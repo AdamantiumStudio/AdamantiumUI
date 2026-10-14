@@ -76,6 +76,20 @@ public static class DiscardedVisuals
         Publish(System.Runtime.InteropServices.CollectionsMarshal.AsSpan(gone));
     }
 
+    /// <summary>Publishes each of <paramref name="roots"/> with everything under it and releases the whole queue at once:
+    /// for a surface that draws no frames of its own to release between them - the designer, a headless build.</summary>
+    public static void ReleaseNow(IEnumerable<IUIComponent> roots)
+    {
+        foreach (var root in roots)
+        {
+            PublishSubtree(root);
+        }
+
+        while (Drain(int.MaxValue) > 0)
+        {
+        }
+    }
+
     /// <summary>Releases up to <paramref name="budget"/> queued elements, skipping any that came back, and returns how
     /// many were released.</summary>
     public static int Drain(int budget)

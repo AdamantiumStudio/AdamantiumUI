@@ -1,5 +1,4 @@
-﻿using System.Text;
-using Adamantium.UI.Markup.AST;
+﻿using Adamantium.UI.Markup.AST;
 using Adamantium.UI.Markup.AST.MarkupExtension;
 using Adamantium.UI.Markup.AST.TypeReference;
 using Adamantium.UI.Markup.Localization;
@@ -53,21 +52,20 @@ public class MarkupExtensionParser
         }
 
         var result = new AumlAstMarkupExtensionNode(info, extensionTypeRef);
-        var splitedParts = SplitByCommasRespectingBraces(body);
-
-        foreach (var part in splitedParts)
+        var position = 0;
+        while (NextPart(body, ref position, out var start, out var end))
         {
-            int eq = part.IndexOf('=');
+            int eq = body.IndexOf('=', start, end - start);
             if (eq >= 0)
             {
-                string key = part.Substring(0, eq).Trim();
-                string value = part.Substring(eq + 1).Trim();
+                string key = Trimmed(body, start, eq);
+                string value = Trimmed(body, eq + 1, end);
                 var res = ParseValue(context, value, info, namespaceMappings);
                 result.Arguments.Add(new MarkupArgument(info, key, res));
             }
-            else if (!string.IsNullOrWhiteSpace(part))
+            else if (end > start)
             {
-                var res = ParseValue(context, part.Trim(), info, namespaceMappings);
+                var res = ParseValue(context, body.Substring(start, end - start), info, namespaceMappings);
                 result.Arguments.Add(new MarkupArgument(info, string.Empty, res));
             }
         }
@@ -128,30 +126,32 @@ public class MarkupExtensionParser
             : value;
     }
 
-    private static List<string> SplitByCommasRespectingBraces(string input)
+    // The next argument of the body from position: its bounds with the white space around it left out. Arguments are
+    // parted by the commas outside braces and quotes; inside quotes nothing is punctuation, a comma there belongs to the
+    // text, which is the whole reason for quoting an argument in the first place.
+    private static bool NextPart(string input, ref int position, out int start, out int end)
     {
-        var result = new List<string>();
-        if (string.IsNullOrWhiteSpace(input)) return result;
-
-        var sb = new StringBuilder();
-        int depth = 0;
-        var quote = '\0';
-
-        foreach (char c in input)
+        start = end = 0;
+        if (position > input.Length)
         {
-            // Inside quotes nothing is punctuation: a comma there belongs to the text, which is the whole reason for
-            // quoting an argument in the first place.
+            return false;
+        }
+
+        var depth = 0;
+        var quote = '\0';
+        var i = position;
+        for (; i < input.Length; i++)
+        {
+            var c = input[i];
             if (quote != '\0')
             {
                 if (c == quote) quote = '\0';
-                sb.Append(c);
                 continue;
             }
 
             if (c is '\'' or '"')
             {
                 quote = c;
-                sb.Append(c);
                 continue;
             }
 
@@ -159,18 +159,22 @@ public class MarkupExtensionParser
             if (c == '}') depth--;
             if (c == ',' && depth == 0)
             {
-                result.Add(sb.ToString().Trim());
-                sb.Clear();
-            }
-            else
-            {
-                sb.Append(c);
+                break;
             }
         }
 
-        if (sb.Length > 0)
-            result.Add(sb.ToString().Trim());
+        start = position;
+        end = i;
+        while (start < end && char.IsWhiteSpace(input[start])) start++;
+        while (end > start && char.IsWhiteSpace(input[end - 1])) end--;
+        position = i + 1;
+        return true;
+    }
 
-        return result;
+    private static string Trimmed(string input, int start, int end)
+    {
+        while (start < end && char.IsWhiteSpace(input[start])) start++;
+        while (end > start && char.IsWhiteSpace(input[end - 1])) end--;
+        return input.Substring(start, end - start);
     }
 }

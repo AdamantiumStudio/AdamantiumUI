@@ -613,6 +613,33 @@ public class Theme : AdamantiumComponent, ITheme
 
     public bool Initializing { get; private set; }
 
+    internal void RefreshFromMarkup()
+    {
+        RemergeStyles();
+        ApplyVariant(CurrentVariant);
+        lock (_siblings)
+        {
+            foreach (var sibling in _siblings.Values)
+            {
+                sibling.RemergeStyles();
+                sibling.ApplyVariant(sibling.CurrentVariant);
+            }
+        }
+    }
+
+    private void RemergeStyles()
+    {
+        var styles = StyleSets.SelectMany(set => set.Styles).ToList();
+        foreach (var style in styles)
+        {
+            style.Theme ??= VariantRoot;
+        }
+
+        MergedStyles.Styles.Clear();
+        Merge(styles);
+        _typeStyleCache.Clear();
+    }
+
     private void OnStyleSetRepositoriesChanged(object sender, NotifyCollectionChangedEventArgs e)
     {
 

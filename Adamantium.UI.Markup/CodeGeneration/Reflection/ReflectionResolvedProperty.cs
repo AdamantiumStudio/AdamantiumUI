@@ -5,13 +5,21 @@ namespace Adamantium.UI.Markup.CodeGeneration.Reflection;
 public class ReflectionResolvedProperty : IResolvedProperty
 {
     private readonly PropertyInfo _property;
+    private object[] _attributes;
 
     public ReflectionResolvedProperty(PropertyInfo property) => _property = property;
 
     public string Name => _property.Name;
 
-    public IResolvedType PropertyType => new ReflectionResolvedType(_property.PropertyType);
+    public IResolvedType PropertyType => ReflectionResolvedType.Of(_property.PropertyType);
 
-    public bool HasAttribute(string attributeFullName) =>
-        _property.GetCustomAttributes(false).Any(a => a.GetType().FullName == attributeFullName);
+    public bool HasAttribute(string attributeFullName)
+    {
+        foreach (var attribute in _attributes ??= _property.GetCustomAttributes(false))
+        {
+            if (attribute.GetType().FullName == attributeFullName) return true;
+        }
+
+        return false;
+    }
 }

@@ -7,6 +7,25 @@ All packages share one version.
 
 ### Added
 
+- Markup hot reload. Save an `.auml` while a debug build of the application runs, and every view, window and control
+  built from it takes the change in place at the next frame: changed properties are set again, children are added,
+  removed and reordered, and everything that did not change keeps its instance and its state. A version that does not
+  build is logged and the running one stays; a view opened after an edit opens with it.
+  - **Switch.** The build property `AdamantiumAumlHotReload` is `true` in a Debug build unless the project sets it.
+    Generated code then reports each instance it builds through `MarkupHotReload.Track`; a Release build carries
+    nothing of it.
+  - **API.** `MarkupHotReload` (`Adamantium.UI.Core.Markup`): `Mode` (`OnSave` or `Manual`), `ChangedFiles`,
+    `NotifyChanged`, `ApplyAsync` with a `MarkupReloadReport` per file, the events `Reloaded` and `Failed`.
+  - **The IDE's apply button.** Rider's Apply Changes, Visual Studio's Hot Reload and `dotnet watch` apply the saved
+    markup too, in either mode, and have every window measured and drawn again so that changed control code shows at
+    once. A view the updated code builds is not edited a second time.
+  - **Themes too.** A style set, a theme variant or a resource dictionary is built again from the saved file, and the
+    current theme takes it: its styles are merged anew, its variant repaints the palette brushes, resource references
+    resolve again, and every window is restyled - without the theme swap's overlay.
+  - **Not applied in place:** a changed root element, a theme's own file (its list of style sets and variants),
+    children of a style or a trigger inside a view, and children behind `x:Load`. They are reported; restart to see
+    them. A file changed after the build is not followed until the application is rebuilt.
+
 - Automation scenarios as tests. A scenario is an XML file, `*.ascenario` (`http://adamantium/automation/scenario`):
   steps such as `<Invoke Target="id=Save"/>`, `<Expect Target="id=Status" Name="Saved."/>` or
   `<Pen Target="id=Canvas" Gesture="Drag" From="400,150" To="700,150" Pressure="0.2..1"/>`.
@@ -894,6 +913,17 @@ All packages share one version.
 
 ### Changed
 
+- Markup is built one way everywhere. What a document means is decided once, when it is lowered to a build plan
+  (`Adamantium.UI.Markup.Building`); the generated class prints that plan as C#, and the runtime loader - the
+  designer's preview, `VisualRenderer` - runs the same plan by reflection. The loader used to decide everything a
+  second time on its own, and what the designer showed drifted from what the application built.
+- `AumlLoader.Reconcile` takes the previous `AumlLoadResult` instead of its AST: an edit is now applied by comparing the
+  plans of the two versions. Attached properties (`Grid.Row`) and grid definitions written as child elements are
+  applied in place too; children a style, a trigger or `x:Load` holds are reported as needing a rebuild.
+- A `ControlTemplate` built by the application carries the `TargetType` its markup names, as the designer's always did.
+- The markup generator reads only `*.auml` files. It used to take any `*.xml` file handed to it as well, so an XML
+  file another tool lists in `AdditionalFiles` was parsed as markup and failed the build.
+
 - Each project of the repository builds into a folder of its own,
   `artifacts/bin/<project>/<Configuration>/<target framework>/`. Before, all of them shared
   `artifacts/bin/<Configuration>/<target framework>/`, so cleaning one project deleted files another needed (the
@@ -1087,6 +1117,8 @@ All packages share one version.
 
 ### Removed
 
+- `AumlAstTemplateNode.TemplateContent`, the template's markup written back out as text for every template parsed;
+  nothing read it.
 - The text scenario language:
   - `.adam` files;
   - `adam-auto run`;
@@ -1116,6 +1148,31 @@ All packages share one version.
   The diagnostics overlay and what it reads stay.
 
 ### Fixed
+
+- The designer no longer keeps every tree it has shown. A full preview now closes the window it showed before and
+  releases everything the markup built for it, a drawer not opened and a tab not shown included; its frames clear the
+  render marks as the application's loop does, which held every element ever marked; and an edit that takes a child
+  out releases it. Added `DiscardedVisuals.ReleaseNow` for a surface that draws no frames of its own.
+- The designer knows every built-in type a build plan names by its C# keyword (`byte`, `char`, `decimal` and the
+  others it lacked), from the one table the plan's names are printed by.
+- The designer passes an empty `params` array as C# does. `new PropertyPath("Name")` took the `(object)` constructor
+  instead of `(string, params object[])`, so every binding the designer built had no `PathParameters`. Found by a new
+  test that builds every sandbox view both ways and compares the trees element by element.
+- The designer and markup hot reload read markup about 30 times faster and leave about 200 times less garbage: lowering
+  every sandbox file took 9.5 s and allocated 8 GB, now 0.3 s and 39 MB. What reflection says about a type, an
+  assembly's types by name and its xmlns definitions are read once and shared; a type name not found is remembered;
+  the parser, the structure check and the transformer stopped building strings, lists and iterators they threw away.
+  Saving a 700-line view applies in about 0.2 s instead of 1.5–2 s.
+- An animated picture nobody disposed no longer destroys its frame array and palette on the finalizer thread: they
+  are retired to the device and freed once no frame in flight can sample them, as a disposed picture's are. Freed on
+  the spot, they could vanish under a frame, and left the resource registry in the middle of another test
+  (`GraphicsResources_Unregister_OnDispose`).
+- An event set in markup (`Click="OnClick"`) is subscribed. The generator asked the event's TYPE whether it was an
+  event, never the member, so the handler was written as a plain assignment and did not compile; the designer
+  dropped it.
+- Markup that names core types through a facade (`clr-namespace:System;assembly=System.Runtime`, as the themes'
+  metrics do) is built by the designer: the types a facade forwards were not found by the runtime loader, nor by the
+  generator outside a reference pack.
 
 - Deleting an `.auml`, `.alang` or `.ascenario` file rebuilds the project: the build counted these files only by their
   dates, so with one gone it stayed "up to date" and kept the class, table or test generated from it.

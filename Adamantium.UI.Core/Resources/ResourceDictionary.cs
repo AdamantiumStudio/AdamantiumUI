@@ -3,7 +3,7 @@ using Adamantium.UI.Core.MarkupExtensions;
 
 namespace Adamantium.UI.Core.Resources;
 
-public class ResourceDictionary : IResourceDictionary
+public class ResourceDictionary : IResourceDictionary, Markup.IMarkupContent
 {
     private readonly AdamantiumDictionary<string, object> resourceCache;
 
@@ -89,4 +89,10 @@ public class ResourceDictionary : IResourceDictionary
 
     public bool Initialized => _isInitialized;
     public bool Initializing => _isInitializing;
+
+    void Markup.IMarkupContent.ClearMarkupContent()
+    {
+        Clear();
+        Includes.Clear();
+    }
 }

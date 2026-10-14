@@ -24,15 +24,17 @@ namespace Adamantium.UI.Generators
                 options.GlobalOptions.TryGetValue("build_property.NeutralLanguage", out var neutralLanguage);
                 options.GlobalOptions.TryGetValue("build_property.AdamantiumRequireAutomationId", out var requireAutomationId);
                 options.GlobalOptions.TryGetValue("build_property." + CheckFileProperty, out var checkFile);
+                options.GlobalOptions.TryGetValue("build_property." + HotReloadProperty, out var hotReload);
                 return (RootNamespace: rootNamespace, ProjectDir: projectDir, NeutralLanguage: neutralLanguage,
                     RequireAutomationId: string.Equals(requireAutomationId, "true", System.StringComparison.OrdinalIgnoreCase),
-                    CheckFile: string.IsNullOrEmpty(checkFile) ? null : checkFile);
+                    CheckFile: string.IsNullOrEmpty(checkFile) ? null : checkFile,
+                    HotReload: string.Equals(hotReload, "true", System.StringComparison.OrdinalIgnoreCase));
             });
 
             // Parsing is its own PER-FILE step, so Roslyn caches each document: it used to sit inside the output below,
             // which carries the Compilation, and every code edit reparsed all 2 MB of markup.
             var parsedFiles = context.AdditionalTextsProvider
-                .Where(file => file.Path.EndsWith(".xml") || file.Path.EndsWith(".auml"))
+                .Where(file => file.Path.EndsWith(".auml"))
                 .Select((text, cancellationToken) => (
                     Path: text.Path,
                     Content: text.GetText(cancellationToken).ToString()))
@@ -69,7 +71,7 @@ namespace Adamantium.UI.Generators
                 {
                     LanguageTables = LanguageFileParser.Shapes(languages, properties.RootNamespace, properties.NeutralLanguage),
                 };
-                var codeGenerator = new AumlSourceGenerator();
+                var codeGenerator = new AumlSourceGenerator { HotReload = properties.HotReload };
 
                 var metadata = new List<AumlDocument>();
 
@@ -222,6 +224,10 @@ namespace Adamantium.UI.Generators
         /// would get - the resource map, the entry point - is made.</summary>
         public const string CheckFileProperty = "AdamantiumCheckFile";
 
+        /// <summary>The build property that has every view, window and control report itself to the markup hot reload:
+        /// true in a debug build unless the project says otherwise.</summary>
+        public const string HotReloadProperty = "AdamantiumAumlHotReload";
+
         private static bool IsChecked(string path, string checkFile) =>
             checkFile == null || string.Equals(path, checkFile, System.StringComparison.OrdinalIgnoreCase);
 
@@ -258,6 +264,7 @@ namespace Adamantium.UI.Generators
 
             document.RelativeFilePath = relativePath;
             document.SourceFilePath = path;
+            document.SourceHash = MarkupHash.Of(content);
             document.RootNamespace = rootNamespace;
 
             return new ParsedAumlFile(path, document);

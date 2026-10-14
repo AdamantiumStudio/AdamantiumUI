@@ -224,6 +224,24 @@ public class ThemeManager : IThemeManager
             ResourceContext.RegisterResources(component, resources);
     }
 
+    internal void RefreshFromMarkup()
+    {
+        if (CurrentTheme is not Theme theme)
+        {
+            return;
+        }
+
+        theme.VariantRoot.RefreshFromMarkup();
+        PaletteVersion++;
+        _resourceManager?.NotifyResourcesChanged();
+        foreach (var window in UIAppContext.Current.Windows)
+        {
+            window.InvalidateStyles();
+        }
+
+        RenderDirty.ForceStructuralUntilSettled();
+    }
+
     public void ApplyTheme(ITheme theme, IFundamentalUIComponent component)
     {
         theme?.Initialize();

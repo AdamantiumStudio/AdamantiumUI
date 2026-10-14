@@ -17,6 +17,16 @@
     </ItemGroup>
   </Target>
 
+  <!-- The repository's own markup projects reference the generator directly, not through the package's buildTransitive
+       targets, so they get the markup hot reload switch here: on in a Debug build. -->
+  <PropertyGroup>
+    <AdamantiumAumlHotReload Condition="'$(AdamantiumAumlHotReload)' == '' And '$(Configuration)' == 'Debug'">true</AdamantiumAumlHotReload>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <CompilerVisibleProperty Include="AdamantiumAumlHotReload" />
+  </ItemGroup>
+
   <!-- Packages are made against the published engine packages. Packed from the engine's source, the analyzer-only
        references to its projects would turn into package dependencies. -->
   <Target Name="PackAgainstEnginePackages" BeforeTargets="GenerateNuspec" Condition="'$(UseEngineSource)' == 'true' And '$(IsPackable)' == 'true'">

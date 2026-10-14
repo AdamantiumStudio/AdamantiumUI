@@ -14,24 +14,45 @@ public sealed class CompositeResolvedAssembly : IResolvedAssembly
 
     public string Name => string.Join("+", _parts.Select(p => p.Name));
 
+    // The union is made again only when a part has gained a type since.
     public IReadOnlyList<IResolvedType> Types
     {
         get
         {
-            var seen = new HashSet<string>();
-            var list = new List<IResolvedType>();
-            foreach (var part in _parts)
-            foreach (var type in part.Types)
-                if (seen.Add(type.FullName ?? type.Name)) list.Add(type);   // first part wins on a name clash
-            return list;
+            var count = 0;
+            for (var i = 0; i < _parts.Count; i++)
+            {
+                count += _parts[i].Types.Count;
+            }
+
+            if (_types == null || count != _unionOf)
+            {
+                _types = Union();
+                _unionOf = count;
+            }
+
+            return _types;
         }
+    }
+
+    private IReadOnlyList<IResolvedType> _types;
+    private int _unionOf;
+
+    private List<IResolvedType> Union()
+    {
+        var seen = new HashSet<string>();
+        var list = new List<IResolvedType>();
+        foreach (var part in _parts)
+        foreach (var type in part.Types)
+            if (seen.Add(type.FullName ?? type.Name)) list.Add(type);   // first part wins on a name clash
+        return list;
     }
 
     public IResolvedType GetTypeByShortName(string shortName)
     {
-        foreach (var part in _parts)
+        for (var i = 0; i < _parts.Count; i++)
         {
-            var type = part.GetTypeByShortName(shortName);
+            var type = _parts[i].GetTypeByShortName(shortName);
             if (type != null) return type;
         }
         return null;
@@ -42,9 +63,9 @@ public sealed class CompositeResolvedAssembly : IResolvedAssembly
 
     public IResolvedType GetTypeByFullName(string fullName)
     {
-        foreach (var part in _parts)
+        for (var i = 0; i < _parts.Count; i++)
         {
-            var type = part.GetTypeByFullName(fullName);
+            var type = _parts[i].GetTypeByFullName(fullName);
             if (type != null) return type;
         }
         return null;

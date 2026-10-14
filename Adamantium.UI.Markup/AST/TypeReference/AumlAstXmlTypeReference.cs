@@ -33,10 +33,9 @@ public class AumlAstXmlTypeReference : AumlAstNode, IAumlAstTypeReference
         return false;
     }
 
-    public string GetFullTypeName()
-    {
-        return string.IsNullOrEmpty(Namespace) ? Name : $"{Namespace}/{Name}";
-    }
+    public string GetFullTypeName() => _fullTypeName ??= string.IsNullOrEmpty(Namespace) ? Name : $"{Namespace}/{Name}";
+
+    private string _fullTypeName;
 
     public bool ContainsValidData()
     {

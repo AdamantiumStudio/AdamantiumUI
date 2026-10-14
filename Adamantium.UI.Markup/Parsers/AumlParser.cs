@@ -92,7 +92,8 @@ public class ParserContext
 
     private AumlAstObjectNode ParseAumlNode(XElement element, bool isRoot)
     {
-        var targetType = element.GetTypeReference();
+        var elementInfo = element.ToLineInfo();
+        var targetType = element.GetTypeReference(elementInfo);
 
         AumlAstObjectNode objectNode = null;
         switch (targetType.Name)
@@ -100,15 +101,14 @@ public class ParserContext
             case "ControlTemplate":
             case "DataTemplate":
             case "HierarchicalDataTemplate":
-                var templateNode = new AumlAstTemplateNode(element.ToLineInfo(), targetType, element.ToString());
-                objectNode = templateNode;
+                objectNode = new AumlAstTemplateNode(elementInfo, targetType);
                 break;
             default:
-                objectNode = new AumlAstObjectNode(element.ToLineInfo(), targetType);
+                objectNode = new AumlAstObjectNode(elementInfo, targetType);
                 break;
         }
 
-        foreach (var attribute in element.Attributes())
+        for (var attribute = element.FirstAttribute; attribute != null; attribute = attribute.NextAttribute)
         {
             if (attribute.IsNamespaceDeclaration)
             {
@@ -124,68 +124,76 @@ public class ParserContext
             else // parse property or event
             {
                 var propName = attribute.Name.LocalName;
-                var ns = attribute.Name.Namespace.ToString();
+                var ns = attribute.Name.NamespaceName;
                 var ownerType = objectNode.TypeReference;
                 bool isAttachedProperty = false;
+                var attributeInfo = attribute.ToLineInfo();
                 if (ns == AumlNamespaces.AumlDirective)
                 {
-                    objectNode.Children.Add(new AumlAstDirective(attribute.ToLineInfo(), objectNode, ns, propName,
-                        new AumlAstTextNode(attribute.ToLineInfo(), attribute.Value)));
+                    objectNode.Children.Add(new AumlAstDirective(attributeInfo, objectNode, ns, propName,
+                        new AumlAstTextNode(attributeInfo, attribute.Value)));
                     continue;
                 }
 
                 // check does we faced with using of attached property or attached event
-                if (propName.Contains('.'))
+                var dot = propName.IndexOf('.');
+                if (dot >= 0)
                 {
                     isAttachedProperty = true;
-                    var names = propName.Split('.');
-                    propName = names[1];
+                    var owner = propName.Substring(0, dot);
+                    propName = SecondPart(propName, dot);
 
                     // An attached property's owner comes from the attribute's prefix, or the default xmlns when unprefixed,
                     // never from the element's namespace.
                     var ownerNamespace = string.IsNullOrEmpty(ns) ? DefaultNamespace() ?? targetType.Namespace : ns;
-                    ownerType = new AumlAstXmlTypeReference(element.ToLineInfo(), ownerNamespace, names[0]);
+                    ownerType = new AumlAstXmlTypeReference(elementInfo, ownerNamespace, owner);
                 }
 
-                var propertyNode = new AumlAstPropertyNode(element.ToLineInfo(), 
-                    new AumlAstPropertyReference(attribute.ToLineInfo(), isAttachedProperty, objectNode, ownerType, targetType, propName),
-                    ParseTextOrMarkupExtension(attribute.Value, element, attribute.ToLineInfo()));
+                var propertyNode = new AumlAstPropertyNode(elementInfo,
+                    new AumlAstPropertyReference(attributeInfo, isAttachedProperty, objectNode, ownerType, targetType, propName),
+                    ParseTextOrMarkupExtension(attribute.Value, element, attributeInfo));
                 objectNode.Children.Add(propertyNode);
             }
         }
 
-        foreach (var node in element.Nodes())
+        var mixed = IsMixedContent(element);
+        for (var node = element.FirstNode; node != null; node = node.NextNode)
         {
-            if (node is XElement elNode && elNode.Name.LocalName.Contains('.'))
+            if (node is XElement elNode && elNode.Name.LocalName.IndexOf('.') is var dot and >= 0)
             {
-                foreach (var stray in elNode.Attributes().Where(a => !a.IsNamespaceDeclaration))
+                var localName = elNode.Name.LocalName;
+                for (var stray = elNode.FirstAttribute; stray != null; stray = stray.NextAttribute)
                 {
-                    Error(MarkupMessages.PropertyElementAttribute(elNode.Name.LocalName, stray.Name.LocalName), stray.ToLineInfo());
+                    if (!stray.IsNamespaceDeclaration)
+                    {
+                        Error(MarkupMessages.PropertyElementAttribute(localName, stray.Name.LocalName), stray.ToLineInfo());
+                    }
                 }
 
-                var names = elNode.Name.LocalName.Split('.');
+                var owner = localName.Substring(0, dot);
                 // A property-element whose owner prefix differs from the element's own type is an ATTACHED property in
                 // property-element position: <StackPanel><ResourceContext.Resources>... The attribute path already sets
                 // this (propName.Contains('.')); the property-element path used to hardcode false, so an attached property
                 // written with child content resolved its member against the wrong type (the element) and failed.
-                var isAttachedProperty = names[0] != objectNode.TypeReference?.Name;
+                var isAttachedProperty = owner != objectNode.TypeReference?.Name;
+                var propertyInfo = elNode.ToLineInfo();
                 var property = new AumlAstPropertyNode(
-                    elNode.ToLineInfo(),
+                    propertyInfo,
                     new AumlAstPropertyReference(
-                        elNode.ToLineInfo(),
+                        propertyInfo,
                         isAttachedProperty,
                         objectNode,
-                        new AumlAstXmlTypeReference(elNode.ToLineInfo(), elNode.Name.NamespaceName, names[0]),
+                        new AumlAstXmlTypeReference(propertyInfo, elNode.Name.NamespaceName, owner),
                         targetType,
-                        names[1]),
+                        SecondPart(localName, dot)),
                     ParseValueNodes(elNode)
                     );
-                
+
                 objectNode.Children.Add(property);
             }
             else
             {
-                var valueNode = ParseValueNode(node);
+                var valueNode = ParseValueNode(node, mixed);
                 if (valueNode != null)
                 {
                     objectNode.Children.Add(valueNode);
@@ -196,13 +204,20 @@ public class ParserContext
         return objectNode;
     }
 
-    private IAumlAstValueNode ParseValueNode(XNode node)
+    // As Split('.')[1]: what stands between the first dot and the next one.
+    private static string SecondPart(string name, int dot)
+    {
+        var next = name.IndexOf('.', dot + 1);
+        return next < 0 ? name.Substring(dot + 1) : name.Substring(dot + 1, next - dot - 1);
+    }
+
+    private IAumlAstValueNode ParseValueNode(XNode node, bool parentIsMixed)
     {
         if (node is XElement xElement)
             return ParseAumlNode(xElement, false);
         if (node is XText xText)
         {
-            if (IsXmlSpace(xText.Value) && !IsMixedContent(xText.Parent) && !SpacesTwoElementsOnALine(xText))
+            if (IsXmlSpace(xText.Value) && !parentIsMixed && !SpacesTwoElementsOnALine(xText))
             {
                 return null;
             }
@@ -215,20 +230,42 @@ public class ParserContext
 
     /// <summary>Whether <paramref name="text"/> is only XML white space (space, tab, carriage return, line feed) - not
     /// a no-break space, which is text.</summary>
-    public static bool IsXmlSpace(string text) => text.All(c => c is ' ' or '\t' or '\r' or '\n');
+    public static bool IsXmlSpace(string text)
+    {
+        foreach (var c in text)
+        {
+            if (c is not (' ' or '\t' or '\r' or '\n')) return false;
+        }
 
-    private static bool IsMixedContent(XElement element) =>
-        element != null && element.Elements().Any() && element.Nodes().OfType<XText>().Any(text => !IsXmlSpace(text.Value));
+        return true;
+    }
+
+    // Elements and text other than white space, side by side.
+    private static bool IsMixedContent(XElement element)
+    {
+        var hasElement = false;
+        var hasText = false;
+        for (var node = element.FirstNode; node != null; node = node.NextNode)
+        {
+            hasElement |= node is XElement;
+            hasText |= node is XText text && !IsXmlSpace(text.Value);
+        }
+
+        return hasElement && hasText;
+    }
 
     private static bool SpacesTwoElementsOnALine(XText text) =>
-        text.PreviousNode is XElement && text.NextNode is XElement && text.Value.IndexOfAny(['\r', '\n']) < 0;
+        text.PreviousNode is XElement && text.NextNode is XElement && text.Value.IndexOfAny(LineBreaks) < 0;
+
+    private static readonly char[] LineBreaks = ['\r', '\n'];
 
     private List<IAumlAstValueNode> ParseValueNodes(XElement element)
     {
         var valueNodes = new List<IAumlAstValueNode>();
-        foreach (var xNode in element.Nodes())
+        var mixed = IsMixedContent(element);
+        for (var xNode = element.FirstNode; xNode != null; xNode = xNode.NextNode)
         {
-            var valueNode = ParseValueNode(xNode);
+            var valueNode = ParseValueNode(xNode, mixed);
             if (valueNode != null)
                 valueNodes.Add(valueNode);
         }

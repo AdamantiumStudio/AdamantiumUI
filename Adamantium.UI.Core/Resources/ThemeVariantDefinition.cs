@@ -5,7 +5,7 @@ namespace Adamantium.UI.Core.Resources;
 
 /// <summary>One theme variant: palette <see cref="Colors"/> and theme-property <see cref="Values"/> (accent, focus); the
 /// brushes stay the theme's. Derivable, so a variant can live in its own markup file.</summary>
-public class ThemeVariantDefinition : IThemeVariant
+public class ThemeVariantDefinition : IThemeVariant, Markup.IMarkupContent
 {
     public ThemeVariantDefinition() { }
 
@@ -25,4 +25,10 @@ public class ThemeVariantDefinition : IThemeVariant
     public ThemeValueCollection Values { get; } = new();
 
     public override string ToString() => $"{Key} ({Colors.Count} colors, {Values.Count} values)";
+
+    void Markup.IMarkupContent.ClearMarkupContent()
+    {
+        Colors.Clear();
+        Values.Clear();
+    }
 }

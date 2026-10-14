@@ -56,8 +56,8 @@ internal sealed class MarkupStructureCheck
         HashSet<string> scope = isTemplate ? [] : names;
 
         var own = !isRoot && (type == null || type is MetadataResolvedType) ? null : context;
-        var dataContext = node.Children.OfType<AumlAstPropertyNode>()
-            .FirstOrDefault(p => p.Property is AumlAstPropertyReference { IsAttachedProperty: false, Name: "DataContext" });
+        var dataContext = NodeScan.First<AumlAstPropertyNode>(node.Children,
+            p => p.Property is AumlAstPropertyReference { IsAttachedProperty: false, Name: "DataContext" });
         if (dataContext != null)
         {
             own = DataContextOf(dataContext, context);
@@ -67,10 +67,10 @@ internal sealed class MarkupStructureCheck
             : type != null && type.Name is "Style" or "Setter" ? null
             : own;
 
-        var set = new Dictionary<string, AumlAstPropertyNode>(StringComparer.Ordinal);
-        foreach (var property in node.Children.OfType<AumlAstPropertyNode>())
+        var set = _spareSets.Count > 0 ? _spareSets.Pop() : new Dictionary<string, AumlAstPropertyNode>(StringComparer.Ordinal);
+        for (var i = 0; i < node.Children.Count; i++)
         {
-            if (property.Property is not AumlAstPropertyReference reference)
+            if (node.Children[i] is not AumlAstPropertyNode { Property: AumlAstPropertyReference reference } property)
             {
                 continue;
             }
@@ -88,7 +88,7 @@ internal sealed class MarkupStructureCheck
             Property(type, reference, property, isRoot);
             var bound = property == dataContext ? context : isTemplate ? null : inner;
             Bindings(property.Values, bound);
-            var values = property.Values.OfType<AumlAstObjectNode>().ToList();
+            var values = NodeScan.All<AumlAstObjectNode>(property.Values);
             var isResources = reference.Name == "Resources";
             if (isResources)
             {
@@ -102,8 +102,10 @@ internal sealed class MarkupStructureCheck
         }
 
         Children(node, type, set);
-        var children = node.GetLogicalChildrenObjects().ToList();
+        var children = node.GetLogicalChildrenObjects();
         Triggered(node, type, isTemplate, set, children);
+        set.Clear();
+        _spareSets.Push(set);
         if (type != null && type.ImplementsInterface("IResourceDictionary"))
         {
             Keys(children);
@@ -114,6 +116,9 @@ internal sealed class MarkupStructureCheck
             Element(child, false, scope, inner);
         }
     }
+
+    // One set of "properties given here" per level of the walk, reused: an element's set is done with before its children.
+    private readonly Stack<Dictionary<string, AumlAstPropertyNode>> _spareSets = new();
 
     private void Property(IResolvedType type, AumlAstPropertyReference reference, AumlAstPropertyNode property, bool isRoot)
     {
@@ -138,7 +143,7 @@ internal sealed class MarkupStructureCheck
             return;
         }
 
-        var values = property.Values.OfType<AumlAstObjectNode>().ToList();
+        var values = NodeScan.All<AumlAstObjectNode>(property.Values);
         if (many)
         {
             if (propertyType.IsCollection())
@@ -174,12 +179,12 @@ internal sealed class MarkupStructureCheck
         }
 
         if (type.TypeKind is not (ResolvedTypeKind.Struct or ResolvedTypeKind.Enum) && type.SpecialType != ResolvedSpecialType.System_String &&
-            node.Children.OfType<AumlAstTextNode>().FirstOrDefault(text => !string.IsNullOrWhiteSpace(text.Text)) is { } stray)
+            NodeScan.First<AumlAstTextNode>(node.Children, text => !string.IsNullOrWhiteSpace(text.Text)) is { } stray)
         {
             Report(MarkupMessages.NoPlaceForText(type.Name), stray);
         }
 
-        var children = node.GetLogicalChildrenObjects().Where(child => CollectionFor(type, child) == null).ToList();
+        var children = NotInACollection(node.GetLogicalChildrenObjects(), type);
         if (children.Count == 0 || type.Name == "Style" || type.ImplementsInterface("ITrigger") || type.InheritsFrom(BindingBase))
         {
             return;
@@ -226,6 +231,17 @@ internal sealed class MarkupStructureCheck
         }
 
         Report(MarkupMessages.NoPlaceForChild(type.Name), children[0]);
+    }
+
+    private IReadOnlyList<AumlAstObjectNode> NotInACollection(IReadOnlyList<AumlAstObjectNode> children, IResolvedType type)
+    {
+        List<AumlAstObjectNode> kept = null;
+        for (var i = 0; i < children.Count; i++)
+        {
+            if (CollectionFor(type, children[i]) == null) (kept ??= []).Add(children[i]);
+        }
+
+        return kept ?? (IReadOnlyList<AumlAstObjectNode>)Array.Empty<AumlAstObjectNode>();
     }
 
     private void Items(IEnumerable<AumlAstObjectNode> items, IResolvedType collection, string property)
@@ -372,7 +388,7 @@ internal sealed class MarkupStructureCheck
     }
 
     private void Triggered(AumlAstObjectNode node, IResolvedType type, bool isTemplate,
-        Dictionary<string, AumlAstPropertyNode> set, List<AumlAstObjectNode> children)
+        Dictionary<string, AumlAstPropertyNode> set, IReadOnlyList<AumlAstObjectNode> children)
     {
         if (type?.Name == "Style")
         {

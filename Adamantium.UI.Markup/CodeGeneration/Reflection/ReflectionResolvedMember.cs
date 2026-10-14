@@ -5,6 +5,8 @@ namespace Adamantium.UI.Markup.CodeGeneration.Reflection;
 public class ReflectionResolvedMember : IResolvedMember
 {
     private readonly MemberInfo _member;
+    private object[] _attributes;
+    private IReadOnlyList<string> _parameterNames;
 
     public ReflectionResolvedMember(MemberInfo member, IResolvedType declaringType)
     {
@@ -16,23 +18,36 @@ public class ReflectionResolvedMember : IResolvedMember
 
     public IResolvedType MemberType => _member switch
     {
-        PropertyInfo p => new ReflectionResolvedType(p.PropertyType),
-        FieldInfo f => new ReflectionResolvedType(f.FieldType),
-        MethodInfo m => new ReflectionResolvedType(m.ReturnType),
-        EventInfo e => new ReflectionResolvedType(e.EventHandlerType),
+        PropertyInfo p => ReflectionResolvedType.Of(p.PropertyType),
+        FieldInfo f => ReflectionResolvedType.Of(f.FieldType),
+        MethodInfo m => ReflectionResolvedType.Of(m.ReturnType),
+        EventInfo e => ReflectionResolvedType.Of(e.EventHandlerType),
         _ => null
     };
 
     public IResolvedType DeclaringType { get; }
 
-    public bool HasAttribute(string attributeMetadataName) =>
-        _member.GetCustomAttributes(false).Any(a => a.GetType().FullName == attributeMetadataName);
+    private object[] Attributes => _attributes ??= _member.GetCustomAttributes(false);
 
-    public IResolvedAttribute GetAttribute(string attributeMetadataName) =>
-        _member.GetCustomAttributes(false).OfType<Attribute>()
-            .Where(a => a.GetType().FullName == attributeMetadataName)
-            .Select(a => new ReflectionResolvedAttribute(a))
-            .FirstOrDefault();
+    public bool HasAttribute(string attributeMetadataName)
+    {
+        foreach (var attribute in Attributes)
+        {
+            if (attribute.GetType().FullName == attributeMetadataName) return true;
+        }
+
+        return false;
+    }
+
+    public IResolvedAttribute GetAttribute(string attributeMetadataName)
+    {
+        foreach (var attribute in Attributes)
+        {
+            if (attribute is Attribute attr && attr.GetType().FullName == attributeMetadataName) return new ReflectionResolvedAttribute(attr);
+        }
+
+        return null;
+    }
 
     public bool HasSetter() => _member switch
     {
@@ -58,7 +73,7 @@ public class ReflectionResolvedMember : IResolvedMember
     };
 
     public IReadOnlyList<string> ParameterNames =>
-        _member is MethodBase method ? method.GetParameters().Select(p => p.Name).ToList() : [];
+        _parameterNames ??= _member is MethodBase method ? method.GetParameters().Select(p => p.Name).ToArray() : [];
 
     public ResolvedMemberKind MemberKind => _member.MemberType switch
     {

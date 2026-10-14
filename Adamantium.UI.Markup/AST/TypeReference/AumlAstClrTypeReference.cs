@@ -35,10 +35,11 @@ public class AumlAstClrTypeReference : AumlAstNode, IAumlAstTypeReference
         return false;
     }
 
-    public string GetFullTypeName()
-    {
-        return $"{Namespace}.{Name}";
-    }
+    public string GetFullTypeName() => _fullTypeName ??= $"{Namespace}.{Name}";
+
+    private protected void KnowFullTypeName(string fullTypeName) => _fullTypeName = fullTypeName;
+
+    private string _fullTypeName;
 
     public bool ContainsValidData()
     {

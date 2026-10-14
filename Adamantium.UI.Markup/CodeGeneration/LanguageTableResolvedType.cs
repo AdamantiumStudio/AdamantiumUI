@@ -46,7 +46,7 @@ internal sealed class LanguageTableResolvedType : IResolvedType
     public bool HasAttribute(string attributeName) => false;
     public IResolvedAttribute GetAttribute(string fullName) => null;
     public IEnumerable<IResolvedAttribute> GetAttributes() => [];
-    public List<IResolvedProperty> GetAllProperties() => [];
+    public IReadOnlyList<IResolvedProperty> GetAllProperties() => [];
     public bool IsAssignableTo(string fullName) => fullName == FullName;
     public bool ImplementsInterface(string interfaceName) => false;
     public bool IsCollection() => false;

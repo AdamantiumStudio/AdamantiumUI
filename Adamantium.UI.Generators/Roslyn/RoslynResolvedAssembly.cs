@@ -34,6 +34,8 @@ public class RoslynResolvedAssembly : IResolvedAssembly
                 nsStack.Push(nsMember);
             }
         }
+
+        _types.AddRange(_assemblySymbol.GetForwardedTypes().Select(x => new RoslynResolvedType(x)));
     }
 
     public string Name { get; }

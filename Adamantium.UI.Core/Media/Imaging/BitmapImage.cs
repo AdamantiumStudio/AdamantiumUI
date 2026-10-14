@@ -450,9 +450,9 @@ public sealed class BitmapImage : BitmapSource
       }
 
       _mipLevels.Clear();
-      _frameArrayTexture?.Dispose();
+      Retire(_frameArrayTexture);
       _frameArrayTexture = null;
-      _framePalette?.Dispose();
+      Retire(_framePalette);
       _framePalette = null;
       _rawBitmap?.ReleaseDecodedFrames();
       // ...and the base's own texture, which is where a still image's ENTIRE picture lives (77 MB for the 4984x3858 TGA).

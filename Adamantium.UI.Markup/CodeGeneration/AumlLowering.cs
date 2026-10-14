@@ -1,31 +1,55 @@
-﻿using Adamantium.Core;
-using Adamantium.UI.Markup.AST;
+﻿using Adamantium.UI.Markup.AST;
 using Adamantium.UI.Markup.AST.MarkupExtension;
+using Adamantium.UI.Markup.Building;
 using Adamantium.UI.Markup.Localization;
 
 namespace Adamantium.UI.Markup.CodeGeneration;
 
-public class CodeGenerationContext
+/// <summary>Turns a transformed markup document into its build plan: every decision about what the markup means is
+/// made here, once, for the generated code and the runtime loader alike.</summary>
+public class AumlLowering
 {
     public string ParentName { get; private set; }
     public Stack<string> ElementStack { get; }
     private readonly Stack<string> _templateStack = new();
+    private readonly BuildPlanWriter _writer;
+    private readonly bool _rootIsThis;
 
     public Stack<IResolvedType> TargetTypeContext { get; }
-    public TextGenerator TextGenerator { get; }
+
+    /// <summary>What the processed elements build, in order.</summary>
+    public BuildPlan Plan { get; } = new();
+
     public AumlMetadataContainer Metadata { get; }
     public int Id { get; set; }
 
     public EntityType EntityType { get; }
 
-    public CodeGenerationContext(TextGenerator textGenerator, AumlMetadataContainer metadata, EntityType entityType)
+    private AumlLowering(AumlMetadataContainer metadata, EntityType entityType)
     {
         Id = 1;
         ElementStack = new();
         TargetTypeContext = new();
-        TextGenerator = textGenerator;
         Metadata = metadata;
         EntityType = entityType;
+        _writer = new BuildPlanWriter(Plan);
+        _rootIsThis = entityType != EntityType.Unknown;
+    }
+
+    /// <summary>The build plan of a transformed document. A document with a class of its own builds into <c>this</c>;
+    /// a fragment (a bare panel, a template, a value) has none, so its plan builds the root and returns it.</summary>
+    public static BuildPlan Lower(AumlMetadataContainer container, IDiagnosticSink diagnostics)
+    {
+        var isResource = container.RootEntityType is EntityType.ResourceDictionary or EntityType.StyleSet
+            or EntityType.Theme or EntityType.ThemeVariant;
+        var lowering = new AumlLowering(container, container.RootEntityType);
+        var root = lowering.ProcessControlElements((AumlAstObjectNode)container.RootNode, diagnostics, isResource);
+        if (!lowering._rootIsThis)
+        {
+            lowering._writer.Add(new ReturnStep(root));
+        }
+
+        return lowering.Plan;
     }
 
     public string GenerateNextElementName(string name = "") =>
@@ -44,7 +68,7 @@ public class CodeGenerationContext
         ElementStack.Pop();
         ParentName = ElementStack.Count > 0 ? ElementStack.Peek() : string.Empty;
     }
-    
+
     private void PushTemplate(string templateVar) => _templateStack.Push(templateVar);
     private void PopTemplate() { if (_templateStack.Count > 0) _templateStack.Pop(); }
     private string CurrentTemplate => _templateStack.Count > 0 ? _templateStack.Peek() : null;
@@ -65,7 +89,7 @@ public class CodeGenerationContext
             return TargetTypeContext.Peek();
         return fallback;
     }
-    
+
     public void WithElement(string name, Action action)
     {
         PushElement(name);
@@ -78,10 +102,10 @@ public class CodeGenerationContext
             PopElement();
         }
     }
-    
+
     public string CurrentParent => PeekElement();
-    
-    public string ProcessControlElements(
+
+    public BuildValue ProcessControlElements(
         AumlAstObjectNode element,
         IDiagnosticSink diagnostics,
         bool isResource)
@@ -91,7 +115,7 @@ public class CodeGenerationContext
         {
             diagnostics.ReportError(Metadata.ClassName, MarkupMessages.AssemblyOfElementNotResolved(element.TypeReference.Assembly,
                 element.TypeReference.Name, element.TypeReference.Namespace, element.TypeReference.IsResolved), element);
-            return string.Empty;
+            return Variable(string.Empty);
         }
         var typeInfo = typeContainer.GetTypeByShortName(element.TypeReference.Name);
         var properties = element.GetProperties();
@@ -105,11 +129,12 @@ public class CodeGenerationContext
                          && typeInfo.InheritsFrom(Metadata.DefaultTypeContainer.UiTemplate.FullName);
 
         string elementName = string.Empty;
-        bool isRoot = element == Metadata.RootNode;
+        bool isRoot = _rootIsThis && element == Metadata.RootNode;
 
         if (isRoot)
         {
             elementName = "this";
+            _writer.Open(new ElementStep(element, elementName));
             EmitDesignSource(elementName, element);
         }
 
@@ -120,6 +145,7 @@ public class CodeGenerationContext
             elementName = isNamed && !isHeldBack
                 ? named
                 : GenerateNextElementName();
+            _writer.Open(new ElementStep(element, elementName));
             // Named elements in a control file assign their backing field; templates, resource files and x:Load elements
             // use a local.
             var hasBackingField = isNamed
@@ -127,7 +153,6 @@ public class CodeGenerationContext
                 && !isHeldBack
                 && EntityType is not (EntityType.ResourceDictionary or EntityType.StyleSet or EntityType.Theme
                                       or EntityType.ThemeVariant);
-            var declaration = hasBackingField ? elementName : $"var {elementName}";
 
             // A value-type element with text content (<Color x:Key="X">#33FFFFFF</Color>) is parsed from that text, so it
             // can be a keyed resource.
@@ -137,31 +162,33 @@ public class CodeGenerationContext
 
             if (isTemplate)
             {
-                EmitTemplateBuilder(declaration, typeInfo.QualifiedName, element, isResource, diagnostics);
+                EmitTemplateBuilder(elementName, hasBackingField, typeInfo, element, isResource, diagnostics);
             }
             else if (!string.IsNullOrEmpty(valueText))
             {
                 ReportIfUnparsable(typeInfo, diagnostics, $"<{typeInfo.Name}>{valueText}</{typeInfo.Name}>");
-                TextGenerator.WriteLine($"{declaration} = {Metadata.DefaultTypeContainer.TypeParser.QualifiedName}.Parse<{typeInfo.QualifiedName}>({Quote(valueText)});");
+                _writer.Add(new DeclareStep(elementName, ParseCall(typeInfo, valueText), hasBackingField));
             }
             else
             {
-                TextGenerator.WriteLine($"{declaration} = new {typeInfo.QualifiedName}();");
+                _writer.Add(new DeclareStep(elementName, new NewValue(Type(typeInfo)), hasBackingField));
                 EmitDesignSource(elementName, element);
                 // Carry the x:Name at runtime too, so {Binding ..., ElementName=X} resolves it by walking the tree (a view
                 // exposes named elements as fields; Name is what an ElementName binding matches on). Only for types that
                 // HAVE a Name property - a named non-UI object (e.g. a Transform an animation targets) does not.
                 if (isNamed && typeInfo.GetMemberByName("Name") is { MemberType: not null })
-                    TextGenerator.WriteLine($"{elementName}.Name = \"{named}\";");
+                {
+                    _writer.Add(new AssignStep(Variable(elementName), "Name", Unescaped(named)));
+                }
             }
             if (isNamed && CurrentTemplate != null)
             {
-                TextGenerator.WriteLine($"{CurrentTemplate}.RegisterName(\"{named}\", {elementName});");
+                _writer.Add(Invoke(Variable(CurrentTemplate), "RegisterName", Unescaped(named), Variable(elementName)));
             }
             else if (isNamed && EntityType is not (EntityType.ResourceDictionary or EntityType.StyleSet or EntityType.Theme
                                                    or EntityType.ThemeVariant))
             {
-                TextGenerator.WriteLine($"global::Adamantium.UI.Core.Templates.NameScope.Register(this, \"{named}\", {elementName});");
+                _writer.Add(Invoke(Type(NameScopeFqn), "Register", VariableValue.This, Unescaped(named), Variable(elementName)));
             }
         }
 
@@ -183,19 +210,20 @@ public class CodeGenerationContext
         if (isResource && !string.IsNullOrEmpty(key) && (IsPerTarget(element) || IsPerTargetType(element)))
         {
             var factoryName = GenerateNextElementName("shared");
-            TextGenerator.WriteLine($"var {factoryName} = {EmitPerTargetValue(element, false, diagnostics)};");
-            TextGenerator.WriteLine($@"Add(""{key}"", {factoryName});");
-            return factoryName;
+            _writer.Add(new DeclareStep(factoryName, EmitPerTargetValue(element, false, diagnostics)));
+            _writer.Add(Invoke(null, "Add", Unescaped(key), Variable(factoryName)));
+            _writer.Close();
+            return Variable(factoryName);
         }
 
         PushTypeContext(typeInfo);
 
         void ProcessProperties(IEnumerable<AumlAstPropertyNode> propertyNodes)
         {
-            foreach (var prop in propertyNodes)
+            foreach (var prop in EachInItsPropertyStep(propertyNodes))
             {
                 var propRef = (AumlAstPropertyReference)prop.Property;
-                string symbolName = isRoot ? propRef.Name : $"{CurrentParent}.{propRef.Name}";
+                var symbolTarget = isRoot ? null : Variable(CurrentParent);
                 // Property type it's always a type of the parent object for the current property.
                 // It will always be one level up.
                 // For ex. TargetType property -> ControlTemplate
@@ -240,9 +268,9 @@ public class CodeGenerationContext
                     continue;
                 }
 
-                if (resolvedType.MemberKind == ResolvedMemberKind.Event)
+                if (resolvedMember.MemberKind == ResolvedMemberKind.Event)
                 {
-                    TextGenerator.WriteLine($"{symbolName} += {prop.GetTextValue()};");
+                    _writer.Add(new SubscribeStep(symbolTarget, propRef.Name, prop.GetTextValue()));
                     continue;
                 }
 
@@ -256,15 +284,15 @@ public class CodeGenerationContext
                     var nullTarget = isRoot ? "this" : CurrentParent;
                     if (propRef.IsAttachedProperty)
                     {
-                        TextGenerator.WriteLine($"{Qualified(propRef.OwnerType.GetFullTypeName())}.Set{propRef.Name}({nullTarget}, null);");
+                        _writer.Add(Invoke(OwnerOf(propRef), $"Set{propRef.Name}", Variable(nullTarget), NullValue.Instance));
                     }
                     else if (typeInfo != null && typeInfo.ImplementsInterface("IAdamantiumComponent"))
                     {
-                        TextGenerator.WriteLine($"{nullTarget}.SetValue(\"{propRef.Name}\", null);");
+                        _writer.Add(Invoke(Variable(nullTarget), "SetValue", Unescaped(propRef.Name), NullValue.Instance));
                     }
                     else
                     {
-                        TextGenerator.WriteLine($"{nullTarget}.{propRef.Name} = null;");
+                        _writer.Add(new AssignStep(Variable(nullTarget), propRef.Name, NullValue.Instance));
                     }
 
                     continue;
@@ -275,11 +303,11 @@ public class CodeGenerationContext
                     var localizedVar = EmitLocalizedBinding(localized, diagnostics, isResource);
                     if (element.TypeReference.Namespace == "Adamantium.UI.Core.Resources")
                     {
-                        TextGenerator.WriteLine($"{symbolName} = {localizedVar};");
+                        _writer.Add(new AssignStep(symbolTarget, propRef.Name, localizedVar));
                     }
                     else
                     {
-                        TextGenerator.WriteLine(EmitSetBinding(isRoot ? "this" : CurrentParent, propRef, localizedVar));
+                        _writer.Add(EmitSetBinding(isRoot ? "this" : CurrentParent, propRef, localizedVar));
                     }
 
                     continue;
@@ -296,7 +324,7 @@ public class CodeGenerationContext
                     && !value.IsTextNode())
                 {
                     var rdVar = GenerateNextElementName("res");
-                    TextGenerator.WriteLine($"var {rdVar} = new {Metadata.DefaultTypeContainer.ResourceDictionary.QualifiedName}();");
+                    _writer.Add(new DeclareStep(rdVar, new NewValue(Type(Metadata.DefaultTypeContainer.ResourceDictionary))));
                     foreach (var entry in prop.Values.OfType<AumlAstObjectNode>())
                     {
                         // A <ResourceLink> child is not an entry but a LINK to a dictionary FILE, so it goes to Includes
@@ -306,7 +334,7 @@ public class CodeGenerationContext
                             && entryType.FullName == Metadata.DefaultTypeContainer.ResourceLink.FullName)
                         {
                             var linkName = ProcessControlElements(entry, diagnostics, isResource: false);
-                            TextGenerator.WriteLine($"{rdVar}.Includes.Add({linkName});");
+                            _writer.Add(Invoke(new MemberValue(Variable(rdVar), "Includes"), "Add", linkName));
                             continue;
                         }
 
@@ -318,20 +346,24 @@ public class CodeGenerationContext
                             ? EmitPerTargetValue(entry, false, diagnostics)
                             : ProcessControlElements(entry, diagnostics, isResource: false);
                         if (!string.IsNullOrEmpty(entryKey))
-                            TextGenerator.WriteLine($@"{rdVar}.Add(""{entryKey}"", {entryName});");
+                        {
+                            _writer.Add(Invoke(Variable(rdVar), "Add", Unescaped(entryKey), entryName));
+                        }
                         else
+                        {
                             diagnostics.ReportError(Metadata.ClassName,
                                 MarkupMessages.InlineResourceNeedsKey(propRef.Name), propRef);
+                        }
                     }
 
                     if (propRef.IsAttachedProperty)
                     {
                         var setTarget = isRoot ? "this" : CurrentParent;
-                        TextGenerator.WriteLine($"{Qualified(propRef.OwnerType.GetFullTypeName())}.Set{propRef.Name}({setTarget}, {rdVar});");
+                        _writer.Add(Invoke(OwnerOf(propRef), $"Set{propRef.Name}", Variable(setTarget), Variable(rdVar)));
                     }
                     else
                     {
-                        TextGenerator.WriteLine($"{symbolName} = {rdVar};");
+                        _writer.Add(new AssignStep(symbolTarget, propRef.Name, Variable(rdVar)));
                     }
                     continue;
                 }
@@ -345,7 +377,7 @@ public class CodeGenerationContext
                     && valueResolvedType.InheritsFrom(Metadata.DefaultTypeContainer.UiTemplate.FullName))
                 {
                     var templateName = GenerateNextElementName("template");
-                    EmitTemplateBuilder($"var {templateName}", valueResolvedType.QualifiedName, value, isResource, diagnostics);
+                    EmitTemplateBuilder(templateName, false, valueResolvedType, value, isResource, diagnostics);
                     // A template assigned to a PART's property inside a ControlTemplate goes to TEMPLATE priority (not the CLR
                     // setter's LOCAL), so a theme's own Template setter/trigger can still override it - same rule as every
                     // other templated-part property. Outside a template it stays a plain assignment.
@@ -354,19 +386,18 @@ public class CodeGenerationContext
                         // An ATTACHED template (Ribbon.QuickAccessTemplate on a Slider) belongs to its owner's setter,
                         // not to the element - the element has no such property and the assignment did not compile.
                         var attachedTarget = isRoot ? "this" : CurrentParent;
-                        TextGenerator.WriteLine(
-                            $"{Qualified(propRef.OwnerType.GetFullTypeName())}.Set{propRef.Name}({attachedTarget}, {templateName});");
+                        _writer.Add(Invoke(OwnerOf(propRef), $"Set{propRef.Name}", Variable(attachedTarget), Variable(templateName)));
                     }
                     else if (CurrentTemplate != null && typeInfo != null && typeInfo.ImplementsInterface("IAdamantiumComponent")
                              && HasAdamantiumProperty(typeInfo, propRef.Name))
                     {
                         var target = isRoot ? "this" : CurrentParent;
-                        TextGenerator.WriteLine($"{target}.SetValue(\"{propRef.Name}\", {templateName}, global::Adamantium.UI.Core.ValuePriority.Template);");
+                        _writer.Add(Invoke(Variable(target), "SetValue", Unescaped(propRef.Name), Variable(templateName), Priority("Template")));
                     }
                     else
                     {
                         var target = isRoot ? "this" : CurrentParent;
-                        TextGenerator.WriteLine($"{target}.{propRef.Name} = {templateName};");
+                        _writer.Add(new AssignStep(Variable(target), propRef.Name, Variable(templateName)));
                     }
                     continue;
                 }
@@ -375,7 +406,7 @@ public class CodeGenerationContext
                     var typeContainer = Metadata.TypeResolver.GetResolvedAssembly(literal.TypeReference.Assembly);
                     var typeInfo = typeContainer.GetTypeByShortName(literal.TypeReference.Name);
                     var literalName = GenerateNextElementName();
-                    TextGenerator.WriteLine($"var {literalName} = new {typeInfo.QualifiedName}();");
+                    _writer.Add(new DeclareStep(literalName, new NewValue(Type(typeInfo))));
                 }
                 else if (value is AumlAstMarkupExtensionNode extension)
                 {
@@ -388,8 +419,8 @@ public class CodeGenerationContext
                             // applied; in any file, not only resource files.
                             if (element.TypeReference.Namespace == "Adamantium.UI.Core.Resources")
                             {
-                                TextGenerator.WriteLine(
-                                    $"{symbolName} = new {Metadata.DefaultTypeContainer.ResourceReference.QualifiedName}(\"{key}\");");
+                                _writer.Add(new AssignStep(symbolTarget, propRef.Name,
+                                    new NewValue(Type(Metadata.DefaultTypeContainer.ResourceReference), Unescaped(key))));
                             }
                             else if (typeInfo != null && !propRef.IsAttachedProperty
                                      && (!typeInfo.ImplementsInterface("IAdamantiumComponent") || !HasAdamantiumProperty(typeInfo, propRef.Name)))
@@ -397,9 +428,10 @@ public class CodeGenerationContext
                                 // A plain markup object (a template selector, a converter), or a plain CLR property of a
                                 // component: no property store to defer into, so resolve the key now and assign it.
                                 var target = isRoot ? "this" : CurrentParent;
-                                TextGenerator.WriteLine(
-                                    $"{target}.{propRef.Name} = ({resolvedType.QualifiedName})" +
-                                    $"({Metadata.DefaultTypeContainer.ResourceResolver.QualifiedName}.ResolveNow(\"{key}\"));");
+                                var resolveNow = new CallValue(Type(Metadata.DefaultTypeContainer.ResourceResolver),
+                                    "ResolveNow", Unescaped(key));
+                                _writer.Add(new AssignStep(Variable(target), propRef.Name,
+                                    new CastValue(Type(resolvedType), resolveNow, innerParenthesized: true)));
                             }
                             else
                             {
@@ -407,11 +439,9 @@ public class CodeGenerationContext
                                 // a ControlTemplate (so triggers can override) and Local otherwise, like a literal. An
                                 // attached one is named with its owner, the only way the element can find it.
                                 var target = isRoot ? "this" : CurrentParent;
-                                var deferredPriority = CurrentTemplate != null
-                                    ? "global::Adamantium.UI.Core.ValuePriority.Template"
-                                    : "global::Adamantium.UI.Core.ValuePriority.Local";
-                                TextGenerator.WriteLine(
-                                    $"{Metadata.DefaultTypeContainer.ResourceResolver.QualifiedName}.SetDeferred({target}, \"{PropertyPath(propRef)}\", \"{key}\", {deferredPriority});");
+                                var deferredPriority = Priority(CurrentTemplate != null ? "Template" : "Local");
+                                _writer.Add(Invoke(Type(Metadata.DefaultTypeContainer.ResourceResolver), "SetDeferred",
+                                    Variable(target), Unescaped(PropertyPath(propRef)), Unescaped(key), deferredPriority));
                             }
 
                             break;
@@ -422,10 +452,10 @@ public class CodeGenerationContext
                             // it's stored as the marker (Setter.Apply -> SetBinding), in any file - a style written in a
                             // view too; as a normal property it's bound now.
                             var key = extension.Arguments[0].Value.GetTextValue();
+                            var themeResource = new NewValue(Type(Metadata.DefaultTypeContainer.ThemeResource), Unescaped(key));
                             if (element.TypeReference.Namespace == "Adamantium.UI.Core.Resources")
                             {
-                                TextGenerator.WriteLine(
-                                    $"{symbolName} = new {Metadata.DefaultTypeContainer.ThemeResource.QualifiedName}(\"{key}\");");
+                                _writer.Add(new AssignStep(symbolTarget, propRef.Name, themeResource));
                             }
                             else if (IsPlainProperty(typeInfo, propRef))
                             {
@@ -434,10 +464,9 @@ public class CodeGenerationContext
                             else
                             {
                                 var trVar = GenerateNextElementName("tr");
-                                TextGenerator.WriteLine(
-                                    $"var {trVar} = new {Metadata.DefaultTypeContainer.ThemeResource.QualifiedName}(\"{key}\");");
+                                _writer.Add(new DeclareStep(trVar, themeResource));
                                 var trTarget = isRoot ? "this" : CurrentParent;
-                                TextGenerator.WriteLine($"{trVar}.Apply({trTarget}, \"{PropertyPath(propRef)}\");");
+                                _writer.Add(Invoke(Variable(trVar), "Apply", Variable(trTarget), Unescaped(PropertyPath(propRef))));
                             }
 
                             break;
@@ -449,10 +478,10 @@ public class CodeGenerationContext
                             // (Setter.Apply / the trigger activator call Apply), in any file; as a normal property it's
                             // connected now.
                             var key = extension.Arguments[0].Value.GetTextValue();
+                            var observable = new NewValue(Type(Metadata.DefaultTypeContainer.ObservableResource), Unescaped(key));
                             if (element.TypeReference.Namespace == "Adamantium.UI.Core.Resources")
                             {
-                                TextGenerator.WriteLine(
-                                    $"{symbolName} = new {Metadata.DefaultTypeContainer.ObservableResource.QualifiedName}(\"{key}\");");
+                                _writer.Add(new AssignStep(symbolTarget, propRef.Name, observable));
                             }
                             else if (IsPlainProperty(typeInfo, propRef))
                             {
@@ -461,10 +490,9 @@ public class CodeGenerationContext
                             else
                             {
                                 var orVar = GenerateNextElementName("or");
-                                TextGenerator.WriteLine(
-                                    $"var {orVar} = new {Metadata.DefaultTypeContainer.ObservableResource.QualifiedName}(\"{key}\");");
+                                _writer.Add(new DeclareStep(orVar, observable));
                                 var orTarget = isRoot ? "this" : CurrentParent;
-                                TextGenerator.WriteLine($"{orVar}.Apply({orTarget}, \"{PropertyPath(propRef)}\");");
+                                _writer.Add(Invoke(Variable(orVar), "Apply", Variable(orTarget), Unescaped(PropertyPath(propRef))));
                             }
 
                             break;
@@ -479,7 +507,7 @@ public class CodeGenerationContext
                                 // marker; the trigger resolves it against the templated parent when it fires - see
                                 // PropertyTriggerActivator.ApplyTemplateBinding. (Distinct from a normal template
                                 // element binding below, which wires up immediately at template build.)
-                                TextGenerator.WriteLine($"{symbolName} = {tbVar};");
+                                _writer.Add(new AssignStep(symbolTarget, propRef.Name, tbVar));
                             }
                             else if (CurrentTemplate == null)
                             {
@@ -488,8 +516,8 @@ public class CodeGenerationContext
                             }
                             else
                             {
-                                TextGenerator.WriteLine(
-                                    $"{CurrentTemplate}.AddTemplateBinding({CurrentParent}, \"{PropertyPath(propRef)}\", {tbVar});");
+                                _writer.Add(Invoke(Variable(CurrentTemplate), "AddTemplateBinding",
+                                    Variable(CurrentParent), Unescaped(PropertyPath(propRef)), tbVar));
                             }
 
                             break;
@@ -504,18 +532,18 @@ public class CodeGenerationContext
                                 // it as a live binding on the styled element (resolved against ITS DataContext) - this is
                                 // what lets an ItemContainerStyle bind a generated container's props from the data item.
                                 // Mirrors the ResourceReference/Ancestor/Self markers above.
-                                TextGenerator.WriteLine($"{symbolName} = {bindingVar};");
+                                _writer.Add(new AssignStep(symbolTarget, propRef.Name, bindingVar));
                             }
                             else if (IsBindingTypedProperty(resolvedType))
                             {
                                 // The property itself HOLDS a binding object (e.g. DataTrigger.Binding) - assign it.
-                                TextGenerator.WriteLine($"{symbolName} = {bindingVar};");
+                                _writer.Add(new AssignStep(symbolTarget, propRef.Name, bindingVar));
                             }
                             else
                             {
                                 // Ordinary property: establish a live binding on it.
                                 var bindingTarget = isRoot ? "this" : CurrentParent;
-                                TextGenerator.WriteLine(EmitSetBinding(bindingTarget, propRef, bindingVar));
+                                _writer.Add(EmitSetBinding(bindingTarget, propRef, bindingVar));
                             }
                             break;
                         }
@@ -526,7 +554,8 @@ public class CodeGenerationContext
                             // (re)resolves against the tree on attach. Works in a ControlTemplate, a DataTemplate, or on a
                             // plain element - target is just the current element.
                             var acVar = GenerateNextElementName("anc");
-                            TextGenerator.WriteLine($"var {acVar} = new {Qualified(extension.TypeReference.GetFullTypeName())}();");
+                            var ancestor = Variable(acVar);
+                            _writer.Add(new DeclareStep(acVar, new NewValue(Type(Qualified(extension.TypeReference.GetFullTypeName())))));
 
                             var positional = 0;
                             foreach (var argument in extension.Arguments)
@@ -540,13 +569,17 @@ public class CodeGenerationContext
                                     {
                                         var resolved = ResolveTypeArgument(argument.Value);
                                         if (resolved == null)
+                                        {
                                             diagnostics.ReportError(Metadata.ClassName, MarkupMessages.AncestorTypeNotResolved(text), extension);
+                                        }
                                         else
-                                            TextGenerator.WriteLine($"{acVar}.AncestorType = typeof({resolved.QualifiedName});");
+                                        {
+                                            _writer.Add(new AssignStep(ancestor, "AncestorType", new TypeOfValue(Type(resolved))));
+                                        }
                                     }
                                     else if (positional == 1)
                                     {
-                                        TextGenerator.WriteLine($"{acVar}.Path = \"{text}\";");
+                                        _writer.Add(new AssignStep(ancestor, "Path", Unescaped(text)));
                                     }
                                     positional++;
                                 }
@@ -554,35 +587,51 @@ public class CodeGenerationContext
                                 {
                                     switch (argument.Name)
                                     {
-                                        case "Path": TextGenerator.WriteLine($"{acVar}.Path = \"{text}\";"); break;
-                                        case "Skip": TextGenerator.WriteLine($"{acVar}.Skip = {text};"); break;
-                                        case "Name": TextGenerator.WriteLine($"{acVar}.Name = \"{text}\";"); break;
-                                        case "Logical": TextGenerator.WriteLine($"{acVar}.Logical = {text.ToLowerInvariant()};"); break;
+                                        case "Path": _writer.Add(new AssignStep(ancestor, "Path", Unescaped(text))); break;
+                                        case "Skip": _writer.Add(new AssignStep(ancestor, "Skip", new LiteralValue(text))); break;
+                                        case "Name": _writer.Add(new AssignStep(ancestor, "Name", Unescaped(text))); break;
+                                        case "Logical": _writer.Add(new AssignStep(ancestor, "Logical", new LiteralValue(text.ToLowerInvariant()))); break;
                                         case "Stop":
                                         {
                                             var st = ResolveTypeArgument(argument.Value);
                                             if (st == null)
+                                            {
                                                 diagnostics.ReportError(Metadata.ClassName, MarkupMessages.AncestorStopTypeNotResolved(text), extension);
+                                            }
                                             else
-                                                TextGenerator.WriteLine($"{acVar}.Stop = typeof({st.QualifiedName});");
+                                            {
+                                                _writer.Add(new AssignStep(ancestor, "Stop", new TypeOfValue(Type(st))));
+                                            }
+
                                             break;
                                         }
                                         case "Mode":
-                                            TextGenerator.WriteLine($"{acVar}.Mode = {Qualified(argument.Value.TypeReference.GetFullTypeName())}.{text};");
+                                            _writer.Add(new AssignStep(ancestor, "Mode",
+                                                new MemberValue(Type(Qualified(argument.Value.TypeReference.GetFullTypeName())), text)));
                                             break;
                                         case "Converter":
                                             var acConv = EmitValueExpression(argument.Value, ValueConverterFqn, diagnostics, isResource);
-                                            if (acConv != null) TextGenerator.WriteLine($"{acVar}.Converter = {acConv};");
-                                            else diagnostics.ReportError(Metadata.ClassName, MarkupMessages.AncestorConverterInvalid(), extension);
+                                            if (acConv != null)
+                                            {
+                                                _writer.Add(new AssignStep(ancestor, "Converter", acConv));
+                                            }
+                                            else
+                                            {
+                                                diagnostics.ReportError(Metadata.ClassName, MarkupMessages.AncestorConverterInvalid(), extension);
+                                            }
+
                                             break;
                                         case "ConverterParameter":
-                                            TextGenerator.WriteLine($"{acVar}.ConverterParameter = {EmitValueExpression(argument.Value, "object", diagnostics, isResource) ?? $"\"{text}\""};");
+                                            _writer.Add(new AssignStep(ancestor, "ConverterParameter",
+                                                EmitValueExpression(argument.Value, "object", diagnostics, isResource) ?? Unescaped(text)));
                                             break;
                                         case "FallbackValue":
-                                            TextGenerator.WriteLine($"{acVar}.FallbackValue = {EmitValueExpression(argument.Value, "object", diagnostics, isResource) ?? $"\"{text}\""};");
+                                            _writer.Add(new AssignStep(ancestor, "FallbackValue",
+                                                EmitValueExpression(argument.Value, "object", diagnostics, isResource) ?? Unescaped(text)));
                                             break;
                                         case "TargetNullValue":
-                                            TextGenerator.WriteLine($"{acVar}.TargetNullValue = {EmitValueExpression(argument.Value, "object", diagnostics, isResource) ?? $"\"{text}\""};");
+                                            _writer.Add(new AssignStep(ancestor, "TargetNullValue",
+                                                EmitValueExpression(argument.Value, "object", diagnostics, isResource) ?? Unescaped(text)));
                                             break;
                                         default:
                                             diagnostics.ReportError(Metadata.ClassName, MarkupMessages.AncestorUnknownArgument(argument.Name), extension);
@@ -595,12 +644,12 @@ public class CodeGenerationContext
                             {
                                 // {Ancestor ...} as a Setter/trigger value: store the marker; Setter.Apply (or the trigger
                                 // activator) calls .Apply against each matched element when the setter fires.
-                                TextGenerator.WriteLine($"{symbolName} = {acVar};");
+                                _writer.Add(new AssignStep(symbolTarget, propRef.Name, ancestor));
                             }
                             else
                             {
                                 var acTarget = isRoot ? "this" : CurrentParent;
-                                TextGenerator.WriteLine($"{acVar}.Apply({acTarget}, \"{propRef.Name}\");");
+                                _writer.Add(Invoke(ancestor, "Apply", Variable(acTarget), Unescaped(propRef.Name)));
                             }
                             break;
                         }
@@ -608,30 +657,46 @@ public class CodeGenerationContext
                         {
                             // {Self Path, Mode=} -> bind a target property to another property on the SAME element.
                             var slfVar = GenerateNextElementName("self");
-                            TextGenerator.WriteLine($"var {slfVar} = new {Qualified(extension.TypeReference.GetFullTypeName())}();");
+                            var self = Variable(slfVar);
+                            _writer.Add(new DeclareStep(slfVar, new NewValue(Type(Qualified(extension.TypeReference.GetFullTypeName())))));
                             foreach (var argument in extension.Arguments)
                             {
                                 var text = argument.Value.GetTextValue();
                                 if (string.IsNullOrEmpty(argument.Name) || argument.Name == "Path")
-                                    TextGenerator.WriteLine($"{slfVar}.Path = \"{text}\";");
-                                else switch (argument.Name)
+                                {
+                                    _writer.Add(new AssignStep(self, "Path", Unescaped(text)));
+                                    continue;
+                                }
+
+                                switch (argument.Name)
                                 {
                                     case "Mode":
-                                        TextGenerator.WriteLine($"{slfVar}.Mode = {Qualified(argument.Value.TypeReference.GetFullTypeName())}.{text};");
+                                        _writer.Add(new AssignStep(self, "Mode",
+                                            new MemberValue(Type(Qualified(argument.Value.TypeReference.GetFullTypeName())), text)));
                                         break;
                                     case "Converter":
                                         var slfConv = EmitValueExpression(argument.Value, ValueConverterFqn, diagnostics, isResource);
-                                        if (slfConv != null) TextGenerator.WriteLine($"{slfVar}.Converter = {slfConv};");
-                                        else diagnostics.ReportError(Metadata.ClassName, MarkupMessages.SelfConverterInvalid(), extension);
+                                        if (slfConv != null)
+                                        {
+                                            _writer.Add(new AssignStep(self, "Converter", slfConv));
+                                        }
+                                        else
+                                        {
+                                            diagnostics.ReportError(Metadata.ClassName, MarkupMessages.SelfConverterInvalid(), extension);
+                                        }
+
                                         break;
                                     case "ConverterParameter":
-                                        TextGenerator.WriteLine($"{slfVar}.ConverterParameter = {EmitValueExpression(argument.Value, "object", diagnostics, isResource) ?? $"\"{text}\""};");
+                                        _writer.Add(new AssignStep(self, "ConverterParameter",
+                                            EmitValueExpression(argument.Value, "object", diagnostics, isResource) ?? Unescaped(text)));
                                         break;
                                     case "FallbackValue":
-                                        TextGenerator.WriteLine($"{slfVar}.FallbackValue = {EmitValueExpression(argument.Value, "object", diagnostics, isResource) ?? $"\"{text}\""};");
+                                        _writer.Add(new AssignStep(self, "FallbackValue",
+                                            EmitValueExpression(argument.Value, "object", diagnostics, isResource) ?? Unescaped(text)));
                                         break;
                                     case "TargetNullValue":
-                                        TextGenerator.WriteLine($"{slfVar}.TargetNullValue = {EmitValueExpression(argument.Value, "object", diagnostics, isResource) ?? $"\"{text}\""};");
+                                        _writer.Add(new AssignStep(self, "TargetNullValue",
+                                            EmitValueExpression(argument.Value, "object", diagnostics, isResource) ?? Unescaped(text)));
                                         break;
                                     default:
                                         diagnostics.ReportError(Metadata.ClassName, MarkupMessages.SelfUnknownArgument(argument.Name), extension);
@@ -640,26 +705,24 @@ public class CodeGenerationContext
                             }
                             if (isResource && element.TypeReference.Namespace == "Adamantium.UI.Core.Resources")
                             {
-                                TextGenerator.WriteLine($"{symbolName} = {slfVar};");
+                                _writer.Add(new AssignStep(symbolTarget, propRef.Name, self));
                             }
                             else
                             {
                                 var slfTarget = isRoot ? "this" : CurrentParent;
-                                TextGenerator.WriteLine($"{slfVar}.Apply({slfTarget}, \"{propRef.Name}\");");
+                                _writer.Add(Invoke(self, "Apply", Variable(slfTarget), Unescaped(propRef.Name)));
                             }
                             break;
                         }
                         default:
-                            string nestedName = ProcessNestedValue(extension, diagnostics, isResource);
+                            var nestedName = ProcessNestedValue(extension, diagnostics, isResource);
                             if (propRef.IsAttachedProperty)
                             {
-                                TextGenerator.WriteLine(
-                                    $"{Qualified(propRef.OwnerType.GetFullTypeName())}.Set{propRef.Name}({elementName}, {nestedName});");
+                                _writer.Add(Invoke(OwnerOf(propRef), $"Set{propRef.Name}", Variable(elementName), nestedName));
                             }
                             else
                             {
-                                TextGenerator.WriteLine(
-                                    $"{Qualified(propRef.OwnerType.GetFullTypeName())}.{propRef.Name} = {nestedName};");
+                                _writer.Add(new AssignStep(OwnerOf(propRef), propRef.Name, nestedName));
                             }
                             break;
                     }
@@ -681,14 +744,12 @@ public class CodeGenerationContext
                     // override it.
                     if (CurrentTemplate != null)
                     {
-                        TextGenerator.WriteLine(
-                            $"{attachedTarget}.SetValue({Qualified(propRef.OwnerType.GetFullTypeName())}.{propRef.Name}Property, " +
-                            $"{expr}, global::Adamantium.UI.Core.ValuePriority.Template);");
+                        _writer.Add(Invoke(Variable(attachedTarget), "SetValue",
+                            new MemberValue(OwnerOf(propRef), $"{propRef.Name}Property"), expr, Priority("Template")));
                     }
                     else
                     {
-                        TextGenerator.WriteLine(
-                            $"{Qualified(propRef.OwnerType.GetFullTypeName())}.Set{propRef.Name}({attachedTarget}, {expr});");
+                        _writer.Add(Invoke(OwnerOf(propRef), $"Set{propRef.Name}", Variable(attachedTarget), expr));
                     }
                 }
                 // A collection given child elements: new + Add per child. The string form is a text node and goes through
@@ -697,13 +758,13 @@ public class CodeGenerationContext
                 {
                     if (resolvedMember.MemberKind == ResolvedMemberKind.Property && resolvedMember.HasSetter())
                     {
-                        TextGenerator.WriteLine($"{symbolName} = new {resolvedType.QualifiedName}();");
+                        _writer.Add(new AssignStep(symbolTarget, propRef.Name, new NewValue(Type(resolvedType))));
                     }
 
                     foreach (var propertyValue in prop.Values)
                     {
-                        string nestedName = ProcessNestedValue(propertyValue, diagnostics, isResource);
-                        TextGenerator.WriteLine($"{symbolName}.Add({nestedName});");
+                        var nestedName = ProcessNestedValue(propertyValue, diagnostics, isResource);
+                        _writer.Add(Invoke(new MemberValue(symbolTarget, propRef.Name), "Add", nestedName));
                     }
                 }
                 else if (resolvedType.FullName == "System.Type")
@@ -714,25 +775,25 @@ public class CodeGenerationContext
                         diagnostics.ReportError(Metadata.ClassName, MarkupMessages.PropertyTypeNotFound(prop.GetTextValue(), propRef.Name), propRef);
                         continue;
                     }
-                    TextGenerator.WriteLine($"{symbolName} = typeof({type.QualifiedName});");
+                    _writer.Add(new AssignStep(symbolTarget, propRef.Name, new TypeOfValue(Type(type))));
                 }
                 else if (value.IsTextNode())
                 {
+                    var where = $"{propRef.Name}=\"{prop.GetTextValue()}\" (line {prop.Line})";
                     // Template parts get their literals at Template priority so triggers can override them; plain CLR
                     // objects in triggers keep ordinary assignments.
                     if (CurrentTemplate != null && typeInfo.ImplementsInterface("IAdamantiumComponent")
                         && HasAdamantiumProperty(typeInfo, propRef.Name))
                     {
                         var target = isRoot ? "this" : CurrentParent;
-                        var expr = BuildValueExpression(prop.GetTextValue(), resolvedType, diagnostics,
-                            $"{propRef.Name}=\"{prop.GetTextValue()}\" (line {prop.Line})");
-                        TextGenerator.WriteLine(
-                            $"{target}.SetValue(\"{propRef.Name}\", ({resolvedType.QualifiedName})({expr}), global::Adamantium.UI.Core.ValuePriority.Template);");
+                        var expr = BuildValueExpression(prop.GetTextValue(), resolvedType, diagnostics, where);
+                        _writer.Add(Invoke(Variable(target), "SetValue", Unescaped(propRef.Name),
+                            new CastValue(Type(resolvedType), expr, innerParenthesized: true), Priority("Template")));
                     }
                     else
                     {
-                        GenerateSimpleAssignment(symbolName, prop.GetTextValue(), resolvedType, diagnostics,
-                            $"{propRef.Name}=\"{prop.GetTextValue()}\" (line {prop.Line})");
+                        _writer.Add(new AssignStep(symbolTarget, propRef.Name,
+                            BuildValueExpression(prop.GetTextValue(), resolvedType, diagnostics, where)));
                     }
                 }
                 else
@@ -746,12 +807,12 @@ public class CodeGenerationContext
                             var bindingVar = EmitBinding(propertyValue, diagnostics, isResource);
                             if (IsBindingTypedProperty(resolvedType))
                             {
-                                TextGenerator.WriteLine($"{symbolName} = {bindingVar};");
+                                _writer.Add(new AssignStep(symbolTarget, propRef.Name, bindingVar));
                             }
                             else
                             {
                                 var bindingTarget = isRoot ? "this" : CurrentParent;
-                                TextGenerator.WriteLine(EmitSetBinding(bindingTarget, propRef, bindingVar));
+                                _writer.Add(EmitSetBinding(bindingTarget, propRef, bindingVar));
                             }
                             continue;
                         }
@@ -760,11 +821,11 @@ public class CodeGenerationContext
                         if (IsPerTarget(propertyValue)
                             || (propRef.Name == "Value" && typeInfo.ImplementsInterface("ISetter") && IsPerTargetType(propertyValue)))
                         {
-                            TextGenerator.WriteLine($"{symbolName} = {EmitPerTargetValue(propertyValue, isResource, diagnostics)};");
+                            _writer.Add(new AssignStep(symbolTarget, propRef.Name, EmitPerTargetValue(propertyValue, isResource, diagnostics)));
                             continue;
                         }
 
-                        string nestedName = ProcessNestedValue(propertyValue, diagnostics, isResource);
+                        var nestedName = ProcessNestedValue(propertyValue, diagnostics, isResource);
                         // Same rule as the text-node branch above: a PART's property set inside a ControlTemplate lands at
                         // TEMPLATE priority, not the CLR setter's LOCAL - so a theme trigger/style can override it. Nested
                         // object values (e.g. <X.Template><ControlTemplate/>) used to skip this and go to Local.
@@ -772,11 +833,11 @@ public class CodeGenerationContext
                             && HasAdamantiumProperty(typeInfo, propRef.Name))
                         {
                             var target = isRoot ? "this" : CurrentParent;
-                            TextGenerator.WriteLine($"{target}.SetValue(\"{propRef.Name}\", {nestedName}, global::Adamantium.UI.Core.ValuePriority.Template);");
+                            _writer.Add(Invoke(Variable(target), "SetValue", Unescaped(propRef.Name), nestedName, Priority("Template")));
                         }
                         else
                         {
-                            TextGenerator.WriteLine($"{symbolName} = {nestedName};");
+                            _writer.Add(new AssignStep(symbolTarget, propRef.Name, nestedName));
                         }
                     }
                 }
@@ -789,11 +850,16 @@ public class CodeGenerationContext
             {
                 var child = childNodes[childIndex];
 
+                var childStep = new ChildStep(child);
+                _writer.Open(childStep);
+
                 // x:Load: the child is not built here at all. What goes in its place is a slot holding the factory that
                 // would build it, and the condition that says when - see EmitLoadSlot.
                 if (GetLoadDirective(child) is { } load)
                 {
+                    childStep.Placement = ChildPlacement.LoadSlot;
                     EmitLoadSlot(child, load, childIndex, elementName, typeInfo, diagnostics, isResource);
+                    _writer.Close();
                     continue;
                 }
 
@@ -801,15 +867,18 @@ public class CodeGenerationContext
 
                 if (element.TypeReference.Name == "Style")
                 {
-                    TextGenerator.WriteLine($"{ParentName}.Add({childName});");
+                    childStep.Placement = ChildPlacement.Owner;
+                    _writer.Add(Invoke(Variable(ParentName), "Add", childName));
                 }
                 else if (typeInfo.ImplementsInterface("ITrigger"))
                 {
-                    TextGenerator.WriteLine($"{ParentName}.Add({childName});");
+                    childStep.Placement = ChildPlacement.Owner;
+                    _writer.Add(Invoke(Variable(ParentName), "Add", childName));
                 }
                 else if (MarkupCollectionFor(typeInfo, child) is { } collection)
                 {
-                    TextGenerator.WriteLine($"{elementName}.{collection}.Add({childName});");
+                    childStep.Placement = ChildPlacement.MarkupCollection;
+                    _writer.Add(Invoke(new MemberValue(Variable(elementName), collection), "Add", childName));
                 }
                 // [Content] BEFORE IContainer: the attribute is a statement by THIS type about where its markup
                 // children go and is searched most-derived first, while IContainer is one implementation for the whole
@@ -817,23 +886,29 @@ public class CodeGenerationContext
                 // declaration. Where both agree (a Panel's Children) the emitted line is the same either way.
                 else if (typeInfo.FindPropertyWithAttribute("Adamantium.UI.Core.ContentAttribute", out var contentProp))
                 {
+                    childStep.Placement = ChildPlacement.Tree;
                     if (contentProp.PropertyType.IsCollection())
                     {
-                        TextGenerator.WriteLine($"{elementName}.{contentProp.Name}.Add({childName});");
+                        _writer.Add(Invoke(new MemberValue(Variable(elementName), contentProp.Name), "Add", childName));
                     }
                     else
                     {
-                        TextGenerator.WriteLine($"{elementName}.{contentProp.Name} = {childName};");
+                        _writer.Add(new AssignStep(Variable(elementName), contentProp.Name, childName));
                     }
                 }
                 else if (typeInfo.ImplementsInterface("IContainer"))
                 {
-                    TextGenerator.WriteLine($"(({typeInfo.GetInterface("IContainer").QualifiedName}){elementName}).AddOrSetChildComponent({childName});");
+                    childStep.Placement = ChildPlacement.Tree;
+                    var container = new CastValue(Type(typeInfo.GetInterface("IContainer")), Variable(elementName));
+                    _writer.Add(Invoke(container, "AddOrSetChildComponent", childName));
                 }
                 else if (isResource && Metadata.RootEntityType != EntityType.ResourceDictionary)
                 {
-                    TextGenerator.WriteLine($"Add({childName});");
+                    childStep.Placement = ChildPlacement.Resources;
+                    _writer.Add(Invoke(null, "Add", childName));
                 }
+
+                _writer.Close();
             }
         }
 
@@ -857,18 +932,29 @@ public class CodeGenerationContext
 
         if (isResource && !string.IsNullOrEmpty(key))
         {
-            TextGenerator.WriteLine($@"Add(""{key}"", {elementName});");
+            _writer.Add(Invoke(null, "Add", Unescaped(key), Variable(elementName)));
         }
-        
-        PopTypeContext();
 
-        return elementName;
+        PopTypeContext();
+        _writer.Close();
+
+        return Variable(elementName);
+    }
+
+    private IEnumerable<AumlAstPropertyNode> EachInItsPropertyStep(IEnumerable<AumlAstPropertyNode> propertyNodes)
+    {
+        foreach (var node in propertyNodes)
+        {
+            _writer.Open(new PropertyStep(node));
+            yield return node;
+            _writer.Close();
+        }
     }
 
     /// <summary>The <c>x:Load</c> directive on this element, or null. Its value has already been judged by the
     /// transformer - text here is only ever True or False, anything else is a binding node.</summary>
     internal static AumlAstDirective GetLoadDirective(AumlAstObjectNode node) =>
-        node.Children.OfType<AumlAstDirective>().FirstOrDefault(d => d.Name == AumlDirectives.Load);
+        NodeScan.First<AumlAstDirective>(node.Children, static d => d.Name == AumlDirectives.Load);
 
     /// <summary>The field holding the slot of a NAMED held-back element. The name is exposed as a property that reads
     /// through it, so asking for the element by name builds it - see the generated accessor.</summary>
@@ -901,35 +987,36 @@ public class CodeGenerationContext
         // slot and builds it. An unnamed one is only ever driven by its condition, so a local is enough.
         var isNamed = Metadata.NamedElementsMap.TryGetValue(child, out var childName_);
         var slotVar = isNamed ? LoadSlotField(childName_) : GenerateNextElementName("load");
-        var slotDeclaration = isNamed ? slotVar : $"var {slotVar}";
+        var slot = Variable(slotVar);
         var builder = $"Build_{GenerateNextElementName("load")}";
 
-        TextGenerator.NewLine();
-        TextGenerator.WriteLine($"{UIComponentFqn} {builder}()");
-        TextGenerator.WriteOpenBraceAndIndent();
+        _writer.BlankLine();
+        _writer.Open(new FunctionStep(Type(UIComponentFqn), builder));
         var childName = ProcessControlElements(child, diagnostics, isResource);
-        TextGenerator.WriteLine($"return {childName};");
-        TextGenerator.UnindentAndWriteCloseBrace();
+        _writer.Add(new ReturnStep(childName));
+        _writer.Close();
 
-        TextGenerator.WriteLine(
-            $"{slotDeclaration} = new {LoadSlotFqn}({builder}, ({ContainerFqn}){containerVar}, {index});");
-        TextGenerator.WriteLine($"(({FundamentalComponentFqn}){containerVar}).AddLogicalChild({slotVar});");
+        _writer.Add(new DeclareStep(slotVar,
+            new NewValue(Type(LoadSlotFqn), Variable(builder), new CastValue(Type(ContainerFqn), Variable(containerVar)),
+                new LiteralValue(index.ToString())),
+            isNamed));
+        _writer.Add(Invoke(new CastValue(Type(FundamentalComponentFqn), Variable(containerVar)), "AddLogicalChild", slot));
 
         switch (load.Value)
         {
             case AumlAstTextNode { Text: var text } when text.Trim() == "True":
-                TextGenerator.WriteLine($"{slotVar}.Condition = true;");
+                _writer.Add(new AssignStep(slot, "Condition", new LiteralValue("true")));
                 break;
             case AumlAstTextNode:
                 // "False" - nothing is built until something asks for it by name.
                 break;
             default:
-                TextGenerator.WriteLine(
-                    $"{slotVar}.SetBinding({LoadSlotFqn}.ConditionProperty, {EmitBinding(load.Value, diagnostics, isResource)});");
+                _writer.Add(Invoke(slot, "SetBinding", new MemberValue(Type(LoadSlotFqn), "ConditionProperty"),
+                    EmitBinding(load.Value, diagnostics, isResource)));
                 break;
         }
 
-        TextGenerator.NewLine();
+        _writer.BlankLine();
     }
 
     /// <summary>Whether this value is marked <c>x:Shared="False"</c> - build it per target, do not share one instance.</summary>
@@ -968,55 +1055,55 @@ public class CodeGenerationContext
     /// <summary>Emits a builder for a per-target value and returns the expression that wraps it. Same shape as a
     /// template's builder (see <see cref="EmitTemplateBuilder"/>): a local function that constructs the tree, handed to
     /// the value object so the setter can call it once per element it matches.</summary>
-    private string EmitPerTargetValue(IAumlAstValueNode value, bool isResource, IDiagnosticSink diagnostics)
+    private BuildValue EmitPerTargetValue(IAumlAstValueNode value, bool isResource, IDiagnosticSink diagnostics)
     {
         var builder = $"Build_{GenerateNextElementName("shared")}";
-        var expression = $"new {Metadata.DefaultTypeContainer.PerTargetValue.QualifiedName}({builder})";
 
-        TextGenerator.NewLine();
-        TextGenerator.WriteLine($"object {builder}()");
-        TextGenerator.WriteOpenBraceAndIndent();
+        _writer.BlankLine();
+        _writer.Open(new FunctionStep(Type("object"), builder));
         var built = ProcessNestedValue(value, diagnostics, isResource);
-        TextGenerator.WriteLine($"return {built};");
-        TextGenerator.UnindentAndWriteCloseBrace();
-        TextGenerator.NewLine();
+        _writer.Add(new ReturnStep(built));
+        _writer.Close();
+        _writer.BlankLine();
 
-        return expression;
+        return new NewValue(Type(Metadata.DefaultTypeContainer.PerTargetValue), Variable(builder));
     }
 
     // Emits `target = new Template(Build_xxx)` and the local builder returning a TemplateResult. Templates carry content
     // only through this builder, whether a property value or a keyed resource.
-    private void EmitTemplateBuilder(string targetVar, string templateTypeName, IAumlAstNode templateNode,
+    private void EmitTemplateBuilder(string templateVar, bool isField, IResolvedType templateType, IAumlAstNode templateNode,
         bool isResource, IDiagnosticSink diagnostics)
     {
         var templateBuilderMethod = $"Build_{GenerateNextElementName("template")}";
+        var template = Variable(templateVar);
 
-        TextGenerator.WriteLine($"{targetVar} = new {templateTypeName}({templateBuilderMethod});");
+        _writer.Add(new DeclareStep(templateVar, new NewValue(Type(templateType), Variable(templateBuilderMethod)), isField));
 
         // The builder below produces the template's VISUAL (a DataTemplate's item / a HierarchicalDataTemplate's header).
         // A template's own CONFIGURATION attributes (e.g. HierarchicalDataTemplate.ItemsSource / ItemContainerStyle /
         // ItemTemplate) aren't part of that visual - emit them onto the template variable itself.
-        var templateVar = targetVar.StartsWith("var ") ? targetVar.Substring(4) : targetVar;
-        EmitTemplateConfigProperties(templateVar, templateNode, isResource, diagnostics);
+        EmitTemplateConfigProperties(template, templateNode, isResource, diagnostics);
         if (DataTypeOf(templateNode) is { } dataType)
         {
-            TextGenerator.WriteLine($"{templateVar}.DataType = typeof({dataType.QualifiedName});");
+            _writer.Add(new AssignStep(template, "DataType", new TypeOfValue(Type(dataType))));
         }
 
-        TextGenerator.NewLine();
-        TextGenerator.WriteLine($"{Metadata.DefaultTypeContainer.TemplateResult.QualifiedName} {templateBuilderMethod}()");
-        TextGenerator.WriteOpenBraceAndIndent();
+        var templateResult = Type(Metadata.DefaultTypeContainer.TemplateResult);
+        var result = Variable("result");
 
-        TextGenerator.WriteLine($"var result = new {Metadata.DefaultTypeContainer.TemplateResult.QualifiedName}();");
+        _writer.BlankLine();
+        _writer.Open(new FunctionStep(templateResult, templateBuilderMethod));
 
-        PushTemplate("result");
+        _writer.Add(new DeclareStep(result.Name, new NewValue(templateResult)));
+
+        PushTemplate(result.Name);
 
         var child = templateNode.GetLogicalChildrenObjects().FirstOrDefault();
         var childName = ProcessControlElements(child, diagnostics, false);
-        TextGenerator.WriteLine($"result.RootComponent = {childName};");
+        _writer.Add(new AssignStep(result, "RootComponent", childName));
 
         var templateProperties = templateNode.GetProperties().ToList();
-        WithElement("result", () => // Temporary Context for object "result"
+        WithElement(result.Name, () => // Temporary Context for object "result"
         {
             PushTypeContext(Metadata.DefaultTypeContainer.ControlTemplate);
             foreach (var templateProp in templateProperties)
@@ -1029,7 +1116,7 @@ public class CodeGenerationContext
                         if (triggerValueNode is AumlAstObjectNode triggerObjectNode)
                         {
                             var triggerVariableName = ProcessControlElements(triggerObjectNode, diagnostics, isResource);
-                            TextGenerator.WriteLine($"result.Triggers.Add({triggerVariableName});");
+                            _writer.Add(Invoke(new MemberValue(result, "Triggers"), "Add", triggerVariableName));
                         }
                     }
                 }
@@ -1039,8 +1126,8 @@ public class CodeGenerationContext
 
         PopTemplate();
 
-        TextGenerator.WriteLine($"return result;");
-        TextGenerator.UnindentAndWriteCloseBrace();
+        _writer.Add(new ReturnStep(result));
+        _writer.Close();
     }
 
     private IResolvedType DataTypeOf(IAumlAstNode templateNode)
@@ -1058,9 +1145,20 @@ public class CodeGenerationContext
             : null;
     }
 
-    // A template's own configuration (e.g. ItemsSource as a binding object, ItemContainerStyle). Text values such as
-    // TargetType are generation-time hints and skipped.
-    private void EmitTemplateConfigProperties(string templateVar, IAumlAstNode templateNode, bool isResource, IDiagnosticSink diagnostics)
+    private IResolvedType TypeNamedBy(IAumlAstNode templateNode, AumlAstPropertyNode prop)
+    {
+        var templateType = (templateNode as AumlAstObjectNode)?.TypeReference is { } reference
+            ? Metadata.TypeResolver.Resolve(reference.GetFullTypeName())
+            : null;
+        var name = ((AumlAstPropertyReference)prop.Property).Name;
+        return templateType?.GetMemberByName(name)?.MemberType?.FullName == "System.Type"
+            ? Metadata.TypeResolver.Resolve(prop.GetFullTypeValue())
+            : null;
+    }
+
+    // A template's own configuration (e.g. ItemsSource as a binding object, ItemContainerStyle, TargetType). Other text
+    // values are generation-time hints and skipped.
+    private void EmitTemplateConfigProperties(VariableValue template, IAumlAstNode templateNode, bool isResource, IDiagnosticSink diagnostics)
     {
         foreach (var prop in templateNode.GetProperties())
         {
@@ -1068,20 +1166,17 @@ public class CodeGenerationContext
             if (name == "Triggers") continue;
             switch (prop.Values.FirstOrDefault())
             {
+                case not null when TypeNamedBy(templateNode, prop) is { } type:
+                    _writer.Add(new AssignStep(template, name, new TypeOfValue(Type(type))));
+                    break;
                 case AumlAstMarkupExtensionNode me when me.TypeReference?.Name is "Binding" or "MultiBinding":
-                    TextGenerator.WriteLine($"{templateVar}.{name} = {EmitBinding(me, diagnostics, isResource)};");
+                    _writer.Add(new AssignStep(template, name, EmitBinding(me, diagnostics, isResource)));
                     break;
                 case AumlAstObjectNode obj:
-                    TextGenerator.WriteLine($"{templateVar}.{name} = {ProcessControlElements(obj, diagnostics, isResource)};");
+                    _writer.Add(new AssignStep(template, name, ProcessControlElements(obj, diagnostics, isResource)));
                     break;
             }
         }
-    }
-
-    private void GenerateSimpleAssignment(string symbolName, string valueText, IResolvedType member,
-        IDiagnosticSink diagnostics, string where)
-    {
-        TextGenerator.WriteLine($"{symbolName} = {BuildValueExpression(valueText, member, diagnostics, where)};");
     }
 
     private void ReportIfUnparsable(IResolvedType type, IDiagnosticSink diagnostics, string where)
@@ -1096,9 +1191,13 @@ public class CodeGenerationContext
     // clear member error.
     private static readonly char[] EnumFlagSeparators = [',', '|'];
 
-    private static string BuildEnumExpression(string valueText, IResolvedType member)
+    private static EnumValue BuildEnumExpression(string valueText, IResolvedType member)
     {
-        if (valueText.IndexOfAny(EnumFlagSeparators) < 0) return $"{member.QualifiedName}.{valueText}";
+        var type = Type(member);
+        if (valueText.IndexOfAny(EnumFlagSeparators) < 0)
+        {
+            return new EnumValue(type, [valueText]);
+        }
 
         var parts = valueText.Split(EnumFlagSeparators);
         var terms = new List<string>(parts.Length);
@@ -1108,15 +1207,15 @@ public class CodeGenerationContext
             var name = part.Trim();
             if (name.Length == 0) continue;
 
-            terms.Add($"{member.QualifiedName}.{name}");
+            terms.Add(name);
         }
 
-        return terms.Count == 0 ? $"{member.QualifiedName}.{valueText}" : string.Join(" | ", terms);
+        return new EnumValue(type, terms.Count == 0 ? [valueText] : terms);
     }
 
-    // The C# expression for a literal attribute value, typed as the property's type (so it can be assigned directly OR
-    // boxed for a priority-aware SetValue without losing its type, e.g. Opacity="0" must be (double)0, not a boxed int).
-    private string BuildValueExpression(string valueText, IResolvedType member, IDiagnosticSink diagnostics, string where)
+    // The value of a literal attribute, typed as the property's type (so it can be assigned directly OR boxed for a
+    // priority-aware SetValue without losing its type, e.g. Opacity="0" must be (double)0, not a boxed int).
+    private BuildValue BuildValueExpression(string valueText, IResolvedType member, IDiagnosticSink diagnostics, string where)
     {
         if (member.TypeKind == ResolvedTypeKind.Enum)
             return BuildEnumExpression(valueText, member);
@@ -1126,21 +1225,21 @@ public class CodeGenerationContext
         // IterationCount="Infinity" (loop forever) or a Width="NaN".
         if (member.SpecialType is ResolvedSpecialType.System_Double or ResolvedSpecialType.System_Single)
         {
-            var floatType = member.SpecialType == ResolvedSpecialType.System_Double ? "double" : "float";
+            var floatType = Type(member.SpecialType == ResolvedSpecialType.System_Double ? "double" : "float");
             switch (valueText)
             {
                 case "Infinity":
-                case "+Infinity": return $"{floatType}.PositiveInfinity";
-                case "-Infinity": return $"{floatType}.NegativeInfinity";
+                case "+Infinity": return new MemberValue(floatType, "PositiveInfinity");
+                case "-Infinity": return new MemberValue(floatType, "NegativeInfinity");
                 case "NaN":
-                case "Auto": return $"{floatType}.NaN";
+                case "Auto": return new MemberValue(floatType, "NaN");
             }
         }
 
         switch (member.SpecialType)
         {
             case ResolvedSpecialType.System_String:
-                return Quote(valueText);
+                return new StringValue(valueText);
             case ResolvedSpecialType.System_Double:
             case ResolvedSpecialType.System_Single:
             case ResolvedSpecialType.System_Decimal:
@@ -1152,17 +1251,20 @@ public class CodeGenerationContext
             case ResolvedSpecialType.System_UInt16:
             case ResolvedSpecialType.System_UInt32:
             case ResolvedSpecialType.System_UInt64:
-                return valueText;
+                return new LiteralValue(valueText);
             case ResolvedSpecialType.System_Boolean:
-                return valueText.ToLowerInvariant();
+                return new LiteralValue(valueText.ToLowerInvariant());
             case ResolvedSpecialType.System_Object:
-                return Quote(valueText);
+                return new StringValue(valueText);
             default:
                 ReportIfUnparsable(member, diagnostics, where);
-                return $"{Metadata.DefaultTypeContainer.TypeParser.QualifiedName}.Parse<{member.QualifiedName}>({Quote(valueText)})";
+                return ParseCall(member, valueText);
         }
     }
-    
+
+    private CallValue ParseCall(IResolvedType type, string text) =>
+        new(Type(Metadata.DefaultTypeContainer.TypeParser), "Parse", [Type(type)], new StringValue(text));
+
     private const string MarkupItemAttributeName = "Adamantium.UI.Core.MarkupItemAttribute";
 
     private const string DataTemplateTypeName = "Adamantium.UI.Core.Templates.DataTemplate";
@@ -1200,29 +1302,13 @@ public class CodeGenerationContext
             return;
         }
 
-        TextGenerator.WriteLine("#if DEBUG");
-        TextGenerator.WriteLine($"global::Adamantium.UI.Core.Design.Source({elementName}, {Quote(Metadata.SourceFilePath)}, {element.Line}, {element.Position});");
-        TextGenerator.WriteLine("#endif");
+        _writer.Open(new ConditionalStep("DEBUG"));
+        _writer.Add(Invoke(Type(DesignFqn), "Source", Variable(elementName), new StringValue(Metadata.SourceFilePath),
+            new LiteralValue(element.Line.ToString()), new LiteralValue(element.Position.ToString())));
+        _writer.Close();
     }
 
-    // A proper C# string literal, escaping quotes, backslashes and line breaks from markup.
-    private string Quote(string str)
-    {
-        if (str == null)
-        {
-            return "null";
-        }
-
-        var escaped = str
-            .Replace("\\", "\\\\")
-            .Replace("\"", "\\\"")
-            .Replace("\r", "\\r")
-            .Replace("\n", "\\n");
-
-        return $"\"{escaped}\"";
-    }
-    
-    private string ProcessNestedValue(IAumlAstNode value, IDiagnosticSink diagnostics, bool isResource)
+    private BuildValue ProcessNestedValue(IAumlAstNode value, IDiagnosticSink diagnostics, bool isResource)
     {
         if (value is AumlAstObjectNode objNode)
         {
@@ -1232,7 +1318,7 @@ public class CodeGenerationContext
         // {x:Static Type.Member} - the member is read where the value is used, so it needs no variable of its own.
         if (value is AumlAstStaticMemberValueNode staticMember)
         {
-            return $"{Qualified(staticMember.TypeReference.GetFullTypeName())}.{staticMember.MemberName}";
+            return new MemberValue(Type(Qualified(staticMember.TypeReference.GetFullTypeName())), staticMember.MemberName);
         }
 
         if (value is AumlAstMarkupExtensionLiteral literal)
@@ -1240,9 +1326,9 @@ public class CodeGenerationContext
             var resolvedAssembly = Metadata.TypeResolver.ResolveAssembly(literal.TypeReference.Assembly);
             var type = resolvedAssembly.Types.First(x => x.Name == literal.TypeReference.Name);
             var name = GenerateNextElementName();
-            GenerateSimpleAssignment($"var {name}", literal.Text, type, diagnostics,
-                $"{literal.TypeReference.Name} \"{literal.Text}\"");
-            return name;
+            _writer.Add(new DeclareStep(name, BuildValueExpression(literal.Text, type, diagnostics,
+                $"{literal.TypeReference.Name} \"{literal.Text}\"")));
+            return Variable(name);
         }
 
         if (value is AumlAstMarkupExtensionNode extension)
@@ -1250,36 +1336,35 @@ public class CodeGenerationContext
             var type = Metadata.TypeResolver.ResolveAssembly(extension.TypeReference.Assembly)
                 .Types.First(x => x.Name == extension.TypeReference.Name);
             var name = GenerateNextElementName();
-            TextGenerator.WriteLine($"var {name} = new {type.QualifiedName}();");
+            var created = Variable(name);
+            _writer.Add(new DeclareStep(name, new NewValue(Type(type))));
 
             foreach (var arg in extension.Arguments)
             {
-                var target = $"{name}.{arg.Name}";
-
                 if (arg.Value is AumlAstTypeReferenceValueNode typeValueNode)
                 {
                     var fullTypeName = typeValueNode.TypeReference.GetFullTypeName();
-                    TextGenerator.WriteLine($"{target} = typeof({Qualified(fullTypeName)});");
+                    _writer.Add(new AssignStep(created, arg.Name, new TypeOfValue(Type(Qualified(fullTypeName)))));
                 }
                 else if (arg.Value is IAumlAstMarkupExtensionLiteral or IAumlAstMarkupExtensionNode
                          || arg.Value is AumlAstObjectNode or AumlAstStaticMemberValueNode)
                 {
                     var nested = ProcessNestedValue(arg.Value, diagnostics, isResource);
-                    TextGenerator.WriteLine($"{target} = {nested};");
+                    _writer.Add(new AssignStep(created, arg.Name, nested));
                 }
                 else
                 {
                     var resolvedMember = Metadata.TypeResolver.ResolveAssembly(arg.Value.TypeReference.Assembly).Types
                         .First(x => x.Name == arg.Value.TypeReference.Name);
-                    GenerateSimpleAssignment(target, arg.Value.GetTextValue(), resolvedMember, diagnostics,
-                        $"{extension.TypeReference.Name} {arg.Name}=\"{arg.Value.GetTextValue()}\"");
+                    _writer.Add(new AssignStep(created, arg.Name, BuildValueExpression(arg.Value.GetTextValue(), resolvedMember,
+                        diagnostics, $"{extension.TypeReference.Name} {arg.Name}=\"{arg.Value.GetTextValue()}\"")));
                 }
             }
 
-            return name;
+            return created;
         }
 
-        return "null";
+        return NullValue.Instance;
     }
 
     // ---- bindings -------------------------------------------------------------------------------------------------
@@ -1288,14 +1373,29 @@ public class CodeGenerationContext
     // target's type, so binding by NAME (SetBinding("ToolTip", ...)) can't resolve it and throws. Bind to the property
     // OBJECT instead - <Owner>.<Name>Property - exactly as WPF binds to the DependencyProperty; the target type is
     // irrelevant, the property object fully identifies it.
-    private static string EmitSetBinding(string bindingTarget, AumlAstPropertyReference propRef, string bindingVar)
+    private static InvokeStep EmitSetBinding(string bindingTarget, AumlAstPropertyReference propRef, BuildValue binding)
     {
         if (propRef.IsAttachedProperty)
-            return $"{bindingTarget}.SetBinding({Qualified(propRef.OwnerType.GetFullTypeName())}.{propRef.Name}Property, {bindingVar});";
-        return $"{bindingTarget}.SetBinding(\"{propRef.Name}\", {bindingVar});";
+            return Invoke(Variable(bindingTarget), "SetBinding", new MemberValue(OwnerOf(propRef), $"{propRef.Name}Property"), binding);
+        return Invoke(Variable(bindingTarget), "SetBinding", Unescaped(propRef.Name), binding);
     }
 
     private static string Qualified(string fullTypeName) => $"global::{fullTypeName}";
+
+    private static TypeValue Type(string qualifiedName) => new(qualifiedName);
+
+    private static TypeValue Type(IResolvedType type) => new(type.QualifiedName, type);
+
+    private static VariableValue Variable(string name) => new(name);
+
+    private static StringValue Unescaped(string text) => new(text, escaped: false);
+
+    private static TypeValue OwnerOf(AumlAstPropertyReference propRef) => Type(Qualified(propRef.OwnerType.GetFullTypeName()));
+
+    private static MemberValue Priority(string priority) => new(Type(ValuePriorityFqn), priority);
+
+    private static InvokeStep Invoke(BuildValue target, string method, params BuildValue[] arguments) =>
+        new(new CallValue(target, method, arguments));
 
     private const string LoadSlotFqn = "global::Adamantium.UI.Controls.LoadSlot";
     private const string ContainerFqn = "global::Adamantium.UI.Core.IContainer";
@@ -1309,6 +1409,9 @@ public class CodeGenerationContext
     private const string MultiValueConverterFqn = "global::Adamantium.UI.Core.Data.IMultiValueConverter";
     private const string LocalizeFqn = "global::Adamantium.UI.Core.Localization.Localize";
     private const string ResourceResolverFqn = "global::Adamantium.UI.Core.Resources.ResourceResolver";
+    private const string NameScopeFqn = "global::Adamantium.UI.Core.Templates.NameScope";
+    private const string ValuePriorityFqn = "global::Adamantium.UI.Core.ValuePriority";
+    private const string DesignFqn = "global::Adamantium.UI.Core.Design";
 
     // The x:Key directive of an inline object node (an inline resource entry), or null if it has none.
     private static string GetKeyDirective(IAumlAstNode node)
@@ -1361,9 +1464,9 @@ public class CodeGenerationContext
         return false;
     }
 
-    // Emits the code that constructs a Binding/MultiBinding and returns the variable holding it. Recurses for nested
+    // Emits the steps that construct a Binding/MultiBinding and returns the variable holding it. Recurses for nested
     // multi-bindings, so multibinding-inside-multibinding generates correctly.
-    private string EmitBinding(IAumlAstNode node, IDiagnosticSink diagnostics, bool isResource) => node switch
+    private BuildValue EmitBinding(IAumlAstNode node, IDiagnosticSink diagnostics, bool isResource) => node switch
     {
         AumlAstMarkupExtensionNode me when me.TypeReference?.Name == "MultiBinding"
             => EmitMultiBindingFromMarkup(me, diagnostics, isResource),
@@ -1371,40 +1474,44 @@ public class CodeGenerationContext
         AumlAstObjectNode obj when obj.TypeReference?.Name == "MultiBinding"
             => EmitMultiBindingFromObject(obj, diagnostics, isResource),
         AumlAstObjectNode obj => EmitBindingFromObject(obj, diagnostics, isResource),
-        _ => "null",
+        _ => NullValue.Instance,
     };
 
     // {Localize Table.Key, name=value}: the key is checked by the compiler through nameof, the placeholders by the
     // transformer; an argument is a binding to follow, a property of the templated control, another phrase, or a
     // plain value.
-    private string EmitLocalizedBinding(AumlAstLocalizedStringNode localized, IDiagnosticSink diagnostics, bool isResource)
+    private BuildValue EmitLocalizedBinding(AumlAstLocalizedStringNode localized, IDiagnosticSink diagnostics, bool isResource)
     {
         var name = GenerateNextElementName("localized");
+        var localize = Variable(name);
         if (localized.TableSource != null)
         {
-            TextGenerator.WriteLine($"var {name} = new {LocalizeFqn}(null, null);");
-            TextGenerator.WriteLine($"{name}.TableSource = {Followed(localized.TableSource)};");
+            _writer.Add(new DeclareStep(name, new NewValue(Type(LocalizeFqn), NullValue.Instance, NullValue.Instance)));
+            _writer.Add(new AssignStep(localize, "TableSource", Followed(localized.TableSource)));
         }
         else
         {
-            var table = Qualified(localized.TableFullName);
-            var key = localized.KeySource == null ? $"nameof({table}.{localized.Key})" : "null";
-            TextGenerator.WriteLine($"var {name} = new {LocalizeFqn}({table}.Current, {key});");
+            var table = Type(Qualified(localized.TableFullName));
+            BuildValue key = localized.KeySource == null
+                ? new NameOfValue(new MemberValue(table, localized.Key))
+                : NullValue.Instance;
+            _writer.Add(new DeclareStep(name, new NewValue(Type(LocalizeFqn), new MemberValue(table, "Current"), key)));
         }
 
         if (localized.KeySource != null)
         {
-            TextGenerator.WriteLine($"{name}.KeySource = {Followed(localized.KeySource)};");
+            _writer.Add(new AssignStep(localize, "KeySource", Followed(localized.KeySource)));
         }
 
         foreach (var argument in localized.Arguments)
         {
-            TextGenerator.WriteLine($"{name}.Arguments[{Quote(argument.Name)}] = {Followed(argument.Value)};");
+            _writer.Add(new IndexAssignStep(new MemberValue(localize, "Arguments"), new StringValue(argument.Name),
+                Followed(argument.Value)));
         }
 
-        return name;
+        return localize;
 
-        string Followed(IAumlAstValueNode value) => value switch
+        BuildValue Followed(IAumlAstValueNode value) => value switch
         {
             _ when IsBindingNode(value) => EmitBinding(value, diagnostics, isResource),
             AumlAstMarkupExtensionNode { TypeReference.Name: "TemplateBinding" } templateBinding =>
@@ -1412,129 +1519,163 @@ public class CodeGenerationContext
                     ? ReportOutsideTemplate(diagnostics, templateBinding)
                     : EmitTemplateBinding(templateBinding),
             AumlAstLocalizedStringNode phrase => EmitLocalizedBinding(phrase, diagnostics, isResource),
-            _ => Quote(value.GetTextValue() ?? string.Empty),
+            _ => new StringValue(value.GetTextValue() ?? string.Empty),
         };
     }
 
-    private string ReportOutsideTemplate(IDiagnosticSink diagnostics, IAumlLineInfo at)
+    private BuildValue ReportOutsideTemplate(IDiagnosticSink diagnostics, IAumlLineInfo at)
     {
         diagnostics.ReportError(Metadata.ClassName, MarkupMessages.TemplateBindingOutsideTemplate(), at);
-        return "null";
+        return NullValue.Instance;
     }
 
-    private string EmitTemplateBinding(AumlAstMarkupExtensionNode extension)
+    private BuildValue EmitTemplateBinding(AumlAstMarkupExtensionNode extension)
     {
         var name = GenerateNextElementName("tb");
-        TextGenerator.WriteLine($"var {name} = new {Qualified(extension.TypeReference.GetFullTypeName())}();");
+        var templateBinding = Variable(name);
+        _writer.Add(new DeclareStep(name, new NewValue(Type(Qualified(extension.TypeReference.GetFullTypeName())))));
 
         foreach (var argument in extension.Arguments)
         {
             if (string.IsNullOrEmpty(argument.Name))
             {
-                TextGenerator.WriteLine($"{name}.Path = \"{argument.Value.GetTextValue()}\";");
+                _writer.Add(new AssignStep(templateBinding, "Path", Unescaped(argument.Value.GetTextValue())));
             }
             else
             {
-                TextGenerator.WriteLine(
-                    $"{name}.{argument.Name} = {Qualified(argument.Value.TypeReference.GetFullTypeName())}.{argument.Value.GetTextValue()};");
+                _writer.Add(new AssignStep(templateBinding, argument.Name,
+                    new MemberValue(Type(Qualified(argument.Value.TypeReference.GetFullTypeName())), argument.Value.GetTextValue())));
             }
         }
 
-        return name;
+        return templateBinding;
     }
 
-    private string EmitBindingFromMarkup(AumlAstMarkupExtensionNode me, IDiagnosticSink diagnostics, bool isResource)
+    private BuildValue EmitBindingFromMarkup(AumlAstMarkupExtensionNode me, IDiagnosticSink diagnostics, bool isResource)
     {
         var name = GenerateNextElementName("binding");
-        TextGenerator.WriteLine($"var {name} = new {BindingFqn}();");
+        _writer.Add(new DeclareStep(name, new NewValue(Type(BindingFqn))));
         foreach (var arg in me.Arguments)
             EmitBindingProperty(name, string.IsNullOrEmpty(arg.Name) ? "Path" : arg.Name, arg.Value, isMulti: false, diagnostics, isResource);
-        return name;
+        return Variable(name);
     }
 
-    private string EmitBindingFromObject(AumlAstObjectNode obj, IDiagnosticSink diagnostics, bool isResource)
+    private BuildValue EmitBindingFromObject(AumlAstObjectNode obj, IDiagnosticSink diagnostics, bool isResource)
     {
         var name = GenerateNextElementName("binding");
-        TextGenerator.WriteLine($"var {name} = new {BindingFqn}();");
+        _writer.Add(new DeclareStep(name, new NewValue(Type(BindingFqn))));
         foreach (var child in obj.Children)
             if (child is AumlAstPropertyNode { Property: AumlAstPropertyReference pref } pn && pn.Values.Count > 0)
                 EmitBindingProperty(name, pref.Name, pn.Values[0], isMulti: false, diagnostics, isResource);
-        return name;
+        return Variable(name);
     }
 
-    private string EmitMultiBindingFromMarkup(AumlAstMarkupExtensionNode me, IDiagnosticSink diagnostics, bool isResource)
+    private BuildValue EmitMultiBindingFromMarkup(AumlAstMarkupExtensionNode me, IDiagnosticSink diagnostics, bool isResource)
     {
         var name = GenerateNextElementName("multiBinding");
-        TextGenerator.WriteLine($"var {name} = new {MultiBindingFqn}();");
+        var bindings = new MemberValue(Variable(name), "Bindings");
+        _writer.Add(new DeclareStep(name, new NewValue(Type(MultiBindingFqn))));
         foreach (var arg in me.Arguments)
         {
             if (string.IsNullOrEmpty(arg.Name))                       // positional = a child binding
             {
                 if (IsBindingNode(arg.Value))
-                    TextGenerator.WriteLine($"{name}.Bindings.Add({EmitBinding(arg.Value, diagnostics, isResource)});");
+                {
+                    _writer.Add(Invoke(bindings, "Add", EmitBinding(arg.Value, diagnostics, isResource)));
+                }
             }
             else EmitBindingProperty(name, arg.Name, arg.Value, isMulti: true, diagnostics, isResource);
         }
-        return name;
+        return Variable(name);
     }
 
-    private string EmitMultiBindingFromObject(AumlAstObjectNode obj, IDiagnosticSink diagnostics, bool isResource)
+    private BuildValue EmitMultiBindingFromObject(AumlAstObjectNode obj, IDiagnosticSink diagnostics, bool isResource)
     {
         var name = GenerateNextElementName("multiBinding");
-        TextGenerator.WriteLine($"var {name} = new {MultiBindingFqn}();");
+        var bindings = new MemberValue(Variable(name), "Bindings");
+        _writer.Add(new DeclareStep(name, new NewValue(Type(MultiBindingFqn))));
         foreach (var child in obj.Children)
         {
             switch (child)
             {
                 case AumlAstObjectNode childObj when IsBindingNode(childObj):
-                    TextGenerator.WriteLine($"{name}.Bindings.Add({EmitBinding(childObj, diagnostics, isResource)});");
+                    _writer.Add(Invoke(bindings, "Add", EmitBinding(childObj, diagnostics, isResource)));
                     break;
                 case AumlAstPropertyNode { Property: AumlAstPropertyReference pref } pn when pn.Values.Count > 0:
                     if (pref.Name == "Bindings")
                     {
                         foreach (var v in pn.Values)
+                        {
                             if (IsBindingNode(v))
-                                TextGenerator.WriteLine($"{name}.Bindings.Add({EmitBinding(v, diagnostics, isResource)});");
+                            {
+                                _writer.Add(Invoke(bindings, "Add", EmitBinding(v, diagnostics, isResource)));
+                            }
+                        }
                     }
                     else EmitBindingProperty(name, pref.Name, pn.Values[0], isMulti: true, diagnostics, isResource);
                     break;
             }
         }
-        return name;
+        return Variable(name);
     }
 
     private void EmitBindingProperty(string bindingVar, string name, IAumlAstValueNode value, bool isMulti,
         IDiagnosticSink diagnostics, bool isResource)
     {
+        var binding = Variable(bindingVar);
         switch (name)
         {
             case "Path":
                 if ((value as AumlAstTextNode)?.Text?.Trim() is { Length: > 0 } path)
-                    TextGenerator.WriteLine($"{bindingVar}.Path = new {PropertyPathFqn}({Quote(path)});");
+                {
+                    _writer.Add(new AssignStep(binding, "Path", new NewValue(Type(PropertyPathFqn), new StringValue(path))));
+                }
+
                 break;
             case "Mode":
                 if ((value as AumlAstTextNode)?.Text is { Length: > 0 } mode)
-                    TextGenerator.WriteLine($"{bindingVar}.Mode = {BindingModeFqn}.{mode};");
+                {
+                    _writer.Add(new AssignStep(binding, "Mode", new MemberValue(Type(BindingModeFqn), mode)));
+                }
+
                 break;
             case "Converter":
                 var converter = EmitValueExpression(value, isMulti ? MultiValueConverterFqn : ValueConverterFqn, diagnostics, isResource);
-                if (converter != null) TextGenerator.WriteLine($"{bindingVar}.Converter = {converter};");
+                if (converter != null)
+                {
+                    _writer.Add(new AssignStep(binding, "Converter", converter));
+                }
+
                 break;
             case "ConverterParameter":
                 var parameter = EmitValueExpression(value, "object", diagnostics, isResource);
-                if (parameter != null) TextGenerator.WriteLine($"{bindingVar}.ConverterParameter = {parameter};");
+                if (parameter != null)
+                {
+                    _writer.Add(new AssignStep(binding, "ConverterParameter", parameter));
+                }
+
                 break;
             case "StringFormat":
                 if ((value as AumlAstTextNode)?.Text is { } format)
-                    TextGenerator.WriteLine($"{bindingVar}.StringFormat = {Quote(format)};");
+                {
+                    _writer.Add(new AssignStep(binding, "StringFormat", new StringValue(format)));
+                }
+
                 break;
             case "Source":
                 var source = EmitValueExpression(value, "object", diagnostics, isResource);
-                if (source != null) TextGenerator.WriteLine($"{bindingVar}.Source = {source};");
+                if (source != null)
+                {
+                    _writer.Add(new AssignStep(binding, "Source", source));
+                }
+
                 break;
             case "ElementName":
                 if ((value as AumlAstTextNode)?.Text?.Trim() is { Length: > 0 } elementName)
-                    TextGenerator.WriteLine($"{bindingVar}.ElementName = \"{elementName}\";");
+                {
+                    _writer.Add(new AssignStep(binding, "ElementName", Unescaped(elementName)));
+                }
+
                 break;
             default:
                 diagnostics.ReportWarning(Metadata.ClassName, MarkupMessages.UnknownBindingProperty(name), value);
@@ -1542,21 +1683,23 @@ public class CodeGenerationContext
         }
     }
 
-    // A binding sub-value (Converter / ConverterParameter / Source) as a C# expression: a {ResourceReference}, an
-    // inline element, a converter authored as a markup extension ({local:MyConverter} -> new MyConverter()), or a literal.
-    private string EmitValueExpression(IAumlAstValueNode value, string targetTypeFqn, IDiagnosticSink diagnostics, bool isResource)
+    // A binding sub-value (Converter / ConverterParameter / Source): a {ResourceReference}, an inline element, a
+    // converter authored as a markup extension ({local:MyConverter} -> new MyConverter()), or a literal.
+    private BuildValue EmitValueExpression(IAumlAstValueNode value, string targetTypeFqn, IDiagnosticSink diagnostics, bool isResource)
     {
         switch (value)
         {
             case AumlAstMarkupExtensionNode me when me.TypeReference?.Name?.StartsWith("ResourceReference") == true:
                 var key = (me.Arguments.FirstOrDefault()?.Value as AumlAstTextNode)?.Text;
-                return string.IsNullOrEmpty(key) ? null : $"{ResourceResolverFqn}.Resolve<{targetTypeFqn}>(\"{key}\")";
+                return string.IsNullOrEmpty(key)
+                    ? null
+                    : new CallValue(Type(ResourceResolverFqn), "Resolve", [Type(targetTypeFqn)], Unescaped(key));
             case AumlAstMarkupExtensionNode me:
                 return ProcessNestedValue(me, diagnostics, isResource);          // converter authored as a markup extension
             case AumlAstObjectNode obj:
                 return ProcessControlElements(obj, diagnostics, isResource);     // inline element
             case AumlAstTextNode text:
-                return $"\"{text.Text}\"";
+                return Unescaped(text.Text);
             default:
                 return null;
         }
@@ -1623,7 +1766,7 @@ public class CodeGenerationContext
         public IEnumerable<IResolvedMember> Members { get; }
         public IResolvedMember GetMemberByName(string memberName) => null;
 
-        public List<IResolvedProperty> GetAllProperties() => [];
+        public IReadOnlyList<IResolvedProperty> GetAllProperties() => [];
 
         public bool IsAssignableTo(string fullName) => false;
 

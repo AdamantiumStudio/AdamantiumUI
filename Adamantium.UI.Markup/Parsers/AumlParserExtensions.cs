@@ -7,20 +7,23 @@ namespace Adamantium.UI.Markup.Parsers;
 
 public static class AumlParserExtensions
 {
-    public static IAumlAstTypeReference GetTypeReference(this XElement element)
+    public static IAumlAstTypeReference GetTypeReference(this XElement element) => element.GetTypeReference(element.ToLineInfo());
+
+    /// <summary>The element's type, at <paramref name="info"/> - the element's own place, when the caller has it.</summary>
+    public static IAumlAstTypeReference GetTypeReference(this XElement element, IAumlLineInfo info)
     {
         var ns = element.Name.Namespace.NamespaceName;
-        
-        bool isClrNamespace = ns.StartsWith("clr-namespace:");
+
+        bool isClrNamespace = ns.StartsWith("clr-namespace:", StringComparison.Ordinal);
 
         if (isClrNamespace)
         {
             var clrNamespace = ParseXmlNamespace(ns);
-            
-            return new AumlAstClrTypeReference(element.ToLineInfo(), clrNamespace.Namespace, element.Name.LocalName, clrNamespace.Assembly);
+
+            return new AumlAstClrTypeReference(info, clrNamespace.Namespace, element.Name.LocalName, clrNamespace.Assembly);
         }
-        
-        return new AumlAstXmlTypeReference(element.ToLineInfo(), element.Name.NamespaceName, element.Name.LocalName);
+
+        return new AumlAstXmlTypeReference(info, element.Name.NamespaceName, element.Name.LocalName);
     }
 
     public static NamespaceMapping GetNamespaceMapping(this XAttribute attribute)
