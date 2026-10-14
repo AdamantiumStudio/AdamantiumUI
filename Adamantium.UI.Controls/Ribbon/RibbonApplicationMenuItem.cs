@@ -3,6 +3,7 @@ using Adamantium.UI.Controls.Buttons;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Media;
+using Adamantium.UI.Core.RoutedEvents;
 using Adamantium.UI.Core.Templates;
 
 namespace Adamantium.UI.Controls;
@@ -22,7 +23,15 @@ public class RibbonApplicationMenuItem : Button, ISelectable
 
     /// <summary>What this row shows beside the rail. Null makes the row a command rather than a page.</summary>
     public static readonly AdamantiumProperty PageContentProperty = AdamantiumProperty.Register(nameof(PageContent),
-        typeof(object), typeof(RibbonApplicationMenuItem), new PropertyMetadata(null));
+        typeof(object), typeof(RibbonApplicationMenuItem), new PropertyMetadata(null, OnPageContentChanged));
+
+    private static void OnPageContentChanged(AdamantiumComponent sender, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (e.OldValue is Base.UIComponent { RootVisual: null } replaced)
+        {
+            ParkedSubtree.Discard(replaced);
+        }
+    }
 
     public static readonly AdamantiumProperty IsSelectedProperty = AdamantiumProperty.Register(nameof(IsSelected),
         typeof(bool), typeof(RibbonApplicationMenuItem), new PropertyMetadata(false, PropertyMetadataOptions.AffectsRender));
@@ -59,6 +68,18 @@ public class RibbonApplicationMenuItem : Button, ISelectable
     {
         get => GetValue<Brush>(BackgroundSelectedProperty);
         set => SetValue(BackgroundSelectedProperty, value);
+    }
+
+    /// <summary>The page is this row's: the pane only shows it, and lets it wait parked while another one shows. So it
+    /// goes with the row, unless something else has taken it into a tree.</summary>
+    protected override void OnDiscarded()
+    {
+        base.OnDiscarded();
+
+        if (PageContent is Base.UIComponent { RootVisual: null } page)
+        {
+            ParkedSubtree.Discard(page);
+        }
     }
 
     protected override AutomationPeer OnCreateAutomationPeer() => new RibbonApplicationMenuItemAutomationPeer(this);

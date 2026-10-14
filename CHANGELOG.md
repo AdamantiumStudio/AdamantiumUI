@@ -921,10 +921,21 @@ All packages share one version.
   in the caption's or the row's color. `Adamantium.UI.Core` now depends on `Adamantium.MVVM`.
 - The quick-access bar's own button and overflow rows draw a `WindowCommand`-shaped item's icon by `IconKey` too.
 - `Drawing.Render` and `DrawingImage.Render` take the color to paint `CurrentColor` with.
+- A discarded `Popup` leaves what a content presenter in it was handed through a binding - a control's content, a
+  menu's page or footer: that is its owner's, and a template swap shows it again. A closed slide panel's content and the
+  File menu's pages and footer came back empty after a theme change or a change of the menu's shape. The owners let
+  their own go with them: a ribbon its drawer, a slide panel its header, as a content control its content.
+- A `ContentPresenter` handed content its owner parked brings it back alive.
+- An in-process automation session releases what was let go when it settles, as the application's idle frames do, so a
+  test sees an element that came back dead.
 - `BrushParser` is an `ITypeParser<Brush>` (it was `ITypeParser<SolidColorBrush>`): the word `CurrentColor` reads as a
   `CurrentColorBrush`, any other text as before.
 - `{ObservableResource}` takes its value away when its key changes to one that resolves to nothing, or to none; a miss of
   the key it already shows still keeps the value.
+- The focus ring: after a click hides it, the first arrow key shows it where the focus is, as the first Tab does, and
+  only the next one moves. Alt shows it too, as across Windows, and marks the keyboard as in use even with nothing
+  focused, so what takes the focus next - a menu opened by its key tip - comes up with the ring.
+  `KeyboardNavigation.MoveInto(container, ringVisible)` moves the focus in with or without it.
 - Markup is built one way everywhere. What a document means is decided once, when it is lowered to a build plan
   (`Adamantium.UI.Markup.Building`); the generated class prints that plan as C#, and the runtime loader - the
   designer's preview, `VisualRenderer` - runs the same plan by reflection. The loader used to decide everything a
@@ -1152,6 +1163,13 @@ All packages share one version.
 
 ### Fixed
 
+- The File menu's pages no longer come back empty on a second pass, in either shape. The page shown is the row's, not
+  the pane's: the menu parks a page while another shows; a row takes its page with it when it goes, and the menu its
+  auxiliary pane and footer.
+- The row chosen in the File backstage no longer stays lit in the dropped panel whatever the pointer goes to: the
+  choice is the backstage's, kept for when it is back, and the panel lights only the row under the pointer.
+- The File menu dropped under its button, opened by a click, no longer shows a focus ring on its first row: it takes
+  the keyboard in without one, and shows it once a key asks.
 - Markup hot reload no longer makes an editor's save fail: it read a saved file without sharing it for writing, so a
   save made while it read was refused.
 - The designer no longer keeps every tree it has shown. A full preview now closes the window it showed before and

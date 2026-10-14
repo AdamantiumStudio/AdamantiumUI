@@ -28,7 +28,15 @@ public class RibbonApplicationMenu : Selector
     /// dropped under the button (Office 2007). The same rows and the same pages either way - only where they are shown
     /// differs, which is why one control answers for both.</summary>
     public static readonly AdamantiumProperty IsBackstageProperty = AdamantiumProperty.Register(nameof(IsBackstage),
-        typeof(bool), typeof(RibbonApplicationMenu), new PropertyMetadata(true, PropertyMetadataOptions.AffectsMeasure));
+        typeof(bool), typeof(RibbonApplicationMenu), new PropertyMetadata(true, PropertyMetadataOptions.AffectsMeasure, OnIsBackstageChanged));
+
+    private static void OnIsBackstageChanged(AdamantiumComponent sender, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (sender is not RibbonApplicationMenu menu) return;
+
+        menu.UpdateContainersSelection();
+        menu.UpdateSelectedPage();
+    }
 
     public bool IsBackstage
     {
@@ -66,6 +74,11 @@ public class RibbonApplicationMenu : Selector
 
     private static void OnAuxiliaryPaneContentChanged(AdamantiumComponent sender, AdamantiumPropertyChangedEventArgs e)
     {
+        if (e.OldValue is Base.UIComponent { RootVisual: null } replaced)
+        {
+            ParkedSubtree.Discard(replaced);
+        }
+
         (sender as RibbonApplicationMenu)?.UpdateSelectedPage();
     }
 
@@ -209,13 +222,19 @@ public class RibbonApplicationMenu : Selector
     // menu is something you run your eye down without committing to anything.
     private void UpdateSelectedPage()
     {
-        if (IsBackstage)
-        {
-            SelectedPage = (SelectedItem as RibbonApplicationMenuItem)?.PageContent;
-            return;
-        }
+        ShowPage(IsBackstage
+            ? (SelectedItem as RibbonApplicationMenuItem)?.PageContent
+            : _pointedAt?.PageContent ?? AuxiliaryPaneContent);
+    }
 
-        SelectedPage = _pointedAt?.PageContent ?? AuxiliaryPaneContent;
+    private void ShowPage(object page)
+    {
+        var shown = SelectedPage;
+        if (ReferenceEquals(shown, page)) return;
+
+        if (shown is IUIComponent leaving) ParkedSubtree.Park(leaving);
+        if (page is IUIComponent { IsParked: true, IsAttachedToVisualTree: true } still) ParkedSubtree.Unpark(still, remeasure: false);
+        SelectedPage = page;
     }
 
     private RibbonApplicationMenuItem _pointedAt;
@@ -233,6 +252,7 @@ public class RibbonApplicationMenu : Selector
     private Popup _popup;
     private Primitives.ToggleButton _button;
     private Primitives.ButtonBase _backButton;
+    private bool _ringOnOpen;
 
     public override void OnApplyTemplate()
     {
@@ -324,13 +344,14 @@ public class RibbonApplicationMenu : Selector
     {
         if (_popup == null) return;
 
+        _ringOnOpen = Core.Input.FocusManager.IsFocusVisible;
         _popup.LayerPass -= OnLayerPass;
         _popup.LayerPass += OnLayerPass;
     }
 
     private void OnLayerPass(object sender, EventArgs e)
     {
-        if (_popup?.Child is not { } content || !Core.Input.KeyboardNavigation.MoveInto(content)) return;
+        if (_popup?.Child is not { } content || !Core.Input.KeyboardNavigation.MoveInto(content, _ringOnOpen)) return;
 
         _popup.LayerPass -= OnLayerPass;
     }
@@ -382,6 +403,27 @@ public class RibbonApplicationMenu : Selector
 
         SetCurrentValue(IsOpenProperty, false);
     }
+
+    /// <summary>The auxiliary pane and the footer are the menu's own, only shown by its template: they go with the menu.
+    /// </summary>
+    protected override void OnDiscarded()
+    {
+        base.OnDiscarded();
+
+        if (AuxiliaryPaneContent is Base.UIComponent { RootVisual: null } pane)
+        {
+            ParkedSubtree.Discard(pane);
+        }
+
+        if (FooterPaneContent is Base.UIComponent { RootVisual: null } footer)
+        {
+            ParkedSubtree.Discard(footer);
+        }
+    }
+
+    /// <summary>The chosen row is the backstage's: it is the place navigated to, kept for the next time. The dropped
+    /// panel lights only the row under the pointer, so it shows no choice at all.</summary>
+    protected override bool IsItemSelected(object item) => IsBackstage && base.IsItemSelected(item);
 
     protected internal override bool IsItemItsOwnContainer(object item) => item is RibbonApplicationMenuItem;
 

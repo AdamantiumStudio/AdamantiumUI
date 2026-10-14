@@ -226,6 +226,7 @@ public class ContentPresenter : InputUIComponent
 
         if (newContent is IUIComponent iuiComponent)
         {
+            if (iuiComponent.IsParked) ParkedSubtree.Revalidate(iuiComponent);
             _currentRoot = iuiComponent;
         }
         else
@@ -432,6 +433,10 @@ public class ContentPresenter : InputUIComponent
         RemoveVisualChild(root);
         RemoveLogicalChild(root);
     }
+
+    internal bool ShowsHandedContent =>
+        _currentRoot != null && ReferenceEquals(_currentRoot, _builtFor) &&
+        GetValueSource(ContentProperty) is ValuePriority.Binding or ValuePriority.Template;
 
     private bool IsOwnersOwnItem(IUIComponent visual) =>
         visual != null && TemplatedParent is ItemsControl owner && owner.Items.Contains(visual);

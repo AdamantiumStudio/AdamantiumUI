@@ -241,7 +241,8 @@ public class Popup : MeasurableUIComponent, IContainer
 
     /// <summary>Closes, and discards the content along with the popup. It is not a visual child, so a template the popup
     /// is part of neither reaches it when torn down nor stamps it as one of its parts. What the content shows for others
-    /// stays: the items an items presenter in it shows, and anything already back in a tree.</summary>
+    /// stays: the items an items presenter in it shows, what a content presenter in it was handed through a binding, and
+    /// anything already back in a tree.</summary>
     protected override void OnDiscarded()
     {
         base.OnDiscarded();
@@ -269,7 +270,7 @@ public class Popup : MeasurableUIComponent, IContainer
             gone.Add(fundamental);
         }
 
-        if (node is ItemsPresenter)
+        if (node is ItemsPresenter or ContentPresenter { ShowsHandedContent: true })
         {
             return;
         }

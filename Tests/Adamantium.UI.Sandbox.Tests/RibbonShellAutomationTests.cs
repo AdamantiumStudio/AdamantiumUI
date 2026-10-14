@@ -4,6 +4,7 @@ using Adamantium.UI.Automation;
 using Adamantium.UI.Controls;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Automation;
+using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Resources;
 using Adamantium.UI.Sandbox.ModuleLoading;
 using Adamantium.UI.Sandbox.Resources;
@@ -31,9 +32,9 @@ public class RibbonShellAutomationTests
         app.ResourceManager.AddSource(new ModuleResources(), typeof(CaptionIcons), ResourceScope.Global);
     }
 
-    private static async Task<AutomationSession> RibbonShell(double width = 1280)
+    private static async Task<AutomationSession> RibbonShell(double width = 1280, bool backstage = true)
     {
-        var shell = new RibbonShellView { DataContext = new RibbonShellViewModel() };
+        var shell = new RibbonShellView { DataContext = new RibbonShellViewModel { IsBackstage = backstage } };
         var window = new Window { Width = width, Height = 720, ClientWidth = width, ClientHeight = 720, Content = shell };
         var session = AutomationSession.InProcess(window);
         await session.WaitForIdleAsync();
@@ -156,6 +157,88 @@ public class RibbonShellAutomationTests
         await file.CollapseAsync();
 
         Assert.That(choices.Name, Is.EqualTo("Choose commands from"), "named by the label beside it");
+    }
+
+    /// <summary>A second pass over the File menu: a page shown, left for others and shown again still works. Its pane
+    /// let it go when the next one came, and a page let go of for good came back empty - its button there by name, and
+    /// nothing behind it.</summary>
+    [TestCase(true)]
+    [TestCase(false)]
+    public async Task File_APageVisitedAgain_StillWorks(bool backstage)
+    {
+        await using var session = await RibbonShell(backstage: backstage);
+        var file = session.Find(By.Id("Band")).Find(By.Name("File"));
+
+        await file.ExpandAsync();
+        foreach (var row in new[] { "New", "Open", "Import", "New" })
+        {
+            await file.Find(By.Name(row)).InvokeAsync();
+            await session.WaitForIdleAsync();
+        }
+
+        await session.Find(By.Name("Empty scene")).InvokeAsync();
+        var status = await session.Find(By.Id("StatusLine")).NameAsync();
+
+        Assert.That(status, Is.EqualTo("New scene."), "the page came back dead: its command did not run");
+    }
+
+    /// <summary>The menu changes its shape - backstage to a dropped panel - while New is on show: the old shape's template
+    /// is torn down with what it showed, and the page and the footer are the menu's, only lent to it. They came back
+    /// empty, and the footer's Exit was gone.</summary>
+    [Test]
+    public async Task File_AfterItsShapeChanged_StillShowsItsPagesAndFooter()
+    {
+        await using var session = await RibbonShell();
+        var file = session.Find(By.Id("Band")).Find(By.Name("File"));
+
+        await file.ExpandAsync();
+        foreach (var row in new[] { "Open", "Import", "New" })
+        {
+            await file.Find(By.Name(row)).InvokeAsync();
+            await session.WaitForIdleAsync();
+        }
+
+        await file.CollapseAsync();
+        await session.Find(By.Name("Backstage")).ToggleAsync();
+        await session.WaitForIdleAsync();
+
+        await file.ExpandAsync();
+        await file.Find(By.Name("New")).InvokeAsync();
+        await session.WaitForIdleAsync();
+        await session.Find(By.Name("Empty scene")).InvokeAsync();
+        var afterPage = await session.Find(By.Id("StatusLine")).NameAsync();
+        await file.Find(By.Name("Exit")).InvokeAsync();
+        var afterFooter = await session.Find(By.Id("StatusLine")).NameAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(afterPage, Is.EqualTo("New scene."), "the page came back dead: its command did not run");
+            Assert.That(afterFooter, Is.EqualTo("Exit requested."), "the footer came back dead");
+        });
+    }
+
+    /// <summary>The File menu takes the keyboard in with it either way, and shows where it is only if the keyboard was in
+    /// use when it opened - a click lit the first row as if it had been reached by Tab.</summary>
+    [TestCase(false)]
+    [TestCase(true)]
+    public async Task File_TakesTheKeyboardIn_WithTheRingOnlyFromTheKeyboard(bool keyboardInUse)
+    {
+        await using var session = await RibbonShell(backstage: false);
+        var file = session.Find(By.Id("Band")).Find(By.Name("File"));
+        FocusManager.ResetFocus();
+        if (keyboardInUse) FocusManager.Reveal();
+
+        await file.ExpandAsync();
+        await session.WaitForIdleAsync();
+        var focused = FocusManager.Focused;
+        var ring = FocusManager.IsFocusVisible;
+        await file.CollapseAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(focused, Is.InstanceOf<RibbonApplicationMenuItem>(), "the keyboard went in with the menu");
+            Assert.That(ring, Is.EqualTo(keyboardInUse));
+        });
     }
 
     [Test]

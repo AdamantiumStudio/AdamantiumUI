@@ -194,5 +194,16 @@ public class SlidePanel : ContentControl
         return t;
     }
 
+    /// <summary>The header is the panel's own, as its content is: it goes with the panel.</summary>
+    protected override void OnDiscarded()
+    {
+        base.OnDiscarded();
+
+        if (Header is Base.UIComponent { RootVisual: null } header)
+        {
+            ParkedSubtree.Discard(header);
+        }
+    }
+
     protected override AutomationPeer OnCreateAutomationPeer() => new SlidePanelAutomationPeer(this);
 }
