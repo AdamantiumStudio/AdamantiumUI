@@ -60,9 +60,13 @@ public sealed class DesignerSession : IDisposable
 
     // Hot reload: the AST the live tree was built from, the authored root instance, and the file it came from. An edit
     // to the SAME file reconciles this tree in place (keeping animations) instead of rebuilding it.
-    private AumlAstObjectNode _lastAst;
+    private AumlLoadResult _lastLoad;
     private object _liveAuthoredRoot;
     private string _lastUri;
+
+    // Every element the markup built for the window shown, by the first load and by each edit reconciled into it. Weak:
+    // what an edit took out is released already and must not be kept for the next rebuild to release again.
+    private System.Runtime.CompilerServices.ConditionalWeakTable<IUIComponent, object> _built = new();
 
     private const double DefaultWidth = 1280;
     private const double DefaultHeight = 720;
@@ -159,15 +163,16 @@ public sealed class DesignerSession : IDisposable
         // Hot reload: an edit to a file we already have live -> reconcile the EXISTING tree in place (changed properties
         // re-applied so transitions ease, added/removed children spliced in) instead of rebuilding it. The animation
         // clocks are NOT reset, so everything that was running keeps running. Only a full (first) build resets them.
-        if (live && _lastWindow != null && _lastAst != null && _liveAuthoredRoot != null
+        if (live && _lastWindow != null && _lastLoad != null && _liveAuthoredRoot != null
             && string.Equals(aumlSourcePath, _lastUri, StringComparison.Ordinal))
         {
-            var rec = AumlLoader.Reconcile(_liveAuthoredRoot, _lastAst, aumlText,
+            var rec = AumlLoader.Reconcile(_liveAuthoredRoot, _lastLoad, aumlText,
                 AppDomain.CurrentDomain.GetAssemblies(),
                 t => typeof(IWindow).IsAssignableFrom(t) ? typeof(VirtualWindow) : t);
             if (rec.Reconciled)
             {
-                _lastAst = rec.Ast;
+                _lastLoad = rec;
+                RememberBuilt(rec);
                 var win = _lastWindow;
                 var src = (_liveAuthoredRoot as IMeasurableComponent) ?? (win as IMeasurableComponent);
                 var dw = ResolveDimension(src?.Width, requestWidth, DefaultWidth);
@@ -179,7 +184,10 @@ public sealed class DesignerSession : IDisposable
                 // Reconcile keeps the SAME control instances (same RenderIds), so their cached render units are still
                 // valid - do NOT reset the cache (that would dispose every unit, and unchanged/clean controls record
                 // nothing to rebuild them -> white screen). The changed control re-renders itself via its invalidation.
-                return RenderTail(win, dw, dh, scale, outPath, live, rec.Diagnostics, resetCache: false);
+                var reconciled = RenderTail(win, dw, dh, scale, outPath, live, rec.Diagnostics, resetCache: false);
+                // What the edit took out is released after the frame that drew it gone, as the loop releases after its frame.
+                DiscardedVisuals.ReleaseNow([]);
+                return reconciled;
             }
             // reconcile declined (root element type changed) -> fall through to a full rebuild
         }
@@ -264,17 +272,57 @@ public sealed class DesignerSession : IDisposable
             window.Update(_app.ThemeManager, new AppTime());
         }
 
+        if (_lastWindow != null && !ReferenceEquals(_lastWindow, window))
+        {
+            Retire(_lastWindow);
+        }
+
+        // The work posted while the tree was built - its view model's own - runs as the loop would run it, on every
+        // preview alike; then the tree is laid out again so that what it changed is in the frame.
+        LoopSignal.Drain();
+        window.Update(_app.ThemeManager, new AppTime());
+
         (designWidth, designHeight) = ShrinkToContent(window, authoredVisual, sizeSource, designWidth, designHeight);
 
         // Keep the laid-out tree + source map + AST for a follow-up hittest and for reconciling the next edit. A template
         // is rebuilt on every edit: its content is not a live tree the reconciler can patch.
+        RememberBuilt(load);
         _lastWindow = window;
         _lastSourceMap = load.SourceMap;
-        _lastAst = load.Ast;
+        _lastLoad = load;
         _liveAuthoredRoot = load.Root is UiTemplate ? null : load.Root;
         _lastUri = aumlSourcePath;
 
         return RenderTail(window, designWidth, designHeight, scale, outPath, live, load.Diagnostics, resetCache: true);
+    }
+
+    // The window shown before is done with. Closed as the application closes one, which lets go of the theme manager and
+    // the languages; then released at once, since no loop runs here to do it between frames. What the markup built is
+    // released by name too: a drawer not opened or a tab not shown is not in the visual tree, yet it holds the theme's
+    // brushes and, through them, the whole tree.
+    private void Retire(IWindow window)
+    {
+        if (window == null)
+        {
+            return;
+        }
+
+        _lastHoverElement = null;
+        window.Close();
+        LoopSignal.Drain();
+        DiscardedVisuals.ReleaseNow([window, .. _built.Select(pair => pair.Key)]);
+        _built = new();
+    }
+
+    private void RememberBuilt(AumlLoadResult load)
+    {
+        foreach (var built in load.SourceMap?.Keys ?? [])
+        {
+            if (built is IUIComponent element)
+            {
+                _built.AddOrUpdate(element, null);
+            }
+        }
     }
 
     // What is not a window has no caption of its own: it is shown in a window without one.
@@ -951,5 +999,12 @@ public sealed class DesignerSession : IDisposable
         return _renderService;
     }
 
-    public void Dispose() => _renderService?.UnloadContent();
+    public void Dispose()
+    {
+        Retire(_lastWindow);
+        RenderDirty.Clear();   // no frame follows to consume what letting go marked
+        _lastWindow = null;
+        _liveWindow = null;
+        _renderService?.UnloadContent();
+    }
 }

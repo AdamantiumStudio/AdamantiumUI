@@ -23,6 +23,9 @@ public class AumlDocument
     /// <summary>The file's full path where the build found it; null when the markup did not come from a file.</summary>
     public string SourceFilePath { get; set; }
 
+    /// <summary>The <see cref="MarkupHash"/> of the text the document was parsed from; null when nobody asked for it.</summary>
+    public string SourceHash { get; set; }
+
     public string FileName => Path.GetFileNameWithoutExtension(RelativeFilePath);
 
     public string RootNamespace { get; set; }
@@ -41,6 +44,7 @@ public class AumlDocument
             Root = (AumlAstObjectNode)Root?.Clone(null),
             RelativeFilePath = RelativeFilePath,
             SourceFilePath = SourceFilePath,
+            SourceHash = SourceHash,
             RootNamespace = RootNamespace
         };
 }

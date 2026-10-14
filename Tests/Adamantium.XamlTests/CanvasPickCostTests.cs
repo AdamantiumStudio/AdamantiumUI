@@ -91,6 +91,28 @@ public class CanvasPickCostTests
         return clock.Elapsed.TotalMilliseconds / times;
     }
 
+    // The fastest of many short batches, the batches of every case taken in turn. Whatever else the machine does only ever
+    // ADDS time to a batch, so the fastest is the one it did not touch; and taking the cases in turn lets a slower spell
+    // fall on all of them alike, instead of on whichever case it happened to coincide with.
+    private static double[] Fastest(int batches, int times, params Action[] cases)
+    {
+        foreach (var what in cases) what();
+
+        var best = new double[cases.Length];
+        Array.Fill(best, double.MaxValue);
+        for (var batch = 0; batch < batches; batch++)
+        {
+            for (var i = 0; i < cases.Length; i++)
+            {
+                var clock = Stopwatch.StartNew();
+                for (var n = 0; n < times; n++) cases[i]();
+                best[i] = Math.Min(best[i], clock.Elapsed.TotalMilliseconds / times);
+            }
+        }
+
+        return best;
+    }
+
     // NOT a threshold on a number that depends on the machine - what this asserts is the SHAPE: a press on a plane with
     // ten nodes must not cost ten times what it costs with one. Anything that walks everything on the plane does.
     [Test]
@@ -99,28 +121,32 @@ public class CanvasPickCostTests
         Use();
 
         var said = new System.Text.StringBuilder();
-        var costs = new double[2];
         var counts = new[] { 1, 10 };
+        var planes = Array.ConvertAll(counts, Plane);
+        var at = new Vector2(2000, 2000);   // empty plane: nothing is hit, so what is timed is the SEARCH
+
+        var presses = Fastest(30, 20, Array.ConvertAll(planes, plane => (Action)(() =>
+        {
+            plane.Canvas.Tool.OnPressed(plane.Canvas, new CanvasPointerEventArgs
+            {
+                World = at,
+                Pointer = at,
+                Screen = plane.Canvas.WorldToScreen(at),
+                Button = Adamantium.UI.Core.Input.MouseButtons.Left
+            });
+            plane.Canvas.Tool.Cancel(plane.Canvas);
+        })));
 
         for (var i = 0; i < counts.Length; i++)
         {
-            var (canvas, scene, _, window) = Plane(counts[i]);
-            var at = new Vector2(2000, 2000);   // empty plane: nothing is hit, so what is timed is the SEARCH
+            var (_, scene, _, window) = planes[i];
 
             var scan = Millis(200, () =>
             {
                 foreach (var item in scene.ItemsIn(new Rect(at.X - 4, at.Y - 4, 8, 8))) _ = item.Bounds;
             });
 
-            var press = Millis(200, () => canvas.Tool.OnPressed(canvas, new CanvasPointerEventArgs
-            {
-                World = at,
-                Pointer = at,
-                Screen = canvas.WorldToScreen(at),
-                Button = Adamantium.UI.Core.Input.MouseButtons.Left
-            }));
-
-            canvas.Tool.Cancel(canvas);
+            var press = presses[i];
 
             // ...and what a press SETS GOING. Touching the scene is what every gesture ends with, and if that puts a
             // layout pass over every node through, the press is cheap and the frame after it is not - which is what a
@@ -131,7 +157,6 @@ public class CanvasPickCostTests
                 Adamantium.UI.Extensions.WindowExtension.UpdateTree(window);
             });
 
-            costs[i] = press;
             said.AppendLine($"{counts[i]} nodes: scan {scan:F4} ms, press {press:F4} ms, settle {settle:F4} ms");
         }
 
@@ -140,7 +165,7 @@ public class CanvasPickCostTests
 
         // Ten times the nodes for at most four times the press: some growth is honest (the scene IS walked once), a
         // multiple of the count is not.
-        Assert.That(costs[1], Is.LessThan(Math.Max(costs[0], 1e-4) * 4),
+        Assert.That(presses[1], Is.LessThan(Math.Max(presses[0], 1e-4) * 4),
             "a press costs in proportion to how much is on the plane:\r\n" + said);
     }
 }

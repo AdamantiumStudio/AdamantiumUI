@@ -270,6 +270,9 @@ public class WindowRenderService : UiRenderService
             }
         }
 
+        // What changed is recorded now, as the loop clears after its draw; left, the marks would hold every element they
+        // name for the whole designer session.
+        RenderDirty.Clear();
         return true;
     }
 

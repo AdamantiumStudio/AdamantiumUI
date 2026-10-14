@@ -731,26 +731,14 @@ public class GpuRenderUnitTests
             ClearColor = Colors.Black
         };
 
-        var dir = new System.IO.DirectoryInfo(AppContext.BaseDirectory);
-        while (!System.IO.File.Exists(System.IO.Path.Combine(dir.FullName, "Adamantium.UI.Sandbox.Content", "Textures", "RotatingEarth2.gif")))
-        {
-            dir = dir.Parent;
-        }
-
-        var picture = new Adamantium.UI.Core.Media.Imaging.BitmapImage(
-            BitmapLoader.Load(System.IO.Path.Combine(dir.FullName, "Adamantium.UI.Sandbox.Content", "Textures", "RotatingEarth2.gif")));
+        using var picture = Animation();
         var destination = new Rect(3, 5, 311, 147);
 
         var fullColorRoot = new TestRoot(width, height);
         fullColorRoot.Add(new TestControl { RenderAction = s => s.DrawImage(picture, null, destination, new CornerRadius(0)) });
         var fullColor = Drawn(renderer, fullColorRoot, width, height);
 
-        picture.RequestFrameArrayTexture(resources);
-        var waited = System.Diagnostics.Stopwatch.StartNew();
-        while (picture.FrameArrayTexture == null && waited.Elapsed < TimeSpan.FromSeconds(30))
-        {
-            System.Threading.Thread.Sleep(20);
-        }
+        BuildFrameArray(picture, resources);
 
         Assume.That(picture.FramePalette, Is.Not.Null, "precondition: the animation fits one palette");
 
@@ -766,6 +754,68 @@ public class GpuRenderUnitTests
 
         Assert.That(fullColor.Distinct().Count(), Is.GreaterThan(100), "precondition: the picture was actually drawn");
         Assert.That(worst, Is.LessThanOrEqualTo(2), "the paletted frame differs from the full-color one");
+    }
+
+    // Freed on the finalizer thread, the textures left the registry under another test and could die under a frame.
+    [Test]
+    public void AnAnimationNobodyDisposed_RetiresItsTextures_FromTheFinalizerToo()
+    {
+        var (picture, array, palette) = TexturesOfAnAnimationLeftToTheCollector(new DeviceResourceFactory(_device));
+        Assume.That(palette, Is.Not.Null, "precondition: the animation fits one palette");
+
+        // The frame array's build task may still hold the picture for a moment after the texture is set.
+        var waited = System.Diagnostics.Stopwatch.StartNew();
+        while (picture.IsAlive && waited.Elapsed < TimeSpan.FromSeconds(10))
+        {
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+        }
+
+        Assert.That(picture.IsAlive, Is.False, "a picture nobody holds is collected");
+        Assert.Multiple(() =>
+        {
+            Assert.That(array.IsDisposed, Is.False, "the frame array is retired, not destroyed");
+            Assert.That(palette.IsDisposed, Is.False, "the palette is retired, not destroyed");
+        });
+
+        GpuTestDevice.Reclaim();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(array.IsDisposed, Is.True, "a retired frame array is freed when the device reclaims");
+            Assert.That(palette.IsDisposed, Is.True, "a retired palette is freed when the device reclaims");
+        });
+    }
+
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+    private static (WeakReference Picture, ITexture Array, ITexture Palette) TexturesOfAnAnimationLeftToTheCollector(
+        IResourceFactory resources)
+    {
+        var picture = Animation();
+        BuildFrameArray(picture, resources);
+        return (new WeakReference(picture), picture.FrameArrayTexture, picture.FramePalette);
+    }
+
+    private static Adamantium.UI.Core.Media.Imaging.BitmapImage Animation()
+    {
+        var dir = new System.IO.DirectoryInfo(AppContext.BaseDirectory);
+        while (!System.IO.File.Exists(System.IO.Path.Combine(dir.FullName, "Adamantium.UI.Sandbox.Content", "Textures", "RotatingEarth2.gif")))
+        {
+            dir = dir.Parent;
+        }
+
+        return new Adamantium.UI.Core.Media.Imaging.BitmapImage(
+            BitmapLoader.Load(System.IO.Path.Combine(dir.FullName, "Adamantium.UI.Sandbox.Content", "Textures", "RotatingEarth2.gif")));
+    }
+
+    private static void BuildFrameArray(Adamantium.UI.Core.Media.Imaging.BitmapImage picture, IResourceFactory resources)
+    {
+        picture.RequestFrameArrayTexture(resources);
+        var waited = System.Diagnostics.Stopwatch.StartNew();
+        while (picture.FrameArrayTexture == null && waited.Elapsed < TimeSpan.FromSeconds(30))
+        {
+            System.Threading.Thread.Sleep(20);
+        }
     }
 
     private sealed class StubResourceFactory : IResourceFactory

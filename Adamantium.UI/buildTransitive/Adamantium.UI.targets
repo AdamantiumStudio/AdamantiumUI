@@ -20,7 +20,14 @@
                      Exclude="@(AdditionalFiles);bin\**;obj\**;$(BaseIntermediateOutputPath)**;$(BaseOutputPath)**" />
   </ItemGroup>
 
+  <!-- true: every view, window and control reports itself to the markup hot reload, so a saved .auml is applied to the
+       running application. A debug build only, unless the project says otherwise. -->
+  <PropertyGroup>
+    <AdamantiumAumlHotReload Condition="'$(AdamantiumAumlHotReload)' == '' And '$(Configuration)' == 'Debug'">true</AdamantiumAumlHotReload>
+  </PropertyGroup>
+
   <ItemGroup>
+    <CompilerVisibleProperty Include="AdamantiumAumlHotReload" />
     <CompilerVisibleProperty Include="AdamantiumScenarioApplication" />
     <CompilerVisibleProperty Include="RootNamespace" />
     <CompilerVisibleProperty Include="ProjectDir" />

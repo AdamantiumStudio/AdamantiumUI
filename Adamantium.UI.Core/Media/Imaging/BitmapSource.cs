@@ -71,6 +71,13 @@ public unsafe class BitmapSource : ImageSource
    {
       var texture = Texture;
       Texture = null;
+      Retire(texture);
+   }
+
+   /// <summary>Hands <paramref name="texture"/> to its device to free once no frame in flight can sample it - from any
+   /// thread, the finalizer's included.</summary>
+   protected static void Retire(ITexture texture)
+   {
       if (texture == null)
       {
          return;

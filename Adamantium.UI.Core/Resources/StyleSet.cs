@@ -1,6 +1,6 @@
 ﻿namespace Adamantium.UI.Core.Resources;
 
-public class StyleSet : AdamantiumComponent, IStyleSet
+public class StyleSet : AdamantiumComponent, IStyleSet, Markup.IMarkupContent
 {
     public StylesCollection Styles { get; }
 
@@ -56,4 +56,9 @@ public class StyleSet : AdamantiumComponent, IStyleSet
     public string Name { get; set; }
 
     public bool Initialized { get; private set; }
+
+    void Markup.IMarkupContent.ClearMarkupContent()
+    {
+        Styles.Clear();
+    }
 }

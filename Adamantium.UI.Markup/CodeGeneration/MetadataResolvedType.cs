@@ -48,7 +48,7 @@ public class MetadataResolvedType : IResolvedType
     // and to the language server's property completion/hover.
     public IEnumerable<IResolvedMember> Members => BaseType?.Members ?? [];
     public IResolvedMember GetMemberByName(string memberName) => BaseType?.GetMemberByName(memberName);
-    public List<IResolvedProperty> GetAllProperties() => BaseType?.GetAllProperties() ?? new List<IResolvedProperty>();
+    public IReadOnlyList<IResolvedProperty> GetAllProperties() => BaseType?.GetAllProperties() ?? [];
     public bool HasAttribute(string attributeName) => BaseType?.HasAttribute(attributeName) ?? false;
     public IResolvedAttribute GetAttribute(string fullName) => BaseType?.GetAttribute(fullName);
     public IEnumerable<IResolvedAttribute> GetAttributes() => BaseType?.GetAttributes() ?? [];

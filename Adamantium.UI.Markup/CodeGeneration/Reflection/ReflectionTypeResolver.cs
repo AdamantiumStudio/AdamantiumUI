@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Runtime.CompilerServices;
 
 namespace Adamantium.UI.Markup.CodeGeneration.Reflection;
 
@@ -15,6 +16,12 @@ public class ReflectionTypeResolver : ITypeResolver
     // One xmlns URI may map to several assemblies (controls + core both under "http://adamantium/ui"); unioned
     // via a CompositeResolvedAssembly on lookup.
     private readonly Dictionary<string, List<IResolvedAssembly>> _resolvedXmlAssemblies = new();
+    // Resolve's answers, misses included: a miss asks every assembly. Dropped when an assembly joins.
+    private static readonly char[] Slash = ['/'];
+
+    private readonly Dictionary<string, IResolvedType> _resolved = new(StringComparer.Ordinal);
+    // GetResolvedAssemblyByXmlDefinition's answers; a key is dropped when an assembly joins its xmlns.
+    private readonly Dictionary<string, IResolvedAssembly> _xmlLookups = new(StringComparer.Ordinal);
 
     public ReflectionTypeResolver(IEnumerable<Assembly> assemblies = null)
     {
@@ -25,17 +32,30 @@ public class ReflectionTypeResolver : ITypeResolver
 
     public IReadOnlyCollection<string> XmlnsDefinitions => _resolvedXmlAssemblies.Keys.ToArray();
 
-    public IResolvedAssembly GetResolvedAssembly(string assemblyName) =>
-        _resolvedAssemblies.FirstOrDefault(x => x.Name == assemblyName) ?? ResolveAssembly(assemblyName);
+    public IResolvedAssembly GetResolvedAssembly(string assemblyName)
+    {
+        foreach (var assembly in _resolvedAssemblies)
+            if (assembly.Name == assemblyName) return assembly;
+        return ResolveAssembly(assemblyName);
+    }
 
     public IResolvedAssembly GetResolvedAssemblyByXmlDefinition(string xmlDefinition)
     {
-        if (!_resolvedXmlAssemblies.TryGetValue(xmlDefinition.Trim('/'), out var assemblies) || assemblies.Count == 0)
+        var key = xmlDefinition.Trim(Slash);
+        if (_xmlLookups.TryGetValue(key, out var known)) return known;
+        if (!_resolvedXmlAssemblies.TryGetValue(key, out var assemblies) || assemblies.Count == 0)
             return null;
-        return assemblies.Count == 1 ? assemblies[0] : new CompositeResolvedAssembly(assemblies);
+        return _xmlLookups[key] = assemblies.Count == 1 ? assemblies[0] : new CompositeResolvedAssembly(assemblies);
     }
 
     public IResolvedType Resolve(string metadataName)
+    {
+        if (_resolved.TryGetValue(metadataName, out var known)) return known;
+
+        return _resolved[metadataName] = ResolveUncached(metadataName);
+    }
+
+    private IResolvedType ResolveUncached(string metadataName)
     {
         foreach (var assembly in _resolvedAssemblies)
         {
@@ -45,8 +65,8 @@ public class ReflectionTypeResolver : ITypeResolver
 
         foreach (var asm in _assemblies)
         {
-            var type = asm.GetType(metadataName, throwOnError: false);
-            if (type != null) return new ReflectionResolvedType(type);
+            var type = ReflectionResolvedAssembly.TypeNamed(asm, metadataName);
+            if (type != null) return ReflectionResolvedType.Of(type);
         }
         return null;
     }
@@ -61,8 +81,8 @@ public class ReflectionTypeResolver : ITypeResolver
 
         foreach (var asm in _assemblies)
         {
-            var type = ReflectionResolvedAssembly.SafeGetTypes(asm).FirstOrDefault(t => !t.IsNested && t.Name == metadataName);
-            if (type != null) return new ReflectionResolvedType(type);
+            var type = ReflectionResolvedAssembly.TopLevelTypeNamed(asm, metadataName);
+            if (type != null) return ReflectionResolvedType.Of(type);
         }
         return null;
     }
@@ -76,30 +96,42 @@ public class ReflectionTypeResolver : ITypeResolver
     public List<IResolvedAssembly> ScanXmlnsAttributes()
     {
         var result = new List<IResolvedAssembly>();
-        const string attrName = "Adamantium.UI.Core.Markup.XmlnsDefinitionAttribute";
-
         foreach (var asm in _assemblies)
         {
-            // Read the attribute as metadata (CustomAttributeData) rather than instantiating it: cheaper and
-            // reflection-only-safe, and the raw "clr-namespace:...;assembly=..." string is parsed here.
-            IList<CustomAttributeData> datas;
-            try { datas = CustomAttributeData.GetCustomAttributes(asm); }
-            catch { continue; }
-
-            foreach (var data in datas)
+            foreach (var (xmlNs, asmName) in asm.IsDynamic ? ReadXmlnsDefinitions(asm) : XmlnsDefinitionsOf.GetValue(asm, ReadXmlnsDefinitions))
             {
-                if (data.AttributeType.FullName != attrName || data.ConstructorArguments.Count < 2) continue;
-
-                var xmlNs = data.ConstructorArguments[0].Value as string;
-                var clrNsRaw = data.ConstructorArguments[1].Value as string;
-                if (xmlNs == null || clrNsRaw == null) continue;
-
-                var (_, asmName) = ParseClrNamespace(clrNsRaw);
                 var container = GetOrCreateTypeContainerForAssembly(asmName, xmlNs);
                 if (container != null) result.Add(container);
             }
         }
         return result;
+    }
+
+    // An assembly's attributes do not change: read once per assembly.
+    private static readonly ConditionalWeakTable<Assembly, (string XmlNamespace, string Assembly)[]> XmlnsDefinitionsOf = new();
+
+    private static (string XmlNamespace, string Assembly)[] ReadXmlnsDefinitions(Assembly asm)
+    {
+        const string attrName = "Adamantium.UI.Core.Markup.XmlnsDefinitionAttribute";
+
+        // Read the attribute as metadata (CustomAttributeData) rather than instantiating it: cheaper and
+        // reflection-only-safe, and the raw "clr-namespace:...;assembly=..." string is parsed here.
+        IList<CustomAttributeData> datas;
+        try { datas = CustomAttributeData.GetCustomAttributes(asm); }
+        catch { return []; }
+
+        var definitions = new List<(string, string)>();
+        foreach (var data in datas)
+        {
+            if (data.AttributeType.FullName != attrName || data.ConstructorArguments.Count < 2) continue;
+
+            var xmlNs = data.ConstructorArguments[0].Value as string;
+            var clrNsRaw = data.ConstructorArguments[1].Value as string;
+            if (xmlNs == null || clrNsRaw == null) continue;
+
+            definitions.Add((xmlNs, ParseClrNamespace(clrNsRaw).Assembly));
+        }
+        return definitions.ToArray();
     }
 
     // clr-namespace:Some.Ns;assembly=Some.Asm  (also tolerates an 'assembly:' separator).
@@ -124,12 +156,13 @@ public class ReflectionTypeResolver : ITypeResolver
             return resolved;
         }
 
-        var asm = _assemblies.FirstOrDefault(a => a.GetName().Name == assemblyName) ?? LoadByName(assemblyName);
+        var asm = _assemblies.FirstOrDefault(a => ReflectionResolvedAssembly.SimpleName(a) == assemblyName) ?? LoadByName(assemblyName);
         if (asm == null) return null;
 
         var container = new ReflectionResolvedAssembly(asm);
         _resolvedAssembliesMap[assemblyName] = container;
         _resolvedAssemblies.Add(container);
+        _resolved.Clear();
         EnsureXmlDefinitionAssemblyAdded(container, xmlNamespace);
         return container;
     }
@@ -156,13 +189,15 @@ public class ReflectionTypeResolver : ITypeResolver
     public IResolvedAssembly FindAssemblyByNamespace(string targetNamespace)
     {
         foreach (var assembly in _resolvedAssemblies)
-            if (assembly.Types.Any(t => t.Namespace == targetNamespace))
+            if (assembly is ReflectionResolvedAssembly reflected
+                    ? reflected.HasNamespace(targetNamespace)
+                    : assembly.Types.Any(t => t.Namespace == targetNamespace))
                 return assembly;
 
         foreach (var asm in _assemblies)
         {
-            if (ReflectionResolvedAssembly.SafeGetTypes(asm).Any(t => t.Namespace == targetNamespace))
-                return GetOrCreateTypeContainerForAssembly(asm.GetName().Name);
+            if (ReflectionResolvedAssembly.DeclaresNamespace(asm, targetNamespace))
+                return GetOrCreateTypeContainerForAssembly(ReflectionResolvedAssembly.SimpleName(asm));
         }
         return null;
     }
@@ -172,10 +207,13 @@ public class ReflectionTypeResolver : ITypeResolver
     private void EnsureXmlDefinitionAssemblyAdded(IResolvedAssembly assembly, string xmlDefinition)
     {
         if (string.IsNullOrEmpty(xmlDefinition)) return;
-        var key = xmlDefinition.Trim('/');
+        var key = xmlDefinition.Trim(Slash);
         if (!_resolvedXmlAssemblies.TryGetValue(key, out var assemblies))
             _resolvedXmlAssemblies[key] = assemblies = new List<IResolvedAssembly>();
         if (!assemblies.Contains(assembly))
+        {
             assemblies.Add(assembly);
+            _xmlLookups.Remove(key);
+        }
     }
 }

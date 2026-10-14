@@ -36,7 +36,7 @@ public interface IResolvedType
     
     IResolvedMember GetMemberByName(string memberName);
 
-    List<IResolvedProperty> GetAllProperties();
+    IReadOnlyList<IResolvedProperty> GetAllProperties();
 
     bool IsAssignableTo(string fullName);
 
