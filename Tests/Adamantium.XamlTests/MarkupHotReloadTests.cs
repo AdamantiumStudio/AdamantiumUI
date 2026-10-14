@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Metadata;
+using System.Threading;
 using System.Threading.Tasks;
 using Adamantium.Core.DependencyInjection;
 using Adamantium.Mathematics;
@@ -281,6 +282,24 @@ public class MarkupHotReloadTests
         MarkupHotReload.NotifyChanged(_file);
 
         Assert.That(MarkupHotReload.ChangedFiles, Is.Empty);
+    }
+
+    // The watcher's reports of a save arrive while it is being applied. One that read the hash last taken before the
+    // apply took the save, and gathered it after, put an applied save back on the list.
+    [Test]
+    public async Task SavesAppliedRightAfterTheyAreMade_AreNotLeftAsChanged()
+    {
+        var panel = Built(Panel("Save 0"));
+
+        for (var save = 1; save <= 20; save++)
+        {
+            File.WriteAllText(_file, Panel($"Save {save}"));
+            await MarkupHotReload.ApplyAsync([_file]);
+            Assert.That(((TextBlock)panel.Children[0]).Text, Is.EqualTo($"Save {save}"));
+        }
+
+        Thread.Sleep(500);
+        Assert.That(MarkupHotReload.ChangedFiles, Is.Empty, "a save already applied is still listed as changed");
     }
 
     [Test]

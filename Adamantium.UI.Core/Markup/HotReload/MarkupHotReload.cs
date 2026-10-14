@@ -108,12 +108,14 @@ public static class MarkupHotReload
             }
         }
 
-        // Read outside the lock, compared inside it: a save taken to apply meanwhile is not gathered again. Unread counts
-        // as new - a file the save still holds is looked at again once it settles.
+        // Read outside the lock, compared inside it; and what looks new is read again inside it, since the first read may
+        // be older than a save taken to apply meanwhile - a write reports itself as soon as it empties the file. Unread
+        // counts as new: a file the save still holds is looked at again once it settles.
         var content = HashOf(ReadText(fullPath, 1));
         lock (Sync)
         {
-            if (content != null && Taken.TryGetValue(fullPath, out var taken) && taken == content)
+            if (Taken.TryGetValue(fullPath, out var taken) && taken != null
+                && (content == taken || HashOf(ReadText(fullPath, 1)) == taken))
             {
                 return;
             }
