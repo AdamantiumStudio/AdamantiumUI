@@ -124,6 +124,49 @@ public static class FocusManager
       AnnounceFocusMove(previous, null, NavigationMethod.Unspecified);
    }
 
+   /// <summary>Moves the focus out of <paramref name="hidden"/>, which has just stopped being shown, onto the nearest
+   /// ancestor that can hold it - so keys go on reaching something on screen, as they reach a game's surface again once
+   /// the menu laid over it closes. With no ancestor to take it the focus is let go of, so no key reaches a hidden
+   /// element.</summary>
+   public static void LeaveHidden(IUIComponent hidden)
+   {
+      if (Focused == null || !IsWithin(Focused, hidden))
+         return;
+
+      for (var node = hidden.VisualParent; node != null; node = node.VisualParent)
+      {
+         if (node is IInputComponent candidate && CanFocus(candidate))
+         {
+            Return(candidate, IsFocusVisible);
+            return;
+         }
+      }
+
+      Release(Focused);
+   }
+
+   private static bool IsShown(IUIComponent element)
+   {
+      for (var node = element.VisualParent; node != null; node = node.VisualParent)
+      {
+         if (node.Visibility != Visibility.Visible)
+            return false;
+      }
+
+      return true;
+   }
+
+   private static bool IsWithin(IUIComponent element, IUIComponent container)
+   {
+      for (var node = element; node != null; node = node.VisualParent)
+      {
+         if (ReferenceEquals(node, container))
+            return true;
+      }
+
+      return false;
+   }
+
    private static void DropFromScopes(IInputComponent element)
    {
       List<IInputComponent> stale = null;
@@ -258,7 +301,8 @@ public static class FocusManager
    /// is how the caller knows to enter it at its first stop instead.</summary>
    public static bool TryRestoreFocus(IInputComponent root)
    {
-      if (root == null || !FocusByRoot.TryGetValue(root, out var remembered) || !CanFocus(remembered))
+      if (root == null || !FocusByRoot.TryGetValue(root, out var remembered) || !CanFocus(remembered)
+          || !IsShown(remembered))
          return false;
 
       // It has to still be IN this window: the remembered element may have been removed with a closed tab, or moved to
