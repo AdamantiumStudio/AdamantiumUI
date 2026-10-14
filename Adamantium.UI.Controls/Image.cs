@@ -342,6 +342,12 @@ public class Image : InputUIComponent, IDesignTimeAnimatedMedia
       set => SetValue(SourceProperty, value);
    }
 
+   static Image()
+   {
+      ForegroundProperty.OverrideMetadata(typeof(Image),
+         new PropertyMetadata(null, PropertyMetadataOptions.Inherits | PropertyMetadataOptions.AffectsRender));
+   }
+
    public Image()
    {
    }
@@ -649,7 +655,7 @@ public class Image : InputUIComponent, IDesignTimeAnimatedMedia
       if (image is DrawingImage drawing)
       {
          EnsureDrawingAttached();
-         drawing.Render(session, destination);
+         drawing.Render(session, destination, Foreground);
          return;
       }
 

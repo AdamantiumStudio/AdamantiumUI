@@ -172,7 +172,7 @@ public class GlyphRunDrawing : Drawing
         }
     }
 
-    public override void Render(IDrawingSession session, Matrix4x4F transform)
+    public override void Render(IDrawingSession session, Matrix4x4F transform, Brush currentColor)
     {
         var text = Text;
         if (string.IsNullOrEmpty(text)) return;
@@ -209,10 +209,11 @@ public class GlyphRunDrawing : Drawing
         // height further down and right, which is what a top-left anchor does with a center handed to it.
         var placed = new Rect(corner.X, corner.Y, 0, 0).TransformToAABB(transform);
         var place = Matrix4x4F.Translation((float)placed.X, (float)placed.Y, 0);
-        var parameters = Parameters(Foreground, new Rect(0, 0, desired.Width, desired.Height),
+        var foreground = CurrentColorBrush.Resolve(Foreground, currentColor);
+        var parameters = Parameters(foreground, new Rect(0, 0, desired.Width, desired.Height),
             HorizontalAlignment, VerticalAlignment);
 
-        session.DrawText(parameters, desired, layout, Foreground, Brushes.Transparent, Brushes.Transparent, place);
+        session.DrawText(parameters, desired, layout, foreground, Brushes.Transparent, Brushes.Transparent, place);
     }
 
     // Length of the transformed unit axis - the scale actually applied along it, rotation included.

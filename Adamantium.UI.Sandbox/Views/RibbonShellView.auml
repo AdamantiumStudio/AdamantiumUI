@@ -79,11 +79,11 @@
                         VerticalAlignment="Center"
                         ToolTip="{Localize RibbonShellStrings.DetachFromDocument}"
                         Command="{Binding AskDetachCommand}">
-                    <Path Data="M5,1 L5,4 M11,1 L11,4 M3,4 L13,4 L13,7 A5,5 0 0 1 3,7 Z M8,12 L8,15 M1,1 L15,15"
-                          Stroke="{ResourceReference TextFillColorSecondary}"
-                          StrokeThickness="1.25"
-                          HorizontalAlignment="Center"
-                          VerticalAlignment="Center"/>
+                    <Image Source="{ObservableResource DetachIcon}"
+                           Stretch="None"
+                           Foreground="{ObservableResource TextFillColorSecondary}"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"/>
                 </Button>
                 <Popup Grid.Column="2"
                        Placement="Right"
@@ -793,13 +793,11 @@
         <!-- A command of the shell as a row of the customize page: its icon and its name. -->
         <DataTemplate x:Key="CommandRow">
             <StackPanel Orientation="Horizontal">
-                <Path Data="{Binding Icon}"
-                      Stroke="{ResourceReference TextFillColorPrimary}"
-                      StrokeThickness="1"
-                      Width="16"
-                      Height="16"
-                      Margin="0 0 10 0"
-                      VerticalAlignment="Center"/>
+                <Image Source="{ObservableResource Key={Binding IconKey}}"
+                       Width="16"
+                       Height="16"
+                       Margin="0 0 10 0"
+                       VerticalAlignment="Center"/>
                 <TextBlock Text="{Localize RibbonShellStrings, Key={Binding Name}}"
                            VerticalAlignment="Center"/>
             </StackPanel>
@@ -860,9 +858,8 @@
                 IsDrawerOpen="{Binding IsModuleCatalogOpen, Mode=TwoWay}"
                 TabSetsSource="{Binding DocumentModules}">
 
-            <!-- The band's commands are drawn from the shell's catalog (classes Shell / ShellToggle, styled in
-                 RibbonShellStyleSet): the quick-access bar and the customize page draw from the same commands, so
-                 nothing is stated twice and nothing is kept in step. -->
+            <!-- Every command of the band states its own words, icon, command and quick-access key right here. The bar
+                 and the customize page take the shell's catalog; a button asked into the bar is matched to it by key. -->
 
             <!-- Each module of the document brings its tabs: its own piece of view, or the common one. -->
             <Ribbon.TabSetTemplateSelector>
@@ -1024,21 +1021,19 @@
                                             Margin="0 0 0 8"
                                             ToolTip="{Localize RibbonShellStrings.MoveUp}"
                                             Command="{Binding MoveUpInBarCommand}">
-                                        <Path Data="M8,3 L8,13 M4,7 L8,3 L12,7"
-                                              Stroke="{ResourceReference TextFillColorPrimary}"
-                                              StrokeThickness="1.25"
-                                              HorizontalAlignment="Center"
-                                              VerticalAlignment="Center"/>
+                                        <Image Source="{ObservableResource MoveUpIcon}"
+                                               Stretch="None"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"/>
                                     </Button>
                                     <Button Classes="Toolbar"
                                             Padding="6"
                                             ToolTip="{Localize RibbonShellStrings.MoveDown}"
                                             Command="{Binding MoveDownInBarCommand}">
-                                        <Path Data="M8,3 L8,13 M4,9 L8,13 L12,9"
-                                              Stroke="{ResourceReference TextFillColorPrimary}"
-                                              StrokeThickness="1.25"
-                                              HorizontalAlignment="Center"
-                                              VerticalAlignment="Center"/>
+                                        <Image Source="{ObservableResource MoveDownIcon}"
+                                               Stretch="None"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"/>
                                     </Button>
                                 </StackPanel>
 
@@ -1086,7 +1081,8 @@
                                    Margin="6 2 6 3"
                                    HorizontalAlignment="Left">
                     <RibbonQuickAccess.ItemTemplateSelector>
-                        <views:ShellQuickAccessTemplateSelector Toggle="{ResourceReference QuickAccessToggleTemplate}"
+                        <views:ShellQuickAccessTemplateSelector Button="{ResourceReference QuickAccessButtonTemplate}"
+                                                                Toggle="{ResourceReference QuickAccessToggleTemplate}"
                                                                 DropDown="{ResourceReference QuickAccessDropDownTemplate}"
                                                                 Split="{ResourceReference QuickAccessSplitTemplate}"/>
                     </RibbonQuickAccess.ItemTemplateSelector>
@@ -1208,13 +1204,11 @@
                                 VerticalAlignment="Center"
                                 Margin="0 0 8 0">
                             <StackPanel Orientation="Horizontal">
-                                <Path Data="M4,2 L10,2 L13,5 L13,14 L4,14 Z M10,2 L10,5 L13,5 M8.5,7 L8.5,12 M6.5,10 L8.5,12 L10.5,10"
-                                      Stroke="{ResourceReference TextFillColorPrimary}"
-                                      StrokeThickness="1.25"
-                                      Width="16"
-                                      Height="16"
-                                      Margin="0 0 8 0"
-                                      VerticalAlignment="Center"/>
+                                <Image Source="{ObservableResource InstallFromFileIcon}"
+                                       Width="16"
+                                       Height="16"
+                                       Margin="0 0 8 0"
+                                       VerticalAlignment="Center"/>
                                 <TextBlock Text="{Localize RibbonShellStrings.InstallFromFile}"
                                            VerticalAlignment="Center"/>
                             </StackPanel>
@@ -1226,11 +1220,11 @@
                                 VerticalAlignment="Center"
                                 ToolTip="{Localize RibbonShellStrings.CloseCatalog}"
                                 Command="{Binding CloseModuleCatalogCommand}">
-                            <Path Data="M3,3 L13,13 M13,3 L3,13"
-                                  Stroke="{ResourceReference TextFillColorSecondary}"
-                                  StrokeThickness="1.25"
-                                  HorizontalAlignment="Center"
-                                  VerticalAlignment="Center"/>
+                            <Image Source="{ObservableResource CloseCatalogIcon}"
+                                   Stretch="None"
+                                   Foreground="{ObservableResource TextFillColorSecondary}"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"/>
                         </Button>
                     </Grid>
 
@@ -1576,13 +1570,16 @@
             <RibbonTab Header="{Localize RibbonShellStrings.Home}" KeyTipService.KeyTip="H">
                 <RibbonGroup Header="{Localize RibbonShellStrings.Clipboard}" Icon="{ObservableResource ClipboardIcon}">
                     <!-- Split: the body pastes, the arrow offers the rarer ways to paste. Both halves are disabled
-                         together - the command gates the whole thing. The rows are the command's own DATA, which is
-                         what lets it sit in the quick-access bar and keep its arrow there. -->
-                    <RibbonSplitButton Classes="Shell"
-                                       DataContext="{Binding Commands.Paste}"
+                         together - the command gates the whole thing. Ribbon.QuickAccessKey names the shell's command
+                         this button stands for. The rows are DATA, the same ones the quick-access bar drops: a menu of
+                         MenuItem controls cannot be in two places. -->
+                    <RibbonSplitButton Content="{Localize RibbonShellStrings.Paste}"
+                                       Icon="{ObservableResource PasteIcon}"
+                                       Command="{Binding PasteCommand}"
+                                       Ribbon.QuickAccessKey="Paste"
                                        ToolTip="{Localize RibbonShellStrings.PasteTip}">
                         <RibbonSplitButton.DropDownMenu>
-                            <ContextMenu ItemsSource="{Binding DropDownItems}">
+                            <ContextMenu ItemsSource="{Binding PasteOptions}">
                                 <ContextMenu.ItemTemplate>
                                     <DataTemplate>
                                         <TextBlock Text="{Localize RibbonShellStrings, Key={Binding Header}}"/>
@@ -1597,44 +1594,64 @@
                         </RibbonSplitButton.DropDownMenu>
                     </RibbonSplitButton>
                     <!-- Medium: small icon, label beside it - three stack into one column. -->
-                    <RibbonButton Classes="Shell"
-                                  DataContext="{Binding Commands.Cut}"
+                    <RibbonButton Content="{Localize RibbonShellStrings.Cut}"
+                                  Icon="{ObservableResource CutIcon}"
+                                  Command="{Binding CutCommand}"
+                                  Ribbon.QuickAccessKey="Cut"
                                   AutomationProperties.AutomationId="Cut"
                                   MaxSize="Medium"/>
-                    <RibbonButton Classes="Shell"
-                                  DataContext="{Binding Commands.Copy}"
+                    <RibbonButton Content="{Localize RibbonShellStrings.Copy}"
+                                  Icon="{ObservableResource CopyIcon}"
+                                  Command="{Binding CopyCommand}"
+                                  Ribbon.QuickAccessKey="Copy"
                                   MaxSize="Medium"/>
-                    <RibbonButton Classes="Shell"
-                                  DataContext="{Binding Commands.Duplicate}"
+                    <RibbonButton Content="{Localize RibbonShellStrings.Duplicate}"
+                                  Icon="{ObservableResource DuplicateIcon}"
+                                  Command="{Binding DuplicateCommand}"
+                                  Ribbon.QuickAccessKey="Duplicate"
                                   MaxSize="Medium"/>
                 </RibbonGroup>
 
                 <RibbonGroup Header="{Localize RibbonShellStrings.Scene}" Icon="{ObservableResource SceneIcon}">
-                    <RibbonButton Classes="Shell"
-                                  DataContext="{Binding Commands.Entity}"
+                    <RibbonButton Content="{Localize RibbonShellStrings.Entity}"
+                                  Icon="{ObservableResource EntityIcon}"
+                                  Command="{Binding AddEntityCommand}"
+                                  Ribbon.QuickAccessKey="Entity"
                                   ToolTip="{Localize RibbonShellStrings.EntityTip}"/>
-                    <RibbonButton Classes="Shell"
-                                  DataContext="{Binding Commands.Delete}"
+                    <RibbonButton Content="{Localize RibbonShellStrings.Delete}"
+                                  Icon="{ObservableResource DeleteIcon}"
+                                  Command="{Binding DeleteCommand}"
+                                  Ribbon.QuickAccessKey="Delete"
                                   MaxSize="Medium"/>
-                    <RibbonButton Classes="Shell"
-                                  DataContext="{Binding Commands.SelectAll}"
+                    <RibbonButton Content="{Localize RibbonShellStrings.SelectAll}"
+                                  Icon="{ObservableResource SelectAllIcon}"
+                                  Command="{Binding SelectAllCommand}"
+                                  Ribbon.QuickAccessKey="SelectAll"
                                   MaxSize="Medium"
                                   CollapseToSmall="Never"/>
-                    <RibbonButton Classes="Shell"
-                                  DataContext="{Binding Commands.SelectNone}"
+                    <RibbonButton Content="{Localize RibbonShellStrings.SelectNone}"
+                                  Icon="{ObservableResource SelectNoneIcon}"
+                                  Command="{Binding SelectNoneCommand}"
+                                  Ribbon.QuickAccessKey="SelectNone"
                                   MaxSize="Medium"/>
                 </RibbonGroup>
 
                 <RibbonGroup Header="{Localize RibbonShellStrings.View}" Icon="{ObservableResource ViewIcon}">
                     <!-- The state these show is the command's own, so this button, the one in the View tab and the one in
                          the quick-access bar are three views of one value - not three values kept in step. -->
-                    <RibbonToggleButton Classes="ShellToggle"
-                                        DataContext="{Binding Commands.Wireframe}"/>
-                    <RibbonToggleButton Classes="ShellToggle"
-                                        DataContext="{Binding Commands.Grid}"
+                    <RibbonToggleButton Content="{Localize RibbonShellStrings.Wireframe}"
+                                        Icon="{ObservableResource WireframeIcon}"
+                                        IsChecked="{Binding Commands.Wireframe.IsChecked, Mode=TwoWay}"
+                                        Ribbon.QuickAccessKey="Wireframe"/>
+                    <RibbonToggleButton Content="{Localize RibbonShellStrings.Grid}"
+                                        Icon="{ObservableResource GridIcon}"
+                                        IsChecked="{Binding Commands.Grid.IsChecked, Mode=TwoWay}"
+                                        Ribbon.QuickAccessKey="Grid"
                                         MaxSize="Medium"/>
-                    <RibbonToggleButton Classes="ShellToggle"
-                                        DataContext="{Binding Commands.Gizmos}"
+                    <RibbonToggleButton Content="{Localize RibbonShellStrings.Gizmos}"
+                                        Icon="{ObservableResource GizmosIcon}"
+                                        IsChecked="{Binding Commands.Gizmos.IsChecked, Mode=TwoWay}"
+                                        Ribbon.QuickAccessKey="Gizmos"
                                         MaxSize="Medium"/>
                     <!-- A separator ends the run beside it, so what follows starts a fresh column. -->
                     <Separator/>
@@ -1662,8 +1679,10 @@
                               Margin="4 2"
                               IsChecked="{Binding IsBackstage, Mode=TwoWay}"/>
                     <Separator/>
-                    <RibbonButton Classes="Shell"
-                                  DataContext="{Binding Commands.MoveQuickAccess}"
+                    <RibbonButton Content="{Localize RibbonShellStrings.MoveQuickAccess}"
+                                  Icon="{ObservableResource MoveQuickAccessIcon}"
+                                  Command="{Binding MoveQuickAccessCommand}"
+                                  Ribbon.QuickAccessKey="MoveQuickAccess"
                                   MaxSize="Medium"
                                   ToolTip="{Localize RibbonShellStrings.MoveQuickAccessTip}"/>
                 </RibbonGroup>
@@ -1696,43 +1715,63 @@
                 </RibbonGroup>
 
                 <RibbonGroup Header="{Localize RibbonShellStrings.Arrange}" ShrinkSteps="None" Icon="{ObservableResource ArrangeIcon}">
-                    <RibbonButton Classes="Shell"
-                                  DataContext="{Binding Commands.AlignLeft}"
+                    <RibbonButton Content="{Localize RibbonShellStrings.AlignLeft}"
+                                  Icon="{ObservableResource AlignLeftIcon}"
+                                  Command="{Binding AlignLeftCommand}"
+                                  Ribbon.QuickAccessKey="AlignLeft"
                                   MaxSize="Medium"/>
-                    <RibbonButton Classes="Shell"
-                                  DataContext="{Binding Commands.Center}"
+                    <RibbonButton Content="{Localize RibbonShellStrings.Center}"
+                                  Icon="{ObservableResource CenterIcon}"
+                                  Command="{Binding AlignCenterCommand}"
+                                  Ribbon.QuickAccessKey="Center"
                                   MaxSize="Medium"/>
-                    <RibbonButton Classes="Shell"
-                                  DataContext="{Binding Commands.Distribute}"
+                    <RibbonButton Content="{Localize RibbonShellStrings.Distribute}"
+                                  Icon="{ObservableResource DistributeIcon}"
+                                  Command="{Binding DistributeCommand}"
+                                  Ribbon.QuickAccessKey="Distribute"
                                   MaxSize="Medium"/>
-                    <RibbonButton Classes="Shell"
-                                  DataContext="{Binding Commands.Group}"
+                    <RibbonButton Content="{Localize RibbonShellStrings.Group}"
+                                  Icon="{ObservableResource GroupIcon}"
+                                  Command="{Binding GroupSelectionCommand}"
+                                  Ribbon.QuickAccessKey="Group"
                                   MaxSize="Medium"/>
                 </RibbonGroup>
 
                 <RibbonGroup Header="{Localize RibbonShellStrings.Order}" ShrinkSteps="None" Icon="{ObservableResource OrderIcon}">
-                    <RibbonButton Classes="Shell"
-                                  DataContext="{Binding Commands.Forward}"
+                    <RibbonButton Content="{Localize RibbonShellStrings.Forward}"
+                                  Icon="{ObservableResource ForwardIcon}"
+                                  Command="{Binding BringForwardCommand}"
+                                  Ribbon.QuickAccessKey="Forward"
                                   MaxSize="Medium"/>
-                    <RibbonButton Classes="Shell"
-                                  DataContext="{Binding Commands.Backward}"
+                    <RibbonButton Content="{Localize RibbonShellStrings.Backward}"
+                                  Icon="{ObservableResource BackwardIcon}"
+                                  Command="{Binding SendBackwardCommand}"
+                                  Ribbon.QuickAccessKey="Backward"
                                   MaxSize="Medium"/>
                 </RibbonGroup>
 
                 <RibbonGroup Header="{Localize RibbonShellStrings.Lighting}" ShrinkSteps="None" Icon="{ObservableResource LightIcon}">
-                    <RibbonButton Classes="Shell"
-                                  DataContext="{Binding Commands.AddLight}"/>
-                    <RibbonButton Classes="Shell"
-                                  DataContext="{Binding Commands.Bake}"
+                    <RibbonButton Content="{Localize RibbonShellStrings.AddLight}"
+                                  Icon="{ObservableResource AddLightIcon}"
+                                  Command="{Binding AddLightCommand}"
+                                  Ribbon.QuickAccessKey="AddLight"/>
+                    <RibbonButton Content="{Localize RibbonShellStrings.Bake}"
+                                  Icon="{ObservableResource BakeLightingIcon}"
+                                  Command="{Binding BakeLightingCommand}"
+                                  Ribbon.QuickAccessKey="Bake"
                                   MaxSize="Medium"/>
                 </RibbonGroup>
 
                 <RibbonGroup Header="{Localize RibbonShellStrings.Physics}" ShrinkSteps="None" Icon="{ObservableResource PhysicsIcon}">
-                    <RibbonButton Classes="Shell"
-                                  DataContext="{Binding Commands.Collider}"
+                    <RibbonButton Content="{Localize RibbonShellStrings.Collider}"
+                                  Icon="{ObservableResource ColliderIcon}"
+                                  Command="{Binding AddColliderCommand}"
+                                  Ribbon.QuickAccessKey="Collider"
                                   MaxSize="Medium"/>
-                    <RibbonButton Classes="Shell"
-                                  DataContext="{Binding Commands.Simulate}"
+                    <RibbonButton Content="{Localize RibbonShellStrings.Simulate}"
+                                  Icon="{ObservableResource SimulateIcon}"
+                                  Command="{Binding SimulateCommand}"
+                                  Ribbon.QuickAccessKey="Simulate"
                                   MaxSize="Medium"/>
                 </RibbonGroup>
 
@@ -1761,11 +1800,15 @@
                 </RibbonGroup>
 
                 <RibbonGroup Header="{Localize RibbonShellStrings.Tools}" ShrinkSteps="None" Icon="{ObservableResource ToolsIcon}">
-                    <RibbonButton Classes="Shell"
-                                  DataContext="{Binding Commands.Measure}"
+                    <RibbonButton Content="{Localize RibbonShellStrings.Measure}"
+                                  Icon="{ObservableResource MeasureIcon}"
+                                  Command="{Binding MeasureCommand}"
+                                  Ribbon.QuickAccessKey="Measure"
                                   MaxSize="Medium"/>
-                    <RibbonButton Classes="Shell"
-                                  DataContext="{Binding Commands.Annotate}"
+                    <RibbonButton Content="{Localize RibbonShellStrings.Annotate}"
+                                  Icon="{ObservableResource AnnotateIcon}"
+                                  Command="{Binding AnnotateCommand}"
+                                  Ribbon.QuickAccessKey="Annotate"
                                   MaxSize="Medium"/>
                 </RibbonGroup>
             </RibbonTab>
@@ -1806,13 +1849,13 @@
                 </RibbonGroup>
 
                 <RibbonGroup Header="{Localize RibbonShellStrings.Primitives}" Icon="{ObservableResource PrimitivesIcon}">
-                    <!-- Drops a menu instead of doing something. The rows are the command's DATA: a menu of MenuItem
-                         CONTROLS cannot be in two places, so it would reach the quick-access bar as an arrow over nothing. -->
-                    <RibbonDropDownButton Classes="Shell"
-                                          DataContext="{Binding Commands.Add}"
+                    <!-- Drops a menu instead of doing something. Its rows are data for the same reason as Paste's. -->
+                    <RibbonDropDownButton Content="{Localize RibbonShellStrings.Add}"
+                                          Icon="{ObservableResource AddIcon}"
+                                          Ribbon.QuickAccessKey="Add"
                                           ToolTip="{Localize RibbonShellStrings.AddTip}">
                         <RibbonDropDownButton.DropDownMenu>
-                            <ContextMenu ItemsSource="{Binding DropDownItems}">
+                            <ContextMenu ItemsSource="{Binding PrimitiveOptions}">
                                 <ContextMenu.ItemTemplate>
                                     <DataTemplate>
                                         <TextBlock Text="{Localize RibbonShellStrings, Key={Binding Header}}"/>
@@ -1826,21 +1869,30 @@
                             </ContextMenu>
                         </RibbonDropDownButton.DropDownMenu>
                     </RibbonDropDownButton>
-                    <RibbonButton Classes="Shell"
-                                  DataContext="{Binding Commands.Cube}"/>
-                    <RibbonButton Classes="Shell"
-                                  DataContext="{Binding Commands.Sphere}"/>
-                    <RibbonButton Classes="Shell"
-                                  DataContext="{Binding Commands.Plane}"/>
+                    <RibbonButton Content="{Localize RibbonShellStrings.Cube}"
+                                  Icon="{ObservableResource CubeIcon}"
+                                  Command="{Binding AddCubeCommand}"
+                                  Ribbon.QuickAccessKey="Cube"/>
+                    <RibbonButton Content="{Localize RibbonShellStrings.Sphere}"
+                                  Icon="{ObservableResource SphereIcon}"
+                                  Command="{Binding AddSphereCommand}"
+                                  Ribbon.QuickAccessKey="Sphere"/>
+                    <RibbonButton Content="{Localize RibbonShellStrings.Plane}"
+                                  Icon="{ObservableResource PlaneIcon}"
+                                  Command="{Binding AddPlaneCommand}"
+                                  Ribbon.QuickAccessKey="Plane"/>
                 </RibbonGroup>
 
-                <!-- Commands as DATA: the group sizes the button each item's template builds, within its own MaxSize. -->
+                <!-- Commands as DATA: the group sizes the button each item's template builds, within its own MaxSize.
+                     The template says where every part of the button comes from. -->
                 <RibbonGroup Header="{Localize RibbonShellStrings.Mesh}"
                              Icon="{ObservableResource MeshIcon}"
                              ItemsSource="{Binding Commands.MeshTools}">
                     <RibbonGroup.ItemTemplate>
                         <DataTemplate>
-                            <RibbonButton Classes="Shell"
+                            <RibbonButton Content="{Localize RibbonShellStrings, Key={Binding Name}}"
+                                          Icon="{ObservableResource Key={Binding IconKey}}"
+                                          Command="{Binding Command}"
                                           MaxSize="Medium"/>
                         </DataTemplate>
                     </RibbonGroup.ItemTemplate>
@@ -1850,38 +1902,39 @@
                              Icon="{ObservableResource SnappingIcon}">
                     <!-- THIS group's commands get the shell's OWN right-click menu instead of the ribbon's. The property
                          is inherited, so the same attribute on <Ribbon> would speak for the whole band; written here it
-                         overrides just this group. Its rows are the commands' own DATA - nothing about them reaches the
-                         ribbon. Write {x:Null} instead and the commands get no menu at all. -->
+                         overrides just this group. Write {x:Null} instead and the commands get no menu at all. -->
                     <Ribbon.CommandContextMenuTemplate>
                         <DataTemplate>
-                            <ContextMenu ItemsSource="{Binding MenuRows}">
-                                <ContextMenu.ItemTemplate>
-                                    <DataTemplate>
-                                        <TextBlock Text="{Localize RibbonShellStrings, Key={Binding Header}}"/>
-                                    </DataTemplate>
-                                </ContextMenu.ItemTemplate>
-                                <ContextMenu.ItemContainerStyle>
-                                    <Style Selector="MenuItem">
-                                        <Setter Property="Command" Value="{Binding Command}"/>
-                                    </Style>
-                                </ContextMenu.ItemContainerStyle>
+                            <ContextMenu>
+                                <MenuItem Header="{Localize RibbonShellStrings.SnapSettings}"
+                                          Command="{Binding SnapSettingsCommand}"/>
+                                <MenuItem Header="{Localize RibbonShellStrings.ClearSnaps}"
+                                          Command="{Binding ClearSnapsCommand}"/>
                             </ContextMenu>
                         </DataTemplate>
                     </Ribbon.CommandContextMenuTemplate>
 
-                    <RibbonToggleButton Classes="ShellToggle"
-                                        DataContext="{Binding Commands.Snap}"/>
+                    <RibbonToggleButton Content="{Localize RibbonShellStrings.Snap}"
+                                        Icon="{ObservableResource SnapIcon}"
+                                        IsChecked="{Binding Commands.Snap.IsChecked, Mode=TwoWay}"
+                                        Ribbon.QuickAccessKey="Snap"/>
                     <!-- Small: the icon alone, three to a column. MaxSize is a RANGE - the adaptive pass may only shrink. -->
-                    <RibbonToggleButton Classes="ShellToggle"
-                                        DataContext="{Binding Commands.SnapToVertices}"
+                    <RibbonToggleButton Content="{Localize RibbonShellStrings.SnapToVertices}"
+                                        Icon="{ObservableResource SnapToVerticesIcon}"
+                                        IsChecked="{Binding Commands.SnapToVertices.IsChecked, Mode=TwoWay}"
+                                        Ribbon.QuickAccessKey="SnapToVertices"
                                         MaxSize="Small"
                                         ToolTip="{Localize RibbonShellStrings.SnapToVertices}"/>
-                    <RibbonToggleButton Classes="ShellToggle"
-                                        DataContext="{Binding Commands.SnapToEdges}"
+                    <RibbonToggleButton Content="{Localize RibbonShellStrings.SnapToEdges}"
+                                        Icon="{ObservableResource SnapToEdgesIcon}"
+                                        IsChecked="{Binding Commands.SnapToEdges.IsChecked, Mode=TwoWay}"
+                                        Ribbon.QuickAccessKey="SnapToEdges"
                                         MaxSize="Small"
                                         ToolTip="{Localize RibbonShellStrings.SnapToEdges}"/>
-                    <RibbonToggleButton Classes="ShellToggle"
-                                        DataContext="{Binding Commands.SnapToFaces}"
+                    <RibbonToggleButton Content="{Localize RibbonShellStrings.SnapToFaces}"
+                                        Icon="{ObservableResource SnapToFacesIcon}"
+                                        IsChecked="{Binding Commands.SnapToFaces.IsChecked, Mode=TwoWay}"
+                                        Ribbon.QuickAccessKey="SnapToFaces"
                                         MaxSize="Small"
                                         ToolTip="{Localize RibbonShellStrings.SnapToFaces}"/>
                 </RibbonGroup>
@@ -1890,8 +1943,10 @@
             <!-- ================= MATERIALS ================= -->
             <RibbonTab Header="{Localize RibbonShellStrings.Materials}" KeyTipService.KeyTip="A">
                 <RibbonGroup Header="{Localize RibbonShellStrings.Library}" Icon="{ObservableResource LibraryIcon}">
-                    <RibbonButton Classes="Shell"
-                                  DataContext="{Binding Commands.NewMaterial}"
+                    <RibbonButton Content="{Localize RibbonShellStrings.NewMaterial}"
+                                  Icon="{ObservableResource NewMaterialIcon}"
+                                  Command="{Binding NewMaterialCommand}"
+                                  Ribbon.QuickAccessKey="NewMaterial"
                                   ToolTip="{Localize RibbonShellStrings.NewMaterialTip}"/>
                     <!-- An icon that is not path data at all: a COLOR, drawn as a disc by the command's own template. A
                          look on show, not a command of the shell, so it stays out of the quick-access bar. -->
@@ -1910,20 +1965,28 @@
                 </RibbonGroup>
 
                 <RibbonGroup Header="{Localize RibbonShellStrings.Channels}" Icon="{ObservableResource ChannelsIcon}">
-                    <RibbonButton Classes="Shell"
-                                  DataContext="{Binding Commands.Albedo}"
+                    <RibbonButton Content="{Localize RibbonShellStrings.Albedo}"
+                                  Icon="{ObservableResource AlbedoIcon}"
+                                  Command="{Binding EditAlbedoCommand}"
+                                  Ribbon.QuickAccessKey="Albedo"
                                   MaxSize="Medium"/>
-                    <RibbonButton Classes="Shell"
-                                  DataContext="{Binding Commands.Normal}"
+                    <RibbonButton Content="{Localize RibbonShellStrings.Normal}"
+                                  Icon="{ObservableResource NormalIcon}"
+                                  Command="{Binding EditNormalCommand}"
+                                  Ribbon.QuickAccessKey="Normal"
                                   MaxSize="Medium"/>
-                    <RibbonButton Classes="Shell"
-                                  DataContext="{Binding Commands.Roughness}"
+                    <RibbonButton Content="{Localize RibbonShellStrings.Roughness}"
+                                  Icon="{ObservableResource RoughnessIcon}"
+                                  Command="{Binding EditRoughnessCommand}"
+                                  Ribbon.QuickAccessKey="Roughness"
                                   MaxSize="Medium"/>
                 </RibbonGroup>
 
                 <RibbonGroup Header="{Localize RibbonShellStrings.Preview}" Icon="{ObservableResource PreviewIcon}">
-                    <RibbonToggleButton Classes="ShellToggle"
-                                        DataContext="{Binding Commands.Wireframe}"/>
+                    <RibbonToggleButton Content="{Localize RibbonShellStrings.Wireframe}"
+                                        Icon="{ObservableResource WireframeIcon}"
+                                        IsChecked="{Binding Commands.Wireframe.IsChecked, Mode=TwoWay}"
+                                        Ribbon.QuickAccessKey="Wireframe"/>
                     <TextBlock Text="{Localize RibbonShellStrings.Shading}" Ribbon.MaxSize="Medium" Ribbon.CollapseToSmall="Never" Margin="6 4 4 0" FontSize="11"/>
                     <DropDown Ribbon.MaxSize="Medium"
                               Ribbon.CollapseToSmall="Never"
@@ -1944,23 +2007,35 @@
             <!-- ================= VIEW ================= -->
             <RibbonTab Header="{Localize RibbonShellStrings.View}" KeyTipService.KeyTip="V">
                 <RibbonGroup Header="{Localize RibbonShellStrings.Display}" Icon="{ObservableResource DisplayIcon}">
-                    <RibbonToggleButton Classes="ShellToggle"
-                                        DataContext="{Binding Commands.Grid}"/>
-                    <RibbonToggleButton Classes="ShellToggle"
-                                        DataContext="{Binding Commands.Gizmos}"/>
-                    <RibbonToggleButton Classes="ShellToggle"
-                                        DataContext="{Binding Commands.Wireframe}"/>
+                    <RibbonToggleButton Content="{Localize RibbonShellStrings.Grid}"
+                                        Icon="{ObservableResource GridIcon}"
+                                        IsChecked="{Binding Commands.Grid.IsChecked, Mode=TwoWay}"
+                                        Ribbon.QuickAccessKey="Grid"/>
+                    <RibbonToggleButton Content="{Localize RibbonShellStrings.Gizmos}"
+                                        Icon="{ObservableResource GizmosIcon}"
+                                        IsChecked="{Binding Commands.Gizmos.IsChecked, Mode=TwoWay}"
+                                        Ribbon.QuickAccessKey="Gizmos"/>
+                    <RibbonToggleButton Content="{Localize RibbonShellStrings.Wireframe}"
+                                        Icon="{ObservableResource WireframeIcon}"
+                                        IsChecked="{Binding Commands.Wireframe.IsChecked, Mode=TwoWay}"
+                                        Ribbon.QuickAccessKey="Wireframe"/>
                 </RibbonGroup>
 
                 <RibbonGroup Header="{Localize RibbonShellStrings.Selection}" Icon="{ObservableResource SelectionIcon}">
-                    <RibbonButton Classes="Shell"
-                                  DataContext="{Binding Commands.SelectAll}"
+                    <RibbonButton Content="{Localize RibbonShellStrings.SelectAll}"
+                                  Icon="{ObservableResource SelectAllIcon}"
+                                  Command="{Binding SelectAllCommand}"
+                                  Ribbon.QuickAccessKey="SelectAll"
                                   MaxSize="Medium"/>
-                    <RibbonButton Classes="Shell"
-                                  DataContext="{Binding Commands.SelectNone}"
+                    <RibbonButton Content="{Localize RibbonShellStrings.SelectNone}"
+                                  Icon="{ObservableResource SelectNoneIcon}"
+                                  Command="{Binding SelectNoneCommand}"
+                                  Ribbon.QuickAccessKey="SelectNone"
                                   MaxSize="Medium"/>
-                    <RibbonButton Classes="Shell"
-                                  DataContext="{Binding Commands.Delete}"
+                    <RibbonButton Content="{Localize RibbonShellStrings.Delete}"
+                                  Icon="{ObservableResource DeleteIcon}"
+                                  Command="{Binding DeleteCommand}"
+                                  Ribbon.QuickAccessKey="Delete"
                                   MaxSize="Medium"/>
                 </RibbonGroup>
             </RibbonTab>
@@ -1984,23 +2059,33 @@
             <!-- TWO tabs in one context: they stand together under ONE ledge spanning both. -->
             <RibbonTab Header="{Localize RibbonShellStrings.Geometry}" ContextualGroupKey="MeshTools" KeyTipService.KeyTip="G">
                 <RibbonGroup Header="{Localize RibbonShellStrings.Edit}" Icon="{ObservableResource SplitIcon}">
-                    <RibbonButton Classes="Shell"
-                                  DataContext="{Binding Commands.Extrude}"/>
-                    <RibbonButton Classes="Shell"
-                                  DataContext="{Binding Commands.Bevel}"
+                    <RibbonButton Content="{Localize RibbonShellStrings.Extrude}"
+                                  Icon="{ObservableResource ExtrudeIcon}"
+                                  Command="{Binding ExtrudeCommand}"
+                                  Ribbon.QuickAccessKey="Extrude"/>
+                    <RibbonButton Content="{Localize RibbonShellStrings.Bevel}"
+                                  Icon="{ObservableResource BevelIcon}"
+                                  Command="{Binding BevelCommand}"
+                                  Ribbon.QuickAccessKey="Bevel"
                                   MaxSize="Medium"/>
-                    <RibbonButton Classes="Shell"
-                                  DataContext="{Binding Commands.Subdivide}"
+                    <RibbonButton Content="{Localize RibbonShellStrings.Subdivide}"
+                                  Icon="{ObservableResource SubdivideIcon}"
+                                  Command="{Binding SubdivideCommand}"
+                                  Ribbon.QuickAccessKey="Subdivide"
                                   MaxSize="Medium"/>
                 </RibbonGroup>
             </RibbonTab>
 
             <RibbonTab Header="{Localize RibbonShellStrings.Uv}" ContextualGroupKey="MeshTools" KeyTipService.KeyTip="U">
                 <RibbonGroup Header="{Localize RibbonShellStrings.Unwrap}" Icon="{ObservableResource UnwrapIcon}">
-                    <RibbonButton Classes="Shell"
-                                  DataContext="{Binding Commands.Unwrap}"/>
-                    <RibbonButton Classes="Shell"
-                                  DataContext="{Binding Commands.Measure}"
+                    <RibbonButton Content="{Localize RibbonShellStrings.Unwrap}"
+                                  Icon="{ObservableResource UnwrapUvIcon}"
+                                  Command="{Binding UnwrapCommand}"
+                                  Ribbon.QuickAccessKey="Unwrap"/>
+                    <RibbonButton Content="{Localize RibbonShellStrings.Measure}"
+                                  Icon="{ObservableResource MeasureIcon}"
+                                  Command="{Binding MeasureCommand}"
+                                  Ribbon.QuickAccessKey="Measure"
                                   MaxSize="Medium"/>
                 </RibbonGroup>
             </RibbonTab>
@@ -2009,10 +2094,14 @@
                  right and does not shift what someone was already aiming at. -->
             <RibbonTab Header="{Localize RibbonShellStrings.Light}" ContextualGroupKey="LightTools" KeyTipService.KeyTip="L">
                 <RibbonGroup Header="{Localize RibbonShellStrings.Emission}" Icon="{ObservableResource EmissionIcon}">
-                    <RibbonButton Classes="Shell"
-                                  DataContext="{Binding Commands.Bake}"/>
-                    <RibbonButton Classes="Shell"
-                                  DataContext="{Binding Commands.AddLight}"
+                    <RibbonButton Content="{Localize RibbonShellStrings.Bake}"
+                                  Icon="{ObservableResource BakeLightingIcon}"
+                                  Command="{Binding BakeLightingCommand}"
+                                  Ribbon.QuickAccessKey="Bake"/>
+                    <RibbonButton Content="{Localize RibbonShellStrings.AddLight}"
+                                  Icon="{ObservableResource AddLightIcon}"
+                                  Command="{Binding AddLightCommand}"
+                                  Ribbon.QuickAccessKey="AddLight"
                                   MaxSize="Medium"/>
                 </RibbonGroup>
             </RibbonTab>

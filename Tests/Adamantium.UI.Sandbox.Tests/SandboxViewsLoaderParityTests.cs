@@ -40,6 +40,7 @@ public class SandboxViewsLoaderParityTests
         app.ThemeManager.AddStyleSet<RibbonShellStyleSet>();
         app.ResourceManager.AddSource(new ModuleResources(), typeof(ModuleIcons), ResourceScope.Global);
         app.ResourceManager.AddSource(new ModuleResources(), typeof(RibbonShellIcons), ResourceScope.Global);
+        app.ResourceManager.AddSource(new ModuleResources(), typeof(CaptionIcons), ResourceScope.Global);
         var container = (Adamantium.Core.DependencyInjection.IDependencyContainer)typeof(HeadlessApplication)
             .GetField("_container", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(app);
         container.RegisterInstance<Adamantium.Core.DependencyInjection.IDependencyResolver>(container);

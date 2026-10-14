@@ -477,8 +477,24 @@ public class AumlLowering
                             // theme swap / dictionary load-unload). As a Setter/trigger value it's stored as the marker
                             // (Setter.Apply / the trigger activator call Apply), in any file; as a normal property it's
                             // connected now.
-                            var key = extension.Arguments[0].Value.GetTextValue();
-                            var observable = new NewValue(Type(Metadata.DefaultTypeContainer.ObservableResource), Unescaped(key));
+                            var keyValue = extension.Arguments[0].Value;
+                            BuildValue observable;
+                            string key;
+                            string keyed = null;
+                            if (IsBindingNode(keyValue))
+                            {
+                                key = "{Binding}";
+                                keyed = GenerateNextElementName("or");
+                                _writer.Add(new DeclareStep(keyed, new NewValue(Type(Metadata.DefaultTypeContainer.ObservableResource))));
+                                _writer.Add(new AssignStep(Variable(keyed), "KeySource", EmitBinding(keyValue, diagnostics, isResource)));
+                                observable = Variable(keyed);
+                            }
+                            else
+                            {
+                                key = keyValue.GetTextValue();
+                                observable = new NewValue(Type(Metadata.DefaultTypeContainer.ObservableResource), Unescaped(key));
+                            }
+
                             if (element.TypeReference.Namespace == "Adamantium.UI.Core.Resources")
                             {
                                 _writer.Add(new AssignStep(symbolTarget, propRef.Name, observable));
@@ -489,8 +505,12 @@ public class AumlLowering
                             }
                             else
                             {
-                                var orVar = GenerateNextElementName("or");
-                                _writer.Add(new DeclareStep(orVar, observable));
+                                var orVar = keyed ?? GenerateNextElementName("or");
+                                if (keyed == null)
+                                {
+                                    _writer.Add(new DeclareStep(orVar, observable));
+                                }
+
                                 var orTarget = isRoot ? "this" : CurrentParent;
                                 _writer.Add(Invoke(Variable(orVar), "Apply", Variable(orTarget), Unescaped(PropertyPath(propRef))));
                             }

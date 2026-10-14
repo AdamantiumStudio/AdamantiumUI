@@ -86,8 +86,8 @@ public partial class RibbonShellViewModel : IWindowAware
 
     [Command] private void PasteSpecial() => LastAction = RibbonAction.PasteSpecial;
 
-    /// <summary>The rows of Paste's drop-down, as DATA - which is what lets the command be put in the quick-access bar
-    /// and keep its arrow there. Built on first read: the commands are generated, so they exist by then.</summary>
+    /// <summary>The rows of Paste's drop-down, in the ribbon and in the quick-access bar: data, because a menu of controls
+    /// cannot be in two places. Built on first read: the commands are generated, so they exist by then.</summary>
     public IReadOnlyList<MenuCommand> PasteOptions => _pasteOptions ??=
     [
         new MenuCommand { Header = nameof(RibbonShellStrings.KeepFormatting), Command = PasteKeepFormattingCommand },
@@ -97,7 +97,7 @@ public partial class RibbonShellViewModel : IWindowAware
 
     private IReadOnlyList<MenuCommand> _pasteOptions;
 
-    /// <summary>The rows of Add's drop-down - data for the same reason.</summary>
+    /// <summary>The rows of Add's drop-down, in the ribbon and in the quick-access bar.</summary>
     public IReadOnlyList<MenuCommand> PrimitiveOptions => _primitiveOptions ??=
     [
         new MenuCommand { Header = nameof(RibbonShellStrings.Cube), Command = AddCubeCommand },
@@ -107,17 +107,6 @@ public partial class RibbonShellViewModel : IWindowAware
     ];
 
     private IReadOnlyList<MenuCommand> _primitiveOptions;
-
-    /// <summary>The rows of the right-click menu THIS shell wants on its snapping commands, instead of the one the
-    /// ribbon offers. Nothing about them is the ribbon's business - they are the view model's own list, drawn by the
-    /// template the view points <c>Ribbon.CommandContextMenuTemplate</c> at.</summary>
-    public IReadOnlyList<MenuCommand> SnapMenuRows => _snapMenuRows ??=
-    [
-        new MenuCommand { Header = nameof(RibbonShellStrings.SnapSettings), Command = SnapSettingsCommand },
-        new MenuCommand { Header = nameof(RibbonShellStrings.ClearSnaps), Command = ClearSnapsCommand }
-    ];
-
-    private IReadOnlyList<MenuCommand> _snapMenuRows;
 
     [Command] private void SnapSettings() => LastAction = RibbonAction.SnapSettings;
 
@@ -260,8 +249,8 @@ public partial class RibbonShellViewModel : IWindowAware
         ShowChoices();
     }
 
-    /// <summary>Every command of the shell, as data: the ribbon's buttons, the quick-access bar and the customize page all
-    /// draw from it. Built on first read - the commands it runs are generated, so they exist by then.</summary>
+    /// <summary>Every command of the shell, as data: the quick-access bar and the customize page draw from it. Built on
+    /// first read - the commands it runs are generated, so they exist by then.</summary>
     public ShellCommands Commands => _commands ??= new ShellCommands(this);
 
     /// <summary>The quick-access bar: commands of <see cref="Commands"/>, in the order the user put them. Both bars and
@@ -739,11 +728,9 @@ public partial class RibbonShellViewModel : IWindowAware
 
     [Command] private void Annotate() => LastAction = RibbonAction.Annotating;
 
-    // A ribbon command is drawn for a command of the catalog, and the request hands that one over - the bar holds the
-    // catalog's own commands, so nothing is rebuilt from a description and nothing is kept in step.
     [Command] private void AddToQuickAccess(object request)
     {
-        if (request is RibbonQuickAccessEventArgs { Item: ShellCommand command })
+        if (CommandOf(request) is { } command)
         {
             PutInBar(command);
         }
@@ -751,11 +738,18 @@ public partial class RibbonShellViewModel : IWindowAware
 
     [Command] private void RemoveFromQuickAccess(object request)
     {
-        if (request is RibbonQuickAccessEventArgs { Item: ShellCommand command })
+        if (CommandOf(request) is { } command)
         {
             TakeOutOfBar(command);
         }
     }
+
+    private ShellCommand CommandOf(object request) => request switch
+    {
+        RibbonQuickAccessEventArgs { Item: ShellCommand command } => command,
+        RibbonQuickAccessEventArgs { Key: { } key } => Commands.All.FirstOrDefault(command => Equals(command.Key, key)),
+        _ => null
+    };
 
     [Command] private void MoveQuickAccess()
     {

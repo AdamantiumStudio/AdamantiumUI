@@ -3,10 +3,10 @@ using Adamantium.UI.Core.Media;
 
 namespace Adamantium.UI.Core.TypeParsers;
 
-public class BrushParser : ITypeParser<SolidColorBrush>
+public class BrushParser : ITypeParser<Brush>
 {
-    public SolidColorBrush Parse(string value)
+    public Brush Parse(string value)
     {
-        return new SolidColorBrush(value);
+        return value == CurrentColorBrush.Name ? new CurrentColorBrush() : new SolidColorBrush(value);
     }
 }

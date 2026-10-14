@@ -5,10 +5,12 @@ using Adamantium.UI.Sandbox.ViewModels;
 
 namespace Adamantium.UI.Sandbox.Views;
 
-/// <summary>Picks how this shell's bar draws each of its commands, by what the command is. A plain command keeps the
-/// icon button the theme draws.</summary>
+/// <summary>Picks how this shell's bar draws each of its commands, by what the command is.</summary>
 public class ShellQuickAccessTemplateSelector : RibbonQuickAccessTemplateSelector
 {
+    /// <summary>A command that runs.</summary>
+    public DataTemplate Button { get; set; }
+
     /// <summary>A command that is ON or OFF. Its template binds the command's own state, so the button in the caption and
     /// the one in the ribbon are two views of one value.</summary>
     public DataTemplate Toggle { get; set; }
@@ -36,6 +38,6 @@ public class ShellQuickAccessTemplateSelector : RibbonQuickAccessTemplateSelecto
             return command.Command != null ? Split : DropDown;
         }
 
-        return base.SelectTemplate(item, container);
+        return Button ?? base.SelectTemplate(item, container);
     }
 }

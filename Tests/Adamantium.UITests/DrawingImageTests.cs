@@ -53,7 +53,7 @@ public class DrawingImageTests
         var image = new DrawingImage { Drawing = Square(0, 0, 10, Colors.Red) };
         var session = new RecordingDrawingSession();
 
-        image.Render(session, new Rect(50, 50, 100, 100));
+        image.Render(session, new Rect(50, 50, 100, 100), null);
 
         Assert.That(session.Geometries, Has.Count.EqualTo(1));
         var transform = session.Geometries[0].Transform;
@@ -69,7 +69,7 @@ public class DrawingImageTests
         var image = new DrawingImage { Drawing = Square(8, 8, 4, Colors.Red) };
         var session = new RecordingDrawingSession();
 
-        image.Render(session, new Rect(0, 0, 40, 40));
+        image.Render(session, new Rect(0, 0, 40, 40), null);
 
         var transform = session.Geometries[0].Transform;
         Assert.That(Place(transform, 8, 8), Is.EqualTo(new Vector2(0, 0)));
@@ -95,7 +95,7 @@ public class DrawingImageTests
         };
         var session = new RecordingDrawingSession();
 
-        image.Render(session, new Rect(0, 0, 20, 20));
+        image.Render(session, new Rect(0, 0, 20, 20), null);
 
         Assert.That(session.Geometries, Has.Count.EqualTo(2));
         Assert.That(session.Geometries[0].Geometry, Is.SameAs(session.Geometries[1].Geometry));
@@ -121,7 +121,7 @@ public class DrawingImageTests
         var session = new RecordingDrawingSession();
 
         // Viewbox is 0..20 wide; drawn 1:1 so the group's 10px shift stays 10px.
-        image.Render(session, new Rect(0, 0, 20, 10));
+        image.Render(session, new Rect(0, 0, 20, 10), null);
 
         Assert.That(session.Geometries, Has.Count.EqualTo(2));
         Assert.That(session.Geometries[0].Geometry, Is.SameAs(session.Geometries[1].Geometry));
@@ -252,7 +252,7 @@ public class DrawingImageTests
         var image = new DrawingImage { Drawing = run };
         var session = new RecordingDrawingSession();
 
-        image.Render(session, new Rect(0, 0, image.Width, image.Height));
+        image.Render(session, new Rect(0, 0, image.Width, image.Height), null);
 
         Assert.That(session.Texts, Has.Count.EqualTo(1));
         var layout = session.Texts[0].Layout;
@@ -294,8 +294,8 @@ public class DrawingImageTests
         };
         var session = new RecordingDrawingSession();
 
-        image.Render(session, new Rect(0, 0, image.Width, image.Height));
-        image.Render(session, new Rect(0, 0, image.Width * 4, image.Height * 4));
+        image.Render(session, new Rect(0, 0, image.Width, image.Height), null);
+        image.Render(session, new Rect(0, 0, image.Width * 4, image.Height * 4), null);
 
         Assert.That(session.Texts, Has.Count.EqualTo(2));
         Assert.That(session.Texts[0].Layout, Is.Not.SameAs(session.Texts[1].Layout));
@@ -318,7 +318,7 @@ public class DrawingImageTests
         var image = new DrawingImage { Drawing = run };
 
         var session = new RecordingDrawingSession();
-        image.Render(session, new Rect(0, 0, 200, 80));   // drawn at 2x
+        image.Render(session, new Rect(0, 0, 200, 80), null);   // drawn at 2x
 
         // The alignment must reach the LAYOUT, shaping into the box: the ink does not sit centered inside a line box
         // (ascender and descender space are not symmetric), so centering from out here lands the text visibly low.

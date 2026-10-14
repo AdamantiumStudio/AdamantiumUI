@@ -232,6 +232,97 @@ public class ObservableResourceTests
         Assert.That(drawing.Stroke, Is.SameAs(LightPalette.Ink), "repainted by the light palette");
     }
 
+    // The data names the resource, the element finds it: a quick-access command says which icon is its, and one template
+    // draws every command - no icon in the view model, and nothing to resolve before the element is in its tree.
+    [Test]
+    public void AKeyFromABinding_ResolvesTheResourceTheDataNames_AndFollowsIt()
+    {
+        _rm.AddSource(new Border(), typeof(Icons), ResourceScope.Global);
+        var command = new Named { Icon = "CutIcon" };
+        var button = new Button { DataContext = command };
+
+        new ObservableResource { KeySource = new Adamantium.UI.Core.Data.Binding { Path = new PropertyPath(nameof(Named.Icon)) } }
+            .Apply(button, "Content");
+        Assert.That(button.Content, Is.EqualTo("CUT"), "the resource the data names");
+
+        command.Icon = "CopyIcon";
+        Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
+        Assert.That(button.Content, Is.EqualTo("COPY"), "another key named, another resource");
+    }
+
+    [TestCase(null)]
+    [TestCase("NoSuchIcon")]
+    public void AKeyFromABinding_NamingNothing_TakesTheOldResourceAway(string key)
+    {
+        _rm.AddSource(new Border(), typeof(Icons), ResourceScope.Global);
+        var command = new Named { Icon = "CutIcon" };
+        var button = new Button { DataContext = command };
+        new ObservableResource { KeySource = new Adamantium.UI.Core.Data.Binding { Path = new PropertyPath(nameof(Named.Icon)) } }
+            .Apply(button, "Content");
+        Assume.That(button.Content, Is.EqualTo("CUT"));
+
+        command.Icon = key;
+        Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
+
+        Assert.That(button.Content, Is.Null, "the last command's icon stayed on");
+    }
+
+    [Test]
+    public void AKeyFromABinding_ReadsTheDataContextAParentGivesLater()
+    {
+        _rm.AddSource(new Border(), typeof(Icons), ResourceScope.Global);
+        var button = new Button();
+        var parent = new Border { Child = button };
+        new ObservableResource { KeySource = new Adamantium.UI.Core.Data.Binding { Path = new PropertyPath(nameof(Named.Icon)) } }
+            .Apply(button, "Content");
+
+        parent.DataContext = new Named { Icon = "CopyIcon" };
+        Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
+
+        Assert.That(button.Content, Is.EqualTo("COPY"));
+    }
+
+    [Test]
+    public void AKeyFromABinding_IsWrittenInMarkup_AndBuiltByTheLoader()
+    {
+        _rm.AddSource(new Border(), typeof(Icons), ResourceScope.Global);
+
+        var load = Adamantium.UI.Core.Markup.AumlLoader.Load(
+            "<Button xmlns=\"http://adamantium/ui\" Content=\"{ObservableResource Key={Binding Icon}}\"/>");
+        var button = (Button)load.Root;
+        button.DataContext = new Named { Icon = "CopyIcon" };
+        Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
+
+        Assert.That(load.Diagnostics, Is.Empty);
+        Assert.That(button.Content, Is.EqualTo("COPY"));
+    }
+
+    private sealed class Named : System.ComponentModel.INotifyPropertyChanged
+    {
+        private string _icon;
+
+        public event System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
+
+        public string Icon
+        {
+            get => _icon;
+            set
+            {
+                _icon = value;
+                PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(Icon)));
+            }
+        }
+    }
+
+    private sealed class Icons : ResourceDictionary
+    {
+        protected override void OnInitialize()
+        {
+            Add("CutIcon", "CUT");
+            Add("CopyIcon", "COPY");
+        }
+    }
+
     private sealed class DarkPalette : ResourceDictionary
     {
         public static readonly Brush Ink = new SolidColorBrush(Colors.White);

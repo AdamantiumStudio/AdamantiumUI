@@ -39,8 +39,10 @@ public abstract class Drawing : AdamantiumComponent
     public abstract Rect Bounds { get; }
 
     /// <summary>Replay into <paramref name="session"/>, placing this drawing through <paramref name="transform"/>
-    /// (the consumer's viewbox-to-destination mapping, with any enclosing group transforms already folded in).</summary>
-    public abstract void Render(IDrawingSession session, Matrix4x4F transform);
+    /// (the consumer's viewbox-to-destination mapping, with any enclosing group transforms already folded in).
+    /// <paramref name="currentColor"/> paints whatever is written <see cref="CurrentColorBrush">CurrentColor</see>: the
+    /// Foreground of the element showing the drawing, null where there is none.</summary>
+    public abstract void Render(IDrawingSession session, Matrix4x4F transform, Brush currentColor);
 
     /// <summary>Hang this drawing, and everything inside it, under the component that shows it. A drawing lives in a
     /// RESOURCE - outside the tree entirely - so on its own a <c>{Binding}</c> anywhere inside has no DataContext to

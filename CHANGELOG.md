@@ -906,9 +906,25 @@ All packages share one version.
   It drops into another of the application's windows too.
 - A column header's funnel is a button to automation that opens and closes the column's filter
   (`PartButtonAutomationPeer`, which the × of a data grid's chip uses too); the themes name the filter's fields.
+- `CurrentColor` in a drawing: a fill or a stroke written `Stroke="CurrentColor"` is painted with the `Foreground` of the
+  `Image` showing the drawing (`CurrentColorBrush`). One icon resource is then dark on a light surface, takes the
+  on-accent color on an accent - a checked ribbon toggle, an active caption - and follows the color when it changes.
+  `Image.Foreground` is inherited and redraws the picture.
+- `{ObservableResource Key={Binding ...}}`: a resource whose key comes from the data, followed as the data changes.
+  A command names its icon by key and the view finds the resource, so icons stay in markup and the designer shows them.
 
 ### Changed
 
+- `WindowCommand` is a view model in `Adamantium.UI.Core` (it was in `Adamantium.UI.Controls`): it derives from
+  `AdamantiumViewModel` and notifies its changes, so a derived command is a view model with no notification code of its
+  own. Its icon is `IconKey`, the key of a resource the themes show with `{ObservableResource Key={Binding IconKey}}`
+  in the caption's or the row's color. `Adamantium.UI.Core` now depends on `Adamantium.MVVM`.
+- The quick-access bar's own button and overflow rows draw a `WindowCommand`-shaped item's icon by `IconKey` too.
+- `Drawing.Render` and `DrawingImage.Render` take the color to paint `CurrentColor` with.
+- `BrushParser` is an `ITypeParser<Brush>` (it was `ITypeParser<SolidColorBrush>`): the word `CurrentColor` reads as a
+  `CurrentColorBrush`, any other text as before.
+- `{ObservableResource}` takes its value away when its key changes to one that resolves to nothing, or to none; a miss of
+  the key it already shows still keeps the value.
 - Markup is built one way everywhere. What a document means is decided once, when it is lowered to a build plan
   (`Adamantium.UI.Markup.Building`); the generated class prints that plan as C#, and the runtime loader - the
   designer's preview, `VisualRenderer` - runs the same plan by reflection. The loader used to decide everything a
@@ -1113,6 +1129,8 @@ All packages share one version.
 
 ### Removed
 
+- `WindowCommand.IconData` and `WindowCommand.Icon`: an icon is not path data in a view model; name a resource with
+  `IconKey`.
 - `AumlAstTemplateNode.TemplateContent`, the template's markup written back out as text for every template parsed;
   nothing read it.
 - The text scenario language:
@@ -1134,6 +1152,8 @@ All packages share one version.
 
 ### Fixed
 
+- Markup hot reload no longer makes an editor's save fail: it read a saved file without sharing it for writing, so a
+  save made while it read was refused.
 - The designer no longer keeps every tree it has shown. A full preview now closes the window it showed before and
   releases everything the markup built for it, a drawer not opened and a tab not shown included; its frames clear the
   render marks as the application's loop does, which held every element ever marked; and an edit that takes a child
