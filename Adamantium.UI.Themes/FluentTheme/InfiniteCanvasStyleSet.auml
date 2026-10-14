@@ -156,44 +156,6 @@
                          a second column - it just runs off the bottom of the canvas, taking its last tools with it. A
                          dock hands the fill child what is actually left. -->
                     <DockPanel LastChildFill="True">
-                        <!-- Resize strips, docked first so they span the full height, one per side facing into the canvas
-                             (see CanvasPane.SyncSizer); dots mark them. -->
-                        <Border x:Name="PART_SizerLeft" DockPanel.Dock="Left" Width="8" Visibility="Collapsed"
-                                Background="Transparent" Cursor="SizeEWE"
-                                ToolTip="{Localize CanvasStrings.ResizePanel}">
-                            <!-- Short and centered: the strip is taken from the pane's full height, so a full-height
-                                 line would run past the plate's corners. -->
-                            <Grid Height="56" VerticalAlignment="Center">
-                                <Border Width="1" HorizontalAlignment="Center"
-                                        Background="{ObservableResource ControlStrokeColorDefault}"/>
-                                <StackPanel Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                    <Border Width="3" Height="3" CornerRadius="1.5"
-                                            Background="{ObservableResource TextFillColorSecondary}"/>
-                                    <Border Width="3" Height="3" CornerRadius="1.5" MarginTop="3"
-                                            Background="{ObservableResource TextFillColorSecondary}"/>
-                                    <Border Width="3" Height="3" CornerRadius="1.5" MarginTop="3"
-                                            Background="{ObservableResource TextFillColorSecondary}"/>
-                                </StackPanel>
-                            </Grid>
-                        </Border>
-
-                        <Border x:Name="PART_SizerRight" DockPanel.Dock="Right" Width="8" Visibility="Collapsed"
-                                Background="Transparent" Cursor="SizeEWE"
-                                ToolTip="{Localize CanvasStrings.ResizePanel}">
-                            <Grid Height="56" VerticalAlignment="Center">
-                                <Border Width="1" HorizontalAlignment="Center"
-                                        Background="{ObservableResource ControlStrokeColorDefault}"/>
-                                <StackPanel Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                    <Border Width="3" Height="3" CornerRadius="1.5"
-                                            Background="{ObservableResource TextFillColorSecondary}"/>
-                                    <Border Width="3" Height="3" CornerRadius="1.5" MarginTop="3"
-                                            Background="{ObservableResource TextFillColorSecondary}"/>
-                                    <Border Width="3" Height="3" CornerRadius="1.5" MarginTop="3"
-                                            Background="{ObservableResource TextFillColorSecondary}"/>
-                                </StackPanel>
-                            </Grid>
-                        </Border>
-
                         <!-- The grip carries and folds; the turn button is beside it and does the one other thing a
                              panel can be asked about itself. Both above the body, so a folded pane is its handles. -->
                         <!-- The handles ride in a row of their OWN, named so it can be collapsed whole. Hiding only the
@@ -218,35 +180,69 @@
                             </Button>
                         </StackPanel>
 
-                        <Border x:Name="PART_Body"
-                                VerticalAlignment="Top"
-                                Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="{TemplateBinding CornerRadius}"
-                                Padding="{TemplateBinding Padding}">
-                            <DockPanel LastChildFill="True">
-                                <!-- The caption names what the panel is about. Quieter than the rows and colored
-                                     OUTRIGHT: a presenter handed a bare string does not carry the pane's foreground
-                                     down to the text it makes, so the caption came out drawn in nothing. -->
-                                <ContentPresenter x:Name="PART_Header" DockPanel.Dock="Top"
-                                                  Content="{TemplateBinding Header}"
-                                                  FontSize="12"
-                                                  Foreground="{ObservableResource TextFillColorSecondary}"
-                                                  MarginBottom="6"/>
-                                <ContentPresenter x:Name="PART_ContentPresenter" DockPanel.Dock="Top"
-                                                  HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                                  VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
-                                                  Content="{TemplateBinding Content}"
-                                                  ContentTemplate="{TemplateBinding ContentTemplate}"/>
-                                <!-- A rail pane's buttons come from the tools themselves; custom content needs another
-                                     pane kind. -->
-                                <CanvasToolRail x:Name="PART_Rail" Visibility="Collapsed"
-                                                Canvas="{TemplateBinding Canvas}"
-                                                Orientation="{TemplateBinding Orientation}"
-                                                ButtonWidth="30" ButtonHeight="28" IconSize="13" ButtonGap="4"/>
-                            </DockPanel>
-                        </Border>
+                        <!-- Resize strips, one per side facing into the canvas (see CanvasPane.SyncSizer). Invisible, so
+                             they lie OVER the plate's edge: beside it they were a strip of nothing catching the mouse,
+                             and they stood the handles aside whenever they were shown. Over the plate only, so a strip
+                             never takes a press meant for the grip. -->
+                        <Grid VerticalAlignment="Top">
+                            <Border x:Name="PART_Body"
+                                    Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    CornerRadius="{TemplateBinding CornerRadius}"
+                                    Padding="{TemplateBinding Padding}">
+                                <DockPanel LastChildFill="True">
+                                    <!-- The caption names what the panel is about. Quieter than the rows and colored
+                                         OUTRIGHT: a presenter handed a bare string does not carry the pane's foreground
+                                         down to the text it makes, so the caption came out drawn in nothing. -->
+                                    <ContentPresenter x:Name="PART_Header" DockPanel.Dock="Top"
+                                                      Content="{TemplateBinding Header}"
+                                                      FontSize="12"
+                                                      Foreground="{ObservableResource TextFillColorSecondary}"
+                                                      MarginBottom="6"/>
+                                    <ContentPresenter x:Name="PART_ContentPresenter" DockPanel.Dock="Top"
+                                                      HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                      VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                                      Content="{TemplateBinding Content}"
+                                                      ContentTemplate="{TemplateBinding ContentTemplate}"/>
+                                    <!-- A rail pane's buttons come from the tools themselves; custom content needs
+                                         another pane kind. -->
+                                    <CanvasToolRail x:Name="PART_Rail" Visibility="Collapsed"
+                                                    Canvas="{TemplateBinding Canvas}"
+                                                    Orientation="{TemplateBinding Orientation}"
+                                                    ButtonWidth="30" ButtonHeight="28" IconSize="13" ButtonGap="4"/>
+                                </DockPanel>
+                            </Border>
+
+                            <!-- Three dots mark each strip: an edge nobody can see is an edge nobody finds. -->
+                            <Border x:Name="PART_SizerLeft" HorizontalAlignment="Left" Width="8" Visibility="Collapsed"
+                                    Background="Transparent" Cursor="SizeEWE"
+                                    ToolTip="{Localize CanvasStrings.ResizePanel}">
+                                <StackPanel Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                            Cursor="SizeEWE">
+                                    <Border Width="3" Height="3" CornerRadius="1.5"
+                                            Background="{ObservableResource TextFillColorSecondary}"/>
+                                    <Border Width="3" Height="3" CornerRadius="1.5" MarginTop="3"
+                                            Background="{ObservableResource TextFillColorSecondary}"/>
+                                    <Border Width="3" Height="3" CornerRadius="1.5" MarginTop="3"
+                                            Background="{ObservableResource TextFillColorSecondary}"/>
+                                </StackPanel>
+                            </Border>
+
+                            <Border x:Name="PART_SizerRight" HorizontalAlignment="Right" Width="8" Visibility="Collapsed"
+                                    Background="Transparent" Cursor="SizeEWE"
+                                    ToolTip="{Localize CanvasStrings.ResizePanel}">
+                                <StackPanel Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                            Cursor="SizeEWE">
+                                    <Border Width="3" Height="3" CornerRadius="1.5"
+                                            Background="{ObservableResource TextFillColorSecondary}"/>
+                                    <Border Width="3" Height="3" CornerRadius="1.5" MarginTop="3"
+                                            Background="{ObservableResource TextFillColorSecondary}"/>
+                                    <Border Width="3" Height="3" CornerRadius="1.5" MarginTop="3"
+                                            Background="{ObservableResource TextFillColorSecondary}"/>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
                     </DockPanel>
 
                     <ControlTemplate.Triggers>

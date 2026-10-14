@@ -547,11 +547,36 @@ public partial class InfiniteCanvas
         _ground.Coarsening = GridCoarsening;
         _ground.MinPitch = MinGridPitch;
         _ground.MarkSize = GridStyle == CanvasGridStyle.Dots ? GridDotSize : GridThickness;
+        ColorGround();
+
+        session.DrawRectangle(_ground, new Rect(0, 0, size.Width, size.Height));
+    }
+
+    private void ColorGround()
+    {
         _ground.Background = ColorOf(Background, new Color(0, 0, 0, 0));
         _ground.Color = ColorOf(GridBrush, new Color(0, 0, 0, 0));
         _ground.AxisColor = ColorOf(AxisBrush, new Color(0, 0, 0, 0));
+    }
 
-        session.DrawRectangle(_ground, new Rect(0, 0, size.Width, size.Height));
+    private static void OnGroundBrushSet(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e) =>
+        (component as InfiniteCanvas)?.FollowGroundBrush(e.Property, e.NewValue as Brush);
+
+    private void FollowGroundBrush(AdamantiumProperty property, Brush brush)
+    {
+        if (brush == null)
+        {
+            Follow(property, null);
+            return;
+        }
+
+        brush.Changed += OnGroundBrushChanged;
+        Follow(property, () => brush.Changed -= OnGroundBrushChanged);
+    }
+
+    private void OnGroundBrushChanged(object sender, EventArgs e)
+    {
+        ColorGround();
     }
 
     // The plate that says where the pointer is, BESIDE it: a number drawn where the mark is would cover the very

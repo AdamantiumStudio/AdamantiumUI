@@ -1168,6 +1168,15 @@ All packages share one version.
 
 ### Fixed
 
+- `InfiniteCanvas`: the plane follows a theme variant switch. Its ground copied the colors of `Background`,
+  `GridBrush` and `AxisBrush` and kept them when the variant recolored those brushes in place, so the plane stayed
+  dark in a light window until the camera moved.
+- `CanvasPane` folded is its handles. A pane with a width - the inspector - kept that width folded, so its grip could
+  not be carried up to the canvas's far edge; the width now waits and comes back when the pane opens, and a layout
+  saved while it is folded keeps it. Folding and opening by the grip leave the grip where it stood, and opening moves
+  the pane in only as far as it has to fit. A folded pane offers no resize edge.
+- `CanvasPane`'s resize edges lie over the edge of the plate, marked by three dots, instead of beside it: shown on
+  opening, the left one stood the handles aside and the grip jumped as the pane was folded and opened.
 - `TreeDataGrid` keeps the column being edited built while it is scrolled out of view, and a commit whose cell is gone
   closes the edit instead of writing null into the record.
 - `TreeDataGrid` follows the column being edited when the columns change under it: a column put in front of it no

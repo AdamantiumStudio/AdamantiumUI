@@ -842,12 +842,14 @@ public partial class InfiniteCanvas : Control, ISceneFollower
         typeof(Double), typeof(InfiniteCanvas), new PropertyMetadata(12.0, PropertyMetadataOptions.AffectsRender));
 
     public static readonly AdamantiumProperty GridBrushProperty = AdamantiumProperty.Register(nameof(GridBrush),
-        typeof(Brush), typeof(InfiniteCanvas), new PropertyMetadata(null, PropertyMetadataOptions.AffectsRender));
+        typeof(Brush), typeof(InfiniteCanvas),
+        new PropertyMetadata(null, PropertyMetadataOptions.AffectsRender, OnGroundBrushSet));
 
     /// <summary>The mark on the world's own axes, drawn where they cross the viewport. Without it there is nothing on
     /// an unbounded plane to say where the origin went.</summary>
     public static readonly AdamantiumProperty AxisBrushProperty = AdamantiumProperty.Register(nameof(AxisBrush),
-        typeof(Brush), typeof(InfiniteCanvas), new PropertyMetadata(null, PropertyMetadataOptions.AffectsRender));
+        typeof(Brush), typeof(InfiniteCanvas),
+        new PropertyMetadata(null, PropertyMetadataOptions.AffectsRender, OnGroundBrushSet));
 
     public static readonly AdamantiumProperty GridThicknessProperty = AdamantiumProperty.Register(nameof(GridThickness),
         typeof(Double), typeof(InfiniteCanvas), new PropertyMetadata(1.0, PropertyMetadataOptions.AffectsRender));

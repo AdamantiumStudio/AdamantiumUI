@@ -691,6 +691,22 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
         return ValuePriority.Default;
     }
 
+    internal T GetBaseValue<T>(AdamantiumProperty property)
+    {
+        if (Slots(property) is not { } slots)
+        {
+            return GetValue<T>(property);
+        }
+
+        object baseValue;
+        lock (slots)
+        {
+            baseValue = slots.BaseValue;
+        }
+
+        return baseValue is T value ? value : GetValue<T>(property);
+    }
+
     // An inherited value changed (parent assigned/attached): fire the metadata callback (e.g. DataContext -> refresh
     // bindings) and re-raise so this element's own descendants inherit in turn.
 

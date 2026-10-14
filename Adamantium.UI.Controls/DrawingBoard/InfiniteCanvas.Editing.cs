@@ -6,6 +6,7 @@ using Adamantium.UI.Controls.Text;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Data;
 using Adamantium.UI.Core.Input;
+using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls.DrawingBoard;
@@ -1066,6 +1067,8 @@ public partial class InfiniteCanvas
     static InfiniteCanvas()
     {
         Gestures.IsManipulationEnabledProperty.OverrideMetadata(typeof(InfiniteCanvas), new PropertyMetadata(true));
+        BackgroundProperty.OverrideMetadata(typeof(InfiniteCanvas),
+            new PropertyMetadata(Brushes.Transparent, OnGroundBrushSet));
     }
 
     private void OnPointerDown(object sender, PointerPressedEventArgs e) => PointerDown(sender, e);
