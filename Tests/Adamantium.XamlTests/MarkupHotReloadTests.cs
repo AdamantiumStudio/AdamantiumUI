@@ -250,6 +250,39 @@ public class MarkupHotReloadTests
         Assert.That(((TextBlock)panel.Children[0]).Text, Is.EqualTo("After"));
     }
 
+    // Two writes within one tick of the file clock share a write time, and a save told apart by it was lost - on CI.
+    [Test]
+    public async Task ASaveWithTheWriteTimeOfTheOneBefore_IsStillApplied()
+    {
+        var panel = Built(Panel("Before"));
+        MarkupHotReload.Mode = MarkupReloadMode.Manual;
+        var before = File.GetLastWriteTimeUtc(_file);
+
+        File.WriteAllText(_file, Panel("After"));
+        File.SetLastWriteTimeUtc(_file, before);
+        MarkupHotReload.NotifyChanged(_file);
+        var gathered = MarkupHotReload.ChangedFiles;
+        await MarkupHotReload.CodeUpdatedAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(gathered, Has.Count.EqualTo(1), "the watcher's report is kept");
+            Assert.That(((TextBlock)panel.Children[0]).Text, Is.EqualTo("After"), "the IDE's apply applies it");
+        });
+    }
+
+    [Test]
+    public void ASaveOfWhatIsAlreadyApplied_IsNotGatheredAgain()
+    {
+        Built(Panel("Before"));
+        MarkupHotReload.Mode = MarkupReloadMode.Manual;
+
+        File.WriteAllText(_file, Panel("Before"));
+        MarkupHotReload.NotifyChanged(_file);
+
+        Assert.That(MarkupHotReload.ChangedFiles, Is.Empty);
+    }
+
     [Test]
     public void TheRuntimesHotReload_CallsTheHandler()
     {

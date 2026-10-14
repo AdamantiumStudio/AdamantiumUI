@@ -19,7 +19,9 @@ public static class MarkupHotReload
     private static readonly Dictionary<string, TrackedMarkup> Files = new(StringComparer.OrdinalIgnoreCase);
     private static readonly Dictionary<string, FileSystemWatcher> Watchers = new(StringComparer.OrdinalIgnoreCase);
     private static readonly HashSet<string> Changed = new(StringComparer.OrdinalIgnoreCase);
-    private static readonly Dictionary<string, DateTime> TakenAt = new(StringComparer.OrdinalIgnoreCase);
+    // The hash of each file's text as last taken - built from, or taken to apply. A save is told apart by what it says,
+    // not by when: two saves within one tick of the file clock share a write time, and the second was lost.
+    private static readonly Dictionary<string, string> Taken = new(StringComparer.OrdinalIgnoreCase);
     private static readonly Timer SettleTimer = new(_ => ApplyChanged(), null, Timeout.Infinite, Timeout.Infinite);
     private static volatile MarkupReloadMode _mode;
 
@@ -76,9 +78,10 @@ public static class MarkupHotReload
             {
                 if (!Files.TryGetValue(fullPath, out file))
                 {
-                    file = new TrackedMarkup(fullPath, BuiltText(fullPath, hash), hash);
+                    var onDisk = File.Exists(fullPath) ? ReadText(fullPath, 1) : null;
+                    file = new TrackedMarkup(fullPath, BuiltText(fullPath, onDisk, hash), hash);
                     Files[fullPath] = file;
-                    TakenAt[fullPath] = File.GetLastWriteTimeUtc(fullPath);
+                    Taken[fullPath] = HashOf(onDisk) ?? hash;
                     Watch(Path.GetDirectoryName(fullPath));
                 }
             }
@@ -97,14 +100,24 @@ public static class MarkupHotReload
     public static void NotifyChanged(string path)
     {
         var fullPath = Path.GetFullPath(path);
+        string taken;
         lock (Sync)
         {
-            if (!Files.ContainsKey(fullPath)
-                || (TakenAt.TryGetValue(fullPath, out var taken) && taken == File.GetLastWriteTimeUtc(fullPath)))
+            if (!Files.ContainsKey(fullPath))
             {
                 return;
             }
 
+            Taken.TryGetValue(fullPath, out taken);
+        }
+
+        if (!IsNewSave(fullPath, taken))
+        {
+            return;
+        }
+
+        lock (Sync)
+        {
             Changed.Add(fullPath);
         }
 
@@ -132,13 +145,13 @@ public static class MarkupHotReload
             return Task.CompletedTask;
         }
 
-        List<string> saved;
+        List<(string Path, string Taken)> tracked;
         lock (Sync)
         {
-            saved = Files.Keys
-                .Where(path => !TakenAt.TryGetValue(path, out var taken) || taken != File.GetLastWriteTimeUtc(path))
-                .ToList();
+            tracked = Files.Keys.Select(path => (path, Taken.TryGetValue(path, out var taken) ? taken : null)).ToList();
         }
+
+        var saved = tracked.Where(file => IsNewSave(file.Path, file.Taken)).Select(file => file.Path).ToList();
 
         Log.Logger.Information("Markup hot reload: the application's code was updated; {Count} saved file(s) to apply", saved.Count);
         Dispatch(RefreshWindows);
@@ -157,9 +170,14 @@ public static class MarkupHotReload
             Watchers.Clear();
             Files.Clear();
             Changed.Clear();
-            TakenAt.Clear();
+            Taken.Clear();
         }
     }
+
+    // Unread is new too: a file the save still holds is looked at again once it settles.
+    private static bool IsNewSave(string path, string taken) => taken == null || HashOf(ReadText(path, 1)) != taken;
+
+    private static string HashOf(string text) => text == null ? null : MarkupHash.Of(text);
 
     private static void RefreshWindows()
     {
@@ -180,7 +198,7 @@ public static class MarkupHotReload
         VisualTreeNotifications.RaiseStateSwapStarted();
     }
 
-    private static string BuiltText(string path, string hash)
+    private static string BuiltText(string path, string text, string hash)
     {
         if (!File.Exists(path))
         {
@@ -188,7 +206,6 @@ public static class MarkupHotReload
             return null;
         }
 
-        var text = ReadText(path, 1);
         if (text != null && MarkupHash.Of(text) == hash)
         {
             return text;
@@ -227,7 +244,7 @@ public static class MarkupHotReload
             {
                 if (Files.TryGetValue(path, out var file))
                 {
-                    TakenAt[path] = File.GetLastWriteTimeUtc(path);
+                    Taken[path] = HashOf(ReadText(path, 1));
                     due.Add(file);
                 }
             }
