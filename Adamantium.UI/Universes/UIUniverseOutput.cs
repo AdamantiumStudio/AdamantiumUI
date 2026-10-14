@@ -10,6 +10,7 @@ using Adamantium.Mathematics;
 using Adamantium.UI.Controls;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Input;
+using Adamantium.UI.Core.RoutedEvents;
 using UniverseMouseButton = Adamantium.Multiverse.Input.MouseButton;
 
 
@@ -331,7 +332,7 @@ namespace Adamantium.UI.Universes
 
         private void OnManipulation(object sender, ManipulationEventArgs e)
         {
-            if (!ReferenceEquals(e.Source, listenedInput) || e.State != ManipulationState.Delta)
+            if (!ReferenceEquals(e.OriginalSource, listenedInput) || e.State != ManipulationState.Delta)
             {
                 return;
             }
@@ -451,8 +452,19 @@ namespace Adamantium.UI.Universes
             OnMouseInput(mouseInput);
         }
 
+        /// <summary>Whether input that reached the listened element is meant for the universe. Everything is, by default;
+        /// a host that lays controls over the picture keeps theirs (see <see cref="RenderTargetUniverseOutput"/>). Only
+        /// presses are asked: a release always passes, or a key or button pressed in the universe would stay held.</summary>
+        protected virtual bool IsUniverseInput(RoutedEventArgs e) => true;
+
+        /// <summary>Whether a key the universe took is marked handled, so focus navigation or a scroll viewer further up
+        /// the route does not act on it too. Asked only while the universe accepts the keyboard. Not by default.</summary>
+        protected virtual bool SpendsKey(KeyEventArgs e) => false;
+
         private void OnPointerWheelChanged(object sender, PointerWheelEventArgs e)
         {
+            if (!IsUniverseInput(e)) return;
+
             var mouseInput = new MouseInput();
             mouseInput.InputType = InputType.Wheel;
             mouseInput.WheelDelta = e.Delta;
@@ -471,7 +483,7 @@ namespace Adamantium.UI.Universes
 
         private void OnPointerPressed(object sender, PointerPressedEventArgs e)
         {
-            if (!MouseTranslationKeys.TryGetValue(e.ChangedButton, out var button))
+            if (!IsUniverseInput(e) || !MouseTranslationKeys.TryGetValue(e.ChangedButton, out var button))
             {
                 return;
             }
@@ -502,17 +514,20 @@ namespace Adamantium.UI.Universes
 
         private void WindowOnTextInput(object sender, TextInputEventArgs e)
         {
+            if (!IsUniverseInput(e)) return;
+
             OnTextInput(e.Text);
         }
 
         private void WindowOnKeyDown(object sender, KeyEventArgs e)
         {
-            if (!TryTranslate(e.Key, e.PhysicalKey, out var key))
+            if (!IsUniverseInput(e) || !TryTranslate(e.Key, e.PhysicalKey, out var key))
             {
                 return;
             }
 
             OnKeyInput(new KeyboardInput { Key = key, InputType = InputType.Down });
+            if (Input is { TakesKeyboard: true } && SpendsKey(e)) e.Handled = true;
         }
     }
 }
