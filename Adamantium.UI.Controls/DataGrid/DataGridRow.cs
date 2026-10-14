@@ -484,6 +484,7 @@ public class DataGridRow : Panel
 
         _groupTotals.Remove(index);
         Children.Remove(cell);
+        DiscardedVisuals.PublishSubtree(cell);   // made anew when a total is wanted again
     }
 
     private void HideGroupTotals()

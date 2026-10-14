@@ -79,6 +79,15 @@ public sealed class NavigationService : INavigationService
         }
     }
 
+    public async Task LeaveWindowAsync(object viewModel, CancellationToken cancellationToken = default)
+    {
+        if (viewModel is INavigationAware aware)
+        {
+            var context = new NavigationContext(null, this, null, viewModel, null, NavigationMode.New, cancellationToken);
+            await aware.OnNavigatedFromAsync(context, cancellationToken);
+        }
+    }
+
     public Task<NavigationResult> OpenWindowAsync<TContentViewModel>(NavigationParameters parameters = null, string windowShell = null, bool singleInstance = false, CancellationToken cancellationToken = default)
         => OpenWindowAsync(typeof(TContentViewModel), parameters, windowShell, singleInstance, cancellationToken);
 

@@ -61,6 +61,35 @@ public sealed class RegionManager : IRegionManager
         if (region != null) _regions[region.Name] = region;
     }
 
+    public Task RemoveRegionAsync(IRegion region)
+    {
+        if (region == null) return Task.CompletedTask;
+        if (_regions.TryGetValue(region.Name, out var registered) && ReferenceEquals(registered, region))
+        {
+            _regions.Remove(region.Name);
+        }
+
+        var leaving = new object[region.ActiveViewModels.Count];
+        for (var i = 0; i < leaving.Length; i++) leaving[i] = region.ActiveViewModels[i];
+
+        foreach (var viewModel in leaving) region.Remove(viewModel);
+        region.Journal?.Clear();
+
+        var told = new List<Task>();
+        foreach (var viewModel in leaving)
+        {
+            if (viewModel is INavigationAware aware) told.Add(LeaveAsync(region, aware));
+        }
+
+        return Task.WhenAll(told);
+    }
+
+    private async Task LeaveAsync(IRegion region, INavigationAware leaving)
+    {
+        var context = new NavigationContext(region, _navigationService, null, leaving, null, NavigationMode.New, CancellationToken.None);
+        await leaving.OnNavigatedFromAsync(context, CancellationToken.None);
+    }
+
     public Task<NavigationResult> NavigateToAsync<TViewModel>(string regionName, NavigationParameters parameters = null,
         CancellationToken cancellationToken = default)
         => GetOrCreateRegion(regionName).NavigateToAsync<TViewModel>(parameters, cancellationToken);

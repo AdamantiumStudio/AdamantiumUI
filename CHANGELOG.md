@@ -1240,6 +1240,38 @@ All packages share one version.
     element now lists what it is an owner of (`IRenderAttachable.Release`), at no cost to painting or recoloring.
   - **A shared `Aura` or `Shadow` lets go of an element when it is discarded.** The element listened to it for as long
     as the glow lived, so one handed out by a view model held every page lit with it.
+  - **A closed window takes its regions and kept pages with it.** A region lives in the application's manager, so the
+    tabs a closed window showed stayed in it, and the next window asking for the name opened on them. Closing a window
+    now removes each region declared in it by name that no other window shows (`IRegionManager.RemoveRegionAsync`) -
+    a region a view model hands over with `Region.Source` stays the view model's: its view models
+    hear `OnNavigatedFromAsync` and its journal is emptied. The view model of a window opened by `OpenWindowAsync`
+    hears `OnNavigatedFromAsync` when the window closes (`INavigationService.LeaveWindowAsync`), as it heard
+    `OnNavigatedToAsync` when it opened. A page kept between visits (`x:KeepAlive`) goes when the control that kept it is
+    discarded; it waited to be evicted, and one kept as `Required` stayed for good.
+  - **A binding's converted value is kept once per item and property, not once per converter.** A converter written as
+    `Converter={conv:ToBrush}` is a new instance on every element, and each was kept as a key of its own with the item,
+    so an item kept a brush for every element ever realized for it - a pass of the sandbox's scenarios kept about 7,000
+    brushes more each time. The converter's parameter now tells two bindings apart too: one converter on one property
+    with two parameters handed both the first one's value.
+  - **A closed overlay window lets go of what it was shown on.** The manager discards the card and the dim it made for
+    that showing, and a window the framework made for one dialog, overlay or question is discarded with its view once
+    closed. Kept, the window's frame stayed an owner of the default overlay brush, which lives as long as the
+    application, and held the dialog's view for good.
+  - **Parts made for a moment are discarded when they are done.** A data grid's total cells of a column gone and a drag's
+    insertion cue as the pointer moves on were only taken out; each went on following the theme and was kept for good. A discarded docking area closes
+    the window its compass is shown in - a real window, with its renderer and GPU memory, only hidden between drags.
+  - **A closed document's pane is discarded, and a docking area discards the panes it holds out of sight.** A document
+    closed is gone for good, and so is the pane a docking region made for a view model that left it, but each was only
+    taken out, and a tool put away or a tab never shown was never reached
+    by the discard of its area. Each went on following the theme and the language, holding the view it showed.
+  - **An element's context menu made by its template is discarded with it, and so is a ribbon drop-down's menu.** Only
+    a menu set on the element itself was; one a template made for that very element was treated as one a style
+    shares and only unhooked, and a closed ribbon window's application menu kept its modules and commands for good.
+  - **A released element is not subscribed to a resource again.** A style or trigger still running on it as it went - a
+    pane's selection undone while its region let it go - connected it to the resource manager, which outlives
+    everything, and nothing closed that connection.
+  - **A tab control showing a region follows it until it is discarded.** It let go of the region when it left the tree,
+    so on a kept page it stopped following its region after the page came back, and one never in a tree never let go.
   - **The focus manager knows focus scopes only weakly.** A scope dropped without leaving its tree stayed in the map of
     what each scope focused last.
   - **A `ContentPresenter` lets go of its content when that content is released or taken by another parent**, told so

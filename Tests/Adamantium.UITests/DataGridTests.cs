@@ -4393,6 +4393,24 @@ public class DataGridTests
         });
     }
 
+    // A column gone from the strip takes its cell with it: only taken out, the cell went on following the theme and the
+    // language, and a table whose columns came and went kept every cell it had ever made.
+    [Test]
+    public void TheFooterStrip_DiscardsTheCellOfAColumnGone()
+    {
+        var grid = GroupableGrid(4);
+        Relayout(grid);
+        var footer = new DataGridFooterPresenter { Owner = grid };
+        footer.Measure(new Size(400, 24));
+        var leaving = footer.VisualChildren.OfType<DataGridFooterCell>().Last();
+
+        grid.Columns.RemoveAt(grid.Columns.Count - 1);
+        footer.Measure(new Size(400, 24));
+        while (DiscardedVisuals.Drain(64) > 0) { }
+
+        Assert.That(leaving.IsDiscarded, Is.True);
+    }
+
     // A column being resized has to carry the strip of totals with it. The strip measures its cells at the columns'
     // widths, but a measure that is not invalidated never runs: widening a column left its total trimmed to an ellipsis
     // in the width it used to have.

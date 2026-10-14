@@ -22,6 +22,6 @@ public static class RegionManager
         if (a is not IUIComponent host || e.NewValue is not string name || string.IsNullOrEmpty(name)) return;
         var manager = UIAppContext.Current?.UIContext?.Resolve<IRegionManager>();
         var region = manager?.GetOrCreateRegion(name);
-        if (region != null) RegionHost.Attach(region, host);
+        if (region != null) RegionHost.Attach(region, host, named: true);
     }
 }

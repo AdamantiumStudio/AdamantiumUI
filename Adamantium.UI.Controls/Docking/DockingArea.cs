@@ -561,7 +561,11 @@ public class DockingArea : Panel
         }
 
         question.Answered += Finish;
-        window.Closed += (_, _) => Finish(UnsavedAnswer.Cancel);
+        window.Closed += (_, _) =>
+        {
+            Finish(UnsavedAnswer.Cancel);
+            DiscardedVisuals.PublishSubtree(window);   // made for this question alone
+        };
         host.ShowOverlayWindow(window);
         return answered.Task;
     }
@@ -637,6 +641,10 @@ public class DockingArea : Panel
 
         // On the OWNER: a pane can be closed in any window of the layout, and listeners attached to the area.
         Owner.PaneClosed?.Invoke(Owner, new PaneClosedEventArgs(id, isTool));
+
+        // ...and the document itself goes, with the view it showed. Only taken out, it went on following the theme and
+        // the language and held its view for good - every document ever closed.
+        if (!isTool) DiscardedVisuals.PublishSubtree(pane);
         return (true, false);
     }
 
@@ -1101,6 +1109,29 @@ public class DockingArea : Panel
     {
         base.OnDiscarded();
         Workspace?.Detach(this);
+
+        // Its panes go with it, the ones not shown too - a tab behind another, a group put away - which the discard of the
+        // tree never reaches. Only the area that owns them: a floating window's area shares its owner's panes.
+        if (_owner == null)
+        {
+            foreach (var pane in _panesById.Values)
+            {
+                if (pane.VisualParent == null) DiscardedVisuals.PublishSubtree(pane);
+            }
+        }
+
+        // The compass is shown in a window of its own, only hidden between drags: left so, an area thrown away kept a
+        // real window - its renderer, its effects, its GPU memory - for as long as the application ran. Closing it
+        // discards the compass with it; a compass never shown goes on its own.
+        if (_compassWindow != null)
+        {
+            _compassWindow.Close();
+            _compassWindow = null;
+        }
+        else
+        {
+            DiscardedVisuals.PublishSubtree(_compass);
+        }
     }
 
     private static void OnWorkspaceChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
