@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<StyleSet xmlns="http://adamantium/ui"
+          xmlns:x="http://adamantium/ui/xaml/extensions">
+
+    <!-- Text a press or a drag already means something on does not select: a button's caption, a row of a list, a menu
+         item. Set on the control and inherited by every label inside it. A tab's and an expander's header are turned
+         off in their templates instead - their CONTENT is a page, and its text stays selectable. -->
+    <Style Selector="Button, ToggleButton, RepeatButton, CheckBox, RadioButton, ToggleSwitch, ColorPickerButton">
+        <Setter Property="TextBlock.IsTextSelectionEnabled" Value="False"/>
+    </Style>
+
+    <Style Selector="DropDown, DropDownItem, ListBoxItem, TreeViewItem, MenuItem, TitleBar, FlipTile, CanvasNode">
+        <Setter Property="TextBlock.IsTextSelectionEnabled" Value="False"/>
+    </Style>
+
+    <Style Selector="DataGridRow, DataGridColumnHeader, DataGridRowHeader, DataGridGroupHeader, DataGridGroupChip">
+        <Setter Property="TextBlock.IsTextSelectionEnabled" Value="False"/>
+    </Style>
+
+    <Style Selector="DataGridSortChip, DataGridRowDetailsToggle, RibbonButton, RibbonToggleButton, RibbonDropDownButton">
+        <Setter Property="TextBlock.IsTextSelectionEnabled" Value="False"/>
+    </Style>
+
+    <Style Selector="RibbonSplitButton, RibbonTabHeader, RibbonGalleryItem, RibbonApplicationMenuItem, RibbonGroup">
+        <Setter Property="TextBlock.IsTextSelectionEnabled" Value="False"/>
+    </Style>
+
+    <Style Selector="RibbonQuickAccessMenuItem, DataGridNewRowPresenter">
+        <Setter Property="TextBlock.IsTextSelectionEnabled" Value="False"/>
+    </Style>
+
+    <Style Selector="ScrollBar, Slider, RangeSlider, NumericUpDown, Thumb, GridSplitter, PaneSplitter">
+        <Setter Property="TextBlock.IsTextSelectionEnabled" Value="False"/>
+    </Style>
+</StyleSet>

@@ -80,7 +80,7 @@ public class Setter : ISetter, IEquatable<Setter>
     {
         if (style is not { IsTypeDefault: true }) return ValuePriority.Style;
 
-        return property.CanInherit ? ValuePriority.TypeDefault : ValuePriority.Style;
+        return property.CanInherit && !property.InheritsFromTypeStyle ? ValuePriority.TypeDefault : ValuePriority.Style;
     }
 
     // Resolves tree-scoped; a Local miss before the element has ancestors is deferred to attach. Theme/Global resolve

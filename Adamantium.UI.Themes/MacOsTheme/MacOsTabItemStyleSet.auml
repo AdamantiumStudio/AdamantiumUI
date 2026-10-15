@@ -32,7 +32,9 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="TabItem">
+                    <!-- A header's text does not select - see Fluent's TabItem. -->
                     <Border x:Name="TabBorder"
+                            TextBlock.IsTextSelectionEnabled="False"
                             CornerRadius="{TemplateBinding CornerRadius}"
                             Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"

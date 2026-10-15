@@ -125,6 +125,7 @@
                         <!-- The accent-filled tool header, text in Theme.AccentForegroundColor; its buttons are parts the
                              group wires. -->
                         <Border x:Name="PART_Header" Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="3"
+                                TextBlock.IsTextSelectionEnabled="False"
                                 Background="{ThemeResource AccentFillColorDefault}"
                                 BorderBrush="{ResourceReference ControlStrokeColorDefault}"
                                 BorderThickness="0 0 0 1"
@@ -219,6 +220,7 @@
                                     <!-- A PART, because this is the caption a revealed panel is dragged by: while the
                                          flyout is up it is the only caption the panel has on screen. -->
                                     <Border x:Name="PART_FlyoutHeader" Grid.Row="0"
+                                            TextBlock.IsTextSelectionEnabled="False"
                                             Background="{ThemeResource AccentFillColorDefault}"
                                             Padding="8 2 8 2">
                                         <Grid ColumnDefinitions="*,Auto,Auto">

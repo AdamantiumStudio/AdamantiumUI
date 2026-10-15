@@ -19,7 +19,9 @@
             <Setter.Value>
                 <ControlTemplate TargetType="Expander">
                     <Grid RowDefinitions="Auto,Auto">
+                        <!-- A header's text does not select - see Fluent's Expander. -->
                         <Border Grid.Row="0" x:Name="PART_Header"
+                                TextBlock.IsTextSelectionEnabled="False"
                                 Background="{ObservableResource SolidBackgroundFillColorTertiary}"
                                 BorderBrush="{ObservableResource ControlStrokeColorDefault}"
                                 BorderThickness="0 0 0 1"

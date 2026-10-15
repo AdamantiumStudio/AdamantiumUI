@@ -34,7 +34,10 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="TabItem">
+                    <!-- A header is a handle - pressed to select the tab, dragged to move it - so its text does not
+                         select; the page under the tab still does. -->
                     <Border x:Name="TabBorder"
+                            TextBlock.IsTextSelectionEnabled="False"
                             CornerRadius="{TemplateBinding CornerRadius}"
                             Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"

@@ -54,5 +54,11 @@ public enum PropertyMetadataOptions
    /// re-recorded, and animations can run on the compositor.</summary>
    /// <remarks>Not for properties that replace a brush object, which need AffectsRender. On a brush's own properties it
    /// only classifies the change for the compositor; Changed delivers the repaint.</remarks>
-   AffectsPaint = 256
+   AffectsPaint = 256,
+
+   /// <summary>With <see cref="Inherits"/>: a value from a style chosen by type alone reaches the element's subtree like
+   /// any value set on it. For a property by which a control decides for everything inside it - whether text in a button
+   /// selects. Not for looks such as fonts and colors: there an element's own style must win over its container's, which
+   /// is why a type style's value does not travel by default.</summary>
+   InheritsFromTypeStyle = 512
 }

@@ -38,6 +38,11 @@ public sealed class AdamantiumProperty:IEquatable<AdamantiumProperty>
    /// it with a field read.</summary>
    public bool CanInherit { get; private set; }
 
+   /// <summary>Whether a value from a style chosen by type alone reaches the subtree - see
+   /// <see cref="PropertyMetadataOptions.InheritsFromTypeStyle"/>. Such a style writes the value as any style does, rather
+   /// than as the element's own default.</summary>
+   public bool InheritsFromTypeStyle { get; private set; }
+
    // Bumped on any inheriting write or re-parent; a cached inherited value is valid while its stamp matches. Global so
    // the bump is O(1); a stale stamp costs one ancestor walk.
    internal static long InheritanceEpoch;
@@ -131,6 +136,7 @@ public sealed class AdamantiumProperty:IEquatable<AdamantiumProperty>
       // Once ANY declaration inherits, the property can inherit - an override may add it for a derived type and never
       // takes it away for the type that had it.
       CanInherit |= metadata.Inherits;
+      InheritsFromTypeStyle |= metadata.InheritsFromTypeStyle;
       metadataCache.Clear();   // a previously-resolved (base-walked) entry may now resolve to this newer, more-derived one
       // ...and an override can ADD inheritance for a derived type, so the per-type "which of my properties inherit" answer
       // is stale too. Static-init only, so this never runs hot.

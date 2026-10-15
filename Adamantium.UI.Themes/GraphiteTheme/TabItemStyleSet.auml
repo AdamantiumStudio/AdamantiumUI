@@ -31,8 +31,9 @@
             <Setter.Value>
                 <ControlTemplate TargetType="TabItem">
                     <!-- No rule per item: the tab control's sliding PART_SelectionIndicator is the one mark
-                         (SelectionIndicatorThickness from this theme's metrics). -->
-                    <Grid>
+                         (SelectionIndicatorThickness from this theme's metrics). A header's text does not select - see
+                         Fluent's TabItem. -->
+                    <Grid TextBlock.IsTextSelectionEnabled="False">
                         <Border x:Name="TabBorder"
                                 CornerRadius="{TemplateBinding CornerRadius}"
                                 Background="{TemplateBinding Background}"

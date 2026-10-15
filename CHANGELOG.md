@@ -7,6 +7,32 @@ All packages share one version.
 
 ### Added
 
+- Text in a `TextBlock` selects. `TextBlock.IsTextSelectionEnabled` is on by default, with the I-beam over the text;
+  off protects the text from being selected and copied and shows the inherited cursor.
+  - **By hand:** a drag selects what it passes over, a double click a word, a triple click the whole text, Shift with a
+    click extends the selection; a plain click lets it go. As on a page, a press on other text or on the background
+    lets it go too, while a right click, a press on a control where text does not select (a button, a list row) and
+    the keyboard moving elsewhere keep it; switching to another window and back keeps both the selection and the
+    keyboard. Rewritten text - a live diagnostics line - keeps its selection in place (a whole-text one
+    stays whole), and a copy takes the text as it is now; new data (a changed `DataContext`, as in a reused list
+    container) lets it go. A drag in right-to-left text selects by the screen, as a text box does; a word, `Select` and
+    `SelectAll` are ranges of the text.
+  - **Keyboard:** Ctrl+A, Ctrl+C; Shift with the arrows, Home, End and Ctrl+arrows moves the selection's end, back
+    through where it began and on; Left and Right collapse the selection to its edge, and a click in text that has
+    the keyboard sets where Shift+arrows start. Escape is left to the control around the text. No caret is drawn, and
+    text selected with the mouse wears no focus ring - a control says so with the new
+    `InputUIComponent.ShowsFocusRing`; `FocusManager.IsLeavingWindow` tells a control its focus will come back.
+  - **From code:** `SelectedText` (a line break copied as a new line, a control in the line left out), `SelectAll`,
+    `Select(start, length)`, `SelectionBrush`.
+  - **Never the press of the control around it:** a button or a tab that takes the press keeps it. The property is
+    inherited, and the themes turn it off for captions a press already means something on - buttons, check boxes,
+    list and tree rows, menu items, table rows and headers, the ribbon's buttons, the title bar, canvas nodes - and in
+    the headers of tabs, expanders, docked panes and overlay windows, while a tab's page, an expander's content, a
+    pane's content and a table row's details panel still select.
+  - Vertical text does not select yet.
+- `PropertyMetadataOptions.InheritsFromTypeStyle`: with `Inherits`, a value from a style chosen by type alone reaches the
+  subtree as any style's does. For a property by which a control decides for everything inside it; looks such as fonts
+  and colors keep the element's own style winning over its container's.
 - Markup hot reload. Save an `.auml` while a debug build of the application runs, and every view, window and control
   built from it takes the change in place at the next frame: changed properties are set again, children are added,
   removed and reordered, and everything that did not change keeps its instance and its state. A version that does not

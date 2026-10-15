@@ -138,6 +138,7 @@ public class ContentPresenter : InputUIComponent
             && _currentRoot is TextBlock reusableText
             && ContentTemplate == null && ContentTemplateSelector == null)
         {
+            reusableText.LetSelectionGo();
             reusableText.Text = newContent.ToString();
             return false;
         }

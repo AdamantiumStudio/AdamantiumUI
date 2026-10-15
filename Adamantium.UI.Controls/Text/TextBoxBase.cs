@@ -1414,5 +1414,5 @@ public abstract class TextBoxBase : Control
         _scrollViewer.VerticalScrollBarVisibility = VerticalScrollBarVisibility;
     }
 
-    private static readonly Brush DefaultSelectionBrush = new SolidColorBrush(new Color(0x33, 0x99, 0xFF, 0x66));
+    internal static readonly Brush DefaultSelectionBrush = new SolidColorBrush(new Color(0x33, 0x99, 0xFF, 0x66));
 }

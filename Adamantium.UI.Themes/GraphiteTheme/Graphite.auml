@@ -37,6 +37,7 @@
   <Theme.StyleIncludes>
     <!-- These sets define this theme's shapes; density comes from Metrics. Busy indicators and the ribbon keep Fluent's
          forms and change only tempo and grounds. -->
+    <StyleInclude Source="{x:Type shared:TextSelectionStyleSet}"/>
     <StyleInclude Source="{x:Type editor:ButtonStyleSet}"/>
     <StyleInclude Source="{x:Type editor:ToggleButtonStyleSet}"/>
     <StyleInclude Source="{x:Type editor:RepeatButtonStyleSet}"/>

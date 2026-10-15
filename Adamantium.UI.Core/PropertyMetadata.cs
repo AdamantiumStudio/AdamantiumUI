@@ -16,6 +16,9 @@ public class PropertyMetadata
    public bool IsDataBindingAllowed { get; private set; }
    public bool IsNotDataBindable { get; private set; }
    public bool Inherits { get; private set; }
+
+   /// <summary>See <see cref="PropertyMetadataOptions.InheritsFromTypeStyle"/>.</summary>
+   public bool InheritsFromTypeStyle { get; private set; }
    public bool AffectsMeasure { get; set; }
    public bool AffectsArrange { get; set; }
    public bool AffectsRender { get; set; }
@@ -155,6 +158,10 @@ public class PropertyMetadata
       if ((flags & PropertyMetadataOptions.Inherits) > 0)
       {
          Inherits = true;
+      }
+      if ((flags & PropertyMetadataOptions.InheritsFromTypeStyle) > 0)
+      {
+         InheritsFromTypeStyle = true;
       }
       if ((flags & PropertyMetadataOptions.NotDataBindable) > 0)
       {

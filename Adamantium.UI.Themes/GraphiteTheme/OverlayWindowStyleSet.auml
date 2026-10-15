@@ -49,6 +49,7 @@
                                                     VerticalAlignment="Center"
                                                     Margin="{ResourceReference TitleBarIconGap}"/>
                                             <ContentPresenter x:Name="PART_Title" Content="{TemplateBinding Title}"
+                                                    TextBlock.IsTextSelectionEnabled="False"
                                                     Foreground="{TemplateBinding TitleForeground}"
                                                     FontSize="{ResourceReference FontSizeChrome}"
                                                     VerticalAlignment="Center"/>

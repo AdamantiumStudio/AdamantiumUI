@@ -72,7 +72,26 @@ public class TextBlock : InputUIComponent, IFocusableInParts
     public static readonly AdamantiumProperty WritingModeProperty = AdamantiumProperty.Register(nameof(WritingMode),
         typeof(WritingMode), typeof(TextBlock),
         new PropertyMetadata(WritingMode.Horizontal, PropertyMetadataOptions.AffectsMeasure, TextParametersChangedCallback));
-    
+
+    /// <summary>Whether the text can be selected and copied: on by default, with the I-beam over it; off protects the
+    /// text from being copied and shows the inherited cursor. Inherited, so a control's style turns it off for every
+    /// label inside it - the themes do so in buttons, tabs, menus and list rows.</summary>
+    public static readonly AdamantiumProperty IsTextSelectionEnabledProperty = AdamantiumProperty.RegisterAttached(
+        "IsTextSelectionEnabled", typeof(Boolean), typeof(UIComponent),
+        new PropertyMetadata(true, PropertyMetadataOptions.Inherits | PropertyMetadataOptions.InheritsFromTypeStyle,
+            OnTextSelectionEnabledChanged));
+
+    public static Boolean GetIsTextSelectionEnabled(IUIComponent element) =>
+        element.GetValue<Boolean>(IsTextSelectionEnabledProperty);
+
+    public static void SetIsTextSelectionEnabled(IUIComponent element, Boolean value) =>
+        element.SetValue(IsTextSelectionEnabledProperty, value);
+
+    /// <summary>What selected text is painted on; the same default as a text box's.</summary>
+    public static readonly AdamantiumProperty SelectionBrushProperty = AdamantiumProperty.Register(nameof(SelectionBrush),
+        typeof(Brush), typeof(TextBlock),
+        new PropertyMetadata(TextBoxBase.DefaultSelectionBrush, PropertyMetadataOptions.AffectsRender));
+
     // FontFamily is declared (inherited) on UIComponent. On a TextBlock a font change must re-shape the text, so override
     // the metadata with a callback that re-measures - this fires on BOTH a direct set and an inherited change cascaded
     // from an ancestor (RaiseInheritedChange invokes the callback; the AffectsMeasure flag would not fire on the cascade).
@@ -112,7 +131,10 @@ public class TextBlock : InputUIComponent, IFocusableInParts
 
     private static void TextChangedCallback(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
     {
-        
+        if (a is TextBlock { SelectionCarries: false } block)
+        {
+            block.ClearSelection();
+        }
     }
 
     private TextLayout _textLayout;
@@ -171,6 +193,28 @@ public class TextBlock : InputUIComponent, IFocusableInParts
     private int _focusedLink = -1;
     private bool _overLink;
     private bool _madeFocusable;
+    private bool _focusableForSelection;
+    private bool _focusingForSelection;
+    private bool _selectionHoldsFocus;
+    private CaretPosition _selectionAnchor;
+    private CaretPosition _selectionFocus;
+    private string _selectedIn;
+    private bool _selectionLogical;
+    private bool _selectionWhole;
+    private object _selectionContext;
+    private bool _selecting;
+    private bool _pressPending;
+    private Vector2 _pressAt;
+    private int _pressClicks;
+    private bool _pressExtends;
+    private IInputComponent _listenedWindow;
+    private IInputComponent _listenedTop;
+    private PointerPressedEventHandler _outsidePress;
+    private KeyEventHandler _copyFromRoot;
+    private RoutedEventHandler _selectionTaken;
+
+    private static readonly RoutedEvent SelectionTakenEvent = EventManager.RegisterRoutedEvent("SelectionTaken",
+        RoutingStrategy.Bubble, typeof(RoutedEventHandler), typeof(TextBlock));
     private InlineCollection _inlines;
     private bool _inlinesDirty = true;
     private string _inlineText;
@@ -273,7 +317,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts
         }
         else if (_links.Count == 0 && _madeFocusable)
         {
-            SetCurrentValue(FocusableProperty, false);
+            ClearValue(FocusableProperty, ValuePriority.Binding);
             _madeFocusable = false;
         }
 
@@ -320,6 +364,11 @@ public class TextBlock : InputUIComponent, IFocusableInParts
         _hasLayout = true;
         _inlinesDirty = false;
         _lastShaping = shaping;
+        if (_lastText != text)
+        {
+            CarrySelectionTo(text);
+        }
+
         _lastText = text; _lastFontSize = FontSize; _lastWidth = width; _lastHeight = height;
         _lastWrapping = TextWrapping; _lastTrimming = TextTrimming;
         _lastHAlign = HorizontalTextAlignment; _lastVAlign = VerticalTextAlignment; _lastJustify = JustifyLastLine;
@@ -521,6 +570,18 @@ public class TextBlock : InputUIComponent, IFocusableInParts
         set => SetValue(WritingModeProperty, value);
     }
 
+    public Boolean IsTextSelectionEnabled
+    {
+        get => GetValue<Boolean>(IsTextSelectionEnabledProperty);
+        set => SetValue(IsTextSelectionEnabledProperty, value);
+    }
+
+    public Brush SelectionBrush
+    {
+        get => GetValue<Brush>(SelectionBrushProperty);
+        set => SetValue(SelectionBrushProperty, value);
+    }
+
     public Brush Background
     {
         get => GetValue<Brush>(BackgroundProperty);
@@ -572,6 +633,11 @@ public class TextBlock : InputUIComponent, IFocusableInParts
             foreach (Inline old in e.OldItems) { old.Changed -= OnInlineChanged; RemoveLogicalChild(old); }
         if (e.NewItems != null)
             foreach (Inline added in e.NewItems) { AddLogicalChild(added); added.Changed += OnInlineChanged; }
+        if (!SelectionCarries)
+        {
+            ClearSelection();
+        }
+
         _inlinesDirty = true;
         HostChildren();
         InvalidateMeasure();
@@ -1103,9 +1169,422 @@ public class TextBlock : InputUIComponent, IFocusableInParts
         var session = context.ForControl(this);
         EnsureLayout();   // refresh shaping if a render-only property (alignment/wrapping) changed since the last measure
         DrawAdornments(session, backgrounds: true);
+        DrawSelection(session);
         session.DrawText(GetTextRenderingParameters(), DesiredSize, _textLayout, Foreground, Background, Stroke);
         DrawAdornments(session, backgrounds: false);
     }
+
+    /// <summary>The selected text as it is copied: a line break as a new line, a control in the line left out.</summary>
+    public string SelectedText
+    {
+        get
+        {
+            EnsureLayout();
+            if (!HasSelection)
+            {
+                return string.Empty;
+            }
+
+            var selected = new StringBuilder();
+            foreach (var (start, end) in SelectedRanges())
+            {
+                selected.Append(_lastText, start, end - start);
+            }
+
+            return selected.ToString().Replace(LineSeparator, '\n').Replace(ObjectReplacement.ToString(), string.Empty);
+        }
+    }
+
+    /// <summary>Selects the whole text.</summary>
+    public void SelectAll()
+    {
+        EnsureLayout();
+        SelectLogical(0, _lastText?.Length ?? 0, whole: true);
+    }
+
+    /// <summary>Selects <paramref name="length"/> characters from <paramref name="start"/>; a length of zero clears
+    /// the selection.</summary>
+    public void Select(int start, int length)
+    {
+        EnsureLayout();
+        var size = _lastText?.Length ?? 0;
+        var from = Math.Clamp(start, 0, size);
+        SelectLogical(from, (int)Math.Clamp((long)from + length, 0, size));
+    }
+
+    private bool CanSelect => IsTextSelectionEnabled && WritingMode == WritingMode.Horizontal;
+
+    private bool HoldsAnchor => CanSelect && _selectedIn != null && _selectedIn == _lastText;
+
+    private bool SelectionCarries => _selectedIn != null && SameData(DataContext, _selectionContext);
+
+    private static bool SameData(object now, object then) =>
+        ReferenceEquals(now, then) || (now is ValueType or string && Equals(now, then));
+
+    internal void LetSelectionGo() => ClearSelection();
+
+    private void CarrySelectionTo(string text)
+    {
+        if (_selectedIn == null)
+        {
+            return;
+        }
+
+        if (!SelectionCarries)
+        {
+            _selectedIn = null;
+            _selectionContext = null;
+            StopListeningToTheWindow();
+            return;
+        }
+
+        var size = text?.Length ?? 0;
+        if (_selectionWhole && !_selecting)
+        {
+            _selectionAnchor = new CaretPosition(0);
+            _selectionFocus = new CaretPosition(size, afterPrevious: size > 0);
+            _selectionLogical = true;
+        }
+        else
+        {
+            _selectionAnchor = Snapped(_selectionAnchor, size);
+            _selectionFocus = Snapped(_selectionFocus, size);
+        }
+
+        _selectedIn = text;
+    }
+
+    private CaretPosition Snapped(CaretPosition position, int size)
+    {
+        var index = Math.Min(position.Index, size);
+        if (index > 0 && index < size)
+        {
+            index = _textLayout.PreviousCaretStop(_textLayout.NextCaretStop(index));
+        }
+
+        return new CaretPosition(index, position.AfterPrevious && index > 0);
+    }
+
+    private bool HasSelection => HoldsAnchor &&
+                                 (_selectionAnchor.Index != _selectionFocus.Index ||
+                                  (!_selectionLogical && _selectionAnchor.AfterPrevious != _selectionFocus.AfterPrevious &&
+                                   _textLayout.GetVisualRanges(_selectionAnchor, _selectionFocus).Count > 0));
+
+    private IReadOnlyList<(int Start, int End)> SelectedRanges()
+    {
+        if (!HasSelection)
+        {
+            return [];
+        }
+
+        if (_selectionLogical)
+        {
+            return [(Math.Min(_selectionAnchor.Index, _selectionFocus.Index),
+                Math.Max(_selectionAnchor.Index, _selectionFocus.Index))];
+        }
+
+        return _textLayout.GetVisualRanges(_selectionAnchor, _selectionFocus);
+    }
+
+    private void Select(CaretPosition anchor, CaretPosition focus, bool logical = false, bool whole = false)
+    {
+        if (!CanSelect)
+        {
+            return;
+        }
+
+        _selectionAnchor = anchor;
+        _selectionFocus = focus;
+        _selectionLogical = logical;
+        _selectionWhole = whole;
+        _selectionContext = DataContext;
+        _selectedIn = _lastText;
+        ListenToTheWindow();
+        InvalidateRender(false);
+    }
+
+    private void ListenToTheWindow()
+    {
+        if (_listenedWindow != null || RootVisual is not IInputComponent window)
+        {
+            return;
+        }
+
+        IUIComponent top = this;
+        while (top.VisualParent != null)
+        {
+            top = top.VisualParent;
+        }
+
+        RaiseEvent(new RoutedEventArgs(SelectionTakenEvent));
+        if (!ReferenceEquals(top, window))
+        {
+            window.RaiseEvent(new RoutedEventArgs(SelectionTakenEvent));
+        }
+
+        _outsidePress ??= OnPressAnywhere;
+        _copyFromRoot ??= OnKeyAnywhere;
+        _selectionTaken ??= OnSelectionTakenElsewhere;
+        _listenedWindow = window;
+        Listen(window);
+        DataContextChanged += OnDataSwapped;
+        if (top is IInputComponent own && !ReferenceEquals(top, window))
+        {
+            _listenedTop = own;
+            Listen(own);
+        }
+    }
+
+    private void Listen(IInputComponent root)
+    {
+        root.AddHandler(PointerEvents.PreviewPointerPressedEvent, _outsidePress, handledEventsToo: true);
+        root.AddHandler(Keyboard.KeyDownEvent, _copyFromRoot);
+        root.AddHandler(SelectionTakenEvent, _selectionTaken);
+    }
+
+    private void StopListening(IInputComponent root)
+    {
+        root.RemoveHandler(PointerEvents.PreviewPointerPressedEvent, _outsidePress);
+        root.RemoveHandler(Keyboard.KeyDownEvent, _copyFromRoot);
+        root.RemoveHandler(SelectionTakenEvent, _selectionTaken);
+    }
+
+    private void StopListeningToTheWindow()
+    {
+        if (_listenedWindow == null)
+        {
+            return;
+        }
+
+        StopListening(_listenedWindow);
+        _listenedWindow = null;
+        DataContextChanged -= OnDataSwapped;
+        if (_listenedTop != null)
+        {
+            StopListening(_listenedTop);
+            _listenedTop = null;
+        }
+    }
+
+    private void OnKeyAnywhere(object sender, KeyEventArgs e)
+    {
+        if (e.Handled || e.Key != Key.C || !IsCopyKey(e.Key, e.Modifiers))
+        {
+            return;
+        }
+
+        var copied = SelectedText;
+        if (copied.Length > 0)
+        {
+            Clipboard.SetText(copied);
+            e.Handled = true;
+        }
+    }
+
+    private void OnDataSwapped(object sender, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (!SameData(DataContext, _selectionContext))
+        {
+            ClearSelection();
+        }
+    }
+
+    private void OnSelectionTakenElsewhere(object sender, RoutedEventArgs e)
+    {
+        if (!ReferenceEquals(e.OriginalSource, this))
+        {
+            ClearSelection();
+        }
+    }
+
+    private static bool IsCopyKey(Key key, InputModifiers modifiers)
+    {
+        const InputModifiers ctrl = InputModifiers.LeftControl | InputModifiers.RightControl;
+        const InputModifiers others = InputModifiers.LeftShift | InputModifiers.RightShift | InputModifiers.LeftAlt |
+                                      InputModifiers.RightAlt;
+        return key is (Key.C or Key.Insert) && (modifiers & ctrl) != 0 && (modifiers & others) == 0;
+    }
+
+    private void OnPressAnywhere(object sender, PointerPressedEventArgs e)
+    {
+        if (e.ChangedButton != MouseButtons.Left)
+        {
+            return;
+        }
+
+        for (var node = e.OriginalSource as IUIComponent; node != null; node = node.VisualParent)
+        {
+            if (ReferenceEquals(node, this))
+            {
+                return;
+            }
+
+            if (node is TextBlock or TextBoxBase)
+            {
+                break;
+            }
+        }
+
+        if (e.OriginalSource is IUIComponent pressed && !GetIsTextSelectionEnabled(pressed) && !InTextField(pressed))
+        {
+            return;
+        }
+
+        ClearSelection();
+    }
+
+    private static bool InTextField(IUIComponent pressed)
+    {
+        for (var node = pressed; node != null; node = node.VisualParent)
+        {
+            if (node is TextBoxBase)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private void SelectLogical(int start, int end, bool whole = false) =>
+        Select(new CaretPosition(start), new CaretPosition(end, afterPrevious: end > start), logical: true, whole);
+
+    private void ClearSelection()
+    {
+        if (_selecting)
+        {
+            _selecting = false;
+            foreach (var pointer in PointerDevice.Current.Pointers)
+            {
+                if (ReferenceEquals(pointer.Captured, this))
+                {
+                    pointer.Capture(null);
+                }
+            }
+        }
+
+        StopListeningToTheWindow();
+        if (_selectedIn == null)
+        {
+            return;
+        }
+
+        _selectedIn = null;
+        _selectionContext = null;
+        InvalidateRender(false);
+    }
+
+    private CaretPosition PositionAt(double x, double y)
+    {
+        EnsureLayout();
+        var size = _lastText?.Length ?? 0;
+        if (size == 0)
+        {
+            return new CaretPosition(0);
+        }
+
+        var hit = _textLayout.HitTest(x - LinesShift(), y);
+        var index = Math.Clamp(hit.CaretIndex, 0, size);
+        if (index > 0 && index < size)
+        {
+            index = _textLayout.PreviousCaretStop(_textLayout.NextCaretStop(index));
+        }
+
+        return new CaretPosition(index, hit.IsTrailing && index == hit.CaretIndex);
+    }
+
+    private void DrawSelection(IDrawingSession session)
+    {
+        if (!HasSelection || SelectionBrush == null)
+        {
+            return;
+        }
+
+        var shift = LinesShift();
+        foreach (var (start, end) in SelectedRanges())
+        {
+            foreach (var rect in _textLayout.GetRangeRects(start, end))
+            {
+                session.DrawRectangle(SelectionBrush, new Rect(rect.X + shift, rect.Y, rect.Width, rect.Height));
+            }
+        }
+    }
+
+    private void TakeSelectionFocus()
+    {
+        if (!Focusable && GetValueSource(FocusableProperty) == ValuePriority.Default &&
+            GetValueSource(KeyboardNavigation.IsTabStopProperty) == ValuePriority.Default)
+        {
+            SetCurrentValue(FocusableProperty, true);
+            SetCurrentValue(KeyboardNavigation.IsTabStopProperty, false);
+            _focusableForSelection = true;
+        }
+
+        _focusingForSelection = true;
+        try
+        {
+            if (!IsKeyboardFocused && Focus())
+            {
+                _selectionHoldsFocus = true;
+            }
+        }
+        finally
+        {
+            _focusingForSelection = false;
+        }
+    }
+
+    private void GiveUpSelectionFocus()
+    {
+        if (!_focusableForSelection)
+        {
+            return;
+        }
+
+        _focusableForSelection = false;
+        ClearValue(KeyboardNavigation.IsTabStopProperty, ValuePriority.Binding);
+        if (_links.Count > 0)
+        {
+            _madeFocusable = true;
+        }
+        else
+        {
+            ClearValue(FocusableProperty, ValuePriority.Binding);
+        }
+    }
+
+    private Cursor ShownCursor => CanSelect && GetValueSource(CursorProperty) is ValuePriority.Inherited or ValuePriority.Default
+        ? Cursors.IBeam
+        : Cursor;
+
+    private static void OnTextSelectionEnabledChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (component is not TextBlock block)
+        {
+            return;
+        }
+
+        if (!block.IsTextSelectionEnabled)
+        {
+            block.ClearSelection();
+        }
+
+        if (block.IsPointerOver && !block._overLink)
+        {
+            Mouse.Cursor = block.ShownCursor;
+        }
+    }
+
+    protected override void OnPointerEntered(PointerEventArgs e)
+    {
+        base.OnPointerEntered(e);
+        if (e.Pointer.Type != PointerType.Touch)
+        {
+            Mouse.Cursor = ShownCursor;
+        }
+    }
+
+    protected override bool ShowsFocusRing => _focusedLink >= 0 || (!_selectionHoldsFocus && !_focusingForSelection);
 
     public override Rect? FocusBounds
     {
@@ -1199,7 +1678,9 @@ public class TextBlock : InputUIComponent, IFocusableInParts
         return null;
     }
 
-    bool IFocusableInParts.TakesFocusAt(PointerPressedEventArgs e) => LinkAt(e) != null;
+    bool IFocusableInParts.TakesFocusAt(PointerPressedEventArgs e) =>
+        LinkAt(e) != null || (IsKeyboardFocused && HoldsAnchor &&
+                              (e.Modifiers & (InputModifiers.LeftShift | InputModifiers.RightShift)) != 0);
 
     protected override void OnPointerMoved(PointerEventArgs e)
     {
@@ -1208,7 +1689,133 @@ public class TextBlock : InputUIComponent, IFocusableInParts
         if (overLink != _overLink)
         {
             _overLink = overLink;
-            Mouse.Cursor = overLink ? Cursors.Of(CursorType.Hand) : Cursor;
+            Mouse.Cursor = overLink ? Cursors.Of(CursorType.Hand) : ShownCursor;
+        }
+        else if (!overLink && ReferenceEquals(e.OriginalSource, this) && e.Pointer.Type != PointerType.Touch &&
+                 !ReferenceEquals(Mouse.Cursor, ShownCursor))
+        {
+            Mouse.Cursor = ShownCursor;
+        }
+
+        if (Drag(e))
+        {
+            e.Handled = true;
+        }
+    }
+
+    private bool Drag(PointerEventArgs e)
+    {
+        if ((!_selecting && !_pressPending) || !IsAttachedToVisualTree)
+        {
+            return false;
+        }
+
+        if (!e.Properties.IsLeftButtonPressed)
+        {
+            EndSelecting(e);
+            _pressPending = false;
+            return false;
+        }
+
+        var point = e.GetPosition(this);
+        if (_selecting)
+        {
+            Select(_selectionAnchor, PositionAt(point.X, point.Y));
+            return true;
+        }
+
+        var captured = e.Pointer.Captured;
+        if (captured != null && !ReferenceEquals(captured, this))
+        {
+            _pressPending = false;
+            return false;
+        }
+
+        if (!PlatformSettings.ExceedsDragThreshold(point - _pressAt, this))
+        {
+            return false;
+        }
+
+        var anchor = _pressExtends && HoldsAnchor ? _selectionAnchor : PositionAt(_pressAt.X, _pressAt.Y);
+        _pressPending = false;
+        _selecting = true;
+        e.Pointer.Capture(this);
+        Mouse.Cursor = ShownCursor;
+        TakeSelectionFocus();
+        Select(anchor, PositionAt(point.X, point.Y));
+        return true;
+    }
+
+    private void Pressed(PointerPressedEventArgs e)
+    {
+        _pressPending = CanSelect && e.Pointer.Type != PointerType.Touch && IsAttachedToVisualTree;
+        if (!_pressPending)
+        {
+            return;
+        }
+
+        _pressAt = e.GetPosition(this);
+        _pressClicks = e.ClickCount;
+        _pressExtends = (e.Modifiers & (InputModifiers.LeftShift | InputModifiers.RightShift)) != 0;
+    }
+
+    private void EndSelecting(PointerEventArgs e)
+    {
+        if (!_selecting)
+        {
+            return;
+        }
+
+        _selecting = false;
+        if (ReferenceEquals(e.Pointer.Captured, this))
+        {
+            e.Pointer.Capture(null);
+        }
+    }
+
+    private void Released(PointerReleasedEventArgs e)
+    {
+        if (_selecting)
+        {
+            EndSelecting(e);
+            e.Handled = true;
+            return;
+        }
+
+        if (!_pressPending)
+        {
+            return;
+        }
+
+        _pressPending = false;
+        var at = PositionAt(_pressAt.X, _pressAt.Y);
+        var size = _lastText?.Length ?? 0;
+
+        if (_pressClicks >= 3)
+        {
+            TakeSelectionFocus();
+            SelectAll();
+            e.Handled = true;
+        }
+        else if (_pressClicks == 2 && size > 0)
+        {
+            var (start, end) = _textLayout.GetWordAt(Math.Min(at.Index, size - 1));
+            TakeSelectionFocus();
+            SelectLogical(start, end);
+            e.Handled = true;
+        }
+        else if (_pressExtends && HoldsAnchor)
+        {
+            Select(_selectionAnchor, at);
+            e.Handled = true;
+        }
+        else if (IsKeyboardFocused)
+        {
+            Select(at, at);
+        }
+        else
+        {
+            ClearSelection();
         }
     }
 
@@ -1217,6 +1824,17 @@ public class TextBlock : InputUIComponent, IFocusableInParts
         base.OnPointerExited(e);
         _overLink = false;
         _pressedLink = null;
+        if (_pressPending)
+        {
+            Drag(e);
+            _pressPending = false;
+        }
+    }
+
+    protected override void OnPointerCaptureLost(PointerEventArgs e)
+    {
+        base.OnPointerCaptureLost(e);
+        _selecting = false;
     }
 
     protected override void OnPointerPressed(PointerPressedEventArgs e)
@@ -1230,6 +1848,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts
         _pressedLink = LinkAt(e);
         if (_pressedLink == null)
         {
+            Pressed(e);
             return;
         }
 
@@ -1257,18 +1876,134 @@ public class TextBlock : InputUIComponent, IFocusableInParts
         {
             e.Handled = true;
             link.Activate();
+            return;
         }
+
+        Released(e);
+    }
+
+    private bool SelectionKey(Key key, InputModifiers modifiers)
+    {
+        if (!CanSelect)
+        {
+            return false;
+        }
+
+        var ctrl = (modifiers & (InputModifiers.LeftControl | InputModifiers.RightControl)) != 0;
+        var shift = (modifiers & (InputModifiers.LeftShift | InputModifiers.RightShift)) != 0;
+        if ((modifiers & (InputModifiers.LeftAlt | InputModifiers.RightAlt)) != 0)
+        {
+            return false;
+        }
+
+        switch (key)
+        {
+            case Key.A when ctrl && !shift:
+                SelectAll();
+                return true;
+            case Key.C or Key.Insert when IsCopyKey(key, modifiers):
+                var copied = SelectedText;
+                if (copied.Length == 0)
+                {
+                    return false;
+                }
+
+                Clipboard.SetText(copied);
+                return true;
+        }
+
+        if (!HoldsAnchor)
+        {
+            return false;
+        }
+
+        if (!shift && !ctrl && key is (Key.LeftArrow or Key.RightArrow) && HasSelection)
+        {
+            var (anchorX, anchorLine) = _textLayout.GetCaretPoint(_selectionAnchor);
+            var (focusX, focusLine) = _textLayout.GetCaretPoint(_selectionFocus);
+            var anchorFirst = anchorLine == focusLine ? anchorX <= focusX : anchorLine < focusLine;
+            var start = anchorFirst ? _selectionAnchor : _selectionFocus;
+            var end = anchorFirst ? _selectionFocus : _selectionAnchor;
+            var edge = key == Key.LeftArrow ? start : end;
+            Select(edge, edge);
+            return true;
+        }
+
+        var size = _lastText?.Length ?? 0;
+        var focus = _selectionFocus;
+        switch (key)
+        {
+            case Key.LeftArrow when ctrl:
+                focus = new CaretPosition(_textLayout.PreviousWordStop(focus.Index));
+                break;
+            case Key.RightArrow when ctrl:
+                focus = new CaretPosition(_textLayout.NextWordStop(focus.Index));
+                break;
+            case Key.LeftArrow or Key.RightArrow:
+                focus = _textLayout.MoveVisually(focus, key == Key.RightArrow);
+                break;
+            case Key.Home:
+                focus = ctrl ? new CaretPosition(0) : _textLayout.GetLineStart(_textLayout.GetCaretPoint(focus).LineIndex);
+                break;
+            case Key.End:
+                focus = ctrl ? new CaretPosition(size) : _textLayout.GetLineEnd(_textLayout.GetCaretPoint(focus).LineIndex);
+                break;
+            case Key.UpArrow or Key.DownArrow:
+                focus = LineAway(focus, key == Key.DownArrow ? 1 : -1);
+                break;
+            default:
+                return false;
+        }
+
+        Select(shift ? _selectionAnchor : focus, focus);
+        return true;
+    }
+
+    private CaretPosition LineAway(CaretPosition from, int step)
+    {
+        var (x, line) = _textLayout.GetCaretPoint(from);
+        var target = line + step;
+        if (target < 0)
+        {
+            return new CaretPosition(0);
+        }
+
+        if (target >= _textLayout.LineCount)
+        {
+            return new CaretPosition(_lastText?.Length ?? 0);
+        }
+
+        var metrics = _textLayout.GetLine(target);
+        return PositionAt(x + LinesShift(), metrics.Top + metrics.Height / 2);
     }
 
     protected override void OnGotFocus(RoutedEventArgs e)
     {
         base.OnGotFocus(e);
-        if (_links.Count > 0 && ReferenceEquals(e.OriginalSource, this))
+        if (_links.Count > 0 && ReferenceEquals(e.OriginalSource, this) && !_focusingForSelection &&
+            !_selectionHoldsFocus)
         {
             var backwards = (Keyboard.Modifiers & (InputModifiers.LeftShift | InputModifiers.RightShift)) != 0;
             _focusedLink = backwards ? _links.Count - 1 : 0;
             InvalidateRender(false);
         }
+    }
+
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+        if (_selectedIn != null)
+        {
+            ListenToTheWindow();
+        }
+    }
+
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnDetachedFromVisualTree(e);
+        ClearSelection();
+        _selectionHoldsFocus = false;
+        GiveUpSelectionFocus();
     }
 
     protected override void OnLostFocus(RoutedEventArgs e)
@@ -1281,19 +2016,46 @@ public class TextBlock : InputUIComponent, IFocusableInParts
 
         _focusedLink = -1;
         InvalidateRender(false);
+        if (FocusManager.IsLeavingWindow)
+        {
+            return;
+        }
+
+        _selectionHoldsFocus = false;
+        GiveUpSelectionFocus();
     }
 
     protected override void OnKeyDown(KeyEventArgs e)
     {
         base.OnKeyDown(e);
-        if (_focusedLink < 0 || _focusedLink >= _links.Count || e.Handled || !ReferenceEquals(e.OriginalSource, this))
+        if (!e.Handled && ReferenceEquals(e.OriginalSource, this) && SelectionKey(e.Key, e.Modifiers))
         {
+            e.Handled = true;
             return;
         }
 
         const InputModifiers shift = InputModifiers.LeftShift | InputModifiers.RightShift;
         const InputModifiers others = InputModifiers.LeftControl | InputModifiers.RightControl | InputModifiers.LeftAlt |
                                       InputModifiers.RightAlt;
+        if (!e.Handled && ReferenceEquals(e.OriginalSource, this) && e.Key == Key.Tab && _focusedLink < 0 &&
+            _links.Count > 0 && _selectionHoldsFocus && (e.Modifiers & others) == 0)
+        {
+            _focusedLink = (e.Modifiers & shift) != 0 ? _links.Count - 1 : 0;
+            if (!FocusManager.Reveal())
+            {
+                RaiseEvent(new RoutedEventArgs(FocusManager.FocusRevealedEvent));
+            }
+
+            InvalidateRender(false);
+            e.Handled = true;
+            return;
+        }
+
+        if (_focusedLink < 0 || _focusedLink >= _links.Count || e.Handled || !ReferenceEquals(e.OriginalSource, this))
+        {
+            return;
+        }
+
         var modifiers = Keyboard.Modifiers;
         if ((modifiers & others) != 0)
         {
