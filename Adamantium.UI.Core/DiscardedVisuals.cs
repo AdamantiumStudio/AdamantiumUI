@@ -31,6 +31,13 @@ public static class DiscardedVisuals
     /// comparison, that some of them may have died since it last looked.</summary>
     public static long ReleasedBatches => System.Threading.Interlocked.Read(ref _releasedBatches);
 
+    private static long _discards;
+
+    /// <summary>Counts the elements discarded so far.</summary>
+    public static long Discards => System.Threading.Interlocked.Read(ref _discards);
+
+    internal static long NextDiscard() => System.Threading.Interlocked.Increment(ref _discards);
+
     /// <summary>Called by <see cref="FundamentalUIComponent.MarkDiscarded"/> - the O(1) half of a teardown.</summary>
     internal static void Enqueue(FundamentalUIComponent gone)
     {

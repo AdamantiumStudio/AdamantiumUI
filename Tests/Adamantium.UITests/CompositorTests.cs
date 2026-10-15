@@ -123,6 +123,46 @@ public class CompositorTests
         Assert.That(Compositor.Tick(_view), Is.False);
     }
 
+    // A record made before the cancel stays on screen until a later one is applied, and the spinner in it keeps turning:
+    // a theme swap or a view being built holds the loop thread for a second.
+    [Test]
+    public void CancelingKeepsPlayingForARecordMadeBeforeIt()
+    {
+        var (_, transform) = Spinner();
+        Spin().Apply(transform);
+        var recorded = Compositor.Frame;
+        Compositor.EndFrame();
+
+        AnimationManager.Cancel(transform);
+
+        Assert.That(Compositor.Tick(_view, recorded), Is.True, "the frame drawing the earlier record still shows the spinner");
+        Assert.That(Compositor.Tick(_view, Compositor.Frame), Is.False, "a record made after the cancel no longer plays it");
+        Assert.That(Compositor.Tick(_view, recorded), Is.False, "and once one is drawn, the animation is gone");
+    }
+
+    // A theme swap restarts the overlay's spinner in the very frame it holds the loop thread for a second: the window,
+    // still drawing the record before it, plays the spinner that record shows - not the restart, whose clock has not started.
+    [Test]
+    public void ARestartPlaysOnlyOnceARecordOfItIsDrawn()
+    {
+        var (_, transform) = Spinner();
+        Spin().Apply(transform);
+        Compositor.StartPending();
+        var recorded = Compositor.Frame;
+        Compositor.EndFrame();
+        Thread.Sleep(40);
+
+        Spin().Apply(transform);
+
+        Compositor.Tick(_view, recorded);
+        Assert.That(_view, Has.Count.EqualTo(1), "one animation per record");
+        Assert.That(_view[0].Elapsed, Is.GreaterThan(0.02), "the spinner on screen keeps turning");
+
+        Compositor.Tick(_view, Compositor.Frame);
+        Assert.That(_view, Has.Count.EqualTo(1));
+        Assert.That(_view[0], Is.SameAs(Compositor.EntryFor(transform)), "a record of the restart plays the restart");
+    }
+
     [Test]
     public void ALayoutAffectingAnimationIsNotComposited()
     {

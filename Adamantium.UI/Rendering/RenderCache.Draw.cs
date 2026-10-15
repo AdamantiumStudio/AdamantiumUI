@@ -2000,7 +2000,7 @@ public partial class RenderCache
     {
         _traceComposited = 0;
         if (device == null || _transformTable == null) return;
-        if (!Compositor.Tick(_compositedBuf))   // recomposes matrices AND republishes paint snapshots
+        if (!Compositor.Tick(_compositedBuf, _appliedCompositorFrame))   // recomposes matrices AND republishes paint snapshots
         {
             if (_compositedOwners.Count > 0) _compositedOwners.Clear();
             _compositedFallback.Clear();

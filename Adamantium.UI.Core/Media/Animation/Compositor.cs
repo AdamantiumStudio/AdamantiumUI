@@ -107,6 +107,10 @@ public static class Compositor
         /// viewport) has this false and is left promoted. Carried across a re-animation of the same target.</summary>
         internal bool Promoted { get; set; }
 
+        internal long TakenInFrame { get; set; }
+
+        internal long RetiredInFrame { get; set; }
+
         private volatile Basis _basis;
         public Matrix4x4F Local { get; private set; }
 
@@ -247,7 +251,41 @@ public static class Compositor
     // and cost the ability to reason about it.
     private static readonly object Gate = new();
     private static readonly List<Entry> Entries = new();
+    private static readonly List<Entry> Retiring = new();
     private static int _opacityEntries;
+    private static long _frame;
+    private static long _recorded;
+
+    // A record this many loop frames older than the newest is never drawn again, so what it alone still played can go.
+    private const long StaleRecordFrames = 600;
+
+    /// <summary>The loop frame being built. A render packet carries the number of the frame that recorded it.</summary>
+    public static long Frame => Interlocked.Read(ref _frame);
+
+    /// <summary>How many loop frames have been recorded and handed to the render thread; 0 under a host that records none.</summary>
+    public static long Recorded => Interlocked.Read(ref _recorded);
+
+    /// <summary>Ends the loop frame. Loop thread, once the frame is recorded.</summary>
+    public static void EndFrame()
+    {
+        var frame = Interlocked.Increment(ref _frame);
+        lock (Gate)
+        {
+            for (var i = Retiring.Count - 1; i >= 0; i--)
+            {
+                if (Retiring[i].RetiredInFrame < frame - StaleRecordFrames) Retiring.RemoveAt(i);
+            }
+        }
+    }
+
+    /// <summary>The loop frame has been recorded and handed to the render thread. Loop thread.</summary>
+    public static void FrameRecorded() => Interlocked.Increment(ref _recorded);
+
+    /// <summary>Whether a frame recorded after <paramref name="recorded"/> was read has been handed to the render thread -
+    /// what has to happen before the loop thread starts work that holds it, so what it put up first is on screen. Under a
+    /// host that records nothing, two updates after <paramref name="ticks"/> stand for it.</summary>
+    public static bool RecordedSince(long recorded, long ticks) =>
+        Recorded > 0 ? Recorded > recorded : AnimationManager.Ticks >= ticks + 2;
 
     /// <summary>Hand an animation to the render thread, if it can play it. Loop thread, when the animation starts. Returns
     /// null when it cannot - the caller then keeps the animation on the loop thread, as before.</summary>
@@ -325,8 +363,11 @@ public static class Compositor
                 }
 
                 Entries.RemoveAt(i);
+                e.RetiredInFrame = Frame;
+                Retiring.Add(e);
             }
 
+            entry.TakenInFrame = Frame;
             Entries.Add(entry);
             if (entry.Channel == CompositorChannel.Opacity)
             {
@@ -347,6 +388,8 @@ public static class Compositor
                 return;
             }
 
+            entry.RetiredInFrame = Frame;
+            Retiring.Add(entry);
             if (entry.Channel == CompositorChannel.Opacity)
             {
                 _opacityEntries--;
@@ -430,6 +473,7 @@ public static class Compositor
         lock (Gate)
         {
             Entries.Clear();
+            Retiring.Clear();
             _opacityEntries = 0;
         }
     }
@@ -500,17 +544,40 @@ public static class Compositor
 
     /// <summary>Recompose every composited animation for the instant it is called, into <paramref name="into"/> (the caller
     /// keeps and reuses that list, so a present allocates nothing). Called by the RENDER thread, once per present.
-    /// Every animation of one transform lands in its one matrix. False = nothing is composited, and
-    /// <paramref name="into"/> is empty.</summary>
-    public static bool Tick(List<Entry> into)
+    /// Every animation of one transform lands in its one matrix. An animation plays only for a caller drawing a record made
+    /// between its start and its stop; <paramref name="drawnFrame"/> is that record's frame. False = nothing is composited,
+    /// and <paramref name="into"/> is empty.</summary>
+    public static bool Tick(List<Entry> into, long drawnFrame)
     {
         into.Clear();
         lock (Gate)
         {
-            if (Entries.Count == 0) return false;
-            into.AddRange(Entries);
+            for (var i = Retiring.Count - 1; i >= 0; i--)
+            {
+                if (Retiring[i].RetiredInFrame <= drawnFrame) Retiring.RemoveAt(i);
+            }
+
+            foreach (var entry in Entries)
+            {
+                if (entry.TakenInFrame <= drawnFrame) into.Add(entry);
+            }
+
+            foreach (var retiring in Retiring)
+            {
+                if (retiring.TakenInFrame <= drawnFrame) into.Add(retiring);
+            }
         }
 
+        if (into.Count == 0) return false;
+        Recompose(into);
+        return true;
+    }
+
+    /// <summary><see cref="Tick(List{Entry}, long)"/> for a caller drawing the newest record.</summary>
+    public static bool Tick(List<Entry> into) => Tick(into, Frame);
+
+    private static void Recompose(List<Entry> into)
+    {
         var folded = _folded ??= new Dictionary<AdamantiumComponent, (Basis Basis, TransformValues Values)>();
         foreach (var entry in into)
         {
@@ -540,7 +607,6 @@ public static class Compositor
         }
 
         folded.Clear();
-        return true;
     }
 
     [ThreadStatic]

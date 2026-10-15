@@ -715,6 +715,129 @@ public class RenderCacheTests
         AssertPaintOrderMatchesFullWalk("hidden during a renumber");
     }
 
+    // A clone host draws nothing of its own: only its group puts it in the order, and the renumber took its rank.
+    [Test]
+    public void Splice_CloneHostCollapsedDuringARenumber_StopsPainting()
+    {
+        var a = AddControl(); DrawsRectangle(a);
+        var host = AddControl();
+        var card = new TestControl(); DrawsRectangle(card, Brushes.Blue);
+        host.Add(card);
+        host.RenderClones = new[] { Matrix4x4F.Identity, Matrix4x4F.Translation(20, 0, 0) };
+        var z = AddControl(); DrawsRectangle(z);
+        RenderFrame();
+
+        for (var i = 0; i < 60; i++)
+        {
+            var filler = new TestControl(); DrawsRectangle(filler);
+            _root.Insert(1, filler);
+            host.Visibility = Visibility.Collapsed;
+            RenderFrame();
+
+            Assert.That(_cache.PaintOrder, Does.Not.Contain(host.RenderId),
+                $"insert #{i}: a clone host collapsed in the frame of an insert must leave the paint order");
+
+            host.Visibility = Visibility.Visible;
+            RenderFrame();
+        }
+
+        AssertPaintOrderMatchesFullWalk("a clone host collapsed during renumbers");
+    }
+
+    // A recolor that arrives while a frame is recorded (a Render flushing bindings) belongs to the next record: neither the
+    // window's own clear nor the one after every window has recorded may wipe it - a recycled row kept the old colors.
+    [Test]
+    public void APaintMarkTakenDuringTheRecord_SurvivesTheClear()
+    {
+        var late = AddControl(); DrawsRectangle(late);
+        var marker = AddControl(); DrawsRectangle(marker);
+        RenderFrame();
+
+        marker.RenderAction = s =>
+        {
+            RenderDirty.MarkPaint(late);
+            s.DrawRectangle(Brushes.Red, Box);
+        };
+        marker.Invalidate();
+        RenderFrame();
+
+        var marks = new System.Collections.Generic.List<IUIComponent>();
+        _cache.Dirty.SnapshotPaintInto(marks);
+        Assert.That(marks, Does.Contain(late), "the recolor taken during the record waits for the next one");
+    }
+
+    // Records applied together in one frame build it as the larger of them: a structural one that withdrew a control,
+    // then a recolor, used to leave the frame a mere in-place patch.
+    [Test]
+    public void TwoRecordsAppliedInOneFrame_BuildAsTheLargerOfThem()
+    {
+        var kept = AddControl(); DrawsRectangle(kept);
+        var gone = AddControl(); DrawsRectangle(gone);
+        RenderFrame();
+
+        _root.Remove(gone);
+        _cache.RecordFrame(_root);
+        RenderDirty.Clear();
+
+        DrawsRectangle(kept, Brushes.Blue);
+        kept.Invalidate();
+        _cache.RecordFrame(_root);
+        RenderDirty.Clear();
+
+        _cache.ApplyFrame();
+
+        Assert.That(_cache.LastBuildKind, Is.EqualTo(RenderBuildKind.Structural));
+        Assert.That(_cache.PaintOrder, Does.Not.Contain(gone.RenderId));
+    }
+
+    // The loop can discard a view between recording a frame and the window applying it: that frame still draws the view.
+    [Test]
+    public void ViewDiscardedAfterItsRecord_KeepsItsLayoutForThatFrame()
+    {
+        var view = AddControl(); DrawsRectangle(view);
+        var text = new TestControl(); DrawsRectangle(text);
+        view.Add(text);
+        var other = AddControl(); DrawsRectangle(other);
+        RenderFrame();
+
+        _root.Remove(other);
+        _cache.RecordFrame(_root);
+        RenderDirty.Clear();
+        view.MarkDiscarded();
+        _cache.ApplyFrame();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(_cache.PaintOrder, Does.Contain(text.RenderId));
+            Assert.That(_cache.TryGetFrozen(view, out _), Is.True,
+                "the frame drawing the view's text must still hold the view's own layout");
+        });
+
+        view.Revive();
+    }
+
+    // ...and one still shown has to move with the rest, or its copies open wherever its old number now falls.
+    [Test]
+    public void Splice_CloneHostDuringARenumber_KeepsItsPlace()
+    {
+        var a = AddControl(); DrawsRectangle(a);
+        var host = AddControl();
+        var card = new TestControl(); DrawsRectangle(card, Brushes.Blue);
+        host.Add(card);
+        host.RenderClones = new[] { Matrix4x4F.Identity, Matrix4x4F.Translation(20, 0, 0) };
+        var z = AddControl(); DrawsRectangle(z);
+        RenderFrame();
+
+        for (var i = 0; i < 41; i++)
+        {
+            var filler = new TestControl(); DrawsRectangle(filler);
+            _root.Insert(1, filler);
+            RenderFrame();
+        }
+
+        AssertPaintOrderMatchesFullWalk("a clone host through a renumber");
+    }
+
     // Content can enter the tree through paths that never call AddVisualChild - a Decorator (a Border) putting its Child in
     // goes straight to the visual-children collection. Such a component used to appear with nobody naming it, so the splice
     // had nowhere to place it and every frame of a list fill fell back to re-recording the whole tree. The COLLECTION names

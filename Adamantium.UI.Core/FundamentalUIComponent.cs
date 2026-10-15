@@ -321,6 +321,10 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
     /// final - nothing brings it back - while a discarded one not yet released may still return to the tree.</summary>
     public long ReleasedInBatch { get; private set; }
 
+    /// <summary>When this element was discarded, counted as <see cref="DiscardedVisuals.Discards"/> counts them; 0 while
+    /// it is not.</summary>
+    public long DiscardedAt { get; private set; }
+
     /// <summary>Deliberately out of the tree and coming back - parked, or waiting in a container pool. Not dead, and
     /// nothing about it may be released.</summary>
     public bool IsAwaitingReturn => Lifecycle is VisualLifecycle.Parked or VisualLifecycle.Recycled;
@@ -349,7 +353,10 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
     /// body moving between panels.</summary>
     public void Revive()
     {
-        if (Lifecycle != VisualLifecycle.Discarded || !_released) Lifecycle = VisualLifecycle.Live;
+        if (Lifecycle == VisualLifecycle.Discarded && _released) return;
+
+        Lifecycle = VisualLifecycle.Live;
+        DiscardedAt = 0;
     }
 
     private bool _released;   // the queue has let go of what held it: its bindings are closed
@@ -363,6 +370,7 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
     {
         if (IsDiscarded || IsAwaitingReturn) return;
 
+        DiscardedAt = DiscardedVisuals.NextDiscard();
         Lifecycle = VisualLifecycle.Discarded;
 
         // Release is queued for idle time rather than done inside the frame; anything that comes back meanwhile is

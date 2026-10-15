@@ -884,6 +884,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
     private void OnCycleFinishedInternal()
     {
         Compositor.StartPending();
+        Compositor.EndFrame();
 
         // Snapshots are recorded here, on the loop thread, once the frame has settled; they are drawn on the render thread.
         _visualRenderer?.RecordPendingSnapshots();
@@ -1122,12 +1123,18 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         if (!threaded)
         {
             var drewInline = ExecuteDrawSequence(appTime);
-            if (drewInline) RenderDirty.Clear();
+            if (drewInline)
+            {
+                RenderDirty.Clear();
+                Compositor.FrameRecorded();
+            }
+
             return;
         }
 
         // Threaded: the loop never draws. The device belongs to the render thread, and each packet carries its own projection.
         if (!_recordedThisFrame) return;
+        Compositor.FrameRecorded();
         _renderAppTime = appTime;
         Interlocked.Increment(ref _publishedFrame);
         Interlocked.Increment(ref _framesInFlight);
