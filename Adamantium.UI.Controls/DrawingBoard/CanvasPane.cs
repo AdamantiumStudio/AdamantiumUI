@@ -38,7 +38,11 @@ public class CanvasPane : ContentControl
     static CanvasPane()
     {
         Gestures.IsManipulationEnabledProperty.OverrideMetadata(typeof(CanvasPane), new PropertyMetadata(true));
+        WidthProperty.OverrideMetadata(typeof(CanvasPane), new PropertyMetadata(Double.NaN, null, CoerceWidth));
     }
+
+    private static object CoerceWidth(AdamantiumComponent component, object baseValue) =>
+        component is CanvasPane { IsOpen: false } ? Double.NaN : baseValue;
 
     public static readonly AdamantiumProperty PlacementProperty = AdamantiumProperty.Register(nameof(Placement),
         typeof(CanvasPanePlacement), typeof(CanvasPane),
@@ -60,7 +64,8 @@ public class CanvasPane : ContentControl
     public static readonly AdamantiumProperty IsOpenProperty = AdamantiumProperty.Register(nameof(IsOpen),
         typeof(Boolean), typeof(CanvasPane),
         new PropertyMetadata(true,
-            PropertyMetadataOptions.AffectsParentArrange | PropertyMetadataOptions.BindsTwoWayByDefault));
+            PropertyMetadataOptions.AffectsParentArrange | PropertyMetadataOptions.BindsTwoWayByDefault,
+            OnIsOpenChanged));
 
     public static readonly AdamantiumProperty IsDockedProperty = AdamantiumProperty.Register(nameof(IsDocked),
         typeof(Boolean), typeof(CanvasPane),
@@ -329,8 +334,19 @@ public class CanvasPane : ContentControl
     // inner one: its outer edge has nowhere to travel.
     private void SyncSizer()
     {
-        Show(_sizerLeft, CanResize && Pulls(Dock.Left));
-        Show(_sizerRight, CanResize && Pulls(Dock.Right));
+        Show(_sizerLeft, CanResize && IsOpen && Pulls(Dock.Left));
+        Show(_sizerRight, CanResize && IsOpen && Pulls(Dock.Right));
+    }
+
+    private static void OnIsOpenChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (component is not CanvasPane pane)
+        {
+            return;
+        }
+
+        pane.CoerceValue(WidthProperty);
+        pane.SyncSizer();
     }
 
     private static void Show(IUIComponent part, bool yes)
@@ -383,6 +399,21 @@ public class CanvasPane : ContentControl
     private static void OnPlacementChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e) =>
         (component as CanvasPane)?.SyncSizer();
 
+    internal double Footprint
+    {
+        get
+        {
+            var asked = GetBaseValue<Double>(WidthProperty);
+            if (IsOpen || Double.IsNaN(asked))
+            {
+                return DesiredSize.Width;
+            }
+
+            var margin = EffectiveMargin;
+            return Math.Max(DesiredSize.Width, asked + margin.Left + margin.Right);
+        }
+    }
+
     /// <summary>What this pane takes out of the canvas's usable area - all zero unless it is docked.</summary>
     internal Thickness Reserved()
     {
@@ -410,8 +441,24 @@ public class CanvasPane : ContentControl
     {
         if (_moved) return;
 
-        SetCurrentValue(IsOpenProperty, !IsOpen);
+        Toggle();
         Settled();
+    }
+
+    private void Toggle()
+    {
+        var at = new Vector2(Bounds.X, Bounds.Y);
+        SetCurrentValue(IsOpenProperty, !IsOpen);
+
+        if (Layer == null || Placement != CanvasPanePlacement.Free)
+        {
+            return;
+        }
+
+        var room = Layer.RenderSize;
+        Measure(PreviousMeasureConstraint ?? room);
+
+        SetCurrentValue(AnchorProperty, AnchorFor(at, room, DesiredSize));
     }
 
     private void OnSnapClicked(object sender, RoutedEventArgs e)
@@ -529,7 +576,10 @@ public class CanvasPane : ContentControl
     /// <summary>Widens or narrows the pane to <paramref name="width"/>, as a pull on its right edge does.</summary>
     internal void ResizeTo(double width)
     {
-        if (Layer == null) return;
+        if (Layer == null || !IsOpen)
+        {
+            return;
+        }
 
         var room = Layer.RenderSize;
         HoldingEdge(Dock.Right, Bounds.X, Bounds.X + ActualWidth);

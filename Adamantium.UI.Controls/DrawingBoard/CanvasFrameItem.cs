@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Adamantium.Core;
 using Adamantium.Mathematics;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Graphics;
@@ -9,13 +10,14 @@ namespace Adamantium.UI.Controls.DrawingBoard;
 
 /// <summary>A titled comment frame drawn behind a group of nodes. It owns nothing, but a drag carries what stood on it
 /// (<see cref="Catch"/>); it sits at the bottom of the order.</summary>
-public class CanvasFrameItem : ICanvasItem
+public class CanvasFrameItem : PropertyChangedBase, ICanvasItem
 {
     private readonly List<ICanvasItem> _caught = new();
 
     private Pen _pen;
     private Brush _penBrush;
     private double _penWidth = double.NaN;
+    private Rect _world;
 
     public CanvasFrameItem(Rect world, string title, Brush stroke, Brush fill = null)
     {
@@ -26,7 +28,17 @@ public class CanvasFrameItem : ICanvasItem
     }
 
     /// <summary>The box it covers, in WORLD units.</summary>
-    public Rect World { get; set; }
+    public Rect World
+    {
+        get => _world;
+        set
+        {
+            if (SetProperty(ref _world, value))
+            {
+                RaisePropertyChanged(nameof(Bounds));
+            }
+        }
+    }
 
     /// <summary>What it says along the top. The whole point of the thing.</summary>
     public string Title { get; set; }
@@ -119,9 +131,9 @@ public class CanvasFrameItem : ICanvasItem
 
     public void Move(Vector2 worldDelta)
     {
-        World = new Rect(World.X + worldDelta.X, World.Y + worldDelta.Y, World.Width, World.Height);
-
         foreach (var item in _caught) item.Move(worldDelta);
+
+        World = new Rect(World.X + worldDelta.X, World.Y + worldDelta.Y, World.Width, World.Height);
     }
 
     /// <summary>Resized like any box - and what is inside is LEFT WHERE IT IS. A frame is a note about a graph, not a

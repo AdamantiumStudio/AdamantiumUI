@@ -6,6 +6,7 @@ using Adamantium.UI.Controls.DrawingBoard;
 using Adamantium.UI.Controls.Buttons;
 using Adamantium.UI.Controls.Decorators;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Graphics;
 using Adamantium.UI.Core.Media;
 using Adamantium.ProceduralGeometry;
 using Adamantium.UI.Rendering;
@@ -402,6 +403,43 @@ public class InfiniteCanvasTests
             Assert.That(item.Params.Y, Is.EqualTo(2), "lines");
             Assert.That(item.Background.W, Is.EqualTo(1).Within(1e-6));
             Assert.That(item.GridColor.W, Is.EqualTo(51 / 255f).Within(1e-6), "straight alpha, opacity folded in");
+        });
+    }
+
+    private sealed class Recorder : IDrawingContext
+    {
+        public Rendering.RecordingDrawingSession Session { get; } = new();
+
+        public IDrawingSession ForControl(IUIComponent component) => Session;
+    }
+
+    // A theme's variant recolors its brushes IN PLACE, and that only repaints - the ground is not drawn again. A ground
+    // that copied the colors once kept the old ones: the whole window went light and the plane stayed dark.
+    [Test]
+    public void TheGroundFollowsItsBrushesRecoloredInPlace()
+    {
+        var background = new SolidColorBrush(new Color(32, 32, 32, 255));
+        var grid = new SolidColorBrush(new Color(64, 64, 64, 255));
+        var axis = new SolidColorBrush(new Color(96, 96, 96, 255));
+        var canvas = Sized();
+        canvas.Background = background;
+        canvas.GridBrush = grid;
+        canvas.AxisBrush = axis;
+
+        var recorder = new Recorder();
+        canvas.Render(recorder);
+        var ground = recorder.Session.Rectangles.Find(r => r.Brush is CanvasGridBrush).Brush as CanvasGridBrush;
+        Assert.That(ground, Is.Not.Null, "the canvas drew no ground");
+
+        background.Color = new Color(240, 240, 240, 255);
+        grid.Color = new Color(200, 200, 200, 255);
+        axis.Color = new Color(160, 160, 160, 255);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(ground.Background, Is.EqualTo(new Color(240, 240, 240, 255)), "background");
+            Assert.That(ground.Color, Is.EqualTo(new Color(200, 200, 200, 255)), "grid");
+            Assert.That(ground.AxisColor, Is.EqualTo(new Color(160, 160, 160, 255)), "axis");
         });
     }
 

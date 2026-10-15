@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Adamantium.Core;
 using Adamantium.Mathematics;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Graphics;
@@ -8,7 +9,7 @@ namespace Adamantium.UI.Controls.DrawingBoard;
 
 /// <summary>Several items treated as one item, so groups nest. The children leave the scene while grouped, keeping the drawn
 /// list flat.</summary>
-public class GroupItem : ICanvasItem
+public class GroupItem : PropertyChangedBase, ICanvasItem
 {
     private readonly List<ICanvasItem> _children = new();
 
@@ -133,7 +134,16 @@ public class GroupItem : ICanvasItem
 
     public void Move(Vector2 worldDelta)
     {
+        if (worldDelta.X == 0 && worldDelta.Y == 0)
+        {
+            return;
+        }
+
         foreach (var child in _children) child.Move(worldDelta);
+
+        RaisePropertyChanged(nameof(X));
+        RaisePropertyChanged(nameof(Y));
+        RaisePropertyChanged(nameof(Bounds));
     }
 
     /// <summary>Puts the whole group in a new box, and every child keeps its PLACE IN IT: a child a third of the way
@@ -157,6 +167,17 @@ public class GroupItem : ICanvasItem
                 Math.Max(1e-9, box.Width * sx),
                 Math.Max(1e-9, box.Height * sy)));
         }
+
+        if (Bounds.Equals(from))
+        {
+            return;
+        }
+
+        RaisePropertyChanged(nameof(X));
+        RaisePropertyChanged(nameof(Y));
+        RaisePropertyChanged(nameof(Width));
+        RaisePropertyChanged(nameof(Height));
+        RaisePropertyChanged(nameof(Bounds));
     }
 
     /// <summary>Hit when any CHILD is - not when the group's box is. A group of two things far apart has a box that is

@@ -1,4 +1,5 @@
-﻿using Adamantium.ProceduralGeometry;
+﻿using Adamantium.Core;
+using Adamantium.ProceduralGeometry;
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Controls.Text;
 using Adamantium.UI.Core;
@@ -8,7 +9,7 @@ namespace Adamantium.UI.Controls.DrawingBoard;
 
 /// <summary>A real control on the plane at a world place and size. It costs a visual-tree node, which is why ink is not
 /// one; panning and zooming only re-arrange it.</summary>
-public class ElementItem : ICanvasItem, ICanvasTransformed
+public class ElementItem : PropertyChangedBase, ICanvasItem, ICanvasTransformed
 {
     private Boolean? _sizeFollowsContent;
     private Rect _world;
@@ -56,14 +57,33 @@ public class ElementItem : ICanvasItem, ICanvasTransformed
             ? _world
             : new Rect(Model.Left, Model.Top,
                 Math.Max(Model.Width > 0 ? Model.Width : _world.Width, Smallest.Width), _world.Height);
-        set
+        set => Place(value, null);
+    }
+
+    private void Place(Rect value, Double? askedWidth)
+    {
+        var was = World;
+        _world = value;
+
+        if (Model != null)
         {
-            _world = value;
-
-            if (Model == null) return;
-
             Model.Left = value.X;
             Model.Top = value.Y;
+
+            if (askedWidth is { } width)
+            {
+                Model.Width = width;
+            }
+        }
+
+        if (!World.Equals(was))
+        {
+            RaisePropertyChanged(nameof(World));
+            RaisePropertyChanged(nameof(X));
+            RaisePropertyChanged(nameof(Y));
+            RaisePropertyChanged(nameof(Width));
+            RaisePropertyChanged(nameof(Height));
+            RaisePropertyChanged(nameof(Bounds));
         }
     }
 
@@ -309,11 +329,9 @@ public class ElementItem : ICanvasItem, ICanvasTransformed
         var width = Math.Max(world.Width, Smallest.Width);
         var height = Math.Max(world.Height, Smallest.Height);
 
-        World = new Rect(world.X, world.Y, width, height);
-
         // A width ASKED FOR, which the measured one is not: the hand on the edge is the only thing that says a node is
         // to be wider than it needs, so it is the only thing that writes it down.
-        if (Model != null) Model.Width = width;
+        Place(new Rect(world.X, world.Y, width, height), width);
     }
 
     public bool HitTest(Vector2 world, double tolerance)

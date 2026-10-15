@@ -101,9 +101,13 @@ public class CanvasLayoutTests
             Assert.That(back.Placement, Is.EqualTo(CanvasPanePlacement.Free));
             Assert.That(back.Anchor.X, Is.EqualTo(0.25).Within(0.001));
             Assert.That(back.Anchor.Y, Is.EqualTo(0.6).Within(0.001));
-            Assert.That(back.Width, Is.EqualTo(360).Within(0.5), "the width it was pulled to was lost");
             Assert.That(back.IsOpen, Is.False, "a panel folded away came back open");
         });
+
+        // Folded, a pane is its handles; the width it was pulled to is the one it opens at.
+        back.IsOpen = true;
+
+        Assert.That(back.Width, Is.EqualTo(360).Within(0.5), "the width it was pulled to was lost");
     }
 
     // A WIDTH IS IN PIXELS, and a window that cannot show it holds it down - a panel wider than the canvas covers the

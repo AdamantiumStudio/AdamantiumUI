@@ -6,6 +6,7 @@
     <Phrase Key="Thickness" Text="Толщина"/>
     <Phrase Key="Position" Text="Положение"/>
     <Phrase Key="Size" Text="Размер"/>
+    <Phrase Key="Selection" Text="Выделение"/>
     <Phrase Key="Width" Text="Ширина"/>
     <Phrase Key="Height" Text="Высота"/>
     <Phrase Key="Shape" Text="Фигура"/>

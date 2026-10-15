@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Adamantium.Core;
 using Adamantium.Mathematics;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Graphics;
@@ -9,7 +10,7 @@ namespace Adamantium.UI.Controls.DrawingBoard;
 
 /// <summary>A curve through points - Bezier, B-spline or NURBS, switchable after drawing. Reshaped by its points; the frame
 /// only moves it.</summary>
-public class CurveItem : ICanvasItem, ICanvasPoints
+public class CurveItem : PropertyChangedBase, ICanvasItem, ICanvasPoints
 {
     // What the curve is DRAWN with: a polyline handed to the ink pass as data. See Render for why it is not a geometry.
     private readonly InkBrush _ink = new();
@@ -111,7 +112,17 @@ public class CurveItem : ICanvasItem, ICanvasPoints
     {
         if (index < 0 || index >= _points.Count) return;
 
+        var was = Bounds;
         _points[index] = world;
+        RaiseBoundsIfMoved(was);
+    }
+
+    private void RaiseBoundsIfMoved(Rect was)
+    {
+        if (!Bounds.Equals(was))
+        {
+            RaisePropertyChanged(nameof(Bounds));
+        }
     }
 
     /// <summary>Adds a point to the end - what the tool does while the curve is being drawn.</summary>
@@ -120,7 +131,10 @@ public class CurveItem : ICanvasItem, ICanvasPoints
 
     public void Move(Vector2 worldDelta)
     {
+        var was = Bounds;
         for (var i = 0; i < _points.Count; i++) _points[i] += worldDelta;
+
+        RaiseBoundsIfMoved(was);
     }
 
     public void Resize(Rect world)
@@ -137,6 +151,8 @@ public class CurveItem : ICanvasItem, ICanvasPoints
                 world.X + (_points[i].X - from.X) * sx,
                 world.Y + (_points[i].Y - from.Y) * sy);
         }
+
+        RaiseBoundsIfMoved(from);
     }
 
     /// <summary>Whether a point is on the LINE - not in the box round it. The box of a curve is mostly empty, and a

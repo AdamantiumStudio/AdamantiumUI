@@ -18,7 +18,7 @@ public class CanvasPaneAutomationPeer : PaneAutomationPeer, ITransformProvider
 
     public bool CanMove => _pane.CanDrag;
 
-    public bool CanResize => _pane.CanResize;
+    public bool CanResize => _pane.CanResize && _pane.IsOpen;
 
     public bool CanZoom => false;
 

@@ -52,6 +52,8 @@ public class PropertyRow : Control
         new PropertyMetadata(ResetButtonState.Always, PropertyMetadataOptions.AffectsRender));
 
     private readonly List<BoundValue> _values = new();
+    private int _agreeing;
+    private int _edited;
     private Grid _layout;
     private IInputComponent _grip;
     private IInputComponent _expander;
@@ -351,6 +353,7 @@ public class PropertyRow : Control
             }
 
             bound.Changed += OnBoundValueChanged;
+            bound.Slot = _values.Count;
             _values.Add(bound);
         }
 
@@ -369,18 +372,59 @@ public class PropertyRow : Control
         }
 
         var first = _values[0].Value;
-        for (var i = 1; i < _values.Count; i++)
+        _agreeing = 0;
+        _edited = 0;
+
+        foreach (var bound in _values)
         {
             // The DEFINITION says what "the same" means: two brushes of one color are two instances, and comparing
             // them here would make the row report a difference nobody can see.
-            if (Definition?.SameValue(_values[i].Value, first) ?? Equals(_values[i].Value, first)) continue;
+            bound.Agrees = bound.Slot == 0 || Same(bound.Value, first);
+            bound.WasEdited = bound.IsEdited;
 
+            if (bound.Agrees)
+            {
+                _agreeing++;
+            }
+
+            if (bound.WasEdited)
+            {
+                _edited++;
+            }
+        }
+
+        Settle(first);
+    }
+
+    private void ReadOne(BoundValue bound)
+    {
+        var agrees = Same(bound.Value, _values[0].Value);
+        if (agrees != bound.Agrees)
+        {
+            _agreeing += agrees ? 1 : -1;
+            bound.Agrees = agrees;
+        }
+
+        var edited = bound.IsEdited;
+        if (edited != bound.WasEdited)
+        {
+            _edited += edited ? 1 : -1;
+            bound.WasEdited = edited;
+        }
+
+        Settle(_values[0].Value);
+    }
+
+    private void Settle(object first)
+    {
+        if (_agreeing < _values.Count)
+        {
             Value = null;
             IsMixed = true;
 
             // Objects that disagree cannot ALL be at the default - at most one of them is. So the row is modified, and
             // resetting it is the one edit that makes them agree again.
-            IsModified = !IsReadOnly && (Definition?.HasDefault == true || Edited());
+            IsModified = !IsReadOnly && (Definition?.HasDefault == true || _edited > 0);
             return;
         }
 
@@ -388,21 +432,13 @@ public class PropertyRow : Control
         IsMixed = false;
 
         // Never on a read-only row. Modified means differs from DefaultValue when one is given, otherwise a local value
-        // on a component.
+        // on a component - on any of them: a selection where one object was edited and two were not is a selection with
+        // something to put back.
         IsModified = !IsReadOnly &&
-            (Definition is { HasDefault: true } ? !Definition.SameValue(first, Default()) : Edited());
+            (Definition is { HasDefault: true } ? !Definition.SameValue(first, Default()) : _edited > 0);
     }
 
-    // Any of them: a selection where one object was edited and two were not is a selection with something to put back.
-    private bool Edited()
-    {
-        foreach (var bound in _values)
-        {
-            if (bound.IsEdited) return true;
-        }
-
-        return false;
-    }
+    private bool Same(object value, object first) => Definition?.SameValue(value, first) ?? Equals(value, first);
 
     // The default AS THE PROPERTY WOULD HOLD IT. Written in markup it arrives as text - `DefaultValue="80"` is the
     // string "80", not the number - and comparing that with what the object holds would mark every such row as edited
@@ -416,10 +452,29 @@ public class PropertyRow : Control
 
     private void OnBoundValueChanged(object sender, EventArgs e)
     {
-        if (_pushing) return;
+        if (_pushing)
+        {
+            return;
+        }
 
-        Read();
-        ApplyContent();
+        var value = Value;
+        var mixed = IsMixed;
+        var modified = IsModified;
+
+        if (sender is BoundValue { Slot: > 0 } bound && bound.Slot < _values.Count &&
+            ReferenceEquals(_values[bound.Slot], bound))
+        {
+            ReadOne(bound);
+        }
+        else
+        {
+            Read();
+        }
+
+        if (!Equals(value, Value) || mixed != IsMixed || modified != IsModified)
+        {
+            ApplyContent();
+        }
     }
 
     // What the action button LOOKS like, which is the only thing a person has to go on before pressing it. A line that

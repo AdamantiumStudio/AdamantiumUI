@@ -138,7 +138,11 @@ public static class CanvasLayoutSerializer
             writer.WriteNumber("x", pane.Anchor.X);
             writer.WriteNumber("y", pane.Anchor.Y);
 
-            if (!Double.IsNaN(pane.Width)) writer.WriteNumber("width", pane.Width);
+            var width = pane.GetBaseValue<Double>(CanvasPane.WidthProperty);
+            if (!Double.IsNaN(width))
+            {
+                writer.WriteNumber("width", width);
+            }
             if (!Double.IsNaN(pane.Height)) writer.WriteNumber("height", pane.Height);
 
             writer.WriteBoolean("open", pane.IsOpen);

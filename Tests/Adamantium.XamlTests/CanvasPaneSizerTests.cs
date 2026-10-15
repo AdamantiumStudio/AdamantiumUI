@@ -5,6 +5,7 @@ using Adamantium.UI.Controls;
 using Adamantium.UI.Controls.DrawingBoard;
 using Adamantium.UI.Controls.Decorators;
 using Adamantium.UI.Controls.Panels;
+using Adamantium.UI.Controls.Primitives;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Media;
@@ -167,6 +168,61 @@ public class CanvasPaneSizerTests
         });
     }
 
+    // A FOLDED pane is its handles, and an edge on handles widens nothing.
+    [Test]
+    [TestCase("Fluent")]
+    [TestCase("Graphite")]
+    [TestCase("MacOs")]
+    public void AFoldedPaneOffersNoEdge(string theme)
+    {
+        Use(ThemeNamed(theme));
+        var pane = Built(new CanvasPane
+        {
+            Kind = CanvasPaneKind.Sheet,
+            CanResize = true,
+            Placement = CanvasPanePlacement.Free
+        });
+
+        pane.IsOpen = false;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(Sizer(pane, Dock.Left).Visibility, Is.EqualTo(Visibility.Collapsed), "folded, left");
+            Assert.That(Sizer(pane, Dock.Right).Visibility, Is.EqualTo(Visibility.Collapsed), "folded, right");
+        });
+
+        pane.IsOpen = true;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(Sizer(pane, Dock.Left).Visibility, Is.EqualTo(Visibility.Visible), "opened, left");
+            Assert.That(Sizer(pane, Dock.Right).Visibility, Is.EqualTo(Visibility.Visible), "opened, right");
+        });
+    }
+
+    // The edges lie OVER the plate. Beside it, an edge shown on opening stood the handles aside, and the grip jumped
+    // sideways every time the pane was folded or opened.
+    [Test]
+    [TestCase("Fluent")]
+    [TestCase("Graphite")]
+    [TestCase("MacOs")]
+    public void AnEdgeDoesNotStandTheHandlesAside(string theme)
+    {
+        Use(ThemeNamed(theme));
+        var pane = Built(new CanvasPane
+        {
+            Kind = CanvasPaneKind.Sheet,
+            CanResize = true,
+            Placement = CanvasPanePlacement.Free,
+            Content = new Border { Width = 120, Height = 60 }
+        });
+
+        var handles = pane.GetTemplateChild("PART_Handles") as IUIComponent;
+
+        Assert.That(Sizer(pane, Dock.Left).Visibility, Is.EqualTo(Visibility.Visible));
+        Assert.That(handles.Bounds.X, Is.EqualTo(0).Within(0.01), "the left edge pushed the handles in");
+    }
+
     // Docking takes from what is LEFT, so an edge docked after the handles cuts its strip out of the body alone and
     // stands the handles seven pixels to the side of the plate they belong to.
     [Test]
@@ -206,7 +262,11 @@ public class CanvasPaneSizerTests
 
         void Walk(IUIComponent at)
         {
-            if (at is Border { Background: SolidColorBrush brush } && brush.Color.A > 0) painted++;
+            if (at is Border { Background: SolidColorBrush brush } && brush.Color.A > 0 ||
+                at is Adamantium.UI.Controls.Shapes.Shape { Fill: SolidColorBrush fill } && fill.Color.A > 0)
+            {
+                painted++;
+            }
 
             foreach (var child in at.VisualChildren) Walk(child);
         }
@@ -345,6 +405,83 @@ public class CanvasPaneSizerTests
         });
     }
 
+    // FOLDING KEEPS THE GRIP WHERE THE HAND IS. A folded pane is its handles - so it can be carried right up to an
+    // edge - and both folding and opening leave the grip where it stood. Opening moves the pane only when the open
+    // panel would not fit.
+    [Test]
+    [TestCase("Fluent")]
+    [TestCase("Graphite")]
+    [TestCase("MacOs")]
+    public void FoldingTheInspectorLeavesItsGripWhereItWas(string theme)
+    {
+        Use(ThemeNamed(theme));
+
+        var canvas = new InfiniteCanvas { Scene = new CanvasScene() };
+
+        canvas.ApplyCurrentTheme();
+
+        var window = new Window { Width = 1000, Height = 700, Content = canvas };
+
+        Laid(window, canvas);
+
+        var pane = canvas.GetTemplateChild("PART_Inspector") as CanvasPane;
+        var grip = pane.GetTemplateChild("PART_Grip") as ButtonBase;
+        var width = pane.Width;
+        var placement = pane.Placement;
+        var at = new Vector2(pane.Bounds.X, pane.Bounds.Y);
+
+        grip.PerformClick();
+        Laid(window, canvas);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(pane.IsOpen, Is.False, "the grip did not fold the pane");
+            Assert.That(pane.Placement, Is.EqualTo(placement), "folding took the pane off its edge");
+            Assert.That(pane.Bounds.X, Is.EqualTo(at.X).Within(0.5), "folding moved the grip sideways");
+            Assert.That(pane.Bounds.Y, Is.EqualTo(at.Y).Within(0.5), "folding moved the grip up or down");
+            Assert.That(pane.RenderSize.Width, Is.LessThan(width / 2), "a folded pane kept the width of an open one");
+        });
+
+        grip.PerformClick();
+        Laid(window, canvas);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(pane.IsOpen, Is.True, "the grip did not open the pane");
+            Assert.That(pane.Placement, Is.EqualTo(placement), "opening took the pane off its edge");
+            Assert.That(pane.Width, Is.EqualTo(width).Within(0.5), "the width it was given did not come back");
+            Assert.That(pane.Bounds.X, Is.EqualTo(at.X).Within(0.5), "opening moved a pane that fits");
+        });
+
+        // Folded and carried to the far right, there is no room to open in place: the pane comes in just far enough.
+        grip.PerformClick();
+        Laid(window, canvas);
+        pane.Placement = CanvasPanePlacement.Free;
+        pane.Anchor = new Vector2(1, 0);
+        Laid(window, canvas);
+
+        Assert.That(pane.Bounds.X + pane.RenderSize.Width, Is.EqualTo(canvas.RenderSize.Width).Within(0.5),
+            "a folded pane could not be carried up to the far edge");
+
+        grip.PerformClick();
+        Laid(window, canvas);
+
+        Assert.That(pane.Bounds.X + pane.RenderSize.Width, Is.EqualTo(canvas.RenderSize.Width).Within(0.5),
+            "an open pane that did not fit was not brought in to the edge");
+    }
+
+    private static void Laid(Window window, InfiniteCanvas canvas)
+    {
+        Settle(window);
+
+        for (var pass = 0; pass < 2; pass++)
+        {
+            canvas.Measure(new Size(1000, 700), force: true);
+            canvas.Arrange(new Rect(0, 0, 1000, 700));
+        }
+
+        Settle(window);
+    }
 
     private static void Settle(Window window)
     {

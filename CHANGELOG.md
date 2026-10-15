@@ -1168,6 +1168,35 @@ All packages share one version.
 
 ### Fixed
 
+- `InfiniteCanvas`: the plane follows a theme variant switch. Its ground copied the colors of `Background`,
+  `GridBrush` and `AxisBrush` and kept them when the variant recolored those brushes in place, so the plane stayed
+  dark in a light window until the camera moved.
+- `CanvasPane` folded is its handles. A pane with a width - the inspector - kept that width folded, so its grip could
+  not be carried up to the canvas's far edge; the width now waits and comes back when the pane opens, and a layout
+  saved while it is folded keeps it. Folding and opening by the grip leave the grip where it stood, and opening moves
+  the pane in only as far as it has to fit. A folded pane offers no resize edge.
+- `CanvasPane`'s resize edges lie over the edge of the plate, marked by three dots, instead of beside it: shown on
+  opening, the left one stood the handles aside and the grip jumped as the pane was folded and opened.
+- The canvas inspector follows an item dragged, resized or moved back by undo. `ICanvasItem` is now an
+  `INotifyPropertyChanged`, and every item says when its place or size changes - `X`, `Y`, `Width`, `Height` and
+  `Bounds` where it has them, a stroke's `Thickness` when a resize scales it - and nothing when they did not change.
+- With several things selected, the canvas inspector shows the place and size of the frame round them all - one line
+  each, not a line per item - and writing a number there moves or scales the whole selection as one step of undo.
+  A drag of a thousand selected strokes took over a second a step in the inspector; it now costs the same as one.
+  `InfiniteCanvas.SelectionFrame` (`CanvasSelectionFrame`) is the frame as one object; a section marked
+  `CanvasInspector.ReadsSelectionFrame` reads it while several things are selected, and an item's own place and size
+  lines are shown only while it is the one thing selected.
+- A line of the property grid goes on following its object after a value was typed into it. The value was written
+  over the line's binding, so a dragged item left the line showing the number typed.
+- A two-way binding no longer writes back into its source the value it has just carried from it. Every change the
+  source reported was written into it once more; a value the source took back - a reset, a theme's answer - came
+  back as a local one. A target that coerces the value still hands its answer to the source.
+- A property grid line standing for many objects asks again only the one that changed whether they still agree,
+  and redraws only when what it shows changed: a line over a thousand objects, all moved by one resize, read all
+  thousand once for each.
+- A binding no longer leaves its source subscribed after it is gone: the one `PropertyChanged` subscription a source
+  is read through is taken off when its last binding closes, so an object selected once and then let go does not keep
+  a listener for as long as it lives.
 - `TreeDataGrid` keeps the column being edited built while it is scrolled out of view, and a commit whose cell is gone
   closes the edit instead of writing null into the record.
 - `TreeDataGrid` follows the column being edited when the columns change under it: a column put in front of it no
