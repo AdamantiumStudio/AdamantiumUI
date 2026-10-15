@@ -766,6 +766,24 @@ public class RenderCacheTests
         Assert.That(marks, Does.Contain(late), "the recolor taken during the record waits for the next one");
     }
 
+    // ...for the loop frame of that record only. A scope recorded once - a one-off snapshot of a visual records through
+    // the shared scope - kept every later mark for good, and the application never went idle again.
+    [Test]
+    public void ALatePaintMark_IsKeptForTheFrameOfItsRecordOnly()
+    {
+        var scope = new RenderDirtyScope();
+        var late = new TestControl();
+
+        scope.BeginRecord();
+        scope.MarkPaint(late);
+        scope.Clear();
+        Assert.That(scope.PaintCount, Is.EqualTo(1), "the clears of the record's frame keep it for the next record");
+
+        Adamantium.UI.Core.Media.Animation.Compositor.EndFrame();
+        scope.Clear();
+        Assert.That(scope.PaintCount, Is.Zero, "a later frame with no record of this scope clears it");
+    }
+
     // Records applied together in one frame build it as the larger of them: a structural one that withdrew a control,
     // then a recolor, used to leave the frame a mere in-place patch.
     [Test]
