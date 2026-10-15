@@ -112,6 +112,33 @@ internal abstract class BatchCollector<TItem> : BatchArena where TItem : struct
     /// <summary>How far the instances the segments still issue reach - see <see cref="RetainedExtent"/>.</summary>
     internal int IssuedExtent => RetainedExtent;
 
+    /// <summary>The instances the segment named <paramref name="id"/> draws, for the frame verifier.</summary>
+    internal bool TryGetSegment(int id, out int first, out int count)
+    {
+        var index = IndexOf(id);
+        if (index < 0)
+        {
+            first = count = 0;
+            return false;
+        }
+
+        first = (int)_segments[index].First;
+        count = (int)_segments[index].Count;
+        return true;
+    }
+
+    /// <summary>Whether one recorded segment draws all of [first, first + count) - instances no segment covers are never
+    /// sent to the shader, whatever they hold.</summary>
+    internal bool Issues(int first, int count)
+    {
+        foreach (var segment in _segments)
+        {
+            if (first >= segment.First && first + count <= segment.First + segment.Count) return true;
+        }
+
+        return false;
+    }
+
     /// <summary>Absolute slot index of the item written by the LAST successful TryAdd (= its position in the retained
     /// buffer). RenderCache records it per unit during the walk so a partial-replay can address that unit's slot.</summary>
     public int LastSlot => Count - 1;

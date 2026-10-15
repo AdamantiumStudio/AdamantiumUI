@@ -308,6 +308,10 @@ All packages share one version.
     opacities and clips share one table); every text run must lie inside the glyph batch, match its text's glyph count
     and share no instance with another run; and the alpha a run is drawn at (its color times its opacity slot) must be
     the tree's - the foreground, the element's `SelfOpacity` and the opacities above it up to a layer.
+  - **Each glyph and the order it is drawn in.** Every glyph's place as its shader puts it (its slot's matrix over its
+    local rect) and its atlas cell against the tree; the clip rectangle it is cut by against its owner's place; the
+    text's color against its `Foreground` in the tree (not the cache's own brush); visible batchable text that has no
+    run, a run no segment draws; and text drawn before an ancestor's background, which then covers it.
   - **An error in the log.** Each new alarm is also logged as an error, so a driven run fails on it (see below).
 
 - Automation catches a broken render or tree on its own. An application started by `AutomationSession.LaunchAsync` -
@@ -316,7 +320,7 @@ All packages share one version.
   are checked for an element that was thrown away, parked or released while still in a window, and for a visible
   presenter holding content it does not show. Each is reported once to the `ErrorJournal`, as are the verifier's
   alarms, so the step fails with what broke - unless `AllowErrors` says the error is what is being checked.
-  `adam-auto visual` prints a node's lifecycle when it is not live.
+  `adam-auto visual` prints a node's lifecycle when it is not live, and the foreground of text and presenters.
 
 - `adam-auto wheel <selector> <notches>` and `AutomationElement.WheelAsync`: the mouse wheel turned over an element's
   middle inside the application, a notch at a time - positive away from the user, scrolling up.
@@ -1227,6 +1231,11 @@ All packages share one version.
   `TabControl` without `ItemsSource` is now discarded with its page. Layout no longer measures a discarded element: a
   tool panel takes its own template, and the first template's content host, measured after it was thrown away, took
   the body from the second.
+- A selected docking tab carried out into a window and back no longer loses its caption, and the strip's selection bar
+  no longer slips under it: the tab's border drew nothing while it was not selected, kept its place in the paint order
+  from before the trip, and once selected drew its background from there - over its own caption. A group that draws
+  nothing is now put at its new rank too, and a group whose rank changes moves in the paint order instead of only
+  taking the number.
 - A docking tab docked back from a floating window, and a whole panel taken out into one, no longer arrive thrown away -
   a tab whose caption went missing after a few switches: the window's dropped panel, and the row a carried panel left,
   still held them until their next layout and discarded them with themselves. Panes and carried panels are the

@@ -42,25 +42,89 @@ public partial class RenderCache
     /// slots of the last walk that drew them.</summary>
     internal IReadOnlyList<Core.Graphics.IRenderUnit> DescribeUnits()
     {
-        var units = new List<Core.Graphics.IRenderUnit>();
+        _describedUnits.Clear();
         foreach (var group in _groups)
         {
-            if (group.InOrder) units.AddRange(group.Units);
+            if (group.InOrder) _describedUnits.AddRange(group.Units);
         }
 
-        return units;
+        return _describedUnits;
+    }
+
+    // Kept between frames: the verifier asks every frame it checks, and each answer is a scene-sized collection. Read only
+    // on the drawing thread, until the next ask.
+    private readonly List<Core.Graphics.IRenderUnit> _describedUnits = [];
+    private readonly Dictionary<Core.Graphics.IRenderUnit, int> _describedOrder = new();
+    private readonly Dictionary<int, Core.Graphics.IRenderUnit> _rectUnitBySlot = new();
+    private readonly List<(int First, int Count, int Op)> _textSegments = [];
+    private readonly List<(Core.Graphics.IRenderUnit, int, int)> _describedRuns = [];
+
+    /// <summary>When batched fills and text are drawn in the op stream the frame issues: the index of the op that draws
+    /// each. Only fills, which cover what lies under them - an outline drawn later only touches the edges. Paint order is
+    /// the one thing the data of each unit cannot tell.</summary>
+    internal Dictionary<Core.Graphics.IRenderUnit, int> DescribeDrawOrder()
+    {
+        var order = _describedOrder;
+        order.Clear();
+        _rectUnitBySlot.Clear();
+        foreach (var (unit, slot) in _rectSlotByUnit) _rectUnitBySlot[slot] = unit;
+        _textSegments.Clear();
+
+        for (var i = 0; i < _ops.Count; i++)
+        {
+            var op = _ops[i];
+            if (op.Kind != RenderOpKind.Segment) continue;
+
+            if (_rectBatch != null && op.Batch == _rectBatch.BatchId && _rectBatch.TryGetSegment(op.SegId, out var first, out var count))
+            {
+                for (var slot = first; slot < first + count; slot++)
+                {
+                    if (_rectUnitBySlot.TryGetValue(slot, out var unit)) order.TryAdd(unit, i);
+                }
+            }
+            else if (_textBatch != null && op.Batch == _textBatch.BatchId && _textBatch.TryGetSegment(op.SegId, out first, out count))
+            {
+                _textSegments.Add((first, count, i));
+            }
+        }
+
+        // Each run finds its segment by bisection over the segments sorted by start - not every segment asking every run.
+        _textSegments.Sort(static (a, b) => a.First.CompareTo(b.First));
+        foreach (var (unit, run) in _textRunByUnit)
+        {
+            int low = 0, high = _textSegments.Count - 1, at = -1;
+            while (low <= high)
+            {
+                var mid = (low + high) >> 1;
+                if (_textSegments[mid].First <= run.First) { at = mid; low = mid + 1; }
+                else high = mid - 1;
+            }
+
+            if (at >= 0 && run.First < _textSegments[at].First + _textSegments[at].Count) order.TryAdd(unit, _textSegments[at].Op);
+        }
+
+        return order;
     }
 
     /// <summary>The text runs the last walk placed in the glyph batch: which unit owns which instances.</summary>
     internal IReadOnlyList<(Core.Graphics.IRenderUnit Unit, int First, int Count)> DescribeTextRuns()
     {
-        var runs = new List<(Core.Graphics.IRenderUnit, int, int)>(_textRunByUnit.Count);
-        foreach (var (unit, run) in _textRunByUnit) runs.Add((unit, run.First, run.Count));
-        return runs;
+        _describedRuns.Clear();
+        foreach (var (unit, run) in _textRunByUnit) _describedRuns.Add((unit, run.First, run.Count));
+        return _describedRuns;
     }
 
     /// <summary>How far the glyph instances the batch still issues reach.</summary>
     internal int GlyphExtent => _textBatch?.IssuedExtent ?? 0;
+
+    /// <summary>Whether a segment of the glyph batch draws the instances [first, first + count).</summary>
+    internal bool GlyphsIssued(int first, int count) => _textBatch != null && _textBatch.Issues(first, count);
+
+    /// <summary>Whether the last walk left <paramref name="unit"/> out because it lies outside its clip.</summary>
+    internal bool WasCulled(Core.Graphics.IRenderUnit unit) => _culledWhenRecorded.Contains(unit);
+
+    /// <summary>Whether text of this kind is drawn through the glyph batch rather than on its own.</summary>
+    internal bool BatchesText(RenderUnits.TextRenderComponent text) => _textBatch != null && _textBatch.CanBatch(text, out _);
 
     /// <summary>One glyph instance as the shader reads it.</summary>
     internal GlyphItem GlyphAt(int index) => _textBatch.ItemAt(index);
@@ -68,6 +132,20 @@ public partial class RenderCache
     /// <summary>What every slot of the transform table is held for, and by whom.</summary>
     internal Dictionary<int, (TransformTable.SlotUse Use, System.Guid Owner)> DescribeSlots() =>
         _transformTable?.DescribeSlots() ?? new();
+
+    /// <summary>The clip rectangle (device px) the shaders read from <paramref name="slot"/>.</summary>
+    internal Vector4F SlotClipBox(int slot) => _transformTable?.ClipBoxAt(slot) ?? default;
+
+    /// <summary>The clip rectangle a clip owner of <paramref name="size"/> at <paramref name="world"/> makes, by the same
+    /// conversion the draw uses - for the verifier to feed it the tree's place.</summary>
+    internal Vector4F ClipBoxOf(Size size, Matrix4x4F world)
+    {
+        var box = ToFramebufferScissor(new Rect(0, 0, size.Width, size.Height).TransformToAABB(world), _frameScissor);
+        return new Vector4F(box.Offset.X, box.Offset.Y, box.Extent.Width, box.Extent.Height);
+    }
+
+    /// <summary>The matrix the shaders read from <paramref name="slot"/>.</summary>
+    internal Matrix4x4F SlotMatrix(int slot) => _transformTable?.MatrixAt(slot) ?? Matrix4x4F.Identity;
 
     /// <summary>The alpha the shaders read from <paramref name="slot"/>.</summary>
     internal float SlotAlpha(int slot) => _transformTable?.AlphaAt(slot) ?? 1f;
