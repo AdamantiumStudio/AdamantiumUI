@@ -160,6 +160,8 @@ public partial class RenderCache
 
         _projectionMatrix = packet.ProjectionMatrix;
         _appliedReleases = packet.ReleasedBatches;
+        _appliedDiscards = packet.Discards;
+        _appliedCompositorFrame = packet.CompositorFrame;
 
         // The applier's OWN derived memos (world/clip/node transforms), dropped here not by the recorder: they are
         // applier-resident, and the recorder only says WHEN they went stale.
@@ -217,7 +219,7 @@ public partial class RenderCache
             // A part the template teardown has DESTROYED gets no snapshot. Sweeping the map is not enough on its own:
             // the sweep runs mid-swap and the applier then writes the delta straight back in, so 39 dead controls a swap
             // survived a sweep that was removing 762. Nobody will ever draw these, and the key is the control itself.
-            if (entry.Key is Core.FundamentalUIComponent { IsDiscarded: true })
+            if (DiscardedBeforeApplied(entry.Key))
             {
                 _applySnap.Remove(entry.Key);
                 _readLive.Remove(entry.Key);
@@ -243,7 +245,7 @@ public partial class RenderCache
             {
                 // Those units are gone, so the op stream and the recorded slots no longer describe the scene: the draw
                 // pass must re-walk instead of replaying, exactly as after a splice.
-                if (LastBuildKind != RenderBuildKind.Full) LastBuildKind = RenderBuildKind.Structural;
+                Escalate(RenderBuildKind.Structural);
                 _partialDirty.Clear();
                 _partialSpliced = false;
             }
@@ -264,7 +266,7 @@ public partial class RenderCache
                 foreach (var draw in packet.Draws)
                     ApplyReRender(draw.Component, draw.Commands, draw.Order, draw.Clones, draw.CloneSteps, draw.CloneStagger);
 
-                if (LastBuildKind != RenderBuildKind.Full) LastBuildKind = RenderBuildKind.Partial;
+                Escalate(RenderBuildKind.Partial);
                 _partialDirty.AddRange(packet.PartialDirty);
                 _movedNodesBuf.AddRange(packet.MovedNodes);
 
@@ -286,17 +288,26 @@ public partial class RenderCache
 
 
                 ApplyStructural(packet);
-                if (LastBuildKind != RenderBuildKind.Full)
-                    LastBuildKind = local ? RenderBuildKind.Partial : RenderBuildKind.Structural;
-                LastBuildTransformDirty = !local;
-                _partialDirty.Clear();
-                if (local)
+
+                Escalate(local ? RenderBuildKind.Partial : RenderBuildKind.Structural);
+                LastBuildTransformDirty |= !local;
+                if (LastBuildKind == RenderBuildKind.Partial)
                 {
-                    foreach (var draw in packet.Draws) _partialDirty.Add(draw.Component);
+                    foreach (var draw in packet.Draws)
+                    {
+                        if (!_partialDirty.Contains(draw.Component)) _partialDirty.Add(draw.Component);
+                    }
+
+                    foreach (var component in packet.PartialDirty)
+                    {
+                        if (!_partialDirty.Contains(component)) _partialDirty.Add(component);
+                    }
+
                     _partialSpliced = true;
                 }
                 else
                 {
+                    _partialDirty.Clear();
                     _partialSpliced = false;
                 }
 
@@ -404,7 +415,7 @@ public partial class RenderCache
         var commands = decision == PartialRecord.Undrawn
             ? CopyCommands(System.Array.Empty<IDrawCommand>())
             : CopyCommands(_drawingContextInternal.GetDrawCommands());
-        packet.Draws.Add(new ComponentDraw(component, commands, false, rank, true));
+        packet.Draws.Add(new ComponentDraw(component, commands, false, rank, withClones: decision != PartialRecord.Undrawn));
         Core.Diagnostics.RuntimeStats.LastRecordCopyMs += System.Diagnostics.Stopwatch.GetElapsedTime(copyStart).TotalMilliseconds;
         Core.Diagnostics.RuntimeStats.LastRecordCopyBytes += System.GC.GetAllocatedBytesForCurrentThread() - copyBytes0;
         // The one place that can know it: the record that just counted the commands. NOT on the Undrawn path - those
@@ -650,6 +661,14 @@ public partial class RenderCache
         if (_orderBatch.Count > 0) _groups.RemoveAll(_orderBatch.Contains);
         _orderBatch.Clear();
         _batchOrderRemovals = false;
+    }
+
+    private void Escalate(RenderBuildKind kind)
+    {
+        if (kind > LastBuildKind)
+        {
+            LastBuildKind = kind;
+        }
     }
 
     // A group in the order sits where its rank says: _groups is kept sorted by rank and the walk draws it in that order.

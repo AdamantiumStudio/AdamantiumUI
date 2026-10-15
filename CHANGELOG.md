@@ -1218,6 +1218,27 @@ All packages share one version.
 
 ### Fixed
 
+- A busy indicator keeps turning while a theme is switched or a view is being built: an animation the render thread
+  plays runs for exactly the records made between its start and its stop, so the record still on screen keeps its
+  spinner turning while the loop thread is busy, and a spinner restarted mid-swap does not stand still at its first
+  value. Before, every spinner on screen stopped until the loop thread recorded its next frame - half a second for a
+  theme, a second for the DataGrid page (`Compositor.Frame`, `Compositor.EndFrame`, `Compositor.Tick(into, drawnFrame)`).
+- A deferred view that was built before the tab swap finished now puts its loading visual up for a frame before itself,
+  so the spinner turns while the loop thread puts the view up (the DataGrid page: 1.8 s with no spinner at all).
+- The theme switch's busy overlay shows for the whole swap: the swap waits for the frame that raises the overlay to be
+  recorded before it re-styles the tree. Started from a click, it re-styled in that same frame, and the overlay appeared
+  only as the swap ended (`Compositor.Recorded`, `Compositor.FrameRecorded`, `Compositor.RecordedSince`,
+  `AnimationManager.Ticks`).
+- A recycled DataGrid row no longer draws its new text in the colors of the row before it, and a tab strip whose
+  selection moves in the same frame as its page changes no longer keeps the old tab's colors: a recolor that arrived
+  while a frame was being recorded is kept for the next record, a structural record carries the frame's recolors, and
+  packets applied in one frame merge into the larger of their build kinds instead of the last one.
+- A skeleton list that stops loading no longer leaves its collapsed placeholder in the paint order: a clone host that
+  draws nothing of its own leaves the order when collapsed in a frame that renumbers it, and moves with the order while
+  shown. A hidden clone host no longer runs its copies.
+- A view switched away from no longer loses its layout one frame before its content stops being drawn: the window
+  forgets an element discarded only once it applies a record made after the discard (`DiscardedVisuals.Discards`,
+  `FundamentalUIComponent.DiscardedAt`).
 - Text with an opacity, or under a faded parent, is no longer drawn too faint once part of the window is repaired in
   place: the repair baked the whole opacity chain into the glyph color while the shader multiplied it in again from
   the opacity slot - a 0.35 label came out at 0.12. Ink, arrows, the canvas grid, polygons and patterns had the same

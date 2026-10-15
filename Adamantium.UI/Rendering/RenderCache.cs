@@ -129,11 +129,18 @@ public partial class RenderCache
     private void MirrorUnits(IUIComponent component, int commandCount, bool wasGeometryValid)
     {
         if (commandCount > 0) _recordedUnits[component] = (component, commandCount);
+        else if (component.RenderClones is { Count: > 0 } || WantsLayer(component))
+        {
+            if (!wasGeometryValid) _recordedUnits[component] = (component, 0);
+            else _recordedUnits.TryAdd(component, (component, 0));
+        }
         else if (!wasGeometryValid) _recordedUnits.Remove(component);
     }
 
     private bool HoldsUnits(IUIComponent component) =>
         _recordedUnits.TryGetValue(component, out var entry) && entry.Units > 0;
+
+    private bool HoldsGroup(IUIComponent component) => _recordedUnits.ContainsKey(component);
 
     // Components whose instances the render thread blanked (BlankOrphanInstances); the recorder drains this so their
     // return re-records instead of assuming the units still hold bytes.
@@ -342,6 +349,7 @@ public partial class RenderCache
     public void RecordFrame(IRootVisualComponent visualRoot)
     {
         _packet = RentPacket();
+        Dirty.BeginRecord();
         RecordFrameCore(visualRoot);
         // Freeze the snapshot at the END of the device-free record so the applier reads only the frozen packet, never a
         // live component.

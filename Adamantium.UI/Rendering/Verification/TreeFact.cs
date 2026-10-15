@@ -19,4 +19,5 @@ internal readonly record struct TreeFact(
     int Clones,
     bool Hidden,
     float SelfOpacity,
-    Vector4F? TextColor);
+    Vector4F? TextColor,
+    bool Pending);

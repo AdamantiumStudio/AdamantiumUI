@@ -126,11 +126,14 @@ public class ThemeManager : IThemeManager
         // A real swap: this frame only raises the busy overlay; the palette swap and re-style wait a frame so the spinner
         // is laid out and composited first.
         var contentStarted = false;
+        var raisedAt = AnimationManager.Ticks;
+        var recordedAt = Compositor.Recorded;
         AnimationManager.AddTicker(dt =>
         {
             _swapElapsed += dt;
             if (!contentStarted)
             {
+                if (!Compositor.RecordedSince(recordedAt, raisedAt)) return false;
                 contentStarted = true;
                 BeginContentCascade();
             }

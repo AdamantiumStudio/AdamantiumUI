@@ -59,6 +59,12 @@ internal sealed class RenderPacket
     /// by then is drawn by it, so once it is applied the applier may let go of what it kept for them.</summary>
     public long ReleasedBatches;
 
+    /// <summary>How many elements had been discarded when this packet was recorded.</summary>
+    public long Discards;
+
+    /// <summary>The loop frame that recorded this packet (<see cref="Core.Media.Animation.Compositor.Frame"/>).</summary>
+    public long CompositorFrame;
+
     /// <summary>Structural only: components DETACHED from the tree - the applier frees their retained units. A Full walk needs
     /// no such list: it rebuilds the paint order from scratch and reclaims whatever it did not visit.</summary>
     public readonly List<IUIComponent> Removed = new();

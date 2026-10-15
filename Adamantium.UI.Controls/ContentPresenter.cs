@@ -6,6 +6,7 @@ using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Controls.Text;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Media;
+using Adamantium.UI.Core.Media.Animation;
 using Adamantium.UI.Core.RoutedEvents;
 using Adamantium.UI.Core.Templates;
 
@@ -379,6 +380,22 @@ public class ContentPresenter : InputUIComponent
         {
             _afterTransition = () => AdoptDeferred(token, content, template, built, failure);
             return;
+        }
+        if (_currentRoot == null && built?.RootComponent != null)
+        {
+            ShowLoadingVisual(content);
+            if (_currentRoot != null)
+            {
+                var shownAt = AnimationManager.Ticks;
+                var recordedAt = Compositor.Recorded;
+                AnimationManager.AddTicker(_ =>
+                {
+                    if (!Compositor.RecordedSince(recordedAt, shownAt)) return false;
+                    AdoptDeferred(token, content, template, built, failure);
+                    return true;
+                });
+                return;
+            }
         }
 
         _deferInFlight = false;

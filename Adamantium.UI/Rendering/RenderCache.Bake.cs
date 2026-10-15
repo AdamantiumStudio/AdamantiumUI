@@ -25,6 +25,8 @@ public partial class RenderCache
 
     private readonly List<IUIComponent> _releasedSnaps = [];
     private long _appliedReleases;
+    private long _appliedDiscards;
+    private long _appliedCompositorFrame;
     private long _releasesSeen;
     private long _liveReadReleasesSeen;
 
@@ -169,6 +171,8 @@ public partial class RenderCache
         _readLive.Clear();
         foreach (var entry in _packet.SnapDelta) _applySnap[entry.Key] = entry.Value;
         _appliedReleases = _packet.ReleasedBatches;
+        _appliedDiscards = _packet.Discards;
+        _appliedCompositorFrame = _packet.CompositorFrame;
         _packet.Reset(RenderBuildKind.Clean);
         _spare.Add(_packet);
         _packet = null;
@@ -268,6 +272,8 @@ public partial class RenderCache
         LastBuildKind = RenderBuildKind.Full;
         _projectionMatrix = packet.ProjectionMatrix;
         _appliedReleases = packet.ReleasedBatches;
+        _appliedDiscards = packet.Discards;
+        _appliedCompositorFrame = packet.CompositorFrame;
         _commands.Clear();
         ClearOrder();
         _worldCache.Clear();
@@ -412,6 +418,8 @@ public partial class RenderCache
     {
         var packet = _spare.TryTake(out var spare) ? spare : new RenderPacket();
         packet.ReleasedBatches = Core.DiscardedVisuals.ReleasedBatches;
+        packet.Discards = Core.DiscardedVisuals.Discards;
+        packet.CompositorFrame = Core.Media.Animation.Compositor.Frame;
         return packet;
     }
 
@@ -469,6 +477,10 @@ public partial class RenderCache
     }
 
     private readonly HashSet<IUIComponent> _readLive = [];
+
+    private bool DiscardedBeforeApplied(IUIComponent component) =>
+        component is Core.FundamentalUIComponent { IsDiscarded: true, DiscardedAt: > 0 } discarded
+        && discarded.DiscardedAt <= _appliedDiscards;
 
     private bool ReleasedBeforeApplied(IUIComponent component) =>
         component is Core.FundamentalUIComponent { ReleasedInBatch: > 0 } released

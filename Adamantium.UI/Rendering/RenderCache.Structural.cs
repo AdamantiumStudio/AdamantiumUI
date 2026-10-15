@@ -86,6 +86,12 @@ public partial class RenderCache
             RecordReRender(component, packet, _dirtyDecisions[i]);   // pre-validated above: it cannot fall back now
         }
 
+        Dirty.SnapshotPaintInto(_paintDirtyBuffer);
+        foreach (var component in _paintDirtyBuffer)
+        {
+            if (!_removedSet.Contains(component)) packet.PartialDirty.Add(component);
+        }
+
         // A component's Render can mark MORE geometry dirty (an image decode). Those marks clear with the rest, so a
         // component that arrived mid-pass would be lost and stay dirty forever - force a full walk NEXT frame instead
         // (the request keeps it from being dropped; the loop only runs when something asks - see LoopSignal).
@@ -127,8 +133,8 @@ public partial class RenderCache
             if (!visited.Add(component)) continue;
 
             _orderByControl[component] = order;
-            // Only a component that actually DRAWS has a group to move; the rest just need the number.
-            if (HoldsUnits(component)) packet.Reranks.Add(new KeyValuePair<IUIComponent, long>(component, order));
+            // Only a component that holds a group has one to move; the rest just need the number.
+            if (HoldsGroup(component)) packet.Reranks.Add(new KeyValuePair<IUIComponent, long>(component, order));
             order += OrderGap;
 
             PushChildrenInPaintOrder(stack, component.VisualChildren, false);
@@ -344,7 +350,7 @@ public partial class RenderCache
             // Ask the mirror of the applier's groups (_recordedUnits), NOT the rank: the rank is dropped the moment a
             // component leaves the drawn set, so a component whose rank was gone but whose GROUP still existed was silently
             // skipped - the applier kept painting it, frozen at its last slot on top of real content (the stuck skeleton card).
-            var known = HoldsUnits(c) || HasRank(c);
+            var known = HoldsGroup(c) || HasRank(c);
             if (known && _removedSet.Add(c))
             {
                 // Hidden keeps its units; so does PARKED - out of the tree on purpose and coming back, which is the whole

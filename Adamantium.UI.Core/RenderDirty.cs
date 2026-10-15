@@ -63,7 +63,9 @@ public sealed class RenderDirtyScope
 
     // Paint-dirty: same commands, new colors; the applier re-bakes existing units without re-rendering. Keeps an animated
     // shared brush cheap.
-    private readonly HashSet<IUIComponent> PaintSet = new();
+    private readonly Dictionary<IUIComponent, long> PaintSet = new();
+    private readonly List<IUIComponent> _paintCleared = new();
+    private long _recordStartMark = long.MaxValue;
 
     /// <summary>Records that only <paramref name="component"/>'s PAINT changed - same shape, same commands, new color.</summary>
     public void MarkPaint(IUIComponent component)
@@ -75,10 +77,17 @@ public sealed class RenderDirtyScope
 
         lock (PaintSet)
         {
-            PaintSet.Add(component);
             _paintMarks++;
+            PaintSet[component] = _paintMarks;
         }
         LoopSignal.Request();
+    }
+
+    /// <summary>A record of this scope begins: a paint mark taken from here on arrived too late for it, and outlives the
+    /// <see cref="Clear"/> that ends it.</summary>
+    public void BeginRecord()
+    {
+        lock (PaintSet) _recordStartMark = _paintMarks;
     }
 
     private long _paintMarks;
@@ -92,7 +101,7 @@ public sealed class RenderDirtyScope
     public void SnapshotPaintInto(List<IUIComponent> buffer)
     {
         buffer.Clear();
-        lock (PaintSet) buffer.AddRange(PaintSet);
+        lock (PaintSet) buffer.AddRange(PaintSet.Keys);
     }
 
     public int PaintCount { get { lock (PaintSet) return PaintSet.Count; } }
@@ -267,13 +276,24 @@ public sealed class RenderDirtyScope
         Clear();
     }
 
-    /// <summary>Reset after a build has consumed the dirty state.</summary>
+    /// <summary>Reset after a build has consumed the dirty state - all but the paint marks taken since the last
+    /// <see cref="BeginRecord"/>.</summary>
     public void Clear()
     {
         // Clear the HashSets under the SAME locks their writers (MarkGeometry/MarkNodeTransform/MarkTransform) take - a
         // lock-free Clear racing a concurrent Add (parallel arrange / Dispatcher-thread invalidation) corrupted the set.
         lock (GeometrySet) GeometrySet.Clear();
-        lock (PaintSet) PaintSet.Clear();
+        lock (PaintSet)
+        {
+            _paintCleared.Clear();
+            foreach (var (component, mark) in PaintSet)
+            {
+                if (mark <= _recordStartMark) _paintCleared.Add(component);
+            }
+
+            foreach (var component in _paintCleared) PaintSet.Remove(component);
+            _paintCleared.Clear();
+        }
         lock (NodeSet) NodeSet.Clear();
         lock (MovedSet) MovedSet.Clear();
         lock (StructuralSet) StructuralSet.Clear();
