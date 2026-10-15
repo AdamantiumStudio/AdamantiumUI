@@ -7,11 +7,10 @@ All packages share one version.
 
 ### Added
 
-- `DockablePaneViewModel` (`Adamantium.Navigation`), a base for a view model shown as a pane of a docking region: its id
-  is its type's name, it opens in the document area and may be moved anywhere, and `PaneZone` follows a drag both ways.
-  The title is a function read again whenever the source handed with it changes - a language table, so the tab follows
-  the application's language: `base(() => EditorStrings.Scene, EditorStrings.Current)`; the source is listened to
-  weakly. A derived class overrides `PaneAllowed`, `PaneKind` or `PaneMinSize` where it differs.
+- `IDockablePane` asks only for `PaneTitle`: `PaneId` is the type's name, `PaneZone` the document area and
+  `PaneAllowed` anywhere unless the view model says otherwise. A `PaneZone` the view model declares with a setter still
+  follows a drag both ways. A docking region reads the titles of its panes again when the application's language
+  changes, so `PaneTitle => EditorStrings.Scene` keeps the tab in the current language with nothing to raise.
 - `IDockingRegion.OpenAsync<T>()` opens the one pane of a type, or brings the open one to the front - for a scene, an
   inspector or anything else there is one of, with no key to make up. `OpenDocumentAsync` keeps the key for documents
   there are many of, such as files.
@@ -999,6 +998,10 @@ All packages share one version.
 
 ### Changed
 
+- Nothing in the UI derives from `PropertyChangedBase` any more, on the way to its removal from the engine: the canvas
+  items (`ElementItem`, `ShapeItem`, `PathItem`, `CurveItem`, `StrokeItem`, `TextItem`, `GroupItem`, `ConnectionItem`,
+  `CanvasFrameItem`, `CanvasSelectionFrame`) derive from `AdamantiumViewModel`, which keeps `SetProperty` and
+  `RaisePropertyChanged`, and `Region` implements `INotifyPropertyChanged` itself.
 - `Text` and `TextProperty` moved from `TextBoxBase` to `TextBox`. `TextBoxBase` edits the property its control names
   (`EditedTextProperty`), and a control can mask what is shown (`DisplayedText`), keep no undo history
   (`KeepsUndoHistory`) and decide its word boundaries (`WordBoundary`, `WordAt`). Code that read `TextBoxBase.Text`

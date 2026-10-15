@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.ComponentModel;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Adamantium.Core;
@@ -11,8 +13,12 @@ namespace Adamantium.Navigation;
 
 /// <summary>Default region: owns the lifecycle sequence, the journal and the active-view-model set, resolving targets via
 /// the DI container. UI-free - an adapter (UI layer) observes CurrentViewModel/ActiveViewModels and drives a control.</summary>
-public sealed class Region : PropertyChangedBase, IRegion
+public sealed class Region : IRegion
 {
+    /// <summary>Raised when <see cref="CurrentViewModel"/>, the current view's key or the journal's way back or forward
+    /// changes.</summary>
+    public event PropertyChangedEventHandler PropertyChanged;
+
     private static readonly AsyncLocal<ImmutableStack<(Region Region, Task Settled)>> Within = new();
 
     private readonly IDependencyResolver _resolver;
@@ -258,4 +264,14 @@ public sealed class Region : PropertyChangedBase, IRegion
     }
 
     private void RaiseActiveViewsChanged() => ActiveViewsChanged?.Invoke(this, EventArgs.Empty);
+
+    private void SetProperty<T>(ref T field, T value, [CallerMemberName] string propertyName = "")
+    {
+        if (EqualityComparer<T>.Default.Equals(field, value)) return;
+        field = value;
+        RaisePropertyChanged(propertyName);
+    }
+
+    private void RaisePropertyChanged(string propertyName) =>
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 }

@@ -103,7 +103,7 @@ public class CanvasArrangeTests
 
     // Something in the selection that has NO PLACE OF ITS OWN - a wire, which is wherever the two sockets it joins are.
     // A band takes those along with the nodes, so everything that arranges the plane meets them.
-    private sealed class Attached : Adamantium.Core.PropertyChangedBase, ICanvasItem
+    private sealed class Attached : Adamantium.MVVM.AdamantiumViewModel, ICanvasItem
     {
         public Rect Bounds { get; init; }
         public int Order { get; set; }

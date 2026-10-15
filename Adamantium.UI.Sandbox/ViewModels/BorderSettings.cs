@@ -1,4 +1,5 @@
 using Adamantium.Core;
+using Adamantium.MVVM;
 using Adamantium.Mathematics;
 using Adamantium.ProceduralGeometry;
 using Adamantium.UI.Core.Media;
@@ -9,7 +10,7 @@ namespace Adamantium.UI.Sandbox.ViewModels;
 /// unequal sides or unequal corners used to leave the SDF batch for a tessellated ring; both now ride in the instance,
 /// so every combination these eight sliders can make is drawn by the same instanced pass - which is what makes dragging
 /// them worth watching rather than just reading about.</summary>
-public sealed class BorderSettings : PropertyChangedBase
+public sealed class BorderSettings : AdamantiumViewModel
 {
     private double _left = 2;
     private double _top = 10;

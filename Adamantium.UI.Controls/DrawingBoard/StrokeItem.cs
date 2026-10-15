@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Adamantium.Core;
+using Adamantium.MVVM;
 using Adamantium.Mathematics;
 using Adamantium.ProceduralGeometry.Shapes;
 using Adamantium.UI.Core;
@@ -11,7 +12,7 @@ namespace Adamantium.UI.Controls.DrawingBoard;
 
 /// <summary>A trail of ink with a width and a color. Points are float offsets from the stroke's origin, precise at any
 /// distance and moved by one field.</summary>
-public class StrokeItem : PropertyChangedBase, ICanvasItem
+public class StrokeItem : AdamantiumViewModel, ICanvasItem
 {
     private readonly List<StrokePoint> _points = new();
     private Vector2F _min = new(float.MaxValue, float.MaxValue);

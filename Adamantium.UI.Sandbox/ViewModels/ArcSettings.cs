@@ -1,4 +1,5 @@
 using Adamantium.Core;
+using Adamantium.MVVM;
 using Adamantium.Mathematics;
 using Adamantium.ProceduralGeometry.Shapes;
 using Adamantium.UI.Core.Media;
@@ -7,7 +8,7 @@ namespace Adamantium.UI.Sandbox.ViewModels;
 
 /// <summary>The sector playground on the Shapes tab: <see cref="EllipseType.Sector"/> closes through the center,
 /// <see cref="EllipseType.EdgeToEdge"/> by the chord and strokes as an open arc.</summary>
-public sealed class ArcSettings : PropertyChangedBase
+public sealed class ArcSettings : AdamantiumViewModel
 {
     private double _startAngle = 30;
     private double _sweepAngle = 210;

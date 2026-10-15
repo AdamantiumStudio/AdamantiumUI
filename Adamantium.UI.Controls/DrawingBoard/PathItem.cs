@@ -1,5 +1,6 @@
 using System;
 using Adamantium.Core;
+using Adamantium.MVVM;
 using Adamantium.Mathematics;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Graphics;
@@ -9,7 +10,7 @@ namespace Adamantium.UI.Controls.DrawingBoard;
 
 /// <summary>A contour from path data (sub-paths, fill rule, curves and arcs) read through <see cref="SVGParser"/>. Moving and
 /// resizing change only its box; the contour is mapped in when drawn.</summary>
-public class PathItem : PropertyChangedBase, ICanvasItem, ICanvasTransformed
+public class PathItem : AdamantiumViewModel, ICanvasItem, ICanvasTransformed
 {
     private string _data;
     private StreamGeometry _geometry;

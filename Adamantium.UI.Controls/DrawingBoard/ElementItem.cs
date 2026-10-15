@@ -1,4 +1,5 @@
 ﻿using Adamantium.Core;
+using Adamantium.MVVM;
 using Adamantium.ProceduralGeometry;
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Controls.Text;
@@ -9,7 +10,7 @@ namespace Adamantium.UI.Controls.DrawingBoard;
 
 /// <summary>A real control on the plane at a world place and size. It costs a visual-tree node, which is why ink is not
 /// one; panning and zooming only re-arrange it.</summary>
-public class ElementItem : PropertyChangedBase, ICanvasItem, ICanvasTransformed
+public class ElementItem : AdamantiumViewModel, ICanvasItem, ICanvasTransformed
 {
     private Boolean? _sizeFollowsContent;
     private Rect _world;

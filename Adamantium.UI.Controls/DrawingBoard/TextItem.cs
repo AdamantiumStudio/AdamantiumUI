@@ -1,5 +1,6 @@
 ﻿using System;
 using Adamantium.Core;
+using Adamantium.MVVM;
 using Adamantium.Graphics.Fonts;
 using Adamantium.Mathematics;
 using Adamantium.ProceduralGeometry.Shapes;
@@ -14,7 +15,7 @@ namespace Adamantium.UI.Controls.DrawingBoard;
 /// part of the drawing and grows with the zoom, the way a label written on paper does.
 /// <para>Which is why it is shaped at the size it is DRAWN at rather than once: a glyph laid out for one size and then
 /// scaled is a blurred glyph, and the whole reason this engine keeps text as glyphs is not to do that.</para></summary>
-public class TextItem : PropertyChangedBase, ICanvasItem
+public class TextItem : AdamantiumViewModel, ICanvasItem
 {
     private Vector2 _origin;
     private double _fontSize;

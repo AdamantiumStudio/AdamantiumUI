@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Adamantium.Core;
+using Adamantium.MVVM;
 using Adamantium.Mathematics;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Graphics;
@@ -10,7 +11,7 @@ namespace Adamantium.UI.Controls.DrawingBoard;
 
 /// <summary>A titled comment frame drawn behind a group of nodes. It owns nothing, but a drag carries what stood on it
 /// (<see cref="Catch"/>); it sits at the bottom of the order.</summary>
-public class CanvasFrameItem : PropertyChangedBase, ICanvasItem
+public class CanvasFrameItem : AdamantiumViewModel, ICanvasItem
 {
     private readonly List<ICanvasItem> _caught = new();
 
