@@ -223,19 +223,19 @@ public class CanvasChromeLayer : Panel
                     break;
 
                 case CanvasPanePlacement.TopRight:
-                    x = finalSize.Width - inset.Right - size.Width;
+                    x = finalSize.Width - inset.Right - pane.Footprint;
                     y = topRight;
                     topRight += size.Height + gap;
                     break;
 
                 case CanvasPanePlacement.Right:
-                    x = finalSize.Width - inset.Right - size.Width;
+                    x = finalSize.Width - inset.Right - pane.Footprint;
                     y = right;
                     right += size.Height + gap;
                     break;
 
                 case CanvasPanePlacement.BottomRight:
-                    x = finalSize.Width - inset.Right - size.Width;
+                    x = finalSize.Width - inset.Right - pane.Footprint;
                     y = bottomRight - size.Height;
                     bottomRight -= size.Height + gap;
                     break;
@@ -243,13 +243,13 @@ public class CanvasChromeLayer : Panel
                 case CanvasPanePlacement.TopCenter:
                     x = Centered(CanvasPanePlacement.TopCenter, finalSize.Width, gap) + topCenter - inset.Left;
                     y = inset.Top;
-                    topCenter += size.Width + gap;
+                    topCenter += pane.Footprint + gap;
                     break;
 
                 case CanvasPanePlacement.BottomCenter:
                     x = Centered(CanvasPanePlacement.BottomCenter, finalSize.Width, gap) + bottomCenter - inset.Left;
                     y = finalSize.Height - inset.Bottom - size.Height;
-                    bottomCenter += size.Width + gap;
+                    bottomCenter += pane.Footprint + gap;
                     break;
 
                 case CanvasPanePlacement.Selection:
@@ -311,7 +311,7 @@ public class CanvasChromeLayer : Panel
         {
             if (pane.Placement != placement || pane.Visibility == Visibility.Collapsed) continue;
 
-            total += vertical ? pane.DesiredSize.Height : pane.DesiredSize.Width;
+            total += vertical ? pane.DesiredSize.Height : pane.Footprint;
             count++;
         }
 

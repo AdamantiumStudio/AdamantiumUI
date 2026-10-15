@@ -74,6 +74,18 @@ public class CanvasInspector : Control, ICanvasPart
 
     public static readonly AdamantiumProperty StructureFaceProperty = Face(nameof(StructureFace));
 
+    /// <summary>Marks a section as the selection frame's: shown only while several things are selected, and reading
+    /// <see cref="InfiniteCanvas.SelectionFrame"/> - one object however many are selected.</summary>
+    public static readonly AdamantiumProperty ReadsSelectionFrameProperty =
+        AdamantiumProperty.RegisterAttached("ReadsSelectionFrame", typeof(Boolean), typeof(UIComponent),
+            new PropertyMetadata(false));
+
+    public static Boolean GetReadsSelectionFrame(IUIComponent element) =>
+        element.GetValue<Boolean>(ReadsSelectionFrameProperty);
+
+    public static void SetReadsSelectionFrame(IUIComponent element, Boolean value) =>
+        element.SetValue(ReadsSelectionFrameProperty, value);
+
     // WHICH SECTIONS FIT WHAT IS SELECTED is no longer a row of flags here. There used to be one per kind of thing -
     // and one per VARIANT of a kind: has corners, has sides, has heads - so a panel had to be told about every kind the
     // canvas could hold, and the next kind meant a new flag here and an edit to three themes. The sets of lines now say
@@ -560,8 +572,7 @@ public class CanvasInspector : Control, ICanvasPart
         // selection first they read it as that: a wire picked after a node was asked for the node's kind and title.
         // Handed it after, a node picked after a wire would be. So when the lines change, the old selection is let go
         // of first.
-        if (_grid != null && !Same(_grid.SectionsSource,
-                Wanted(Sections(SelectionSetsKey, Canvas?.InspectorSections, ref _selectionSections), Names(chosen))))
+        if (_grid != null && !Same(_grid.SectionsSource, SelectionWanted(chosen)))
         {
             Selection = null;
         }
@@ -587,7 +598,7 @@ public class CanvasInspector : Control, ICanvasPart
         // an empty page, and an empty page is not worth turning to. Asked of the SETS and not of a list of classes: a
         // list of classes has to be edited for every new kind, and the one written from an SVG was not on it, so a
         // whole imported drawing could not be painted.
-        var lines = Fill(_grid, Sections(SelectionSetsKey, Canvas?.InspectorSections, ref _selectionSections), Names(chosen));
+        var lines = Fill(_grid, SelectionWanted(chosen));
 
         Fill(_tools, Sections(ToolSetsKey, Canvas?.ToolSections, ref _toolSections), Names(Canvas?.Tool));
 
@@ -664,11 +675,12 @@ public class CanvasInspector : Control, ICanvasPart
 
     // Hands a grid the sections that fit. Through SectionsSource, which is the grid's own door for an inspector that is
     // assembled rather than written out - see PropertyGrid.SectionsSource.
-    private static int Fill(PropertyGrid grid, CanvasInspectorSections sections, IReadOnlyList<string> names)
+    private static int Fill(PropertyGrid grid, CanvasInspectorSections sections, IReadOnlyList<string> names) =>
+        Fill(grid, Wanted(sections, names));
+
+    private static int Fill(PropertyGrid grid, IReadOnlyList<PropertySection> wanted)
     {
         if (grid == null) return 0;
-
-        var wanted = Wanted(sections, names);
 
         // ONLY WHEN IT IS ACTUALLY DIFFERENT. This is worked out again after every write - a picture painted onto a
         // surface brings a texture's lines with it - and handing over a fresh list of the SAME sections still counts as
@@ -677,6 +689,35 @@ public class CanvasInspector : Control, ICanvasPart
         if (!Same(grid.SectionsSource, wanted)) grid.SectionsSource = wanted;
 
         return wanted?.Count ?? 0;
+    }
+
+    private IReadOnlyList<PropertySection> SelectionWanted(IReadOnlyList<ICanvasItem> chosen)
+    {
+        var wanted = Wanted(Sections(SelectionSetsKey, Canvas?.InspectorSections, ref _selectionSections), Names(chosen));
+        if (wanted == null)
+        {
+            return null;
+        }
+
+        var many = chosen.Count > 1 && Any(chosen, item => item.IsPlaced);
+        var kept = new List<PropertySection>(wanted.Count);
+
+        foreach (var section in wanted)
+        {
+            if (GetReadsSelectionFrame(section))
+            {
+                if (!many)
+                {
+                    continue;
+                }
+
+                section.Target = Canvas?.SelectionFrame;
+            }
+
+            kept.Add(section);
+        }
+
+        return kept;
     }
 
     private static IReadOnlyList<PropertySection> Wanted(CanvasInspectorSections sections, IReadOnlyList<string> names) =>

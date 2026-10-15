@@ -16,6 +16,21 @@
                 <NumericProperty ShowButtons="{Ancestor CanvasInspector, Canvas.ShowsNumberButtons}" ButtonsPlacement="{Ancestor CanvasInspector, Canvas.NumberButtonsPlacement}" Header="{Localize InspectorStrings.Index}" Binding="{Binding Order}"
                                  Minimum="0" Maximum="100000" Step="1"/>
             </PropertySection>
+
+            <!-- SEVERAL THINGS AT ONCE are placed by the frame round them: one line, however many are selected. -->
+            <PropertySection Header="{Localize InspectorStrings.Selection}" IsExpanded="True"
+                             CanvasInspector.ReadsSelectionFrame="True">
+                <CompositeProperty Header="{Localize InspectorStrings.Position}">
+                    <NumericProperty ShowButtons="{Ancestor CanvasInspector, Canvas.ShowsNumberButtons}" ButtonsPlacement="{Ancestor CanvasInspector, Canvas.NumberButtonsPlacement}" Header="X" Binding="{Binding X}" Step="1"/>
+                    <NumericProperty ShowButtons="{Ancestor CanvasInspector, Canvas.ShowsNumberButtons}" ButtonsPlacement="{Ancestor CanvasInspector, Canvas.NumberButtonsPlacement}" Header="Y" Binding="{Binding Y}" Step="1"/>
+                </CompositeProperty>
+                <CompositeProperty Header="{Localize InspectorStrings.Size}">
+                    <NumericProperty ShowButtons="{Ancestor CanvasInspector, Canvas.ShowsNumberButtons}" ButtonsPlacement="{Ancestor CanvasInspector, Canvas.NumberButtonsPlacement}" Header="{Localize InspectorStrings.Width}" Binding="{Binding Width}" Step="1"
+                                     Minimum="0.01"/>
+                    <NumericProperty ShowButtons="{Ancestor CanvasInspector, Canvas.ShowsNumberButtons}" ButtonsPlacement="{Ancestor CanvasInspector, Canvas.NumberButtonsPlacement}" Header="{Localize InspectorStrings.Height}" Binding="{Binding Height}" Step="1"
+                                     Minimum="0.01"/>
+                </CompositeProperty>
+            </PropertySection>
         </CanvasSectionSet>
 
         <!-- WHERE and HOW BIG on every kind that has a box, because that is true of everything drawn on a plane. The
@@ -29,11 +44,11 @@
                 <NumericProperty ShowButtons="{Ancestor CanvasInspector, Canvas.ShowsNumberButtons}" ButtonsPlacement="{Ancestor CanvasInspector, Canvas.NumberButtonsPlacement}" Header="{Localize InspectorStrings.Thickness}" Binding="{Binding Thickness}"
                                  Minimum="{Ancestor CanvasInspector, Canvas.ThicknessLeast}" Maximum="400"
                                  Step="{Ancestor CanvasInspector, Canvas.ThicknessStep}" Decimals="6"/>
-                <CompositeProperty Header="{Localize InspectorStrings.Position}">
+                <CompositeProperty Header="{Localize InspectorStrings.Position}" IsVisible="{Self Inspected.IsPlaced, FallbackValue=False}">
                     <NumericProperty ShowButtons="{Ancestor CanvasInspector, Canvas.ShowsNumberButtons}" ButtonsPlacement="{Ancestor CanvasInspector, Canvas.NumberButtonsPlacement}" Header="X" Binding="{Binding X}" Step="1"/>
                     <NumericProperty ShowButtons="{Ancestor CanvasInspector, Canvas.ShowsNumberButtons}" ButtonsPlacement="{Ancestor CanvasInspector, Canvas.NumberButtonsPlacement}" Header="Y" Binding="{Binding Y}" Step="1"/>
                 </CompositeProperty>
-                <CompositeProperty Header="{Localize InspectorStrings.Size}">
+                <CompositeProperty Header="{Localize InspectorStrings.Size}" IsVisible="{Self Inspected.IsPlaced, FallbackValue=False}">
                     <NumericProperty ShowButtons="{Ancestor CanvasInspector, Canvas.ShowsNumberButtons}" ButtonsPlacement="{Ancestor CanvasInspector, Canvas.NumberButtonsPlacement}" Header="{Localize InspectorStrings.Width}" Binding="{Binding Width}" Step="1"
                                      Minimum="0.01"/>
                     <NumericProperty ShowButtons="{Ancestor CanvasInspector, Canvas.ShowsNumberButtons}" ButtonsPlacement="{Ancestor CanvasInspector, Canvas.NumberButtonsPlacement}" Header="{Localize InspectorStrings.Height}" Binding="{Binding Height}" Step="1"
@@ -53,11 +68,11 @@
                 <NumericProperty ShowButtons="{Ancestor CanvasInspector, Canvas.ShowsNumberButtons}" ButtonsPlacement="{Ancestor CanvasInspector, Canvas.NumberButtonsPlacement}" Header="{Localize InspectorStrings.Thickness}" Binding="{Binding Thickness}"
                                  Minimum="0" Maximum="400"
                                  Step="{Ancestor CanvasInspector, Canvas.ThicknessStep}" Decimals="6"/>
-                <CompositeProperty Header="{Localize InspectorStrings.Position}">
+                <CompositeProperty Header="{Localize InspectorStrings.Position}" IsVisible="{Self Inspected.IsPlaced, FallbackValue=False}">
                     <NumericProperty ShowButtons="{Ancestor CanvasInspector, Canvas.ShowsNumberButtons}" ButtonsPlacement="{Ancestor CanvasInspector, Canvas.NumberButtonsPlacement}" Header="X" Binding="{Binding X}" Step="1"/>
                     <NumericProperty ShowButtons="{Ancestor CanvasInspector, Canvas.ShowsNumberButtons}" ButtonsPlacement="{Ancestor CanvasInspector, Canvas.NumberButtonsPlacement}" Header="Y" Binding="{Binding Y}" Step="1"/>
                 </CompositeProperty>
-                <CompositeProperty Header="{Localize InspectorStrings.Size}">
+                <CompositeProperty Header="{Localize InspectorStrings.Size}" IsVisible="{Self Inspected.IsPlaced, FallbackValue=False}">
                     <NumericProperty ShowButtons="{Ancestor CanvasInspector, Canvas.ShowsNumberButtons}" ButtonsPlacement="{Ancestor CanvasInspector, Canvas.NumberButtonsPlacement}" Header="{Localize InspectorStrings.Width}" Binding="{Binding Width}" Step="1"
                                      Minimum="0.01"/>
                     <NumericProperty ShowButtons="{Ancestor CanvasInspector, Canvas.ShowsNumberButtons}" ButtonsPlacement="{Ancestor CanvasInspector, Canvas.NumberButtonsPlacement}" Header="{Localize InspectorStrings.Height}" Binding="{Binding Height}" Step="1"
@@ -122,7 +137,7 @@
                 <NumericProperty ShowButtons="{Ancestor CanvasInspector, Canvas.ShowsNumberButtons}" ButtonsPlacement="{Ancestor CanvasInspector, Canvas.NumberButtonsPlacement}" Header="{Localize InspectorStrings.Size}" Binding="{Binding FontSize}"
                                  Minimum="4" Maximum="400" Step="1"/>
                 <SolidColorBrushProperty Header="{Localize InspectorStrings.Color}" Binding="{Binding Brush}"/>
-                <CompositeProperty Header="{Localize InspectorStrings.Position}">
+                <CompositeProperty Header="{Localize InspectorStrings.Position}" IsVisible="{Self Inspected.IsPlaced, FallbackValue=False}">
                     <NumericProperty ShowButtons="{Ancestor CanvasInspector, Canvas.ShowsNumberButtons}" ButtonsPlacement="{Ancestor CanvasInspector, Canvas.NumberButtonsPlacement}" Header="X" Binding="{Binding X}" Step="1"/>
                     <NumericProperty ShowButtons="{Ancestor CanvasInspector, Canvas.ShowsNumberButtons}" ButtonsPlacement="{Ancestor CanvasInspector, Canvas.NumberButtonsPlacement}" Header="Y" Binding="{Binding Y}" Step="1"/>
                 </CompositeProperty>
@@ -155,11 +170,11 @@
                 <NumericProperty ShowButtons="{Ancestor CanvasInspector, Canvas.ShowsNumberButtons}" ButtonsPlacement="{Ancestor CanvasInspector, Canvas.NumberButtonsPlacement}" Header="{Localize InspectorStrings.Thickness}" Binding="{Binding Thickness}"
                                  Minimum="0" Maximum="400"
                                  Step="{Ancestor CanvasInspector, Canvas.ThicknessStep}" Decimals="6"/>
-                <CompositeProperty Header="{Localize InspectorStrings.Position}">
+                <CompositeProperty Header="{Localize InspectorStrings.Position}" IsVisible="{Self Inspected.IsPlaced, FallbackValue=False}">
                     <NumericProperty ShowButtons="{Ancestor CanvasInspector, Canvas.ShowsNumberButtons}" ButtonsPlacement="{Ancestor CanvasInspector, Canvas.NumberButtonsPlacement}" Header="X" Binding="{Binding X}" Step="1"/>
                     <NumericProperty ShowButtons="{Ancestor CanvasInspector, Canvas.ShowsNumberButtons}" ButtonsPlacement="{Ancestor CanvasInspector, Canvas.NumberButtonsPlacement}" Header="Y" Binding="{Binding Y}" Step="1"/>
                 </CompositeProperty>
-                <CompositeProperty Header="{Localize InspectorStrings.Size}">
+                <CompositeProperty Header="{Localize InspectorStrings.Size}" IsVisible="{Self Inspected.IsPlaced, FallbackValue=False}">
                     <NumericProperty ShowButtons="{Ancestor CanvasInspector, Canvas.ShowsNumberButtons}" ButtonsPlacement="{Ancestor CanvasInspector, Canvas.NumberButtonsPlacement}" Header="{Localize InspectorStrings.Width}" Binding="{Binding Width}" Minimum="0.1" Step="1"/>
                     <NumericProperty ShowButtons="{Ancestor CanvasInspector, Canvas.ShowsNumberButtons}" ButtonsPlacement="{Ancestor CanvasInspector, Canvas.NumberButtonsPlacement}" Header="{Localize InspectorStrings.Height}" Binding="{Binding Height}" Minimum="0.1" Step="1"/>
                 </CompositeProperty>
@@ -178,7 +193,7 @@
                                  Step="{Ancestor CanvasInspector, Canvas.ThicknessStep}" Decimals="6"/>
                 <NumericProperty ShowButtons="{Ancestor CanvasInspector, Canvas.ShowsNumberButtons}" ButtonsPlacement="{Ancestor CanvasInspector, Canvas.NumberButtonsPlacement}" Header="{Localize InspectorStrings.Points}" Binding="{Binding Count}" IsReadOnly="True"
                                  Decimals="0"/>
-                <CompositeProperty Header="{Localize InspectorStrings.Position}">
+                <CompositeProperty Header="{Localize InspectorStrings.Position}" IsVisible="{Self Inspected.IsPlaced, FallbackValue=False}">
                     <NumericProperty ShowButtons="{Ancestor CanvasInspector, Canvas.ShowsNumberButtons}" ButtonsPlacement="{Ancestor CanvasInspector, Canvas.NumberButtonsPlacement}" Header="X" Binding="{Binding Bounds.X}" IsReadOnly="True"/>
                     <NumericProperty ShowButtons="{Ancestor CanvasInspector, Canvas.ShowsNumberButtons}" ButtonsPlacement="{Ancestor CanvasInspector, Canvas.NumberButtonsPlacement}" Header="Y" Binding="{Binding Bounds.Y}" IsReadOnly="True"/>
                 </CompositeProperty>
@@ -211,11 +226,11 @@
             <PropertySection Header="{Localize InspectorStrings.Group}" IsExpanded="True">
                 <NumericProperty ShowButtons="{Ancestor CanvasInspector, Canvas.ShowsNumberButtons}" ButtonsPlacement="{Ancestor CanvasInspector, Canvas.NumberButtonsPlacement}" Header="{Localize InspectorStrings.Holds}" Binding="{Binding Count}" IsReadOnly="True"
                                  Decimals="0"/>
-                <CompositeProperty Header="{Localize InspectorStrings.Position}">
+                <CompositeProperty Header="{Localize InspectorStrings.Position}" IsVisible="{Self Inspected.IsPlaced, FallbackValue=False}">
                     <NumericProperty ShowButtons="{Ancestor CanvasInspector, Canvas.ShowsNumberButtons}" ButtonsPlacement="{Ancestor CanvasInspector, Canvas.NumberButtonsPlacement}" Header="X" Binding="{Binding X}" Step="1"/>
                     <NumericProperty ShowButtons="{Ancestor CanvasInspector, Canvas.ShowsNumberButtons}" ButtonsPlacement="{Ancestor CanvasInspector, Canvas.NumberButtonsPlacement}" Header="Y" Binding="{Binding Y}" Step="1"/>
                 </CompositeProperty>
-                <CompositeProperty Header="{Localize InspectorStrings.Size}">
+                <CompositeProperty Header="{Localize InspectorStrings.Size}" IsVisible="{Self Inspected.IsPlaced, FallbackValue=False}">
                     <NumericProperty ShowButtons="{Ancestor CanvasInspector, Canvas.ShowsNumberButtons}" ButtonsPlacement="{Ancestor CanvasInspector, Canvas.NumberButtonsPlacement}" Header="{Localize InspectorStrings.Width}" Binding="{Binding Width}" Step="1"
                                      Minimum="0.01"/>
                     <NumericProperty ShowButtons="{Ancestor CanvasInspector, Canvas.ShowsNumberButtons}" ButtonsPlacement="{Ancestor CanvasInspector, Canvas.NumberButtonsPlacement}" Header="{Localize InspectorStrings.Height}" Binding="{Binding Height}" Step="1"
@@ -232,11 +247,11 @@
                      moment one of them is used. Asked of the ITEM, which knows whether it stands for something. -->
                 <StringProperty Header="{Localize InspectorStrings.Label}" Binding="{Binding Label}"
                                 IsVisible="{Self Inspected.HasLabel, FallbackValue=False}"/>
-                <CompositeProperty Header="{Localize InspectorStrings.Position}">
+                <CompositeProperty Header="{Localize InspectorStrings.Position}" IsVisible="{Self Inspected.IsPlaced, FallbackValue=False}">
                     <NumericProperty ShowButtons="{Ancestor CanvasInspector, Canvas.ShowsNumberButtons}" ButtonsPlacement="{Ancestor CanvasInspector, Canvas.NumberButtonsPlacement}" Header="X" Binding="{Binding X}" Step="1"/>
                     <NumericProperty ShowButtons="{Ancestor CanvasInspector, Canvas.ShowsNumberButtons}" ButtonsPlacement="{Ancestor CanvasInspector, Canvas.NumberButtonsPlacement}" Header="Y" Binding="{Binding Y}" Step="1"/>
                 </CompositeProperty>
-                <CompositeProperty Header="{Localize InspectorStrings.Size}">
+                <CompositeProperty Header="{Localize InspectorStrings.Size}" IsVisible="{Self Inspected.IsPlaced, FallbackValue=False}">
                     <NumericProperty ShowButtons="{Ancestor CanvasInspector, Canvas.ShowsNumberButtons}" ButtonsPlacement="{Ancestor CanvasInspector, Canvas.NumberButtonsPlacement}" Header="{Localize InspectorStrings.Width}" Binding="{Binding Width}"
                                      Minimum="1" Maximum="4000" Step="1"/>
                     <NumericProperty ShowButtons="{Ancestor CanvasInspector, Canvas.ShowsNumberButtons}" ButtonsPlacement="{Ancestor CanvasInspector, Canvas.NumberButtonsPlacement}" Header="{Localize InspectorStrings.Height}" Binding="{Binding Height}"

@@ -1,4 +1,5 @@
 ﻿using System;
+using Adamantium.Core;
 using Adamantium.Mathematics;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Graphics;
@@ -8,7 +9,7 @@ namespace Adamantium.UI.Controls.DrawingBoard;
 
 /// <summary>A wire between sockets of two nodes. It holds no position: every frame it asks the nodes where their sockets are,
 /// so it follows any move or restyle.</summary>
-public class ConnectionItem : ICanvasItem
+public class ConnectionItem : PropertyChangedBase, ICanvasItem
 {
     private readonly ElementItem _from;
     private readonly ElementItem _to;

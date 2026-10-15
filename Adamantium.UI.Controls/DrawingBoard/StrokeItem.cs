@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Adamantium.Core;
 using Adamantium.Mathematics;
 using Adamantium.ProceduralGeometry.Shapes;
 using Adamantium.UI.Core;
@@ -10,11 +11,13 @@ namespace Adamantium.UI.Controls.DrawingBoard;
 
 /// <summary>A trail of ink with a width and a color. Points are float offsets from the stroke's origin, precise at any
 /// distance and moved by one field.</summary>
-public class StrokeItem : ICanvasItem
+public class StrokeItem : PropertyChangedBase, ICanvasItem
 {
     private readonly List<StrokePoint> _points = new();
     private Vector2F _min = new(float.MaxValue, float.MaxValue);
     private Vector2F _max = new(float.MinValue, float.MinValue);
+    private Vector2 _origin;
+    private double _thickness;
 
     // The stroke's points in the canvas's coordinates, and the parameter block that carries them to the ink pass. Both
     // are kept and re-pointed rather than made per frame - a stroke being drawn hands the same array over every frame
@@ -41,7 +44,17 @@ public class StrokeItem : ICanvasItem
     }
 
     /// <summary>Where the stroke's own coordinates start, in the world.</summary>
-    public Vector2 Origin { get; set; }
+    public Vector2 Origin
+    {
+        get => _origin;
+        set
+        {
+            if (SetProperty(ref _origin, value))
+            {
+                RaisePlace();
+            }
+        }
+    }
 
     public Brush Brush { get; set; }
 
@@ -52,7 +65,17 @@ public class StrokeItem : ICanvasItem
 
     /// <summary>How wide the ink is, in WORLD units - so it grows with the zoom, the way ink on paper does. What must
     /// NOT scale is the grid and the handles; those are stated in screen pixels.</summary>
-    public double Thickness { get; set; }
+    public double Thickness
+    {
+        get => _thickness;
+        set
+        {
+            if (SetProperty(ref _thickness, value))
+            {
+                RaiseBox();
+            }
+        }
+    }
 
     public IReadOnlyList<StrokePoint> Points => _points;
 
@@ -115,10 +138,12 @@ public class StrokeItem : ICanvasItem
     {
         if (_points.Count == 0) return;
 
+        var was = Bounds;
         _points[^1] = new StrokePoint(new Vector2F((float)(world.X - Origin.X), (float)(world.Y - Origin.Y)),
             _points[^1].Pressure);
 
         Rebuild();
+        RaiseBoxIfMoved(was);
     }
 
     /// <summary>Moves the whole stroke. ONE field: the points are offsets from the origin, which is the reason they are
@@ -137,7 +162,8 @@ public class StrokeItem : ICanvasItem
         // The thickness first, from how much the whole box changed - then the box the POINTS have to land in is the
         // wanted one minus that new thickness. Done the other way round the ink would be scaled by a box it had already
         // changed, and every resize would drift by half a nib.
-        Thickness *= (world.Width / from.Width + world.Height / from.Height) / 2;
+        var thickness = _thickness;
+        _thickness *= (world.Width / from.Width + world.Height / from.Height) / 2;
 
         var half = Thickness / 2;
         var inner = new Rect(from.X + half, from.Y + half,
@@ -161,6 +187,12 @@ public class StrokeItem : ICanvasItem
         }
 
         Rebuild();
+        RaiseBoxIfMoved(from);
+
+        if (_thickness != thickness)
+        {
+            RaisePropertyChanged(nameof(Thickness));
+        }
     }
 
     /// <summary>Rubs a round hole in the stroke, cutting at the circle's crossings, and returns the pieces left (none, one or
@@ -271,8 +303,10 @@ public class StrokeItem : ICanvasItem
     {
         if (_points.Count == 0) return;
 
+        var was = Bounds;
         _points.RemoveAt(_points.Count - 1);
         Rebuild();
+        RaiseBoxIfMoved(was);
     }
 
     private void Append(Vector2F at, float pressure)
@@ -294,6 +328,30 @@ public class StrokeItem : ICanvasItem
             _min = new Vector2F(Math.Min(_min.X, point.At.X), Math.Min(_min.Y, point.At.Y));
             _max = new Vector2F(Math.Max(_max.X, point.At.X), Math.Max(_max.Y, point.At.Y));
         }
+    }
+
+    private void RaiseBoxIfMoved(Rect was)
+    {
+        if (!Bounds.Equals(was))
+        {
+            RaiseBox();
+        }
+    }
+
+    private void RaisePlace()
+    {
+        RaisePropertyChanged(nameof(X));
+        RaisePropertyChanged(nameof(Y));
+        RaisePropertyChanged(nameof(Bounds));
+    }
+
+    private void RaiseBox()
+    {
+        RaisePropertyChanged(nameof(X));
+        RaisePropertyChanged(nameof(Y));
+        RaisePropertyChanged(nameof(Width));
+        RaisePropertyChanged(nameof(Height));
+        RaisePropertyChanged(nameof(Bounds));
     }
 
 

@@ -1,4 +1,5 @@
 using System;
+using Adamantium.Core;
 using Adamantium.Mathematics;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Graphics;
@@ -8,11 +9,12 @@ namespace Adamantium.UI.Controls.DrawingBoard;
 
 /// <summary>A contour from path data (sub-paths, fill rule, curves and arcs) read through <see cref="SVGParser"/>. Moving and
 /// resizing change only its box; the contour is mapped in when drawn.</summary>
-public class PathItem : ICanvasItem, ICanvasTransformed
+public class PathItem : PropertyChangedBase, ICanvasItem, ICanvasTransformed
 {
     private string _data;
     private StreamGeometry _geometry;
     private Rect _source;
+    private Rect _world;
 
     public PathItem(string data, Brush fill, Brush stroke, double thickness = 1)
     {
@@ -54,7 +56,21 @@ public class PathItem : ICanvasItem, ICanvasTransformed
 
     /// <summary>Where it stands and how big, in world units. The contour is mapped into this box when it is drawn.
     /// </summary>
-    public Rect World { get; set; }
+    public Rect World
+    {
+        get => _world;
+        set
+        {
+            if (SetProperty(ref _world, value))
+            {
+                RaisePropertyChanged(nameof(X));
+                RaisePropertyChanged(nameof(Y));
+                RaisePropertyChanged(nameof(Width));
+                RaisePropertyChanged(nameof(Height));
+                RaisePropertyChanged(nameof(Bounds));
+            }
+        }
+    }
 
     public CanvasTransform Transform { get; set; } = CanvasTransform.None;
 

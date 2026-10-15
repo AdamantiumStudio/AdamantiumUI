@@ -75,6 +75,8 @@ public class BindingExpression : BindingExpressionBase
    private string[] _segments;   // cached Binding.Path split on '.', computed once (path is fixed per expression)
    private List<(object Owner, string Segment)> _passed;
    private bool _reconnectPending;
+   private bool _writingTarget;
+   private bool _targetMoved;
    private IUIComponent _awaitingAttach;
    private IFundamentalUIComponent _contextOwner;
 
@@ -689,6 +691,12 @@ public class BindingExpression : BindingExpressionBase
 
    private void OnTargetPropertyChanged(object sender, AdamantiumPropertyChangedEventArgs e)
    {
+      if (_writingTarget)
+      {
+         _targetMoved |= e.Property == TargetProperty;
+         return;
+      }
+
       if (Mode is BindingMode.TwoWay or BindingMode.OneWayToSource && e.Property == TargetProperty)
          UpdateSource();
    }
@@ -794,7 +802,29 @@ public class BindingExpression : BindingExpressionBase
       // Can't make the value fit the target type (e.g. a FallbackValue="50" on an ICommand property)? Leave the target
       // at its default instead of pushing an incompatible value, which would throw in SetValue and abort the whole load.
       if (!TryCoerce(value, TargetProperty.PropertyType, out var coerced, FormatCulture)) return;
-      WriteTarget(coerced);
+
+      var outerWriting = _writingTarget;
+      var outerMoved = _targetMoved;
+      bool moved;
+
+      _targetMoved = false;
+      _writingTarget = true;
+      try
+      {
+         WriteTarget(coerced);
+      }
+      finally
+      {
+         moved = _targetMoved;
+         _writingTarget = outerWriting;
+         _targetMoved = outerMoved;
+      }
+
+      if (moved && Mode == BindingMode.TwoWay && !Equals(Target.GetValue(TargetProperty), coerced))
+      {
+         UpdateSource();
+      }
+
       RuntimeStats.BindingUpdatesApplied++;   // diagnostics: a binding wrote its target (initial/establish, DataContext re-resolve, or a batched source change)
    }
 

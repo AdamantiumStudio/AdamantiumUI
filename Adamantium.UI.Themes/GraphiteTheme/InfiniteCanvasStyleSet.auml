@@ -123,43 +123,6 @@
                 <ControlTemplate TargetType="CanvasPane">
                     <!-- Dock and not a stack - see Fluent's set for why a wrapping rail needs to be told its height. -->
                     <DockPanel LastChildFill="True">
-                        <!-- The edge that widens the panel, and FIRST - see Fluent's set for why the order matters. -->
-                        <!-- ONE ON EITHER SIDE, each pulling its own way - see Fluent's set. -->
-                        <Border x:Name="PART_SizerLeft" DockPanel.Dock="Left" Width="8" Visibility="Collapsed"
-                                Background="Transparent" Cursor="SizeEWE"
-                                ToolTip="{Localize CanvasStrings.ResizePanel}">
-                            <!-- A SHORT GRIP IN THE MIDDLE - see Fluent's set. -->
-                            <Grid Height="56" VerticalAlignment="Center">
-                                <Border Width="1" HorizontalAlignment="Center"
-                                        Background="{ObservableResource ControlStrokeColorDefault}"/>
-                                <StackPanel Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                    <Border Width="3" Height="3" CornerRadius="1.5"
-                                            Background="{ObservableResource TextFillColorSecondary}"/>
-                                    <Border Width="3" Height="3" CornerRadius="1.5" MarginTop="3"
-                                            Background="{ObservableResource TextFillColorSecondary}"/>
-                                    <Border Width="3" Height="3" CornerRadius="1.5" MarginTop="3"
-                                            Background="{ObservableResource TextFillColorSecondary}"/>
-                                </StackPanel>
-                            </Grid>
-                        </Border>
-
-                        <Border x:Name="PART_SizerRight" DockPanel.Dock="Right" Width="8" Visibility="Collapsed"
-                                Background="Transparent" Cursor="SizeEWE"
-                                ToolTip="{Localize CanvasStrings.ResizePanel}">
-                            <Grid Height="56" VerticalAlignment="Center">
-                                <Border Width="1" HorizontalAlignment="Center"
-                                        Background="{ObservableResource ControlStrokeColorDefault}"/>
-                                <StackPanel Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                    <Border Width="3" Height="3" CornerRadius="1.5"
-                                            Background="{ObservableResource TextFillColorSecondary}"/>
-                                    <Border Width="3" Height="3" CornerRadius="1.5" MarginTop="3"
-                                            Background="{ObservableResource TextFillColorSecondary}"/>
-                                    <Border Width="3" Height="3" CornerRadius="1.5" MarginTop="3"
-                                            Background="{ObservableResource TextFillColorSecondary}"/>
-                                </StackPanel>
-                            </Grid>
-                        </Border>
-
                         <!-- The handles in a row of their own, collapsed whole - see Fluent's set. -->
                         <StackPanel x:Name="PART_Handles" Orientation="Horizontal" DockPanel.Dock="Top"
                                     HorizontalAlignment="Left" MarginBottom="4">
@@ -180,33 +143,58 @@
                             </Button>
                         </StackPanel>
 
-                        <Border x:Name="PART_Body"
-                                VerticalAlignment="Top"
-                                Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="{TemplateBinding CornerRadius}"
-                                Padding="{TemplateBinding Padding}">
-                            <DockPanel LastChildFill="True">
-                                <!-- Colored outright - see Fluent's set. -->
-                                <ContentPresenter x:Name="PART_Header" DockPanel.Dock="Top"
-                                                  Content="{TemplateBinding Header}"
-                                                  FontSize="11"
-                                                  Foreground="{ObservableResource TextFillColorSecondary}"
-                                                  MarginBottom="4"/>
-                                <ContentPresenter x:Name="PART_ContentPresenter" DockPanel.Dock="Top"
-                                                  HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                                  VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
-                                                  Content="{TemplateBinding Content}"
-                                                  ContentTemplate="{TemplateBinding ContentTemplate}"/>
-                                <!-- The tool rail, filled by the canvas - see Fluent's set. Smaller buttons, like
-                                     everything in this theme. -->
-                                <CanvasToolRail x:Name="PART_Rail" Visibility="Collapsed"
-                                                Canvas="{TemplateBinding Canvas}"
-                                                Orientation="{TemplateBinding Orientation}"
-                                                ButtonWidth="28" ButtonHeight="24" IconSize="12" ButtonGap="3"/>
-                            </DockPanel>
-                        </Border>
+                        <!-- The edges lie OVER the plate - see Fluent's set. -->
+                        <Grid VerticalAlignment="Top">
+                            <Border x:Name="PART_Body"
+                                    Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    CornerRadius="{TemplateBinding CornerRadius}"
+                                    Padding="{TemplateBinding Padding}">
+                                <DockPanel LastChildFill="True">
+                                    <!-- Colored outright - see Fluent's set. -->
+                                    <ContentPresenter x:Name="PART_Header" DockPanel.Dock="Top"
+                                                      Content="{TemplateBinding Header}"
+                                                      FontSize="11"
+                                                      Foreground="{ObservableResource TextFillColorSecondary}"
+                                                      MarginBottom="4"/>
+                                    <ContentPresenter x:Name="PART_ContentPresenter" DockPanel.Dock="Top"
+                                                      HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                      VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                                      Content="{TemplateBinding Content}"
+                                                      ContentTemplate="{TemplateBinding ContentTemplate}"/>
+                                    <!-- The tool rail, filled by the canvas - see Fluent's set. Smaller buttons, like
+                                         everything in this theme. -->
+                                    <CanvasToolRail x:Name="PART_Rail" Visibility="Collapsed"
+                                                    Canvas="{TemplateBinding Canvas}"
+                                                    Orientation="{TemplateBinding Orientation}"
+                                                    ButtonWidth="28" ButtonHeight="24" IconSize="12" ButtonGap="3"/>
+                                </DockPanel>
+                            </Border>
+
+                            <!-- Three dots mark each strip - see Fluent's set. -->
+                            <Border x:Name="PART_SizerLeft" HorizontalAlignment="Left" Width="8" Visibility="Collapsed"
+                                    Background="Transparent" Cursor="SizeEWE"
+                                    ToolTip="{Localize CanvasStrings.ResizePanel}">
+                                <StackPanel Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                            Cursor="SizeEWE">
+                                    <Ellipse Width="3" Height="3" Fill="{ObservableResource TextFillColorSecondary}"/>
+                                    <Ellipse Width="3" Height="3" MarginTop="3" Fill="{ObservableResource TextFillColorSecondary}"/>
+                                    <Ellipse Width="3" Height="3" MarginTop="3" Fill="{ObservableResource TextFillColorSecondary}"/>
+                                </StackPanel>
+                            </Border>
+
+                            <Border x:Name="PART_SizerRight" HorizontalAlignment="Right" Width="8" Visibility="Collapsed"
+                                    Background="Transparent" Cursor="SizeEWE"
+                                    ToolTip="{Localize CanvasStrings.ResizePanel}">
+                                <StackPanel Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                            Cursor="SizeEWE">
+                                    <Ellipse Width="3" Height="3" Fill="{ObservableResource TextFillColorSecondary}"/>
+                                    <Ellipse Width="3" Height="3" MarginTop="3" Fill="{ObservableResource TextFillColorSecondary}"/>
+                                    <Ellipse Width="3" Height="3" MarginTop="3" Fill="{ObservableResource TextFillColorSecondary}"/>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
                     </DockPanel>
 
                     <ControlTemplate.Triggers>
