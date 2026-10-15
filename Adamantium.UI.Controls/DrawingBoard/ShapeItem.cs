@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Adamantium.Core;
 using Adamantium.Mathematics;
 using Adamantium.ProceduralGeometry;
 using Adamantium.ProceduralGeometry.Shapes;
@@ -11,7 +12,7 @@ namespace Adamantium.UI.Controls.DrawingBoard;
 
 /// <summary>A rectangle, ellipse, line, arrow or regular polygon: a world-unit box with a fill and an outline. The shape is
 /// its box, so a resize is one field.</summary>
-public class ShapeItem : ICanvasItem, ICanvasTransformed, ICanvasPoints
+public class ShapeItem : PropertyChangedBase, ICanvasItem, ICanvasTransformed, ICanvasPoints
 {
     private CanvasArrowBrush _paint;
 
@@ -69,14 +70,26 @@ public class ShapeItem : ICanvasItem, ICanvasTransformed, ICanvasPoints
         get => Model == null ? _world : new Rect(Model.Left, Model.Top, Model.Width, Model.Height);
         set
         {
+            var was = World;
             _world = Normalize(value);
 
-            if (Model == null) return;
+            if (Model != null)
+            {
+                Model.Left = _world.X;
+                Model.Top = _world.Y;
+                Model.Width = _world.Width;
+                Model.Height = _world.Height;
+            }
 
-            Model.Left = _world.X;
-            Model.Top = _world.Y;
-            Model.Width = _world.Width;
-            Model.Height = _world.Height;
+            if (!World.Equals(was))
+            {
+                RaisePropertyChanged(nameof(World));
+                RaisePropertyChanged(nameof(X));
+                RaisePropertyChanged(nameof(Y));
+                RaisePropertyChanged(nameof(Width));
+                RaisePropertyChanged(nameof(Height));
+                RaisePropertyChanged(nameof(Bounds));
+            }
         }
     }
 
@@ -665,9 +678,6 @@ public class ShapeItem : ICanvasItem, ICanvasTransformed, ICanvasPoints
     // Sets the normalized box plus the lean and direction bits for a line between two points; the drag tool uses it too.
     internal void SetEnds(Vector2 from, Vector2 to)
     {
-        World = new Rect(Math.Min(from.X, to.X), Math.Min(from.Y, to.Y),
-            Math.Abs(to.X - from.X), Math.Abs(to.Y - from.Y));
-
         Flipped = (to.X - from.X) * (to.Y - from.Y) < 0;
 
         Reversed = Flipped
@@ -675,6 +685,9 @@ public class ShapeItem : ICanvasItem, ICanvasTransformed, ICanvasPoints
             : Math.Abs(to.X - from.X) > 1e-9
                 ? from.X > to.X
                 : from.Y > to.Y;
+
+        World = new Rect(Math.Min(from.X, to.X), Math.Min(from.Y, to.Y),
+            Math.Abs(to.X - from.X), Math.Abs(to.Y - from.Y));
     }
 
     // The whole run - shaft and both heads - as ONE quad whose fragments decide the shape. Returns false when the run

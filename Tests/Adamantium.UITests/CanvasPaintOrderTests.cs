@@ -53,7 +53,7 @@ public class CanvasPaintOrderTests
 
     // Something drawn in a GRAPH that is not a node or a wire: a note pointing at a node, or the frame a group of them
     // is gathered by. WHERE IN THE ORDER it stands against the controls is the whole question these ask.
-    private sealed class Marker : ICanvasItem
+    private sealed class Marker : Adamantium.Core.PropertyChangedBase, ICanvasItem
     {
         public Rect Bounds { get; init; }
         public int Order { get; set; }

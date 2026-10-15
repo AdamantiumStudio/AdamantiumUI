@@ -1,4 +1,5 @@
-﻿using Adamantium.Mathematics;
+﻿using System.ComponentModel;
+using Adamantium.Mathematics;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Graphics;
 
@@ -8,8 +9,10 @@ namespace Adamantium.UI.Controls.DrawingBoard;
 /// <para>Items are DATA, not elements: they have no property storage, no node in the visual tree and no node in the hit
 /// tree. That is what lets a drawing hold tens of thousands of them, and it is the only reason they are not simply
 /// controls - a control on the canvas is a perfectly good way to put something there, and costs nothing at zoom.</para>
+/// <para>They say when they are moved or resized, so whatever shows one - an inspector bound to the selection - follows
+/// a drag, a grip and an undo alike.</para>
 /// </summary>
-public interface ICanvasItem
+public interface ICanvasItem : INotifyPropertyChanged
 {
     /// <summary>What it covers, in WORLD units. The canvas draws the items whose bounds it can see and no others, so
     /// this is what makes the cost of a frame depend on what is visible rather than on what exists.</summary>

@@ -80,6 +80,104 @@ public partial class InfiniteCanvas
         }
     }
 
+    /// <summary><see cref="SelectionBounds"/> as one object an inspector can bind to; writing it moves or scales the
+    /// whole selection.</summary>
+    public CanvasSelectionFrame SelectionFrame
+    {
+        get
+        {
+            if (_selectionFrame == null)
+            {
+                _selectionFrame = new CanvasSelectionFrame(this);
+                FollowSelectionFrame();
+            }
+
+            return _selectionFrame;
+        }
+    }
+
+    private void FollowSelectionFrame()
+    {
+        _selectionFrame?.Follow(SelectionBounds ?? default);
+    }
+
+    internal void MoveSelectionTo(Double? x, Double? y)
+    {
+        if (SelectionBounds is not { } from)
+        {
+            return;
+        }
+
+        var by = new Vector2((x ?? from.X) - from.X, (y ?? from.Y) - from.Y);
+        if (by.X == 0 && by.Y == 0)
+        {
+            return;
+        }
+
+        BeginEdit("Move");
+
+        foreach (var item in _selection)
+        {
+            item.Move(by);
+        }
+
+        EndEdit();
+        Scene?.Touch();
+    }
+
+    internal void ResizeSelectionTo(Double? width, Double? height)
+    {
+        if (SelectionBounds is not { } from)
+        {
+            return;
+        }
+
+        var to = new Rect(from.X, from.Y, Math.Max(1e-9, width ?? from.Width), Math.Max(1e-9, height ?? from.Height));
+        var shrinkX = 0.0;
+        var shrinkY = 0.0;
+
+        foreach (var item in _selection)
+        {
+            var box = item.Bounds;
+            var least = item.Smallest;
+
+            if (box.Width > 1e-9 && least.Width > 0)
+            {
+                shrinkX = Math.Max(shrinkX, least.Width / box.Width);
+            }
+
+            if (box.Height > 1e-9 && least.Height > 0)
+            {
+                shrinkY = Math.Max(shrinkY, least.Height / box.Height);
+            }
+        }
+
+        to = new Rect(to.X, to.Y, Math.Max(to.Width, from.Width * shrinkX), Math.Max(to.Height, from.Height * shrinkY));
+
+        if (from.Equals(to))
+        {
+            return;
+        }
+
+        var sx = from.Width > 1e-9 ? to.Width / from.Width : 1;
+        var sy = from.Height > 1e-9 ? to.Height / from.Height : 1;
+
+        BeginEdit("Resize");
+
+        foreach (var item in _selection)
+        {
+            var was = item.Bounds;
+            item.Resize(new Rect(
+                to.X + (was.X - from.X) * sx,
+                to.Y + (was.Y - from.Y) * sy,
+                Math.Max(1e-9, was.Width * sx),
+                Math.Max(1e-9, was.Height * sy)));
+        }
+
+        EndEdit();
+        Scene?.Touch();
+    }
+
     public bool IsSelected(ICanvasItem item) => item != null && _selection.Contains(item);
 
     /// <summary>Selects one thing, replacing what was selected unless <paramref name="extend"/> says to add to it.

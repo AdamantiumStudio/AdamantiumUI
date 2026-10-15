@@ -32,6 +32,7 @@ public partial class InfiniteCanvas : Control, ISceneFollower
     private bool _cameraPlaced;
 
     private readonly List<ICanvasItem> _selection = new();
+    private CanvasSelectionFrame _selectionFrame;
     private readonly List<IUIComponent> _announcedSelected = [];
     private Pen _selectionPen;
     private Brush _selectionPenBrush;
@@ -656,7 +657,15 @@ public partial class InfiniteCanvas : Control, ISceneFollower
 
         if (sender is not PropertyGrid grid || about?.Property == null) return;
 
-        foreach (var target in about.Targets) _edited.Add((target, grid.ValueOf(target, about.Property), null));
+        foreach (var target in about.Targets)
+        {
+            if (target is CanvasSelectionFrame)
+            {
+                continue;
+            }
+
+            _edited.Add((target, grid.ValueOf(target, about.Property), null));
+        }
     }
 
     private void OnInspectorWritten(object sender, PropertyValuesChangedEventArgs about)
@@ -1666,6 +1675,7 @@ public partial class InfiniteCanvas : Control, ISceneFollower
         _publishing = false;
 
         HasSelection = _selection.Count > 0;
+        FollowSelectionFrame();
 
         // The frame stands where the held thing stands, so a new selection is a new place for it - and the runs have
         // not changed, so nothing else would work it out.
@@ -1973,6 +1983,7 @@ public partial class InfiniteCanvas : Control, ISceneFollower
         // frame. This is the one place every edit passes through - a drag, a resize, an inspector writing a number -
         // so it is the one place that has to say so.
         _chromeLayer?.InvalidateArrange();
+        FollowSelectionFrame();
 
         PlaneChanged?.Invoke(this, EventArgs.Empty);
 

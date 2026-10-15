@@ -6,6 +6,7 @@
     <Phrase Key="Thickness" Text="Thickness"/>
     <Phrase Key="Position" Text="Position"/>
     <Phrase Key="Size" Text="Size"/>
+    <Phrase Key="Selection" Text="Selection"/>
     <Phrase Key="Width" Text="Width"/>
     <Phrase Key="Height" Text="Height"/>
     <Phrase Key="Shape" Text="Shape"/>

@@ -30,6 +30,12 @@ internal sealed class BoundValue : FundamentalUIComponent
     /// tells an edit from the way the object always looked.</summary>
     public bool IsEdited => _expression?.IsSourceEdited ?? false;
 
+    internal int Slot { get; set; }
+
+    internal bool Agrees { get; set; }
+
+    internal bool WasEdited { get; set; }
+
     /// <summary>Raised when the SOURCE moved the value - not when we wrote it ourselves.</summary>
     public event EventHandler Changed;
 
@@ -89,7 +95,7 @@ internal sealed class BoundValue : FundamentalUIComponent
         _writing = true;
         try
         {
-            Value = value;
+            SetCurrentValue(ValueProperty, value);
         }
         finally
         {

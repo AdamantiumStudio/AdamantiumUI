@@ -40,8 +40,8 @@ public sealed class CanvasPropertyStep : ICanvasStep
     {
         foreach (var (target, was, now) in _values) _grid.WriteTo(target, _definition, forward ? now : was);
 
-        // Plane objects raise no change events, so tell both the drawing and the panel; the rows are rebuilt, since
-        // re-reading returns their stale values.
+        // Plane objects say only where they are and how big, so tell both the drawing and the panel; the rows are
+        // rebuilt, since re-reading returns their stale values.
         scene?.Touch();
         _grid.Rebuild();
     }
