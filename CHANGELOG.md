@@ -1236,6 +1236,14 @@ All packages share one version.
   from before the trip, and once selected drew its background from there - over its own caption. A group that draws
   nothing is now put at its new rank too, and a group whose rank changes moves in the paint order instead of only
   taking the number.
+- Text no longer lands under its own background after an in-place repair:
+  - **A text box being typed into** (the DataGrid's search box): the caption's new segment went before the first op
+    ranked after it, and that was a segment of fills spanning the caption's rank that had not been cut - one holding the
+    box's own background. A newcomer now goes after a segment still spanning its rank; a placed segment states its own
+    rank as where it begins, instead of 0.
+  - **A docking panel's body after a pane was taken out into a window**: one record re-ranked the whole docking area and
+    also placed the body on its own, against its parent's rank from before the move; the second placement won. A parent
+    is now read at the rank this plan gives it, and what an outer placement carried is not placed again.
 - A docking tab docked back from a floating window, and a whole panel taken out into one, no longer arrive thrown away -
   a tab whose caption went missing after a few switches: the window's dropped panel, and the row a carried panel left,
   still held them until their next layout and discarded them with themselves. Panes and carried panels are the

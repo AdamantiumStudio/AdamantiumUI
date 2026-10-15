@@ -106,6 +106,19 @@ public partial class RenderCache
         return order;
     }
 
+    /// <summary>The rank the draw holds for <paramref name="component"/>'s group, and the ranks op <paramref name="op"/>
+    /// claims to span - what tells a wrong rank from a wrong place in the stream.</summary>
+    internal string DescribeRanks(IUIComponent component, int op)
+    {
+        var group = _groupById.TryGetValue(component.RenderId, out var g) ? g.Order.ToString() : "none";
+        var span = op >= 0 && op < _ops.Count ? $"[{_ops[op].OrderFirst}, {_ops[op].Order}] batch {_ops[op].Batch}" : "?";
+        return $"rank {group}, op {op} spans {span}";
+    }
+
+    /// <summary>The rank the draw holds for <paramref name="component"/>'s group, or null without one.</summary>
+    internal long? RankOfGroup(IUIComponent component) =>
+        _groupById.TryGetValue(component.RenderId, out var group) ? group.Order : null;
+
     /// <summary>The text runs the last walk placed in the glyph batch: which unit owns which instances.</summary>
     internal IReadOnlyList<(Core.Graphics.IRenderUnit Unit, int First, int Count)> DescribeTextRuns()
     {

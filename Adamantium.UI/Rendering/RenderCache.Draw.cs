@@ -3369,7 +3369,8 @@ public partial class RenderCache
         var at = OpIndexForRank(group.Order);
         _ops.Insert(at, new RenderOp
         {
-            Kind = arena.OpKind, Batch = arena.BatchId, SegId = seg, Clip = group.Component, Order = group.Order
+            Kind = arena.OpKind, Batch = arena.BatchId, SegId = seg, Clip = group.Component, Order = group.Order,
+            OrderFirst = group.Order   // one group's own segment spans its own rank; left at 0 it claimed every rank before it
         });
         NoteOpInserted(at);
 
@@ -3410,6 +3411,12 @@ public partial class RenderCache
         for (var i = from; i < to; i++)
         {
             if (_ops[i].Order <= order) continue;
+
+            // A segment still spanning the rank after SplitSegmentSpanningRank paints all of its content before the
+            // newcomer (or none of it overlaps), so the newcomer goes after it. Placed in front, a caption landed under the
+            // background of its own text box, glued into that segment with what follows it.
+            if (_ops[i].Kind == RenderOpKind.Segment && _ops[i].OrderFirst < order) continue;
+
             at = i;
             break;
         }

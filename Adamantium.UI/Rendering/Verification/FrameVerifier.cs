@@ -484,11 +484,26 @@ internal sealed class FrameVerifier : IRenderCacheObserver
                 if (_lastFillOp.TryGetValue(link, out var ancestorOp) && ancestorOp > textOp)
                 {
                     Alarm($"{ComponentText.Of(component)}: its glyphs are drawn by op {textOp}, before {ComponentText.Of(link)} " +
-                          $"behind it (op {ancestorOp}), which covers them");
+                          $"behind it (op {ancestorOp}), which covers them - text {live.DescribeRanks(component, textOp)}; " +
+                          $"behind {live.DescribeRanks(link, ancestorOp)}; chain {ChainRanks(live, component, link)}");
                     break;
                 }
             }
         }
+    }
+
+    // Each link from a text up to the ancestor that covers it, with the rank the draw holds for it - where the order breaks.
+    private string ChainRanks(RenderCache live, IUIComponent from, IUIComponent to)
+    {
+        var text = new StringBuilder();
+        for (var link = from; link != null; link = _facts.TryGetValue(link, out var fact) ? fact.Parent : null)
+        {
+            text.Append(text.Length > 0 ? " < " : string.Empty).Append(link.GetType().Name)
+                .Append(' ').Append(live.RankOfGroup(link)?.ToString() ?? "-");
+            if (ReferenceEquals(link, to)) break;
+        }
+
+        return text.ToString();
     }
 
     // Where the clip a glyph is cut by lies, against where its owner is in the tree: a clip left at a place its owner has
