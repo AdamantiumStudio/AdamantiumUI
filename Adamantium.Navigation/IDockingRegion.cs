@@ -54,6 +54,11 @@ public interface IDockingRegion
     Task<T> OpenDocumentAsync<T>(string key, NavigationParameters parameters = null,
         CancellationToken cancellationToken = default) where T : class;
 
+    /// <summary>The pane of the one <typeparamref name="T"/> brought to the front, or opened by navigation - for a pane
+    /// there is only ever one of, such as a scene or an inspector. Null when the navigation did not happen.</summary>
+    Task<T> OpenAsync<T>(NavigationParameters parameters = null, CancellationToken cancellationToken = default)
+        where T : class;
+
     /// <summary>The documents, the one worked in most recently first.</summary>
     IReadOnlyList<object> RecentDocuments { get; }
 

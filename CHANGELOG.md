@@ -7,6 +7,15 @@ All packages share one version.
 
 ### Added
 
+- `DockablePaneViewModel` (`Adamantium.Navigation`), a base for a view model shown as a pane of a docking region: its id
+  is its type's name, it opens in the document area and may be moved anywhere, and `PaneZone` follows a drag both ways.
+  The title is a function read again whenever the source handed with it changes - a language table, so the tab follows
+  the application's language: `base(() => EditorStrings.Scene, EditorStrings.Current)`; the source is listened to
+  weakly. A derived class overrides `PaneAllowed`, `PaneKind` or `PaneMinSize` where it differs.
+- `IDockingRegion.OpenAsync<T>()` opens the one pane of a type, or brings the open one to the front - for a scene, an
+  inspector or anything else there is one of, with no key to make up. `OpenDocumentAsync` keeps the key for documents
+  there are many of, such as files.
+
 - Text in a `TextBlock` selects. `TextBlock.IsTextSelectionEnabled` is on by default, with the I-beam over the text;
   off protects the text from being selected and copied and shows the inherited cursor.
   - **By hand:** a drag selects what it passes over, a double click a word, a triple click the whole text, Shift with a
