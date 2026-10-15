@@ -1492,10 +1492,9 @@
                                         <Setter.Value>
                                             <!-- The ROW's foreground: a popup is a detached subtree, so {Ancestor} cannot
                                                  reach the bar from here. -->
-                                            <Path x:Shared="False"
-                                                    Data="{Binding Icon}"
-                                                    Stroke="{Ancestor MenuItem, Foreground}"
-                                                    StrokeThickness="1"
+                                            <Image x:Shared="False"
+                                                    Source="{ObservableResource Key={Binding IconKey}}" Stretch="None"
+                                                    Foreground="{Ancestor MenuItem, Foreground}"
                                                     HorizontalAlignment="Center"
                                                     VerticalAlignment="Center"/>
                                         </Setter.Value>
@@ -1547,8 +1546,8 @@
                         <!-- The BAR's foreground, not the caption's: below the ribbon there is no TitleBar to
                              ask, and the icons would come out with no stroke at all. The caption instance takes
                              its color from the title bar, so they still follow its active/inactive state. -->
-                        <Path Data="{Binding Icon}"
-                                Stroke="{Ancestor RibbonQuickAccess, Foreground}" StrokeThickness="1"
+                        <Image Source="{ObservableResource Key={Binding IconKey}}" Stretch="None"
+                                Foreground="{Ancestor RibbonQuickAccess, Foreground}"
                                 HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Button>
                 </DataTemplate>

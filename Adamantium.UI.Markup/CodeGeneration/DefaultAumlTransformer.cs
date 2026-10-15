@@ -426,7 +426,9 @@ public class DefaultAumlTransformer : IAumlTransformer
             }
 
             var hasKey = marker.Arguments.Any(argument => (string.IsNullOrEmpty(argument.Name) || argument.Name == "Key")
-                                                          && !string.IsNullOrWhiteSpace(argument.Value?.GetTextValue()));
+                                                          && (!string.IsNullOrWhiteSpace(argument.Value?.GetTextValue())
+                                                              || marker.TypeReference.Name == "ObservableResource"
+                                                              && argument.Value is AumlAstMarkupExtensionNode { TypeReference.Name: "Binding" }));
             if (!hasKey)
             {
                 diagnostics.ReportError(document.FileName,

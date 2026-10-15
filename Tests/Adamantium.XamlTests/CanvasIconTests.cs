@@ -16,9 +16,10 @@ public class CanvasIconTests
     // place as the icons would catch neither.
     private static readonly string[] Keys =
     {
-        "ToolSelectIcon", "ToolPenIcon", "ToolTextIcon", "ToolEraseIcon", "ToolEraseStrokeIcon",
-        "ToolRectangleIcon", "ToolEllipseIcon", "ToolPolygonIcon", "ToolLineIcon", "ToolArrowIcon", "ToolCurveIcon",
-        "ToolButtonIcon", "ToolCheckBoxIcon", "ToolTextBoxIcon", "ToolNodeIcon", "ToolAddIcon"
+        "CanvasToolSelectIcon", "CanvasToolPenIcon", "CanvasToolTextIcon", "CanvasToolEraseIcon",
+        "CanvasToolEraseStrokeIcon", "CanvasToolRectangleIcon", "CanvasToolEllipseIcon", "CanvasToolPolygonIcon",
+        "CanvasToolLineIcon", "CanvasToolArrowIcon", "CanvasToolCurveIcon", "CanvasToolButtonIcon",
+        "CanvasToolCheckBoxIcon", "CanvasToolTextBoxIcon", "CanvasToolNodeIcon", "CanvasToolAddIcon"
     };
 
     private FakeApp _app;
@@ -71,8 +72,8 @@ public class CanvasIconTests
     // reads as a button that does nothing rather than as one that is not there.
     private static readonly string[] Actions =
     {
-        "SaveIcon", "OpenIcon", "FrameIcon", "AlignLeftIcon", "AlignMiddleIcon", "AlignTopIcon",
-        "FitIcon", "SpreadRowsIcon", "SpreadColumnsIcon", "BinIcon"
+        "CanvasSaveIcon", "CanvasOpenIcon", "CanvasFrameIcon", "CanvasAlignLeftIcon", "CanvasAlignMiddleIcon",
+        "CanvasAlignTopIcon", "CanvasFitIcon", "CanvasSpreadRowsIcon", "CanvasSpreadColumnsIcon", "CanvasBinIcon"
     };
 
     [TestCase("Fluent")]

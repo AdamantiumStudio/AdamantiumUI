@@ -440,7 +440,9 @@ public partial class RenderCache
         // Fast path: same command count and every unit still matches -> update in place; nothing structural changed. Gate
         // on InOrder: a group that fell OUT of the paint order (its container was hidden/parked, then rebound and re-drawn
         // here) MUST be re-inserted, not just patched in place - so let it fall through to the re-insert below.
-        if (group is { InOrder: true } && drawCommands.Count == oldCount && oldCount > 0)
+        // ...and only while it keeps its rank: a group whose place changed goes the splice's way below, which re-places its
+        // instances by rank in the recorded stream instead of re-walking the scene.
+        if (group is { InOrder: true } && drawCommands.Count == oldCount && oldCount > 0 && group.Order == order)
         {
             var units = group.Units;
             var allMatch = true;
@@ -456,7 +458,6 @@ public partial class RenderCache
                     units[i].UpdateWithDrawCommand(drawCommands[i]);
                     NoteBandedText(units[i]);
                 }
-                group.Order = order;
                 return;
             }
         }
@@ -472,7 +473,8 @@ public partial class RenderCache
         var needsInsert = group is not { InOrder: true };
 
         group = BuildUnitsFor(component, drawCommands, _projectionMatrix);
-        group.Order = order;
+        if (needsInsert) group.Order = order;
+        else PlaceAt(group, order);
         group.Clones = clones;   // a group made here for the first time - a clone host that draws nothing of its own
         group.CloneSteps = cloneSteps;
         group.CloneStagger = cloneStagger;
@@ -549,6 +551,14 @@ public partial class RenderCache
                     host.CloneStagger = draw.CloneStagger;
                     host.Order = draw.Order;
                     QueueInsert(host);
+                }
+                else if (emptied is { InOrder: true } && emptied.Order != draw.Order)
+                {
+                    // Draws nothing NOW, but keeps its place for when it draws again - so the place has to be the one the
+                    // tree gives it. Left at its old rank, a tab carried away and back drew its selected background from
+                    // where it used to be: after its own caption, and over the strip's selection bar.
+                    emptied.Order = draw.Order;
+                    QueueInsert(emptied);
                 }
 
                 continue;
@@ -640,6 +650,21 @@ public partial class RenderCache
         if (_orderBatch.Count > 0) _groups.RemoveAll(_orderBatch.Contains);
         _orderBatch.Clear();
         _batchOrderRemovals = false;
+    }
+
+    // A group in the order sits where its rank says: _groups is kept sorted by rank and the walk draws it in that order.
+    // A new rank with no move left a group drawing from its old place - over what the tree puts on top of it.
+    private void PlaceAt(ControlGroup group, long order)
+    {
+        if (!group.InOrder || group.Order == order)
+        {
+            group.Order = order;
+            return;
+        }
+
+        _groups.Remove(group);
+        group.Order = order;
+        _groups.Insert(FirstGroupAfter(order), group);
     }
 
     // Queue a group for this frame's ONE merge into the paint order. Deduped: the same group can be named twice in a packet

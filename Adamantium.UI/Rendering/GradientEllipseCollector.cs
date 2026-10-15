@@ -13,6 +13,8 @@ namespace Adamantium.UI.Rendering;
 // (GradientRectItem / GradientRectCollector.BakeGradientItem) - only the pixel-shader SDF differs (pass GradientEllipse).
 internal sealed class GradientEllipseCollector : BrushSdfCollector<GradientRectItem>
 {
+    public override bool ReadsFadeSlot => true;
+
     public static bool Enabled = true;
 
     public GradientEllipseCollector() : base(1024) { }

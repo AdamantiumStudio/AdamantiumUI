@@ -26,7 +26,7 @@ public class EraseTool : ICanvasTool
 
         var whole = mode == CanvasEraseMode.Stroke;
         Name = whole ? "EraseStroke" : "Erase";
-        Icon = whole ? "ToolEraseStrokeIcon" : "ToolEraseIcon";
+        Icon = whole ? "CanvasToolEraseStrokeIcon" : "CanvasToolEraseIcon";
         Shortcut = whole ? Key.D : Key.E;
         Description = whole ? "EraseStrokeDescription" : "EraseDescription";
     }

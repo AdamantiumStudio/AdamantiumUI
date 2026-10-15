@@ -284,4 +284,95 @@ public class RibbonApplicationMenuTests
 
         Assert.That(menu.SelectedPage, Is.EqualTo("the templates"));
     }
+
+    private sealed class Words : System.ComponentModel.INotifyPropertyChanged
+    {
+        private string _text = "first";
+
+        public event System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
+
+        public string Text
+        {
+            get => _text;
+            set
+            {
+                _text = value;
+                PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(Text)));
+            }
+        }
+    }
+
+    private static (Adamantium.UI.Controls.Text.TextBlock Page, Words Source) LivePage()
+    {
+        var source = new Words();
+        var page = new Adamantium.UI.Controls.Text.TextBlock();
+        page.SetBinding(Adamantium.UI.Controls.Text.TextBlock.TextProperty, new Binding(nameof(Words.Text)) { Source = source });
+        return (page, source);
+    }
+
+    // The pane that shows a page lets it go when another one shows, as it would any content of its own. The page is the
+    // row's, though, and comes back: let go of for good, it came back empty - a second pass over the menu showed nothing.
+    [Test]
+    public void APageShownAgain_IsAlive_AfterThePaneLetItGo()
+    {
+        var (page, source) = LivePage();
+        var first = Row("New", page);
+        var second = Row("Open", "the recent files");
+        var menu = WithRows(first, second);
+        menu.IsOpen = true;
+
+        menu.SelectedItem = second;
+        DiscardedVisuals.Publish(page);
+        DiscardedVisuals.Drain(int.MaxValue);
+        menu.SelectedItem = first;
+
+        source.Text = "second";
+        BindingUpdateQueue.Flush();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(menu.SelectedPage, Is.SameAs(page));
+            Assert.That(page.IsDiscarded, Is.False);
+            Assert.That(page.Text, Is.EqualTo("second"), "its binding was closed");
+        });
+    }
+
+    // The row chosen in the backstage stayed lit in the dropped panel whatever the pointer went to - the panel shows no
+    // choice. The backstage keeps it for when it is back.
+    [Test]
+    public void TheBackstagesChoice_IsNotLitInTheDroppedPanel_AndIsKeptForTheBackstage()
+    {
+        var first = Row("New", "the templates");
+        var second = Row("Import", "the formats");
+        var menu = WithRows(first, second);
+        menu.IsOpen = true;
+        menu.SelectedItem = second;
+
+        menu.IsBackstage = false;
+        var litInPanel = second.IsSelected;
+        menu.IsBackstage = true;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(litInPanel, Is.False, "lit in the dropped panel");
+            Assert.That(second.IsSelected, Is.True, "the backstage forgot its choice");
+        });
+    }
+
+    [Test]
+    public void APage_GoesWithItsRow()
+    {
+        var (page, _) = LivePage();
+        var row = Row("New", page);
+        var other = Row("Open", "the recent files");
+        var menu = WithRows(row, other);
+        menu.IsOpen = true;
+        menu.SelectedItem = other;
+
+        DiscardedVisuals.Publish(row);
+        DiscardedVisuals.Drain(int.MaxValue);
+        DiscardedVisuals.Drain(int.MaxValue);
+
+        Assert.That(page.IsDiscarded, Is.True);
+    }
 }

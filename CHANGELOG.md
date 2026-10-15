@@ -303,6 +303,24 @@ All packages share one version.
   order, and logs each part that differs - the component, the field, both values, how the frame was drawn and its
   motion nodes - to a session log, up to `MaxReports` frames. No GPU work; off, it costs one read per frame. Sandbox:
   "Verify frames" in the diagnostics panel, counts on the plate.
+  - **What the shaders read, too.** The slots a unit's records point at - its opacity, and each text run's matrix,
+    opacity and clip slots - must be held for that element or an ancestor, not free or a stranger's (matrices,
+    opacities and clips share one table); every text run must lie inside the glyph batch, match its text's glyph count
+    and share no instance with another run; and the alpha a run is drawn at (its color times its opacity slot) must be
+    the tree's - the foreground, the element's `SelfOpacity` and the opacities above it up to a layer.
+  - **Each glyph and the order it is drawn in.** Every glyph's place as its shader puts it (its slot's matrix over its
+    local rect) and its atlas cell against the tree; the clip rectangle it is cut by against its owner's place; the
+    text's color against its `Foreground` in the tree (not the cache's own brush); visible batchable text that has no
+    run, a run no segment draws; and text drawn before an ancestor's background, which then covers it.
+  - **An error in the log.** Each new alarm is also logged as an error, so a driven run fails on it (see below).
+
+- Automation catches a broken render or tree on its own. An application started by `AutomationSession.LaunchAsync` -
+  scenarios, `adam-auto start` - verifies its frames from the start (`LaunchOptions.VerifyFrames`, true by default;
+  the variable `ADAM_VERIFY_FRAMES`). After every step, and in `WaitForIdleAsync`, the settled windows and their overlay
+  are checked for an element that was thrown away, parked or released while still in a window, and for a visible
+  presenter holding content it does not show. Each is reported once to the `ErrorJournal`, as are the verifier's
+  alarms, so the step fails with what broke - unless `AllowErrors` says the error is what is being checked.
+  `adam-auto visual` prints a node's lifecycle when it is not live, and the foreground of text and presenters.
 
 - `adam-auto wheel <selector> <notches>` and `AutomationElement.WheelAsync`: the mouse wheel turned over an element's
   middle inside the application, a notch at a time - positive away from the user, scrolling up.
@@ -923,9 +941,39 @@ All packages share one version.
   It drops into another of the application's windows too.
 - A column header's funnel is a button to automation that opens and closes the column's filter
   (`PartButtonAutomationPeer`, which the × of a data grid's chip uses too); the themes name the filter's fields.
+- `CurrentColor` in a drawing: a fill or a stroke written `Stroke="CurrentColor"` is painted with the `Foreground` of the
+  `Image` showing the drawing (`CurrentColorBrush`). One icon resource is then dark on a light surface, takes the
+  on-accent color on an accent - a checked ribbon toggle, an active caption - and follows the color when it changes.
+  `Image.Foreground` is inherited and redraws the picture.
+- `{ObservableResource Key={Binding ...}}`: a resource whose key comes from the data, followed as the data changes.
+  A command names its icon by key and the view finds the resource, so icons stay in markup and the designer shows them.
 
 ### Changed
 
+- `WindowCommand` is a view model in `Adamantium.UI.Core` (it was in `Adamantium.UI.Controls`): it derives from
+  `AdamantiumViewModel` and notifies its changes, so a derived command is a view model with no notification code of its
+  own. Its icon is `IconKey`, the key of a resource the themes show with `{ObservableResource Key={Binding IconKey}}`
+  in the caption's or the row's color. `Adamantium.UI.Core` now depends on `Adamantium.MVVM`.
+- The quick-access bar's own button and overflow rows draw a `WindowCommand`-shaped item's icon by `IconKey` too.
+- `Drawing.Render` and `DrawingImage.Render` take the color to paint `CurrentColor` with.
+- A discarded `Popup` leaves what a content presenter in it was handed through a binding - a control's content, a
+  menu's page or footer: that is its owner's, and a template swap shows it again. A closed slide panel's content and the
+  File menu's pages and footer came back empty after a theme change or a change of the menu's shape. The owners let
+  their own go with them: a ribbon its drawer, a slide panel its header, as a content control its content.
+- A `ContentPresenter` handed content its owner parked brings it back alive.
+- An in-process automation session releases what was let go when it settles, as the application's idle frames do, so a
+  test sees an element that came back dead.
+- The infinite canvas's icons are keyed `Canvas…` (`CanvasSaveIcon`, `CanvasToolPenIcon`, `CanvasGroupIcon`…; they were
+  `SaveIcon`, `ToolPenIcon`, `GroupIcon`…). A theme's resource is found before the application's, so the canvas's
+  generic names took the place of an application's own `SaveIcon` or `GroupIcon` wherever it showed one.
+- `BrushParser` is an `ITypeParser<Brush>` (it was `ITypeParser<SolidColorBrush>`): the word `CurrentColor` reads as a
+  `CurrentColorBrush`, any other text as before.
+- `{ObservableResource}` takes its value away when its key changes to one that resolves to nothing, or to none; a miss of
+  the key it already shows still keeps the value.
+- The focus ring: after a click hides it, the first arrow key shows it where the focus is, as the first Tab does, and
+  only the next one moves. Alt shows it too, as across Windows, and marks the keyboard as in use even with nothing
+  focused, so what takes the focus next - a menu opened by its key tip - comes up with the ring.
+  `KeyboardNavigation.MoveInto(container, ringVisible)` moves the focus in with or without it.
 - A focused element that stops being shown hands the focus to its nearest ancestor that can take it, or lets it go
   when there is none (`FocusManager.LeaveHidden`), and a window coming back does not return the focus into a hidden
   element. Keys used to go on into a hidden button - a game's menu closed by its Continue button kept them all.
@@ -1136,6 +1184,8 @@ All packages share one version.
 
 ### Removed
 
+- `WindowCommand.IconData` and `WindowCommand.Icon`: an icon is not path data in a view model; name a resource with
+  `IconKey`.
 - `AumlAstTemplateNode.TemplateContent`, the template's markup written back out as text for every template parsed;
   nothing read it.
 - The text scenario language:
@@ -1168,6 +1218,47 @@ All packages share one version.
 
 ### Fixed
 
+- Text with an opacity, or under a faded parent, is no longer drawn too faint once part of the window is repaired in
+  place: the repair baked the whole opacity chain into the glyph color while the shader multiplied it in again from
+  the opacity slot - a 0.35 label came out at 0.12. Ink, arrows, the canvas grid, polygons and patterns had the same
+  fault. Each batch family now says itself whether its shader reads the slot (`BatchArena.ReadsFadeSlot`), so the
+  repair and the full walk cannot disagree about it again.
+- A docking pane's body no longer goes blank - drawn empty, its labels gone, its commands dead - after switching tabs,
+  after the pane is taken out into a window and docked back, or in a tool panel from the start. The body is the pane's:
+  the panel showing it lends it a place and lets it go without discarding it, and so does a closing floating window,
+  while the pane lives and holds it as its `Content` (true of any `ContentControl`'s element content, so a plain
+  `TabControl`'s page too). A closed document's body still goes with it, and a tab closed by its close button in a
+  `TabControl` without `ItemsSource` is now discarded with its page. Layout no longer measures a discarded element: a
+  tool panel takes its own template, and the first template's content host, measured after it was thrown away, took
+  the body from the second.
+- A selected docking tab carried out into a window and back no longer loses its caption, and the strip's selection bar
+  no longer slips under it: the tab's border drew nothing while it was not selected, kept its place in the paint order
+  from before the trip, and once selected drew its background from there - over its own caption. A group that draws
+  nothing is now put at its new rank too, and a group whose rank changes moves in the paint order instead of only
+  taking the number.
+- Text no longer lands under its own background after an in-place repair:
+  - **A text box being typed into** (the DataGrid's search box): the caption's new segment went before the first op
+    ranked after it, and that was a segment of fills spanning the caption's rank that had not been cut - one holding the
+    box's own background. A newcomer now goes after a segment still spanning its rank; a placed segment states its own
+    rank as where it begins, instead of 0.
+  - **A docking panel's body after a pane was taken out into a window**: one record re-ranked the whole docking area and
+    also placed the body on its own, against its parent's rank from before the move; the second placement won. A parent
+    is now read at the rank this plan gives it, and what an outer placement carried is not placed again.
+- A docking tab docked back from a floating window, and a whole panel taken out into one, no longer arrive thrown away -
+  a tab whose caption went missing after a few switches: the window's dropped panel, and the row a carried panel left,
+  still held them until their next layout and discarded them with themselves. Panes and carried panels are the
+  layout's; only a close discards them.
+- A minimized window brought back by `Activate` - a window opened again by navigation - is restored as it was, normal or
+  maximized. It came back on screen still reading Minimized, took no sizes and no input, and showed its last frame.
+- The File menu's pages no longer come back empty on a second pass, in either shape. The page shown is the row's, not
+  the pane's: the menu parks a page while another shows; a row takes its page with it when it goes, and the menu its
+  auxiliary pane and footer.
+- The row chosen in the File backstage no longer stays lit in the dropped panel whatever the pointer goes to: the
+  choice is the backstage's, kept for when it is back, and the panel lights only the row under the pointer.
+- The File menu dropped under its button, opened by a click, no longer shows a focus ring on its first row: it takes
+  the keyboard in without one, and shows it once a key asks.
+- Markup hot reload no longer makes an editor's save fail: it read a saved file without sharing it for writing, so a
+  save made while it read was refused.
 - `InfiniteCanvas`: the plane follows a theme variant switch. Its ground copied the colors of `Background`,
   `GridBrush` and `AxisBrush` and kept them when the variant recolored those brushes in place, so the plane stayed
   dark in a light window until the camera moved.

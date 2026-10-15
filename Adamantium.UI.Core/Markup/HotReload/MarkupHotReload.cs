@@ -373,7 +373,14 @@ public static class MarkupHotReload
         {
             try
             {
-                return File.Exists(path) ? File.ReadAllText(path) : null;
+                if (!File.Exists(path))
+                {
+                    return null;
+                }
+
+                using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+                using var reader = new StreamReader(stream);
+                return reader.ReadToEnd();
             }
             catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
             {

@@ -223,11 +223,13 @@ public partial class RenderCache
 
         for (var i = 0; i < _childBuf.Count; i++)
         {
-            if (!_placeRoots.Contains(_childBuf[i])) continue;
+            // Placed already, with a subtree an outer run of this plan carried: a second placement would win the commit
+            // with ranks read before that outer one moved.
+            if (!_placeRoots.Contains(_childBuf[i]) || _plannedSet.Contains(_childBuf[i])) continue;
 
             // The contiguous RUN of new children starting here: one gap serves them all.
             var j = i;
-            while (j + 1 < _childBuf.Count && _placeRoots.Contains(_childBuf[j + 1])) j++;
+            while (j + 1 < _childBuf.Count && _placeRoots.Contains(_childBuf[j + 1]) && !_plannedSet.Contains(_childBuf[j + 1])) j++;
 
             Core.Diagnostics.RuntimeStats.LastRecordPlanRuns++;
 
@@ -317,8 +319,10 @@ public partial class RenderCache
         var at = _prevVisible[i];
         if (at < 0)
         {
-            rank = RankOf(parent);   // nothing is painted before it: the parent bounds the run
-            return true;
+            // Nothing is painted before it: the parent bounds the run - at the rank THIS plan gives it, when it gives one.
+            // Read from the committed map, a parent re-placed earlier in the same plan handed its old rank to a child, and
+            // the child was drawn under the parent's own background.
+            return TryPlannedRank(parent, out rank);
         }
 
         var before = _childBuf[at];

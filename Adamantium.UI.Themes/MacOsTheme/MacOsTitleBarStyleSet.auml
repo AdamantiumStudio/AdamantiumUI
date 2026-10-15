@@ -101,8 +101,8 @@
                                             CommandParameter="{Binding CommandParameter}"
                                             AutomationProperties.AutomationId="{Binding AutomationId}"
                                             AutomationProperties.Name="{Binding Label}">
-                                        <Path Data="{Binding Icon}"
-                                                Stroke="{Ancestor TitleBar, Foreground}" StrokeThickness="1"
+                                        <Image Source="{ObservableResource Key={Binding IconKey}}" Stretch="None"
+                                                Foreground="{Ancestor TitleBar, Foreground}"
                                                 HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </Button>
                                 </DataTemplate>
@@ -130,8 +130,8 @@
                                             CommandParameter="{Binding CommandParameter}"
                                             AutomationProperties.AutomationId="{Binding AutomationId}"
                                             AutomationProperties.Name="{Binding Label}">
-                                        <Path Data="{Binding Icon}"
-                                                Stroke="{Ancestor TitleBar, Foreground}" StrokeThickness="1"
+                                        <Image Source="{ObservableResource Key={Binding IconKey}}" Stretch="None"
+                                                Foreground="{Ancestor TitleBar, Foreground}"
                                                 HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </Button>
                                 </DataTemplate>

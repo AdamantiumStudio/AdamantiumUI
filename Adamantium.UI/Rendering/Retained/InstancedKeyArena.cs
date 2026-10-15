@@ -12,6 +12,8 @@ namespace Adamantium.UI.Rendering.Retained;
 // range is a segment, and the flush index is its id. Solid fills only.
 internal sealed class InstancedKeyArena : BatchArena
 {
+    public override bool ReadsFadeSlot => true;
+
     private readonly InstancedFillCollector _collector;
     private readonly object _key;               // the KeySegment this arena speaks for (typed inside the collector)
     private readonly List<GeometryInstance> _stage = new();

@@ -368,6 +368,9 @@ public sealed class LayoutManager
         var control = (IMeasurableComponent)node;
         if (control.IsMeasureValid) return;   // already measured this pass via an ancestor's cascade
 
+        // A part of a removed template measured here took the content its successor was showing.
+        if (node is FundamentalUIComponent { IsDiscarded: true }) return;
+
         if (HasCollapsedAncestor(node))
         {
             control.InvalidateMeasure();

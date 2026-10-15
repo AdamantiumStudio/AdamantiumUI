@@ -26,7 +26,7 @@ public class CurveTool : ICanvasTool
 
     public string Name { get; set; }
 
-    public string Icon { get; set; } = "ToolCurveIcon";
+    public string Icon { get; set; } = "CanvasToolCurveIcon";
 
     public Key Shortcut { get; set; } = Key.B;
 

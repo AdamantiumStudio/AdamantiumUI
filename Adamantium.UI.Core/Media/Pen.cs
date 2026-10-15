@@ -111,6 +111,21 @@ public class Pen : IEquatable<Pen>
       FitDashesToContour, 
       DashPhase);
 
+   internal Pen WithBrush(Brush brush) => new(
+      brush,
+      Thickness,
+      DashOffset,
+      DashStrokeArray,
+      StartLineCap,
+      EndLineCap,
+      PenLineJoin,
+      TrimStart,
+      TrimEnd,
+      DashStartCap,
+      DashEndCap,
+      FitDashesToContour,
+      DashPhase);
+
    public bool Equals(Pen other)
    {
       if (ReferenceEquals(null, other)) return false;

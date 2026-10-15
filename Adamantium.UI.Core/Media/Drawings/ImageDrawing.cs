@@ -31,7 +31,7 @@ public class ImageDrawing : Drawing
 
     public override Rect Bounds => Rect;
 
-    public override void Render(IDrawingSession session, Matrix4x4F transform)
+    public override void Render(IDrawingSession session, Matrix4x4F transform, Brush currentColor)
     {
         var image = ImageSource;
         if (image == null) return;

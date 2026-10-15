@@ -232,16 +232,23 @@ public static class FocusManager
    /// appeared on every click is noise, since a click already says where you are.</summary>
    public static bool IsFocusVisible { get; private set; }
 
-   /// <summary>Shows where the focus is without moving it. A focus the mouse put somewhere wears no ring, and the first
-   /// Tab asks for the ring rather than leaving. False when there is nothing to show.</summary>
+   /// <summary>Shows where the focus is without moving it, and marks the keyboard as in use until the focus next moves,
+   /// for whoever asks <see cref="IsFocusVisible"/> before moving it - a menu opening. A focus the mouse put somewhere
+   /// wears no ring; the first navigation key and Alt ask for the ring rather than moving. False when there is nothing
+   /// to show.</summary>
    public static bool Reveal()
    {
-      if (Focused == null || IsFocusVisible)
+      if (IsFocusVisible)
       {
          return false;
       }
 
       IsFocusVisible = true;
+      if (Focused == null)
+      {
+         return false;
+      }
+
       Focused.RaiseEvent(new RoutedEventArgs(FocusRevealedEvent));
       return true;
    }

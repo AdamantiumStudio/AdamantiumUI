@@ -21,6 +21,10 @@ public static class AutomationAgentExtensions
 
         WindowBase.ActivateOnShowProperty.OverrideMetadata(typeof(Window), new PropertyMetadata(false));
         ErrorJournal.Install();
+        if (Environment.GetEnvironmentVariable(AutomationProtocol.VerifyFramesVariable) == "1")
+        {
+            application.FrameVerification.IsEnabled = true;
+        }
 
         var agent = new AutomationAgent(application, pipe);
         application.Started += (_, _) => agent.Start();

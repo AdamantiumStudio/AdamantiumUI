@@ -123,11 +123,17 @@ public class GeometryDrawing : Drawing
         }
     }
 
-    public override void Render(IDrawingSession session, Matrix4x4F transform)
+    public override void Render(IDrawingSession session, Matrix4x4F transform, Brush currentColor)
     {
         var geometry = Geometry;
         if (geometry == null) return;
 
-        session.DrawGeometry(Brush, geometry, Pen, transform);
+        var pen = Pen;
+        if (pen?.Brush is CurrentColorBrush)
+        {
+            pen = currentColor == null ? null : pen.WithBrush(currentColor);
+        }
+
+        session.DrawGeometry(CurrentColorBrush.Resolve(Brush, currentColor), geometry, pen, transform);
     }
 }

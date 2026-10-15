@@ -222,6 +222,7 @@ public class ContentPresenter : InputUIComponent
 
         if (newContent is IUIComponent iuiComponent)
         {
+            if (iuiComponent.IsParked) ParkedSubtree.Revalidate(iuiComponent);
             _currentRoot = iuiComponent;
         }
         else
@@ -429,12 +430,17 @@ public class ContentPresenter : InputUIComponent
         RemoveLogicalChild(root);
     }
 
+    internal bool ShowsHandedContent =>
+        _currentRoot != null && ReferenceEquals(_currentRoot, _builtFor) &&
+        GetValueSource(ContentProperty) is ValuePriority.Binding or ValuePriority.Template;
+
     // LENT, not ours: an items control's own item goes back to it, and a tip element goes back to the element that set
     // it - the shared card shows one after another, and discarding the last one shown broke it for good. What this
     // presenter built for a tip, the label for a string, is its own all the same.
     private bool IsOwnersOwnItem(IUIComponent visual) =>
         visual != null && (TemplatedParent is ItemsControl owner && owner.Items.Contains(visual) ||
-                           TemplatedParent is ToolTip && IsGivenContent(visual));
+                           TemplatedParent is ToolTip && IsGivenContent(visual) ||
+                           ContentControl.IsLentContent(visual));
 
     private bool IsGivenContent(IUIComponent visual) =>
         ReferenceEquals(visual, _builtFor) || ReferenceEquals(visual, _outgoingRoot) && _outgoingIsContent;

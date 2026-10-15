@@ -17,6 +17,11 @@ internal abstract class BatchArena
     /// INSTANCE, not per type: the halo family runs two arenas of one type, one drawn under its shapes and one over.</summary>
     public byte BatchId { get; set; }
 
+    /// <summary>Whether this family's shader reads the element's alpha from its opacity slot, so a re-bake must leave the
+    /// opacity chain out of the color - or the fade lands twice. Said by the family, so a patch cannot disagree with the
+    /// walk about it.</summary>
+    public virtual bool ReadsFadeSlot => false;
+
     /// <summary>Does a recorded op draw THIS arena segment? Almost every family is a Segment op named by its id; the
     /// instanced fill is drawn by a flush op instead, because a flush covers every key of one clip under one coverage
     /// mark. Asked of the arena rather than assumed by the caller.</summary>

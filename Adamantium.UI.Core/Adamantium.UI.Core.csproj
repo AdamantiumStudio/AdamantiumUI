@@ -29,12 +29,14 @@
         <ProjectReference Include="$(AdamantiumEngineDir)Adamantium.ECS\Adamantium.ECS.csproj"/>
         <ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Fonts\Adamantium.Fonts.csproj"/>
         <ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Mathematics\Adamantium.Mathematics.csproj" />
+        <ProjectReference Include="$(AdamantiumEngineDir)Adamantium.MVVM\Adamantium.MVVM.csproj" />
     </ItemGroup>
 
     <ItemGroup Condition="'$(UseEngineSource)' != 'true'">
         <PackageReference Include="Adamantium.ECS" Version="$(AdamantiumEngineVersion)" />
         <PackageReference Include="Adamantium.Fonts" Version="$(AdamantiumEngineVersion)" />
         <PackageReference Include="Adamantium.Mathematics" Version="$(AdamantiumEngineVersion)" />
+        <PackageReference Include="Adamantium.MVVM" Version="$(AdamantiumEngineVersion)" />
     </ItemGroup>
 
     <ItemGroup>

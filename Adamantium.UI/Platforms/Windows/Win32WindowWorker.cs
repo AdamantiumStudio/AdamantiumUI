@@ -507,9 +507,9 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
     {
         if (window == null || window.Handle == IntPtr.Zero) return;
         var hwnd = window.Handle;
-        // Un-minimize first (Restore returns to the prior normal/maximized state); a minimized window can't be raised.
+        // Un-minimize first, through State as every restore goes; a minimized window can't be raised.
         if (chromeState == WindowState.Minimized)
-            Win32Interop.ShowWindow(hwnd, WindowShowStyle.Restore);
+            window.State = lastWindowState == WindowState.Maximized ? WindowState.Maximized : WindowState.Normal;
         // Request foreground the STANDARD way. When the calling process isn't already the foreground one (launched from a
         // background process, e.g. a shell/launcher), Windows deliberately refuses to steal focus and just flashes the
         // taskbar - and that's correct. The old topmost-toggle (HWND_TOPMOST -> HWND_NOTOPMOST) forced it above everything,

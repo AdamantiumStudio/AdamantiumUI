@@ -292,6 +292,11 @@ public sealed class AutomationSession : IAsyncDisposable
     private static Process Start(string path, LaunchOptions options, string pipe, string data)
     {
         var variables = new Dictionary<string, string>(options.Environment) { [AutomationProtocol.PipeVariable] = pipe };
+        if (options.VerifyFrames)
+        {
+            variables[AutomationProtocol.VerifyFramesVariable] = "1";
+        }
+
         if (data != null)
         {
             variables[ApplicationData.FolderVariable] = data;

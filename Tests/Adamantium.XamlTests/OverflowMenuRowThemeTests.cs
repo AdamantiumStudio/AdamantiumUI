@@ -6,8 +6,10 @@ using Adamantium.Mathematics;
 using Adamantium.UI.Controls;
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Controls.Primitives;
-using Adamantium.UI.Controls.Shapes;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Media;
+using Adamantium.UI.Core.Media.Drawings;
+using Adamantium.UI.Core.Media.Imaging;
 using Adamantium.UI.Core.Resources;
 using Adamantium.UI.Themes.GraphiteTheme;
 using Adamantium.UI.Themes.FluentTheme;
@@ -47,9 +49,17 @@ public class OverflowMenuRowThemeTests
         UIAppContext.Initialize(_app, null);
     }
 
+    private static readonly DrawingImage TestIcon = new()
+    {
+        Drawing = new GeometryDrawing { Geometry = new RectangleGeometry { Rect = new Rect(0, 0, 8, 8) }, Stroke = new CurrentColorBrush() }
+    };
+
     private void Use(string name)
     {
         _app.ResourceManager = new ResourceManager();
+        var icons = new ResourceDictionary();
+        icons.Add(nameof(TestIcon), TestIcon);
+        _app.ResourceManager.AddSource(new Window(), icons, ResourceScope.Global);
         typeof(UIAppContext).GetProperty(nameof(UIAppContext.Current)).SetValue(null, _app);
         var themes = new ThemeManager(new AdamantiumDependencyContainer());
         _app.ThemeManager = themes;
@@ -101,7 +111,8 @@ public class OverflowMenuRowThemeTests
             Assert.That(row.Header, Is.SameAs(command));
             Assert.That(row.HeaderTemplate, Is.Not.Null, "the theme's words for it");
             Assert.That(row.Command, Is.SameAs(command.Command));
-            Assert.That((row.Icon as Path)?.Data, Is.SameAs(command.Icon));
+            Assert.That((row.Icon as Image)?.Source, Is.SameAs(TestIcon), "the icon the command names by key");
+            Assert.That((row.Icon as Image)?.Foreground, Is.SameAs(row.Foreground), "drawn in the row's color");
         });
     }
 
@@ -112,7 +123,7 @@ public class OverflowMenuRowThemeTests
     {
         Use(theme);
         var bar = Built(new RibbonQuickAccess(), 320, 32);
-        var command = new WindowCommand { Label = "Save", IconData = "M0,0 L8,8", Command = new Counted() };
+        var command = new WindowCommand { Label = "Save", IconKey = nameof(TestIcon), Command = new Counted() };
 
         AssertTheRowCarries(RowFor((ContextMenu)bar.GetTemplateChild("PART_OverflowMenu"), command), command);
     }
@@ -123,7 +134,7 @@ public class OverflowMenuRowThemeTests
     {
         Use(theme);
         var bar = Built(new TitleBar(), 600, 32);
-        var command = new WindowCommand { Label = "Ribbon", IconData = "M0,0 L8,8", Command = new Counted() };
+        var command = new WindowCommand { Label = "Ribbon", IconKey = nameof(TestIcon), Command = new Counted() };
 
         AssertTheRowCarries(RowFor((ContextMenu)bar.GetTemplateChild("PART_RightOverflowMenu"), command), command);
     }

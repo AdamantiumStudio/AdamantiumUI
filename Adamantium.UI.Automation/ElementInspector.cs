@@ -62,6 +62,15 @@ internal static class ElementInspector
                 text.Append("  \"").Append(words).Append('"');
             }
 
+            // What text is drawn in: a caption missing on screen is as often an invisible color as a missing element.
+            if (element is TextBlock or ContentPresenter && element is UIComponent { Foreground: var foreground })
+            {
+                text.Append("  fg ").Append(foreground is Core.Media.SolidColorBrush solid
+                    ? $"#{solid.Color.A:X2}{solid.Color.R:X2}{solid.Color.G:X2}{solid.Color.B:X2} op {solid.Opacity:0.##}"
+                    : foreground?.GetType().Name ?? "null");
+                text.Append(" (").Append(((AdamantiumComponent)element).GetValueSource(UIComponent.ForegroundProperty)).Append(')');
+            }
+
             text.AppendLine();
             if (depth > 0 && level + 1 >= depth)
             {
@@ -138,6 +147,16 @@ internal static class ElementInspector
         if (!element.IsHitTestVisible)
         {
             layout.Append(" not-hit-testable");
+        }
+
+        // On screen but dead is a state the picture cannot tell apart from a live one.
+        if (element is FundamentalUIComponent { Lifecycle: not VisualLifecycle.Live } fundamental)
+        {
+            layout.Append(' ').Append(fundamental.Lifecycle);
+            if (fundamental.ReleasedInBatch > 0)
+            {
+                layout.Append(" released");
+            }
         }
 
         return layout.ToString();

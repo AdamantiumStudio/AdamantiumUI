@@ -32,6 +32,7 @@ public class SandboxViewsReleaseTests
         app.ThemeManager.AddStyleSet<RibbonShellStyleSet>();
         app.ResourceManager.AddSource(new ModuleResources(), typeof(ModuleIcons), ResourceScope.Global);
         app.ResourceManager.AddSource(new ModuleResources(), typeof(RibbonShellIcons), ResourceScope.Global);
+        app.ResourceManager.AddSource(new ModuleResources(), typeof(CaptionIcons), ResourceScope.Global);
         _ = typeof(RibbonShellView).Assembly;
 
         var dir = new DirectoryInfo(AppContext.BaseDirectory);

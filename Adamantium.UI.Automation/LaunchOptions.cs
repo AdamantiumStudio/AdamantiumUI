@@ -30,4 +30,9 @@ public sealed class LaunchOptions
     /// of its own (<see cref="ApplicationData.Folder"/>), deleted once the session has closed it: the run starts as the
     /// first one ever did and leaves nothing for the next. An application left running keeps its folder.</summary>
     public bool FreshData { get; set; }
+
+    /// <summary>Whether the application checks every frame it draws against its tree (the frame verifier) from its start;
+    /// true by default. A frame that parts from the tree is an error in the <see cref="ErrorJournal"/>, so the step after
+    /// which it was drawn fails - what a broken render cache shows is caught by a run, not by someone's eye.</summary>
+    public bool VerifyFrames { get; set; } = true;
 }

@@ -9,6 +9,10 @@ public static class AutomationProtocol
     /// <summary>The environment variable that names the agent's pipe. The agent starts only when it is set.</summary>
     public const string PipeVariable = "ADAM_AUTOMATION_PIPE";
 
+    /// <summary>The environment variable that, set to 1, has a driven application verify every frame it draws from its
+    /// start - see <see cref="LaunchOptions.VerifyFrames"/>.</summary>
+    public const string VerifyFramesVariable = "ADAM_VERIFY_FRAMES";
+
     private static readonly JsonSerializerOptions Options = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,

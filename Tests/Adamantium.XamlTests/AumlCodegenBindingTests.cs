@@ -41,6 +41,18 @@ public class AumlCodegenBindingTests
     }
 
     [Test]
+    public void AResourceKeyFromABinding_EmitsTheKeySource_AndCompiles()
+    {
+        var auml = WindowHeader + "><Button Content=\"{ObservableResource Key={Binding Icon}}\"/></Window>";
+        var code = Generate(auml, out var errors);
+
+        Assert.That(errors, Is.Empty, Errors(errors));
+        Assert.That(code, Does.Contain(".KeySource = binding_"));
+        Assert.That(code, Does.Contain("PropertyPath(\"Icon\")"));
+        Assert.That(Compile(auml), Is.Empty, Errors(Compile(auml)));
+    }
+
+    [Test]
     public void NestedMultiBinding_EmitsNestedMultiBindings()
     {
         var auml = WindowHeader + ">" +

@@ -11,7 +11,8 @@ using Path = Adamantium.UI.Controls.Shapes.Path;
 namespace Adamantium.UI.Controls;
 
 /// <summary>Draws an icon of either kind: path data - a <see cref="Geometry"/>, or its text - stroked with
-/// <see cref="Stroke"/>, or an <see cref="ImageSource"/> such as a <c>DrawingImage</c>, which carries its own colors.</summary>
+/// <see cref="Stroke"/>, or an <see cref="ImageSource"/> such as a <c>DrawingImage</c>, which carries its own colors
+/// except where it says <c>CurrentColor</c> - that is the presenter's Foreground.</summary>
 public class IconPresenter : Decorator
 {
     /// <summary>The icon: path data or a picture.</summary>

@@ -44,7 +44,7 @@ public class DrawnIconPatchRenderTests
             var session = context.ForControl(this);
             for (var i = 0; i < Count; i++)
             {
-                _icon.Render(session, new Rect(10, 40 + i * 24, 12, 20));
+                _icon.Render(session, new Rect(10, 40 + i * 24, 12, 20), null);
             }
         }
     }

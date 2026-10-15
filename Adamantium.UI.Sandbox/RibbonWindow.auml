@@ -14,6 +14,24 @@
          inside a selector inside a property element is unreadable, and these are the shell's vocabulary, not one
          control's detail. -->
     <ResourceContext.Resources>
+        <!-- A command that runs. Every form names its icon by the command's key, so the picture is the same resource the
+             ribbon's button shows; drawn in CurrentColor, it takes the bar's color. -->
+        <DataTemplate x:Key="QuickAccessButtonTemplate">
+            <Button Classes="QuickAccessButton"
+                    Ribbon.IsInQuickAccess="True"
+                    ToolTip="{Localize RibbonShellStrings, Key={Binding Name}}"
+                    Command="{Binding Command}">
+                <Button.ContextMenu>
+                    <ContextMenu>
+                        <RibbonQuickAccessMenuItem/>
+                    </ContextMenu>
+                </Button.ContextMenu>
+                <Image Source="{ObservableResource Key={Binding IconKey}}"
+                       Foreground="{Ancestor RibbonQuickAccess, Foreground}"
+                       Stretch="None"/>
+            </Button>
+        </DataTemplate>
+
         <DataTemplate x:Key="QuickAccessToggleTemplate">
             <ToggleButton Classes="QuickAccessButton"
                           Ribbon.IsInQuickAccess="True"
@@ -25,18 +43,16 @@
                         <RibbonQuickAccessMenuItem/>
                     </ContextMenu>
                 </ToggleButton.ContextMenu>
-                <Path Data="{Binding Icon}"
-                      Stroke="{Ancestor RibbonQuickAccess, Foreground}"
-                      StrokeThickness="1"
-                      HorizontalAlignment="Center"
-                      VerticalAlignment="Center"/>
+                <Image Source="{ObservableResource Key={Binding IconKey}}"
+                       Foreground="{Ancestor RibbonQuickAccess, Foreground}"
+                       Stretch="None"/>
             </ToggleButton>
         </DataTemplate>
 
         <!-- A command that drops its rows: the menu is built here, from the rows the command holds. -->
         <DataTemplate x:Key="QuickAccessDropDownTemplate">
             <RibbonDropDownButton Ribbon.Size="Small"
-                                  Ribbon.Icon="{Binding Icon}"
+                                  Ribbon.Icon="{ObservableResource Key={Binding IconKey}}"
                                   Ribbon.IsInQuickAccess="True"
                                   ToolTip="{Localize RibbonShellStrings, Key={Binding Name}}"
                                   Foreground="{Ancestor RibbonQuickAccess, Foreground}"
@@ -72,7 +88,7 @@
         <!-- A command that runs, with its other ways beside it: both halves stay. -->
         <DataTemplate x:Key="QuickAccessSplitTemplate">
             <RibbonSplitButton Ribbon.Size="Small"
-                               Ribbon.Icon="{Binding Icon}"
+                               Ribbon.Icon="{ObservableResource Key={Binding IconKey}}"
                                Ribbon.IsInQuickAccess="True"
                                ToolTip="{Localize RibbonShellStrings, Key={Binding Name}}"
                                Command="{Binding Command}"
@@ -119,7 +135,8 @@
                            Ribbon.RemoveFromQuickAccessCommand="{Binding RemoveFromQuickAccessCommand}"
                            Foreground="{Ancestor TitleBar, Foreground}">
             <RibbonQuickAccess.ItemTemplateSelector>
-                <ShellQuickAccessTemplateSelector Toggle="{ResourceReference QuickAccessToggleTemplate}"
+                <ShellQuickAccessTemplateSelector Button="{ResourceReference QuickAccessButtonTemplate}"
+                                                  Toggle="{ResourceReference QuickAccessToggleTemplate}"
                                                   DropDown="{ResourceReference QuickAccessDropDownTemplate}"
                                                   Split="{ResourceReference QuickAccessSplitTemplate}"/>
             </RibbonQuickAccess.ItemTemplateSelector>

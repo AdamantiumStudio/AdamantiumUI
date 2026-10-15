@@ -463,7 +463,7 @@ public class PropertyGridTests
             Binding = new Binding("Element.InputPins"),
             ItemHeader = new Binding("Name"),
             ItemAction = new Doing(),
-            ItemActionIcon = "BinIcon",
+            ItemActionIcon = "CanvasBinIcon",
             ItemActionTip = "Remove this socket"
         };
         sockets.Children.Add(new StringProperty { Header = "Name", Binding = new Binding("Name") });
@@ -475,7 +475,7 @@ public class PropertyGridTests
         Assert.Multiple(() =>
         {
             Assert.That(header.Definition.ShowActionButton, Is.True);
-            Assert.That(header.Definition.ActionIcon, Is.EqualTo("BinIcon"), "it would still be three dots");
+            Assert.That(header.Definition.ActionIcon, Is.EqualTo("CanvasBinIcon"), "it would still be three dots");
             Assert.That(header.Definition.ActionTip, Is.EqualTo("Remove this socket"));
         });
     }

@@ -106,7 +106,7 @@ public class DrawingGroup : Drawing
         }
     }
 
-    public override void Render(IDrawingSession session, Matrix4x4F transform)
+    public override void Render(IDrawingSession session, Matrix4x4F transform, Brush currentColor)
     {
         var own = Transform;
         // The group's own placement happens FIRST, in its parent's coordinates, so it pre-multiplies what came down.
@@ -114,7 +114,7 @@ public class DrawingGroup : Drawing
 
         foreach (var child in Children)
         {
-            child.Render(session, combined);
+            child.Render(session, combined, currentColor);
         }
     }
 }

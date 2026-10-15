@@ -27,7 +27,7 @@ public class PenTool : ICanvasTool
     /// <summary>How a rail shows this tool - see <see cref="SelectTool.Name"/>.</summary>
     public string Name { get; set; } = "Pen";
 
-    public string Icon { get; set; } = "ToolPenIcon";
+    public string Icon { get; set; } = "CanvasToolPenIcon";
 
     public Key Shortcut { get; set; } = Key.P;
 

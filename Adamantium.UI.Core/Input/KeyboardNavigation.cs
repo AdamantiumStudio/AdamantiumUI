@@ -95,6 +95,7 @@ public static class KeyboardNavigation
 
         _registered = true;
         Keyboard.KeyDownEvent.RegisterClassHandler<IInputComponent>(new KeyEventHandler(OnKeyDown));
+        Keyboard.KeyDownEvent.RegisterClassHandler<IInputComponent>(new KeyEventHandler(OnAltDown), handledEventsToo: true);
         FocusManager.GotFocusEvent.RegisterClassHandler<IInputComponent>(new RoutedEventHandler(OnGotFocus));
     }
 
@@ -252,6 +253,11 @@ public static class KeyboardNavigation
         return true;
     }
 
+    /// <summary>Moves focus inside <paramref name="container"/> with the ring only if <paramref name="ringVisible"/> - a
+    /// menu opened by a click takes the keyboard with it, and shows where it is once a key asks.</summary>
+    public static bool MoveInto(IUIComponent container, bool ringVisible) =>
+        MoveInto(container, ringVisible ? NavigationMethod.Tab : NavigationMethod.Unspecified);
+
     private static void OnKeyDown(object sender, KeyEventArgs e)
     {
         // At the END of the bubble, never on the focused element. A class handler runs BEFORE that element's own
@@ -296,7 +302,7 @@ public static class KeyboardNavigation
         if (!ReferenceEquals(RootOf(FocusManager.Focused), sender))
             return;
 
-        if (IsTabbing(direction.Value) && IsStop(FocusManager.Focused, direction.Value) && FocusManager.Reveal())
+        if (IsStop(FocusManager.Focused, direction.Value) && FocusManager.Reveal())
         {
             e.Handled = true;
             return;
@@ -304,6 +310,14 @@ public static class KeyboardNavigation
 
         if (Move(direction.Value))
             e.Handled = true;
+    }
+
+    private static void OnAltDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key is (Key.Alt or Key.LeftAlt or Key.RightAlt) && sender is IObservableComponent { ObservableParent: null })
+        {
+            FocusManager.Reveal();
+        }
     }
 
     private static IUIComponent RootOf(IUIComponent component)

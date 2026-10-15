@@ -797,6 +797,90 @@ public class KeyboardNavigationTests
         });
     }
 
+    private static void PressOn(Button element, Key key) =>
+        element.RaiseEvent(new KeyEventArgs(KeyboardDevice.CurrentDevice, key, InputModifiers.None, 0)
+        {
+            RoutedEvent = Keyboard.KeyDownEvent
+        });
+
+    private static (Button A, Button B) TwoButtonsInAWindow()
+    {
+        var a = NewButton("a");
+        var b = NewButton("b");
+        var stack = new StackPanel();
+        stack.Children.Add(a);
+        stack.Children.Add(b);
+        var window = new Window { Width = 200, Height = 100, Content = stack };
+        for (var i = 0; i < 5; i++) WindowExtension.UpdateTree(window);
+        return (a, b);
+    }
+
+    /// <summary>A click hides where the keyboard is; the first arrow shows it there, as the first Tab does, and only the
+    /// next one moves. A menu opened by a click has the keyboard on its first row - an arrow that moved at once would
+    /// skip a row nobody could see was current.</summary>
+    [Test]
+    public void AfterAClick_TheFirstArrowShowsTheRing_TheNextMoves()
+    {
+        var (a, b) = TwoButtonsInAWindow();
+        FocusManager.Focus(a, NavigationMethod.Mouse);
+
+        PressOn(a, Key.DownArrow);
+        Assert.Multiple(() =>
+        {
+            Assert.That(FocusManager.Focused, Is.SameAs(a), "the first arrow stayed");
+            Assert.That(FocusManager.IsFocusVisible, Is.True, "and showed the ring");
+        });
+
+        PressOn(a, Key.DownArrow);
+        Assert.That(FocusManager.Focused, Is.SameAs(b));
+    }
+
+    /// <summary>Alt shows where the keyboard is, as it does across Windows - and what takes the focus next shows it
+    /// too, so a menu opened by its key tip comes up with the ring.</summary>
+    [Test]
+    public void Alt_ShowsTheRing_WithoutMovingTheFocus()
+    {
+        var (a, _) = TwoButtonsInAWindow();
+        FocusManager.Focus(a, NavigationMethod.Mouse);
+
+        PressOn(a, Key.LeftAlt);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(FocusManager.Focused, Is.SameAs(a));
+            Assert.That(FocusManager.IsFocusVisible, Is.True);
+        });
+    }
+
+    /// <summary>A menu takes the keyboard in with it either way, and shows the ring only if the keyboard was in use.</summary>
+    [TestCase(false)]
+    [TestCase(true)]
+    public void MovingInto_TakesTheFocus_WithTheRingAsAsked(bool ringVisible)
+    {
+        var (a, _) = TwoButtonsInAWindow();
+
+        KeyboardNavigation.MoveInto((IUIComponent)a.VisualParent, ringVisible);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(FocusManager.Focused, Is.SameAs(a));
+            Assert.That(FocusManager.IsFocusVisible, Is.EqualTo(ringVisible));
+        });
+    }
+
+    [Test]
+    public void Alt_WithNothingFocused_MarksTheKeyboardInUse()
+    {
+        var (a, _) = TwoButtonsInAWindow();
+        FocusManager.Focus(a, NavigationMethod.Mouse);
+        FocusManager.ResetFocus();
+        Assume.That(FocusManager.IsFocusVisible, Is.False);
+
+        PressOn(a, Key.LeftAlt);
+
+        Assert.That(FocusManager.IsFocusVisible, Is.True);
+    }
+
     /// <summary>Closing an overlay puts the keyboard back where it was. Otherwise it is stranded on something that has
     /// just left the screen, and the next Tab starts again from the top of the window instead of carrying on from the
     /// control that opened the thing - which is exactly what Escape is pressed to undo.</summary>

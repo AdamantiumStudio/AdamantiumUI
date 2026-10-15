@@ -391,6 +391,40 @@ internal sealed class TransformTable
 
     public bool TryGetSlot(Guid nodeId, out int slot) => _slotByNode.TryGetValue(nodeId, out slot);
 
+    /// <summary>What each slot is held for right now and by whom, for the frame verifier: matrices, opacities and clips
+    /// share one table and one free list, so an index kept past its release reads a stranger's record.</summary>
+    internal Dictionary<int, (SlotUse Use, Guid Owner)> DescribeSlots()
+    {
+        var uses = _describedSlots;
+        uses.Clear();
+        foreach (var slot in _free) uses[slot] = (SlotUse.Free, Guid.Empty);
+        foreach (var (node, slot) in _slotByNode) uses[slot] = (SlotUse.Matrix, node);
+        foreach (var (owner, slot) in _opacitySlotByOwner) uses[slot] = (SlotUse.Opacity, owner.Owner);
+        foreach (var (owner, slot) in _clipSlotByOwner) uses[slot] = (SlotUse.Clip, owner);
+        return uses;
+    }
+
+    /// <summary>The matrix a shader reads from <paramref name="slot"/>, for the frame verifier.</summary>
+    internal Matrix4x4F MatrixAt(int slot) => slot >= 0 && slot < _count ? _cpu[slot].World : Matrix4x4F.Identity;
+
+    /// <summary>The clip rectangle (device px) a shader reads from <paramref name="slot"/>, for the frame verifier.</summary>
+    internal Vector4F ClipBoxAt(int slot)
+    {
+        if (slot < 0 || slot >= _count) return default;
+        ref var s = ref _cpu[slot];
+        return new Vector4F(s.World.M11, s.World.M12, s.World.M13, s.World.M14);
+    }
+
+    private readonly Dictionary<int, (SlotUse, Guid)> _describedSlots = new();
+
+    internal enum SlotUse
+    {
+        Free,
+        Matrix,
+        Opacity,
+        Clip
+    }
+
     /// <summary>Hands back every slot but the identity one, each as a fresh slot: for a cache that drops a whole tree at
     /// once, whose nodes never detach to release their slots one by one.</summary>
     public void ReleaseAll()

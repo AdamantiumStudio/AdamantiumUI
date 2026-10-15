@@ -29,7 +29,7 @@ public class TextTool : ICanvasTool
     /// <summary>How a rail shows this tool - see <see cref="SelectTool.Name"/>.</summary>
     public string Name { get; set; } = "Text";
 
-    public string Icon { get; set; } = "ToolTextIcon";
+    public string Icon { get; set; } = "CanvasToolTextIcon";
 
     public Key Shortcut { get; set; } = Key.T;
 

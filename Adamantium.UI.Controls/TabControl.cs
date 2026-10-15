@@ -1478,9 +1478,16 @@ public class TabControl : Selector
         if (!RemoveOnClose(tab, index)) return;
 
         if (ItemsSource is IList { IsReadOnly: false, IsFixedSize: false } src && index < src.Count)
+        {
             src.RemoveAt(index);
-        else
-            Items.RemoveAt(index);
+            return;
+        }
+
+        var closed = Items[index];
+        Items.RemoveAt(index);
+
+        // Closed for good, with the page it holds - only taken out, the tab kept its page alive and following the theme.
+        if (closed is UIComponent { IsDiscarded: false } element) DiscardedVisuals.PublishSubtree(element);
     }
 
     /// <summary>Whether closing takes the tab out of this strip. A docking group says no: its layout model is the truth

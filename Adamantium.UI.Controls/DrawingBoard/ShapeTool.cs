@@ -18,7 +18,7 @@ public class ShapeTool : ICanvasTool
     {
         Shape = shape;
         Name = shape.ToString();
-        Icon = "Tool" + shape + "Icon";
+        Icon = "CanvasTool" + shape + "Icon";
         Shortcut = shape switch
         {
             CanvasShape.Rectangle => Key.R,

@@ -42,7 +42,7 @@
                                     MinWidth="0" MinHeight="0" Padding="0"
                                     HorizontalAlignment="Left" MarginBottom="6"
                                     ToolTip="{Localize CanvasStrings.MovePanel}">
-                                <Image Source="{ObservableResource GripIcon}" Width="12" Height="12"/>
+                                <Image Source="{ObservableResource CanvasGripIcon}" Width="12" Height="12"/>
                             </Button>
                             <ContentPresenter x:Name="PART_Overlay"/>
                         </StackPanel>
@@ -129,17 +129,17 @@
                             <Button x:Name="PART_Grip" Width="32" Height="24"
                                     MinWidth="0" MinHeight="0" Padding="0"
                                     ToolTip="{Localize CanvasStrings.MovePanel}">
-                                <Image Source="{ObservableResource GripIcon}" Width="12" Height="12"/>
+                                <Image Source="{ObservableResource CanvasGripIcon}" Width="12" Height="12"/>
                             </Button>
                             <ToggleButton x:Name="PART_Snap" Width="32" Height="24" MarginLeft="5"
                                           MinWidth="0" MinHeight="0" Padding="0"
                                           ToolTip="{Localize CanvasStrings.StickToEdge}">
-                                <Image Source="{ObservableResource PaneSnapIcon}" Width="12" Height="12"/>
+                                <Image Source="{ObservableResource CanvasPaneSnapIcon}" Width="12" Height="12"/>
                             </ToggleButton>
                             <Button x:Name="PART_Turn" Width="32" Height="24" MarginLeft="5"
                                     MinWidth="0" MinHeight="0" Padding="0" Visibility="Collapsed"
                                     ToolTip="{Localize CanvasStrings.ToolsLayout}">
-                                <Image Source="{ObservableResource PaneTurnIcon}" Width="12" Height="12"/>
+                                <Image Source="{ObservableResource CanvasPaneTurnIcon}" Width="12" Height="12"/>
                             </Button>
                         </StackPanel>
 
@@ -261,13 +261,13 @@
                                          Width="28" Height="24" MinWidth="0" MinHeight="0" Padding="0"
                                          ToolTip="{Localize CanvasStrings.DrawingMode}"
                                          IsChecked="{TemplateBinding IsDrawing, Mode=TwoWay}">
-                                <Image Source="{ObservableResource ToolPenIcon}" Width="13" Height="13"/>
+                                <Image Source="{ObservableResource CanvasToolPenIcon}" Width="13" Height="13"/>
                             </RadioButton>
                             <RadioButton Classes="Toggle" GroupName="CanvasMode" MarginLeft="4"
                                          Width="28" Height="24" MinWidth="0" MinHeight="0" Padding="0"
                                          ToolTip="{Localize CanvasStrings.GraphMode}"
                                          IsChecked="{TemplateBinding IsGraph, Mode=TwoWay}">
-                                <Image Source="{ObservableResource ToolNodeIcon}" Width="13" Height="13"/>
+                                <Image Source="{ObservableResource CanvasToolNodeIcon}" Width="13" Height="13"/>
                             </RadioButton>
 
                             <Separator Orientation="Vertical" MarginLeft="6" MarginRight="6"/>
@@ -276,13 +276,13 @@
                                          Width="28" Height="24" MinWidth="0" MinHeight="0" Padding="0"
                                          ToolTip="{Localize CanvasStrings.Properties}"
                                          IsChecked="{TemplateBinding ShowsProperties, Mode=TwoWay}">
-                                <Image Source="{ObservableResource FaceInspectorIcon}" Width="13" Height="13"/>
+                                <Image Source="{ObservableResource CanvasFaceInspectorIcon}" Width="13" Height="13"/>
                             </RadioButton>
                             <RadioButton Classes="Toggle" GroupName="CanvasInspectorFace" MarginLeft="4"
                                          Width="28" Height="24" MinWidth="0" MinHeight="0" Padding="0"
                                          ToolTip="{Localize CanvasStrings.Layers}"
                                          IsChecked="{TemplateBinding ShowsStructure, Mode=TwoWay}">
-                                <Image Source="{ObservableResource FaceStructureIcon}" Width="13" Height="13"/>
+                                <Image Source="{ObservableResource CanvasFaceStructureIcon}" Width="13" Height="13"/>
                             </RadioButton>
                         </StackPanel>
 
@@ -293,33 +293,33 @@
                                     Visibility="{TemplateBinding GraphActions}"
                                     ToolTip="{Localize CanvasStrings.CommentFrame}"
                                     Command="{Ancestor CanvasInspector, Canvas.FrameCommand}">
-                                <Image Source="{ObservableResource FrameIcon}" Width="14" Height="14"/>
+                                <Image Source="{ObservableResource CanvasFrameIcon}" Width="14" Height="14"/>
                             </Button>
 
                             <Button Width="26" Height="26" MinWidth="0" MinHeight="0" Padding="0" MarginRight="4"
                                     Visibility="{TemplateBinding GraphActions}"
                                     ToolTip="{Localize CanvasStrings.AlignLeft}"
                                     Command="{Ancestor CanvasInspector, Canvas.AlignCommand}" CommandParameter="Left">
-                                <Image Source="{ObservableResource AlignLeftIcon}" Width="14" Height="14"/>
+                                <Image Source="{ObservableResource CanvasAlignLeftIcon}" Width="14" Height="14"/>
                             </Button>
                             <Button Width="26" Height="26" MinWidth="0" MinHeight="0" Padding="0" MarginRight="4"
                                     Visibility="{TemplateBinding GraphActions}"
                                     ToolTip="{Localize CanvasStrings.AlignCenter}"
                                     Command="{Ancestor CanvasInspector, Canvas.AlignCommand}"
                                     CommandParameter="HorizontalCenter">
-                                <Image Source="{ObservableResource AlignMiddleIcon}" Width="14" Height="14"/>
+                                <Image Source="{ObservableResource CanvasAlignMiddleIcon}" Width="14" Height="14"/>
                             </Button>
                             <Button Width="26" Height="26" MinWidth="0" MinHeight="0" Padding="0" MarginRight="4"
                                     Visibility="{TemplateBinding GraphActions}"
                                     ToolTip="{Localize CanvasStrings.AlignRight}"
                                     Command="{Ancestor CanvasInspector, Canvas.AlignCommand}" CommandParameter="Right">
-                                <Image Source="{ObservableResource AlignRightIcon}" Width="14" Height="14"/>
+                                <Image Source="{ObservableResource CanvasAlignRightIcon}" Width="14" Height="14"/>
                             </Button>
                             <Button Width="26" Height="26" MinWidth="0" MinHeight="0" Padding="0" MarginRight="8"
                                     Visibility="{TemplateBinding GraphActions}"
                                     ToolTip="{Localize CanvasStrings.AlignTop}"
                                     Command="{Ancestor CanvasInspector, Canvas.AlignCommand}" CommandParameter="Top">
-                                <Image Source="{ObservableResource AlignTopIcon}" Width="14" Height="14"/>
+                                <Image Source="{ObservableResource CanvasAlignTopIcon}" Width="14" Height="14"/>
                             </Button>
 
                             <Button Width="26" Height="26" MinWidth="0" MinHeight="0" Padding="0" MarginRight="4"
@@ -327,21 +327,21 @@
                                     ToolTip="{Localize CanvasStrings.DistributeVertically}"
                                     Command="{Ancestor CanvasInspector, Canvas.SpreadCommand}"
                                     CommandParameter="Vertical">
-                                <Image Source="{ObservableResource SpreadRowsIcon}" Width="14" Height="14"/>
+                                <Image Source="{ObservableResource CanvasSpreadRowsIcon}" Width="14" Height="14"/>
                             </Button>
                             <Button Width="26" Height="26" MinWidth="0" MinHeight="0" Padding="0" MarginRight="8"
                                     Visibility="{TemplateBinding GraphActions}"
                                     ToolTip="{Localize CanvasStrings.DistributeHorizontally}"
                                     Command="{Ancestor CanvasInspector, Canvas.SpreadCommand}"
                                     CommandParameter="Horizontal">
-                                <Image Source="{ObservableResource SpreadColumnsIcon}" Width="14" Height="14"/>
+                                <Image Source="{ObservableResource CanvasSpreadColumnsIcon}" Width="14" Height="14"/>
                             </Button>
 
                             <Button Width="26" Height="26" MinWidth="0" MinHeight="0" Padding="0" MarginRight="8"
                                     Visibility="{TemplateBinding GraphActions}"
                                     ToolTip="{Localize CanvasStrings.FitToView}"
                                     Command="{Ancestor CanvasInspector, Canvas.FitViewCommand}">
-                                <Image Source="{ObservableResource FitIcon}" Width="14" Height="14"/>
+                                <Image Source="{ObservableResource CanvasFitIcon}" Width="14" Height="14"/>
                             </Button>
 
                             <!-- THE DRAWING's own pair - see Fluent's set: SVG out and in, because a drawing is the
@@ -350,19 +350,19 @@
                                     Visibility="{TemplateBinding DrawingActions}"
                                     ToolTip="{Localize CanvasStrings.ExportSvg}"
                                     Command="{Ancestor CanvasInspector, Canvas.ExportSvgCommand}">
-                                <Image Source="{ObservableResource SaveIcon}" Width="13" Height="13"/>
+                                <Image Source="{ObservableResource CanvasSaveIcon}" Width="13" Height="13"/>
                             </Button>
                             <Button Width="26" Height="26" MinWidth="0" MinHeight="0" Padding="0" MarginRight="6"
                                     Visibility="{TemplateBinding DrawingActions}"
                                     ToolTip="{Localize CanvasStrings.OpenSvg}"
                                     Command="{Ancestor CanvasInspector, Canvas.ImportSvgCommand}">
-                                <Image Source="{ObservableResource OpenIcon}" Width="13" Height="13"/>
+                                <Image Source="{ObservableResource CanvasOpenIcon}" Width="13" Height="13"/>
                             </Button>
 
                             <Button Width="26" Height="26" MinWidth="0" MinHeight="0" Padding="0"
                                     ToolTip="{Localize CanvasStrings.ClearCanvas}"
                                     Command="{Ancestor CanvasInspector, Canvas.ClearCommand}">
-                                <Image Source="{ObservableResource BinIcon}" Width="14" Height="14"/>
+                                <Image Source="{ObservableResource CanvasBinIcon}" Width="14" Height="14"/>
                             </Button>
                         </WrapPanel>
 
@@ -530,13 +530,13 @@
                                 MarginRight="6" Padding="0"
                                 ToolTip="{Localize CanvasStrings.BringToFront}"
                                 Command="{Ancestor CanvasSelectionBar, Canvas.BringToFrontCommand}">
-                            <Image Source="{ObservableResource BringToFrontIcon}" Width="14" Height="14"/>
+                            <Image Source="{ObservableResource CanvasBringToFrontIcon}" Width="14" Height="14"/>
                         </Button>
                         <Button x:Name="PART_Back" Width="28" Height="26" MinWidth="0" MinHeight="0"
                                 MarginRight="6" Padding="0"
                                 ToolTip="{Localize CanvasStrings.SendToBack}"
                                 Command="{Ancestor CanvasSelectionBar, Canvas.SendToBackCommand}">
-                            <Image Source="{ObservableResource SendToBackIcon}" Width="14" Height="14"/>
+                            <Image Source="{ObservableResource CanvasSendToBackIcon}" Width="14" Height="14"/>
                         </Button>
 
                         <!-- ONE PLACE AT A TIME - see Fluent's set: the ends are not where arranging happens. -->
@@ -544,30 +544,30 @@
                                 MarginRight="6" Padding="0"
                                 ToolTip="{Localize CanvasStrings.BringForward}"
                                 Command="{Ancestor CanvasSelectionBar, Canvas.BringForwardCommand}">
-                            <Image Source="{ObservableResource BringForwardIcon}" Width="14" Height="14"/>
+                            <Image Source="{ObservableResource CanvasBringForwardIcon}" Width="14" Height="14"/>
                         </Button>
                         <Button x:Name="PART_Backward" Width="28" Height="26" MinWidth="0" MinHeight="0"
                                 MarginRight="6" Padding="0"
                                 ToolTip="{Localize CanvasStrings.SendBackward}"
                                 Command="{Ancestor CanvasSelectionBar, Canvas.SendBackwardCommand}">
-                            <Image Source="{ObservableResource SendBackwardIcon}" Width="14" Height="14"/>
+                            <Image Source="{ObservableResource CanvasSendBackwardIcon}" Width="14" Height="14"/>
                         </Button>
                         <Button x:Name="PART_Group" Width="28" Height="26" MinWidth="0" MinHeight="0"
                                 MarginRight="6" Padding="0"
                                 ToolTip="{Localize CanvasStrings.Group}"
                                 Command="{Ancestor CanvasSelectionBar, Canvas.GroupCommand}">
-                            <Image Source="{ObservableResource GroupIcon}" Width="14" Height="14"/>
+                            <Image Source="{ObservableResource CanvasGroupIcon}" Width="14" Height="14"/>
                         </Button>
                         <Button x:Name="PART_Ungroup" Width="28" Height="26" MinWidth="0" MinHeight="0"
                                 MarginRight="6" Padding="0"
                                 ToolTip="{Localize CanvasStrings.Ungroup}"
                                 Command="{Ancestor CanvasSelectionBar, Canvas.UngroupCommand}">
-                            <Image Source="{ObservableResource UngroupIcon}" Width="14" Height="14"/>
+                            <Image Source="{ObservableResource CanvasUngroupIcon}" Width="14" Height="14"/>
                         </Button>
                         <Button Width="28" Height="26" MinWidth="0" MinHeight="0" Padding="0"
                                 ToolTip="{Localize CanvasStrings.Delete}"
                                 Command="{Ancestor CanvasSelectionBar, Canvas.DeleteCommand}">
-                            <Image Source="{ObservableResource BinIcon}" Width="14" Height="14"/>
+                            <Image Source="{ObservableResource CanvasBinIcon}" Width="14" Height="14"/>
                         </Button>
                     </StackPanel>
 
@@ -594,12 +594,12 @@
                         <Button Width="30" Height="28" MinWidth="0" Padding="0" MarginRight="8"
                                 Command="{Ancestor CanvasViewBar, Canvas.UndoCommand}"
                                 ToolTip="{Localize CanvasStrings.Undo}">
-                            <Image Source="{ObservableResource UndoIcon}" Width="14" Height="14"/>
+                            <Image Source="{ObservableResource CanvasUndoIcon}" Width="14" Height="14"/>
                         </Button>
                         <Button Width="30" Height="28" MinWidth="0" Padding="0" MarginRight="12"
                                 Command="{Ancestor CanvasViewBar, Canvas.RedoCommand}"
                                 ToolTip="{Localize CanvasStrings.Redo}">
-                            <Image Source="{ObservableResource RedoIcon}" Width="14" Height="14"/>
+                            <Image Source="{ObservableResource CanvasRedoIcon}" Width="14" Height="14"/>
                         </Button>
 
                         <Button Content="-" Width="30" Height="28" MinWidth="0" Padding="0"
@@ -614,20 +614,20 @@
                         <Button Width="30" Height="28" MinWidth="0" Padding="0" MarginLeft="10"
                                 Command="{Ancestor CanvasViewBar, Canvas.HomeCommand}"
                                 ToolTip="{Localize CanvasStrings.GoHome}">
-                            <Image Source="{ObservableResource HomeIcon}" Width="12" Height="12"/>
+                            <Image Source="{ObservableResource CanvasHomeIcon}" Width="12" Height="12"/>
                         </Button>
                         <!-- WHICH VIEW HOME MEANS - see Fluent's set. -->
                         <Button Width="30" Height="28" MinWidth="0" Padding="0" MarginLeft="6"
                                 Command="{Ancestor CanvasViewBar, Canvas.RememberViewCommand}"
                                 ToolTip="{Localize CanvasStrings.KeepHome}">
-                            <Image Source="{ObservableResource KeepViewIcon}" Width="12" Height="12"/>
+                            <Image Source="{ObservableResource CanvasKeepViewIcon}" Width="12" Height="12"/>
                         </Button>
                         <!-- Offered only where it does something - see Fluent's set. -->
                         <Button Width="30" Height="28" MinWidth="0" Padding="0" MarginLeft="6"
                                 Visibility="{Ancestor CanvasViewBar, Canvas.KeepsHomeFace}"
                                 Command="{Ancestor CanvasViewBar, Canvas.ForgetViewCommand}"
                                 ToolTip="{Localize CanvasStrings.ForgetHome}">
-                            <Image Source="{ObservableResource ForgetViewIcon}" Width="12" Height="12"/>
+                            <Image Source="{ObservableResource CanvasForgetViewIcon}" Width="12" Height="12"/>
                         </Button>
                     </StackPanel>
                 </ControlTemplate>

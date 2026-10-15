@@ -2412,13 +2412,6 @@ public partial class RenderCache
         || _textRunByUnit.ContainsKey(u)
         || _sdfSlotByUnit.ContainsKey(u);
 
-    // Does this arena's shader pass read the element's alpha from the opacity slot? Only these do; the rest still fold
-    // the opacity chain into their color (see GlyphItem).
-    private bool ReadsFadeSlot(BatchArena arena) =>
-        ReferenceEquals(arena, _rectBatch) || ReferenceEquals(arena, _ellipseBatch)
-        || ReferenceEquals(arena, _gradientRectBatch) || ReferenceEquals(arena, _gradientEllipseBatch)
-        || arena is Retained.InstancedKeyArena;
-
     // Is this unit in the paint order at all? A group that is not draws nothing, so the walk never visits it and no slot
     // map holds its units - there is nothing to repaint and nothing to refuse over.
     private bool Drawing(IRenderUnit u) =>
@@ -2627,8 +2620,10 @@ public partial class RenderCache
         {
             // Through the arena's own stage: it knows how to bake one record of its key, and the same two calls are what
             // the splice uses to replace a record. Staged, written, and the stage dropped - a patch owns nothing between
-            // frames. The color keeps the opacity CHAIN here: this family's shader does not read the slot.
+            // frames. The arena says whether its shader reads the opacity slot, and then the color is baked without the
+            // chain, as the walk bakes it.
             var (fillArena, fillSlot) = _fillSlotByUnit[u];
+            if (fillArena.ReadsFadeSlot) FadeBySlot(u);
             fillArena.ClearStage();
             if (!fillArena.TryStage(u, bakeWorld, transformSlot, 0, RoundedClipSlot(u.Component, _frameScissor))) return false;
 
@@ -2928,7 +2923,7 @@ public partial class RenderCache
                 var bakeWorld = ResolveBake(device, u.Component, wt, out var slot);
                 // The families whose shaders read the opacity slot must be re-baked WITHOUT the chain in their color,
                 // exactly as the walk bakes them; the rest keep it. Which arena repairs this group says which it is.
-                if (ReadsFadeSlot(arena)) FadeBySlot(u);
+                if (arena.ReadsFadeSlot) FadeBySlot(u);
                 if (!arena.TryStage(u, bakeWorld, slot, TagOf(group), RoundedClipSlot(u.Component, fullScissor)))
                     return SpliceRefused($"notStageable<{u.GetType().Name} in {comp.GetType().Name}>");
                 // How many INSTANCES it added, which is not how many units were asked: one rectangle is one instance, one
@@ -3374,7 +3369,8 @@ public partial class RenderCache
         var at = OpIndexForRank(group.Order);
         _ops.Insert(at, new RenderOp
         {
-            Kind = arena.OpKind, Batch = arena.BatchId, SegId = seg, Clip = group.Component, Order = group.Order
+            Kind = arena.OpKind, Batch = arena.BatchId, SegId = seg, Clip = group.Component, Order = group.Order,
+            OrderFirst = group.Order   // one group's own segment spans its own rank; left at 0 it claimed every rank before it
         });
         NoteOpInserted(at);
 
@@ -3415,6 +3411,12 @@ public partial class RenderCache
         for (var i = from; i < to; i++)
         {
             if (_ops[i].Order <= order) continue;
+
+            // A segment still spanning the rank after SplitSegmentSpanningRank paints all of its content before the
+            // newcomer (or none of it overlaps), so the newcomer goes after it. Placed in front, a caption landed under the
+            // background of its own text box, glued into that segment with what follows it.
+            if (_ops[i].Kind == RenderOpKind.Segment && _ops[i].OrderFirst < order) continue;
+
             at = i;
             break;
         }

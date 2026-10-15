@@ -26,6 +26,11 @@ public class ObservableResource : MarkupExtension
     [DefaultProperty]
     public string Key { get; set; }
 
+    /// <summary>Where the key comes from when only the data knows it - the icon a command names:
+    /// <c>{ObservableResource Key={Binding Icon}}</c>. Followed as it changes, and the resource it names is tracked as
+    /// <see cref="Key"/>'s would be; the data names the resource, the element finds it.</summary>
+    public BindingBase KeySource { get; set; }
+
     /// <summary>Connects a live <see cref="ObservableResourceExpression"/> from the keyed resource to
     /// <paramref name="propertyName"/> on <paramref name="target"/>. Used by codegen, setters and triggers.</summary>
     /// <remarks>Works on non-tree targets such as gradient stops, which resolve against Theme and Global. A name the target
@@ -37,7 +42,7 @@ public class ObservableResource : MarkupExtension
         if (property == null)
         {
             Diagnostics.PropertyTrace.Log(
-                $"{target.GetType().Name} has no property {propertyName} for {{ObservableResource {Key}}}; nothing was connected.");
+                $"{target.GetType().Name} has no property {propertyName} for {{ObservableResource {Key ?? "Key={Binding}"}}}; nothing was connected.");
             return null;
         }
 
@@ -46,7 +51,7 @@ public class ObservableResource : MarkupExtension
         // everything: nothing would ever close that connection again.
         if (target is FundamentalUIComponent { ReleasedInBatch: > 0 }) return null;
 
-        var expression = new ObservableResourceExpression(target, property, Key, priority, token);
+        var expression = new ObservableResourceExpression(target, property, Key, priority, token, KeySource);
         expression.EstablishConnection();
 
         var map = _applied.GetValue(target, static _ => new Dictionary<(string, object), ObservableResourceExpression>());

@@ -1,0 +1,87 @@
+<ResourceDictionary xmlns:x="http://adamantium/ui/xaml/extensions"
+        xmlns="http://adamantium/ui">
+
+    <!-- The main window's caption commands, by key. Drawn in a 14-unit box, stated by the empty frame first in each and
+         started half a unit early, so a 1-unit stroke on whole coordinates lies on whole pixels. The stroke is
+         CurrentColor, so an icon takes the caption's color - the on-accent one while the window is active. -->
+
+    <DrawingImage x:Key="OpenWorkspaceIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="-0.5,-0.5,14,14"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M1,2 L13,2 L13,12 L1,12 Z M1,5 L13,5"
+                             Stroke="CurrentColor"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="OpenRibbonIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="-0.5,-0.5,14,14"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M1,1 L13,1 L13,13 L1,13 Z M1,4 L13,4 M4,4 L4,1 M3,7 L6,7 M3,10 L6,10 M8,6 L12,6 L12,11 L8,11 Z"
+                             Stroke="CurrentColor"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="ShowConfirmIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="-0.5,-0.5,14,14"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M1,2 L13,2 L13,12 L1,12 Z M4,6 L10,6 M4,9 L8,9"
+                             Stroke="CurrentColor"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="AboutIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="-0.5,-0.5,14,14"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M6.5,0 L13,6.5 L6.5,13 L0,6.5 Z"
+                             Stroke="CurrentColor"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="DiagnosticsIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="-0.5,-0.5,14,14"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M1,13 L1,7 M6,13 L6,2 M11,13 L11,9"
+                             Stroke="CurrentColor"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <!-- A diagonal resize double-arrow: resizing by the grip only. -->
+    <DrawingImage x:Key="GripResizeIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="-0.5,-0.5,14,14"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M2,2 L12,12 M12,12 L12,8 M12,12 L8,12 M2,2 L2,6 M2,2 L6,2"
+                             Stroke="CurrentColor"
+                             StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+</ResourceDictionary>

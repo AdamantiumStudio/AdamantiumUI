@@ -13,7 +13,7 @@ public class NodeTool : ICanvasTool
 {
     public string Name { get; set; } = "Node";
 
-    public string Icon { get; set; } = "ToolNodeIcon";
+    public string Icon { get; set; } = "CanvasToolNodeIcon";
 
     public string Description { get; set; } = "NodeDescription";
 

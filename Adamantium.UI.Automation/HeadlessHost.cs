@@ -10,7 +10,8 @@ using Adamantium.UI.Extensions;
 namespace Adamantium.UI.Automation;
 
 /// <summary>Windows built by a test in its own process, with no application loop and no GPU: the test's thread is the
-/// loop, and settling is done here - layout passes, bindings and queued work - instead of waiting for frames.</summary>
+/// loop, and settling is done here - layout passes, bindings and queued work, then the release of what was let go, as
+/// the application's idle frames release it - instead of waiting for frames.</summary>
 public sealed class HeadlessHost : IAutomationHost
 {
     private const int SettlePasses = 3;
@@ -54,6 +55,10 @@ public sealed class HeadlessHost : IAutomationHost
                 BindingUpdateQueue.Flush();
                 window.LayoutPopups();
             }
+        }
+
+        while (DiscardedVisuals.Drain(int.MaxValue) > 0)
+        {
         }
 
         return Task.CompletedTask;

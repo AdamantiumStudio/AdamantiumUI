@@ -497,6 +497,17 @@ public class Ribbon : Selector
         Follow((nameof(_tabSets), item), null);
     }
 
+    /// <summary>The drawer is the ribbon's own, only shown by its template: it goes with the ribbon.</summary>
+    protected override void OnDiscarded()
+    {
+        base.OnDiscarded();
+
+        if (Drawer is Base.UIComponent { RootVisual: null } drawer)
+        {
+            ParkedSubtree.Discard(drawer);
+        }
+    }
+
     private static void OnDrawerChanged(AdamantiumComponent sender, AdamantiumPropertyChangedEventArgs e)
     {
         if (sender is not Ribbon ribbon) return;

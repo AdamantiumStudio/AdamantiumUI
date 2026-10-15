@@ -1116,7 +1116,9 @@ public class DockingArea : Panel
         {
             foreach (var pane in _panesById.Values)
             {
-                if (pane.VisualParent == null) DiscardedVisuals.PublishSubtree(pane);
+                // Out of every window, not merely without a parent: a dropped strip is never laid out again and keeps
+                // naming its tabs' parent.
+                if (pane.RootVisual == null) DiscardedVisuals.PublishSubtree(pane);
             }
         }
 
@@ -1714,13 +1716,18 @@ public class DockingArea : Panel
         // The window is going either way (the platform has already closed it), so this is not a question - it is the
         // same bookkeeping ClosePaneAsync does, minus the asking. Anything else would leave the layout holding panes
         // whose window no longer exists while a dialog was on screen.
+        var closedDocuments = new List<Pane>();
         foreach (var id in ids)
         {
             if (!_panesById.TryGetValue(id, out var pane)) continue;
 
             var isTool = pane.Kind == PaneKind.Tool;
             if (isTool) Owner._hidden[id] = new HiddenSpot(Layout.FindGroup(id), 0, pane.Zone);
-            else _panesById.Remove(id);
+            else
+            {
+                _panesById.Remove(id);
+                closedDocuments.Add(pane);
+            }
 
             Layout.RemovePane(id);
             Owner.PaneClosed?.Invoke(Owner, new PaneClosedEventArgs(id, isTool));
@@ -1728,6 +1735,10 @@ public class DockingArea : Panel
 
         Layout.Roots.Remove(root);
         RebuildFamily();
+
+        // ...and each document goes with its view, as a close by its own button does: dropping the panel that held it
+        // does not, since a pane is the layout's.
+        foreach (var pane in closedDocuments) DiscardedVisuals.PublishSubtree(pane);
     }
 
     // A pane opened in a window of its OWN with no gesture behind it - DockZone.Floating from code. Same window, wiring
@@ -2226,7 +2237,7 @@ public class DockingArea : Panel
         return dropped;
     }
 
-    private static void DiscardDropped(List<PaneGroup> groups, List<PaneHost> hosts)
+    private void DiscardDropped(List<PaneGroup> groups, List<PaneHost> hosts)
     {
         var gone = new List<IFundamentalUIComponent>();
         CollectDroppedRoots(groups, gone);
@@ -2234,7 +2245,18 @@ public class DockingArea : Panel
         DiscardedVisuals.Publish(System.Runtime.InteropServices.CollectionsMarshal.AsSpan(gone));
     }
 
-    private static void CollectDroppedRoots(IEnumerable<IUIComponent> controls, List<IFundamentalUIComponent> gone)
+    // A panel carried into a floating window keeps its control, which the row it left still holds until its next layout.
+    private bool IsTrackedInFamily(PaneGroup group)
+    {
+        foreach (var area in Family)
+        {
+            if (area._groupsByNode.ContainsValue(group)) return true;
+        }
+
+        return false;
+    }
+
+    private void CollectDroppedRoots(IEnumerable<IUIComponent> controls, List<IFundamentalUIComponent> gone)
     {
         if (controls == null)
         {
@@ -2250,7 +2272,7 @@ public class DockingArea : Panel
         }
     }
 
-    private static void CollectDropped(IUIComponent node, List<IFundamentalUIComponent> gone)
+    private void CollectDropped(IUIComponent node, List<IFundamentalUIComponent> gone)
     {
         if (node is IFundamentalUIComponent component)
         {
@@ -2259,7 +2281,11 @@ public class DockingArea : Panel
 
         foreach (var child in node.VisualChildren)
         {
-            if (ReferenceEquals(child.VisualParent, node))
+            // A pane is the layout's and goes where the layout puts it - a strip lets its tabs go only at its next layout,
+            // so a dropped panel still holds them here. A closed document is discarded by its close, a hidden tool kept.
+            // Its body goes with it, not with the panel that last showed it.
+            if (ReferenceEquals(child.VisualParent, node) && child is not Pane && !ContentControl.IsLentContent(child)
+                && !(child is PaneGroup group && IsTrackedInFamily(group)))
             {
                 CollectDropped(child, gone);
             }

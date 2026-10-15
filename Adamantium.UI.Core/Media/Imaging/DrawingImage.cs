@@ -107,8 +107,10 @@ public class DrawingImage : ImageSource
 
     /// <summary>Replay into <paramref name="destination"/>. The drawing's own bounds are its viewbox: they map onto the
     /// destination rect, so an icon authored in any coordinate box lands correctly without the author converting
-    /// anything. Non-uniform on purpose - the caller (Image.Stretch) has already decided the aspect.</summary>
-    public void Render(IDrawingSession session, Rect destination)
+    /// anything. Non-uniform on purpose - the caller (Image.Stretch) has already decided the aspect.
+    /// <paramref name="currentColor"/> paints what the drawing writes CurrentColor - the Foreground of the element showing
+    /// it.</summary>
+    public void Render(IDrawingSession session, Rect destination, Brush currentColor)
     {
         var drawing = Drawing;
         if (drawing == null) return;
@@ -125,6 +127,6 @@ public class DrawingImage : ImageSource
                         Matrix4x4F.Scaling(scaleX, scaleY, 1) *
                         Matrix4x4F.Translation((float)destination.X, (float)destination.Y, 0);
 
-        drawing.Render(session, transform);
+        drawing.Render(session, transform, currentColor);
     }
 }

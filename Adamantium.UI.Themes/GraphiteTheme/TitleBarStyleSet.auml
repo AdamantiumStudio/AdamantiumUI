@@ -49,11 +49,11 @@
                                                 AutomationProperties.AutomationId="{Binding AutomationId}"
                                                 AutomationProperties.Name="{Binding Label}">
                                             <!-- {Ancestor} walks up to the hosting TitleBar and binds its LIVE
-                                                 Foreground, so a command icon follows the same active/inactive color
-                                                 as the window buttons (and re-resolves if the tree rebuilds). -->
-                                            <Path Data="{Binding Icon}"
-                                                    Stroke="{Ancestor TitleBar, Foreground}"
-                                                    StrokeThickness="{ResourceReference StrokeThinValue}"
+                                                 Foreground, so a command icon drawn in CurrentColor follows the same
+                                                 active/inactive color as the window buttons (and re-resolves if the
+                                                 tree rebuilds). -->
+                                            <Image Source="{ObservableResource Key={Binding IconKey}}" Stretch="None"
+                                                    Foreground="{Ancestor TitleBar, Foreground}"
                                                     HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                         </Button>
                                     </DataTemplate>
@@ -99,9 +99,8 @@
                                                     CommandParameter="{Binding CommandParameter}"
                                                     AutomationProperties.AutomationId="{Binding AutomationId}"
                                                     AutomationProperties.Name="{Binding Label}">
-                                                <Path Data="{Binding Icon}"
-                                                        Stroke="{Ancestor TitleBar, Foreground}"
-                                                        StrokeThickness="{ResourceReference StrokeThinValue}"
+                                                <Image Source="{ObservableResource Key={Binding IconKey}}" Stretch="None"
+                                                        Foreground="{Ancestor TitleBar, Foreground}"
                                                         HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                             </Button>
                                         </DataTemplate>
@@ -136,10 +135,9 @@
                                                 <Setter.Value>
                                                     <!-- The ROW's foreground: a popup is a detached subtree, so
                                                          {Ancestor} cannot reach the TitleBar from here. -->
-                                                    <Path x:Shared="False"
-                                                            Data="{Binding Icon}"
-                                                            Stroke="{Ancestor MenuItem, Foreground}"
-                                                            StrokeThickness="{ResourceReference StrokeThinValue}"
+                                                    <Image x:Shared="False"
+                                                            Source="{ObservableResource Key={Binding IconKey}}" Stretch="None"
+                                                            Foreground="{Ancestor MenuItem, Foreground}"
                                                             HorizontalAlignment="Center"
                                                             VerticalAlignment="Center"/>
                                                 </Setter.Value>

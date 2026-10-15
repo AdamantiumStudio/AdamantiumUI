@@ -17,4 +17,6 @@ internal readonly record struct TreeFact(
     bool Animated,
     bool Carried,
     int Clones,
-    bool Hidden);
+    bool Hidden,
+    float SelfOpacity,
+    Vector4F? TextColor);
