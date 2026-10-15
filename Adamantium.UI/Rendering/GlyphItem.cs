@@ -16,8 +16,8 @@ public struct GlyphItem
     /// <summary>Atlas UV rect: u, v, w, h.</summary>
     public Vector4F Source;
 
-    /// <summary>.x = transform-table slot; .y = atlas layer; .z = depth; .w = opacity slot, sent but not yet read (text
-    /// still folds the opacity chain into its color).</summary>
+    /// <summary>.x = transform-table slot; .y = atlas layer; .z = depth; .w = opacity slot, whose alpha the glyph shader
+    /// multiplies in - so the color carries only the element's own SelfOpacity, never the chain.</summary>
     public Vector4F Params;
 
     /// <summary>.x = the clip slot this glyph is cut by, or -1 (0 is a valid slot); .yzw = the glyph's synthesized bold

@@ -15,6 +15,8 @@ namespace Adamantium.UI.Rendering;
 // group's single draw. See InkEffect.fx.
 internal sealed class InkCollector : SdfBatchCollector<InkSegmentItem>
 {
+    public override bool ReadsFadeSlot => true;
+
     public static bool Enabled = true;
 
     private InkEffect Effect;

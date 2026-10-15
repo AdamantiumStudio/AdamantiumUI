@@ -60,8 +60,7 @@ public sealed class AutomationExecutor
             switch (request.Command)
             {
                 case AutomationCommand.WaitIdle:
-                    await _host.WaitForIdleAsync(timeout);
-                    return AutomationReply.Done();
+                    return await IdleAndHealthyAsync(request, timeout);
                 case AutomationCommand.WaitFor:
                     return await WaitForAsync(request.Target, timeout);
                 case AutomationCommand.Shutdown:
@@ -338,10 +337,38 @@ public sealed class AutomationExecutor
         return await SettledAsync(request, mark, timeout);
     }
 
+    // Idle, and then the tree checked for what a settled application must never show.
+    private async Task SettleAsync(TimeSpan timeout)
+    {
+        await _host.WaitForIdleAsync(timeout);
+        await _host.RunOnLoopAsync(() =>
+        {
+            TreeHealth.Check(_host.Windows);
+            return true;
+        }, timeout);
+    }
+
+    // A wait fails on a broken tree or frame too: a test that only waits and reads must not pass over one.
+    private async Task<AutomationReply> IdleAndHealthyAsync(AutomationRequest request, TimeSpan timeout)
+    {
+        var mark = ErrorJournal.Mark();
+        await SettleAsync(timeout);
+        var broken = ErrorJournal.Since(mark).Where(entry => entry.Kind == "Tree" || entry.Message.StartsWith("Frame verifier")).ToList();
+        if (broken.Count == 0 || request.AllowErrors)
+        {
+            return AutomationReply.Done();
+        }
+
+        var reply = AutomationReply.Failed($"The application settled broken:{Environment.NewLine}" +
+                                           string.Join(Environment.NewLine, broken.Select(entry => $"  [{entry.Kind}] {entry.Message}")));
+        reply.Errors = broken;
+        return reply;
+    }
+
     // The application settled after an action, with what the action left in the error journal.
     private async Task<AutomationReply> SettledAsync(AutomationRequest request, long mark, TimeSpan timeout)
     {
-        await _host.WaitForIdleAsync(timeout);
+        await SettleAsync(timeout);
         var reply = await _host.RunOnLoopAsync(() => Describe(request.Target), timeout);
 
         var quiet = ErrorJournal.Since(mark);

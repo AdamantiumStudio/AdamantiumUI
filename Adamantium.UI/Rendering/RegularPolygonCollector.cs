@@ -15,6 +15,8 @@ namespace Adamantium.UI.Rendering;
 // collectors, and deliberately its own: a polygon and an ellipse share a shape of record, not a shape.
 internal sealed class RegularPolygonCollector : ShapeSdfCollector<PolygonItem>
 {
+    public override bool ReadsFadeSlot => true;
+
     // A/B / safety-valve toggle: off routes every polygon back to its per-unit tessellated draw.
     public static bool Enabled = true;
 

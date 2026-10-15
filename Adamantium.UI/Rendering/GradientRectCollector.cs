@@ -14,6 +14,8 @@ namespace Adamantium.UI.Rendering;
 // stay in RectBatch. BakeGradientItem is shared with GradientEllipseCollector.
 internal sealed class GradientRectCollector : BrushSdfCollector<GradientRectItem>
 {
+    public override bool ReadsFadeSlot => true;
+
     public static bool Enabled = true;
 
     public GradientRectCollector() : base(1024) { }

@@ -1366,6 +1366,9 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
     /// </summary>
     public bool IsAttachedToVisualTree => RootVisual != null;
 
+    // The control this element is the Content of - see ContentControl.IsLentContent.
+    internal ContentControl ContentOwner { get; set; }
+
     /// <summary>Out of the tree on purpose and coming back, so nothing cached for it may be freed. Read off
     /// <see cref="FundamentalUIComponent.Lifecycle"/>; set through <see cref="ParkedSubtree"/>.</summary>
     public bool IsParked => Lifecycle == Core.VisualLifecycle.Parked;

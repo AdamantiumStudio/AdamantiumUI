@@ -14,6 +14,8 @@ namespace Adamantium.UI.Rendering;
 // Procedural pattern and noise rounded-rect fills in one instanced draw, for PatternBrush and NoiseBrush.
 internal sealed class PatternRectCollector : BrushSdfCollector<PatternRectItem>
 {
+    public override bool ReadsFadeSlot => true;
+
     public static bool Enabled = true;
 
     public PatternRectCollector() : base(512) { }

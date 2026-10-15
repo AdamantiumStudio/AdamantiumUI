@@ -303,6 +303,20 @@ All packages share one version.
   order, and logs each part that differs - the component, the field, both values, how the frame was drawn and its
   motion nodes - to a session log, up to `MaxReports` frames. No GPU work; off, it costs one read per frame. Sandbox:
   "Verify frames" in the diagnostics panel, counts on the plate.
+  - **What the shaders read, too.** The slots a unit's records point at - its opacity, and each text run's matrix,
+    opacity and clip slots - must be held for that element or an ancestor, not free or a stranger's (matrices,
+    opacities and clips share one table); every text run must lie inside the glyph batch, match its text's glyph count
+    and share no instance with another run; and the alpha a run is drawn at (its color times its opacity slot) must be
+    the tree's - the foreground, the element's `SelfOpacity` and the opacities above it up to a layer.
+  - **An error in the log.** Each new alarm is also logged as an error, so a driven run fails on it (see below).
+
+- Automation catches a broken render or tree on its own. An application started by `AutomationSession.LaunchAsync` -
+  scenarios, `adam-auto start` - verifies its frames from the start (`LaunchOptions.VerifyFrames`, true by default;
+  the variable `ADAM_VERIFY_FRAMES`). After every step, and in `WaitForIdleAsync`, the settled windows and their overlay
+  are checked for an element that was thrown away, parked or released while still in a window, and for a visible
+  presenter holding content it does not show. Each is reported once to the `ErrorJournal`, as are the verifier's
+  alarms, so the step fails with what broke - unless `AllowErrors` says the error is what is being checked.
+  `adam-auto visual` prints a node's lifecycle when it is not live.
 
 - `adam-auto wheel <selector> <notches>` and `AutomationElement.WheelAsync`: the mouse wheel turned over an element's
   middle inside the application, a notch at a time - positive away from the user, scrolling up.
@@ -1200,6 +1214,23 @@ All packages share one version.
 
 ### Fixed
 
+- Text with an opacity, or under a faded parent, is no longer drawn too faint once part of the window is repaired in
+  place: the repair baked the whole opacity chain into the glyph color while the shader multiplied it in again from
+  the opacity slot - a 0.35 label came out at 0.12. Ink, arrows, the canvas grid, polygons and patterns had the same
+  fault. Each batch family now says itself whether its shader reads the slot (`BatchArena.ReadsFadeSlot`), so the
+  repair and the full walk cannot disagree about it again.
+- A docking pane's body no longer goes blank - drawn empty, its labels gone, its commands dead - after switching tabs,
+  after the pane is taken out into a window and docked back, or in a tool panel from the start. The body is the pane's:
+  the panel showing it lends it a place and lets it go without discarding it, and so does a closing floating window,
+  while the pane lives and holds it as its `Content` (true of any `ContentControl`'s element content, so a plain
+  `TabControl`'s page too). A closed document's body still goes with it, and a tab closed by its close button in a
+  `TabControl` without `ItemsSource` is now discarded with its page. Layout no longer measures a discarded element: a
+  tool panel takes its own template, and the first template's content host, measured after it was thrown away, took
+  the body from the second.
+- A docking tab docked back from a floating window, and a whole panel taken out into one, no longer arrive thrown away -
+  a tab whose caption went missing after a few switches: the window's dropped panel, and the row a carried panel left,
+  still held them until their next layout and discarded them with themselves. Panes and carried panels are the
+  layout's; only a close discards them.
 - A minimized window brought back by `Activate` - a window opened again by navigation - is restored as it was, normal or
   maximized. It came back on screen still reading Minimized, took no sizes and no input, and showed its last frame.
 - The File menu's pages no longer come back empty on a second pass, in either shape. The page shown is the row's, not

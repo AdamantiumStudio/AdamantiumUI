@@ -15,6 +15,8 @@ namespace Adamantium.UI.Rendering;
 // coverage and one blend, so translucent heads have no seams and sharp tips no miter spikes.
 internal sealed class CanvasArrowCollector : SdfBatchCollector<CanvasArrowItem>
 {
+    public override bool ReadsFadeSlot => true;
+
     public static bool Enabled = true;
 
     private ArrowEffect Effect;

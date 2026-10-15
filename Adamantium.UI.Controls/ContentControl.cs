@@ -43,9 +43,16 @@ public class ContentControl : Control, IContentControl
    {
       if (a is ContentControl o)
       {
+         if (e.OldValue is UIComponent { ContentOwner: var owner } old && ReferenceEquals(owner, o)) old.ContentOwner = null;
+         if (e.NewValue is UIComponent content) content.ContentOwner = o;
          o.OnContentChangedInternal(e.OldValue, e.NewValue);
       }
    }
+
+   // Lent, not owned: the Content of a control still alive, which takes it along wherever it goes - a host showing it
+   // (a tab strip's page, a template's presenter) lets it go without discarding it.
+   internal static bool IsLentContent(IUIComponent visual) =>
+      visual is UIComponent { ContentOwner: { IsDiscarded: false } owner } && ReferenceEquals(owner.Content, visual);
     
    private static void OnContentTemplateChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
    {
@@ -193,6 +200,9 @@ public class ContentControl : Control, IContentControl
    protected override void OnDiscarded()
    {
       base.OnDiscarded();
+
+      // A view the view model still holds must not hold this control in turn.
+      if (Content is UIComponent { ContentOwner: var owner } held && ReferenceEquals(owner, this)) held.ContentOwner = null;
 
       if (Content is UIComponent { RootVisual: null, IsDiscarded: false, IsAwaitingReturn: false } content)
       {

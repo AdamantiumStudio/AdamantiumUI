@@ -140,6 +140,16 @@ internal static class ElementInspector
             layout.Append(" not-hit-testable");
         }
 
+        // On screen but dead is a state the picture cannot tell apart from a live one.
+        if (element is FundamentalUIComponent { Lifecycle: not VisualLifecycle.Live } fundamental)
+        {
+            layout.Append(' ').Append(fundamental.Lifecycle);
+            if (fundamental.ReleasedInBatch > 0)
+            {
+                layout.Append(" released");
+            }
+        }
+
         return layout.ToString();
     }
 

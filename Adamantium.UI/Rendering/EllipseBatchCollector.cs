@@ -19,6 +19,8 @@ namespace Adamantium.UI.Rendering;
 // at any DPI/zoom, no AA fringe). Sibling of RectBatchCollector; drawn in the SAME fill layer (below the text batch).
 internal sealed class EllipseBatchCollector : ShapeSdfCollector<EllipseItem>
 {
+    public override bool ReadsFadeSlot => true;
+
     // A/B / safety-valve toggle: off routes every ellipse back to its per-unit tessellated fill + AA-fringe draw.
     public static bool Enabled = true;
 

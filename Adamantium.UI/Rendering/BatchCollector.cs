@@ -109,6 +109,9 @@ internal abstract class BatchCollector<TItem> : BatchArena where TItem : struct
 
     public TItem ItemAt(int slot) => Items[slot];
 
+    /// <summary>How far the instances the segments still issue reach - see <see cref="RetainedExtent"/>.</summary>
+    internal int IssuedExtent => RetainedExtent;
+
     /// <summary>Absolute slot index of the item written by the LAST successful TryAdd (= its position in the retained
     /// buffer). RenderCache records it per unit during the walk so a partial-replay can address that unit's slot.</summary>
     public int LastSlot => Count - 1;

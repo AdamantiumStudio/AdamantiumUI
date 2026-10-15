@@ -36,6 +36,19 @@
   <Dock Target="id=DockingWindow/type=Tab" Position="Right" />
   <Absent Target="id=DockingWindow" />
   <Expect Target="id=DockingView/type=TabItem,name=Properties" Dock="Right" />
+  <!-- A pane's body lives on across tab switches and a trip out into a window and back: its option still reaches the
+       view model, which then refuses to close the pane. It used to come back drawn empty, its option dead. -->
+  <Select Target="id=DockingView/type=TabItem,name=Game" />
+  <Select Target="id=DockingView/type=TabItem,name=Scene" />
+  <Dock Target="id=DockingView/type=TabItem,name=Scene" Position="None" />
+  <Wait Target="id=DockingWindow,name=Scene" />
+  <Dock Target="id=DockingWindow/type=TabItem,name=Scene" Position="Fill" Beside="id=DockingView/type=TabItem,name=Game" />
+  <Absent Target="id=DockingWindow" />
+  <Select Target="id=DockingView/type=TabItem,name=Scene" />
+  <Toggle Target="id=DockingView/type=CheckBox,name=Unsaved changes (refuses to close outright)" />
+  <Invoke Target="id=DockingView/type=TabItem,name=Scene/id=CloseTab" />
+  <Wait Target="id=DockingView/type=Text,name=REFUSED: 'Scene' has unsaved changes. Untick the box in it and try again." />
+  <Toggle Target="id=DockingView/type=CheckBox,name=Unsaved changes (refuses to close outright)" />
   <Invoke Target="id=DockingView/name=Reset" />
   <Expect Target="id=DockingView/type=TabItem,name=Scene" Selected="True" />
   <Wait Target="id=DockingView/type=TabItem,name=Game" />

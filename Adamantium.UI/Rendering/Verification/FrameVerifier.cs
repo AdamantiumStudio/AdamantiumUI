@@ -29,7 +29,10 @@ internal sealed class FrameVerifier : IRenderCacheObserver
     private readonly HashSet<IUIComponent> _checked = [];
     private readonly List<string> _alarms = [];
     private readonly HashSet<IUIComponent> _animated = [];
+    private readonly HashSet<IUIComponent> _animatedBefore = [];
     private readonly HashSet<IUIComponent> _cloned = [];
+    private readonly Dictionary<Guid, IUIComponent> _byRenderId = new();
+    private readonly List<(int First, int Count, IUIComponent Component)> _runs = [];
 
     private int _state;
     private int _alarmCount;
@@ -129,9 +132,17 @@ internal sealed class FrameVerifier : IRenderCacheObserver
     private void NoteTheTree()
     {
         _facts.Clear();
+        _byRenderId.Clear();
         _stack.Clear();
+
+        // What the render thread played up to the last record is still its own in this one: the release that hands the
+        // value back marks the node for the NEXT record, so the record in which an animation ends draws its last played
+        // value under the tree's final one. Held for one record only - a value still stale after that is caught.
         _animated.Clear();
-        Compositor.CollectOwners(_animated);
+        _animated.UnionWith(_animatedBefore);
+        _animatedBefore.Clear();
+        Compositor.CollectOwners(_animatedBefore);
+        _animated.UnionWith(_animatedBefore);
         _stack.Push((_root, false));
 
         while (_stack.Count > 0)
@@ -159,7 +170,9 @@ internal sealed class FrameVerifier : IRenderCacheObserver
             }
 
             _facts[component] = new TreeFact(local, component.RenderSize, component.ClipToBounds, parent,
-                (float)component.Opacity, world, animated, carried, component.RenderClones?.Count ?? 0, hidden);
+                (float)component.Opacity, world, animated, carried, component.RenderClones?.Count ?? 0, hidden,
+                (float)component.SelfOpacity);
+            _byRenderId[component.RenderId] = component;
             RenderCache.PushChildrenInPaintOrder(_stack, component.VisualChildren, hidden);
         }
     }
@@ -203,6 +216,8 @@ internal sealed class FrameVerifier : IRenderCacheObserver
 
         _cloned.Clear();
 
+        CheckShaderInputs(live);
+
         _settings.CountVerified();
         if (_alarms.Count == 0)
         {
@@ -220,7 +235,11 @@ internal sealed class FrameVerifier : IRenderCacheObserver
         _lastAlarms = alarms;
         if (_settings.TakeReport())
         {
-            _settings.Log(Report(live));
+            var report = Report(live);
+            _settings.Log(report);
+
+            // An error, not only a line in the file: a driven run fails the step after which the frame was drawn.
+            Serilog.Log.Error("Frame verifier: {Report}", report);
         }
     }
 
@@ -272,6 +291,156 @@ internal sealed class FrameVerifier : IRenderCacheObserver
             link = frozen.RenderParent;
         }
     }
+
+    // What the shaders read, against the tree: the slots a unit's records point at (matrices, opacities and clips share
+    // one table, so an index kept past its release reads a stranger's record), and the glyph batch's runs and alpha.
+    private void CheckShaderInputs(RenderCache live)
+    {
+        var slots = live.DescribeSlots();
+        foreach (var unit in live.DescribeUnits())
+        {
+            if (unit.FadeSlot >= 0 && unit.Component is { } component && _facts.TryGetValue(component, out var fact) && !fact.Hidden)
+            {
+                CheckSlot(slots, unit.FadeSlot, TransformTable.SlotUse.Opacity, component, "takes its opacity from");
+            }
+        }
+
+        var extent = live.GlyphExtent;
+        _runs.Clear();
+        foreach (var (unit, first, count) in live.DescribeTextRuns())
+        {
+            if (unit.Component is not { } component || !_facts.TryGetValue(component, out var fact) || fact.Hidden)
+            {
+                continue;
+            }
+
+            if (first < 0 || count <= 0 || first + count > extent)
+            {
+                Alarm($"{ComponentText.Of(component)}: its glyphs [{first}, {first + count}) lie outside the {extent} the batch draws");
+                continue;
+            }
+
+            _runs.Add((first, count, component));
+            if (unit is RenderUnits.TextRenderUnit { TextComponent: { GlyphRun: { } glyphs } text } && glyphs.Count == count)
+            {
+                CheckGlyphs(live, slots, component, fact, live.GlyphAt(first), text, glyphs.Glyphs[0].HasOwnColor);
+            }
+            else
+            {
+                Alarm($"{ComponentText.Of(component)}: {count} glyph instances in the batch, its text has " +
+                      $"{(unit as RenderUnits.TextRenderUnit)?.TextComponent?.GlyphRun?.Count ?? 0}");
+            }
+        }
+
+        _runs.Sort((a, b) => a.First.CompareTo(b.First));
+        for (var i = 1; i < _runs.Count; i++)
+        {
+            var (before, after) = (_runs[i - 1], _runs[i]);
+            if (before.First + before.Count > after.First)
+            {
+                Alarm($"{ComponentText.Of(before.Component)} and {ComponentText.Of(after.Component)} share glyph instances " +
+                      $"[{after.First}, {Math.Min(before.First + before.Count, after.First + after.Count)})");
+            }
+        }
+    }
+
+    private void CheckGlyphs(RenderCache live, Dictionary<int, (TransformTable.SlotUse Use, Guid Owner)> slots,
+        IUIComponent component, TreeFact fact, GlyphItem glyph, RenderUnits.TextRenderComponent text, bool ownColor)
+    {
+        var matrix = (int)glyph.Params.X;
+        if (matrix != 0)
+        {
+            CheckSlot(slots, matrix, TransformTable.SlotUse.Matrix, component, "takes its place from");
+        }
+
+        var fade = (int)glyph.Params.W;
+        if (fade >= 0)
+        {
+            CheckSlot(slots, fade, TransformTable.SlotUse.Opacity, component, "takes its opacity from");
+        }
+
+        var clip = (int)glyph.Clip.X;
+        if (clip >= 0)
+        {
+            CheckSlot(slots, clip, TransformTable.SlotUse.Clip, component, "is cut by");
+        }
+
+        if (ownColor || text.Foreground is not Core.Media.SolidColorBrush foreground || TreeAlpha(live, component, fact) is not { } tree)
+        {
+            return;
+        }
+
+        var drawn = glyph.Color.W * (fade >= 0 ? live.SlotAlpha(fade) : 1f);
+        var expected = foreground.Color.ToVector4().W * tree;
+        if (Math.Abs(drawn - expected) > 0.02f)
+        {
+            Alarm($"{ComponentText.Of(component)}: its glyphs are drawn at alpha {drawn:0.###} (color {glyph.Color.W:0.###}" +
+                  $"{(fade >= 0 ? $" x slot {fade} {live.SlotAlpha(fade):0.###}" : string.Empty)}), the tree has {expected:0.###}");
+        }
+    }
+
+    // The tree's alpha for an element's own draws: its SelfOpacity and the opacities above it, up to a layer, which
+    // applies its own when it is composited. Null while any of them is animated.
+    private float? TreeAlpha(RenderCache live, IUIComponent component, TreeFact fact)
+    {
+        var alpha = fact.SelfOpacity;
+        for (var link = component; link != null && _facts.TryGetValue(link, out var above); link = above.Parent)
+        {
+            if (above.Animated)
+            {
+                return null;
+            }
+
+            if (live.DrawsIntoLayer(link))
+            {
+                break;
+            }
+
+            alpha *= above.Opacity;
+        }
+
+        return alpha;
+    }
+
+    private void CheckSlot(Dictionary<int, (TransformTable.SlotUse Use, Guid Owner)> slots, int slot, TransformTable.SlotUse expected,
+        IUIComponent component, string verb)
+    {
+        if (!slots.TryGetValue(slot, out var held))
+        {
+            Alarm($"{ComponentText.Of(component)}: {verb} slot {slot}, which nobody holds");
+            return;
+        }
+
+        if (held.Use != expected)
+        {
+            Alarm($"{ComponentText.Of(component)}: {verb} slot {slot}, held as {held.Use} by {OwnerText(held.Owner)}");
+            return;
+        }
+
+        if (held.Owner != Guid.Empty && !IsSelfOrAncestor(component, held.Owner))
+        {
+            Alarm($"{ComponentText.Of(component)}: {verb} slot {slot}, the {expected} of {OwnerText(held.Owner)} - " +
+                  "neither it nor an ancestor");
+        }
+    }
+
+    private bool IsSelfOrAncestor(IUIComponent component, Guid owner)
+    {
+        for (var link = component; link != null; link = _facts.TryGetValue(link, out var fact) ? fact.Parent : null)
+        {
+            if (link.RenderId == owner)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private string OwnerText(Guid owner) =>
+        owner == Guid.Empty ? "nobody"
+        : _byRenderId.TryGetValue(owner, out var component) ? ComponentText.Of(component)
+        : $"an element not in the tree ({owner.ToString()[..8]})";
 
     private void Alarm(string line)
     {

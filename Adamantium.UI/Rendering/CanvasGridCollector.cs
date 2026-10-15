@@ -15,6 +15,8 @@ namespace Adamantium.UI.Rendering;
 // on a mark, instead of a rectangle per mark.
 internal sealed class CanvasGridCollector : SdfBatchCollector<CanvasGridItem>
 {
+    public override bool ReadsFadeSlot => true;
+
     public static bool Enabled = true;
 
     private GridEffect Effect;

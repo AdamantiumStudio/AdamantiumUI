@@ -17,6 +17,8 @@ namespace Adamantium.UI.Rendering;
 // the GPU by their slot, with per-instance color. Drawn above the rect batch.
 internal sealed class TextBatchCollector : BatchCollector<GlyphItem>
 {
+    public override bool ReadsFadeSlot => true;
+
     private FontAtlas _atlas;            // the pending segment's atlas (one bind per draw)
     private FontRenderer _fontRenderer;
 
