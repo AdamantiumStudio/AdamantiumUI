@@ -88,6 +88,21 @@ public class CanvasItemChangesTests
         Assert.That(heard, Does.Contain("Width").And.Contain("Height").And.Contain("Thickness"));
     }
 
+    // TEXT made bigger is a bigger FONT, and a box dragged by its top-left corner moves it as well.
+    [Test]
+    public void ResizingTextSaysItsNewFontSizeAndPlace()
+    {
+        var text = new TextItem(new Vector2(0, 0), "words", Brushes.White, 12);
+        var box = text.Bounds;
+        var heard = Heard(text);
+
+        text.Resize(new Rect(-10, -10, box.Width * 2, box.Height * 2));
+
+        Assert.That(heard, Does.Contain("FontSize").And.Contain("Width").And.Contain("Height")
+            .And.Contain("Origin").And.Contain("X").And.Contain("Y").And.Contain("Bounds"));
+        Assert.That(text.FontSize, Is.EqualTo(24).Within(1e-9));
+    }
+
     [Test]
     public void ACurveAndAFrameSayTheirBox()
     {

@@ -15,11 +15,8 @@ namespace Adamantium.UI.Controls.DrawingBoard;
 /// part of the drawing and grows with the zoom, the way a label written on paper does.
 /// <para>Which is why it is shaped at the size it is DRAWN at rather than once: a glyph laid out for one size and then
 /// scaled is a blurred glyph, and the whole reason this engine keeps text as glyphs is not to do that.</para></summary>
-public class TextItem : AdamantiumViewModel, ICanvasItem
+public partial class TextItem : AdamantiumViewModel, ICanvasItem
 {
-    private Vector2 _origin;
-    private double _fontSize;
-
     // Two layouts: the drawing keeps a reference to its layout, so measuring at world size must not reshape it.
     private TextLayout _draw;
     private TextLayout _measure;
@@ -44,19 +41,8 @@ public class TextItem : AdamantiumViewModel, ICanvasItem
     public ICanvasItem Copy() => new TextItem(Origin, Text, Brush?.Copy(), FontSize, FontFamily);
 
     /// <summary>Where the text starts, in the world - its top-left corner.</summary>
-    public Vector2 Origin
-    {
-        get => _origin;
-        set
-        {
-            if (SetProperty(ref _origin, value))
-            {
-                RaisePropertyChanged(nameof(X));
-                RaisePropertyChanged(nameof(Y));
-                RaisePropertyChanged(nameof(Bounds));
-            }
-        }
-    }
+    [Bindable, Affects(nameof(X), nameof(Y), nameof(Bounds))]
+    public partial Vector2 Origin { get; set; }
 
     public string Text { get; set; }
 
@@ -68,19 +54,8 @@ public class TextItem : AdamantiumViewModel, ICanvasItem
     public void PaintWith(Color color) => Brush = new SolidColorBrush(color);
 
     /// <summary>The height of the letters in WORLD units.</summary>
-    public double FontSize
-    {
-        get => _fontSize;
-        set
-        {
-            if (SetProperty(ref _fontSize, value))
-            {
-                RaisePropertyChanged(nameof(Width));
-                RaisePropertyChanged(nameof(Height));
-                RaisePropertyChanged(nameof(Bounds));
-            }
-        }
-    }
+    [Bindable, Affects(nameof(Width), nameof(Height), nameof(Bounds))]
+    public partial double FontSize { get; set; }
 
     /// <summary>The face, or nothing for the application's own.</summary>
     public FontFamily FontFamily { get; set; }
@@ -162,32 +137,8 @@ public class TextItem : AdamantiumViewModel, ICanvasItem
 
         // Only away from zero: a floor in world units is a floor on the ZOOM - typed at 1000x the text is a hundredth
         // of a unit tall, and 0.01 stopped it a third of the way down.
-        var fontSize = Math.Max(1e-6, FontSize * world.Height / was.Height);
-        var origin = new Vector2(world.X, world.Y);
-        var grew = !fontSize.Equals(_fontSize);
-        var moved = origin != _origin;
-
-        _fontSize = fontSize;
-        _origin = origin;
-
-        if (grew)
-        {
-            RaisePropertyChanged(nameof(FontSize));
-            RaisePropertyChanged(nameof(Width));
-            RaisePropertyChanged(nameof(Height));
-        }
-
-        if (moved)
-        {
-            RaisePropertyChanged(nameof(Origin));
-            RaisePropertyChanged(nameof(X));
-            RaisePropertyChanged(nameof(Y));
-        }
-
-        if (grew || moved)
-        {
-            RaisePropertyChanged(nameof(Bounds));
-        }
+        FontSize = Math.Max(1e-6, FontSize * world.Height / was.Height);
+        Origin = new Vector2(world.X, world.Y);
     }
 
     public bool HitTest(Vector2 world, double tolerance)

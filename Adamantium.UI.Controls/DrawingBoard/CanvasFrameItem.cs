@@ -11,14 +11,13 @@ namespace Adamantium.UI.Controls.DrawingBoard;
 
 /// <summary>A titled comment frame drawn behind a group of nodes. It owns nothing, but a drag carries what stood on it
 /// (<see cref="Catch"/>); it sits at the bottom of the order.</summary>
-public class CanvasFrameItem : AdamantiumViewModel, ICanvasItem
+public partial class CanvasFrameItem : AdamantiumViewModel, ICanvasItem
 {
     private readonly List<ICanvasItem> _caught = new();
 
     private Pen _pen;
     private Brush _penBrush;
     private double _penWidth = double.NaN;
-    private Rect _world;
 
     public CanvasFrameItem(Rect world, string title, Brush stroke, Brush fill = null)
     {
@@ -29,17 +28,8 @@ public class CanvasFrameItem : AdamantiumViewModel, ICanvasItem
     }
 
     /// <summary>The box it covers, in WORLD units.</summary>
-    public Rect World
-    {
-        get => _world;
-        set
-        {
-            if (SetProperty(ref _world, value))
-            {
-                RaisePropertyChanged(nameof(Bounds));
-            }
-        }
-    }
+    [Bindable, Affects(nameof(Bounds))]
+    public partial Rect World { get; set; }
 
     /// <summary>What it says along the top. The whole point of the thing.</summary>
     public string Title { get; set; }

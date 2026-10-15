@@ -12,13 +12,11 @@ namespace Adamantium.UI.Controls.DrawingBoard;
 
 /// <summary>A trail of ink with a width and a color. Points are float offsets from the stroke's origin, precise at any
 /// distance and moved by one field.</summary>
-public class StrokeItem : AdamantiumViewModel, ICanvasItem
+public partial class StrokeItem : AdamantiumViewModel, ICanvasItem
 {
     private readonly List<StrokePoint> _points = new();
     private Vector2F _min = new(float.MaxValue, float.MaxValue);
     private Vector2F _max = new(float.MinValue, float.MinValue);
-    private Vector2 _origin;
-    private double _thickness;
 
     // The stroke's points in the canvas's coordinates, and the parameter block that carries them to the ink pass. Both
     // are kept and re-pointed rather than made per frame - a stroke being drawn hands the same array over every frame
@@ -45,17 +43,8 @@ public class StrokeItem : AdamantiumViewModel, ICanvasItem
     }
 
     /// <summary>Where the stroke's own coordinates start, in the world.</summary>
-    public Vector2 Origin
-    {
-        get => _origin;
-        set
-        {
-            if (SetProperty(ref _origin, value))
-            {
-                RaisePlace();
-            }
-        }
-    }
+    [Bindable, Affects(nameof(X), nameof(Y), nameof(Bounds))]
+    public partial Vector2 Origin { get; set; }
 
     public Brush Brush { get; set; }
 
@@ -66,17 +55,8 @@ public class StrokeItem : AdamantiumViewModel, ICanvasItem
 
     /// <summary>How wide the ink is, in WORLD units - so it grows with the zoom, the way ink on paper does. What must
     /// NOT scale is the grid and the handles; those are stated in screen pixels.</summary>
-    public double Thickness
-    {
-        get => _thickness;
-        set
-        {
-            if (SetProperty(ref _thickness, value))
-            {
-                RaiseBox();
-            }
-        }
-    }
+    [Bindable, Affects(nameof(X), nameof(Y), nameof(Width), nameof(Height), nameof(Bounds))]
+    public partial double Thickness { get; set; }
 
     public IReadOnlyList<StrokePoint> Points => _points;
 
@@ -163,14 +143,13 @@ public class StrokeItem : AdamantiumViewModel, ICanvasItem
         // The thickness first, from how much the whole box changed - then the box the POINTS have to land in is the
         // wanted one minus that new thickness. Done the other way round the ink would be scaled by a box it had already
         // changed, and every resize would drift by half a nib.
-        var thickness = _thickness;
-        _thickness *= (world.Width / from.Width + world.Height / from.Height) / 2;
+        var thickness = Thickness * (world.Width / from.Width + world.Height / from.Height) / 2;
 
-        var half = Thickness / 2;
+        var half = thickness / 2;
         var inner = new Rect(from.X + half, from.Y + half,
-            Math.Max(0, from.Width - Thickness), Math.Max(0, from.Height - Thickness));
+            Math.Max(0, from.Width - thickness), Math.Max(0, from.Height - thickness));
         var target = new Rect(world.X + half, world.Y + half,
-            Math.Max(0, world.Width - Thickness), Math.Max(0, world.Height - Thickness));
+            Math.Max(0, world.Width - thickness), Math.Max(0, world.Height - thickness));
 
         // A stroke with no extent in one direction - a horizontal line - has nothing to scale there, only somewhere to
         // be put. Scaling it by a ratio of zeroes would send every point to NaN.
@@ -188,12 +167,9 @@ public class StrokeItem : AdamantiumViewModel, ICanvasItem
         }
 
         Rebuild();
-        RaiseBoxIfMoved(from);
 
-        if (_thickness != thickness)
-        {
-            RaisePropertyChanged(nameof(Thickness));
-        }
+        if (Thickness.Equals(thickness)) RaiseBoxIfMoved(from);
+        else Thickness = thickness;
     }
 
     /// <summary>Rubs a round hole in the stroke, cutting at the circle's crossings, and returns the pieces left (none, one or
@@ -337,13 +313,6 @@ public class StrokeItem : AdamantiumViewModel, ICanvasItem
         {
             RaiseBox();
         }
-    }
-
-    private void RaisePlace()
-    {
-        RaisePropertyChanged(nameof(X));
-        RaisePropertyChanged(nameof(Y));
-        RaisePropertyChanged(nameof(Bounds));
     }
 
     private void RaiseBox()

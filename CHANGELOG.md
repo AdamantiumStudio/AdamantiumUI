@@ -1002,6 +1002,9 @@ All packages share one version.
   items (`ElementItem`, `ShapeItem`, `PathItem`, `CurveItem`, `StrokeItem`, `TextItem`, `GroupItem`, `ConnectionItem`,
   `CanvasFrameItem`, `CanvasSelectionFrame`) derive from `AdamantiumViewModel`, which keeps `SetProperty` and
   `RaisePropertyChanged`, and `Region` implements `INotifyPropertyChanged` itself.
+- `Adamantium.UI.Controls` builds with the MVVM generator. The canvas items' stored properties (`Origin` and `Thickness`
+  of a stroke, `Origin` and `FontSize` of text, `World` of a path and a frame) are `[Bindable]` partial properties, and
+  a resized stroke or text sets them like anyone else instead of writing their fields and raising by hand.
 - `Text` and `TextProperty` moved from `TextBoxBase` to `TextBox`. `TextBoxBase` edits the property its control names
   (`EditedTextProperty`), and a control can mask what is shown (`DisplayedText`), keep no undo history
   (`KeepsUndoHistory`) and decide its word boundaries (`WordBoundary`, `WordAt`). Code that read `TextBoxBase.Text`
