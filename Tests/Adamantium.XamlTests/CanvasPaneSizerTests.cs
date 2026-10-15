@@ -262,7 +262,11 @@ public class CanvasPaneSizerTests
 
         void Walk(IUIComponent at)
         {
-            if (at is Border { Background: SolidColorBrush brush } && brush.Color.A > 0) painted++;
+            if (at is Border { Background: SolidColorBrush brush } && brush.Color.A > 0 ||
+                at is Adamantium.UI.Controls.Shapes.Shape { Fill: SolidColorBrush fill } && fill.Color.A > 0)
+            {
+                painted++;
+            }
 
             foreach (var child in at.VisualChildren) Walk(child);
         }

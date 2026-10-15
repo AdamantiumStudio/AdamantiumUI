@@ -220,12 +220,9 @@
                                     ToolTip="{Localize CanvasStrings.ResizePanel}">
                                 <StackPanel Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center"
                                             Cursor="SizeEWE">
-                                    <Border Width="3" Height="3" CornerRadius="1.5"
-                                            Background="{ObservableResource TextFillColorSecondary}"/>
-                                    <Border Width="3" Height="3" CornerRadius="1.5" MarginTop="3"
-                                            Background="{ObservableResource TextFillColorSecondary}"/>
-                                    <Border Width="3" Height="3" CornerRadius="1.5" MarginTop="3"
-                                            Background="{ObservableResource TextFillColorSecondary}"/>
+                                    <Ellipse Width="3" Height="3" Fill="{ObservableResource TextFillColorSecondary}"/>
+                                    <Ellipse Width="3" Height="3" MarginTop="3" Fill="{ObservableResource TextFillColorSecondary}"/>
+                                    <Ellipse Width="3" Height="3" MarginTop="3" Fill="{ObservableResource TextFillColorSecondary}"/>
                                 </StackPanel>
                             </Border>
 
@@ -234,12 +231,9 @@
                                     ToolTip="{Localize CanvasStrings.ResizePanel}">
                                 <StackPanel Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center"
                                             Cursor="SizeEWE">
-                                    <Border Width="3" Height="3" CornerRadius="1.5"
-                                            Background="{ObservableResource TextFillColorSecondary}"/>
-                                    <Border Width="3" Height="3" CornerRadius="1.5" MarginTop="3"
-                                            Background="{ObservableResource TextFillColorSecondary}"/>
-                                    <Border Width="3" Height="3" CornerRadius="1.5" MarginTop="3"
-                                            Background="{ObservableResource TextFillColorSecondary}"/>
+                                    <Ellipse Width="3" Height="3" Fill="{ObservableResource TextFillColorSecondary}"/>
+                                    <Ellipse Width="3" Height="3" MarginTop="3" Fill="{ObservableResource TextFillColorSecondary}"/>
+                                    <Ellipse Width="3" Height="3" MarginTop="3" Fill="{ObservableResource TextFillColorSecondary}"/>
                                 </StackPanel>
                             </Border>
                         </Grid>
