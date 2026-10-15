@@ -73,6 +73,11 @@ public class DockingRegionTests
 
     private sealed class Script(string id) : Dockable(id, DockZone.Center);
 
+    private sealed class Hierarchy() : DockablePaneViewModel(() => "Hierarchy", zone: DockZone.Left)
+    {
+        public override PaneKind PaneKind => PaneKind.Tool;
+    }
+
     private sealed class SceneModel;
 
     private sealed class Resolver : IDependencyResolver
@@ -139,6 +144,43 @@ public class DockingRegionTests
             Assert.That(docking.PlacementOf(output).Zone, Is.EqualTo(DockZone.Bottom));
             Assert.That(docking.PlacementOf(output).State, Is.EqualTo(PaneState.Open));
             Assert.That(docking.PlacementOf(new Output()).Zone, Is.EqualTo(DockZone.None), "not here");
+        });
+    }
+
+    // A pane there is one of is opened by its type: no key to make up, and asking again brings back the open one.
+    [Test]
+    public async Task OpenAsync_OpensTheOnePaneOfAType_AndBringsItBack()
+    {
+        var (area, _, docking, _, resolver) = Docking();
+
+        var first = await docking.OpenAsync<Timeline>();
+        var made = resolver.Made;
+        var second = await docking.OpenAsync<Timeline>();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(second, Is.SameAs(first));
+            Assert.That(resolver.Made, Is.EqualTo(made), "the open one is brought back, not made again");
+            Assert.That(docking.ViewModels.OfType<Timeline>().Count(), Is.EqualTo(1));
+            Assert.That(area.PaneById("timeline"), Is.Not.Null);
+        });
+    }
+
+    // The base view model is all a pane needs: its type names it, its title labels the tab, and it opens where it says.
+    [Test]
+    public async Task ADockablePaneViewModel_IsNamedByItsType_AndLabelsItsTab()
+    {
+        var (area, _, docking, _, _) = Docking();
+
+        var hierarchy = await docking.OpenAsync<Hierarchy>();
+        var pane = area.PaneById(nameof(Hierarchy));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(pane, Is.Not.Null);
+            Assert.That(pane.Header, Is.EqualTo("Hierarchy"));
+            Assert.That(pane.Kind, Is.EqualTo(PaneKind.Tool));
+            Assert.That(docking.PlacementOf(hierarchy).Zone, Is.EqualTo(DockZone.Left));
         });
     }
 

@@ -105,6 +105,19 @@ public sealed class DockingRegion : IDockingRegion
         return result.Success ? result.ViewModel as T : null;
     }
 
+    public async Task<T> OpenAsync<T>(NavigationParameters parameters = null, CancellationToken cancellationToken = default)
+        where T : class
+    {
+        if (Find<T>() is { } existing)
+        {
+            Activate(existing);
+            return existing;
+        }
+
+        var result = await Region.NavigateToAsync<T>(parameters, cancellationToken);
+        return result.Success ? result.ViewModel as T : null;
+    }
+
     public IReadOnlyList<DockedGroup> Groups => _host?.Groups ?? [];
 
     public IReadOnlyList<DockedGroup> DocumentGroups => Groups.Where(group => group.Kind == PaneKind.Document).ToList();
