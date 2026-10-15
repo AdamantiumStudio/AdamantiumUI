@@ -847,7 +847,10 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
 
     private ValuePriority StyleSlotFor(AdamantiumProperty property, string propertyName, Style applied)
     {
-        if (!property.CanInherit) return ValuePriority.Style;
+        if (!property.CanInherit || property.InheritsFromTypeStyle)
+        {
+            return ValuePriority.Style;
+        }
 
         var winner = styleValues != null && styleValues.TryGetValue(propertyName, out var entry)
             ? entry.EffectiveStyle

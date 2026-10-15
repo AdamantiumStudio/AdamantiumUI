@@ -22,7 +22,10 @@
                             BorderThickness="{TemplateBinding BorderThickness}"
                             CornerRadius="{TemplateBinding CornerRadius}">
                         <Grid RowDefinitions="Auto,Auto">
+                            <!-- The header folds and opens the expander, so its text does not select; the content
+                                 does. -->
                             <Border Grid.Row="0" x:Name="PART_Header"
+                                    TextBlock.IsTextSelectionEnabled="False"
                                     Background="Transparent"
                                     Padding="{TemplateBinding Padding}"
                                     Cursor="Hand">

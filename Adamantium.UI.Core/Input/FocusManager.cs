@@ -337,8 +337,20 @@ public static class FocusManager
          return;
 
       Remember(Focused);
-      Release(Focused);
+      IsLeavingWindow = true;
+      try
+      {
+         Release(Focused);
+      }
+      finally
+      {
+         IsLeavingWindow = false;
+      }
    }
+
+   /// <summary>True while <see cref="LeaveWindow"/> lets the focus go: the element will get it back when the window is
+   /// activated again, so what it holds for the keyboard - a selection, say - is kept.</summary>
+   public static bool IsLeavingWindow { get; private set; }
 
    public static void SetFocusedElement(IInputComponent component, IInputComponent scope,
       NavigationMethod navigationMethod = NavigationMethod.Unspecified,

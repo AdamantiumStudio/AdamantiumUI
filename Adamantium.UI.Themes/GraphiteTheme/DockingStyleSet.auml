@@ -133,6 +133,7 @@
                              them silently: a missing part is a button that does nothing, which is worse than none.
                              A quiet band closed with a hairline - see the note at the top of this file. -->
                         <Border x:Name="PART_Header" Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="3"
+                                TextBlock.IsTextSelectionEnabled="False"
                                 Background="{ResourceReference SolidBackgroundFillColorTertiary}"
                                 BorderBrush="{ResourceReference ControlStrokeColorDefault}"
                                 BorderThickness="{ResourceReference DockHeaderUnderline}"
@@ -223,6 +224,7 @@
                                     <!-- A PART, because this is the caption a revealed panel is dragged by: while the
                                          flyout is up it is the only caption the panel has on screen. -->
                                     <Border x:Name="PART_FlyoutHeader" Grid.Row="0"
+                                            TextBlock.IsTextSelectionEnabled="False"
                                             Background="{ResourceReference SolidBackgroundFillColorTertiary}"
                                             BorderBrush="{ResourceReference ControlStrokeColorDefault}"
                                             BorderThickness="{ResourceReference DockHeaderUnderline}"

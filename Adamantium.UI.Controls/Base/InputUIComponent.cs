@@ -789,8 +789,17 @@ public class InputUIComponent : MeasurableUIComponent, IInputComponent
         }
     }
 
+    /// <summary>Whether the keyboard on this element is shown with a ring; false while the focus only serves the pointer,
+    /// as for text selected with the mouse.</summary>
+    protected virtual bool ShowsFocusRing => true;
+
     private void ShowFocusRing()
     {
+        if (!ShowsFocusRing)
+        {
+            return;
+        }
+
         AdornerHost()?.AdornerLayer.SetFocus(FocusVisualOwner());
         // Keyboard only: scrolling under a click would move the target from under the cursor.
         if (!FocusManager.IsReturning)

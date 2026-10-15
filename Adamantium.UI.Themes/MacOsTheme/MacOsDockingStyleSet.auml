@@ -148,6 +148,7 @@
                              accent block did in the Fluent set. Its buttons are PARTS, so the group wires them once and
                              a restyle cannot lose them silently. -->
                         <Border x:Name="PART_Header" Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="3"
+                                TextBlock.IsTextSelectionEnabled="False"
                                 Background="{ResourceReference SolidBackgroundFillColorBase}"
                                 BorderBrush="{ResourceReference ControlStrokeColorDefault}"
                                 BorderThickness="0 0 0 1"
@@ -228,6 +229,7 @@
                                     <!-- A PART, because this is the caption a revealed panel is dragged by: while the
                                          flyout is up it is the only caption the panel has on screen. -->
                                     <Border x:Name="PART_FlyoutHeader" Grid.Row="0"
+                                            TextBlock.IsTextSelectionEnabled="False"
                                             Background="{ResourceReference SolidBackgroundFillColorBase}"
                                             BorderBrush="{ResourceReference ControlStrokeColorDefault}"
                                             BorderThickness="0 0 0 1"

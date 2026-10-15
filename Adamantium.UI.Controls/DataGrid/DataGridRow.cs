@@ -356,6 +356,7 @@ public class DataGridRow : Panel
         if (_details == null)
         {
             _details = new ContentPresenter();
+            Text.TextBlock.SetIsTextSelectionEnabled(_details, true);
             Children.Add(_details);
         }
 

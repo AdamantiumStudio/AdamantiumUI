@@ -43,6 +43,7 @@
                                                 Foreground="{TemplateBinding TitleForeground}"
                                                 VerticalAlignment="Center" Margin="0,0,8,0"/>
                                         <ContentPresenter x:Name="PART_Title" Content="{TemplateBinding Title}"
+                                                TextBlock.IsTextSelectionEnabled="False"
                                                 Foreground="{TemplateBinding TitleForeground}" FontSize="{ResourceReference FontSizeSubtitle}"
                                                 VerticalAlignment="Center"/>
                                     </StackPanel>
