@@ -1244,6 +1244,9 @@ All packages share one version.
 
 ### Fixed
 
+- The application goes idle again after a visual brush or a visual snapshot was drawn: a recolor kept for the next record
+  is kept for the loop frame of the record that missed it only. The one-off record of a snapshot went through the shared
+  scope, and every later recolor in it outlived every clear, so the loop never stopped recording.
 - A busy indicator keeps turning while a theme is switched or a view is being built: an animation the render thread
   plays runs for exactly the records made between its start and its stop, so the record still on screen keeps its
   spinner turning while the loop thread is busy, and a spinner restarted mid-swap does not stand still at its first

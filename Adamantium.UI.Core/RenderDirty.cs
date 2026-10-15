@@ -66,6 +66,7 @@ public sealed class RenderDirtyScope
     private readonly Dictionary<IUIComponent, long> PaintSet = new();
     private readonly List<IUIComponent> _paintCleared = new();
     private long _recordStartMark = long.MaxValue;
+    private long _recordFrame = -1;
 
     /// <summary>Records that only <paramref name="component"/>'s PAINT changed - same shape, same commands, new color.</summary>
     public void MarkPaint(IUIComponent component)
@@ -84,10 +85,14 @@ public sealed class RenderDirtyScope
     }
 
     /// <summary>A record of this scope begins: a paint mark taken from here on arrived too late for it, and outlives the
-    /// <see cref="Clear"/> that ends it.</summary>
+    /// clears of this loop frame (<see cref="Media.Animation.Compositor.Frame"/>) - the next record takes it.</summary>
     public void BeginRecord()
     {
-        lock (PaintSet) _recordStartMark = _paintMarks;
+        lock (PaintSet)
+        {
+            _recordStartMark = _paintMarks;
+            _recordFrame = Media.Animation.Compositor.Frame;
+        }
     }
 
     private long _paintMarks;
@@ -276,8 +281,8 @@ public sealed class RenderDirtyScope
         Clear();
     }
 
-    /// <summary>Reset after a build has consumed the dirty state - all but the paint marks taken since the last
-    /// <see cref="BeginRecord"/>.</summary>
+    /// <summary>Reset after a build has consumed the dirty state - all but the paint marks taken since a
+    /// <see cref="BeginRecord"/> of this loop frame.</summary>
     public void Clear()
     {
         // Clear the HashSets under the SAME locks their writers (MarkGeometry/MarkNodeTransform/MarkTransform) take - a
@@ -286,9 +291,10 @@ public sealed class RenderDirtyScope
         lock (PaintSet)
         {
             _paintCleared.Clear();
+            var keepAfter = _recordFrame == Media.Animation.Compositor.Frame ? _recordStartMark : long.MaxValue;
             foreach (var (component, mark) in PaintSet)
             {
-                if (mark <= _recordStartMark) _paintCleared.Add(component);
+                if (mark <= keepAfter) _paintCleared.Add(component);
             }
 
             foreach (var component in _paintCleared) PaintSet.Remove(component);
