@@ -97,6 +97,11 @@ public interface IWindow : IRootVisualComponent, IContentControl
     /// <see cref="Input.InputMethod.SetCaretBounds"/> and read by the platform worker from the OS message thread.</summary>
     Rect InputMethodCaret { get; set; }
 
+    /// <summary>Turns the input method off while the window takes text that must not pass through it - a password,
+    /// which an input method would show in clear and may remember - and back on after. Kept until the native window
+    /// exists, so a field focused before it shows is covered too.</summary>
+    void SetInputMethodEnabled(bool enabled);
+
     /// <summary>Per-window DPI scale (device pixels per DIP), separate X/Y (usually equal on desktop). 1,1 = 96 DPI /
     /// 100%. Set by the platform on create and on WM_DPICHANGED; drives the render scale and the DIP&lt;-&gt;physical map.</summary>
     Vector2 DpiScale { get; set; }

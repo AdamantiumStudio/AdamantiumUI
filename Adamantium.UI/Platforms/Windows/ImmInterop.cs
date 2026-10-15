@@ -9,6 +9,7 @@ internal static unsafe partial class ImmInterop
     public const int ResultString = 0x0800;
     public const int PointStyle = 0x0002;
     public const int ExcludeStyle = 0x0080;
+    public const int AssociateDefault = 0x0010;
 
     private const string Imm = "imm32.dll";
 
@@ -18,6 +19,10 @@ internal static unsafe partial class ImmInterop
     [LibraryImport(Imm)]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static partial bool ImmReleaseContext(nint hwnd, nint context);
+
+    [LibraryImport(Imm)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool ImmAssociateContextEx(nint hwnd, nint context, int flags);
 
     [LibraryImport(Imm, EntryPoint = "ImmGetCompositionStringW")]
     public static partial int ImmGetCompositionString(nint context, int index, void* buffer, int bufferLength);

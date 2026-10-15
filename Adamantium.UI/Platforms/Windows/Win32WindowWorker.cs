@@ -29,6 +29,7 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
     private bool _relativeActive;
     private NativePoint _recenterScreen;
     private char _highSurrogate;
+    private bool _inputMethodOff;
 
     // PLAIN-FIELD snapshots of the window state the WndProc handlers need. The WndProc runs on the OS message (pump)
     // thread; reading an AdamantiumProperty there calls GetValue -> Monitor.Enter, which DEADLOCKS against the loop
@@ -110,6 +111,7 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
         messageTable[(uint)WindowMessages.Getobject] = HandleGetObject;
         messageTable[BeginMoveDragMessage] = HandleBeginMoveDrag;
         messageTable[RelativeModeMessage] = HandleRelativeModeMessage;
+        messageTable[InputMethodMessage] = HandleInputMethodMessage;
     }
 
     // Posted by BeginMoveDrag so the caption-drag handoff runs on the HWND's thread; lParam packs the screen cursor.
@@ -118,6 +120,8 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
     // App-private message the loop thread posts (SetRelativeMouseMode) so the enter/exit of relative mouse mode - which
     // hides/shows the cursor and takes/drops the OS capture, both thread-affine to the HWND owner - runs on the pump thread.
     private const uint RelativeModeMessage = (uint)WindowMessages.App + 2;
+
+    private const uint InputMethodMessage = (uint)WindowMessages.App + 3;
 
     // Initial OS-window extent: prefer the explicit Width/Height; if unset, fall back to the requested CLIENT size (a
     // window can be sized by its client area alone - e.g. one opened from a view model), then a sane default so it is
@@ -181,6 +185,10 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
             return;
         
         this.window.SetSurfaceHandle(source.Handle);
+        if (_inputMethodOff)
+        {
+            Messages.PostMessage(source.Handle, InputMethodMessage, IntPtr.Zero, IntPtr.Zero);
+        }
 
         ApplyTransparency();
         SwitchOffSystemHoldCue(source.Handle);
@@ -1331,6 +1339,22 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
             Win32Interop.ShowCursor(true);
             if (!osMouseCaptured) Win32Interop.ReleaseCapture();
         }
+        return IntPtr.Zero;
+    }
+
+    public void SetInputMethodEnabled(bool enabled)
+    {
+        _inputMethodOff = !enabled;
+        if (window == null || window.Handle == IntPtr.Zero) return;
+        Messages.PostMessage(window.Handle, InputMethodMessage, enabled ? (IntPtr)1 : IntPtr.Zero, IntPtr.Zero);
+    }
+
+    private IntPtr HandleInputMethodMessage(WindowMessages windowMessage, IntPtr wParam, IntPtr lParam, out bool handled)
+    {
+        handled = true;
+        if (window == null || window.Handle == IntPtr.Zero) return IntPtr.Zero;
+        ImmInterop.ImmAssociateContextEx(window.Handle, IntPtr.Zero,
+            wParam != IntPtr.Zero ? ImmInterop.AssociateDefault : 0);
         return IntPtr.Zero;
     }
 

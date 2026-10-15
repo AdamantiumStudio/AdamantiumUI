@@ -275,6 +275,7 @@ internal abstract class UiaProvider : IRawElementProviderSimple2, IRawElementPro
         UiaIds.IsOffscreenProperty => UiaVariant.From(peer.IsOffscreen),
         UiaIds.HasKeyboardFocusProperty => UiaVariant.From(peer.HasKeyboardFocus),
         UiaIds.IsKeyboardFocusableProperty => UiaVariant.From(peer.IsKeyboardFocusable),
+        UiaIds.IsPasswordProperty => UiaVariant.From(peer.IsPassword),
         UiaIds.IsControlElementProperty or UiaIds.IsContentElementProperty => UiaVariant.From(true),
         UiaIds.FrameworkIdProperty => UiaVariant.From(FrameworkId),
         _ => UiaVariant.Empty

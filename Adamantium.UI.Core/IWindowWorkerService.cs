@@ -53,6 +53,9 @@ public interface IWindowWorkerService
     /// reappears at <paramref name="restoreScreen"/>.</summary>
     public void SetRelativeMouseMode(bool enabled, PixelPoint restoreScreen);
 
+    /// <summary>Turns the OS input method on or off for the window.</summary>
+    public void SetInputMethodEnabled(bool enabled);
+
     /// <summary>Start an OS-driven move of the window from the current cursor (custom-chrome caption drag). Runs the
     /// native modal move loop, so Aero Snap and snap-to-edges work. Call from a title bar's mouse-down. No-op on
     /// platforms without a native move loop.</summary>

@@ -466,7 +466,7 @@ public class NumericUpDown : RangeLimitsBase
 
     private void OnTextChanged(object sender, AdamantiumPropertyChangedEventArgs e)
     {
-        if (e.Property != TextBoxBase.TextProperty) return;
+        if (e.Property != TextBox.TextProperty) return;
         // Our own write, echoed back. Reading it as an edit would re-parse what we just formatted, and a format that
         // rounds ("N0" on 2.4) would quietly move the value every time it was displayed.
         if (_writingText || !ChangesValueWhileTyping || !IsManualEntryEnabled) return;

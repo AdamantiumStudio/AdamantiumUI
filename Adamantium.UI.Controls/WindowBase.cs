@@ -21,6 +21,7 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
 {
     private IWindowRenderer _renderer;
     private protected bool _opensMaximized;
+    private bool _inputMethodOff;
     protected IWindowWorkerService WindowWorkerService { get; private set; }
 
     public IWindowRenderer DefaultRenderer { get; set; }
@@ -741,6 +742,14 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
 
     public Rect InputMethodCaret { get; set; }
 
+    internal bool IsInputMethodOff => _inputMethodOff;
+
+    public void SetInputMethodEnabled(bool enabled)
+    {
+        _inputMethodOff = !enabled;
+        WindowWorkerService?.SetInputMethodEnabled(enabled);
+    }
+
     public Double ClientWidth
     {
         get => GetValue<Double>(ClientWidthProperty);
@@ -785,6 +794,11 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
         if (WindowWorkerService != null)
         {
             PlaceOnScreen(context);
+            if (_inputMethodOff)
+            {
+                WindowWorkerService.SetInputMethodEnabled(false);
+            }
+
             WindowWorkerService.SetWindow(this);
         }
         else

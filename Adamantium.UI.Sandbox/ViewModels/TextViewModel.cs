@@ -47,6 +47,11 @@ public partial class TextViewModel : TabPageViewModel
     // Toggles the floating-label (watermark) effect on the editable TextBoxes live.
     [Bindable] private bool _floatingWatermark = true;
 
+    // Bound two-way by both password boxes on the editing stand: typing in one shows in the other.
+    [Bindable, Affects(nameof(PasswordLength))] private string _password = string.Empty;
+
+    public int PasswordLength => new System.Globalization.StringInfo(Password ?? string.Empty).LengthInTextElements;
+
     // Bound by a Run's Foreground - demonstrates that a Run's color is bindable too, not just its text.
     [Bindable] private Brush _accentBrush = new SolidColorBrush("#22D3EE");
 

@@ -33,6 +33,20 @@ All packages share one version.
 - `PropertyMetadataOptions.InheritsFromTypeStyle`: with `Inherits`, a value from a style chosen by type alone reaches the
   subtree as any style's does. For a property by which a control decides for everything inside it; looks such as fonts
   and colors keep the element's own style winning over its container's.
+- `PasswordBox`: a text field that shows a mask and edits like a `TextBox`.
+  - **Binds:** `Password` is an ordinary property, two-way by default - unlike WPF, a view model can hold it.
+  - **Placeholders:** the text box's `Placeholder` and `FloatingPlaceholder` work as they do there; all three themes
+    dress it as their text box.
+  - **Mask:** `PasswordChar` (`●` by default), one per character a reader sees - an emoji or a letter with its accent
+    is one, and the caret never stops inside it.
+  - **Reveal button:** `PasswordRevealMode` - `Peek` (the default) shows the password while the eye is held (mouse,
+    pen or finger), `Toggle` until the next click, `Hidden` offers no button and leaves `IsPasswordRevealed` to the
+    application, for a "show password" control of its own.
+  - **Never leaves the box:** copy and cut do nothing, a paste takes the first line without control characters, there
+    is no undo history, Ctrl+arrows go to the ends and a double click takes it all. While it has the keyboard the
+    window's input method is off (`IWindow.SetInputMethodEnabled`; on Windows; macOS to come), so no composition window
+    shows the password in clear; it comes back on when the box loses the keyboard or leaves the window. Automation reports a password field (`AutomationPeer.IsPassword`, UIA `IsPassword`) with no
+    value, and `adam-auto inspect` hides it; a value can still be set, so a test can type one.
 - Markup hot reload. Save an `.auml` while a debug build of the application runs, and every view, window and control
   built from it takes the change in place at the next frame: changed properties are set again, children are added,
   removed and reordered, and everything that did not change keeps its instance and its state. A version that does not
@@ -976,6 +990,15 @@ All packages share one version.
 
 ### Changed
 
+- `Text` and `TextProperty` moved from `TextBoxBase` to `TextBox`. `TextBoxBase` edits the property its control names
+  (`EditedTextProperty`), and a control can mask what is shown (`DisplayedText`), keep no undo history
+  (`KeepsUndoHistory`) and decide its word boundaries (`WordBoundary`, `WordAt`). Code that read `TextBoxBase.Text`
+  reads `TextBox.Text`.
+- The editing keys of a `TextBoxBase` read Ctrl and Shift from the key event (`KeyEventArgs.Modifiers`), so simulated
+  input drives its shortcuts too; Ctrl with Alt - AltGr - is no shortcut, and AltGr+A types its letter instead of
+  selecting everything. The same holds for `TreeDataGrid`'s keys, so AltGr+Z in a cell editor no longer undoes the
+  table. Ctrl+Insert copies, Shift+Insert pastes and Shift+Delete cuts, as everywhere on Windows; in a table only a
+  plain Insert adds a row and a plain Delete removes the selected ones.
 - `WindowCommand` is a view model in `Adamantium.UI.Core` (it was in `Adamantium.UI.Controls`): it derives from
   `AdamantiumViewModel` and notifies its changes, so a derived command is a view model with no notification code of its
   own. Its icon is `IconKey`, the key of a resource the themes show with `{ObservableResource Key={Binding IconKey}}`
