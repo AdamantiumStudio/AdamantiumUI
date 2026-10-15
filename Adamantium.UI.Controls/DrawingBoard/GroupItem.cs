@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Adamantium.Core;
+using Adamantium.MVVM;
 using Adamantium.Mathematics;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Graphics;
@@ -9,7 +10,7 @@ namespace Adamantium.UI.Controls.DrawingBoard;
 
 /// <summary>Several items treated as one item, so groups nest. The children leave the scene while grouped, keeping the drawn
 /// list flat.</summary>
-public class GroupItem : PropertyChangedBase, ICanvasItem
+public class GroupItem : AdamantiumViewModel, ICanvasItem
 {
     private readonly List<ICanvasItem> _children = new();
 

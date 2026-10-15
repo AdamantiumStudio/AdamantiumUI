@@ -12,6 +12,7 @@ using Adamantium.UI.Controls.Docking;
 using Adamantium.UI.Controls.Navigation;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Data;
+using Adamantium.UI.Core.Localization;
 using NUnit.Framework;
 
 namespace Adamantium.UITests;
@@ -73,9 +74,10 @@ public class DockingRegionTests
 
     private sealed class Script(string id) : Dockable(id, DockZone.Center);
 
-    private sealed class Hierarchy() : DockablePaneViewModel(() => "Hierarchy", zone: DockZone.Left)
+    // Says only its title; the rest is the interface's.
+    private sealed class Hierarchy : IDockablePane
     {
-        public override PaneKind PaneKind => PaneKind.Tool;
+        public string PaneTitle => Languages.Current == "ru" ? "Иерархия" : "Hierarchy";
     }
 
     private sealed class SceneModel;
@@ -166,9 +168,9 @@ public class DockingRegionTests
         });
     }
 
-    // The base view model is all a pane needs: its type names it, its title labels the tab, and it opens where it says.
+    // A title is all a pane has to say: its type names it, and it opens in the document area as a document.
     [Test]
-    public async Task ADockablePaneViewModel_IsNamedByItsType_AndLabelsItsTab()
+    public async Task APaneThatSaysOnlyItsTitle_IsNamedByItsType_InTheDocumentArea()
     {
         var (area, _, docking, _, _) = Docking();
 
@@ -179,9 +181,30 @@ public class DockingRegionTests
         {
             Assert.That(pane, Is.Not.Null);
             Assert.That(pane.Header, Is.EqualTo("Hierarchy"));
-            Assert.That(pane.Kind, Is.EqualTo(PaneKind.Tool));
-            Assert.That(docking.PlacementOf(hierarchy).Zone, Is.EqualTo(DockZone.Left));
+            Assert.That(pane.Kind, Is.EqualTo(PaneKind.Document));
+            Assert.That(docking.PlacementOf(hierarchy).Zone, Is.EqualTo(DockZone.Center));
         });
+    }
+
+    // A title read from a language table says nothing when the language changes; the tab asks for it again.
+    [Test]
+    public async Task ALanguageSwitch_RetitlesTheTab()
+    {
+        var language = Languages.Current;
+        try
+        {
+            Languages.Current = "en";
+            var (area, _, docking, _, _) = Docking();
+            await docking.OpenAsync<Hierarchy>();
+
+            Languages.Current = "ru";
+
+            Assert.That(area.PaneById(nameof(Hierarchy)).Header, Is.EqualTo("Иерархия"));
+        }
+        finally
+        {
+            Languages.Current = language;
+        }
     }
 
     [Test]

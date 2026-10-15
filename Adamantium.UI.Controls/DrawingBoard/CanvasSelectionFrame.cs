@@ -1,5 +1,6 @@
 using System;
 using Adamantium.Core;
+using Adamantium.MVVM;
 using Adamantium.UI.Core;
 
 namespace Adamantium.UI.Controls.DrawingBoard;
@@ -7,7 +8,7 @@ namespace Adamantium.UI.Controls.DrawingBoard;
 /// <summary>The box round everything selected, as one object: what an inspector shows for several items at once. The
 /// canvas updates it once per edit however many items moved, and writing a number moves or scales the whole selection
 /// as the frame's grips do - one step of undo.</summary>
-public sealed class CanvasSelectionFrame : PropertyChangedBase
+public sealed class CanvasSelectionFrame : AdamantiumViewModel
 {
     private readonly InfiniteCanvas _canvas;
     private Rect _box;

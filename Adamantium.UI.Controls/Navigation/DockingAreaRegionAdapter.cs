@@ -3,6 +3,7 @@ using Adamantium.Navigation;
 using Adamantium.UI.Controls.Docking;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Data;
+using Adamantium.UI.Core.Localization;
 
 namespace Adamantium.UI.Controls.Navigation;
 
@@ -183,12 +184,15 @@ public sealed class DockingAreaRegionAdapter : IRegionAdapter
             syncing = false;
         }
 
+        void OnLanguageChanged(object s, EventArgs e) => RetitlePanes(area, panesByViewModel);
+
         region.ActiveViewsChanged += OnActiveViewsChanged;
         region.PropertyChanged += OnRegionPropertyChanged;
         region.Navigated += OnNavigated;
         area.PaneRestoring += OnPaneRestoring;
         area.PaneClosed += OnPaneClosed;
         area.ActivePaneChanged += OnActivePaneChanged;
+        Languages.Changed += OnLanguageChanged;
 
         // ...and taken off again the moment this area is gone for good. Without it the adapter outlives its control: the
         // region goes on calling into an area nobody can see, which keeps its own layout, its own panes and its own idea
@@ -212,6 +216,7 @@ public sealed class DockingAreaRegionAdapter : IRegionAdapter
             area.PaneRestoring -= OnPaneRestoring;
             area.PaneClosed -= OnPaneClosed;
             area.ActivePaneChanged -= OnActivePaneChanged;
+            Languages.Changed -= OnLanguageChanged;
             DockingRegion.Of(region).Detach(dockingHost);
             dockingHost.Release();
             DiscardedVisuals.Discarded -= Release;
@@ -288,8 +293,28 @@ public sealed class DockingAreaRegionAdapter : IRegionAdapter
             Mode = BindingMode.OneWay,
             TargetNullValue = viewModel
         });
-        pane.SetBinding(Pane.ZoneProperty,
-            new Binding(nameof(IDockablePane.PaneZone)) { Source = viewModel, Mode = BindingMode.TwoWay });
+
+        if (DeclaresZone(viewModel))
+        {
+            pane.SetBinding(Pane.ZoneProperty,
+                new Binding(nameof(IDockablePane.PaneZone)) { Source = viewModel, Mode = BindingMode.TwoWay });
+        }
+
         return pane;
+    }
+
+    private static bool DeclaresZone(object viewModel) =>
+        viewModel.GetType().GetProperty(nameof(IDockablePane.PaneZone),
+            System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance) != null;
+
+    private static void RetitlePanes(DockingArea area, Dictionary<object, string> panes)
+    {
+        foreach (var (viewModel, id) in panes)
+        {
+            if (viewModel is IDockablePane && area.PaneById(id) is { } pane)
+            {
+                BindingEngine.GetBindingExpression(pane, TabItem.HeaderProperty)?.UpdateTarget();
+            }
+        }
     }
 }

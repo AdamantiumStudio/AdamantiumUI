@@ -1,5 +1,6 @@
 using System.Globalization;
 using Adamantium.Core;
+using Adamantium.MVVM;
 using Adamantium.Mathematics;
 using Adamantium.ProceduralGeometry;
 using Adamantium.UI.Core.Media;
@@ -9,7 +10,7 @@ namespace Adamantium.UI.Sandbox.ViewModels;
 /// <summary>Shared stroke ("кайма") parameters for the Shapes-tab pen playground. ONE instance drives the stroke of
 /// EVERY shape in the tab: thickness, dashes, trim, corner, cap/join (bound to <c>DropDown</c>s) and color (bound to a
 /// <c>ColorPicker</c>). Sliders/dropdowns/picker mutate this one object; each shape binds its stroke off <c>Stroke.*</c>.</summary>
-public sealed class StrokeSettings : PropertyChangedBase
+public sealed class StrokeSettings : AdamantiumViewModel
 {
     private double _strokeWidth = 8;
     public double StrokeWidth { get => _strokeWidth; set => SetProperty(ref _strokeWidth, value); }

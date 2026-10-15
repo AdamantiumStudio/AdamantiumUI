@@ -1,4 +1,5 @@
 using Adamantium.Core;
+using Adamantium.MVVM;
 using Adamantium.Mathematics;
 using Adamantium.UI.Core.Media;
 
@@ -7,7 +8,7 @@ namespace Adamantium.UI.Sandbox.ViewModels;
 /// <summary>The polygon playground on the Shapes tab. One shape, one number: three corners is a triangle, six a hexagon,
 /// and enough of them is a circle - so dragging the slider walks the whole family the UI actually needs (ticks, chevrons,
 /// diamonds, dice pips, hex tiles), and every stop of it is one instanced draw.</summary>
-public sealed class PolygonSettings : PropertyChangedBase
+public sealed class PolygonSettings : AdamantiumViewModel
 {
     private double _corners = 3;
     private double _ringThickness = 0;

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Adamantium.Core;
+using Adamantium.MVVM;
 using Adamantium.Mathematics;
 using Adamantium.ProceduralGeometry;
 using Adamantium.ProceduralGeometry.Shapes;
@@ -12,7 +13,7 @@ namespace Adamantium.UI.Controls.DrawingBoard;
 
 /// <summary>A rectangle, ellipse, line, arrow or regular polygon: a world-unit box with a fill and an outline. The shape is
 /// its box, so a resize is one field.</summary>
-public class ShapeItem : PropertyChangedBase, ICanvasItem, ICanvasTransformed, ICanvasPoints
+public class ShapeItem : AdamantiumViewModel, ICanvasItem, ICanvasTransformed, ICanvasPoints
 {
     private CanvasArrowBrush _paint;
 

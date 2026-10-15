@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Adamantium.Core;
+using Adamantium.MVVM;
 using Adamantium.Mathematics;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Graphics;
@@ -10,7 +11,7 @@ namespace Adamantium.UI.Controls.DrawingBoard;
 
 /// <summary>A curve through points - Bezier, B-spline or NURBS, switchable after drawing. Reshaped by its points; the frame
 /// only moves it.</summary>
-public class CurveItem : PropertyChangedBase, ICanvasItem, ICanvasPoints
+public class CurveItem : AdamantiumViewModel, ICanvasItem, ICanvasPoints
 {
     // What the curve is DRAWN with: a polyline handed to the ink pass as data. See Render for why it is not a geometry.
     private readonly InkBrush _ink = new();

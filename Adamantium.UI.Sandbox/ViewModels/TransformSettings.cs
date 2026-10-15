@@ -1,13 +1,14 @@
 using System;
 using System.Collections.ObjectModel;
 using Adamantium.Core;
+using Adamantium.MVVM;
 
 namespace Adamantium.UI.Sandbox.ViewModels;
 
 /// <summary>Drives the Transforms tab: one rotation/shear/scale setting fans out over a grid of tiles, each tile offset
 /// by its index so no two are drawn under the same matrix. The point is what the RENDERER does with that - every tile is
 /// a rounded, stroked rect, i.e. SDF-batch content, and it stays batched however it is turned or sheared.</summary>
-public sealed class TransformSettings : PropertyChangedBase
+public sealed class TransformSettings : AdamantiumViewModel
 {
     private static readonly string[] Palette =
         ["#3B82F6", "#22C55E", "#F59E0B", "#EF4444", "#8B5CF6", "#14B8A6", "#EC4899", "#EAB308"];

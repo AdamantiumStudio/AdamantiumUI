@@ -25,6 +25,14 @@
       <ProjectReference Include="..\Adamantium.Navigation\Adamantium.Navigation.csproj" />
     </ItemGroup>
 
+    <ItemGroup Condition="'$(UseEngineSource)' == 'true'">
+      <ProjectReference Include="$(AdamantiumEngineDir)Adamantium.MVVM.Generators\Adamantium.MVVM.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(UseEngineSource)' != 'true'">
+      <PackageReference Include="Adamantium.MVVM.Generators" Version="$(AdamantiumEngineVersion)" PrivateAssets="all" />
+    </ItemGroup>
+
     <ItemGroup>
         <InternalsVisibleTo Include="Adamantium.UI" />
         <InternalsVisibleTo Include="Adamantium.UI.Automation" />
