@@ -17,6 +17,10 @@
     <Phrase Key="Message" Text="Message"/>
     <Phrase Key="FloatingTitle" Text="Floating placeholder (empty - focus or type):"/>
     <Phrase Key="YourName" Text="Your name"/>
+    <Phrase Key="PasswordTitle" Text="Password box (the eye shows it while held):"/>
+    <Phrase Key="Password" Text="Password"/>
+    <Phrase Key="PasswordToggleTitle" Text="The same password, bound to the same property; here the eye is a switch:"/>
+    <Phrase Key="PasswordBound" Count="count" One="In the view model: {count} character" Other="In the view model: {count} characters"/>
     <Phrase Key="ReadOnly" Text="Read-only:"/>
     <Phrase Key="MultiLine" Text="Multi-line (AcceptsReturn, no wrap → H + V scroll):"/>
     <Phrase Key="BindableRuns" Text="Bindable runs:"/>

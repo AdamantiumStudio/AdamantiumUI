@@ -1,3 +1,4 @@
 <Language>
     <Phrase Key="Clear" Text="Очистить"/>
+    <Phrase Key="ShowPassword" Text="Показать пароль"/>
 </Language>

@@ -11,6 +11,11 @@ namespace Adamantium.UI.Controls.Text;
 /// <see cref="EnterPressed"/> instead of inserting a newline.</summary>
 public class TextBox : TextBoxBase
 {
+    public static readonly AdamantiumProperty TextProperty = AdamantiumProperty.Register(nameof(Text),
+        typeof(string), typeof(TextBox),
+        new PropertyMetadata(string.Empty,
+            PropertyMetadataOptions.AffectsMeasure | PropertyMetadataOptions.BindsTwoWayByDefault, OnTextChanged));
+
     public static readonly AdamantiumProperty AcceptsReturnProperty = AdamantiumProperty.Register(nameof(AcceptsReturn),
         typeof(bool), typeof(TextBox), new PropertyMetadata(false));
 
@@ -30,10 +35,13 @@ public class TextBox : TextBoxBase
 
     private ButtonBase _clearButton;
 
-    static TextBox()
+    public string Text
     {
-        TextProperty.OverrideMetadata(typeof(TextBox), new PropertyMetadata(string.Empty, OnTextChanged));
+        get => GetValue<string>(TextProperty);
+        set => SetValue(TextProperty, value);
     }
+
+    protected override AdamantiumProperty EditedTextProperty => TextProperty;
 
     /// <summary>When true, Enter inserts a newline (multi-line editing). When false (default), Enter raises
     /// <see cref="EnterPressed"/> instead and the buffer stays single-line.</summary>
@@ -87,6 +95,7 @@ public class TextBox : TextBoxBase
 
     private static void OnTextChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
     {
+        OnEditedTextChanged(a, e);
         if (a is not TextBox box) return;
         box.SetCurrentValue(HasTextProperty, !string.IsNullOrEmpty(box.Text));
         AutomationEvents.RaisePropertyChanged(box, AutomationProperty.Value, e.OldValue, e.NewValue);

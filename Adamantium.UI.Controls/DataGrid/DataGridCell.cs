@@ -290,7 +290,7 @@ public class DataGridCell : ContentControl
 
         // ...and what the user typed REPLACES what the editor was prepared with: typing over a cell is how a value is
         // replaced everywhere else, and an editor that kept the old value and appended would spell nonsense.
-        if (PendingText is { Length: > 0 } seed && _editor is Text.TextBoxBase typed)
+        if (PendingText is { Length: > 0 } seed && _editor is Text.TextBox typed)
         {
             typed.Text = seed;
 

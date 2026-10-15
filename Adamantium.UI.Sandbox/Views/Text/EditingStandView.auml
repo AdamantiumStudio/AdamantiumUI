@@ -18,6 +18,19 @@
         <TextBox Width="520" HorizontalAlignment="Left"
                  Placeholder="{Localize TextStrings.YourName}" FloatingPlaceholder="{Binding FloatingWatermark}"/>
 
+        <!-- Password boxes: both bound two-way to the same Password, so typing in one shows in the other. -->
+        <TextBlock Text="{Localize TextStrings.PasswordTitle}" Margin="0,16,0,6"/>
+        <PasswordBox AutomationProperties.AutomationId="Password" Password="{Binding Password, Mode=TwoWay}"
+                     Width="520" HorizontalAlignment="Left"
+                     Placeholder="{Localize TextStrings.Password}" FloatingPlaceholder="{Binding FloatingWatermark}"/>
+        <TextBlock Text="{Localize TextStrings.PasswordToggleTitle}" Margin="0,12,0,6"/>
+        <PasswordBox AutomationProperties.AutomationId="PasswordToggle" Password="{Binding Password, Mode=TwoWay}"
+                     PasswordRevealMode="Toggle"
+                     Width="520" HorizontalAlignment="Left"
+                     Placeholder="{Localize TextStrings.Password}"/>
+        <TextBlock Text="{Localize TextStrings.PasswordBound, count={Binding PasswordLength}}" Margin="0,6,0,0"
+                   Foreground="{ResourceReference TextFillColorSecondary}"/>
+
         <TextBlock x:Name="ReadOnlyLabel" Text="{Localize TextStrings.ReadOnly}" Margin="0,16,0,6"/>
         <TextBox AutomationProperties.AutomationId="ReadOnlyMessage" AutomationProperties.LabeledBy="{Binding ElementName=ReadOnlyLabel}"
                  Text="{Binding Message}" IsReadOnly="True"

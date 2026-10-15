@@ -43,6 +43,9 @@ public abstract class AutomationPeer
 
     public abstract bool IsKeyboardFocusable { get; }
 
+    /// <summary>Holds a password: its value is not to be read out or shown.</summary>
+    public virtual bool IsPassword => false;
+
     public abstract IReadOnlyList<AutomationPeer> GetChildren();
 
     public abstract AutomationPeer GetParent();

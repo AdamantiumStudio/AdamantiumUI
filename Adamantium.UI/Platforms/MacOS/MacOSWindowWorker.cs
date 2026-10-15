@@ -147,6 +147,11 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
     {
     }
 
+    // TODO(macOS): secure text input (EnableSecureEventInput) while a password box has the keyboard.
+    public void SetInputMethodEnabled(bool enabled)
+    {
+    }
+
     // TODO(macOS): start an AppKit window drag (NSWindow performWindowDragWithEvent:) for custom-chrome caption drag.
     // No-op until the macOS input/window pipeline lands.
     public void BeginMoveDrag()

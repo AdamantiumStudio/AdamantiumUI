@@ -28,7 +28,9 @@ internal static class ElementInspector
             Properties = [.. properties.OrderBy(property => property.Name).Select(property => new PropertyValueInfo
             {
                 Name = property.Name,
-                Value = ValueOf(element, property),
+                Value = element is PasswordBox && property == PasswordBox.PasswordProperty
+                    ? "(hidden)"
+                    : ValueOf(element, property),
                 Source = element.GetValueSource(property).ToString()
             })],
             Bindings = [.. BindingEngine.GetBindings(element).Select(binding => new BindingInfo

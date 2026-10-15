@@ -1,3 +1,4 @@
 <Language>
     <Phrase Key="Clear" Text="Clear"/>
+    <Phrase Key="ShowPassword" Text="Show password"/>
 </Language>

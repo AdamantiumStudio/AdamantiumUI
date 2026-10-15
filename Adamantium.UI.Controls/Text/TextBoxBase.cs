@@ -22,12 +22,7 @@ namespace Adamantium.UI.Controls.Text;
 /// template supplies a <see cref="TextPresenter"/> named <c>PART_TextPresenter</c>.</summary>
 public abstract class TextBoxBase : Control
 {
-    // --- Text + editing state ------------------------------------------------------------------------------------
-
-    public static readonly AdamantiumProperty TextProperty = AdamantiumProperty.Register(nameof(Text),
-        typeof(string), typeof(TextBoxBase),
-        new PropertyMetadata(string.Empty,
-            PropertyMetadataOptions.AffectsMeasure | PropertyMetadataOptions.BindsTwoWayByDefault, OnTextChanged));
+    // --- Editing state -------------------------------------------------------------------------------------------
 
     public static readonly AdamantiumProperty CaretIndexProperty = AdamantiumProperty.Register(nameof(CaretIndex),
         typeof(int), typeof(TextBoxBase), new PropertyMetadata(0, OnCaretOrSelectionChanged));
@@ -103,13 +98,32 @@ public abstract class TextBoxBase : Control
         AddHandler(Keyboard.TextInputEvent, new TextInputEventHandler(OnTextInputHandler));
     }
 
-    public string Text
+    /// <summary>The property that holds the string being edited: <see cref="TextBox.Text"/> in a text box,
+    /// <see cref="PasswordBox.Password"/> in a password box. Registered by the control with
+    /// <see cref="OnEditedTextChanged"/> as its callback.</summary>
+    protected abstract AdamantiumProperty EditedTextProperty { get; }
+
+    /// <summary>What is laid out and drawn for <paramref name="text"/>: the text itself, or a mask of the same length.
+    /// Caret stops and selection follow the result, so a mask must keep the text's character boundaries.</summary>
+    protected virtual string DisplayedText(string text) => text;
+
+    /// <summary>Whether edits can be undone. A password box keeps no history of what it held.</summary>
+    protected virtual bool KeepsUndoHistory => true;
+
+    /// <summary>Lays the text out again: what <see cref="DisplayedText"/> returns has changed without the text changing.</summary>
+    protected void RefreshDisplayedText()
     {
-        get => GetValue<string>(TextProperty);
-        set => SetValue(TextProperty, value);
+        _lastShapedText = null;
+        _visualRanges = null;
+        _caretHeldAt = -1;
+        _desiredColumnX = null;
+        InvalidateSurface(measure: true);
+        ScrollCaretIntoView();
     }
 
-    /// <summary>Caret position as a character index in <see cref="Text"/> (0..Length). It is the moving end of the selection.</summary>
+    private string EditedText => GetValue<string>(EditedTextProperty) ?? string.Empty;
+
+    /// <summary>Caret position as a character index in the edited text (0..Length). It is the moving end of the selection.</summary>
     public int CaretIndex
     {
         get => GetValue<int>(CaretIndexProperty);
@@ -379,7 +393,7 @@ public abstract class TextBoxBase : Control
         _lineHeight = LineHeight > 0 && double.IsFinite(LineHeight) ? LineHeight : naturalHeight;
         _lineLeading = (_lineHeight - naturalHeight) / 2;
 
-        var text = Text ?? string.Empty;
+        var text = DisplayedText(EditedText) ?? string.Empty;
         var wrapping = TextWrapping;
         // NaN width => ProcessText treats the axis as unbounded and returns the real ink extent (its explicit
         // "unbounded" sentinel). Soft wrap passes the live viewport width so lines break there.
@@ -553,7 +567,7 @@ public abstract class TextBoxBase : Control
         return (index, hit.IsTrailing && index == hit.CaretIndex);
     }
 
-    private int TextLength => (Text ?? string.Empty).Length;
+    private int TextLength => EditedText.Length;
 
     private bool HasSelection => SelectionLength > 0;
 
@@ -637,13 +651,13 @@ public abstract class TextBoxBase : Control
         var length = ranges.Count > 0 ? ranges[^1].End - start : 0;
         _selectionAnchor = anchor;
         _visualRanges = ranges;
-        _visualFor = (Text, start, length);
+        _visualFor = (EditedText, start, length);
         SelectionStart = start;
         SelectionLength = length;
     }
 
     private bool VisualSelectionIsCurrent() =>
-        _visualRanges != null && _visualFor.Text == Text
+        _visualRanges != null && _visualFor.Text == EditedText
         && _visualFor.Start == SelectionStart && _visualFor.Length == SelectionLength;
 
     private IReadOnlyList<(int Start, int End)> SelectedRanges() =>
@@ -679,7 +693,7 @@ public abstract class TextBoxBase : Control
         if (IsReadOnly) return;
         insert ??= string.Empty;
 
-        var text = Text ?? string.Empty;
+        var text = EditedText;
         var ranges = HasSelection ? SelectedRanges() : [(Clamp(CaretIndex), Clamp(CaretIndex))];
         var start = ranges[0].Start;
         var removed = ranges.Sum(r => r.End - r.Start);
@@ -715,7 +729,7 @@ public abstract class TextBoxBase : Control
         // two-way {Binding}/{Ancestor} fires its write-back AND later source->target updates still apply. A plain Local set
         // MASKS the binding - the box then "lives on its own", never reflecting a later source change (a ColorPicker field
         // stuck after you typed in it). Mirrors Slider.SetValueFromInput.
-        SetCurrentValue(TextProperty, newText);
+        SetCurrentValue(EditedTextProperty, newText);
         var newCaret = start + insert.Length;
         _caretHeldAt = insert.Length > 0 ? newCaret : -1;
         SelectionStart = newCaret;
@@ -728,14 +742,14 @@ public abstract class TextBoxBase : Control
     // --- Undo / redo ---------------------------------------------------------------------------------------------
 
     private TextState Snapshot() => SelectedRanges().Count > 1
-        ? new(Text ?? string.Empty, CaretIndex, CaretIndex, 0)
-        : new(Text ?? string.Empty, CaretIndex, SelectionStart, SelectionLength);
+        ? new(EditedText, CaretIndex, CaretIndex, 0)
+        : new(EditedText, CaretIndex, SelectionStart, SelectionLength);
 
     // Capture the PRE-edit state. A typing run keeps only its first snapshot (so undo removes the whole run at once);
     // any non-typing edit, or the first char after a caret move, starts a fresh entry. Every edit clears the redo stack.
     private void RecordUndo(bool isTyping)
     {
-        if (_restoring) return;
+        if (_restoring || !KeepsUndoHistory) return;
         _redo.Clear();
         if (isTyping && _typingRun) return;
         _undo.Add(Snapshot());
@@ -767,7 +781,7 @@ public abstract class TextBoxBase : Control
         _typingRun = false;
         _caretHeldAt = -1;
         _visualRanges = null;
-        SetCurrentValue(TextProperty, s.Text);   // binding-slot write (see ReplaceSelection), so undo doesn't mask a two-way binding either
+        SetCurrentValue(EditedTextProperty, s.Text);   // binding-slot write (see ReplaceSelection), so undo doesn't mask a two-way binding either
         var len = TextLength;
         SelectionStart = Math.Clamp(s.SelStart, 0, len);
         SelectionLength = Math.Clamp(s.SelLength, 0, len - Math.Clamp(s.SelStart, 0, len));
@@ -823,9 +837,11 @@ public abstract class TextBoxBase : Control
         return PreviousCaretStop(NextCaretStop(index));
     }
 
-    private int WordBoundary(int index, int dir)
+    /// <summary>Where Ctrl+arrow from <paramref name="index"/> lands in direction <paramref name="dir"/> (-1 or +1): past
+    /// the whitespace and then the word next to it.</summary>
+    protected virtual int WordBoundary(int index, int dir)
     {
-        var text = Text ?? string.Empty;
+        var text = EditedText;
         var i = index;
         if (dir < 0)
         {
@@ -854,8 +870,9 @@ public abstract class TextBoxBase : Control
     protected override void OnKeyDown(KeyEventArgs e)
     {
         base.OnKeyDown(e);
-        var ctrl = (Keyboard.Modifiers & (InputModifiers.LeftControl | InputModifiers.RightControl)) != 0;
-        var shift = (Keyboard.Modifiers & (InputModifiers.LeftShift | InputModifiers.RightShift)) != 0;
+        var alt = (e.Modifiers & (InputModifiers.LeftAlt | InputModifiers.RightAlt)) != 0;
+        var ctrl = !alt && (e.Modifiers & (InputModifiers.LeftControl | InputModifiers.RightControl)) != 0;
+        var shift = (e.Modifiers & (InputModifiers.LeftShift | InputModifiers.RightShift)) != 0;
 
         switch (e.Key)
         {
@@ -902,6 +919,18 @@ public abstract class TextBoxBase : Control
             case Key.BackSpace:
                 if (ctrl && !HasSelection) { SelectionStart = WordBoundary(CaretIndex, -1); SelectionLength = CaretIndex - SelectionStart; }
                 DeleteBackward();
+                e.Handled = true;
+                break;
+            case Key.Delete when shift && !ctrl:
+                CutToClipboard();
+                e.Handled = true;
+                break;
+            case Key.Insert when ctrl && !shift:
+                CopyToClipboard();
+                e.Handled = true;
+                break;
+            case Key.Insert when shift && !ctrl:
+                PasteFromClipboard();
                 e.Handled = true;
                 break;
             case Key.Delete:
@@ -974,7 +1003,7 @@ public abstract class TextBoxBase : Control
 
     protected string SelectedText()
     {
-        var text = Text ?? string.Empty;
+        var text = EditedText;
         return string.Concat(SelectedRanges().Select(r => text.Substring(r.Start, r.End - r.Start)));
     }
 
@@ -1052,11 +1081,11 @@ public abstract class TextBoxBase : Control
         else ResetBlink();   // back from the drag: show it at once rather than mid-blink
     }
 
-    // The run around an index: a word, or the whitespace between two. Not WordBoundary() twice - that one walks OVER the
-    // gap to the next word, so a click at a word's first character would have selected the word BEFORE it.
-    private (int Start, int End) WordAt(int index)
+    /// <summary>The run around <paramref name="index"/> a double-click selects: a word, or the whitespace between two.
+    /// Not <see cref="WordBoundary"/> twice, which walks over the gap and would take the word before.</summary>
+    protected virtual (int Start, int End) WordAt(int index)
     {
-        var text = Text ?? string.Empty;
+        var text = EditedText;
         if (text.Length == 0) return (0, 0);
 
         var i = Math.Clamp(index, 0, text.Length - 1);
@@ -1076,7 +1105,7 @@ public abstract class TextBoxBase : Control
         // resolved state (floated if it already holds text) WITHOUT animating - only later user changes animate.
         if (!_floatLoaded) { _floatLoaded = true; _floatProgress = FloatTarget(); }
 
-        var hasText = !string.IsNullOrEmpty(Text);
+        var hasText = EditedText.Length > 0;
         // Scrolling is owned by the enclosing ScrollViewer (its ScrollContentPresenter translates this whole surface by
         // the offset), so we render the FULL content at our own origin (ox = 0). Text sits below the floating-label strip
         // (zero when off); single-line content then centers vertically in the surface (which the ScrollContentPresenter
@@ -1310,7 +1339,7 @@ public abstract class TextBoxBase : Control
 
     // The label floats up whenever the field is focused or non-empty; it returns to the text line (full size) only when
     // the field is both empty AND unfocused.
-    private double FloatTarget() => IsFocused || !string.IsNullOrEmpty(Text) ? 1.0 : 0.0;
+    private double FloatTarget() => IsFocused || EditedText.Length > 0 ? 1.0 : 0.0;
 
     private void UpdateFloatState()
     {
@@ -1368,11 +1397,15 @@ public abstract class TextBoxBase : Control
         InvalidateSurface();
     }
 
-    private static void OnTextChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
+    /// <summary>The callback the control registers its <see cref="EditedTextProperty"/> with: keeps the caret and the
+    /// selection inside the new text and lays it out again.</summary>
+    protected static void OnEditedTextChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
     {
         if (a is not TextBoxBase tb) return;
         tb._lastShapedText = null;
-        var len = (tb.Text ?? string.Empty).Length;
+        tb._visualRanges = null;
+        tb._visualFor = default;
+        var len = tb.EditedText.Length;
         if (tb.CaretIndex > len) tb.SetCurrentValue(CaretIndexProperty, len);
         if (tb.SelectionStart > len) tb.SetCurrentValue(SelectionStartProperty, len);
         if (tb.SelectionStart + tb.SelectionLength > len)

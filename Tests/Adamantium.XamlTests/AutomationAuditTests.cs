@@ -154,6 +154,7 @@ public class AutomationAuditTests
         [typeof(FractalView)] = (T.Pane, null),
         [typeof(TextBlock)] = (T.Text, null),
         [typeof(TextBox)] = (T.Edit, null),
+        [typeof(PasswordBox)] = (T.Edit, null),
         [typeof(TextPresenter)] = (null, "draws a text box's text; the text box answers for it"),
     };
 

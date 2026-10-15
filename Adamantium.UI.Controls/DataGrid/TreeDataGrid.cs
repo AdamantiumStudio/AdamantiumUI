@@ -2820,7 +2820,8 @@ public partial class TreeDataGrid : Selector
         base.OnKeyDown(e);
         if (e.Handled) return;
 
-        var control = (e.Modifiers & (InputModifiers.LeftControl | InputModifiers.RightControl)) != 0;
+        var alt = (e.Modifiers & (InputModifiers.LeftAlt | InputModifiers.RightAlt)) != 0;
+        var control = !alt && (e.Modifiers & (InputModifiers.LeftControl | InputModifiers.RightControl)) != 0;
         var shift = (e.Modifiers & (InputModifiers.LeftShift | InputModifiers.RightShift)) != 0;
 
         // The four arrows are ONE gesture with four labels, so they are asked as one: a switch of four cases each with
@@ -2889,11 +2890,11 @@ public partial class TreeDataGrid : Selector
                 e.Handled = PasteSelection();
                 break;
 
-            case Key.Delete when !IsEditing:
+            case Key.Delete when !IsEditing && !control && !shift:
                 e.Handled = DeleteSelectedRows();
                 break;
 
-            case Key.Insert when !IsEditing:
+            case Key.Insert when !IsEditing && !control && !shift:
                 e.Handled = AddRow() != null;
                 break;
         }
