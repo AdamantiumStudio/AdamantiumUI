@@ -23,6 +23,10 @@ public static class AnimationManager
 
     // Reused tick snapshot (Active.ToArray() allocated a fresh array every frame; see the iteration note in Tick).
     private static readonly List<IRunningAnimation> TickBuffer = new();
+    private static long _ticks;
+
+    /// <summary>How many times <see cref="Tick"/> has run.</summary>
+    public static long Ticks => _ticks;
 
     private static readonly HashSet<object> Released = new(ReferenceEqualityComparer.Instance);
     private static readonly List<AdamantiumComponent> UnheldTargets = new();
@@ -133,6 +137,8 @@ public static class AnimationManager
     /// <summary>Advances every running animation by <paramref name="deltaSeconds"/>. Called once per frame.</summary>
     public static void Tick(double deltaSeconds)
     {
+        _ticks++;
+
         // Re-publish what the render thread composes its matrices FROM (the element's base transform, where layout put it,
         // what size it is). Only the loop thread may read the live tree, and only it can change any of this - so while it is
         // stalled the render thread's copy cannot go stale: no loop, no layout.

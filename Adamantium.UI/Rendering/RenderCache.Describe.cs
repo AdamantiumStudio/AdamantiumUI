@@ -115,6 +115,13 @@ public partial class RenderCache
         return $"rank {group}, op {op} spans {span}";
     }
 
+    internal string DescribeTextGroup(Core.Graphics.IRenderUnit unit)
+    {
+        if (unit.Component == null || !_groupById.TryGetValue(unit.Component.RenderId, out var group)) return "no group";
+        var runs = string.Join(" ", group.Runs.ConvertAll(r => $"[{r.First}, {r.First + r.Count})"));
+        return $"group runs {runs}, walked {group.WalkVersion} of {_walkVersion}, arena {(ReferenceEquals(group.Arena, _textBatch) ? "text" : group.Arena?.GetType().Name ?? "none")}";
+    }
+
     /// <summary>The rank the draw holds for <paramref name="component"/>'s group, or null without one.</summary>
     internal long? RankOfGroup(IUIComponent component) =>
         _groupById.TryGetValue(component.RenderId, out var group) ? group.Order : null;

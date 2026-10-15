@@ -790,7 +790,7 @@ public partial class RenderCache
         => Departed(group.Component ?? (group.Units.Count > 0 ? group.Units[0].Component : null));
 
     private bool Departed(IUIComponent component)
-        => component != null && (component is Core.FundamentalUIComponent { IsDiscarded: true } || _departed.Contains(component));
+        => component != null && (DiscardedBeforeApplied(component) || _departed.Contains(component));
 
     // Frees units of controls the recorder found neither attached nor parked. Runs during the build (EndDraw), since
     // disposal is deferred and an earlier call could free a unit still in flight.

@@ -215,6 +215,41 @@ public class DeferredContentTests
             "the content takes its place as soon as the swap it belongs to is done");
     }
 
+    // Content built during the swap still has to be put up, and on a large view that holds the loop thread for a second
+    // (the DataGrid page: 1.8 s). The spinner goes up first, for a frame of its own, so it turns through that second.
+    [Test]
+    public void ContentThatArrivesMidTransition_PutsTheSpinnerUpBeforeItself()
+    {
+        var presenter = new ContentPresenter
+        {
+            DeferContent = true,
+            LoadingTemplate = new DataTemplate(() => new TemplateResult { RootComponent = new Border { Width = 8, Height = 8 } }),
+            ContentTemplate = new DataTemplate(() => new TemplateResult { RootComponent = new Border { Width = 40, Height = 30 } }),
+            Content = new object()
+        };
+
+        var window = new Window { Width = 100, Height = 100, Content = presenter };
+        ((IMeasurableComponent)window).Measure(Host);
+        Assert.That(PumpUntil(() => SizeOfChild(presenter) == new Size(40, 30), presenter), Is.True, "first content arrives");
+
+        presenter.ContentTransition = ContentTransition.SlideLeft;
+        presenter.TransitionDuration = 0.5;
+        presenter.ContentTemplate = new DataTemplate(() => new TemplateResult { RootComponent = new Border { Width = 60, Height = 50 } });
+        presenter.Content = new object();
+        presenter.Measure(Host);
+        presenter.Arrange(new Rect(0, 0, Host.Width, Host.Height));
+        PumpUntil(() => false, presenter, seconds: 0.25);
+
+        var spinnerFirst = false;
+        Assert.That(PumpUntil(() =>
+        {
+            if (HasChild(presenter, new Size(60, 50))) return true;
+            spinnerFirst |= HasChild(presenter, new Size(8, 8));
+            return false;
+        }, presenter, seconds: 5, tick: 0.1), Is.True, "the content arrives");
+        Assert.That(spinnerFirst, Is.True, "the spinner is up for a frame before the content is put up");
+    }
+
     // A one-shot render has no "next frame", so it must not hand back a picture with a spinner where the content belongs:
     // the synchronous switch is what every bake path (RenderTargetBitmap, the designer preview, the test harness) turns on.
     [Test]

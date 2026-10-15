@@ -176,7 +176,8 @@ internal sealed class FrameVerifier : IRenderCacheObserver
                 (float)component.SelfOpacity,
                 component is Controls.Text.TextBlock { Foreground: Core.Media.SolidColorBrush foreground }
                     ? foreground.Color.ToVector4()
-                    : null);
+                    : null,
+                !component.IsGeometryValid);
             _byRenderId[component.RenderId] = component;
             RenderCache.PushChildrenInPaintOrder(_stack, component.VisualChildren, hidden);
         }
@@ -193,7 +194,10 @@ internal sealed class FrameVerifier : IRenderCacheObserver
             var component = group.Component;
             if (!_facts.TryGetValue(component, out var fact))
             {
-                Alarm($"{ComponentText.Of(component)}: in the paint order ({group.Units} units), but not in the tree");
+                Alarm($"{ComponentText.Of(component)}: in the paint order ({group.Units} units, {group.Clones} copies), but not in the tree" +
+                      $" - {((component as Core.FundamentalUIComponent)?.Lifecycle.ToString() ?? "?")}, " +
+                      $"{(component.IsAttachedToVisualTree ? "attached" : "detached")}, " +
+                      $"{(component.Visibility == Visibility.Collapsed ? "collapsed" : "visible")}, parent {ComponentText.Of(component.VisualParent)}");
                 continue;
             }
 
@@ -254,7 +258,9 @@ internal sealed class FrameVerifier : IRenderCacheObserver
         {
             if (!live.TryGetFrozen(link, out var frozen))
             {
-                Alarm($"{ComponentText.Of(link)}: drawn, but the cache holds no layout for it");
+                Alarm($"{ComponentText.Of(link)}: drawn, but the cache holds no layout for it - on the chain of {ComponentText.Of(component)}, " +
+                      $"{((link as Core.FundamentalUIComponent)?.Lifecycle.ToString() ?? "?")}, " +
+                      $"{(link.IsAttachedToVisualTree ? "attached" : "detached")}, in the tree {_facts.ContainsKey(link)}, parent {ComponentText.Of(link.VisualParent)}");
                 return;
             }
 
@@ -314,7 +320,8 @@ internal sealed class FrameVerifier : IRenderCacheObserver
         _runs.Clear();
         foreach (var (unit, first, count) in live.DescribeTextRuns())
         {
-            if (unit.Component is not { } component || !_facts.TryGetValue(component, out var fact) || fact.Hidden)
+            _textWithRuns.Add(unit);
+            if (unit.Component is not { } component || !_facts.TryGetValue(component, out var fact) || fact.Hidden || fact.Pending)
             {
                 continue;
             }
@@ -326,7 +333,6 @@ internal sealed class FrameVerifier : IRenderCacheObserver
             }
 
             _runs.Add((first, count, component));
-            _textWithRuns.Add(unit);
             if (!live.GlyphsIssued(first, count))
             {
                 Alarm($"{ComponentText.Of(component)}: its glyphs [{first}, {first + count}) are in the batch, but no segment draws them");
@@ -334,7 +340,13 @@ internal sealed class FrameVerifier : IRenderCacheObserver
 
             if (unit is RenderUnits.TextRenderUnit { TextComponent: { GlyphRun: { } glyphs } text } textUnit && glyphs.Count == count)
             {
+                var before = _alarmCount;
                 CheckGlyphs(live, slots, component, fact, live.GlyphAt(first), text, glyphs.Glyphs[0].HasOwnColor);
+                if (_alarmCount > before)
+                {
+                    Alarm($"  ...{ComponentText.Of(component)} \"{(component as Controls.Text.TextBlock)?.Text}\" owns glyphs " +
+                          $"[{first}, {first + count}) - {live.DescribeTextGroup(unit)}");
+                }
                 CheckGlyphPlaces(live, component, fact, textUnit, first, count);
             }
             else
@@ -348,10 +360,11 @@ internal sealed class FrameVerifier : IRenderCacheObserver
         foreach (var unit in live.DescribeUnits())
         {
             if (unit is RenderUnits.TextRenderUnit { TextComponent: { GlyphRun.Count: > 0 } text } && !_textWithRuns.Contains(unit)
-                && unit.Component is { } component && _facts.TryGetValue(component, out var fact) && !fact.Hidden
+                && unit.Component is { } component && _facts.TryGetValue(component, out var fact) && !fact.Hidden && !fact.Pending
                 && !live.WasCulled(unit) && live.BatchesText(text))
             {
-                Alarm($"{ComponentText.Of(component)}: has {text.GlyphRun.Count} glyphs to draw, but none of them is in the glyph batch");
+                Alarm($"{ComponentText.Of(component)}: has {text.GlyphRun.Count} glyphs to draw, but none of them is in the glyph batch" +
+                      $" - {live.DescribeTextGroup(unit)}");
             }
         }
 
