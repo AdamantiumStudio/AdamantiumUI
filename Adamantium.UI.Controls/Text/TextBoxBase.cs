@@ -863,7 +863,7 @@ public abstract class TextBoxBase : Control
         if (IsReadOnly || string.IsNullOrEmpty(e.Text)) return;
         var filtered = new string(e.Text.Where(c => !char.IsControl(c)).ToArray());
         if (filtered.Length == 0) return;
-        ReplaceSelection(filtered, isTyping: true);
+        ReplaceSelection(Entered(filtered), isTyping: true);
         e.Handled = true;
     }
 
@@ -998,8 +998,12 @@ public abstract class TextBoxBase : Control
         if (string.IsNullOrEmpty(text)) return;
         text = text.Replace("\r\n", "\n").Replace("\r", "\n").Replace((char)0x2028, '\n').Replace((char)0x2029, '\n'); // normalize line endings
         if (!AcceptsNewLines) text = text.Replace("\n", " ");        // single-line: newlines become spaces
-        ReplaceSelection(text);
+        ReplaceSelection(Entered(text));
     }
+
+    /// <summary>What the user types or pastes, as the box takes it in; text set from code or a binding does not pass
+    /// here.</summary>
+    protected virtual string Entered(string text) => text;
 
     protected string SelectedText()
     {

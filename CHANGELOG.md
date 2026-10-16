@@ -7,6 +7,10 @@ All packages share one version.
 
 ### Added
 
+- `TextBox.CharacterCasing` (`Normal`, `Lower`, `Upper`), as WPF's: what is typed or pasted takes that case, letter
+  by letter as the box's `Language` maps it (else the application's language; a tag it does not know loses subtags
+  from the right until it does). Text set from code or a binding keeps its own.
+
 - `Paragraph` in a `TextBlock`'s inlines, as HTML's `p`: it starts on lines of its own, and the inlines between
   paragraphs make a paragraph of their own unless they hold nothing but white space. `HorizontalTextAlignment` (null
   takes the block's), `Margin` (left and right keep its lines from the edges, top and bottom are the room above and
@@ -1306,6 +1310,8 @@ All packages share one version.
 - Content that stretches, adopted by a `ContentPresenter` after a deferred build, fills the presenter. The layout pass
   could arrange it on its own first, into its desired size, and the presenter's next arrange at its old size took that
   for "nothing changed": a page opened for the first time stayed as tall as its content asked.
+- `adam-auto type` hands a character outside the Basic Multilingual Plane on whole, as the platform's window does,
+  not as two halves.
 - A span refuses an inline it cannot hold (itself, a span it is in) before taking it: the refused inline used to stay
   in its `Inlines` after the exception.
 - A paragraph separator (U+2029) pasted into a text box is a line break, a space in a single-line box.

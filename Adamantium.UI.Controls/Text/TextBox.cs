@@ -1,8 +1,10 @@
+using System.Globalization;
 using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Controls.Primitives;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Input;
+using Adamantium.UI.Core.Localization;
 using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls.Text;
@@ -19,6 +21,9 @@ public class TextBox : TextBoxBase
     public static readonly AdamantiumProperty AcceptsReturnProperty = AdamantiumProperty.Register(nameof(AcceptsReturn),
         typeof(bool), typeof(TextBox), new PropertyMetadata(false));
 
+    public static readonly AdamantiumProperty CharacterCasingProperty = AdamantiumProperty.Register(
+        nameof(CharacterCasing), typeof(CharacterCasing), typeof(TextBox), new PropertyMetadata(CharacterCasing.Normal));
+
     /// <summary>Whether the box offers a button that empties it in one press. The theme shows it while there is text
     /// and the box is not read-only.</summary>
     public static readonly AdamantiumProperty ShowsClearButtonProperty = AdamantiumProperty.Register(
@@ -34,6 +39,8 @@ public class TextBox : TextBoxBase
         typeof(bool), typeof(TextBox), new PropertyMetadata(false));
 
     private ButtonBase _clearButton;
+    private string _casingLanguage;
+    private CultureInfo _casingCulture;
 
     public string Text
     {
@@ -51,6 +58,15 @@ public class TextBox : TextBoxBase
         set => SetValue(AcceptsReturnProperty, value);
     }
 
+    /// <summary>The case given to what is typed or pasted, letter by letter as the box's <c>Language</c> maps it (else
+    /// the application's language; a tag it does not know loses subtags from the right until it does). Text set from
+    /// code or a binding keeps its own.</summary>
+    public CharacterCasing CharacterCasing
+    {
+        get => GetValue<CharacterCasing>(CharacterCasingProperty);
+        set => SetValue(CharacterCasingProperty, value);
+    }
+
     public bool ShowsClearButton
     {
         get => GetValue<bool>(ShowsClearButtonProperty);
@@ -66,6 +82,44 @@ public class TextBox : TextBoxBase
     public bool HasText => GetValue<bool>(HasTextProperty);
 
     protected override bool AcceptsNewLines => AcceptsReturn;
+
+    protected override string Entered(string text) => CharacterCasing switch
+    {
+        CharacterCasing.Upper => text.ToUpper(CasingCulture()),
+        CharacterCasing.Lower => text.ToLower(CasingCulture()),
+        _ => text,
+    };
+
+    private CultureInfo CasingCulture()
+    {
+        var language = Language?.Trim();
+        if (!string.IsNullOrEmpty(language) && language != _casingLanguage)
+        {
+            _casingLanguage = language;
+            _casingCulture = LookUp(language);
+        }
+
+        return (string.IsNullOrEmpty(language) ? null : _casingCulture)
+               ?? LookUp(Languages.Current)
+               ?? CultureInfo.InvariantCulture;
+    }
+
+    private static CultureInfo LookUp(string language)
+    {
+        for (var tag = language?.Trim() ?? string.Empty; tag.Length > 0;
+             tag = tag.LastIndexOf('-') is > 0 and var dash ? tag[..dash] : string.Empty)
+        {
+            try
+            {
+                return Languages.CultureFor(tag);
+            }
+            catch (CultureNotFoundException)
+            {
+            }
+        }
+
+        return null;
+    }
 
     /// <summary>Raised when Enter is pressed while <see cref="AcceptsReturn"/> is off; a host can commit/submit here.</summary>
     public event KeyEventHandler EnterPressed;
