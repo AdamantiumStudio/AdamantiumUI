@@ -227,9 +227,17 @@ public class TextBlock : InputUIComponent, IFocusableInParts
     private readonly List<int> _inlineStarts = [];
     private readonly List<(int Start, int Length, Paragraph Paragraph)> _paragraphs = [];
     private bool _runFontsPending;
+    private TextEffectCollection _textEffects;
+    private readonly List<(Inline Inline, int Start, int Length)> _inlineRanges = [];
+    private readonly List<GlyphEffect> _resolvedEffects = [];
+    private GlyphEffect[] _drawnEffects = [];
+    private readonly HeldBrushes _effectBrushes;
+    private readonly HeldBrushes _inlineBrushes;
 
     public TextBlock()
     {
+        _effectBrushes = new HeldBrushes(this);
+        _inlineBrushes = new HeldBrushes(this);
         Id = Guid.NewGuid().ToString();
         // _textLayout is built lazily in EnsureLayout: FontFamily is inherited and may be null here (it resolves against
         // an ancestor / DefaultFontFamily), and the typeface is fixed per TextLayout, so it's rebuilt when the font changes.
@@ -315,9 +323,11 @@ public class TextBlock : InputUIComponent, IFocusableInParts
         _runFontsPending = false;
         _links.Clear();
         _objects.Clear();
+        _inlineBrushes.Clear();
         var attributed = HasInlines
             ? InlineAttributedText(text, shaping)
             : shaping == null ? null : new AttributedText(text, shaping);
+        _inlineBrushes.Take();
         if (_links.Count > 0 && !Focusable && GetValueSource(FocusableProperty) == ValuePriority.Default)
         {
             SetCurrentValue(FocusableProperty, true);
@@ -640,6 +650,26 @@ public class TextBlock : InputUIComponent, IFocusableInParts
 
     private bool HasInlines => _inlines is { Count: > 0 };
 
+    /// <summary>Ranges of the text drawn apart from the rest, as WPF's text effects: moved, turned, scaled or recolored.
+    /// Their positions count the text as it is laid out, a line break and a paragraph's end one each; an inline's own
+    /// <see cref="Inline.TextEffects"/> count from its start. Only the drawing changes, so changing them draws the text
+    /// again without laying it out.</summary>
+    public TextEffectCollection TextEffects
+    {
+        get
+        {
+            if (_textEffects == null)
+            {
+                _textEffects = new TextEffectCollection(this);
+                _textEffects.Changed += OnTextEffectsChanged;
+            }
+
+            return _textEffects;
+        }
+    }
+
+    private void OnTextEffectsChanged(object sender, System.EventArgs e) => InvalidateRender(false);
+
     internal string ShownText => HasInlines
         ? InlineText().Replace(LineSeparator, '\n').Replace(ParagraphSeparator, '\n')
             .Replace(ObjectReplacement.ToString(), string.Empty)
@@ -650,9 +680,9 @@ public class TextBlock : InputUIComponent, IFocusableInParts
     private void OnInlinesChanged(object sender, NotifyCollectionChangedEventArgs e)
     {
         if (e.OldItems != null)
-            foreach (Inline old in e.OldItems) { old.Changed -= OnInlineChanged; RemoveLogicalChild(old); }
+            foreach (Inline old in e.OldItems) { old.Changed -= OnInlineChanged; RemoveLogicalChild(old); old.ReparentEffects(); old.SetInBlock(old.ReachesABlock()); }
         if (e.NewItems != null)
-            foreach (Inline added in e.NewItems) { AddLogicalChild(added); added.Changed += OnInlineChanged; }
+            foreach (Inline added in e.NewItems) { AddLogicalChild(added); added.Changed += OnInlineChanged; added.ReparentEffects(); added.SetInBlock(true); }
         if (!SelectionCarries)
         {
             ClearSelection();
@@ -665,6 +695,12 @@ public class TextBlock : InputUIComponent, IFocusableInParts
 
     private void OnInlineChanged(object sender, System.EventArgs e)
     {
+        if (ReferenceEquals(e, Inline.EffectsOnly))
+        {
+            InvalidateRender(false);
+            return;
+        }
+
         _inlinesDirty = true;
         HostChildren();
         InvalidateMeasure();
@@ -674,7 +710,21 @@ public class TextBlock : InputUIComponent, IFocusableInParts
     protected override void OnDiscarded()
     {
         base.OnDiscarded();
+        DiscardEffects(_textEffects);
         DiscardInlines(_inlines);
+    }
+
+    private static void DiscardEffects(TextEffectCollection effects)
+    {
+        if (effects == null)
+        {
+            return;
+        }
+
+        foreach (var effect in effects)
+        {
+            DiscardedVisuals.Publish(effect);
+        }
     }
 
     private static void DiscardInlines(InlineCollection inlines)
@@ -687,6 +737,11 @@ public class TextBlock : InputUIComponent, IFocusableInParts
         foreach (var inline in inlines)
         {
             DiscardedVisuals.Publish(inline);
+            if (inline.HasTextEffects)
+            {
+                DiscardEffects(inline.TextEffects);
+            }
+
             if (inline is Span span)
             {
                 DiscardInlines(span.Inlines);
@@ -873,6 +928,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts
     {
         var attributed = new AttributedText(text, shaping);
         List<Inline> chain = [];
+        _inlineRanges.Clear();
         for (var i = 0; i < _inlines.Count; i++)
         {
             var start = _inlineStarts[i];
@@ -915,7 +971,17 @@ public class TextBlock : InputUIComponent, IFocusableInParts
 
     private void ApplyInline(Inline inline, List<Inline> chain, AttributedText attributed, ref int start)
     {
+        var from = start;
         chain.Add(inline);
+        _inlineBrushes.Add(inline.Foreground);
+        _inlineBrushes.Add(inline.Background);
+        if (inline.HasDecorationLines)
+        {
+            foreach (var line in inline.DecorationLines)
+            {
+                _inlineBrushes.Add(line.Brush);
+            }
+        }
         switch (inline)
         {
             case Run run:
@@ -944,6 +1010,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts
                 break;
         }
 
+        _inlineRanges.Add((inline, from, start - from));
         chain.RemoveAt(chain.Count - 1);
     }
 
@@ -1286,8 +1353,103 @@ public class TextBlock : InputUIComponent, IFocusableInParts
         EnsureLayout();   // refresh shaping if a render-only property (alignment/wrapping) changed since the last measure
         DrawAdornments(session, backgrounds: true);
         DrawSelection(session);
-        session.DrawText(GetTextRenderingParameters(), DesiredSize, _textLayout, Foreground, Background, Stroke);
+        var parameters = GetTextRenderingParameters();
+        if (DrawnEffects(new Vector2F(parameters.TextArea.X, parameters.TextArea.Y)) is { Length: > 0 } effects)
+        {
+            session.DrawText(parameters, DesiredSize, _textLayout, Foreground, Background, Stroke, effects);
+        }
+        else
+        {
+            session.DrawText(parameters, DesiredSize, _textLayout, Foreground, Background, Stroke);
+        }
+
         DrawAdornments(session, backgrounds: false);
+    }
+
+    private GlyphEffect[] DrawnEffects(Vector2F area)
+    {
+        _resolvedEffects.Clear();
+        _effectBrushes.Clear();
+        var length = _textLayout?.Text?.Length ?? 0;
+        if (_textEffects is { Count: > 0 })
+        {
+            foreach (var effect in _textEffects)
+            {
+                Resolve(effect, 0, length, area);
+            }
+        }
+
+        if (HasInlines)
+        {
+            foreach (var (inline, start, count) in _inlineRanges)
+            {
+                if (!inline.HasTextEffects)
+                {
+                    continue;
+                }
+
+                foreach (var effect in inline.TextEffects)
+                {
+                    Resolve(effect, start, Math.Min(count, length - start), area);
+                }
+            }
+        }
+
+        _effectBrushes.Take();
+        if (!SameAsDrawn())
+        {
+            _drawnEffects = [.. _resolvedEffects];
+        }
+
+        return _drawnEffects;
+    }
+
+    private void Resolve(TextEffect effect, int offset, int limit, Vector2F area)
+    {
+        if (!effect.TryResolve(offset, limit, area, RenderSize, out var resolved))
+        {
+            return;
+        }
+
+        _resolvedEffects.Add(resolved);
+        _effectBrushes.Add(effect.Foreground);
+    }
+
+    internal override void OnRenderValueChanged(object sender, System.EventArgs e)
+    {
+        if (sender is Brush brush)
+        {
+            if (_inlineBrushes.Contains(brush))
+            {
+                _inlinesDirty = true;
+                InvalidateMeasure();
+            }
+
+            if (_effectBrushes.Contains(brush))
+            {
+                InvalidateRender(false);
+            }
+        }
+
+        base.OnRenderValueChanged(sender, e);
+    }
+
+    private bool SameAsDrawn()
+    {
+        if (_drawnEffects.Length != _resolvedEffects.Count)
+        {
+            return false;
+        }
+
+        for (var i = 0; i < _drawnEffects.Length; i++)
+        {
+            if (_drawnEffects[i] != _resolvedEffects[i])
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /// <summary>The selected text as it is copied: a line break and a paragraph's end as a new line, a control in the
@@ -2110,6 +2272,8 @@ public class TextBlock : InputUIComponent, IFocusableInParts
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
+        _inlineBrushes.Take();
+        _effectBrushes.Take();
         if (_selectedIn != null)
         {
             ListenToTheWindow();
@@ -2119,6 +2283,8 @@ public class TextBlock : InputUIComponent, IFocusableInParts
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnDetachedFromVisualTree(e);
+        _inlineBrushes.Released();
+        _effectBrushes.Released();
         ClearSelection();
         _selectionHoldsFocus = false;
         GiveUpSelectionFocus();

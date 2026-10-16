@@ -1,6 +1,7 @@
 using Adamantium.Mathematics;
 using Adamantium.UI.Core.Graphics;
 using Adamantium.UI.Core.Media.Imaging;
+using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Core.Media.Drawings;
 
@@ -8,7 +9,7 @@ namespace Adamantium.UI.Core.Media.Drawings;
 public class ImageDrawing : Drawing
 {
     public static readonly AdamantiumProperty ImageSourceProperty = AdamantiumProperty.Register(nameof(ImageSource),
-        typeof(ImageSource), typeof(ImageDrawing), new PropertyMetadata(null));
+        typeof(ImageSource), typeof(ImageDrawing), new PropertyMetadata(null, ImageSourceChangedCallback));
 
     public static readonly AdamantiumProperty RectProperty = AdamantiumProperty.Register(nameof(Rect),
         typeof(Rect), typeof(ImageDrawing), new PropertyMetadata(default(Rect)));
@@ -27,7 +28,17 @@ public class ImageDrawing : Drawing
         set => SetValue(RectProperty, value);
     }
 
+    private static void ImageSourceChangedCallback(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (a is ImageDrawing drawing)
+        {
+            drawing.ReplaceOwned(e.OldValue as ImageSource, e.NewValue as ImageSource);
+        }
+    }
+
     protected override void AttachChildren() => AttachOwned(ImageSource);
+
+    protected override void DetachChildren() => DetachOwned(ImageSource);
 
     public override Rect Bounds => Rect;
 

@@ -115,6 +115,16 @@
     <Phrase Key="RunShiftRun" Text="смещённый участок"/>
     <Phrase Key="DecorationFlagsTitle" Text="Линии по имени: под текстом, сквозь него и над ним, и волнистая — как у орфографической ошибки:"/>
     <Phrase Key="DecorationLinesTitle" Text="Линии оформления, каждая со своей кистью, толщиной, пунктиром и смещением:"/>
+    <Phrase Key="TextEffectsTitle" Text="Эффекты текста: буквы повёрнуты, подняты, увеличены и перекрашены на своих местах — вокруг своего центра или угла элемента; строка, каретка и выделение остаются, как их разложили:"/>
+    <Phrase Key="TextEffectsWaveTitle" Text="Анимация: у каждой буквы свой эффект, его преобразование или кисть анимируется по имени, одна буква за другой:"/>
+    <Phrase Key="EffectWave" Text="Волна"/>
+    <Phrase Key="EffectShake" Text="Тряска"/>
+    <Phrase Key="EffectArrive" Text="Прилёт по очереди"/>
+    <Phrase Key="EffectTypewriter" Text="Печатная машинка"/>
+    <Phrase Key="EffectDrunk" Text="Качка"/>
+    <Phrase Key="EffectSpin" Text="Вращение буквы"/>
+    <Phrase Key="EffectPendulum" Text="Маятник"/>
+    <Phrase Key="EffectFlip" Text="Табло"/>
     <Phrase Key="BaselineAlignmentTitle" Text="Положение по базовой линии: верхний и нижний индекс там, где их ставит шрифт; мелкие участки у верха, середины и низа строки и у верха и низа текста:"/>
     <Phrase Key="LinesTitle" Text="Строки: расстояние между базовыми линиями, промежуток между строками и наибольшее число строк (0 — все); крупный участок раздвигает свою строку:"/>
     <Phrase Key="LinesHeight" Text="Высота строки:"/>

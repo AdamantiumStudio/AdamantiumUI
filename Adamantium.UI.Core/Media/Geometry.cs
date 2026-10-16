@@ -36,6 +36,11 @@ public abstract class Geometry : AdamantiumComponent
          {
             transform1.PropertyChanged += geometry.TransformOnPropertyChanged;
          }
+
+         if (geometry.InheritanceParent is Drawings.Drawing drawing)
+         {
+            drawing.ReplaceOwned(e.OldValue as Transform, e.NewValue as Transform);
+         }
       }
    }
 

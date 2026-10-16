@@ -67,6 +67,13 @@ public abstract class Inline : FundamentalUIComponent
         new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure));
 
     private TextDecorationCollection _decorationLines;
+    private TextEffectCollection _textEffects;
+    private Brush _bakedForeground;
+    private Brush _bakedBackground;
+    private bool _inBlock;
+    private bool _linesBaked;
+
+    internal static readonly EventArgs EffectsOnly = new();
 
     /// <summary>Raised when a property that affects this inline's rendered text changes (so the TextBlock re-lays-out).</summary>
     internal event EventHandler Changed;
@@ -203,7 +210,43 @@ public abstract class Inline : FundamentalUIComponent
 
     internal bool HasDecorationLines => _decorationLines is { Count: > 0 };
 
+    /// <summary>Ranges of this inline drawn apart from the rest, as WPF's text effects; their positions count from the
+    /// start of this inline's own text. Only the drawing changes, so changing them draws the text again without laying
+    /// it out.</summary>
+    public TextEffectCollection TextEffects
+    {
+        get
+        {
+            if (_textEffects == null)
+            {
+                _textEffects = new TextEffectCollection(this);
+                _textEffects.Changed += OnTextEffectsChanged;
+            }
+
+            return _textEffects;
+        }
+    }
+
+    internal bool HasTextEffects => _textEffects is { Count: > 0 };
+
+    internal virtual void ReparentEffects()
+    {
+        if (!HasTextEffects)
+        {
+            return;
+        }
+
+        foreach (var effect in _textEffects)
+        {
+            effect.ReparentTransform();
+        }
+    }
+
     protected void RaiseChanged() => Changed?.Invoke(this, EventArgs.Empty);
+
+    private protected void RaiseChanged(EventArgs e) => Changed?.Invoke(this, e);
+
+    private void OnTextEffectsChanged(object sender, EventArgs e) => RaiseChanged(EffectsOnly);
 
     private void OnDecorationLinesChanged(object sender, NotifyCollectionChangedEventArgs e)
     {
@@ -212,6 +255,10 @@ public abstract class Inline : FundamentalUIComponent
             foreach (TextDecoration line in e.OldItems)
             {
                 line.Changed -= OnDecorationLineChanged;
+                if (_linesBaked)
+                {
+                    line.Bake(false);
+                }
             }
         }
 
@@ -220,6 +267,10 @@ public abstract class Inline : FundamentalUIComponent
             foreach (TextDecoration line in e.NewItems)
             {
                 line.Changed += OnDecorationLineChanged;
+                if (_linesBaked)
+                {
+                    line.Bake(true);
+                }
             }
         }
 
@@ -228,9 +279,85 @@ public abstract class Inline : FundamentalUIComponent
 
     private void OnDecorationLineChanged(object sender, EventArgs e) => RaiseChanged();
 
+    internal bool InBlock => _inBlock;
+
+    internal bool ReachesABlock()
+    {
+        for (var node = LogicalParent; node != null; node = node.LogicalParent)
+        {
+            if (node is TextBlock)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    internal virtual void SetInBlock(bool inBlock)
+    {
+        _inBlock = inBlock;
+        Rebake();
+        if (_textEffects == null)
+        {
+            return;
+        }
+
+        foreach (var effect in _textEffects)
+        {
+            effect.SetInBlock(inBlock);
+        }
+    }
+
+    protected override void OnDiscarded()
+    {
+        base.OnDiscarded();
+        _inBlock = false;
+        Rebake();
+    }
+
+    private void Rebake()
+    {
+        var baking = _inBlock && !IsDiscarded;
+        _bakedForeground = Bake(_bakedForeground, baking ? Foreground : null);
+        _bakedBackground = Bake(_bakedBackground, baking ? Background : null);
+        if (_linesBaked == baking)
+        {
+            return;
+        }
+
+        _linesBaked = baking;
+        if (_decorationLines == null)
+        {
+            return;
+        }
+
+        foreach (var line in _decorationLines)
+        {
+            line.Bake(baking);
+        }
+    }
+
+    private static Brush Bake(Brush baked, Brush brush)
+    {
+        if (ReferenceEquals(baked, brush))
+        {
+            return baked;
+        }
+
+        baked?.ReleaseBaked();
+        brush?.HoldBaked();
+        return brush;
+    }
+
     protected override void OnPropertyChanged(AdamantiumPropertyChangedEventArgs e)
     {
         base.OnPropertyChanged(e);
+        if (e.Property == ForegroundProperty || e.Property == BackgroundProperty)
+        {
+            Rebake();
+        }
+
         if (e.Property.GetDefaultMetadata(GetType())?.AffectsMeasure == true)
         {
             RaiseChanged();

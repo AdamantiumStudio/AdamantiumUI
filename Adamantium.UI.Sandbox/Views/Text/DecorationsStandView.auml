@@ -73,5 +73,723 @@
                 </Run>
             </TextBlock.Inlines>
         </TextBlock>
+
+        <!-- Text effects, as WPF's: a range drawn moved and recolored, the layout as it is. -->
+        <TextBlock Text="{Localize TextStrings.TextEffectsTitle}"
+                   Margin="0,20,0,6"/>
+        <TextBlock AutomationProperties.AutomationId="TextEffectsSample"
+                   FontSize="28"
+                   Margin="0,8,0,8"
+                   HorizontalAlignment="Left">
+            <TextBlock.Inlines>
+                <Run Text="turned">
+                    <Run.TextEffects>
+                        <TextEffect PositionStart="0"
+                                    PositionCount="6">
+                            <TextEffect.Transform>
+                                <Transform RotationAngle="-15"/>
+                            </TextEffect.Transform>
+                        </TextEffect>
+                    </Run.TextEffects>
+                </Run>
+                <Run Text="   "/>
+                <Run Text="raised">
+                    <Run.TextEffects>
+                        <TextEffect PositionStart="2"
+                                    PositionCount="2"
+                                    Foreground="#F87171">
+                            <TextEffect.Transform>
+                                <Transform TranslateY="-10"/>
+                            </TextEffect.Transform>
+                        </TextEffect>
+                    </Run.TextEffects>
+                </Run>
+                <Run Text="   "/>
+                <Run Text="bigger">
+                    <Run.TextEffects>
+                        <TextEffect PositionStart="2"
+                                    PositionCount="2"
+                                    Foreground="#38BDF8">
+                            <TextEffect.Transform>
+                                <Transform ScaleX="1.5"
+                                           ScaleY="1.5"/>
+                            </TextEffect.Transform>
+                        </TextEffect>
+                    </Run.TextEffects>
+                </Run>
+                <Run Text="   "/>
+                <Run Text="swung">
+                    <Run.TextEffects>
+                        <TextEffect PositionStart="0"
+                                    PositionCount="5"
+                                    TransformOrigin="Element">
+                            <TextEffect.Transform>
+                                <Transform RotationAngle="4"/>
+                            </TextEffect.Transform>
+                        </TextEffect>
+                    </Run.TextEffects>
+                </Run>
+            </TextBlock.Inlines>
+        </TextBlock>
+
+        <!-- Animated effects: an effect a letter (or one over a word), each one's transform or brush named and
+             animated, one a little after the other. -->
+        <TextBlock Text="{Localize TextStrings.TextEffectsWaveTitle}"
+                   Margin="0,20,0,6"/>
+        <ContentControl Content="{Binding}"
+                        HorizontalAlignment="Left">
+            <ContentControl.ContentTemplate>
+                <DataTemplate>
+                    <StackPanel Orientation="Vertical">
+                        <StackPanel Orientation="Horizontal"
+                                    Margin="0,6,0,6">
+                            <TextBlock Text="{Localize TextStrings.EffectWave}"
+                                       Width="180"
+                                       VerticalAlignment="Center"/>
+                            <TextBlock AutomationProperties.AutomationId="TextEffectsWave"
+                                       Text="EFFECTS"
+                                       FontSize="32"
+                                       Margin="0,10,0,10">
+                                <TextBlock.TextEffects>
+                                    <TextEffect PositionStart="0"
+                                                PositionCount="1">
+                                        <TextEffect.Transform>
+                                            <Transform x:Name="Wave0"/>
+                                        </TextEffect.Transform>
+                                    </TextEffect>
+                                    <TextEffect PositionStart="1"
+                                                PositionCount="1">
+                                        <TextEffect.Transform>
+                                            <Transform x:Name="Wave1"/>
+                                        </TextEffect.Transform>
+                                    </TextEffect>
+                                    <TextEffect PositionStart="2"
+                                                PositionCount="1">
+                                        <TextEffect.Transform>
+                                            <Transform x:Name="Wave2"/>
+                                        </TextEffect.Transform>
+                                    </TextEffect>
+                                    <TextEffect PositionStart="3"
+                                                PositionCount="1">
+                                        <TextEffect.Transform>
+                                            <Transform x:Name="Wave3"/>
+                                        </TextEffect.Transform>
+                                    </TextEffect>
+                                    <TextEffect PositionStart="4"
+                                                PositionCount="1">
+                                        <TextEffect.Transform>
+                                            <Transform x:Name="Wave4"/>
+                                        </TextEffect.Transform>
+                                    </TextEffect>
+                                    <TextEffect PositionStart="5"
+                                                PositionCount="1">
+                                        <TextEffect.Transform>
+                                            <Transform x:Name="Wave5"/>
+                                        </TextEffect.Transform>
+                                    </TextEffect>
+                                    <TextEffect PositionStart="6"
+                                                PositionCount="1">
+                                        <TextEffect.Transform>
+                                            <Transform x:Name="Wave6"/>
+                                        </TextEffect.Transform>
+                                    </TextEffect>
+                                </TextBlock.TextEffects>
+                            </TextBlock>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal"
+                                    Margin="0,6,0,6">
+                            <TextBlock Text="{Localize TextStrings.EffectShake}"
+                                       Width="180"
+                                       VerticalAlignment="Center"/>
+                            <TextBlock AutomationProperties.AutomationId="TextEffectsShake"
+                                       Text="ERROR"
+                                       FontSize="32"
+                                       Margin="0,10,0,10">
+                                <TextBlock.TextEffects>
+                                    <TextEffect PositionStart="0"
+                                                PositionCount="5"
+                                                Foreground="#F87171">
+                                        <TextEffect.Transform>
+                                            <Transform x:Name="Shake"/>
+                                        </TextEffect.Transform>
+                                    </TextEffect>
+                                </TextBlock.TextEffects>
+                            </TextBlock>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal"
+                                    Margin="0,6,0,6">
+                            <TextBlock Text="{Localize TextStrings.EffectArrive}"
+                                       Width="180"
+                                       VerticalAlignment="Center"/>
+                            <TextBlock AutomationProperties.AutomationId="TextEffectsArrive"
+                                       Text="HELLO"
+                                       FontSize="32"
+                                       Margin="0,10,0,10">
+                                <TextBlock.TextEffects>
+                                    <TextEffect PositionStart="0"
+                                                PositionCount="1">
+                                        <TextEffect.Transform>
+                                            <Transform x:Name="Arrive0"/>
+                                        </TextEffect.Transform>
+                                    </TextEffect>
+                                    <TextEffect PositionStart="1"
+                                                PositionCount="1">
+                                        <TextEffect.Transform>
+                                            <Transform x:Name="Arrive1"/>
+                                        </TextEffect.Transform>
+                                    </TextEffect>
+                                    <TextEffect PositionStart="2"
+                                                PositionCount="1">
+                                        <TextEffect.Transform>
+                                            <Transform x:Name="Arrive2"/>
+                                        </TextEffect.Transform>
+                                    </TextEffect>
+                                    <TextEffect PositionStart="3"
+                                                PositionCount="1">
+                                        <TextEffect.Transform>
+                                            <Transform x:Name="Arrive3"/>
+                                        </TextEffect.Transform>
+                                    </TextEffect>
+                                    <TextEffect PositionStart="4"
+                                                PositionCount="1">
+                                        <TextEffect.Transform>
+                                            <Transform x:Name="Arrive4"/>
+                                        </TextEffect.Transform>
+                                    </TextEffect>
+                                </TextBlock.TextEffects>
+                            </TextBlock>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal"
+                                    Margin="0,6,0,6">
+                            <TextBlock Text="{Localize TextStrings.EffectTypewriter}"
+                                       Width="180"
+                                       VerticalAlignment="Center"/>
+                            <TextBlock AutomationProperties.AutomationId="TextEffectsTypewriter"
+                                       Text="TYPED"
+                                       FontSize="32"
+                                       Margin="0,10,0,10">
+                                <TextBlock.TextEffects>
+                                    <TextEffect PositionStart="0"
+                                                PositionCount="1">
+                                        <TextEffect.Foreground>
+                                            <SolidColorBrush x:Name="Ink0"
+                                                             Color="#38BDF8"
+                                                             Opacity="0"/>
+                                        </TextEffect.Foreground>
+                                    </TextEffect>
+                                    <TextEffect PositionStart="1"
+                                                PositionCount="1">
+                                        <TextEffect.Foreground>
+                                            <SolidColorBrush x:Name="Ink1"
+                                                             Color="#38BDF8"
+                                                             Opacity="0"/>
+                                        </TextEffect.Foreground>
+                                    </TextEffect>
+                                    <TextEffect PositionStart="2"
+                                                PositionCount="1">
+                                        <TextEffect.Foreground>
+                                            <SolidColorBrush x:Name="Ink2"
+                                                             Color="#38BDF8"
+                                                             Opacity="0"/>
+                                        </TextEffect.Foreground>
+                                    </TextEffect>
+                                    <TextEffect PositionStart="3"
+                                                PositionCount="1">
+                                        <TextEffect.Foreground>
+                                            <SolidColorBrush x:Name="Ink3"
+                                                             Color="#38BDF8"
+                                                             Opacity="0"/>
+                                        </TextEffect.Foreground>
+                                    </TextEffect>
+                                    <TextEffect PositionStart="4"
+                                                PositionCount="1">
+                                        <TextEffect.Foreground>
+                                            <SolidColorBrush x:Name="Ink4"
+                                                             Color="#38BDF8"
+                                                             Opacity="0"/>
+                                        </TextEffect.Foreground>
+                                    </TextEffect>
+                                </TextBlock.TextEffects>
+                            </TextBlock>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal"
+                                    Margin="0,6,0,6">
+                            <TextBlock Text="{Localize TextStrings.EffectDrunk}"
+                                       Width="180"
+                                       VerticalAlignment="Center"/>
+                            <TextBlock AutomationProperties.AutomationId="TextEffectsWobble"
+                                       Text="WOBBLE"
+                                       FontSize="32"
+                                       Margin="0,10,0,10">
+                                <TextBlock.TextEffects>
+                                    <TextEffect PositionStart="0"
+                                                PositionCount="1">
+                                        <TextEffect.Transform>
+                                            <Transform x:Name="Wobble0"/>
+                                        </TextEffect.Transform>
+                                    </TextEffect>
+                                    <TextEffect PositionStart="1"
+                                                PositionCount="1">
+                                        <TextEffect.Transform>
+                                            <Transform x:Name="Wobble1"/>
+                                        </TextEffect.Transform>
+                                    </TextEffect>
+                                    <TextEffect PositionStart="2"
+                                                PositionCount="1">
+                                        <TextEffect.Transform>
+                                            <Transform x:Name="Wobble2"/>
+                                        </TextEffect.Transform>
+                                    </TextEffect>
+                                    <TextEffect PositionStart="3"
+                                                PositionCount="1">
+                                        <TextEffect.Transform>
+                                            <Transform x:Name="Wobble3"/>
+                                        </TextEffect.Transform>
+                                    </TextEffect>
+                                    <TextEffect PositionStart="4"
+                                                PositionCount="1">
+                                        <TextEffect.Transform>
+                                            <Transform x:Name="Wobble4"/>
+                                        </TextEffect.Transform>
+                                    </TextEffect>
+                                    <TextEffect PositionStart="5"
+                                                PositionCount="1">
+                                        <TextEffect.Transform>
+                                            <Transform x:Name="Wobble5"/>
+                                        </TextEffect.Transform>
+                                    </TextEffect>
+                                </TextBlock.TextEffects>
+                            </TextBlock>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal"
+                                    Margin="0,6,0,6">
+                            <TextBlock Text="{Localize TextStrings.EffectSpin}"
+                                       Width="180"
+                                       VerticalAlignment="Center"/>
+                            <TextBlock AutomationProperties.AutomationId="TextEffectsSpin"
+                                       Text="Loading"
+                                       FontSize="32"
+                                       Margin="0,10,0,10">
+                                <TextBlock.TextEffects>
+                                    <TextEffect PositionStart="1"
+                                                PositionCount="1">
+                                        <TextEffect.Transform>
+                                            <Transform x:Name="Spin"/>
+                                        </TextEffect.Transform>
+                                    </TextEffect>
+                                </TextBlock.TextEffects>
+                            </TextBlock>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal"
+                                    Margin="0,6,0,6">
+                            <TextBlock Text="{Localize TextStrings.EffectPendulum}"
+                                       Width="180"
+                                       VerticalAlignment="Center"/>
+                            <TextBlock AutomationProperties.AutomationId="TextEffectsPendulum"
+                                       Text="PENDULUM"
+                                       FontSize="32"
+                                       Margin="0,10,0,10">
+                                <TextBlock.TextEffects>
+                                    <TextEffect PositionStart="0"
+                                                PositionCount="8"
+                                                TransformOrigin="Element">
+                                        <TextEffect.Transform>
+                                            <Transform x:Name="Pendulum"
+                                                       RotationCenterX="80"/>
+                                        </TextEffect.Transform>
+                                    </TextEffect>
+                                </TextBlock.TextEffects>
+                            </TextBlock>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal"
+                                    Margin="0,6,0,6">
+                            <TextBlock Text="{Localize TextStrings.EffectFlip}"
+                                       Width="180"
+                                       VerticalAlignment="Center"/>
+                            <TextBlock AutomationProperties.AutomationId="TextEffectsFlip"
+                                       Text="BOARD"
+                                       FontSize="32"
+                                       Margin="0,10,0,10">
+                                <TextBlock.TextEffects>
+                                    <TextEffect PositionStart="0"
+                                                PositionCount="1">
+                                        <TextEffect.Transform>
+                                            <Transform x:Name="Flip0"
+                                                       Perspective="300"/>
+                                        </TextEffect.Transform>
+                                    </TextEffect>
+                                    <TextEffect PositionStart="1"
+                                                PositionCount="1">
+                                        <TextEffect.Transform>
+                                            <Transform x:Name="Flip1"
+                                                       Perspective="300"/>
+                                        </TextEffect.Transform>
+                                    </TextEffect>
+                                    <TextEffect PositionStart="2"
+                                                PositionCount="1">
+                                        <TextEffect.Transform>
+                                            <Transform x:Name="Flip2"
+                                                       Perspective="300"/>
+                                        </TextEffect.Transform>
+                                    </TextEffect>
+                                    <TextEffect PositionStart="3"
+                                                PositionCount="1">
+                                        <TextEffect.Transform>
+                                            <Transform x:Name="Flip3"
+                                                       Perspective="300"/>
+                                        </TextEffect.Transform>
+                                    </TextEffect>
+                                    <TextEffect PositionStart="4"
+                                                PositionCount="1">
+                                        <TextEffect.Transform>
+                                            <Transform x:Name="Flip4"
+                                                       Perspective="300"/>
+                                        </TextEffect.Transform>
+                                    </TextEffect>
+                                </TextBlock.TextEffects>
+                            </TextBlock>
+                        </StackPanel>
+                    </StackPanel>
+                    <DataTemplate.Triggers>
+                        <PropertyTrigger Property="Visibility"
+                                         Value="Visible">
+                            <PropertyTrigger.EnterActions>
+                                <RunAnimationAction TargetName="Wave0">
+                                    <Animation Duration="0:0:0.5"
+                                               IterationCount="Infinity"
+                                               AutoReverse="True"
+                                               Easing="CubicInOut">
+                                        <KeyFrame Cue="0"><Setter Property="TranslateY" Value="0"/></KeyFrame>
+                                        <KeyFrame Cue="1"><Setter Property="TranslateY" Value="-12"/></KeyFrame>
+                                    </Animation>
+                                </RunAnimationAction>
+                                <RunAnimationAction TargetName="Wave1">
+                                    <Animation Duration="0:0:0.5"
+                                               Delay="0:0:0.08"
+                                               IterationCount="Infinity"
+                                               AutoReverse="True"
+                                               Easing="CubicInOut">
+                                        <KeyFrame Cue="0"><Setter Property="TranslateY" Value="0"/></KeyFrame>
+                                        <KeyFrame Cue="1"><Setter Property="TranslateY" Value="-12"/></KeyFrame>
+                                    </Animation>
+                                </RunAnimationAction>
+                                <RunAnimationAction TargetName="Wave2">
+                                    <Animation Duration="0:0:0.5"
+                                               Delay="0:0:0.16"
+                                               IterationCount="Infinity"
+                                               AutoReverse="True"
+                                               Easing="CubicInOut">
+                                        <KeyFrame Cue="0"><Setter Property="TranslateY" Value="0"/></KeyFrame>
+                                        <KeyFrame Cue="1"><Setter Property="TranslateY" Value="-12"/></KeyFrame>
+                                    </Animation>
+                                </RunAnimationAction>
+                                <RunAnimationAction TargetName="Wave3">
+                                    <Animation Duration="0:0:0.5"
+                                               Delay="0:0:0.24"
+                                               IterationCount="Infinity"
+                                               AutoReverse="True"
+                                               Easing="CubicInOut">
+                                        <KeyFrame Cue="0"><Setter Property="TranslateY" Value="0"/></KeyFrame>
+                                        <KeyFrame Cue="1"><Setter Property="TranslateY" Value="-12"/></KeyFrame>
+                                    </Animation>
+                                </RunAnimationAction>
+                                <RunAnimationAction TargetName="Wave4">
+                                    <Animation Duration="0:0:0.5"
+                                               Delay="0:0:0.32"
+                                               IterationCount="Infinity"
+                                               AutoReverse="True"
+                                               Easing="CubicInOut">
+                                        <KeyFrame Cue="0"><Setter Property="TranslateY" Value="0"/></KeyFrame>
+                                        <KeyFrame Cue="1"><Setter Property="TranslateY" Value="-12"/></KeyFrame>
+                                    </Animation>
+                                </RunAnimationAction>
+                                <RunAnimationAction TargetName="Wave5">
+                                    <Animation Duration="0:0:0.5"
+                                               Delay="0:0:0.40"
+                                               IterationCount="Infinity"
+                                               AutoReverse="True"
+                                               Easing="CubicInOut">
+                                        <KeyFrame Cue="0"><Setter Property="TranslateY" Value="0"/></KeyFrame>
+                                        <KeyFrame Cue="1"><Setter Property="TranslateY" Value="-12"/></KeyFrame>
+                                    </Animation>
+                                </RunAnimationAction>
+                                <RunAnimationAction TargetName="Wave6">
+                                    <Animation Duration="0:0:0.5"
+                                               Delay="0:0:0.48"
+                                               IterationCount="Infinity"
+                                               AutoReverse="True"
+                                               Easing="CubicInOut">
+                                        <KeyFrame Cue="0"><Setter Property="TranslateY" Value="0"/></KeyFrame>
+                                        <KeyFrame Cue="1"><Setter Property="TranslateY" Value="-12"/></KeyFrame>
+                                    </Animation>
+                                </RunAnimationAction>
+                                <RunAnimationAction TargetName="Shake">
+                                    <Animation Duration="0:0:1.5"
+                                               IterationCount="Infinity">
+                                        <KeyFrame Cue="0"><Setter Property="TranslateX" Value="0"/></KeyFrame>
+                                        <KeyFrame Cue="0.05"><Setter Property="TranslateX" Value="-5"/></KeyFrame>
+                                        <KeyFrame Cue="0.1"><Setter Property="TranslateX" Value="5"/></KeyFrame>
+                                        <KeyFrame Cue="0.15"><Setter Property="TranslateX" Value="-5"/></KeyFrame>
+                                        <KeyFrame Cue="0.2"><Setter Property="TranslateX" Value="5"/></KeyFrame>
+                                        <KeyFrame Cue="0.25"><Setter Property="TranslateX" Value="0"/></KeyFrame>
+                                        <KeyFrame Cue="1"><Setter Property="TranslateX" Value="0"/></KeyFrame>
+                                    </Animation>
+                                </RunAnimationAction>
+                                <RunAnimationAction TargetName="Arrive0">
+                                    <Animation Duration="0:0:2.4"
+                                               IterationCount="Infinity"
+                                               Easing="CubicOut">
+                                        <KeyFrame Cue="0"><Setter Property="TranslateY" Value="-30"/><Setter Property="ScaleY" Value="0"/></KeyFrame>
+                                        <KeyFrame Cue="0.25"><Setter Property="TranslateY" Value="0"/><Setter Property="ScaleY" Value="1"/></KeyFrame>
+                                        <KeyFrame Cue="1"><Setter Property="TranslateY" Value="0"/><Setter Property="ScaleY" Value="1"/></KeyFrame>
+                                    </Animation>
+                                </RunAnimationAction>
+                                <RunAnimationAction TargetName="Arrive1">
+                                    <Animation Duration="0:0:2.4"
+                                               Delay="0:0:0.10"
+                                               IterationCount="Infinity"
+                                               Easing="CubicOut">
+                                        <KeyFrame Cue="0"><Setter Property="TranslateY" Value="-30"/><Setter Property="ScaleY" Value="0"/></KeyFrame>
+                                        <KeyFrame Cue="0.25"><Setter Property="TranslateY" Value="0"/><Setter Property="ScaleY" Value="1"/></KeyFrame>
+                                        <KeyFrame Cue="1"><Setter Property="TranslateY" Value="0"/><Setter Property="ScaleY" Value="1"/></KeyFrame>
+                                    </Animation>
+                                </RunAnimationAction>
+                                <RunAnimationAction TargetName="Arrive2">
+                                    <Animation Duration="0:0:2.4"
+                                               Delay="0:0:0.20"
+                                               IterationCount="Infinity"
+                                               Easing="CubicOut">
+                                        <KeyFrame Cue="0"><Setter Property="TranslateY" Value="-30"/><Setter Property="ScaleY" Value="0"/></KeyFrame>
+                                        <KeyFrame Cue="0.25"><Setter Property="TranslateY" Value="0"/><Setter Property="ScaleY" Value="1"/></KeyFrame>
+                                        <KeyFrame Cue="1"><Setter Property="TranslateY" Value="0"/><Setter Property="ScaleY" Value="1"/></KeyFrame>
+                                    </Animation>
+                                </RunAnimationAction>
+                                <RunAnimationAction TargetName="Arrive3">
+                                    <Animation Duration="0:0:2.4"
+                                               Delay="0:0:0.30"
+                                               IterationCount="Infinity"
+                                               Easing="CubicOut">
+                                        <KeyFrame Cue="0"><Setter Property="TranslateY" Value="-30"/><Setter Property="ScaleY" Value="0"/></KeyFrame>
+                                        <KeyFrame Cue="0.25"><Setter Property="TranslateY" Value="0"/><Setter Property="ScaleY" Value="1"/></KeyFrame>
+                                        <KeyFrame Cue="1"><Setter Property="TranslateY" Value="0"/><Setter Property="ScaleY" Value="1"/></KeyFrame>
+                                    </Animation>
+                                </RunAnimationAction>
+                                <RunAnimationAction TargetName="Arrive4">
+                                    <Animation Duration="0:0:2.4"
+                                               Delay="0:0:0.40"
+                                               IterationCount="Infinity"
+                                               Easing="CubicOut">
+                                        <KeyFrame Cue="0"><Setter Property="TranslateY" Value="-30"/><Setter Property="ScaleY" Value="0"/></KeyFrame>
+                                        <KeyFrame Cue="0.25"><Setter Property="TranslateY" Value="0"/><Setter Property="ScaleY" Value="1"/></KeyFrame>
+                                        <KeyFrame Cue="1"><Setter Property="TranslateY" Value="0"/><Setter Property="ScaleY" Value="1"/></KeyFrame>
+                                    </Animation>
+                                </RunAnimationAction>
+                                <RunAnimationAction TargetName="Ink0">
+                                    <Animation Duration="0:0:3"
+                                               IterationCount="Infinity">
+                                        <KeyFrame Cue="0"><Setter Property="Opacity" Value="0"/></KeyFrame>
+                                        <KeyFrame Cue="0.05"><Setter Property="Opacity" Value="1"/></KeyFrame>
+                                        <KeyFrame Cue="0.8"><Setter Property="Opacity" Value="1"/></KeyFrame>
+                                        <KeyFrame Cue="1"><Setter Property="Opacity" Value="0"/></KeyFrame>
+                                    </Animation>
+                                </RunAnimationAction>
+                                <RunAnimationAction TargetName="Ink1">
+                                    <Animation Duration="0:0:3"
+                                               Delay="0:0:0.15"
+                                               IterationCount="Infinity">
+                                        <KeyFrame Cue="0"><Setter Property="Opacity" Value="0"/></KeyFrame>
+                                        <KeyFrame Cue="0.05"><Setter Property="Opacity" Value="1"/></KeyFrame>
+                                        <KeyFrame Cue="0.8"><Setter Property="Opacity" Value="1"/></KeyFrame>
+                                        <KeyFrame Cue="1"><Setter Property="Opacity" Value="0"/></KeyFrame>
+                                    </Animation>
+                                </RunAnimationAction>
+                                <RunAnimationAction TargetName="Ink2">
+                                    <Animation Duration="0:0:3"
+                                               Delay="0:0:0.30"
+                                               IterationCount="Infinity">
+                                        <KeyFrame Cue="0"><Setter Property="Opacity" Value="0"/></KeyFrame>
+                                        <KeyFrame Cue="0.05"><Setter Property="Opacity" Value="1"/></KeyFrame>
+                                        <KeyFrame Cue="0.8"><Setter Property="Opacity" Value="1"/></KeyFrame>
+                                        <KeyFrame Cue="1"><Setter Property="Opacity" Value="0"/></KeyFrame>
+                                    </Animation>
+                                </RunAnimationAction>
+                                <RunAnimationAction TargetName="Ink3">
+                                    <Animation Duration="0:0:3"
+                                               Delay="0:0:0.45"
+                                               IterationCount="Infinity">
+                                        <KeyFrame Cue="0"><Setter Property="Opacity" Value="0"/></KeyFrame>
+                                        <KeyFrame Cue="0.05"><Setter Property="Opacity" Value="1"/></KeyFrame>
+                                        <KeyFrame Cue="0.8"><Setter Property="Opacity" Value="1"/></KeyFrame>
+                                        <KeyFrame Cue="1"><Setter Property="Opacity" Value="0"/></KeyFrame>
+                                    </Animation>
+                                </RunAnimationAction>
+                                <RunAnimationAction TargetName="Ink4">
+                                    <Animation Duration="0:0:3"
+                                               Delay="0:0:0.60"
+                                               IterationCount="Infinity">
+                                        <KeyFrame Cue="0"><Setter Property="Opacity" Value="0"/></KeyFrame>
+                                        <KeyFrame Cue="0.05"><Setter Property="Opacity" Value="1"/></KeyFrame>
+                                        <KeyFrame Cue="0.8"><Setter Property="Opacity" Value="1"/></KeyFrame>
+                                        <KeyFrame Cue="1"><Setter Property="Opacity" Value="0"/></KeyFrame>
+                                    </Animation>
+                                </RunAnimationAction>
+                                <RunAnimationAction TargetName="Wobble0">
+                                    <Animation Duration="0:0:0.6"
+                                               IterationCount="Infinity"
+                                               AutoReverse="True"
+                                               Easing="CubicInOut">
+                                        <KeyFrame Cue="0"><Setter Property="RotationAngle" Value="-10"/></KeyFrame>
+                                        <KeyFrame Cue="1"><Setter Property="RotationAngle" Value="10"/></KeyFrame>
+                                    </Animation>
+                                </RunAnimationAction>
+                                <RunAnimationAction TargetName="Wobble1">
+                                    <Animation Duration="0:0:0.8"
+                                               IterationCount="Infinity"
+                                               AutoReverse="True"
+                                               Easing="CubicInOut">
+                                        <KeyFrame Cue="0"><Setter Property="RotationAngle" Value="-10"/></KeyFrame>
+                                        <KeyFrame Cue="1"><Setter Property="RotationAngle" Value="10"/></KeyFrame>
+                                    </Animation>
+                                </RunAnimationAction>
+                                <RunAnimationAction TargetName="Wobble2">
+                                    <Animation Duration="0:0:0.7"
+                                               IterationCount="Infinity"
+                                               AutoReverse="True"
+                                               Easing="CubicInOut">
+                                        <KeyFrame Cue="0"><Setter Property="RotationAngle" Value="-10"/></KeyFrame>
+                                        <KeyFrame Cue="1"><Setter Property="RotationAngle" Value="10"/></KeyFrame>
+                                    </Animation>
+                                </RunAnimationAction>
+                                <RunAnimationAction TargetName="Wobble3">
+                                    <Animation Duration="0:0:0.9"
+                                               IterationCount="Infinity"
+                                               AutoReverse="True"
+                                               Easing="CubicInOut">
+                                        <KeyFrame Cue="0"><Setter Property="RotationAngle" Value="-10"/></KeyFrame>
+                                        <KeyFrame Cue="1"><Setter Property="RotationAngle" Value="10"/></KeyFrame>
+                                    </Animation>
+                                </RunAnimationAction>
+                                <RunAnimationAction TargetName="Wobble4">
+                                    <Animation Duration="0:0:0.65"
+                                               IterationCount="Infinity"
+                                               AutoReverse="True"
+                                               Easing="CubicInOut">
+                                        <KeyFrame Cue="0"><Setter Property="RotationAngle" Value="-10"/></KeyFrame>
+                                        <KeyFrame Cue="1"><Setter Property="RotationAngle" Value="10"/></KeyFrame>
+                                    </Animation>
+                                </RunAnimationAction>
+                                <RunAnimationAction TargetName="Wobble5">
+                                    <Animation Duration="0:0:0.75"
+                                               IterationCount="Infinity"
+                                               AutoReverse="True"
+                                               Easing="CubicInOut">
+                                        <KeyFrame Cue="0"><Setter Property="RotationAngle" Value="-10"/></KeyFrame>
+                                        <KeyFrame Cue="1"><Setter Property="RotationAngle" Value="10"/></KeyFrame>
+                                    </Animation>
+                                </RunAnimationAction>
+                                <RunAnimationAction TargetName="Spin">
+                                    <Animation Duration="0:0:1.2"
+                                               IterationCount="Infinity">
+                                        <KeyFrame Cue="0"><Setter Property="RotationAngle" Value="0"/></KeyFrame>
+                                        <KeyFrame Cue="1"><Setter Property="RotationAngle" Value="360"/></KeyFrame>
+                                    </Animation>
+                                </RunAnimationAction>
+                                <RunAnimationAction TargetName="Pendulum">
+                                    <Animation Duration="0:0:1.2"
+                                               IterationCount="Infinity"
+                                               AutoReverse="True"
+                                               Easing="CubicInOut">
+                                        <KeyFrame Cue="0"><Setter Property="RotationAngle" Value="-6"/></KeyFrame>
+                                        <KeyFrame Cue="1"><Setter Property="RotationAngle" Value="6"/></KeyFrame>
+                                    </Animation>
+                                </RunAnimationAction>
+                                <RunAnimationAction TargetName="Flip0">
+                                    <Animation Duration="0:0:2.5"
+                                               IterationCount="Infinity"
+                                               Easing="CubicInOut">
+                                        <KeyFrame Cue="0"><Setter Property="RotationX" Value="0"/></KeyFrame>
+                                        <KeyFrame Cue="0.3"><Setter Property="RotationX" Value="360"/></KeyFrame>
+                                        <KeyFrame Cue="1"><Setter Property="RotationX" Value="360"/></KeyFrame>
+                                    </Animation>
+                                </RunAnimationAction>
+                                <RunAnimationAction TargetName="Flip1">
+                                    <Animation Duration="0:0:2.5"
+                                               Delay="0:0:0.12"
+                                               IterationCount="Infinity"
+                                               Easing="CubicInOut">
+                                        <KeyFrame Cue="0"><Setter Property="RotationX" Value="0"/></KeyFrame>
+                                        <KeyFrame Cue="0.3"><Setter Property="RotationX" Value="360"/></KeyFrame>
+                                        <KeyFrame Cue="1"><Setter Property="RotationX" Value="360"/></KeyFrame>
+                                    </Animation>
+                                </RunAnimationAction>
+                                <RunAnimationAction TargetName="Flip2">
+                                    <Animation Duration="0:0:2.5"
+                                               Delay="0:0:0.24"
+                                               IterationCount="Infinity"
+                                               Easing="CubicInOut">
+                                        <KeyFrame Cue="0"><Setter Property="RotationX" Value="0"/></KeyFrame>
+                                        <KeyFrame Cue="0.3"><Setter Property="RotationX" Value="360"/></KeyFrame>
+                                        <KeyFrame Cue="1"><Setter Property="RotationX" Value="360"/></KeyFrame>
+                                    </Animation>
+                                </RunAnimationAction>
+                                <RunAnimationAction TargetName="Flip3">
+                                    <Animation Duration="0:0:2.5"
+                                               Delay="0:0:0.36"
+                                               IterationCount="Infinity"
+                                               Easing="CubicInOut">
+                                        <KeyFrame Cue="0"><Setter Property="RotationX" Value="0"/></KeyFrame>
+                                        <KeyFrame Cue="0.3"><Setter Property="RotationX" Value="360"/></KeyFrame>
+                                        <KeyFrame Cue="1"><Setter Property="RotationX" Value="360"/></KeyFrame>
+                                    </Animation>
+                                </RunAnimationAction>
+                                <RunAnimationAction TargetName="Flip4">
+                                    <Animation Duration="0:0:2.5"
+                                               Delay="0:0:0.48"
+                                               IterationCount="Infinity"
+                                               Easing="CubicInOut">
+                                        <KeyFrame Cue="0"><Setter Property="RotationX" Value="0"/></KeyFrame>
+                                        <KeyFrame Cue="0.3"><Setter Property="RotationX" Value="360"/></KeyFrame>
+                                        <KeyFrame Cue="1"><Setter Property="RotationX" Value="360"/></KeyFrame>
+                                    </Animation>
+                                </RunAnimationAction>
+                            </PropertyTrigger.EnterActions>
+                            <PropertyTrigger.ExitActions>
+                                <StopAnimationAction TargetName="Wave0"/>
+                                <StopAnimationAction TargetName="Wave1"/>
+                                <StopAnimationAction TargetName="Wave2"/>
+                                <StopAnimationAction TargetName="Wave3"/>
+                                <StopAnimationAction TargetName="Wave4"/>
+                                <StopAnimationAction TargetName="Wave5"/>
+                                <StopAnimationAction TargetName="Wave6"/>
+                                <StopAnimationAction TargetName="Shake"/>
+                                <StopAnimationAction TargetName="Arrive0"/>
+                                <StopAnimationAction TargetName="Arrive1"/>
+                                <StopAnimationAction TargetName="Arrive2"/>
+                                <StopAnimationAction TargetName="Arrive3"/>
+                                <StopAnimationAction TargetName="Arrive4"/>
+                                <StopAnimationAction TargetName="Ink0"/>
+                                <StopAnimationAction TargetName="Ink1"/>
+                                <StopAnimationAction TargetName="Ink2"/>
+                                <StopAnimationAction TargetName="Ink3"/>
+                                <StopAnimationAction TargetName="Ink4"/>
+                                <StopAnimationAction TargetName="Wobble0"/>
+                                <StopAnimationAction TargetName="Wobble1"/>
+                                <StopAnimationAction TargetName="Wobble2"/>
+                                <StopAnimationAction TargetName="Wobble3"/>
+                                <StopAnimationAction TargetName="Wobble4"/>
+                                <StopAnimationAction TargetName="Wobble5"/>
+                                <StopAnimationAction TargetName="Spin"/>
+                                <StopAnimationAction TargetName="Pendulum"/>
+                                <StopAnimationAction TargetName="Flip0"/>
+                                <StopAnimationAction TargetName="Flip1"/>
+                                <StopAnimationAction TargetName="Flip2"/>
+                                <StopAnimationAction TargetName="Flip3"/>
+                                <StopAnimationAction TargetName="Flip4"/>
+                            </PropertyTrigger.ExitActions>
+                        </PropertyTrigger>
+                    </DataTemplate.Triggers>
+                </DataTemplate>
+            </ContentControl.ContentTemplate>
+        </ContentControl>
     </StackPanel>
 </View>

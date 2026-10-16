@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.CompilerServices;
 using Adamantium.Mathematics;
 using Adamantium.UI.Core.Data;
 using Adamantium.UI.Core.Graphics;
@@ -11,6 +12,8 @@ namespace Adamantium.UI.Core.Media.Drawings;
 /// changes. That is the whole reason it exists next to <see cref="Imaging.ImageSource"/>.</summary>
 public abstract class Drawing : AdamantiumComponent
 {
+    private static readonly ConditionalWeakTable<AdamantiumComponent, WeakReference<AdamantiumComponent>> HungFrom = new();
+
     protected Drawing()
     {
         PropertyChanged += (_, _) => RaiseChanged();
@@ -57,15 +60,93 @@ public abstract class Drawing : AdamantiumComponent
         AttachChildren();
     }
 
+    /// <summary>Take this drawing, and everything it hung, off the component that showed it: the bindings inside stop
+    /// resolving against that component, and a transform a text effect also draws with passes to the effect.</summary>
+    public void Detach()
+    {
+        InheritanceParent = null;
+        DetachChildren();
+    }
+
     /// <summary>Pass the attachment on to whatever this drawing owns - nested drawings, brushes, transforms.</summary>
     protected virtual void AttachChildren() { }
+
+    /// <summary>Pass the detachment on to whatever this drawing owns.</summary>
+    protected virtual void DetachChildren() { }
 
     /// <summary>Hang one owned component (a brush, a geometry) under this drawing and re-establish its bindings.</summary>
     protected void AttachOwned(AdamantiumComponent owned)
     {
         if (owned == null) return;
 
+        if (owned is not Transform && owned.InheritanceParent is { } before && !ReferenceEquals(before, this))
+        {
+            var origin = before is Drawing && HungFrom.TryGetValue(owned, out var earlier)
+                && earlier.TryGetTarget(out var first)
+                ? first
+                : before;
+            HungFrom.AddOrUpdate(owned, new WeakReference<AdamantiumComponent>(origin));
+        }
+
         owned.InheritanceParent = this;
         BindingEngine.RefreshBindings(owned);
+    }
+
+    /// <summary>Whether this drawing still draws with <paramref name="owned"/> through another of its properties, so
+    /// replacing one of them must keep it hung.</summary>
+    protected virtual bool StillOwns(AdamantiumComponent owned) => false;
+
+    /// <summary>Let go of one owned component, if this drawing is what it hangs on: it goes back to what it hung on
+    /// before.</summary>
+    protected void DetachOwned(AdamantiumComponent owned)
+    {
+        if (owned == null)
+        {
+            return;
+        }
+
+        if (owned is Transform transform)
+        {
+            transform.ReleaseFrom(this);
+            return;
+        }
+
+        if (!ReferenceEquals(owned.InheritanceParent, this))
+        {
+            return;
+        }
+
+        owned.InheritanceParent = HungFrom.TryGetValue(owned, out var weak) && weak.TryGetTarget(out var back)
+            && back is not FundamentalUIComponent { IsDiscarded: true } && back is not Drawing { InheritanceParent: null }
+            ? back
+            : null;
+        HungFrom.Remove(owned);
+        BindingEngine.RefreshBindings(owned);
+    }
+
+    internal void ReplaceOwned(AdamantiumComponent previous, AdamantiumComponent next)
+    {
+        if (previous != null && !StillOwns(previous))
+        {
+            DetachOwned(previous);
+        }
+
+        if (InheritanceParent != null)
+        {
+            AttachOwned(next);
+        }
+    }
+
+    internal void ReplaceChild(Drawing previous, Drawing next)
+    {
+        if (previous != null && ReferenceEquals(previous.InheritanceParent, this))
+        {
+            previous.Detach();
+        }
+
+        if (InheritanceParent != null)
+        {
+            next?.Attach(this);
+        }
     }
 }

@@ -116,6 +116,16 @@
     <Phrase Key="RunShiftAfter" Text=" in its middle."/>
     <Phrase Key="DecorationFlagsTitle" Text="Lines by name: under, through and over the text, and the wavy line of a spelling error:"/>
     <Phrase Key="DecorationLinesTitle" Text="Decoration lines, each with its own brush, thickness, dashes and offset:"/>
+    <Phrase Key="TextEffectsTitle" Text="Text effects: characters turned, raised, scaled and recolored where they stand, about each one's center or the element's corner; the line, the caret and selection stay as they were laid out:"/>
+    <Phrase Key="TextEffectsWaveTitle" Text="Animated: each letter an effect of its own, its transform or brush animated by name, one after another:"/>
+    <Phrase Key="EffectWave" Text="Wave"/>
+    <Phrase Key="EffectShake" Text="Shake"/>
+    <Phrase Key="EffectArrive" Text="Arrive in turn"/>
+    <Phrase Key="EffectTypewriter" Text="Typewriter"/>
+    <Phrase Key="EffectDrunk" Text="Wobble"/>
+    <Phrase Key="EffectSpin" Text="Spinning letter"/>
+    <Phrase Key="EffectPendulum" Text="Pendulum"/>
+    <Phrase Key="EffectFlip" Text="Flip board"/>
     <Phrase Key="BaselineAlignmentTitle" Text="Baseline alignment: superscript and subscript where the font sets them; small runs at the top, middle and bottom of the line, and at the text's top and bottom:"/>
     <Phrase Key="LinesTitle" Text="Lines: the distance between baselines, the space between lines and the most lines shown (0 for all); a larger run grows its line:"/>
     <Phrase Key="LinesHeight" Text="Line height:"/>

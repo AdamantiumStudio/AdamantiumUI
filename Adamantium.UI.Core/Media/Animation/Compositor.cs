@@ -322,7 +322,7 @@ public static class Compositor
                 // thread republishes the brush's snapshot each present, and the slots painting with it are re-baked from it.
                 // Any double paint property works - BuildAnimatedSnapshot applies it generically, and AffectsPaint (which the
                 // channel already required) guarantees a re-bake suffices.
-                if (target is not Brush brush) return null;
+                if (target is not Brush brush || brush.IsBakedIn) return null;
                 entry = Entry.ForPaint(brush, curve, brush.CaptureBase(), resumeElapsed);
                 break;
             }

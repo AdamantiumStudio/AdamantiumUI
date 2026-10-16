@@ -1125,7 +1125,7 @@ public class TextRenderUnit : RenderUnit<TextPayload>
     private void Rebuild(RectangleF? band)
     {
         _band = band;
-        TextComponent?.GlyphRun = Payload.TextLayout.BuildGlyphRun(GraphicsDevice, band);
+        TextComponent?.GlyphRun = Payload.TextLayout.BuildGlyphRun(GraphicsDevice, band, Payload.Effects);
     }
 
     private RectangleF? BandFor(Adamantium.Graphics.Fonts.TextLayout layout)
@@ -1143,7 +1143,7 @@ public class TextRenderUnit : RenderUnit<TextPayload>
     {
         if (Payload?.TextLayout is not { NeedsGlyphRefresh: true } layout) return false;
 
-        var run = layout.BuildGlyphRun(GraphicsDevice, _band);
+        var run = layout.BuildGlyphRun(GraphicsDevice, _band, Payload.Effects);
         if (TextComponent != null) TextComponent.GlyphRun = run;
         // The frozen run is what the batch reads, so the element has to be re-recorded for the new one to be drawn.
         DrawCommand?.Component?.InvalidateRender(false);
@@ -1168,11 +1168,11 @@ public class TextRenderUnit : RenderUnit<TextPayload>
 
     public TextRenderUnit(IDrawCommand command, RenderUnitContext context) : base(command, context)
     {
-        var run = Payload.TextLayout.BuildGlyphRun(GraphicsDevice, BandFor(Payload.TextLayout));
-        // Pad the text quad/RT so glyph effects (outline/glow) that reach beyond the body aren't clipped at
-        // the block edges. The body stays put: the rect is grown symmetrically (origin shifted by -pad), so
+        var run = Payload.TextLayout.BuildGlyphRun(GraphicsDevice, BandFor(Payload.TextLayout), Payload.Effects);
+        // Pad the text quad/RT so glyph effects (outline/glow, glyphs drawn apart) that reach beyond the body aren't
+        // clipped at the block edges. The body stays put: the rect is grown symmetrically (origin shifted by -pad), so
         // its center - and thus mesh-local (0,0) where the text is anchored - is unchanged.
-        var pad = Payload.TextLayout.EffectPadding;
+        var pad = run.EffectPadding;
         var ds = Payload.DesiredSize;
         var rectangleGeometry = new RectangleGeometry(new Rect(-pad, -pad, ds.Width + 2 * pad, ds.Height + 2 * pad));
         rectangleGeometry.ProcessGeometry(GeometryType.Solid);
@@ -1185,7 +1185,7 @@ public class TextRenderUnit : RenderUnit<TextPayload>
             Payload.Background,
             Payload.Foreground,
             Payload.Stroke,
-            BufferManager);
+            BufferManager) { Padding = pad };
         GeometryRenderer.RenderData = DrawCommand.RenderData;
         GeometryRenderer.Owner = DrawCommand.Component;
         TextComponent.GlyphRun = run;   // freeze the shaped glyphs for the render-thread batch bake
@@ -1194,10 +1194,11 @@ public class TextRenderUnit : RenderUnit<TextPayload>
     public override void UpdateWithDrawCommand(IDrawCommand drawCommand)
     {
         if (drawCommand.Payload is not TextPayload inputPayload) return;
-        
+
         if (Payload.RequiresBufferRebuild(inputPayload))
         {
-            var run = inputPayload.TextLayout.BuildGlyphRun(GraphicsDevice, BandFor(inputPayload.TextLayout));   // re-upload the (re-shaped) glyph buffer either way
+            var run = inputPayload.TextLayout.BuildGlyphRun(GraphicsDevice, BandFor(inputPayload.TextLayout),
+                inputPayload.Effects);   // re-upload the (re-shaped) glyph buffer either way
 
             // Same size, same params, same (re-shaped-in-place) layout instance: only the text content changed, so the
             // render target is the same size - reuse it and just re-rasterize, instead of disposing the component and
@@ -1206,13 +1207,14 @@ public class TextRenderUnit : RenderUnit<TextPayload>
             if (GeometryRenderer is TextRenderComponent reuse
                 && Payload.DesiredSize == inputPayload.DesiredSize
                 && Payload.TextLayout == inputPayload.TextLayout
-                && Equals(Payload.TextRenderingParameters, inputPayload.TextRenderingParameters))
+                && Equals(Payload.TextRenderingParameters, inputPayload.TextRenderingParameters)
+                && (Adamantium.Graphics.Fonts.FontRenderer.UseDirectTextDraw || reuse.Padding >= run.EffectPadding))
             {
                 reuse.UpdateText(inputPayload.Background, inputPayload.Foreground, inputPayload.Stroke);
             }
             else
             {
-                var pad = inputPayload.TextLayout.EffectPadding;
+                var pad = run.EffectPadding;
                 var ds = inputPayload.DesiredSize;
                 var rectangleGeometry = new RectangleGeometry(new Rect(-pad, -pad, ds.Width + 2 * pad, ds.Height + 2 * pad));
                 rectangleGeometry.ProcessGeometry(GeometryType.Both);
@@ -1226,7 +1228,7 @@ public class TextRenderUnit : RenderUnit<TextPayload>
                     inputPayload.Background,
                     inputPayload.Foreground,
                     inputPayload.Stroke,
-                    BufferManager);
+                    BufferManager) { Padding = pad };
             }
             // Glyphs were re-shaped in place (reuse) or a new component was built - refresh the frozen snapshot either way.
             TextComponent.GlyphRun = run;

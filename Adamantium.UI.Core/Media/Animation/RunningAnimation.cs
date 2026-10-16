@@ -50,7 +50,7 @@ internal sealed class RunningAnimation : IRunningAnimation
     // The visual this animation drives: the target itself, or - when the target is a Transform - the element the
     // transform moves (a Transform is not a visual, so without this every transform animation had NO dirty target and
     // rode only the transform's own node/global marks).
-    public IUIComponent DirtyTarget => _target as IUIComponent ?? (_target as Transform)?.Owner;
+    public IUIComponent DirtyTarget => _target as IUIComponent ?? (_target as Transform)?.Element;
 
     public bool IsEndless => double.IsPositiveInfinity(_iterationCount);
 

@@ -105,9 +105,12 @@ public class GlyphRunDrawing : Drawing
         if (a is not GlyphRunDrawing drawing) return;
 
         drawing._foregroundRelay = drawing.Follow(drawing._foregroundRelay, e.NewValue as Brush);
+        drawing.ReplaceOwned(e.OldValue as Brush, e.NewValue as Brush);
     }
 
     protected override void AttachChildren() => AttachOwned(Foreground);
+
+    protected override void DetachChildren() => DetachOwned(Foreground);
 
     // The typeface is fixed per TextLayout, so a font change means new ones (same rule TextBlock follows).
     private TextLayout EnsureLayout(double fontSize)

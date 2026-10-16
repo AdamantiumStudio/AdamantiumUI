@@ -83,5 +83,14 @@ internal sealed class RecordingDrawingSession : IDrawingSession
     public IDrawingSession DrawText(TextRenderingParameters renderingParameters, Size desiredSize, TextLayout textLayout,
         Brush foreground, Brush background, Brush stroke) => this;
 
+    public List<IReadOnlyList<GlyphEffect>> Effects { get; } = [];
+
+    public IDrawingSession DrawText(TextRenderingParameters renderingParameters, Size desiredSize, TextLayout textLayout,
+        Brush foreground, Brush background, Brush stroke, IReadOnlyList<GlyphEffect> effects)
+    {
+        Effects.Add(effects);
+        return this;
+    }
+
     public IDrawingSession PushImage(ImageSource image) => this;
 }
