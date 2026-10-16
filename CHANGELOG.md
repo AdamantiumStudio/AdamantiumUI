@@ -1015,6 +1015,15 @@ All packages share one version.
 
 ### Changed
 
+- `ToggleButton.IsChecked` binds both ways by default, as in WPF - for every toggle: `CheckBox`, `RadioButton`,
+  `ToggleSwitch`, `RibbonToggleButton`, `RibbonRadioButton`, `RibbonDropDownButton`. `IsChecked="{Binding IsMoving}"`
+  sets the flag when the button is pressed; it only showed it, so a tool chosen on a ribbon never reached its view
+  model. A binding that is only to show a value says `Mode=OneWay`, as the data pager's page buttons, the data grid's
+  check boxes and the property grid's read-only ones now do. `{TemplateBinding}`, `{Ancestor}` and `{Self}` stay one-way.
+- A binding writes back only what may be written, as WPF does: not a property whose setter is not public, and not a
+  control's read-only property. A write back that fails - a converter with no `ConvertBack`, a setter that throws - is
+  written to the binding trace instead of thrown: it ran inside the target's change notification, and every listener
+  after the binding, a theme trigger among them, missed the change.
 - A collapsed control builds its template the first time it is shown, not when it is themed, and keeps it when it is
   collapsed again (`TemplatedUIComponent.DeferTemplate` is true while collapsed). The scroll viewers of the three
   themes start their bars collapsed, and an `Auto` bar waits for a viewport before it shows. A bar with nothing to

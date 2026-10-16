@@ -894,7 +894,7 @@ internal static class PropertyEditors
         // The READ-ONLY box follows the value by binding, because nothing fills it: a property that cannot be edited has
         // no editor to prepare. The live one is filled by the definition itself, and a binding there would fight the
         // write-back.
-        if (!live) result.AddBinding(check, "IsChecked", new Core.Data.Binding());
+        if (!live) result.AddBinding(check, "IsChecked", new Core.Data.Binding { Mode = Core.Data.BindingMode.OneWay });
 
         return result;
     });

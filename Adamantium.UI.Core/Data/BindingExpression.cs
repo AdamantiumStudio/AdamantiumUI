@@ -146,7 +146,7 @@ public class BindingExpression : BindingExpressionBase
             ? Expression.Lambda<Func<object, object>>(Expression.Convert(Expression.Property(from, prop), typeof(object)), o).Compile()
             : null;
 
-         return new Hop(prop.PropertyType, prop.CanWrite, read, prop.SetValue);
+         return new Hop(prop.PropertyType, prop.SetMethod is { IsPublic: true }, read, prop.SetValue);
       }
 
       if (owner.GetField(member) is { } field)
@@ -858,6 +858,7 @@ public class BindingExpression : BindingExpressionBase
 
          if (_boxes[i - 1] is AdamantiumComponent component && component.GetProperty(_segments[i - 1]) is { } property)
          {
+            if (property.ReadOnly) return;
             component.SetCurrentValue(property, _boxes[i]);
          }
          else
@@ -885,17 +886,29 @@ public class BindingExpression : BindingExpressionBase
       var (component, property) = SourceSlot();
       if (property != null)
       {
-         component.SetCurrentValue(property, written);
+         // A read-only property is the control's to set, as in WPF, which refuses to write one back.
+         if (!property.ReadOnly) component.SetCurrentValue(property, written);
          return;
       }
 
       _sourceProperty.SetValue(ResolvedSource, written);
    }
 
+   // Logged, not thrown, as WPF does: the write runs inside the target's change notification, and an exception there
+   // silenced every listener after this binding - a theme trigger included.
+   private void WriteBackFailed(Exception e)
+   {
+      var cause = e.GetBaseException();
+      BindingTrace.Log(
+         $"Writing {TargetProperty?.Name} back to '{SourcePropertyName}' failed: {cause.GetType().Name}: {cause.Message}");
+   }
+
    public override void UpdateSource()
    {
       var sourceType = _leaf?.Type ?? _sourceProperty?.PropertyType;
-      var writable = _leaf?.CanWrite ?? _sourceProperty is { CanWrite: true };
+      // A setter that is not public is the object's own, as in WPF: written back, it would change state nobody else
+      // may set.
+      var writable = _leaf?.CanWrite ?? _sourceProperty is { SetMethod.IsPublic: true };
 
       if (sourceType == null || !writable || TargetProperty == null) return;
       if (_leaf != null && !Walk()) return;
@@ -903,7 +916,17 @@ public class BindingExpression : BindingExpressionBase
       var targetValue = Target.GetValue(TargetProperty);
       var value = targetValue;
       if (Binding.Converter != null)
-         value = Binding.Converter.ConvertBack(value, sourceType, Binding.ConverterParameter, FormatCulture);
+      {
+         try
+         {
+            value = Binding.Converter.ConvertBack(value, sourceType, Binding.ConverterParameter, FormatCulture);
+         }
+         catch (Exception e)
+         {
+            WriteBackFailed(e);
+            return;
+         }
+      }
 
       if (ReferenceEquals(value, AdamantiumProperty.UnsetValue))
       {
@@ -926,6 +949,11 @@ public class BindingExpression : BindingExpressionBase
       try
       {
          WriteSource(written);
+      }
+      catch (Exception e)
+      {
+         WriteBackFailed(e);
+         return;
       }
       finally
       {

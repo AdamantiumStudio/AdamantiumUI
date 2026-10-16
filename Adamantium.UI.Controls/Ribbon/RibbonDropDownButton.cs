@@ -14,7 +14,7 @@ public class RibbonDropDownButton : RibbonToggleButton, IKeyTipTarget
     /// keyboard standing on the button with a list open in front of it and no way in.</summary>
     public void PressKeyTip()
     {
-        IsChecked = true;
+        SetCurrentValue(IsCheckedProperty, true);
         DropDownMenu?.MoveKeyboardInsideWhenReady();
     }
 

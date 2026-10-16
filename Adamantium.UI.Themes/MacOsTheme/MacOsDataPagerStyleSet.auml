@@ -67,7 +67,7 @@
                                         <DataTemplate>
                                             <RadioButton Classes="PagerPage"
                                                          Content="{Binding Text}"
-                                                         IsChecked="{Binding IsCurrent}"
+                                                         IsChecked="{Binding IsCurrent, Mode=OneWay}"
                                                          IsEnabled="{Binding IsEnabled}"
                                                          Command="{Binding Command}"
                                                          MarginRight="4"/>

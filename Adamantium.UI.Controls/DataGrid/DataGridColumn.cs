@@ -667,7 +667,7 @@ internal static class DataGridEditors
         };
 
         var result = new TemplateResult { RootComponent = check };
-        result.AddBinding(check, "IsChecked", new Binding());
+        result.AddBinding(check, "IsChecked", new Binding { Mode = BindingMode.OneWay });
         return result;
     });
 
