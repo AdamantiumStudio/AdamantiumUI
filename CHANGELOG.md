@@ -7,6 +7,10 @@ All packages share one version.
 
 ### Added
 
+- `TreeView.ParentPath`: the member a node names its parent by, as an entity's `Owner`. With it, a node written into
+  `SelectedItem` from outside - an entity picked in a scene, deep inside a closed model - is revealed: the branches
+  above it open, it is selected and scrolled to - also when the tree is rebuilt with that node chosen. Without it, such
+  a node is selected only when its row is shown.
 - An `ItemsControl`, `TreeView` or `TreeDataGrid` follows a source changed on another thread - a game world adding
   and removing its entities on its own loop: the changes are carried over to the UI thread and applied there in the
   order they came, so no container is built on the world's thread. A source that makes and announces its changes under
