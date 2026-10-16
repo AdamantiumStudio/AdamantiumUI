@@ -101,6 +101,62 @@ public class TextBoxTests
         Assert.That(box.Text, Is.EqualTo("Iİ"));
     }
 
+    private sealed class Shown : TextBox
+    {
+        public string For(string text) => DisplayedText(text);
+    }
+
+    // As CSS's text-transform: the box shows the case, the text and its binding keep their own.
+    [Test]
+    public void TextTransform_ShowsTheCase_TheTextKeepsItsOwn()
+    {
+        var box = new Shown { Text = "abc", TextTransform = TextTransform.Uppercase };
+        box.CaretIndex = 3;
+        Type(box, "x");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(box.Text, Is.EqualTo("abcx"));
+            Assert.That(box.For(box.Text), Is.EqualTo("ABCX"));
+        });
+    }
+
+    [Test]
+    public void TextTransform_GoesByTheBoxsLanguage()
+    {
+        var box = new Shown { TextTransform = TextTransform.Uppercase, Language = "tr" };
+
+        Assert.That(box.For("i"), Is.EqualTo("İ"));
+    }
+
+    // A combining mark whose capital is a letter of its own stays a mark, so the shown text keeps the characters' bounds.
+    [Test]
+    public void TextTransform_KeepsACombiningMarkAMark()
+    {
+        var text = "α" + (char)0x0345;
+        var box = new Shown { Text = text, TextTransform = TextTransform.Uppercase };
+        box.CaretIndex = 0;
+
+        Press(box, Key.RightArrow);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(box.For(text), Is.EqualTo("Α" + (char)0x0345));
+            Assert.That(box.CaretIndex, Is.EqualTo(2));
+        });
+    }
+
+    [Test]
+    public void TextTransform_IsWhatIsCopied()
+    {
+        var box = new TextBox { Text = "Mixed Case", TextTransform = TextTransform.Lowercase };
+        box.SelectAll();
+
+        Press(box, Key.C, InputModifiers.LeftControl);
+
+        Assert.That(Clipboard.GetText(), Is.EqualTo("mixed case"));
+    }
+
     // A paragraph separator is a line break too: a single-line box takes it as a space, a multi-line one as a new line.
     [TestCase(false, "one two")]
     [TestCase(true, "one\ntwo")]

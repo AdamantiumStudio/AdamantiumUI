@@ -259,6 +259,41 @@ public class TextBlockParagraphTests
         Assert.That(span.Inlines[0], Is.InstanceOf<Run>());
     }
 
+    // As CSS's text-transform: the block lays out and copies the case, its text and inlines keep their own.
+    [Test]
+    public void TextTransform_ShowsAndCopiesTheCase_TheTextKeepsItsOwn()
+    {
+        var plain = new TextBlock { Text = "plain text", TextTransform = TextTransform.Uppercase };
+        var inlines = new TextBlock { TextTransform = TextTransform.Uppercase };
+        inlines.Inlines.Add(Of("first"));
+        inlines.Inlines.Add(new Bold { Inlines = { new Run { Text = "bold" } } });
+        Host(plain);
+        Host(inlines);
+        plain.SelectAll();
+        inlines.SelectAll();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(plain.Layout.Text, Is.EqualTo("PLAIN TEXT"));
+            Assert.That(plain.Text, Is.EqualTo("plain text"));
+            Assert.That(plain.SelectedText, Is.EqualTo("PLAIN TEXT"));
+            Assert.That(inlines.Layout.Text, Is.EqualTo("FIRST" + Separator + "BOLD"));
+            Assert.That(inlines.SelectedText, Is.EqualTo("FIRST\nBOLD"));
+        });
+    }
+
+    [Test]
+    public void TextTransform_ChangedLater_LaysTheBlockOutAgain()
+    {
+        var text = new TextBlock { Text = "abc" };
+        var window = Host(text);
+
+        text.TextTransform = TextTransform.Uppercase;
+        Update(window);
+
+        Assert.That(text.Layout.Text, Is.EqualTo("ABC"));
+    }
+
     [Test]
     public void TheEndOfAParagraph_IsCopiedAsANewLine()
     {

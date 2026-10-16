@@ -33,6 +33,10 @@ public class TextBlock : InputUIComponent, IFocusableInParts
         typeof(HorizontalTextAlignment), typeof(TextBlock),
         new PropertyMetadata(HorizontalTextAlignment.Left, PropertyMetadataOptions.AffectsRender, TextParametersChangedCallback));
     
+    public static readonly AdamantiumProperty TextTransformProperty = AdamantiumProperty.Register(nameof(TextTransform),
+        typeof(TextTransform), typeof(TextBlock),
+        new PropertyMetadata(TextTransform.None, PropertyMetadataOptions.AffectsMeasure | PropertyMetadataOptions.AffectsRender));
+
     public static readonly AdamantiumProperty VerticalTextAlignmentProperty = AdamantiumProperty.Register(nameof(VerticalTextAlignment),
         typeof(VerticalTextAlignment), typeof(TextBlock),
         new PropertyMetadata(VerticalTextAlignment.Bottom, PropertyMetadataOptions.AffectsRender, TextParametersChangedCallback));
@@ -216,6 +220,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts
 
     private static readonly RoutedEvent SelectionTakenEvent = EventManager.RegisterRoutedEvent("SelectionTaken",
         RoutingStrategy.Bubble, typeof(RoutedEventHandler), typeof(TextBlock));
+    private readonly TextCasing.Shown _shown = new();
     private InlineCollection _inlines;
     private bool _inlinesDirty = true;
     private string _inlineText;
@@ -283,7 +288,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts
         {
             height = _lastConstraint.Height;
         }
-        var text = HasInlines ? InlineText() : Text;
+        var text = _shown.Of(HasInlines ? InlineText() : Text, TextTransform, Language);
         var shaping = TextShaping(font);
 
         if (_hasLayout && !_inlinesDirty
@@ -481,6 +486,15 @@ public class TextBlock : InputUIComponent, IFocusableInParts
     {
         get => GetValue<TextWrapping>(TextWrappingProperty);
         set => SetValue(TextWrappingProperty, value);
+    }
+
+    /// <summary>The case the text is shown and copied in, as CSS's <c>text-transform</c>, letter by letter as the
+    /// block's <c>Language</c> maps it (else the application's language). <see cref="Text"/>, the inlines and what
+    /// automation reads keep the text as it is.</summary>
+    public TextTransform TextTransform
+    {
+        get => GetValue<TextTransform>(TextTransformProperty);
+        set => SetValue(TextTransformProperty, value);
     }
     
     public HorizontalTextAlignment HorizontalTextAlignment

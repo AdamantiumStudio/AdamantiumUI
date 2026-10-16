@@ -9,6 +9,10 @@
   <Key Keys="End" Into="id=Message" />
   <Type Text=" again" Into="id=Message" />
   <Expect Target="id=ReadOnlyMessage" Value="Hello, automation again" />
+  <Expect Target="id=ShownUpper" Value="Hello, automation again" />
+  <Select Target="id=ShownLowercase" />
+  <Expect Target="id=ShownUpper" Value="Hello, automation again" />
+  <Select Target="id=ShownUppercase" />
   <Key Keys="Ctrl+End Enter" Into="id=Notes" />
   <Type Text="added line" Into="id=Notes" />
   <Key Keys="Backspace Backspace Backspace Backspace Backspace Backspace Backspace Backspace Backspace Backspace Backspace" Into="id=Notes" />
