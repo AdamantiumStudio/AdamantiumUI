@@ -22,4 +22,7 @@ public interface IResolvedMember
     IReadOnlyList<string> ParameterNames { get; }
 
     ResolvedMemberKind MemberKind { get; }
+
+    /// <summary>A constant's value, as written in code; null for any other member.</summary>
+    object ConstantValue { get; }
 }

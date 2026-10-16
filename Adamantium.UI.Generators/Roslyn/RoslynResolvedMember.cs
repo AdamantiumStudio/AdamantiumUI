@@ -20,6 +20,8 @@ public class RoslynResolvedMember : IResolvedMember
 
     public string Name => _symbol.Name;
 
+    public object ConstantValue => _symbol is IFieldSymbol { HasConstantValue: true } constant ? constant.ConstantValue : null;
+
     public IResolvedType MemberType
     {
         get

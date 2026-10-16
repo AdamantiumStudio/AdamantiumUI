@@ -2,7 +2,7 @@
   "name": "adamantium-auml",
   "displayName": "Adamantium AUML",
   "description": "Language support (completion, diagnostics) for Adamantium UI markup (.auml) and automation scenarios (.ascenario).",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "publisher": "adamantium",
   "icon": "icons/icon.png",
   "engines": {

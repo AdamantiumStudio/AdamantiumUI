@@ -1052,6 +1052,26 @@ public class DefaultAumlTransformer : IAumlTransformer
                             container.NamedElements.Add(new NamedElement(textNode.Text, directive.ParentNode));
                         }
                     }
+                    // x:Key="{x:Static Type.Member}": a key shared with code. An attribute directive's value is kept as
+                    // text, so a markup extension in it is read here, the way it is in a property's value; "{}" keeps
+                    // a key that only starts with a brace literal.
+                    else if (directive.Name == AumlDirectives.Key
+                             && directive.Value is AumlAstTextNode { Text: var keyText }
+                             && keyText.TrimStart().StartsWith("{") && !keyText.TrimStart().StartsWith("{}"))
+                    {
+                        directive.Value = ProcessValueNode(MarkupExtensionParser.Parse(new ParserContext(null), keyText,
+                            directive.GetLineInfo(), document.NamespaceMappings.ToList()));
+
+                        // A dictionary is keyed by text: a member of another type would fail in the generated code.
+                        if (directive.Value is AumlAstStaticMemberValueNode keyMember
+                            && typeResolver.Resolve(keyMember.TypeReference.GetFullTypeName())
+                                ?.GetMemberByName(keyMember.MemberName)?.MemberType is
+                                { FullName: not ("System.String" or "string") } keyType)
+                        {
+                            diagnostics.ReportError(document.FileName,
+                                MarkupMessages.KeyStaticNotText(keyMember.MemberName, keyType.FullName), directive);
+                        }
+                    }
                     else if (directive.Name == AumlDirectives.KeepAlive && directive.ParentNode == document.Root)
                     {
                         var mode = (directive.Value as AumlAstTextNode)?.Text?.Trim();

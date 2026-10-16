@@ -7,6 +7,13 @@ All packages share one version.
 
 ### Added
 
+- `x:Key="{x:Static Type.Member}"`: a resource keyed by a constant code uses too - an entity's icon key - so the key is
+  written once, in C#. In a resource file, an inline dictionary, and with `x:Shared="False"`; a member that is not text
+  is a build error, and `{}` still starts a key that is braces as written. Hot reload sees an `{x:Static}` changed to
+  another member, in a key or a property's value. The assembly names such a key by the constant's value, and the
+  language server reads it from the code too: completion offers it, and a use goes to the entry it keys; the
+  `{x:Static}` text is not taken for a key to rename.
+
 - `TreeView.ParentPath`: the member a node names its parent by, as an entity's `Owner`. With it, a node written into
   `SelectedItem` from outside - an entity picked in a scene, deep inside a closed model - is revealed: the branches
   above it open, it is selected and scrolled to - also when the tree is rebuilt with that node chosen. Without it, such
@@ -1041,6 +1048,9 @@ All packages share one version.
 
 ### Changed
 
+- The designer shows a file with nothing to preview - a `ResourceDictionary`, a style set, a theme, a template with no
+  content - as a plate in the middle of the preview ("ResourceDictionary has no preview"), not as an error: nothing is
+  wrong with the markup. Only markup that does not build is an error.
 - `ToggleButton.IsChecked` binds both ways by default, as in WPF - for every toggle: `CheckBox`, `RadioButton`,
   `ToggleSwitch`, `RibbonToggleButton`, `RibbonRadioButton`, `RibbonDropDownButton`. `IsChecked="{Binding IsMoving}"`
   sets the flag when the button is pressed; it only showed it, so a tool chosen on a ribbon never reached its view
@@ -1344,6 +1354,8 @@ All packages share one version.
 
 ### Fixed
 
+- An `x:Key` that is neither text nor `{x:Static}` is a build error; such an entry was left out of its dictionary in
+  silence, so the resource was simply never found.
 - A `TreeDataGrid` grouped by a column, with no sort or filter, shows a record added to its source or taken out of it.
   Its groups are lists of its own making and were made again only for a sort, a filter or a key relation.
 - An `{Ancestor}` binding on a non-visual target - a line of an inspector, a behavior - resolves when the element

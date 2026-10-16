@@ -192,26 +192,15 @@ public class AumlLowering
             }
         }
 
-        var directives = element.Children.Where(x => x is AumlAstDirective).ToList();
-        string key = string.Empty;
-        foreach (var aumlAstNode in directives)
-        {
-            var directive = (AumlAstDirective)aumlAstNode;
-            if (directive.Name == AumlDirectives.Key)
-            {
-                var textNode = directive.Value as AumlAstTextNode;
-                key = textNode.Text;
-                break;
-            }
-        }
+        var key = KeyOf(element);
 
         // x:Shared="False" on a KEYED entry: the dictionary stores a FACTORY, not the object, so each ask builds its own.
         // Emitted here, before the element is constructed - once its statements are out there is nothing to wrap.
-        if (isResource && !string.IsNullOrEmpty(key) && (IsPerTarget(element) || IsPerTargetType(element)))
+        if (isResource && key != null && (IsPerTarget(element) || IsPerTargetType(element)))
         {
             var factoryName = GenerateNextElementName("shared");
             _writer.Add(new DeclareStep(factoryName, EmitPerTargetValue(element, false, diagnostics)));
-            _writer.Add(Invoke(null, "Add", Unescaped(key), Variable(factoryName)));
+            _writer.Add(Invoke(null, "Add", key, Variable(factoryName)));
             _writer.Close();
             return Variable(factoryName);
         }
@@ -338,16 +327,16 @@ public class AumlLowering
                             continue;
                         }
 
-                        var entryKey = GetKeyDirective(entry);
+                        var entryKey = KeyOf(entry);
                         // x:Shared="False" works here exactly as it does in a resource FILE: store a factory so every ask
                         // builds its own object. An inline dictionary is where an icon (one visual, many templates) lives,
                         // and a visual has ONE parent - without this the second user of the key would steal it.
                         var entryName = IsPerTarget(entry) || IsPerTargetType(entry)
                             ? EmitPerTargetValue(entry, false, diagnostics)
                             : ProcessControlElements(entry, diagnostics, isResource: false);
-                        if (!string.IsNullOrEmpty(entryKey))
+                        if (entryKey != null)
                         {
-                            _writer.Add(Invoke(Variable(rdVar), "Add", Unescaped(entryKey), entryName));
+                            _writer.Add(Invoke(Variable(rdVar), "Add", entryKey, entryName));
                         }
                         else
                         {
@@ -950,9 +939,9 @@ public class AumlLowering
             WithElement(elementName, emitBody);
         }
 
-        if (isResource && !string.IsNullOrEmpty(key))
+        if (isResource && key != null)
         {
-            _writer.Add(Invoke(null, "Add", Unescaped(key), Variable(elementName)));
+            _writer.Add(Invoke(null, "Add", key, Variable(elementName)));
         }
 
         PopTypeContext();
@@ -1434,12 +1423,25 @@ public class AumlLowering
     private const string DesignFqn = "global::Adamantium.UI.Core.Design";
 
     // The x:Key directive of an inline object node (an inline resource entry), or null if it has none.
-    private static string GetKeyDirective(IAumlAstNode node)
+    // x:Key as written: text, or {x:Static Type.Member} - a constant shared with code, so a key is never typed twice.
+    // Null when there is none.
+    private static BuildValue KeyOf(IAumlAstNode node)
     {
         if (node is not AumlAstObjectNode obj) return null;
+
         foreach (var child in obj.Children)
-            if (child is AumlAstDirective d && d.Name == AumlDirectives.Key && d.Value is AumlAstTextNode t)
-                return t.Text;
+        {
+            if (child is not AumlAstDirective { Name: AumlDirectives.Key } directive) continue;
+
+            return directive.Value switch
+            {
+                AumlAstTextNode { Text.Length: > 0 } text => Unescaped(text.Text),
+                AumlAstStaticMemberValueNode member =>
+                    new MemberValue(Type(Qualified(member.TypeReference.GetFullTypeName())), member.MemberName),
+                _ => null
+            };
+        }
+
         return null;
     }
 
@@ -1754,6 +1756,7 @@ public class AumlLowering
         }
 
         public ResolvedMemberKind MemberKind => ResolvedMemberKind.Property;
+        public object ConstantValue => null;
         public bool IsStatic => false;
         public bool IsPublic => true;
         public IReadOnlyList<string> ParameterNames => [];

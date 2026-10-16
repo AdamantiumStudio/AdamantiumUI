@@ -56,6 +56,8 @@ public class ReflectionResolvedMember : IResolvedMember
         _ => false
     };
 
+    public object ConstantValue => _member is FieldInfo { IsLiteral: true } constant ? constant.GetRawConstantValue() : null;
+
     public bool IsStatic => _member switch
     {
         FieldInfo f => f.IsStatic,

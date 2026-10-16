@@ -30,6 +30,9 @@
     ]]></description>
 
     <change-notes><![CDATA[
+        <p>A resource keyed by a constant - x:Key="{x:Static Type.Member}" - is known by the constant's value: completion
+        offers it and a use goes to the entry it keys. The preview shows a file with nothing to show - a resource
+        dictionary, a style set, a theme - as a plate in its middle, not as an error.</p>
         <p>Automation scenarios (.ascenario): the steps that drive an application, which a test project's build turns
         into a test each. The language server completes the steps, their attributes and values, the keys of a selector
         path and the AutomationIds the application's markup declares, shows what a step does on hover, and underlines
