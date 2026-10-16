@@ -629,18 +629,6 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         if (!containerRegistry.IsRegistered<IVisualRenderer>())
             containerRegistry.RegisterSingleton<IVisualRenderer, VisualRenderer>();
 
-        // The window that follows the cursor during a drag.
-        if (!containerRegistry.IsRegistered<IDragGhost>() && OperatingSystem.IsWindows())
-            containerRegistry.RegisterSingleton<IDragGhost, Win32DragGhost>();
-
-        // Drag-drop with other applications; unregistered elsewhere, where only in-app drag-drop runs.
-        if (!containerRegistry.IsRegistered<INativeDragDrop>() && OperatingSystem.IsWindows())
-            containerRegistry.RegisterSingleton<INativeDragDrop, WindowsDragDrop>();
-
-        // A finger or a pen handed to the system, for checking the platform's own pointer path.
-        if (!containerRegistry.IsRegistered<ISyntheticPointerInput>() && OperatingSystem.IsWindows())
-            containerRegistry.RegisterSingleton<ISyntheticPointerInput, WindowsSyntheticPointerInput>();
-
         // Where windows' places are kept between runs; an application registers its own store to keep them elsewhere.
         if (!containerRegistry.IsRegistered<IWindowPlacementStore>())
             containerRegistry.RegisterInstance<IWindowPlacementStore>(new FileWindowPlacementStore());

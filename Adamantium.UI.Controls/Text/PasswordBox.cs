@@ -118,6 +118,8 @@ public class PasswordBox : TextBoxBase
 
     protected override (int Start, int End) WordAt(int index) => (0, (Password ?? string.Empty).Length);
 
+    protected override bool GivesTextAway => false;
+
     protected override void CopyToClipboard()
     {
     }

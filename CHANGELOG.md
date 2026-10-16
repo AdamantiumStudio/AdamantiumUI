@@ -7,6 +7,21 @@ All packages share one version.
 
 ### Added
 
+- Spelling checked in a text box, as WPF's `SpellCheck.IsEnabled`: set on a box or on any element above it, off by
+  default. A misspelled word gets a wavy line (`TextBoxBase.MisspellingBrush`), and the box's menu offers, for the word
+  under the pointer or at the caret, what it may have been meant as, "Ignore all" and "Add to dictionary". The words
+  are the system's (`ISpellChecker`; on Windows its own dictionaries and the user's), in the box's `Language`, else the
+  application's language, else English; `SpellCheckBehavior.Checker` takes another. macOS comes later.
+- A text box has an editing menu in every theme: Cut, Copy, Paste, Select all. The box's commands
+  (`CutCommand`, `CopyCommand`, `PasteCommand`, `SelectAllCommand`) say when they apply; a theme's row names one with
+  `TextBoxBase.EditAction`, and the box hands it the command as the menu opens. A password box gives nothing away.
+- `ContextMenu.Opening`: raised before a menu shows, with the point it was opened at (none from the keyboard), so its
+  rows can fit the moment.
+- `TextBox.AcceptsTab`: Tab types a tab; Shift+Tab and Ctrl+Tab still move the focus on, and a read-only box lets Tab
+  move it too.
+- `TextBox.MinLines` and `MaxLines`: the box is at least and at most that many lines tall; past the most, its text
+  scrolls.
+- `TextBoxBase.Replace(range, text)` as one edit undo takes back, and `GetCharacterIndexFromPoint`.
 - `TextBox.CharacterCasing` (`Normal`, `Lower`, `Upper`), as WPF's: what is typed or pasted takes that case, letter
   by letter as the box's `Language` maps it (else the application's language; a tag it does not know loses subtags
   from the right until it does). Text set from code or a binding keeps its own.

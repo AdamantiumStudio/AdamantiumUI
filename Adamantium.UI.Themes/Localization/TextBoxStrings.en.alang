@@ -1,4 +1,11 @@
 <Language>
     <Phrase Key="Clear" Text="Clear"/>
     <Phrase Key="ShowPassword" Text="Show password"/>
+    <Phrase Key="Cut" Text="Cut"/>
+    <Phrase Key="Copy" Text="Copy"/>
+    <Phrase Key="Paste" Text="Paste"/>
+    <Phrase Key="SelectAll" Text="Select all"/>
+    <Phrase Key="NoSuggestions" Text="No suggestions"/>
+    <Phrase Key="IgnoreAll" Text="Ignore all"/>
+    <Phrase Key="AddToDictionary" Text="Add to dictionary"/>
 </Language>

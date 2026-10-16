@@ -5,3 +5,4 @@ using Adamantium.UI.Core.Markup;
 // Adamantium.UI - to avoid type-name collisions with Adamantium.UI.Controls.
 [assembly: XmlnsDefinition("http://adamantium/ui", "clr-namespace:Adamantium.UI.Input;assembly=Adamantium.UI")]
 [assembly: XmlnsDefinition("http://adamantium/ui", "clr-namespace:Adamantium.UI.ApplicationModel;assembly=Adamantium.UI")]
+[assembly: XmlnsDefinition("http://adamantium/ui", "clr-namespace:Adamantium.UI.Text;assembly=Adamantium.UI")]

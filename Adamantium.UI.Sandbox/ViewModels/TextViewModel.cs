@@ -48,6 +48,9 @@ public partial class TextViewModel : TabPageViewModel
     // Toggles the floating-label (watermark) effect on the editable TextBoxes live.
     [Bindable] private bool _floatingWatermark = true;
 
+    // A draft with a few misspelled words, for the box that checks its spelling.
+    [Bindable] private string _draft = "Thsi sentense has a fiew misteaks in it.\nTab\tworks here too.";
+
     // The case the message is shown in on the editing stand; the message itself keeps its own.
     [Bindable] private TextTransform _shownCase = TextTransform.Uppercase;
 
