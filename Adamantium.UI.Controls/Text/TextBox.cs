@@ -1,10 +1,8 @@
-using System.Globalization;
 using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Controls.Primitives;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Input;
-using Adamantium.UI.Core.Localization;
 using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls.Text;
@@ -38,9 +36,12 @@ public class TextBox : TextBoxBase
     public static readonly AdamantiumProperty HasTextProperty = AdamantiumProperty.RegisterReadOnly(nameof(HasText),
         typeof(bool), typeof(TextBox), new PropertyMetadata(false));
 
+    public static readonly AdamantiumProperty TextTransformProperty = AdamantiumProperty.Register(nameof(TextTransform),
+        typeof(TextTransform), typeof(TextBox),
+        new PropertyMetadata(TextTransform.None, PropertyMetadataOptions.AffectsMeasure, OnShownCaseChanged));
+
+    private readonly TextCasing.Shown _shown = new();
     private ButtonBase _clearButton;
-    private string _casingLanguage;
-    private CultureInfo _casingCulture;
 
     public string Text
     {
@@ -67,6 +68,15 @@ public class TextBox : TextBoxBase
         set => SetValue(CharacterCasingProperty, value);
     }
 
+    /// <summary>The case the text is shown and copied in, as CSS's <c>text-transform</c>, by the same language rules as
+    /// <see cref="CharacterCasing"/>. <see cref="Text"/>, its binding and what automation reads keep the text as it
+    /// is.</summary>
+    public TextTransform TextTransform
+    {
+        get => GetValue<TextTransform>(TextTransformProperty);
+        set => SetValue(TextTransformProperty, value);
+    }
+
     public bool ShowsClearButton
     {
         get => GetValue<bool>(ShowsClearButtonProperty);
@@ -85,41 +95,12 @@ public class TextBox : TextBoxBase
 
     protected override string Entered(string text) => CharacterCasing switch
     {
-        CharacterCasing.Upper => text.ToUpper(CasingCulture()),
-        CharacterCasing.Lower => text.ToLower(CasingCulture()),
+        CharacterCasing.Upper => TextCasing.Upper(text, Language),
+        CharacterCasing.Lower => TextCasing.Lower(text, Language),
         _ => text,
     };
 
-    private CultureInfo CasingCulture()
-    {
-        var language = Language?.Trim();
-        if (!string.IsNullOrEmpty(language) && language != _casingLanguage)
-        {
-            _casingLanguage = language;
-            _casingCulture = LookUp(language);
-        }
-
-        return (string.IsNullOrEmpty(language) ? null : _casingCulture)
-               ?? LookUp(Languages.Current)
-               ?? CultureInfo.InvariantCulture;
-    }
-
-    private static CultureInfo LookUp(string language)
-    {
-        for (var tag = language?.Trim() ?? string.Empty; tag.Length > 0;
-             tag = tag.LastIndexOf('-') is > 0 and var dash ? tag[..dash] : string.Empty)
-        {
-            try
-            {
-                return Languages.CultureFor(tag);
-            }
-            catch (CultureNotFoundException)
-            {
-            }
-        }
-
-        return null;
-    }
+    protected override string DisplayedText(string text) => _shown.Of(text, TextTransform, Language);
 
     /// <summary>Raised when Enter is pressed while <see cref="AcceptsReturn"/> is off; a host can commit/submit here.</summary>
     public event KeyEventHandler EnterPressed;
@@ -146,6 +127,9 @@ public class TextBox : TextBoxBase
     }
 
     private void OnClearPressed(object sender, RoutedEventArgs e) => Clear();
+
+    private static void OnShownCaseChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e) =>
+        (a as TextBox)?.RelayOutText();
 
     private static void OnTextChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
     {

@@ -823,9 +823,13 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
     {
         foreach (var node in GetVisualDescendants())
         {
-            if (node is TextBlock or TextBoxBase)
+            if (node is TextBoxBase box)
             {
-                ((MeasurableUIComponent)node).InvalidateMeasure();
+                box.RelayOutText();
+            }
+            else if (node is TextBlock block)
+            {
+                block.InvalidateMeasure();
             }
         }
     }

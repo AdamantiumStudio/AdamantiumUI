@@ -6,6 +6,7 @@ using Adamantium.Fonts;
 using Adamantium.Graphics.Fonts;
 using Adamantium.MVVM;
 using Adamantium.Navigation;
+using Adamantium.UI.Controls.Text;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Sandbox.Content;
 
@@ -46,6 +47,9 @@ public partial class TextViewModel : TabPageViewModel
 
     // Toggles the floating-label (watermark) effect on the editable TextBoxes live.
     [Bindable] private bool _floatingWatermark = true;
+
+    // The case the message is shown in on the editing stand; the message itself keeps its own.
+    [Bindable] private TextTransform _shownCase = TextTransform.Uppercase;
 
     // Bound two-way by both password boxes on the editing stand: typing in one shows in the other.
     [Bindable, Affects(nameof(PasswordLength))] private string _password = string.Empty;
