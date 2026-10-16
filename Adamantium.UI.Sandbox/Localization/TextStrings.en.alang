@@ -20,6 +20,7 @@
     <Phrase Key="UpperCaseTitle" Text="Character casing (what you type or paste goes in upper case):"/>
     <Phrase Key="UpperCaseHint" Text="Type a code"/>
     <Phrase Key="TextTransformTitle" Text="Text transform, bound (the message shown in the case chosen; it keeps its own):"/>
+    <Phrase Key="SpellingTitle" Text="Spelling, tabs and lines (right-click a word with a wavy line; 3 to 6 lines tall):"/>
     <Phrase Key="ShownAsIs" Text="As is"/>
     <Phrase Key="ShownUppercase" Text="UPPERCASE"/>
     <Phrase Key="ShownLowercase" Text="lowercase"/>

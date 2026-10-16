@@ -1043,7 +1043,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts
             rect.X += LinesShift();
             if (adornment.Kind == TextAdornmentKind.Squiggle)
             {
-                DrawSquiggle(session, rect, brush);
+                WavyLine.Draw(session, rect, brush, WritingMode == WritingMode.VerticalRightToLeft);
             }
             else if (adornment.Kind == TextAdornmentKind.Background)
             {
@@ -1085,31 +1085,6 @@ public class TextBlock : InputUIComponent, IFocusableInParts
         return vertical
             ? new Rect(snapped.X, snapped.Y, thickness, snapped.Height)
             : new Rect(snapped.X, snapped.Y, snapped.Width, thickness);
-    }
-
-    private void DrawSquiggle(IDrawingSession session, RectangleF band, Brush brush)
-    {
-        var down = WritingMode == WritingMode.VerticalRightToLeft;
-        var depth = down ? band.Width : band.Height;
-        var thickness = depth / 3;
-        var pen = new Pen(brush, thickness);
-        var step = depth;
-        var top = (down ? band.X : band.Y) + thickness / 2;
-        var bottom = (down ? band.X : band.Y) + depth - thickness / 2;
-        var x = (double)(down ? band.Y : band.X);
-        var end = down ? band.Bottom : band.Right;
-        var up = false;
-        while (x < end)
-        {
-            var next = Math.Min(x + step, end);
-            var fraction = (next - x) / step;
-            var from = up ? bottom : top;
-            var to = from + (up ? top - bottom : bottom - top) * fraction;
-            session.DrawLine(down ? new Vector2(from, x) : new Vector2(x, from),
-                down ? new Vector2(to, next) : new Vector2(next, to), pen);
-            x = next;
-            up = !up;
-        }
     }
 
     /// <summary>Lays the text out again in the fonts that arrived.</summary>

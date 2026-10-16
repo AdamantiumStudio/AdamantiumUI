@@ -101,17 +101,28 @@ public class ContextMenu : ItemsControl
         _popup.LayerPass -= OnLayerPass;
     }
 
+    /// <summary>Raised as the menu is about to open, before it is shown: the target, or something attached to it, can make
+    /// its rows fit the moment - which apply, and what they offer for the point it opens at.</summary>
+    public event EventHandler<ContextMenuOpeningEventArgs> Opening;
+
     /// <summary>Opens the menu positioned against <paramref name="target"/>.</summary>
     public void Open(UIComponent target)
     {
+        Opening?.Invoke(this, new ContextMenuOpeningEventArgs(target, null));
         PlacementTarget = target;
         IsOpen = true;
     }
 
     /// <summary>Opens the menu AT <paramref name="point"/> (in <paramref name="target"/>-local coordinates) - the right-click
     /// entry point: places relative to the target's top-left, then offsets to the click point.</summary>
-    public void Open(UIComponent target, Vector2 point)
+    public void Open(UIComponent target, Vector2 point) => OpenAt(target, point, point);
+
+    // The keyboard opens the menu at a place of its own choosing, not at a point anybody pointed at.
+    internal void OpenFromKeyboard(UIComponent target, Vector2 point) => OpenAt(target, point, null);
+
+    private void OpenAt(UIComponent target, Vector2 point, Vector2? pointed)
     {
+        Opening?.Invoke(this, new ContextMenuOpeningEventArgs(target, pointed));
         Placement = PlacementMode.Relative;
         HorizontalOffset = point.X;
         VerticalOffset = point.Y;

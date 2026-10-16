@@ -8,6 +8,7 @@ using Adamantium.Mathematics;
 using Adamantium.ProceduralGeometry;
 using Adamantium.UI.Controls;
 using Adamantium.UI.Controls.Base;
+using Adamantium.UI.Controls.Primitives;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Graphics;
@@ -15,6 +16,7 @@ using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.Media.Animation;
 using Adamantium.UI.Core.RoutedEvents;
+using Adamantium.UI.Core.Text;
 
 namespace Adamantium.UI.Controls.Text;
 
@@ -67,6 +69,26 @@ public abstract class TextBoxBase : Control
 
     public static readonly AdamantiumProperty SelectionBrushProperty = AdamantiumProperty.Register(nameof(SelectionBrush),
         typeof(Brush), typeof(TextBoxBase), new PropertyMetadata(null, PropertyMetadataOptions.AffectsRender));
+
+    public static readonly AdamantiumProperty MisspellingBrushProperty = AdamantiumProperty.Register(
+        nameof(MisspellingBrush), typeof(Brush), typeof(TextBoxBase),
+        new PropertyMetadata(new SolidColorBrush(Colors.Red), PropertyMetadataOptions.AffectsRender));
+
+    /// <summary>Set on a row of a text box's menu: the box's command the row runs. The box hands the row its command as
+    /// the menu opens, so a theme's menu names the action and needs no binding.</summary>
+    public static readonly AdamantiumProperty EditActionProperty = AdamantiumProperty.RegisterAttached("EditAction",
+        typeof(TextEditAction), typeof(AdamantiumComponent), new PropertyMetadata(TextEditAction.None));
+
+    private static readonly TextAttributes Squiggled = new() { Decorations = TextDecorations.Squiggle };
+
+    private IReadOnlyList<TextRange> _misspelled = [];
+    private IReadOnlyList<TextRange> _lastShapedMisspelled = [];
+    private ContextMenu _watchedMenu;
+    private (double Min, double Max)? _hostHeights;
+    private TextEditCommand _cutCommand;
+    private TextEditCommand _copyCommand;
+    private TextEditCommand _pasteCommand;
+    private TextEditCommand _selectAllCommand;
 
     static TextBoxBase()
     {
@@ -237,6 +259,71 @@ public abstract class TextBoxBase : Control
         set => SetValue(SelectionBrushProperty, value);
     }
 
+    /// <summary>The wavy line under a word in <see cref="MisspelledRanges"/>.</summary>
+    public Brush MisspellingBrush
+    {
+        get => GetValue<Brush>(MisspellingBrushProperty);
+        set => SetValue(MisspellingBrushProperty, value);
+    }
+
+    /// <summary>The words marked as misspelled, each with a wavy line under it. Whatever checks the spelling sets them
+    /// (<c>SpellCheck.IsEnabled</c>); the box only shows them.</summary>
+    public IReadOnlyList<TextRange> MisspelledRanges
+    {
+        get => _misspelled;
+        set
+        {
+            _misspelled = value ?? [];
+            InvalidateSurface();
+        }
+    }
+
+    /// <summary>Cuts the selection to the clipboard; applies while there is one the box may give away and change.</summary>
+    public TextEditCommand CutCommand =>
+        _cutCommand ??= new TextEditCommand(CutToClipboard, () => HasSelection && !IsReadOnly && GivesTextAway);
+
+    /// <summary>Copies the selection, as shown, to the clipboard; applies while there is one the box may give away.</summary>
+    public TextEditCommand CopyCommand =>
+        _copyCommand ??= new TextEditCommand(CopyToClipboard, () => HasSelection && GivesTextAway);
+
+    /// <summary>Pastes the clipboard's text over the selection; applies while the box can be changed and there is text
+    /// to paste.</summary>
+    public TextEditCommand PasteCommand => _pasteCommand ??= new TextEditCommand(PasteFromClipboard,
+        () => !IsReadOnly && !string.IsNullOrEmpty(Clipboard.GetText()));
+
+    /// <summary>Selects the whole text; applies while there is some.</summary>
+    public TextEditCommand SelectAllCommand => _selectAllCommand ??= new TextEditCommand(SelectAll, () => TextLength > 0);
+
+    /// <summary>Whether the box lets its text go out by copy and cut; a password box does not.</summary>
+    protected virtual bool GivesTextAway => true;
+
+    /// <summary>Replaces <paramref name="range"/> of the text with <paramref name="text"/> as one edit, which undo takes
+    /// back, and puts the caret after it. A read-only box is left alone.</summary>
+    public void Replace(TextRange range, string text)
+    {
+        var length = EditedText.Length;
+        var start = Math.Clamp(range.Start, 0, length);
+        var end = Math.Clamp(range.End, start, length);
+        CaretIndex = end;
+        SelectionStart = start;
+        SelectionLength = end - start;
+        ReplaceSelection(text);
+    }
+
+    /// <summary>The index of the character at <paramref name="point"/>, in this box's own coordinates: the caret stop
+    /// nearest to it.</summary>
+    public int GetCharacterIndexFromPoint(Vector2 point)
+    {
+        if (_presenter == null)
+        {
+            return 0;
+        }
+
+        EnsureLayout();
+        var local = this.TranslatePoint(point, _presenter);
+        return HitFromPoint(local.X - _textOx, local.Y - _textOy).Index;
+    }
+
     // --- Template wiring -----------------------------------------------------------------------------------------
 
     private TextPresenter _presenter;
@@ -250,6 +337,7 @@ public abstract class TextBoxBase : Control
         _presenter = GetTemplateChild("PART_TextPresenter") as TextPresenter;
         _border = GetTemplateChild("PART_Border") as IMeasurableComponent;
         _scrollViewer = GetTemplateChild("PART_ContentHost") as ScrollViewer;
+        _hostHeights = null;
         if (_presenter != null) _presenter.Owner = this;
         PushScrollSettings();
         InvalidateSurface(measure: true);
@@ -261,6 +349,118 @@ public abstract class TextBoxBase : Control
         if (e.Property == LanguageProperty)
         {
             RelayOutText();
+        }
+        else if (e.Property == PlaceholderProperty && FloatingPlaceholder)
+        {
+            InvalidateSurface(measure: true);
+        }
+        else if (e.Property == ContextMenuProperty)
+        {
+            if (_watchedMenu != null)
+            {
+                _watchedMenu.Opening -= OnMenuOpening;
+            }
+
+            _watchedMenu = ContextMenu;
+            if (_watchedMenu != null)
+            {
+                _watchedMenu.Opening += OnMenuOpening;
+            }
+        }
+    }
+
+    protected override void OnDiscarded()
+    {
+        base.OnDiscarded();
+        if (_watchedMenu != null)
+        {
+            _watchedMenu.Opening -= OnMenuOpening;
+            _watchedMenu = null;
+        }
+    }
+
+    public static TextEditAction GetEditAction(AdamantiumComponent element) =>
+        element.GetValue<TextEditAction>(EditActionProperty);
+
+    public static void SetEditAction(AdamantiumComponent element, TextEditAction value) =>
+        element.SetValue(EditActionProperty, value);
+
+    private void OnMenuOpening(object sender, ContextMenuOpeningEventArgs e)
+    {
+        if (!ReferenceEquals(e.Target, this))
+        {
+            return;
+        }
+
+        foreach (var row in _watchedMenu.Items.OfType<MenuItem>())
+        {
+            var command = GetEditAction(row) switch
+            {
+                TextEditAction.Cut => CutCommand,
+                TextEditAction.Copy => CopyCommand,
+                TextEditAction.Paste => PasteCommand,
+                TextEditAction.SelectAll => SelectAllCommand,
+                _ => null,
+            };
+            if (command != null && !ReferenceEquals(row.Command, command))
+            {
+                row.Command = command;
+            }
+        }
+
+        _cutCommand?.RaiseCanExecuteChanged();
+        _copyCommand?.RaiseCanExecuteChanged();
+        _pasteCommand?.RaiseCanExecuteChanged();
+        _selectAllCommand?.RaiseCanExecuteChanged();
+    }
+
+    /// <summary>How many lines the box is at least and at most as tall as; 0 for no limit. Past the most, the text
+    /// scrolls.</summary>
+    protected virtual (int Least, int Most) LineLimits => (0, 0);
+
+    protected override Size MeasureOverride(Size availableSize)
+    {
+        ApplyLineLimits();
+        return base.MeasureOverride(availableSize);
+    }
+
+    private void ApplyLineLimits()
+    {
+        if (_scrollViewer == null)
+        {
+            return;
+        }
+
+        var (least, most) = LineLimits;
+        var limited = least > 1 || most > 0;
+        if (!limited && _hostHeights == null)
+        {
+            return;
+        }
+
+        _hostHeights ??= (_scrollViewer.MinHeight, _scrollViewer.MaxHeight);
+        var (minHeight, maxHeight) = _hostHeights.Value;
+        if (limited)
+        {
+            EnsureLayout();
+            var spacing = double.IsFinite(LineSpacing) ? Math.Max(LineSpacing, 1 - _lineHeight) : 0;
+            double LinesHigh(int lines) => lines * _lineHeight + (lines - 1) * spacing + FloatStripHeight();
+            minHeight = least > 1 ? LinesHigh(least) : minHeight;
+            maxHeight = most > 0 ? LinesHigh(Math.Max(most, least)) : maxHeight;
+        }
+        else
+        {
+            _hostHeights = null;
+        }
+
+        if (!_scrollViewer.MinHeight.Equals(minHeight))
+        {
+            _scrollViewer.MinHeight = minHeight;
+        }
+
+        if (!_scrollViewer.MaxHeight.Equals(maxHeight))
+        {
+            _scrollViewer.MaxHeight = maxHeight;
         }
     }
 
@@ -418,7 +618,8 @@ public abstract class TextBoxBase : Control
             : _wrapWidth;
 
         var shaping = TextShaping(font);
-        if (_lastShapedText == text && _lastShapedFontSize.Equals(FontSize)
+        var misspelled = _misspelled;
+        if (_lastShapedText == text && ReferenceEquals(_lastShapedMisspelled, misspelled) && _lastShapedFontSize.Equals(FontSize)
             && _lastShapedWrapping == wrapping && _lastShapedWidth.Equals(width)
             && _lastShapedAlignment == HorizontalTextAlignment && _lastShapedWordSpacing.Equals(WordSpacing)
             && _lastShapedLetterSpacing.Equals(LetterSpacing) && _lastShapedTracking.Equals(Tracking)
@@ -446,12 +647,12 @@ public abstract class TextBoxBase : Control
         }
         else
         {
-            var size = shaping == null
+            var size = shaping == null && misspelled.Count == 0
                 ? _textLayout.ProcessText(text, FontSize,
                     new Size(width, double.NaN),
                     wrapping, TextTrimming.None,
                     LaidOutAlignment, VerticalTextAlignment.Top)
-                : _textLayout.ProcessText(new AttributedText(text, shaping), FontSize,
+                : _textLayout.ProcessText(Marked(new AttributedText(text, shaping), misspelled), FontSize,
                     new Size(width, double.NaN),
                     wrapping, TextTrimming.None,
                     LaidOutAlignment, VerticalTextAlignment.Top);
@@ -465,6 +666,7 @@ public abstract class TextBoxBase : Control
         }
 
         _lastShapedText = text;
+        _lastShapedMisspelled = misspelled;
         _lastShapedFontSize = FontSize;
         _lastShapedWrapping = wrapping;
         _lastShapedAlignment = HorizontalTextAlignment;
@@ -486,6 +688,16 @@ public abstract class TextBoxBase : Control
         _lastShapedLineBreaking = LineBreaking;
         _lastShapedTabStops = TabStops;
         _lastShapedOpticalMargins = OpticalMarginAlignment;
+    }
+
+    private static AttributedText Marked(AttributedText text, IReadOnlyList<TextRange> misspelled)
+    {
+        foreach (var range in misspelled)
+        {
+            text.Apply(range.Start, range.Length, Squiggled);
+        }
+
+        return text;
     }
 
     private void BuildCaretModel()
@@ -1153,6 +1365,7 @@ public abstract class TextBoxBase : Control
         if (hasText)
         {
             session.DrawText(BuildTextParameters(Foreground, ox, oy, size), size, _textLayout, Foreground, Brushes.Transparent, Brushes.Transparent);
+            DrawMisspellings(session, ox, oy);
         }
 
         // Placeholder: floating label (always visible, animates up/shrinks) or the classic in-line prompt (only while
@@ -1168,6 +1381,25 @@ public abstract class TextBoxBase : Control
         {
             var c = CaretRect(CaretIndex);
             session.DrawRectangle(CaretBrush, new Rect(ox + c.X, oy + c.Y, CaretWidth, c.Height));
+        }
+    }
+
+    private void DrawMisspellings(IDrawingSession session, double ox, double oy)
+    {
+        if (_lastShapedMisspelled.Count == 0 || _textLayout.AttributedText == null)
+        {
+            return;
+        }
+
+        foreach (var adornment in _textLayout.GetAdornments())
+        {
+            if (adornment.Kind == TextAdornmentKind.Squiggle)
+            {
+                var band = adornment.Rect;
+                band.X += (float)ox;
+                band.Y += (float)oy;
+                WavyLine.Draw(session, band, MisspellingBrush, down: false);
+            }
         }
     }
 

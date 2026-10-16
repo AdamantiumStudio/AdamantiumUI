@@ -3,6 +3,7 @@ using System.Threading;
 using Adamantium.Core.DependencyInjection;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Input;
+using Adamantium.UI.Core.Text;
 using Adamantium.Win32;
 
 namespace Adamantium.UI.Platforms.Windows;
@@ -74,5 +75,9 @@ public class WindowsPlatform : IApplicationPlatform
     public static void Initialize(IContainerRegistry resolver)
     {
         resolver.RegisterSingleton<IApplicationPlatform, WindowsPlatform>();
+        resolver.RegisterSingleton<IDragGhost, Win32DragGhost>();
+        resolver.RegisterSingleton<INativeDragDrop, WindowsDragDrop>();
+        resolver.RegisterSingleton<ISyntheticPointerInput, WindowsSyntheticPointerInput>();
+        resolver.RegisterSingleton<ISpellChecker, WindowsSpellChecker>();
     }
 }

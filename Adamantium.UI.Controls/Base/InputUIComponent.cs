@@ -142,7 +142,7 @@ public class InputUIComponent : MeasurableUIComponent, IInputComponent
     {
         if (ContextMenuHost(element) is not { } host) return false;
 
-        host.ContextMenu.Open(host, element.TranslatePoint(new Vector2(0, element.RenderSize.Height), host));
+        host.ContextMenu.OpenFromKeyboard(host, element.TranslatePoint(new Vector2(0, element.RenderSize.Height), host));
         host.ContextMenu.MoveKeyboardInsideWhenReady();
         return true;
     }
