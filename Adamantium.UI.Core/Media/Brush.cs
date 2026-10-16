@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.InteropServices;
+using System.Threading;
 using Adamantium.Core.TypeParsing;
 using Adamantium.UI.Core.Media.Animation;
 using Adamantium.UI.Core.TypeParsers;
@@ -30,6 +31,8 @@ public abstract class Brush: AdamantiumComponent, IRenderAttachable
    private volatile Brush _snapshot;
 
    private bool _isFrozen;
+
+   private int _bakedHolds;
 
    // PAINT: a brush's own opacity changes only the color the units are baked with - never a shape, never a layout. Every
    // element painting with this brush re-bakes (via Changed -> InvalidatePaint); the flag STATES that, so an animation of
@@ -318,6 +321,14 @@ public abstract class Brush: AdamantiumComponent, IRenderAttachable
    {
       lock (_ownersLock) return _owners != null && _owners.TryGetValue(owner, out var held) ? held : 0;
    }
+
+   /// <summary>Whether something draws with this brush's color baked in where the render thread cannot reach - a text
+   /// effect, a run - so an animation of the brush stays on the loop thread, where every change is drawn again.</summary>
+   internal bool IsBakedIn => Volatile.Read(ref _bakedHolds) > 0;
+
+   internal void HoldBaked() => Interlocked.Increment(ref _bakedHolds);
+
+   internal void ReleaseBaked() => Interlocked.Decrement(ref _bakedHolds);
 
    // Anchors the brush to its first owner so expressions on the brush can resolve; only brushes with pending expressions
    // are anchored.

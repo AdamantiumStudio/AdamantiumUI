@@ -12,7 +12,7 @@ public class GeometryDrawing : Drawing
     private BrushChangeRelay _strokeRelay;
 
     public static readonly AdamantiumProperty GeometryProperty = AdamantiumProperty.Register(nameof(Geometry),
-        typeof(Geometry), typeof(GeometryDrawing), new PropertyMetadata(null));
+        typeof(Geometry), typeof(GeometryDrawing), new PropertyMetadata(null, GeometryChangedCallback));
 
     public static readonly AdamantiumProperty BrushProperty = AdamantiumProperty.Register(nameof(Brush),
         typeof(Brush), typeof(GeometryDrawing), new PropertyMetadata(null, BrushChangedCallback));
@@ -61,6 +61,20 @@ public class GeometryDrawing : Drawing
         set => SetValue(StrokeThicknessProperty, value);
     }
 
+    private static void GeometryChangedCallback(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (a is not GeometryDrawing drawing)
+        {
+            return;
+        }
+
+        var previous = e.OldValue as Geometry;
+        var next = e.NewValue as Geometry;
+        drawing.ReplaceOwned(previous?.Transform, null);
+        drawing.ReplaceOwned(previous, next);
+        drawing.ReplaceOwned(null, next?.Transform);
+    }
+
     // Either half arriving builds the pen. Both are ordinary property writes from markup and can land in any order, so
     // this must not assume the brush comes first.
     private static void StrokeChangedCallback(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
@@ -79,6 +93,7 @@ public class GeometryDrawing : Drawing
         if (a is not GeometryDrawing drawing) return;
 
         drawing._strokeRelay = drawing.Follow(drawing._strokeRelay, e.NewValue as Brush);
+        drawing.ReplaceOwned(e.OldValue as Brush, e.NewValue as Brush);
         StrokeChangedCallback(a, e);
     }
 
@@ -89,6 +104,7 @@ public class GeometryDrawing : Drawing
         if (a is not GeometryDrawing drawing) return;
 
         drawing._fillRelay = drawing.Follow(drawing._fillRelay, e.NewValue as Brush);
+        drawing.ReplaceOwned(e.OldValue as Brush, e.NewValue as Brush);
     }
 
     // The geometry too, not just the brush: <RectangleGeometry Rect="{Binding IconRect}"/> is the same markup and would
@@ -99,6 +115,18 @@ public class GeometryDrawing : Drawing
         AttachOwned(Stroke);
         AttachOwned(Geometry);
         AttachOwned(Geometry?.Transform);
+    }
+
+    protected override bool StillOwns(AdamantiumComponent owned) =>
+        ReferenceEquals(owned, Brush) || ReferenceEquals(owned, Stroke) || ReferenceEquals(owned, Geometry)
+        || ReferenceEquals(owned, Geometry?.Transform);
+
+    protected override void DetachChildren()
+    {
+        DetachOwned(Brush);
+        DetachOwned(Stroke);
+        DetachOwned(Geometry?.Transform);
+        DetachOwned(Geometry);
     }
 
     /// <summary>The shape's extent, widened by half the stroke - a stroke straddles the contour, so an icon whose outline

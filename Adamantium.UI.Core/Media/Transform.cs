@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using Adamantium.Mathematics;
 using Adamantium.UI.Core.RoutedEvents;
 
@@ -5,6 +7,10 @@ namespace Adamantium.UI.Core.Media;
 
 public class Transform : AnimatableUIComponent
 {
+    private static readonly object HoldersGate = new();
+    [ThreadStatic] private static List<ITransformHolder> _liveHolders;
+    private List<WeakReference<ITransformHolder>> _holders;
+
     public static readonly AdamantiumProperty ScaleXProperty = AdamantiumProperty.Register(nameof(ScaleX),
         typeof (Double), typeof (Transform), new PropertyMetadata(1.0, TransformPropertyChangedCallback));
         
@@ -174,7 +180,7 @@ public class Transform : AnimatableUIComponent
             // with the property system but no place in the tree, so on its own a {Binding} on it has nothing to resolve
             // against; through the owner it binds like anything else - which is what makes
             // <Transform ScaleX="{Binding Zoom}"/> - the obvious markup - actually work.
-            InheritanceParent = value as AdamantiumComponent;
+            InheritanceParent = value as AdamantiumComponent ?? HoldersParent();
             if (value is AdamantiumComponent owner) owner.PropertyChanged += OnOwnerPropertyChanged;
 
             // A transform is BUILT before it is assigned, so its bindings were established with no owner and therefore
@@ -196,6 +202,190 @@ public class Transform : AnimatableUIComponent
     /// re-runs the owner's LAYOUT, because it reshapes the footprint - not just the render.</summary>
     internal bool IsLayoutTransform { get; set; }
 
+    internal bool IsHeld
+    {
+        get
+        {
+            PruneHolders();
+            lock (HoldersGate)
+            {
+                return _holders is { Count: > 0 };
+            }
+        }
+    }
+
+    internal IUIComponent Element
+    {
+        get
+        {
+            if (Owner != null || !IsHeld)
+            {
+                return Owner;
+            }
+
+            return ElementAbove(InheritanceParent) ?? ElementAbove(HoldersParent());
+        }
+    }
+
+    private static IUIComponent ElementAbove(AdamantiumComponent from)
+    {
+        for (var node = from; node != null; node = node.InheritanceParent)
+        {
+            if (node is IUIComponent element)
+            {
+                return element;
+            }
+        }
+
+        return null;
+    }
+
+    internal void AddHolder(ITransformHolder holder)
+    {
+        lock (HoldersGate)
+        {
+            (_holders ??= []).Add(new WeakReference<ITransformHolder>(holder));
+        }
+
+        Reparent();
+    }
+
+    internal void RemoveHolder(ITransformHolder holder)
+    {
+        lock (HoldersGate)
+        {
+            if (_holders == null)
+            {
+                return;
+            }
+
+            for (var i = _holders.Count - 1; i >= 0; i--)
+            {
+                if (!_holders[i].TryGetTarget(out var held) || ReferenceEquals(held, holder))
+                {
+                    _holders.RemoveAt(i);
+                }
+            }
+        }
+
+        Reparent();
+    }
+
+    internal void Reparent()
+    {
+        if (Owner != null || InheritanceParent is { } hung && hung is not ITransformHolder && ElementAbove(hung) != null)
+        {
+            return;
+        }
+
+        var parent = HoldersParent();
+        if (ReferenceEquals(InheritanceParent, parent))
+        {
+            return;
+        }
+
+        InheritanceParent = parent;
+        Data.BindingEngine.RefreshBindings(this);
+    }
+
+    internal void ReleaseFrom(AdamantiumComponent hanger)
+    {
+        if (hanger == null || !ReferenceEquals(InheritanceParent, hanger))
+        {
+            return;
+        }
+
+        InheritanceParent = Owner as AdamantiumComponent;
+        if (Owner == null)
+        {
+            Reparent();
+        }
+        else
+        {
+            Data.BindingEngine.RefreshBindings(this);
+        }
+    }
+
+    private AdamantiumComponent HoldersParent()
+    {
+        lock (HoldersGate)
+        {
+            if (_holders == null)
+            {
+                return null;
+            }
+
+            foreach (var weak in _holders)
+            {
+                if (weak.TryGetTarget(out var holder) && holder.ParentFor(this) is { } parent)
+                {
+                    return parent;
+                }
+            }
+
+            return null;
+        }
+    }
+
+    private void PruneHolders()
+    {
+        lock (HoldersGate)
+        {
+            if (_holders == null)
+            {
+                return;
+            }
+
+            for (var i = _holders.Count - 1; i >= 0; i--)
+            {
+                if (!_holders[i].TryGetTarget(out _))
+                {
+                    _holders.RemoveAt(i);
+                }
+            }
+        }
+    }
+
+    private bool NotifyHolders()
+    {
+        if (_holders == null)
+        {
+            return false;
+        }
+
+        var live = _liveHolders ?? [];
+        _liveHolders = null;
+        try
+        {
+            lock (HoldersGate)
+            {
+                for (var i = _holders.Count - 1; i >= 0; i--)
+                {
+                    if (_holders[i].TryGetTarget(out var holder))
+                    {
+                        live.Add(holder);
+                    }
+                    else
+                    {
+                        _holders.RemoveAt(i);
+                    }
+                }
+            }
+
+            foreach (var holder in live)
+            {
+                holder.OnTransformChanged(this);
+            }
+
+            return live.Count > 0;
+        }
+        finally
+        {
+            live.Clear();
+            _liveHolders = live;
+        }
+    }
+
     private void UpdateTransform()
     {
         Matrix = CalculateFinalTransform();
@@ -207,6 +397,11 @@ public class Transform : AnimatableUIComponent
         if (IsLayoutTransform)
         {
             if (Owner is IMeasurableComponent measurable) measurable.InvalidateMeasure();
+            return;
+        }
+
+        if (NotifyHolders() && Owner == null)
+        {
             return;
         }
 

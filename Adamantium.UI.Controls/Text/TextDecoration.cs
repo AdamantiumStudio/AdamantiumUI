@@ -14,6 +14,8 @@ namespace Adamantium.UI.Controls.Text;
 public sealed class TextDecoration : AdamantiumComponent
 {
     private TrackingCollection<double> _dashes;
+    private int _bakers;
+    private Brush _bakedBrush;
 
     public static readonly AdamantiumProperty LocationProperty = AdamantiumProperty.Register(nameof(Location),
         typeof(TextDecorationLocation), typeof(TextDecoration),
@@ -70,9 +72,33 @@ public sealed class TextDecoration : AdamantiumComponent
 
     internal event EventHandler Changed;
 
+    internal void Bake(bool baking)
+    {
+        _bakers = Math.Max(0, _bakers + (baking ? 1 : -1));
+        BakeBrush();
+    }
+
+    private void BakeBrush()
+    {
+        var brush = _bakers > 0 ? Brush : null;
+        if (ReferenceEquals(_bakedBrush, brush))
+        {
+            return;
+        }
+
+        _bakedBrush?.ReleaseBaked();
+        _bakedBrush = brush;
+        _bakedBrush?.HoldBaked();
+    }
+
     protected override void OnPropertyChanged(AdamantiumPropertyChangedEventArgs e)
     {
         base.OnPropertyChanged(e);
+        if (e.Property == BrushProperty)
+        {
+            BakeBrush();
+        }
+
         if (e.Property == DashArrayProperty)
         {
             if (_dashes != null)

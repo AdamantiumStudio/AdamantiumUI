@@ -25,6 +25,15 @@ All packages share one version.
   world changes it shows each item once; the rows are built from the copy after the lock is let go, so the world never
   waits on them. A change that does not fit what the list holds reads the source again. A `DataPager` over such a
   source is not covered.
+- Text effects, as WPF's: `TextBlock.TextEffects` and `Inline.TextEffects` draw a range of the text apart from the rest -
+  its characters moved, turned, scaled or slanted by a `Transform` and drawn in their own `Foreground`. Each character
+  turns about its own center unless `TransformOrigin="Element"` (WPF's way), the transform's `ShiftX`/`ShiftY` count in
+  sizes of each character, or of the element, and a turn about X or Y with a `Perspective` tips the characters as
+  flipping cards; the brush's `Opacity` fades the range. A block counts its whole text, an inline from its own start. Only the
+  drawing changes: the lines, the caret, selection and hit testing stay, and a change draws the text again without
+  laying it out. An effect binds against its holder's data; name its transform to animate it, as any;
+  `TextEffectResolver` splits one effect into one a character, for letters moved in turn. A text box has none: rich text
+  while typing is for a rich text editor.
 - Spelling checked in a text box, as WPF's `SpellCheck.IsEnabled`: set on a box or on any element above it, off by
   default. A misspelled word gets a wavy line (`TextBoxBase.MisspellingBrush`), and the box's menu offers, for the word
   under the pointer or at the caret, what it may have been meant as, "Ignore all" and "Add to dictionary". The words
@@ -1358,6 +1367,14 @@ All packages share one version.
   silence, so the resource was simply never found.
 - A `TreeDataGrid` grouped by a column, with no sort or filter, shows a record added to its source or taken out of it.
   Its groups are lists of its own making and were made again only for a sort, a filter or a key relation.
+- A run's `Foreground` or `Background` brush, or a decoration line's brush, changed in place (a new color, an animated
+  one) shows in the text; only a brush swapped for another did. An animation of such a brush, or of a text effect's,
+  stays on the loop thread: the compositor repaints what draws with a brush directly, and text holds its colors in the
+  glyphs it laid out.
+- A drawing shown by an element keeps what it holds in step: a brush, geometry, transform or nested drawing set later is
+  hung on it too, so its bindings resolve, and one replaced is let go. `DrawingImage.Detach` and a drawing replaced in
+  the image let go of everything the drawing hung (`Drawing.Detach`); a transform let go passes to the element it moves,
+  or to a text effect still drawing with it. `DrawingGroup.Children.Clear()` lets go of each child.
 - An `{Ancestor}` binding on a non-visual target - a line of an inspector, a behavior - resolves when the element
   holding it enters the visual tree later, or gets a parent there. It listened to its own logical attach only, which
   never comes when the element stands in a template: the logical news of a window stops at a template's edge.

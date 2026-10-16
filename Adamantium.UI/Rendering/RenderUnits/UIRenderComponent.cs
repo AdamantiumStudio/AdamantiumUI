@@ -438,6 +438,11 @@ public class TextRenderComponent : ImageRenderComponent
         _rtWidth, _rtHeight, MSAALevel.None, SurfaceFormat.R8G8B8A8.UNorm, name: "TextRenderer"));
     
     public FontRenderer FontRenderer { get; }
+
+    /// <summary>How far the quad and target reach past the text on every side, as they were built; at least the glyph
+    /// run's <see cref="FrozenGlyphRun.EffectPadding"/>.</summary>
+    public int Padding { get; init; }
+
     public TextLayout TextLayout { get; }
     public TextRenderingParameters RenderingParameters { get; }
     public Brush Foreground { get; set; }
@@ -533,7 +538,7 @@ public class TextRenderComponent : ImageRenderComponent
 
         // Inset the text by the effect padding inside the (padded) target so edge glyphs' outline/glow have room. The
         // composite quad was grown by the same pad with its origin shifted -pad (see RenderUnit), canceling this inset.
-        var pad = GlyphRun.EffectPadding;
+        var pad = Padding;
         var location = new Vector3F(RenderingParameters.TextArea.X + pad, RenderingParameters.TextArea.Y + pad, 5);
         var foreground = ((SolidColorBrush)Foreground).Color;
         var previousColor = GraphicsDevice.ClearColor;

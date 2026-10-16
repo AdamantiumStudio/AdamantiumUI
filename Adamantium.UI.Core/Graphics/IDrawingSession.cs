@@ -1,4 +1,5 @@
-﻿using Adamantium.Graphics.Fonts;
+﻿using System.Collections.Generic;
+using Adamantium.Graphics.Fonts;
 using Adamantium.Mathematics;
 using Adamantium.ProceduralGeometry;
 using Adamantium.ProceduralGeometry.Shapes;
@@ -61,6 +62,15 @@ public interface IDrawingSession
         Brush background,
         Brush stroke,
         Matrix4x4F transform);
+    /// <summary>Draws the text with <paramref name="effects"/>: ranges of it moved and recolored, the layout as it
+    /// is.</summary>
+    IDrawingSession DrawText(TextRenderingParameters renderingParameters,
+        Size desiredSize,
+        TextLayout textLayout,
+        Brush foreground,
+        Brush background,
+        Brush stroke,
+        IReadOnlyList<GlyphEffect> effects);
 
     IDrawingSession PushImage(ImageSource image);
 }

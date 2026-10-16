@@ -36,6 +36,8 @@ public class Span : Inline
             {
                 old.Changed -= OnInlineChanged;
                 RemoveLogicalChild(old);
+                old.ReparentEffects();
+                old.SetInBlock(old.ReachesABlock());
             }
         }
 
@@ -45,13 +47,43 @@ public class Span : Inline
             {
                 AddLogicalChild(added);
                 added.Changed += OnInlineChanged;
+                added.ReparentEffects();
+                added.SetInBlock(InBlock);
             }
         }
 
         RaiseChanged();
     }
 
-    private void OnInlineChanged(object sender, EventArgs e) => RaiseChanged();
+    internal override void SetInBlock(bool inBlock)
+    {
+        base.SetInBlock(inBlock);
+        if (_inlines == null)
+        {
+            return;
+        }
+
+        foreach (var inline in _inlines)
+        {
+            inline.SetInBlock(inBlock);
+        }
+    }
+
+    internal override void ReparentEffects()
+    {
+        base.ReparentEffects();
+        if (_inlines == null)
+        {
+            return;
+        }
+
+        foreach (var inline in _inlines)
+        {
+            inline.ReparentEffects();
+        }
+    }
+
+    private void OnInlineChanged(object sender, EventArgs e) => RaiseChanged(e);
 
     private void Admit(Inline added)
     {

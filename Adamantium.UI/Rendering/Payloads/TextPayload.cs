@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Adamantium.Graphics.Fonts;
 using Adamantium.Mathematics;
 using Adamantium.UI.Core.Graphics;
@@ -13,7 +14,8 @@ public class TextPayload(
     Brush foreground,
     Brush background,
     Brush stroke,
-    Matrix4x4F? localTransform = null) : IEquatable<TextPayload>, IRenderCachePolicy
+    Matrix4x4F? localTransform = null,
+    IReadOnlyList<GlyphEffect> effects = null) : IEquatable<TextPayload>, IRenderCachePolicy
 {
     /// <summary>Where this run sits ON TOP of the element's world transform. The text quad is anchored at its own CENTER
     /// in mesh-local space and placed by the unit's transform - the text AREA only aligns the run inside the layout - so
@@ -29,6 +31,9 @@ public class TextPayload(
     // ...and this, when the text and size stay the same but the glyphs move: a new last-line alignment, kashidas off.
     public int Revision { get; } = textLayout?.Revision ?? 0;
 
+    /// <summary>The ranges drawn apart from the rest, as they were when the text was recorded; empty for none.</summary>
+    public IReadOnlyList<GlyphEffect> Effects { get; } = effects ?? [];
+
     // The LIVE brushes, read through their immutable snapshots - see RectanglePayload.
     private readonly Brush _foreground = foreground?.ForRendering();
     private readonly Brush _background = background?.ForRendering();
@@ -41,7 +46,7 @@ public class TextPayload(
     public override int GetHashCode()
     {
         return HashCode.Combine(TextRenderingParameters, DesiredSize, TextLayout, Revision, Foreground, Background, Stroke,
-            LocalTransform);
+            HashCode.Combine(LocalTransform, Effects.Count));
     }
 
     public bool RequiresBufferRebuild(IRenderCachePolicy newState)
@@ -49,7 +54,26 @@ public class TextPayload(
         if (newState is not TextPayload payload) return true;
 
         return DesiredSize != payload.DesiredSize || Text != payload.Text || TextLayout != payload.TextLayout ||
-               Revision != payload.Revision || TextRenderingParameters != payload.TextRenderingParameters;
+               Revision != payload.Revision || TextRenderingParameters != payload.TextRenderingParameters ||
+               !SameEffects(payload);
+    }
+
+    private bool SameEffects(TextPayload other)
+    {
+        if (Effects.Count != other.Effects.Count)
+        {
+            return false;
+        }
+
+        for (var i = 0; i < Effects.Count; i++)
+        {
+            if (Effects[i] != other.Effects[i])
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     public bool Equals(TextPayload other)
@@ -59,7 +83,7 @@ public class TextPayload(
         return Equals(TextRenderingParameters, other.TextRenderingParameters) &&
                DesiredSize.Equals(other.DesiredSize) && Equals(TextLayout, other.TextLayout) && Revision == other.Revision &&
                Equals(Foreground, other.Foreground) && Equals(Background, other.Background) &&
-               Equals(Stroke, other.Stroke) && LocalTransform == other.LocalTransform;
+               Equals(Stroke, other.Stroke) && LocalTransform == other.LocalTransform && SameEffects(other);
     }
 
     public override bool Equals(object obj)

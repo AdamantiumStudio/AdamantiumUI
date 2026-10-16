@@ -232,6 +232,7 @@ internal sealed class TextBatchCollector : BatchCollector<GlyphItem>
         {
             var d = glyphs[i].ArrangeRect;   // local x, y, w, h
             var synthesis = glyphs[i].Synthesis;
+            var (effect, offset, perspective) = NodeEffect(glyphs[i], sx, sy, tx, ty, ax, ay);
             dst[i] = new GlyphItem
             {
                 LocalRect = new Vector4F((d.X + ax) * sx + tx, (d.Y + ay) * sy + ty, d.Z * sx, d.W * sy),
@@ -239,13 +240,34 @@ internal sealed class TextBatchCollector : BatchCollector<GlyphItem>
                 Params = new Vector4F(transformSlot, glyphs[i].Layer, glyphs[i].Depth, fadeSlot),
                 Clip = new Vector4F(clipSlot, synthesis.X, synthesis.Y, synthesis.Z),
                 Color = GlyphColor(glyphs[i], color, opacity),
-                Paint = new Vector4F(glyphs[i].Paint.X, MathF.Pow(opacity, 2.2f), 0, 0),
+                Paint = new Vector4F(glyphs[i].Paint.X, MathF.Pow(opacity, 2.2f), offset.X, offset.Y),
                 SecondSource = glyphs[i].SecondSource,
-                Second = new Vector4F(glyphs[i].Second.X, glyphs[i].Second.Y, glyphs[i].Rotation, 0)
+                Second = new Vector4F(glyphs[i].Second.X, glyphs[i].Second.Y, glyphs[i].Rotation, 0),
+                Effect = effect,
+                Perspective = new Vector4F(perspective.X, perspective.Y, perspective.Z, 0)
             };
         }
 
         return true;
+    }
+
+    internal static (Vector4F Effect, Vector2F Offset, Vector3F Perspective) NodeEffect(in FontItem glyph, float sx,
+        float sy, float tx, float ty, float ax, float ay)
+    {
+        var e = glyph.Effect;
+        var o = glyph.EffectOffset;
+        var p = glyph.EffectPerspective;
+        if ((e == default && o == default && p == default) || sx == 0 || sy == 0)
+        {
+            return (default, default, default);
+        }
+
+        var effect = new Matrix3x3F(e.X + 1, e.Y, p.X, e.Z, e.W + 1, p.Y, o.X, o.Y, 1 + p.Z);
+        var toNode = new Matrix3x3F(sx, 0, 0, 0, sy, 0, ax * sx + tx, ay * sy + ty, 1);
+        var fromNode = new Matrix3x3F(1 / sx, 0, 0, 0, 1 / sy, 0, -(ax * sx + tx) / sx, -(ay * sy + ty) / sy, 1);
+        var node = fromNode * effect * toNode;
+        return (new Vector4F(node.M11 - 1, node.M12, node.M21, node.M22 - 1), new Vector2F(node.M31, node.M32),
+            new Vector3F(node.M13, node.M23, node.M33 - 1));
     }
 
     private static Vector4F GlyphColor(in FontItem glyph, Vector4F foreground, float opacity)

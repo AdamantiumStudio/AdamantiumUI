@@ -20,7 +20,7 @@ internal sealed class RunningKeyFrameAnimation : IRunningAnimation
     // Set when the RENDER thread has taken this animation over. It then owns the clock, and this object's job shrinks to
     // MIRRORING: writing the composited value into the property system so hit-testing and bindings still agree with what is
     // on screen. It must not keep a clock of its own - two clocks on one animation is two answers to "where is it now".
-    private readonly Compositor.Entry _composited;
+    private Compositor.Entry _composited;
 
     public RunningKeyFrameAnimation(AdamantiumComponent target, Animation animation, Action completed, double resumeElapsed = 0)
         : this(target, BuildCurve(target, animation), FillBehavior.HoldEnd, true, completed, resumeElapsed, animation)
@@ -65,12 +65,19 @@ internal sealed class RunningKeyFrameAnimation : IRunningAnimation
 
     public bool AnimatesTarget(AdamantiumComponent target) => ReferenceEquals(_target, target);
 
-    public IUIComponent DirtyTarget => _target as IUIComponent ?? (_target as Transform)?.Owner;
+    public IUIComponent DirtyTarget => _target as IUIComponent ?? (_target as Transform)?.Element;
 
     public bool IsEndless => _curve.IsEndless;
 
     public bool Advance(double deltaSeconds)
     {
+        if (_composited is { Channel: CompositorChannel.Paint } && _target is Brush { IsBakedIn: true })
+        {
+            _elapsedSeconds = _composited.Elapsed - deltaSeconds;
+            Compositor.Release(_composited);
+            _composited = null;
+        }
+
         // Composited: the render thread's clock is THE clock. Read it rather than accumulating a second one - if the loop
         // thread was stalled for 300 ms, the animation on screen moved on by 300 ms, and anything the loop thread does with
         // this animation must agree with what the user is looking at, not lag it.

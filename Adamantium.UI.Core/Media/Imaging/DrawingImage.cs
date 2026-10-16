@@ -34,6 +34,10 @@ public class DrawingImage : ImageSource
         if (e.OldValue is Drawing oldDrawing)
         {
             oldDrawing.Changed -= image.OnDrawingChanged;
+            if (ReferenceEquals(oldDrawing.InheritanceParent, image))
+            {
+                oldDrawing.Detach();
+            }
         }
 
         if (e.NewValue is Drawing newDrawing)
@@ -70,7 +74,8 @@ public class DrawingImage : ImageSource
             return;
         }
 
-        if (ReferenceEquals(_owner, owner) && ReferenceEquals(_dataContext, dataContext))
+        if (ReferenceEquals(_owner, owner) && ReferenceEquals(_dataContext, dataContext)
+            && (Drawing == null || Drawing.InheritanceParent != null))
         {
             return;
         }
@@ -93,6 +98,10 @@ public class DrawingImage : ImageSource
         _owner = null;
         _dataContext = null;
         InheritanceParent = null;
+        if (Drawing is { } drawing && ReferenceEquals(drawing.InheritanceParent, this))
+        {
+            drawing.Detach();
+        }
     }
 
     private AdamantiumComponent _owner;

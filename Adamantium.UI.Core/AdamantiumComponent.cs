@@ -1179,7 +1179,7 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
     // re-record. Skipped for a non-visible element: one shared brush fans out to thousands, and marking a hidden one
     // that still holds units drops the partial pass to a full walk.
     // Assigning a DIFFERENT brush is not this path - that one does need a re-record (see the AffectsRender path above).
-    internal void OnRenderValueChanged(object sender, EventArgs e)
+    internal virtual void OnRenderValueChanged(object sender, EventArgs e)
     {
         if (this is not IUIComponent { Visibility: Visibility.Visible } element) return;
         element.InvalidatePaint();

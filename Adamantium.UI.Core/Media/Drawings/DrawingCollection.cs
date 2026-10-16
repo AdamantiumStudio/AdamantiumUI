@@ -9,4 +9,12 @@ public sealed class DrawingCollection : ObservableCollection<Drawing>
     public DrawingCollection() { }
 
     public DrawingCollection(IEnumerable<Drawing> drawings) : base(drawings) { }
+
+    protected override void ClearItems()
+    {
+        for (var i = Count - 1; i >= 0; i--)
+        {
+            RemoveAt(i);
+        }
+    }
 }

@@ -43,6 +43,8 @@ public class DrawingGroup : Drawing
         {
             newTransform.PropertyChanged += group.OnTransformChanged;
         }
+
+        group.ReplaceOwned(e.OldValue as Transform, e.NewValue as Transform);
     }
 
     private void OnTransformChanged(object sender, AdamantiumPropertyChangedEventArgs e) => RaiseChanged();
@@ -54,6 +56,10 @@ public class DrawingGroup : Drawing
             foreach (Drawing child in e.OldItems)
             {
                 child.Changed -= OnChildChanged;
+                if (!Children.Contains(child))
+                {
+                    ReplaceChild(child, null);
+                }
             }
         }
 
@@ -62,6 +68,7 @@ public class DrawingGroup : Drawing
             foreach (Drawing child in e.NewItems)
             {
                 child.Changed += OnChildChanged;
+                ReplaceChild(null, child);
             }
         }
 
@@ -75,6 +82,16 @@ public class DrawingGroup : Drawing
         foreach (var child in Children)
         {
             child.Attach(this);
+        }
+    }
+
+    protected override void DetachChildren()
+    {
+        DetachOwned(Transform);
+
+        foreach (var child in Children)
+        {
+            ReplaceChild(child, null);
         }
     }
 
