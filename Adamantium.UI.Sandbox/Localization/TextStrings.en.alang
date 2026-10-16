@@ -83,6 +83,11 @@
     <Phrase Key="SpansColored" Text="A blue span with "/>
     <Phrase Key="SpansUnderlined" Text="an underlined part"/>
     <Phrase Key="SpansOwnColor" Text=" and a red run of its own"/>
+    <Phrase Key="ParagraphsTitle" Text="Paragraphs: each on lines of its own, with its own alignment, margins, first-line indent and line height; the room between two is the larger of theirs:"/>
+    <Phrase Key="ParagraphsHeading" Text="The Frog King"/>
+    <Phrase Key="ParagraphsBody" Text="In olden times, when wishing still helped, there lived a king whose daughters were all beautiful, but the youngest was so beautiful that the sun itself, which has seen so much, was astonished whenever it shone in her face."/>
+    <Phrase Key="ParagraphsQuote" Text="“Be quiet, and do not weep,” answered the frog, “I can help you, but what will you give me if I bring your plaything up again?”"/>
+    <Phrase Key="ParagraphsLoose" Text="Text outside a paragraph stands as a paragraph of its own, as the block sets it."/>
     <Phrase Key="LinksTitle" Text="Links: one opens its address in the browser, one runs a command; Tab walks them, Enter activates:"/>
     <Phrase Key="LinksBefore" Text="Read about "/>
     <Phrase Key="LinksSite" Text="Adamantium on GitHub"/>

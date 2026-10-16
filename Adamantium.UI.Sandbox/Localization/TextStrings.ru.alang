@@ -83,6 +83,11 @@
     <Phrase Key="SpansColored" Text="Голубой участок с "/>
     <Phrase Key="SpansUnderlined" Text="подчёркнутой частью"/>
     <Phrase Key="SpansOwnColor" Text=" и своим красным отрезком"/>
+    <Phrase Key="ParagraphsTitle" Text="Абзацы: каждый на своих строках, со своим выравниванием, полями, отступом первой строки и высотой строк; между двумя - больший из их промежутков:"/>
+    <Phrase Key="ParagraphsHeading" Text="Король-лягушонок"/>
+    <Phrase Key="ParagraphsBody" Text="В стародавние времена, когда желания ещё помогали, жил король, и все дочери его были красавицы, но младшая была так прекрасна, что даже солнце, которое видело так много, дивилось ей всякий раз, как озаряло её лицо."/>
+    <Phrase Key="ParagraphsQuote" Text="«Успокойся и не плачь, - ответил лягушонок, - я могу помочь тебе, но что ты дашь мне, если я достану твою игрушку?»"/>
+    <Phrase Key="ParagraphsLoose" Text="Текст вне абзаца стоит отдельным абзацем, как задаёт блок."/>
     <Phrase Key="LinksTitle" Text="Ссылки: одна открывает адрес в браузере, другая выполняет команду; Tab ходит по ним, Enter нажимает:"/>
     <Phrase Key="LinksBefore" Text="Почитайте про "/>
     <Phrase Key="LinksSite" Text="Adamantium на GitHub"/>

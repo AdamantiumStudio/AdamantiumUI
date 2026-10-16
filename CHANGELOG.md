@@ -7,6 +7,14 @@ All packages share one version.
 
 ### Added
 
+- `Paragraph` in a `TextBlock`'s inlines, as HTML's `p`: it starts on lines of its own, and the inlines between
+  paragraphs make a paragraph of their own unless they hold nothing but white space. `HorizontalTextAlignment` (null
+  takes the block's), `Margin` (left and right keep its lines from the edges, top and bottom are the room above and
+  below it - between two paragraphs only the larger is kept), `TextIndent` (the first line's; negative hangs it out)
+  and `LineHeight` (NaN takes the block's); its inline formatting goes to its inlines as a span's does. It stands only
+  directly in the block: in a span the build reports it, and adding one to a span throws. Its end is copied as a new
+  line.
+
 - `IDockablePane` asks only for `PaneTitle`: `PaneId` is the type's name, `PaneZone` the document area and
   `PaneAllowed` anywhere unless the view model says otherwise. A `PaneZone` the view model declares with a setter still
   follows a drag both ways. A docking region reads the titles of its panes again when the application's language
@@ -1282,6 +1290,11 @@ All packages share one version.
 
 ### Fixed
 
+- A span refuses an inline it cannot hold (itself, a span it is in) before taking it: the refused inline used to stay
+  in its `Inlines` after the exception.
+- A paragraph separator (U+2029) pasted into a text box is a line break, a space in a single-line box.
+- The designer's loader takes a nullable enum written in markup (`BaselineAlignment="Top"` on a run) without warning
+  that it has no type parser: it knew `Nullable` by the name the build gives it, not by reflection's.
 - The application goes idle again after a visual brush or a visual snapshot was drawn: a recolor kept for the next record
   is kept for the loop frame of the record that missed it only. The one-off record of a snapshot went through the shared
   scope, and every later recolor in it outlived every clear, so the loop never stopped recording.

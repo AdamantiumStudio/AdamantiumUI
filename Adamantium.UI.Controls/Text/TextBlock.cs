@@ -182,6 +182,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts
     private const int MostColumnGrowth = 200;
     private const char LineSeparator = (char)0x2028;
     private const char ObjectReplacement = (char)0xFFFC;
+    private const char ParagraphSeparator = (char)0x2029;
     private TextAttributes _lastShaping;
 
     private readonly List<(int Start, int End, Hyperlink Link)> _links = [];
@@ -218,6 +219,8 @@ public class TextBlock : InputUIComponent, IFocusableInParts
     private InlineCollection _inlines;
     private bool _inlinesDirty = true;
     private string _inlineText;
+    private readonly List<int> _inlineStarts = [];
+    private readonly List<(int Start, int Length, Paragraph Paragraph)> _paragraphs = [];
     private bool _runFontsPending;
 
     public TextBlock()
@@ -424,8 +427,10 @@ public class TextBlock : InputUIComponent, IFocusableInParts
                 _textLayout.Frames = [Frame(0, Unbounded)];
                 lay();
                 var lineHeight = Enumerable.Range(0, _textLayout.LineCount).Min(line => _textLayout.GetLine(line).Height);
+                // The least room between two lines: a paragraph may keep more above it.
                 var spacing = _textLayout.LineCount > 1
-                    ? Math.Max(0, _textLayout.GetLine(1).Top - _textLayout.GetLine(0).Top - _textLayout.GetLine(0).Height)
+                    ? Math.Max(0, Enumerable.Range(1, _textLayout.LineCount - 1).Min(line =>
+                        _textLayout.GetLine(line).Top - _textLayout.GetLine(line - 1).Top - _textLayout.GetLine(line - 1).Height))
                     : 0;
                 growth = (float)(lineHeight + spacing);
                 var rows = Math.Ceiling(_textLayout.LineCount / (double)columns);
@@ -622,7 +627,8 @@ public class TextBlock : InputUIComponent, IFocusableInParts
     private bool HasInlines => _inlines is { Count: > 0 };
 
     internal string ShownText => HasInlines
-        ? InlineText().Replace(LineSeparator, '\n').Replace(ObjectReplacement.ToString(), string.Empty)
+        ? InlineText().Replace(LineSeparator, '\n').Replace(ParagraphSeparator, '\n')
+            .Replace(ObjectReplacement.ToString(), string.Empty)
         : Text;
 
     internal IReadOnlyList<IMeasurableComponent> HostedChildren => _hosted;
@@ -727,13 +733,96 @@ public class TextBlock : InputUIComponent, IFocusableInParts
         base.DisownVisualChild(child);
     }
 
+    // Each paragraph is a stretch of the text ended by U+2029. The inlines between two paragraphs make one of their own,
+    // as text outside a p does in HTML, unless they hold nothing but white space. Where each top-level inline starts is
+    // kept, so the attributes go where its text went; -1 for one left out.
     private string InlineText()
     {
         if (_inlinesDirty || _inlineText == null)
         {
             var text = new StringBuilder();
-            AppendInlineText(_inlines, text);
+            _inlineStarts.Clear();
+            _paragraphs.Clear();
+            var paragraphs = 0;
+            var hasParagraphs = _inlines.Any(inline => inline is Paragraph);
+            var looseFrom = -1;
+            var looseFirst = 0;
+            foreach (var inline in _inlines)
+            {
+                if (inline is Paragraph paragraph)
+                {
+                    EndLoose();
+                    Separate();
+                    var start = text.Length;
+                    _inlineStarts.Add(start);
+                    AppendInlineText(paragraph.Inlines, text);
+                    _paragraphs.Add((start, text.Length - start, paragraph));
+                    paragraphs++;
+                    continue;
+                }
+
+                if (looseFrom < 0)
+                {
+                    looseFrom = text.Length;
+                    looseFirst = _inlineStarts.Count;
+                    Separate();
+                }
+
+                _inlineStarts.Add(text.Length);
+                AppendInline(inline, text);
+            }
+
+            EndLoose();
             _inlineText = text.ToString();
+
+            void Separate()
+            {
+                if (paragraphs == 0)
+                {
+                    return;
+                }
+
+                if (_paragraphs.Count > 0 && _paragraphs[^1].Start + _paragraphs[^1].Length == text.Length)
+                {
+                    _paragraphs[^1] = (_paragraphs[^1].Start, _paragraphs[^1].Length + 1, _paragraphs[^1].Paragraph);
+                }
+
+                text.Append(ParagraphSeparator);
+            }
+
+            void EndLoose()
+            {
+                if (looseFrom < 0)
+                {
+                    return;
+                }
+
+                var blank = hasParagraphs;
+                for (var i = looseFrom + (paragraphs > 0 ? 1 : 0); i < text.Length && blank; i++)
+                {
+                    blank = text[i] is ' ' or '\t' or '\r' or '\n';
+                }
+
+                if (blank)
+                {
+                    text.Length = looseFrom;
+                    for (var i = looseFirst; i < _inlineStarts.Count; i++)
+                    {
+                        _inlineStarts[i] = -1;
+                    }
+
+                    if (_paragraphs.Count > 0 && _paragraphs[^1].Start + _paragraphs[^1].Length == looseFrom + 1)
+                    {
+                        _paragraphs[^1] = (_paragraphs[^1].Start, _paragraphs[^1].Length - 1, _paragraphs[^1].Paragraph);
+                    }
+                }
+                else
+                {
+                    paragraphs++;
+                }
+
+                looseFrom = -1;
+            }
         }
 
         return _inlineText;
@@ -743,29 +832,62 @@ public class TextBlock : InputUIComponent, IFocusableInParts
     {
         foreach (var inline in inlines)
         {
-            switch (inline)
-            {
-                case Run run:
-                    text.Append(run.Text);
-                    break;
-                case LineBreak:
-                    text.Append(LineSeparator);
-                    break;
-                case InlineUIContainer { Child: not null }:
-                    text.Append(ObjectReplacement);
-                    break;
-                case Span span:
-                    AppendInlineText(span.Inlines, text);
-                    break;
-            }
+            AppendInline(inline, text);
+        }
+    }
+
+    private static void AppendInline(Inline inline, StringBuilder text)
+    {
+        switch (inline)
+        {
+            case Run run:
+                text.Append(run.Text);
+                break;
+            case LineBreak:
+                text.Append(LineSeparator);
+                break;
+            case InlineUIContainer { Child: not null }:
+                text.Append(ObjectReplacement);
+                break;
+            case Span span:
+                AppendInlineText(span.Inlines, text);
+                break;
         }
     }
 
     private AttributedText InlineAttributedText(string text, TextAttributes shaping)
     {
         var attributed = new AttributedText(text, shaping);
-        var start = 0;
-        ApplyInlines(_inlines, [], attributed, ref start);
+        List<Inline> chain = [];
+        for (var i = 0; i < _inlines.Count; i++)
+        {
+            var start = _inlineStarts[i];
+            if (start >= 0)
+            {
+                ApplyInline(_inlines[i], chain, attributed, ref start);
+            }
+        }
+
+        foreach (var (start, length, paragraph) in _paragraphs)
+        {
+            attributed.SetParagraph(start, length, new ParagraphAttributes
+            {
+                Alignment = paragraph.HorizontalTextAlignment,
+                MarginLeft = paragraph.Margin.Left,
+                MarginRight = paragraph.Margin.Right,
+                SpaceBefore = paragraph.Margin.Top,
+                SpaceAfter = paragraph.Margin.Bottom,
+                TextIndent = paragraph.TextIndent,
+                LineHeight = paragraph.LineHeight,
+            });
+            if (length > 0 && text[start + length - 1] == ParagraphSeparator)
+            {
+                chain.Add(paragraph);
+                attributed.Apply(start + length - 1, 1, InlineAttributes(chain));
+                chain.Clear();
+            }
+        }
+
         return attributed;
     }
 
@@ -773,37 +895,42 @@ public class TextBlock : InputUIComponent, IFocusableInParts
     {
         foreach (var inline in inlines)
         {
-            chain.Add(inline);
-            switch (inline)
-            {
-                case Run run:
-                    var length = (run.Text ?? string.Empty).Length;
-                    attributed.Apply(start, length, InlineAttributes(chain));
-                    start += length;
-                    break;
-                case LineBreak:
-                    attributed.Apply(start, 1, InlineAttributes(chain));
-                    start++;
-                    break;
-                case InlineUIContainer { Child: { } child }:
-                    attributed.Apply(start, 1,
-                        InlineAttributes(chain, child.DesiredSize, _hostedRaises.GetValueOrDefault(child)));
-                    _objects.Add((start, child));
-                    start++;
-                    break;
-                case Span span:
-                    var spanStart = start;
-                    ApplyInlines(span.Inlines, chain, attributed, ref start);
-                    if (span is Hyperlink link)
-                    {
-                        _links.Add((spanStart, start, link));
-                    }
-
-                    break;
-            }
-
-            chain.RemoveAt(chain.Count - 1);
+            ApplyInline(inline, chain, attributed, ref start);
         }
+    }
+
+    private void ApplyInline(Inline inline, List<Inline> chain, AttributedText attributed, ref int start)
+    {
+        chain.Add(inline);
+        switch (inline)
+        {
+            case Run run:
+                var length = (run.Text ?? string.Empty).Length;
+                attributed.Apply(start, length, InlineAttributes(chain));
+                start += length;
+                break;
+            case LineBreak:
+                attributed.Apply(start, 1, InlineAttributes(chain));
+                start++;
+                break;
+            case InlineUIContainer { Child: { } child }:
+                attributed.Apply(start, 1,
+                    InlineAttributes(chain, child.DesiredSize, _hostedRaises.GetValueOrDefault(child)));
+                _objects.Add((start, child));
+                start++;
+                break;
+            case Span span:
+                var spanStart = start;
+                ApplyInlines(span.Inlines, chain, attributed, ref start);
+                if (span is Hyperlink link)
+                {
+                    _links.Add((spanStart, start, link));
+                }
+
+                break;
+        }
+
+        chain.RemoveAt(chain.Count - 1);
     }
 
     // The chain runs from the outermost span down to the inline itself: each sets what it sets, the nearer one wins,
@@ -1174,7 +1301,8 @@ public class TextBlock : InputUIComponent, IFocusableInParts
         DrawAdornments(session, backgrounds: false);
     }
 
-    /// <summary>The selected text as it is copied: a line break as a new line, a control in the line left out.</summary>
+    /// <summary>The selected text as it is copied: a line break and a paragraph's end as a new line, a control in the
+    /// line left out.</summary>
     public string SelectedText
     {
         get
@@ -1191,7 +1319,8 @@ public class TextBlock : InputUIComponent, IFocusableInParts
                 selected.Append(_lastText, start, end - start);
             }
 
-            return selected.ToString().Replace(LineSeparator, '\n').Replace(ObjectReplacement.ToString(), string.Empty);
+            return selected.ToString().Replace(LineSeparator, '\n').Replace(ParagraphSeparator, '\n')
+                .Replace(ObjectReplacement.ToString(), string.Empty);
         }
     }
 

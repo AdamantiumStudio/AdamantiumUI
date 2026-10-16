@@ -48,6 +48,7 @@ public static class MarkupMessages
     public static string WrongValueType(string value, string type, string property) =>
         Say(nameof(WrongValueType), ("value", value), ("type", type), ("property", property));
 
+    public static string ParagraphInsideSpan(string span) => Say(nameof(ParagraphInsideSpan), ("span", span));
     public static string TemplateTakesOne(string type) => Say(nameof(TemplateTakesOne), ("type", type));
     public static string NoPlaceForChild(string type) => Say(nameof(NoPlaceForChild), ("type", type));
     public static string ContentSetTwice(string type, string property) => Say(nameof(ContentSetTwice), ("type", type), ("property", property));
