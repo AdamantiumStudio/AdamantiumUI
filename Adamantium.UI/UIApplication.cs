@@ -30,7 +30,6 @@ using Adamantium.UI.Core.Rendering;
 using Adamantium.UI.Platforms.Windows;
 using Adamantium.UI.Core.Resources;
 using Adamantium.UI.Core.RoutedEvents;
-using Adamantium.UI.Core.Text;
 using Adamantium.UI.EntityServices;
 using Adamantium.UI.Events;
 using Adamantium.UI.Controls;
@@ -629,24 +628,6 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         // Off-screen renderer for drag ghosts and brush bakes; an app may register its own before base.
         if (!containerRegistry.IsRegistered<IVisualRenderer>())
             containerRegistry.RegisterSingleton<IVisualRenderer, VisualRenderer>();
-
-        // The window that follows the cursor during a drag.
-        if (!containerRegistry.IsRegistered<IDragGhost>() && OperatingSystem.IsWindows())
-            containerRegistry.RegisterSingleton<IDragGhost, Win32DragGhost>();
-
-        // Drag-drop with other applications; unregistered elsewhere, where only in-app drag-drop runs.
-        if (!containerRegistry.IsRegistered<INativeDragDrop>() && OperatingSystem.IsWindows())
-            containerRegistry.RegisterSingleton<INativeDragDrop, WindowsDragDrop>();
-
-        // A finger or a pen handed to the system, for checking the platform's own pointer path.
-        if (!containerRegistry.IsRegistered<ISyntheticPointerInput>() && OperatingSystem.IsWindows())
-            containerRegistry.RegisterSingleton<ISyntheticPointerInput, WindowsSyntheticPointerInput>();
-
-        // The system's spelling, for SpellCheck.IsEnabled; an application registers its own checker to use another.
-        if (!containerRegistry.IsRegistered<ISpellChecker>() && OperatingSystem.IsWindows())
-        {
-            containerRegistry.RegisterSingleton<ISpellChecker, WindowsSpellChecker>();
-        }
 
         // Where windows' places are kept between runs; an application registers its own store to keep them elsewhere.
         if (!containerRegistry.IsRegistered<IWindowPlacementStore>())

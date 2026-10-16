@@ -16,7 +16,6 @@ namespace Adamantium.UI.Platforms.Windows;
 /// dictionary. A language is matched to one the system has by its tag, then by its first subtag; a word ignored is
 /// ignored for every tag of its language. Its objects live in the multithreaded apartment, so it is called from any
 /// thread; a repeated word is no misspelling here.</summary>
-[SupportedOSPlatform("windows")]
 internal sealed class WindowsSpellChecker : Core.Text.ISpellChecker
 {
     private static readonly Guid FactoryClass = new("7AB36653-1796-484B-BDFA-E74F1DB7C1DC");
@@ -32,6 +31,7 @@ internal sealed class WindowsSpellChecker : Core.Text.ISpellChecker
 
     public bool Supports(string language) => InApartment(() => CheckerFor(language) != null);
 
+    [SupportedOSPlatform("windows")]
     public IReadOnlyList<TextRange> Check(string text, string language) => InApartment(() =>
     {
         if (string.IsNullOrEmpty(text) || CheckerFor(language) is not { } checker
@@ -64,6 +64,7 @@ internal sealed class WindowsSpellChecker : Core.Text.ISpellChecker
         return found;
     });
 
+    [SupportedOSPlatform("windows")]
     public IReadOnlyList<string> Suggest(string word, string language) => InApartment(() =>
     {
         if (string.IsNullOrEmpty(word) || CheckerFor(language) is not { } checker

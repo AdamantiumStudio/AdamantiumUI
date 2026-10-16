@@ -11,7 +11,7 @@ All packages share one version.
   default. A misspelled word gets a wavy line (`TextBoxBase.MisspellingBrush`), and the box's menu offers, for the word
   under the pointer or at the caret, what it may have been meant as, "Ignore all" and "Add to dictionary". The words
   are the system's (`ISpellChecker`; on Windows its own dictionaries and the user's), in the box's `Language`, else the
-  application's language, else English; an application registers its own checker to use another. macOS comes later.
+  application's language, else English; `SpellCheckBehavior.Checker` takes another. macOS comes later.
 - A text box has an editing menu in every theme: Cut, Copy, Paste, Select all. The box's commands
   (`CutCommand`, `CopyCommand`, `PasteCommand`, `SelectAllCommand`) say when they apply; a theme's row names one with
   `TextBoxBase.EditAction`, and the box hands it the command as the menu opens. A password box gives nothing away.
