@@ -426,6 +426,7 @@ internal sealed class BuildPlanReconciler
                                             string.Join(",", m.Arguments.Select(a => a.Name + "=" + Signature(a.Value))) + ")",
             AumlAstObjectNode o => "O:" + (o.TypeReference?.Name ?? "") + "{" + string.Join(";", o.Children.Select(Signature)) + "}",
             AumlAstDirective d => "D:" + d.Name + "=" + Signature(d.Value),
+            AumlAstStaticMemberValueNode s => "S:" + s.TypeReference?.GetFullTypeName() + "." + s.MemberName,
             _ => node?.ToString() ?? ""
         };
     }

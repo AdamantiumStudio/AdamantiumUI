@@ -62,6 +62,11 @@ public static class MarkupMessages
     public static string NameNotIdentifier(string name) => Say(nameof(NameNotIdentifier), ("name", name));
     public static string KeyTwice(string key) => Say(nameof(KeyTwice), ("key", key));
 
+    public static string KeyNotTextOrStatic() => Say(nameof(KeyNotTextOrStatic));
+
+    public static string KeyStaticNotText(string member, string type) =>
+        Say(nameof(KeyStaticNotText), ("member", member), ("type", type));
+
     public static string ContentTakesOne(string type, string property) =>
         Say(nameof(ContentTakesOne), ("type", type), ("property", property));
 

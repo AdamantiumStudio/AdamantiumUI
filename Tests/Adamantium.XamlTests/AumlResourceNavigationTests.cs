@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using Adamantium.UI;
 using Adamantium.UI.LanguageServer;
 using NUnit.Framework;
 
@@ -109,6 +110,38 @@ public class AumlResourceNavigationTests
         Assert.That(renamed, Does.Contain("PickIcon").And.Not.Contain("LiveIcon"));
         Assert.That(halfTyped, Does.Contain("PickIcon"));
         Assert.That(_model.ResourceKeys.Select(k => k.Key), Does.Not.Contain("PickIcon"));
+    }
+
+    // x:Key="{x:Static Type.Member}": the key is the constant's value, offered and gone to by it; the text in the file is
+    // code's, not a key to rename.
+    [Test]
+    public void AKeyNamedByAConstant_IsKnownByItsValue_AndGoneToFromAUse()
+    {
+        const string constantKeys = """
+            <ResourceDictionary xmlns="http://adamantium/ui" xmlns:x="http://adamantium/ui/xaml/extensions"
+                                xmlns:ui="clr-namespace:Adamantium.UI;assembly=Adamantium.UI">
+                <SolidColorBrush x:Key="{x:Static ui:ApplicationData.FolderVariable}" Color="Red"/>
+            </ResourceDictionary>
+            """;
+        var file = Path.Combine(_project, "ConstantKeys.auml");
+        _model.UpdateMarkup(file, constantKeys);
+        try
+        {
+            var (text, caret) = Marked(Root + """<Border Background="{ObservableResource ADAMANTIUM_APP|_DATA}"/>""" + "</Window>");
+            var location = new DefinitionEngine(_model).Definition(text, caret);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(_model.ResourceKeys.Select(k => k.Key), Does.Contain(ApplicationData.FolderVariable));
+                Assert.That(location?.FilePath, Is.EqualTo(Path.GetFullPath(file)).IgnoreCase);
+                Assert.That(location?.StartLine, Is.EqualTo(2), "the entry the constant keys");
+                Assert.That(ResourceKeyOccurrences.Find(constantKeys), Is.Empty, "the {x:Static} text is not a key");
+            });
+        }
+        finally
+        {
+            _model.RemoveMarkup(file);
+        }
     }
 
     [Test]

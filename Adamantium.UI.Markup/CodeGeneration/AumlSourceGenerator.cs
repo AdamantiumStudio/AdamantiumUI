@@ -143,7 +143,14 @@ public class AumlSourceGenerator : IAumlSourceGenerator
 
     private static void WriteResourceKeys(TextGenerator textGenerator, AumlMetadataContainer container)
     {
-        foreach (var resource in DeclaredResources.Of(container.RootNode as AumlAstObjectNode))
+        // A key written as {x:Static Type.Member} is named by the constant's value, so code that refers to it by text
+        // finds it too.
+        var resources = DeclaredResources.Of(container.RootNode as AumlAstObjectNode, value =>
+            value is AumlAstStaticMemberValueNode member
+                ? container.TypeResolver.Resolve(member.TypeReference.GetFullTypeName())
+                    ?.GetMemberByName(member.MemberName)?.ConstantValue as string
+                : null);
+        foreach (var resource in resources)
         {
             var elementType = resource.Value.TypeReference is { IsResolved: true } reference ? reference.GetFullTypeName() : null;
             var valueType = DeclaredResources.ValueTypeOf(resource, elementType);

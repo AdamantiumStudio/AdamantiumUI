@@ -624,7 +624,19 @@ internal sealed class MarkupStructureCheck
         foreach (var entry in entries)
         {
             var directive = entry.Children.OfType<AumlAstDirective>().FirstOrDefault(d => d.Name == AumlDirectives.Key);
-            if ((directive?.Value as AumlAstTextNode)?.Text is { Length: > 0 } key && !keys.Add(key))
+            var key = directive?.Value switch
+            {
+                AumlAstTextNode text => text.Text,
+                AumlAstStaticMemberValueNode member =>
+                    $"{{x:Static {member.TypeReference.GetFullTypeName()}.{member.MemberName}}}",
+                _ => null
+            };
+
+            if (directive != null && key == null)
+            {
+                Report(MarkupMessages.KeyNotTextOrStatic(), directive);
+            }
+            else if (key is { Length: > 0 } && !keys.Add(key))
             {
                 Report(MarkupMessages.KeyTwice(key), directive);
             }

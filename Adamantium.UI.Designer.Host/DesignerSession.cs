@@ -208,6 +208,7 @@ public sealed class DesignerSession : IDisposable
         // look of their own.
         IWindow window;
         object authoredVisual;
+        var noPreview = false;
         switch (load.Root)
         {
             case IWindow w:
@@ -228,8 +229,9 @@ public sealed class DesignerSession : IDisposable
                 break;
             case UiTemplate template:
                 // A data or items-panel template: its content, against the design data context when there is one.
-                if (template.Build(null)?.RootComponent is not { } content)
-                    return RenderResult.Fail($"{template.GetType().Name} has no content to preview", load.Diagnostics);
+                var content = template.Build(null)?.RootComponent;
+                noPreview = content == null;
+                content ??= NoPreviewPlate(template.GetType().Name, requestWidth, requestHeight);
                 window = CaptionlessHost(content);
                 authoredVisual = content;
                 break;
@@ -239,9 +241,12 @@ public sealed class DesignerSession : IDisposable
                              ?? load.Diagnostics.LastOrDefault() ?? "unknown error";
                 return RenderResult.Fail($"the markup could not be built: {reason}", load.Diagnostics);
             default:
-                return RenderResult.Fail(IsThemeStyleOrResource(load.Root)
-                    ? $"{load.Root.GetType().Name} is a theme, style or resource set: it has no look of its own to preview"
-                    : $"{load.Root.GetType().Name} is not a visual element: nothing to preview", load.Diagnostics);
+                // A dictionary, a style set, a theme - nothing wrong with the file, it only has no look of its own.
+                var plate = NoPreviewPlate(load.Root.GetType().Name, requestWidth, requestHeight);
+                window = CaptionlessHost(plate);
+                authoredVisual = plate;
+                noPreview = true;
+                break;
         }
 
         var sizeSource = authoredVisual as IMeasurableComponent;
@@ -290,7 +295,8 @@ public sealed class DesignerSession : IDisposable
         _lastWindow = window;
         _lastSourceMap = load.SourceMap;
         _lastLoad = load;
-        _liveAuthoredRoot = load.Root is UiTemplate ? null : load.Root;
+        // A file shown as a plate is loaded afresh on its next edit too: there is nothing live to patch.
+        _liveAuthoredRoot = load.Root is UiTemplate || noPreview ? null : load.Root;
         _lastUri = aumlSourcePath;
 
         return RenderTail(window, designWidth, designHeight, scale, outPath, live, load.Diagnostics, resetCache: true);
@@ -327,6 +333,23 @@ public sealed class DesignerSession : IDisposable
 
     // What is not a window has no caption of its own: it is shown in a window without one.
     private static VirtualWindow CaptionlessHost(IUIComponent content) => new() { Content = content, UseCustomChrome = false };
+
+    // What a file with nothing to show is told as: a plate in the middle of the preview, not an error - the markup is
+    // fine. As large as the preview, so the plate stands in its middle.
+    private static IUIComponent NoPreviewPlate(string what, uint? requestWidth, uint? requestHeight)
+    {
+        var width = ResolveDimension(null, requestWidth, DefaultWidth);
+        var height = ResolveDimension(null, requestHeight, DefaultHeight);
+        var plate = AumlLoader.Load(
+            $"<Grid xmlns=\"http://adamantium/ui\" Width=\"{width}\" Height=\"{height}\">" +
+            "<Border HorizontalAlignment=\"Center\" VerticalAlignment=\"Center\"" +
+            " Padding=\"44,28\" CornerRadius=\"12\" BorderThickness=\"1\" Background=\"{ResourceReference CardBackgroundFillColorDefault}\"" +
+            " BorderBrush=\"{ResourceReference ControlStrokeColorDefault}\">" +
+            $"<TextBlock Text=\"{System.Security.SecurityElement.Escape(what)} has no preview\" FontSize=\"26\"/>" +
+            "</Border></Grid>",
+            AppDomain.CurrentDomain.GetAssemblies());
+        return (IUIComponent)plate.Root;
+    }
 
     // A click on a tab header shows that tab, as it does in the running application: a page behind another tab is looked
     // at in the preview too. The markup is left alone. True when the click landed on one.
@@ -410,11 +433,6 @@ public sealed class DesignerSession : IDisposable
         host.Template = template;
         return host;
     }
-
-    // What the markup kinds with no visual of their own implement: themes, theme variants, resource dictionaries, style
-    // sets (the same interfaces the markup compiler reads an entity type from), and a lone Style.
-    private static bool IsThemeStyleOrResource(object root) =>
-        root is Style || root.GetType().GetInterfaces().Any(i => i.Name is "ITheme" or "IThemeVariant" or "IResourceDictionary" or "IStyleSet");
 
     // A hosted control with no declared size: shrink the design canvas to its natural (content) size so the preview
     // fits the control instead of a full default window. Windows and explicitly-sized controls keep their size.

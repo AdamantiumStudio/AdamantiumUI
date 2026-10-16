@@ -44,6 +44,8 @@
     <Phrase Key="NameTwice" Text="x:Name '{name}' уже дано другому элементу"/>
     <Phrase Key="NameNotIdentifier" Text="x:Name '{name}' не может быть именем: сначала буква или '_', дальше буквы, цифры или '_', и не ключевое слово C#"/>
     <Phrase Key="KeyTwice" Text="x:Key '{key}' уже есть в этом словаре"/>
+    <Phrase Key="KeyStaticNotText" Text="x:Key ссылается на {member} типа {type}: ключ словаря - это текст"/>
+    <Phrase Key="KeyNotTextOrStatic" Text="x:Key принимает текст или x:Static Тип.Член; без него элемента нет в словаре"/>
     <Phrase Key="ContentTakesOne" Text="В {type} помещается один дочерний элемент, в {property}: этот заменил бы предыдущий"/>
     <Phrase Key="NotAttached" Text="{owner}.{property} - не присоединённое свойство: его задают только у {owner}, а не у {element}"/>
     <Phrase Key="PropertyTypeNotFound" Text="Не найден тип {type} для свойства {property}"/>

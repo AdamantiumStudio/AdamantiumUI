@@ -31,6 +31,12 @@ public static class ResourceKeyOccurrences
         var found = new List<ResourceKeyOccurrence>();
         foreach (Match match in DirectiveKey.Matches(uncommented))
         {
+            // x:Key="{x:Static Type.Member}" names a constant, not a key written here: the type in it is code's.
+            if (Adamantium.UI.Markup.CodeGeneration.DeclaredResources.IsMarkupExtension(match.Groups["key"].Value))
+            {
+                continue;
+            }
+
             if (namespaces.TryGetValue(match.Groups["prefix"].Value, out var xmlns) && xmlns == AumlXDirectives.Xmlns)
             {
                 found.Add(Occurrence(match, isDeclaration: true));

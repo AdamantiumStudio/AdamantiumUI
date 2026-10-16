@@ -44,6 +44,8 @@
     <Phrase Key="NameTwice" Text="x:Name '{name}' is given to another element already"/>
     <Phrase Key="NameNotIdentifier" Text="x:Name '{name}' cannot be a name: a letter or '_' first, then letters, digits or '_', and no C# keyword"/>
     <Phrase Key="KeyTwice" Text="x:Key '{key}' is in this dictionary already"/>
+    <Phrase Key="KeyStaticNotText" Text="x:Key names {member}, a {type}: a dictionary is keyed by text"/>
+    <Phrase Key="KeyNotTextOrStatic" Text="x:Key takes text or x:Static Type.Member; without one the entry is not in the dictionary"/>
     <Phrase Key="ContentTakesOne" Text="{type} holds one child, in {property}: this one would replace the one before it"/>
     <Phrase Key="NotAttached" Text="{owner}.{property} is not an attached property: it is set on a {owner} only, not on {element}"/>
     <Phrase Key="PropertyTypeNotFound" Text="Cannot find type {type} for property {property}"/>

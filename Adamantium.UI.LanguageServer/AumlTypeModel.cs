@@ -1,3 +1,4 @@
+using Adamantium.UI.Markup;
 using Adamantium.UI.Markup.AST;
 using Adamantium.UI.Markup.CodeGeneration;
 using Adamantium.UI.Generators.Roslyn;
@@ -204,6 +205,25 @@ public sealed class AumlTypeModel
         }
     }
 
+    // x:Key="{x:Static prefix:Type.Member}" as written: the constant's value, read from the assemblies the model knows;
+    // null for a member that is not a text constant, or a type it cannot find.
+    private string StaticKeyValue(IAumlAstValueNode value, List<NamespaceMapping> mappings)
+    {
+        if (value is not AumlAstTextNode text
+            || MarkupExtensionParser.Parse(new ParserContext(null), text.Text, text, mappings)
+                is not AumlAstDirective { Name: AumlDirectives.Static, Value: AumlAstTextNode { Text: var body } })
+        {
+            return null;
+        }
+
+        var lastDot = body.LastIndexOf('.');
+        if (lastDot <= 0) return null;
+
+        var type = MarkupExtensionParser.ParseTypeName(new ParserContext(null), body.Substring(0, lastDot), text, mappings);
+        return _resolver.Resolve(type.GetFullTypeName())?.GetMemberByName(body.Substring(lastDot + 1))?.ConstantValue
+            as string;
+    }
+
     /// <summary>Takes a markup file's text as it stands now - typed in the editor or saved - so the keys it declares are
     /// known at once, with no build. A text that does not parse keeps the keys the file declared before.</summary>
     public void UpdateMarkup(string file, string text)
@@ -224,11 +244,15 @@ public sealed class AumlTypeModel
         {
             var written = ResourceKeyOccurrences.Find(text).Where(o => o.IsDeclaration).ToList();
             keys = [];
-            foreach (var resource in DeclaredResources.Of(root))
+            var mappings = document.NamespaceMappings.ToList();
+            foreach (var resource in DeclaredResources.Of(root, value => StaticKeyValue(value, mappings)))
             {
                 var reference = resource.Value.TypeReference;
                 var at = written.FirstOrDefault(o => o.Key == resource.Key);
-                var (line, character) = at == null ? (0, 0) : TextPositions.LineAndCharacter(text, at.Start);
+                // A key that is a constant's value is not written in the file: the entry it keys is where it is declared.
+                var (line, character) = at != null
+                    ? TextPositions.LineAndCharacter(text, at.Start)
+                    : (Math.Max(resource.Value.Line - 1, 0), Math.Max(resource.Value.Position - 1, 0));
                 keys.Add(new MarkupResourceKey(resource.Key, reference?.Namespace ?? string.Empty, reference?.Name,
                     resource.PaletteColorAs == null ? null : DeclaredResources.ValueTypeOf(resource, null), file, line, character));
             }
