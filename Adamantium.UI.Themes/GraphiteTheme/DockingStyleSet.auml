@@ -416,29 +416,23 @@
          panels already have their own edges, and a stroke laid between two of them lands right next to those edges and
          reads as a double border, with a lump wherever three splitters meet. What the gap is for is GRABBING, and that
          is what Transparent gives - a hit-testable band with nothing drawn in it. -->
-    <!-- A LINE down the middle of the gap, not a filled band. Lighting the whole divider put a solid bar where the
-         layout's one piece of empty space is - the groove between two panels - and it read as a foreign object every
-         time the pointer crossed it. This theme separates things with hairlines, so the grip answers with one: the
-         BAND stays the full grab target (transparent, DividerThickness wide), and only a line inside it is drawn. -->
+    <!-- The grip between two areas: a transparent, hit-testable band of DividerThickness with three dots in its middle.
+         Lighting the whole divider put a solid bar into the layout's one piece of empty space - the groove between two
+         panels - and a line down it still read as a foreign object; the dots only say where to grab. -->
     <Style Selector="PaneSplitter">
         <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="{ObservableResource TextFillColorTertiary}"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="PaneSplitter">
                     <Border Background="{TemplateBinding Background}">
-                        <!-- Default is a VERTICAL line: a splitter in a left-to-right host separates side by side, and
-                             the host hands it its own orientation (see PaneHost). -->
-                        <!-- One line per orientation swapped by visibility, since a trigger cannot reset Width to Auto; two
-                             units thick to stay visible. -->
-                        <Grid>
-                            <Border x:Name="LineV" Background="Transparent"
-                                    Width="{ResourceReference StrokeAccentValue}"
-                                    HorizontalAlignment="Center" VerticalAlignment="Stretch"/>
-                            <Border x:Name="LineH" Background="Transparent"
-                                    Height="{ResourceReference StrokeAccentValue}"
-                                    HorizontalAlignment="Stretch" VerticalAlignment="Center"
-                                    Visibility="Collapsed"/>
-                        </Grid>
+                        <!-- Down the band by default: a left-to-right host hands its splitters Horizontal. -->
+                        <StackPanel x:Name="Dots" Orientation="Vertical" Spacing="3"
+                                    HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <Ellipse Width="3" Height="3" Fill="{TemplateBinding Foreground}"/>
+                            <Ellipse Width="3" Height="3" Fill="{TemplateBinding Foreground}"/>
+                            <Ellipse Width="3" Height="3" Fill="{TemplateBinding Foreground}"/>
+                        </StackPanel>
                     </Border>
                 </ControlTemplate>
             </Setter.Value>
@@ -446,24 +440,19 @@
     </Style>
 
     <Style Selector="PaneSplitter">
-        <!-- Turned: a top-to-bottom host separates one above the other, so the line lies across. Width/Height both
-             stated - the one that is not the thickness has to go back to Auto or it keeps the value it had. -->
         <PropertyTrigger Property="Orientation" Value="Vertical">
-            <Setter TargetName="LineV" Property="Visibility" Value="Collapsed"/>
-            <Setter TargetName="LineH" Property="Visibility" Value="Visible"/>
+            <Setter TargetName="Dots" Property="Orientation" Value="Horizontal"/>
         </PropertyTrigger>
         <!-- Hover is ambient - crossing splitters is what a pointer does all day in a docked layout - so it answers in
-             neutral. Both lines are painted; only one of them is on screen. -->
+             neutral. -->
         <PropertyTrigger Property="IsPointerOver" Value="true">
-            <Setter TargetName="LineV" Property="Background" Value="{ResourceReference TextFillColorTertiary}"/>
-            <Setter TargetName="LineH" Property="Background" Value="{ResourceReference TextFillColorTertiary}"/>
+            <Setter Property="Foreground" Value="{ObservableResource TextFillColorPrimary}"/>
         </PropertyTrigger>
         <!-- The drag is a deliberate act and there is exactly one at a time, so this one keeps the accent. It also has
              to STAY lit: the pointer leaves the band the moment the boundary starts moving, so hover alone made the
-             divider blink out exactly during the gesture it belongs to. -->
+             dots fade exactly during the gesture they belong to. -->
         <PropertyTrigger Property="IsDragging" Value="true">
-            <Setter TargetName="LineV" Property="Background" Value="{ThemeResource AccentFillColorDefault}"/>
-            <Setter TargetName="LineH" Property="Background" Value="{ThemeResource AccentFillColorDefault}"/>
+            <Setter Property="Foreground" Value="{ThemeResource AccentFillColorDefault}"/>
         </PropertyTrigger>
     </Style>
 

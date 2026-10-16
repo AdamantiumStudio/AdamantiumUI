@@ -467,6 +467,31 @@ public abstract class DataGridColumn : FundamentalUIComponent
         return _reader.Write(value);
     }
 
+    private readonly Dictionary<Type, bool> _writesByType = new();
+    private BindingBase _writesFor;
+
+    /// <summary>Whether <see cref="Binding"/> can write into a row of <paramref name="item"/>'s type: a property with
+    /// no public setter takes no edit. Asked once per type of row, since a cell asks on every measure.</summary>
+    protected internal bool Writes(object item)
+    {
+        if (Binding == null || item == null) return true;
+
+        if (!ReferenceEquals(_writesFor, Binding))
+        {
+            _writesFor = Binding;
+            _writesByType.Clear();
+        }
+
+        var type = item.GetType();
+        if (_writesByType.TryGetValue(type, out var writes)) return writes;
+
+        _reader ??= new BoundValue();
+        _reader.PointAt(item, Binding);
+        writes = !_reader.Reads || _reader.Writes;
+        _writesByType[type] = writes;
+        return writes;
+    }
+
     /// <summary>Reads one of this column's row-bindings against one item. One reusable carrier per column: a bulk read -
     /// a sort, a filter's distinct values, a copy of the selection - walks every item in turn, and an object per item
     /// would be a garbage storm on a table that exists to hold a lot of rows.</summary>

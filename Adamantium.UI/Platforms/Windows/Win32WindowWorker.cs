@@ -62,6 +62,7 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
         messageTable = new Dictionary<uint, HandleMessage>();
         messageTable[(uint)WindowMessages.Activate] = HandleActivate;
         messageTable[(uint)WindowMessages.Syscommand] = HandleSysCommand;
+        messageTable[(uint)WindowMessages.Close] = HandleClose;
         messageTable[(uint)WindowMessages.Nclbuttondown] = HandleNcButtonDown;
         messageTable[(uint)WindowMessages.Nchittest] = HandleNcHittest;
         messageTable[(uint)WindowMessages.Nccalcsize] = HandleNcCalcSize;
@@ -862,6 +863,16 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
     }
 
     private WindowState lastWindowState;
+    // WM_CLOSE from outside - the task manager, a session ending, another process: closed the managed way, as SC_CLOSE.
+    // Left to the default, it destroyed the HWND under a window the application still drew and waited on, and the process
+    // never exited.
+    private IntPtr HandleClose(WindowMessages windowMessage, IntPtr wParam, IntPtr lParam, out bool handled)
+    {
+        handled = true;
+        window.Close();
+        return IntPtr.Zero;
+    }
+
     private IntPtr HandleSysCommand(WindowMessages windowMessage, IntPtr wParam, IntPtr lParam, out bool handled)
     {
         var command = (SystemCommands)(Environment.Is64BitProcess ? wParam.ToInt64() : wParam.ToInt32());

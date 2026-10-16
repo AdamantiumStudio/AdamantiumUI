@@ -22,7 +22,7 @@ internal sealed class DeviceResourceFactory : IResourceFactory
     public ITexture CreateTextureArray(TextureDescription description, IReadOnlyList<byte[]> layers)
         => _device.CreateTextureArray(description, layers);
 
-    public ITexture ImportSharedSurface(SharedSurfaceDescriptor descriptor) => throw new NotSupportedException();
+    public ITexture ImportSharedSurface(SharedSurfaceDescriptor descriptor) => _device.ImportSharedSurface(descriptor);
 
     public IRenderTarget CreateRenderTarget(uint width, uint height, MSAALevel msaa, SurfaceFormat format, ImageLayout desiredLayout)
         => throw new NotSupportedException();

@@ -1061,6 +1061,9 @@ All packages share one version.
 
 ### Changed
 
+- The splitter between docked areas (`PaneSplitter`) is three dots in the middle of its band, in every theme, instead
+  of a band lit in the accent color (Fluent, macOS) or a line down it (Graphite): subtle at rest, brighter under the
+  pointer, in the accent while dragged. The whole band is still the grab target.
 - The designer shows a file with nothing to preview - a `ResourceDictionary`, a style set, a theme, a template with no
   content - as a plate in the middle of the preview ("ResourceDictionary has no preview"), not as an error: nothing is
   wrong with the markup. Only markup that does not build is an error.
@@ -1379,6 +1382,28 @@ All packages share one version.
   effect brought in from far off was not drawn.
 - A transform two drawings and a text effect share, let go by one of the drawings, stays hung on the other drawing and
   binds against its data; it went to the effect.
+- A `RenderTargetPanel` being resized - a docked pane dragged by its splitter - no longer loses its picture for a frame
+  or two, showing what lies behind it. Its producer hands over a new surface for every size, faster than frames
+  recorded with the old one are drawn, and such a frame found that surface let go of and drew nothing. A frame recorded
+  with a replaced surface now draws the newest one that replaced it (`SharedSurfaceImage.ReplaceWith`), and a surface's
+  import lives as long as a render component holds it (`HoldImport` / `ReleaseImport`). A surface for a new size is
+  given to the panel only once it holds a frame, and the one it replaces is freed after the frames in flight instead of
+  waiting the whole device idle on every size. An output going away unbinds its own surface from the panel
+  (`RenderTargetPanel.ClearSource(descriptor)`), so the panel no longer keeps a surface whose handles are closed, and
+  leaves alone one another output has bound since.
+- A `RenderTargetPanel` draws a copy of its producer's newest frame (`SharedSurface.LatchCopy`) instead of the shared
+  surface itself, which a frame drawn again while nothing new came read as the producer wrote its next frame. The copy
+  costs a second texture of the panel's size and one GPU copy per new frame. A panel that leaves the tree keeps its
+  import: made again on the way back, it copied a frame the producer was already free to overwrite.
+- A window closed by `WM_CLOSE` - the task manager, a session ending, another process - closes the way its close
+  button closes it. The message went to the default handler, which destroyed the window under the renderer still
+  drawing it: the application never exited, and its render thread spun on a lost surface.
+- A window being resized no longer changes the scissor and viewport of the frame in flight. They were edited in place
+  on the loop thread while the render thread drew with them, so a frame could clip to a size between two; the frame
+  verifier reported it as a clip of the wrong size.
+- A `TreeDataGrid` cell over a property with no public setter is read-only. It opened an editor and took the value,
+  which the write-back then dropped; a `PropertyGrid` line likewise no longer reports such a write as made
+  (`BindingExpressionBase.IsSourceWritable`).
 - An `x:Key` that is neither text nor `{x:Static}` is a build error; such an entry was left out of its dictionary in
   silence, so the resource was simply never found.
 - A `TreeDataGrid` grouped by a column, with no sort or filter, shows a record added to its source or taken out of it.
