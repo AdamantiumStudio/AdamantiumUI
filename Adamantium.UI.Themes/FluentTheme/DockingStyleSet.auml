@@ -405,28 +405,39 @@
         </Setter>
     </Style>
 
-    <!-- The grip between two areas. Same shape as GridSplitter's: a thin subtle bar that lights up accent under the
-         pointer, so it is visible ENOUGH to aim at without drawing attention when it is not wanted. -->
-    <!-- The splitter: a transparent, hit-testable band of DividerThickness, shown only on hover and while dragged. -->
+    <!-- The grip between two areas: a transparent, hit-testable band of DividerThickness with three dots in its middle.
+         A lit band put a solid bar into the gap between two panels; the dots only say where to grab. -->
     <Style Selector="PaneSplitter">
         <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="{ObservableResource TextFillColorTertiary}"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="PaneSplitter">
-                    <Border Background="{TemplateBinding Background}"/>
+                    <Border Background="{TemplateBinding Background}">
+                        <!-- Down the band by default: a left-to-right host hands its splitters Horizontal. -->
+                        <StackPanel x:Name="Dots" Orientation="Vertical" Spacing="3"
+                                    HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <Ellipse Width="3" Height="3" Fill="{TemplateBinding Foreground}"/>
+                            <Ellipse Width="3" Height="3" Fill="{TemplateBinding Foreground}"/>
+                            <Ellipse Width="3" Height="3" Fill="{TemplateBinding Foreground}"/>
+                        </StackPanel>
+                    </Border>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
     </Style>
 
     <Style Selector="PaneSplitter">
+        <PropertyTrigger Property="Orientation" Value="Vertical">
+            <Setter TargetName="Dots" Property="Orientation" Value="Horizontal"/>
+        </PropertyTrigger>
         <PropertyTrigger Property="IsPointerOver" Value="true">
-            <Setter Property="Background" Value="{ThemeResource AccentFillColorDefault}"/>
+            <Setter Property="Foreground" Value="{ObservableResource TextFillColorPrimary}"/>
         </PropertyTrigger>
         <!-- And it STAYS lit while dragging: the pointer leaves the band the moment the boundary starts moving, so
-             hover alone made the divider blink out exactly during the gesture it belongs to. -->
+             hover alone made the dots fade exactly during the gesture they belong to. -->
         <PropertyTrigger Property="IsDragging" Value="true">
-            <Setter Property="Background" Value="{ThemeResource AccentFillColorDefault}"/>
+            <Setter Property="Foreground" Value="{ThemeResource AccentFillColorDefault}"/>
         </PropertyTrigger>
     </Style>
 

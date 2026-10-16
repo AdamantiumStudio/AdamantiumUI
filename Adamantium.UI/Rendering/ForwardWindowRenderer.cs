@@ -39,13 +39,14 @@ public class ForwardWindowRenderer : WindowRendererBase
         var width = (uint)(Window.ClientWidth * RenderScale);
         var height = (uint)(Window.ClientHeight * RenderScale);
 
-        Viewport.Width = width;
-        Viewport.Height = height;
-
-        Scissor.Extent = new Extent2D();
-        Scissor.Extent.Width = width;
-        Scissor.Extent.Height = height;
-        Scissor.Offset = new Offset2D();
+        // New objects, never written into: the render thread draws the frame in flight with the ones it took, and a size
+        // written under it changed that frame's scissor halfway through.
+        Viewport = new Viewport
+        {
+            X = Viewport.X, Y = Viewport.Y, Width = width, Height = height,
+            MinDepth = Viewport.MinDepth, MaxDepth = Viewport.MaxDepth
+        };
+        Scissor = new Rect2D { Offset = new Offset2D(), Extent = new Extent2D { Width = width, Height = height } };
         
         Parameters.Width = width;
         Parameters.Height = height;

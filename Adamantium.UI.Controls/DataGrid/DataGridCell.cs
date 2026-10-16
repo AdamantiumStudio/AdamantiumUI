@@ -436,7 +436,8 @@ public class DataGridCell : ContentControl
         Content = column?.CellContentFor(item);
         State = column?.StateFor(item);
         IsReadOnly = (column?.IsReadOnly ?? false)
-                     || (column?.IsReadOnlyBinding != null && column.Read(column.IsReadOnlyBinding, item) as bool? == true);
+                     || (column?.IsReadOnlyBinding != null && column.Read(column.IsReadOnlyBinding, item) as bool? == true)
+                     || (column != null && !IsPlaceholder && !column.Writes(item));
 
         var grid = OwningGrid();
         ShowsVerticalLine = grid?.ShowsVerticalLines ?? false;

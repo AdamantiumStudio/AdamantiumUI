@@ -25,6 +25,10 @@ public class BindingExpression : BindingExpressionBase
    public override Type SourceType => _leaf?.Type ?? _sourceProperty?.PropertyType;
 
    /// <inheritdoc/>
+   // A setter that is not public is the object's own, as in WPF: written back, it would change state nobody else may set.
+   public override bool IsSourceWritable => _leaf?.CanWrite ?? _sourceProperty is { SetMethod.IsPublic: true };
+
+   /// <inheritdoc/>
    public override bool IsSourceEdited
    {
       get
@@ -906,11 +910,7 @@ public class BindingExpression : BindingExpressionBase
    public override void UpdateSource()
    {
       var sourceType = _leaf?.Type ?? _sourceProperty?.PropertyType;
-      // A setter that is not public is the object's own, as in WPF: written back, it would change state nobody else
-      // may set.
-      var writable = _leaf?.CanWrite ?? _sourceProperty is { SetMethod.IsPublic: true };
-
-      if (sourceType == null || !writable || TargetProperty == null) return;
+      if (sourceType == null || !IsSourceWritable || TargetProperty == null) return;
       if (_leaf != null && !Walk()) return;
 
       var targetValue = Target.GetValue(TargetProperty);

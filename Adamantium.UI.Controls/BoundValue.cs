@@ -30,6 +30,10 @@ internal sealed class BoundValue : FundamentalUIComponent
     /// tells an edit from the way the object always looked.</summary>
     public bool IsEdited => _expression?.IsSourceEdited ?? false;
 
+    /// <summary>Whether a value written here reaches the object: not through a one-way binding, nor into a property
+    /// whose setter is the object's own.</summary>
+    public bool Writes => _writable && (_expression?.IsSourceWritable ?? false);
+
     internal int Slot { get; set; }
 
     internal bool Agrees { get; set; }
@@ -85,7 +89,7 @@ internal sealed class BoundValue : FundamentalUIComponent
     /// produced will not fit what the object holds - a refusal, which is what validation looks like from here.</summary>
     public bool Write(object value)
     {
-        if (!_writable) return false;
+        if (!Writes) return false;
 
         // WHAT THE PROPERTY TAKES, and only failing that what is in it now. A property typed Brush holding a solid
         // color takes a picture just as well, and asking the value being replaced what fits refused every kind but

@@ -980,7 +980,7 @@ public class ImageRenderUnit : RenderUnit<ImagePayload>
     }
 
     // BitmapSource (not just BitmapImage) so SharedSurfaceImage / RenderTargetImage also render. A live shared
-    // surface (universe→panel) is sampled directly and synchronized via its Produce/Consume timeline (see
+    // surface (universe→panel) is sampled through a copy latched on its Produce/Consume timeline (see
     // ImageRenderComponent.SharedSource/PreRender); a regular bitmap is sampled directly.
     private ImageRenderComponent CreateImageRenderer(Adamantium.Graphics.Core.Models.Mesh mesh, BitmapSource image)
     {
@@ -997,7 +997,9 @@ public class ImageRenderUnit : RenderUnit<ImagePayload>
             palette = animated.FramePalette;
             if (texture == null) layer = null;
         }
-        texture ??= image.GetOrCreateTexture(ResourceFactory);
+        SharedSurfaceImage live = null;
+        if (image is SharedSurfaceImage recorded) texture = recorded.HoldImport(ResourceFactory, out live);
+        else texture ??= image.GetOrCreateTexture(ResourceFactory);
         if (texture == null) return null;   // decode still pending - no texture yet, draw nothing until a re-render
         var component = new ImageRenderComponent(GraphicsDevice, UIBasicEffect, mesh, texture, BufferManager)
         {
@@ -1005,14 +1007,16 @@ public class ImageRenderUnit : RenderUnit<ImagePayload>
             FrameLayer = layer,
             FramePalette = layer.HasValue ? palette : null
         };
-        // A live shared surface (universe→panel): sample it directly, and drive the producer/consumer timeline so the
-        // sample never races the producer's write (see ImageRenderComponent.PreRender). Composited with the default
-        // AlphaBlend so the panel's Opacity controls translucency; the producer now publishes an opaque frame
-        // (alpha=1, see RenderingService.BeginDraw) so at Opacity=1 it is fully solid.
-        if (texture is Adamantium.Graphics.SharedSurface shared)
+        // A live shared surface (universe→panel): sample its latched copy, so the sample never races the producer's
+        // write (see ImageRenderComponent.PreRender). Composited with the default AlphaBlend so the panel's Opacity
+        // controls translucency; the producer now publishes an opaque frame (alpha=1, see RenderingService.BeginDraw)
+        // so at Opacity=1 it is fully solid.
+        if (live != null)
         {
-            component.SharedSource = shared;
-            component.SharedImage = image as SharedSurfaceImage;
+            component.SharedSource = texture as Adamantium.Graphics.SharedSurface;
+            component.SharedImage = live;
+            // Never the surface itself: its latched copy, or nothing until a frame is latched.
+            component.Texture = component.SharedSource?.LatchedCopy;
         }
         return component;
     }
