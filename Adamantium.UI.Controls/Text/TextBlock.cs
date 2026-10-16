@@ -14,7 +14,7 @@ using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls.Text;
 
-public class TextBlock : InputUIComponent, IFocusableInParts
+public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
 {
     public static readonly AdamantiumProperty TextProperty = AdamantiumProperty.Register(nameof(Text),
         typeof(string), typeof(TextBlock),
@@ -668,7 +668,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts
         }
     }
 
-    private void OnTextEffectsChanged(object sender, System.EventArgs e) => InvalidateRender(false);
+    private void OnTextEffectsChanged(object sender, System.EventArgs e) => EffectsChanged();
 
     internal string ShownText => HasInlines
         ? InlineText().Replace(LineSeparator, '\n').Replace(ParagraphSeparator, '\n')
@@ -697,7 +697,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts
     {
         if (ReferenceEquals(e, Inline.EffectsOnly))
         {
-            InvalidateRender(false);
+            EffectsChanged();
             return;
         }
 
@@ -1327,7 +1327,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts
         return true;
     }
 
-    internal float LinesShift() => WritingMode == WritingMode.VerticalRightToLeft && double.IsNaN(Width)
+    internal float LinesShift() => WritingMode == WritingMode.VerticalRightToLeft && double.IsNaN(Width) && _textLayout != null
         ? (float)Math.Round(RenderSize.Width - _textLayout.CalculatedLayoutSize.Width)
         : 0;
 
@@ -1368,15 +1368,27 @@ public class TextBlock : InputUIComponent, IFocusableInParts
 
     private GlyphEffect[] DrawnEffects(Vector2F area)
     {
-        _resolvedEffects.Clear();
         _effectBrushes.Clear();
-        var length = _textLayout?.Text?.Length ?? 0;
-        if (_textEffects is { Count: > 0 })
+        _resolvedEffects.Clear();
+        ResolveEffects(_resolvedEffects, _effectBrushes, area);
+        _effectBrushes.Take();
+        if (!SameAsDrawn())
         {
-            foreach (var effect in _textEffects)
-            {
-                Resolve(effect, 0, length, area);
-            }
+            _drawnEffects = [.. _resolvedEffects];
+        }
+
+        return _drawnEffects;
+    }
+
+    void IGlyphEffectSource.ResolveEffects(List<GlyphEffect> effects) =>
+        ResolveEffects(effects, null, new Vector2F(LinesShift(), 0));
+
+    private void ResolveEffects(List<GlyphEffect> into, HeldBrushes brushes, Vector2F area)
+    {
+        var length = _textLayout?.Text?.Length ?? 0;
+        for (var i = 0; i < (_textEffects?.Count ?? 0); i++)
+        {
+            Resolve(_textEffects[i], 0, length, area, into, brushes);
         }
 
         if (HasInlines)
@@ -1388,31 +1400,41 @@ public class TextBlock : InputUIComponent, IFocusableInParts
                     continue;
                 }
 
-                foreach (var effect in inline.TextEffects)
+                var effects = inline.TextEffects;
+                for (var i = 0; i < effects.Count; i++)
                 {
-                    Resolve(effect, start, Math.Min(count, length - start), area);
+                    Resolve(effects[i], start, Math.Min(count, length - start), area, into, brushes);
                 }
             }
         }
-
-        _effectBrushes.Take();
-        if (!SameAsDrawn())
-        {
-            _drawnEffects = [.. _resolvedEffects];
-        }
-
-        return _drawnEffects;
     }
 
-    private void Resolve(TextEffect effect, int offset, int limit, Vector2F area)
+    private void Resolve(TextEffect effect, int offset, int limit, Vector2F area, List<GlyphEffect> into,
+        HeldBrushes brushes)
     {
         if (!effect.TryResolve(offset, limit, area, RenderSize, out var resolved))
         {
             return;
         }
 
-        _resolvedEffects.Add(resolved);
-        _effectBrushes.Add(effect.Foreground);
+        into.Add(resolved);
+        brushes?.Add(effect.Foreground);
+    }
+
+    private void EffectsChanged()
+    {
+        _effectBrushes.Clear();
+        _resolvedEffects.Clear();
+        ResolveEffects(_resolvedEffects, _effectBrushes, new Vector2F(LinesShift(), 0));
+        _effectBrushes.Take();
+        if (_resolvedEffects.Count > 0 != _drawnEffects.Length > 0)
+        {
+            InvalidateRender(false);
+        }
+        else if (_drawnEffects.Length > 0)
+        {
+            RenderDirty.MarkEffects(this);
+        }
     }
 
     internal override void OnRenderValueChanged(object sender, System.EventArgs e)
@@ -1427,7 +1449,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts
 
             if (_effectBrushes.Contains(brush))
             {
-                InvalidateRender(false);
+                EffectsChanged();
             }
         }
 

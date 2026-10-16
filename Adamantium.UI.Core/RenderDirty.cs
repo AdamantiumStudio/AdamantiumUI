@@ -93,6 +93,8 @@ public sealed class RenderDirtyScope
             _recordStartMark = _paintMarks;
             _recordFrame = Media.Animation.Compositor.Frame;
         }
+
+        lock (EffectSet) _effectRecordStartMark = _effectMarks;
     }
 
     private long _paintMarks;
@@ -110,6 +112,40 @@ public sealed class RenderDirtyScope
     }
 
     public int PaintCount { get { lock (PaintSet) return PaintSet.Count; } }
+
+    private readonly Dictionary<IUIComponent, long> EffectSet = new();
+    private readonly List<IUIComponent> _effectsCleared = new();
+    private long _effectMarks;
+    private long _effectRecordStartMark = long.MaxValue;
+
+    /// <summary>Records that only the glyph effects of <paramref name="component"/> changed (see
+    /// <see cref="IGlyphEffectSource"/>): nothing is re-recorded, the recorder hands their values to the applier. A mark
+    /// taken after a record began outlives this loop frame's clears, as a paint mark does.</summary>
+    public void MarkEffects(IUIComponent component)
+    {
+        if (component == null || _forgotten)
+        {
+            return;
+        }
+
+        lock (EffectSet)
+        {
+            _effectMarks++;
+            EffectSet[component] = _effectMarks;
+        }
+
+        LoopSignal.Request();
+    }
+
+    /// <summary>How many effect marks this scope has ever taken; monotonic, as <see cref="TotalPaintMarks"/>.</summary>
+    public long TotalEffectMarks { get { lock (EffectSet) return _effectMarks; } }
+
+    /// <summary>Atomically snapshot the effect-dirty set (same locking discipline as <see cref="SnapshotGeometryInto"/>).</summary>
+    public void SnapshotEffectsInto(List<IUIComponent> buffer)
+    {
+        buffer.Clear();
+        lock (EffectSet) buffer.AddRange(EffectSet.Keys);
+    }
 
     // Assigning a different brush still re-records the element: a one-element case, not worth coupling to the renderer.
 
@@ -261,7 +297,7 @@ public sealed class RenderDirtyScope
 
     /// <summary>Any dirty state at all (else the frame is fully clean).</summary>
     public bool HasWork => _structural || _transform || GeometrySet.Count > 0 || PaintSet.Count > 0
-                                  || NodeSet.Count > 0 || _forceUntilSettled || _finalForcedBuild;
+                                  || NodeSet.Count > 0 || EffectSet.Count > 0 || _forceUntilSettled || _finalForcedBuild;
 
     public bool IsStructural => _structural || _forceUntilSettled || _finalForcedBuild;
     public bool IsTransform => _transform;
@@ -301,6 +337,17 @@ public sealed class RenderDirtyScope
             _paintCleared.Clear();
         }
         lock (NodeSet) NodeSet.Clear();
+        lock (EffectSet)
+        {
+            var keepAfter = _recordFrame == Media.Animation.Compositor.Frame ? _effectRecordStartMark : long.MaxValue;
+            foreach (var (component, mark) in EffectSet)
+            {
+                if (mark <= keepAfter) _effectsCleared.Add(component);
+            }
+
+            foreach (var component in _effectsCleared) EffectSet.Remove(component);
+            _effectsCleared.Clear();
+        }
         lock (MovedSet) MovedSet.Clear();
         lock (StructuralSet) StructuralSet.Clear();
         _transform = false;

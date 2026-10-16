@@ -29,8 +29,15 @@ public class TextEffectsMarkupTests
         "</TextEffect></Run.TextEffects></Run>" +
         "</TextBlock.Inlines></TextBlock>";
 
+    private const string Clipped =
+        "<TextBlock " + Namespaces + " Text=\"wipe\"><TextBlock.TextEffects>" +
+        "<TextEffect PositionStart=\"0\" PositionCount=\"4\" ClipFollowsTransform=\"False\">" +
+        "<TextEffect.Clip><RectangleGeometry Rect=\"0,0,20,30\" CornerRadius=\"4\"/></TextEffect.Clip>" +
+        "</TextEffect></TextBlock.TextEffects></TextBlock>";
+
     [TestCase(Block)]
     [TestCase(Inline)]
+    [TestCase(Clipped)]
     public void TextEffects_Compile(string markup)
     {
         var errors = AumlCodegenHarness.Compile(
@@ -52,6 +59,21 @@ public class TextEffectsMarkupTests
             Assert.That(effect.TransformOrigin, Is.EqualTo(TextEffectOrigin.Element));
             Assert.That(((SolidColorBrush)effect.Foreground).Color, Is.EqualTo(Colors.Red));
             Assert.That(effect.Transform.RotationAngle, Is.EqualTo(20));
+        });
+    }
+
+    [Test]
+    public void TheDesignersLoader_BuildsAnEffectsClip()
+    {
+        var result = AumlLoader.Load(Clipped);
+
+        Assert.That(result.Diagnostics, Is.Empty, string.Join(" | ", result.Diagnostics));
+        var effect = ((TextBlock)result.Root).TextEffects[0];
+        Assert.Multiple(() =>
+        {
+            Assert.That(effect.ClipFollowsTransform, Is.False);
+            Assert.That(effect.Clip.Rect, Is.EqualTo(new Adamantium.UI.Core.Rect(0, 0, 20, 30)));
+            Assert.That(effect.Clip.CornerRadius.TopLeft, Is.EqualTo(4));
         });
     }
 

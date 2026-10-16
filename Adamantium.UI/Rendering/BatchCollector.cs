@@ -168,6 +168,7 @@ internal abstract class BatchCollector<TItem> : BatchArena where TItem : struct
         _highWater = 0;
         _gpuCapacity = 0;
         _segments.Clear();
+        _indexById.Clear();
         _freeBlocks.Clear();
         Count = 0;
     }

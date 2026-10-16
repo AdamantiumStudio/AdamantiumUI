@@ -395,66 +395,47 @@ public class ImageRenderComponent : UIRenderComponent
     }
 }
 
-public class TextRenderComponent : ImageRenderComponent
+public class TextRenderComponent : UIRenderComponent
 {
-    private IRenderTarget _renderTarget;
-
-    // Render text into a supersampled target (this factor larger), then let it minify when composited onto
-    // the control = SSAA. The real fix for small unhinted text: gives sub-pixel stems enough pixels.
-    private const float TextSupersample = 1f;
-
     public TextRenderComponent(IGraphicsDevice device,
         UIBasicEffect uiBasicEffect,
-        Mesh mesh,
         FontRenderer fontRenderer,
         TextLayout textLayout,
-        TextRenderingParameters renderingParameters, 
+        TextRenderingParameters renderingParameters,
         Brush background,
         Brush foreground,
         Brush stroke,
-        GpuBufferManager bufferManager) : base(device, uiBasicEffect, mesh, background, bufferManager)
+        GpuBufferManager bufferManager) : base(device, uiBasicEffect, null, bufferManager)
     {
         FontRenderer = fontRenderer;
         TextLayout = textLayout;
         RenderingParameters = renderingParameters;
+        Background = background;
         Foreground = foreground;
         Stroke = stroke;
-        _rtWidth = (uint)(mesh.Bounds.Width * TextSupersample);
-        _rtHeight = (uint)(mesh.Bounds.Height * TextSupersample);
-        Sampler = SamplerStates.LinearFont;
     }
 
-    private readonly uint _rtWidth, _rtHeight;
-
-    // The block's private text target, created lazily since the batched and direct paths never use it. Supersampled by
-    // TextSupersample in step with FontRenderer.RenderScale; no MSAA, MSDF glyphs anti-alias themselves.
-    private IRenderTarget EnsureRenderTarget() => _renderTarget ??= ToDispose(GraphicsDevice.CreateRenderTarget(
-        _rtWidth, _rtHeight, MSAALevel.None, SurfaceFormat.R8G8B8A8.UNorm, name: "TextRenderer"));
-    
     public FontRenderer FontRenderer { get; }
-
-    /// <summary>How far the quad and target reach past the text on every side, as they were built; at least the glyph
-    /// run's <see cref="FrozenGlyphRun.EffectPadding"/>.</summary>
-    public int Padding { get; init; }
 
     public TextLayout TextLayout { get; }
     public TextRenderingParameters RenderingParameters { get; }
+    public Brush Background { get; set; }
     public Brush Foreground { get; set; }
 
     public Brush Stroke { get; set; }
 
     // The frozen glyph snapshot BOTH text paths bake from (set by TextRenderUnit after each TextLayout.Update): the batch
-    // packs it into the shared SSBO, the direct/composite fallback uploads it into this component's own vertex buffer
+    // packs it into the shared SSBO, the direct draw uploads it into this component's own vertex buffer
     // (EnsureGlyphVtx). Neither reads the live, reshaped-in-place TextLayout at draw, so the whole text draw path is a pure
     // function of the frozen snapshot - render-thread safe. Null only before the first snapshot.
     private FrozenGlyphRun _glyphRun;
     public FrozenGlyphRun GlyphRun
     {
         get => _glyphRun;
-        set { _glyphRun = value; _glyphVtxDirty = true; _textRendered = false; }
+        set { _glyphRun = value; _glyphVtxDirty = true; }
     }
 
-    // Per-block vertex buffer for the DIRECT/composite draw, uploaded from the FROZEN glyph run (never the live layout).
+    // Per-block vertex buffer for the direct draw, uploaded from the FROZEN glyph run (never the live layout).
     // Lazily allocated (only if a block ever falls to the direct draw - batched text never touches it), reused + re-uploaded
     // when the run changes, and replaced by a larger one when the run outgrows it.
     private Buffer<FontItem> _glyphVtx;
@@ -490,81 +471,32 @@ public class TextRenderComponent : ImageRenderComponent
         return _glyphVtx;
     }
 
-    private bool _textRendered = false;
+    internal TransformTable EffectTable { get; private set; }
+    internal int EffectHead { get; private set; } = -1;
+    private int _lastEffectSlot = -1;
 
-    // Color-only change: swap the brushes and force one re-rasterization, reusing the existing render
-    // target and geometry (no buffer/RT rebuild).
+    internal void UseEffects(TransformTable table, int head, int lastSlot)
+    {
+        EffectTable = table;
+        EffectHead = head;
+        _lastEffectSlot = lastSlot;
+    }
+
+    // A slot past this frame's buffer would be read out of the allocation.
+    internal (ulong Table, int Head) Effects() =>
+        EffectHead >= 0 && EffectTable != null && EffectTable.IsSlotLive(_lastEffectSlot)
+            ? (EffectTable.DeviceAddress, EffectHead)
+            : (0, -1);
+
     public void UpdateColors(Brush background, Brush foreground, Brush stroke)
     {
         Background = background;
         Foreground = foreground;
         Stroke = stroke;
-        _textRendered = false;
     }
 
-    // Text-content change at the SAME size: the shared TextLayout was re-shaped in place and its glyph buffer
-    // re-uploaded, so just reuse this render target + geometry and force one re-rasterization - no new component and no
-    // Vulkan render-target allocation (the live-text / recycled-list-row fast path). Same body as UpdateColors; the name
-    // marks the intent at the call site.
-    public void UpdateText(Brush background, Brush foreground, Brush stroke)
-    {
-        Background = background;
-        Foreground = foreground;
-        Stroke = stroke;
-        _textRendered = false;
-    }
-
-    // Rasterize the glyphs into the private text target BEFORE the main render pass begins (this runs in the
-    // beforeRenderPass PreRender phase). So the main pass is never interrupted per text block - it only composites the
-    // pre-rastered target. SetState/RestoreState use outerPassActive:false: there is no main pass to end/resume yet
-    // (BeginDraw begins it right after PreRender), we just render this one target as a standalone pass.
-    public override void PreRender()
-    {
-        // Direct main-pass draw: glyphs are drawn straight into the main pass in Render() - no private-RT
-        // rasterization pre-pass at all. See FontRenderer.UseDirectTextDraw.
-        if (FontRenderer.UseDirectTextDraw) 
-            return;
-        
-        if (_textRendered)
-            return;
-
-        if (GlyphRun == null) return;
-
-        // Inset the text by the effect padding inside the (padded) target so edge glyphs' outline/glow have room. The
-        // composite quad was grown by the same pad with its origin shifted -pad (see RenderUnit), canceling this inset.
-        var pad = Padding;
-        var location = new Vector3F(RenderingParameters.TextArea.X + pad, RenderingParameters.TextArea.Y + pad, 5);
-        var foreground = ((SolidColorBrush)Foreground).Color;
-        var previousColor = GraphicsDevice.ClearColor;
-        // Rasterize the (logical-size) layout RenderScale x larger into the target; the composite minifies it = SSAA.
-        FontRenderer.RenderScale = TextSupersample;
-        FontRenderer.SetState(SamplerStates.LinearFont, location, EnsureRenderTarget(), outerPassActive: false);
-        FontRenderer.DrawLayout(EnsureGlyphVtx(), (uint)GlyphRun.Count, GlyphRun.Atlas, GlyphRun.FontSize, foreground);
-        FontRenderer.RestoreState(outerPassActive: false);
-        GraphicsDevice.ClearColor = previousColor;
-        _textRendered = true;
-    }
-
+    // Draws one block's glyphs straight into the main pass: local + TextArea, then world and projection (row vectors).
     public override void Render()
-    {
-        if (FontRenderer.UseDirectTextDraw)
-        {
-            RenderDirect();
-            return;
-        }
-
-        // The glyphs were rasterized into the private target in PreRender (before the main pass); here we only composite it.
-        Texture = EnsureRenderTarget().ResolveTexture;
-        Sampler = SamplerStates.LinearClampToEdge;
-        // The text target holds premultiplied color (the font shaders output rgb*alpha, rendered with a premultiplied
-        // blend), so composite it with a premultiplied blend too - a straight AlphaBlend would darken the edges (rim).
-        ColorBlendEquation = ColorBlendEquations.Premultiplied;
-        base.Render();
-    }
-
-    // Draws one block's glyphs straight into the main pass: local + TextArea, then world and projection (row vectors),
-    // at RenderScale 1.
-    private void RenderDirect()
     {
         if (GlyphRun == null) return;
         var textArea = RenderingParameters.TextArea;
@@ -572,7 +504,7 @@ public class TextRenderComponent : ImageRenderComponent
                   * RenderData.TransformMatrix
                   * RenderData.ProjectionMatrix;
         var foreground = ((SolidColorBrush)Foreground).Color;
-        FontRenderer.RenderScale = 1f;
+        var (table, head) = Effects();
         FontRenderer.DrawLayoutDirect(
             SamplerStates.LinearFont,
             EnsureGlyphVtx(),
@@ -583,6 +515,8 @@ public class TextRenderComponent : ImageRenderComponent
             mvp,
             RenderData.Opacity,
             RenderData.RoundedClipBox,      // the rounded ancestor clip the batched path gets from the table by slot
-            RenderData.RoundedClipRadii);
+            RenderData.RoundedClipRadii,
+            table,
+            head);
     }
 }

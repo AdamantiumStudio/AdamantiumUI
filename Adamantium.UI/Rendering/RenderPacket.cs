@@ -26,6 +26,13 @@ internal sealed class RenderPacket
     /// <summary>Partial only: the components whose contents changed, for the draw phase's O(dirty) slot-patch + op replay.</summary>
     public readonly List<IUIComponent> PartialDirty = new();
 
+    /// <summary>The texts whose glyph effects changed, each with its range of <see cref="EffectValues"/>: the applier
+    /// writes them into the table slots their glyphs read, and nothing is drawn again.</summary>
+    public readonly List<(IUIComponent Component, int First, int Count)> Effects = new();
+
+    /// <summary>The values <see cref="Effects"/> point into, as they were when the packet was recorded.</summary>
+    public readonly List<Adamantium.Graphics.Fonts.GlyphEffect> EffectValues = new();
+
     /// <summary>The layout entries the recorder re-froze this frame - the DELTA of the frozen snapshot. The applier keeps its
     /// OWN snapshot dictionary and folds each packet's delta into it, so the two threads never share one: the recorder's map
     /// is authoritative and mutable on the loop thread, the applier's is a private replica built only from packets it has
@@ -97,6 +104,8 @@ internal sealed class RenderPacket
         Draws.Clear();
         MovedNodes.Clear();
         PartialDirty.Clear();
+        Effects.Clear();
+        EffectValues.Clear();
         SnapDelta.Clear();
         Removed.Clear();
         Undrawn.Clear();

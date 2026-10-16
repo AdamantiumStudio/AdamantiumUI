@@ -29,9 +29,13 @@ All packages share one version.
   its characters moved, turned, scaled or slanted by a `Transform` and drawn in their own `Foreground`. Each character
   turns about its own center unless `TransformOrigin="Element"` (WPF's way), the transform's `ShiftX`/`ShiftY` count in
   sizes of each character, or of the element, and a turn about X or Y with a `Perspective` tips the characters as
-  flipping cards; the brush's `Opacity` fades the range. A block counts its whole text, an inline from its own start. Only the
-  drawing changes: the lines, the caret, selection and hit testing stay, and a change draws the text again without
-  laying it out. An effect binds against its holder's data; name its transform to animate it, as any;
+  flipping cards; the brush's `Opacity` fades the range. `Clip` - a `RectangleGeometry`, its corners rounded and placed
+  by its own `Transform` - draws only what of the range is inside it: as in WPF it goes with the characters, and with
+  `ClipFollowsTransform="False"` it stays, so they pass through it; of the effects over a character, the last that clips
+  it does. A block counts its whole text, an inline from its own start. Only the drawing changes: the lines, the caret,
+  selection and hit testing stay. The effects are kept in the renderer's transform table, so a changed one - a frame of
+  an animation - is a few slot writes: the text is neither laid out, drawn again nor packed again, and allocates nothing
+  of its own. An effect binds against its holder's data; name its transform to animate it, as any;
   `TextEffectResolver` splits one effect into one a character, for letters moved in turn. A text box has none: rich text
   while typing is for a rich text editor.
 - Spelling checked in a text box, as WPF's `SpellCheck.IsEnabled`: set on a box or on any element above it, off by
@@ -1332,6 +1336,9 @@ All packages share one version.
 
 ### Removed
 
+- Text drawn into a target of its own and laid over the element (the engine's `FontRenderer.UseDirectTextDraw` off):
+  nothing turned it on. `TextRenderComponent` draws the glyphs straight into the pass and is no image any more; its
+  `Padding` and `UpdateText` went with that path.
 - `WindowCommand.IconData` and `WindowCommand.Icon`: an icon is not path data in a view model; name a resource with
   `IconKey`.
 - `AumlAstTemplateNode.TemplateContent`, the template's markup written back out as text for every template parsed;
@@ -1366,6 +1373,15 @@ All packages share one version.
 
 ### Fixed
 
+- A page that slid in through a `ContentPresenter` transition gets the presenter's size back once the page it replaced
+  has slid out: the presenter kept the size of the larger of the two, so the topic area of the Text tab scrolled through
+  empty space after a long topic.
+- The frame verifier no longer throws in `TryGetSegment` after a batch let its GPU buffers go: the segments went, but the
+  map from a segment's id to its place stayed, and pointed past the end.
+- A long text with a text effect builds all of its glyphs: only the band around the window was built, so a character an
+  effect brought in from far off was not drawn.
+- A transform two drawings and a text effect share, let go by one of the drawings, stays hung on the other drawing and
+  binds against its data; it went to the effect.
 - A `RenderTargetPanel` being resized - a docked pane dragged by its splitter - no longer loses its picture for a frame
   or two, showing what lies behind it. Its producer hands over a new surface for every size, faster than frames
   recorded with the old one are drawn, and such a frame found that surface let go of and drew nothing. A frame recorded

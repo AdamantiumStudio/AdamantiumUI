@@ -30,7 +30,7 @@ public struct GlyphItem
     /// <summary>.x = a 'COLR' version 1 layer's paint record plus one, or 0, as
     /// <see cref="Adamantium.Graphics.Fonts.FontItem.Paint"/> holds it (<see cref="LocalRect"/> is then the pen and
     /// baseline, and the pixels per font unit); .y = the element's opacity raised to 2.2, which the layer's own colors
-    /// take; .zw = the move of <see cref="Effect"/>.</summary>
+    /// take; .zw reserved.</summary>
     public Vector4F Paint;
 
     /// <summary>A glyph of a font on the way between two key instances, as
@@ -44,12 +44,15 @@ public struct GlyphItem
     /// <see cref="Adamantium.Graphics.Fonts.FontItem.Rotation"/> holds it.</summary>
     public Vector4F Second;
 
-    /// <summary>A glyph drawn apart, as <see cref="Adamantium.Graphics.Fonts.FontItem.Effect"/> holds it but in node-local
-    /// space; zero for none.</summary>
-    public Vector4F Effect;
+    /// <summary>The glyph's cell in the layout's units, as <see cref="Adamantium.Graphics.Fonts.FontItem.Cell"/> holds
+    /// it: what its effects turn it about.</summary>
+    public Vector4F Cell;
 
-    /// <summary>The perspective of <see cref="Effect"/> in node-local space: a corner at (x, y) has w = 1 + z + x * X +
-    /// y * Y. Not divided out: far from the node's origin w may pass zero there, and the rasterizer must see its
-    /// sign.</summary>
-    public Vector4F Perspective;
+    /// <summary>The layout's units to node-local, where the effects are undone to and redone from: x * X + Z,
+    /// y * Y + W.</summary>
+    public Vector4F ToNode;
+
+    /// <summary>.xy = <see cref="Adamantium.Graphics.Fonts.FontItem.Place"/>; .z = the slot of the block's chain of glyph
+    /// effects in the transform table, -1 for none; .w = the element's opacity, which an effect's color takes.</summary>
+    public Vector4F Place;
 }
