@@ -17,6 +17,8 @@
     <Phrase Key="Message" Text="Сообщение"/>
     <Phrase Key="FloatingTitle" Text="Всплывающая подсказка (пусто — поставьте фокус или печатайте):"/>
     <Phrase Key="YourName" Text="Ваше имя"/>
+    <Phrase Key="UpperCaseTitle" Text="Регистр символов (напечатанное и вставленное — заглавными):"/>
+    <Phrase Key="UpperCaseHint" Text="Введите код"/>
     <Phrase Key="PasswordTitle" Text="Поле пароля (глаз показывает его, пока нажат):"/>
     <Phrase Key="Password" Text="Пароль"/>
     <Phrase Key="PasswordToggleTitle" Text="Тот же пароль, привязанный к тому же свойству; здесь глаз — переключатель:"/>

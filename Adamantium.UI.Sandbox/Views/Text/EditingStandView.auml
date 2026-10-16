@@ -18,6 +18,12 @@
         <TextBox Width="520" HorizontalAlignment="Left"
                  Placeholder="{Localize TextStrings.YourName}" FloatingPlaceholder="{Binding FloatingWatermark}"/>
 
+        <!-- Character casing: what is typed or pasted goes in upper case, by the rules of the box's language. -->
+        <TextBlock Text="{Localize TextStrings.UpperCaseTitle}" Margin="0,16,0,6"/>
+        <TextBox AutomationProperties.AutomationId="UpperCase" CharacterCasing="Upper"
+                 Width="520" HorizontalAlignment="Left"
+                 Placeholder="{Localize TextStrings.UpperCaseHint}"/>
+
         <!-- Password boxes: both bound two-way to the same Password, so typing in one shows in the other. -->
         <TextBlock Text="{Localize TextStrings.PasswordTitle}" Margin="0,16,0,6"/>
         <PasswordBox AutomationProperties.AutomationId="Password" Password="{Binding Password, Mode=TwoWay}"

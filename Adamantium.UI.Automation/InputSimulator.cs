@@ -349,9 +349,10 @@ internal static class InputSimulator
         return (window, point);
     }
 
+    // One character per event, a surrogate pair whole, as the platform's window hands them on.
     public static void Type(string text)
     {
-        foreach (var character in text)
+        foreach (var character in text.EnumerateRunes())
         {
             KeyboardDevice.CurrentDevice.ProcessEvent(
                 new RawTextInputEventArgs(character.ToString(), InputModifiers.None, Now()));
