@@ -475,6 +475,7 @@ public partial class RenderCache
                 Dirty.SnapshotMovedInto(_movedBuf);            // the MOVED components - CaptureSnapshot re-freezes just these
                 _packet.Moved.AddRange(_movedBuf);             // ...and the draw asks whether it is patching all of them
                 _packet.TransformUnknown = Dirty.IsTransformUnknown;
+                CaptureEffects();
 
                 return;   // packet.Kind == Partial -> ApplyFrame runs the partial apply
             }
@@ -495,10 +496,15 @@ public partial class RenderCache
         {
             _packet.Reset(RenderBuildKind.Structural);
             _packet.ProjectionMatrix = visualRoot.GetProjectionMatrix();
-            if (RecordStructuralFrame(visualRoot, _packet)) return;
+            if (RecordStructuralFrame(visualRoot, _packet))
+            {
+                CaptureEffects();
+                return;
+            }
         }
 
         RecordFullFrame(visualRoot);
+        CaptureEffects();
     }
 
     // RECORD a full walk (DEVICE-FREE): first build, a structural change, or a partial that surfaced one. Fills the packet.

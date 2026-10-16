@@ -328,6 +328,8 @@ public partial class RenderCache
                 _partialSpliced = false;
                 break;
         }
+
+        ApplyEffects(packet);   // after the units are built, whatever the kind: slot writes the stream survives
     }
 
     // The record+apply decision for one dirty component: Skip = reuse its cached units as-is (nothing recorded);
@@ -468,6 +470,7 @@ public partial class RenderCache
                 {
                     units[i].UpdateWithDrawCommand(drawCommands[i]);
                     NoteBandedText(units[i]);
+                    NoteEffects(units[i]);
                 }
                 return;
             }

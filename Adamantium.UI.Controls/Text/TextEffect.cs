@@ -17,6 +17,7 @@ namespace Adamantium.UI.Controls.Text;
 public sealed class TextEffect : FundamentalUIComponent, ITransformHolder
 {
     private Transform _transform;
+    private Transform _clipTransform;
     private Brush _bakedBrush;
     private bool _inBlock;
 
@@ -34,6 +35,12 @@ public sealed class TextEffect : FundamentalUIComponent, ITransformHolder
 
     public static readonly AdamantiumProperty TransformOriginProperty = AdamantiumProperty.Register(
         nameof(TransformOrigin), typeof(TextEffectOrigin), typeof(TextEffect), new PropertyMetadata(TextEffectOrigin.Glyph));
+
+    public static readonly AdamantiumProperty ClipProperty = AdamantiumProperty.Register(nameof(Clip),
+        typeof(RectangleGeometry), typeof(TextEffect), new PropertyMetadata(null));
+
+    public static readonly AdamantiumProperty ClipFollowsTransformProperty = AdamantiumProperty.Register(
+        nameof(ClipFollowsTransform), typeof(bool), typeof(TextEffect), new PropertyMetadata(true));
 
     /// <summary>The first character of the range: in a text block, of its text, where a line break and a paragraph's end
     /// count one each; in an inline, of the inline's own text.</summary>
@@ -76,6 +83,23 @@ public sealed class TextEffect : FundamentalUIComponent, ITransformHolder
         set => SetValue(TransformOriginProperty, value);
     }
 
+    /// <summary>What of the range is drawn: a rectangle, its corners rounded as it says, in the element's space and placed
+    /// by its own <c>Transform</c>; null draws all of it. As in WPF it cuts the characters where the layout put them and
+    /// goes with them; with <see cref="ClipFollowsTransform"/> off it stays, and they pass through it.</summary>
+    public RectangleGeometry Clip
+    {
+        get => GetValue<RectangleGeometry>(ClipProperty);
+        set => SetValue(ClipProperty, value);
+    }
+
+    /// <summary>Whether <see cref="Clip"/> moves with the characters <see cref="Transform"/> moves (the default) or stays
+    /// in the element.</summary>
+    public bool ClipFollowsTransform
+    {
+        get => GetValue<bool>(ClipFollowsTransformProperty);
+        set => SetValue(ClipFollowsTransformProperty, value);
+    }
+
     internal event EventHandler Changed;
 
     protected override void OnPropertyChanged(AdamantiumPropertyChangedEventArgs e)
@@ -85,19 +109,81 @@ public sealed class TextEffect : FundamentalUIComponent, ITransformHolder
         {
             Hold(Transform);
         }
+        else if (e.Property == ClipProperty)
+        {
+            if (e.OldValue is RectangleGeometry old)
+            {
+                old.PropertyChanged -= OnClipChanged;
+                if (ReferenceEquals(old.InheritanceParent, this))
+                {
+                    old.InheritanceParent = null;
+                }
+            }
+
+            if (e.NewValue is RectangleGeometry clip)
+            {
+                clip.PropertyChanged += OnClipChanged;
+                clip.InheritanceParent = this;
+                BindingEngine.RefreshBindings(clip);
+            }
+
+            FollowClipTransform(Clip?.Transform);
+        }
         else if (e.Property == ForegroundProperty)
         {
             Bake(_inBlock && !IsDiscarded ? Foreground : null);
         }
-        else if (e.Property == DataContextProperty && _transform != null)
+        else if (e.Property == DataContextProperty)
         {
-            BindingEngine.RefreshBindings(_transform);
+            if (_transform != null)
+            {
+                BindingEngine.RefreshBindings(_transform);
+            }
+
+            if (Clip != null)
+            {
+                BindingEngine.RefreshBindings(Clip);
+            }
         }
 
         Changed?.Invoke(this, EventArgs.Empty);
     }
 
     internal override void OnRenderValueChanged(object sender, EventArgs e) => Changed?.Invoke(this, EventArgs.Empty);
+
+    private void OnClipChanged(object sender, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (e.Property == Geometry.TransformProperty)
+        {
+            FollowClipTransform(Clip?.Transform);
+        }
+
+        Changed?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void FollowClipTransform(Transform transform)
+    {
+        if (ReferenceEquals(_clipTransform, transform))
+        {
+            return;
+        }
+
+        if (_clipTransform != null)
+        {
+            _clipTransform.PropertyChanged -= OnClipTransformChanged;
+        }
+
+        _clipTransform = transform;
+        if (_clipTransform != null)
+        {
+            _clipTransform.PropertyChanged += OnClipTransformChanged;
+        }
+    }
+
+    private void OnClipTransformChanged(object sender, AdamantiumPropertyChangedEventArgs e) =>
+        Changed?.Invoke(this, EventArgs.Empty);
+
+    bool ITransformHolder.RedrawsItself => true;
 
     void ITransformHolder.OnTransformChanged(Transform transform) => Changed?.Invoke(this, EventArgs.Empty);
 
@@ -121,6 +207,12 @@ public sealed class TextEffect : FundamentalUIComponent, ITransformHolder
         base.OnDiscarded();
         Hold(null);
         Bake(null);
+        if (Clip != null)
+        {
+            Clip.PropertyChanged -= OnClipChanged;
+        }
+
+        FollowClipTransform(null);
     }
 
     internal void SetInBlock(bool inBlock)
@@ -183,13 +275,36 @@ public sealed class TextEffect : FundamentalUIComponent, ITransformHolder
             shift = default;
         }
 
-        if (matrix.IsIdentity && color == null && shift == default)
+        var clip = ResolveClip(area);
+        if (matrix.IsIdentity && color == null && shift == default && clip == null)
         {
             return false;
         }
 
-        effect = new GlyphEffect(offset + start, (int)(end - start), matrix, aroundGlyph, color, shift);
+        effect = new GlyphEffect(offset + start, (int)(end - start), matrix, aroundGlyph, color, shift, clip);
         return true;
+    }
+
+    private GlyphClip? ResolveClip(Vector2F area)
+    {
+        if (Clip is not { } clip)
+        {
+            return null;
+        }
+
+        var toClip = Matrix3x2F.Translation(area.X, area.Y);
+        if (clip.Transform?.Matrix is { } m)
+        {
+            var placed = new Matrix3x2F((float)m.M11, (float)m.M12, (float)m.M21, (float)m.M22, (float)m.M41, (float)m.M42);
+            toClip *= Matrix3x2F.Invert(placed);
+        }
+
+        var rect = clip.Rect;
+        var corners = clip.CornerRadius;
+        return new GlyphClip(new RectangleF((float)rect.X, (float)rect.Y, (float)rect.Width, (float)rect.Height),
+            new Vector4F((float)corners.TopLeft, (float)corners.TopRight, (float)corners.BottomRight,
+                (float)corners.BottomLeft),
+            toClip, !ClipFollowsTransform);
     }
 
     private static Matrix3x3F Move(float x, float y) => new(1, 0, 0, 0, 1, 0, x, y, 1);

@@ -609,7 +609,12 @@ public class ContentPresenter : InputUIComponent
     private void TransitionFinished()
     {
         _transitionRunning = false;
-        RemoveOutgoing();
+        if (_outgoingRoot != null)
+        {
+            RemoveOutgoing();
+            _lastContentDesired = default;
+            InvalidateMeasure();
+        }
 
         var waiting = _afterTransition;
         _afterTransition = null;

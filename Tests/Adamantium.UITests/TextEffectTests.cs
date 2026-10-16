@@ -157,7 +157,7 @@ public class TextEffectTests
     }
 
     [Test]
-    public void ChangingAnEffect_DrawsAgain_WithoutLayingOut()
+    public void ChangingAnInlinesEffect_HandsTheRendererItsValues_WithoutLayingOutOrDrawing()
     {
         var text = new TextBlock();
         var run = new Run { Text = "abc" };
@@ -165,18 +165,17 @@ public class TextEffectTests
         run.TextEffects.Add(effect);
         text.Inlines.Add(run);
         Hosted(text);
-        var before = Drawn(text);
+        Drawn(text);
         var layout = text.Layout.Revision;
 
         effect.Transform.TranslateY = -9;
-        var after = Drawn(text);
 
         Assert.Multiple(() =>
         {
             Assert.That(text.IsMeasureValid, Is.True, "nothing to lay out");
             Assert.That(text.Layout.Revision, Is.EqualTo(layout));
-            Assert.That(after.Single().Transform, Is.EqualTo(GlyphEffect.Flat(Matrix3x2F.Translation(0, -9))));
-            Assert.That(after, Is.Not.SameAs(before));
+            Assert.That(text.IsGeometryValid, Is.True, "nothing to draw again");
+            Assert.That(Resolved(text).Single().Transform, Is.EqualTo(GlyphEffect.Flat(Matrix3x2F.Translation(0, -9))));
         });
     }
 
@@ -463,7 +462,7 @@ public class TextEffectTests
     }
 
     [Test]
-    public void ChangingTheEffectsBrush_DrawsTheTextAgain()
+    public void ChangingTheEffectsBrush_HandsTheRendererItsColor_WithoutDrawingTheTextAgain()
     {
         var brush = new SolidColorBrush(Colors.Red);
         var text = new TextBlock { Text = "abc" };
@@ -473,8 +472,118 @@ public class TextEffectTests
 
         brush.Color = Colors.Blue;
 
-        Assert.That(text.IsGeometryValid, Is.False, "the block is to be drawn again");
-        Assert.That(Drawn(text).Single().Color, Is.EqualTo(Colors.Blue.ToVector4()));
+        Assert.Multiple(() =>
+        {
+            Assert.That(text.IsGeometryValid, Is.True, "the text is not drawn again");
+            Assert.That(Resolved(text).Single().Color, Is.EqualTo(Colors.Blue.ToVector4()));
+        });
+    }
+
+    [Test]
+    public void ChangingAnEffect_MarksOnlyItsValues()
+    {
+        var text = new TextBlock { Text = "abc" };
+        var effect = Raise(0, 1);
+        text.TextEffects.Add(effect);
+        Hosted(text);
+        Drawn(text);
+        var marks = new List<IUIComponent>();
+
+        RenderDirty.Clear();
+        effect.Transform.TranslateY = -7;
+        RenderDirty.Scope.SnapshotEffectsInto(marks);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(marks, Is.EqualTo(new[] { text }));
+            Assert.That(text.IsGeometryValid, Is.True);
+            Assert.That(Resolved(text).Single().Transform, Is.EqualTo(GlyphEffect.Flat(Matrix3x2F.Translation(0, -7))));
+        });
+    }
+
+    [Test]
+    public void ATextThatGainsOrLosesItsLastEffect_IsDrawnAgain()
+    {
+        var text = new TextBlock { Text = "abc" };
+        var effect = Raise(0, 1);
+        text.TextEffects.Add(effect);
+        Hosted(text);
+        Drawn(text);
+
+        effect.PositionCount = 0;
+        var lost = text.IsGeometryValid;
+        Drawn(text);
+        effect.PositionCount = 2;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(lost, Is.False, "a long text builds all of its glyphs only while it has effects");
+            Assert.That(text.IsGeometryValid, Is.False);
+        });
+    }
+
+    [Test]
+    public void AnOverlay_IsRecordedAgain_WhenOnlyAnEffectInItChanged()
+    {
+        var scope = RenderDirtyRouter.NewScope();
+        try
+        {
+            var gate = new Adamantium.UI.EntityServices.OverlayRebuildGate();
+            var text = new TextBlock { Text = "abc" };
+            gate.HasChanged([], scope, 1);
+            var idle = gate.HasChanged([], scope, 1);
+
+            scope.MarkEffects(text);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(idle, Is.False);
+                Assert.That(gate.HasChanged([], scope, 1), Is.True);
+            });
+        }
+        finally
+        {
+            RenderDirtyRouter.Forget(scope);
+        }
+    }
+
+    [Test]
+    public void AnEffectMarkTakenAfterTheRecordBegan_OutlivesTheFramesClear()
+    {
+        var scope = RenderDirtyRouter.NewScope();
+        try
+        {
+            var early = new TextBlock { Text = "abc" };
+            var late = new TextBlock { Text = "def" };
+            var marks = new List<IUIComponent>();
+            scope.MarkEffects(early);
+            scope.BeginRecord();
+            scope.MarkEffects(late);
+
+            scope.Clear();
+            scope.SnapshotEffectsInto(marks);
+
+            Assert.That(marks, Is.EqualTo(new[] { late }));
+        }
+        finally
+        {
+            RenderDirtyRouter.Forget(scope);
+        }
+    }
+
+    [Test]
+    public void AnEffectAddedToVerticalTextBeforeItIsLaidOut_IsTakenInStride()
+    {
+        var text = new TextBlock { Text = "abc", WritingMode = WritingMode.VerticalRightToLeft };
+
+        Assert.DoesNotThrow(() => text.TextEffects.Add(Raise(0, 1)));
+    }
+
+    private static List<GlyphEffect> Resolved(TextBlock text)
+    {
+        var effects = new List<GlyphEffect>();
+        ((IGlyphEffectSource)text).ResolveEffects(effects);
+        return effects;
     }
 
     [Test]
@@ -591,6 +700,42 @@ public class TextEffectTests
         {
             geometry.Transform = null;
         }
+
+        Assert.That(shared.Element, Is.SameAs(text));
+    }
+
+    [TestCase(true)]
+    [TestCase(false)]
+    public void ATransformOneOfTwoDrawingsLetsGo_StaysWithTheOtherDrawing(bool lastHungLetsGo)
+    {
+        var shared = new Transform();
+        var text = new TextBlock { Text = "abc" };
+        text.TextEffects.Add(new TextEffect { PositionStart = 0, PositionCount = 1, Transform = shared });
+        Hosted(text);
+        var first = new Adamantium.UI.Core.Media.Drawings.DrawingGroup { Transform = shared };
+        var second = new Adamantium.UI.Core.Media.Drawings.DrawingGroup { Transform = shared };
+        first.Attach(new Border());
+        second.Attach(new Border());
+
+        (lastHungLetsGo ? second : first).Transform = null;
+
+        Assert.That(shared.InheritanceParent, Is.SameAs(lastHungLetsGo ? first : second));
+    }
+
+    [Test]
+    public void ATransformBothDrawingsLetGo_PassesToTheEffectHoldingIt()
+    {
+        var shared = new Transform();
+        var text = new TextBlock { Text = "abc" };
+        text.TextEffects.Add(new TextEffect { PositionStart = 0, PositionCount = 1, Transform = shared });
+        Hosted(text);
+        var first = new Adamantium.UI.Core.Media.Drawings.DrawingGroup { Transform = shared };
+        var second = new Adamantium.UI.Core.Media.Drawings.DrawingGroup { Transform = shared };
+        first.Attach(new Border());
+        second.Attach(new Border());
+
+        second.Detach();
+        first.Detach();
 
         Assert.That(shared.Element, Is.SameAs(text));
     }
@@ -714,44 +859,6 @@ public class TextEffectTests
             Assert.That(effects.Select(e => e.Transform).Distinct().Count(), Is.EqualTo(3), "each its own transform");
             Assert.That(effects.Select(e => e.Transform.RotationAngle), Is.All.EqualTo(30));
             Assert.That(effects.Select(e => e.Foreground), Is.All.SameAs(template.Foreground));
-        });
-    }
-
-    [Test]
-    public void TheBatch_MovesAGlyphInTheNodeAsTheLayoutSaid()
-    {
-        // Far from the node's origin, as a block low on a page: w at the node's origin is then negative, and the w a
-        // corner gets must still be the one it has in the layout - its sign is what the rasterizer clips by.
-        float sx = 2, sy = 3, tx = 180, ty = 815, ax = 1, ay = 2;
-        var flat = Matrix3x2F.Rotation(0.3f) * Matrix3x2F.Scaling(1.2f, 0.8f) * Matrix3x2F.Translation(4, -2);
-        var layoutEffect = GlyphEffect.Flat(flat);
-        layoutEffect.M13 = 0.004f;
-        layoutEffect.M23 = 0.004f;
-        var glyph = new FontItem
-        {
-            Effect = new Vector4F(layoutEffect.M11 - 1, layoutEffect.M12, layoutEffect.M21, layoutEffect.M22 - 1),
-            EffectOffset = new Vector2F(layoutEffect.M31, layoutEffect.M32),
-            EffectPerspective = new Vector4F(layoutEffect.M13, layoutEffect.M23, 0, 0),
-        };
-        var q = new Vector2F(10, 20);
-        var p = new Vector2F((q.X + ax) * sx + tx, (q.Y + ay) * sy + ty);
-        var w = 1 + q.X * layoutEffect.M13 + q.Y * layoutEffect.M23;
-        var moved = new Vector2F((q.X * layoutEffect.M11 + q.Y * layoutEffect.M21 + layoutEffect.M31) / w,
-            (q.X * layoutEffect.M12 + q.Y * layoutEffect.M22 + layoutEffect.M32) / w);
-        var expected = new Vector2F((moved.X + ax) * sx + tx, (moved.Y + ay) * sy + ty);
-
-        var (effect, offset, perspective) = TextBatchCollector.NodeEffect(glyph, sx, sy, tx, ty, ax, ay);
-        var nodeW = 1 + perspective.Z + p.X * perspective.X + p.Y * perspective.Y;
-        var drawn = new Vector2F(
-            (p.X + p.X * effect.X + p.Y * effect.Z + offset.X) / nodeW,
-            (p.Y + p.X * effect.Y + p.Y * effect.W + offset.Y) / nodeW);
-
-        Assert.Multiple(() =>
-        {
-            Assert.That(1 + perspective.Z, Is.LessThan(0), "the case that clipped: w at the node's origin below zero");
-            Assert.That(nodeW, Is.EqualTo(w).Within(1e-3), "the corner's w as in the layout, sign and all");
-            Assert.That(drawn.X, Is.EqualTo(expected.X).Within(1e-2));
-            Assert.That(drawn.Y, Is.EqualTo(expected.Y).Within(1e-2));
         });
     }
 }

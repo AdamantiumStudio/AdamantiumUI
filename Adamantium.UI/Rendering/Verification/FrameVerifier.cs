@@ -404,6 +404,12 @@ internal sealed class FrameVerifier : IRenderCacheObserver
             CheckClipBox(live, slots, component, clip);
         }
 
+        var effects = (int)glyph.Place.Z;
+        if (effects >= 0)
+        {
+            CheckSlot(slots, effects, TransformTable.SlotUse.Effect, component, "takes its glyph effects from");
+        }
+
         if (ownColor || text.Foreground is not Core.Media.SolidColorBrush foreground || TreeAlpha(live, component, fact) is not { } tree)
         {
             return;

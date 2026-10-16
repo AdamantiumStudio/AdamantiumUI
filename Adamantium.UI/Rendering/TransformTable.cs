@@ -359,6 +359,47 @@ internal sealed class TransformTable
         if (_uploaded[_current][slot] != _version[slot]) Upload(slot);
     }
 
+    // ---- EFFECT SLOTS ---------------------------------------------------------------------------------------------
+    // A text's glyph effects, one slot each, chained (see Adamantium.Graphics.Fonts.GlyphEffect.ToSlot).
+    private readonly Dictionary<int, Guid> _effectSlotOwner = new();
+
+    public bool HasEffectSlots => _effectSlotOwner.Count > 0;
+
+    /// <summary>A slot for one glyph effect of <paramref name="ownerId"/>'s text; an owner takes as many as its text has
+    /// effects.</summary>
+    public int AcquireEffectSlot(Guid ownerId)
+    {
+        var slot = AcquireFreeSlot();
+        _cpu[slot] = default;
+        _version[slot]++;
+        _effectSlotOwner[slot] = ownerId;
+        return slot;
+    }
+
+    public void ReleaseEffectSlot(int slot)
+    {
+        if (!_effectSlotOwner.Remove(slot)) return;
+
+        InitSlots(_cpu, slot, slot + 1);
+        _version[slot]++;
+        _free.Push(slot);
+    }
+
+    /// <summary>Writes one glyph effect as <see cref="Adamantium.Graphics.Fonts.GlyphEffect.ToSlot"/> lays it out. Like
+    /// a clip, not a matrix: the shaders read it live, so a recorded op stream survives it. Written when a packet is
+    /// applied, before this frame's copy is picked, so it reaches the GPU at the next <see cref="EnsureResources"/> - the
+    /// copy picked now may still be read by a frame in flight.</summary>
+    public void SetEffect(int slot, in Matrix4x4F rows, in Vector4F color)
+    {
+        ref var s = ref _cpu[slot];
+        if (!SameBytes(s.World, rows) || s.Params != color)
+        {
+            s.World = rows;
+            s.Params = color;
+            _version[slot]++;
+        }
+    }
+
     private int AcquireFreeSlot()
     {
         if (_free.Count > 0) return _free.Pop();
@@ -401,6 +442,7 @@ internal sealed class TransformTable
         foreach (var (node, slot) in _slotByNode) uses[slot] = (SlotUse.Matrix, node);
         foreach (var (owner, slot) in _opacitySlotByOwner) uses[slot] = (SlotUse.Opacity, owner.Owner);
         foreach (var (owner, slot) in _clipSlotByOwner) uses[slot] = (SlotUse.Clip, owner);
+        foreach (var (slot, owner) in _effectSlotOwner) uses[slot] = (SlotUse.Effect, owner);
         return uses;
     }
 
@@ -422,7 +464,8 @@ internal sealed class TransformTable
         Free,
         Matrix,
         Opacity,
-        Clip
+        Clip,
+        Effect
     }
 
     /// <summary>Hands back every slot but the identity one, each as a fresh slot: for a cache that drops a whole tree at
@@ -434,6 +477,7 @@ internal sealed class TransformTable
         _slotByNode.Clear();
         _clipSlotByOwner.Clear();
         _opacitySlotByOwner.Clear();
+        _effectSlotOwner.Clear();
         _fadeChildren.Clear();
         _free.Clear();
 
@@ -499,6 +543,6 @@ internal sealed class TransformTable
         _count = 0;
         _free.Clear();
         _slotByNode.Clear();
-
+        _effectSlotOwner.Clear();
     }
 }

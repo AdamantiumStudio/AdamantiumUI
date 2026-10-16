@@ -440,7 +440,7 @@ public class TextRenderComponent : ImageRenderComponent
     public FontRenderer FontRenderer { get; }
 
     /// <summary>How far the quad and target reach past the text on every side, as they were built; at least the glyph
-    /// run's <see cref="FrozenGlyphRun.EffectPadding"/>.</summary>
+    /// run's <see cref="FrozenGlyphRun.PaddingFor"/>.</summary>
     public int Padding { get; init; }
 
     public TextLayout TextLayout { get; }
@@ -498,6 +498,25 @@ public class TextRenderComponent : ImageRenderComponent
 
     private bool _textRendered = false;
 
+    internal TransformTable EffectTable { get; private set; }
+    internal int EffectHead { get; private set; } = -1;
+    private int _lastEffectSlot = -1;
+
+    internal void UseEffects(TransformTable table, int head, int lastSlot)
+    {
+        EffectTable = table;
+        EffectHead = head;
+        _lastEffectSlot = lastSlot;
+    }
+
+    internal void EffectsChanged() => _textRendered = false;
+
+    // A slot past this frame's buffer would be read out of the allocation.
+    internal (ulong Table, int Head) Effects() =>
+        EffectHead >= 0 && EffectTable != null && EffectTable.IsSlotLive(_lastEffectSlot)
+            ? (EffectTable.DeviceAddress, EffectHead)
+            : (0, -1);
+
     // Color-only change: swap the brushes and force one re-rasterization, reusing the existing render
     // target and geometry (no buffer/RT rebuild).
     public void UpdateColors(Brush background, Brush foreground, Brush stroke)
@@ -545,10 +564,12 @@ public class TextRenderComponent : ImageRenderComponent
         // Rasterize the (logical-size) layout RenderScale x larger into the target; the composite minifies it = SSAA.
         FontRenderer.RenderScale = TextSupersample;
         FontRenderer.SetState(SamplerStates.LinearFont, location, EnsureRenderTarget(), outerPassActive: false);
-        FontRenderer.DrawLayout(EnsureGlyphVtx(), (uint)GlyphRun.Count, GlyphRun.Atlas, GlyphRun.FontSize, foreground);
+        var (table, head) = Effects();
+        FontRenderer.DrawLayout(EnsureGlyphVtx(), (uint)GlyphRun.Count, GlyphRun.Atlas, GlyphRun.FontSize, foreground,
+            table, head);
         FontRenderer.RestoreState(outerPassActive: false);
         GraphicsDevice.ClearColor = previousColor;
-        _textRendered = true;
+        _textRendered = EffectHead < 0 || head >= 0;
     }
 
     public override void Render()
@@ -578,6 +599,7 @@ public class TextRenderComponent : ImageRenderComponent
                   * RenderData.TransformMatrix
                   * RenderData.ProjectionMatrix;
         var foreground = ((SolidColorBrush)Foreground).Color;
+        var (table, head) = Effects();
         FontRenderer.RenderScale = 1f;
         FontRenderer.DrawLayoutDirect(
             SamplerStates.LinearFont,
@@ -589,6 +611,8 @@ public class TextRenderComponent : ImageRenderComponent
             mvp,
             RenderData.Opacity,
             RenderData.RoundedClipBox,      // the rounded ancestor clip the batched path gets from the table by slot
-            RenderData.RoundedClipRadii);
+            RenderData.RoundedClipRadii,
+            table,
+            head);
     }
 }

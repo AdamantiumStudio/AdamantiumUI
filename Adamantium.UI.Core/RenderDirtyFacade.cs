@@ -13,6 +13,8 @@ public static class RenderDirty
 
     public static void MarkPaint(IUIComponent component) => RenderDirtyRouter.Of(component).MarkPaint(component);
 
+    public static void MarkEffects(IUIComponent component) => RenderDirtyRouter.Of(component).MarkEffects(component);
+
     public static void MarkSubtreeGeometry(IUIComponent root) => RenderDirtyRouter.Of(root).MarkSubtreeGeometry(root);
 
     /// <summary>Something MOVED. Without a component the mover has no owner to name (a bare Transform ticking), and no

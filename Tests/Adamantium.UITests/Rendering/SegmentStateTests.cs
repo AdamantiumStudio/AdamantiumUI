@@ -105,4 +105,42 @@ public class SegmentStateTests
             collector.DisposeGpuResources(device);
         }
     }
+
+    // Letting its buffers go drops the segments too: the ops of the last frame still name them, and the frame verifier,
+    // describing the draw order from those ops, read past the end of a list that no longer held them.
+    [Test]
+    public void ACollectorThatLetItsBuffersGo_HasNoSegments()
+    {
+        var device = GpuTestDevice.Device;
+        using var presenter = GraphicsPresenter.Create(device,
+            new PresentationParameters(PresenterType.RenderTarget, 64, 64, IntPtr.Zero), "segment_release");
+        var collector = new Tagged();
+        int walked;
+        try
+        {
+            device.SetRenderTargets(presenter.RenderTarget);
+            device.SetDepthBuffer(presenter.DepthBuffer);
+            device.MSAALevel = presenter.MSAALevel;
+            device.Presenter = presenter;
+            Assert.That(device.BeginDraw(), Is.True);
+            collector.BeginFrame(device);
+            collector.Put(4);
+            walked = collector.Flush(device, Scissor, Matrix4x4F.Identity);
+            device.EndDraw();
+            device.Submit();
+            presenter.Present();
+            device.FrameEnded();
+            device.DeviceWaitIdle();
+        }
+        finally
+        {
+            collector.DisposeGpuResources(device);
+        }
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(collector.HasSegment(walked), Is.False);
+            Assert.That(collector.TryGetSegment(walked, out _, out _), Is.False);
+        });
+    }
 }

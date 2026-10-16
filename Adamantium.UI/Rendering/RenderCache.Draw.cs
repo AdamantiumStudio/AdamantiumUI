@@ -440,18 +440,32 @@ public partial class RenderCache
     private int _cloneReserve;   // clone slots this frame reserved - counted once, read by the trace
     private readonly List<RectItem> _rebakeBuf = new();
 
+    private TransformTable EnsureTransformTable()
+    {
+        if (_transformTable == null)
+        {
+            _transformTable = new TransformTable();
+            _transformTable.SetMatrix(null, _transformTable.AcquireSlot(Guid.Empty), Matrix4x4F.Identity);
+        }
+
+        return _transformTable;
+    }
+
     // Picks this frame's transform-table copy and gives its address to every collector; called again after the walk
     // creates collectors, since replays skip the walk's setup.
     private void BeginTransformFrame(IGraphicsDevice device)
     {
-        if (device == null) return;
-
-        if (_transformTable == null)
+        if (device == null)
         {
-            _transformTable = new TransformTable();
-            _transformTable.EnsureResources(device);
-            _transformTable.SetMatrix(device, _transformTable.AcquireSlot(Guid.Empty), Matrix4x4F.Identity);
+            if (_transformTable is { HasEffectSlots: true } && _renderUnitFactory.GraphicsDevice is { } own)
+            {
+                _transformTable.EnsureResources(own);
+            }
+
+            return;
         }
+
+        EnsureTransformTable();
 
         // Every clone takes a slot of its own, and a clone run asks for its whole set in ONE frame. The buffer is sized
         // here and nowhere else, so the count has to be known BEFORE it is made - discovering it while baking leaves the
@@ -517,6 +531,11 @@ public partial class RenderCache
 
             _preRenderWalkVersion = membership;
             _preRenderMachineryVersion = machinery;
+        }
+
+        if (_transformTable is { HasEffectSlots: true } && _renderUnitFactory.GraphicsDevice is { } device)
+        {
+            _transformTable.EnsureResources(device);
         }
 
         foreach (var unit in _preRenderUnits) unit.PreRender();

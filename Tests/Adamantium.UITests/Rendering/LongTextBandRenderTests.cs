@@ -179,6 +179,28 @@ public class LongTextBandRenderTests
         });
     }
 
+    // A band picks glyphs by where they were laid; an effect may bring one into view from far outside it.
+    [Test]
+    public void ALongTextWithAnEffect_BuildsTheWholeText_SoAGlyphMovedIntoViewIsDrawn()
+    {
+        var before = LitPixelsRightOf(Pixels(), Dim / 2);
+        var farLine = _block.Text.IndexOf("line 300", StringComparison.Ordinal);
+        _block.TextEffects.Add(new TextEffect
+        {
+            PositionStart = farLine,
+            PositionCount = 8,
+            TransformOrigin = TextEffectOrigin.Element,
+            Transform = new Transform { TranslateX = Dim / 2.0, TranslateY = -Offset(300) },
+        });
+        Draw();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(_block.Layout.QuadWindow, Is.Null, "no band for a text whose glyphs may move");
+            Assert.That(LitPixelsRightOf(Pixels(), Dim / 2), Is.GreaterThan(before), "the line moved into view is drawn");
+        });
+    }
+
     [Test]
     public void ACopyElsewhere_BuildsTheWholeText()
     {

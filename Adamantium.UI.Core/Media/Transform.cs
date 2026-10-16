@@ -209,7 +209,20 @@ public class Transform : AnimatableUIComponent
             PruneHolders();
             lock (HoldersGate)
             {
-                return _holders is { Count: > 0 };
+                if (_holders == null)
+                {
+                    return false;
+                }
+
+                foreach (var weak in _holders)
+                {
+                    if (weak.TryGetTarget(out var holder) && holder.RedrawsItself)
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
             }
         }
     }
@@ -273,7 +286,9 @@ public class Transform : AnimatableUIComponent
 
     internal void Reparent()
     {
-        if (Owner != null || InheritanceParent is { } hung && hung is not ITransformHolder && ElementAbove(hung) != null)
+        if (Owner != null || InheritanceParent is { } hung && (hung is ITransformHolder holder
+                ? Holds(holder) && ReferenceEquals(holder.ParentFor(this), hung)
+                : ElementAbove(hung) != null))
         {
             return;
         }
@@ -288,21 +303,76 @@ public class Transform : AnimatableUIComponent
         Data.BindingEngine.RefreshBindings(this);
     }
 
-    internal void ReleaseFrom(AdamantiumComponent hanger)
+    internal void HangOn<T>(T hanger) where T : AdamantiumComponent, ITransformHolder
     {
-        if (hanger == null || !ReferenceEquals(InheritanceParent, hanger))
+        lock (HoldersGate)
+        {
+            if (!Holds(hanger))
+            {
+                (_holders ??= []).Add(new WeakReference<ITransformHolder>(hanger));
+            }
+        }
+
+        InheritanceParent = hanger;
+        Data.BindingEngine.RefreshBindings(this);
+    }
+
+    internal void ReleaseFrom<T>(T hanger) where T : AdamantiumComponent, ITransformHolder
+    {
+        lock (HoldersGate)
+        {
+            for (var i = (_holders?.Count ?? 0) - 1; i >= 0; i--)
+            {
+                if (!_holders[i].TryGetTarget(out var held) || ReferenceEquals(held, hanger))
+                {
+                    _holders.RemoveAt(i);
+                }
+            }
+        }
+
+        if (!ReferenceEquals(InheritanceParent, hanger))
         {
             return;
         }
 
-        InheritanceParent = Owner as AdamantiumComponent;
-        if (Owner == null)
+        InheritanceParent = Owner as AdamantiumComponent ?? HangerParent<T>() ?? HoldersParent();
+        Data.BindingEngine.RefreshBindings(this);
+    }
+
+    private AdamantiumComponent HangerParent<T>() where T : ITransformHolder
+    {
+        lock (HoldersGate)
         {
-            Reparent();
+            for (var i = (_holders?.Count ?? 0) - 1; i >= 0; i--)
+            {
+                if (_holders[i].TryGetTarget(out var holder) && holder is T && holder.ParentFor(this) is { } parent)
+                {
+                    return parent;
+                }
+            }
+
+            return null;
         }
-        else
+    }
+
+    private bool Holds(ITransformHolder holder)
+    {
+        lock (HoldersGate)
         {
-            Data.BindingEngine.RefreshBindings(this);
+            if (_holders == null)
+            {
+                return false;
+            }
+
+            foreach (var weak in _holders)
+            {
+                if (weak.TryGetTarget(out var held) && ReferenceEquals(held, holder))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
     }
 
@@ -372,12 +442,14 @@ public class Transform : AnimatableUIComponent
                 }
             }
 
+            var redrawn = false;
             foreach (var holder in live)
             {
                 holder.OnTransformChanged(this);
+                redrawn |= holder.RedrawsItself;
             }
 
-            return live.Count > 0;
+            return redrawn;
         }
         finally
         {

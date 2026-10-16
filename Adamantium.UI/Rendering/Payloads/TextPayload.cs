@@ -53,9 +53,11 @@ public class TextPayload(
     {
         if (newState is not TextPayload payload) return true;
 
+        // The glyphs do not carry their effects, which the shaders read from the table; but a long text builds all of
+        // them only while it has any.
         return DesiredSize != payload.DesiredSize || Text != payload.Text || TextLayout != payload.TextLayout ||
                Revision != payload.Revision || TextRenderingParameters != payload.TextRenderingParameters ||
-               !SameEffects(payload);
+               (Effects.Count > 0) != (payload.Effects.Count > 0);
     }
 
     private bool SameEffects(TextPayload other)

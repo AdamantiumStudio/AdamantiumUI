@@ -18,6 +18,8 @@ internal sealed class OverlayRebuildGate
 
     private long _seenPaintMarks;
 
+    private long _seenEffectMarks;
+
     private double _seenRenderScale;
 
     private long _seenReleases;
@@ -49,6 +51,14 @@ internal sealed class OverlayRebuildGate
         if (marks != _seenPaintMarks)
         {
             _seenPaintMarks = marks;
+            changed = true;
+        }
+
+        // ...and so do a text's glyph effects, which change without the text being drawn again.
+        var effects = scope?.TotalEffectMarks ?? 0;
+        if (effects != _seenEffectMarks)
+        {
+            _seenEffectMarks = effects;
             changed = true;
         }
 

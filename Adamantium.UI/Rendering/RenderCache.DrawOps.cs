@@ -684,6 +684,7 @@ public partial class RenderCache
         foreach (var unit in units)
         {
             NoteBandedText(unit);
+            NoteEffects(unit);
         }
 
         // The group's units have been rebuilt - added to, replaced in place, or dropped. Anything keeping a list derived
@@ -704,6 +705,7 @@ public partial class RenderCache
         if (unit is TextRenderUnit text)
         {
             _bandedText.Remove(text);
+            ReleaseEffects(text);
         }
 
         unit.DeferDispose();

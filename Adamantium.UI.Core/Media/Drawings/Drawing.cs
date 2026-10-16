@@ -10,7 +10,7 @@ namespace Adamantium.UI.Core.Media.Drawings;
 /// it is replayed straight into whatever session is drawing it (see <see cref="Render"/>), so the same drawing used at
 /// 16px and at 512px is one shared mesh drawn twice - crisp at both, and nothing to re-bake when a size or the DPI
 /// changes. That is the whole reason it exists next to <see cref="Imaging.ImageSource"/>.</summary>
-public abstract class Drawing : AdamantiumComponent
+public abstract class Drawing : AdamantiumComponent, ITransformHolder
 {
     private static readonly ConditionalWeakTable<AdamantiumComponent, WeakReference<AdamantiumComponent>> HungFrom = new();
 
@@ -61,7 +61,8 @@ public abstract class Drawing : AdamantiumComponent
     }
 
     /// <summary>Take this drawing, and everything it hung, off the component that showed it: the bindings inside stop
-    /// resolving against that component, and a transform a text effect also draws with passes to the effect.</summary>
+    /// resolving against that component, and a transform something else also draws with - another drawing, a text
+    /// effect - passes to it.</summary>
     public void Detach()
     {
         InheritanceParent = null;
@@ -79,7 +80,13 @@ public abstract class Drawing : AdamantiumComponent
     {
         if (owned == null) return;
 
-        if (owned is not Transform && owned.InheritanceParent is { } before && !ReferenceEquals(before, this))
+        if (owned is Transform transform)
+        {
+            transform.HangOn(this);
+            return;
+        }
+
+        if (owned.InheritanceParent is { } before && !ReferenceEquals(before, this))
         {
             var origin = before is Drawing && HungFrom.TryGetValue(owned, out var earlier)
                 && earlier.TryGetTarget(out var first)
@@ -123,6 +130,12 @@ public abstract class Drawing : AdamantiumComponent
         HungFrom.Remove(owned);
         BindingEngine.RefreshBindings(owned);
     }
+
+    bool ITransformHolder.RedrawsItself => false;
+
+    void ITransformHolder.OnTransformChanged(Transform transform) { }
+
+    AdamantiumComponent ITransformHolder.ParentFor(Transform transform) => InheritanceParent != null ? this : null;
 
     internal void ReplaceOwned(AdamantiumComponent previous, AdamantiumComponent next)
     {

@@ -173,6 +173,8 @@ public partial class RenderCache
         _appliedReleases = _packet.ReleasedBatches;
         _appliedDiscards = _packet.Discards;
         _appliedCompositorFrame = _packet.CompositorFrame;
+        CaptureEffects();
+        ApplyEffects(_packet);
         _packet.Reset(RenderBuildKind.Clean);
         _spare.Add(_packet);
         _packet = null;
@@ -244,6 +246,7 @@ public partial class RenderCache
             }
         }
 
+        CaptureEffects();
         _published.Enqueue(_packet);
         _packet = null;
     }
@@ -315,6 +318,7 @@ public partial class RenderCache
             NoteDrawnChain(draw.Component);
         }
 
+        ApplyEffects(packet);
         ReleaseSlotsOfUndrawn();
     }
 
