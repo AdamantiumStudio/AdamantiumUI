@@ -1,4 +1,11 @@
 <Language>
     <Phrase Key="Clear" Text="Очистить"/>
     <Phrase Key="ShowPassword" Text="Показать пароль"/>
+    <Phrase Key="Cut" Text="Вырезать"/>
+    <Phrase Key="Copy" Text="Копировать"/>
+    <Phrase Key="Paste" Text="Вставить"/>
+    <Phrase Key="SelectAll" Text="Выделить всё"/>
+    <Phrase Key="NoSuggestions" Text="Нет вариантов"/>
+    <Phrase Key="IgnoreAll" Text="Пропустить все"/>
+    <Phrase Key="AddToDictionary" Text="Добавить в словарь"/>
 </Language>

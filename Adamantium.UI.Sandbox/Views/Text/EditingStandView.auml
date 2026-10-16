@@ -20,33 +20,63 @@
                  Placeholder="{Localize TextStrings.YourName}" FloatingPlaceholder="{Binding FloatingWatermark}"/>
 
         <!-- Character casing: what is typed or pasted goes in upper case, by the rules of the box's language. -->
-        <TextBlock Text="{Localize TextStrings.UpperCaseTitle}" Margin="0,16,0,6"/>
-        <TextBox AutomationProperties.AutomationId="UpperCase" CharacterCasing="Upper"
-                 Width="520" HorizontalAlignment="Left"
+        <TextBlock Text="{Localize TextStrings.UpperCaseTitle}"
+                   Margin="0,16,0,6"/>
+        <TextBox AutomationProperties.AutomationId="UpperCase"
+                 CharacterCasing="Upper"
+                 Width="520"
+                 HorizontalAlignment="Left"
                  Placeholder="{Localize TextStrings.UpperCaseHint}"/>
 
         <!-- Text transform: the message above, in the case the buttons choose - bound, so the box and the label follow
              a switch at once; what is typed here reaches the message as typed. -->
-        <TextBlock Text="{Localize TextStrings.TextTransformTitle}" Margin="0,16,0,6"/>
-        <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+        <TextBlock Text="{Localize TextStrings.TextTransformTitle}"
+                   Margin="0,16,0,6"/>
+        <StackPanel Orientation="Horizontal"
+                    Margin="0,0,0,6">
             <RadioButton AutomationProperties.AutomationId="ShownAsIs"
-                         Classes="Toggle" GroupName="ShownCase" MarginRight="6"
+                         Classes="Toggle"
+                         GroupName="ShownCase"
+                         MarginRight="6"
                          Content="{Localize TextStrings.ShownAsIs}"
                          IsChecked="{Binding ShownCase, Converter={conv:EnumToBoolConverter}, ConverterParameter=None, Mode=TwoWay}"/>
             <RadioButton AutomationProperties.AutomationId="ShownUppercase"
-                         Classes="Toggle" GroupName="ShownCase" MarginRight="6"
+                         Classes="Toggle"
+                         GroupName="ShownCase"
+                         MarginRight="6"
                          Content="{Localize TextStrings.ShownUppercase}"
                          IsChecked="{Binding ShownCase, Converter={conv:EnumToBoolConverter}, ConverterParameter=Uppercase, Mode=TwoWay}"/>
             <RadioButton AutomationProperties.AutomationId="ShownLowercase"
-                         Classes="Toggle" GroupName="ShownCase"
+                         Classes="Toggle"
+                         GroupName="ShownCase"
                          Content="{Localize TextStrings.ShownLowercase}"
                          IsChecked="{Binding ShownCase, Converter={conv:EnumToBoolConverter}, ConverterParameter=Lowercase, Mode=TwoWay}"/>
         </StackPanel>
-        <TextBox AutomationProperties.AutomationId="ShownUpper" Text="{Binding Message, Mode=TwoWay}"
+        <TextBox AutomationProperties.AutomationId="ShownUpper"
+                 Text="{Binding Message, Mode=TwoWay}"
                  TextTransform="{Binding ShownCase}"
-                 Width="520" HorizontalAlignment="Left"/>
-        <TextBlock AutomationProperties.AutomationId="ShownLabel" Text="{Binding Message}"
-                   TextTransform="{Binding ShownCase}" Margin="0,6,0,0"/>
+                 Width="520"
+                 HorizontalAlignment="Left"/>
+        <TextBlock AutomationProperties.AutomationId="ShownLabel"
+                   Text="{Binding Message}"
+                   TextTransform="{Binding ShownCase}"
+                   Margin="0,6,0,0"/>
+
+        <!-- Spelling, tabs and lines: misspelled words get a wavy line and the menu offers corrections; Tab types a tab;
+             the box is three lines tall at least and six at most, then it scrolls. English, whatever the app's language. -->
+        <TextBlock Text="{Localize TextStrings.SpellingTitle}"
+                   Margin="0,16,0,6"/>
+        <TextBox AutomationProperties.AutomationId="Draft"
+                 Text="{Binding Draft, Mode=TwoWay}"
+                 SpellCheck.IsEnabled="True"
+                 Language="en-US"
+                 AcceptsReturn="True"
+                 AcceptsTab="True"
+                 TextWrapping="WrapByWords"
+                 MinLines="3"
+                 MaxLines="6"
+                 Width="520"
+                 HorizontalAlignment="Left"/>
 
         <!-- Password boxes: both bound two-way to the same Password, so typing in one shows in the other. -->
         <TextBlock Text="{Localize TextStrings.PasswordTitle}" Margin="0,16,0,6"/>

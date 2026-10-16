@@ -27,6 +27,30 @@
         <Setter Property="ClearButtonToolTip" Value="{Localize TextBoxStrings.Clear}"/>
     </Style>
 
+    <!-- The editing menu, one per box (x:Shared): a menu points at the box it opens on. Spelling rows come above these
+         while the spelling is checked. -->
+    <Style Selector="TextBox">
+        <Setter Property="ContextMenu">
+            <Setter.Value>
+                <ContextMenu x:Shared="False">
+                    <MenuItem Header="{Localize TextBoxStrings.Cut}"
+                              InputGestureText="Ctrl+X"
+                              TextBoxBase.EditAction="Cut"/>
+                    <MenuItem Header="{Localize TextBoxStrings.Copy}"
+                              InputGestureText="Ctrl+C"
+                              TextBoxBase.EditAction="Copy"/>
+                    <MenuItem Header="{Localize TextBoxStrings.Paste}"
+                              InputGestureText="Ctrl+V"
+                              TextBoxBase.EditAction="Paste"/>
+                    <Separator/>
+                    <MenuItem Header="{Localize TextBoxStrings.SelectAll}"
+                              InputGestureText="Ctrl+A"
+                              TextBoxBase.EditAction="SelectAll"/>
+                </ContextMenu>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <Style Selector="TextBox">
         <Setter Property="Template">
             <Setter.Value>

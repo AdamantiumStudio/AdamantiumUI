@@ -30,6 +30,7 @@ using Adamantium.UI.Core.Rendering;
 using Adamantium.UI.Platforms.Windows;
 using Adamantium.UI.Core.Resources;
 using Adamantium.UI.Core.RoutedEvents;
+using Adamantium.UI.Core.Text;
 using Adamantium.UI.EntityServices;
 using Adamantium.UI.Events;
 using Adamantium.UI.Controls;
@@ -640,6 +641,12 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         // A finger or a pen handed to the system, for checking the platform's own pointer path.
         if (!containerRegistry.IsRegistered<ISyntheticPointerInput>() && OperatingSystem.IsWindows())
             containerRegistry.RegisterSingleton<ISyntheticPointerInput, WindowsSyntheticPointerInput>();
+
+        // The system's spelling, for SpellCheck.IsEnabled; an application registers its own checker to use another.
+        if (!containerRegistry.IsRegistered<ISpellChecker>() && OperatingSystem.IsWindows())
+        {
+            containerRegistry.RegisterSingleton<ISpellChecker, WindowsSpellChecker>();
+        }
 
         // Where windows' places are kept between runs; an application registers its own store to keep them elsewhere.
         if (!containerRegistry.IsRegistered<IWindowPlacementStore>())

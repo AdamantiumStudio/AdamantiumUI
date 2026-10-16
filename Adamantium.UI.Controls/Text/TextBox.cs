@@ -19,6 +19,15 @@ public class TextBox : TextBoxBase
     public static readonly AdamantiumProperty AcceptsReturnProperty = AdamantiumProperty.Register(nameof(AcceptsReturn),
         typeof(bool), typeof(TextBox), new PropertyMetadata(false));
 
+    public static readonly AdamantiumProperty AcceptsTabProperty = AdamantiumProperty.Register(nameof(AcceptsTab),
+        typeof(bool), typeof(TextBox), new PropertyMetadata(false));
+
+    public static readonly AdamantiumProperty MinLinesProperty = AdamantiumProperty.Register(nameof(MinLines),
+        typeof(int), typeof(TextBox), new PropertyMetadata(1, PropertyMetadataOptions.AffectsMeasure));
+
+    public static readonly AdamantiumProperty MaxLinesProperty = AdamantiumProperty.Register(nameof(MaxLines),
+        typeof(int), typeof(TextBox), new PropertyMetadata(0, PropertyMetadataOptions.AffectsMeasure));
+
     public static readonly AdamantiumProperty CharacterCasingProperty = AdamantiumProperty.Register(
         nameof(CharacterCasing), typeof(CharacterCasing), typeof(TextBox), new PropertyMetadata(CharacterCasing.Normal));
 
@@ -57,6 +66,31 @@ public class TextBox : TextBoxBase
     {
         get => GetValue<bool>(AcceptsReturnProperty);
         set => SetValue(AcceptsReturnProperty, value);
+    }
+
+    /// <summary>The fewest lines the box is tall enough for, empty or not; 1 (default) leaves it to its text.</summary>
+    public int MinLines
+    {
+        get => GetValue<int>(MinLinesProperty);
+        set => SetValue(MinLinesProperty, value);
+    }
+
+    /// <summary>The most lines the box grows to; past them its text scrolls. 0 (default) lets it grow with its
+    /// text.</summary>
+    public int MaxLines
+    {
+        get => GetValue<int>(MaxLinesProperty);
+        set => SetValue(MaxLinesProperty, value);
+    }
+
+    protected override (int Least, int Most) LineLimits => (MinLines, MaxLines);
+
+    /// <summary>Whether Tab types a tab character instead of moving the focus on. Shift+Tab and Ctrl+Tab still move
+    /// it, so the keyboard always has a way out; a read-only box lets Tab move it too.</summary>
+    public bool AcceptsTab
+    {
+        get => GetValue<bool>(AcceptsTabProperty);
+        set => SetValue(AcceptsTabProperty, value);
     }
 
     /// <summary>The case given to what is typed or pasted, letter by letter as the box's <c>Language</c> maps it (else
@@ -143,6 +177,15 @@ public class TextBox : TextBoxBase
 
     protected override void OnUnhandledKey(KeyEventArgs e)
     {
+        const InputModifiers chords = InputModifiers.LeftControl | InputModifiers.RightControl | InputModifiers.LeftShift
+                                      | InputModifiers.RightShift | InputModifiers.LeftAlt | InputModifiers.RightAlt;
+        if (e.Key == Key.Tab && AcceptsTab && !IsReadOnly && (e.Modifiers & chords) == 0)
+        {
+            ReplaceSelection("\t", isTyping: true);
+            e.Handled = true;
+            return;
+        }
+
         if (e.Key == Key.Enter)
         {
             if (AcceptsReturn) ReplaceSelection("\n");

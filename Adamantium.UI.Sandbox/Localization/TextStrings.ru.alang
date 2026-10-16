@@ -20,6 +20,7 @@
     <Phrase Key="UpperCaseTitle" Text="Регистр символов (напечатанное и вставленное — заглавными):"/>
     <Phrase Key="UpperCaseHint" Text="Введите код"/>
     <Phrase Key="TextTransformTitle" Text="Показ в регистре через привязку (то же сообщение в выбранном регистре; само оно свой сохраняет):"/>
+    <Phrase Key="SpellingTitle" Text="Орфография, табуляция и строки (правый щелчок по слову с волнистой линией; высота от 3 до 6 строк):"/>
     <Phrase Key="ShownAsIs" Text="Как есть"/>
     <Phrase Key="ShownUppercase" Text="ЗАГЛАВНЫЕ"/>
     <Phrase Key="ShownLowercase" Text="строчные"/>
