@@ -343,19 +343,33 @@ public partial class TreeDataGrid : Selector
     protected override void ApplyItemsSource(IEnumerable newValue)
     {
         _roots = newValue;
+        _sourceChanges ??= new CrossThreadChanges<NotifyCollectionChangedEventArgs>(ApplySourceChange);
+        _sourceChanges.Clear();
+        _sourceChanges.TakeThisThread();
         Follow(nameof(_roots), _roots as INotifyCollectionChanged, OnSourceChanged);
 
         RebuildFlattener();
     }
 
+    private CrossThreadChanges<NotifyCollectionChangedEventArgs> _sourceChanges;
+
+    // Rows of the table's own making - a relation, a filter, a sort, groups - rather than its source's own list.
+    private bool MakesItsOwnRows => HasKeyRelation || Filter != null || HasColumnFilters || SortDescriptions.Count > 0
+                                    || GroupDescriptions.Count > 0;
+
+    private void OnSourceChanged(object sender, NotifyCollectionChangedEventArgs e)
+    {
+        if (!_sourceChanges.Defer(e)) ApplySourceChange(e);
+    }
+
     // A SHAPED view is a list of this control's own making, so the flattener's splices land on it and never on the
     // application's collection - a row removed while the table is sorted or filtered would stay on screen. Re-shaping is
     // the honest answer anyway: where a new row belongs depends on the sort.
-    private void OnSourceChanged(object sender, NotifyCollectionChangedEventArgs e)
+    private void ApplySourceChange(NotifyCollectionChangedEventArgs e)
     {
         // A relation made of keys is the whole TREE, not one row's place in it: a record arriving or leaving changes
         // what belongs to what, and the lookup that says so was worked out before it happened.
-        if (Filter != null || HasColumnFilters || SortColumn != null || HasKeyRelation)
+        if (MakesItsOwnRows)
         {
             RebuildFlattener();
             return;
@@ -398,16 +412,37 @@ public partial class TreeDataGrid : Selector
         // The relation is worked out ONCE, here, and asked afterwards: finding a record's children by scanning the list
         // would be a scan per branch opened, and on ten thousand rows that is the table stopping every time someone
         // opens one.
-        _relation = HasKeyRelation && _roots != null
-            ? DataGridKeyRelation.Build(_roots, KeyPath, ParentKeyPath)
-            : null;
+        // A table that makes rows of its own reads a source changed on another thread as a copy taken under the
+        // source's lock, and sorts the copy after letting it go: that thread must never wait on a sort. An unshaped
+        // table hands the source to the flattener, which follows it live.
+        object[] copy = null;
+        var count = 0;
+        if (MakesItsOwnRows)
+        {
+            using var gate = SourceGate.Hold(_roots);
+            copy = gate.Copy(_roots, out count);
+        }
 
-        _rawChildren = ChildrenSelector
-                       ?? (_relation != null ? _relation.ChildrenOf : TreeChildResolver.ForPath(ChildrenPath));
-        // Groups start shut like branches, since grouping is for folding; one the user opened comes back open (by path).
-        _flattener = new TreeFlattener(ShapedChildrenOf, IsGroupOpen, static _ => false, DetailsFor);
-        _shapedRoots = Group(Shape(_relation != null ? _relation.Roots : _roots));
-        _flattener.SetRoots(_shapedRoots);
+        try
+        {
+            var roots = copy == null ? _roots : new ArraySegment<object>(copy, 0, count);
+            _relation = HasKeyRelation && roots != null
+                ? DataGridKeyRelation.Build(roots, KeyPath, ParentKeyPath)
+                : null;
+
+            _rawChildren = ChildrenSelector
+                           ?? (_relation != null ? _relation.ChildrenOf : TreeChildResolver.ForPath(ChildrenPath));
+            // Groups start shut like branches, since grouping is for folding; one the user opened comes back open (by
+            // path).
+            _flattener = new TreeFlattener(ShapedChildrenOf, IsGroupOpen, static _ => false, DetailsFor);
+            _shapedRoots = Group(Shape(_relation != null ? _relation.Roots : roots));
+            _flattener.SetRoots(_shapedRoots);
+        }
+        finally
+        {
+            SourceGate.Return(copy);
+        }
+
         Follow(nameof(_flattener), _flattener.Clear);
         RebuildRowExceptions();
         Items.SetSource(_flattener.Rows);
@@ -1010,8 +1045,30 @@ public partial class TreeDataGrid : Selector
         return order;
     }
 
-    private IEnumerable ShapedChildrenOf(object node) =>
-        node is DataGridGroup group ? group.Children : Shape(_rawChildren(node));
+    private IEnumerable ShapedChildrenOf(object node)
+    {
+        if (node is DataGridGroup group) return group.Children;
+
+        var children = _rawChildren(node);
+        if (Filter == null && !HasColumnFilters && SortDescriptions.Count == 0) return children;
+
+        // Shaped from a copy taken under the children's lock, as the roots are.
+        object[] copy;
+        int count;
+        using (var gate = SourceGate.Hold(children))
+        {
+            copy = gate.Copy(children, out count);
+        }
+
+        try
+        {
+            return Shape(copy == null ? children : new ArraySegment<object>(copy, 0, count));
+        }
+        finally
+        {
+            SourceGate.Return(copy);
+        }
+    }
 
     /// <summary>Whether any column asks for a total. The footer band exists exactly when one does - a strip that is
     /// always there and always empty is a strip nobody wanted - so the theme hangs the band on this.</summary>

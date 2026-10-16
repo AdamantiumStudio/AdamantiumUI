@@ -10,13 +10,21 @@ namespace Adamantium.UI.Controls;
 /// The effective item list of an <see cref="ItemsControl"/>: either items authored directly in markup
 /// (<c>&lt;ItemsControl&gt;&lt;Button/&gt;…</c>) or a view over an assigned <c>ItemsSource</c>. While a source is set the
 /// collection is read-only (mutate the source instead), mirroring WPF. Raises <see cref="INotifyCollectionChanged"/>
-/// so the control regenerates containers. A source that raises its own change notifications is mirrored live.
+/// so the control regenerates containers. A source that raises its own change notifications is mirrored live - also
+/// one changed on another thread, a game world's entities: its changes are carried over to the UI thread in order.
 /// </summary>
 public sealed class ItemCollection : IList<object>, IReadOnlyList<object>, INotifyCollectionChanged
 {
     private readonly List<object> _direct = [];
     private IEnumerable _source;
     private List<object> _sourceSnapshot;
+
+    private readonly CrossThreadChanges<NotifyCollectionChangedEventArgs> _changes;
+
+    public ItemCollection()
+    {
+        _changes = new CrossThreadChanges<NotifyCollectionChangedEventArgs>(Apply);
+    }
 
     public event NotifyCollectionChangedEventHandler CollectionChanged;
 
@@ -44,33 +52,55 @@ public sealed class ItemCollection : IList<object>, IReadOnlyList<object>, INoti
     /// If the source raises <see cref="INotifyCollectionChanged"/> its changes are mirrored live and forwarded.</summary>
     internal void SetSource(IEnumerable source)
     {
-        if (_source is INotifyCollectionChanged oldObservable)
-            oldObservable.CollectionChanged -= OnSourceCollectionChanged;
-
+        LetGoOfSource();
+        _changes.TakeThisThread();
         _source = source;
-        _sourceSnapshot = source?.Cast<object>().ToList();
 
-        if (source is INotifyCollectionChanged observable)
-            observable.CollectionChanged += OnSourceCollectionChanged;
+        // Read and followed in one step under the source's lock: a change from another thread is either in what is read
+        // or arrives after it.
+        using (SourceGate.Hold(source))
+        {
+            _sourceSnapshot = source?.Cast<object>().ToList();
+
+            if (source is INotifyCollectionChanged observable)
+                observable.CollectionChanged += OnSourceCollectionChanged;
+        }
 
         Raise(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
     }
 
     internal void LetGoOfSource()
     {
-        if (_source is INotifyCollectionChanged observable)
+        // Under the source's lock, so a change from another thread being announced now is waiting already and dropped.
+        using (SourceGate.Hold(_source))
         {
-            observable.CollectionChanged -= OnSourceCollectionChanged;
+            if (_source is INotifyCollectionChanged observable)
+            {
+                observable.CollectionChanged -= OnSourceCollectionChanged;
+            }
+
+            _changes.Clear();
         }
 
         _source = null;
         _sourceSnapshot = null;
     }
 
-    // Mirror the source's change into the snapshot (so indexing stays correct), then forward the SAME args so the
-    // ItemsControl can update containers incrementally with the source's own indices.
     private void OnSourceCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
     {
+        if (!_changes.Defer(e)) Apply(e);
+    }
+
+    // Mirror the source's change into the snapshot (so indexing stays correct), then forward the SAME args so the
+    // ItemsControl can update containers incrementally with the source's own indices.
+    private void Apply(NotifyCollectionChangedEventArgs e)
+    {
+        if (_sourceSnapshot == null) return;
+
+        // A change that does not fit the snapshot - a source that announced it wrongly - is answered by reading the
+        // source again.
+        if (!Fits(e)) e = new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset);
+
         switch (e.Action)
         {
             case NotifyCollectionChangedAction.Add:
@@ -93,12 +123,47 @@ public sealed class ItemCollection : IList<object>, IReadOnlyList<object>, INoti
                 _sourceSnapshot.Insert(e.NewStartingIndex, moved);
                 break;
             case NotifyCollectionChangedAction.Reset:
-                _sourceSnapshot = _source?.Cast<object>().ToList() ?? [];
+                // What waits from another thread is in what is read here.
+                using (SourceGate.Hold(_source))
+                {
+                    _changes.Clear();
+                    _sourceSnapshot = _source?.Cast<object>().ToList() ?? [];
+                }
+
                 Raise(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
                 return;
         }
 
         Raise(e);
+    }
+
+    private bool Fits(NotifyCollectionChangedEventArgs e)
+    {
+        var count = _sourceSnapshot.Count;
+        switch (e.Action)
+        {
+            case NotifyCollectionChangedAction.Add:
+                return e.NewStartingIndex >= 0 && e.NewStartingIndex <= count;
+            case NotifyCollectionChangedAction.Remove:
+            case NotifyCollectionChangedAction.Replace:
+                return Holds(e.OldStartingIndex, e.OldItems);
+            case NotifyCollectionChangedAction.Move:
+                return Holds(e.OldStartingIndex, e.OldItems) && e.NewStartingIndex >= 0 && e.NewStartingIndex < count;
+            default:
+                return true;
+        }
+    }
+
+    private bool Holds(int index, IList items)
+    {
+        if (index < 0 || items == null || index + items.Count > _sourceSnapshot.Count) return false;
+
+        for (var i = 0; i < items.Count; i++)
+        {
+            if (!Equals(_sourceSnapshot[index + i], items[i])) return false;
+        }
+
+        return true;
     }
 
     public void Add(object item)

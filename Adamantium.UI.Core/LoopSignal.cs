@@ -25,6 +25,12 @@ public static class LoopSignal
     private static int _posted;
     private static long _requests;
 
+    private static int _loopThread;
+
+    /// <summary>Whether the calling thread is the one running the loop - the one that last ran <see cref="Drain"/>.
+    /// </summary>
+    public static bool IsLoopThread => Environment.CurrentManagedThreadId == Volatile.Read(ref _loopThread);
+
     /// <summary>True while a posted action waits for the loop.</summary>
     public static bool HasPostedWork => Volatile.Read(ref _posted) > 0;
 
@@ -90,6 +96,7 @@ public static class LoopSignal
     /// anything signaled while this frame runs queues a fresh one and becomes the wake for the next frame - never swallowed.</summary>
     public static void Drain()
     {
+        Volatile.Write(ref _loopThread, Environment.CurrentManagedThreadId);
         Interlocked.Exchange(ref _wakePending, 0);
         RunAwaited();
         while (Pipe.Reader.TryRead(out var action))

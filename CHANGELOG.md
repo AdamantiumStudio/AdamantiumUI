@@ -7,6 +7,13 @@ All packages share one version.
 
 ### Added
 
+- An `ItemsControl`, `TreeView` or `TreeDataGrid` follows a source changed on another thread - a game world adding
+  and removing its entities on its own loop: the changes are carried over to the UI thread and applied there in the
+  order they came, so no container is built on the world's thread. A source that makes and announces its changes under
+  its `SyncRoot` (the engine's `TrackingCollection`) is copied under that lock, so a list or a branch read while the
+  world changes it shows each item once; the rows are built from the copy after the lock is let go, so the world never
+  waits on them. A change that does not fit what the list holds reads the source again. A `DataPager` over such a
+  source is not covered.
 - Spelling checked in a text box, as WPF's `SpellCheck.IsEnabled`: set on a box or on any element above it, off by
   default. A misspelled word gets a wavy line (`TextBoxBase.MisspellingBrush`), and the box's menu offers, for the word
   under the pointer or at the caret, what it may have been meant as, "Ignore all" and "Add to dictionary". The words
@@ -1333,6 +1340,8 @@ All packages share one version.
 
 ### Fixed
 
+- A `TreeDataGrid` grouped by a column, with no sort or filter, shows a record added to its source or taken out of it.
+  Its groups are lists of its own making and were made again only for a sort, a filter or a key relation.
 - An `{Ancestor}` binding on a non-visual target - a line of an inspector, a behavior - resolves when the element
   holding it enters the visual tree later, or gets a parent there. It listened to its own logical attach only, which
   never comes when the element stands in a template: the logical news of a window stops at a template's edge.

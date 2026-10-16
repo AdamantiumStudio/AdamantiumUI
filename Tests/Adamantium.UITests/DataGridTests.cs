@@ -4086,6 +4086,21 @@ public class DataGridTests
         });
     }
 
+    // A grouped table's groups are lists of its own making, so a record added to the source reaches them only by
+    // grouping again - it did not, and the new record never showed.
+    [Test]
+    public void ARecordAddedToAGroupedTable_JoinsItsGroup()
+    {
+        var grid = GroupableGrid(0);
+        var rows = new ObservableCollection<Row>(Flat(4));
+        grid.ItemsSource = rows;
+        grid.GroupBy(grid.Columns[0]);
+
+        rows.Add(new Row { Name = "Item 5", Region = "east" });
+
+        Assert.That(grid.Rows.Count, Is.EqualTo(3), "a third group for the new region");
+    }
+
     // Grouping by a second column nests: the outer group's children are groups of their own, and only the innermost
     // hold rows. The order of GroupDescriptions is the order of the nesting, and each level opens on its own.
     [Test]

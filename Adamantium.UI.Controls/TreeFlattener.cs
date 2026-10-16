@@ -25,7 +25,10 @@ internal sealed class TreeFlattener
         _isExpanded = isExpanded ?? (static _ => false);
         _isSelected = isSelected ?? (static _ => false);
         _detailsOf = detailsOf ?? (static _ => null);
+        _changes = new CrossThreadChanges<(Subscription, NotifyCollectionChangedEventArgs)>(ApplyChildrenChange);
     }
+
+    private readonly CrossThreadChanges<(Subscription From, NotifyCollectionChangedEventArgs Change)> _changes;
 
     /// <summary>The visible rows in display order - the virtualized list binds to this.</summary>
     public FlatRowCollection Rows { get; } = [];
@@ -35,9 +38,10 @@ internal sealed class TreeFlattener
     {
         UnsubscribeAllNodes();
         Unsubscribe(null);
+        _changes.Clear();
+        _changes.TakeThisThread();
         _roots = roots;
-        Subscribe(null, roots);
-        Rows.ResetTo(BuildRows(roots, 0));
+        Rows.ResetTo(FollowAndBuild(null, roots, 0));
     }
 
     /// <summary>Detach every subscription (roots + expanded nodes) - called before this flattener is discarded so its
@@ -46,6 +50,7 @@ internal sealed class TreeFlattener
     {
         UnsubscribeAllNodes();
         Unsubscribe(null);
+        _changes.Clear();
         _roots = null;
     }
 
@@ -87,8 +92,7 @@ internal sealed class TreeFlattener
             return;
         }
 
-        Subscribe(row, children);
-        Rows.InsertMany(AfterDetailsOf(index), BuildRows(children, row.Depth + 1));
+        Rows.InsertMany(AfterDetailsOf(index), FollowAndBuild(row, children, row.Depth + 1));
     }
 
     // Where a row's children begin: after the row, and after the details panel it may have open - the panel belongs to
@@ -126,8 +130,20 @@ internal sealed class TreeFlattener
 
     // A node's (or the roots') children changed while it is expanded/visible: reconcile just that node's direct-child
     // region of the flat list. parent == null means the roots collection.
-    private void OnChildrenChanged(TreeRow parent, NotifyCollectionChangedEventArgs e)
+    private void OnChildrenChanged(Subscription from, NotifyCollectionChangedEventArgs e)
     {
+        if (!_changes.Defer((from, e))) ApplyChildrenChange((from, e));
+    }
+
+    private void ApplyChildrenChange((Subscription From, NotifyCollectionChangedEventArgs Change) change)
+    {
+        var (from, e) = change;
+        var parent = from.Parent;
+
+        // Carried over from another thread after the branch closed, or was read again, or the roots were let go of:
+        // what it says is no longer to be applied, or is in the rows already.
+        if (!ReferenceEquals(parent == null ? _rootsSub : _subs.GetValueOrDefault(parent), from)) return;
+
         if (parent != null && Rows.IndexOf(parent) < 0)
         {
             Unsubscribe(parent);   // parent scrolled out of existence
@@ -178,7 +194,7 @@ internal sealed class TreeFlattener
         if (parent == null)
         {
             UnsubscribeAllNodes();
-            Rows.ResetTo(BuildRows(_roots, 0));
+            Rows.ResetTo(FollowAndBuild(null, _roots, 0));
             return;
         }
 
@@ -192,7 +208,7 @@ internal sealed class TreeFlattener
         var from = AfterDetailsOf(index);
         UnsubscribeRange(from, end);
         Rows.RemoveMany(from, end - from);
-        Rows.InsertMany(from, BuildRows(_childrenOf(parent.Node), parent.Depth + 1));
+        Rows.InsertMany(from, FollowAndBuild(parent, _childrenOf(parent.Node), parent.Depth + 1));
     }
 
     // ---- Geometry over the flat list ----------------------------------------------------------------------------
@@ -283,11 +299,35 @@ internal sealed class TreeFlattener
         return -1;
     }
 
-    private List<TreeRow> BuildRows(IEnumerable items, int depth)
+    private List<TreeRow> FollowAndBuild(TreeRow parent, IEnumerable children, int depth)
     {
         var list = new List<TreeRow>();
-        AppendRows(list, items, depth);
+        FollowAndAppend(list, parent, children, depth);
         return list;
+    }
+
+    // Follows a children collection (null parent = the roots) and reads it in one step under its lock: a change from
+    // another thread is either in the rows built or comes after them, and one waiting for the subscription this
+    // replaces is not applied. Only the copy is taken under the lock; the rows are built after it is let go.
+    private void FollowAndAppend(List<TreeRow> list, TreeRow parent, IEnumerable children, int depth)
+    {
+        object[] copy;
+        int count;
+        using (var gate = SourceGate.Hold(children))
+        {
+            Unsubscribe(parent);
+            Subscribe(parent, children);
+            copy = gate.Copy(children, out count);
+        }
+
+        try
+        {
+            AppendRows(list, copy == null ? children : new ArraySegment<object>(copy, 0, count), depth);
+        }
+        finally
+        {
+            SourceGate.Return(copy);
+        }
     }
 
     // Flatten items at `depth`, RESTORING each node that the view-model still marks expanded (its row is built open and its
@@ -314,9 +354,7 @@ internal sealed class TreeFlattener
             if (hasChildren && _isExpanded(item))
             {
                 row.IsExpanded = true;
-                var children = _childrenOf(item);
-                Subscribe(row, children);
-                AppendRows(list, children, depth + 1);
+                FollowAndAppend(list, row, _childrenOf(item), depth + 1);
             }
         }
     }
@@ -347,9 +385,7 @@ internal sealed class TreeFlattener
             return;
         }
 
-        NotifyCollectionChangedEventHandler handler = (_, e) => OnChildrenChanged(parent, e);
-        incc.CollectionChanged += handler;
-        var sub = new Subscription(incc, handler);
+        var sub = new Subscription(this, parent, incc);
         if (parent == null)
         {
             _rootsSub = sub;
@@ -395,8 +431,25 @@ internal sealed class TreeFlattener
         _subs.Clear();
     }
 
-    private sealed class Subscription(INotifyCollectionChanged collection, NotifyCollectionChangedEventHandler handler)
+    // One following of one children collection: a change carries the subscription it came through, so one that waited
+    // while the branch was closed or read again is told from one that still applies.
+    private sealed class Subscription
     {
-        public void Detach() => collection.CollectionChanged -= handler;
+        private readonly TreeFlattener _owner;
+        private readonly INotifyCollectionChanged _collection;
+
+        public Subscription(TreeFlattener owner, TreeRow parent, INotifyCollectionChanged collection)
+        {
+            _owner = owner;
+            _collection = collection;
+            Parent = parent;
+            collection.CollectionChanged += OnChanged;
+        }
+
+        public TreeRow Parent { get; }
+
+        public void Detach() => _collection.CollectionChanged -= OnChanged;
+
+        private void OnChanged(object sender, NotifyCollectionChangedEventArgs e) => _owner.OnChildrenChanged(this, e);
     }
 }
