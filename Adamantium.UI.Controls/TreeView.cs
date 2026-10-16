@@ -38,6 +38,12 @@ public class TreeView : ItemsControl
     public static readonly AdamantiumProperty SelectedItemProperty = AdamantiumProperty.Register(nameof(SelectedItem),
         typeof(object), typeof(TreeView), new PropertyMetadata(null, OnSelectedItemChanged));
 
+    /// <summary>The member a node names its parent by - an entity's <c>Owner</c>. With it, a node written into
+    /// <see cref="SelectedItem"/> from outside is revealed: the branches above it are opened if it sits in a closed one,
+    /// and it is scrolled to. Without it such a node is selected only when its row is already shown.</summary>
+    public static readonly AdamantiumProperty ParentPathProperty = AdamantiumProperty.Register(nameof(ParentPath),
+        typeof(string), typeof(TreeView), new PropertyMetadata(null));
+
     /// <summary>Single (one node - the default), Multiple (each click toggles), or Extended (Ctrl/Shift like a list box).</summary>
     public static readonly AdamantiumProperty SelectionModeProperty = AdamantiumProperty.Register(nameof(SelectionMode),
         typeof(TreeViewSelectionMode), typeof(TreeView), new PropertyMetadata(TreeViewSelectionMode.Single));
@@ -114,6 +120,8 @@ public class TreeView : ItemsControl
     /// selects that node - null selects nothing at all.</summary>
     public object SelectedItem { get => GetValue<object>(SelectedItemProperty); set => SetValue(SelectedItemProperty, value); }
 
+    public string ParentPath { get => GetValue<string>(ParentPathProperty); set => SetValue(ParentPathProperty, value); }
+
     /// <summary>How many nodes may be selected and how clicks combine (Single, Multiple, Extended).</summary>
     public TreeViewSelectionMode SelectionMode { get => GetValue<TreeViewSelectionMode>(SelectionModeProperty); set => SetValue(SelectionModeProperty, value); }
 
@@ -189,6 +197,15 @@ public class TreeView : ItemsControl
                 _selectedRows.Add(row);
                 primary ??= row.Node;
             }
+        }
+
+        // The node chosen before the rows were made sits in a closed branch: opened to, rather than let go of.
+        if (primary == null && !string.IsNullOrEmpty(ParentPath) && SelectedItem is { } chosen
+            && Reveal(chosen) is { } revealed)
+        {
+            HoldOnly(revealed);
+            ScrollToWhenMeasured(revealed);
+            return;
         }
 
         Chosen(primary);
@@ -641,19 +658,71 @@ public class TreeView : ItemsControl
             return;
         }
 
-        if (_flattener?.Rows is not { } rows) return;
+        if (_flattener == null) return;
 
-        foreach (var row in rows)
-        {
-            if (!Equals(row.Node, node)) continue;
-            if (row.IsSelected && _selectedRows.Count == 1) return;
+        var revealing = !string.IsNullOrEmpty(ParentPath);
+        if ((RowOf(node) ?? (revealing ? Reveal(node) : null)) is not { } row) return;
 
-            ClearSelection();
-            Select(row);
-            SyncSelectionToContainers();
-            return;
-        }
+        HoldOnly(row);
+        if (revealing) ScrollToWhenMeasured(row);
     }
+
+    // The row alone selected, for a choice made outside - not told back. Asked of the selection, not of the row: a row
+    // built for a node its view-model already marks selected comes marked, and is still not the one the tree holds.
+    private void HoldOnly(TreeRow row)
+    {
+        if (_selectedRows.Count == 1 && _selectedRows.Contains(row)) return;
+
+        ClearSelection();
+        Select(row);
+        SyncSelectionToContainers();
+    }
+
+    // Branches opened just now are not measured yet, and a scroll now is held to the list as it was: it goes at the
+    // start of the next frame, after the layout that measures them.
+    private void ScrollToWhenMeasured(TreeRow row) => LoopSignal.Post(() => ScrollIntoView(row));
+
+    private TreeRow RowOf(object node)
+    {
+        foreach (var row in _flattener.Rows)
+        {
+            if (Equals(row.Node, node)) return row;
+        }
+
+        return null;
+    }
+
+    // Opens the branches above a node that has no row, from the nearest ancestor that has one down to the node's own
+    // parent. Null when no ancestor has a row: the node is not under these roots.
+    private TreeRow Reveal(object node)
+    {
+        var parentOf = TreeChildResolver.ForValuePath(ParentPath);
+        var above = new Stack<object>();
+        TreeRow row = null;
+        for (var parent = parentOf(node); parent != null && row == null; parent = parentOf(parent))
+        {
+            // A chain that comes round again has no top to open from.
+            if (Equals(parent, node) || above.Contains(parent)) return null;
+
+            above.Push(parent);
+            row = RowOf(parent);
+        }
+
+        if (row == null) return null;
+
+        above.Pop();
+        Open(row);
+        while (above.Count > 0)
+        {
+            if (RowOf(above.Pop()) is not { } next) return null;
+            Open(next);
+        }
+
+        return RowOf(node);
+    }
+
+    // As the keyboard opens one: through its container when it has one, so the expander shows it open and closes it.
+    private void Open(TreeRow row) => Expand(_flattener.Rows.IndexOf(row), row, true);
 
     // What the TREE decided, said without being told it back. A CURRENT value: a plain set lands at Local, which
     // outranks the binding this is usually read through - and a view-model that answered the pick and let it go could
