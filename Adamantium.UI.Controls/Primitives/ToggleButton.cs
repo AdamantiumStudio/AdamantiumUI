@@ -12,7 +12,8 @@ public class ToggleButton : ButtonBase
 {
     public static readonly AdamantiumProperty IsCheckedProperty = AdamantiumProperty.Register(nameof(IsChecked),
         typeof(bool?), typeof(ToggleButton),
-        new PropertyMetadata((bool?)false, PropertyMetadataOptions.AffectsRender, OnIsCheckedChanged));
+        new PropertyMetadata((bool?)false, PropertyMetadataOptions.AffectsRender | PropertyMetadataOptions.BindsTwoWayByDefault,
+            OnIsCheckedChanged));
 
     public static readonly AdamantiumProperty IsThreeStateProperty = AdamantiumProperty.Register(nameof(IsThreeState),
         typeof(bool), typeof(ToggleButton), new PropertyMetadata(false));
