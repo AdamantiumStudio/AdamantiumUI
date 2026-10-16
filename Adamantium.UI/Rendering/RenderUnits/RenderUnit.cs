@@ -1094,11 +1094,6 @@ public class TextRenderUnit : RenderUnit<TextPayload>
 
     internal bool HasBand => _band != null;
 
-    // A text drawn into its own target needs room there for wherever its effects take the glyphs.
-    internal bool RoomFor(IReadOnlyList<Adamantium.Graphics.Fonts.GlyphEffect> effects) =>
-        Adamantium.Graphics.Fonts.FontRenderer.UseDirectTextDraw || TextComponent is not { GlyphRun: { } run } text
-        || text.Padding >= run.PaddingFor(effects);
-
     internal bool FitBand(Matrix4x4F world, Rect shown, Rect band)
     {
         if (_band is not { } held)
@@ -1173,7 +1168,7 @@ public class TextRenderUnit : RenderUnit<TextPayload>
         var foreground = Payload.Foreground;
         var stroke = Payload.Stroke;
         // Between changes a brush hands out the SAME snapshot instance, so an unchanged block costs three reference
-        // compares - and never a needless re-rasterization of its render target.
+        // compares.
         if (Equals(tc.Background, background) && Equals(tc.Foreground, foreground) && Equals(tc.Stroke, stroke)) return;
 
         tc.UpdateColors(background, foreground, stroke);
@@ -1182,23 +1177,15 @@ public class TextRenderUnit : RenderUnit<TextPayload>
     public TextRenderUnit(IDrawCommand command, RenderUnitContext context) : base(command, context)
     {
         var run = Payload.TextLayout.BuildGlyphRun(GraphicsDevice, BandFor(Payload));
-        // Pad the text quad/RT so glyph effects (outline/glow, glyphs drawn apart) that reach beyond the body aren't
-        // clipped at the block edges. The body stays put: the rect is grown symmetrically (origin shifted by -pad), so
-        // its center - and thus mesh-local (0,0) where the text is anchored - is unchanged.
-        var pad = run.PaddingFor(Payload.Effects);
-        var ds = Payload.DesiredSize;
-        var rectangleGeometry = new RectangleGeometry(new Rect(-pad, -pad, ds.Width + 2 * pad, ds.Height + 2 * pad));
-        rectangleGeometry.ProcessGeometry(GeometryType.Solid);
         GeometryRenderer = new TextRenderComponent(GraphicsDevice,
             UIBasicEffect,
-            rectangleGeometry.Mesh,
-            ResourceFactory.GetFontRenderer(GraphicsDevice), 
+            ResourceFactory.GetFontRenderer(GraphicsDevice),
             Payload.TextLayout,
-            Payload.TextRenderingParameters, 
+            Payload.TextRenderingParameters,
             Payload.Background,
             Payload.Foreground,
             Payload.Stroke,
-            BufferManager) { Padding = pad };
+            BufferManager);
         GeometryRenderer.RenderData = DrawCommand.RenderData;
         GeometryRenderer.Owner = DrawCommand.Component;
         TextComponent.GlyphRun = run;   // freeze the shaped glyphs for the render-thread batch bake
@@ -1208,40 +1195,30 @@ public class TextRenderUnit : RenderUnit<TextPayload>
     {
         if (drawCommand.Payload is not TextPayload inputPayload) return;
 
-        if (Payload.RequiresBufferRebuild(inputPayload) || !RoomFor(inputPayload.Effects))
+        if (Payload.RequiresBufferRebuild(inputPayload))
         {
             var run = inputPayload.TextLayout.BuildGlyphRun(GraphicsDevice, BandFor(inputPayload));   // re-upload the (re-shaped) glyph buffer either way
 
-            // Same size, same params, same (re-shaped-in-place) layout instance: only the text content changed, so the
-            // render target is the same size - reuse it and just re-rasterize, instead of disposing the component and
-            // allocating a fresh render target. The live-text (counters/clocks) + recycled-list-row fast path; the RT
-            // allocation it skips is the dominant per-change cost. Mirrors the color-only UpdateColors path below.
+            // The same (re-shaped-in-place) layout drawn with the same params: keep the component, and its glyph buffer -
+            // the live-text (counters/clocks) and recycled-list-row fast path.
             if (GeometryRenderer is TextRenderComponent reuse
-                && Payload.DesiredSize == inputPayload.DesiredSize
                 && Payload.TextLayout == inputPayload.TextLayout
-                && Equals(Payload.TextRenderingParameters, inputPayload.TextRenderingParameters)
-                && (Adamantium.Graphics.Fonts.FontRenderer.UseDirectTextDraw
-                    || reuse.Padding >= run.PaddingFor(inputPayload.Effects)))
+                && Equals(Payload.TextRenderingParameters, inputPayload.TextRenderingParameters))
             {
-                reuse.UpdateText(inputPayload.Background, inputPayload.Foreground, inputPayload.Stroke);
+                reuse.UpdateColors(inputPayload.Background, inputPayload.Foreground, inputPayload.Stroke);
             }
             else
             {
-                var pad = run.PaddingFor(inputPayload.Effects);
-                var ds = inputPayload.DesiredSize;
-                var rectangleGeometry = new RectangleGeometry(new Rect(-pad, -pad, ds.Width + 2 * pad, ds.Height + 2 * pad));
-                rectangleGeometry.ProcessGeometry(GeometryType.Both);
                 GeometryRenderer?.DeferDispose();
                 GeometryRenderer = new TextRenderComponent(GraphicsDevice,
                     UIBasicEffect,
-                    rectangleGeometry.Mesh,
                     ResourceFactory.GetFontRenderer(GraphicsDevice),
                     inputPayload.TextLayout,
                     inputPayload.TextRenderingParameters,
                     inputPayload.Background,
                     inputPayload.Foreground,
                     inputPayload.Stroke,
-                    BufferManager) { Padding = pad };
+                    BufferManager);
             }
             // Glyphs were re-shaped in place (reuse) or a new component was built - refresh the frozen snapshot either way.
             TextComponent.GlyphRun = run;
@@ -1250,9 +1227,8 @@ public class TextRenderUnit : RenderUnit<TextPayload>
                  !Equals(Payload.Foreground, inputPayload.Foreground) ||
                  !Equals(Payload.Stroke, inputPayload.Stroke))
         {
-            // Geometry/layout unchanged - only the colors differ. Swap brushes and force a re-raster,
-            // reusing the existing render target (RequiresBufferRebuild ignores colors, so without this
-            // a color-only change would never repaint). Compared against the old Payload, before reassign.
+            // Layout unchanged - only the colors differ (RequiresBufferRebuild ignores colors). Compared against the old
+            // Payload, before reassign.
             ((TextRenderComponent)GeometryRenderer).UpdateColors(
                 inputPayload.Background, inputPayload.Foreground, inputPayload.Stroke);
         }

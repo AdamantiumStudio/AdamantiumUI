@@ -533,11 +533,6 @@ public partial class RenderCache
             _preRenderMachineryVersion = machinery;
         }
 
-        if (_transformTable is { HasEffectSlots: true } && _renderUnitFactory.GraphicsDevice is { } device)
-        {
-            _transformTable.EnsureResources(device);
-        }
-
         foreach (var unit in _preRenderUnits) unit.PreRender();
     }
 

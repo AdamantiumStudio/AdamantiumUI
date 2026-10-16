@@ -1333,6 +1333,9 @@ All packages share one version.
 
 ### Removed
 
+- Text drawn into a target of its own and laid over the element (the engine's `FontRenderer.UseDirectTextDraw` off):
+  nothing turned it on. `TextRenderComponent` draws the glyphs straight into the pass and is no image any more; its
+  `Padding` and `UpdateText` went with that path.
 - `WindowCommand.IconData` and `WindowCommand.Icon`: an icon is not path data in a view model; name a resource with
   `IconKey`.
 - `AumlAstTemplateNode.TemplateContent`, the template's markup written back out as text for every template parsed;

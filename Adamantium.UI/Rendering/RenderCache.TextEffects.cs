@@ -15,7 +15,6 @@ public partial class RenderCache
     private static readonly GlyphEffect ChainHead = new(0, 0, Matrix3x3F.Identity, false, null);
 
     private readonly List<IUIComponent> _effectDirtyBuffer = new();
-    private readonly List<GlyphEffect> _effectSlice = new();
 
     private void CaptureEffects()
     {
@@ -107,11 +106,9 @@ public partial class RenderCache
         }
 
         component.UseEffects(table, slots[0], last);
-        component.EffectsChanged();
 
-        // Glyphs packed before the chain was there carry no head, and a target too small for where the effects take the
-        // glyphs is made again, bigger.
-        if (!recordedWith && (fresh || !FontRenderer.UseDirectTextDraw && !text.RoomFor(Slice(values, first, count))))
+        // Glyphs packed before the chain was there carry no head.
+        if (fresh && !recordedWith)
         {
             text.Component.InvalidateRender(false);
         }
@@ -168,16 +165,5 @@ public partial class RenderCache
         text.EffectSlots = null;
         text.EffectClipSlots = null;
         text.TextComponent?.UseEffects(null, -1, -1);
-    }
-
-    private IReadOnlyList<GlyphEffect> Slice(IReadOnlyList<GlyphEffect> values, int first, int count)
-    {
-        _effectSlice.Clear();
-        for (var i = 0; i < count; i++)
-        {
-            _effectSlice.Add(values[first + i]);
-        }
-
-        return _effectSlice;
     }
 }
