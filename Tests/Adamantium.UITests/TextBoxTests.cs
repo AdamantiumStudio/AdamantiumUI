@@ -17,8 +17,89 @@ public class TextBoxTests
     private static void Type(TextBox tb, string text)
         => tb.RaiseEvent(new TextInputEventArgs(text) { RoutedEvent = Keyboard.TextInputEvent });
 
-    private static void Press(TextBox tb, Key key)
-        => tb.RaiseEvent(new KeyEventArgs(KeyboardDevice.CurrentDevice, key, InputModifiers.None, 0) { RoutedEvent = Keyboard.KeyDownEvent });
+    private static void Press(TextBox tb, Key key, InputModifiers modifiers = InputModifiers.None)
+        => tb.RaiseEvent(new KeyEventArgs(KeyboardDevice.CurrentDevice, key, modifiers, 0) { RoutedEvent = Keyboard.KeyDownEvent });
+
+    [Test]
+    public void CharacterCasing_GivesTypedTextItsCase()
+    {
+        var upper = new TextBox { CharacterCasing = CharacterCasing.Upper };
+        var lower = new TextBox { CharacterCasing = CharacterCasing.Lower };
+        Type(upper, "Abc");
+        Type(lower, "AbC");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(upper.Text, Is.EqualTo("ABC"));
+            Assert.That(lower.Text, Is.EqualTo("abc"));
+        });
+    }
+
+    [Test]
+    public void CharacterCasing_GivesPastedTextItsCase()
+    {
+        var box = new TextBox { CharacterCasing = CharacterCasing.Upper };
+        Clipboard.SetText("pasted Text");
+
+        Press(box, Key.V, InputModifiers.LeftControl);
+
+        Assert.That(box.Text, Is.EqualTo("PASTED TEXT"));
+    }
+
+    // Only what is entered: text from code or a binding is the model's, and the box does not rewrite it.
+    [Test]
+    public void CharacterCasing_LeavesTextSetFromCodeAsItIs()
+    {
+        var box = new TextBox { CharacterCasing = CharacterCasing.Upper, Text = "Kept" };
+        box.CaretIndex = 4;
+        Type(box, "x");
+
+        Assert.That(box.Text, Is.EqualTo("KeptX"));
+    }
+
+    // The case goes by the rules of the box's language: Turkish has a dotted capital i.
+    [TestCase("tr-TR", "İ")]
+    [TestCase(" tr-TR ", "İ")]
+    [TestCase("tr-u-co-trad", "İ")]
+    [TestCase("en-US", "I")]
+    [TestCase("not a language!", "I")]
+    public void CharacterCasing_GoesByTheBoxsLanguage(string language, string expected)
+    {
+        var box = new TextBox { CharacterCasing = CharacterCasing.Upper, Language = language };
+
+        Type(box, "i");
+
+        Assert.That(box.Text, Is.EqualTo(expected));
+    }
+
+    [Test]
+    public void CharacterCasing_GoesByTheApplicationsLanguageWhenTheBoxHasNone()
+    {
+        Adamantium.UI.Core.Localization.Languages.Current = "tr";
+        try
+        {
+            var box = new TextBox { CharacterCasing = CharacterCasing.Upper };
+
+            Type(box, "i");
+
+            Assert.That(box.Text, Is.EqualTo("İ"));
+        }
+        finally
+        {
+            Adamantium.UI.Core.Localization.Languages.Current = null;
+        }
+    }
+
+    [Test]
+    public void CharacterCasing_FollowsALanguageChangedLater()
+    {
+        var box = new TextBox { CharacterCasing = CharacterCasing.Upper, Language = "en" };
+        Type(box, "i");
+        box.Language = "tr";
+        Type(box, "i");
+
+        Assert.That(box.Text, Is.EqualTo("Iİ"));
+    }
 
     // A paragraph separator is a line break too: a single-line box takes it as a space, a multi-line one as a new line.
     [TestCase(false, "one two")]
