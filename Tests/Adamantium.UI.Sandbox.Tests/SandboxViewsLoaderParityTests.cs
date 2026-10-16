@@ -146,6 +146,16 @@ public class SandboxViewsLoaderParityTests
             return;
         }
 
+        if (a is Array aa && b is Array ab && a.GetType().GetElementType()!.IsPrimitive)
+        {
+            if (!Bytes(aa).SequenceEqual(Bytes(ab)))
+            {
+                differences.Add($"{path}: the {aa.Length} values differ");
+            }
+
+            return;
+        }
+
         if (a is AdamantiumComponent ca && b is AdamantiumComponent cb)
         {
             foreach (var property in SlottedProperties(ca).Union(SlottedProperties(cb)).OrderBy(p => p.Name))
@@ -231,6 +241,10 @@ public class SandboxViewsLoaderParityTests
             }
         }
     }
+
+    private static ReadOnlySpan<byte> Bytes(Array array) =>
+        System.Runtime.InteropServices.MemoryMarshal.CreateReadOnlySpan(
+            ref System.Runtime.InteropServices.MemoryMarshal.GetArrayDataReference(array), Buffer.ByteLength(array));
 
     private static string Describe(object value) => value == null ? "null" : $"{value} ({value.GetType().Name})";
 
