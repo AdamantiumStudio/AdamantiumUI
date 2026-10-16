@@ -37,6 +37,7 @@ public sealed class AutomationExecutor
 
     private const int MostFingers = 10;
     private const char LineSeparator = (char)0x2028;
+    private const char ParagraphSeparator = (char)0x2029;
 
     private readonly IAutomationHost _host;
 
@@ -665,7 +666,7 @@ public sealed class AutomationExecutor
         return start + column - 1;
     }
 
-    private static bool IsLineBreak(char character) => character is '\n' or '\r' or LineSeparator;
+    private static bool IsLineBreak(char character) => character is '\n' or '\r' or LineSeparator or ParagraphSeparator;
 
     private static void SetValue(AutomationPeer peer, string value)
     {

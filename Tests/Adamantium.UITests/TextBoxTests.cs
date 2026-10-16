@@ -20,6 +20,22 @@ public class TextBoxTests
     private static void Press(TextBox tb, Key key)
         => tb.RaiseEvent(new KeyEventArgs(KeyboardDevice.CurrentDevice, key, InputModifiers.None, 0) { RoutedEvent = Keyboard.KeyDownEvent });
 
+    // A paragraph separator is a line break too: a single-line box takes it as a space, a multi-line one as a new line.
+    [TestCase(false, "one two")]
+    [TestCase(true, "one\ntwo")]
+    public void APastedParagraphSeparator_IsALineBreak(bool acceptsReturn, string expected)
+    {
+        var tb = new TextBox { AcceptsReturn = acceptsReturn };
+        Clipboard.SetText("one" + (char)0x2029 + "two");
+
+        tb.RaiseEvent(new KeyEventArgs(KeyboardDevice.CurrentDevice, Key.V, InputModifiers.LeftControl, 0)
+        {
+            RoutedEvent = Keyboard.KeyDownEvent,
+        });
+
+        Assert.That(tb.Text, Is.EqualTo(expected));
+    }
+
     [Test]
     public void Typing_InsertsAtCaret()
     {
