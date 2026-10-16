@@ -20,6 +20,7 @@ public class Span : Inline
             if (_inlines == null)
             {
                 _inlines = [];
+                _inlines.Admit = Admit;
                 _inlines.CollectionChanged += OnInlinesChanged;
             }
 
@@ -42,14 +43,6 @@ public class Span : Inline
         {
             foreach (Inline added in e.NewItems)
             {
-                for (IFundamentalUIComponent at = this; at != null; at = at.LogicalParent)
-                {
-                    if (ReferenceEquals(at, added))
-                    {
-                        throw new InvalidOperationException("A span cannot hold itself or a span it is in.");
-                    }
-                }
-
                 AddLogicalChild(added);
                 added.Changed += OnInlineChanged;
             }
@@ -59,4 +52,20 @@ public class Span : Inline
     }
 
     private void OnInlineChanged(object sender, EventArgs e) => RaiseChanged();
+
+    private void Admit(Inline added)
+    {
+        for (IFundamentalUIComponent at = this; at != null; at = at.LogicalParent)
+        {
+            if (ReferenceEquals(at, added))
+            {
+                throw new InvalidOperationException("A span cannot hold itself or a span it is in.");
+            }
+        }
+
+        if (added is Paragraph)
+        {
+            throw new InvalidOperationException("A paragraph stands only directly in a TextBlock, not in a span.");
+        }
+    }
 }

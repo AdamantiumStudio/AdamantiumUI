@@ -1,3 +1,4 @@
+using System;
 using System.Collections.ObjectModel;
 using Adamantium.UI.Core;
 
@@ -10,6 +11,21 @@ namespace Adamantium.UI.Controls.Text;
 [ContentWrapper(WrapperType = typeof(Run))]
 public class InlineCollection : ObservableCollection<Inline>
 {
+    // The owner's say on an inline before it is in: it throws for one it cannot hold.
+    internal Action<Inline> Admit { get; set; }
+
+    protected override void InsertItem(int index, Inline item)
+    {
+        Admit?.Invoke(item);
+        base.InsertItem(index, item);
+    }
+
+    protected override void SetItem(int index, Inline item)
+    {
+        Admit?.Invoke(item);
+        base.SetItem(index, item);
+    }
+
     protected override void ClearItems()
     {
         for (var i = Count - 1; i >= 0; i--)

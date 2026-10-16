@@ -140,6 +140,75 @@ public class InlineSpansMarkupTests
         Assert.That(((Run)((Bold)text.Inlines[1]).Inlines[0]).Text, Is.EqualTo("after"));
     }
 
+    private const string Paragraphs =
+        "<TextBlock " + Namespaces + ">\n" +
+        "    loose <Bold>words</Bold>\n" +
+        "    <Paragraph Margin=\"10,4,20,8\" TextIndent=\"-12\" LineHeight=\"30\" HorizontalTextAlignment=\"Right\">\n" +
+        "        first   paragraph\n" +
+        "    </Paragraph>\n" +
+        "    <Paragraph>second <Italic>one</Italic></Paragraph>\n" +
+        "    tail\n" +
+        "</TextBlock>";
+
+    [Test]
+    public void Paragraphs_Compile()
+    {
+        var errors = AumlCodegenHarness.Compile(
+            "<Window " + Namespaces + ">" + Paragraphs.Replace(" " + Namespaces, string.Empty) + "</Window>");
+
+        Assert.That(errors, Is.Empty, AumlCodegenHarness.Errors(errors));
+    }
+
+    // White space at a paragraph's edges is no text, as around a block in HTML; a space between words stays.
+    [Test]
+    public void Paragraphs_AreLoaded_WithNoSpaceAtTheirEdges()
+    {
+        var result = AumlLoader.Load(Paragraphs);
+
+        Assert.That(result.Diagnostics, Is.Empty, string.Join(" | ", result.Diagnostics));
+        var inlines = ((TextBlock)result.Root).Inlines;
+        Assert.That(inlines.Select(inline => inline.GetType()),
+            Is.EqualTo(new[] { typeof(Run), typeof(Bold), typeof(Paragraph), typeof(Paragraph), typeof(Run) }));
+        Assert.That(((Run)inlines[0]).Text, Is.EqualTo("loose "));
+        var first = (Paragraph)inlines[2];
+        Assert.That(((Run)first.Inlines.Single()).Text, Is.EqualTo("first paragraph"));
+        Assert.That(first.Margin, Is.EqualTo(new Adamantium.Mathematics.Thickness(10, 4, 20, 8)));
+        Assert.That(first.TextIndent, Is.EqualTo(-12));
+        Assert.That(first.LineHeight, Is.EqualTo(30));
+        Assert.That(first.HorizontalTextAlignment, Is.EqualTo(Adamantium.Graphics.Fonts.HorizontalTextAlignment.Right));
+        Assert.That(((Run)((Paragraph)inlines[3]).Inlines[0]).Text, Is.EqualTo("second "));
+        Assert.That(((Run)inlines[4]).Text, Is.EqualTo("tail"));
+    }
+
+    [Test]
+    public void ANullableEnum_IsSetByTheDesignersLoader_WithNoWarning()
+    {
+        var result = AumlLoader.Load("<TextBlock " + Namespaces + "><Run BaselineAlignment=\"Top\">x</Run></TextBlock>");
+
+        Assert.That(result.Diagnostics, Is.Empty, string.Join(" | ", result.Diagnostics));
+        Assert.That(((Run)((TextBlock)result.Root).Inlines[0]).BaselineAlignment,
+            Is.EqualTo(Adamantium.Graphics.Fonts.BaselineAlignment.Top));
+    }
+
+    [TestCase("<TextBlock><Bold><Paragraph>x</Paragraph></Bold></TextBlock>", "Bold")]
+    [TestCase("<TextBlock><Paragraph><Paragraph>x</Paragraph></Paragraph></TextBlock>", "Paragraph")]
+    [TestCase("<TextBlock><TextBlock.Inlines><Span><Span.Inlines><Paragraph/></Span.Inlines></Span></TextBlock.Inlines></TextBlock>", "Span")]
+    public void AParagraphInsideASpan_IsReportedWhereItStands(string body, string span)
+    {
+        AumlCodegenHarness.Generate("<Window " + Namespaces + ">" + body + "</Window>", out var errors);
+
+        Assert.That(errors.Select(e => e.GetMessage()), Has.Some.Contains("A Paragraph cannot stand in a " + span));
+    }
+
+    [Test]
+    public void AParagraphInsideASpan_IsReportedByTheDesignersLoaderToo()
+    {
+        var result = AumlLoader.Load("<TextBlock " + Namespaces + "><Bold><Paragraph>x</Paragraph></Bold></TextBlock>");
+
+        Assert.That(result.Diagnostics.Select(diagnostic => diagnostic.ToString()),
+            Has.Some.Contains("A Paragraph cannot stand in a Bold"));
+    }
+
     [Test]
     public void TheDesignersLoader_BuildsTheSameNesting()
     {

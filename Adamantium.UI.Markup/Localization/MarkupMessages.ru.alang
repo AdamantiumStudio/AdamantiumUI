@@ -34,6 +34,7 @@
     <Phrase Key="ReadOnlyProperty" Text="{type}.{property} только для чтения: разметка не может его задать"/>
     <Phrase Key="OneValue" Text="{property} принимает одно значение: это заменило бы предыдущее"/>
     <Phrase Key="WrongValueType" Text="{value} - это не {type}: {property} принимает {type}"/>
+    <Phrase Key="ParagraphInsideSpan" Text="Paragraph не может стоять в {span}: абзац стоит прямо в TextBlock"/>
     <Phrase Key="TemplateTakesOne" Text="{type} строит один элемент, свой корень: этот был бы пропущен"/>
     <Phrase Key="NoPlaceForChild" Text="В {type} некуда поместить дочерний элемент: у него нет свойства содержимого, и он не контейнер"/>
     <Phrase Key="ContentSetTwice" Text="{type}.{property} уже задано: дочерний элемент задал бы его снова"/>

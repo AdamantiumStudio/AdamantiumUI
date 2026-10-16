@@ -23,7 +23,8 @@ public static class TypeParserCheck
     /// <summary>True when generated code may parse a markup string into <paramref name="type"/>.</summary>
     public static bool CanParse(IResolvedType type)
     {
-        if (type.IsGenericType && type.Name == "Nullable")
+        // Roslyn names it Nullable, reflection Nullable`1.
+        if (type.IsGenericType && type.Name is "Nullable" or "Nullable`1")
         {
             type = type.TypeArguments.FirstOrDefault() ?? type;
         }

@@ -14,6 +14,8 @@ internal sealed class MarkupStructureCheck
     private const string ContentAttribute = "Adamantium.UI.Core.ContentAttribute";
     private const string UiTemplate = "Adamantium.UI.Core.Templates.UiTemplate";
     private const string BindingBase = "Adamantium.UI.Core.Data.BindingBase";
+    private const string Span = "Adamantium.UI.Controls.Text.Span";
+    private const string Paragraph = "Adamantium.UI.Controls.Text.Paragraph";
 
     private static readonly Regex Identifier = new("^[A-Za-z_][A-Za-z0-9_]*$", RegexOptions.Compiled);
 
@@ -148,7 +150,7 @@ internal sealed class MarkupStructureCheck
         {
             if (propertyType.IsCollection())
             {
-                Items(values, propertyType, reference.Name);
+                Items(type, values, propertyType, reference.Name);
             }
 
             return;
@@ -209,7 +211,7 @@ internal sealed class MarkupStructureCheck
 
             if (content.PropertyType.IsCollection())
             {
-                Items(children, content.PropertyType, content.Name);
+                Items(type, children, content.PropertyType, content.Name);
                 return;
             }
 
@@ -244,7 +246,7 @@ internal sealed class MarkupStructureCheck
         return kept ?? (IReadOnlyList<AumlAstObjectNode>)Array.Empty<AumlAstObjectNode>();
     }
 
-    private void Items(IEnumerable<AumlAstObjectNode> items, IResolvedType collection, string property)
+    private void Items(IResolvedType owner, IEnumerable<AumlAstObjectNode> items, IResolvedType collection, string property)
     {
         if (ItemTypeOf(collection) is not { TypeKind: ResolvedTypeKind.Class or ResolvedTypeKind.Interface } item)
         {
@@ -253,9 +255,18 @@ internal sealed class MarkupStructureCheck
 
         foreach (var element in items)
         {
-            if (TypeOf(element) is { } type && !PropertyValues.Fits(type, item))
+            if (TypeOf(element) is not { } type)
+            {
+                continue;
+            }
+
+            if (!PropertyValues.Fits(type, item))
             {
                 Report(MarkupMessages.WrongValueType(type.Name, item.Name, property), element);
+            }
+            else if (type.IsAssignableTo(Paragraph) && owner.IsAssignableTo(Span))
+            {
+                Report(MarkupMessages.ParagraphInsideSpan(owner.Name), element);
             }
         }
     }

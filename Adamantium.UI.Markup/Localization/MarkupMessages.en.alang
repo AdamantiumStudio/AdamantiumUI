@@ -35,6 +35,7 @@
     <Phrase Key="OneValue" Text="{property} takes one value: this one would replace the one before it"/>
     <Phrase Key="WrongValueType" Text="{value} is not a {type}: {property} takes a {type}"/>
     <Phrase Key="TemplateTakesOne" Text="{type} builds one element, its root: this one would be left out"/>
+    <Phrase Key="ParagraphInsideSpan" Text="A Paragraph cannot stand in a {span}: a paragraph stands directly in a TextBlock"/>
     <Phrase Key="NoPlaceForChild" Text="{type} has no place for a child: it has no content property and is no container"/>
     <Phrase Key="ContentSetTwice" Text="{type}.{property} is set already: a child would set it again"/>
     <Phrase Key="NoPlaceForText" Text="{type} takes no text: only a value type, a number or a Thickness, is written as its text"/>
