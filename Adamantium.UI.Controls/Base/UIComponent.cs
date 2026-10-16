@@ -122,7 +122,15 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
         {
             FocusManager.LeaveHidden(component);
         }
+
+        if (previous == Visibility.Collapsed)
+        {
+            component.OnUncollapsed();
+        }
     }
+
+    /// <summary>The element stopped being collapsed and takes a place in the layout again.</summary>
+    internal virtual void OnUncollapsed() { }
       
     public static readonly AdamantiumProperty IsHitTestVisibleProperty =
         AdamantiumProperty.Register(nameof(IsHitTestVisible),

@@ -998,6 +998,12 @@ All packages share one version.
 
 ### Changed
 
+- A collapsed control builds its template the first time it is shown, not when it is themed, and keeps it when it is
+  collapsed again (`TemplatedUIComponent.DeferTemplate` is true while collapsed). The scroll viewers of the three
+  themes start their bars collapsed, and an `Auto` bar waits for a viewport before it shows. A bar with nothing to
+  scroll now builds nothing: every text box and list carried two such bars, and the infinite canvas went from 1029
+  elements to 807. A content control collapsed when it is themed has no presenter until it is shown, so its content
+  joins the logical tree - its data context, its view model, `Loaded` - then too.
 - Nothing in the UI derives from `PropertyChangedBase` any more, on the way to its removal from the engine: the canvas
   items (`ElementItem`, `ShapeItem`, `PathItem`, `CurveItem`, `StrokeItem`, `TextItem`, `GroupItem`, `ConnectionItem`,
   `CanvasFrameItem`, `CanvasSelectionFrame`) derive from `AdamantiumViewModel`, which keeps `SetProperty` and
@@ -1282,6 +1288,9 @@ All packages share one version.
 
 ### Fixed
 
+- Content that stretches, adopted by a `ContentPresenter` after a deferred build, fills the presenter. The layout pass
+  could arrange it on its own first, into its desired size, and the presenter's next arrange at its old size took that
+  for "nothing changed": a page opened for the first time stayed as tall as its content asked.
 - The application goes idle again after a visual brush or a visual snapshot was drawn: a recolor kept for the next record
   is kept for the loop frame of the record that missed it only. The one-off record of a snapshot went through the shared
   scope, and every later recolor in it outlived every clear, so the loop never stopped recording.

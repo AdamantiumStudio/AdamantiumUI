@@ -699,9 +699,11 @@ public class ContentPresenter : InputUIComponent
     protected override Size ArrangeOverride(Size finalSize)
     {
         // A pending transition is not "nothing changed": a kept view comes back arrange-valid at the same size, and
-        // skipping swallowed its entrance.
+        // skipping swallowed its entrance. Nor is a root arranged into another slot - one adopted after a deferred build
+        // was arranged on its own, into its desired size.
         if (!_transitionPending && !_lastContentRebuilt
-            && _currentRoot is IMeasurableComponent { IsArrangeValid: true } && finalSize == _lastArrangeSize)
+            && _currentRoot is IMeasurableComponent { IsArrangeValid: true } root && finalSize == _lastArrangeSize
+            && root.PreviousArrangeSlot == new Rect(finalSize))
             return finalSize;
 
         _lastArrangeSize = finalSize;

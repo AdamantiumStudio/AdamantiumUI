@@ -464,7 +464,7 @@ public class ScrollViewer : ContentControl
     private static Visibility ComputeVisibility(ScrollBarVisibility mode, double extent, double viewport) => mode switch
     {
         ScrollBarVisibility.Visible => Visibility.Visible,
-        ScrollBarVisibility.Auto => extent > viewport + 0.5 ? Visibility.Visible : Visibility.Collapsed,
+        ScrollBarVisibility.Auto => viewport > 0 && extent > viewport + 0.5 ? Visibility.Visible : Visibility.Collapsed,
         _ => Visibility.Collapsed   // Disabled, Hidden: no bar (Hidden still scrolls via wheel/programmatic)
     };
 

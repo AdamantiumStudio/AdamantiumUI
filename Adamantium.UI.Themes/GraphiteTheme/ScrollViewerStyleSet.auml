@@ -15,17 +15,20 @@
                                 Content="{TemplateBinding Content}"
                                 ContentTemplate="{TemplateBinding ContentTemplate}"/>
                         <!-- Each bar spans its whole edge and insets only while the other bar shows (see the trigger
-                             below). -->
+                             below). Both start collapsed, so a bar with nothing to scroll builds nothing; the viewer
+                             shows the one there is something to scroll for. -->
                         <ScrollBar
                                 x:Name="PART_VerticalScrollBar"
                                 Orientation="Vertical"
                                 HorizontalAlignment="Right"
-                                VerticalAlignment="Stretch"/>
+                                VerticalAlignment="Stretch"
+                                Visibility="Collapsed"/>
                         <ScrollBar
                                 x:Name="PART_HorizontalScrollBar"
                                 Orientation="Horizontal"
                                 VerticalAlignment="Bottom"
-                                HorizontalAlignment="Stretch"/>
+                                HorizontalAlignment="Stretch"
+                                Visibility="Collapsed"/>
                         <!-- The square where they cross. A part of its own rather than one bar being let run over it:
                              the vertical bar covering the corner also let its THUMB travel into it, so the thumb could
                              come to rest beside the horizontal bar instead of stopping above it. These bars are always
