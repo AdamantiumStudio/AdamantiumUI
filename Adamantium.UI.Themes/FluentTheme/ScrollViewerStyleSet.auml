@@ -20,12 +20,15 @@
                         <!-- Each bar runs its WHOLE edge, and is shortened only when the other one is actually there -
                              see the IsScrollBarCornerOccupied trigger below. The inset used to be written here, on the
                              horizontal bar, unconditionally: a viewer with only a horizontal bar then stopped it short
-                             of the right edge to clear a vertical bar that was not showing. -->
+                             of the right edge to clear a vertical bar that was not showing.
+                             Both start collapsed, so a bar with nothing to scroll builds nothing; the viewer shows the
+                             one there is something to scroll for. -->
                         <ScrollBar
                             x:Name="PART_VerticalScrollBar"
                             Orientation="Vertical"
                             HorizontalAlignment="Right"
                             VerticalAlignment="Stretch"
+                            Visibility="Collapsed"
                             Opacity="0"
                             IsHitTestVisible="False"/>
                         <ScrollBar
@@ -33,6 +36,7 @@
                             Orientation="Horizontal"
                             VerticalAlignment="Bottom"
                             HorizontalAlignment="Stretch"
+                            Visibility="Collapsed"
                             Opacity="0"
                             IsHitTestVisible="False"/>
                         <!-- The corner is its own part, so the vertical thumb stops above the horizontal bar; shown only

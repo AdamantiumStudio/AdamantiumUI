@@ -483,8 +483,15 @@ public class ContentPresenter : InputUIComponent
         }
 
         RemoveVisualChild(visual);
-        RemoveLogicalChild(visual);
+        Unhost(visual);
         built?.Destroy();
+    }
+
+    // A control's content let go here goes back to the control while it cannot be shown - see ContentControl.HoldIfHidden.
+    private void Unhost(IUIComponent root)
+    {
+        RemoveLogicalChild(root);
+        if (ContentControl.IsLentContent(root)) ((UIComponent)root).ContentOwner.HoldIfHidden();
     }
 
     /// <summary>Destroyed: lets the content go, since a root held only by these fields cannot be reached otherwise.</summary>
@@ -541,7 +548,7 @@ public class ContentPresenter : InputUIComponent
     {
         if (root == null || !IsVisualChild(root)) return;
         RemoveVisualChild(root);
-        RemoveLogicalChild(root);
+        Unhost(root);
     }
 
     /// <summary>Lets go of its content once that is released while this presenter lives on: the fields naming the root
@@ -699,9 +706,11 @@ public class ContentPresenter : InputUIComponent
     protected override Size ArrangeOverride(Size finalSize)
     {
         // A pending transition is not "nothing changed": a kept view comes back arrange-valid at the same size, and
-        // skipping swallowed its entrance.
+        // skipping swallowed its entrance. Nor is a root arranged into another slot - one adopted after a deferred build
+        // was arranged on its own, into its desired size.
         if (!_transitionPending && !_lastContentRebuilt
-            && _currentRoot is IMeasurableComponent { IsArrangeValid: true } && finalSize == _lastArrangeSize)
+            && _currentRoot is IMeasurableComponent { IsArrangeValid: true } root && finalSize == _lastArrangeSize
+            && root.PreviousArrangeSlot == new Rect(finalSize))
             return finalSize;
 
         _lastArrangeSize = finalSize;

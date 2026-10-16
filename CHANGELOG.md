@@ -1015,6 +1015,16 @@ All packages share one version.
 
 ### Changed
 
+- A collapsed control builds its template the first time it is shown, not when it is themed, and keeps it when it is
+  collapsed again (`TemplatedUIComponent.DeferTemplate` is true while collapsed). The scroll viewers of the three
+  themes start their bars collapsed, and an `Auto` bar waits for a viewport before it shows. A bar with nothing to
+  scroll now builds nothing: every text box and list carried two such bars, and the infinite canvas went from 1029
+  elements to 807.
+- The content of a collapsed content control waits as the control's logical child while nothing shows it - no
+  presenter yet, a presenter that is not laid out, one a theme swap let go of: it inherits its data context and gets its
+  view model as if shown. Whatever shows it takes it from there, and with it the colors and the font the control's
+  state gives it, as before. A tab's page is not held - the tab strip shows it - and a discarded control lets go of
+  what it held.
 - Nothing in the UI derives from `PropertyChangedBase` any more, on the way to its removal from the engine: the canvas
   items (`ElementItem`, `ShapeItem`, `PathItem`, `CurveItem`, `StrokeItem`, `TextItem`, `GroupItem`, `ConnectionItem`,
   `CanvasFrameItem`, `CanvasSelectionFrame`) derive from `AdamantiumViewModel`, which keeps `SetProperty` and
@@ -1299,6 +1309,12 @@ All packages share one version.
 
 ### Fixed
 
+- An `{Ancestor}` binding on a non-visual target - a line of an inspector, a behavior - resolves when the element
+  holding it enters the visual tree later, or gets a parent there. It listened to its own logical attach only, which
+  never comes when the element stands in a template: the logical news of a window stops at a template's edge.
+- Content that stretches, adopted by a `ContentPresenter` after a deferred build, fills the presenter. The layout pass
+  could arrange it on its own first, into its desired size, and the presenter's next arrange at its old size took that
+  for "nothing changed": a page opened for the first time stayed as tall as its content asked.
 - A text box lays its text out again when its `Language` or the application's language changes: it kept the forms and
   the case of the language it was first laid out in until the caret moved.
 - `adam-auto type` hands a character outside the Basic Multilingual Plane on whole, as the platform's window does,

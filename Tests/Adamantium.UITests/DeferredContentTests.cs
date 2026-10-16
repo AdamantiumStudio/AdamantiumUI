@@ -148,6 +148,53 @@ public class DeferredContentTests
             "the content the user stopped at has to be the one that shows - and it has to show at all");
     }
 
+    // Content adopted after a deferred build that STRETCHES fills the presenter. The layout pass can find it dirty before
+    // the presenter has arranged it, and arranges it on its own into its desired size; the presenter then arranges at the
+    // size it had for the spinner, and that same size is not "nothing changed" - the child was arranged into another slot.
+    [Test]
+    public void AdoptedContentThatStretches_FillsThePresenter()
+    {
+        var presenter = new ContentPresenter
+        {
+            DeferContent = true,
+            LoadingTemplate = new DataTemplate(() => new TemplateResult { RootComponent = new Border { Width = 8, Height = 8 } }),
+            ContentTemplate = new DataTemplate(() => new TemplateResult
+            {
+                RootComponent = new Border { Child = new Border { Width = 40, Height = 30 } }
+            }),
+            Content = new object()
+        };
+
+        presenter.Measure(Host);
+        presenter.Arrange(new Rect(0, 0, Host.Width, Host.Height));
+        var spinner = presenter.VisualChildren.First();
+
+        var sw = Stopwatch.StartNew();
+        IMeasurableComponent adopted = null;
+        while (adopted == null && sw.Elapsed.TotalSeconds < 5)
+        {
+            LoopSignal.Drain();
+            if (presenter.VisualChildren.FirstOrDefault(c => !ReferenceEquals(c, spinner)) is IMeasurableComponent child)
+            {
+                adopted = child;
+                break;
+            }
+
+            presenter.Measure(Host);
+            presenter.Arrange(new Rect(0, 0, Host.Width, Host.Height));
+            Compositor.StartPending();
+            Thread.Sleep(1);
+        }
+
+        Assert.That(adopted, Is.Not.Null, "precondition: the content arrives");
+
+        presenter.Measure(Host);
+        adopted.Arrange(new Rect(adopted.DesiredSize));
+        presenter.Arrange(new Rect(0, 0, Host.Width, Host.Height));
+
+        Assert.That(adopted.RenderSize, Is.EqualTo(Host));
+    }
+
     // A background build that fails leaves the presenter holding a spinner forever, which is worse than the pause it was
     // meant to hide. It falls back to building the ordinary way instead - the case that showed up as a tab that never
     // arrived when two views were being built at once.

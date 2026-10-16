@@ -49,13 +49,23 @@ public class TemplatedUIComponent : InputUIComponent, ITemplatedUIComponent, ITe
     {
         if (_suspendTemplateBuild) { _pendingTemplateBuild = true; return; }
         var effective = Template;
-        if (ReferenceEquals(effective, appliedTemplate)) return;
+        if (ReferenceEquals(effective, appliedTemplate))
+        {
+            if (templateResult != null || effective == null || DeferTemplate || IsDiscarded) return;
+        }
+        else
+        {
+            if (appliedTemplate != null) RemoveTemplate();
+            appliedTemplate = effective;
+        }
 
-        if (appliedTemplate != null) RemoveTemplate();
-        appliedTemplate = effective;
         if (effective != null && !DeferTemplate)
         {
             ApplyTemplate();
+        }
+        else if (effective != null)
+        {
+            OnTemplateHeldBack();
         }
 
         // Template parts just changed: re-point any style/element triggers that target named parts at the new tree
@@ -76,10 +86,28 @@ public class TemplatedUIComponent : InputUIComponent, ITemplatedUIComponent, ITe
         return templateResult.GetComponentByName(name);
     }
 
-    /// <summary>Hold the template back instead of building it as soon as it is themed. A control that is shown nowhere
-    /// inline - a <c>ContextMenu</c>, whose rows live in the popup overlay and which exists only to be right-clicked open -
-    /// answers true until it is asked for, and calls <see cref="EnsureTemplate"/> then.</summary>
-    protected virtual bool DeferTemplate => false;
+    /// <summary>Hold the template back instead of building it as soon as it is themed. By default a collapsed control
+    /// holds it until it is shown: a scroll bar with nothing to scroll, a page nobody has turned to. A control shown
+    /// nowhere inline - a <c>ContextMenu</c>, whose rows live in the popup overlay - answers for itself, and calls
+    /// <see cref="EnsureTemplate"/> when it is asked for.</summary>
+    protected virtual bool DeferTemplate => Visibility == Visibility.Collapsed;
+
+    /// <summary>The template was held back instead of built - see <see cref="DeferTemplate"/>.</summary>
+    protected virtual void OnTemplateHeldBack() { }
+
+    internal override void OnUncollapsed()
+    {
+        base.OnUncollapsed();
+        OnTemplateChanged();
+    }
+
+    /// <summary>Also builds a template held back while the control was discarded and shown, now that it is taken up
+    /// again.</summary>
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+        OnTemplateChanged();
+    }
 
     /// <summary>Builds the template that <see cref="DeferTemplate"/> held back. Does nothing if it is already built.</summary>
     protected void EnsureTemplate()
