@@ -7,6 +7,13 @@ All packages share one version.
 
 ### Added
 
+- `PropertySection.DataType`: a section written for a type of object. With `SectionsSource` set, the grid points each
+  such section at the first item of its type and leaves it out when there is none, so an inspector of an entity shows
+  its components in the order its sections are written, whatever order the entity holds them in. The same section
+  serves every object of its type and keeps its folding from one selection to the next. Items no section is written
+  for show only with `AutoGenerateSections`; a source changed on another thread - a world adding a component - is
+  followed on the grid's own thread.
+
 - `x:Key="{x:Static Type.Member}"`: a resource keyed by a constant code uses too - an entity's icon key - so the key is
   written once, in C#. In a resource file, an inline dictionary, and with `x:Shared="False"`; a member that is not text
   is a build error, and `{}` still starts a key that is braces as written. Hot reload sees an `{x:Static}` changed to
@@ -1373,6 +1380,9 @@ All packages share one version.
 
 ### Fixed
 
+- A `PropertyGrid` narrower than its `NameColumnWidth` leaves the values `MinValueColumnWidth` beside the grip and the
+  buttons: the names took their full width and squeezed the values to a sliver in a docked inspector. The width given
+  comes back when the grid widens again.
 - A page that slid in through a `ContentPresenter` transition gets the presenter's size back once the page it replaced
   has slid out: the presenter kept the size of the larger of the two, so the topic area of the Text tab scrolled through
   empty space after a long topic.

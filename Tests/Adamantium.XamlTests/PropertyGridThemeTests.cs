@@ -284,6 +284,45 @@ public class PropertyGridThemeTests
         }
     }
 
+    // A docked inspector narrower than its names were given: every row narrows its name by the same amount - the row
+    // with the most buttons decides - and the value keeps its minimum. Taken per row, the grip zig-zagged.
+    [Test]
+    public void ANarrowGridNarrowsEveryName_ByOneWidth()
+    {
+        Use(Fluent());
+        var grid = Built();
+        grid.MinValueColumnWidth = 80;
+        grid.NameColumnWidth = 160;
+
+        for (var pass = 0; pass < 3; pass++)
+        {
+            grid.Measure(new Size(240, 400), force: true);
+            grid.Arrange(new Rect(0, 0, 240, 400));
+        }
+
+        var widths = new List<double>();
+        foreach (var section in grid.Sections)
+        {
+            foreach (var child in ((IUIComponent)section.Content).VisualChildren)
+            {
+                if (child is not PropertyRow view) continue;
+
+                var layout = (Adamantium.UI.Controls.Panels.Grid)view.GetTemplateChild("PART_Layout");
+                widths.Add(layout.ColumnDefinitions[0].Width.Value);
+                Assert.That(layout.ColumnDefinitions[2].ActualWidth, Is.GreaterThanOrEqualTo(79),
+                    $"row '{view.Definition.Header}' left its value less than the minimum");
+            }
+        }
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(widths, Is.Not.Empty);
+            Assert.That(widths.Distinct().Count(), Is.EqualTo(1), "one width for every row");
+            Assert.That(widths[0], Is.LessThan(160), "narrowed");
+            Assert.That(grid.NameColumnWidth, Is.EqualTo(160), "and the width given is kept for a wider grid");
+        });
+    }
+
     // A LIST'S WORDS SIT IN THE MIDDLE of it. A drop-down whose text rides high reads as a box a line too tall, and a
     // column of them reads as a form that has slipped.
     [TestCase("MacOs")]

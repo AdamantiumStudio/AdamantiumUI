@@ -30,6 +30,12 @@ public class PropertySection : Expander
     /// else (a component of the selection).</summary>
     public object Target { get; set; }
 
+    /// <summary>The type of object this section is written for. With <see cref="PropertyGrid.SectionsSource"/> set, the
+    /// grid points the section at the first item of that type, or leaves it out when there is none - so the sections
+    /// keep the order they are written in, whatever order the items come in, and the same section, folded or not,
+    /// serves every object of its type.</summary>
+    public Type DataType { get; set; }
+
     /// <summary>What the section is called in the model - the component's type name, the [Category] attribute. Free
     /// text; the grid does not interpret it.</summary>
     public String Category
