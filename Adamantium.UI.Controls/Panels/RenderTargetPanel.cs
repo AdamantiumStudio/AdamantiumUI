@@ -9,9 +9,10 @@ using Adamantium.UI.Core.RoutedEvents;
 namespace Adamantium.UI.Controls.Panels;
 
 /// <summary>Displays frames an external producer renders into a shared surface, imported zero-copy via
-/// <see cref="SetSource"/>. Interop resources are freed on source change and when the panel leaves the tree.</summary>
+/// <see cref="SetSource"/>. Interop resources are freed when the source changes.</summary>
 public class RenderTargetPanel : Grid
 {
+   private readonly object _sourceLock = new();
    private SharedSurfaceImage _image;
 
    static RenderTargetPanel()
@@ -98,18 +99,20 @@ public class RenderTargetPanel : Grid
    }
 
    /// <summary>
-   /// Binds an externally produced surface and triggers a redraw. Any previously bound surface is released first.
-   /// Pass <c>null</c> to unbind (equivalent to <see cref="ClearSource"/>).
+   /// Binds an externally produced surface and triggers a redraw. A frame recorded with the previously bound surface
+   /// draws this one instead. Pass <c>null</c> to unbind (equivalent to <see cref="ClearSource"/>).
    /// </summary>
    public void SetSource(SharedSurfaceDescriptor descriptor)
    {
-      if (ReferenceEquals(Source, descriptor)) return;
-
-      DropCurrentSource();
-      if (descriptor != null)
+      // The producer binds from its own thread, while the panel may be leaving or joining the tree on the loop.
+      lock (_sourceLock)
       {
+         if (ReferenceEquals(Source, descriptor)) return;
+
+         var replaced = _image;
          Source = descriptor;
-         _image = new SharedSurfaceImage(descriptor);
+         _image = descriptor != null ? new SharedSurfaceImage(descriptor) : null;
+         replaced?.ReplaceWith(_image);
       }
       InvalidateAfterSourceChange();
    }
@@ -117,8 +120,23 @@ public class RenderTargetPanel : Grid
    /// <summary>Unbinds the current source, if any (see <see cref="DropCurrentSource"/>).</summary>
    public void ClearSource()
    {
-      if (Source == null) return;
-      DropCurrentSource();
+      lock (_sourceLock)
+      {
+         if (Source == null) return;
+         DropCurrentSource();
+      }
+      InvalidateAfterSourceChange();
+   }
+
+   /// <summary>Unbinds <paramref name="descriptor"/> if it is still the bound source: a producer letting go of its own
+   /// surface leaves alone one another producer has bound since.</summary>
+   public void ClearSource(SharedSurfaceDescriptor descriptor)
+   {
+      lock (_sourceLock)
+      {
+         if (Source == null || !ReferenceEquals(Source, descriptor)) return;
+         DropCurrentSource();
+      }
       InvalidateAfterSourceChange();
    }
 
@@ -130,30 +148,24 @@ public class RenderTargetPanel : Grid
       else InvalidateRender(false);
    }
 
-   // Lets go of the image without freeing its import: the sampling render component frees it fence-gated once this panel
-   // has re-rendered without it, since the render thread may still be replaying it. Disposing the image is what tells
-   // the component the import is no longer handed to anyone.
+   // Lets go of the image without freeing its import: the render thread may still build a frame recorded with it, so the
+   // import lives until its last holding component is gone (see SharedSurfaceImage.HoldImport).
    private void DropCurrentSource()
-   {
-      ReleaseImport();
-      Source = null;
-   }
-
-   private void ReleaseImport()
    {
       _image?.Dispose();
       _image = null;
+      Source = null;
    }
 
    protected override void OnRender(IDrawingContext context)
    {
       var rect = new Rect(new Size(ActualWidth, ActualHeight));
       var session = context.ForControl(this);
-      if (_image != null)
+      // Read once: the producer may rebind it from its own thread.
+      var image = _image;
+      if (image != null)
       {
-         // TODO: wait(produce) before sampling and signal(consume) after, wired into the compositor's
-         // queue submit (OnRender only records draw commands, so the semaphores can't be driven from here).
-         session.DrawImage(_image, Background, rect, CornerRadius.Empty);
+         session.DrawImage(image, Background, rect, CornerRadius.Empty);
       }
       else
       {
@@ -168,18 +180,9 @@ public class RenderTargetPanel : Grid
       _middleDown = false;
       Disengage();   // a tab switch / tree teardown while looking must restore the cursor
       LetGoOfPointer();
-      ReleaseImport();
+      // The image, and with it the import, stays: imported again on the way back, the surface would be copied from a frame
+      // the producer is free to overwrite, since the first import already read it.
       base.OnDetachedFromVisualTree(e);
-   }
-
-   protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
-   {
-      base.OnAttachedToVisualTree(e);
-      if (Source != null && _image == null)
-      {
-         _image = new SharedSurfaceImage(Source);
-         InvalidateAfterSourceChange();
-      }
    }
 
    // --- Mouse-look: engage relative mouse mode per MouseLookMode ---------------------------------------------------

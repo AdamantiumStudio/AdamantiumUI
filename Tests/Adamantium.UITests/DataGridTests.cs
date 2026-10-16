@@ -2157,6 +2157,31 @@ public class DataGridTests
         Assert.That(grid.CellFor(0, 1).IsReadOnly, Is.False, "which is not the whole column");
     }
 
+    // A property whose setter is the row's own takes no edit: the cell opened an editor, said it took the value, and the
+    // write-back dropped it.
+    [Test]
+    public void ACellOverAPropertyWithNoPublicSetter_IsReadOnly()
+    {
+        var items = new List<Guarded> { new("one") };
+        var name = new DataGridTextColumn { Binding = new Binding("Name"), Width = new GridLength(100) };
+        var note = new DataGridTextColumn { Binding = new Binding("Note"), Width = new GridLength(100) };
+        var grid = Grid(name, note);
+        grid.ItemsSource = items;
+        Relayout(grid);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(grid.CellFor(0, 0).IsReadOnly, Is.True);
+            Assert.That(grid.CellFor(0, 1).IsReadOnly, Is.False);
+        });
+    }
+
+    private sealed class Guarded(string name)
+    {
+        public string Name { get; private set; } = name;
+        public string Note { get; set; }
+    }
+
     private static int Selected(TreeDataGrid grid)
     {
         var count = 0;

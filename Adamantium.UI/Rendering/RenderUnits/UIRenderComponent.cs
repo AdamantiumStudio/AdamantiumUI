@@ -318,10 +318,8 @@ public class ImageRenderComponent : UIRenderComponent
     /// <see cref="UIRenderComponent.Texture"/>, refreshed each frame by the latch in <see cref="PreRender"/>.</summary>
     public SharedSurface SharedSource { get; set; }
 
-    // The shared surface (Texture) is sampled directly. Register, for this frame's UI Submit: a wait on
-    // Produce>=latest (so the producer's write+transition-to-ShaderReadOnly is complete before the fragment sample)
-    // and a signal of Consume=latest (so the producer may reuse the surface). Producer/consumer run one frame in
-    // lockstep (the producer CPU-throttles on Consume), so there is no read-during-write race.
+    // Draws the import's copy of the newest frame, not the surface: the producer writes its next frame into the surface
+    // once the copy is done, while this frame and later ones still sample the copy.
     public override void PreRender()
     {
         if (SharedSource == null)
@@ -329,18 +327,18 @@ public class ImageRenderComponent : UIRenderComponent
             return;
         }
 
-        var latest = SharedSource.LatchNewFrame();
-        if (latest == 0)
-        {
-            return;
-        }
-
-        GraphicsDevice.AddWaitSemaphore(SharedSource.ProduceSemaphore, PipelineStageFlagBits2.FragmentShaderBit, latest);
-        GraphicsDevice.AddSignalSemaphore(SharedSource.ConsumeSemaphore, latest);
+        SharedSource.LatchCopy(GraphicsDevice);
+        Texture = SharedSource.LatchedCopy;
     }
 
     public override void Render()
     {
+        // No frame copied out of the shared surface yet: nothing to draw.
+        if (SharedSource != null && Texture == null)
+        {
+            return;
+        }
+
         var world = RenderData.TransformMatrix;;
         UIBasicEffect.Wvp.SetValue(world * RenderData.ProjectionMatrix);
         UIBasicEffect.Opacity.SetValue(RenderData.Opacity);
@@ -384,19 +382,15 @@ public class ImageRenderComponent : UIRenderComponent
         base.Render();
     }
 
-    /// <summary>The image the shared surface in <see cref="Texture"/> was imported for. One import serves every component
-    /// made for that image - a re-render makes a new one before the old goes - so only the last, after the image itself
-    /// was let go of, may free it.</summary>
+    /// <summary>The image whose import <see cref="SharedSource"/> is, held through
+    /// <see cref="Core.Media.Imaging.SharedSurfaceImage.HoldImport"/> and released when this component is disposed.</summary>
     public Core.Media.Imaging.SharedSurfaceImage SharedImage { get; set; }
 
-    // Frees a live shared-surface import (reached via the deferred queue, so no frame still samples it) once its image is
-    // let go of; bitmap textures belong to their BitmapSource.
+    // Reached via the deferred queue, so no frame still samples the import; bitmap textures belong to their BitmapSource.
     protected override void Dispose(bool disposeManagedResources)
     {
-        if (Texture is Adamantium.Graphics.SharedSurface shared && SharedImage is not { IsDisposed: false })
-        {
-            shared.Dispose();
-        }
+        SharedImage?.ReleaseImport();
+        SharedImage = null;
         base.Dispose(disposeManagedResources);
     }
 }
