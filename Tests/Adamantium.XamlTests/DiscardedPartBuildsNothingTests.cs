@@ -26,6 +26,7 @@ public class DiscardedPartBuildsNothingTests
     private void Use(Theme theme)
     {
         _app.ResourceManager = new ResourceManager();
+        _app.Windows = [];
         typeof(UIAppContext).GetProperty(nameof(UIAppContext.Current)).SetValue(null, _app);
         var themes = new ThemeManager(new AdamantiumDependencyContainer());
         _app.ThemeManager = themes;
@@ -44,19 +45,36 @@ public class DiscardedPartBuildsNothingTests
     }
 
     [Test]
-    public void AButtonTheThemeCollapsed_IsNotBuiltOnTheWayOut()
+    public async System.Threading.Tasks.Task AButtonTheThemeCollapsed_IsNotBuiltOnTheWayOut()
     {
-        Use(new Adamantium.UI.Themes.FluentTheme.Fluent());
+        _app.ResourceManager = new ResourceManager();
+        _app.Windows = [];
+        typeof(UIAppContext).GetProperty(nameof(UIAppContext.Current)).SetValue(null, _app);
+        var themes = new ThemeManager(new AdamantiumDependencyContainer());
+        _app.ThemeManager = themes;
+        ((FakeContext)_app.UIContext).ThemeEngine = themes;
+        var fluent = new Adamantium.UI.Themes.FluentTheme.Fluent();
+        var graphite = new Adamantium.UI.Themes.GraphiteTheme.Graphite();
+        themes.AddTheme(fluent.Name, fluent);
+        themes.AddTheme(graphite.Name, graphite);
+        themes.SetTheme(fluent);
+
         var spinner = new NumericUpDown { AreButtonsVisible = false };
-        var window = new Window { Width = 400, Height = 300, Content = spinner };
-        window.ApplyCurrentTheme();
-        Settle(window);
+        var window = new Window { Width = 400, Height = 300, ClientWidth = 400, ClientHeight = 300, Content = spinner };
+        _app.Windows = [window];
+        await using var session = Adamantium.UI.Automation.AutomationSession.InProcess(window);
+        await session.WaitForIdleAsync();
         var old = (TemplatedUIComponent)spinner.GetTemplateChild("PART_Increase");
         Assert.That(old.Visibility, Is.EqualTo(Visibility.Collapsed), "the trigger collapsed it");
 
-        Use(new Adamantium.UI.Themes.GraphiteTheme.Graphite());
-        window.ApplyCurrentTheme();
-        Settle(window);
+        themes.SetTheme(graphite);
+        for (var frame = 0; frame < 100 && themes.IsThemeChanging; frame++)
+        {
+            Adamantium.UI.Core.Media.Animation.AnimationManager.Tick(0.05);
+            await session.WaitForIdleAsync();
+        }
+
+        Assert.That(themes.IsThemeChanging, Is.False, "precondition: the swap finished");
 
         Assert.That(spinner.GetTemplateChild("PART_Increase"), Is.Not.SameAs(old), "the theme swap replaced the part");
         Assert.That(old.IsDiscarded, Is.True);

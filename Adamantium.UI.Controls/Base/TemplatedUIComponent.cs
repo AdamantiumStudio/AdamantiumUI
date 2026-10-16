@@ -63,6 +63,10 @@ public class TemplatedUIComponent : InputUIComponent, ITemplatedUIComponent, ITe
         {
             ApplyTemplate();
         }
+        else if (effective != null)
+        {
+            OnTemplateHeldBack();
+        }
 
         // Template parts just changed: re-point any style/element triggers that target named parts at the new tree
         // (and tear down what they held on the old, now-discarded parts) so a runtime template swap stays leak-free.
@@ -87,6 +91,9 @@ public class TemplatedUIComponent : InputUIComponent, ITemplatedUIComponent, ITe
     /// nowhere inline - a <c>ContextMenu</c>, whose rows live in the popup overlay - answers for itself, and calls
     /// <see cref="EnsureTemplate"/> when it is asked for.</summary>
     protected virtual bool DeferTemplate => Visibility == Visibility.Collapsed;
+
+    /// <summary>The template was held back instead of built - see <see cref="DeferTemplate"/>.</summary>
+    protected virtual void OnTemplateHeldBack() { }
 
     internal override void OnUncollapsed()
     {

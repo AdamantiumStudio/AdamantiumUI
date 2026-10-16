@@ -483,8 +483,15 @@ public class ContentPresenter : InputUIComponent
         }
 
         RemoveVisualChild(visual);
-        RemoveLogicalChild(visual);
+        Unhost(visual);
         built?.Destroy();
+    }
+
+    // A control's content let go here goes back to the control while it cannot be shown - see ContentControl.HoldIfHidden.
+    private void Unhost(IUIComponent root)
+    {
+        RemoveLogicalChild(root);
+        if (ContentControl.IsLentContent(root)) ((UIComponent)root).ContentOwner.HoldIfHidden();
     }
 
     /// <summary>Destroyed: lets the content go, since a root held only by these fields cannot be reached otherwise.</summary>
@@ -541,7 +548,7 @@ public class ContentPresenter : InputUIComponent
     {
         if (root == null || !IsVisualChild(root)) return;
         RemoveVisualChild(root);
-        RemoveLogicalChild(root);
+        Unhost(root);
     }
 
     /// <summary>Lets go of its content once that is released while this presenter lives on: the fields naming the root

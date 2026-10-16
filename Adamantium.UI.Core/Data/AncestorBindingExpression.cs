@@ -62,11 +62,47 @@ public class AncestorBindingExpression : BindingExpressionBase
         else
         {
             // Non-visual target (a Behavior): it has no visual node, so it re-resolves against its HOST's visual tree.
-            // AddLogicalChild (attach to the host) raises the logical-tree event - use that to (re)resolve.
+            // AddLogicalChild (attach to the host) raises the logical-tree event - use that to (re)resolve - and the host
+            // entering the visual tree later, which raises nothing on the target itself.
             _anchor.AttachedToLogicalTree += OnLogicalAttached;
             _anchor.DetachedFromLogicalTree += OnLogicalDetached;
+            HookHost();
         }
         _hooked = true;
+    }
+
+    // The element a non-visual target rides, followed while its logical chain changes.
+    private IUIComponent _host;
+
+    private void HookHost()
+    {
+        var host = NearestElement(_anchor);
+        if (ReferenceEquals(host, _host)) return;
+
+        UnhookHost();
+        _host = host;
+        if (_host == null) return;
+
+        _host.AttachedToVisualTreeEvent += OnVisualAttached;
+        _host.DetachedFromVisualTreeEvent += OnVisualDetached;
+        _host.VisualParentChanged += OnHostReparented;
+    }
+
+    private void UnhookHost()
+    {
+        if (_host == null) return;
+
+        _host.AttachedToVisualTreeEvent -= OnVisualAttached;
+        _host.DetachedFromVisualTreeEvent -= OnVisualDetached;
+        _host.VisualParentChanged -= OnHostReparented;
+        _host = null;
+    }
+
+    // A tree with no window yet raises no attach, but its ancestors are already there to be found. In a window the attach
+    // came first and has resolved it.
+    private void OnHostReparented(object sender, VisualParentChangedEventArgs e)
+    {
+        if (e.NewParent != null && _host is { IsAttachedToVisualTree: false }) ResolveAndReport();
     }
 
     private void UnhookTree()
@@ -86,14 +122,23 @@ public class AncestorBindingExpression : BindingExpressionBase
         {
             _anchor.AttachedToLogicalTree -= OnLogicalAttached;
             _anchor.DetachedFromLogicalTree -= OnLogicalDetached;
+            UnhookHost();
         }
         _hooked = false;
         _anchor = null;
     }
 
-    private void OnLogicalAttached(object sender, LogicalTreeAttachmentEventArgs e) => ResolveAndReport();
+    private void OnLogicalAttached(object sender, LogicalTreeAttachmentEventArgs e)
+    {
+        if (!_def.Logical && _anchor is not IUIComponent) HookHost();
+        ResolveAndReport();
+    }
     private void OnVisualAttached(object sender, VisualTreeAttachmentEventArgs e) => ResolveAndReport();
-    private void OnLogicalDetached(object sender, LogicalTreeAttachmentEventArgs e) => OnDetached();
+    private void OnLogicalDetached(object sender, LogicalTreeAttachmentEventArgs e)
+    {
+        if (!_def.Logical && _anchor is not IUIComponent) HookHost();
+        OnDetached();
+    }
     private void OnVisualDetached(object sender, VisualTreeAttachmentEventArgs e) => OnDetached();
 
     // Resolve, then classify the outcome. A found source is already Active (or PathError for a missing property - set in

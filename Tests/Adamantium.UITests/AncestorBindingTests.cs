@@ -203,6 +203,58 @@ public class AncestorBindingTests
         }
     }
 
+    // A NON-VISUAL target - a line of an inspector - rides the element that holds it. That element entering a window
+    // later is when the binding can resolve, though nothing happens to the target itself then: the host stands in a
+    // template, whose parts are visual only, so the logical news of the window stops at the template's edge.
+    [Test]
+    public void Ancestor_NonVisualTarget_ResolvesWhenItsHostEntersAWindow()
+    {
+        var line = new NumericProperty();
+        var host = new Border();
+        host.AddLogicalChild(line);
+        var control = new Adamantium.UI.Controls.Base.Control
+        {
+            Template = new Adamantium.UI.Core.Templates.ControlTemplate(() =>
+                new Adamantium.UI.Core.Templates.TemplateResult { RootComponent = host })
+        };
+
+        var e = new Ancestor { AncestorType = typeof(Grid), Path = "Width" }.Apply(line, "Step");
+        Assert.That(e.Status, Is.EqualTo(BindingStatus.NotAttached), "precondition: its host is in no tree yet");
+
+        var grid = new Grid { Width = 3, Children = { control } };
+        var window = new Window { Width = 200, Height = 100, Content = grid };
+        WindowExtension.UpdateTree(window);
+        BindingUpdateQueue.Flush();
+
+        Assert.That(e.Status, Is.EqualTo(BindingStatus.Active));
+        Assert.That(line.Step, Is.EqualTo(3d));
+    }
+
+    // ...and with no window at all: the element is given its place among ancestors already there, which raises no attach.
+    [Test]
+    public void Ancestor_NonVisualTarget_ResolvesWhenItsHostGetsAParent_WithNoWindow()
+    {
+        var line = new NumericProperty();
+        var host = new Border();
+        host.AddLogicalChild(line);
+        var control = new Adamantium.UI.Controls.Base.Control
+        {
+            Visibility = Adamantium.UI.Core.Visibility.Collapsed,
+            Template = new Adamantium.UI.Core.Templates.ControlTemplate(() =>
+                new Adamantium.UI.Core.Templates.TemplateResult { RootComponent = host })
+        };
+        _ = new Grid { Width = 3, Children = { control } };
+
+        var e = new Ancestor { AncestorType = typeof(Grid), Path = "Width" }.Apply(line, "Step");
+        Assert.That(e.Status, Is.EqualTo(BindingStatus.NotAttached), "precondition: the template is not built yet");
+
+        control.Visibility = Adamantium.UI.Core.Visibility.Visible;
+        BindingUpdateQueue.Flush();
+
+        Assert.That(e.Status, Is.EqualTo(BindingStatus.Active));
+        Assert.That(line.Step, Is.EqualTo(3d));
+    }
+
     [Test]
     public void Self_BindsToAnotherPropertyOnSameElement()
     {

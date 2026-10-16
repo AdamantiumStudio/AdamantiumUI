@@ -127,10 +127,17 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
         {
             component.OnUncollapsed();
         }
+        else if (effective == Visibility.Collapsed)
+        {
+            component.OnCollapsed();
+        }
     }
 
     /// <summary>The element stopped being collapsed and takes a place in the layout again.</summary>
     internal virtual void OnUncollapsed() { }
+
+    /// <summary>The element was collapsed: it is not laid out until it is shown again.</summary>
+    internal virtual void OnCollapsed() { }
       
     public static readonly AdamantiumProperty IsHitTestVisibleProperty =
         AdamantiumProperty.Register(nameof(IsHitTestVisible),
