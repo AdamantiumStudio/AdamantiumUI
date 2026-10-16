@@ -1,5 +1,6 @@
 <View xmlns="http://adamantium/ui"
-      xmlns:x="http://adamantium/ui/xaml/extensions">
+      xmlns:x="http://adamantium/ui/xaml/extensions"
+      xmlns:conv="clr-namespace:Adamantium.UI.Sandbox.Converters">
     <!-- Navigated into the text tab's region under the key "Editing"; the DataContext is the tab's own view-model. -->
     <StackPanel Orientation="Vertical">
         <!-- Live toggle for the floating-label (watermark) effect. Off = a plain static watermark (shown only when the
@@ -23,6 +24,29 @@
         <TextBox AutomationProperties.AutomationId="UpperCase" CharacterCasing="Upper"
                  Width="520" HorizontalAlignment="Left"
                  Placeholder="{Localize TextStrings.UpperCaseHint}"/>
+
+        <!-- Text transform: the message above, in the case the buttons choose - bound, so the box and the label follow
+             a switch at once; what is typed here reaches the message as typed. -->
+        <TextBlock Text="{Localize TextStrings.TextTransformTitle}" Margin="0,16,0,6"/>
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+            <RadioButton AutomationProperties.AutomationId="ShownAsIs"
+                         Classes="Toggle" GroupName="ShownCase" MarginRight="6"
+                         Content="{Localize TextStrings.ShownAsIs}"
+                         IsChecked="{Binding ShownCase, Converter={conv:EnumToBoolConverter}, ConverterParameter=None, Mode=TwoWay}"/>
+            <RadioButton AutomationProperties.AutomationId="ShownUppercase"
+                         Classes="Toggle" GroupName="ShownCase" MarginRight="6"
+                         Content="{Localize TextStrings.ShownUppercase}"
+                         IsChecked="{Binding ShownCase, Converter={conv:EnumToBoolConverter}, ConverterParameter=Uppercase, Mode=TwoWay}"/>
+            <RadioButton AutomationProperties.AutomationId="ShownLowercase"
+                         Classes="Toggle" GroupName="ShownCase"
+                         Content="{Localize TextStrings.ShownLowercase}"
+                         IsChecked="{Binding ShownCase, Converter={conv:EnumToBoolConverter}, ConverterParameter=Lowercase, Mode=TwoWay}"/>
+        </StackPanel>
+        <TextBox AutomationProperties.AutomationId="ShownUpper" Text="{Binding Message, Mode=TwoWay}"
+                 TextTransform="{Binding ShownCase}"
+                 Width="520" HorizontalAlignment="Left"/>
+        <TextBlock AutomationProperties.AutomationId="ShownLabel" Text="{Binding Message}"
+                   TextTransform="{Binding ShownCase}" Margin="0,6,0,0"/>
 
         <!-- Password boxes: both bound two-way to the same Password, so typing in one shows in the other. -->
         <TextBlock Text="{Localize TextStrings.PasswordTitle}" Margin="0,16,0,6"/>

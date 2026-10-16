@@ -103,8 +103,9 @@ public abstract class TextBoxBase : Control
     /// <see cref="OnEditedTextChanged"/> as its callback.</summary>
     protected abstract AdamantiumProperty EditedTextProperty { get; }
 
-    /// <summary>What is laid out and drawn for <paramref name="text"/>: the text itself, or a mask of the same length.
-    /// Caret stops and selection follow the result, so a mask must keep the text's character boundaries.</summary>
+    /// <summary>What is laid out, drawn and copied for <paramref name="text"/>: the text itself, its case changed, or a
+    /// mask of the same length. Caret stops and selection follow the result, so it must keep the text's character
+    /// boundaries.</summary>
     protected virtual string DisplayedText(string text) => text;
 
     /// <summary>Whether edits can be undone. A password box keeps no history of what it held.</summary>
@@ -251,6 +252,21 @@ public abstract class TextBoxBase : Control
         _scrollViewer = GetTemplateChild("PART_ContentHost") as ScrollViewer;
         if (_presenter != null) _presenter.Owner = this;
         PushScrollSettings();
+        InvalidateSurface(measure: true);
+    }
+
+    protected override void OnPropertyChanged(AdamantiumPropertyChangedEventArgs e)
+    {
+        base.OnPropertyChanged(e);
+        if (e.Property == LanguageProperty)
+        {
+            RelayOutText();
+        }
+    }
+
+    internal void RelayOutText()
+    {
+        _lastShapedText = null;
         InvalidateSurface(measure: true);
     }
 
@@ -981,13 +997,13 @@ public abstract class TextBoxBase : Control
 
     protected virtual void CopyToClipboard()
     {
-        if (HasSelection) Clipboard.SetText(SelectedText());
+        if (HasSelection) Clipboard.SetText(DisplayedText(SelectedText()));
     }
 
     protected virtual void CutToClipboard()
     {
         if (IsReadOnly || !HasSelection) return;
-        Clipboard.SetText(SelectedText());
+        Clipboard.SetText(DisplayedText(SelectedText()));
         ReplaceSelection(string.Empty);
     }
 
