@@ -1022,9 +1022,11 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
                 }
                 else if (span is Ruby ruby && !string.IsNullOrEmpty(ruby.Annotation))
                 {
-                    var size = ruby.AnnotationFontSize;
-                    attributed.SetRuby(spanStart, start - spanStart, new RubyAnnotation(ruby.Annotation,
-                        ruby.RubyPosition, size > 0 && double.IsFinite(size) ? size : null));
+                    var annotation = TextTransform == TextTransform.None
+                        ? ruby.Annotation
+                        : TextCasing.Transform(ruby.Annotation, TextTransform, TextCasing.CultureOf(ruby.Language ?? Language));
+                    attributed.SetRuby(spanStart, start - spanStart,
+                        new RubyAnnotation(annotation, ruby.RubyPosition, ruby.AnnotationFontSize));
                 }
 
                 break;

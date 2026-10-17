@@ -10,7 +10,8 @@ All packages share one version.
 - `Ruby`, a `Span` with an annotation, as HTML's `<ruby>`: `<Ruby Annotation="かんじ">漢字</Ruby>` sets furigana
   centered over its inlines at half their size (`AnnotationFontSize` sets its own), spreads inlines narrower than the
   annotation to its width and keeps them on one line; `RubyPosition="Under"` puts it under the line. The line grows to
-  hold it unless its height is set. The Text tab's OpenType topic shows furigana and an annotation under the line.
+  hold it unless its height is set; the annotation takes the block's `TextTransform`; of rubies one inside another the
+  outer one's annotation is shown. The Text tab's OpenType topic shows furigana and an annotation under the line.
 
 - `Kerning` on every element, inherited, and on an inline, as InDesign's: the font's pairs (`Metrics`, the default),
   the letters' outlines (`Optical` - for a font with no pairs, or pairs it left out) or none. In a `TextBlock` and a

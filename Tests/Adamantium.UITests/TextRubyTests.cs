@@ -86,6 +86,28 @@ public class TextRubyTests
     }
 
     [Test]
+    public void TheAnnotation_IsShownInTheBlocksTextTransform()
+    {
+        var (text, _, window) = Hosted();
+        text.TextTransform = TextTransform.Uppercase;
+        Update(window);
+
+        Assert.That(new string(Annotation(text).Select(glyph => glyph.Symbol).ToArray()), Is.EqualTo("CAPITAL"));
+    }
+
+    [Test]
+    public void ABlockEndingInARuby_IsAsWideAsItsAnnotation()
+    {
+        var ruby = new Ruby { Annotation = "averyveryverylongannotation" };
+        ruby.Inlines.Add(new Run { Text = "a" });
+        var text = new TextBlock { FontSize = FontSize };
+        text.Inlines.Add(ruby);
+        Update(new Window { Width = 800, Height = 300, Content = new StackPanel { Children = { text } } });
+
+        Assert.That(text.DesiredSize.Width, Is.GreaterThanOrEqualTo(Annotation(text).Max(glyph => glyph.Rect.Right) - 0.5));
+    }
+
+    [Test]
     public void TheBlock_GrowsToHoldTheAnnotation()
     {
         var plain = new TextBlock { FontSize = FontSize, Text = "Visit Tokyo today" };
