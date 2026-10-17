@@ -172,9 +172,6 @@ public abstract class TextFormat : AdamantiumComponent
     // style, none.
     internal TextFormat Base => BaseFormat is { } based && !based.Reaches(this) ? based : null;
 
-    // How many styles a chain of BasedOn is followed through.
-    internal const int MaxChain = 64;
-
     // The attributes of the text this style itself sets; the engine's style takes the rest from the one it is based
     // on, and the font is the block's to resolve.
     internal TextAttributes OwnTextAttributes() => new()
@@ -205,49 +202,74 @@ public abstract class TextFormat : AdamantiumComponent
         }
     }
 
-    // What lays out by this style lays out again, told outside the lock; once, when a chain set in a loop brings the
-    // news back round.
+    // What lays out by this style lays out again, told outside the lock, every one of them even if one throws; on a
+    // thread already telling it, once, when a chain set in a loop brings the news back round.
     private protected void NotifyUsers()
     {
-        if (Interlocked.Exchange(ref _notifying, 1) == 1)
+        var telling = _telling ??= [];
+        if (!telling.Add(this))
         {
             return;
         }
 
+        var told = (_buffers ??= []).Count > 0 ? _buffers.Pop() : [];
+        Exception failed = null;
         try
         {
             lock (_usersLock)
             {
                 foreach (var (user, _) in _users)
                 {
-                    _told.Add(user);
+                    told.Add(user);
                 }
             }
 
-            foreach (var user in _told)
+            foreach (var user in told)
             {
-                user.TextStyleChanged();
+                try
+                {
+                    user.TextStyleChanged();
+                }
+                catch (Exception e)
+                {
+                    failed ??= e;
+                }
             }
         }
         finally
         {
-            _told.Clear();
-            Volatile.Write(ref _notifying, 0);
+            told.Clear();
+            _buffers.Push(told);
+            telling.Remove(this);
+        }
+
+        if (failed != null)
+        {
+            System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw(failed);
         }
     }
 
-    private readonly List<ITextStyleUser> _told = [];
-    private int _notifying;
+    [ThreadStatic] private static HashSet<TextFormat> _telling;
+    [ThreadStatic] private static Stack<List<ITextStyleUser>> _buffers;
 
-    // Whether basing a style on this one would bring the chain round to the style itself.
+    // Whether basing a style on this one would bring the chain round to the style itself: followed to its end, or to a
+    // loop that does not hold the style.
     internal bool Reaches(TextFormat style)
     {
-        var format = this;
-        for (var depth = 0; format != null && depth < MaxChain; depth++, format = format.BaseFormat)
+        var slow = this;
+        var fast = this;
+        while (fast != null)
         {
-            if (ReferenceEquals(format, style))
+            if (ReferenceEquals(fast, style) || ReferenceEquals(fast.BaseFormat, style))
             {
                 return true;
+            }
+
+            fast = fast.BaseFormat?.BaseFormat;
+            slow = slow.BaseFormat;
+            if (fast != null && ReferenceEquals(fast, slow))
+            {
+                return false;
             }
         }
 

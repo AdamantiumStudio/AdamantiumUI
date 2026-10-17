@@ -170,6 +170,22 @@ public class TextStyleTests
     }
 
     [Test]
+    public void ALongLoopClosedByMarkup_LaysOut()
+    {
+        var styles = Enumerable.Range(0, 70).Select(_ => new CharacterStyle()).ToArray();
+        for (var i = 1; i < styles.Length; i++)
+        {
+            styles[i].BasedOn = styles[i - 1];
+        }
+
+        styles[0].SetValue(CharacterStyle.BasedOnProperty, styles[^1]);
+        styles[35].FontSize = 21;
+        var (text, _) = Hosted(new Run { Text = "x", CharacterStyle = styles[^1] });
+
+        Assert.That(First(text, 0).FontSize, Is.EqualTo(16), "a style in a loop stands alone");
+    }
+
+    [Test]
     public void AnObject_TakesItsStylesBaselineShift()
     {
         var raised = new CharacterStyle { BaselineShift = 5 };
