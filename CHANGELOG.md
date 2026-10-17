@@ -13,7 +13,8 @@ All packages share one version.
   (field by field), an inline its character style over its paragraph's and under what it and the spans around it set
   themselves; the nearest inline's style wins. Changing a style, or one it is based on, lays out again the text it is
   set on (styles hold their users weakly). Laid out by the engine's styles. A `{ResourceReference}` on an inline or on
-  its styles is answered from its block's place in the tree (it was answered for no inline before). The Text tab's
+  its styles is answered from its block's place in the tree, and again when its theme scope switches (it was answered
+  for no inline before). The Text tab's
   Paragraph topic shows a heading, body paragraphs and an emphasis.
 
 - `Ruby`, a `Span` with an annotation, as HTML's `<ruby>`: `<Ruby Annotation="かんじ">漢字</Ruby>` sets furigana
@@ -1403,6 +1404,7 @@ All packages share one version.
 
 ### Fixed
 
+- A `TextBlock` whose inlines were all removed no longer keeps the last of them alive.
 - A page that slid in through a `ContentPresenter` transition gets the presenter's size back once the page it replaced
   has slid out: the presenter kept the size of the larger of the two, so the topic area of the Text tab scrolled through
   empty space after a long topic.

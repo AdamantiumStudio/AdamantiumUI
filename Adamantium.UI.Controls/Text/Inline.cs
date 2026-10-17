@@ -16,7 +16,7 @@ namespace Adamantium.UI.Controls.Text;
 /// span around it, and in the end from the TextBlock. The hosting TextBlock listens to <see cref="Changed"/> to re-shape
 /// when a bound value updates.
 /// </summary>
-public abstract class Inline : FundamentalUIComponent, ITextStyleUser
+public abstract class Inline : FundamentalUIComponent, ITextStyleUser, Adamantium.UI.Core.Resources.IResolvesOwnResources
 {
     public static readonly AdamantiumProperty CharacterStyleProperty = AdamantiumProperty.Register(
         nameof(CharacterStyle), typeof(CharacterStyle), typeof(Inline),
@@ -204,8 +204,13 @@ public abstract class Inline : FundamentalUIComponent, ITextStyleUser
         set => SetValue(CharacterStyleProperty, value);
     }
 
-    void ITextStyleUser.TextStyleChanged()
+    void ITextStyleUser.TextStyleChanged(bool rebased)
     {
+        if (rebased && _inBlock)
+        {
+            ResolveResources();
+        }
+
         Rebake();
         RaiseChanged(StyleOnly);
     }
@@ -317,8 +322,10 @@ public abstract class Inline : FundamentalUIComponent, ITextStyleUser
 
     internal bool InBlock => _inBlock;
 
-    // An inline takes no part in the visual tree: what a {ResourceReference} on it, or on its styles, asks is answered
-    // from its block's place there.
+    // An inline takes no part in the visual tree: what a {ResourceReference} on it, or on its styles and the ones they
+    // are based on, asks is answered from its block's place there, each time it joins a live tree.
+    void Adamantium.UI.Core.Resources.IResolvesOwnResources.ResolveResources() => ResolveResources();
+
     private void ResolveResources()
     {
         TextBlock block = null;
@@ -332,16 +339,22 @@ public abstract class Inline : FundamentalUIComponent, ITextStyleUser
             return;
         }
 
-        Adamantium.UI.Core.Resources.ResourceResolver.Resolve(this, block);
-        if (CharacterStyle is { } characterStyle)
+        Adamantium.UI.Core.Resources.ResourceResolver.ResolveFrom(this, block);
+        for (TextFormat format = CharacterStyle; format != null; format = format.Base)
         {
-            Adamantium.UI.Core.Resources.ResourceResolver.Resolve(characterStyle, block);
+            Adamantium.UI.Core.Resources.ResourceResolver.ResolveFrom(format, block);
         }
 
-        if ((this as Paragraph)?.ParagraphStyle is { } paragraphStyle)
+        for (TextFormat format = (this as Paragraph)?.ParagraphStyle; format != null; format = format.Base)
         {
-            Adamantium.UI.Core.Resources.ResourceResolver.Resolve(paragraphStyle, block);
+            Adamantium.UI.Core.Resources.ResourceResolver.ResolveFrom(format, block);
         }
+    }
+
+    protected override void OnAttachedToLogicalTree(LogicalTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToLogicalTree(e);
+        ResolveResources();
     }
 
     internal bool ReachesABlock()
@@ -360,11 +373,6 @@ public abstract class Inline : FundamentalUIComponent, ITextStyleUser
     internal virtual void SetInBlock(bool inBlock)
     {
         _inBlock = inBlock;
-        if (inBlock)
-        {
-            ResolveResources();
-        }
-
         Rebake();
         if (_textEffects == null)
         {

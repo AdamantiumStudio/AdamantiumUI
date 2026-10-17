@@ -338,6 +338,13 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         _links.Clear();
         _objects.Clear();
         _inlineBrushes.Clear();
+        if (!HasInlines)
+        {
+            _inlineRanges.Clear();
+            _paragraphs.Clear();
+            _engineStyles.Clear();
+        }
+
         var attributed = HasInlines
             ? InlineAttributedText(text, shaping)
             : shaping == null ? null : new AttributedText(text, shaping);

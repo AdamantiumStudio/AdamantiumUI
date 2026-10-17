@@ -105,4 +105,90 @@ public class TextStyleResourceTests
 
         Assert.That(paragraph.ParagraphStyle, Is.SameAs(heading));
     }
+
+    [Test]
+    public void AScopeSwitched_ReachesTheInlinesAndTheirStyles()
+    {
+        var run = new Run { Text = "x" };
+        Adamantium.UI.Core.Resources.ResourceResolver.SetDeferred(run, nameof(Run.CharacterStyle), "Emphasis");
+        var style = new CharacterStyle();
+        Adamantium.UI.Core.Resources.ResourceResolver.SetDeferred(style, nameof(CharacterStyle.FontSize), "Size");
+        var text = new TextBlock();
+        text.Inlines.Add(new Run { Text = "y", CharacterStyle = style });
+        text.Inlines.Add(new Span { Inlines = { run } });
+        var panel = new StackPanel { Children = { text } };
+        var resources = new Adamantium.UI.Core.Resources.ResourceDictionary();
+        resources.Add("Emphasis", new CharacterStyle());
+        resources.Add("Size", 12.0);
+        Adamantium.UI.Core.Resources.ResourceContext.SetResources(panel, resources);
+        var window = new Adamantium.UI.Controls.Window { Width = 400, Height = 300, Content = panel };
+        Adamantium.UI.Extensions.WindowExtension.UpdateTree(window);
+        var switched = new CharacterStyle();
+        resources["Emphasis"] = switched;
+        resources["Size"] = 30.0;
+
+        Adamantium.UI.Core.Resources.ResourceResolver.ReResolveSubtree(panel);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(run.CharacterStyle, Is.SameAs(switched));
+            Assert.That(style.FontSize, Is.EqualTo(30));
+        });
+    }
+
+    [Test]
+    public void ABaseGivenToAStyleInUse_AnswersItsReferences()
+    {
+        var used = new CharacterStyle();
+        var text = new TextBlock();
+        text.Inlines.Add(new Run { Text = "x", CharacterStyle = used });
+        var panel = new StackPanel { Children = { text } };
+        var resources = new Adamantium.UI.Core.Resources.ResourceDictionary();
+        resources.Add("Size", 24.0);
+        Adamantium.UI.Core.Resources.ResourceContext.SetResources(panel, resources);
+        var window = new Adamantium.UI.Controls.Window { Width = 400, Height = 300, Content = panel };
+        Adamantium.UI.Extensions.WindowExtension.UpdateTree(window);
+        var late = new CharacterStyle();
+        Adamantium.UI.Core.Resources.ResourceResolver.SetDeferred(late, nameof(CharacterStyle.FontSize), "Size");
+
+        used.BasedOn = late;
+
+        Assert.That(late.FontSize, Is.EqualTo(24));
+    }
+
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+    private static System.WeakReference[] AddedAndRemoved(TextBlock text, Adamantium.UI.Controls.Window window)
+    {
+        var references = new System.WeakReference[50];
+        for (var i = 0; i < references.Length; i++)
+        {
+            var run = new Run { Text = "x" };
+            Adamantium.UI.Core.Resources.ResourceResolver.SetDeferred(run, nameof(Run.CharacterStyle), "Emphasis");
+            text.Inlines.Add(run);
+            Adamantium.UI.Extensions.WindowExtension.UpdateTree(window);
+            text.Inlines.Remove(run);
+            Adamantium.UI.Extensions.WindowExtension.UpdateTree(window);
+            references[i] = new System.WeakReference(run);
+        }
+
+        return references;
+    }
+
+    [Test]
+    public void InlinesThatReferencedAResource_AreNotKeptByTheirBlock()
+    {
+        var text = new TextBlock();
+        var panel = new StackPanel { Children = { text } };
+        var resources = new Adamantium.UI.Core.Resources.ResourceDictionary();
+        resources.Add("Emphasis", new CharacterStyle { FontSize = 20 });
+        Adamantium.UI.Core.Resources.ResourceContext.SetResources(panel, resources);
+        var window = new Adamantium.UI.Controls.Window { Width = 400, Height = 300, Content = panel };
+        Adamantium.UI.Extensions.WindowExtension.UpdateTree(window);
+        var references = AddedAndRemoved(text, window);
+        System.GC.Collect();
+        System.GC.WaitForPendingFinalizers();
+        System.GC.Collect();
+
+        Assert.That(System.Linq.Enumerable.Count(references, reference => reference.IsAlive), Is.Zero);
+    }
 }

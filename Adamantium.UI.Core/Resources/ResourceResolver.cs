@@ -85,7 +85,27 @@ public static class ResourceResolver
         if (root == null) return;
 
         ResolveThrough(root, root);
+        ReResolveParts(root);
         foreach (var child in root.VisualChildren) ReResolveSubtree(child);
+    }
+
+    // Parts that sit in the logical tree only, as inlines do: no visual walk reaches them.
+    private static void ReResolveParts(IFundamentalUIComponent owner)
+    {
+        foreach (var part in owner.LogicalChildren)
+        {
+            if (part is IUIComponent)
+            {
+                continue;
+            }
+
+            if (part is IResolvesOwnResources own)
+            {
+                own.ResolveResources();
+            }
+
+            ReResolveParts(part);
+        }
     }
 
     /// <summary>Answer a non-visual target's deferred resources from <paramref name="anchor"/>'s position in the tree.
@@ -103,6 +123,16 @@ public static class ResourceResolver
         // And AGAIN when the anchor enters the tree: markup assigns a brush to its element BEFORE that element is added
         // to its parent, so the walk above starts from an element that has no ancestors yet.
         anchor.AttachedToVisualTreeEvent += (_, _) => ResolveThrough(target, anchor);
+    }
+
+    /// <summary>Answers a non-visual target's deferred resources from where <paramref name="anchor"/> stands now, once and
+    /// with nothing subscribed: for a target that hears of its own attaching, as an inline does.</summary>
+    public static void ResolveFrom(IAdamantiumComponent target, IUIComponent anchor)
+    {
+        if (anchor != null)
+        {
+            ResolveThrough(target, anchor);
+        }
     }
 
     private static void ResolveThrough(IAdamantiumComponent target, IUIComponent anchor)

@@ -204,7 +204,7 @@ public abstract class TextFormat : AdamantiumComponent
 
     // What lays out by this style lays out again, told outside the lock, every one of them even if one throws; on a
     // thread already telling it, once, when a chain set in a loop brings the news back round.
-    private protected void NotifyUsers()
+    private protected void NotifyUsers(bool rebased)
     {
         var telling = _telling ??= [];
         if (!telling.Add(this))
@@ -228,7 +228,7 @@ public abstract class TextFormat : AdamantiumComponent
             {
                 try
                 {
-                    user.TextStyleChanged();
+                    user.TextStyleChanged(rebased);
                 }
                 catch (Exception e)
                 {
@@ -279,14 +279,14 @@ public abstract class TextFormat : AdamantiumComponent
     protected override void OnPropertyChanged(AdamantiumPropertyChangedEventArgs e)
     {
         base.OnPropertyChanged(e);
-        NotifyUsers();
+        NotifyUsers(e.Property == CharacterStyle.BasedOnProperty || e.Property == ParagraphStyle.BasedOnProperty);
     }
 }
 
-// What lays out by a text style, and hears when it changes.
+// What lays out by a text style, and hears when it changes; rebased when a style in its chain took another base.
 internal interface ITextStyleUser
 {
-    void TextStyleChanged();
+    void TextStyleChanged(bool rebased);
 }
 
 /// <summary>A named character style, as InDesign's: formatting a range of inlines takes over its paragraph's style
@@ -313,7 +313,7 @@ public class CharacterStyle : TextFormat, ITextStyleUser
 
     private protected override TextFormat BaseFormat => BasedOn;
 
-    void ITextStyleUser.TextStyleChanged() => NotifyUsers();
+    void ITextStyleUser.TextStyleChanged(bool rebased) => NotifyUsers(rebased);
 
     protected override void OnPropertyChanged(AdamantiumPropertyChangedEventArgs e)
     {
@@ -416,7 +416,7 @@ public class ParagraphStyle : TextFormat, ITextStyleUser
         return attributes;
     }
 
-    void ITextStyleUser.TextStyleChanged() => NotifyUsers();
+    void ITextStyleUser.TextStyleChanged(bool rebased) => NotifyUsers(rebased);
 
     protected override void OnPropertyChanged(AdamantiumPropertyChangedEventArgs e)
     {
