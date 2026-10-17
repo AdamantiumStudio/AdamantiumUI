@@ -59,6 +59,9 @@ public abstract class Inline : FundamentalUIComponent
     public static readonly AdamantiumProperty TrackingProperty = AdamantiumProperty.Register(nameof(Tracking),
         typeof(double?), typeof(Inline), new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure));
 
+    public static readonly AdamantiumProperty KerningProperty = AdamantiumProperty.Register(nameof(Kerning),
+        typeof(TextKerning?), typeof(Inline), new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure));
+
     public static readonly AdamantiumProperty BaselineShiftProperty = AdamantiumProperty.Register(nameof(BaselineShift),
         typeof(double?), typeof(Inline), new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure));
 
@@ -172,6 +175,14 @@ public abstract class Inline : FundamentalUIComponent
     {
         get => GetValue<double?>(TrackingProperty);
         set => SetValue(TrackingProperty, value);
+    }
+
+    /// <summary>Where the space between two letters of this inline comes from; null takes the enclosing span's, then the
+    /// TextBlock's <c>Kerning</c>.</summary>
+    public TextKerning? Kerning
+    {
+        get => GetValue<TextKerning?>(KerningProperty);
+        set => SetValue(KerningProperty, value);
     }
 
     /// <summary>How far this inline is raised above the line's baseline, as InDesign's baseline shift; negative lowers

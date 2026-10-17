@@ -7,6 +7,10 @@ All packages share one version.
 
 ### Added
 
+- `Kerning` on every element, inherited, and on an inline, as InDesign's: the font's pairs (`Metrics`, the default),
+  the letters' outlines (`Optical` - for a font with no pairs, or pairs it left out) or none. In a `TextBlock` and a
+  `TextBox`; the Text tab's OpenType topic shows one line three ways.
+
 - `x:Key="{x:Static Type.Member}"`: a resource keyed by a constant code uses too - an entity's icon key - so the key is
   written once, in C#. In a resource file, an inline dictionary, and with `x:Shared="False"`; a member that is not text
   is a build error, and `{}` still starts a key that is braces as written. Hot reload sees an `{x:Static}` changed to
