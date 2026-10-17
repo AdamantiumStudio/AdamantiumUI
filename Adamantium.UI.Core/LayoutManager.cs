@@ -215,6 +215,12 @@ public sealed class LayoutManager
     /// raised on a clean frame, so a consumer (e.g. the render cache) can rebuild on this instead of every frame.</summary>
     public event EventHandler LayoutUpdated;
 
+    // After a pass that settled, and after the layer laid an overlay of this manager out: what lays out by where it
+    // stands checks its place, the elements above it now arranged.
+    internal event EventHandler PlacesSettled;
+
+    internal void OverlayArranged() => PlacesSettled?.Invoke(this, EventArgs.Empty);
+
     /// <summary>Raised after a pass that found NO work: every queue empty AND nothing re-dirtied, so this tree has SETTLED.</summary>
     /// <remarks>
     /// Distinct from <see cref="LayoutUpdated"/> (which fires after a pass that DID work - mid-cascade, just one of several).
@@ -302,7 +308,10 @@ public sealed class LayoutManager
 
         // LayoutUpdated = "layout settled this frame" - only when everything drained.
         if (didWork && settled)
+        {
             LayoutUpdated?.Invoke(this, EventArgs.Empty);
+            PlacesSettled?.Invoke(this, EventArgs.Empty);
+        }
 
         // Coalesced resource-change notification: the style drain may have loaded a new theme's dictionaries, so fire
         // ResourcesChanged once, here, after they're present. No-op (a flag read) when nothing changed.

@@ -11,6 +11,17 @@ All packages share one version.
   the letters' outlines (`Optical` - for a font with no pairs, or pairs it left out) or none. In a `TextBlock` and a
   `TextBox`; the Text tab's OpenType topic shows one line three ways.
 
+- A baseline grid on any element, inherited, as InDesign's: `BaselineGridStep` (NaN, the default, is none),
+  `BaselineGridOffset` and `BaselineGridFirstLineOnly`. The grid starts at the top of the element its step is set on,
+  and every `TextBlock` under it puts its baselines on the grid's lines, so headings, body text and columns of other
+  sizes keep one rhythm. A `StackPanel`, a `Border` and a `ScrollContentPresenter` tell a child where it will stand
+  while measuring it (`PlaceAt`), so a stack of blocks, the rows of a list and text in a popup are on the grid in the
+  pass that lays them out; under other panels a block that moved lays its lines out again once the pass settles. A
+  block centered or at the bottom of a taller slot - itself or an element above it - moves with its own height and is
+  not put on the grid: it keeps the place it first took. Scrolling moves the grid with the text; a `LayoutTransform`
+  between the two is not taken into account. The Text tab's Paragraph topic shows a heading and two columns on one
+  grid.
+
 - `x:Key="{x:Static Type.Member}"`: a resource keyed by a constant code uses too - an entity's icon key - so the key is
   written once, in C#. In a resource file, an inline dictionary, and with `x:Shared="False"`; a member that is not text
   is a build error, and `{}` still starts a key that is braces as written. Hot reload sees an `{x:Static}` changed to
