@@ -46,6 +46,13 @@
             </StackPanel>
         </StackPanel>
 
+        <!-- Ruby: furigana over kanji, a longer reading spreading its base, and an annotation under the line. -->
+        <TextBlock Text="{Localize TextStrings.RubyTitle}"
+                   Margin="0,20,0,6"/>
+        <TextBlock AutomationProperties.AutomationId="RubySample"
+                   FontSize="34"
+                   Language="ja"><Ruby Annotation="にほん">日本</Ruby>の<Ruby Annotation="かんじ">漢字</Ruby>を<Ruby Annotation="うけたまわ">承</Ruby>る、<Ruby Annotation="English" RubyPosition="Under">英語</Ruby></TextBlock>
+
         <!-- A panel of OpenType features: each feature that turns a glyph into another, named by the font itself when it
              names it, and characters it changes drawn with it on. -->
         <TextBlock Text="{Localize TextStrings.FeaturesTitle}"
