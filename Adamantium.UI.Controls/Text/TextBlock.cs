@@ -1070,6 +1070,8 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         return null;
     }
 
+    private static bool IsStyled(ValuePriority source) => source is ValuePriority.Style or ValuePriority.Trigger;
+
     private static ParagraphStyle ParagraphStyleOf(List<Inline> chain)
     {
         foreach (var inline in chain)
@@ -1173,7 +1175,8 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         Brush foreground = null;
         Brush background = null;
         var decorations = TextDecorations.None;
-        var kindDecorations = TextDecorations.None;
+        var looks = TextDecorations.None;
+        var styleLines = false;
         FontWeight? weight = null;
         FontStyle? style = null;
         FontStretch? stretch = null;
@@ -1187,8 +1190,16 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         double? shift = null;
         BaselineAlignment? alignment = null;
         List<TextDecorationLine> lines = null;
-        foreach (var inline in chain)
+        var foregroundAt = -1;
+        var styleAt = -1;
+        for (var i = 0; i < chain.Count; i++)
         {
+            var inline = chain[i];
+            if (inline.CharacterStyle != null)
+            {
+                styleAt = i;
+            }
+
             if (inline.HasDecorationLines)
             {
                 lines ??= [];
@@ -1200,17 +1211,39 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
                 fontSize = inline.FontSize;
             }
 
-            foreground = inline.Foreground ?? foreground;
-            background = inline.Background ?? background;
-            // A decoration an inline has by its kind, as a hyperlink's underline, yields to a style's.
-            if (inline.GetValueSource(Inline.TextDecorationsProperty) == ValuePriority.Default)
+            if (inline.Foreground != null)
             {
-                kindDecorations |= inline.TextDecorations;
+                foreground = inline.Foreground;
+                foregroundAt = IsStyled(inline.GetValueSource(Inline.ForegroundProperty)) ? i : -1;
+            }
+
+            background = inline.Background ?? background;
+            var source = inline.GetValueSource(Inline.TextDecorationsProperty);
+            var characterLines = inline.CharacterStyle?.ResolvedDecorations();
+            var paragraphLines = (inline as Paragraph)?.ParagraphStyle?.ResolvedDecorations();
+            var ownStyleLines = characterLines == null && paragraphLines == null
+                ? (TextDecorations?)null
+                : (characterLines ?? TextDecorations.None) | (paragraphLines ?? TextDecorations.None);
+            var byLook = IsStyled(source) || (inline is Hyperlink && source == ValuePriority.Default);
+            styleLines |= ownStyleLines != null;
+            if (source != ValuePriority.Default && !IsStyled(source))
+            {
+                decorations |= inline.TextDecorations;
+            }
+            else if (ownStyleLines is { } styled)
+            {
+                looks = TextDecorations.None;
+                decorations |= styled | (byLook ? TextDecorations.None : inline.TextDecorations);
+            }
+            else if (byLook)
+            {
+                looks |= inline.TextDecorations;
             }
             else
             {
                 decorations |= inline.TextDecorations;
             }
+
             weight = inline.FontWeight ?? weight;
             style = inline.FontStyle ?? style;
             stretch = inline.FontStretch ?? stretch;
@@ -1225,11 +1258,12 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
             alignment = inline.BaselineAlignment ?? alignment;
         }
 
+        decorations |= looks;
         var characterStyle = CharacterStyleOf(chain);
         var paragraphStyle = ParagraphStyleOf(chain);
-        if ((characterStyle?.ResolvedDecorations() ?? paragraphStyle?.ResolvedDecorations()) == null)
+        if (foregroundAt >= 0 && styleAt >= foregroundAt && characterStyle.ResolvedForeground() != null)
         {
-            decorations |= kindDecorations;
+            foreground = null;
         }
 
         if (objectSize != null && alignment is null or BaselineAlignment.Baseline)
@@ -1260,7 +1294,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
             FontSize = double.IsNaN(fontSize) ? null : fontSize,
             Foreground = (foreground as SolidColorBrush)?.Color,
             Background = (background as SolidColorBrush)?.Color,
-            Decorations = decorations == TextDecorations.None ? null : decorations,
+            Decorations = decorations == TextDecorations.None && !styleLines ? null : decorations,
             DecorationLines = lines,
         };
     }

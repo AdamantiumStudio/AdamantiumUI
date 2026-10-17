@@ -153,6 +153,87 @@ public class TextStyleTests
         });
     }
 
+    private static Hyperlink Link(string text, CharacterStyle style = null)
+    {
+        var link = new Hyperlink { CharacterStyle = style };
+        link.Inlines.Add(new Run { Text = text });
+        // As the theme colors it.
+        link.SetValue(Inline.ForegroundProperty, new SolidColorBrush(Colors.Blue), ValuePriority.Style);
+        return link;
+    }
+
+    [Test]
+    public void AHyperlinksLook_YieldsToAStyleOnIt_NotToOneAroundIt()
+    {
+        var plain = new CharacterStyle { Foreground = new SolidColorBrush(Colors.Red), TextDecorations = TextDecorations.None };
+        var around = new Span { CharacterStyle = plain };
+        around.Inlines.Add(Link("inner"));
+        var own = Link("own", plain);
+        own.Foreground = new SolidColorBrush(Colors.Green);
+        var (text, _) = Hosted(Link("styled", plain), around, own);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(text.Layout.AttributedText.AttributesAt(0).Decorations, Is.Null.Or.EqualTo(TextDecorations.None));
+            Assert.That(First(text, 0).Attributes.Foreground, Is.EqualTo(Colors.Red), "the style on the link");
+            Assert.That(text.Layout.AttributedText.AttributesAt(6).Decorations, Is.EqualTo(TextDecorations.Underline));
+            Assert.That(First(text, 6).Attributes.Foreground, Is.EqualTo(Colors.Blue), "a style around the link");
+            Assert.That(First(text, 11).Attributes.Foreground, Is.EqualTo(Colors.Green), "the link's own color");
+        });
+    }
+
+    [Test]
+    public void AParagraphStyle_AddsItsLinesToALinksUnderline_ItsNoneTakesNothingAway()
+    {
+        var clean = new ParagraphStyle { TextDecorations = TextDecorations.None };
+        var struck = new ParagraphStyle { TextDecorations = TextDecorations.Strikethrough };
+        var (text, _) = Hosted(new Paragraph { ParagraphStyle = clean, Inlines = { Link("a") } },
+            new Paragraph { ParagraphStyle = struck, Inlines = { Link("b"), new Run { Text = "c" } } });
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(text.Layout.AttributedText.AttributesAt(0).Decorations, Is.EqualTo(TextDecorations.Underline));
+            Assert.That(text.Layout.AttributedText.AttributesAt(2).Decorations,
+                Is.EqualTo(TextDecorations.Underline | TextDecorations.Strikethrough));
+            Assert.That(text.Layout.AttributedText.AttributesAt(3).Decorations, Is.EqualTo(TextDecorations.Strikethrough));
+        });
+    }
+
+    [Test]
+    public void AnUnderlinesLine_AndTheLinesInsideALink_AddUp()
+    {
+        var struck = new CharacterStyle { TextDecorations = TextDecorations.Strikethrough };
+        var over = new CharacterStyle { TextDecorations = TextDecorations.Overline };
+        var underlined = new Underline();
+        underlined.Inlines.Add(new Run { Text = "a", CharacterStyle = struck });
+        var aroundLink = new Underline();
+        aroundLink.Inlines.Add(Link("b", struck));
+        var link = new Hyperlink { CharacterStyle = over };
+        link.Inlines.Add(new Run { Text = "c", TextDecorations = TextDecorations.Strikethrough });
+        var overridden = new Hyperlink();
+        overridden.Inlines.Add(new Run { Text = "d", CharacterStyle = struck, TextDecorations = TextDecorations.Overline });
+        var both = new Paragraph
+        {
+            ParagraphStyle = new ParagraphStyle { TextDecorations = TextDecorations.Strikethrough }, CharacterStyle = over,
+            Inlines = { new Run { Text = "e" } },
+        };
+        var (text, _) = Hosted(underlined, aroundLink, link, overridden, both);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(text.Layout.AttributedText.AttributesAt(0).Decorations,
+                Is.EqualTo(TextDecorations.Underline | TextDecorations.Strikethrough), "a style inside an underline");
+            Assert.That(text.Layout.AttributedText.AttributesAt(1).Decorations,
+                Is.EqualTo(TextDecorations.Underline | TextDecorations.Strikethrough), "an underline around a link");
+            Assert.That(text.Layout.AttributedText.AttributesAt(2).Decorations,
+                Is.EqualTo(TextDecorations.Overline | TextDecorations.Strikethrough), "a run's own line in a styled link");
+            Assert.That(text.Layout.AttributedText.AttributesAt(3).Decorations,
+                Is.EqualTo(TextDecorations.Underline | TextDecorations.Overline), "a style its run's own line overrides");
+            Assert.That(text.Layout.AttributedText.AttributesAt(5).Decorations,
+                Is.EqualTo(TextDecorations.Overline | TextDecorations.Strikethrough), "a paragraph's two styles");
+        });
+    }
+
     [Test]
     public void ALoopClosedByMarkup_AndOpenedAgain_StillTellsTheText()
     {
