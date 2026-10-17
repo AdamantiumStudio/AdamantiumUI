@@ -317,6 +317,33 @@ public abstract class Inline : FundamentalUIComponent, ITextStyleUser
 
     internal bool InBlock => _inBlock;
 
+    // An inline takes no part in the visual tree: what a {ResourceReference} on it, or on its styles, asks is answered
+    // from its block's place there.
+    private void ResolveResources()
+    {
+        TextBlock block = null;
+        for (var node = LogicalParent; node != null && block == null; node = node.LogicalParent)
+        {
+            block = node as TextBlock;
+        }
+
+        if (block == null)
+        {
+            return;
+        }
+
+        Adamantium.UI.Core.Resources.ResourceResolver.Resolve(this, block);
+        if (CharacterStyle is { } characterStyle)
+        {
+            Adamantium.UI.Core.Resources.ResourceResolver.Resolve(characterStyle, block);
+        }
+
+        if ((this as Paragraph)?.ParagraphStyle is { } paragraphStyle)
+        {
+            Adamantium.UI.Core.Resources.ResourceResolver.Resolve(paragraphStyle, block);
+        }
+    }
+
     internal bool ReachesABlock()
     {
         for (var node = LogicalParent; node != null; node = node.LogicalParent)
@@ -333,6 +360,11 @@ public abstract class Inline : FundamentalUIComponent, ITextStyleUser
     internal virtual void SetInBlock(bool inBlock)
     {
         _inBlock = inBlock;
+        if (inBlock)
+        {
+            ResolveResources();
+        }
+
         Rebake();
         if (_textEffects == null)
         {
@@ -404,6 +436,11 @@ public abstract class Inline : FundamentalUIComponent, ITextStyleUser
         {
             (e.OldValue as TextFormat)?.Unuse(this);
             (e.NewValue as TextFormat)?.Use(this);
+            if (_inBlock && e.NewValue != null)
+            {
+                ResolveResources();
+            }
+
             Rebake();
         }
 

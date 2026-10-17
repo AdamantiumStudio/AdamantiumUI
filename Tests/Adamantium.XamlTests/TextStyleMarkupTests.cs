@@ -18,11 +18,11 @@ public class TextStyleMarkupTests
     private const string Panel =
         "<StackPanel " + Namespaces + "><StackPanel.Resources>" +
         "<ParagraphStyle x:Key=\"Body\" FontSize=\"16\" Margin=\"0,0,0,8\"/>" +
-        "<ParagraphStyle x:Key=\"Heading\" BasedOn=\"{StaticResource Body}\" FontSize=\"28\" TextIndent=\"0\"/>" +
+        "<ParagraphStyle x:Key=\"Heading\" FontSize=\"28\" TextIndent=\"0\"/>" +
         "<CharacterStyle x:Key=\"Emphasis\" FontWeight=\"Bold\"/>" +
         "</StackPanel.Resources>" +
-        "<TextBlock><Paragraph ParagraphStyle=\"{StaticResource Heading}\">Title</Paragraph>" +
-        "<Paragraph ParagraphStyle=\"{StaticResource Body}\">Body <Run CharacterStyle=\"{StaticResource Emphasis}\" Text=\"em\"/></Paragraph>" +
+        "<TextBlock><Paragraph ParagraphStyle=\"{ResourceReference Heading}\">Title</Paragraph>" +
+        "<Paragraph ParagraphStyle=\"{ResourceReference Body}\">Body <Run CharacterStyle=\"{ResourceReference Emphasis}\" Text=\"em\"/></Paragraph>" +
         "</TextBlock></StackPanel>";
 
     [Test]
@@ -59,5 +59,50 @@ public class TextStyleMarkupTests
             Assert.That(heading.Margin, Is.EqualTo(new Thickness(0, 0, 0, 8)));
             Assert.That(((Run)body.Inlines[1]).CharacterStyle.FontWeight, Is.EqualTo(FontWeight.Bold));
         });
+    }
+}
+
+/// <summary>A style a paragraph references from an element's resources, as the built markup sets it: deferred, and
+/// answered from its block's place in the tree.</summary>
+[TestFixture]
+public class TextStyleResourceTests
+{
+    private FakeApp _app;
+
+    [OneTimeSetUp]
+    public void EnsureAppContext()
+    {
+        _app = new FakeApp(new Adamantium.Core.DependencyInjection.AdamantiumDependencyContainer());
+        Adamantium.UI.Core.UIAppContext.Initialize(_app, null);
+    }
+
+    [SetUp]
+    public void FreshResources()
+    {
+        _app.ResourceManager = new Adamantium.UI.Core.Resources.ResourceManager();
+        typeof(Adamantium.UI.Core.UIAppContext).GetProperty(nameof(Adamantium.UI.Core.UIAppContext.Current))
+            .SetValue(null, _app);
+    }
+
+    [Test]
+    public void AStyleReferencedFromAnElementsResources_IsTheOneTheParagraphTakes()
+    {
+        var heading = new ParagraphStyle { FontSize = 28 };
+        var paragraph = new Paragraph();
+        paragraph.Inlines.Add(new Run { Text = "Title" });
+        Adamantium.UI.Core.Resources.ResourceResolver.SetDeferred(paragraph, nameof(Paragraph.ParagraphStyle), "Heading");
+        var text = new TextBlock();
+        text.Inlines.Add(paragraph);
+        var panel = new StackPanel { Children = { text } };
+        var resources = new Adamantium.UI.Core.Resources.ResourceDictionary();
+        resources.Add("Heading", heading);
+        Adamantium.UI.Core.Resources.ResourceContext.SetResources(panel, resources);
+        var window = new Adamantium.UI.Controls.Window { Width = 400, Height = 300, Content = panel };
+        for (var i = 0; i < 5; i++)
+        {
+            Adamantium.UI.Extensions.WindowExtension.UpdateTree(window);
+        }
+
+        Assert.That(paragraph.ParagraphStyle, Is.SameAs(heading));
     }
 }

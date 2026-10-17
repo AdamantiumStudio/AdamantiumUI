@@ -8,10 +8,13 @@
                         FontSize="16"
                         Margin="0,0,0,8"/>
         <ParagraphStyle x:Key="HeadingStyle"
-                        BasedOn="{StaticResource BodyStyle}"
                         FontSize="26"
-                        FontWeight="Bold"
-                        Margin="0,4,0,6"/>
+                        FontWeight="Bold">
+            <ParagraphStyle.BasedOn>
+                <ParagraphStyle Margin="0,4,0,6"
+                                Foreground="#404040"/>
+            </ParagraphStyle.BasedOn>
+        </ParagraphStyle>
         <CharacterStyle x:Key="EmphasisStyle"
                         FontStyle="Italic"
                         Foreground="#2F7DD1"/>
@@ -623,9 +626,9 @@
             <TextBlock AutomationProperties.AutomationId="StyledText"
                        Language="en-US"
                        TextWrapping="WrapByWords">
-                <Paragraph ParagraphStyle="{StaticResource HeadingStyle}">A heading</Paragraph>
-                <Paragraph ParagraphStyle="{StaticResource BodyStyle}">Body text in its paragraph style, with <Run CharacterStyle="{StaticResource EmphasisStyle}" Text="an emphasis"/> and <Run CharacterStyle="{StaticResource EmphasisStyle}" Foreground="Red" Text="one that sets its own color"/>.</Paragraph>
-                <Paragraph ParagraphStyle="{StaticResource BodyStyle}" TextIndent="20">A paragraph of the same style that indents its own first line.</Paragraph>
+                <Paragraph ParagraphStyle="{ResourceReference HeadingStyle}">A heading</Paragraph>
+                <Paragraph ParagraphStyle="{ResourceReference BodyStyle}">Body text in its paragraph style, with <Run CharacterStyle="{ResourceReference EmphasisStyle}" Text="an emphasis"/> and <Run CharacterStyle="{ResourceReference EmphasisStyle}" Foreground="Red" Text="one that sets its own color"/>.</Paragraph>
+                <Paragraph ParagraphStyle="{ResourceReference BodyStyle}" TextIndent="20">A paragraph of the same style that indents its own first line.</Paragraph>
             </TextBlock>
         </Border>
 

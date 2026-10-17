@@ -12,8 +12,9 @@ All packages share one version.
   `Inline.CharacterStyle`, each with `BasedOn`, kept as resources. A paragraph takes its style under what it sets itself
   (field by field), an inline its character style over its paragraph's and under what it and the spans around it set
   themselves; the nearest inline's style wins. Changing a style, or one it is based on, lays out again the text it is
-  set on (styles hold their users weakly). Laid out by the engine's styles. The Text tab's Paragraph topic shows a
-  heading, body paragraphs and an emphasis.
+  set on (styles hold their users weakly). Laid out by the engine's styles. A `{ResourceReference}` on an inline or on
+  its styles is answered from its block's place in the tree (it was answered for no inline before). The Text tab's
+  Paragraph topic shows a heading, body paragraphs and an emphasis.
 
 - `Ruby`, a `Span` with an annotation, as HTML's `<ruby>`: `<Ruby Annotation="かんじ">漢字</Ruby>` sets furigana
   centered over its inlines at half their size (`AnnotationFontSize` sets its own), spreads inlines narrower than the
