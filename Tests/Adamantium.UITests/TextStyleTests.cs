@@ -235,6 +235,66 @@ public class TextStyleTests
     }
 
     [Test]
+    public void ABoldsWeight_AndAnItalicsSlant_YieldToAStyleOnThemOrInside_NotToOneAround()
+    {
+        var light = new CharacterStyle { FontWeight = FontWeight.Light, FontStyle = FontStyle.Normal };
+        var inside = new Bold();
+        inside.Inlines.Add(new Run { Text = "a", CharacterStyle = light });
+        var on = new Italic { CharacterStyle = light };
+        on.Inlines.Add(new Run { Text = "b" });
+        var around = new Span { CharacterStyle = light };
+        var bold = new Bold();
+        bold.Inlines.Add(new Italic { Inlines = { new Run { Text = "c" } } });
+        around.Inlines.Add(bold);
+        var own = new Bold();
+        own.Inlines.Add(new Run { Text = "d", CharacterStyle = light, FontWeight = FontWeight.Black });
+        var deeper = new Bold { CharacterStyle = light };
+        deeper.Inlines.Add(new Run { Text = "e", CharacterStyle = new CharacterStyle { FontSize = 20 } });
+        var link = Link("f", new CharacterStyle { Foreground = new SolidColorBrush(Colors.Red) });
+        ((Run)link.Inlines[0]).CharacterStyle = new CharacterStyle { FontSize = 20 };
+        var wrapped = new Bold();
+        wrapped.Inlines.Add(new Span
+        {
+            CharacterStyle = light,
+            Inlines = { new Run { Text = "g", CharacterStyle = new CharacterStyle { FontSize = 20 } } },
+        });
+        var (text, window) = Hosted(inside, on, around, own, deeper, link, wrapped);
+        // Faces not loaded yet are read on a worker; the text lays out again on the loop when they arrive.
+        var deadline = DateTime.UtcNow.AddSeconds(10);
+        while ((text.Layout.AttributedText.AttributesAt(0).Font?.Weight != FontWeight.Light
+                || text.Layout.AttributedText.AttributesAt(2).Font?.Weight != FontWeight.Bold
+                || text.Layout.AttributedText.AttributesAt(3).Font?.Weight != FontWeight.Black
+                || text.Layout.AttributedText.AttributesAt(4).Font?.Weight != FontWeight.Bold
+                || text.Layout.AttributedText.AttributesAt(6).Font?.Weight != FontWeight.Bold)
+               && DateTime.UtcNow < deadline)
+        {
+            Thread.Sleep(10);
+            LoopSignal.Drain();
+            WindowExtension.UpdateTree(window);
+        }
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(text.Layout.AttributedText.AttributesAt(0).Font.Weight, Is.EqualTo(FontWeight.Light),
+                "a style inside a bold");
+            Assert.That(text.Layout.AttributedText.AttributesAt(1).Font.Style, Is.EqualTo(FontStyle.Normal),
+                "a style on an italic");
+            Assert.That(text.Layout.AttributedText.AttributesAt(2).Font.Weight, Is.EqualTo(FontWeight.Bold),
+                "a style around a bold");
+            Assert.That(text.Layout.AttributedText.AttributesAt(2).Font.Style, Is.EqualTo(FontStyle.Italic),
+                "a style around an italic");
+            Assert.That(text.Layout.AttributedText.AttributesAt(3).Font.Weight, Is.EqualTo(FontWeight.Black),
+                "a weight set on the run");
+            Assert.That(text.Layout.AttributedText.AttributesAt(4).Font.Weight, Is.EqualTo(FontWeight.Bold),
+                "a style on the bold, replaced whole by one without a weight inside");
+            Assert.That(First(text, 5).Attributes.Foreground, Is.EqualTo(Colors.Blue),
+                "a style on a link, replaced whole by one without a color inside");
+            Assert.That(text.Layout.AttributedText.AttributesAt(6).Font.Weight, Is.EqualTo(FontWeight.Bold),
+                "a bold around a style that does not reach its run");
+        });
+    }
+
+    [Test]
     public void ALoopClosedByMarkup_AndOpenedAgain_StillTellsTheText()
     {
         var a = new CharacterStyle { FontSize = 20 };

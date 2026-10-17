@@ -1072,6 +1072,21 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
 
     private static bool IsStyled(ValuePriority source) => source is ValuePriority.Style or ValuePriority.Trigger;
 
+    private static bool IsLook(ValuePriority source) => source == ValuePriority.Default || IsStyled(source);
+
+    private static TValue NearestStyleFrom<TValue>(List<Inline> chain, int from, Func<CharacterStyle, TValue> field)
+    {
+        for (var i = chain.Count - 1; i >= from; i--)
+        {
+            if (chain[i].CharacterStyle is { } format)
+            {
+                return field(format);
+            }
+        }
+
+        return default;
+    }
+
     private static ParagraphStyle ParagraphStyleOf(List<Inline> chain)
     {
         foreach (var inline in chain)
@@ -1191,15 +1206,11 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         BaselineAlignment? alignment = null;
         List<TextDecorationLine> lines = null;
         var foregroundAt = -1;
-        var styleAt = -1;
+        var weightAt = -1;
+        var fontStyleAt = -1;
         for (var i = 0; i < chain.Count; i++)
         {
             var inline = chain[i];
-            if (inline.CharacterStyle != null)
-            {
-                styleAt = i;
-            }
-
             if (inline.HasDecorationLines)
             {
                 lines ??= [];
@@ -1244,8 +1255,18 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
                 decorations |= inline.TextDecorations;
             }
 
-            weight = inline.FontWeight ?? weight;
-            style = inline.FontStyle ?? style;
+            if (inline.FontWeight != null)
+            {
+                weight = inline.FontWeight;
+                weightAt = IsLook(inline.GetValueSource(Inline.FontWeightProperty)) ? i : -1;
+            }
+
+            if (inline.FontStyle != null)
+            {
+                style = inline.FontStyle;
+                fontStyleAt = IsLook(inline.GetValueSource(Inline.FontStyleProperty)) ? i : -1;
+            }
+
             stretch = inline.FontStretch ?? stretch;
             synthesis = inline.FontSynthesis ?? synthesis;
             features = inline.FontFeatures ?? features;
@@ -1261,9 +1282,19 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         decorations |= looks;
         var characterStyle = CharacterStyleOf(chain);
         var paragraphStyle = ParagraphStyleOf(chain);
-        if (foregroundAt >= 0 && styleAt >= foregroundAt && characterStyle.ResolvedForeground() != null)
+        if (foregroundAt >= 0)
         {
-            foreground = null;
+            foreground = NearestStyleFrom(chain, foregroundAt, static format => format.ResolvedForeground()) ?? foreground;
+        }
+
+        if (weightAt >= 0)
+        {
+            weight = NearestStyleFrom(chain, weightAt, static format => format.ResolvedWeight()) ?? weight;
+        }
+
+        if (fontStyleAt >= 0)
+        {
+            style = NearestStyleFrom(chain, fontStyleAt, static format => format.ResolvedStyle()) ?? style;
         }
 
         if (objectSize != null && alignment is null or BaselineAlignment.Baseline)
