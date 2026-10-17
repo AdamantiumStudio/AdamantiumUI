@@ -1380,6 +1380,8 @@ All packages share one version.
 
 ### Fixed
 
+- An idle loop no longer throws an `OperationCanceledException` on the thread pool each time its sleep times out: the
+  next sleep waited on the pipe afresh, which canceled the wait before. It keeps that wait instead.
 - A docking area gone for good takes its panes off screen: their view models hear `OnDeactivated` and `OnHidden`, so
   one that follows something only while shown lets it go, and an area put in its place shows them again. Before, they
   stayed "shown" with nothing on screen and went on following. Its floating windows close with it: when it went before

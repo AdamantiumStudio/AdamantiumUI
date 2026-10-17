@@ -1,3 +1,4 @@
+using System;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
@@ -53,6 +54,51 @@ public class LoopSignalTests
 
         LoopSignal.Drain();
         Assert.That(ran, Is.True);
+    }
+
+    // An idle loop sleeps out its timeout again and again: a sleep must not cancel the one before, which threw on the
+    // thread pool every time.
+    [Test]
+    public void SleepsThatTimeOut_ThrowNothing()
+    {
+        var thrown = 0;
+        EventHandler<System.Runtime.ExceptionServices.FirstChanceExceptionEventArgs> count = (_, e) =>
+        {
+            if (e.Exception is OperationCanceledException) Interlocked.Increment(ref thrown);
+        };
+        AppDomain.CurrentDomain.FirstChanceException += count;
+        try
+        {
+            LoopSignal.Wait(20, CancellationToken.None);
+            LoopSignal.Wait(20, CancellationToken.None);
+            LoopSignal.Wait(20, CancellationToken.None);
+            Thread.Sleep(100);
+        }
+        finally
+        {
+            AppDomain.CurrentDomain.FirstChanceException -= count;
+        }
+
+        Assert.That(thrown, Is.Zero);
+    }
+
+    [Test]
+    public void APost_WakesASleepKeptFromBefore()
+    {
+        LoopSignal.Wait(20, CancellationToken.None);
+        var clock = Stopwatch.StartNew();
+        var poster = Task.Run(() =>
+        {
+            Thread.Sleep(50);
+            LoopSignal.Post(() => { });
+        });
+
+        LoopSignal.Wait(5000, CancellationToken.None);
+        var woke = clock.ElapsedMilliseconds;
+        poster.Wait();
+        LoopSignal.Drain();
+
+        Assert.That(woke, Is.LessThan(2000));
     }
 
     [Test]

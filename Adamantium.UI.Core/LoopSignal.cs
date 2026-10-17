@@ -27,6 +27,10 @@ public static class LoopSignal
 
     private static int _loopThread;
 
+    // The wait a sleep timed out on, kept for the next one: a new wait on the single-reader pipe cancels the one before,
+    // which throws on the thread pool every time the loop idles. Only the loop thread sleeps.
+    private static System.Threading.Tasks.Task<bool> _sleep;
+
     /// <summary>Whether the calling thread is the one running the loop - the one that last ran <see cref="Drain"/>.
     /// </summary>
     public static bool IsLoopThread => Environment.CurrentManagedThreadId == Volatile.Read(ref _loopThread);
@@ -125,16 +129,25 @@ public static class LoopSignal
     {
         try
         {
-            var pending = Pipe.Reader.WaitToReadAsync(token);
-            if (pending.IsCompleted)
+            // What woke the last sleep may have been drained since: ask the pipe again.
+            if (_sleep is { IsCompleted: true }) _sleep = null;
+
+            if (_sleep == null)
             {
-                pending.GetAwaiter().GetResult();   // observe the result; the items stay in the pipe for Drain
-                return;
+                var pending = Pipe.Reader.WaitToReadAsync(token);
+                if (pending.IsCompleted)
+                {
+                    pending.GetAwaiter().GetResult();   // observe the result; the items stay in the pipe for Drain
+                    return;
+                }
+
+                // Only allocates when the loop actually goes to sleep - i.e. when the UI is idle, which is exactly when nobody cares.
+                _sleep = pending.AsTask();
             }
-            // Only allocates when the loop actually goes to sleep - i.e. when the UI is idle, which is exactly when nobody cares.
-            pending.AsTask().Wait(timeoutMs, token);
+
+            if (_sleep.Wait(timeoutMs, token)) _sleep = null;
         }
-        catch (OperationCanceledException) { /* shutting down */ }
-        catch (AggregateException) { /* the wait was canceled */ }
+        catch (OperationCanceledException) { _sleep = null; /* shutting down */ }
+        catch (AggregateException) { _sleep = null; /* the wait was canceled */ }
     }
 }
