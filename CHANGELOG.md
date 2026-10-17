@@ -1420,7 +1420,9 @@ All packages share one version.
 - The designer preview scrolls: the wheel over it is raised on the element under the cursor as the platform raises it
   (the host's `scroll` op), so a list or a property grid taller than the design size shows the rest, smoothly, as in
   the application. Where nothing takes the wheel, and with Alt, the Rider plugin scrolls its view of the frame, and Ctrl
-  still zooms; a burst of turns goes to the host as one.
+  still zooms; a burst of turns goes to the host as one. A click on a section's header in the preview opens or folds
+  it, as a click on a tab header shows the tab; the markup is left alone, and a rebuild of the preview keeps what the
+  clicks opened.
   Before, what the design size cut off could not be seen.
 - An idle loop no longer throws an `OperationCanceledException` on the thread pool each time its sleep times out: the
   next sleep waited on the pipe afresh, which canceled the wait before. It keeps that wait instead.

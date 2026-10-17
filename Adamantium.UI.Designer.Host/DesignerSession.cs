@@ -36,6 +36,9 @@ public sealed class DesignerSession : IDisposable
     // The tab a click showed, per file and per tab control (by its place in the tree).
     private readonly Dictionary<(string Uri, string Place), int> _shownTabs = new();
 
+    // Whether a click left a section open, per file and per expander (by its place in the tree).
+    private readonly Dictionary<(string Uri, string Place), bool> _foldedByClick = new();
+
     // One render service for the whole designer session: ONE device (the shared _device) + one renderer/presenter,
     // re-pointed/resized per previewed window (WindowRenderService.RenderHeadlessFrame). It drives the content
     // renderer AND the adorner processor (selection frames), exactly like the runtime path.
@@ -277,6 +280,8 @@ public sealed class DesignerSession : IDisposable
             window.Update(_app.ThemeManager, new AppTime());
         }
 
+        FoldAsClickedBefore(window, aumlSourcePath);
+
         if (_lastWindow != null && !ReferenceEquals(_lastWindow, window))
         {
             Retire(_lastWindow);
@@ -387,6 +392,63 @@ public sealed class DesignerSession : IDisposable
         }
 
         return shown;
+    }
+
+    // A click on a section's header opens or folds it, as in the running application, so a folded section is looked at
+    // in the preview too. The markup is left alone. True when the click landed on one.
+    private bool FoldAt(double x, double y)
+    {
+        if (_lastWindow is not IUIComponent root) return false;
+
+        var hit = root.GetVisualsAt(new Vector2(x, y)).FirstOrDefault();
+        for (var node = hit; node != null; node = node.VisualParent)
+        {
+            if (node is not Expander expander) continue;
+
+            // Only its header: a click inside the content selects what is there.
+            if (!IsUnder(hit, expander.GetTemplateChild("PART_Header"))) return false;
+
+            if (!expander.Toggle()) return false;
+            _foldedByClick[(_lastUri, PlaceOf(expander))] = expander.IsExpanded;
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool IsUnder(IUIComponent element, object ancestor)
+    {
+        for (var at = element; at != null; at = at.VisualParent)
+        {
+            if (ReferenceEquals(at, ancestor)) return true;
+        }
+
+        return false;
+    }
+
+    // A rebuild of the same file opens and folds the sections a click did. Laid out between passes: a section inside a
+    // folded one is in the tree only once that one opens.
+    private bool FoldAsClickedBefore(IWindow window, string uri)
+    {
+        var changed = false;
+        for (var pass = 0; pass < 8; pass++)
+        {
+            var any = false;
+            foreach (var expander in DescendantsOf<Expander>((IUIComponent)window).ToList())
+            {
+                if (_foldedByClick.TryGetValue((uri, PlaceOf(expander)), out var open) && expander.IsExpanded != open)
+                {
+                    expander.SetCurrentValue(Expander.IsExpandedProperty, open);
+                    any = true;
+                }
+            }
+
+            if (!any) break;
+            changed = true;
+            window.Update(_app.ThemeManager, new AppTime());
+        }
+
+        return changed;
     }
 
     // Where an element sits in its tree, as child indices from the root: the same markup builds the same places.
@@ -939,7 +1001,7 @@ public sealed class DesignerSession : IDisposable
         if (_lastWindow == null || _renderService == null || _liveWindow == null)
             return RenderResult.Fail("no live session to select in", null);
 
-        if (ShowTabAt(x, y))
+        if (ShowTabAt(x, y) || FoldAt(x, y))
         {
             _lastWindow.Update(_app.ThemeManager, new AppTime());
         }

@@ -24,7 +24,7 @@ namespace Adamantium.UI.Designer.Host;
 ///   -&gt; {"op":"select","x":..,"y":..}   &lt;- {"frames":[..],"hit":{"line":..,"column":..},..}
 ///        (selects the authored element at the point - the FRAMEWORK draws the selection frame - and returns the
 ///         updated frame plus the element's markup line/col for editor caret sync; a miss clears the selection; a click
-///         on a tab header also shows that tab)
+///         on a tab header also shows that tab, and one on a section's header opens or folds it)
 ///   -&gt; {"op":"hover","x":..,"y":..}   &lt;- {"frames":[..],..}
 ///        (the transient hover frame, also drawn by the FRAMEWORK; returns the updated frame. Omit x/y to clear it)
 ///   -&gt; {"op":"scroll","x":..,"y":..,"delta":..,"horizontal":false}   &lt;- {"frames":[..],"animating":..,"handled":..,..}
