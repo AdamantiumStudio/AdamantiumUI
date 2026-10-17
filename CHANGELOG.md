@@ -7,6 +7,9 @@ All packages share one version.
 
 ### Added
 
+- `TextBlock.TextLineBounds`, as WinUI's: `Full` (the default), `TrimToCapHeight`, `TrimToBaseline` or `Tight` - the
+  block measures from the top of the capitals of its first line and to the baseline of its last, so a label centered by
+  its layout has its capitals in the middle.
 - `DockingArea.PanePadding`: the room between a panel's edge and what it shows, for every panel of the area, without
   touching the theme - `PanePadding="0"` puts a scene or a tree right against the frame. Unset, the theme's stands
   (Fluent's 12 came from the tab control's content padding).
@@ -1126,6 +1129,11 @@ All packages share one version.
 
 ### Changed
 
+- A `TextBlock` with no height of its own leaves its text where its lines are, whatever `VerticalTextAlignment` says,
+  as WinUI's: the themes' `Center` moved the letters down by half the font's descent, so they, the selection and the
+  backgrounds came out of the block - over the text below it, by 56 pixels for Poppins at 320. Labels in every theme
+  stand that much higher (under 2 pixels at Segoe UI 14). With a height given, `Center` and `Bottom` place whole lines.
+  The key tips of every theme set their letter `TextLineBounds="Tight"`, so it stands in the middle of its plate.
 - The splitter between docked areas (`PaneSplitter`) is three dots in the middle of its band, in every theme, instead
   of a band lit in the accent color (Fluent, macOS) or a line down it (Graphite): subtle at rest, brighter under the
   pointer, in the accent while dragged. The whole band is still the grab target.

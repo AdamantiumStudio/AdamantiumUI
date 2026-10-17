@@ -168,6 +168,18 @@ public partial class TextViewModel : TabPageViewModel
 
     public string PricesSample => "Tea\t3.50\nCoffee\t12.75\nA whole cake\t120.00";
 
+    public FontFamily CurvesFont { get; } = FromFile(SandboxContentAssets.Fonts.OTFFonts.Poppins_Medium);
+
+    public string TrimmedSample => "In olden times when wishing still helped one, there lived a king whose daughters were all beautiful.";
+
+    public string AlignedTabsSample => "Name\tValue\nSize\t12 px\nColor\tdeep blue";
+
+    public string LongWordsSample =>
+        "Достопримечательности высокопроизводительного сельскохозяйственного производства неизменно привлекают " +
+        "внимание любознательных путешественников.";
+
+    public string DatesSample => "今日は2026年10月17日で、3つのりんごと12個のみかんを買いました。";
+
     [Bindable] private double _columnWidth = 220;
 
     [Bindable, Affects(nameof(ColumnAlignment))] private bool _justified;

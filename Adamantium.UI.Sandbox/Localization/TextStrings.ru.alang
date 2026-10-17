@@ -10,6 +10,7 @@
     <Phrase Key="TopicScripts" Text="Письменности"/>
     <Phrase Key="TopicParagraph" Text="Абзац"/>
     <Phrase Key="TopicVertical" Text="Вертикальный"/>
+    <Phrase Key="TopicFinishing" Text="Доводки"/>
     <Phrase Key="FontSize" Text="Размер шрифта:"/>
     <Phrase Key="Trimmed" Text="Обрезано до одной строки:"/>
     <Phrase Key="FloatingWatermark" Text="Всплывающая подсказка"/>
@@ -152,4 +153,15 @@
     <Phrase Key="LineMiddle" Text="По центру"/>
     <Phrase Key="LineBottom" Text="Снизу"/>
     <Phrase Key="VerticalTitle" Text="Японский текст вертикально: строки идут сверху вниз и встают справа налево, каны стоят прямо в вертикальных формах, латиница и год лежат на боку, короткие числа стоят прямо поперёк строки:"/>
+    <Phrase Key="FinishingCurvesTitle" Text="Кривые крупным кеглем (Poppins, кривые третьего порядка): контур идёт по кривой, а не гранями хорд:"/>
+    <Phrase Key="FinishingLineBoundsTitle" Text="TextLineBounds, как в WinUI: каждая подпись центрируется в рамке раскладкой, а заливка показывает коробку самой подписи - целые строки, обрезка до верха заглавных и от заглавных до базовой линии. С Tight заглавные стоят посередине:"/>
+    <Phrase Key="FinishingTrimTitle" Text="Высота — две с половиной строки. С многоточием ставятся только строки, влезающие целиком; без обрезки третья строка срезается краем, как в CSS:"/>
+    <Phrase Key="FinishingHyphensTitle" Text="Автоматический перенос без предела и с HyphenLimit = 1 — не больше одной строки подряд с дефисом:"/>
+    <Phrase Key="FinishingTabsTitle" Text="Табуляция при выравнивании вправо и по центру: имя стоит у поля, выравнивается текст после табуляции, а заполнитель доходит до него:"/>
+    <Phrase Key="FinishingVerticalTitle" Text="Вертикальный текст в широком блоке: VerticalTextAlignment Top, Center и Bottom ставят строки поперёк — у правого края, посередине, у левого:"/>
+    <Phrase Key="FinishingDatesTitle" Text="Число держит иероглиф или кану после себя — 2026年, 10月, 3つ не разрываются:"/>
+    <Phrase Key="FinishingColumnsTitle" Text="Подчёркнутый текст в двух колонках: во второй колонке линия стоит под буквами, как в первой:"/>
+    <Phrase Key="FinishingPlaceholderTitle" Text="Подсказка поля с трекингом 300 набрана так же, как его текст:"/>
+    <Phrase Key="FinishingPlaceholder" Text="Поиск по документу"/>
+    <Phrase Key="FinishingOversetTitle" Text="IsOverset привязан к подписи справа — двигайте число строк:"/>
 </Language>

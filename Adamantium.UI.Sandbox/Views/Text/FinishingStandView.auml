@@ -1,0 +1,289 @@
+<View xmlns="http://adamantium/ui"
+      xmlns:x="http://adamantium/ui/xaml/extensions">
+    <!-- Navigated into the text tab's region under the key "Finishing"; the DataContext is the tab's own view-model. -->
+    <StackPanel Orientation="Vertical">
+        <TextBlock Text="{Localize TextStrings.FinishingCurvesTitle}"
+                   TextWrapping="WrapByWords"
+                   Margin="0,0,0,8"/>
+        <TextBlock AutomationProperties.AutomationId="LargeCurves"
+                   Text="OoQ@"
+                   FontFamily="{Binding CurvesFont}"
+                   FontSize="320"
+                   Margin="0,0,0,16"/>
+
+        <TextBlock Text="{Localize TextStrings.FinishingLineBoundsTitle}"
+                   TextWrapping="WrapByWords"
+                   Margin="0,8,0,8"/>
+        <WrapPanel Orientation="Horizontal">
+            <Border Width="240"
+                    Height="64"
+                    Margin="0,0,16,16"
+                    VerticalAlignment="Top"
+                    BorderThickness="1"
+                    BorderBrush="{ResourceReference ControlStrokeColorDefault}">
+                <TextBlock AutomationProperties.AutomationId="LineBoundsFull"
+                           Text="Full Hxg"
+                           FontFamily="{Binding CurvesFont}"
+                           FontSize="28"
+                           Background="{ResourceReference SubtleFillColorSecondary}"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"/>
+            </Border>
+            <Border Width="240"
+                    Height="64"
+                    Margin="0,0,16,16"
+                    VerticalAlignment="Top"
+                    BorderThickness="1"
+                    BorderBrush="{ResourceReference ControlStrokeColorDefault}">
+                <TextBlock AutomationProperties.AutomationId="LineBoundsCapHeight"
+                           Text="Cap Hxg"
+                           TextLineBounds="TrimToCapHeight"
+                           FontFamily="{Binding CurvesFont}"
+                           FontSize="28"
+                           Background="{ResourceReference SubtleFillColorSecondary}"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"/>
+            </Border>
+            <Border Width="240"
+                    Height="64"
+                    Margin="0,0,16,16"
+                    VerticalAlignment="Top"
+                    BorderThickness="1"
+                    BorderBrush="{ResourceReference ControlStrokeColorDefault}">
+                <TextBlock AutomationProperties.AutomationId="LineBoundsTight"
+                           Text="Tight Hxg"
+                           TextLineBounds="Tight"
+                           FontFamily="{Binding CurvesFont}"
+                           FontSize="28"
+                           Background="{ResourceReference SubtleFillColorSecondary}"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"/>
+            </Border>
+        </WrapPanel>
+
+        <TextBlock Text="{Localize TextStrings.FinishingTrimTitle}"
+                   TextWrapping="WrapByWords"
+                   Margin="0,0,0,8"/>
+        <WrapPanel Orientation="Horizontal">
+            <Border Padding="6"
+                    Margin="0,0,16,16"
+                    VerticalAlignment="Top"
+                    BorderThickness="1"
+                    BorderBrush="{ResourceReference ControlStrokeColorDefault}">
+                <TextBlock AutomationProperties.AutomationId="TrimmedInHeight"
+                           Text="{Binding TrimmedSample}"
+                           TextWrapping="WrapByWords"
+                           TextTrimming="WordEllipses"
+                           FontSize="16"
+                           LineHeight="20"
+                           Width="220"
+                           Height="50"/>
+            </Border>
+            <Border Padding="6"
+                    Margin="0,0,16,16"
+                    VerticalAlignment="Top"
+                    BorderThickness="1"
+                    BorderBrush="{ResourceReference ControlStrokeColorDefault}">
+                <TextBlock AutomationProperties.AutomationId="UntrimmedInHeight"
+                           Text="{Binding TrimmedSample}"
+                           TextWrapping="WrapByWords"
+                           FontSize="16"
+                           LineHeight="20"
+                           Width="220"
+                           Height="50"
+                           ClipToBounds="True"/>
+            </Border>
+        </WrapPanel>
+
+        <TextBlock Text="{Localize TextStrings.FinishingHyphensTitle}"
+                   TextWrapping="WrapByWords"
+                   Margin="0,8,0,8"/>
+        <WrapPanel Orientation="Horizontal"
+                   Hyphens="Auto"
+                   Language="ru">
+            <Border Padding="6"
+                    Margin="0,0,16,16"
+                    VerticalAlignment="Top"
+                    BorderThickness="1"
+                    BorderBrush="{ResourceReference ControlStrokeColorDefault}">
+                <TextBlock AutomationProperties.AutomationId="HyphensUnlimited"
+                           Text="{Binding LongWordsSample}"
+                           TextWrapping="WrapByWords"
+                           FontSize="20"
+                           Width="320"/>
+            </Border>
+            <Border Padding="6"
+                    Margin="0,0,16,16"
+                    VerticalAlignment="Top"
+                    BorderThickness="1"
+                    BorderBrush="{ResourceReference ControlStrokeColorDefault}">
+                <TextBlock AutomationProperties.AutomationId="HyphensLimited"
+                           Text="{Binding LongWordsSample}"
+                           TextWrapping="WrapByWords"
+                           HyphenLimit="1"
+                           FontSize="20"
+                           Width="320"/>
+            </Border>
+        </WrapPanel>
+
+        <TextBlock Text="{Localize TextStrings.FinishingTabsTitle}"
+                   TextWrapping="WrapByWords"
+                   Margin="0,8,0,8"/>
+        <WrapPanel Orientation="Horizontal">
+            <Border Width="320"
+                    Padding="6"
+                    Margin="0,0,16,16"
+                    VerticalAlignment="Top"
+                    BorderThickness="1"
+                    BorderBrush="{ResourceReference ControlStrokeColorDefault}">
+                <TextBlock AutomationProperties.AutomationId="RightAlignedTabs"
+                           TextWrapping="WrapByWords"
+                           HorizontalTextAlignment="Right"
+                           TabStops="100 Left Leader=."
+                           FontSize="18">
+                    <Underline><Run Text="{Binding AlignedTabsSample}"/></Underline>
+                </TextBlock>
+            </Border>
+            <Border Width="320"
+                    Padding="6"
+                    Margin="0,0,16,16"
+                    VerticalAlignment="Top"
+                    BorderThickness="1"
+                    BorderBrush="{ResourceReference ControlStrokeColorDefault}">
+                <TextBlock AutomationProperties.AutomationId="CenteredTabs"
+                           Text="{Binding AlignedTabsSample}"
+                           TextWrapping="WrapByWords"
+                           HorizontalTextAlignment="Center"
+                           TabStops="100 Left Leader=."
+                           FontSize="18"/>
+            </Border>
+        </WrapPanel>
+
+        <TextBlock Text="{Localize TextStrings.FinishingVerticalTitle}"
+                   TextWrapping="WrapByWords"
+                   Margin="0,8,0,8"/>
+        <WrapPanel Orientation="Horizontal">
+            <Border Margin="0,0,16,16"
+                    VerticalAlignment="Top"
+                    BorderThickness="1"
+                    BorderBrush="{ResourceReference ControlStrokeColorDefault}">
+                <TextBlock AutomationProperties.AutomationId="VerticalTop"
+                           Text="吾輩は猫である。名前はまだ無い。"
+                           Language="ja"
+                           WritingMode="VerticalRightToLeft"
+                           TextWrapping="WrapByWords"
+                           VerticalTextAlignment="Top"
+                           FontSize="20"
+                           Width="160"
+                           Height="180"/>
+            </Border>
+            <Border Margin="0,0,16,16"
+                    VerticalAlignment="Top"
+                    BorderThickness="1"
+                    BorderBrush="{ResourceReference ControlStrokeColorDefault}">
+                <TextBlock AutomationProperties.AutomationId="VerticalCenter"
+                           Text="吾輩は猫である。名前はまだ無い。"
+                           Language="ja"
+                           WritingMode="VerticalRightToLeft"
+                           TextWrapping="WrapByWords"
+                           VerticalTextAlignment="Center"
+                           FontSize="20"
+                           Width="160"
+                           Height="180"/>
+            </Border>
+            <Border Margin="0,0,16,16"
+                    VerticalAlignment="Top"
+                    BorderThickness="1"
+                    BorderBrush="{ResourceReference ControlStrokeColorDefault}">
+                <TextBlock AutomationProperties.AutomationId="VerticalBottom"
+                           Text="吾輩は猫である。名前はまだ無い。"
+                           Language="ja"
+                           WritingMode="VerticalRightToLeft"
+                           TextWrapping="WrapByWords"
+                           VerticalTextAlignment="Bottom"
+                           FontSize="20"
+                           Width="160"
+                           Height="180"/>
+            </Border>
+        </WrapPanel>
+
+        <TextBlock Text="{Localize TextStrings.FinishingDatesTitle}"
+                   TextWrapping="WrapByWords"
+                   Margin="0,8,0,8"/>
+        <Border Padding="6"
+                Margin="0,0,0,16"
+                HorizontalAlignment="Left"
+                BorderThickness="1"
+                BorderBrush="{ResourceReference ControlStrokeColorDefault}">
+            <TextBlock AutomationProperties.AutomationId="DatesColumn"
+                       Text="{Binding DatesSample}"
+                       Language="ja"
+                       TextWrapping="WrapByWords"
+                       FontSize="20"
+                       Width="150"/>
+        </Border>
+
+        <TextBlock Text="{Localize TextStrings.FinishingColumnsTitle}"
+                   TextWrapping="WrapByWords"
+                   Margin="0,8,0,8"/>
+        <Border Padding="6"
+                Margin="0,0,0,16"
+                HorizontalAlignment="Left"
+                BorderThickness="1"
+                BorderBrush="{ResourceReference ControlStrokeColorDefault}">
+            <TextBlock AutomationProperties.AutomationId="UnderlinedColumns"
+                       TextWrapping="WrapByWords"
+                       Columns="2"
+                       ColumnGap="24"
+                       FontSize="17"
+                       Width="520"
+                       Height="96">
+                <Underline><Run Text="{Binding Message}"/> <Run Text="{Binding LongWordsSample}"/></Underline>
+            </TextBlock>
+        </Border>
+
+        <TextBlock Text="{Localize TextStrings.FinishingPlaceholderTitle}"
+                   TextWrapping="WrapByWords"
+                   Margin="0,8,0,8"/>
+        <TextBox AutomationProperties.AutomationId="TrackedPlaceholder"
+                 Placeholder="{Localize TextStrings.FinishingPlaceholder}"
+                 Tracking="300"
+                 Width="320"
+                 HorizontalAlignment="Left"
+                 Margin="0,0,0,16"/>
+
+        <TextBlock Text="{Localize TextStrings.FinishingOversetTitle}"
+                   TextWrapping="WrapByWords"
+                   Margin="0,8,0,8"/>
+        <StackPanel Orientation="Horizontal">
+            <Slider x:Name="OversetLines"
+                    AutomationProperties.AutomationId="OversetLinesSlider"
+                    Width="160"
+                    Minimum="1"
+                    Maximum="8"
+                    TickFrequency="1"
+                    IsSnapToTickEnabled="True"
+                    IsValueToolTipEnabled="True"
+                    Value="2"
+                    Margin="0,0,16,0"/>
+            <Border Padding="6"
+                    VerticalAlignment="Top"
+                    BorderThickness="1"
+                    BorderBrush="{ResourceReference ControlStrokeColorDefault}">
+                <TextBlock x:Name="OversetSample"
+                           AutomationProperties.AutomationId="OversetSample"
+                           Text="{Binding LongWordsSample}"
+                           TextWrapping="WrapByWords"
+                           MaxLines="{Binding Value, ElementName=OversetLines}"
+                           FontSize="16"
+                           Width="260"/>
+            </Border>
+            <CheckBox AutomationProperties.AutomationId="OversetLabel"
+                      Content="IsOverset"
+                      IsChecked="{Binding IsOverset, ElementName=OversetSample, Mode=OneWay}"
+                      IsHitTestVisible="False"
+                      VerticalAlignment="Center"
+                      Margin="16,0,0,0"/>
+        </StackPanel>
+    </StackPanel>
+</View>
