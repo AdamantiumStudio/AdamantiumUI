@@ -19,6 +19,8 @@ import kotlin.io.path.readText
  */
 internal class DesignerHostLaunch private constructor(
     val folder: Path,
+    /** Files from outside [folder] put into its copy too: the host a project's build runs on. */
+    val extras: List<Path> = emptyList(),
     private val commandIn: (Path) -> List<String>,
 ) {
     fun command(copy: Path): List<String> = commandIn(copy)
@@ -75,7 +77,11 @@ internal class DesignerHostLaunch private constructor(
             }
             val packages = if (appConfig == null) optional("packageFolder") else null
 
-            return DesignerHostLaunch(depsFile.parent.toAbsolutePath().normalize()) { copy ->
+            // The host runs from the copy as well: run from where it is built, it held its dll, and a build of the UI
+            // failed while a preview was open.
+            val hostFiles = listOf(host, host.resolveSibling("${host.fileName.toString().removeSuffix(".dll")}.pdb"))
+                .filter { it.exists() }
+            return DesignerHostLaunch(depsFile.parent.toAbsolutePath().normalize(), hostFiles) { copy ->
                 val config = appConfig?.let { copy.resolve(it.fileName) } ?: hostConfig
                 buildList {
                     addAll(listOf("dotnet", "exec", "--depsfile", copy.resolve(depsFile.fileName).toString()))
@@ -83,7 +89,7 @@ internal class DesignerHostLaunch private constructor(
                     if (packages != null) {
                         addAll(listOf("--additionalprobingpath", packages.toString()))
                     }
-                    addAll(listOf(host.toString(), "serve"))
+                    addAll(listOf(copy.resolve(host.fileName).toString(), "serve"))
                 }
             }
         }

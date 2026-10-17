@@ -1381,6 +1381,8 @@ All packages share one version.
 
 ### Fixed
 
+- The Rider plugin (1.11.2) runs the designer host from its copy of the project's build: run from where it was built,
+  the host held its dll, and a build of the UI failed while a preview was open.
 - An idle loop no longer throws an `OperationCanceledException` on the thread pool each time its sleep times out: the
   next sleep waited on the pipe afresh, which canceled the wait before. It keeps that wait instead.
 - A docking area gone for good takes its panes off screen: their view models hear `OnDeactivated` and `OnHidden`, so

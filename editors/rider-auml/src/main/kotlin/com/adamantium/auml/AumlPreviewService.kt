@@ -192,8 +192,8 @@ class AumlPreviewService : Disposable {
         stopProcess()
 
         val target = launch ?: error("nothing has been rendered yet")
-        val stamp = DesignerHostShadowCopy.settledStamp(target.folder)
-        val copy = DesignerHostShadowCopy.copyOf(target.folder, stamp)
+        val stamp = DesignerHostShadowCopy.settledStamp(target.folder, target.extras)
+        val copy = DesignerHostShadowCopy.copyOf(target.folder, stamp, target.extras)
         val command = GeneralCommandLine(target.command(copy)).apply { charset = StandardCharsets.UTF_8 }
         val proc = command.createProcess()
 
@@ -225,8 +225,8 @@ class AumlPreviewService : Disposable {
         }
 
         val running = hostStamp ?: return
-        val stamp = DesignerHostShadowCopy.stamp(next.folder)
-        if (stamp != running && DesignerHostShadowCopy.isSettled(next.folder, stamp)) {
+        val stamp = DesignerHostShadowCopy.stamp(next.folder, next.extras)
+        if (stamp != running && DesignerHostShadowCopy.isSettled(next.folder, stamp, next.extras)) {
             stopProcess()
         }
     }

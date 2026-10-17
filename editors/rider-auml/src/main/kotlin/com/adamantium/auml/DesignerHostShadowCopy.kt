@@ -36,22 +36,24 @@ internal object DesignerHostShadowCopy {
 
     private val root: Path = PathManager.getSystemDir().resolve("adamantium-designer-host")
 
-    /** A fingerprint of [folder]; any file a build writes changes it. */
-    fun stamp(folder: Path): String {
+    /** A fingerprint of [folder] and [extras]; any file a build writes changes it. */
+    fun stamp(folder: Path, extras: List<Path> = emptyList()): String {
         val digest = MessageDigest.getInstance("SHA-256")
         digest.update(folder.toAbsolutePath().normalize().toString().toByteArray())
+        fun take(name: String, file: Path) {
+            digest.update(name.toByteArray())
+            digest.update(ByteBuffer.allocate(16)
+                .putLong(file.fileSize())
+                .putLong(file.getLastModifiedTime().toMillis())
+                .array())
+        }
         try {
             Files.walk(folder).use { paths ->
                 paths.filter { it.isRegularFile() && !it.startsWith(folder.resolve(LOGS)) }
                     .sorted()
-                    .forEach { file ->
-                        digest.update(folder.relativize(file).toString().toByteArray())
-                        digest.update(ByteBuffer.allocate(16)
-                            .putLong(file.fileSize())
-                            .putLong(file.getLastModifiedTime().toMillis())
-                            .array())
-                    }
+                    .forEach { file -> take(folder.relativize(file).toString(), file) }
             }
+            extras.forEach { file -> take(file.toAbsolutePath().normalize().toString(), file) }
         } catch (_: IOException) {
             return "changing-${System.nanoTime()}"
         } catch (_: UncheckedIOException) {
@@ -61,34 +63,38 @@ internal object DesignerHostShadowCopy {
     }
 
     /** True when [stamp] still holds a moment later, i.e. no build is writing the folder. */
-    fun isSettled(folder: Path, stamp: String): Boolean {
+    fun isSettled(folder: Path, stamp: String, extras: List<Path> = emptyList()): Boolean {
         Thread.sleep(SETTLE_MS)
-        return stamp(folder) == stamp
+        return stamp(folder, extras) == stamp
     }
 
     /** The stamp of a build that is no longer being written, waiting for a running build to finish. */
-    fun settledStamp(folder: Path): String {
-        var stamp = stamp(folder)
+    fun settledStamp(folder: Path, extras: List<Path> = emptyList()): String {
+        var stamp = stamp(folder, extras)
         if (root.resolve(stamp).exists()) {
             return stamp
         }
 
         val deadline = System.currentTimeMillis() + MAX_WAIT_MS
-        while (!isSettled(folder, stamp) && System.currentTimeMillis() < deadline) {
-            stamp = stamp(folder)
+        while (!isSettled(folder, stamp, extras) && System.currentTimeMillis() < deadline) {
+            stamp = stamp(folder, extras)
         }
         return stamp
     }
 
     /**
-     * The copy of [folder] as of [stamp], made on first use. Other copies go once no host runs from them: at once on
-     * Windows, which will not delete a loaded dll, after a day elsewhere.
+     * The copy of [folder] as of [stamp], [extras] beside its files, made on first use. Other copies go once no host
+     * runs from them: at once on Windows, which will not delete a loaded dll, after a day elsewhere.
      */
-    fun copyOf(folder: Path, stamp: String): Path {
+    fun copyOf(folder: Path, stamp: String, extras: List<Path> = emptyList()): Path {
         val target = root.resolve(stamp)
         if (!target.exists()) {
             val staging = root.resolve("$stamp.${ProcessHandle.current().pid()}.${System.nanoTime()}$STAGING")
             copyTree(folder, staging)
+            extras.forEach { file ->
+                Files.copy(file, staging.resolve(file.fileName.toString()), StandardCopyOption.COPY_ATTRIBUTES,
+                    StandardCopyOption.REPLACE_EXISTING)
+            }
             try {
                 Files.move(staging, target, StandardCopyOption.ATOMIC_MOVE)
             } catch (_: IOException) {
