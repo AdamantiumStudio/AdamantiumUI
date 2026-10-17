@@ -11,7 +11,10 @@ All packages share one version.
   `TextIndent`, `LineHeight` and the text's formatting) on `Paragraph.ParagraphStyle`, `CharacterStyle` on
   `Inline.CharacterStyle`, each with `BasedOn`, kept as resources. A paragraph takes its style under what it sets itself
   (field by field), an inline its character style over its paragraph's and under what it and the spans around it set
-  themselves; the nearest inline's style wins. Changing a style, or one it is based on, lays out again the text it is
+  themselves; the nearest inline's style wins. A hyperlink's underline and theme color yield only to a character style
+  on the link or inside it, as in CSS: styles around it, and its paragraph's, add their lines to its underline and
+  take nothing away; the lines of nested inlines and of their styles add up, an `<Underline>`'s among them. Changing a
+  style, or one it is based on, lays out again the text it is
   set on (styles hold their users weakly). Laid out by the engine's styles. A `{ResourceReference}` on an inline or on
   its styles is answered from its block's place in the tree, and again when its theme scope switches (it was answered
   for no inline before). The Text tab's
