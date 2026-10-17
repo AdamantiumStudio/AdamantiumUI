@@ -16,8 +16,12 @@ namespace Adamantium.UI.Controls.Text;
 /// span around it, and in the end from the TextBlock. The hosting TextBlock listens to <see cref="Changed"/> to re-shape
 /// when a bound value updates.
 /// </summary>
-public abstract class Inline : FundamentalUIComponent
+public abstract class Inline : FundamentalUIComponent, ITextStyleUser
 {
+    public static readonly AdamantiumProperty CharacterStyleProperty = AdamantiumProperty.Register(
+        nameof(CharacterStyle), typeof(CharacterStyle), typeof(Inline),
+        new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure));
+
     public static readonly AdamantiumProperty ForegroundProperty = AdamantiumProperty.Register(nameof(Foreground),
         typeof(Brush), typeof(Inline), new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure));
 
@@ -184,6 +188,16 @@ public abstract class Inline : FundamentalUIComponent
         get => GetValue<TextKerning?>(KerningProperty);
         set => SetValue(KerningProperty, value);
     }
+
+    /// <summary>The named character style its text takes, over its paragraph's style and under what this inline and
+    /// the spans around it set themselves; an inner inline's style wins over an outer one's. Null sets none.</summary>
+    public CharacterStyle CharacterStyle
+    {
+        get => GetValue<CharacterStyle>(CharacterStyleProperty);
+        set => SetValue(CharacterStyleProperty, value);
+    }
+
+    void ITextStyleUser.TextStyleChanged() => RaiseChanged();
 
     /// <summary>How far this inline is raised above the line's baseline, as InDesign's baseline shift; negative lowers
     /// it. Its size and the line's height stay as they are. Null takes the enclosing span's shift, or none.</summary>
@@ -367,6 +381,12 @@ public abstract class Inline : FundamentalUIComponent
         if (e.Property == ForegroundProperty || e.Property == BackgroundProperty)
         {
             Rebake();
+        }
+
+        if (e.Property == CharacterStyleProperty || e.Property == Paragraph.ParagraphStyleProperty)
+        {
+            (e.OldValue as TextFormat)?.Unuse(this);
+            (e.NewValue as TextFormat)?.Use(this);
         }
 
         if (e.Property.GetDefaultMetadata(GetType())?.AffectsMeasure == true)

@@ -54,6 +54,7 @@
     <Phrase Key="KerningNone" Text="Без кернинга"/>
     <Phrase Key="BaselineGridTitle" Text="Сетка базовых линий:"/>
     <Phrase Key="RubyTitle" Text="Руби (фуригана над основой, длинное чтение её раздвигает, подпись под строкой):"/>
+    <Phrase Key="StylesTitle" Text="Стили абзаца и символа:"/>
     <Phrase Key="FeaturesTitle" Text="Свойства OpenType шрифта Source Sans 3, меняющие глифы: тег и значения, имя от самого шрифта, символы с включённым свойством:"/>
     <Phrase Key="AlternatesTitle" Text="Альтернативы символа, каждая нарисована тем свойством и значением, что её дают:"/>
     <Phrase Key="AlternateCharacter" Text="Символ"/>

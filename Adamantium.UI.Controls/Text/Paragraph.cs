@@ -21,9 +21,21 @@ public class Paragraph : Span
     public static readonly AdamantiumProperty TextIndentProperty = AdamantiumProperty.Register(nameof(TextIndent),
         typeof(double), typeof(Paragraph), new PropertyMetadata(0d, PropertyMetadataOptions.AffectsMeasure));
 
+    public static readonly AdamantiumProperty ParagraphStyleProperty = AdamantiumProperty.Register(
+        nameof(ParagraphStyle), typeof(ParagraphStyle), typeof(Paragraph),
+        new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure));
+
     // NaN = "the TextBlock's LineHeight".
     public static readonly AdamantiumProperty LineHeightProperty = AdamantiumProperty.Register(nameof(LineHeight),
         typeof(double), typeof(Paragraph), new PropertyMetadata(double.NaN, PropertyMetadataOptions.AffectsMeasure));
+
+    /// <summary>The named paragraph style it takes: how it stands and the formatting of its inlines, under what it and
+    /// its inlines set themselves. Null sets none.</summary>
+    public ParagraphStyle ParagraphStyle
+    {
+        get => GetValue<ParagraphStyle>(ParagraphStyleProperty);
+        set => SetValue(ParagraphStyleProperty, value);
+    }
 
     /// <summary>How its lines stand between its edges; null takes the TextBlock's.</summary>
     public HorizontalTextAlignment? HorizontalTextAlignment

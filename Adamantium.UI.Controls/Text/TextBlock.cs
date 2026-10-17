@@ -237,6 +237,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
     private bool _runFontsPending;
     private TextEffectCollection _textEffects;
     private readonly List<(Inline Inline, int Start, int Length)> _inlineRanges = [];
+    private readonly Dictionary<TextFormat, object> _engineStyles = [];
     private readonly List<GlyphEffect> _resolvedEffects = [];
     private GlyphEffect[] _drawnEffects = [];
     private readonly HeldBrushes _effectBrushes;
@@ -943,6 +944,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         var attributed = new AttributedText(text, shaping);
         List<Inline> chain = [];
         _inlineRanges.Clear();
+        _engineStyles.Clear();
         for (var i = 0; i < _inlines.Count; i++)
         {
             var start = _inlineStarts[i];
@@ -954,16 +956,12 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
 
         foreach (var (start, length, paragraph) in _paragraphs)
         {
-            attributed.SetParagraph(start, length, new ParagraphAttributes
+            attributed.SetParagraph(start, length, OwnParagraphAttributes(paragraph));
+            if (paragraph.ParagraphStyle is { } paragraphStyle)
             {
-                Alignment = paragraph.HorizontalTextAlignment,
-                MarginLeft = paragraph.Margin.Left,
-                MarginRight = paragraph.Margin.Right,
-                SpaceBefore = paragraph.Margin.Top,
-                SpaceAfter = paragraph.Margin.Bottom,
-                TextIndent = paragraph.TextIndent,
-                LineHeight = paragraph.LineHeight,
-            });
+                attributed.SetParagraphStyle(start, length, EngineStyle(paragraphStyle));
+            }
+
             if (length > 0 && text[start + length - 1] == ParagraphSeparator)
             {
                 chain.Add(paragraph);
@@ -973,6 +971,101 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         }
 
         return attributed;
+    }
+
+    // What a paragraph sets itself, field by field, so its style shows through the rest.
+    private static ParagraphAttributes OwnParagraphAttributes(Paragraph paragraph)
+    {
+        var own = new ParagraphAttributes { Alignment = paragraph.HorizontalTextAlignment };
+        if (paragraph.GetValueSource(Paragraph.MarginProperty) != ValuePriority.Default
+            || paragraph.ParagraphStyle == null)
+        {
+            var margin = paragraph.Margin;
+            own = own.With(new ParagraphAttributes
+            {
+                MarginLeft = margin.Left, MarginRight = margin.Right, SpaceBefore = margin.Top, SpaceAfter = margin.Bottom,
+            });
+        }
+
+        if (paragraph.GetValueSource(Paragraph.TextIndentProperty) != ValuePriority.Default
+            || paragraph.ParagraphStyle == null)
+        {
+            own = own.With(new ParagraphAttributes { TextIndent = paragraph.TextIndent });
+        }
+
+        if (!double.IsNaN(paragraph.LineHeight))
+        {
+            own = own.With(new ParagraphAttributes { LineHeight = paragraph.LineHeight });
+        }
+
+        return own;
+    }
+
+    // The engine's style for a style of the block's text, the ones it is based on mapped with it; one per style for a
+    // layout, and its brushes held by the block.
+    private Adamantium.Graphics.Fonts.ParagraphStyle EngineStyle(ParagraphStyle style)
+    {
+        if (_engineStyles.TryGetValue(style, out var known))
+        {
+            return (Adamantium.Graphics.Fonts.ParagraphStyle)known;
+        }
+
+        _inlineBrushes.Add(style.Foreground);
+        _inlineBrushes.Add(style.Background);
+        var engine = new Adamantium.Graphics.Fonts.ParagraphStyle(style.Name, style.OwnParagraphAttributes(),
+            style.OwnTextAttributes(), style.BasedOn != null ? EngineStyle(style.BasedOn) : null);
+        _engineStyles[style] = engine;
+        return engine;
+    }
+
+    private Adamantium.Graphics.Fonts.CharacterStyle EngineStyle(CharacterStyle style)
+    {
+        if (_engineStyles.TryGetValue(style, out var known))
+        {
+            return (Adamantium.Graphics.Fonts.CharacterStyle)known;
+        }
+
+        _inlineBrushes.Add(style.Foreground);
+        _inlineBrushes.Add(style.Background);
+        var engine = new Adamantium.Graphics.Fonts.CharacterStyle(style.Name, style.OwnTextAttributes(),
+            style.BasedOn != null ? EngineStyle(style.BasedOn) : null);
+        _engineStyles[style] = engine;
+        return engine;
+    }
+
+    // The nearest character style along the chain: an inner inline's wins.
+    private static CharacterStyle CharacterStyleOf(List<Inline> chain)
+    {
+        for (var i = chain.Count - 1; i >= 0; i--)
+        {
+            if (chain[i].CharacterStyle is { } style)
+            {
+                return style;
+            }
+        }
+
+        return null;
+    }
+
+    private static ParagraphStyle ParagraphStyleOf(List<Inline> chain)
+    {
+        foreach (var inline in chain)
+        {
+            if (inline is Paragraph { ParagraphStyle: { } style })
+            {
+                return style;
+            }
+        }
+
+        return null;
+    }
+
+    private void ApplyStyle(List<Inline> chain, AttributedText attributed, int start, int length)
+    {
+        if (CharacterStyleOf(chain) is { } style)
+        {
+            attributed.SetCharacterStyle(start, length, EngineStyle(style));
+        }
     }
 
     private void ApplyInlines(InlineCollection inlines, List<Inline> chain, AttributedText attributed, ref int start)
@@ -1001,15 +1094,18 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
             case Run run:
                 var length = (run.Text ?? string.Empty).Length;
                 attributed.Apply(start, length, InlineAttributes(chain));
+                ApplyStyle(chain, attributed, start, length);
                 start += length;
                 break;
             case LineBreak:
                 attributed.Apply(start, 1, InlineAttributes(chain));
+                ApplyStyle(chain, attributed, start, 1);
                 start++;
                 break;
             case InlineUIContainer { Child: { } child }:
                 attributed.Apply(start, 1,
                     InlineAttributes(chain, child.DesiredSize, _hostedRaises.GetValueOrDefault(child)));
+                ApplyStyle(chain, attributed, start, 1);
                 _objects.Add((start, child));
                 start++;
                 break;
@@ -1092,10 +1188,15 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
             shift = (shift ?? 0) + objectRaise;
         }
 
-        var resolvedWeight = weight ?? FontWeight;
-        var resolvedStyle = style ?? FontStyle;
+        // The font as the inlines choose it, else their character style, else their paragraph's style, else the block.
+        var characterStyle = CharacterStyleOf(chain);
+        var paragraphStyle = ParagraphStyleOf(chain);
+        var resolvedWeight = weight ?? characterStyle?.ResolvedWeight() ?? paragraphStyle?.ResolvedWeight() ?? FontWeight;
+        var resolvedStyle = style ?? characterStyle?.ResolvedStyle() ?? paragraphStyle?.ResolvedStyle() ?? FontStyle;
+        var resolvedStretch = stretch ?? characterStyle?.ResolvedStretch() ?? paragraphStyle?.ResolvedStretch()
+                              ?? FontStretch;
         _runFontsPending |= !TryResolveFont(FontFamily ?? DefaultFontFamily, resolvedWeight, resolvedStyle,
-            stretch ?? FontStretch, variations ?? FontVariations, out var font);
+            resolvedStretch, variations ?? FontVariations, out var font);
         return new TextAttributes
         {
             Font = font,
