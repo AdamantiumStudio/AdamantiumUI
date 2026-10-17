@@ -100,6 +100,45 @@ public class TreeViewRevealTests
         });
     }
 
+    // With no member that keeps a node's selection, a row built again - its branch closed and opened - is still the one
+    // chosen, and letting the choice go reaches it.
+    [Test]
+    public void ARowBuiltAgain_IsStillTheChosenOne()
+    {
+        var model = new Node("model");
+        var wing = new Node("wing", model);
+        var tree = Tree(nameof(Node.Parent), model);
+        tree.SelectedItem = wing;
+
+        tree.SetRowExpanded((TreeRow)tree.Items[0], false);
+        tree.SetRowExpanded((TreeRow)tree.Items[0], true);
+        var rebuilt = (TreeRow)tree.Items[1];
+        var chosenAgain = rebuilt.IsSelected;
+        tree.SelectedItem = null;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(rebuilt.Node, Is.SameAs(wing));
+            Assert.That(chosenAgain, Is.True);
+            Assert.That(rebuilt.IsSelected, Is.False, "let go");
+        });
+    }
+
+    // A node chosen before it is in the tree - an entity picked as it is added - comes selected when its row does.
+    [Test]
+    public void ARowAddedForTheChosenNode_ComesSelected()
+    {
+        var roots = new ObservableCollection<Node> { new("model") };
+        var tree = Tree(nameof(Node.Parent));
+        tree.ItemsSource = roots;
+        var light = new Node("light");
+        tree.SelectedItem = light;
+
+        roots.Add(light);
+
+        Assert.That(((TreeRow)tree.Items[1]).IsSelected, Is.True);
+    }
+
     // A tree made after the choice - the hierarchy shown once the scene had a selection - opens to it.
     [Test]
     public void ANodeChosenBeforeTheRoots_IsRevealedWhenTheyCome()

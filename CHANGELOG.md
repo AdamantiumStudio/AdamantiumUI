@@ -1380,6 +1380,14 @@ All packages share one version.
 
 ### Fixed
 
+- A docking area gone for good takes its panes off screen: their view models hear `OnDeactivated` and `OnHidden`, so
+  one that follows something only while shown lets it go, and an area put in its place shows them again. Before, they
+  stayed "shown" with nothing on screen and went on following. Its floating windows close with it: when it went before
+  an area in its place came, nothing closed them.
+- A `TreeView` whose container style keeps no `IsSelected` on the nodes still shows `SelectedItem` selected after its
+  row is built again - its branch closed and opened, its children read again - and selects the row of a node added
+  after it was chosen. Before, the row came unselected and choosing the same node again changed nothing. A node added
+  to an open branch now comes selected, as at a rebuild, when its view model marks it so.
 - A `PropertyGrid` narrower than its `NameColumnWidth` leaves the values `MinValueColumnWidth` beside the grip and the
   buttons: the names took their full width and squeezed the values to a sliver in a docked inspector. The width given
   comes back when the grid widens again.

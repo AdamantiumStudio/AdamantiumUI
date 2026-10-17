@@ -456,6 +456,55 @@ public class DockingRegionTests
         Assert.That(events, Is.EqualTo(new[] { "opened a", "opened b", "closed b", "opened c" }));
     }
 
+    [Test]
+    public void AControlGoneForGood_HidesWhatItShowed_ItsFloatingWindowsIncluded()
+    {
+        var region = new Adamantium.Navigation.Region("docking", new Resolver(), null);
+        var docking = DockingRegion.Of(region);
+        var log = new List<string>();
+        var docked = new Aware("docked", log);
+        var floating = new Aware("floating", log);
+        var host = new FakeHost(
+            new DockedPane("docked", docked, PaneKind.Tool, new PanePlacement(DockZone.Right, PaneState.Open, true, true)),
+            new DockedPane("floating", floating, PaneKind.Tool, new PanePlacement(DockZone.Floating, PaneState.Open, false, true)));
+        docking.Attach(host);
+        log.Clear();
+        var activeChanged = 0;
+        docking.ActivePaneChanged += (_, _) => activeChanged++;
+
+        docking.Detach(host);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(log, Is.EqualTo(new[] { "docked deactivated", "docked hidden", "floating hidden" }));
+            Assert.That(activeChanged, Is.EqualTo(1));
+        });
+
+        // A control in its place shows what it shows, and opens or closes nothing that only went off screen.
+        var events = new List<string>();
+        docking.PaneOpened += (_, e) => events.Add($"opened {((Aware)e.ViewModel).Id}");
+        docking.PaneClosed += (_, e) => events.Add($"closed {((Aware)e.ViewModel).Id}");
+        log.Clear();
+        docking.Attach(new FakeHost(
+            new DockedPane("docked", docked, PaneKind.Tool, new PanePlacement(DockZone.Right, PaneState.Open, true, true)),
+            new DockedPane("floating", floating, PaneKind.Tool, new PanePlacement(DockZone.Floating, PaneState.Open, false, true))));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(log, Is.EqualTo(new[] { "docked shown", "floating shown", "docked activated" }));
+            Assert.That(events, Is.Empty);
+        });
+    }
+
+    private sealed class Aware(string id, List<string> log) : IDockingAware
+    {
+        public string Id => id;
+        public void OnActivated() => log.Add($"{id} activated");
+        public void OnDeactivated() => log.Add($"{id} deactivated");
+        public void OnShown() => log.Add($"{id} shown");
+        public void OnHidden() => log.Add($"{id} hidden");
+    }
+
     private static string Name(object viewModel) => (viewModel as IDockablePane)?.PaneId ?? viewModel.ToString();
 
     private sealed class FakeHost : IDockingHost
@@ -465,6 +514,8 @@ public class DockingRegionTests
             Panes = panes.Select(pane => new DockedPane(pane.ViewModel, pane.ViewModel, PaneKind.Document,
                 new PanePlacement(pane.Zone, PaneState.Open, false, true))).ToList();
         }
+
+        public FakeHost(params DockedPane[] panes) => Panes = panes;
 
         public IReadOnlyList<DockedPane> Panes { get; }
         public IReadOnlyList<DockedGroup> Groups => [];

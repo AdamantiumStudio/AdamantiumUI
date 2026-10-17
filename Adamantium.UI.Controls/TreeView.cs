@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.ComponentModel;
 using Adamantium.Mathematics;
 using Adamantium.UI.Controls.Automation;
@@ -94,6 +95,7 @@ public class TreeView : ItemsControl
     // Writes a node's selection onto the node itself (from the ItemContainerStyle's IsSelected binding path), so a selection
     // persists across a view rebuild and reaches OFF-SCREEN rows that have no container. No-op if the style doesn't bind it.
     private Action<object, bool> _setNodeSelected = static (_, _) => { };
+    private Func<object, bool> _isChosen;
 
     // Writes a node's OWN IsExpanded (the ItemContainerStyle's IsExpanded binding path), so SyncRowExpansion can trigger a
     // lazy branch's load synchronously BEFORE the flattener reads its children - no reliance on binding-vs-callback order.
@@ -153,13 +155,20 @@ public class TreeView : ItemsControl
         // its expanded + selected state - persists). Read from the style's own setters, so there's no second place to declare them.
         var expandPath = MemberPath(nameof(TreeViewItem.IsExpanded));
         var selectPath = MemberPath(nameof(TreeViewItem.IsSelected));
+        // Without a member to read it from, a row built again - its branch closed and opened - knows itself by SelectedItem.
         _flattener = new TreeFlattener(TreeChildResolver.ForPath(childPath),
             TreeChildResolver.ForBoolPath(expandPath),
-            TreeChildResolver.ForBoolPath(selectPath));
+            selectPath != null ? TreeChildResolver.ForBoolPath(selectPath) : _isChosen ??= IsChosen);
         _setNodeExpanded = TreeChildResolver.SetterForBoolPath(expandPath);
         _setNodeSelected = TreeChildResolver.SetterForBoolPath(selectPath);
         _flattener.SetRoots(_roots);
-        Follow(nameof(_flattener), _flattener.Clear);
+        var flattener = _flattener;
+        flattener.Rows.CollectionChanged += OnRowsChanged;
+        Follow(nameof(_flattener), () =>
+        {
+            flattener.Rows.CollectionChanged -= OnRowsChanged;
+            flattener.Clear();
+        });
         Items.SetSource(_flattener.Rows);   // the flat rows are now the effective item list -> virtualized directly
         RestoreSelectionFromRows();
         _anchorRow = null;
@@ -186,6 +195,36 @@ public class TreeView : ItemsControl
     }
 
     // After a (re)build, rebuild the selected-row set from the rows the flattener restored as selected, and pick a primary.
+    private bool IsChosen(object node) => SelectedItem is { } chosen && Equals(node, chosen);
+
+    // Rows built again stand in for the ones they replace, so the selection is held by the rows on screen.
+    private void OnRowsChanged(object sender, NotifyCollectionChangedEventArgs e)
+    {
+        if (e.Action == NotifyCollectionChangedAction.Reset)
+        {
+            _selectedRows.Clear();
+            foreach (var row in _flattener.Rows)
+            {
+                if (row.IsSelected) _selectedRows.Add(row);
+            }
+
+            return;
+        }
+
+        if (e.OldItems != null)
+        {
+            foreach (TreeRow row in e.OldItems) _selectedRows.Remove(row);
+        }
+
+        if (e.NewItems != null)
+        {
+            foreach (TreeRow row in e.NewItems)
+            {
+                if (row.IsSelected) _selectedRows.Add(row);
+            }
+        }
+    }
+
     private void RestoreSelectionFromRows()
     {
         _selectedRows.Clear();

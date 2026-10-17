@@ -9,7 +9,7 @@ namespace Adamantium.Navigation;
 
 /// <summary>The docking side of a region: one per region, there before a docking control shows it and after that control
 /// is gone. The control's adapter attaches an <see cref="IDockingHost"/>; the answers are read from it as asked, and the
-/// events are what changed between two of its reports.</summary>
+/// events are what changed between two of its reports, or since the one before it left.</summary>
 public sealed class DockingRegion : IDockingRegion
 {
     private static readonly ConditionalWeakTable<IRegion, DockingRegion> ByRegion = new();
@@ -17,7 +17,7 @@ public sealed class DockingRegion : IDockingRegion
     private IDockingHost _host;
 
     // What the host held at its last report, by view model: the events are the difference to the next one. Kept across a
-    // host leaving, so the control that replaces it reports only what really changed.
+    // host leaving, off screen, so the control that replaces it opens and closes only what really changed.
     private Dictionary<object, DockedPane> _known = new(ReferenceEqualityComparer.Instance);
     private object _active;
     private readonly List<object> _recent = [];
@@ -44,13 +44,15 @@ public sealed class DockingRegion : IDockingRegion
         Refresh();
     }
 
-    /// <summary>Disconnects that control, if it is still the one connected.</summary>
+    /// <summary>Disconnects that control, if it is still the one connected. Its panes went off screen with it: their view
+    /// models hear it, and a control that replaces it shows them again.</summary>
     public void Detach(IDockingHost host)
     {
         if (host == null || !ReferenceEquals(_host, host)) return;
 
         _host.Changed -= OnHostChanged;
         _host = null;
+        LeaveScreen();
     }
 
     private IReadOnlyList<DockedPane> Panes => _host?.Panes ?? [];
@@ -204,6 +206,34 @@ public sealed class DockingRegion : IDockingRegion
         viewModel == null ? null : Known.FirstOrDefault(pane => ReferenceEquals(pane.ViewModel, viewModel));
 
     private void OnHostChanged(object sender, EventArgs e) => Refresh();
+
+    // Kept where they were, so the next control opens and closes nothing it does not change; only off screen. Floating
+    // ones too: their windows go with the control.
+    private void LeaveScreen()
+    {
+        var left = new Dictionary<object, DockedPane>(ReferenceEqualityComparer.Instance);
+        foreach (var (viewModel, was) in _known)
+        {
+            if (was.Placement.IsActive) Tell(viewModel, aware => aware.OnDeactivated());
+        }
+
+        foreach (var (viewModel, was) in _known)
+        {
+            if (was.Placement.IsShown) Tell(viewModel, aware => aware.OnHidden());
+
+            var placement = new PanePlacement(was.Placement.Zone, was.Placement.State, false, false);
+            left[viewModel] = new DockedPane(was.Id, viewModel, was.Kind, placement);
+        }
+
+        _known = left;
+        if (_active != null)
+        {
+            _active = null;
+            _pending.Enqueue(() => ActivePaneChanged?.Invoke(this, EventArgs.Empty));
+        }
+
+        Drain();
+    }
 
     private void Refresh()
     {

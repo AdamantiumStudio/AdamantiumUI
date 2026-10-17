@@ -1120,6 +1120,9 @@ public class DockingArea : Panel
                 // naming its tabs' parent.
                 if (pane.RootVisual == null) DiscardedVisuals.PublishSubtree(pane);
             }
+
+            // Its floating windows too: an area in its place no longer finds this one through the workspace to close them.
+            ReleaseFloatingWindows();
         }
 
         // The compass is shown in a window of its own, only hidden between drags: left so, an area thrown away kept a
