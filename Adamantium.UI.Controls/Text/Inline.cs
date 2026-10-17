@@ -16,8 +16,12 @@ namespace Adamantium.UI.Controls.Text;
 /// span around it, and in the end from the TextBlock. The hosting TextBlock listens to <see cref="Changed"/> to re-shape
 /// when a bound value updates.
 /// </summary>
-public abstract class Inline : FundamentalUIComponent
+public abstract class Inline : FundamentalUIComponent, ITextStyleUser, Adamantium.UI.Core.Resources.IResolvesOwnResources
 {
+    public static readonly AdamantiumProperty CharacterStyleProperty = AdamantiumProperty.Register(
+        nameof(CharacterStyle), typeof(CharacterStyle), typeof(Inline),
+        new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure));
+
     public static readonly AdamantiumProperty ForegroundProperty = AdamantiumProperty.Register(nameof(Foreground),
         typeof(Brush), typeof(Inline), new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure));
 
@@ -73,10 +77,17 @@ public abstract class Inline : FundamentalUIComponent
     private TextEffectCollection _textEffects;
     private Brush _bakedForeground;
     private Brush _bakedBackground;
+    private Brush _bakedStyleForeground;
+    private Brush _bakedStyleBackground;
+    private Brush _bakedParagraphForeground;
+    private Brush _bakedParagraphBackground;
     private bool _inBlock;
     private bool _linesBaked;
 
     internal static readonly EventArgs EffectsOnly = new();
+
+    // A style the inline takes changed: its text lays out again, the inlines themselves are as they were.
+    internal static readonly EventArgs StyleOnly = new();
 
     /// <summary>Raised when a property that affects this inline's rendered text changes (so the TextBlock re-lays-out).</summary>
     internal event EventHandler Changed;
@@ -183,6 +194,25 @@ public abstract class Inline : FundamentalUIComponent
     {
         get => GetValue<TextKerning?>(KerningProperty);
         set => SetValue(KerningProperty, value);
+    }
+
+    /// <summary>The named character style its text takes, over its paragraph's style and under what this inline and
+    /// the spans around it set themselves; an inner inline's style wins over an outer one's. Null sets none.</summary>
+    public CharacterStyle CharacterStyle
+    {
+        get => GetValue<CharacterStyle>(CharacterStyleProperty);
+        set => SetValue(CharacterStyleProperty, value);
+    }
+
+    void ITextStyleUser.TextStyleChanged(bool rebased)
+    {
+        if (rebased && _inBlock)
+        {
+            ResolveResources();
+        }
+
+        Rebake();
+        RaiseChanged(StyleOnly);
     }
 
     /// <summary>How far this inline is raised above the line's baseline, as InDesign's baseline shift; negative lowers
@@ -292,6 +322,41 @@ public abstract class Inline : FundamentalUIComponent
 
     internal bool InBlock => _inBlock;
 
+    // An inline takes no part in the visual tree: what a {ResourceReference} on it, or on its styles and the ones they
+    // are based on, asks is answered from its block's place there, each time it joins a live tree.
+    void Adamantium.UI.Core.Resources.IResolvesOwnResources.ResolveResources() => ResolveResources();
+
+    private void ResolveResources()
+    {
+        TextBlock block = null;
+        for (var node = LogicalParent; node != null && block == null; node = node.LogicalParent)
+        {
+            block = node as TextBlock;
+        }
+
+        if (block == null)
+        {
+            return;
+        }
+
+        Adamantium.UI.Core.Resources.ResourceResolver.ResolveFrom(this, block);
+        for (TextFormat format = CharacterStyle; format != null; format = format.Base)
+        {
+            Adamantium.UI.Core.Resources.ResourceResolver.ResolveFrom(format, block);
+        }
+
+        for (TextFormat format = (this as Paragraph)?.ParagraphStyle; format != null; format = format.Base)
+        {
+            Adamantium.UI.Core.Resources.ResourceResolver.ResolveFrom(format, block);
+        }
+    }
+
+    protected override void OnAttachedToLogicalTree(LogicalTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToLogicalTree(e);
+        ResolveResources();
+    }
+
     internal bool ReachesABlock()
     {
         for (var node = LogicalParent; node != null; node = node.LogicalParent)
@@ -332,6 +397,12 @@ public abstract class Inline : FundamentalUIComponent
         var baking = _inBlock && !IsDiscarded;
         _bakedForeground = Bake(_bakedForeground, baking ? Foreground : null);
         _bakedBackground = Bake(_bakedBackground, baking ? Background : null);
+        // The brushes of its styles are drawn into its text as its own are.
+        var paragraphStyle = (this as Paragraph)?.ParagraphStyle;
+        _bakedStyleForeground = Bake(_bakedStyleForeground, baking ? CharacterStyle?.ResolvedForeground() : null);
+        _bakedStyleBackground = Bake(_bakedStyleBackground, baking ? CharacterStyle?.ResolvedBackground() : null);
+        _bakedParagraphForeground = Bake(_bakedParagraphForeground, baking ? paragraphStyle?.ResolvedForeground() : null);
+        _bakedParagraphBackground = Bake(_bakedParagraphBackground, baking ? paragraphStyle?.ResolvedBackground() : null);
         if (_linesBaked == baking)
         {
             return;
@@ -366,6 +437,18 @@ public abstract class Inline : FundamentalUIComponent
         base.OnPropertyChanged(e);
         if (e.Property == ForegroundProperty || e.Property == BackgroundProperty)
         {
+            Rebake();
+        }
+
+        if (e.Property == CharacterStyleProperty || e.Property == Paragraph.ParagraphStyleProperty)
+        {
+            (e.OldValue as TextFormat)?.Unuse(this);
+            (e.NewValue as TextFormat)?.Use(this);
+            if (_inBlock && e.NewValue != null)
+            {
+                ResolveResources();
+            }
+
             Rebake();
         }
 

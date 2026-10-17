@@ -2,6 +2,23 @@
       xmlns:x="http://adamantium/ui/xaml/extensions"
       xmlns:conv="clr-namespace:Adamantium.UI.Sandbox.Converters">
     <!-- Navigated into the text tab's region under the key "Paragraph"; the DataContext is the tab's own view-model. -->
+    <!-- Named styles, as InDesign's: a heading based on the body, and an emphasis. -->
+    <ResourceContext.Resources>
+        <ParagraphStyle x:Key="BodyStyle"
+                        FontSize="16"
+                        Margin="0,0,0,8"/>
+        <ParagraphStyle x:Key="HeadingStyle"
+                        FontSize="26"
+                        FontWeight="Bold">
+            <ParagraphStyle.BasedOn>
+                <ParagraphStyle Margin="0,4,0,6"
+                                Foreground="#404040"/>
+            </ParagraphStyle.BasedOn>
+        </ParagraphStyle>
+        <CharacterStyle x:Key="EmphasisStyle"
+                        FontStyle="Italic"
+                        Foreground="#2F7DD1"/>
+    </ResourceContext.Resources>
     <StackPanel Orientation="Vertical"
                 Hyphens="{Binding Hyphens}"
                 OpticalMarginAlignment="{Binding OpticalMargins}">
@@ -594,6 +611,25 @@
                                Margin="10,0,0,0"/>
                 </Grid>
             </StackPanel>
+        </Border>
+
+        <!-- Paragraph and character styles: a heading and body paragraphs, a run in the emphasis style, and a run that
+             sets its own color over it. -->
+        <TextBlock Text="{Localize TextStrings.StylesTitle}"
+                   Margin="0,8,0,8"/>
+        <Border Width="420"
+                HorizontalAlignment="Left"
+                Padding="6"
+                Margin="0,0,16,16"
+                BorderThickness="1"
+                BorderBrush="{ResourceReference ControlStrokeColorDefault}">
+            <TextBlock AutomationProperties.AutomationId="StyledText"
+                       Language="en-US"
+                       TextWrapping="WrapByWords">
+                <Paragraph ParagraphStyle="{ResourceReference HeadingStyle}">A heading</Paragraph>
+                <Paragraph ParagraphStyle="{ResourceReference BodyStyle}">Body text in its paragraph style, with <Run CharacterStyle="{ResourceReference EmphasisStyle}" Text="an emphasis"/> and <Run CharacterStyle="{ResourceReference EmphasisStyle}" Foreground="Red" Text="one that sets its own color"/>.</Paragraph>
+                <Paragraph ParagraphStyle="{ResourceReference BodyStyle}" TextIndent="20">A paragraph of the same style that indents its own first line.</Paragraph>
+            </TextBlock>
         </Border>
 
         <!-- Tab stops: page numbers right-aligned behind dot leaders, prices lined up on the decimal point. -->

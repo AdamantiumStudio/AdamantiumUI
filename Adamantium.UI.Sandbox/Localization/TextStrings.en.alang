@@ -54,6 +54,7 @@
     <Phrase Key="KerningNone" Text="None"/>
     <Phrase Key="BaselineGridTitle" Text="A baseline grid:"/>
     <Phrase Key="RubyTitle" Text="Ruby (furigana over the base, a longer reading spreading it, an annotation under the line):"/>
+    <Phrase Key="StylesTitle" Text="Paragraph and character styles:"/>
     <Phrase Key="FeaturesTitle" Text="OpenType features of Source Sans 3 that change glyphs: tag and values, the font's own name, characters it changes with it on:"/>
     <Phrase Key="AlternatesTitle" Text="Alternates of a character, each drawn with the feature and value that ask for it:"/>
     <Phrase Key="AlternateCharacter" Text="Character"/>
