@@ -1020,6 +1020,14 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
                 {
                     _links.Add((spanStart, start, link));
                 }
+                else if (span is Ruby ruby && !string.IsNullOrEmpty(ruby.Annotation))
+                {
+                    var annotation = TextTransform == TextTransform.None
+                        ? ruby.Annotation
+                        : TextCasing.Transform(ruby.Annotation, TextTransform, TextCasing.CultureOf(ruby.Language ?? Language));
+                    attributed.SetRuby(spanStart, start - spanStart,
+                        new RubyAnnotation(annotation, ruby.RubyPosition, ruby.AnnotationFontSize));
+                }
 
                 break;
         }
