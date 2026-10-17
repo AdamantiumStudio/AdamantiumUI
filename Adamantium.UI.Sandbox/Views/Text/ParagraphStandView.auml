@@ -2,6 +2,32 @@
       xmlns:x="http://adamantium/ui/xaml/extensions"
       xmlns:conv="clr-namespace:Adamantium.UI.Sandbox.Converters">
     <!-- Navigated into the text tab's region under the key "Paragraph"; the DataContext is the tab's own view-model. -->
+    <!-- Named styles, as InDesign's: a heading based on the body, and an emphasis. -->
+    <ResourceContext.Resources>
+        <ParagraphStyle x:Key="BodyStyle"
+                        FontSize="16"
+                        Margin="0,0,0,8"/>
+        <ParagraphStyle x:Key="HeadingStyle"
+                        FontSize="26"
+                        FontWeight="Bold">
+            <ParagraphStyle.BasedOn>
+                <ParagraphStyle Margin="0,4,0,6"
+                                Foreground="#404040"/>
+            </ParagraphStyle.BasedOn>
+        </ParagraphStyle>
+        <CharacterStyle x:Key="EmphasisStyle"
+                        FontStyle="Italic"
+                        Foreground="#2F7DD1"/>
+        <CharacterStyle x:Key="AsideStyle"
+                        Foreground="#2E9E5B"
+                        TextDecorations="None"/>
+        <CharacterStyle x:Key="QuietLinkStyle"
+                        Foreground="#D9534F"
+                        TextDecorations="None"/>
+        <ParagraphStyle x:Key="StruckStyle"
+                        BasedOn="{ResourceReference BodyStyle}"
+                        TextDecorations="Strikethrough"/>
+    </ResourceContext.Resources>
     <StackPanel Orientation="Vertical"
                 Hyphens="{Binding Hyphens}"
                 OpticalMarginAlignment="{Binding OpticalMargins}">
@@ -563,6 +589,59 @@
                 </Grid>
             </Border>
         </WrapPanel>
+
+        <!-- A baseline grid set on the frame: the heading and both columns, each of its own size, keep one rhythm. -->
+        <TextBlock Text="{Localize TextStrings.BaselineGridTitle}"
+                   Margin="0,8,0,8"/>
+        <Border Width="660"
+                HorizontalAlignment="Left"
+                Padding="6"
+                Margin="0,0,16,16"
+                BorderThickness="1"
+                BorderBrush="{ResourceReference ControlStrokeColorDefault}"
+                BaselineGridStep="24">
+            <StackPanel Orientation="Vertical">
+                <TextBlock AutomationProperties.AutomationId="GridHeading"
+                           Text="{Localize TextStrings.BaselineGridTitle}"
+                           FontSize="30"/>
+                <Grid ColumnDefinitions="*,*">
+                    <TextBlock AutomationProperties.AutomationId="GridLeftColumn"
+                               Text="{Binding ProseSample}"
+                               Language="en-US"
+                               TextWrapping="WrapByWords"
+                               FontSize="16"
+                               Margin="0,5,10,0"/>
+                    <TextBlock AutomationProperties.AutomationId="GridRightColumn"
+                               Grid.Column="1"
+                               Text="{Binding ProseSample}"
+                               Language="en-US"
+                               TextWrapping="WrapByWords"
+                               FontSize="13"
+                               Margin="10,0,0,0"/>
+                </Grid>
+            </StackPanel>
+        </Border>
+
+        <!-- Paragraph and character styles: a heading and body paragraphs, a run in the emphasis style, a run that sets
+             its own color over it, and links against the styles around them and on them. -->
+        <TextBlock Text="{Localize TextStrings.StylesTitle}"
+                   Margin="0,8,0,8"/>
+        <Border Width="420"
+                HorizontalAlignment="Left"
+                Padding="6"
+                Margin="0,0,16,16"
+                BorderThickness="1"
+                BorderBrush="{ResourceReference ControlStrokeColorDefault}">
+            <TextBlock AutomationProperties.AutomationId="StyledText"
+                       Language="en-US"
+                       TextWrapping="WrapByWords">
+                <Paragraph ParagraphStyle="{ResourceReference HeadingStyle}">A heading</Paragraph>
+                <Paragraph ParagraphStyle="{ResourceReference BodyStyle}">Body text in its paragraph style, with <Run CharacterStyle="{ResourceReference EmphasisStyle}" Text="an emphasis"/> and <Run CharacterStyle="{ResourceReference EmphasisStyle}" Foreground="Red" Text="one that sets its own color"/>.</Paragraph>
+                <Paragraph ParagraphStyle="{ResourceReference BodyStyle}" TextIndent="20">A paragraph of the same style that indents its own first line.</Paragraph>
+                <Paragraph ParagraphStyle="{ResourceReference BodyStyle}"><Hyperlink NavigateUri="https://github.com/AdamantiumStudio">A link</Hyperlink> keeps its look, <Span CharacterStyle="{ResourceReference AsideStyle}">as it does in an aside: <Hyperlink NavigateUri="https://github.com/AdamantiumStudio">this link</Hyperlink></Span>; <Hyperlink CharacterStyle="{ResourceReference QuietLinkStyle}" NavigateUri="https://github.com/AdamantiumStudio">one in its own style</Hyperlink> takes the style.</Paragraph>
+                <Paragraph ParagraphStyle="{ResourceReference StruckStyle}">A struck paragraph adds its line to <Hyperlink NavigateUri="https://github.com/AdamantiumStudio">a link's underline</Hyperlink>.</Paragraph>
+            </TextBlock>
+        </Border>
 
         <!-- Tab stops: page numbers right-aligned behind dot leaders, prices lined up on the decimal point. -->
         <TextBlock Text="{Localize TextStrings.TabsTitle}"

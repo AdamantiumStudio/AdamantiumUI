@@ -15,6 +15,40 @@ All packages share one version.
   followed on the grid's own thread. Without a source such sections are left out, except in the designer, which has
   no view model to give one: there they are all shown, empty, so the layout can be seen.
 
+- Named paragraph and character styles, as InDesign's: `ParagraphStyle` (`HorizontalTextAlignment`, `Margin`,
+  `TextIndent`, `LineHeight` and the text's formatting) on `Paragraph.ParagraphStyle`, `CharacterStyle` on
+  `Inline.CharacterStyle`, each with `BasedOn`, kept as resources. A paragraph takes its style under what it sets itself
+  (field by field), an inline its character style over its paragraph's and under what it and the spans around it set
+  themselves; the nearest inline's style wins. A hyperlink's underline and theme color yield only to a character style
+  on the link or inside it, as in CSS: styles around it, and its paragraph's, add their lines to its underline and
+  take nothing away; the lines of nested inlines and of their styles add up, an `<Underline>`'s among them. Changing a
+  style, or one it is based on, lays out again the text it is
+  set on (styles hold their users weakly). Laid out by the engine's styles. A `{ResourceReference}` on an inline or on
+  its styles is answered from its block's place in the tree, and again when its theme scope switches (it was answered
+  for no inline before). The Text tab's
+  Paragraph topic shows a heading, body paragraphs, an emphasis and links against the styles around them and on them.
+
+- `Ruby`, a `Span` with an annotation, as HTML's `<ruby>`: `<Ruby Annotation="かんじ">漢字</Ruby>` sets furigana
+  centered over its inlines at half their size (`AnnotationFontSize` sets its own), spreads inlines narrower than the
+  annotation to its width and keeps them on one line; `RubyPosition="Under"` puts it under the line. The line grows to
+  hold it unless its height is set; the annotation takes the block's `TextTransform`; of rubies one inside another the
+  outer one's annotation is shown. The Text tab's OpenType topic shows furigana and an annotation under the line.
+
+- `Kerning` on every element, inherited, and on an inline, as InDesign's: the font's pairs (`Metrics`, the default),
+  the letters' outlines (`Optical` - for a font with no pairs, or pairs it left out) or none. In a `TextBlock` and a
+  `TextBox`; the Text tab's OpenType topic shows one line three ways.
+
+- A baseline grid on any element, inherited, as InDesign's: `BaselineGridStep` (NaN, the default, is none),
+  `BaselineGridOffset` and `BaselineGridFirstLineOnly`. The grid starts at the top of the element its step is set on,
+  and every `TextBlock` under it puts its baselines on the grid's lines, so headings, body text and columns of other
+  sizes keep one rhythm. A `StackPanel`, a `Border` and a `ScrollContentPresenter` tell a child where it will stand
+  while measuring it (`PlaceAt`), so a stack of blocks, the rows of a list and text in a popup are on the grid in the
+  pass that lays them out; under other panels a block that moved lays its lines out again once the pass settles. A
+  block centered or at the bottom of a taller slot - itself or an element above it - moves with its own height and is
+  not put on the grid: it keeps the place it first took. Scrolling moves the grid with the text; a `LayoutTransform`
+  between the two is not taken into account. The Text tab's Paragraph topic shows a heading and two columns on one
+  grid.
+
 - `x:Key="{x:Static Type.Member}"`: a resource keyed by a constant code uses too - an entity's icon key - so the key is
   written once, in C#. In a resource file, an inline dictionary, and with `x:Shared="False"`; a member that is not text
   is a build error, and `{}` still starts a key that is braces as written. Hot reload sees an `{x:Static}` changed to
@@ -1396,6 +1430,7 @@ All packages share one version.
 - A `PropertyGrid` narrower than its `NameColumnWidth` leaves the values `MinValueColumnWidth` beside the grip and the
   buttons: the names took their full width and squeezed the values to a sliver in a docked inspector. The width given
   comes back when the grid widens again.
+- A `TextBlock` whose inlines were all removed no longer keeps the last of them alive.
 - A page that slid in through a `ContentPresenter` transition gets the presenter's size back once the page it replaced
   has slid out: the presenter kept the size of the larger of the two, so the topic area of the Text tab scrolled through
   empty space after a long topic.

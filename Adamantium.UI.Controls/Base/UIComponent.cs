@@ -624,6 +624,56 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
         set => SetValue(TrackingProperty, value);
     }
 
+    public static readonly AdamantiumProperty KerningProperty = AdamantiumProperty.Register(nameof(Kerning),
+        typeof(TextKerning), typeof(UIComponent),
+        new PropertyMetadata(TextKerning.Metrics, PropertyMetadataOptions.Inherits | PropertyMetadataOptions.AffectsMeasure));
+
+    /// <summary>Where the space between two letters of the text in this element and its descendants comes from, as
+    /// InDesign's kerning: the font's pairs (the default), the letters' outlines (<see cref="TextKerning.Optical"/>) or
+    /// neither.</summary>
+    public TextKerning Kerning
+    {
+        get => GetValue<TextKerning>(KerningProperty);
+        set => SetValue(KerningProperty, value);
+    }
+
+    public static readonly AdamantiumProperty BaselineGridStepProperty = AdamantiumProperty.Register(
+        nameof(BaselineGridStep), typeof(double), typeof(UIComponent),
+        new PropertyMetadata(double.NaN, PropertyMetadataOptions.Inherits | PropertyMetadataOptions.AffectsMeasure));
+
+    /// <summary>How far apart the lines of a baseline grid are, as InDesign's: the baselines of the text blocks in this
+    /// element and its descendants move down onto it, so text of every size and in every column keeps one rhythm. The
+    /// grid starts at the top of the element it is set on. NaN (the default) is no grid.</summary>
+    public double BaselineGridStep
+    {
+        get => GetValue<double>(BaselineGridStepProperty);
+        set => SetValue(BaselineGridStepProperty, value);
+    }
+
+    public static readonly AdamantiumProperty BaselineGridOffsetProperty = AdamantiumProperty.Register(
+        nameof(BaselineGridOffset), typeof(double), typeof(UIComponent),
+        new PropertyMetadata(0.0, PropertyMetadataOptions.Inherits | PropertyMetadataOptions.AffectsMeasure));
+
+    /// <summary>Where the first line of the baseline grid lies below the top of the element
+    /// <see cref="BaselineGridStep"/> is set on. 0 by default.</summary>
+    public double BaselineGridOffset
+    {
+        get => GetValue<double>(BaselineGridOffsetProperty);
+        set => SetValue(BaselineGridOffsetProperty, value);
+    }
+
+    public static readonly AdamantiumProperty BaselineGridFirstLineOnlyProperty = AdamantiumProperty.Register(
+        nameof(BaselineGridFirstLineOnly), typeof(bool), typeof(UIComponent),
+        new PropertyMetadata(false, PropertyMetadataOptions.Inherits | PropertyMetadataOptions.AffectsMeasure));
+
+    /// <summary>Whether only the first line of each paragraph goes onto the baseline grid, the lines after it keeping
+    /// their own spacing. False by default.</summary>
+    public bool BaselineGridFirstLineOnly
+    {
+        get => GetValue<bool>(BaselineGridFirstLineOnlyProperty);
+        set => SetValue(BaselineGridFirstLineOnlyProperty, value);
+    }
+
     public static readonly AdamantiumProperty LineHeightProperty = AdamantiumProperty.Register(nameof(LineHeight),
         typeof(double), typeof(UIComponent),
         new PropertyMetadata(double.NaN, PropertyMetadataOptions.Inherits | PropertyMetadataOptions.AffectsMeasure));
@@ -1454,6 +1504,7 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
         if (old != null && parent != null) (old as UIComponent)?.DisownVisualChild(this);
 
         VisualParent = parent;
+        OnVisualParentReplaced();
 
         if (IsAttachedToVisualTree)
         {
@@ -1587,6 +1638,14 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
     {
          
     }
+
+    private protected virtual void OnVisualParentReplaced()
+    {
+    }
+
+    internal int VisualChildCount => _visualChildren?.Count ?? 0;
+
+    internal IUIComponent VisualChildAt(int index) => _visualChildren[index];
 
     protected void OnVisualParentChanged(IUIComponent oldParent, IUIComponent newParent)
     {

@@ -68,6 +68,7 @@ public class Border : Decorator
       var size = availableSize.Deflate(padding);
       if (child != null)
       {
+         (child as Base.MeasurableUIComponent)?.PlaceAt(padding.Top, double.NaN);
          child.Measure(size);
          return child.DesiredSize.Inflate(padding);
       }

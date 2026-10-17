@@ -173,6 +173,14 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
     private SpacingRange _lastWordSpacing;
     private SpacingRange _lastLetterSpacing;
     private double _lastTracking;
+    private TextKerning _lastKerning;
+    private BaselineGrid _lastBaselineGrid;
+    private double _gridPhase = double.NaN;
+    private LayoutManager _gridManager;
+    private IUIComponent _gridOrigin;
+    private double _gridTop = double.NaN;
+    private double _gridHeight = double.NaN;
+    private bool _gridHeld;
     private SpacingRange _lastGlyphScaling;
     private bool _lastJustificationAlternates;
     private HorizontalTextAlignment _lastLastLineAlignment;
@@ -229,6 +237,8 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
     private bool _runFontsPending;
     private TextEffectCollection _textEffects;
     private readonly List<(Inline Inline, int Start, int Length)> _inlineRanges = [];
+    private readonly Dictionary<TextFormat, object> _engineStyles = [];
+    private readonly List<(int Start, int End, CharacterStyle Style)> _styleRanges = [];
     private readonly List<GlyphEffect> _resolvedEffects = [];
     private GlyphEffect[] _drawnEffects = [];
     private readonly HeldBrushes _effectBrushes;
@@ -272,6 +282,9 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         _textLayout.WordSpacing = WordSpacing;
         _textLayout.LetterSpacing = LetterSpacing;
         _textLayout.Tracking = Tracking;
+        _textLayout.Kerning = Kerning;
+        var baselineGrid = BaselineGridOf();
+        _textLayout.BaselineGrid = baselineGrid;
         _textLayout.GlyphScaling = GlyphScaling;
         _textLayout.JustificationAlternates = JustificationAlternates;
         _textLayout.LastLineAlignment = LastLineAlignment;
@@ -309,7 +322,8 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
             && _lastOpticalMargins == OpticalMarginAlignment && Equals(_lastDropCap, dropCap)
             && _lastColumns == Columns && _lastColumnGap.Equals(ColumnGap) && Equals(_lastExclusions, Exclusions)
             && _lastWritingMode == WritingMode && _lastWordSpacing.Equals(WordSpacing)
-            && _lastLetterSpacing.Equals(LetterSpacing) && _lastTracking.Equals(Tracking)
+            && _lastLetterSpacing.Equals(LetterSpacing) && _lastTracking.Equals(Tracking) && _lastKerning == Kerning
+            && Equals(_lastBaselineGrid, baselineGrid)
             && _lastGlyphScaling.Equals(GlyphScaling) && _lastJustificationAlternates == JustificationAlternates
             && _lastLastLineAlignment == LastLineAlignment && _lastSingleWord == SingleWordJustification
             && _lastKashidas == Kashidas && _lastLineHeight.Equals(LineHeight)
@@ -324,6 +338,13 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         _links.Clear();
         _objects.Clear();
         _inlineBrushes.Clear();
+        if (!HasInlines)
+        {
+            _inlineRanges.Clear();
+            _paragraphs.Clear();
+            _engineStyles.Clear();
+        }
+
         var attributed = HasInlines
             ? InlineAttributedText(text, shaping)
             : shaping == null ? null : new AttributedText(text, shaping);
@@ -403,6 +424,8 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         _lastWordSpacing = WordSpacing;
         _lastLetterSpacing = LetterSpacing;
         _lastTracking = Tracking;
+        _lastKerning = Kerning;
+        _lastBaselineGrid = baselineGrid;
         _lastGlyphScaling = GlyphScaling;
         _lastJustificationAlternates = JustificationAlternates;
         _lastLastLineAlignment = LastLineAlignment;
@@ -701,6 +724,13 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
             return;
         }
 
+        if (ReferenceEquals(e, Inline.StyleOnly))
+        {
+            _inlinesDirty = true;
+            InvalidateMeasure();
+            return;
+        }
+
         _inlinesDirty = true;
         HostChildren();
         InvalidateMeasure();
@@ -929,6 +959,8 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         var attributed = new AttributedText(text, shaping);
         List<Inline> chain = [];
         _inlineRanges.Clear();
+        _engineStyles.Clear();
+        _styleRanges.Clear();
         for (var i = 0; i < _inlines.Count; i++)
         {
             var start = _inlineStarts[i];
@@ -938,18 +970,21 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
             }
         }
 
+        foreach (var (start, end, style) in _styleRanges)
+        {
+            attributed.SetCharacterStyle(start, end - start, EngineStyle(style));
+        }
+
+        _styleRanges.Clear();
+
         foreach (var (start, length, paragraph) in _paragraphs)
         {
-            attributed.SetParagraph(start, length, new ParagraphAttributes
+            attributed.SetParagraph(start, length, OwnParagraphAttributes(paragraph));
+            if (paragraph.ParagraphStyle is { } paragraphStyle)
             {
-                Alignment = paragraph.HorizontalTextAlignment,
-                MarginLeft = paragraph.Margin.Left,
-                MarginRight = paragraph.Margin.Right,
-                SpaceBefore = paragraph.Margin.Top,
-                SpaceAfter = paragraph.Margin.Bottom,
-                TextIndent = paragraph.TextIndent,
-                LineHeight = paragraph.LineHeight,
-            });
+                attributed.SetParagraphStyle(start, length, EngineStyle(paragraphStyle));
+            }
+
             if (length > 0 && text[start + length - 1] == ParagraphSeparator)
             {
                 chain.Add(paragraph);
@@ -959,6 +994,113 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         }
 
         return attributed;
+    }
+
+    // What a paragraph sets itself, field by field, so its style shows through the rest.
+    private static ParagraphAttributes OwnParagraphAttributes(Paragraph paragraph)
+    {
+        var own = new ParagraphAttributes { Alignment = paragraph.HorizontalTextAlignment };
+        if (paragraph.GetValueSource(Paragraph.MarginProperty) != ValuePriority.Default
+            || paragraph.ParagraphStyle == null)
+        {
+            var margin = paragraph.Margin;
+            own = own.With(new ParagraphAttributes
+            {
+                MarginLeft = margin.Left, MarginRight = margin.Right, SpaceBefore = margin.Top, SpaceAfter = margin.Bottom,
+            });
+        }
+
+        if (paragraph.GetValueSource(Paragraph.TextIndentProperty) != ValuePriority.Default
+            || paragraph.ParagraphStyle == null)
+        {
+            own = own.With(new ParagraphAttributes { TextIndent = paragraph.TextIndent });
+        }
+
+        if (!double.IsNaN(paragraph.LineHeight))
+        {
+            own = own.With(new ParagraphAttributes { LineHeight = paragraph.LineHeight });
+        }
+
+        return own;
+    }
+
+    // The engine's style for a style of the block's text, the ones it is based on mapped with it; one per style for a
+    // layout, and its brushes held by the block.
+    private Adamantium.Graphics.Fonts.ParagraphStyle EngineStyle(ParagraphStyle style)
+    {
+        if (_engineStyles.TryGetValue(style, out var known))
+        {
+            return (Adamantium.Graphics.Fonts.ParagraphStyle)known;
+        }
+
+        _inlineBrushes.Add(style.Foreground);
+        _inlineBrushes.Add(style.Background);
+        var engine = new Adamantium.Graphics.Fonts.ParagraphStyle(style.Name, style.OwnParagraphAttributes(),
+            style.OwnTextAttributes(), style.BasedOn is { } based && !based.Reaches(style) ? EngineStyle(based) : null);
+        _engineStyles[style] = engine;
+        return engine;
+    }
+
+    private Adamantium.Graphics.Fonts.CharacterStyle EngineStyle(CharacterStyle style)
+    {
+        if (_engineStyles.TryGetValue(style, out var known))
+        {
+            return (Adamantium.Graphics.Fonts.CharacterStyle)known;
+        }
+
+        _inlineBrushes.Add(style.Foreground);
+        _inlineBrushes.Add(style.Background);
+        var engine = new Adamantium.Graphics.Fonts.CharacterStyle(style.Name, style.OwnTextAttributes(),
+            style.BasedOn is { } based && !based.Reaches(style) ? EngineStyle(based) : null);
+        _engineStyles[style] = engine;
+        return engine;
+    }
+
+    // The nearest character style along the chain: an inner inline's wins.
+    private static CharacterStyle CharacterStyleOf(List<Inline> chain)
+    {
+        for (var i = chain.Count - 1; i >= 0; i--)
+        {
+            if (chain[i].CharacterStyle is { } style)
+            {
+                return style;
+            }
+        }
+
+        return null;
+    }
+
+    private static bool IsStyled(ValuePriority source) => source is ValuePriority.Style or ValuePriority.Trigger;
+
+    private static ParagraphStyle ParagraphStyleOf(List<Inline> chain)
+    {
+        foreach (var inline in chain)
+        {
+            if (inline is Paragraph { ParagraphStyle: { } style })
+            {
+                return style;
+            }
+        }
+
+        return null;
+    }
+
+    // Runs of one style next to each other take it as one range.
+    private void ApplyStyle(List<Inline> chain, AttributedText attributed, int start, int length)
+    {
+        if (CharacterStyleOf(chain) is not { } style)
+        {
+            return;
+        }
+
+        if (_styleRanges.Count > 0 && _styleRanges[^1] is var (lastStart, lastEnd, lastStyle)
+                                   && lastEnd == start && ReferenceEquals(lastStyle, style))
+        {
+            _styleRanges[^1] = (lastStart, start + length, style);
+            return;
+        }
+
+        _styleRanges.Add((start, start + length, style));
     }
 
     private void ApplyInlines(InlineCollection inlines, List<Inline> chain, AttributedText attributed, ref int start)
@@ -987,15 +1129,18 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
             case Run run:
                 var length = (run.Text ?? string.Empty).Length;
                 attributed.Apply(start, length, InlineAttributes(chain));
+                ApplyStyle(chain, attributed, start, length);
                 start += length;
                 break;
             case LineBreak:
                 attributed.Apply(start, 1, InlineAttributes(chain));
+                ApplyStyle(chain, attributed, start, 1);
                 start++;
                 break;
             case InlineUIContainer { Child: { } child }:
                 attributed.Apply(start, 1,
                     InlineAttributes(chain, child.DesiredSize, _hostedRaises.GetValueOrDefault(child)));
+                ApplyStyle(chain, attributed, start, 1);
                 _objects.Add((start, child));
                 start++;
                 break;
@@ -1005,6 +1150,14 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
                 if (span is Hyperlink link)
                 {
                     _links.Add((spanStart, start, link));
+                }
+                else if (span is Ruby ruby && !string.IsNullOrEmpty(ruby.Annotation))
+                {
+                    var annotation = TextTransform == TextTransform.None
+                        ? ruby.Annotation
+                        : TextCasing.Transform(ruby.Annotation, TextTransform, TextCasing.CultureOf(ruby.Language ?? Language));
+                    attributed.SetRuby(spanStart, start - spanStart,
+                        new RubyAnnotation(annotation, ruby.RubyPosition, ruby.AnnotationFontSize));
                 }
 
                 break;
@@ -1022,6 +1175,8 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         Brush foreground = null;
         Brush background = null;
         var decorations = TextDecorations.None;
+        var looks = TextDecorations.None;
+        var styleLines = false;
         FontWeight? weight = null;
         FontStyle? style = null;
         FontStretch? stretch = null;
@@ -1031,11 +1186,20 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         string language = null;
         int? palette = null;
         double? tracking = null;
+        TextKerning? kerning = null;
         double? shift = null;
         BaselineAlignment? alignment = null;
         List<TextDecorationLine> lines = null;
-        foreach (var inline in chain)
+        var foregroundAt = -1;
+        var styleAt = -1;
+        for (var i = 0; i < chain.Count; i++)
         {
+            var inline = chain[i];
+            if (inline.CharacterStyle != null)
+            {
+                styleAt = i;
+            }
+
             if (inline.HasDecorationLines)
             {
                 lines ??= [];
@@ -1047,9 +1211,39 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
                 fontSize = inline.FontSize;
             }
 
-            foreground = inline.Foreground ?? foreground;
+            if (inline.Foreground != null)
+            {
+                foreground = inline.Foreground;
+                foregroundAt = IsStyled(inline.GetValueSource(Inline.ForegroundProperty)) ? i : -1;
+            }
+
             background = inline.Background ?? background;
-            decorations |= inline.TextDecorations;
+            var source = inline.GetValueSource(Inline.TextDecorationsProperty);
+            var characterLines = inline.CharacterStyle?.ResolvedDecorations();
+            var paragraphLines = (inline as Paragraph)?.ParagraphStyle?.ResolvedDecorations();
+            var ownStyleLines = characterLines == null && paragraphLines == null
+                ? (TextDecorations?)null
+                : (characterLines ?? TextDecorations.None) | (paragraphLines ?? TextDecorations.None);
+            var byLook = IsStyled(source) || (inline is Hyperlink && source == ValuePriority.Default);
+            styleLines |= ownStyleLines != null;
+            if (source != ValuePriority.Default && !IsStyled(source))
+            {
+                decorations |= inline.TextDecorations;
+            }
+            else if (ownStyleLines is { } styled)
+            {
+                looks = TextDecorations.None;
+                decorations |= styled | (byLook ? TextDecorations.None : inline.TextDecorations);
+            }
+            else if (byLook)
+            {
+                looks |= inline.TextDecorations;
+            }
+            else
+            {
+                decorations |= inline.TextDecorations;
+            }
+
             weight = inline.FontWeight ?? weight;
             style = inline.FontStyle ?? style;
             stretch = inline.FontStretch ?? stretch;
@@ -1059,19 +1253,32 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
             language = inline.Language ?? language;
             palette = inline.ColorPalette ?? palette;
             tracking = inline.Tracking ?? tracking;
+            kerning = inline.Kerning ?? kerning;
             shift = inline.BaselineShift ?? shift;
             alignment = inline.BaselineAlignment ?? alignment;
         }
 
-        if (objectSize != null && alignment is null or BaselineAlignment.Baseline)
+        decorations |= looks;
+        var characterStyle = CharacterStyleOf(chain);
+        var paragraphStyle = ParagraphStyleOf(chain);
+        if (foregroundAt >= 0 && styleAt >= foregroundAt && characterStyle.ResolvedForeground() != null)
         {
-            shift = (shift ?? 0) + objectRaise;
+            foreground = null;
         }
 
-        var resolvedWeight = weight ?? FontWeight;
-        var resolvedStyle = style ?? FontStyle;
+        if (objectSize != null && alignment is null or BaselineAlignment.Baseline)
+        {
+            shift = (shift ?? characterStyle?.ResolvedBaselineShift() ?? paragraphStyle?.ResolvedBaselineShift() ?? 0)
+                    + objectRaise;
+        }
+
+        // The font as the inlines choose it, else their character style, else their paragraph's style, else the block.
+        var resolvedWeight = weight ?? characterStyle?.ResolvedWeight() ?? paragraphStyle?.ResolvedWeight() ?? FontWeight;
+        var resolvedStyle = style ?? characterStyle?.ResolvedStyle() ?? paragraphStyle?.ResolvedStyle() ?? FontStyle;
+        var resolvedStretch = stretch ?? characterStyle?.ResolvedStretch() ?? paragraphStyle?.ResolvedStretch()
+                              ?? FontStretch;
         _runFontsPending |= !TryResolveFont(FontFamily ?? DefaultFontFamily, resolvedWeight, resolvedStyle,
-            stretch ?? FontStretch, variations ?? FontVariations, out var font);
+            resolvedStretch, variations ?? FontVariations, out var font);
         return new TextAttributes
         {
             Font = font,
@@ -1080,13 +1287,14 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
             Language = language,
             ColorPalette = palette,
             Tracking = tracking,
+            Kerning = kerning,
             BaselineShift = shift,
             BaselineAlignment = alignment,
             ObjectSize = objectSize,
             FontSize = double.IsNaN(fontSize) ? null : fontSize,
             Foreground = (foreground as SolidColorBrush)?.Color,
             Background = (background as SolidColorBrush)?.Color,
-            Decorations = decorations == TextDecorations.None ? null : decorations,
+            Decorations = decorations == TextDecorations.None && !styleLines ? null : decorations,
             DecorationLines = lines,
         };
     }
@@ -1165,6 +1373,9 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
     {
         _lastConstraint = availableSize;   // a wrapping block reflows to this (its container's width) when it has no explicit Width
         MeasureHosted();
+        _gridOrigin = null;
+        _gridPhase = GridPhaseAt(TopOnBaselineGrid(ref _gridOrigin));
+        FollowTheGrid(IsAttachedToVisualTree);
         var size = EnsureLayout();
         // The layout is what gets drawn. A measure whose size came out the same has no arrange after it, so a block that
         // already has a slot goes back to the slot's width - else right-aligned text stood at the width it was MEASURED
@@ -1196,6 +1407,108 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         {
             InvalidateArrange();
         }
+    }
+
+    protected internal override bool MeasuresByPlace => BaselineGridStep > 0 && !double.IsInfinity(BaselineGridStep);
+
+    private BaselineGrid BaselineGridOf()
+    {
+        var step = BaselineGridStep;
+        if (!(step > 0) || double.IsInfinity(step) || double.IsNaN(_gridPhase))
+        {
+            return null;
+        }
+
+        return _lastBaselineGrid is { } last && last.Step.Equals(step) && last.Offset.Equals(_gridPhase)
+                                              && last.FirstLineOnly == BaselineGridFirstLineOnly
+            ? last
+            : new BaselineGrid(step, _gridPhase, BaselineGridFirstLineOnly);
+    }
+
+    private void FollowTheGrid(bool attached)
+    {
+        var follows = attached && BaselineGridStep > 0 && !double.IsInfinity(BaselineGridStep);
+        if (follows && _gridManager == null)
+        {
+            _gridManager = LayoutManager.For(this);
+            _gridManager.PlacesSettled += OnGridSettled;
+        }
+        else if (!follows && _gridManager != null)
+        {
+            _gridManager.PlacesSettled -= OnGridSettled;
+            _gridManager = null;
+            _gridOrigin = null;
+        }
+    }
+
+    // Laid out where it no longer stands (a place no parent told it while measuring): measured again there - unless it
+    // moved by its own new height, as a block centered or at the bottom does, which can never settle on the grid.
+    private void OnGridSettled(object sender, EventArgs e)
+    {
+        if (double.IsNaN(_gridPhase))
+        {
+            return;
+        }
+
+        var top = TopOnBaselineGrid(ref _gridOrigin);
+        var height = RenderSize.Height;
+        var moved = top - _gridTop;
+        var grown = height - _gridHeight;
+        _gridTop = top;
+        _gridHeight = height;
+        var phase = GridPhaseAt(top);
+        if (double.IsNaN(phase) || SamePhase(phase, _gridPhase))
+        {
+            _gridHeld = false;
+            return;
+        }
+
+        var followsItsHeight = Math.Abs(grown) > 0.01
+                               && (Math.Abs(moved + grown) < 0.5 || Math.Abs(moved + grown / 2) < 0.5)
+                               && PlacedByItsHeight();
+        if (followsItsHeight || (_gridHeld && Math.Abs(moved) < 0.01))
+        {
+            _gridHeld = true;
+            return;
+        }
+
+        _gridHeld = false;
+        InvalidateMeasure();
+    }
+
+    // Centered or at the bottom of a slot taller than it, itself or an element up to the grid's start: its height moves it.
+    private bool PlacedByItsHeight()
+    {
+        for (IUIComponent element = this; element != null && !ReferenceEquals(element, _gridOrigin);
+             element = element.VisualParent)
+        {
+            if (element is MeasurableUIComponent
+                {
+                    VerticalAlignment: VerticalAlignment.Center or VerticalAlignment.Bottom,
+                    PreviousArrangeSlot: { } slot,
+                } measurable
+                && slot.Height - measurable.EffectiveMargin.Top - measurable.EffectiveMargin.Bottom
+                > measurable.Bounds.Height + 0.5)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private double GridPhaseAt(double top)
+    {
+        var step = BaselineGridStep;
+        var phase = (BaselineGridOffset - top) % step;
+        return phase < 0 ? phase + step : phase;
+    }
+
+    private bool SamePhase(double a, double b)
+    {
+        var step = BaselineGridStep;
+        var apart = ((a - b) % step + step) % step;
+        return !double.IsNaN(apart) && Math.Min(apart, step - apart) <= 0.01;
     }
 
     private void MeasureHosted()
@@ -2300,6 +2613,8 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         {
             ListenToTheWindow();
         }
+
+        FollowTheGrid(attached: true);
     }
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
@@ -2310,6 +2625,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         ClearSelection();
         _selectionHoldsFocus = false;
         GiveUpSelectionFocus();
+        FollowTheGrid(attached: false);
     }
 
     protected override void OnLostFocus(RoutedEventArgs e)

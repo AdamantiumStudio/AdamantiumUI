@@ -15,6 +15,44 @@
                        Typography.Fraction="Slashed"/>
         </StackPanel>
 
+        <!-- Kerning: the font's own pairs, measured from the outlines, or none - one line three ways. -->
+        <TextBlock Text="{Localize TextStrings.KerningTitle}"
+                   Margin="0,20,0,6"/>
+        <StackPanel Orientation="Vertical">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="{Localize TextStrings.KerningMetrics}"
+                           Width="160"
+                           VerticalAlignment="Center"/>
+                <TextBlock Text="AVATAR Toyota WAVE LTd. Yo, 7."
+                           FontSize="34"
+                           Kerning="Metrics"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="{Localize TextStrings.KerningOptical}"
+                           Width="160"
+                           VerticalAlignment="Center"/>
+                <TextBlock AutomationProperties.AutomationId="OpticalKerningSample"
+                           Text="AVATAR Toyota WAVE LTd. Yo, 7."
+                           FontSize="34"
+                           Kerning="Optical"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="{Localize TextStrings.KerningNone}"
+                           Width="160"
+                           VerticalAlignment="Center"/>
+                <TextBlock Text="AVATAR Toyota WAVE LTd. Yo, 7."
+                           FontSize="34"
+                           Kerning="None"/>
+            </StackPanel>
+        </StackPanel>
+
+        <!-- Ruby: furigana over kanji, a longer reading spreading its base, and an annotation under the line. -->
+        <TextBlock Text="{Localize TextStrings.RubyTitle}"
+                   Margin="0,20,0,6"/>
+        <TextBlock AutomationProperties.AutomationId="RubySample"
+                   FontSize="34"
+                   Language="ja"><Ruby Annotation="にほん">日本</Ruby>の<Ruby Annotation="かんじ">漢字</Ruby>を<Ruby Annotation="うけたまわ">承</Ruby>る、<Ruby Annotation="English" RubyPosition="Under">英語</Ruby></TextBlock>
+
         <!-- A panel of OpenType features: each feature that turns a glyph into another, named by the font itself when it
              names it, and characters it changes drawn with it on. -->
         <TextBlock Text="{Localize TextStrings.FeaturesTitle}"
