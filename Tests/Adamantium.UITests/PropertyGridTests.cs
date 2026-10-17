@@ -2025,6 +2025,34 @@ public class PropertyGridTests
         });
     }
 
+    // The designer has no view model to give a source: every section is shown, empty, so the layout can be seen.
+    [Test]
+    public void InTheDesigner_SectionsForATypeAreShownWithoutASource()
+    {
+        var typed = TypedSection(typeof(Target), "T");
+        var plain = new PropertySection { Header = "P" };
+        Design.IsDesignMode = true;
+        try
+        {
+            var grid = Built(typed, plain);
+            grid.SectionsSource = new TrackingCollection<object> { new Target() };
+
+            grid.SectionsSource = null;
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(grid.Displayed, Is.EqualTo(new[] { typed, plain }), "in the written order");
+                Assert.That(typed.Target, Is.Null, "nothing of its type to read");
+                Assert.That(((Adamantium.UI.Controls.Panels.StackPanel)typed.Content).Children, Is.Not.Empty,
+                    "its rows are there to be seen");
+            });
+        }
+        finally
+        {
+            Design.IsDesignMode = false;
+        }
+    }
+
     [Test]
     public void ASectionWithNothingOfItsType_IsLeftOut_AndAnItemWithNoSection_TooUnlessGenerated()
     {

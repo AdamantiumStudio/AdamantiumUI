@@ -318,7 +318,8 @@ public class PropertyGrid : Control
         // list is a section the user had folded himself before this search started - give it back.
         if (!searching) ReleaseOpened();
 
-        foreach (var section in DisplayedSections())
+        var displayed = DisplayedSections().ToList();
+        foreach (var section in displayed)
         {
             // A section named for what is being looked for keeps all of its properties: asking for "Transform" means
             // the whole of it, not the one row that happens to repeat the word.
@@ -366,10 +367,11 @@ public class PropertyGrid : Control
             }
         }
 
-        // A section written for a type with no object now lets go of its rows: they went on reading the last one.
+        // A section written for a type with no object, not shown, lets go of its rows: they went on reading the last one.
         foreach (var section in Sections)
         {
-            if (section.DataType == null || section.Target != null || section.Content is not StackPanel idle) continue;
+            if (section.DataType == null || section.Target != null || displayed.Contains(section)
+                || section.Content is not StackPanel idle) continue;
 
             while (idle.Children.Count > 0)
             {
@@ -673,6 +675,9 @@ public class PropertyGrid : Control
             {
                 if (section.DataType != null) section.Target = null;
             }
+
+            // The designer has no source to give: every section is shown, empty, so the layout can be seen.
+            if (Design.IsDesignMode) return Sections;
 
             return Sections.Where(s => s.DataType == null).ToList();
         }

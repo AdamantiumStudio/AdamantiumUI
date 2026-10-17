@@ -12,7 +12,8 @@ All packages share one version.
   its components in the order its sections are written, whatever order the entity holds them in. The same section
   serves every object of its type and keeps its folding from one selection to the next. Items no section is written
   for show only with `AutoGenerateSections`; a source changed on another thread - a world adding a component - is
-  followed on the grid's own thread.
+  followed on the grid's own thread. Without a source such sections are left out, except in the designer, which has
+  no view model to give one: there they are all shown, empty, so the layout can be seen.
 
 - `x:Key="{x:Static Type.Member}"`: a resource keyed by a constant code uses too - an entity's icon key - so the key is
   written once, in C#. In a resource file, an inline dictionary, and with `x:Shared="False"`; a member that is not text
