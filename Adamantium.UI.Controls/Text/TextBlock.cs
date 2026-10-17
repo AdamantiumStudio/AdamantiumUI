@@ -73,6 +73,9 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         typeof(int), typeof(TextBlock),
         new PropertyMetadata(0, PropertyMetadataOptions.AffectsMeasure));
 
+    public static readonly AdamantiumProperty IsOversetProperty = AdamantiumProperty.RegisterReadOnly(nameof(IsOverset),
+        typeof(bool), typeof(TextBlock), new PropertyMetadata(false));
+
     public static readonly AdamantiumProperty WritingModeProperty = AdamantiumProperty.Register(nameof(WritingMode),
         typeof(WritingMode), typeof(TextBlock),
         new PropertyMetadata(WritingMode.Horizontal, PropertyMetadataOptions.AffectsMeasure, TextParametersChangedCallback));
@@ -162,6 +165,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
     private bool _lastJustify;
     private TextDirection _lastDirection;
     private Hyphens _lastHyphens;
+    private int _lastHyphenLimit;
     private LineBreaking _lastLineBreaking;
     private TabStopList _lastTabStops;
     private bool _lastOpticalMargins;
@@ -272,6 +276,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         _textLayout.LoadFontsInBackground = !FontAtlasStore.SynchronousFill;
         _textLayout.Direction = TextDirection;
         _textLayout.Hyphens = Hyphens;
+        _textLayout.HyphenLimit = HyphenLimit;
         _textLayout.LineBreaking = LineBreaking;
         _textLayout.TabStops = TabStops;
         _textLayout.OpticalMarginAlignment = OpticalMarginAlignment;
@@ -318,6 +323,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
             && _lastWrapping == TextWrapping && _lastTrimming == TextTrimming
             && _lastHAlign == HorizontalTextAlignment && _lastVAlign == VerticalTextAlignment
             && _lastJustify == JustifyLastLine && _lastDirection == TextDirection && _lastHyphens == Hyphens
+            && _lastHyphenLimit == HyphenLimit
             && _lastLineBreaking == LineBreaking && Equals(_lastTabStops, TabStops)
             && _lastOpticalMargins == OpticalMarginAlignment && Equals(_lastDropCap, dropCap)
             && _lastColumns == Columns && _lastColumnGap.Equals(ColumnGap) && Equals(_lastExclusions, Exclusions)
@@ -401,6 +407,8 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         }
 
         _hasLayout = true;
+        IsOverset = (_textLayout.Frames != null || _textLayout.MaxLines > 0)
+                    && _textLayout.OversetIndex < (text?.Length ?? 0);
         _inlinesDirty = false;
         _lastShaping = shaping;
         if (_lastText != text)
@@ -413,6 +421,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         _lastHAlign = HorizontalTextAlignment; _lastVAlign = VerticalTextAlignment; _lastJustify = JustifyLastLine;
         _lastDirection = TextDirection;
         _lastHyphens = Hyphens;
+        _lastHyphenLimit = HyphenLimit;
         _lastLineBreaking = LineBreaking;
         _lastTabStops = TabStops;
         _lastOpticalMargins = OpticalMarginAlignment;
@@ -439,9 +448,9 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
 
         Size Lay() => attributed == null
             ? _textLayout.ProcessText(text, FontSize, new Size(width, height), TextWrapping, TextTrimming,
-                HorizontalTextAlignment, vertical ? VerticalTextAlignment.Top : VerticalTextAlignment, JustifyLastLine)
+                HorizontalTextAlignment, vertical ? AcrossLines() : VerticalTextAlignment, JustifyLastLine)
             : _textLayout.ProcessText(attributed, FontSize, new Size(width, height), TextWrapping, TextTrimming,
-                HorizontalTextAlignment, vertical ? VerticalTextAlignment.Top : VerticalTextAlignment, JustifyLastLine);
+                HorizontalTextAlignment, vertical ? AcrossLines() : VerticalTextAlignment, JustifyLastLine);
     }
 
     private RectangleF[] FramesOf(double length, double across, bool vertical, Func<Size> lay, out float growth)
@@ -584,9 +593,12 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
     }
 
     /// <summary>Whether the text did not all fit into the block's <see cref="Columns"/> or <see cref="MaxLines"/>, so
-    /// that the rest is not shown; trimmed text says so with its ellipsis instead.</summary>
-    public bool IsOverset => _textLayout != null && (_textLayout.Frames != null || _textLayout.MaxLines > 0)
-                                                 && _textLayout.OversetIndex < (_textLayout.Text?.Length ?? 0);
+    /// that the rest is not shown; trimmed text says so with its ellipsis instead. Set after each layout, so it binds.</summary>
+    public bool IsOverset
+    {
+        get => GetValue<bool>(IsOversetProperty);
+        private set => SetValue(IsOversetProperty, value);
+    }
 
     /// <summary>How many lines a drop cap - the first characters set large, the lines running beside them - spans:
     /// 2 or more; 0 (the default) for none. Text wrapped by words only.</summary>
@@ -613,7 +625,8 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
     /// <summary>Which way lines run: across (the default), or down and stacked from right to left, as Chinese and
     /// Japanese are set vertically. A vertical line is as long as the block is high - its <see cref="Height"/>, else the
     /// height it is given - the block asks to be as wide as its lines take, the first line stands at its right edge
-    /// (<see cref="VerticalTextAlignment"/> does not apply), <see cref="HorizontalTextAlignment"/> places text along
+    /// unless <see cref="VerticalTextAlignment"/> is set to place the lines across a wider block (Top at its right edge,
+    /// Bottom at its left), <see cref="HorizontalTextAlignment"/> places text along
     /// the lines (<see cref="HorizontalTextAlignment.Left"/> at their top), and <see cref="Columns"/> stack one under
     /// another. Drop caps are for horizontal text only.</summary>
     public WritingMode WritingMode
@@ -1410,9 +1423,13 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         var size = EnsureLayout();
         // The layout is what gets drawn. A measure whose size came out the same has no arrange after it, so a block that
         // already has a slot goes back to the slot's width - else right-aligned text stood at the width it was MEASURED
-        // against, short of the slot's edge.
+        // against, short of the slot's edge. It does so in the arrange it asks for: laid out at the old slot here, it
+        // was laid out once more at its new one on every change of width.
         if (UseSlot(RenderSize))
-            EnsureLayout();
+        {
+            InvalidateArrange();
+        }
+
         return size;
     }
 
@@ -1671,9 +1688,25 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         return true;
     }
 
-    internal float LinesShift() => WritingMode == WritingMode.VerticalRightToLeft && double.IsNaN(Width) && _textLayout != null
-        ? (float)Math.Round(RenderSize.Width - _textLayout.CalculatedLayoutSize.Width)
-        : 0;
+    internal float LinesShift()
+    {
+        if (WritingMode != WritingMode.VerticalRightToLeft || !double.IsNaN(Width) || _textLayout == null)
+        {
+            return 0;
+        }
+
+        var room = RenderSize.Width - _textLayout.CalculatedLayoutSize.Width;
+        return (float)Math.Round(AcrossLines() switch
+        {
+            VerticalTextAlignment.Center => room / 2,
+            VerticalTextAlignment.Bottom => 0,
+            _ => room,
+        });
+    }
+
+    private VerticalTextAlignment AcrossLines() => GetValueSource(VerticalTextAlignmentProperty) == ValuePriority.Default
+        ? VerticalTextAlignment.Top
+        : VerticalTextAlignment;
 
     TextRenderingParameters GetTextRenderingParameters()
     {

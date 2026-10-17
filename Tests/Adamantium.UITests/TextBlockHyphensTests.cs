@@ -62,4 +62,42 @@ public class TextBlockHyphensTests
 
         Assert.That(Hyphens(text), Is.Zero);
     }
+
+    [Test]
+    public void AHyphenLimitOnAContainer_EndsNoMoreLinesInARowInAHyphen()
+    {
+        const string prose = "Достопримечательности высокопроизводительного сельскохозяйственного производства " +
+                             "неизменно привлекают внимание любознательных путешественников.";
+        var text = new TextBlock
+        {
+            Text = prose, Language = "ru", TextWrapping = TextWrapping.WrapByWords, FontSize = 20, Width = 320,
+        };
+        var host = new Border { Child = text, Hyphens = Graphics.Fonts.Hyphens.Auto };
+        var window = Host(host);
+        Assume.That(LongestHyphenRun(text), Is.GreaterThan(1));
+
+        host.HyphenLimit = 1;
+        Update(window);
+
+        Assert.That(text.HyphenLimit, Is.EqualTo(1));
+        Assert.That(LongestHyphenRun(text), Is.LessThanOrEqualTo(1));
+    }
+
+    [Test]
+    public void AHyphenLimitBelowZero_IsRejected()
+    {
+        Assert.That(() => new TextBlock { HyphenLimit = -1 }, Throws.Exception);
+    }
+
+    private static int LongestHyphenRun(TextBlock text)
+    {
+        int longest = 0, run = 0;
+        foreach (var line in text.Layout.GetTextData().GroupBy(g => g.LineIndex).OrderBy(g => g.Key))
+        {
+            run = line.OrderBy(g => g.PenX).Last(g => g.Symbol != ' ').Symbol == '-' ? run + 1 : 0;
+            longest = System.Math.Max(longest, run);
+        }
+
+        return longest;
+    }
 }
