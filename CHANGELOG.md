@@ -49,6 +49,10 @@ All packages share one version.
   between the two is not taken into account. The Text tab's Paragraph topic shows a heading and two columns on one
   grid.
 
+- `VectorToColorConverter`: a color a game keeps as numbers - a `Vector3F` of red, green and blue, or a `Vector4F` with
+  alpha - shown as a `Color` and written back as the same kind, so an inspector edits it with the color picker:
+  `<ColorProperty Binding="{Binding Color, Converter={VectorToColorConverter}}"/>`.
+
 - `x:Key="{x:Static Type.Member}"`: a resource keyed by a constant code uses too - an entity's icon key - so the key is
   written once, in C#. In a resource file, an inline dictionary, and with `x:Shared="False"`; a member that is not text
   is a build error, and `{}` still starts a key that is braces as written. Hot reload sees an `{x:Static}` changed to
@@ -1438,6 +1442,9 @@ All packages share one version.
   buttons: the names took their full width and squeezed the values to a sliver in a docked inspector. The width given
   comes back when the grid widens again.
 - A `TextBlock` whose inlines were all removed no longer keeps the last of them alive.
+- A `PropertyGrid` or `DataGrid` row bound through a converter writes what its editor produced: it was checked against
+  the object's property type before the converter had turned it into one, so a color picked for a vector was refused.
+  The converter's `ConvertBack` now says whether it fits.
 - A page that slid in through a `ContentPresenter` transition gets the presenter's size back once the page it replaced
   has slid out: the presenter kept the size of the larger of the two, so the topic area of the Text tab scrolled through
   empty space after a long topic.

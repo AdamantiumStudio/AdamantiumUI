@@ -6,6 +6,7 @@ using Adamantium.Core.Collections;
 using Adamantium.Core.Commands;
 using Adamantium.Mathematics;
 using Adamantium.UI.Controls;
+using Adamantium.UI.Controls.Converters;
 using Adamantium.UI.Controls.DrawingBoard;
 using Adamantium.UI.Controls.Primitives;
 using Adamantium.UI.Controls.Text;
@@ -497,6 +498,42 @@ public class PropertyGridTests
 
         Assert.That(row.Value, Is.Null, "the node has a color already, so this proves nothing");
         Assert.That(row.Editor, Is.Not.Null, "the line is blank, so there is nothing to pick a color with");
+    }
+
+    private sealed class Tinted
+    {
+        public Vector3F Light { get; set; } = new(1f, 0.5f, 0f);
+        public Vector4F Diffuse { get; set; } = new(0f, 0f, 1f, 0.5f);
+    }
+
+    // A COLOR A GAME KEEPS AS NUMBERS is still picked as a color: the converter shows the vector as a Color and writes the
+    // pick back as the same kind of vector, alpha and all.
+    [Test]
+    public void AColorKeptAsAVector_IsPickedAsAColor()
+    {
+        var tinted = new Tinted();
+        var light = new ColorProperty
+        {
+            Header = "Light", Binding = new Binding("Light") { Converter = new VectorToColorConverter() }
+        };
+        var diffuse = new ColorProperty
+        {
+            Header = "Diffuse", Binding = new Binding("Diffuse") { Converter = new VectorToColorConverter() }
+        };
+        var grid = Built(Section(tinted, light, diffuse));
+
+        var shown = RowOf(grid, light).Value;
+        var lightWritten = grid.Write(RowOf(grid, light), Colors.Red);
+        var diffuseWritten = grid.Write(RowOf(grid, diffuse), Color.FromRgba((byte)0, (byte)255, (byte)0, (byte)51));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(shown, Is.EqualTo(new Color(new Vector3F(1f, 0.5f, 0f))));
+            Assert.That(lightWritten && diffuseWritten, Is.True);
+            Assert.That(tinted.Light, Is.EqualTo(new Vector3F(1f, 0f, 0f)));
+            Assert.That(tinted.Diffuse.Y, Is.EqualTo(1f));
+            Assert.That(tinted.Diffuse.W, Is.EqualTo(0.2f).Within(0.005f), "alpha kept");
+        });
     }
 
     // SHOWING a line must not set what it shows. The inspector's "Folded" box appeared the first time nodes were

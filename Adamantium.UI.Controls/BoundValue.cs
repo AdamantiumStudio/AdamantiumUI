@@ -20,6 +20,7 @@ internal sealed class BoundValue : FundamentalUIComponent
     private bool _writing;
     private bool _writable;
     private BindingExpressionBase _expression;
+    private Binding _converting;
 
     /// <summary>Whether the object this was pointed at HAS what the binding asks for. False is not "the value is
     /// empty" - it is "this is not one of the objects the line is about", which is what a wire is to a line about
@@ -62,6 +63,7 @@ internal sealed class BoundValue : FundamentalUIComponent
         ClearValue(ValueProperty, ValuePriority.Binding);
         _writable = false;
         _expression = null;
+        _converting = null;
         Reads = false;
 
         if (declared == null || source == null) return;
@@ -80,6 +82,7 @@ internal sealed class BoundValue : FundamentalUIComponent
         // the frame-final value is exactly right for something being DRAWN. This is not being drawn - it is what a row
         // is asked for, in the same breath it is pointed at an object, with no frame in between.
         binding.IsImmediate = true;
+        _converting = binding is Binding { Converter: not null } converted ? converted : null;
 
         _expression = BindingEngine.SetBinding(this, ValueProperty, binding);
         Reads = _expression?.IsResolved ?? false;
@@ -94,7 +97,17 @@ internal sealed class BoundValue : FundamentalUIComponent
         // WHAT THE PROPERTY TAKES, and only failing that what is in it now. A property typed Brush holding a solid
         // color takes a picture just as well, and asking the value being replaced what fits refused every kind but
         // the one already there - a row could put a color over a color for ever and never put a picture there once.
-        if (!TryConvert(value, _expression?.SourceType ?? Value?.GetType(), out value)) return false;
+        // Through a converter the editor's value is the converter's to take: a color picked for a vector the object
+        // keeps fits once converted back, and was refused for not being a vector already.
+        var sourceType = _expression?.SourceType ?? Value?.GetType();
+        if (_converting != null)
+        {
+            if (!ConvertsBack(value, sourceType)) return false;
+        }
+        else if (!TryConvert(value, sourceType, out value))
+        {
+            return false;
+        }
 
         _writing = true;
         try
@@ -114,6 +127,13 @@ internal sealed class BoundValue : FundamentalUIComponent
     public bool Reset() => _expression?.ResetSource() ?? false;
 
     public void Release() => BindingEngine.ClearBindings(this);
+
+    private bool ConvertsBack(object value, Type sourceType)
+    {
+        var back = _converting.Converter.ConvertBack(value, sourceType, _converting.ConverterParameter, CultureInfo.CurrentCulture);
+        if (ReferenceEquals(back, AdamantiumProperty.UnsetValue)) return false;
+        return sourceType == null || back == null || sourceType.IsInstanceOfType(back) || TryConvert(back, sourceType, out _);
+    }
 
     /// <summary>Turns what an editor produced into what the object will take - a string into a number, a chosen item
     /// into its underlying value. False refuses, and refusing is the point: a value that will not fit must not be
