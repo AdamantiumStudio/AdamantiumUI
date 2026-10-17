@@ -97,6 +97,39 @@ public class TextBlockWritingModeTests
             Is.EqualTo(text.RenderSize.Width).Within(text.Layout.GetLine(0).Height / 2), "the first line at the right");
     }
 
+    [TestCase(VerticalTextAlignment.Top, 1.0)]
+    [TestCase(VerticalTextAlignment.Center, 0.5)]
+    [TestCase(VerticalTextAlignment.Bottom, 0.0)]
+    public void InAWiderSlot_AVerticalAlignmentSet_PlacesTheLinesAcrossIt(VerticalTextAlignment alignment, double share)
+    {
+        var text = Hosted(new TextBlock
+        {
+            Text = "Once upon a time", TextWrapping = TextWrapping.WrapByWords, Height = 200,
+            WritingMode = WritingMode.VerticalRightToLeft, VerticalTextAlignment = alignment,
+        });
+        var lines = text.Layout.CalculatedLayoutSize.Width;
+
+        Assert.That(text.LinesShift(), Is.EqualTo(System.Math.Round((text.RenderSize.Width - lines) * share)));
+    }
+
+    [TestCase(VerticalTextAlignment.Bottom, 0.0)]
+    [TestCase(VerticalTextAlignment.Center, 0.5)]
+    public void AWidthSet_TheLinesAreAlignedAcrossIt(VerticalTextAlignment alignment, double share)
+    {
+        var text = Hosted(new TextBlock
+        {
+            Text = "Once upon a time", TextWrapping = TextWrapping.WrapByWords, Width = 400, Height = 200,
+            WritingMode = WritingMode.VerticalRightToLeft, VerticalTextAlignment = alignment,
+        });
+        var glyphs = text.Layout.GetTextData();
+        var right = glyphs.Max(glyph => glyph.Rect.Right);
+        var left = glyphs.Min(glyph => glyph.Rect.Left);
+        var lineHeight = text.Layout.GetLine(0).Height;
+
+        Assert.That(text.LinesShift(), Is.Zero);
+        Assert.That((left + right) / 2, Is.EqualTo(lineHeight / 2 + (400 - lineHeight) * share).Within(lineHeight / 2));
+    }
+
     [Test]
     public void Columns_StackOneUnderAnother()
     {

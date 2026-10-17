@@ -62,4 +62,31 @@ public class TextAlignmentRelayoutTests
         Assert.That(RightEdge(detail), Is.EqualTo(detail.RenderSize.Width).Within(1.0),
             "the text is aligned to the width it was measured against");
     }
+
+    // Measured against a new width, the block was laid out again at its old slot before the arrange to the new one.
+    [Test]
+    public void ATrimmedBlock_IsLaidOutOncePerChangeOfWidth_AndNotAgainForTheSameOne()
+    {
+        var detail = Detail();
+        detail.Text = "In olden times when wishing still helped one, there lived a king";
+        var grid = new Grid { Width = 200, Children = { detail } };
+        var window = new Window { Width = 600, Height = 200, Content = grid };
+        Settle(window);
+
+        var before = detail.Layout.Revision;
+        for (var i = 0; i < 10; i++)
+        {
+            detail.InvalidateMeasure();
+            Settle(window);
+        }
+
+        Assert.That(detail.Layout.Revision, Is.EqualTo(before), "measured again at the same width");
+        for (var i = 1; i <= 10; i++)
+        {
+            grid.Width = 200 + i;
+            Settle(window);
+        }
+
+        Assert.That(detail.Layout.Revision - before, Is.LessThanOrEqualTo(10));
+    }
 }

@@ -486,6 +486,20 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
         set => SetValue(HyphensProperty, value);
     }
 
+    public static readonly AdamantiumProperty HyphenLimitProperty = AdamantiumProperty.Register(nameof(HyphenLimit),
+        typeof(int), typeof(UIComponent),
+        new PropertyMetadata(0, PropertyMetadataOptions.Inherits | PropertyMetadataOptions.AffectsMeasure),
+        value => value is >= 0);
+
+    /// <summary>The most lines in a row of the text in this element and its descendants that may end in a hyphen
+    /// breaking a word, as InDesign's hyphen limit: past it a word goes down whole, unless it is alone on its line;
+    /// hyphens of the text itself are not counted. 0, the default, sets no limit.</summary>
+    public int HyphenLimit
+    {
+        get => GetValue<int>(HyphenLimitProperty);
+        set => SetValue(HyphenLimitProperty, value);
+    }
+
     public static readonly AdamantiumProperty LineBreakingProperty = AdamantiumProperty.Register(nameof(LineBreaking),
         typeof(LineBreaking), typeof(UIComponent),
         new PropertyMetadata(LineBreaking.Greedy, PropertyMetadataOptions.Inherits | PropertyMetadataOptions.AffectsMeasure));

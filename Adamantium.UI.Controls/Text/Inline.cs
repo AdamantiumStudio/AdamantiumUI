@@ -73,6 +73,13 @@ public abstract class Inline : FundamentalUIComponent, ITextStyleUser, Adamantiu
         nameof(BaselineAlignment), typeof(BaselineAlignment?), typeof(Inline),
         new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure));
 
+    private static readonly AdamantiumProperty[] Overrides =
+    [
+        ForegroundProperty, FontSizeProperty, BackgroundProperty, TextDecorationsProperty, FontWeightProperty,
+        FontStyleProperty, FontStretchProperty, FontSynthesisProperty, FontFeaturesProperty, FontVariationsProperty,
+        LanguageProperty, ColorPaletteProperty, TrackingProperty, KerningProperty, BaselineShiftProperty,
+    ];
+
     private TextDecorationCollection _decorationLines;
     private TextEffectCollection _textEffects;
     private Brush _bakedForeground;
@@ -250,6 +257,31 @@ public abstract class Inline : FundamentalUIComponent, ITextStyleUser, Adamantiu
     }
 
     internal bool HasDecorationLines => _decorationLines is { Count: > 0 };
+
+    /// <summary>Takes away the character formatting set on this inline and on the inlines inside it, as InDesign's Clear
+    /// Overrides: the text keeps its styles and what it inherits; a paragraph keeps its own alignment, margins and indent. Bindings on those properties go with their values; an inline
+    /// object keeps its <see cref="BaselineAlignment"/>, which places it rather than formats it.</summary>
+    public void ClearOverrides()
+    {
+        foreach (var property in Overrides)
+        {
+            ClearValue(property);
+        }
+
+        if (this is not InlineUIContainer)
+        {
+            ClearValue(BaselineAlignmentProperty);
+        }
+
+        _decorationLines?.Clear();
+        if (this is Span span)
+        {
+            foreach (var inline in span.Inlines)
+            {
+                inline.ClearOverrides();
+            }
+        }
+    }
 
     /// <summary>Ranges of this inline drawn apart from the rest, as WPF's text effects; their positions count from the
     /// start of this inline's own text. Only the drawing changes, so changing them draws the text again without laying

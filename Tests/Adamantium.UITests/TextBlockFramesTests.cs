@@ -94,6 +94,30 @@ public class TextBlockFramesTests
     }
 
     [Test]
+    public void IsOverset_TellsWhenItChanges()
+    {
+        var text = new TextBlock
+        {
+            Text = Prose,
+            TextWrapping = TextWrapping.WrapByWords,
+            Width = 400,
+            Height = 30,
+            Columns = 2,
+        };
+        var window = new Window { Width = 900, Height = 600, Content = new Border { Child = text } };
+        WindowExtension.UpdateTree(window);
+        Assume.That(text.IsOverset, Is.True);
+        var heard = 0;
+        text.PropertyChanged += (_, e) => heard += e.Property == TextBlock.IsOversetProperty ? 1 : 0;
+
+        text.Height = 500;
+        WindowExtension.UpdateTree(window);
+
+        Assert.That(text.IsOverset, Is.False);
+        Assert.That(heard, Is.EqualTo(1));
+    }
+
+    [Test]
     public void TextFlowsAroundAnExclusion()
     {
         var text = Hosted(new TextBlock

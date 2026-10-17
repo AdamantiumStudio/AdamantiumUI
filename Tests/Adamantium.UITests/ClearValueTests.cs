@@ -13,6 +13,9 @@ public class ClearValueTests
         public static readonly AdamantiumProperty FlagProperty = AdamantiumProperty.Register(
             nameof(Flag), typeof(bool), typeof(Probe), new PropertyMetadata(false, OnFlagChanged));
 
+        public static readonly AdamantiumProperty CheckedProperty = AdamantiumProperty.Register("Checked", typeof(int),
+            typeof(Probe), new PropertyMetadata(0), value => value is >= 0);
+
         public static object LastNewValue;
         public static string Failure;
 
@@ -53,5 +56,17 @@ public class ClearValueTests
             Assert.That(Probe.LastNewValue, Is.EqualTo(false), "the callback should see the value the property now reads as");
             Assert.That(probe.Flag, Is.False, "GetValue falls back to the metadata default");
         });
+    }
+
+    // The check is for values set, and clearing sets none: an inherited one with a check threw as its element moved.
+    [Test]
+    public void ClearingAPropertyWithACheck_DoesNotAskTheCheck()
+    {
+        var probe = new Probe();
+        probe.SetValue(Probe.CheckedProperty, 3);
+
+        Assert.DoesNotThrow(() => probe.ClearValue(Probe.CheckedProperty));
+        Assert.That(probe.GetValue(Probe.CheckedProperty), Is.Zero);
+        Assert.Throws<System.ArgumentException>(() => probe.SetValue(Probe.CheckedProperty, -1));
     }
 }
