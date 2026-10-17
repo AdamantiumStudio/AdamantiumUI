@@ -624,6 +624,19 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
         set => SetValue(TrackingProperty, value);
     }
 
+    public static readonly AdamantiumProperty KerningProperty = AdamantiumProperty.Register(nameof(Kerning),
+        typeof(TextKerning), typeof(UIComponent),
+        new PropertyMetadata(TextKerning.Metrics, PropertyMetadataOptions.Inherits | PropertyMetadataOptions.AffectsMeasure));
+
+    /// <summary>Where the space between two letters of the text in this element and its descendants comes from, as
+    /// InDesign's kerning: the font's pairs (the default), the letters' outlines (<see cref="TextKerning.Optical"/>) or
+    /// neither.</summary>
+    public TextKerning Kerning
+    {
+        get => GetValue<TextKerning>(KerningProperty);
+        set => SetValue(KerningProperty, value);
+    }
+
     public static readonly AdamantiumProperty LineHeightProperty = AdamantiumProperty.Register(nameof(LineHeight),
         typeof(double), typeof(UIComponent),
         new PropertyMetadata(double.NaN, PropertyMetadataOptions.Inherits | PropertyMetadataOptions.AffectsMeasure));

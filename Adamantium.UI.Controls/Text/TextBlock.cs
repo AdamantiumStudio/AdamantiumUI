@@ -173,6 +173,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
     private SpacingRange _lastWordSpacing;
     private SpacingRange _lastLetterSpacing;
     private double _lastTracking;
+    private TextKerning _lastKerning;
     private SpacingRange _lastGlyphScaling;
     private bool _lastJustificationAlternates;
     private HorizontalTextAlignment _lastLastLineAlignment;
@@ -272,6 +273,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         _textLayout.WordSpacing = WordSpacing;
         _textLayout.LetterSpacing = LetterSpacing;
         _textLayout.Tracking = Tracking;
+        _textLayout.Kerning = Kerning;
         _textLayout.GlyphScaling = GlyphScaling;
         _textLayout.JustificationAlternates = JustificationAlternates;
         _textLayout.LastLineAlignment = LastLineAlignment;
@@ -309,7 +311,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
             && _lastOpticalMargins == OpticalMarginAlignment && Equals(_lastDropCap, dropCap)
             && _lastColumns == Columns && _lastColumnGap.Equals(ColumnGap) && Equals(_lastExclusions, Exclusions)
             && _lastWritingMode == WritingMode && _lastWordSpacing.Equals(WordSpacing)
-            && _lastLetterSpacing.Equals(LetterSpacing) && _lastTracking.Equals(Tracking)
+            && _lastLetterSpacing.Equals(LetterSpacing) && _lastTracking.Equals(Tracking) && _lastKerning == Kerning
             && _lastGlyphScaling.Equals(GlyphScaling) && _lastJustificationAlternates == JustificationAlternates
             && _lastLastLineAlignment == LastLineAlignment && _lastSingleWord == SingleWordJustification
             && _lastKashidas == Kashidas && _lastLineHeight.Equals(LineHeight)
@@ -403,6 +405,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         _lastWordSpacing = WordSpacing;
         _lastLetterSpacing = LetterSpacing;
         _lastTracking = Tracking;
+        _lastKerning = Kerning;
         _lastGlyphScaling = GlyphScaling;
         _lastJustificationAlternates = JustificationAlternates;
         _lastLastLineAlignment = LastLineAlignment;
@@ -1031,6 +1034,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         string language = null;
         int? palette = null;
         double? tracking = null;
+        TextKerning? kerning = null;
         double? shift = null;
         BaselineAlignment? alignment = null;
         List<TextDecorationLine> lines = null;
@@ -1059,6 +1063,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
             language = inline.Language ?? language;
             palette = inline.ColorPalette ?? palette;
             tracking = inline.Tracking ?? tracking;
+            kerning = inline.Kerning ?? kerning;
             shift = inline.BaselineShift ?? shift;
             alignment = inline.BaselineAlignment ?? alignment;
         }
@@ -1080,6 +1085,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
             Language = language,
             ColorPalette = palette,
             Tracking = tracking,
+            Kerning = kerning,
             BaselineShift = shift,
             BaselineAlignment = alignment,
             ObjectSize = objectSize,

@@ -516,6 +516,7 @@ public abstract class TextBoxBase : Control
     private SpacingRange _lastShapedWordSpacing;
     private SpacingRange _lastShapedLetterSpacing;
     private double _lastShapedTracking;
+    private TextKerning _lastShapedKerning;
     private SpacingRange _lastShapedGlyphScaling;
     private bool _lastShapedAlternates;
     private HorizontalTextAlignment _lastShapedLastLine;
@@ -594,6 +595,7 @@ public abstract class TextBoxBase : Control
         _textLayout.WordSpacing = WordSpacing;
         _textLayout.LetterSpacing = LetterSpacing;
         _textLayout.Tracking = Tracking;
+        _textLayout.Kerning = Kerning;
         _textLayout.GlyphScaling = GlyphScaling;
         _textLayout.JustificationAlternates = JustificationAlternates;
         _textLayout.LastLineAlignment = LastLineAlignment;
@@ -623,6 +625,7 @@ public abstract class TextBoxBase : Control
             && _lastShapedWrapping == wrapping && _lastShapedWidth.Equals(width)
             && _lastShapedAlignment == HorizontalTextAlignment && _lastShapedWordSpacing.Equals(WordSpacing)
             && _lastShapedLetterSpacing.Equals(LetterSpacing) && _lastShapedTracking.Equals(Tracking)
+            && _lastShapedKerning == Kerning
             && _lastShapedGlyphScaling.Equals(GlyphScaling) && _lastShapedAlternates == JustificationAlternates
             && _lastShapedLastLine == LastLineAlignment && _lastShapedSingleWord == SingleWordJustification
             && _lastShapedKashidas == Kashidas && _lastShapedLineHeight.Equals(LineHeight)
@@ -673,6 +676,7 @@ public abstract class TextBoxBase : Control
         _lastShapedWordSpacing = WordSpacing;
         _lastShapedLetterSpacing = LetterSpacing;
         _lastShapedTracking = Tracking;
+        _lastShapedKerning = Kerning;
         _lastShapedGlyphScaling = GlyphScaling;
         _lastShapedAlternates = JustificationAlternates;
         _lastShapedLastLine = LastLineAlignment;
