@@ -295,7 +295,9 @@ public class PropertyRow : Control
     {
         if (_layout == null || Owner == null || _layout.ColumnDefinitions.Count < 3) return;
 
-        _layout.ColumnDefinitions[0].Width = new GridLength(Math.Max(0, Owner.NameColumnWidth));
+        var name = Owner.EffectiveNameWidth;
+        if (Math.Abs(_layout.ColumnDefinitions[0].Width.Value - name) < 0.5) return;
+        _layout.ColumnDefinitions[0].Width = new GridLength(name);
 
         // A column definition changing its width dirties NOTHING by itself, so the path is dirtied by hand - starting
         // at the LAYOUT, not at the row: one valid element on the way stops the pass before it reaches the grid.
@@ -314,6 +316,22 @@ public class PropertyRow : Control
         if (_pendingEditor) HookEditor();
 
         return size;
+    }
+
+    // How wide the name may be in this row with the value keeping the grid's minimum beside the grip and the buttons;
+    // the grid gives every row the narrowest, so the columns stay one line. Unbounded before the row is laid out.
+    internal double NameRoom()
+    {
+        if (_layout == null || Owner == null || _layout.ActualWidth <= 0) return double.MaxValue;
+
+        var columns = _layout.ColumnDefinitions;
+        var others = 0.0;
+        for (var i = 1; i < columns.Count; i++)
+        {
+            if (!columns[i].Width.IsStar) others += columns[i].ActualWidth;
+        }
+
+        return _layout.ActualWidth - others - Owner.MinValueColumnWidth;
     }
 
     // One live binding per inspected object. They are logical children so a value binding that reads an ancestor

@@ -71,6 +71,10 @@ class AumlPreviewService : Disposable {
      * i.e. the selection was cleared). */
     data class SelectResult(val render: RenderResult, val hit: HitResult?)
 
+    /** Result of a wheel turned over the preview (op "scroll"): the scrolled frame ([render]), or [handled] false when
+     * nothing there takes the wheel and the editor scrolls its own view instead. */
+    data class ScrollResult(val render: RenderResult, val handled: Boolean)
+
     /**
      * Renders [text] at the window's design size × [scale]. A settled render returns one frame; a [live] render returns
      * the whole animation sequence (the host renders it all in this one call). Blocking and potentially slow on the very
@@ -181,6 +185,36 @@ class AumlPreviewService : Disposable {
         }
     }
 
+    /**
+     * Turns the wheel at a point in the last render's design space ([delta] 120 a notch, positive up): the host raises it
+     * on the element there as the platform does, so the content the design size cuts off scrolls into view. Off-EDT; on
+     * error returns an error RenderResult, unhandled.
+     */
+    fun scroll(x: Double, y: Double, delta: Int, horizontal: Boolean, ownerPath: String?, text: String, scale: Double): ScrollResult {
+        synchronized(lock) {
+            // The host scrolls its ONE warm scene: another file's, if another preview rendered since - render this one back
+            // first, as a select does.
+            if (ownerPath != lastRenderPath) {
+                val rendered = render(text, scale, ownerPath, live = true)
+                if (rendered.error != null) return ScrollResult(rendered, false)
+            }
+            return try {
+                ensureProcess()
+                writer!!.apply {
+                    write("{\"op\":\"scroll\",\"x\":$x,\"y\":$y,\"delta\":$delta,\"horizontal\":$horizontal}")
+                    write("\n")
+                    flush()
+                }
+                val line = reader!!.readLine() ?: throw RuntimeException("designer host closed the connection")
+                val handled = (MiniJson.parse(line) as? Map<*, *>)?.get("handled") == true
+                ScrollResult(parseResponse(line), handled)
+            } catch (e: Exception) {
+                stopProcess()
+                ScrollResult(RenderResult(emptyList(), e.message ?: e.toString(), emptyList(), null, null, null), false)
+            }
+        }
+    }
+
     private fun exchange(request: String): String {
         ensureProcess()
         writer!!.apply { write(request); write("\n"); flush() }
@@ -192,8 +226,8 @@ class AumlPreviewService : Disposable {
         stopProcess()
 
         val target = launch ?: error("nothing has been rendered yet")
-        val stamp = DesignerHostShadowCopy.settledStamp(target.folder)
-        val copy = DesignerHostShadowCopy.copyOf(target.folder, stamp)
+        val stamp = DesignerHostShadowCopy.settledStamp(target.folder, target.extras)
+        val copy = DesignerHostShadowCopy.copyOf(target.folder, stamp, target.extras)
         val command = GeneralCommandLine(target.command(copy)).apply { charset = StandardCharsets.UTF_8 }
         val proc = command.createProcess()
 
@@ -225,8 +259,8 @@ class AumlPreviewService : Disposable {
         }
 
         val running = hostStamp ?: return
-        val stamp = DesignerHostShadowCopy.stamp(next.folder)
-        if (stamp != running && DesignerHostShadowCopy.isSettled(next.folder, stamp)) {
+        val stamp = DesignerHostShadowCopy.stamp(next.folder, next.extras)
+        if (stamp != running && DesignerHostShadowCopy.isSettled(next.folder, stamp, next.extras)) {
             stopProcess()
         }
     }

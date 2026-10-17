@@ -41,6 +41,14 @@ public class DockingLifecycleTests
 
     private static (DockingArea Area, Adamantium.Navigation.Region Region) Docking()
     {
+        var area = Area();
+        var region = new Adamantium.Navigation.Region("docking", new NoResolver(), null);
+        new DockingAreaRegionAdapter(new ViewLocator()).Attach(region, area);
+        return (area, region);
+    }
+
+    private static DockingArea Area()
+    {
         var area = new DockingArea { DividerThickness = 0 };
         var documents = new PaneGroup { Name = "documents", Zone = DockZone.Center };
         documents.Items.Add(new Pane { Header = "scene", Id = "scene" });
@@ -48,10 +56,7 @@ public class DockingLifecycleTests
 
         area.Measure(new Size(1000, 800));
         area.Arrange(new Rect(0, 0, 1000, 800));
-
-        var region = new Adamantium.Navigation.Region("docking", new NoResolver(), null);
-        new DockingAreaRegionAdapter(new ViewLocator()).Attach(region, area);
-        return (area, region);
+        return area;
     }
 
     [Test]
@@ -114,5 +119,31 @@ public class DockingLifecycleTests
         log.Clear();
         Assert.That(area.Activate("output"), Is.True);
         Assert.That(log, Is.EqualTo(new[] { "output shown", "output activated" }));
+    }
+
+    [Test]
+    public void AnAreaGoneForGood_HidesItsPanes_AndOneInItsPlaceShowsThemAgain()
+    {
+        var (area, region) = Docking();
+        var log = new List<string>();
+        var closed = new List<object>();
+        var docking = DockingRegion.Of(region);
+        docking.PaneClosed += (_, e) => closed.Add(e.ViewModel);
+        region.Add(new Tool("output", log));
+        region.Add(new Tool("errors", log));
+        log.Clear();
+
+        DiscardedVisuals.ReleaseNow([area]);
+
+        Assert.That(log, Is.EqualTo(new[] { "errors deactivated", "errors hidden" }));
+
+        log.Clear();
+        new DockingAreaRegionAdapter(new ViewLocator()).Attach(region, Area());
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(log, Is.EqualTo(new[] { "errors shown", "errors activated" }));
+            Assert.That(closed, Is.Empty, "off screen, not closed");
+        });
     }
 }

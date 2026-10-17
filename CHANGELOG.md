@@ -7,6 +7,14 @@ All packages share one version.
 
 ### Added
 
+- `PropertySection.DataType`: a section written for a type of object. With `SectionsSource` set, the grid points each
+  such section at the first item of its type and leaves it out when there is none, so an inspector of an entity shows
+  its components in the order its sections are written, whatever order the entity holds them in. The same section
+  serves every object of its type and keeps its folding from one selection to the next. Items no section is written
+  for show only with `AutoGenerateSections`; a source changed on another thread - a world adding a component - is
+  followed on the grid's own thread. Without a source such sections are left out, except in the designer, which has
+  no view model to give one: there they are all shown, empty, so the layout can be seen.
+
 - Named paragraph and character styles, as InDesign's: `ParagraphStyle` (`HorizontalTextAlignment`, `Margin`,
   `TextIndent`, `LineHeight` and the text's formatting) on `Paragraph.ParagraphStyle`, `CharacterStyle` on
   `Inline.CharacterStyle`, each with `BasedOn`, kept as resources. A paragraph takes its style under what it sets itself
@@ -41,6 +49,10 @@ All packages share one version.
   not put on the grid: it keeps the place it first took. Scrolling moves the grid with the text; a `LayoutTransform`
   between the two is not taken into account. The Text tab's Paragraph topic shows a heading and two columns on one
   grid.
+
+- `VectorToColorConverter`: a color a game keeps as numbers - a `Vector3F` of red, green and blue, or a `Vector4F` with
+  alpha - shown as a `Color` and written back as the same kind, so an inspector edits it with the color picker:
+  `<ColorProperty Binding="{Binding Color, Converter={VectorToColorConverter}}"/>`.
 
 - `x:Key="{x:Static Type.Member}"`: a resource keyed by a constant code uses too - an entity's icon key - so the key is
   written once, in C#. In a resource file, an inline dictionary, and with `x:Shared="False"`; a member that is not text
@@ -1408,7 +1420,32 @@ All packages share one version.
 
 ### Fixed
 
+- The Rider plugin (1.11.2) runs the designer host from its copy of the project's build: run from where it was built,
+  the host held its dll, and a build of the UI failed while a preview was open.
+- The designer preview scrolls: the wheel over it is raised on the element under the cursor as the platform raises it
+  (the host's `scroll` op), so a list or a property grid taller than the design size shows the rest, smoothly, as in
+  the application. Where nothing takes the wheel, and with Alt, the Rider plugin scrolls its view of the frame, and Ctrl
+  still zooms; a burst of turns goes to the host as one. A click on a section's header in the preview opens or folds
+  it, as a click on a tab header shows the tab; the markup is left alone, and a rebuild of the preview keeps what the
+  clicks opened.
+  Before, what the design size cut off could not be seen.
+- An idle loop no longer throws an `OperationCanceledException` on the thread pool each time its sleep times out: the
+  next sleep waited on the pipe afresh, which canceled the wait before. It keeps that wait instead.
+- A docking area gone for good takes its panes off screen: their view models hear `OnDeactivated` and `OnHidden`, so
+  one that follows something only while shown lets it go, and an area put in its place shows them again. Before, they
+  stayed "shown" with nothing on screen and went on following. Its floating windows close with it: when it went before
+  an area in its place came, nothing closed them.
+- A `TreeView` whose container style keeps no `IsSelected` on the nodes still shows `SelectedItem` selected after its
+  row is built again - its branch closed and opened, its children read again - and selects the row of a node added
+  after it was chosen. Before, the row came unselected and choosing the same node again changed nothing. A node added
+  to an open branch now comes selected, as at a rebuild, when its view model marks it so.
+- A `PropertyGrid` narrower than its `NameColumnWidth` leaves the values `MinValueColumnWidth` beside the grip and the
+  buttons: the names took their full width and squeezed the values to a sliver in a docked inspector. The width given
+  comes back when the grid widens again.
 - A `TextBlock` whose inlines were all removed no longer keeps the last of them alive.
+- A `PropertyGrid` or `DataGrid` row bound through a converter writes what its editor produced: it was checked against
+  the object's property type before the converter had turned it into one, so a color picked for a vector was refused.
+  The converter's `ConvertBack` now says whether it fits.
 - A page that slid in through a `ContentPresenter` transition gets the presenter's size back once the page it replaced
   has slid out: the presenter kept the size of the larger of the two, so the topic area of the Text tab scrolled through
   empty space after a long topic.

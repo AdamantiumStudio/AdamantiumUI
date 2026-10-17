@@ -160,7 +160,7 @@ internal sealed class TreeFlattener
                 var rows = new List<TreeRow>(e.NewItems.Count);
                 foreach (var item in e.NewItems)
                 {
-                    rows.Add(new TreeRow(item, baseDepth, HasChildren(item)));
+                    rows.Add(new TreeRow(item, baseDepth, HasChildren(item)) { IsSelected = _isSelected(item) });
                 }
 
                 Rows.InsertMany(pos, rows);

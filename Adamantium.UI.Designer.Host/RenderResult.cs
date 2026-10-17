@@ -31,10 +31,14 @@ public sealed class RenderResult
     /// caret. Null for ordinary renders and for a selection that hit nothing (the selection was cleared).</summary>
     public HitTestResult Hit { get; private init; }
 
+    /// <summary>Whether something in the preview took the wheel (op "scroll"); when nothing did, the editor scrolls its
+    /// own view of the frame instead.</summary>
+    public bool Handled { get; private init; }
+
     public static RenderResult Ok(List<string> frames, List<string> diagnostics, uint width, uint height, double scale,
-        uint designWidth, uint designHeight, bool animating = false, HitTestResult hit = null) =>
+        uint designWidth, uint designHeight, bool animating = false, HitTestResult hit = null, bool handled = false) =>
         new() { Success = true, Frames = frames, Diagnostics = diagnostics, Width = width, Height = height, Scale = scale,
-            DesignWidth = designWidth, DesignHeight = designHeight, Animating = animating, Hit = hit };
+            DesignWidth = designWidth, DesignHeight = designHeight, Animating = animating, Hit = hit, Handled = handled };
 
     public static RenderResult Fail(string error, List<string> diagnostics) =>
         new() { Success = false, Error = error, Diagnostics = diagnostics };

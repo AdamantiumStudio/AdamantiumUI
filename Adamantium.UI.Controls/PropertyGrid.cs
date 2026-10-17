@@ -82,8 +82,12 @@ public class PropertyGrid : Control
         typeof(ResetButtonState), typeof(PropertyGrid),
         new PropertyMetadata(ResetButtonState.Always, OnResetButtonChanged));
 
-    /// <summary>Generated sections; when set, replaces <see cref="Sections"/>. An item that is not a section is an object
-    /// to inspect, and the grid builds its own section for it.</summary>
+    /// <summary>The sections or the objects to inspect. When <see cref="Sections"/> holds sections with a
+    /// <see cref="PropertySection.DataType"/>, each of them is pointed at the first item of its type and shown in its own
+    /// place, beside the sections written for no type; the items no section is written for are shown only with
+    /// <see cref="AutoGenerateSections"/>, and sections in the source are not shown at all. Otherwise this
+    /// replaces <see cref="Sections"/>: an item that is not a section is an object to inspect, and the grid builds its
+    /// own section for it. Changed on another thread - a game world's - the grid follows on its own.</summary>
     public static readonly AdamantiumProperty SectionsSourceProperty = AdamantiumProperty.Register(
         nameof(SectionsSource), typeof(IEnumerable), typeof(PropertyGrid),
         new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure, OnSectionsSourceChanged));
@@ -113,6 +117,9 @@ public class PropertyGrid : Control
     private readonly List<INotifyCollectionChanged> _followed = new();
     private readonly Dictionary<object, PropertySection> _built = new(ReferenceEqualityComparer.Instance);
     private readonly List<PropertySection> _dropped = [];
+    private readonly List<object> _sourceItems = [];
+    private readonly HashSet<object> _claimed = new(ReferenceEqualityComparer.Instance);
+    private readonly CrossThreadChanges<NotifyCollectionChangedEventArgs> _sourceChanges;
 
     /// <summary>How many times the whole panel has been torn down and put back - most of what an inspector costs, and
     /// nothing else said it was happening, so a click that rebuilt the panel looked exactly like a click that did
@@ -135,6 +142,7 @@ public class PropertyGrid : Control
     public PropertyGrid()
     {
         Sections.CollectionChanged += OnSectionsChanged;
+        _sourceChanges = new CrossThreadChanges<NotifyCollectionChangedEventArgs>(_ => Rebuild());
     }
 
     /// <summary>The sections, in display order. [Content], so an inspector is written as the list of sections it is.</summary>
@@ -310,7 +318,8 @@ public class PropertyGrid : Control
         // list is a section the user had folded himself before this search started - give it back.
         if (!searching) ReleaseOpened();
 
-        foreach (var section in DisplayedSections())
+        var displayed = DisplayedSections().ToList();
+        foreach (var section in displayed)
         {
             // A section named for what is being looked for keeps all of its properties: asking for "Transform" means
             // the whole of it, not the one row that happens to repeat the word.
@@ -355,6 +364,20 @@ public class PropertyGrid : Control
             {
                 _openedBySearch.Add(section);
                 section.SetCurrentValue(Expander.IsExpandedProperty, true);
+            }
+        }
+
+        // A section written for a type with no object, not shown, lets go of its rows: they went on reading the last one.
+        foreach (var section in Sections)
+        {
+            if (section.DataType == null || section.Target != null || displayed.Contains(section)
+                || section.Content is not StackPanel idle) continue;
+
+            while (idle.Children.Count > 0)
+            {
+                var leaving = idle.Children[^1];
+                idle.Children.RemoveAt(idle.Children.Count - 1);
+                DiscardedVisuals.PublishSubtree(leaving);
             }
         }
 
@@ -634,23 +657,62 @@ public class PropertyGrid : Control
         grid.Rebuild();
     }
 
-    /// <summary>The sections actually shown: <see cref="Sections"/>, or those from <see cref="SectionsSource"/> when
-    /// set.</summary>
+    /// <summary>The sections actually shown: <see cref="Sections"/>, those from <see cref="SectionsSource"/>, or both
+    /// when sections are written for a <see cref="PropertySection.DataType"/>. Asking points those sections at the
+    /// items of the source as it stands.</summary>
     public IEnumerable<PropertySection> Displayed => DisplayedSections();
 
     private IEnumerable<PropertySection> DisplayedSections()
     {
-        if (SectionsSource == null) return AutoGenerateSections ? GeneratedSections() : Sections;
+        if (SectionsSource == null)
+        {
+            if (AutoGenerateSections) return GeneratedSections();
 
+            // A section written for a type has nothing to show without a source to find its object in.
+            if (!Sections.Any(s => s.DataType != null)) return Sections;
+
+            foreach (var section in Sections)
+            {
+                if (section.DataType != null) section.Target = null;
+            }
+
+            // The designer has no source to give: every section is shown, empty, so the layout can be seen.
+            if (Design.IsDesignMode) return Sections;
+
+            return Sections.Where(s => s.DataType == null).ToList();
+        }
+
+        ReadSource();
         var many = new List<PropertySection>();
         var seen = new HashSet<object>(ReferenceEqualityComparer.Instance);
-        foreach (var item in SectionsSource)
+        var typed = Sections.Any(s => s.DataType != null);
+        _claimed.Clear();
+
+        if (typed)
+        {
+            foreach (var section in Sections)
+            {
+                if (section.DataType == null)
+                {
+                    many.Add(section);
+                    continue;
+                }
+
+                section.Target = FirstUnclaimed(section.DataType);
+                if (section.Target == null) continue;
+
+                _claimed.Add(section.Target);
+                many.Add(section);
+            }
+        }
+
+        foreach (var item in _sourceItems)
         {
             if (item is PropertySection section)
             {
-                many.Add(section);
+                if (!typed) many.Add(section);
             }
-            else if (item != null)
+            else if (item != null && !_claimed.Contains(item) && (!typed || AutoGenerateSections))
             {
                 many.Add(SectionFor(item));
                 seen.Add(item);
@@ -664,6 +726,37 @@ public class PropertyGrid : Control
         }
 
         return many;
+    }
+
+    // Under the source's own lock where it has one: a world adding a component on its own thread is never seen halfway.
+    private void ReadSource()
+    {
+        _sourceItems.Clear();
+        var source = SectionsSource;
+        object[] copy;
+        int count;
+        using (var gate = SourceGate.Hold(source))
+        {
+            copy = gate.Copy(source, out count);
+            if (copy == null)
+            {
+                foreach (var item in source) _sourceItems.Add(item);
+                return;
+            }
+        }
+
+        for (var i = 0; i < count; i++) _sourceItems.Add(copy[i]);
+        SourceGate.Return(copy);
+    }
+
+    private object FirstUnclaimed(Type type)
+    {
+        foreach (var item in _sourceItems)
+        {
+            if (item != null && !_claimed.Contains(item) && type.IsInstanceOfType(item)) return item;
+        }
+
+        return null;
     }
 
     private PropertySection SectionFor(object item)
@@ -898,8 +991,16 @@ public class PropertyGrid : Control
             return;
         }
 
-        grid.Follow(SectionsSourceProperty, grid.SectionsSource as INotifyCollectionChanged, grid.OnSectionsChanged);
+        grid._sourceChanges.TakeThisThread();
+        grid._sourceChanges.Clear();
+        grid.Follow(SectionsSourceProperty, grid.SectionsSource as INotifyCollectionChanged, grid.OnSourceChanged);
         grid.Rebuild();
+    }
+
+    private void OnSourceChanged(object sender, NotifyCollectionChangedEventArgs e)
+    {
+        if (_sourceChanges.Defer(e)) return;
+        Rebuild();
     }
 
     // Told to the rows that are already standing, rather than rebuilding them: a panel's manner can be changed while
@@ -933,7 +1034,34 @@ public class PropertyGrid : Control
             return;
         }
 
-        foreach (var row in grid._rows) row.ApplyNameWidth();
+        grid.FitNameWidth();
+    }
+
+    /// <summary>The name width every row is laid out with: <see cref="NameColumnWidth"/>, narrowed while the grid is too
+    /// narrow for it, so the values keep <see cref="MinValueColumnWidth"/> beside the grip and the buttons.</summary>
+    internal double EffectiveNameWidth { get; private set; } = 140.0;
+
+    // One width for every row - the narrowest any row can give - or the columns turn into a staircase.
+    private void FitNameWidth()
+    {
+        var wanted = Math.Max(0, NameColumnWidth);
+        var room = double.MaxValue;
+        foreach (var row in _rows) room = Math.Min(room, row.NameRoom());
+
+        var fitted = room == double.MaxValue ? wanted : Math.Max(Math.Min(MinNameColumnWidth, wanted), Math.Min(wanted, room));
+        if (Math.Abs(fitted - EffectiveNameWidth) < 0.5) return;
+
+        EffectiveNameWidth = fitted;
+        foreach (var row in _rows) row.ApplyNameWidth();
+    }
+
+    protected override Size ArrangeOverride(Size finalSize)
+    {
+        var size = base.ArrangeOverride(finalSize);
+
+        // Only once the rows are laid out is it known how wide they stand.
+        FitNameWidth();
+        return size;
     }
 
     protected override AutomationPeer OnCreateAutomationPeer() => new PropertyGridAutomationPeer(this);

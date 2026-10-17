@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
 using Adamantium.Core.Collections;
 using Adamantium.Core.Commands;
 using Adamantium.Mathematics;
 using Adamantium.UI.Controls;
+using Adamantium.UI.Controls.Converters;
 using Adamantium.UI.Controls.DrawingBoard;
 using Adamantium.UI.Controls.Primitives;
 using Adamantium.UI.Controls.Text;
@@ -496,6 +498,42 @@ public class PropertyGridTests
 
         Assert.That(row.Value, Is.Null, "the node has a color already, so this proves nothing");
         Assert.That(row.Editor, Is.Not.Null, "the line is blank, so there is nothing to pick a color with");
+    }
+
+    private sealed class Tinted
+    {
+        public Vector3F Light { get; set; } = new(1f, 0.5f, 0f);
+        public Vector4F Diffuse { get; set; } = new(0f, 0f, 1f, 0.5f);
+    }
+
+    // A COLOR A GAME KEEPS AS NUMBERS is still picked as a color: the converter shows the vector as a Color and writes the
+    // pick back as the same kind of vector, alpha and all.
+    [Test]
+    public void AColorKeptAsAVector_IsPickedAsAColor()
+    {
+        var tinted = new Tinted();
+        var light = new ColorProperty
+        {
+            Header = "Light", Binding = new Binding("Light") { Converter = new VectorToColorConverter() }
+        };
+        var diffuse = new ColorProperty
+        {
+            Header = "Diffuse", Binding = new Binding("Diffuse") { Converter = new VectorToColorConverter() }
+        };
+        var grid = Built(Section(tinted, light, diffuse));
+
+        var shown = RowOf(grid, light).Value;
+        var lightWritten = grid.Write(RowOf(grid, light), Colors.Red);
+        var diffuseWritten = grid.Write(RowOf(grid, diffuse), Color.FromRgba((byte)0, (byte)255, (byte)0, (byte)51));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(shown, Is.EqualTo(new Color(new Vector3F(1f, 0.5f, 0f))));
+            Assert.That(lightWritten && diffuseWritten, Is.True);
+            Assert.That(tinted.Light, Is.EqualTo(new Vector3F(1f, 0f, 0f)));
+            Assert.That(tinted.Diffuse.Y, Is.EqualTo(1f));
+            Assert.That(tinted.Diffuse.W, Is.EqualTo(0.2f).Within(0.005f), "alpha kept");
+        });
     }
 
     // SHOWING a line must not set what it shows. The inspector's "Folded" box appeared the first time nodes were
@@ -1955,6 +1993,154 @@ public class PropertyGridTests
             Assert.That(sections, Has.Count.EqualTo(1));
             Assert.That(sections[0].Target, Is.SameAs(target));
             Assert.That(DisplayedHeaders(grid), Does.Contain("Name"));
+        });
+    }
+
+    // An inspector of an entity: the sections are written once, for the kinds of component, in the order they are to
+    // stand - and the components come in whatever order the entity was built in.
+    private sealed class Other
+    {
+        public string Name { get; set; } = "other";
+    }
+
+    private static PropertySection TypedSection(Type type, string header) =>
+        new() { DataType = type, Header = header, Properties = { new StringProperty { Header = header, Binding = new Binding("Name") } } };
+
+    [Test]
+    public void SectionsForATypeStandInTheirWrittenOrder_WhateverOrderTheItemsComeIn()
+    {
+        var target = new Target();
+        var other = new Other();
+        var grid = Built(TypedSection(typeof(Target), "T"), TypedSection(typeof(Other), "O"));
+
+        grid.SectionsSource = new TrackingCollection<object> { other, target };
+
+        var sections = new List<PropertySection>(grid.Displayed);
+        Assert.Multiple(() =>
+        {
+            Assert.That(sections.Select(s => s.Header), Is.EqualTo(new[] { "T", "O" }));
+            Assert.That(sections[0].Target, Is.SameAs(target));
+            Assert.That(sections[1].Target, Is.SameAs(other));
+            Assert.That(RowOf(grid, sections[0].Properties[0])?.Value, Is.EqualTo("entity"), "the row reads its own object");
+            Assert.That(RowOf(grid, sections[1].Properties[0])?.Value, Is.EqualTo("other"));
+        });
+    }
+
+    // A section with no object of its kind any more lets its rows go: they went on reading the last one.
+    [Test]
+    public void ASectionLeftWithoutItsObject_LetsItsRowsGo()
+    {
+        var section = TypedSection(typeof(Other), "O");
+        var grid = Built(section);
+        grid.SectionsSource = new TrackingCollection<object> { new Other() };
+        Assume.That(((IUIComponent)section.Content).VisualChildren, Is.Not.Empty);
+
+        grid.SectionsSource = new TrackingCollection<object> { new Target() };
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(section.Target, Is.Null);
+            Assert.That(((IUIComponent)section.Content).VisualChildren, Is.Empty);
+        });
+    }
+
+    // Without a source there is nothing for a section written for a type to show.
+    [Test]
+    public void WithoutASource_SectionsForATypeAreLeftOut()
+    {
+        var typed = TypedSection(typeof(Target), "T");
+        var plain = new PropertySection { Header = "P" };
+        var grid = Built(typed, plain);
+        grid.SectionsSource = new TrackingCollection<object> { new Target() };
+
+        grid.SectionsSource = null;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(grid.Displayed, Is.EqualTo(new[] { plain }));
+            Assert.That(typed.Target, Is.Null);
+        });
+    }
+
+    // The designer has no view model to give a source: every section is shown, empty, so the layout can be seen.
+    [Test]
+    public void InTheDesigner_SectionsForATypeAreShownWithoutASource()
+    {
+        var typed = TypedSection(typeof(Target), "T");
+        var plain = new PropertySection { Header = "P" };
+        Design.IsDesignMode = true;
+        try
+        {
+            var grid = Built(typed, plain);
+            grid.SectionsSource = new TrackingCollection<object> { new Target() };
+
+            grid.SectionsSource = null;
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(grid.Displayed, Is.EqualTo(new[] { typed, plain }), "in the written order");
+                Assert.That(typed.Target, Is.Null, "nothing of its type to read");
+                Assert.That(((Adamantium.UI.Controls.Panels.StackPanel)typed.Content).Children, Is.Not.Empty,
+                    "its rows are there to be seen");
+            });
+        }
+        finally
+        {
+            Design.IsDesignMode = false;
+        }
+    }
+
+    [Test]
+    public void ASectionWithNothingOfItsType_IsLeftOut_AndAnItemWithNoSection_TooUnlessGenerated()
+    {
+        var grid = Built(TypedSection(typeof(Other), "O"));
+        grid.SectionsSource = new TrackingCollection<object> { new Target() };
+
+        Assert.That(grid.Displayed, Is.Empty);
+
+        grid.AutoGenerateSections = true;
+        Assert.That(DisplayedHeaders(grid), Does.Contain("Name"), "the item no section is written for, generated");
+    }
+
+    // The same section serves the next object of its type, so it stays folded the way it was left.
+    [Test]
+    public void ASectionForAType_KeepsItsFoldingFromOneObjectToTheNext()
+    {
+        var section = TypedSection(typeof(Target), "T");
+        var grid = Built(section);
+        grid.SectionsSource = new TrackingCollection<object> { new Target() };
+        section.IsExpanded = false;
+
+        var next = new Target();
+        grid.SectionsSource = new TrackingCollection<object> { next };
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(grid.Displayed.Single(), Is.SameAs(section));
+            Assert.That(section.Target, Is.SameAs(next));
+            Assert.That(section.IsExpanded, Is.False);
+        });
+    }
+
+    // A world adds its components on its own thread; the grid rebuilds on its own.
+    [Test]
+    public void AnItemAddedOnAnotherThread_IsShownByTheGridsThread()
+    {
+        LoopSignal.Drain();
+        var grid = Built(TypedSection(typeof(Target), "T"));
+        var source = new TrackingCollection<object>();
+        grid.SectionsSource = source;
+
+        var added = new Target();
+        var rebuilds = PropertyGrid.Rebuilds;
+        System.Threading.Tasks.Task.Run(() => source.Add(added)).Wait();
+        Assert.That(PropertyGrid.Rebuilds, Is.EqualTo(rebuilds), "not rebuilt on the world's thread");
+
+        LoopSignal.Drain();
+        Assert.Multiple(() =>
+        {
+            Assert.That(PropertyGrid.Rebuilds, Is.GreaterThan(rebuilds), "rebuilt on the grid's own");
+            Assert.That(RowOf(grid, grid.Sections[0].Properties[0])?.Target, Is.SameAs(added));
         });
     }
 

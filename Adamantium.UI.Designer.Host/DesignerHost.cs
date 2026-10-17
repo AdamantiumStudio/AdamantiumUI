@@ -24,9 +24,13 @@ namespace Adamantium.UI.Designer.Host;
 ///   -&gt; {"op":"select","x":..,"y":..}   &lt;- {"frames":[..],"hit":{"line":..,"column":..},..}
 ///        (selects the authored element at the point - the FRAMEWORK draws the selection frame - and returns the
 ///         updated frame plus the element's markup line/col for editor caret sync; a miss clears the selection; a click
-///         on a tab header also shows that tab)
+///         on a tab header also shows that tab, and one on a section's header opens or folds it)
 ///   -&gt; {"op":"hover","x":..,"y":..}   &lt;- {"frames":[..],..}
 ///        (the transient hover frame, also drawn by the FRAMEWORK; returns the updated frame. Omit x/y to clear it)
+///   -&gt; {"op":"scroll","x":..,"y":..,"delta":..,"horizontal":false}   &lt;- {"frames":[..],"animating":..,"handled":..,..}
+///        (turns the wheel at the point - delta 120 a notch, positive up - as the platform does, so the content the design
+///         size cuts off can be scrolled to; a smooth scroll answers animating=true and plays through "frame"; when
+///         nothing takes the wheel: handled=false and no frame, and the client scrolls its own view)
 ///   -&gt; {"op":"shutdown"}   (exits the process)
 /// </summary>
 public static class DesignerHost
@@ -153,6 +157,11 @@ public static class DesignerHost
                 case "hover":
                     var hovPath = Path.Combine(tempDir, $"preview-{counter++}.bgra");
                     WriteResponse(protocol, HoverOne(session, request, hovPath, previousFrames));
+                    break;
+
+                case "scroll":
+                    var scrollPath = Path.Combine(tempDir, $"preview-{counter++}.bgra");
+                    WriteResponse(protocol, ScrollOne(session, request, scrollPath, previousFrames));
                     break;
 
                 default:
@@ -334,6 +343,40 @@ public static class DesignerHost
         }
     }
 
+    // Turns the wheel at a design-space point; the response carries the scrolled frame.
+    private static Response ScrollOne(DesignerSession session, Request request, string outPath, List<string> previousFrames)
+    {
+        try
+        {
+            var result = session.ScrollAt(request.X ?? 0, request.Y ?? 0, request.Delta ?? 0, request.Horizontal ?? false, outPath);
+            if (!result.Success)
+                return new Response { Error = result.Error };
+            if (!result.Handled)
+                return new Response { Frames = [], Handled = false };
+
+            foreach (var f in previousFrames)
+                if (File.Exists(f)) { try { File.Delete(f); } catch { /* best effort */ } }
+            previousFrames.Clear();
+            previousFrames.AddRange(result.Frames);
+
+            return new Response
+            {
+                Frames = result.Frames.ToArray(),
+                Animating = result.Animating,
+                Width = result.Width,
+                Height = result.Height,
+                DesignWidth = result.DesignWidth,
+                DesignHeight = result.DesignHeight,
+                Scale = result.Scale,
+                Handled = true
+            };
+        }
+        catch (Exception e)
+        {
+            return new Response { Error = Describe(e) };
+        }
+    }
+
     private static List<string> NullIfEmpty(List<string> diagnostics) =>
         diagnostics is { Count: > 0 } ? diagnostics : null;
 
@@ -357,6 +400,9 @@ public static class DesignerHost
         // hittest: a point in the last render's design space.
         public double? X { get; set; }
         public double? Y { get; set; }
+        // scroll: the wheel's turn, 120 a notch, positive away from the user (up); horizontal for a tilt or Shift.
+        public int? Delta { get; set; }
+        public bool? Horizontal { get; set; }
     }
 
     private sealed class Response
@@ -372,6 +418,8 @@ public static class DesignerHost
         public List<string> Diagnostics { get; set; }
         public HitInfo Hit { get; set; }
         public bool? Restart { get; set; }
+        // scroll: whether the preview took the wheel; when not, the client scrolls its own view.
+        public bool? Handled { get; set; }
     }
 
     private sealed class HitInfo
