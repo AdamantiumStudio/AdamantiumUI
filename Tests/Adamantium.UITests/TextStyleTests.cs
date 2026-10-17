@@ -154,6 +154,22 @@ public class TextStyleTests
     }
 
     [Test]
+    public void ALoopClosedByMarkup_AndOpenedAgain_StillTellsTheText()
+    {
+        var a = new CharacterStyle { FontSize = 20 };
+        var b = new CharacterStyle { BasedOn = a };
+        b.SetValue(CharacterStyle.BasedOnProperty, a);
+        a.SetValue(CharacterStyle.BasedOnProperty, b);
+        var (text, window) = Hosted(new Run { Text = "x", CharacterStyle = b });
+        a.ClearValue(CharacterStyle.BasedOnProperty);
+        Update(window);
+        a.FontSize = 30;
+        Update(window);
+
+        Assert.That(First(text, 0).FontSize, Is.EqualTo(30));
+    }
+
+    [Test]
     public void AnObject_TakesItsStylesBaselineShift()
     {
         var raised = new CharacterStyle { BaselineShift = 5 };

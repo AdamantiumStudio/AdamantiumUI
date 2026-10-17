@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using Adamantium.Fonts;
 using Adamantium.Graphics.Fonts;
 using Adamantium.UI.Core;
@@ -155,8 +156,7 @@ public abstract class TextFormat : AdamantiumComponent
 
     private T Resolved<T>(Func<TextFormat, T> value, Func<T, bool> isSet)
     {
-        var format = this;
-        for (var depth = 0; format != null && depth < MaxChain; depth++, format = format.BaseFormat)
+        for (var format = this; format != null; format = format.Base)
         {
             var found = value(format);
             if (isSet(found))
@@ -167,6 +167,10 @@ public abstract class TextFormat : AdamantiumComponent
 
         return default;
     }
+
+    // The style this one is based on, unless the chain from there comes back round to it: then, as for the engine's
+    // style, none.
+    internal TextFormat Base => BaseFormat is { } based && !based.Reaches(this) ? based : null;
 
     // How many styles a chain of BasedOn is followed through.
     internal const int MaxChain = 64;
@@ -201,24 +205,39 @@ public abstract class TextFormat : AdamantiumComponent
         }
     }
 
-    // What lays out by this style lays out again, told outside the lock.
+    // What lays out by this style lays out again, told outside the lock; once, when a chain set in a loop brings the
+    // news back round.
     private protected void NotifyUsers()
     {
-        List<ITextStyleUser> users;
-        lock (_usersLock)
+        if (Interlocked.Exchange(ref _notifying, 1) == 1)
         {
-            users = [];
-            foreach (var (user, _) in _users)
-            {
-                users.Add(user);
-            }
+            return;
         }
 
-        foreach (var user in users)
+        try
         {
-            user.TextStyleChanged();
+            lock (_usersLock)
+            {
+                foreach (var (user, _) in _users)
+                {
+                    _told.Add(user);
+                }
+            }
+
+            foreach (var user in _told)
+            {
+                user.TextStyleChanged();
+            }
+        }
+        finally
+        {
+            _told.Clear();
+            Volatile.Write(ref _notifying, 0);
         }
     }
+
+    private readonly List<ITextStyleUser> _told = [];
+    private int _notifying;
 
     // Whether basing a style on this one would bring the chain round to the style itself.
     internal bool Reaches(TextFormat style)
@@ -279,10 +298,7 @@ public class CharacterStyle : TextFormat, ITextStyleUser
         if (e.Property == BasedOnProperty)
         {
             (e.OldValue as CharacterStyle)?.Unuse(this);
-            if (e.NewValue is CharacterStyle based && !based.Reaches(this))
-            {
-                based.Use(this);
-            }
+            (e.NewValue as CharacterStyle)?.Use(this);
         }
 
         base.OnPropertyChanged(e);
@@ -385,10 +401,7 @@ public class ParagraphStyle : TextFormat, ITextStyleUser
         if (e.Property == BasedOnProperty)
         {
             (e.OldValue as ParagraphStyle)?.Unuse(this);
-            if (e.NewValue is ParagraphStyle based && !based.Reaches(this))
-            {
-                based.Use(this);
-            }
+            (e.NewValue as ParagraphStyle)?.Use(this);
         }
 
         base.OnPropertyChanged(e);

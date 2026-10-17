@@ -238,6 +238,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
     private TextEffectCollection _textEffects;
     private readonly List<(Inline Inline, int Start, int Length)> _inlineRanges = [];
     private readonly Dictionary<TextFormat, object> _engineStyles = [];
+    private readonly List<(int Start, int End, CharacterStyle Style)> _styleRanges = [];
     private readonly List<GlyphEffect> _resolvedEffects = [];
     private GlyphEffect[] _drawnEffects = [];
     private readonly HeldBrushes _effectBrushes;
@@ -952,6 +953,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         List<Inline> chain = [];
         _inlineRanges.Clear();
         _engineStyles.Clear();
+        _styleRanges.Clear();
         for (var i = 0; i < _inlines.Count; i++)
         {
             var start = _inlineStarts[i];
@@ -960,6 +962,13 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
                 ApplyInline(_inlines[i], chain, attributed, ref start);
             }
         }
+
+        foreach (var (start, end, style) in _styleRanges)
+        {
+            attributed.SetCharacterStyle(start, end - start, EngineStyle(style));
+        }
+
+        _styleRanges.Clear();
 
         foreach (var (start, length, paragraph) in _paragraphs)
         {
@@ -1067,12 +1076,22 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         return null;
     }
 
+    // Runs of one style next to each other take it as one range.
     private void ApplyStyle(List<Inline> chain, AttributedText attributed, int start, int length)
     {
-        if (CharacterStyleOf(chain) is { } style)
+        if (CharacterStyleOf(chain) is not { } style)
         {
-            attributed.SetCharacterStyle(start, length, EngineStyle(style));
+            return;
         }
+
+        if (_styleRanges.Count > 0 && _styleRanges[^1] is var (lastStart, lastEnd, lastStyle)
+                                   && lastEnd == start && ReferenceEquals(lastStyle, style))
+        {
+            _styleRanges[^1] = (lastStart, start + length, style);
+            return;
+        }
+
+        _styleRanges.Add((start, start + length, style));
     }
 
     private void ApplyInlines(InlineCollection inlines, List<Inline> chain, AttributedText attributed, ref int start)
