@@ -8,7 +8,8 @@
     <Style Selector="TextBlock">
         <Setter Property="Foreground" Value="{ObservableResource TextFillColorPrimary}"/>
         <Setter Property="FontSize" Value="{ResourceReference FontSizeBody}"/>
-        <!-- Center for labels; the property default stays Bottom because text controls lay out their runs with it. -->
+        <!-- Center for a block given a height; one as high as its text is left as it is. The property default stays
+             Bottom because text controls lay out their runs with it. -->
         <Setter Property="VerticalTextAlignment" Value="Center"/>
     </Style>
 

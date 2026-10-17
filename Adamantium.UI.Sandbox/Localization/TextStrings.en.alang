@@ -10,6 +10,7 @@
     <Phrase Key="TopicScripts" Text="Scripts"/>
     <Phrase Key="TopicParagraph" Text="Paragraph"/>
     <Phrase Key="TopicVertical" Text="Vertical"/>
+    <Phrase Key="TopicFinishing" Text="Finishing touches"/>
     <Phrase Key="FontSize" Text="Font size:"/>
     <Phrase Key="Trimmed" Text="Trimmed to one line:"/>
     <Phrase Key="FloatingWatermark" Text="Floating watermark"/>
@@ -152,4 +153,15 @@
     <Phrase Key="LineMiddle" Text="Middle"/>
     <Phrase Key="LineBottom" Text="Bottom"/>
     <Phrase Key="VerticalTitle" Text="Japanese set vertically: lines run down and stack from the right, kana stand upright in their vertical forms, Latin and the year lie turned, and short numbers stand upright across the line:"/>
+    <Phrase Key="FinishingCurvesTitle" Text="Curves at a large size (Poppins, cubic curves): the outline follows the curve, not the facets of its chords:"/>
+    <Phrase Key="FinishingLineBoundsTitle" Text="TextLineBounds, as in WinUI: each label is centered in its box by its layout, and the fill shows the label's own box - whole lines, trimmed to the top of the capitals, and from the capitals to the baseline. With Tight the capitals stand in the middle:"/>
+    <Phrase Key="FinishingTrimTitle" Text="Two and a half lines high. With an ellipsis only lines that fit whole are set; untrimmed, the third line is cut by the edge, as CSS clips it:"/>
+    <Phrase Key="FinishingHyphensTitle" Text="Automatic hyphenation without a limit and with HyphenLimit = 1 - no more than one line in a row ending in a hyphen:"/>
+    <Phrase Key="FinishingTabsTitle" Text="Tabs in right-aligned and centered lines: the name stays at the margin, the text after the tab is aligned, and the leader reaches it:"/>
+    <Phrase Key="FinishingVerticalTitle" Text="Vertical text in a wide block: VerticalTextAlignment Top, Center and Bottom place the lines across it - at the right edge, in the middle, at the left:"/>
+    <Phrase Key="FinishingDatesTitle" Text="A number keeps the ideograph or kana after it - 2026年, 10月, 3つ do not part:"/>
+    <Phrase Key="FinishingColumnsTitle" Text="Underlined text in two columns: in the second column the line stands under the letters, as in the first:"/>
+    <Phrase Key="FinishingPlaceholderTitle" Text="The placeholder of a box with tracking 300 is set as its text is:"/>
+    <Phrase Key="FinishingPlaceholder" Text="Search the document"/>
+    <Phrase Key="FinishingOversetTitle" Text="IsOverset is bound to the label on the right - move the number of lines:"/>
 </Language>

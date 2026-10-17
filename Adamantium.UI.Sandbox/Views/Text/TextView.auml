@@ -41,6 +41,12 @@
                              MarginRight="6"
                              MarginBottom="6"
                              IsChecked="{Binding Stand, Converter={conv:EnumToBoolConverter}, ConverterParameter=Vertical, Mode=TwoWay}"/>
+                <RadioButton AutomationProperties.AutomationId="FinishingTopic"
+                             Classes="Toggle"
+                             Content="{Localize TextStrings.TopicFinishing}"
+                             MarginRight="6"
+                             MarginBottom="6"
+                             IsChecked="{Binding Stand, Converter={conv:EnumToBoolConverter}, ConverterParameter=Finishing, Mode=TwoWay}"/>
             </WrapPanel>
 
             <!-- The topic itself, navigated in by key: leaving a topic drops its markup, and what the topics share (the

@@ -75,7 +75,7 @@ public class TextRoundedClipRenderTests
             Text = "WWW",
             Foreground = Brushes.White,
             FontSize = 44,
-            RenderTransform = new Transform { TranslateY = -24 }
+            RenderTransform = new Transform { TranslateY = -13 }
         };
         var box = new Border
         {

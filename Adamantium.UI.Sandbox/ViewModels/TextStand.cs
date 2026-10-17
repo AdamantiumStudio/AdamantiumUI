@@ -46,4 +46,9 @@ public enum TextStand
     /// <summary>Japanese set vertically: lines running down and stacking from the right, kana upright, Latin turned.</summary>
     [Display(Name = "Vertical")]
     Vertical,
+
+    /// <summary>The finishing touches: trimming in a fixed height, a hyphen limit, tabs in aligned lines, vertical lines
+    /// placed across, numbers kept with ideographs, columns, a typed placeholder, overset that binds.</summary>
+    [Display(Name = "Finishing touches")]
+    Finishing,
 }

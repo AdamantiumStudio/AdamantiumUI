@@ -16,13 +16,13 @@
                             MinWidth="{ResourceReference KeyTipSize}"
                             MinHeight="{ResourceReference KeyTipSize}"
                             Padding="{ResourceReference KeyTipPadding}">
-                        <!-- Both text alignments stated: the vertical one defaults to Bottom, which sits the letter on
-                             the floor of the plate instead of in the middle of it. -->
+                        <!-- Tight: the block is the letter's capitals, so centering the block puts them in the middle
+                             of the plate. -->
                         <TextBlock Text="{TemplateBinding Keys}"
                                 FontSize="{ResourceReference FontSizeMicro}"
                                 Foreground="{ObservableResource KeyTipForeground}"
                                 HorizontalTextAlignment="Center"
-                                VerticalTextAlignment="Center"
+                                TextLineBounds="Tight"
                                 HorizontalAlignment="Center"
                                 VerticalAlignment="Center"/>
                     </Border>

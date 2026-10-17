@@ -361,13 +361,8 @@ public class Slider : RangeBase
             {
                 Foreground = new SolidColorBrush(Colors.White),
                 FontSize = 12,
-                // Center the BLOCK in the badge via layout alignment (both axes). VerticalTextAlignment DEFAULTS to
-                // Bottom, which sits the glyphs' ink on the block's baseline - so the value looked low/offset in the
-                // badge even though the block itself was centered. Center centers the INK inside the block's line box,
-                // so the digit lands on the badge's true vertical center.
                 HorizontalAlignment = HorizontalAlignment.Center,
-                VerticalAlignment = VerticalAlignment.Center,
-                VerticalTextAlignment = VerticalTextAlignment.Center
+                VerticalAlignment = VerticalAlignment.Center
             };
             var badge = new Border
             {
