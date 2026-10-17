@@ -1435,6 +1435,12 @@ All packages share one version.
 - What a docking area says of its panels' strips - the selection bar's side and thickness, the pinned row, now the
   padding - sits beneath what a panel states itself, and is taken back when it is unset or no longer applies: a panel
   kept the last value it was given, and one turned from a tool into a document kept the tools' bar.
+- A nullable enum or bool property - a docking area's `ToolSelectionIndicatorPlacement` or `PinnedTabsPlacement`,
+  `ToggleButton.IsChecked`, a run's `Kerning` - is checked as the run time parses it: its null (nothing, or `null` in
+  any case) and its type's values, an enum's names in any case. The build, the preview and the language server took
+  anything, and a value naming nothing was lost where the view was built; it is now an error in all three, and the
+  language server (Rider plugin 1.11.3, VS Code extension 0.3.2) completes the type's values under the type's name,
+  where it offered nothing. Nullable numbers are still left to the run time.
 - The Rider plugin (1.11.2) runs the designer host from its copy of the project's build: run from where it was built,
   the host held its dll, and a build of the UI failed while a preview was open.
 - The designer preview scrolls: the wheel over it is raised on the element under the cursor as the platform raises it

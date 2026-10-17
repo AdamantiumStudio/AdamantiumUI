@@ -320,10 +320,11 @@ public sealed class CompletionEngine
         // Enum members / booleans / brush colors handled uniformly by the type model.
         var values = _model.GetValueCompletions(propType);
         if (values.Count == 0) return [];
+        var valueType = TypeParserCheck.ValueTypeOf(propType);
         return values
             .Where(v => Matches(v, partial))
-            .Select(v => new AumlCompletionItem(v, AumlCompletionItemKind.Value, propType.Name, ReplaceBack: partial.Length,
-                Color: ColorOf(propType, v)))
+            .Select(v => new AumlCompletionItem(v, AumlCompletionItemKind.Value, valueType.Name, ReplaceBack: partial.Length,
+                Color: ColorOf(valueType, v)))
             .ToList();
     }
 
@@ -792,9 +793,10 @@ public sealed class CompletionEngine
             return CompletePaths(ctx.Prefix, documentPath, extensions);
         }
 
+        var valueType = TypeParserCheck.ValueTypeOf(propertyType);
         return _model.GetValueCompletions(propertyType)
             .Where(v => Matches(v, ctx.Prefix))
-            .Select(v => new AumlCompletionItem(v, AumlCompletionItemKind.Value, propertyType.Name, Color: ColorOf(propertyType, v)))
+            .Select(v => new AumlCompletionItem(v, AumlCompletionItemKind.Value, valueType.Name, Color: ColorOf(valueType, v)))
             .ToList();
     }
 

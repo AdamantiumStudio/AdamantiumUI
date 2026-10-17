@@ -530,7 +530,7 @@ internal sealed class MarkupStructureCheck
             (DefaultAumlTransformer.ExpectedLiteral(propertyType, text) ?? MarkupValueChecks.Problem(propertyType.FullName, text)) is { } expected)
         {
             var valueAt = value.Property;
-            Report(MarkupMessages.InvalidLiteral(text, propertyType.Name, name, expected, valueAt.Line, valueAt.Position), valueAt);
+            Report(MarkupMessages.InvalidLiteral(text, TypeParserCheck.ValueTypeOf(propertyType).Name, name, expected, valueAt.Line, valueAt.Position), valueAt);
         }
     }
 

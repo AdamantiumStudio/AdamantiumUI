@@ -388,15 +388,21 @@ public static class AumlValidator
             return;
         }
 
-        if (propertyType is { TypeKind: ResolvedTypeKind.Enum } && value is not null && value.IsTextNode())
+        // A nullable is parsed at run time: its null literal, and its enum's names in any case.
+        var valueType = propertyType is null ? null : TypeParserCheck.ValueTypeOf(propertyType);
+        var nullable = !ReferenceEquals(valueType, propertyType);
+        if (valueType is { TypeKind: ResolvedTypeKind.Enum } && value is not null && value.IsTextNode())
         {
-            var valueText = value.GetTextValue();
-            if (valueText.Length > 0 && !valueText.Contains(',') && !valueText.All(char.IsDigit))
+            var valueText = value.GetTextValue().Trim();
+            if (valueText.Length > 0 && !valueText.Contains(',') && !valueText.Contains('|') && !valueText.All(char.IsDigit)
+                && !(nullable && TypeParserCheck.IsNullLiteral(valueText)))
             {
-                var allowed = model.GetValueCompletions(propertyType);
-                if (!allowed.Contains(valueText))
+                var allowed = model.GetValueCompletions(valueType);
+                if (!allowed.Contains(valueText, nullable ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal))
+                {
                     diagnostics.Add(At(reference, propertyName.Length,
-                        ServerMessages.InvalidEnumValue(valueText, propertyType.Name, string.Join(", ", allowed))));
+                        ServerMessages.InvalidEnumValue(valueText, valueType.Name, string.Join(", ", allowed))));
+                }
             }
         }
     }

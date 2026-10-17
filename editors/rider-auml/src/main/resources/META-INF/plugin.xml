@@ -30,6 +30,8 @@
     ]]></description>
 
     <change-notes><![CDATA[
+        <p>A nullable property - DockingArea.ToolSelectionIndicatorPlacement, PinnedTabsPlacement, IsChecked - is
+        completed with the values of the type it holds, and a value the run time would throw on is underlined.</p>
         <p>The wheel over the preview scrolls the previewed content - a list, a property grid - as it does in the running
         application, so what the design size cuts off can be seen; where nothing scrolls, and with Alt, it scrolls the
         preview's view as before, and Ctrl still zooms.</p>

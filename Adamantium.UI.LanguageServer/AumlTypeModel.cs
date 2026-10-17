@@ -861,9 +861,11 @@ public sealed class AumlTypeModel
     public bool IsKnownAttribute(IResolvedType element, string name) =>
         element.GetMemberByName(name) is not null;
 
-    /// <summary>Value completions for an attribute's CLR type: enum members or boolean literals.</summary>
+    /// <summary>Value completions for an attribute's CLR type: enum members or boolean literals, the same for a
+    /// nullable one.</summary>
     public IReadOnlyList<string> GetValueCompletions(IResolvedType propertyType)
     {
+        propertyType = TypeParserCheck.ValueTypeOf(propertyType);
         if (propertyType.TypeKind == ResolvedTypeKind.Enum)
             return propertyType.Members
                 .Where(m => m.MemberKind == ResolvedMemberKind.Field && m.Name != "value__")
