@@ -7,6 +7,14 @@ All packages share one version.
 
 ### Added
 
+- `HyphenLimit` on every element, inherited, as InDesign's hyphen limit: the most lines in a row of its text that may
+  end in a hyphen (0, the default, sets none), in `TextBlock` and `TextBox`.
+
+- `Inline.ClearOverrides()`, as InDesign's Clear Overrides: the character formatting set on an inline and on the
+  inlines inside it goes, and the text keeps its styles and what it inherits.
+
+- `TextBlock.IsOversetProperty`: `IsOverset` is set after each layout and binds.
+
 - `PropertySection.DataType`: a section written for a type of object. With `SectionsSource` set, the grid points each
   such section at the first item of its type and leaves it out when there is none, so an inspector of an entity shows
   its components in the order its sections are written, whatever order the entity holds them in. The same section
@@ -1420,6 +1428,15 @@ All packages share one version.
 
 ### Fixed
 
+- `VerticalTextAlignment` set on a vertical `TextBlock` places its lines across a wider block - Top at its right edge,
+  Center, Bottom at its left; unset, the first line still stands at the right edge. It did nothing.
+- A `TextBox`'s placeholder is set with the box's spacing, tracking, kerning, glyph scaling, features and language.
+- A trimmed or aligned `TextBlock` measured against a new width is laid out once: it was laid out again at its old slot
+  before the arrange to the new one, three layouts to a change. Measured with no arrange after it, it asks for one.
+- An off-screen render leaves glyph filling as it found it, failed or not: it switched inline filling off after it,
+  and the designer, which fills inline throughout, then drew its previews without the letters still to come.
+- Clearing a property with a check of its values no longer throws: the check was asked about the cleared value, so an
+  inherited property with a check threw as its element moved.
 - The Rider plugin (1.11.2) runs the designer host from its copy of the project's build: run from where it was built,
   the host held its dll, and a build of the UI failed while a preview was open.
 - The designer preview scrolls: the wheel over it is raised on the element under the cursor as the platform raises it

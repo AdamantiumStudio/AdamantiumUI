@@ -490,7 +490,11 @@ public abstract class TextBoxBase : Control
     private TextLayout _textLayout;
     private IFont _layoutFont;
     private IFont _placeholderFont;
-    private double _textWidth;                // widest line's ink width (horizontal scroll bound in NoWrap)
+    private TextLayout _placeholderLayout;
+    private (string Text, double Size, TextDirection Direction, SpacingRange Words, SpacingRange Letters, double Tracking,
+        TextKerning Kerning, SpacingRange Scaling)? _placeholderShaped;
+    private TextAttributes _placeholderShaping;
+    private double _textWidth;               // widest line's ink width (horizontal scroll bound in NoWrap)
     private double _lineHeight;
     private double _lineLeading;
     private double[] _lineTops = [0];
@@ -527,6 +531,7 @@ public abstract class TextBoxBase : Control
     private double _lastShapedLineSpacing;
     private TextDirection _lastShapedDirection;
     private Hyphens _lastShapedHyphens;
+    private int _lastShapedHyphenLimit;
     private LineBreaking _lastShapedLineBreaking;
     private TabStopList _lastShapedTabStops;
     private bool _lastShapedOpticalMargins;
@@ -589,6 +594,7 @@ public abstract class TextBoxBase : Control
         _textLayout.LoadFontsInBackground = !FontAtlasStore.SynchronousFill;
         _textLayout.Direction = TextDirection;
         _textLayout.Hyphens = Hyphens;
+        _textLayout.HyphenLimit = HyphenLimit;
         _textLayout.LineBreaking = LineBreaking;
         _textLayout.TabStops = TabStops;
         _textLayout.OpticalMarginAlignment = OpticalMarginAlignment;
@@ -631,6 +637,7 @@ public abstract class TextBoxBase : Control
             && _lastShapedKashidas == Kashidas && _lastShapedLineHeight.Equals(LineHeight)
             && _lastShapedLineStacking == LineStackingStrategy && _lastShapedLineSpacing.Equals(LineSpacing)
             && _lastShapedDirection == TextDirection && _lastShapedHyphens == Hyphens
+            && _lastShapedHyphenLimit == HyphenLimit
             && _lastShapedLineBreaking == LineBreaking && Equals(_lastShapedTabStops, TabStops)
             && _lastShapedOpticalMargins == OpticalMarginAlignment && ShapesLike(_lastShapedShaping, shaping))
         {
@@ -689,6 +696,7 @@ public abstract class TextBoxBase : Control
         _lastShapedShaping = shaping;
         _lastShapedDirection = TextDirection;
         _lastShapedHyphens = Hyphens;
+        _lastShapedHyphenLimit = HyphenLimit;
         _lastShapedLineBreaking = LineBreaking;
         _lastShapedTabStops = TabStops;
         _lastShapedOpticalMargins = OpticalMarginAlignment;
@@ -1447,6 +1455,12 @@ public abstract class TextBoxBase : Control
 
     internal UIComponent TextSurface => _presenter;
 
+    internal TextLayout PlaceholderLayout()
+    {
+        EnsurePlaceholderShaped(FontSize);
+        return _placeholderLayout;
+    }
+
     internal int LineOfIndex(int index) => CaretLineOf(Clamp(index));
 
     internal (int Start, int End) LineIndexRange(int line)
@@ -1493,8 +1507,6 @@ public abstract class TextBoxBase : Control
         };
     }
 
-    private TextLayout _placeholderLayout;
-    private string _placeholderShaped;
     private void EnsurePlaceholderShaped(double fontSize)
     {
         var loadsSeen = TypefaceStore.LoadedCount;
@@ -1508,11 +1520,32 @@ public abstract class TextBoxBase : Control
 
         _placeholderLayout.LoadFontsInBackground = !FontAtlasStore.SynchronousFill;
         _placeholderLayout.Direction = TextDirection;
-        var key = Placeholder + "|" + fontSize + "|" + TextDirection;
-        if (_placeholderShaped == key) return;
-        _placeholderLayout.ProcessText(Placeholder, fontSize, new Size(double.NaN, double.NaN),
-            TextWrapping.NoWrap, TextTrimming.None, HorizontalTextAlignment.Left, VerticalTextAlignment.Top);
+        _placeholderLayout.WordSpacing = WordSpacing;
+        _placeholderLayout.LetterSpacing = LetterSpacing;
+        _placeholderLayout.Tracking = Tracking;
+        _placeholderLayout.Kerning = Kerning;
+        _placeholderLayout.GlyphScaling = GlyphScaling;
+        var shaping = TextShaping(font);
+        var key = (Placeholder, fontSize, TextDirection, WordSpacing, LetterSpacing, Tracking, Kerning, GlyphScaling);
+        if (_placeholderShaped is { } shaped && shaped.Equals(key) && ShapesLike(_placeholderShaping, shaping))
+        {
+            return;
+        }
+
+        if (shaping == null)
+        {
+            _placeholderLayout.ProcessText(Placeholder, fontSize, new Size(double.NaN, double.NaN),
+                TextWrapping.NoWrap, TextTrimming.None, HorizontalTextAlignment.Left, VerticalTextAlignment.Top);
+        }
+        else
+        {
+            _placeholderLayout.ProcessText(new AttributedText(Placeholder, shaping), fontSize,
+                new Size(double.NaN, double.NaN), TextWrapping.NoWrap, TextTrimming.None, HorizontalTextAlignment.Left,
+                VerticalTextAlignment.Top);
+        }
+
         _placeholderShaped = key;
+        _placeholderShaping = shaping;
         if (!fontReady || _placeholderLayout.HasPendingFonts)
         {
             WaitForFonts(loadsSeen);

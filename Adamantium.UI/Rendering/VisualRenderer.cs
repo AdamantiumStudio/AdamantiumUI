@@ -86,18 +86,24 @@ public sealed class VisualRenderer : IVisualRenderer
         EnsureDevice();
         // A bake has ONE frame - whatever its text has not rasterized yet would simply be missing from the picture - so
         // glyphs are filled INLINE here, unlike a live window which lets them arrive over the following frames.
+        var filling = Adamantium.Graphics.Fonts.FontAtlasStore.SynchronousFill;
         Adamantium.Graphics.Fonts.FontAtlasStore.SynchronousFill = true;
-        var root = new VisualRoot(visual, size.Width, size.Height);
-        var layoutSize = new Size(size.Width, size.Height);
-        ((IMeasurableComponent)root).Measure(layoutSize);
-        ((IMeasurableComponent)root).Arrange(new Rect(layoutSize));
+        try
+        {
+            var root = new VisualRoot(visual, size.Width, size.Height);
+            var layoutSize = new Size(size.Width, size.Height);
+            ((IMeasurableComponent)root).Measure(layoutSize);
+            ((IMeasurableComponent)root).Arrange(new Rect(layoutSize));
 
-        var cache = SharedCache();
-        cache.BuildFromVisualTree(root);
-        cache.ProcessCommands(root.GetProjectionMatrix(), scale);
-
-        Adamantium.Graphics.Fonts.FontAtlasStore.SynchronousFill = false;
-        return (cache, (uint)Math.Max(1, size.Width * scale), (uint)Math.Max(1, size.Height * scale));
+            var cache = SharedCache();
+            cache.BuildFromVisualTree(root);
+            cache.ProcessCommands(root.GetProjectionMatrix(), scale);
+            return (cache, (uint)Math.Max(1, size.Width * scale), (uint)Math.Max(1, size.Height * scale));
+        }
+        finally
+        {
+            Adamantium.Graphics.Fonts.FontAtlasStore.SynchronousFill = filling;
+        }
     }
 
     /// <summary>Parses AUML markup into a fresh visual and renders it (UWP <c>XamlReader.Load</c> + RenderTargetBitmap).</summary>

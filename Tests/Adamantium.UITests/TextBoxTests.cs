@@ -21,6 +21,18 @@ public class TextBoxTests
         => tb.RaiseEvent(new KeyEventArgs(KeyboardDevice.CurrentDevice, key, modifiers, 0) { RoutedEvent = Keyboard.KeyDownEvent });
 
     [Test]
+    public void ThePlaceholder_IsSetWithTheBoxsTypography()
+    {
+        var plain = new TextBox { Placeholder = "Search" }.PlaceholderLayout().GetLine(0).Width;
+        var box = new TextBox { Placeholder = "Search", Tracking = 300 };
+        var tracked = box.PlaceholderLayout().GetLine(0).Width;
+        box.Tracking = 0;
+
+        Assert.That(tracked, Is.GreaterThan(plain + 5 * 300 * box.FontSize / 1000 - 0.5), "spaced as its text is");
+        Assert.That(box.PlaceholderLayout().GetLine(0).Width, Is.EqualTo(plain).Within(1e-3), "and laid out again");
+    }
+
+    [Test]
     public void CharacterCasing_GivesTypedTextItsCase()
     {
         var upper = new TextBox { CharacterCasing = CharacterCasing.Upper };

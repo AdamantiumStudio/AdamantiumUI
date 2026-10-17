@@ -1033,7 +1033,7 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
     private void RunSetValueSequence(AdamantiumProperty property, object value, ValuePriority priority, bool raiseValueChangedEvent)
     {
         var metadata = property.GetDefaultMetadata(GetType());
-        if (property.ValidateValueCallBack?.Invoke(value) == false)
+        if (value != AdamantiumProperty.UnsetValue && property.ValidateValueCallBack?.Invoke(value) == false)
         {
             throw new ArgumentException($"Value {value} is incorrect!");
         }

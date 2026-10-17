@@ -53,6 +53,31 @@ public class TextStyleTests
         text.Layout.GetTextData().First(glyph => glyph.PositionInString == position);
 
     [Test]
+    public void ClearingOverrides_LeavesASpanAndTheInlinesInsideItOnlyTheirStyle()
+    {
+        var emphasis = new CharacterStyle { FontSize = 24, Foreground = new SolidColorBrush(Colors.Red) };
+        var inner = new Run { Text = "b", FontSize = 40, Tracking = 200 };
+        var span = new Span { CharacterStyle = emphasis, Foreground = new SolidColorBrush(Colors.Blue) };
+        span.Inlines.Add(new Run { Text = "a", FontWeight = FontWeight.Bold });
+        span.Inlines.Add(inner);
+        var (text, window) = Hosted(span);
+        Assume.That(First(text, 1).FontSize, Is.EqualTo(40));
+
+        span.ClearOverrides();
+        Update(window);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(First(text, 0).FontSize, Is.EqualTo(24), "the style's size");
+            Assert.That(First(text, 1).FontSize, Is.EqualTo(24), "inside too");
+            Assert.That(First(text, 0).Attributes.Foreground, Is.EqualTo(Colors.Red), "the style's color");
+            Assert.That(span.Inlines.First().FontWeight, Is.Null, "no weight of its own");
+            Assert.That(inner.Tracking, Is.Null);
+            Assert.That(span.CharacterStyle, Is.SameAs(emphasis), "the style stays");
+        });
+    }
+
+    [Test]
     public void AParagraphStyle_SetsItsParagraphAndItsText_UnderWhatTheParagraphSetsItself()
     {
         var heading = new ParagraphStyle
