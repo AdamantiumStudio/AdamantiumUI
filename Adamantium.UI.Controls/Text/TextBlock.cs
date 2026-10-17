@@ -716,6 +716,13 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
             return;
         }
 
+        if (ReferenceEquals(e, Inline.StyleOnly))
+        {
+            _inlinesDirty = true;
+            InvalidateMeasure();
+            return;
+        }
+
         _inlinesDirty = true;
         HostChildren();
         InvalidateMeasure();
@@ -1013,7 +1020,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         _inlineBrushes.Add(style.Foreground);
         _inlineBrushes.Add(style.Background);
         var engine = new Adamantium.Graphics.Fonts.ParagraphStyle(style.Name, style.OwnParagraphAttributes(),
-            style.OwnTextAttributes(), style.BasedOn != null ? EngineStyle(style.BasedOn) : null);
+            style.OwnTextAttributes(), style.BasedOn is { } based && !based.Reaches(style) ? EngineStyle(based) : null);
         _engineStyles[style] = engine;
         return engine;
     }
@@ -1028,7 +1035,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         _inlineBrushes.Add(style.Foreground);
         _inlineBrushes.Add(style.Background);
         var engine = new Adamantium.Graphics.Fonts.CharacterStyle(style.Name, style.OwnTextAttributes(),
-            style.BasedOn != null ? EngineStyle(style.BasedOn) : null);
+            style.BasedOn is { } based && !based.Reaches(style) ? EngineStyle(based) : null);
         _engineStyles[style] = engine;
         return engine;
     }
@@ -1140,6 +1147,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         Brush foreground = null;
         Brush background = null;
         var decorations = TextDecorations.None;
+        var kindDecorations = TextDecorations.None;
         FontWeight? weight = null;
         FontStyle? style = null;
         FontStretch? stretch = null;
@@ -1168,7 +1176,15 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
 
             foreground = inline.Foreground ?? foreground;
             background = inline.Background ?? background;
-            decorations |= inline.TextDecorations;
+            // A decoration an inline has by its kind, as a hyperlink's underline, yields to a style's.
+            if (inline.GetValueSource(Inline.TextDecorationsProperty) == ValuePriority.Default)
+            {
+                kindDecorations |= inline.TextDecorations;
+            }
+            else
+            {
+                decorations |= inline.TextDecorations;
+            }
             weight = inline.FontWeight ?? weight;
             style = inline.FontStyle ?? style;
             stretch = inline.FontStretch ?? stretch;
@@ -1183,14 +1199,20 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
             alignment = inline.BaselineAlignment ?? alignment;
         }
 
+        var characterStyle = CharacterStyleOf(chain);
+        var paragraphStyle = ParagraphStyleOf(chain);
+        if ((characterStyle?.ResolvedDecorations() ?? paragraphStyle?.ResolvedDecorations()) == null)
+        {
+            decorations |= kindDecorations;
+        }
+
         if (objectSize != null && alignment is null or BaselineAlignment.Baseline)
         {
-            shift = (shift ?? 0) + objectRaise;
+            shift = (shift ?? characterStyle?.ResolvedBaselineShift() ?? paragraphStyle?.ResolvedBaselineShift() ?? 0)
+                    + objectRaise;
         }
 
         // The font as the inlines choose it, else their character style, else their paragraph's style, else the block.
-        var characterStyle = CharacterStyleOf(chain);
-        var paragraphStyle = ParagraphStyleOf(chain);
         var resolvedWeight = weight ?? characterStyle?.ResolvedWeight() ?? paragraphStyle?.ResolvedWeight() ?? FontWeight;
         var resolvedStyle = style ?? characterStyle?.ResolvedStyle() ?? paragraphStyle?.ResolvedStyle() ?? FontStyle;
         var resolvedStretch = stretch ?? characterStyle?.ResolvedStretch() ?? paragraphStyle?.ResolvedStretch()

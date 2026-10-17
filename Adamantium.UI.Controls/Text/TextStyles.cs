@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using Adamantium.Fonts;
 using Adamantium.Graphics.Fonts;
 using Adamantium.UI.Core;
@@ -47,8 +48,9 @@ public abstract class TextFormat : AdamantiumComponent
         nameof(BaselineShift), typeof(double?), typeof(TextFormat), new PropertyMetadata(null));
 
     // Whoever lays out by this style: inlines, and the styles based on it. Held weakly, so a style kept in a theme
-    // keeps none of them alive.
-    private readonly List<WeakReference<ITextStyleUser>> _users = [];
+    // keeps none of them alive; written from any thread.
+    private readonly ConditionalWeakTable<ITextStyleUser, object> _users = new();
+    private readonly object _usersLock = new();
 
     /// <summary>The style's name, as the resource key it is kept under usually says.</summary>
     public string Name { get; set; }
@@ -133,48 +135,41 @@ public abstract class TextFormat : AdamantiumComponent
     // The style this one is based on, as its BasedOn says.
     private protected abstract TextFormat BaseFormat { get; }
 
-    // The font this style or the ones it is based on choose, for the block to resolve.
-    internal FontWeight? ResolvedWeight()
+    // What this style or the ones it is based on set, for the block: the font to resolve, the brushes to hold and what
+    // an inline's own defaults yield to. A chain set in a loop through markup ends where it comes round.
+    internal FontWeight? ResolvedWeight() => Resolved(static format => format.FontWeight, static weight => weight != null);
+
+    internal FontStyle? ResolvedStyle() => Resolved(static format => format.FontStyle, static style => style != null);
+
+    internal FontStretch? ResolvedStretch() => Resolved(static format => format.FontStretch, static stretch => stretch != null);
+
+    internal Brush ResolvedForeground() => Resolved(static format => format.Foreground, static brush => brush != null);
+
+    internal Brush ResolvedBackground() => Resolved(static format => format.Background, static brush => brush != null);
+
+    internal TextDecorations? ResolvedDecorations() =>
+        Resolved(static format => format.TextDecorations, static decorations => decorations != null);
+
+    internal double? ResolvedBaselineShift() =>
+        Resolved(static format => format.BaselineShift, static shift => shift != null);
+
+    private T Resolved<T>(Func<TextFormat, T> value, Func<T, bool> isSet)
     {
-        for (var format = this; format != null; format = format.BaseFormat)
+        var format = this;
+        for (var depth = 0; format != null && depth < MaxChain; depth++, format = format.BaseFormat)
         {
-            if (format.FontWeight is { } weight)
+            var found = value(format);
+            if (isSet(found))
             {
-                return weight;
+                return found;
             }
         }
 
-        return null;
+        return default;
     }
 
-    internal FontStyle? ResolvedStyle()
-    {
-        for (var format = this; format != null; format = format.BaseFormat)
-        {
-            if (format.FontStyle is { } style)
-            {
-                return style;
-            }
-        }
-
-        return null;
-    }
-
-    internal FontStretch? ResolvedStretch()
-    {
-        for (var format = this; format != null; format = format.BaseFormat)
-        {
-            if (format.FontStretch is { } stretch)
-            {
-                return stretch;
-            }
-        }
-
-        return null;
-    }
-
-    // The style this one is based on, for the engine's style.
-    internal TextFormat Base => BaseFormat;
+    // How many styles a chain of BasedOn is followed through.
+    internal const int MaxChain = 64;
 
     // The attributes of the text this style itself sets; the engine's style takes the rest from the one it is based
     // on, and the font is the block's to resolve.
@@ -192,27 +187,52 @@ public abstract class TextFormat : AdamantiumComponent
 
     internal void Use(ITextStyleUser user)
     {
-        _users.RemoveAll(reference => !reference.TryGetTarget(out var alive) || ReferenceEquals(alive, user));
-        _users.Add(new WeakReference<ITextStyleUser>(user));
+        lock (_usersLock)
+        {
+            _users.AddOrUpdate(user, null);
+        }
     }
 
-    internal void Unuse(ITextStyleUser user) =>
-        _users.RemoveAll(reference => !reference.TryGetTarget(out var alive) || ReferenceEquals(alive, user));
+    internal void Unuse(ITextStyleUser user)
+    {
+        lock (_usersLock)
+        {
+            _users.Remove(user);
+        }
+    }
 
-    // What lays out by this style lays out again.
+    // What lays out by this style lays out again, told outside the lock.
     private protected void NotifyUsers()
     {
-        for (var i = _users.Count - 1; i >= 0; i--)
+        List<ITextStyleUser> users;
+        lock (_usersLock)
         {
-            if (_users[i].TryGetTarget(out var user))
+            users = [];
+            foreach (var (user, _) in _users)
             {
-                user.TextStyleChanged();
-            }
-            else
-            {
-                _users.RemoveAt(i);
+                users.Add(user);
             }
         }
+
+        foreach (var user in users)
+        {
+            user.TextStyleChanged();
+        }
+    }
+
+    // Whether basing a style on this one would bring the chain round to the style itself.
+    internal bool Reaches(TextFormat style)
+    {
+        var format = this;
+        for (var depth = 0; format != null && depth < MaxChain; depth++, format = format.BaseFormat)
+        {
+            if (ReferenceEquals(format, style))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     protected override void OnPropertyChanged(AdamantiumPropertyChangedEventArgs e)
@@ -239,7 +259,15 @@ public class CharacterStyle : TextFormat, ITextStyleUser
     public CharacterStyle BasedOn
     {
         get => GetValue<CharacterStyle>(BasedOnProperty);
-        set => SetValue(BasedOnProperty, value);
+        set
+        {
+            if (value != null && value.Reaches(this))
+            {
+                throw new ArgumentException("A style cannot be based on itself.", nameof(value));
+            }
+
+            SetValue(BasedOnProperty, value);
+        }
     }
 
     private protected override TextFormat BaseFormat => BasedOn;
@@ -250,17 +278,11 @@ public class CharacterStyle : TextFormat, ITextStyleUser
     {
         if (e.Property == BasedOnProperty)
         {
-            for (var style = e.NewValue as CharacterStyle; style != null; style = style.BasedOn)
-            {
-                if (ReferenceEquals(style, this))
-                {
-                    SetValue(BasedOnProperty, e.OldValue);
-                    throw new ArgumentException("A style cannot be based on itself.");
-                }
-            }
-
             (e.OldValue as CharacterStyle)?.Unuse(this);
-            (e.NewValue as CharacterStyle)?.Use(this);
+            if (e.NewValue is CharacterStyle based && !based.Reaches(this))
+            {
+                based.Use(this);
+            }
         }
 
         base.OnPropertyChanged(e);
@@ -290,7 +312,15 @@ public class ParagraphStyle : TextFormat, ITextStyleUser
     public ParagraphStyle BasedOn
     {
         get => GetValue<ParagraphStyle>(BasedOnProperty);
-        set => SetValue(BasedOnProperty, value);
+        set
+        {
+            if (value != null && value.Reaches(this))
+            {
+                throw new ArgumentException("A style cannot be based on itself.", nameof(value));
+            }
+
+            SetValue(BasedOnProperty, value);
+        }
     }
 
     /// <summary>How the paragraph's lines stand between its edges; null sets none.</summary>
@@ -354,17 +384,11 @@ public class ParagraphStyle : TextFormat, ITextStyleUser
     {
         if (e.Property == BasedOnProperty)
         {
-            for (var style = e.NewValue as ParagraphStyle; style != null; style = style.BasedOn)
-            {
-                if (ReferenceEquals(style, this))
-                {
-                    SetValue(BasedOnProperty, e.OldValue);
-                    throw new ArgumentException("A style cannot be based on itself.");
-                }
-            }
-
             (e.OldValue as ParagraphStyle)?.Unuse(this);
-            (e.NewValue as ParagraphStyle)?.Use(this);
+            if (e.NewValue is ParagraphStyle based && !based.Reaches(this))
+            {
+                based.Use(this);
+            }
         }
 
         base.OnPropertyChanged(e);

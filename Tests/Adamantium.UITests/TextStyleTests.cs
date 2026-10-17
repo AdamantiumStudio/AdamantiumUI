@@ -117,6 +117,53 @@ public class TextStyleTests
     }
 
     [Test]
+    public void AStylesBrush_IsDrawnIntoTheText_AsAnInlinesOwnIs()
+    {
+        var brush = new SolidColorBrush(Colors.Blue);
+        var style = new CharacterStyle { Foreground = brush };
+        Hosted(new Run { Text = "styled", CharacterStyle = style });
+
+        Assert.That(brush.IsBakedIn, Is.True);
+    }
+
+    [Test]
+    public void BasingAStyleOnOneBasedOnIt_Throws()
+    {
+        var a = new CharacterStyle();
+        var b = new CharacterStyle { BasedOn = a };
+
+        Assert.Throws<ArgumentException>(() => a.BasedOn = b);
+        Assert.That(a.BasedOn, Is.Null);
+    }
+
+    [Test]
+    public void AHyperlinksUnderline_YieldsToItsStyle_AnInlinesOwnDecorationDoesNot()
+    {
+        var struck = new CharacterStyle { TextDecorations = TextDecorations.Strikethrough };
+        var link = new Hyperlink();
+        link.Inlines.Add(new Run { Text = "styled", CharacterStyle = struck });
+        var plain = new Hyperlink();
+        plain.Inlines.Add(new Run { Text = "plain" });
+        var (text, _) = Hosted(link, plain);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(text.Layout.AttributedText.AttributesAt(0).Decorations, Is.EqualTo(TextDecorations.Strikethrough));
+            Assert.That(text.Layout.AttributedText.AttributesAt(7).Decorations, Is.EqualTo(TextDecorations.Underline));
+        });
+    }
+
+    [Test]
+    public void AnObject_TakesItsStylesBaselineShift()
+    {
+        var raised = new CharacterStyle { BaselineShift = 5 };
+        var container = new InlineUIContainer { Child = new Adamantium.UI.Controls.Decorators.Border { Width = 10, Height = 10 }, CharacterStyle = raised };
+        var (text, _) = Hosted(new Run { Text = "a" }, container);
+
+        Assert.That(text.Layout.AttributedText.AttributesAt(1).BaselineShift, Is.EqualTo(5));
+    }
+
+    [Test]
     public void ChangingAStyle_OrOneItIsBasedOn_LaysTheBlockOutAgain()
     {
         var body = new CharacterStyle { FontSize = 20 };

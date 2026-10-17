@@ -77,10 +77,17 @@ public abstract class Inline : FundamentalUIComponent, ITextStyleUser
     private TextEffectCollection _textEffects;
     private Brush _bakedForeground;
     private Brush _bakedBackground;
+    private Brush _bakedStyleForeground;
+    private Brush _bakedStyleBackground;
+    private Brush _bakedParagraphForeground;
+    private Brush _bakedParagraphBackground;
     private bool _inBlock;
     private bool _linesBaked;
 
     internal static readonly EventArgs EffectsOnly = new();
+
+    // A style the inline takes changed: its text lays out again, the inlines themselves are as they were.
+    internal static readonly EventArgs StyleOnly = new();
 
     /// <summary>Raised when a property that affects this inline's rendered text changes (so the TextBlock re-lays-out).</summary>
     internal event EventHandler Changed;
@@ -197,7 +204,11 @@ public abstract class Inline : FundamentalUIComponent, ITextStyleUser
         set => SetValue(CharacterStyleProperty, value);
     }
 
-    void ITextStyleUser.TextStyleChanged() => RaiseChanged();
+    void ITextStyleUser.TextStyleChanged()
+    {
+        Rebake();
+        RaiseChanged(StyleOnly);
+    }
 
     /// <summary>How far this inline is raised above the line's baseline, as InDesign's baseline shift; negative lowers
     /// it. Its size and the line's height stay as they are. Null takes the enclosing span's shift, or none.</summary>
@@ -346,6 +357,12 @@ public abstract class Inline : FundamentalUIComponent, ITextStyleUser
         var baking = _inBlock && !IsDiscarded;
         _bakedForeground = Bake(_bakedForeground, baking ? Foreground : null);
         _bakedBackground = Bake(_bakedBackground, baking ? Background : null);
+        // The brushes of its styles are drawn into its text as its own are.
+        var paragraphStyle = (this as Paragraph)?.ParagraphStyle;
+        _bakedStyleForeground = Bake(_bakedStyleForeground, baking ? CharacterStyle?.ResolvedForeground() : null);
+        _bakedStyleBackground = Bake(_bakedStyleBackground, baking ? CharacterStyle?.ResolvedBackground() : null);
+        _bakedParagraphForeground = Bake(_bakedParagraphForeground, baking ? paragraphStyle?.ResolvedForeground() : null);
+        _bakedParagraphBackground = Bake(_bakedParagraphBackground, baking ? paragraphStyle?.ResolvedBackground() : null);
         if (_linesBaked == baking)
         {
             return;
@@ -387,6 +404,7 @@ public abstract class Inline : FundamentalUIComponent, ITextStyleUser
         {
             (e.OldValue as TextFormat)?.Unuse(this);
             (e.NewValue as TextFormat)?.Use(this);
+            Rebake();
         }
 
         if (e.Property.GetDefaultMetadata(GetType())?.AffectsMeasure == true)
