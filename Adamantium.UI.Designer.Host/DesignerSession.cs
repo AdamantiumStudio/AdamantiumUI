@@ -999,6 +999,46 @@ public sealed class DesignerSession : IDisposable
             _liveDesignWidth, _liveDesignHeight, animating: animating);
     }
 
+    /// <summary>
+    /// A wheel turned over the preview at a design-space point: raised on the element under it as the platform's wheel
+    /// is, so a ScrollViewer - or anything else that takes the wheel - scrolls the content the design size cuts off.
+    /// Returns the new frame; a smooth scroll reports Animating, and the client streams its frames. When nothing takes the
+    /// wheel, no frame is rendered and Handled is false.
+    /// </summary>
+    public RenderResult ScrollAt(double x, double y, int delta, bool horizontal, string outPath)
+    {
+        if (_lastWindow == null || _renderService == null || _liveWindow == null)
+            return RenderResult.Fail("no live session to scroll in", null);
+
+        var handled = false;
+        if (delta != 0 && _lastWindow is IInputComponent root && PointerDevice.HitTestTopmost(root, new Vector2(x, y)) is { } hit)
+        {
+            // Where the pointer is, for a control that zooms or steps about it (a ZoomBox, a canvas); nothing else here
+            // moves the mouse.
+            PointerDevice.Current.SetExternalMousePosition(root, root.PointToScreen(new Vector2(x, y)));
+            var args = new PointerWheelEventArgs(Mouse.Pointer, InputModifiers.None, delta, 0, horizontal)
+            {
+                RoutedEvent = PointerEvents.PreviewPointerWheelChangedEvent
+            };
+            hit.RaiseEvent(args);
+            args.RoutedEvent = PointerEvents.PointerWheelChangedEvent;
+            hit.RaiseEvent(args);
+            handled = args.Handled;
+        }
+
+        if (!handled)
+            return RenderResult.Ok([], null, _liveTargetWidth, _liveTargetHeight, _liveScale, _liveDesignWidth, _liveDesignHeight);
+
+        _lastWindow.Update(_app.ThemeManager, new AppTime());
+        if (!_renderService.RenderHeadlessFrame(_liveWindow, _liveScale, new AppTime()))
+            return RenderResult.Fail("render failed", null);
+        _renderService.SaveFrameRaw(outPath);
+
+        var animating = AnimationManager.HasActiveAnimations || DesignTimeMediaClock.HasActiveMedia;
+        return RenderResult.Ok([outPath], null, _liveTargetWidth, _liveTargetHeight, _liveScale,
+            _liveDesignWidth, _liveDesignHeight, animating: animating, handled: true);
+    }
+
     // Drives the previewed window's framework AdornerLayer hover via IAdornerHost. Null clears it.
     private void SetWindowHover(UIComponent element)
     {

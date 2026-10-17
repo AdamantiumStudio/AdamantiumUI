@@ -30,6 +30,9 @@
     ]]></description>
 
     <change-notes><![CDATA[
+        <p>The wheel over the preview scrolls the previewed content - a list, a property grid - as it does in the running
+        application, so what the design size cuts off can be seen; where nothing scrolls, and with Alt, it scrolls the
+        preview's view as before, and Ctrl still zooms.</p>
         <p>The preview runs the designer host from its copy of the project's build: run from where it was built, the
         host held its dll, and a build of the UI failed while a preview was open.</p>
         <p>A resource keyed by a constant - x:Key="{x:Static Type.Member}" - is known by the constant's value: completion

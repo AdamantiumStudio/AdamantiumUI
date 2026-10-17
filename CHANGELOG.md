@@ -1417,6 +1417,11 @@ All packages share one version.
 
 - The Rider plugin (1.11.2) runs the designer host from its copy of the project's build: run from where it was built,
   the host held its dll, and a build of the UI failed while a preview was open.
+- The designer preview scrolls: the wheel over it is raised on the element under the cursor as the platform raises it
+  (the host's `scroll` op), so a list or a property grid taller than the design size shows the rest, smoothly, as in
+  the application. Where nothing takes the wheel, and with Alt, the Rider plugin scrolls its view of the frame, and Ctrl
+  still zooms; a burst of turns goes to the host as one.
+  Before, what the design size cut off could not be seen.
 - An idle loop no longer throws an `OperationCanceledException` on the thread pool each time its sleep times out: the
   next sleep waited on the pipe afresh, which canceled the wait before. It keeps that wait instead.
 - A docking area gone for good takes its panes off screen: their view models hear `OnDeactivated` and `OnHidden`, so

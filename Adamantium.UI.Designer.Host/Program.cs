@@ -22,13 +22,17 @@ public static class Program
         if (args.Length >= 5 && args[0] == "hover")
             return HoverToFile(args);
 
+        if (args.Length >= 6 && args[0] == "scroll")
+            return ScrollToFile(args);
+
         Console.Error.WriteLine(
             "usage:\n" +
             "  host serve                                    long-running JSON/stdio protocol (live preview)\n" +
             "  host render <file.auml> <out.png> [scale]     one-shot render at the window's design size x scale\n" +
             "  host hittest <file.auml> <x> <y>              render then map a design-space point to its markup line/col\n" +
             "  host select <file.auml> <out.bgra> <x> <y>    render, select the element at the point (framework frame), write it\n" +
-            "  host hover <file.auml> <out.bgra> <x> <y>     render, hover the element at the point (framework frame), write it");
+            "  host hover <file.auml> <out.bgra> <x> <y>     render, hover the element at the point (framework frame), write it\n" +
+            "  host scroll <file.auml> <out.bgra> <x> <y> <delta>  render, turn the wheel at the point (120 a notch, up), write it");
         return 2;
     }
 
@@ -137,6 +141,46 @@ public static class Program
             return 1;
         }
         Console.Error.WriteLine($"[auml] hover ({x},{y}): wrote {outPath} ({result.Width}x{result.Height})");
+        return 0;
+    }
+
+    // Headless check for the designer wheel: render the file, turn the wheel at a design-space point, play the smooth
+    // scroll out as the client streams it, and write the raw BGRA frame it settles on.
+    private static int ScrollToFile(string[] args)
+    {
+        var aumlPath = args[1];
+        var outPath = args[2];
+        var x = double.Parse(args[3], CultureInfo.InvariantCulture);
+        var y = double.Parse(args[4], CultureInfo.InvariantCulture);
+        var delta = int.Parse(args[5], CultureInfo.InvariantCulture);
+
+        using var session = new DesignerSession();
+        var tmp = Path.Combine(Path.GetTempPath(), "auml-scroll-base.bgra");
+        var baseResult = session.Render(File.ReadAllText(aumlPath), null, null, 1.0, tmp, aumlPath);
+        if (!baseResult.Success)
+        {
+            Console.Error.WriteLine($"[auml] render failed: {baseResult.Error}");
+            return 1;
+        }
+
+        var result = session.ScrollAt(x, y, delta, false, outPath);
+        if (result.Success && !result.Handled)
+        {
+            Console.Error.WriteLine($"[auml] scroll ({x},{y}): nothing there takes the wheel");
+            return 1;
+        }
+
+        for (var frame = 0; result.Success && result.Animating && frame < 600; frame++)
+        {
+            result = session.RenderNextFrame(outPath);
+        }
+
+        if (!result.Success)
+        {
+            Console.Error.WriteLine($"[auml] scroll failed: {result.Error}");
+            return 1;
+        }
+        Console.Error.WriteLine($"[auml] scroll ({x},{y}) by {delta}: wrote {outPath} ({result.Width}x{result.Height})");
         return 0;
     }
 }

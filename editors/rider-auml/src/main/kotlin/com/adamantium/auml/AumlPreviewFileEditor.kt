@@ -54,6 +54,7 @@ import javax.swing.SwingUtilities
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.roundToInt
+import kotlin.math.sign
 
 /**
  * Read-only preview half of the AUML split editor: renders the current editor buffer through the designer
@@ -75,6 +76,14 @@ class AumlPreviewFileEditor(
     // the streaming loop exits as soon as it sees renderToken has moved on. Written on the EDT, read by the streaming
     // loop on a pooled thread -> @Volatile so the loop sees a new render promptly.
     @Volatile private var renderToken = 0
+    // The token of the stream playing now, or -1: a smooth scroll joins it instead of starting another.
+    @Volatile private var streamingToken = -1
+
+    // The wheel, gathered on the EDT while one turn is with the host - see scrollPreview.
+    private var wheelPending = 0.0
+    private var wheelAt: Point2D.Double? = null
+    private var wheelHorizontal = false
+    private var wheelInFlight = false
 
     private var scale = 1.0
     private var updatingZoom = false
@@ -189,13 +198,17 @@ class AumlPreviewFileEditor(
             // then the editor streams the animation frame-by-frame, so animations keep playing after a change.
             override fun documentChanged(event: DocumentEvent) = scheduleRender()
         }, this)
+        // Ctrl zooms. Over the frame the wheel goes to the preview, so content the design size cuts off scrolls into view;
+        // where nothing there takes it, off the frame and with Alt, it scrolls this view of the frame.
         scrollPane.addMouseWheelListener { e ->
             if (e.isControlDown) {
                 setScale(scale * if (e.wheelRotation < 0) ZOOM_STEP else 1.0 / ZOOM_STEP)
-            } else {
-                val bar = if (e.isShiftDown) scrollPane.horizontalScrollBar else scrollPane.verticalScrollBar
-                bar.value += e.wheelRotation * bar.unitIncrement * 3
+                return@addMouseWheelListener
             }
+            // Alt always scrolls the view: a list filling the frame would otherwise take every turn.
+            val design = if (e.isAltDown) null else canvas.canvasToDesign(SwingUtilities.convertPoint(e.component, e.point, canvas))
+            if (design == null) scrollView(e.wheelRotation, e.isShiftDown)
+            else scrollPreview(design, e.preciseWheelRotation, e.isShiftDown)
         }
         // While auto-fit is on, keep the frame fitted as the panel is resized.
         scrollPane.viewport.addComponentListener(object : ComponentAdapter() {
@@ -216,6 +229,64 @@ class AumlPreviewFileEditor(
             override fun mouseExited(e: MouseEvent) = scheduleHover(null)   // clear the framework hover frame
         })
         scheduleRender(live = true)   // play the design-time animations on first load
+    }
+
+    private fun scrollView(rotation: Int, horizontal: Boolean) {
+        val bar = if (horizontal) scrollPane.horizontalScrollBar else scrollPane.verticalScrollBar
+        bar.value += rotation * bar.unitIncrement * 3
+    }
+
+    // On the EDT: the turns gather while one wheel is with the host, so a burst is sent as one; the part of a turn short
+    // of a whole unit carries over. AWT turns positive toward the user - down, or right with Shift; the host takes 120 a
+    // notch, up or right.
+    private fun scrollPreview(design: Point2D.Double, precise: Double, horizontal: Boolean) {
+        if (horizontal != wheelHorizontal) wheelPending = 0.0
+        wheelPending += (if (horizontal) precise else -precise) * WHEEL_NOTCH
+        wheelAt = design
+        wheelHorizontal = horizontal
+        if (!wheelInFlight) sendWheel()
+    }
+
+    // Off the EDT: the host turns the wheel on the element under the point and answers with the scrolled frame. It does
+    // not supersede a running stream - a smooth scroll plays through it, or starts one; nothing taking the wheel scrolls
+    // this view instead.
+    private fun sendWheel() {
+        val design = wheelAt ?: return
+        val text = document?.text ?: return
+        val delta = wheelPending.toInt()
+        if (delta == 0) return
+        wheelPending -= delta
+        wheelInFlight = true
+        val horizontal = wheelHorizontal
+        val token = renderToken
+        val renderScale = scale
+        ApplicationManager.getApplication().executeOnPooledThread {
+            val result = service.scroll(design.x, design.y, delta, horizontal, file.path, text, renderScale)
+            val r = result.render
+            val image = if (result.handled && token == renderToken) {
+                r.frames.firstOrNull()?.let { loadRawBgra(it, r.width ?: 0, r.height ?: 0) }
+            } else null
+            ApplicationManager.getApplication().invokeLater({
+                wheelInFlight = false
+                val error = r.error
+                when {
+                    error != null -> showError(error)
+                    !result.handled -> {
+                        val notches = delta / WHEEL_NOTCH.toInt()
+                        val turn = if (notches != 0) notches else delta.sign
+                        scrollView(if (horizontal) turn else -turn, horizontal)
+                    }
+                    token == renderToken -> {
+                        if (image != null) {
+                            canvas.setImage(image, r.scale ?: renderScale)
+                            canvas.setStale(false)
+                        }
+                        if (r.animating && streamingToken != renderToken) startStreaming(renderToken, renderScale)
+                    }
+                }
+                sendWheel()
+            }, ModalityState.any())
+        }
     }
 
     // Hover frame (FRAMEWORK-drawn): throttle (one per ~60 ms of movement), then ask the host to hover the element under
@@ -393,20 +464,25 @@ class AumlPreviewFileEditor(
     // the old batch playback, the scene stays live on the host, so an edit just keeps animating instead of re-capturing
     // a whole sequence (no freeze) and a one-shot transition isn't restarted by an unrelated change.
     private fun startStreaming(token: Int, renderScale: Double) {
+        streamingToken = token   // a smooth scroll plays through a running stream rather than starting a second one
         ApplicationManager.getApplication().executeOnPooledThread {
-            while (token == renderToken) {
-                val r = service.frame(file.path)
-                if (token != renderToken || r.error != null) break
-                val w = r.width ?: 0
-                val h = r.height ?: 0
-                val img = r.frames.firstOrNull()?.let { loadRawBgra(it, w, h) }
-                val frameScale = r.scale ?: renderScale
-                if (img != null) {
-                    ApplicationManager.getApplication().invokeLater({
-                        if (token == renderToken) { canvas.setImage(img, frameScale); canvas.setStale(false) }
-                    }, ModalityState.any())
+            try {
+                while (token == renderToken) {
+                    val r = service.frame(file.path)
+                    if (token != renderToken || r.error != null) break
+                    val w = r.width ?: 0
+                    val h = r.height ?: 0
+                    val img = r.frames.firstOrNull()?.let { loadRawBgra(it, w, h) }
+                    val frameScale = r.scale ?: renderScale
+                    if (img != null) {
+                        ApplicationManager.getApplication().invokeLater({
+                            if (token == renderToken) { canvas.setImage(img, frameScale); canvas.setStale(false) }
+                        }, ModalityState.any())
+                    }
+                    if (!r.animating) break
                 }
-                if (!r.animating) break
+            } finally {
+                if (streamingToken == token) streamingToken = -1
             }
         }
     }
@@ -684,6 +760,7 @@ class AumlPreviewFileEditor(
         private const val DEBOUNCE_MS = 250
         private const val HOVER_DEBOUNCE_MS = 60
         private const val ZOOM_STEP = 1.25
+        private const val WHEEL_NOTCH = 120.0
         private const val MIN_SCALE = 0.05
         private const val MAX_SCALE = 8.0
         private val ZOOM_PRESETS = listOf(0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 2.0, 3.0, 4.0)
