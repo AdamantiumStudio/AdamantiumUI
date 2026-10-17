@@ -273,6 +273,7 @@ public class TabItem : ContentControl, ISelectable, ISpringLoadable
             IsSelected = owner.IsContainerSelected(this);
             IsStretched = owner.HasStretchedTab;
             IsSideTab = owner.TabStripPlacement is TabStripPlacement.Left or TabStripPlacement.Right;
+            StripPlacement = owner.TabStripPlacement;
             // Pull the close-button config from the owner (authored + generated tabs alike) and follow later changes.
             _closeOwner = owner;
             _closeOwner.PropertyChanged += OnOwnerPropertyChanged;
@@ -353,7 +354,22 @@ public class TabItem : ContentControl, ISelectable, ISpringLoadable
         else if (e.Property == TabControl.HasStretchedTabProperty && sender is TabControl owner)
             IsStretched = owner.HasStretchedTab;
         else if (e.Property == TabControl.TabStripPlacementProperty && sender is TabControl placed)
+        {
             IsSideTab = placed.TabStripPlacement is TabStripPlacement.Left or TabStripPlacement.Right;
+            StripPlacement = placed.TabStripPlacement;
+        }
+    }
+
+    /// <summary>Which side of its tab control this tab's strip runs along, so a theme rounds the tab's outer corners and
+    /// keeps the ones against the content square - rounded there, a tab under its panel left a notch at either side of
+    /// where it joins it. Set by the owner, never authored.</summary>
+    public static readonly AdamantiumProperty StripPlacementProperty = AdamantiumProperty.Register(
+        nameof(StripPlacement), typeof(TabStripPlacement), typeof(TabItem), new PropertyMetadata(TabStripPlacement.Top));
+
+    public TabStripPlacement StripPlacement
+    {
+        get => GetValue<TabStripPlacement>(StripPlacementProperty);
+        internal set => SetValue(StripPlacementProperty, value);
     }
 
     /// <summary>This tab is in a SIDE strip (left or right). The tab itself is still an ordinary horizontal header - only

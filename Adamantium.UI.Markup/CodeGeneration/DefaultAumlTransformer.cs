@@ -461,13 +461,20 @@ public class DefaultAumlTransformer : IAumlTransformer
                 return;
             }
 
+            // The target type reference names a Nullable<T> without its T; the property's own type keeps it.
             var type = typeResolver.Resolve(reference.TargetType.GetFullTypeName());
+            if (type?.Name is "Nullable" or "Nullable`1"
+                && typeResolver.Resolve(reference.OwnerType.GetFullTypeName())?.GetMemberByName(reference.Name)?.MemberType is { } declared)
+            {
+                type = declared;
+            }
+
             var text = value.GetTextValue()?.Trim() ?? string.Empty;
             var expected = type == null ? null : ExpectedLiteral(type, text);
             if (expected != null)
             {
                 diagnostics.ReportError(document.FileName,
-                    MarkupMessages.InvalidLiteral(text, type.Name, reference.Name, expected, value.Line, value.Position), value);
+                    MarkupMessages.InvalidLiteral(text, TypeParserCheck.ValueTypeOf(type).Name, reference.Name, expected, value.Line, value.Position), value);
             }
         }
 
@@ -1219,14 +1226,30 @@ public class DefaultAumlTransformer : IAumlTransformer
 
     internal static string ExpectedLiteral(IResolvedType type, string text)
     {
+        // A nullable enum or bool is parsed at run time: its null literal, and an enum's names in any case. Nullable
+        // numbers are parsed more loosely than the checks below, so they are left to the run time.
+        var held = TypeParserCheck.ValueTypeOf(type);
+        var nullable = !ReferenceEquals(held, type);
+        if (nullable)
+        {
+            if (TypeParserCheck.IsNullLiteral(text)
+                || held.TypeKind != ResolvedTypeKind.Enum && held.SpecialType != ResolvedSpecialType.System_Boolean)
+            {
+                return null;
+            }
+
+            type = held;
+        }
+
         if (type.TypeKind == ResolvedTypeKind.Enum)
         {
             var names = type.Members
                 .Where(m => m.MemberKind == ResolvedMemberKind.Field && m.Name != "value__")
                 .Select(m => m.Name)
                 .ToList();
+            var comparer = nullable ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
             var parts = text.Split(',', '|').Select(p => p.Trim()).ToList();
-            var valid = parts.All(p => names.Contains(p) || (p.Length > 0 && long.TryParse(p, NumberStyles.Integer, CultureInfo.InvariantCulture, out _)));
+            var valid = parts.All(p => names.Contains(p, comparer) || (p.Length > 0 && long.TryParse(p, NumberStyles.Integer, CultureInfo.InvariantCulture, out _)));
             return valid ? null : string.Join(", ", names);
         }
 

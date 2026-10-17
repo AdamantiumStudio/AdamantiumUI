@@ -7,6 +7,16 @@ All packages share one version.
 
 ### Added
 
+- `DockingArea.PanePadding`: the room between a panel's edge and what it shows, for every panel of the area, without
+  touching the theme - `PanePadding="0"` puts a scene or a tree right against the frame. Unset, the theme's stands
+  (Fluent's 12 came from the tab control's content padding).
+- `DockingArea.ToolSelectionIndicatorPlacement`: which side of a tool panel's tab strip the selection bar runs along,
+  over `SelectionIndicatorPlacement`; documents keep theirs. The tool templates of every theme follow the placement
+  for a docked panel's strip now - they drew the bar under the tabs whatever it said - and their style keeps it there by
+  default; a folded panel keeps its bar facing the body.
+- `TabItem.StripPlacement`: which side of its tab control the tab's strip runs along, set by the owner, for a theme to
+  round the right corners.
+
 - `HyphenLimit` on every element, inherited, as InDesign's hyphen limit: the most lines in a row of its text that may
   end in a hyphen (0, the default, sets none), in `TextBlock` and `TextBox`.
 
@@ -1428,6 +1438,18 @@ All packages share one version.
 
 ### Fixed
 
+- In Fluent, a tab whose strip is not on top rounds its outer corners, not those against its panel: a tool's tabs,
+  under its body, were rounded on top and left a notch either side of where they join it.
+- A tool panel folded to the edge of a docking area takes the area's tab policy, as a docked one does.
+- What a docking area says of its panels' strips - the selection bar's side and thickness, the pinned row, now the
+  padding - sits beneath what a panel states itself, and is taken back when it is unset or no longer applies: a panel
+  kept the last value it was given, and one turned from a tool into a document kept the tools' bar.
+- A nullable enum or bool property - a docking area's `ToolSelectionIndicatorPlacement` or `PinnedTabsPlacement`,
+  `ToggleButton.IsChecked`, a run's `Kerning` - is checked as the run time parses it: its null (nothing, or `null` in
+  any case) and its type's values, an enum's names in any case. The build, the preview and the language server took
+  anything, and a value naming nothing was lost where the view was built; it is now an error in all three, and the
+  language server (Rider plugin 1.11.3, VS Code extension 0.3.2) completes the type's values under the type's name,
+  where it offered nothing. Nullable numbers are still left to the run time.
 - `VerticalTextAlignment` set on a vertical `TextBlock` places its lines across a wider block - Top at its right edge,
   Center, Bottom at its left; unset, the first line still stands at the right edge. It did nothing.
 - A `TextBox`'s placeholder is set with the box's spacing, tracking, kerning, glyph scaling, features and language.

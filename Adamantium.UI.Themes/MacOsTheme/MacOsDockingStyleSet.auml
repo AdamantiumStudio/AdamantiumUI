@@ -130,6 +130,8 @@
          it - while its tabs sit along the BOTTOM. A document has many siblings and no caption of its own. -->
     <Style Selector="PaneGroup[Kind=Tool]">
         <Setter Property="TabStripPlacement" Value="Bottom"/>
+        <!-- The bar under the tabs, as tools have always had it; DockingArea.ToolSelectionIndicatorPlacement moves it. -->
+        <Setter Property="SelectionIndicatorPlacement" Value="Outer"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="PaneGroup">
@@ -205,7 +207,7 @@
                                         Width="1"
                                         Height="{TemplateBinding SelectionIndicatorThickness}"
                                         HorizontalAlignment="Left"
-                                        VerticalAlignment="Bottom"
+                                        VerticalAlignment="Top"
                                         IsHitTestVisible="False"/>
                             </Grid>
                         </TabStripScroller>
@@ -295,6 +297,11 @@
                         <!-- One tab in a window of its own is not a choice, so there is no strip to make it with. -->
                         <PropertyTrigger Property="ShowTabStrip" Value="false">
                             <Setter TargetName="PART_TabStrip" Property="Visibility" Value="Collapsed"/>
+                        </PropertyTrigger>
+                        <!-- The bar runs beside the body by default - along the top of the strip below it; Outer moves it
+                             to the strip's far edge, under the tabs. -->
+                        <PropertyTrigger Property="SelectionIndicatorPlacement" Value="Outer">
+                            <Setter TargetName="PART_SelectionIndicator" Property="VerticalAlignment" Value="Bottom"/>
                         </PropertyTrigger>
                         <!-- Revealed: the docked presenter is emptied so the content can move to the flyout; the control
                              drives IsOpen, since undoing a trigger would leave it Unset. -->

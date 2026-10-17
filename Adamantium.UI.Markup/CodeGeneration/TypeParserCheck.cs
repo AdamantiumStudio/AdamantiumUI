@@ -20,14 +20,23 @@ public static class TypeParserCheck
         "Adamantium.Core.Collections.TrackingCollection<double>",
     ];
 
+    /// <summary>The type a value of <paramref name="type"/> is written as: T for a Nullable&lt;T&gt;, otherwise the type
+    /// itself.</summary>
+    public static IResolvedType ValueTypeOf(IResolvedType type)
+    {
+        // Roslyn names it Nullable, reflection Nullable`1.
+        return type.IsGenericType && type.Name is "Nullable" or "Nullable`1" ? type.TypeArguments.FirstOrDefault() ?? type : type;
+    }
+
+    /// <summary>True when <paramref name="text"/> is what TypeParser reads as a Nullable&lt;T&gt;'s null: nothing, or
+    /// "null" in any case.</summary>
+    public static bool IsNullLiteral(string text) =>
+        string.IsNullOrEmpty(text) || string.Equals(text, "null", StringComparison.OrdinalIgnoreCase);
+
     /// <summary>True when generated code may parse a markup string into <paramref name="type"/>.</summary>
     public static bool CanParse(IResolvedType type)
     {
-        // Roslyn names it Nullable, reflection Nullable`1.
-        if (type.IsGenericType && type.Name is "Nullable" or "Nullable`1")
-        {
-            type = type.TypeArguments.FirstOrDefault() ?? type;
-        }
+        type = ValueTypeOf(type);
 
         if (Registered.Contains(type.FullName) || type.TypeKind == ResolvedTypeKind.Enum
             || type.ImplementsInterface("IConvertible"))

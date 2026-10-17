@@ -207,6 +207,10 @@ public class GraphiteThemeTests
             // appears only once you are already pointing at it cannot be used to see where you are in a long file - so
             // there is no hover state to have.
             "Adamantium.UI.Controls.ScrollViewer -> IsPointerOver",
+            // Fluent rounds a tab's outer corners by the side its strip is on, and squares a stretched one. Graphite's
+            // tabs are square on every side, so there are no corners to follow the strip.
+            "Adamantium.UI.Controls.TabItem -> IsStretched",
+            "Adamantium.UI.Controls.TabItem -> StripPlacement",
         };
 
         var covered = WatchedStates(graphite);

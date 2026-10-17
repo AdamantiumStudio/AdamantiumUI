@@ -90,6 +90,11 @@
     <CornerRadius x:Key="CornerRadiusDefault">4</CornerRadius>
     <CornerRadius x:Key="CornerRadiusSurface">8</CornerRadius>
     <CornerRadius x:Key="CornerRadiusTabTop">4 4 0 0</CornerRadius>
+    <!-- The same pair for a strip on another side: the corners away from the content round, the ones against it stay
+         square, or the tab leaves a notch either side of where it joins its panel. -->
+    <CornerRadius x:Key="CornerRadiusTabBottom">0 0 4 4</CornerRadius>
+    <CornerRadius x:Key="CornerRadiusTabLeft">4 0 0 4</CornerRadius>
+    <CornerRadius x:Key="CornerRadiusTabRight">0 4 4 0</CornerRadius>
 
     <!-- ── Strokes ────────────────────────────────────────────────────────────────────────────────────────────────
          A hairline for everything that is merely bounded, and a heavier edge for what is PRESSED: a button's border is
