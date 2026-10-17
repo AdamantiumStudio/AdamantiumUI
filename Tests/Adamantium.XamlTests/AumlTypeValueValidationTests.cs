@@ -83,6 +83,30 @@ public class AumlTypeValueValidationTests
         Assert.That(errors[0].Length, Is.EqualTo(written.Length));
     }
 
+    // A dictionary the project writes in markup is a class the build makes of that file, found by its name - as the
+    // editor's blueprint links its icons. It was flagged as found in no assembly.
+    [Test]
+    public void ADictionaryWrittenInMarkup_IsFoundByItsName()
+    {
+        var project = Path.Combine(Path.GetTempPath(), $"aumlprobe-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(Path.Combine(project, "Icons"));
+        var icons = Path.Combine(project, "Icons", "ProbeIcons.auml");
+        File.WriteAllText(icons, """
+            <?xml version="1.0" encoding="utf-8" ?>
+            <ResourceDictionary xmlns="http://adamantium/ui" xmlns:x="http://adamantium/ui/xaml/extensions"/>
+            """, new System.Text.UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
+        try
+        {
+            _model.RegisterViews([icons], "Probe", project);
+
+            Assert.That(BuildErrors("""<Border ResourceContext.Source="{ResourceLink Source=ProbeIcons}"/>"""), Is.Empty);
+        }
+        finally
+        {
+            Directory.Delete(project, true);
+        }
+    }
+
     private List<AumlDiagnostic> BuildErrors(string body) =>
         AumlValidator.Validate(Root + body + "</Window>", _model).Where(d => d.Code == "AUM001").ToList();
 }

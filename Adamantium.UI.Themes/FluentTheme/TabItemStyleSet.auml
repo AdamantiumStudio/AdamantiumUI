@@ -107,7 +107,24 @@
         <Setter Property="BackgroundSelected" Value="{ThemeResource AccentFillColorDefault}"/>
         <Setter Property="ForegroundSelected" Value="{ThemeResource AccentForegroundColor}"/>
         <Setter Property="BackgroundPointerOver" Value="{ThemeResource AccentFillColorDefault}"/>
-        <Setter Property="CornerRadius" Value="0"/>
+    </Style>
+
+    <!-- The corners, as triggers because their ORDER decides: a strip on another side rounds the tab's other corners -
+         the outer ones, never those against the content - and the stretched tab, last, has none at all whatever side
+         its strip is on. -->
+    <Style Selector="TabItem">
+        <PropertyTrigger Property="StripPlacement" Value="Bottom">
+            <Setter Property="CornerRadius" Value="{ResourceReference CornerRadiusTabBottom}"/>
+        </PropertyTrigger>
+        <PropertyTrigger Property="StripPlacement" Value="Left">
+            <Setter Property="CornerRadius" Value="{ResourceReference CornerRadiusTabLeft}"/>
+        </PropertyTrigger>
+        <PropertyTrigger Property="StripPlacement" Value="Right">
+            <Setter Property="CornerRadius" Value="{ResourceReference CornerRadiusTabRight}"/>
+        </PropertyTrigger>
+        <PropertyTrigger Property="IsStretched" Value="true">
+            <Setter Property="CornerRadius" Value="0"/>
+        </PropertyTrigger>
     </Style>
 
     <Style Selector="TabItem">

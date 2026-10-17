@@ -1379,6 +1379,7 @@ public class DockingArea : Panel
                     strip.State = node.State;
                     strip.Edge = bar.Key;
                     strip.Kind = PaneKind.Tool;
+                    ApplyTabPolicy(strip);
                     strip.RevealExtent = FlyoutExtent(node);
                     FillPanes(strip, node);
                     wanted.Add(strip);
@@ -2546,15 +2547,23 @@ public class DockingArea : Panel
         new PropertyMetadata(true, OnTabPolicyChanged));
 
     // Where the selection bar of a panel's strip runs, and how thick it is - the same two properties every TabControl
-    // has, said ONCE for the whole area. Nullable, and that is the point: unset means the area has NO opinion and does
-    // not touch its groups, so the theme's look stands and a group that states its own keeps it. Only a value here is
-    // pushed down, and then it is pushed to all of them, which is what "the area decides" has to mean.
+    // has, said ONCE for the whole area. Nullable, and that is the point: unset means the area has NO opinion and takes
+    // back any it gave, so the theme's look stands and a group that states its own keeps it. Only a value here is pushed
+    // down, and then it is pushed to all of them, which is what "the area decides" has to mean.
     public static readonly AdamantiumProperty SelectionIndicatorPlacementProperty = AdamantiumProperty.Register(
         nameof(SelectionIndicatorPlacement), typeof(TabIndicatorPlacement?), typeof(DockingArea),
         new PropertyMetadata(null, OnTabPolicyChanged));
 
     public static readonly AdamantiumProperty SelectionIndicatorThicknessProperty = AdamantiumProperty.Register(
         nameof(SelectionIndicatorThickness), typeof(double?), typeof(DockingArea),
+        new PropertyMetadata(null, OnTabPolicyChanged));
+
+    public static readonly AdamantiumProperty ToolSelectionIndicatorPlacementProperty = AdamantiumProperty.Register(
+        nameof(ToolSelectionIndicatorPlacement), typeof(TabIndicatorPlacement?), typeof(DockingArea),
+        new PropertyMetadata(null, OnTabPolicyChanged));
+
+    public static readonly AdamantiumProperty PanePaddingProperty = AdamantiumProperty.Register(
+        nameof(PanePadding), typeof(Thickness?), typeof(DockingArea),
         new PropertyMetadata(null, OnTabPolicyChanged));
 
     /// <summary>Whether pinned tabs get a row of their own in every panel of this area, or share the one row. Unset
@@ -2590,14 +2599,34 @@ public class DockingArea : Panel
         set => SetValue(SelectionIndicatorThicknessProperty, value);
     }
 
+    /// <summary>Which side of a TOOL panel's tab strip the selection bar runs along, over
+    /// <see cref="SelectionIndicatorPlacement"/>: a tool's tabs sit below its body, where a bar on the outer edge, right
+    /// for documents, reads as belonging to nothing. Unset (default): tools follow
+    /// <see cref="SelectionIndicatorPlacement"/>, or the theme.</summary>
+    public TabIndicatorPlacement? ToolSelectionIndicatorPlacement
+    {
+        get => GetValue<TabIndicatorPlacement?>(ToolSelectionIndicatorPlacementProperty);
+        set => SetValue(ToolSelectionIndicatorPlacementProperty, value);
+    }
+
+    /// <summary>The room between a panel's edge and what it shows, for every panel of this area - 0 puts a scene or a
+    /// tree right against the frame. Unset (default): each panel keeps what the theme says.</summary>
+    public Thickness? PanePadding
+    {
+        get => GetValue<Thickness?>(PanePaddingProperty);
+        set => SetValue(PanePaddingProperty, value);
+    }
+
     // The policy as PLAIN FIELDS, mirrored from the properties above. Building a panel must never READ a property of
     // the area: SetValue holds the component's lock across its callbacks, so while a layout load runs inside
     // Workspace's callback on the loop thread and waits for the dispatcher, the pump thread rebuilding panels would
     // wait for that same lock - measured as a hang the moment the docking view was shown.
     private bool _stretchSingleDocumentTab = true;
     private TabIndicatorPlacement? _indicatorPlacement;
+    private TabIndicatorPlacement? _toolIndicatorPlacement;
     private double? _indicatorThickness;
     private PinnedTabsPlacement? _pinnedPlacement;
+    private Thickness? _panePadding;
 
     // Pushed onto the live controls at once - the policy is about panels that already exist, and waiting for the next
     // rebuild would leave the setting apparently ignored.
@@ -2609,8 +2638,10 @@ public class DockingArea : Panel
         // already runs under the area's own lock, on the thread that took it.
         area._stretchSingleDocumentTab = area.StretchSingleDocumentTab;
         area._indicatorPlacement = area.SelectionIndicatorPlacement;
+        area._toolIndicatorPlacement = area.ToolSelectionIndicatorPlacement;
         area._indicatorThickness = area.SelectionIndicatorThickness;
         area._pinnedPlacement = area.PinnedTabsPlacement;
+        area._panePadding = area.PanePadding;
 
         foreach (var member in area.Family)
         {
@@ -2634,9 +2665,25 @@ public class DockingArea : Panel
         control.ShowPinButton = isDocument;
         control.StretchSingleTab = isDocument && owner._stretchSingleDocumentTab;
 
-        if (owner._indicatorPlacement is { } placement) control.SelectionIndicatorPlacement = placement;
-        if (owner._indicatorThickness is { } thickness) control.SelectionIndicatorThickness = thickness;
-        if (owner._pinnedPlacement is { } pinnedPlacement) control.PinnedTabsPlacement = pinnedPlacement;
+        var placement = isDocument ? owner._indicatorPlacement : owner._toolIndicatorPlacement ?? owner._indicatorPlacement;
+        Say(control, TabControl.SelectionIndicatorPlacementProperty, placement);
+        Say(control, TabControl.SelectionIndicatorThicknessProperty, owner._indicatorThickness);
+        Say(control, TabControl.PinnedTabsPlacementProperty, owner._pinnedPlacement);
+        Say(control, TabControl.PaddingProperty, owner._panePadding);
+    }
+
+    // The area's word on a group, in a slot of its own above the theme and below what the group states itself, and taken
+    // back when the area has none: unset again, or a group turned from a tool into a document, wears the theme's look
+    // rather than the last word it was given.
+    private static void Say(PaneGroup control, AdamantiumProperty property, object value)
+    {
+        if (value is null)
+        {
+            control.ClearValue(property, ValuePriority.Binding);
+            return;
+        }
+
+        control.SetValue(property, value, ValuePriority.Binding);
     }
 
     /// <summary>How wide a pane docked to an EDGE starts out, in pixels along that edge's axis. A band, not half the

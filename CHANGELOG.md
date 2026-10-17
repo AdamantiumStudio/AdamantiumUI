@@ -7,6 +7,15 @@ All packages share one version.
 
 ### Added
 
+- `DockingArea.PanePadding`: the room between a panel's edge and what it shows, for every panel of the area, without
+  touching the theme - `PanePadding="0"` puts a scene or a tree right against the frame. Unset, the theme's stands
+  (Fluent's 12 came from the tab control's content padding).
+- `DockingArea.ToolSelectionIndicatorPlacement`: which side of a tool panel's tab strip the selection bar runs along,
+  over `SelectionIndicatorPlacement`; documents keep theirs. The tool templates of every theme follow the placement
+  for a docked panel's strip now - they drew the bar under the tabs whatever it said - and their style keeps it there by
+  default; a folded panel keeps its bar facing the body.
+- `TabItem.StripPlacement`: which side of its tab control the tab's strip runs along, set by the owner, for a theme to
+  round the right corners.
 - `PropertySection.DataType`: a section written for a type of object. With `SectionsSource` set, the grid points each
   such section at the first item of its type and leaves it out when there is none, so an inspector of an entity shows
   its components in the order its sections are written, whatever order the entity holds them in. The same section
@@ -1420,6 +1429,12 @@ All packages share one version.
 
 ### Fixed
 
+- In Fluent, a tab whose strip is not on top rounds its outer corners, not those against its panel: a tool's tabs,
+  under its body, were rounded on top and left a notch either side of where they join it.
+- A tool panel folded to the edge of a docking area takes the area's tab policy, as a docked one does.
+- What a docking area says of its panels' strips - the selection bar's side and thickness, the pinned row, now the
+  padding - sits beneath what a panel states itself, and is taken back when it is unset or no longer applies: a panel
+  kept the last value it was given, and one turned from a tool into a document kept the tools' bar.
 - The Rider plugin (1.11.2) runs the designer host from its copy of the project's build: run from where it was built,
   the host held its dll, and a build of the UI failed while a preview was open.
 - The designer preview scrolls: the wheel over it is raised on the element under the cursor as the platform raises it

@@ -115,6 +115,8 @@
 
     <Style Selector="PaneGroup[Kind=Tool]">
         <Setter Property="TabStripPlacement" Value="Bottom"/>
+        <!-- The bar under the tabs, as tools have always had it; DockingArea.ToolSelectionIndicatorPlacement moves it. -->
+        <Setter Property="SelectionIndicatorPlacement" Value="Outer"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="PaneGroup">
@@ -203,7 +205,7 @@
                                         Width="{ResourceReference StrokeThinValue}"
                                         Height="{TemplateBinding SelectionIndicatorThickness}"
                                         HorizontalAlignment="Left"
-                                        VerticalAlignment="Bottom"
+                                        VerticalAlignment="Top"
                                         IsHitTestVisible="False"/>
                             </Grid>
                         </TabStripScroller>
@@ -313,6 +315,11 @@
                              the thing being looked at. Dock a second panel in and the strip is back. -->
                         <PropertyTrigger Property="ShowTabStrip" Value="false">
                             <Setter TargetName="PART_TabStrip" Property="Visibility" Value="Collapsed"/>
+                        </PropertyTrigger>
+                        <!-- The bar runs beside the body by default - along the top of the strip below it; Outer moves it
+                             to the strip's far edge, under the tabs. -->
+                        <PropertyTrigger Property="SelectionIndicatorPlacement" Value="Outer">
+                            <Setter TargetName="PART_SelectionIndicator" Property="VerticalAlignment" Value="Bottom"/>
                         </PropertyTrigger>
                         <!-- Revealed: only the strip stays docked and the body moves to the flyout, so the docked
                              presenter is emptied. IsOpen is driven by PaneGroup.SyncFold. -->
