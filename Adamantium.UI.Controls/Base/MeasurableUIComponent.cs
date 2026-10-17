@@ -312,6 +312,187 @@ public class MeasurableUIComponent : ObservableUIComponent, IName, IMeasurableCo
     /// invalidation so the layout manager can re-measure the element with it. Null until the first measure.</summary>
     public Size? PreviousMeasureConstraint => _previousMeasure;
 
+    // The slot the parent will arrange this element into, told while measuring it; NaN when it has not said since this
+    // element came to it.
+    private double _slotTop = double.NaN;
+    private double _slotHeight = double.NaN;
+    private double _placedTop;
+    private bool _placedTopKnown;
+
+    private protected override void OnVisualParentReplaced()
+    {
+        _slotTop = double.NaN;
+        _slotHeight = double.NaN;
+        _placedTopKnown = false;
+    }
+
+    // PlacedTop, kept until the slot, the parent or this element's own measure or arrange changes it.
+    private double KnownPlacedTop()
+    {
+        if (!_placedTopKnown)
+        {
+            _placedTop = PlacedTop();
+            _placedTopKnown = true;
+        }
+
+        return _placedTop;
+    }
+
+    /// <summary>Whether what this element lays out depends on where it stands, as text on a baseline grid does.</summary>
+    protected internal virtual bool MeasuresByPlace => false;
+
+    /// <summary>Tells this element, before measuring it, the slot its parent will arrange it into - NaN for what the
+    /// parent does not know yet; an element under a baseline grid that moved off its grid's phase has what lays out by
+    /// its place measured again. A parent that tells one child tells each of them on every measure.</summary>
+    protected internal void PlaceAt(double slotTop, double slotHeight)
+    {
+        if (_slotTop.Equals(slotTop) && _slotHeight.Equals(slotHeight))
+        {
+            return;
+        }
+
+        _placedTopKnown = false;
+        var step = BaselineGridStep;
+        if (!(step > 0) || double.IsInfinity(step))
+        {
+            _slotTop = slotTop;
+            _slotHeight = slotHeight;
+            return;
+        }
+
+        var before = PlacedTop();
+        _slotTop = slotTop;
+        _slotHeight = slotHeight;
+        var apart = ((PlacedTop() - before) % step + step) % step;
+        if (double.IsNaN(apart) || Math.Min(apart, step - apart) > 0.01)
+        {
+            InvalidatePlaced(this);
+        }
+    }
+
+    // Where the told slot puts this element's top in its parent, as ArrangeCore does: NaN when it is not known.
+    private double PlacedTop()
+    {
+        if (double.IsNaN(_slotTop))
+        {
+            return double.NaN;
+        }
+
+        var margin = EffectiveMargin;
+        var top = _slotTop + margin.Top;
+        if (VerticalAlignment is VerticalAlignment.Center or VerticalAlignment.Bottom)
+        {
+            var room = Math.Max(0, _slotHeight - margin.Top - margin.Bottom);
+            var used = Math.Min(room, Math.Max(0, DesiredSize.Height - margin.Top - margin.Bottom));
+            top += VerticalAlignment == VerticalAlignment.Center ? (room - used) / 2 : room - used;
+        }
+
+        return UseLayoutRounding ? Math.Floor(top) : top;
+    }
+
+    /// <summary>Whether this element or one below it lays out by where it stands.</summary>
+    protected internal static bool LaysOutByPlace(IUIComponent element)
+    {
+        if (element is MeasurableUIComponent { MeasuresByPlace: true })
+        {
+            return true;
+        }
+
+        if (element is UIComponent component)
+        {
+            for (var i = 0; i < component.VisualChildCount; i++)
+            {
+                if (component.VisualChildAt(i) is { } child && LaysOutByPlace(child))
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    protected override bool OnValueSet(AdamantiumProperty property, object oldEffectiveValue, object newValue,
+        ValuePriority priority)
+    {
+        // A grid set or cleared here starts where the grid of what lays out by its place below is found again, even when
+        // the step it reads is the same.
+        if (property == BaselineGridStepProperty && priority < ValuePriority.Inherited)
+        {
+            InvalidatePlaced(this);
+        }
+
+        return base.OnValueSet(property, oldEffectiveValue, newValue, priority);
+    }
+
+    private static bool InvalidatePlaced(IUIComponent element)
+    {
+        var placed = element is MeasurableUIComponent { MeasuresByPlace: true };
+        if (element is UIComponent component)
+        {
+            for (var i = 0; i < component.VisualChildCount; i++)
+            {
+                if (component.VisualChildAt(i) is { } child)
+                {
+                    placed |= InvalidatePlaced(child);
+                }
+            }
+        }
+
+        if (placed && element is MeasurableUIComponent measurable)
+        {
+            measurable.InvalidateMeasure();
+        }
+
+        return placed;
+    }
+
+    /// <summary>Where this element's top stands below the top of the element <see cref="UIComponent.BaselineGridStep"/>
+    /// is set on, the start of its baseline grid: NaN with no grid. A scrolled offset is left out, so the grid scrolls
+    /// with the content. <paramref name="origin"/> is that element: found when null, else walked up to.</summary>
+    protected double TopOnBaselineGrid(ref IUIComponent origin)
+    {
+        var step = BaselineGridStep;
+        if (!(step > 0) || double.IsInfinity(step))
+        {
+            origin = null;
+            return double.NaN;
+        }
+
+        double top = 0;
+        IUIComponent element = this;
+        var known = origin;
+        while (!ReferenceEquals(element, known) && element.VisualParent is { } parent
+               && (known != null || (element is AdamantiumComponent component
+                                     && component.GetValueSource(BaselineGridStepProperty) >= ValuePriority.Inherited)))
+        {
+            if (element is MeasurableUIComponent measurable && measurable.KnownPlacedTop() is var placed
+                                                            && !double.IsNaN(placed))
+            {
+                top += placed;
+            }
+            else
+            {
+                top += element.Bounds.Y;
+                if (parent is ScrollContentPresenter presenter)
+                {
+                    top += presenter.RealizedOffset.Y;
+                }
+            }
+
+            element = parent;
+        }
+
+        if (known != null && !ReferenceEquals(element, known))
+        {
+            origin = null;
+            return TopOnBaselineGrid(ref origin);
+        }
+
+        origin = element;
+        return top;
+    }
+
     // Test/diagnostics hook: process-wide count of Measure()/Arrange() invocations across all instances. A perf test
     // asserts a clean frame (nothing invalidated) triggers zero of these - i.e. the dirty-queue layout manager touches
     // nothing when nothing is dirty (vs. the old full-tree walk, which called Measure/Arrange on every node each frame).
@@ -377,6 +558,7 @@ public class MeasurableUIComponent : ObservableUIComponent, IName, IMeasurableCo
         if (force || !IsMeasureValid || _previousMeasure != availableSize)
         {
             TotalMeasureCores++;
+            _placedTopKnown = false;
             IsMeasureValid = true;
             IsArrangeValid = false;
             InvalidateGeometryFromLayout();
@@ -568,6 +750,7 @@ public class MeasurableUIComponent : ObservableUIComponent, IName, IMeasurableCo
     /// </remarks>
     protected void ArrangeCore(Rect finalRect)
     {
+        _placedTopKnown = false;
         if (Visibility is Visibility.Visible or Visibility.Hidden)
         {
             var margin = EffectiveMargin;

@@ -1,5 +1,6 @@
 using System;
 using Adamantium.Mathematics;
+using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Input;
 
@@ -49,7 +50,7 @@ public class StackPanel : VirtualizingPanel
       if (exceptions == null) return 0;
 
       double extra = 0;
-      for (var i = 0; i < exceptions.Count && exceptions[i].Index < slot; i++) extra += exceptions[i].Extra;
+      for (var i = 0; i < exceptions.Count && exceptions[i].Index < slot; i++) extra += OnGrid(exceptions[i].Extra);
       return extra;
    }
 
@@ -60,12 +61,17 @@ public class StackPanel : VirtualizingPanel
 
       for (var i = 0; i < exceptions.Count; i++)
       {
-         if (exceptions[i].Index == index) return exceptions[i].Extra;
+         if (exceptions[i].Index == index) return OnGrid(exceptions[i].Extra);
          if (exceptions[i].Index > index) break;
       }
 
       return 0;
    }
+
+   // The step of the baseline grid rows that lay out by their place stand on, or 0: every row then keeps the same phase.
+   private double _gridPitch;
+
+   private double OnGrid(double extent) => _gridPitch > 0 ? Math.Ceiling(extent / _gridPitch - 1e-6) * _gridPitch : extent;
 
    private double StartOf(int slot) => slot * Pitch + ExtraBefore(slot);
 
@@ -87,8 +93,8 @@ public class StackPanel : VirtualizingPanel
          var start = exceptions[i].Index * pitch + extra;
          if (along < start) break;   // the answer is in the uniform stretch before this exception
 
-         extra += exceptions[i].Extra;
-         if (along < start + pitch + exceptions[i].Extra) return exceptions[i].Index;
+         extra += OnGrid(exceptions[i].Extra);
+         if (along < start + pitch + OnGrid(exceptions[i].Extra)) return exceptions[i].Index;
       }
 
       return (int)Math.Floor((along - extra) / pitch);
@@ -172,6 +178,18 @@ public class StackPanel : VirtualizingPanel
 
       foreach (var child in Children)
       {
+         if (child is MeasurableUIComponent { Visibility: not Visibility.Collapsed } placedChild)
+         {
+            if (Orientation == Orientation.Vertical)
+            {
+               placedChild.PlaceAt(measuredHeight + gap * stacked, placedChild.DesiredSize.Height);
+            }
+            else
+            {
+               placedChild.PlaceAt(0, double.NaN);
+            }
+         }
+
          child.Measure(new Size(childAvailableWidth, childAvailableHeight));
          if (child.Visibility == Visibility.Collapsed) continue;
          Size size = child.DesiredSize;
@@ -269,6 +287,12 @@ public class StackPanel : VirtualizingPanel
          for (var i = 0; i < count; i++)
          {
             var container = (IMeasurableComponent)RealizeInWindow(i);
+            if (container is MeasurableUIComponent placedRow)
+            {
+               placedRow.PlaceAt(vertical ? runningMain + (i > 0 ? Math.Max(0, Spacing) : 0) : 0,
+                  vertical ? placedRow.DesiredSize.Height : double.NaN);
+            }
+
             container.Measure(childConstraint);
             if (i > 0) runningMain += Math.Max(0, Spacing);   // between rows only
             _itemStarts.Add(runningMain);
@@ -283,8 +307,23 @@ public class StackPanel : VirtualizingPanel
       var probeIndex = Math.Clamp(_lastFirst, 0, count - 1);
       while (ExtraAt(probeIndex) != 0 && probeIndex + 1 < count) probeIndex++;
       var probe = (IMeasurableComponent)RealizeInWindow(probeIndex);
+      if (vertical && probe is MeasurableUIComponent placedProbe)
+      {
+         var probeSlot = SlotOf(probeIndex);
+         placedProbe.PlaceAt(StartOf(probeSlot), ExtentAt(probeSlot));
+      }
+
       probe.Measure(childConstraint);
       var probeExtent = vertical ? probe.DesiredSize.Height : probe.DesiredSize.Width;
+      // Rows laid out on a baseline grid each stand at the same phase of it, so each lays out as the probe did.
+      var gridStep = BaselineGridStep;
+      _gridPitch = vertical && gridStep > 0 && !double.IsInfinity(gridStep) && LaysOutByPlace(probe) ? gridStep : 0;
+      if (probeExtent > 0 && _gridPitch > 0)
+      {
+         var gap = Math.Max(0, Spacing);
+         probeExtent = OnGrid(probeExtent + gap) - gap;
+      }
+
       if (probeExtent > 0 && ExtraAt(probeIndex) == 0) _itemExtent = probeExtent;
 
       // An infinite viewport is the ScrollViewer's extent probe: realize a window sized to the last real viewport (or a
@@ -314,6 +353,12 @@ public class StackPanel : VirtualizingPanel
       for (var i = first; i <= last; i++)
       {
          var container = (IMeasurableComponent)RealizeInWindow(i);
+         if (container is MeasurableUIComponent row)
+         {
+            var slot = SlotOf(i);
+            row.PlaceAt(vertical ? StartOf(slot) : 0, vertical ? ExtentAt(slot) : double.NaN);
+         }
+
          container.Measure(childConstraint);
          crossMax = Math.Max(crossMax, vertical ? container.DesiredSize.Width : container.DesiredSize.Height);
       }

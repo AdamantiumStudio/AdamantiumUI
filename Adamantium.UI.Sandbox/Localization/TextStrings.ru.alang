@@ -52,6 +52,7 @@
     <Phrase Key="KerningMetrics" Text="Пары шрифта"/>
     <Phrase Key="KerningOptical" Text="Оптический"/>
     <Phrase Key="KerningNone" Text="Без кернинга"/>
+    <Phrase Key="BaselineGridTitle" Text="Сетка базовых линий:"/>
     <Phrase Key="FeaturesTitle" Text="Свойства OpenType шрифта Source Sans 3, меняющие глифы: тег и значения, имя от самого шрифта, символы с включённым свойством:"/>
     <Phrase Key="AlternatesTitle" Text="Альтернативы символа, каждая нарисована тем свойством и значением, что её дают:"/>
     <Phrase Key="AlternateCharacter" Text="Символ"/>

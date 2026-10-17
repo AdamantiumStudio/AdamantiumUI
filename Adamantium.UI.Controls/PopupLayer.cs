@@ -224,6 +224,7 @@ public class PopupLayer
         if (arrangeDirty) InvalidateArrangeSubtree(child);
         child.Arrange(rect, force: arrangeDirty);
         lock (_sync) _lastRect[child] = rect;
+        LayoutManager.For(child).OverlayArranged();
     }
 
     private static bool NeedsArrange(IUIComponent node)

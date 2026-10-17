@@ -564,6 +564,38 @@
             </Border>
         </WrapPanel>
 
+        <!-- A baseline grid set on the frame: the heading and both columns, each of its own size, keep one rhythm. -->
+        <TextBlock Text="{Localize TextStrings.BaselineGridTitle}"
+                   Margin="0,8,0,8"/>
+        <Border Width="660"
+                HorizontalAlignment="Left"
+                Padding="6"
+                Margin="0,0,16,16"
+                BorderThickness="1"
+                BorderBrush="{ResourceReference ControlStrokeColorDefault}"
+                BaselineGridStep="24">
+            <StackPanel Orientation="Vertical">
+                <TextBlock AutomationProperties.AutomationId="GridHeading"
+                           Text="{Localize TextStrings.BaselineGridTitle}"
+                           FontSize="30"/>
+                <Grid ColumnDefinitions="*,*">
+                    <TextBlock AutomationProperties.AutomationId="GridLeftColumn"
+                               Text="{Binding ProseSample}"
+                               Language="en-US"
+                               TextWrapping="WrapByWords"
+                               FontSize="16"
+                               Margin="0,5,10,0"/>
+                    <TextBlock AutomationProperties.AutomationId="GridRightColumn"
+                               Grid.Column="1"
+                               Text="{Binding ProseSample}"
+                               Language="en-US"
+                               TextWrapping="WrapByWords"
+                               FontSize="13"
+                               Margin="10,0,0,0"/>
+                </Grid>
+            </StackPanel>
+        </Border>
+
         <!-- Tab stops: page numbers right-aligned behind dot leaders, prices lined up on the decimal point. -->
         <TextBlock Text="{Localize TextStrings.TabsTitle}"
                    Margin="0,8,0,8"/>

@@ -174,6 +174,13 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
     private SpacingRange _lastLetterSpacing;
     private double _lastTracking;
     private TextKerning _lastKerning;
+    private BaselineGrid _lastBaselineGrid;
+    private double _gridPhase = double.NaN;
+    private LayoutManager _gridManager;
+    private IUIComponent _gridOrigin;
+    private double _gridTop = double.NaN;
+    private double _gridHeight = double.NaN;
+    private bool _gridHeld;
     private SpacingRange _lastGlyphScaling;
     private bool _lastJustificationAlternates;
     private HorizontalTextAlignment _lastLastLineAlignment;
@@ -274,6 +281,8 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         _textLayout.LetterSpacing = LetterSpacing;
         _textLayout.Tracking = Tracking;
         _textLayout.Kerning = Kerning;
+        var baselineGrid = BaselineGridOf();
+        _textLayout.BaselineGrid = baselineGrid;
         _textLayout.GlyphScaling = GlyphScaling;
         _textLayout.JustificationAlternates = JustificationAlternates;
         _textLayout.LastLineAlignment = LastLineAlignment;
@@ -312,6 +321,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
             && _lastColumns == Columns && _lastColumnGap.Equals(ColumnGap) && Equals(_lastExclusions, Exclusions)
             && _lastWritingMode == WritingMode && _lastWordSpacing.Equals(WordSpacing)
             && _lastLetterSpacing.Equals(LetterSpacing) && _lastTracking.Equals(Tracking) && _lastKerning == Kerning
+            && Equals(_lastBaselineGrid, baselineGrid)
             && _lastGlyphScaling.Equals(GlyphScaling) && _lastJustificationAlternates == JustificationAlternates
             && _lastLastLineAlignment == LastLineAlignment && _lastSingleWord == SingleWordJustification
             && _lastKashidas == Kashidas && _lastLineHeight.Equals(LineHeight)
@@ -406,6 +416,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         _lastLetterSpacing = LetterSpacing;
         _lastTracking = Tracking;
         _lastKerning = Kerning;
+        _lastBaselineGrid = baselineGrid;
         _lastGlyphScaling = GlyphScaling;
         _lastJustificationAlternates = JustificationAlternates;
         _lastLastLineAlignment = LastLineAlignment;
@@ -1171,6 +1182,9 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
     {
         _lastConstraint = availableSize;   // a wrapping block reflows to this (its container's width) when it has no explicit Width
         MeasureHosted();
+        _gridOrigin = null;
+        _gridPhase = GridPhaseAt(TopOnBaselineGrid(ref _gridOrigin));
+        FollowTheGrid(IsAttachedToVisualTree);
         var size = EnsureLayout();
         // The layout is what gets drawn. A measure whose size came out the same has no arrange after it, so a block that
         // already has a slot goes back to the slot's width - else right-aligned text stood at the width it was MEASURED
@@ -1202,6 +1216,108 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         {
             InvalidateArrange();
         }
+    }
+
+    protected internal override bool MeasuresByPlace => BaselineGridStep > 0 && !double.IsInfinity(BaselineGridStep);
+
+    private BaselineGrid BaselineGridOf()
+    {
+        var step = BaselineGridStep;
+        if (!(step > 0) || double.IsInfinity(step) || double.IsNaN(_gridPhase))
+        {
+            return null;
+        }
+
+        return _lastBaselineGrid is { } last && last.Step.Equals(step) && last.Offset.Equals(_gridPhase)
+                                              && last.FirstLineOnly == BaselineGridFirstLineOnly
+            ? last
+            : new BaselineGrid(step, _gridPhase, BaselineGridFirstLineOnly);
+    }
+
+    private void FollowTheGrid(bool attached)
+    {
+        var follows = attached && BaselineGridStep > 0 && !double.IsInfinity(BaselineGridStep);
+        if (follows && _gridManager == null)
+        {
+            _gridManager = LayoutManager.For(this);
+            _gridManager.PlacesSettled += OnGridSettled;
+        }
+        else if (!follows && _gridManager != null)
+        {
+            _gridManager.PlacesSettled -= OnGridSettled;
+            _gridManager = null;
+            _gridOrigin = null;
+        }
+    }
+
+    // Laid out where it no longer stands (a place no parent told it while measuring): measured again there - unless it
+    // moved by its own new height, as a block centered or at the bottom does, which can never settle on the grid.
+    private void OnGridSettled(object sender, EventArgs e)
+    {
+        if (double.IsNaN(_gridPhase))
+        {
+            return;
+        }
+
+        var top = TopOnBaselineGrid(ref _gridOrigin);
+        var height = RenderSize.Height;
+        var moved = top - _gridTop;
+        var grown = height - _gridHeight;
+        _gridTop = top;
+        _gridHeight = height;
+        var phase = GridPhaseAt(top);
+        if (double.IsNaN(phase) || SamePhase(phase, _gridPhase))
+        {
+            _gridHeld = false;
+            return;
+        }
+
+        var followsItsHeight = Math.Abs(grown) > 0.01
+                               && (Math.Abs(moved + grown) < 0.5 || Math.Abs(moved + grown / 2) < 0.5)
+                               && PlacedByItsHeight();
+        if (followsItsHeight || (_gridHeld && Math.Abs(moved) < 0.01))
+        {
+            _gridHeld = true;
+            return;
+        }
+
+        _gridHeld = false;
+        InvalidateMeasure();
+    }
+
+    // Centered or at the bottom of a slot taller than it, itself or an element up to the grid's start: its height moves it.
+    private bool PlacedByItsHeight()
+    {
+        for (IUIComponent element = this; element != null && !ReferenceEquals(element, _gridOrigin);
+             element = element.VisualParent)
+        {
+            if (element is MeasurableUIComponent
+                {
+                    VerticalAlignment: VerticalAlignment.Center or VerticalAlignment.Bottom,
+                    PreviousArrangeSlot: { } slot,
+                } measurable
+                && slot.Height - measurable.EffectiveMargin.Top - measurable.EffectiveMargin.Bottom
+                > measurable.Bounds.Height + 0.5)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private double GridPhaseAt(double top)
+    {
+        var step = BaselineGridStep;
+        var phase = (BaselineGridOffset - top) % step;
+        return phase < 0 ? phase + step : phase;
+    }
+
+    private bool SamePhase(double a, double b)
+    {
+        var step = BaselineGridStep;
+        var apart = ((a - b) % step + step) % step;
+        return !double.IsNaN(apart) && Math.Min(apart, step - apart) <= 0.01;
     }
 
     private void MeasureHosted()
@@ -2306,6 +2422,8 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         {
             ListenToTheWindow();
         }
+
+        FollowTheGrid(attached: true);
     }
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
@@ -2316,6 +2434,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         ClearSelection();
         _selectionHoldsFocus = false;
         GiveUpSelectionFocus();
+        FollowTheGrid(attached: false);
     }
 
     protected override void OnLostFocus(RoutedEventArgs e)

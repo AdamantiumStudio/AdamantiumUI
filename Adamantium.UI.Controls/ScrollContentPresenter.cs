@@ -429,6 +429,8 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
 
     protected override Size MeasureOverride(Size availableSize)
     {
+        // The content stands at its own top, wherever it is scrolled to.
+        (VisualChildren.FirstOrDefault() as Base.MeasurableUIComponent)?.PlaceAt(0, double.NaN);
         if (CanContentScroll)
         {
             // Measure the content at the VIEWPORT (not unbounded) so an inner virtualizing panel realizes only what's
