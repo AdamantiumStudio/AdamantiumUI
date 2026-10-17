@@ -24,6 +24,8 @@
         <CharacterStyle x:Key="QuietLinkStyle"
                         Foreground="#D9534F"
                         TextDecorations="None"/>
+        <CharacterStyle x:Key="LightStyle"
+                        FontWeight="Light"/>
         <ParagraphStyle x:Key="StruckStyle"
                         BasedOn="{ResourceReference BodyStyle}"
                         TextDecorations="Strikethrough"/>
@@ -623,7 +625,7 @@
         </Border>
 
         <!-- Paragraph and character styles: a heading and body paragraphs, a run in the emphasis style, a run that sets
-             its own color over it, and links against the styles around them and on them. -->
+             its own color over it, links against the styles around them and on them, and bolds likewise. -->
         <TextBlock Text="{Localize TextStrings.StylesTitle}"
                    Margin="0,8,0,8"/>
         <Border Width="420"
@@ -640,6 +642,7 @@
                 <Paragraph ParagraphStyle="{ResourceReference BodyStyle}" TextIndent="20">A paragraph of the same style that indents its own first line.</Paragraph>
                 <Paragraph ParagraphStyle="{ResourceReference BodyStyle}"><Hyperlink NavigateUri="https://github.com/AdamantiumStudio">A link</Hyperlink> keeps its look, <Span CharacterStyle="{ResourceReference AsideStyle}">as it does in an aside: <Hyperlink NavigateUri="https://github.com/AdamantiumStudio">this link</Hyperlink></Span>; <Hyperlink CharacterStyle="{ResourceReference QuietLinkStyle}" NavigateUri="https://github.com/AdamantiumStudio">one in its own style</Hyperlink> takes the style.</Paragraph>
                 <Paragraph ParagraphStyle="{ResourceReference StruckStyle}">A struck paragraph adds its line to <Hyperlink NavigateUri="https://github.com/AdamantiumStudio">a link's underline</Hyperlink>.</Paragraph>
+                <Paragraph ParagraphStyle="{ResourceReference BodyStyle}"><Bold>A bold</Bold>, <Bold CharacterStyle="{ResourceReference LightStyle}">one in a light style</Bold>, <Bold>one with <Run CharacterStyle="{ResourceReference LightStyle}" Text="a light run"/> inside</Bold>, and <Span CharacterStyle="{ResourceReference LightStyle}">a light aside with <Bold>a bold</Bold> in it</Span>.</Paragraph>
             </TextBlock>
         </Border>
 

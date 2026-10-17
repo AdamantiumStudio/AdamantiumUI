@@ -19,7 +19,7 @@ All packages share one version.
   set on (styles hold their users weakly). Laid out by the engine's styles. A `{ResourceReference}` on an inline or on
   its styles is answered from its block's place in the tree, and again when its theme scope switches (it was answered
   for no inline before). The Text tab's
-  Paragraph topic shows a heading, body paragraphs, an emphasis and links against the styles around them and on them.
+  Paragraph topic shows a heading, body paragraphs, an emphasis, and links and bolds against the styles around them and on them.
 
 - `Ruby`, a `Span` with an annotation, as HTML's `<ruby>`: `<Ruby Annotation="かんじ">漢字</Ruby>` sets furigana
   centered over its inlines at half their size (`AnnotationFontSize` sets its own), spreads inlines narrower than the
