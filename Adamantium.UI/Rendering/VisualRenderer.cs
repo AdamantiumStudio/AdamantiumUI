@@ -307,11 +307,14 @@ public sealed class VisualRenderer : IVisualRenderer
         return (cache, width, height, scale);
     }
 
+    // In paint order, as the window draws it: a child raised or lowered by ZIndex is so in a snapshot too.
     private static void FlattenSubtree(IUIComponent component, List<IUIComponent> list)
     {
         if (component.Visibility != Visibility.Visible) return;
         list.Add(component);
-        foreach (var child in component.VisualChildren) FlattenSubtree(child, list);
+        var children = new List<IUIComponent>();
+        RenderCache.ChildrenInPaintOrder(component, children);
+        foreach (var child in children) FlattenSubtree(child, list);
     }
 
     // Draws a built cache off-screen and reads it back to a CPU bitmap, tagged with the recording density so its logical

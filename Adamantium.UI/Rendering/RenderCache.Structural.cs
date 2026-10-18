@@ -515,7 +515,7 @@ public partial class RenderCache
     }
 
     // A component's children in PAINT order (drawn first = underneath) - the same precedence the full walk's stack uses.
-    private static void ChildrenInPaintOrder(IUIComponent parent, List<IUIComponent> into)
+    internal static void ChildrenInPaintOrder(IUIComponent parent, List<IUIComponent> into)
     {
         into.Clear();
         foreach (var child in parent.VisualChildren) into.Add(child);
