@@ -24,6 +24,11 @@ All packages share one version.
 
 ### Added
 
+- The clipboard carries several formats of one thing at once: `Clipboard.SetData` puts an `IDataPackage` on it -
+  `DataFormats.Text`, `Html` (the fragment; the Windows header is written and read for you) and `Rtf` as strings,
+  formats of one's own as `byte[]` under their name - and `Contains` / `GetData` read one back. `IClipboard` has these
+  as new members, so a clipboard of one's own implements them too. The Windows clipboard tries to open again for a
+  moment when another application holds it, as one does right after every copy.
 - `xml:space="preserve"` in markup, as in WPF: on an element, or one around it, the white space of its text is kept as
   written - in a property element, in content and among inlines; `xml:space="default"` inside undoes it.
 - `FocusManager.ReturnsFocus`: a focus scope whose commands give the focus back - after a button, a drop-down, a
