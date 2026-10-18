@@ -299,6 +299,19 @@ public static partial class DragDrop
 
     private static void RunDragCompleted(DragDropEventArgs args)
     {
+        if (_source is IObservableComponent source)
+        {
+            args.RoutedEvent = DragDropEvents.DragCompletedEvent;
+            source.RaiseEvent(args);
+            var handled = args.Handled;
+            // The same args go on to the target's drop.
+            args.Handled = false;
+            if (handled)
+            {
+                return;
+            }
+        }
+
         var completed = GetDragCompletedCommand((AdamantiumComponent)_source);
         if (completed != null && completed.CanExecute(args)) completed.Execute(args);
     }

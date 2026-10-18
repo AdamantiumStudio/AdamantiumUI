@@ -102,6 +102,30 @@ public class ProgrammaticDragTests
         Assert.That(outcome, Is.EqualTo(DragDropEffects.None));
     }
 
+    // A control dragging its own content hears the outcome as an event on itself; handling it answers for the source,
+    // and the command is left alone.
+    [Test]
+    public void TheSourceHearsDragCompleted_AndHandlingItKeepsTheCommandFromRunning()
+    {
+        DragDropEffects? heard = null;
+        var commandRuns = 0;
+        _source.AddHandler(DragDropEvents.DragCompletedEvent, new DragDropEventHandler((_, e) =>
+        {
+            heard = e.Effects;
+            e.Handled = true;
+        }));
+        DragDrop.SetDragCompletedCommand(_source, new TestCommand(_ => commandRuns++));
+
+        DragDrop.DoDragDrop(_source, "Item 42");
+        ReleaseButton();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(heard, Is.EqualTo(DragDropEffects.None));
+            Assert.That(commandRuns, Is.Zero);
+        });
+    }
+
     [Test]
     public void DoDragDrop_RefusesAnEmptyEffectMask()
     {
