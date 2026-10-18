@@ -73,6 +73,10 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         typeof(int), typeof(TextBlock),
         new PropertyMetadata(0, PropertyMetadataOptions.AffectsMeasure));
 
+    public static readonly AdamantiumProperty TextLineBoundsProperty = AdamantiumProperty.Register(nameof(TextLineBounds),
+        typeof(TextLineBounds), typeof(TextBlock),
+        new PropertyMetadata(TextLineBounds.Full, PropertyMetadataOptions.AffectsMeasure));
+
     public static readonly AdamantiumProperty IsOversetProperty = AdamantiumProperty.RegisterReadOnly(nameof(IsOverset),
         typeof(bool), typeof(TextBlock), new PropertyMetadata(false));
 
@@ -194,6 +198,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
     private LineStackingStrategy _lastLineStacking;
     private double _lastLineSpacing;
     private int _lastMaxLines;
+    private TextLineBounds _lastLineBounds;
     private const float Unbounded = 1e7f;
     private const int MostColumnGrowth = 200;
     private const char LineSeparator = (char)0x2028;
@@ -299,6 +304,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         _textLayout.LineStacking = LineStackingStrategy;
         _textLayout.LineSpacing = LineSpacing;
         _textLayout.MaxLines = MaxLines;
+        _textLayout.LineBounds = TextLineBounds;
 
         // Boundary: an explicit Width, else the available width for wrapping or trimming blocks; plain NoWrap labels stay
         // unbounded. NaN means unbounded. Vertical lines run down, so there the height bounds them.
@@ -334,7 +340,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
             && _lastLastLineAlignment == LastLineAlignment && _lastSingleWord == SingleWordJustification
             && _lastKashidas == Kashidas && _lastLineHeight.Equals(LineHeight)
             && _lastLineStacking == LineStackingStrategy && _lastLineSpacing.Equals(LineSpacing)
-            && _lastMaxLines == MaxLines
+            && _lastMaxLines == MaxLines && _lastLineBounds == TextLineBounds
             && ShapesLike(_lastShaping, shaping))
         {
             return _cachedSize;
@@ -444,6 +450,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         _lastLineStacking = LineStackingStrategy;
         _lastLineSpacing = LineSpacing;
         _lastMaxLines = MaxLines;
+        _lastLineBounds = TextLineBounds;
         return _cachedSize;
 
         Size Lay() => attributed == null
@@ -590,6 +597,17 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
     {
         get => GetValue<int>(MaxLinesProperty);
         set => SetValue(MaxLinesProperty, value);
+    }
+
+    /// <summary>Where the block's box starts above its first line and ends below its last, as WinUI's:
+    /// <see cref="Adamantium.Graphics.Fonts.TextLineBounds.Full"/> (the default) takes whole lines;
+    /// <c>Tight</c> takes from the top of the capitals to the baseline, so a label centered by its layout has its
+    /// capitals in the middle. Horizontal text in one column: text in <see cref="Columns"/> or around
+    /// <see cref="Exclusions"/> keeps whole lines.</summary>
+    public TextLineBounds TextLineBounds
+    {
+        get => GetValue<TextLineBounds>(TextLineBoundsProperty);
+        set => SetValue(TextLineBoundsProperty, value);
     }
 
     /// <summary>Whether the text did not all fit into the block's <see cref="Columns"/> or <see cref="MaxLines"/>, so

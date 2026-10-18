@@ -14,12 +14,13 @@
                             MinWidth="20"
                             MinHeight="20"
                             Padding="4 0 4 0">
-                        <!-- VerticalTextAlignment defaults to Bottom. -->
+                        <!-- Tight: the block is the letter's capitals, so centering the block puts them in the middle
+                             of the plate. -->
                         <TextBlock Text="{TemplateBinding Keys}"
                                    FontSize="{ResourceReference FontSizeCaption}"
                                    Foreground="{ObservableResource KeyTipForeground}"
                                    HorizontalTextAlignment="Center"
-                                   VerticalTextAlignment="Center"
+                                   TextLineBounds="Tight"
                                    HorizontalAlignment="Center"
                                    VerticalAlignment="Center"/>
                     </Border>
