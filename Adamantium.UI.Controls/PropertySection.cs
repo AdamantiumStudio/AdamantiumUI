@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Collections.Specialized;
 using Adamantium.UI.Core;
 
@@ -30,8 +31,13 @@ public class PropertySection : Expander
     /// else (a component of the selection).</summary>
     public object Target { get; set; }
 
+    /// <summary>Every object of the source this section is written for, when the grid points it at the items of
+    /// <see cref="DataType"/>: all of them, edited together - the components of several selected entities - with
+    /// <see cref="Target"/> the first.</summary>
+    public IReadOnlyList<object> Targets { get; internal set; }
+
     /// <summary>The type of object this section is written for. With <see cref="PropertyGrid.SectionsSource"/> set, the
-    /// grid points the section at the first item of that type, or leaves it out when there is none - so the sections
+    /// grid points the section at the items of that type, or leaves it out when there is none - so the sections
     /// keep the order they are written in, whatever order the items come in, and the same section, folded or not,
     /// serves every object of its type.</summary>
     public Type DataType { get; set; }

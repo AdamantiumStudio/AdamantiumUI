@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using Adamantium.UI.Controls;
 using Adamantium.UI.Controls.Decorators;
+using Adamantium.UI.Core;
 using Adamantium.UI.Core.Data;
 using Adamantium.UI.Core.Templates;
 using NUnit.Framework;
@@ -226,6 +227,65 @@ public class TreeViewRevealTests
     {
         public string Name { get; } = name;
         public Looping Parent { get; set; }
+    }
+
+    private sealed class Moving(string name)
+    {
+        public string Name { get; } = name;
+        public Moving Parent { get; set; }
+        public ObservableCollection<Moving> Children { get; } = [];
+        public override string ToString() => Name;
+    }
+
+    private static TreeView MovingTree(ObservableCollection<Moving> roots) => new()
+    {
+        ItemTemplate = new HierarchicalDataTemplate(() => new TemplateResult { RootComponent = new Border() })
+        {
+            ItemsSource = new Binding(nameof(Moving.Children))
+        },
+        ParentPath = nameof(Moving.Parent),
+        ItemsSource = roots
+    };
+
+    // A camera hung on a part of a closed model goes with its row: the tree opens the way to where it went.
+    [Test]
+    public void AChosenNodeMovedIntoAClosedBranch_IsFollowedThere()
+    {
+        var model = new Moving("model");
+        var wing = new Moving("wing") { Parent = model };
+        model.Children.Add(wing);
+        var camera = new Moving("camera");
+        var roots = new ObservableCollection<Moving> { model, camera };
+        var tree = MovingTree(roots);
+        tree.SelectedItem = camera;
+
+        roots.Remove(camera);
+        camera.Parent = wing;
+        wing.Children.Add(camera);
+        LoopSignal.Drain();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(tree.SelectedItem, Is.SameAs(camera));
+            Assert.That(tree.Items, Has.Count.EqualTo(3), "model and wing opened to it");
+            Assert.That(((TreeRow)tree.Items[2]).Node, Is.SameAs(camera));
+            Assert.That(((TreeRow)tree.Items[2]).IsSelected, Is.True);
+        });
+    }
+
+    [Test]
+    public void ABranchClosedOverTheChosenNode_StaysClosed()
+    {
+        var model = new Moving("model");
+        var wing = new Moving("wing") { Parent = model };
+        model.Children.Add(wing);
+        var tree = MovingTree([model]);
+        tree.SelectedItem = wing;
+
+        tree.SetRowExpanded((TreeRow)tree.Items[0], false);
+        LoopSignal.Drain();
+
+        Assert.That(tree.Items, Has.Count.EqualTo(1));
     }
 
     // A node not under these roots at all opens nothing.

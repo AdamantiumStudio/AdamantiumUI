@@ -30,6 +30,8 @@
     ]]></description>
 
     <change-notes><![CDATA[
+        <p>Ctrl+click goes where a value points: from {Localize Table.Key} to the phrase in the table's base language
+        file, from the table to that file, and from the member of {x:Static Type.Member} to its declaration.</p>
         <p>A nullable property - DockingArea.ToolSelectionIndicatorPlacement, PinnedTabsPlacement, IsChecked - is
         completed with the values of the type it holds, and a value the run time would throw on is underlined.</p>
         <p>The wheel over the preview scrolls the previewed content - a list, a property grid - as it does in the running

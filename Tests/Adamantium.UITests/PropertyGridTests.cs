@@ -2026,6 +2026,31 @@ public class PropertyGridTests
         });
     }
 
+    // Several entities selected: one section for a kind of component takes all of theirs, and its rows edit them together.
+    [Test]
+    public void ASectionForAType_TakesEveryObjectOfIt_AndItsRowsEditThemAll()
+    {
+        var first = new Other { Name = "a" };
+        var second = new Other { Name = "b" };
+        var section = TypedSection(typeof(Other), "O");
+        var grid = Built(section);
+
+        grid.SectionsSource = new TrackingCollection<object> { first, second };
+        var sections = new List<PropertySection>(grid.Displayed);
+        var row = RowOf(grid, section.Properties[0]);
+        var mixed = row.IsMixed;
+        row.WriteValue("same");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(sections, Has.Count.EqualTo(1));
+            Assert.That(section.Targets, Is.EqualTo(new object[] { first, second }));
+            Assert.That(row.Targets, Is.EqualTo(new object[] { first, second }));
+            Assert.That(mixed, Is.True, "a and b disagree");
+            Assert.That(new[] { first.Name, second.Name }, Is.EqualTo(new[] { "same", "same" }), "one edit writes both");
+        });
+    }
+
     // A section with no object of its kind any more lets its rows go: they went on reading the last one.
     [Test]
     public void ASectionLeftWithoutItsObject_LetsItsRowsGo()

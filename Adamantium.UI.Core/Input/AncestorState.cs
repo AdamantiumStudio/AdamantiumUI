@@ -26,10 +26,11 @@ internal static class AncestorState
                 element.RaiseEvent(makeArgs(leaveEvent));
         }
 
-        foreach (var element in newChain)   // joined the chain (deepest first)
+        // Joined the chain, outermost first: the deepest speaks last, as the pointer's cursor is the one it shows.
+        for (var i = newChain.Count - 1; i >= 0; i--)
         {
-            if (!oldSet.Contains(element))
-                element.RaiseEvent(makeArgs(enterEvent));
+            if (!oldSet.Contains(newChain[i]))
+                newChain[i].RaiseEvent(makeArgs(enterEvent));
         }
     }
 

@@ -228,6 +228,27 @@ public class InputHitTestTests
         Assert.That(Mouse.Cursor, Is.EqualTo(Cursors.Hand), "the pointer is still over the first one");
     }
 
+    // A pointer coming over an element and its ancestors at once - from a side panel straight onto a view that fills
+    // its document - shows the element's cursor: the ancestors entered with it spoke last and put up their arrow.
+    [Test]
+    public void EnteringAnElementWithItsAncestors_ShowsTheElementsCursor()
+    {
+        var root = new Grid();
+        var side = new Border();
+        var document = new Border { Cursor = Cursors.Arrow };
+        var scene = new Border { Cursor = Cursors.Crosshair };
+        document.Child = scene;
+        root.Children.Add(side);
+        root.Children.Add(document);
+
+        AncestorState.Transition(null, side, PointerEvents.PointerEnteredEvent, PointerEvents.PointerExitedEvent,
+            evt => new PointerEventArgs(Mouse.Pointer, InputModifiers.None, 0) { RoutedEvent = evt });
+        AncestorState.Transition(side, scene, PointerEvents.PointerEnteredEvent, PointerEvents.PointerExitedEvent,
+            evt => new PointerEventArgs(Mouse.Pointer, InputModifiers.None, 0) { RoutedEvent = evt });
+
+        Assert.That(Mouse.Cursor, Is.EqualTo(Cursors.Crosshair));
+    }
+
     // An ancestor can be told the same pointer entered twice: a hovered subtree taken out of the tree cuts the chain the
     // next move compares against. One exit must still clear it, or hover stays lit after the pointer has gone.
     [Test]
