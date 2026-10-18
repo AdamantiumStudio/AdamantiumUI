@@ -23,6 +23,7 @@ public class Ribbon : Selector
     static Ribbon()
     {
         FocusManager.IsFocusScopeProperty.OverrideMetadata(typeof(Ribbon), new PropertyMetadata(true));
+        FocusManager.ReturnsFocusProperty.OverrideMetadata(typeof(Ribbon), new PropertyMetadata(true));
     }
 
     // Sizing is ATTACHED because the commands share no base (Button vs ToggleButton), and so any control put in a

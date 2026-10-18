@@ -15,6 +15,11 @@ All packages share one version.
 
 ### Added
 
+- `FocusManager.ReturnsFocus`: a focus scope whose commands give the focus back - after a button, a drop-down, a
+  segment or a gallery inside it has run its command, the focus goes back to the element that had it in the scope
+  around, unless the command put it somewhere of its own. A ribbon and its quick-access bar do, so after a click on
+  Bold the caret and the keys are in the field being edited again, as in Office. Its backstage, menus and drop-down
+  lists are scopes of their own, and a toggle with no command keeps the focus.
 - `DropDown.Command`: a choice runs it with the chosen item's value, as a font box sets the font of the text being
   edited. A routed command's answer is shown as the choice without running it - a value no item has shows in the
   header as it is, none (the selection is mixed) shows the placeholder - and the drop-down is disabled while the
