@@ -15,6 +15,11 @@ All packages share one version.
 
 ### Added
 
+- The clipboard carries several formats of one thing at once: `Clipboard.SetData` puts an `IDataPackage` on it -
+  `DataFormats.Text`, `Html` (the fragment; the Windows header is written and read for you) and `Rtf` as strings,
+  formats of one's own as `byte[]` under their name - and `Contains` / `GetData` read one back. `IClipboard` has these
+  as new members, so a clipboard of one's own implements them too. The Windows clipboard tries to open again for a
+  moment when another application holds it, as one does right after every copy.
 - `FocusManager.ReturnsFocus`: a focus scope whose commands give the focus back - after a button, a drop-down, a
   segment or a gallery inside it has run its command, the focus goes back to the element that had it in the scope
   around, unless the command put it somewhere of its own. A ribbon and its quick-access bar do, so after a click on
