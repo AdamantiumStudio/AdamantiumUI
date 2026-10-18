@@ -193,11 +193,7 @@ public class ParserContext
             }
             else
             {
-                var valueNode = ParseValueNode(node, mixed);
-                if (valueNode != null)
-                {
-                    objectNode.Children.Add(valueNode);
-                }
+                AddValue(objectNode.Children, ParseValueNode(node, mixed));
             }
         }
 
@@ -217,7 +213,7 @@ public class ParserContext
             return ParseAumlNode(xElement, false);
         if (node is XText xText)
         {
-            if (IsXmlSpace(xText.Value) && !parentIsMixed && !SpacesTwoElementsOnALine(xText))
+            if (IsXmlSpace(xText.Value) && !parentIsMixed && !SpacesTwoElements(xText))
             {
                 return null;
             }
@@ -254,10 +250,27 @@ public class ParserContext
         return hasElement && hasText;
     }
 
-    private static bool SpacesTwoElementsOnALine(XText text) =>
-        text.PreviousNode is XElement && text.NextNode is XElement && text.Value.IndexOfAny(LineBreaks) < 0;
+    // White space between two elements, on a line or across lines: among inlines it is a space, as in WPF; the
+    // transformer drops it everywhere else. Comments and property elements between them are passed over, and the gap
+    // keeps one space only.
+    private static bool SpacesTwoElements(XText text)
+    {
+        var before = text.PreviousNode;
+        while (before is XComment || IsPropertyElement(before))
+        {
+            before = before.PreviousNode;
+        }
 
-    private static readonly char[] LineBreaks = ['\r', '\n'];
+        var after = text.NextNode;
+        while (after is XComment || IsPropertyElement(after) || (after is XText { Value: var value } && IsXmlSpace(value)))
+        {
+            after = after.NextNode;
+        }
+
+        return before is XElement && after is XElement;
+    }
+
+    private static bool IsPropertyElement(XNode node) => node is XElement element && element.Name.LocalName.IndexOf('.') >= 0;
 
     private List<IAumlAstValueNode> ParseValueNodes(XElement element)
     {
@@ -265,12 +278,27 @@ public class ParserContext
         var mixed = IsMixedContent(element);
         for (var xNode = element.FirstNode; xNode != null; xNode = xNode.NextNode)
         {
-            var valueNode = ParseValueNode(xNode, mixed);
-            if (valueNode != null)
-                valueNodes.Add(valueNode);
+            AddValue(valueNodes, ParseValueNode(xNode, mixed));
         }
 
         return valueNodes;
+    }
+
+    // Texts a comment parted are one text.
+    private static void AddValue<T>(List<T> nodes, IAumlAstValueNode node) where T : class, IAumlAstNode
+    {
+        if (node == null)
+        {
+            return;
+        }
+
+        if (node is AumlAstTextNode text && nodes.Count > 0 && nodes[nodes.Count - 1] is AumlAstTextNode previous)
+        {
+            nodes[nodes.Count - 1] = new AumlAstTextNode(previous.GetLineInfo(), previous.Text + text.Text) as T;
+            return;
+        }
+
+        nodes.Add(node as T);
     }
 
     private string GetNamespaceForAttribute(XAttribute attr, XElement element)

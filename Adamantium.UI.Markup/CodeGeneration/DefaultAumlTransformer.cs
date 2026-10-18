@@ -883,11 +883,42 @@ public class DefaultAumlTransformer : IAumlTransformer
         IResolvedType ResolvedTypeOf(IAumlAstTypeReference reference) =>
             reference is { IsResolved: true } ? typeResolver.Resolve(reference.GetFullTypeName()) : null;
 
-        IResolvedType WrapperOf(IResolvedType collection) =>
+        IResolvedType WrapperOf(IResolvedType collection, string kind = "WrapperType") =>
             collection?.GetAttribute(ContentWrapperAttributeName)?.NamedArguments is { } arguments &&
-            arguments.TryGetValue("WrapperType", out var wrapper) && wrapper != null
+            arguments.TryGetValue(kind, out var wrapper) && wrapper != null
                 ? typeResolver.Resolve(wrapper.ToString())
                 : null;
+
+        IResolvedType ElementWrapperOf(IResolvedType collection) => WrapperOf(collection, "ElementWrapperType");
+
+        // An element among the items that is not one, as a control among inlines: in the element wrapper, through its
+        // content property, when it fits that.
+        T WrappedElement<T>(T node, IResolvedType elementWrapper) where T : class, IAumlAstNode
+        {
+            if (elementWrapper == null || node is not AumlAstObjectNode { TypeReference: { } reference } element
+                || !elementWrapper.FindPropertyWithAttribute(ContentAttributeName, out var content)
+                || (reference.IsResolved ? ResolvedTypeOf(reference) : typeResolver.ResolveByShortName(reference.Name))
+                    is not { } type
+                || content.PropertyType == null)
+            {
+                return node;
+            }
+
+            var slot = content.PropertyType.FullName;
+            if (!type.IsAssignableTo(slot) && !type.ImplementsInterface(slot))
+            {
+                return node;
+            }
+
+            var info = element.GetLineInfo();
+            var wrapperReference = CreateResolved(elementWrapper, info);
+            var item = new AumlAstObjectNode(info, wrapperReference);
+            item.Children.Add(new AumlAstPropertyNode(info,
+                new AumlAstPropertyReference(info, false, item, wrapperReference,
+                    CreateResolved(content.PropertyType, info), content.Name),
+                element));
+            return item as T;
+        }
 
         List<T> WithoutSpaces<T>(List<T> nodes) where T : class, IAumlAstNode =>
             nodes.Where(node => node is not AumlAstTextNode text || !ParserContext.IsXmlSpace(text.Text)).ToList();
@@ -895,11 +926,11 @@ public class DefaultAumlTransformer : IAumlTransformer
         bool IsContent(IAumlAstNode node) =>
             node is AumlAstObjectNode || (node is AumlAstTextNode text && !ParserContext.IsXmlSpace(text.Text));
 
-        List<T> Wrapped<T>(List<T> nodes, IResolvedType wrapper) where T : class, IAumlAstNode
+        List<T> Wrapped<T>(List<T> nodes, IResolvedType wrapper, IResolvedType elementWrapper) where T : class, IAumlAstNode
         {
             if (!wrapper.FindPropertyWithAttribute(ContentAttributeName, out var wrapperContent))
             {
-                return WithoutSpaces(nodes);
+                return WithoutSpaces(nodes).Select(node => WrappedElement(node, elementWrapper)).ToList();
             }
 
             var first = nodes.FindIndex(IsContent);
@@ -909,7 +940,7 @@ public class DefaultAumlTransformer : IAumlTransformer
             {
                 if (nodes[i] is not AumlAstTextNode text)
                 {
-                    result.Add(nodes[i]);
+                    result.Add(WrappedElement(nodes[i], elementWrapper));
                     continue;
                 }
 
@@ -940,7 +971,8 @@ public class DefaultAumlTransformer : IAumlTransformer
 
         void WrapText(AumlAstObjectNode objectNode)
         {
-            if (NodeScan.First<AumlAstTextNode>(objectNode.Children) == null)
+            var hasText = NodeScan.First<AumlAstTextNode>(objectNode.Children) != null;
+            if (!hasText && !objectNode.Children.OfType<AumlAstObjectNode>().Any())
             {
                 return;
             }
@@ -949,6 +981,11 @@ public class DefaultAumlTransformer : IAumlTransformer
                           type.FindPropertyWithAttribute(ContentAttributeName, out var found)
                 ? found
                 : null;
+            var elementWrapper = ElementWrapperOf(content?.PropertyType);
+            if (!hasText && elementWrapper == null)
+            {
+                return;
+            }
             List<IAumlAstNode> children;
             if (content?.PropertyType?.SpecialType == ResolvedSpecialType.System_String &&
                 objectNode.Children.Any(IsContent))
@@ -964,7 +1001,7 @@ public class DefaultAumlTransformer : IAumlTransformer
             else
             {
                 children = WrapperOf(content?.PropertyType) is { } wrapper
-                    ? Wrapped(objectNode.Children, wrapper)
+                    ? Wrapped(objectNode.Children, wrapper, elementWrapper)
                     : WithoutSpaces(objectNode.Children);
             }
 
@@ -1013,17 +1050,24 @@ public class DefaultAumlTransformer : IAumlTransformer
                     ExpandShorthandCollection(propertyNode);
 
                     var reference = propertyNode.Property as AumlAstPropertyReference;
+                    var collection = reference is { IsAttachedProperty: false }
+                                     && propertyNode.Values.Any(value => value is AumlAstTextNode or AumlAstObjectNode)
+                        ? ResolvedTypeOf(reference.TargetType)
+                        : null;
                     if (propertyNode.Values.OfType<AumlAstTextNode>().Any())
                     {
-                        if (reference is { IsAttachedProperty: false } &&
-                            WrapperOf(ResolvedTypeOf(reference.TargetType)) is { } wrapper)
+                        if (WrapperOf(collection) is { } wrapper)
                         {
-                            propertyNode.Values = Wrapped(propertyNode.Values, wrapper);
+                            propertyNode.Values = Wrapped(propertyNode.Values, wrapper, ElementWrapperOf(collection));
                         }
                         else if (propertyNode.Values.Count > 1)
                         {
                             propertyNode.Values = WithoutSpaces(propertyNode.Values);
                         }
+                    }
+                    else if (ElementWrapperOf(collection) is { } elementWrapper)
+                    {
+                        propertyNode.Values = propertyNode.Values.Select(value => WrappedElement(value, elementWrapper)).ToList();
                     }
 
                     var takesType = reference is { IsAttachedProperty: false, TargetType.IsResolved: true }

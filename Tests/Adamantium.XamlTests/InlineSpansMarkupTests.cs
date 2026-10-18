@@ -1,5 +1,6 @@
 using System.Linq;
 using Adamantium.Fonts;
+using Adamantium.UI.Controls.Buttons;
 using Adamantium.UI.Controls.Text;
 using Adamantium.UI.Core.Markup;
 using NUnit.Framework;
@@ -113,13 +114,97 @@ public class InlineSpansMarkupTests
         Assert.That(((Run)text.Inlines[0]).Text, Is.EqualTo("one"));
     }
 
+    // A control among inlines is set into the line as WPF sets it, in an InlineUIContainer of its own.
     [TestCase("<TextBlock><TextBlock.Inlines><Bold><Button/></Bold></TextBlock.Inlines></TextBlock>")]
     [TestCase("<TextBlock><TextBlock.Inlines><Button/></TextBlock.Inlines></TextBlock>")]
-    public void AControlAmongInlines_IsReportedWhereItStands(string body)
+    [TestCase("<TextBlock>Press <Button/> here</TextBlock>")]
+    public void AControlAmongInlines_Compiles(string body)
     {
-        AumlCodegenHarness.Generate("<Window " + Namespaces + ">" + body + "</Window>", out var errors);
+        var auml = "<Window " + Namespaces + ">" + body + "</Window>";
+        AumlCodegenHarness.Generate(auml, out var generated);
+        var errors = AumlCodegenHarness.Compile(auml);
 
-        Assert.That(errors.Select(e => e.GetMessage()), Has.Some.Contains("Button is not a Inline"));
+        Assert.That(generated, Is.Empty, AumlCodegenHarness.Errors(generated));
+        Assert.That(errors, Is.Empty, AumlCodegenHarness.Errors(errors));
+    }
+
+    [Test]
+    public void AControlAmongInlines_IsWrappedInAContainer()
+    {
+        var result = AumlLoader.Load(
+            "<TextBlock " + Namespaces + ">Press <Button Content=\"OK\"/> here <Bold><Border Width=\"8\"/></Bold></TextBlock>");
+
+        Assert.That(result.Diagnostics, Is.Empty, string.Join(" | ", result.Diagnostics));
+        var inlines = ((TextBlock)result.Root).Inlines;
+        Assert.That(inlines[1], Is.InstanceOf<InlineUIContainer>());
+        Assert.That(((InlineUIContainer)inlines[1]).Child, Is.InstanceOf<Adamantium.UI.Controls.Buttons.Button>());
+        Assert.That(((Run)inlines[2]).Text, Is.EqualTo(" here "));
+        Assert.That(((InlineUIContainer)((Bold)inlines[3]).Inlines[0]).Child,
+            Is.InstanceOf<Adamantium.UI.Controls.Decorators.Border>());
+    }
+
+    // White space between two inlines on lines of their own is a space, as in WPF.
+    [Test]
+    public void InlinesOnLinesOfTheirOwn_KeepASpaceBetweenThem()
+    {
+        var result = AumlLoader.Load(
+            "<TextBlock " + Namespaces + ">\n    <Bold>a</Bold>\n    <Italic>b</Italic>\n</TextBlock>");
+
+        Assert.That(result.Diagnostics, Is.Empty, string.Join(" | ", result.Diagnostics));
+        var inlines = ((TextBlock)result.Root).Inlines;
+        Assert.That(inlines, Has.Count.EqualTo(3));
+        Assert.That(((Run)inlines[1]).Text, Is.EqualTo(" "));
+    }
+
+    // A comment between them takes nothing away, and adds no second space.
+    [TestCase("\n    <!-- note -->\n    ")]
+    [TestCase("<!-- note -->\n    ")]
+    [TestCase("\n    <!-- note -->")]
+    [TestCase("\n    <!-- note -->\n    <TextBlock.Tag>t</TextBlock.Tag>\n    ")]
+    public void ACommentBetweenInlines_LeavesOneSpace(string gap)
+    {
+        var result = AumlLoader.Load(
+            "<TextBlock " + Namespaces + ">\n    <Run Text=\"a\"/>" + gap + "<Run Text=\"b\"/>\n</TextBlock>");
+
+        Assert.That(result.Diagnostics, Is.Empty, string.Join(" | ", result.Diagnostics));
+        var text = (TextBlock)result.Root;
+        Assert.That(string.Concat(text.Inlines.OfType<Run>().Select(run => run.Text)), Is.EqualTo("a b"));
+    }
+
+    // The texts either side of a comment are one text.
+    [TestCase("Hello <!-- c --> world", "Hello world")]
+    [TestCase("Hello<!-- c --> world", "Hello world")]
+    [TestCase("Hello<!-- c -->world", "Helloworld")]
+    [TestCase("Hello <!-- c --> <Run Text=\"w\"/>", "Hello w")]
+    public void ACommentInText_LeavesOneSpace(string content, string expected)
+    {
+        var result = AumlLoader.Load("<TextBlock " + Namespaces + ">" + content + "</TextBlock>");
+
+        Assert.That(result.Diagnostics, Is.Empty, string.Join(" | ", result.Diagnostics));
+        var text = (TextBlock)result.Root;
+        Assert.That(string.Concat(text.Inlines.OfType<Run>().Select(run => run.Text)), Is.EqualTo(expected));
+    }
+
+    // A property element's text is the same with a comment in it as without: the text after the comment was lost.
+    [Test]
+    public void ACommentInAPropertyElementsText_KeepsAllOfIt()
+    {
+        var text = (TextBlock)AumlLoader.Load(
+            "<TextBlock " + Namespaces + "><TextBlock.Text>Hello <!-- c --> world</TextBlock.Text></TextBlock>").Root;
+        var button = (Button)AumlLoader.Load(
+            "<Button " + Namespaces + "><Button.Content>Hello <!-- c --> world</Button.Content></Button>").Root;
+
+        Assert.That(text.Text, Is.EqualTo("Hello  world"));
+        Assert.That(button.Content, Is.EqualTo("Hello  world"));
+    }
+
+    [Test]
+    public void InlinesOnLinesOfTheirOwn_Compile()
+    {
+        var errors = AumlCodegenHarness.Compile("<Window " + Namespaces + ">\n<StackPanel>\n    <Border/>\n    <Border/>\n</StackPanel>" +
+                                                "<TextBlock>\n    <Bold>a</Bold>\n    <Italic>b</Italic>\n</TextBlock></Window>");
+
+        Assert.That(errors, Is.Empty, AumlCodegenHarness.Errors(errors));
     }
 
     private static string Paragraph(string word) =>

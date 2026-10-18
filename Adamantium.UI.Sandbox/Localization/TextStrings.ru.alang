@@ -92,12 +92,12 @@
     <Phrase Key="LastLine" Text="Последняя строка:"/>
     <Phrase Key="JustificationTitle" Text="Выключка по ширине: каждая настройка над текстом, который она меняет:"/>
     <Phrase Key="SpansTitle" Text="Участки: Bold, Italic и Underline вкладываются, цвет и кегль участка достаются его отрезкам, свои у отрезка важнее, LineBreak кончает строку:"/>
-    <Phrase Key="SpansPlain" Text="Обычный, затем "/>
-    <Phrase Key="SpansBold" Text="жирный, "/>
+    <Phrase Key="SpansPlain" Text="Обычный, затем"/>
+    <Phrase Key="SpansBold" Text="жирный,"/>
     <Phrase Key="SpansBoldItalic" Text="жирный курсив"/>
-    <Phrase Key="SpansColored" Text="Голубой участок с "/>
+    <Phrase Key="SpansColored" Text="Голубой участок с"/>
     <Phrase Key="SpansUnderlined" Text="подчёркнутой частью"/>
-    <Phrase Key="SpansOwnColor" Text=" и своим красным отрезком"/>
+    <Phrase Key="SpansOwnColor" Text="и своим красным отрезком"/>
     <Phrase Key="ParagraphsTitle" Text="Абзацы: каждый на своих строках, со своим выравниванием, полями, отступом первой строки и высотой строк; между двумя - больший из их промежутков:"/>
     <Phrase Key="ParagraphsHeading" Text="Король-лягушонок"/>
     <Phrase Key="ParagraphsBody" Text="В стародавние времена, когда желания ещё помогали, жил король, и все дочери его были красавицы, но младшая была так прекрасна, что даже солнце, которое видело так много, дивилось ей всякий раз, как озаряло её лицо."/>

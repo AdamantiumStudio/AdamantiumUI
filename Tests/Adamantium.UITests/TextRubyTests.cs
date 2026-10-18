@@ -95,6 +95,23 @@ public class TextRubyTests
         Assert.That(new string(Annotation(text).Select(glyph => glyph.Symbol).ToArray()), Is.EqualTo("CAPITAL"));
     }
 
+    // A ruby inside a ruby on the other side of the base: a double-sided ruby, both annotations shown.
+    [Test]
+    public void ARubyInsideARubyOnTheOtherSide_ShowsBothAnnotations()
+    {
+        var inner = new Ruby { Annotation = "over" };
+        inner.Inlines.Add(new Run { Text = "Rome" });
+        var outer = new Ruby { Annotation = "under", RubyPosition = Adamantium.Graphics.Fonts.RubyPosition.Under };
+        outer.Inlines.Add(inner);
+        var text = new TextBlock { FontSize = FontSize };
+        text.Inlines.Add(outer);
+        Update(new Window { Width = 800, Height = 300, Content = new StackPanel { Children = { text } } });
+
+        Assert.That(text.Layout.AttributedText.Rubies.Select(run => run.Annotation.Text),
+            Is.EquivalentTo(new[] { "over", "under" }));
+        Assert.That(Annotation(text).Length, Is.EqualTo("overunder".Length));
+    }
+
     [Test]
     public void ABlockEndingInARuby_IsAsWideAsItsAnnotation()
     {

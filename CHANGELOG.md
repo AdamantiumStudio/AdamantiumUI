@@ -5,7 +5,47 @@ All packages share one version.
 
 ## Unreleased
 
+### Fixed
+
+- An items host with `IsVirtualizing="False"` asks for what its items take; it asked for all the room it was given, as
+  a scrolling list's viewport does, so a row of them standing in a taller space grew as tall as the space.
+- A `TreeView` told to select a node that has no row yet - an entity made and selected at once - lets the row selected
+  before go at once; it stayed selected beside the new one when its row came. The new row comes selected - a node
+  keeping its own selection is marked - and, with a `ParentPath`, is scrolled to.
+
 ### Added
+
+- `CharacterStyle` and `ParagraphStyle` on `TextBlock` and `TextBox` (and `PasswordBox`): named text styles for the
+  whole text, its `Text` with no inlines included. What the element sets itself wins over them, and an inline or a
+  paragraph with its own style takes that one instead; changing a style lays the text out again, and so does moving the
+  element under other resources.
+- A control written among inlines in markup is set into the line in an `InlineUIContainer` of its own, as WPF wraps it
+  (`<TextBlock>Press <Button/> here</TextBlock>`), in the loader and in the generated code alike;
+  `ContentWrapperAttribute.ElementWrapperType` names the wrapper.
+- A `TextBox` takes the baseline grid (`BaselineGridStep`) as a `TextBlock` does: its lines stand on the grid from
+  where its text surface is, its scroll left out; on the grid a single line is not centered off the grid's rows.
+- A `Ruby` inside a `Ruby` on the other side of the base is a double-sided ruby: both annotations are shown, where only
+  the outer one was.
+- `SegmentedControl` and `SegmentedControlItem`: a few choices of one setting side by side, one of them chosen, as
+  macOS's segmented control. Segments are written in markup, made from `ItemsSource` by `ItemTemplate` (each made
+  segment's `DataContext` is its item, so `ItemContainerStyle` can bind a segment to its model), or made from an enum by
+  `EnumType`. A segment's `Command` runs when it is chosen - clicked, or reached with the arrows, Home or End; choosing
+  the chosen one again runs nothing. A segment whose command cannot run is disabled and the keys pass it by. One tab
+  stop for the whole control; made not focusable, as in a toolbar, a click leaves the keyboard where it was. A
+  disabled control fades whole. To automation it is a list with one selected item. Styled in every theme; the Buttons
+  tab of the sandbox shows them.
+- `Selector.SelectedValue` and `SelectedValuePath`, as in WPF: the selected item's value - its property named by the
+  path, or the item itself - and, set, the item whose value it is selected, also when it is named before the items
+  come. A view-model holds a plain value while the items are pictures or models written in markup.
+- `SegmentedChoiceProperty` (`PropertyEditors.Segments()`): a property grid row choosing among a few values with a
+  `SegmentedControl`; its `EditorTemplate` may bring segments of its own, `ValuePath` naming the value of each. A
+  `PropertyRow` now follows any `Selector` editor it shows, not only a `DropDown`. A `ChoiceProperty` finds and reads
+  its choice through the selector's `SelectedValuePath`, and its enum's values come as one list while the enum stays.
+
+- `RibbonGallery.ItemCommand`: a gallery that runs its choices rather than holds one, as a gallery of shapes to insert
+  does. A picked item - clicked or chosen with Enter or Space, in the band or the drop-down - is passed to the command
+  and the drop-down closes; the gallery has no selection (one set on it is dropped), so the same item runs again on the
+  next pick. A choice the command cannot run is disabled. To automation its choices are invoked, not selected.
 
 - `TextBlock.TextLineBounds`, as WinUI's: `Full` (the default), `TrimToCapHeight`, `TrimToBaseline` or `Tight` - the
   block measures from the top of the capitals of its first line and to the baseline of its last, so a label centered by
@@ -1466,6 +1506,22 @@ All packages share one version.
 
 ### Fixed
 
+- A text style shared by texts in different theme scopes gives each its own answer to a `{ResourceReference}` in it:
+  the answer was written into the shared style, so every text took the one resolved last. A style keeps no answer
+  now; each text reads it from where it stands, and a scope switched round a text lays it out again.
+- A control in a line whose text moved inside it, its size and slot the same, moves on the line too: the block read
+  its baseline only when measured or arranged again. It now reads its controls' baselines again after each layout pass
+  that did work - those the text reaches; one past a cut stands nowhere and is left alone.
+- Ctrl+arrows in a `TextBox` holding mixed text, and in a selectable `TextBlock`, go a word at a time by the screen, as
+  the plain arrows go: they went by the reading order, jumping back across right-to-left words.
+- A `TextBox` that does not wrap, its paragraphs running different ways, stands each line at its own edge: the whole
+  text stood at the edge of its first paragraph.
+- White space between two inlines written on lines of their own is a space, as in WPF: `</Bold>`↵`<Italic>` gave
+  "ab". A comment in the gap takes nothing away, and one in text adds no second space (`Hello <!-- c --> world`);
+  elsewhere white space is still dropped. In a property element (`<Button.Content>`, `<TextBlock.Text>`) the text after
+  a comment is no longer lost. Markup that put the spaces
+  in its runs instead writes the runs side by side (`.../><Run .../>`), as the sandbox's text stands now do.
+- The generator's type resolver takes an interface a type implements as one it is assignable to, as the runtime's does.
 - In Fluent, a tab whose strip is not on top rounds its outer corners, not those against its panel: a tool's tabs,
   under its body, were rounded on top and left a notch either side of where they join it.
 - A tool panel folded to the edge of a docking area takes the area's tab policy, as a docked one does.

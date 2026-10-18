@@ -650,7 +650,7 @@ public class PropertyRow : Control
         }
 
         if (_editor is NumericUpDown numeric) numeric.ValueChanged += OnEditorValueChanged;
-        if (_editor is DropDown drop) drop.SelectionChanged += OnEditorChosen;
+        if (_editor is Selector chooser) chooser.SelectionChanged += OnEditorChosen;
         if (_editor is ToggleButton toggle) toggle.PropertyChanged += OnTogglePropertyChanged;
         if (_editor is ColorPickerButton swatch) swatch.PropertyChanged += OnSwatchPropertyChanged;
     }
@@ -666,7 +666,7 @@ public class PropertyRow : Control
         }
 
         if (_editor is NumericUpDown numeric) numeric.ValueChanged -= OnEditorValueChanged;
-        if (_editor is DropDown drop) drop.SelectionChanged -= OnEditorChosen;
+        if (_editor is Selector chooser) chooser.SelectionChanged -= OnEditorChosen;
         if (_editor is ToggleButton toggle) toggle.PropertyChanged -= OnTogglePropertyChanged;
         if (_editor is ColorPickerButton swatch) swatch.PropertyChanged -= OnSwatchPropertyChanged;
 
@@ -681,7 +681,7 @@ public class PropertyRow : Control
         {
             // The swatch is named here for the same reason the spinner is: it CONTAINS a picker full of fields and
             // sliders, and a hunt for "the first focusable thing" would come back with one of those.
-            if (child is NumericUpDown or DropDown or ToggleButton or TextBox or ColorPickerButton)
+            if (child is NumericUpDown or DropDown or SegmentedControl or ToggleButton or TextBox or ColorPickerButton)
                 return (IInputComponent)child;
             if (FindEditor(child) is { } nested) return nested;
         }

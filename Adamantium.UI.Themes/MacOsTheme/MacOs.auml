@@ -45,6 +45,7 @@
         <StyleInclude Source="{x:Type mac:MacOsTitleBarStyleSet}"/>
         <StyleInclude Source="{x:Type mac:MacOsButtonStyleSet}"/>
         <StyleInclude Source="{x:Type mac:MacOsToggleSwitchStyleSet}"/>
+        <StyleInclude Source="{x:Type mac:MacOsSegmentedControlStyleSet}"/>
         <StyleInclude Source="{x:Type mac:MacOsCheckBoxStyleSet}"/>
         <StyleInclude Source="{x:Type mac:MacOsRadioButtonStyleSet}"/>
         <StyleInclude Source="{x:Type mac:MacOsTextBoxStyleSet}"/>

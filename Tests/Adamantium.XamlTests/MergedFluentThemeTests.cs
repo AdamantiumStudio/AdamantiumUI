@@ -172,7 +172,7 @@ public class MergedFluentThemeTests
 
         // No style set may go missing (a control would lose its style unnoticed); raise this count deliberately when a
         // set is added.
-        Assert.That(merged.StyleIncludes.Count, Is.EqualTo(57));
+        Assert.That(merged.StyleIncludes.Count, Is.EqualTo(58));
     }
 
     [Test]

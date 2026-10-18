@@ -8,4 +8,9 @@ public sealed class ContentWrapperAttribute : Attribute
 {
     /// <summary>The item type a piece of text is wrapped in.</summary>
     public Type WrapperType { get; set; }
+
+    /// <summary>The item type an element written among the items, and not one itself, is wrapped in, as WPF wraps a
+    /// control among inlines in an <c>InlineUIContainer</c>: set through that type's <see cref="ContentAttribute"/>
+    /// property when the element fits it. Null wraps none.</summary>
+    public Type ElementWrapperType { get; set; }
 }

@@ -14,8 +14,7 @@
         <Content Include="..\..\Adamantium.UI.FX\*.fx" LinkBase="EffectsData\UIFX">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </Content>
-        <!-- FLAT, beside the .fx files: handed no list of includes the compiler scans the shader's OWN directory and no
-             deeper, while the resolver matches a request by file name alone. -->
+        <!-- FLAT, beside the .fx files: a request for "Includes/X.fxh" that no path fits is found by its file name. -->
         <Content Include="..\..\Adamantium.UI.FX\Includes\*.fxh" LinkBase="EffectsData\UIFX">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </Content>
