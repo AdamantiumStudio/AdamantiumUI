@@ -157,50 +157,7 @@ public class SpellCheckBehavior : Behavior<TextBox>
     {
         var now = _box.Text ?? string.Empty;
         _markedText = now;
-        _box.MisspelledRanges = Moved(marks, markedIn, now);
-    }
-
-    internal static IReadOnlyList<TextRange> Moved(IReadOnlyList<TextRange> marks, string markedIn, string now)
-    {
-        if (markedIn == now)
-        {
-            return marks;
-        }
-
-        var head = 0;
-        var most = Math.Min(markedIn.Length, now.Length);
-        while (head < most && markedIn[head] == now[head])
-        {
-            head++;
-        }
-
-        var tail = 0;
-        while (tail < most - head && markedIn[markedIn.Length - 1 - tail] == now[now.Length - 1 - tail])
-        {
-            tail++;
-        }
-
-        var changedEnd = markedIn.Length - tail;
-        var shift = now.Length - markedIn.Length;
-        List<TextRange> moved = [];
-        foreach (var mark in marks)
-        {
-            if (mark.Start < 0 || mark.End > markedIn.Length)
-            {
-                continue;
-            }
-
-            if (mark.End < head)
-            {
-                moved.Add(mark);
-            }
-            else if (mark.Start > changedEnd)
-            {
-                moved.Add(new TextRange(mark.Start + shift, mark.Length));
-            }
-        }
-
-        return moved;
+        _box.MisspelledRanges = TextRange.Follow(marks, markedIn, now);
     }
 
     private static IReadOnlyList<TextRange> Checked(ISpellChecker checker, string text, string language)
