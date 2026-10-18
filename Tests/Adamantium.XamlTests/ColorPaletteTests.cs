@@ -116,7 +116,7 @@ public class ColorPaletteTests
     }
 
     // Word's "Recent colors": a row of places, empty until colors are applied through "More colors"; the latest first,
-    // one taken again moves to the front, and the oldest goes past the count.
+    // one applied there again moves to the front, a pick from the row keeps the order, and the oldest goes past the count.
     [Test]
     public void RecentColors_KeepWhatMoreColorsApplied_LatestFirst()
     {
@@ -138,13 +138,16 @@ public class ColorPaletteTests
 
         var standard = Below(palette).OfType<ColorPaletteSwatch>().First(s => s.Color == Color.FromRgba(255, 0, 0));
         standard.PerformClick();
+        palette.RecentPlaces[1].PerformClick();
         Adamantium.UI.Extensions.WindowExtension.UpdateTree(palette);
         var shown = Below(palette).OfType<ColorPaletteSwatch>().Where(s => s.Color == c || s.Color == a).ToList();
 
         Assert.Multiple(() =>
         {
             Assert.That(empty, Is.EqualTo(new Color?[] { null, null }), "a row of empty places before any");
-            Assert.That(palette.RecentColors, Is.EqualTo(new[] { c, a }), "b was the oldest; a standard color is not kept");
+            Assert.That(palette.RecentColors, Is.EqualTo(new[] { c, a }),
+                "b was the oldest; a standard color is not kept; a pick from the row keeps the order");
+            Assert.That(palette.SelectedColor, Is.EqualTo(a), "the row's pick is applied");
             Assert.That(palette.RecentPlaces.Select(place => place.Color), Is.EqualTo(new Color?[] { c, a }));
             Assert.That(shown, Has.Count.EqualTo(2), "and both are shown in the row");
         });

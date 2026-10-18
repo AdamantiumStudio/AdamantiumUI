@@ -31,7 +31,8 @@ All packages share one version.
 - `ColorPalette` and `ColorPaletteSwatch`: colors to pick from, as Word's font color menu holds them - a choice of no
   color (`NoColorText`; none, none shown), a grid of `Colors` (`ColorPalette.StandardColors` by default) and, under
   "More colors", a `ColorPicker` whose color "Apply" takes - and a row of `RecentColors`, as Word's: empty places until
-  colors are applied through "More colors", the latest first, one taken again moved to the front, at most
+  colors are applied through "More colors", the latest first, one applied there again moved to the front, a pick from
+  the row leaving the order as it is, at most
   `RecentCount` (10); a list given to several palettes is shared. A pick runs `Command` with the color, null for no color,
   keeps it as `SelectedColor` - for a split button's body to apply again - and closes the menu it stands in. One style
   set serves every theme.

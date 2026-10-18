@@ -100,8 +100,9 @@ public class ColorPalette : Control
         set => SetValue(IsMoreColorsOpenProperty, value);
     }
 
-    /// <summary>The colors applied through "More colors" lately, the latest first, as Word's "Recent colors": one taken
-    /// again moves to the front, and past <see cref="RecentCount"/> the oldest goes. A list of the palette's own unless
+    /// <summary>The colors applied through "More colors" lately, the latest first, as Word's "Recent colors": one applied
+    /// there again moves to the front, a pick from the row leaves the order as it is, and past <see cref="RecentCount"/>
+    /// the oldest goes. A list of the palette's own unless
     /// set - one list given to several palettes is shared, and an application may keep it between runs.</summary>
     public IList<Color> RecentColors
     {
@@ -169,7 +170,7 @@ public class ColorPalette : Control
 
     internal void Pick(Color? color, bool custom = false)
     {
-        if (color is { } picked && (custom || RecentColors?.Contains(picked) == true))
+        if (color is { } picked && custom)
         {
             Remember(picked);
         }
