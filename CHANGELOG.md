@@ -53,6 +53,20 @@ All packages share one version.
   The Vertical text stand of the sandbox has one to edit.
 - A vertical `TextBlock` selects, as a horizontal one does: dragged down its lines, and with the arrows turned as in a
   vertical field; it could not be selected at all.
+- `FontFamily.Source`, as WPF's: the family's name - the one it was made with, or the name its font file gives.
+- `RibbonControlGroup`, as WPF's: a row of ribbon commands side by side - Word's Bold, Italic and Underline, or its
+  font and size boxes with the size steps - that stands in its group as one row of the group's columns, its commands
+  drawn small. To automation it is a group of them.
+- `ColorPalette` and `ColorPaletteSwatch`: colors to pick from, as Word's font color menu holds them - a choice of no
+  color (`NoColorText`; none, none shown), a grid of `Colors` (`ColorPalette.StandardColors` by default) and, under
+  "More colors", a `ColorPicker` whose color "Apply" takes. A pick runs `Command` with the color, null for no color,
+  keeps it as `SelectedColor` - for a split button's body to apply again - and closes the menu it stands in. One style
+  set serves every theme.
+- The clipboard carries several formats of one thing at once: `Clipboard.SetData` puts an `IDataPackage` on it -
+  `DataFormats.Text`, `Html` (the fragment; the Windows header is written and read for you) and `Rtf` as strings,
+  formats of one's own as `byte[]` under their name - and `Contains` / `GetData` read one back. `IClipboard` has these
+  as new members, so a clipboard of one's own implements them too. The Windows clipboard tries to open again for a
+  moment when another application holds it, as one does right after every copy.
 - `xml:space="preserve"` in markup, as in WPF: on an element, or one around it, the white space of its text is kept as
   written - in a property element, in content and among inlines; `xml:space="default"` inside undoes it.
 - `FocusManager.ReturnsFocus`: a focus scope whose commands give the focus back - after a button, a drop-down, a
@@ -1240,6 +1254,9 @@ All packages share one version.
 
 ### Changed
 
+- A ribbon group's columns start at the top of the band, as Office's, their commands `RibbonGroupPanel.RowSpacing`
+  (4) apart: Word's two rows of font commands stand at the top, not touching. The whole block was centered in the band,
+  its commands touching.
 - A `TextBlock` with no height of its own leaves its text where its lines are, whatever `VerticalTextAlignment` says,
   as WinUI's: the themes' `Center` moved the letters down by half the font's descent, so they, the selection and the
   backgrounds came out of the block - over the text below it, by 56 pixels for Poppins at 320. Labels in every theme

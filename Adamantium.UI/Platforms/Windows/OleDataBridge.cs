@@ -111,9 +111,12 @@ internal static class OleDataBridge
     /// <summary>CF_HTML in, markup out. The wire format is UTF-8 bytes behind a header of BYTE offsets; what a consumer
     /// actually wants is the fragment those offsets delimit, so that is what is handed over (falling back to the whole
     /// document when a source left the fragment markers out).</summary>
-    private static string ReadHtml(ComTypes.IDataObject data)
+    private static string ReadHtml(ComTypes.IDataObject data) =>
+        ReadRegisteredBytes(data, HtmlFormat) is { Length: > 0 } bytes ? HtmlFragment(bytes) : null;
+
+    /// <summary>The fragment of a CF_HTML block, from the drag and from the clipboard alike.</summary>
+    public static string HtmlFragment(byte[] bytes)
     {
-        if (ReadRegisteredBytes(data, HtmlFormat) is not { Length: > 0 } bytes) return null;
         var text = System.Text.Encoding.UTF8.GetString(bytes).TrimEnd('\0');
         var start = OffsetHeader(text, "StartFragment:");
         var end = OffsetHeader(text, "EndFragment:");
@@ -144,24 +147,30 @@ internal static class OleDataBridge
         if (format == 0 || !TryGetMedium(data, unchecked((short)format), out var medium)) return null;
         try
         {
-            var size = (int)Win32Interop.GlobalSize(medium.unionmember);
-            if (size <= 0) return null;
-            var pointer = Win32Interop.GlobalLock(medium.unionmember);
-            if (pointer == IntPtr.Zero) return null;
-            try
-            {
-                var bytes = new byte[size];
-                Marshal.Copy(pointer, bytes, 0, size);
-                return bytes;
-            }
-            finally
-            {
-                Win32Interop.GlobalUnlock(medium.unionmember);
-            }
+            return BytesOf(medium.unionmember);
         }
         finally
         {
             Win32Interop.ReleaseStgMedium(ref medium);
+        }
+    }
+
+    /// <summary>The bytes of an HGLOBAL, as long as the block is - which may be more than was written into it.</summary>
+    public static byte[] BytesOf(IntPtr global)
+    {
+        var size = (int)Win32Interop.GlobalSize(global);
+        if (size <= 0) return null;
+        var pointer = Win32Interop.GlobalLock(global);
+        if (pointer == IntPtr.Zero) return null;
+        try
+        {
+            var bytes = new byte[size];
+            Marshal.Copy(pointer, bytes, 0, size);
+            return bytes;
+        }
+        finally
+        {
+            Win32Interop.GlobalUnlock(global);
         }
     }
 

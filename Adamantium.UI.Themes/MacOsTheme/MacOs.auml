@@ -35,6 +35,7 @@
   <Theme.StyleIncludes>
         <StyleInclude Source="{x:Type shared:BusyEffectsStyleSet}"/>
         <StyleInclude Source="{x:Type shared:TextSelectionStyleSet}"/>
+        <StyleInclude Source="{x:Type shared:ColorPaletteStyleSet}"/>
         <StyleInclude Source="{x:Type mac:MacOsBorderStyleSet}"/>
         <StyleInclude Source="{x:Type mac:MacOsContentControlStyleSet}"/>
         <StyleInclude Source="{x:Type mac:MacOsThumbStyleSet}"/>
