@@ -22,7 +22,7 @@ namespace Adamantium.UI.Controls.Text;
 
 /// <summary>The editing core of text input controls: buffer, caret, selection, keyboard, clipboard and scroll. The
 /// template supplies a <see cref="TextPresenter"/> named <c>PART_TextPresenter</c>.</summary>
-public abstract class TextBoxBase : Control
+public abstract class TextBoxBase : Control, ITextStyleUser, Adamantium.UI.Core.Resources.IResolvesOwnResources
 {
     // --- Editing state -------------------------------------------------------------------------------------------
 
@@ -48,6 +48,14 @@ public abstract class TextBoxBase : Control
     public static readonly AdamantiumProperty HorizontalTextAlignmentProperty = AdamantiumProperty.Register(
         nameof(HorizontalTextAlignment), typeof(HorizontalTextAlignment), typeof(TextBoxBase),
         new PropertyMetadata(HorizontalTextAlignment.Left, PropertyMetadataOptions.AffectsMeasure, OnLayoutAffectingChanged));
+
+    public static readonly AdamantiumProperty CharacterStyleProperty = AdamantiumProperty.Register(nameof(CharacterStyle),
+        typeof(CharacterStyle), typeof(TextBoxBase),
+        new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure, OnTextStyleSet));
+
+    public static readonly AdamantiumProperty ParagraphStyleProperty = AdamantiumProperty.Register(nameof(ParagraphStyle),
+        typeof(ParagraphStyle), typeof(TextBoxBase),
+        new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure, OnTextStyleSet));
 
     public static readonly AdamantiumProperty PlaceholderProperty = AdamantiumProperty.Register(nameof(Placeholder),
         typeof(string), typeof(TextBoxBase), new PropertyMetadata(null, PropertyMetadataOptions.AffectsRender));
@@ -81,6 +89,10 @@ public abstract class TextBoxBase : Control
 
     private static readonly TextAttributes Squiggled = new() { Decorations = TextDecorations.Squiggle };
 
+    private readonly HeldBrushes _styleBrushes;
+    private readonly EngineTextStyles _engineStyles;
+    private readonly BaselineGridFollower _grid;
+    private BaselineGrid _lastShapedGrid;
     private IReadOnlyList<TextRange> _misspelled = [];
     private IReadOnlyList<TextRange> _lastShapedMisspelled = [];
     private ContextMenu _watchedMenu;
@@ -118,6 +130,61 @@ public abstract class TextBoxBase : Control
     protected TextBoxBase()
     {
         AddHandler(Keyboard.TextInputEvent, new TextInputEventHandler(OnTextInputHandler));
+        _styleBrushes = new HeldBrushes(this);
+        _engineStyles = new EngineTextStyles(this, _styleBrushes);
+        // On a baseline grid the text's lines stand on the grid from where the text surface is, its scroll left out.
+        _grid = new BaselineGridFollower(this, () => _presenter, FloatStripHeight, RelayOutText);
+    }
+
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+        _grid.Follow(attached: true);
+        // Moved under other resources, its styles answer from there.
+        ((Adamantium.UI.Core.Resources.IResolvesOwnResources)this).ResolveResources();
+    }
+
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnDetachedFromVisualTree(e);
+        _grid.Follow(attached: false);
+    }
+
+    /// <summary>The named character style of the box's text, as a <see cref="TextBlock"/>'s: over
+    /// <see cref="ParagraphStyle"/>, under what the box sets itself. Null sets none.</summary>
+    public CharacterStyle CharacterStyle
+    {
+        get => GetValue<CharacterStyle>(CharacterStyleProperty);
+        set => SetValue(CharacterStyleProperty, value);
+    }
+
+    /// <summary>The named paragraph style of the box's text, as a <see cref="TextBlock"/>'s: how its lines stand and
+    /// the formatting the text takes. Null sets none.</summary>
+    public ParagraphStyle ParagraphStyle
+    {
+        get => GetValue<ParagraphStyle>(ParagraphStyleProperty);
+        set => SetValue(ParagraphStyleProperty, value);
+    }
+
+    private bool Styled => CharacterStyle != null || ParagraphStyle != null;
+
+    private static void OnTextStyleSet(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
+    {
+        var box = (TextBoxBase)a;
+        (e.OldValue as TextFormat)?.Unuse(box);
+        (e.NewValue as TextFormat)?.Use(box);
+        box.OnFontChanged();
+    }
+
+    void ITextStyleUser.TextStyleChanged(bool rebased) => OnFontChanged();
+
+    // The box's styles answer their resources from where it stands: a theme scope switched round it changes them.
+    void Adamantium.UI.Core.Resources.IResolvesOwnResources.ResolveResources()
+    {
+        if (Styled)
+        {
+            OnFontChanged();
+        }
     }
 
     /// <summary>The property that holds the string being edited: <see cref="TextBox.Text"/> in a text box,
@@ -495,6 +562,9 @@ public abstract class TextBoxBase : Control
         TextKerning Kerning, SpacingRange Scaling)? _placeholderShaped;
     private TextAttributes _placeholderShaping;
     private double _textWidth;               // widest line's ink width (horizontal scroll bound in NoWrap)
+    private double _naturalWidth;
+    private double _alignWidth = double.NaN;
+    private bool _mixedDirections;
     private double _lineHeight;
     private double _lineLeading;
     private double[] _lineTops = [0];
@@ -583,7 +653,13 @@ public abstract class TextBoxBase : Control
     private void EnsureLayout()
     {
         var loadsSeen = TypefaceStore.LoadedCount;
-        var fontReady = TryResolveFont(FontFamily ?? DefaultFontFamily, out var font);
+        // The face as the box's styles choose it, what it sets itself over them.
+        var styled = Styled;
+        var (weight, fontStyle, stretch) = styled
+            ? EngineTextStyles.Face(this, CharacterStyle, ParagraphStyle)
+            : (FontWeight, FontStyle, FontStretch);
+        var fontReady = TryResolveFont(FontFamily ?? DefaultFontFamily, weight, fontStyle, stretch, FontVariations,
+            out var font);
         if (_textLayout == null || !ReferenceEquals(_layoutFont, font))
         {
             _textLayout = new TextLayout(font.Typeface, font) { EmitNewlineCarets = true };
@@ -610,10 +686,16 @@ public abstract class TextBoxBase : Control
         _textLayout.LineHeight = LineHeight;
         _textLayout.LineStacking = LineStackingStrategy;
         _textLayout.LineSpacing = LineSpacing;
+        var grid = _grid.Grid();
+        _textLayout.BaselineGrid = grid;
 
-        // The height of a line of this font, as ProcessText advances it: what an empty field's one line is.
+        // The height of a line of this font at the text's size, as ProcessText advances it: what an empty field's one
+        // line is.
         var iFont = _textLayout.Font;
-        var naturalHeight = (iFont.LineAscent + iFont.LineDescent + iFont.LineGap) * (FontSize / iFont.UnitsPerEm);
+        var textSize = styled && !EngineTextStyles.SetsItself(this, FontSizeProperty)
+            ? CharacterStyle?.ResolvedFontSize(this) ?? ParagraphStyle?.ResolvedFontSize(this) ?? FontSize
+            : FontSize;
+        var naturalHeight = (iFont.LineAscent + iFont.LineDescent + iFont.LineGap) * (textSize / iFont.UnitsPerEm);
         _lineHeight = LineHeight > 0 && double.IsFinite(LineHeight) ? LineHeight : naturalHeight;
         _lineLeading = (_lineHeight - naturalHeight) / 2;
 
@@ -621,9 +703,9 @@ public abstract class TextBoxBase : Control
         var wrapping = TextWrapping;
         // NaN width => ProcessText treats the axis as unbounded and returns the real ink extent (its explicit
         // "unbounded" sentinel). Soft wrap passes the live viewport width so lines break there.
-        var width = wrapping == TextWrapping.NoWrap || _wrapWidth <= 0 || double.IsInfinity(_wrapWidth)
-            ? double.NaN
-            : _wrapWidth;
+        var width = wrapping != TextWrapping.NoWrap && _wrapWidth > 0 && !double.IsInfinity(_wrapWidth)
+            ? _wrapWidth
+            : wrapping == TextWrapping.NoWrap ? _alignWidth : double.NaN;
 
         var shaping = TextShaping(font);
         var misspelled = _misspelled;
@@ -639,7 +721,8 @@ public abstract class TextBoxBase : Control
             && _lastShapedDirection == TextDirection && _lastShapedHyphens == Hyphens
             && _lastShapedHyphenLimit == HyphenLimit
             && _lastShapedLineBreaking == LineBreaking && Equals(_lastShapedTabStops, TabStops)
-            && _lastShapedOpticalMargins == OpticalMarginAlignment && ShapesLike(_lastShapedShaping, shaping))
+            && _lastShapedOpticalMargins == OpticalMarginAlignment && ShapesLike(_lastShapedShaping, shaping)
+            && ReferenceEquals(_lastShapedGrid, grid))
         {
             return;
         }
@@ -657,17 +740,23 @@ public abstract class TextBoxBase : Control
         }
         else
         {
-            var size = shaping == null && misspelled.Count == 0
+            var size = shaping == null && misspelled.Count == 0 && !styled
                 ? _textLayout.ProcessText(text, FontSize,
                     new Size(width, double.NaN),
                     wrapping, TextTrimming.None,
                     LaidOutAlignment, VerticalTextAlignment.Top)
-                : _textLayout.ProcessText(Marked(new AttributedText(text, shaping), misspelled), FontSize,
+                : _textLayout.ProcessText(Marked(InStyles(new AttributedText(text, shaping)), misspelled), FontSize,
                     new Size(width, double.NaN),
                     wrapping, TextTrimming.None,
                     LaidOutAlignment, VerticalTextAlignment.Top);
-            _textWidth = size.Width;
             BuildCaretModel();
+            if (double.IsNaN(_alignWidth))
+            {
+                _naturalWidth = size.Width;
+                _mixedDirections = MixedDirections();
+            }
+
+            _textWidth = double.IsNaN(_alignWidth) ? size.Width : _naturalWidth;
         }
 
         if (!fontReady || (text.Length > 0 && _textLayout.HasPendingFonts))
@@ -676,6 +765,7 @@ public abstract class TextBoxBase : Control
         }
 
         _lastShapedText = text;
+        _lastShapedGrid = grid;
         _lastShapedMisspelled = misspelled;
         _lastShapedFontSize = FontSize;
         _lastShapedWrapping = wrapping;
@@ -700,6 +790,20 @@ public abstract class TextBoxBase : Control
         _lastShapedLineBreaking = LineBreaking;
         _lastShapedTabStops = TabStops;
         _lastShapedOpticalMargins = OpticalMarginAlignment;
+    }
+
+    // The text in the box's styles, their brushes held while it shows them.
+    private AttributedText InStyles(AttributedText text)
+    {
+        _styleBrushes.Clear();
+        _engineStyles.Clear();
+        if (Styled)
+        {
+            _engineStyles.Style(text, this, CharacterStyle, ParagraphStyle);
+        }
+
+        _styleBrushes.Take();
+        return text;
     }
 
     private static AttributedText Marked(AttributedText text, IReadOnlyList<TextRange> misspelled)
@@ -907,6 +1011,14 @@ public abstract class TextBoxBase : Control
     {
         EnsureLayout();
         var to = _textLayout.MoveVisually(new CaretPosition(CaretIndex, _caretHeldAt == CaretIndex), toRight);
+        MoveCaretTo(to.Index, extend, afterPrevious: to.AfterPrevious);
+    }
+
+    // Ctrl+arrows in mixed text go by the screen, word by word, as the plain arrows go by it.
+    private void MoveWordVisually(bool toRight, bool extend)
+    {
+        EnsureLayout();
+        var to = _textLayout.MoveWordVisually(new CaretPosition(CaretIndex, _caretHeldAt == CaretIndex), toRight);
         MoveCaretTo(to.Index, extend, afterPrevious: to.AfterPrevious);
     }
 
@@ -1124,6 +1236,14 @@ public abstract class TextBoxBase : Control
                 MoveVisually(toRight: true, shift);
                 e.Handled = true;
                 break;
+            case Key.LeftArrow when _bidi:
+                MoveWordVisually(toRight: false, shift);
+                e.Handled = true;
+                break;
+            case Key.RightArrow when _bidi:
+                MoveWordVisually(toRight: true, shift);
+                e.Handled = true;
+                break;
             case Key.LeftArrow:
                 MoveCaretTo(ctrl ? WordBoundary(CaretIndex, -1) : PreviousCaretStop(CaretIndex), shift);
                 e.Handled = true;
@@ -1256,13 +1376,56 @@ public abstract class TextBoxBase : Control
     internal Size MeasureSurface(double availableWidth)
     {
         _wrapWidth = availableWidth;   // soft wrap breaks at the viewport width
+        _grid.Measure();
+        _alignWidth = double.NaN;
         EnsureLayout();
+        var natural = _textWidth;
+        AlignMixedLines(_presenter?.RenderSize.Width ?? 0);
+        _textWidth = natural;
         // Wrapped text fills the given width; unwrapped desires its widest line (+ caret). Height is all the lines plus
         // the reserved strip for a floating label (zero when that effect is off).
         var w = TextWrapping != TextWrapping.NoWrap && !double.IsInfinity(availableWidth)
             ? availableWidth
             : _textWidth + CaretWidth;
         return new Size(w, ContentHeight + FloatStripHeight());
+    }
+
+    internal void ArrangeSurface(double width) => AlignMixedLines(width);
+
+    // Lines of paragraphs that run different ways, in a box that does not wrap, each stand at their own edge of the
+    // surface: laid out across its width, which only its arrange knows. The natural width still gives the scroll extent.
+    private void AlignMixedLines(double surfaceWidth)
+    {
+        var width = TextWrapping == TextWrapping.NoWrap && _mixedDirections && surfaceWidth > 0
+            ? Math.Max(surfaceWidth - CaretWidth, _naturalWidth)
+            : double.NaN;
+        if (width.Equals(_alignWidth))
+        {
+            return;
+        }
+
+        _alignWidth = width;
+        EnsureLayout();
+        _presenter?.InvalidateRender(false);
+    }
+
+    private bool MixedDirections()
+    {
+        if (!_bidi || _textLayout.LineCount < 2)
+        {
+            return false;
+        }
+
+        var first = _textLayout.IsRightToLeftParagraph(_textLayout.GetLine(0).Start);
+        for (var line = 1; line < _textLayout.LineCount; line++)
+        {
+            if (_textLayout.IsRightToLeftParagraph(_textLayout.GetLine(line).Start) != first)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     internal void SurfacePointerDown(double localX, double localY, bool extend)
@@ -1358,11 +1521,15 @@ public abstract class TextBoxBase : Control
         var contentWidth = TextWrapping != TextWrapping.NoWrap && !double.IsInfinity(_wrapWidth)
             ? size.Width
             : _textWidth + CaretWidth;
-        var ox = rightToLeft ? Math.Floor(Math.Max(0, size.Width - contentWidth)) : 0;
+        // Mixed paragraphs laid across the surface already stand at their own edges.
+        var ox = rightToLeft && double.IsNaN(_alignWidth) ? Math.Floor(Math.Max(0, size.Width - contentWidth)) : 0;
         _textOx = ox;
         var stripH = FloatStripHeight();
         var textAreaH = size.Height - stripH;
-        var vOffset = !AcceptsNewLines && ContentHeight < textAreaH ? (textAreaH - ContentHeight) / 2 : 0;
+        // On a baseline grid the lines keep the grid's rows: a single line is not centered off them.
+        var vOffset = !AcceptsNewLines && ContentHeight < textAreaH && _lastShapedGrid == null
+            ? (textAreaH - ContentHeight) / 2
+            : 0;
         // WHOLE pixels. The glyph pipeline snaps the vertical origin it is handed (it rounds the baseline and the
         // ascender line to whole rows), so a fractional offset moves the caret and the selection while leaving the text
         // where it was: centering a 15.8-tall line in a 17.4-tall surface handed the text 0.8 it silently dropped and the
@@ -1454,6 +1621,8 @@ public abstract class TextBoxBase : Control
     }
 
     internal UIComponent TextSurface => _presenter;
+
+    internal TextLayout Layout => _textLayout;
 
     internal TextLayout PlaceholderLayout()
     {

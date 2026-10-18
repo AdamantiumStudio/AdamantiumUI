@@ -72,6 +72,43 @@ public class BaselineGridTests
         return phase < 0.51 || Step - phase < 0.51;
     }
 
+    // A text box lays its lines out inside its own surface: they stand on the grid from where that surface is.
+    [Test]
+    public void TheLinesOfATextBox_StandOnTheGrid()
+    {
+        var presenter = new TextPresenter();
+        var box = new TextBox
+        {
+            Text = "one\ntwo\nthree",
+            AcceptsReturn = true,
+            FontSize = 16,
+            Template = new ControlTemplate(() =>
+            {
+                var root = new Border { Padding = new Thickness(0, 5, 0, 0), Child = presenter };
+                var result = new TemplateResult { RootComponent = root };
+                result.RegisterName("PART_TextPresenter", presenter);
+                return result;
+            }),
+        };
+        var panel = new StackPanel { Width = 300, BaselineGridStep = Step, Children = { new Border { Height = 7 }, box } };
+        var window = new Window { Width = 400, Height = 300, Content = panel };
+        Update(window);
+        double top = 0;
+        for (IUIComponent element = presenter; !ReferenceEquals(element, panel); element = element.VisualParent)
+        {
+            top += element.Bounds.Y;
+        }
+
+        var baselines = Enumerable.Range(0, box.Layout.LineCount)
+            .Select(i => top + box.Layout.GetLine(i).Baseline).ToArray();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(baselines, Has.Length.EqualTo(3));
+            Assert.That(baselines.All(baseline => OnGrid(baseline)), Is.True, string.Join(", ", baselines));
+        });
+    }
+
     [Test]
     public void TheBlocksUnderTheGrid_StandOnItsLines()
     {

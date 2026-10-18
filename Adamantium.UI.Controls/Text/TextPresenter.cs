@@ -28,11 +28,15 @@ public sealed class TextPresenter : InputUIComponent
     protected override Size MeasureOverride(Size availableSize)
         => Owner == null ? new Size() : Owner.MeasureSurface(availableSize.Width);
 
+    // The owner's lines stand on a baseline grid from where this surface is: moved, it lays them out again.
+    protected internal override bool MeasuresByPlace => BaselineGridStep > 0 && !double.IsInfinity(BaselineGridStep);
+
     protected override Size ArrangeOverride(Size finalSize)
     {
         // Re-render only when the SLOT SIZE changes (content/box resized, e.g. the floating-strip toggle), not on a mere
         // reposition (scrolling moves us via the arrange rect's ORIGIN - the same rendered units just shift, no redraw).
         if (finalSize != _lastArrangeSize) { _lastArrangeSize = finalSize; InvalidateRender(false); }
+        Owner?.ArrangeSurface(finalSize.Width);
         return finalSize;
     }
 
