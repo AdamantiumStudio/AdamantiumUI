@@ -24,6 +24,12 @@ public static class DragDropEvents
     public static readonly RoutedEvent DropEvent = EventManager.RegisterRoutedEvent("Drop",
         RoutingStrategy.Bubble, typeof(DragDropEventHandler), typeof(DragDropEvents));
 
+    /// <summary>The drag this source started is over, raised on the source alone before its <c>DragCompletedCommand</c>,
+    /// ahead of the target's drop: <c>Effects</c> Move asks the source to remove what it gave, None says it landed
+    /// nowhere. A control that drags its own content handles it; Handled keeps the command from running.</summary>
+    public static readonly RoutedEvent DragCompletedEvent = EventManager.RegisterRoutedEvent("DragCompleted",
+        RoutingStrategy.Direct, typeof(DragDropEventHandler), typeof(DragDropEvents));
+
     // The tunnelling half: a CONTAINER sees the drag before the element it contains does, which is the only way to veto
     // from above (a locked panel refusing every drop inside it, a parent that answers for its children).
     /// <summary>Tunnels ahead of <see cref="DragEnterEvent"/>.</summary>

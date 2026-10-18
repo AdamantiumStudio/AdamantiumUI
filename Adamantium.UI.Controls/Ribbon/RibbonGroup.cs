@@ -193,6 +193,12 @@ public class RibbonGroup : ItemsControl, IHeaderedItemsControl
 
     private void PrepareCommand(Base.InputUIComponent command, object item)
     {
+        if (command is Primitives.ButtonBase button &&
+            button.GetValueSource(ToolTipService.ToolTipProperty) == Core.ValuePriority.Default)
+        {
+            ToolTipService.SetToolTip(button, new RibbonCommandToolTip(button));
+        }
+
         if (command == null || !Ribbon.GetCanAddToQuickAccess(command)) return;
 
         // A command the author named nothing by gets an identity of its own. Without one it cannot be told apart at all:

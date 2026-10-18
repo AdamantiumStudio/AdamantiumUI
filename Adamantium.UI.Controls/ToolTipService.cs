@@ -80,11 +80,19 @@ public static class ToolTipService
 
     internal static void Show(IInputComponent owner)
     {
+        // A tip that reads as nothing - a command with no label and no key - is no card at all.
+        var tip = GetToolTip((AdamantiumComponent)owner);
+        if (tip is not IUIComponent && string.IsNullOrEmpty(tip?.ToString()))
+        {
+            Hide();
+            return;
+        }
+
         _pending = owner;
         EnsureBuilt();
 
         // The themed ToolTip control renders both a string (via its template's ContentPresenter) and a UI element as-is.
-        _toolTip.Content = GetToolTip((AdamantiumComponent)owner);
+        _toolTip.Content = tip;
 
         _popup.PlacementTarget = owner as UIComponent;
         _popup.Placement = GetPlacement((AdamantiumComponent)owner);

@@ -33,6 +33,17 @@ All packages share one version.
   `SelectedDate` it cannot select goes back to the day selected rather than throwing, and blackout days or a range
   that come to cover selected days let them go. It is in the Fluent, Graphite and macOS themes, reaches automation
   as a grid of selectable dates, and has a "Date and time" tab in the sandbox.
+- `Inline.FontFamily`: a run or a span sets the family of its own text, as WPF's `TextElement` does; `ClearOverrides`
+  takes it off.
+- `DragDropEvents.DragCompleted`: the source of a drag hears how it ended as an event on itself, before its
+  `DragCompletedCommand` - Move asks it to remove what it gave; handling it keeps the command from running. A control
+  that drags its own content, as a text editor drags its selection, answers for it there.
+- A ribbon command its author gave no tip shows its label and its key, as Word's "Bold (Ctrl+B)", read as the tip
+  opens; a tip that reads as nothing - a command with an icon alone - opens no card.
+  `RibbonSplitButton.IndicatorBrush`: a bar under the icon in what the body applies, as Word's font color and
+  highlight show the color picked last.
+- `WavyLine` and `TextRange.Follow` are public, for an editor outside the controls to draw its spelling marks and keep
+  them on their words through edits, as `TextBox` does.
 - The sandbox's text tab has a topic "New in typesetting": CJK punctuation with `TextSpacingTrim` and
   `HangingPunctuation` switched, words hyphenated inside a ligature and at an Arabic soft hyphen, a tall line in
   columns, a vertical field and a control in a vertical line, one text through three frames, 'SVG' glyphs of a font of
@@ -1595,6 +1606,10 @@ All packages share one version.
 - A `TreeView` with a `ParentPath` follows its selected node to another parent - a camera hung on a part of a closed
   model: the branches above its new place open and it is scrolled to; it vanished into the closed branch. A branch the
   user closes over the selection stays closed.
+- Up and Down between two rows of a ribbon group's commands (Word's font boxes over its Bold and Italic) land on the
+  command standing over or under the focus; Up landed on the row's last, Down on its first.
+- A snapshot of an element - an `adam-auto shot`, a drag's picture - paints its children in the window's order: a
+  child a `ZIndex` lowered covered its siblings in it.
 - While an element holds the pointer, what the pointer is over is found where the pointer is: the point was taken in
   the window's units as the element's parent's, so in a panel away from the window's corner the hover lit a cell off
   to the side of the pointer, moving with it.

@@ -25,6 +25,9 @@ public abstract class Inline : FundamentalUIComponent, ITextStyleUser, Adamantiu
     public static readonly AdamantiumProperty ForegroundProperty = AdamantiumProperty.Register(nameof(Foreground),
         typeof(Brush), typeof(Inline), new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure));
 
+    public static readonly AdamantiumProperty FontFamilyProperty = AdamantiumProperty.Register(nameof(FontFamily),
+        typeof(FontFamily), typeof(Inline), new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure));
+
     // NaN = "inherit the enclosing span's or the TextBlock's FontSize".
     public static readonly AdamantiumProperty FontSizeProperty = AdamantiumProperty.Register(nameof(FontSize),
         typeof(double), typeof(Inline), new PropertyMetadata(double.NaN, PropertyMetadataOptions.AffectsMeasure));
@@ -75,8 +78,8 @@ public abstract class Inline : FundamentalUIComponent, ITextStyleUser, Adamantiu
 
     private static readonly AdamantiumProperty[] Overrides =
     [
-        ForegroundProperty, FontSizeProperty, BackgroundProperty, TextDecorationsProperty, FontWeightProperty,
-        FontStyleProperty, FontStretchProperty, FontSynthesisProperty, FontFeaturesProperty, FontVariationsProperty,
+        ForegroundProperty, FontFamilyProperty, FontSizeProperty, BackgroundProperty, TextDecorationsProperty,
+        FontWeightProperty, FontStyleProperty, FontStretchProperty, FontSynthesisProperty, FontFeaturesProperty, FontVariationsProperty,
         LanguageProperty, ColorPaletteProperty, TrackingProperty, KerningProperty, BaselineShiftProperty,
     ];
 
@@ -104,6 +107,13 @@ public abstract class Inline : FundamentalUIComponent, ITextStyleUser, Adamantiu
     {
         get => GetValue<Brush>(ForegroundProperty);
         set => SetValue(ForegroundProperty, value);
+    }
+
+    /// <summary>The family of this inline's text; null takes the enclosing span's, then the TextBlock's.</summary>
+    public FontFamily FontFamily
+    {
+        get => GetValue<FontFamily>(FontFamilyProperty);
+        set => SetValue(FontFamilyProperty, value);
     }
 
     /// <summary>This inline's font size; NaN (default) takes the enclosing span's, then the TextBlock's.</summary>

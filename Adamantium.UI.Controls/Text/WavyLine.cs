@@ -5,8 +5,11 @@ using Adamantium.UI.Core.Media;
 
 namespace Adamantium.UI.Controls.Text;
 
-internal static class WavyLine
+/// <summary>The wavy line under a misspelled word, as text boxes and editors draw it.</summary>
+public static class WavyLine
 {
+    /// <summary>Draws the line along <paramref name="band"/>, the band a text layout gives a squiggle; down runs it
+    /// along vertical text.</summary>
     public static void Draw(IDrawingSession session, RectangleF band, Brush brush, bool down)
     {
         var depth = down ? band.Width : band.Height;

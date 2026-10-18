@@ -4,6 +4,7 @@ using Adamantium.Mathematics;
 using Adamantium.UI.Controls;
 using Adamantium.UI.Controls.Decorators;
 using Adamantium.UI.Controls.Panels;
+using Adamantium.UI.Controls.Buttons;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Templates;
@@ -250,6 +251,60 @@ public class RibbonTests
             Assert.That(large.Bounds.Y, Is.EqualTo(0), "and the large one starts on the same line");
             Assert.That(lone.Bounds.Y, Is.EqualTo(0), "as does a column holding a single command");
             Assert.That(b.Bounds.Y, Is.EqualTo(20 + panel.RowSpacing), "rows stack from there, apart");
+        });
+    }
+
+    // Up and Down between two rows of commands land on the one standing over or under the focus, as in Word - not on the
+    // row's first, nor, going up, on its last.
+    [Test]
+    public void UpAndDownBetweenRows_LandOnTheNearestCommand()
+    {
+        var font = new Button { Width = 150, Height = 22 };
+        var grow = new Button { Width = 24, Height = 22 };
+        var bold = new Button { Width = 24, Height = 22 };
+        var italic = new Button { Width = 24, Height = 22 };
+        var color = new Button { Width = 24, Height = 22 };
+        var top = new RibbonControlGroup { Children = { font, grow } };
+        var bottom = new RibbonControlGroup { Children = { bold, italic, new Border { Width = 100 }, color } };
+        var panel = new RibbonGroupPanel();
+        panel.Children.Add(top);
+        panel.Children.Add(bottom);
+        panel.Measure(Size.Infinity);
+        panel.Arrange(new Rect(0, 0, panel.DesiredSize.Width, panel.DesiredSize.Height));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(panel.Navigate(italic, FocusNavigationDirection.Up), Is.SameAs(font));
+            Assert.That(panel.Navigate(color, FocusNavigationDirection.Up), Is.SameAs(grow));
+            Assert.That(panel.Navigate(grow, FocusNavigationDirection.Down), Is.SameAs(color));
+            Assert.That(panel.Navigate(font, FocusNavigationDirection.Down), Is.SameAs(italic));
+            Assert.That(panel.Navigate(bold, FocusNavigationDirection.Down), Is.Null, "below the last row is nothing");
+        });
+    }
+
+    // A command its author gave no tip shows its label and its key, as Word's "Bold (Ctrl+B)", read as the tip opens; an
+    // author's own tip is left as written.
+    [Test]
+    public void ACommandWithoutATip_ShowsItsLabelAndKey_AnAuthorsTipStays()
+    {
+        var bold = new RoutedCommand("Bold", typeof(RibbonTests), new KeyGesture(Key.B, ModifierKeys.Control));
+        var plain = new RibbonButton { Content = "Bold", Command = bold };
+        var own = new RibbonButton { Content = "Paste", ToolTip = "Paste from the clipboard" };
+        var row = new RibbonControlGroup { Children = { new RibbonToggleButton { Content = "Italic" } } };
+        var group = new RibbonGroup();
+
+        group.PrepareContainer(plain, plain);
+        group.PrepareContainer(own, own);
+        group.PrepareContainer(row, row);
+        var before = ToolTipService.GetToolTip(plain)?.ToString();
+        plain.Content = "Полужирный";
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(before, Is.EqualTo("Bold (Ctrl+B)"));
+            Assert.That(ToolTipService.GetToolTip(plain)?.ToString(), Is.EqualTo("Полужирный (Ctrl+B)"));
+            Assert.That(ToolTipService.GetToolTip(own), Is.EqualTo("Paste from the clipboard"));
+            Assert.That(ToolTipService.GetToolTip((RibbonToggleButton)row.Children[0])?.ToString(), Is.EqualTo("Italic"));
         });
     }
 

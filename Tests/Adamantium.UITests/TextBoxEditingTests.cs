@@ -361,11 +361,11 @@ public class TextBoxEditingTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(SpellCheckBehavior.Moved(marks, "a teh cat teh", "xyz a teh cat teh"),
+            Assert.That(TextRange.Follow(marks, "a teh cat teh", "xyz a teh cat teh"),
                 Is.EqualTo(new[] { new TextRange(6, 3), new TextRange(14, 3) }), "typed before both");
-            Assert.That(SpellCheckBehavior.Moved(marks, "a teh cat teh", "a teh dog teh"),
+            Assert.That(TextRange.Follow(marks, "a teh cat teh", "a teh dog teh"),
                 Is.EqualTo(new[] { new TextRange(2, 3), new TextRange(10, 3) }), "changed between them");
-            Assert.That(SpellCheckBehavior.Moved(marks, "a teh cat teh", "a tehx cat teh"),
+            Assert.That(TextRange.Follow(marks, "a teh cat teh", "a tehx cat teh"),
                 Is.EqualTo(new[] { new TextRange(11, 3) }), "the word typed into is checked again");
         });
     }
