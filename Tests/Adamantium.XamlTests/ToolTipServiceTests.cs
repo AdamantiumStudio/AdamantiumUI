@@ -151,6 +151,18 @@ public class ToolTipServiceTests
         return null;
     }
 
+    // A tip that reads as nothing - a ribbon command with an icon alone - opens no empty card.
+    [Test]
+    public void ATipThatReadsAsNothing_OpensNoCard()
+    {
+        var (one, _, _, _, window) = Owners();
+        ToolTipService.SetToolTip(one, string.Empty);
+
+        Show(one, window);
+
+        Assert.That(Shared<Popup>("_popup")?.IsOpen ?? false, Is.False);
+    }
+
     [Test]
     public void ATipIsTakenDown_WhenItsOwnerIsDiscarded()
     {
