@@ -15,6 +15,11 @@ All packages share one version.
 
 ### Added
 
+- `DropDown.Command`: a choice runs it with the chosen item's value, as a font box sets the font of the text being
+  edited. A routed command's answer is shown as the choice without running it - a value no item has shows in the
+  header as it is, none (the selection is mixed) shows the placeholder - and the drop-down is disabled while the
+  command cannot run.
+
 - `CharacterStyle` and `ParagraphStyle` on `TextBlock` and `TextBox` (and `PasswordBox`): named text styles for the
   whole text, its `Text` with no inlines included. What the element sets itself wins over them, and an inline or a
   paragraph with its own style takes that one instead; changing a style lays the text out again, and so does moving the

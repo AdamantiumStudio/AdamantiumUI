@@ -4,7 +4,9 @@ using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Reflection;
 using Adamantium.ProceduralGeometry;
+using Adamantium.Core.Commands;
 using Adamantium.UI.Controls.Base;
+using Adamantium.UI.Controls.Primitives;
 using Adamantium.UI.Core;
 using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Core.Automation;
@@ -41,7 +43,13 @@ public class DropDown : Selector
     public static readonly AdamantiumProperty BackgroundPointerOverProperty = AdamantiumProperty.Register(
         nameof(BackgroundPointerOver), typeof(Brush), typeof(DropDown), new PropertyMetadata(default(Brush)));
 
+    public static readonly AdamantiumProperty CommandProperty = AdamantiumProperty.Register(nameof(Command),
+        typeof(ICommand), typeof(DropDown), new PropertyMetadata(null, OnCommandChanged));
+
     private Popup _popup;
+    private CommandSourceListener<DropDown> _commandListener;
+    private bool _showingAnswer;
+    private object _answer;
 
     static DropDown()
     {
@@ -133,7 +141,11 @@ public class DropDown : Selector
 
     public DropDown()
     {
-        SelectionChanged += (_, _) => UpdateDisplayContent();
+        SelectionChanged += (_, _) =>
+        {
+            UpdateDisplayContent();
+            RunCommand();
+        };
         PointerWheelChanged += OnHeaderWheel;
     }
 
@@ -204,6 +216,68 @@ public class DropDown : Selector
     {
         get => GetValue<Brush>(BackgroundPointerOverProperty);
         set => SetValue(BackgroundPointerOverProperty, value);
+    }
+
+    /// <summary>What a choice runs, given the chosen item's value, as a font box sets the font of the text being edited.
+    /// The value a routed command answers with is shown as the choice - one no item has shows in the header as it
+    /// is, none shows <see cref="Placeholder"/> - without running it; <see cref="Selector.SelectedValue"/> then follows
+    /// the command, not a binding. While the command cannot run, the drop-down is disabled.</summary>
+    public ICommand Command
+    {
+        get => GetValue<ICommand>(CommandProperty);
+        set => SetValue(CommandProperty, value);
+    }
+
+    private static void OnCommandChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
+    {
+        var dropDown = (DropDown)a;
+        dropDown._commandListener ??= new CommandSourceListener<DropDown>(dropDown, static d => d.UpdateCommandState());
+        dropDown._commandListener.Listen(e.NewValue as ICommand);
+        dropDown.UpdateCommandState();
+    }
+
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+        _commandListener?.Attached();
+    }
+
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnDetachedFromVisualTree(e);
+        _commandListener?.Detached();
+    }
+
+    private void UpdateCommandState()
+    {
+        var state = CommandManager.QueryFrom(Command, null, this, null);
+        SetCurrentValue(IsEnabledProperty, state.CanExecute);
+        if (Command is not RoutedCommand)
+        {
+            return;
+        }
+
+        _showingAnswer = true;
+        try
+        {
+            SetCurrentValue(SelectedValueProperty, state.Value);
+        }
+        finally
+        {
+            _showingAnswer = false;
+        }
+
+        _answer = SelectedItem == null ? state.Value : null;
+        UpdateDisplayContent();
+    }
+
+    private void RunCommand()
+    {
+        if (!_showingAnswer && SelectedItem != null && Command is { } command)
+        {
+            _answer = null;
+            CommandManager.ExecuteFrom(command, SelectedValue, this, null);
+        }
     }
 
     public override void OnApplyTemplate()
@@ -302,7 +376,7 @@ public class DropDown : Selector
             if (_shown != null) _shown.PropertyChanged += OnShownChanged;
         }
 
-        DisplayContent = SelectedItem != null ? FormatForDisplay(SelectedItem) : Placeholder;
+        DisplayContent = SelectedItem != null ? FormatForDisplay(SelectedItem) : _answer ?? Placeholder;
     }
 
     private void OnShownChanged(object sender, AdamantiumPropertyChangedEventArgs e)
