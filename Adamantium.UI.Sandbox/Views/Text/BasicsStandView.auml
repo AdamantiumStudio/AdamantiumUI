@@ -33,10 +33,9 @@
         <TextBlock Text="{Localize TextStrings.BindableRuns}" Margin="0,20,0,6"/>
         <TextBlock FontSize="16">
             <TextBlock.Inlines>
-                <!-- Side by side, with no white space between them: the phrases carry their own spaces. -->
-                <Run Text="{Localize TextStrings.YouTyped}" Foreground="#94A3B8"
-                /><Run Text="{Binding Message}" Foreground="{Binding AccentBrush}"
-                /><Run Text="{Localize TextStrings.Chars, count={Binding MessageLength}}" Foreground="#64748B"/>
+                <Run Text="{Localize TextStrings.YouTyped}" Foreground="#94A3B8"/>
+                <Run Text="{Binding Message}" Foreground="{Binding AccentBrush}"/>
+                <Run Text="{Localize TextStrings.Chars, count={Binding MessageLength}}" Foreground="#64748B"/>
             </TextBlock.Inlines>
         </TextBlock>
 
@@ -129,15 +128,17 @@
                    FontSize="18"
                    HorizontalAlignment="Left">
             <TextBlock.Inlines>
-                <Run Text="{Localize TextStrings.LinksBefore}"
-                /><Hyperlink AutomationProperties.AutomationId="SiteLink"
+                <Run Text="{Localize TextStrings.LinksBefore}"/>
+                <Hyperlink AutomationProperties.AutomationId="SiteLink"
                            NavigateUri="https://github.com/AdamantiumStudio">
                     <Run Text="{Localize TextStrings.LinksSite}"/>
-                </Hyperlink><Run Text="{Localize TextStrings.LinksMiddle}"
-                /><Hyperlink AutomationProperties.AutomationId="CountLink"
+                </Hyperlink>
+                <Run Text="{Localize TextStrings.LinksMiddle}"/>
+                <Hyperlink AutomationProperties.AutomationId="CountLink"
                            Command="{Binding CountLinkCommand}">
                     <Run Text="{Localize TextStrings.LinksCount}"/>
-                </Hyperlink><Run Text="{Binding LinkClicksText}"/>
+                </Hyperlink>
+                <Run Text="{Binding LinkClicksText}"/>
             </TextBlock.Inlines>
         </TextBlock>
 
@@ -151,16 +152,19 @@
                    TextWrapping="WrapByWords"
                    HorizontalAlignment="Left">
             <TextBlock.Inlines>
-                <Run Text="{Localize TextStrings.InlineControlsAgree}"
-                /><InlineUIContainer BaselineAlignment="TextBottom">
+                <Run Text="{Localize TextStrings.InlineControlsAgree}"/>
+                <InlineUIContainer BaselineAlignment="TextBottom">
                     <CheckBox AutomationProperties.AutomationId="InlineCheckBox"/>
-                </InlineUIContainer><Run Text="{Localize TextStrings.InlineControlsPress}"
-                /><InlineUIContainer>
+                </InlineUIContainer>
+                <Run Text="{Localize TextStrings.InlineControlsPress}"/>
+                <InlineUIContainer>
                     <Button AutomationProperties.AutomationId="InlineButton"
                             Content="{Localize TextStrings.InlineControlsButton}"
                             Command="{Binding CountLinkCommand}"/>
-                </InlineUIContainer><Run Text="{Localize TextStrings.InlineControlsSwatch}"
-                /><InlineUIContainer>
+                </InlineUIContainer>
+                <Run Text="{Localize TextStrings.InlineControlsSwatch}"/>
+                <!-- The swatch and the punctuation after it stand side by side. -->
+                <InlineUIContainer>
                     <Border Width="28"
                             Height="44"
                             CornerRadius="4"
@@ -242,35 +246,26 @@
                    HorizontalAlignment="Left"
                    Margin="0,12,0,18">
             <TextBlock.Inlines>
-                <Run Text="{Localize TextStrings.RunShiftBefore}"
-                /><Run Text="{Localize TextStrings.RunShiftRun}"
+                <Run Text="{Localize TextStrings.RunShiftBefore}"/>
+                <Run Text="{Localize TextStrings.RunShiftRun}"
                      BaselineShift="{Binding RunShift}"
                      TextDecorations="Underline"
-                     Background="#7C3AED"
-                /><Run Text="{Localize TextStrings.RunShiftAfter}"/>
+                     Background="#7C3AED"/>
+                <Run Text="{Localize TextStrings.RunShiftAfter}"/>
             </TextBlock.Inlines>
         </TextBlock>
         <TextBlock AutomationProperties.AutomationId="BaselineShiftSample"
                    FontSize="22"
                    HorizontalAlignment="Left">
             <TextBlock.Inlines>
-                <Run Text="E = mc"
-                /><Run Text="2"
-                     FontSize="13"
-                     BaselineShift="9"
-                /><Run Text="   H"
-                /><Run Text="2"
-                     FontSize="13"
-                     BaselineShift="-4"
-                /><Run Text="O   x"
-                /><Run Text="n+1"
-                     FontSize="13"
-                     BaselineShift="9"
-                /><Run Text="   footnote"
-                /><Run Text="1"
-                     FontSize="13"
-                     BaselineShift="9"
-                     TextDecorations="Underline"/>
+                <!-- Each formula on a line of its own; its runs side by side, with no white space between them. -->
+                <Run Text="E = mc"/><Run Text="2" FontSize="13" BaselineShift="9"/>
+                <Run Text=" "/>
+                <Run Text="H"/><Run Text="2" FontSize="13" BaselineShift="-4"/><Run Text="O"/>
+                <Run Text=" "/>
+                <Run Text="x"/><Run Text="n+1" FontSize="13" BaselineShift="9"/>
+                <Run Text=" "/>
+                <Run Text="footnote"/><Run Text="1" FontSize="13" BaselineShift="9" TextDecorations="Underline"/>
             </TextBlock.Inlines>
         </TextBlock>
 
@@ -282,30 +277,24 @@
                    FontSize="22"
                    HorizontalAlignment="Left">
             <TextBlock.Inlines>
-                <Run Text="x"
-                /><Run Text="2"
+                <Run Text="x"/><Run Text="2" FontSize="13" BaselineAlignment="Superscript"/>
+                <Run Text="+ log"/><Run Text="2" FontSize="13" BaselineAlignment="Subscript"/>
+                <Run Text=" "/>
+                <Run Text="W"
+                     FontSize="48"/>
+                <Run Text="top"
                      FontSize="13"
-                     BaselineAlignment="Superscript"
-                /><Run Text=" + log"
-                /><Run Text="2"
+                     BaselineAlignment="Top"/>
+                <Run Text="center"
                      FontSize="13"
-                     BaselineAlignment="Subscript"
-                /><Run Text="   "
-                /><Run Text="W"
-                     FontSize="48"
-                /><Run Text=" top"
+                     BaselineAlignment="Center"/>
+                <Run Text="bottom"
                      FontSize="13"
-                     BaselineAlignment="Top"
-                /><Run Text=" center"
+                     BaselineAlignment="Bottom"/>
+                <Run Text="text top"
                      FontSize="13"
-                     BaselineAlignment="Center"
-                /><Run Text=" bottom"
-                     FontSize="13"
-                     BaselineAlignment="Bottom"
-                /><Run Text=" text top"
-                     FontSize="13"
-                     BaselineAlignment="TextTop"
-                /><Run Text=" text bottom"
+                     BaselineAlignment="TextTop"/>
+                <Run Text="text bottom"
                      FontSize="13"
                      BaselineAlignment="TextBottom"/>
             </TextBlock.Inlines>
@@ -373,10 +362,10 @@
                        LineSpacing="{Binding SampleLineSpacing}"
                        MaxLines="{Binding SampleMaxLines}">
                 <TextBlock.Inlines>
-                    <Run Text="{Localize TextStrings.LinesBefore}"
-                    /><Run Text="{Localize TextStrings.LinesLarge}"
-                         FontSize="30"
-                    /><Run Text="{Localize TextStrings.LinesAfter}"/>
+                    <Run Text="{Localize TextStrings.LinesBefore}"/>
+                    <Run Text="{Localize TextStrings.LinesLarge}"
+                         FontSize="30"/>
+                    <Run Text="{Localize TextStrings.LinesAfter}"/>
                 </TextBlock.Inlines>
             </TextBlock>
         </Border>
