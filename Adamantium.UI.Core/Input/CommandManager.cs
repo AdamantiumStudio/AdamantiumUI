@@ -177,16 +177,30 @@ public static class CommandManager
         };
     }
 
-    /// <summary>Runs a command source's command when it can run.</summary>
+    /// <summary>Runs a command source's command when it can run; from a scope that
+    /// <see cref="FocusManager.ReturnsFocusProperty"/>, the focus then goes back to the field it acted on.</summary>
     public static void ExecuteFrom(ICommand command, object parameter, IInputComponent source, IInputComponent target)
     {
+        var field = source is IUIComponent from ? FocusManager.FocusToReturnTo(from) : null;
+        var before = FocusManager.Focused;
+        bool ran;
         if (command is RoutedCommand routed)
         {
-            routed.Execute(parameter, TargetFor(source, target));
+            ran = routed.Execute(parameter, TargetFor(source, target));
         }
         else if (command != null && command.CanExecute(parameter))
         {
             command.Execute(parameter);
+            ran = true;
+        }
+        else
+        {
+            ran = false;
+        }
+
+        if (ran)
+        {
+            FocusManager.ReturnFocus(field, before);
         }
     }
 

@@ -215,6 +215,83 @@ public class CommandSourceTests
         });
     }
 
+    // A click on a ribbon's command lands the focus on the button; once the command has run, it is back in the field.
+    [TestCase(true, true, ExpectedResult = "field")]
+    [TestCase(false, true, ExpectedResult = "button")]
+    [TestCase(true, false, ExpectedResult = "button")]
+    public string ACommandFromAScopeThatReturnsFocus_GivesItBackToTheField(bool returnsFocus, bool runs)
+    {
+        var (field, editor) = Editor();
+        var can = true;
+        CommandManager.GetCommandBindings(editor).Add(new CommandBinding(Bold, (_, _) => { }, (_, e) => e.CanExecute = can));
+        var button = new Button { Command = Bold };
+        var ribbon = new StackPanel { Children = { button } };
+        FocusManager.SetIsFocusScope(ribbon, true);
+        FocusManager.SetReturnsFocus(ribbon, returnsFocus);
+        Shown(editor, ribbon);
+        FocusManager.Focus(field);
+        Requery();
+
+        FocusManager.Focus(button);
+        can = runs;
+        CommandManager.ExecuteFrom(Bold, null, button, null);
+
+        return ReferenceEquals(FocusManager.Focused, field) ? "field" : ReferenceEquals(FocusManager.Focused, button) ? "button" : "other";
+    }
+
+    // A bar inside the ribbon gives the focus back past the ribbon too; a command that moves it keeps it where it put it.
+    [Test]
+    public void TheFocusGoesBack_PastANestedScope_ButNotOverWhereTheCommandPutIt()
+    {
+        var (field, editor) = Editor();
+        var search = new Button();
+        var moves = false;
+        CommandManager.GetCommandBindings(editor).Add(new CommandBinding(Bold, (_, _) =>
+        {
+            if (moves)
+            {
+                FocusManager.Focus(search);
+            }
+        }, (_, e) => e.CanExecute = true));
+        var save = new Button { Command = Bold };
+        var bar = new StackPanel { Children = { save } };
+        var ribbon = new StackPanel { Children = { bar, search } };
+        foreach (var scope in new[] { bar, ribbon })
+        {
+            FocusManager.SetIsFocusScope(scope, true);
+            FocusManager.SetReturnsFocus(scope, true);
+        }
+
+        Shown(editor, ribbon);
+        FocusManager.Focus(field);
+        Requery();
+        FocusManager.Focus(save);
+        CommandManager.ExecuteFrom(Bold, null, save, null);
+        var past = FocusManager.Focused;
+
+        moves = true;
+        FocusManager.Focus(save);
+        CommandManager.ExecuteFrom(Bold, null, save, null);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(past, Is.SameAs(field));
+            Assert.That(FocusManager.Focused, Is.SameAs(search));
+        });
+    }
+
+    [Test]
+    public void ARibbon_AndItsQuickAccessBar_ReturnTheFocus()
+    {
+        Assert.Multiple(() =>
+        {
+            Assert.That(FocusManager.GetReturnsFocus(new Ribbon()), Is.True);
+            Assert.That(FocusManager.GetReturnsFocus(new RibbonQuickAccess()), Is.True);
+            Assert.That(FocusManager.GetReturnsFocus(new RibbonApplicationMenu()), Is.False, "the backstage keeps it");
+            Assert.That(FocusManager.GetReturnsFocus(new Popup()), Is.False);
+        });
+    }
+
     private static void Shown(params IMeasurableComponent[] parts)
     {
         var root = new StackPanel();

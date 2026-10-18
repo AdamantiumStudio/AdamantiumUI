@@ -22,6 +22,7 @@ public class RibbonQuickAccess : ItemsControl
         ItemTemplateSelectorProperty.OverrideMetadata(typeof(RibbonQuickAccess),
             new PropertyMetadata(new RibbonQuickAccessTemplateSelector()));
         FocusManager.IsFocusScopeProperty.OverrideMetadata(typeof(RibbonQuickAccess), new PropertyMetadata(true));
+        FocusManager.ReturnsFocusProperty.OverrideMetadata(typeof(RibbonQuickAccess), new PropertyMetadata(true));
     }
 
     /// <summary>Where the bar is shown. The application hosts an instance in BOTH slots, bound to the one collection,
