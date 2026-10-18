@@ -1,6 +1,7 @@
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Input;
+using Adamantium.UI.Core.Media;
 
 namespace Adamantium.UI.Controls;
 
@@ -14,6 +15,9 @@ public class RibbonSplitButton : RibbonDropDownButton
         AdamantiumProperty.RegisterReadOnly(nameof(IsPointerOverDropDown),
             typeof(bool), typeof(RibbonSplitButton), new PropertyMetadata(false));
 
+    public static readonly AdamantiumProperty IndicatorBrushProperty = AdamantiumProperty.Register(nameof(IndicatorBrush),
+        typeof(Brush), typeof(RibbonSplitButton), new PropertyMetadata(null, PropertyMetadataOptions.AffectsRender));
+
     private InputUIComponent _dropDownArea;
     private bool _pressedDropDown;
 
@@ -21,6 +25,14 @@ public class RibbonSplitButton : RibbonDropDownButton
     {
         get => GetValue<bool>(IsPointerOverDropDownProperty);
         private set => SetValue(IsPointerOverDropDownProperty, value);
+    }
+
+    /// <summary>A bar under the icon in what the body applies - the font color or the highlight picked last, as in
+    /// Word; null draws none.</summary>
+    public Brush IndicatorBrush
+    {
+        get => GetValue<Brush>(IndicatorBrushProperty);
+        set => SetValue(IndicatorBrushProperty, value);
     }
 
     public override void OnApplyTemplate()

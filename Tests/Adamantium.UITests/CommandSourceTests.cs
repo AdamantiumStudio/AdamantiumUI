@@ -239,6 +239,26 @@ public class CommandSourceTests
         return ReferenceEquals(FocusManager.Focused, field) ? "field" : ReferenceEquals(FocusManager.Focused, button) ? "button" : "other";
     }
 
+    // A toggle with no command acts on its own - the panel of an application's view switches, a page shows - and gives
+    // the focus back just the same.
+    [TestCase(true, ExpectedResult = "field")]
+    [TestCase(false, ExpectedResult = "toggle")]
+    public string AToggleWithNoCommand_GivesTheFocusBackFromAScopeThatReturnsIt(bool returnsFocus)
+    {
+        var (field, editor) = Editor();
+        var toggle = new ToggleButton();
+        var bar = new StackPanel { Children = { toggle } };
+        FocusManager.SetIsFocusScope(bar, true);
+        FocusManager.SetReturnsFocus(bar, returnsFocus);
+        Shown(editor, bar);
+        FocusManager.Focus(field);
+
+        FocusManager.Focus(toggle);
+        CommandManager.ExecuteFrom(toggle.Command, null, toggle, null);
+
+        return ReferenceEquals(FocusManager.Focused, field) ? "field" : ReferenceEquals(FocusManager.Focused, toggle) ? "toggle" : "other";
+    }
+
     // A bar inside the ribbon gives the focus back past the ribbon too; a command that moves it keeps it where it put it.
     [Test]
     public void TheFocusGoesBack_PastANestedScope_ButNotOverWhereTheCommandPutIt()

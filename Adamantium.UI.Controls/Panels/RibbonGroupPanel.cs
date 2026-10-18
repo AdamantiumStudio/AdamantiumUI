@@ -43,7 +43,7 @@ public class RibbonGroupPanel : Panel
     {
         if (!IsArrow(direction)) return base.Navigate(from, direction);
 
-        if (from is not IMeasurableComponent measurable) return null;
+        if (ChildHolding(from) is not IMeasurableComponent measurable) return null;
 
         var column = _columns.FindIndex(c => c.Contains(measurable));
         if (column < 0) return null;
@@ -54,7 +54,9 @@ public class RibbonGroupPanel : Panel
         if (IsVertical(direction))
         {
             var next = row + (forward ? 1 : -1);
-            return next >= 0 && next < _columns[column].Count ? _columns[column][next] : null;
+            return next >= 0 && next < _columns[column].Count
+                ? NearestAcross(_columns[column][next], from)
+                : null;
         }
 
         var nextColumn = column + (forward ? 1 : -1);
@@ -63,6 +65,45 @@ public class RibbonGroupPanel : Panel
         // Landing in a shorter column: the nearest row it actually has.
         var target = _columns[nextColumn];
         return target[Math.Min(row, target.Count - 1)];
+    }
+
+    // The child of this panel that holds the element - the focus may sit in a row of commands, or a command of a row may
+    // be handed back to ask for the one after it.
+    private IUIComponent ChildHolding(IUIComponent element)
+    {
+        for (var node = element; node != null; node = node.VisualParent)
+        {
+            if (ReferenceEquals(node.VisualParent, this)) return node;
+        }
+
+        return null;
+    }
+
+    // Up or Down into a row of commands lands on the one standing nearest under or over the focus, as in Word, not on
+    // the row's first or last.
+    private IUIComponent NearestAcross(IUIComponent row, IUIComponent from)
+    {
+        var origin = FocusManager.Focused is IUIComponent focused && ChildHolding(focused) is { } holder &&
+                     ReferenceEquals(holder, ChildHolding(from))
+            ? focused
+            : from;
+        var x = origin.TransformBoundsToVisual(this).Center.X;
+        IUIComponent nearest = null;
+        var distance = double.MaxValue;
+        foreach (var command in row.VisualChildren)
+        {
+            if (command is not IInputComponent { Focusable: true, IsEnabled: true } || command.Visibility != Visibility.Visible)
+                continue;
+
+            var away = Math.Abs(command.TransformBoundsToVisual(this).Center.X - x);
+            if (away < distance)
+            {
+                distance = away;
+                nearest = command;
+            }
+        }
+
+        return nearest ?? row;
     }
 
     protected override Size MeasureOverride(Size availableSize)

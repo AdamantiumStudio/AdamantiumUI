@@ -1441,6 +1441,11 @@
                                                 Content="{TemplateBinding Icon}"
                                                 ContentTemplate="{TemplateBinding IconTemplate}"/>
                                     </Viewbox>
+                                    <!-- Word's bar under the icon: the color the body applies. -->
+                                    <Rectangle x:Name="IndicatorBar" Grid.Row="0" Grid.Column="0"
+                                            Height="3" Margin="1 0"
+                                            HorizontalAlignment="Stretch" VerticalAlignment="Bottom"
+                                            Fill="{TemplateBinding IndicatorBrush}"/>
                                     <ContentPresenter x:Name="PART_ContentPresenter" Grid.Row="1" Grid.Column="0"
                                             Margin="{ResourceReference RibbonCaptionMargin}"
                                             HorizontalAlignment="Center" VerticalAlignment="Center"

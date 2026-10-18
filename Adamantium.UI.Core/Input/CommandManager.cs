@@ -178,7 +178,8 @@ public static class CommandManager
     }
 
     /// <summary>Runs a command source's command when it can run; from a scope that
-    /// <see cref="FocusManager.ReturnsFocusProperty"/>, the focus then goes back to the field it acted on.</summary>
+    /// <see cref="FocusManager.ReturnsFocusProperty"/>, the focus then goes back to the field it acted on - also after a
+    /// source with no command, a toggle that switched itself.</summary>
     public static void ExecuteFrom(ICommand command, object parameter, IInputComponent source, IInputComponent target)
     {
         var field = source is IUIComponent from ? FocusManager.FocusToReturnTo(from) : null;
@@ -188,14 +189,17 @@ public static class CommandManager
         {
             ran = routed.Execute(parameter, TargetFor(source, target));
         }
-        else if (command != null && command.CanExecute(parameter))
+        else if (command != null)
         {
-            command.Execute(parameter);
-            ran = true;
+            ran = command.CanExecute(parameter);
+            if (ran)
+            {
+                command.Execute(parameter);
+            }
         }
         else
         {
-            ran = false;
+            ran = true;
         }
 
         if (ran)
