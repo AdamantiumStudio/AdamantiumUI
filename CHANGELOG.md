@@ -160,7 +160,8 @@ All packages share one version.
   model holds whenever no field with the keyboard takes Copy first. Its gestures run it from the keyboard, and
   `KeyBinding`s on an element or a class add keys of their own (`KeyGesture.Parse("Ctrl+Shift+K")`); a key whose
   command an element takes stays with it even when it cannot run now.
-  A button, a menu row or a hyperlink sends its routed command from itself, or from its `CommandTarget`. A focus scope
+  A button, a menu row, a segment or a hyperlink sends its routed command from itself, or from its `CommandTarget`; a
+  gallery sends its `ItemCommand` from itself, the picked item as the parameter. A focus scope
   (`FocusManager.IsFocusScope`: a context menu, a popup, a ribbon, its application menu and quick-access bar) keeps a
   focus of its own, per window: a command nothing inside it took goes to the element with the focus in the scope
   around it, so a ribbon's Copy copies from the field being edited, and a box's own menu acts on that box, also in a

@@ -142,9 +142,8 @@ public abstract class ButtonBase : ContentControl
         set => SetValue(CommandTargetProperty, value);
     }
 
-    // Track the command's CanExecuteChanged so the button auto-enables/disables. The subscription is weak (the relay
-    // holds the button weakly), so a command owned by a long-lived view-model doesn't keep a removed button alive.
-    private WeakCanExecuteChangedRelay<ButtonBase> _commandRelay;
+    // Track the command's CanExecuteChanged so the button auto-enables/disables.
+    private CommandSourceListener<ButtonBase> _commandListener;
 
     private static void OnCommandChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
     {
@@ -158,31 +157,21 @@ public abstract class ButtonBase : ContentControl
 
     private void OnCommandChanged(ICommand newCommand)
     {
-        _commandRelay?.Detach();
-        _commandRelay = newCommand != null && (newCommand is not RoutedCommand || IsAttachedToVisualTree)
-            ? new WeakCanExecuteChangedRelay<ButtonBase>(newCommand, this, static b => b.UpdateCanExecute())
-            : null;
+        _commandListener ??= new CommandSourceListener<ButtonBase>(this, static b => b.UpdateCanExecute());
+        _commandListener.Listen(newCommand);
         UpdateCanExecute();
     }
 
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
-        if (Command is RoutedCommand command)
-        {
-            _commandRelay ??= new WeakCanExecuteChangedRelay<ButtonBase>(command, this, static b => b.UpdateCanExecute());
-            UpdateCanExecute();
-        }
+        _commandListener?.Attached();
     }
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnDetachedFromVisualTree(e);
-        if (Command is RoutedCommand)
-        {
-            _commandRelay?.Detach();
-            _commandRelay = null;
-        }
+        _commandListener?.Detached();
     }
 
     private void UpdateCanExecute()

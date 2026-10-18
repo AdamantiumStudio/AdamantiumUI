@@ -11,7 +11,7 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests;
 
-/// <summary>Buttons and menu rows with a routed command: they ask its target and show what it says - can it run, is it
+/// <summary>Buttons, menu rows, segments and galleries with a routed command: they ask its target and show what it says - can it run, is it
 /// on, its key - and run it there; menus, ribbons and popups are focus scopes, so the target stays the field outside.</summary>
 [TestFixture]
 public class CommandSourceTests
@@ -121,6 +121,60 @@ public class CommandSourceTests
         row.Invoke();
 
         Assert.That(ran, Is.EqualTo(new object[] { editor }));
+    }
+
+    // No focus anywhere: the route starts from the segment, so the binding of the view it sits in takes the command.
+    [Test]
+    public void ASegmentWithARoutedCommand_AsksAndRunsItFromItself()
+    {
+        var ran = new List<object>();
+        var day = new SegmentedControlItem { Content = "Day", Command = Bold, CommandParameter = "day" };
+        var view = new StackPanel { Children = { day } };
+        CommandManager.GetCommandBindings(view).Add(new CommandBinding(Bold, (_, e) => ran.Add(e.Parameter)));
+        Shown(view);
+        Requery();
+        var enabled = day.IsEnabled;
+
+        day.RunCommand();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(enabled, Is.True);
+            Assert.That(ran, Is.EqualTo(new object[] { "day" }));
+        });
+    }
+
+    [Test]
+    public void AGalleryWithARoutedItemCommand_AsksAndRunsItFromItself()
+    {
+        var ran = new List<object>();
+        var allowed = "plane";
+        var gallery = new RibbonGallery { ItemCommand = Bold };
+        gallery.Items.Add("plane");
+        gallery.Items.Add("cube");
+        var plane = (RibbonGalleryItem)gallery.ItemContainerGenerator.Realize(0);
+        var cube = (RibbonGalleryItem)gallery.ItemContainerGenerator.Realize(1);
+        var view = new StackPanel { Children = { gallery } };
+        CommandManager.GetCommandBindings(view).Add(new CommandBinding(Bold, (_, e) => ran.Add(e.Parameter),
+            (_, e) => e.CanExecute = (string)e.Parameter == allowed));
+        var outOfTheTree = (plane.IsEnabled, cube.IsEnabled);
+        Shown(view);
+        Requery();
+        var shown = (plane.IsEnabled, cube.IsEnabled);
+        gallery.PickFromContainer(plane);
+        gallery.PickFromContainer(cube);
+
+        allowed = "cube";
+        CommandManager.InvalidateRequerySuggested();
+        Requery();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(outOfTheTree, Is.EqualTo((false, false)), "out of a tree the route reaches no binding");
+            Assert.That(shown, Is.EqualTo((true, false)));
+            Assert.That(ran, Is.EqualTo(new object[] { "plane" }));
+            Assert.That((plane.IsEnabled, cube.IsEnabled), Is.EqualTo((false, true)));
+        });
     }
 
     private static void Shown(params IMeasurableComponent[] parts)

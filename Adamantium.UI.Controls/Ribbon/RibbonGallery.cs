@@ -4,8 +4,10 @@ using System.Collections.Specialized;
 using Adamantium.Core.Commands;
 using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Controls.Panels;
+using Adamantium.UI.Controls.Primitives;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Automation;
+using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls;
@@ -38,20 +40,29 @@ public class RibbonGallery : Selector
         set => SetValue(ItemCommandProperty, value);
     }
 
-    // Weak, as ButtonBase's: a command owned by a long-lived view-model must not keep a removed gallery alive.
-    private WeakCanExecuteChangedRelay<RibbonGallery> _itemCommandRelay;
+    private CommandSourceListener<RibbonGallery> _itemCommandListener;
 
     private static void OnItemCommandChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
     {
         if (a is not RibbonGallery gallery) return;
 
         var command = e.NewValue as ICommand;
-        gallery._itemCommandRelay?.Detach();
-        gallery._itemCommandRelay = command != null
-            ? new WeakCanExecuteChangedRelay<RibbonGallery>(command, gallery, static g => g.UpdateCanRun())
-            : null;
+        gallery._itemCommandListener ??= new CommandSourceListener<RibbonGallery>(gallery, static g => g.UpdateCanRun());
+        gallery._itemCommandListener.Listen(command);
         if (command != null) gallery.SelectSingle(-1);
         gallery.UpdateCanRun();
+    }
+
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+        _itemCommandListener?.Attached();
+    }
+
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnDetachedFromVisualTree(e);
+        _itemCommandListener?.Detached();
     }
 
     private void UpdateCanRun()
@@ -73,7 +84,7 @@ public class RibbonGallery : Selector
         }
     }
 
-    private bool CanRun(object item) => ItemCommand?.CanExecute(item) ?? true;
+    private bool CanRun(object item) => CommandManager.QueryFrom(ItemCommand, item, this, null).CanExecute;
 
     protected override void OnSelectedIndexSet(int index)
     {
@@ -465,10 +476,10 @@ public class RibbonGallery : Selector
 
         if (ItemCommand is { } command)
         {
-            if (!command.CanExecute(item)) return;
+            if (!CanRun(item)) return;
 
             IsDropDownOpen = false;
-            command.Execute(item);
+            CommandManager.ExecuteFrom(command, item, this, null);
             return;
         }
 

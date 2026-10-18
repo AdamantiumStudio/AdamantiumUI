@@ -46,10 +46,9 @@ public class MenuItem : ItemsControl, IHeaderedItemsControl
         typeof(bool), typeof(MenuItem), new PropertyMetadata(false));
 
     // A row follows its command's availability, the way a button does: grayed out while the command says no, instead of
-    // looking ordinary and doing nothing when clicked. The subscription is WEAK (the relay holds the row weakly), so a
-    // command owned by a long-lived view-model does not keep a dismissed menu's rows alive - a menu is built and thrown
-    // away on every open, so that leak would be per-open.
-    private WeakCanExecuteChangedRelay<MenuItem> _commandRelay;
+    // looking ordinary and doing nothing when clicked. A menu is built and thrown away on every open, so the listener's
+    // weak hold keeps that from leaking per open.
+    private CommandSourceListener<MenuItem> _commandListener;
     private string _gestureTextOfCommand;
 
     private static void OnCommandChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
@@ -64,10 +63,8 @@ public class MenuItem : ItemsControl, IHeaderedItemsControl
 
     private void OnCommandChanged(ICommand newCommand)
     {
-        _commandRelay?.Detach();
-        _commandRelay = newCommand != null && (newCommand is not RoutedCommand || IsAttachedToVisualTree)
-            ? new WeakCanExecuteChangedRelay<MenuItem>(newCommand, this, static i => i.UpdateCanExecute())
-            : null;
+        _commandListener ??= new CommandSourceListener<MenuItem>(this, static i => i.UpdateCanExecute());
+        _commandListener.Listen(newCommand);
         if (string.IsNullOrEmpty(InputGestureText) || InputGestureText == _gestureTextOfCommand)
         {
             var text = newCommand is RoutedCommand { InputGestures: [var gesture, ..] } ? gesture.ToString() : null;
@@ -291,20 +288,12 @@ public class MenuItem : ItemsControl, IHeaderedItemsControl
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
-        if (Command is RoutedCommand command)
-        {
-            _commandRelay ??= new WeakCanExecuteChangedRelay<MenuItem>(command, this, static i => i.UpdateCanExecute());
-            UpdateCanExecute();
-        }
+        _commandListener?.Attached();
     }
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
-        if (Command is RoutedCommand)
-        {
-            _commandRelay?.Detach();
-            _commandRelay = null;
-        }
+        _commandListener?.Detached();
 
         // When the owning flyout closes this row detaches; drop the submenu state so it doesn't spontaneously re-open the
         // next time the menu is shown.
