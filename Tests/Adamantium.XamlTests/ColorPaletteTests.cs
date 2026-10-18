@@ -74,7 +74,7 @@ public class ColorPaletteTests
         var ran = new List<object>();
         var palette = new ColorPalette { NoColorText = "Automatic", Command = new AdamantiumCommand<object>(ran.Add) };
         Lay(palette);
-        var swatches = Below(palette).OfType<ColorPaletteSwatch>().ToList();
+        var swatches = Below(palette).OfType<ColorPaletteSwatch>().Where(s => s.HasColor).ToList();
         var red = swatches.First(s => s.Color == Color.FromRgba(255, 0, 0));
         var noColor = (Button)palette.GetTemplateChild("PART_NoColor");
 
@@ -112,6 +112,44 @@ public class ColorPaletteTests
             Assert.That(ran, Is.EqualTo(new object[] { Color.FromRgba(10, 20, 30) }));
             Assert.That(palette.IsMoreColorsOpen, Is.False, "the pick closes it");
             Assert.That(noColor.Visibility, Is.EqualTo(Visibility.Collapsed), "no words, no choice of no color");
+        });
+    }
+
+    // Word's "Recent colors": a row of places, empty until colors are applied through "More colors"; the latest first,
+    // one applied there again moves to the front, a pick from the row keeps the order, and the oldest goes past the count.
+    [Test]
+    public void RecentColors_KeepWhatMoreColorsApplied_LatestFirst()
+    {
+        Use(ThemeNamed("Fluent"));
+        var palette = new ColorPalette { RecentCount = 2, Command = new AdamantiumCommand<object>(_ => { }) };
+        Lay(palette);
+        var empty = palette.RecentPlaces.Select(place => place.Color).ToList();
+        var picker = (ColorPicker)palette.GetTemplateChild("PART_Picker");
+        var apply = (Button)palette.GetTemplateChild("PART_Apply");
+        var a = Color.FromRgba(1, 2, 3);
+        var b = Color.FromRgba(4, 5, 6);
+        var c = Color.FromRgba(7, 8, 9);
+
+        foreach (var color in new[] { a, b, a, c })
+        {
+            picker.SelectedColor = color;
+            apply.PerformClick();
+        }
+
+        var standard = Below(palette).OfType<ColorPaletteSwatch>().First(s => s.Color == Color.FromRgba(255, 0, 0));
+        standard.PerformClick();
+        palette.RecentPlaces[1].PerformClick();
+        Adamantium.UI.Extensions.WindowExtension.UpdateTree(palette);
+        var shown = Below(palette).OfType<ColorPaletteSwatch>().Where(s => s.Color == c || s.Color == a).ToList();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(empty, Is.EqualTo(new Color?[] { null, null }), "a row of empty places before any");
+            Assert.That(palette.RecentColors, Is.EqualTo(new[] { c, a }),
+                "b was the oldest; a standard color is not kept; a pick from the row keeps the order");
+            Assert.That(palette.SelectedColor, Is.EqualTo(a), "the row's pick is applied");
+            Assert.That(palette.RecentPlaces.Select(place => place.Color), Is.EqualTo(new Color?[] { c, a }));
+            Assert.That(shown, Has.Count.EqualTo(2), "and both are shown in the row");
         });
     }
 

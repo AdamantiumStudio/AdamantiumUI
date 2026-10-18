@@ -47,6 +47,18 @@
                                    SelectedColor="{Binding PickedColor, Mode=TwoWay}"
                                    Width="180" Height="30"
                                    HorizontalAlignment="Left"/>
+
+                <TextBlock x:Name="PaletteLabel" Text="{Localize ColorPageStrings.Palette}"
+                           FontSize="14"
+                           MarginTop="28"
+                           MarginBottom="14"/>
+                <!-- The color menu of a word processor's font color button, shown open: a pick runs the command, which
+                     sets the same PickedColor; its choice of no color goes back to the starting blue. -->
+                <ColorPalette AutomationProperties.AutomationId="Palette"
+                              AutomationProperties.LabeledBy="{Binding ElementName=PaletteLabel}"
+                              NoColorText="{Localize ColorPageStrings.StartColor}"
+                              Command="{Binding PickFromPaletteCommand}"
+                              HorizontalAlignment="Left"/>
             </StackPanel>
 
             <StackPanel AutomationProperties.LabeledBy="{Binding ElementName=LiveAccentHeading}"

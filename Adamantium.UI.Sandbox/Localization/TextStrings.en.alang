@@ -153,6 +153,7 @@
     <Phrase Key="LineMiddle" Text="Middle"/>
     <Phrase Key="LineBottom" Text="Bottom"/>
     <Phrase Key="VerticalTitle" Text="Japanese set vertically: lines run down and stack from the right, kana stand upright in their vertical forms, Latin and the year lie turned, and short numbers stand upright across the line:"/>
+    <Phrase Key="VerticalEditTitle" Text="The same in a field to edit: the caret lies across its line, Down goes along it and Left to the next line, and the field wraps at its height:"/>
     <Phrase Key="FinishingCurvesTitle" Text="Curves at a large size (Poppins, cubic curves): the outline follows the curve, not the facets of its chords:"/>
     <Phrase Key="FinishingLineBoundsTitle" Text="TextLineBounds, as in WinUI: each label is centered in its box by its layout, and the fill shows the label's own box - whole lines, trimmed to the top of the capitals, and from the capitals to the baseline. With Tight the capitals stand in the middle:"/>
     <Phrase Key="FinishingTrimTitle" Text="Two and a half lines high. With an ellipsis only lines that fit whole are set; untrimmed, the third line is cut by the edge, as CSS clips it:"/>
@@ -164,4 +165,24 @@
     <Phrase Key="FinishingPlaceholderTitle" Text="The placeholder of a box with tracking 300 is set as its text is:"/>
     <Phrase Key="FinishingPlaceholder" Text="Search the document"/>
     <Phrase Key="FinishingOversetTitle" Text="IsOverset is bound to the label on the right - move the number of lines:"/>
+    <Phrase Key="TopicTypesetting" Text="New in typesetting"/>
+    <Phrase Key="NewPunctuationTitle" Text="CJK punctuation, as CSS sets it: TextSpacingTrim gives up the blank halves of fullwidth brackets side by side and at the ends of lines, HangingPunctuation hangs a comma or full stop past the edge, and a justified line widens between its letters:"/>
+    <Phrase Key="SpacingTrimLabel" Text="TextSpacingTrim:"/>
+    <Phrase Key="HangingLabel" Text="HangingPunctuation:"/>
+    <Phrase Key="NewHyphenTitle" Text="Hyphenated words set again in their halves: a break inside the ffi ligature (of-fice), and Arabic letters taking their final and initial forms at a soft hyphen:"/>
+    <Phrase Key="NewTallLineTitle" Text="Columns: the line of larger text takes the room of its own height, so it does not run into the next row:"/>
+    <Phrase Key="NewVerticalTitle" Text="Vertical text: a field to edit and select down its lines, and a button standing upright among a block's lines:"/>
+    <Phrase Key="NewVerticalButton" Text="OK"/>
+    <Phrase Key="NewThreadedTitle" Text="One text through three frames - the block, an overflow beside it and one under both (TextBlock.OverflowContentTarget, TextBlockOverflow):"/>
+    <Phrase Key="NewSvgTitle" Text="Color glyphs of 'SVG', our own font: a style sheet, classes and the CSS cascade, clips in the box's units:"/>
+    <Phrase Key="NewSvgLegend" Text="A - colors by classes, the third by its id over its class. B - a fill attribute (red), the sheet over it (purple), !important over the style attribute (gold). C - stripes clipped round in their box (clipPathUnits=objectBoundingBox). D - clipped by its ancestor's clip-path, the left half. E - fill: bogus is dropped, the brown of its group is kept. F - clipped by a use of a moved rectangle."/>
+    <Phrase Key="NewAtlasTitle" Text="The color atlas lets go of images no text draws. Each tile below is a color image of our own 'sbix' font, 600 of them, twenty a row - as emoji are. The video card keeps such images in the color atlas, in layers of 1024 by 1024 pixels, 32 of these tiles to a layer. The budget is how many layers the atlas may take before it lets go of images not on the screen. Try it: set the budget to 4, scroll the list to its end and back - the atlas stays at the layers the tiles on the screen need, and the rows scrolled back to come back as they were."/>
+    <Phrase Key="ColorBudgetLabel" Text="Budget:"/>
+    <Phrase Key="ColorLayersUnit" Text=" layers ≈ "/>
+    <Phrase Key="ColorImagesUnit" Text=" images ≈ "/>
+    <Phrase Key="ColorMegabytesUnit" Text=" MB"/>
+    <Phrase Key="ColorHeldLabel" Text="In the atlas now: "/>
+    <Phrase Key="ColorImagesIn" Text=" images in "/>
+    <Phrase Key="ColorAllLabel" Text="All 600 at once, as the atlas kept them before it let images go: "/>
+    <Phrase Key="ColorAtlasNote" Text="Layers once taken stay taken: the video card does not take a layer of a texture back. Lowering the budget stops the atlas growing - it does not give memory back until the application is started again."/>
 </Language>

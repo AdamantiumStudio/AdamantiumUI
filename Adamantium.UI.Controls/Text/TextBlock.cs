@@ -87,6 +87,13 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
     public static readonly AdamantiumProperty IsOversetProperty = AdamantiumProperty.RegisterReadOnly(nameof(IsOverset),
         typeof(bool), typeof(TextBlock), new PropertyMetadata(false));
 
+    public static readonly AdamantiumProperty OverflowContentTargetProperty = AdamantiumProperty.Register(
+        nameof(OverflowContentTarget), typeof(TextBlockOverflow), typeof(TextBlock),
+        new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure | PropertyMetadataOptions.AffectsRender));
+
+    public static readonly AdamantiumProperty HasOverflowContentProperty = AdamantiumProperty.RegisterReadOnly(
+        nameof(HasOverflowContent), typeof(bool), typeof(TextBlock), new PropertyMetadata(false));
+
     public static readonly AdamantiumProperty WritingModeProperty = AdamantiumProperty.Register(nameof(WritingMode),
         typeof(WritingMode), typeof(TextBlock),
         new PropertyMetadata(WritingMode.Horizontal, PropertyMetadataOptions.AffectsMeasure, TextParametersChangedCallback));
@@ -209,12 +216,27 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
     private HorizontalTextAlignment _lastLastLineAlignment;
     private HorizontalTextAlignment _lastSingleWord;
     private bool _lastKashidas;
+    private TextSpacingTrim _lastSpacingTrim;
+    private HangingPunctuation _lastHanging;
     private double _lastLineHeight = double.NaN;
     private LineStackingStrategy _lastLineStacking;
     private double _lastLineSpacing;
     private int _lastMaxLines;
     private TextLineBounds _lastLineBounds;
     private const float Unbounded = 1e7f;
+
+    // The size the text was laid out at before the last, and what it came to: see EnsureLayout.
+    private bool _hasOther;
+    private double _otherWidth;
+    private double _otherHeight;
+    private Size _otherSize;
+
+    // The overflows the text runs on into, in order, and how many of the layout's frames are the block's own: none
+    // while it runs into no overflow.
+    private List<TextBlockOverflow> _overflows = [];
+    // Kept as numbers: a room not yet known is NaN, and Size's equality would never find it the same.
+    private readonly List<(double Width, double Height, double Phase)> _lastRooms = [];
+    private int _ownFrames;
     private const int MostColumnGrowth = 200;
     private const char LineSeparator = (char)0x2028;
     private const char ObjectReplacement = (char)0xFFFC;
@@ -284,7 +306,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
     // Shapes the text only when an input that affects the layout changed since the last call; otherwise returns the
     // cached size (and leaves _textLayout as-is). Cheap to call every measure/arrange/render. Width/Height use
     // double.Equals so NaN==NaN counts as "unchanged" (an auto-sized label stays a cache hit while its parent resizes).
-    private Size EnsureLayout()
+    private Size EnsureLayout(bool measuring = false)
     {
         // Resolve the inherited font (falling back to the single shared default), and (re)build the layout when it
         // changes - the typeface is fixed per TextLayout, so a font change means a new TextLayout for that face.
@@ -319,6 +341,8 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         _textLayout.LastLineAlignment = LastLineAlignment;
         _textLayout.SingleWordJustification = SingleWordJustification;
         _textLayout.Kashidas = Kashidas;
+        _textLayout.SpacingTrim = TextSpacingTrim;
+        _textLayout.HangingPunctuation = HangingPunctuation;
         _textLayout.LineHeight = LineHeight;
         _textLayout.LineStacking = LineStackingStrategy;
         _textLayout.LineSpacing = LineSpacing;
@@ -341,10 +365,10 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         }
         var text = _shown.Of(HasInlines ? InlineText() : Text, TextTransform, Language);
         var shaping = TextShaping(font);
+        var threads = TakeChain(vertical ? height : width, vertical ? width : height);
 
-        if (_hasLayout && !_inlinesDirty
+        var sameInputs = _hasLayout && !_inlinesDirty && SameRooms(threads)
             && _lastText == text && _lastFontSize.Equals(FontSize)
-            && _lastWidth.Equals(width) && _lastHeight.Equals(height)
             && _lastWrapping == TextWrapping && _lastTrimming == TextTrimming
             && _lastHAlign == HorizontalTextAlignment && _lastVAlign == VerticalTextAlignment
             && _lastJustify == JustifyLastLine && _lastDirection == TextDirection && _lastHyphens == Hyphens
@@ -357,14 +381,26 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
             && Equals(_lastBaselineGrid, baselineGrid)
             && _lastGlyphScaling.Equals(GlyphScaling) && _lastJustificationAlternates == JustificationAlternates
             && _lastLastLineAlignment == LastLineAlignment && _lastSingleWord == SingleWordJustification
-            && _lastKashidas == Kashidas && _lastLineHeight.Equals(LineHeight)
+            && _lastKashidas == Kashidas && _lastSpacingTrim == TextSpacingTrim && _lastHanging == HangingPunctuation
+            && _lastLineHeight.Equals(LineHeight)
             && _lastLineStacking == LineStackingStrategy && _lastLineSpacing.Equals(LineSpacing)
             && _lastMaxLines == MaxLines && _lastLineBounds == TextLineBounds
-            && ShapesLike(_lastShaping, shaping))
+            && ShapesLike(_lastShaping, shaping);
+        if (sameInputs && _lastWidth.Equals(width) && _lastHeight.Equals(height))
         {
             return _cachedSize;
         }
 
+        // A panel measuring twice a pass at two sizes - a grid's star column first at an upper bound, then at its
+        // share - is answered the size laid out at the other one, not laid out again each time. What is drawn and
+        // arranged is laid out at the size it ends up with.
+        if (measuring && sameInputs && _hasOther && _otherWidth.Equals(width) && _otherHeight.Equals(height))
+        {
+            return _otherSize;
+        }
+
+        _hasOther = sameInputs;
+        (_otherWidth, _otherHeight, _otherSize) = (_lastWidth, _lastHeight, _cachedSize);
         _runFontsPending = false;
         _links.Clear();
         _objects.Clear();
@@ -398,6 +434,13 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         }
         _textLayout.Exclusions = Exclusions;
         _textLayout.Frames = FramesOf(vertical ? height : width, vertical ? width : height, vertical, Lay, out var growth);
+        _ownFrames = 0;
+        if (threads)
+        {
+            _textLayout.Frames = Threaded(_textLayout.Frames, vertical, width, height);
+            growth = 0;
+        }
+
         _cachedSize = Lay();
         for (var grown = 0; growth > 0 && (MaxLines <= 0 || _textLayout.LineCount < MaxLines)
                             && _textLayout.OversetIndex < (text?.Length ?? 0) && grown < MostColumnGrowth; grown++)
@@ -409,6 +452,13 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
                 .ToArray();
             _cachedSize = Lay();
         }
+
+        // The layout's size takes in the overflows' frames: the block is as large as its own room.
+        if (_ownFrames > 0)
+        {
+            _cachedSize = new Size(width, height);
+        }
+
         if (!fontReady || _runFontsPending || _textLayout.HasPendingFonts)
         {
             WaitForFonts(loadsSeen);
@@ -435,6 +485,9 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         _hasLayout = true;
         IsOverset = (_textLayout.Frames != null || _textLayout.MaxLines > 0)
                     && _textLayout.OversetIndex < (text?.Length ?? 0);
+        Distribute(text?.Length ?? 0, vertical);
+        _lastRooms.Clear();
+        _lastRooms.AddRange(_overflows.Select(RoomOf));
         _inlinesDirty = false;
         _lastShaping = shaping;
         if (_lastText != text)
@@ -466,6 +519,8 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         _lastLastLineAlignment = LastLineAlignment;
         _lastSingleWord = SingleWordJustification;
         _lastKashidas = Kashidas;
+        _lastSpacingTrim = TextSpacingTrim;
+        _lastHanging = HangingPunctuation;
         _lastLineHeight = LineHeight;
         _lastLineStacking = LineStackingStrategy;
         _lastLineSpacing = LineSpacing;
@@ -519,6 +574,224 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         RectangleF Frame(float start, float extent) => vertical
             ? new RectangleF(0, start, extent, columnLength)
             : new RectangleF(start, 0, columnLength, extent);
+    }
+
+    // The chain of overflows from the target on, up to one that is not shown or shows another block's text; a new
+    // chain lays the text out again. Whether the block lays its text out to run on, its own room first - with the chain
+    // cut short, what does not fit is overset: wrapped by words in a block bounded both ways.
+    private bool TakeChain(double length, double across)
+    {
+        var chain = new List<TextBlockOverflow>();
+        for (var next = OverflowContentTarget; next != null && !chain.Contains(next) && next.Join(this);
+             next = next.OverflowContentTarget)
+        {
+            chain.Add(next);
+        }
+
+        if (!chain.SequenceEqual(_overflows))
+        {
+            foreach (var gone in _overflows.Where(overflow => !chain.Contains(overflow)))
+            {
+                gone.Leave(this);
+            }
+
+            _overflows = chain;
+            _hasLayout = false;
+        }
+
+        return OverflowContentTarget != null && TextWrapping == TextWrapping.WrapByWords && Bounded(length)
+               && Bounded(across);
+
+        static bool Bounded(double extent) => !double.IsNaN(extent) && !double.IsInfinity(extent);
+    }
+
+    private bool SameRooms(bool threads) =>
+        threads == _ownFrames > 0 && (!threads || _lastRooms.SequenceEqual(_overflows.Select(RoomOf)));
+
+    private static (double Width, double Height, double Phase) RoomOf(TextBlockOverflow overflow) =>
+        (overflow.Room.Width, overflow.Room.Height, overflow.GridPhase);
+
+    // The block's own frames, then a frame for each overflow as large as the room it gives, below them all and clear of
+    // the exclusions, on whole pixels, its rows where the grid the overflow stands on has them (at its top without one).
+    // An overflow not yet measured, or one without bounds, ends the chain.
+    private RectangleF[] Threaded(IReadOnlyList<RectangleF> own, bool vertical, double width, double height)
+    {
+        var frames = own?.ToList() ?? [new RectangleF(0, 0, (float)width, (float)height)];
+        _ownFrames = frames.Count;
+        var bottom = frames.Max(frame => frame.Bottom);
+        foreach (var exclusion in Exclusions ?? (IReadOnlyList<RectangleF>)[])
+        {
+            bottom = Math.Max(bottom, exclusion.Bottom);
+        }
+
+        var gap = (float)(4 * FontSize);
+        var grid = _textLayout.BaselineGrid;
+        foreach (var overflow in _overflows)
+        {
+            var room = overflow.Room;
+            var length = vertical ? room.Height : room.Width;
+            var across = vertical ? room.Width : room.Height;
+            if (double.IsNaN(length) || double.IsInfinity(length))
+            {
+                length = vertical ? height : width;
+            }
+
+            var unbounded = double.IsNaN(across) || double.IsInfinity(across);
+            if (!(length > 0) || (unbounded && vertical) || (!unbounded && !(across > 0)))
+            {
+                break;
+            }
+
+            var top = bottom + gap;
+            if (grid is { Step: > 0 } rows)
+            {
+                var phase = overflow.Grid is { } its && its.Step.Equals(rows.Step) ? its.Offset : 0;
+                var start = rows.Offset - phase;
+                top = (float)(start + Math.Ceiling((top - start) / rows.Step) * rows.Step);
+            }
+
+            top = MathF.Round(top);
+
+            var extent = unbounded ? Unbounded : (float)across;
+            frames.Add(vertical ? new RectangleF(0, top, extent, (float)length) : new RectangleF(0, top, (float)length, extent));
+            if (unbounded)
+            {
+                break;
+            }
+
+            bottom = top + extent;
+        }
+
+        return frames.ToArray();
+    }
+
+    // Each overflow shown its frame, as tall as its lines where its room has no bottom; whether the text goes on past
+    // the block and past each overflow.
+    private void Distribute(int length, bool vertical)
+    {
+        var frames = _textLayout.Frames;
+        var over = _textLayout.OversetIndex < length;
+        if (_ownFrames == 0)
+        {
+            HasOverflowContent = IsOverset;
+            foreach (var overflow in _overflows)
+            {
+                overflow.Show(null, default, false, _textLayout.Revision);
+            }
+
+            return;
+        }
+
+        var lastFrame = -1;
+        var extents = new double[frames.Count];
+        for (var line = 0; line < _textLayout.LineCount; line++)
+        {
+            var frame = _textLayout.GetLineFrame(line);
+            if (frame < 0)
+            {
+                continue;
+            }
+
+            lastFrame = Math.Max(lastFrame, frame);
+            var metrics = _textLayout.GetLine(line);
+            extents[frame] = Math.Max(extents[frame], metrics.Top + metrics.Height - frames[frame].Y);
+        }
+
+        HasOverflowContent = lastFrame >= _ownFrames || over;
+        for (var k = 0; k < _overflows.Count; k++)
+        {
+            var index = _ownFrames + k;
+            if (index >= frames.Count)
+            {
+                _overflows[k].Show(null, default, false, _textLayout.Revision);
+                continue;
+            }
+
+            var frame = frames[index];
+            var content = vertical || frame.Height < Unbounded
+                ? new Size(frame.Width, frame.Height)
+                : new Size(frame.Width, Math.Ceiling(extents[index]));
+            _overflows[k].Show(frame, content, lastFrame > index || over, _textLayout.Revision);
+        }
+    }
+
+    // Whether a control among the inlines stands at a point of an overflow showing the frame.
+    internal bool ShowsObjectAt(RectangleF frame, Vector2 local)
+    {
+        if (_hosted.Count == 0)
+        {
+            return false;
+        }
+
+        var x = local.X + frame.X;
+        var y = local.Y + frame.Y;
+        foreach (var item in _textLayout.GetInlineObjects())
+        {
+            if (x >= item.Rect.Left && x <= item.Rect.Right && y >= item.Rect.Top && y <= item.Rect.Bottom
+                && _objects.Exists(entry => entry.Index == item.Index))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    // Where a rect of the layout is shown, in the block's space: in its own frames, or in the overflow showing it.
+    private Rect ShownRect(RectangleF rect)
+    {
+        foreach (var overflow in _overflows)
+        {
+            if (overflow.Frame is { } frame && rect.Bottom >= frame.Top && rect.Top <= frame.Bottom
+                && rect.Right >= frame.Left && rect.Left <= frame.Right)
+            {
+                var at = overflow.TranslatePoint(new Vector2(rect.X - frame.X, rect.Y - frame.Y), this);
+                return new Rect(at.X, at.Y, rect.Width, rect.Height);
+            }
+        }
+
+        return new Rect(rect.X + LinesShift(), rect.Y, rect.Width, rect.Height);
+    }
+
+    // The part of the layout the block draws itself: its own frames, with room for ink past their edges.
+    private RectangleF? OwnWindow()
+    {
+        if (_ownFrames == 0)
+        {
+            return null;
+        }
+
+        var frames = _textLayout.Frames;
+        var margin = (float)FontSize;
+        var left = frames.Take(_ownFrames).Min(frame => frame.Left) - margin;
+        var top = frames.Take(_ownFrames).Min(frame => frame.Top) - margin;
+        var right = frames.Take(_ownFrames).Max(frame => frame.Right) + margin;
+        var bottom = frames.Take(_ownFrames).Max(frame => frame.Bottom) + margin;
+        return new RectangleF(left, top, right - left, bottom - top);
+    }
+
+    internal void OverflowArranged()
+    {
+        if (_hosted.Count > 0)
+        {
+            InvalidateArrange();
+        }
+    }
+
+    protected override void OnRenderInvalidated()
+    {
+        foreach (var overflow in _overflows ?? [])
+        {
+            overflow.InvalidateRender(false);
+        }
+    }
+
+    protected override void OnPaintInvalidated()
+    {
+        foreach (var overflow in _overflows ?? [])
+        {
+            overflow.InvalidatePaint();
+        }
     }
 
     private DropCap DropCapOf(ref bool fontReady)
@@ -652,6 +925,24 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
     {
         get => GetValue<bool>(IsOversetProperty);
         private set => SetValue(IsOversetProperty, value);
+    }
+
+    /// <summary>Where the text that does not fit into the block goes on, as WinUI's RichTextBlock sends it on: the
+    /// block lays its text out through its own room and then through the room each overflow of the chain gives. Text
+    /// wrapped by <see cref="TextWrapping.WrapByWords"/> into a block of bounded height (width, for vertical text).
+    /// <c>OverflowContentTarget="{Binding ElementName=next}"</c>.</summary>
+    public TextBlockOverflow OverflowContentTarget
+    {
+        get => GetValue<TextBlockOverflow>(OverflowContentTargetProperty);
+        set => SetValue(OverflowContentTargetProperty, value);
+    }
+
+    /// <summary>Whether the text goes on past the block: into its <see cref="OverflowContentTarget"/>, or, with none, out
+    /// of sight (<see cref="IsOverset"/>).</summary>
+    public bool HasOverflowContent
+    {
+        get => GetValue<bool>(HasOverflowContentProperty);
+        private set => SetValue(HasOverflowContentProperty, value);
     }
 
     /// <summary>How many lines a drop cap - the first characters set large, the lines running beside them - spans:
@@ -908,9 +1199,11 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         }
     }
 
+    // Down vertical lines a control stands centered across its line, on no baseline.
     private bool OnTheBaseline(IMeasurableComponent child) =>
-        Containers(_inlines).FirstOrDefault(container => ReferenceEquals(container.Child, child)) is not
-            { BaselineAlignment: { } alignment } || alignment == BaselineAlignment.Baseline;
+        WritingMode != WritingMode.VerticalRightToLeft
+        && (Containers(_inlines).FirstOrDefault(container => ReferenceEquals(container.Child, child)) is not
+            { BaselineAlignment: { } alignment } || alignment == BaselineAlignment.Baseline);
 
     private static IEnumerable<InlineUIContainer> Containers(InlineCollection inlines)
     {
@@ -1456,7 +1749,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         };
     }
 
-    private void DrawAdornments(IDrawingSession session, bool backgrounds)
+    private void DrawAdornments(IDrawingSession session, bool backgrounds, RectangleF? window, Vector2F shift)
     {
         if (_textLayout.AttributedText == null)
         {
@@ -1465,14 +1758,15 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
 
         foreach (var adornment in _textLayout.GetAdornments())
         {
-            if ((adornment.Kind == TextAdornmentKind.Background) != backgrounds)
+            if ((adornment.Kind == TextAdornmentKind.Background) != backgrounds || !Touches(window, adornment.Rect))
             {
                 continue;
             }
 
             var brush = adornment.Color is { } color ? new SolidColorBrush(color) : Foreground;
             var rect = adornment.Rect;
-            rect.X += LinesShift();
+            rect.X += shift.X;
+            rect.Y += shift.Y;
             if (adornment.Kind == TextAdornmentKind.Squiggle)
             {
                 WavyLine.Draw(session, rect, brush, WritingMode == WritingMode.VerticalRightToLeft);
@@ -1531,7 +1825,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         _lastConstraint = availableSize;   // a wrapping block reflows to this (its container's width) when it has no explicit Width
         MeasureHosted();
         _grid.Measure();
-        var size = EnsureLayout();
+        var size = EnsureLayout(measuring: true);
         // The layout is what gets drawn. A measure whose size came out the same has no arrange after it, so a block that
         // already has a slot goes back to the slot's width - else right-aligned text stood at the width it was MEASURED
         // against, short of the slot's edge. It does so in the arrange it asks for: laid out at the old slot here, it
@@ -1684,7 +1978,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
             }
 
             var child = _objects[index].Child;
-            var slot = new Rect(item.Rect.X + LinesShift(), item.Rect.Y, item.Rect.Width, item.Rect.Height);
+            var slot = ShownRect(item.Rect);
             child.Arrange(slot);
             placed.Add(child);
             if (_hostedRaises.TryGetValue(child, out var raise) && raise != 0 && !RaiseIn(child, slot).Equals(raise))
@@ -1728,7 +2022,8 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
 
     internal float LinesShift()
     {
-        if (WritingMode != WritingMode.VerticalRightToLeft || !double.IsNaN(Width) || _textLayout == null)
+        if (WritingMode != WritingMode.VerticalRightToLeft || !double.IsNaN(Width) || _textLayout == null
+            || _ownFrames > 0)
         {
             return 0;
         }
@@ -1746,10 +2041,8 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         ? VerticalTextAlignment.Top
         : VerticalTextAlignment;
 
-    TextRenderingParameters GetTextRenderingParameters()
+    TextRenderingParameters GetTextRenderingParameters(Vector2F textPos, Size size)
     {
-        var textPos = new Vector2F(LinesShift(), 0);
-
         return new TextRenderingParameters()
         {
             HorizontalTextAlignment = HorizontalTextAlignment,
@@ -1758,7 +2051,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
             TextTrimming = TextTrimming,
             TextWrapping = TextWrapping,
             Color = ((SolidColorBrush)Foreground).Color,
-            TextArea = new Rectangle(textPos, DesiredSize)
+            TextArea = new Rectangle(textPos, size)
         };
     }
 
@@ -1766,10 +2059,17 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
     {
         var session = context.ForControl(this);
         EnsureLayout();   // refresh shaping if a render-only property (alignment/wrapping) changed since the last measure
-        DrawAdornments(session, backgrounds: true);
-        DrawSelection(session);
-        var parameters = GetTextRenderingParameters();
-        if (DrawnEffects(new Vector2F(parameters.TextArea.X, parameters.TextArea.Y)) is { Length: > 0 } effects)
+        var shift = new Vector2F(LinesShift(), 0);
+        var window = OwnWindow();
+        DrawAdornments(session, backgrounds: true, window, shift);
+        DrawSelection(session, window, shift);
+        var parameters = GetTextRenderingParameters(shift, DesiredSize);
+        var effects = DrawnEffects(shift);
+        if (window is { } own)
+        {
+            session.DrawText(parameters, DesiredSize, _textLayout, Foreground, Background, Stroke, effects, own);
+        }
+        else if (effects.Length > 0)
         {
             session.DrawText(parameters, DesiredSize, _textLayout, Foreground, Background, Stroke, effects);
         }
@@ -1778,8 +2078,26 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
             session.DrawText(parameters, DesiredSize, _textLayout, Foreground, Background, Stroke);
         }
 
-        DrawAdornments(session, backgrounds: false);
+        DrawAdornments(session, backgrounds: false, window, shift);
     }
+
+    // An overflow's part of the text: the glyphs, lines, backgrounds and selection of its frame, moved to its top left.
+    // The block's own background and text effects stay in the block.
+    internal void RenderFrame(IDrawingSession session, RectangleF frame, Size size)
+    {
+        EnsureLayout();
+        var margin = (float)FontSize;
+        var window = new RectangleF(frame.X - margin, frame.Y - margin, frame.Width + 2 * margin, frame.Height + 2 * margin);
+        var shift = new Vector2F(-frame.X, -frame.Y);
+        DrawAdornments(session, backgrounds: true, window, shift);
+        DrawSelection(session, window, shift);
+        session.DrawText(GetTextRenderingParameters(shift, size), size, _textLayout, Foreground, Brushes.Transparent,
+            Stroke, [], window);
+        DrawAdornments(session, backgrounds: false, window, shift);
+    }
+
+    private static bool Touches(RectangleF? window, RectangleF rect) => window is not { } part
+        || (rect.Right >= part.Left && rect.Left <= part.Right && rect.Bottom >= part.Top && rect.Top <= part.Bottom);
 
     private GlyphEffect[] DrawnEffects(Vector2F area)
     {
@@ -1929,7 +2247,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         SelectLogical(from, (int)Math.Clamp((long)from + length, 0, size));
     }
 
-    private bool CanSelect => IsTextSelectionEnabled && WritingMode == WritingMode.Horizontal;
+    private bool CanSelect => IsTextSelectionEnabled;
 
     private bool HoldsAnchor => CanSelect && _selectedIn != null && _selectedIn == _lastText;
 
@@ -2207,7 +2525,13 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
             return new CaretPosition(0);
         }
 
-        var hit = _textLayout.HitTest(x - LinesShift(), y);
+        return Snapped(_textLayout.HitTest(x - LinesShift(), y));
+    }
+
+    // Where a hit puts the caret: on a caret stop, after the character before when the hit was past it.
+    private CaretPosition Snapped(TextHit hit)
+    {
+        var size = _lastText?.Length ?? 0;
         var index = Math.Clamp(hit.CaretIndex, 0, size);
         if (index > 0 && index < size)
         {
@@ -2217,19 +2541,22 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         return new CaretPosition(index, hit.IsTrailing && index == hit.CaretIndex);
     }
 
-    private void DrawSelection(IDrawingSession session)
+    private void DrawSelection(IDrawingSession session, RectangleF? window, Vector2F shift)
     {
         if (!HasSelection || SelectionBrush == null)
         {
             return;
         }
 
-        var shift = LinesShift();
         foreach (var (start, end) in SelectedRanges())
         {
             foreach (var rect in _textLayout.GetRangeRects(start, end))
             {
-                session.DrawRectangle(SelectionBrush, new Rect(rect.X + shift, rect.Y, rect.Width, rect.Height));
+                if (Touches(window, rect))
+                {
+                    session.DrawRectangle(SelectionBrush,
+                        new Rect(rect.X + shift.X, rect.Y + shift.Y, rect.Width, rect.Height));
+                }
             }
         }
     }
@@ -2354,9 +2681,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         {
             if (ReferenceEquals(candidate, link))
             {
-                return _textLayout.GetRangeRects(start, end)
-                    .Select(rect => new Rect(rect.X + LinesShift(), rect.Y, rect.Width, rect.Height))
-                    .ToList();
+                return _textLayout.GetRangeRects(start, end).Select(ShownRect).ToList();
             }
         }
 
@@ -2384,7 +2709,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
             return null;
         }
 
-        var point = e.GetPosition(this);
+        var point = PointerAt(e);
         var hit = _textLayout.HitTest(point.X - LinesShift(), point.Y);
         if (!hit.IsInside)
         {
@@ -2409,13 +2734,18 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
     protected override void OnPointerMoved(PointerEventArgs e)
     {
         base.OnPointerMoved(e);
+        Moved(e);
+    }
+
+    private void Moved(PointerEventArgs e)
+    {
         var overLink = LinkAt(e) != null;
         if (overLink != _overLink)
         {
             _overLink = overLink;
             Mouse.Cursor = overLink ? Cursors.Of(CursorType.Hand) : ShownCursor;
         }
-        else if (!overLink && ReferenceEquals(e.OriginalSource, this) && e.Pointer.Type != PointerType.Touch &&
+        else if (!overLink && Shows(e.OriginalSource) && e.Pointer.Type != PointerType.Touch &&
                  !ReferenceEquals(Mouse.Cursor, ShownCursor))
         {
             Mouse.Cursor = ShownCursor;
@@ -2426,6 +2756,46 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
             e.Handled = true;
         }
     }
+
+    // The block, or an overflow showing its text.
+    private bool Shows(object element) =>
+        ReferenceEquals(element, this) || (element is TextBlockOverflow overflow && _overflows.Contains(overflow));
+
+    // The pointer in the block's space: over an overflow, where the block would show that part of its text.
+    private Vector2 PointerAt(PointerEventArgs e)
+    {
+        foreach (var overflow in _overflows)
+        {
+            if (overflow.Frame is not { } frame || !overflow.IsAttachedToVisualTree)
+            {
+                continue;
+            }
+
+            var point = e.GetPosition(overflow);
+            if (point.X >= 0 && point.Y >= 0 && point.X < overflow.RenderSize.Width && point.Y < overflow.RenderSize.Height)
+            {
+                return new Vector2(point.X + frame.X + LinesShift(), point.Y + frame.Y);
+            }
+        }
+
+        return e.GetPosition(this);
+    }
+
+    internal void OverflowPointerEntered(PointerEventArgs e)
+    {
+        if (e.Pointer.Type != PointerType.Touch)
+        {
+            Mouse.Cursor = ShownCursor;
+        }
+    }
+
+    internal void OverflowPointerMoved(PointerEventArgs e) => Moved(e);
+
+    internal void OverflowPointerPressed(PointerPressedEventArgs e) => PressedOnText(e);
+
+    internal void OverflowPointerReleased(PointerReleasedEventArgs e) => ReleasedOnText(e);
+
+    internal void OverflowPointerExited(PointerEventArgs e) => Exited(e);
 
     private bool Drag(PointerEventArgs e)
     {
@@ -2441,7 +2811,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
             return false;
         }
 
-        var point = e.GetPosition(this);
+        var point = PointerAt(e);
         if (_selecting)
         {
             Select(_selectionAnchor, PositionAt(point.X, point.Y));
@@ -2478,7 +2848,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
             return;
         }
 
-        _pressAt = e.GetPosition(this);
+        _pressAt = PointerAt(e);
         _pressClicks = e.ClickCount;
         _pressExtends = (e.Modifiers & (InputModifiers.LeftShift | InputModifiers.RightShift)) != 0;
     }
@@ -2546,6 +2916,11 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
     protected override void OnPointerExited(PointerEventArgs e)
     {
         base.OnPointerExited(e);
+        Exited(e);
+    }
+
+    private void Exited(PointerEventArgs e)
+    {
         _overLink = false;
         _pressedLink = null;
         if (_pressPending)
@@ -2564,6 +2939,11 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
     protected override void OnPointerPressed(PointerPressedEventArgs e)
     {
         base.OnPointerPressed(e);
+        PressedOnText(e);
+    }
+
+    private void PressedOnText(PointerPressedEventArgs e)
+    {
         if (e.ChangedButton != MouseButtons.Left)
         {
             return;
@@ -2588,6 +2968,11 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
     protected override void OnPointerReleased(PointerReleasedEventArgs e)
     {
         base.OnPointerReleased(e);
+        ReleasedOnText(e);
+    }
+
+    private void ReleasedOnText(PointerReleasedEventArgs e)
+    {
         if (e.ChangedButton != MouseButtons.Left)
         {
             return;
@@ -2625,39 +3010,47 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
             return false;
         }
 
-        if (!shift && !ctrl && key is (Key.LeftArrow or Key.RightArrow) && HasSelection)
+        // Down vertical lines the arrows turn with the text: up and down go along a line, left to the next line.
+        var vertical = WritingMode == WritingMode.VerticalRightToLeft;
+        var (back, forth) = vertical ? (Key.UpArrow, Key.DownArrow) : (Key.LeftArrow, Key.RightArrow);
+        var (before, after) = vertical ? (Key.RightArrow, Key.LeftArrow) : (Key.UpArrow, Key.DownArrow);
+        if (!shift && !ctrl && (key == back || key == forth) && HasSelection)
         {
             var (anchorX, anchorLine) = _textLayout.GetCaretPoint(_selectionAnchor);
             var (focusX, focusLine) = _textLayout.GetCaretPoint(_selectionFocus);
             var anchorFirst = anchorLine == focusLine ? anchorX <= focusX : anchorLine < focusLine;
             var start = anchorFirst ? _selectionAnchor : _selectionFocus;
             var end = anchorFirst ? _selectionFocus : _selectionAnchor;
-            var edge = key == Key.LeftArrow ? start : end;
+            var edge = key == back ? start : end;
             Select(edge, edge);
             return true;
         }
 
         var size = _lastText?.Length ?? 0;
         var focus = _selectionFocus;
-        switch (key)
+        if ((key == back || key == forth) && ctrl)
         {
-            case Key.LeftArrow or Key.RightArrow when ctrl:
-                focus = _textLayout.MoveWordVisually(focus, key == Key.RightArrow);
-                break;
-            case Key.LeftArrow or Key.RightArrow:
-                focus = _textLayout.MoveVisually(focus, key == Key.RightArrow);
-                break;
-            case Key.Home:
-                focus = ctrl ? new CaretPosition(0) : _textLayout.GetLineStart(_textLayout.GetCaretPoint(focus).LineIndex);
-                break;
-            case Key.End:
-                focus = ctrl ? new CaretPosition(size) : _textLayout.GetLineEnd(_textLayout.GetCaretPoint(focus).LineIndex);
-                break;
-            case Key.UpArrow or Key.DownArrow:
-                focus = LineAway(focus, key == Key.DownArrow ? 1 : -1);
-                break;
-            default:
-                return false;
+            focus = _textLayout.MoveWordVisually(focus, key == forth);
+        }
+        else if (key == back || key == forth)
+        {
+            focus = _textLayout.MoveVisually(focus, key == forth);
+        }
+        else if (key == Key.Home)
+        {
+            focus = ctrl ? new CaretPosition(0) : _textLayout.GetLineStart(_textLayout.GetCaretPoint(focus).LineIndex);
+        }
+        else if (key == Key.End)
+        {
+            focus = ctrl ? new CaretPosition(size) : _textLayout.GetLineEnd(_textLayout.GetCaretPoint(focus).LineIndex);
+        }
+        else if (key == before || key == after)
+        {
+            focus = LineAway(focus, key == after ? 1 : -1);
+        }
+        else
+        {
+            return false;
         }
 
         Select(shift ? _selectionAnchor : focus, focus);
@@ -2678,8 +3071,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
             return new CaretPosition(_lastText?.Length ?? 0);
         }
 
-        var metrics = _textLayout.GetLine(target);
-        return PositionAt(x + LinesShift(), metrics.Top + metrics.Height / 2);
+        return Snapped(_textLayout.HitTestLine(target, x));
     }
 
     protected override void OnGotFocus(RoutedEventArgs e)
@@ -2733,6 +3125,13 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnDetachedFromVisualTree(e);
+        foreach (var overflow in _overflows)
+        {
+            overflow.Leave(this);
+        }
+
+        _overflows = [];
+        _hasLayout = false;
         _inlineBrushes.Released();
         _effectBrushes.Released();
         ClearSelection();

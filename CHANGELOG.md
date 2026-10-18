@@ -33,6 +33,16 @@ All packages share one version.
 - A `TreeView` with a `ParentPath` follows its selected node to another parent - a camera hung on a part of a closed
   model: the branches above its new place open and it is scrolled to; it vanished into the closed branch. A branch the
   user closes over the selection stays closed.
+- A `TextBlockOverflow` in a grid's star columns let its layout settle: it took its room each time the grid measured
+  it - first unbounded, then the column's width - and laid the block's text out again every time, never idle, the
+  overflow under the others as short as nothing and its lines over what came below. It takes its room as it is
+  arranged. A block whose overflows have no room yet no longer lays its text out again on every measure (a room not
+  known never compared the same).
+- A wrapping `TextBlock` measured twice a pass at two sizes - a grid's star column first at an upper bound, then at
+  its share - is answered the size it laid out at the other one, not laid out again each time; what it draws and
+  arranges is laid out at the size it ends up with.
+- A control among the inlines of a vertical `TextBlock` stands upright in its line, centered across it, as large as it
+  asks; it was collapsed to nothing.
 - An items host with `IsVirtualizing="False"` asks for what its items take; it asked for all the room it was given, as
   a scrolling list's viewport does, so a row of them standing in a taller space grew as tall as the space.
 - A `TreeView` told to select a node that has no row yet - an entity made and selected at once - lets the row selected
@@ -50,13 +60,48 @@ All packages share one version.
 
 ### Added
 
+- The sandbox's text tab has a topic "New in typesetting": CJK punctuation with `TextSpacingTrim` and
+  `HangingPunctuation` switched, words hyphenated inside a ligature and at an Arabic soft hyphen, a tall line in
+  columns, a vertical field and a control in a vertical line, one text through three frames, 'SVG' glyphs of a font of
+  our own styled by a sheet and clipped in their box, and 600 color images of another (`sbix`) scrolled under a budget
+  of the color atlas, its layers taken shown.
+- `TextBlockOverflow` and `TextBlock.OverflowContentTarget`, as WinUI's RichTextBlockOverflow: the text that does not
+  fit into a block goes on in the overflow it names, and on in the one that overflow names, wherever they stand. The
+  block lays its text out once, through its own room (its columns included) and then through each overflow's, so a
+  paragraph, its hyphenation and justification run on across them, and an overflow's lines sit on the baseline grid as
+  its own top would have them; an overflow of unbounded height is as tall as its lines and ends the chain. Each draws,
+  selects and clicks its part as the block does, in the block's formatting - the block's background and `TextEffects`
+  stay in the block; a control among the inlines shown in an overflow takes its own presses. An overflow shows one
+  block's text: a second block reaching it ends its chain before it, and takes it when the first lets go; a collapsed
+  overflow, or one out of the tree, ends the chain. `HasOverflowContent` on both, `ContentSource` on the overflow;
+  `IsOverset` is the text past the last. Text wrapped by words in a block of bounded height (width, for vertical
+  text). The paragraph stand shows one text through three frames.
+- `IDrawingSession.DrawText(..., effects, window)` and `TextPayload.Window`: only the glyphs of a layout touching a
+  part of it are drawn. A text unit rebuilds its glyphs when the run it holds is stale, not when the layout's last
+  build was.
+- `UIComponent.OnRenderInvalidated` and `OnPaintInvalidated`, for an element whose content other elements show part of.
+- `TextSpacingTrim` and `HangingPunctuation` on every element (inherited), taken by `TextBlock` and `TextBox`, as CSS's
+  `text-spacing-trim` and `hanging-punctuation`: fullwidth CJK punctuation gives up its blank half side by side and
+  where a line would not fit otherwise (`Normal`, the default), and a CJK comma or full stop hangs past the end of a
+  line where it would not fit otherwise (`AllowEnd`, the default).
+- `TextBox.WritingMode` (on `TextBoxBase`, so a `PasswordBox` too), as a `TextBlock`'s: lines down the field, stacked
+  from the right. The caret lies across its line, a click finds the character shown there, the arrows turn with the
+  text - Up and Down along a line, Left to the next one and Right back - a wrapping field wraps at its height and
+  scrolls across, opening on its first lines at the right and keeping its place from there as the text grows,
+  `MinLines`/`MaxLines` limit its width, and the placeholder and a floated label stand at its right.
+  The Vertical text stand of the sandbox has one to edit.
+- A vertical `TextBlock` selects, as a horizontal one does: dragged down its lines, and with the arrows turned as in a
+  vertical field; it could not be selected at all.
 - `FontFamily.Source`, as WPF's: the family's name - the one it was made with, or the name its font file gives.
 - `RibbonControlGroup`, as WPF's: a row of ribbon commands side by side - Word's Bold, Italic and Underline, or its
   font and size boxes with the size steps - that stands in its group as one row of the group's columns, its commands
   drawn small. To automation it is a group of them.
 - `ColorPalette` and `ColorPaletteSwatch`: colors to pick from, as Word's font color menu holds them - a choice of no
   color (`NoColorText`; none, none shown), a grid of `Colors` (`ColorPalette.StandardColors` by default) and, under
-  "More colors", a `ColorPicker` whose color "Apply" takes. A pick runs `Command` with the color, null for no color,
+  "More colors", a `ColorPicker` whose color "Apply" takes - and a row of `RecentColors`, as Word's: empty places until
+  colors are applied through "More colors", the latest first, one applied there again moved to the front, a pick from
+  the row leaving the order as it is, at most
+  `RecentCount` (10); a list given to several palettes is shared. A pick runs `Command` with the color, null for no color,
   keeps it as `SelectedColor` - for a split button's body to apply again - and closes the menu it stands in. One style
   set serves every theme.
 - The clipboard carries several formats of one thing at once: `Clipboard.SetData` puts an `IDataPackage` on it -

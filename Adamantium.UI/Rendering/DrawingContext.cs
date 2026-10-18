@@ -230,6 +230,15 @@ public class DrawingContext : IDrawingContext, IDrawingContextInternal, IDrawing
       return this;
    }
 
+   IDrawingSession IDrawingSession.DrawText(TextRenderingParameters renderingParameters, Size desiredSize, TextLayout textLayout, Brush foreground, Brush background, Brush stroke, IReadOnlyList<GlyphEffect> effects, RectangleF window)
+   {
+      if (background.IsVisible())
+         CreateCommand(new RectanglePayload(background, new Rect(desiredSize), CornerRadius.Empty, null));
+
+      CreateCommand(new TextPayload(renderingParameters, desiredSize, textLayout, foreground, background, stroke, null, effects, window));
+      return this;
+   }
+
    private RenderData GetRenderDataFromComponent()
    {
       var renderData = new RenderData(GetEffectiveOpacity(),
