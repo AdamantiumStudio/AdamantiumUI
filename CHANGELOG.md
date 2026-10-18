@@ -5,31 +5,11 @@ All packages share one version.
 
 ## Unreleased
 
-### Added
-
-- `TreeView.SelectedItems`: every node selected, kept in step with a view-model's list both ways - the tree writes
-  into it what is clicked (Ctrl adding, Shift a run), and selects what is written into it, a node in a closed branch
-  when its row comes. A node of the list written into `SelectedItem` becomes the one chosen last without letting the
-  rest go.
-- A `PropertySection` written for a `DataType` takes every object of that type in `SectionsSource`
-  (`PropertySection.Targets`), and its rows edit them together, as with `SelectedObjects`: the components of several
-  selected entities in one inspector.
-- The language server goes where a value points: from `{Localize Table.Key}` to the phrase in the table's base language
-  file, from the table to the file, and from the member of `{x:Static Type.Member}` to its declaration. Rider plugin
-  1.11.5, VS Code extension 0.3.4.
-- `PropertySection.Target` and `Targets` say when they change, so a section can bind to the object it is pointed at -
-  its folding to the object's own, `IsExpanded="{Self Target.IsExpanded, Mode=TwoWay}"`, though one section serves
-  every object of its type.
-- The designer selects a property grid's line, taking it to its definition in markup: a click on a line selected the
-  whole section, the line being the grid's own element with no markup of its own. `Design.StandsFor` records what such
-  an element shows of the markup, `Design.AuthoredOf` reads it; outside the designer they keep nothing.
-
 ### Fixed
 
 - A pointer coming over an element together with its ancestors - from a side panel straight onto a view that fills its
   document - shows the element's cursor: the ancestors were told of the enter after it, and the outermost put up its
   own. Elements joining a pointer's or the keyboard focus's chain hear of it outermost first.
-
 - A `TreeView` with a `ParentPath` follows its selected node to another parent - a camera hung on a part of a closed
   model: the branches above its new place open and it is scrolled to; it vanished into the closed branch. A branch the
   user closes over the selection stays closed.
@@ -63,6 +43,22 @@ All packages share one version.
 
 ### Added
 
+- `TreeView.SelectedItems`: every node selected, kept in step with a view-model's list both ways - the tree writes
+  into it what is clicked (Ctrl adding, Shift a run), and selects what is written into it, a node in a closed branch
+  when its row comes. A node of the list written into `SelectedItem` becomes the one chosen last without letting the
+  rest go.
+- A `PropertySection` written for a `DataType` takes every object of that type in `SectionsSource`
+  (`PropertySection.Targets`), and its rows edit them together, as with `SelectedObjects`: the components of several
+  selected entities in one inspector.
+- The language server goes where a value points: from `{Localize Table.Key}` to the phrase in the table's base language
+  file, from the table to the file, and from the member of `{x:Static Type.Member}` to its declaration. Rider plugin
+  1.11.5, VS Code extension 0.3.4.
+- `PropertySection.Target` and `Targets` say when they change, so a section can bind to the object it is pointed at -
+  its folding to the object's own, `IsExpanded="{Self Target.IsExpanded, Mode=TwoWay}"`, though one section serves
+  every object of its type.
+- The designer selects a property grid's line, taking it to its definition in markup: a click on a line selected the
+  whole section, the line being the grid's own element with no markup of its own. `Design.StandsFor` records what such
+  an element shows of the markup, `Design.AuthoredOf` reads it; outside the designer they keep nothing.
 - `Calendar`, with WPF's API: the days of a month, the months of a year and the years of a decade (`DisplayMode`), the
   header going up a level and the arrows back and on; `SelectionMode` (one date, one run, several runs or none) with
   `SelectedDate`/`SelectedDates`, `BlackoutDates`, `DisplayDateStart`/`End`, `IsTodayHighlighted` and
