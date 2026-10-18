@@ -469,43 +469,93 @@ public class ChoiceProperty : PropertyDefinition
     protected internal override DataTemplate DefaultEditorTemplate =>
         _editor ??= new DataTemplate(() => new TemplateResult { RootComponent = PropertyEditors.Choice() });
 
-    /// <summary>The choices for this property: the explicit list, else the enum's values, else nothing.</summary>
+    /// <summary>The choices for this property: the explicit list, else the enum's values, else nothing. The same list
+    /// each time while the enum stays, so an editor refilled with it keeps its items.</summary>
     public IEnumerable Choices()
     {
         if (ItemsSource != null) return ItemsSource;
-        return EnumType is { IsEnum: true } type ? Enum.GetValues(type) : null;
+        if (EnumType is not { IsEnum: true } type) return null;
+
+        if (_enumValuesOf != type)
+        {
+            _enumValues = Enum.GetValues(type);
+            _enumValuesOf = type;
+        }
+
+        return _enumValues;
     }
+
+    private Array _enumValues;
+    private Type _enumValuesOf;
 
     protected internal override void PrepareEditor(IUIComponent editor, object value)
     {
         if (editor is not DropDown drop) return;
 
         drop.ItemsSource = Choices();
-        drop.SelectedItem = String.IsNullOrEmpty(ValuePath) ? value : Matching(value);
+        ShowIn(drop, value);
     }
 
-    protected internal override object ReadEditor(IUIComponent editor)
+    protected internal override object ReadEditor(IUIComponent editor) => ReadFrom(editor as Selector);
+
+    // The selector finds the item whose ValuePath reads as the value; an editor that brings its own choices keeps them.
+    private protected void ShowIn(Selector selector, object value)
     {
-        var picked = (editor as DropDown)?.SelectedItem;
-
-        return String.IsNullOrEmpty(ValuePath) ? picked : Read(picked);
-    }
-
-    // The item whose ValuePath reads as this value - the reverse of what the row writes back.
-    private object Matching(object value)
-    {
-        if (Choices() is not { } choices) return null;
-
-        foreach (var choice in choices)
+        if (!String.IsNullOrEmpty(ValuePath))
         {
-            if (Equals(Read(choice), value)) return choice;
+            selector.SelectedValuePath = ValuePath;
         }
 
-        return null;
+        selector.SelectedValue = value;
+        selector.SelectValue(value);
     }
 
-    private object Read(object item) =>
-        item?.GetType().GetProperty(ValuePath)?.GetValue(item);
+    private protected static object ReadFrom(Selector selector) =>
+        selector?.SelectedItem == null ? null : selector.SelectedValue;
+}
+
+/// <summary>A choice from a few, all in sight as the segments of a <see cref="SegmentedControl"/> rather than hidden in a
+/// drop-down. The choices come as a <see cref="ChoiceProperty"/>'s do, or from an <see cref="PropertyDefinition.EditorTemplate"/>
+/// whose segments are written in it - pictures standing for values, with <see cref="ChoiceProperty.ValuePath"/> naming
+/// the value of each.</summary>
+public class SegmentedChoiceProperty : ChoiceProperty
+{
+    /// <summary>What a segment shows of its choice; null shows the choice as text.</summary>
+    public static readonly AdamantiumProperty ItemTemplateProperty = AdamantiumProperty.Register(nameof(ItemTemplate),
+        typeof(DataTemplate), typeof(SegmentedChoiceProperty), new PropertyMetadata(null));
+
+    private DataTemplate _editor;
+
+    public DataTemplate ItemTemplate
+    {
+        get => GetValue<DataTemplate>(ItemTemplateProperty);
+        set => SetValue(ItemTemplateProperty, value);
+    }
+
+    protected internal override DataTemplate DefaultEditorTemplate =>
+        _editor ??= new DataTemplate(() => new TemplateResult { RootComponent = PropertyEditors.Segments() });
+
+    protected internal override void PrepareEditor(IUIComponent editor, object value)
+    {
+        if (editor is not SegmentedControl segments)
+        {
+            return;
+        }
+
+        if (ItemTemplate != null)
+        {
+            segments.ItemTemplate = ItemTemplate;
+        }
+
+        if (Choices() is { } choices)
+        {
+            segments.ItemsSource = choices;
+        }
+
+        ShowIn(segments, value);
+    }
+
+    protected internal override object ReadEditor(IUIComponent editor) => ReadFrom(editor as SegmentedControl);
 }
 
 /// <summary>A <see cref="Color"/>, edited by the swatch button that opens the full picker. A color is the one value
@@ -867,6 +917,14 @@ internal static class PropertyEditors
         Padding = new Thickness(8, 0, 8, 0),
         VerticalAlignment = VerticalAlignment.Stretch,
         HorizontalAlignment = HorizontalAlignment.Stretch
+    };
+
+    /// <summary>Segments at their own width, left in the cell: stretched to it they would change size with the column.</summary>
+    public static SegmentedControl Segments() => new()
+    {
+        MinHeight = 0,
+        VerticalAlignment = VerticalAlignment.Stretch,
+        HorizontalAlignment = HorizontalAlignment.Left
     };
 
     // No border of its own: the swatch IS the control, and a frame around a color changes how the color reads.

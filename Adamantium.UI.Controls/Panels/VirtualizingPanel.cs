@@ -290,10 +290,13 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent
                 double.IsInfinity(availableSize.Width) ? (_viewport.Width > 0 ? _viewport.Width : extent.Width) : availableSize.Width,
                 double.IsInfinity(availableSize.Height) ? (_viewport.Height > 0 ? _viewport.Height : extent.Height) : availableSize.Height);
             // The DESIRED size still answers that question honestly: the extent on an unbounded axis, the slot on a
-            // bounded one. It is what the parent asked for and is independent of the viewport above.
-            desired = new Size(
-                double.IsInfinity(availableSize.Width) ? extent.Width : availableSize.Width,
-                double.IsInfinity(availableSize.Height) ? extent.Height : availableSize.Height);
+            // bounded one. It is what the parent asked for and is independent of the viewport above. A host that
+            // realizes every item is a plain stack with no viewport: it asks for what its items take.
+            desired = !IsVirtualizing
+                ? extent
+                : new Size(
+                    double.IsInfinity(availableSize.Width) ? extent.Width : availableSize.Width,
+                    double.IsInfinity(availableSize.Height) ? extent.Height : availableSize.Height);
             // The NEW extent can be SMALLER than the one _offset was clamped to above (e.g. the cells just shrank): an
             // offset that was valid against the old, larger extent now over-scrolls the content off the top/left. Re-clamp
             // to the new extent and, if it moved, schedule a follow-up pass so the window realizes at the corrected offset.

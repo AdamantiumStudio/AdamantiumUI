@@ -5,8 +5,8 @@ using Adamantium.UI.Core.Automation;
 
 namespace Adamantium.UI.Controls.Automation;
 
-/// <summary>The peer of a <see cref="RibbonGallery"/>: a list of choices, one picked at a time, that opens to show them
-/// all. Unnamed, it is called by its group.</summary>
+/// <summary>The peer of a <see cref="RibbonGallery"/>: a list of choices, one picked at a time - or run, with an
+/// <see cref="RibbonGallery.ItemCommand"/> - that opens to show them all. Unnamed, it is called by its group.</summary>
 public class RibbonGalleryAutomationPeer : ItemsControlAutomationPeer, ISelectionProvider, IExpandCollapseProvider
 {
     private readonly RibbonGallery _gallery;
@@ -31,6 +31,10 @@ public class RibbonGalleryAutomationPeer : ItemsControlAutomationPeer, ISelectio
     public void Expand() => _gallery.SetCurrentValue(RibbonGallery.IsDropDownOpenProperty, true);
 
     public void Collapse() => _gallery.SetCurrentValue(RibbonGallery.IsDropDownOpenProperty, false);
+
+    /// <summary>A gallery that runs its choices holds none, so it offers no selection.</summary>
+    public override object GetPattern(PatternId pattern) =>
+        pattern == PatternId.Selection && _gallery.ItemCommand != null ? null : base.GetPattern(pattern);
 
     protected override string NameCore() =>
         _gallery.GetVisualAncestors().OfType<RibbonGroup>().FirstOrDefault()?.Header as string;

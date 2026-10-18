@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
+using Adamantium.Core.Commands;
 using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Core;
@@ -23,6 +25,84 @@ public class RibbonGallery : Selector
 
     public static readonly AdamantiumProperty DropDownColumnsProperty = AdamantiumProperty.Register(nameof(DropDownColumns),
         typeof(int), typeof(RibbonGallery), new PropertyMetadata(0));
+
+    public static readonly AdamantiumProperty ItemCommandProperty = AdamantiumProperty.Register(nameof(ItemCommand),
+        typeof(ICommand), typeof(RibbonGallery), new PropertyMetadata(null, OnItemCommandChanged));
+
+    /// <summary>Makes the gallery run its choices rather than hold one, as a gallery of shapes to insert does: a picked
+    /// item is passed to the command, and the gallery has no selection - one set on it is dropped. A choice the command
+    /// cannot run is shown disabled. Null - the default - picks by selecting.</summary>
+    public ICommand ItemCommand
+    {
+        get => GetValue<ICommand>(ItemCommandProperty);
+        set => SetValue(ItemCommandProperty, value);
+    }
+
+    // Weak, as ButtonBase's: a command owned by a long-lived view-model must not keep a removed gallery alive.
+    private WeakCanExecuteChangedRelay<RibbonGallery> _itemCommandRelay;
+
+    private static void OnItemCommandChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (a is not RibbonGallery gallery) return;
+
+        var command = e.NewValue as ICommand;
+        gallery._itemCommandRelay?.Detach();
+        gallery._itemCommandRelay = command != null
+            ? new WeakCanExecuteChangedRelay<RibbonGallery>(command, gallery, static g => g.UpdateCanRun())
+            : null;
+        if (command != null) gallery.SelectSingle(-1);
+        gallery.UpdateCanRun();
+    }
+
+    private void UpdateCanRun()
+    {
+        foreach (var (container, item) in RealizedContainers())
+        {
+            if (container is RibbonGalleryItem cell)
+            {
+                cell.SetCurrentValue(IsEnabledProperty, CanRun(item));
+            }
+        }
+    }
+
+    private void ShowCanRun(RibbonGalleryItem cell, object item)
+    {
+        if (ItemCommand != null)
+        {
+            cell.SetCurrentValue(IsEnabledProperty, CanRun(item));
+        }
+    }
+
+    private bool CanRun(object item) => ItemCommand?.CanExecute(item) ?? true;
+
+    protected override void OnSelectedIndexSet(int index)
+    {
+        if (ItemCommand != null)
+        {
+            SelectSingle(-1);
+            return;
+        }
+
+        base.OnSelectedIndexSet(index);
+    }
+
+    // A selection named before the items came is taken when they do, past OnSelectedIndexSet.
+    protected override void OnItemsChanged(NotifyCollectionChangedEventArgs e)
+    {
+        base.OnItemsChanged(e);
+        if (ItemCommand != null && SelectedIndex >= 0) SelectSingle(-1);
+    }
+
+    protected override void OnSelectedItemSet(object item)
+    {
+        if (ItemCommand != null)
+        {
+            SelectSingle(-1);
+            return;
+        }
+
+        base.OnSelectedItemSet(item);
+    }
 
     /// <summary>How many choices stand side by side while the group is roomy.</summary>
     public int Columns
@@ -319,6 +399,7 @@ public class RibbonGallery : Selector
                 IsSelected = IsItemSelected(item)
             };
 
+            ShowCanRun(cell, item);
             if (ItemContainerStyle != null) cell.Styles.Add(ItemContainerStyle);
 
             _dropDownPanel.Children.Add(cell);
@@ -360,6 +441,7 @@ public class RibbonGallery : Selector
         }
 
         cell.IsSelected = IsItemSelected(item);
+        ShowCanRun(cell, item);
     }
 
     protected internal override void ClearContainer(IUIComponent container)
@@ -377,11 +459,21 @@ public class RibbonGallery : Selector
     /// <summary>A cell was picked - in the band or in the drop-down. Picking closes the drop-down: the choice is made.</summary>
     internal void PickFromContainer(RibbonGalleryItem cell)
     {
-        var index = IndexOfItem(ItemFor(cell));
+        var item = ItemFor(cell);
+        var index = IndexOfItem(item);
         if (index < 0) return;
 
-        SelectSingle(index);
+        if (ItemCommand is { } command)
+        {
+            if (!command.CanExecute(item)) return;
+
+            IsDropDownOpen = false;
+            command.Execute(item);
+            return;
+        }
+
         IsDropDownOpen = false;
+        SelectSingle(index);
     }
 
     /// <summary>Whether the item this cell stands for is the current choice - asked by a cell realized after the fact.</summary>

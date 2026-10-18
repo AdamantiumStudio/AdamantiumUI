@@ -1,9 +1,11 @@
 using System.Collections.Generic;
 using Adamantium.Mathematics;
+using Adamantium.MVVM;
 using Adamantium.UI.Controls;
 using Adamantium.UI.Controls.Decorators;
 using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Automation;
 using NUnit.Framework;
 
 namespace Adamantium.UITests;
@@ -116,6 +118,100 @@ public class RibbonGalleryTests
             Assert.That(gallery.SelectedItem, Is.EqualTo("item 2"));
             Assert.That(cell.IsSelected, Is.True);
             Assert.That(changed, Is.EqualTo(1));
+        });
+    }
+
+    [Test]
+    public void AGalleryWithAnItemCommand_RunsThePickedItem_EveryTime_AndHoldsNoChoice()
+    {
+        var gallery = Gallery(12);
+        var ran = new List<object>();
+        gallery.ItemCommand = new AdamantiumCommand<object>(ran.Add);
+        gallery.IsDropDownOpen = true;
+
+        var cell = (RibbonGalleryItem)gallery.ItemContainerGenerator.Realize(2);
+        gallery.PickFromContainer(cell);
+        gallery.PickFromContainer(cell);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(ran, Is.EqualTo(new[] { "item 2", "item 2" }), "a second pick of the same item runs it again");
+            Assert.That(gallery.SelectedItem, Is.Null);
+            Assert.That(cell.IsSelected, Is.False);
+            Assert.That(gallery.IsDropDownOpen, Is.False, "the choice is made");
+        });
+    }
+
+    [Test]
+    public void AChoiceTheItemCommandCannotRun_IsDisabled_AndNotRun()
+    {
+        var gallery = Gallery(12);
+        var ran = 0;
+        var command = new AdamantiumCommand<object>(_ => ran++, item => (string)item != "item 2");
+        var cell = (RibbonGalleryItem)gallery.ItemContainerGenerator.Realize(2);
+        var other = (RibbonGalleryItem)gallery.ItemContainerGenerator.Realize(3);
+        gallery.ItemCommand = command;
+        gallery.IsDropDownOpen = true;
+
+        gallery.PickFromContainer(cell);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(ran, Is.Zero);
+            Assert.That(gallery.SelectedItem, Is.Null);
+            Assert.That(cell.IsEnabled, Is.False);
+            Assert.That(other.IsEnabled, Is.True);
+            Assert.That(gallery.IsDropDownOpen, Is.True, "nothing was chosen");
+        });
+    }
+
+    [Test]
+    public void AGalleryWithAnItemCommand_DropsASelectionSetOnIt()
+    {
+        var gallery = Gallery(12);
+        gallery.SelectedIndex = 1;
+
+        gallery.ItemCommand = new AdamantiumCommand<object>(_ => { });
+        var dropped = gallery.SelectedIndex;
+        gallery.SelectedIndex = 4;
+        gallery.SelectedItem = "item 5";
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(dropped, Is.EqualTo(-1), "a selection held before the command came");
+            Assert.That(gallery.SelectedIndex, Is.EqualTo(-1));
+            Assert.That(gallery.SelectedItem, Is.Null);
+        });
+    }
+
+    [Test]
+    public void ASelectionNamedBeforeTheItemsCame_IsDroppedToo()
+    {
+        var gallery = new RibbonGallery { SelectedIndex = 0 };
+        gallery.ItemCommand = new AdamantiumCommand<object>(_ => { });
+
+        gallery.Items.Add("item 0");
+        gallery.Items.Add("item 1");
+
+        Assert.That(gallery.SelectedIndex, Is.EqualTo(-1));
+    }
+
+    [Test]
+    public void ToAutomation_AChoiceOfAGalleryWithAnItemCommand_IsInvoked_NotSelected()
+    {
+        var gallery = Gallery(12);
+        var ran = new List<object>();
+        gallery.ItemCommand = new AdamantiumCommand<object>(ran.Add);
+        var cell = (RibbonGalleryItem)gallery.ItemContainerGenerator.Realize(2);
+        var peer = cell.GetAutomationPeer();
+
+        ((IInvokeProvider)peer.GetPattern(PatternId.Invoke)).Invoke();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(ran, Is.EqualTo(new[] { "item 2" }));
+            Assert.That(peer.GetPattern(PatternId.SelectionItem), Is.Null);
+            Assert.That(gallery.GetAutomationPeer().GetPattern(PatternId.Selection), Is.Null, "it holds no choice");
         });
     }
 }
