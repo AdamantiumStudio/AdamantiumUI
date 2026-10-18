@@ -18,6 +18,7 @@
     <Phrase Key="XmlnsOnlyAtRoot" Text="xmlns можно объявлять только у корневого элемента"/>
     <Phrase Key="MarkupExtensionNotWrapped" Text="'{text}' не закрыто: расширение разметки заканчивается на }}"/>
     <Phrase Key="PropertyElementAttribute" Text="&lt;{element}&gt; задаёт свойство и не принимает атрибутов; '{attribute}' пишется на элементе, который оно задаёт"/>
+    <Phrase Key="PropertyElementAmidText" Text="&lt;{element}&gt; стоит посреди текста элемента; элемент-свойство пишется до содержимого или после него"/>
     <Phrase Key="PrefixNotDefined" Text="Префикс {prefix} не объявлен в корневом элементе."/>
 
     <!-- Types, properties and values. -->

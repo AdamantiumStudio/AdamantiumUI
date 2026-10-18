@@ -12,9 +12,20 @@ All packages share one version.
 - A `TreeView` told to select a node that has no row yet - an entity made and selected at once - lets the row selected
   before go at once; it stayed selected beside the new one when its row came. The new row comes selected - a node
   keeping its own selection is marked - and, with a `ParentPath`, is scrolled to.
+- A property element's text (`<TextBlock.Text>`, `<Button.Content>`) has its white space collapsed to single spaces and
+  none at its ends, as WPF reads it: two spaces stayed two, and a text on lines of its own kept its line breaks. In
+  any text, a line break between two East Asian characters is dropped, as WPF drops it (`日本`↵`語` is "日本語").
+- A property element in the middle of an element's text (`Hello <TextBlock.Tag>t</TextBlock.Tag> world`) is an error,
+  as in WPF; the texts either side were joined with both their spaces. One among elements alone stays allowed.
+- The markup loader behind the live preview and hot reload reports what the parser finds - a property element amid
+  text, an attribute on a property element, xmlns off the root - where it is written, and builds nothing of it, as the
+  build does not: it built such markup and said nothing. A live preview whose edit does not build - mid-typing - keeps
+  the tree it shows and its running animations, and says why.
 
 ### Added
 
+- `xml:space="preserve"` in markup, as in WPF: on an element, or one around it, the white space of its text is kept as
+  written - in a property element, in content and among inlines; `xml:space="default"` inside undoes it.
 - `FocusManager.ReturnsFocus`: a focus scope whose commands give the focus back - after a button, a drop-down, a
   segment or a gallery inside it has run its command, the focus goes back to the element that had it in the scope
   around, unless the command put it somewhere of its own. A ribbon and its quick-access bar do, so after a click on
@@ -1530,8 +1541,8 @@ All packages share one version.
 - White space between two inlines written on lines of their own is a space, as in WPF: `</Bold>`↵`<Italic>` gave
   "ab". A comment in the gap takes nothing away, and one in text adds no second space (`Hello <!-- c --> world`);
   elsewhere white space is still dropped. In a property element (`<Button.Content>`, `<TextBlock.Text>`) the text after
-  a comment is no longer lost. Markup that put the spaces
-  in its runs instead writes the runs side by side (`.../><Run .../>`), as the sandbox's text stands now do.
+  a comment is no longer lost. Markup that put the spaces in its runs drops them, as the sandbox's text stands now do,
+  and writes runs side by side (`.../><Run .../>`) only where no space stands between them.
 - The generator's type resolver takes an interface a type implements as one it is assignable to, as the runtime's does.
 - In Fluent, a tab whose strip is not on top rounds its outer corners, not those against its panel: a tool's tabs,
   under its body, were rounded on top and left a notch either side of where they join it.
