@@ -282,6 +282,32 @@ public class RibbonTests
         });
     }
 
+    // A command its author gave no tip shows its label and its key, as Word's "Bold (Ctrl+B)", read as the tip opens; an
+    // author's own tip is left as written.
+    [Test]
+    public void ACommandWithoutATip_ShowsItsLabelAndKey_AnAuthorsTipStays()
+    {
+        var bold = new RoutedCommand("Bold", typeof(RibbonTests), new KeyGesture(Key.B, ModifierKeys.Control));
+        var plain = new RibbonButton { Content = "Bold", Command = bold };
+        var own = new RibbonButton { Content = "Paste", ToolTip = "Paste from the clipboard" };
+        var row = new RibbonControlGroup { Children = { new RibbonToggleButton { Content = "Italic" } } };
+        var group = new RibbonGroup();
+
+        group.PrepareContainer(plain, plain);
+        group.PrepareContainer(own, own);
+        group.PrepareContainer(row, row);
+        var before = ToolTipService.GetToolTip(plain)?.ToString();
+        plain.Content = "Полужирный";
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(before, Is.EqualTo("Bold (Ctrl+B)"));
+            Assert.That(ToolTipService.GetToolTip(plain)?.ToString(), Is.EqualTo("Полужирный (Ctrl+B)"));
+            Assert.That(ToolTipService.GetToolTip(own), Is.EqualTo("Paste from the clipboard"));
+            Assert.That(ToolTipService.GetToolTip((RibbonToggleButton)row.Children[0])?.ToString(), Is.EqualTo("Italic"));
+        });
+    }
+
     // A separator ends the run beside it, so what follows starts a fresh column.
     [Test]
     public void ASeparator_BreaksTheColumnRun()
