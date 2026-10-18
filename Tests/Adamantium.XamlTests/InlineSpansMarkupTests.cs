@@ -256,6 +256,19 @@ public class InlineSpansMarkupTests
             AumlCodegenHarness.Errors(errors));
     }
 
+    // The preview reports what the build reports, where it is written, and builds nothing of it: it built such markup
+    // and said nothing.
+    [TestCase("Hello <TextBlock.Tag>t</TextBlock.Tag> world")]
+    [TestCase("<TextBlock.Tag Foo=\"1\">t</TextBlock.Tag>")]
+    public void TheLoader_ReportsWhatTheParserFinds(string content)
+    {
+        var result = AumlLoader.Load("<TextBlock " + Namespaces + ">\n" + content + "</TextBlock>");
+
+        Assert.That(result.Diagnostics, Has.Some.Contains("TextBlock.Tag").And.Contains("(2,"),
+            string.Join(" | ", result.Diagnostics));
+        Assert.That(result.Root, Is.Null);
+    }
+
     [Test]
     public void InlinesOnLinesOfTheirOwn_Compile()
     {

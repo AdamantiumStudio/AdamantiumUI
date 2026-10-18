@@ -17,6 +17,10 @@ All packages share one version.
   any text, a line break between two East Asian characters is dropped, as WPF drops it (`日本`↵`語` is "日本語").
 - A property element in the middle of an element's text (`Hello <TextBlock.Tag>t</TextBlock.Tag> world`) is an error,
   as in WPF; the texts either side were joined with both their spaces. One among elements alone stays allowed.
+- The markup loader behind the live preview and hot reload reports what the parser finds - a property element amid
+  text, an attribute on a property element, xmlns off the root - where it is written, and builds nothing of it, as the
+  build does not: it built such markup and said nothing. A live preview whose edit does not build - mid-typing - keeps
+  the tree it shows and its running animations, and says why.
 
 ### Added
 

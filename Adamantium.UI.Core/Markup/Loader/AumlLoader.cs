@@ -56,6 +56,26 @@ public static class AumlLoader
         catch (Exception e) { diagnostics.Add($"Parse error: {e.Message}"); return null; }
 
         if (doc.Root == null) { diagnostics.Add("Empty / invalid AUML"); return null; }
+
+        // What the build reports and does not build, the preview reports and does not build either.
+        if (doc.HasErrors)
+        {
+            var sink = new ListDiagnosticSink(diagnostics);
+            foreach (var error in doc.Errors)
+            {
+                sink.ReportError(null, error.Message, error.At);
+            }
+
+            if (doc.Errors.Count == 0)
+            {
+                foreach (var message in doc.Logger.Messages)
+                {
+                    sink.ReportLogMessage(null, message);
+                }
+            }
+
+            return null;
+        }
         doc.RelativeFilePath ??= "preview.auml";
         doc.RootNamespace ??= "Adamantium.Designer.Preview";
         doc.SourceFilePath = sourceFilePath;

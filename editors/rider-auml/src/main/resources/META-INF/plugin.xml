@@ -31,7 +31,7 @@
 
     <change-notes><![CDATA[
         <p>xml:space="preserve" is taken, as in WPF, and a property element in the middle of an element's text is
-        underlined.</p>
+        underlined. The preview shows what the markup cannot be built for instead of building it.</p>
         <p>A nullable property - DockingArea.ToolSelectionIndicatorPlacement, PinnedTabsPlacement, IsChecked - is
         completed with the values of the type it holds, and a value the run time would throw on is underlined.</p>
         <p>The wheel over the preview scrolls the previewed content - a list, a property grid - as it does in the running
