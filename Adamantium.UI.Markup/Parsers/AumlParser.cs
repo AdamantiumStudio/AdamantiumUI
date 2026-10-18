@@ -193,11 +193,7 @@ public class ParserContext
             }
             else
             {
-                var valueNode = ParseValueNode(node, mixed);
-                if (valueNode != null)
-                {
-                    objectNode.Children.Add(valueNode);
-                }
+                AddValue(objectNode.Children, ParseValueNode(node, mixed));
             }
         }
 
@@ -282,12 +278,27 @@ public class ParserContext
         var mixed = IsMixedContent(element);
         for (var xNode = element.FirstNode; xNode != null; xNode = xNode.NextNode)
         {
-            var valueNode = ParseValueNode(xNode, mixed);
-            if (valueNode != null)
-                valueNodes.Add(valueNode);
+            AddValue(valueNodes, ParseValueNode(xNode, mixed));
         }
 
         return valueNodes;
+    }
+
+    // Texts a comment parted are one text.
+    private static void AddValue<T>(List<T> nodes, IAumlAstValueNode node) where T : class, IAumlAstNode
+    {
+        if (node == null)
+        {
+            return;
+        }
+
+        if (node is AumlAstTextNode text && nodes.Count > 0 && nodes[nodes.Count - 1] is AumlAstTextNode previous)
+        {
+            nodes[nodes.Count - 1] = new AumlAstTextNode(previous.GetLineInfo(), previous.Text + text.Text) as T;
+            return;
+        }
+
+        nodes.Add(node as T);
     }
 
     private string GetNamespaceForAttribute(XAttribute attr, XElement element)

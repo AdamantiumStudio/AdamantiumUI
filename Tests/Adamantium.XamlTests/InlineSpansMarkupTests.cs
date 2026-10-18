@@ -1,5 +1,6 @@
 using System.Linq;
 using Adamantium.Fonts;
+using Adamantium.UI.Controls.Buttons;
 using Adamantium.UI.Controls.Text;
 using Adamantium.UI.Core.Markup;
 using NUnit.Framework;
@@ -168,6 +169,33 @@ public class InlineSpansMarkupTests
         Assert.That(result.Diagnostics, Is.Empty, string.Join(" | ", result.Diagnostics));
         var text = (TextBlock)result.Root;
         Assert.That(string.Concat(text.Inlines.OfType<Run>().Select(run => run.Text)), Is.EqualTo("a b"));
+    }
+
+    // The texts either side of a comment are one text.
+    [TestCase("Hello <!-- c --> world", "Hello world")]
+    [TestCase("Hello<!-- c --> world", "Hello world")]
+    [TestCase("Hello<!-- c -->world", "Helloworld")]
+    [TestCase("Hello <!-- c --> <Run Text=\"w\"/>", "Hello w")]
+    public void ACommentInText_LeavesOneSpace(string content, string expected)
+    {
+        var result = AumlLoader.Load("<TextBlock " + Namespaces + ">" + content + "</TextBlock>");
+
+        Assert.That(result.Diagnostics, Is.Empty, string.Join(" | ", result.Diagnostics));
+        var text = (TextBlock)result.Root;
+        Assert.That(string.Concat(text.Inlines.OfType<Run>().Select(run => run.Text)), Is.EqualTo(expected));
+    }
+
+    // A property element's text is the same with a comment in it as without: the text after the comment was lost.
+    [Test]
+    public void ACommentInAPropertyElementsText_KeepsAllOfIt()
+    {
+        var text = (TextBlock)AumlLoader.Load(
+            "<TextBlock " + Namespaces + "><TextBlock.Text>Hello <!-- c --> world</TextBlock.Text></TextBlock>").Root;
+        var button = (Button)AumlLoader.Load(
+            "<Button " + Namespaces + "><Button.Content>Hello <!-- c --> world</Button.Content></Button>").Root;
+
+        Assert.That(text.Text, Is.EqualTo("Hello  world"));
+        Assert.That(button.Content, Is.EqualTo("Hello  world"));
     }
 
     [Test]

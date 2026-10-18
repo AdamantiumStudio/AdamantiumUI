@@ -1468,7 +1468,9 @@ All packages share one version.
 - A `TextBox` that does not wrap, its paragraphs running different ways, stands each line at its own edge: the whole
   text stood at the edge of its first paragraph.
 - White space between two inlines written on lines of their own is a space, as in WPF: `</Bold>`↵`<Italic>` gave
-  "ab". A comment in the gap takes nothing away; elsewhere white space is still dropped. Markup that put the spaces
+  "ab". A comment in the gap takes nothing away, and one in text adds no second space (`Hello <!-- c --> world`);
+  elsewhere white space is still dropped. In a property element (`<Button.Content>`, `<TextBlock.Text>`) the text after
+  a comment is no longer lost. Markup that put the spaces
   in its runs instead writes the runs side by side (`.../><Run .../>`), as the sandbox's text stands now do.
 - The generator's type resolver takes an interface a type implements as one it is assignable to, as the runtime's does.
 - In Fluent, a tab whose strip is not on top rounds its outer corners, not those against its panel: a tool's tabs,
