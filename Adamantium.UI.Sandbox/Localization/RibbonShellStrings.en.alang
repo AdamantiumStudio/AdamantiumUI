@@ -1,6 +1,7 @@
 <Language>
     <Phrase Key="Title" Text="Ribbon — Adamantium editor shell"/>
     <Phrase Key="SceneView" Text="Scene view"/>
+    <Phrase Key="Notes" Text="Notes - the ribbon's Cut, Copy and Paste work here while you type"/>
 
     <Phrase Key="File" Text="File"/>
     <Phrase Key="New" Text="New"/>

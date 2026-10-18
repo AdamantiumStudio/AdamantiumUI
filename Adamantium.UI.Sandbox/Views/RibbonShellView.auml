@@ -842,6 +842,18 @@
                    Height="16"/>
         </DataTemplate>
     </ResourceContext.Resources>
+    <!-- Cut, Copy, Paste and Select all are routed: the field the keyboard is in takes them first, and what no field
+         takes comes up here and goes to the scene. -->
+    <View.Behaviors>
+        <CommandBinding Command="{x:Static ApplicationCommands.Cut}"
+                        Handler="{Binding CutCommand}"/>
+        <CommandBinding Command="{x:Static ApplicationCommands.Copy}"
+                        Handler="{Binding CopyCommand}"/>
+        <CommandBinding Command="{x:Static ApplicationCommands.Paste}"
+                        Handler="{Binding PasteCommand}"/>
+        <CommandBinding Command="{x:Static ApplicationCommands.SelectAll}"
+                        Handler="{Binding SelectAllCommand}"/>
+    </View.Behaviors>
     <!-- An editor shell: a ribbon band, a document surface, a status line. Exercises the three command sizes, commands
          graying out on CanExecute, two-way toggles, ordinary controls inside a group, a separator breaking a column,
          and the quick-access bar in the caption reading the SAME view model (see RibbonWindow.auml). -->
@@ -1575,7 +1587,7 @@
                          MenuItem controls cannot be in two places. -->
                     <RibbonSplitButton Content="{Localize RibbonShellStrings.Paste}"
                                        Icon="{ObservableResource PasteIcon}"
-                                       Command="{Binding PasteCommand}"
+                                       Command="{x:Static ApplicationCommands.Paste}"
                                        Ribbon.QuickAccessKey="Paste"
                                        ToolTip="{Localize RibbonShellStrings.PasteTip}">
                         <RibbonSplitButton.DropDownMenu>
@@ -1596,13 +1608,13 @@
                     <!-- Medium: small icon, label beside it - three stack into one column. -->
                     <RibbonButton Content="{Localize RibbonShellStrings.Cut}"
                                   Icon="{ObservableResource CutIcon}"
-                                  Command="{Binding CutCommand}"
+                                  Command="{x:Static ApplicationCommands.Cut}"
                                   Ribbon.QuickAccessKey="Cut"
                                   AutomationProperties.AutomationId="Cut"
                                   MaxSize="Medium"/>
                     <RibbonButton Content="{Localize RibbonShellStrings.Copy}"
                                   Icon="{ObservableResource CopyIcon}"
-                                  Command="{Binding CopyCommand}"
+                                  Command="{x:Static ApplicationCommands.Copy}"
                                   Ribbon.QuickAccessKey="Copy"
                                   MaxSize="Medium"/>
                     <RibbonButton Content="{Localize RibbonShellStrings.Duplicate}"
@@ -1625,8 +1637,9 @@
                                   MaxSize="Medium"/>
                     <RibbonButton Content="{Localize RibbonShellStrings.SelectAll}"
                                   Icon="{ObservableResource SelectAllIcon}"
-                                  Command="{Binding SelectAllCommand}"
+                                  Command="{x:Static ApplicationCommands.SelectAll}"
                                   Ribbon.QuickAccessKey="SelectAll"
+                                  AutomationProperties.AutomationId="SelectAll"
                                   MaxSize="Medium"
                                   CollapseToSmall="Never"/>
                     <RibbonButton Content="{Localize RibbonShellStrings.SelectNone}"
@@ -2024,7 +2037,7 @@
                 <RibbonGroup Header="{Localize RibbonShellStrings.Selection}" Icon="{ObservableResource SelectionIcon}">
                     <RibbonButton Content="{Localize RibbonShellStrings.SelectAll}"
                                   Icon="{ObservableResource SelectAllIcon}"
-                                  Command="{Binding SelectAllCommand}"
+                                  Command="{x:Static ApplicationCommands.SelectAll}"
                                   Ribbon.QuickAccessKey="SelectAll"
                                   MaxSize="Medium"/>
                     <RibbonButton Content="{Localize RibbonShellStrings.SelectNone}"
@@ -2107,18 +2120,29 @@
             </RibbonTab>
         </Ribbon>
 
-        <!-- The "document": a stand-in surface the commands land on. -->
+        <!-- The "document": a stand-in surface the commands land on. A click on it takes the keyboard, so the clipboard
+             commands go back to the scene from the notes field. -->
         <Border Grid.Row="1" Margin="16" CornerRadius="6"
+                AutomationProperties.AutomationId="SceneSurface"
+                Focusable="True"
                 Background="{ResourceReference SolidBackgroundFillColorSecondary}"
                 BorderBrush="{ResourceReference ControlStrokeColorDefault}" BorderThickness="1">
-            <StackPanel Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center">
-                <TextBlock Text="{Localize RibbonShellStrings.SceneView}" FontSize="22" HorizontalAlignment="Center"
-                           Foreground="{ResourceReference TextFillColorPrimary}"/>
-                <TextBlock Text="{Localize RibbonShellStrings.Status, action={Binding LastAction}, format={Binding Format}}" FontSize="14" Margin="0 12 0 0" HorizontalAlignment="Center"
-                           Foreground="{ResourceReference TextFillColorSecondary}"/>
-                <TextBlock Text="{Localize RibbonShellStrings, Key={Binding ShadingMode}}" FontSize="13" Margin="0 16 0 0" HorizontalAlignment="Center"
-                           Foreground="{ResourceReference TextFillColorTertiary}"/>
-            </StackPanel>
+            <Grid>
+                <StackPanel Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <TextBlock Text="{Localize RibbonShellStrings.SceneView}" FontSize="22" HorizontalAlignment="Center"
+                               Foreground="{ResourceReference TextFillColorPrimary}"/>
+                    <TextBlock Text="{Localize RibbonShellStrings.Status, action={Binding LastAction}, format={Binding Format}}" FontSize="14" Margin="0 12 0 0" HorizontalAlignment="Center"
+                               Foreground="{ResourceReference TextFillColorSecondary}"/>
+                    <TextBlock Text="{Localize RibbonShellStrings, Key={Binding ShadingMode}}" FontSize="13" Margin="0 16 0 0" HorizontalAlignment="Center"
+                               Foreground="{ResourceReference TextFillColorTertiary}"/>
+                </StackPanel>
+                <TextBox AutomationProperties.AutomationId="Notes"
+                         Placeholder="{Localize RibbonShellStrings.Notes}"
+                         Width="460"
+                         Margin="0 0 0 16"
+                         HorizontalAlignment="Center"
+                         VerticalAlignment="Bottom"/>
+            </Grid>
         </Border>
 
         <Border Grid.Row="2" Height="26" Background="{ResourceReference SolidBackgroundFillColorTertiary}">

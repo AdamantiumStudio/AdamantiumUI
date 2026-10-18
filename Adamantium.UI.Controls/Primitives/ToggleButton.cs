@@ -1,6 +1,7 @@
 using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Automation;
+using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.RoutedEvents;
 
@@ -114,6 +115,14 @@ public class ToggleButton : ButtonBase
     {
         add => AddHandler(IndeterminateEvent, value);
         remove => RemoveHandler(IndeterminateEvent, value);
+    }
+
+    protected override void OnCommandState(CommandState state)
+    {
+        if (state.IsChecked is { } on)
+        {
+            SetCurrentValue(IsCheckedProperty, on);
+        }
     }
 
     // A click toggles before the base raises Click/Command, so a handler/command sees the new IsChecked.

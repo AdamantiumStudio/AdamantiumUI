@@ -1,5 +1,6 @@
 using Adamantium.Core.Commands;
 using Adamantium.UI.Controls.Automation;
+using Adamantium.UI.Controls.Primitives;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Input;
@@ -55,7 +56,7 @@ public class SegmentedControlItem : ContentControl, ISelectable
         set => SetValue(CommandParameterProperty, value);
     }
 
-    private WeakCanExecuteChangedRelay<SegmentedControlItem> _commandRelay;
+    private CommandSourceListener<SegmentedControlItem> _commandListener;
 
     private static void OnCommandChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
     {
@@ -64,24 +65,30 @@ public class SegmentedControlItem : ContentControl, ISelectable
             return;
         }
 
-        segment._commandRelay?.Detach();
-        segment._commandRelay = e.NewValue is ICommand command
-            ? new WeakCanExecuteChangedRelay<SegmentedControlItem>(command, segment, static s => s.UpdateCanExecute())
-            : null;
+        segment._commandListener ??=
+            new CommandSourceListener<SegmentedControlItem>(segment, static s => s.UpdateCanExecute());
+        segment._commandListener.Listen(e.NewValue as ICommand);
         segment.UpdateCanExecute();
     }
 
     private static void OnCommandParameterChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e) =>
         (a as SegmentedControlItem)?.UpdateCanExecute();
 
-    private void UpdateCanExecute() => SetCurrentValue(IsEnabledProperty, Command?.CanExecute(CommandParameter) ?? true);
+    private void UpdateCanExecute() => SetCurrentValue(IsEnabledProperty,
+        CommandManager.QueryFrom(Command, CommandParameter, this, null).CanExecute);
 
-    internal void RunCommand()
+    internal void RunCommand() => CommandManager.ExecuteFrom(Command, CommandParameter, this, null);
+
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
-        if (Command is { } command && command.CanExecute(CommandParameter))
-        {
-            command.Execute(CommandParameter);
-        }
+        base.OnAttachedToVisualTree(e);
+        _commandListener?.Attached();
+    }
+
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnDetachedFromVisualTree(e);
+        _commandListener?.Detached();
     }
 
     /// <summary>Whether it is the first segment, which has no divider before it.</summary>

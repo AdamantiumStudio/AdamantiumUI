@@ -33,17 +33,17 @@
                 <ContextMenu x:Shared="False">
                     <MenuItem Header="{Localize TextBoxStrings.Cut}"
                               InputGestureText="⌘X"
-                              TextBoxBase.EditAction="Cut"/>
+                              Command="{x:Static ApplicationCommands.Cut}"/>
                     <MenuItem Header="{Localize TextBoxStrings.Copy}"
                               InputGestureText="⌘C"
-                              TextBoxBase.EditAction="Copy"/>
+                              Command="{x:Static ApplicationCommands.Copy}"/>
                     <MenuItem Header="{Localize TextBoxStrings.Paste}"
                               InputGestureText="⌘V"
-                              TextBoxBase.EditAction="Paste"/>
+                              Command="{x:Static ApplicationCommands.Paste}"/>
                     <Separator/>
                     <MenuItem Header="{Localize TextBoxStrings.SelectAll}"
                               InputGestureText="⌘A"
-                              TextBoxBase.EditAction="SelectAll"/>
+                              Command="{x:Static ApplicationCommands.SelectAll}"/>
                 </ContextMenu>
             </Setter.Value>
         </Setter>

@@ -126,6 +126,19 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
                 PropertyMetadataOptions.Inherits | PropertyMetadataOptions.AffectsRender));
         FontSizeProperty.OverrideMetadata(typeof(TextBlock),
             new PropertyMetadata(12.0d, PropertyMetadataOptions.Inherits | PropertyMetadataOptions.AffectsMeasure | PropertyMetadataOptions.AffectsRender));
+        CommandManager.RegisterClassCommandBinding(typeof(TextBlock), new CommandBinding(ApplicationCommands.Copy,
+            static (sender, _) => ((TextBlock)sender).CopySelection(), static (sender, e) => AskAsText(sender, e,
+                static block => block.HasSelection)));
+        CommandManager.RegisterClassCommandBinding(typeof(TextBlock), new CommandBinding(ApplicationCommands.SelectAll,
+            static (sender, _) => ((TextBlock)sender).SelectAll(), static (sender, e) => AskAsText(sender, e,
+                static block => block._lastText?.Length > 0)));
+    }
+
+    private static void AskAsText(object sender, CanExecuteRoutedEventArgs e, Func<TextBlock, bool> can)
+    {
+        var block = (TextBlock)sender;
+        e.Handled = block.CanSelect;
+        e.CanExecute = block.CanSelect && can(block);
     }
 
     private static void OnFontFamilyChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
@@ -2005,6 +2018,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         _selectedIn = _lastText;
         ListenToTheWindow();
         InvalidateRender(false);
+        CommandManager.InvalidateRequerySuggested(this);
     }
 
     private void ListenToTheWindow()
@@ -2072,17 +2086,22 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
 
     private void OnKeyAnywhere(object sender, KeyEventArgs e)
     {
-        if (e.Handled || e.Key != Key.C || !IsCopyKey(e.Key, e.Modifiers))
+        if (!e.Handled && e.Key == Key.C && IsCopyKey(e.Key, e.Modifiers) && CopySelection())
         {
-            return;
-        }
-
-        var copied = SelectedText;
-        if (copied.Length > 0)
-        {
-            Clipboard.SetText(copied);
             e.Handled = true;
         }
+    }
+
+    private bool CopySelection()
+    {
+        var copied = SelectedText;
+        if (copied.Length == 0)
+        {
+            return false;
+        }
+
+        Clipboard.SetText(copied);
+        return true;
     }
 
     private void OnDataSwapped(object sender, AdamantiumPropertyChangedEventArgs e)
@@ -2176,6 +2195,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         _selectedIn = null;
         _selectionContext = null;
         InvalidateRender(false);
+        CommandManager.InvalidateRequerySuggested(this);
     }
 
     private CaretPosition PositionAt(double x, double y)
@@ -2598,22 +2618,6 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         if ((modifiers & (InputModifiers.LeftAlt | InputModifiers.RightAlt)) != 0)
         {
             return false;
-        }
-
-        switch (key)
-        {
-            case Key.A when ctrl && !shift:
-                SelectAll();
-                return true;
-            case Key.C or Key.Insert when IsCopyKey(key, modifiers):
-                var copied = SelectedText;
-                if (copied.Length == 0)
-                {
-                    return false;
-                }
-
-                Clipboard.SetText(copied);
-                return true;
         }
 
         if (!HoldsAnchor)

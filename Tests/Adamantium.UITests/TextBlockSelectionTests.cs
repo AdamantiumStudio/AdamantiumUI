@@ -595,6 +595,46 @@ public class TextBlockSelectionTests
         });
     }
 
+    // A menu's or a ribbon's Copy reaches the selection of the text the keyboard is on, and is off while there is none.
+    [Test]
+    public void CopyFromAMenu_CopiesTheSelectionOfTheTextWithTheFocus()
+    {
+        var block = Laid("Hello world");
+        block.Focusable = true;
+        FocusManager.Focus(block);
+        Clipboard.SetText(string.Empty);
+
+        var before = CommandManager.QueryFrom(ApplicationCommands.Copy, null, null, null).CanExecute;
+        block.Select(0, 5);
+        var after = CommandManager.QueryFrom(ApplicationCommands.Copy, null, null, null).CanExecute;
+        CommandManager.ExecuteFrom(ApplicationCommands.Copy, null, null, null);
+        FocusManager.ResetFocus();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That((before, after), Is.EqualTo((false, true)));
+            Assert.That(Clipboard.GetText(), Is.EqualTo("Hello"));
+        });
+    }
+
+    // Text that cannot be selected leaves Ctrl+A to what is around it - a grid selects its rows.
+    [Test]
+    public void TextThatCannotBeSelected_LeavesTheKeysToItsContainer()
+    {
+        var container = new Border();
+        var block = Laid("Hello world", container);
+        block.IsTextSelectionEnabled = false;
+        block.Focusable = true;
+        var reached = false;
+        container.AddHandler(Keyboard.KeyDownEvent, new KeyEventHandler((_, _) => reached = true));
+        FocusManager.Focus(block);
+
+        Key(block, Adamantium.UI.Core.Input.Key.A, InputModifiers.LeftControl);
+        FocusManager.ResetFocus();
+
+        Assert.That(reached, Is.True);
+    }
+
     // Ctrl+Insert is only the text's own: at the window it would copy the paragraph over a field that has a selection
     // of its own but does not know that key.
     [Test]
