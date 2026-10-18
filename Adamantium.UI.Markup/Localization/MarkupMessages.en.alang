@@ -18,6 +18,7 @@
     <Phrase Key="XmlnsOnlyAtRoot" Text="xmlns could be defined only at the root element"/>
     <Phrase Key="MarkupExtensionNotWrapped" Text="'{text}' is not closed: a markup extension ends with }}"/>
     <Phrase Key="PropertyElementAttribute" Text="&lt;{element}&gt; sets a property and takes no attributes; '{attribute}' belongs on the element it sets"/>
+    <Phrase Key="PropertyElementAmidText" Text="&lt;{element}&gt; stands in the middle of the element's text; a property element goes before its content or after it"/>
     <Phrase Key="PrefixNotDefined" Text="Prefix {prefix} is not defined in root element."/>
 
     <!-- Types, properties and values. -->

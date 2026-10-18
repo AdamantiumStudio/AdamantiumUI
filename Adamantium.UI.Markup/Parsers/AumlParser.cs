@@ -121,6 +121,10 @@ public class ParserContext
                 var mapping = attribute.GetNamespaceMapping();
                 NamespaceMappings.Add(mapping);
             }
+            else if (attribute.Name == XmlSpace)
+            {
+                continue;
+            }
             else // parse property or event
             {
                 var propName = attribute.Name.LocalName;
@@ -164,10 +168,15 @@ public class ParserContext
                 var localName = elNode.Name.LocalName;
                 for (var stray = elNode.FirstAttribute; stray != null; stray = stray.NextAttribute)
                 {
-                    if (!stray.IsNamespaceDeclaration)
+                    if (!stray.IsNamespaceDeclaration && stray.Name != XmlSpace)
                     {
                         Error(MarkupMessages.PropertyElementAttribute(localName, stray.Name.LocalName), stray.ToLineInfo());
                     }
+                }
+
+                if (SplitsText(elNode))
+                {
+                    Error(MarkupMessages.PropertyElementAmidText(localName), elNode.ToLineInfo());
                 }
 
                 var owner = localName.Substring(0, dot);
@@ -187,7 +196,7 @@ public class ParserContext
                         targetType,
                         SecondPart(localName, dot)),
                     ParseValueNodes(elNode)
-                    );
+                    ) { IsElement = true };
 
                 objectNode.Children.Add(property);
             }
@@ -213,15 +222,54 @@ public class ParserContext
             return ParseAumlNode(xElement, false);
         if (node is XText xText)
         {
-            if (IsXmlSpace(xText.Value) && !parentIsMixed && !SpacesTwoElements(xText))
+            var preserves = PreservesSpace(xText);
+            if (IsXmlSpace(xText.Value) && !parentIsMixed && !preserves && !SpacesTwoElements(xText))
             {
                 return null;
             }
 
-            return new AumlAstTextNode(node.ToLineInfo(), xText.Value);
+            return new AumlAstTextNode(node.ToLineInfo(), xText.Value) { PreservesSpace = preserves };
         }
 
         return null;
+    }
+
+    private static readonly XName XmlSpace = XNamespace.Xml + "space";
+
+    // xml:space="preserve" on the text's element or one around it, the nearest one deciding.
+    private static bool PreservesSpace(XText text)
+    {
+        for (var element = text.Parent; element != null; element = element.Parent)
+        {
+            if (element.Attribute(XmlSpace) is { } space)
+            {
+                return space.Value == "preserve";
+            }
+        }
+
+        return false;
+    }
+
+    // A property element with text on one side of it and content on the other: WPF does not take it.
+    private static bool SplitsText(XElement property)
+    {
+        var textBefore = false;
+        var contentBefore = false;
+        for (var node = property.PreviousNode; node != null; node = node.PreviousNode)
+        {
+            textBefore |= node is XText text && !IsXmlSpace(text.Value);
+            contentBefore |= node is XElement element && !IsPropertyElement(element);
+        }
+
+        var textAfter = false;
+        var contentAfter = false;
+        for (var node = property.NextNode; node != null; node = node.NextNode)
+        {
+            textAfter |= node is XText text && !IsXmlSpace(text.Value);
+            contentAfter |= node is XElement element && !IsPropertyElement(element);
+        }
+
+        return (textBefore && (textAfter || contentAfter)) || (contentBefore && textAfter);
     }
 
     /// <summary>Whether <paramref name="text"/> is only XML white space (space, tab, carriage return, line feed) - not
@@ -294,7 +342,10 @@ public class ParserContext
 
         if (node is AumlAstTextNode text && nodes.Count > 0 && nodes[nodes.Count - 1] is AumlAstTextNode previous)
         {
-            nodes[nodes.Count - 1] = new AumlAstTextNode(previous.GetLineInfo(), previous.Text + text.Text) as T;
+            nodes[nodes.Count - 1] = new AumlAstTextNode(previous.GetLineInfo(), previous.Text + text.Text)
+            {
+                PreservesSpace = previous.PreservesSpace,
+            } as T;
             return;
         }
 

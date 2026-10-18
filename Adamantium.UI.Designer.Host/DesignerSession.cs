@@ -192,6 +192,12 @@ public sealed class DesignerSession : IDisposable
                 DiscardedVisuals.ReleaseNow([]);
                 return reconciled;
             }
+
+            // The edit does not build - mid-typing, say: the live tree and its running animations stay as they were.
+            if (!rec.Builds)
+            {
+                return RenderResult.Fail($"the markup could not be built: {WhyNotBuilt(rec.Diagnostics)}", rec.Diagnostics);
+            }
             // reconcile declined (root element type changed) -> fall through to a full rebuild
         }
 
@@ -240,9 +246,7 @@ public sealed class DesignerSession : IDisposable
                 break;
             case null:
                 // The markup did not build: say why, not that the file is of a kind that can't be previewed.
-                var reason = load.Diagnostics.LastOrDefault(d => d.Contains("error", StringComparison.OrdinalIgnoreCase))
-                             ?? load.Diagnostics.LastOrDefault() ?? "unknown error";
-                return RenderResult.Fail($"the markup could not be built: {reason}", load.Diagnostics);
+                return RenderResult.Fail($"the markup could not be built: {WhyNotBuilt(load.Diagnostics)}", load.Diagnostics);
             default:
                 // A dictionary, a style set, a theme - nothing wrong with the file, it only has no look of its own.
                 var plate = NoPreviewPlate(load.Root.GetType().Name, requestWidth, requestHeight);
@@ -335,6 +339,10 @@ public sealed class DesignerSession : IDisposable
             }
         }
     }
+
+    private static string WhyNotBuilt(List<string> diagnostics) =>
+        diagnostics.LastOrDefault(d => d.Contains("error", StringComparison.OrdinalIgnoreCase))
+        ?? diagnostics.LastOrDefault() ?? "unknown error";
 
     // What is not a window has no caption of its own: it is shown in a window without one.
     private static VirtualWindow CaptionlessHost(IUIComponent content) => new() { Content = content, UseCustomChrome = false };
