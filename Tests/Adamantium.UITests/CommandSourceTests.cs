@@ -177,6 +177,44 @@ public class CommandSourceTests
         });
     }
 
+    // A font box: it shows what the text has - a size it lists, one it does not, none when mixed - and a pick sets it.
+    [Test]
+    public void ADropDownWithARoutedCommand_ShowsItsValue_AndAPickRunsIt()
+    {
+        object size = 12.0;
+        var ran = new List<object>();
+        var box = new DropDown { Command = Bold, Placeholder = "mixed" };
+        box.Items.Add(12.0);
+        box.Items.Add(14.0);
+        var view = new StackPanel { Children = { box } };
+        CommandManager.GetCommandBindings(view).Add(new CommandBinding(Bold, (_, e) => ran.Add(e.Parameter), (_, e) =>
+        {
+            e.CanExecute = true;
+            e.Value = size;
+        }));
+        Shown(view);
+        Requery();
+        var listed = (box.SelectedValue, box.DisplayContent);
+
+        size = 10.5;
+        CommandManager.InvalidateRequerySuggested();
+        Requery();
+        var unlisted = (box.SelectedItem, box.DisplayContent);
+        size = null;
+        CommandManager.InvalidateRequerySuggested();
+        Requery();
+        var mixed = box.DisplayContent;
+        box.SelectedIndex = 1;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(listed, Is.EqualTo(((object)12.0, (object)12.0)));
+            Assert.That(unlisted, Is.EqualTo(((object)null, (object)10.5)));
+            Assert.That(mixed, Is.EqualTo("mixed"));
+            Assert.That(ran, Is.EqualTo(new object[] { 14.0 }), "showing the answer runs nothing");
+        });
+    }
+
     private static void Shown(params IMeasurableComponent[] parts)
     {
         var root = new StackPanel();
