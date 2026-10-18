@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 using Adamantium.Core.Collections;
@@ -229,6 +230,109 @@ public class PropertyGridTests
             Assert.That(RowOf(grid, scale), Is.Null, "a line nobody asked for is still shown");
             Assert.That(RowOf(grid, name), Is.Not.Null);
         });
+    }
+
+    // One section serves every object of its type, and its folding is each object's own: bound to its target, it opens
+    // and closes as the object it is pointed at says, and folding it is written back to that object.
+    [Test]
+    public void ASectionBoundToItsTarget_FoldsAsEachObjectSays()
+    {
+        var open = new Folding { IsExpanded = true };
+        var closed = new Folding { IsExpanded = false };
+        var source = new ObservableCollection<object> { open };
+        var section = new PropertySection { DataType = typeof(Folding), Header = "Folding" };
+        new Self { Path = "Target.IsExpanded", Mode = BindingMode.TwoWay }.Apply(section, nameof(PropertySection.IsExpanded));
+        var grid = new PropertyGrid { Template = Chrome(), SectionsSource = source };
+        grid.Sections.Add(section);
+        Settle(grid);
+        var whileOpen = section.IsExpanded;
+
+        source[0] = closed;
+        Settle(grid);
+        var whileClosed = section.IsExpanded;
+        section.IsExpanded = true;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(whileOpen, Is.True);
+            Assert.That(whileClosed, Is.False, "pointed at a folded object, the section folds");
+            Assert.That(closed.IsExpanded, Is.True, "opening it opens the object's own");
+            Assert.That(open.IsExpanded, Is.True);
+        });
+    }
+
+    // A search opens what it needs without telling the object the section is bound to, and the section reads the
+    // object's folding again when it ends - the object it shows by then, if another was picked meanwhile.
+    [Test]
+    public void ASearch_OpensABoundSection_WithoutWritingTheObjectsFolding()
+    {
+        var folded = new Folding { IsExpanded = false };
+        var open = new Folding { IsExpanded = true };
+        var source = new ObservableCollection<object> { folded };
+        var section = new PropertySection { DataType = typeof(Folding), Header = "Folding" };
+        section.Properties.Add(new StringProperty { Header = "Offset", Binding = new Binding("Name") });
+        new Self { Path = "Target.IsExpanded", Mode = BindingMode.TwoWay }.Apply(section, nameof(PropertySection.IsExpanded));
+        var grid = new PropertyGrid { Template = Chrome(), SectionsSource = source };
+        grid.Sections.Add(section);
+        Settle(grid);
+
+        grid.SearchText = "offset";
+        Settle(grid);
+        var openedBySearch = section.IsExpanded;
+        var foldedWhileSearching = folded.IsExpanded;
+        source[0] = open;
+        Settle(grid);
+        grid.SearchText = null;
+        Settle(grid);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(openedBySearch, Is.True, "opened, or the answer is behind a fold");
+            Assert.That(foldedWhileSearching, Is.False, "the search wrote its opening into the object");
+            Assert.That(folded.IsExpanded, Is.False);
+            Assert.That(open.IsExpanded, Is.True, "the end of the search folded the object picked meanwhile");
+            Assert.That(section.IsExpanded, Is.True, "the section shows the folding of the object it shows");
+        });
+    }
+
+    private sealed class Folding : INotifyPropertyChanged
+    {
+        private bool isExpanded;
+
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        public string Name { get; set; }
+
+        public bool IsExpanded
+        {
+            get => isExpanded;
+            set
+            {
+                if (isExpanded == value) return;
+                isExpanded = value;
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsExpanded)));
+            }
+        }
+    }
+
+    // A line is the grid's own element, built for a definition written in markup that has none: in the designer it says
+    // so, and a click on it selects the definition's line of markup rather than the whole section.
+    [Test]
+    public void InTheDesigner_ALineStandsForItsDefinition()
+    {
+        var wasDesignMode = Design.IsDesignMode;
+        try
+        {
+            Design.IsDesignMode = true;
+            var name = new StringProperty { Header = "Name", Binding = new Binding("Name") };
+            var grid = Built(Section(new Target(), name));
+
+            Assert.That(Design.AuthoredOf(RowOf(grid, name)), Is.SameAs(name));
+        }
+        finally
+        {
+            Design.IsDesignMode = wasDesignMode;
+        }
     }
 
     // A path that goes THROUGH a property whose declared type is an interface has to resolve the rest of it on what the

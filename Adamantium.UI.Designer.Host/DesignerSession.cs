@@ -993,6 +993,11 @@ public sealed class DesignerSession : IDisposable
                 return (current, null, span.Line, span.Position);
             }
 
+            if (Design.AuthoredOf(current) is { } authored && _lastSourceMap.TryGetValue(authored, out var shown))
+            {
+                return (current, null, shown.Line, shown.Position);
+            }
+
             if (Design.SourceOf(current) is { } source)
             {
                 return (current, source.File, source.Line, source.Column);

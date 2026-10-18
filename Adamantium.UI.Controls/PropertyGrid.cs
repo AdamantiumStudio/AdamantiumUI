@@ -114,6 +114,7 @@ public class PropertyGrid : Control
 
     private readonly List<PropertyRow> _rows = new();
     private readonly List<PropertySection> _openedBySearch = new();
+    private readonly Dictionary<PropertySection, BindingExpressionBase> _foldingHeldBySearch = new();
     private readonly List<PropertyDefinition> _watched = new();
     private readonly List<INotifyCollectionChanged> _followed = new();
     private readonly Dictionary<object, PropertySection> _built = new(ReferenceEqualityComparer.Instance);
@@ -363,10 +364,18 @@ public class PropertyGrid : Control
             _host.Children.Add(section);
 
             // SetCurrentValue, not the setter: folding state is two-way bindable, and a Local value written from here
-            // would outrank the binding and leave the section deaf to its own view-model ever after.
+            // would outrank the binding and leave the section deaf to its own view-model ever after. A bound one rests
+            // while the search holds the section open, so the object it is bound to keeps its own folding, and reads
+            // it again - from whatever the section shows by then - when the search ends.
             if (searching && !section.IsExpanded)
             {
                 _openedBySearch.Add(section);
+                if (BindingEngine.GetBindingExpression(section, Expander.IsExpandedProperty) is { } folding)
+                {
+                    folding.CloseConnection();
+                    _foldingHeldBySearch[section] = folding;
+                }
+
                 section.SetCurrentValue(Expander.IsExpandedProperty, true);
             }
         }
@@ -410,6 +419,7 @@ public class PropertyGrid : Control
         foreach (var section in _dropped)
         {
             _openedBySearch.Remove(section);
+            _foldingHeldBySearch.Remove(section);
             if (section.VisualParent == null)
             {
                 DiscardedVisuals.PublishSubtree(section);
@@ -421,7 +431,11 @@ public class PropertyGrid : Control
 
     private void ReleaseOpened()
     {
-        foreach (var section in _openedBySearch) section.SetCurrentValue(Expander.IsExpandedProperty, false);
+        foreach (var section in _openedBySearch)
+        {
+            if (_foldingHeldBySearch.Remove(section, out var folding)) folding.EstablishConnection();
+            else section.SetCurrentValue(Expander.IsExpandedProperty, false);
+        }
 
         _openedBySearch.Clear();
     }

@@ -17,6 +17,12 @@ All packages share one version.
 - The language server goes where a value points: from `{Localize Table.Key}` to the phrase in the table's base language
   file, from the table to the file, and from the member of `{x:Static Type.Member}` to its declaration. Rider plugin
   1.11.5, VS Code extension 0.3.4.
+- `PropertySection.Target` and `Targets` say when they change, so a section can bind to the object it is pointed at -
+  its folding to the object's own, `IsExpanded="{Self Target.IsExpanded, Mode=TwoWay}"`, though one section serves
+  every object of its type.
+- The designer selects a property grid's line, taking it to its definition in markup: a click on a line selected the
+  whole section, the line being the grid's own element with no markup of its own. `Design.StandsFor` records what such
+  an element shows of the markup, `Design.AuthoredOf` reads it; outside the designer they keep nothing.
 
 ### Fixed
 

@@ -179,6 +179,7 @@ public class PropertyRow : Control
 
         Owner = owner;
         Definition = definition;
+        Design.StandsFor(this, definition);
         Targets = targets ?? Array.Empty<object>();
         Indent = indent;
 

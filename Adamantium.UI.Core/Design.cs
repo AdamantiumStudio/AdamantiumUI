@@ -31,6 +31,21 @@ public static class Design
     /// <summary>Where generated code built <paramref name="element"/>; null when nothing recorded it.</summary>
     public static DesignSource SourceOf(object element) =>
         element != null && Sources.TryGetValue(element, out var source) ? source : null;
+
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<object, object> Shown = new();
+
+    /// <summary>Records that <paramref name="element"/>, built by a control, shows <paramref name="authored"/> - something
+    /// written in markup with no element of its own, as a property grid's line shows its definition - so the designer
+    /// takes a click on the element to that markup. Does nothing outside the designer.</summary>
+    public static void StandsFor(object element, object authored)
+    {
+        if (!IsDesignMode || element == null || authored == null) return;
+        Shown.AddOrUpdate(element, authored);
+    }
+
+    /// <summary>What <paramref name="element"/> shows of the markup (<see cref="StandsFor"/>); null when nothing.</summary>
+    public static object AuthoredOf(object element) =>
+        element != null && Shown.TryGetValue(element, out var authored) ? authored : null;
 }
 
 /// <summary>A place in a markup file: its full path, line and column (1-based, as the parser counts them).</summary>
