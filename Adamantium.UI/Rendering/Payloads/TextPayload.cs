@@ -15,8 +15,12 @@ public class TextPayload(
     Brush background,
     Brush stroke,
     Matrix4x4F? localTransform = null,
-    IReadOnlyList<GlyphEffect> effects = null) : IEquatable<TextPayload>, IRenderCachePolicy
+    IReadOnlyList<GlyphEffect> effects = null,
+    RectangleF? window = null) : IEquatable<TextPayload>, IRenderCachePolicy
 {
+    /// <summary>The part of the layout drawn, in its units: the glyphs touching it; null for all of them.</summary>
+    public RectangleF? Window { get; } = window;
+
     /// <summary>Where this run sits ON TOP of the element's world transform. The text quad is anchored at its own CENTER
     /// in mesh-local space and placed by the unit's transform - the text AREA only aligns the run inside the layout - so
     /// a drawing putting several runs at their own spots inside one element has nowhere else to say where they go.</summary>
@@ -46,7 +50,7 @@ public class TextPayload(
     public override int GetHashCode()
     {
         return HashCode.Combine(TextRenderingParameters, DesiredSize, TextLayout, Revision, Foreground, Background, Stroke,
-            HashCode.Combine(LocalTransform, Effects.Count));
+            HashCode.Combine(LocalTransform, Effects.Count, Window));
     }
 
     public bool RequiresBufferRebuild(IRenderCachePolicy newState)
@@ -57,7 +61,7 @@ public class TextPayload(
         // them only while it has any.
         return DesiredSize != payload.DesiredSize || Text != payload.Text || TextLayout != payload.TextLayout ||
                Revision != payload.Revision || TextRenderingParameters != payload.TextRenderingParameters ||
-               (Effects.Count > 0) != (payload.Effects.Count > 0);
+               (Effects.Count > 0) != (payload.Effects.Count > 0) || Window != payload.Window;
     }
 
     private bool SameEffects(TextPayload other)
@@ -85,7 +89,8 @@ public class TextPayload(
         return Equals(TextRenderingParameters, other.TextRenderingParameters) &&
                DesiredSize.Equals(other.DesiredSize) && Equals(TextLayout, other.TextLayout) && Revision == other.Revision &&
                Equals(Foreground, other.Foreground) && Equals(Background, other.Background) &&
-               Equals(Stroke, other.Stroke) && LocalTransform == other.LocalTransform && SameEffects(other);
+               Equals(Stroke, other.Stroke) && LocalTransform == other.LocalTransform && SameEffects(other) &&
+               Window == other.Window;
     }
 
     public override bool Equals(object obj)

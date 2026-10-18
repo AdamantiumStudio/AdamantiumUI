@@ -45,6 +45,10 @@ public abstract class TextBoxBase : Control, ITextStyleUser, Adamantium.UI.Core.
         typeof(TextWrapping), typeof(TextBoxBase),
         new PropertyMetadata(TextWrapping.NoWrap, PropertyMetadataOptions.AffectsMeasure, OnLayoutAffectingChanged));
 
+    public static readonly AdamantiumProperty WritingModeProperty = AdamantiumProperty.Register(nameof(WritingMode),
+        typeof(WritingMode), typeof(TextBoxBase),
+        new PropertyMetadata(WritingMode.Horizontal, PropertyMetadataOptions.AffectsMeasure, OnLayoutAffectingChanged));
+
     public static readonly AdamantiumProperty HorizontalTextAlignmentProperty = AdamantiumProperty.Register(
         nameof(HorizontalTextAlignment), typeof(HorizontalTextAlignment), typeof(TextBoxBase),
         new PropertyMetadata(HorizontalTextAlignment.Left, PropertyMetadataOptions.AffectsMeasure, OnLayoutAffectingChanged));
@@ -91,6 +95,7 @@ public abstract class TextBoxBase : Control, ITextStyleUser, Adamantium.UI.Core.
     private IReadOnlyList<TextRange> _misspelled = [];
     private IReadOnlyList<TextRange> _lastShapedMisspelled = [];
     private (double Min, double Max)? _hostHeights;
+    private (double Min, double Max)? _hostWidths;
 
     static TextBoxBase()
     {
@@ -257,6 +262,17 @@ public abstract class TextBoxBase : Control, ITextStyleUser, Adamantium.UI.Core.
         set => SetValue(TextWrappingProperty, value);
     }
 
+    /// <summary>How the lines run, as a <see cref="TextBlock"/>'s: across the field (the default), or down it, stacked
+    /// from the right. Down the lines the arrows turn with them - up and down go along a line, left to the next one - a
+    /// wrapping field wraps at its height and scrolls across.</summary>
+    public WritingMode WritingMode
+    {
+        get => GetValue<WritingMode>(WritingModeProperty);
+        set => SetValue(WritingModeProperty, value);
+    }
+
+    private bool Vertical => WritingMode == WritingMode.VerticalRightToLeft;
+
     /// <summary>How wrapped lines stand in the field: at their start (the default), centered, right or justified.
     /// Text that does not wrap stays at its start.</summary>
     public HorizontalTextAlignment HorizontalTextAlignment
@@ -267,7 +283,7 @@ public abstract class TextBoxBase : Control, ITextStyleUser, Adamantium.UI.Core.
 
     /// <summary>Scroll-bar policy on the horizontal axis (the shared <see cref="ScrollViewer.HorizontalScrollBarVisibilityProperty"/>
     /// attached property, forwarded to the internal ScrollViewer). Ignored while the box
-    /// wraps - a wrapping box never scrolls horizontally.</summary>
+    /// wraps horizontal lines - a box wrapping them never scrolls along them.</summary>
     public ScrollBarVisibility HorizontalScrollBarVisibility
     {
         get => ScrollViewer.GetHorizontalScrollBarVisibility(this);
@@ -276,7 +292,7 @@ public abstract class TextBoxBase : Control, ITextStyleUser, Adamantium.UI.Core.
 
     /// <summary>Scroll-bar policy on the vertical axis (the shared <see cref="ScrollViewer.VerticalScrollBarVisibilityProperty"/>
     /// attached property, forwarded to the internal ScrollViewer). Use <c>Auto</c> for a multi-line box so a bar appears
-    /// once the text outgrows the height.</summary>
+    /// once the text outgrows the height. Ignored while the box wraps vertical lines.</summary>
     public ScrollBarVisibility VerticalScrollBarVisibility
     {
         get => ScrollViewer.GetVerticalScrollBarVisibility(this);
@@ -389,6 +405,7 @@ public abstract class TextBoxBase : Control, ITextStyleUser, Adamantium.UI.Core.
         _border = GetTemplateChild("PART_Border") as IMeasurableComponent;
         _scrollViewer = GetTemplateChild("PART_ContentHost") as ScrollViewer;
         _hostHeights = null;
+        _hostWidths = null;
         if (_presenter != null) _presenter.Owner = this;
         PushScrollSettings();
         InvalidateSurface(measure: true);
@@ -421,6 +438,44 @@ public abstract class TextBoxBase : Control, ITextStyleUser, Adamantium.UI.Core.
         return base.MeasureOverride(availableSize);
     }
 
+    protected override Size ArrangeOverride(Size finalSize)
+    {
+        var size = base.ArrangeOverride(finalSize);
+        KeepTheRightEdge();
+        return size;
+    }
+
+    private double _lastExtentWidth = double.NaN;
+    private double _lastViewportWidth;
+
+    // Vertical lines stack from the right: the field opens on its first lines there, and as the text grows or narrows
+    // across, the view keeps its distance from the right edge.
+    private void KeepTheRightEdge()
+    {
+        if (!Vertical || _scrollViewer == null)
+        {
+            _lastExtentWidth = double.NaN;
+            return;
+        }
+
+        var extent = _scrollViewer.ExtentSize.Width;
+        var viewport = _scrollViewer.ViewportSize.Width;
+        var offset = _scrollViewer.ScrollOffset;
+        if (extent.Equals(_lastExtentWidth) && viewport.Equals(_lastViewportWidth))
+        {
+            return;
+        }
+
+        var fromRight = double.IsNaN(_lastExtentWidth) ? 0 : Math.Max(0, _lastExtentWidth - _lastViewportWidth - offset.X);
+        _lastExtentWidth = extent;
+        _lastViewportWidth = viewport;
+        var x = Math.Max(0, extent - viewport - fromRight);
+        if (!x.Equals(offset.X))
+        {
+            _scrollViewer.SetScrollOffset(new Vector2(x, offset.Y));
+        }
+    }
+
     private void ApplyLineLimits()
     {
         if (_scrollViewer == null)
@@ -430,34 +485,46 @@ public abstract class TextBoxBase : Control, ITextStyleUser, Adamantium.UI.Core.
 
         var (least, most) = LineLimits;
         var limited = least > 1 || most > 0;
-        if (!limited && _hostHeights == null)
+        LimitLines(across: false, limited && !Vertical, least, most);
+        LimitLines(across: true, limited && Vertical, least, most);
+    }
+
+    // The lines the box stands as tall as - as wide down vertical lines. The host's own limits on that axis come back
+    // when the box no longer limits it.
+    private void LimitLines(bool across, bool limited, int least, int most)
+    {
+        var held = across ? _hostWidths : _hostHeights;
+        if (!limited && held == null)
         {
             return;
         }
 
-        _hostHeights ??= (_scrollViewer.MinHeight, _scrollViewer.MaxHeight);
-        var (minHeight, maxHeight) = _hostHeights.Value;
+        held ??= across ? (_scrollViewer.MinWidth, _scrollViewer.MaxWidth) : (_scrollViewer.MinHeight, _scrollViewer.MaxHeight);
+        var (min, max) = held.Value;
         if (limited)
         {
             EnsureLayout();
             var spacing = double.IsFinite(LineSpacing) ? Math.Max(LineSpacing, 1 - _lineHeight) : 0;
             double LinesHigh(int lines) => lines * _lineHeight + (lines - 1) * spacing + FloatStripHeight();
-            minHeight = least > 1 ? LinesHigh(least) : minHeight;
-            maxHeight = most > 0 ? LinesHigh(Math.Max(most, least)) : maxHeight;
+            min = least > 1 ? LinesHigh(least) : min;
+            max = most > 0 ? LinesHigh(Math.Max(most, least)) : max;
         }
         else
         {
-            _hostHeights = null;
+            held = null;
         }
 
-        if (!_scrollViewer.MinHeight.Equals(minHeight))
+        if (across)
         {
-            _scrollViewer.MinHeight = minHeight;
+            _hostWidths = held;
+            if (!_scrollViewer.MinWidth.Equals(min)) _scrollViewer.MinWidth = min;
+            if (!_scrollViewer.MaxWidth.Equals(max)) _scrollViewer.MaxWidth = max;
         }
-
-        if (!_scrollViewer.MaxHeight.Equals(maxHeight))
+        else
         {
-            _scrollViewer.MaxHeight = maxHeight;
+            _hostHeights = held;
+            if (!_scrollViewer.MinHeight.Equals(min)) _scrollViewer.MinHeight = min;
+            if (!_scrollViewer.MaxHeight.Equals(max)) _scrollViewer.MaxHeight = max;
         }
     }
 
@@ -489,9 +556,11 @@ public abstract class TextBoxBase : Control, ITextStyleUser, Adamantium.UI.Core.
     private IFont _placeholderFont;
     private TextLayout _placeholderLayout;
     private (string Text, double Size, TextDirection Direction, SpacingRange Words, SpacingRange Letters, double Tracking,
-        TextKerning Kerning, SpacingRange Scaling)? _placeholderShaped;
+        TextKerning Kerning, SpacingRange Scaling, WritingMode Mode)? _placeholderShaped;
     private TextAttributes _placeholderShaping;
-    private double _textWidth;               // widest line's ink width (horizontal scroll bound in NoWrap)
+    private double _textWidth;               // longest line's length (the scroll bound along the lines in NoWrap)
+    private double _columnsWidth;            // down vertical lines: how wide the lines stand across the field
+    private WritingMode _lastShapedWritingMode;
     private double _naturalWidth;
     private double _alignWidth = double.NaN;
     private bool _mixedDirections;
@@ -526,6 +595,8 @@ public abstract class TextBoxBase : Control, ITextStyleUser, Adamantium.UI.Core.
     private HorizontalTextAlignment _lastShapedLastLine;
     private HorizontalTextAlignment _lastShapedSingleWord;
     private bool _lastShapedKashidas;
+    private TextSpacingTrim _lastShapedSpacingTrim;
+    private HangingPunctuation _lastShapedHanging;
     private double _lastShapedLineHeight = double.NaN;
     private LineStackingStrategy _lastShapedLineStacking;
     private double _lastShapedLineSpacing;
@@ -598,6 +669,7 @@ public abstract class TextBoxBase : Control, ITextStyleUser, Adamantium.UI.Core.
         }
 
         _textLayout.LoadFontsInBackground = !FontAtlasStore.SynchronousFill;
+        _textLayout.WritingMode = WritingMode;
         _textLayout.Direction = TextDirection;
         _textLayout.Hyphens = Hyphens;
         _textLayout.HyphenLimit = HyphenLimit;
@@ -613,6 +685,8 @@ public abstract class TextBoxBase : Control, ITextStyleUser, Adamantium.UI.Core.
         _textLayout.LastLineAlignment = LastLineAlignment;
         _textLayout.SingleWordJustification = SingleWordJustification;
         _textLayout.Kashidas = Kashidas;
+        _textLayout.SpacingTrim = TextSpacingTrim;
+        _textLayout.HangingPunctuation = HangingPunctuation;
         _textLayout.LineHeight = LineHeight;
         _textLayout.LineStacking = LineStackingStrategy;
         _textLayout.LineSpacing = LineSpacing;
@@ -646,13 +720,14 @@ public abstract class TextBoxBase : Control, ITextStyleUser, Adamantium.UI.Core.
             && _lastShapedKerning == Kerning
             && _lastShapedGlyphScaling.Equals(GlyphScaling) && _lastShapedAlternates == JustificationAlternates
             && _lastShapedLastLine == LastLineAlignment && _lastShapedSingleWord == SingleWordJustification
-            && _lastShapedKashidas == Kashidas && _lastShapedLineHeight.Equals(LineHeight)
+            && _lastShapedKashidas == Kashidas && _lastShapedSpacingTrim == TextSpacingTrim
+            && _lastShapedHanging == HangingPunctuation && _lastShapedLineHeight.Equals(LineHeight)
             && _lastShapedLineStacking == LineStackingStrategy && _lastShapedLineSpacing.Equals(LineSpacing)
             && _lastShapedDirection == TextDirection && _lastShapedHyphens == Hyphens
             && _lastShapedHyphenLimit == HyphenLimit
             && _lastShapedLineBreaking == LineBreaking && Equals(_lastShapedTabStops, TabStops)
             && _lastShapedOpticalMargins == OpticalMarginAlignment && ShapesLike(_lastShapedShaping, shaping)
-            && ReferenceEquals(_lastShapedGrid, grid))
+            && ReferenceEquals(_lastShapedGrid, grid) && _lastShapedWritingMode == WritingMode)
         {
             return;
         }
@@ -667,26 +742,30 @@ public abstract class TextBoxBase : Control, ITextStyleUser, Adamantium.UI.Core.
             _lineCount = 1;
             _lineTops = [0];
             _lineHeights = [_lineHeight];
+            _columnsWidth = Math.Ceiling(_lineHeight);
         }
         else
         {
+            // Down vertical lines the length a line may take is the field's height.
+            var area = Vertical ? new Size(double.NaN, width) : new Size(width, double.NaN);
             var size = shaping == null && misspelled.Count == 0 && !styled
-                ? _textLayout.ProcessText(text, FontSize,
-                    new Size(width, double.NaN),
+                ? _textLayout.ProcessText(text, FontSize, area,
                     wrapping, TextTrimming.None,
                     LaidOutAlignment, VerticalTextAlignment.Top)
                 : _textLayout.ProcessText(Marked(InStyles(new AttributedText(text, shaping)), misspelled), FontSize,
-                    new Size(width, double.NaN),
+                    area,
                     wrapping, TextTrimming.None,
                     LaidOutAlignment, VerticalTextAlignment.Top);
             BuildCaretModel();
+            var along = Vertical ? size.Height : size.Width;
+            _columnsWidth = Vertical ? size.Width : 0;
             if (double.IsNaN(_alignWidth))
             {
-                _naturalWidth = size.Width;
+                _naturalWidth = along;
                 _mixedDirections = MixedDirections();
             }
 
-            _textWidth = double.IsNaN(_alignWidth) ? size.Width : _naturalWidth;
+            _textWidth = double.IsNaN(_alignWidth) ? along : _naturalWidth;
         }
 
         if (!fontReady || (text.Length > 0 && _textLayout.HasPendingFonts))
@@ -695,6 +774,7 @@ public abstract class TextBoxBase : Control, ITextStyleUser, Adamantium.UI.Core.
         }
 
         _lastShapedText = text;
+        _lastShapedWritingMode = WritingMode;
         _lastShapedGrid = grid;
         _lastShapedMisspelled = misspelled;
         _lastShapedFontSize = FontSize;
@@ -709,6 +789,8 @@ public abstract class TextBoxBase : Control, ITextStyleUser, Adamantium.UI.Core.
         _lastShapedLastLine = LastLineAlignment;
         _lastShapedSingleWord = SingleWordJustification;
         _lastShapedKashidas = Kashidas;
+        _lastShapedSpacingTrim = TextSpacingTrim;
+        _lastShapedHanging = HangingPunctuation;
         _lastShapedLineHeight = LineHeight;
         _lastShapedLineStacking = LineStackingStrategy;
         _lastShapedLineSpacing = LineSpacing;
@@ -804,6 +886,16 @@ public abstract class TextBoxBase : Control, ITextStyleUser, Adamantium.UI.Core.
         return new Rect(x, top, CaretWidth, Math.Round(_lineTops[line] + _lineHeights[line]) - top);
     }
 
+    // The caret where the surface shows it: a bar across a horizontal line, a dash across a vertical one, whose top is
+    // its distance from the right of the lines.
+    private Rect SurfaceCaret(int index)
+    {
+        var caret = CaretRect(index);
+        return Vertical
+            ? new Rect(_textOx + _columnsWidth - caret.Y - caret.Height, _textOy + caret.X, caret.Height, CaretWidth)
+            : new Rect(_textOx + caret.X, _textOy + caret.Y, CaretWidth, caret.Height);
+    }
+
     private (double X, int Line) CaretPoint(int index) => _bidi
         ? _textLayout.GetCaretPoint(new CaretPosition(index, index == _caretHeldAt))
         : (_caretX[index], _caretLine[index]);
@@ -836,7 +928,11 @@ public abstract class TextBoxBase : Control, ITextStyleUser, Adamantium.UI.Core.
         EnsureLayout();
         if (_caretX.Length == 1) return (0, false);
 
-        var hit = _textLayout.HitTest(x, y);
+        return Snapped(_textLayout.HitTest(x, y));
+    }
+
+    private (int Index, bool After) Snapped(TextHit hit)
+    {
         var index = SnapToCaretStop(Clamp(hit.CaretIndex));
         return (index, hit.IsTrailing && index == hit.CaretIndex);
     }
@@ -893,7 +989,7 @@ public abstract class TextBoxBase : Control, ITextStyleUser, Adamantium.UI.Core.
         if (target > MaxLineIndex) { MoveCaretTo(TextLength, extend); return; }
 
         var col = _desiredColumnX ?? CaretRect(CaretIndex).X;
-        var (idx, after) = HitFromPoint(col, _lineTops[target] + _lineHeights[target] / 2.0);
+        var (idx, after) = _caretX.Length == 1 ? (0, false) : Snapped(_textLayout.HitTestLine(target, col));
         MoveCaretTo(idx, extend, keepColumn: true, afterPrevious: after);
         _desiredColumnX = col;
     }
@@ -1156,7 +1252,16 @@ public abstract class TextBoxBase : Control, ITextStyleUser, Adamantium.UI.Core.
         var ctrl = !alt && (e.Modifiers & (InputModifiers.LeftControl | InputModifiers.RightControl)) != 0;
         var shift = (e.Modifiers & (InputModifiers.LeftShift | InputModifiers.RightShift)) != 0;
 
-        switch (e.Key)
+        // Down vertical lines the arrows turn with the text: up and down go along a line, left to the next line.
+        var key = !Vertical ? e.Key : e.Key switch
+        {
+            Key.UpArrow => Key.LeftArrow,
+            Key.DownArrow => Key.RightArrow,
+            Key.LeftArrow => Key.DownArrow,
+            Key.RightArrow => Key.UpArrow,
+            _ => e.Key,
+        };
+        switch (key)
         {
             case Key.LeftArrow when _bidi && !ctrl:
                 MoveVisually(toRight: false, shift);
@@ -1263,21 +1368,26 @@ public abstract class TextBoxBase : Control, ITextStyleUser, Adamantium.UI.Core.
 
     // --- Surface callbacks (the TextPresenter measures / renders / hit-tests through these) -----------------------
 
-    internal Size MeasureSurface(double availableWidth)
+    internal Size MeasureSurface(double availableWidth) => MeasureSurface(new Size(availableWidth, double.PositiveInfinity));
+
+    internal Size MeasureSurface(Size available)
     {
-        _wrapWidth = availableWidth;   // soft wrap breaks at the viewport width
+        var length = Vertical ? available.Height : available.Width;
+        _wrapWidth = length;   // soft wrap breaks at the viewport's length along the lines
         _grid.Measure();
         _alignWidth = double.NaN;
         EnsureLayout();
         var natural = _textWidth;
         AlignMixedLines(_presenter?.RenderSize.Width ?? 0);
         _textWidth = natural;
-        // Wrapped text fills the given width; unwrapped desires its widest line (+ caret). Height is all the lines plus
-        // the reserved strip for a floating label (zero when that effect is off).
-        var w = TextWrapping != TextWrapping.NoWrap && !double.IsInfinity(availableWidth)
-            ? availableWidth
+        // Wrapped text fills the given length; unwrapped desires its longest line (+ caret). Across, it is all the
+        // lines plus the reserved strip for a floating label (zero when that effect is off).
+        var along = TextWrapping != TextWrapping.NoWrap && !double.IsInfinity(length)
+            ? length
             : _textWidth + CaretWidth;
-        return new Size(w, ContentHeight + FloatStripHeight());
+        return Vertical
+            ? new Size(_columnsWidth + FloatStripHeight(), along)
+            : new Size(along, ContentHeight + FloatStripHeight());
     }
 
     internal void ArrangeSurface(double width) => AlignMixedLines(width);
@@ -1286,7 +1396,7 @@ public abstract class TextBoxBase : Control, ITextStyleUser, Adamantium.UI.Core.
     // surface: laid out across its width, which only its arrange knows. The natural width still gives the scroll extent.
     private void AlignMixedLines(double surfaceWidth)
     {
-        var width = TextWrapping == TextWrapping.NoWrap && _mixedDirections && surfaceWidth > 0
+        var width = !Vertical && TextWrapping == TextWrapping.NoWrap && _mixedDirections && surfaceWidth > 0
             ? Math.Max(surfaceWidth - CaretWidth, _naturalWidth)
             : double.NaN;
         if (width.Equals(_alignWidth))
@@ -1407,24 +1517,39 @@ public abstract class TextBoxBase : Control, ITextStyleUser, Adamantium.UI.Core.
         // the offset), so we render the FULL content at our own origin (ox = 0). Text sits below the floating-label strip
         // (zero when off); single-line content then centers vertically in the surface (which the ScrollContentPresenter
         // sizes to at least the viewport), multi-line is top-aligned. vOffset is 0 for the multi-line case.
-        var rightToLeft = hasText ? _textLayout.IsRightToLeftParagraph(0) : TextDirection == TextDirection.RightToLeft;
-        var contentWidth = TextWrapping != TextWrapping.NoWrap && !double.IsInfinity(_wrapWidth)
-            ? size.Width
-            : _textWidth + CaretWidth;
-        // Mixed paragraphs laid across the surface already stand at their own edges.
-        var ox = rightToLeft && double.IsNaN(_alignWidth) ? Math.Floor(Math.Max(0, size.Width - contentWidth)) : 0;
-        _textOx = ox;
         var stripH = FloatStripHeight();
-        var textAreaH = size.Height - stripH;
-        // On a baseline grid the lines keep the grid's rows: a single line is not centered off them.
-        var vOffset = !AcceptsNewLines && ContentHeight < textAreaH && _lastShapedGrid == null
-            ? (textAreaH - ContentHeight) / 2
-            : 0;
-        // WHOLE pixels. The glyph pipeline snaps the vertical origin it is handed (it rounds the baseline and the
-        // ascender line to whole rows), so a fractional offset moves the caret and the selection while leaving the text
-        // where it was: centering a 15.8-tall line in a 17.4-tall surface handed the text 0.8 it silently dropped and the
-        // caret 0.8 it kept, and the caret drew a visible row below the letters. One snapped origin for all three.
-        var oy = Math.Floor(stripH + vOffset);
+        double ox, oy;
+        if (Vertical)
+        {
+            // Down vertical lines the text stands at the right of the surface, left of the strip a floated label takes;
+            // a single line is centered across it.
+            var room = size.Width - stripH;
+            ox = Math.Floor(!AcceptsNewLines && _columnsWidth < room
+                ? (room - _columnsWidth) / 2
+                : Math.Max(0, room - _columnsWidth));
+            oy = 0;
+        }
+        else
+        {
+            var rightToLeft = hasText ? _textLayout.IsRightToLeftParagraph(0) : TextDirection == TextDirection.RightToLeft;
+            var contentWidth = TextWrapping != TextWrapping.NoWrap && !double.IsInfinity(_wrapWidth)
+                ? size.Width
+                : _textWidth + CaretWidth;
+            // Mixed paragraphs laid across the surface already stand at their own edges.
+            ox = rightToLeft && double.IsNaN(_alignWidth) ? Math.Floor(Math.Max(0, size.Width - contentWidth)) : 0;
+            var textAreaH = size.Height - stripH;
+            // On a baseline grid the lines keep the grid's rows: a single line is not centered off them.
+            var vOffset = !AcceptsNewLines && ContentHeight < textAreaH && _lastShapedGrid == null
+                ? (textAreaH - ContentHeight) / 2
+                : 0;
+            // WHOLE pixels. The glyph pipeline snaps the vertical origin it is handed (it rounds the baseline and the
+            // ascender line to whole rows), so a fractional offset moves the caret and the selection while leaving the
+            // text where it was: centering a 15.8-tall line in a 17.4-tall surface handed the text 0.8 it silently dropped
+            // and the caret 0.8 it kept, and the caret drew a visible row below the letters. One snapped origin for all.
+            oy = Math.Floor(stripH + vOffset);
+        }
+
+        _textOx = ox;
         _textOy = oy;
 
         // Selection highlight (behind the text) - one rect per spanned visual line.
@@ -1441,15 +1566,14 @@ public abstract class TextBoxBase : Control, ITextStyleUser, Adamantium.UI.Core.
         // empty and unfocused).
         if (!string.IsNullOrEmpty(Placeholder))
         {
-            if (FloatingPlaceholder) RenderFloatingPlaceholder(session, oy, size);
-            else if (!hasText && !IsFocused) RenderPlaceholder(session, oy, size);
+            if (FloatingPlaceholder) RenderFloatingPlaceholder(session, size);
+            else if (!hasText && !IsFocused) RenderPlaceholder(session, size);
         }
 
         // Caret.
         if (IsFocused && _caretVisible && !_caretSuppressed)
         {
-            var c = CaretRect(CaretIndex);
-            session.DrawRectangle(CaretBrush, new Rect(ox + c.X, oy + c.Y, CaretWidth, c.Height));
+            session.DrawRectangle(CaretBrush, SurfaceCaret(CaretIndex));
         }
     }
 
@@ -1467,7 +1591,7 @@ public abstract class TextBoxBase : Control, ITextStyleUser, Adamantium.UI.Core.
                 var band = adornment.Rect;
                 band.X += (float)ox;
                 band.Y += (float)oy;
-                WavyLine.Draw(session, band, MisspellingBrush, down: false);
+                WavyLine.Draw(session, band, MisspellingBrush, down: Vertical);
             }
         }
     }
@@ -1478,8 +1602,17 @@ public abstract class TextBoxBase : Control, ITextStyleUser, Adamantium.UI.Core.
         foreach (var piece in SelectedRanges().SelectMany(r => _textLayout.GetRangeRects(r.Start, r.End)))
         {
             // A sliver, so a selected empty or blank line is visible.
-            var w = piece.Width > 0 ? piece.Width : piece.Height * 0.4;
-            session.DrawRectangle(brush, new Rect(ox + piece.X, oy + piece.Y, w, piece.Height));
+            var rect = new Rect(ox + piece.X, oy + piece.Y, piece.Width, piece.Height);
+            if (Vertical && piece.Height <= 0)
+            {
+                rect.Height = piece.Width * 0.4;
+            }
+            else if (!Vertical && piece.Width <= 0)
+            {
+                rect.Width = piece.Height * 0.4;
+            }
+
+            session.DrawRectangle(brush, rect);
         }
     }
 
@@ -1499,15 +1632,16 @@ public abstract class TextBoxBase : Control, ITextStyleUser, Adamantium.UI.Core.
             return;
         }
 
-        var caret = CaretRect(CaretIndex);
-        InputMethod.SetCaretBounds(_presenter, new Rect(caret.X + _textOx, caret.Y + _textOy, CaretWidth, caret.Height));
+        InputMethod.SetCaretBounds(_presenter, SurfaceCaret(CaretIndex));
     }
 
     internal void ScrollIndexIntoView(int index)
     {
         if (_scrollViewer == null) return;
-        var c = CaretRect(Clamp(index));
-        _scrollViewer.BringIntoView(new Rect(c.X + _textOx, c.Y + _textOy, CaretWidth + CaretPadding, c.Height));
+        var c = SurfaceCaret(Clamp(index));
+        _scrollViewer.BringIntoView(Vertical
+            ? new Rect(c.X, c.Y, c.Width, c.Height + CaretPadding)
+            : new Rect(c.X, c.Y, c.Width + CaretPadding, c.Height));
     }
 
     internal UIComponent TextSurface => _presenter;
@@ -1537,14 +1671,14 @@ public abstract class TextBoxBase : Control, ITextStyleUser, Adamantium.UI.Core.
         (start, end) = (Clamp(Math.Min(start, end)), Clamp(Math.Max(start, end)));
         if (start == end)
         {
-            var caret = CaretRect(start);
-            return [new Rect(caret.X + _textOx, caret.Y + _textOy, 0, caret.Height)];
+            var caret = SurfaceCaret(start);
+            return [Vertical ? new Rect(caret.X, caret.Y, caret.Width, 0) : new Rect(caret.X, caret.Y, 0, caret.Height)];
         }
 
         var rects = new List<Rect>();
         foreach (var piece in _textLayout.GetRangeRects(start, end))
         {
-            if (piece.Width > 0)
+            if ((Vertical ? piece.Height : piece.Width) > 0)
             {
                 rects.Add(new Rect(piece.X + _textOx, _textOy + piece.Y, piece.Width, piece.Height));
             }
@@ -1578,6 +1712,7 @@ public abstract class TextBoxBase : Control, ITextStyleUser, Adamantium.UI.Core.
         }
 
         _placeholderLayout.LoadFontsInBackground = !FontAtlasStore.SynchronousFill;
+        _placeholderLayout.WritingMode = WritingMode;
         _placeholderLayout.Direction = TextDirection;
         _placeholderLayout.WordSpacing = WordSpacing;
         _placeholderLayout.LetterSpacing = LetterSpacing;
@@ -1585,7 +1720,8 @@ public abstract class TextBoxBase : Control, ITextStyleUser, Adamantium.UI.Core.
         _placeholderLayout.Kerning = Kerning;
         _placeholderLayout.GlyphScaling = GlyphScaling;
         var shaping = TextShaping(font);
-        var key = (Placeholder, fontSize, TextDirection, WordSpacing, LetterSpacing, Tracking, Kerning, GlyphScaling);
+        var key = (Placeholder, fontSize, TextDirection, WordSpacing, LetterSpacing, Tracking, Kerning, GlyphScaling,
+            WritingMode);
         if (_placeholderShaped is { } shaped && shaped.Equals(key) && ShapesLike(_placeholderShaping, shaping))
         {
             return;
@@ -1611,14 +1747,23 @@ public abstract class TextBoxBase : Control, ITextStyleUser, Adamantium.UI.Core.
         }
     }
 
-    private void RenderPlaceholder(IDrawingSession session, double oy, Size size)
+    private void RenderPlaceholder(IDrawingSession session, Size size)
     {
         EnsurePlaceholderShaped(FontSize);
-        session.DrawText(BuildTextParameters(PlaceholderForeground, PlaceholderX(size), oy + _lineLeading, size), size, _placeholderLayout, PlaceholderForeground, Brushes.Transparent, Brushes.Transparent);
+        var (x, y) = PlaceholderAt(size);
+        session.DrawText(BuildTextParameters(PlaceholderForeground, x, y, size), size, _placeholderLayout, PlaceholderForeground, Brushes.Transparent, Brushes.Transparent);
     }
 
-    private double PlaceholderX(Size size) => Math.Floor(AlignedStart(
-        Math.Max(0, size.Width - _placeholderLayout.GetLine(0).Width), _placeholderLayout.IsRightToLeftParagraph(0)));
+    // Where the placeholder stands: on the text's first line, along it as the text would stand.
+    private (double X, double Y) PlaceholderAt(Size size)
+    {
+        var along = Math.Floor(AlignedStart(
+            Math.Max(0, (Vertical ? size.Height : size.Width) - _placeholderLayout.GetLine(0).Width),
+            _placeholderLayout.IsRightToLeftParagraph(0)));
+        return Vertical
+            ? (Math.Floor(_textOx + _columnsWidth - _lineLeading - _placeholderLayout.CalculatedLayoutSize.Width), _textOy + along)
+            : (along, _textOy + _lineLeading);
+    }
 
     private HorizontalTextAlignment LaidOutAlignment =>
         TextWrapping == TextWrapping.NoWrap ? HorizontalTextAlignment.Left : HorizontalTextAlignment;
@@ -1633,15 +1778,24 @@ public abstract class TextBoxBase : Control, ITextStyleUser, Adamantium.UI.Core.
 
     // Floating label: interpolate font size (full -> shrunk), Y (text position -> top strip) and color (placeholder ->
     // accent) by _floatProgress.
-    private void RenderFloatingPlaceholder(IDrawingSession session, double textOy, Size size)
+    private void RenderFloatingPlaceholder(IDrawingSession session, Size size)
     {
         var t = _floatProgress;
         var floatFs = FontSize + (FontSize * FloatScale - FontSize) * t;
         EnsurePlaceholderShaped(floatFs);
-        var rest = textOy + _lineLeading;
-        var y = rest + (0.0 - rest) * t;   // rest (t=0): at the text; floated (t=1): at the top of the strip
+        var (x, y) = PlaceholderAt(size);
+        // Rest (t=0): at the text; floated (t=1): in the strip - above horizontal lines, right of vertical ones.
+        if (Vertical)
+        {
+            x += (size.Width - _placeholderLayout.CalculatedLayoutSize.Width - x) * t;
+        }
+        else
+        {
+            y -= y * t;
+        }
+
         var brush = FloatLabelBrush(t);
-        session.DrawText(BuildTextParameters(brush, PlaceholderX(size), y, size), size, _placeholderLayout, brush, Brushes.Transparent, Brushes.Transparent);
+        session.DrawText(BuildTextParameters(brush, x, y, size), size, _placeholderLayout, brush, Brushes.Transparent, Brushes.Transparent);
     }
 
     // Blend the label color from the resting placeholder color to the accent (FloatingPlaceholderForeground) as it
@@ -1787,14 +1941,17 @@ public abstract class TextBoxBase : Control, ITextStyleUser, Adamantium.UI.Core.
     private static void OnScrollSettingChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
         => (a as TextBoxBase)?.PushScrollSettings();
 
-    // Forward our policy to the internal ScrollViewer. A wrapping box must NOT scroll horizontally (the content is bound
-    // to the viewport width so it wraps), so we force Disabled there regardless of HorizontalScrollBarVisibility.
+    // Forward our policy to the internal ScrollViewer. A wrapping box must NOT scroll along its lines (the content is bound
+    // to the viewport's length there so it wraps), so we force Disabled on that axis - the horizontal one, or the vertical
+    // one down vertical lines - regardless of the set visibility.
     private void PushScrollSettings()
     {
         if (_scrollViewer == null) return;
+        var wraps = TextWrapping != TextWrapping.NoWrap;
         _scrollViewer.HorizontalScrollBarVisibility =
-            TextWrapping != TextWrapping.NoWrap ? ScrollBarVisibility.Disabled : HorizontalScrollBarVisibility;
-        _scrollViewer.VerticalScrollBarVisibility = VerticalScrollBarVisibility;
+            wraps && !Vertical ? ScrollBarVisibility.Disabled : HorizontalScrollBarVisibility;
+        _scrollViewer.VerticalScrollBarVisibility =
+            wraps && Vertical ? ScrollBarVisibility.Disabled : VerticalScrollBarVisibility;
     }
 
     internal static readonly Brush DefaultSelectionBrush = new SolidColorBrush(new Color(0x33, 0x99, 0xFF, 0x66));

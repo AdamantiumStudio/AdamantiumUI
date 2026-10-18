@@ -1,4 +1,5 @@
 using System.Linq;
+using Adamantium.Graphics.Fonts;
 using Adamantium.Mathematics;
 using Adamantium.UI.Controls;
 using Adamantium.UI.Controls.Decorators;
@@ -1037,6 +1038,74 @@ public class TextBlockSelectionTests
         {
             Assert.That(on, Is.EqualTo(Cursors.IBeam), "selectable text shows the I-beam");
             Assert.That(Mouse.Cursor, Is.Not.EqualTo(Cursors.IBeam), "text that does not select shows no I-beam");
+        });
+    }
+
+    private static TextBlock Vertical(string text) => Laid(new TextBlock
+    {
+        Text = text, WritingMode = WritingMode.VerticalRightToLeft, Height = 120, TextWrapping = TextWrapping.WrapByWords,
+    });
+
+    // The middle of a character where the block shows it.
+    private static Vector2 Shown(TextBlock block, int index)
+    {
+        var rect = block.Layout.GetRangeRects(index, index + 1).Single();
+        return new Vector2(rect.X + block.LinesShift() + rect.Width / 2, rect.Y + rect.Height / 2);
+    }
+
+    private static void Pointer(TextBlock block, RoutedEvent routed, Vector2 at, InputModifiers held)
+    {
+        PointerDevice.Current.SetExternalMousePosition(block, new PixelPoint(at.X, at.Y));
+        var properties = PointerPointProperties.FromMouse(held);
+        PointerEventArgs args = routed == PointerEvents.PointerMovedEvent
+            ? new PointerEventArgs(Mouse.Pointer, held, 0) { RoutedEvent = routed, Properties = properties }
+            : routed == PointerEvents.PointerReleasedEvent
+                ? new PointerReleasedEventArgs(Mouse.Pointer, MouseButtons.Left, held, 0)
+                {
+                    RoutedEvent = routed, Properties = properties,
+                }
+                : new PointerPressedEventArgs(Mouse.Pointer, MouseButtons.Left, held, 0)
+                {
+                    RoutedEvent = routed, Properties = properties, ClickCount = 1,
+                };
+        ((IObservableComponent)block).RaiseEvent(args);
+    }
+
+    // Down a vertical line a drag selects what it passes over, from where it was pressed to where it is.
+    [Test]
+    public void DownAVerticalLine_ADragSelects()
+    {
+        var block = Vertical("Hello world");
+
+        var from = Shown(block, 1);
+        var to = Shown(block, 4);
+        Pointer(block, PointerEvents.PointerPressedEvent, new Vector2(from.X, from.Y - 2), InputModifiers.LeftMouseButton);
+        Pointer(block, PointerEvents.PointerMovedEvent, new Vector2(to.X, to.Y + 2), InputModifiers.LeftMouseButton);
+        Pointer(block, PointerEvents.PointerReleasedEvent, new Vector2(to.X, to.Y + 2), InputModifiers.None);
+
+        Assert.That(block.SelectedText, Is.EqualTo("ello"));
+    }
+
+    // Down vertical lines the arrows turn with the text: Down goes along the line, Left to the next line.
+    [Test]
+    public void DownVerticalLines_TheArrowsTurnWithTheText()
+    {
+        var block = Vertical("abcdefghijklmnopqrstuvwxyz abcdefghijklmnopqrstuvwxyz");
+        var layout = block.Layout;
+        Assert.That(layout.LineCount, Is.GreaterThan(1));
+        var second = layout.GetLine(1).Start;
+
+        block.Focus();
+        block.Select(0, 0);
+        Key(block, Adamantium.UI.Core.Input.Key.DownArrow, InputModifiers.LeftShift);
+        var along = block.SelectedText;
+        block.Select(0, 0);
+        Key(block, Adamantium.UI.Core.Input.Key.LeftArrow, InputModifiers.LeftShift);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(along, Is.EqualTo("a"), "Down: one character along the line");
+            Assert.That(block.SelectedText.Length, Is.EqualTo(second), "Left: to the head of the next line");
         });
     }
 }

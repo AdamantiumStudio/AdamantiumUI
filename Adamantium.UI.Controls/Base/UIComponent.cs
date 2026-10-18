@@ -602,6 +602,30 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
         set => SetValue(KashidasProperty, value);
     }
 
+    public static readonly AdamantiumProperty TextSpacingTrimProperty = AdamantiumProperty.Register(
+        nameof(TextSpacingTrim), typeof(TextSpacingTrim), typeof(UIComponent),
+        new PropertyMetadata(TextSpacingTrim.Normal, PropertyMetadataOptions.Inherits | PropertyMetadataOptions.AffectsMeasure));
+
+    /// <summary>How fullwidth CJK punctuation of the text in this element and its descendants gives up its blank half,
+    /// as CSS's text-spacing-trim: side by side and where a line would not fit otherwise by default.</summary>
+    public TextSpacingTrim TextSpacingTrim
+    {
+        get => GetValue<TextSpacingTrim>(TextSpacingTrimProperty);
+        set => SetValue(TextSpacingTrimProperty, value);
+    }
+
+    public static readonly AdamantiumProperty HangingPunctuationProperty = AdamantiumProperty.Register(
+        nameof(HangingPunctuation), typeof(HangingPunctuation), typeof(UIComponent),
+        new PropertyMetadata(HangingPunctuation.AllowEnd, PropertyMetadataOptions.Inherits | PropertyMetadataOptions.AffectsMeasure));
+
+    /// <summary>Whether a CJK comma or full stop of the text in this element and its descendants hangs past the end of
+    /// a line, as CSS's hanging-punctuation: where it would not fit otherwise by default.</summary>
+    public HangingPunctuation HangingPunctuation
+    {
+        get => GetValue<HangingPunctuation>(HangingPunctuationProperty);
+        set => SetValue(HangingPunctuationProperty, value);
+    }
+
     public static readonly AdamantiumProperty LastLineAlignmentProperty = AdamantiumProperty.Register(
         nameof(LastLineAlignment), typeof(HorizontalTextAlignment), typeof(UIComponent),
         new PropertyMetadata(HorizontalTextAlignment.Left, PropertyMetadataOptions.Inherits | PropertyMetadataOptions.AffectsMeasure));
@@ -1022,7 +1046,22 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
     /// <summary>Only the paint changed - do NOT touch IsGeometryValid. That flag is what makes the recorder re-run OnRender
     /// and rebuild this element's draw commands, and none of that is needed for a new color: the commands are the same, the
     /// units are the same, and the GPU data they bake from the brush is all that is stale.</summary>
-    public void InvalidatePaint() => VisualTreeNotifications.RaisePaintInvalidated(this);
+    public void InvalidatePaint()
+    {
+        VisualTreeNotifications.RaisePaintInvalidated(this);
+        OnPaintInvalidated();
+    }
+
+    /// <summary>The element's draw commands are stale (<see cref="InvalidateRender"/>): for an element whose content
+    /// other elements show part of.</summary>
+    protected virtual void OnRenderInvalidated()
+    {
+    }
+
+    /// <summary>Only the element's paint changed (<see cref="InvalidatePaint"/>).</summary>
+    protected virtual void OnPaintInvalidated()
+    {
+    }
 
     /// <summary>The last record produced no draw commands, so a re-layout need not re-record it. Never latched from a record
     /// taken at zero size, which says nothing about later sizes.</summary>
@@ -1046,6 +1085,7 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
     {
         GeometryStaleByContent = true;
         IsGeometryValid = false;
+        OnRenderInvalidated();
         // The child collection is null until the UIComponent ctor runs; a property-changed callback (e.g. Opacity's)
         // can fire earlier, while the base ctor applies defaults - guard so an early invalidate is a harmless no-op.
         // Reading VisualChildrenCollection here would BUILD one; a component with no children has nothing to cascade into.

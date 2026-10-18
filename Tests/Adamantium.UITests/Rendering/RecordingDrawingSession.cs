@@ -92,5 +92,14 @@ internal sealed class RecordingDrawingSession : IDrawingSession
         return this;
     }
 
+    public List<(TextLayout Layout, RectangleF Window)> Windows { get; } = [];
+
+    public IDrawingSession DrawText(TextRenderingParameters renderingParameters, Size desiredSize, TextLayout textLayout,
+        Brush foreground, Brush background, Brush stroke, IReadOnlyList<GlyphEffect> effects, RectangleF window)
+    {
+        Windows.Add((textLayout, window));
+        return this;
+    }
+
     public IDrawingSession PushImage(ImageSource image) => this;
 }

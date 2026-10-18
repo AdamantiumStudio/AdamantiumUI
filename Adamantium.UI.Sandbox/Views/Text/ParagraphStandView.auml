@@ -590,6 +590,35 @@
                            VerticalAlignment="Top"/>
                 </Grid>
             </Border>
+            <!-- One text through three frames: the block, then an overflow beside it, then one under both. -->
+            <Border Width="460"
+                    Padding="6"
+                    Margin="0,0,16,16"
+                    VerticalAlignment="Top"
+                    BorderThickness="1"
+                    BorderBrush="{ResourceReference ControlStrokeColorDefault}">
+                <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto">
+                    <TextBlock AutomationProperties.AutomationId="ThreadedText"
+                               Text="{Binding ProseSample}"
+                               Language="en-US"
+                               TextWrapping="WrapByWords"
+                               FontSize="16"
+                               Height="130"
+                               Margin="0,0,10,10"
+                               HorizontalTextAlignment="{Binding ColumnAlignment}"
+                               OverflowContentTarget="{Binding ElementName=ThreadedBeside}"/>
+                    <TextBlockOverflow x:Name="ThreadedBeside"
+                                       AutomationProperties.AutomationId="ThreadedBeside"
+                                       Grid.Column="1"
+                                       Height="130"
+                                       Margin="10,0,0,10"
+                                       OverflowContentTarget="{Binding ElementName=ThreadedUnder}"/>
+                    <TextBlockOverflow x:Name="ThreadedUnder"
+                                       AutomationProperties.AutomationId="ThreadedUnder"
+                                       Grid.Row="1"
+                                       Grid.ColumnSpan="2"/>
+                </Grid>
+            </Border>
         </WrapPanel>
 
         <!-- A baseline grid set on the frame: the heading and both columns, each of its own size, keep one rhythm. -->
