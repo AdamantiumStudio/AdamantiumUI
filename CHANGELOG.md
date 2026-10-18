@@ -151,9 +151,30 @@ All packages share one version.
   under the pointer or at the caret, what it may have been meant as, "Ignore all" and "Add to dictionary". The words
   are the system's (`ISpellChecker`; on Windows its own dictionaries and the user's), in the box's `Language`, else the
   application's language, else English; `SpellCheckBehavior.Checker` takes another. macOS comes later.
-- A text box has an editing menu in every theme: Cut, Copy, Paste, Select all. The box's commands
-  (`CutCommand`, `CopyCommand`, `PasteCommand`, `SelectAllCommand`) say when they apply; a theme's row names one with
-  `TextBoxBase.EditAction`, and the box hands it the command as the menu opens. A password box gives nothing away.
+- Routed commands, as WPF's: a `RoutedCommand` (`Name`, `OwnerType`, its `KeyGesture`s) goes from its target up
+  the tree to the first element whose `CommandBinding` takes it - on the element (in markup among its `Behaviors`, or
+  `CommandManager.GetCommandBindings`) or on its whole class (`RegisterClassCommandBinding`) - through
+  `PreviewCanExecute`, `CanExecute`, `PreviewExecuted` and `Executed`. Asked, it answers `CanExecute`, and may answer
+  `IsChecked` and `Value`. A binding's `Handler` hands the command to a view model's:
+  `<CommandBinding Command="{x:Static ApplicationCommands.Copy}" Handler="{Binding CopyCommand}"/>` copies what the view
+  model holds whenever no field with the keyboard takes Copy first. Its gestures run it from the keyboard, and
+  `KeyBinding`s on an element or a class add keys of their own (`KeyGesture.Parse("Ctrl+Shift+K")`); a key whose
+  command an element takes stays with it even when it cannot run now.
+  A button, a menu row, a segment or a hyperlink sends its routed command from itself, or from its `CommandTarget`; a
+  gallery sends its `ItemCommand` from itself, the picked item as the parameter. A focus scope
+  (`FocusManager.IsFocusScope`: a context menu, a popup, a ribbon, its application menu and quick-access bar) keeps a
+  focus of its own, per window: a command nothing inside it took goes to the element with the focus in the scope
+  around it, so a ribbon's Copy copies from the field being edited, and a box's own menu acts on that box, also in a
+  ribbon or a popup. A popup's content is in its popup, and a menu goes on to the element it belongs to. A toggle
+  button takes `IsChecked` from the answer, a menu row shows the command's first gesture unless `InputGestureText` is
+  set. Sources in the tree ask again when the focus moves, when a control calls
+  `CommandManager.InvalidateRequerySuggested`, at most once a frame, and a menu asks as it opens.
+- `Clipboard.HasText()`: whether there is text to paste, without reading it. `IClipboard` has it as a new member, so a
+  clipboard of one's own implements it too.
+- `ApplicationCommands`: Cut, Copy, Paste, Undo, Redo, Select all, Find, Replace, with their usual keys. A text box
+  takes Cut, Copy, Paste, Select all, Undo and Redo (its keys are these commands' keys now), a password box gives
+  nothing away, and a selectable `TextBlock` takes Copy and Select all.
+- A text box has an editing menu in every theme: Cut, Copy, Paste, Select all, its rows on `ApplicationCommands`.
 - `ContextMenu.Opening`: raised before a menu shows, with the point it was opened at (none from the keyboard), so its
   rows can fit the moment.
 - `TextBox.AcceptsTab`: Tab types a tab; Shift+Tab and Ctrl+Tab still move the focus on, and a read-only box lets Tab

@@ -72,7 +72,7 @@ public class TextBoxThemeMenuTests
             Assert.That(first.ContextMenu, Is.Not.SameAs(second.ContextMenu), "one menu points at one box");
             Assert.That(rows.Select(row => row.Command), Is.EqualTo(new object[]
             {
-                first.CutCommand, first.CopyCommand, first.PasteCommand, first.SelectAllCommand,
+                ApplicationCommands.Cut, ApplicationCommands.Copy, ApplicationCommands.Paste, ApplicationCommands.SelectAll,
             }));
             Assert.That(first.ContextMenu.Items.OfType<Separator>().Count(), Is.EqualTo(1));
         });

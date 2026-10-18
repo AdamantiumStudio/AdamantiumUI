@@ -46,6 +46,9 @@ public abstract class ButtonBase : ContentControl
     public static readonly AdamantiumProperty CommandParameterProperty = AdamantiumProperty.Register(nameof(CommandParameter),
         typeof(object), typeof(ButtonBase), new PropertyMetadata(null, OnCommandParameterChanged));
 
+    public static readonly AdamantiumProperty CommandTargetProperty = AdamantiumProperty.Register(nameof(CommandTarget),
+        typeof(IInputComponent), typeof(ButtonBase), new PropertyMetadata(null, OnCommandParameterChanged));
+
     public static readonly RoutedEvent ClickEvent = EventManager.RegisterRoutedEvent(nameof(Click),
         RoutingStrategy.Bubble, typeof(RoutedEventHandler), typeof(ButtonBase));
 
@@ -131,9 +134,16 @@ public abstract class ButtonBase : ContentControl
         set => SetValue(CommandParameterProperty, value);
     }
 
-    // Track the command's CanExecuteChanged so the button auto-enables/disables. The subscription is weak (the relay
-    // holds the button weakly), so a command owned by a long-lived view-model doesn't keep a removed button alive.
-    private WeakCanExecuteChangedRelay<ButtonBase> _commandRelay;
+    /// <summary>Where a <see cref="RoutedCommand"/> starts; null starts it from the button, and from a ribbon or a menu it
+    /// goes on to the field with the focus.</summary>
+    public IInputComponent CommandTarget
+    {
+        get => GetValue<IInputComponent>(CommandTargetProperty);
+        set => SetValue(CommandTargetProperty, value);
+    }
+
+    // Track the command's CanExecuteChanged so the button auto-enables/disables.
+    private CommandSourceListener<ButtonBase> _commandListener;
 
     private static void OnCommandChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
     {
@@ -147,17 +157,34 @@ public abstract class ButtonBase : ContentControl
 
     private void OnCommandChanged(ICommand newCommand)
     {
-        _commandRelay?.Detach();
-        _commandRelay = newCommand != null
-            ? new WeakCanExecuteChangedRelay<ButtonBase>(newCommand, this, static b => b.UpdateCanExecute())
-            : null;
+        _commandListener ??= new CommandSourceListener<ButtonBase>(this, static b => b.UpdateCanExecute());
+        _commandListener.Listen(newCommand);
         UpdateCanExecute();
+    }
+
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+        _commandListener?.Attached();
+    }
+
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnDetachedFromVisualTree(e);
+        _commandListener?.Detached();
     }
 
     private void UpdateCanExecute()
     {
-        var command = Command;
-        IsEnabled = command == null || command.CanExecute(CommandParameter);
+        var state = CommandManager.QueryFrom(Command, CommandParameter, this, CommandTarget);
+        IsEnabled = state.CanExecute;
+        OnCommandState(state);
+    }
+
+    /// <summary>Takes what the element a routed command reaches says of it beyond whether it can run - a toggle shows
+    /// whether it is on.</summary>
+    protected virtual void OnCommandState(CommandState state)
+    {
     }
 
     /// <summary>Programmatically clicks the button (e.g. a default/cancel button activated by Enter/Esc), if enabled.</summary>
@@ -168,12 +195,7 @@ public abstract class ButtonBase : ContentControl
 
     protected virtual void OnClick()
     {
-        var parameter = CommandParameter;
-        if (Command != null && Command.CanExecute(parameter))
-        {
-            Command.Execute(parameter);
-        }
-
+        CommandManager.ExecuteFrom(Command, CommandParameter, this, CommandTarget);
         RaiseEvent(new RoutedEventArgs(ClickEvent, this) { RoutedEvent = ClickEvent });
         if (AutomationEvents.IsListening && GetAutomationPeer() is IInvokeProvider)
         {

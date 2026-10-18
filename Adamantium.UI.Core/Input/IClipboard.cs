@@ -6,5 +6,8 @@ public interface IClipboard
 {
     string GetText();
 
+    /// <summary>Whether there is text to paste, without reading it: asked whenever a Paste row or button checks.</summary>
+    bool HasText();
+
     void SetText(string text);
 }

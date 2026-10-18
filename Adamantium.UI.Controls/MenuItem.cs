@@ -33,6 +33,9 @@ public class MenuItem : ItemsControl, IHeaderedItemsControl
     public static readonly AdamantiumProperty CommandParameterProperty = AdamantiumProperty.Register(nameof(CommandParameter),
         typeof(object), typeof(MenuItem), new PropertyMetadata(null, OnCommandParameterChanged));
 
+    public static readonly AdamantiumProperty CommandTargetProperty = AdamantiumProperty.Register(nameof(CommandTarget),
+        typeof(IInputComponent), typeof(MenuItem), new PropertyMetadata(null, OnCommandParameterChanged));
+
     public static readonly AdamantiumProperty IsCheckableProperty = AdamantiumProperty.Register(nameof(IsCheckable),
         typeof(bool), typeof(MenuItem), new PropertyMetadata(false));
 
@@ -43,10 +46,10 @@ public class MenuItem : ItemsControl, IHeaderedItemsControl
         typeof(bool), typeof(MenuItem), new PropertyMetadata(false));
 
     // A row follows its command's availability, the way a button does: grayed out while the command says no, instead of
-    // looking ordinary and doing nothing when clicked. The subscription is WEAK (the relay holds the row weakly), so a
-    // command owned by a long-lived view-model does not keep a dismissed menu's rows alive - a menu is built and thrown
-    // away on every open, so that leak would be per-open.
-    private WeakCanExecuteChangedRelay<MenuItem> _commandRelay;
+    // looking ordinary and doing nothing when clicked. A menu is built and thrown away on every open, so the listener's
+    // weak hold keeps that from leaking per open.
+    private CommandSourceListener<MenuItem> _commandListener;
+    private string _gestureTextOfCommand;
 
     private static void OnCommandChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
     {
@@ -60,18 +63,30 @@ public class MenuItem : ItemsControl, IHeaderedItemsControl
 
     private void OnCommandChanged(ICommand newCommand)
     {
-        _commandRelay?.Detach();
-        _commandRelay = newCommand != null
-            ? new WeakCanExecuteChangedRelay<MenuItem>(newCommand, this, static i => i.UpdateCanExecute())
-            : null;
+        _commandListener ??= new CommandSourceListener<MenuItem>(this, static i => i.UpdateCanExecute());
+        _commandListener.Listen(newCommand);
+        if (string.IsNullOrEmpty(InputGestureText) || InputGestureText == _gestureTextOfCommand)
+        {
+            var text = newCommand is RoutedCommand { InputGestures: [var gesture, ..] } ? gesture.ToString() : null;
+            if (text != _gestureTextOfCommand)
+            {
+                _gestureTextOfCommand = text;
+                SetCurrentValue(InputGestureTextProperty, text);
+            }
+        }
+
         UpdateCanExecute();
     }
 
     private void UpdateCanExecute()
     {
         // A PARENT row opens a submenu and runs nothing, so a command on it says nothing about whether it can be used.
-        var command = Command;
-        IsEnabled = HasItems || command == null || command.CanExecute(CommandParameter);
+        var state = CommandManager.QueryFrom(Command, CommandParameter, this, CommandTarget);
+        IsEnabled = HasItems || state.CanExecute;
+        if (state.IsChecked is { } on)
+        {
+            SetCurrentValue(IsCheckedProperty, on);
+        }
     }
 
     // Read-only: true once the item has children (so it's a submenu parent, not a leaf). Drives the chevron + the flyout.
@@ -105,13 +120,22 @@ public class MenuItem : ItemsControl, IHeaderedItemsControl
     /// <summary>Optional icon/glyph shown at the left of the row.</summary>
     public object Icon { get => GetValue<object>(IconProperty); set => SetValue(IconProperty, value); }
 
-    /// <summary>Optional shortcut hint shown right-aligned (e.g. "Ctrl+S"). Display only - it wires nothing.</summary>
+    /// <summary>Optional shortcut hint shown right-aligned (e.g. "Ctrl+S"). Display only - it wires nothing; left unset,
+    /// a <see cref="RoutedCommand"/> fills it with its first key.</summary>
     public string InputGestureText { get => GetValue<string>(InputGestureTextProperty); set => SetValue(InputGestureTextProperty, value); }
 
     /// <summary>Command run when a LEAF item is clicked.</summary>
     public ICommand Command { get => GetValue<ICommand>(CommandProperty); set => SetValue(CommandProperty, value); }
 
     public object CommandParameter { get => GetValue<object>(CommandParameterProperty); set => SetValue(CommandParameterProperty, value); }
+
+    /// <summary>Where a <see cref="RoutedCommand"/> starts; null starts it from the row, and it goes on to the element the
+    /// menu belongs to, or the field with the focus.</summary>
+    public IInputComponent CommandTarget
+    {
+        get => GetValue<IInputComponent>(CommandTargetProperty);
+        set => SetValue(CommandTargetProperty, value);
+    }
 
     /// <summary>Whether choosing the row flips <see cref="IsChecked"/>.</summary>
     public bool IsCheckable { get => GetValue<bool>(IsCheckableProperty); set => SetValue(IsCheckableProperty, value); }
@@ -261,8 +285,16 @@ public class MenuItem : ItemsControl, IHeaderedItemsControl
         RaiseEvent(new RoutedEventArgs(ClickEvent, this) { RoutedEvent = ClickEvent });
     }
 
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+        _commandListener?.Attached();
+    }
+
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
+        _commandListener?.Detached();
+
         // When the owning flyout closes this row detaches; drop the submenu state so it doesn't spontaneously re-open the
         // next time the menu is shown.
         IsSubmenuOpen = false;
@@ -361,8 +393,7 @@ public class MenuItem : ItemsControl, IHeaderedItemsControl
             SetCurrentValue(IsCheckedProperty, !IsChecked);
         }
 
-        if (Command != null && Command.CanExecute(CommandParameter))
-            Command.Execute(CommandParameter);
+        CommandManager.ExecuteFrom(Command, CommandParameter, this, CommandTarget);
         RaiseEvent(new RoutedEventArgs(ClickEvent, this) { RoutedEvent = ClickEvent });
         return true;
     }

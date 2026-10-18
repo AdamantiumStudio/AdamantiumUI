@@ -38,6 +38,7 @@ public class InputUIComponent : MeasurableUIComponent, IInputComponent
         Keyboard.LostKeyboardFocusWithinEvent.RegisterClassHandler<IInputComponent>(
             new RoutedEventHandler(LostKeyboardFocusWithinHandler));
         FocusManager.FocusRevealedEvent.RegisterClassHandler<IInputComponent>(new RoutedEventHandler(FocusRevealedHandler));
+        CommandManager.Register();
         Keyboard.KeyDownEvent.RegisterClassHandler<IInputComponent>(new KeyEventHandler(KeyDownHandler));
         Keyboard.KeyUpEvent.RegisterClassHandler<IInputComponent>(new KeyEventHandler(KeyUpHandler));
         Keyboard.PreviewKeyDownEvent.RegisterClassHandler<IInputComponent>(new KeyEventHandler(PreviewKeyDownHandler));

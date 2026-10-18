@@ -3,6 +3,7 @@ using System.Linq;
 using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Automation;
+using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.RoutedEvents;
 using Adamantium.UI.Core.Templates;
@@ -13,6 +14,11 @@ namespace Adamantium.UI.Controls;
 /// command and close.</summary>
 public class RibbonApplicationMenu : Selector
 {
+    static RibbonApplicationMenu()
+    {
+        FocusManager.IsFocusScopeProperty.OverrideMetadata(typeof(RibbonApplicationMenu), new PropertyMetadata(true));
+    }
+
     /// <summary>What the button says - "File".</summary>
     public static readonly AdamantiumProperty HeaderProperty = AdamantiumProperty.Register(nameof(Header),
         typeof(object), typeof(RibbonApplicationMenu), new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure));
