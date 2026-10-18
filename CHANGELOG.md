@@ -7,6 +7,14 @@ All packages share one version.
 
 ### Fixed
 
+- A `TextBlockOverflow` in a grid's star columns let its layout settle: it took its room each time the grid measured
+  it - first unbounded, then the column's width - and laid the block's text out again every time, never idle, the
+  overflow under the others as short as nothing and its lines over what came below. It takes its room as it is
+  arranged. A block whose overflows have no room yet no longer lays its text out again on every measure (a room not
+  known never compared the same).
+- A wrapping `TextBlock` measured twice a pass at two sizes - a grid's star column first at an upper bound, then at
+  its share - is answered the size it laid out at the other one, not laid out again each time; what it draws and
+  arranges is laid out at the size it ends up with.
 - A control among the inlines of a vertical `TextBlock` stands upright in its line, centered across it, as large as it
   asks; it was collapsed to nothing.
 - An items host with `IsVirtualizing="False"` asks for what its items take; it asked for all the room it was given, as
@@ -26,6 +34,11 @@ All packages share one version.
 
 ### Added
 
+- The sandbox's text tab has a topic "New in typesetting": CJK punctuation with `TextSpacingTrim` and
+  `HangingPunctuation` switched, words hyphenated inside a ligature and at an Arabic soft hyphen, a tall line in
+  columns, a vertical field and a control in a vertical line, one text through three frames, 'SVG' glyphs of a font of
+  our own styled by a sheet and clipped in their box, and 600 color images of another (`sbix`) scrolled under a budget
+  of the color atlas, its layers taken shown.
 - `TextBlockOverflow` and `TextBlock.OverflowContentTarget`, as WinUI's RichTextBlockOverflow: the text that does not
   fit into a block goes on in the overflow it names, and on in the one that overflow names, wherever they stand. The
   block lays its text out once, through its own room (its columns included) and then through each overflow's, so a

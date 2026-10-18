@@ -26,6 +26,7 @@ public class TextBlockOverflow : InputUIComponent
 
     private readonly BaselineGridFollower _grid;
     private Size _room = new(double.NaN, double.NaN);
+    private Size _measured = new(double.PositiveInfinity, double.PositiveInfinity);
     private Size _content;
     private int _revision = -1;
 
@@ -125,22 +126,33 @@ public class TextBlockOverflow : InputUIComponent
         _revision = revision;
     }
 
+    // A panel measures a child more than once a pass, with sizes it then settles (a grid's star columns first unbounded):
+    // the room is taken when the child is arranged, once, so the block lays out against the room it ends up with.
     protected override Size MeasureOverride(Size availableSize)
     {
         _grid.Measure();
-        var room = new Size(double.IsNaN(Width) ? availableSize.Width : Width,
-            double.IsNaN(Height) ? availableSize.Height : Height);
+        _measured = availableSize;
+        return Frame == null ? new Size(0, 0) : _content;
+    }
+
+    protected override Size ArrangeOverride(Size finalSize)
+    {
+        // Its own size, else its slot where it stretches into it, else what it was measured with; unbounded down where
+        // it was measured so, as it is in a row as tall as it asks.
+        var width = !double.IsNaN(Width) ? Width
+            : HorizontalAlignment == HorizontalAlignment.Stretch || double.IsInfinity(_measured.Width) ? finalSize.Width
+            : _measured.Width;
+        var height = !double.IsNaN(Height) ? Height
+            : double.IsInfinity(_measured.Height) ? double.PositiveInfinity
+            : VerticalAlignment == VerticalAlignment.Stretch ? finalSize.Height
+            : _measured.Height;
+        var room = new Size(width, height);
         if (!room.Equals(_room))
         {
             _room = room;
             ContentSource?.InvalidateMeasure();
         }
 
-        return Frame == null ? new Size(0, 0) : _content;
-    }
-
-    protected override Size ArrangeOverride(Size finalSize)
-    {
         ContentSource?.OverflowArranged();
         return finalSize;
     }
