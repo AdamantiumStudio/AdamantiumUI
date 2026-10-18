@@ -26,6 +26,4 @@ public partial class DateTimeViewModel : TabPageViewModel
 
     /// <summary>The last day the range calendar shows: three months on.</summary>
     public DateTime RangeEnd => DateTime.Today.AddMonths(3);
-
-    [Command] private void ShowLanguage(object language) => CalendarLanguage = language as string;
 }

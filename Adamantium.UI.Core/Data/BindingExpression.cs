@@ -248,8 +248,6 @@ public class BindingExpression : BindingExpressionBase
          return;
       }
 
-      if (Mode == BindingMode.TwoWay && !IsProducer && Target != null)
-         Target.PropertyChanged += OnTargetPropertyChanged;
       Refresh();                    // initial push (or produce)
       if (newObserved != null)
       {
@@ -264,6 +262,8 @@ public class BindingExpression : BindingExpressionBase
          _observedComponent = component;
          component.PropertyChanged += OnSourceComponentChanged;
       }
+      if (Mode == BindingMode.TwoWay && !IsProducer && Target != null)
+         Target.PropertyChanged += OnTargetPropertyChanged;
       WatchPassed();
    }
 

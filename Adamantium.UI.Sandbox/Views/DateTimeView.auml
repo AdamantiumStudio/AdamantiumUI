@@ -52,31 +52,26 @@
                 <RadioButton Classes="Toggle"
                              GroupName="CalendarLanguage"
                              Content="Русский"
-                             IsChecked="True"
-                             Command="{Binding ShowLanguageCommand}"
-                             CommandParameter="ru-RU"
                              MarginRight="6"
-                             MarginBottom="6"/>
+                             MarginBottom="6"
+                             IsChecked="{Binding CalendarLanguage, Converter={conv:EnumToBoolConverter}, ConverterParameter=ru-RU, Mode=TwoWay}"/>
                 <RadioButton Classes="Toggle"
                              GroupName="CalendarLanguage"
                              Content="English (US)"
-                             Command="{Binding ShowLanguageCommand}"
-                             CommandParameter="en-US"
                              MarginRight="6"
-                             MarginBottom="6"/>
+                             MarginBottom="6"
+                             IsChecked="{Binding CalendarLanguage, Converter={conv:EnumToBoolConverter}, ConverterParameter=en-US, Mode=TwoWay}"/>
                 <RadioButton Classes="Toggle"
                              GroupName="CalendarLanguage"
                              Content="日本語"
-                             Command="{Binding ShowLanguageCommand}"
-                             CommandParameter="ja-JP"
                              MarginRight="6"
-                             MarginBottom="6"/>
+                             MarginBottom="6"
+                             IsChecked="{Binding CalendarLanguage, Converter={conv:EnumToBoolConverter}, ConverterParameter=ja-JP, Mode=TwoWay}"/>
                 <RadioButton Classes="Toggle"
                              GroupName="CalendarLanguage"
                              Content="العربية"
-                             Command="{Binding ShowLanguageCommand}"
-                             CommandParameter="ar-EG"
-                             MarginBottom="6"/>
+                             MarginBottom="6"
+                             IsChecked="{Binding CalendarLanguage, Converter={conv:EnumToBoolConverter}, ConverterParameter=ar-EG, Mode=TwoWay}"/>
             </WrapPanel>
 
             <WrapPanel Orientation="Horizontal"

@@ -36,10 +36,6 @@ All packages share one version.
 - While an element holds the pointer, what the pointer is over is found where the pointer is: the point was taken in
   the window's units as the element's parent's, so in a panel away from the window's corner the hover lit a cell off
   to the side of the pointer, moving with it.
-- A two-way binding hears the control it binds as soon as it gives the control its first value: a control that refuses
-  or corrects that value writes its own back to the source. Only later changes were heard, so the source kept a value
-  the control had refused - a view model's date a calendar could not select stayed in the view model, the calendar
-  showing none.
 - A `TextBlockOverflow` in a grid's star columns let its layout settle: it took its room each time the grid measured
   it - first unbounded, then the column's width - and laid the block's text out again every time, never idle, the
   overflow under the others as short as nothing and its lines over what came below. It takes its room as it is

@@ -1,5 +1,4 @@
 using System;
-using System.ComponentModel;
 using System.Linq;
 using Adamantium.Mathematics;
 using Adamantium.UI.Controls;
@@ -8,7 +7,6 @@ using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Controls.Primitives;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Automation;
-using Adamantium.UI.Core.Data;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Localization;
 using Adamantium.UI.Core.RoutedEvents;
@@ -370,19 +368,6 @@ public class CalendarTests
 
         DateTime[] run = [new(2026, 10, 10), new(2026, 10, 11)];
         Assert.That(calendar.SelectedDates, Is.EqualTo(run));
-    }
-
-    [Test]
-    public void ADateRefusedAsTheBindingFirstApplies_IsWrittenBack()
-    {
-        var choice = new DateChoice { Mode = CalendarSelectionMode.None, Date = new DateTime(2026, 10, 3) };
-        var calendar = new Calendar { DisplayDate = October, DataContext = choice };
-        calendar.SetBinding(Calendar.SelectionModeProperty, new Binding(nameof(DateChoice.Mode)));
-        calendar.SetBinding(Calendar.SelectedDateProperty, new Binding(nameof(DateChoice.Date)));
-        Shown(calendar);
-        BindingUpdateQueue.Flush();
-
-        Assert.That((calendar.SelectedDate, choice.Date), Is.EqualTo(((DateTime?)null, (DateTime?)null)));
     }
 
     [Test]
@@ -852,33 +837,5 @@ public class CalendarTests
             Assert.That(calendar.RenderSize, Is.EqualTo(new Size(140, 140)));
             Assert.That(calendar.DayButtons.Max(d => d.RenderSize.Width), Is.LessThanOrEqualTo(140 / 7.0));
         });
-    }
-
-    private sealed class DateChoice : INotifyPropertyChanged
-    {
-        private CalendarSelectionMode _mode;
-        private DateTime? _date;
-
-        public event PropertyChangedEventHandler PropertyChanged;
-
-        public CalendarSelectionMode Mode
-        {
-            get => _mode;
-            set
-            {
-                _mode = value;
-                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Mode)));
-            }
-        }
-
-        public DateTime? Date
-        {
-            get => _date;
-            set
-            {
-                _date = value;
-                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Date)));
-            }
-        }
     }
 }
