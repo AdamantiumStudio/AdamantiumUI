@@ -450,7 +450,7 @@ public class MeasurableUIComponent : ObservableUIComponent, IName, IMeasurableCo
     /// <summary>Where this element's top stands below the top of the element <see cref="UIComponent.BaselineGridStep"/>
     /// is set on, the start of its baseline grid: NaN with no grid. A scrolled offset is left out, so the grid scrolls
     /// with the content. <paramref name="origin"/> is that element: found when null, else walked up to.</summary>
-    protected double TopOnBaselineGrid(ref IUIComponent origin)
+    protected internal double TopOnBaselineGrid(ref IUIComponent origin)
     {
         var step = BaselineGridStep;
         if (!(step > 0) || double.IsInfinity(step))

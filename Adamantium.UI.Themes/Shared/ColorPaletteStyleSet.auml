@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<StyleSet xmlns="http://adamantium/ui"
+          xmlns:x="http://adamantium/ui/xaml/extensions">
+
+    <!-- ColorPalette: the choice of no color, the grid of swatches, and the picker under "More colors". Its buttons are
+         the theme's own, so one set serves every theme. -->
+    <Style Selector="ColorPalette">
+        <Setter Property="Padding" Value="6"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ColorPalette">
+                    <StackPanel Margin="{TemplateBinding Padding}" Spacing="6">
+                        <Button x:Name="PART_NoColor"
+                                Content="{TemplateBinding NoColorText}"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Left"/>
+                        <ItemsControl ItemsSource="{TemplateBinding Colors}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <UniformGrid Columns="10"/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <ColorPaletteSwatch Color="{Binding}" Margin="2"/>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <Button x:Name="PART_MoreColors"
+                                Content="{Localize ColorPickerStrings.MoreColors}"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Left"/>
+                        <StackPanel x:Name="PART_More" Visibility="Collapsed" Spacing="6">
+                            <ColorPicker x:Name="PART_Picker"/>
+                            <Button x:Name="PART_Apply"
+                                    Content="{Localize ColorPickerStrings.Apply}"
+                                    HorizontalAlignment="Right"/>
+                        </StackPanel>
+                    </StackPanel>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style Selector="ColorPalette">
+        <PropertyTrigger Property="IsMoreColorsOpen" Value="true">
+            <Setter TargetName="PART_More" Property="Visibility" Value="Visible"/>
+        </PropertyTrigger>
+    </Style>
+
+    <Style Selector="ColorPaletteSwatch">
+        <Setter Property="Width" Value="18"/>
+        <Setter Property="Height" Value="18"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ColorPaletteSwatch">
+                    <Border x:Name="Chrome"
+                            Background="{TemplateBinding SwatchBrush}"
+                            BorderBrush="{ResourceReference ControlStrokeColorDefault}"
+                            BorderThickness="1"/>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style Selector="ColorPaletteSwatch">
+        <PropertyTrigger Property="IsPointerOver" Value="true">
+            <Setter TargetName="Chrome" Property="BorderBrush" Value="{ResourceReference TextFillColorPrimary}"/>
+            <Setter TargetName="Chrome" Property="BorderThickness" Value="2"/>
+        </PropertyTrigger>
+    </Style>
+
+</StyleSet>

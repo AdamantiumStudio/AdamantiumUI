@@ -14,7 +14,8 @@ using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls.Text;
 
-public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
+public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource, ITextStyleUser,
+    Adamantium.UI.Core.Resources.IResolvesOwnResources
 {
     public static readonly AdamantiumProperty TextProperty = AdamantiumProperty.Register(nameof(Text),
         typeof(string), typeof(TextBlock),
@@ -73,6 +74,12 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         typeof(int), typeof(TextBlock),
         new PropertyMetadata(0, PropertyMetadataOptions.AffectsMeasure));
 
+    public static readonly AdamantiumProperty CharacterStyleProperty = AdamantiumProperty.Register(nameof(CharacterStyle),
+        typeof(CharacterStyle), typeof(TextBlock), new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure));
+
+    public static readonly AdamantiumProperty ParagraphStyleProperty = AdamantiumProperty.Register(nameof(ParagraphStyle),
+        typeof(ParagraphStyle), typeof(TextBlock), new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure));
+
     public static readonly AdamantiumProperty TextLineBoundsProperty = AdamantiumProperty.Register(nameof(TextLineBounds),
         typeof(TextLineBounds), typeof(TextBlock),
         new PropertyMetadata(TextLineBounds.Full, PropertyMetadataOptions.AffectsMeasure));
@@ -119,6 +126,19 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
                 PropertyMetadataOptions.Inherits | PropertyMetadataOptions.AffectsRender));
         FontSizeProperty.OverrideMetadata(typeof(TextBlock),
             new PropertyMetadata(12.0d, PropertyMetadataOptions.Inherits | PropertyMetadataOptions.AffectsMeasure | PropertyMetadataOptions.AffectsRender));
+        CommandManager.RegisterClassCommandBinding(typeof(TextBlock), new CommandBinding(ApplicationCommands.Copy,
+            static (sender, _) => ((TextBlock)sender).CopySelection(), static (sender, e) => AskAsText(sender, e,
+                static block => block.HasSelection)));
+        CommandManager.RegisterClassCommandBinding(typeof(TextBlock), new CommandBinding(ApplicationCommands.SelectAll,
+            static (sender, _) => ((TextBlock)sender).SelectAll(), static (sender, e) => AskAsText(sender, e,
+                static block => block._lastText?.Length > 0)));
+    }
+
+    private static void AskAsText(object sender, CanExecuteRoutedEventArgs e, Func<TextBlock, bool> can)
+    {
+        var block = (TextBlock)sender;
+        e.Handled = block.CanSelect;
+        e.CanExecute = block.CanSelect && can(block);
     }
 
     private static void OnFontFamilyChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
@@ -183,12 +203,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
     private double _lastTracking;
     private TextKerning _lastKerning;
     private BaselineGrid _lastBaselineGrid;
-    private double _gridPhase = double.NaN;
-    private LayoutManager _gridManager;
-    private IUIComponent _gridOrigin;
-    private double _gridTop = double.NaN;
-    private double _gridHeight = double.NaN;
-    private bool _gridHeld;
+    private readonly BaselineGridFollower _grid;
     private SpacingRange _lastGlyphScaling;
     private bool _lastJustificationAlternates;
     private HorizontalTextAlignment _lastLastLineAlignment;
@@ -209,8 +224,10 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
     private readonly List<(int Start, int End, Hyperlink Link)> _links = [];
     private readonly List<(int Index, IMeasurableComponent Child)> _objects = [];
     private readonly List<IMeasurableComponent> _hosted = [];
+    private LayoutManager _watchedLayout;
     private readonly List<Size> _hostedSizes = [];
     private readonly Dictionary<IMeasurableComponent, double> _hostedRaises = [];
+    private readonly HashSet<IMeasurableComponent> _placedHosted = [];
     private Hyperlink _pressedLink;
     private int _focusedLink = -1;
     private bool _overLink;
@@ -246,7 +263,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
     private bool _runFontsPending;
     private TextEffectCollection _textEffects;
     private readonly List<(Inline Inline, int Start, int Length)> _inlineRanges = [];
-    private readonly Dictionary<TextFormat, object> _engineStyles = [];
+    private readonly EngineTextStyles _engineStyles;
     private readonly List<(int Start, int End, CharacterStyle Style)> _styleRanges = [];
     private readonly List<GlyphEffect> _resolvedEffects = [];
     private GlyphEffect[] _drawnEffects = [];
@@ -257,6 +274,8 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
     {
         _effectBrushes = new HeldBrushes(this);
         _inlineBrushes = new HeldBrushes(this);
+        _engineStyles = new EngineTextStyles(this, _inlineBrushes);
+        _grid = new BaselineGridFollower(this, () => null, () => 0, InvalidateMeasure);
         Id = Guid.NewGuid().ToString();
         // _textLayout is built lazily in EnsureLayout: FontFamily is inherited and may be null here (it resolves against
         // an ancestor / DefaultFontFamily), and the typeface is fixed per TextLayout, so it's rebuilt when the font changes.
@@ -293,7 +312,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         _textLayout.LetterSpacing = LetterSpacing;
         _textLayout.Tracking = Tracking;
         _textLayout.Kerning = Kerning;
-        var baselineGrid = BaselineGridOf();
+        var baselineGrid = _grid.Grid();
         _textLayout.BaselineGrid = baselineGrid;
         _textLayout.GlyphScaling = GlyphScaling;
         _textLayout.JustificationAlternates = JustificationAlternates;
@@ -359,6 +378,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
 
         var attributed = HasInlines
             ? InlineAttributedText(text, shaping)
+            : CharacterStyle != null || ParagraphStyle != null ? StyledAttributedText(text, shaping)
             : shaping == null ? null : new AttributedText(text, shaping);
         _inlineBrushes.Take();
         if (_links.Count > 0 && !Focusable && GetValueSource(FocusableProperty) == ValuePriority.Default)
@@ -599,6 +619,22 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         set => SetValue(MaxLinesProperty, value);
     }
 
+    /// <summary>The named character style of the block's text, as an inline's: over <see cref="ParagraphStyle"/>, under
+    /// what the block sets itself; an inline with its own style takes that one instead. Null sets none.</summary>
+    public CharacterStyle CharacterStyle
+    {
+        get => GetValue<CharacterStyle>(CharacterStyleProperty);
+        set => SetValue(CharacterStyleProperty, value);
+    }
+
+    /// <summary>The named paragraph style of the block's text, as a <see cref="Paragraph"/>'s: how its paragraphs stand
+    /// and the formatting their text takes; a paragraph with its own style takes that one instead. Null sets none.</summary>
+    public ParagraphStyle ParagraphStyle
+    {
+        get => GetValue<ParagraphStyle>(ParagraphStyleProperty);
+        set => SetValue(ParagraphStyleProperty, value);
+    }
+
     /// <summary>Where the block's box starts above its first line and ends below its last, as WinUI's:
     /// <see cref="Adamantium.Graphics.Fonts.TextLineBounds.Full"/> (the default) takes whole lines;
     /// <c>Tight</c> takes from the top of the capitals to the baseline, so a label centered by its layout has its
@@ -833,7 +869,48 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
             _hosted.Add(added);
             AddVisualChild(added);
         }
+
+        WatchHostedBaselines(IsAttachedToVisualTree);
     }
+
+    // A control in the line whose text moved inside it, its size and slot the same, tells nobody: after each layout pass
+    // that did work the block reads the baselines of its controls again, and lays itself out when one moved.
+    private void WatchHostedBaselines(bool attached)
+    {
+        var wanted = attached && _hosted.Count > 0 ? LayoutManager.For(this) : null;
+        if (ReferenceEquals(wanted, _watchedLayout))
+        {
+            return;
+        }
+
+        if (_watchedLayout != null)
+        {
+            _watchedLayout.LayoutUpdated -= OnLayoutSettled;
+        }
+
+        _watchedLayout = wanted;
+        if (wanted != null)
+        {
+            wanted.LayoutUpdated += OnLayoutSettled;
+        }
+    }
+
+    private void OnLayoutSettled(object sender, EventArgs e)
+    {
+        foreach (var child in _hosted)
+        {
+            if (_placedHosted.Contains(child) && OnTheBaseline(child) && _hostedRaises.TryGetValue(child, out var raise)
+                && child.PreviousArrangeSlot is { } slot && !RaiseIn(child, slot).Equals(raise))
+            {
+                InvalidateMeasure();
+                return;
+            }
+        }
+    }
+
+    private bool OnTheBaseline(IMeasurableComponent child) =>
+        Containers(_inlines).FirstOrDefault(container => ReferenceEquals(container.Child, child)) is not
+            { BaselineAlignment: { } alignment } || alignment == BaselineAlignment.Baseline;
 
     private static IEnumerable<InlineUIContainer> Containers(InlineCollection inlines)
     {
@@ -1003,17 +1080,23 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
 
         foreach (var (start, end, style) in _styleRanges)
         {
-            attributed.SetCharacterStyle(start, end - start, EngineStyle(style));
+            attributed.SetCharacterStyle(start, end - start, _engineStyles.Of(style));
         }
 
         _styleRanges.Clear();
+
+        // The block's paragraph style for text in no paragraph and paragraphs with none of their own.
+        if (ParagraphStyle is { } blockStyle && text.Length > 0)
+        {
+            attributed.SetParagraphStyle(0, text.Length, _engineStyles.Of(blockStyle));
+        }
 
         foreach (var (start, length, paragraph) in _paragraphs)
         {
             attributed.SetParagraph(start, length, OwnParagraphAttributes(paragraph));
             if (paragraph.ParagraphStyle is { } paragraphStyle)
             {
-                attributed.SetParagraphStyle(start, length, EngineStyle(paragraphStyle));
+                attributed.SetParagraphStyle(start, length, _engineStyles.Of(paragraphStyle));
             }
 
             if (length > 0 && text[start + length - 1] == ParagraphSeparator)
@@ -1027,12 +1110,12 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         return attributed;
     }
 
-    // What a paragraph sets itself, field by field, so its style shows through the rest.
-    private static ParagraphAttributes OwnParagraphAttributes(Paragraph paragraph)
+    // What a paragraph sets itself, field by field, so its style - or the block's - shows through the rest.
+    private ParagraphAttributes OwnParagraphAttributes(Paragraph paragraph)
     {
+        var styled = (paragraph.ParagraphStyle ?? ParagraphStyle) != null;
         var own = new ParagraphAttributes { Alignment = paragraph.HorizontalTextAlignment };
-        if (paragraph.GetValueSource(Paragraph.MarginProperty) != ValuePriority.Default
-            || paragraph.ParagraphStyle == null)
+        if (paragraph.GetValueSource(Paragraph.MarginProperty) != ValuePriority.Default || !styled)
         {
             var margin = paragraph.Margin;
             own = own.With(new ParagraphAttributes
@@ -1041,8 +1124,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
             });
         }
 
-        if (paragraph.GetValueSource(Paragraph.TextIndentProperty) != ValuePriority.Default
-            || paragraph.ParagraphStyle == null)
+        if (paragraph.GetValueSource(Paragraph.TextIndentProperty) != ValuePriority.Default || !styled)
         {
             own = own.With(new ParagraphAttributes { TextIndent = paragraph.TextIndent });
         }
@@ -1055,36 +1137,30 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         return own;
     }
 
-    // The engine's style for a style of the block's text, the ones it is based on mapped with it; one per style for a
-    // layout, and its brushes held by the block.
-    private Adamantium.Graphics.Fonts.ParagraphStyle EngineStyle(ParagraphStyle style)
+    private bool SetsItself(AdamantiumProperty property) => EngineTextStyles.SetsItself(this, property);
+
+    private (FontWeight Weight, FontStyle Style, FontStretch Stretch) BlockFace() =>
+        EngineTextStyles.Face(this, CharacterStyle, ParagraphStyle);
+
+    // Text with no inlines in the block's styles: its font as they choose it, and what the block sets itself over them.
+    private AttributedText StyledAttributedText(string text, TextAttributes shaping)
     {
-        if (_engineStyles.TryGetValue(style, out var known))
+        var attributed = new AttributedText(text, shaping);
+        if (text.Length == 0)
         {
-            return (Adamantium.Graphics.Fonts.ParagraphStyle)known;
+            return attributed;
         }
 
-        _inlineBrushes.Add(style.Foreground);
-        _inlineBrushes.Add(style.Background);
-        var engine = new Adamantium.Graphics.Fonts.ParagraphStyle(style.Name, style.OwnParagraphAttributes(),
-            style.OwnTextAttributes(), style.BasedOn is { } based && !based.Reaches(style) ? EngineStyle(based) : null);
-        _engineStyles[style] = engine;
-        return engine;
-    }
-
-    private Adamantium.Graphics.Fonts.CharacterStyle EngineStyle(CharacterStyle style)
-    {
-        if (_engineStyles.TryGetValue(style, out var known))
+        var (weight, fontStyle, stretch) = BlockFace();
+        _runFontsPending |= !TryResolveFont(FontFamily ?? DefaultFontFamily, weight, fontStyle, stretch, FontVariations,
+            out var font);
+        attributed.Apply(0, text.Length, new TextAttributes
         {
-            return (Adamantium.Graphics.Fonts.CharacterStyle)known;
-        }
-
-        _inlineBrushes.Add(style.Foreground);
-        _inlineBrushes.Add(style.Background);
-        var engine = new Adamantium.Graphics.Fonts.CharacterStyle(style.Name, style.OwnTextAttributes(),
-            style.BasedOn is { } based && !based.Reaches(style) ? EngineStyle(based) : null);
-        _engineStyles[style] = engine;
-        return engine;
+            Font = font,
+            Synthesis = FontSynthesisRules.Needed(font, weight, fontStyle, FontSynthesis),
+        });
+        _engineStyles.Style(attributed, this, CharacterStyle, ParagraphStyle);
+        return attributed;
     }
 
     // The nearest character style along the chain: an inner inline's wins.
@@ -1104,6 +1180,9 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
     private static bool IsStyled(ValuePriority source) => source is ValuePriority.Style or ValuePriority.Trigger;
 
     private static bool IsLook(ValuePriority source) => source == ValuePriority.Default || IsStyled(source);
+
+    private static bool Inherits(Inline inline, AdamantiumProperty property) =>
+        inline.GetValueSource(property) == ValuePriority.Inherited;
 
     private static TValue NearestStyleFrom<TValue>(List<Inline> chain, int from, Func<CharacterStyle, TValue> field)
     {
@@ -1131,10 +1210,11 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         return null;
     }
 
-    // Runs of one style next to each other take it as one range.
+    // Runs of one style next to each other take it as one range; an inline with no character style takes the block's,
+    // unless its paragraph has a style of its own, which is nearer.
     private void ApplyStyle(List<Inline> chain, AttributedText attributed, int start, int length)
     {
-        if (CharacterStyleOf(chain) is not { } style)
+        if ((CharacterStyleOf(chain) ?? (ParagraphStyleOf(chain) == null ? CharacterStyle : null)) is not { } style)
         {
             return;
         }
@@ -1261,8 +1341,8 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
 
             background = inline.Background ?? background;
             var source = inline.GetValueSource(Inline.TextDecorationsProperty);
-            var characterLines = inline.CharacterStyle?.ResolvedDecorations();
-            var paragraphLines = (inline as Paragraph)?.ParagraphStyle?.ResolvedDecorations();
+            var characterLines = inline.CharacterStyle?.ResolvedDecorations(this);
+            var paragraphLines = (inline as Paragraph)?.ParagraphStyle?.ResolvedDecorations(this);
             var ownStyleLines = characterLines == null && paragraphLines == null
                 ? (TextDecorations?)null
                 : (characterLines ?? TextDecorations.None) | (paragraphLines ?? TextDecorations.None);
@@ -1286,19 +1366,20 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
                 decorations |= inline.TextDecorations;
             }
 
-            if (inline.FontWeight != null)
+            // A face an inline only inherits from the block is the block's: the block's styles choose it below.
+            if (inline.FontWeight != null && !Inherits(inline, Inline.FontWeightProperty))
             {
                 weight = inline.FontWeight;
                 weightAt = IsLook(inline.GetValueSource(Inline.FontWeightProperty)) ? i : -1;
             }
 
-            if (inline.FontStyle != null)
+            if (inline.FontStyle != null && !Inherits(inline, Inline.FontStyleProperty))
             {
                 style = inline.FontStyle;
                 fontStyleAt = IsLook(inline.GetValueSource(Inline.FontStyleProperty)) ? i : -1;
             }
 
-            stretch = inline.FontStretch ?? stretch;
+            stretch = Inherits(inline, Inline.FontStretchProperty) ? stretch : inline.FontStretch ?? stretch;
             synthesis = inline.FontSynthesis ?? synthesis;
             features = inline.FontFeatures ?? features;
             variations = inline.FontVariations ?? variations;
@@ -1315,30 +1396,44 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         var paragraphStyle = ParagraphStyleOf(chain);
         if (foregroundAt >= 0)
         {
-            foreground = NearestStyleFrom(chain, foregroundAt, static format => format.ResolvedForeground()) ?? foreground;
+            foreground = NearestStyleFrom(chain, foregroundAt, format => format.ResolvedForeground(this)) ?? foreground;
         }
 
         if (weightAt >= 0)
         {
-            weight = NearestStyleFrom(chain, weightAt, static format => format.ResolvedWeight()) ?? weight;
+            weight = NearestStyleFrom(chain, weightAt, format => format.ResolvedWeight(this)) ?? weight;
         }
 
         if (fontStyleAt >= 0)
         {
-            style = NearestStyleFrom(chain, fontStyleAt, static format => format.ResolvedStyle()) ?? style;
+            style = NearestStyleFrom(chain, fontStyleAt, format => format.ResolvedStyle(this)) ?? style;
+        }
+
+        // Text in the block's styles only: what the block sets itself wins over them, as an inline's own does.
+        if (characterStyle == null && paragraphStyle == null && (CharacterStyle != null || ParagraphStyle != null))
+        {
+            fontSize = double.IsNaN(fontSize) && SetsItself(FontSizeProperty) ? FontSize : fontSize;
+            foreground ??= SetsItself(ForegroundProperty) ? Foreground : null;
         }
 
         if (objectSize != null && alignment is null or BaselineAlignment.Baseline)
         {
-            shift = (shift ?? characterStyle?.ResolvedBaselineShift() ?? paragraphStyle?.ResolvedBaselineShift() ?? 0)
+            shift = (shift ?? characterStyle?.ResolvedBaselineShift(this) ?? paragraphStyle?.ResolvedBaselineShift(this)
+                        ?? CharacterStyle?.ResolvedBaselineShift(this) ?? ParagraphStyle?.ResolvedBaselineShift(this) ?? 0)
                     + objectRaise;
         }
 
-        // The font as the inlines choose it, else their character style, else their paragraph's style, else the block.
-        var resolvedWeight = weight ?? characterStyle?.ResolvedWeight() ?? paragraphStyle?.ResolvedWeight() ?? FontWeight;
-        var resolvedStyle = style ?? characterStyle?.ResolvedStyle() ?? paragraphStyle?.ResolvedStyle() ?? FontStyle;
-        var resolvedStretch = stretch ?? characterStyle?.ResolvedStretch() ?? paragraphStyle?.ResolvedStretch()
-                              ?? FontStretch;
+        // The font as the inlines choose it, else their character style, else their paragraph's style, else the block:
+        // its own styles only where the inline has none, as a style of its own takes the block's place whole.
+        var block = characterStyle == null && paragraphStyle == null
+            ? BlockFace()
+            : (Weight: FontWeight, Style: FontStyle, Stretch: FontStretch);
+        var resolvedWeight = weight ?? characterStyle?.ResolvedWeight(this) ?? paragraphStyle?.ResolvedWeight(this)
+                             ?? block.Weight;
+        var resolvedStyle = style ?? characterStyle?.ResolvedStyle(this) ?? paragraphStyle?.ResolvedStyle(this)
+                            ?? block.Style;
+        var resolvedStretch = stretch ?? characterStyle?.ResolvedStretch(this) ?? paragraphStyle?.ResolvedStretch(this)
+                              ?? block.Stretch;
         _runFontsPending |= !TryResolveFont(FontFamily ?? DefaultFontFamily, resolvedWeight, resolvedStyle,
             resolvedStretch, variations ?? FontVariations, out var font);
         return new TextAttributes
@@ -1435,9 +1530,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
     {
         _lastConstraint = availableSize;   // a wrapping block reflows to this (its container's width) when it has no explicit Width
         MeasureHosted();
-        _gridOrigin = null;
-        _gridPhase = GridPhaseAt(TopOnBaselineGrid(ref _gridOrigin));
-        FollowTheGrid(IsAttachedToVisualTree);
+        _grid.Measure();
         var size = EnsureLayout();
         // The layout is what gets drawn. A measure whose size came out the same has no arrange after it, so a block that
         // already has a slot goes back to the slot's width - else right-aligned text stood at the width it was MEASURED
@@ -1473,109 +1566,35 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         {
             InvalidateArrange();
         }
+
+        if (e.Property == CharacterStyleProperty || e.Property == ParagraphStyleProperty)
+        {
+            (e.OldValue as TextFormat)?.Unuse(this);
+            (e.NewValue as TextFormat)?.Use(this);
+            RestyleText();
+        }
+    }
+
+    void ITextStyleUser.TextStyleChanged(bool rebased) => RestyleText();
+
+    // The block's styles answer their resources from where it stands: a theme scope switched round it changes them.
+    void Adamantium.UI.Core.Resources.IResolvesOwnResources.ResolveResources()
+    {
+        if (CharacterStyle != null || ParagraphStyle != null)
+        {
+            RestyleText();
+        }
+    }
+
+    private void RestyleText()
+    {
+        _inlinesDirty = true;
+        InvalidateMeasure();
+        InvalidateRender(false);
     }
 
     protected internal override bool MeasuresByPlace => BaselineGridStep > 0 && !double.IsInfinity(BaselineGridStep);
 
-    private BaselineGrid BaselineGridOf()
-    {
-        var step = BaselineGridStep;
-        if (!(step > 0) || double.IsInfinity(step) || double.IsNaN(_gridPhase))
-        {
-            return null;
-        }
-
-        return _lastBaselineGrid is { } last && last.Step.Equals(step) && last.Offset.Equals(_gridPhase)
-                                              && last.FirstLineOnly == BaselineGridFirstLineOnly
-            ? last
-            : new BaselineGrid(step, _gridPhase, BaselineGridFirstLineOnly);
-    }
-
-    private void FollowTheGrid(bool attached)
-    {
-        var follows = attached && BaselineGridStep > 0 && !double.IsInfinity(BaselineGridStep);
-        if (follows && _gridManager == null)
-        {
-            _gridManager = LayoutManager.For(this);
-            _gridManager.PlacesSettled += OnGridSettled;
-        }
-        else if (!follows && _gridManager != null)
-        {
-            _gridManager.PlacesSettled -= OnGridSettled;
-            _gridManager = null;
-            _gridOrigin = null;
-        }
-    }
-
-    // Laid out where it no longer stands (a place no parent told it while measuring): measured again there - unless it
-    // moved by its own new height, as a block centered or at the bottom does, which can never settle on the grid.
-    private void OnGridSettled(object sender, EventArgs e)
-    {
-        if (double.IsNaN(_gridPhase))
-        {
-            return;
-        }
-
-        var top = TopOnBaselineGrid(ref _gridOrigin);
-        var height = RenderSize.Height;
-        var moved = top - _gridTop;
-        var grown = height - _gridHeight;
-        _gridTop = top;
-        _gridHeight = height;
-        var phase = GridPhaseAt(top);
-        if (double.IsNaN(phase) || SamePhase(phase, _gridPhase))
-        {
-            _gridHeld = false;
-            return;
-        }
-
-        var followsItsHeight = Math.Abs(grown) > 0.01
-                               && (Math.Abs(moved + grown) < 0.5 || Math.Abs(moved + grown / 2) < 0.5)
-                               && PlacedByItsHeight();
-        if (followsItsHeight || (_gridHeld && Math.Abs(moved) < 0.01))
-        {
-            _gridHeld = true;
-            return;
-        }
-
-        _gridHeld = false;
-        InvalidateMeasure();
-    }
-
-    // Centered or at the bottom of a slot taller than it, itself or an element up to the grid's start: its height moves it.
-    private bool PlacedByItsHeight()
-    {
-        for (IUIComponent element = this; element != null && !ReferenceEquals(element, _gridOrigin);
-             element = element.VisualParent)
-        {
-            if (element is MeasurableUIComponent
-                {
-                    VerticalAlignment: VerticalAlignment.Center or VerticalAlignment.Bottom,
-                    PreviousArrangeSlot: { } slot,
-                } measurable
-                && slot.Height - measurable.EffectiveMargin.Top - measurable.EffectiveMargin.Bottom
-                > measurable.Bounds.Height + 0.5)
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private double GridPhaseAt(double top)
-    {
-        var step = BaselineGridStep;
-        var phase = (BaselineGridOffset - top) % step;
-        return phase < 0 ? phase + step : phase;
-    }
-
-    private bool SamePhase(double a, double b)
-    {
-        var step = BaselineGridStep;
-        var apart = ((a - b) % step + step) % step;
-        return !double.IsNaN(apart) && Math.Min(apart, step - apart) <= 0.01;
-    }
 
     private void MeasureHosted()
     {
@@ -1608,8 +1627,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
 
     private double HostedRaise(IMeasurableComponent child)
     {
-        if (Containers(_inlines).FirstOrDefault(container => ReferenceEquals(container.Child, child)) is
-            { BaselineAlignment: { } alignment } && alignment != BaselineAlignment.Baseline)
+        if (!OnTheBaseline(child))
         {
             return 0;
         }
@@ -1654,7 +1672,9 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
             return;
         }
 
-        HashSet<IMeasurableComponent> placed = [];
+        // A control the text does not reach (past a cut) stands nowhere: its baseline is no line's.
+        var placed = _placedHosted;
+        placed.Clear();
         foreach (var item in _textLayout.GetInlineObjects())
         {
             var index = _objects.FindIndex(entry => entry.Index == item.Index);
@@ -1998,6 +2018,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         _selectedIn = _lastText;
         ListenToTheWindow();
         InvalidateRender(false);
+        CommandManager.InvalidateRequerySuggested(this);
     }
 
     private void ListenToTheWindow()
@@ -2065,17 +2086,22 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
 
     private void OnKeyAnywhere(object sender, KeyEventArgs e)
     {
-        if (e.Handled || e.Key != Key.C || !IsCopyKey(e.Key, e.Modifiers))
+        if (!e.Handled && e.Key == Key.C && IsCopyKey(e.Key, e.Modifiers) && CopySelection())
         {
-            return;
-        }
-
-        var copied = SelectedText;
-        if (copied.Length > 0)
-        {
-            Clipboard.SetText(copied);
             e.Handled = true;
         }
+    }
+
+    private bool CopySelection()
+    {
+        var copied = SelectedText;
+        if (copied.Length == 0)
+        {
+            return false;
+        }
+
+        Clipboard.SetText(copied);
+        return true;
     }
 
     private void OnDataSwapped(object sender, AdamantiumPropertyChangedEventArgs e)
@@ -2169,6 +2195,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         _selectedIn = null;
         _selectionContext = null;
         InvalidateRender(false);
+        CommandManager.InvalidateRequerySuggested(this);
     }
 
     private CaretPosition PositionAt(double x, double y)
@@ -2593,22 +2620,6 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
             return false;
         }
 
-        switch (key)
-        {
-            case Key.A when ctrl && !shift:
-                SelectAll();
-                return true;
-            case Key.C or Key.Insert when IsCopyKey(key, modifiers):
-                var copied = SelectedText;
-                if (copied.Length == 0)
-                {
-                    return false;
-                }
-
-                Clipboard.SetText(copied);
-                return true;
-        }
-
         if (!HoldsAnchor)
         {
             return false;
@@ -2630,11 +2641,8 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         var focus = _selectionFocus;
         switch (key)
         {
-            case Key.LeftArrow when ctrl:
-                focus = new CaretPosition(_textLayout.PreviousWordStop(focus.Index));
-                break;
-            case Key.RightArrow when ctrl:
-                focus = new CaretPosition(_textLayout.NextWordStop(focus.Index));
+            case Key.LeftArrow or Key.RightArrow when ctrl:
+                focus = _textLayout.MoveWordVisually(focus, key == Key.RightArrow);
                 break;
             case Key.LeftArrow or Key.RightArrow:
                 focus = _textLayout.MoveVisually(focus, key == Key.RightArrow);
@@ -2696,7 +2704,30 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
             ListenToTheWindow();
         }
 
-        FollowTheGrid(attached: true);
+        _grid.Follow(attached: true);
+        WatchHostedBaselines(attached: true);
+        // Moved under other resources, its styles and its inlines' answer from there.
+        foreach (var inline in AllInlines(_inlines))
+        {
+            ((Adamantium.UI.Core.Resources.IResolvesOwnResources)inline).ResolveResources();
+        }
+
+        ((Adamantium.UI.Core.Resources.IResolvesOwnResources)this).ResolveResources();
+    }
+
+    private static IEnumerable<Inline> AllInlines(InlineCollection inlines)
+    {
+        foreach (var inline in inlines ?? [])
+        {
+            yield return inline;
+            if (inline is Span span)
+            {
+                foreach (var nested in AllInlines(span.Inlines))
+                {
+                    yield return nested;
+                }
+            }
+        }
     }
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
@@ -2707,7 +2738,8 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         ClearSelection();
         _selectionHoldsFocus = false;
         GiveUpSelectionFocus();
-        FollowTheGrid(attached: false);
+        _grid.Follow(attached: false);
+        WatchHostedBaselines(attached: false);
     }
 
     protected override void OnLostFocus(RoutedEventArgs e)

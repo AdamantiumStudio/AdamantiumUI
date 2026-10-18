@@ -17,6 +17,20 @@ public static class FocusManager
    public static readonly RoutedEvent LostFocusEvent = EventManager.RegisterRoutedEvent("LostFocus",
       RoutingStrategy.Bubble, typeof(RoutedEventHandler), typeof(FocusManager));
 
+   /// <summary>Marks an element - a menu, a ribbon, a popup - that keeps a focus of its own: a command from inside it
+   /// that nothing inside takes goes to the element with the focus around it, the field being edited.</summary>
+   public static readonly AdamantiumProperty IsFocusScopeProperty = AdamantiumProperty.RegisterAttached("IsFocusScope",
+      typeof(bool), typeof(AdamantiumComponent), new PropertyMetadata(false));
+
+   /// <summary>Marks a focus scope whose commands give the focus back, as a ribbon's do: once a button, a drop-down or
+   /// a gallery inside it has run its command, the focus goes back to the element that has it in the scope
+   /// around - the field being edited.</summary>
+   public static readonly AdamantiumProperty ReturnsFocusProperty = AdamantiumProperty.RegisterAttached("ReturnsFocus",
+      typeof(bool), typeof(AdamantiumComponent), new PropertyMetadata(false));
+
+   // What had the focus last in each focus scope, and in each window outside every scope; weak both ways.
+   private static readonly ConditionalWeakTable<IUIComponent, WeakReference<IInputComponent>> focusedInScope = new();
+
    public static IInputComponent Focused { get; private set; }
 
    public static IInputComponent Scope { get; private set; }
@@ -115,7 +129,6 @@ public static class FocusManager
       // ...and the scope map, which is written on every focus move. Its key is weak but what a scope remembers is not,
       // so a departed element would sit there as a live scope's remembered element.
       DropFromScopes(element);
-
       if (!ReferenceEquals(Focused, element))
          return;
 
@@ -291,7 +304,96 @@ public static class FocusManager
       {
          AutomationEvents.Raise(current, AutomationEvent.FocusChanged);
       }
+
+      if (current is IUIComponent element && GetFocusScope(element) is { } scope)
+      {
+         focusedInScope.AddOrUpdate(scope, new WeakReference<IInputComponent>(current));
+      }
+
+      CommandManager.InvalidateRequerySuggested();
    }
+
+   public static bool GetIsFocusScope(IAdamantiumComponent element) => element.GetValue<bool>(IsFocusScopeProperty);
+
+   public static void SetIsFocusScope(IAdamantiumComponent element, bool value) =>
+      element.SetValue(IsFocusScopeProperty, value);
+
+   public static bool GetReturnsFocus(IAdamantiumComponent element) => element.GetValue<bool>(ReturnsFocusProperty);
+
+   public static void SetReturnsFocus(IAdamantiumComponent element, bool value) =>
+      element.SetValue(ReturnsFocusProperty, value);
+
+   // Where the focus goes back to once a command from source has run: the element that has it in the first scope
+   // around that does not give it back itself (a quick-access bar sits inside a ribbon); null when source's scope keeps it.
+   internal static IInputComponent FocusToReturnTo(IUIComponent source)
+   {
+      var scope = GetFocusScope(source);
+      if (scope == null || !GetReturnsFocus(scope))
+      {
+         return null;
+      }
+
+      while (GetReturnsFocus(scope))
+      {
+         if (ParentOf(scope) is not { } around)
+         {
+            return null;
+         }
+
+         scope = GetFocusScope(around);
+      }
+
+      return GetFocusedElement(scope);
+   }
+
+   // Back to field after a command - unless the command moved the focus from where it was before (a search box, a
+   // dialog); gone with a source taken out of the tree counts as not moved.
+   internal static void ReturnFocus(IInputComponent field, IInputComponent before)
+   {
+      var focused = Focused;
+      if (field != null && !ReferenceEquals(field, focused) && (focused == null || ReferenceEquals(focused, before)))
+      {
+         field.Focus();
+      }
+   }
+
+   /// <summary>The focus scope <paramref name="element"/> is in: the nearest element marked
+   /// <see cref="IsFocusScopeProperty"/> at or above it, else the top of its tree - its window. A popup's content is in
+   /// the popup, though it is shown on the window's overlay.</summary>
+   public static IUIComponent GetFocusScope(IUIComponent element)
+   {
+      IUIComponent top = null;
+      for (var node = element; node != null; node = ParentOf(node))
+      {
+         if (GetIsFocusScope(node))
+         {
+            return node;
+         }
+
+         top = node;
+      }
+
+      return top;
+   }
+
+   /// <summary>What had the focus last inside <paramref name="scope"/> (a focus scope or a window), while it is still
+   /// there, shown, and can have it.</summary>
+   public static IInputComponent GetFocusedElement(IUIComponent scope)
+   {
+      if (scope == null || !focusedInScope.TryGetValue(scope, out var reference) ||
+          !reference.TryGetTarget(out var focused) || !CanFocus(focused) || focused is not IUIComponent element ||
+          !IsShown(element) || !ReferenceEquals(GetFocusScope(element), scope))
+      {
+         return null;
+      }
+
+      return focused;
+   }
+
+   /// <summary>The element above <paramref name="element"/>: its visual parent, or for a popup's content, which has
+   /// none, the popup that shows it.</summary>
+   public static IUIComponent ParentOf(IUIComponent element) =>
+      element.VisualParent ?? (element as IFundamentalUIComponent)?.LogicalParent as IUIComponent;
 
    // The last focused element per window, restored when that window is activated; weak so closed windows can go.
    private static readonly ConditionalWeakTable<IUIComponent, IInputComponent> FocusByRoot = new();

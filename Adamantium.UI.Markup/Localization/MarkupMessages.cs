@@ -14,6 +14,7 @@ public static class MarkupMessages
     public static string MarkupExtensionNotWrapped(string text) => Say(nameof(MarkupExtensionNotWrapped), ("text", text));
     public static string PropertyElementAttribute(string element, string attribute) =>
         Say(nameof(PropertyElementAttribute), ("element", element), ("attribute", attribute));
+    public static string PropertyElementAmidText(string element) => Say(nameof(PropertyElementAmidText), ("element", element));
 
     public static string PrefixNotDefined(string prefix) => Say(nameof(PrefixNotDefined), ("prefix", prefix));
 

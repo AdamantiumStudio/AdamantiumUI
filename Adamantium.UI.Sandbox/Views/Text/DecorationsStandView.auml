@@ -11,13 +11,13 @@
             <TextBlock.Inlines>
                 <Run Text="underline"
                      TextDecorations="Underline"/>
-                <Run Text="   "/>
+                <Run Text=" "/>
                 <Run Text="strikethrough"
                      TextDecorations="Strikethrough"/>
-                <Run Text="   "/>
+                <Run Text=" "/>
                 <Run Text="overline"
                      TextDecorations="Overline"/>
-                <Run Text="   "/>
+                <Run Text=" "/>
                 <Run Text="squiggle"
                      TextDecorations="Squiggle"/>
             </TextBlock.Inlines>
@@ -38,7 +38,7 @@
                                         DashArray="6 3"/>
                     </Run.DecorationLines>
                 </Run>
-                <Run Text="   "/>
+                <Run Text=" "/>
                 <Run Text="thick strike">
                     <Run.DecorationLines>
                         <TextDecoration Location="Strikethrough"
@@ -46,7 +46,7 @@
                                         Thickness="4"/>
                     </Run.DecorationLines>
                 </Run>
-                <Run Text="   "/>
+                <Run Text=" "/>
                 <Run Text="two lines">
                     <Run.DecorationLines>
                         <TextDecoration Location="Underline"/>
@@ -54,7 +54,7 @@
                                         Offset="3"/>
                     </Run.DecorationLines>
                 </Run>
-                <Run Text="   "/>
+                <Run Text=" "/>
                 <Run Text="baseline">
                     <Run.DecorationLines>
                         <TextDecoration Location="Baseline"
@@ -62,7 +62,7 @@
                                         DashArray="2 2"/>
                     </Run.DecorationLines>
                 </Run>
-                <Run Text="   "/>
+                <Run Text=" "/>
                 <Run Text="dotted overline">
                     <Run.DecorationLines>
                         <TextDecoration Location="Overline"
@@ -92,7 +92,7 @@
                         </TextEffect>
                     </Run.TextEffects>
                 </Run>
-                <Run Text="   "/>
+                <Run Text=" "/>
                 <Run Text="raised">
                     <Run.TextEffects>
                         <TextEffect PositionStart="2"
@@ -104,7 +104,7 @@
                         </TextEffect>
                     </Run.TextEffects>
                 </Run>
-                <Run Text="   "/>
+                <Run Text=" "/>
                 <Run Text="bigger">
                     <Run.TextEffects>
                         <TextEffect PositionStart="2"
@@ -117,7 +117,7 @@
                         </TextEffect>
                     </Run.TextEffects>
                 </Run>
-                <Run Text="   "/>
+                <Run Text=" "/>
                 <Run Text="swung">
                     <Run.TextEffects>
                         <TextEffect PositionStart="0"

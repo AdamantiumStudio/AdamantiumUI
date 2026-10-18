@@ -224,7 +224,8 @@ public class SandboxViewsLoaderParityTests
             .Where(p => p.GetIndexParameters().Length == 0 && p.GetMethod != null && p.DeclaringType != typeof(object))
             .Where(p => !component || p.SetMethod is { IsPublic: true } || typeof(IEnumerable).IsAssignableFrom(p.PropertyType))
             .Where(p => !slotted.Contains(p.Name))
-            .Where(p => p.Name is not ("Parent" or "VisualParent" or "LogicalParent" or "TemplatedParent" or "Owner" or "Root" or "Host"))
+            .Where(p => p.Name is not ("Parent" or "VisualParent" or "LogicalParent" or "TemplatedParent" or "InheritanceParent" or
+                "Owner" or "Root" or "Host"))
             .ToArray();
     });
 

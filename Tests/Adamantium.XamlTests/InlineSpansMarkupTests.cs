@@ -1,5 +1,6 @@
 using System.Linq;
 using Adamantium.Fonts;
+using Adamantium.UI.Controls.Buttons;
 using Adamantium.UI.Controls.Text;
 using Adamantium.UI.Core.Markup;
 using NUnit.Framework;
@@ -113,13 +114,168 @@ public class InlineSpansMarkupTests
         Assert.That(((Run)text.Inlines[0]).Text, Is.EqualTo("one"));
     }
 
+    // A control among inlines is set into the line as WPF sets it, in an InlineUIContainer of its own.
     [TestCase("<TextBlock><TextBlock.Inlines><Bold><Button/></Bold></TextBlock.Inlines></TextBlock>")]
     [TestCase("<TextBlock><TextBlock.Inlines><Button/></TextBlock.Inlines></TextBlock>")]
-    public void AControlAmongInlines_IsReportedWhereItStands(string body)
+    [TestCase("<TextBlock>Press <Button/> here</TextBlock>")]
+    public void AControlAmongInlines_Compiles(string body)
     {
-        AumlCodegenHarness.Generate("<Window " + Namespaces + ">" + body + "</Window>", out var errors);
+        var auml = "<Window " + Namespaces + ">" + body + "</Window>";
+        AumlCodegenHarness.Generate(auml, out var generated);
+        var errors = AumlCodegenHarness.Compile(auml);
 
-        Assert.That(errors.Select(e => e.GetMessage()), Has.Some.Contains("Button is not a Inline"));
+        Assert.That(generated, Is.Empty, AumlCodegenHarness.Errors(generated));
+        Assert.That(errors, Is.Empty, AumlCodegenHarness.Errors(errors));
+    }
+
+    [Test]
+    public void AControlAmongInlines_IsWrappedInAContainer()
+    {
+        var result = AumlLoader.Load(
+            "<TextBlock " + Namespaces + ">Press <Button Content=\"OK\"/> here <Bold><Border Width=\"8\"/></Bold></TextBlock>");
+
+        Assert.That(result.Diagnostics, Is.Empty, string.Join(" | ", result.Diagnostics));
+        var inlines = ((TextBlock)result.Root).Inlines;
+        Assert.That(inlines[1], Is.InstanceOf<InlineUIContainer>());
+        Assert.That(((InlineUIContainer)inlines[1]).Child, Is.InstanceOf<Adamantium.UI.Controls.Buttons.Button>());
+        Assert.That(((Run)inlines[2]).Text, Is.EqualTo(" here "));
+        Assert.That(((InlineUIContainer)((Bold)inlines[3]).Inlines[0]).Child,
+            Is.InstanceOf<Adamantium.UI.Controls.Decorators.Border>());
+    }
+
+    // White space between two inlines on lines of their own is a space, as in WPF.
+    [Test]
+    public void InlinesOnLinesOfTheirOwn_KeepASpaceBetweenThem()
+    {
+        var result = AumlLoader.Load(
+            "<TextBlock " + Namespaces + ">\n    <Bold>a</Bold>\n    <Italic>b</Italic>\n</TextBlock>");
+
+        Assert.That(result.Diagnostics, Is.Empty, string.Join(" | ", result.Diagnostics));
+        var inlines = ((TextBlock)result.Root).Inlines;
+        Assert.That(inlines, Has.Count.EqualTo(3));
+        Assert.That(((Run)inlines[1]).Text, Is.EqualTo(" "));
+    }
+
+    // A comment between them takes nothing away, and adds no second space.
+    [TestCase("\n    <!-- note -->\n    ")]
+    [TestCase("<!-- note -->\n    ")]
+    [TestCase("\n    <!-- note -->")]
+    [TestCase("\n    <!-- note -->\n    <TextBlock.Tag>t</TextBlock.Tag>\n    ")]
+    public void ACommentBetweenInlines_LeavesOneSpace(string gap)
+    {
+        var result = AumlLoader.Load(
+            "<TextBlock " + Namespaces + ">\n    <Run Text=\"a\"/>" + gap + "<Run Text=\"b\"/>\n</TextBlock>");
+
+        Assert.That(result.Diagnostics, Is.Empty, string.Join(" | ", result.Diagnostics));
+        var text = (TextBlock)result.Root;
+        Assert.That(string.Concat(text.Inlines.OfType<Run>().Select(run => run.Text)), Is.EqualTo("a b"));
+    }
+
+    // The texts either side of a comment are one text.
+    [TestCase("Hello <!-- c --> world", "Hello world")]
+    [TestCase("Hello<!-- c --> world", "Hello world")]
+    [TestCase("Hello<!-- c -->world", "Helloworld")]
+    [TestCase("日本\n    語 <Run Text=\"w\"/>", "日本語 w")]
+    [TestCase("Hello <!-- c --> <Run Text=\"w\"/>", "Hello w")]
+    public void ACommentInText_LeavesOneSpace(string content, string expected)
+    {
+        var result = AumlLoader.Load("<TextBlock " + Namespaces + ">" + content + "</TextBlock>");
+
+        Assert.That(result.Diagnostics, Is.Empty, string.Join(" | ", result.Diagnostics));
+        var text = (TextBlock)result.Root;
+        Assert.That(string.Concat(text.Inlines.OfType<Run>().Select(run => run.Text)), Is.EqualTo(expected));
+    }
+
+    // A property element's text is the same with a comment in it as without: the text after the comment was lost.
+    [Test]
+    public void ACommentInAPropertyElementsText_KeepsAllOfIt()
+    {
+        var text = (TextBlock)AumlLoader.Load(
+            "<TextBlock " + Namespaces + "><TextBlock.Text>Hello <!-- c --> world</TextBlock.Text></TextBlock>").Root;
+        var button = (Button)AumlLoader.Load(
+            "<Button " + Namespaces + "><Button.Content>Hello <!-- c --> world</Button.Content></Button>").Root;
+
+        Assert.That(text.Text, Is.EqualTo("Hello world"));
+        Assert.That(button.Content, Is.EqualTo("Hello world"));
+    }
+
+    // As WPF reads it: white space collapsed to one space, none at the ends; two spaces stayed two.
+    [TestCase("Hello  world", "Hello world")]
+    [TestCase("\n    Hello\n    world\n", "Hello world")]
+    [TestCase("\tHello \t world ", "Hello world")]
+    [TestCase("日本\n    語", "日本語")]
+    [TestCase("日本 語", "日本 語")]
+    [TestCase("日本\n    a", "日本 a")]
+    [TestCase("한국\n어", "한국어")]
+    public void APropertyElementsText_CollapsesItsWhiteSpace(string written, string expected)
+    {
+        var result = AumlLoader.Load("<TextBlock " + Namespaces + "><TextBlock.Text>" + written + "</TextBlock.Text></TextBlock>");
+
+        Assert.That(result.Diagnostics, Is.Empty, string.Join(" | ", result.Diagnostics));
+        Assert.That(((TextBlock)result.Root).Text, Is.EqualTo(expected));
+    }
+
+    // xml:space="preserve" keeps the white space as written, on the element or one around it; "default" undoes it.
+    [TestCase("<TextBlock {0} xml:space=\"preserve\"><TextBlock.Text> Hello  world </TextBlock.Text></TextBlock>", " Hello  world ")]
+    [TestCase("<TextBlock {0}><TextBlock.Text xml:space=\"preserve\"> Hello  world </TextBlock.Text></TextBlock>", " Hello  world ")]
+    [TestCase("<TextBlock {0} xml:space=\"preserve\"> Hello  world </TextBlock>", " Hello  world ")]
+    [TestCase("<TextBlock {0} xml:space=\"preserve\"><Run Text=\"a\"/>  <Run Text=\"b\"/></TextBlock>", "a  b")]
+    [TestCase("<TextBlock {0} xml:space=\"preserve\"><TextBlock.Text xml:space=\"default\"> Hello  world </TextBlock.Text></TextBlock>", "Hello world")]
+    public void XmlSpacePreserve_KeepsTheWhiteSpace(string markup, string expected)
+    {
+        var result = AumlLoader.Load(string.Format(markup, Namespaces));
+
+        Assert.That(result.Diagnostics, Is.Empty, string.Join(" | ", result.Diagnostics));
+        var text = (TextBlock)result.Root;
+        var shown = text.Inlines.Count > 0 ? string.Concat(text.Inlines.OfType<Run>().Select(run => run.Text)) : text.Text;
+        Assert.That(shown, Is.EqualTo(expected));
+    }
+
+    [Test]
+    public void XmlSpacePreserve_Compiles()
+    {
+        var errors = AumlCodegenHarness.Compile("<Window " + Namespaces + " xml:space=\"preserve\">" +
+                                                "<TextBlock><TextBlock.Text> a  b </TextBlock.Text></TextBlock></Window>");
+
+        Assert.That(errors, Is.Empty, AumlCodegenHarness.Errors(errors));
+    }
+
+    // WPF does not take a property element in the middle of an element's text; ours joined the two texts with both
+    // their spaces.
+    [TestCase("Hello <TextBlock.Tag>t</TextBlock.Tag> world", true)]
+    [TestCase("Hello <TextBlock.Tag>t</TextBlock.Tag><Run Text=\"w\"/>", true)]
+    [TestCase("<Run Text=\"w\"/><TextBlock.Tag>t</TextBlock.Tag> world", true)]
+    [TestCase("<TextBlock.Tag>t</TextBlock.Tag> Hello world", false)]
+    [TestCase("Hello world <TextBlock.Tag>t</TextBlock.Tag>", false)]
+    [TestCase("<Run Text=\"a\"/> <TextBlock.Tag>t</TextBlock.Tag> <Run Text=\"b\"/>", false)]
+    public void APropertyElementAmidText_IsAnError(string content, bool error)
+    {
+        AumlCodegenHarness.Generate("<Window " + Namespaces + "><TextBlock>" + content + "</TextBlock></Window>", out var errors);
+
+        Assert.That(errors.Any(e => e.GetMessage().Contains("TextBlock.Tag")), Is.EqualTo(error),
+            AumlCodegenHarness.Errors(errors));
+    }
+
+    // The preview reports what the build reports, where it is written, and builds nothing of it: it built such markup
+    // and said nothing.
+    [TestCase("Hello <TextBlock.Tag>t</TextBlock.Tag> world")]
+    [TestCase("<TextBlock.Tag Foo=\"1\">t</TextBlock.Tag>")]
+    public void TheLoader_ReportsWhatTheParserFinds(string content)
+    {
+        var result = AumlLoader.Load("<TextBlock " + Namespaces + ">\n" + content + "</TextBlock>");
+
+        Assert.That(result.Diagnostics, Has.Some.Contains("TextBlock.Tag").And.Contains("(2,"),
+            string.Join(" | ", result.Diagnostics));
+        Assert.That(result.Root, Is.Null);
+    }
+
+    [Test]
+    public void InlinesOnLinesOfTheirOwn_Compile()
+    {
+        var errors = AumlCodegenHarness.Compile("<Window " + Namespaces + ">\n<StackPanel>\n    <Border/>\n    <Border/>\n</StackPanel>" +
+                                                "<TextBlock>\n    <Bold>a</Bold>\n    <Italic>b</Italic>\n</TextBlock></Window>");
+
+        Assert.That(errors, Is.Empty, AumlCodegenHarness.Errors(errors));
     }
 
     private static string Paragraph(string word) =>

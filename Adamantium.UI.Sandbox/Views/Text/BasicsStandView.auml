@@ -47,19 +47,16 @@
                    Width="520"
                    HorizontalAlignment="Left">
             <TextBlock.Inlines>
+                <!-- White space between runs on lines of their own is a space, as in WPF. -->
                 <Run Text="{Localize TextStrings.Highlighted}"
                      Background="#7C3AED"/>
-                <Run Text=" "/>
                 <Run Text="{Localize TextStrings.Underlined}"
                      TextDecorations="Underline"/>
-                <Run Text=" "/>
                 <Run Text="{Localize TextStrings.Misspelt}"
                      TextDecorations="Squiggle"
                      Foreground="#F87171"/>
-                <Run Text=" "/>
                 <Run Text="{Localize TextStrings.Struck}"
                      TextDecorations="Strikethrough"/>
-                <Run Text=" "/>
                 <Run Text="{Localize TextStrings.Large}"
                      FontSize="32"/>
             </TextBlock.Inlines>
@@ -166,13 +163,13 @@
                             Command="{Binding CountLinkCommand}"/>
                 </InlineUIContainer>
                 <Run Text="{Localize TextStrings.InlineControlsSwatch}"/>
+                <!-- The swatch and the punctuation after it stand side by side. -->
                 <InlineUIContainer>
                     <Border Width="28"
                             Height="44"
                             CornerRadius="4"
                             Background="#38BDF8"/>
-                </InlineUIContainer>
-                <Run Text="{Localize TextStrings.InlineControlsEnd}"/>
+                </InlineUIContainer><Run Text="{Localize TextStrings.InlineControlsEnd}"/>
             </TextBlock.Inlines>
         </TextBlock>
 
@@ -261,23 +258,14 @@
                    FontSize="22"
                    HorizontalAlignment="Left">
             <TextBlock.Inlines>
-                <Run Text="E = mc"/>
-                <Run Text="2"
-                     FontSize="13"
-                     BaselineShift="9"/>
-                <Run Text="   H"/>
-                <Run Text="2"
-                     FontSize="13"
-                     BaselineShift="-4"/>
-                <Run Text="O   x"/>
-                <Run Text="n+1"
-                     FontSize="13"
-                     BaselineShift="9"/>
-                <Run Text="   footnote"/>
-                <Run Text="1"
-                     FontSize="13"
-                     BaselineShift="9"
-                     TextDecorations="Underline"/>
+                <!-- Each formula on a line of its own; its runs side by side, with no white space between them. -->
+                <Run Text="E = mc"/><Run Text="2" FontSize="13" BaselineShift="9"/>
+                <Run Text=" "/>
+                <Run Text="H"/><Run Text="2" FontSize="13" BaselineShift="-4"/><Run Text="O"/>
+                <Run Text=" "/>
+                <Run Text="x"/><Run Text="n+1" FontSize="13" BaselineShift="9"/>
+                <Run Text=" "/>
+                <Run Text="footnote"/><Run Text="1" FontSize="13" BaselineShift="9" TextDecorations="Underline"/>
             </TextBlock.Inlines>
         </TextBlock>
 
@@ -289,30 +277,24 @@
                    FontSize="22"
                    HorizontalAlignment="Left">
             <TextBlock.Inlines>
-                <Run Text="x"/>
-                <Run Text="2"
-                     FontSize="13"
-                     BaselineAlignment="Superscript"/>
-                <Run Text=" + log"/>
-                <Run Text="2"
-                     FontSize="13"
-                     BaselineAlignment="Subscript"/>
-                <Run Text="   "/>
+                <Run Text="x"/><Run Text="2" FontSize="13" BaselineAlignment="Superscript"/>
+                <Run Text="+ log"/><Run Text="2" FontSize="13" BaselineAlignment="Subscript"/>
+                <Run Text=" "/>
                 <Run Text="W"
                      FontSize="48"/>
-                <Run Text=" top"
+                <Run Text="top"
                      FontSize="13"
                      BaselineAlignment="Top"/>
-                <Run Text=" center"
+                <Run Text="center"
                      FontSize="13"
                      BaselineAlignment="Center"/>
-                <Run Text=" bottom"
+                <Run Text="bottom"
                      FontSize="13"
                      BaselineAlignment="Bottom"/>
-                <Run Text=" text top"
+                <Run Text="text top"
                      FontSize="13"
                      BaselineAlignment="TextTop"/>
-                <Run Text=" text bottom"
+                <Run Text="text bottom"
                      FontSize="13"
                      BaselineAlignment="TextBottom"/>
             </TextBlock.Inlines>

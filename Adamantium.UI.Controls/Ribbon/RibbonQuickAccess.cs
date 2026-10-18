@@ -4,6 +4,7 @@ using System.Linq;
 using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Automation;
+using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.RoutedEvents;
 
@@ -20,6 +21,8 @@ public class RibbonQuickAccess : ItemsControl
         // The bar's own choice, so the theme states only the LOOK. Stateless, hence shared as the metadata default.
         ItemTemplateSelectorProperty.OverrideMetadata(typeof(RibbonQuickAccess),
             new PropertyMetadata(new RibbonQuickAccessTemplateSelector()));
+        FocusManager.IsFocusScopeProperty.OverrideMetadata(typeof(RibbonQuickAccess), new PropertyMetadata(true));
+        FocusManager.ReturnsFocusProperty.OverrideMetadata(typeof(RibbonQuickAccess), new PropertyMetadata(true));
     }
 
     /// <summary>Where the bar is shown. The application hosts an instance in BOTH slots, bound to the one collection,

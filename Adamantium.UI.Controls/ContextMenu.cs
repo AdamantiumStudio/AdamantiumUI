@@ -18,6 +18,11 @@ namespace Adamantium.UI.Controls;
 /// </summary>
 public class ContextMenu : ItemsControl
 {
+    static ContextMenu()
+    {
+        FocusManager.IsFocusScopeProperty.OverrideMetadata(typeof(ContextMenu), new PropertyMetadata(true));
+    }
+
     public static readonly AdamantiumProperty IsOpenProperty = AdamantiumProperty.Register(nameof(IsOpen),
         typeof(bool), typeof(ContextMenu), new PropertyMetadata(false, OnIsOpenChanged));
 
@@ -236,6 +241,7 @@ public class ContextMenu : ItemsControl
         if ((bool)e.NewValue)
         {
             menu.EnsureTemplate();
+            CommandManager.RequeryNow();
         }
 
         if (menu._popup != null)

@@ -19,6 +19,11 @@ namespace Adamantium.UI.Controls;
 /// </summary>
 public class Popup : MeasurableUIComponent, IContainer
 {
+    static Popup()
+    {
+        FocusManager.IsFocusScopeProperty.OverrideMetadata(typeof(Popup), new PropertyMetadata(true));
+    }
+
     public static readonly AdamantiumProperty IsOpenProperty = AdamantiumProperty.Register(nameof(IsOpen),
         typeof(bool), typeof(Popup), new PropertyMetadata(false, OnIsOpenChanged));
 

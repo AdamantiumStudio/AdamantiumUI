@@ -32,8 +32,8 @@
     <Phrase Key="ReadOnly" Text="Только чтение:"/>
     <Phrase Key="MultiLine" Text="Многострочное (AcceptsReturn, без переноса → прокрутка по H и V):"/>
     <Phrase Key="BindableRuns" Text="Привязываемые Run:"/>
-    <Phrase Key="YouTyped" Text="Вы набрали: "/>
-    <Phrase Key="Chars" Count="count" One="  ({count} символ)" Few="  ({count} символа)" Many="  ({count} символов)" Other="  ({count} символа)"/>
+    <Phrase Key="YouTyped" Text="Вы набрали:"/>
+    <Phrase Key="Chars" Count="count" One="({count} символ)" Few="({count} символа)" Many="({count} символов)" Other="({count} символа)"/>
     <Phrase Key="StyledRuns" Text="Run с фоном, линиями и размером:"/>
     <Phrase Key="Highlighted" Text="выделено"/>
     <Phrase Key="Underlined" Text="подчёркнуто"/>
@@ -92,26 +92,26 @@
     <Phrase Key="LastLine" Text="Последняя строка:"/>
     <Phrase Key="JustificationTitle" Text="Выключка по ширине: каждая настройка над текстом, который она меняет:"/>
     <Phrase Key="SpansTitle" Text="Участки: Bold, Italic и Underline вкладываются, цвет и кегль участка достаются его отрезкам, свои у отрезка важнее, LineBreak кончает строку:"/>
-    <Phrase Key="SpansPlain" Text="Обычный, затем "/>
-    <Phrase Key="SpansBold" Text="жирный, "/>
+    <Phrase Key="SpansPlain" Text="Обычный, затем"/>
+    <Phrase Key="SpansBold" Text="жирный,"/>
     <Phrase Key="SpansBoldItalic" Text="жирный курсив"/>
-    <Phrase Key="SpansColored" Text="Голубой участок с "/>
+    <Phrase Key="SpansColored" Text="Голубой участок с"/>
     <Phrase Key="SpansUnderlined" Text="подчёркнутой частью"/>
-    <Phrase Key="SpansOwnColor" Text=" и своим красным отрезком"/>
+    <Phrase Key="SpansOwnColor" Text="и своим красным отрезком"/>
     <Phrase Key="ParagraphsTitle" Text="Абзацы: каждый на своих строках, со своим выравниванием, полями, отступом первой строки и высотой строк; между двумя - больший из их промежутков:"/>
     <Phrase Key="ParagraphsHeading" Text="Король-лягушонок"/>
     <Phrase Key="ParagraphsBody" Text="В стародавние времена, когда желания ещё помогали, жил король, и все дочери его были красавицы, но младшая была так прекрасна, что даже солнце, которое видело так много, дивилось ей всякий раз, как озаряло её лицо."/>
     <Phrase Key="ParagraphsQuote" Text="«Успокойся и не плачь, - ответил лягушонок, - я могу помочь тебе, но что ты дашь мне, если я достану твою игрушку?»"/>
     <Phrase Key="ParagraphsLoose" Text="Текст вне абзаца стоит отдельным абзацем, как задаёт блок."/>
     <Phrase Key="LinksTitle" Text="Ссылки: одна открывает адрес в браузере, другая выполняет команду; Tab ходит по ним, Enter нажимает:"/>
-    <Phrase Key="LinksBefore" Text="Почитайте про "/>
+    <Phrase Key="LinksBefore" Text="Почитайте про"/>
     <Phrase Key="LinksSite" Text="Adamantium на GitHub"/>
-    <Phrase Key="LinksMiddle" Text=" или посчитайте нажатия: "/>
+    <Phrase Key="LinksMiddle" Text="или посчитайте нажатия:"/>
     <Phrase Key="LinksCount" Text="нажми меня"/>
     <Phrase Key="InlineControlsTitle" Text="Контролы в строке: стоят на базовой линии, высокий поднимает свою строку, переносятся как слова:"/>
-    <Phrase Key="InlineControlsAgree" Text="Отметьте "/>
-    <Phrase Key="InlineControlsPress" Text=" в знак согласия и нажмите "/>
-    <Phrase Key="InlineControlsSwatch" Text=" - или посмотрите на образец "/>
+    <Phrase Key="InlineControlsAgree" Text="Отметьте"/>
+    <Phrase Key="InlineControlsPress" Text="в знак согласия и нажмите"/>
+    <Phrase Key="InlineControlsSwatch" Text="- или посмотрите на образец"/>
     <Phrase Key="InlineControlsEnd" Text=": он выше текста и поднимает свою строку."/>
     <Phrase Key="InlineControlsButton" Text="ОК"/>
     <Phrase Key="LineBreakTitle" Text="LineBreak кончает строку, а не абзац: после него латинская строка остаётся в абзаце на иврите и начинается справа; после перевода строки это отдельный абзац:"/>
@@ -119,7 +119,7 @@
     <Phrase Key="WithNewline" Text="С переводом строки"/>
     <Phrase Key="BaselineShiftTitle" Text="Смещение базовой линии: участки подняты и опущены, высота строки та же:"/>
     <Phrase Key="RunShift" Text="Смещение выделенного участка:"/>
-    <Phrase Key="RunShiftBefore" Text="В середине строки "/>
+    <Phrase Key="RunShiftBefore" Text="В середине строки"/>
     <Phrase Key="RunShiftRun" Text="смещённый участок"/>
     <Phrase Key="DecorationFlagsTitle" Text="Линии по имени: под текстом, сквозь него и над ним, и волнистая — как у орфографической ошибки:"/>
     <Phrase Key="DecorationLinesTitle" Text="Линии оформления, каждая со своей кистью, толщиной, пунктиром и смещением:"/>
@@ -138,10 +138,10 @@
     <Phrase Key="LinesHeight" Text="Высота строки:"/>
     <Phrase Key="LinesSpacing" Text="Промежуток:"/>
     <Phrase Key="LinesMost" Text="Строк не больше:"/>
-    <Phrase Key="LinesBefore" Text="Текст с собственной высотой строки держит ровный ритм по всей странице, а "/>
+    <Phrase Key="LinesBefore" Text="Текст с собственной высотой строки держит ровный ритм по всей странице, а"/>
     <Phrase Key="LinesLarge" Text="крупный участок"/>
-    <Phrase Key="LinesAfter" Text=" освобождает себе место. Промежуток раздвигает строки, а блок, которому позволено показать лишь несколько строк, заканчивает последнюю многоточием, если читать есть ещё что."/>
-    <Phrase Key="RunShiftAfter" Text=", остальное на месте."/>
+    <Phrase Key="LinesAfter" Text="освобождает себе место. Промежуток раздвигает строки, а блок, которому позволено показать лишь несколько строк, заканчивает последнюю многоточием, если читать есть ещё что."/>
+    <Phrase Key="RunShiftAfter" Text="- остальное на месте."/>
     <Phrase Key="Kashidas" Text="Кашиды"/>
     <Phrase Key="SingleWord" Text="Одно слово:"/>
     <Phrase Key="AlignStart" Text="В начале"/>

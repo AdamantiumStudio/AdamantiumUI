@@ -1,6 +1,7 @@
 <Language>
     <Phrase Key="Title" Text="Лента — оболочка редактора Adamantium"/>
     <Phrase Key="SceneView" Text="Вид сцены"/>
+    <Phrase Key="Notes" Text="Заметки — «Вырезать», «Копировать» и «Вставить» на ленте работают здесь, пока вы пишете"/>
 
     <Phrase Key="File" Text="Файл"/>
     <Phrase Key="New" Text="Создать"/>

@@ -7,8 +7,8 @@ namespace Adamantium.UI.Controls.Text;
 /// <summary>The ordered inline content of a <see cref="TextBlock"/> or a <see cref="Span"/> (their <c>Inlines</c>). A
 /// typed <see cref="ObservableCollection{T}"/> so the owner re-lays-out when inlines are added or removed; clearing it
 /// reports each removed inline, so its owner lets go of every one. Text written among the inlines in markup becomes a
-/// <see cref="Run"/>.</summary>
-[ContentWrapper(WrapperType = typeof(Run))]
+/// <see cref="Run"/>, and a control an <see cref="InlineUIContainer"/>.</summary>
+[ContentWrapper(WrapperType = typeof(Run), ElementWrapperType = typeof(InlineUIContainer))]
 public class InlineCollection : ObservableCollection<Inline>
 {
     // The owner's say on an inline before it is in: it throws for one it cannot hold.

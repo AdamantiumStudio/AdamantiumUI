@@ -30,25 +30,41 @@ public class DefaultAumlTransformer : IAumlTransformer
     // {Localize Table={Binding Phrases}, Key={Binding Name}}: where a table known only at run time is read from.
     private const string TableArgument = "Table";
 
+    // As WPF: each run of white space one space; a run starting with a line break between two East Asian characters none.
     private static string CollapsedSpaces(string text, bool trimStart, bool trimEnd)
     {
         var collapsed = new System.Text.StringBuilder(text.Length);
         var space = false;
-        foreach (var c in text)
+        var lineBreak = false;
+        var last = -1;
+        for (var i = 0; i < text.Length; i++)
         {
+            var c = text[i];
             if (c is ' ' or '\t' or '\r' or '\n')
             {
+                lineBreak |= !space && c is '\r' or '\n';
                 space = true;
                 continue;
             }
 
-            if (space && (collapsed.Length > 0 || !trimStart))
+            var codePoint = char.IsHighSurrogate(c) && i + 1 < text.Length && char.IsLowSurrogate(text[i + 1])
+                ? char.ConvertToUtf32(c, text[i + 1])
+                : c;
+            var joined = lineBreak && IsEastAsian(last) && IsEastAsian(codePoint);
+            if (space && !joined && (collapsed.Length > 0 || !trimStart))
             {
                 collapsed.Append(' ');
             }
 
             space = false;
+            lineBreak = false;
             collapsed.Append(c);
+            if (codePoint > 0xFFFF)
+            {
+                collapsed.Append(text[++i]);
+            }
+
+            last = codePoint;
         }
 
         if (space && !trimEnd && (collapsed.Length > 0 || !trimStart))
@@ -58,6 +74,13 @@ public class DefaultAumlTransformer : IAumlTransformer
 
         return collapsed.ToString();
     }
+
+    // The blocks System.Xaml takes as East Asian: Hangul, CJK, Yi, the full and half width forms and the ideographs past
+    // the Basic Multilingual Plane.
+    private static bool IsEastAsian(int c) =>
+        c is >= 0x1100 and <= 0x11FF or >= 0x2E80 and <= 0x2FDF or >= 0x2FF0 and <= 0x4DBF or >= 0x4E00 and <= 0x9FFF
+            or >= 0xA000 and <= 0xA4CF or >= 0xAC00 and <= 0xD7A3 or >= 0xF900 and <= 0xFAFF or >= 0xFF00 and <= 0xFFEF
+            or >= 0x20000 and <= 0x2FFFF;
 
     // Tokens of a shorthand collection: commas or spaces, but only outside a markup extension, whose own arguments are
     // separated the same way ("Auto, {Binding A, Mode=OneWay}, *").
@@ -883,11 +906,42 @@ public class DefaultAumlTransformer : IAumlTransformer
         IResolvedType ResolvedTypeOf(IAumlAstTypeReference reference) =>
             reference is { IsResolved: true } ? typeResolver.Resolve(reference.GetFullTypeName()) : null;
 
-        IResolvedType WrapperOf(IResolvedType collection) =>
+        IResolvedType WrapperOf(IResolvedType collection, string kind = "WrapperType") =>
             collection?.GetAttribute(ContentWrapperAttributeName)?.NamedArguments is { } arguments &&
-            arguments.TryGetValue("WrapperType", out var wrapper) && wrapper != null
+            arguments.TryGetValue(kind, out var wrapper) && wrapper != null
                 ? typeResolver.Resolve(wrapper.ToString())
                 : null;
+
+        IResolvedType ElementWrapperOf(IResolvedType collection) => WrapperOf(collection, "ElementWrapperType");
+
+        // An element among the items that is not one, as a control among inlines: in the element wrapper, through its
+        // content property, when it fits that.
+        T WrappedElement<T>(T node, IResolvedType elementWrapper) where T : class, IAumlAstNode
+        {
+            if (elementWrapper == null || node is not AumlAstObjectNode { TypeReference: { } reference } element
+                || !elementWrapper.FindPropertyWithAttribute(ContentAttributeName, out var content)
+                || (reference.IsResolved ? ResolvedTypeOf(reference) : typeResolver.ResolveByShortName(reference.Name))
+                    is not { } type
+                || content.PropertyType == null)
+            {
+                return node;
+            }
+
+            var slot = content.PropertyType.FullName;
+            if (!type.IsAssignableTo(slot) && !type.ImplementsInterface(slot))
+            {
+                return node;
+            }
+
+            var info = element.GetLineInfo();
+            var wrapperReference = CreateResolved(elementWrapper, info);
+            var item = new AumlAstObjectNode(info, wrapperReference);
+            item.Children.Add(new AumlAstPropertyNode(info,
+                new AumlAstPropertyReference(info, false, item, wrapperReference,
+                    CreateResolved(content.PropertyType, info), content.Name),
+                element));
+            return item as T;
+        }
 
         List<T> WithoutSpaces<T>(List<T> nodes) where T : class, IAumlAstNode =>
             nodes.Where(node => node is not AumlAstTextNode text || !ParserContext.IsXmlSpace(text.Text)).ToList();
@@ -895,11 +949,11 @@ public class DefaultAumlTransformer : IAumlTransformer
         bool IsContent(IAumlAstNode node) =>
             node is AumlAstObjectNode || (node is AumlAstTextNode text && !ParserContext.IsXmlSpace(text.Text));
 
-        List<T> Wrapped<T>(List<T> nodes, IResolvedType wrapper) where T : class, IAumlAstNode
+        List<T> Wrapped<T>(List<T> nodes, IResolvedType wrapper, IResolvedType elementWrapper) where T : class, IAumlAstNode
         {
             if (!wrapper.FindPropertyWithAttribute(ContentAttributeName, out var wrapperContent))
             {
-                return WithoutSpaces(nodes);
+                return WithoutSpaces(nodes).Select(node => WrappedElement(node, elementWrapper)).ToList();
             }
 
             var first = nodes.FindIndex(IsContent);
@@ -909,12 +963,14 @@ public class DefaultAumlTransformer : IAumlTransformer
             {
                 if (nodes[i] is not AumlAstTextNode text)
                 {
-                    result.Add(nodes[i]);
+                    result.Add(WrappedElement(nodes[i], elementWrapper));
                     continue;
                 }
 
-                var words = CollapsedSpaces(text.Text, first < 0 || i <= first || TrimsSpace(nodes, i - 1),
-                    i >= last || TrimsSpace(nodes, i + 1));
+                var words = text.PreservesSpace
+                    ? text.Text
+                    : CollapsedSpaces(text.Text, first < 0 || i <= first || TrimsSpace(nodes, i - 1),
+                        i >= last || TrimsSpace(nodes, i + 1));
                 if (words.Length == 0)
                 {
                     continue;
@@ -940,7 +996,8 @@ public class DefaultAumlTransformer : IAumlTransformer
 
         void WrapText(AumlAstObjectNode objectNode)
         {
-            if (NodeScan.First<AumlAstTextNode>(objectNode.Children) == null)
+            var hasText = NodeScan.First<AumlAstTextNode>(objectNode.Children) != null;
+            if (!hasText && !objectNode.Children.OfType<AumlAstObjectNode>().Any())
             {
                 return;
             }
@@ -949,22 +1006,28 @@ public class DefaultAumlTransformer : IAumlTransformer
                           type.FindPropertyWithAttribute(ContentAttributeName, out var found)
                 ? found
                 : null;
+            var elementWrapper = ElementWrapperOf(content?.PropertyType);
+            if (!hasText && elementWrapper == null)
+            {
+                return;
+            }
             List<IAumlAstNode> children;
             if (content?.PropertyType?.SpecialType == ResolvedSpecialType.System_String &&
                 objectNode.Children.Any(IsContent))
             {
                 var texts = objectNode.Children.OfType<AumlAstTextNode>().ToList();
                 var info = texts[0].GetLineInfo();
+                var written = string.Concat(texts.Select(text => text.Text));
                 children = objectNode.Children.Where(child => child is not AumlAstTextNode).ToList();
                 children.Add(new AumlAstPropertyNode(info,
                     new AumlAstPropertyReference(info, false, objectNode, objectNode.TypeReference,
                         CreateResolved(content.PropertyType, info), content.Name),
-                    new AumlAstTextNode(info, CollapsedSpaces(string.Concat(texts.Select(text => text.Text)), true, true))));
+                    new AumlAstTextNode(info, texts[0].PreservesSpace ? written : CollapsedSpaces(written, true, true))));
             }
             else
             {
                 children = WrapperOf(content?.PropertyType) is { } wrapper
-                    ? Wrapped(objectNode.Children, wrapper)
+                    ? Wrapped(objectNode.Children, wrapper, elementWrapper)
                     : WithoutSpaces(objectNode.Children);
             }
 
@@ -1013,17 +1076,37 @@ public class DefaultAumlTransformer : IAumlTransformer
                     ExpandShorthandCollection(propertyNode);
 
                     var reference = propertyNode.Property as AumlAstPropertyReference;
+                    var collection = reference is { IsAttachedProperty: false }
+                                     && propertyNode.Values.Any(value => value is AumlAstTextNode or AumlAstObjectNode)
+                        ? ResolvedTypeOf(reference.TargetType)
+                        : null;
                     if (propertyNode.Values.OfType<AumlAstTextNode>().Any())
                     {
-                        if (reference is { IsAttachedProperty: false } &&
-                            WrapperOf(ResolvedTypeOf(reference.TargetType)) is { } wrapper)
+                        if (WrapperOf(collection) is { } wrapper)
                         {
-                            propertyNode.Values = Wrapped(propertyNode.Values, wrapper);
+                            propertyNode.Values = Wrapped(propertyNode.Values, wrapper, ElementWrapperOf(collection));
                         }
-                        else if (propertyNode.Values.Count > 1)
+                        else
                         {
-                            propertyNode.Values = WithoutSpaces(propertyNode.Values);
+                            if (propertyNode.Values.Count > 1)
+                            {
+                                propertyNode.Values = WithoutSpaces(propertyNode.Values);
+                            }
+
+                            // A property element's text, as WPF reads it: white space collapsed, none at its ends.
+                            if (propertyNode.IsElement)
+                            {
+                                propertyNode.Values = propertyNode.Values
+                                    .Select(value => value is AumlAstTextNode { PreservesSpace: false } text
+                                        ? new AumlAstTextNode(text.GetLineInfo(), CollapsedSpaces(text.Text, true, true))
+                                        : value)
+                                    .ToList();
+                            }
                         }
+                    }
+                    else if (ElementWrapperOf(collection) is { } elementWrapper)
+                    {
+                        propertyNode.Values = propertyNode.Values.Select(value => WrappedElement(value, elementWrapper)).ToList();
                     }
 
                     var takesType = reference is { IsAttachedProperty: false, TargetType.IsResolved: true }

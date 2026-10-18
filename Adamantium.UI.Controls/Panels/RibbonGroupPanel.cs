@@ -16,6 +16,17 @@ public class RibbonGroupPanel : Panel
         typeof(int), typeof(RibbonGroupPanel),
         new PropertyMetadata(3, PropertyMetadataOptions.AffectsMeasure | PropertyMetadataOptions.AffectsArrange));
 
+    public static readonly AdamantiumProperty RowSpacingProperty = AdamantiumProperty.Register(nameof(RowSpacing),
+        typeof(double), typeof(RibbonGroupPanel),
+        new PropertyMetadata(4.0, PropertyMetadataOptions.AffectsMeasure | PropertyMetadataOptions.AffectsArrange));
+
+    /// <summary>The room between the commands stacked in one column.</summary>
+    public double RowSpacing
+    {
+        get => GetValue<double>(RowSpacingProperty);
+        set => SetValue(RowSpacingProperty, value);
+    }
+
     /// <summary>How many non-large commands stack in one column. Three is the Office metric the theme is drawn to.</summary>
     public int RowsPerColumn
     {
@@ -75,7 +86,7 @@ public class RibbonGroupPanel : Panel
             {
                 child.Measure(Size.Infinity);
                 columnWidth = Math.Max(columnWidth, child.DesiredSize.Width);
-                columnHeight += child.DesiredSize.Height;
+                columnHeight += child.DesiredSize.Height + (columnHeight > 0 ? RowSpacing : 0);
             }
 
             _columnWidths[i] = columnWidth;
@@ -88,22 +99,12 @@ public class RibbonGroupPanel : Panel
 
     protected override Size ArrangeOverride(Size finalSize)
     {
-        // The BLOCK is centered and every column starts on that one line - centering each column separately left a
-        // one-command column floating at the middle beside a three-command one.
-        double tallest = 0;
-        for (var i = 0; i < _columns.Count; i++)
-        {
-            double total = 0;
-            foreach (var child in _columns[i]) total += child.DesiredSize.Height;
-            tallest = Math.Max(tallest, total);
-        }
-
-        var top = Math.Max(0, (finalSize.Height - tallest) / 2);
-
+        // As Office lays a group out: every column starts at the top, its commands one under another with RowSpacing
+        // between them - Word's two rows of font commands stand at the top, not touching.
         double x = 0;
         for (var i = 0; i < _columns.Count; i++)
         {
-            var y = top;
+            double y = 0;
             foreach (var child in _columns[i])
             {
                 // Never taller than the room LEFT: arranged at its wish, a command taller than the band hangs out of
@@ -111,7 +112,7 @@ public class RibbonGroupPanel : Panel
                 // 90 handed out.) A control given less shows less; the gallery scrolls.
                 var childHeight = Math.Min(child.DesiredSize.Height, Math.Max(0, finalSize.Height - y));
                 child.Arrange(new Rect(x, y, _columnWidths[i], childHeight));
-                y += childHeight;
+                y += childHeight + RowSpacing;
             }
 
             x += _columnWidths[i];

@@ -20,5 +20,9 @@ public class AumlLoadResult
     /// declined (e.g. the root element type changed) and the caller should do a full rebuild instead.</summary>
     public bool Reconciled { get; set; }
 
+    /// <summary>Whether the markup builds: false when it does not parse or resolve, and <see cref="Diagnostics"/>
+    /// say why.</summary>
+    public bool Builds => Plan != null;
+
     internal BuildPlan Plan { get; set; }
 }

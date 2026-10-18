@@ -85,6 +85,11 @@ public static class ResourceResolver
         if (root == null) return;
 
         ResolveThrough(root, root);
+        if (root is IResolvesOwnResources own)
+        {
+            own.ResolveResources();
+        }
+
         ReResolveParts(root);
         foreach (var child in root.VisualChildren) ReResolveSubtree(child);
     }
@@ -123,6 +128,29 @@ public static class ResourceResolver
         // And AGAIN when the anchor enters the tree: markup assigns a brush to its element BEFORE that element is added
         // to its parent, so the walk above starts from an element that has no ancestors yet.
         anchor.AttachedToVisualTreeEvent += (_, _) => ResolveThrough(target, anchor);
+    }
+
+    // What a deferred {ResourceReference} on a non-visual target's property answers from where the anchor stands, written
+    // nowhere: for a target shared by elements in different theme scopes, as a text style is, each asks for its own.
+    internal static bool TryAnswer(IAdamantiumComponent target, string property, IUIComponent anchor, out object answer)
+    {
+        answer = null;
+        var resourceManager = UIAppContext.Current?.ResourceManager;
+        if (anchor == null || resourceManager == null || !_pending.TryGetValue(target, out var asks))
+        {
+            return false;
+        }
+
+        foreach (var ask in asks)
+        {
+            if (ask.Property == property)
+            {
+                answer = resourceManager.FindResource(anchor, ask.Key);
+                return answer != null;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>Answers a non-visual target's deferred resources from where <paramref name="anchor"/> stands now, once and

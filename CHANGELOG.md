@@ -16,7 +16,7 @@ All packages share one version.
   selected entities in one inspector.
 - The language server goes where a value points: from `{Localize Table.Key}` to the phrase in the table's base language
   file, from the table to the file, and from the member of `{x:Static Type.Member}` to its declaration. Rider plugin
-  1.11.4, VS Code extension 0.3.3.
+  1.11.5, VS Code extension 0.3.4.
 
 ### Fixed
 
@@ -32,9 +32,55 @@ All packages share one version.
 - A `TreeView` told to select a node that has no row yet - an entity made and selected at once - lets the row selected
   before go at once; it stayed selected beside the new one when its row came. The new row comes selected - a node
   keeping its own selection is marked - and, with a `ParentPath`, is scrolled to.
+- A property element's text (`<TextBlock.Text>`, `<Button.Content>`) has its white space collapsed to single spaces and
+  none at its ends, as WPF reads it: two spaces stayed two, and a text on lines of its own kept its line breaks. In
+  any text, a line break between two East Asian characters is dropped, as WPF drops it (`日本`↵`語` is "日本語").
+- A property element in the middle of an element's text (`Hello <TextBlock.Tag>t</TextBlock.Tag> world`) is an error,
+  as in WPF; the texts either side were joined with both their spaces. One among elements alone stays allowed.
+- The markup loader behind the live preview and hot reload reports what the parser finds - a property element amid
+  text, an attribute on a property element, xmlns off the root - where it is written, and builds nothing of it, as the
+  build does not: it built such markup and said nothing. A live preview whose edit does not build - mid-typing - keeps
+  the tree it shows and its running animations, and says why.
 
 ### Added
 
+- `FontFamily.Source`, as WPF's: the family's name - the one it was made with, or the name its font file gives.
+- `RibbonControlGroup`, as WPF's: a row of ribbon commands side by side - Word's Bold, Italic and Underline, or its
+  font and size boxes with the size steps - that stands in its group as one row of the group's columns, its commands
+  drawn small. To automation it is a group of them.
+- `ColorPalette` and `ColorPaletteSwatch`: colors to pick from, as Word's font color menu holds them - a choice of no
+  color (`NoColorText`; none, none shown), a grid of `Colors` (`ColorPalette.StandardColors` by default) and, under
+  "More colors", a `ColorPicker` whose color "Apply" takes. A pick runs `Command` with the color, null for no color,
+  keeps it as `SelectedColor` - for a split button's body to apply again - and closes the menu it stands in. One style
+  set serves every theme.
+- The clipboard carries several formats of one thing at once: `Clipboard.SetData` puts an `IDataPackage` on it -
+  `DataFormats.Text`, `Html` (the fragment; the Windows header is written and read for you) and `Rtf` as strings,
+  formats of one's own as `byte[]` under their name - and `Contains` / `GetData` read one back. `IClipboard` has these
+  as new members, so a clipboard of one's own implements them too. The Windows clipboard tries to open again for a
+  moment when another application holds it, as one does right after every copy.
+- `xml:space="preserve"` in markup, as in WPF: on an element, or one around it, the white space of its text is kept as
+  written - in a property element, in content and among inlines; `xml:space="default"` inside undoes it.
+- `FocusManager.ReturnsFocus`: a focus scope whose commands give the focus back - after a button, a drop-down, a
+  segment or a gallery inside it has run its command, the focus goes back to the element that had it in the scope
+  around, unless the command put it somewhere of its own. A ribbon and its quick-access bar do, so after a click on
+  Bold the caret and the keys are in the field being edited again, as in Office. Its backstage, menus and drop-down
+  lists are scopes of their own, and a toggle with no command keeps the focus.
+- `DropDown.Command`: a choice runs it with the chosen item's value, as a font box sets the font of the text being
+  edited. A routed command's answer is shown as the choice without running it - a value no item has shows in the
+  header as it is, none (the selection is mixed) shows the placeholder - and the drop-down is disabled while the
+  command cannot run.
+
+- `CharacterStyle` and `ParagraphStyle` on `TextBlock` and `TextBox` (and `PasswordBox`): named text styles for the
+  whole text, its `Text` with no inlines included. What the element sets itself wins over them, and an inline or a
+  paragraph with its own style takes that one instead; changing a style lays the text out again, and so does moving the
+  element under other resources.
+- A control written among inlines in markup is set into the line in an `InlineUIContainer` of its own, as WPF wraps it
+  (`<TextBlock>Press <Button/> here</TextBlock>`), in the loader and in the generated code alike;
+  `ContentWrapperAttribute.ElementWrapperType` names the wrapper.
+- A `TextBox` takes the baseline grid (`BaselineGridStep`) as a `TextBlock` does: its lines stand on the grid from
+  where its text surface is, its scroll left out; on the grid a single line is not centered off the grid's rows.
+- A `Ruby` inside a `Ruby` on the other side of the base is a double-sided ruby: both annotations are shown, where only
+  the outer one was.
 - `SegmentedControl` and `SegmentedControlItem`: a few choices of one setting side by side, one of them chosen, as
   macOS's segmented control. Segments are written in markup, made from `ItemsSource` by `ItemTemplate` (each made
   segment's `DataContext` is its item, so `ItemContainerStyle` can bind a segment to its model), or made from an enum by
@@ -160,9 +206,30 @@ All packages share one version.
   under the pointer or at the caret, what it may have been meant as, "Ignore all" and "Add to dictionary". The words
   are the system's (`ISpellChecker`; on Windows its own dictionaries and the user's), in the box's `Language`, else the
   application's language, else English; `SpellCheckBehavior.Checker` takes another. macOS comes later.
-- A text box has an editing menu in every theme: Cut, Copy, Paste, Select all. The box's commands
-  (`CutCommand`, `CopyCommand`, `PasteCommand`, `SelectAllCommand`) say when they apply; a theme's row names one with
-  `TextBoxBase.EditAction`, and the box hands it the command as the menu opens. A password box gives nothing away.
+- Routed commands, as WPF's: a `RoutedCommand` (`Name`, `OwnerType`, its `KeyGesture`s) goes from its target up
+  the tree to the first element whose `CommandBinding` takes it - on the element (in markup among its `Behaviors`, or
+  `CommandManager.GetCommandBindings`) or on its whole class (`RegisterClassCommandBinding`) - through
+  `PreviewCanExecute`, `CanExecute`, `PreviewExecuted` and `Executed`. Asked, it answers `CanExecute`, and may answer
+  `IsChecked` and `Value`. A binding's `Handler` hands the command to a view model's:
+  `<CommandBinding Command="{x:Static ApplicationCommands.Copy}" Handler="{Binding CopyCommand}"/>` copies what the view
+  model holds whenever no field with the keyboard takes Copy first. Its gestures run it from the keyboard, and
+  `KeyBinding`s on an element or a class add keys of their own (`KeyGesture.Parse("Ctrl+Shift+K")`); a key whose
+  command an element takes stays with it even when it cannot run now.
+  A button, a menu row, a segment or a hyperlink sends its routed command from itself, or from its `CommandTarget`; a
+  gallery sends its `ItemCommand` from itself, the picked item as the parameter. A focus scope
+  (`FocusManager.IsFocusScope`: a context menu, a popup, a ribbon, its application menu and quick-access bar) keeps a
+  focus of its own, per window: a command nothing inside it took goes to the element with the focus in the scope
+  around it, so a ribbon's Copy copies from the field being edited, and a box's own menu acts on that box, also in a
+  ribbon or a popup. A popup's content is in its popup, and a menu goes on to the element it belongs to. A toggle
+  button takes `IsChecked` from the answer, a menu row shows the command's first gesture unless `InputGestureText` is
+  set. Sources in the tree ask again when the focus moves, when a control calls
+  `CommandManager.InvalidateRequerySuggested`, at most once a frame, and a menu asks as it opens.
+- `Clipboard.HasText()`: whether there is text to paste, without reading it. `IClipboard` has it as a new member, so a
+  clipboard of one's own implements it too.
+- `ApplicationCommands`: Cut, Copy, Paste, Undo, Redo, Select all, Find, Replace, with their usual keys. A text box
+  takes Cut, Copy, Paste, Select all, Undo and Redo (its keys are these commands' keys now), a password box gives
+  nothing away, and a selectable `TextBlock` takes Copy and Select all.
+- A text box has an editing menu in every theme: Cut, Copy, Paste, Select all, its rows on `ApplicationCommands`.
 - `ContextMenu.Opening`: raised before a menu shows, with the point it was opened at (none from the keyboard), so its
   rows can fit the moment.
 - `TextBox.AcceptsTab`: Tab types a tab; Shift+Tab and Ctrl+Tab still move the focus on, and a read-only box lets Tab
@@ -1178,6 +1245,9 @@ All packages share one version.
 
 ### Changed
 
+- A ribbon group's columns start at the top of the band, as Office's, their commands `RibbonGroupPanel.RowSpacing`
+  (4) apart: Word's two rows of font commands stand at the top, not touching. The whole block was centered in the band,
+  its commands touching.
 - A `TextBlock` with no height of its own leaves its text where its lines are, whatever `VerticalTextAlignment` says,
   as WinUI's: the themes' `Center` moved the letters down by half the font's descent, so they, the selection and the
   backgrounds came out of the block - over the text below it, by 56 pixels for Poppins at 320. Labels in every theme
@@ -1495,6 +1565,22 @@ All packages share one version.
 
 ### Fixed
 
+- A text style shared by texts in different theme scopes gives each its own answer to a `{ResourceReference}` in it:
+  the answer was written into the shared style, so every text took the one resolved last. A style keeps no answer
+  now; each text reads it from where it stands, and a scope switched round a text lays it out again.
+- A control in a line whose text moved inside it, its size and slot the same, moves on the line too: the block read
+  its baseline only when measured or arranged again. It now reads its controls' baselines again after each layout pass
+  that did work - those the text reaches; one past a cut stands nowhere and is left alone.
+- Ctrl+arrows in a `TextBox` holding mixed text, and in a selectable `TextBlock`, go a word at a time by the screen, as
+  the plain arrows go: they went by the reading order, jumping back across right-to-left words.
+- A `TextBox` that does not wrap, its paragraphs running different ways, stands each line at its own edge: the whole
+  text stood at the edge of its first paragraph.
+- White space between two inlines written on lines of their own is a space, as in WPF: `</Bold>`↵`<Italic>` gave
+  "ab". A comment in the gap takes nothing away, and one in text adds no second space (`Hello <!-- c --> world`);
+  elsewhere white space is still dropped. In a property element (`<Button.Content>`, `<TextBlock.Text>`) the text after
+  a comment is no longer lost. Markup that put the spaces in its runs drops them, as the sandbox's text stands now do,
+  and writes runs side by side (`.../><Run .../>`) only where no space stands between them.
+- The generator's type resolver takes an interface a type implements as one it is assignable to, as the runtime's does.
 - In Fluent, a tab whose strip is not on top rounds its outer corners, not those against its panel: a tool's tabs,
   under its body, were rounded on top and left a notch either side of where they join it.
 - A tool panel folded to the edge of a docking area takes the area's tab policy, as a docked one does.

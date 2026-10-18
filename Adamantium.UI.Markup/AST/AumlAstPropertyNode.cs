@@ -24,9 +24,13 @@ public class AumlAstPropertyNode : AumlAstNode
 
     public List<IAumlAstValueNode> Values { get; set; }
 
+    /// <summary>Whether the markup sets the property with a property element (<c>&lt;Button.Content&gt;</c>), not an
+    /// attribute or what the transformer makes.</summary>
+    public bool IsElement { get; set; }
+
     public override IAumlAstNode Clone(AumlAstObjectNode parent) =>
         new AumlAstPropertyNode(this, Property?.Clone(parent),
-            Values.Select(value => (IAumlAstValueNode)value.Clone(parent)));
+            Values.Select(value => (IAumlAstValueNode)value.Clone(parent))) { IsElement = IsElement };
 
     public override string ToString()
     {

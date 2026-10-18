@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using Adamantium.Core.Commands;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Input;
 
 namespace Adamantium.UI.Controls.Text;
 
@@ -60,11 +61,7 @@ public class Hyperlink : Span
     public void Activate()
     {
         Click?.Invoke(this, EventArgs.Empty);
-        if (Command is { } command && command.CanExecute(CommandParameter))
-        {
-            command.Execute(CommandParameter);
-        }
-
+        CommandManager.ExecuteFrom(Command, CommandParameter, Block(), null);
         if (NavigateUri is not { } uri)
         {
             return;
@@ -84,5 +81,18 @@ public class Hyperlink : Span
         catch (Win32Exception)
         {
         }
+    }
+
+    private TextBlock Block()
+    {
+        for (var node = LogicalParent; node != null; node = node.LogicalParent)
+        {
+            if (node is TextBlock block)
+            {
+                return block;
+            }
+        }
+
+        return null;
     }
 }

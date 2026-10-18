@@ -5,8 +5,9 @@ namespace Adamantium.UI.Controls.Text;
 
 /// <summary>A <see cref="Span"/> with a ruby annotation, as HTML's &lt;ruby&gt;: small text centered over its
 /// inlines - furigana over kanji, a reading, a gloss. Inlines narrower than the annotation are spread to its width and
-/// stay on one line; the line grows to hold it unless its height is set. Of rubies one inside another, the outer one's
-/// annotation is the one shown.</summary>
+/// stay on one line; the line grows to hold it unless its height is set. A ruby inside a ruby on the other side of the
+/// base (<see cref="RubyPosition"/>) is a double-sided ruby: both annotations are shown. Of rubies one inside another on
+/// the same side, the outer one's annotation is the one shown.</summary>
 public class Ruby : Span
 {
     public static readonly AdamantiumProperty AnnotationProperty = AdamantiumProperty.Register(nameof(Annotation),

@@ -6,6 +6,7 @@ using Adamantium.Fonts;
 using Adamantium.Graphics.Fonts;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Media;
+using Adamantium.UI.Core.Resources;
 using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls.Text;
@@ -136,30 +137,43 @@ public abstract class TextFormat : AdamantiumComponent
     // The style this one is based on, as its BasedOn says.
     private protected abstract TextFormat BaseFormat { get; }
 
-    // What this style or the ones it is based on set, for the block: the font to resolve, the brushes to hold and what
-    // an inline's own defaults yield to. A chain set in a loop through markup ends where it comes round.
-    internal FontWeight? ResolvedWeight() => Resolved(static format => format.FontWeight, static weight => weight != null);
+    // What this style or the ones it is based on set, for the text in scope: the font to resolve, the brushes to hold
+    // and what an inline's own defaults yield to. A chain set in a loop through markup ends where it comes round.
+    internal FontWeight? ResolvedWeight(IUIComponent scope) => Resolved<FontWeight?>(FontWeightProperty, scope);
 
-    internal FontStyle? ResolvedStyle() => Resolved(static format => format.FontStyle, static style => style != null);
+    internal FontStyle? ResolvedStyle(IUIComponent scope) => Resolved<FontStyle?>(FontStyleProperty, scope);
 
-    internal FontStretch? ResolvedStretch() => Resolved(static format => format.FontStretch, static stretch => stretch != null);
+    internal FontStretch? ResolvedStretch(IUIComponent scope) => Resolved<FontStretch?>(FontStretchProperty, scope);
 
-    internal Brush ResolvedForeground() => Resolved(static format => format.Foreground, static brush => brush != null);
+    internal Brush ResolvedForeground(IUIComponent scope) => Resolved<Brush>(ForegroundProperty, scope);
 
-    internal Brush ResolvedBackground() => Resolved(static format => format.Background, static brush => brush != null);
+    internal Brush ResolvedBackground(IUIComponent scope) => Resolved<Brush>(BackgroundProperty, scope);
 
-    internal TextDecorations? ResolvedDecorations() =>
-        Resolved(static format => format.TextDecorations, static decorations => decorations != null);
+    internal TextDecorations? ResolvedDecorations(IUIComponent scope) =>
+        Resolved<TextDecorations?>(TextDecorationsProperty, scope);
 
-    internal double? ResolvedBaselineShift() =>
-        Resolved(static format => format.BaselineShift, static shift => shift != null);
+    internal double? ResolvedBaselineShift(IUIComponent scope) => Resolved<double?>(BaselineShiftProperty, scope);
 
-    private T Resolved<T>(Func<TextFormat, T> value, Func<T, bool> isSet)
+    internal double? ResolvedFontSize(IUIComponent scope)
     {
         for (var format = this; format != null; format = format.Base)
         {
-            var found = value(format);
-            if (isSet(found))
+            var size = format.Scoped<double>(FontSizeProperty, scope);
+            if (!double.IsNaN(size))
+            {
+                return size;
+            }
+        }
+
+        return null;
+    }
+
+    private T Resolved<T>(AdamantiumProperty property, IUIComponent scope)
+    {
+        for (var format = this; format != null; format = format.Base)
+        {
+            var found = format.Scoped<T>(property, scope);
+            if (found != null)
             {
                 return found;
             }
@@ -168,23 +182,34 @@ public abstract class TextFormat : AdamantiumComponent
         return default;
     }
 
+    // A value this style sets as the text in scope sees it: a {ResourceReference} on it is answered from where that text
+    // stands, and written nowhere - a style shared by texts in different theme scopes gives each its own answer.
+    internal T Scoped<T>(AdamantiumProperty property, IUIComponent scope) =>
+        ResourceResolver.TryAnswer(this, property.Name, scope, out var answer) && answer is T value
+            ? value
+            : GetValue<T>(property);
+
     // The style this one is based on, unless the chain from there comes back round to it: then, as for the engine's
     // style, none.
     internal TextFormat Base => BaseFormat is { } based && !based.Reaches(this) ? based : null;
 
-    // The attributes of the text this style itself sets; the engine's style takes the rest from the one it is based
-    // on, and the font is the block's to resolve.
-    internal TextAttributes OwnTextAttributes() => new()
+    // The attributes of the text this style itself sets, as the text in scope sees them; the engine's style takes the
+    // rest from the one it is based on, and the font is the block's to resolve.
+    internal TextAttributes OwnTextAttributes(IUIComponent scope)
     {
-        FontSize = double.IsNaN(FontSize) ? null : FontSize,
-        Foreground = (Foreground as SolidColorBrush)?.Color,
-        Background = (Background as SolidColorBrush)?.Color,
-        Decorations = TextDecorations,
-        Tracking = Tracking,
-        Kerning = Kerning,
-        Language = Language,
-        BaselineShift = BaselineShift,
-    };
+        var size = Scoped<double>(FontSizeProperty, scope);
+        return new TextAttributes
+        {
+            FontSize = double.IsNaN(size) ? null : size,
+            Foreground = (Scoped<Brush>(ForegroundProperty, scope) as SolidColorBrush)?.Color,
+            Background = (Scoped<Brush>(BackgroundProperty, scope) as SolidColorBrush)?.Color,
+            Decorations = Scoped<TextDecorations?>(TextDecorationsProperty, scope),
+            Tracking = Scoped<double?>(TrackingProperty, scope),
+            Kerning = Scoped<TextKerning?>(KerningProperty, scope),
+            Language = Scoped<string>(LanguageProperty, scope),
+            BaselineShift = Scoped<double?>(BaselineShiftProperty, scope),
+        };
+    }
 
     internal void Use(ITextStyleUser user)
     {
@@ -391,11 +416,14 @@ public class ParagraphStyle : TextFormat, ITextStyleUser
 
     private protected override TextFormat BaseFormat => BasedOn;
 
-    // How the paragraph stands by what this style itself sets.
-    internal ParagraphAttributes OwnParagraphAttributes()
+    // How the paragraph stands by what this style itself sets, as the text in scope sees it.
+    internal ParagraphAttributes OwnParagraphAttributes(IUIComponent scope)
     {
-        var attributes = new ParagraphAttributes { Alignment = HorizontalTextAlignment };
-        if (Margin is { } margin)
+        var attributes = new ParagraphAttributes
+        {
+            Alignment = Scoped<HorizontalTextAlignment?>(HorizontalTextAlignmentProperty, scope),
+        };
+        if (Scoped<Thickness?>(MarginProperty, scope) is { } margin)
         {
             attributes = attributes.With(new ParagraphAttributes
             {
@@ -403,14 +431,16 @@ public class ParagraphStyle : TextFormat, ITextStyleUser
             });
         }
 
-        if (!double.IsNaN(TextIndent))
+        var indent = Scoped<double>(TextIndentProperty, scope);
+        if (!double.IsNaN(indent))
         {
-            attributes = attributes.With(new ParagraphAttributes { TextIndent = TextIndent });
+            attributes = attributes.With(new ParagraphAttributes { TextIndent = indent });
         }
 
-        if (!double.IsNaN(LineHeight))
+        var lineHeight = Scoped<double>(LineHeightProperty, scope);
+        if (!double.IsNaN(lineHeight))
         {
-            attributes = attributes.With(new ParagraphAttributes { LineHeight = LineHeight });
+            attributes = attributes.With(new ParagraphAttributes { LineHeight = lineHeight });
         }
 
         return attributes;

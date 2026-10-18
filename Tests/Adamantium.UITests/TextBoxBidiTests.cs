@@ -107,4 +107,48 @@ public class TextBoxBidiTests
         tb.SurfacePointerMove(tb.CaretRect(6).X - 1, y);
         return tb;
     }
+
+    // Ctrl+arrows in mixed text go by the screen too, a word at a time.
+    [Test]
+    public void CtrlRight_MovesTheCaretRightOnScreen_WordByWord()
+    {
+        var tb = new TextBox { Text = $"abc {Hebrew} {Hebrew} def" };
+        tb.CaretIndex = 0;
+        var xs = new List<double> { CaretX(tb) };
+        for (var step = 0; step < 6; step++)
+        {
+            tb.RaiseEvent(new KeyEventArgs(KeyboardDevice.CurrentDevice, Key.RightArrow, InputModifiers.LeftControl, 0)
+            {
+                RoutedEvent = Keyboard.KeyDownEvent,
+            });
+            if (CaretX(tb) <= xs[^1])
+            {
+                break;
+            }
+
+            xs.Add(CaretX(tb));
+        }
+
+        Assert.That(xs, Is.Ordered.Ascending.And.Unique);
+        Assert.That(tb.CaretIndex, Is.EqualTo(tb.Text.Length), "it reached the right end");
+    }
+
+    // A box that does not wrap, its paragraphs running different ways: each line stands at its own edge.
+    [Test]
+    public void LinesOfBothDirections_StandAtTheirOwnEdges()
+    {
+        var tb = new TextBox { Text = $"abc\n{Hebrew}", AcceptsReturn = true };
+        tb.MeasureSurface(double.PositiveInfinity);
+        tb.ArrangeSurface(300);
+        var glyphs = tb.Layout.GetTextData();
+        var latin = System.Linq.Enumerable.Min(System.Linq.Enumerable.Where(glyphs, g => g.LineIndex == 0), g => g.Rect.Left);
+        var hebrew = System.Linq.Enumerable.Max(System.Linq.Enumerable.Where(glyphs, g => g.LineIndex == 1 && g.Advance > 0),
+            g => g.PenX + g.Advance);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(latin, Is.LessThan(5), "the Latin line at the left edge");
+            Assert.That(hebrew, Is.GreaterThan(290), "the Hebrew line at the right edge");
+        });
+    }
 }

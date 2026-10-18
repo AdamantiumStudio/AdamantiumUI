@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Scenario xmlns="http://adamantium/automation/scenario" Description="The ribbon shell, opened by the gallery's caption command: its clipboard commands say in the status line what they did.">
+<Scenario xmlns="http://adamantium/automation/scenario" Description="The ribbon shell, opened by the gallery's caption command: its clipboard commands say in the status line what they did, and work on the notes field while it has the keyboard.">
   <Invoke Target="id=OpenRibbon" />
   <!-- The window comes first and its page after it, by navigation: wait for what the next steps read. -->
   <Wait Target="id=RibbonWindow/id=StatusLine" Timeout="30s" />
@@ -8,6 +8,20 @@
   <Expect Target="id=StatusLine" Name="Cut the selection." />
   <Click Target="id=Band/name=Copy" />
   <Expect Target="id=StatusLine" Name="Copied the selection." />
+  <!-- The clipboard commands are routed: with the keyboard in the notes they are the field's - off while it has nothing
+       to give, its text when it has - and the scene hears none of it. A click on the scene gives them back to it. -->
+  <Type Text="note" Into="id=Notes" />
+  <Expect Target="id=Band/name=Copy" Enabled="False" />
+  <Invoke Target="id=SelectAll" />
+  <Expect Target="id=Band/name=Copy" Enabled="True" />
+  <Click Target="id=Band/name=Copy" />
+  <Key Keys="End" Into="id=Notes" />
+  <Invoke Target="id=Band/name=Paste" />
+  <Expect Target="id=Notes" Value="notenote" />
+  <Expect Target="id=StatusLine" Name="Copied the selection." />
+  <Click Target="id=RibbonWindow/id=SceneSurface" />
+  <Invoke Target="id=Cut" />
+  <Expect Target="id=StatusLine" Name="Cut the selection." />
   <!-- Key tips: Alt, then F, opens the File menu; Escape puts it away. -->
   <Key Keys="Alt F" Into="id=RibbonWindow" />
   <Wait Target="id=RibbonWindow/id=PART_BackButton" />
@@ -52,6 +66,14 @@
   <Invoke Target="id=Band/name=Modules/name=Module catalog..." />
   <Wait Target="id=CatalogModules" />
   <Expect Target="id=CatalogSearch" Name="Find a module" />
+  <!-- The search box is inside the ribbon, and its editing menu is still its own: Cut takes the search away and
+       nothing from the scene. -->
+  <Type Text="find" Into="id=CatalogSearch" />
+  <ContextMenu Target="id=CatalogSearch" />
+  <Invoke Target="type=MenuItem,name=Select all" />
+  <ContextMenu Target="id=CatalogSearch" />
+  <Invoke Target="type=MenuItem,name=Cut" />
+  <Expect Target="id=CatalogSearch" Value="" />
   <Invoke Target="id=CloseCatalog" />
   <Absent Target="id=CatalogModules" />
   <!-- Opened again from the gallery while minimized, it comes back as it was. It used to come back on screen still
