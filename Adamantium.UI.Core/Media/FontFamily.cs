@@ -31,6 +31,10 @@ public class FontFamily
 
     public Typeface Typeface { get; }
 
+    /// <summary>The family's name, as WPF's: the one it was made with, or for a family made from a file the name its
+    /// font gives - what a font box shows for it.</summary>
+    public string Source => _name ?? (Fonts.Count > 0 ? Fonts[0].FontFamily : null);
+
     public IReadOnlyList<IFont> Fonts => Typeface.Fonts;
 
     public double LineGap => Typeface.GetFont(0).LineGap;

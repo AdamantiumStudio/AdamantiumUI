@@ -1,3 +1,5 @@
 <Language>
     <Phrase Key="Preview" Text="Preview"/>
+    <Phrase Key="MoreColors" Text="More colors…"/>
+    <Phrase Key="Apply" Text="Apply"/>
 </Language>
