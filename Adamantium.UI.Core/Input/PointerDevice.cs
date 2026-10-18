@@ -314,7 +314,8 @@ public sealed class PointerDevice
         }
         else
         {
-            ChangePointerOver(pointer, pointer.Captured.HitTest(p) ?? pointer.Captured, modifiers, timestamp);
+            var inParent = pointer.Captured.VisualParent is { } parent ? Pointer.ToLocal(parent, p) : p;
+            ChangePointerOver(pointer, pointer.Captured.HitTest(inParent) ?? pointer.Captured, modifiers, timestamp);
             source = pointer.Captured;
         }
 

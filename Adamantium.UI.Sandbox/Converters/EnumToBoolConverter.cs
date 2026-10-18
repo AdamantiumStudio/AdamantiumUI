@@ -5,8 +5,8 @@ using Adamantium.UI.Core.Data;
 
 namespace Adamantium.UI.Sandbox.Converters;
 
-/// <summary>Checks the toggle whose ConverterParameter names the bound enum value and writes it back when checked; lets a
-/// row of buttons drive one choice. Unchecking writes nothing.</summary>
+/// <summary>Checks the toggle whose ConverterParameter names the bound enum (or string) value and writes it back when
+/// checked; lets a row of buttons drive one choice. Unchecking writes nothing.</summary>
 public class EnumToBoolConverter : IValueConverter
 {
     /// <inheritdoc/>
@@ -19,6 +19,10 @@ public class EnumToBoolConverter : IValueConverter
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
     {
         if (value is not true || parameter is not string wanted) return AdamantiumProperty.UnsetValue;
+        if (targetType == typeof(string))
+        {
+            return wanted;
+        }
 
         var enumType = Nullable.GetUnderlyingType(targetType) ?? targetType;
         return enumType.IsEnum && Enum.TryParse(enumType, wanted, true, out var parsed)

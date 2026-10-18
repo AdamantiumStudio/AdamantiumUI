@@ -23,43 +23,16 @@ All packages share one version.
 - The designer selects a property grid's line, taking it to its definition in markup: a click on a line selected the
   whole section, the line being the grid's own element with no markup of its own. `Design.StandsFor` records what such
   an element shows of the markup, `Design.AuthoredOf` reads it; outside the designer they keep nothing.
-
-### Fixed
-
-- A pointer coming over an element together with its ancestors - from a side panel straight onto a view that fills its
-  document - shows the element's cursor: the ancestors were told of the enter after it, and the outermost put up its
-  own. Elements joining a pointer's or the keyboard focus's chain hear of it outermost first.
-
-- A `TreeView` with a `ParentPath` follows its selected node to another parent - a camera hung on a part of a closed
-  model: the branches above its new place open and it is scrolled to; it vanished into the closed branch. A branch the
-  user closes over the selection stays closed.
-- A `TextBlockOverflow` in a grid's star columns let its layout settle: it took its room each time the grid measured
-  it - first unbounded, then the column's width - and laid the block's text out again every time, never idle, the
-  overflow under the others as short as nothing and its lines over what came below. It takes its room as it is
-  arranged. A block whose overflows have no room yet no longer lays its text out again on every measure (a room not
-  known never compared the same).
-- A wrapping `TextBlock` measured twice a pass at two sizes - a grid's star column first at an upper bound, then at
-  its share - is answered the size it laid out at the other one, not laid out again each time; what it draws and
-  arranges is laid out at the size it ends up with.
-- A control among the inlines of a vertical `TextBlock` stands upright in its line, centered across it, as large as it
-  asks; it was collapsed to nothing.
-- An items host with `IsVirtualizing="False"` asks for what its items take; it asked for all the room it was given, as
-  a scrolling list's viewport does, so a row of them standing in a taller space grew as tall as the space.
-- A `TreeView` told to select a node that has no row yet - an entity made and selected at once - lets the row selected
-  before go at once; it stayed selected beside the new one when its row came. The new row comes selected - a node
-  keeping its own selection is marked - and, with a `ParentPath`, is scrolled to.
-- A property element's text (`<TextBlock.Text>`, `<Button.Content>`) has its white space collapsed to single spaces and
-  none at its ends, as WPF reads it: two spaces stayed two, and a text on lines of its own kept its line breaks. In
-  any text, a line break between two East Asian characters is dropped, as WPF drops it (`日本`↵`語` is "日本語").
-- A property element in the middle of an element's text (`Hello <TextBlock.Tag>t</TextBlock.Tag> world`) is an error,
-  as in WPF; the texts either side were joined with both their spaces. One among elements alone stays allowed.
-- The markup loader behind the live preview and hot reload reports what the parser finds - a property element amid
-  text, an attribute on a property element, xmlns off the root - where it is written, and builds nothing of it, as the
-  build does not: it built such markup and said nothing. A live preview whose edit does not build - mid-typing - keeps
-  the tree it shows and its running animations, and says why.
-
-### Added
-
+- `Calendar`, with WPF's API: the days of a month, the months of a year and the years of a decade (`DisplayMode`), the
+  header going up a level and the arrows back and on; `SelectionMode` (one date, one run, several runs or none) with
+  `SelectedDate`/`SelectedDates`, `BlackoutDates`, `DisplayDateStart`/`End`, `IsTodayHighlighted` and
+  `ShowWeekNumbers`. Days are selected by click, Ctrl, Shift and a drag; the keyboard moves through them, its cursor
+  shown only once the keyboard is in use. Month and day names, the first day of the week (or `FirstDayOfWeek`) and
+  the week numbers follow the calendar's `Language`, on the Gregorian calendar (Thai keeps its Buddhist years). Given
+  a size, its cells share the room - no `Viewbox` needed - and it keeps its size from level to level. Unlike WPF, a
+  `SelectedDate` it cannot select goes back to the day selected rather than throwing, and blackout days or a range
+  that come to cover selected days let them go. It is in the Fluent, Graphite and macOS themes, reaches automation
+  as a grid of selectable dates, and has a "Date and time" tab in the sandbox.
 - The sandbox's text tab has a topic "New in typesetting": CJK punctuation with `TextSpacingTrim` and
   `HangingPunctuation` switched, words hyphenated inside a ligature and at an Arabic soft hyphen, a tall line in
   columns, a vertical field and a control in a vertical line, one text through three frames, 'SVG' glyphs of a font of
@@ -1616,6 +1589,39 @@ All packages share one version.
 
 ### Fixed
 
+- A pointer coming over an element together with its ancestors - from a side panel straight onto a view that fills its
+  document - shows the element's cursor: the ancestors were told of the enter after it, and the outermost put up its
+  own. Elements joining a pointer's or the keyboard focus's chain hear of it outermost first.
+- A `TreeView` with a `ParentPath` follows its selected node to another parent - a camera hung on a part of a closed
+  model: the branches above its new place open and it is scrolled to; it vanished into the closed branch. A branch the
+  user closes over the selection stays closed.
+- While an element holds the pointer, what the pointer is over is found where the pointer is: the point was taken in
+  the window's units as the element's parent's, so in a panel away from the window's corner the hover lit a cell off
+  to the side of the pointer, moving with it.
+- A `TextBlockOverflow` in a grid's star columns let its layout settle: it took its room each time the grid measured
+  it - first unbounded, then the column's width - and laid the block's text out again every time, never idle, the
+  overflow under the others as short as nothing and its lines over what came below. It takes its room as it is
+  arranged. A block whose overflows have no room yet no longer lays its text out again on every measure (a room not
+  known never compared the same).
+- A wrapping `TextBlock` measured twice a pass at two sizes - a grid's star column first at an upper bound, then at
+  its share - is answered the size it laid out at the other one, not laid out again each time; what it draws and
+  arranges is laid out at the size it ends up with.
+- A control among the inlines of a vertical `TextBlock` stands upright in its line, centered across it, as large as it
+  asks; it was collapsed to nothing.
+- An items host with `IsVirtualizing="False"` asks for what its items take; it asked for all the room it was given, as
+  a scrolling list's viewport does, so a row of them standing in a taller space grew as tall as the space.
+- A `TreeView` told to select a node that has no row yet - an entity made and selected at once - lets the row selected
+  before go at once; it stayed selected beside the new one when its row came. The new row comes selected - a node
+  keeping its own selection is marked - and, with a `ParentPath`, is scrolled to.
+- A property element's text (`<TextBlock.Text>`, `<Button.Content>`) has its white space collapsed to single spaces and
+  none at its ends, as WPF reads it: two spaces stayed two, and a text on lines of its own kept its line breaks. In
+  any text, a line break between two East Asian characters is dropped, as WPF drops it (`日本`↵`語` is "日本語").
+- A property element in the middle of an element's text (`Hello <TextBlock.Tag>t</TextBlock.Tag> world`) is an error,
+  as in WPF; the texts either side were joined with both their spaces. One among elements alone stays allowed.
+- The markup loader behind the live preview and hot reload reports what the parser finds - a property element amid
+  text, an attribute on a property element, xmlns off the root - where it is written, and builds nothing of it, as the
+  build does not: it built such markup and said nothing. A live preview whose edit does not build - mid-typing - keeps
+  the tree it shows and its running animations, and says why.
 - A text style shared by texts in different theme scopes gives each its own answer to a `{ResourceReference}` in it:
   the answer was written into the shared style, so every text took the one resolved last. A style keeps no answer
   now; each text reads it from where it stands, and a scope switched round a text lays it out again.

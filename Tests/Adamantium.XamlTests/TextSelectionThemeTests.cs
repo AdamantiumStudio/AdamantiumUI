@@ -115,6 +115,22 @@ public class TextSelectionThemeTests
     [TestCase("Fluent")]
     [TestCase("Graphite")]
     [TestCase("MacOs")]
+    public void ACalendarsTextDoesNotSelect(string theme)
+    {
+        Use(theme);
+        var calendar = new Calendar { ShowWeekNumbers = true };
+
+        Shown(calendar);
+
+        var texts = Texts(calendar).ToList();
+        Assert.That(texts, Is.Not.Empty);
+        Assert.That(texts.Where(text => text.IsTextSelectionEnabled), Is.Empty, "days, day names, week numbers, header");
+    }
+
+    [Test]
+    [TestCase("Fluent")]
+    [TestCase("Graphite")]
+    [TestCase("MacOs")]
     public void ATabsHeaderDoesNotSelect_ItsPageDoes(string theme)
     {
         Use(theme);

@@ -1,0 +1,9 @@
+<Language>
+    <Phrase Key="Title" Text="Date and time"/>
+    <Phrase Key="Intro" Text="Calendar, as WPF's: the days of a month, the months of a year and the years of a decade - the header goes up a level, the arrows back and on. Days are selected one, a run or several runs at a time, with Ctrl, Shift and a drag; the keyboard moves through them. The names of months and days, the first day of the week and the week numbers follow the calendar's language. Given a size, the cells share it."/>
+    <Phrase Key="WeekNumbers" Text="Week numbers"/>
+    <Phrase Key="Plain" Text="At the size its content asks for:"/>
+    <Phrase Key="Selected" Text="Selected: "/>
+    <Phrase Key="Range" Text="From today for three months, holidays struck through:"/>
+    <Phrase Key="Large" Text="Given 640 by 520, its cells share the room - no Viewbox around it:"/>
+</Language>

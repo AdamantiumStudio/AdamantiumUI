@@ -1,0 +1,5 @@
+<Language>
+    <Phrase Key="Previous" Text="Назад"/>
+    <Phrase Key="Next" Text="Вперёд"/>
+    <Phrase Key="HeaderHelp" Text="Показывает месяцы года или годы десятилетия"/>
+</Language>

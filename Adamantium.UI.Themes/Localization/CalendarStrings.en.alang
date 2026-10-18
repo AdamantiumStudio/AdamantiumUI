@@ -1,0 +1,5 @@
+<Language>
+    <Phrase Key="Previous" Text="Previous"/>
+    <Phrase Key="Next" Text="Next"/>
+    <Phrase Key="HeaderHelp" Text="Shows the months of the year, or the years of the decade"/>
+</Language>

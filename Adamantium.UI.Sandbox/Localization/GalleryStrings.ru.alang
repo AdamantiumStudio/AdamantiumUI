@@ -27,6 +27,7 @@
     <Phrase Key="Trees" Text="Деревья"/>
     <Phrase Key="Splitter" Text="Разделитель"/>
     <Phrase Key="ColorPicker" Text="Выбор цвета"/>
+    <Phrase Key="DateTime" Text="Дата и время"/>
     <Phrase Key="Ranges" Text="Диапазоны"/>
     <Phrase Key="Keyboard" Text="Клавиатура"/>
     <Phrase Key="Resources" Text="Ресурсы"/>
