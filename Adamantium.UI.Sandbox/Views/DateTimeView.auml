@@ -1,0 +1,135 @@
+<View xmlns="http://adamantium/ui"
+      xmlns:x="http://adamantium/ui/xaml/extensions"
+      xmlns:conv="clr-namespace:Adamantium.UI.Sandbox.Converters">
+    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                  HorizontalScrollBarVisibility="Auto">
+        <StackPanel Orientation="Vertical"
+                    Margin="24">
+
+            <TextBlock Text="{Localize DateTimePageStrings.Title}"
+                       FontSize="20"
+                       MarginBottom="4"/>
+            <TextBlock Text="{Localize DateTimePageStrings.Intro}"
+                       FontSize="13"
+                       TextWrapping="WrapByWords"
+                       Foreground="{ResourceReference TextFillColorSecondary}"
+                       MaxWidth="680"
+                       HorizontalAlignment="Left"
+                       MarginBottom="18"/>
+
+            <!-- How days are selected, whether weeks are numbered, and the language the calendar speaks. -->
+            <WrapPanel Orientation="Horizontal">
+                <RadioButton AutomationProperties.AutomationId="SingleDateRadio"
+                             Classes="Toggle"
+                             GroupName="CalendarSelection"
+                             Content="SingleDate"
+                             MarginRight="6"
+                             MarginBottom="6"
+                             IsChecked="{Binding SelectionMode, Converter={conv:EnumToBoolConverter}, ConverterParameter=SingleDate, Mode=TwoWay}"/>
+                <RadioButton Classes="Toggle"
+                             GroupName="CalendarSelection"
+                             Content="SingleRange"
+                             MarginRight="6"
+                             MarginBottom="6"
+                             IsChecked="{Binding SelectionMode, Converter={conv:EnumToBoolConverter}, ConverterParameter=SingleRange, Mode=TwoWay}"/>
+                <RadioButton Classes="Toggle"
+                             GroupName="CalendarSelection"
+                             Content="MultipleRange"
+                             MarginRight="6"
+                             MarginBottom="6"
+                             IsChecked="{Binding SelectionMode, Converter={conv:EnumToBoolConverter}, ConverterParameter=MultipleRange, Mode=TwoWay}"/>
+                <RadioButton Classes="Toggle"
+                             GroupName="CalendarSelection"
+                             Content="None"
+                             MarginRight="24"
+                             MarginBottom="6"
+                             IsChecked="{Binding SelectionMode, Converter={conv:EnumToBoolConverter}, ConverterParameter=None, Mode=TwoWay}"/>
+                <CheckBox AutomationProperties.AutomationId="WeekNumbersCheck"
+                          Content="{Localize DateTimePageStrings.WeekNumbers}"
+                          IsChecked="{Binding ShowWeekNumbers, Mode=TwoWay}"
+                          MarginRight="24"
+                          MarginBottom="6"/>
+                <RadioButton Classes="Toggle"
+                             GroupName="CalendarLanguage"
+                             Content="Русский"
+                             IsChecked="True"
+                             Command="{Binding ShowLanguageCommand}"
+                             CommandParameter="ru-RU"
+                             MarginRight="6"
+                             MarginBottom="6"/>
+                <RadioButton Classes="Toggle"
+                             GroupName="CalendarLanguage"
+                             Content="English (US)"
+                             Command="{Binding ShowLanguageCommand}"
+                             CommandParameter="en-US"
+                             MarginRight="6"
+                             MarginBottom="6"/>
+                <RadioButton Classes="Toggle"
+                             GroupName="CalendarLanguage"
+                             Content="日本語"
+                             Command="{Binding ShowLanguageCommand}"
+                             CommandParameter="ja-JP"
+                             MarginRight="6"
+                             MarginBottom="6"/>
+                <RadioButton Classes="Toggle"
+                             GroupName="CalendarLanguage"
+                             Content="العربية"
+                             Command="{Binding ShowLanguageCommand}"
+                             CommandParameter="ar-EG"
+                             MarginBottom="6"/>
+            </WrapPanel>
+
+            <WrapPanel Orientation="Horizontal"
+                       MarginTop="12">
+                <!-- At the size its content asks for, bound to the page's date. -->
+                <StackPanel Orientation="Vertical"
+                            Margin="0,0,24,24"
+                            VerticalAlignment="Top">
+                    <TextBlock Text="{Localize DateTimePageStrings.Plain}"
+                               MarginBottom="8"/>
+                    <Calendar AutomationProperties.AutomationId="PageCalendar"
+                              SelectedDate="{Binding SelectedDate, Mode=TwoWay}"
+                              SelectionMode="{Binding SelectionMode}"
+                              ShowWeekNumbers="{Binding ShowWeekNumbers}"
+                              Language="{Binding CalendarLanguage}"
+                              HorizontalAlignment="Left"/>
+                    <TextBlock MarginTop="8"><Run Text="{Localize DateTimePageStrings.Selected}"/><Run Text="{Binding SelectedDate, StringFormat='{0:D}'}"/></TextBlock>
+                </StackPanel>
+
+                <!-- From today for three months, the weekend of Christmas and the past struck through. -->
+                <StackPanel Orientation="Vertical"
+                            Margin="0,0,24,24"
+                            VerticalAlignment="Top">
+                    <TextBlock Text="{Localize DateTimePageStrings.Range}"
+                               MarginBottom="8"/>
+                    <Calendar AutomationProperties.AutomationId="RangeCalendar"
+                              DisplayDateStart="{Binding RangeStart}"
+                              DisplayDateEnd="{Binding RangeEnd}"
+                              SelectionMode="{Binding SelectionMode}"
+                              Language="{Binding CalendarLanguage}"
+                              HorizontalAlignment="Left">
+                        <Calendar.BlackoutDates>
+                            <CalendarDateRange Start="2026-12-24"
+                                               End="2026-12-26"/>
+                            <CalendarDateRange Start="2026-12-31"
+                                               End="2027-01-02"/>
+                        </Calendar.BlackoutDates>
+                    </Calendar>
+                </StackPanel>
+            </WrapPanel>
+
+            <!-- Given a size, the calendar's cells share it: no Viewbox around it. -->
+            <TextBlock Text="{Localize DateTimePageStrings.Large}"
+                       MarginBottom="8"/>
+            <Calendar AutomationProperties.AutomationId="LargeCalendar"
+                      Width="640"
+                      Height="520"
+                      HorizontalAlignment="Left"
+                      FontSize="18"
+                      SelectedDate="{Binding SelectedDate, Mode=TwoWay}"
+                      SelectionMode="{Binding SelectionMode}"
+                      ShowWeekNumbers="{Binding ShowWeekNumbers}"
+                      Language="{Binding CalendarLanguage}"/>
+        </StackPanel>
+    </ScrollViewer>
+</View>

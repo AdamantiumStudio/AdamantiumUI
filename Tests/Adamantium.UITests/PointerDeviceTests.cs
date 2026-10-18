@@ -83,6 +83,32 @@ public class PointerDeviceTests
     }
 
     [Test]
+    public void UnderACapture_ThePointerIsOverWhatIsUnderIt_InAnOffsetPanel()
+    {
+        var first = new Border { Width = 100, Height = 100, Background = Brushes.Gray };
+        var second = new Border { Width = 100, Height = 100, Background = Brushes.Gray };
+        var held = new StackPanel { Orientation = Orientation.Horizontal };
+        held.Children.Add(first);
+        held.Children.Add(second);
+        var offset = new StackPanel { Margin = new Thickness(40) };
+        offset.Children.Add(held);
+        _window.Content = offset;
+        for (var i = 0; i < 5; i++)
+        {
+            WindowExtension.UpdateTree(_window);
+        }
+
+        held.AddHandler(PointerEvents.PointerPressedEvent,
+            new PointerPressedEventHandler((_, e) => e.Pointer.Capture(held)), handledEventsToo: true);
+
+        Send(RawPointerEventType.Down, PointerDevice.MouseId, PointerType.Mouse, new Vector2(60, 60), 0);
+        Send(RawPointerEventType.Move, PointerDevice.MouseId, PointerType.Mouse, new Vector2(130, 60), 0);
+
+        Assert.That(Mouse.Pointer.Captured, Is.SameAs(held));
+        Assert.That(Mouse.Pointer.DirectlyOver, Is.SameAs(first), "90 into the panel is still the first of its two");
+    }
+
+    [Test]
     public void ALiftedFinger_IsGoneAndLetsGo()
     {
         Send(RawPointerEventType.Down, 10, PointerType.Touch, new Vector2(50, 50), 0);

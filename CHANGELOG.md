@@ -33,6 +33,13 @@ All packages share one version.
 - A `TreeView` with a `ParentPath` follows its selected node to another parent - a camera hung on a part of a closed
   model: the branches above its new place open and it is scrolled to; it vanished into the closed branch. A branch the
   user closes over the selection stays closed.
+- While an element holds the pointer, what the pointer is over is found where the pointer is: the point was taken in
+  the window's units as the element's parent's, so in a panel away from the window's corner the hover lit a cell off
+  to the side of the pointer, moving with it.
+- A two-way binding hears the control it binds as soon as it gives the control its first value: a control that refuses
+  or corrects that value writes its own back to the source. Only later changes were heard, so the source kept a value
+  the control had refused - a view model's date a calendar could not select stayed in the view model, the calendar
+  showing none.
 - A `TextBlockOverflow` in a grid's star columns let its layout settle: it took its room each time the grid measured
   it - first unbounded, then the column's width - and laid the block's text out again every time, never idle, the
   overflow under the others as short as nothing and its lines over what came below. It takes its room as it is
@@ -60,6 +67,16 @@ All packages share one version.
 
 ### Added
 
+- `Calendar`, with WPF's API: the days of a month, the months of a year and the years of a decade (`DisplayMode`), the
+  header going up a level and the arrows back and on; `SelectionMode` (one date, one run, several runs or none) with
+  `SelectedDate`/`SelectedDates`, `BlackoutDates`, `DisplayDateStart`/`End`, `IsTodayHighlighted` and
+  `ShowWeekNumbers`. Days are selected by click, Ctrl, Shift and a drag; the keyboard moves through them, its cursor
+  shown only once the keyboard is in use. Month and day names, the first day of the week (or `FirstDayOfWeek`) and
+  the week numbers follow the calendar's `Language`, on the Gregorian calendar (Thai keeps its Buddhist years). Given
+  a size, its cells share the room - no `Viewbox` needed - and it keeps its size from level to level. Unlike WPF, a
+  `SelectedDate` it cannot select goes back to the day selected rather than throwing, and blackout days or a range
+  that come to cover selected days let them go. It is in the Fluent, Graphite and macOS themes, reaches automation
+  as a grid of selectable dates, and has a "Date and time" tab in the sandbox.
 - The sandbox's text tab has a topic "New in typesetting": CJK punctuation with `TextSpacingTrim` and
   `HangingPunctuation` switched, words hyphenated inside a ligature and at an Arabic soft hyphen, a tall line in
   columns, a vertical field and a control in a vertical line, one text through three frames, 'SVG' glyphs of a font of
