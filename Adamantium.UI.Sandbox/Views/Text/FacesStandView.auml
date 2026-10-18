@@ -7,14 +7,14 @@
                    Margin="0,0,0,6"/>
         <TextBlock FontSize="20">
             <TextBlock.Inlines>
-                <Run Text="Light "
+                <Run Text="Light"
                      FontWeight="Light"/>
-                <Run Text="Regular "/>
-                <Run Text="SemiBold "
+                <Run Text="Regular"/>
+                <Run Text="SemiBold"
                      FontWeight="SemiBold"/>
-                <Run Text="Bold "
+                <Run Text="Bold"
                      FontWeight="Bold"/>
-                <Run Text="Black "
+                <Run Text="Black"
                      FontWeight="Black"/>
                 <Run Text="Italic"
                      FontStyle="Italic"/>
@@ -29,15 +29,15 @@
                     Orientation="Vertical">
             <TextBlock>
                 <TextBlock.Inlines>
-                    <Run Text="300 "
+                    <Run Text="300"
                          FontWeight="300"/>
-                    <Run Text="380 "
+                    <Run Text="380"
                          FontWeight="380"/>
-                    <Run Text="460 "
+                    <Run Text="460"
                          FontWeight="460"/>
-                    <Run Text="540 "
+                    <Run Text="540"
                          FontWeight="540"/>
-                    <Run Text="620 "
+                    <Run Text="620"
                          FontWeight="620"/>
                     <Run Text="700"
                          FontWeight="700"/>
@@ -45,9 +45,9 @@
             </TextBlock>
             <TextBlock>
                 <TextBlock.Inlines>
-                    <Run Text="Condensed "
+                    <Run Text="Condensed"
                          FontStretch="Condensed"/>
-                    <Run Text="SemiCondensed "
+                    <Run Text="SemiCondensed"
                          FontStretch="SemiCondensed"/>
                     <Run Text="Normal"/>
                 </TextBlock.Inlines>
@@ -62,10 +62,10 @@
                     Orientation="Vertical">
             <TextBlock>
                 <TextBlock.Inlines>
-                    <Run Text="Regular "/>
-                    <Run Text="Bold "
+                    <Run Text="Regular"/>
+                    <Run Text="Bold"
                          FontWeight="Bold"/>
-                    <Run Text="Italic "
+                    <Run Text="Italic"
                          FontStyle="Italic"/>
                     <Run Text="Bold Italic"
                          FontWeight="Bold"
@@ -74,10 +74,10 @@
             </TextBlock>
             <TextBlock FontSynthesis="Weight, Style">
                 <TextBlock.Inlines>
-                    <Run Text="Regular "/>
-                    <Run Text="Bold "
+                    <Run Text="Regular"/>
+                    <Run Text="Bold"
                          FontWeight="Bold"/>
-                    <Run Text="Italic "
+                    <Run Text="Italic"
                          FontStyle="Italic"/>
                     <Run Text="Bold Italic"
                          FontWeight="Bold"

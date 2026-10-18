@@ -132,8 +132,108 @@ public class TextStyleResourceTests
         Assert.Multiple(() =>
         {
             Assert.That(run.CharacterStyle, Is.SameAs(switched));
-            Assert.That(style.FontSize, Is.EqualTo(30));
+            Assert.That(style.ResolvedFontSize(text), Is.EqualTo(30), "as the block sees it");
+            Assert.That(style.FontSize, Is.NaN, "the shared style keeps no answer");
         });
+    }
+
+    // A style shared by blocks in two scopes answered from the one that resolved it last, for both.
+    [Test]
+    public void AStyleSharedByTwoScopes_GivesEachBlockItsOwnAnswer()
+    {
+        var style = new CharacterStyle();
+        Adamantium.UI.Core.Resources.ResourceResolver.SetDeferred(style, nameof(CharacterStyle.FontSize), "Size");
+        TextBlock InScope(double size, out StackPanel panel)
+        {
+            var text = new TextBlock();
+            text.Inlines.Add(new Run { Text = "Shared", CharacterStyle = style });
+            panel = new StackPanel { Children = { text } };
+            var resources = new Adamantium.UI.Core.Resources.ResourceDictionary();
+            resources.Add("Size", size);
+            Adamantium.UI.Core.Resources.ResourceContext.SetResources(panel, resources);
+            return text;
+        }
+
+        var small = InScope(12, out var smallPanel);
+        var large = InScope(30, out var largePanel);
+        var window = new Adamantium.UI.Controls.Window
+        {
+            Width = 400, Height = 300, Content = new StackPanel { Children = { smallPanel, largePanel } },
+        };
+        for (var i = 0; i < 5; i++)
+        {
+            Adamantium.UI.Extensions.WindowExtension.UpdateTree(window);
+        }
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(style.ResolvedFontSize(small), Is.EqualTo(12));
+            Assert.That(style.ResolvedFontSize(large), Is.EqualTo(30));
+            Assert.That(small.DesiredSize.Height, Is.LessThan(large.DesiredSize.Height), "each laid out at its own size");
+        });
+    }
+
+    // Moved to another scope, a text answers its styles from there.
+    [TestCase("block")]
+    [TestCase("run")]
+    [TestCase("box")]
+    public void ATextMovedToAnotherScope_TakesItsStylesFromThere(string where)
+    {
+        var style = new CharacterStyle();
+        Adamantium.UI.Core.Resources.ResourceResolver.SetDeferred(style, nameof(CharacterStyle.FontSize), "Size");
+        StackPanel Scope(double size)
+        {
+            var panel = new StackPanel();
+            var resources = new Adamantium.UI.Core.Resources.ResourceDictionary();
+            resources.Add("Size", size);
+            Adamantium.UI.Core.Resources.ResourceContext.SetResources(panel, resources);
+            return panel;
+        }
+
+        var small = Scope(12);
+        var large = Scope(30);
+        Adamantium.UI.Core.IMeasurableComponent element;
+        if (where == "box")
+        {
+            element = new TextBox { Text = "Moved", CharacterStyle = style };
+        }
+        else
+        {
+            var text = new TextBlock();
+            if (where == "block")
+            {
+                text.CharacterStyle = style;
+                text.Inlines.Add(new Run { Text = "Moved" });
+            }
+            else
+            {
+                text.Inlines.Add(new Run { Text = "Moved", CharacterStyle = style });
+            }
+
+            element = text;
+        }
+
+        small.Children.Add(element);
+        var window = new Adamantium.UI.Controls.Window
+        {
+            Width = 400, Height = 300, Content = new StackPanel { Children = { small, large } },
+        };
+        void Update()
+        {
+            for (var i = 0; i < 5; i++)
+            {
+                Adamantium.UI.Extensions.WindowExtension.UpdateTree(window);
+            }
+        }
+
+        double Height() => element is TextBox box ? box.MeasureSurface(300).Height : element.DesiredSize.Height;
+        Update();
+        var before = Height();
+        small.Children.Remove(element);
+        large.Children.Add(element);
+        Update();
+
+        Assert.That(Height(), Is.GreaterThan(before + 10), "laid out at the larger scope's size");
     }
 
     [Test]
@@ -153,7 +253,7 @@ public class TextStyleResourceTests
 
         used.BasedOn = late;
 
-        Assert.That(late.FontSize, Is.EqualTo(24));
+        Assert.That(used.ResolvedFontSize(text), Is.EqualTo(24));
     }
 
     [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]

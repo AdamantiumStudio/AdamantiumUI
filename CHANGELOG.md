@@ -7,6 +7,17 @@ All packages share one version.
 
 ### Added
 
+- `CharacterStyle` and `ParagraphStyle` on `TextBlock` and `TextBox` (and `PasswordBox`): named text styles for the
+  whole text, its `Text` with no inlines included. What the element sets itself wins over them, and an inline or a
+  paragraph with its own style takes that one instead; changing a style lays the text out again, and so does moving the
+  element under other resources.
+- A control written among inlines in markup is set into the line in an `InlineUIContainer` of its own, as WPF wraps it
+  (`<TextBlock>Press <Button/> here</TextBlock>`), in the loader and in the generated code alike;
+  `ContentWrapperAttribute.ElementWrapperType` names the wrapper.
+- A `TextBox` takes the baseline grid (`BaselineGridStep`) as a `TextBlock` does: its lines stand on the grid from
+  where its text surface is, its scroll left out; on the grid a single line is not centered off the grid's rows.
+- A `Ruby` inside a `Ruby` on the other side of the base is a double-sided ruby: both annotations are shown, where only
+  the outer one was.
 - `TextBlock.TextLineBounds`, as WinUI's: `Full` (the default), `TrimToCapHeight`, `TrimToBaseline` or `Tight` - the
   block measures from the top of the capitals of its first line and to the baseline of its last, so a label centered by
   its layout has its capitals in the middle.
@@ -1446,6 +1457,20 @@ All packages share one version.
 
 ### Fixed
 
+- A text style shared by texts in different theme scopes gives each its own answer to a `{ResourceReference}` in it:
+  the answer was written into the shared style, so every text took the one resolved last. A style keeps no answer
+  now; each text reads it from where it stands, and a scope switched round a text lays it out again.
+- A control in a line whose text moved inside it, its size and slot the same, moves on the line too: the block read
+  its baseline only when measured or arranged again. It now reads its controls' baselines again after each layout pass
+  that did work - those the text reaches; one past a cut stands nowhere and is left alone.
+- Ctrl+arrows in a `TextBox` holding mixed text, and in a selectable `TextBlock`, go a word at a time by the screen, as
+  the plain arrows go: they went by the reading order, jumping back across right-to-left words.
+- A `TextBox` that does not wrap, its paragraphs running different ways, stands each line at its own edge: the whole
+  text stood at the edge of its first paragraph.
+- White space between two inlines written on lines of their own is a space, as in WPF: `</Bold>`↵`<Italic>` gave
+  "ab". A comment in the gap takes nothing away; elsewhere white space is still dropped. Markup that put the spaces
+  in its runs instead writes the runs side by side (`.../><Run .../>`), as the sandbox's text stands now do.
+- The generator's type resolver takes an interface a type implements as one it is assignable to, as the runtime's does.
 - In Fluent, a tab whose strip is not on top rounds its outer corners, not those against its panel: a tool's tabs,
   under its body, were rounded on top and left a notch either side of where they join it.
 - A tool panel folded to the edge of a docking area takes the area's tab policy, as a docked one does.

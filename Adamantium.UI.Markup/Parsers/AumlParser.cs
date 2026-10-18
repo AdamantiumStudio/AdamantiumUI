@@ -217,7 +217,7 @@ public class ParserContext
             return ParseAumlNode(xElement, false);
         if (node is XText xText)
         {
-            if (IsXmlSpace(xText.Value) && !parentIsMixed && !SpacesTwoElementsOnALine(xText))
+            if (IsXmlSpace(xText.Value) && !parentIsMixed && !SpacesTwoElements(xText))
             {
                 return null;
             }
@@ -254,10 +254,27 @@ public class ParserContext
         return hasElement && hasText;
     }
 
-    private static bool SpacesTwoElementsOnALine(XText text) =>
-        text.PreviousNode is XElement && text.NextNode is XElement && text.Value.IndexOfAny(LineBreaks) < 0;
+    // White space between two elements, on a line or across lines: among inlines it is a space, as in WPF; the
+    // transformer drops it everywhere else. Comments and property elements between them are passed over, and the gap
+    // keeps one space only.
+    private static bool SpacesTwoElements(XText text)
+    {
+        var before = text.PreviousNode;
+        while (before is XComment || IsPropertyElement(before))
+        {
+            before = before.PreviousNode;
+        }
 
-    private static readonly char[] LineBreaks = ['\r', '\n'];
+        var after = text.NextNode;
+        while (after is XComment || IsPropertyElement(after) || (after is XText { Value: var value } && IsXmlSpace(value)))
+        {
+            after = after.NextNode;
+        }
+
+        return before is XElement && after is XElement;
+    }
+
+    private static bool IsPropertyElement(XNode node) => node is XElement element && element.Name.LocalName.IndexOf('.') >= 0;
 
     private List<IAumlAstValueNode> ParseValueNodes(XElement element)
     {

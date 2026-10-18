@@ -86,6 +86,53 @@ public class InlineUIContainerTests
         Assert.That(labelBaseline, Is.EqualTo(text.Layout.GetLine(0).Baseline).Within(1));
     }
 
+    // Text moved inside a control of a fixed size, the slot the same: the line learns of it all the same.
+    [Test]
+    public void TextMovedInsideAFixedSizeChild_MovesItOnTheLine()
+    {
+        var label = new TextBlock { Text = "OK", FontSize = 14, VerticalAlignment = VerticalAlignment.Top };
+        var button = new Border { Width = 60, Height = 40, Child = label };
+        var text = new TextBlock { FontSize = 20 };
+        text.Inlines.Add(new Run { Text = "press " });
+        text.Inlines.Add(new InlineUIContainer { Child = button });
+        text.Inlines.Add(new Run { Text = " now" });
+        var window = Host(text);
+
+        label.VerticalAlignment = VerticalAlignment.Bottom;
+        Update(window);
+
+        var labelBaseline = button.Bounds.Y + label.Bounds.Y + label.Layout.GetLine(0).Baseline;
+        Assert.That(label.Bounds.Y, Is.GreaterThan(0), "the label went down inside the box");
+        Assert.That(labelBaseline, Is.EqualTo(text.Layout.GetLine(0).Baseline).Within(1));
+    }
+
+    // A control past the line the text is cut at stands nowhere; the block does not lay itself out for it every frame.
+    [Test]
+    public void AControlPastTheCut_LeavesTheBlockAtRest()
+    {
+        var text = new CountingTextBlock { FontSize = 20, Width = 120, MaxLines = 1 };
+        text.Inlines.Add(new Run { Text = "a long first line that is cut well before " });
+        text.Inlines.Add(new InlineUIContainer { Child = new TextBlock { Text = "OK", FontSize = 14 } });
+        var window = Host(text);
+
+        var before = text.Measures;
+        Update(window);
+        Update(window);
+
+        Assert.That(text.Measures, Is.EqualTo(before));
+    }
+
+    private sealed class CountingTextBlock : TextBlock
+    {
+        public int Measures { get; private set; }
+
+        protected override Size MeasureOverride(Size availableSize)
+        {
+            Measures++;
+            return base.MeasureOverride(availableSize);
+        }
+    }
+
     [Test]
     public void CenteredByItsContainer_ItStandsInTheMiddleOfTheLine()
     {

@@ -78,7 +78,7 @@ public class RoslynResolvedType : IResolvedType
                 return true;
             current = (current as INamedTypeSymbol)?.BaseType;
         }
-        return false;
+        return _symbol != null && _symbol.AllInterfaces.Any(@interface => @interface.ToDisplayString() == fullName);
     }
     
     public bool InheritsFrom(string baseTypeName)

@@ -213,11 +213,6 @@ public abstract class Inline : FundamentalUIComponent, ITextStyleUser, Adamantiu
 
     void ITextStyleUser.TextStyleChanged(bool rebased)
     {
-        if (rebased && _inBlock)
-        {
-            ResolveResources();
-        }
-
         Rebake();
         RaiseChanged(StyleOnly);
     }
@@ -354,32 +349,24 @@ public abstract class Inline : FundamentalUIComponent, ITextStyleUser, Adamantiu
 
     internal bool InBlock => _inBlock;
 
-    // An inline takes no part in the visual tree: what a {ResourceReference} on it, or on its styles and the ones they
-    // are based on, asks is answered from its block's place there, each time it joins a live tree.
-    void Adamantium.UI.Core.Resources.IResolvesOwnResources.ResolveResources() => ResolveResources();
+    // An inline takes no part in the visual tree: what a {ResourceReference} on it asks is answered from its block's place
+    // there, each time it joins a live tree. Its styles are shared and keep no answer: they are read as the block sees
+    // them, so a theme scope switched round the block lays its text out again.
+    void Adamantium.UI.Core.Resources.IResolvesOwnResources.ResolveResources()
+    {
+        ResolveResources();
+        if (CharacterStyle != null || (this as Paragraph)?.ParagraphStyle != null)
+        {
+            Rebake();
+            RaiseChanged(StyleOnly);
+        }
+    }
 
     private void ResolveResources()
     {
-        TextBlock block = null;
-        for (var node = LogicalParent; node != null && block == null; node = node.LogicalParent)
+        if (Block() is { } block)
         {
-            block = node as TextBlock;
-        }
-
-        if (block == null)
-        {
-            return;
-        }
-
-        Adamantium.UI.Core.Resources.ResourceResolver.ResolveFrom(this, block);
-        for (TextFormat format = CharacterStyle; format != null; format = format.Base)
-        {
-            Adamantium.UI.Core.Resources.ResourceResolver.ResolveFrom(format, block);
-        }
-
-        for (TextFormat format = (this as Paragraph)?.ParagraphStyle; format != null; format = format.Base)
-        {
-            Adamantium.UI.Core.Resources.ResourceResolver.ResolveFrom(format, block);
+            Adamantium.UI.Core.Resources.ResourceResolver.ResolveFrom(this, block);
         }
     }
 
@@ -389,17 +376,19 @@ public abstract class Inline : FundamentalUIComponent, ITextStyleUser, Adamantiu
         ResolveResources();
     }
 
-    internal bool ReachesABlock()
+    internal bool ReachesABlock() => Block() != null;
+
+    private TextBlock Block()
     {
         for (var node = LogicalParent; node != null; node = node.LogicalParent)
         {
-            if (node is TextBlock)
+            if (node is TextBlock block)
             {
-                return true;
+                return block;
             }
         }
 
-        return false;
+        return null;
     }
 
     internal virtual void SetInBlock(bool inBlock)
@@ -429,12 +418,13 @@ public abstract class Inline : FundamentalUIComponent, ITextStyleUser, Adamantiu
         var baking = _inBlock && !IsDiscarded;
         _bakedForeground = Bake(_bakedForeground, baking ? Foreground : null);
         _bakedBackground = Bake(_bakedBackground, baking ? Background : null);
-        // The brushes of its styles are drawn into its text as its own are.
+        // The brushes of its styles, as its block sees them, are drawn into its text as its own are.
         var paragraphStyle = (this as Paragraph)?.ParagraphStyle;
-        _bakedStyleForeground = Bake(_bakedStyleForeground, baking ? CharacterStyle?.ResolvedForeground() : null);
-        _bakedStyleBackground = Bake(_bakedStyleBackground, baking ? CharacterStyle?.ResolvedBackground() : null);
-        _bakedParagraphForeground = Bake(_bakedParagraphForeground, baking ? paragraphStyle?.ResolvedForeground() : null);
-        _bakedParagraphBackground = Bake(_bakedParagraphBackground, baking ? paragraphStyle?.ResolvedBackground() : null);
+        var scope = baking && (CharacterStyle != null || paragraphStyle != null) ? Block() : null;
+        _bakedStyleForeground = Bake(_bakedStyleForeground, baking ? CharacterStyle?.ResolvedForeground(scope) : null);
+        _bakedStyleBackground = Bake(_bakedStyleBackground, baking ? CharacterStyle?.ResolvedBackground(scope) : null);
+        _bakedParagraphForeground = Bake(_bakedParagraphForeground, baking ? paragraphStyle?.ResolvedForeground(scope) : null);
+        _bakedParagraphBackground = Bake(_bakedParagraphBackground, baking ? paragraphStyle?.ResolvedBackground(scope) : null);
         if (_linesBaked == baking)
         {
             return;
@@ -476,11 +466,6 @@ public abstract class Inline : FundamentalUIComponent, ITextStyleUser, Adamantiu
         {
             (e.OldValue as TextFormat)?.Unuse(this);
             (e.NewValue as TextFormat)?.Use(this);
-            if (_inBlock && e.NewValue != null)
-            {
-                ResolveResources();
-            }
-
             Rebake();
         }
 

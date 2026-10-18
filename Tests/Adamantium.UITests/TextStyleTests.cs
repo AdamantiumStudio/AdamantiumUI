@@ -378,4 +378,146 @@ public class TextStyleTests
             Assert.That(First(text, 0).PenX, Is.EqualTo(10).Within(0.01));
         });
     }
+
+    // A block's own styles style its Text with no inlines, as they would a paragraph's runs.
+    [Test]
+    public void TheBlocksStyles_StyleItsPlainText()
+    {
+        UntilTheBoldFaceHasLoaded();
+        var text = new TextBlock
+        {
+            Text = "Plain",
+            CharacterStyle = new CharacterStyle { FontSize = 30, FontWeight = FontWeight.Bold },
+            ParagraphStyle = new ParagraphStyle { TextIndent = 12 },
+        };
+        var window = new Window { Width = 800, Height = 600, Content = new StackPanel { Children = { text } } };
+        Update(window);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(First(text, 0).FontSize, Is.EqualTo(30));
+            Assert.That(First(text, 0).Font.Weight.Value, Is.EqualTo(FontWeight.Bold.Value), "the bold face");
+            Assert.That(First(text, 0).PenX, Is.EqualTo(12).Within(0.01), "the paragraph style's indent");
+        });
+    }
+
+    // What the block sets itself wins over its styles; an inline's own style wins over the block's.
+    [Test]
+    public void WhatTheBlockSetsItself_AndAnInlinesStyle_WinOverTheBlocksStyle()
+    {
+        var text = new TextBlock { FontSize = 16, CharacterStyle = new CharacterStyle { FontSize = 30 } };
+        text.Inlines.Add(new Run { Text = "a" });
+        text.Inlines.Add(new Run { Text = "b", CharacterStyle = new CharacterStyle { FontSize = 40 } });
+        var window = new Window { Width = 800, Height = 600, Content = new StackPanel { Children = { text } } };
+        Update(window);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(First(text, 0).FontSize, Is.EqualTo(16), "the block's own size");
+            Assert.That(First(text, 1).FontSize, Is.EqualTo(40), "the inline's style");
+        });
+    }
+
+    // The block's styles reach its inlines as they reach its plain text; a paragraph's own style is nearer than them.
+    [Test]
+    public void TheBlocksStyles_StyleItsInlines_UnderAParagraphsOwnStyle()
+    {
+        UntilTheBoldFaceHasLoaded();
+        var text = new TextBlock { CharacterStyle = new CharacterStyle { FontSize = 12, FontWeight = FontWeight.Bold } };
+        text.Inlines.Add(new Run { Text = "body" });
+        var heading = new Paragraph { ParagraphStyle = new ParagraphStyle { FontSize = 28 } };
+        heading.Inlines.Add(new Run { Text = "Title" });
+        text.Inlines.Add(heading);
+        var window = new Window { Width = 800, Height = 600, Content = new StackPanel { Children = { text } } };
+        Update(window);
+        var title = text.Layout.GetTextData().First(glyph => glyph.Symbol == 'T');
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(First(text, 0).FontSize, Is.EqualTo(12));
+            Assert.That(First(text, 0).Font.Weight.Value, Is.EqualTo(FontWeight.Bold.Value), "the block style's face");
+            Assert.That(title.FontSize, Is.EqualTo(28), "the paragraph's own style");
+        });
+    }
+
+    // The bold face loads in the background the first time it is asked for: laid out until it has arrived.
+    private static void UntilTheBoldFaceHasLoaded()
+    {
+        var bold = new TextBlock { Text = "x", FontWeight = FontWeight.Bold };
+        var window = new Window { Width = 200, Height = 100, Content = bold };
+        for (var i = 0; i < 300 && bold.Layout?.GetTextData().FirstOrDefault()?.Font.Weight.Value != FontWeight.Bold.Value; i++)
+        {
+            Update(window);
+            LoopSignal.Drain();
+            System.Threading.Thread.Sleep(10);
+        }
+    }
+
+    // A run's own style takes the place of the block's entirely, its face too; a run in a plain paragraph or span takes
+    // the block's.
+    [Test]
+    public void ARunsOwnStyle_TakesTheBlocksFaceAway_APlainContainerKeepsIt()
+    {
+        UntilTheBoldFaceHasLoaded();
+        var text = new TextBlock { CharacterStyle = new CharacterStyle { FontWeight = FontWeight.Bold, FontSize = 31 } };
+        text.Inlines.Add(new Run { Text = "a" });
+        text.Inlines.Add(new Run { Text = "b", CharacterStyle = new CharacterStyle { FontSize = 30 } });
+        var paragraph = new Paragraph();
+        paragraph.Inlines.Add(new Run { Text = "c" });
+        text.Inlines.Add(paragraph);
+        var span = new Span();
+        span.Inlines.Add(new Run { Text = "d" });
+        text.Inlines.Add(span);
+        var window = new Window { Width = 800, Height = 600, Content = new StackPanel { Children = { text } } };
+        Update(window);
+        GlyphWordData Letter(char symbol) => text.Layout.GetTextData().First(glyph => glyph.Symbol == symbol);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(Letter('a').Font.Weight.Value, Is.EqualTo(FontWeight.Bold.Value), "the block style's face");
+            Assert.That(Letter('b').Font.Weight.Value, Is.EqualTo(FontWeight.Normal.Value), "its own style, not the block's");
+            Assert.That(Letter('b').FontSize, Is.EqualTo(30));
+            Assert.That(Letter('c').Font.Weight.Value, Is.EqualTo(FontWeight.Bold.Value), "in a plain paragraph");
+            Assert.That(Letter('c').FontSize, Is.EqualTo(31));
+            Assert.That(Letter('d').Font.Weight.Value, Is.EqualTo(FontWeight.Bold.Value), "in a plain span");
+        });
+    }
+
+    [Test]
+    public void ChangingTheBlocksStyle_LaysItOutAgain()
+    {
+        var style = new CharacterStyle { FontSize = 20 };
+        var text = new TextBlock { Text = "Plain", CharacterStyle = style };
+        var window = new Window { Width = 800, Height = 600, Content = new StackPanel { Children = { text } } };
+        Update(window);
+
+        style.FontSize = 36;
+        Update(window);
+
+        Assert.That(First(text, 0).FontSize, Is.EqualTo(36));
+    }
+
+    [Test]
+    public void ATextBoxsStyles_StyleItsText()
+    {
+        UntilTheBoldFaceHasLoaded();
+        var style = new CharacterStyle { FontSize = 30, FontWeight = FontWeight.Bold };
+        var box = new TextBox { Text = "Edit me", CharacterStyle = style };
+        var empty = new TextBox { CharacterStyle = style };
+        box.MeasureSurface(300);
+        var glyph = box.Layout.GetTextData().First(g => g.PositionInString == 0);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(glyph.FontSize, Is.EqualTo(30));
+            Assert.That(glyph.Font.Weight.Value, Is.EqualTo(FontWeight.Bold.Value));
+            Assert.That(empty.MeasureSurface(300).Height, Is.EqualTo(box.MeasureSurface(300).Height).Within(1e-3),
+                "an empty field's line is as high as its text's");
+        });
+
+        style.FontSize = 18;
+        box.MeasureSurface(300);
+        Assert.That(box.Layout.GetTextData().First(g => g.PositionInString == 0).FontSize, Is.EqualTo(18),
+            "a changed style lays the box out again");
+    }
 }
