@@ -206,6 +206,7 @@ public class TreeView : ItemsControl
             foreach (var row in _flattener.Rows)
             {
                 if (row.IsSelected) _selectedRows.Add(row);
+                ScrollIfAwaited(row);
             }
 
             return;
@@ -221,7 +222,17 @@ public class TreeView : ItemsControl
             foreach (TreeRow row in e.NewItems)
             {
                 if (row.IsSelected) _selectedRows.Add(row);
+                ScrollIfAwaited(row);
             }
+        }
+    }
+
+    private void ScrollIfAwaited(TreeRow row)
+    {
+        if (_awaitedRow != null && Equals(row.Node, _awaitedRow))
+        {
+            _awaitedRow = null;
+            ScrollToWhenMeasured(row);
         }
     }
 
@@ -688,6 +699,7 @@ public class TreeView : ItemsControl
 
     private void Choose(object node)
     {
+        _awaitedRow = null;
         if (node == null)
         {
             if (_selectedRows.Count == 0) return;
@@ -700,11 +712,27 @@ public class TreeView : ItemsControl
         if (_flattener == null) return;
 
         var revealing = !string.IsNullOrEmpty(ParentPath);
-        if ((RowOf(node) ?? (revealing ? Reveal(node) : null)) is not { } row) return;
+        if ((RowOf(node) ?? (revealing ? Reveal(node) : null)) is not { } row)
+        {
+            // A node with no row yet - added a moment ago, its row still to come: the old choice goes now, and the row
+            // comes marked when it is built, by SelectedItem or by the node's own member, and is scrolled to.
+            if (_selectedRows.Count > 0)
+            {
+                ClearSelection();
+                SyncSelectionToContainers();
+            }
+
+            _setNodeSelected(node, true);
+            if (revealing) _awaitedRow = node;
+            return;
+        }
 
         HoldOnly(row);
         if (revealing) ScrollToWhenMeasured(row);
     }
+
+    // The node chosen before its row came, to be scrolled to when it does.
+    private object _awaitedRow;
 
     // The row alone selected, for a choice made outside - not told back. Asked of the selection, not of the row: a row
     // built for a node its view-model already marks selected comes marked, and is still not the one the tree holds.

@@ -19,6 +19,23 @@
     <Phrase Key="Selected" Text="Selected:"/>
     <Phrase Key="ChosenPlan" Select="pro" True="Pro" False="Free"/>
 
+    <Phrase Key="Segmented" Text="Segmented"/>
+    <Phrase Key="ShadingName" Text="Shading"/>
+    <Phrase Key="Shaded" Text="Shaded"/>
+    <Phrase Key="Wireframe" Text="Wireframe"/>
+    <Phrase Key="ShadedWireframe" Text="Shaded + wireframe"/>
+    <Phrase Key="AlignmentName" Text="Alignment"/>
+    <Phrase Key="AlignmentIs" Select="align" Left="Aligned left" Center="Centered" Right="Aligned right" Justify="Justified"/>
+    <Phrase Key="Left" Text="Left"/>
+    <Phrase Key="Center" Text="Center"/>
+    <Phrase Key="Right" Text="Right"/>
+    <Phrase Key="Justify" Text="Justify"/>
+    <Phrase Key="ZoomName" Text="Zoom"/>
+    <Phrase Key="ZoomIs" Text="Zoom: {zoom}%"/>
+    <Phrase Key="Day" Text="Day"/>
+    <Phrase Key="Week" Text="Week"/>
+    <Phrase Key="Month" Text="Month"/>
+
     <Phrase Key="Dropdowns" Text="Dropdowns"/>
     <Phrase Key="SelectCity" Text="Select a city..."/>
     <Phrase Key="CityName" Text="City"/>

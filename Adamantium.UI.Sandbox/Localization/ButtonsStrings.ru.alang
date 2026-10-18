@@ -19,6 +19,23 @@
     <Phrase Key="Selected" Text="Выбран:"/>
     <Phrase Key="ChosenPlan" Select="pro" True="Pro" False="Бесплатный"/>
 
+    <Phrase Key="Segmented" Text="Сегменты"/>
+    <Phrase Key="ShadingName" Text="Отображение"/>
+    <Phrase Key="Shaded" Text="Заливка"/>
+    <Phrase Key="Wireframe" Text="Каркас"/>
+    <Phrase Key="ShadedWireframe" Text="Заливка + каркас"/>
+    <Phrase Key="AlignmentName" Text="Выравнивание"/>
+    <Phrase Key="AlignmentIs" Select="align" Left="Выравнено слева" Center="По центру" Right="Выравнено справа" Justify="По ширине"/>
+    <Phrase Key="Left" Text="Слева"/>
+    <Phrase Key="Center" Text="По центру"/>
+    <Phrase Key="Right" Text="Справа"/>
+    <Phrase Key="Justify" Text="По ширине"/>
+    <Phrase Key="ZoomName" Text="Масштаб"/>
+    <Phrase Key="ZoomIs" Text="Масштаб: {zoom}%"/>
+    <Phrase Key="Day" Text="День"/>
+    <Phrase Key="Week" Text="Неделя"/>
+    <Phrase Key="Month" Text="Месяц"/>
+
     <Phrase Key="Dropdowns" Text="Выпадающие списки"/>
     <Phrase Key="SelectCity" Text="Выберите город..."/>
     <Phrase Key="CityName" Text="Город"/>
