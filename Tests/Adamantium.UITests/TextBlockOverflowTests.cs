@@ -244,6 +244,54 @@ public class TextBlockOverflowTests
         Assert.That(hit, Is.SameAs(button));
     }
 
+    // A grid measures its star columns more than once a pass, first unbounded: the overflows take their room as they are
+    // arranged, so the layout settles, and the one in a row as tall as it asks is as tall as its lines.
+    [Test]
+    public void OverflowsInAGridOfStarColumns_Settle_AndTheOpenOneIsAsTallAsItsLines()
+    {
+        var under = new TextBlockOverflow();
+        var beside = new TextBlockOverflow { Height = 60, OverflowContentTarget = under };
+        var block = new TextBlock
+        {
+            Text = Prose, FontSize = 16, Width = 200, Height = 60, TextWrapping = TextWrapping.WrapByWords,
+            OverflowContentTarget = beside,
+        };
+        var grid = new Grid
+        {
+            ColumnDefinitions =
+            {
+                new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
+                new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
+            },
+            RowDefinitions =
+            {
+                new RowDefinition { Height = GridLength.Auto }, new RowDefinition { Height = GridLength.Auto },
+            },
+        };
+        Grid.SetColumn(beside, 1);
+        Grid.SetRow(under, 1);
+        Grid.SetColumnSpan(under, 2);
+        grid.Children.Add(block);
+        grid.Children.Add(beside);
+        grid.Children.Add(under);
+        _window = new Window { Width = 460, Height = 800, Content = grid };
+        for (var i = 0; i < 10; i++)
+        {
+            WindowExtension.UpdateTree(_window);
+        }
+
+        var lines = LinesIn(block, 2);
+        Assume.That(lines, Is.Not.Empty);
+        var last = block.Layout.GetLine(lines[^1]);
+        Assert.Multiple(() =>
+        {
+            Assert.That(LayoutManager.For(_window).IsSettled, Is.True);
+            Assert.That(under.RenderSize.Width, Is.EqualTo(grid.RenderSize.Width).Within(1), "as wide as both columns");
+            Assert.That(under.RenderSize.Height,
+                Is.EqualTo(System.Math.Ceiling(last.Top + last.Height - under.Frame.Value.Y)).Within(1), "as tall as its lines");
+        });
+    }
+
     [Test]
     public void TextPastTheLastOverflow_IsOverset()
     {

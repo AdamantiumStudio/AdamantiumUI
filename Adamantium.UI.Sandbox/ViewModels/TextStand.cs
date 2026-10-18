@@ -51,4 +51,10 @@ public enum TextStand
     /// placed across, numbers kept with ideographs, columns, a typed placeholder, overset that binds.</summary>
     [Display(Name = "Finishing touches")]
     Finishing,
+
+    /// <summary>What typesetting gained last: CJK punctuation trimmed and hanging, words set again in their hyphenated
+    /// halves, a tall line in frames, vertical fields and controls, one text through frames apart, 'SVG' glyphs styled by
+    /// sheets and clipped in their box, and the color atlas letting go of images no longer shown.</summary>
+    [Display(Name = "New in typesetting")]
+    Typesetting,
 }

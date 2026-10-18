@@ -31,7 +31,11 @@ public partial class TextViewModel : TabPageViewModel
     /// <summary>Which topic the tab is showing.</summary>
     [Bindable] private TextStand _stand = TextStand.Basics;
 
-    partial void OnStandChanged(TextStand value) => ShowStand(value);
+    partial void OnStandChanged(TextStand value)
+    {
+        WatchTheAtlas(value == TextStand.Typesetting);
+        ShowStand(value);
+    }
 
     private void ShowStand(TextStand stand)
         => _ = _regions.GetOrCreateRegion(RegionNames.TextStand).NavigateToInstanceAsync(this, stand.ToString());
@@ -348,4 +352,90 @@ public partial class TextViewModel : TabPageViewModel
     {
         return new FontFamily(new Uri(Path.Combine(AppContext.BaseDirectory, path)));
     }
+
+    // The new typesetting stand: CJK punctuation as CSS's text-spacing-trim and hanging-punctuation set it.
+    [Bindable] private TextSpacingTrim _spacingTrim = TextSpacingTrim.Normal;
+
+    [Bindable] private HangingPunctuation _hanging = HangingPunctuation.AllowEnd;
+
+    public string PunctuationSample =>
+        "「吾輩は猫である。」（名前はまだ無い。）どこで生れたか、とんと見当がつかぬ。「何でも薄暗い所で」泣いていた。";
+
+    // Words broken inside a ligature, and an Arabic word at its soft hyphen: each half set again by itself.
+    public string LigatureSample => "officially affluent offices efficiently shuffled";
+
+    public string ArabicHyphenSample => "مكت­بات المكت­بات والمكت­بات";
+
+    // Our own font of 'SVG' color glyphs: classes, the cascade, a clip in the box's units, an ancestor's clip, a wrong
+    // value, a clip by a use.
+    public FontFamily SvgStylesFont { get; } = FromFile(SandboxContentAssets.Fonts.AdamantiumSvgStyles);
+
+    // Our own font of 600 color images ('sbix'), each its own color and stripes, in rows of twenty: scrolled through, the
+    // atlas lets the rows no longer shown go when the images take more than the budget.
+    public FontFamily TilesFont { get; } = FromFile(SandboxContentAssets.Fonts.AdamantiumColorTiles);
+
+    public IReadOnlyList<string> TileRows { get; } = Enumerable.Range(0, 30)
+        .Select(row => string.Concat(Enumerable.Range(0, 20).Select(column => (char)(0xE000 + row * 20 + column))))
+        .ToArray();
+
+    // A layer of the color atlas: 1024 by 1024 pixels of four bytes with their smaller levels, holding 32 of the tiles.
+    private const double LayerMegabytes = 1024 * 1024 * 4 * 4 / 3.0 / 1_000_000;
+
+    private const int TilesInALayer = 32;
+
+    // The budget of the color atlas while the stand is shown; the default when it is left.
+    [Bindable, Affects(nameof(BudgetImages), nameof(BudgetMegabytes))] private int _colorBudget = 8;
+
+    public string BudgetImages => (ColorBudget * TilesInALayer).ToString();
+
+    public string BudgetMegabytes => (ColorBudget * LayerMegabytes).ToString("0");
+
+    // What the atlas holds now, read four times a second while the stand is shown.
+    [Bindable] private string _colorImages = "0";
+
+    [Bindable] private string _colorLayers = "0";
+
+    [Bindable] private string _colorMegabytes = "0";
+
+    // All 600 tiles at once: what the atlas kept before it let images go.
+    public string AllTilesLayers => Math.Ceiling(600.0 / TilesInALayer).ToString();
+
+    public string AllTilesMegabytes => (Math.Ceiling(600.0 / TilesInALayer) * LayerMegabytes).ToString("0");
+
+    private void ReadTheAtlas()
+    {
+        var layers = FontAtlasStore.ColorImageLayers;
+        ColorImages = FontAtlasStore.ColorImages.ToString();
+        ColorLayers = layers.ToString();
+        ColorMegabytes = (layers * LayerMegabytes).ToString("0");
+    }
+
+    private Adamantium.UI.Core.Dispatcher.DispatcherTimer _atlasWatch;
+
+    partial void OnColorBudgetChanged(int value)
+    {
+        if (Stand == TextStand.Typesetting)
+        {
+            FontAtlasStore.ColorImageLayerBudget = value;
+        }
+    }
+
+    // On the typesetting stand the budget is the stand's and the layers taken are shown; elsewhere the default holds.
+    private void WatchTheAtlas(bool shown)
+    {
+        FontAtlasStore.ColorImageLayerBudget = shown ? ColorBudget : DefaultColorBudget;
+        if (shown && _atlasWatch == null)
+        {
+            _atlasWatch = new Adamantium.UI.Core.Dispatcher.DispatcherTimer { Interval = TimeSpan.FromSeconds(0.25) };
+            _atlasWatch.Tick += (_, _) => ReadTheAtlas();
+            _atlasWatch.Start();
+        }
+        else if (!shown && _atlasWatch != null)
+        {
+            _atlasWatch.Dispose();
+            _atlasWatch = null;
+        }
+    }
+
+    private static readonly int DefaultColorBudget = FontAtlasStore.ColorImageLayerBudget;
 }

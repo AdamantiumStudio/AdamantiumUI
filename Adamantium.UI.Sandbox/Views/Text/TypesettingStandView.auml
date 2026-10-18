@@ -1,0 +1,247 @@
+<View xmlns="http://adamantium/ui"
+      xmlns:x="http://adamantium/ui/xaml/extensions"
+      xmlns:conv="clr-namespace:Adamantium.UI.Sandbox.Converters">
+    <!-- Navigated into the text tab's region under the key "Typesetting"; the DataContext is the tab's own view-model.
+         What typesetting gained last, one section each. -->
+    <StackPanel Orientation="Vertical">
+
+        <!-- CJK punctuation: fullwidth brackets side by side give up their blank halves, a full stop that does not fit
+             hangs past the edge - each as the switches set it. -->
+        <TextBlock Text="{Localize TextStrings.NewPunctuationTitle}"
+                   TextWrapping="WrapByWords"
+                   Margin="0,0,0,8"/>
+        <WrapPanel Orientation="Horizontal">
+            <TextBlock Text="{Localize TextStrings.SpacingTrimLabel}"
+                       VerticalAlignment="Center"
+                       MarginRight="8"
+                       MarginBottom="6"/>
+            <RadioButton AutomationProperties.AutomationId="TrimNormalRadio" Classes="Toggle" GroupName="SpacingTrim"
+                         Content="Normal" MarginRight="6" MarginBottom="6"
+                         IsChecked="{Binding SpacingTrim, Converter={conv:EnumToBoolConverter}, ConverterParameter=Normal, Mode=TwoWay}"/>
+            <RadioButton Classes="Toggle" GroupName="SpacingTrim" Content="SpaceAll" MarginRight="6" MarginBottom="6"
+                         IsChecked="{Binding SpacingTrim, Converter={conv:EnumToBoolConverter}, ConverterParameter=SpaceAll, Mode=TwoWay}"/>
+            <RadioButton Classes="Toggle" GroupName="SpacingTrim" Content="SpaceFirst" MarginRight="6" MarginBottom="6"
+                         IsChecked="{Binding SpacingTrim, Converter={conv:EnumToBoolConverter}, ConverterParameter=SpaceFirst, Mode=TwoWay}"/>
+            <RadioButton Classes="Toggle" GroupName="SpacingTrim" Content="TrimStart" MarginRight="6" MarginBottom="6"
+                         IsChecked="{Binding SpacingTrim, Converter={conv:EnumToBoolConverter}, ConverterParameter=TrimStart, Mode=TwoWay}"/>
+            <RadioButton Classes="Toggle" GroupName="SpacingTrim" Content="TrimBoth" MarginRight="6" MarginBottom="6"
+                         IsChecked="{Binding SpacingTrim, Converter={conv:EnumToBoolConverter}, ConverterParameter=TrimBoth, Mode=TwoWay}"/>
+            <RadioButton Classes="Toggle" GroupName="SpacingTrim" Content="TrimAll" MarginRight="6" MarginBottom="6"
+                         IsChecked="{Binding SpacingTrim, Converter={conv:EnumToBoolConverter}, ConverterParameter=TrimAll, Mode=TwoWay}"/>
+        </WrapPanel>
+        <WrapPanel Orientation="Horizontal">
+            <TextBlock Text="{Localize TextStrings.HangingLabel}"
+                       VerticalAlignment="Center"
+                       MarginRight="8"
+                       MarginBottom="6"/>
+            <RadioButton AutomationProperties.AutomationId="HangNoneRadio" Classes="Toggle" GroupName="Hanging"
+                         Content="None" MarginRight="6" MarginBottom="6"
+                         IsChecked="{Binding Hanging, Converter={conv:EnumToBoolConverter}, ConverterParameter=None, Mode=TwoWay}"/>
+            <RadioButton Classes="Toggle" GroupName="Hanging" Content="AllowEnd" MarginRight="6" MarginBottom="6"
+                         IsChecked="{Binding Hanging, Converter={conv:EnumToBoolConverter}, ConverterParameter=AllowEnd, Mode=TwoWay}"/>
+            <RadioButton Classes="Toggle" GroupName="Hanging" Content="ForceEnd" MarginRight="6" MarginBottom="6"
+                         IsChecked="{Binding Hanging, Converter={conv:EnumToBoolConverter}, ConverterParameter=ForceEnd, Mode=TwoWay}"/>
+        </WrapPanel>
+        <WrapPanel Orientation="Horizontal">
+            <Border Width="272"
+                    Margin="0,0,16,16"
+                    VerticalAlignment="Top"
+                    BorderThickness="1,0,1,0"
+                    BorderBrush="{ResourceReference ControlStrokeColorDefault}">
+                <TextBlock AutomationProperties.AutomationId="PunctuationText"
+                           Text="{Binding PunctuationSample}"
+                           Language="ja"
+                           FontSize="20"
+                           TextWrapping="WrapByWords"
+                           HorizontalTextAlignment="Justify"
+                           TextSpacingTrim="{Binding SpacingTrim}"
+                           HangingPunctuation="{Binding Hanging}"/>
+            </Border>
+            <Border Height="272"
+                    Margin="0,0,16,16"
+                    VerticalAlignment="Top"
+                    BorderThickness="0,1,0,1"
+                    BorderBrush="{ResourceReference ControlStrokeColorDefault}">
+                <TextBlock AutomationProperties.AutomationId="PunctuationVerticalText"
+                           Text="{Binding PunctuationSample}"
+                           Language="ja"
+                           FontSize="20"
+                           WritingMode="VerticalRightToLeft"
+                           TextWrapping="WrapByWords"
+                           HorizontalTextAlignment="Justify"
+                           TextSpacingTrim="{Binding SpacingTrim}"
+                           HangingPunctuation="{Binding Hanging}"/>
+            </Border>
+        </WrapPanel>
+
+        <!-- Hyphenated words set again in their halves: a break inside the ffi ligature, Arabic letters taking their
+             final and initial forms at a soft hyphen. -->
+        <TextBlock Text="{Localize TextStrings.NewHyphenTitle}"
+                   TextWrapping="WrapByWords"
+                   Margin="0,8,0,8"/>
+        <WrapPanel Orientation="Horizontal">
+            <Border Width="110"
+                    Margin="0,0,16,16"
+                    VerticalAlignment="Top"
+                    BorderThickness="1,0,1,0"
+                    BorderBrush="{ResourceReference ControlStrokeColorDefault}">
+                <TextBlock AutomationProperties.AutomationId="LigatureHyphenText"
+                           Text="{Binding LigatureSample}"
+                           FontFamily="{Binding FeatureFont}"
+                           Language="en-US"
+                           FontSize="22"
+                           Hyphens="Auto"
+                           TextWrapping="WrapByWords"/>
+            </Border>
+            <Border Width="120"
+                    Margin="0,0,16,16"
+                    VerticalAlignment="Top"
+                    BorderThickness="1,0,1,0"
+                    BorderBrush="{ResourceReference ControlStrokeColorDefault}">
+                <TextBlock AutomationProperties.AutomationId="ArabicHyphenText"
+                           Text="{Binding ArabicHyphenSample}"
+                           Language="ar"
+                           FontSize="28"
+                           TextWrapping="WrapByWords"/>
+            </Border>
+        </WrapPanel>
+
+        <!-- Frames: a line of larger text in a column is given the room of its own height, not the paragraph's. -->
+        <TextBlock Text="{Localize TextStrings.NewTallLineTitle}"
+                   TextWrapping="WrapByWords"
+                   Margin="0,8,0,8"/>
+        <Border Width="460"
+                HorizontalAlignment="Left"
+                Padding="6"
+                Margin="0,0,16,16"
+                BorderThickness="1"
+                BorderBrush="{ResourceReference ControlStrokeColorDefault}">
+            <TextBlock AutomationProperties.AutomationId="TallLineText"
+                       Columns="2"
+                       ColumnGap="20"
+                       Height="170"
+                       FontSize="15"
+                       Language="en-US"
+                       TextWrapping="WrapByWords"><Run Text="{Binding TrimmedSample}"/><Run Text=" "/><Run FontSize="40" Text="Large words"/><Run Text=" "/><Run Text="{Binding TrimmedSample}"/></TextBlock>
+        </Border>
+
+        <!-- Vertical text: a field to edit and select, and a control standing upright among a block's lines. -->
+        <TextBlock Text="{Localize TextStrings.NewVerticalTitle}"
+                   TextWrapping="WrapByWords"
+                   Margin="0,8,0,8"/>
+        <WrapPanel Orientation="Horizontal">
+            <TextBox AutomationProperties.AutomationId="NewVerticalBox"
+                     Text="{Binding JapaneseSample, Mode=OneWay}"
+                     Language="ja"
+                     FontSize="20"
+                     WritingMode="VerticalRightToLeft"
+                     TextWrapping="WrapByWords"
+                     AcceptsReturn="True"
+                     Width="140"
+                     Height="240"
+                     Margin="0,0,16,16"/>
+            <Border Height="240"
+                    Margin="0,0,16,16"
+                    VerticalAlignment="Top"
+                    BorderThickness="0,1,0,1"
+                    BorderBrush="{ResourceReference ControlStrokeColorDefault}">
+                <TextBlock AutomationProperties.AutomationId="VerticalControlText"
+                           Language="ja"
+                           FontSize="20"
+                           WritingMode="VerticalRightToLeft"
+                           TextWrapping="WrapByWords"><Run Text="吾輩は猫である。"/><InlineUIContainer><Button Content="{Localize TextStrings.NewVerticalButton}"/></InlineUIContainer><Run Text="名前はまだ無い。どこで生れたかとんと見当がつかぬ。"/></TextBlock>
+            </Border>
+        </WrapPanel>
+
+        <!-- One text through frames apart, as InDesign threads them: the block, an overflow beside it, one under both. -->
+        <TextBlock Text="{Localize TextStrings.NewThreadedTitle}"
+                   TextWrapping="WrapByWords"
+                   Margin="0,8,0,8"/>
+        <Border Width="460"
+                HorizontalAlignment="Left"
+                Padding="6"
+                Margin="0,0,16,16"
+                BorderThickness="1"
+                BorderBrush="{ResourceReference ControlStrokeColorDefault}">
+            <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto">
+                <TextBlock AutomationProperties.AutomationId="NewThreadedText"
+                           Text="{Binding ProseSample}"
+                           Language="en-US"
+                           TextWrapping="WrapByWords"
+                           FontSize="16"
+                           Height="110"
+                           Margin="0,0,10,10"
+                           HorizontalTextAlignment="Justify"
+                           Hyphens="Auto"
+                           OverflowContentTarget="{Binding ElementName=NewThreadedBeside}"/>
+                <TextBlockOverflow x:Name="NewThreadedBeside"
+                                   AutomationProperties.AutomationId="NewThreadedBeside"
+                                   Grid.Column="1"
+                                   Height="110"
+                                   Margin="10,0,0,10"
+                                   OverflowContentTarget="{Binding ElementName=NewThreadedUnder}"/>
+                <TextBlockOverflow x:Name="NewThreadedUnder"
+                                   AutomationProperties.AutomationId="NewThreadedUnder"
+                                   Grid.Row="1"
+                                   Grid.ColumnSpan="2"/>
+            </Grid>
+        </Border>
+
+        <!-- 'SVG' color glyphs of our own font: A by classes and an id, B by the cascade, C clipped in its box, D clipped
+             by an ancestor, E with a wrong fill, F clipped by a use. -->
+        <TextBlock Text="{Localize TextStrings.NewSvgTitle}"
+                   TextWrapping="WrapByWords"
+                   Margin="0,8,0,8"/>
+        <TextBlock AutomationProperties.AutomationId="SvgStylesText"
+                   FontFamily="{Binding SvgStylesFont}"
+                   FontSize="64"
+                   Text="ABCDEF"/>
+        <TextBlock Text="{Localize TextStrings.NewSvgLegend}"
+                   TextWrapping="WrapByWords"
+                   MaxWidth="640"
+                   HorizontalAlignment="Left"
+                   Margin="0,4,0,16"/>
+
+        <!-- The color atlas: 600 images in rows. The budget is what it may take before it lets go of images not shown;
+             what it holds now is read off it while the stand is shown. -->
+        <TextBlock Text="{Localize TextStrings.NewAtlasTitle}"
+                   TextWrapping="WrapByWords"
+                   MaxWidth="760"
+                   HorizontalAlignment="Left"
+                   Margin="0,8,0,8"/>
+        <StackPanel Orientation="Horizontal">
+            <TextBlock x:Name="ColorBudgetLabel"
+                       Text="{Localize TextStrings.ColorBudgetLabel}"
+                       VerticalAlignment="Center"/>
+            <Slider AutomationProperties.AutomationId="ColorBudgetSlider"
+                    AutomationProperties.LabeledBy="{Binding ElementName=ColorBudgetLabel}"
+                    Width="200"
+                    Minimum="1"
+                    Maximum="16"
+                    TickFrequency="1"
+                    IsSnapToTickEnabled="True"
+                    IsValueToolTipEnabled="True"
+                    Value="{Binding ColorBudget, Mode=TwoWay}"
+                    Margin="8,0,12,0"/>
+            <TextBlock AutomationProperties.AutomationId="ColorBudgetText"
+                       VerticalAlignment="Center"><Run Text="{Binding ColorBudget}"/><Run Text="{Localize TextStrings.ColorLayersUnit}"/><Run Text="{Binding BudgetImages}"/><Run Text="{Localize TextStrings.ColorImagesUnit}"/><Run Text="{Binding BudgetMegabytes}"/><Run Text="{Localize TextStrings.ColorMegabytesUnit}"/></TextBlock>
+        </StackPanel>
+        <TextBlock AutomationProperties.AutomationId="ColorHeldText"
+                   Margin="0,8,0,0"><Run Text="{Localize TextStrings.ColorHeldLabel}"/><Run Text="{Binding ColorImages}"/><Run Text="{Localize TextStrings.ColorImagesIn}"/><Run Text="{Binding ColorLayers}"/><Run Text="{Localize TextStrings.ColorLayersUnit}"/><Run Text="{Binding ColorMegabytes}"/><Run Text="{Localize TextStrings.ColorMegabytesUnit}"/></TextBlock>
+        <TextBlock Margin="0,4,0,0"><Run Text="{Localize TextStrings.ColorAllLabel}"/><Run Text="{Binding AllTilesLayers}"/><Run Text="{Localize TextStrings.ColorLayersUnit}"/><Run Text="{Binding AllTilesMegabytes}"/><Run Text="{Localize TextStrings.ColorMegabytesUnit}"/></TextBlock>
+        <TextBlock Text="{Localize TextStrings.ColorAtlasNote}"
+                   TextWrapping="WrapByWords"
+                   MaxWidth="760"
+                   HorizontalAlignment="Left"
+                   Opacity="0.75"
+                   Margin="0,4,0,0"/>
+        <ListBox AutomationProperties.AutomationId="ColorTilesList"
+                 ItemsSource="{Binding TileRows}"
+                 FontFamily="{Binding TilesFont}"
+                 FontSize="28"
+                 Height="260"
+                 Width="760"
+                 HorizontalAlignment="Left"
+                 Margin="0,8,0,16"/>
+    </StackPanel>
+</View>

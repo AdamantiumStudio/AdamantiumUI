@@ -225,10 +225,17 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
     private TextLineBounds _lastLineBounds;
     private const float Unbounded = 1e7f;
 
+    // The size the text was laid out at before the last, and what it came to: see EnsureLayout.
+    private bool _hasOther;
+    private double _otherWidth;
+    private double _otherHeight;
+    private Size _otherSize;
+
     // The overflows the text runs on into, in order, and how many of the layout's frames are the block's own: none
     // while it runs into no overflow.
     private List<TextBlockOverflow> _overflows = [];
-    private readonly List<(Size Room, double Phase)> _lastRooms = [];
+    // Kept as numbers: a room not yet known is NaN, and Size's equality would never find it the same.
+    private readonly List<(double Width, double Height, double Phase)> _lastRooms = [];
     private int _ownFrames;
     private const int MostColumnGrowth = 200;
     private const char LineSeparator = (char)0x2028;
@@ -299,7 +306,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
     // Shapes the text only when an input that affects the layout changed since the last call; otherwise returns the
     // cached size (and leaves _textLayout as-is). Cheap to call every measure/arrange/render. Width/Height use
     // double.Equals so NaN==NaN counts as "unchanged" (an auto-sized label stays a cache hit while its parent resizes).
-    private Size EnsureLayout()
+    private Size EnsureLayout(bool measuring = false)
     {
         // Resolve the inherited font (falling back to the single shared default), and (re)build the layout when it
         // changes - the typeface is fixed per TextLayout, so a font change means a new TextLayout for that face.
@@ -360,9 +367,8 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         var shaping = TextShaping(font);
         var threads = TakeChain(vertical ? height : width, vertical ? width : height);
 
-        if (_hasLayout && !_inlinesDirty && SameRooms(threads)
+        var sameInputs = _hasLayout && !_inlinesDirty && SameRooms(threads)
             && _lastText == text && _lastFontSize.Equals(FontSize)
-            && _lastWidth.Equals(width) && _lastHeight.Equals(height)
             && _lastWrapping == TextWrapping && _lastTrimming == TextTrimming
             && _lastHAlign == HorizontalTextAlignment && _lastVAlign == VerticalTextAlignment
             && _lastJustify == JustifyLastLine && _lastDirection == TextDirection && _lastHyphens == Hyphens
@@ -379,11 +385,22 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
             && _lastLineHeight.Equals(LineHeight)
             && _lastLineStacking == LineStackingStrategy && _lastLineSpacing.Equals(LineSpacing)
             && _lastMaxLines == MaxLines && _lastLineBounds == TextLineBounds
-            && ShapesLike(_lastShaping, shaping))
+            && ShapesLike(_lastShaping, shaping);
+        if (sameInputs && _lastWidth.Equals(width) && _lastHeight.Equals(height))
         {
             return _cachedSize;
         }
 
+        // A panel measuring twice a pass at two sizes - a grid's star column first at an upper bound, then at its
+        // share - is answered the size laid out at the other one, not laid out again each time. What is drawn and
+        // arranged is laid out at the size it ends up with.
+        if (measuring && sameInputs && _hasOther && _otherWidth.Equals(width) && _otherHeight.Equals(height))
+        {
+            return _otherSize;
+        }
+
+        _hasOther = sameInputs;
+        (_otherWidth, _otherHeight, _otherSize) = (_lastWidth, _lastHeight, _cachedSize);
         _runFontsPending = false;
         _links.Clear();
         _objects.Clear();
@@ -470,7 +487,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
                     && _textLayout.OversetIndex < (text?.Length ?? 0);
         Distribute(text?.Length ?? 0, vertical);
         _lastRooms.Clear();
-        _lastRooms.AddRange(_overflows.Select(overflow => (overflow.Room, overflow.GridPhase)));
+        _lastRooms.AddRange(_overflows.Select(RoomOf));
         _inlinesDirty = false;
         _lastShaping = shaping;
         if (_lastText != text)
@@ -589,8 +606,10 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
     }
 
     private bool SameRooms(bool threads) =>
-        threads == _ownFrames > 0
-        && (!threads || _lastRooms.SequenceEqual(_overflows.Select(overflow => (overflow.Room, overflow.GridPhase))));
+        threads == _ownFrames > 0 && (!threads || _lastRooms.SequenceEqual(_overflows.Select(RoomOf)));
+
+    private static (double Width, double Height, double Phase) RoomOf(TextBlockOverflow overflow) =>
+        (overflow.Room.Width, overflow.Room.Height, overflow.GridPhase);
 
     // The block's own frames, then a frame for each overflow as large as the room it gives, below them all and clear of
     // the exclusions, on whole pixels, its rows where the grid the overflow stands on has them (at its top without one).
@@ -1806,7 +1825,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         _lastConstraint = availableSize;   // a wrapping block reflows to this (its container's width) when it has no explicit Width
         MeasureHosted();
         _grid.Measure();
-        var size = EnsureLayout();
+        var size = EnsureLayout(measuring: true);
         // The layout is what gets drawn. A measure whose size came out the same has no arrange after it, so a block that
         // already has a slot goes back to the slot's width - else right-aligned text stood at the width it was MEASURED
         // against, short of the slot's edge. It does so in the arrange it asks for: laid out at the old slot here, it

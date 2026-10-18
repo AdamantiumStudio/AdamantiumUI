@@ -165,4 +165,24 @@
     <Phrase Key="FinishingPlaceholderTitle" Text="Подсказка поля с трекингом 300 набрана так же, как его текст:"/>
     <Phrase Key="FinishingPlaceholder" Text="Поиск по документу"/>
     <Phrase Key="FinishingOversetTitle" Text="IsOverset привязан к подписи справа — двигайте число строк:"/>
+    <Phrase Key="TopicTypesetting" Text="Новое в вёрстке"/>
+    <Phrase Key="NewPunctuationTitle" Text="Пунктуация CJK, как в CSS: TextSpacingTrim убирает пустые половины полноширинных скобок рядом и на краях строк, HangingPunctuation вывешивает запятую или точку за край, а выключенная строка растягивается между буквами:"/>
+    <Phrase Key="SpacingTrimLabel" Text="TextSpacingTrim:"/>
+    <Phrase Key="HangingLabel" Text="HangingPunctuation:"/>
+    <Phrase Key="NewHyphenTitle" Text="Слова с переносом формируются заново по половинкам: разрыв внутри лигатуры ffi (of-fice), арабские буквы у мягкого переноса — в конечной и начальной форме:"/>
+    <Phrase Key="NewTallLineTitle" Text="Колонки: строка крупного кегля получает место по своей высоте и не залезает на следующий ряд:"/>
+    <Phrase Key="NewVerticalTitle" Text="Вертикальный текст: поле, которое правится и выделяется вдоль строк, и кнопка, стоящая прямо среди строк блока:"/>
+    <Phrase Key="NewVerticalButton" Text="ОК"/>
+    <Phrase Key="NewThreadedTitle" Text="Один текст через три фрейма — блок, продолжение рядом и ещё одно под обоими (TextBlock.OverflowContentTarget, TextBlockOverflow):"/>
+    <Phrase Key="NewSvgTitle" Text="Цветные глифы «SVG», наш шрифт: таблица стилей, классы и каскад CSS, клипы в единицах рамки:"/>
+    <Phrase Key="NewSvgLegend" Text="A — цвета по классам, у третьего id важнее класса. B — атрибут fill (красный), таблица важнее него (фиолетовый), !important важнее атрибута style (золотой). C — полосы, обрезанные кругом в своей рамке (clipPathUnits=objectBoundingBox). D — обрезан clip-path предка, левая половина. E — fill: bogus отброшен, остаётся коричневый цвет группы. F — обрезан через use сдвинутого прямоугольника."/>
+    <Phrase Key="NewAtlasTitle" Text="Цветной атлас отпускает картинки, которые не рисуются. Каждая плитка ниже — цветная картинка нашего шрифта «sbix», их 600, по двадцать в строке, как эмодзи. Видеокарта хранит такие картинки в цветном атласе — в слоях 1024 на 1024 пикселя, по 32 таких плитки в слое. Бюджет — сколько слоёв атлас может занять, прежде чем начнёт выбрасывать картинки, которых нет на экране. Попробуйте: поставьте бюджет 4, прокрутите список до конца и обратно — атлас держится на тех слоях, что нужны плиткам на экране, а строки, к которым вернулись, приходят такими же."/>
+    <Phrase Key="ColorBudgetLabel" Text="Бюджет:"/>
+    <Phrase Key="ColorLayersUnit" Text=" слоёв ≈ "/>
+    <Phrase Key="ColorImagesUnit" Text=" картинок ≈ "/>
+    <Phrase Key="ColorMegabytesUnit" Text=" МБ"/>
+    <Phrase Key="ColorHeldLabel" Text="Сейчас в атласе: "/>
+    <Phrase Key="ColorImagesIn" Text=" картинок в "/>
+    <Phrase Key="ColorAllLabel" Text="Все 600 сразу — столько атлас держал, пока не умел выбрасывать: "/>
+    <Phrase Key="ColorAtlasNote" Text="Занятые слои остаются занятыми: видеокарта не забирает слой текстуры обратно. Снижение бюджета останавливает рост атласа, но не возвращает память до перезапуска приложения."/>
 </Language>
