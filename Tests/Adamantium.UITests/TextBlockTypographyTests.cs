@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using Adamantium.Fonts;
@@ -216,6 +217,31 @@ public class TextBlockTypographyTests
 
         Assert.That(glyphs.Where(g => g.PositionInString < 5).All(g => g.Font == text.Layout.Font));
         Assert.That(glyphs.Where(g => g.PositionInString >= 6).All(g => g.Font.FullName.Contains("Bold")));
+    }
+
+    [Test]
+    public void ASpansFamily_SetsTheRunsInsideIt_UntilItsOverridesAreCleared()
+    {
+        var flex = new FontFamily(new Uri(Path.Combine(TestContext.CurrentContext.TestDirectory, "Fonts",
+            "RobotoFlex-Variable.ttf")));
+        var span = new Span { FontFamily = flex };
+        span.Inlines.Add(new Run { Text = "flex" });
+        var text = new TextBlock();
+        text.Inlines.Add(new Run { Text = "plain " });
+        text.Inlines.Add(span);
+        HostedUntil(text, () => text.Layout?.GetTextData().Any(g => g.Font.FullName.Contains("Roboto Flex")) == true);
+        var glyphs = text.Layout.GetTextData();
+        var inFamily = glyphs.Where(g => g.PositionInString >= 6).All(g => g.Font.FullName.Contains("Roboto Flex"));
+        var plain = glyphs.Where(g => g.PositionInString < 5).All(g => g.Font == text.Layout.Font);
+
+        span.ClearOverrides();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(inFamily, Is.True);
+            Assert.That(plain, Is.True);
+            Assert.That(span.FontFamily, Is.Null);
+        });
     }
 
     [Test]

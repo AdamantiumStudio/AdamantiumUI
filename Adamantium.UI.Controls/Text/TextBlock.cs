@@ -1591,6 +1591,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
     private TextAttributes InlineAttributes(List<Inline> chain, Size? objectSize = null, double objectRaise = 0)
     {
         var fontSize = double.NaN;
+        FontFamily family = null;
         Brush foreground = null;
         Brush background = null;
         var decorations = TextDecorations.None;
@@ -1626,6 +1627,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
                 fontSize = inline.FontSize;
             }
 
+            family = inline.FontFamily ?? family;
             if (inline.Foreground != null)
             {
                 foreground = inline.Foreground;
@@ -1727,7 +1729,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
                             ?? block.Style;
         var resolvedStretch = stretch ?? characterStyle?.ResolvedStretch(this) ?? paragraphStyle?.ResolvedStretch(this)
                               ?? block.Stretch;
-        _runFontsPending |= !TryResolveFont(FontFamily ?? DefaultFontFamily, resolvedWeight, resolvedStyle,
+        _runFontsPending |= !TryResolveFont(family ?? FontFamily ?? DefaultFontFamily, resolvedWeight, resolvedStyle,
             resolvedStretch, variations ?? FontVariations, out var font);
         return new TextAttributes
         {
