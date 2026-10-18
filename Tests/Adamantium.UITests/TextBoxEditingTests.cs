@@ -4,9 +4,11 @@ using System.Linq;
 using System.Runtime.Versioning;
 using Adamantium.Mathematics;
 using Adamantium.UI.Controls;
+using Adamantium.UI.Controls.Buttons;
 using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Controls.Primitives;
 using Adamantium.UI.Controls.Text;
+using Adamantium.UI.Core;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Text;
 using Adamantium.UI.Extensions;
@@ -20,6 +22,9 @@ namespace Adamantium.UITests;
 [TestFixture]
 public class TextBoxEditingTests
 {
+    [TearDown]
+    public void LetGoOfTheFocus() => FocusManager.ResetFocus();
+
     private static void Type(TextBoxBase box, string text)
         => box.RaiseEvent(new TextInputEventArgs(text) { RoutedEvent = Keyboard.TextInputEvent });
 
@@ -89,20 +94,41 @@ public class TextBoxEditingTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(box.CopyCommand.CanExecute(), Is.False, "nothing selected");
-            Assert.That(box.SelectAllCommand.CanExecute(), Is.True);
-            Assert.That(password.CopyCommand.CanExecute(), Is.False, "a password is not given away");
-            Assert.That(password.CutCommand.CanExecute(), Is.False);
+            Assert.That(CanRun(ApplicationCommands.Copy, box), Is.False, "nothing selected");
+            Assert.That(CanRun(ApplicationCommands.SelectAll, box), Is.True);
+            Assert.That(CanRun(ApplicationCommands.Copy, password), Is.False, "a password is not given away");
+            Assert.That(CanRun(ApplicationCommands.Cut, password), Is.False);
         });
 
-        box.SelectAllCommand.Execute();
+        ApplicationCommands.SelectAll.Execute(null, box);
         box.IsReadOnly = true;
 
         Assert.Multiple(() =>
         {
-            Assert.That(box.CopyCommand.CanExecute(), Is.True);
-            Assert.That(box.CutCommand.CanExecute(), Is.False, "a read-only box is not changed");
-            Assert.That(box.PasteCommand.CanExecute(), Is.False);
+            Assert.That(CanRun(ApplicationCommands.Copy, box), Is.True);
+            Assert.That(CanRun(ApplicationCommands.Cut, box), Is.False, "a read-only box is not changed");
+            Assert.That(CanRun(ApplicationCommands.Paste, box), Is.False);
+        });
+    }
+
+    [Test]
+    public void TheEditingKeys_AreTheCommandsKeys()
+    {
+        var box = new TextBox { Text = "abc" };
+        FocusManager.Focus(box);
+
+        Press(box, Key.A, InputModifiers.LeftControl);
+        Press(box, Key.C, InputModifiers.LeftControl);
+        var copied = Clipboard.GetText();
+        Press(box, Key.Delete, InputModifiers.LeftShift);
+        var cut = box.Text;
+        Press(box, Key.Z, InputModifiers.LeftControl);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(copied, Is.EqualTo("abc"));
+            Assert.That(cut, Is.Empty, "Shift+Delete cuts");
+            Assert.That(box.Text, Is.EqualTo("abc"), "Ctrl+Z takes the cut back");
         });
     }
 
@@ -293,21 +319,38 @@ public class TextBoxEditingTests
     }
 
     [Test]
-    public void AMenuOpenedOnAnotherBox_IsNotThisBoxs()
+    public void ARibbonsCopy_CopiesFromTheFieldOutsideIt_EvenAfterTheRibbonWasClicked()
     {
-        var first = new TextBox { Text = "abc" };
-        var second = new TextBox { Text = "xyz" };
-        var menu = new ContextMenu();
-        var copy = new MenuItem();
-        TextBoxBase.SetEditAction(copy, TextEditAction.Copy);
-        menu.Items.Add(copy);
-        first.ContextMenu = menu;
-        second.ContextMenu = menu;
-        first.SelectAll();
+        var notes = new TextBox { Text = "notes" };
+        var copy = new Button();
+        var ribbon = new StackPanel { Children = { copy } };
+        FocusManager.SetIsFocusScope(ribbon, true);
+        var view = new StackPanel { Children = { notes, ribbon } };
+        CommandManager.GetCommandBindings(view).Add(new CommandBinding(ApplicationCommands.Copy,
+            (_, _) => Clipboard.SetText("scene")));
+        notes.SelectAll();
+        FocusManager.Focus(notes);
+        copy.Focusable = true;
+        FocusManager.Focus(copy);
+        Clipboard.SetText(string.Empty);
 
-        menu.Open(first);
+        Press(copy, Key.C, InputModifiers.LeftControl);
 
-        Assert.That(copy.Command, Is.SameAs(first.CopyCommand));
+        Assert.That(Clipboard.GetText(), Is.EqualTo("notes"));
+    }
+
+    [Test]
+    public void AnEditingKeyTheBoxCannotRunNow_StaysWithTheBox()
+    {
+        var box = new TextBox();
+        var grid = new StackPanel { Children = { box } };
+        var reachedTheGrid = false;
+        grid.AddHandler(Keyboard.KeyDownEvent, new KeyEventHandler((_, _) => reachedTheGrid = true));
+        FocusManager.Focus(box);
+
+        Press(box, Key.Z, InputModifiers.LeftControl);
+
+        Assert.That(reachedTheGrid, Is.False, "an empty undo is still the box's Ctrl+Z");
     }
 
     // Marks made for an older text stay on their words: shifted past an edit before them, dropped where it touches them.
@@ -332,13 +375,24 @@ public class TextBoxEditingTests
     {
         var box = new TextBox();
         Clipboard.SetText(string.Empty);
-        var empty = box.PasteCommand.CanExecute();
+        var empty = CanRun(ApplicationCommands.Paste, box);
         Clipboard.SetText("x");
 
         Assert.Multiple(() =>
         {
             Assert.That(empty, Is.False);
-            Assert.That(box.PasteCommand.CanExecute(), Is.True);
+            Assert.That(CanRun(ApplicationCommands.Paste, box), Is.True);
+        });
+    }
+
+    private static bool CanRun(RoutedCommand command, IInputComponent target) =>
+        command.Query(null, target).CanExecute;
+
+    private static void Press(IInputComponent target, Key key, InputModifiers modifiers)
+    {
+        target.RaiseEvent(new KeyEventArgs(KeyboardDevice.CurrentDevice, key, modifiers, 0)
+        {
+            RoutedEvent = Keyboard.KeyDownEvent
         });
     }
 

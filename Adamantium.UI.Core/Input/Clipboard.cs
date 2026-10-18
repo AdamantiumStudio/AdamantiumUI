@@ -11,6 +11,7 @@ public static class Clipboard
     {
         private string _text = string.Empty;
         public string GetText() => _text;
+        public bool HasText() => _text.Length > 0;
         public void SetText(string text) => _text = text ?? string.Empty;
     }
 
@@ -18,6 +19,9 @@ public static class Clipboard
     public static IClipboard Current { get; set; } = new InProcessClipboard();
 
     public static string GetText() => Current?.GetText() ?? string.Empty;
+
+    /// <summary>Whether there is text to paste, without reading it.</summary>
+    public static bool HasText() => Current?.HasText() == true;
 
     public static void SetText(string text) => Current?.SetText(text ?? string.Empty);
 }

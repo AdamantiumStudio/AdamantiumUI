@@ -27,6 +27,8 @@ internal sealed class WindowsClipboard : IClipboard
         finally { Win32Interop.CloseClipboard(); }
     }
 
+    public bool HasText() => Win32Interop.IsClipboardFormatAvailable(Win32Interop.CF_UNICODETEXT);
+
     public void SetText(string text)
     {
         text ??= string.Empty;

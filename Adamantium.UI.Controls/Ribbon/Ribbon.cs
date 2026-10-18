@@ -20,6 +20,11 @@ namespace Adamantium.UI.Controls;
 /// </summary>
 public class Ribbon : Selector
 {
+    static Ribbon()
+    {
+        FocusManager.IsFocusScopeProperty.OverrideMetadata(typeof(Ribbon), new PropertyMetadata(true));
+    }
+
     // Sizing is ATTACHED because the commands share no base (Button vs ToggleButton), and so any control put in a
     // group - a drop-down, a slider - can state the same range.
 

@@ -74,24 +74,24 @@ public abstract class TextBoxBase : Control
         nameof(MisspellingBrush), typeof(Brush), typeof(TextBoxBase),
         new PropertyMetadata(new SolidColorBrush(Colors.Red), PropertyMetadataOptions.AffectsRender));
 
-    /// <summary>Set on a row of a text box's menu: the box's command the row runs. The box hands the row its command as
-    /// the menu opens, so a theme's menu names the action and needs no binding.</summary>
-    public static readonly AdamantiumProperty EditActionProperty = AdamantiumProperty.RegisterAttached("EditAction",
-        typeof(TextEditAction), typeof(AdamantiumComponent), new PropertyMetadata(TextEditAction.None));
-
     private static readonly TextAttributes Squiggled = new() { Decorations = TextDecorations.Squiggle };
 
     private IReadOnlyList<TextRange> _misspelled = [];
     private IReadOnlyList<TextRange> _lastShapedMisspelled = [];
-    private ContextMenu _watchedMenu;
     private (double Min, double Max)? _hostHeights;
-    private TextEditCommand _cutCommand;
-    private TextEditCommand _copyCommand;
-    private TextEditCommand _pasteCommand;
-    private TextEditCommand _selectAllCommand;
 
     static TextBoxBase()
     {
+        Bind(ApplicationCommands.Cut, static box => box.CutToClipboard(),
+            static box => box.HasSelection && !box.IsReadOnly && box.GivesTextAway);
+        Bind(ApplicationCommands.Copy, static box => box.CopyToClipboard(),
+            static box => box.HasSelection && box.GivesTextAway);
+        Bind(ApplicationCommands.Paste, static box => box.PasteFromClipboard(),
+            static box => !box.IsReadOnly && Clipboard.HasText());
+        Bind(ApplicationCommands.SelectAll, static box => box.SelectAll(), static box => box.TextLength > 0);
+        Bind(ApplicationCommands.Undo, static box => box.Undo(), static box => !box.IsReadOnly && box._undo.Count > 0);
+        Bind(ApplicationCommands.Redo, static box => box.Redo(), static box => !box.IsReadOnly && box._redo.Count > 0);
+
         FontFamilyProperty.OverrideMetadata(typeof(TextBoxBase),
             new PropertyMetadata(null, PropertyMetadataOptions.Inherits, (a, _) => (a as TextBoxBase)?.OnFontChanged()));
         // An editor is a keyboard-focus target - opt in (the base default is now false). Its inner TextPresenter stays
@@ -278,22 +278,6 @@ public abstract class TextBoxBase : Control
         }
     }
 
-    /// <summary>Cuts the selection to the clipboard; applies while there is one the box may give away and change.</summary>
-    public TextEditCommand CutCommand =>
-        _cutCommand ??= new TextEditCommand(CutToClipboard, () => HasSelection && !IsReadOnly && GivesTextAway);
-
-    /// <summary>Copies the selection, as shown, to the clipboard; applies while there is one the box may give away.</summary>
-    public TextEditCommand CopyCommand =>
-        _copyCommand ??= new TextEditCommand(CopyToClipboard, () => HasSelection && GivesTextAway);
-
-    /// <summary>Pastes the clipboard's text over the selection; applies while the box can be changed and there is text
-    /// to paste.</summary>
-    public TextEditCommand PasteCommand => _pasteCommand ??= new TextEditCommand(PasteFromClipboard,
-        () => !IsReadOnly && !string.IsNullOrEmpty(Clipboard.GetText()));
-
-    /// <summary>Selects the whole text; applies while there is some.</summary>
-    public TextEditCommand SelectAllCommand => _selectAllCommand ??= new TextEditCommand(SelectAll, () => TextLength > 0);
-
     /// <summary>Whether the box lets its text go out by copy and cut; a password box does not.</summary>
     protected virtual bool GivesTextAway => true;
 
@@ -354,65 +338,11 @@ public abstract class TextBoxBase : Control
         {
             InvalidateSurface(measure: true);
         }
-        else if (e.Property == ContextMenuProperty)
-        {
-            if (_watchedMenu != null)
-            {
-                _watchedMenu.Opening -= OnMenuOpening;
-            }
-
-            _watchedMenu = ContextMenu;
-            if (_watchedMenu != null)
-            {
-                _watchedMenu.Opening += OnMenuOpening;
-            }
-        }
     }
 
-    protected override void OnDiscarded()
-    {
-        base.OnDiscarded();
-        if (_watchedMenu != null)
-        {
-            _watchedMenu.Opening -= OnMenuOpening;
-            _watchedMenu = null;
-        }
-    }
-
-    public static TextEditAction GetEditAction(AdamantiumComponent element) =>
-        element.GetValue<TextEditAction>(EditActionProperty);
-
-    public static void SetEditAction(AdamantiumComponent element, TextEditAction value) =>
-        element.SetValue(EditActionProperty, value);
-
-    private void OnMenuOpening(object sender, ContextMenuOpeningEventArgs e)
-    {
-        if (!ReferenceEquals(e.Target, this))
-        {
-            return;
-        }
-
-        foreach (var row in _watchedMenu.Items.OfType<MenuItem>())
-        {
-            var command = GetEditAction(row) switch
-            {
-                TextEditAction.Cut => CutCommand,
-                TextEditAction.Copy => CopyCommand,
-                TextEditAction.Paste => PasteCommand,
-                TextEditAction.SelectAll => SelectAllCommand,
-                _ => null,
-            };
-            if (command != null && !ReferenceEquals(row.Command, command))
-            {
-                row.Command = command;
-            }
-        }
-
-        _cutCommand?.RaiseCanExecuteChanged();
-        _copyCommand?.RaiseCanExecuteChanged();
-        _pasteCommand?.RaiseCanExecuteChanged();
-        _selectAllCommand?.RaiseCanExecuteChanged();
-    }
+    private static void Bind(RoutedCommand command, Action<TextBoxBase> run, Func<TextBoxBase, bool> can) =>
+        CommandManager.RegisterClassCommandBinding(typeof(TextBoxBase), new CommandBinding(command,
+            (sender, _) => run((TextBoxBase)sender), (sender, e) => e.CanExecute = can((TextBoxBase)sender)));
 
     /// <summary>How many lines the box is at least and at most as tall as; 0 for no limit. Past the most, the text
     /// scrolls.</summary>
@@ -1161,49 +1091,9 @@ public abstract class TextBoxBase : Control
                 DeleteBackward();
                 e.Handled = true;
                 break;
-            case Key.Delete when shift && !ctrl:
-                CutToClipboard();
-                e.Handled = true;
-                break;
-            case Key.Insert when ctrl && !shift:
-                CopyToClipboard();
-                e.Handled = true;
-                break;
-            case Key.Insert when shift && !ctrl:
-                PasteFromClipboard();
-                e.Handled = true;
-                break;
-            case Key.Delete:
+            case Key.Delete when !shift || ctrl:
                 if (ctrl && !HasSelection) { SelectionStart = CaretIndex; SelectionLength = WordBoundary(CaretIndex, +1) - CaretIndex; }
                 DeleteForward();
-                e.Handled = true;
-                break;
-            case Key.Z when ctrl && shift:   // Ctrl+Shift+Z = redo (common alias)
-                Redo();
-                e.Handled = true;
-                break;
-            case Key.Z when ctrl:
-                Undo();
-                e.Handled = true;
-                break;
-            case Key.Y when ctrl:
-                Redo();
-                e.Handled = true;
-                break;
-            case Key.A when ctrl:
-                SelectAll();
-                e.Handled = true;
-                break;
-            case Key.C when ctrl:
-                CopyToClipboard();
-                e.Handled = true;
-                break;
-            case Key.X when ctrl:
-                CutToClipboard();
-                e.Handled = true;
-                break;
-            case Key.V when ctrl:
-                PasteFromClipboard();
                 e.Handled = true;
                 break;
             default:
@@ -1701,12 +1591,14 @@ public abstract class TextBoxBase : Control
             tb.SetCurrentValue(SelectionLengthProperty, Math.Max(0, len - tb.SelectionStart));
         tb.UpdateFloatState();
         tb.InvalidateSurface(measure: true);
+        CommandManager.InvalidateRequerySuggested(tb);
     }
 
     private static void OnCaretOrSelectionChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
     {
         if (a is not TextBoxBase box) return;
         box.InvalidateSurface();
+        CommandManager.InvalidateRequerySuggested(box);
         if (AutomationEvents.IsListening && box.FindAutomationPeer() != null)
             AutomationEvents.Raise(box, AutomationEvent.TextSelectionChanged);
     }

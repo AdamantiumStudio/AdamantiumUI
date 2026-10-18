@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Scenario xmlns="http://adamantium/automation/scenario" Description="The Text page: every topic opened in turn in the page's region, the message typed in one box read back in the read-only one, the font size set, a line added to the notes and taken out again, a code typed in upper case, and the floating watermark switched.">
+<Scenario xmlns="http://adamantium/automation/scenario" Description="The Text page: every topic opened in turn in the page's region, the message typed in one box read back in the read-only one, the font size set, a line added to the notes and taken out again, a code typed in upper case and copied and pasted through its editing menu, and the floating watermark switched.">
   <Select Target="id=GalleryTabs/id=Text" />
   <Wait Target="id=TextView" />
   <Select Target="id=TextView/name=Editing" />
@@ -18,6 +18,21 @@
   <Key Keys="Backspace Backspace Backspace Backspace Backspace Backspace Backspace Backspace Backspace Backspace Backspace" Into="id=Notes" />
   <Type Text="code 𐐨" Into="id=UpperCase" />
   <Expect Target="id=UpperCase" Value="CODE 𐐀" />
+  <Set Target="id=UpperCase" Value="" />
+  <!-- The editing menu's rows are the box's commands: off while the box has nothing for them, its own when it has. -->
+  <Type Text="abc" Into="id=UpperCase" />
+  <ContextMenu Target="id=UpperCase" />
+  <Expect Target="type=MenuItem,name=Copy" Enabled="False" />
+  <Invoke Target="type=MenuItem,name=Select all" />
+  <ContextMenu Target="id=UpperCase" />
+  <Expect Target="type=MenuItem,name=Copy" Enabled="True" />
+  <Invoke Target="type=MenuItem,name=Copy" />
+  <Key Keys="End" Into="id=UpperCase" />
+  <Type Text="x" Into="id=UpperCase" />
+  <Expect Target="id=UpperCase" Value="ABCX" />
+  <ContextMenu Target="id=UpperCase" />
+  <Invoke Target="type=MenuItem,name=Paste" />
+  <Expect Target="id=UpperCase" Value="ABCXABC" />
   <Set Target="id=UpperCase" Value="" />
   <Toggle Target="id=TextView/name=Floating watermark" />
   <Toggle Target="id=TextView/name=Floating watermark" />

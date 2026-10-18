@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Adamantium.UI.Core.Input;
 using Adamantium.UI.Sandbox.Localization;
 
 namespace Adamantium.UI.Sandbox.ViewModels;
@@ -33,7 +34,7 @@ public sealed class ShellCommands
             Name = nameof(RibbonShellStrings.Paste),
             Tabs = ShellTab.Home,
             IconKey = "PasteIcon",
-            Command = shell.PasteCommand,
+            Command = ApplicationCommands.Paste,
             DropDownItems = shell.PasteOptions
         };
         Cut = new ShellCommand
@@ -41,14 +42,14 @@ public sealed class ShellCommands
             Name = nameof(RibbonShellStrings.Cut),
             Tabs = ShellTab.Home,
             IconKey = "CutIcon",
-            Command = shell.CutCommand
+            Command = ApplicationCommands.Cut
         };
         Copy = new ShellCommand
         {
             Name = nameof(RibbonShellStrings.Copy),
             Tabs = ShellTab.Home,
             IconKey = "CopyIcon",
-            Command = shell.CopyCommand
+            Command = ApplicationCommands.Copy
         };
         Duplicate = new ShellCommand
         {
@@ -76,7 +77,7 @@ public sealed class ShellCommands
             Name = nameof(RibbonShellStrings.SelectAll),
             Tabs = ShellTab.Home | ShellTab.View,
             IconKey = "SelectAllIcon",
-            Command = shell.SelectAllCommand
+            Command = ApplicationCommands.SelectAll
         };
         SelectNone = new ShellCommand
         {
