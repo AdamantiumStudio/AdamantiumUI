@@ -63,6 +63,7 @@
         <StyleInclude Source="{x:Type shared:BusyEffectsStyleSet}"/>
         <!-- Where text does not select: captions of things a press already means something on. -->
         <StyleInclude Source="{x:Type shared:TextSelectionStyleSet}"/>
+        <StyleInclude Source="{x:Type shared:ColorPaletteStyleSet}"/>
         <StyleInclude Source="{x:Type fluent:ItemsControlStyleSet}"/>
         <StyleInclude Source="{x:Type fluent:ListBoxStyleSet}"/>
         <StyleInclude Source="{x:Type fluent:DataGridStyleSet}"/>

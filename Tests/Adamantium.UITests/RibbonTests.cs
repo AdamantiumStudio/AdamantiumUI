@@ -217,20 +217,21 @@ public class RibbonTests
             // Column 0 = the large one, column 1 = a/b/c stacked, column 2 = d (the fourth starts a new run).
             Assert.That(large.Bounds.X, Is.EqualTo(0));
             Assert.That(a.Bounds.X, Is.EqualTo(40));
-            Assert.That(b.Bounds, Is.EqualTo(new Rect(40, 20, 30, 20)));
-            Assert.That(c.Bounds, Is.EqualTo(new Rect(40, 40, 30, 20)));
+            // Rows stand RowSpacing (4) apart.
+            Assert.That(b.Bounds, Is.EqualTo(new Rect(40, 24, 30, 20)));
+            Assert.That(c.Bounds, Is.EqualTo(new Rect(40, 48, 30, 20)));
             // A fourth small command starts a new column, on the SAME top line as the others.
             Assert.That(d.Bounds, Is.EqualTo(new Rect(70, 0, 30, 20)), "a fourth small command starts a new column");
             Assert.That(panel.DesiredSize.Width, Is.EqualTo(100));
-            Assert.That(panel.DesiredSize.Height, Is.EqualTo(60), "the tallest column is the group's height");
+            Assert.That(panel.DesiredSize.Height, Is.EqualTo(68), "the tallest column, its rows apart, is the group's height");
         });
     }
 
-    // The BLOCK is centered in the band and every column starts on that one line. Centering each column separately looks
-    // right for two full columns and wrong the moment they differ: a column of one command floats at the middle while
-    // the column beside it stacks three from the top, and the rows stop lining up.
+    // Every column starts at the top of the band, as in Office, its rows apart by RowSpacing: Word's two rows of font
+    // commands stand at the top, not touching. Centering each column separately would leave a column of one command
+    // floating at the middle beside one that stacks three, and the rows would stop lining up.
     [Test]
-    public void ColumnsShareOneTopLine_AndTheBlockIsCentered()
+    public void ColumnsShareTheTopLine_AndTheirRowsStandApart()
     {
         var large = Command(RibbonSize.Large, 40, 50);
         var a = Command(RibbonSize.Medium, 30, 20);
@@ -245,10 +246,10 @@ public class RibbonTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(a.Bounds.Y, Is.EqualTo(10), "the tallest column is 60 in an 80 band -> 10 above and below");
-            Assert.That(large.Bounds.Y, Is.EqualTo(10), "and the large one starts on the same line");
-            Assert.That(lone.Bounds.Y, Is.EqualTo(10), "as does a column holding a single command");
-            Assert.That(b.Bounds.Y, Is.EqualTo(30), "rows stack from there");
+            Assert.That(a.Bounds.Y, Is.EqualTo(0), "at the top of an 80 band, not in its middle");
+            Assert.That(large.Bounds.Y, Is.EqualTo(0), "and the large one starts on the same line");
+            Assert.That(lone.Bounds.Y, Is.EqualTo(0), "as does a column holding a single command");
+            Assert.That(b.Bounds.Y, Is.EqualTo(20 + panel.RowSpacing), "rows stack from there, apart");
         });
     }
 

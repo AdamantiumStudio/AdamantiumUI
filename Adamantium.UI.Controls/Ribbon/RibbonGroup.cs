@@ -177,8 +177,23 @@ public class RibbonGroup : ItemsControl, IHeaderedItemsControl
             built.DataContext = item;
         }
 
-        if (container is not Base.InputUIComponent command) return;
-        if (!Ribbon.GetCanAddToQuickAccess(command)) return;
+        // A row of commands is not one: each command in it is offered to the quick-access bar on its own.
+        if (container is RibbonControlGroup row)
+        {
+            foreach (var child in row.Children)
+            {
+                PrepareCommand(child as Base.InputUIComponent, child);
+            }
+
+            return;
+        }
+
+        PrepareCommand(container as Base.InputUIComponent, item);
+    }
+
+    private void PrepareCommand(Base.InputUIComponent command, object item)
+    {
+        if (command == null || !Ribbon.GetCanAddToQuickAccess(command)) return;
 
         // A command the author named nothing by gets an identity of its own. Without one it cannot be told apart at all:
         // it would be put in the bar again on every asking (the ribbon never recognizing its own copy) and could then
