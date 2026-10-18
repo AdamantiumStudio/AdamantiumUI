@@ -70,7 +70,8 @@ All packages share one version.
   `DragCompletedCommand` - Move asks it to remove what it gave; handling it keeps the command from running. A control
   that drags its own content, as a text editor drags its selection, answers for it there.
 - A ribbon command its author gave no tip shows its label and its key, as Word's "Bold (Ctrl+B)", read as the tip
-  opens; a tip that reads as nothing - a command with an icon alone - opens no card. `RibbonSplitButton.IndicatorBrush`: a bar under the icon in what the body applies, as Word's font color and
+  opens; a tip that reads as nothing - a command with an icon alone - opens no card.
+  `RibbonSplitButton.IndicatorBrush`: a bar under the icon in what the body applies, as Word's font color and
   highlight show the color picked last.
 - `WavyLine` and `TextRange.Follow` are public, for an editor outside the controls to draw its spelling marks and keep
   them on their words through edits, as `TextBox` does.
