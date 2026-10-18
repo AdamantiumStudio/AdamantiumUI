@@ -33,6 +33,10 @@ All packages share one version.
 - A `TreeView` with a `ParentPath` follows its selected node to another parent - a camera hung on a part of a closed
   model: the branches above its new place open and it is scrolled to; it vanished into the closed branch. A branch the
   user closes over the selection stays closed.
+- Up and Down between two rows of a ribbon group's commands (Word's font boxes over its Bold and Italic) land on the
+  command standing over or under the focus; Up landed on the row's last, Down on its first.
+- A snapshot of an element - an `adam-auto shot`, a drag's picture - paints its children in the window's order: a
+  child a `ZIndex` lowered covered its siblings in it.
 - A `TextBlockOverflow` in a grid's star columns let its layout settle: it took its room each time the grid measured
   it - first unbounded, then the column's width - and laid the block's text out again every time, never idle, the
   overflow under the others as short as nothing and its lines over what came below. It takes its room as it is
@@ -60,6 +64,18 @@ All packages share one version.
 
 ### Added
 
+- `Inline.FontFamily`: a run or a span sets the family of its own text, as WPF's `TextElement` does; `ClearOverrides`
+  takes it off.
+- `DragDropEvents.DragCompleted`: the source of a drag hears how it ended as an event on itself, before its
+  `DragCompletedCommand` - Move asks it to remove what it gave; handling it keeps the command from running. A control
+  that drags its own content, as a text editor drags its selection, answers for it there.
+- A ribbon command its author gave no tip shows its label and its key, as Word's "Bold (Ctrl+B)", read as the tip
+  opens. `RibbonSplitButton.IndicatorBrush`: a bar under the icon in what the body applies, as Word's font color and
+  highlight show the color picked last.
+- A button with no command in a scope that returns the focus (`FocusManager.ReturnsFocus`) gives it back once clicked,
+  as a command's source does: a toggle in an application's bar over a document leaves the typing in the document.
+- `WavyLine` and `TextRange.Follow` are public, for an editor outside the controls to draw its spelling marks and keep
+  them on their words through edits, as `TextBox` does.
 - The sandbox's text tab has a topic "New in typesetting": CJK punctuation with `TextSpacingTrim` and
   `HangingPunctuation` switched, words hyphenated inside a ligature and at an Arabic soft hyphen, a tall line in
   columns, a vertical field and a control in a vertical line, one text through three frames, 'SVG' glyphs of a font of
