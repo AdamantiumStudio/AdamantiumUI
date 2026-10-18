@@ -1,5 +1,6 @@
 using System.Linq;
 using Adamantium.Graphics.Fonts;
+using Adamantium.Mathematics;
 using Adamantium.UI.Controls;
 using Adamantium.UI.Controls.Decorators;
 using Adamantium.UI.Controls.Text;
@@ -53,6 +54,43 @@ public class TextBlockSpacingTests
         }
 
         Assert.That(text.Layout.GetTextData().Select(glyph => glyph.HorizontalScale), Is.All.EqualTo(1.1).Within(1e-9));
+    }
+
+    [Test]
+    public void CjkPunctuationTrimAndHanging_AreInheritedByTheText()
+    {
+        var text = new TextBlock { Text = "吾輩は猫である。", FontSize = 20 };
+        var border = new Border
+        {
+            Child = text, TextSpacingTrim = TextSpacingTrim.TrimBoth, HangingPunctuation = HangingPunctuation.None,
+        };
+        var window = new Window { Width = 900, Height = 600, Content = border };
+        for (var i = 0; i < 5; i++)
+        {
+            WindowExtension.UpdateTree(window);
+        }
+
+        Assert.That(text.Layout.SpacingTrim, Is.EqualTo(TextSpacingTrim.TrimBoth));
+        Assert.That(text.Layout.HangingPunctuation, Is.EqualTo(HangingPunctuation.None));
+
+        border.HangingPunctuation = HangingPunctuation.ForceEnd;
+        WindowExtension.UpdateTree(window);
+
+        Assert.That(text.Layout.HangingPunctuation, Is.EqualTo(HangingPunctuation.ForceEnd));
+    }
+
+    [Test]
+    public void CjkPunctuationTrimAndHanging_AreTakenByATextBox()
+    {
+        var box = new TextBox
+        {
+            Text = "吾輩は猫である。", FontSize = 20, TextSpacingTrim = TextSpacingTrim.SpaceAll,
+            HangingPunctuation = HangingPunctuation.ForceEnd,
+        };
+        box.MeasureSurface(new Size(double.PositiveInfinity, double.PositiveInfinity));
+
+        Assert.That(box.Layout.SpacingTrim, Is.EqualTo(TextSpacingTrim.SpaceAll));
+        Assert.That(box.Layout.HangingPunctuation, Is.EqualTo(HangingPunctuation.ForceEnd));
     }
 
     [Test]

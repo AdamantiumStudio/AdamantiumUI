@@ -76,5 +76,21 @@
                        Columns="{Binding Tiers}"
                        HorizontalTextAlignment="{Binding LineAlignment}"/>
         </Border>
+
+        <!-- The same in a field to edit: the caret lies across its line, the arrows turn with the text - Down along the
+             line, Left to the next one - and the field wraps at its height, scrolling across. -->
+        <TextBlock Text="{Localize TextStrings.VerticalEditTitle}"
+                   Margin="0,16,0,8"/>
+        <TextBox AutomationProperties.AutomationId="VerticalField"
+                 Text="{Binding VerticalSample, Mode=OneTime}"
+                 Language="ja"
+                 WritingMode="VerticalRightToLeft"
+                 TextWrapping="WrapByWords"
+                 AcceptsReturn="True"
+                 FontSize="22"
+                 Width="320"
+                 Height="{Binding VerticalLength}"
+                 HorizontalAlignment="Left"
+                 HorizontalScrollBarVisibility="Auto"/>
     </StackPanel>
 </View>

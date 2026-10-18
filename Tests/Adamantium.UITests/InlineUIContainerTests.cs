@@ -46,6 +46,27 @@ public class InlineUIContainerTests
     private static float LeftOf(TextBlock text, int index) =>
         text.Layout.GetTextData().Single(glyph => glyph.PositionInString == index).Rect.X;
 
+    // Down vertical lines the child stands upright, as large as it asks, between the text before and after it; it was
+    // given no room at all.
+    [Test]
+    public void InVerticalText_TheChildStandsInItsLine()
+    {
+        var (text, child, _) = Block(40, 24);
+        text.WritingMode = WritingMode.VerticalRightToLeft;
+        text.Height = 200;
+        Host(text);
+        var before = text.Layout.GetRangeRects(1, 2).Single();
+        var after = text.Layout.GetRangeRects(3, 4).Single();
+        var bounds = child.Bounds;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That((bounds.Width, bounds.Height), Is.EqualTo((40.0, 24.0)), "as large as it asks");
+            Assert.That(bounds.Y, Is.EqualTo(before.Bottom).Within(1), "below b");
+            Assert.That(after.Top, Is.EqualTo(bounds.Bottom).Within(1), "above c");
+        });
+    }
+
     [Test]
     public void TheChild_IsTheBlocksVisualChild_AndItsContainersLogicalOne()
     {

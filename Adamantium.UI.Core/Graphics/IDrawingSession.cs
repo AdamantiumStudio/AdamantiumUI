@@ -71,6 +71,16 @@ public interface IDrawingSession
         Brush background,
         Brush stroke,
         IReadOnlyList<GlyphEffect> effects);
+    /// <summary>Draws only the glyphs of the layout touching <paramref name="window"/>, in its units: a block drawing one
+    /// frame of a layout another block owns.</summary>
+    IDrawingSession DrawText(TextRenderingParameters renderingParameters,
+        Size desiredSize,
+        TextLayout textLayout,
+        Brush foreground,
+        Brush background,
+        Brush stroke,
+        IReadOnlyList<GlyphEffect> effects,
+        RectangleF window);
 
     IDrawingSession PushImage(ImageSource image);
 }

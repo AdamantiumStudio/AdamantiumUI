@@ -24,9 +24,9 @@ public sealed class TextPresenter : InputUIComponent
     // The scroll surface: report the FULL content size (all lines, full width) so the enclosing ScrollViewer's
     // ScrollContentPresenter knows the extent and provides the viewport/scrollbars. It measures us unbounded on the axes
     // it lets scroll (so we report our natural extent) and constrained on a disabled axis (so wrapping fits the viewport);
-    // MeasureSurface already interprets an infinite width as "no wrap / full width" and a finite one as the wrap width.
+    // MeasureSurface already interprets an infinite length along the lines as "no wrap" and a finite one as the wrap length.
     protected override Size MeasureOverride(Size availableSize)
-        => Owner == null ? new Size() : Owner.MeasureSurface(availableSize.Width);
+        => Owner == null ? new Size() : Owner.MeasureSurface(availableSize);
 
     // The owner's lines stand on a baseline grid from where this surface is: moved, it lays them out again.
     protected internal override bool MeasuresByPlace => BaselineGridStep > 0 && !double.IsInfinity(BaselineGridStep);

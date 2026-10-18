@@ -153,6 +153,7 @@
     <Phrase Key="LineMiddle" Text="Middle"/>
     <Phrase Key="LineBottom" Text="Bottom"/>
     <Phrase Key="VerticalTitle" Text="Japanese set vertically: lines run down and stack from the right, kana stand upright in their vertical forms, Latin and the year lie turned, and short numbers stand upright across the line:"/>
+    <Phrase Key="VerticalEditTitle" Text="The same in a field to edit: the caret lies across its line, Down goes along it and Left to the next line, and the field wraps at its height:"/>
     <Phrase Key="FinishingCurvesTitle" Text="Curves at a large size (Poppins, cubic curves): the outline follows the curve, not the facets of its chords:"/>
     <Phrase Key="FinishingLineBoundsTitle" Text="TextLineBounds, as in WinUI: each label is centered in its box by its layout, and the fill shows the label's own box - whole lines, trimmed to the top of the capitals, and from the capitals to the baseline. With Tight the capitals stand in the middle:"/>
     <Phrase Key="FinishingTrimTitle" Text="Two and a half lines high. With an ellipsis only lines that fit whole are set; untrimmed, the third line is cut by the edge, as CSS clips it:"/>

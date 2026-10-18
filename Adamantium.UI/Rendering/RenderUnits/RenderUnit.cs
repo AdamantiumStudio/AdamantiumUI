@@ -1135,7 +1135,7 @@ public class TextRenderUnit : RenderUnit<TextPayload>
     private void Rebuild(RectangleF? band)
     {
         _band = band;
-        TextComponent?.GlyphRun = Payload.TextLayout.BuildGlyphRun(GraphicsDevice, band);
+        TextComponent?.GlyphRun = Payload.TextLayout.BuildGlyphRun(GraphicsDevice, Within(Payload, band));
     }
 
     private RectangleF? BandFor(TextPayload payload)
@@ -1143,8 +1143,13 @@ public class TextRenderUnit : RenderUnit<TextPayload>
         _band = payload.TextLayout.GlyphCount < LongFrom || _drawnByCopies || payload.Effects.Count > 0
             ? null
             : _band ?? default(RectangleF);
-        return _band;
+        return Within(payload, _band);
     }
+
+    // The band, inside the part of the layout the payload draws.
+    private static RectangleF? Within(TextPayload payload, RectangleF? band) => payload.Window is { } window
+        ? band is { } shown ? RectangleF.Intersect(shown, window) : window
+        : band;
 
     /// <summary>Letters this block was waiting on have landed in the atlas: lay its quads out again and re-freeze the
     /// glyph run the batch bakes from. Costs nothing for a block whose glyphs were all there (the version check), which
@@ -1153,9 +1158,10 @@ public class TextRenderUnit : RenderUnit<TextPayload>
     /// stream would draw the run as it was: empty.</returns>
     public bool RefreshGlyphsIfArrived()
     {
-        if (Payload?.TextLayout is not { NeedsGlyphRefresh: true } layout) return false;
+        // The unit's own run: blocks drawing frames of one layout build it at their own times.
+        if (Payload?.TextLayout is not { } layout || TextComponent?.GlyphRun is not { IsStale: true }) return false;
 
-        var run = layout.BuildGlyphRun(GraphicsDevice, _band);
+        var run = layout.BuildGlyphRun(GraphicsDevice, Within(Payload, _band));
         if (TextComponent != null) TextComponent.GlyphRun = run;
         // The frozen run is what the batch reads, so the element has to be re-recorded for the new one to be drawn.
         DrawCommand?.Component?.InvalidateRender(false);

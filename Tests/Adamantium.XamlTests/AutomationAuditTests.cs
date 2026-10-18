@@ -158,6 +158,7 @@ public class AutomationAuditTests
         [typeof(ToggleButton)] = (T.Button, null),
         [typeof(FractalView)] = (T.Pane, null),
         [typeof(TextBlock)] = (T.Text, null),
+        [typeof(TextBlockOverflow)] = (null, "shows part of a block's text; the block answers for all of it"),
         [typeof(TextBox)] = (T.Edit, null),
         [typeof(PasswordBox)] = (T.Edit, null),
         [typeof(TextPresenter)] = (null, "draws a text box's text; the text box answers for it"),
