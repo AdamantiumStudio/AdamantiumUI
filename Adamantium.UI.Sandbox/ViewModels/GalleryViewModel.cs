@@ -24,6 +24,7 @@ public partial class GalleryViewModel
         new TreesViewModel(),
         new SplitterViewModel(),
         new ColorPickerViewModel(),
+        new DateTimeViewModel(),
         new RangesViewModel(),
         new KeyboardViewModel(),
         new ResourcesViewModel(),

@@ -27,6 +27,7 @@
     <Phrase Key="Trees" Text="Trees"/>
     <Phrase Key="Splitter" Text="Splitter"/>
     <Phrase Key="ColorPicker" Text="Color Picker"/>
+    <Phrase Key="DateTime" Text="Date and Time"/>
     <Phrase Key="Ranges" Text="Ranges"/>
     <Phrase Key="Keyboard" Text="Keyboard"/>
     <Phrase Key="Resources" Text="Resources"/>

@@ -112,24 +112,25 @@ public sealed class Pointer
         }
 
         var clientRoot = root is IWindow ? root : ((PositionRoot as IUIComponent) ?? root);
-        var p = clientRoot.PointToClient(ScreenPosition);
+        return ToLocal(relativeTo, clientRoot.PointToClient(ScreenPosition));
+    }
 
-        if (Transformed(relativeTo))
+    internal static Vector2 ToLocal(IUIComponent element, Vector2 client)
+    {
+        if (Transformed(element))
         {
-            var local = Vector3F.TransformCoordinate(new Vector3F((float)p.X, (float)p.Y, 0),
-                Matrix4x4F.Invert(relativeTo.WorldTransform));
+            var local = Vector3F.TransformCoordinate(new Vector3F((float)client.X, (float)client.Y, 0),
+                Matrix4x4F.Invert(element.WorldTransform));
 
             return new Vector2(local.X, local.Y);
         }
 
-        IUIComponent v = relativeTo;
-        while (v != null)
+        for (var v = element; v != null; v = v.VisualParent)
         {
-            p -= v.Bounds.Location;
-            v = v.VisualParent;
+            client -= v.Bounds.Location;
         }
 
-        return p;
+        return client;
     }
 
     /// <summary>The pointer in <paramref name="relativeTo"/>'s units, with what it reports.</summary>
