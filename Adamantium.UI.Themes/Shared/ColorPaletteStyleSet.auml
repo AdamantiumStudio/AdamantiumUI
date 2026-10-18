@@ -22,9 +22,21 @@
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <ColorPaletteSwatch Color="{Binding}" Margin="2"/>
+                                    <ColorPaletteSwatch Color="{Binding}"/>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <!-- One row kept for the colors applied through "More colors", as Word's "Recent colors":
+                             empty places until there are some. -->
+                        <TextBlock Text="{Localize ColorPickerStrings.RecentColors}"
+                                   FontSize="12"
+                                   Foreground="{ResourceReference TextFillColorSecondary}"/>
+                        <ItemsControl ItemsSource="{TemplateBinding RecentPlaces}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <UniformGrid Columns="10"/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
                         </ItemsControl>
                         <Button x:Name="PART_MoreColors"
                                 Content="{Localize ColorPickerStrings.MoreColors}"
@@ -49,6 +61,7 @@
     </Style>
 
     <Style Selector="ColorPaletteSwatch">
+        <Setter Property="Margin" Value="2"/>
         <Setter Property="Width" Value="18"/>
         <Setter Property="Height" Value="18"/>
         <Setter Property="Template">
@@ -64,6 +77,11 @@
     </Style>
 
     <Style Selector="ColorPaletteSwatch">
+        <!-- An empty place: an outline, nothing to press. -->
+        <PropertyTrigger Property="HasColor" Value="false">
+            <Setter TargetName="Chrome" Property="Background" Value="Transparent"/>
+            <Setter TargetName="Chrome" Property="BorderBrush" Value="{ResourceReference TextFillColorSecondary}"/>
+        </PropertyTrigger>
         <PropertyTrigger Property="IsPointerOver" Value="true">
             <Setter TargetName="Chrome" Property="BorderBrush" Value="{ResourceReference TextFillColorPrimary}"/>
             <Setter TargetName="Chrome" Property="BorderThickness" Value="2"/>

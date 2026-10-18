@@ -1,5 +1,6 @@
 <Language>
     <Phrase Key="Preview" Text="Образец"/>
     <Phrase Key="MoreColors" Text="Другие цвета…"/>
+    <Phrase Key="RecentColors" Text="Последние цвета"/>
     <Phrase Key="Apply" Text="Применить"/>
 </Language>

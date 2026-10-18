@@ -1,4 +1,7 @@
+using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using Adamantium.Core.Commands;
 using Adamantium.Mathematics;
 using Adamantium.UI.Controls.Automation;
@@ -45,11 +48,21 @@ public class ColorPalette : Control
     public static readonly AdamantiumProperty IsMoreColorsOpenProperty = AdamantiumProperty.Register(
         nameof(IsMoreColorsOpen), typeof(bool), typeof(ColorPalette), new PropertyMetadata(false));
 
+    public static readonly AdamantiumProperty RecentColorsProperty = AdamantiumProperty.Register(nameof(RecentColors),
+        typeof(IList<Color>), typeof(ColorPalette), new PropertyMetadata(null, OnRecentColorsChanged));
+
+    public static readonly AdamantiumProperty RecentCountProperty = AdamantiumProperty.Register(nameof(RecentCount),
+        typeof(int), typeof(ColorPalette), new PropertyMetadata(10, (a, _) => ((ColorPalette)a).ShowRecent()));
+
+    public static readonly AdamantiumProperty RecentPlacesProperty = AdamantiumProperty.RegisterReadOnly(
+        nameof(RecentPlaces), typeof(IReadOnlyList<ColorPaletteSwatch>), typeof(ColorPalette), new PropertyMetadata(null));
+
     private CommandSourceListener<ColorPalette> _commandListener;
     private ButtonBase _noColor;
     private ButtonBase _moreColors;
     private ButtonBase _apply;
     private ColorPicker _picker;
+    private INotifyCollectionChanged _watchedRecent;
 
     /// <summary>The colors of the grid; <see cref="StandardColors"/> unless set.</summary>
     public IReadOnlyList<Color> Colors
@@ -87,6 +100,31 @@ public class ColorPalette : Control
         set => SetValue(IsMoreColorsOpenProperty, value);
     }
 
+    /// <summary>The colors applied through "More colors" lately, the latest first, as Word's "Recent colors": one applied
+    /// there again moves to the front, a pick from the row leaves the order as it is, and past <see cref="RecentCount"/>
+    /// the oldest goes. A list of the palette's own unless
+    /// set - one list given to several palettes is shared, and an application may keep it between runs.</summary>
+    public IList<Color> RecentColors
+    {
+        get => GetValue<IList<Color>>(RecentColorsProperty);
+        set => SetValue(RecentColorsProperty, value);
+    }
+
+    /// <summary>How many recent colors are kept, and how many places their row has.</summary>
+    public int RecentCount
+    {
+        get => GetValue<int>(RecentCountProperty);
+        set => SetValue(RecentCountProperty, value);
+    }
+
+    /// <summary>The row of recent colors as the template shows it: <see cref="RecentCount"/> places, the colors first
+    /// and the rest empty.</summary>
+    public IReadOnlyList<ColorPaletteSwatch> RecentPlaces
+    {
+        get => GetValue<IReadOnlyList<ColorPaletteSwatch>>(RecentPlacesProperty);
+        private set => SetValue(RecentPlacesProperty, value);
+    }
+
     public override void OnApplyTemplate()
     {
         base.OnApplyTemplate();
@@ -112,18 +150,31 @@ public class ColorPalette : Control
     {
         base.OnAttachedToVisualTree(e);
         _commandListener?.Attached();
+        WatchRecent(RecentColors as INotifyCollectionChanged);
+        ShowRecent();
     }
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnDetachedFromVisualTree(e);
         _commandListener?.Detached();
+        WatchRecent(null);
     }
 
     protected override AutomationPeer OnCreateAutomationPeer() => new GroupAutomationPeer(this);
 
-    internal void Pick(Color? color)
+    public ColorPalette()
     {
+        SetValue(RecentColorsProperty, new ObservableCollection<Color>(), ValuePriority.TypeDefault);
+    }
+
+    internal void Pick(Color? color, bool custom = false)
+    {
+        if (color is { } picked && custom)
+        {
+            Remember(picked);
+        }
+
         SetCurrentValue(SelectedColorProperty, color);
         SetCurrentValue(IsMoreColorsOpenProperty, false);
         CommandManager.ExecuteFrom(Command, color, this, null);
@@ -136,6 +187,76 @@ public class ColorPalette : Control
         palette._commandListener ??= new CommandSourceListener<ColorPalette>(palette, static p => p.UpdateCanExecute());
         palette._commandListener.Listen(e.NewValue as ICommand);
         palette.UpdateCanExecute();
+    }
+
+    private void Remember(Color color)
+    {
+        if (RecentColors is not { IsReadOnly: false } recent)
+        {
+            return;
+        }
+
+        recent.Remove(color);
+        recent.Insert(0, color);
+        while (recent.Count > Math.Max(0, RecentCount))
+        {
+            recent.RemoveAt(recent.Count - 1);
+        }
+
+        if (_watchedRecent == null)
+        {
+            ShowRecent();
+        }
+    }
+
+    private static void OnRecentColorsChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
+    {
+        var palette = (ColorPalette)a;
+        if (palette.IsAttachedToVisualTree)
+        {
+            palette.WatchRecent(e.NewValue as INotifyCollectionChanged);
+        }
+
+        palette.ShowRecent();
+    }
+
+    // Watched only while shown: a list shared by an application would otherwise keep every palette ever made alive.
+    private void WatchRecent(INotifyCollectionChanged recent)
+    {
+        if (_watchedRecent != null)
+        {
+            _watchedRecent.CollectionChanged -= OnRecentChanged;
+        }
+
+        _watchedRecent = recent;
+        if (_watchedRecent != null)
+        {
+            _watchedRecent.CollectionChanged += OnRecentChanged;
+        }
+    }
+
+    private void OnRecentChanged(object sender, NotifyCollectionChangedEventArgs e) => ShowRecent();
+
+    // The places are kept and given their colors: an empty place has to be an element of its own to be drawn.
+    private void ShowRecent()
+    {
+        var count = Math.Max(0, RecentCount);
+        if (RecentPlaces?.Count != count)
+        {
+            var made = new ColorPaletteSwatch[count];
+            for (var i = 0; i < count; i++)
+            {
+                made[i] = new ColorPaletteSwatch();
+            }
+
+            RecentPlaces = made;
+        }
+
+        var recent = RecentColors;
+        for (var i = 0; i < count; i++)
+        {
+            RecentPlaces[i].Color = recent != null && i < recent.Count ? recent[i] : null;
+        }
     }
 
     private void UpdateCanExecute() =>
@@ -165,7 +286,7 @@ public class ColorPalette : Control
     {
         if (_picker != null)
         {
-            Pick(_picker.SelectedColor);
+            Pick(_picker.SelectedColor, true);
         }
     }
 

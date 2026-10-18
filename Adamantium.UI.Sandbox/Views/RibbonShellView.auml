@@ -1931,25 +1931,26 @@
                                         Icon="{ObservableResource SnapIcon}"
                                         IsChecked="{Binding Commands.Snap.IsChecked, Mode=TwoWay}"
                                         Ribbon.QuickAccessKey="Snap"/>
-                    <!-- Small: the icon alone, three to a column. MaxSize is a RANGE - the adaptive pass may only shrink. -->
+                    <!-- A row (RibbonControlGroup): side by side, the icon alone, as Word's Bold, Italic and Underline -
+                         one row of the group's column, not three rows of it. Each is offered to the quick-access bar on
+                         its own. -->
+                    <RibbonControlGroup Spacing="2">
                     <RibbonToggleButton Content="{Localize RibbonShellStrings.SnapToVertices}"
                                         Icon="{ObservableResource SnapToVerticesIcon}"
                                         IsChecked="{Binding Commands.SnapToVertices.IsChecked, Mode=TwoWay}"
                                         Ribbon.QuickAccessKey="SnapToVertices"
-                                        MaxSize="Small"
                                         ToolTip="{Localize RibbonShellStrings.SnapToVertices}"/>
                     <RibbonToggleButton Content="{Localize RibbonShellStrings.SnapToEdges}"
                                         Icon="{ObservableResource SnapToEdgesIcon}"
                                         IsChecked="{Binding Commands.SnapToEdges.IsChecked, Mode=TwoWay}"
                                         Ribbon.QuickAccessKey="SnapToEdges"
-                                        MaxSize="Small"
                                         ToolTip="{Localize RibbonShellStrings.SnapToEdges}"/>
                     <RibbonToggleButton Content="{Localize RibbonShellStrings.SnapToFaces}"
                                         Icon="{ObservableResource SnapToFacesIcon}"
                                         IsChecked="{Binding Commands.SnapToFaces.IsChecked, Mode=TwoWay}"
                                         Ribbon.QuickAccessKey="SnapToFaces"
-                                        MaxSize="Small"
                                         ToolTip="{Localize RibbonShellStrings.SnapToFaces}"/>
+                    </RibbonControlGroup>
                 </RibbonGroup>
             </RibbonTab>
 
