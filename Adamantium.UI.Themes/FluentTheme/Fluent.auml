@@ -51,6 +51,7 @@
         <StyleInclude Source="{x:Type fluent:CheckBoxStyleSet}"/>
         <StyleInclude Source="{x:Type fluent:RadioButtonStyleSet}"/>
         <StyleInclude Source="{x:Type fluent:ToggleSwitchStyleSet}"/>
+        <StyleInclude Source="{x:Type fluent:SegmentedControlStyleSet}"/>
         <StyleInclude Source="{x:Type fluent:SliderStyleSet}"/>
         <StyleInclude Source="{x:Type fluent:RangeSliderStyleSet}"/>
         <StyleInclude Source="{x:Type fluent:NumericUpDownStyleSet}"/>

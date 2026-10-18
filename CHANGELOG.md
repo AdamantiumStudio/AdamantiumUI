@@ -5,7 +5,36 @@ All packages share one version.
 
 ## Unreleased
 
+### Fixed
+
+- An items host with `IsVirtualizing="False"` asks for what its items take; it asked for all the room it was given, as
+  a scrolling list's viewport does, so a row of them standing in a taller space grew as tall as the space.
+- A `TreeView` told to select a node that has no row yet - an entity made and selected at once - lets the row selected
+  before go at once; it stayed selected beside the new one when its row came. The new row comes selected - a node
+  keeping its own selection is marked - and, with a `ParentPath`, is scrolled to.
+
 ### Added
+
+- `SegmentedControl` and `SegmentedControlItem`: a few choices of one setting side by side, one of them chosen, as
+  macOS's segmented control. Segments are written in markup, made from `ItemsSource` by `ItemTemplate` (each made
+  segment's `DataContext` is its item, so `ItemContainerStyle` can bind a segment to its model), or made from an enum by
+  `EnumType`. A segment's `Command` runs when it is chosen - clicked, or reached with the arrows, Home or End; choosing
+  the chosen one again runs nothing. A segment whose command cannot run is disabled and the keys pass it by. One tab
+  stop for the whole control; made not focusable, as in a toolbar, a click leaves the keyboard where it was. A
+  disabled control fades whole. To automation it is a list with one selected item. Styled in every theme; the Buttons
+  tab of the sandbox shows them.
+- `Selector.SelectedValue` and `SelectedValuePath`, as in WPF: the selected item's value - its property named by the
+  path, or the item itself - and, set, the item whose value it is selected, also when it is named before the items
+  come. A view-model holds a plain value while the items are pictures or models written in markup.
+- `SegmentedChoiceProperty` (`PropertyEditors.Segments()`): a property grid row choosing among a few values with a
+  `SegmentedControl`; its `EditorTemplate` may bring segments of its own, `ValuePath` naming the value of each. A
+  `PropertyRow` now follows any `Selector` editor it shows, not only a `DropDown`. A `ChoiceProperty` finds and reads
+  its choice through the selector's `SelectedValuePath`, and its enum's values come as one list while the enum stays.
+
+- `RibbonGallery.ItemCommand`: a gallery that runs its choices rather than holds one, as a gallery of shapes to insert
+  does. A picked item - clicked or chosen with Enter or Space, in the band or the drop-down - is passed to the command
+  and the drop-down closes; the gallery has no selection (one set on it is dropped), so the same item runs again on the
+  next pick. A choice the command cannot run is disabled. To automation its choices are invoked, not selected.
 
 - `TextBlock.TextLineBounds`, as WinUI's: `Full` (the default), `TrimToCapHeight`, `TrimToBaseline` or `Tight` - the
   block measures from the top of the capitals of its first line and to the baseline of its last, so a label centered by

@@ -139,6 +139,60 @@ public class TreeViewRevealTests
         Assert.That(((TreeRow)tree.Items[1]).IsSelected, Is.True);
     }
 
+    // An entity made and selected at once, while another was selected: the row chosen before lets go at once, not left
+    // selected beside the new one.
+    [Test]
+    public void ANodeChosenBeforeItsRowComes_LetsTheOldRowGo()
+    {
+        var model = new Node("model");
+        var roots = new ObservableCollection<Node> { model };
+        var tree = Tree(nameof(Node.Parent));
+        tree.ItemsSource = roots;
+        tree.SelectedItem = model;
+        var light = new Node("light");
+
+        tree.SelectedItem = light;
+        var modelLetGo = !((TreeRow)tree.Items[0]).IsSelected;
+        roots.Add(light);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(modelLetGo, Is.True, "before the new row came");
+            Assert.That(((TreeRow)tree.Items[0]).IsSelected, Is.False);
+            Assert.That(((TreeRow)tree.Items[1]).IsSelected, Is.True);
+            Assert.That(tree.SelectedItem, Is.SameAs(light));
+        });
+    }
+
+    // Where a node keeps its own selection, the node chosen before its row came is marked, so its row comes selected.
+    [Test]
+    public void ANodeChosenBeforeItsRowComes_IsMarked_WhereNodesKeepTheirSelection()
+    {
+        var model = new Node("model");
+        var roots = new ObservableCollection<Node> { model };
+        var tree = Tree(nameof(Node.Parent));
+        var style = new Adamantium.UI.Core.Resources.Style
+        {
+            Selector = new Adamantium.UI.Core.Resources.StyleSelector { Types = { typeof(TreeViewItem) } }
+        };
+        style.Setters.Add(new Adamantium.UI.Core.Resources.Setter("IsSelected",
+            new Binding(nameof(Node.Selected)) { Mode = BindingMode.TwoWay }));
+        tree.ItemContainerStyle = style;
+        tree.ItemsSource = roots;
+        tree.SelectedItem = model;
+        var light = new Node("light");
+
+        tree.SelectedItem = light;
+        roots.Add(light);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(model.Selected, Is.False);
+            Assert.That(light.Selected, Is.True);
+            Assert.That(((TreeRow)tree.Items[1]).IsSelected, Is.True);
+        });
+    }
+
     // A tree made after the choice - the hierarchy shown once the scene had a selection - opens to it.
     [Test]
     public void ANodeChosenBeforeTheRoots_IsRevealedWhenTheyCome()
@@ -174,9 +228,9 @@ public class TreeViewRevealTests
         public Looping Parent { get; set; }
     }
 
-    // A node not under these roots at all leaves the tree as it is.
+    // A node not under these roots at all opens nothing.
     [Test]
-    public void ANodeFromElsewhere_ChangesNothing()
+    public void ANodeFromElsewhere_OpensNothing()
     {
         var model = new Node("model");
         new Node("wing", model);

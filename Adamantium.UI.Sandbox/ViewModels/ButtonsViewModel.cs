@@ -11,7 +11,20 @@ public partial class ButtonsViewModel : TabPageViewModel
     public ButtonsViewModel() : base("Buttons")
     {
         SelectedColor = Palette[0];   // seed so the templated header shows a real row from the start (no null-through-template)
+        Zooms =
+        [
+            new ZoomOption("50%", new AdamantiumCommand(() => Zoom = 50)),
+            new ZoomOption("100%", new AdamantiumCommand(() => Zoom = 100)),
+            new ZoomOption("200%", new AdamantiumCommand(() => Zoom = 200)),
+            new ZoomOption("400%", new AdamantiumCommand(() => Zoom = 400, () => false)),
+        ];
     }
+
+    // SegmentedControl made from view-models by a template, each segment running its own model's command; the last one
+    // cannot run, so its segment is disabled.
+    public ZoomOption[] Zooms { get; }
+
+    [Bindable] private int _zoom = 100;
 
     // Click counter: a plain Button and an auto-repeating RepeatButton both invoke Add; the count shows live.
     [Bindable] private int _clickCount;
@@ -32,6 +45,10 @@ public partial class ButtonsViewModel : TabPageViewModel
     // Mutually-exclusive RadioButton group (same GroupName in markup); the checked one is the plan.
     [Bindable] private bool _planFree = true;
     [Bindable] private bool _planPro;
+
+    // SegmentedControl: segments written in markup, chosen by index; and an enum bound via EnumType.
+    [Bindable] private int _shading;
+    [Bindable] private TextAlign _alignment = TextAlign.Left;
 
     // DropDown (non-editable). A plain string list bound via ItemsSource; and an enum bound via EnumType (the view says
     // each member by its name, while SelectedPriority stays the real enum value).

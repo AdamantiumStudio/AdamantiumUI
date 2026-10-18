@@ -19,11 +19,22 @@ public abstract class Selector : ItemsControl
         typeof(object), typeof(Selector),
         new PropertyMetadata(null, PropertyMetadataOptions.BindsTwoWayByDefault, OnSelectedItemPropertyChanged));
 
+    public static readonly AdamantiumProperty SelectedValueProperty = AdamantiumProperty.Register(nameof(SelectedValue),
+        typeof(object), typeof(Selector),
+        new PropertyMetadata(null, PropertyMetadataOptions.BindsTwoWayByDefault, OnSelectedValuePropertyChanged));
+
+    public static readonly AdamantiumProperty SelectedValuePathProperty = AdamantiumProperty.Register(
+        nameof(SelectedValuePath), typeof(string), typeof(Selector),
+        new PropertyMetadata(null, OnSelectedValuePathPropertyChanged));
+
     /// <summary>Guards the control's own writes to the selection properties from re-entering their change callbacks.</summary>
     protected bool SyncingSelection { get; set; }
 
     private object _selectedItemTracked;   // last item SelectSingle selected - change detection independent of DP write ordering
     private int _pendingIndex = -1;
+    private bool _syncingValue;
+    private bool _hasPendingValue;
+    private object _pendingValue;
 
     /// <summary>Raised when the selection changes.</summary>
     public event EventHandler SelectionChanged;
@@ -42,6 +53,22 @@ public abstract class Selector : ItemsControl
         set => SetValue(SelectedItemProperty, value);
     }
 
+    /// <summary>The value of the selected item: its property named by <see cref="SelectedValuePath"/>, or the item itself
+    /// without one. Setting it selects the item whose value it is, so a view-model can hold a plain value while the
+    /// items are pictures or models written in markup.</summary>
+    public object SelectedValue
+    {
+        get => GetValue(SelectedValueProperty);
+        set => SetValue(SelectedValueProperty, value);
+    }
+
+    /// <summary>The name of the property of an item that is its value; empty, the item is its own value.</summary>
+    public string SelectedValuePath
+    {
+        get => GetValue<string>(SelectedValuePathProperty);
+        set => SetValue(SelectedValuePathProperty, value);
+    }
+
     private static void OnSelectedIndexPropertyChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
     {
         var selector = (Selector)a;
@@ -49,11 +76,95 @@ public abstract class Selector : ItemsControl
         selector.OnSelectedIndexSet((int)e.NewValue);
     }
 
+    // Whoever wrote the item - the control itself or the outside - its value follows.
     private static void OnSelectedItemPropertyChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
     {
         var selector = (Selector)a;
+        selector.ShowValueOf(e.NewValue);
         if (selector.SyncingSelection) return;
         selector.OnSelectedItemSet(e.NewValue);
+    }
+
+    private static void OnSelectedValuePropertyChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
+    {
+        var selector = (Selector)a;
+        if (selector._syncingValue) return;
+        selector.SelectValue(e.NewValue);
+    }
+
+    private static void OnSelectedValuePathPropertyChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
+    {
+        var selector = (Selector)a;
+        selector._readValue = e.NewValue is string { Length: > 0 } path ? TreeChildResolver.ForValuePath(path) : null;
+        if (selector.SelectedItem != null)
+        {
+            selector.ShowValueOf(selector.SelectedItem);
+        }
+        else if (selector.SelectedValue != null)
+        {
+            selector.SelectValue(selector.SelectedValue);
+        }
+    }
+
+    private void ShowValueOf(object item)
+    {
+        if (_syncingValue) return;
+
+        _syncingValue = true;
+        try
+        {
+            SetCurrentValue(SelectedValueProperty, ValueOf(item));
+        }
+        finally
+        {
+            _syncingValue = false;
+        }
+    }
+
+    /// <summary>Selects the item whose value this is, even when <see cref="SelectedValue"/> already says so - the items
+    /// may have been replaced under it. A value named before the items existed waits for them.</summary>
+    internal void SelectValue(object value)
+    {
+        var index = IndexOfValue(value);
+        if (index < 0 && value != null && Items.Count == 0)
+        {
+            _pendingValue = value;
+            _hasPendingValue = true;
+            return;
+        }
+
+        _hasPendingValue = false;
+        _pendingValue = null;
+        _syncingValue = true;
+        try
+        {
+            SetCurrentValue(SelectedItemProperty, index >= 0 ? Items[index] : null);
+        }
+        finally
+        {
+            _syncingValue = false;
+        }
+
+        if (SelectedItem != null)
+        {
+            ShowValueOf(SelectedItem);
+        }
+    }
+
+    private Func<object, object> _readValue;
+
+    private object ValueOf(object item) => _readValue == null || item == null ? item : _readValue(item);
+
+    /// <summary>The index of the item whose value this is, or -1.</summary>
+    protected int IndexOfValue(object value)
+    {
+        if (Items == null) return -1;
+        for (var i = 0; i < Items.Count; i++)
+        {
+            if (Equals(ValueOf(Items[i]), value)) return i;
+        }
+
+        return -1;
     }
 
     /// <summary>SelectedIndex was set from OUTSIDE (binding / code). Default = single-select that index.
@@ -75,6 +186,11 @@ public abstract class Selector : ItemsControl
     protected override void OnItemsChanged(NotifyCollectionChangedEventArgs e)
     {
         base.OnItemsChanged(e);
+
+        if (_hasPendingValue && IndexOfValue(_pendingValue) >= 0)
+        {
+            SelectValue(_pendingValue);
+        }
 
         if (_pendingIndex < 0 || _pendingIndex >= Items.Count) return;
 

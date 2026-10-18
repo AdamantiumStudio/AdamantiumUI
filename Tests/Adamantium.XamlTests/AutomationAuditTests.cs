@@ -76,6 +76,8 @@ public class AutomationAuditTests
         [typeof(RibbonDropDownButton)] = (T.Button, null),
         [typeof(RibbonGallery)] = (T.List, null),
         [typeof(RibbonGalleryItem)] = (T.ListItem, null),
+        [typeof(SegmentedControl)] = (T.List, null),
+        [typeof(SegmentedControlItem)] = (T.ListItem, null),
         [typeof(RibbonGroup)] = (T.Group, null),
         [typeof(RibbonQuickAccess)] = (T.ToolBar, null),
         [typeof(RibbonQuickAccessMenuItem)] = (T.MenuItem, null),

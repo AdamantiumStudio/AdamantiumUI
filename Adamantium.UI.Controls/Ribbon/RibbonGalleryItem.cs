@@ -8,7 +8,8 @@ using Adamantium.UI.Core.RoutedEvents;
 namespace Adamantium.UI.Controls;
 
 /// <summary>One choice in a <see cref="RibbonGallery"/> - the item container the gallery generates. A ContentControl and
-/// not a button: a gallery cell shows what the choice LOOKS like, and the click picks it rather than running it.</summary>
+/// not a button: a gallery cell shows what the choice LOOKS like, and the click picks it - running it only in a gallery
+/// with an <see cref="RibbonGallery.ItemCommand"/>.</summary>
 public class RibbonGalleryItem : ContentControl, ISelectable
 {
     public static readonly AdamantiumProperty IsSelectedProperty = AdamantiumProperty.Register(nameof(IsSelected),

@@ -45,6 +45,7 @@
     <StyleInclude Source="{x:Type editor:CheckBoxStyleSet}"/>
     <StyleInclude Source="{x:Type editor:RadioButtonStyleSet}"/>
     <StyleInclude Source="{x:Type editor:ToggleSwitchStyleSet}"/>
+    <StyleInclude Source="{x:Type editor:SegmentedControlStyleSet}"/>
     <StyleInclude Source="{x:Type editor:DropDownStyleSet}"/>
     <StyleInclude Source="{x:Type editor:ExpanderStyleSet}"/>
     <StyleInclude Source="{x:Type editor:PropertyGridStyleSet}"/>

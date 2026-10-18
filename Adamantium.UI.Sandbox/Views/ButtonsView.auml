@@ -46,6 +46,56 @@
             <TextBlock AutomationProperties.AutomationId="ChosenPlan" Text="{Localize ButtonsStrings.ChosenPlan, pro={Binding PlanPro}}" VerticalAlignment="Center"/>
         </StackPanel>
 
+        <!-- SegmentedControl: a few choices of one setting, all in sight. Segments written in markup (chosen by index),
+             and an enum bound via EnumType, each member said by the page's phrases. -->
+        <TextBlock Text="{Localize ButtonsStrings.Segmented}" FontSize="18" Margin="0,24,0,10"/>
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+            <SegmentedControl SelectedIndex="{Binding Shading, Mode=TwoWay}"
+                              AutomationProperties.AutomationId="Shading"
+                              AutomationProperties.Name="{Localize ButtonsStrings.ShadingName}">
+                <SegmentedControlItem Content="{Localize ButtonsStrings.Shaded}"/>
+                <SegmentedControlItem Content="{Localize ButtonsStrings.Wireframe}"/>
+                <SegmentedControlItem Content="{Localize ButtonsStrings.ShadedWireframe}"/>
+            </SegmentedControl>
+            <SegmentedControl IsEnabled="False" SelectedIndex="1" Margin="14,0,0,0">
+                <SegmentedControlItem Content="{Localize ButtonsStrings.Day}"/>
+                <SegmentedControlItem Content="{Localize ButtonsStrings.Week}"/>
+                <SegmentedControlItem Content="{Localize ButtonsStrings.Month}"/>
+            </SegmentedControl>
+        </StackPanel>
+        <StackPanel Orientation="Horizontal">
+            <SegmentedControl EnumType="{x:Type vm:TextAlign}"
+                              SelectedItem="{Binding Alignment, Mode=TwoWay}"
+                              AutomationProperties.AutomationId="Alignment"
+                              AutomationProperties.Name="{Localize ButtonsStrings.AlignmentName}">
+                <SegmentedControl.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock Text="{Localize ButtonsStrings, Key={Binding}}"/>
+                    </DataTemplate>
+                </SegmentedControl.ItemTemplate>
+            </SegmentedControl>
+            <TextBlock AutomationProperties.AutomationId="AlignmentChoice" Text="{Localize ButtonsStrings.AlignmentIs, align={Binding Alignment}}" VerticalAlignment="Center" Margin="14,0,0,0"/>
+        </StackPanel>
+        <!-- Made from view-models by the item template; each segment runs its own model's command, bound through the
+             item container style - the last one's cannot run, so it is disabled. -->
+        <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+            <SegmentedControl ItemsSource="{Binding Zooms}" SelectedIndex="1"
+                              AutomationProperties.AutomationId="Zoom"
+                              AutomationProperties.Name="{Localize ButtonsStrings.ZoomName}">
+                <SegmentedControl.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding Name}"/>
+                    </DataTemplate>
+                </SegmentedControl.ItemTemplate>
+                <SegmentedControl.ItemContainerStyle>
+                    <Style Selector="SegmentedControlItem">
+                        <Setter Property="Command" Value="{Binding Apply}"/>
+                    </Style>
+                </SegmentedControl.ItemContainerStyle>
+            </SegmentedControl>
+            <TextBlock AutomationProperties.AutomationId="ZoomChoice" Text="{Localize ButtonsStrings.ZoomIs, zoom={Binding Zoom}}" VerticalAlignment="Center" Margin="14,0,0,0"/>
+        </StackPanel>
+
         <!-- DropDown: a string list (via ItemsSource) and an enum (via EnumType - each member said by the page's phrases,
              its name being the key, while the bound value stays the enum). Near the bottom, so opening tests the
              edge-aware flip. -->
