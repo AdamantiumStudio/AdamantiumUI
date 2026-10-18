@@ -83,7 +83,8 @@ public class PropertyGrid : Control
         new PropertyMetadata(ResetButtonState.Always, OnResetButtonChanged));
 
     /// <summary>The sections or the objects to inspect. When <see cref="Sections"/> holds sections with a
-    /// <see cref="PropertySection.DataType"/>, each of them is pointed at the first item of its type and shown in its own
+    /// <see cref="PropertySection.DataType"/>, each of them is pointed at the items of its type - several edited together
+    /// - and shown in its own
     /// place, beside the sections written for no type; the items no section is written for are shown only with
     /// <see cref="AutoGenerateSections"/>, and sections in the source are not shown at all. Otherwise this
     /// replaces <see cref="Sections"/>: an item that is not a section is an object to inspect, and the grid builds its
@@ -113,6 +114,7 @@ public class PropertyGrid : Control
 
     private readonly List<PropertyRow> _rows = new();
     private readonly List<PropertySection> _openedBySearch = new();
+    private readonly Dictionary<PropertySection, BindingExpressionBase> _foldingHeldBySearch = new();
     private readonly List<PropertyDefinition> _watched = new();
     private readonly List<INotifyCollectionChanged> _followed = new();
     private readonly Dictionary<object, PropertySection> _built = new(ReferenceEqualityComparer.Instance);
@@ -334,8 +336,11 @@ public class PropertyGrid : Control
                 section.Content = rows;
             }
 
-            // A section may inspect something of its own; the rest follow the selection - all of it.
-            var targets = section.Target != null ? new[] { section.Target } : Targets;
+            // A section may inspect something of its own - all the source's objects of its type; the rest follow the
+            // selection - all of it.
+            var targets = section.Target == null ? Targets
+                : section.Targets is { Count: > 1 } several ? several
+                : new[] { section.Target };
             var at = 0;
 
             foreach (var definition in section.Properties)
@@ -359,10 +364,18 @@ public class PropertyGrid : Control
             _host.Children.Add(section);
 
             // SetCurrentValue, not the setter: folding state is two-way bindable, and a Local value written from here
-            // would outrank the binding and leave the section deaf to its own view-model ever after.
+            // would outrank the binding and leave the section deaf to its own view-model ever after. A bound one rests
+            // while the search holds the section open, so the object it is bound to keeps its own folding, and reads
+            // it again - from whatever the section shows by then - when the search ends.
             if (searching && !section.IsExpanded)
             {
                 _openedBySearch.Add(section);
+                if (BindingEngine.GetBindingExpression(section, Expander.IsExpandedProperty) is { } folding)
+                {
+                    folding.CloseConnection();
+                    _foldingHeldBySearch[section] = folding;
+                }
+
                 section.SetCurrentValue(Expander.IsExpandedProperty, true);
             }
         }
@@ -406,6 +419,7 @@ public class PropertyGrid : Control
         foreach (var section in _dropped)
         {
             _openedBySearch.Remove(section);
+            _foldingHeldBySearch.Remove(section);
             if (section.VisualParent == null)
             {
                 DiscardedVisuals.PublishSubtree(section);
@@ -417,7 +431,11 @@ public class PropertyGrid : Control
 
     private void ReleaseOpened()
     {
-        foreach (var section in _openedBySearch) section.SetCurrentValue(Expander.IsExpandedProperty, false);
+        foreach (var section in _openedBySearch)
+        {
+            if (_foldingHeldBySearch.Remove(section, out var folding)) folding.EstablishConnection();
+            else section.SetCurrentValue(Expander.IsExpandedProperty, false);
+        }
 
         _openedBySearch.Clear();
     }
@@ -673,7 +691,11 @@ public class PropertyGrid : Control
 
             foreach (var section in Sections)
             {
-                if (section.DataType != null) section.Target = null;
+                if (section.DataType != null)
+                {
+                    section.Target = null;
+                    section.Targets = null;
+                }
             }
 
             // The designer has no source to give: every section is shown, empty, so the layout can be seen.
@@ -698,10 +720,18 @@ public class PropertyGrid : Control
                     continue;
                 }
 
-                section.Target = FirstUnclaimed(section.DataType);
-                if (section.Target == null) continue;
+                var ofType = Unclaimed(section.DataType);
+                section.Targets = ofType;
+                section.Target = ofType.Count > 0 ? ofType[0] : null;
+                if (section.Target == null)
+                {
+                    continue;
+                }
 
-                _claimed.Add(section.Target);
+                foreach (var item in ofType)
+                {
+                    _claimed.Add(item);
+                }
                 many.Add(section);
             }
         }
@@ -749,14 +779,15 @@ public class PropertyGrid : Control
         SourceGate.Return(copy);
     }
 
-    private object FirstUnclaimed(Type type)
+    private List<object> Unclaimed(Type type)
     {
+        var ofType = new List<object>();
         foreach (var item in _sourceItems)
         {
-            if (item != null && !_claimed.Contains(item) && type.IsInstanceOfType(item)) return item;
+            if (item != null && !_claimed.Contains(item) && type.IsInstanceOfType(item)) ofType.Add(item);
         }
 
-        return null;
+        return ofType;
     }
 
     private PropertySection SectionFor(object item)

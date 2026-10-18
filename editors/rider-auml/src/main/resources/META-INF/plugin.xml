@@ -30,6 +30,8 @@
     ]]></description>
 
     <change-notes><![CDATA[
+        <p>Ctrl+click goes where a value points: from {Localize Table.Key} to the phrase in the table's base language
+        file, from the table to that file, and from the member of {x:Static Type.Member} to its declaration.</p>
         <p>xml:space="preserve" is taken, as in WPF, and a property element in the middle of an element's text is
         underlined. The preview shows what the markup cannot be built for instead of building it.</p>
         <p>A nullable property - DockingArea.ToolSelectionIndicatorPlacement, PinnedTabsPlacement, IsChecked - is

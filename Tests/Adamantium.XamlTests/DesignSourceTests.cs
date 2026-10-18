@@ -40,6 +40,33 @@ public class DesignSourceTests
     }
 
     [Test]
+    public void WhatAnElementStandsFor_IsKept_OnlyInTheDesigner()
+    {
+        var wasDesignMode = Design.IsDesignMode;
+        try
+        {
+            var authored = new object();
+            var running = new object();
+            Design.IsDesignMode = false;
+            Design.StandsFor(running, authored);
+
+            var previewed = new object();
+            Design.IsDesignMode = true;
+            Design.StandsFor(previewed, authored);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(Design.AuthoredOf(running), Is.Null);
+                Assert.That(Design.AuthoredOf(previewed), Is.SameAs(authored));
+            });
+        }
+        finally
+        {
+            Design.IsDesignMode = wasDesignMode;
+        }
+    }
+
+    [Test]
     public void ASourceIsKept_OnlyInTheDesigner()
     {
         var wasDesignMode = Design.IsDesignMode;

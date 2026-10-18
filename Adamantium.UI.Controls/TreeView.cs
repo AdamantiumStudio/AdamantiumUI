@@ -122,6 +122,142 @@ public class TreeView : ItemsControl
     /// selects that node - null selects nothing at all.</summary>
     public object SelectedItem { get => GetValue<object>(SelectedItemProperty); set => SetValue(SelectedItemProperty, value); }
 
+    /// <summary>Every node selected, kept in step both ways: the tree writes into the list what is selected in it, and
+    /// selects what is written into it - a node in a closed branch comes selected when its row does. A node written into
+    /// <see cref="SelectedItem"/> that the list holds becomes the one chosen last without letting the rest go.</summary>
+    public static readonly AdamantiumProperty SelectedItemsProperty = AdamantiumProperty.Register(nameof(SelectedItems),
+        typeof(IList), typeof(TreeView), new PropertyMetadata(null, OnSelectedItemsChanged));
+
+    public IList SelectedItems { get => GetValue<IList>(SelectedItemsProperty); set => SetValue(SelectedItemsProperty, value); }
+
+    private readonly Dictionary<object, TreeRow> _rowsByNode = new();
+    private Action _showSelectedItems;
+    private bool _showingItems;
+    private bool _showPending;
+    private bool _writingItems;
+
+    private static void OnSelectedItemsChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (component is not TreeView tree)
+        {
+            return;
+        }
+
+        if (e.OldValue is INotifyCollectionChanged old)
+        {
+            old.CollectionChanged -= tree.OnSelectedItemsListChanged;
+        }
+
+        if (e.NewValue is INotifyCollectionChanged now)
+        {
+            now.CollectionChanged += tree.OnSelectedItemsListChanged;
+        }
+
+        tree.ShowSelectedItems();
+    }
+
+    private void OnSelectedItemsListChanged(object sender, NotifyCollectionChangedEventArgs e)
+    {
+        if (_writingItems || _showPending)
+        {
+            return;
+        }
+
+        _showPending = true;
+        LoopSignal.Post(_showSelectedItems ??= ShowSelectedItems);
+    }
+
+    private void ShowSelectedItems()
+    {
+        _showPending = false;
+        if (_flattener == null || SelectedItems is not { } list)
+        {
+            return;
+        }
+
+        var rows = RowsByNode();
+        _showingItems = true;
+        try
+        {
+            ClearSelection();
+            foreach (var node in list)
+            {
+                if (node != null && rows.TryGetValue(node, out var row))
+                {
+                    Select(row);
+                }
+            }
+
+            if (SelectedItem != null && rows.TryGetValue(SelectedItem, out var chosen))
+            {
+                _anchorRow = chosen;
+            }
+
+            SyncSelectionToContainers();
+        }
+        finally
+        {
+            _showingItems = false;
+        }
+    }
+
+    private Dictionary<object, TreeRow> RowsByNode()
+    {
+        _rowsByNode.Clear();
+        foreach (var row in _flattener.Rows)
+        {
+            _rowsByNode.TryAdd(row.Node, row);
+        }
+
+        return _rowsByNode;
+    }
+
+    private void WriteSelectedItems(bool replaced)
+    {
+        if (_showingItems || SelectedItems is not { IsReadOnly: false } list)
+        {
+            return;
+        }
+
+        var rows = RowsByNode();
+        _writingItems = true;
+        try
+        {
+            for (var i = list.Count - 1; i >= 0; i--)
+            {
+                var shown = list[i] != null && rows.TryGetValue(list[i], out var row) ? row : null;
+                if (shown is { IsSelected: false } || (shown == null && replaced))
+                {
+                    list.RemoveAt(i);
+                }
+            }
+
+            var kept = new HashSet<object>();
+            foreach (var node in list)
+            {
+                kept.Add(node);
+            }
+
+            foreach (var row in _selectedRows)
+            {
+                if (kept.Add(row.Node))
+                {
+                    list.Add(row.Node);
+                }
+            }
+
+            if (SelectedItem is { } chosen && list.Count > 1 && !Equals(list[^1], chosen) && list.Contains(chosen))
+            {
+                list.Remove(chosen);
+                list.Add(chosen);
+            }
+        }
+        finally
+        {
+            _writingItems = false;
+        }
+    }
+
     public string ParentPath { get => GetValue<string>(ParentPathProperty); set => SetValue(ParentPathProperty, value); }
 
     /// <summary>How many nodes may be selected and how clicks combine (Single, Multiple, Extended).</summary>
@@ -195,7 +331,8 @@ public class TreeView : ItemsControl
     }
 
     // After a (re)build, rebuild the selected-row set from the rows the flattener restored as selected, and pick a primary.
-    private bool IsChosen(object node) => SelectedItem is { } chosen && Equals(node, chosen);
+    private bool IsChosen(object node) =>
+        (SelectedItem is { } chosen && Equals(node, chosen)) || SelectedItems?.Contains(node) == true;
 
     // Rows built again stand in for the ones they replace, so the selection is held by the rows on screen.
     private void OnRowsChanged(object sender, NotifyCollectionChangedEventArgs e)
@@ -212,9 +349,17 @@ public class TreeView : ItemsControl
             return;
         }
 
+        object movedAway = null;
         if (e.OldItems != null)
         {
-            foreach (TreeRow row in e.OldItems) _selectedRows.Remove(row);
+            foreach (TreeRow row in e.OldItems)
+            {
+                _selectedRows.Remove(row);
+                if (!_collapsing && IsChosen(row.Node))
+                {
+                    movedAway = row.Node;
+                }
+            }
         }
 
         if (e.NewItems != null)
@@ -225,6 +370,36 @@ public class TreeView : ItemsControl
                 ScrollIfAwaited(row);
             }
         }
+
+        // The chosen node went to another parent, maybe into a closed branch: followed there, once the rows settle.
+        if (movedAway != null && !string.IsNullOrEmpty(ParentPath))
+        {
+            LoopSignal.Post(() => FollowMoved(movedAway));
+        }
+    }
+
+    private bool _collapsing;
+
+    private void FollowMoved(object node)
+    {
+        if (_flattener == null || !IsChosen(node))
+        {
+            return;
+        }
+
+        if ((RowOf(node) ?? Reveal(node)) is { } row)
+        {
+            if (!row.IsSelected)
+            {
+                Select(row);
+                SyncSelectionToContainers();
+            }
+
+            ScrollToWhenMeasured(row);
+            return;
+        }
+
+        _awaitedRow = node;
     }
 
     private void ScrollIfAwaited(TreeRow row)
@@ -489,7 +664,16 @@ public class TreeView : ItemsControl
         }
         else
         {
-            _flattener.Collapse(row);
+            _collapsing = true;
+            try
+            {
+                _flattener.Collapse(row);
+            }
+            finally
+            {
+                _collapsing = false;
+            }
+
             WriteNodeExpanded(row.Node, false);
         }
     }
@@ -607,6 +791,7 @@ public class TreeView : ItemsControl
 
         SelectOnly(row);
         SyncSelectionToContainers();
+        WriteSelectedItems(true);
         ShowRow(index);
     }
 
@@ -653,10 +838,12 @@ public class TreeView : ItemsControl
             return;
         }
 
+        var replaced = true;
         switch (SelectionMode)
         {
             case TreeViewSelectionMode.Multiple:
                 ToggleSelection(row);
+                replaced = false;
                 break;
 
             case TreeViewSelectionMode.Extended:
@@ -670,6 +857,7 @@ public class TreeView : ItemsControl
                 {
                     ToggleSelection(row);
                     _anchorRow = row;
+                    replaced = false;
                 }
                 else
                 {
@@ -684,6 +872,7 @@ public class TreeView : ItemsControl
         }
 
         SyncSelectionToContainers();
+        WriteSelectedItems(replaced);
     }
 
     // WRITTEN FROM OUTSIDE: a node to select, or null for none. What the tree wrote itself is skipped - the rows are
@@ -739,6 +928,17 @@ public class TreeView : ItemsControl
     private void HoldOnly(TreeRow row)
     {
         if (_selectedRows.Count == 1 && _selectedRows.Contains(row)) return;
+
+        if (SelectedItems is { } list && list.Contains(row.Node))
+        {
+            if (!row.IsSelected)
+            {
+                Select(row);
+            }
+
+            SyncSelectionToContainers();
+            return;
+        }
 
         ClearSelection();
         Select(row);
@@ -823,6 +1023,7 @@ public class TreeView : ItemsControl
         SelectOnly(row);
         _anchorRow = row;
         SyncSelectionToContainers();
+        WriteSelectedItems(true);
     }
 
     internal void AddRowToSelection(TreeRow row)
@@ -836,6 +1037,7 @@ public class TreeView : ItemsControl
 
         ToggleSelection(row);
         SyncSelectionToContainers();
+        WriteSelectedItems(false);
     }
 
     internal void RemoveRowFromSelection(TreeRow row)
@@ -844,6 +1046,7 @@ public class TreeView : ItemsControl
 
         ToggleSelection(row);
         SyncSelectionToContainers();
+        WriteSelectedItems(false);
     }
 
     // Flip one row, leaving the rest untouched (Multiple, and Extended's Ctrl+click).

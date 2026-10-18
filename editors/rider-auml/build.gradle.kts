@@ -11,7 +11,7 @@ plugins {
 }
 
 group = "com.adamantium"
-version = "1.11.4"
+version = "1.11.5"
 
 repositories {
     mavenCentral()

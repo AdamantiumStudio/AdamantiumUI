@@ -443,20 +443,8 @@ public sealed class CompletionEngine
             .ToList();
     }
 
-    // The tables a "[prefix:]Table" can name: by the prefix's namespace when one is written, any table otherwise - the
-    // way the build finds them. A null name takes every table.
-    private IEnumerable<LanguageTableInfo> TablesNamed(string prefix, string name, IReadOnlyDictionary<string, string> namespaces)
-    {
-        var tables = _model.LanguageTables.Where(t => name == null || t.Name == name);
-        if (prefix.Length == 0)
-        {
-            return tables;
-        }
-
-        var xmlns = ResolveXmlns(prefix, namespaces);
-        var inScope = _model.GetElements(xmlns).Select(t => t.FullName).ToHashSet(StringComparer.Ordinal);
-        return tables.Where(t => inScope.Contains(t.FullName));
-    }
+    private IEnumerable<LanguageTableInfo> TablesNamed(string prefix, string name, IReadOnlyDictionary<string, string> namespaces) =>
+        _model.TablesNamed(prefix.Length == 0 ? null : ResolveXmlns(prefix, namespaces), name);
 
     /// <summary>The type named by the nearest <c>&lt;attrLocalName&gt;="..."</c> attribute before the caret
     /// (pragmatic scan): the ControlTemplate's <c>TargetType</c> for a TemplateBinding, or the <c>x:ViewModel</c>

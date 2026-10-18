@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Collections.Specialized;
 using Adamantium.UI.Core;
 
@@ -10,6 +11,12 @@ public class PropertySection : Expander
 {
     public static readonly AdamantiumProperty CategoryProperty = AdamantiumProperty.Register(nameof(Category),
         typeof(String), typeof(PropertySection), new PropertyMetadata(null));
+
+    public static readonly AdamantiumProperty TargetProperty = AdamantiumProperty.Register(nameof(Target),
+        typeof(object), typeof(PropertySection), new PropertyMetadata(null));
+
+    public static readonly AdamantiumProperty TargetsProperty = AdamantiumProperty.Register(nameof(Targets),
+        typeof(IReadOnlyList<object>), typeof(PropertySection), new PropertyMetadata(null));
 
     public PropertySection()
     {
@@ -27,11 +34,25 @@ public class PropertySection : Expander
 
     /// <summary>The object these properties read and write. Set by the grid from its own
     /// <see cref="PropertyGrid.SelectedObject"/> unless the section names its own - a section CAN inspect something
-    /// else (a component of the selection).</summary>
-    public object Target { get; set; }
+    /// else (a component of the selection). It says when it changes, so the section can bind to its object - its
+    /// folding, say: <c>IsExpanded="{Self Target.IsExpanded, Mode=TwoWay}"</c>.</summary>
+    public object Target
+    {
+        get => GetValue(TargetProperty);
+        set => SetValue(TargetProperty, value);
+    }
+
+    /// <summary>Every object of the source this section is written for, when the grid points it at the items of
+    /// <see cref="DataType"/>: all of them, edited together - the components of several selected entities - with
+    /// <see cref="Target"/> the first.</summary>
+    public IReadOnlyList<object> Targets
+    {
+        get => GetValue<IReadOnlyList<object>>(TargetsProperty);
+        internal set => SetValue(TargetsProperty, value);
+    }
 
     /// <summary>The type of object this section is written for. With <see cref="PropertyGrid.SectionsSource"/> set, the
-    /// grid points the section at the first item of that type, or leaves it out when there is none - so the sections
+    /// grid points the section at the items of that type, or leaves it out when there is none - so the sections
     /// keep the order they are written in, whatever order the items come in, and the same section, folded or not,
     /// serves every object of its type.</summary>
     public Type DataType { get; set; }

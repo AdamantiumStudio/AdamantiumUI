@@ -44,6 +44,20 @@ public sealed class AumlTypeModel
     /// <summary>The language tables <c>{Localize}</c> can name.</summary>
     public IReadOnlyList<LanguageTableInfo> LanguageTables => _languageTables ??= LanguageServer.LanguageTables.Collect(Compilation);
 
+    /// <summary>The tables a "[prefix:]Table" can name, the way the build finds them: those in <paramref name="xmlns"/>,
+    /// the prefix's namespace, when one is written, any table for a null one. A null name takes every table.</summary>
+    public IEnumerable<LanguageTableInfo> TablesNamed(string xmlns, string name)
+    {
+        var tables = LanguageTables.Where(t => name == null || t.Name == name);
+        if (xmlns == null)
+        {
+            return tables;
+        }
+
+        var inScope = GetElements(xmlns).Select(t => t.FullName).ToHashSet(StringComparer.Ordinal);
+        return tables.Where(t => inScope.Contains(t.FullName));
+    }
+
     public static AumlTypeModel Build(IEnumerable<string> assemblyPaths, IEnumerable<string> sourceFiles = null)
     {
         var references = new List<MetadataReference>();
