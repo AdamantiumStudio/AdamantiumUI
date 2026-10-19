@@ -37,6 +37,91 @@ public class RibbonGalleryTests
         });
     }
 
+    private sealed record Choice(string Name, string Kind);
+
+    private static string Shown(RibbonGallery gallery)
+    {
+        var names = new List<string>();
+        foreach (var item in gallery.Items) names.Add(((Choice)item).Name);
+        return string.Join(" ", names);
+    }
+
+    // Groups stand in the order they first appear in the source - read whole, not in the order a sort happens to ask -
+    // and follow it as it changes: a group whose first item went moves back, and one that left and came back goes last.
+    [Test]
+    public void AGroupedSource_StandsInTheOrderItsGroupsFirstAppear()
+    {
+        var source = new System.Collections.ObjectModel.ObservableCollection<Choice>
+        {
+            new("a1", "A"), new("b1", "B"), new("a2", "A"), new("c1", "C")
+        };
+        var gallery = new RibbonGallery { GroupMemberPath = "Kind", ItemsSource = source };
+        var whole = Shown(gallery);
+
+        source.RemoveAt(0);
+        var moved = Shown(gallery);
+
+        source.RemoveAt(0);
+        source.Add(new Choice("b2", "B"));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(whole, Is.EqualTo("a1 a2 b1 c1"));
+            Assert.That(moved, Is.EqualTo("b1 a2 c1"), "B's first item now comes before A's");
+            Assert.That(Shown(gallery), Is.EqualTo("a2 c1 b2"), "B left and came back after the rest");
+        });
+    }
+
+    // Grouped anew by another path over the same source, the gallery still follows it in order, each item once.
+    [Test]
+    public void AGroupedSourceRegrouped_StillFollowsItsChanges()
+    {
+        var source = new System.Collections.ObjectModel.ObservableCollection<Choice>
+        {
+            new("a1", "A"), new("b1", "B"), new("a2", "A"), new("c1", "C")
+        };
+        var gallery = new RibbonGallery { GroupMemberPath = "Name", ItemsSource = source };
+        gallery.GroupMemberPath = "Kind";
+
+        source.RemoveAt(0);
+        var removed = Shown(gallery);
+        source.Add(new Choice("d1", "D"));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(removed, Is.EqualTo("b1 a2 c1"));
+            Assert.That(Shown(gallery), Is.EqualTo("b1 a2 c1 d1"));
+        });
+    }
+
+    // The view a grouped gallery shows its source through is let go of with it: a source that outlives the gallery - a
+    // view model's list - keeps neither.
+    [Test]
+    public void AGroupedGalleryDiscarded_IsNotKeptByItsSource()
+    {
+        var source = new System.Collections.ObjectModel.ObservableCollection<Choice> { new("a", "A"), new("b", "B") };
+        var gallery = Discarded(source);
+        System.GC.Collect();
+        System.GC.WaitForPendingFinalizers();
+        System.GC.Collect();
+
+        Assert.That(gallery.IsAlive, Is.False);
+        System.GC.KeepAlive(source);
+    }
+
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+    private static System.WeakReference Discarded(System.Collections.ObjectModel.ObservableCollection<Choice> source)
+    {
+        var gallery = new RibbonGallery { GroupMemberPath = "Kind", ItemsSource = source };
+        var window = new Window { Width = 200, Height = 100, Content = gallery };
+        Adamantium.UI.Extensions.WindowExtension.UpdateTree(window);
+        window.Close();
+        LoopSignal.Drain();
+        while (DiscardedVisuals.Drain(64) > 0) { }
+        RenderDirty.Clear();
+        return new System.WeakReference(gallery);
+    }
+
     // A group's title takes a row of its own across the cells, and Up and Down step over it as over nothing.
     [Test]
     public void APanelWithGroupTitles_GivesThemRowsOfTheirOwn()
