@@ -173,7 +173,7 @@ public class RibbonGroupDeferredFlyoutTests
     // cells go into therefore arrives with the content, and the gallery has to fill it then - otherwise the drop-down
     // opens onto an empty card, which is the same failure in a different control.
 
-    private static ControlTemplate DeferredGalleryTemplate() => new(() =>
+    private static ControlTemplate DeferredGalleryTemplate(Button scrollDown = null) => new(() =>
     {
         var popup = new Popup
         {
@@ -192,8 +192,36 @@ public class RibbonGroupDeferredFlyoutTests
 
         var result = new TemplateResult { RootComponent = grid };
         result.RegisterName("PART_Popup", popup);
+        if (scrollDown != null)
+        {
+            grid.Children.Add(scrollDown);
+            result.RegisterName("PART_ScrollDown", scrollDown);
+        }
+
         return result;
     });
+
+    // The scroll arrows stand beside the open card, on the gallery a press elsewhere leaves alone: a press there puts the
+    // card away instead of turning the rows hidden under it.
+    [Test]
+    public void AScrollArrowPressedUnderAnOpenDropDown_PutsItAway()
+    {
+        var arrow = new Button();
+        var gallery = new RibbonGallery { Columns = 2, Rows = 1, Template = DeferredGalleryTemplate(arrow) };
+        for (var i = 0; i < 6; i++) gallery.Items.Add($"item {i}");
+        var window = new Window { Width = 400, Height = 200, Content = gallery };
+        for (var i = 0; i < 5; i++) WindowExtension.UpdateTree(window);
+        gallery.IsDropDownOpen = true;
+        for (var i = 0; i < 3; i++) WindowExtension.UpdateTree(window);
+
+        ((Adamantium.UI.Core.IObservableComponent)arrow).RaiseEvent(new Adamantium.UI.Core.RoutedEvents.RoutedEventArgs(ButtonBase.ClickEvent, arrow));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(gallery.IsDropDownOpen, Is.False);
+            Assert.That(gallery.FirstRow, Is.Zero, "the rows under it stay where they were");
+        });
+    }
 
     private static (RibbonGallery gallery, Window window) HostedGallery()
     {
@@ -225,6 +253,31 @@ public class RibbonGroupDeferredFlyoutTests
         var panel = (gallery.GetTemplateChild("PART_Popup") as Popup).FindContentChild("PART_DropDownPanel") as RibbonGalleryPanel;
         Assert.That(panel, Is.Not.Null, "the deferred card has to carry the panel the cells go into");
         Assert.That(panel.Children.Count, Is.EqualTo(6), "every item must get a cell once the drop-down is down");
+    }
+
+    // A press anywhere else puts the drop-down away, as every flyout does; one on the gallery is the gallery's to answer.
+    [Test]
+    public void ADroppedDownGallery_IsPutAwayByAPressElsewhere()
+    {
+        var gallery = new RibbonGallery { Columns = 3, Rows = 2, Template = DeferredGalleryTemplate() };
+        for (var i = 0; i < 6; i++) gallery.Items.Add($"item {i}");
+        var elsewhere = new Border { Width = 50, Height = 50 };
+        var window = new Window { Width = 400, Height = 200, Content = new StackPanel { Children = { gallery, elsewhere } } };
+        for (var i = 0; i < 5; i++) WindowExtension.UpdateTree(window);
+
+        gallery.IsDropDownOpen = true;
+        for (var i = 0; i < 3; i++) WindowExtension.UpdateTree(window);
+        PointerInput.PreviewPress(gallery);
+        WindowExtension.UpdateTree(window);
+        var pressedOnItself = gallery.IsDropDownOpen;
+        PointerInput.PreviewPress(elsewhere);
+        WindowExtension.UpdateTree(window);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(pressedOnItself, Is.True, "a press on the gallery is its own");
+            Assert.That(gallery.IsDropDownOpen, Is.False);
+        });
     }
 
     private sealed record Choice(string Name, string Kind);

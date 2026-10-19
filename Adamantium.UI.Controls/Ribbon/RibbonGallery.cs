@@ -433,6 +433,17 @@ public class RibbonGallery : Selector
 
     public void ScrollDown() => FirstRow++;
 
+    private void Scroll(Action step)
+    {
+        if (IsDropDownOpen)
+        {
+            IsDropDownOpen = false;
+            return;
+        }
+
+        step();
+    }
+
     private bool _clamping;
 
     private void Clamp()
@@ -492,6 +503,7 @@ public class RibbonGallery : Selector
         if (_popup != null)
         {
             _popup.PlacementTarget = this;
+            _popup.KeepOpen = false;   // a press anywhere else puts the drop-down away, as any other does
             // WE own the close - the chevron's own press must not light-dismiss first, or the press would close and
             // re-open and read as doing nothing.
             _popup.IgnoreTargetPress = true;
@@ -509,8 +521,9 @@ public class RibbonGallery : Selector
 
         _dropDownPanel = null;
 
-        if (GetTemplateChild("PART_ScrollUp") is Primitives.ButtonBase up) up.Click += (_, _) => ScrollUp();
-        if (GetTemplateChild("PART_ScrollDown") is Primitives.ButtonBase down) down.Click += (_, _) => ScrollDown();
+        // The arrows stand beside the open card, on the gallery a press elsewhere leaves alone: there they put it away.
+        if (GetTemplateChild("PART_ScrollUp") is Primitives.ButtonBase up) up.Click += (_, _) => Scroll(ScrollUp);
+        if (GetTemplateChild("PART_ScrollDown") is Primitives.ButtonBase down) down.Click += (_, _) => Scroll(ScrollDown);
         if (GetTemplateChild("PART_More") is Primitives.ButtonBase more) more.Click += (_, _) => IsDropDownOpen = !IsDropDownOpen;
 
         RefreshDropDown();
