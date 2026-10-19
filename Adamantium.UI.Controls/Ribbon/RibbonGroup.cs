@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Core;
@@ -14,7 +15,43 @@ namespace Adamantium.UI.Controls;
 public class RibbonGroup : ItemsControl, IHeaderedItemsControl
 {
     public static readonly AdamantiumProperty HeaderProperty = AdamantiumProperty.Register(nameof(Header),
-        typeof(object), typeof(RibbonGroup), new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure));
+        typeof(object), typeof(RibbonGroup),
+        new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure, OnHeaderChanged));
+
+    /// <summary>The header as the collapsed button shows it: a name of several words on two lines, broken at the space
+    /// nearest its middle, as Office labels a collapsed group. Anything but text, or a header drawn by a
+    /// <see cref="HeaderTemplate"/>, is the header itself.</summary>
+    public static readonly AdamantiumProperty CollapsedHeaderProperty = AdamantiumProperty.RegisterReadOnly(
+        nameof(CollapsedHeader), typeof(object), typeof(RibbonGroup),
+        new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure));
+
+    public object CollapsedHeader
+    {
+        get => GetValue(CollapsedHeaderProperty);
+        private set => SetValue(CollapsedHeaderProperty, value);
+    }
+
+    private static void OnHeaderChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (a is RibbonGroup group) group.CollapsedHeader = group.CollapsedHeaderOf(e.NewValue);
+    }
+
+    // A template is handed the header as written: it may key or convert on it.
+    private object CollapsedHeaderOf(object header) =>
+        HeaderTemplate == null && header is string text ? TwoLines(text.Trim()) : header;
+
+    // At a space between two words, the one leaving the two lines nearest in length.
+    private static string TwoLines(string text)
+    {
+        var cut = -1;
+        for (var i = 1; i < text.Length - 1; i++)
+        {
+            if (text[i] != ' ' || text[i - 1] == ' ' || text[i + 1] == ' ') continue;
+            if (cut < 0 || Math.Abs(text.Length - 2 * i) < Math.Abs(text.Length - 2 * cut)) cut = i;
+        }
+
+        return cut < 0 ? text : text[..cut] + "\n" + text[(cut + 1)..];
+    }
 
     public static readonly AdamantiumProperty HeaderTemplateProperty = AdamantiumProperty.Register(nameof(HeaderTemplate),
         typeof(DataTemplate), typeof(RibbonGroup), new PropertyMetadata(null));
@@ -60,53 +97,150 @@ public class RibbonGroup : ItemsControl, IHeaderedItemsControl
             var live = Packing?.Variants;
             if (live is { Count: > 0 } && !ReferenceEquals(live, _variants))
             {
+                // Rebuilt every time the commands are re-measured - collapsing the group re-measures them at the sizes
+                // the flyout draws them in. Only a different ladder makes the widths kept here meaningless; forgetting
+                // them on every collapse sent the band opening the group again to learn them, without end.
+                if (!SameLadder(live, _variants)) _widths = null;
                 _variants = live;
-                _widths = null;
             }
 
             return _variants;
         }
     }
 
-    /// <summary>How wide this GROUP is at <paramref name="index"/> - its commands plus its own chrome. The panel knows
-    /// only what the commands cost.</summary>
+    /// <summary>Drop the widths a collapsed group answers from: its commands were rewritten (another language), and it
+    /// cannot be measured inside its flyout. The band opens it to learn them again.</summary>
+    internal void ForgetWidths() => _widths = null;
+
+    private static bool SameLadder(IReadOnlyList<RibbonGroupVariant> a, IReadOnlyList<RibbonGroupVariant> b)
+    {
+        if (a.Count != b.Count) return false;
+
+        for (var i = 0; i < a.Count; i++)
+        {
+            if (a[i].IsCollapsed != b[i].IsCollapsed || !a[i].Sizes.SequenceEqual(b[i].Sizes)) return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>How wide this GROUP is at <paramref name="index"/> - its commands with everything around them, its caption
+    /// included. The panel knows only what the commands cost.</summary>
     public double WidthAt(int index)
     {
         var variants = Variants;
         if (variants.Count == 0) return double.NaN;
-        if (index == variants.Count - 1) return CollapsedWidth;
+        if (index == variants.Count - 1) return CollapsedCost();
 
-        // Asked fresh - the panel caches and drops these itself. What is kept here is only the fallback for a collapsed
-        // group, which has no panel to ask. Re-sized because the steps are rebuilt when the commands change.
-        if (_widths is null || _widths.Length != variants.Count) _widths = NotMeasured(variants.Count);
+        // Re-sized because the steps are rebuilt when the commands change.
+        if (_widths is null || _widths.Length != variants.Count)
+        {
+            _widths = NotMeasured(variants.Count);
+            _packedAt = null;
+        }
+
+        _packedAt ??= NotMeasured(variants.Count);
 
         // Not probed while collapsed: the panel is inside the flyout, and measuring it re-lays out the overlay, which
-        // lands back here - the flyout rebuilt itself without end.
+        // lands back here - the flyout rebuilt itself without end. A collapsed group answers what it last measured.
         if (IsCollapsed) return _widths[index];
 
+        // The panel keeps what the commands cost and drops it when they change; the group is measured again only then.
         var packed = Packing?.WidthAt(index) ?? double.NaN;
         if (double.IsNaN(packed)) return _widths[index];
 
-        _widths[index] = packed + Chrome;
+        if (double.IsNaN(_widths[index]) || double.IsNaN(_packedAt[index]) || Math.Abs(packed - _packedAt[index]) > 0.5)
+        {
+            _widths[index] = MeasuredAt(index);
+            _packedAt[index] = packed;
+        }
+
         return _widths[index];
     }
 
-    // Padding and the dividing rule. Captured DURING the measure: read on demand, the two sizes come from different
-    // variants while the search walks them, and their difference is not the chrome.
-    private double _chrome;
+    // What the commands cost when the group's width at each variant was measured. Dropped when the group itself changes
+    // its size around them - a caption, the dividing rule, the theme's padding - which the commands' cost does not show.
+    private double[] _packedAt;
 
-    private double Chrome => _chrome;
+    protected override void OnPropertyChanged(AdamantiumPropertyChangedEventArgs e)
+    {
+        base.OnPropertyChanged(e);
+
+        if (e.Property == IsCollapsedProperty || e.Property == CollapsedHeaderProperty) return;
+
+        if (e.Property == HeaderTemplateProperty || e.Property.GetDefaultMetadata(GetType())?.AffectsMeasure == true)
+        {
+            _packedAt = null;
+        }
+
+        if (e.Property == HeaderTemplateProperty) CollapsedHeader = CollapsedHeaderOf(Header);
+    }
+
+    // The group drawn at a variant and measured whole, then put back. Not the commands plus a constant: a caption wider
+    // than the commands of a small variant is the group's width there, and a sum read off the variant drawn answered
+    // differently for every one - the band flipped between them on every pass.
+    private double MeasuredAt(int index)
+    {
+        var drawn = CurrentVariant;
+        Packing.Apply(index);
+        RemeasureFromCommands();
+        Measure(new Size(double.PositiveInfinity, _bandHeight));
+        var width = DesiredSize.Width;
+
+        if (index != drawn)
+        {
+            Packing.Apply(drawn);
+            RemeasureFromCommands();
+            Measure(new Size(double.PositiveInfinity, _bandHeight));
+        }
+
+        return width;
+    }
+
+    // The commands' new sizes are template levels down, and the levels between still hold their old measure: a measure
+    // asked of the group right now would answer the old width unless every level says so.
+    private void RemeasureFromCommands()
+    {
+        Packing?.InvalidateOwnMeasure();
+        for (var node = Packing?.VisualParent; node != null && !ReferenceEquals(node, this); node = node.VisualParent)
+        {
+            (node as IMeasurableComponent)?.InvalidateMeasure();
+        }
+
+        InvalidateMeasure();
+    }
+
+    // What the button costs: CollapsedWidth at least, more for a label that needs it. Measured while it is shown, and
+    // kept for the asking before the next collapse; until it was ever shown, the metric stands in.
+    private double _collapsedCost = double.NaN;
+    private double _bandHeight = double.PositiveInfinity;
+
+    private double CollapsedCost()
+    {
+        // The whole group, its dividing rule with it - but only once the button shows and the commands' place is hidden:
+        // until the theme has done both, the commands are what the group measures, and a collapse costing the whole
+        // group was never taken again.
+        if (IsCollapsed && _collapsedButton is { Visibility: Visibility.Visible }
+            && _inlineHost is not { Visibility: Visibility.Visible })
+        {
+            // The levels between the button and the group may still hold the measure of the commands.
+            for (var node = _collapsedButton.VisualParent; node != null && !ReferenceEquals(node, this); node = node.VisualParent)
+            {
+                (node as IMeasurableComponent)?.InvalidateMeasure();
+            }
+
+            InvalidateMeasure();
+            Measure(new Size(double.PositiveInfinity, _bandHeight));
+            if (DesiredSize.Width > 0) _collapsedCost = DesiredSize.Width;
+        }
+
+        return Math.Max(CollapsedWidth, double.IsNaN(_collapsedCost) ? 0 : _collapsedCost);
+    }
 
     protected override Size MeasureOverride(Size availableSize)
     {
-        var size = base.MeasureOverride(availableSize);
-
-        if (Packing is { } packing && packing.DesiredSize.Width > 0)
-        {
-            _chrome = Math.Max(0, size.Width - packing.DesiredSize.Width);
-        }
-
-        return size;
+        _bandHeight = availableSize.Height;
+        return base.MeasureOverride(availableSize);
     }
 
     /// <summary>A command from data is the control its item template builds, not a presenter around it: the group sizes
@@ -233,6 +367,7 @@ public class RibbonGroup : ItemsControl, IHeaderedItemsControl
 
         IsCollapsed = false;
         Packing?.Apply(index);
+        RemeasureFromCommands();
     }
 
     private int _current;
@@ -321,7 +456,8 @@ public class RibbonGroup : ItemsControl, IHeaderedItemsControl
             return;
         }
 
-        // ...and back to the variant the band chose for it.
+        // ...and back to the variant the band chose for it, measured anew.
+        Packing?.ForgetWidths();
         Packing?.Apply(Math.Min(Math.Max(_current, 0), Variants.Count - 1));
 
         if (_inlineHost != null) _inlineHost.Child = _content;
@@ -344,6 +480,9 @@ public class RibbonGroup : ItemsControl, IHeaderedItemsControl
         var open = Equals(e.NewValue, true) && group.IsCollapsed;
         if (group._popup != null) group._popup.IsOpen = open;
         group._collapsedButton?.SetCurrentValue(Primitives.ToggleButton.IsCheckedProperty, open);
+
+        // The row left it as it was while the flyout was in use; closed, it is the row's to decide again.
+        if (!open) (group.VisualParent as Panels.RibbonGroupsPanel)?.InvalidateArrange();
     }
 
     /// <summary>The variant currently drawn - 0 while there is room for everything.</summary>
@@ -416,7 +555,7 @@ public class RibbonGroup : ItemsControl, IHeaderedItemsControl
         set => SetValue(ShrinkStepsProperty, value);
     }
 
-    /// <summary>What the collapsed button is worth in width - a THEME metric, not a measurement.</summary>
+    /// <summary>How narrow the collapsed button may be - a THEME metric; a longer label makes it wider.</summary>
     public static readonly AdamantiumProperty CollapsedWidthProperty = AdamantiumProperty.Register(nameof(CollapsedWidth),
         typeof(double), typeof(RibbonGroup), new PropertyMetadata(64.0, PropertyMetadataOptions.AffectsMeasure));
 

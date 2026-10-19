@@ -22,9 +22,22 @@ public class RibbonAdaptiveLayoutTests
         /// than drawn large. Measured on the live ribbon: "Select none" costs 84 medium against 66 large.</summary>
         public bool LongLabel { get; init; }
 
+        private double _extra;
+
+        /// <summary>Added at every size: a label rewritten longer or shorter, as another language does.</summary>
+        public double Extra
+        {
+            get => _extra;
+            set
+            {
+                _extra = value;
+                InvalidateMeasure();
+            }
+        }
+
         protected override Size MeasureOverride(Size availableSize)
         {
-            Width = Ribbon.GetSize(this) switch
+            Width = _extra + Ribbon.GetSize(this) switch
             {
                 RibbonSize.Large => 60,
                 RibbonSize.Medium => LongLabel ? 90 : 40,
@@ -39,7 +52,7 @@ public class RibbonAdaptiveLayoutTests
     /// at what its COMMANDS cost has nowhere to put this, and the rule walks back into the commands.</summary>
     private const double Chrome = 15;   // 6 + 6 padding, 1 rule, 1 + 1 rule margin
 
-    private static RibbonGroup Group(int commands, int shrinkPriority = 0, bool fixedSize = false)
+    private static RibbonGroup Group(int commands, int shrinkPriority = 0, bool fixedSize = false, double caption = 0)
     {
         var group = new RibbonGroup
         {
@@ -62,6 +75,12 @@ public class RibbonAdaptiveLayoutTests
 
                 outer.Children.Add(presenter);
                 outer.Children.Add(rule);
+
+                // The group's caption, under the commands - wider than they are once they shrink.
+                if (caption > 0)
+                {
+                    outer.Children.Add(new Border { Width = caption, Height = 1, Margin = new Thickness(6, 0, 6, 0) });
+                }
 
                 var result = new TemplateResult { RootComponent = outer };
                 result.RegisterName("PART_ItemsPresenter", presenter);
@@ -146,15 +165,6 @@ public class RibbonAdaptiveLayoutTests
     private static IEnumerable<int> Variants(RibbonGroup[] groups) => groups.Select(g => g.CurrentVariant);
 
     private static double Occupied(RibbonGroup[] groups) => groups.Sum(g => g.WidthAt(g.CurrentVariant));
-
-    // Nothing left that would help: at the last variant, or the only step left is a collapse that would make it wider.
-    private static bool Exhausted(RibbonGroup group)
-    {
-        var next = group.CurrentVariant + 1;
-        if (next >= group.Variants.Count) return true;
-
-        return group.Variants[next].IsCollapsed && group.WidthAt(next) >= group.WidthAt(group.CurrentVariant);
-    }
 
     // A command from data is the control its template builds, bound to its item - not a presenter around it, which took
     // the size the group chose and the quick-access menu and key, and kept them from the command.
@@ -431,29 +441,31 @@ public class RibbonAdaptiveLayoutTests
         }
     }
 
-    // One group at a time, and each to the END of its own ladder - sizes down to the tightest, then collapsed - before
-    // the next one is touched at all. A group with room to stay whole stays whole.
+    // Nothing stays put away while there is room for it. The order groups give way in decides WHICH gives way; it never
+    // leaves band standing empty beside a group shrunk or collapsed that would fit in it - a collapse frees more than
+    // was needed, and a group further along may take that back. Swept both ways, as a window is dragged.
     [Test]
-    public void AGroupIsExhaustedBeforeTheNextIsTouched()
+    public void NoGroupStaysShrunkWhileThereIsRoomForIt()
     {
-        // Nine commands, so a group's tightest row of icons is still wider than the button - collapsing is a step that
-        // buys something, and the order it happens in is observable.
-        var (panel, groups) = Row(Group(9), Group(9), Group(9));
+        var (panel, groups) = Row(Group(9), NonMonotonicGroup(), Group(3, fixedSize: true), Group(9));
         LayoutAt(panel, 2000);
+        var whole = (int)Occupied(groups);
 
-        for (var width = Occupied(groups); width >= 120; width -= 5)
+        var widths = Enumerable.Range(0, (whole - 120) / 5).Select(i => whole - 5.0 * i).ToList();
+        widths.AddRange(Enumerable.Reverse(widths));
+
+        foreach (var width in widths)
         {
             LayoutAt(panel, width);
 
-            // Whatever the width, the picture reads left to right as: untouched groups, at most one part-way down, then
-            // exhausted ones. A group that has started giving way while the one to its right still has something left is
-            // the trade this order exists to avoid.
-            for (var i = 1; i < groups.Length; i++)
+            foreach (var group in groups)
             {
-                if (groups[i - 1].CurrentVariant == 0) continue;
-
-                Assert.That(Exhausted(groups[i]), Is.True,
-                    $"at width {width}, '{groups[i - 1].Header}' gave way while the group to its right still had steps");
+                var room = width - (Occupied(groups) - group.WidthAt(group.CurrentVariant));
+                for (var i = 0; i < group.CurrentVariant; i++)
+                {
+                    Assert.That(group.WidthAt(i), Is.GreaterThan(room),
+                        $"at width {width} a group sits at variant {group.CurrentVariant} with room for variant {i}");
+                }
             }
         }
     }
@@ -478,6 +490,51 @@ public class RibbonAdaptiveLayoutTests
 
             Assert.That(group.WidthAt(group.CurrentVariant), Is.LessThanOrEqualTo(roomiest),
                 $"at width {width} the group sits on rung {group.CurrentVariant} and is wider than it was whole");
+        }
+    }
+
+    // Dragging a window narrower, the row at each width is the one a fresh row shows there, and what each variant costs
+    // stays what it is. A group's chrome read off a measure that had not reached its commands misread every width, and
+    // groups grew back and shrank again as the window only narrowed.
+    [Test]
+    public void SweepingTheWidth_GivesAtEachWidthWhatAFreshRowGives()
+    {
+        var (panel, groups) = Row(Group(3), Group(3), Group(2));
+        LayoutAt(panel, 2000);
+        var costs = groups.Select(g => Enumerable.Range(0, g.Variants.Count - 1).Select(g.WidthAt).ToArray()).ToArray();
+
+        for (var width = 700.0; width >= 120; width -= 1)
+        {
+            LayoutAt(panel, width);
+
+            var (fresh, freshGroups) = Row(Group(3), Group(3), Group(2));
+            LayoutAt(fresh, 2000);
+            LayoutAt(fresh, width);
+
+            Assert.That(Variants(groups), Is.EqualTo(Variants(freshGroups)), $"at width {width}");
+            for (var g = 0; g < groups.Length; g++)
+            {
+                var now = Enumerable.Range(0, costs[g].Length).Select(groups[g].WidthAt).ToArray();
+                Assert.That(now, Is.EqualTo(costs[g]).Within(0.5), $"group {g}'s costs at width {width}");
+            }
+        }
+    }
+
+    // ...a group whose caption is wider than its smaller layouts too: its width there is the caption's, which no
+    // constant added to what the commands cost says - read off the layout drawn, it came out different for each.
+    [Test]
+    public void AGroupWiderByItsCaption_CostsTheSameWhicheverLayoutIsDrawn()
+    {
+        var (panel, groups) = Row(Group(3), Group(2, caption: 70));
+        LayoutAt(panel, 2000);
+        var costs = Enumerable.Range(0, groups[1].Variants.Count - 1).Select(groups[1].WidthAt).ToArray();
+        Assert.That(costs[^1], Is.EqualTo(costs[^2]).Within(0.5), "precondition: the caption holds the small layouts wide");
+
+        for (var width = 400.0; width >= 120; width -= 1)
+        {
+            LayoutAt(panel, width);
+            var now = Enumerable.Range(0, costs.Length).Select(groups[1].WidthAt).ToArray();
+            Assert.That(now, Is.EqualTo(costs).Within(0.5), $"at width {width}");
         }
     }
 
@@ -608,33 +665,6 @@ public class RibbonAdaptiveLayoutTests
         Assert.That(Occupied(groups), Is.LessThanOrEqualTo(roomy - 120));
     }
 
-    // Sweeping the width one way must give a monotonic answer - a band that flickers while a window is dragged is the
-    // failure. This passes with the grow-back margin at zero too, so it does NOT stand in for the hysteresis: it says
-    // the choice is stable, not that the deadband is what makes it so.
-    [Test]
-    public void SweepingTheWidthDown_NeverGrowsAGroupBackMidSweep()
-    {
-        var (panel, groups) = Row(Group(3), Group(3), Group(2));
-        LayoutAt(panel, 2000);
-
-        var seen = new List<(double Width, int[] Variants)>();
-        for (var width = 700.0; width >= 120; width -= 1)
-        {
-            LayoutAt(panel, width);
-            seen.Add((width, groups.Select(g => g.CurrentVariant).ToArray()));
-        }
-
-        for (var i = 1; i < seen.Count; i++)
-        {
-            for (var g = 0; g < groups.Length; g++)
-            {
-                Assert.That(seen[i].Variants[g], Is.GreaterThanOrEqualTo(seen[i - 1].Variants[g]),
-                    $"group {g} grew back at width {seen[i].Width} (was {seen[i - 1].Variants[g]} " +
-                    $"at {seen[i - 1].Width}, now {seen[i].Variants[g]})");
-            }
-        }
-    }
-
     // The same width twice has to give the same answer, whichever side it was approached from - within the deadband the
     // choice is allowed to differ, outside it, it is not.
     [Test]
@@ -696,6 +726,207 @@ public class RibbonAdaptiveLayoutTests
             Assert.That(groups.Select(g => g.IsCollapsed), Is.All.False);
             Assert.That(Variants(groups), Is.All.EqualTo(0));
         });
+    }
+
+    // A group hidden gives its room back at the SAME tab width: what shrank for want of it is drawn whole again. Waiting
+    // for the tab to widen left the row shrunk beside empty space.
+    [Test]
+    public void AGroupHidden_GivesItsRoomBack()
+    {
+        var (panel, groups) = Row(Group(3), Group(3), Group(3));
+        LayoutAt(panel, 2000);
+        var width = groups[0].WidthAt(0) + groups[1].WidthAt(0) + 30;
+        LayoutAt(panel, width);
+        Assert.That(groups[1].CurrentVariant, Is.GreaterThan(0), "precondition: the middle group shrank too");
+
+        groups[2].Visibility = Visibility.Collapsed;
+        LayoutAt(panel, width);
+
+        Assert.That(groups.Take(2).Select(g => g.CurrentVariant), Is.All.EqualTo(0));
+    }
+
+    // Commands drawn narrower - another language, a shorter label - give the row room the same way.
+    [Test]
+    public void CommandsDrawnNarrower_GiveTheRowRoomBack()
+    {
+        var (panel, groups) = Row(Group(3), Group(3));
+        var commands = groups.SelectMany(g => g.Items.Cast<SizedCommand>()).ToArray();
+        foreach (var command in commands) command.Extra = 20;
+        LayoutAt(panel, 2000);
+        var width = Occupied(groups) - 40;
+        LayoutAt(panel, width);
+        Assert.That(Variants(groups), Is.Not.All.EqualTo(0), "precondition: something shrank");
+
+        foreach (var command in commands) command.Extra = 0;
+        LayoutManager.For(panel).ExecuteLayoutPass();     // one frame, as the running app re-measures the labels
+        LayoutAt(panel, width);
+
+        Assert.That(Variants(groups), Is.All.EqualTo(0));
+    }
+
+    // ...a collapsed group's commands too, rewritten with everyone's (another language). Its widths were about the old
+    // labels, it cannot be measured inside its flyout, and it stayed a button for good - the band switched to Russian
+    // and back sat half empty.
+    [Test]
+    public void ACollapsedGroupWhoseCommandsGrewNarrower_IsDrawnWholeWhenItFits()
+    {
+        var (panel, groups) = Row(Group(3, fixedSize: true), Group(3, fixedSize: true));
+        LayoutAt(panel, 2000);
+        var width = groups[0].WidthAt(0) + groups[1].WidthAt(0) + 6;
+        var commands = groups.SelectMany(g => g.Items.Cast<SizedCommand>()).ToArray();
+
+        foreach (var command in commands) command.Extra = 40;
+        LayoutManager.For(panel).ExecuteLayoutPass();
+        LayoutAt(panel, width);
+        Assert.That(groups[1].IsCollapsed, Is.True, "precondition: too wide, so it collapsed");
+
+        foreach (var command in commands) command.Extra = 0;
+        LayoutManager.For(panel).ExecuteLayoutPass();
+        LayoutAt(panel, width);
+
+        Assert.That(groups[1].IsCollapsed, Is.False);
+    }
+
+    // The choice is the width's and the content's alone, not the path there: a label misread wide for one pass (fonts
+    // still arriving) collapsed a group, its room went to a neighbor, and the row never came back to what a fresh one
+    // shows at that width.
+    [Test]
+    public void AfterCommandsWereWideForAMoment_TheRowIsAsAFreshOne()
+    {
+        var width = 0.0;
+        int[] Fresh()
+        {
+            var (fresh, freshGroups) = Row(Group(9), NonMonotonicGroup(), Group(3, fixedSize: true), Group(9));
+            LayoutAt(fresh, 2000);
+            width = Occupied(freshGroups) - 150;
+            LayoutAt(fresh, width);
+            return freshGroups.Select(g => g.CurrentVariant).ToArray();
+        }
+
+        var expected = Fresh();
+        var (panel, groups) = Row(Group(9), NonMonotonicGroup(), Group(3, fixedSize: true), Group(9));
+        LayoutAt(panel, 2000);
+        LayoutAt(panel, width);
+        var commands = groups[1].Items.Cast<SizedCommand>().ToArray();
+
+        foreach (var command in commands) command.Extra = 120;
+        LayoutManager.For(panel).ExecuteLayoutPass();
+        LayoutAt(panel, width);
+        foreach (var command in commands) command.Extra = 0;
+        LayoutManager.For(panel).ExecuteLayoutPass();
+        LayoutAt(panel, width);
+
+        Assert.That(Variants(groups), Is.EqualTo(expected));
+    }
+
+    // A collapsed group whose flyout is in use is left as it is while the row around it changes: opened, it closed the
+    // flyout under the pointer, and with its widths forgotten it was counted as costing nothing.
+    [Test]
+    public void ACollapsedGroupWithItsFlyoutOpen_StaysCollapsed()
+    {
+        var (panel, groups) = Row(Group(3, fixedSize: true), Group(3, fixedSize: true));
+        LayoutAt(panel, 2000);
+        var width = groups[0].WidthAt(0) + groups[1].CollapsedWidth + 6;
+        LayoutAt(panel, width);
+        Assert.That(groups[1].IsCollapsed, Is.True, "precondition");
+        groups[1].IsDropDownOpen = true;
+
+        foreach (var command in groups[0].Items.Cast<SizedCommand>()) command.Extra = 1;
+        LayoutManager.For(panel).ExecuteLayoutPass();
+        LayoutAt(panel, width);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(groups[1].IsCollapsed, Is.True);
+            Assert.That(groups[1].IsDropDownOpen, Is.True);
+        });
+    }
+
+    // A collapsed group's button names it on two lines when the name has several words, broken nearest the middle.
+    [TestCase("Styles", "Styles")]
+    [TestCase("Stylistic sets", "Stylistic\nsets")]
+    [TestCase("Update style to match", "Update style\nto match")]
+    [TestCase("Буфер обмена", "Буфер\nобмена")]
+    [TestCase(" Font  size ", "Font  size")]
+    public void ACollapsedHeader_IsTheNameOnTwoLines(string header, string shown)
+    {
+        Assert.That(new RibbonGroup { Header = header }.CollapsedHeader, Is.EqualTo(shown));
+    }
+
+    // ...but a header a template draws is handed to it as written: it may key or convert on it.
+    [Test]
+    public void AHeaderDrawnByATemplate_IsGivenAsWritten()
+    {
+        var group = new RibbonGroup { Header = "Font size" };
+        group.HeaderTemplate = new DataTemplate(() => new TemplateResult { RootComponent = new Border() });
+
+        Assert.That(group.CollapsedHeader, Is.EqualTo("Font size"));
+    }
+
+    // A group held collapsed while its flyout was in use is the row's to decide again once the flyout closes - room
+    // freed meanwhile (a command in the flyout hid a group) is not left standing empty.
+    [Test]
+    public void AGroupHeldForItsFlyout_IsDecidedAgainWhenItCloses()
+    {
+        var a = Group(3, fixedSize: true);
+        var c = Group(3, fixedSize: true);
+        var b = Group(3, fixedSize: true);
+        b.ShrinkSteps = RibbonGroupShrinkSteps.Collapse;
+        var (panel, _) = Row(a, c, b);
+        LayoutAt(panel, 2000);
+        var width = a.WidthAt(0) + c.WidthAt(0) + b.CollapsedWidth + 6;
+        LayoutAt(panel, width);
+        Assert.That(b.IsCollapsed, Is.True, "precondition");
+
+        b.IsDropDownOpen = true;
+        c.Visibility = Visibility.Collapsed;
+        LayoutManager.For(panel).ExecuteLayoutPass();
+        Assert.That(b.IsCollapsed, Is.True, "held while its flyout is open");
+
+        b.IsDropDownOpen = false;
+        LayoutManager.For(panel).ExecuteLayoutPass();
+
+        Assert.That(b.IsCollapsed, Is.False);
+    }
+
+    // A group shown again is laid out for the row as it is now, not left at the step it had when it was hidden.
+    [Test]
+    public void AGroupShownAgain_IsDrawnWholeWhenThereIsRoom()
+    {
+        var (panel, groups) = Row(Group(3, fixedSize: true), Group(3, fixedSize: true));
+        LayoutAt(panel, 2000);
+        LayoutAt(panel, groups[0].WidthAt(0) + groups[1].CollapsedWidth + 6);
+        Assert.That(groups[1].IsCollapsed, Is.True, "precondition: the second group collapsed");
+
+        groups[1].Visibility = Visibility.Collapsed;
+        LayoutAt(panel, 2000);
+        groups[1].Visibility = Visibility.Visible;
+        LayoutAt(panel, 2000);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(groups[1].IsCollapsed, Is.False);
+            Assert.That(Variants(groups), Is.All.EqualTo(0));
+        });
+    }
+
+    // ...and the choice settles: un-collapsing a group moves its commands, which must not set off another choice.
+    [Test]
+    public void TheRoomGivenBack_Settles()
+    {
+        var (panel, groups) = Row(Group(3, fixedSize: true), Group(3, fixedSize: true), Group(3, fixedSize: true));
+        LayoutAt(panel, 2000);
+        var width = groups[0].WidthAt(0) + groups[1].CollapsedWidth + groups[2].CollapsedWidth + 6;
+        LayoutAt(panel, width);
+        groups[2].Visibility = Visibility.Collapsed;
+        LayoutAt(panel, width);
+        var settled = groups.Take(2).Select(g => g.CurrentVariant).ToArray();
+
+        for (var pass = 0; pass < 5; pass++)
+        {
+            LayoutAt(panel, width);
+            Assert.That(groups.Take(2).Select(g => g.CurrentVariant), Is.EqualTo(settled), $"pass {pass} changed its mind");
+        }
     }
 
     // A tab narrower than even the collapsed buttons still lays out and still answers - it runs out of variants, not out

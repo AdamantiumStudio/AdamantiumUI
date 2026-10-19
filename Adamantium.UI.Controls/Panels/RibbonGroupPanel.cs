@@ -254,6 +254,25 @@ public class RibbonGroupPanel : Panel
         return widths;
     }
 
+    /// <summary>Measure every variant afresh when next asked: what was measured inside a collapsed group's flyout may be
+    /// about labels since rewritten. The variants themselves stand.</summary>
+    internal void ForgetWidths() => _variantWidths = null;
+
+    /// <summary>Measure again on the next asking, the widths kept: the group re-measures through the panel after sizing
+    /// the commands itself.</summary>
+    internal void InvalidateOwnMeasure()
+    {
+        _sizingSelf++;
+        try
+        {
+            InvalidateMeasure();
+        }
+        finally
+        {
+            _sizingSelf--;
+        }
+    }
+
     // A command added, a label rebound, a font changed: the measured widths are about content that is gone.
     public override void InvalidateMeasure()
     {
@@ -266,7 +285,9 @@ public class RibbonGroupPanel : Panel
         base.InvalidateMeasure();
     }
 
-    // A large command or a separator owns its column; anything else joins the run until it holds RowsPerColumn.
+    // A large command, a gallery showing its cells or a separator owns its column; anything else joins the run until it
+    // holds RowsPerColumn. A gallery at its compact size is still rows of cells the band's height: stacked with a
+    // command after it, the command was pushed out of the bottom of the band.
     private void Repartition()
     {
         _columns.Clear();
@@ -279,7 +300,7 @@ public class RibbonGroupPanel : Panel
 
             var size = Ribbon.GetSize(child);
 
-            if (size == RibbonSize.Large || child is Separator)
+            if (size == RibbonSize.Large || child is Separator || child is RibbonGallery { IsCollapsed: false })
             {
                 run = null;
                 Add([child]);
