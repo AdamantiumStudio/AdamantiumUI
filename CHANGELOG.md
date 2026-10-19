@@ -54,6 +54,19 @@ All packages share one version.
     the themes, and `CalendarDayButton.IsMarked` and the classes for a style; `CalendarDayButtonStyle` and
     `CalendarButtonStyle` add a style to every day or month and year cell, and `CalendarDayButton.DayOfWeek` lets one
     pick out weekends.
+- `DateTimeField`: a date, a time or both entered part by part (`DateTimeFieldSegment`) in the order and form of its
+  `Language` - `Format` (short or long date, short or long time, short date and time) or a .NET pattern of its own in
+  `CustomFormat`, counted by a `CalendarSystem` as the calendar's, Japanese eras a part of their own. Digits fill a part
+  and move on once no other digit can follow; the up and down arrows step a part round within itself (the 31st to the
+  1st in the same month); the left and right arrows, Tab and a separator move between parts; Backspace and Delete empty
+  one; a letter picks a named month or AM/PM. `Value` is null until every part is entered, and empty parts show their
+  placeholders. A click anywhere on it puts the keyboard on the nearest part. In the Fluent, Graphite and macOS themes as
+  their text field; automation sees an edit of spinners. The sandbox's "Date and time" tab has a field of each format.
+- `DatePicker`, `TimePicker` and `DateTimePicker`: the same field with a button at its end (Alt+Down and F4 too) that
+  opens a calendar, the times of a day, or both side by side. A day picked keeps the time; a time picked keeps the day
+  and closes. The times come as a list a `TimeInterval` apart (15 minutes by default), as columns of hours, minutes and
+  AM/PM, or on a clock face whose hand is dragged round, hours then minutes (`PopupStyle`). `DisplayDateStart`/`End`
+  bound the calendar; Escape closes. Automation sees a combo box that expands.
 - `Inline.FontFamily`: a run or a span sets the family of its own text, as WPF's `TextElement` does; `ClearOverrides`
   takes it off.
 - `DragDropEvents.DragCompleted`: the source of a drag hears how it ended as an event on itself, before its

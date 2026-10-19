@@ -169,4 +169,105 @@
         </PropertyTrigger>
     </Style>
 
+    <!-- DateTimeField: the same field, its parts side by side where the text box has its text. -->
+    <Style Selector="DateTimeField">
+        <Setter Property="Background" Value="{ResourceReference ControlFillColorDefault}"/>
+        <Setter Property="Foreground" Value="{ObservableResource TextFillColorPrimary}"/>
+        <Setter Property="BorderBrush" Value="{ResourceReference ControlStrokeColorDefault}"/>
+        <Setter Property="BorderThickness" Value="{ResourceReference StrokeThin}"/>
+        <Setter Property="CornerRadius" Value="{ResourceReference CornerRadiusDefault}"/>
+        <Setter Property="Padding" Value="{ResourceReference PaddingField}"/>
+        <Setter Property="MinHeight" Value="{ResourceReference ControlHeight}"/>
+        <Setter Property="FontSize" Value="{ResourceReference FontSizeBody}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="DateTimeField">
+                    <Border x:Name="PART_Border"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="{TemplateBinding CornerRadius}"
+                            Padding="{TemplateBinding Padding}">
+                        <StackPanel x:Name="PART_Segments"
+                                    Orientation="Horizontal"
+                                    VerticalAlignment="Center"/>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style Selector="DateTimeField">
+        <PropertyTrigger Property="IsPointerOver" Value="true">
+            <Setter TargetName="PART_Border" Property="BorderBrush" Value="{ResourceReference ControlStrokeColorSecondary}"/>
+        </PropertyTrigger>
+        <PropertyTrigger Property="IsFocused" Value="true">
+            <Setter TargetName="PART_Border" Property="BorderBrush" Value="{ThemeResource AccentFillColorDefault}"/>
+            <Setter TargetName="PART_Border" Property="Background" Value="{ResourceReference ControlFillColorSecondary}"/>
+        </PropertyTrigger>
+        <PropertyTrigger Property="IsEnabled" Value="false">
+            <Setter Property="Foreground" Value="{ObservableResource TextFillColorDisabled}"/>
+        </PropertyTrigger>
+    </Style>
+
+    <!-- The pickers: the same field, its button at the end and the card the button opens under it. -->
+    <Style Selector="DatePicker, TimePicker, DateTimePicker">
+        <Setter Property="Background" Value="{ResourceReference ControlFillColorDefault}"/>
+        <Setter Property="Foreground" Value="{ObservableResource TextFillColorPrimary}"/>
+        <Setter Property="BorderBrush" Value="{ResourceReference ControlStrokeColorDefault}"/>
+        <Setter Property="BorderThickness" Value="{ResourceReference StrokeThin}"/>
+        <Setter Property="CornerRadius" Value="{ResourceReference CornerRadiusDefault}"/>
+        <Setter Property="Padding" Value="{ResourceReference PaddingField}"/>
+        <Setter Property="MinHeight" Value="{ResourceReference ControlHeight}"/>
+        <Setter Property="FontSize" Value="{ResourceReference FontSizeBody}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="DateTimePickerBase">
+                    <Border x:Name="PART_Border"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="{TemplateBinding CornerRadius}"
+                            Padding="{TemplateBinding Padding}">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel x:Name="PART_Segments"
+                                        Orientation="Horizontal"
+                                        VerticalAlignment="Center"/>
+                            <Button x:Name="PART_Button"
+                                    Grid.Column="1"
+                                    Classes="DateTimePickerButton"
+                                    Focusable="False"
+                                    AutomationProperties.Name="{Localize DateTimeFieldStrings.Choose}">
+                                <Image Source="{TemplateBinding ButtonIcon}"
+                                       Width="12"
+                                       Height="12"/>
+                            </Button>
+                            <Popup x:Name="PART_Popup"
+                                   Placement="Bottom"
+                                   PlacementAlignment="Start"
+                                   FlipToFit="True"
+                                   VerticalOffset="4"/>
+                        </Grid>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style Selector="DatePicker, TimePicker, DateTimePicker">
+        <PropertyTrigger Property="IsPointerOver" Value="true">
+            <Setter TargetName="PART_Border" Property="BorderBrush" Value="{ResourceReference ControlStrokeColorSecondary}"/>
+        </PropertyTrigger>
+        <PropertyTrigger Property="IsFocused" Value="true">
+            <Setter TargetName="PART_Border" Property="BorderBrush" Value="{ThemeResource AccentFillColorDefault}"/>
+            <Setter TargetName="PART_Border" Property="Background" Value="{ResourceReference ControlFillColorSecondary}"/>
+        </PropertyTrigger>
+        <PropertyTrigger Property="IsDropDownOpen" Value="true">
+            <Setter TargetName="PART_Border" Property="BorderBrush" Value="{ThemeResource AccentFillColorDefault}"/>
+        </PropertyTrigger>
+        <PropertyTrigger Property="IsEnabled" Value="false">
+            <Setter Property="Foreground" Value="{ObservableResource TextFillColorDisabled}"/>
+        </PropertyTrigger>
+    </Style>
+
 </StyleSet>

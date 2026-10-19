@@ -74,6 +74,145 @@
                              IsChecked="{Binding CalendarLanguage, Converter={conv:EnumToBoolConverter}, ConverterParameter=ar-EG, Mode=TwoWay}"/>
             </WrapPanel>
 
+            <!-- Date and time fields in each format and language; the date is the calendars' own. -->
+            <TextBlock Text="{Localize DateTimePageStrings.Fields}"
+                       TextWrapping="WrapByWords"
+                       MaxWidth="680"
+                       HorizontalAlignment="Left"
+                       MarginTop="12"
+                       MarginBottom="8"/>
+            <Grid ColumnDefinitions="Auto,Auto,Auto"
+                  RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto"
+                  ColumnSpacing="12"
+                  RowSpacing="6"
+                  HorizontalAlignment="Left">
+                <TextBlock Text="{Localize DateTimePageStrings.ShortDate}"
+                           VerticalAlignment="Center"/>
+                <DateTimeField AutomationProperties.AutomationId="DateField"
+                               Grid.Column="1"
+                               Value="{Binding SelectedDate}"
+                               Language="{Binding CalendarLanguage}"/>
+                <TextBlock Grid.Column="2"
+                           VerticalAlignment="Center"><Run Text="{Localize DateTimePageStrings.FieldValue}"/><Run Text="{Binding SelectedDate, StringFormat='{0:G}'}"/></TextBlock>
+
+                <TextBlock Grid.Row="1"
+                           Text="{Localize DateTimePageStrings.LongDate}"
+                           VerticalAlignment="Center"/>
+                <DateTimeField Grid.Row="1"
+                               Grid.Column="1"
+                               Format="LongDate"
+                               Value="{Binding SelectedDate}"
+                               Language="{Binding CalendarLanguage}"/>
+
+                <TextBlock Grid.Row="2"
+                           Text="{Localize DateTimePageStrings.ShortTime}"
+                           VerticalAlignment="Center"/>
+                <DateTimeField AutomationProperties.AutomationId="TimeField"
+                               Grid.Row="2"
+                               Grid.Column="1"
+                               Format="ShortTime"
+                               Value="{Binding MeetingTime}"
+                               Language="{Binding CalendarLanguage}"/>
+                <TextBlock Grid.Row="2"
+                           Grid.Column="2"
+                           VerticalAlignment="Center"><Run Text="{Localize DateTimePageStrings.FieldValue}"/><Run Text="{Binding MeetingTime, StringFormat='{0:G}'}"/></TextBlock>
+
+                <TextBlock Grid.Row="3"
+                           Text="{Localize DateTimePageStrings.DateAndTime}"
+                           VerticalAlignment="Center"/>
+                <DateTimeField Grid.Row="3"
+                               Grid.Column="1"
+                               Format="ShortDateTime"
+                               Value="{Binding MeetingTime}"
+                               Language="{Binding CalendarLanguage}"/>
+
+                <TextBlock Grid.Row="4"
+                           Text="{Localize DateTimePageStrings.Custom}"
+                           VerticalAlignment="Center"/>
+                <DateTimeField Grid.Row="4"
+                               Grid.Column="1"
+                               Format="Custom"
+                               CustomFormat="dddd, d MMMM yyyy"
+                               Value="{Binding SelectedDate}"
+                               Language="{Binding CalendarLanguage}"/>
+
+                <TextBlock Grid.Row="5"
+                           Text="{Localize DateTimePageStrings.CountedField}"
+                           VerticalAlignment="Center"/>
+                <DateTimeField Grid.Row="5"
+                               Grid.Column="1"
+                               CalendarSystem="{Binding CalendarSystem}"
+                               Value="{Binding SelectedDate}"
+                               Language="{Binding CalendarLanguage}"/>
+            </Grid>
+
+            <!-- The same fields with a button that opens a calendar, a list of times, or both. -->
+            <TextBlock Text="{Localize DateTimePageStrings.Pickers}"
+                       TextWrapping="WrapByWords"
+                       MaxWidth="680"
+                       HorizontalAlignment="Left"
+                       MarginTop="16"
+                       MarginBottom="8"/>
+            <Grid ColumnDefinitions="Auto,Auto"
+                  RowDefinitions="Auto,Auto,Auto,Auto,Auto"
+                  ColumnSpacing="12"
+                  RowSpacing="6"
+                  HorizontalAlignment="Left"
+                  MarginBottom="12">
+                <TextBlock Text="{Localize DateTimePageStrings.DatePicker}"
+                           VerticalAlignment="Center"/>
+                <DatePicker AutomationProperties.AutomationId="DatePicker"
+                            Grid.Column="1"
+                            MinWidth="180"
+                            Value="{Binding SelectedDate}"
+                            CalendarSystem="{Binding CalendarSystem}"
+                            Language="{Binding CalendarLanguage}"/>
+
+                <TextBlock Grid.Row="1"
+                           Text="{Localize DateTimePageStrings.TimePicker}"
+                           VerticalAlignment="Center"/>
+                <TimePicker AutomationProperties.AutomationId="TimePicker"
+                            Grid.Row="1"
+                            Grid.Column="1"
+                            MinWidth="180"
+                            Value="{Binding MeetingTime}"
+                            Language="{Binding CalendarLanguage}"/>
+
+                <TextBlock Grid.Row="2"
+                           Text="{Localize DateTimePageStrings.DateTimePicker}"
+                           VerticalAlignment="Center"/>
+                <DateTimePicker AutomationProperties.AutomationId="DateTimePicker"
+                                Grid.Row="2"
+                                Grid.Column="1"
+                                MinWidth="220"
+                                Value="{Binding MeetingTime}"
+                                CalendarSystem="{Binding CalendarSystem}"
+                                Language="{Binding CalendarLanguage}"/>
+
+                <TextBlock Grid.Row="3"
+                           Text="{Localize DateTimePageStrings.TimeColumns}"
+                           VerticalAlignment="Center"/>
+                <TimePicker AutomationProperties.AutomationId="TimeColumnsPicker"
+                            Grid.Row="3"
+                            Grid.Column="1"
+                            MinWidth="180"
+                            PopupStyle="Columns"
+                            TimeInterval="0:05:00"
+                            Value="{Binding MeetingTime}"
+                            Language="{Binding CalendarLanguage}"/>
+
+                <TextBlock Grid.Row="4"
+                           Text="{Localize DateTimePageStrings.TimeDial}"
+                           VerticalAlignment="Center"/>
+                <TimePicker AutomationProperties.AutomationId="TimeDialPicker"
+                            Grid.Row="4"
+                            Grid.Column="1"
+                            MinWidth="180"
+                            PopupStyle="Dial"
+                            Value="{Binding MeetingTime}"
+                            Language="{Binding CalendarLanguage}"/>
+            </Grid>
+
             <WrapPanel Orientation="Horizontal"
                        MarginTop="12">
                 <!-- At the size its content asks for, bound to the page's date. -->

@@ -15,4 +15,18 @@
     <Phrase Key="Japanese" Text="Japanese eras"/>
     <Phrase Key="Months" Text="Months:"/>
     <Phrase Key="Large" Text="Given 640 by 520, its cells share the room - no Viewbox around it:"/>
+    <Phrase Key="Fields" Text="A date and time field is entered part by part, in the language's order and form: digits fill a part and move on, the up and down arrows step a part round, left, right and Tab move between parts, Backspace empties one. The value comes once every part is entered. The date is bound to the calendar below:"/>
+    <Phrase Key="ShortDate" Text="Date"/>
+    <Phrase Key="LongDate" Text="Long date"/>
+    <Phrase Key="ShortTime" Text="Time"/>
+    <Phrase Key="DateAndTime" Text="Date and time"/>
+    <Phrase Key="Custom" Text="A pattern of its own, &quot;dddd, d MMMM yyyy&quot;"/>
+    <Phrase Key="CountedField" Text="By the chosen calendar"/>
+    <Phrase Key="FieldValue" Text="Value: "/>
+    <Phrase Key="Pickers" Text="The same fields with a button at the end: it opens a calendar, a list of times, or both (Alt+Down and F4 too). A click on a day or a time picks it, Esc closes."/>
+    <Phrase Key="DatePicker" Text="Date picker"/>
+    <Phrase Key="TimePicker" Text="Time picker"/>
+    <Phrase Key="DateTimePicker" Text="Date and time picker"/>
+    <Phrase Key="TimeColumns" Text="Time in columns, 5 minutes apart"/>
+    <Phrase Key="TimeDial" Text="Time on a clock face"/>
 </Language>

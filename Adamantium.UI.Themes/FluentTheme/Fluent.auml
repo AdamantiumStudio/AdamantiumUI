@@ -100,5 +100,7 @@
         <StyleInclude Source="{x:Type fluent:ColorPickerStyleSet}"/>
         <StyleInclude Source="{x:Type fluent:ColorPickerButtonStyleSet}"/>
         <StyleInclude Source="{x:Type fluent:ColorWheelStyleSet}"/>
+        <!-- Last: its class styles of buttons and lists stand over the theme's own. -->
+        <StyleInclude Source="{x:Type shared:DateTimeFieldStyleSet}"/>
   </Theme.StyleIncludes>
 </Theme>

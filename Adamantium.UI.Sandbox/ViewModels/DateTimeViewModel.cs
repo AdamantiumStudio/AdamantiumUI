@@ -5,9 +5,10 @@ using Adamantium.UI.Controls;
 
 namespace Adamantium.UI.Sandbox.ViewModels;
 
-/// <summary>Date and time tab: calendars - one bound to <see cref="SelectedDate"/> with its selection mode, week numbers
-/// and language switched, one with a range and days struck through, several months side by side counted by the chosen
-/// calendar with holidays marked, and one given a large size its cells share.</summary>
+/// <summary>Date and time tab: date and time fields in each format, the date one bound to <see cref="SelectedDate"/> with
+/// the calendars; calendars - one bound to <see cref="SelectedDate"/> with its selection mode, week numbers and language
+/// switched, one with a range and days struck through, several months side by side counted by the chosen calendar with
+/// holidays marked, and one given a large size its cells share.</summary>
 [ViewModel]
 public partial class DateTimeViewModel : TabPageViewModel
 {
@@ -26,6 +27,8 @@ public partial class DateTimeViewModel : TabPageViewModel
     [Bindable] private CalendarSystem _calendarSystem = CalendarSystem.Language;
 
     [Bindable] private int _monthsShown = 2;
+
+    [Bindable] private DateTime? _meetingTime = DateTime.Today.AddHours(14).AddMinutes(5);
 
     /// <summary>The first day the range calendar shows: today.</summary>
     public DateTime RangeStart => DateTime.Today;

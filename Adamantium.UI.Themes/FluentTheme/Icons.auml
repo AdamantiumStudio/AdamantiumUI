@@ -69,6 +69,20 @@
                          StrokeThickness="1"/>
     </DrawingImage>
 
+    <!-- Calendar: a page with its top bar and two rings - what a date picker's button opens. -->
+    <DrawingImage x:Key="CalendarIcon">
+        <GeometryDrawing Geometry="M1,2 L9,2 L9,9.5 L1,9.5 Z M1,4.5 L9,4.5 M3.5,0.5 L3.5,3 M6.5,0.5 L6.5,3"
+                         Stroke="{ResourceReference TextFillColorSecondary}"
+                         StrokeThickness="1"/>
+    </DrawingImage>
+
+    <!-- Clock: a face and two hands - what a time picker's button opens. -->
+    <DrawingImage x:Key="ClockIcon">
+        <GeometryDrawing Geometry="M0.5,5 A4.5,4.5 0 1,1 9.5,5 A4.5,4.5 0 1,1 0.5,5 Z M5,2.5 L5,5 L7,6.5"
+                         Stroke="{ResourceReference TextFillColorSecondary}"
+                         StrokeThickness="1"/>
+    </DrawingImage>
+
     <!-- Chevrons: a filled triangle, one shape rotated by where it points. Kept as geometry rather than the SDF
          RegularPolygon they used to be, so the whole set is one kind of thing. -->
     <DrawingImage x:Key="ChevronDownIcon">

@@ -25,7 +25,7 @@
         <Setter Property="TextBlock.IsTextSelectionEnabled" Value="False"/>
     </Style>
 
-    <Style Selector="RibbonQuickAccessMenuItem, DataGridNewRowPresenter, Calendar">
+    <Style Selector="RibbonQuickAccessMenuItem, DataGridNewRowPresenter, Calendar, DateTimeField, DatePicker, TimePicker, DateTimePicker">
         <Setter Property="TextBlock.IsTextSelectionEnabled" Value="False"/>
     </Style>
 

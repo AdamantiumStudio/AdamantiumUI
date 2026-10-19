@@ -15,4 +15,18 @@
     <Phrase Key="Japanese" Text="Японские эры"/>
     <Phrase Key="Months" Text="Месяцев:"/>
     <Phrase Key="Large" Text="С размером 640 на 520 ячейки делят место — без Viewbox:"/>
+    <Phrase Key="Fields" Text="Поле даты и времени вводится по частям, в порядке и виде языка: цифры заполняют часть и переходят дальше, стрелки вверх и вниз листают часть по кругу, влево, вправо и Tab ходят между частями, Backspace очищает. Значение появляется, когда введены все части. Дата привязана к календарю ниже:"/>
+    <Phrase Key="ShortDate" Text="Дата"/>
+    <Phrase Key="LongDate" Text="Длинная дата"/>
+    <Phrase Key="ShortTime" Text="Время"/>
+    <Phrase Key="DateAndTime" Text="Дата и время"/>
+    <Phrase Key="Custom" Text="Свой шаблон «dddd, d MMMM yyyy»"/>
+    <Phrase Key="CountedField" Text="По выбранному календарю"/>
+    <Phrase Key="FieldValue" Text="Значение: "/>
+    <Phrase Key="Pickers" Text="Те же поля с кнопкой справа: она открывает календарь, список времени или оба сразу (Alt+↓ и F4 тоже). Щелчок по дню или времени выбирает его, Esc закрывает."/>
+    <Phrase Key="DatePicker" Text="Выбор даты"/>
+    <Phrase Key="TimePicker" Text="Выбор времени"/>
+    <Phrase Key="DateTimePicker" Text="Выбор даты и времени"/>
+    <Phrase Key="TimeColumns" Text="Время колонками, шаг 5 минут"/>
+    <Phrase Key="TimeDial" Text="Время циферблатом"/>
 </Language>
