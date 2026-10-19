@@ -119,6 +119,11 @@ public partial class RenderCache
     {
         if (unit.Component == null || !_groupById.TryGetValue(unit.Component.RenderId, out var group)) return "no group";
         var runs = string.Join(" ", group.Runs.ConvertAll(r => $"[{r.First}, {r.First + r.Count})"));
+        if (group.OtherRuns.Count > 0)
+        {
+            runs += ", in other arenas " + string.Join(" ", group.OtherRuns.ConvertAll(r =>
+                $"{(ReferenceEquals(r.Arena, _textBatch) ? "text" : r.Arena.GetType().Name)} [{r.First}, {r.First + r.Count})"));
+        }
         return $"group runs {runs}, walked {group.WalkVersion} of {_walkVersion}, arena {(ReferenceEquals(group.Arena, _textBatch) ? "text" : group.Arena?.GetType().Name ?? "none")}";
     }
 

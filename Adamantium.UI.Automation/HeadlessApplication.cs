@@ -22,6 +22,10 @@ public sealed class HeadlessApplication : IUIApplication, IUIContext, IWindowPla
     private HeadlessApplication()
     {
         ResourceManager = new ResourceManager();
+        // What a closed window asks for on its way out, as UIApplication registers it.
+        IDependencyContainer container = _container;
+        container.RegisterInstance<IDependencyResolver>(container);
+        container.RegisterSingleton<IRegionManager, RegionManager>();
         UIAppContext.Initialize(this, this);
         UIAppContext.Replace(this, this);
         _themes = new ThemeManager(_container);

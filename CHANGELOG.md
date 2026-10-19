@@ -1600,6 +1600,14 @@ All packages share one version.
 
 ### Fixed
 
+- Content that grows or shrinks by a splice no longer leaves its neighbors pointing at instances that moved with it: a
+  paragraph drawing a background or an underline with its text, an ellipse or a gradient fill beside it, or a cloned
+  copy went on recoloring and patching where it had been, and the frame verifier saw its glyphs undrawn. Typing into a
+  heading above a formatted paragraph raised it. A paragraph whose text comes before its underline also patches again
+  after such a splice, instead of walking the scene.
+- A window closed in a `HeadlessApplication` is discarded with its content: the discard asked for a region manager the
+  headless application did not register, and threw, so the window stayed alive in its brushes for the rest of a test
+  run.
 - A pointer coming over an element together with its ancestors - from a side panel straight onto a view that fills its
   document - shows the element's cursor: the ancestors were told of the enter after it, and the outermost put up its
   own. Elements joining a pointer's or the keyboard focus's chain hear of it outermost first.
