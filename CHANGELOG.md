@@ -1644,6 +1644,9 @@ All packages share one version.
 
 ### Fixed
 
+- A cursor that changes under a pointer standing still - a style turning it into a tool's - shows at once on Windows:
+  set from the UI loop it waited for the next move, `SetCursor` showing only from the window's own thread, which is now
+  asked to answer `WM_SETCURSOR` again.
 - A click into a `RenderTargetPanel` takes the keyboard focus, with any button: only a mouse-look did, so after a
   click on a toolbar the keys - Esc to a scene's tool among them - went on to the toolbar instead of the universe.
 - A checked menu row's label starts on the line of the others, in every theme: the check mark collapsed the icon
