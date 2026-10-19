@@ -102,10 +102,11 @@
                     Value="{ResourceReference TextFillColorDisabled}"/>
             <Setter TargetName="CheckGlyph" Property="Stroke" Value="{ResourceReference TextFillColorDisabled}"/>
         </PropertyTrigger>
-        <!-- A checked row shows the check mark in the icon gutter, in place of its icon. -->
+        <!-- A checked row shows the check mark in the icon gutter, in place of its icon - hidden, not collapsed: the
+             icon's presenter is what holds the gutter's width, so the label stays on the line of the others. -->
         <PropertyTrigger Property="IsChecked" Value="true">
             <Setter TargetName="CheckGlyph" Property="Visibility" Value="Visible"/>
-            <Setter TargetName="IconPresenter" Property="Visibility" Value="Collapsed"/>
+            <Setter TargetName="IconPresenter" Property="Visibility" Value="Hidden"/>
         </PropertyTrigger>
         <PropertyTrigger Property="HasItems" Value="true">
             <Setter TargetName="Chevron" Property="Visibility" Value="Visible"/>
