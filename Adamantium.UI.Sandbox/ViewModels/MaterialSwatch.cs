@@ -8,4 +8,7 @@ public class MaterialSwatch
 
     /// <summary>The swatch color, as a string the binding parses into a brush.</summary>
     public string Fill { get; set; }
+
+    /// <summary>Which family the gallery's drop-down titles it under - a phrase key of the shell's table.</summary>
+    public string Family { get; set; }
 }

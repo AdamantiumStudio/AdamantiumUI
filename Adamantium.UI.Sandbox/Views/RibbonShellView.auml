@@ -1709,8 +1709,14 @@
                                    CompactColumns="2"
                                    Rows="2"
                                    DropDownColumns="4"
+                                   GroupMemberPath="Family"
                                    Ribbon.CollapseToSmall="Never"
                                    Ribbon.CanAddToQuickAccess="False">
+                        <RibbonGallery.GroupHeaderTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Localize RibbonShellStrings, Key={Binding}}"/>
+                            </DataTemplate>
+                        </RibbonGallery.GroupHeaderTemplate>
                         <RibbonGallery.ItemTemplate>
                             <DataTemplate>
                                 <StackPanel Orientation="Vertical" Width="52">

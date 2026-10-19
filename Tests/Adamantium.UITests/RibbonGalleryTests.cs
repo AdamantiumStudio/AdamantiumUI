@@ -6,6 +6,7 @@ using Adamantium.UI.Controls.Decorators;
 using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Automation;
+using Adamantium.UI.Core.Input;
 using NUnit.Framework;
 
 namespace Adamantium.UITests;
@@ -33,6 +34,38 @@ public class RibbonGalleryTests
         {
             Assert.That(gallery.EffectiveColumns, Is.EqualTo(2));
             Assert.That(gallery.IsCollapsed, Is.False);
+        });
+    }
+
+    // A group's title takes a row of its own across the cells, and Up and Down step over it as over nothing.
+    [Test]
+    public void APanelWithGroupTitles_GivesThemRowsOfTheirOwn()
+    {
+        static Border Cell() => new() { Width = 20, Height = 10, Focusable = true };
+        var first = Cell();
+        var under = Cell();
+        var afterTitle = Cell();
+        var panel = new RibbonGalleryPanel { Columns = 3, Rows = 10 };
+        foreach (var child in new IMeasurableComponent[]
+                 {
+                     new RibbonGalleryGroupHeader { Content = "one" }, first, Cell(), Cell(), under,
+                     new RibbonGalleryGroupHeader { Content = "two" }, afterTitle
+                 })
+        {
+            panel.Children.Add(child);
+        }
+
+        panel.Measure(new Size(400, 400));
+        panel.Arrange(new Rect(0, 0, panel.DesiredSize.Width, panel.DesiredSize.Height));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(panel.RowCount, Is.EqualTo(5), "title, 3 cells, 1 cell, title, 1 cell");
+            Assert.That(panel.Navigate(first, FocusNavigationDirection.Down), Is.SameAs(under));
+            Assert.That(panel.Navigate(under, FocusNavigationDirection.Down), Is.SameAs(afterTitle), "over the second title");
+            Assert.That(panel.Navigate(afterTitle, FocusNavigationDirection.Up), Is.SameAs(under));
+            Assert.That(panel.Navigate(panel.Children[3], FocusNavigationDirection.Down), Is.Null,
+                "a shorter row below stops the arrow, as without titles");
         });
     }
 

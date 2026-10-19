@@ -30,6 +30,16 @@ public static class CommandManager
     public static readonly AdamantiumProperty InputBindingsProperty = AdamantiumProperty.RegisterAttached(
         "InputBindings", typeof(List<KeyBinding>), typeof(AdamantiumComponent), new PropertyMetadata(null));
 
+    /// <summary>Where the commands of every source in this element's subtree go when nothing on their way takes them -
+    /// no field with the focus, or one that knows nothing of them - and the source names no target of its own: a
+    /// ribbon's buttons act on the document beside it before anything had the focus. Inherited.</summary>
+    public static readonly AdamantiumProperty CommandTargetProperty = AdamantiumProperty.RegisterAttached(
+        "CommandTarget", typeof(IInputComponent), typeof(AdamantiumComponent),
+        new PropertyMetadata(null, PropertyMetadataOptions.Inherits, OnCommandTargetChanged));
+
+    // Elements a source sends its commands to whatever the focus: what they answer changes without the focus on them.
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<IUIComponent, object> NamedTargets = new();
+
     private static readonly Dictionary<Type, List<CommandBinding>> ClassCommandBindings = new();
     private static readonly Dictionary<Type, List<KeyBinding>> ClassInputBindings = new();
     private static readonly Func<double, bool> RequeryOnFrame = _ =>
@@ -91,10 +101,27 @@ public static class CommandManager
     public static void InvalidateRequerySuggested(IUIComponent changed)
     {
         if (changed is IInputComponent element &&
-            ReferenceEquals(FocusManager.GetFocusedElement(FocusManager.GetFocusScope(changed)), element))
+            (ReferenceEquals(FocusManager.GetFocusedElement(FocusManager.GetFocusScope(changed)), element) ||
+             NamedTargets.TryGetValue(changed, out _)))
         {
             InvalidateRequerySuggested();
         }
+    }
+
+    public static IInputComponent GetCommandTarget(IAdamantiumComponent element) =>
+        element?.GetValue(CommandTargetProperty) as IInputComponent;
+
+    public static void SetCommandTarget(IAdamantiumComponent element, IInputComponent value) =>
+        element?.SetValue(CommandTargetProperty, value);
+
+    private static void OnCommandTargetChanged(AdamantiumComponent element, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (e.NewValue is IUIComponent target)
+        {
+            NamedTargets.TryAdd(target, null);
+        }
+
+        InvalidateRequerySuggested();
     }
 
     /// <summary>Has command sources ask again at once - what a menu does as it opens, so its rows say what holds that
@@ -160,33 +187,48 @@ public static class CommandManager
 
     /// <summary>Where a command from <paramref name="source"/> starts: <paramref name="target"/> when it names one, else
     /// the source itself - from a ribbon or a menu it goes on to the field with the focus - else
-    /// <see cref="DefaultTarget"/>.</summary>
+    /// <see cref="DefaultTarget"/>. What nothing on that way takes goes to the <see cref="CommandTargetProperty"/>
+    /// around the source.</summary>
     public static IInputComponent TargetFor(IInputComponent source, IInputComponent target) =>
         target ?? source ?? DefaultTarget;
 
     /// <summary>What a command source - a button, a menu row - shows of its command: a routed one is asked of its
-    /// target, any other of itself.</summary>
+    /// target, and failing it of the <see cref="CommandTargetProperty"/> around the source; any other of itself.</summary>
     public static CommandState QueryFrom(ICommand command, object parameter, IInputComponent source,
         IInputComponent target)
     {
-        return command switch
+        if (command is not RoutedCommand routed)
         {
-            null => new CommandState(true),
-            RoutedCommand routed => routed.Query(parameter, TargetFor(source, target)),
-            _ => new CommandState(command.CanExecute(parameter))
-        };
+            return new CommandState(command?.CanExecute(parameter) ?? true);
+        }
+
+        var answer = Ask(routed, parameter, TargetFor(source, target)) ??
+                     (FallbackFor(source, target) is { } fallback ? Ask(routed, parameter, fallback) : null);
+        return answer is { } asked ? new CommandState(asked.CanExecute, asked.IsChecked, asked.Value) : CommandState.Unhandled;
     }
 
     /// <summary>Runs a command source's command when it can run; from a scope that
-    /// <see cref="FocusManager.ReturnsFocusProperty"/>, the focus then goes back to the field it acted on.</summary>
+    /// <see cref="FocusManager.ReturnsFocusProperty"/>, the focus then goes back to the field it acted on - or, when the
+    /// <see cref="CommandTargetProperty"/> took it, to that target.</summary>
     public static void ExecuteFrom(ICommand command, object parameter, IInputComponent source, IInputComponent target)
     {
-        var field = source is IUIComponent from ? FocusManager.FocusToReturnTo(from) : null;
+        var from = source as IUIComponent;
+        var field = from != null ? FocusManager.FocusToReturnTo(from) : null;
         var before = FocusManager.Focused;
         bool ran;
         if (command is RoutedCommand routed)
         {
-            ran = routed.Execute(parameter, TargetFor(source, target));
+            var run = Run(routed, parameter, TargetFor(source, target));
+            if (run == null && FallbackFor(source, target) is { } fallback)
+            {
+                run = Run(routed, parameter, fallback);
+                if (run?.Ran == true && from != null && FocusManager.ReturnsFocusFrom(from))
+                {
+                    field = fallback;
+                }
+            }
+
+            ran = run?.Ran == true;
         }
         else if (command != null && command.CanExecute(parameter))
         {
@@ -203,6 +245,10 @@ public static class CommandManager
             FocusManager.ReturnFocus(field, before);
         }
     }
+
+    // A source's own target leaves no fallback: it said where its commands go.
+    private static IInputComponent FallbackFor(IInputComponent source, IInputComponent target) =>
+        target == null ? GetCommandTarget(source) : null;
 
     internal static CommandState Query(RoutedCommand command, object parameter, IInputComponent target) =>
         Ask(command, parameter, target) is { } answer

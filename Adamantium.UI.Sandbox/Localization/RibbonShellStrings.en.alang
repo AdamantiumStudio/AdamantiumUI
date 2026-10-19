@@ -497,4 +497,8 @@
             MovingSelection="Drag to move the selection."
             RotatingSelection="Drag to rotate the selection."
             ScalingSelection="Drag to scale the selection."/>
+
+    <Phrase Key="Metals" Text="Metals"/>
+    <Phrase Key="Stones" Text="Stones"/>
+    <Phrase Key="Natural" Text="Natural"/>
 </Language>
