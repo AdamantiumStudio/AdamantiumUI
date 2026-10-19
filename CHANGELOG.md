@@ -7,6 +7,9 @@ All packages share one version.
 
 ### Added
 
+- A `RibbonGallery` that runs its choices (`ItemCommand`) lights the one its command answers checked for - the style
+  the text has in a gallery of styles - in the band and in the drop-down, following the command as it is asked again.
+
 - `CommandManager.CommandTarget`, attached and inherited: the commands of every source under it that names no target
   of its own go there when nothing on their way takes them - no field has the focus, or the one that has knows nothing
   of them. A ribbon that acts on a document beside it is enabled before anything had the focus and stays so when

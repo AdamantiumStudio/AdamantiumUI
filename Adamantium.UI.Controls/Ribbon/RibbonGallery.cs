@@ -194,7 +194,8 @@ public class RibbonGallery : Selector
 
     /// <summary>Makes the gallery run its choices rather than hold one, as a gallery of shapes to insert does: a picked
     /// item is passed to the command, and the gallery has no selection - one set on it is dropped. A choice the command
-    /// cannot run is shown disabled. Null - the default - picks by selecting.</summary>
+    /// cannot run is shown disabled, and one it answers checked - the style the text has - is shown as the current one.
+    /// Null - the default - picks by selecting.</summary>
     public ICommand ItemCommand
     {
         get => GetValue<ICommand>(ItemCommandProperty);
@@ -226,13 +227,24 @@ public class RibbonGallery : Selector
         _itemCommandListener?.Detached();
     }
 
+    // The command gone, the cells are back to enabled and to the selection.
     private void UpdateCanRun()
     {
         foreach (var (container, item) in RealizedContainers())
         {
-            if (container is RibbonGalleryItem cell)
+            if (container is not RibbonGalleryItem cell)
             {
-                cell.SetCurrentValue(IsEnabledProperty, CanRun(item));
+                continue;
+            }
+
+            if (ItemCommand != null)
+            {
+                ShowCanRun(cell, item);
+            }
+            else
+            {
+                cell.SetCurrentValue(IsEnabledProperty, true);
+                cell.IsSelected = IsItemSelected(item);
             }
         }
     }
@@ -241,9 +253,16 @@ public class RibbonGallery : Selector
     {
         if (ItemCommand != null)
         {
-            cell.SetCurrentValue(IsEnabledProperty, CanRun(item));
+            var state = CommandManager.QueryFrom(ItemCommand, item, this, null);
+            cell.SetCurrentValue(IsEnabledProperty, state.CanExecute);
+            cell.IsSelected = state.IsChecked == true;
         }
     }
+
+    // With a command, the current choice is what it answers checked - for every way the cells are lit.
+    protected override bool IsItemSelected(object item) => ItemCommand is { } command
+        ? CommandManager.QueryFrom(command, item, this, null).IsChecked == true
+        : base.IsItemSelected(item);
 
     private bool CanRun(object item) => CommandManager.QueryFrom(ItemCommand, item, this, null).CanExecute;
 
