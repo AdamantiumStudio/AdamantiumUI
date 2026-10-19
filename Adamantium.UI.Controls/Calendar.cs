@@ -506,67 +506,6 @@ public class Calendar : Control
         }
     }
 
-    private static CultureInfo Counted(CultureInfo culture, CalendarSystem system)
-    {
-        if (system == CalendarSystem.Language)
-        {
-            return culture;
-        }
-
-        var wanted = system switch
-        {
-            CalendarSystem.Hijri => typeof(HijriCalendar),
-            CalendarSystem.UmAlQura => typeof(UmAlQuraCalendar),
-            CalendarSystem.Persian => typeof(PersianCalendar),
-            CalendarSystem.Hebrew => typeof(HebrewCalendar),
-            CalendarSystem.Japanese => typeof(JapaneseCalendar),
-            CalendarSystem.Korean => typeof(KoreanCalendar),
-            CalendarSystem.Taiwan => typeof(TaiwanCalendar),
-            CalendarSystem.ThaiBuddhist => typeof(ThaiBuddhistCalendar),
-            _ => typeof(GregorianCalendar),
-        };
-        if (culture.Calendar.GetType() == wanted)
-        {
-            return culture;
-        }
-
-        foreach (var named in (string[])[culture.Name, HomeOf(system)])
-        {
-            var candidate = string.IsNullOrEmpty(named) ? CultureInfo.InvariantCulture : CultureInfo.GetCultureInfo(named);
-            if (candidate.OptionalCalendars.FirstOrDefault(c => c.GetType() == wanted) is { } counted)
-            {
-                var clone = (CultureInfo)candidate.Clone();
-                var format = clone.DateTimeFormat;
-                format.Calendar = counted;
-                if (!ReferenceEquals(candidate, culture))
-                {
-                    var own = culture.DateTimeFormat;
-                    format.DayNames = own.DayNames;
-                    format.AbbreviatedDayNames = own.AbbreviatedDayNames;
-                    format.ShortestDayNames = own.ShortestDayNames;
-                    format.FirstDayOfWeek = own.FirstDayOfWeek;
-                    format.CalendarWeekRule = own.CalendarWeekRule;
-                }
-
-                return CultureInfo.ReadOnly(clone);
-            }
-        }
-
-        return CultureInfo.InvariantCulture;
-    }
-
-    private static string HomeOf(CalendarSystem system) => system switch
-    {
-        CalendarSystem.Hijri or CalendarSystem.UmAlQura => "ar-SA",
-        CalendarSystem.Persian => "fa-IR",
-        CalendarSystem.Hebrew => "he-IL",
-        CalendarSystem.Japanese => "ja-JP",
-        CalendarSystem.Korean => "ko-KR",
-        CalendarSystem.Taiwan => "zh-TW",
-        CalendarSystem.ThaiBuddhist => "th-TH",
-        _ => string.Empty,
-    };
-
     private static bool IsMoveKey(Key key) =>
         key is Key.LeftArrow or Key.RightArrow or Key.UpArrow or Key.DownArrow or Key.PageUp or Key.PageDown or Key.Home
             or Key.End;
@@ -610,7 +549,7 @@ public class Calendar : Control
         {
             _cultureAsked = asked;
             _systemAsked = CalendarSystem;
-            _culture = Counted(asked, CalendarSystem);
+            _culture = CalendarCulture.Of(asked, CalendarSystem);
         }
 
         return _culture;
@@ -1521,19 +1460,16 @@ public class Calendar : Control
         ShowCells(page, culture);
     }
 
-    private static string WithEra(string pattern, DateTimeFormatInfo format) =>
-        format.Calendar.Eras.Length > 1 && !pattern.Contains('g') ? "gg" + pattern.Replace("yyyy", "y") : pattern;
-
     private static string MonthText(DateTime month, CultureInfo culture) =>
-        month.ToString(WithEra(culture.DateTimeFormat.YearMonthPattern, culture.DateTimeFormat), culture);
+        month.ToString(CalendarCulture.WithEra(culture.DateTimeFormat.YearMonthPattern, culture.DateTimeFormat), culture);
 
     private static string DayText(DateTime day, CultureInfo culture) =>
-        day.ToString(WithEra(culture.DateTimeFormat.LongDatePattern, culture.DateTimeFormat), culture);
+        day.ToString(CalendarCulture.WithEra(culture.DateTimeFormat.LongDatePattern, culture.DateTimeFormat), culture);
 
     private string YearText(int year, int era, CultureInfo culture)
     {
         var format = culture.DateTimeFormat;
-        var pattern = WithEra(format.YearMonthPattern.Contains('年') ? "yyyy年" : "yyyy", format);
+        var pattern = CalendarCulture.WithEra(format.YearMonthPattern.Contains('年') ? "yyyy年" : "yyyy", format);
         return YearStartOf(year, era)?.ToString(pattern, culture) ?? year.ToString(culture);
     }
 

@@ -97,5 +97,7 @@
     <StyleInclude Source="{x:Type editor:ScrollBarStyleSet}"/>
     <StyleInclude Source="{x:Type editor:TreeViewStyleSet}"/>
     <StyleInclude Source="{x:Type editor:MenuStyleSet}"/>
+    <!-- Last: its class styles of buttons and lists stand over the theme's own. -->
+    <StyleInclude Source="{x:Type shared:DateTimeFieldStyleSet}"/>
   </Theme.StyleIncludes>
 </Theme>

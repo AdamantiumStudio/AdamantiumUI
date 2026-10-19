@@ -1,0 +1,23 @@
+<Language>
+    <Phrase Key="Day" Text="День"/>
+    <Phrase Key="Month" Text="Месяц"/>
+    <Phrase Key="Year" Text="Год"/>
+    <Phrase Key="Hour" Text="Часы"/>
+    <Phrase Key="Minute" Text="Минуты"/>
+    <Phrase Key="Second" Text="Секунды"/>
+    <Phrase Key="Period" Text="До или после полудня"/>
+    <Phrase Key="Era" Text="Эра"/>
+    <Phrase Key="DayOfWeek" Text="День недели"/>
+    <Phrase Key="DayPlaceholder" Text="д"/>
+    <Phrase Key="MonthPlaceholder" Text="м"/>
+    <Phrase Key="YearPlaceholder" Text="г"/>
+    <Phrase Key="HourPlaceholder" Text="ч"/>
+    <Phrase Key="MinutePlaceholder" Text="м"/>
+    <Phrase Key="SecondPlaceholder" Text="с"/>
+    <Phrase Key="PeriodPlaceholder" Text="AM"/>
+    <Phrase Key="EraPlaceholder" Text="эра"/>
+    <Phrase Key="DayOfWeekPlaceholder" Text="день недели"/>
+    <Phrase Key="Choose" Text="Выбрать"/>
+    <Phrase Key="Accept" Text="Готово"/>
+    <Phrase Key="Cancel" Text="Отмена"/>
+</Language>

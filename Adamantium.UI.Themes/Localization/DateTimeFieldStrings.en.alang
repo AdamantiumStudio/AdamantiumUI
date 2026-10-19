@@ -1,0 +1,23 @@
+<Language>
+    <Phrase Key="Day" Text="Day"/>
+    <Phrase Key="Month" Text="Month"/>
+    <Phrase Key="Year" Text="Year"/>
+    <Phrase Key="Hour" Text="Hour"/>
+    <Phrase Key="Minute" Text="Minute"/>
+    <Phrase Key="Second" Text="Second"/>
+    <Phrase Key="Period" Text="AM/PM"/>
+    <Phrase Key="Era" Text="Era"/>
+    <Phrase Key="DayOfWeek" Text="Day of the week"/>
+    <Phrase Key="DayPlaceholder" Text="d"/>
+    <Phrase Key="MonthPlaceholder" Text="m"/>
+    <Phrase Key="YearPlaceholder" Text="y"/>
+    <Phrase Key="HourPlaceholder" Text="h"/>
+    <Phrase Key="MinutePlaceholder" Text="m"/>
+    <Phrase Key="SecondPlaceholder" Text="s"/>
+    <Phrase Key="PeriodPlaceholder" Text="AM"/>
+    <Phrase Key="EraPlaceholder" Text="era"/>
+    <Phrase Key="DayOfWeekPlaceholder" Text="weekday"/>
+    <Phrase Key="Choose" Text="Choose"/>
+    <Phrase Key="Accept" Text="Done"/>
+    <Phrase Key="Cancel" Text="Cancel"/>
+</Language>

@@ -95,6 +95,8 @@
         <StyleInclude Source="{x:Type mac:MacOsColorWheelStyleSet}"/>
         <StyleInclude Source="{x:Type mac:MacOsRibbonStyleSet}"/>
         <StyleInclude Source="{x:Type mac:MacOsDataPagerStyleSet}"/>
+        <!-- Last: its class styles of buttons and lists stand over the theme's own. -->
+        <StyleInclude Source="{x:Type shared:DateTimeFieldStyleSet}"/>
   </Theme.StyleIncludes>
 
 </Theme>

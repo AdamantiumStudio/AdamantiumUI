@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="utf-8"?>
+<StyleSet xmlns="http://adamantium/ui"
+          xmlns:x="http://adamantium/ui/xaml/extensions">
+
+    <!-- The parts of a DateTimeField: each its text, or its placeholder dimmed while empty, and the one the keyboard is
+         on lit in the accent. The field's own frame is each theme's text field (its TextBox style set). -->
+    <Style Selector="DateTimeFieldSegment">
+        <Setter Property="Padding" Value="1,0"/>
+        <Setter Property="CornerRadius" Value="2"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="DateTimeFieldSegment">
+                    <Border x:Name="Chrome"
+                            Background="{TemplateBinding Background}"
+                            CornerRadius="{TemplateBinding CornerRadius}"
+                            Padding="{TemplateBinding Padding}">
+                        <TextBlock x:Name="PART_Text"
+                                   Text="{TemplateBinding Text}"/>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style Selector="DateTimeFieldSegment">
+        <PropertyTrigger Property="IsEmpty" Value="true">
+            <Setter TargetName="PART_Text" Property="Foreground" Value="{ResourceReference TextFillColorTertiary}"/>
+        </PropertyTrigger>
+        <PropertyTrigger Property="IsActive" Value="true">
+            <Setter TargetName="Chrome" Property="Background" Value="{ThemeResource AccentFillColorDefault}"/>
+            <Setter TargetName="PART_Text" Property="Foreground" Value="{ThemeResource AccentForegroundColor}"/>
+        </PropertyTrigger>
+    </Style>
+
+    <!-- What each part shows while empty, and what it is called. -->
+    <Style Selector="DateTimeFieldSegment">
+        <PropertyTrigger Property="Kind" Value="Day">
+            <Setter Property="Placeholder" Value="{Localize DateTimeFieldStrings.DayPlaceholder}"/>
+            <Setter Property="AutomationProperties.Name" Value="{Localize DateTimeFieldStrings.Day}"/>
+        </PropertyTrigger>
+        <PropertyTrigger Property="Kind" Value="Month">
+            <Setter Property="Placeholder" Value="{Localize DateTimeFieldStrings.MonthPlaceholder}"/>
+            <Setter Property="AutomationProperties.Name" Value="{Localize DateTimeFieldStrings.Month}"/>
+        </PropertyTrigger>
+        <PropertyTrigger Property="Kind" Value="Year">
+            <Setter Property="Placeholder" Value="{Localize DateTimeFieldStrings.YearPlaceholder}"/>
+            <Setter Property="AutomationProperties.Name" Value="{Localize DateTimeFieldStrings.Year}"/>
+        </PropertyTrigger>
+        <PropertyTrigger Property="Kind" Value="Hour">
+            <Setter Property="Placeholder" Value="{Localize DateTimeFieldStrings.HourPlaceholder}"/>
+            <Setter Property="AutomationProperties.Name" Value="{Localize DateTimeFieldStrings.Hour}"/>
+        </PropertyTrigger>
+        <PropertyTrigger Property="Kind" Value="Minute">
+            <Setter Property="Placeholder" Value="{Localize DateTimeFieldStrings.MinutePlaceholder}"/>
+            <Setter Property="AutomationProperties.Name" Value="{Localize DateTimeFieldStrings.Minute}"/>
+        </PropertyTrigger>
+        <PropertyTrigger Property="Kind" Value="Second">
+            <Setter Property="Placeholder" Value="{Localize DateTimeFieldStrings.SecondPlaceholder}"/>
+            <Setter Property="AutomationProperties.Name" Value="{Localize DateTimeFieldStrings.Second}"/>
+        </PropertyTrigger>
+        <PropertyTrigger Property="Kind" Value="Period">
+            <Setter Property="Placeholder" Value="{Localize DateTimeFieldStrings.PeriodPlaceholder}"/>
+            <Setter Property="AutomationProperties.Name" Value="{Localize DateTimeFieldStrings.Period}"/>
+        </PropertyTrigger>
+        <PropertyTrigger Property="Kind" Value="Era">
+            <Setter Property="Placeholder" Value="{Localize DateTimeFieldStrings.EraPlaceholder}"/>
+            <Setter Property="AutomationProperties.Name" Value="{Localize DateTimeFieldStrings.Era}"/>
+        </PropertyTrigger>
+        <PropertyTrigger Property="Kind" Value="DayOfWeek">
+            <Setter Property="Placeholder" Value="{Localize DateTimeFieldStrings.DayOfWeekPlaceholder}"/>
+            <Setter Property="AutomationProperties.Name" Value="{Localize DateTimeFieldStrings.DayOfWeek}"/>
+        </PropertyTrigger>
+    </Style>
+
+    <Style Selector="TextBlock.DateTimeFieldLiteral">
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+
+    <!-- The pickers: a button at the field's end, and the card it opens - a calendar, the times of a day, or both. The
+         field's own frame is each theme's text field (its TextBox style set). -->
+    <Style Selector="DatePicker, DateTimePicker">
+        <Setter Property="ButtonIcon" Value="{ResourceReference CalendarIcon}"/>
+    </Style>
+
+    <Style Selector="TimePicker">
+        <Setter Property="ButtonIcon" Value="{ResourceReference ClockIcon}"/>
+    </Style>
+
+    <Style Selector="Button.DateTimePickerButton">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding" Value="4"/>
+        <Setter Property="MinWidth" Value="0"/>
+        <Setter Property="MinHeight" Value="0"/>
+        <Setter Property="Margin" Value="4,0,0,0"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+
+    <Style Selector="Border.DateTimePickerDropDown">
+        <Setter Property="Background" Value="{ResourceReference FlyoutSurfaceFill}"/>
+        <Setter Property="BorderBrush" Value="{ResourceReference ControlStrokeColorDefault}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="Padding" Value="4"/>
+    </Style>
+
+    <Style Selector="ListBox.DateTimePickerTimes">
+        <Setter Property="MaxHeight" Value="300"/>
+        <Setter Property="MinWidth" Value="96"/>
+    </Style>
+
+    <!-- Columns: hours, minutes and AM/PM side by side. -->
+    <Style Selector="ListBox.DateTimePickerColumn">
+        <Setter Property="MaxHeight" Value="240"/>
+        <Setter Property="MinWidth" Value="56"/>
+        <Setter Property="Margin" Value="2,0"/>
+    </Style>
+
+    <Style Selector="StackPanel.DateTimePickerActions">
+        <Setter Property="Margin" Value="0,8,0,0"/>
+    </Style>
+
+    <Style Selector="Button.DateTimePickerAccept">
+        <Setter Property="Content" Value="{Localize DateTimeFieldStrings.Accept}"/>
+        <Setter Property="MinWidth" Value="80"/>
+        <Setter Property="Margin" Value="0,0,6,0"/>
+    </Style>
+
+    <Style Selector="Button.DateTimePickerCancel">
+        <Setter Property="Content" Value="{Localize DateTimeFieldStrings.Cancel}"/>
+        <Setter Property="MinWidth" Value="80"/>
+    </Style>
+
+    <!-- The clock face: a plate, the hand and the knob it ends in, the hours or minutes round it; above it the time,
+         its hours or minutes lit as the face shows them. -->
+    <Style Selector="Border.ClockDialPlate">
+        <Setter Property="Background" Value="{ResourceReference ControlFillColorSecondary}"/>
+    </Style>
+
+    <Style Selector="Border.ClockDialHand">
+        <Setter Property="Background" Value="{ThemeResource AccentFillColorDefault}"/>
+    </Style>
+
+    <Style Selector="Border.ClockDialKnob">
+        <Setter Property="Background" Value="{ThemeResource AccentFillColorDefault}"/>
+    </Style>
+
+    <Style Selector="TextBlock.ClockDialMarkChosen">
+        <Setter Property="Foreground" Value="{ThemeResource AccentForegroundColor}"/>
+    </Style>
+
+    <Style Selector="Button.ClockDialPart">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="MinWidth" Value="0"/>
+        <Setter Property="MinHeight" Value="0"/>
+        <Setter Property="FontSize" Value="28"/>
+        <Setter Property="Padding" Value="6,0"/>
+    </Style>
+
+    <Style Selector="Button.ClockDialPeriod">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="MinWidth" Value="0"/>
+        <Setter Property="MinHeight" Value="0"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="Padding" Value="6,1"/>
+        <Setter Property="Margin" Value="8,0,0,0"/>
+    </Style>
+
+    <!-- The part the face is not showing stands back. -->
+    <Style Selector="Button.ClockDialPart">
+        <Setter Property="Opacity" Value="0.55"/>
+    </Style>
+
+    <Style Selector="Button.ClockDialPeriod">
+        <Setter Property="Opacity" Value="0.55"/>
+    </Style>
+
+    <Style Selector="Button.ClockDialPartChosen">
+        <Setter Property="Opacity" Value="1"/>
+    </Style>
+
+    <Style Selector="TextBlock.ClockDialSeparator">
+        <Setter Property="FontSize" Value="28"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+
+    <!-- Beside the calendar: as tall as it, a gap between them. -->
+    <Style Selector="ListBox.DateTimePickerTimesBeside">
+        <Setter Property="Margin" Value="8,0,0,0"/>
+        <Setter Property="MaxHeight" Value="280"/>
+    </Style>
+
+</StyleSet>
