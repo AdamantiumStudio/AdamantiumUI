@@ -1621,6 +1621,11 @@ All packages share one version.
 
 ### Fixed
 
+- A font family the system does not have no longer throws: text in it - Word's Aptos pasted on a machine without it,
+  an SVG drawing naming it - threw a `NullReferenceException` as it was laid out. `ResolveFont` and `TryResolveFont`
+  set it in `UIComponent.DefaultFontFamily`, as a browser does; the family itself keeps its name (`Source`, written
+  back into an SVG) and draws in the system's UI font, or any font the system has when that one is missing too. New
+  `FontFamily.IsInstalled` says which it is.
 - A ribbon gallery's drop-down is put away by a press anywhere else, as every flyout is: it closed only from its own
   chevron or a pick, its popup being left at the default that keeps it open. A press on the gallery's scroll arrows
   beside the open card puts it away too, rather than turning the rows hidden under it.

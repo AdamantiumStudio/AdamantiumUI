@@ -1,12 +1,17 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Adamantium.Fonts;
+using Adamantium.UI.Core.Resources;
 
 namespace Adamantium.UI.Core.Media;
 
 public class FontFamily
 {
+    private static Typeface _standIn;
+
     private readonly string _name;
+    private readonly Typeface _typeface;
     private readonly Dictionary<(FontWeight Weight, FontStyle Style, FontStretch Stretch), IFont> _faces = new();
 
     /// <summary>A family of the system's fonts, by its name ("Segoe UI"); its faces are picked by weight, slant and
@@ -14,13 +19,13 @@ public class FontFamily
     public FontFamily(string fontName)
     {
         _name = fontName;
-        Typeface = TypefaceStore.GetTypeface(fontName, true);
+        _typeface = TypefaceStore.GetTypeface(fontName, true);
     }
 
     /// <summary>The one font of a file: every weight and slant draws with it.</summary>
     public FontFamily(Uri fontPath)
     {
-        Typeface = TypefaceStore.GetTypeface(fontPath.OriginalString);
+        _typeface = TypefaceStore.GetTypeface(fontPath.OriginalString);
     }
 
     /// <summary>A family of the system's fonts by its name, as markup writes it: FontFamily="Bahnschrift".</summary>
@@ -29,7 +34,11 @@ public class FontFamily
         return new FontFamily(text.Trim());
     }
 
-    public Typeface Typeface { get; }
+    /// <summary>Whether the system has the family. One it does not have keeps its name and draws in the system's UI
+    /// font (<see cref="Theme.SystemDefaultFontFamily"/>), or failing that in any font the system has.</summary>
+    public bool IsInstalled => _typeface != null;
+
+    public Typeface Typeface => _typeface ?? StandIn;
 
     /// <summary>The family's name, as WPF's: the one it was made with, or for a family made from a file the name its
     /// font gives - what a font box shows for it.</summary>
@@ -96,4 +105,9 @@ public class FontFamily
 
         return true;
     }
+
+    private static Typeface StandIn => _standIn ??= Theme.SystemDefaultFontFamily._typeface ??
+                                                    FontCollection.System.Families.Select(name =>
+                                                        TypefaceStore.GetTypeface(name, true)).FirstOrDefault(
+                                                        typeface => typeface != null);
 }
