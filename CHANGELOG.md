@@ -1626,6 +1626,8 @@ All packages share one version.
   (`BindingExpressionBase.ProducesText`). A bound argument's `StringFormat` writes it in the phrase's language and
   follows a language switch, while its value still chooses a counted or selected phrase's form; a format the phrase
   gives its placeholder (`{size:N2}`) is applied first, the binding's around it.
+- An element added under a hidden one stays unseen: a subtree that arrived after its ancestor was hidden was placed in
+  the frame as if visible and drew - a calendar's hidden months showed odd day numbers over its year view.
 - Content that grows or shrinks by a splice no longer leaves its neighbors pointing at instances that moved with it: a
   paragraph drawing a background or an underline with its text, an ellipse or a gradient fill beside it, or a cloned
   copy went on recoloring and patching where it had been, and the frame verifier saw its glyphs undrawn. Typing into a

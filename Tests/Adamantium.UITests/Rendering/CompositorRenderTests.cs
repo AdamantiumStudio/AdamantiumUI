@@ -265,6 +265,212 @@ public class CompositorRenderTests
         Assert.That(Center(renderer), Is.Not.EqualTo(mirrored), "after a loop tick the render thread still drives the fade");
     }
 
+    [Test]
+    public void AChildAddedUnderAHiddenParent_IsNotDrawn()
+    {
+        AnimationManager.Reset();
+        RenderDirty.Clear();
+        var factory = new RenderUnitFactory(_device, new StubResourceFactory());
+        // Not black: a frame of one color is saved in a form the loader does not read.
+        using var renderer = new OffscreenTestRenderer(_device, factory, 64, 64) { ClearColor = Colors.Navy };
+
+        var root = new TestRoot(64, 64);
+        var page = new TestControl();
+        page.Bounds = new Rect(0, 0, 64, 64);
+        page.RenderSize = new Size(64, 64);
+        var first = new TestControl { RenderAction = s => s.DrawRectangle(Brushes.Red, new Rect(0, 0, 16, 16)) };
+        first.Bounds = new Rect(4, 4, 16, 16);
+        first.RenderSize = new Size(16, 16);
+        page.Add(first);
+        root.Add(page);
+        Assert.That(renderer.RenderFrame(root), Is.True);
+        RenderDirty.Clear();
+
+        page.Visibility = Visibility.Hidden;
+        Assert.That(renderer.RenderFrame(root), Is.True);
+        RenderDirty.Clear();
+
+        var late = new TestControl { RenderAction = s => s.DrawRectangle(Brushes.Red, new Rect(0, 0, 16, 16)) };
+        late.Bounds = new Rect(24, 24, 16, 16);
+        late.RenderSize = new Size(16, 16);
+        page.Add(late);
+        Assert.That(renderer.RenderFrame(root), Is.True);
+
+        var (before, added) = RedAt(renderer, (12, 12), (32, 32));
+        Assert.That(before, Is.Zero, "the hidden page draws nothing");
+        Assert.That(added, Is.Zero, "...nor a child added to it while hidden");
+
+        RenderDirty.Clear();
+        page.Visibility = Visibility.Visible;
+        Assert.That(renderer.RenderFrame(root), Is.True);
+
+        (before, added) = RedAt(renderer, (12, 12), (32, 32));
+        Assert.That(before, Is.EqualTo(255), "shown again, the page draws");
+        Assert.That(added, Is.EqualTo(255), "...the child added while it was hidden too");
+    }
+
+    [Test]
+    public void AChildRaisedWhileItsParentIsHidden_IsOnTopOnceShown()
+    {
+        AnimationManager.Reset();
+        RenderDirty.Clear();
+        var factory = new RenderUnitFactory(_device, new StubResourceFactory());
+        using var renderer = new OffscreenTestRenderer(_device, factory, 64, 64) { ClearColor = Colors.Navy };
+
+        var root = new TestRoot(64, 64);
+        var page = new TestControl();
+        page.Bounds = new Rect(0, 0, 64, 64);
+        page.RenderSize = new Size(64, 64);
+        var red = Square(Brushes.Red, 24);
+        var green = Square(Brushes.Lime, 24);
+        page.Add(red);
+        page.Add(green);
+        root.Add(page);
+        Assert.That(renderer.RenderFrame(root), Is.True);
+        RenderDirty.Clear();
+
+        page.Visibility = Visibility.Hidden;
+        Assert.That(renderer.RenderFrame(root), Is.True);
+        RenderDirty.Clear();
+        red.ZIndex = 1;
+        Assert.That(renderer.RenderFrame(root), Is.True);
+        RenderDirty.Clear();
+        page.Visibility = Visibility.Visible;
+        Assert.That(renderer.RenderFrame(root), Is.True);
+
+        Assert.That(RedAt(renderer, (32, 32), (32, 32)).A, Is.EqualTo(255), "the raised child is drawn over its sibling");
+    }
+
+    [Test]
+    public void AChildMovedUnderAHiddenParent_TakesItsPlaceThereOnceShown()
+    {
+        AnimationManager.Reset();
+        RenderDirty.Clear();
+        var factory = new RenderUnitFactory(_device, new StubResourceFactory());
+        using var renderer = new OffscreenTestRenderer(_device, factory, 64, 64) { ClearColor = Colors.Navy };
+
+        // In paint order: the page, a green cover, then a holder; the red square moves from the holder into the page,
+        // which puts it under the cover.
+        var root = new TestRoot(64, 64);
+        var page = Square(null, 0, 64);
+        var cover = Square(Brushes.Lime, 24);
+        var holder = Square(null, 0, 64);
+        var red = Square(Brushes.Red, 24);
+        holder.Add(red);
+        root.Add(page);
+        root.Add(cover);
+        root.Add(holder);
+        Assert.That(renderer.RenderFrame(root), Is.True);
+        RenderDirty.Clear();
+        Assert.That(RedAt(renderer, (32, 32), (32, 32)).A, Is.EqualTo(255), "the red square starts over the cover");
+
+        page.Visibility = Visibility.Hidden;
+        Assert.That(renderer.RenderFrame(root), Is.True);
+        RenderDirty.Clear();
+        holder.Remove(red);
+        page.Add(red);
+        Assert.That(renderer.RenderFrame(root), Is.True);
+        RenderDirty.Clear();
+        Assert.That(RedAt(renderer, (32, 32), (32, 32)).A, Is.Zero, "moved into the hidden page, it is not drawn");
+
+        page.Visibility = Visibility.Visible;
+        Assert.That(renderer.RenderFrame(root), Is.True);
+        Assert.That(RedAt(renderer, (32, 32), (32, 32)).A, Is.Zero, "shown, it is under the cover");
+    }
+
+    // A strip, a page and a holder with a red square in it. Each child added to the strip halves the rank gap before the
+    // page (hidden, it is no anchor) and the holder, so the 32nd since the last full walk finds no room: a renumber.
+    private (OffscreenTestRenderer Renderer, TestRoot Root, TestControl Strip, TestControl Page, TestControl Holder,
+        TestControl Red) RenumberStand()
+    {
+        AnimationManager.Reset();
+        RenderDirty.Clear();
+        var factory = new RenderUnitFactory(_device, new StubResourceFactory());
+        var renderer = new OffscreenTestRenderer(_device, factory, 64, 64) { ClearColor = Colors.Navy };
+
+        var root = new TestRoot(64, 64);
+        var strip = Square(null, 0, 64);
+        var page = Square(null, 0, 64);
+        var holder = Square(null, 0, 64);
+        var red = Square(Brushes.Red, 24);
+        holder.Add(red);
+        root.Add(strip);
+        root.Add(page);
+        root.Add(holder);
+        Assert.That(renderer.RenderFrame(root), Is.True);
+        RenderDirty.Clear();
+
+        page.Visibility = Visibility.Hidden;
+        Assert.That(renderer.RenderFrame(root), Is.True);
+        RenderDirty.Clear();
+        return (renderer, root, strip, page, holder, red);
+    }
+
+    private static void Grow(OffscreenTestRenderer renderer, TestRoot root, TestControl strip)
+    {
+        strip.Add(Square(null, 0, 1));
+        Assert.That(renderer.RenderFrame(root), Is.True);
+        RenderDirty.Clear();
+    }
+
+    [Test]
+    public void MovedUnderAHiddenParentInTheFrameThatRenumbers_IsNotDrawn()
+    {
+        var (renderer, root, strip, page, holder, red) = RenumberStand();
+        using var _ = renderer;
+        for (var i = 0; i < 31; i++) Grow(renderer, root, strip);
+        Assert.That(RedAt(renderer, (32, 32), (32, 32)).A, Is.EqualTo(255), "still in the holder");
+
+        holder.Remove(red);
+        page.Add(red);
+        Grow(renderer, root, strip);
+        Assert.That(RedAt(renderer, (32, 32), (32, 32)).A, Is.Zero, "moved under the hidden page in the renumber frame");
+
+        Assert.That(renderer.RenderFrame(root), Is.True);
+        Assert.That(RedAt(renderer, (32, 32), (32, 32)).A, Is.Zero, "...and in the frame after");
+    }
+
+    [Test]
+    public void ARenumberWhileItWaitsUnderAHiddenParent_DoesNotDrawIt()
+    {
+        var (renderer, root, strip, page, holder, red) = RenumberStand();
+        using var _ = renderer;
+        holder.Remove(red);
+        page.Add(red);
+        Assert.That(renderer.RenderFrame(root), Is.True);
+        RenderDirty.Clear();
+
+        for (var i = 0; i < 40; i++)
+        {
+            Grow(renderer, root, strip);
+            Assert.That(RedAt(renderer, (32, 32), (32, 32)).A, Is.Zero, $"child {i} added to the strip");
+        }
+    }
+
+    private static TestControl Square(Brush brush, int at, int size = 16)
+    {
+        var square = new TestControl();
+        if (brush != null) square.RenderAction = s => s.DrawRectangle(brush, new Rect(0, 0, size, size));
+        square.Bounds = new Rect(at, at, size, size);
+        square.RenderSize = new Size(size, size);
+        return square;
+    }
+
+    private static (int A, int B) RedAt(OffscreenTestRenderer renderer, (int X, int Y) a, (int X, int Y) b)
+    {
+        var path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"comp_{Guid.NewGuid():N}.png");
+        renderer.Save(path, ImageFileType.Png);
+        try
+        {
+            var px = Image.Load(path).GetPixelBuffer(0, 0);
+            return ((int)(px.GetPixel<uint>(a.X, a.Y) & 0xFF), (int)(px.GetPixel<uint>(b.X, b.Y) & 0xFF));
+        }
+        finally
+        {
+            System.IO.File.Delete(path);
+        }
+    }
+
     // A loading garland: one card drawn three times, each copy a second behind the one before it, fading 0.1 -> 0.9 over
     // four seconds, endlessly.
     private (OffscreenTestRenderer Renderer, TestRoot Root, Compositor.Entry Fade) Garland(bool endless = true)
