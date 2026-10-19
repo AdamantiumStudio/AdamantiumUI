@@ -346,6 +346,21 @@ public static class FocusManager
       return GetFocusedElement(scope);
    }
 
+   // Whether a command from source gives the focus back at all: its scope does, or one around it - a ribbon's drop-down
+   // is a scope of its own inside the ribbon's.
+   internal static bool ReturnsFocusFrom(IUIComponent source)
+   {
+      for (var scope = GetFocusScope(source); scope != null; scope = ParentOf(scope) is { } around ? GetFocusScope(around) : null)
+      {
+         if (GetReturnsFocus(scope))
+         {
+            return true;
+         }
+      }
+
+      return false;
+   }
+
    // Back to field after a command - unless the command moved the focus from where it was before (a search box, a
    // dialog); gone with a source taken out of the tree counts as not moved.
    internal static void ReturnFocus(IInputComponent field, IInputComponent before)

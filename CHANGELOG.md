@@ -7,6 +7,15 @@ All packages share one version.
 
 ### Added
 
+- `CommandManager.CommandTarget`, attached and inherited: the commands of every source under it that names no target
+  of its own go there when nothing on their way takes them - no field has the focus, or the one that has knows nothing
+  of them. A ribbon that acts on a document beside it is enabled before anything had the focus and stays so when
+  another field takes it, while a field that handles a command (a search box in the document) still gets it first.
+  What the target answers reaches the ribbon's buttons without the focus on it, and a command it ran leaves the focus
+  in it.
+- `RibbonGallery.GroupMemberPath` and `GroupHeaderTemplate`: the drop-down titles each run of items that share a group
+  with a `RibbonGalleryGroupHeader`, a row of its own across the cells, which Up and Down step over; the band shows the
+  items in a row as before. The sandbox's Materials gallery groups metals, stones and natural ones.
 - `TreeView.SelectedItems`: every node selected, kept in step with a view-model's list both ways - the tree writes
   into it what is clicked (Ctrl adding, Shift a run), and selects what is written into it, a node in a closed branch
   when its row comes. A node of the list written into `SelectedItem` becomes the one chosen last without letting the

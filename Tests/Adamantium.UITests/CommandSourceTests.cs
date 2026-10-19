@@ -86,6 +86,114 @@ public class CommandSourceTests
         });
     }
 
+    // A ribbon that names the document it acts on is enabled before anything had the focus, and stays so when another
+    // field takes it; what the document says reaches its toggles without the focus on it.
+    [Test]
+    public void ARibbonWithACommandTarget_ActsOnIt_WhereverTheFocusIs()
+    {
+        var (field, editor) = Editor();
+        var on = false;
+        CommandManager.GetCommandBindings(editor).Add(new CommandBinding(Bold, (_, _) => on = !on, (_, e) =>
+        {
+            e.CanExecute = true;
+            e.IsChecked = on;
+        }));
+        var toggle = new ToggleButton { Command = Bold };
+        var ribbon = new StackPanel { Children = { toggle } };
+        FocusManager.SetIsFocusScope(ribbon, true);
+        CommandManager.SetCommandTarget(ribbon, field);
+        var other = new Button { Focusable = true };
+        Shown(editor, ribbon, other);
+        Requery();
+        var unfocused = toggle.IsEnabled;
+
+        FocusManager.Focus(other);
+        Requery();
+        var elsewhere = toggle.IsEnabled;
+        toggle.PerformClick();
+        Requery();
+        var clicked = toggle.IsChecked;
+
+        on = false;
+        CommandManager.InvalidateRequerySuggested(field);
+        Requery();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That((unfocused, elsewhere), Is.EqualTo((true, true)), "enabled with no focus and with it elsewhere");
+            Assert.That(clicked, Is.True, "ran on the document");
+            Assert.That(toggle.IsChecked, Is.False, "told of the document's change without the focus on it");
+        });
+    }
+
+    // The target is where commands go that nothing on their way takes: a field with the focus that handles one - a
+    // search box in the document - still gets it first.
+    [Test]
+    public void AFieldWithTheFocusThatHandlesTheCommand_TakesItBeforeTheRibbonsTarget()
+    {
+        var (field, editor) = Editor();
+        var toDocument = 0;
+        var toBox = 0;
+        CommandManager.GetCommandBindings(editor).Add(new CommandBinding(Bold, (_, _) => toDocument++));
+        var box = new Button { Focusable = true };
+        var search = new StackPanel { Children = { box } };
+        CommandManager.GetCommandBindings(search).Add(new CommandBinding(Bold, (_, _) => toBox++));
+        editor.Children.Add(search);
+        var button = new Button { Command = Bold };
+        var ribbon = new StackPanel { Children = { button } };
+        FocusManager.SetIsFocusScope(ribbon, true);
+        CommandManager.SetCommandTarget(ribbon, field);
+        Shown(editor, ribbon);
+        FocusManager.Focus(box);
+
+        CommandManager.ExecuteFrom(Bold, null, button, null);
+
+        Assert.That((toBox, toDocument), Is.EqualTo((1, 0)));
+    }
+
+    // Run on the target with nothing focused, the command leaves the focus there, as a ribbon leaves it in the text.
+    [Test]
+    public void ACommandTheRibbonsTargetRan_LeavesTheFocusInIt()
+    {
+        var (field, editor) = Editor();
+        CommandManager.GetCommandBindings(editor).Add(new CommandBinding(Bold, (_, _) => { }));
+        var toggle = new ToggleButton { Command = Bold };
+        var ribbon = new StackPanel { Children = { toggle } };
+        FocusManager.SetIsFocusScope(ribbon, true);
+        FocusManager.SetReturnsFocus(ribbon, true);
+        CommandManager.SetCommandTarget(ribbon, field);
+        Shown(editor, ribbon);
+        Requery();
+
+        FocusManager.Focus(toggle);
+        toggle.PerformClick();
+
+        Assert.That(FocusManager.Focused, Is.SameAs(field));
+    }
+
+    // The target is inherited: a row in a ribbon's drop-down sends its command to it too.
+    [Test]
+    public void ARowInAPopupUnderTheRibbon_TakesItsCommandTarget()
+    {
+        var (field, editor) = Editor();
+        var ran = 0;
+        CommandManager.GetCommandBindings(editor).Add(new CommandBinding(Bold, (_, _) => ran++));
+        var row = new MenuItem { Command = Bold };
+        var ribbon = new StackPanel { Children = { new Popup { Child = new StackPanel { Children = { row } } } } };
+        FocusManager.SetIsFocusScope(ribbon, true);
+        FocusManager.SetReturnsFocus(ribbon, true);
+        CommandManager.SetCommandTarget(ribbon, field);
+        Shown(editor, ribbon);
+
+        CommandManager.ExecuteFrom(Bold, null, row, null);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(ran, Is.EqualTo(1));
+            Assert.That(FocusManager.Focused, Is.SameAs(field), "and the focus is in it, as the ribbon's own buttons leave it");
+        });
+    }
+
     [Test]
     public void AButtonWhoseCommandNoOneHandles_IsDisabled()
     {

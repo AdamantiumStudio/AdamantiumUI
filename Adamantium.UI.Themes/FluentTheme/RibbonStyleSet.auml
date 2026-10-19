@@ -697,6 +697,28 @@
         </PropertyTrigger>
     </Style>
 
+    <!-- A group's title in the gallery's drop-down, quieter than the choices under it. -->
+    <Style Selector="RibbonGalleryGroupHeader">
+        <Setter Property="Foreground" Value="{ObservableResource TextFillColorSecondary}"/>
+        <Setter Property="Padding" Value="8,6,8,2"/>
+        <Setter Property="HorizontalContentAlignment" Value="Left"/>
+    </Style>
+
+    <Style Selector="RibbonGalleryGroupHeader">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="RibbonGalleryGroupHeader">
+                    <Border Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          Foreground="{TemplateBinding Foreground}"
+                                          Content="{TemplateBinding Content}"
+                                          ContentTemplate="{TemplateBinding ContentTemplate}"/>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <Style Selector="ToggleButton.CollapsedGroupButton">
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BackgroundPointerOver" Value="{ResourceReference SubtleFillColorSecondary}"/>

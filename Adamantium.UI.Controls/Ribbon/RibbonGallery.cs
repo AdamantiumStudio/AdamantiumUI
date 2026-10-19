@@ -9,6 +9,7 @@ using Adamantium.UI.Core;
 using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.RoutedEvents;
+using Adamantium.UI.Core.Templates;
 
 namespace Adamantium.UI.Controls;
 
@@ -27,6 +28,42 @@ public class RibbonGallery : Selector
 
     public static readonly AdamantiumProperty DropDownColumnsProperty = AdamantiumProperty.Register(nameof(DropDownColumns),
         typeof(int), typeof(RibbonGallery), new PropertyMetadata(0));
+
+    public static readonly AdamantiumProperty GroupMemberPathProperty = AdamantiumProperty.Register(nameof(GroupMemberPath),
+        typeof(string), typeof(RibbonGallery), new PropertyMetadata(null, OnShapeChanged));
+
+    public static readonly AdamantiumProperty GroupHeaderTemplateProperty = AdamantiumProperty.Register(
+        nameof(GroupHeaderTemplate), typeof(DataTemplate), typeof(RibbonGallery), new PropertyMetadata(null, OnShapeChanged));
+
+    /// <summary>The path to what an item's group is: the drop-down titles each run of items that share it with a
+    /// <see cref="RibbonGalleryGroupHeader"/>, while the band shows them in a row as they come. Items of a group stand
+    /// together in the source. Null - the default - groups nothing.</summary>
+    public string GroupMemberPath
+    {
+        get => GetValue<string>(GroupMemberPathProperty);
+        set => SetValue(GroupMemberPathProperty, value);
+    }
+
+    /// <summary>How a group's title shows its key. Null shows the key as text.</summary>
+    public DataTemplate GroupHeaderTemplate
+    {
+        get => GetValue<DataTemplate>(GroupHeaderTemplateProperty);
+        set => SetValue(GroupHeaderTemplateProperty, value);
+    }
+
+    private string _groupReaderPath;
+    private Func<object, object> _groupReader;
+
+    private object GroupOf(object item)
+    {
+        if (!string.Equals(_groupReaderPath, GroupMemberPath, StringComparison.Ordinal))
+        {
+            _groupReaderPath = GroupMemberPath;
+            _groupReader = TreeChildResolver.ForValuePath(GroupMemberPath);
+        }
+
+        return _groupReader(item);
+    }
 
     public static readonly AdamantiumProperty ItemCommandProperty = AdamantiumProperty.Register(nameof(ItemCommand),
         typeof(ICommand), typeof(RibbonGallery), new PropertyMetadata(null, OnItemCommandChanged));
@@ -396,10 +433,25 @@ public class RibbonGallery : Selector
         if (!IsDropDownOpen) return;
 
         _dropDownPanel.Columns = DropDownColumns > 0 ? DropDownColumns : Math.Max(1, Columns);
-        _dropDownPanel.Rows = Math.Max(1, (Items.Count + _dropDownPanel.Columns - 1) / _dropDownPanel.Columns);
 
+        var grouped = GroupMemberPath is { Length: > 0 };
+        object group = null;
+        var first = true;
         foreach (var item in Items)
         {
+            var key = grouped ? GroupOf(item) : null;
+            if (grouped && (first || !Equals(key, group)))
+            {
+                group = key;
+                _dropDownPanel.Children.Add(new RibbonGalleryGroupHeader
+                {
+                    DataContext = group,
+                    Content = group,
+                    ContentTemplate = GroupHeaderTemplate
+                });
+            }
+
+            first = false;
             var cell = new RibbonGalleryItem
             {
                 Owner = this,
@@ -416,6 +468,8 @@ public class RibbonGallery : Selector
             _dropDownPanel.Children.Add(cell);
             _dropDownCells.Add((cell, item));
         }
+
+        _dropDownPanel.Rows = Math.Max(1, _dropDownPanel.RowCount);
     }
 
     /// <summary>The dropped-down cells stand for the same items, so the selection has to reach them too - they are not

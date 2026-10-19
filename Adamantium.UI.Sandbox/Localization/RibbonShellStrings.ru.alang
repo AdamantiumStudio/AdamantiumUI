@@ -497,4 +497,8 @@
             MovingSelection="Тяните, чтобы переместить выделенное."
             RotatingSelection="Тяните, чтобы повернуть выделенное."
             ScalingSelection="Тяните, чтобы масштабировать выделенное."/>
+
+    <Phrase Key="Metals" Text="Металлы"/>
+    <Phrase Key="Stones" Text="Камни"/>
+    <Phrase Key="Natural" Text="Природные"/>
 </Language>

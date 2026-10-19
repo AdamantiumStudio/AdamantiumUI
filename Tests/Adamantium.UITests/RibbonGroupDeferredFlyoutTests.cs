@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Adamantium.UI.Controls;
 using Adamantium.UI.Controls.Decorators;
 using Adamantium.UI.Controls.Panels;
@@ -224,5 +225,38 @@ public class RibbonGroupDeferredFlyoutTests
         var panel = (gallery.GetTemplateChild("PART_Popup") as Popup).FindContentChild("PART_DropDownPanel") as RibbonGalleryPanel;
         Assert.That(panel, Is.Not.Null, "the deferred card has to carry the panel the cells go into");
         Assert.That(panel.Children.Count, Is.EqualTo(6), "every item must get a cell once the drop-down is down");
+    }
+
+    private sealed record Choice(string Name, string Kind);
+
+    // Each run of items that share a group gets a title over it in the drop-down; the band shows them in a row.
+    [Test]
+    public void AGroupedGallery_TitlesEachGroupInTheDropDown()
+    {
+        var gallery = new RibbonGallery { Columns = 3, Rows = 2, GroupMemberPath = "Kind", Template = DeferredGalleryTemplate() };
+        foreach (var choice in new[] { new Choice("a", "Paragraph"), new Choice("b", "Paragraph"), new Choice("c", "Character") })
+        {
+            gallery.Items.Add(choice);
+        }
+
+        var window = new Window { Width = 400, Height = 200, Content = gallery };
+        for (var i = 0; i < 5; i++) WindowExtension.UpdateTree(window);
+
+        gallery.IsDropDownOpen = true;
+        for (var i = 0; i < 3; i++) WindowExtension.UpdateTree(window);
+
+        var panel = (gallery.GetTemplateChild("PART_Popup") as Popup).FindContentChild("PART_DropDownPanel") as RibbonGalleryPanel;
+        var shape = new List<string>();
+        foreach (var child in panel.Children)
+        {
+            shape.Add(child is RibbonGalleryGroupHeader header ? $"[{header.Content}]" : ((Choice)((RibbonGalleryItem)child).Content).Name);
+        }
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(shape, Is.EqualTo(new[] { "[Paragraph]", "a", "b", "[Character]", "c" }));
+            Assert.That(panel.RowCount, Is.EqualTo(4), "a title is a row of its own, and the cells after it begin one");
+            Assert.That(panel.Rows, Is.EqualTo(4), "the drop-down shows every row");
+        });
     }
 }

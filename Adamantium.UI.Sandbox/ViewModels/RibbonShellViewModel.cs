@@ -171,18 +171,18 @@ public partial class RibbonShellViewModel : IWindowAware
     /// <summary>The gallery's choices. DATA, so the dropped-down gallery can build its own cells from the same template.</summary>
     private static readonly MaterialSwatch[] MaterialChoices =
     [
-        new MaterialSwatch { Name = "Steel", Fill = "#8A8F98" },
-        new MaterialSwatch { Name = "Copper", Fill = "#B87333" },
-        new MaterialSwatch { Name = "Gold", Fill = "#D4AF37" },
-        new MaterialSwatch { Name = "Jade", Fill = "#4FA37A" },
-        new MaterialSwatch { Name = "Cobalt", Fill = "#3B6FD4" },
-        new MaterialSwatch { Name = "Ruby", Fill = "#C0334A" },
-        new MaterialSwatch { Name = "Slate", Fill = "#4A5058" },
-        new MaterialSwatch { Name = "Sand", Fill = "#C9B48A" },
-        new MaterialSwatch { Name = "Ivory", Fill = "#E8E2D4" },
-        new MaterialSwatch { Name = "Basalt", Fill = "#2E3238" },
-        new MaterialSwatch { Name = "Moss", Fill = "#6B7A45" },
-        new MaterialSwatch { Name = "Plum", Fill = "#7A4A85" }
+        new MaterialSwatch { Name = "Steel", Fill = "#8A8F98", Family = "Metals" },
+        new MaterialSwatch { Name = "Copper", Fill = "#B87333", Family = "Metals" },
+        new MaterialSwatch { Name = "Gold", Fill = "#D4AF37", Family = "Metals" },
+        new MaterialSwatch { Name = "Cobalt", Fill = "#3B6FD4", Family = "Metals" },
+        new MaterialSwatch { Name = "Jade", Fill = "#4FA37A", Family = "Stones" },
+        new MaterialSwatch { Name = "Ruby", Fill = "#C0334A", Family = "Stones" },
+        new MaterialSwatch { Name = "Slate", Fill = "#4A5058", Family = "Stones" },
+        new MaterialSwatch { Name = "Basalt", Fill = "#2E3238", Family = "Stones" },
+        new MaterialSwatch { Name = "Sand", Fill = "#C9B48A", Family = "Natural" },
+        new MaterialSwatch { Name = "Ivory", Fill = "#E8E2D4", Family = "Natural" },
+        new MaterialSwatch { Name = "Moss", Fill = "#6B7A45", Family = "Natural" },
+        new MaterialSwatch { Name = "Plum", Fill = "#7A4A85", Family = "Natural" }
     ];
 
     public IReadOnlyList<MaterialSwatch> Materials => MaterialChoices;
