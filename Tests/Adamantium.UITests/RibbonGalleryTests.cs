@@ -7,6 +7,7 @@ using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Input;
+using Adamantium.UI.Core.Media.Animation;
 using NUnit.Framework;
 
 namespace Adamantium.UITests;
@@ -280,6 +281,40 @@ public class RibbonGalleryTests
             Assert.That(cell.IsEnabled, Is.False);
             Assert.That(other.IsEnabled, Is.True);
             Assert.That(gallery.IsDropDownOpen, Is.True, "nothing was chosen");
+        });
+    }
+
+    // The style the text has, lit in the gallery of styles: what the command answers checked for an item.
+    [Test]
+    public void AChoiceTheItemCommandAnswersChecked_IsShownAsTheCurrentOne()
+    {
+        var gallery = Gallery(12);
+        var current = "item 3";
+        var command = new RoutedCommand("Pick", typeof(RibbonGalleryTests));
+        CommandManager.GetCommandBindings(gallery).Add(new CommandBinding(command, (_, _) => { }, (_, e) =>
+        {
+            e.CanExecute = true;
+            e.IsChecked = Equals(e.Parameter, current);
+        }));
+        var window = new Window { Width = 600, Height = 300, Content = gallery };
+        Adamantium.UI.Extensions.WindowExtension.UpdateTree(window);
+        var three = (RibbonGalleryItem)gallery.ItemContainerGenerator.Realize(3);
+        var four = (RibbonGalleryItem)gallery.ItemContainerGenerator.Realize(4);
+        gallery.ItemCommand = command;
+        var before = (three.IsSelected, four.IsSelected);
+
+        current = "item 4";
+        CommandManager.InvalidateRequerySuggested();
+        AnimationManager.Tick(0.016);
+        var followed = (three.IsSelected, four.IsSelected);
+        gallery.SelectedItem = "item 1";
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(before, Is.EqualTo((true, false)));
+            Assert.That(followed, Is.EqualTo((false, true)), "it follows the answer");
+            Assert.That((three.IsSelected, four.IsSelected), Is.EqualTo((false, true)), "a selection written on it is not");
+            Assert.That(gallery.SelectedItem, Is.Null, "a gallery that runs its choices still holds none");
         });
     }
 
