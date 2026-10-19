@@ -1621,6 +1621,8 @@ All packages share one version.
 
 ### Fixed
 
+- A checked menu row's label starts on the line of the others, in every theme: the check mark collapsed the icon
+  that holds the gutter's width, so the label moved in by the difference; the icon is hidden now, its room kept.
 - A font family the system does not have no longer throws: text in it - Word's Aptos pasted on a machine without it,
   an SVG drawing naming it - threw a `NullReferenceException` as it was laid out. `ResolveFont` and `TryResolveFont`
   set it in `UIComponent.DefaultFontFamily`, as a browser does; the family itself keeps its name (`Source`, written
