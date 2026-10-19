@@ -7,6 +7,7 @@ namespace Adamantium.UI.Rendering;
 public partial class RenderCache
 {
     private bool _needRenumber;   // PlanNewChildren ran out of rank space -> renumber (a cheap order-walk), not a full-walk fallback
+    private readonly HashSet<IUIComponent> _rankedBeforeRenumber = new();
 
     private readonly List<int> _prevVisible = new();   // BuildNeighborMaps: nearest painted sibling before i
     private readonly List<int> _nextAnchor = new();    // BuildNeighborMaps: nearest ranked, not-being-placed sibling after i
@@ -47,6 +48,9 @@ public partial class RenderCache
 
             RenumberOrder(visualRoot, packet);
             if (!PlanStructuralChange()) return GaveUp("cannotPlaceAfterRenumber");
+
+            // What the plan took out of the order (moved under something hidden) must not be put back by the renumber.
+            if (_removedSet.Count > 0) packet.Reranks.RemoveAll(r => _removedSet.Contains(r.Key));
         }
 
         // The geometry-dirty components ride along (as in a Partial). Pre-validate against the PLAN before anything
@@ -115,6 +119,8 @@ public partial class RenderCache
     private void RenumberOrder(IRootVisualComponent visualRoot, RenderPacket packet)
     {
         packet.Renumbered = true;
+        _rankedBeforeRenumber.Clear();
+        foreach (var ranked in _orderByControl.Keys) _rankedBeforeRenumber.Add(ranked);
         _orderByControl.Clear();
 
         var stack = _walkStack;
@@ -126,10 +132,14 @@ public partial class RenderCache
 
         while (stack.Count > 0)
         {
-            var (component, _) = stack.Pop();
+            var (component, hiddenByAncestor) = stack.Pop();
             // Same rule as the full walk: only COLLAPSED leaves the order. A hidden element keeps its rank, so coming
             // back is a refill of a group that never moved rather than a placement.
             if (component.Visibility == Visibility.Collapsed) continue;
+            // ...but what came under something hidden after it was hidden left the order (PlanNewChildren) and waits to
+            // be shown; ranking it here would put its kept group back on screen.
+            var hidden = hiddenByAncestor || component.Visibility != Visibility.Visible;
+            if (hidden && !_rankedBeforeRenumber.Contains(component)) continue;
             if (!visited.Add(component)) continue;
 
             _orderByControl[component] = order;
@@ -137,9 +147,10 @@ public partial class RenderCache
             if (HoldsGroup(component)) packet.Reranks.Add(new KeyValuePair<IUIComponent, long>(component, order));
             order += OrderGap;
 
-            PushChildrenInPaintOrder(stack, component.VisualChildren, false);
+            PushChildrenInPaintOrder(stack, component.VisualChildren, hidden);
         }
 
+        _rankedBeforeRenumber.Clear();
         _needRenumber = false;
     }
 
@@ -225,6 +236,17 @@ public partial class RenderCache
     {
         Core.Diagnostics.RuntimeStats.LastRecordPlanParents++;
         ChildrenInPaintOrder(parent, _childBuf); Core.Diagnostics.RuntimeStats.ScansParent += _childBuf.Count;
+
+        // Hidden is inherited: what arrives under a hidden parent paints nothing, so it leaves the order as anything
+        // hidden does - with a rank it had elsewhere - and takes a place when it is shown.
+        for (var a = parent; a != null; a = a.VisualParent)
+        {
+            if (a.Visibility != Visibility.Hidden) continue;
+            foreach (var child in _childBuf)
+                if (_placeRoots.Contains(child)) PlanRemoval(child);
+            return true;
+        }
+
         BuildNeighborMaps(parent);
 
         for (var i = 0; i < _childBuf.Count; i++)

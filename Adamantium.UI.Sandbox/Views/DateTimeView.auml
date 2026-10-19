@@ -113,6 +113,113 @@
                 </StackPanel>
             </WrapPanel>
 
+            <!-- Months side by side, counted by the chosen calendar, holidays marked and weekends in their own color. -->
+            <TextBlock Text="{Localize DateTimePageStrings.Several}"
+                       TextWrapping="WrapByWords"
+                       MaxWidth="680"
+                       HorizontalAlignment="Left"
+                       MarginBottom="8"/>
+            <WrapPanel Orientation="Horizontal">
+                <TextBlock Text="{Localize DateTimePageStrings.Counting}"
+                           VerticalAlignment="Center"
+                           MarginRight="8"
+                           MarginBottom="6"/>
+                <RadioButton Classes="Toggle"
+                             GroupName="CalendarCounting"
+                             Content="{Localize DateTimePageStrings.ByLanguage}"
+                             MarginRight="6"
+                             MarginBottom="6"
+                             IsChecked="{Binding CalendarSystem, Converter={conv:EnumToBoolConverter}, ConverterParameter=Language, Mode=TwoWay}"/>
+                <RadioButton Classes="Toggle"
+                             GroupName="CalendarCounting"
+                             Content="{Localize DateTimePageStrings.Gregorian}"
+                             MarginRight="6"
+                             MarginBottom="6"
+                             IsChecked="{Binding CalendarSystem, Converter={conv:EnumToBoolConverter}, ConverterParameter=Gregorian, Mode=TwoWay}"/>
+                <RadioButton Classes="Toggle"
+                             GroupName="CalendarCounting"
+                             Content="{Localize DateTimePageStrings.Hijri}"
+                             MarginRight="6"
+                             MarginBottom="6"
+                             IsChecked="{Binding CalendarSystem, Converter={conv:EnumToBoolConverter}, ConverterParameter=UmAlQura, Mode=TwoWay}"/>
+                <RadioButton Classes="Toggle"
+                             GroupName="CalendarCounting"
+                             Content="{Localize DateTimePageStrings.Persian}"
+                             MarginRight="6"
+                             MarginBottom="6"
+                             IsChecked="{Binding CalendarSystem, Converter={conv:EnumToBoolConverter}, ConverterParameter=Persian, Mode=TwoWay}"/>
+                <RadioButton Classes="Toggle"
+                             GroupName="CalendarCounting"
+                             Content="{Localize DateTimePageStrings.Hebrew}"
+                             MarginRight="6"
+                             MarginBottom="6"
+                             IsChecked="{Binding CalendarSystem, Converter={conv:EnumToBoolConverter}, ConverterParameter=Hebrew, Mode=TwoWay}"/>
+                <RadioButton Classes="Toggle"
+                             GroupName="CalendarCounting"
+                             Content="{Localize DateTimePageStrings.Japanese}"
+                             MarginRight="24"
+                             MarginBottom="6"
+                             IsChecked="{Binding CalendarSystem, Converter={conv:EnumToBoolConverter}, ConverterParameter=Japanese, Mode=TwoWay}"/>
+                <TextBlock Text="{Localize DateTimePageStrings.Months}"
+                           VerticalAlignment="Center"
+                           MarginRight="8"
+                           MarginBottom="6"/>
+                <RadioButton Classes="Toggle"
+                             GroupName="CalendarMonths"
+                             Content="1"
+                             MarginRight="6"
+                             MarginBottom="6"
+                             IsChecked="{Binding MonthsShown, Converter={conv:EnumToBoolConverter}, ConverterParameter=1, Mode=TwoWay}"/>
+                <RadioButton Classes="Toggle"
+                             GroupName="CalendarMonths"
+                             Content="2"
+                             MarginRight="6"
+                             MarginBottom="6"
+                             IsChecked="{Binding MonthsShown, Converter={conv:EnumToBoolConverter}, ConverterParameter=2, Mode=TwoWay}"/>
+                <RadioButton Classes="Toggle"
+                             GroupName="CalendarMonths"
+                             Content="3"
+                             MarginBottom="6"
+                             IsChecked="{Binding MonthsShown, Converter={conv:EnumToBoolConverter}, ConverterParameter=3, Mode=TwoWay}"/>
+            </WrapPanel>
+            <Calendar AutomationProperties.AutomationId="MonthsCalendar"
+                      MonthsShown="{Binding MonthsShown}"
+                      CalendarSystem="{Binding CalendarSystem}"
+                      MarkedDates="{Binding Holidays}"
+                      SelectionMode="{Binding SelectionMode}"
+                      ShowWeekNumbers="{Binding ShowWeekNumbers}"
+                      Language="{Binding CalendarLanguage}"
+                      HorizontalAlignment="Left"
+                      MarginTop="6"
+                      MarginBottom="24">
+                <Calendar.CalendarDayButtonStyle>
+                    <Style Selector="CalendarDayButton">
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="DayOfWeek"
+                                           Value="Saturday"/>
+                                <Condition Property="IsToday"
+                                           Value="false"/>
+                                <Condition Property="IsInactive"
+                                           Value="false"/>
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="PART_ContentPresenter" Property="Foreground" Value="{ResourceReference SystemFillColorCritical}"/>
+                        </MultiTrigger>
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="DayOfWeek"
+                                           Value="Sunday"/>
+                                <Condition Property="IsToday"
+                                           Value="false"/>
+                                <Condition Property="IsInactive"
+                                           Value="false"/>
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="PART_ContentPresenter" Property="Foreground" Value="{ResourceReference SystemFillColorCritical}"/>
+                        </MultiTrigger>
+                    </Style>
+                </Calendar.CalendarDayButtonStyle>
+            </Calendar>
+
             <!-- Given a size, the calendar's cells share it: no Viewbox around it. -->
             <TextBlock Text="{Localize DateTimePageStrings.Large}"
                        MarginBottom="8"/>

@@ -48,9 +48,9 @@ public abstract class CalendarButtonBase : ButtonBase
 
     internal int Index { get; set; }
 
-    internal int Row => Index / Columns();
+    internal abstract int Row { get; }
 
-    internal int Column => Index % Columns();
+    internal abstract int Column { get; }
 
     protected override Size MeasureOverride(Size availableSize)
     {
@@ -58,6 +58,4 @@ public abstract class CalendarButtonBase : ButtonBase
         var padding = Padding;
         return new Size(content.Width + padding.Left + padding.Right, content.Height + padding.Top + padding.Bottom);
     }
-
-    private protected abstract int Columns();
 }

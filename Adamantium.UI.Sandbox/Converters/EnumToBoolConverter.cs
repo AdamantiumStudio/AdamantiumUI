@@ -5,8 +5,8 @@ using Adamantium.UI.Core.Data;
 
 namespace Adamantium.UI.Sandbox.Converters;
 
-/// <summary>Checks the toggle whose ConverterParameter names the bound enum (or string) value and writes it back when
-/// checked; lets a row of buttons drive one choice. Unchecking writes nothing.</summary>
+/// <summary>Checks the toggle whose ConverterParameter names the bound value - an enum member, a string, a number - and
+/// writes it back when checked; lets a row of buttons drive one choice. Unchecking writes nothing.</summary>
 public class EnumToBoolConverter : IValueConverter
 {
     /// <inheritdoc/>
@@ -19,14 +19,20 @@ public class EnumToBoolConverter : IValueConverter
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
     {
         if (value is not true || parameter is not string wanted) return AdamantiumProperty.UnsetValue;
-        if (targetType == typeof(string))
+
+        var valueType = Nullable.GetUnderlyingType(targetType) ?? targetType;
+        if (valueType.IsEnum)
         {
-            return wanted;
+            return Enum.TryParse(valueType, wanted, true, out var parsed) ? parsed : AdamantiumProperty.UnsetValue;
         }
 
-        var enumType = Nullable.GetUnderlyingType(targetType) ?? targetType;
-        return enumType.IsEnum && Enum.TryParse(enumType, wanted, true, out var parsed)
-            ? parsed
-            : AdamantiumProperty.UnsetValue;
+        try
+        {
+            return System.Convert.ChangeType(wanted, valueType, CultureInfo.InvariantCulture);
+        }
+        catch (Exception e) when (e is FormatException or InvalidCastException or OverflowException)
+        {
+            return AdamantiumProperty.UnsetValue;
+        }
     }
 }

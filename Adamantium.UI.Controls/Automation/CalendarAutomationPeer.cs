@@ -5,7 +5,7 @@ using Adamantium.UI.Core.Automation;
 namespace Adamantium.UI.Controls.Automation;
 
 /// <summary>The peer of a <see cref="Calendar"/>: a calendar whose selection is its selected days, and a grid of the
-/// days of the month shown - or of the months or years, a level up.</summary>
+/// days of the months shown, side by side - or of the months or years, a level up.</summary>
 public class CalendarAutomationPeer : UIComponentAutomationPeer, ISelectionProvider, IGridProvider
 {
     public CalendarAutomationPeer(Calendar owner) : base(owner)
@@ -19,9 +19,13 @@ public class CalendarAutomationPeer : UIComponentAutomationPeer, ISelectionProvi
 
     public bool IsSelectionRequired => false;
 
-    public int RowCount => Cells().Count / ColumnCount;
+    public int RowCount => Target().DisplayMode == CalendarMode.Month
+        ? Target().Months.Count > 0 ? CalendarMonth.Days / Calendar.DayColumns : 0
+        : (Target().CalendarButtons.Count + Calendar.CellColumns - 1) / Calendar.CellColumns;
 
-    public int ColumnCount => Target().DisplayMode == CalendarMode.Month ? Calendar.DayColumns : Calendar.CellColumns;
+    public int ColumnCount => Target().DisplayMode == CalendarMode.Month
+        ? Target().Months.Count * Calendar.DayColumns
+        : Calendar.CellColumns;
 
     public IReadOnlyList<AutomationPeer> GetSelection() => Target().DisplayMode == CalendarMode.Month
         ? [.. Target().DayButtons.Where(day => day.IsSelected).Select(day => day.GetAutomationPeer())]
@@ -29,13 +33,22 @@ public class CalendarAutomationPeer : UIComponentAutomationPeer, ISelectionProvi
 
     public AutomationPeer GetItem(int row, int column)
     {
-        var cells = Cells();
-        var index = row * ColumnCount + column;
-        return index >= 0 && index < cells.Count ? cells[index].GetAutomationPeer() : null;
+        if (row < 0 || column < 0 || row >= RowCount || column >= ColumnCount)
+        {
+            return null;
+        }
+
+        if (Target().DisplayMode != CalendarMode.Month)
+        {
+            var index = row * Calendar.CellColumns + column;
+            return index < Target().CalendarButtons.Count ? Target().CalendarButtons[index].GetAutomationPeer() : null;
+        }
+
+        var day = column / Calendar.DayColumns * CalendarMonth.Days + row * Calendar.DayColumns + column % Calendar.DayColumns;
+        return day < Target().DayButtons.Count ? Target().DayButtons[day].GetAutomationPeer() : null;
     }
 
-    private Calendar Target() => (Calendar)Owner;
+    protected override IReadOnlyList<AutomationPeer> ChildrenCore() => CalendarAutomation.Shown(base.ChildrenCore(), Owner);
 
-    private IReadOnlyList<CalendarButtonBase> Cells() =>
-        Target().DisplayMode == CalendarMode.Month ? Target().DayButtons : Target().CalendarButtons;
+    private Calendar Target() => (Calendar)Owner;
 }
