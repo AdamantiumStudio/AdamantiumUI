@@ -114,6 +114,7 @@ public class ObservableResourceExpression : BindingExpressionBase
     {
         UnfollowKey();
         _followedKey = _keySource.CreateExpression(Target, null);
+        _followedKey.ProducesText = true;
         _followedKey.ValueChanged += OnKeyChanged;
         _followedKey.EstablishConnection();
     }

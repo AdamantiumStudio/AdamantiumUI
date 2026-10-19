@@ -1609,6 +1609,12 @@ All packages share one version.
 
 ### Fixed
 
+- A bound key of `{Localize}` or `{ObservableResource}` takes its binding's `StringFormat`:
+  `Key={Binding Kind, StringFormat='{0}Styles'}` read the bare value. Such a binding has no target property of its own,
+  and a binding without one kept its raw value, as a trigger's condition must; one read as text now says so
+  (`BindingExpressionBase.ProducesText`). A bound argument's `StringFormat` writes it in the phrase's language and
+  follows a language switch, while its value still chooses a counted or selected phrase's form; a format the phrase
+  gives its placeholder (`{size:N2}`) is applied first, the binding's around it.
 - Content that grows or shrinks by a splice no longer leaves its neighbors pointing at instances that moved with it: a
   paragraph drawing a background or an underline with its text, an ellipse or a gradient fill beside it, or a cloned
   copy went on recoloring and patching where it had been, and the frame verifier saw its glyphs undrawn. Typing into a

@@ -714,6 +714,11 @@ public class BindingExpression : BindingExpressionBase
          // NULL, not against the engine's unset token. The distinction is the target property's business, and a
          // producer has none.
          var produced = ComputeValue(typeof(object));
+         if (ProducesText)
+         {
+            produced = Formatted(produced, typeof(string));
+         }
+
          ProducedValue = ReferenceEquals(produced, AdamantiumProperty.UnsetValue) ? null : produced;
          RaiseValueChanged();
       }
