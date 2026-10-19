@@ -1621,6 +1621,9 @@ All packages share one version.
 
 ### Fixed
 
+- A ribbon gallery's drop-down is put away by a press anywhere else, as every flyout is: it closed only from its own
+  chevron or a pick, its popup being left at the default that keeps it open. A press on the gallery's scroll arrows
+  beside the open card puts it away too, rather than turning the rows hidden under it.
 - A bound key of `{Localize}` or `{ObservableResource}` takes its binding's `StringFormat`:
   `Key={Binding Kind, StringFormat='{0}Styles'}` read the bare value. Such a binding has no target property of its own,
   and a binding without one kept its raw value, as a trigger's condition must; one read as text now says so
