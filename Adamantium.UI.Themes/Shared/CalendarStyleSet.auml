@@ -2,9 +2,10 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- Calendar, as WinUI draws one: a header that goes up a level, arrows back and on, the names of the days over six
-         weeks of them - or the months of a year, the years of a decade. The cells share whatever room the calendar is
-         given. Built from keys every theme answers, so one set serves every theme. -->
+    <!-- Calendar, as WinUI draws one: a header that goes up a level, arrows up and down, and under them a page - the
+         names of the days over six weeks of them, month by month, or the months of a year, the years of a decade. The
+         calendar holds two pages and slides or zooms from one to the other; the cells share whatever room it is given.
+         Built from keys every theme answers, so one set serves every theme. -->
     <Style Selector="Calendar">
         <Setter Property="Background" Value="{ResourceReference CardBackgroundFillColorDefault}"/>
         <Setter Property="BorderBrush" Value="{ResourceReference ControlStrokeColorDefault}"/>
@@ -22,10 +23,8 @@
                             BorderThickness="{TemplateBinding BorderThickness}"
                             CornerRadius="{TemplateBinding CornerRadius}"
                             Padding="{TemplateBinding Padding}">
-                        <Grid RowDefinitions="Auto,Auto,*"
-                              ColumnDefinitions="Auto,*">
-                            <Grid Grid.ColumnSpan="2"
-                                  ColumnDefinitions="*,Auto,Auto"
+                        <Grid RowDefinitions="Auto,*">
+                            <Grid ColumnDefinitions="*,Auto,Auto"
                                   Margin="0,0,0,4">
                                 <Button x:Name="PART_Header"
                                         Classes="CalendarHeader"
@@ -37,7 +36,7 @@
                                               Classes="CalendarArrow"
                                               Focusable="False"
                                               AutomationProperties.Name="{Localize CalendarStrings.Previous}">
-                                    <Image Source="{ResourceReference ChevronLeftIcon}"
+                                    <Image Source="{ResourceReference ChevronUpIcon}"
                                            Width="10"
                                            Height="10"/>
                                 </RepeatButton>
@@ -46,32 +45,14 @@
                                               Classes="CalendarArrow"
                                               Focusable="False"
                                               AutomationProperties.Name="{Localize CalendarStrings.Next}">
-                                    <Image Source="{ResourceReference ChevronRightIcon}"
+                                    <Image Source="{ResourceReference ChevronDownIcon}"
                                            Width="10"
                                            Height="10"/>
                                 </RepeatButton>
                             </Grid>
-                            <UniformGrid x:Name="PART_DayNames"
-                                         Grid.Row="1"
-                                         Grid.Column="1"
-                                         Columns="7"
-                                         Rows="1"/>
-                            <UniformGrid x:Name="PART_WeekNumbers"
-                                         Grid.Row="2"
-                                         Columns="1"
-                                         Rows="6"/>
-                            <UniformGrid x:Name="PART_Days"
-                                         Grid.Row="2"
-                                         Grid.Column="1"
-                                         Columns="7"
-                                         Rows="6"/>
-                            <UniformGrid x:Name="PART_Cells"
-                                         Grid.Row="1"
-                                         Grid.RowSpan="2"
-                                         Grid.ColumnSpan="2"
-                                         Columns="4"
-                                         Rows="3"
-                                         Visibility="Collapsed"/>
+                            <Grid x:Name="PART_Pages"
+                                  Grid.Row="1"
+                                  ClipToBounds="True"/>
                         </Grid>
                     </Border>
                 </ControlTemplate>
@@ -79,19 +60,83 @@
         </Setter>
     </Style>
 
-    <!-- A level up: the months of a year, or the years of a decade, in place of the days - which keep their room, so
-         the calendar keeps its size. -->
-    <Style Selector="Calendar">
+    <!-- A page: the months side by side, or - a level up - the months of a year or the years of a decade in their
+         place; the months keep their room, so the calendar keeps its size. -->
+    <Style Selector="CalendarPage">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="CalendarPage">
+                    <Grid>
+                        <UniformGrid x:Name="PART_Months"
+                                     Rows="1"
+                                     ColumnSpacing="16"/>
+                        <UniformGrid x:Name="PART_Cells"
+                                     Columns="4"
+                                     Rows="3"
+                                     Visibility="Collapsed"/>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style Selector="CalendarPage">
         <PropertyTrigger Property="DisplayMode" Value="Year">
-            <Setter TargetName="PART_Days" Property="Visibility" Value="Hidden"/>
-            <Setter TargetName="PART_DayNames" Property="Visibility" Value="Hidden"/>
+            <Setter TargetName="PART_Months" Property="Visibility" Value="Hidden"/>
             <Setter TargetName="PART_Cells" Property="Visibility" Value="Visible"/>
         </PropertyTrigger>
         <PropertyTrigger Property="DisplayMode" Value="Decade">
-            <Setter TargetName="PART_Days" Property="Visibility" Value="Hidden"/>
-            <Setter TargetName="PART_DayNames" Property="Visibility" Value="Hidden"/>
+            <Setter TargetName="PART_Months" Property="Visibility" Value="Hidden"/>
             <Setter TargetName="PART_Cells" Property="Visibility" Value="Visible"/>
         </PropertyTrigger>
+    </Style>
+
+    <!-- A month: its name where several are shown, the names of the days, six weeks numbered beside them. -->
+    <Style Selector="CalendarMonth">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="CalendarMonth">
+                    <Grid RowDefinitions="Auto,Auto,*"
+                          ColumnDefinitions="Auto,*">
+                        <TextBlock x:Name="Title"
+                                   Grid.ColumnSpan="2"
+                                   Classes="CalendarMonthTitle"
+                                   Text="{TemplateBinding Title}"
+                                   Visibility="Collapsed"/>
+                        <UniformGrid x:Name="PART_DayNames"
+                                     Grid.Row="1"
+                                     Grid.Column="1"
+                                     Columns="7"
+                                     Rows="1"/>
+                        <UniformGrid x:Name="PART_WeekNumbers"
+                                     Grid.Row="2"
+                                     Columns="1"
+                                     Rows="6"
+                                     Visibility="Collapsed"/>
+                        <UniformGrid x:Name="PART_Days"
+                                     Grid.Row="2"
+                                     Grid.Column="1"
+                                     Columns="7"
+                                     Rows="6"/>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style Selector="CalendarMonth">
+        <PropertyTrigger Property="IsTitleShown" Value="true">
+            <Setter TargetName="Title" Property="Visibility" Value="Visible"/>
+        </PropertyTrigger>
+        <PropertyTrigger Property="ShowWeekNumbers" Value="true">
+            <Setter TargetName="PART_WeekNumbers" Property="Visibility" Value="Visible"/>
+        </PropertyTrigger>
+    </Style>
+
+    <Style Selector="TextBlock.CalendarMonthTitle">
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="HorizontalAlignment" Value="Center"/>
+        <Setter Property="Margin" Value="0,0,0,4"/>
     </Style>
 
     <Style Selector="Button.CalendarHeader">
@@ -156,6 +201,15 @@
                                 VerticalAlignment="Center"
                                 Background="{ResourceReference TextFillColorSecondary}"
                                 Visibility="Collapsed"/>
+                        <Border x:Name="Mark"
+                                Width="4"
+                                Height="4"
+                                CornerRadius="2"
+                                Margin="0,0,0,3"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Bottom"
+                                Background="{ThemeResource AccentFillColorDefault}"
+                                Visibility="Collapsed"/>
                         <Border x:Name="Cursor"
                                 Margin="-1"
                                 BorderBrush="{ResourceReference TextFillColorPrimary}"
@@ -198,6 +252,16 @@
         <PropertyTrigger Property="IsBlackedOut" Value="true">
             <Setter TargetName="Strike" Property="Visibility" Value="Visible"/>
         </PropertyTrigger>
+        <PropertyTrigger Property="IsMarked" Value="true">
+            <Setter TargetName="Mark" Property="Visibility" Value="Visible"/>
+        </PropertyTrigger>
+        <MultiTrigger>
+            <MultiTrigger.Conditions>
+                <Condition Property="IsMarked" Value="true"/>
+                <Condition Property="IsToday" Value="true"/>
+            </MultiTrigger.Conditions>
+            <Setter TargetName="Mark" Property="Background" Value="{ThemeResource AccentForegroundColor}"/>
+        </MultiTrigger>
         <PropertyTrigger Property="IsEnabled" Value="false">
             <Setter TargetName="PART_ContentPresenter" Property="Foreground" Value="{ResourceReference TextFillColorDisabled}"/>
         </PropertyTrigger>

@@ -19,7 +19,7 @@ internal static class ContentTransitions
     /// finishes (or immediately if there is nothing to slide out) so the caller removes the old content then.
     /// </summary>
     public static void Run(ContentTransition direction, double durationSeconds, Size size,
-        IUIComponent incoming, IUIComponent outgoing, Action onOutgoingComplete)
+        IUIComponent incoming, IUIComponent outgoing, Action onOutgoingComplete, IEasingFunction easing = null)
     {
         if (direction == ContentTransition.None || (incoming == null && outgoing == null))
         {
@@ -35,11 +35,12 @@ internal static class ContentTransitions
         var axis = horizontal ? Transform.TranslateXProperty : Transform.TranslateYProperty;
 
         EnsureRenderTransform(incoming)?.BeginAnimation(axis,
-            new DoubleAnimation { From = enterFrom, To = 0, Duration = duration });
+            new DoubleAnimation { From = enterFrom, To = 0, Duration = duration, Easing = easing });
 
         var outTransform = EnsureRenderTransform(outgoing);
         if (outTransform != null)
-            outTransform.BeginAnimation(axis, new DoubleAnimation { From = 0, To = -enterFrom, Duration = duration }, onOutgoingComplete);
+            outTransform.BeginAnimation(axis,
+                new DoubleAnimation { From = 0, To = -enterFrom, Duration = duration, Easing = easing }, onOutgoingComplete);
         else
             onOutgoingComplete?.Invoke();
     }

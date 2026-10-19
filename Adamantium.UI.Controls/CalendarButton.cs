@@ -27,7 +27,9 @@ public class CalendarButton : CalendarButtonBase
         internal set => SetValue(HasSelectedDatesProperty, value);
     }
 
-    private protected override int Columns() => Calendar.CellColumns;
+    internal override int Row => Index / Calendar.CellColumns;
+
+    internal override int Column => Index % Calendar.CellColumns;
 
     protected override void OnClick()
     {

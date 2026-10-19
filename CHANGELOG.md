@@ -37,11 +37,22 @@ All packages share one version.
   `SelectedDate`/`SelectedDates`, `BlackoutDates`, `DisplayDateStart`/`End`, `IsTodayHighlighted` and
   `ShowWeekNumbers`. Days are selected by click, Ctrl, Shift and a drag; the keyboard moves through them, its cursor
   shown only once the keyboard is in use. Month and day names, the first day of the week (or `FirstDayOfWeek`) and
-  the week numbers follow the calendar's `Language`, on the Gregorian calendar (Thai keeps its Buddhist years). Given
-  a size, its cells share the room - no `Viewbox` needed - and it keeps its size from level to level. Unlike WPF, a
-  `SelectedDate` it cannot select goes back to the day selected rather than throwing, and blackout days or a range
-  that come to cover selected days let them go. It is in the Fluent, Graphite and macOS themes, reaches automation
-  as a grid of selectable dates, and has a "Date and time" tab in the sandbox.
+  the week numbers follow the calendar's `Language`. Given a size, its cells share the room - no `Viewbox` needed -
+  and it keeps its size from level to level. Unlike WPF, a `SelectedDate` it cannot select goes back to the day
+  selected rather than throwing, and blackout days or a range that come to cover selected days let them go. It is in
+  the Fluent, Graphite and macOS themes, reaches automation as a grid of selectable dates, and has a "Date and time"
+  tab in the sandbox.
+  - The page slides up or down to the next or previous month, year or decade, and zooms in or out between levels, as
+    WinUI's does - played by the compositor, `TransitionDuration` long (0 moves at once).
+  - `MonthsShown` stands several months side by side, each named over it; the keyboard and a drag run across them,
+    and automation sees one grid of their days.
+  - `CalendarSystem` counts months and years by another calendar - the language's own by default (Hijri for Saudi
+    Arabic, Persian for Farsi, Buddhist years for Thai), or Gregorian, Hijri, Um al-Qura, Persian, Hebrew (thirteen
+    months in a leap year), Japanese eras, Korean or Taiwanese, named by the language where it knows that calendar.
+  - `MarkedDates` (`CalendarDateMark`: a run of days and the classes they wear) marks events and holidays - a dot in
+    the themes, and `CalendarDayButton.IsMarked` and the classes for a style; `CalendarDayButtonStyle` and
+    `CalendarButtonStyle` add a style to every day or month and year cell, and `CalendarDayButton.DayOfWeek` lets one
+    pick out weekends.
 - `Inline.FontFamily`: a run or a span sets the family of its own text, as WPF's `TextElement` does; `ClearOverrides`
   takes it off.
 - `DragDropEvents.DragCompleted`: the source of a drag hears how it ended as an event on itself, before its

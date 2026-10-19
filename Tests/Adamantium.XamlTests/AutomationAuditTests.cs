@@ -163,6 +163,8 @@ public class AutomationAuditTests
         [typeof(Calendar)] = (T.Calendar, null),
         [typeof(CalendarDayButton)] = (T.DataItem, null),
         [typeof(CalendarButton)] = (T.Button, null),
+        [typeof(CalendarMonth)] = (T.Group, null),
+        [typeof(CalendarPage)] = (null, "a calendar's page; the months and cells on it answer for themselves"),
         [typeof(TextBox)] = (T.Edit, null),
         [typeof(PasswordBox)] = (T.Edit, null),
         [typeof(TextPresenter)] = (null, "draws a text box's text; the text box answers for it"),
