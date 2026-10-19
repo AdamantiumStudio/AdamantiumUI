@@ -7,6 +7,13 @@ All packages share one version.
 
 ### Added
 
+- A key binding runs from anywhere in its window, not only while the focus is in its element. The whole way up from the
+  focus has the key first - the window's default and cancel buttons and the Tab and arrow navigation too - then the
+  binding nearest to the focus whose element is shown and enabled; Esc clears the focus only when no binding takes it.
+  A field being typed in (`ITextEntry`) keeps the keys that type, a key held down repeats only where the focus is, and
+  a key pressed in an overlay window stays in it. `KeyBinding` is set in markup with its command bound to the element's
+  data - `<View.InputBindings><KeyBinding Gesture="Escape" Command="{Binding Cancel}"/></View.InputBindings>` - and a
+  hosted universe, which takes every key, lets one go that a key binding would run (`CommandManager.IsBoundInWindow`).
 - A `RibbonGallery` that runs its choices (`ItemCommand`) lights the one its command answers checked for - the style
   the text has in a gallery of styles - in the band and in the drop-down, following the command as it is asked again.
 
@@ -1637,6 +1644,11 @@ All packages share one version.
 
 ### Fixed
 
+- A cursor that changes under a pointer standing still - a style turning it into a tool's - shows at once on Windows:
+  set from the UI loop it waited for the next move, `SetCursor` showing only from the window's own thread, which is now
+  asked to answer `WM_SETCURSOR` again.
+- A click into a `RenderTargetPanel` takes the keyboard focus, with any button: only a mouse-look did, so after a
+  click on a toolbar the keys - Esc to a scene's tool among them - went on to the toolbar instead of the universe.
 - A checked menu row's label starts on the line of the others, in every theme: the check mark collapsed the icon
   that holds the gutter's width, so the label moved in by the difference; the icon is hidden now, its room kept.
 - A font family the system does not have no longer throws: text in it - Word's Aptos pasted on a machine without it,

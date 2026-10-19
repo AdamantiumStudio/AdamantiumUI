@@ -26,9 +26,31 @@ internal sealed class WindowsCursors : INativeCursors
     private readonly ConcurrentDictionary<CursorType, IntPtr> _standard = new();
     private readonly ConcurrentDictionary<string, IntPtr> _custom = new();
 
+    /// <summary>Shows <paramref name="cursor"/> at once, wherever it is called from: <c>SetCursor</c> shows only from the
+    /// thread of the window under the pointer, so from the UI loop that window is asked to answer WM_SETCURSOR again on
+    /// its own thread - a cursor changed under a still pointer waited for the next move.</summary>
     public void Apply(Cursor cursor)
     {
         Win32Interop.SetCursor(Resolve(cursor));
+        AskTheWindowUnderThePointer();
+    }
+
+    private static void AskTheWindowUnderThePointer()
+    {
+        if (!Win32Interop.GetCursorPos(out var point) || Win32Interop.WindowFromPoint(point) is var window && window == IntPtr.Zero)
+        {
+            return;
+        }
+
+        var thread = Win32Interop.GetWindowThreadProcessId(window, out var process);
+        if (process != (uint)Environment.ProcessId || thread == Win32Interop.GetCurrentThreadId())
+        {
+            return;
+        }
+
+        const int clientArea = 1;
+        Messages.PostMessage(window, (uint)WindowMessages.Setcursor, window,
+            (IntPtr)(clientArea | ((int)WindowMessages.Mousemove << 16)));
     }
 
     private IntPtr Resolve(Cursor cursor)

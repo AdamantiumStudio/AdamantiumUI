@@ -195,8 +195,9 @@ public class RenderTargetUniverseOutput : UIUniverseOutput
     protected override bool IsUniverseInput(RoutedEventArgs e) => ReferenceEquals(e.OriginalSource, InputComponent);
 
     protected override bool SpendsKey(KeyEventArgs e) =>
-        e.Key != Key.Tab ||
-        nativeWindow.AcceptsTab && (e.Modifiers & (InputModifiers.LeftControl | InputModifiers.RightControl)) == 0;
+        (e.Key != Key.Tab ||
+         nativeWindow.AcceptsTab && (e.Modifiers & (InputModifiers.LeftControl | InputModifiers.RightControl)) == 0)
+        && !CommandManager.IsBoundInWindow(nativeWindow, e);
 
     protected override void SwitchContext(OutputContext context)
     {

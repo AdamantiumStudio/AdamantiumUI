@@ -22,7 +22,8 @@ namespace Adamantium.UI.Controls.Text;
 
 /// <summary>The editing core of text input controls: buffer, caret, selection, keyboard, clipboard and scroll. The
 /// template supplies a <see cref="TextPresenter"/> named <c>PART_TextPresenter</c>.</summary>
-public abstract class TextBoxBase : Control, ITextStyleUser, Adamantium.UI.Core.Resources.IResolvesOwnResources
+public abstract class TextBoxBase : Control, ITextStyleUser, Adamantium.UI.Core.Resources.IResolvesOwnResources,
+   Adamantium.UI.Core.Input.ITextEntry
 {
     // --- Editing state -------------------------------------------------------------------------------------------
 

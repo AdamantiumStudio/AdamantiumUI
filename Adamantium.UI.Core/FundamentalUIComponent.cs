@@ -476,6 +476,18 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
         LetGoOfFollowed();
         ReleaseRenderAttachments();
 
+        if (GetValue(Input.CommandManager.InputBindingsProperty) is Input.KeyBindingCollection keys && keys.Count > 0)
+        {
+            foreach (var key in keys)
+            {
+                foreach (var binding in Data.BindingEngine.GetBindings(key))
+                    binding.CloseConnection();
+                Resources.ObservableResource.CloseAll(key);
+            }
+
+            keys.Clear();
+        }
+
         // ...and the BEHAVIORS, which carry bindings of their own. A binding is keyed by its TARGET, and a behavior is
         // not a component, so the sweep above cannot see one: a DragSourceBehavior's {Ancestor} binding stayed open, its
         // source (a live ListBox) went on holding the expression, and the expression held the behavior's element and
