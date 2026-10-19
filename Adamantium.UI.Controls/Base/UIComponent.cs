@@ -790,10 +790,11 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
 
     /// <summary>The face of <paramref name="family"/> this element's text is set in: the one nearest to its
     /// <see cref="FontWeight"/>, <see cref="FontStyle"/> and <see cref="FontStretch"/>. A control that lays out text of
-    /// its own lays it out in this face, as <see cref="Adamantium.UI.Controls.Text.TextBlock"/> does.</summary>
+    /// its own lays it out in this face, as <see cref="Adamantium.UI.Controls.Text.TextBlock"/> does. A family the system
+    /// does not have is set in <see cref="DefaultFontFamily"/>, as a browser sets it.</summary>
     public IFont ResolveFont(FontFamily family)
     {
-        var font = family.GetFont(FontWeight, FontStyle, FontStretch);
+        var font = Installed(family).GetFont(FontWeight, FontStyle, FontStretch);
         return FontVariations?.Apply(font) ?? font;
     }
 
@@ -815,6 +816,7 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
         FontVariationList variations, out IFont font)
     {
         bool ready;
+        family = Installed(family);
         if (FontAtlasStore.SynchronousFill)
         {
             font = family.GetFont(weight, style, stretch);
@@ -828,6 +830,8 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
         font = variations?.Apply(font) ?? font;
         return ready;
     }
+
+    private static FontFamily Installed(FontFamily family) => family.IsInstalled ? family : DefaultFontFamily;
 
     /// <summary>Asks to be told, on the loop, when a font file finishes loading: <see cref="OnFontsArrived"/>.
     /// <paramref name="loadsSeen"/> is <see cref="TypefaceStore.LoadedCount"/> read before the fonts were asked for, so

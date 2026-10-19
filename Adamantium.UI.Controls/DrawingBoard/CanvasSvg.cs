@@ -350,9 +350,11 @@ public static class CanvasSvg
             new XAttribute("font-size", Num(text.FontSize)),
             new XText(text.Text ?? String.Empty));
 
-        // THE FAMILY AS THE FONT ITSELF NAMES IT. A FontFamily is built from a name and does not keep it, so the name
-        // written out is the one the face reports - which is also the one another program will look for.
-        if (text.FontFamily?.Typeface?.GetFont(0)?.TypographicFamilyName is { Length: > 0 } family)
+        // THE FAMILY AS THE FONT ITSELF NAMES IT - the one another program will look for; a family this system does not
+        // have keeps the name it was asked by.
+        if ((text.FontFamily is { IsInstalled: false } missing
+                ? missing.Source
+                : text.FontFamily?.Typeface.GetFont(0)?.TypographicFamilyName) is { Length: > 0 } family)
         {
             element.Add(new XAttribute("font-family", family));
         }

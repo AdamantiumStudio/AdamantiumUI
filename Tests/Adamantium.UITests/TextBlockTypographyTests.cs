@@ -14,6 +14,7 @@ using Adamantium.UI.Core;
 using Adamantium.UI.Core.Graphics;
 using Adamantium.UI.Core.Localization;
 using Adamantium.UI.Core.Media;
+using Adamantium.UI.Core.Resources;
 using Adamantium.UI.Extensions;
 using Adamantium.UITests.Rendering;
 using NUnit.Framework;
@@ -203,6 +204,58 @@ public class TextBlockTypographyTests
             "a regular face set for bold italic text is thickened and slanted");
         Assert.That(new TextBlock { FontWeight = FontWeight.Bold }.TextShaping(regular)?.Synthesis, Is.Null,
             "nothing is synthesized unless asked for");
+    }
+
+    // As pasted text names one, Word's Aptos on a machine without it.
+    [Test]
+    public void AFamilyTheSystemDoesNotHave_IsSetInTheDefaultOne()
+    {
+        var missing = new FontFamily("No Such Family 4f2c");
+        var text = new TextBlock();
+        text.Inlines.Add(new Run { Text = "plain " });
+        text.Inlines.Add(new Run { Text = "missing", FontFamily = missing });
+        HostedUntil(text, () => text.Layout != null);
+        var standard = new TextBlock().ResolveFont(UIComponent.DefaultFontFamily);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(new TextBlock().ResolveFont(missing).FullName, Is.EqualTo(standard.FullName));
+            Assert.That(new TextBlock().TryResolveFont(missing, out var font) ? font.FullName : null,
+                Is.EqualTo(standard.FullName));
+            Assert.That(text.Layout.GetTextData().Where(g => g.PositionInString >= 6).Select(g => g.Font.FullName),
+                Is.All.EqualTo(standard.FullName));
+        });
+    }
+
+    [Test]
+    public void AFamilyTheSystemDoesNotHave_KeepsItsName_AndHasTheSystemsUIFont()
+    {
+        var missing = new FontFamily("No Such Family 4f2c");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(missing.IsInstalled, Is.False);
+            Assert.That(Theme.SystemDefaultFontFamily.IsInstalled, Is.True);
+            Assert.That(missing.Source, Is.EqualTo("No Such Family 4f2c"));
+            Assert.That(missing.Fonts[0].FullName, Is.EqualTo(Theme.SystemDefaultFontFamily.Fonts[0].FullName));
+            Assert.That(() => missing.LineGap, Throws.Nothing);
+        });
+    }
+
+    [Test]
+    public void ADefaultFamilyTheSystemDoesNotHave_StillGivesAFace()
+    {
+        UIComponent.DefaultFontFamily = new FontFamily("No Such Default 91aa");
+        try
+        {
+            var font = new TextBlock().ResolveFont(new FontFamily("No Such Family 4f2c"));
+
+            Assert.That(font.FullName, Is.EqualTo(Theme.SystemDefaultFontFamily.Fonts[0].FullName));
+        }
+        finally
+        {
+            UIComponent.DefaultFontFamily = null;
+        }
     }
 
     [Test]

@@ -425,6 +425,21 @@ public class CanvasSvgTests
         });
     }
 
+    // A drawing from a machine with a font this one lacks.
+    [Test]
+    public void TextInAFamilyTheSystemDoesNotHave_IsMeasured_AndKeepsTheFamilysName()
+    {
+        var text = CanvasSvg.Load("<svg xmlns='http://www.w3.org/2000/svg'>" +
+                                  "<text x='5' y='20' font-family='Aptos Missing 7c1e'>hi</text></svg>")
+            .OfType<TextItem>().Single();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(text.Bounds.Width, Is.GreaterThan(0), "drawn in a stand-in");
+            Assert.That(CanvasSvg.Save(new ICanvasItem[] { text }), Does.Contain("font-family=\"Aptos Missing 7c1e\""));
+        });
+    }
+
     [Test]
     public void AGroupComesBackAsAGroupWithWhatWasInIt()
     {
