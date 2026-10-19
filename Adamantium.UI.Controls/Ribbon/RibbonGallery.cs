@@ -389,6 +389,11 @@ public class RibbonGallery : Selector
         // Metadata is MERGED, so the base AffectsMeasure stays and this callback is added to it.
         Ribbon.SizeProperty.OverrideMetadata(typeof(RibbonGallery),
             new PropertyMetadata(RibbonSize.Large, PropertyMetadataOptions.AffectsMeasure, OnRibbonSizeChanged));
+
+        // A chevron with nothing to say what it opens is not a step a group should stand on, as Office's galleries never
+        // do: past its compact size the group collapses into its labeled button instead. An author may still allow it.
+        Ribbon.CollapseToSmallProperty.OverrideMetadata(typeof(RibbonGallery),
+            new PropertyMetadata(RibbonCollapseThreshold.Never, PropertyMetadataOptions.AffectsMeasure));
     }
 
     private static void OnRibbonSizeChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
@@ -406,6 +411,15 @@ public class RibbonGallery : Selector
         var size = Ribbon.GetSize(this);
         IsCollapsed = size == RibbonSize.Small;
         EffectiveColumns = Math.Max(1, size == RibbonSize.Large ? Columns : CompactColumns);
+
+        // The group measures each of its sizes on the spot, before any layout pass runs. The items panel taking the new
+        // columns is template levels down, and the levels between still held their old measure: the gallery answered
+        // the width it was drawn at, whatever size it was asked about.
+        for (var node = ItemsHostPanel as IUIComponent; node != null && !ReferenceEquals(node, this); node = node.VisualParent)
+        {
+            (node as IMeasurableComponent)?.InvalidateMeasure();
+        }
+
         Clamp();
         RefreshDropDown();
     }

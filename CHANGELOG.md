@@ -14,6 +14,8 @@ All packages share one version.
   a key pressed in an overlay window stays in it. `KeyBinding` is set in markup with its command bound to the element's
   data - `<View.InputBindings><KeyBinding Gesture="Escape" Command="{Binding Cancel}"/></View.InputBindings>` - and a
   hosted universe, which takes every key, lets one go that a key binding would run (`CommandManager.IsBoundInWindow`).
+- `RibbonGroup.CollapsedHeader`: the header as the collapsed button shows it - a name of several words on two lines,
+  broken at the space nearest its middle, as Office labels a collapsed group.
 - A `RibbonGallery` that runs its choices (`ItemCommand`) lights the one its command answers checked for - the style
   the text has in a gallery of styles - in the band and in the drop-down, following the command as it is asked again.
 
@@ -1324,6 +1326,20 @@ All packages share one version.
 
 ### Changed
 
+- A ribbon decides its groups' sizes afresh on every pass, from every group whole: the groups give way from the end
+  of the tab as before, and then whatever room is left goes back to them - the one given up last first, each to the
+  roomiest layout that still fits, a group it does not fit passed over for the next. The answer is the width's and
+  the content's alone: room freed at the same width - a group hidden, labels shortened by another language - is taken
+  back, and a width misread while fonts were still arriving no longer leaves a group collapsed. The band stood half
+  empty beside collapsed groups, and after a switch of language and back a group stayed collapsed for good.
+- A gallery is not cut to its bare chevron unless its author allows it (`Ribbon.CollapseToSmall`): past its compact
+  size the group collapses into its labeled button, as Office's does.
+- A collapsed ribbon group's button is labeled as a large command is - in the text's own color and size, a name of
+  several words on two lines (`CollapsedHeader`) - and is as wide as its label needs, `CollapsedWidth` at the least,
+  and the band counts it at that width. The label was a gray caption on one line cut to the metric's width. A group
+  whose flyout is open is left collapsed while the row around it changes, and decided again when the flyout closes. A
+  header drawn by a `HeaderTemplate` is handed to it as written.
+- A gallery shows its scroll arrows only when it has rows out of sight; the chevron to the whole set stays.
 - A ribbon group's columns start at the top of the band, as Office's, their commands `RibbonGroupPanel.RowSpacing`
   (4) apart: Word's two rows of font commands stand at the top, not touching. The whole block was centered in the band,
   its commands touching.
@@ -1649,6 +1665,15 @@ All packages share one version.
   asked to answer `WM_SETCURSOR` again.
 - A click into a `RenderTargetPanel` takes the keyboard focus, with any button: only a mouse-look did, so after a
   click on a toolbar the keys - Esc to a scene's tool among them - went on to the toolbar instead of the universe.
+- A ribbon group measured at another size than it is drawn at answers that size's width when it holds a gallery: the
+  gallery's new column count was template levels down and the levels between kept their old measure, so it answered
+  the width it was drawn at, and the band flipped between two choices on every pass. The same held for the group's
+  own padding, read off a measure that had not reached its commands: every width it reported was off. A group's width
+  at each layout is now the group measured at it, caption included - a caption wider than the commands of a small
+  layout made the old sum of commands and padding come out different for every layout drawn.
+- A gallery owns its column in a ribbon group at every size it shows cells at: at its compact size it was stacked
+  with the command after it, which was pushed out of the bottom of the band ("Update style to match selection"
+  vanished beside the style gallery).
 - A checked menu row's label starts on the line of the others, in every theme: the check mark collapsed the icon
   that holds the gutter's width, so the label moved in by the difference; the icon is hidden now, its room kept.
 - A font family the system does not have no longer throws: text in it - Word's Aptos pasted on a machine without it,

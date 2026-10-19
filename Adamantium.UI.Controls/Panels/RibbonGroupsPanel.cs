@@ -183,13 +183,6 @@ public class RibbonGroupsPanel : Panel
 
     // --- Choosing which variant each group is drawn at ---------------------------------------------------------------
 
-    /// <summary>Growing back gets a stricter test than shrinking, so a boundary width settles instead of flipping.
-    /// Untested insurance so far: the tests pass with it at zero.</summary>
-    private const double GrowBackMargin = 16;
-
-    // The width the current choice was made for.
-    private double _decidedFor;
-
     private void ChooseVariants(double available)
     {
         var groups = new List<RibbonGroup>();
@@ -203,104 +196,171 @@ public class RibbonGroupsPanel : Panel
 
         if (groups.Count == 0) return;
 
-        LowerUntilItFits(groups, available);
-
-        // Only when the tab got WIDER: collapsing frees a lot at once, and re-solving would spend it on the neighbors -
-        // narrowing by a pixel made the groups on the left spring back to full size.
-        if (available > _decidedFor)
+        // Labels rewritten (another language) change what the open groups cost at once. A collapsed group cannot be
+        // measured inside its flyout, so what it keeps is about the old labels: forgotten, and the group drawn open to
+        // learn them again - unless its flyout is in use. Collapsing a neighbor changes no open group's widths, so this
+        // does not feed itself.
+        var widths = new double[groups.Count][];
+        var rewritten = false;
+        for (var g = 0; g < groups.Count; g++)
         {
-            RaiseWhileItStillFits(groups, available - GrowBackMargin);
+            if (groups[g].IsCollapsed) continue;
+
+            widths[g] = WidthsOf(groups[g]);
+            rewritten |= _measured.TryGetValue(groups[g], out var before) && Differ(before, widths[g]);
+            _measured.AddOrUpdate(groups[g], widths[g]);
         }
 
-        _decidedFor = available;
+        for (var g = 0; g < groups.Count; g++)
+        {
+            var group = groups[g];
+            if (!group.IsCollapsed) continue;
+
+            if (rewritten) group.ForgetWidths();
+            if (!group.IsDropDownOpen && HasUnknownWidths(group)) group.ApplyVariant(0);
+
+            widths[g] = WidthsOf(group);
+        }
+
+        // Decided afresh on every pass, from every group whole, and only then applied: the answer is the width's and the
+        // content's alone. Stepping on from the last answer, a width misread for one pass while fonts were still
+        // arriving collapsed a group for good - the room it freed went to a neighbor and never came back.
+        var plan = new int[groups.Count];
+        var held = new bool[groups.Count];
+        for (var g = 0; g < groups.Count; g++)
+        {
+            // A group whose flyout is in use stays as it is: changing it would close the flyout under the pointer.
+            held[g] = groups[g].IsCollapsed && groups[g].IsDropDownOpen;
+
+            // From its roomiest KNOWN variant: one it cannot say the cost of is not one to draw it at.
+            plan[g] = held[g] ? groups[g].CurrentVariant : FirstKnown(widths[g]);
+        }
+
+        Lower(groups, widths, plan, held, available);
+        GiveBackTheRoom(groups, widths, plan, held, available);
+
+        for (var g = 0; g < groups.Count; g++)
+        {
+            if (groups[g].CurrentVariant != plan[g]) groups[g].ApplyVariant(plan[g]);
+        }    }
+
+    // What each open group cost the last time it was asked.
+    private readonly System.Runtime.CompilerServices.ConditionalWeakTable<RibbonGroup, double[]> _measured = new();
+
+    private static int FirstKnown(double[] widths)
+    {
+        for (var i = 0; i < widths.Length; i++)
+        {
+            if (!double.IsNaN(widths[i])) return i;
+        }
+
+        return 0;
     }
 
-    private static double Total(List<RibbonGroup> groups)
+    // The collapsed button's cost is left out: measured the first time the group collapses, it is not the labels changing.
+    private static bool Differ(double[] before, double[] now)
+    {
+        if (before.Length != now.Length) return true;
+
+        for (var i = 0; i < now.Length - 1; i++)
+        {
+            if (double.IsNaN(before[i]) != double.IsNaN(now[i]) || Math.Abs(before[i] - now[i]) > 0.5) return true;
+        }
+
+        return false;
+    }
+
+    private static bool HasUnknownWidths(RibbonGroup group)
+    {
+        for (var i = 0; i < group.Variants.Count - 1; i++)
+        {
+            if (double.IsNaN(group.WidthAt(i))) return true;
+        }
+
+        return false;
+    }
+
+    // What each variant costs; a group with no variants is what it measured. Unknown stays NaN, which never fits.
+    private static double[] WidthsOf(RibbonGroup group)
+    {
+        var count = group.Variants.Count;
+        if (count == 0) return [group.DesiredSize.Width];
+
+        var widths = new double[count];
+        for (var i = 0; i < count; i++) widths[i] = group.WidthAt(i);
+        return widths;
+    }
+
+    private static double Total(double[][] widths, int[] plan)
     {
         double total = 0;
-        foreach (var group in groups) total += WidthOf(group);
+        for (var g = 0; g < plan.Length; g++)
+        {
+            var width = widths[g][plan[g]];
+            if (!double.IsNaN(width)) total += width;
+        }
+
         return total;
     }
 
-    // ONE group at a time, each to the end of its own ladder - collapsed is simply its last step, not a separate pass.
-    // A group with room to stay whole stays whole.
-    private static void LowerUntilItFits(List<RibbonGroup> groups, double available)
+    // ONE group at a time, each to the end of its own ladder - collapsed is simply its last step, not a separate pass:
+    // the lowest ShrinkPriority, among equals the one furthest RIGHT, so the tab gives way from its end inwards.
+    private static void Lower(List<RibbonGroup> groups, double[][] widths, int[] plan, bool[] held, double available)
     {
-        while (Total(groups) > available)
+        while (Total(widths, plan) > available)
         {
-            if (!Lower(groups)) return;
-        }
-    }
-
-    // No width to test against here: Raise tries a step and puts it back itself if the result no longer fits.
-    private static void RaiseWhileItStillFits(List<RibbonGroup> groups, double limit)
-    {
-        while (true)
-        {
-            if (!Raise(groups, limit)) return;
-        }
-    }
-
-    // Lowest ShrinkPriority, and among equals the one furthest RIGHT - and it keeps being chosen until it has nothing
-    // left, so the tab gives way from its end inwards.
-    private static bool Lower(List<RibbonGroup> groups)
-    {
-        RibbonGroup pick = null;
-        for (var i = 0; i < groups.Count; i++)
-        {
-            var group = groups[i];
-            if (NextNarrower(group) < 0) continue;
-            if (pick == null || group.ShrinkPriority <= pick.ShrinkPriority)
+            var pick = -1;
+            for (var g = 0; g < groups.Count; g++)
             {
-                pick = group;
+                if (held[g] || NextNarrower(groups[g], widths[g], plan[g]) < 0) continue;
+                if (pick < 0 || groups[g].ShrinkPriority <= groups[pick].ShrinkPriority) pick = g;
+            }
+
+            if (pick < 0) return;
+
+            plan[pick] = NextNarrower(groups[pick], widths[pick], plan[pick]);
+        }
+    }
+
+    // The mirror: sacrificed last, restored first, each to the roomiest variant that still fits. A step that collapses
+    // a group frees more than was needed, and the band does not stand empty beside commands put away: a group the room
+    // does not fit is passed over, not the end of it - one further on may need less.
+    private static void GiveBackTheRoom(List<RibbonGroup> groups, double[][] widths, int[] plan, bool[] held,
+        double available)
+    {
+        // Stable, so among equals the leftmost - the last the tab gave up - comes first.
+        var order = Enumerable.Range(0, groups.Count).OrderByDescending(g => groups[g].ShrinkPriority);
+        foreach (var g in order)
+        {
+            if (held[g]) continue;
+
+            var room = available - (Total(widths, plan) - widths[g][plan[g]]);
+            for (var i = 0; i < plan[g]; i++)
+            {
+                if (i > 0 && (groups[g].ShrinkSteps & RibbonGroupShrinkSteps.Sizes) == 0) break;
+                if (widths[g][i] <= room)
+                {
+                    plan[g] = i;
+                    break;
+                }
             }
         }
-
-        if (pick == null) return false;
-
-        pick.ApplyVariant(NextNarrower(pick));
-        return true;
-    }
-
-    // The mirror: sacrificed last, restored first, and only if the result clears the margin.
-    private static bool Raise(List<RibbonGroup> groups, double limit)
-    {
-        RibbonGroup pick = null;
-        for (var i = groups.Count - 1; i >= 0; i--)
-        {
-            var group = groups[i];
-            if (group.CurrentVariant <= 0) continue;
-            if (pick == null || group.ShrinkPriority >= pick.ShrinkPriority)
-            {
-                pick = group;
-            }
-        }
-
-        if (pick == null) return false;
-
-        var drawn = pick.CurrentVariant;
-        pick.ApplyVariant(drawn - 1);
-        if (Total(groups) <= limit) return true;
-
-        pick.ApplyVariant(drawn);
-        return false;
     }
 
     // A step has to BUY width, collapsing included. Ladders are not monotonic: dropping a group's only large command
     // re-packs its rows into MORE columns, so the rung below can cost more than the one above it. -1 = nothing left.
-    private static int NextNarrower(RibbonGroup group)
+    private static int NextNarrower(RibbonGroup group, double[] widths, int from)
     {
         var steps = group.ShrinkSteps;
         if (steps == RibbonGroupShrinkSteps.None) return -1;
 
         var variants = group.Variants;
-        var current = group.WidthAt(group.CurrentVariant);
-        for (var i = group.CurrentVariant + 1; i < variants.Count; i++)
+        for (var i = from + 1; i < variants.Count; i++)
         {
             var step = variants[i].IsCollapsed ? RibbonGroupShrinkSteps.Collapse : RibbonGroupShrinkSteps.Sizes;
             if ((steps & step) == 0) continue;
 
-            if (group.WidthAt(i) < current) return i;
+            if (widths[i] < widths[from]) return i;
         }
 
         return -1;

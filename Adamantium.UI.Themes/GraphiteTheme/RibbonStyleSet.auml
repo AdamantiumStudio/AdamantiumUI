@@ -466,7 +466,7 @@
                             <ToggleButton x:Name="PART_CollapsedButton"
                                     Classes="CollapsedGroupButton"
                                     Visibility="Collapsed"
-                                    Width="{TemplateBinding CollapsedWidth}"
+                                    MinWidth="{TemplateBinding CollapsedWidth}"
                                     ToolTip="{TemplateBinding Header}">
                                 <Grid RowDefinitions="Auto,Auto,Auto" Margin="{TemplateBinding Padding}"
                                         VerticalAlignment="Center">
@@ -479,13 +479,15 @@
                                                 ContentTemplate="{TemplateBinding IconTemplate}"
                                                 Foreground="{ObservableResource TextFillColorPrimary}"/>
                                     </Viewbox>
+                                    <!-- Labeled as a large command is: the button IS the group's commands now, not
+                                         a caption under them. A name of several words on two lines, as Office's. -->
                                     <ContentPresenter Grid.Row="1"
                                             Margin="{ResourceReference RibbonCaptionMargin}"
-                                            FontSize="{ResourceReference FontSizeMicro}"
-                                            Content="{TemplateBinding Header}"
+                                            FontSize="{ResourceReference FontSizeCaption}"
+                                            Content="{TemplateBinding CollapsedHeader}"
                                             ContentTemplate="{TemplateBinding HeaderTemplate}"
                                             HorizontalAlignment="Center" VerticalAlignment="Center"
-                                            Foreground="{ObservableResource TextFillColorTertiary}"/>
+                                            Foreground="{ObservableResource TextFillColorPrimary}"/>
                                     <Path Grid.Row="2" Data="M0,0 L4,4 L8,0"
                                             StrokeThickness="{ResourceReference StrokeThinValue}"
                                             Margin="{ResourceReference RibbonCaptionMargin}"
@@ -648,6 +650,18 @@
             <Setter TargetName="PART_ScrollUp" Property="Visibility" Value="Collapsed"/>
             <Setter TargetName="PART_ScrollDown" Property="Visibility" Value="Collapsed"/>
         </PropertyTrigger>
+    </Style>
+
+    <!-- Every row in view: nothing to scroll, so no arrows that do nothing. The chevron stays where it was. -->
+    <Style Selector="RibbonGallery">
+        <MultiTrigger>
+            <MultiTrigger.Conditions>
+                <Condition Property="CanScrollUp" Value="false"/>
+                <Condition Property="CanScrollDown" Value="false"/>
+            </MultiTrigger.Conditions>
+            <Setter TargetName="PART_ScrollUp" Property="Visibility" Value="Collapsed"/>
+            <Setter TargetName="PART_ScrollDown" Property="Visibility" Value="Collapsed"/>
+        </MultiTrigger>
     </Style>
 
     <Style Selector="RepeatButton.GalleryArrow">
