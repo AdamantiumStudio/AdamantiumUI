@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using Adamantium.Core.Commands;
@@ -7,6 +8,7 @@ using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Controls.Primitives;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Automation;
+using Adamantium.UI.Core.Collections;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.RoutedEvents;
 using Adamantium.UI.Core.Templates;
@@ -30,14 +32,17 @@ public class RibbonGallery : Selector
         typeof(int), typeof(RibbonGallery), new PropertyMetadata(0));
 
     public static readonly AdamantiumProperty GroupMemberPathProperty = AdamantiumProperty.Register(nameof(GroupMemberPath),
-        typeof(string), typeof(RibbonGallery), new PropertyMetadata(null, OnShapeChanged));
+        typeof(string), typeof(RibbonGallery), new PropertyMetadata(null, OnGroupMemberPathChanged));
 
     public static readonly AdamantiumProperty GroupHeaderTemplateProperty = AdamantiumProperty.Register(
         nameof(GroupHeaderTemplate), typeof(DataTemplate), typeof(RibbonGallery), new PropertyMetadata(null, OnShapeChanged));
 
-    /// <summary>The path to what an item's group is: the drop-down titles each run of items that share it with a
-    /// <see cref="RibbonGalleryGroupHeader"/>, while the band shows them in a row as they come. Items of a group stand
-    /// together in the source. Null - the default - groups nothing.</summary>
+    /// <summary>The path to what an item's group is. The items of <see cref="ItemsControl.ItemsSource"/> are shown
+    /// gathered by it - the groups in the order they first appear, each in the source's order - in the band and in the
+    /// drop-down, which titles each group with a <see cref="RibbonGalleryGroupHeader"/>. Items written into
+    /// <see cref="ItemsControl.Items"/> keep the order they were written in. A grouped source is changed on the UI
+    /// thread: the view that gathers it is not handed changes from another, as the items of an ungrouped one are.
+    /// Null - the default - groups nothing.</summary>
     public string GroupMemberPath
     {
         get => GetValue<string>(GroupMemberPathProperty);
@@ -53,6 +58,125 @@ public class RibbonGallery : Selector
 
     private string _groupReaderPath;
     private Func<object, object> _groupReader;
+    private CollectionView _grouped;
+
+    private static void OnGroupMemberPathChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (a is not RibbonGallery gallery) return;
+
+        if (gallery.ItemsSource != null) gallery.ApplyItemsSource(gallery.ItemsSource);
+        gallery.ApplyShape();
+    }
+
+    // Grouped, the source is shown through a view that gathers each group's items - so the band, the drop-down, the
+    // selection and the keyboard all see one order. What is followed here is let go of with the gallery.
+    protected override void ApplyItemsSource(IEnumerable newValue)
+    {
+        if (newValue == null || GroupMemberPath is not { Length: > 0 })
+        {
+            base.ApplyItemsSource(newValue);
+            LetGoOfGrouping();
+            return;
+        }
+
+        // The old grouping goes before anything new listens, or on the same source the gallery's handler would come
+        // first - ahead of the order it asks and the view it sorts.
+        LetGoOfGrouping();
+        var order = new GroupOrder(newValue, GroupOf);
+        var view = new CollectionView { CustomSort = order };
+        // The order hears of a change before the view places it, and the gallery after, to sort anew if the groups moved.
+        Follow(nameof(GroupOrder), newValue as INotifyCollectionChanged, order.OnSourceChanged);
+        view.Source = newValue;
+        base.ApplyItemsSource(view);
+        Follow(nameof(_grouped), view.LetGoOfSource);
+        Follow(nameof(OnGroupedSourceChanged), newValue as INotifyCollectionChanged, OnGroupedSourceChanged);
+        _grouped = view;
+        _groupOrder = order;
+        order.Moved();
+    }
+
+    private GroupOrder _groupOrder;
+
+    private void LetGoOfGrouping()
+    {
+        Follow(nameof(GroupOrder), null);
+        Follow(nameof(_grouped), null);
+        Follow(nameof(OnGroupedSourceChanged), null);
+        _grouped = null;
+        _groupOrder = null;
+    }
+
+    private void OnGroupedSourceChanged(object sender, NotifyCollectionChangedEventArgs e)
+    {
+        // Only a change the view placed in place can leave it out of order; on the rest it was rebuilt whole.
+        if (_groupOrder?.Moved() == true && e.Action is NotifyCollectionChangedAction.Add or NotifyCollectionChangedAction.Remove
+                or NotifyCollectionChangedAction.Replace)
+        {
+            _grouped.Refresh();
+        }
+    }
+
+    // Groups by where each first appears in the source; a group that comes later goes after the rest.
+    private sealed class GroupOrder(IEnumerable source, Func<object, object> groupOf) : IComparer
+    {
+        private static readonly object NoGroup = new();
+        private readonly Dictionary<object, int> _ranks = new();
+        private readonly List<object> _laidOut = [];
+        private bool _stale = true;
+
+        public void OnSourceChanged(object sender, NotifyCollectionChangedEventArgs e) => _stale = true;
+
+        public int Compare(object left, object right) => RankOf(left).CompareTo(RankOf(right));
+
+        /// <summary>Whether the groups that were there stand in another order now - the view placed only what changed,
+        /// and has to be sorted anew. A group that came or went moves no other.</summary>
+        public bool Moved()
+        {
+            Rank();
+            var now = new List<object>(_ranks.Count);
+            foreach (var (key, _) in _ranks)
+            {
+                now.Add(key);
+            }
+
+            now.Sort((a, b) => _ranks[a].CompareTo(_ranks[b]));
+            var kept = now.FindAll(_laidOut.Contains);
+            var before = _laidOut.FindAll(_ranks.ContainsKey);
+            _laidOut.Clear();
+            _laidOut.AddRange(now);
+
+            for (var i = 0; i < kept.Count; i++)
+            {
+                if (!Equals(kept[i], before[i]))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private int RankOf(object item)
+        {
+            Rank();
+            return _ranks.TryGetValue(groupOf(item) ?? NoGroup, out var rank) ? rank : int.MaxValue;
+        }
+
+        private void Rank()
+        {
+            if (!_stale)
+            {
+                return;
+            }
+
+            _stale = false;
+            _ranks.Clear();
+            foreach (var item in source)
+            {
+                _ranks.TryAdd(groupOf(item) ?? NoGroup, _ranks.Count);
+            }
+        }
+    }
 
     private object GroupOf(object item)
     {

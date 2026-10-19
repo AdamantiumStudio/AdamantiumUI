@@ -13,9 +13,10 @@ All packages share one version.
   another field takes it, while a field that handles a command (a search box in the document) still gets it first.
   What the target answers reaches the ribbon's buttons without the focus on it, and a command it ran leaves the focus
   in it.
-- `RibbonGallery.GroupMemberPath` and `GroupHeaderTemplate`: the drop-down titles each run of items that share a group
-  with a `RibbonGalleryGroupHeader`, a row of its own across the cells, which Up and Down step over; the band shows the
-  items in a row as before. The sandbox's Materials gallery groups metals, stones and natural ones.
+- `RibbonGallery.GroupMemberPath` and `GroupHeaderTemplate`: the items of `ItemsSource` are shown gathered by group -
+  the groups in the order they first appear, an item that comes later joining its own - in the band and in the
+  drop-down, which titles each group with a `RibbonGalleryGroupHeader`, a row of its own across the cells that Up and
+  Down step over. The sandbox's Materials gallery groups metals, stones and natural ones.
 - `TreeView.SelectedItems`: every node selected, kept in step with a view-model's list both ways - the tree writes
   into it what is clicked (Ctrl adding, Shift a run), and selects what is written into it, a node in a closed branch
   when its row comes. A node of the list written into `SelectedItem` becomes the one chosen last without letting the

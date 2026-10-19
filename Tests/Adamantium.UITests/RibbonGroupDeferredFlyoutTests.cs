@@ -229,6 +229,42 @@ public class RibbonGroupDeferredFlyoutTests
 
     private sealed record Choice(string Name, string Kind);
 
+    // A source's items are gathered by group: one that comes later joins its group, in the band and in the drop-down,
+    // rather than opening a second title of the same group at the end.
+    [Test]
+    public void AGroupedSource_GathersAnItemThatComesLater_IntoItsGroup()
+    {
+        var source = new System.Collections.ObjectModel.ObservableCollection<Choice>
+        {
+            new("a", "Paragraph"), new("b", "Paragraph"), new("c", "Character")
+        };
+        var gallery = new RibbonGallery
+        {
+            Columns = 3, Rows = 2, GroupMemberPath = "Kind", ItemsSource = source, Template = DeferredGalleryTemplate()
+        };
+        var window = new Window { Width = 400, Height = 200, Content = gallery };
+        for (var i = 0; i < 5; i++) WindowExtension.UpdateTree(window);
+
+        source.Add(new Choice("d", "Paragraph"));
+        gallery.IsDropDownOpen = true;
+        for (var i = 0; i < 3; i++) WindowExtension.UpdateTree(window);
+
+        var band = new List<string>();
+        foreach (var item in gallery.Items) band.Add(((Choice)item).Name);
+        var panel = (gallery.GetTemplateChild("PART_Popup") as Popup).FindContentChild("PART_DropDownPanel") as RibbonGalleryPanel;
+        var dropDown = new List<string>();
+        foreach (var child in panel.Children)
+        {
+            dropDown.Add(child is RibbonGalleryGroupHeader header ? $"[{header.Content}]" : ((Choice)((RibbonGalleryItem)child).Content).Name);
+        }
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(band, Is.EqualTo(new[] { "a", "b", "d", "c" }));
+            Assert.That(dropDown, Is.EqualTo(new[] { "[Paragraph]", "a", "b", "d", "[Character]", "c" }));
+        });
+    }
+
     // Each run of items that share a group gets a title over it in the drop-down; the band shows them in a row.
     [Test]
     public void AGroupedGallery_TitlesEachGroupInTheDropDown()
