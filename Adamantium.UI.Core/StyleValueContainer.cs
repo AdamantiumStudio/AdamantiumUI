@@ -44,6 +44,8 @@ internal class StyleValueContainer
 
     public Resources.Style EffectiveStyle => _values.Count > 0 ? _values[^1].Style : null;
 
+    public bool Holds(Style style) => _styleHash.Contains(style);
+
     /// <summary>Removes one style's contribution and returns the most specific remaining one, whatever the removal
     /// order.</summary>
     public object RemoveAndGetEffectiveValue(Style style)

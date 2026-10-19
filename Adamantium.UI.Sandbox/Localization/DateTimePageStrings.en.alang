@@ -29,4 +29,10 @@
     <Phrase Key="DateTimePicker" Text="Date and time picker"/>
     <Phrase Key="TimeColumns" Text="Time in columns, 5 minutes apart"/>
     <Phrase Key="TimeDial" Text="Time on a clock face"/>
+    <Phrase Key="Clocks" Text="Clocks - one control, ClockStyle choosing the look: hands over four kinds of face, or figures - text, seven-segment, flip cards. The compositor turns the hands; the application's loop is not woken each second. Below, the world's time and a clock showing the bound meeting time."/>
+    <Phrase Key="MinimalSweep" Text="Minimal, sweeping seconds"/>
+    <Phrase Key="DotsNoSeconds" Text="Dots, no seconds"/>
+    <Phrase Key="Tokyo" Text="Tokyo"/>
+    <Phrase Key="NewYork" Text="New York"/>
+    <Phrase Key="Meeting" Text="Meeting time"/>
 </Language>

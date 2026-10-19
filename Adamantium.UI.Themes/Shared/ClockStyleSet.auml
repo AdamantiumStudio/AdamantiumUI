@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8"?>
+<StyleSet xmlns="http://adamantium/ui"
+          xmlns:x="http://adamantium/ui/xaml/extensions">
+
+    <!-- The clock's face: a round plate and what is marked round its edge, laid out by the face to its size. Built from
+         keys every theme answers, so one set serves every theme. -->
+    <Style Selector="ClockFace">
+        <Setter Property="Background" Value="{ResourceReference CardBackgroundFillColorDefault}"/>
+        <Setter Property="BorderBrush" Value="{ResourceReference ControlStrokeColorDefault}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ClockFace">
+                    <Grid>
+                        <Ellipse Fill="{TemplateBinding Background}"
+                                 Stroke="{TemplateBinding BorderBrush}"
+                                 StrokeThickness="1"/>
+                        <Grid x:Name="PART_Marks"/>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style Selector="Border.ClockFaceTick">
+        <Setter Property="Background" Value="{ResourceReference TextFillColorTertiary}"/>
+    </Style>
+
+    <Style Selector="Border.ClockFaceHourTick">
+        <Setter Property="Background" Value="{ResourceReference TextFillColorPrimary}"/>
+    </Style>
+
+    <Style Selector="Border.ClockFaceDot">
+        <Setter Property="Background" Value="{ResourceReference TextFillColorPrimary}"/>
+    </Style>
+
+    <Style Selector="TextBlock.ClockFaceLabel">
+        <Setter Property="Foreground" Value="{ResourceReference TextFillColorPrimary}"/>
+    </Style>
+
+    <Style Selector="TextBlock.ClockFaceLabelChosen">
+        <Setter Property="Foreground" Value="{ThemeResource AccentForegroundColor}"/>
+    </Style>
+
+    <!-- The clock: a face with hands, or figures - built by the clock into its display. -->
+    <Style Selector="Clock">
+        <Setter Property="FontSize" Value="32"/>
+        <Setter Property="Foreground" Value="{ObservableResource TextFillColorPrimary}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Clock">
+                    <Grid x:Name="PART_Display"/>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style Selector="Border.ClockHourHand">
+        <Setter Property="Width" Value="6"/>
+        <Setter Property="CornerRadius" Value="3"/>
+        <Setter Property="Background" Value="{ResourceReference TextFillColorPrimary}"/>
+    </Style>
+
+    <Style Selector="Border.ClockMinuteHand">
+        <Setter Property="Width" Value="4"/>
+        <Setter Property="CornerRadius" Value="2"/>
+        <Setter Property="Background" Value="{ResourceReference TextFillColorPrimary}"/>
+    </Style>
+
+    <Style Selector="Border.ClockSecondHand">
+        <Setter Property="Width" Value="2"/>
+        <Setter Property="Background" Value="{ThemeResource AccentFillColorDefault}"/>
+    </Style>
+
+    <Style Selector="Border.ClockHub">
+        <Setter Property="Background" Value="{ThemeResource AccentFillColorDefault}"/>
+    </Style>
+
+    <Style Selector="TextBlock.ClockText">
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+
+    <!-- A segment is lit or not - one class or the other, never both: two styles setting one property on one element
+         apply in no promised order. -->
+    <Style Selector="Border.ClockSegmentOff">
+        <Setter Property="Background" Value="{ResourceReference TextFillColorPrimary}"/>
+        <Setter Property="Opacity" Value="0.08"/>
+    </Style>
+
+    <Style Selector="Border.ClockSegmentOn">
+        <Setter Property="Background" Value="{ResourceReference TextFillColorPrimary}"/>
+        <Setter Property="Opacity" Value="1"/>
+    </Style>
+
+    <Style Selector="Border.ClockColonDot">
+        <Setter Property="Background" Value="{ResourceReference TextFillColorPrimary}"/>
+    </Style>
+
+    <Style Selector="Border.ClockFlipCard">
+        <Setter Property="Background" Value="{ResourceReference ControlFillColorSecondary}"/>
+        <Setter Property="BorderBrush" Value="{ResourceReference ControlStrokeColorDefault}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="6"/>
+        <Setter Property="Padding" Value="8,2"/>
+        <Setter Property="Margin" Value="2,0"/>
+    </Style>
+
+    <Style Selector="TextBlock.ClockPeriod">
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="Margin" Value="6,0,0,4"/>
+    </Style>
+
+</StyleSet>

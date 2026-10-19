@@ -213,6 +213,89 @@
                             Language="{Binding CalendarLanguage}"/>
             </Grid>
 
+            <!-- One clock, every style: hands turned by the compositor, figures changed on the second. -->
+            <TextBlock Text="{Localize DateTimePageStrings.Clocks}"
+                       TextWrapping="WrapByWords"
+                       MaxWidth="680"
+                       HorizontalAlignment="Left"
+                       MarginTop="4"
+                       MarginBottom="8"/>
+            <WrapPanel Orientation="Horizontal"
+                       MarginBottom="12">
+                <StackPanel Margin="0,0,16,16">
+                    <Clock AutomationProperties.AutomationId="ClassicClock"
+                           ClockStyle="Classic"
+                           Width="160"
+                           Height="160"
+                           Language="{Binding CalendarLanguage}"/>
+                    <TextBlock Text="Classic" HorizontalAlignment="Center" MarginTop="4"/>
+                </StackPanel>
+                <StackPanel Margin="0,0,16,16">
+                    <Clock ClockStyle="Minimal"
+                           SecondHandMotion="Sweep"
+                           Width="160"
+                           Height="160"/>
+                    <TextBlock Text="{Localize DateTimePageStrings.MinimalSweep}" HorizontalAlignment="Center" MarginTop="4"/>
+                </StackPanel>
+                <StackPanel Margin="0,0,16,16">
+                    <Clock ClockStyle="Roman"
+                           Width="160"
+                           Height="160"/>
+                    <TextBlock Text="Roman" HorizontalAlignment="Center" MarginTop="4"/>
+                </StackPanel>
+                <StackPanel Margin="0,0,16,16">
+                    <Clock ClockStyle="Dots"
+                           ShowSeconds="False"
+                           Width="160"
+                           Height="160"/>
+                    <TextBlock Text="{Localize DateTimePageStrings.DotsNoSeconds}" HorizontalAlignment="Center" MarginTop="4"/>
+                </StackPanel>
+            </WrapPanel>
+            <WrapPanel Orientation="Horizontal"
+                       MarginBottom="12">
+                <StackPanel Margin="0,0,24,16">
+                    <Clock AutomationProperties.AutomationId="TextClock"
+                           ClockStyle="Text"
+                           Language="{Binding CalendarLanguage}"/>
+                    <TextBlock Text="Text" HorizontalAlignment="Center" MarginTop="4"/>
+                </StackPanel>
+                <StackPanel Margin="0,0,24,16">
+                    <Clock ClockStyle="SevenSegment"
+                           Language="{Binding CalendarLanguage}"/>
+                    <TextBlock Text="SevenSegment" HorizontalAlignment="Center" MarginTop="4"/>
+                </StackPanel>
+                <StackPanel Margin="0,0,24,16">
+                    <Clock ClockStyle="Flip"
+                           Language="{Binding CalendarLanguage}"/>
+                    <TextBlock Text="Flip" HorizontalAlignment="Center" MarginTop="4"/>
+                </StackPanel>
+            </WrapPanel>
+            <WrapPanel Orientation="Horizontal"
+                       MarginBottom="24">
+                <StackPanel Margin="0,0,16,0">
+                    <Clock ClockStyle="Classic"
+                           TimeZone="{Binding Tokyo}"
+                           Width="120"
+                           Height="120"/>
+                    <TextBlock Text="{Localize DateTimePageStrings.Tokyo}" HorizontalAlignment="Center" MarginTop="4"/>
+                </StackPanel>
+                <StackPanel Margin="0,0,16,0">
+                    <Clock ClockStyle="Classic"
+                           TimeZone="{Binding NewYork}"
+                           Width="120"
+                           Height="120"/>
+                    <TextBlock Text="{Localize DateTimePageStrings.NewYork}" HorizontalAlignment="Center" MarginTop="4"/>
+                </StackPanel>
+                <StackPanel>
+                    <Clock ClockStyle="Text"
+                           IsLive="False"
+                           Time="{Binding MeetingTime}"
+                           ShowSeconds="False"
+                           Language="{Binding CalendarLanguage}"/>
+                    <TextBlock Text="{Localize DateTimePageStrings.Meeting}" HorizontalAlignment="Center" MarginTop="4"/>
+                </StackPanel>
+            </WrapPanel>
+
             <WrapPanel Orientation="Horizontal"
                        MarginTop="12">
                 <!-- At the size its content asks for, bound to the page's date. -->
