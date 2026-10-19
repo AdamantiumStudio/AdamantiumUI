@@ -31,11 +31,11 @@ public sealed class LocalizeExpression : BindingExpressionBase
 
         // Each argument publishes its value as it connects; the string is written once, when all of them have one.
         _connecting = true;
-        _table = Follow(Localize.TableSource);
-        _key = Follow(Localize.KeySource);
+        _table = Follow(Localize.TableSource, text: false);
+        _key = Follow(Localize.KeySource, text: true);
         foreach (var (name, value) in Localize.Arguments)
         {
-            if (Follow(value) is { } argument)
+            if (Follow(value, text: false) is { } argument)
             {
                 _arguments[name] = argument;
             }
@@ -45,7 +45,9 @@ public sealed class LocalizeExpression : BindingExpressionBase
         UpdateTarget();
     }
 
-    private BindingExpressionBase Follow(object value)
+    // A key is text, and its StringFormat applies; a table is what it is, and an argument keeps its value - a format of
+    // its own is applied as the phrase is written (see Argument).
+    private BindingExpressionBase Follow(object value, bool text)
     {
         if (Followed(value) is not { } binding)
         {
@@ -53,6 +55,7 @@ public sealed class LocalizeExpression : BindingExpressionBase
         }
 
         var expression = binding.CreateExpression(Target, null);
+        expression.ProducesText = text;
         expression.ValueChanged += OnArgumentChanged;
         expression.EstablishConnection();
         return expression;
@@ -171,7 +174,11 @@ public sealed class LocalizeExpression : BindingExpressionBase
     {
         if (_arguments.TryGetValue(name, out var argument))
         {
-            return argument.ProducedValue;
+            // A MultiBinding writes its own format as it combines; only a single binding hands its value over raw.
+            return Localize.Arguments[name] is Data.Binding { StringFormat: { Length: > 0 } format } &&
+                   argument.ProducedValue is { } produced
+                ? new FormattedArgument(produced, format)
+                : argument.ProducedValue;
         }
 
         // A value given as it is; one that follows something not reached yet has none yet.

@@ -26,6 +26,7 @@ public class LocalizeMarkupTests
             <Phrase Key="PageOf">Page {page} of {count}</Phrase>
             <Phrase Key="Files" Count="count" One="{count} file" Other="{count} files"/>
             <Phrase Key="Notify" Select="on" True="Notifications on" False="Notifications off"/>
+            <Phrase Key="Size">{size:N2} MB</Phrase>
         </Language>
         """;
 
@@ -35,6 +36,7 @@ public class LocalizeMarkupTests
             <Phrase Key="PageOf">{count}: страница {page}</Phrase>
             <Phrase Key="Files" Count="count" One="{count} файл" Few="{count} файла" Many="{count} файлов" Other="{count} файла"/>
             <Phrase Key="Notify" Select="on" True="Уведомления включены" False="Уведомления выключены"/>
+            <Phrase Key="Size">{size:N2} МБ</Phrase>
         </Language>
         """;
 
@@ -156,6 +158,77 @@ public class LocalizeMarkupTests
             Assert.That(first, Is.EqualTo("Page 2 of 5"));
             Assert.That(moved, Is.EqualTo("Page 3 of 5"));
             Assert.That(text.Text, Is.EqualTo("5: страница 3"));
+        });
+    }
+
+    // A bound key and a bound argument are text, so their bindings' StringFormat applies: a key made of a kind's name.
+    [Test]
+    public void AKeyAndAnArgument_TakeTheirBindingsFormat()
+    {
+        var page = new Reading { Number = 2 };
+        var key = new TextBlock();
+        key.SetBinding(TextBlock.TextProperty, new Localize(DesignerTable(), null)
+        {
+            KeySource = new Binding { Source = "Clo", StringFormat = "{0}se" }
+        });
+        var argument = new TextBlock();
+        var localize = new Localize(DesignerTable(), "PageOf");
+        localize.Arguments["page"] = new Binding(nameof(Reading.Number)) { Source = page, StringFormat = "#{0}" };
+        localize.Arguments["count"] = 5;
+        argument.SetBinding(TextBlock.TextProperty, localize);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(key.Text, Is.EqualTo("Close"));
+            Assert.That(argument.Text, Is.EqualTo("Page #2 of 5"));
+        });
+    }
+
+    // The phrase's own format for a placeholder goes first and the binding's around it; a MultiBinding, which formats
+    // as it combines, is written once.
+    [Test]
+    public void APhrasesFormat_AndAMultiBindingsFormat_AreKept()
+    {
+        var reading = new Reading { Number = 1234 };
+        var size = new TextBlock();
+        var sized = new Localize(DesignerTable(), "Size");
+        sized.Arguments["size"] = new Binding(nameof(Reading.Number)) { Source = reading, StringFormat = "~{0}" };
+        size.SetBinding(TextBlock.TextProperty, sized);
+        var page = new TextBlock();
+        var paged = new Localize(DesignerTable(), "PageOf");
+        var both = new MultiBinding { StringFormat = "{0}/{1}" };
+        both.Bindings.Add(new Binding(nameof(Reading.Number)) { Source = reading });
+        both.Bindings.Add(new Binding(nameof(Reading.Number)) { Source = reading });
+        paged.Arguments["page"] = both;
+        paged.Arguments["count"] = 5;
+        page.SetBinding(TextBlock.TextProperty, paged);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(size.Text, Is.EqualTo("~1,234.00 MB"));
+            Assert.That(page.Text, Is.EqualTo("Page 1234/1234 of 5"));
+        });
+    }
+
+    // A counted argument's format writes the number, the number chooses the form, and both follow the language.
+    [Test]
+    public void AFormattedCount_ChoosesByItsNumber_AndIsWrittenInThePhrasesLanguage()
+    {
+        var files = new Reading { Number = 1001 };
+        var text = new TextBlock();
+        var localize = new Localize(DesignerTable(), "Files");
+        localize.Arguments["count"] = new Binding(nameof(Reading.Number)) { Source = files, StringFormat = "{0:N0}" };
+        text.SetBinding(TextBlock.TextProperty, localize);
+
+        var english = text.Text;
+        Languages.Current = "ru";
+        BindingUpdateQueue.Flush();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(english, Is.EqualTo("1,001 files"));
+            Assert.That(text.Text, Is.EqualTo(1001.ToString("N0", new System.Globalization.CultureInfo("ru")) + " файл"),
+                "one in Russian, by the number and not by how it is written");
         });
     }
 

@@ -112,6 +112,11 @@ public abstract class BindingExpressionBase
    // of driving a target property. A top-level expression (TargetProperty != null) pushes straight to the target.
    public object ProducedValue { get; protected set; }
 
+   /// <summary>Whether what this expression produces is read as text - a phrase's key or argument, a resource key - so
+   /// the binding's <see cref="BindingBase.StringFormat"/> applies to it. A trigger's condition and a MultiBinding's
+   /// input keep the raw value, which is what they compare.</summary>
+   public bool ProducesText { get; set; }
+
    // Raised when ProducedValue changes so a parent MultiBindingExpression can recombine. This is what makes
    // multibinding-inside-multibinding work: expressions nest as producers and bubble changes upward.
    public event Action<BindingExpressionBase> ValueChanged;

@@ -74,7 +74,8 @@ public abstract class LocalizedStrings : INotifyPropertyChanged
         {
             if (names[i] == chooser)
             {
-                return value(i);
+                // The value itself chooses, not the way a format writes it.
+                return value(i) is FormattedArgument formatted ? formatted.Value : value(i);
             }
         }
 
