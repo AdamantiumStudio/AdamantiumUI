@@ -43,9 +43,7 @@ public class SandboxViewsLoaderParityTests
         app.ResourceManager.AddSource(new ModuleResources(), typeof(CaptionIcons), ResourceScope.Global);
         var container = (Adamantium.Core.DependencyInjection.IDependencyContainer)typeof(HeadlessApplication)
             .GetField("_container", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(app);
-        container.RegisterInstance<Adamantium.Core.DependencyInjection.IDependencyResolver>(container);
         container.RegisterInstance<IUIApplication>(app);
-        container.RegisterSingleton<Adamantium.Navigation.IRegionManager, Adamantium.Navigation.RegionManager>();
         container.RegisterSingleton<Adamantium.UI.Controls.Navigation.IViewLocator, Adamantium.UI.Controls.Navigation.ViewLocator>();
         container.RegisterSingleton<Adamantium.UI.Controls.Navigation.IWindowShellRegistry, Adamantium.UI.Controls.Navigation.WindowShellRegistry>();
         container.RegisterSingleton<Adamantium.Navigation.IWindowNavigationBackend, Adamantium.UI.Navigation.WindowNavigationBackend>();

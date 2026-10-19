@@ -82,6 +82,10 @@ public partial class RenderCache
         public BatchArena Arena;
         public bool PatchableBatchedOnly;
 
+        // Runs in arenas other than Arena, each with its own: a slot number means something only in its arena, and a
+        // re-issue that moves one of them has to find what it moved.
+        public readonly List<(BatchArena Arena, int First, int Count)> OtherRuns = new();
+
         /// <summary>Why this group cannot be repaired from one arena, or null while it can.</summary>
         public string NotBatchableBecause;
 

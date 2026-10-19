@@ -163,6 +163,56 @@ public class TextPatchRenderTests
         AssertMatchesAFullWalk(scene, Pixels(scene.Renderer), "the shorter text must not leave a tail, nor move its neighbor");
     }
 
+    // A neighbor that fills a background under some of its text draws in two arenas. The grown run carries the glyph
+    // segment to the end of the batch (a walked segment has no room to spare), and a second growth shifts what follows it
+    // within the room the move left; the neighbor's glyphs go with it either way, and where the cache keeps them has to
+    // follow, or its next recolor rewrites glyphs that are no longer its own.
+    [TestCase("1200 fps", null)]
+    [TestCase("1200 fps", "12000 fps")]
+    public void AGrownRun_CarriesANeighborThatAlsoFills(string grown, string grownAgain)
+    {
+        using var scene = NewScene("600 fps", string.Empty);
+        var marked = scene.Blocks[1];
+        marked.Inlines.Add(new Run { Text = "layout", Background = Brushes.Blue });
+        marked.Inlines.Add(new Run { Text = " 0.02" });
+        RenderDirty.MarkStructural();
+        scene.Draw();
+
+        foreach (var text in grownAgain == null ? new[] { grown } : new[] { grown, grownAgain })
+        {
+            scene.Blocks[0].Text = text;
+            scene.Draw();
+            Assert.That(scene.Renderer.Cache.LastFrameReplayed, Is.True, "the grown run must be spliced, not walked");
+        }
+
+        marked.Foreground = Brushes.Red;
+        scene.Draw();
+        Assert.That(scene.Renderer.Cache.LastFrameReplayed, Is.True, "a color-only change must patch");
+        AssertMatchesAFullWalk(scene, Pixels(scene.Renderer), "the neighbor's glyphs must be recolored where they are now");
+    }
+
+    // An underline is drawn after the text, so the neighbor's group is the text's and the line's rects are kept apart:
+    // its glyph run still describes its text alone after the move, and a recolor patches it instead of walking the scene.
+    [Test]
+    public void AGrownRun_LeavesAnUnderlinedNeighborPatchable()
+    {
+        using var scene = NewScene("600 fps", string.Empty);
+        var underlined = scene.Blocks[1];
+        underlined.Inlines.Add(new Run { Text = "layout", TextDecorations = TextDecorations.Underline });
+        underlined.Inlines.Add(new Run { Text = " 0.02" });
+        RenderDirty.MarkStructural();
+        scene.Draw();
+
+        scene.Blocks[0].Text = "1200 fps";
+        scene.Draw();
+        Assert.That(scene.Renderer.Cache.LastFrameReplayed, Is.True, "the grown run must be spliced, not walked");
+
+        underlined.Foreground = Brushes.Red;
+        scene.Draw();
+        Assert.That(scene.Renderer.Cache.LastFrameReplayed, Is.True, "the recolor must patch, not walk");
+        AssertMatchesAFullWalk(scene, Pixels(scene.Renderer), "the neighbor's glyphs and line must be recolored where they are");
+    }
+
     [Test]
     public void GlyphCountChange_ReIssuesTheRun_InsteadOfWalkingTheScene()
     {

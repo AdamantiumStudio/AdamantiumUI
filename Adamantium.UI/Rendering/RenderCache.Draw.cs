@@ -265,26 +265,47 @@ public partial class RenderCache
 
             // OWNERSHIP rides in the instance, and only a rect instance carries it (RectItem.OwnerTag). Another family's
             // orphans are left to the next walk rather than blanked on a guess about whose slots those are.
-            if (!ReferenceEquals(group.Arena, _rectBatch))
+            // Its rect runs are its own runs or kept apart, whichever arena it drew in first.
+            var ownRects = ReferenceEquals(group.Arena, _rectBatch);
+            var otherRects = false;
+            foreach (var run in group.OtherRuns)
+            {
+                otherRects |= ReferenceEquals(run.Arena, _rectBatch);
+            }
+
+            if (!ownRects && !otherRects)
             {
                 LayerProbe.Say($"  ...not swept: {Named(group)} draws in {ArenaName(group)}, so nothing marks it unrecorded");
                 continue;
             }
-            var reclaimedAll = true;
-            foreach (var run in group.Runs)
-            {
-                var segment = _rectBatch.FindSegmentContaining(run.First);
-                _rectBatch.BlankOwned(device, (uint)run.First, (uint)run.Count, group.Tag);
 
-                // ...and give the run back where it can be given back at all: at an edge of its segment the range simply
-                // shrinks, so those instances stop being ISSUED rather than being issued blank. In the middle they stay
-                // blanked - see BatchCollector.ReclaimRun for why splitting to reclaim them is the wrong trade.
-                reclaimedAll &= _rectBatch.ReclaimRun(run.First, run.Count);
-                if (segment >= 0) _emptiedSegments.Add(segment);
+            var reclaimedAll = true;
+            if (ownRects)
+            {
+                foreach (var run in group.Runs)
+                {
+                    reclaimedAll &= SweepRectRun(device, group, run.First, run.Count);
+                }
+            }
+
+            foreach (var run in group.OtherRuns)
+            {
+                if (ReferenceEquals(run.Arena, _rectBatch))
+                {
+                    reclaimedAll &= SweepRectRun(device, group, run.First, run.Count);
+                }
             }
 
             // Runs it no longer owns anywhere: keeping them would let a later patch address space that is now free.
-            if (reclaimedAll) group.Runs.Clear();
+            if (reclaimedAll)
+            {
+                if (ownRects)
+                {
+                    group.Runs.Clear();
+                }
+
+                group.OtherRuns.RemoveAll(run => ReferenceEquals(run.Arena, _rectBatch));
+            }
 
             // Its bytes are gone though its units survive, so the recorder must re-record it on return (NoteUnrecorded).
             group.Unrecorded = true;
@@ -928,6 +949,7 @@ public partial class RenderCache
                 // later one - so keep moving the mark until something lands.
                 if (_rectBatch == null || !_rectBatch.HasPending) _rectSegStart = group.Order;
                 group.Runs.Clear();
+                group.OtherRuns.Clear();
                 group.Arena = null;
                 group.PatchableBatchedOnly = true;
                 group.NotBatchableBecause = null;   // a fresh walk describes this group from scratch
@@ -1233,6 +1255,7 @@ public partial class RenderCache
                     if (_recording)
                     {
                         _sdfSlotByUnit[unit] = (SdfSlotKind.GradientRect, _gradientRectBatch.LastSlot);   // so a MOVE re-points it
+                        NoteBatched(group, _gradientRectBatch, _gradientRectBatch.LastSlot);   // ...and a rank cut sees it
                         group.NotBatchable("gradientPolygon");
                         IndexUnitBrush(unit.Component, unit, gpru.PolygonPayload.LiveBrush);
                     }
@@ -2899,7 +2922,11 @@ public partial class RenderCache
             // Runs are valid only for the last walk's arena; a group that walk skipped drops its runs (they may name other
             // groups' slots now) and re-appends.
             var walked = group.WalkVersion == _walkVersion;
-            if (!walked) group.Runs.Clear();
+            if (!walked)
+            {
+                group.Runs.Clear();
+                group.OtherRuns.Clear();
+            }
             var runTotal = 0;
             foreach (var r in group.Runs) runTotal += r.Count;
             // A group DESCRIBED by the last walk must have drawn from ONE arena and nothing else - else it also drew
@@ -3255,7 +3282,21 @@ public partial class RenderCache
     private static void NoteBatched(ControlGroup group, BatchArena arena, int slot)
     {
         if (group.Arena == null) group.Arena = arena;
-        else if (!ReferenceEquals(group.Arena, arena)) group.NotBatchable("twoArenas");
+        else if (!ReferenceEquals(group.Arena, arena))
+        {
+            group.NotBatchable("twoArenas");
+            var others = group.OtherRuns;
+            if (others.Count > 0 && ReferenceEquals(others[^1].Arena, arena) && others[^1].First + others[^1].Count == slot)
+            {
+                others[^1] = (arena, others[^1].First, others[^1].Count + 1);
+            }
+            else
+            {
+                others.Add((arena, slot, 1));
+            }
+
+            return;
+        }
 
         var runs = group.Runs;
         if (runs.Count > 0 && runs[^1].First + runs[^1].Count == slot) runs[^1] = (runs[^1].First, runs[^1].Count + 1);
@@ -3311,36 +3352,36 @@ public partial class RenderCache
         // The layer now covers what this patch put into it, and the next placement has to see that.
         arena.GrowSegmentBounds(layer, patch.Bounds);
         var (newFirst, _) = arena.SegmentRange(layer);
-        var delta = patch.StageCount - replaced;
-        var editEnd = first + at + replaced;
         // An instanced key is ONE array behind every flush record that draws it: the edit shifted what follows it in the
         // later records too, not just inside this one.
-        var sharedArray = arena is Retained.InstancedKeyArena;
-        foreach (var g in _groups)
+        var move = new SlotMove(first, count, newFirst, first + at + replaced, patch.StageCount - replaced,
+            arena is Retained.InstancedKeyArena);
+        if (move.MovesAny)
         {
-            if (g.WalkVersion != _walkVersion || ReferenceEquals(g, group)) continue;
-            // ...groups of THIS arena only. A slot number means something solely inside the array it indexes, and with a
-            // family per arena two of them overlap numerically all the time - so without this a re-issue silently
-            // re-pointed the runs of an unrelated family whose numbers happened to fall in the same range, and whatever
-            // it drew stayed on screen as it was (the close button's highlight stuck lit).
-            if (!ReferenceEquals(g.Arena, arena)) continue;
-            var touched = false;
-            for (var r = 0; r < g.Runs.Count; r++)
+            foreach (var g in _groups)
             {
-                var run = g.Runs[r];
-                if (run.First < first || run.First >= first + count)
+                if (g.WalkVersion != _walkVersion || ReferenceEquals(g, group)) continue;
+
+                // A slot number means something solely inside the array it indexes, and with a family per arena two of
+                // them overlap numerically all the time - so the runs of an unrelated family whose numbers fall in the same
+                // range must not move (the close button's highlight stuck lit). A group drawing in two arenas keeps the
+                // runs of the second apart, with their arena, and those moved all the same.
+                var own = ReferenceEquals(g.Arena, arena);
+                if (own)
                 {
-                    if (!sharedArray || run.First < editEnd) continue;
-                    g.Runs[r] = (run.First + delta, run.Count);
-                    touched = true;
-                    continue;
+                    MoveRuns(g.Runs, move);
                 }
 
-                g.Runs[r] = (run.First - first + newFirst + (run.First >= editEnd ? delta : 0), run.Count);
-                touched = true;
-            }
+                var other = MoveOtherRuns(g.OtherRuns, arena, move);
 
-            if (touched) ReslotUnits(g);
+                // Its units' records, each by the same rule and whatever the runs say: a neighbor's glyphs went with the
+                // layer while its recolor kept writing where they had been. Only a group with a run here holds a record
+                // here; a cloned one's runs describe its last copy alone.
+                if (own || other || _clonedWhenRecorded.Contains(g))
+                {
+                    MoveUnitSlots(g, arena, move);
+                }
+            }
         }
 
         group.Runs.Clear();
@@ -3356,6 +3397,162 @@ public partial class RenderCache
         ReslotUnits(group);
         return true;
     }
+
+    // Where a re-issue put the instances of an arena: its layer [First, First + Count) went to NewFirst, and from EditEnd
+    // on everything shifted by Delta - past the layer too, in an array every record shares.
+    private readonly record struct SlotMove(int First, int Count, int NewFirst, int EditEnd, int Delta, bool SharedArray)
+    {
+        public bool MovesAny => NewFirst != First || Delta != 0;
+
+        public bool Moves(int slot) => slot >= First && slot < First + Count || SharedArray && slot >= EditEnd;
+
+        public int Of(int slot) => slot >= First && slot < First + Count ? slot - First + NewFirst + (slot >= EditEnd ? Delta : 0)
+            : SharedArray && slot >= EditEnd ? slot + Delta
+            : slot;
+    }
+
+    private static void MoveRuns(List<(int First, int Count)> runs, SlotMove move)
+    {
+        for (var r = 0; r < runs.Count; r++)
+        {
+            runs[r] = (move.Of(runs[r].First), runs[r].Count);
+        }
+    }
+
+    // Blanks a departed group's rect run and gives it back where it can be given back at all: at an edge of its segment
+    // the range simply shrinks, so those instances stop being ISSUED rather than being issued blank. In the middle they
+    // stay blanked - see BatchCollector.ReclaimRun for why splitting to reclaim them is the wrong trade.
+    private bool SweepRectRun(IGraphicsDevice device, ControlGroup group, int first, int count)
+    {
+        var segment = _rectBatch.FindSegmentContaining(first);
+        _rectBatch.BlankOwned(device, (uint)first, (uint)count, group.Tag);
+        var reclaimed = _rectBatch.ReclaimRun(first, count);
+        if (segment >= 0)
+        {
+            _emptiedSegments.Add(segment);
+        }
+
+        return reclaimed;
+    }
+
+    // True when any of the runs is in the arena.
+    private static bool MoveOtherRuns(List<(BatchArena Arena, int First, int Count)> runs, BatchArena arena, SlotMove move)
+    {
+        var any = false;
+        for (var r = 0; r < runs.Count; r++)
+        {
+            if (ReferenceEquals(runs[r].Arena, arena))
+            {
+                runs[r] = (arena, move.Of(runs[r].First), runs[r].Count);
+                any = true;
+            }
+        }
+
+        return any;
+    }
+
+    // Moves what this group's units hold in the arena, and what each copy of a cloned unit holds there.
+    private void MoveUnitSlots(ControlGroup group, BatchArena arena, SlotMove move)
+    {
+        foreach (var u in group.Units)
+        {
+            MoveLiveSlots(u, arena, move);
+            if (!_copiesByUnit.TryGetValue(u, out var ledger))
+            {
+                continue;
+            }
+
+            for (var k = 0; k < ledger.Copies.Count; k++)
+            {
+                ledger.Copies[k] = MoveSlots(ledger.Copies[k], arena, move);
+            }
+        }
+    }
+
+    // Only the maps an arena's slots can be in: this runs for every unit of the frame on each re-issue.
+    private void MoveLiveSlots(IRenderUnit u, BatchArena arena, SlotMove move)
+    {
+        if (ReferenceEquals(arena, _textBatch))
+        {
+            if (_textRunByUnit.TryGetValue(u, out var run) && move.Moves(run.First))
+            {
+                _textRunByUnit[u] = (move.Of(run.First), run.Count, run.Atlas);
+            }
+
+            return;
+        }
+
+        if (ReferenceEquals(arena, _rectBatch))
+        {
+            if (_rectSlotByUnit.TryGetValue(u, out var rect) && move.Moves(rect))
+            {
+                _rectSlotByUnit[u] = move.Of(rect);
+            }
+
+            return;
+        }
+
+        if (arena is Retained.InstancedKeyArena)
+        {
+            if (_fillSlotByUnit.TryGetValue(u, out var fill) && ReferenceEquals(fill.Arena, arena) && move.Moves(fill.Slot))
+            {
+                _fillSlotByUnit[u] = (fill.Arena, move.Of(fill.Slot));
+            }
+
+            return;
+        }
+
+        if (_sdfSlotByUnit.TryGetValue(u, out var sdf) && ReferenceEquals(ArenaOfKind(sdf.Kind), arena) && move.Moves(sdf.Slot))
+        {
+            _sdfSlotByUnit[u] = (sdf.Kind, move.Of(sdf.Slot));
+        }
+    }
+
+    private CopySlots MoveSlots(CopySlots slots, BatchArena arena, SlotMove move)
+    {
+        if (ReferenceEquals(arena, _textBatch) && slots.TextRun is { } run)
+        {
+            slots.TextRun = (move.Of(run.First), run.Count, run.Atlas);
+        }
+
+        if (ReferenceEquals(arena, _rectBatch) && slots.Rect is { } rect)
+        {
+            slots.Rect = move.Of(rect);
+        }
+
+        if (slots.Sdf is { } sdf && ReferenceEquals(ArenaOfKind(sdf.Kind), arena))
+        {
+            slots.Sdf = (sdf.Kind, move.Of(sdf.Slot));
+        }
+
+        if (slots.Fill is { } fill && ReferenceEquals(fill.Arena, arena))
+        {
+            slots.Fill = (fill.Arena, move.Of(fill.Slot));
+        }
+
+        return slots;
+    }
+
+    private BatchArena ArenaOfKind(SdfSlotKind kind) => kind switch
+    {
+        SdfSlotKind.Ellipse => _ellipseBatch,
+        SdfSlotKind.GradientRect => _gradientRectBatch,
+        SdfSlotKind.GradientEllipse => _gradientEllipseBatch,
+        SdfSlotKind.Polygon => _polygonBatch,
+        SdfSlotKind.Pattern => _patternBatch,
+        SdfSlotKind.Texture => _texRectBatch,
+        SdfSlotKind.Fractal => _fractalBatch,
+        SdfSlotKind.Material => _materialBatch,
+        _ => null
+    };
+
+    // The family whose slots a group drawing one instance per unit in this arena holds in the SDF map; null for an arena
+    // whose units the map does not hold one slot each.
+    private SdfSlotKind? OneSlotKindOf(BatchArena arena) =>
+        ReferenceEquals(arena, _ellipseBatch) ? SdfSlotKind.Ellipse
+        : ReferenceEquals(arena, _gradientRectBatch) ? SdfSlotKind.GradientRect
+        : ReferenceEquals(arena, _gradientEllipseBatch) ? SdfSlotKind.GradientEllipse
+        : null;
 
     // A control that drew nothing until now: give it its own segment and put its op where its RANK says, not where its
     // neighbors happen to be. Nothing already recorded moves, so this cannot disturb anyone's order - and it is provable
@@ -3499,11 +3696,23 @@ public partial class RenderCache
         {
             var group = _groups[i];
             if (group.WalkVersion != _walkVersion) continue;
-            if (!ReferenceEquals(group.Arena, arena)) continue;   // a slot number only means something inside its own arena
-            foreach (var run in group.Runs)
+
+            // A slot number only means something inside its own arena: a group's runs there, or those it keeps apart.
+            if (ReferenceEquals(group.Arena, arena))
             {
-                if (run.First < first || run.First >= first + count) continue;
-                if (cut < 0 || run.First < cut) cut = run.First;
+                foreach (var run in group.Runs)
+                {
+                    if (run.First < first || run.First >= first + count) continue;
+                    if (cut < 0 || run.First < cut) cut = run.First;
+                }
+            }
+
+            foreach (var run in group.OtherRuns)
+            {
+                if (ReferenceEquals(run.Arena, arena) && run.First >= first && run.First < first + count && (cut < 0 || run.First < cut))
+                {
+                    cut = run.First;
+                }
             }
         }
 
@@ -3524,10 +3733,11 @@ public partial class RenderCache
             return;
         }
 
-        // Everything else keeps its slots in _sdfSlotByUnit, written by the walk; the maps below are the RECT one and the
-        // instanced FILL one.
+        // The maps below are the RECT one, the instanced FILL one and the SDF one for the families that re-issue, one slot
+        // per unit; the rest keep theirs in _sdfSlotByUnit as the walk wrote them, and do not re-issue.
         var fill = group.Arena as Retained.InstancedKeyArena;
-        if (group.Arena != null && !ReferenceEquals(group.Arena, _rectBatch) && fill == null) return;
+        var sdf = OneSlotKindOf(group.Arena);
+        if (group.Arena != null && !ReferenceEquals(group.Arena, _rectBatch) && fill == null && sdf == null) return;
 
         var total = 0;
         foreach (var run in group.Runs) total += run.Count;
@@ -3536,7 +3746,9 @@ public partial class RenderCache
             foreach (var u in group.Units)
             {
                 if (fill != null) _fillSlotByUnit.Remove(u);
-                else _rectSlotByUnit.Remove(u);
+                else if (sdf == null) _rectSlotByUnit.Remove(u);
+                // ...only this family's: another of the map's families is in an arena that did not move.
+                else if (_sdfSlotByUnit.TryGetValue(u, out var entry) && entry.Kind == sdf) _sdfSlotByUnit.Remove(u);
             }
 
             return;
@@ -3546,6 +3758,7 @@ public partial class RenderCache
         foreach (var u in group.Units)
         {
             if (fill != null) _fillSlotByUnit[u] = (fill, i++);
+            else if (sdf is { } kind) _sdfSlotByUnit[u] = (kind, i++);
             else _rectSlotByUnit[u] = i++;
         }
     }

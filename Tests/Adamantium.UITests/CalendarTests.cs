@@ -655,12 +655,14 @@ public class CalendarTests
     [Test]
     public void ShiftAndAnArrow_WithNothingSelected_SelectsBothDays()
     {
-        var calendar = Shown(new Calendar { DisplayDate = October, SelectionMode = CalendarSelectionMode.SingleRange });
+        // A month without today: the cursor starts on today where it is shown, and on the date shown elsewhere.
+        var shown = DateTime.Today.AddMonths(-2);
+        var calendar = Shown(new Calendar { DisplayDate = shown, SelectionMode = CalendarSelectionMode.SingleRange });
         FocusManager.Focus(calendar, NavigationMethod.Tab);
 
         Press(calendar, Key.RightArrow, InputModifiers.LeftShift);
 
-        DateTime[] both = [October, October.AddDays(1)];
+        DateTime[] both = [shown, shown.AddDays(1)];
         Assert.That(calendar.SelectedDates, Is.EquivalentTo(both));
     }
 
