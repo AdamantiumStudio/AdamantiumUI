@@ -102,8 +102,9 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
             return;
         }
 
-        // Escape that nobody handled on the way up clears keyboard focus, the only way to drop the focus ring.
-        if (e.Key == Key.Escape && FocusManager.Focused != null)
+        // Escape that nobody handled on the way up - nor a key binding of the window would - clears keyboard focus, the
+        // only way to drop the focus ring.
+        if (e.Key == Key.Escape && FocusManager.Focused != null && !CommandManager.IsBoundInWindow(this, e))
         {
             FocusManager.Release(FocusManager.Focused);
             e.Handled = true;

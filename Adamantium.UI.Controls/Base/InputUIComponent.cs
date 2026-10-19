@@ -25,6 +25,10 @@ public class InputUIComponent : MeasurableUIComponent, IInputComponent
 
     #endregion
 
+    /// <summary>The keys set on this element: they run while the focus is in it, and from anywhere in its window when
+    /// nothing around the focus takes them (see <see cref="KeyBinding"/>).</summary>
+    public KeyBindingCollection InputBindings => CommandManager.GetInputBindings(this);
+
     // The ids of the pointers over this element, so an enter told twice for one pointer still takes one exit to undo.
     private List<uint> _pointersOver;
     private List<uint> _pointersDirectlyOver;
@@ -73,6 +77,7 @@ public class InputUIComponent : MeasurableUIComponent, IInputComponent
 
         // The one place guaranteed to run before any element exists.
         KeyboardNavigation.Register();
+        CommandManager.RegisterWindowKeys();
         // An overlay element has no visual path back to its window; only the popup layer knows it.
         KeyboardNavigation.HostOf = element => Popup.HostOf(element);
     }

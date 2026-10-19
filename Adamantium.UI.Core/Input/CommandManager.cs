@@ -1,3 +1,4 @@
+using System.Buffers;
 using Adamantium.Core.Commands;
 using Adamantium.UI.Core.Media.Animation;
 using Adamantium.UI.Core.RoutedEvents;
@@ -28,7 +29,10 @@ public static class CommandManager
         "CommandBindings", typeof(List<CommandBinding>), typeof(AdamantiumComponent), new PropertyMetadata(null));
 
     public static readonly AdamantiumProperty InputBindingsProperty = AdamantiumProperty.RegisterAttached(
-        "InputBindings", typeof(List<KeyBinding>), typeof(AdamantiumComponent), new PropertyMetadata(null));
+        "InputBindings", typeof(KeyBindingCollection), typeof(AdamantiumComponent), new PropertyMetadata(null));
+
+    private static readonly AdamantiumProperty KeyHostsProperty = AdamantiumProperty.RegisterAttached(
+        "KeyHosts", typeof(List<IUIComponent>), typeof(AdamantiumComponent), new PropertyMetadata(null));
 
     /// <summary>Where the commands of every source in this element's subtree go when nothing on their way takes them -
     /// no field with the focus, or one that knows nothing of them - and the source names no target of its own: a
@@ -55,6 +59,8 @@ public static class CommandManager
     private static int transfers;
 
     private static bool registered;
+    private static bool windowKeysRegistered;
+    private static readonly object HostsLock = new();
 
     static CommandManager() => Register();
 
@@ -146,16 +152,55 @@ public static class CommandManager
     }
 
     /// <summary>The keys set on <paramref name="element"/> itself, made on first ask.</summary>
-    public static List<KeyBinding> GetInputBindings(IAdamantiumComponent element)
+    public static KeyBindingCollection GetInputBindings(IAdamantiumComponent element)
     {
         ArgumentNullException.ThrowIfNull(element);
-        if (element.GetValue(InputBindingsProperty) is not List<KeyBinding> bindings)
+        if (element.GetValue(InputBindingsProperty) is not KeyBindingCollection bindings)
         {
-            bindings = [];
+            bindings = new KeyBindingCollection(element);
             element.SetValue(InputBindingsProperty, bindings);
         }
 
         return bindings;
+    }
+
+    /// <summary>Whether a key would run a binding set anywhere in the window of <paramref name="from"/> but on it - around
+    /// it as well: what an element that takes every key, a hosted universe, lets go on.</summary>
+    public static bool IsBoundInWindow(IUIComponent from, KeyEventArgs e) => FindInWindow(from, e, aroundToo: true) != null;
+
+    internal static void List(IRootVisualComponent root, IUIComponent host)
+    {
+        if (root == null)
+        {
+            return;
+        }
+
+        lock (HostsLock)
+        {
+            if (root.GetValue(KeyHostsProperty) is not List<IUIComponent> hosts)
+            {
+                hosts = [];
+                root.SetValue(KeyHostsProperty, hosts);
+            }
+
+            hosts.Add(host);
+        }
+    }
+
+    internal static void Unlist(IRootVisualComponent root, IUIComponent host)
+    {
+        if (root == null)
+        {
+            return;
+        }
+
+        lock (HostsLock)
+        {
+            if (root.GetValue(KeyHostsProperty) is List<IUIComponent> hosts)
+            {
+                hosts.Remove(host);
+            }
+        }
     }
 
     /// <summary>Has every element of <paramref name="type"/> and of the types derived from it handle a command; an
@@ -407,13 +452,219 @@ public static class CommandManager
     {
         var target = e.OriginalSource as IInputComponent ?? sender as IInputComponent;
         var type = sender.GetType();
-        if (RunKey(Own<KeyBinding>(sender, InputBindingsProperty), e, target) ||
+        if (RunKey((sender as IAdamantiumComponent)?.GetValue(InputBindingsProperty) as KeyBindingCollection, e, target) ||
             ForClass(ClassInputBindings, type, e, target, RunKey) ||
             RunGesture(Own<CommandBinding>(sender, CommandBindingsProperty), e, target) ||
             ForClass(ClassCommandBindings, type, e, target, RunGesture))
         {
             e.Handled = true;
         }
+    }
+
+    /// <summary>Hooks the key handler that runs, at a window's root and after everything on the way up - its default and
+    /// cancel buttons and the keyboard navigation too - the binding set anywhere in the window for a key nobody took.
+    /// Called from the input element base's static constructor after the navigation hooks its own.</summary>
+    public static void RegisterWindowKeys()
+    {
+        if (windowKeysRegistered)
+        {
+            return;
+        }
+
+        windowKeysRegistered = true;
+        Keyboard.KeyDownEvent.RegisterClassHandler<IInputComponent>(new KeyEventHandler(OnKeyLeftOver));
+    }
+
+    private static void OnKeyLeftOver(object sender, KeyEventArgs e)
+    {
+        if (!e.Handled && sender is IRootVisualComponent root && FindInWindow(root, e) is { } found)
+        {
+            e.Handled = Run(found.Binding, found.Host);
+        }
+    }
+
+    private readonly record struct WindowKey(KeyBinding Binding, IUIComponent Host);
+
+    private static WindowKey? FindInWindow(IUIComponent from, KeyEventArgs e, bool aroundToo = false)
+    {
+        var root = from as IRootVisualComponent ?? from?.RootVisual;
+        if (root == null || e.IsRepeated || TypesInto(FocusManager.Focused, e))
+        {
+            return null;
+        }
+
+        IUIComponent[] hosts;
+        int count;
+        lock (HostsLock)
+        {
+            if (root.GetValue(KeyHostsProperty) is not List<IUIComponent> { Count: > 0 } listed)
+            {
+                return null;
+            }
+
+            count = listed.Count;
+            hosts = ArrayPool<IUIComponent>.Shared.Rent(count);
+            listed.CopyTo(hosts);
+        }
+
+        try
+        {
+            var focusChain = new List<IUIComponent>();
+            for (var node = e.OriginalSource as IUIComponent ?? from; node != null; node = node.VisualParent)
+            {
+                focusChain.Add(node);
+            }
+
+            WindowKey? best = null;
+            var bestDepth = -1;
+            for (var i = 0; i < count; i++)
+            {
+                var host = hosts[i];
+                if (host.GetValue(InputBindingsProperty) is not KeyBindingCollection { Count: > 0 } bindings ||
+                    (aroundToo ? ReferenceEquals(host, from) : focusChain.Contains(host)) || !IsLive(host, root))
+                {
+                    continue;
+                }
+
+                foreach (var binding in bindings)
+                {
+                    if (!binding.Gesture.Matches(e.Key, e.Modifiers) || !CanRun(binding, host))
+                    {
+                        continue;
+                    }
+
+                    var depth = SharedDepth(host, focusChain);
+                    if (best == null || depth > bestDepth || (depth == bestDepth && FirstInTree(host, best.Value.Host)))
+                    {
+                        best = new WindowKey(binding, host);
+                        bestDepth = depth;
+                    }
+
+                    break;
+                }
+            }
+
+            return best;
+        }
+        finally
+        {
+            ArrayPool<IUIComponent>.Shared.Return(hosts, clearArray: true);
+        }
+    }
+
+    private static bool TypesInto(IInputComponent focused, KeyEventArgs e)
+    {
+        if (e.Key is >= Key.F1 and <= Key.F24 || !InTextEntry(focused))
+        {
+            return false;
+        }
+
+        var held = KeyGesture.Of(e.Modifiers) & ~ModifierKeys.Shift;
+        return held is ModifierKeys.None or (ModifierKeys.Control | ModifierKeys.Alt);
+    }
+
+    private static bool InTextEntry(IInputComponent focused)
+    {
+        for (IUIComponent node = focused; node != null; node = node.VisualParent)
+        {
+            if (node is ITextEntry)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool IsLive(IUIComponent host, IRootVisualComponent root)
+    {
+        if (!ReferenceEquals(host.RootVisual, root) && !ReferenceEquals(host, root))
+        {
+            return false;
+        }
+
+        for (var node = host; node != null; node = node.VisualParent)
+        {
+            if (node.Visibility != Visibility.Visible || !node.IsEnabled)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static int SharedDepth(IUIComponent host, List<IUIComponent> focusChain)
+    {
+        for (var node = host; node != null; node = node.VisualParent)
+        {
+            var index = focusChain.IndexOf(node);
+            if (index >= 0)
+            {
+                return focusChain.Count - 1 - index;
+            }
+        }
+
+        return -1;
+    }
+
+    private static bool FirstInTree(IUIComponent a, IUIComponent b)
+    {
+        var chainA = new List<IUIComponent>();
+        for (var node = a; node != null; node = node.VisualParent)
+        {
+            chainA.Insert(0, node);
+        }
+
+        var chainB = new List<IUIComponent>();
+        for (var node = b; node != null; node = node.VisualParent)
+        {
+            chainB.Insert(0, node);
+        }
+
+        var i = 0;
+        while (i < chainA.Count && i < chainB.Count && ReferenceEquals(chainA[i], chainB[i]))
+        {
+            i++;
+        }
+
+        if (i == chainA.Count || i == chainB.Count || i == 0)
+        {
+            return i == chainA.Count;
+        }
+
+        foreach (var child in chainA[i - 1].VisualChildren)
+        {
+            if (ReferenceEquals(child, chainA[i]))
+            {
+                return true;
+            }
+
+            if (ReferenceEquals(child, chainB[i]))
+            {
+                return false;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool CanRun(KeyBinding binding, IUIComponent host) => binding.Command switch
+    {
+        null => false,
+        RoutedCommand routed => Query(routed, binding.CommandParameter, host as IInputComponent).CanExecute,
+        { } command => command.CanExecute(binding.CommandParameter)
+    };
+
+    private static bool Run(KeyBinding binding, IUIComponent host)
+    {
+        if (binding.Command is RoutedCommand routed)
+        {
+            return Execute(routed, binding.CommandParameter, host as IInputComponent);
+        }
+
+        binding.Command.Execute(binding.CommandParameter);
+        return true;
     }
 
     private static bool ForClass<T>(Dictionary<Type, List<T>> bindings, Type type, KeyEventArgs e,
@@ -430,7 +681,7 @@ public static class CommandManager
         return false;
     }
 
-    private static bool RunKey(List<KeyBinding> bindings, KeyEventArgs e, IInputComponent target)
+    private static bool RunKey(IEnumerable<KeyBinding> bindings, KeyEventArgs e, IInputComponent target)
     {
         if (bindings == null)
         {

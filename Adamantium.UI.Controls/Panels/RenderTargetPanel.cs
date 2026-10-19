@@ -251,6 +251,7 @@ public class RenderTargetPanel : Grid
          return;
       }
 
+      Focus();
       switch (e.ChangedButton)
       {
          case MouseButtons.Left:

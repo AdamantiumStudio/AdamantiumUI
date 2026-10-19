@@ -1,4 +1,5 @@
 using Adamantium.UI.Controls;
+using Adamantium.UI.Controls.Buttons;
 using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Input;
@@ -57,6 +58,31 @@ public class RenderTargetPanelCaptureTests
         Release(panel, MouseButtons.Right);
 
         Assert.That(Mouse.Pointer.Captured, Is.Null);
+    }
+
+    // The keys go to the universe only while the panel has the focus: a left click into the picture takes it from the
+    // button chosen before, as a click into any control does - Esc to a scene's tool went to the ribbon.
+    [Test]
+    public void ALeftPress_TakesTheFocus()
+    {
+        var panel = new RenderTargetPanel { Width = 200, Height = 100 };
+        var button = new Button { Content = "Tool" };
+        var window = new Window { Width = 400, Height = 300, Content = new StackPanel { Children = { button, panel } } };
+        for (var i = 0; i < 5; i++)
+        {
+            WindowExtension.UpdateTree(window);
+        }
+
+        button.Focus();
+        var before = FocusManager.Focused;
+        Press(panel, MouseButtons.Left);
+        Release(panel, MouseButtons.Left);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(before, Is.SameAs(button));
+            Assert.That(FocusManager.Focused, Is.SameAs(panel));
+        });
     }
 
     private static RenderTargetPanel Built()
