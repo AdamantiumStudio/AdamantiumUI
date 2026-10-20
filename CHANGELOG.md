@@ -16,6 +16,9 @@ All packages share one version.
   begun, attaching throws. An event no observer watches pays one check for it.
   `EventManager.RoutedEventRegistered` announces events registered after a tool started. The sandbox attaches the
   first such tool, a trace of every routed event to a file, when `ADAM_EVENT_TRACE` names the file.
+- `UIComponent.ResolveTextComposition(last)`: the element's hyphens, spacing, justification and CJK punctuation
+  settings as one engine `TextComposition`, the last one given back while they hold. `TextBlock` and `TextBox` lay
+  their text out with it and tell a change by it.
 - `Ribbon.RowAlignment`: the commands stacked in a group's column stand from the top, as in Word (`Top`, the default),
   or spread over the group's height, the last at the bottom (`Spread`). Inherited - set on the ribbon or on one group.
 - `DropDown.IsEditable`: a value is typed into the header, as Word's font and size boxes take one. Enter picks the item
@@ -1800,6 +1803,10 @@ All packages share one version.
   raised on the thread that runs the outermost such arrange, after its items and in their order, also when one of them
   throws: it was raised on pool threads, and a handler on the panel or above it ran there. A panel with fewer items,
   arranged one by one, still raises each as the item is arranged.
+- `GlyphScaling` with a minimum of 0 or below is refused when set, as the engine refuses it, instead of failing when
+  the text is laid out. `TextBlock.DropCapLines` of 1 or below 0 and `DropCapCharacters` below 1 are refused too: 1
+  line set no drop cap without a word. A `DropCapFontFamily` not installed sets the cap in the text's own face, not in
+  the default one.
 - An element under a `LayoutTransform` is hit, and the pointer read, where it is drawn: a click into a zoomed view
   went where the unzoomed one has that point, as only a `RenderTransform` was undone.
 - Windows spelling no longer calls words joined by a math symbol wrong as one ("Shift+Tab" offered as "Shift Tab"):
