@@ -120,7 +120,7 @@ public class MeasurableUIComponent : ObservableUIComponent, IName, IMeasurableCo
         var args = new SizeChangedEventArgs(old, newSize, true, false);
         args.RoutedEvent = SizeChangedEvent;
         o.OnSizeChanged(args);
-        o.RaiseEvent(args);
+        o.RaiseSizeChanged(args);
     }
         
     private static void HeightChangedCallBack(AdamantiumComponent adamantiumComponent, AdamantiumPropertyChangedEventArgs e)
@@ -135,12 +135,20 @@ public class MeasurableUIComponent : ObservableUIComponent, IName, IMeasurableCo
         var args = new SizeChangedEventArgs(old, newSize, false, true);
         args.RoutedEvent = SizeChangedEvent;
         o.OnSizeChanged(args);
-        o?.RaiseEvent(args);
+        o.RaiseSizeChanged(args);
     }
-    
+
     protected virtual void OnSizeChanged(SizeChangedEventArgs e)
     {
-            
+
+    }
+
+    private void RaiseSizeChanged(SizeChangedEventArgs args)
+    {
+        if (!ParallelArrange.TryDefer(this, args))
+        {
+            RaiseEvent(args);
+        }
     }
 
     public Double Width
@@ -910,7 +918,7 @@ public class MeasurableUIComponent : ObservableUIComponent, IName, IMeasurableCo
                         {
                             RoutedEvent = SizeChangedEvent
                         };
-                        RaiseEvent(args);
+                        RaiseSizeChanged(args);
                     }
                 }
             }

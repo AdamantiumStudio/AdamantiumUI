@@ -6,19 +6,22 @@ public static class EventManager
 {
    private static Dictionary<Type, List<RoutedEvent>> routedEvents = new Dictionary<Type, List<RoutedEvent>>();
 
-   private static Dictionary<RoutedEvent, List<ClassEventSubsription>> classEventSubscriptions =
-      new Dictionary<RoutedEvent, List<ClassEventSubsription>>();
+   private static Dictionary<RoutedEvent, List<ClassEventSubscription>> classEventSubscriptions =
+      new Dictionary<RoutedEvent, List<ClassEventSubscription>>();
 
+   /// <summary>A routed event has just been registered: a debugging tool that watches every event adds its observer
+   /// here to the events whose owners load after it started - subscribing first, then going over
+   /// <see cref="GetRoutedEvents()"/>. Raised inside the static initializer of the event's owner, on the thread that
+   /// runs it, while the owner's field for the event is still unset; what a subscriber throws is logged and does not
+   /// reach the owner.</summary>
+   public static event Action<RoutedEvent> RoutedEventRegistered;
+
+   /// <summary>Every routed event registered so far.</summary>
    public static RoutedEvent[] GetRoutedEvents()
    {
       lock (routedEvents)
       {
-         List<RoutedEvent> eventsList = new List<RoutedEvent>();
-         foreach (var routedEvent in eventsList)
-         {
-            eventsList.AddRange(new[] {routedEvent});
-         }
-         return eventsList.ToArray();
+         return [.. routedEvents.Values.SelectMany(events => events)];
       }
    }
 
@@ -35,6 +38,27 @@ public static class EventManager
    }
 
    public static RoutedEvent RegisterRoutedEvent(String name, RoutingStrategy routingStrategy, Type eventHandlerType, Type eventOwnerType)
+   {
+      var routedEvent = Register(name, routingStrategy, eventHandlerType, eventOwnerType);
+      if (RoutedEventRegistered is { } registered)
+      {
+         foreach (Action<RoutedEvent> subscriber in registered.GetInvocationList())
+         {
+            try
+            {
+               subscriber(routedEvent);
+            }
+            catch (Exception fault)
+            {
+               Serilog.Log.Logger.Warning(fault, "RoutedEventRegistered subscriber threw for {Event}", routedEvent);
+            }
+         }
+      }
+
+      return routedEvent;
+   }
+
+   private static RoutedEvent Register(String name, RoutingStrategy routingStrategy, Type eventHandlerType, Type eventOwnerType)
    {
       lock (routedEvents)
       {

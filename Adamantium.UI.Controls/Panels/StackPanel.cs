@@ -411,11 +411,16 @@ public class StackPanel : VirtualizingPanel
       // as WrapPanel: the only shared write a tile arrange makes is RenderDirty.MarkGeometry, which is locked). Small
       // windows stay sequential.
       if (_arrangeIndexBuf.Count >= ParallelArrangeThreshold)
-         System.Threading.Tasks.Parallel.ForEach(
-            System.Collections.Concurrent.Partitioner.Create(0, _arrangeIndexBuf.Count),
-            range => { for (var i = range.Item1; i < range.Item2; i++) ArrangeAt(_arrangeIndexBuf[i]); });
+      {
+         ParallelArrange.Run(_arrangeIndexBuf.Count, i => ArrangeAt(_arrangeIndexBuf[i]));
+      }
       else
-         foreach (var index in _arrangeIndexBuf) ArrangeAt(index);
+      {
+         foreach (var index in _arrangeIndexBuf)
+         {
+            ArrangeAt(index);
+         }
+      }
 
       AnimateLayoutMoves(SlotRect);
       ReconcileDropPlaceholder(SlotRect);
