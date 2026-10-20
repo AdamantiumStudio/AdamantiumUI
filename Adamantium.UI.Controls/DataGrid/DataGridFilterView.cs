@@ -57,8 +57,9 @@ public class DataGridFilterView : Control
         Values.Clear();
         foreach (var value in owner.DistinctValues(column))
         {
-            var included = filter.Included?.Contains(DataGridColumnFilter.Text(value)) ?? false;
-            var line = new DataGridFilterValue(value, included);
+            var text = column.TextOf(value);
+            var included = filter.Included?.Contains(text) ?? false;
+            var line = new DataGridFilterValue(value, text, included);
             line.PropertyChanged += OnValueToggled;
             Values.Add(line);
         }

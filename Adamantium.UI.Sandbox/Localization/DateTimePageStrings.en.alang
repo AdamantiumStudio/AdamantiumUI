@@ -37,4 +37,16 @@
     <Phrase Key="Meeting" Text="Meeting time"/>
     <Phrase Key="Timers" Text="A countdown and a stopwatch on the same clock: its styles, their buttons, and on a face what is left of the countdown filled. The stopwatch takes laps."/>
     <Phrase Key="TimerDone" Text="Countdowns finished: "/>
+    <Phrase Key="Durations" Text="A length of time part by part: the largest part counts everything above it (30 hours with no days is 30), a minus or a plus anywhere sets the sign."/>
+    <Phrase Key="Duration" Text="Hours, minutes, seconds"/>
+    <Phrase Key="DurationDays" Text="With days"/>
+    <Phrase Key="DurationMilliseconds" Text="Seconds and milliseconds, never below zero"/>
+    <Phrase Key="Table" Text="In a table: dates, times and lengths drawn as text, edited (double-click or F2) in a picker or a length field. The value goes back as the type the record holds: DateOnly, TimeOnly, DateTimeOffset."/>
+    <Phrase Key="Inspector" Text="In an inspector built from a type: a picker by the type for DateTime, DateOnly, TimeOnly, a length field for TimeSpan."/>
+    <Phrase Key="TaskName" Text="Task"/>
+    <Phrase Key="Due" Text="Due"/>
+    <Phrase Key="Day" Text="Day"/>
+    <Phrase Key="Start" Text="Start"/>
+    <Phrase Key="Stamp" Text="Stamp"/>
+    <Phrase Key="Length" Text="Length"/>
 </Language>

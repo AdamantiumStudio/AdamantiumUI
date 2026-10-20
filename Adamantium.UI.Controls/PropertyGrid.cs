@@ -514,7 +514,9 @@ public class PropertyGrid : Control
 
     /// <summary>Writes what a row's editor produced to every object the row stands for. Called by the row when its
     /// editor says the user changed something - there is no edit MODE to enter or leave: the editors are live.</summary>
-    public bool Write(PropertyRow row, object edited)
+    public bool Write(PropertyRow row, object edited) => Write(row, edited, keepUnshown: true);
+
+    internal bool Write(PropertyRow row, object edited, bool keepUnshown)
     {
         if (row?.Definition == null || row.IsReadOnly) return false;
 
@@ -538,8 +540,12 @@ public class PropertyGrid : Control
         }
 
         // Every selected object gets the SAME value - that is what editing a multiple selection means.
-        if (!row.Definition.TryConvert(edited, row.ValueType, out var value)) return false;
-        if (!row.WriteValue(value)) return false;
+        if (!row.Definition.TryConvert(edited, row.ValueType, keepUnshown && !row.IsMixed ? row.Value : null, out var value) ||
+            !row.WriteValue(value))
+        {
+            if (edited == null) row.ShowHeld();
+            return false;
+        }
 
         ValueChanged?.Invoke(this, about);
         Refresh(null, row.Definition);

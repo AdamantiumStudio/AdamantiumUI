@@ -169,8 +169,8 @@
         </PropertyTrigger>
     </Style>
 
-    <!-- DateTimeField: the same field, its parts side by side where the text box has its text. -->
-    <Style Selector="DateTimeField">
+    <!-- DateTimeField and DurationField: the same field, its parts side by side where the text box has its text. -->
+    <Style Selector="DateTimeField, DurationField">
         <Setter Property="Background" Value="{ResourceReference ControlFillColorDefault}"/>
         <Setter Property="Foreground" Value="{ObservableResource TextFillColorPrimary}"/>
         <Setter Property="BorderBrush" Value="{ResourceReference ControlStrokeColorDefault}"/>
@@ -181,7 +181,7 @@
         <Setter Property="FontSize" Value="{ResourceReference FontSizeBody}"/>
         <Setter Property="Template">
             <Setter.Value>
-                <ControlTemplate TargetType="DateTimeField">
+                <ControlTemplate TargetType="Control">
                     <Border x:Name="PART_Border"
                             Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"
@@ -197,7 +197,7 @@
         </Setter>
     </Style>
 
-    <Style Selector="DateTimeField">
+    <Style Selector="DateTimeField, DurationField">
         <PropertyTrigger Property="IsPointerOver" Value="true">
             <Setter TargetName="PART_Border" Property="BorderBrush" Value="{ResourceReference ControlStrokeColorSecondary}"/>
         </PropertyTrigger>

@@ -19,21 +19,25 @@ public class PropertyRowAutomationPeer : UIComponentAutomationPeer, IValueProvid
 
     public override AutomationControlType ControlType => AutomationControlType.DataItem;
 
-    /// <summary>The value in the invariant culture; empty while the objects disagree.</summary>
-    public string Value => _row.IsMixed ? string.Empty : Convert.ToString(_row.Value, CultureInfo.InvariantCulture) ?? string.Empty;
+    /// <summary>The value as its line reads it for automation - the invariant culture's text, a date or a length in
+    /// the line's own form; empty while the objects disagree.</summary>
+    public string Value => _row.IsMixed
+        ? string.Empty
+        : (_row.Definition is { } line ? line.AutomationTextOf(_row.Value) : Convert.ToString(_row.Value, CultureInfo.InvariantCulture))
+          ?? string.Empty;
 
     public bool IsReadOnly => _row.IsReadOnly;
 
-    public ToggleState ToggleState => _row.IsMixed
+    public ToggleState ToggleState => _row.IsMixed || _row.Value is not bool
         ? ToggleState.Indeterminate
-        : _row.Value as bool? == true ? ToggleState.On : ToggleState.Off;
+        : (bool)_row.Value ? ToggleState.On : ToggleState.Off;
 
     public ExpandCollapseState ExpandCollapseState =>
         _row.IsExpanded ? ExpandCollapseState.Expanded : ExpandCollapseState.Collapsed;
 
     public override object GetPattern(PatternId pattern) => pattern switch
     {
-        PatternId.Toggle when _row.ValueType != typeof(bool) => null,
+        PatternId.Toggle when (_row.ValueType is { } type ? Nullable.GetUnderlyingType(type) ?? type : null) != typeof(bool) => null,
         PatternId.ExpandCollapse when !_row.HasChildren => null,
         _ => base.GetPattern(pattern)
     };

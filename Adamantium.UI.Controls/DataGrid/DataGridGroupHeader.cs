@@ -18,6 +18,12 @@ public class DataGridGroupHeader : ContentControl
         typeof(object), typeof(DataGridGroupHeader),
         new PropertyMetadata(null, PropertyMetadataOptions.AffectsRender, OnCaptionChanged));
 
+    /// <summary>The value as the column it was grouped by reads it - a date in that column's format. Unset reads the
+    /// value itself.</summary>
+    public static readonly AdamantiumProperty KeyTextProperty = AdamantiumProperty.Register(nameof(KeyText),
+        typeof(String), typeof(DataGridGroupHeader),
+        new PropertyMetadata(null, PropertyMetadataOptions.AffectsRender, OnCaptionChanged));
+
     /// <summary>What the rows were grouped BY - the column's header, so "Region: Iberia" reads as a sentence.</summary>
     public static readonly AdamantiumProperty GroupNameProperty = AdamantiumProperty.Register(nameof(GroupName),
         typeof(String), typeof(DataGridGroupHeader),
@@ -43,6 +49,12 @@ public class DataGridGroupHeader : ContentControl
     {
         get => GetValue(KeyProperty);
         set => SetValue(KeyProperty, value);
+    }
+
+    public String KeyText
+    {
+        get => GetValue<String>(KeyTextProperty);
+        set => SetValue(KeyTextProperty, value);
     }
 
     public String GroupName
@@ -75,7 +87,7 @@ public class DataGridGroupHeader : ContentControl
     {
         if (component is not DataGridGroupHeader header) return;
 
-        var value = DataGridColumnFilter.Text(header.Key);
+        var value = header.KeyText ?? DataGridColumnFilter.Text(header.Key);
         if (header.Phrases is not { } phrases)
         {
             header.Content = value;

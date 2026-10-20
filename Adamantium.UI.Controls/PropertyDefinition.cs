@@ -9,6 +9,7 @@ using Adamantium.UI.Controls.Primitives;
 using Adamantium.UI.Controls.Text;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Data;
+using Adamantium.UI.Core.Localization;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.Media.Imaging;
 using Adamantium.UI.Core.RoutedEvents;
@@ -227,6 +228,10 @@ public abstract class PropertyDefinition : FundamentalUIComponent
 
     protected internal DataTemplate EditorFor() => EditorTemplate ?? DefaultEditorTemplate;
 
+    /// <summary>Told the type a row's objects hold, just before that row asks for its editor - for a line whose editor
+    /// depends on it. A line shown in several rows is told before each.</summary>
+    protected internal virtual void Meet(Type valueType) { }
+
     protected internal DataTemplate ValueFor() => ValueTemplate ?? DefaultValueTemplate;
 
     /// <summary>Fills the editor with the value. Called whenever the row is (re)bound - the editor is LIVE, so this
@@ -241,14 +246,39 @@ public abstract class PropertyDefinition : FundamentalUIComponent
     protected internal virtual bool TryConvert(object edited, Type target, out object value) =>
         BoundValue.TryConvert(edited, target, out value);
 
+    /// <summary>...knowing the value the objects hold now, or null while they disagree - for a line whose text does not
+    /// say all of its value, which keeps the rest from it.</summary>
+    protected internal virtual bool TryConvert(object edited, Type target, object current, out object value) =>
+        TryConvert(edited, target, out value);
+
     /// <summary>Whether two selected objects hold the same value, so a multi-selection row shows it. Override for object
     /// values (brushes) without giving the type an equality the render cache relies on not having.</summary>
     protected internal virtual bool SameValue(object left, object right) => Equals(left, right);
+
+    /// <summary>Whether what the objects hold is the line's default - <see cref="SameValue"/> unless the default is a
+    /// moment that each object holds in an offset of its own.</summary>
+    protected internal virtual bool SameAsDefault(object value, object fallback) => SameValue(value, fallback);
+
+    /// <summary>Whether objects holding different values can all be at <paramref name="fallback"/> - a date or a time,
+    /// held by each at an offset or of a kind of its own. False by default.</summary>
+    protected internal virtual bool IsMetInManyWays(object fallback) => false;
+
+    /// <summary>Turns <see cref="DefaultValue"/> into what the property holds. Text is read as markup writes it - in no
+    /// language - so the default does not move with the language.</summary>
+    protected internal virtual bool TryReadDefault(Type target, out object value) =>
+        DefaultValue is string && target != null && !target.IsInstanceOfType(DefaultValue)
+            && BoundValue.TryConvert(DefaultValue, target, true, out value)
+        || TryConvert(DefaultValue, target, out value);
 
     /// <summary>The value as a person would read it, which is what <see cref="ValueAsTip"/> shows. A number or a string
     /// says itself; a value that is an OBJECT does not - a brush painted from a file has a file to name, and its type's
     /// own wording is not it.</summary>
     protected internal virtual String TextOf(object value) => value?.ToString();
+
+    /// <summary>The value as automation reads it: the invariant culture's text by default; a line whose value has a form
+    /// of its own, a date or a length, reads in that form, and that text written back keeps what the form does not show.</summary>
+    protected internal virtual String AutomationTextOf(object value) =>
+        System.Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture);
 
     /// <summary>Whether the editor can show no value while staying usable, for rows of disagreeing objects; a color
     /// swatch cannot, so its row stays blank.</summary>
@@ -637,6 +667,290 @@ public class SolidColorBrushProperty : PropertyDefinition
     }
 }
 
+/// <summary>A date, a time or both - <see cref="DateTime"/>, <see cref="DateTimeOffset"/>, <see cref="DateOnly"/> or
+/// <see cref="TimeOnly"/> - in the picker for the parts <see cref="Format"/> names: a calendar for a date, the times of
+/// a day for a time, both for both. What is picked goes back as the type the property holds, each object's own offset or
+/// kind kept.</summary>
+public class DateTimeProperty : PropertyDefinition
+{
+    public static readonly AdamantiumProperty FormatProperty = AdamantiumProperty.Register(nameof(Format),
+        typeof(DateTimeFieldFormat?), typeof(DateTimeProperty), new PropertyMetadata(null, OnFormatChanged));
+
+    public static readonly AdamantiumProperty CustomFormatProperty = AdamantiumProperty.Register(nameof(CustomFormat),
+        typeof(String), typeof(DateTimeProperty), new PropertyMetadata(null, OnFormatChanged));
+
+    private readonly Dictionary<DateTimeFieldFormat, DataTemplate> _editors = new();
+    private DataTemplate _display;
+    private DateTimeFieldFormat _built = DateTimeFieldFormat.ShortDateTime;
+
+    /// <summary>Which parts are shown and edited, as in <see cref="DateTimeField.Format"/>. Unset picks them by what the
+    /// line holds: the short date for a <see cref="DateOnly"/>, the short time for a <see cref="TimeOnly"/>, both
+    /// otherwise.</summary>
+    public DateTimeFieldFormat? Format
+    {
+        get => GetValue<DateTimeFieldFormat?>(FormatProperty);
+        set => SetValue(FormatProperty, value);
+    }
+
+    /// <summary>A .NET date and time pattern used when <see cref="Format"/> is <see cref="DateTimeFieldFormat.Custom"/>.</summary>
+    public String CustomFormat
+    {
+        get => GetValue<String>(CustomFormatProperty);
+        set => SetValue(CustomFormatProperty, value);
+    }
+
+    protected internal override DataTemplate DefaultEditorTemplate
+    {
+        get
+        {
+            var format = Format ?? _built;
+            if (_editors.TryGetValue(format, out var editor)) return editor;
+
+            editor = new DataTemplate(() => new TemplateResult
+            {
+                RootComponent = PropertyEditors.Picker(DateTimeValues.PickerFor(format, CustomFormat))
+            });
+            _editors[format] = editor;
+            return editor;
+        }
+    }
+
+    protected internal override void Meet(Type valueType)
+    {
+        if (valueType != null && DateTimeValues.IsDate(valueType)) _built = DateTimeValues.FormatFor(valueType);
+    }
+
+    protected internal override DataTemplate DefaultValueTemplate =>
+        _display ??= new DataTemplate(() =>
+        {
+            var text = new TextBlock { VerticalAlignment = VerticalAlignment.Center };
+            var result = new TemplateResult { RootComponent = text };
+            result.AddBinding(text, "Text", new Binding { Mode = BindingMode.OneWay, Converter = new Shown(this) });
+            return result;
+        });
+
+    protected internal override void PrepareEditor(IUIComponent editor, object value)
+    {
+        if (editor is DateTimeField field) field.Value = DateTimeValues.ToDateTime(value);
+    }
+
+    protected internal override object ReadEditor(IUIComponent editor)
+    {
+        var field = editor as DateTimeField;
+        field?.FinishTyping();
+        return field?.Value;
+    }
+
+    protected internal sealed override bool TryConvert(object edited, Type target, out object value) =>
+        TryConvert(edited, target, null, out value);
+
+    protected internal override bool TryConvert(object edited, Type target, object current, out object value)
+    {
+        if (edited is string text)
+        {
+            if (string.IsNullOrWhiteSpace(text)) return base.TryConvert(null, target, out value);
+
+            if (!DateTimeValues.TryParseMoment(text, FormatOf(current), CustomFormat, Languages.Culture, current, out var read))
+            {
+                value = null;
+                return false;
+            }
+
+            edited = read;
+        }
+
+        if (edited is DateTime { Kind: DateTimeKind.Unspecified } clock)
+        {
+            value = DateTimeValues.InFrameOf(clock, current);
+            return true;
+        }
+
+        if (edited is DateTime or DateTimeOffset)
+        {
+            value = edited;
+            return true;
+        }
+
+        return base.TryConvert(edited, target, out value);
+    }
+
+    protected internal override bool SameAsDefault(object value, object fallback) =>
+        value is not null && DateTimeValues.AsMoment(fallback) is { } moment ? DateTimeValues.SameInstant(value, moment)
+        : value is not null && DateTimeValues.ToDateTime(value) is { } clock && DateTimeValues.ToDateTime(fallback) is { } said
+            ? clock == said
+            : SameValue(value, fallback);
+
+    protected internal override bool IsMetInManyWays(object fallback) => DateTimeValues.ToDateTime(fallback) != null;
+
+    protected internal override bool TryReadDefault(Type target, out object value)
+    {
+        if (DefaultValue is string text && !string.IsNullOrWhiteSpace(text))
+        {
+            value = null;
+            return DateTimeValues.TryParseMoment(text, FormatOf(null), CustomFormat,
+                       System.Globalization.CultureInfo.InvariantCulture, null,
+                       out var read) && TryConvert(read, target, null, out value);
+        }
+
+        return base.TryReadDefault(target, out value);
+    }
+
+    protected internal override bool SameValue(object left, object right) =>
+        left is DateTimeOffset first && right is DateTimeOffset second ? first.EqualsExact(second)
+        : left is DateTime a && right is DateTime b ? a.Kind == b.Kind && a == b
+        : left?.GetType() != right?.GetType() && DateTimeValues.AsMoment(left) == null && DateTimeValues.AsMoment(right) == null
+          && DateTimeValues.ToDateTime(left) is { } x && DateTimeValues.ToDateTime(right) is { } y
+            ? x == y
+            : base.SameValue(left, right);
+
+    protected internal override String TextOf(object value) =>
+        DateTimeValues.Text(value, FormatOf(value), CustomFormat, Languages.Culture);
+
+    protected internal override String AutomationTextOf(object value) => value == null ? null : TextOf(value);
+
+    private DateTimeFieldFormat FormatOf(object value) =>
+        Format ?? (value != null ? DateTimeValues.FormatFor(value.GetType()) : _built);
+
+    private sealed class Shown(DateTimeProperty definition) : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture) =>
+            DateTimeValues.Text(value, definition.FormatOf(value), definition.CustomFormat, culture);
+
+        public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture) =>
+            throw new NotSupportedException();
+    }
+
+    private static void OnFormatChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (component is not DateTimeProperty definition) return;
+
+        definition._editors.Clear();
+        definition._display = null;
+        definition.Relayout();
+    }
+}
+
+/// <summary>A length of time - <see cref="TimeSpan"/> - in a <see cref="DurationField"/>, the parts
+/// <see cref="Parts"/> names, between <see cref="Minimum"/> and <see cref="Maximum"/>.</summary>
+public class DurationProperty : PropertyDefinition
+{
+    public static readonly AdamantiumProperty PartsProperty = AdamantiumProperty.Register(nameof(Parts),
+        typeof(DurationParts), typeof(DurationProperty),
+        new PropertyMetadata(DurationParts.Hours | DurationParts.Minutes | DurationParts.Seconds, OnPartsChanged));
+
+    public static readonly AdamantiumProperty MinimumProperty = AdamantiumProperty.Register(nameof(Minimum),
+        typeof(TimeSpan), typeof(DurationProperty), new PropertyMetadata(-TimeSpan.MaxValue));
+
+    public static readonly AdamantiumProperty MaximumProperty = AdamantiumProperty.Register(nameof(Maximum),
+        typeof(TimeSpan), typeof(DurationProperty), new PropertyMetadata(TimeSpan.MaxValue));
+
+    /// <summary>The word that follows the days in the line's text, its tip among them; the theme says it in the
+    /// application's language.</summary>
+    public static readonly AdamantiumProperty DayUnitProperty = AdamantiumProperty.Register(nameof(DayUnit),
+        typeof(String), typeof(DurationProperty), new PropertyMetadata(null));
+
+    public String DayUnit
+    {
+        get => GetValue<String>(DayUnitProperty);
+        set => SetValue(DayUnitProperty, value);
+    }
+
+    private DataTemplate _editor;
+    private DataTemplate _display;
+
+    /// <summary>Which parts are shown and edited, as in <see cref="DurationField.Parts"/>.</summary>
+    public DurationParts Parts
+    {
+        get => GetValue<DurationParts>(PartsProperty);
+        set => SetValue(PartsProperty, value);
+    }
+
+    public TimeSpan Minimum
+    {
+        get => GetValue<TimeSpan>(MinimumProperty);
+        set => SetValue(MinimumProperty, value);
+    }
+
+    public TimeSpan Maximum
+    {
+        get => GetValue<TimeSpan>(MaximumProperty);
+        set => SetValue(MaximumProperty, value);
+    }
+
+    protected internal override DataTemplate DefaultEditorTemplate =>
+        _editor ??= new DataTemplate(() => new TemplateResult { RootComponent = PropertyEditors.Duration() });
+
+    protected internal override DataTemplate DefaultValueTemplate =>
+        _display ??= DateTimeValues.DurationTemplate(() => Parts);
+
+    protected internal override void PrepareEditor(IUIComponent editor, object value)
+    {
+        if (editor is not DurationField field) return;
+
+        field.Parts = Parts;
+        field.Minimum = Minimum;
+        field.Maximum = Maximum;
+        field.Value = value as TimeSpan?;
+    }
+
+    protected internal override object ReadEditor(IUIComponent editor)
+    {
+        var field = editor as DurationField;
+        field?.FinishTyping();
+        return field?.Value;
+    }
+
+    protected internal sealed override bool TryConvert(object edited, Type target, out object value) =>
+        TryConvert(edited, target, null, out value);
+
+    protected internal override bool TryConvert(object edited, Type target, object current, out object value)
+    {
+        if (edited is string text)
+        {
+            if (string.IsNullOrWhiteSpace(text)) return base.TryConvert(null, target, out value);
+            if (!DateTimeValues.TryParseDuration(text, Parts, Languages.Culture, current as TimeSpan?, out var length))
+            {
+                value = null;
+                return false;
+            }
+
+            edited = length;
+        }
+
+        return base.TryConvert(edited, target, out value);
+    }
+
+    protected internal override bool TryReadDefault(Type target, out object value)
+    {
+        if (DefaultValue is string text && !string.IsNullOrWhiteSpace(text))
+        {
+            value = null;
+            return DateTimeValues.TryParseDuration(text, Parts, System.Globalization.CultureInfo.InvariantCulture, null,
+                       out var length) &&
+                   base.TryConvert(length, target, out value);
+        }
+
+        return base.TryReadDefault(target, out value);
+    }
+
+    protected internal override String TextOf(object value)
+    {
+        return value is TimeSpan length
+            ? DateTimeValues.DurationLine(length, Parts, DayUnit, Languages.Culture)
+            : base.TextOf(value);
+    }
+
+    protected internal override String AutomationTextOf(object value) => value == null ? null : TextOf(value);
+
+    private static void OnPartsChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (component is not DurationProperty definition) return;
+
+        definition._display = null;
+        definition.Relayout();
+    }
+}
+
 /// <summary>An <see cref="ImageSource"/>: shows the file path, accepts a typed one, and "..." opens the system file
 /// picker.</summary>
 public class ImageSourceProperty : PropertyDefinition
@@ -925,6 +1239,27 @@ internal static class PropertyEditors
         MinHeight = 0,
         VerticalAlignment = VerticalAlignment.Stretch,
         HorizontalAlignment = HorizontalAlignment.Left
+    };
+
+    public static DateTimePickerBase Picker(DateTimePickerBase picker)
+    {
+        picker.MinWidth = 0;
+        picker.MinHeight = 0;
+        picker.BorderThickness = new Thickness(0);
+        picker.Padding = new Thickness(4, 0, 4, 0);
+        picker.VerticalAlignment = VerticalAlignment.Stretch;
+        picker.HorizontalAlignment = HorizontalAlignment.Stretch;
+        return picker;
+    }
+
+    public static DurationField Duration() => new()
+    {
+        MinWidth = 0,
+        MinHeight = 0,
+        BorderThickness = new Thickness(0),
+        Padding = new Thickness(4, 0, 4, 0),
+        VerticalAlignment = VerticalAlignment.Stretch,
+        HorizontalAlignment = HorizontalAlignment.Stretch
     };
 
     // No border of its own: the swatch IS the control, and a frame around a color changes how the color reads.

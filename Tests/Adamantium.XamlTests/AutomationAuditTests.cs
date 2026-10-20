@@ -167,6 +167,8 @@ public class AutomationAuditTests
         [typeof(CalendarPage)] = (null, "a calendar's page; the months and cells on it answer for themselves"),
         [typeof(DateTimeField)] = (T.Edit, null),
         [typeof(DateTimeFieldSegment)] = (T.Spinner, null),
+        [typeof(DurationField)] = (T.Edit, null),
+        [typeof(DurationFieldSegment)] = (T.Spinner, null),
         [typeof(DatePicker)] = (T.ComboBox, null),
         [typeof(TimePicker)] = (T.ComboBox, null),
         [typeof(DateTimePicker)] = (T.ComboBox, null),

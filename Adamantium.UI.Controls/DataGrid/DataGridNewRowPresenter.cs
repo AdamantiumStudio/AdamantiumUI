@@ -213,7 +213,8 @@ public class DataGridNewRowPresenter : Panel
         }
 
         var value = cell.ValueForCommit();
-        if (value == null || (value as string)?.Length == 0) _typed.Remove(_editing);
+        if (value == null || (value as string)?.Length == 0 || ReferenceEquals(value, AdamantiumProperty.UnsetValue))
+            _typed.Remove(_editing);
         else _typed[_editing] = value;
     }
 
