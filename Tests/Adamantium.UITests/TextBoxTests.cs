@@ -27,16 +27,32 @@ public class TextBoxTests
     {
         var box = new TextBox { Placeholder = "Find" };
         _ = new Adamantium.UI.Controls.Panels.StackPanel { Children = { box } };
-        FocusManager.Focus(box);
-        var focusedEmpty = box.ShowsInlinePlaceholder;
+        bool focusedEmpty, composing, composed, typed;
+        try
+        {
+            FocusManager.Focus(box);
+            Assume.That(box.IsFocused, Is.True, "the keyboard is in the box");
+            focusedEmpty = box.ShowsInlinePlaceholder;
 
-        Type(box, "a");
-        var typed = box.ShowsInlinePlaceholder;
-        FocusManager.ResetFocus();
+            // An input method composing draws its own window at the caret, over where the prompt would stand.
+            box.RaiseEvent(new TextCompositionEventArgs("ni", 2) { RoutedEvent = Keyboard.TextCompositionStartedEvent });
+            composing = box.ShowsInlinePlaceholder;
+            box.RaiseEvent(new TextCompositionEventArgs(string.Empty, 0) { RoutedEvent = Keyboard.TextCompositionEndedEvent });
+            composed = box.ShowsInlinePlaceholder;
+
+            Type(box, "a");
+            typed = box.ShowsInlinePlaceholder;
+        }
+        finally
+        {
+            FocusManager.ResetFocus();
+        }
 
         Assert.Multiple(() =>
         {
             Assert.That(focusedEmpty, Is.True);
+            Assert.That(composing, Is.False);
+            Assert.That(composed, Is.True);
             Assert.That(typed, Is.False);
         });
     }

@@ -136,6 +136,9 @@ public abstract class TextBoxBase : Control, ITextStyleUser, Adamantium.UI.Core.
     protected TextBoxBase()
     {
         AddHandler(Keyboard.TextInputEvent, new TextInputEventHandler(OnTextInputHandler));
+        // An input method draws what it composes in a window of its own at the caret: the prompt is not left under it.
+        AddHandler(Keyboard.TextCompositionStartedEvent, new TextCompositionEventHandler((_, _) => Composing(true)));
+        AddHandler(Keyboard.TextCompositionEndedEvent, new TextCompositionEventHandler((_, _) => Composing(false)));
         _styleBrushes = new HeldBrushes(this);
         _engineStyles = new EngineTextStyles(this, _styleBrushes);
         // On a baseline grid the text's lines stand on the grid from where the text surface is, its scroll left out.
@@ -423,6 +426,19 @@ public abstract class TextBoxBase : Control, ITextStyleUser, Adamantium.UI.Core.
         {
             InvalidateSurface(measure: true);
         }
+        else if (e.Property == PlaceholderProperty || e.Property == PlaceholderForegroundProperty)
+        {
+            // Drawn by the text surface, which its own render mark does not reach.
+            InvalidateSurface();
+        }
+    }
+
+    private bool _composing;
+
+    private void Composing(bool composing)
+    {
+        _composing = composing;
+        InvalidateSurface();
     }
 
     private static void Bind(RoutedCommand command, Action<TextBoxBase> run, Func<TextBoxBase, bool> can) =>
@@ -1651,7 +1667,7 @@ public abstract class TextBoxBase : Control, ITextStyleUser, Adamantium.UI.Core.
     internal TextLayout Layout => _textLayout;
 
     internal bool ShowsInlinePlaceholder =>
-        !FloatingPlaceholder && !string.IsNullOrEmpty(Placeholder) && EditedText.Length == 0;
+        !FloatingPlaceholder && !string.IsNullOrEmpty(Placeholder) && EditedText.Length == 0 && !_composing;
 
     internal TextLayout PlaceholderLayout()
     {
@@ -1834,6 +1850,7 @@ public abstract class TextBoxBase : Control, ITextStyleUser, Adamantium.UI.Core.
     {
         base.OnLostFocus(e);
         _caretVisible = false;
+        _composing = false;   // a composition the focus left unended composes nothing here any more
         UpdateFloatState();
         InvalidateSurface();
     }
