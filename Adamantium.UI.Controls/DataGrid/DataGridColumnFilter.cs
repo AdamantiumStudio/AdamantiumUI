@@ -50,9 +50,17 @@ public class DataGridFilterCondition
     }
 
     /// <summary>Whether <paramref name="value"/> passes this condition.</summary>
-    public bool Passes(object value)
+    public bool Passes(object value) => Passes(value, value?.ToString());
+
+    /// <summary>Whether <paramref name="value"/>, reading as <paramref name="text"/> in its column, passes this
+    /// condition.</summary>
+    public bool Passes(object value, string text) => Passes(value, text, null);
+
+    /// <summary>...with what is typed to compare against read as the column reads a paste: "greater than 01:30:00"
+    /// compares lengths, not text.</summary>
+    public bool Passes(object value, string text, Func<string, object> parse)
     {
-        var text = value?.ToString() ?? string.Empty;
+        text ??= string.Empty;
         var wanted = Value?.ToString() ?? string.Empty;
         var comparison = IsCaseSensitive ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
 
@@ -66,16 +74,41 @@ public class DataGridFilterCondition
             DataGridFilterOperator.DoesNotContain => !text.Contains(wanted, comparison),
             DataGridFilterOperator.StartsWith => text.StartsWith(wanted, comparison),
             DataGridFilterOperator.EndsWith => text.EndsWith(wanted, comparison),
-            DataGridFilterOperator.IsGreaterThan => Compare(value, wanted, comparison) > 0,
-            DataGridFilterOperator.IsLessThan => Compare(value, wanted, comparison) < 0,
+            DataGridFilterOperator.IsGreaterThan => Compare(value, wanted, comparison, parse) > 0,
+            DataGridFilterOperator.IsLessThan => Compare(value, wanted, comparison, parse) < 0,
             _ => true
         };
     }
 
+    private string _readText;
+    private Func<string, object> _readBy;
+    private object _read;
+
+    /// <summary>Drops what the condition read its value as - for a column whose form or language changed.</summary>
+    public void Forget()
+    {
+        _readText = null;
+        _readBy = null;
+        _read = null;
+    }
+
     // Numbers and dates compare AS THEMSELVES where they can - "9" is not greater than "10" in a Size column, however
     // convincing the string comparison is.
-    private static int Compare(object value, string wanted, StringComparison comparison)
+    private int Compare(object value, string wanted, StringComparison comparison, Func<string, object> parse)
     {
+        if (parse != null && (!ReferenceEquals(parse, _readBy) || !string.Equals(wanted, _readText, StringComparison.Ordinal)))
+        {
+            _readBy = parse;
+            _readText = wanted;
+            _read = parse(wanted);
+        }
+
+        if (parse != null && _read is IComparable parsed and not string)
+        {
+            var held = parsed is DateTime ? DateTimeValues.ToDateTime(value) : value;
+            if (held is IComparable mine && mine.GetType() == parsed.GetType()) return mine.CompareTo(parsed);
+        }
+
         if (value is IComparable comparable && value is not string)
         {
             try
@@ -119,12 +152,19 @@ public class DataGridColumnFilter
     }
 
     /// <summary>Whether a cell holding <paramref name="value"/> survives.</summary>
-    public bool Passes(object value)
-    {
-        if (Included != null && !Included.Contains(Text(value))) return false;
+    public bool Passes(object value) => Passes(value, Text(value));
 
-        var first = First.IsSet ? First.Passes(value) : (bool?)null;
-        var second = Second.IsSet ? Second.Passes(value) : (bool?)null;
+    /// <summary>Whether a cell holding <paramref name="value"/>, reading as <paramref name="text"/> in its column,
+    /// survives.</summary>
+    public bool Passes(object value, string text) => Passes(value, text, null);
+
+    /// <summary>...with what the conditions compare against read by <paramref name="parse"/>.</summary>
+    public bool Passes(object value, string text, Func<string, object> parse)
+    {
+        if (Included != null && !Included.Contains(text ?? string.Empty)) return false;
+
+        var first = First.IsSet ? First.Passes(value, text, parse) : (bool?)null;
+        var second = Second.IsSet ? Second.Passes(value, text, parse) : (bool?)null;
 
         if (first == null) return second ?? true;
         if (second == null) return first.Value;
@@ -143,10 +183,15 @@ public class DataGridFilterValue : AdamantiumComponent
     public static readonly AdamantiumProperty IsCheckedProperty = AdamantiumProperty.Register(nameof(IsChecked),
         typeof(bool), typeof(DataGridFilterValue), new PropertyMetadata(true));
 
-    public DataGridFilterValue(object value, bool isChecked)
+    public DataGridFilterValue(object value, bool isChecked) : this(value, DataGridColumnFilter.Text(value), isChecked)
+    {
+    }
+
+    /// <summary>A line for <paramref name="value"/> reading as <paramref name="text"/> in its column.</summary>
+    public DataGridFilterValue(object value, string text, bool isChecked)
     {
         Value = value;
-        Text = DataGridColumnFilter.Text(value);
+        Text = text ?? string.Empty;
         IsChecked = isChecked;
     }
 

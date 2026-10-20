@@ -48,4 +48,19 @@
     <Phrase Key="Critical" Text="Critical - drop everything"/>
     <Phrase Key="PriorityIs" Select="priority" Low="Priority: low" Normal="Priority: normal" High="Priority: high" Critical="Priority: critical"/>
     <Phrase Key="Color" Select="color" None="No color chosen" Other="Color: {color}"/>
+
+    <Phrase Key="ActionButtons" Text="Drop-down and split buttons"/>
+    <Phrase Key="Export" Text="Export"/>
+    <Phrase Key="PasteName" Text="Paste"/>
+    <Phrase Key="BulletsName" Text="Bullets"/>
+    <Phrase Key="Pdf" Text="As PDF"/>
+    <Phrase Key="Png" Text="As PNG"/>
+    <Phrase Key="Svg" Text="As SVG"/>
+    <Phrase Key="PasteKeep" Text="Keep formatting"/>
+    <Phrase Key="PasteText" Text="Text only"/>
+    <Phrase Key="BulletDisc" Text="Discs"/>
+    <Phrase Key="BulletNumber" Text="Numbers"/>
+    <Phrase Key="LastAction" Select="action" None="Nothing run yet" Pdf="Exported as PDF" Png="Exported as PNG"
+            Svg="Exported as SVG" Paste="Pasted" PasteKeep="Pasted keeping formatting" PasteText="Pasted as text"
+            BulletDiscOn="Disc bullets on" BulletNumberOn="Numbered list on" BulletsOff="Bullets off"/>
 </Language>

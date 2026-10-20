@@ -12,6 +12,7 @@ using Adamantium.UI.Controls.Text;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Dispatcher;
+using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Localization;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.Media.Animation;
@@ -44,6 +45,9 @@ public class Clock : Control
     public static readonly AdamantiumProperty SecondHandMotionProperty = AdamantiumProperty.Register(
         nameof(SecondHandMotion), typeof(SecondHandMotion), typeof(Clock),
         new PropertyMetadata(SecondHandMotion.Tick, OnShownChanged));
+
+    public static readonly AdamantiumProperty MarkedPartsProperty = AdamantiumProperty.Register(nameof(MarkedParts),
+        typeof(DurationParts), typeof(Clock), new PropertyMetadata(DurationParts.None, OnShownChanged));
 
     private static readonly bool[][] Segments =
     [
@@ -115,7 +119,8 @@ public class Clock : Control
         set => SetValue(TimeZoneProperty, value);
     }
 
-    /// <summary>Shows the seconds - a second hand, or the seconds' figures; on by default.</summary>
+    /// <summary>Shows the seconds - a second hand (none over a countdown's ring), or the seconds' figures; on by
+    /// default.</summary>
     public bool ShowSeconds
     {
         get => GetValue<bool>(ShowSecondsProperty);
@@ -127,6 +132,14 @@ public class Clock : Control
     {
         get => GetValue<SecondHandMotion>(SecondHandMotionProperty);
         set => SetValue(SecondHandMotionProperty, value);
+    }
+
+    /// <summary>The hours, minutes or seconds of its figures lit in the accent - the part being set, as a countdown's
+    /// digital clock marks the part its length is typed into. None by default; figures only.</summary>
+    public DurationParts MarkedParts
+    {
+        get => GetValue<DurationParts>(MarkedPartsProperty);
+        set => SetValue(MarkedPartsProperty, value);
     }
 
     /// <summary>The time it shows now, as text in its language; empty while it shows no time.</summary>
@@ -164,7 +177,35 @@ public class Clock : Control
     private bool Running => _counting ? _countSince != null : IsLive;
 
     /// <summary>Whether it shows with hands rather than figures.</summary>
-    public bool IsAnalog => ClockStyle is ClockStyle.Classic or ClockStyle.Minimal or ClockStyle.Roman or ClockStyle.Dots;
+    public bool IsAnalog => HasHands(ClockStyle);
+
+    internal static bool HasHands(ClockStyle style) =>
+        style is ClockStyle.Classic or ClockStyle.Minimal or ClockStyle.Roman or ClockStyle.Dots;
+
+    internal DurationParts PartAt(PointerPressedEventArgs e)
+    {
+        var best = DurationParts.None;
+        var nearest = double.MaxValue;
+
+        void Try(IInputComponent element, DurationParts part)
+        {
+            if (element == null) return;
+            var x = e.GetPosition(element).X;
+            var width = element.RenderSize.Width;
+            var distance = x < 0 ? -x : x > width ? x - width : 0;
+            if (distance < nearest)
+            {
+                nearest = distance;
+                best = part;
+            }
+        }
+
+        for (var i = 0; i < _digits.Count; i++) Try(_digits[i][0].VisualParent as IInputComponent, PartOf(i));
+        for (var i = 0; i < _cards.Count; i++) Try(_cards[i], PartOf(i));
+        for (var i = 0; i < _texts.Count; i++)
+            Try(_texts[i], i == 0 ? DurationParts.Hours : i == 1 ? DurationParts.Minutes : DurationParts.Seconds);
+        return best;
+    }
 
     /// <summary>The face its hands go round, while it shows with hands.</summary>
     public ClockFace Face { get; private set; }
@@ -313,15 +354,14 @@ public class Clock : Control
             _remaining = new Shapes.Ellipse
             {
                 Classes = Classes.Parse("ClockRemaining"),
-                RenderTransform = new Transform { RotationAngle = 270 },
-                RenderTransformOrigin = new Vector2(0.5, 0.5),
+                StartAngle = 270,
             };
-            _hands.Add(_remaining, 0, 0.94, RadialAnchor.Disc);
+            _hands.Add(_remaining, 0, 1, RadialAnchor.Disc);
         }
 
         _hour = Hand("ClockHand ClockHourHand", 0.5);
         _minute = Hand("ClockHand ClockMinuteHand", 0.72);
-        if (ShowSeconds)
+        if (ShowSeconds && _remaining == null)
         {
             _second = Hand("ClockHand ClockSecondHand", 0.84);
         }
@@ -583,7 +623,6 @@ public class Clock : Control
         }
 
         var left = total > TimeSpan.Zero ? Math.Clamp(Counted() / total, 0, 1) : 0;
-        _remaining.StartAngle = 0;
         _remaining.StopAngle = left * 360;
     }
 
@@ -649,6 +688,8 @@ public class Clock : Control
             for (var i = 0; i < _texts.Count; i++)
             {
                 _texts[i].Text = split ? parts[i] : i == 0 ? text : string.Empty;
+                Mark(_texts[i], "ClockText", Marked(i == 0 ? DurationParts.Hours : i == 1 ? DurationParts.Minutes
+                    : DurationParts.Seconds));
             }
 
             foreach (var separator in _separators)
@@ -688,9 +729,10 @@ public class Clock : Control
         for (var i = 0; i < _digits.Count; i++)
         {
             var lit = i < figures.Length && figures[i] != ' ' ? Segments[figures[i] - '0'] : Blank;
+            var on = Marked(PartOf(i)) ? "ClockSegmentMarked" : "ClockSegmentOn";
             for (var s = 0; s < 7; s++)
             {
-                var name = lit[s] ? "ClockSegmentOn" : "ClockSegmentOff";
+                var name = lit[s] ? on : "ClockSegmentOff";
                 if (!_digits[i][s].Classes.Contains(name))
                 {
                     _digits[i][s].Classes = Classes.Parse(name);
@@ -700,6 +742,7 @@ public class Clock : Control
 
         for (var i = 0; i < _cards.Count; i++)
         {
+            Mark((TextBlock)_cards[i].Child, "ClockFlipFigure", Marked(PartOf(i)));
             var figure = i < figures.Length ? figures[i].ToString().Trim() : string.Empty;
             var before = i < _shown.Length ? _shown[i].ToString().Trim() : null;
             if (figure == before)
@@ -719,6 +762,20 @@ public class Clock : Control
         }
 
         _shown = figures;
+    }
+
+    private bool Marked(DurationParts part) => (MarkedParts & part) != 0;
+
+    private DurationParts PartOf(int digit) =>
+        digit < _hourDigits ? DurationParts.Hours : digit < _hourDigits + 2 ? DurationParts.Minutes : DurationParts.Seconds;
+
+    private static void Mark(TextBlock text, string plain, bool marked)
+    {
+        var wanted = marked ? plain + " " + plain + "Marked" : plain;
+        if (text.Classes.Contains(plain + "Marked") != marked)
+        {
+            text.Classes = Classes.Parse(wanted);
+        }
     }
 
     private void Flip(Border card, Transform turn, string figure)

@@ -213,6 +213,89 @@
                             Language="{Binding CalendarLanguage}"/>
             </Grid>
 
+            <!-- Lengths of time part by part. -->
+            <TextBlock Text="{Localize DateTimePageStrings.Durations}"
+                       TextWrapping="WrapByWords"
+                       MaxWidth="680"
+                       HorizontalAlignment="Left"
+                       MarginTop="16"
+                       MarginBottom="8"/>
+            <Grid ColumnDefinitions="Auto,Auto,Auto"
+                  RowDefinitions="Auto,Auto,Auto"
+                  ColumnSpacing="12"
+                  RowSpacing="6"
+                  HorizontalAlignment="Left"
+                  MarginBottom="12">
+                <TextBlock Text="{Localize DateTimePageStrings.Duration}"
+                           VerticalAlignment="Center"/>
+                <DurationField AutomationProperties.AutomationId="DurationField"
+                               Grid.Column="1"
+                               Value="{Binding Length}"
+                               Language="{Binding CalendarLanguage}"/>
+                <TextBlock Grid.Column="2"
+                           VerticalAlignment="Center"><Run Text="{Localize DateTimePageStrings.FieldValue}"/><Run Text="{Binding Length, StringFormat='{0:c}'}"/></TextBlock>
+
+                <TextBlock Grid.Row="1"
+                           Text="{Localize DateTimePageStrings.DurationDays}"
+                           VerticalAlignment="Center"/>
+                <DurationField Grid.Row="1"
+                               Grid.Column="1"
+                               Parts="Days, Hours, Minutes"
+                               Value="{Binding Length}"
+                               Language="{Binding CalendarLanguage}"/>
+
+                <TextBlock Grid.Row="2"
+                           Text="{Localize DateTimePageStrings.DurationMilliseconds}"
+                           VerticalAlignment="Center"/>
+                <DurationField AutomationProperties.AutomationId="CooldownField"
+                               Grid.Row="2"
+                               Grid.Column="1"
+                               Parts="Seconds, Milliseconds"
+                               Minimum="0:00:00"
+                               Value="{Binding Cooldown}"
+                               Language="{Binding CalendarLanguage}"/>
+                <TextBlock Grid.Row="2"
+                           Grid.Column="2"
+                           VerticalAlignment="Center"><Run Text="{Localize DateTimePageStrings.FieldValue}"/><Run Text="{Binding Cooldown, StringFormat='{0:c}'}"/></TextBlock>
+            </Grid>
+
+            <!-- The same in a table and in an inspector built from the record's type. -->
+            <TextBlock Text="{Localize DateTimePageStrings.Table}"
+                       TextWrapping="WrapByWords"
+                       MaxWidth="680"
+                       HorizontalAlignment="Left"
+                       MarginTop="16"
+                       MarginBottom="8"/>
+            <TreeDataGrid AutomationProperties.AutomationId="ScheduleTable"
+                          ItemsSource="{Binding Schedule}"
+                          Height="200"
+                          MaxWidth="900"
+                          HorizontalAlignment="Left"
+                          MarginBottom="12">
+                <TreeDataGrid.Columns>
+                    <DataGridTextColumn Header="{Localize DateTimePageStrings.TaskName}" Binding="{Binding Name}" Width="160"/>
+                    <DataGridDateTimeColumn Header="{Localize DateTimePageStrings.Due}" Binding="{Binding Due}" Format="ShortDateTime" Width="200"/>
+                    <DataGridDateTimeColumn Header="{Localize DateTimePageStrings.Day}" Binding="{Binding Day}" Width="140"/>
+                    <DataGridDateTimeColumn Header="{Localize DateTimePageStrings.Start}" Binding="{Binding Start}" Format="ShortTime" Width="120"/>
+                    <DataGridDateTimeColumn Header="{Localize DateTimePageStrings.Stamp}" Binding="{Binding Stamp}" Format="ShortDateTime" Width="200"/>
+                    <DataGridDurationColumn Header="{Localize DateTimePageStrings.Length}" Binding="{Binding Length}" Width="120"/>
+                </TreeDataGrid.Columns>
+            </TreeDataGrid>
+
+            <TextBlock Text="{Localize DateTimePageStrings.Inspector}"
+                       TextWrapping="WrapByWords"
+                       MaxWidth="680"
+                       HorizontalAlignment="Left"
+                       MarginTop="4"
+                       MarginBottom="8"/>
+            <PropertyGrid AutomationProperties.AutomationId="ScheduleInspector"
+                          AutoGenerateSections="True"
+                          SelectedObject="{Binding Inspected}"
+                          Width="420"
+                          Height="260"
+                          HorizontalAlignment="Left"
+                          MarginBottom="12"/>
+
             <!-- One clock, every style: hands turned by the compositor, figures changed on the second. -->
             <TextBlock Text="{Localize DateTimePageStrings.Clocks}"
                        TextWrapping="WrapByWords"
@@ -296,7 +379,7 @@
                 </StackPanel>
             </WrapPanel>
 
-            <!-- A countdown and a stopwatch on the same clock: its styles, its buttons, what is left filled on a face. -->
+            <!-- A countdown and a stopwatch on the same clock: its styles, its buttons, what is left ringed on a face. -->
             <TextBlock Text="{Localize DateTimePageStrings.Timers}"
                        TextWrapping="WrapByWords"
                        MaxWidth="680"
@@ -322,7 +405,6 @@
                                 Margin="0,0,24,16"/>
                 <StopwatchTimer AutomationProperties.AutomationId="FlipStopwatch"
                                 ClockStyle="Flip"
-                                ShowLaps="False"
                                 VerticalAlignment="Top"
                                 Margin="0,0,24,16"/>
             </WrapPanel>

@@ -769,7 +769,7 @@ public class DateTimeFieldTests
         Assert.That(peer.ControlType, Is.EqualTo(AutomationControlType.Edit));
         Assert.That(peer.Value, Is.EqualTo("2026-02-10T00:00:00"));
 
-        var day = (DateTimeFieldSegmentAutomationPeer)peer.GetChildren()[0];
+        var day = (FieldSegmentAutomationPeer)peer.GetChildren()[0];
         Assert.That(day.ControlType, Is.EqualTo(AutomationControlType.Spinner));
         Assert.That(day.Maximum, Is.EqualTo(28), "February 2026");
         day.SetValue(14);

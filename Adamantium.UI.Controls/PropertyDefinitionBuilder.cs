@@ -154,6 +154,8 @@ public class PropertyDefinitionBuilder
         if (type == typeof(bool)) return new BooleanProperty();
         if (type.IsEnum) return new ChoiceProperty { EnumType = type };
         if (IsNumber(type)) return Number(type);
+        if (DateTimeValues.IsDate(type)) return new DateTimeProperty { Format = DateTimeValues.FormatFor(type) };
+        if (type == typeof(TimeSpan)) return new DurationProperty();
 
         // Anything else is an object: opened into lines of its own while there is depth left, and shown as plain text
         // when there is not. Text rather than nothing, because "Material: Steel" still tells the reader something.

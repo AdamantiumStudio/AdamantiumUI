@@ -115,6 +115,31 @@ public class TextSelectionThemeTests
     [TestCase("Fluent")]
     [TestCase("Graphite")]
     [TestCase("MacOs")]
+    public void ADropDownAndASplitButtonsCaptionDoesNotSelect(string theme)
+    {
+        Use(theme);
+        var drop = new DropDownButton { Content = "Share" };
+        var split = new SplitButton { Content = "Paste" };
+        var toggle = new ToggleSplitButton { Content = "Bold" };
+        var panel = new Adamantium.UI.Controls.Panels.StackPanel();
+        panel.Children.Add(drop);
+        panel.Children.Add(split);
+        panel.Children.Add(toggle);
+
+        Shown(panel);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(Saying(drop, "Share")?.IsTextSelectionEnabled, Is.False);
+            Assert.That(Saying(split, "Paste")?.IsTextSelectionEnabled, Is.False);
+            Assert.That(Saying(toggle, "Bold")?.IsTextSelectionEnabled, Is.False);
+        });
+    }
+
+    [Test]
+    [TestCase("Fluent")]
+    [TestCase("Graphite")]
+    [TestCase("MacOs")]
     public void ACalendarsTextDoesNotSelect(string theme)
     {
         Use(theme);
@@ -125,6 +150,24 @@ public class TextSelectionThemeTests
         var texts = Texts(calendar).ToList();
         Assert.That(texts, Is.Not.Empty);
         Assert.That(texts.Where(text => text.IsTextSelectionEnabled), Is.Empty, "days, day names, week numbers, header");
+    }
+
+    [Test]
+    [TestCase("Fluent")]
+    [TestCase("Graphite")]
+    [TestCase("MacOs")]
+    public void ASegmentsCaptionDoesNotSelect(string theme)
+    {
+        Use(theme);
+        var segments = new SegmentedControl();
+        segments.Items.Add(new SegmentedControlItem { Content = "Day" });
+        segments.Items.Add(new SegmentedControlItem { Content = "Week" });
+
+        Shown(segments);
+
+        var texts = Texts(segments).ToList();
+        Assert.That(texts, Is.Not.Empty);
+        Assert.That(texts.Where(text => text.IsTextSelectionEnabled), Is.Empty);
     }
 
     [Test]

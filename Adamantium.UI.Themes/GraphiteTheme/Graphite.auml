@@ -63,6 +63,7 @@
     <StyleInclude Source="{x:Type editor:ListBoxStyleSet}"/>
     <StyleInclude Source="{x:Type editor:ListBoxItemStyleSet}"/>
     <StyleInclude Source="{x:Type editor:DropDownItemStyleSet}"/>
+    <StyleInclude Source="{x:Type editor:DropDownButtonStyleSet}"/>
     <StyleInclude Source="{x:Type editor:TabControlStyleSet}"/>
     <StyleInclude Source="{x:Type editor:TabItemStyleSet}"/>
     <StyleInclude Source="{x:Type editor:BusyIndicatorStyleSet}"/>

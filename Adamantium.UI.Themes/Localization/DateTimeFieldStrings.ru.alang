@@ -17,6 +17,10 @@
     <Phrase Key="PeriodPlaceholder" Text="AM"/>
     <Phrase Key="EraPlaceholder" Text="эра"/>
     <Phrase Key="DayOfWeekPlaceholder" Text="день недели"/>
+    <Phrase Key="Days" Text="Дни"/>
+    <Phrase Key="Millisecond" Text="Миллисекунды"/>
+    <Phrase Key="MillisecondPlaceholder" Text="мс"/>
+    <Phrase Key="DayUnit" Text="д"/>
     <Phrase Key="Choose" Text="Выбрать"/>
     <Phrase Key="Accept" Text="Готово"/>
     <Phrase Key="Cancel" Text="Отмена"/>

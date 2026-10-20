@@ -83,6 +83,7 @@
         <StyleInclude Source="{x:Type fluent:PropertyGridStyleSet}"/>
         <StyleInclude Source="{x:Type fluent:DataPagerStyleSet}"/>
         <StyleInclude Source="{x:Type fluent:DropDownItemStyleSet}"/>
+        <StyleInclude Source="{x:Type fluent:DropDownButtonStyleSet}"/>
         <StyleInclude Source="{x:Type fluent:TextBoxStyleSet}"/>
         <StyleInclude Source="{x:Type fluent:ToolTipStyleSet}"/>
         <StyleInclude Source="{x:Type fluent:TabControlStyleSet}"/>

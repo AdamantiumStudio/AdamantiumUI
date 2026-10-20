@@ -67,4 +67,33 @@ public partial class ButtonsViewModel : TabPageViewModel
         new ColorOption("Rose", "#C42B72"),
     ];
     [Bindable] private ColorOption _selectedColor;
+
+    // Drop-down and split buttons: each list's items are keys the view says in words; a pick runs the item command, the
+    // body of a split button its own command. A bullet kind picked is kept and turned on; the body of the toggle split
+    // button turns the kept kind on and off. What ran last is shown beside them.
+    public string[] ExportFormats { get; } = ["Pdf", "Png", "Svg"];
+
+    public string[] PasteKinds { get; } = ["PasteKeep", "PasteText"];
+
+    public string[] BulletKinds { get; } = ["BulletDisc", "BulletNumber"];
+
+    [Bindable] private string _lastAction = "None";
+
+    [Bindable] private bool _bullets;
+
+    [Bindable] private string _bulletKind = "BulletDisc";
+
+    [Command] private void Run(object action) => LastAction = action as string ?? "None";
+
+    [Command] private void Paste() => LastAction = "Paste";
+
+    [Command]
+    private void ChooseBullets(object kind)
+    {
+        BulletKind = kind as string ?? BulletKind;
+        Bullets = true;
+        LastAction = BulletKind + "On";
+    }
+
+    partial void OnBulletsChanged(bool value) => LastAction = value ? BulletKind + "On" : "BulletsOff";
 }

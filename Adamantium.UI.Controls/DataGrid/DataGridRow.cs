@@ -437,6 +437,7 @@ public class DataGridRow : Panel
 
         _groupHeader.Visibility = Visibility.Visible;
         _groupHeader.GroupName = group.Column?.Header?.ToString();
+        _groupHeader.KeyText = group.Column?.TextOf(group.Key);
         _groupHeader.Key = group.Key;
         _groupHeader.Count = group.Count;
         _groupHeader.IsExpanded = Row?.IsExpanded ?? false;

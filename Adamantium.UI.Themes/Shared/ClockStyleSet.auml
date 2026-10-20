@@ -91,6 +91,20 @@
         <Setter Property="Opacity" Value="1"/>
     </Style>
 
+    <!-- The part being set (Clock.MarkedParts): its lit segments, its figures, in the accent. -->
+    <Style Selector="Border.ClockSegmentMarked">
+        <Setter Property="Background" Value="{ThemeResource AccentFillColorDefault}"/>
+        <Setter Property="Opacity" Value="1"/>
+    </Style>
+
+    <Style Selector="TextBlock.ClockTextMarked">
+        <Setter Property="Foreground" Value="{ThemeResource AccentFillColorDefault}"/>
+    </Style>
+
+    <Style Selector="TextBlock.ClockFlipFigureMarked">
+        <Setter Property="Foreground" Value="{ThemeResource AccentFillColorDefault}"/>
+    </Style>
+
     <Style Selector="Border.ClockColonDot">
         <Setter Property="Background" Value="{ResourceReference TextFillColorPrimary}"/>
     </Style>
@@ -109,14 +123,14 @@
         <Setter Property="Margin" Value="6,0,0,4"/>
     </Style>
 
-    <!-- What is left of a countdown, filled on the face under the hands. -->
+    <!-- What is left of a countdown: a ring round the rim, apart from the hands. -->
     <Style Selector="Ellipse.ClockRemaining">
         <Setter Property="Fill" Value="{ThemeResource AccentFillColorDefault}"/>
-        <Setter Property="Opacity" Value="0.25"/>
+        <Setter Property="RingThickness" Value="4"/>
     </Style>
 
-    <!-- A countdown: its clock, and under it what starts, pauses and resets it. The start button gives way to the pause
-         button while it runs. -->
+    <!-- A countdown: its clock - or, standing at its whole length, a field to set that length in - and under it what
+         starts, pauses and resets it. The start button gives way to the pause button while it runs. -->
     <Style Selector="CountdownTimer">
         <Setter Property="Template">
             <Setter.Value>
@@ -124,7 +138,35 @@
                     <Grid RowDefinitions="*,Auto">
                         <Clock x:Name="PART_Clock"
                                ClockStyle="{TemplateBinding ClockStyle}"
-                               ShowSeconds="{TemplateBinding ShowSeconds}"/>
+                               ShowSeconds="{TemplateBinding ShowSeconds}"
+                               MarkedParts="{Binding ActivePart, ElementName=PART_Duration}"/>
+                        <!-- The length set in figures as large as the clock's room takes, with no frame: the part
+                             being typed is marked by its figures alone. Over a clock in figures it is not seen - the
+                             clock shows the length and lights the part being typed. -->
+                        <Viewbox x:Name="Length"
+                                 Margin="8,0"
+                                 Visibility="Collapsed">
+                            <DurationField x:Name="PART_Duration"
+                                           Value="{TemplateBinding Duration, Mode=TwoWay}"
+                                           Minimum="0:00:00"
+                                           Maximum="36500.00:00:00"
+                                           MinWidth="0"
+                                           MinHeight="0"
+                                           FieldSegment.Marking="Figures">
+                                <!-- No ring: the part lit in the accent shows where the keyboard is. -->
+                                <DurationField.FocusVisualStyle>
+                                    <Style Selector="FocusAdorner">
+                                        <Setter Property="Visibility" Value="Hidden"/>
+                                    </Style>
+                                </DurationField.FocusVisualStyle>
+                                <DurationField.Template>
+                                    <ControlTemplate TargetType="Control">
+                                        <FieldSegmentPanel x:Name="PART_Segments"
+                                                           VerticalAlignment="Center"/>
+                                    </ControlTemplate>
+                                </DurationField.Template>
+                            </DurationField>
+                        </Viewbox>
                         <StackPanel x:Name="Buttons"
                                     Grid.Row="1"
                                     Classes="ClockButtons">
@@ -149,6 +191,31 @@
         <PropertyTrigger Property="IsRunning" Value="true">
             <Setter TargetName="PART_Start" Property="Visibility" Value="Collapsed"/>
             <Setter TargetName="PART_Pause" Property="Visibility" Value="Visible"/>
+        </PropertyTrigger>
+        <MultiTrigger>
+            <MultiTrigger.Conditions>
+                <Condition Property="IsAtStart" Value="true"/>
+                <Condition Property="ShowDurationField" Value="true"/>
+                <Condition Property="IsAnalog" Value="true"/>
+            </MultiTrigger.Conditions>
+            <!-- Hidden, not collapsed: the clock keeps its room, so the field fills it and nothing moves on start. -->
+            <Setter TargetName="PART_Clock" Property="Visibility" Value="Hidden"/>
+            <Setter TargetName="Length" Property="Visibility" Value="Visible"/>
+        </MultiTrigger>
+        <MultiTrigger>
+            <MultiTrigger.Conditions>
+                <Condition Property="IsAtStart" Value="true"/>
+                <Condition Property="ShowDurationField" Value="true"/>
+                <Condition Property="IsAnalog" Value="false"/>
+            </MultiTrigger.Conditions>
+            <!-- Unseen, never larger than it is, and not in the way of a press: the clock picks the part pressed. -->
+            <Setter TargetName="Length" Property="Visibility" Value="Visible"/>
+            <Setter TargetName="Length" Property="Opacity" Value="0"/>
+            <Setter TargetName="Length" Property="StretchDirection" Value="DownOnly"/>
+            <Setter TargetName="Length" Property="IsHitTestVisible" Value="False"/>
+        </MultiTrigger>
+        <PropertyTrigger Property="ShowSeconds" Value="false">
+            <Setter TargetName="PART_Duration" Property="Parts" Value="Hours, Minutes"/>
         </PropertyTrigger>
         <PropertyTrigger Property="ShowButtons" Value="false">
             <Setter TargetName="Buttons" Property="Visibility" Value="Collapsed"/>
@@ -214,6 +281,7 @@
             <Setter TargetName="Buttons" Property="Visibility" Value="Collapsed"/>
         </PropertyTrigger>
         <PropertyTrigger Property="ShowLaps" Value="false">
+            <Setter TargetName="PART_Lap" Property="Visibility" Value="Collapsed"/>
             <Setter TargetName="PART_Laps" Property="Visibility" Value="Collapsed"/>
         </PropertyTrigger>
         <PropertyTrigger Property="HasLaps" Value="false">

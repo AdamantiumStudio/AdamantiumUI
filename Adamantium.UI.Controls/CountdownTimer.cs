@@ -6,14 +6,16 @@ using Adamantium.UI.Controls.Primitives;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Dispatcher;
+using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls;
 
 /// <summary>A countdown: a <see cref="Clock"/> that counts <see cref="Duration"/> down to zero once started - with hands
-/// going back round a face whose part still left is filled, or in figures, as <see cref="ClockStyle"/> says. Started,
-/// paused and reset by the buttons it shows (<see cref="ShowButtons"/>), its commands or its methods. It keeps counting
-/// while it is out of the tree - a countdown on a hidden page still ends on time. At zero it stops and runs
+/// going back round a face ringed at its rim as far as is still left of the whole, with no second hand; or in figures,
+/// as <see cref="ClockStyle"/> says. Standing at its whole length it shows a field to set the length in instead
+/// (<see cref="ShowDurationField"/>). Started, paused and reset by the buttons it shows (<see cref="ShowButtons"/>), its commands or its methods. It keeps
+/// counting while it is out of the tree - a countdown on a hidden page still ends on time. At zero it stops and runs
 /// <see cref="CompletedCommand"/>.</summary>
 public class CountdownTimer : Control
 {
@@ -28,12 +30,22 @@ public class CountdownTimer : Control
         typeof(bool), typeof(CountdownTimer), new PropertyMetadata(false));
 
     public static readonly AdamantiumProperty ClockStyleProperty = AdamantiumProperty.Register(nameof(ClockStyle),
-        typeof(ClockStyle), typeof(CountdownTimer), new PropertyMetadata(ClockStyle.Classic));
+        typeof(ClockStyle), typeof(CountdownTimer), new PropertyMetadata(ClockStyle.Classic,
+            (a, e) => ((CountdownTimer)a).IsAnalog = Clock.HasHands((ClockStyle)e.NewValue)));
+
+    public static readonly AdamantiumProperty IsAnalogProperty = AdamantiumProperty.RegisterReadOnly(nameof(IsAnalog),
+        typeof(bool), typeof(CountdownTimer), new PropertyMetadata(true));
 
     public static readonly AdamantiumProperty ShowSecondsProperty = AdamantiumProperty.Register(nameof(ShowSeconds),
         typeof(bool), typeof(CountdownTimer), new PropertyMetadata(true));
 
     public static readonly AdamantiumProperty ShowButtonsProperty = AdamantiumProperty.Register(nameof(ShowButtons),
+        typeof(bool), typeof(CountdownTimer), new PropertyMetadata(true));
+
+    public static readonly AdamantiumProperty ShowDurationFieldProperty = AdamantiumProperty.Register(
+        nameof(ShowDurationField), typeof(bool), typeof(CountdownTimer), new PropertyMetadata(true));
+
+    public static readonly AdamantiumProperty IsAtStartProperty = AdamantiumProperty.RegisterReadOnly(nameof(IsAtStart),
         typeof(bool), typeof(CountdownTimer), new PropertyMetadata(true));
 
     public static readonly AdamantiumProperty CompletedCommandProperty = AdamantiumProperty.Register(
@@ -44,6 +56,7 @@ public class CountdownTimer : Control
     private readonly ClockAction _reset;
     private DispatcherTimer _tick;
     private Clock _clock;
+    private DurationField _length;
     private TimeSpan _left = TimeSpan.FromMinutes(5);
     private string _handTo;
     private IUIComponent _handFrom;
@@ -52,13 +65,14 @@ public class CountdownTimer : Control
 
     public CountdownTimer()
     {
-        _start = new ClockAction(Start, () => !IsRunning && Left() > TimeSpan.Zero);
+        _start = new ClockAction(Start, () => !IsRunning &&
+            (Left() > TimeSpan.Zero || IsAtStart && _length?.ShownValue > TimeSpan.Zero));
         _pause = new ClockAction(Pause, () => IsRunning);
         _reset = new ClockAction(Reset, () => IsRunning || Left() != Allowed(Duration));
     }
 
     /// <summary>The length counted down; five minutes by default, below zero counted as zero and at most a hundred years.
-    /// Two-way by default. A new one while it stands starts it afresh; while it runs, the face fills its part of it.</summary>
+    /// Two-way by default. A new one while it stands starts it afresh; while it runs, the ring shows its part of it.</summary>
     public TimeSpan Duration
     {
         get => GetValue<TimeSpan>(DurationProperty);
@@ -87,7 +101,8 @@ public class CountdownTimer : Control
         set => SetValue(ClockStyleProperty, value);
     }
 
-    /// <summary>Shows the seconds; on by default.</summary>
+    /// <summary>Shows the seconds in figures, and counts down to the second rather than the minute; on by default.
+    /// A face with hands has no second hand.</summary>
     public bool ShowSeconds
     {
         get => GetValue<bool>(ShowSecondsProperty);
@@ -100,6 +115,29 @@ public class CountdownTimer : Control
     {
         get => GetValue<bool>(ShowButtonsProperty);
         set => SetValue(ShowButtonsProperty, value);
+    }
+
+    /// <summary>Whether its <see cref="ClockStyle"/> has hands rather than figures.</summary>
+    public bool IsAnalog
+    {
+        get => GetValue<bool>(IsAnalogProperty);
+        private set => SetValue(IsAnalogProperty, value);
+    }
+
+    /// <summary>Lets its <see cref="Duration"/> be set while it stands at its whole length (<see cref="IsAtStart"/>):
+    /// a face with hands gives way to the length in large figures, figures take what is typed into them, the part being
+    /// set lit in the accent; on by default. Off, the clock only shows it.</summary>
+    public bool ShowDurationField
+    {
+        get => GetValue<bool>(ShowDurationFieldProperty);
+        set => SetValue(ShowDurationFieldProperty, value);
+    }
+
+    /// <summary>Whether it stands at its whole <see cref="Duration"/>: not started yet, or reset.</summary>
+    public bool IsAtStart
+    {
+        get => GetValue<bool>(IsAtStartProperty);
+        private set => SetValue(IsAtStartProperty, value);
     }
 
     /// <summary>What runs when it reaches zero.</summary>
@@ -126,6 +164,7 @@ public class CountdownTimer : Control
 
     public void Start()
     {
+        _length?.FinishTyping();
         if (IsRunning || Left() <= TimeSpan.Zero)
         {
             return;
@@ -167,6 +206,8 @@ public class CountdownTimer : Control
     {
         base.OnApplyTemplate();
         _clock = GetTemplateChild("PART_Clock") as Clock;
+        _length = GetTemplateChild("PART_Duration") as DurationField;
+        if (_length != null) _length.PropertyChanged += OnLengthChanged;
         if (GetTemplateChild("PART_Start") is ButtonBase start) start.Command = _start;
         if (GetTemplateChild("PART_Pause") is ButtonBase pause) pause.Command = _pause;
         if (GetTemplateChild("PART_Reset") is ButtonBase reset) reset.Command = _reset;
@@ -176,7 +217,46 @@ public class CountdownTimer : Control
     public override void OnRemoveTemplate()
     {
         base.OnRemoveTemplate();
+        if (_length != null) _length.PropertyChanged -= OnLengthChanged;
+        _length = null;
         _clock = null;
+    }
+
+    protected override void OnPreviewPointerPressed(PointerPressedEventArgs e)
+    {
+        base.OnPreviewPointerPressed(e);
+        if (e.ChangedButton != MouseButtons.Left || !IsAtStart || !ShowDurationField || IsAnalog || _clock == null ||
+            _length == null)
+        {
+            return;
+        }
+
+        var at = e.GetPosition(_clock);
+        if (at.X < 0 || at.Y < 0 || at.X > _clock.RenderSize.Width || at.Y > _clock.RenderSize.Height)
+        {
+            return;
+        }
+
+        var part = _clock.PartAt(e);
+        _length.Focus();
+        _length.ActivatePart(part);
+        e.Handled = true;
+    }
+
+    private void OnLengthChanged(object sender, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (e.Property != DurationField.ShownValueProperty)
+        {
+            return;
+        }
+
+        if (IsAtStart && _length.ShownValue is { } shown)
+        {
+            var typed = Allowed(shown);
+            _clock?.Count(typed, -1, null, typed);
+        }
+
+        _start.RaiseCanExecuteChanged();
     }
 
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
@@ -242,7 +322,7 @@ public class CountdownTimer : Control
         _handTo = _handFrom != null ? to : null;
     }
 
-    private static readonly string[] Buttons = ["PART_Start", "PART_Pause", "PART_Reset"];
+    private static readonly string[] Buttons = ["PART_Start", "PART_Pause", "PART_Reset", "PART_Duration"];
 
     private void HandOver()
     {
@@ -267,6 +347,7 @@ public class CountdownTimer : Control
 
         var left = Left();
         Remaining = TimeSpan.FromSeconds(Math.Ceiling(left.TotalSeconds));
+        IsAtStart = !IsRunning && _left == Allowed(Duration);
         _clock?.Count(_left, -1, _since, Allowed(Duration));
         _tick?.Stop();
         if (IsRunning && (LoopSignal.IsClaimed || System.Threading.SynchronizationContext.Current != null))

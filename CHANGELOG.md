@@ -15,6 +15,19 @@ All packages share one version.
 - `ColorPalette.ColorPlaces` and `HasRecentColors`, and `ColorPaletteSwatch.SelectedColor` and `IsSelected`: the swatch
   of the palette's selected color is ringed, in the grid and in the recent row, and the recent row with its title is
   shown only once a color has been applied through "More colors".
+- `DropDownButton`, `SplitButton` and `ToggleSplitButton`: buttons that drop a list of their items, as `DropDown`
+  does - `ItemsControl`s, the items written in place as `DropDownButtonItem`s or made for `ItemsSource` and shown by
+  `ItemTemplate` - but a picked item is an action, not a value kept: it runs its own command, then `ItemCommand` with
+  the item, and raises `ItemClick`; a row with no command of its own that `ItemCommand` cannot run for is drawn
+  disabled and cannot be picked (`DropDownButtonItem.IsAvailable`) - its own `IsEnabled` is left to its author. Rows
+  written in place take the button's data. A disabled button closes its list and does not open it. A press on the
+  button, Enter, Space, Alt+Down and F4 open the list, the arrows walk it past disabled rows and Enter picks; Escape,
+  Alt+Up, a pick and a press elsewhere close it. A split button's body (`Command`, `Click`) is pressed by Enter and
+  Space, its arrow (`PART_DropDownArea`) drops the list, each half lit on its own (`IsPointerOverDropDown`); a body
+  whose command cannot run is disabled alone (`IsBodyEnabled`) and the list stays reachable. A toggle split button's
+  body stays down (`IsChecked`, two-way) and shows what a routed command's target answers. Automation: a button that
+  expands, a split button that is also invoked, a toggle split button that also toggles; the rows, while the list is
+  open, are menu items. Styles in Fluent, Graphite and macOS; the sandbox's "Buttons" tab has all three.
 - A key binding runs from anywhere in its window, not only while the focus is in its element. The whole way up from the
   focus has the key first - the window's default and cancel buttons and the Tab and arrow navigation too - then the
   binding nearest to the focus whose element is shown and enabled; Esc clears the focus only when no binding takes it.
@@ -89,23 +102,82 @@ All packages share one version.
   given, its face round in any. Its face, `ClockFace`, is the time picker's dial too. Automation reads the time it
   shows. It runs in the designer's live preview too.
 - `CountdownTimer` and `StopwatchTimer`: a countdown of a `Duration` and a stopwatch, on a `Clock` in any of its
-  styles - with hands, which a countdown turns back and over a face whose part still left is filled, or in figures
-  counting hours past a day, a digit more past a hundred. A countdown rounds up - to the minute when it shows no
-  seconds - and its colon blinks with its figures. Started, paused and reset (and lapped) by the buttons they show
-  (`ShowButtons`; the keyboard passes to the button that takes the pressed one's place), by their commands
-  (`StartCommand`, `PauseCommand`, `ResetCommand`, `LapCommand`) or their methods; `Remaining` and `Elapsed` are told
-  every second while shown and `IsRunning` as it changes. A countdown of a `Duration` from zero to a hundred years keeps
-  counting off the tree - one on a hidden page still ends on time, woken at its end (or once a day) rather than every
-  second, and tells `Remaining` again once shown - stops at
-  zero, raises `Completed` and runs `CompletedCommand`, a pause at zero included; one discarded stops. A stopwatch's
-  `Laps` (`StopwatchLap`: number, lap time and total, as text to the hundredth too, in the language of the moment) are
-  listed under it, the latest first, once there are any (`HasLaps`) and while `ShowLaps`. Automation reads what is left
-  and what has passed in whole seconds. The sandbox's "Date and time" tab has both.
+  styles - with hands, which a countdown turns back round a face ringed at its rim as far as is still left of the whole
+  (with no second hand), or in figures counting hours past a day, a digit more past a hundred. Standing at its whole
+  length (`IsAtStart` - not started, or reset) a countdown's `Duration` is set in place (`ShowDurationField`, on by
+  default): a face with hands gives way to a frameless `DurationField` in figures as large as the room takes, the
+  part being typed marked by its figures alone (`FieldSegment.Marking`); figures stay the clock's own, a press on them
+  picks the part pressed, they take what is typed into them as it is typed and light the part being set
+  (`Clock.MarkedParts`, `DurationField.ActivePart` and `ShownValue`, `CountdownTimer.IsAnalog`). Without seconds shown
+  there are none to type; a length typed from nothing lets it start. A countdown rounds up - to the minute when it shows no seconds - and its
+  colon blinks with its figures. Started, paused
+  and reset (and lapped) by the buttons they show (`ShowButtons`; the keyboard passes to the button that takes the
+  pressed one's place), by their commands (`StartCommand`, `PauseCommand`, `ResetCommand`, `LapCommand`) or their
+  methods; `Remaining` and `Elapsed` are told every second while shown and `IsRunning` as it changes. A countdown of a
+  `Duration` from zero to a hundred years keeps counting off the tree - one on a hidden page still ends on time, woken
+  at its end (or once a day) rather than every second, and tells `Remaining` again once shown - stops at zero, raises
+  `Completed` and runs `CompletedCommand`, a pause at zero included; one discarded stops. A stopwatch's `Laps`
+  (`StopwatchLap`: number, lap time and total, as text to the hundredth too, in the language of the moment) are listed
+  under it, the latest first, once there are any (`HasLaps`) and while `ShowLaps`, which shows the lap button too.
+  Automation reads what is left and what has passed in whole seconds. The sandbox's "Date and time" tab has both.
 - `DatePicker`, `TimePicker` and `DateTimePicker`: the same field with a button at its end (Alt+Down and F4 too) that
   opens a calendar, the times of a day, or both side by side. A day picked keeps the time; a time picked keeps the day
   and closes. The times come as a list a `TimeInterval` apart (15 minutes by default), as columns of hours, minutes and
   AM/PM, or on a clock face whose hand is dragged round, hours then minutes (`PopupStyle`). `DisplayDateStart`/`End`
   bound the calendar; Escape closes. Automation sees a combo box that expands.
+- `DurationField`: a length of time - `TimeSpan` - entered part by part, the days, hours, minutes, seconds and
+  milliseconds that `Parts` names (hours, minutes and seconds by default). The largest part shown counts everything above
+  it - thirty hours with no days shown is 30 - and the others step round within themselves; parts not shown keep what
+  the value had. A minus or a plus anywhere sets the sign while `Minimum` lets it go below zero; `Value` is held between
+  `Minimum` and `Maximum`, whoever writes it, and is null until every part is entered. Days are followed by the theme's
+  word for them; milliseconds by the decimal separator after seconds, by the time separator otherwise. Its
+  parts (`DurationFieldSegment`) and those of `DateTimeField` share `FieldSegment`, their template and their automation
+  peer (`FieldSegmentAutomationPeer`, which replaces `DateTimeFieldSegmentAutomationPeer`); automation sees an edit whose
+  value is the invariant `c` form. In the Fluent, Graphite and macOS themes as their text field.
+- `DataGridDateTimeColumn` and `DataGridDurationColumn`: dates, times or both (`DateTime`, `DateTimeOffset`,
+  `DateOnly`, `TimeOnly`) and lengths of time in a table, drawn as text in the column's `Format` (or `Parts`) in the
+  application's language - left unset, the format is what the column holds: the short date for a `DateOnly`, the short
+  time for a `TimeOnly`, both otherwise - edited in the picker for those parts - a calendar for a date, the times of a day for a time,
+  both for both - or in a `DurationField`; a character typed on a cell opens the field with it, Enter keeps a part being
+  typed, and an emptied field empties a property that can be empty. What is picked goes back as the type the record
+  holds, the record's own offset or kind kept - in a cell, in the strip for a new record and in an inspector alike: the
+  write through the property turns the picker's `DateTime` into a `DateOnly`, a `TimeOnly` or a `DateTimeOffset`.
+  `DataGridColumn.TextOf` is the value as a column reads it - what a search looks in, what the filter lists and
+  compares, what a group is named by (`DataGridGroupHeader.KeyText`) and what a copy carries - and `ValueOfText` the way
+  back for a paste and for a cell's automation, keeping what the text does not say from the value it replaces (the time
+  under a short date) - text the column cannot read is refused (`AdamantiumProperty.UnsetValue`), not written; both new columns read their values as they draw them - a length's days with the theme's word for
+  them (`DataGridDurationColumn.DayUnit`, `DurationProperty.DayUnit`) - automation reads a cell of theirs the same way
+  (`DrawsItsText`); a new language translates what a column filter ticked and the values its equal, unequal, greater
+  and less conditions compare with - text that reads back as itself, other conditions as typed - groups keep their
+  place across it (keyed by what the column shows of the value, not by words of the language, `KeyOf`) and the cells
+  redraw in it; a
+  theme's new word for days renames what was ticked by the old, and a new `Format` or `Parts` keeps the rows ticked; and
+  a filter's "greater than" and "less than" compare lengths and dates rather than text, a date by the parts its column
+  shows (`DataGridColumnFilter.Passes` takes how the column reads what was typed, `DataGridColumn.ComparedAs`). The
+  new-row strip of an empty table edits in the picker for what its source's rows declare. `EditorIsEmpty` says an editor holds nothing; emptied over a member that cannot be
+  empty, the cell keeps what it held. A picker's drop-down closed by a click away from the table ends the edit. A date,
+  time or length field too narrow for its parts - in a cell, beside a picker's button - cuts them at its edges and
+  slides them along to the part being typed, back to the start once left (`FieldSegmentPanel`, the themes'
+  `PART_Segments`); a picker's parts no longer run under its button.
+- `DateTimeProperty` and `DurationProperty`: the same in a `PropertyGrid`, the picker or the length field live in the
+  row, a read-only row in the line's format; moments at two offsets, or clocks of two kinds, are two values, and a line of objects that disagree
+  says so in place of the parts (`DateTimeField.Placeholder`, `DurationField.Placeholder`). A field emptied writes its
+  nothing on Enter or once it is left, not on the key that emptied a part. `PropertyDefinition.Meet` tells a line the
+  type a row holds before the row asks for its editor. Automation reads a date or a length line in the line's own form
+  (`AutomationTextOf`), and text written to one by automation is read in the line's own form first, then as ISO
+  (`2026-10-05`, `14:30`, `2026-10-05T14:30` as the clock typed) or in a form of the language - with or without its
+  year, with a year of two digits - keeping each part the text does not say - year, month, day, the half of the day,
+  seconds - from the value the objects hold (`PropertyDefinition.TryConvert` with the current value), a time alone with
+  nothing held being today's; text in no such form is refused rather than guessed at. Text naming its zone
+  (`2026-10-05T14:30:00Z`, `+03:00`) is a moment, which each object takes in its own offset or kind. A `DefaultValue`
+  written as text is read in no language (`PropertyDefinition.TryReadDefault`), and a reset writes it whole. A moment
+  for a default - a `DateTimeOffset`, or a `DateTime` of a kind - is met by the same moment in any offset or kind, a
+  clock by the same clock; objects that each hold the default in their own offset or kind are at it, and the row then
+  shows the default and an edit is made in its frame (`SameAsDefault`, `IsMetInManyWays`). A day picked in a calendar is a day, not a moment in this machine's zone, and one picked over a
+  `DateTimeOffset` never set is in this machine's offset. `DateTimeProperty.Format` left unset is read off what the line
+  holds, as the column's is. The inspector built from a type picks them by the property's type: the short date for
+  `DateOnly`, the short time for `TimeOnly`, both for `DateTime` and `DateTimeOffset`, a length field for `TimeSpan`. The sandbox's "Date and time"
+  tab has length fields, a table and an inspector.
 - `Inline.FontFamily`: a run or a span sets the family of its own text, as WPF's `TextElement` does; `ClearOverrides`
   takes it off.
 - `DragDropEvents.DragCompleted`: the source of a drag hears how it ended as an event on itself, before its
@@ -1378,6 +1450,13 @@ All packages share one version.
   whose flyout is open is left collapsed while the row around it changes, and decided again when the flyout closes. A
   header drawn by a `HeaderTemplate` is handed to it as written.
 - A gallery shows its scroll arrows only when it has rows out of sight; the chevron to the whole set stays.
+- `DateTimeFieldSegment` is a `FieldSegment`, which now holds its `Text`, `IsEmpty`, `IsActive` and `Placeholder`; its
+  automation peer is `FieldSegmentAutomationPeer`. Enter in a `DateTimeField` (and a picker) takes the part being typed
+  before whoever answers Enter reads the value. A picker gives the keyboard back to its field before its drop-down closes.
+- `PropertyRow.ValueType` is the property's declared type where it says more than `object`, so an `int?` holding a
+  number can be emptied - of several objects, one whose property cannot be empty decides - and a row whose empty editor
+  was refused shows again what the objects hold. A `bool?` row toggles for automation too, and reads as indeterminate
+  while it holds nothing.
 - A ribbon group's columns start at the top of the band, as Office's, their commands `RibbonGroupPanel.RowSpacing`
   (4) apart: Word's two rows of font commands stand at the top, not touching. The whole block was centered in the band,
   its commands touching.
@@ -1661,6 +1740,8 @@ All packages share one version.
 
 ### Removed
 
+- `DateTimeFieldSegmentAutomationPeer`: `FieldSegmentAutomationPeer` is the peer of every part of a field, a date's
+  and a length's alike.
 - Text drawn into a target of its own and laid over the element (the engine's `FontRenderer.UseDirectTextDraw` off):
   nothing turned it on. `TextRenderComponent` draws the glyphs straight into the pass and is no image any more; its
   `Padding` and `UpdateText` went with that path.
@@ -1702,6 +1783,11 @@ All packages share one version.
   went where the unzoomed one has that point, as only a `RenderTransform` was undone.
 - Windows spelling no longer calls words joined by a math symbol wrong as one ("Shift+Tab" offered as "Shift Tab"):
   each side of the symbol is checked as the word it is.
+- A two-way `{TemplateBinding}` wrote nothing (null) into a property that cannot hold it - an emptied length field over
+  a `TimeSpan` - and the slot then read as a null value type; it is refused as a `{Binding}` refuses it, the field
+  given back what is held.
+- A `Viewbox` set its scaled child at its top-left corner, so content scaled to fit one side hung at the top or left
+  of the room it did not fill; it is centered in it, as a WPF `Viewbox`'s is.
 - Escape on a menu dropped by a click closes the menu: the button's hover tip, opened after the press, was the
   innermost popup and took the key.
 - A ribbon tab with a key tip of its own no longer wears a second badge among its commands.
@@ -1709,6 +1795,17 @@ All packages share one version.
   part as it had been, so a group asked for a roomier variant from a small one answered the small width, the band
   flipped between two layouts on every pass and the window never went idle. A size set on a command now has its
   template measured afresh.
+- A `SegmentedControl`'s captions selected as text, with the text cursor over them: a segment is pressed, so its
+  caption no longer selects, as a button's.
+- An empty edit of a property that cannot be empty is refused, and says so - by an inspector row, a table's commit or
+  paste, the strip for a new record, an undo or a cell's automation alike: the write landed nowhere, yet was reported as
+  written, and the row stood blank beside an object that still held its value. Now the write reports the refusal and
+  the row or cell shows what is held; a property that can be empty - an `int?`, a `DateOnly?` - still takes it.
+- An `Ellipse`'s `StopAngle` is the sweep it is drawn with, yet it was held to no less than `StartAngle` and the start to
+  no more than it: an arc starting at 180 asked to sweep 90 swept 180. Each is now held on its own - the sweep to one
+  turn, the start to no less than zero. One that sweeps nothing draws nothing.
+- A ring (`Ellipse.RingThickness`) drawn by its own tessellated body turned solid once its angles or size changed, and
+  one swept through nothing was cut from nothing.
 - A cursor that changes under a pointer standing still - a style turning it into a tool's - shows at once on Windows:
   set from the UI loop it waited for the next move, `SetCursor` showing only from the window's own thread, which is now
   asked to answer `WM_SETCURSOR` again.

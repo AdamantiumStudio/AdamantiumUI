@@ -54,14 +54,17 @@ public class Viewbox : Decorator
         var natural = child.DesiredSize;
         var (sx, sy) = ComputeScale(finalSize, natural);
 
-        // Lay the child out at its natural size at the origin, and scale it there (top-left origin) via the render transform.
+        // Lay the child out at its natural size and scale it about its top-left via the render transform, placed so the
+        // scaled child is centered in the slot - as WPF centers a Viewbox's content in room it does not fill.
         if (!ReferenceEquals(child.RenderTransform, _scale)) child.RenderTransform = _scale;
         child.RenderTransformOrigin = default;   // (0,0): scale about the top-left, so the child grows into the slot
         _scale.ScaleX = sx;
         _scale.ScaleY = sy;
-        child.Arrange(new Rect(new Size(natural.Width, natural.Height)));
+        var x = (finalSize.Width - natural.Width * sx) / 2;
+        var y = (finalSize.Height - natural.Height * sy) / 2;
+        child.Arrange(new Rect(x, y, natural.Width, natural.Height));
 
-        return new Size(natural.Width * sx, natural.Height * sy);
+        return finalSize;
     }
 
     // The per-axis scale that maps the content size into the available size for the current Stretch, then clamped by

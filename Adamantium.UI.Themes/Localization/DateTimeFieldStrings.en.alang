@@ -17,6 +17,10 @@
     <Phrase Key="PeriodPlaceholder" Text="AM"/>
     <Phrase Key="EraPlaceholder" Text="era"/>
     <Phrase Key="DayOfWeekPlaceholder" Text="weekday"/>
+    <Phrase Key="Days" Text="Days"/>
+    <Phrase Key="Millisecond" Text="Millisecond"/>
+    <Phrase Key="MillisecondPlaceholder" Text="ms"/>
+    <Phrase Key="DayUnit" Text="d"/>
     <Phrase Key="Choose" Text="Choose"/>
     <Phrase Key="Accept" Text="Done"/>
     <Phrase Key="Cancel" Text="Cancel"/>

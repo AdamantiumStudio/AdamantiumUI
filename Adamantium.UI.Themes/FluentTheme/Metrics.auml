@@ -127,6 +127,9 @@
     <sys:Double x:Key="RibbonMenuItemHeight">48</sys:Double>
     <Thickness x:Key="RibbonBackstagePadding">20 0</Thickness>
     <!-- A split button's two halves: the radius is the theme's, cut in half down the seam. -->
+    <CornerRadius x:Key="SplitButtonLeadingRadius">4 0 0 4</CornerRadius>
+    <CornerRadius x:Key="SplitButtonTrailingRadius">0 4 4 0</CornerRadius>
+    <Thickness x:Key="SplitButtonArrowPadding">8 0</Thickness>
     <CornerRadius x:Key="RibbonSplitLeadingRadius">4 0 0 4</CornerRadius>
     <CornerRadius x:Key="RibbonSplitTrailingRadius">0 4 4 0</CornerRadius>
     <Thickness x:Key="RibbonSplitDropDownPadding">3 2</Thickness>

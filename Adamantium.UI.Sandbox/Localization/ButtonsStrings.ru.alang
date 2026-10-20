@@ -48,4 +48,20 @@
     <Phrase Key="Critical" Text="Критичный — бросить всё"/>
     <Phrase Key="PriorityIs" Select="priority" Low="Приоритет: низкий" Normal="Приоритет: обычный" High="Приоритет: высокий" Critical="Приоритет: критичный"/>
     <Phrase Key="Color" Select="color" None="Цвет не выбран" Other="Цвет: {color}"/>
+
+    <Phrase Key="ActionButtons" Text="Кнопки с выпадающим списком"/>
+    <Phrase Key="Export" Text="Экспорт"/>
+    <Phrase Key="PasteName" Text="Вставить"/>
+    <Phrase Key="BulletsName" Text="Маркеры"/>
+    <Phrase Key="Pdf" Text="В PDF"/>
+    <Phrase Key="Png" Text="В PNG"/>
+    <Phrase Key="Svg" Text="В SVG"/>
+    <Phrase Key="PasteKeep" Text="Сохранить оформление"/>
+    <Phrase Key="PasteText" Text="Только текст"/>
+    <Phrase Key="BulletDisc" Text="Кружки"/>
+    <Phrase Key="BulletNumber" Text="Номера"/>
+    <Phrase Key="LastAction" Select="action" None="Пока ничего" Pdf="Выгружено в PDF" Png="Выгружено в PNG"
+            Svg="Выгружено в SVG" Paste="Вставлено" PasteKeep="Вставлено с оформлением" PasteText="Вставлено как текст"
+            BulletDiscOn="Включены маркеры-кружки" BulletNumberOn="Включён нумерованный список"
+            BulletsOff="Маркеры выключены"/>
 </Language>

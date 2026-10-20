@@ -8,6 +8,7 @@ using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.RoutedEvents;
+using Adamantium.UI.Core.Templates;
 
 namespace Adamantium.UI.Controls.DataGrid;
 
@@ -240,19 +241,47 @@ public class DataGridCell : ContentControl
         if (d is not DataGridCell cell || cell.Column == null) return;
 
         cell.DetachEditor();
+        cell._editingColumn = null;
+        cell._editingTemplate = null;
         cell.ContentTemplate = cell.IsEditing
-            ? cell.Column.EditingTemplate ?? cell.Column.DisplayTemplate
+            ? cell.EditingTemplateOf(cell.Column, cell.Item) ?? cell.Column.DisplayTemplate
             : cell.IsPlaceholder ? null
             : cell.Column.DisplayTemplate;
         cell._pendingEditorFocus = cell.IsEditing;
         cell.ClipToBounds = cell.IsEditing;
     }
 
+    private DataGridColumn _editingColumn;
+    private object _editingItem;
+    private DataTemplate _editingTemplate;
+
+    private DataTemplate EditingTemplateOf(DataGridColumn column, object item)
+    {
+        if (!ReferenceEquals(column, _editingColumn) || !ReferenceEquals(item, _editingItem) || _editingTemplate == null)
+        {
+            _editingColumn = column;
+            _editingItem = item;
+            _editingTemplate = column?.EditingTemplateFor(item);
+        }
+
+        return _editingTemplate;
+    }
+
     /// <summary>What the editor currently holds, for the commit to write. Null when nothing has been typed, in which case
     /// the commit falls back to the value the cell already showed.</summary>
     public object EditedValue { get; set; }
 
-    internal object ValueForCommit() => EditedValue ?? Column?.ReadEditor(_editor) ?? Content;
+    internal object ValueForCommit()
+    {
+        if (EditedValue != null && !ReferenceEquals(EditedValue, _pendingText)) return EditedValue;
+        if (_pendingText is { Length: > 0 } seed && Column is { } reader) return reader.ValueOfSeed(seed, Current());
+
+        return Column is { } column && column.EditorIsEmpty(_editor)
+            ? column.CanBeEmpty(Item) ? null : Current()
+            : Column?.ReadEditor(_editor) ?? Current();
+    }
+
+    private object Current() => Item != null && Column is { Binding: { } binding } column ? column.Read(binding, Item) : Content;
 
     /// <summary>What the user typed to OPEN this editor. It is the edited VALUE from the moment it is typed - the
     /// editor is only the view of it, and it is built by the template swap this edit asks for and arrives a layout pass
@@ -288,9 +317,16 @@ public class DataGridCell : ContentControl
 
         Column?.PrepareEditor(_editor, Item, Content);
 
+        // ...and the seed stops being the answer the moment the editor holds it. EditedValue outranks the editor on a
+        // commit - that is how a template column writes back - so leaving the first character there made it the WHOLE
+        // value: five keys in, one character saved. Cleared BEFORE the editor is given the seed, so a template that
+        // writes EditedValue as its text changes keeps what it wrote.
+        var seed = _pendingText;
+        if (ReferenceEquals(EditedValue, seed)) EditedValue = null;
+
         // ...and what the user typed REPLACES what the editor was prepared with: typing over a cell is how a value is
         // replaced everywhere else, and an editor that kept the old value and appended would spell nonsense.
-        if (PendingText is { Length: > 0 } seed && _editor is Text.TextBox typed)
+        if (seed is { Length: > 0 } && _editor is Text.TextBox typed)
         {
             typed.Text = seed;
 
@@ -300,32 +336,38 @@ public class DataGridCell : ContentControl
             typed.SelectionLength = 0;
             typed.SelectionStart = seed.Length;
             typed.CaretIndex = seed.Length;
-
-            // ...and the seed stops being the answer the moment the editor holds it. EditedValue outranks the editor on
-            // a commit - that is how a template column writes back - so leaving the first character there made it the
-            // WHOLE value: five keys in, one character saved.
-            EditedValue = null;
         }
 
-        PendingText = null;
+        var takesTyping = _editor is Text.TextBox or DateTimeField or DurationField;
+        var typedIntoField = _editor is DateTimeField or DurationField ? seed : null;
+        _pendingText = !takesTyping && seed is { Length: > 0 } && Column?.ReadEditor(_editor) == null ? seed : null;
         if (_editor is TextBox box) box.EnterPressed += OnEditorEnter;
 
         // A drop-down COMMITS ON CHOICE. Its list is a popup: opening it takes the focus off the editor, so the
         // lost-focus rule alone ended the edit before anything was chosen and wrote back the value that was already
         // there - the cell looked as if the choice had been ignored.
         if (_editor is DropDown drop) drop.SelectionChanged += OnEditorChosen;
+        if (_editor is DateTimePickerBase picker) picker.PropertyChanged += OnPickerPropertyChanged;
 
         _editor.LostFocus += OnEditorLostFocus;
         _editor.Focus();
+
+        if (typedIntoField is { Length: > 0 })
+        {
+            if (_editor is DateTimeField dates) dates.TypeFromTheStart(typedIntoField);
+            else if (_editor is DurationField lengths) lengths.TypeFromTheStart(typedIntoField);
+        }
     }
 
     private void DetachEditor()
     {
         EditedValue = null;
+        _pendingText = null;
         if (_editor == null) return;
 
         if (_editor is TextBox box) box.EnterPressed -= OnEditorEnter;
         if (_editor is DropDown drop) drop.SelectionChanged -= OnEditorChosen;
+        if (_editor is DateTimePickerBase picker) picker.PropertyChanged -= OnPickerPropertyChanged;
         _editor.LostFocus -= OnEditorLostFocus;
         _editor = null;
     }
@@ -371,8 +413,15 @@ public class DataGridCell : ContentControl
     {
         // ...and while that list is OPEN the focus is inside it, not gone from the cell: ending the edit here would
         // close the very list the user is choosing from.
-        if (_editor is DropDown { IsDropDownOpen: true }) return;
+        if (_editor is DropDown { IsDropDownOpen: true } or DateTimePickerBase { IsDropDownOpen: true }) return;
         if (IsEditing) OwningGrid()?.FinishEditOnFocusLoss();
+    }
+
+    private void OnPickerPropertyChanged(object sender, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (e.Property == DateTimePickerBase.IsDropDownOpenProperty && e.NewValue is false
+            && sender is DateTimePickerBase { IsFocused: false } && IsEditing)
+            OwningGrid()?.FinishEditOnFocusLoss();
     }
 
     private TreeDataGrid OwningGrid()
@@ -429,7 +478,7 @@ public class DataGridCell : ContentControl
         Item = item;
 
         // Keep the editing template, since this runs on every measure pass; a placeholder row shows nothing until opened.
-        ContentTemplate = IsEditing ? column?.EditingTemplate ?? column?.DisplayTemplate
+        ContentTemplate = IsEditing ? EditingTemplateOf(column, item) ?? column?.DisplayTemplate
             : IsPlaceholder ? null
             : column?.DisplayTemplate;
 

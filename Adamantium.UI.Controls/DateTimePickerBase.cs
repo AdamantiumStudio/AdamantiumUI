@@ -142,11 +142,12 @@ public abstract class DateTimePickerBase : DateTimeField
         _flyout = null;
     }
 
-    /// <summary>Closes the choice and gives the keyboard back to the field.</summary>
+    /// <summary>Gives the keyboard back to the field and closes the choice - in that order, so the choice is never seen
+    /// closed with the keyboard elsewhere unless it was closed from elsewhere.</summary>
     protected void CloseDropDown()
     {
-        SetCurrentValue(IsDropDownOpenProperty, false);
         Focus();
+        SetCurrentValue(IsDropDownOpenProperty, false);
     }
 
     protected override void OnKeyDown(KeyEventArgs e)
@@ -169,6 +170,7 @@ public abstract class DateTimePickerBase : DateTimeField
     {
         if (IsDropDownOpen && !IsOnButton(e))
         {
+            Focus();
             SetCurrentValue(IsDropDownOpenProperty, false);
         }
 
@@ -304,11 +306,7 @@ public abstract class DateTimePickerBase : DateTimeField
     private void OnButtonClick(object sender, RoutedEventArgs e)
     {
         _openedByKeyboard = false;
-        if (!IsDropDownOpen)
-        {
-            Focus();
-        }
-
+        Focus();
         SetCurrentValue(IsDropDownOpenProperty, !IsDropDownOpen);
     }
 

@@ -9,7 +9,7 @@
         <Setter Property="TextBlock.IsTextSelectionEnabled" Value="False"/>
     </Style>
 
-    <Style Selector="DropDown, DropDownItem, ListBoxItem, TreeViewItem, MenuItem, TitleBar, FlipTile, CanvasNode">
+    <Style Selector="DropDown, DropDownItem, ListBoxItem, TreeViewItem, MenuItem, TitleBar, FlipTile, CanvasNode, SegmentedControlItem">
         <Setter Property="TextBlock.IsTextSelectionEnabled" Value="False"/>
     </Style>
 
@@ -25,11 +25,15 @@
         <Setter Property="TextBlock.IsTextSelectionEnabled" Value="False"/>
     </Style>
 
-    <Style Selector="RibbonQuickAccessMenuItem, DataGridNewRowPresenter, Calendar, DateTimeField, DatePicker, TimePicker, DateTimePicker, Clock, ClockFace">
+    <Style Selector="RibbonQuickAccessMenuItem, DataGridNewRowPresenter, Calendar, DateTimeField, DurationField, DatePicker, TimePicker, DateTimePicker, Clock, ClockFace">
         <Setter Property="TextBlock.IsTextSelectionEnabled" Value="False"/>
     </Style>
 
     <Style Selector="ScrollBar, Slider, RangeSlider, NumericUpDown, Thumb, GridSplitter, PaneSplitter">
+        <Setter Property="TextBlock.IsTextSelectionEnabled" Value="False"/>
+    </Style>
+
+    <Style Selector="DropDownButton, SplitButton, ToggleSplitButton, DropDownButtonItem">
         <Setter Property="TextBlock.IsTextSelectionEnabled" Value="False"/>
     </Style>
 </StyleSet>

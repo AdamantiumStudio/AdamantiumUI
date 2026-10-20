@@ -24,7 +24,7 @@ namespace Adamantium.UI.Controls;
 /// <see cref="Value"/> is null until every part is entered; a day past the month's end is its last day, and the day typed
 /// comes back when the month has it. Stepping a part never moves another - the era included. A value the calendar cannot
 /// count is shown at the nearest day it can, and left as it is.</summary>
-public class DateTimeField : Control
+public class DateTimeField : Control, ISegmentHost
 {
     public static readonly AdamantiumProperty ValueProperty = AdamantiumProperty.Register(nameof(Value),
         typeof(DateTime?), typeof(DateTimeField),
@@ -41,6 +41,9 @@ public class DateTimeField : Control
         nameof(CalendarSystem), typeof(CalendarSystem), typeof(DateTimeField),
         new PropertyMetadata(CalendarSystem.Language, OnPatternChanged));
 
+    public static readonly AdamantiumProperty PlaceholderProperty = AdamantiumProperty.Register(nameof(Placeholder),
+        typeof(string), typeof(DateTimeField), new PropertyMetadata(null, (a, _) => ((DateTimeField)a).Show()));
+
     private const InputModifiers Chords = InputModifiers.LeftControl | InputModifiers.RightControl |
                                           InputModifiers.LeftAlt | InputModifiers.RightAlt;
 
@@ -52,6 +55,7 @@ public class DateTimeField : Control
     private readonly List<DateTimeFieldSegment> _segments = new();
     private readonly int?[] _values = new int?[Kinds];
     private Panel _host;
+    private TextBlock _prompt;
     private CultureInfo _culture;
     private CultureInfo _cultureAsked;
     private CalendarSystem _systemAsked;
@@ -106,6 +110,14 @@ public class DateTimeField : Control
         set => SetValue(CalendarSystemProperty, value);
     }
 
+    /// <summary>What the field says in place of its parts while nothing is entered and the keyboard is elsewhere - what
+    /// an inspector line of objects that disagree says. Unset shows the parts' own placeholders.</summary>
+    public string Placeholder
+    {
+        get => GetValue<string>(PlaceholderProperty);
+        set => SetValue(PlaceholderProperty, value);
+    }
+
     /// <summary>Its parts, in the order shown.</summary>
     public IReadOnlyList<DateTimeFieldSegment> Segments => _segments;
 
@@ -127,6 +139,7 @@ public class DateTimeField : Control
         base.OnRemoveTemplate();
         _host?.Children.Clear();
         _host = null;
+        _prompt = null;
         _segments.Clear();
         _active = -1;
         _typed = string.Empty;
@@ -183,6 +196,21 @@ public class DateTimeField : Control
     }
 
     internal int? ValueOf(DateTimeSegmentKind kind) => _values[(int)kind];
+
+    (long Minimum, long Maximum) ISegmentHost.RangeOf(FieldSegment segment) => RangeOf(((DateTimeFieldSegment)segment).Kind);
+
+    long? ISegmentHost.ValueOf(FieldSegment segment) => ValueOf(((DateTimeFieldSegment)segment).Kind);
+
+    bool ISegmentHost.IsReadOnly(FieldSegment segment) =>
+        ((DateTimeFieldSegment)segment).Kind == DateTimeSegmentKind.DayOfWeek;
+
+    void ISegmentHost.Write(FieldSegment segment, long value) => Write((DateTimeFieldSegment)segment, (int)value);
+
+    internal void TypeFromTheStart(string text)
+    {
+        Activate(NextEditable(-1, 1));
+        OnTyped(this, new TextInputEventArgs(text) { RoutedEvent = Keyboard.TextInputEvent });
+    }
 
     internal void Write(DateTimeFieldSegment segment, int value)
     {
@@ -308,6 +336,10 @@ public class DateTimeField : Control
                 Update();
                 e.Handled = true;
                 break;
+
+            case Key.Enter:
+                Commit();
+                break;
         }
     }
 
@@ -374,15 +406,7 @@ public class DateTimeField : Control
     {
         var culture = ShownCulture();
         var format = culture.DateTimeFormat;
-        var pattern = Format switch
-        {
-            DateTimeFieldFormat.LongDate => format.LongDatePattern,
-            DateTimeFieldFormat.ShortTime => format.ShortTimePattern,
-            DateTimeFieldFormat.LongTime => format.LongTimePattern,
-            DateTimeFieldFormat.ShortDateTime => format.ShortDatePattern + " " + format.ShortTimePattern,
-            DateTimeFieldFormat.Custom when !string.IsNullOrEmpty(CustomFormat) => Standard(CustomFormat, format),
-            _ => format.ShortDatePattern,
-        };
+        var pattern = PatternOf(Format, CustomFormat, format);
         if (CalendarCulture.Names(pattern, 'y'))
         {
             pattern = CalendarCulture.WithEra(pattern, format);
@@ -403,6 +427,8 @@ public class DateTimeField : Control
         if (_host != null)
         {
             _host.Children.Clear();
+            _prompt = new TextBlock { Classes = Classes.Parse("DateTimeFieldPrompt") };
+            _host.Children.Add(_prompt);
             foreach (var piece in _pieces)
             {
                 if (piece.Kind is not { } kind)
@@ -411,7 +437,7 @@ public class DateTimeField : Control
                     continue;
                 }
 
-                var segment = new DateTimeFieldSegment { Owner = this, Index = _segments.Count, Kind = kind };
+                var segment = new DateTimeFieldSegment { Host = this, Index = _segments.Count, Kind = kind };
                 _segments.Add(segment);
                 _host.Children.Add(segment);
             }
@@ -444,6 +470,16 @@ public class DateTimeField : Control
             Activate(again);
         }
     }
+
+    internal static string PatternOf(DateTimeFieldFormat kind, string custom, DateTimeFormatInfo format) => kind switch
+    {
+        DateTimeFieldFormat.LongDate => format.LongDatePattern,
+        DateTimeFieldFormat.ShortTime => format.ShortTimePattern,
+        DateTimeFieldFormat.LongTime => format.LongTimePattern,
+        DateTimeFieldFormat.ShortDateTime => format.ShortDatePattern + " " + format.ShortTimePattern,
+        DateTimeFieldFormat.Custom when !string.IsNullOrEmpty(custom) => Standard(custom, format),
+        _ => format.ShortDatePattern,
+    };
 
     private static string Standard(string custom, DateTimeFormatInfo format)
     {
@@ -760,6 +796,11 @@ public class DateTimeField : Control
         return stay;
     }
 
+    internal void FinishTyping()
+    {
+        if (_typed.Length > 0 && _typed.All(char.IsDigit)) Commit();
+    }
+
     private void Commit()
     {
         if (_typed.Length == 0 || _active < 0 || _active >= _segments.Count)
@@ -971,6 +1012,7 @@ public class DateTimeField : Control
     {
         var format = ShownCulture().DateTimeFormat;
         var value = Value;
+        Prompt(_host, _prompt, Placeholder, value == null && _active < 0 && _segments.All(s => _values[(int)s.Kind] == null));
         for (var i = 0; i < _segments.Count; i++)
         {
             var segment = _segments[i];
@@ -1007,6 +1049,21 @@ public class DateTimeField : Control
             DateTimeSegmentKind.Era => format.GetEraName(number),
             _ => Digits(number, width),
         };
+    }
+
+    internal static void Prompt(Panel host, TextBlock prompt, string placeholder, bool empty)
+    {
+        if (host == null || prompt == null)
+        {
+            return;
+        }
+
+        var prompting = empty && !string.IsNullOrEmpty(placeholder);
+        prompt.Text = placeholder ?? string.Empty;
+        foreach (var child in host.Children)
+        {
+            child.Visibility = ReferenceEquals(child, prompt) == prompting ? Visibility.Visible : Visibility.Collapsed;
+        }
     }
 
     private static int PlaceholderWidth(DateTimeSegmentKind kind, int width) => kind switch

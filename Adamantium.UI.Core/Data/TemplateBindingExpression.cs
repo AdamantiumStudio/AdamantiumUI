@@ -55,7 +55,16 @@ public class TemplateBindingExpression : BindingExpressionBase
     // as {Binding} does, and skip the write when the value cannot be made to fit rather than poison the slot.
     public override void UpdateSource()
     {
-        if (TryCoerce(Target.GetValue(TargetProperty), SourceProperty.PropertyType, out var value))
+        var shown = Target.GetValue(TargetProperty);
+        // Nothing cannot go into a slot that cannot hold it (an emptied length field over a TimeSpan): the target is
+        // given back what the source holds, as a {Binding} refuses it.
+        if (shown == null && !CanHoldNothing(SourceProperty.PropertyType))
+        {
+            UpdateTarget();
+            return;
+        }
+
+        if (TryCoerce(shown, SourceProperty.PropertyType, out var value))
         {
             Source.SetCurrentValue(SourceProperty, value);
         }
@@ -63,7 +72,10 @@ public class TemplateBindingExpression : BindingExpressionBase
 
     public override void UpdateTarget()
     {
-        if (TryCoerce(Source.GetValue(SourceProperty), TargetProperty.PropertyType, out var value))
+        var held = Source.GetValue(SourceProperty);
+        if (held == null && !CanHoldNothing(TargetProperty.PropertyType)) return;
+
+        if (TryCoerce(held, TargetProperty.PropertyType, out var value))
         {
             Target.SetValue(TargetProperty, value, ValuePriority.Template);
         }
