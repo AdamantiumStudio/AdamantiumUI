@@ -41,6 +41,7 @@
     <Phrase Key="MoveUp" Text="Выше"/>
     <Phrase Key="MoveDown" Text="Ниже"/>
     <Phrase Key="ShowBelowRibbon" Text="Показывать панель под лентой"/>
+    <Phrase Key="SpreadRows" Text="Распределять ряды группы по её высоте"/>
     <Phrase Key="ResetBar" Text="Сбросить"/>
     <Phrase Key="Exit" Text="Выход"/>
 

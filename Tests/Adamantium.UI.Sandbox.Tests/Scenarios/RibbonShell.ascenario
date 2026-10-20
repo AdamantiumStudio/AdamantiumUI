@@ -57,6 +57,12 @@
   <Expand Target="id=Band/name=File" />
   <Select Target="id=Band/name=File/name=Customize" />
   <Expect Target="id=CommandChoices" Name="Choose commands from" />
+  <!-- The rows of the groups spread over their height and back to standing from the top. -->
+  <Expect Target="id=SpreadRows" Toggle="Off" />
+  <Toggle Target="id=SpreadRows" />
+  <Expect Target="id=SpreadRows" Toggle="On" />
+  <Toggle Target="id=SpreadRows" />
+  <Expect Target="id=SpreadRows" Toggle="Off" />
   <Collapse Target="id=Band/name=File" />
   <!-- The ribbon folds down to its tabs and opens again. -->
   <Collapse Target="id=Band" />
