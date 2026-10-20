@@ -8,7 +8,8 @@ namespace Adamantium.UI.Sandbox.ViewModels;
 /// <summary>Date and time tab: date and time fields in each format, the date one bound to <see cref="SelectedDate"/> with
 /// the calendars; calendars - one bound to <see cref="SelectedDate"/> with its selection mode, week numbers and language
 /// switched, one with a range and days struck through, several months side by side counted by the chosen calendar with
-/// holidays marked, and one given a large size its cells share.</summary>
+/// holidays marked, and one given a large size its cells share; clocks, and countdowns of <see cref="TimerLength"/> and
+/// stopwatches on them.</summary>
 [ViewModel]
 public partial class DateTimeViewModel : TabPageViewModel
 {
@@ -29,6 +30,13 @@ public partial class DateTimeViewModel : TabPageViewModel
     [Bindable] private int _monthsShown = 2;
 
     [Bindable] private DateTime? _meetingTime = DateTime.Today.AddHours(14).AddMinutes(5);
+
+    [Bindable] private TimeSpan _timerLength = TimeSpan.FromSeconds(90);
+
+    [Bindable] private int _timesDone;
+
+    /// <summary>What a countdown runs when it reaches zero: counts it.</summary>
+    [Command] private void TimerDone() => TimesDone++;
 
     /// <summary>Tokyo's time zone, for a clock of the world's cities.</summary>
     public TimeZoneInfo Tokyo { get; } = Zone("Asia/Tokyo");

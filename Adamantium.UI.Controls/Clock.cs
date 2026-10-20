@@ -77,8 +77,15 @@ public class Clock : Control
     private Border _minute;
     private Border _second;
     private TextBlock _period;
+    private Shapes.Ellipse _remaining;
     private string _shown = string.Empty;
     private bool _attached;
+    private bool _counting;
+    private TimeSpan _countFrom;
+    private int _countWay = 1;
+    private long? _countSince;
+    private TimeSpan? _countTotal;
+    private int _hourDigits = 2;
 
     /// <summary>With hands - and what is marked on the face - or in figures, and which figures.</summary>
     public ClockStyle ClockStyle
@@ -123,10 +130,38 @@ public class Clock : Control
     }
 
     /// <summary>The time it shows now, as text in its language; empty while it shows no time.</summary>
-    public string ShownText => Shown() is { } now
-        ? now.ToString(ShowSeconds ? Culture().DateTimeFormat.LongTimePattern : Culture().DateTimeFormat.ShortTimePattern,
-            Culture())
-        : string.Empty;
+    public string ShownText => Shown() is not { } now ? string.Empty
+        : _counting ? CountedText(now)
+        : now.ToString(ShowSeconds ? Culture().DateTimeFormat.LongTimePattern : Culture().DateTimeFormat.ShortTimePattern,
+            Culture());
+
+    internal TimeSpan Counted()
+    {
+        var since = _countSince is { } start ? System.Diagnostics.Stopwatch.GetElapsedTime(start) : TimeSpan.Zero;
+        var counted = _countWay < 0 ? _countFrom - since : _countFrom + since;
+        return counted < TimeSpan.Zero ? TimeSpan.Zero : counted;
+    }
+
+    internal void Count(TimeSpan from, int way, long? since, TimeSpan? total)
+    {
+        var shape = !_counting || _countTotal.HasValue != total.HasValue;
+        _counting = true;
+        _countFrom = from;
+        _countWay = way;
+        _countSince = since;
+        _countTotal = total;
+        var digits = Math.Max(2, ((long)Counted().TotalHours).ToString(CultureInfo.InvariantCulture).Length);
+        if (shape || (since == null && !IsAnalog && ClockStyle != ClockStyle.Text && digits != _hourDigits))
+        {
+            Build();
+        }
+        else
+        {
+            Show();
+        }
+    }
+
+    private bool Running => _counting ? _countSince != null : IsLive;
 
     /// <summary>Whether it shows with hands rather than figures.</summary>
     public bool IsAnalog => ClockStyle is ClockStyle.Classic or ClockStyle.Minimal or ClockStyle.Roman or ClockStyle.Dots;
@@ -202,6 +237,18 @@ public class Clock : Control
 
     private DateTime? Shown()
     {
+        if (_counting)
+        {
+            var counted = Counted();
+            if (_countWay < 0)
+            {
+                var step = ShowSeconds ? TimeSpan.TicksPerSecond : TimeSpan.TicksPerMinute;
+                counted = TimeSpan.FromTicks((counted.Ticks + step - 1) / step * step);
+            }
+
+            return DateTime.MinValue + counted;
+        }
+
         if (!IsLive)
         {
             return Time;
@@ -221,6 +268,7 @@ public class Clock : Control
         _hands = null;
         _hour = _minute = _second = null;
         _period = null;
+        _remaining = null;
         _shown = string.Empty;
         Face = null;
     }
@@ -260,6 +308,17 @@ public class Clock : Control
         };
         _host.Children.Add(Face);
         _hands = new RadialPanel { IsHitTestVisible = false };
+        if (_counting && _countTotal != null)
+        {
+            _remaining = new Shapes.Ellipse
+            {
+                Classes = Classes.Parse("ClockRemaining"),
+                RenderTransform = new Transform { RotationAngle = 270 },
+                RenderTransformOrigin = new Vector2(0.5, 0.5),
+            };
+            _hands.Add(_remaining, 0, 0.94, RadialAnchor.Disc);
+        }
+
         _hour = Hand("ClockHand ClockHourHand", 0.5);
         _minute = Hand("ClockHand ClockMinuteHand", 0.72);
         if (ShowSeconds)
@@ -309,10 +368,13 @@ public class Clock : Control
             return;
         }
 
-        var figures = ShowSeconds ? 6 : 4;
+        _hourDigits = _counting && Shown() is { } shown
+            ? Math.Max(2, ((int)(shown - DateTime.MinValue).TotalHours).ToString(CultureInfo.InvariantCulture).Length)
+            : 2;
+        var figures = _hourDigits + (ShowSeconds ? 4 : 2);
         for (var i = 0; i < figures; i++)
         {
-            if (i > 0 && i % 2 == 0)
+            if (i == _hourDigits || i == _hourDigits + 2)
             {
                 row.Children.Add(Colon());
             }
@@ -320,7 +382,7 @@ public class Clock : Control
             row.Children.Add(ClockStyle == ClockStyle.SevenSegment ? SegmentDigit() : FlipCard());
         }
 
-        if (CalendarCulture.Names(Culture().DateTimeFormat.ShortTimePattern, 'h'))
+        if (!_counting && CalendarCulture.Names(Culture().DateTimeFormat.ShortTimePattern, 'h'))
         {
             _period = new TextBlock { Classes = Classes.Parse("ClockPeriod"), VerticalAlignment = VerticalAlignment.Bottom };
             row.Children.Add(_period);
@@ -420,17 +482,39 @@ public class Clock : Control
             ShowFigures(shown, animate: false);
         }
 
-        if (shown is { } now && IsLive && _attached)
+        if (shown is { } now && Running && _attached)
         {
             if (LoopSignal.IsClaimed || System.Threading.SynchronizationContext.Current != null)
             {
-                var untilNext = TimeSpan.FromMilliseconds(1000 - now.Millisecond);
-                _timer.Interval = IsAnalog ? TimeSpan.FromMinutes(1) : TimeSpan.FromSeconds(1);
-                _timer.Start(IsAnalog ? untilNext + TimeSpan.FromSeconds(59 - now.Second) : untilNext);
+                var untilNext = UntilNextSecond(now);
+                var bySecond = !IsAnalog || _remaining != null;
+                _timer.Interval = bySecond ? TimeSpan.FromSeconds(1) : TimeSpan.FromMinutes(1);
+                _timer.Start(bySecond ? untilNext : untilNext + TimeSpan.FromSeconds(59 - now.Second));
             }
 
             StartBlink(now);
         }
+    }
+
+    private TimeSpan UntilNextSecond(DateTime now)
+    {
+        if (!_counting)
+        {
+            return TimeSpan.FromMilliseconds(1000 - now.Millisecond);
+        }
+
+        var within = Counted().Ticks % TimeSpan.TicksPerSecond;
+        var left = _countWay < 0 ? within : TimeSpan.TicksPerSecond - within;
+        return TimeSpan.FromTicks(left == 0 ? TimeSpan.TicksPerSecond : left);
+    }
+
+    private string CountedText(DateTime shown)
+    {
+        var length = shown - DateTime.MinValue;
+        var separator = Culture().DateTimeFormat.TimeSeparator;
+        var text = ((int)length.TotalHours).ToString("00", CultureInfo.InvariantCulture) + separator +
+                   length.Minutes.ToString("00", CultureInfo.InvariantCulture);
+        return ShowSeconds ? text + separator + length.Seconds.ToString("00", CultureInfo.InvariantCulture) : text;
     }
 
     private void Stop()
@@ -459,23 +543,48 @@ public class Clock : Control
 
     private void OnTick(object sender, EventArgs e)
     {
-        if (IsAnalog || Shown() is not { } now)
+        if (Shown() is not { } now)
         {
             Show();
             return;
         }
 
-        ShowFigures(now, animate: true);
-        if (now.Second == 0)
+        if (IsAnalog)
         {
-            StartBlink(now);
+            if (_remaining == null)
+            {
+                Show();
+                return;
+            }
+
+            ShowRemaining();
+        }
+        else
+        {
+            ShowFigures(now, animate: true);
+            if (now.Second == 0 && !_counting)
+            {
+                StartBlink(now);
+            }
         }
 
-        var drift = TimeSpan.FromMilliseconds(1000 - now.Millisecond);
+        var drift = UntilNextSecond(now);
         if (drift < TimeSpan.FromMilliseconds(900))
         {
             _timer.Start(drift);
         }
+    }
+
+    private void ShowRemaining()
+    {
+        if (_remaining == null || _countTotal is not { } total)
+        {
+            return;
+        }
+
+        var left = total > TimeSpan.Zero ? Math.Clamp(Counted() / total, 0, 1) : 0;
+        _remaining.StartAngle = 0;
+        _remaining.StopAngle = left * 360;
     }
 
     private void ShowHands(DateTime? shown)
@@ -490,7 +599,8 @@ public class Clock : Control
             return;
         }
 
-        var seconds = now.TimeOfDay.TotalSeconds;
+        ShowRemaining();
+        var seconds = _counting ? Counted().TotalSeconds : now.TimeOfDay.TotalSeconds;
         Turn(HourTurn, seconds % 43200, 43200, null);
         Turn(MinuteTurn, seconds % 3600, 3600, null);
         Turn(SecondTurn, seconds % 60, 60, SecondHandMotion == SecondHandMotion.Tick ? new StepEasing(60) : null);
@@ -503,9 +613,11 @@ public class Clock : Control
             return;
         }
 
-        var at = (easing?.Ease(elapsed / period) ?? elapsed / period) * 360;
-        turn.RotationAngle = at;
-        if (!IsLive || !_attached)
+        var back = _counting && _countWay < 0;
+        var progress = back ? 1 - elapsed / period : elapsed / period;
+        var eased = easing?.Ease(progress) ?? progress;
+        turn.RotationAngle = (back ? 1 - eased : eased) * 360;
+        if (!Running || !_attached)
         {
             return;
         }
@@ -517,10 +629,10 @@ public class Clock : Control
             Easing = easing,
             KeyFrames =
             {
-                new KeyFrame { Cue = new Cue(0), Setters = { new Setter("RotationAngle", 0.0) } },
-                new KeyFrame { Cue = new Cue(1), Setters = { new Setter("RotationAngle", 360.0) } },
+                new KeyFrame { Cue = new Cue(0), Setters = { new Setter("RotationAngle", back ? 360.0 : 0.0) } },
+                new KeyFrame { Cue = new Cue(1), Setters = { new Setter("RotationAngle", back ? 0.0 : 360.0) } },
             },
-        }.Apply(turn, null, elapsed);
+        }.Apply(turn, null, back ? period - elapsed : elapsed);
     }
 
     private void ShowFigures(DateTime? shown, bool animate)
@@ -529,8 +641,9 @@ public class Clock : Control
         var format = culture.DateTimeFormat;
         if (ClockStyle == ClockStyle.Text)
         {
-            var text = shown?.ToString(ShowSeconds ? format.LongTimePattern : format.ShortTimePattern, culture) ??
-                       string.Empty;
+            var text = shown is not { } time ? string.Empty
+                : _counting ? CountedText(time)
+                : time.ToString(ShowSeconds ? format.LongTimePattern : format.ShortTimePattern, culture);
             var parts = text.Split(format.TimeSeparator);
             var split = parts.Length == _texts.Count;
             for (var i = 0; i < _texts.Count; i++)
@@ -550,8 +663,19 @@ public class Clock : Control
         var figures = string.Empty;
         if (shown is { } now)
         {
-            var hour = twelve ? (now.Hour + 11) % 12 + 1 : now.Hour;
-            figures = (twelve ? hour.ToString(CultureInfo.InvariantCulture).PadLeft(2) : hour.ToString("00", CultureInfo.InvariantCulture)) +
+            var hour = _counting ? (int)(now - DateTime.MinValue).TotalHours
+                : twelve ? (now.Hour + 11) % 12 + 1
+                : now.Hour;
+            var hours = twelve
+                ? hour.ToString(CultureInfo.InvariantCulture).PadLeft(2)
+                : hour.ToString(new string('0', _hourDigits), CultureInfo.InvariantCulture);
+            if (hours.Length > _hourDigits)
+            {
+                Build();
+                return;
+            }
+
+            figures = hours +
                       now.Minute.ToString("00", CultureInfo.InvariantCulture) +
                       (ShowSeconds ? now.Second.ToString("00", CultureInfo.InvariantCulture) : string.Empty);
         }
@@ -626,18 +750,25 @@ public class Clock : Control
 
     private void StartBlink(DateTime now)
     {
+        var phase = now.Millisecond / 1000.0;
+        if (_counting)
+        {
+            var within = Counted().Ticks % TimeSpan.TicksPerSecond / (double)TimeSpan.TicksPerSecond;
+            phase = _countWay < 0 ? (1 - within) % 1 : within;
+        }
+
         foreach (var separator in _separators)
         {
-            Blink(separator, now);
+            Blink(separator, phase);
         }
 
         foreach (var colon in _colons)
         {
-            Blink(colon, now);
+            Blink(colon, phase);
         }
     }
 
-    private static void Blink(UIComponent separator, DateTime now)
+    private static void Blink(UIComponent separator, double phase)
     {
         new Animation
         {
@@ -650,7 +781,7 @@ public class Clock : Control
                 new KeyFrame { Cue = new Cue(0.5), Setters = { new Setter("Opacity", 0.25) } },
                 new KeyFrame { Cue = new Cue(1), Setters = { new Setter("Opacity", 0.25) } },
             },
-        }.Apply(separator, null, now.Millisecond / 1000.0);
+        }.Apply(separator, null, phase);
     }
 
     private sealed class StepEasing(int steps) : IEasingFunction

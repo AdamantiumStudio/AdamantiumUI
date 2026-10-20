@@ -109,4 +109,136 @@
         <Setter Property="Margin" Value="6,0,0,4"/>
     </Style>
 
+    <!-- What is left of a countdown, filled on the face under the hands. -->
+    <Style Selector="Ellipse.ClockRemaining">
+        <Setter Property="Fill" Value="{ThemeResource AccentFillColorDefault}"/>
+        <Setter Property="Opacity" Value="0.25"/>
+    </Style>
+
+    <!-- A countdown: its clock, and under it what starts, pauses and resets it. The start button gives way to the pause
+         button while it runs. -->
+    <Style Selector="CountdownTimer">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="CountdownTimer">
+                    <Grid RowDefinitions="*,Auto">
+                        <Clock x:Name="PART_Clock"
+                               ClockStyle="{TemplateBinding ClockStyle}"
+                               ShowSeconds="{TemplateBinding ShowSeconds}"/>
+                        <StackPanel x:Name="Buttons"
+                                    Grid.Row="1"
+                                    Classes="ClockButtons">
+                            <Button x:Name="PART_Start"
+                                    Classes="ClockButton"
+                                    Content="{Localize ClockStrings.Start}"/>
+                            <Button x:Name="PART_Pause"
+                                    Classes="ClockButton"
+                                    Visibility="Collapsed"
+                                    Content="{Localize ClockStrings.Pause}"/>
+                            <Button x:Name="PART_Reset"
+                                    Classes="ClockButton"
+                                    Content="{Localize ClockStrings.Reset}"/>
+                        </StackPanel>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style Selector="CountdownTimer">
+        <PropertyTrigger Property="IsRunning" Value="true">
+            <Setter TargetName="PART_Start" Property="Visibility" Value="Collapsed"/>
+            <Setter TargetName="PART_Pause" Property="Visibility" Value="Visible"/>
+        </PropertyTrigger>
+        <PropertyTrigger Property="ShowButtons" Value="false">
+            <Setter TargetName="Buttons" Property="Visibility" Value="Collapsed"/>
+        </PropertyTrigger>
+    </Style>
+
+    <!-- A stopwatch: its clock, what starts, pauses, laps and resets it, and the laps taken listed under them. -->
+    <Style Selector="StopwatchTimer">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="StopwatchTimer">
+                    <Grid RowDefinitions="*,Auto,Auto">
+                        <Clock x:Name="PART_Clock"
+                               ClockStyle="{TemplateBinding ClockStyle}"
+                               ShowSeconds="{TemplateBinding ShowSeconds}"/>
+                        <StackPanel x:Name="Buttons"
+                                    Grid.Row="1"
+                                    Classes="ClockButtons">
+                            <Button x:Name="PART_Start"
+                                    Classes="ClockButton"
+                                    Content="{Localize ClockStrings.Start}"/>
+                            <Button x:Name="PART_Pause"
+                                    Classes="ClockButton"
+                                    Visibility="Collapsed"
+                                    Content="{Localize ClockStrings.Pause}"/>
+                            <Button x:Name="PART_Lap"
+                                    Classes="ClockButton"
+                                    Content="{Localize ClockStrings.Lap}"/>
+                            <Button x:Name="PART_Reset"
+                                    Classes="ClockButton"
+                                    Content="{Localize ClockStrings.Reset}"/>
+                        </StackPanel>
+                        <ListBox x:Name="PART_Laps"
+                                 Grid.Row="2"
+                                 Classes="ClockLaps"
+                                 AutomationProperties.Name="{Localize ClockStrings.Laps}">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid ColumnDefinitions="*,Auto,Auto"
+                                          ColumnSpacing="16">
+                                        <TextBlock><Run Text="{Localize ClockStrings.Lap}"/><Run Text=" "/><Run Text="{Binding Number}"/></TextBlock>
+                                        <TextBlock Grid.Column="1"
+                                                   Text="{Binding TimeText}"/>
+                                        <TextBlock Grid.Column="2"
+                                                   Classes="ClockLapTotal"
+                                                   Text="{Binding TotalText}"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style Selector="StopwatchTimer">
+        <PropertyTrigger Property="IsRunning" Value="true">
+            <Setter TargetName="PART_Start" Property="Visibility" Value="Collapsed"/>
+            <Setter TargetName="PART_Pause" Property="Visibility" Value="Visible"/>
+        </PropertyTrigger>
+        <PropertyTrigger Property="ShowButtons" Value="false">
+            <Setter TargetName="Buttons" Property="Visibility" Value="Collapsed"/>
+        </PropertyTrigger>
+        <PropertyTrigger Property="ShowLaps" Value="false">
+            <Setter TargetName="PART_Laps" Property="Visibility" Value="Collapsed"/>
+        </PropertyTrigger>
+        <PropertyTrigger Property="HasLaps" Value="false">
+            <Setter TargetName="PART_Laps" Property="Visibility" Value="Collapsed"/>
+        </PropertyTrigger>
+    </Style>
+
+    <Style Selector="StackPanel.ClockButtons">
+        <Setter Property="Orientation" Value="Horizontal"/>
+        <Setter Property="HorizontalAlignment" Value="Center"/>
+        <Setter Property="Margin" Value="0,8,0,0"/>
+    </Style>
+
+    <Style Selector="Button.ClockButton">
+        <Setter Property="MinWidth" Value="72"/>
+        <Setter Property="Margin" Value="3,0"/>
+    </Style>
+
+    <Style Selector="ListBox.ClockLaps">
+        <Setter Property="MaxHeight" Value="160"/>
+        <Setter Property="Margin" Value="0,8,0,0"/>
+    </Style>
+
+    <Style Selector="TextBlock.ClockLapTotal">
+        <Setter Property="Foreground" Value="{ResourceReference TextFillColorSecondary}"/>
+    </Style>
+
 </StyleSet>
