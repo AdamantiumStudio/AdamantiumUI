@@ -447,8 +447,8 @@
                                          whose name cannot be read is worse off than one whose last row is trimmed, and
                                          the band already clips at its own edge for the same reason. -->
                                     <!-- STRETCHED, not sized to its content: top-aligned it shrinks to the commands,
-                                         so a gallery told to Stretch had nothing to stretch into. The commands still
-                                         sit at the top - their panel puts them there. -->
+                                         so a gallery told to Stretch had nothing to stretch into, and rows could not
+                                         spread. The panel places the commands (Ribbon.RowAlignment). -->
                                     <ItemsPresenter x:Name="PART_ItemsPresenter" Grid.Row="0"
                                             ClipToBounds="True"
                                             VerticalAlignment="Stretch" HorizontalAlignment="Left"/>

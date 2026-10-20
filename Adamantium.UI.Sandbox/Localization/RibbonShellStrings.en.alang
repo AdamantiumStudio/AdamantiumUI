@@ -41,6 +41,7 @@
     <Phrase Key="MoveUp" Text="Move up"/>
     <Phrase Key="MoveDown" Text="Move down"/>
     <Phrase Key="ShowBelowRibbon" Text="Show the bar below the ribbon"/>
+    <Phrase Key="SpreadRows" Text="Spread the rows of a group over its height"/>
     <Phrase Key="ResetBar" Text="Reset"/>
     <Phrase Key="Exit" Text="Exit"/>
 

@@ -436,7 +436,7 @@
                                 <Grid x:Name="PART_Content" RowDefinitions="*,Auto"
                                         Margin="{TemplateBinding Padding}">
                                     <ItemsPresenter x:Name="PART_ItemsPresenter" Grid.Row="0"
-                                            VerticalAlignment="Top" HorizontalAlignment="Left"/>
+                                            VerticalAlignment="Stretch" HorizontalAlignment="Left"/>
                                     <ContentPresenter Grid.Row="1"
                                             Content="{TemplateBinding Header}"
                                             ContentTemplate="{TemplateBinding HeaderTemplate}"
