@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Adamantium.Fonts;
+using Adamantium.Fonts.Common;
 using Adamantium.Graphics.Fonts;
 using Adamantium.MVVM;
 using Adamantium.Navigation;
@@ -298,33 +299,11 @@ public partial class TextViewModel : TabPageViewModel
 
     private static IReadOnlyList<FontFeatureItem> ListFeatures(IFont font)
     {
-        var samples = new Dictionary<string, List<string>>();
-        for (var glyph = 0u; glyph < font.GlyphCount; glyph++)
-        {
-            var text = font.GetGlyphText(glyph).FirstOrDefault();
-            if (text == null)
-            {
-                continue;
-            }
-
-            foreach (var alternate in font.GetGlyphAlternates(glyph))
-            {
-                if (!samples.TryGetValue(alternate.Feature, out var list))
-                {
-                    samples[alternate.Feature] = list = [];
-                }
-
-                if (list.Count < 12 && !list.Contains(text))
-                {
-                    list.Add(text);
-                }
-            }
-        }
-
+        var samples = FeatureSamples.Of(font, font.FeatureCatalog.GSUBFeatures, 12);
         return font.FeatureCatalog.GSUBFeatures
             .Where(feature => samples.ContainsKey(feature.Info.Tag))
             .Select(feature => new FontFeatureItem(feature.Info.Tag, feature.Name, feature.ValueCount,
-                feature.SampleText ?? string.Concat(samples[feature.Info.Tag])))
+                samples[feature.Info.Tag]))
             .ToArray();
     }
 
