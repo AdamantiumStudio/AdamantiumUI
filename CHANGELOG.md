@@ -7,6 +7,8 @@ All packages share one version.
 
 ### Added
 
+- `Ribbon.RowAlignment`: the commands stacked in a group's column stand from the top, as in Word (`Top`, the default),
+  or spread over the group's height, the last at the bottom (`Spread`). Inherited - set on the ribbon or on one group.
 - `DropDown.IsEditable`: a value is typed into the header, as Word's font and size boxes take one. Enter picks the item
   that reads the same, ignoring case, or runs `Command` with the text as a value of the items' type - a size no item
   has; Escape, or leaving the box, gives back what was shown, and its automation value is the text.

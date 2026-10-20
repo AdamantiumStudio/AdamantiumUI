@@ -867,6 +867,7 @@
                 Ribbon.AddToQuickAccessCommand="{Binding AddToQuickAccessCommand}"
                 Ribbon.RemoveFromQuickAccessCommand="{Binding RemoveFromQuickAccessCommand}"
                 Ribbon.QuickAccessItems="{Binding QuickAccess}"
+                Ribbon.RowAlignment="{Binding RowAlignment}"
                 IsDrawerOpen="{Binding IsModuleCatalogOpen, Mode=TwoWay}"
                 TabSetsSource="{Binding DocumentModules}">
 
@@ -956,7 +957,7 @@
                     <RibbonApplicationMenuItem Content="{Localize RibbonShellStrings.Customize}"
                                                Icon="{ObservableResource CustomizeIcon}">
                         <RibbonApplicationMenuItem.PageContent>
-                            <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto"
+                            <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto"
                                   ColumnDefinitions="280,Auto,280,Auto"
                                   HorizontalAlignment="Left">
                                 <TextBlock Grid.ColumnSpan="4"
@@ -1060,6 +1061,13 @@
                                             Command="{Binding ResetQuickAccessCommand}"
                                             Margin="24 0 0 0"/>
                                 </StackPanel>
+
+                                <CheckBox Grid.Row="5"
+                                          Grid.ColumnSpan="4"
+                                          Margin="0 12 0 0"
+                                          AutomationProperties.AutomationId="SpreadRows"
+                                          Content="{Localize RibbonShellStrings.SpreadRows}"
+                                          IsChecked="{Binding AreRowsSpread, Mode=TwoWay}"/>
                             </Grid>
                         </RibbonApplicationMenuItem.PageContent>
                     </RibbonApplicationMenuItem>

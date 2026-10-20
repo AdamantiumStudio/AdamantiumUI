@@ -93,6 +93,18 @@ public class Ribbon : Selector
         typeof(RibbonCollapseThreshold), typeof(AdamantiumComponent),
         new PropertyMetadata(RibbonCollapseThreshold.WhenGroupIsSmall, PropertyMetadataOptions.AffectsMeasure));
 
+    /// <summary>Where the commands stacked in a group's column stand. Inherited: set on the ribbon for every group, or
+    /// on one group.</summary>
+    public static readonly AdamantiumProperty RowAlignmentProperty = AdamantiumProperty.RegisterAttached("RowAlignment",
+        typeof(RibbonRowAlignment), typeof(AdamantiumComponent),
+        new PropertyMetadata(RibbonRowAlignment.Top, PropertyMetadataOptions.Inherits | PropertyMetadataOptions.AffectsArrange));
+
+    public static RibbonRowAlignment GetRowAlignment(IAdamantiumComponent element) =>
+        element.GetValue<RibbonRowAlignment>(RowAlignmentProperty);
+
+    public static void SetRowAlignment(IAdamantiumComponent element, RibbonRowAlignment value) =>
+        element.SetValue(RowAlignmentProperty, value);
+
     public static RibbonSize GetSize(IAdamantiumComponent element) => element.GetValue<RibbonSize>(SizeProperty);
 
     public static void SetSize(IAdamantiumComponent element, RibbonSize value) => element.SetValue(SizeProperty, value);
