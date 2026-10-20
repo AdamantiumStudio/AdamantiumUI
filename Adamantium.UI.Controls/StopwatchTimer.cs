@@ -91,15 +91,16 @@ public class StopwatchTimer : Control
         set => SetValue(ShowSecondsProperty, value);
     }
 
-    /// <summary>Shows the start, pause, lap and reset buttons; on by default. Off, it is driven by its commands and
-    /// methods alone.</summary>
+    /// <summary>Shows the start, pause, lap (while <see cref="ShowLaps"/>) and reset buttons; on by default. Off, it is
+    /// driven by its commands and methods alone.</summary>
     public bool ShowButtons
     {
         get => GetValue<bool>(ShowButtonsProperty);
         set => SetValue(ShowButtonsProperty, value);
     }
 
-    /// <summary>Lists the laps under it; on by default.</summary>
+    /// <summary>Lists the laps under it and shows the lap button; on by default. Off, laps are taken by
+    /// <see cref="LapCommand"/> alone, for whoever shows <see cref="Laps"/>.</summary>
     public bool ShowLaps
     {
         get => GetValue<bool>(ShowLapsProperty);

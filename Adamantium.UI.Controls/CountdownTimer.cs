@@ -11,9 +11,10 @@ using Adamantium.UI.Core.RoutedEvents;
 namespace Adamantium.UI.Controls;
 
 /// <summary>A countdown: a <see cref="Clock"/> that counts <see cref="Duration"/> down to zero once started - with hands
-/// going back round a face whose part still left is filled, or in figures, as <see cref="ClockStyle"/> says. Started,
-/// paused and reset by the buttons it shows (<see cref="ShowButtons"/>), its commands or its methods. It keeps counting
-/// while it is out of the tree - a countdown on a hidden page still ends on time. At zero it stops and runs
+/// going back round a face ringed at its rim as far as is still left of the whole, with no second hand; or in figures,
+/// as <see cref="ClockStyle"/> says.
+/// Started, paused and reset by the buttons it shows (<see cref="ShowButtons"/>), its commands or its methods. It keeps
+/// counting while it is out of the tree - a countdown on a hidden page still ends on time. At zero it stops and runs
 /// <see cref="CompletedCommand"/>.</summary>
 public class CountdownTimer : Control
 {
@@ -58,7 +59,7 @@ public class CountdownTimer : Control
     }
 
     /// <summary>The length counted down; five minutes by default, below zero counted as zero and at most a hundred years.
-    /// Two-way by default. A new one while it stands starts it afresh; while it runs, the face fills its part of it.</summary>
+    /// Two-way by default. A new one while it stands starts it afresh; while it runs, the ring shows its part of it.</summary>
     public TimeSpan Duration
     {
         get => GetValue<TimeSpan>(DurationProperty);
@@ -87,7 +88,8 @@ public class CountdownTimer : Control
         set => SetValue(ClockStyleProperty, value);
     }
 
-    /// <summary>Shows the seconds; on by default.</summary>
+    /// <summary>Shows the seconds in figures, and counts down to the second rather than the minute; on by default.
+    /// A face with hands has no second hand.</summary>
     public bool ShowSeconds
     {
         get => GetValue<bool>(ShowSecondsProperty);

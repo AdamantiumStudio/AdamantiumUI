@@ -8,6 +8,7 @@ using Adamantium.Graphics.Fonts;
 using Adamantium.Imaging;
 using Adamantium.Mathematics;
 using Adamantium.ProceduralGeometry;
+using Adamantium.ProceduralGeometry.Shapes;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Graphics;
 using Adamantium.UI.Core.Media;
@@ -99,6 +100,31 @@ public class GpuRenderUnitTests
 
         unit.UpdateWithDrawCommand(Command(Unbatched(Brushes.Red, BoxA, new Pen(Brushes.Black, 2))));
         Assert.That(unit.StrokeRenderer, Is.Not.Null, "pen added must build a stroke (the #7 fix)");
+    }
+
+    [Test]
+    public void ARing_KeepsItsHole_WhenItsSweepChanges()
+    {
+        var box = new Rect(0, 0, 100, 100);
+        EllipsePayload Ring(double sweep) =>
+            new(Brushes.Red, box, 270, sweep, EllipseType.Sector, null) { RingThickness = 10 };
+        var batched = EllipseBatchCollector.Enabled;
+        EllipseBatchCollector.Enabled = false;
+        try
+        {
+            var unit = new EllipseRenderUnit(Command(Ring(270)), Ctx((UIBasicEffect)_effect.Clone()));
+            Assert.That(unit.GeometryRenderer, Is.Not.Null, "off the batch, it builds its own body");
+
+            unit.UpdateWithDrawCommand(Command(Ring(180)));
+
+            var nearest = unit.GeometryRenderer.Mesh.Points.Min(p => Math.Sqrt((p.X - 50) * (p.X - 50) + (p.Y - 50) * (p.Y - 50)));
+            Assert.That(nearest, Is.GreaterThan(39), "the band's inside stays empty");
+            Assert.DoesNotThrow(() => unit.UpdateWithDrawCommand(Command(Ring(0))), "swept through nothing");
+        }
+        finally
+        {
+            EllipseBatchCollector.Enabled = batched;
+        }
     }
 
     [Test]

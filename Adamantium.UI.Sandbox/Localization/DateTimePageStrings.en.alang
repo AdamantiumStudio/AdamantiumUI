@@ -35,7 +35,7 @@
     <Phrase Key="Tokyo" Text="Tokyo"/>
     <Phrase Key="NewYork" Text="New York"/>
     <Phrase Key="Meeting" Text="Meeting time"/>
-    <Phrase Key="Timers" Text="A countdown and a stopwatch on the same clock: its styles, their buttons, and on a face what is left of the countdown filled. The stopwatch takes laps."/>
+    <Phrase Key="Timers" Text="A countdown and a stopwatch on the same clock: its styles, their buttons, and on a face a ring round the rim as long as what is left of the countdown. The stopwatch takes laps."/>
     <Phrase Key="TimerDone" Text="Countdowns finished: "/>
     <Phrase Key="Durations" Text="A length of time part by part: the largest part counts everything above it (30 hours with no days is 30), a minus or a plus anywhere sets the sign."/>
     <Phrase Key="Duration" Text="Hours, minutes, seconds"/>

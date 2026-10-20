@@ -109,10 +109,10 @@
         <Setter Property="Margin" Value="6,0,0,4"/>
     </Style>
 
-    <!-- What is left of a countdown, filled on the face under the hands. -->
+    <!-- What is left of a countdown: a ring round the rim, apart from the hands. -->
     <Style Selector="Ellipse.ClockRemaining">
         <Setter Property="Fill" Value="{ThemeResource AccentFillColorDefault}"/>
-        <Setter Property="Opacity" Value="0.25"/>
+        <Setter Property="RingThickness" Value="4"/>
     </Style>
 
     <!-- A countdown: its clock, and under it what starts, pauses and resets it. The start button gives way to the pause
@@ -214,6 +214,7 @@
             <Setter TargetName="Buttons" Property="Visibility" Value="Collapsed"/>
         </PropertyTrigger>
         <PropertyTrigger Property="ShowLaps" Value="false">
+            <Setter TargetName="PART_Lap" Property="Visibility" Value="Collapsed"/>
             <Setter TargetName="PART_Laps" Property="Visibility" Value="Collapsed"/>
         </PropertyTrigger>
         <PropertyTrigger Property="HasLaps" Value="false">

@@ -115,7 +115,8 @@ public class Clock : Control
         set => SetValue(TimeZoneProperty, value);
     }
 
-    /// <summary>Shows the seconds - a second hand, or the seconds' figures; on by default.</summary>
+    /// <summary>Shows the seconds - a second hand (none over a countdown's ring), or the seconds' figures; on by
+    /// default.</summary>
     public bool ShowSeconds
     {
         get => GetValue<bool>(ShowSecondsProperty);
@@ -313,15 +314,14 @@ public class Clock : Control
             _remaining = new Shapes.Ellipse
             {
                 Classes = Classes.Parse("ClockRemaining"),
-                RenderTransform = new Transform { RotationAngle = 270 },
-                RenderTransformOrigin = new Vector2(0.5, 0.5),
+                StartAngle = 270,
             };
-            _hands.Add(_remaining, 0, 0.94, RadialAnchor.Disc);
+            _hands.Add(_remaining, 0, 1, RadialAnchor.Disc);
         }
 
         _hour = Hand("ClockHand ClockHourHand", 0.5);
         _minute = Hand("ClockHand ClockMinuteHand", 0.72);
-        if (ShowSeconds)
+        if (ShowSeconds && _remaining == null)
         {
             _second = Hand("ClockHand ClockSecondHand", 0.84);
         }
@@ -583,7 +583,6 @@ public class Clock : Control
         }
 
         var left = total > TimeSpan.Zero ? Math.Clamp(Counted() / total, 0, 1) : 0;
-        _remaining.StartAngle = 0;
         _remaining.StopAngle = left * 360;
     }
 

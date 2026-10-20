@@ -87,18 +87,18 @@ All packages share one version.
   given, its face round in any. Its face, `ClockFace`, is the time picker's dial too. Automation reads the time it
   shows. It runs in the designer's live preview too.
 - `CountdownTimer` and `StopwatchTimer`: a countdown of a `Duration` and a stopwatch, on a `Clock` in any of its
-  styles - with hands, which a countdown turns back and over a face whose part still left is filled, or in figures
-  counting hours past a day, a digit more past a hundred. A countdown rounds up - to the minute when it shows no
-  seconds - and its colon blinks with its figures. Started, paused and reset (and lapped) by the buttons they show
-  (`ShowButtons`; the keyboard passes to the button that takes the pressed one's place), by their commands
-  (`StartCommand`, `PauseCommand`, `ResetCommand`, `LapCommand`) or their methods; `Remaining` and `Elapsed` are told
-  every second while shown and `IsRunning` as it changes. A countdown of a `Duration` from zero to a hundred years keeps
-  counting off the tree - one on a hidden page still ends on time, woken at its end (or once a day) rather than every
-  second, and tells `Remaining` again once shown - stops at
-  zero, raises `Completed` and runs `CompletedCommand`, a pause at zero included; one discarded stops. A stopwatch's
-  `Laps` (`StopwatchLap`: number, lap time and total, as text to the hundredth too, in the language of the moment) are
-  listed under it, the latest first, once there are any (`HasLaps`) and while `ShowLaps`. Automation reads what is left
-  and what has passed in whole seconds. The sandbox's "Date and time" tab has both.
+  styles - with hands, which a countdown turns back round a face ringed at its rim as far as is still left of the whole
+  (with no second hand), or in figures counting hours past a day, a digit more past a hundred. A countdown rounds up
+  - to the minute when it shows no seconds - and its colon blinks with its figures. Started, paused
+  and reset (and lapped) by the buttons they show (`ShowButtons`; the keyboard passes to the button that takes the
+  pressed one's place), by their commands (`StartCommand`, `PauseCommand`, `ResetCommand`, `LapCommand`) or their
+  methods; `Remaining` and `Elapsed` are told every second while shown and `IsRunning` as it changes. A countdown of a
+  `Duration` from zero to a hundred years keeps counting off the tree - one on a hidden page still ends on time, woken
+  at its end (or once a day) rather than every second, and tells `Remaining` again once shown - stops at zero, raises
+  `Completed` and runs `CompletedCommand`, a pause at zero included; one discarded stops. A stopwatch's `Laps`
+  (`StopwatchLap`: number, lap time and total, as text to the hundredth too, in the language of the moment) are listed
+  under it, the latest first, once there are any (`HasLaps`) and while `ShowLaps`, which shows the lap button too.
+  Automation reads what is left and what has passed in whole seconds. The sandbox's "Date and time" tab has both.
 - `DatePicker`, `TimePicker` and `DateTimePicker`: the same field with a button at its end (Alt+Down and F4 too) that
   opens a calendar, the times of a day, or both side by side. A day picked keeps the time; a time picked keeps the day
   and closes. The times come as a list a `TimeInterval` apart (15 minutes by default), as columns of hours, minutes and
@@ -1775,6 +1775,11 @@ All packages share one version.
   paste, the strip for a new record, an undo or a cell's automation alike: the write landed nowhere, yet was reported as
   written, and the row stood blank beside an object that still held its value. Now the write reports the refusal and
   the row or cell shows what is held; a property that can be empty - an `int?`, a `DateOnly?` - still takes it.
+- An `Ellipse`'s `StopAngle` is the sweep it is drawn with, yet it was held to no less than `StartAngle` and the start to
+  no more than it: an arc starting at 180 asked to sweep 90 swept 180. Each is now held on its own - the sweep to one
+  turn, the start to no less than zero. One that sweeps nothing draws nothing.
+- A ring (`Ellipse.RingThickness`) drawn by its own tessellated body turned solid once its angles or size changed, and
+  one swept through nothing was cut from nothing.
 - A cursor that changes under a pointer standing still - a style turning it into a tool's - shows at once on Windows:
   set from the UI loop it waited for the next move, `SetCursor` showing only from the window's own thread, which is now
   asked to answer `WM_SETCURSOR` again.

@@ -16,7 +16,7 @@ using NUnit.Framework;
 namespace Adamantium.XamlTests;
 
 /// <summary>A countdown and a stopwatch on the clock: what they show standing, running, paused and reset, a countdown
-/// reaching zero, the part left filled on a face, laps, their buttons and automation.</summary>
+/// reaching zero, the ring on a face as long as what is left, laps, their buttons and automation.</summary>
 [TestFixture]
 public class TimerTests
 {
@@ -176,13 +176,37 @@ public class TimerTests
     }
 
     [Test]
-    public void AnAnalogCountdown_FillsWhatIsLeft_AndTurnsItsHandsBack()
+    public void AnAnalogCountdown_RingsWhatIsLeft_AndTurnsItsHandsBack()
     {
         var timer = Shown(new CountdownTimer { Duration = TimeSpan.FromMinutes(1) });
         var left = Within<Ellipse>(timer.Clock).Single(e => e.Classes.Contains("ClockRemaining"));
 
         Assert.That(left.StopAngle, Is.EqualTo(360).Within(0.01), "all of it is left");
-        Assert.That(timer.Clock.SecondTurn.RotationAngle, Is.EqualTo(0).Within(0.01).Or.EqualTo(360).Within(0.01));
+        Assert.That(left.RingThickness, Is.GreaterThan(0), "a ring round the rim, not a disc under the hands");
+        Assert.That(left.RenderSize.Width, Is.EqualTo(timer.Clock.Face.RenderSize.Width).Within(0.5), "at the rim");
+        Assert.That(left.StartAngle, Is.EqualTo(270), "from twelve");
+        Assert.That(left.RenderTransform?.RotationAngle ?? 0, Is.EqualTo(0), "not turned, so the batch draws it");
+        Assert.That(timer.Clock.SecondTurn, Is.Null, "no second hand over the ring");
+        Assert.That(timer.Clock.MinuteTurn.RotationAngle, Is.EqualTo(6).Within(0.01), "a minute left");
+    }
+
+    [Test]
+    public void WithLapsHidden_LapsAreStillTakenByTheCommand()
+    {
+        LoopSignal.Claim();
+        try
+        {
+            var stopwatch = Shown(new StopwatchTimer { ShowLaps = false });
+            stopwatch.Start();
+            stopwatch.LapCommand.Execute(null);
+
+            Assert.That(stopwatch.Laps, Has.Count.EqualTo(1));
+            stopwatch.Pause();
+        }
+        finally
+        {
+            LoopSignal.Unclaim();
+        }
     }
 
     [Test]
@@ -353,6 +377,19 @@ public class TimerTests
         {
             Assert.That(((UIComponent)stopwatch.GetTemplateChild("Buttons")).Visibility, Is.EqualTo(Visibility.Collapsed));
             Assert.That(((UIComponent)stopwatch.GetTemplateChild("PART_Laps")).Visibility, Is.EqualTo(Visibility.Collapsed));
+        });
+    }
+
+    [Test]
+    public void WithoutTheLapsShown_TheLapButtonGoesToo()
+    {
+        var stopwatch = Shown(new StopwatchTimer { ShowLaps = false });
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(Part(stopwatch, "PART_Lap").Visibility, Is.EqualTo(Visibility.Collapsed));
+            Assert.That(Part(stopwatch, "PART_Start").Visibility, Is.EqualTo(Visibility.Visible));
+            Assert.That(Part(stopwatch, "PART_Reset").Visibility, Is.EqualTo(Visibility.Visible));
         });
     }
 
