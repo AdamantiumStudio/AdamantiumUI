@@ -1437,6 +1437,8 @@ All packages share one version.
 
 ### Changed
 
+- `FontVariationList.Parse` reads axis values with the engine's `FontVariation.ParseList`, one reader for markup and
+  documents; a value that is not finite (`wght=Infinity`) is refused now.
 - Raising a routed event allocates nothing and takes no lock once each handler type and element type has been seen:
   handlers are called by a typed call made once per handler type instead of `DynamicInvoke`, an element's handlers and
   an event's class handlers are read from arrays replaced whole on change, the class handlers of a type are picked
