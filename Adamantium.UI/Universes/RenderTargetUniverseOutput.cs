@@ -28,6 +28,7 @@ public class RenderTargetUniverseOutput : UIUniverseOutput
     private ulong _lastProduced;
     private ulong[] _written = [];
     private ulong _demandSeen;
+    private Action _invalidate;
     // Three: the frame drawn on the panel's ask goes to the surface of two frames back, given back by a copy already done,
     // not to the one the copy of this ask is still reading behind the window's queued frames.
     private const uint SurfaceBuffers = 3;
@@ -75,7 +76,11 @@ public class RenderTargetUniverseOutput : UIUniverseOutput
         if (rt?.ResolveTexture == null) return;
 
         HandOverPendingSurface();
-        if (StartSurfaceForNewSize(mainDevice, rt.ResolveTexture)) return;
+        if (StartSurfaceForNewSize(mainDevice, rt.ResolveTexture))
+        {
+            Invalidate();
+            return;
+        }
         if (_sharedSurface == null || _pendingSurface != null) return;
 
         var index = FreeSurface();
@@ -92,7 +97,8 @@ public class RenderTargetUniverseOutput : UIUniverseOutput
     }
 
     /// <summary>Waits until the panel asks for a frame, so one is drawn per frame it shows, ready by its next ask; then
-    /// until the older surface is given back for it. Gives whether it was.</summary>
+    /// until the older surface is given back for it. Gives whether it was; if not, asks for a frame again on the panel's
+    /// next ask.</summary>
     public override bool WaitUntilShown(TimeSpan timeout)
     {
         if (_sharedSurface == null || _pendingSurface != null) return true;
@@ -101,7 +107,13 @@ public class RenderTargetUniverseOutput : UIUniverseOutput
         _demandSeen = _sharedSurface.Descriptor.Demand.WaitBeyond(_demandSeen, timeout);
         var left = timeout - Stopwatch.GetElapsedTime(start);
         var oldest = OldestSurface();
-        return _sharedSurface.SurfaceAt(oldest).WaitConsumed(_written[oldest], left > TimeSpan.Zero ? left : TimeSpan.Zero);
+        var shown = _sharedSurface.SurfaceAt(oldest).WaitConsumed(_written[oldest], left > TimeSpan.Zero ? left : TimeSpan.Zero);
+        if (!shown)
+        {
+            _sharedSurface.Descriptor.Demand.WhenBeyond(_demandSeen, _invalidate ??= Invalidate);
+        }
+
+        return shown;
     }
 
     private int FreeSurface()

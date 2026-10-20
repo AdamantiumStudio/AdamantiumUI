@@ -57,6 +57,7 @@ namespace Adamantium.UI.Universes
         private void WindowOnStateChanged(object sender, StateChangedEventArgs e)
         {
             StateChanged?.Invoke(State);
+            Invalidate();
         }
 
         private void WindowOnClientSizeChanged(object sender, SizeChangedEventArgs e)

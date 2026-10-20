@@ -112,6 +112,11 @@ public class PropertyGrid : Control
         typeof(Boolean), typeof(PropertyGrid),
         new PropertyMetadata(true, PropertyMetadataOptions.AffectsMeasure, OnShowSearchChanged));
 
+    /// <summary>Executed after each value written or taken back, with the change as its parameter: what
+    /// <see cref="ValueChanged"/> says, for a view model bound from markup.</summary>
+    public static readonly AdamantiumProperty ValueChangedCommandProperty = AdamantiumProperty.Register(
+        nameof(ValueChangedCommand), typeof(ICommand), typeof(PropertyGrid), new PropertyMetadata(null));
+
     private readonly List<PropertyRow> _rows = new();
     private readonly List<PropertySection> _openedBySearch = new();
     private readonly Dictionary<PropertySection, BindingExpressionBase> _foldingHeldBySearch = new();
@@ -242,6 +247,12 @@ public class PropertyGrid : Control
     {
         get => GetValue<String>(SearchTextProperty);
         set => SetValue(SearchTextProperty, value);
+    }
+
+    public ICommand ValueChangedCommand
+    {
+        get => GetValue<ICommand>(ValueChangedCommandProperty);
+        set => SetValue(ValueChangedCommandProperty, value);
     }
 
     public Boolean ShowSearch
@@ -534,7 +545,7 @@ public class PropertyGrid : Control
         // the whole point - everything else holding it follows.
         if (row.WriteInto(edited))
         {
-            ValueChanged?.Invoke(this, about);
+            OnValueChanged(about);
             Refresh(null, row.Definition);
             return true;
         }
@@ -547,9 +558,15 @@ public class PropertyGrid : Control
             return false;
         }
 
-        ValueChanged?.Invoke(this, about);
+        OnValueChanged(about);
         Refresh(null, row.Definition);
         return true;
+    }
+
+    private void OnValueChanged(PropertyValuesChangedEventArgs about)
+    {
+        ValueChanged?.Invoke(this, about);
+        CommandManager.ExecuteFrom(ValueChangedCommand, about, this, null);
     }
 
     /// <summary>Takes back what was written into one line, where the objects themselves know what was written - the
@@ -566,7 +583,7 @@ public class PropertyGrid : Control
 
         if (!row.ResetValues()) return false;
 
-        ValueChanged?.Invoke(this, about);
+        OnValueChanged(about);
         Refresh(null, row.Definition);
         return true;
     }

@@ -7,6 +7,8 @@ All packages share one version.
 
 ### Added
 
+- `PropertyGrid.ValueChangedCommand`: executed after each value written or taken back, with the change as its
+  parameter - what `ValueChanged` says, for a view model bound from markup.
 - `Ribbon.RowAlignment`: the commands stacked in a group's column stand from the top, as in Word (`Top`, the default),
   or spread over the group's height, the last at the bottom (`Spread`). Inherited - set on the ribbon or on one group.
 - `DropDown.IsEditable`: a value is typed into the header, as Word's font and size boxes take one. Enter picks the item
@@ -1439,6 +1441,10 @@ All packages share one version.
   asks for a frame each time it takes one, and the universe draws one per ask into the free one of three surfaces; it
   reads the pointer moving over the panel as a reason for frames under `FrameMode.OnDemand`. The editor, 4K, two
   animated models: the window ran at 100 frames a second with the scene in its frames, now 260-370, the scene 210-290.
+- Under `FrameMode.OnDemand` a universe's output in the UI asks frames of itself alone (`UniverseOutput.Invalidate`):
+  for the pointer moving over the panel, for the panel shown again - its window restored, the panel back in the tree or
+  made visible - after a resize, until the surface of the new size is handed over to the panel, and after a frame
+  dropped for want of a free surface, on the panel's next ask.
 - `RuntimeStats.WindowFps` and `RuntimeStats.LastWindowGpuMs`: the frames the render thread draws a second and the GPU
   time of the last window frame.
 - The menu key opens a text box's context menu under its caret, by the word the menu is about, not under the box's
