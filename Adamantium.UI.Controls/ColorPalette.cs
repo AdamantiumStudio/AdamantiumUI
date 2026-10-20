@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
+using System.Linq;
 using Adamantium.Core.Commands;
 using Adamantium.Mathematics;
 using Adamantium.UI.Controls.Automation;
@@ -34,13 +35,18 @@ public class ColorPalette : Control
     ];
 
     public static readonly AdamantiumProperty ColorsProperty = AdamantiumProperty.Register(nameof(Colors),
-        typeof(IReadOnlyList<Color>), typeof(ColorPalette), new PropertyMetadata(StandardColors));
+        typeof(IReadOnlyList<Color>), typeof(ColorPalette),
+        new PropertyMetadata(StandardColors, (a, _) => ((ColorPalette)a).ShowColors()));
+
+    public static readonly AdamantiumProperty ColorPlacesProperty = AdamantiumProperty.RegisterReadOnly(
+        nameof(ColorPlaces), typeof(IReadOnlyList<ColorPaletteSwatch>), typeof(ColorPalette), new PropertyMetadata(null));
 
     public static readonly AdamantiumProperty CommandProperty = AdamantiumProperty.Register(nameof(Command),
         typeof(ICommand), typeof(ColorPalette), new PropertyMetadata(null, OnCommandChanged));
 
     public static readonly AdamantiumProperty SelectedColorProperty = AdamantiumProperty.Register(nameof(SelectedColor),
-        typeof(Color?), typeof(ColorPalette), new PropertyMetadata(null, PropertyMetadataOptions.BindsTwoWayByDefault));
+        typeof(Color?), typeof(ColorPalette),
+        new PropertyMetadata(null, PropertyMetadataOptions.BindsTwoWayByDefault, OnSelectedColorChanged));
 
     public static readonly AdamantiumProperty NoColorTextProperty = AdamantiumProperty.Register(nameof(NoColorText),
         typeof(object), typeof(ColorPalette), new PropertyMetadata(null, (a, _) => ((ColorPalette)a).ShowNoColor()));
@@ -56,6 +62,9 @@ public class ColorPalette : Control
 
     public static readonly AdamantiumProperty RecentPlacesProperty = AdamantiumProperty.RegisterReadOnly(
         nameof(RecentPlaces), typeof(IReadOnlyList<ColorPaletteSwatch>), typeof(ColorPalette), new PropertyMetadata(null));
+
+    public static readonly AdamantiumProperty HasRecentColorsProperty = AdamantiumProperty.RegisterReadOnly(
+        nameof(HasRecentColors), typeof(bool), typeof(ColorPalette), new PropertyMetadata(false));
 
     private CommandSourceListener<ColorPalette> _commandListener;
     private ButtonBase _noColor;
@@ -125,6 +134,20 @@ public class ColorPalette : Control
         private set => SetValue(RecentPlacesProperty, value);
     }
 
+    /// <summary>The grid as the template shows it: a swatch of each of <see cref="Colors"/>, the selected one marked.</summary>
+    public IReadOnlyList<ColorPaletteSwatch> ColorPlaces
+    {
+        get => GetValue<IReadOnlyList<ColorPaletteSwatch>>(ColorPlacesProperty);
+        private set => SetValue(ColorPlacesProperty, value);
+    }
+
+    /// <summary>Whether any color has been applied through "More colors": the row of recent colors is shown only then.</summary>
+    public bool HasRecentColors
+    {
+        get => GetValue<bool>(HasRecentColorsProperty);
+        private set => SetValue(HasRecentColorsProperty, value);
+    }
+
     public override void OnApplyTemplate()
     {
         base.OnApplyTemplate();
@@ -166,6 +189,21 @@ public class ColorPalette : Control
     public ColorPalette()
     {
         SetValue(RecentColorsProperty, new ObservableCollection<Color>(), ValuePriority.TypeDefault);
+        ShowColors();
+    }
+
+    // Made here, as the recent places are, so each follows the selected color the same way.
+    private void ShowColors() =>
+        ColorPlaces = Array.AsReadOnly([.. (Colors ?? []).Select(color => Swatch(color))]);
+
+    private ColorPaletteSwatch Swatch(Color? color) => new() { Color = color, SelectedColor = SelectedColor };
+
+    // The swatches are the palette's own: told, not bound - a binding to the palette would outlive a swatch replaced.
+    private static void OnSelectedColorChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
+    {
+        var palette = (ColorPalette)a;
+        foreach (var place in palette.ColorPlaces ?? []) place.SelectedColor = palette.SelectedColor;
+        foreach (var place in palette.RecentPlaces ?? []) place.SelectedColor = palette.SelectedColor;
     }
 
     internal void Pick(Color? color, bool custom = false)
@@ -246,7 +284,7 @@ public class ColorPalette : Control
             var made = new ColorPaletteSwatch[count];
             for (var i = 0; i < count; i++)
             {
-                made[i] = new ColorPaletteSwatch();
+                made[i] = Swatch(null);
             }
 
             RecentPlaces = made;
@@ -257,6 +295,8 @@ public class ColorPalette : Control
         {
             RecentPlaces[i].Color = recent != null && i < recent.Count ? recent[i] : null;
         }
+
+        HasRecentColors = count > 0 && recent is { Count: > 0 };
     }
 
     private void UpdateCanExecute() =>

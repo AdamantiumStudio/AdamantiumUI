@@ -49,6 +49,25 @@
                                         Content="{TemplateBinding DisplayContent}"
                                         ContentTemplate="{TemplateBinding ItemTemplate}"
                                         ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"/>
+                                <!-- An editable one's value is typed here; a bare editor, as the spin box's. -->
+                                <TextBox x:Name="PART_EditableTextBox"
+                                        Visibility="Collapsed"
+                                        Foreground="{TemplateBinding Foreground}"
+                                        FontSize="{TemplateBinding FontSize}"
+                                        MinWidth="0" MinHeight="0"
+                                        VerticalAlignment="Center">
+                                    <TextBox.Template>
+                                        <ControlTemplate TargetType="TextBox">
+                                            <ScrollViewer x:Name="PART_ContentHost"
+                                                    HorizontalScrollBarVisibility="{TemplateBinding HorizontalScrollBarVisibility}"
+                                                    VerticalScrollBarVisibility="{TemplateBinding VerticalScrollBarVisibility}">
+                                                <TextPresenter x:Name="PART_TextPresenter"
+                                                        HorizontalAlignment="Stretch"
+                                                        VerticalAlignment="Stretch"/>
+                                            </ScrollViewer>
+                                        </ControlTemplate>
+                                    </TextBox.Template>
+                                </TextBox>
                                 <Image x:Name="Chevron" Grid.Column="1"
                                         Source="{ResourceReference ChevronDownIcon}"
                                         Width="{ResourceReference DropDownIconSize}"
@@ -88,6 +107,13 @@
     <Style Selector="DropDown">
         <PropertyTrigger Property="IsPointerOver" Value="true">
             <Setter TargetName="PART_Header" Property="Background" Value="{TemplateBinding BackgroundPointerOver}"/>
+        </PropertyTrigger>
+    </Style>
+
+    <Style Selector="DropDown">
+        <PropertyTrigger Property="IsEditable" Value="true">
+            <Setter TargetName="PART_ContentPresenter" Property="Visibility" Value="Collapsed"/>
+            <Setter TargetName="PART_EditableTextBox" Property="Visibility" Value="Visible"/>
         </PropertyTrigger>
     </Style>
 

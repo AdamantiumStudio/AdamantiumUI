@@ -20,6 +20,12 @@ public class ColorPaletteSwatch : ButtonBase
     public static readonly AdamantiumProperty HasColorProperty = AdamantiumProperty.RegisterReadOnly(
         nameof(HasColor), typeof(bool), typeof(ColorPaletteSwatch), new PropertyMetadata(false));
 
+    public static readonly AdamantiumProperty SelectedColorProperty = AdamantiumProperty.Register(nameof(SelectedColor),
+        typeof(Color?), typeof(ColorPaletteSwatch), new PropertyMetadata(null, OnSelectedColorChanged));
+
+    public static readonly AdamantiumProperty IsSelectedProperty = AdamantiumProperty.RegisterReadOnly(
+        nameof(IsSelected), typeof(bool), typeof(ColorPaletteSwatch), new PropertyMetadata(false));
+
     public ColorPaletteSwatch()
     {
         Show(null);
@@ -45,6 +51,20 @@ public class ColorPaletteSwatch : ButtonBase
         private set => SetValue(HasColorProperty, value);
     }
 
+    /// <summary>The color its palette has selected - <see cref="ColorPalette.SelectedColor"/>.</summary>
+    public Color? SelectedColor
+    {
+        get => GetValue<Color?>(SelectedColorProperty);
+        set => SetValue(SelectedColorProperty, value);
+    }
+
+    /// <summary>Whether it holds the selected color, for the template to mark.</summary>
+    public bool IsSelected
+    {
+        get => GetValue<bool>(IsSelectedProperty);
+        private set => SetValue(IsSelectedProperty, value);
+    }
+
     protected override void OnClick()
     {
         base.OnClick();
@@ -66,9 +86,16 @@ public class ColorPaletteSwatch : ButtonBase
     private static void OnColorChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e) =>
         ((ColorPaletteSwatch)a).Show((Color?)e.NewValue);
 
+    private static void OnSelectedColorChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
+    {
+        var swatch = (ColorPaletteSwatch)a;
+        swatch.IsSelected = swatch.Color.HasValue && swatch.Color == swatch.SelectedColor;
+    }
+
     private void Show(Color? color)
     {
         HasColor = color.HasValue;
+        IsSelected = color.HasValue && color == SelectedColor;
         SwatchBrush = color is { } shown ? new SolidColorBrush(shown) : null;
         SetCurrentValue(IsEnabledProperty, color.HasValue);
         AutomationProperties.SetName(this, color is { } named ? $"#{named.R:X2}{named.G:X2}{named.B:X2}" : string.Empty);

@@ -869,7 +869,8 @@ public class EllipseRenderUnit : RenderUnit<EllipsePayload>
     private static Geometry EllipseShape(EllipsePayload payload)
     {
         var outer = new EllipseGeometry(payload.DestinationRect, payload.StartAngle, payload.SweepAngle, payload.EllipseType);
-        if (!payload.HasRing) return outer;
+        // A ring swept through nothing is nothing: the empty sector says so without cutting one nothing from another.
+        if (!payload.HasRing || payload.SweepAngle <= 0) return outer;
 
         var t = payload.RingThickness;
         var inner = payload.DestinationRect.Deflate(new Thickness(t));
@@ -905,8 +906,7 @@ public class EllipseRenderUnit : RenderUnit<EllipsePayload>
         var oldBrush = Payload.Brush;
         var rebuild = Payload.RequiresBufferRebuild(inputPayload);
 
-        var ellipseGeometry = new EllipseGeometry(inputPayload.DestinationRect, inputPayload.StartAngle, inputPayload.SweepAngle,
-            inputPayload.EllipseType);
+        var ellipseGeometry = EllipseShape(inputPayload);
         if (rebuild)
         {
             ellipseGeometry.ProcessGeometry(GeometryType.Both);

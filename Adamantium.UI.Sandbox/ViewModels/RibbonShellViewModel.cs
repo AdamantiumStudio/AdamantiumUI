@@ -52,6 +52,9 @@ public partial class RibbonShellViewModel : IWindowAware
     /// shows itself only while this names its own slot; the collection they list is this one view model's.</summary>
     [Bindable] private RibbonQuickAccessPlacement _quickAccessPlacement = RibbonQuickAccessPlacement.Caption;
 
+    /// <summary>Where the commands stacked in a group's column stand - read by the ribbon for every group.</summary>
+    [Bindable] private RibbonRowAlignment _rowAlignment = RibbonRowAlignment.Top;
+
     /// <summary>Which tab's commands the customize page offers.</summary>
     [Bindable] private ShellTab _commandSource = ShellTab.All;
 
@@ -274,6 +277,13 @@ public partial class RibbonShellViewModel : IWindowAware
         set => QuickAccessPlacement = value ? RibbonQuickAccessPlacement.BelowRibbon : RibbonQuickAccessPlacement.Caption;
     }
 
+    /// <summary>The rows of a group spread over its height rather than standing from the top.</summary>
+    public bool AreRowsSpread
+    {
+        get => RowAlignment == RibbonRowAlignment.Spread;
+        set => RowAlignment = value ? RibbonRowAlignment.Spread : RibbonRowAlignment.Top;
+    }
+
     public bool HasChoice => SelectedChoice != null;
 
     public bool HasBarItem => SelectedBarItem != null;
@@ -288,6 +298,8 @@ public partial class RibbonShellViewModel : IWindowAware
 
     partial void OnQuickAccessPlacementChanged(RibbonQuickAccessPlacement value) =>
         RaisePropertyChanged(nameof(IsQuickAccessBelow));
+
+    partial void OnRowAlignmentChanged(RibbonRowAlignment value) => RaisePropertyChanged(nameof(AreRowsSpread));
 
     private void OnQuickAccessChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
     {

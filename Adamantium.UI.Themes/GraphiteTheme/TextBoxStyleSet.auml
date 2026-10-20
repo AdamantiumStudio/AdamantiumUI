@@ -183,8 +183,9 @@
         </PropertyTrigger>
     </Style>
 
-    <!-- DateTimeField: the same flat field over its rule, its parts side by side where the text box has its text. -->
-    <Style Selector="DateTimeField">
+    <!-- DateTimeField and DurationField: the same flat field over its rule, its parts side by side where the text box
+         has its text. -->
+    <Style Selector="DateTimeField, DurationField">
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BorderBrush" Value="{ResourceReference ControlStrokeColorDefault}"/>
         <Setter Property="Foreground" Value="{ObservableResource TextFillColorPrimary}"/>
@@ -193,14 +194,13 @@
         <Setter Property="FontSize" Value="{ResourceReference FontSizeBody}"/>
         <Setter Property="Template">
             <Setter.Value>
-                <ControlTemplate TargetType="DateTimeField">
+                <ControlTemplate TargetType="Control">
                     <Grid RowDefinitions="*,Auto">
                         <Border x:Name="PART_Border"
                                 Background="{TemplateBinding Background}"
                                 Padding="{TemplateBinding Padding}">
-                            <StackPanel x:Name="PART_Segments"
-                                        Orientation="Horizontal"
-                                        VerticalAlignment="Center"/>
+                            <FieldSegmentPanel x:Name="PART_Segments"
+                                               VerticalAlignment="Center"/>
                         </Border>
                         <Border x:Name="Rule" Grid.Row="1"
                                 Height="{ResourceReference StrokeThinValue}"
@@ -211,7 +211,7 @@
         </Setter>
     </Style>
 
-    <Style Selector="DateTimeField">
+    <Style Selector="DateTimeField, DurationField">
         <PropertyTrigger Property="IsPointerOver" Value="true">
             <Setter TargetName="Rule" Property="Background" Value="{ResourceReference ControlStrokeColorSecondary}"/>
         </PropertyTrigger>
@@ -241,9 +241,8 @@
                                 Background="{TemplateBinding Background}"
                                 Padding="{TemplateBinding Padding}">
                             <Grid ColumnDefinitions="*,Auto">
-                                <StackPanel x:Name="PART_Segments"
-                                            Orientation="Horizontal"
-                                            VerticalAlignment="Center"/>
+                                <FieldSegmentPanel x:Name="PART_Segments"
+                                                   VerticalAlignment="Center"/>
                                 <Button x:Name="PART_Button"
                                         Grid.Column="1"
                                         Classes="DateTimePickerButton"

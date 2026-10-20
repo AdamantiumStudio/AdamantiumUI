@@ -19,6 +19,10 @@
   <Invoke Target="id=Band/name=Paste" />
   <Expect Target="id=Notes" Value="notenote" />
   <Expect Target="id=StatusLine" Name="Copied the selection." />
+  <!-- A click on a tab picks it and leaves the keyboard in the notes, as Office's leaves it in the text. -->
+  <Click Target="id=Band/name=Modeling" />
+  <Expect Target="id=Notes" Focus="True" />
+  <Click Target="id=Band/name=Home" />
   <Click Target="id=RibbonWindow/id=SceneSurface" />
   <Invoke Target="id=Cut" />
   <Expect Target="id=StatusLine" Name="Cut the selection." />
@@ -53,6 +57,12 @@
   <Expand Target="id=Band/name=File" />
   <Select Target="id=Band/name=File/name=Customize" />
   <Expect Target="id=CommandChoices" Name="Choose commands from" />
+  <!-- The rows of the groups spread over their height and back to standing from the top. -->
+  <Expect Target="id=SpreadRows" Toggle="Off" />
+  <Toggle Target="id=SpreadRows" />
+  <Expect Target="id=SpreadRows" Toggle="On" />
+  <Toggle Target="id=SpreadRows" />
+  <Expect Target="id=SpreadRows" Toggle="Off" />
   <Collapse Target="id=Band/name=File" />
   <!-- The ribbon folds down to its tabs and opens again. -->
   <Collapse Target="id=Band" />

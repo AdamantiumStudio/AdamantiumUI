@@ -23,7 +23,7 @@ public class DataGridCellAutomationPeer : ContentControlAutomationPeer, IValuePr
     public override AutomationControlType ControlType =>
         IsReadOnly ? AutomationControlType.Text : AutomationControlType.DataItem;
 
-    public string Value => TextOf(_cell) ?? string.Empty;
+    public string Value => Shown() ?? string.Empty;
 
     public bool IsReadOnly => Grid()?.IsCellReadOnly(Row, Column) ?? true;
 
@@ -39,7 +39,8 @@ public class DataGridCellAutomationPeer : ContentControlAutomationPeer, IValuePr
 
     public AutomationPeer SelectionContainer => ContainingGrid;
 
-    /// <summary>Writes the text as the cell's value; refused, as an edit would be, when the grid says no.</summary>
+    /// <summary>Writes the text as the cell's value, read as its column reads a paste; refused, as an edit would be, when
+    /// the grid says no.</summary>
     public void SetValue(string value)
     {
         if (IsReadOnly)
@@ -48,7 +49,8 @@ public class DataGridCellAutomationPeer : ContentControlAutomationPeer, IValuePr
         }
 
         var grid = Grid();
-        if (grid?.WriteCell(Row, Column, value) != true)
+        var written = _cell.Column is { } column ? column.ValueOfText(value, _cell.Content) : value;
+        if (grid?.WriteCell(Row, Column, written) != true)
         {
             throw new InvalidOperationException($"The grid refused '{value}' at row {Row}, column {Column}.");
         }
@@ -71,7 +73,10 @@ public class DataGridCellAutomationPeer : ContentControlAutomationPeer, IValuePr
     public IReadOnlyList<AutomationPeer> GetColumnHeaders() =>
         (ContainingGrid as TreeDataGridAutomationPeer)?.GetColumnHeaders(Column) ?? [];
 
-    protected override string NameCore() => TextOf(_cell);
+    protected override string NameCore() => Shown();
+
+    private string Shown() =>
+        _cell.Column is { DrawsItsText: true } column && !_cell.IsEditing ? column.TextOf(_cell.Content) : TextOf(_cell);
 
     protected override IReadOnlyList<AutomationPeer> ChildrenCore()
     {

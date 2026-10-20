@@ -813,6 +813,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
     private void ApplicationLoopThread()
     {
         Dispatcher.UIThread = Thread.CurrentThread;
+        LoopSignal.Claim();
 
         while (!cancellationTokenSource.IsCancellationRequested)
         {
@@ -1049,6 +1050,8 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
     // after all windows, so the second window still sees all of it.
     private void RecordRenderFrame()
     {
+        // An animation started in this frame's layout captured where its element stood before it was arranged.
+        Compositor.RefreshBases();
         if (RenderThreadOptions.SingleThreaded || DisableRendering) return;
         _recordedThisFrame = false;
 

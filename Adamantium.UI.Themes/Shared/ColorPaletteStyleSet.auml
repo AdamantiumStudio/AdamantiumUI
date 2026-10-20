@@ -14,30 +14,27 @@
                                 Content="{TemplateBinding NoColorText}"
                                 HorizontalAlignment="Stretch"
                                 HorizontalContentAlignment="Left"/>
-                        <ItemsControl ItemsSource="{TemplateBinding Colors}">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <UniformGrid Columns="10"/>
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <ColorPaletteSwatch Color="{Binding}"/>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                        <!-- One row kept for the colors applied through "More colors", as Word's "Recent colors":
-                             empty places until there are some. -->
-                        <TextBlock Text="{Localize ColorPickerStrings.RecentColors}"
-                                   FontSize="12"
-                                   Foreground="{ResourceReference TextFillColorSecondary}"/>
-                        <ItemsControl ItemsSource="{TemplateBinding RecentPlaces}">
+                        <ItemsControl ItemsSource="{TemplateBinding ColorPlaces}">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
                                     <UniformGrid Columns="10"/>
                                 </ItemsPanelTemplate>
                             </ItemsControl.ItemsPanel>
                         </ItemsControl>
+                        <!-- One row for the colors applied through "More colors", as Word's "Recent colors": shown once
+                             there are some, empty places after them. -->
+                        <StackPanel x:Name="RecentRow" Visibility="Collapsed" Spacing="6">
+                            <TextBlock Text="{Localize ColorPickerStrings.RecentColors}"
+                                       FontSize="12"
+                                       Foreground="{ResourceReference TextFillColorSecondary}"/>
+                            <ItemsControl ItemsSource="{TemplateBinding RecentPlaces}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <UniformGrid Columns="10"/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                            </ItemsControl>
+                        </StackPanel>
                         <Button x:Name="PART_MoreColors"
                                 Content="{Localize ColorPickerStrings.MoreColors}"
                                 HorizontalAlignment="Stretch"
@@ -57,6 +54,12 @@
     <Style Selector="ColorPalette">
         <PropertyTrigger Property="IsMoreColorsOpen" Value="true">
             <Setter TargetName="PART_More" Property="Visibility" Value="Visible"/>
+        </PropertyTrigger>
+    </Style>
+
+    <Style Selector="ColorPalette">
+        <PropertyTrigger Property="HasRecentColors" Value="true">
+            <Setter TargetName="RecentRow" Property="Visibility" Value="Visible"/>
         </PropertyTrigger>
     </Style>
 
@@ -84,6 +87,14 @@
         </PropertyTrigger>
         <PropertyTrigger Property="IsPointerOver" Value="true">
             <Setter TargetName="Chrome" Property="BorderBrush" Value="{ResourceReference TextFillColorPrimary}"/>
+            <Setter TargetName="Chrome" Property="BorderThickness" Value="2"/>
+        </PropertyTrigger>
+    </Style>
+
+    <!-- The color picked last, which the split button's body applies, is ringed in the accent. -->
+    <Style Selector="ColorPaletteSwatch">
+        <PropertyTrigger Property="IsSelected" Value="true">
+            <Setter TargetName="Chrome" Property="BorderBrush" Value="{ThemeResource AccentFillColorDefault}"/>
             <Setter TargetName="Chrome" Property="BorderThickness" Value="2"/>
         </PropertyTrigger>
     </Style>

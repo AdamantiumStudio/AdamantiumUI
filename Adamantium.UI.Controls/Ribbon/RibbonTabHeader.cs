@@ -128,16 +128,27 @@ public class RibbonTabHeader : ContentControl, ISelectable, IKeyTipTarget, IKeyT
         }
 
         e.Handled = true;
-        Focus();
 
         // Double-click minimizes the band and restores it, as Office does. The first click has already opened this tab.
         if (e.ClickCount >= 2)
         {
             Owner?.ToggleMinimized();
-            return;
+        }
+        else
+        {
+            Owner?.ClickTab(this);
         }
 
-        Owner?.ClickTab(this);
+        // In a ribbon whose commands give the focus back, a click picks the tab and the field being edited keeps the
+        // keyboard, as Office's does.
+        if (FocusManager.FocusToReturnTo(this) is { } field)
+        {
+            field.Focus();
+        }
+        else
+        {
+            Focus();
+        }
     }
 
     /// <summary>Enter/Space OPENS the tab: picks it and steps into its first command. Tab keeps walking the headers.

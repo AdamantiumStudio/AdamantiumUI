@@ -3,8 +3,10 @@ using System.Threading;
 
 namespace Adamantium.UI.Core.Dispatcher;
 
-/// <summary>A timer whose <see cref="Tick"/> is raised through the <see cref="SynchronizationContext"/> captured at
-/// construction; with none (headless), it ticks on the timer thread.</summary>
+/// <summary>A timer whose <see cref="Tick"/> is raised on the application's loop once one has claimed it
+/// (<see cref="LoopSignal.Claim"/>) - one tick waiting at a time, none from before a <see cref="Stop"/> or
+/// <see cref="Start()"/>; otherwise through the <see cref="SynchronizationContext"/> captured at construction, or with none
+/// (headless) on the timer thread.</summary>
 public sealed class DispatcherTimer : IDisposable
 {
     private readonly SynchronizationContext _syncContext;
@@ -12,6 +14,8 @@ public sealed class DispatcherTimer : IDisposable
     private readonly SendOrPostCallback _post;
     private TimeSpan _interval = TimeSpan.Zero;
     private bool _isEnabled;
+    private int _generation;
+    private int _queued;
 
     public DispatcherTimer()
     {
@@ -47,14 +51,22 @@ public sealed class DispatcherTimer : IDisposable
     /// <summary>Starts with a custom first delay, then ticks every <see cref="Interval"/> (the press-then-repeat pattern).</summary>
     public void Start(TimeSpan firstDelay)
     {
+        Renew();
         _isEnabled = true;
         Schedule(firstDelay);
     }
 
     public void Stop()
     {
+        Renew();
         _isEnabled = false;
         _timer.Change(Timeout.Infinite, Timeout.Infinite);
+    }
+
+    private void Renew()
+    {
+        Interlocked.Increment(ref _generation);
+        Volatile.Write(ref _queued, 0);
     }
 
     private void Schedule(TimeSpan firstDelay)
@@ -67,10 +79,25 @@ public sealed class DispatcherTimer : IDisposable
     private void OnTimerTick(object state)
     {
         if (!_isEnabled) return;
-        if (_syncContext != null && _syncContext != SynchronizationContext.Current)
+        if (LoopSignal.IsClaimed)
+        {
+            if (Interlocked.Exchange(ref _queued, 1) == 0)
+            {
+                var generation = Volatile.Read(ref _generation);
+                LoopSignal.Post(() => RaiseQueued(generation));
+            }
+        }
+        else if (_syncContext != null && _syncContext != SynchronizationContext.Current)
             _syncContext.Post(_post, null);
         else
             RaiseTick();
+    }
+
+    private void RaiseQueued(int generation)
+    {
+        if (generation != Volatile.Read(ref _generation)) return;
+        Volatile.Write(ref _queued, 0);
+        RaiseTick();
     }
 
     private void RaiseTick()

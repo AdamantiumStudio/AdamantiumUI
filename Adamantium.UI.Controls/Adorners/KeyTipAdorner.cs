@@ -1,4 +1,5 @@
 using Adamantium.Mathematics;
+using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Core;
 
 namespace Adamantium.UI.Controls.Adorners;
@@ -48,6 +49,13 @@ public class KeyTipAdorner : Adorner
     {
         var target = AdornedBounds;
 
+        // Below its icon, where the command shows one: the badge then sits by what the eye finds the command by, not
+        // under its label or off the end of a wide one.
+        if (Placement == KeyTipPlacement.Bottom && IconBounds() is { } icon)
+        {
+            target = icon;
+        }
+
         var x = Placement switch
         {
             KeyTipPlacement.Left => target.X - badge.Width / 2,
@@ -63,5 +71,18 @@ public class KeyTipAdorner : Adorner
         };
 
         return new Rect(x, y, badge.Width, badge.Height);
+    }
+
+    private Rect? IconBounds()
+    {
+        if (AdornedElement is not TemplatedUIComponent command ||
+            command.GetTemplateChild("PART_Icon") is not IUIComponent { Visibility: Visibility.Visible } icon ||
+            icon is ContentPresenter { Content: null } ||
+            icon.RenderSize.Width <= 0 || icon.RenderSize.Height <= 0)
+        {
+            return null;
+        }
+
+        return icon.TransformBoundsToVisual(command);
     }
 }

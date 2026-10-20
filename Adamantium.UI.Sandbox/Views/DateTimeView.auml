@@ -213,6 +213,202 @@
                             Language="{Binding CalendarLanguage}"/>
             </Grid>
 
+            <!-- Lengths of time part by part. -->
+            <TextBlock Text="{Localize DateTimePageStrings.Durations}"
+                       TextWrapping="WrapByWords"
+                       MaxWidth="680"
+                       HorizontalAlignment="Left"
+                       MarginTop="16"
+                       MarginBottom="8"/>
+            <Grid ColumnDefinitions="Auto,Auto,Auto"
+                  RowDefinitions="Auto,Auto,Auto"
+                  ColumnSpacing="12"
+                  RowSpacing="6"
+                  HorizontalAlignment="Left"
+                  MarginBottom="12">
+                <TextBlock Text="{Localize DateTimePageStrings.Duration}"
+                           VerticalAlignment="Center"/>
+                <DurationField AutomationProperties.AutomationId="DurationField"
+                               Grid.Column="1"
+                               Value="{Binding Length}"
+                               Language="{Binding CalendarLanguage}"/>
+                <TextBlock Grid.Column="2"
+                           VerticalAlignment="Center"><Run Text="{Localize DateTimePageStrings.FieldValue}"/><Run Text="{Binding Length, StringFormat='{0:c}'}"/></TextBlock>
+
+                <TextBlock Grid.Row="1"
+                           Text="{Localize DateTimePageStrings.DurationDays}"
+                           VerticalAlignment="Center"/>
+                <DurationField Grid.Row="1"
+                               Grid.Column="1"
+                               Parts="Days, Hours, Minutes"
+                               Value="{Binding Length}"
+                               Language="{Binding CalendarLanguage}"/>
+
+                <TextBlock Grid.Row="2"
+                           Text="{Localize DateTimePageStrings.DurationMilliseconds}"
+                           VerticalAlignment="Center"/>
+                <DurationField AutomationProperties.AutomationId="CooldownField"
+                               Grid.Row="2"
+                               Grid.Column="1"
+                               Parts="Seconds, Milliseconds"
+                               Minimum="0:00:00"
+                               Value="{Binding Cooldown}"
+                               Language="{Binding CalendarLanguage}"/>
+                <TextBlock Grid.Row="2"
+                           Grid.Column="2"
+                           VerticalAlignment="Center"><Run Text="{Localize DateTimePageStrings.FieldValue}"/><Run Text="{Binding Cooldown, StringFormat='{0:c}'}"/></TextBlock>
+            </Grid>
+
+            <!-- The same in a table and in an inspector built from the record's type. -->
+            <TextBlock Text="{Localize DateTimePageStrings.Table}"
+                       TextWrapping="WrapByWords"
+                       MaxWidth="680"
+                       HorizontalAlignment="Left"
+                       MarginTop="16"
+                       MarginBottom="8"/>
+            <TreeDataGrid AutomationProperties.AutomationId="ScheduleTable"
+                          ItemsSource="{Binding Schedule}"
+                          Height="200"
+                          MaxWidth="900"
+                          HorizontalAlignment="Left"
+                          MarginBottom="12">
+                <TreeDataGrid.Columns>
+                    <DataGridTextColumn Header="{Localize DateTimePageStrings.TaskName}" Binding="{Binding Name}" Width="160"/>
+                    <DataGridDateTimeColumn Header="{Localize DateTimePageStrings.Due}" Binding="{Binding Due}" Format="ShortDateTime" Width="200"/>
+                    <DataGridDateTimeColumn Header="{Localize DateTimePageStrings.Day}" Binding="{Binding Day}" Width="140"/>
+                    <DataGridDateTimeColumn Header="{Localize DateTimePageStrings.Start}" Binding="{Binding Start}" Format="ShortTime" Width="120"/>
+                    <DataGridDateTimeColumn Header="{Localize DateTimePageStrings.Stamp}" Binding="{Binding Stamp}" Format="ShortDateTime" Width="200"/>
+                    <DataGridDurationColumn Header="{Localize DateTimePageStrings.Length}" Binding="{Binding Length}" Width="120"/>
+                </TreeDataGrid.Columns>
+            </TreeDataGrid>
+
+            <TextBlock Text="{Localize DateTimePageStrings.Inspector}"
+                       TextWrapping="WrapByWords"
+                       MaxWidth="680"
+                       HorizontalAlignment="Left"
+                       MarginTop="4"
+                       MarginBottom="8"/>
+            <PropertyGrid AutomationProperties.AutomationId="ScheduleInspector"
+                          AutoGenerateSections="True"
+                          SelectedObject="{Binding Inspected}"
+                          Width="420"
+                          Height="260"
+                          HorizontalAlignment="Left"
+                          MarginBottom="12"/>
+
+            <!-- One clock, every style: hands turned by the compositor, figures changed on the second. -->
+            <TextBlock Text="{Localize DateTimePageStrings.Clocks}"
+                       TextWrapping="WrapByWords"
+                       MaxWidth="680"
+                       HorizontalAlignment="Left"
+                       MarginTop="4"
+                       MarginBottom="8"/>
+            <WrapPanel Orientation="Horizontal"
+                       MarginBottom="12">
+                <StackPanel Margin="0,0,16,16">
+                    <Clock AutomationProperties.AutomationId="ClassicClock"
+                           ClockStyle="Classic"
+                           Width="160"
+                           Height="160"
+                           Language="{Binding CalendarLanguage}"/>
+                    <TextBlock Text="Classic" HorizontalAlignment="Center" MarginTop="4"/>
+                </StackPanel>
+                <StackPanel Margin="0,0,16,16">
+                    <Clock ClockStyle="Minimal"
+                           SecondHandMotion="Sweep"
+                           Width="160"
+                           Height="160"/>
+                    <TextBlock Text="{Localize DateTimePageStrings.MinimalSweep}" HorizontalAlignment="Center" MarginTop="4"/>
+                </StackPanel>
+                <StackPanel Margin="0,0,16,16">
+                    <Clock ClockStyle="Roman"
+                           Width="160"
+                           Height="160"/>
+                    <TextBlock Text="Roman" HorizontalAlignment="Center" MarginTop="4"/>
+                </StackPanel>
+                <StackPanel Margin="0,0,16,16">
+                    <Clock ClockStyle="Dots"
+                           ShowSeconds="False"
+                           Width="160"
+                           Height="160"/>
+                    <TextBlock Text="{Localize DateTimePageStrings.DotsNoSeconds}" HorizontalAlignment="Center" MarginTop="4"/>
+                </StackPanel>
+            </WrapPanel>
+            <WrapPanel Orientation="Horizontal"
+                       MarginBottom="12">
+                <StackPanel Margin="0,0,24,16">
+                    <Clock AutomationProperties.AutomationId="TextClock"
+                           ClockStyle="Text"
+                           Language="{Binding CalendarLanguage}"/>
+                    <TextBlock Text="Text" HorizontalAlignment="Center" MarginTop="4"/>
+                </StackPanel>
+                <StackPanel Margin="0,0,24,16">
+                    <Clock ClockStyle="SevenSegment"
+                           Language="{Binding CalendarLanguage}"/>
+                    <TextBlock Text="SevenSegment" HorizontalAlignment="Center" MarginTop="4"/>
+                </StackPanel>
+                <StackPanel Margin="0,0,24,16">
+                    <Clock ClockStyle="Flip"
+                           Language="{Binding CalendarLanguage}"/>
+                    <TextBlock Text="Flip" HorizontalAlignment="Center" MarginTop="4"/>
+                </StackPanel>
+            </WrapPanel>
+            <WrapPanel Orientation="Horizontal"
+                       MarginBottom="24">
+                <StackPanel Margin="0,0,16,0">
+                    <Clock ClockStyle="Classic"
+                           TimeZone="{Binding Tokyo}"
+                           Width="120"
+                           Height="120"/>
+                    <TextBlock Text="{Localize DateTimePageStrings.Tokyo}" HorizontalAlignment="Center" MarginTop="4"/>
+                </StackPanel>
+                <StackPanel Margin="0,0,16,0">
+                    <Clock ClockStyle="Classic"
+                           TimeZone="{Binding NewYork}"
+                           Width="120"
+                           Height="120"/>
+                    <TextBlock Text="{Localize DateTimePageStrings.NewYork}" HorizontalAlignment="Center" MarginTop="4"/>
+                </StackPanel>
+                <StackPanel>
+                    <Clock ClockStyle="Text"
+                           IsLive="False"
+                           Time="{Binding MeetingTime}"
+                           ShowSeconds="False"
+                           Language="{Binding CalendarLanguage}"/>
+                    <TextBlock Text="{Localize DateTimePageStrings.Meeting}" HorizontalAlignment="Center" MarginTop="4"/>
+                </StackPanel>
+            </WrapPanel>
+
+            <!-- A countdown and a stopwatch on the same clock: its styles, its buttons, what is left ringed on a face. -->
+            <TextBlock Text="{Localize DateTimePageStrings.Timers}"
+                       TextWrapping="WrapByWords"
+                       MaxWidth="680"
+                       HorizontalAlignment="Left"
+                       MarginBottom="8"/>
+            <WrapPanel Orientation="Horizontal"
+                       MarginBottom="24">
+                <CountdownTimer AutomationProperties.AutomationId="AnalogCountdown"
+                                Duration="{Binding TimerLength}"
+                                Width="220"
+                                Height="270"
+                                Margin="0,0,24,16"/>
+                <StackPanel Margin="0,0,24,16">
+                    <CountdownTimer AutomationProperties.AutomationId="SegmentCountdown"
+                                    ClockStyle="SevenSegment"
+                                    Duration="{Binding TimerLength}"
+                                    CompletedCommand="{Binding TimerDoneCommand}"/>
+                    <TextBlock MarginTop="4"><Run Text="{Localize DateTimePageStrings.TimerDone}"/><Run Text="{Binding TimesDone}"/></TextBlock>
+                </StackPanel>
+                <StopwatchTimer AutomationProperties.AutomationId="Stopwatch"
+                                Width="260"
+                                Height="420"
+                                Margin="0,0,24,16"/>
+                <StopwatchTimer AutomationProperties.AutomationId="FlipStopwatch"
+                                ClockStyle="Flip"
+                                VerticalAlignment="Top"
+                                Margin="0,0,24,16"/>
+            </WrapPanel>
+
             <WrapPanel Orientation="Horizontal"
                        MarginTop="12">
                 <!-- At the size its content asks for, bound to the page's date. -->

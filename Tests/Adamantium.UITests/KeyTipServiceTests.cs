@@ -50,6 +50,26 @@ public class KeyTipServiceTests
         });
     }
 
+    // A tab's letters are written on the tab and worn by its header: the tab itself stands in the band its commands are
+    // offered from, and wore a stray badge of its own among them.
+    [Test]
+    public void ATabIsNotOfferedAmongItsCommands()
+    {
+        var tab = new RibbonTab { Header = "Home" };
+        KeyTipService.SetKeyTip(tab, "H");
+        var band = new StackPanel();
+        band.Children.Add(tab);
+        band.Children.Add(Tipped("V"));
+
+        var candidates = KeyTipService.Candidates(band);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(candidates, Has.Count.EqualTo(1));
+            Assert.That(KeyTipService.GetKeyTip(candidates[0]), Is.EqualTo("V"));
+        });
+    }
+
     [Test]
     public void WhatIsHiddenIsNotOffered()
     {

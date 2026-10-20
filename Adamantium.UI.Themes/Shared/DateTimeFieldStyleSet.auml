@@ -2,15 +2,16 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- The parts of a DateTimeField: each its text, or its placeholder dimmed while empty, and the one the keyboard is
-         on lit in the accent. The field's own frame is each theme's text field (its TextBox style set). -->
-    <Style Selector="DateTimeFieldSegment">
+    <!-- The parts of a DateTimeField and of a DurationField: each its text, or its placeholder dimmed while empty, and
+         the one the keyboard is on lit in the accent. The field's own frame is each theme's text field (its TextBox
+         style set). -->
+    <Style Selector="DateTimeFieldSegment, DurationFieldSegment">
         <Setter Property="Padding" Value="1,0"/>
         <Setter Property="CornerRadius" Value="2"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
         <Setter Property="Template">
             <Setter.Value>
-                <ControlTemplate TargetType="DateTimeFieldSegment">
+                <ControlTemplate TargetType="FieldSegment">
                     <Border x:Name="Chrome"
                             Background="{TemplateBinding Background}"
                             CornerRadius="{TemplateBinding CornerRadius}"
@@ -23,14 +24,25 @@
         </Setter>
     </Style>
 
-    <Style Selector="DateTimeFieldSegment">
+    <Style Selector="DateTimeFieldSegment, DurationFieldSegment">
         <PropertyTrigger Property="IsEmpty" Value="true">
             <Setter TargetName="PART_Text" Property="Foreground" Value="{ResourceReference TextFillColorTertiary}"/>
         </PropertyTrigger>
-        <PropertyTrigger Property="IsActive" Value="true">
+        <MultiTrigger>
+            <MultiTrigger.Conditions>
+                <Condition Property="IsActive" Value="true"/>
+                <Condition Property="FieldSegment.Marking" Value="Fill"/>
+            </MultiTrigger.Conditions>
             <Setter TargetName="Chrome" Property="Background" Value="{ThemeResource AccentFillColorDefault}"/>
             <Setter TargetName="PART_Text" Property="Foreground" Value="{ThemeResource AccentForegroundColor}"/>
-        </PropertyTrigger>
+        </MultiTrigger>
+        <MultiTrigger>
+            <MultiTrigger.Conditions>
+                <Condition Property="IsActive" Value="true"/>
+                <Condition Property="FieldSegment.Marking" Value="Figures"/>
+            </MultiTrigger.Conditions>
+            <Setter TargetName="PART_Text" Property="Foreground" Value="{ThemeResource AccentFillColorDefault}"/>
+        </MultiTrigger>
     </Style>
 
     <!-- What each part shows while empty, and what it is called. -->
@@ -73,8 +85,54 @@
         </PropertyTrigger>
     </Style>
 
+    <!-- ...and what each part of a length shows while empty, and what it is called. -->
+    <Style Selector="DurationFieldSegment">
+        <PropertyTrigger Property="Part" Value="Days">
+            <Setter Property="Placeholder" Value="{Localize DateTimeFieldStrings.DayPlaceholder}"/>
+            <Setter Property="AutomationProperties.Name" Value="{Localize DateTimeFieldStrings.Days}"/>
+        </PropertyTrigger>
+        <PropertyTrigger Property="Part" Value="Hours">
+            <Setter Property="Placeholder" Value="{Localize DateTimeFieldStrings.HourPlaceholder}"/>
+            <Setter Property="AutomationProperties.Name" Value="{Localize DateTimeFieldStrings.Hour}"/>
+        </PropertyTrigger>
+        <PropertyTrigger Property="Part" Value="Minutes">
+            <Setter Property="Placeholder" Value="{Localize DateTimeFieldStrings.MinutePlaceholder}"/>
+            <Setter Property="AutomationProperties.Name" Value="{Localize DateTimeFieldStrings.Minute}"/>
+        </PropertyTrigger>
+        <PropertyTrigger Property="Part" Value="Seconds">
+            <Setter Property="Placeholder" Value="{Localize DateTimeFieldStrings.SecondPlaceholder}"/>
+            <Setter Property="AutomationProperties.Name" Value="{Localize DateTimeFieldStrings.Second}"/>
+        </PropertyTrigger>
+        <PropertyTrigger Property="Part" Value="Milliseconds">
+            <Setter Property="Placeholder" Value="{Localize DateTimeFieldStrings.MillisecondPlaceholder}"/>
+            <Setter Property="AutomationProperties.Name" Value="{Localize DateTimeFieldStrings.Millisecond}"/>
+        </PropertyTrigger>
+    </Style>
+
     <Style Selector="TextBlock.DateTimeFieldLiteral">
         <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+
+    <!-- What a field says in place of its parts - "Multiple values" in an inspector - dimmed as a placeholder is. -->
+    <Style Selector="TextBlock.DateTimeFieldPrompt">
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="Foreground" Value="{ResourceReference TextFillColorTertiary}"/>
+    </Style>
+
+    <!-- ...and the same word in the text a table's column and an inspector's line read a length as. -->
+    <Style Selector="DataGridDurationColumn">
+        <Setter Property="DayUnit" Value="{Localize DateTimeFieldStrings.DayUnit}"/>
+    </Style>
+
+    <Style Selector="DurationProperty">
+        <Setter Property="DayUnit" Value="{Localize DateTimeFieldStrings.DayUnit}"/>
+    </Style>
+
+    <!-- The word for days after a length's days: "2 d 05:30:00". -->
+    <Style Selector="TextBlock.DurationFieldDayUnit">
+        <Setter Property="Text" Value="{Localize DateTimeFieldStrings.DayUnit}"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="Margin" Value="2,0,4,0"/>
     </Style>
 
     <!-- The pickers: a button at the field's end, and the card it opens - a calendar, the times of a day, or both. The
@@ -146,10 +204,6 @@
         <Setter Property="Background" Value="{ThemeResource AccentFillColorDefault}"/>
     </Style>
 
-    <Style Selector="TextBlock.ClockDialMarkChosen">
-        <Setter Property="Foreground" Value="{ThemeResource AccentForegroundColor}"/>
-    </Style>
-
     <Style Selector="Button.ClockDialPart">
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BorderThickness" Value="0"/>
@@ -170,15 +224,12 @@
     </Style>
 
     <!-- The part the face is not showing stands back. -->
-    <Style Selector="Button.ClockDialPart">
+    <!-- One or the other, never both: two styles setting one property on one element apply in no promised order. -->
+    <Style Selector="Button.ClockDialIdle">
         <Setter Property="Opacity" Value="0.55"/>
     </Style>
 
-    <Style Selector="Button.ClockDialPeriod">
-        <Setter Property="Opacity" Value="0.55"/>
-    </Style>
-
-    <Style Selector="Button.ClockDialPartChosen">
+    <Style Selector="Button.ClockDialLit">
         <Setter Property="Opacity" Value="1"/>
     </Style>
 

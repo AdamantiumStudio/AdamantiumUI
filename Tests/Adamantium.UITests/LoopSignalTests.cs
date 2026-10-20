@@ -102,6 +102,66 @@ public class LoopSignalTests
     }
 
     [Test]
+    public void ATimer_TicksOnTheLoop_OneTickWaitingAtATime()
+    {
+        var loop = Thread.CurrentThread;
+        Thread tickedOn = null;
+        var ticks = 0;
+        var timer = new Adamantium.UI.Core.Dispatcher.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(5) };
+        timer.Tick += (_, _) =>
+        {
+            tickedOn = Thread.CurrentThread;
+            ticks++;
+        };
+
+        LoopSignal.Claim();
+        try
+        {
+            timer.Start();
+            Thread.Sleep(100);
+            Assert.That(tickedOn, Is.Null, "not on the timer's own thread");
+
+            LoopSignal.Drain();
+            timer.Stop();
+        }
+        finally
+        {
+            LoopSignal.Unclaim();
+            timer.Dispose();
+        }
+
+        Assert.That(tickedOn, Is.SameAs(loop));
+        Assert.That(ticks, Is.EqualTo(1), "the ticks of a stalled loop are not run one after another");
+    }
+
+    [Test]
+    public void ATickWaitingFromBeforeARestart_IsDropped()
+    {
+        var ticks = 0;
+        var timer = new Adamantium.UI.Core.Dispatcher.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(5) };
+        timer.Tick += (_, _) => ticks++;
+
+        LoopSignal.Claim();
+        try
+        {
+            timer.Start();
+            SpinWait.SpinUntil(() => LoopSignal.HasPostedWork, 2000);
+            timer.Stop();
+            timer.Start(TimeSpan.FromSeconds(10));
+
+            LoopSignal.Drain();
+            timer.Stop();
+        }
+        finally
+        {
+            LoopSignal.Unclaim();
+            timer.Dispose();
+        }
+
+        Assert.That(ticks, Is.Zero, "a restart waits its own delay");
+    }
+
+    [Test]
     public void AwaitedWork_LeftForTheFrame_IsRunByIt()
     {
         var ran = false;

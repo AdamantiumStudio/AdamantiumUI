@@ -103,6 +103,38 @@ internal static class CalendarCulture
         return false;
     }
 
+    public static (int Shortest, int Longest) Runs(string pattern, char letter)
+    {
+        var shortest = 0;
+        var longest = 0;
+        for (var i = 0; i < pattern.Length; i++)
+        {
+            var literal = Literal(pattern, i);
+            if (literal > i)
+            {
+                i = literal - 1;
+                continue;
+            }
+
+            if (pattern[i] != letter)
+            {
+                continue;
+            }
+
+            var run = 1;
+            while (i + 1 < pattern.Length && pattern[i + 1] == letter)
+            {
+                run++;
+                i++;
+            }
+
+            shortest = shortest == 0 ? run : Math.Min(shortest, run);
+            longest = Math.Max(longest, run);
+        }
+
+        return (shortest, longest);
+    }
+
     private static int Literal(string pattern, int at)
     {
         var c = pattern[at];

@@ -69,13 +69,15 @@ public class Style : AdamantiumComponent
         }
     }
 
-    public void Attach(IFundamentalUIComponent component)
+    public void Attach(IFundamentalUIComponent component) => TryAttach(component);
+
+    internal bool TryAttach(IFundamentalUIComponent component)
     {
         ArgumentNullException.ThrowIfNull(component);
 
         if (!Selector.Match(component))
         {
-            return;
+            return false;
         }
 
         // Idempotent: undo a prior attach of THIS style to THIS component first (a theme swap re-applies without a
@@ -90,6 +92,7 @@ public class Style : AdamantiumComponent
         }
 
         ApplyContributions(component, this);
+        return true;
     }
 
     // Apply THIS style's own setters + triggers to `component`, tracked under `owner` (this, or - for a BasedOn base -
@@ -122,11 +125,6 @@ public class Style : AdamantiumComponent
     public void Detach(IFundamentalUIComponent component)
     {
         ArgumentNullException.ThrowIfNull(component);
-
-        if (!Selector.Match(component))
-        {
-            return;
-        }
 
         // Undo own then base setters (bases were tracked under THIS style); ReleaseActivators tears down every activator
         // this style recorded (its own triggers AND any base triggers).

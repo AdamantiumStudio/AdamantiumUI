@@ -130,11 +130,24 @@ public class PropertyRow : Control
 
     /// <summary>The type the property holds, read off the objects rather than off <see cref="Value"/> - which is null
     /// exactly when the objects disagree, and that is the case where a typed value still has to be converted before it
-    /// can be written to all of them.</summary>
+    /// can be written to all of them. The property's declared type where it says more than <c>object</c> - an
+    /// <c>int?</c> holding 5 can be emptied, an <c>int</c> cannot, and of several objects one that cannot be empty
+    /// decides - and the type of what is held otherwise.</summary>
     public Type ValueType
     {
         get
         {
+            Type found = null;
+            foreach (var bound in _values)
+            {
+                if (bound.DeclaredType is not { } declared || declared.IsInterface || declared.IsAbstract) continue;
+                if (declared.IsValueType && Nullable.GetUnderlyingType(declared) == null) return declared;
+
+                found ??= declared;
+            }
+
+            if (found != null) return found;
+
             foreach (var bound in _values)
             {
                 if (bound.Value != null) return bound.Value.GetType();
@@ -198,10 +211,20 @@ public class PropertyRow : Control
     /// <summary>Writes what the editor holds. What the editors' own signals call, and what a test can call directly.</summary>
     public bool Commit()
     {
-        if (_writing || Definition == null || IsReadOnly || _editor == null) return false;
+        if (_writing || _committing || Definition == null || IsReadOnly || _editor == null) return false;
 
-        return Owner?.Write(this, Definition.ReadEditor(_editor)) ?? false;
+        _committing = true;
+        try
+        {
+            return Owner?.Write(this, Definition.ReadEditor(_editor)) ?? false;
+        }
+        finally
+        {
+            _committing = false;
+        }
     }
+
+    private bool _committing;
 
     // EVERY OBJECT'S OWN VALUE, not the row's. A write INTO a value edits the object that holds it and nothing else -
     // the row's copy belongs to the first of them, so a color written that way landed on one shape of a selection and
@@ -218,6 +241,12 @@ public class PropertyRow : Control
         }
 
         return all;
+    }
+
+    internal void ShowHeld()
+    {
+        Read();
+        ApplyContent();
     }
 
     /// <summary>Pushes one value into every object the row stands for, through their bindings.</summary>
@@ -436,38 +465,60 @@ public class PropertyRow : Control
 
     private void Settle(object first)
     {
-        if (_agreeing < _values.Count)
+        var atDefault = _agreeing < _values.Count && AllAtDefault();
+        if (_agreeing < _values.Count && !atDefault)
         {
             Value = null;
             IsMixed = true;
 
-            // Objects that disagree cannot ALL be at the default - at most one of them is. So the row is modified, and
+            // Objects that disagree cannot ALL be at the default - at most one of them is, unless each holds it in its own
+            // way (each at its own offset or kind), which is let through above. So the row is modified, and
             // resetting it is the one edit that makes them agree again.
             IsModified = !IsReadOnly && (Definition?.HasDefault == true || _edited > 0);
             return;
         }
 
-        Value = first;
+        Value = atDefault ? Default() : first;
         IsMixed = false;
 
         // Never on a read-only row. Modified means differs from DefaultValue when one is given, otherwise a local value
         // on a component - on any of them: a selection where one object was edited and two were not is a selection with
         // something to put back.
         IsModified = !IsReadOnly &&
-            (Definition is { HasDefault: true } ? !Definition.SameValue(first, Default()) : _edited > 0);
+            (Definition is { HasDefault: true } ? !Definition.SameAsDefault(first, Default()) : _edited > 0);
     }
 
     private bool Same(object value, object first) => Definition?.SameValue(value, first) ?? Equals(value, first);
 
+    private bool AllAtDefault()
+    {
+        if (Definition is not { HasDefault: true } definition)
+        {
+            return false;
+        }
+
+        var fallback = Default();
+        if (!definition.IsMetInManyWays(fallback))
+        {
+            return false;
+        }
+
+        foreach (var bound in _values)
+        {
+            if (!definition.SameAsDefault(bound.Value, fallback))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     // The default AS THE PROPERTY WOULD HOLD IT. Written in markup it arrives as text - `DefaultValue="80"` is the
     // string "80", not the number - and comparing that with what the object holds would mark every such row as edited
-    // the moment it was shown. The same conversion a write goes through, so the two agree about what the value is.
-    private object Default()
-    {
-        var wanted = Definition?.DefaultValue;
-
-        return Definition != null && Definition.TryConvert(wanted, ValueType, out var value) ? value : wanted;
-    }
+    // the moment it was shown. The same conversion a reset writes, so the two agree about what the value is.
+    private object Default() =>
+        Definition != null && Definition.TryReadDefault(ValueType, out var value) ? value : Definition?.DefaultValue;
 
     private void OnBoundValueChanged(object sender, EventArgs e)
     {
@@ -575,6 +626,7 @@ public class PropertyRow : Control
 
         // A composite row has no value of its own; a read-only one shows text. Everything else gets its editor, and
         // keeps it - the editor is the row, not a state of it.
+        Definition.Meet(ValueType);
         var template = HasChildren
             ? null
             : IsReadOnly ? Definition.ValueFor() : Definition.EditorFor() ?? Definition.ValueFor();
@@ -626,6 +678,8 @@ public class PropertyRow : Control
             case NumericUpDown numeric: numeric.Placeholder = prompt; break;
             case TextBoxBase box: box.Placeholder = prompt; break;
             case DropDown drop: drop.Placeholder = prompt; break;
+            case DateTimeField dates: dates.Placeholder = prompt; break;
+            case DurationField lengths: lengths.Placeholder = prompt; break;
         }
     }
 
@@ -654,6 +708,12 @@ public class PropertyRow : Control
         if (_editor is Selector chooser) chooser.SelectionChanged += OnEditorChosen;
         if (_editor is ToggleButton toggle) toggle.PropertyChanged += OnTogglePropertyChanged;
         if (_editor is ColorPickerButton swatch) swatch.PropertyChanged += OnSwatchPropertyChanged;
+        if (_editor is DateTimeField or DurationField && Definition is DateTimeProperty or DurationProperty)
+        {
+            ((AdamantiumComponent)_editor).PropertyChanged += OnFieldPropertyChanged;
+            _editor.LostFocus += OnFieldLeft;
+            _editor.AddHandler(Keyboard.KeyDownEvent, new KeyEventHandler(OnFieldKey));
+        }
     }
 
     private void UnhookEditor()
@@ -670,6 +730,12 @@ public class PropertyRow : Control
         if (_editor is Selector chooser) chooser.SelectionChanged -= OnEditorChosen;
         if (_editor is ToggleButton toggle) toggle.PropertyChanged -= OnTogglePropertyChanged;
         if (_editor is ColorPickerButton swatch) swatch.PropertyChanged -= OnSwatchPropertyChanged;
+        if (_editor is DateTimeField or DurationField)
+        {
+            ((AdamantiumComponent)_editor).PropertyChanged -= OnFieldPropertyChanged;
+            _editor.LostFocus -= OnFieldLeft;
+            _editor.RemoveHandler(Keyboard.KeyDownEvent, new KeyEventHandler(OnFieldKey));
+        }
 
         _editor = null;
     }
@@ -682,7 +748,8 @@ public class PropertyRow : Control
         {
             // The swatch is named here for the same reason the spinner is: it CONTAINS a picker full of fields and
             // sliders, and a hunt for "the first focusable thing" would come back with one of those.
-            if (child is NumericUpDown or DropDown or SegmentedControl or ToggleButton or TextBox or ColorPickerButton)
+            if (child is NumericUpDown or DropDown or SegmentedControl or ToggleButton or TextBox or ColorPickerButton
+                or DateTimeField or DurationField)
                 return (IInputComponent)child;
             if (FindEditor(child) is { } nested) return nested;
         }
@@ -726,6 +793,28 @@ public class PropertyRow : Control
         else Commit();
     }
 
+    private void OnFieldPropertyChanged(object sender, AdamantiumPropertyChangedEventArgs e)
+    {
+        if ((e.Property == DateTimeField.ValueProperty || e.Property == DurationField.ValueProperty) && e.NewValue != null)
+            Commit();
+        else if (e.Property == DateTimePickerBase.IsDropDownOpenProperty && e.NewValue is false
+                 && sender is DateTimePickerBase { IsFocused: false })
+            CommitEmptied();
+    }
+
+    private void OnFieldLeft(object sender, RoutedEventArgs e) => CommitEmptied();
+
+    private void OnFieldKey(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter) CommitEmptied();
+    }
+
+    private void CommitEmptied()
+    {
+        if (_editor is DateTimePickerBase { IsDropDownOpen: true }) return;
+        if (_editor is DateTimeField { Value: null } or DurationField { Value: null } && Value != null) Commit();
+    }
+
     // A color is chosen by DRAGGING inside the picker, so this fires all the way through the gesture rather than once
     // at the end. That is wanted: the object being inspected follows the pointer, which is the whole reason a color is
     // picked visually instead of typed.
@@ -745,7 +834,7 @@ public class PropertyRow : Control
         // theme's brush, the style's size. Writing a type's default over those would not be a reset - it would be one
         // more edit, and the one nobody asked for.
         return Definition is { HasDefault: true }
-            ? Owner.Write(this, Definition.DefaultValue)
+            ? Owner.Write(this, Default(), keepUnshown: false)
             : Owner.Reset(this);
     }
 

@@ -148,10 +148,17 @@ public class InputUIComponent : MeasurableUIComponent, IInputComponent
     {
         if (ContextMenuHost(element) is not { } host) return false;
 
-        host.ContextMenu.OpenFromKeyboard(host, element.TranslatePoint(new Vector2(0, element.RenderSize.Height), host));
+        var at = element is InputUIComponent input
+            ? input.ContextMenuPointFromKeyboard
+            : new Vector2(0, element.RenderSize.Height);
+        host.ContextMenu.OpenFromKeyboard(host, element.TranslatePoint(at, host));
         host.ContextMenu.MoveKeyboardInsideWhenReady();
         return true;
     }
+
+    /// <summary>Where the menu key opens the context menu, in this element's own space: under it by default; a text
+    /// opens it under its caret, by the word the menu is about.</summary>
+    protected internal virtual Vector2 ContextMenuPointFromKeyboard => new(0, RenderSize.Height);
 
     private static InputUIComponent ContextMenuHost(IUIComponent element)
     {

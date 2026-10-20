@@ -29,4 +29,24 @@
     <Phrase Key="DateTimePicker" Text="Выбор даты и времени"/>
     <Phrase Key="TimeColumns" Text="Время колонками, шаг 5 минут"/>
     <Phrase Key="TimeDial" Text="Время циферблатом"/>
+    <Phrase Key="Clocks" Text="Часы — один контрол, вид задаёт ClockStyle: стрелки над циферблатом четырёх видов или цифры — текстом, семисегментные, перекидные. Стрелки крутит компоновщик, цикл приложения раз в секунду не будится. Ниже — мировое время и часы, показывающие привязанное время встречи."/>
+    <Phrase Key="MinimalSweep" Text="Minimal, плавная секундная"/>
+    <Phrase Key="DotsNoSeconds" Text="Dots, без секунд"/>
+    <Phrase Key="Tokyo" Text="Токио"/>
+    <Phrase Key="NewYork" Text="Нью-Йорк"/>
+    <Phrase Key="Meeting" Text="Время встречи"/>
+    <Phrase Key="Timers" Text="Таймер обратного отсчёта и секундомер на тех же часах: стили, кнопки, у стрелочного таймера кольцо по ободу показывает, сколько осталось. У секундомера — круги."/>
+    <Phrase Key="TimerDone" Text="Отсчёт закончен раз: "/>
+    <Phrase Key="Durations" Text="Длительность по частям: старшая часть считает всё, что выше неё (30 часов без дней — это 30), минус или плюс в любом месте меняют знак."/>
+    <Phrase Key="Duration" Text="Часы, минуты, секунды"/>
+    <Phrase Key="DurationDays" Text="С днями"/>
+    <Phrase Key="DurationMilliseconds" Text="Секунды и миллисекунды, не меньше нуля"/>
+    <Phrase Key="Table" Text="В таблице: дата, время и длительность — текстом, правка (двойной щелчок или F2) — в пикере или в поле длительности. Значение возвращается того типа, что хранит запись: DateOnly, TimeOnly, DateTimeOffset."/>
+    <Phrase Key="Inspector" Text="В инспекторе, собранном по типу: для DateTime, DateOnly, TimeOnly — пикер по типу, для TimeSpan — поле длительности."/>
+    <Phrase Key="TaskName" Text="Задача"/>
+    <Phrase Key="Due" Text="Срок"/>
+    <Phrase Key="Day" Text="День"/>
+    <Phrase Key="Start" Text="Начало"/>
+    <Phrase Key="Stamp" Text="Отметка"/>
+    <Phrase Key="Length" Text="Длительность"/>
 </Language>

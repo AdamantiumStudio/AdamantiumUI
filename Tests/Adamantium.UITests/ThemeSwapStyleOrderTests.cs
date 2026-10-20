@@ -84,4 +84,18 @@ public class ThemeSwapStyleOrderTests
             "the incoming theme's value survives the outgoing one's teardown - a marker setter is undone by property, " +
             "not by style, so the old style's Remove would otherwise take the new style's value with it");
     }
+
+    [Test]
+    public void DetachingAStyleThatNeverApplied_LeavesTheOthersValue()
+    {
+        var border = new Border();
+        WidthOf(40).Attach(border);
+        var danger = WidthOf(90);
+        danger.Selector.Classes.Add("Danger");
+
+        danger.Attach(border);
+        danger.Detach(border);
+
+        Assert.That(border.Width, Is.EqualTo(40), "a style that gave nothing takes nothing away");
+    }
 }

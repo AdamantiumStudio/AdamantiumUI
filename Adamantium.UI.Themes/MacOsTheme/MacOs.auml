@@ -63,6 +63,7 @@
         <StyleInclude Source="{x:Type mac:MacOsDataGridStyleSet}"/>
         <StyleInclude Source="{x:Type mac:MacOsListBoxItemStyleSet}"/>
         <StyleInclude Source="{x:Type mac:MacOsDropDownItemStyleSet}"/>
+        <StyleInclude Source="{x:Type mac:MacOsDropDownButtonStyleSet}"/>
         <StyleInclude Source="{x:Type mac:MacOsProgressBarStyleSet}"/>
         <StyleInclude Source="{x:Type mac:MacOsToolTipStyleSet}"/>
         <StyleInclude Source="{x:Type mac:MacOsKeyTipAdornerStyleSet}"/>
@@ -97,6 +98,7 @@
         <StyleInclude Source="{x:Type mac:MacOsDataPagerStyleSet}"/>
         <!-- Last: its class styles of buttons and lists stand over the theme's own. -->
         <StyleInclude Source="{x:Type shared:DateTimeFieldStyleSet}"/>
+        <StyleInclude Source="{x:Type shared:ClockStyleSet}"/>
   </Theme.StyleIncludes>
 
 </Theme>

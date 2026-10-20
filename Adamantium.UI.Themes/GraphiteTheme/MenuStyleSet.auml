@@ -217,7 +217,9 @@
             <Setter.Value>
                 <ControlTemplate TargetType="ContextMenu">
                     <Grid>
-                        <Popup x:Name="PART_Popup" Placement="Bottom" FlipToFit="True" VerticalOffset="4">
+                        <!-- Under a button, its left edge at the button's, as Office drops a menu. -->
+                        <Popup x:Name="PART_Popup" Placement="Bottom" PlacementAlignment="Start" FlipToFit="True"
+                               VerticalOffset="4">
                             <!-- Built on FIRST OPEN, not with the menu. This is the one deferral that pays across the
                                  whole application rather than in one control: any element may carry a context menu, and
                                  most of them never show it. -->

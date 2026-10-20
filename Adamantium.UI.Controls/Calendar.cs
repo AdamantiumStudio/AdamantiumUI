@@ -31,7 +31,7 @@ public class Calendar : Control
 {
     public static readonly AdamantiumProperty DisplayDateProperty = AdamantiumProperty.Register(nameof(DisplayDate),
         typeof(DateTime), typeof(Calendar),
-        new PropertyMetadata(DateTime.Today, PropertyMetadataOptions.BindsTwoWayByDefault, OnDisplayDateChanged));
+        new PropertyMetadata(Today, PropertyMetadataOptions.BindsTwoWayByDefault, OnDisplayDateChanged));
 
     public static readonly AdamantiumProperty DisplayModeProperty = AdamantiumProperty.Register(nameof(DisplayMode),
         typeof(CalendarMode), typeof(Calendar),
@@ -100,7 +100,9 @@ public class Calendar : Control
     private ButtonBase _previous;
     private ButtonBase _next;
     private ButtonBase _header;
-    private DateTime _cursor = DateTime.Today;
+    private DateTime _cursor = Today;
+
+    private static DateTime Today => DateTime.SpecifyKind(DateTime.Today, DateTimeKind.Unspecified);
     private DateTime? _anchor;
     private bool _dragging;
     private bool _dragAdded;
@@ -327,7 +329,7 @@ public class Calendar : Control
         WaitForMidnight();
         if (GetValueSource(DisplayDateProperty) == ValuePriority.Default && DisplayDate != DateTime.Today)
         {
-            SetCurrentValue(DisplayDateProperty, DateTime.Today);
+            SetCurrentValue(DisplayDateProperty, Today);
         }
 
         OnBlackoutDatesChanged(this, EventArgs.Empty);

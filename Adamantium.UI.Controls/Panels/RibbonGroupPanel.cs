@@ -141,19 +141,34 @@ public class RibbonGroupPanel : Panel
     protected override Size ArrangeOverride(Size finalSize)
     {
         // As Office lays a group out: every column starts at the top, its commands one under another with RowSpacing
-        // between them - Word's two rows of font commands stand at the top, not touching.
+        // between them - Word's two rows of font commands stand at the top, not touching. Spread, the gaps share what
+        // the column leaves of the height, its last command at the bottom.
+        var spread = Ribbon.GetRowAlignment(this) == RibbonRowAlignment.Spread;
         double x = 0;
         for (var i = 0; i < _columns.Count; i++)
         {
+            var column = _columns[i];
+            var gap = RowSpacing;
+            if (spread && column.Count > 1)
+            {
+                double filled = 0;
+                foreach (var child in column)
+                {
+                    filled += child.DesiredSize.Height;
+                }
+
+                gap = Math.Max(gap, (finalSize.Height - filled) / (column.Count - 1));
+            }
+
             double y = 0;
-            foreach (var child in _columns[i])
+            foreach (var child in column)
             {
                 // Never taller than the room LEFT: arranged at its wish, a command taller than the band hangs out of
                 // the bottom and is clipped there - which for a gallery took its chevron off. (Measured: 75 available,
                 // 90 handed out.) A control given less shows less; the gallery scrolls.
                 var childHeight = Math.Min(child.DesiredSize.Height, Math.Max(0, finalSize.Height - y));
                 child.Arrange(new Rect(x, y, _columnWidths[i], childHeight));
-                y += childHeight + RowSpacing;
+                y += childHeight + gap;
             }
 
             x += _columnWidths[i];
@@ -224,7 +239,15 @@ public class RibbonGroupPanel : Panel
             {
                 if (at >= sizes.Count) break;
 
-                    if (Ribbon.GetSize(child) != sizes[at]) Ribbon.SetSize(child, sizes[at]);
+                if (Ribbon.GetSize(child) != sizes[at])
+                {
+                    Ribbon.SetSize(child, sizes[at]);
+                    // A size is drawn by the command's template switching parts, and a part switched deep inside is
+                    // measured only by a layout pass: measured from here at once - a probe - the command answered the
+                    // size it had, and the band flipped between two answers for good.
+                    InvalidateWithin(child);
+                }
+
                 at++;
             }
         }
@@ -232,6 +255,23 @@ public class RibbonGroupPanel : Panel
         {
             _sizingSelf--;
         }
+    }
+
+    // Not into a gallery: its cells do not change with its size, and it re-shapes its own panel as the size is set.
+    private static void InvalidateWithin(IUIComponent node)
+    {
+        if (node is RibbonGallery gallery)
+        {
+            gallery.InvalidateMeasure();
+            return;
+        }
+
+        foreach (var child in node.VisualChildren)
+        {
+            InvalidateWithin(child);
+        }
+
+        (node as IMeasurableComponent)?.InvalidateMeasure();
     }
 
     // A separator has no size to state, and counting it would generate variants that change nothing.

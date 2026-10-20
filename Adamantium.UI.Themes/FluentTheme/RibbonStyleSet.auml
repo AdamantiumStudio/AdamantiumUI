@@ -436,7 +436,7 @@
                                 <Grid x:Name="PART_Content" RowDefinitions="*,Auto"
                                         Margin="{TemplateBinding Padding}">
                                     <ItemsPresenter x:Name="PART_ItemsPresenter" Grid.Row="0"
-                                            VerticalAlignment="Top" HorizontalAlignment="Left"/>
+                                            VerticalAlignment="Stretch" HorizontalAlignment="Left"/>
                                     <ContentPresenter Grid.Row="1"
                                             Content="{TemplateBinding Header}"
                                             ContentTemplate="{TemplateBinding HeaderTemplate}"
@@ -475,7 +475,7 @@
                             </ToggleButton>
 
                             <!-- NOT clipped: our ClipToBounds is rectangular and this card is rounded. Its content is PART_Content, moved here by the group. -->
-                            <Popup x:Name="PART_Popup" Placement="Bottom" FlipToFit="True">
+                            <Popup x:Name="PART_Popup" Placement="Bottom" PlacementAlignment="Start" FlipToFit="True">
                                 <!-- The card builds on FIRST OPEN, not with the group's template: a band carries a
                                      couple of dozen groups and hardly any of them are ever collapsed, let alone opened.
                                      The group hosts its content here through PART_PopupHost when the content arrives
@@ -997,7 +997,7 @@
 
                             <!-- A menu, so a press outside puts it away. The backstage is the one with no outside, and
                                  IgnoreTargetPress so the press that OPENS it is not also the press that dismisses it. -->
-                            <Popup x:Name="PART_Popup" Placement="Bottom" FlipToFit="True"
+                            <Popup x:Name="PART_Popup" Placement="Bottom" PlacementAlignment="Start" FlipToFit="True"
                                     KeepOpen="False" IgnoreTargetPress="True">
                                 <!-- Deferred to first open, and bound through {Ancestor}, for the same reasons as the
                                      backstage above. -->

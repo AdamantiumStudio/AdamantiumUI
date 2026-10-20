@@ -26,6 +26,7 @@ public static class LoopSignal
     private static long _requests;
 
     private static int _loopThread;
+    private static int _claimed;
 
     // The wait a sleep timed out on, kept for the next one: a new wait on the single-reader pipe cancels the one before,
     // which throws on the thread pool every time the loop idles. Only the loop thread sleeps.
@@ -34,6 +35,19 @@ public static class LoopSignal
     /// <summary>Whether the calling thread is the one running the loop - the one that last ran <see cref="Drain"/>.
     /// </summary>
     public static bool IsLoopThread => Environment.CurrentManagedThreadId == Volatile.Read(ref _loopThread);
+
+    /// <summary>Whether an application's loop has claimed this channel (<see cref="Claim"/>): what runs by a timer goes to
+    /// it from then on.</summary>
+    public static bool IsClaimed => Volatile.Read(ref _claimed) != 0;
+
+    /// <summary>Makes the calling thread the application's loop - before it runs its first frame.</summary>
+    public static void Claim()
+    {
+        Volatile.Write(ref _loopThread, Environment.CurrentManagedThreadId);
+        Volatile.Write(ref _claimed, 1);
+    }
+
+    internal static void Unclaim() => Volatile.Write(ref _claimed, 0);
 
     /// <summary>True while a posted action waits for the loop.</summary>
     public static bool HasPostedWork => Volatile.Read(ref _posted) > 0;

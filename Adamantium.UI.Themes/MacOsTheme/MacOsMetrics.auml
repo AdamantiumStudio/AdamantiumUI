@@ -35,6 +35,8 @@
     <sys:Double x:Key="ControlHeight">28</sys:Double>
     <sys:Double x:Key="ControlHeightCompact">22</sys:Double>
     <CornerRadius x:Key="CornerRadiusDefault">6</CornerRadius>
+    <CornerRadius x:Key="SplitButtonLeadingRadius">6 0 0 6</CornerRadius>
+    <CornerRadius x:Key="SplitButtonTrailingRadius">0 6 6 0</CornerRadius>
     <Thickness x:Key="PaddingControl">12 4 12 5</Thickness>
     <Thickness x:Key="PaddingControlCompact">9 3 9 4</Thickness>
 

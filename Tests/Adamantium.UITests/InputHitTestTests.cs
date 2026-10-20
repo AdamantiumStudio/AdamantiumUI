@@ -82,6 +82,31 @@ public class InputHitTestTests
         });
     }
 
+    // Zoomed by a LAYOUT transform - a document view drawn at a scale - the content is hit, and the pointer read, where
+    // it is drawn: a click at the middle of a zoomed page went to the text the unzoomed page has there.
+    [Test]
+    public void ALayoutTransformedElement_IsHitAndPointedAtWhereItIsDrawn()
+    {
+        var inner = new Button { Width = 40, Height = 20, HorizontalAlignment = HorizontalAlignment.Left,
+            VerticalAlignment = VerticalAlignment.Top };
+        var holder = new Grid { HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top,
+            LayoutTransform = new Transform { ScaleX = 2, ScaleY = 2 } };
+        holder.Children.Add(inner);
+        var root = new Grid { Width = 400, Height = 300 };
+        root.Children.Add(holder);
+        root.Measure(new Size(400, 300));
+        root.Arrange(new Rect(0, 0, 400, 300));
+
+        var local = Pointer.ToLocal(holder, new Vector2(60, 30));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(((IInputComponent)root).HitTest(new Vector2(70, 30)), Is.SameAs(inner), "drawn at twice its size");
+            Assert.That(local.X, Is.EqualTo(30).Within(0.5), "the pointer in the content's own units");
+            Assert.That(local.Y, Is.EqualTo(15).Within(0.5));
+        });
+    }
+
     // A control painted ON TOP of a full-size background panel (overlapping siblings): clicking it must hit the control,
     // not the panel behind it. (Designer repro: selecting a control kept selecting the background panel.)
     [Test]

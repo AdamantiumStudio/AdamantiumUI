@@ -664,7 +664,7 @@ public partial class TreeDataGrid : Selector
         foreach (var item in source)
         {
             var value = ValueOf(column, item);
-            if (seen.Add(DataGridColumnFilter.Text(value))) values.Add(value);
+            if (seen.Add(column.TextOf(value))) values.Add(value);
             Collect(_rawChildren(item), column, values, seen);
         }
     }
@@ -676,6 +676,167 @@ public partial class TreeDataGrid : Selector
         column.Binding != null ? column.Read(column.Binding, node) : column.ReadPath(node);
 
     private Dictionary<DataGridColumn, DataGridColumnFilter> _columnFilters;
+    private System.Globalization.CultureInfo _readIn;
+
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+        Core.Localization.Languages.Changed -= OnLanguagesChanged;
+        Core.Localization.Languages.Changed += OnLanguagesChanged;
+        if (_readIn != null && !Equals(_readIn, Core.Localization.Languages.Culture)) OnLanguagesChanged(this, EventArgs.Empty);
+        _readIn = Core.Localization.Languages.Culture;
+    }
+
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnDetachedFromVisualTree(e);
+        Core.Localization.Languages.Changed -= OnLanguagesChanged;
+    }
+
+    internal void RenameDayWord(DataGridColumn column, string was, string now)
+    {
+        if (was == now) return;
+        if (_columnFilters == null || !_columnFilters.TryGetValue(column, out var filter)
+            || column is DataGridDurationColumn { Parts: var parts } && (parts & DurationParts.Days) == 0)
+        {
+            RefreshRealizedRows();
+            return;
+        }
+
+        string Again(string text)
+        {
+            if (!string.IsNullOrEmpty(was))
+            {
+                var at = text.IndexOf(" " + was + " ", StringComparison.Ordinal);
+                if (at >= 0)
+                {
+                    var word = string.IsNullOrEmpty(now) ? " " : " " + now + " ";
+                    return text[..at] + word + text[(at + was.Length + 2)..];
+                }
+
+                if (!text.EndsWith(" " + was, StringComparison.Ordinal)) return text;
+
+                var rest = text[..^(was.Length + 1)];
+                return string.IsNullOrEmpty(now) ? rest : rest + " " + now;
+            }
+
+            return string.IsNullOrEmpty(now) ? text
+                : System.Text.RegularExpressions.Regex.Replace(text, "^([-−]?[0-9]+)( |$)",
+                    m => m.Groups[1].Value + " " + now + m.Groups[2].Value);
+        }
+
+        if (filter.Included != null)
+        {
+            var ticked = new HashSet<string>();
+            foreach (var text in filter.Included) ticked.Add(Again(text));
+            filter.Included = ticked;
+        }
+
+        foreach (var condition in new[] { filter.First, filter.Second })
+        {
+            if (condition.Value is string text && condition.Operator is DataGridFilterOperator.IsEqualTo
+                    or DataGridFilterOperator.IsNotEqualTo or DataGridFilterOperator.IsGreaterThan
+                    or DataGridFilterOperator.IsLessThan)
+                condition.Value = Again(text);
+        }
+        ForgetReads(column);
+        if (filter.IsActive) ApplyFilters();
+        RefreshRealizedRows();
+    }
+
+    internal void Rekey(DataGridColumn column, Func<object, string> was, Func<string, object> wasRead, bool narrower)
+    {
+        if (_columnFilters == null || !_columnFilters.TryGetValue(column, out var filter))
+        {
+            RefreshRealizedRows();
+            return;
+        }
+
+        if (filter.Included != null)
+        {
+            var ticked = new HashSet<string>();
+            var all = new HashSet<string>();
+            Rekey(ItemsSource, column, was, filter.Included, ticked, all);
+            filter.Included = ticked.SetEquals(all) && all.Count > 0 ? null : ticked;
+        }
+
+        foreach (var condition in new[] { filter.First, filter.Second })
+        {
+            if (narrower && condition.Value is string text && condition.Operator is DataGridFilterOperator.IsEqualTo
+                    or DataGridFilterOperator.IsNotEqualTo or DataGridFilterOperator.IsGreaterThan
+                    or DataGridFilterOperator.IsLessThan
+                && wasRead(text) is { } value and not string && was(value) == text)
+                condition.Value = column.TextOf(value);
+        }
+
+        ForgetReads(column);
+        if (filter.IsActive) ApplyFilters();
+        RefreshRealizedRows();
+    }
+
+    private void Rekey(IEnumerable source, DataGridColumn column, Func<object, string> was, HashSet<string> included,
+        HashSet<string> into, HashSet<string> all)
+    {
+        if (source == null) return;
+
+        foreach (var item in source)
+        {
+            var value = ValueOf(column, item);
+            var text = column.TextOf(value);
+            all.Add(text);
+            if (included.Contains(was(value))) into.Add(text);
+            Rekey(_rawChildren(item), column, was, included, into, all);
+        }
+    }
+
+    internal void ForgetReads(DataGridColumn column)
+    {
+        if (_columnFilters == null || !_columnFilters.TryGetValue(column, out var filter)) return;
+
+        filter.First.Forget();
+        filter.Second.Forget();
+    }
+
+    private void OnLanguagesChanged(object sender, EventArgs e)
+    {
+        var was = _readIn ?? Core.Localization.Languages.Culture;
+        var now = Core.Localization.Languages.Culture;
+        _readIn = now;
+        if (Equals(was, now)) return;
+
+        if (_columnFilters != null)
+        {
+            var sample = ItemsSource?.Cast<object>().FirstOrDefault();
+            foreach (var (column, filter) in _columnFilters)
+            {
+                column.Meet(sample);
+                string Again(string text) =>
+                    column.ValueOfText(text, null, was) is { } value and not string && column.TextOf(value, was) == text
+                        ? column.TextOf(value, now)
+                        : text;
+
+                if (filter.Included != null)
+                {
+                    var ticked = new HashSet<string>();
+                    foreach (var text in filter.Included) ticked.Add(Again(text));
+                    filter.Included = ticked;
+                }
+
+                foreach (var condition in new[] { filter.First, filter.Second })
+                {
+                    condition.Forget();
+                    if (condition.Value is string text && condition.Operator is DataGridFilterOperator.IsEqualTo
+                            or DataGridFilterOperator.IsNotEqualTo or DataGridFilterOperator.IsGreaterThan
+                            or DataGridFilterOperator.IsLessThan)
+                        condition.Value = Again(text);
+                }
+            }
+
+            if (HasColumnFilters) ApplyFilters();
+        }
+
+        RefreshRealizedRows();
+    }
 
     private bool HasColumnFilters
     {
@@ -1014,9 +1175,9 @@ public partial class TreeDataGrid : Selector
         foreach (var item in source)
         {
             var key = ValueOf(column, item);
-            // Keyed by the value's TEXT, which is what the header shows and what the filter list already keys by - two
-            // rows that read the same in the table belong in one group whatever their boxes say.
-            var id = DataGridColumnFilter.Text(key);
+            // Keyed by what the column SHOWS of the value (its text in no language) - two rows that read the same in
+            // the table belong in one group whatever their boxes say.
+            var id = column.KeyOf(key);
 
             if (!byKey.TryGetValue(id, out var group))
             {
@@ -1399,7 +1560,7 @@ public partial class TreeDataGrid : Selector
                 var item = items[at];
                 foreach (var (index, column) in columns)
                 {
-                    if (DataGridSearch.Matches(DataGridColumnFilter.Text(column.ReadWithoutTheUI(item)), sought))
+                    if (DataGridSearch.Matches(column.TextOf(column.ReadWithoutTheUI(item)), sought))
                     {
                         batch.Add((item, index));
                     }
@@ -1482,7 +1643,7 @@ public partial class TreeDataGrid : Selector
                 // The SAME reading the walk on its own thread does: cheap where that is the same answer, through the
                 // binding where it is not. One rule, so the two passes can never find different things.
                 var value = column.ReadsWithoutTheUI ? column.ReadWithoutTheUI(item) : ValueOf(column, item);
-                if (DataGridSearch.Matches(DataGridColumnFilter.Text(value), sought)) _search.Add(item, i);
+                if (DataGridSearch.Matches(column.TextOf(value), sought)) _search.Add(item, i);
             }
         }
 
@@ -1800,7 +1961,9 @@ public partial class TreeDataGrid : Selector
 
         foreach (var pair in _columnFilters)
         {
-            if (pair.Value.IsActive && !pair.Value.Passes(ValueOf(pair.Key, node))) return false;
+            if (pair.Value.IsActive && ValueOf(pair.Key, node) is var value
+                && !pair.Value.Passes(pair.Key.ComparedAs(value), pair.Key.TextOf(value), pair.Key.ReadsTyped))
+                return false;
         }
 
         return true;
@@ -3072,6 +3235,7 @@ public partial class TreeDataGrid : Selector
     {
         var item = Rows[row].Node;
         var dataColumn = Columns[column];
+        if (ReferenceEquals(value, AdamantiumProperty.UnsetValue)) return false;
 
         var args = new DataGridCellEditEventArgs(item, dataColumn, value);
         CellEditEnding?.Invoke(this, args);
@@ -3212,7 +3376,7 @@ public partial class TreeDataGrid : Selector
                 // itself, so that its template can bind against it - putting that on the clipboard writes out a type
                 // name. The column says what it means through SortMemberPath, which is what a sort, a search and the
                 // export all already ask it.
-                text.Append(Quoted(ValueOf(Columns[column], rows[row].Node)?.ToString()));
+                text.Append(Quoted(Columns[column].TextOf(ValueOf(Columns[column], rows[row].Node))));
             }
         }
 
@@ -3284,7 +3448,10 @@ public partial class TreeDataGrid : Selector
     {
         if (column.Binding == null || IsCellReadOnly(column, item)) return false;
 
-        var args = new DataGridCellEditEventArgs(item, column, text);
+        var read = column.ValueOfText(text, ValueOf(column, item));
+        if (ReferenceEquals(read, AdamantiumProperty.UnsetValue)) return false;
+
+        var args = new DataGridCellEditEventArgs(item, column, read);
         CellEditEnding?.Invoke(this, args);
 
         return !args.Cancel && WriteThroughColumn(column, item, args.Value);

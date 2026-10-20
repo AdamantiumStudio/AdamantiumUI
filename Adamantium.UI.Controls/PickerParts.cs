@@ -49,7 +49,7 @@ internal sealed class CalendarChoice
             Calendar.DisplayMode = CalendarMode.Month;
             Calendar.SelectedDate = null;
             Calendar.SelectedDate = value?.Date;
-            Calendar.DisplayDate = value?.Date ?? DateTime.Today;
+            Calendar.DisplayDate = value?.Date ?? DateTime.SpecifyKind(DateTime.Today, DateTimeKind.Unspecified);
         }
         finally
         {

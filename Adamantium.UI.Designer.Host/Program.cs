@@ -25,6 +25,9 @@ public static class Program
         if (args.Length >= 6 && args[0] == "scroll")
             return ScrollToFile(args);
 
+        if (args.Length >= 4 && args[0] == "play")
+            return PlayToFile(args);
+
         Console.Error.WriteLine(
             "usage:\n" +
             "  host serve                                    long-running JSON/stdio protocol (live preview)\n" +
@@ -32,7 +35,8 @@ public static class Program
             "  host hittest <file.auml> <x> <y>              render then map a design-space point to its markup line/col\n" +
             "  host select <file.auml> <out.bgra> <x> <y>    render, select the element at the point (framework frame), write it\n" +
             "  host hover <file.auml> <out.bgra> <x> <y>     render, hover the element at the point (framework frame), write it\n" +
-            "  host scroll <file.auml> <out.bgra> <x> <y> <delta>  render, turn the wheel at the point (120 a notch, up), write it");
+            "  host scroll <file.auml> <out.bgra> <x> <y> <delta>  render, turn the wheel at the point (120 a notch, up), write it\n" +
+            "  host play <file.auml> <out.bgra> <seconds>    render live, stream frames as the client does for that long, write the last");
         return 2;
     }
 
@@ -181,6 +185,34 @@ public static class Program
             return 1;
         }
         Console.Error.WriteLine($"[auml] scroll ({x},{y}) by {delta}: wrote {outPath} ({result.Width}x{result.Height})");
+        return 0;
+    }
+
+    // Headless check for the live preview: render live, then stream frames at the client's pace for a while - what runs
+    // by the clock (a clock's hands and figures) should have moved in the frame written last.
+    private static int PlayToFile(string[] args)
+    {
+        var aumlPath = args[1];
+        var outPath = args[2];
+        var seconds = double.Parse(args[3], CultureInfo.InvariantCulture);
+
+        using var session = new DesignerSession();
+        var result = session.Render(File.ReadAllText(aumlPath), null, null, 1.0, outPath, aumlPath, live: true);
+        var frames = 0;
+        var until = DateTime.UtcNow.AddSeconds(seconds);
+        while (result.Success && result.Animating && DateTime.UtcNow < until)
+        {
+            Thread.Sleep(16);
+            result = session.RenderNextFrame(outPath);
+            frames++;
+        }
+
+        if (!result.Success)
+        {
+            Console.Error.WriteLine($"[auml] play failed: {result.Error}");
+            return 1;
+        }
+        Console.Error.WriteLine($"[auml] play: {frames} frames, animating {result.Animating}; wrote {outPath} ({result.Width}x{result.Height})");
         return 0;
     }
 }

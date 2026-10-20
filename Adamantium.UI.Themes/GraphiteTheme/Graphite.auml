@@ -63,6 +63,7 @@
     <StyleInclude Source="{x:Type editor:ListBoxStyleSet}"/>
     <StyleInclude Source="{x:Type editor:ListBoxItemStyleSet}"/>
     <StyleInclude Source="{x:Type editor:DropDownItemStyleSet}"/>
+    <StyleInclude Source="{x:Type editor:DropDownButtonStyleSet}"/>
     <StyleInclude Source="{x:Type editor:TabControlStyleSet}"/>
     <StyleInclude Source="{x:Type editor:TabItemStyleSet}"/>
     <StyleInclude Source="{x:Type editor:BusyIndicatorStyleSet}"/>
@@ -99,5 +100,6 @@
     <StyleInclude Source="{x:Type editor:MenuStyleSet}"/>
     <!-- Last: its class styles of buttons and lists stand over the theme's own. -->
     <StyleInclude Source="{x:Type shared:DateTimeFieldStyleSet}"/>
+    <StyleInclude Source="{x:Type shared:ClockStyleSet}"/>
   </Theme.StyleIncludes>
 </Theme>

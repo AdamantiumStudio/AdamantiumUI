@@ -78,8 +78,9 @@ public static class InputExtensions
          return;
       }
 
-      // Undo a render transform first, so the element is hit where it is drawn rather than where it was laid out.
-      if (element.RenderTransform != null)
+      // Undo a render or layout transform first, so the element is hit where it is drawn rather than where it was laid
+      // out - a page zoomed by a layout transform was hit as if drawn at its own size.
+      if (element.RenderTransform != null || element.LayoutTransform != null)
       {
          var back = Matrix4x4F.Invert(element.LocalTransform);
          var mapped = Vector3F.TransformCoordinate(new Vector3F((float)p.X, (float)p.Y, 0), back);

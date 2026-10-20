@@ -151,6 +151,40 @@ public class RibbonCollapsedAndGalleryThemeTests
         Assert.That(fromSmaller, Is.EqualTo(fromWhole).Within(0.5));
     }
 
+    // A command drawn small hides its label through its template; asked for a roomier variant from a small one, a group
+    // answered the small width - its label's part was switched but not measured - and the band flipped between the two
+    // answers on every pass and never went idle.
+    [TestCase("Fluent")]
+    [TestCase("Graphite")]
+    [TestCase("MacOs")]
+    public void AGroupOfCommands_CostsTheSameWhicheverIsDrawn(string theme)
+    {
+        Use(theme);
+        var group = new RibbonGroup
+        {
+            Header = "Clipboard",
+            Items =
+            {
+                new RibbonSplitButton { Content = "Paste" },
+                new RibbonButton { Content = "Cut", MaxSize = RibbonSize.Medium },
+                new RibbonButton { Content = "Copy", MaxSize = RibbonSize.Medium },
+                new RibbonButton { Content = "Duplicate", MaxSize = RibbonSize.Medium }
+            }
+        };
+        var row = new RibbonGroupsPanel { Children = { group } };
+        Lay(row, 2000, 100);
+
+        var count = group.Variants.Count - 1;
+        var fromWhole = Enumerable.Range(0, count).Select(group.WidthAt).ToArray();
+        Lay(row, fromWhole[count - 1] + 1, 100);
+        Adamantium.UI.Core.LayoutManager.For(row).ExecuteLayoutPass();
+        Assert.That(group.CurrentVariant, Is.EqualTo(count - 1), "precondition: drawn at its smallest open variant");
+        group.ItemsHostPanel.InvalidateMeasure();    // nothing cached: asked afresh
+        var fromSmallest = Enumerable.Range(0, count).Select(i => group.WidthAt(i)).ToArray();
+
+        Assert.That(fromSmallest, Is.EqualTo(fromWhole).Within(0.5));
+    }
+
     // A gallery is never cut to its bare chevron by default - it says nothing of what it opens; past its compact size the
     // group collapses into its labeled button, as Office's does.
     [TestCase("Fluent")]

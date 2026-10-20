@@ -366,6 +366,62 @@ public abstract class DataGridColumn : FundamentalUIComponent
     /// default editor where it has one. A column with neither cannot be edited through the UI at all.</summary>
     protected internal virtual DataTemplate EditingTemplate => CellEditingTemplate;
 
+    /// <summary>The editing template for <paramref name="item"/>'s row - <see cref="EditingTemplate"/>, unless the
+    /// column's editor depends on what the row holds.</summary>
+    protected internal virtual DataTemplate EditingTemplateFor(object item) => EditingTemplate;
+
+    /// <summary>Shown a row - for a column whose form depends on what its rows hold, before it reads or writes text.</summary>
+    protected internal virtual void Meet(object item) { }
+
+    /// <summary>The type <see cref="Binding"/> writes into on <paramref name="item"/>'s row: the member's declared
+    /// type, or what it holds when that is <c>object</c>. With no row - the new-row strip - the member as the rows of the
+    /// grid's source declare it; null when there is no binding or nothing says.</summary>
+    protected internal Type MemberTypeOf(object item)
+    {
+        if (Binding == null) return null;
+        if (item == null) return DeclaredAlong(RowTypeOf(Owner?.ItemsSource), (Binding as Binding)?.Path?.Path);
+
+        _reader ??= new BoundValue();
+        _reader.PointAt(item, Binding);
+        return _reader.SourceType is { } type && type != typeof(object) ? type : _reader.Value?.GetType();
+    }
+
+    private static Type RowTypeOf(IEnumerable source)
+    {
+        foreach (var face in source?.GetType().GetInterfaces() ?? Type.EmptyTypes)
+        {
+            if (face.IsGenericType && face.GetGenericTypeDefinition() == typeof(IEnumerable<>))
+                return face.GetGenericArguments()[0];
+        }
+
+        return null;
+    }
+
+    private static Type DeclaredAlong(Type type, string path)
+    {
+        if (type == null || string.IsNullOrEmpty(path)) return null;
+
+        foreach (var name in path.Split('.'))
+        {
+            var declared = type;
+            System.Reflection.PropertyInfo property = null;
+            for (; declared != null && property == null; declared = declared.BaseType)
+            {
+                property = declared.GetProperty(name, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance |
+                                                       System.Reflection.BindingFlags.DeclaredOnly);
+            }
+
+            foreach (var face in property == null && type is { IsInterface: true } ? type.GetInterfaces() : Type.EmptyTypes)
+            {
+                property ??= face.GetProperty(name);
+            }
+
+            type = property?.PropertyType;
+        }
+
+        return type == typeof(object) ? null : type;
+    }
+
     /// <summary>What a cell wears the rest of the time: <see cref="CellTemplate"/>, or the column's own default where it
     /// has one - a check box column draws a box, not the word "True".</summary>
     protected internal virtual DataTemplate DisplayTemplate => CellTemplate;
@@ -377,6 +433,10 @@ public abstract class DataGridColumn : FundamentalUIComponent
     /// <summary>Reads back what the editor holds. Null means "nothing to say", and the value the cell already had
     /// stands - which is also what a template column does until it sets <see cref="DataGridCell.EditedValue"/>.</summary>
     protected internal virtual object ReadEditor(IUIComponent editor) => null;
+
+    /// <summary>Whether the editor holds nothing - a date field emptied - so the commit writes nothing rather than the
+    /// value the cell already had; a member that cannot be empty keeps that value instead.</summary>
+    protected internal virtual bool EditorIsEmpty(IUIComponent editor) => false;
 
     /// <summary>Whether ONE click on a cell flips its value. True for a check box, where the display and the editor are
     /// the same box: asking for a double-click first would be asking twice for the same thing.</summary>
@@ -452,6 +512,51 @@ public abstract class DataGridColumn : FundamentalUIComponent
     /// the table - pointing at text nobody can see.</summary>
     protected internal virtual bool IsSearchable => true;
 
+    /// <summary>The value as this column reads it - what a search looks in, what the filter lists and compares, what a
+    /// group is named by and what a copy carries. The value's own text by default; a column that draws its value in a
+    /// form of its own reads it in that form, or a search would find text nobody can see.</summary>
+    protected internal string TextOf(object value) => TextOf(value, Core.Localization.Languages.Culture);
+
+    /// <summary>...in <paramref name="culture"/>: a table keys what stays the same across languages by the invariant
+    /// one, and translates what the user ticked when the language changes. A search calls it off the interface's
+    /// thread, so an override reads nothing of the interface - its own properties included - there; keep what it needs
+    /// in plain fields, as the date and length columns do.</summary>
+    protected internal virtual string TextOf(object value, System.Globalization.CultureInfo culture) =>
+        DataGridColumnFilter.Text(value);
+
+    /// <summary>What names <paramref name="value"/>'s group: its text in the invariant language, so a group stays the
+    /// group it was - opened or closed - when the language changes. A column whose text holds words of the language
+    /// leaves them out here.</summary>
+    protected internal virtual string KeyOf(object value) => TextOf(value, System.Globalization.CultureInfo.InvariantCulture);
+
+    /// <summary>What a pasted <paramref name="text"/> stands for in this column - the way back from
+    /// <see cref="TextOf(object)"/>, so what is copied pastes as itself; what the text does not say is kept from
+    /// <paramref name="current"/>, the value it replaces, when there is one. The text itself by default, for the write
+    /// to convert; <see cref="AdamantiumProperty.UnsetValue"/> for text the column refuses to read.</summary>
+    protected internal object ValueOfText(string text, object current) =>
+        ValueOfText(text, current, Core.Localization.Languages.Culture);
+
+    /// <summary>What the character typed to open an edit stands for when the edit is committed before the editor took it
+    /// - read as text by default. A column whose editor takes no text, or reads typing its own way, keeps
+    /// <paramref name="current"/> instead of guessing.</summary>
+    protected internal virtual object ValueOfSeed(string seed, object current) => ValueOfText(seed, current);
+
+    private Func<string, object> _readsTyped;
+
+    internal Func<string, object> ReadsTyped => _readsTyped ??= text => ComparedAs(ValueOfText(text, null));
+
+    /// <summary>What a filter's "greater than" and "less than" compare a value as - the value itself, unless the column
+    /// shows only some of it.</summary>
+    protected internal virtual object ComparedAs(object value) => value;
+
+    /// <summary>...as text written in <paramref name="culture"/>.</summary>
+    protected internal virtual object ValueOfText(string text, object current, System.Globalization.CultureInfo culture) =>
+        text;
+
+    /// <summary>Whether a cell's text is <see cref="TextOf"/> its value - true for a column that draws the value in its
+    /// own form, and so what automation reads rather than the pieces the drawing is made of.</summary>
+    protected internal virtual bool DrawsItsText => false;
+
     /// <summary>Whether the column is in the table: <see cref="IsVisible"/> and not grouped by, since a grouped value already
     /// sits in the group caption. Derived, never stored.</summary>
     public bool IsShown => IsVisible && Owner?.GroupDescriptions.Contains(this) != true;
@@ -490,6 +595,17 @@ public abstract class DataGridColumn : FundamentalUIComponent
         writes = !_reader.Reads || _reader.Writes;
         _writesByType[type] = writes;
         return writes;
+    }
+
+    /// <summary>Whether <see cref="Binding"/> can be written empty on <paramref name="item"/>'s row: a reference or a
+    /// nullable member, or a row not made yet.</summary>
+    protected internal bool CanBeEmpty(object item)
+    {
+        if (Binding == null || item == null) return true;
+
+        _reader ??= new BoundValue();
+        _reader.PointAt(item, Binding);
+        return _reader.SourceType is not { IsValueType: true } type || Nullable.GetUnderlyingType(type) != null;
     }
 
     /// <summary>Reads one of this column's row-bindings against one item. One reusable carrier per column: a bulk read -
@@ -574,6 +690,8 @@ public class DataGridCheckBoxColumn : DataGridColumn
 
     protected internal override object ReadEditor(IUIComponent editor) => (editor as ToggleButton)?.IsChecked;
 
+    protected internal override object ValueOfSeed(string seed, object current) => current;
+
     protected internal override bool TogglesOnClick => true;
 }
 
@@ -652,6 +770,8 @@ public class DataGridDropDownColumn : DataGridColumn
     protected internal override object ReadEditor(IUIComponent editor) =>
         editor is DropDown { SelectedItem: { } chosen } ? Project(chosen) : null;
 
+    protected internal override object ValueOfSeed(string seed, object current) => current;
+
     private object Match(IEnumerable choices, object value)
     {
         if (choices == null) return null;
@@ -666,6 +786,285 @@ public class DataGridDropDownColumn : DataGridColumn
 
     private object Project(object choice) =>
         SelectedValuePath is { Length: > 0 } path ? TreeChildResolver.ForValuePath(path)(choice) : choice;
+}
+
+/// <summary>A column of dates, times or both - <see cref="DateTime"/>, <see cref="DateTimeOffset"/>, <see cref="DateOnly"/>
+/// or <see cref="TimeOnly"/>. It draws text in the form <see cref="Format"/> names, in the language of the application,
+/// and edits in the picker for those parts: a calendar for a date, the times of a day for a time, both for both.</summary>
+public class DataGridDateTimeColumn : DataGridColumn
+{
+    public static readonly AdamantiumProperty FormatProperty = AdamantiumProperty.Register(nameof(Format),
+        typeof(DateTimeFieldFormat?), typeof(DataGridDateTimeColumn), new PropertyMetadata(null, OnFormatChanged));
+
+    public static readonly AdamantiumProperty CustomFormatProperty = AdamantiumProperty.Register(nameof(CustomFormat),
+        typeof(string), typeof(DataGridDateTimeColumn), new PropertyMetadata(null, OnFormatChanged));
+
+    private readonly Dictionary<DateTimeFieldFormat, DataTemplate> _editors = new();
+    private DataTemplate _display;
+    private volatile Shape _shape = new(null, null, DateTimeFieldFormat.ShortDateTime);
+
+    /// <summary>Which parts are shown and edited, as in <see cref="DateTimeField.Format"/>. Unset picks them by what the
+    /// column holds: the short date for a <see cref="DateOnly"/>, the short time for a <see cref="TimeOnly"/>, both
+    /// otherwise.</summary>
+    public DateTimeFieldFormat? Format
+    {
+        get => GetValue<DateTimeFieldFormat?>(FormatProperty);
+        set => SetValue(FormatProperty, value);
+    }
+
+    /// <summary>A .NET date and time pattern used when <see cref="Format"/> is <see cref="DateTimeFieldFormat.Custom"/>.</summary>
+    public string CustomFormat
+    {
+        get => GetValue<string>(CustomFormatProperty);
+        set => SetValue(CustomFormatProperty, value);
+    }
+
+    protected internal override DataTemplate DisplayTemplate =>
+        CellTemplate ?? (_display ??= new DataTemplate(() =>
+        {
+            var text = new TextBlock { VerticalAlignment = VerticalAlignment.Center };
+            var result = new TemplateResult { RootComponent = text };
+            result.AddBinding(text, "Text", new Binding { Mode = BindingMode.OneWay, Converter = new Shown(this) });
+            return result;
+        }));
+
+    protected internal override DataTemplate EditingTemplate => CellEditingTemplate ?? EditorFor(_shape.Format ?? _shape.Held);
+
+    protected internal override DataTemplate EditingTemplateFor(object item)
+    {
+        if (CellEditingTemplate != null) return CellEditingTemplate;
+
+        var type = MemberTypeOf(item);
+        Learn(type);
+        return EditorFor(Format ?? (type != null && DateTimeValues.IsDate(type) ? DateTimeValues.FormatFor(type) : _shape.Held));
+    }
+
+    protected internal override void Meet(object item) => Learn(MemberTypeOf(item));
+
+    private DataTemplate EditorFor(DateTimeFieldFormat format)
+    {
+        if (_editors.TryGetValue(format, out var editor)) return editor;
+
+        var custom = CustomFormat;
+        editor = new DataTemplate(() =>
+        {
+            var picker = DateTimeValues.PickerFor(format, custom);
+            picker.Classes = new Classes { DataGridEditors.EditorClass };
+            return new TemplateResult { RootComponent = picker };
+        });
+        _editors[format] = editor;
+        return editor;
+    }
+
+    protected internal override void PrepareEditor(IUIComponent editor, object item, object value)
+    {
+        if (editor is DateTimeField field) field.Value = DateTimeValues.ToDateTime(value);
+    }
+
+    protected internal override object ReadEditor(IUIComponent editor) => Finished(editor)?.Value;
+
+    protected internal override bool EditorIsEmpty(IUIComponent editor) => Finished(editor) is { Value: null };
+
+    protected internal override object ValueOfSeed(string seed, object current) => current;
+
+    private static DateTimeField Finished(IUIComponent editor)
+    {
+        var field = editor as DateTimeField;
+        field?.FinishTyping();
+        return field;
+    }
+
+    protected internal override string TextOf(object value, System.Globalization.CultureInfo culture) =>
+        value == null || value is string { Length: 0 } ? string.Empty : _shape.Text(value, culture);
+
+    protected internal override bool DrawsItsText => CellTemplate == null;
+
+    protected internal override string KeyOf(object value)
+    {
+        if (value == null || value is string { Length: 0 }) return string.Empty;
+
+        var shape = _shape;
+        return DateTimeValues.KeyOf(value, shape.Format ?? DateTimeValues.FormatFor(value.GetType()), shape.Custom);
+    }
+
+    protected internal override object ValueOfText(string text, object current, System.Globalization.CultureInfo culture) =>
+        _shape.Read(text, current, culture);
+
+    protected internal override object ComparedAs(object value)
+    {
+        if (value is null or string) return value;
+
+        var shape = _shape;
+        return DateTimeValues.Cut(value, shape.Format ?? DateTimeValues.FormatFor(value.GetType()), shape.Custom) ?? value;
+    }
+
+    private void Learn(Type type)
+    {
+        if (type == null || !DateTimeValues.IsDate(type)) return;
+
+        type = Nullable.GetUnderlyingType(type) ?? type;
+        var held = DateTimeValues.FormatFor(type);
+        if (held == _shape.Held && type == _shape.HeldType) return;
+
+        _shape = _shape with { Held = held, HeldType = type };
+    }
+
+    private static void OnFormatChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (component is not DataGridDateTimeColumn column) return;
+
+        var was = column._shape;
+        column._shape = was with { Format = column.Format, Custom = column.CustomFormat };
+        column._display = null;
+        column._editors.Clear();
+        var culture = Core.Localization.Languages.Culture;
+        var now = column._shape;
+        column.Owner?.Rekey(column, value => value is null or string { Length: 0 } ? string.Empty : was.Text(value, culture),
+            text => was.Read(text, null, culture),
+            DateTimeValues.ShowsNoMore(now.Format ?? now.Held, now.Custom, was.Format ?? was.Held, was.Custom));
+    }
+
+    private sealed record Shape(DateTimeFieldFormat? Format, string Custom, DateTimeFieldFormat Held, Type HeldType = null)
+    {
+        public string Text(object value, System.Globalization.CultureInfo culture) =>
+            DateTimeValues.Text(value, Format ?? (value is null or string ? Held : DateTimeValues.FormatFor(value.GetType())),
+                Custom, culture);
+
+        public object Read(string text, object current, System.Globalization.CultureInfo culture)
+        {
+            if (string.IsNullOrWhiteSpace(text)) return null;
+
+            var format = Format ?? (current is null or string ? Held : DateTimeValues.FormatFor(current.GetType()));
+            if (!DateTimeValues.TryParseMoment(text, format, Custom, culture, current, out var read)) return AdamantiumProperty.UnsetValue;
+            if (read is not DateTime kept) return read;
+
+            var type = current is null or string ? HeldType : current.GetType();
+            return type == typeof(DateOnly) ? DateOnly.FromDateTime(kept)
+                : type == typeof(TimeOnly) ? TimeOnly.FromDateTime(kept)
+                : kept;
+        }
+    }
+
+    private sealed class Shown(DataGridDateTimeColumn column) : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+        {
+            column.Learn(value?.GetType());
+            return value is null or string { Length: 0 } ? string.Empty : column._shape.Text(value, culture);
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture) =>
+            throw new NotSupportedException();
+    }
+}
+
+/// <summary>A column of lengths of time - <see cref="TimeSpan"/>. It draws the <see cref="Parts"/> it names and edits
+/// them in a <see cref="DurationField"/>.</summary>
+public class DataGridDurationColumn : DataGridColumn
+{
+    public static readonly AdamantiumProperty PartsProperty = AdamantiumProperty.Register(nameof(Parts),
+        typeof(DurationParts), typeof(DataGridDurationColumn),
+        new PropertyMetadata(DurationParts.Hours | DurationParts.Minutes | DurationParts.Seconds, OnPartsChanged));
+
+    /// <summary>The word that follows the days in the column's text - what a search, a copy and automation read; the
+    /// theme says it in the application's language. The cells draw the same word.</summary>
+    public static readonly AdamantiumProperty DayUnitProperty = AdamantiumProperty.Register(nameof(DayUnit),
+        typeof(string), typeof(DataGridDurationColumn), new PropertyMetadata(null, OnDayUnitChanged));
+
+    private static void OnDayUnitChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (component is not DataGridDurationColumn column) return;
+
+        column._dayUnit = column.DayUnit;
+        column.Owner?.RenameDayWord(column, e.OldValue as string, e.NewValue as string);
+    }
+
+    private DataTemplate _display;
+    private DataTemplate _defaultEditor;
+    private volatile int _parts = (int)(DurationParts.Hours | DurationParts.Minutes | DurationParts.Seconds);
+    private volatile string _dayUnit;
+
+    /// <summary>Which parts are shown and edited, as in <see cref="DurationField.Parts"/>.</summary>
+    public DurationParts Parts
+    {
+        get => GetValue<DurationParts>(PartsProperty);
+        set => SetValue(PartsProperty, value);
+    }
+
+    public string DayUnit
+    {
+        get => GetValue<string>(DayUnitProperty);
+        set => SetValue(DayUnitProperty, value);
+    }
+
+    protected internal override DataTemplate DisplayTemplate =>
+        CellTemplate ?? (_display ??= DateTimeValues.DurationTemplate(() => Parts));
+
+    protected internal override DataTemplate EditingTemplate =>
+        CellEditingTemplate ?? (_defaultEditor ??= new DataTemplate(() => new TemplateResult
+        {
+            RootComponent = new DurationField { Parts = Parts, Classes = new Classes { DataGridEditors.EditorClass } }
+        }));
+
+    protected internal override void PrepareEditor(IUIComponent editor, object item, object value)
+    {
+        if (editor is DurationField field) field.Value = value as TimeSpan?;
+    }
+
+    protected internal override object ReadEditor(IUIComponent editor) => Finished(editor)?.Value;
+
+    protected internal override bool EditorIsEmpty(IUIComponent editor) => Finished(editor) is { Value: null };
+
+    protected internal override object ValueOfSeed(string seed, object current) => current;
+
+    private static DurationField Finished(IUIComponent editor)
+    {
+        var field = editor as DurationField;
+        field?.FinishTyping();
+        return field;
+    }
+
+    protected internal override string TextOf(object value, System.Globalization.CultureInfo culture) =>
+        value is TimeSpan length
+            ? DateTimeValues.DurationLine(length, (DurationParts)_parts, _dayUnit, culture)
+            : base.TextOf(value, culture);
+
+    protected internal override bool DrawsItsText => CellTemplate == null;
+
+    protected internal override string KeyOf(object value) =>
+        value is TimeSpan length
+            ? DateTimeValues.DurationLine(length, (DurationParts)_parts, null, System.Globalization.CultureInfo.InvariantCulture)
+            : base.KeyOf(value);
+
+    protected internal override object ComparedAs(object value) =>
+        value is TimeSpan length ? DateTimeValues.DurationCut(length, (DurationParts)_parts) : value;
+
+    protected internal override object ValueOfText(string text, object current, System.Globalization.CultureInfo culture) =>
+        string.IsNullOrWhiteSpace(text) ? null
+        : DateTimeValues.TryParseDuration(text, (DurationParts)_parts, culture, current as TimeSpan?, out var length)
+            ? length
+            : AdamantiumProperty.UnsetValue;
+
+    private static DurationParts Shown(DurationParts parts) =>
+        parts == DurationParts.None ? DurationParts.Hours | DurationParts.Minutes | DurationParts.Seconds : parts;
+
+    private static void OnPartsChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (component is not DataGridDurationColumn column) return;
+
+        var was = (DurationParts)column._parts;
+        var word = column._dayUnit;
+        column._parts = (int)column.Parts;
+        column._display = null;
+        column._defaultEditor = null;
+        var culture = Core.Localization.Languages.Culture;
+        column.Owner?.Rekey(column,
+            value => value is TimeSpan length ? DateTimeValues.DurationLine(length, was, word, culture) : column.TextOf(value, culture),
+            text => !string.IsNullOrWhiteSpace(text) && DateTimeValues.TryParseDuration(text, was, culture, null, out var length)
+                ? length
+                : null,
+            (Shown(column.Parts) & ~Shown(was)) == 0);
+    }
 }
 
 internal static class DataGridEditors

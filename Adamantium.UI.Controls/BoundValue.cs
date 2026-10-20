@@ -35,6 +35,11 @@ internal sealed class BoundValue : FundamentalUIComponent
     /// whose setter is the object's own.</summary>
     public bool Writes => _writable && (_expression?.IsSourceWritable ?? false);
 
+    public Type SourceType => _expression?.SourceType ?? Value?.GetType();
+
+    internal Type DeclaredType =>
+        _converting == null && _expression?.SourceType is { } type && type != typeof(object) ? type : null;
+
     internal int Slot { get; set; }
 
     internal bool Agrees { get; set; }
@@ -92,14 +97,21 @@ internal sealed class BoundValue : FundamentalUIComponent
     /// produced will not fit what the object holds - a refusal, which is what validation looks like from here.</summary>
     public bool Write(object value)
     {
-        if (!Writes) return false;
+        if (!Writes || ReferenceEquals(value, AdamantiumProperty.UnsetValue)) return false;
 
         // WHAT THE PROPERTY TAKES, and only failing that what is in it now. A property typed Brush holding a solid
         // color takes a picture just as well, and asking the value being replaced what fits refused every kind but
         // the one already there - a row could put a color over a color for ever and never put a picture there once.
         // Through a converter the editor's value is the converter's to take: a color picked for a vector the object
         // keeps fits once converted back, and was refused for not being a vector already.
-        var sourceType = _expression?.SourceType ?? Value?.GetType();
+        var sourceType = SourceType;
+        var held = sourceType == typeof(object) ? Value?.GetType() : sourceType;
+        if (_converting == null && held != null && DateTimeValues.IsDate(held))
+        {
+            if (value is DateTime picked) value = DateTimeValues.FromDateTime(picked, held, Value);
+            else if (value is DateTimeOffset moment) value = DateTimeValues.FromMoment(moment, held, Value);
+        }
+
         if (_converting != null)
         {
             if (!ConvertsBack(value, sourceType)) return false;
@@ -138,10 +150,13 @@ internal sealed class BoundValue : FundamentalUIComponent
     /// <summary>Turns what an editor produced into what the object will take - a string into a number, a chosen item
     /// into its underlying value. False refuses, and refusing is the point: a value that will not fit must not be
     /// reported as written.</summary>
-    internal static bool TryConvert(object edited, Type target, out object value)
+    internal static bool TryConvert(object edited, Type target, out object value) => TryConvert(edited, target, false, out value);
+
+    internal static bool TryConvert(object edited, Type target, bool invariant, out object value)
     {
         value = edited;
-        if (target == null || edited == null) return true;
+        if (target == null) return true;
+        if (edited == null) return !target.IsValueType || Nullable.GetUnderlyingType(target) != null;
         if (target.IsInstanceOfType(edited)) return true;
 
         var underlying = Nullable.GetUnderlyingType(target) ?? target;
@@ -157,7 +172,7 @@ internal sealed class BoundValue : FundamentalUIComponent
         // The USER'S culture first - "2,5" is what a Russian keyboard produces and what the editor showed him - and the
         // invariant one after it, because a value that came from a file or from code is written "2.5" whatever the
         // machine is set to. Trying only one of the two makes half the sources unparsable.
-        return Convert(edited, underlying, Languages.Culture, out value)
+        return !invariant && Convert(edited, underlying, Languages.Culture, out value)
                || Convert(edited, underlying, CultureInfo.InvariantCulture, out value);
     }
 

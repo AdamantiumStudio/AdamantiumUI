@@ -36,43 +36,12 @@ public class Ellipse : Shape
       new PropertyMetadata(EllipseType.Sector,
          PropertyMetadataOptions.AffectsRender));
 
-   private static object StopAngleValueCallback(AdamantiumComponent adamantiumComponent, object baseValue)
-   {
-      if (adamantiumComponent is Ellipse ellipse)
-      {
-         var stopAngle = (Double)baseValue;
-         if (stopAngle > 360.0)
-         {
-            return 360.0;
-         }
+   // StopAngle is drawn as the SWEEP from StartAngle, so it is kept to a turn on its own, whatever the start.
+   private static object StopAngleValueCallback(AdamantiumComponent adamantiumComponent, object baseValue) =>
+      Math.Clamp((Double)baseValue, 0.0, 360.0);
 
-         if (stopAngle < ellipse.StartAngle)
-         {
-            return ellipse.StartAngle;
-         }
-      }
-
-      return baseValue;
-   }
-
-   private static object StartAngleValueCallback(AdamantiumComponent adamantiumComponent, object baseValue)
-   {
-      if (adamantiumComponent is Ellipse ellipse)
-      {
-         var startAngle = (Double)baseValue;
-         if (startAngle < 0)
-         {
-            return 0.0;
-         }
-
-         if (startAngle > ellipse.StopAngle)
-         {
-            return ellipse.StopAngle;
-         }
-      }
-
-      return baseValue;
-   }
+   private static object StartAngleValueCallback(AdamantiumComponent adamantiumComponent, object baseValue) =>
+      Math.Max((Double)baseValue, 0.0);
 
    public Double StartAngle
    {
@@ -107,6 +76,11 @@ public class Ellipse : Shape
 
    protected override void OnRender(IDrawingContext context)
    {
+      if (StopAngle <= 0)
+      {
+         return;
+      }
+
       var destRect = Rect.Deflate(StrokeThickness / 2);
       context.ForControl(this).DrawEllipse(destRect, Fill, StartAngle, StopAngle, EllipseType, GetPen(), RingThickness);
    }

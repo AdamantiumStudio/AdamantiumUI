@@ -20,6 +20,43 @@ public class TextBoxTests
     private static void Press(TextBox tb, Key key, InputModifiers modifiers = InputModifiers.None)
         => tb.RaiseEvent(new KeyEventArgs(KeyboardDevice.CurrentDevice, key, modifiers, 0) { RoutedEvent = Keyboard.KeyDownEvent });
 
+    // Shown while the box is empty, the keyboard in it or not: a search box opened with the keyboard in it said nothing
+    // of what it was for.
+    [Test]
+    public void ThePlaceholder_ShowsWhileEmpty_FocusedToo()
+    {
+        var box = new TextBox { Placeholder = "Find" };
+        _ = new Adamantium.UI.Controls.Panels.StackPanel { Children = { box } };
+        bool focusedEmpty, composing, composed, typed;
+        try
+        {
+            FocusManager.Focus(box);
+            Assume.That(box.IsFocused, Is.True, "the keyboard is in the box");
+            focusedEmpty = box.ShowsInlinePlaceholder;
+
+            // An input method composing draws its own window at the caret, over where the prompt would stand.
+            box.RaiseEvent(new TextCompositionEventArgs("ni", 2) { RoutedEvent = Keyboard.TextCompositionStartedEvent });
+            composing = box.ShowsInlinePlaceholder;
+            box.RaiseEvent(new TextCompositionEventArgs(string.Empty, 0) { RoutedEvent = Keyboard.TextCompositionEndedEvent });
+            composed = box.ShowsInlinePlaceholder;
+
+            Type(box, "a");
+            typed = box.ShowsInlinePlaceholder;
+        }
+        finally
+        {
+            FocusManager.ResetFocus();
+        }
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(focusedEmpty, Is.True);
+            Assert.That(composing, Is.False);
+            Assert.That(composed, Is.True);
+            Assert.That(typed, Is.False);
+        });
+    }
+
     [Test]
     public void ThePlaceholder_IsSetWithTheBoxsTypography()
     {
