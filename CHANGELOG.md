@@ -1666,6 +1666,10 @@ All packages share one version.
 
 ### Fixed
 
+- A ribbon with groups of medium commands settles: a command switched to another size was measured with its label's
+  part as it had been, so a group asked for a roomier variant from a small one answered the small width, the band
+  flipped between two layouts on every pass and the window never went idle. A size set on a command now has its
+  template measured afresh.
 - A cursor that changes under a pointer standing still - a style turning it into a tool's - shows at once on Windows:
   set from the UI loop it waited for the next move, `SetCursor` showing only from the window's own thread, which is now
   asked to answer `WM_SETCURSOR` again.
