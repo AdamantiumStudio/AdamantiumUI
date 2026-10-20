@@ -14,6 +14,8 @@ public abstract class Panel: InputUIComponent, IContainer, INavigablePanel
    // A panel is a passive layout container - never a keyboard-focus target. That now comes for free from the
    // Focusable=false default (see InputUIComponent); no per-panel override needed.
 
+   internal ParallelArrange ArrangingInParallel { get; set; }
+
    /// <summary>Tab and arrow navigation for a panel without a layout shape: children in tab-index or child order, forward
    /// on Next/Down/Right. Panels with rows or columns override this.</summary>
    public virtual IUIComponent Navigate(IUIComponent from, FocusNavigationDirection direction) =>

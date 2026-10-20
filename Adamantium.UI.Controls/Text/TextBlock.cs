@@ -60,11 +60,13 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
 
     public static readonly AdamantiumProperty DropCapLinesProperty = AdamantiumProperty.Register(nameof(DropCapLines),
         typeof(int), typeof(TextBlock),
-        new PropertyMetadata(0, PropertyMetadataOptions.AffectsMeasure, TextParametersChangedCallback));
+        new PropertyMetadata(0, PropertyMetadataOptions.AffectsMeasure, TextParametersChangedCallback),
+        value => value is 0 or >= DropCap.LeastLines);
 
     public static readonly AdamantiumProperty DropCapCharactersProperty = AdamantiumProperty.Register(nameof(DropCapCharacters),
         typeof(int), typeof(TextBlock),
-        new PropertyMetadata(1, PropertyMetadataOptions.AffectsMeasure, TextParametersChangedCallback));
+        new PropertyMetadata(1, PropertyMetadataOptions.AffectsMeasure, TextParametersChangedCallback),
+        value => value is >= 1);
 
     public static readonly AdamantiumProperty DropCapFontFamilyProperty = AdamantiumProperty.Register(nameof(DropCapFontFamily),
         typeof(FontFamily), typeof(TextBlock),
@@ -195,29 +197,17 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
     private VerticalTextAlignment _lastVAlign;
     private bool _lastJustify;
     private TextDirection _lastDirection;
-    private Hyphens _lastHyphens;
-    private int _lastHyphenLimit;
-    private LineBreaking _lastLineBreaking;
+    private TextComposition _lastComposition;
     private TabStopList _lastTabStops;
-    private bool _lastOpticalMargins;
     private DropCap _lastDropCap;
     private int _lastColumns = 1;
     private double _lastColumnGap;
     private ExclusionList _lastExclusions;
     private WritingMode _lastWritingMode;
-    private SpacingRange _lastWordSpacing;
-    private SpacingRange _lastLetterSpacing;
     private double _lastTracking;
     private TextKerning _lastKerning;
     private BaselineGrid _lastBaselineGrid;
     private readonly BaselineGridFollower _grid;
-    private SpacingRange _lastGlyphScaling;
-    private bool _lastJustificationAlternates;
-    private HorizontalTextAlignment _lastLastLineAlignment;
-    private HorizontalTextAlignment _lastSingleWord;
-    private bool _lastKashidas;
-    private TextSpacingTrim _lastSpacingTrim;
-    private HangingPunctuation _lastHanging;
     private double _lastLineHeight = double.NaN;
     private LineStackingStrategy _lastLineStacking;
     private double _lastLineSpacing;
@@ -321,28 +311,17 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
 
         _textLayout.LoadFontsInBackground = !FontAtlasStore.SynchronousFill;
         _textLayout.Direction = TextDirection;
-        _textLayout.Hyphens = Hyphens;
-        _textLayout.HyphenLimit = HyphenLimit;
-        _textLayout.LineBreaking = LineBreaking;
+        var composition = ResolveTextComposition(_lastComposition);
+        _textLayout.Composition = composition;
         _textLayout.TabStops = TabStops;
-        _textLayout.OpticalMarginAlignment = OpticalMarginAlignment;
         var dropCap = DropCapOf(ref fontReady);
         _textLayout.DropCap = dropCap;
         var vertical = WritingMode == WritingMode.VerticalRightToLeft;
         _textLayout.WritingMode = WritingMode;
-        _textLayout.WordSpacing = WordSpacing;
-        _textLayout.LetterSpacing = LetterSpacing;
         _textLayout.Tracking = Tracking;
         _textLayout.Kerning = Kerning;
         var baselineGrid = _grid.Grid();
         _textLayout.BaselineGrid = baselineGrid;
-        _textLayout.GlyphScaling = GlyphScaling;
-        _textLayout.JustificationAlternates = JustificationAlternates;
-        _textLayout.LastLineAlignment = LastLineAlignment;
-        _textLayout.SingleWordJustification = SingleWordJustification;
-        _textLayout.Kashidas = Kashidas;
-        _textLayout.SpacingTrim = TextSpacingTrim;
-        _textLayout.HangingPunctuation = HangingPunctuation;
         _textLayout.LineHeight = LineHeight;
         _textLayout.LineStacking = LineStackingStrategy;
         _textLayout.LineSpacing = LineSpacing;
@@ -371,17 +350,12 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
             && _lastText == text && _lastFontSize.Equals(FontSize)
             && _lastWrapping == TextWrapping && _lastTrimming == TextTrimming
             && _lastHAlign == HorizontalTextAlignment && _lastVAlign == VerticalTextAlignment
-            && _lastJustify == JustifyLastLine && _lastDirection == TextDirection && _lastHyphens == Hyphens
-            && _lastHyphenLimit == HyphenLimit
-            && _lastLineBreaking == LineBreaking && Equals(_lastTabStops, TabStops)
-            && _lastOpticalMargins == OpticalMarginAlignment && Equals(_lastDropCap, dropCap)
+            && _lastJustify == JustifyLastLine && _lastDirection == TextDirection
+            && ReferenceEquals(_lastComposition, composition) && Equals(_lastTabStops, TabStops)
+            && Equals(_lastDropCap, dropCap)
             && _lastColumns == Columns && _lastColumnGap.Equals(ColumnGap) && Equals(_lastExclusions, Exclusions)
-            && _lastWritingMode == WritingMode && _lastWordSpacing.Equals(WordSpacing)
-            && _lastLetterSpacing.Equals(LetterSpacing) && _lastTracking.Equals(Tracking) && _lastKerning == Kerning
+            && _lastWritingMode == WritingMode && _lastTracking.Equals(Tracking) && _lastKerning == Kerning
             && Equals(_lastBaselineGrid, baselineGrid)
-            && _lastGlyphScaling.Equals(GlyphScaling) && _lastJustificationAlternates == JustificationAlternates
-            && _lastLastLineAlignment == LastLineAlignment && _lastSingleWord == SingleWordJustification
-            && _lastKashidas == Kashidas && _lastSpacingTrim == TextSpacingTrim && _lastHanging == HangingPunctuation
             && _lastLineHeight.Equals(LineHeight)
             && _lastLineStacking == LineStackingStrategy && _lastLineSpacing.Equals(LineSpacing)
             && _lastMaxLines == MaxLines && _lastLineBounds == TextLineBounds
@@ -499,28 +473,16 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         _lastWrapping = TextWrapping; _lastTrimming = TextTrimming;
         _lastHAlign = HorizontalTextAlignment; _lastVAlign = VerticalTextAlignment; _lastJustify = JustifyLastLine;
         _lastDirection = TextDirection;
-        _lastHyphens = Hyphens;
-        _lastHyphenLimit = HyphenLimit;
-        _lastLineBreaking = LineBreaking;
+        _lastComposition = composition;
         _lastTabStops = TabStops;
-        _lastOpticalMargins = OpticalMarginAlignment;
         _lastDropCap = dropCap;
         _lastColumns = Columns;
         _lastColumnGap = ColumnGap;
         _lastExclusions = Exclusions;
         _lastWritingMode = WritingMode;
-        _lastWordSpacing = WordSpacing;
-        _lastLetterSpacing = LetterSpacing;
         _lastTracking = Tracking;
         _lastKerning = Kerning;
         _lastBaselineGrid = baselineGrid;
-        _lastGlyphScaling = GlyphScaling;
-        _lastJustificationAlternates = JustificationAlternates;
-        _lastLastLineAlignment = LastLineAlignment;
-        _lastSingleWord = SingleWordJustification;
-        _lastKashidas = Kashidas;
-        _lastSpacingTrim = TextSpacingTrim;
-        _lastHanging = HangingPunctuation;
         _lastLineHeight = LineHeight;
         _lastLineStacking = LineStackingStrategy;
         _lastLineSpacing = LineSpacing;
@@ -796,15 +758,15 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
 
     private DropCap DropCapOf(ref bool fontReady)
     {
-        if (DropCapLines < 2 || DropCapCharacters < 1)
+        if (DropCapLines == 0)
         {
             return null;
         }
 
         IFont font = null;
-        if (DropCapFontFamily != null)
+        if (DropCapFontFamily is { IsInstalled: true } family)
         {
-            fontReady &= TryResolveFont(DropCapFontFamily, out font);
+            fontReady &= TryResolveFont(family, out font);
         }
 
         return new DropCap(DropCapLines, DropCapCharacters, font);
@@ -953,14 +915,15 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         set => SetValue(DropCapLinesProperty, value);
     }
 
-    /// <summary>How many characters the drop cap takes; 1 by default.</summary>
+    /// <summary>How many characters the drop cap takes: 1 (the default) or more.</summary>
     public int DropCapCharacters
     {
         get => GetValue<int>(DropCapCharactersProperty);
         set => SetValue(DropCapCharactersProperty, value);
     }
 
-    /// <summary>The family the drop cap is set in, as a decorative face of initials; unset, the text's own.</summary>
+    /// <summary>The family the drop cap is set in, as a decorative face of initials; unset or not installed, the
+    /// text's own.</summary>
     public FontFamily DropCapFontFamily
     {
         get => GetValue<FontFamily>(DropCapFontFamilyProperty);

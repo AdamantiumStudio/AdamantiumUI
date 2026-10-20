@@ -89,6 +89,9 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
     private string _unrecordedBecause;
     private readonly List<TaskCompletionSource> _idleWaiters = [];
     private long _idleFrame = -1;
+    private readonly object _debugToolsLock = new();
+    private readonly Dictionary<Diagnostics.IDebugTool, bool> _debugTools = new();
+    private readonly HashSet<Diagnostics.IDebugTool> _debugToolsToDetach = [];
 
     static UIApplication()
     {
@@ -208,6 +211,89 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
 
     /// <summary>The frame verifier: off by default, switched on at run time to hunt a rendering bug.</summary>
     public Rendering.Verification.FrameVerification FrameVerification { get; } = new();
+
+    /// <summary>Starts <paramref name="tool"/> on this application, on the calling thread; it stays attached until
+    /// detached or until the application shuts down. Attaching a tool twice attaches it once; once the application has
+    /// begun to shut down, attaching throws <see cref="InvalidOperationException"/>. A tool whose
+    /// <see cref="Diagnostics.IDebugTool.Attach"/> throws is detached and the exception goes on; a tool asked to detach,
+    /// or caught by the shutdown, while it attaches is detached as soon as Attach returns.</summary>
+    public void AttachDebugTool(Diagnostics.IDebugTool tool)
+    {
+        ArgumentNullException.ThrowIfNull(tool);
+
+        lock (_debugToolsLock)
+        {
+            if (_isShuttingDown)
+            {
+                throw new InvalidOperationException("The application is shutting down.");
+            }
+
+            if (!_debugTools.TryAdd(tool, true))
+            {
+                return;
+            }
+        }
+
+        try
+        {
+            tool.Attach(this);
+        }
+        catch
+        {
+            lock (_debugToolsLock)
+            {
+                _debugTools.Remove(tool);
+                _debugToolsToDetach.Remove(tool);
+            }
+
+            DetachLogged(tool);
+            throw;
+        }
+
+        bool detachNow;
+        lock (_debugToolsLock)
+        {
+            detachNow = _debugToolsToDetach.Remove(tool) || _isShuttingDown;
+            if (detachNow)
+            {
+                _debugTools.Remove(tool);
+            }
+            else
+            {
+                _debugTools[tool] = false;
+            }
+        }
+
+        if (detachNow)
+        {
+            DetachLogged(tool);
+        }
+    }
+
+    /// <summary>Stops <paramref name="tool"/> on the calling thread, if it is attached; a tool still attaching is
+    /// stopped when its Attach returns.</summary>
+    public void DetachDebugTool(Diagnostics.IDebugTool tool)
+    {
+        ArgumentNullException.ThrowIfNull(tool);
+
+        lock (_debugToolsLock)
+        {
+            if (!_debugTools.TryGetValue(tool, out var attaching))
+            {
+                return;
+            }
+
+            if (attaching)
+            {
+                _debugToolsToDetach.Add(tool);
+                return;
+            }
+
+            _debugTools.Remove(tool);
+        }
+
+        tool.Detach();
+    }
 
     public IWindow MainWindow
     {
@@ -1337,6 +1423,8 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         if (_isShuttingDown) return;
         _isShuttingDown = true;
 
+        DetachDebugTools();
+
         // Cancel so no frame starts, then take the gate to wait out the one in flight; the render thread then exits by itself.
         cancellationTokenSource.Cancel();
         lock (_renderGate)
@@ -1354,6 +1442,43 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         }
 
         Stopped?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void DetachDebugTools()
+    {
+        List<Diagnostics.IDebugTool> attached = [];
+        lock (_debugToolsLock)
+        {
+            foreach (var (tool, attaching) in _debugTools)
+            {
+                if (!attaching)
+                {
+                    attached.Add(tool);
+                }
+            }
+
+            foreach (var tool in attached)
+            {
+                _debugTools.Remove(tool);
+            }
+        }
+
+        foreach (var tool in attached)
+        {
+            DetachLogged(tool);
+        }
+    }
+
+    private static void DetachLogged(Diagnostics.IDebugTool tool)
+    {
+        try
+        {
+            tool.Detach();
+        }
+        catch (Exception fault)
+        {
+            Log.Logger.Warning(fault, "Debug tool {Tool} failed to detach", tool.GetType().FullName);
+        }
     }
 
     private void FreeResources()

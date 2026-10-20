@@ -9,6 +9,18 @@ All packages share one version.
 
 - `PropertyGrid.ValueChangedCommand`: executed after each value written or taken back, with the change as its
   parameter - what `ValueChanged` says, for a view model bound from markup.
+- A way in for debugging tools: `UIApplication.AttachDebugTool` starts an `IDebugTool` on the application - its
+  windows, the frame verifier, the routed events - and `DetachDebugTool` or shutdown stops it. A tool watches a routed
+  event with `RoutedEvent.AddObserver(IRoutedEventObserver)`: it is told every raise (even one nothing hears), every
+  handler on the route - where, class or own, run or skipped as already handled, handled before and after, how long it
+  took, what it threw - and the end of the route, also when a handler threw. What an observer throws stops nothing
+  (the first fault of each kind is logged), nor does what a tool's `Detach` throws at shutdown. Once shutdown has
+  begun, attaching throws. An event no observer watches pays one check for it.
+  `EventManager.RoutedEventRegistered` announces events registered after a tool started. The sandbox attaches the
+  first such tool, a trace of every routed event to a file, when `ADAM_EVENT_TRACE` names the file.
+- `UIComponent.ResolveTextComposition(last)`: the element's hyphens, spacing, justification and CJK punctuation
+  settings as one engine `TextComposition`, the last one given back while they hold. `TextBlock` and `TextBox` lay
+  their text out with it and tell a change by it.
 - `Ribbon.RowAlignment`: the commands stacked in a group's column stand from the top, as in Word (`Top`, the default),
   or spread over the group's height, the last at the bottom (`Spread`). Inherited - set on the ribbon or on one group.
 - `DropDown.IsEditable`: a value is typed into the header, as Word's font and size boxes take one. Enter picks the item
@@ -1447,6 +1459,15 @@ All packages share one version.
   dropped for want of a free surface, on the panel's next ask.
 - `RuntimeStats.WindowFps` and `RuntimeStats.LastWindowGpuMs`: the frames the render thread draws a second and the GPU
   time of the last window frame.
+- `FontVariationList.Parse` reads axis values with the engine's `FontVariation.ParseList`, one reader for markup and
+  documents; a value that is not finite (`wght=Infinity`) is refused now.
+- Raising a routed event allocates nothing and takes no lock once each handler type and element type has been seen:
+  handlers are called by a typed call made once per handler type instead of `DynamicInvoke`, an element's handlers and
+  an event's class handlers are read from arrays replaced whole on change, the class handlers of a type are picked
+  once, and the route needs no list - a pointer move through 20 levels went from 4.1 µs and 1.1 KB to 0.45-0.85 µs
+  and nothing. An exception a handler throws comes out as it is, no longer wrapped in a `TargetInvocationException`; a
+  handler of the usual `(object sender, args)` shape whose sender or args type does not fit the raise throws
+  `InvalidCastException` rather than `ArgumentException`.
 - The menu key opens a text box's context menu under its caret, by the word the menu is about, not under the box's
   left edge; any element can say where by `ContextMenuPointFromKeyboard`.
 - A text box's placeholder shows while the box is empty with the keyboard in it too, as a browser's and the platforms'
@@ -1814,6 +1835,15 @@ All packages share one version.
 - A vector shape filled in the instanced batch was patched in place - a recolor, a shape blanked or replaced, a new one
   placed on a clean frame - in the copy the frames since the last walk were drawing from. The first patch of a frame
   moves every key to the next copy and fills it with what the keys hold, as the other batches do.
+- `EventManager.GetRoutedEvents()` lists the registered routed events; it always gave none.
+- `SizeChanged` of the items a `StackPanel` or `WrapPanel` arranges in parallel, and of the elements inside them, is
+  raised on the thread that runs the outermost such arrange, after its items and in their order, also when one of them
+  throws: it was raised on pool threads, and a handler on the panel or above it ran there. A panel with fewer items,
+  arranged one by one, still raises each as the item is arranged.
+- `GlyphScaling` with a minimum of 0 or below is refused when set, as the engine refuses it, instead of failing when
+  the text is laid out. `TextBlock.DropCapLines` of 1 or below 0 and `DropCapCharacters` below 1 are refused too: 1
+  line set no drop cap without a word. A `DropCapFontFamily` not installed sets the cap in the text's own face, not in
+  the default one.
 - An element under a `LayoutTransform` is hit, and the pointer read, where it is drawn: a click into a zoomed view
   went where the unzoomed one has that point, as only a `RenderTransform` was undone.
 - Windows spelling no longer calls words joined by a math symbol wrong as one ("Shift+Tab" offered as "Shift Tab"):

@@ -2,6 +2,7 @@ using Adamantium.Graphics.Fonts;
 using Adamantium.UI.Controls;
 using Adamantium.UI.Controls.Decorators;
 using Adamantium.UI.Controls.Text;
+using Adamantium.UI.Core.Media;
 using Adamantium.UI.Extensions;
 using NUnit.Framework;
 
@@ -49,5 +50,30 @@ public class TextBlockDropCapTests
         Update(window);
 
         Assert.That(text.Layout.DropCap, Is.Null);
+    }
+
+    [Test]
+    public void ADropCapOfOneLine_OrOfNoCharacters_IsRefused()
+    {
+        Assert.That(() => new TextBlock { DropCapLines = 1 }, Throws.Exception);
+        Assert.That(() => new TextBlock { DropCapLines = -2 }, Throws.Exception);
+        Assert.That(() => new TextBlock { DropCapCharacters = 0 }, Throws.Exception);
+    }
+
+    [Test]
+    public void AFamilyNotInstalled_SetsTheCapInTheTextsOwnFace()
+    {
+        var text = new TextBlock
+        {
+            Text = "Once upon a time there lived a king whose daughters were all beautiful.",
+            TextWrapping = TextWrapping.WrapByWords,
+            Width = 200,
+            DropCapLines = 3,
+            DropCapFontFamily = new FontFamily("No Such Family Anywhere"),
+        };
+        Update(new Window { Width = 600, Height = 300, Content = new Border { Child = text } });
+
+        Assert.That(text.Layout.DropCap.Lines, Is.EqualTo(3));
+        Assert.That(text.Layout.DropCap.Font, Is.Null);
     }
 }

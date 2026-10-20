@@ -1,6 +1,6 @@
 ﻿namespace Adamantium.UI.Core.RoutedEvents;
 
-internal class ClassEventSubsription : EventSubscription
+internal class ClassEventSubscription : EventSubscription
 {
    public Type TargetType { get; set; }
 }
