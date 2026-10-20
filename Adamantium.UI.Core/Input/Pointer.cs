@@ -144,7 +144,8 @@ public sealed class Pointer
     {
         for (var at = of; at != null; at = at.VisualParent)
         {
-            if (at.RenderTransform != null)
+            // A layout transform scales what is drawn inside the footprint as much as a render transform moves it.
+            if (at.RenderTransform != null || at.LayoutTransform != null)
             {
                 return true;
             }

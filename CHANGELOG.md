@@ -1696,6 +1696,8 @@ All packages share one version.
 
 ### Fixed
 
+- An element under a `LayoutTransform` is hit, and the pointer read, where it is drawn: a click into a zoomed view
+  went where the unzoomed one has that point, as only a `RenderTransform` was undone.
 - Windows spelling no longer calls words joined by a math symbol wrong as one ("Shift+Tab" offered as "Shift Tab"):
   each side of the symbol is checked as the word it is.
 - Escape on a menu dropped by a click closes the menu: the button's hover tip, opened after the press, was the
