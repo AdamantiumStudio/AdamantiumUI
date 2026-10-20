@@ -14,7 +14,8 @@ All packages share one version.
   took, what it threw - and the end of the route, also when a handler threw. What an observer throws stops nothing
   (the first fault of each kind is logged), nor does what a tool's `Detach` throws at shutdown. Once shutdown has
   begun, attaching throws. An event no observer watches pays one check for it.
-  `EventManager.RoutedEventRegistered` announces events registered after a tool started.
+  `EventManager.RoutedEventRegistered` announces events registered after a tool started. The sandbox attaches the
+  first such tool, a trace of every routed event to a file, when `ADAM_EVENT_TRACE` names the file.
 - `Ribbon.RowAlignment`: the commands stacked in a group's column stand from the top, as in Word (`Top`, the default),
   or spread over the group's height, the last at the bottom (`Spread`). Inherited - set on the ribbon or on one group.
 - `DropDown.IsEditable`: a value is typed into the header, as Word's font and size boxes take one. Enter picks the item
