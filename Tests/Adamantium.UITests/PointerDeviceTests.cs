@@ -331,6 +331,36 @@ public class PointerDeviceTests
         Assert.That(states, Is.EqualTo(new[] { HoldingState.Started, HoldingState.Canceled }));
     }
 
+    // With no loop running, the hold's timer ticks on the pool: the hold waits for whoever drains the loop's queue and
+    // is raised there, never on the timer's thread beside the one changing the tree.
+    [Test]
+    public void AHoldWithNoLoopRunning_IsRaisedByWhoeverDrains_NotOnTheTimersThread()
+    {
+        var states = new List<HoldingState>();
+        var threads = new List<System.Threading.Thread>();
+        _left.AddHandler(Gestures.HoldingEvent, new HoldingEventHandler((_, e) =>
+        {
+            states.Add(e.HoldingState);
+            threads.Add(System.Threading.Thread.CurrentThread);
+        }));
+
+        using (HoldingTimeOf(TimeSpan.FromMilliseconds(5)))
+        {
+            Send(RawPointerEventType.Down, 44, PointerType.Touch, new Vector2(20, 50), 0, MouseButtons.None);
+            System.Threading.Thread.Sleep(200);
+            var beforeDrain = states.Count;
+            LoopSignal.Drain();
+            Send(RawPointerEventType.Up, 44, PointerType.Touch, new Vector2(20, 50), 700, MouseButtons.None);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(beforeDrain, Is.Zero, "nothing raised on the timer's thread");
+                Assert.That(states, Is.EqualTo(new[] { HoldingState.Started, HoldingState.Completed }));
+                Assert.That(threads, Has.All.SameAs(System.Threading.Thread.CurrentThread));
+            });
+        }
+    }
+
     [Test]
     public void TheMouse_NeverHolds()
     {

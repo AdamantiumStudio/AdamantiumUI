@@ -29,4 +29,14 @@ public class KeyEventArgs:InputEventArgs
 
    public bool IsToggled { get; }
 
+   protected override void InvokeEventHandler(Delegate handler, object target)
+   {
+      if (handler is KeyEventHandler typed)
+      {
+         typed(target, this);
+         return;
+      }
+
+      base.InvokeEventHandler(handler, target);
+   }
 }

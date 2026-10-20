@@ -84,4 +84,15 @@ public class RibbonQuickAccessEventArgs : RoutedEventArgs
     public Style DropDownItemContainerStyle { get; }
 
     public object ActionParameter { get; }
+
+    protected override void InvokeEventHandler(Delegate handler, object target)
+    {
+        if (handler is EventHandler<RibbonQuickAccessEventArgs> typed)
+        {
+            typed(target, this);
+            return;
+        }
+
+        base.InvokeEventHandler(handler, target);
+    }
 }

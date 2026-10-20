@@ -10,4 +10,15 @@ public class KeyboardGotFocusEventArgs: KeyboardFocusChangedEventArgs
       Modifiers = modifiers;
       NavigationMethod = navigationMethod;
    }
+
+   protected override void InvokeEventHandler(Delegate handler, object target)
+   {
+      if (handler is KeyboardGotFocusEventHandler typed)
+      {
+         typed(target, this);
+         return;
+      }
+
+      base.InvokeEventHandler(handler, target);
+   }
 }

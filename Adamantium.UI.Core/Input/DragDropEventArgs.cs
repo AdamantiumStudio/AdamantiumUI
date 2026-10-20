@@ -54,4 +54,15 @@ public class DragDropEventArgs : RoutedEventArgs
     /// <summary>How the drop lands relative to <see cref="DropTarget"/> (before/after sibling, or into as a child).
     /// <see cref="DropPlacement.None"/> for a flat list.</summary>
     public DropPlacement Placement { get; set; } = DropPlacement.None;
+
+    protected override void InvokeEventHandler(Delegate handler, object target)
+    {
+        if (handler is DragDropEventHandler typed)
+        {
+            typed(target, this);
+            return;
+        }
+
+        base.InvokeEventHandler(handler, target);
+    }
 }

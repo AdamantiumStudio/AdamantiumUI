@@ -8,4 +8,15 @@ public class StateChangedEventArgs : RoutedEventArgs
     }
         
     public WindowState State { get; }
+
+    protected override void InvokeEventHandler(Delegate handler, object target)
+    {
+        if (handler is StateChangedHandler typed)
+        {
+            typed(target, this);
+            return;
+        }
+
+        base.InvokeEventHandler(handler, target);
+    }
 }

@@ -12,4 +12,15 @@ public class KeyboardFocusChangedEventArgs:RoutedEventArgs
       OldFocus = oldFocus;
       NewFocus = newFocus;
    }
+
+   protected override void InvokeEventHandler(Delegate handler, object target)
+   {
+      if (handler is KeyboardFocusChangedEventHandler typed)
+      {
+         typed(target, this);
+         return;
+      }
+
+      base.InvokeEventHandler(handler, target);
+   }
 }

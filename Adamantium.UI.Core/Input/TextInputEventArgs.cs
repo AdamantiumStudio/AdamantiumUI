@@ -10,4 +10,15 @@ public class TextInputEventArgs:RoutedEventArgs
    {
       Text = text;
    }
+
+   protected override void InvokeEventHandler(Delegate handler, object target)
+   {
+      if (handler is TextInputEventHandler typed)
+      {
+         typed(target, this);
+         return;
+      }
+
+      base.InvokeEventHandler(handler, target);
+   }
 }

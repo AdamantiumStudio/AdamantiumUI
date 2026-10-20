@@ -21,4 +21,15 @@ public class CanExecuteRoutedEventArgs : RoutedEventArgs
     public bool? IsChecked { get; set; }
 
     public object Value { get; set; }
+
+    protected override void InvokeEventHandler(Delegate handler, object target)
+    {
+        if (handler is CanExecuteRoutedEventHandler typed)
+        {
+            typed(target, this);
+            return;
+        }
+
+        base.InvokeEventHandler(handler, target);
+    }
 }

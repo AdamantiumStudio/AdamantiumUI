@@ -16,4 +16,15 @@ public class ExecutedRoutedEventArgs : RoutedEventArgs
     public object Parameter { get; }
 
     internal bool Ran { get; set; }
+
+    protected override void InvokeEventHandler(Delegate handler, object target)
+    {
+        if (handler is ExecutedRoutedEventHandler typed)
+        {
+            typed(target, this);
+            return;
+        }
+
+        base.InvokeEventHandler(handler, target);
+    }
 }

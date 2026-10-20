@@ -10,4 +10,15 @@ public class PointerReleasedEventArgs : PointerEventArgs
     }
 
     public MouseButtons ChangedButton { get; }
+
+    protected override void InvokeEventHandler(Delegate handler, object target)
+    {
+        if (handler is PointerReleasedEventHandler typed)
+        {
+            typed(target, this);
+            return;
+        }
+
+        base.InvokeEventHandler(handler, target);
+    }
 }

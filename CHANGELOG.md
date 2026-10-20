@@ -1439,13 +1439,14 @@ All packages share one version.
 
 - `FontVariationList.Parse` reads axis values with the engine's `FontVariation.ParseList`, one reader for markup and
   documents; a value that is not finite (`wght=Infinity`) is refused now.
-- Raising a routed event allocates nothing and takes no lock once each handler type and element type has been seen:
-  handlers are called by a typed call made once per handler type instead of `DynamicInvoke`, an element's handlers and
-  an event's class handlers are read from arrays replaced whole on change, the class handlers of a type are picked
-  once, and the route needs no list - a pointer move through 20 levels went from 4.1 µs and 1.1 KB to 0.45-0.85 µs
-  and nothing. An exception a handler throws comes out as it is, no longer wrapped in a `TargetInvocationException`; a
-  handler of the usual `(object sender, args)` shape whose sender or args type does not fit the raise throws
-  `InvalidCastException` rather than `ArgumentException`.
+- Raising a routed event allocates nothing and takes no lock once each element type has been seen: the args call the
+  handler, as WPF's do - `RoutedEventArgs.InvokeEventHandler`, which each args class with a handler type of its own
+  overrides with a direct call, so a handler of the event's type runs with no reflection and nothing generated at run
+  time (iOS, NativeAOT) - an element's handlers and an event's class handlers are read from arrays replaced whole on
+  change, the class handlers of a type are picked once, and the route needs no list - a pointer move through 20 levels
+  went from 4.1 µs and 1.1 KB to 0.3-0.55 µs and nothing. A handler of a type no args class knows still runs, through
+  `DynamicInvoke`. An exception a handler throws comes out as it is, no longer wrapped in a `TargetInvocationException`.
+- `MSAALeveChangedHandler` is spelled `MSAALevelChangedHandler`.
 - The menu key opens a text box's context menu under its caret, by the word the menu is about, not under the box's
   left edge; any element can say where by `ContextMenuPointFromKeyboard`.
 - A text box's placeholder shows while the box is empty with the keyboard in it too, as a browser's and the platforms'
@@ -1801,6 +1802,9 @@ All packages share one version.
 ### Fixed
 
 - `EventManager.GetRoutedEvents()` lists the registered routed events; it always gave none.
+- `PreviewGotKeyboardFocus` is raised on the element taking the focus, with `KeyboardGotFocusEventArgs`: it went to the
+  element losing it, with args its handlers could not take, so a handler made the focus move throw. `GotKeyboardFocus`
+  says where the focus came from - its `OldFocus` was the new element.
 - `SizeChanged` of the items a `StackPanel` or `WrapPanel` arranges in parallel, and of the elements inside them, is
   raised on the thread that runs the outermost such arrange, after its items and in their order, also when one of them
   throws: it was raised on pool threads, and a handler on the panel or above it ran there. A panel with fewer items,
