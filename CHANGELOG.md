@@ -13,8 +13,8 @@ All packages share one version.
 - `ColorPalette.ColorPlaces` and `HasRecentColors`, and `ColorPaletteSwatch.SelectedColor` and `IsSelected`: the swatch
   of the palette's selected color is ringed, in the grid and in the recent row, and the recent row with its title is
   shown only once a color has been applied through "More colors".
-- `DropDownButton`, `SplitButton` and `ToggleSplitButton`: buttons that drop a list of their items, as `DropDown` does
-  - `ItemsControl`s, the items written in place as `DropDownButtonItem`s or made for `ItemsSource` and shown by
+- `DropDownButton`, `SplitButton` and `ToggleSplitButton`: buttons that drop a list of their items, as `DropDown`
+  does - `ItemsControl`s, the items written in place as `DropDownButtonItem`s or made for `ItemsSource` and shown by
   `ItemTemplate` - but a picked item is an action, not a value kept: it runs its own command, then `ItemCommand` with
   the item, and raises `ItemClick`; a row with no command of its own that `ItemCommand` cannot run for is drawn
   disabled and cannot be picked (`DropDownButtonItem.IsAvailable`) - its own `IsEnabled` is left to its author. Rows
@@ -103,8 +103,9 @@ All packages share one version.
   styles - with hands, which a countdown turns back round a face ringed at its rim as far as is still left of the whole
   (with no second hand), or in figures counting hours past a day, a digit more past a hundred. Standing at its whole
   length (`IsAtStart` - not started, or reset) a countdown shows a `DurationField` for its `Duration` in place of the
-  clock (`ShowDurationField`, on by default). A countdown rounds up
-  - to the minute when it shows no seconds - and its colon blinks with its figures. Started, paused
+  clock (`ShowDurationField`, on by default), in figures as large as the room takes, the part being typed marked by
+  its figures alone (`FieldSegment.Marking`). A countdown rounds up - to the minute when it shows no seconds - and its
+  colon blinks with its figures. Started, paused
   and reset (and lapped) by the buttons they show (`ShowButtons`; the keyboard passes to the button that takes the
   pressed one's place), by their commands (`StartCommand`, `PauseCommand`, `ResetCommand`, `LapCommand`) or their
   methods; `Remaining` and `Elapsed` are told every second while shown and `IsRunning` as it changes. A countdown of a
@@ -1777,6 +1778,11 @@ All packages share one version.
   went where the unzoomed one has that point, as only a `RenderTransform` was undone.
 - Windows spelling no longer calls words joined by a math symbol wrong as one ("Shift+Tab" offered as "Shift Tab"):
   each side of the symbol is checked as the word it is.
+- A two-way `{TemplateBinding}` wrote nothing (null) into a property that cannot hold it - an emptied length field over
+  a `TimeSpan` - and the slot then read as a null value type; it is refused as a `{Binding}` refuses it, the field
+  given back what is held.
+- A `Viewbox` set its scaled child at its top-left corner, so content scaled to fit one side hung at the top or left
+  of the room it did not fill; it is centered in it, as a WPF `Viewbox`'s is.
 - Escape on a menu dropped by a click closes the menu: the button's hover tip, opened after the press, was the
   innermost popup and took the key.
 - A ribbon tab with a key tip of its own no longer wears a second badge among its commands.

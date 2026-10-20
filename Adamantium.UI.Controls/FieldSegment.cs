@@ -20,6 +20,17 @@ public abstract class FieldSegment : Control
     public static readonly AdamantiumProperty IsActiveProperty = AdamantiumProperty.RegisterReadOnly(nameof(IsActive),
         typeof(bool), typeof(FieldSegment), new PropertyMetadata(false, PropertyMetadataOptions.AffectsParentArrange));
 
+    /// <summary>How the part the keyboard is on is marked; set on a field and inherited by its parts.</summary>
+    public static readonly AdamantiumProperty MarkingProperty = AdamantiumProperty.RegisterAttached("Marking",
+        typeof(FieldSegmentMarking), typeof(UIComponent),
+        new PropertyMetadata(FieldSegmentMarking.Fill, PropertyMetadataOptions.Inherits));
+
+    public static FieldSegmentMarking GetMarking(IUIComponent element) =>
+        element.GetValue<FieldSegmentMarking>(MarkingProperty);
+
+    public static void SetMarking(IUIComponent element, FieldSegmentMarking value) =>
+        element.SetValue(MarkingProperty, value);
+
     public static readonly AdamantiumProperty PlaceholderProperty = AdamantiumProperty.Register(nameof(Placeholder),
         typeof(string), typeof(FieldSegment), new PropertyMetadata(string.Empty, OnPlaceholderChanged));
 

@@ -125,12 +125,26 @@
                         <Clock x:Name="PART_Clock"
                                ClockStyle="{TemplateBinding ClockStyle}"
                                ShowSeconds="{TemplateBinding ShowSeconds}"/>
-                        <DurationField x:Name="PART_Duration"
-                                       Value="{TemplateBinding Duration, Mode=TwoWay}"
-                                       Minimum="0:00:00"
-                                       HorizontalAlignment="Center"
-                                       VerticalAlignment="Center"
-                                       Visibility="Collapsed"/>
+                        <!-- The length set in figures as large as the clock's room takes, with no frame: the part
+                             being typed is marked by its figures alone. -->
+                        <Viewbox x:Name="Length"
+                                 Margin="8,0"
+                                 Visibility="Collapsed">
+                            <DurationField x:Name="PART_Duration"
+                                           Value="{TemplateBinding Duration, Mode=TwoWay}"
+                                           Minimum="0:00:00"
+                                           Maximum="36500.00:00:00"
+                                           MinWidth="0"
+                                           MinHeight="0"
+                                           FieldSegment.Marking="Figures">
+                                <DurationField.Template>
+                                    <ControlTemplate TargetType="Control">
+                                        <FieldSegmentPanel x:Name="PART_Segments"
+                                                           VerticalAlignment="Center"/>
+                                    </ControlTemplate>
+                                </DurationField.Template>
+                            </DurationField>
+                        </Viewbox>
                         <StackPanel x:Name="Buttons"
                                     Grid.Row="1"
                                     Classes="ClockButtons">
@@ -161,8 +175,9 @@
                 <Condition Property="IsAtStart" Value="true"/>
                 <Condition Property="ShowDurationField" Value="true"/>
             </MultiTrigger.Conditions>
-            <Setter TargetName="PART_Clock" Property="Visibility" Value="Collapsed"/>
-            <Setter TargetName="PART_Duration" Property="Visibility" Value="Visible"/>
+            <!-- Hidden, not collapsed: the clock keeps its room, so the field fills it and nothing moves on start. -->
+            <Setter TargetName="PART_Clock" Property="Visibility" Value="Hidden"/>
+            <Setter TargetName="Length" Property="Visibility" Value="Visible"/>
         </MultiTrigger>
         <PropertyTrigger Property="ShowButtons" Value="false">
             <Setter TargetName="Buttons" Property="Visibility" Value="Collapsed"/>

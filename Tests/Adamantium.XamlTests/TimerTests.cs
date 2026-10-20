@@ -6,9 +6,11 @@ using Adamantium.UI.Controls;
 using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Controls.Buttons;
+using Adamantium.UI.Controls.Decorators;
 using Adamantium.UI.Controls.Shapes;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Automation;
+using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Resources;
 using Adamantium.UI.Extensions;
 using NUnit.Framework;
@@ -178,7 +180,7 @@ public class TimerTests
     [Test]
     public void AnAnalogCountdown_RingsWhatIsLeft_AndTurnsItsHandsBack()
     {
-        var timer = Shown(new CountdownTimer { Duration = TimeSpan.FromMinutes(1) });
+        var timer = Shown(new CountdownTimer { Duration = TimeSpan.FromMinutes(1), ShowDurationField = false });
         var left = Within<Ellipse>(timer.Clock).Single(e => e.Classes.Contains("ClockRemaining"));
 
         Assert.That(left.StopAngle, Is.EqualTo(360).Within(0.01), "all of it is left");
@@ -388,22 +390,43 @@ public class TimerTests
         {
             var timer = Shown(new CountdownTimer { Duration = TimeSpan.FromMinutes(3) });
             var field = (DurationField)timer.GetTemplateChild("PART_Duration");
+            var length = (UIComponent)timer.GetTemplateChild("Length");
 
             Assert.Multiple(() =>
             {
                 Assert.That(timer.IsAtStart);
-                Assert.That(field.Visibility, Is.EqualTo(Visibility.Visible));
-                Assert.That(timer.Clock.Visibility, Is.EqualTo(Visibility.Collapsed));
+                Assert.That(length.Visibility, Is.EqualTo(Visibility.Visible));
+                Assert.That(timer.Clock.Visibility, Is.EqualTo(Visibility.Hidden), "keeping its room");
                 Assert.That(field.Value, Is.EqualTo(TimeSpan.FromMinutes(3)));
+                Assert.That(field.RenderSize.Width * field.RenderTransform.ScaleX, Is.GreaterThan(150),
+                    "figures as large as the clock's room takes");
             });
 
-            field.Value = TimeSpan.FromMinutes(10);
+            FocusManager.Focus(field, NavigationMethod.Tab);
+            Settle();
+            var chrome = (Border)field.ActiveSegment.GetTemplateChild("Chrome");
+            Assert.That(chrome.Background is null or Adamantium.UI.Core.Media.SolidColorBrush { Color.A: 0 },
+                "the part being typed is marked by its figures, not filled");
+            Assert.That(FieldSegment.GetMarking(field.ActiveSegment), Is.EqualTo(FieldSegmentMarking.Figures));
+
+            field.SetCurrentValue(DurationField.ValueProperty, TimeSpan.FromMinutes(10));
             Settle();
             Assert.That(timer.Duration, Is.EqualTo(TimeSpan.FromMinutes(10)), "the field sets the length");
 
+            Assert.DoesNotThrow(() => field.RaiseEvent(new KeyEventArgs(KeyboardDevice.CurrentDevice, Key.Delete,
+                InputModifiers.None, 0) { RoutedEvent = Keyboard.KeyDownEvent }));
+            Settle();
+            Assert.That(timer.Duration, Is.EqualTo(TimeSpan.FromMinutes(10)), "an emptied part is not an empty length");
+            Assert.That(field.Value, Is.EqualTo(TimeSpan.FromMinutes(10)), "the field is given back what is held");
+
+            field.RaiseEvent(new TextInputEventArgs("1") { RoutedEvent = Keyboard.TextInputEvent });
             timer.Start();
             Settle();
-            Assert.That(field.Visibility, Is.EqualTo(Visibility.Collapsed), "running, the clock");
+            Assert.That(timer.Duration, Is.EqualTo(new TimeSpan(1, 10, 0)), "a part half typed counts on start");
+            Assert.That(timer.Remaining, Is.GreaterThan(TimeSpan.FromHours(1)));
+            Assert.That(((IInputComponent)timer.GetTemplateChild("PART_Pause")).IsFocused, "the keyboard goes on");
+
+            Assert.That(length.Visibility, Is.EqualTo(Visibility.Collapsed), "running, the clock");
             Assert.That(timer.Clock.Visibility, Is.EqualTo(Visibility.Visible));
 
             timer.Pause();
@@ -412,10 +435,11 @@ public class TimerTests
 
             timer.Reset();
             Settle();
-            Assert.That(field.Visibility, Is.EqualTo(Visibility.Visible), "reset, the field again");
+            Assert.That(length.Visibility, Is.EqualTo(Visibility.Visible), "reset, the field again");
         }
         finally
         {
+            FocusManager.ResetFocus();
             LoopSignal.Unclaim();
         }
     }
@@ -428,7 +452,7 @@ public class TimerTests
         Assert.Multiple(() =>
         {
             Assert.That(timer.IsAtStart);
-            Assert.That(((UIComponent)timer.GetTemplateChild("PART_Duration")).Visibility, Is.EqualTo(Visibility.Collapsed));
+            Assert.That(((UIComponent)timer.GetTemplateChild("Length")).Visibility, Is.EqualTo(Visibility.Collapsed));
             Assert.That(timer.Clock.Visibility, Is.EqualTo(Visibility.Visible));
         });
     }

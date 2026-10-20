@@ -149,6 +149,7 @@ public class CountdownTimer : Control
 
     public void Start()
     {
+        (GetTemplateChild("PART_Duration") as DurationField)?.FinishTyping();
         if (IsRunning || Left() <= TimeSpan.Zero)
         {
             return;
@@ -265,7 +266,7 @@ public class CountdownTimer : Control
         _handTo = _handFrom != null ? to : null;
     }
 
-    private static readonly string[] Buttons = ["PART_Start", "PART_Pause", "PART_Reset"];
+    private static readonly string[] Buttons = ["PART_Start", "PART_Pause", "PART_Reset", "PART_Duration"];
 
     private void HandOver()
     {

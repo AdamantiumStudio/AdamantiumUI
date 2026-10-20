@@ -28,10 +28,21 @@
         <PropertyTrigger Property="IsEmpty" Value="true">
             <Setter TargetName="PART_Text" Property="Foreground" Value="{ResourceReference TextFillColorTertiary}"/>
         </PropertyTrigger>
-        <PropertyTrigger Property="IsActive" Value="true">
+        <MultiTrigger>
+            <MultiTrigger.Conditions>
+                <Condition Property="IsActive" Value="true"/>
+                <Condition Property="FieldSegment.Marking" Value="Fill"/>
+            </MultiTrigger.Conditions>
             <Setter TargetName="Chrome" Property="Background" Value="{ThemeResource AccentFillColorDefault}"/>
             <Setter TargetName="PART_Text" Property="Foreground" Value="{ThemeResource AccentForegroundColor}"/>
-        </PropertyTrigger>
+        </MultiTrigger>
+        <MultiTrigger>
+            <MultiTrigger.Conditions>
+                <Condition Property="IsActive" Value="true"/>
+                <Condition Property="FieldSegment.Marking" Value="Figures"/>
+            </MultiTrigger.Conditions>
+            <Setter TargetName="PART_Text" Property="Foreground" Value="{ThemeResource AccentFillColorDefault}"/>
+        </MultiTrigger>
     </Style>
 
     <!-- What each part shows while empty, and what it is called. -->

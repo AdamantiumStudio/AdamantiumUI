@@ -4,8 +4,9 @@ using Adamantium.UI.Core.Automation;
 
 namespace Adamantium.UI.Controls.Automation;
 
-/// <summary>The peer of a <see cref="CountdownTimer"/>: a group of its clock and its buttons, whose value is what is left
-/// in whole seconds, its hours counted past a day (<c>00:04:59</c>, <c>26:00:00</c>); read only - its length is its
+/// <summary>The peer of a <see cref="CountdownTimer"/>: a group of its clock - or, standing at its whole length, the field
+/// its length is set in - and its buttons, whose value is what is left in whole seconds, its hours counted past a day
+/// (<c>00:04:59</c>, <c>26:00:00</c>); read only itself - its length is set in that field or as its
 /// <see cref="CountdownTimer.Duration"/>.</summary>
 public class CountdownTimerAutomationPeer : UIComponentAutomationPeer, IValueProvider
 {
