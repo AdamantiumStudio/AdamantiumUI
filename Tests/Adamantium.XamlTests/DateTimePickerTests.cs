@@ -3,6 +3,7 @@ using System.Linq;
 using Adamantium.Core.DependencyInjection;
 using Adamantium.UI.Controls;
 using Adamantium.UI.Controls.Automation;
+using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Input;
@@ -95,6 +96,41 @@ public class DateTimePickerTests
         picker.RaiseEvent(new TextInputEventArgs("19102026") { RoutedEvent = Keyboard.TextInputEvent });
 
         Assert.That(picker.Value, Is.EqualTo(new DateTime(2026, 10, 19)));
+    }
+
+    [Test]
+    public void TooNarrowForItsParts_ThePickerSlidesToThePartBeingTyped_AndBackOnceLeft()
+    {
+        var picker = Shown(new DateTimePicker
+        {
+            Language = "en-US", Width = 110, Value = new DateTime(2026, 10, 28, 12, 30, 0),
+        });
+        var row = (FieldSegmentPanel)picker.GetTemplateChild("PART_Segments");
+        var first = picker.Segments[0];
+        var last = picker.Segments.Last(s => s.Kind != DateTimeSegmentKind.DayOfWeek);
+        Assert.That(last.Bounds.Right, Is.GreaterThan(row.RenderSize.Width), "the parts do not fit");
+        Assert.That(first.Bounds.X, Is.EqualTo(0).Within(0.5), "the first part shown first");
+
+        for (var i = 0; i < picker.Segments.Count && picker.ActiveSegment != last; i++)
+        {
+            Press(picker, Key.RightArrow);
+            Settle();
+        }
+
+        Assert.That(picker.ActiveSegment, Is.SameAs(last));
+        Assert.Multiple(() =>
+        {
+            Assert.That(last.Bounds.X, Is.GreaterThanOrEqualTo(-0.5), "the part being typed is in view");
+            Assert.That(last.Bounds.Right, Is.LessThanOrEqualTo(row.RenderSize.Width + 0.5));
+            Assert.That(first.Bounds.X, Is.LessThan(0), "slid along");
+        });
+
+        FocusManager.ResetFocus();
+        picker.RaiseEvent(new Adamantium.UI.Core.RoutedEvents.RoutedEventArgs(FocusManager.LostFocusEvent));
+        Settle();
+
+        Assert.That(picker.ActiveSegment, Is.Null);
+        Assert.That(first.Bounds.X, Is.EqualTo(0).Within(0.5), "left, it shows its start again");
     }
 
     [TestCase(Key.F4, InputModifiers.None)]

@@ -274,10 +274,10 @@
                           MarginBottom="12">
                 <TreeDataGrid.Columns>
                     <DataGridTextColumn Header="{Localize DateTimePageStrings.TaskName}" Binding="{Binding Name}" Width="160"/>
-                    <DataGridDateTimeColumn Header="{Localize DateTimePageStrings.Due}" Binding="{Binding Due}" Format="ShortDateTime" Width="170"/>
-                    <DataGridDateTimeColumn Header="{Localize DateTimePageStrings.Day}" Binding="{Binding Day}" Width="120"/>
-                    <DataGridDateTimeColumn Header="{Localize DateTimePageStrings.Start}" Binding="{Binding Start}" Format="ShortTime" Width="100"/>
-                    <DataGridDateTimeColumn Header="{Localize DateTimePageStrings.Stamp}" Binding="{Binding Stamp}" Format="ShortDateTime" Width="170"/>
+                    <DataGridDateTimeColumn Header="{Localize DateTimePageStrings.Due}" Binding="{Binding Due}" Format="ShortDateTime" Width="200"/>
+                    <DataGridDateTimeColumn Header="{Localize DateTimePageStrings.Day}" Binding="{Binding Day}" Width="140"/>
+                    <DataGridDateTimeColumn Header="{Localize DateTimePageStrings.Start}" Binding="{Binding Start}" Format="ShortTime" Width="120"/>
+                    <DataGridDateTimeColumn Header="{Localize DateTimePageStrings.Stamp}" Binding="{Binding Stamp}" Format="ShortDateTime" Width="200"/>
                     <DataGridDurationColumn Header="{Localize DateTimePageStrings.Length}" Binding="{Binding Length}" Width="120"/>
                 </TreeDataGrid.Columns>
             </TreeDataGrid>

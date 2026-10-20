@@ -91,6 +91,25 @@ public class DurationFieldTests
         string.Concat(literals.Where(t => t.Visibility == Visibility.Visible).Select(t => t.Text));
 
     [Test]
+    public void TooNarrowForItsParts_TheFieldSlidesToThePartBeingTyped()
+    {
+        var field = Shown(new DurationField { Width = 40, Value = TimeSpan.FromSeconds(5025) });
+        var row = (FieldSegmentPanel)field.GetTemplateChild("PART_Segments");
+        var last = field.Segments[^1];
+        Assert.That(last.Bounds.Right, Is.GreaterThan(row.RenderSize.Width), "the parts do not fit");
+
+        for (var i = 0; i < field.Segments.Count && field.ActiveSegment != last; i++)
+        {
+            Press(field, Key.RightArrow);
+            Settle();
+        }
+
+        Assert.That(field.ActiveSegment, Is.SameAs(last));
+        Assert.That(last.Bounds.X, Is.GreaterThanOrEqualTo(-0.5));
+        Assert.That(last.Bounds.Right, Is.LessThanOrEqualTo(row.RenderSize.Width + 0.5), "the part being typed is in view");
+    }
+
+    [Test]
     public void HoursMinutesAndSeconds_AreTheDefault_EmptyUntilEntered()
     {
         var field = Shown(new DurationField(), focused: false);

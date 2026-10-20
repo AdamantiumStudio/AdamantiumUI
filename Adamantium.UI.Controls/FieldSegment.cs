@@ -18,7 +18,7 @@ public abstract class FieldSegment : Control
         typeof(bool), typeof(FieldSegment), new PropertyMetadata(true));
 
     public static readonly AdamantiumProperty IsActiveProperty = AdamantiumProperty.RegisterReadOnly(nameof(IsActive),
-        typeof(bool), typeof(FieldSegment), new PropertyMetadata(false));
+        typeof(bool), typeof(FieldSegment), new PropertyMetadata(false, PropertyMetadataOptions.AffectsParentArrange));
 
     public static readonly AdamantiumProperty PlaceholderProperty = AdamantiumProperty.Register(nameof(Placeholder),
         typeof(string), typeof(FieldSegment), new PropertyMetadata(string.Empty, OnPlaceholderChanged));

@@ -188,9 +188,8 @@
                             BorderThickness="{TemplateBinding BorderThickness}"
                             CornerRadius="{TemplateBinding CornerRadius}"
                             Padding="{TemplateBinding Padding}">
-                        <StackPanel x:Name="PART_Segments"
-                                    Orientation="Horizontal"
-                                    VerticalAlignment="Center"/>
+                        <FieldSegmentPanel x:Name="PART_Segments"
+                                           VerticalAlignment="Center"/>
                     </Border>
                 </ControlTemplate>
             </Setter.Value>
@@ -230,9 +229,8 @@
                             CornerRadius="{TemplateBinding CornerRadius}"
                             Padding="{TemplateBinding Padding}">
                         <Grid ColumnDefinitions="*,Auto">
-                            <StackPanel x:Name="PART_Segments"
-                                        Orientation="Horizontal"
-                                        VerticalAlignment="Center"/>
+                            <FieldSegmentPanel x:Name="PART_Segments"
+                                               VerticalAlignment="Center"/>
                             <Button x:Name="PART_Button"
                                     Grid.Column="1"
                                     Classes="DateTimePickerButton"

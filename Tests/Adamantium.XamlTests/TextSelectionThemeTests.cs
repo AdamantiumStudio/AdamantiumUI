@@ -131,6 +131,24 @@ public class TextSelectionThemeTests
     [TestCase("Fluent")]
     [TestCase("Graphite")]
     [TestCase("MacOs")]
+    public void ASegmentsCaptionDoesNotSelect(string theme)
+    {
+        Use(theme);
+        var segments = new SegmentedControl();
+        segments.Items.Add(new SegmentedControlItem { Content = "Day" });
+        segments.Items.Add(new SegmentedControlItem { Content = "Week" });
+
+        Shown(segments);
+
+        var texts = Texts(segments).ToList();
+        Assert.That(texts, Is.Not.Empty);
+        Assert.That(texts.Where(text => text.IsTextSelectionEnabled), Is.Empty);
+    }
+
+    [Test]
+    [TestCase("Fluent")]
+    [TestCase("Graphite")]
+    [TestCase("MacOs")]
     public void ATabsHeaderDoesNotSelect_ItsPageDoes(string theme)
     {
         Use(theme);

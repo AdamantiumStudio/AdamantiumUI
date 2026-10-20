@@ -464,7 +464,7 @@
     <Style Selector="DatePicker.DataGridEditor">
         <Setter Property="CornerRadius" Value="0"/>
         <Setter Property="BorderThickness" Value="0"/>
-        <Setter Property="Padding" Value="10 0"/>
+        <Setter Property="Padding" Value="10 0 2 0"/>
         <Setter Property="MinWidth" Value="0"/>
         <Setter Property="MinHeight" Value="0"/>
         <Setter Property="VerticalAlignment" Value="Stretch"/>
@@ -473,7 +473,7 @@
     <Style Selector="TimePicker.DataGridEditor">
         <Setter Property="CornerRadius" Value="0"/>
         <Setter Property="BorderThickness" Value="0"/>
-        <Setter Property="Padding" Value="10 0"/>
+        <Setter Property="Padding" Value="10 0 2 0"/>
         <Setter Property="MinWidth" Value="0"/>
         <Setter Property="MinHeight" Value="0"/>
         <Setter Property="VerticalAlignment" Value="Stretch"/>
@@ -482,7 +482,7 @@
     <Style Selector="DateTimePicker.DataGridEditor">
         <Setter Property="CornerRadius" Value="0"/>
         <Setter Property="BorderThickness" Value="0"/>
-        <Setter Property="Padding" Value="10 0"/>
+        <Setter Property="Padding" Value="10 0 2 0"/>
         <Setter Property="MinWidth" Value="0"/>
         <Setter Property="MinHeight" Value="0"/>
         <Setter Property="VerticalAlignment" Value="Stretch"/>

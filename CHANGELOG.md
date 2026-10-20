@@ -134,7 +134,10 @@ All packages share one version.
   a filter's "greater than" and "less than" compare lengths and dates rather than text, a date by the parts its column
   shows (`DataGridColumnFilter.Passes` takes how the column reads what was typed, `DataGridColumn.ComparedAs`). The
   new-row strip of an empty table edits in the picker for what its source's rows declare. `EditorIsEmpty` says an editor holds nothing; emptied over a member that cannot be
-  empty, the cell keeps what it held. A picker's drop-down closed by a click away from the table ends the edit.
+  empty, the cell keeps what it held. A picker's drop-down closed by a click away from the table ends the edit. A date,
+  time or length field too narrow for its parts - in a cell, beside a picker's button - cuts them at its edges and
+  slides them along to the part being typed, back to the start once left (`FieldSegmentPanel`, the themes'
+  `PART_Segments`); a picker's parts no longer run under its button.
 - `DateTimeProperty` and `DurationProperty`: the same in a `PropertyGrid`, the picker or the length field live in the
   row, a read-only row in the line's format; moments at two offsets, or clocks of two kinds, are two values, and a line of objects that disagree
   says so in place of the parts (`DateTimeField.Placeholder`, `DurationField.Placeholder`). A field emptied writes its
@@ -1766,6 +1769,8 @@ All packages share one version.
   part as it had been, so a group asked for a roomier variant from a small one answered the small width, the band
   flipped between two layouts on every pass and the window never went idle. A size set on a command now has its
   template measured afresh.
+- A `SegmentedControl`'s captions selected as text, with the text cursor over them: a segment is pressed, so its
+  caption no longer selects, as a button's.
 - An empty edit of a property that cannot be empty is refused, and says so - by an inspector row, a table's commit or
   paste, the strip for a new record, an undo or a cell's automation alike: the write landed nowhere, yet was reported as
   written, and the row stood blank beside an object that still held its value. Now the write reports the refusal and
