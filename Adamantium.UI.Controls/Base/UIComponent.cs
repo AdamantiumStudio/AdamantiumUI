@@ -566,11 +566,12 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
 
     public static readonly AdamantiumProperty GlyphScalingProperty = AdamantiumProperty.Register(nameof(GlyphScaling),
         typeof(SpacingRange), typeof(UIComponent),
-        new PropertyMetadata(new SpacingRange(1, 1, 1), PropertyMetadataOptions.Inherits | PropertyMetadataOptions.AffectsMeasure));
+        new PropertyMetadata(new SpacingRange(1, 1, 1), PropertyMetadataOptions.Inherits | PropertyMetadataOptions.AffectsMeasure),
+        value => value is SpacingRange range && TextComposition.ScalesGlyphs(range));
 
     /// <summary>How wide glyphs of the text in this element and its descendants are drawn, as shares of their own
     /// width, and how far justified lines may narrow and widen them once their spacing is at its limits:
-    /// <c>GlyphScaling="97% 100% 103%"</c>; 100% throughout by default.</summary>
+    /// <c>GlyphScaling="97% 100% 103%"</c>; 100% throughout by default, the minimum above 0.</summary>
     public SpacingRange GlyphScaling
     {
         get => GetValue<SpacingRange>(GlyphScalingProperty);
@@ -872,6 +873,53 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
         return synthesis == FontSynthesis.None
             ? shaping
             : (shaping ?? TextAttributes.Empty).With(new TextAttributes { Synthesis = synthesis });
+    }
+
+    /// <summary>How lines of the text of this element are composed: its <see cref="Hyphens"/>,
+    /// <see cref="WordSpacing"/>, <see cref="LastLineAlignment"/> and the rest, as one value. <paramref name="last"/>
+    /// itself when it holds them all still, so a control that keeps its last answer tells a change by reference and
+    /// allocates nothing while none comes.</summary>
+    public TextComposition ResolveTextComposition(TextComposition last = null)
+    {
+        var hyphens = Hyphens;
+        var hyphenLimit = HyphenLimit;
+        var lineBreaking = LineBreaking;
+        var opticalMargins = OpticalMarginAlignment;
+        var wordSpacing = WordSpacing;
+        var letterSpacing = LetterSpacing;
+        var glyphScaling = GlyphScaling;
+        var alternates = JustificationAlternates;
+        var kashidas = Kashidas;
+        var spacingTrim = TextSpacingTrim;
+        var hanging = HangingPunctuation;
+        var lastLine = LastLineAlignment;
+        var singleWord = SingleWordJustification;
+        if (last != null && last.Hyphens == hyphens && last.HyphenLimit == hyphenLimit
+            && last.LineBreaking == lineBreaking && last.OpticalMarginAlignment == opticalMargins
+            && last.WordSpacing.Equals(wordSpacing) && last.LetterSpacing.Equals(letterSpacing)
+            && last.GlyphScaling.Equals(glyphScaling) && last.JustificationAlternates == alternates
+            && last.Kashidas == kashidas && last.SpacingTrim == spacingTrim && last.HangingPunctuation == hanging
+            && last.LastLineAlignment == lastLine && last.SingleWordJustification == singleWord)
+        {
+            return last;
+        }
+
+        return new TextComposition
+        {
+            Hyphens = hyphens,
+            HyphenLimit = hyphenLimit,
+            LineBreaking = lineBreaking,
+            OpticalMarginAlignment = opticalMargins,
+            WordSpacing = wordSpacing,
+            LetterSpacing = letterSpacing,
+            GlyphScaling = glyphScaling,
+            JustificationAlternates = alternates,
+            Kashidas = kashidas,
+            SpacingTrim = spacingTrim,
+            HangingPunctuation = hanging,
+            LastLineAlignment = lastLine,
+            SingleWordJustification = singleWord,
+        };
     }
 
     /// <summary>Whether text laid out with <paramref name="left"/> and with <paramref name="right"/> - two answers of

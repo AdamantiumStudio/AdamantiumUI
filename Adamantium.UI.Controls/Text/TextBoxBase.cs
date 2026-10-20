@@ -603,26 +603,14 @@ public abstract class TextBoxBase : Control, ITextStyleUser, Adamantium.UI.Core.
     private double _lastShapedWidth = double.NaN;
     private TextWrapping _lastShapedWrapping = TextWrapping.NoWrap;
     private HorizontalTextAlignment _lastShapedAlignment;
-    private SpacingRange _lastShapedWordSpacing;
-    private SpacingRange _lastShapedLetterSpacing;
+    private TextComposition _lastShapedComposition;
     private double _lastShapedTracking;
     private TextKerning _lastShapedKerning;
-    private SpacingRange _lastShapedGlyphScaling;
-    private bool _lastShapedAlternates;
-    private HorizontalTextAlignment _lastShapedLastLine;
-    private HorizontalTextAlignment _lastShapedSingleWord;
-    private bool _lastShapedKashidas;
-    private TextSpacingTrim _lastShapedSpacingTrim;
-    private HangingPunctuation _lastShapedHanging;
     private double _lastShapedLineHeight = double.NaN;
     private LineStackingStrategy _lastShapedLineStacking;
     private double _lastShapedLineSpacing;
     private TextDirection _lastShapedDirection;
-    private Hyphens _lastShapedHyphens;
-    private int _lastShapedHyphenLimit;
-    private LineBreaking _lastShapedLineBreaking;
     private TabStopList _lastShapedTabStops;
-    private bool _lastShapedOpticalMargins;
     private TextAttributes _lastShapedShaping;
     private double _wrapWidth = double.PositiveInfinity;   // live viewport width for soft wrap; set by measure/render
 
@@ -688,22 +676,11 @@ public abstract class TextBoxBase : Control, ITextStyleUser, Adamantium.UI.Core.
         _textLayout.LoadFontsInBackground = !FontAtlasStore.SynchronousFill;
         _textLayout.WritingMode = WritingMode;
         _textLayout.Direction = TextDirection;
-        _textLayout.Hyphens = Hyphens;
-        _textLayout.HyphenLimit = HyphenLimit;
-        _textLayout.LineBreaking = LineBreaking;
+        var composition = ResolveTextComposition(_lastShapedComposition);
+        _textLayout.Composition = composition;
         _textLayout.TabStops = TabStops;
-        _textLayout.OpticalMarginAlignment = OpticalMarginAlignment;
-        _textLayout.WordSpacing = WordSpacing;
-        _textLayout.LetterSpacing = LetterSpacing;
         _textLayout.Tracking = Tracking;
         _textLayout.Kerning = Kerning;
-        _textLayout.GlyphScaling = GlyphScaling;
-        _textLayout.JustificationAlternates = JustificationAlternates;
-        _textLayout.LastLineAlignment = LastLineAlignment;
-        _textLayout.SingleWordJustification = SingleWordJustification;
-        _textLayout.Kashidas = Kashidas;
-        _textLayout.SpacingTrim = TextSpacingTrim;
-        _textLayout.HangingPunctuation = HangingPunctuation;
         _textLayout.LineHeight = LineHeight;
         _textLayout.LineStacking = LineStackingStrategy;
         _textLayout.LineSpacing = LineSpacing;
@@ -732,18 +709,12 @@ public abstract class TextBoxBase : Control, ITextStyleUser, Adamantium.UI.Core.
         var misspelled = _misspelled;
         if (_lastShapedText == text && ReferenceEquals(_lastShapedMisspelled, misspelled) && _lastShapedFontSize.Equals(FontSize)
             && _lastShapedWrapping == wrapping && _lastShapedWidth.Equals(width)
-            && _lastShapedAlignment == HorizontalTextAlignment && _lastShapedWordSpacing.Equals(WordSpacing)
-            && _lastShapedLetterSpacing.Equals(LetterSpacing) && _lastShapedTracking.Equals(Tracking)
-            && _lastShapedKerning == Kerning
-            && _lastShapedGlyphScaling.Equals(GlyphScaling) && _lastShapedAlternates == JustificationAlternates
-            && _lastShapedLastLine == LastLineAlignment && _lastShapedSingleWord == SingleWordJustification
-            && _lastShapedKashidas == Kashidas && _lastShapedSpacingTrim == TextSpacingTrim
-            && _lastShapedHanging == HangingPunctuation && _lastShapedLineHeight.Equals(LineHeight)
+            && _lastShapedAlignment == HorizontalTextAlignment && ReferenceEquals(_lastShapedComposition, composition)
+            && _lastShapedTracking.Equals(Tracking) && _lastShapedKerning == Kerning
+            && _lastShapedLineHeight.Equals(LineHeight)
             && _lastShapedLineStacking == LineStackingStrategy && _lastShapedLineSpacing.Equals(LineSpacing)
-            && _lastShapedDirection == TextDirection && _lastShapedHyphens == Hyphens
-            && _lastShapedHyphenLimit == HyphenLimit
-            && _lastShapedLineBreaking == LineBreaking && Equals(_lastShapedTabStops, TabStops)
-            && _lastShapedOpticalMargins == OpticalMarginAlignment && ShapesLike(_lastShapedShaping, shaping)
+            && _lastShapedDirection == TextDirection
+            && Equals(_lastShapedTabStops, TabStops) && ShapesLike(_lastShapedShaping, shaping)
             && ReferenceEquals(_lastShapedGrid, grid) && _lastShapedWritingMode == WritingMode)
         {
             return;
@@ -797,28 +768,16 @@ public abstract class TextBoxBase : Control, ITextStyleUser, Adamantium.UI.Core.
         _lastShapedFontSize = FontSize;
         _lastShapedWrapping = wrapping;
         _lastShapedAlignment = HorizontalTextAlignment;
-        _lastShapedWordSpacing = WordSpacing;
-        _lastShapedLetterSpacing = LetterSpacing;
+        _lastShapedComposition = composition;
         _lastShapedTracking = Tracking;
         _lastShapedKerning = Kerning;
-        _lastShapedGlyphScaling = GlyphScaling;
-        _lastShapedAlternates = JustificationAlternates;
-        _lastShapedLastLine = LastLineAlignment;
-        _lastShapedSingleWord = SingleWordJustification;
-        _lastShapedKashidas = Kashidas;
-        _lastShapedSpacingTrim = TextSpacingTrim;
-        _lastShapedHanging = HangingPunctuation;
         _lastShapedLineHeight = LineHeight;
         _lastShapedLineStacking = LineStackingStrategy;
         _lastShapedLineSpacing = LineSpacing;
         _lastShapedWidth = width;
         _lastShapedShaping = shaping;
         _lastShapedDirection = TextDirection;
-        _lastShapedHyphens = Hyphens;
-        _lastShapedHyphenLimit = HyphenLimit;
-        _lastShapedLineBreaking = LineBreaking;
         _lastShapedTabStops = TabStops;
-        _lastShapedOpticalMargins = OpticalMarginAlignment;
     }
 
     // The text in the box's styles, their brushes held while it shows them.
