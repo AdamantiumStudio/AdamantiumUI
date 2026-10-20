@@ -7,6 +7,12 @@ All packages share one version.
 
 ### Added
 
+- `DropDown.IsEditable`: a value is typed into the header, as Word's font and size boxes take one. Enter picks the item
+  that reads the same, ignoring case, or runs `Command` with the text as a value of the items' type - a size no item
+  has; Escape, or leaving the box, gives back what was shown, and its automation value is the text.
+- `ColorPalette.ColorPlaces` and `HasRecentColors`, and `ColorPaletteSwatch.SelectedColor` and `IsSelected`: the swatch
+  of the palette's selected color is ringed, in the grid and in the recent row, and the recent row with its title is
+  shown only once a color has been applied through "More colors".
 - A key binding runs from anywhere in its window, not only while the focus is in its element. The whole way up from the
   focus has the key first - the window's default and cancel buttons and the Tab and arrow navigation too - then the
   binding nearest to the focus whose element is shown and enabled; Esc clears the focus only when no binding takes it.
@@ -1332,6 +1338,13 @@ All packages share one version.
 
 ### Changed
 
+- A menu dropped from a button, a collapsed ribbon group's flyout and the application menu open at the button's left
+  edge, as Office drops them, not centered under it.
+- A click on a ribbon tab picks it and leaves the keyboard in the field being edited, as a ribbon command does; so
+  does a menu dropped by a click and put away with nothing picked. Dropped from the keyboard, it stays on the button.
+- A key tip's badge hangs below the command's icon where it shows one, not below the middle of the whole command.
+- A hover tip goes as its element is pressed and is not drawn beneath a menu or a list that is open, unless its
+  element is in it; it takes no Escape and no outside press of its own.
 - A ribbon decides its groups' sizes afresh on every pass, from every group whole: the groups give way from the end
   of the tab as before, and then whatever room is left goes back to them - the one given up last first, each to the
   roomiest layout that still fits, a group it does not fit passed over for the next. The answer is the width's and
@@ -1666,6 +1679,9 @@ All packages share one version.
 
 ### Fixed
 
+- Escape on a menu dropped by a click closes the menu: the button's hover tip, opened after the press, was the
+  innermost popup and took the key.
+- A ribbon tab with a key tip of its own no longer wears a second badge among its commands.
 - A ribbon with groups of medium commands settles: a command switched to another size was measured with its label's
   part as it had been, so a group asked for a roomier variant from a small one answered the small width, the band
   flipped between two layouts on every pass and the window never went idle. A size set on a command now has its

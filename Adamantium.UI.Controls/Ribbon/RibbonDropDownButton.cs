@@ -1,6 +1,7 @@
 using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Automation;
+using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls;
@@ -14,6 +15,7 @@ public class RibbonDropDownButton : RibbonToggleButton, IKeyTipTarget
     /// keyboard standing on the button with a list open in front of it and no way in.</summary>
     public void PressKeyTip()
     {
+        _droppedByPointer = false;
         SetCurrentValue(IsCheckedProperty, true);
         DropDownMenu?.MoveKeyboardInsideWhenReady();
     }
@@ -57,6 +59,29 @@ public class RibbonDropDownButton : RibbonToggleButton, IKeyTipTarget
         if (!Equals(e.NewValue, false)) return;
 
         SetCurrentValue(IsCheckedProperty, false);
+
+        // Dropped by a click and put away with nothing picked - Escape, a press elsewhere - the keyboard goes back to the
+        // field the ribbon acts for, as after a command; dropped from the keyboard, it stays on the button.
+        if (_droppedByPointer && ReferenceEquals(FocusManager.Focused, this))
+        {
+            FocusManager.FocusToReturnTo(this)?.Focus();
+        }
+
+        _droppedByPointer = false;
+    }
+
+    private bool _droppedByPointer;
+
+    protected override void OnPointerPressed(PointerPressedEventArgs e)
+    {
+        _droppedByPointer = e.ChangedButton == MouseButtons.Left;
+        base.OnPointerPressed(e);
+    }
+
+    protected override void OnKeyDown(KeyEventArgs e)
+    {
+        _droppedByPointer = false;
+        base.OnKeyDown(e);
     }
 
     protected override void OnToggleStateChanged(bool? value)

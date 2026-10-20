@@ -485,7 +485,7 @@
                             <!-- The card builds on FIRST OPEN, not with the group's template: a band carries a couple
                                  of dozen groups and hardly any are ever collapsed, let alone opened. It is a TRANSIENT
                                  surface, so it wears the flyout material like every other one in this theme. -->
-                            <Popup x:Name="PART_Popup" Placement="Bottom" FlipToFit="True">
+                            <Popup x:Name="PART_Popup" Placement="Bottom" PlacementAlignment="Start" FlipToFit="True">
                                 <Popup.ChildTemplate>
                                     <ControlTemplate TargetType="Popup">
                                         <Border Background="{ResourceReference FlyoutSurfaceFill}"
@@ -1029,7 +1029,7 @@
 
                             <!-- A menu, so a press outside puts it away. IgnoreTargetPress so the press that OPENS it
                                  is not also the press that dismisses it. -->
-                            <Popup x:Name="PART_Popup" Placement="Bottom" FlipToFit="True"
+                            <Popup x:Name="PART_Popup" Placement="Bottom" PlacementAlignment="Start" FlipToFit="True"
                                     KeepOpen="False" IgnoreTargetPress="True">
                                 <Popup.ChildTemplate>
                                     <ControlTemplate TargetType="Popup">

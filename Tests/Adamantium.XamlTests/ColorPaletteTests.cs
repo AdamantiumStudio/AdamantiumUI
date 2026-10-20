@@ -136,6 +136,7 @@ public class ColorPaletteTests
             apply.PerformClick();
         }
 
+        Lay(palette);   // the row shows once there are colors, and only what is shown is clicked
         var standard = Below(palette).OfType<ColorPaletteSwatch>().First(s => s.Color == Color.FromRgba(255, 0, 0));
         standard.PerformClick();
         palette.RecentPlaces[1].PerformClick();
@@ -150,6 +151,44 @@ public class ColorPaletteTests
             Assert.That(palette.SelectedColor, Is.EqualTo(a), "the row's pick is applied");
             Assert.That(palette.RecentPlaces.Select(place => place.Color), Is.EqualTo(new Color?[] { c, a }));
             Assert.That(shown, Has.Count.EqualTo(2), "and both are shown in the row");
+        });
+    }
+
+    // Nothing applied through "More colors" yet, the row and its title are not shown at all; the color picked last is
+    // marked wherever it stands - in the grid and in the row.
+    [TestCase("Fluent")]
+    [TestCase("Graphite")]
+    [TestCase("MacOs")]
+    public void TheRecentRow_ShowsOnceThereAreColors_AndThePickedOneIsMarked(string theme)
+    {
+        Use(ThemeNamed(theme));
+        var palette = new ColorPalette { Command = new AdamantiumCommand<object>(_ => { }) };
+        Lay(palette);
+        var row = (UIComponent)palette.GetTemplateChild("RecentRow");
+        var hidden = row.Visibility;
+        var custom = Color.FromRgba(10, 20, 30);
+
+        var picker = (ColorPicker)palette.GetTemplateChild("PART_Picker");
+        picker.SelectedColor = custom;
+        ((Button)palette.GetTemplateChild("PART_Apply")).PerformClick();
+        Lay(palette);
+        var markedRecent = palette.RecentPlaces[0].IsSelected;
+        var red = Below(palette).OfType<ColorPaletteSwatch>().First(s => s.Color == Color.FromRgba(255, 0, 0));
+        red.PerformClick();
+        Lay(palette);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(hidden, Is.EqualTo(Visibility.Collapsed), "empty, the row is not shown");
+            Assert.That(row.Visibility, Is.EqualTo(Visibility.Visible), "a color applied, it is");
+            Assert.That(markedRecent, Is.True, "the color applied is marked in the row");
+            Assert.That(red.IsSelected, Is.True, "a pick from the grid is marked there");
+            var orange = Below(palette).OfType<ColorPaletteSwatch>().First(s => s.Color == Color.FromRgba(255, 192, 0));
+            Assert.That(((Adamantium.UI.Controls.Decorators.Border)red.GetTemplateChild("Chrome")).BorderBrush?.ToString(),
+                Is.Not.EqualTo(((Adamantium.UI.Controls.Decorators.Border)orange.GetTemplateChild("Chrome")).BorderBrush?.ToString()),
+                "in a ring of its own color");
+            Assert.That(palette.RecentPlaces[0].IsSelected, Is.False, "and only it");
+            Assert.That(Below(palette).OfType<ColorPaletteSwatch>().Count(s => s.IsSelected), Is.EqualTo(1));
         });
     }
 

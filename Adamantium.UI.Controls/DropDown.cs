@@ -7,17 +7,20 @@ using Adamantium.ProceduralGeometry;
 using Adamantium.Core.Commands;
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Controls.Primitives;
+using Adamantium.UI.Controls.Text;
 using Adamantium.UI.Core;
 using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Input;
+using Adamantium.UI.Core.Localization;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls;
 
-/// <summary>A non-editable single-select drop-down: the header shows the selection, a light-dismissing popup lists
-/// <see cref="DropDownItem"/>s, and <see cref="EnumType"/> binds an enum directly.</summary>
+/// <summary>A single-select drop-down: the header shows the selection, a light-dismissing popup lists
+/// <see cref="DropDownItem"/>s, and <see cref="EnumType"/> binds an enum directly. <see cref="IsEditable"/> lets a value
+/// be typed into the header, as a font or a size is.</summary>
 public class DropDown : Selector
 {
     public static readonly AdamantiumProperty IsDropDownOpenProperty = AdamantiumProperty.Register(nameof(IsDropDownOpen),
@@ -46,7 +49,13 @@ public class DropDown : Selector
     public static readonly AdamantiumProperty CommandProperty = AdamantiumProperty.Register(nameof(Command),
         typeof(ICommand), typeof(DropDown), new PropertyMetadata(null, OnCommandChanged));
 
+    public static readonly AdamantiumProperty IsEditableProperty = AdamantiumProperty.Register(nameof(IsEditable),
+        typeof(bool), typeof(DropDown), new PropertyMetadata(false, OnIsEditableChanged));
+
     private Popup _popup;
+    private TextBox _text;
+    private bool _writingText;
+    private bool _edited;
     private CommandSourceListener<DropDown> _commandListener;
     private bool _showingAnswer;
     private object _answer;
@@ -66,10 +75,49 @@ public class DropDown : Selector
         IsDropDownOpen = false;
     }
 
+    // An editable one's box is what takes the keyboard, as a spin box's does: the drop-down itself is no stop.
+    private static void OnIsEditableChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
+    {
+        var dropDown = (DropDown)a;
+        dropDown.SetCurrentValue(FocusableProperty, !(bool)e.NewValue);
+        dropDown.ShowText();
+    }
+
+    // The box's own keys: the arrows walk an open list, F4 drops it, Escape gives back what was shown and the keyboard
+    // to the field the drop-down acts for. An open list's Escape is the popup's.
+    protected override void OnPreviewKeyDown(KeyEventArgs e)
+    {
+        base.OnPreviewKeyDown(e);
+        if (e.Handled || !IsEditable || !IsWithin(e.OriginalSource as IUIComponent, _text)) return;
+
+        switch (e.Key)
+        {
+            case Key.DownArrow or Key.UpArrow when IsDropDownOpen:
+                StepHighlight(e.Key == Key.DownArrow ? 1 : -1);
+                break;
+            case Key.F4:
+                IsDropDownOpen = !IsDropDownOpen;
+                break;
+            case Key.Escape when !IsDropDownOpen:
+                _edited = false;
+                ShowText();
+                FocusManager.FocusToReturnTo(this)?.Focus();
+                break;
+            default:
+                return;
+        }
+
+        e.Handled = true;
+    }
+
     protected override void OnKeyDown(KeyEventArgs e)
     {
         base.OnKeyDown(e);
         if (e.Handled || !IsEnabled)
+            return;
+
+        // What is typed into the box is the box's: a space is a space in a font's name.
+        if (IsEditable && IsWithin(e.OriginalSource as IUIComponent, _text))
             return;
 
         if (!IsDropDownOpen)
@@ -228,6 +276,15 @@ public class DropDown : Selector
         set => SetValue(CommandProperty, value);
     }
 
+    /// <summary>Whether a value can be typed into the header, as Word's font and size boxes take one. Enter takes it: the
+    /// item that reads the same, ignoring case, or - with a <see cref="Command"/> - the text as a value of the items'
+    /// type, run as a pick is ("13" for a size no item has). Escape, or leaving the box, gives back what was shown.</summary>
+    public bool IsEditable
+    {
+        get => GetValue<bool>(IsEditableProperty);
+        set => SetValue(IsEditableProperty, value);
+    }
+
     private static void OnCommandChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
     {
         var dropDown = (DropDown)a;
@@ -298,6 +355,16 @@ public class DropDown : Selector
             _popup.ContentBuilt += OnPopupContentBuilt;
             _popup.IsOpen = IsDropDownOpen;
         }
+
+        DetachText();
+        _text = GetTemplateChild("PART_EditableTextBox") as TextBox;
+        if (_text != null)
+        {
+            _text.EnterPressed += OnTextEnterPressed;
+            _text.LostFocus += OnTextLostFocus;
+            _text.PropertyChanged += OnTextChanged;
+        }
+
         UpdateDisplayContent();
     }
 
@@ -311,6 +378,154 @@ public class DropDown : Selector
             _popup.ContentBuilt -= OnPopupContentBuilt;
         }
         _popup = null;
+        DetachText();
+    }
+
+    private void DetachText()
+    {
+        if (_text == null) return;
+        _text.EnterPressed -= OnTextEnterPressed;
+        _text.LostFocus -= OnTextLostFocus;
+        _text.PropertyChanged -= OnTextChanged;
+        _text = null;
+    }
+
+    // The box shows what the header would - the choice, or the value the command answers - unless something is being
+    // typed into it.
+    private void ShowText()
+    {
+        if (!IsEditable || _text == null || _edited) return;
+
+        _text.Placeholder = Placeholder?.ToString();
+        var shown = SelectedItem != null ? FormatForDisplay(SelectedItem) : _answer;
+        var text = Convert.ToString(shown, Languages.Culture) ?? string.Empty;
+        if (_text.Text == text) return;
+
+        _writingText = true;
+        try
+        {
+            _text.Text = text;
+        }
+        finally
+        {
+            _writingText = false;
+        }
+    }
+
+    // Typing in an open list moves its highlight to the first row that starts so, and off every row when none does -
+    // Enter then takes what is typed, not a row passed on the way.
+    private void OnTextChanged(object sender, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (e.Property != TextBox.TextProperty || _writingText) return;
+
+        _edited = true;
+        if (IsDropDownOpen) Highlight(IndexOf(_text.Text, prefix: true));
+    }
+
+    private void OnTextEnterPressed(object sender, KeyEventArgs e)
+    {
+        if (IsDropDownOpen && _highlightedIndex >= 0)
+        {
+            _edited = false;
+            Commit();
+            ShowText();
+            return;
+        }
+
+        IsDropDownOpen = false;
+        CommitText();
+    }
+
+    // Leaving the box gives back what was shown, and puts the list away unless one of its rows took the keyboard.
+    private void OnTextLostFocus(object sender, RoutedEventArgs e)
+    {
+        _edited = false;
+        ShowText();
+        if (IsDropDownOpen && !(FocusManager.Focused is DropDownItem row && ReferenceEquals(row.Owner, this)))
+        {
+            IsDropDownOpen = false;
+        }
+    }
+
+    internal string TypedText => _text?.Text;
+
+    // As if typed and Enter pressed.
+    internal void TakeText(string text)
+    {
+        if (_text == null || !IsEnabled) return;
+
+        _text.Text = text ?? string.Empty;
+        CommitText();
+    }
+
+    private void CommitText()
+    {
+        var typed = _text.Text.Trim();
+        _edited = false;
+        var index = typed.Length == 0 ? -1 : IndexOf(typed, prefix: false);
+        if (index >= 0 && index != SelectedIndex)
+        {
+            SelectSingle(index);
+        }
+        else if (index < 0 && typed.Length > 0 && Command is { } command && ValueOfText(typed) is { } value)
+        {
+            _answer = null;
+            CommandManager.ExecuteFrom(command, value, this, null);
+        }
+        else
+        {
+            FocusManager.FocusToReturnTo(this)?.Focus();
+        }
+
+        ShowText();
+    }
+
+    // The row that reads as the text, ignoring case, or holds the value it parses to; with prefix, the first that
+    // starts so.
+    private int IndexOf(string text, bool prefix)
+    {
+        if (text.Length == 0) return -1;
+
+        var value = prefix ? null : ValueOfText(text);
+        for (var i = 0; i < Items.Count; i++)
+        {
+            var shown = Convert.ToString(FormatForDisplay(Items[i]), Languages.Culture) ?? string.Empty;
+            if (prefix ? shown.StartsWith(text, StringComparison.CurrentCultureIgnoreCase)
+                    : shown.Equals(text, StringComparison.CurrentCultureIgnoreCase) ||
+                      (value != null && Equals(value, ValueOf(Items[i]))))
+            {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    // The text as a value of the type the items' values are - a size's number, a font's name; null when it is none.
+    private object ValueOfText(string text)
+    {
+        var type = Items.Count > 0 ? ValueOf(Items[0])?.GetType() : null;
+        if (type == null || type == typeof(string)) return text;
+
+        var converter = TypeDescriptor.GetConverter(type);
+        if (!converter.CanConvertFrom(typeof(string))) return null;
+
+        try
+        {
+            return converter.ConvertFromString(null, Languages.Culture, text);
+        }
+        catch (Exception exception) when (exception is FormatException or NotSupportedException or ArgumentException)
+        {
+            return null;
+        }
+    }
+
+    private static bool IsWithin(IUIComponent node, IUIComponent ancestor)
+    {
+        if (ancestor == null) return false;
+        for (var n = node; n != null; n = n.VisualParent)
+            if (ReferenceEquals(n, ancestor)) return true;
+        return false;
     }
 
     // The items host only exists once the popup has built its deferred content - connect it then.
@@ -332,8 +547,23 @@ public class DropDown : Selector
             return;
         }
 
+        // A press in an editable one's box puts the caret there; the list drops from its arrow.
+        if (IsEditable && IsWithin(e.OriginalSource as IUIComponent, _text))
+        {
+            return;
+        }
+
         e.Handled = true;
-        Focus();
+        if (!IsEditable)
+        {
+            Focus();
+        }
+        else if (!ReferenceEquals(FocusManager.Focused, _text))
+        {
+            // Into the box, unless the keyboard is there already - with what is typed in it.
+            _text?.Focus();
+        }
+
         IsDropDownOpen = !IsDropDownOpen;
     }
 
@@ -377,6 +607,7 @@ public class DropDown : Selector
         }
 
         DisplayContent = SelectedItem != null ? FormatForDisplay(SelectedItem) : _answer ?? Placeholder;
+        ShowText();
     }
 
     private void OnShownChanged(object sender, AdamantiumPropertyChangedEventArgs e)
@@ -423,7 +654,8 @@ public class DropDown : Selector
 
         // The list always opens on the current value and closes with no highlight left behind - one place for it,
         // whether it was opened by the keyboard, by a click on the header, or set from code.
-        if (open) dd.Highlight(dd.SelectedIndex);
+        // Opened over something typed, on the first row that starts so.
+        if (open) dd.Highlight(dd._edited ? dd.IndexOf(dd._text.Text, prefix: true) : dd.SelectedIndex);
         else dd.Highlight(-1);
         AutomationEvents.RaiseExpandCollapse(dd, open);
     }

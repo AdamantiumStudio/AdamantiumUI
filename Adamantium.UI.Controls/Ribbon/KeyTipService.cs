@@ -77,9 +77,11 @@ public static class KeyTipService
 
     /// <summary>Does this element take part in the level? Either it was GIVEN a key tip, or it is something a key tip
     /// can act on at all - Office tips every command in a tab, and making an author write out each letter would leave
-    /// most of the band unreachable from the keyboard.</summary>
+    /// most of the band unreachable from the keyboard. A tab's letters are its header's: the tab itself is the band
+    /// its commands stand in, not one of them.</summary>
     private static bool Participates(IUIComponent node) =>
-        !string.IsNullOrEmpty(GetKeyTip(node)) || node is IKeyTipTarget or Primitives.ButtonBase;
+        node is not RibbonTab &&
+        (!string.IsNullOrEmpty(GetKeyTip(node)) || node is IKeyTipTarget or Primitives.ButtonBase);
 
     /// <summary>Gives a key tip to every participant that has none, so the band is reachable without an author writing
     /// out a letter for each command. Same rule Office uses: the first letter of the label that is still free, then the
