@@ -34,35 +34,88 @@ internal sealed class WindowsSpellChecker : Core.Text.ISpellChecker
     [SupportedOSPlatform("windows")]
     public IReadOnlyList<TextRange> Check(string text, string language) => InApartment(() =>
     {
-        if (string.IsNullOrEmpty(text) || CheckerFor(language) is not { } checker
-            || checker.Check(text, out var errors) != 0 || errors == null)
+        if (string.IsNullOrEmpty(text) || CheckerFor(language) is not { } checker)
         {
             return (IReadOnlyList<TextRange>)[];
         }
 
         List<TextRange> found = [];
+        CheckInto(checker, text, 0, text.Length, language, found);
+        return found;
+    });
+
+    [SupportedOSPlatform("windows")]
+    private void CheckInto(NativeChecker checker, string text, int from, int length, string language,
+        List<TextRange> found)
+    {
+        if (checker.Check(text.Substring(from, length), out var errors) != 0 || errors == null)
+        {
+            return;
+        }
+
         try
         {
             while (errors.Next(out var error) == 0 && error != null)
             {
-                if (error.GetStartIndex(out var start) == 0 && error.GetLength(out var length) == 0 && length > 0
-                    && (error.GetCorrectiveAction(out var action) != 0 || action != CorrectiveAction.Delete)
-                    && start + length <= text.Length
-                    && !Ignored(language, text.Substring((int)start, (int)length)))
+                try
                 {
-                    found.Add(new TextRange((int)start, (int)length));
+                    if (error.GetStartIndex(out var start) == 0 && error.GetLength(out var count) == 0 && count > 0
+                        && (error.GetCorrectiveAction(out var action) != 0 || action != CorrectiveAction.Delete)
+                        && start + count <= length
+                        && !Ignored(language, text.Substring(from + (int)start, (int)count)))
+                    {
+                        AddOrSplit(checker, text, from + (int)start, (int)count, language, found);
+                    }
                 }
-
-                Marshal.ReleaseComObject(error);
+                finally
+                {
+                    Marshal.ReleaseComObject(error);
+                }
             }
         }
         finally
         {
             Marshal.ReleaseComObject(errors);
         }
+    }
 
-        return found;
-    });
+    // The checker may take words joined by a math symbol - "Shift+Tab", "a=b" - as one, and call the whole wrong: each
+    // side is checked as the word it is. Not at other symbols: an accent typed for an apostrophe ("it´z") stays a word.
+    private static bool Joins(char c) =>
+        char.GetUnicodeCategory(c) == System.Globalization.UnicodeCategory.MathSymbol;
+
+    [SupportedOSPlatform("windows")]
+    private void AddOrSplit(NativeChecker checker, string text, int start, int length, string language,
+        List<TextRange> found)
+    {
+        var joined = false;
+        for (var i = start; i < start + length && !joined; i++)
+        {
+            joined = Joins(text[i]);
+        }
+
+        if (!joined)
+        {
+            found.Add(new TextRange(start, length));
+            return;
+        }
+
+        var piece = start;
+        for (var i = start; i <= start + length; i++)
+        {
+            if (i < start + length && !Joins(text[i]))
+            {
+                continue;
+            }
+
+            if (i > piece)
+            {
+                CheckInto(checker, text, piece, i - piece, language, found);
+            }
+
+            piece = i + 1;
+        }
+    }
 
     [SupportedOSPlatform("windows")]
     public IReadOnlyList<string> Suggest(string word, string language) => InApartment(() =>

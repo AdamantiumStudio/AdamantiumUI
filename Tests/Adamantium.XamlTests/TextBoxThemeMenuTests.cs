@@ -117,6 +117,8 @@ public class TextBoxThemeMenuTests
 
         Assert.That(rows.First(), Is.EqualTo("This"));
         Assert.That(rows.Skip(rows.IndexOf("Separator") + 1).First(), Is.EqualTo("Cut"));
+        // By the word: under the caret, not under the box's left edge.
+        Assert.That(box.ContextMenu.HorizontalOffset, Is.GreaterThan(box.Padding.Left + 1));
     }
 
     // A floating placeholder given later takes its strip above the lines, as one given from the start does.

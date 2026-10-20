@@ -1351,6 +1351,8 @@ All packages share one version.
 
 ### Changed
 
+- The menu key opens a text box's context menu under its caret, by the word the menu is about, not under the box's
+  left edge; any element can say where by `ContextMenuPointFromKeyboard`.
 - A text box's placeholder shows while the box is empty with the keyboard in it too, as a browser's and the platforms'
   fields keep it: a search box opened with the keyboard in it said nothing of what it was for.
 - A menu dropped from a button, a collapsed ribbon group's flyout and the application menu open at the button's left
@@ -1694,6 +1696,8 @@ All packages share one version.
 
 ### Fixed
 
+- Windows spelling no longer calls words joined by a math symbol wrong as one ("Shift+Tab" offered as "Shift Tab"):
+  each side of the symbol is checked as the word it is.
 - Escape on a menu dropped by a click closes the menu: the button's hover tip, opened after the press, was the
   innermost popup and took the key.
 - A ribbon tab with a key tip of its own no longer wears a second badge among its commands.
