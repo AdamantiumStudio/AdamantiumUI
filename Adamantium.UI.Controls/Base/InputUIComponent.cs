@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using Adamantium.Mathematics;
 using Adamantium.UI.Controls.Adorners;
 using Adamantium.UI.Core;
@@ -87,25 +88,27 @@ public class InputUIComponent : MeasurableUIComponent, IInputComponent
         if (!e.Handled && e.ChangedButton == MouseButtons.Right && OpenContextMenuAt(sender, e)) e.Handled = true;
     }
 
-    // The cue a held contact wears while it holds: one per pointer, in the window it is held in. The class handler runs
-    // on every element of the route, so the first one shows the cue and the first one after the hold takes it down.
-    private static readonly Dictionary<uint, (AdornerLayer Layer, HoldIndicator Cue)> HoldCues = new();
+    // The cue a held contact wears while it holds, kept with the contact itself: the hold starts and ends on the same
+    // pointer, so the cue comes down from the window it went up in even when the element held left it meanwhile. The
+    // class handler runs on every element of the route, so the first one shows the cue and the first one after the
+    // hold takes it down.
+    private static readonly ConditionalWeakTable<Pointer, HoldIndicator> HoldCues = new();
 
     private static void ShowHoldHandler(object sender, HoldingEventArgs e)
     {
-        var id = e.Pointer.Id;
         if (e.HoldingState != HoldingState.Started)
         {
-            if (HoldCues.Remove(id, out var shown))
+            if (HoldCues.TryGetValue(e.Pointer, out var shown))
             {
-                shown.Layer.Remove(shown.Cue);
-                DiscardedVisuals.PublishSubtree(shown.Cue);
+                HoldCues.Remove(e.Pointer);
+                (shown.AdornedElement as IAdornerHost)?.AdornerLayer.Remove(shown);
+                DiscardedVisuals.PublishSubtree(shown);
             }
 
             return;
         }
 
-        if (HoldCues.ContainsKey(id) || (sender as IUIComponent)?.RootVisual is not IInputComponent root ||
+        if (HoldCues.TryGetValue(e.Pointer, out _) || (sender as IUIComponent)?.RootVisual is not IInputComponent root ||
             root is not IAdornerHost host)
         {
             return;
@@ -113,7 +116,7 @@ public class InputUIComponent : MeasurableUIComponent, IInputComponent
 
         var cue = new HoldIndicator(root, e.GetPosition(root));
         host.AdornerLayer.Add(cue);
-        HoldCues[id] = (host.AdornerLayer, cue);
+        HoldCues.Add(e.Pointer, cue);
     }
 
     // A finger or a pen held still and lifted: the touch way of the right button.
