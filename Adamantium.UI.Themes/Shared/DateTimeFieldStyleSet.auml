@@ -146,10 +146,6 @@
         <Setter Property="Background" Value="{ThemeResource AccentFillColorDefault}"/>
     </Style>
 
-    <Style Selector="TextBlock.ClockDialMarkChosen">
-        <Setter Property="Foreground" Value="{ThemeResource AccentForegroundColor}"/>
-    </Style>
-
     <Style Selector="Button.ClockDialPart">
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="BorderThickness" Value="0"/>
@@ -170,15 +166,12 @@
     </Style>
 
     <!-- The part the face is not showing stands back. -->
-    <Style Selector="Button.ClockDialPart">
+    <!-- One or the other, never both: two styles setting one property on one element apply in no promised order. -->
+    <Style Selector="Button.ClockDialIdle">
         <Setter Property="Opacity" Value="0.55"/>
     </Style>
 
-    <Style Selector="Button.ClockDialPeriod">
-        <Setter Property="Opacity" Value="0.55"/>
-    </Style>
-
-    <Style Selector="Button.ClockDialPartChosen">
+    <Style Selector="Button.ClockDialLit">
         <Setter Property="Opacity" Value="1"/>
     </Style>
 

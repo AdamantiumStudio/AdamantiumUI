@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using Adamantium.Graphics.Fonts;
 using Adamantium.Mathematics;
 using Adamantium.ProceduralGeometry;
@@ -20,8 +21,8 @@ internal sealed class ClockDialChoice
 {
     private const double Size = 224;
     private const double Center = Size / 2;
-    private const double Outer = 88;
-    private const double Inner = 58;
+    private const double Outer = Center * ClockFace.LabelRadius;
+    private const double Inner = Center * ClockFace.InnerLabelRadius;
     private const double Mark = 32;
 
     private readonly Action<TimeSpan> _picked;
@@ -30,7 +31,7 @@ internal sealed class ClockDialChoice
     private readonly Border _hand;
     private readonly Transform _turn = new();
     private readonly Border _knob;
-    private readonly List<TextBlock> _marks = new();
+    private readonly ClockFace _dial;
     private readonly Button _hourPart;
     private readonly Button _minutePart;
     private readonly Button _am;
@@ -78,18 +79,12 @@ internal sealed class ClockDialChoice
         Canvas.SetLeft(hub, Center - 3);
         Canvas.SetTop(hub, Center - 3);
         _face.Children.Add(hub);
-        for (var i = 0; i < 24; i++)
+        _dial = new ClockFace
         {
-            var mark = new TextBlock
-            {
-                Width = Mark, Height = Mark,
-                HorizontalTextAlignment = HorizontalTextAlignment.Center,
-                VerticalTextAlignment = VerticalTextAlignment.Center,
-                Classes = Classes.Parse("ClockDialMark"), IsHitTestVisible = false,
-            };
-            _marks.Add(mark);
-            _face.Children.Add(mark);
-        }
+            Width = Size, Height = Size, FaceStyle = ClockFaceStyle.Labels, IsHitTestVisible = false,
+            Background = Brushes.Transparent, BorderBrush = Brushes.Transparent,
+        };
+        _face.Children.Add(_dial);
 
         _face.AddHandler(PointerEvents.PointerPressedEvent, new PointerPressedEventHandler(OnPressed), true);
         _face.AddHandler(PointerEvents.PointerMovedEvent, new PointerEventHandler(OnMoved), true);
@@ -163,25 +158,10 @@ internal sealed class ClockDialChoice
     {
         _minutes = minutes;
         var inner = !_minutes && !_twelve;
-        for (var i = 0; i < _marks.Count; i++)
-        {
-            var mark = _marks[i];
-            var shown = i < 12 || inner;
-            mark.Visibility = shown ? Visibility.Visible : Visibility.Collapsed;
-            if (!shown)
-            {
-                continue;
-            }
-
-            var radius = i < 12 ? Outer : Inner;
-            var (x, y) = At(i % 12 * 30, radius);
-            Canvas.SetLeft(mark, x - Mark / 2);
-            Canvas.SetTop(mark, y - Mark / 2);
-            mark.Text = _minutes ? (i * 5).ToString("00", _culture)
-                : _twelve ? (i == 0 ? 12 : i).ToString(_culture)
-                : i == 0 ? "00" : i.ToString(_culture);
-        }
-
+        _dial.Labels = [.. Enumerable.Range(0, 12).Select(i => _minutes ? (i * 5).ToString("00", _culture)
+            : _twelve ? (i == 0 ? 12 : i).ToString(_culture)
+            : i == 0 ? "00" : i.ToString(_culture))];
+        _dial.InnerLabels = inner ? [.. Enumerable.Range(12, 12).Select(i => i.ToString(_culture))] : null;
         Refresh();
     }
 
@@ -189,10 +169,10 @@ internal sealed class ClockDialChoice
     {
         _hourPart.Content = (_twelve ? (_hour + 11) % 12 + 1 : _hour).ToString(_twelve ? "0" : "00", _culture);
         _minutePart.Content = _minute.ToString("00", _culture);
-        _hourPart.Classes = Classes.Parse(_minutes ? "ClockDialPart" : "ClockDialPart ClockDialPartChosen");
-        _minutePart.Classes = Classes.Parse(_minutes ? "ClockDialPart ClockDialPartChosen" : "ClockDialPart");
-        _am.Classes = Classes.Parse(_hour < 12 ? "ClockDialPeriod ClockDialPartChosen" : "ClockDialPeriod");
-        _pm.Classes = Classes.Parse(_hour >= 12 ? "ClockDialPeriod ClockDialPartChosen" : "ClockDialPeriod");
+        _hourPart.Classes = Classes.Parse(_minutes ? "ClockDialPart ClockDialIdle" : "ClockDialPart ClockDialLit");
+        _minutePart.Classes = Classes.Parse(_minutes ? "ClockDialPart ClockDialLit" : "ClockDialPart ClockDialIdle");
+        _am.Classes = Classes.Parse(_hour < 12 ? "ClockDialPeriod ClockDialLit" : "ClockDialPeriod ClockDialIdle");
+        _pm.Classes = Classes.Parse(_hour >= 12 ? "ClockDialPeriod ClockDialLit" : "ClockDialPeriod ClockDialIdle");
 
         var angle = _minutes ? _minute * 6.0 : _hour % 12 * 30.0;
         var radius = !_minutes && !_twelve && _hour >= 12 ? Inner : Outer;
@@ -203,11 +183,7 @@ internal sealed class ClockDialChoice
         Canvas.SetLeft(_knob, x - Mark / 2);
         Canvas.SetTop(_knob, y - Mark / 2);
 
-        var chosen = _minutes ? (_minute % 5 == 0 ? _minute / 5 : -1) : _twelve ? _hour % 12 : _hour;
-        for (var i = 0; i < _marks.Count; i++)
-        {
-            _marks[i].Classes = Classes.Parse(i == chosen ? "ClockDialMark ClockDialMarkChosen" : "ClockDialMark");
-        }
+        _dial.ChosenLabel = _minutes ? (_minute % 5 == 0 ? _minute / 5 : -1) : _twelve ? _hour % 12 : _hour;
     }
 
     private static (double X, double Y) At(double degrees, double radius)

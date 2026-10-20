@@ -99,5 +99,6 @@
     <StyleInclude Source="{x:Type editor:MenuStyleSet}"/>
     <!-- Last: its class styles of buttons and lists stand over the theme's own. -->
     <StyleInclude Source="{x:Type shared:DateTimeFieldStyleSet}"/>
+    <StyleInclude Source="{x:Type shared:ClockStyleSet}"/>
   </Theme.StyleIncludes>
 </Theme>

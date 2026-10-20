@@ -873,16 +873,18 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
             ? entry.EffectiveValue
             : fallback;
 
-    /// <summary>Takes one style's contribution away. A name this element has no property for had none to take.</summary>
+    /// <summary>Takes one style's contribution away. A style that gave nothing - no such property here, or never
+    /// applied - has nothing to take, and the values other styles gave stay.</summary>
     public void RemoveStyleValue(string propertyName, Style style)
     {
         var property = AdamantiumPropertyMap.ResolveProperty(GetType(), propertyName);
-        if (property == null)
+        if (property == null || styleValues == null || !styleValues.TryGetValue(propertyName, out var entry) ||
+            !entry.Holds(style))
         {
             return;
         }
 
-        var previousValue = RemoveStyleEntry(propertyName, style);
+        var previousValue = entry.RemoveAndGetEffectiveValue(style);
         WriteStyleValue(property, previousValue, StyleSlotFor(property, propertyName, style));
     }
 
@@ -894,16 +896,6 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
             styleValues[propertyName] = entry = new StyleValueContainer();
         }
         entry.AddValue(style, value);
-    }
-    
-    private object RemoveStyleEntry(string propertyName, Style style)
-    {
-        if (styleValues == null || !styleValues.TryGetValue(propertyName, out var entry))
-        {
-            return AdamantiumProperty.UnsetValue;
-        }
-
-        return entry.RemoveAndGetEffectiveValue(style);
     }
 
     /// <summary>

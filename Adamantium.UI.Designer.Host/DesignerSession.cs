@@ -153,6 +153,9 @@ public sealed class DesignerSession : IDisposable
         // Live preview lets design-mode animations run (a one-shot render keeps them settled). Set before layout below.
         Design.IsLivePreview = live;
 
+        // This thread is the preview's loop: what is posted to the loop - a timer's tick - comes back to it.
+        LoopSignal.Claim();
+
         // Relative asset paths (e.g. <Image Source="Textures/foo.tga">) are loaded against the process working
         // directory, exactly as in the running app (which runs from its output dir). Point the CWD at the edited
         // file's project root so the live designer loads those assets straight from the project source.
@@ -558,6 +561,9 @@ public sealed class DesignerSession : IDisposable
         // instances are unchanged, so their cached units stay valid - resetting here would white out every clean control.
         if (resetCache) service.ResetFrameCache();
 
+        // An animation started while the tree was built captured where its element stood before it was arranged.
+        Compositor.RefreshBases();
+
         // One device + one presenter for the whole session: the service re-points/resizes to this window + scale (no
         // recreation), renders content + adorner overlays (its processor), and the frame is read from the resolve texture.
         if (!service.RenderHeadlessFrame(window, renderScale, new AppTime()))
@@ -587,10 +593,12 @@ public sealed class DesignerSession : IDisposable
             return RenderResult.Fail("no live session to advance", null);
 
         const double dt = 1.0 / 60.0;
+        LoopSignal.Drain();
         Compositor.StartPending();
         AnimationManager.Tick(dt);
         DesignTimeMediaClock.Tick(dt);                     // advance animated images by virtual time
         _lastWindow.Update(_app.ThemeManager, new AppTime());   // re-run layout for any animation-driven size change
+        Compositor.RefreshBases();
 
         if (!_renderService.RenderHeadlessFrame(_liveWindow, _liveScale, new AppTime()))
             return RenderResult.Fail("render failed", null);

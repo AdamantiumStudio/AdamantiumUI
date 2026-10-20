@@ -29,4 +29,10 @@
     <Phrase Key="DateTimePicker" Text="Выбор даты и времени"/>
     <Phrase Key="TimeColumns" Text="Время колонками, шаг 5 минут"/>
     <Phrase Key="TimeDial" Text="Время циферблатом"/>
+    <Phrase Key="Clocks" Text="Часы — один контрол, вид задаёт ClockStyle: стрелки над циферблатом четырёх видов или цифры — текстом, семисегментные, перекидные. Стрелки крутит компоновщик, цикл приложения раз в секунду не будится. Ниже — мировое время и часы, показывающие привязанное время встречи."/>
+    <Phrase Key="MinimalSweep" Text="Minimal, плавная секундная"/>
+    <Phrase Key="DotsNoSeconds" Text="Dots, без секунд"/>
+    <Phrase Key="Tokyo" Text="Токио"/>
+    <Phrase Key="NewYork" Text="Нью-Йорк"/>
+    <Phrase Key="Meeting" Text="Время встречи"/>
 </Language>

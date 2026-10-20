@@ -175,6 +175,12 @@ public class SandboxViewsLoaderParityTests
                     Compare(ca.GetValue(property), cb.GetValue(property), at, differences, seen, depth + 1);
                 }
             }
+
+            // A live clock shows the time it was built at, and the two builds are moments apart.
+            if (a is Adamantium.UI.Controls.Clock { IsLive: true })
+            {
+                return;
+            }
         }
 
         if (a is IEnumerable ea && b is IEnumerable eb)

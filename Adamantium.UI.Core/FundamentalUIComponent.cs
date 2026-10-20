@@ -187,10 +187,58 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
             return;
         }
 
+        if (ClassNames.SequenceEqual(Classes))
+        {
+            return;
+        }
+
         ClassNames.Clear();
         foreach (var name in Classes)
         {
             ClassNames.Add(name);
+        }
+
+        if (IsStyleApplied || _attachedStyles is { Count: > 0 } || StylesOrNull is { Count: > 0 })
+        {
+            RestyleForClasses();
+        }
+    }
+
+    private void RestyleForClasses()
+    {
+        var theme = IsStyleApplied ? ThemeContext.For(this) : null;
+        var incoming = theme?.FindStylesForComponent(this) ?? [];
+        var own = StylesOrNull;
+
+        for (var i = (_attachedStyles?.Count ?? 0) - 1; i >= 0; i--)
+        {
+            var style = _attachedStyles[i];
+            var stays = style.Selector.Match(this) && (style.Theme == null || Array.IndexOf(incoming, style) >= 0);
+            if (!stays)
+            {
+                DetachStyles(style);
+            }
+        }
+
+        foreach (var style in incoming)
+        {
+            if (_attachedStyles == null || !_attachedStyles.Contains(style))
+            {
+                AttachStyles(style);
+            }
+        }
+
+        if (own == null)
+        {
+            return;
+        }
+
+        foreach (var style in own)
+        {
+            if (_attachedStyles == null || !_attachedStyles.Contains(style))
+            {
+                AttachStyles(style);
+            }
         }
     }
     
@@ -506,7 +554,11 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
     {
         foreach (var style in styles)
         {
-            style.Attach(this);
+            if (!style.TryAttach(this))
+            {
+                continue;
+            }
+
             // Track so DetachStyles can undo them (re-theming detaches the previously-applied set first - see
             // ApplyCurrentTheme). Guard against duplicates so a re-attach doesn't record the same style twice.
             _attachedStyles ??= new StylesCollection();
@@ -733,9 +785,9 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
                 continue;
             }
 
-            if (own != null && own.Contains(style))
+            if (own != null && own.Contains(style) && style.Selector.Match(this))
             {
-                continue;   // an author's own style stays; re-applied below either way
+                continue;   // an author's own style that still matches stays; re-applied below
             }
 
             DetachStyles(style);

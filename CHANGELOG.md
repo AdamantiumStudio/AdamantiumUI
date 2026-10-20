@@ -74,6 +74,12 @@ All packages share one version.
   one; a letter picks a named month or AM/PM. `Value` is null until every part is entered, and empty parts show their
   placeholders. A click anywhere on it puts the keyboard on the nearest part. In the Fluent, Graphite and macOS themes as
   their text field; automation sees an edit of spinners. The sandbox's "Date and time" tab has a field of each format.
+- `Clock`: one clock, with hands or in figures (`ClockStyle`) - hands over a face marked Classic, Minimal, Roman or
+  with Dots, or figures as Text (the language's own), SevenSegment or Flip cards, the colon blinking. It shows the time
+  now (`IsLive`, in a `TimeZone`) or a bound `Time` (nothing while that is null); `ShowSeconds`, and a second hand that
+  ticks or sweeps (`SecondHandMotion`). The hands are turned by the compositor; it is drawn to whatever size it is
+  given, its face round in any. Its face, `ClockFace`, is the time picker's dial too. Automation reads the time it
+  shows. It runs in the designer's live preview too.
 - `DatePicker`, `TimePicker` and `DateTimePicker`: the same field with a button at its end (Alt+Down and F4 too) that
   opens a calendar, the times of a day, or both side by side. A day picked keeps the time; a time picked keeps the day
   and closes. The times come as a list a `TimeInterval` apart (15 minutes by default), as columns of hours, minutes and
@@ -1674,6 +1680,22 @@ All packages share one version.
 - A gallery owns its column in a ribbon group at every size it shows cells at: at its compact size it was stacked
   with the command after it, which was pushed out of the bottom of the band ("Update style to match selection"
   vanished beside the style gallery).
+- A component whose classes change is styled by its new classes: class styles were matched only when the theme was
+  applied, and a style its classes no longer named was not taken off - detaching checked that the style still
+  matched, which it no longer did. A seven-segment figure going from 8 to 1 kept its segments lit. Only the styles
+  that stop or start applying change; those that stay keep their triggers as they are, so a hovered button does not
+  replay its animations. The same classes set again change nothing.
+- A `DispatcherTimer` ticks on the application's update loop: made in the loop it ticked on the thread pool, made while
+  the main window was built it ticked on the main thread - either way changing the tree while a frame was recorded. A
+  repeat button's repeats, a menu's close delay, a drag's auto-scroll and a calendar's midnight ran beside the loop; a
+  seven-segment clock showed segments it had turned off. One tick waits for the loop at a time - a stalled loop does
+  not run a burst of them - and one queued before `Stop` or `Start` is dropped. `LoopSignal.Claim` names the loop.
+- An animation started while its element is laid out for the first time plays from where layout puts it: the first
+  frame drew it as if it stood at its parent's corner, and a designer preview kept it there.
+- The designer's live preview runs what is posted to the loop between its frames, as the application's loop does - a
+  timer's tick among it.
+- Taking off a style that never applied leaves the values other styles gave: it cleared the property's whole style
+  value - a style removed from an element's own `Styles`, its class absent, took the theme's background with it.
 - A checked menu row's label starts on the line of the others, in every theme: the check mark collapsed the icon
   that holds the gutter's width, so the label moved in by the difference; the icon is hidden now, its room kept.
 - A font family the system does not have no longer throws: text in it - Word's Aptos pasted on a machine without it,

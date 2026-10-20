@@ -30,11 +30,29 @@ public partial class DateTimeViewModel : TabPageViewModel
 
     [Bindable] private DateTime? _meetingTime = DateTime.Today.AddHours(14).AddMinutes(5);
 
+    /// <summary>Tokyo's time zone, for a clock of the world's cities.</summary>
+    public TimeZoneInfo Tokyo { get; } = Zone("Asia/Tokyo");
+
+    /// <summary>New York's time zone, for a clock of the world's cities.</summary>
+    public TimeZoneInfo NewYork { get; } = Zone("America/New_York");
+
     /// <summary>The first day the range calendar shows: today.</summary>
     public DateTime RangeStart => DateTime.Today;
 
     /// <summary>The last day the range calendar shows: three months on.</summary>
     public DateTime RangeEnd => DateTime.Today.AddMonths(3);
+
+    private static TimeZoneInfo Zone(string id)
+    {
+        try
+        {
+            return TimeZoneInfo.FindSystemTimeZoneById(id);
+        }
+        catch (TimeZoneNotFoundException)
+        {
+            return TimeZoneInfo.Utc;
+        }
+    }
 
     /// <summary>Days the calendar of several months marks.</summary>
     public ObservableCollection<CalendarDateMark> Holidays { get; } =
