@@ -140,6 +140,31 @@ public class DropDownEditableThemeTests
         });
     }
 
+    // "Cam" typed, then the list dropped (F4): it opened on the current font, and Enter took that over the typed name.
+    [TestCase("Fluent")]
+    [TestCase("Graphite")]
+    [TestCase("MacOs")]
+    public void TheListDroppedOverATypedName_OpensOnTheRowThatStartsSo(string theme)
+    {
+        Use(theme);
+        var fonts = new DropDown
+        {
+            IsEditable = true, SelectedValuePath = "Content",
+            Items = { new DropDownItem { Content = "Arial" }, new DropDownItem { Content = "Cambria" } }
+        };
+        Lay(fonts);
+        fonts.SelectedIndex = 0;
+
+        Box(fonts).Text = "Cam";
+        fonts.IsDropDownOpen = true;
+        Box(fonts).RaiseEvent(new KeyEventArgs(KeyboardDevice.CurrentDevice, Key.Enter, InputModifiers.None, 0)
+        {
+            RoutedEvent = Keyboard.KeyDownEvent, OriginalSource = Box(fonts)
+        });
+
+        Assert.That(fonts.SelectedIndex, Is.EqualTo(1));
+    }
+
     // A space typed into the box is part of the name, not a key that opens the list.
     [TestCase("Fluent")]
     [TestCase("Graphite")]

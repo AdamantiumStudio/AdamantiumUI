@@ -654,7 +654,8 @@ public class DropDown : Selector
 
         // The list always opens on the current value and closes with no highlight left behind - one place for it,
         // whether it was opened by the keyboard, by a click on the header, or set from code.
-        if (open) dd.Highlight(dd.SelectedIndex);
+        // Opened over something typed, on the first row that starts so.
+        if (open) dd.Highlight(dd._edited ? dd.IndexOf(dd._text.Text, prefix: true) : dd.SelectedIndex);
         else dd.Highlight(-1);
         AutomationEvents.RaiseExpandCollapse(dd, open);
     }
