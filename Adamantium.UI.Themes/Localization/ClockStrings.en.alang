@@ -1,0 +1,7 @@
+<Language>
+    <Phrase Key="Start" Text="Start"/>
+    <Phrase Key="Pause" Text="Pause"/>
+    <Phrase Key="Reset" Text="Reset"/>
+    <Phrase Key="Lap" Text="Lap"/>
+    <Phrase Key="Laps" Text="Laps"/>
+</Language>

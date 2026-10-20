@@ -172,6 +172,8 @@ public class AutomationAuditTests
         [typeof(DateTimePicker)] = (T.ComboBox, null),
         [typeof(Clock)] = (T.Text, null),
         [typeof(ClockFace)] = (null, "a clock's face; the clock or the time picker reads the time for it"),
+        [typeof(CountdownTimer)] = (T.Group, null),
+        [typeof(StopwatchTimer)] = (T.Group, null),
         [typeof(TextBox)] = (T.Edit, null),
         [typeof(PasswordBox)] = (T.Edit, null),
         [typeof(TextPresenter)] = (null, "draws a text box's text; the text box answers for it"),

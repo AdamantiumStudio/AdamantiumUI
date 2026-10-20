@@ -11,6 +11,7 @@ internal enum RadialAnchor
 {
     Center,
     Hand,
+    Disc,
 }
 
 internal sealed class RadialPanel : Panel
@@ -57,6 +58,12 @@ internal sealed class RadialPanel : Panel
             if (place.Anchor == RadialAnchor.Hand)
             {
                 child.Arrange(new Rect(center.X - size.Width / 2, center.Y - length, size.Width, length));
+                continue;
+            }
+
+            if (place.Anchor == RadialAnchor.Disc)
+            {
+                child.Arrange(new Rect(center.X - length, center.Y - length, 2 * length, 2 * length));
                 continue;
             }
 

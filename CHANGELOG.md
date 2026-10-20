@@ -86,6 +86,19 @@ All packages share one version.
   ticks or sweeps (`SecondHandMotion`). The hands are turned by the compositor; it is drawn to whatever size it is
   given, its face round in any. Its face, `ClockFace`, is the time picker's dial too. Automation reads the time it
   shows. It runs in the designer's live preview too.
+- `CountdownTimer` and `StopwatchTimer`: a countdown of a `Duration` and a stopwatch, on a `Clock` in any of its
+  styles - with hands, which a countdown turns back and over a face whose part still left is filled, or in figures
+  counting hours past a day, a digit more past a hundred. A countdown rounds up - to the minute when it shows no
+  seconds - and its colon blinks with its figures. Started, paused and reset (and lapped) by the buttons they show
+  (`ShowButtons`; the keyboard passes to the button that takes the pressed one's place), by their commands
+  (`StartCommand`, `PauseCommand`, `ResetCommand`, `LapCommand`) or their methods; `Remaining` and `Elapsed` are told
+  every second while shown and `IsRunning` as it changes. A countdown of a `Duration` from zero to a hundred years keeps
+  counting off the tree - one on a hidden page still ends on time, woken at its end (or once a day) rather than every
+  second, and tells `Remaining` again once shown - stops at
+  zero, raises `Completed` and runs `CompletedCommand`, a pause at zero included; one discarded stops. A stopwatch's
+  `Laps` (`StopwatchLap`: number, lap time and total, as text to the hundredth too, in the language of the moment) are
+  listed under it, the latest first, once there are any (`HasLaps`) and while `ShowLaps`. Automation reads what is left
+  and what has passed in whole seconds. The sandbox's "Date and time" tab has both.
 - `DatePicker`, `TimePicker` and `DateTimePicker`: the same field with a button at its end (Alt+Down and F4 too) that
   opens a calendar, the times of a day, or both side by side. A day picked keeps the time; a time picked keeps the day
   and closes. The times come as a list a `TimeInterval` apart (15 minutes by default), as columns of hours, minutes and

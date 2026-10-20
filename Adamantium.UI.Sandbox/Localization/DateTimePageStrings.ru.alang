@@ -35,4 +35,6 @@
     <Phrase Key="Tokyo" Text="Токио"/>
     <Phrase Key="NewYork" Text="Нью-Йорк"/>
     <Phrase Key="Meeting" Text="Время встречи"/>
+    <Phrase Key="Timers" Text="Таймер обратного отсчёта и секундомер на тех же часах: стили, кнопки, у стрелочного таймера закрашена часть, что осталась. У секундомера — круги."/>
+    <Phrase Key="TimerDone" Text="Отсчёт закончен раз: "/>
 </Language>

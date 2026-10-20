@@ -1,0 +1,7 @@
+<Language>
+    <Phrase Key="Start" Text="Старт"/>
+    <Phrase Key="Pause" Text="Пауза"/>
+    <Phrase Key="Reset" Text="Сброс"/>
+    <Phrase Key="Lap" Text="Круг"/>
+    <Phrase Key="Laps" Text="Круги"/>
+</Language>

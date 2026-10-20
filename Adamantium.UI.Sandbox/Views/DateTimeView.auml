@@ -296,6 +296,37 @@
                 </StackPanel>
             </WrapPanel>
 
+            <!-- A countdown and a stopwatch on the same clock: its styles, its buttons, what is left filled on a face. -->
+            <TextBlock Text="{Localize DateTimePageStrings.Timers}"
+                       TextWrapping="WrapByWords"
+                       MaxWidth="680"
+                       HorizontalAlignment="Left"
+                       MarginBottom="8"/>
+            <WrapPanel Orientation="Horizontal"
+                       MarginBottom="24">
+                <CountdownTimer AutomationProperties.AutomationId="AnalogCountdown"
+                                Duration="{Binding TimerLength}"
+                                Width="220"
+                                Height="270"
+                                Margin="0,0,24,16"/>
+                <StackPanel Margin="0,0,24,16">
+                    <CountdownTimer AutomationProperties.AutomationId="SegmentCountdown"
+                                    ClockStyle="SevenSegment"
+                                    Duration="{Binding TimerLength}"
+                                    CompletedCommand="{Binding TimerDoneCommand}"/>
+                    <TextBlock MarginTop="4"><Run Text="{Localize DateTimePageStrings.TimerDone}"/><Run Text="{Binding TimesDone}"/></TextBlock>
+                </StackPanel>
+                <StopwatchTimer AutomationProperties.AutomationId="Stopwatch"
+                                Width="260"
+                                Height="420"
+                                Margin="0,0,24,16"/>
+                <StopwatchTimer AutomationProperties.AutomationId="FlipStopwatch"
+                                ClockStyle="Flip"
+                                ShowLaps="False"
+                                VerticalAlignment="Top"
+                                Margin="0,0,24,16"/>
+            </WrapPanel>
+
             <WrapPanel Orientation="Horizontal"
                        MarginTop="12">
                 <!-- At the size its content asks for, bound to the page's date. -->
