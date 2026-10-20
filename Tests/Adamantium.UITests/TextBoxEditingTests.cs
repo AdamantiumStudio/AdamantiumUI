@@ -412,6 +412,23 @@ public class TextBoxEditingTests
         });
     }
 
+    // Words joined by a symbol are words: Windows called "Shift+Tab" wrong, as "Shift Tab"; each side is checked on its
+    // own, so a wrong one beside the symbol still is.
+    [Test]
+    [SupportedOSPlatform("windows")]
+    public void TheWindowsChecker_ChecksWordsJoinedByASymbol_EachOnItsOwn()
+    {
+        var checker = new WindowsSpellChecker();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(checker.Check("Bulleted; Tab and Shift+Tab step a level, Enter in an empty item leaves the list",
+                "en-US"), Is.Empty);
+            Assert.That(checker.Check("Bulleted; Tab and Shfit+Tab step a level", "en-US"),
+                Is.EqualTo(new[] { new TextRange(18, 5) }));
+        });
+    }
+
     [Test]
     [SupportedOSPlatform("windows")]
     public void TheWindowsChecker_IgnoresAWordForEveryTagOfTheSameDictionary()

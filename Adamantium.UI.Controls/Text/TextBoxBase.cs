@@ -913,6 +913,20 @@ public abstract class TextBoxBase : Control, ITextStyleUser, Adamantium.UI.Core.
             : new Rect(_textOx + caret.X, _textOy + caret.Y, CaretWidth, caret.Height);
     }
 
+    protected internal override Vector2 ContextMenuPointFromKeyboard
+    {
+        get
+        {
+            if (_presenter == null)
+            {
+                return base.ContextMenuPointFromKeyboard;
+            }
+
+            var caret = SurfaceCaret(CaretIndex);
+            return _presenter.TranslatePoint(new Vector2(caret.X, caret.Bottom), this);
+        }
+    }
+
     private (double X, int Line) CaretPoint(int index) => _bidi
         ? _textLayout.GetCaretPoint(new CaretPosition(index, index == _caretHeldAt))
         : (_caretX[index], _caretLine[index]);
