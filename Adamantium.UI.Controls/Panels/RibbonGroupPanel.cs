@@ -224,7 +224,15 @@ public class RibbonGroupPanel : Panel
             {
                 if (at >= sizes.Count) break;
 
-                    if (Ribbon.GetSize(child) != sizes[at]) Ribbon.SetSize(child, sizes[at]);
+                if (Ribbon.GetSize(child) != sizes[at])
+                {
+                    Ribbon.SetSize(child, sizes[at]);
+                    // A size is drawn by the command's template switching parts, and a part switched deep inside is
+                    // measured only by a layout pass: measured from here at once - a probe - the command answered the
+                    // size it had, and the band flipped between two answers for good.
+                    InvalidateWithin(child);
+                }
+
                 at++;
             }
         }
@@ -232,6 +240,23 @@ public class RibbonGroupPanel : Panel
         {
             _sizingSelf--;
         }
+    }
+
+    // Not into a gallery: its cells do not change with its size, and it re-shapes its own panel as the size is set.
+    private static void InvalidateWithin(IUIComponent node)
+    {
+        if (node is RibbonGallery gallery)
+        {
+            gallery.InvalidateMeasure();
+            return;
+        }
+
+        foreach (var child in node.VisualChildren)
+        {
+            InvalidateWithin(child);
+        }
+
+        (node as IMeasurableComponent)?.InvalidateMeasure();
     }
 
     // A separator has no size to state, and counting it would generate variants that change nothing.

@@ -242,20 +242,11 @@ public class RibbonGroupsPanel : Panel
         for (var g = 0; g < groups.Count; g++)
         {
             if (groups[g].CurrentVariant != plan[g]) groups[g].ApplyVariant(plan[g]);
-        }    }
+        }
+    }
 
     // What each open group cost the last time it was asked.
     private readonly System.Runtime.CompilerServices.ConditionalWeakTable<RibbonGroup, double[]> _measured = new();
-
-    private static int FirstKnown(double[] widths)
-    {
-        for (var i = 0; i < widths.Length; i++)
-        {
-            if (!double.IsNaN(widths[i])) return i;
-        }
-
-        return 0;
-    }
 
     // The collapsed button's cost is left out: measured the first time the group collapses, it is not the labels changing.
     private static bool Differ(double[] before, double[] now)
@@ -268,6 +259,16 @@ public class RibbonGroupsPanel : Panel
         }
 
         return false;
+    }
+
+    private static int FirstKnown(double[] widths)
+    {
+        for (var i = 0; i < widths.Length; i++)
+        {
+            if (!double.IsNaN(widths[i])) return i;
+        }
+
+        return 0;
     }
 
     private static bool HasUnknownWidths(RibbonGroup group)
