@@ -445,6 +445,47 @@ public class TimerTests
     }
 
     [Test]
+    public void InFigures_TheLengthIsSetOnTheClockItself_ThePartBeingTypedLit()
+    {
+        try
+        {
+            var timer = Shown(new CountdownTimer { Duration = TimeSpan.FromSeconds(90), ClockStyle = ClockStyle.SevenSegment });
+            var field = (DurationField)timer.GetTemplateChild("PART_Duration");
+            var length = (UIComponent)timer.GetTemplateChild("Length");
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(timer.IsAnalog, Is.False);
+                Assert.That(timer.Clock.Visibility, Is.EqualTo(Visibility.Visible), "the same digital face");
+                Assert.That(length.Visibility, Is.EqualTo(Visibility.Visible), "the field is there to type into");
+                Assert.That(length.Opacity, Is.EqualTo(0), "but not seen");
+            });
+
+            FocusManager.Focus(field, NavigationMethod.Tab);
+            Settle();
+            Assert.That(field.ActivePart, Is.EqualTo(DurationParts.Hours));
+            Assert.That(timer.Clock.MarkedParts, Is.EqualTo(DurationParts.Hours));
+            Assert.That(timer.Clock.Digits[0].Concat(timer.Clock.Digits[1]).Where(s => !s.Classes.Contains("ClockSegmentOff")),
+                Is.All.Matches<Border>(s => s.Classes.Contains("ClockSegmentMarked")), "the hours lit in the accent");
+            Assert.That(timer.Clock.Digits[2].Where(s => s.Classes.Contains("ClockSegmentMarked")), Is.Empty);
+
+            field.RaiseEvent(new TextInputEventArgs("02") { RoutedEvent = Keyboard.TextInputEvent });
+            Settle();
+            Assert.That(timer.Clock.ShownText, Is.EqualTo("02:01:30"), "the face shows what is typed as it is typed");
+
+            field.RaiseEvent(new KeyEventArgs(KeyboardDevice.CurrentDevice, Key.RightArrow, InputModifiers.None, 0)
+                { RoutedEvent = Keyboard.KeyDownEvent });
+            Settle();
+            Assert.That(timer.Duration, Is.EqualTo(new TimeSpan(2, 1, 30)), "written once the part is left");
+            Assert.That(timer.Clock.MarkedParts, Is.EqualTo(DurationParts.Minutes), "on to the minutes");
+        }
+        finally
+        {
+            FocusManager.ResetFocus();
+        }
+    }
+
+    [Test]
     public void WithoutTheDurationField_TheClockShowsWhileItStands()
     {
         var timer = Shown(new CountdownTimer { ShowDurationField = false });

@@ -91,6 +91,20 @@
         <Setter Property="Opacity" Value="1"/>
     </Style>
 
+    <!-- The part being set (Clock.MarkedParts): its lit segments, its figures, in the accent. -->
+    <Style Selector="Border.ClockSegmentMarked">
+        <Setter Property="Background" Value="{ThemeResource AccentFillColorDefault}"/>
+        <Setter Property="Opacity" Value="1"/>
+    </Style>
+
+    <Style Selector="TextBlock.ClockTextMarked">
+        <Setter Property="Foreground" Value="{ThemeResource AccentFillColorDefault}"/>
+    </Style>
+
+    <Style Selector="TextBlock.ClockFlipFigureMarked">
+        <Setter Property="Foreground" Value="{ThemeResource AccentFillColorDefault}"/>
+    </Style>
+
     <Style Selector="Border.ClockColonDot">
         <Setter Property="Background" Value="{ResourceReference TextFillColorPrimary}"/>
     </Style>
@@ -124,9 +138,11 @@
                     <Grid RowDefinitions="*,Auto">
                         <Clock x:Name="PART_Clock"
                                ClockStyle="{TemplateBinding ClockStyle}"
-                               ShowSeconds="{TemplateBinding ShowSeconds}"/>
+                               ShowSeconds="{TemplateBinding ShowSeconds}"
+                               MarkedParts="{Binding ActivePart, ElementName=PART_Duration}"/>
                         <!-- The length set in figures as large as the clock's room takes, with no frame: the part
-                             being typed is marked by its figures alone. -->
+                             being typed is marked by its figures alone. Over a clock in figures it is not seen - the
+                             clock shows the length and lights the part being typed. -->
                         <Viewbox x:Name="Length"
                                  Margin="8,0"
                                  Visibility="Collapsed">
@@ -174,10 +190,20 @@
             <MultiTrigger.Conditions>
                 <Condition Property="IsAtStart" Value="true"/>
                 <Condition Property="ShowDurationField" Value="true"/>
+                <Condition Property="IsAnalog" Value="true"/>
             </MultiTrigger.Conditions>
             <!-- Hidden, not collapsed: the clock keeps its room, so the field fills it and nothing moves on start. -->
             <Setter TargetName="PART_Clock" Property="Visibility" Value="Hidden"/>
             <Setter TargetName="Length" Property="Visibility" Value="Visible"/>
+        </MultiTrigger>
+        <MultiTrigger>
+            <MultiTrigger.Conditions>
+                <Condition Property="IsAtStart" Value="true"/>
+                <Condition Property="ShowDurationField" Value="true"/>
+                <Condition Property="IsAnalog" Value="false"/>
+            </MultiTrigger.Conditions>
+            <Setter TargetName="Length" Property="Visibility" Value="Visible"/>
+            <Setter TargetName="Length" Property="Opacity" Value="0"/>
         </MultiTrigger>
         <PropertyTrigger Property="ShowButtons" Value="false">
             <Setter TargetName="Buttons" Property="Visibility" Value="Collapsed"/>

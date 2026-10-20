@@ -29,7 +29,12 @@ public class CountdownTimer : Control
         typeof(bool), typeof(CountdownTimer), new PropertyMetadata(false));
 
     public static readonly AdamantiumProperty ClockStyleProperty = AdamantiumProperty.Register(nameof(ClockStyle),
-        typeof(ClockStyle), typeof(CountdownTimer), new PropertyMetadata(ClockStyle.Classic));
+        typeof(ClockStyle), typeof(CountdownTimer), new PropertyMetadata(ClockStyle.Classic,
+            (a, e) => ((CountdownTimer)a).IsAnalog = (ClockStyle)e.NewValue is ClockStyle.Classic or ClockStyle.Minimal
+                or ClockStyle.Roman or ClockStyle.Dots));
+
+    public static readonly AdamantiumProperty IsAnalogProperty = AdamantiumProperty.RegisterReadOnly(nameof(IsAnalog),
+        typeof(bool), typeof(CountdownTimer), new PropertyMetadata(true));
 
     public static readonly AdamantiumProperty ShowSecondsProperty = AdamantiumProperty.Register(nameof(ShowSeconds),
         typeof(bool), typeof(CountdownTimer), new PropertyMetadata(true));
@@ -51,6 +56,7 @@ public class CountdownTimer : Control
     private readonly ClockAction _reset;
     private DispatcherTimer _tick;
     private Clock _clock;
+    private DurationField _length;
     private TimeSpan _left = TimeSpan.FromMinutes(5);
     private string _handTo;
     private IUIComponent _handFrom;
@@ -110,8 +116,16 @@ public class CountdownTimer : Control
         set => SetValue(ShowButtonsProperty, value);
     }
 
-    /// <summary>Shows a field for <see cref="Duration"/> in place of the clock while it stands at its whole length
-    /// (<see cref="IsAtStart"/>); on by default. Off, the clock shows then too.</summary>
+    /// <summary>Whether its <see cref="ClockStyle"/> has hands rather than figures.</summary>
+    public bool IsAnalog
+    {
+        get => GetValue<bool>(IsAnalogProperty);
+        private set => SetValue(IsAnalogProperty, value);
+    }
+
+    /// <summary>Lets its <see cref="Duration"/> be set while it stands at its whole length (<see cref="IsAtStart"/>):
+    /// a face with hands gives way to the length in large figures, figures take what is typed into them, the part being
+    /// set lit in the accent; on by default. Off, the clock only shows it.</summary>
     public bool ShowDurationField
     {
         get => GetValue<bool>(ShowDurationFieldProperty);
@@ -149,7 +163,7 @@ public class CountdownTimer : Control
 
     public void Start()
     {
-        (GetTemplateChild("PART_Duration") as DurationField)?.FinishTyping();
+        _length?.FinishTyping();
         if (IsRunning || Left() <= TimeSpan.Zero)
         {
             return;
@@ -191,6 +205,8 @@ public class CountdownTimer : Control
     {
         base.OnApplyTemplate();
         _clock = GetTemplateChild("PART_Clock") as Clock;
+        _length = GetTemplateChild("PART_Duration") as DurationField;
+        if (_length != null) _length.PropertyChanged += OnLengthChanged;
         if (GetTemplateChild("PART_Start") is ButtonBase start) start.Command = _start;
         if (GetTemplateChild("PART_Pause") is ButtonBase pause) pause.Command = _pause;
         if (GetTemplateChild("PART_Reset") is ButtonBase reset) reset.Command = _reset;
@@ -200,7 +216,18 @@ public class CountdownTimer : Control
     public override void OnRemoveTemplate()
     {
         base.OnRemoveTemplate();
+        if (_length != null) _length.PropertyChanged -= OnLengthChanged;
+        _length = null;
         _clock = null;
+    }
+
+    private void OnLengthChanged(object sender, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (e.Property == DurationField.ShownValueProperty && IsAtStart && _length.ShownValue is { } shown)
+        {
+            var typed = Allowed(shown);
+            _clock?.Count(typed, -1, null, typed);
+        }
     }
 
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)

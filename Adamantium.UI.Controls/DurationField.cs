@@ -41,6 +41,12 @@ public class DurationField : Control, ISegmentHost
     public static readonly AdamantiumProperty PlaceholderProperty = AdamantiumProperty.Register(nameof(Placeholder),
         typeof(string), typeof(DurationField), new PropertyMetadata(null, (a, _) => ((DurationField)a).Show()));
 
+    public static readonly AdamantiumProperty ActivePartProperty = AdamantiumProperty.RegisterReadOnly(nameof(ActivePart),
+        typeof(DurationParts), typeof(DurationField), new PropertyMetadata(DurationParts.None));
+
+    public static readonly AdamantiumProperty ShownValueProperty = AdamantiumProperty.RegisterReadOnly(nameof(ShownValue),
+        typeof(TimeSpan?), typeof(DurationField), new PropertyMetadata(null));
+
     private const InputModifiers Chords = InputModifiers.LeftControl | InputModifiers.RightControl |
                                           InputModifiers.LeftAlt | InputModifiers.RightAlt;
 
@@ -119,6 +125,22 @@ public class DurationField : Control, ISegmentHost
     /// <summary>The part the keyboard is on, or null while the field has no focus.</summary>
     public DurationFieldSegment ActiveSegment => _active >= 0 && _active < _segments.Count ? _segments[_active] : null;
 
+    /// <summary>Which part the keyboard is on, <see cref="DurationParts.None"/> while none - for a display that shows the
+    /// length in its own way to mark it (a countdown's digital clock).</summary>
+    public DurationParts ActivePart
+    {
+        get => GetValue<DurationParts>(ActivePartProperty);
+        private set => SetValue(ActivePartProperty, value);
+    }
+
+    /// <summary>The length as it is shown now, the part being typed included before it is written to
+    /// <see cref="Value"/>; null while a part is empty.</summary>
+    public TimeSpan? ShownValue
+    {
+        get => GetValue<TimeSpan?>(ShownValueProperty);
+        private set => SetValue(ShownValueProperty, value);
+    }
+
     public override void OnApplyTemplate()
     {
         base.OnApplyTemplate();
@@ -137,6 +159,7 @@ public class DurationField : Control, ISegmentHost
         _segments.Clear();
         _active = -1;
         _typed = string.Empty;
+        ActivePart = DurationParts.None;
     }
 
     internal void TypeFromTheStart(string text)
@@ -581,6 +604,27 @@ public class DurationField : Control, ISegmentHost
         Show();
     }
 
+    private TimeSpan? WithTyped()
+    {
+        if (_typed.Length == 0 || _active < 0 || _active >= _segments.Count || !_typed.All(char.IsDigit))
+        {
+            return Compose();
+        }
+
+        var part = IndexOf(_segments[_active]);
+        var held = _values[part];
+        var (minimum, maximum) = RangeOf(part);
+        _values[part] = (long)Math.Clamp(decimal.Parse(_typed, CultureInfo.InvariantCulture), minimum, maximum);
+        try
+        {
+            return Compose();
+        }
+        finally
+        {
+            _values[part] = held;
+        }
+    }
+
     private TimeSpan? Compose()
     {
         if (_segments.Count == 0)
@@ -618,6 +662,8 @@ public class DurationField : Control, ISegmentHost
 
     private void Show()
     {
+        ActivePart = ActiveSegment?.Part ?? DurationParts.None;
+        ShownValue = WithTyped();
         var empty = Value == null && _active < 0 && _segments.All(s => _values[Array.IndexOf(Order, s.Part)] == null);
         DateTimeField.Prompt(_host, _prompt, Placeholder, empty);
         var prompting = empty && !string.IsNullOrEmpty(Placeholder);
