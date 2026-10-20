@@ -5,7 +5,6 @@ using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Linq;
-using System.Reflection;
 using System.Threading.Tasks;
 
 namespace Adamantium.UI.Core.Collections;
@@ -17,7 +16,6 @@ public class CollectionView : IEnumerable, IReadOnlyList<object>, INotifyCollect
     private readonly List<object> _snapshot = [];
     private readonly List<object> _view = [];
     private readonly List<int> _sourceIndexOfView = [];
-    private readonly Dictionary<(Type, string), PropertyInfo> _properties = new();
     private readonly Dictionary<object, int> _subscribed = new();
     private readonly List<object> _page = [];
     private int _pageSize;
@@ -272,18 +270,14 @@ public class CollectionView : IEnumerable, IReadOnlyList<object>, INotifyCollect
         return 0;
     }
 
-    private object ValueOf(object item, string propertyName)
+    private static object ValueOf(object item, string propertyName)
     {
-        if (item == null || propertyName == null) return null;
-
-        var key = (item.GetType(), propertyName);
-        if (!_properties.TryGetValue(key, out var property))
+        if (item == null || propertyName == null)
         {
-            property = item.GetType().GetProperty(propertyName);
-            _properties[key] = property;
+            return null;
         }
 
-        return property?.GetValue(item);
+        return Adamantium.MVVM.PropertyAccessors.Find(item.GetType(), propertyName)?.Get?.Invoke(item);
     }
 
     private void OnSourceCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)

@@ -1439,6 +1439,15 @@ All packages share one version.
 
 - `FontVariationList.Parse` reads axis values with the engine's `FontVariation.ParseList`, one reader for markup and
   documents; a value that is not finite (`wght=Infinity`) is refused now.
+- Bindings, a tree's child and expansion paths, a data grid's column paths, a collection view's sort, filter and group
+  properties and a docking pane's zone reach the properties of their objects through the engine's
+  `Adamantium.MVVM.PropertyAccessors` instead of reflection and compiled expressions, so nothing is generated at run
+  time (iOS, NativeAOT). The non-generic components of the framework and of an application are described by the
+  generator - `AdamantiumComponent` carries `[DescribeProperties]` - and so are its non-generic view models; an object
+  nothing describes (a generic component, a view written in markup, a plain object, a struct) is still reached, through
+  reflection, and the log says so once per type. A path is written only through a public setter (an `init` one
+  included) - a tree's or a grid's path wrote a private one - and a tree's, a grid's and a collection view's paths now
+  see what an object has through an interface and its public fields, but no longer a static property or field.
 - Raising a routed event allocates nothing and takes no lock once each handler type and element type has been seen:
   handlers are called by a typed call made once per handler type instead of `DynamicInvoke`, an element's handlers and
   an event's class handlers are read from arrays replaced whole on change, the class handlers of a type are picked

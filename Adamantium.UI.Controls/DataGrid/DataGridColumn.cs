@@ -403,20 +403,11 @@ public abstract class DataGridColumn : FundamentalUIComponent
 
         foreach (var name in path.Split('.'))
         {
-            var declared = type;
-            System.Reflection.PropertyInfo property = null;
-            for (; declared != null && property == null; declared = declared.BaseType)
+            type = Adamantium.MVVM.PropertyAccessors.Find(type, name)?.ValueType;
+            if (type == null)
             {
-                property = declared.GetProperty(name, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance |
-                                                       System.Reflection.BindingFlags.DeclaredOnly);
+                return null;
             }
-
-            foreach (var face in property == null && type is { IsInterface: true } ? type.GetInterfaces() : Type.EmptyTypes)
-            {
-                property ??= face.GetProperty(name);
-            }
-
-            type = property?.PropertyType;
         }
 
         return type == typeof(object) ? null : type;

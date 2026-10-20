@@ -30,6 +30,7 @@
         <ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Fonts\Adamantium.Fonts.csproj"/>
         <ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Mathematics\Adamantium.Mathematics.csproj" />
         <ProjectReference Include="$(AdamantiumEngineDir)Adamantium.MVVM\Adamantium.MVVM.csproj" />
+        <ProjectReference Include="$(AdamantiumEngineDir)Adamantium.MVVM.Generators\Adamantium.MVVM.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
     </ItemGroup>
 
     <ItemGroup Condition="'$(UseEngineSource)' != 'true'">
@@ -37,6 +38,7 @@
         <PackageReference Include="Adamantium.Fonts" Version="$(AdamantiumEngineVersion)" />
         <PackageReference Include="Adamantium.Mathematics" Version="$(AdamantiumEngineVersion)" />
         <PackageReference Include="Adamantium.MVVM" Version="$(AdamantiumEngineVersion)" />
+        <PackageReference Include="Adamantium.MVVM.Generators" Version="$(AdamantiumEngineVersion)" PrivateAssets="all" />
     </ItemGroup>
 
     <ItemGroup>
