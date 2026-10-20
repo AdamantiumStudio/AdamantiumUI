@@ -393,6 +393,22 @@ public class Popup : MeasurableUIComponent, IContainer
         _lightDismiss ??= OnGlobalPreviewDown;
         root.AddHandler(PointerEvents.PreviewPointerPressedEvent, _lightDismiss, handledEventsToo: true);
         OpenLightDismissable.Add(this);
+        ToolTipService.FlyoutOpened();
+    }
+
+    /// <summary>Whether a flyout is open that <paramref name="node"/> is not inside: a hover card for it would be drawn
+    /// over the flyout's rows.</summary>
+    internal static bool IsBeneathOpenFlyout(IUIComponent node)
+    {
+        foreach (var popup in OpenLightDismissable)
+        {
+            if (!popup.IsWithinOwnOverlay(node))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private void UnhookLightDismiss(IPopupHost host = null)

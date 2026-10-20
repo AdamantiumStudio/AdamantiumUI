@@ -3,6 +3,7 @@ using Adamantium.Core.DependencyInjection;
 using Adamantium.UI.Controls;
 using Adamantium.UI.Controls.Buttons;
 using Adamantium.UI.Controls.Panels;
+using Adamantium.UI.Controls.Primitives;
 using Adamantium.UI.Controls.Text;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Resources;
@@ -161,6 +162,43 @@ public class ToolTipServiceTests
         Show(one, window);
 
         Assert.That(Shared<Popup>("_popup")?.IsOpen ?? false, Is.False);
+    }
+
+    // A press acts on the element: its tip goes - a button that drops a menu had its tip drawn over the menu, and the
+    // tip, the innermost popup, took the Escape meant for the menu.
+    [Test]
+    public void APress_TakesTheTipDown_AndTheTipTakesNoEscape()
+    {
+        var (one, _, _, _, window) = Owners();
+        Show(one, window);
+        Assume.That(Shared<Popup>("_popup").IsOpen, Is.True, "the tip is up");
+
+        Call("OnPointerPressed", one, null);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(Shared<Popup>("_popup").IsOpen, Is.False);
+            Assert.That(Shared<Popup>("_popup").DismissOnEscape, Is.False);
+        });
+    }
+
+    // While a menu is open, the tip of anything outside it is not drawn over its rows.
+    [Test]
+    public void NoTipIsShown_BeneathAnOpenMenu()
+    {
+        var (one, _, two, _, window) = Owners();
+        var menu = new ContextMenu { Items = { new MenuItem { Header = "Row" } } };
+        two.ContextMenu = menu;
+        Settle(window);
+        menu.Open(two);
+        Settle(window);
+        Assume.That(menu.IsOpen, Is.True, "the menu is open");
+
+        Show(one, window);
+
+        var shown = Shared<Popup>("_popup").IsOpen;
+        menu.IsOpen = false;
+        Assert.That(shown, Is.False);
     }
 
     [Test]

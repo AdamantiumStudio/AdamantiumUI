@@ -44,10 +44,12 @@ public static class ToolTipService
         // Idempotent: (re)wire hover only while a tooltip is set. Unsubscribe first so re-setting doesn't double-hook.
         input.PointerEntered -= OnPointerEntered;
         input.PointerExited -= OnPointerExited;
+        input.PreviewPointerPressed -= OnPointerPressed;
         if (e.NewValue != null)
         {
             input.PointerEntered += OnPointerEntered;
             input.PointerExited += OnPointerExited;
+            input.PreviewPointerPressed += OnPointerPressed;
         }
         else if (ReferenceEquals(_pending, input))
         {
@@ -70,6 +72,19 @@ public static class ToolTipService
         if (ReferenceEquals(sender, _pending) && !_pending.IsPointerOver) Hide();
     }
 
+    // A press acts on the element: its tip, up or still to come, goes, and comes again only on the next hover - a
+    // button that drops a menu had its tip drawn over the menu.
+    private static void OnPointerPressed(object sender, PointerPressedEventArgs e)
+    {
+        if (ReferenceEquals(sender, _pending)) Hide();
+    }
+
+    // A menu or a list dropped open takes the card of anything outside it away.
+    internal static void FlyoutOpened()
+    {
+        if (_pending is IUIComponent owner && Popup.IsBeneathOpenFlyout(owner)) Hide();
+    }
+
     private static void OnTimerTick(object sender, EventArgs e)
     {
         _timer.Stop();   // one-shot: fire once after the delay
@@ -82,7 +97,8 @@ public static class ToolTipService
     {
         // A tip that reads as nothing - a command with no label and no key - is no card at all.
         var tip = GetToolTip((AdamantiumComponent)owner);
-        if (tip is not IUIComponent && string.IsNullOrEmpty(tip?.ToString()))
+        if ((tip is not IUIComponent && string.IsNullOrEmpty(tip?.ToString())) ||
+            (owner is IUIComponent component && Popup.IsBeneathOpenFlyout(component)))
         {
             Hide();
             return;
@@ -145,7 +161,9 @@ public static class ToolTipService
         // both the hover and the press away from the control it is describing: the control's highlight blinked as the
         // card came and went, and a click that landed while it was up did nothing at all.
         _toolTip = new ToolTip { IsHitTestVisible = false };
-        _popup = new Popup { Child = _toolTip, VerticalOffset = 4 };
+        // Neither a press elsewhere nor Escape is the card's: the service takes it away as the hover ends, and an Escape
+        // it answered was one an open menu under it never had.
+        _popup = new Popup { Child = _toolTip, VerticalOffset = 4, KeepOpen = true, DismissOnEscape = false };
 
         _timer = new DispatcherTimer();
         _timer.Tick += OnTimerTick;

@@ -153,7 +153,7 @@ public abstract class Selector : ItemsControl
 
     private Func<object, object> _readValue;
 
-    private object ValueOf(object item) => _readValue == null || item == null ? item : _readValue(item);
+    private protected object ValueOf(object item) => _readValue == null || item == null ? item : _readValue(item);
 
     /// <summary>The index of the item whose value this is, or -1.</summary>
     protected int IndexOfValue(object value)

@@ -203,7 +203,9 @@
             <Setter.Value>
                 <ControlTemplate TargetType="ContextMenu">
                     <Grid>
-                        <Popup x:Name="PART_Popup" Placement="Bottom" FlipToFit="True" VerticalOffset="4">
+                        <!-- Under a button, its left edge at the button's, as a pull-down menu drops. -->
+                        <Popup x:Name="PART_Popup" Placement="Bottom" PlacementAlignment="Start" FlipToFit="True"
+                               VerticalOffset="4">
                             <!-- Built on FIRST OPEN: any element may carry a context menu, and most never show one. Its
                                  parts are taken from the built content in code (Popup.ContentBuilt). -->
                             <Popup.ChildTemplate>

@@ -204,7 +204,9 @@
             <Setter.Value>
                 <ControlTemplate TargetType="ContextMenu">
                     <Grid>
-                        <Popup x:Name="PART_Popup" Placement="Bottom" FlipToFit="True" VerticalOffset="4">
+                        <!-- Under a button, its left edge at the button's, as Office drops a menu. -->
+                        <Popup x:Name="PART_Popup" Placement="Bottom" PlacementAlignment="Start" FlipToFit="True"
+                               VerticalOffset="4">
                             <!-- The card builds on FIRST OPEN (ChildTemplate), not with the menu. This is the one that pays
                                  across the whole application rather than in one control: ANY element may carry a context
                                  menu, and a right-click menu is by nature something most of them never show. Its parts are
