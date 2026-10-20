@@ -279,6 +279,8 @@ namespace Adamantium.UI.Universes
             listenedInput.PointerReleased += OnPointerReleased;
             listenedInput.PointerWheelChanged += OnPointerWheelChanged;
             listenedInput.RawMouseMove += OnMouseMove;
+            listenedInput.PointerMoved += OnPointerMovedOrLeft;
+            listenedInput.PointerExited += OnPointerMovedOrLeft;
             listenedInput.SetValue(Gestures.IsManipulationEnabledProperty, true, ValuePriority.Default);
             listenedInput.AddHandler(Gestures.ManipulationEvent, new ManipulationEventHandler(OnManipulation));
             listenedInput.AddHandler(PointerEvents.PointerCanceledEvent, new PointerEventHandler(OnPointerCanceled),
@@ -311,6 +313,8 @@ namespace Adamantium.UI.Universes
             listenedInput.PointerReleased -= OnPointerReleased;
             listenedInput.PointerWheelChanged -= OnPointerWheelChanged;
             listenedInput.RawMouseMove -= OnMouseMove;
+            listenedInput.PointerMoved -= OnPointerMovedOrLeft;
+            listenedInput.PointerExited -= OnPointerMovedOrLeft;
             listenedInput.ClearValue(Gestures.IsManipulationEnabledProperty, ValuePriority.Default);
             listenedInput.RemoveHandler(Gestures.ManipulationEvent, new ManipulationEventHandler(OnManipulation));
             listenedInput.RemoveHandler(PointerEvents.PointerCanceledEvent, new PointerEventHandler(OnPointerCanceled));
@@ -443,6 +447,8 @@ namespace Adamantium.UI.Universes
         {
             OnHostScaleChanged();
         }
+
+        private void OnPointerMovedOrLeft(object sender, PointerEventArgs e) => RequestFrame();
 
         private void OnMouseMove(object sender, UnboundMouseEventArgs e)
         {

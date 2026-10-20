@@ -13,4 +13,10 @@
     <Phrase Key="PulseMax" Text="High:"/>
     <Phrase Key="PulseSeconds" Text="Half-cycle, s:"/>
     <Phrase Key="Cell" Text="Cell:"/>
+    <Phrase Key="Expanders" Text="Expanders"/>
+    <Phrase Key="OpensDown" Text="Opens down"/>
+    <Phrase Key="OpensUp" Text="Opens up"/>
+    <Phrase Key="OpensLeft" Text="Opens left"/>
+    <Phrase Key="OpensRight" Text="Opens right"/>
+    <Phrase Key="ExpanderContent" Text="The content opens on the side away from the header and folds back into it."/>
 </Language>

@@ -1326,6 +1326,22 @@ All packages share one version.
 
 ### Changed
 
+- A window whose content has not changed draws its frame from a recording: the first clean frame of each frame slot
+  records the op stream into a secondary command buffer, and the next ones only fingerprint the stream - nothing is
+  sent to the GPU - and execute the recording while the fingerprint is the same. Whatever the stream reads live - a
+  brush, a clock, a fade - changes the fingerprint, and the frame is recorded again; a stream that keeps changing is
+  issued as before for a while, up to 32 frames, between tries. A frame with an off-screen layer or a backdrop material
+  - on a rectangle or on any shape - is issued as before, and so is every frame on a device without `VK_KHR_maintenance7`;
+  `ADAM_NO_RECORDED_REPLAY=1` turns recording off. The editor's window, 4K: a clean frame's op stream 1.2-1.5 ms, now
+  0.4-0.65 ms, 98% of clean frames executed from a recording.
+- A universe shown in the UI runs on a thread of its own, no longer in the window's frames: `IUniverseService.Show`
+  starts its loop, `RetireRemoved` takes the place of `RunUniverses`, and `SuspendLoops`/`ResumeLoops` hold the loops
+  while the devices are made again (`UIApplication.OnDevicesRecreating`/`OnDevicesRecreated`). A `RenderTargetPanel`
+  asks for a frame each time it takes one, and the universe draws one per ask into the free one of three surfaces; it
+  reads the pointer moving over the panel as a reason for frames under `FrameMode.OnDemand`. The editor, 4K, two
+  animated models: the window ran at 100 frames a second with the scene in its frames, now 260-370, the scene 210-290.
+- `RuntimeStats.WindowFps` and `RuntimeStats.LastWindowGpuMs`: the frames the render thread draws a second and the GPU
+  time of the last window frame.
 - A ribbon decides its groups' sizes afresh on every pass, from every group whole: the groups give way from the end
   of the tab as before, and then whatever room is left goes back to them - the one given up last first, each to the
   roomiest layout that still fits, a group it does not fit passed over for the next. The answer is the width's and
@@ -1660,6 +1676,19 @@ All packages share one version.
 
 ### Fixed
 
+- An `Expander`'s content always opened downward: the Fluent and Graphite templates read no `ExpandDirection`. The header
+  now docks to the side the direction names - top, bottom, right or left - and the content opens on the other, with the
+  hairline and the chevron following.
+- Closing the main window could take the application down: the shutdown's handlers unloaded the services outside the
+  render gate, alongside a frame on the render thread and the closed window's own teardown. They run under the gate
+  now, once no frame can start.
+- A batched fill could be written into the copy the frame before, still on the GPU, was drawing from. A patch a whole
+  number of laps of frame slots after the batch last took a copy wrote in place - "the same frame" was told by the
+  frame SLOT, which comes round again; it goes by the device's frame count now (`FrameTicket`). And a frame that
+  patched and then walked took two copies, the second being the one in flight; it takes one.
+- A vector shape filled in the instanced batch was patched in place - a recolor, a shape blanked or replaced, a new one
+  placed on a clean frame - in the copy the frames since the last walk were drawing from. The first patch of a frame
+  moves every key to the next copy and fills it with what the keys hold, as the other batches do.
 - A cursor that changes under a pointer standing still - a style turning it into a tool's - shows at once on Windows:
   set from the UI loop it waited for the next move, `SetCursor` showing only from the window's own thread, which is now
   asked to answer `WM_SETCURSOR` again.

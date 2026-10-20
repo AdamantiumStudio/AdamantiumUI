@@ -56,6 +56,8 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
 
     private double accumulatedFrameTime;
     private TimeSpan totalTime;
+    private int _countedFrames;
+    private long _countingSince = Stopwatch.GetTimestamp();
     private PreciseTimer preciseTimer;
     private Double fpsTime;
     private Int32 fpsCounter;
@@ -383,6 +385,32 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
     {
         Log.Logger.Debug("======Starting recreating sequence======");
         // The render thread must not draw while the devices it draws with are destroyed and remade.
+        OnDevicesRecreating();
+        try
+        {
+            RecreateUnderRenderGate();
+        }
+        finally
+        {
+            OnDevicesRecreated();
+        }
+
+        Log.Logger.Debug("======Finish recreating sequence======");
+    }
+
+    /// <summary>Called before the devices are destroyed and remade, on the loop thread: whatever else draws with them has
+    /// to stop drawing until <see cref="OnDevicesRecreated"/>.</summary>
+    protected virtual void OnDevicesRecreating()
+    {
+    }
+
+    /// <summary>Called once the devices are remade (or remaking them failed).</summary>
+    protected virtual void OnDevicesRecreated()
+    {
+    }
+
+    private void RecreateUnderRenderGate()
+    {
         lock (_renderGate)
         {
             EntityWorld.RemoveAllServices();
@@ -403,7 +431,6 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
             EntityWorld.ForceUpdate();
             Interlocked.Exchange(ref _framesInFlight, 0);
         }
-        Log.Logger.Debug("======Finish recreating sequence======");
     }
 
     private void CreateWindowService(IWindow window)
@@ -1128,6 +1155,17 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         Interlocked.Increment(ref _framesInFlight);
     }
 
+    private void CountWindowFrame()
+    {
+        _countedFrames++;
+        var elapsed = Stopwatch.GetElapsedTime(_countingSince).TotalSeconds;
+        if (elapsed < 1) return;
+
+        RuntimeStats.WindowFps = _countedFrames / elapsed;
+        _countedFrames = 0;
+        _countingSince = Stopwatch.GetTimestamp();
+    }
+
     // Draws at its own pace with whatever the loop has published; with nothing new it replays the retained frame.
     private void RenderThread()
     {
@@ -1143,6 +1181,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
                 {
                     var withheld = Rendering.RenderCache.WithheldFrames;
                     ExecuteDrawSequence(_renderAppTime);
+                    CountWindowFrame();
                     if (Rendering.RenderCache.WithheldFrames == withheld)
                     {
                         Volatile.Write(ref _presentedFrame, drawing);
@@ -1295,12 +1334,12 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         if (_isShuttingDown) return;
         _isShuttingDown = true;
 
-        ShuttingDown?.Invoke(this, EventArgs.Empty);
-
         // Cancel so no frame starts, then take the gate to wait out the one in flight; the render thread then exits by itself.
         cancellationTokenSource.Cancel();
         lock (_renderGate)
         {
+            // Under the gate: its handlers unload the services, which a frame or a closing window's teardown may be using.
+            ShuttingDown?.Invoke(this, EventArgs.Empty);
             ContentUnloading?.Invoke(this, EventArgs.Empty);
             // Windows may still be open under OnExplicitShutDown; their services go before the device.
             foreach (var service in new List<WindowRenderService>(windowToSystem.Values))
