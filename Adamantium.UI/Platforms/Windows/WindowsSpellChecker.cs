@@ -57,15 +57,20 @@ internal sealed class WindowsSpellChecker : Core.Text.ISpellChecker
         {
             while (errors.Next(out var error) == 0 && error != null)
             {
-                if (error.GetStartIndex(out var start) == 0 && error.GetLength(out var count) == 0 && count > 0
-                    && (error.GetCorrectiveAction(out var action) != 0 || action != CorrectiveAction.Delete)
-                    && start + count <= length
-                    && !Ignored(language, text.Substring(from + (int)start, (int)count)))
+                try
                 {
-                    AddOrSplit(checker, text, from + (int)start, (int)count, language, found);
+                    if (error.GetStartIndex(out var start) == 0 && error.GetLength(out var count) == 0 && count > 0
+                        && (error.GetCorrectiveAction(out var action) != 0 || action != CorrectiveAction.Delete)
+                        && start + count <= length
+                        && !Ignored(language, text.Substring(from + (int)start, (int)count)))
+                    {
+                        AddOrSplit(checker, text, from + (int)start, (int)count, language, found);
+                    }
                 }
-
-                Marshal.ReleaseComObject(error);
+                finally
+                {
+                    Marshal.ReleaseComObject(error);
+                }
             }
         }
         finally
@@ -74,8 +79,11 @@ internal sealed class WindowsSpellChecker : Core.Text.ISpellChecker
         }
     }
 
-    // The checker may take words joined by a symbol - "Shift+Tab", "a=b" - as one, and call the whole wrong: each side
-    // of the symbol is checked as the word it is.
+    // The checker may take words joined by a math symbol - "Shift+Tab", "a=b" - as one, and call the whole wrong: each
+    // side is checked as the word it is. Not at other symbols: an accent typed for an apostrophe ("it´z") stays a word.
+    private static bool Joins(char c) =>
+        char.GetUnicodeCategory(c) == System.Globalization.UnicodeCategory.MathSymbol;
+
     [SupportedOSPlatform("windows")]
     private void AddOrSplit(NativeChecker checker, string text, int start, int length, string language,
         List<TextRange> found)
@@ -83,7 +91,7 @@ internal sealed class WindowsSpellChecker : Core.Text.ISpellChecker
         var joined = false;
         for (var i = start; i < start + length && !joined; i++)
         {
-            joined = char.IsSymbol(text[i]);
+            joined = Joins(text[i]);
         }
 
         if (!joined)
@@ -95,7 +103,7 @@ internal sealed class WindowsSpellChecker : Core.Text.ISpellChecker
         var piece = start;
         for (var i = start; i <= start + length; i++)
         {
-            if (i < start + length && !char.IsSymbol(text[i]))
+            if (i < start + length && !Joins(text[i]))
             {
                 continue;
             }

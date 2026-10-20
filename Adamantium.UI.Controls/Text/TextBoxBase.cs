@@ -923,7 +923,9 @@ public abstract class TextBoxBase : Control, ITextStyleUser, Adamantium.UI.Core.
             }
 
             var caret = SurfaceCaret(CaretIndex);
-            return _presenter.TranslatePoint(new Vector2(caret.X, caret.Bottom), this);
+            var at = _presenter.TranslatePoint(new Vector2(caret.X, caret.Bottom), this);
+            // A caret scrolled out of sight opens it at the box's nearest edge, not off where the line went.
+            return new Vector2(Math.Clamp(at.X, 0, RenderSize.Width), Math.Clamp(at.Y, 0, RenderSize.Height));
         }
     }
 

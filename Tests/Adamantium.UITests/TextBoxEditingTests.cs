@@ -424,8 +424,9 @@ public class TextBoxEditingTests
         {
             Assert.That(checker.Check("Bulleted; Tab and Shift+Tab step a level, Enter in an empty item leaves the list",
                 "en-US"), Is.Empty);
-            Assert.That(checker.Check("Bulleted; Tab and Shfit+Tab step a level", "en-US"),
-                Is.EqualTo(new[] { new TextRange(18, 5) }));
+            Assert.That(checker.Check("Bulleted; Tab and Shfit+Tab step a level, then wrold", "en-US"),
+                Is.EqualTo(new[] { new TextRange(18, 5), new TextRange(47, 5) }), "and the words after it still checked");
+            Assert.That(checker.Check("it´z", "en-US"), Has.Count.EqualTo(1), "an accent for an apostrophe joins nothing");
         });
     }
 

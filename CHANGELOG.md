@@ -1683,8 +1683,8 @@ All packages share one version.
 
 ### Fixed
 
-- Windows spelling no longer calls words joined by a symbol wrong as one ("Shift+Tab" offered as "Shift Tab"): each
-  side of the symbol is checked as the word it is.
+- Windows spelling no longer calls words joined by a math symbol wrong as one ("Shift+Tab" offered as "Shift Tab"):
+  each side of the symbol is checked as the word it is.
 - Escape on a menu dropped by a click closes the menu: the button's hover tip, opened after the press, was the
   innermost popup and took the key.
 - A ribbon tab with a key tip of its own no longer wears a second badge among its commands.
