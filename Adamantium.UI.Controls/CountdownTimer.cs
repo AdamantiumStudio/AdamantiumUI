@@ -12,8 +12,8 @@ namespace Adamantium.UI.Controls;
 
 /// <summary>A countdown: a <see cref="Clock"/> that counts <see cref="Duration"/> down to zero once started - with hands
 /// going back round a face ringed at its rim as far as is still left of the whole, with no second hand; or in figures,
-/// as <see cref="ClockStyle"/> says.
-/// Started, paused and reset by the buttons it shows (<see cref="ShowButtons"/>), its commands or its methods. It keeps
+/// as <see cref="ClockStyle"/> says. Standing at its whole length it shows a field to set the length in instead
+/// (<see cref="ShowDurationField"/>). Started, paused and reset by the buttons it shows (<see cref="ShowButtons"/>), its commands or its methods. It keeps
 /// counting while it is out of the tree - a countdown on a hidden page still ends on time. At zero it stops and runs
 /// <see cref="CompletedCommand"/>.</summary>
 public class CountdownTimer : Control
@@ -35,6 +35,12 @@ public class CountdownTimer : Control
         typeof(bool), typeof(CountdownTimer), new PropertyMetadata(true));
 
     public static readonly AdamantiumProperty ShowButtonsProperty = AdamantiumProperty.Register(nameof(ShowButtons),
+        typeof(bool), typeof(CountdownTimer), new PropertyMetadata(true));
+
+    public static readonly AdamantiumProperty ShowDurationFieldProperty = AdamantiumProperty.Register(
+        nameof(ShowDurationField), typeof(bool), typeof(CountdownTimer), new PropertyMetadata(true));
+
+    public static readonly AdamantiumProperty IsAtStartProperty = AdamantiumProperty.RegisterReadOnly(nameof(IsAtStart),
         typeof(bool), typeof(CountdownTimer), new PropertyMetadata(true));
 
     public static readonly AdamantiumProperty CompletedCommandProperty = AdamantiumProperty.Register(
@@ -102,6 +108,21 @@ public class CountdownTimer : Control
     {
         get => GetValue<bool>(ShowButtonsProperty);
         set => SetValue(ShowButtonsProperty, value);
+    }
+
+    /// <summary>Shows a field for <see cref="Duration"/> in place of the clock while it stands at its whole length
+    /// (<see cref="IsAtStart"/>); on by default. Off, the clock shows then too.</summary>
+    public bool ShowDurationField
+    {
+        get => GetValue<bool>(ShowDurationFieldProperty);
+        set => SetValue(ShowDurationFieldProperty, value);
+    }
+
+    /// <summary>Whether it stands at its whole <see cref="Duration"/>: not started yet, or reset.</summary>
+    public bool IsAtStart
+    {
+        get => GetValue<bool>(IsAtStartProperty);
+        private set => SetValue(IsAtStartProperty, value);
     }
 
     /// <summary>What runs when it reaches zero.</summary>
@@ -269,6 +290,7 @@ public class CountdownTimer : Control
 
         var left = Left();
         Remaining = TimeSpan.FromSeconds(Math.Ceiling(left.TotalSeconds));
+        IsAtStart = !IsRunning && _left == Allowed(Duration);
         _clock?.Count(_left, -1, _since, Allowed(Duration));
         _tick?.Stop();
         if (IsRunning && (LoopSignal.IsClaimed || System.Threading.SynchronizationContext.Current != null))

@@ -115,6 +115,31 @@ public class TextSelectionThemeTests
     [TestCase("Fluent")]
     [TestCase("Graphite")]
     [TestCase("MacOs")]
+    public void ADropDownAndASplitButtonsCaptionDoesNotSelect(string theme)
+    {
+        Use(theme);
+        var drop = new DropDownButton { Content = "Share" };
+        var split = new SplitButton { Content = "Paste" };
+        var toggle = new ToggleSplitButton { Content = "Bold" };
+        var panel = new Adamantium.UI.Controls.Panels.StackPanel();
+        panel.Children.Add(drop);
+        panel.Children.Add(split);
+        panel.Children.Add(toggle);
+
+        Shown(panel);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(Saying(drop, "Share")?.IsTextSelectionEnabled, Is.False);
+            Assert.That(Saying(split, "Paste")?.IsTextSelectionEnabled, Is.False);
+            Assert.That(Saying(toggle, "Bold")?.IsTextSelectionEnabled, Is.False);
+        });
+    }
+
+    [Test]
+    [TestCase("Fluent")]
+    [TestCase("Graphite")]
+    [TestCase("MacOs")]
     public void ACalendarsTextDoesNotSelect(string theme)
     {
         Use(theme);

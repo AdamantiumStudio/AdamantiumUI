@@ -83,6 +83,10 @@
     <Thickness x:Key="RibbonButtonPaddingSmall">4 1</Thickness>
     <sys:Double x:Key="RibbonMenuItemHeight">34</sys:Double>
     <Thickness x:Key="RibbonBackstagePadding">14 0</Thickness>
+    <!-- A split button's two halves, its outline's radius cut in half down the seam. -->
+    <CornerRadius x:Key="SplitButtonLeadingRadius">3 0 0 3</CornerRadius>
+    <CornerRadius x:Key="SplitButtonTrailingRadius">0 3 3 0</CornerRadius>
+    <Thickness x:Key="SplitButtonArrowPadding">6 0</Thickness>
     <!-- SQUARE, like every other plate in this theme. They are still two keys rather than one zero, because they are
          the two HALVES of a split button and a theme that does round its commands rounds only the outer corners. -->
     <CornerRadius x:Key="RibbonSplitLeadingRadius">0</CornerRadius>

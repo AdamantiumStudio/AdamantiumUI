@@ -115,8 +115,8 @@
         <Setter Property="RingThickness" Value="4"/>
     </Style>
 
-    <!-- A countdown: its clock, and under it what starts, pauses and resets it. The start button gives way to the pause
-         button while it runs. -->
+    <!-- A countdown: its clock - or, standing at its whole length, a field to set that length in - and under it what
+         starts, pauses and resets it. The start button gives way to the pause button while it runs. -->
     <Style Selector="CountdownTimer">
         <Setter Property="Template">
             <Setter.Value>
@@ -125,6 +125,12 @@
                         <Clock x:Name="PART_Clock"
                                ClockStyle="{TemplateBinding ClockStyle}"
                                ShowSeconds="{TemplateBinding ShowSeconds}"/>
+                        <DurationField x:Name="PART_Duration"
+                                       Value="{TemplateBinding Duration, Mode=TwoWay}"
+                                       Minimum="0:00:00"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"
+                                       Visibility="Collapsed"/>
                         <StackPanel x:Name="Buttons"
                                     Grid.Row="1"
                                     Classes="ClockButtons">
@@ -150,6 +156,14 @@
             <Setter TargetName="PART_Start" Property="Visibility" Value="Collapsed"/>
             <Setter TargetName="PART_Pause" Property="Visibility" Value="Visible"/>
         </PropertyTrigger>
+        <MultiTrigger>
+            <MultiTrigger.Conditions>
+                <Condition Property="IsAtStart" Value="true"/>
+                <Condition Property="ShowDurationField" Value="true"/>
+            </MultiTrigger.Conditions>
+            <Setter TargetName="PART_Clock" Property="Visibility" Value="Collapsed"/>
+            <Setter TargetName="PART_Duration" Property="Visibility" Value="Visible"/>
+        </MultiTrigger>
         <PropertyTrigger Property="ShowButtons" Value="false">
             <Setter TargetName="Buttons" Property="Visibility" Value="Collapsed"/>
         </PropertyTrigger>

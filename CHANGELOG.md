@@ -13,6 +13,19 @@ All packages share one version.
 - `ColorPalette.ColorPlaces` and `HasRecentColors`, and `ColorPaletteSwatch.SelectedColor` and `IsSelected`: the swatch
   of the palette's selected color is ringed, in the grid and in the recent row, and the recent row with its title is
   shown only once a color has been applied through "More colors".
+- `DropDownButton`, `SplitButton` and `ToggleSplitButton`: buttons that drop a list of their items, as `DropDown` does
+  - `ItemsControl`s, the items written in place as `DropDownButtonItem`s or made for `ItemsSource` and shown by
+  `ItemTemplate` - but a picked item is an action, not a value kept: it runs its own command, then `ItemCommand` with
+  the item, and raises `ItemClick`; a row with no command of its own that `ItemCommand` cannot run for is drawn
+  disabled and cannot be picked (`DropDownButtonItem.IsAvailable`) - its own `IsEnabled` is left to its author. Rows
+  written in place take the button's data. A disabled button closes its list and does not open it. A press on the
+  button, Enter, Space, Alt+Down and F4 open the list, the arrows walk it past disabled rows and Enter picks; Escape,
+  Alt+Up, a pick and a press elsewhere close it. A split button's body (`Command`, `Click`) is pressed by Enter and
+  Space, its arrow (`PART_DropDownArea`) drops the list, each half lit on its own (`IsPointerOverDropDown`); a body
+  whose command cannot run is disabled alone (`IsBodyEnabled`) and the list stays reachable. A toggle split button's
+  body stays down (`IsChecked`, two-way) and shows what a routed command's target answers. Automation: a button that
+  expands, a split button that is also invoked, a toggle split button that also toggles; the rows, while the list is
+  open, are menu items. Styles in Fluent, Graphite and macOS; the sandbox's "Buttons" tab has all three.
 - A key binding runs from anywhere in its window, not only while the focus is in its element. The whole way up from the
   focus has the key first - the window's default and cancel buttons and the Tab and arrow navigation too - then the
   binding nearest to the focus whose element is shown and enabled; Esc clears the focus only when no binding takes it.
@@ -88,7 +101,9 @@ All packages share one version.
   shows. It runs in the designer's live preview too.
 - `CountdownTimer` and `StopwatchTimer`: a countdown of a `Duration` and a stopwatch, on a `Clock` in any of its
   styles - with hands, which a countdown turns back round a face ringed at its rim as far as is still left of the whole
-  (with no second hand), or in figures counting hours past a day, a digit more past a hundred. A countdown rounds up
+  (with no second hand), or in figures counting hours past a day, a digit more past a hundred. Standing at its whole
+  length (`IsAtStart` - not started, or reset) a countdown shows a `DurationField` for its `Duration` in place of the
+  clock (`ShowDurationField`, on by default). A countdown rounds up
   - to the minute when it shows no seconds - and its colon blinks with its figures. Started, paused
   and reset (and lapped) by the buttons they show (`ShowButtons`; the keyboard passes to the button that takes the
   pressed one's place), by their commands (`StartCommand`, `PauseCommand`, `ResetCommand`, `LapCommand`) or their

@@ -381,6 +381,59 @@ public class TimerTests
     }
 
     [Test]
+    public void StandingAtItsWholeLength_ACountdownShowsAFieldForIt_InPlaceOfItsClock()
+    {
+        LoopSignal.Claim();
+        try
+        {
+            var timer = Shown(new CountdownTimer { Duration = TimeSpan.FromMinutes(3) });
+            var field = (DurationField)timer.GetTemplateChild("PART_Duration");
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(timer.IsAtStart);
+                Assert.That(field.Visibility, Is.EqualTo(Visibility.Visible));
+                Assert.That(timer.Clock.Visibility, Is.EqualTo(Visibility.Collapsed));
+                Assert.That(field.Value, Is.EqualTo(TimeSpan.FromMinutes(3)));
+            });
+
+            field.Value = TimeSpan.FromMinutes(10);
+            Settle();
+            Assert.That(timer.Duration, Is.EqualTo(TimeSpan.FromMinutes(10)), "the field sets the length");
+
+            timer.Start();
+            Settle();
+            Assert.That(field.Visibility, Is.EqualTo(Visibility.Collapsed), "running, the clock");
+            Assert.That(timer.Clock.Visibility, Is.EqualTo(Visibility.Visible));
+
+            timer.Pause();
+            Settle();
+            Assert.That(timer.Clock.Visibility, Is.EqualTo(Visibility.Visible), "paused part way, still the clock");
+
+            timer.Reset();
+            Settle();
+            Assert.That(field.Visibility, Is.EqualTo(Visibility.Visible), "reset, the field again");
+        }
+        finally
+        {
+            LoopSignal.Unclaim();
+        }
+    }
+
+    [Test]
+    public void WithoutTheDurationField_TheClockShowsWhileItStands()
+    {
+        var timer = Shown(new CountdownTimer { ShowDurationField = false });
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(timer.IsAtStart);
+            Assert.That(((UIComponent)timer.GetTemplateChild("PART_Duration")).Visibility, Is.EqualTo(Visibility.Collapsed));
+            Assert.That(timer.Clock.Visibility, Is.EqualTo(Visibility.Visible));
+        });
+    }
+
+    [Test]
     public void WithoutTheLapsShown_TheLapButtonGoesToo()
     {
         var stopwatch = Shown(new StopwatchTimer { ShowLaps = false });

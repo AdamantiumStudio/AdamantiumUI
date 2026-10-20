@@ -32,4 +32,8 @@
     <Style Selector="ScrollBar, Slider, RangeSlider, NumericUpDown, Thumb, GridSplitter, PaneSplitter">
         <Setter Property="TextBlock.IsTextSelectionEnabled" Value="False"/>
     </Style>
+
+    <Style Selector="DropDownButton, SplitButton, ToggleSplitButton, DropDownButtonItem">
+        <Setter Property="TextBlock.IsTextSelectionEnabled" Value="False"/>
+    </Style>
 </StyleSet>
