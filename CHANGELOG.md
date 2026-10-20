@@ -1338,6 +1338,8 @@ All packages share one version.
 
 ### Changed
 
+- A text box's placeholder shows while the box is empty with the keyboard in it too, as a browser's and the platforms'
+  fields keep it: a search box opened with the keyboard in it said nothing of what it was for.
 - A menu dropped from a button, a collapsed ribbon group's flyout and the application menu open at the button's left
   edge, as Office drops them, not centered under it.
 - A click on a ribbon tab picks it and leaves the keyboard in the field being edited, as a ribbon command does; so

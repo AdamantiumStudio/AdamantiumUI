@@ -20,6 +20,27 @@ public class TextBoxTests
     private static void Press(TextBox tb, Key key, InputModifiers modifiers = InputModifiers.None)
         => tb.RaiseEvent(new KeyEventArgs(KeyboardDevice.CurrentDevice, key, modifiers, 0) { RoutedEvent = Keyboard.KeyDownEvent });
 
+    // Shown while the box is empty, the keyboard in it or not: a search box opened with the keyboard in it said nothing
+    // of what it was for.
+    [Test]
+    public void ThePlaceholder_ShowsWhileEmpty_FocusedToo()
+    {
+        var box = new TextBox { Placeholder = "Find" };
+        _ = new Adamantium.UI.Controls.Panels.StackPanel { Children = { box } };
+        FocusManager.Focus(box);
+        var focusedEmpty = box.ShowsInlinePlaceholder;
+
+        Type(box, "a");
+        var typed = box.ShowsInlinePlaceholder;
+        FocusManager.ResetFocus();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(focusedEmpty, Is.True);
+            Assert.That(typed, Is.False);
+        });
+    }
+
     [Test]
     public void ThePlaceholder_IsSetWithTheBoxsTypography()
     {

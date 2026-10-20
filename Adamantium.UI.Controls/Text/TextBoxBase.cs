@@ -300,7 +300,7 @@ public abstract class TextBoxBase : Control, ITextStyleUser, Adamantium.UI.Core.
         set => ScrollViewer.SetVerticalScrollBarVisibility(this, value);
     }
 
-    /// <summary>Prompt text shown (in <see cref="PlaceholderForeground"/>) while the control is empty and unfocused.</summary>
+    /// <summary>Prompt text shown (in <see cref="PlaceholderForeground"/>) while the control is empty, focused or not.</summary>
     public string Placeholder
     {
         get => GetValue<string>(PlaceholderProperty);
@@ -1563,12 +1563,13 @@ public abstract class TextBoxBase : Control, ITextStyleUser, Adamantium.UI.Core.
             DrawMisspellings(session, ox, oy);
         }
 
-        // Placeholder: floating label (always visible, animates up/shrinks) or the classic in-line prompt (only while
-        // empty and unfocused).
+        // Placeholder: floating label (always visible, animates up/shrinks) or the classic in-line prompt, while empty -
+        // focused too, as a browser's and the platforms' fields keep it: a search box opened with the keyboard in it
+        // said nothing of what it was for.
         if (!string.IsNullOrEmpty(Placeholder))
         {
             if (FloatingPlaceholder) RenderFloatingPlaceholder(session, size);
-            else if (!hasText && !IsFocused) RenderPlaceholder(session, size);
+            else if (ShowsInlinePlaceholder) RenderPlaceholder(session, size);
         }
 
         // Caret.
@@ -1648,6 +1649,9 @@ public abstract class TextBoxBase : Control, ITextStyleUser, Adamantium.UI.Core.
     internal UIComponent TextSurface => _presenter;
 
     internal TextLayout Layout => _textLayout;
+
+    internal bool ShowsInlinePlaceholder =>
+        !FloatingPlaceholder && !string.IsNullOrEmpty(Placeholder) && EditedText.Length == 0;
 
     internal TextLayout PlaceholderLayout()
     {
