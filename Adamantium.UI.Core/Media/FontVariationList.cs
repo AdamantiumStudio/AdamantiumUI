@@ -1,5 +1,4 @@
 using System.Collections;
-using System.Globalization;
 using System.Runtime.CompilerServices;
 using Adamantium.Core.TypeParsing;
 using Adamantium.Fonts;
@@ -63,34 +62,7 @@ public sealed class FontVariationList : IReadOnlyList<FontVariation>, IEquatable
     /// <summary>Parses <c>wght=650, opsz=auto</c>: four-letter axis tags, each with a number or, for <c>opsz</c>,
     /// <c>auto</c>.</summary>
     /// <exception cref="FormatException">An entry is not a tag, '=' and a value.</exception>
-    public static FontVariationList Parse(string text)
-    {
-        var variations = new List<FontVariation>();
-        foreach (var entry in (text ?? string.Empty).Split(',', StringSplitOptions.RemoveEmptyEntries))
-        {
-            var parts = entry.Split('=');
-            var tag = parts[0].Trim().Trim('"', '\'');
-            if (parts.Length != 2 || tag.Length != 4)
-            {
-                throw new FormatException($"'{entry.Trim()}' is not an axis and its value, as wght=650");
-            }
-
-            var value = parts[1].Trim();
-            if (tag == "opsz" && value == "auto")
-            {
-                continue;
-            }
-
-            if (!float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var number))
-            {
-                throw new FormatException($"'{value}' is not a value for the axis {tag}");
-            }
-
-            variations.Add(new FontVariation(tag, number));
-        }
-
-        return new FontVariationList(variations);
-    }
+    public static FontVariationList Parse(string text) => new(FontVariation.ParseList(text));
 
     /// <summary><paramref name="font"/> with these values over the ones it has; the font itself when there are none.</summary>
     public IFont Apply(IFont font)
