@@ -12,6 +12,7 @@ using Adamantium.UI.Controls.Text;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Dispatcher;
+using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Localization;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.Media.Animation;
@@ -176,7 +177,35 @@ public class Clock : Control
     private bool Running => _counting ? _countSince != null : IsLive;
 
     /// <summary>Whether it shows with hands rather than figures.</summary>
-    public bool IsAnalog => ClockStyle is ClockStyle.Classic or ClockStyle.Minimal or ClockStyle.Roman or ClockStyle.Dots;
+    public bool IsAnalog => HasHands(ClockStyle);
+
+    internal static bool HasHands(ClockStyle style) =>
+        style is ClockStyle.Classic or ClockStyle.Minimal or ClockStyle.Roman or ClockStyle.Dots;
+
+    internal DurationParts PartAt(PointerPressedEventArgs e)
+    {
+        var best = DurationParts.None;
+        var nearest = double.MaxValue;
+
+        void Try(IInputComponent element, DurationParts part)
+        {
+            if (element == null) return;
+            var x = e.GetPosition(element).X;
+            var width = element.RenderSize.Width;
+            var distance = x < 0 ? -x : x > width ? x - width : 0;
+            if (distance < nearest)
+            {
+                nearest = distance;
+                best = part;
+            }
+        }
+
+        for (var i = 0; i < _digits.Count; i++) Try(_digits[i][0].VisualParent as IInputComponent, PartOf(i));
+        for (var i = 0; i < _cards.Count; i++) Try(_cards[i], PartOf(i));
+        for (var i = 0; i < _texts.Count; i++)
+            Try(_texts[i], i == 0 ? DurationParts.Hours : i == 1 ? DurationParts.Minutes : DurationParts.Seconds);
+        return best;
+    }
 
     /// <summary>The face its hands go round, while it shows with hands.</summary>
     public ClockFace Face { get; private set; }

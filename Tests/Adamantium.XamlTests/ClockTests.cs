@@ -5,6 +5,8 @@ using Adamantium.UI.Controls;
 using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Controls.Buttons;
+using Adamantium.UI.Controls.Decorators;
+using Adamantium.UI.Controls.Text;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Input;
@@ -219,6 +221,35 @@ public class ClockTests
 
         Assert.That(clock.Texts.Select(t => t.Text), Is.EqualTo(new[] { hours, minutes, seconds }));
         Assert.That(clock.Texts[0].FontSize, Is.EqualTo(clock.FontSize), "figures as large as the clock asks");
+    }
+
+    [Test]
+    public void TheMarkedPart_IsLitInEveryStyleOfFigures()
+    {
+        Clock Marked(ClockStyle style)
+        {
+            var clock = At(style, 18, 45, 0);
+            clock.MarkedParts = DurationParts.Minutes;
+            return Shown(clock);
+        }
+
+        var flip = Marked(ClockStyle.Flip);
+        var text = Marked(ClockStyle.Text);
+        var segments = Marked(ClockStyle.SevenSegment);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(segments.Digits[2].Where(s => !s.Classes.Contains("ClockSegmentOff")),
+                Is.All.Matches<Border>(s => s.Classes.Contains("ClockSegmentMarked")));
+            Assert.That(segments.Digits[0].Any(s => s.Classes.Contains("ClockSegmentMarked")), Is.False);
+            Assert.That(((TextBlock)flip.Cards[2].Child).Classes.Contains("ClockFlipFigureMarked"));
+            Assert.That(((TextBlock)flip.Cards[0].Child).Classes.Contains("ClockFlipFigureMarked"), Is.False);
+            Assert.That(text.Texts[1].Classes.Contains("ClockTextMarked"));
+            Assert.That(text.Texts[0].Classes.Contains("ClockTextMarked"), Is.False);
+        });
+
+        segments.MarkedParts = DurationParts.None;
+        Assert.That(segments.Digits.SelectMany(d => d).Any(s => s.Classes.Contains("ClockSegmentMarked")), Is.False);
     }
 
     [Test]

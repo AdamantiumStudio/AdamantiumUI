@@ -104,9 +104,10 @@ All packages share one version.
   (with no second hand), or in figures counting hours past a day, a digit more past a hundred. Standing at its whole
   length (`IsAtStart` - not started, or reset) a countdown's `Duration` is set in place (`ShowDurationField`, on by
   default): a face with hands gives way to a frameless `DurationField` in figures as large as the room takes, the
-  part being typed marked by its figures alone (`FieldSegment.Marking`); figures stay the clock's own, take what is
-  typed into them as it is typed and light the part being set (`Clock.MarkedParts`, `DurationField.ActivePart` and
-  `ShownValue`, `CountdownTimer.IsAnalog`). A countdown rounds up - to the minute when it shows no seconds - and its
+  part being typed marked by its figures alone (`FieldSegment.Marking`); figures stay the clock's own, a press on them
+  picks the part pressed, they take what is typed into them as it is typed and light the part being set
+  (`Clock.MarkedParts`, `DurationField.ActivePart` and `ShownValue`, `CountdownTimer.IsAnalog`). Without seconds shown
+  there are none to type; a length typed from nothing lets it start. A countdown rounds up - to the minute when it shows no seconds - and its
   colon blinks with its figures. Started, paused
   and reset (and lapped) by the buttons they show (`ShowButtons`; the keyboard passes to the button that takes the
   pressed one's place), by their commands (`StartCommand`, `PauseCommand`, `ResetCommand`, `LapCommand`) or their

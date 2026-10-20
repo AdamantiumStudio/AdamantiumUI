@@ -153,6 +153,12 @@
                                            MinWidth="0"
                                            MinHeight="0"
                                            FieldSegment.Marking="Figures">
+                                <!-- No ring: the part lit in the accent shows where the keyboard is. -->
+                                <DurationField.FocusVisualStyle>
+                                    <Style Selector="FocusAdorner">
+                                        <Setter Property="Visibility" Value="Hidden"/>
+                                    </Style>
+                                </DurationField.FocusVisualStyle>
                                 <DurationField.Template>
                                     <ControlTemplate TargetType="Control">
                                         <FieldSegmentPanel x:Name="PART_Segments"
@@ -202,9 +208,15 @@
                 <Condition Property="ShowDurationField" Value="true"/>
                 <Condition Property="IsAnalog" Value="false"/>
             </MultiTrigger.Conditions>
+            <!-- Unseen, never larger than it is, and not in the way of a press: the clock picks the part pressed. -->
             <Setter TargetName="Length" Property="Visibility" Value="Visible"/>
             <Setter TargetName="Length" Property="Opacity" Value="0"/>
+            <Setter TargetName="Length" Property="StretchDirection" Value="DownOnly"/>
+            <Setter TargetName="Length" Property="IsHitTestVisible" Value="False"/>
         </MultiTrigger>
+        <PropertyTrigger Property="ShowSeconds" Value="false">
+            <Setter TargetName="PART_Duration" Property="Parts" Value="Hours, Minutes"/>
+        </PropertyTrigger>
         <PropertyTrigger Property="ShowButtons" Value="false">
             <Setter TargetName="Buttons" Property="Visibility" Value="Collapsed"/>
         </PropertyTrigger>

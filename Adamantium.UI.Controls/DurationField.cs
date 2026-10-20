@@ -539,6 +539,15 @@ public class DurationField : Control, ISegmentHost
 
     internal void FinishTyping() => Commit();
 
+    internal void ActivatePart(DurationParts part)
+    {
+        var index = _segments.FindIndex(s => s.Part == part);
+        if (index >= 0)
+        {
+            Activate(index);
+        }
+    }
+
     private void Commit()
     {
         if (_typed.Length == 0 || _active < 0 || _active >= _segments.Count)

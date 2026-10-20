@@ -6,6 +6,7 @@ using Adamantium.UI.Controls.Primitives;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Dispatcher;
+using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls;
@@ -30,8 +31,7 @@ public class CountdownTimer : Control
 
     public static readonly AdamantiumProperty ClockStyleProperty = AdamantiumProperty.Register(nameof(ClockStyle),
         typeof(ClockStyle), typeof(CountdownTimer), new PropertyMetadata(ClockStyle.Classic,
-            (a, e) => ((CountdownTimer)a).IsAnalog = (ClockStyle)e.NewValue is ClockStyle.Classic or ClockStyle.Minimal
-                or ClockStyle.Roman or ClockStyle.Dots));
+            (a, e) => ((CountdownTimer)a).IsAnalog = Clock.HasHands((ClockStyle)e.NewValue)));
 
     public static readonly AdamantiumProperty IsAnalogProperty = AdamantiumProperty.RegisterReadOnly(nameof(IsAnalog),
         typeof(bool), typeof(CountdownTimer), new PropertyMetadata(true));
@@ -65,7 +65,8 @@ public class CountdownTimer : Control
 
     public CountdownTimer()
     {
-        _start = new ClockAction(Start, () => !IsRunning && Left() > TimeSpan.Zero);
+        _start = new ClockAction(Start, () => !IsRunning &&
+            (Left() > TimeSpan.Zero || IsAtStart && _length?.ShownValue > TimeSpan.Zero));
         _pause = new ClockAction(Pause, () => IsRunning);
         _reset = new ClockAction(Reset, () => IsRunning || Left() != Allowed(Duration));
     }
@@ -221,13 +222,41 @@ public class CountdownTimer : Control
         _clock = null;
     }
 
+    protected override void OnPreviewPointerPressed(PointerPressedEventArgs e)
+    {
+        base.OnPreviewPointerPressed(e);
+        if (e.ChangedButton != MouseButtons.Left || !IsAtStart || !ShowDurationField || IsAnalog || _clock == null ||
+            _length == null)
+        {
+            return;
+        }
+
+        var at = e.GetPosition(_clock);
+        if (at.X < 0 || at.Y < 0 || at.X > _clock.RenderSize.Width || at.Y > _clock.RenderSize.Height)
+        {
+            return;
+        }
+
+        var part = _clock.PartAt(e);
+        _length.Focus();
+        _length.ActivatePart(part);
+        e.Handled = true;
+    }
+
     private void OnLengthChanged(object sender, AdamantiumPropertyChangedEventArgs e)
     {
-        if (e.Property == DurationField.ShownValueProperty && IsAtStart && _length.ShownValue is { } shown)
+        if (e.Property != DurationField.ShownValueProperty)
+        {
+            return;
+        }
+
+        if (IsAtStart && _length.ShownValue is { } shown)
         {
             var typed = Allowed(shown);
             _clock?.Count(typed, -1, null, typed);
         }
+
+        _start.RaiseCanExecuteChanged();
     }
 
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)

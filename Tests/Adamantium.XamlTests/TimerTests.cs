@@ -8,6 +8,7 @@ using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Controls.Buttons;
 using Adamantium.UI.Controls.Decorators;
 using Adamantium.UI.Controls.Shapes;
+using Adamantium.UI.Controls.Text;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Input;
@@ -408,6 +409,9 @@ public class TimerTests
             Assert.That(chrome.Background is null or Adamantium.UI.Core.Media.SolidColorBrush { Color.A: 0 },
                 "the part being typed is marked by its figures, not filled");
             Assert.That(FieldSegment.GetMarking(field.ActiveSegment), Is.EqualTo(FieldSegmentMarking.Figures));
+            var lit = ((TextBlock)field.ActiveSegment.GetTemplateChild("PART_Text")).Foreground;
+            var plain = ((TextBlock)field.Segments.First(s => !s.IsActive).GetTemplateChild("PART_Text")).Foreground;
+            Assert.That(lit, Is.Not.EqualTo(plain), "its figures are lit");
 
             field.SetCurrentValue(DurationField.ValueProperty, TimeSpan.FromMinutes(10));
             Settle();
@@ -483,6 +487,66 @@ public class TimerTests
         {
             FocusManager.ResetFocus();
         }
+    }
+
+    [Test]
+    public void InFigures_TheUnseenFieldTakesNoRoom_SoNothingMovesOnStart()
+    {
+        LoopSignal.Claim();
+        try
+        {
+            var timer = new CountdownTimer { ClockStyle = ClockStyle.SevenSegment, Duration = TimeSpan.FromSeconds(90), Width = 240 };
+            var row = new Adamantium.UI.Controls.Panels.StackPanel();
+            row.Children.Add(timer);
+            Shown(row);
+            var standing = timer.RenderSize.Height;
+
+            timer.Start();
+            Settle();
+
+            Assert.That(timer.RenderSize.Height, Is.EqualTo(standing).Within(0.5));
+            timer.Pause();
+        }
+        finally
+        {
+            LoopSignal.Unclaim();
+        }
+    }
+
+    [Test]
+    public void FromNoLength_APartTyped_LetsItStart()
+    {
+        LoopSignal.Claim();
+        try
+        {
+            var timer = Shown(new CountdownTimer { Duration = TimeSpan.Zero });
+            var field = (DurationField)timer.GetTemplateChild("PART_Duration");
+            Assert.That(timer.StartCommand.CanExecute(null), Is.False, "nothing to count");
+
+            FocusManager.Focus(field, NavigationMethod.Tab);
+            field.RaiseEvent(new TextInputEventArgs("2") { RoutedEvent = Keyboard.TextInputEvent });
+            Settle();
+            Assert.That(timer.StartCommand.CanExecute(null), "two hours typed");
+
+            timer.StartCommand.Execute(null);
+            Assert.That(timer.Duration, Is.EqualTo(TimeSpan.FromHours(2)));
+            Assert.That(timer.IsRunning);
+            timer.Pause();
+        }
+        finally
+        {
+            FocusManager.ResetFocus();
+            LoopSignal.Unclaim();
+        }
+    }
+
+    [Test]
+    public void WithoutSeconds_TheLengthHasNoSecondsToType()
+    {
+        var timer = Shown(new CountdownTimer { ShowSeconds = false });
+        var field = (DurationField)timer.GetTemplateChild("PART_Duration");
+
+        Assert.That(field.Parts, Is.EqualTo(DurationParts.Hours | DurationParts.Minutes));
     }
 
     [Test]

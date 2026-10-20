@@ -91,6 +91,15 @@ public class DurationFieldTests
         string.Concat(literals.Where(t => t.Visibility == Visibility.Visible).Select(t => t.Text));
 
     [Test]
+    public void ThePartBeingTyped_IsFilledInTheAccent_ByDefault()
+    {
+        var field = Shown(new DurationField { Value = TimeSpan.FromMinutes(5) });
+        var chrome = (Adamantium.UI.Controls.Decorators.Border)field.ActiveSegment.GetTemplateChild("Chrome");
+
+        Assert.That(chrome.Background is Adamantium.UI.Core.Media.SolidColorBrush { Color.A: > 0 }, "filled");
+    }
+
+    [Test]
     public void TooNarrowForItsParts_TheFieldSlidesToThePartBeingTyped()
     {
         var field = Shown(new DurationField { Width = 40, Value = TimeSpan.FromSeconds(5025) });
