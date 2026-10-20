@@ -660,7 +660,8 @@ public class WrapPanel : VirtualizingPanel, IHitTestChildren
       // The only shared write a tile arrange makes is RenderDirty.MarkGeometry (locked); diagnostic counters race harmlessly.
       if (_arrangeIndexBuf.Count >= ParallelArrangeThreshold)
       {
-         ParallelArrange.Run(_arrangeIndexBuf.Count, i => ArrangeAt(_arrangeIndexBuf[i]));
+         ParallelArrange.Run(this, _arrangeIndexBuf.Count, Owner.ItemContainerGenerator.IndexFromContainer,
+            i => ArrangeAt(_arrangeIndexBuf[i]));
       }
       else
       {

@@ -25,7 +25,7 @@ public class ParallelArrangeSizeChangedTests
         var pooled = 0;
         var arranging = Thread.CurrentThread;
 
-        ParallelArrange.Run(Count, i =>
+        ParallelArrange.Run(panel, Count, PositionIn(items), i =>
         {
             NoteThread(arranging, ref pooled);
             items[i].Arrange(new Rect(0, i * 10, 10 + i, 10));
@@ -52,7 +52,7 @@ public class ParallelArrangeSizeChangedTests
 
         heard.Clear();
         var arranging = Thread.CurrentThread;
-        ParallelArrange.Run(Count, i =>
+        ParallelArrange.Run(panel, Count, PositionIn(items), i =>
         {
             NoteThread(arranging, ref pooled);
             items[i].Width = 20 + i;
@@ -73,7 +73,7 @@ public class ParallelArrangeSizeChangedTests
         var heard = Listen(panel, out var foreign);
         var arranged = new bool[Count];
 
-        Assert.That(() => ParallelArrange.Run(Count, i =>
+        Assert.That(() => ParallelArrange.Run(panel, Count, PositionIn(items), i =>
         {
             items[i].Arrange(new Rect(0, i * 10, 10 + i, 10));
             arranged[i] = true;
@@ -112,11 +112,12 @@ public class ParallelArrangeSizeChangedTests
             }
         };
 
-        Assert.That(() => ParallelArrange.Run(Count, i => items[i].Arrange(new Rect(0, i * 10, 10 + i, 10))),
+        Assert.That(() => ParallelArrange.Run(panel, Count, PositionIn(items),
+                i => items[i].Arrange(new Rect(0, i * 10, 10 + i, 10))),
             Throws.Exception.SameAs(thrown));
 
         var arrangeFault = new NotSupportedException("arrange");
-        var both = Assert.Throws<AggregateException>(() => ParallelArrange.Run(Count, i =>
+        var both = Assert.Throws<AggregateException>(() => ParallelArrange.Run(panel, Count, PositionIn(items), i =>
         {
             items[i].Arrange(new Rect(0, i * 10, 20 + i, 10));
             if (i == Count - 1)
@@ -136,23 +137,79 @@ public class ParallelArrangeSizeChangedTests
         panel.Children.Add(innerPanel);
         var heard = Listen(panel, out var foreign);
 
-        ParallelArrange.Run(Count, i =>
+        const int middle = Count / 2;
+        int PositionOf(IUIComponent item)
         {
-            items[i].Arrange(new Rect(0, i * 10, 10 + i, 10));
-            if (i == 0)
+            if (item == innerPanel)
             {
-                ParallelArrange.Run(Count, j => innerItems[j].Arrange(new Rect(0, j * 10, 10 + j, 10)));
+                return middle;
             }
+
+            var index = items.IndexOf(item as Border);
+            return index < middle ? index : index + 1;
+        }
+
+        ParallelArrange.Run(panel, Count + 1, PositionOf, i =>
+        {
+            if (i == middle)
+            {
+                ParallelArrange.Run(innerPanel, Count, PositionIn(innerItems),
+                    j => innerItems[j].Arrange(new Rect(0, j * 10, 10 + j, 10)));
+                return;
+            }
+
+            items[i < middle ? i : i - 1].Arrange(new Rect(0, i * 10, 10 + i, 10));
         });
 
-        List<object> expected = [items[0], .. innerItems];
-        expected.AddRange(items.GetRange(1, Count - 1));
+        List<object> expected = [.. items.GetRange(0, middle), .. innerItems, .. items.GetRange(middle, Count - middle)];
         Assert.Multiple(() =>
         {
             Assert.That(foreign(), Is.EqualTo(0));
-            Assert.That(heard, Is.EqualTo(expected), "inside the outer item, in order");
+            Assert.That(heard, Is.EqualTo(expected), "the inner panel's in its place among the outer items");
         });
     }
+
+    [Test]
+    public void AfterAFaultedArrange_SizeChangedIsRaisedAtOnceAgain()
+    {
+        var (panel, items) = Panel();
+        var heard = Listen(panel, out _);
+
+        Assert.That(() => ParallelArrange.Run(panel, Count, PositionIn(items),
+            i => throw new InvalidOperationException()), Throws.InstanceOf<AggregateException>());
+
+        items[0].Arrange(new Rect(0, 0, 70, 10));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(panel.ArrangingInParallel, Is.Null);
+            Assert.That(heard, Is.EqualTo(new object[] { items[0] }));
+        });
+    }
+
+    [Test]
+    public void AnElementWithNoPlaceInTheArrange_IsRaisedAfterTheItems()
+    {
+        var (panel, items) = Panel();
+        var stray = new Border();
+        panel.Children.Add(stray);
+        stray.Measure(new Size(100, 10));
+        var heard = Listen(panel, out _);
+
+        ParallelArrange.Run(panel, Count, PositionIn(items), i =>
+        {
+            if (i == 0)
+            {
+                stray.Arrange(new Rect(0, 0, 33, 10));
+            }
+
+            items[i].Arrange(new Rect(0, i * 10, 10 + i, 10));
+        });
+
+        Assert.That(heard, Is.EqualTo((List<object>)[.. items, stray]));
+    }
+
+    private static Func<IUIComponent, int> PositionIn(List<Border> items) => item => items.IndexOf(item as Border);
 
     private static (StackPanel Panel, List<Border> Items) Panel()
     {

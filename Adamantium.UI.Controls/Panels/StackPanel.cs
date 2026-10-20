@@ -412,7 +412,8 @@ public class StackPanel : VirtualizingPanel
       // windows stay sequential.
       if (_arrangeIndexBuf.Count >= ParallelArrangeThreshold)
       {
-         ParallelArrange.Run(_arrangeIndexBuf.Count, i => ArrangeAt(_arrangeIndexBuf[i]));
+         ParallelArrange.Run(this, _arrangeIndexBuf.Count, Owner.ItemContainerGenerator.IndexFromContainer,
+            i => ArrangeAt(_arrangeIndexBuf[i]));
       }
       else
       {
