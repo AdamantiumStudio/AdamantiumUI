@@ -1,45 +1,42 @@
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Diagnostics;
 using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls.Base;
 
 public class ObservableUIComponent : UIComponent, IObservableComponent
 {
-    private readonly Dictionary<RoutedEvent, List<EventSubscription>> eventHandlers =
-        new Dictionary<RoutedEvent, List<EventSubscription>>();
-
-    // How many handlers this element carries, across all events. Maintained by Add/RemoveHandler under the same lock the
-    // dictionary is written with, but READ without one - which is the whole point: nearly every element in a big scene has
-    // none at all, and answering "is anyone listening" must not cost a lock per element per raise.
-    private volatile int handlerCount;
+    private readonly object handlersLock = new();
+    private volatile EventHandlerSet[] eventHandlers = [];
 
     public IObservableComponent ObservableParent => ((IUIComponent)this).VisualParent as IObservableComponent;
 
+    /// <summary>Adds a handler for <paramref name="routedEvent"/>. Added by a handler of this element during a raise, it
+    /// runs from the next raise on; added to an element the route has yet to reach, it runs in this one.</summary>
     public void AddHandler(RoutedEvent routedEvent, Delegate handler, bool handledEventsToo = false)
     {
         ArgumentNullException.ThrowIfNull(routedEvent);
-
         ArgumentNullException.ThrowIfNull(handler);
 
-        lock (eventHandlers)
+        var subscription = new EventSubscription
         {
-            List<EventSubscription> subscriptions = null;
-            if (!eventHandlers.ContainsKey(routedEvent))
+            Handler = handler,
+            HandledEventsToo = handledEventsToo,
+        };
+
+        lock (handlersLock)
+        {
+            var sets = eventHandlers;
+            var index = IndexOf(sets, routedEvent);
+            if (index < 0)
             {
-                subscriptions = new List<EventSubscription>();
-                eventHandlers.Add(routedEvent, subscriptions);
+                eventHandlers = [.. sets, new EventHandlerSet(routedEvent, [subscription])];
+                return;
             }
-            else
-            {
-                subscriptions = eventHandlers[routedEvent];
-            }
-            var sub = new EventSubscription
-            {
-                Handler = handler,
-                HandledEventsToo = handledEventsToo,
-            };
-            subscriptions.Add(sub);
-            handlerCount++;
+
+            EventHandlerSet[] changed = [.. sets];
+            changed[index] = new EventHandlerSet(routedEvent, [.. sets[index].Subscriptions, subscription]);
+            eventHandlers = changed;
         }
     }
 
@@ -53,87 +50,30 @@ public class ObservableUIComponent : UIComponent, IObservableComponent
         ArgumentNullException.ThrowIfNull(e);
         ArgumentNullException.ThrowIfNull(e.RoutedEvent);
 
-        // Nothing on the route can hear this: the walk would take a lock and ask a dictionary at every level, and change
-        // nothing observable at any of them. Source/OriginalSource are assigned first so an args object the caller keeps
-        // still reads the same as it always did.
+        // Source/OriginalSource are assigned before the "anyone listening" check, so an args object the caller keeps
+        // reads the same whether or not the route was walked.
         e.Source ??= this;
         e.OriginalSource ??= this;
 
-        if (!WouldBeHeard(e.RoutedEvent)) return;
-
-        if (e.RoutedEvent != null)
+        var watching = e.RoutedEvent.Observers;
+        if (watching == null)
         {
-            if (e.RoutedEvent.RoutingStrategy == RoutingStrategy.Direct)
+            if (WouldBeHeard(e.RoutedEvent))
             {
-                RaiseDirectEvent(e);
-            }
-            else if (e.RoutedEvent.RoutingStrategy == RoutingStrategy.Bubble)
-            {
-                RaiseBubbleEvent(e);
+                Route(e, null);
             }
 
-            else if (e.RoutedEvent.RoutingStrategy == RoutingStrategy.Tunnel)
-            {
-                RaiseTunnelEvent(e);
-            }
-        }
-    }
-
-    private void RaiseDirectEvent(RoutedEventArgs e)
-    {
-        if (e == null)
-        {
-            throw new ArgumentNullException(nameof(e));
+            return;
         }
 
-        e.RoutedEvent.InvokeClassHandlers(this, e);
-
-        lock (eventHandlers)
+        RoutedEvent.TellRaised(watching, this, e);
+        try
         {
-            if (eventHandlers.ContainsKey(e.RoutedEvent))
-            {
-                // Snapshot: a handler can add/remove handlers for this same event while it runs (e.g. an Unloaded
-                // handler that unsubscribes itself during a template teardown) - iterating the live list would throw
-                // "Collection was modified". The lock is reentrant, so the mutation itself is safe.
-                var handlersList = eventHandlers[e.RoutedEvent];
-                foreach (var handler in handlersList.ToArray())
-                {
-                    if (!e.Handled || handler.HandledEventsToo)
-                    {
-                        handler.Handler.DynamicInvoke(this, e);
-                    }
-                }
-            }
+            Route(e, watching);
         }
-    }
-
-    private void RaiseBubbleEvent(RoutedEventArgs e)
-    {
-        if (e == null)
+        finally
         {
-            throw new ArgumentNullException(nameof(e));
-        }
-
-        foreach (var uiComponent in GetBubbleEventRoute())
-        {
-            var element = (ObservableUIComponent)uiComponent;
-            e.Source = element;
-            element.RaiseDirectEvent(e);
-        }
-    }
-
-    private void RaiseTunnelEvent(RoutedEventArgs e)
-    {
-        if (e == null)
-        {
-            throw new ArgumentNullException(nameof(e));
-        }
-
-        foreach (var uiComponent in GetTunnelEventRoute())
-        {
-            var element = (ObservableUIComponent)uiComponent;
-            e.Source = element;
-            element.RaiseDirectEvent(e);
+            RoutedEvent.TellFinished(watching, this, e);
         }
     }
 
@@ -152,53 +92,155 @@ public class ObservableUIComponent : UIComponent, IObservableComponent
         return GetBubbleEventRoute().Reverse();
     }
 
+    /// <summary>Removes every subscription of <paramref name="handler"/> to <paramref name="routedEvent"/>. Removed by a
+    /// handler of this element during a raise, it still runs in that raise; removed from an element the route has yet
+    /// to reach, it does not.</summary>
     public void RemoveHandler(RoutedEvent routedEvent, Delegate handler)
     {
-        if (routedEvent == null)
-        {
-            throw new ArgumentNullException(nameof(routedEvent));
-        }
+        ArgumentNullException.ThrowIfNull(routedEvent);
+        ArgumentNullException.ThrowIfNull(handler);
 
-        if (handler == null)
+        lock (handlersLock)
         {
-            throw new ArgumentNullException(nameof(handler));
-        }
-
-        lock (eventHandlers)
-        {
-            if (eventHandlers.TryGetValue(routedEvent, out var list))
+            var sets = eventHandlers;
+            var index = IndexOf(sets, routedEvent);
+            if (index < 0)
             {
-                handlerCount -= list.RemoveAll(x => x.Handler == handler);
+                return;
             }
+
+            EventSubscription[] left = [.. sets[index].Subscriptions.Where(s => s.Handler != handler)];
+            if (left.Length == sets[index].Subscriptions.Length)
+            {
+                return;
+            }
+
+            if (left.Length > 0)
+            {
+                EventHandlerSet[] changed = [.. sets];
+                changed[index] = new EventHandlerSet(routedEvent, left);
+                eventHandlers = changed;
+                return;
+            }
+
+            eventHandlers = [.. sets.Where(s => s.RoutedEvent != routedEvent)];
         }
     }
 
-    /// <summary>Whether raising <paramref name="routedEvent"/> here would reach any handler, so callers can skip building
-    /// args nobody reads. Allocation-free in the common case.</summary>
+    /// <summary>Whether raising <paramref name="routedEvent"/> here would reach any handler or observer, so callers can
+    /// skip building args nobody reads. Takes no lock and allocates nothing.</summary>
     protected bool WouldBeHeard(RoutedEvent routedEvent)
     {
-        if (routedEvent == null) return false;
-        if (routedEvent.HasClassHandlers) return true;   // a class handler hears it wherever it is raised
+        if (routedEvent == null)
+        {
+            return false;
+        }
 
-        if (routedEvent.RoutingStrategy == RoutingStrategy.Direct) return HasOwnHandler(routedEvent);
+        if (routedEvent.HasClassHandlers || routedEvent.Observers != null)
+        {
+            return true;
+        }
+
+        if (routedEvent.RoutingStrategy == RoutingStrategy.Direct)
+        {
+            return OwnHandlers(routedEvent) != null;
+        }
 
         // Bubble and Tunnel travel the SAME set of elements, in opposite directions - so for "is anyone on it", one walk
         // answers both.
         for (var element = (IObservableComponent)this; element != null; element = element.ObservableParent)
         {
-            if (element is ObservableUIComponent component && component.HasOwnHandler(routedEvent)) return true;
+            if (element is ObservableUIComponent component && component.OwnHandlers(routedEvent) != null)
+            {
+                return true;
+            }
         }
 
         return false;
     }
 
-    private bool HasOwnHandler(RoutedEvent routedEvent)
+    private void Route(RoutedEventArgs e, IRoutedEventObserver[] watching)
     {
-        if (handlerCount == 0) return false;
-
-        lock (eventHandlers)
+        switch (e.RoutedEvent.RoutingStrategy)
         {
-            return eventHandlers.TryGetValue(routedEvent, out var list) && list.Count > 0;
+            case RoutingStrategy.Direct:
+                RaiseDirectEvent(e, watching);
+                break;
+            case RoutingStrategy.Bubble:
+                RaiseBubbleEvent(e, watching);
+                break;
+            case RoutingStrategy.Tunnel:
+                RaiseTunnelEvent(this, e, watching);
+                break;
         }
+    }
+
+    private void RaiseDirectEvent(RoutedEventArgs e, IRoutedEventObserver[] watching)
+    {
+        var routedEvent = e.RoutedEvent;
+        if (routedEvent.HasClassHandlers)
+        {
+            routedEvent.InvokeClassHandlers(this, e, watching);
+        }
+
+        var subscriptions = OwnHandlers(routedEvent);
+        if (subscriptions == null)
+        {
+            return;
+        }
+
+        foreach (var subscription in subscriptions)
+        {
+            RoutedEvent.Invoke(subscription, this, e, false, watching);
+        }
+    }
+
+    private void RaiseBubbleEvent(RoutedEventArgs e, IRoutedEventObserver[] watching)
+    {
+        for (var node = (IObservableComponent)this; node != null; node = node.ObservableParent)
+        {
+            var element = (ObservableUIComponent)node;
+            e.Source = element;
+            element.RaiseDirectEvent(e, watching);
+        }
+    }
+
+    private static void RaiseTunnelEvent(IObservableComponent node, RoutedEventArgs e, IRoutedEventObserver[] watching)
+    {
+        var parent = node.ObservableParent;
+        if (parent != null)
+        {
+            RaiseTunnelEvent(parent, e, watching);
+        }
+
+        var element = (ObservableUIComponent)node;
+        e.Source = element;
+        element.RaiseDirectEvent(e, watching);
+    }
+
+    private EventSubscription[] OwnHandlers(RoutedEvent routedEvent)
+    {
+        foreach (var set in eventHandlers)
+        {
+            if (set.RoutedEvent == routedEvent)
+            {
+                return set.Subscriptions;
+            }
+        }
+
+        return null;
+    }
+
+    private static int IndexOf(EventHandlerSet[] sets, RoutedEvent routedEvent)
+    {
+        for (var i = 0; i < sets.Length; i++)
+        {
+            if (sets[i].RoutedEvent == routedEvent)
+            {
+                return i;
+            }
+        }
+
+        return -1;
     }
 }

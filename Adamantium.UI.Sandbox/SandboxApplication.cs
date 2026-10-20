@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using Adamantium.Core.DependencyInjection;
 using Adamantium.UI.Automation;
 using Adamantium.UI.Controls.Navigation;
@@ -7,7 +8,8 @@ namespace Adamantium.UI.Sandbox;
 
 // The first window, the module icons and the ribbon shell's styles are stated in AppBlueprint.auml; the build writes
 // the entry point from it. Graphics debug (Vulkan validation layers) stays off unless ADAM_VK_DEBUG=1: it costs about
-// three quarters of the frame time, so it is a tool for chasing a GPU bug, not a default.
+// three quarters of the frame time, so it is a tool for chasing a GPU bug, not a default. ADAM_EVENT_TRACE=<file>
+// attaches the routed event trace.
 public class SandboxApplication : Adamantium.UI.Universes.MultiverseApplication
 {
     public SandboxApplication()
@@ -20,6 +22,18 @@ public class SandboxApplication : Adamantium.UI.Universes.MultiverseApplication
         EnableGraphicsDebug = Environment.GetEnvironmentVariable("ADAM_VK_DEBUG") == "1";
         DesiredFPS = 300;
         this.UseAutomationAgent();
+        if (Environment.GetEnvironmentVariable("ADAM_EVENT_TRACE") is { Length: > 0 } eventTrace)
+        {
+            try
+            {
+                AttachDebugTool(new Diagnostics.EventTraceTool(eventTrace));
+            }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException or ArgumentException
+                                          or NotSupportedException)
+            {
+                Serilog.Log.Logger.Warning(e, "ADAM_EVENT_TRACE: cannot write {Path}", eventTrace);
+            }
+        }
     }
 
     protected override void RegisterServices(IContainerRegistry containerRegistry)

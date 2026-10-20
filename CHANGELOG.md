@@ -7,6 +7,15 @@ All packages share one version.
 
 ### Added
 
+- A way in for debugging tools: `UIApplication.AttachDebugTool` starts an `IDebugTool` on the application - its
+  windows, the frame verifier, the routed events - and `DetachDebugTool` or shutdown stops it. A tool watches a routed
+  event with `RoutedEvent.AddObserver(IRoutedEventObserver)`: it is told every raise (even one nothing hears), every
+  handler on the route - where, class or own, run or skipped as already handled, handled before and after, how long it
+  took, what it threw - and the end of the route, also when a handler threw. What an observer throws stops nothing
+  (the first fault of each kind is logged), nor does what a tool's `Detach` throws at shutdown. Once shutdown has
+  begun, attaching throws. An event no observer watches pays one check for it.
+  `EventManager.RoutedEventRegistered` announces events registered after a tool started. The sandbox attaches the
+  first such tool, a trace of every routed event to a file, when `ADAM_EVENT_TRACE` names the file.
 - `Ribbon.RowAlignment`: the commands stacked in a group's column stand from the top, as in Word (`Top`, the default),
   or spread over the group's height, the last at the bottom (`Spread`). Inherited - set on the ribbon or on one group.
 - `DropDown.IsEditable`: a value is typed into the header, as Word's font and size boxes take one. Enter picks the item
@@ -1425,6 +1434,13 @@ All packages share one version.
 
 ### Changed
 
+- Raising a routed event allocates nothing and takes no lock once each handler type and element type has been seen:
+  handlers are called by a typed call made once per handler type instead of `DynamicInvoke`, an element's handlers and
+  an event's class handlers are read from arrays replaced whole on change, the class handlers of a type are picked
+  once, and the route needs no list - a pointer move through 20 levels went from 4.1 µs and 1.1 KB to 0.45-0.85 µs
+  and nothing. An exception a handler throws comes out as it is, no longer wrapped in a `TargetInvocationException`; a
+  handler of the usual `(object sender, args)` shape whose sender or args type does not fit the raise throws
+  `InvalidCastException` rather than `ArgumentException`.
 - The menu key opens a text box's context menu under its caret, by the word the menu is about, not under the box's
   left edge; any element can say where by `ContextMenuPointFromKeyboard`.
 - A text box's placeholder shows while the box is empty with the keyboard in it too, as a browser's and the platforms'
@@ -1779,6 +1795,11 @@ All packages share one version.
 
 ### Fixed
 
+- `EventManager.GetRoutedEvents()` lists the registered routed events; it always gave none.
+- `SizeChanged` of the items a `StackPanel` or `WrapPanel` arranges in parallel, and of the elements inside them, is
+  raised on the thread that runs the outermost such arrange, after its items and in their order, also when one of them
+  throws: it was raised on pool threads, and a handler on the panel or above it ran there. A panel with fewer items,
+  arranged one by one, still raises each as the item is arranged.
 - An element under a `LayoutTransform` is hit, and the pointer read, where it is drawn: a click into a zoomed view
   went where the unzoomed one has that point, as only a `RenderTransform` was undone.
 - Windows spelling no longer calls words joined by a math symbol wrong as one ("Shift+Tab" offered as "Shift Tab"):
