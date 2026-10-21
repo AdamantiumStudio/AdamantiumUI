@@ -91,7 +91,7 @@
                 <ListBox.ItemTemplate>
                     <DataTemplate>
                         <Border Background="{Binding Color, Converter={conv:StringToGradientBrushConverter}}" CornerRadius="4"
-                                DragDrop.AllowDrag="True" DragDrop.DragData="{Binding}">
+                                DragDrop.GhostAnchor="Grab" DragDrop.AllowDrag="True" DragDrop.DragData="{Binding}">
                             <TextBlock Text="{Binding Number}"
                                        FontSize="32"
                                        HorizontalAlignment="Center"
@@ -173,7 +173,7 @@
                 <ListBox.ItemTemplate>
                     <DataTemplate>
                         <Border Background="{Binding Color, Converter={conv:StringToGradientBrushConverter}}" CornerRadius="4"
-                                DragDrop.AllowDrag="True" DragDrop.DragData="{Binding}">
+                                DragDrop.GhostAnchor="Grab" DragDrop.AllowDrag="True" DragDrop.DragData="{Binding}">
                             <TextBlock Text="{Binding Number}"
                                        FontSize="20"
                                        HorizontalAlignment="Center"
@@ -256,7 +256,7 @@
                 <ListBox.ItemTemplate>
                     <DataTemplate>
                         <Border Background="{Binding Color, Converter={conv:StringToGradientBrushConverter}}" CornerRadius="4"
-                                DragDrop.AllowDrag="{Binding CanMove}" DragDrop.DragData="{Binding}">
+                                DragDrop.GhostAnchor="Grab" DragDrop.AllowDrag="{Binding CanMove}" DragDrop.DragData="{Binding}">
                             <Grid>
                                 <TextBlock Text="{Binding Number}"
                                            FontSize="20"

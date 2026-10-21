@@ -29,6 +29,8 @@ All packages share one version.
   viewport layouts of 3D editors, a gallery, and a featured tile with the rest in a strip on any side. Hosting a
   list's items, a tile drags to another place: it leaves its own, a gap opens where it would land and the other
   tiles slide and resize into their new places.
+- `DragDrop.GhostAnchor`: where a source's ghost stands against the cursor - beside it (`Cursor`, the default) or held by
+  the point it was grabbed at (`Grab`), as a large tile is carried.
 - `IDropGapPanel`: an items host that opens a real gap where a dragged item would drop instead of the insertion caret;
   `VirtualizingPanel` and `TiledPanel` both are one, and the drag works with any.
 - `Expander.ExpandDuration`: the content unfolds in the layout and folds away over it - what lies past the expander

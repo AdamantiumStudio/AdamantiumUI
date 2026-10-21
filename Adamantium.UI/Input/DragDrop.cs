@@ -48,6 +48,11 @@ public static partial class DragDrop
     public static readonly AdamantiumProperty UseDropGapProperty = AdamantiumProperty.RegisterAttached(
         "UseDropGap", typeof(bool), typeof(AdamantiumComponent), new PropertyMetadata(true));
 
+    /// <summary>Where a source's ghost stands against the cursor: beside it (default) or held where it was grabbed. A
+    /// custom drag template is always beside it - it has no point that was grabbed.</summary>
+    public static readonly AdamantiumProperty GhostAnchorProperty = AdamantiumProperty.RegisterAttached(
+        "GhostAnchor", typeof(DragGhostAnchor), typeof(AdamantiumComponent), new PropertyMetadata(DragGhostAnchor.Cursor));
+
     // Live drag feedback (set by the engine as the cursor moves over a drag): IsDragOver is true on the AllowDrop target
     // currently under the cursor - drive a highlight off it with a trigger. DragOverCommand fires on that target every move
     // so a view-model can decide "can THIS payload land here right now" (and later adjust the cursor).
@@ -99,6 +104,8 @@ public static partial class DragDrop
     public static bool GetAllowDrop(AdamantiumComponent e) => e.GetValue<bool>(AllowDropProperty);
     public static void SetAllowDrop(AdamantiumComponent e, bool value) => e.SetValue(AllowDropProperty, value);
 
+    public static DragGhostAnchor GetGhostAnchor(AdamantiumComponent e) => e.GetValue<DragGhostAnchor>(GhostAnchorProperty);
+    public static void SetGhostAnchor(AdamantiumComponent e, DragGhostAnchor value) => e.SetValue(GhostAnchorProperty, value);
     public static bool GetUseDropGap(AdamantiumComponent e) => e.GetValue<bool>(UseDropGapProperty);
     public static void SetUseDropGap(AdamantiumComponent e, bool value) => e.SetValue(UseDropGapProperty, value);
 
@@ -140,6 +147,7 @@ public static partial class DragDrop
     private static IInputComponent _source;      // the pressed source; armed until the threshold, then dragging
     private static Pointer _pointer;             // the pointer that pressed it: the mouse, a finger or a pen
     private static PixelPoint _startScreen;
+    private static Vector2? _grabPoint;
 
     // What carries the drag: the pointer that pressed the source, or the mouse for a drag started from code.
     private static Pointer DragPointer => _pointer ?? Mouse.Pointer;
@@ -975,6 +983,9 @@ public static partial class DragDrop
         // element itself (an exact copy of the row). A multi-selection shows this single ghost plus a count badge, not a
         // stack of every selected row.
         IReadOnlyList<IUIComponent> body = BuildDragTemplate(_source) is { } custom ? [custom] : [(IUIComponent)_source];
+        _grabPoint = ReferenceEquals(body[0], _source) && GetGhostAnchor((AdamantiumComponent)_source) == DragGhostAnchor.Grab
+            ? SourceClientPoint(_startScreen)
+            : null;
         _badgePart = default;
         var badge = _dragCount > 1 ? BuildCountBadge(_dragCount) : null;
 
@@ -1164,8 +1175,7 @@ public static partial class DragDrop
     private static void ShowOrMoveGhost()
     {
         if (_ghostBgra == null) return;
-        var s = DragPointer.GetScreenPosition();
-        int x = (int)s.X + DragDropOptions.GhostCursorOffset, y = (int)s.Y + DragDropOptions.GhostCursorOffset;
+        var (x, y) = GhostCorner(_ghostShown ? _presentedScale : _ghostBakeScale);
         if (_ghostShown)
         {
             Ghost?.Move(x, y);                                  // same monitor -> cheap reposition; a DPI crossing re-scales via OnGhostDpiChanged
@@ -1181,13 +1191,23 @@ public static partial class DragDrop
 
     // Re-scale the ghost the instant it crosses onto a monitor of a different DPI (driven by IDragGhost.DpiChanged, event-based
     // - no per-frame polling). Re-uploads the resampled bitmap at the current cursor so the ghost keeps its physical size.
+    private static (int X, int Y) GhostCorner(double scale)
+    {
+        var s = DragPointer.GetScreenPosition();
+        if (_grabPoint is { } grab)
+        {
+            return ((int)Math.Round(s.X - grab.X * scale), (int)Math.Round(s.Y - grab.Y * scale));
+        }
+
+        return ((int)s.X + DragDropOptions.GhostCursorOffset, (int)s.Y + DragDropOptions.GhostCursorOffset);
+    }
+
     private static void OnGhostDpiChanged(uint dpi)
     {
         if (!_ghostShown || _ghostBgra == null) return;
         var scale = dpi / 96.0;
         if (Math.Abs(scale - _presentedScale) < 0.001) return;
-        var s = DragPointer.GetScreenPosition();
-        int x = (int)s.X + DragDropOptions.GhostCursorOffset, y = (int)s.Y + DragDropOptions.GhostCursorOffset;
+        var (x, y) = GhostCorner(scale);
         var (bgra, w, h) = ScaleGhost(scale);
         Ghost?.Show(bgra, w, h, x, y);
         _presentedScale = scale;
@@ -1355,6 +1375,7 @@ public static partial class DragDrop
         _source = null;
         _data = null;
         _dragging = false;
+        _grabPoint = null;
         _liftedList = null;
         _lifted = null;
         _ghostBgra = null;
