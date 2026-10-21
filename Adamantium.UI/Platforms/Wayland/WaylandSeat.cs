@@ -1,13 +1,14 @@
+using System;
 using System.Collections.Generic;
 using System.Text;
-using System;
+using System.Threading;
 using Adamantium.Core;
-using Adamantium.Fonts.Text;
 using Adamantium.Fonts;
+using Adamantium.Fonts.Text;
 using Adamantium.Mathematics;
-using Adamantium.UI.Core.Input.Raw;
-using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Input;
+using Adamantium.UI.Core.Input.Raw;
 using Adamantium.Wayland;
 using KeyState = Adamantium.UI.Core.Input.KeyState;
 
@@ -30,6 +31,10 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
     private readonly WlSeat seat;
     private WlPointer pointer;
     private WlKeyboard keyboard;
+    private volatile WaylandTouch touch;
+    private volatile bool touchSuppressed;
+    private WaylandPointerSnapshot pointerSnapshot = new(null, Vector2.Zero, 0);
+    private uint lastPointerId = PointerDevice.MouseId;
     private WpCursorShapeDeviceV1 cursorShape;
 
     private WaylandWindowWorker pointerWindow;
@@ -72,6 +77,12 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
     /// <summary>The serial of the last press or key: what a move or a resize of a window is asked for with.</summary>
     public uint LastInputSerial { get; private set; }
 
+    /// <summary>Takes a press of another device - a finger - as the input a move or a resize of a window is asked with.</summary>
+    internal void NoteInput(uint serial) => LastInputSerial = serial;
+
+    /// <summary>An id no pointer of the framework has: each finger and pen contact is a pointer of its own.</summary>
+    internal uint NextPointerId() => ++lastPointerId;
+
     /// <summary>The serial of the last pointer button press: what a drag is started with.</summary>
     internal uint PressSerial { get; private set; }
 
@@ -81,11 +92,30 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
     /// <summary>The keys and buttons held now.</summary>
     internal InputModifiers Modifiers => InputModifiers();
 
+    /// <summary>The pointer entered, moved over or left one of our windows: <see cref="Pointer"/> says where it is now.</summary>
+    internal event Action PointerChanged;
+
     /// <summary>A pointer button went up over one of our windows.</summary>
     internal event Action PointerReleased;
 
     /// <summary>The window the pointer is in.</summary>
     internal WaylandWindowWorker PointerWindow => pointerWindow;
+
+    /// <summary>While set, fingers that go down are not raised: the system's own warm-up touches.</summary>
+    internal bool TouchSuppressed
+    {
+        get => touchSuppressed;
+        set => touchSuppressed = value;
+    }
+
+    /// <summary>Whether the seat has a touchscreen.</summary>
+    internal bool HasTouch => touch != null;
+
+    /// <summary>Raises the input still waiting for the frame that closes it, once the events read are dispatched.</summary>
+    internal void Flush() => touch?.Flush();
+
+    /// <summary>The pointer at its last event, readable from any thread.</summary>
+    internal WaylandPointerSnapshot Pointer => Volatile.Read(ref pointerSnapshot);
 
     #region INativeMouse, INativeKeyboard, INativePlatformSettings
 
@@ -221,6 +251,17 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
             pointerWindow = null;
         }
 
+        var hasTouch = (capabilities & WlSeat.Capability.Touch) != 0;
+        if (hasTouch && touch == null)
+        {
+            touch = new WaylandTouch(platform, this, seat.GetTouch());
+        }
+        else if (!hasTouch && touch != null)
+        {
+            touch.Release();
+            touch = null;
+        }
+
         var hasKeyboard = (capabilities & WlSeat.Capability.Keyboard) != 0;
         if (hasKeyboard && keyboard == null)
         {
@@ -260,6 +301,7 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
     {
         var window = pointerWindow?.Window;
         pointerWindow = null;
+        Publish(null);
         buttons = default;
         if (window == null)
         {
@@ -268,6 +310,13 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
 
         var args = new RawPointerEventArgs(RawPointerEventType.LeaveWindow, window, Vector2.Zero, InputModifiers(), 0);
         WaylandPlatform.DispatchInput(() => PointerDevice.Current.ProcessEvent(args));
+    }
+
+    private void Publish(WaylandWindowWorker worker)
+    {
+        var sequence = Volatile.Read(ref pointerSnapshot).Sequence + 1;
+        Volatile.Write(ref pointerSnapshot, new WaylandPointerSnapshot(worker, pointerPosition, sequence));
+        PointerChanged?.Invoke();
     }
 
     private void OnPointerMotion(uint time, double x, double y)
@@ -279,6 +328,7 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
     private void PointerMoved(uint time)
     {
         var worker = pointerWindow;
+        Publish(worker);
         if (worker?.Window == null)
         {
             return;

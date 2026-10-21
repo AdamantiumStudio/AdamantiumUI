@@ -7,6 +7,14 @@ All packages share one version.
 
 ### Added
 
+- Touch on Wayland (`wl_touch`): every finger is a pointer of its own (`PointerType.Touch`), its contact area from the
+  compositor's shape, raised when the compositor closes its frame - or once the events read are dispatched, where it
+  closes none. A finger on the edge of a window drawing its own frame resizes it, as the mouse does.
+- The automation's input through the system (`--os`) on GNOME's Wayland: fingers go through
+  `org.gnome.Mutter.RemoteDesktop`. A Wayland client is not told where its window is, so the pointer is moved over
+  the monitors - clear of their edges and corners - until the window says it is under it, and every landing is checked
+  the same way right before a finger goes down; a held mouse button, which keeps the pointer on our window wherever
+  it is, refuses the input. The session stops after 15 idle seconds. Pens are refused: GNOME's remote desktop has none.
 - `Keyboard.HasRightToLeftLayout` (`INativeKeyboard.HasRightToLeftLayout`): whether a keyboard layout the user switches
   between types a right-to-left script, as Hebrew or Arabic - for keys an editor gives to text direction only where
   such text is typed. Windows reads the installed layouts live; Wayland reads the letter keys of each layout in the
@@ -1469,6 +1477,8 @@ All packages share one version.
 
 ### Changed
 
+- `ISyntheticPointerInput.Inject` takes the window the contacts are played on and refuses a contact that would land
+  on anything else, checked right before the system takes it; the automation's planner no longer checks it.
 - On `Adamantium.Vulkan` 1.0.4, as the engine is.
 - The engine maps the Vulkan loader itself: `UIApplication` no longer registers it, nor references `Adamantium.Vulkan.Loader`.
 - `INativeDragDrop.BeginDrag` takes `external`: false for a drag offered to the application's own windows only. A

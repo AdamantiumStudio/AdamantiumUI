@@ -92,6 +92,7 @@
 		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.MacOS\Adamantium.MacOS.csproj" />
 		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Win32\Adamantium.Win32.csproj" />
 		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Wayland\Adamantium.Wayland.csproj" />
+		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.DBus\Adamantium.DBus.csproj" />
 		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.XInput\Adamantium.XInput.csproj" />
 		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.GameInput\Adamantium.GameInput.csproj" />
 		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Core\Adamantium.Core.csproj"/>
