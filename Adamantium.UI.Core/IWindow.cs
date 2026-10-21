@@ -134,7 +134,7 @@ public interface IWindow : IRootVisualComponent, IContentControl
     
     event SizeChangedEventHandler ClientSizeChanged;
     event EventHandler<WindowClosingEventArgs> Closing;
-    event MSAALeveChangedHandler MSAALevelChanged;
+    event MSAALevelChangedHandler MSAALevelChanged;
     event StateChangedHandler StateChanged;
 
     /// <summary>Raised after <see cref="ResizeMode"/> changes, so the platform worker can refresh its thread-safe snapshot

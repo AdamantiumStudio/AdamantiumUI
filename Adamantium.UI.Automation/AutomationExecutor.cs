@@ -220,7 +220,7 @@ public sealed class AutomationExecutor
     }
 
     // Contacts put down, held still past the holding time and lifted. Pressed and let go on the loop with the real hold
-    // timers running between, so each hold starts as it would under a hand.
+    // timers running between, so each hold starts as it would under a hand - on the loop, settled before the lift.
     private async Task<AutomationReply> HoldAsync(AutomationRequest request, TimeSpan timeout)
     {
         var mark = ErrorJournal.Mark();
@@ -230,12 +230,31 @@ public sealed class AutomationExecutor
             return (InputSimulator.PutDown(paths, contacts), contacts);
         }, timeout);
 
-        await Task.Delay(Gestures.HoldingTime + HoldMargin);
-        await _host.RunOnLoopAsync(() =>
+        Task Lift() => _host.RunOnLoopAsync(() =>
         {
             InputSimulator.Lift(down, contacts);
             return true;
         }, timeout);
+
+        try
+        {
+            await Task.Delay(Gestures.HoldingTime + HoldMargin);
+            await _host.WaitForIdleAsync(timeout);
+        }
+        catch (Exception)
+        {
+            try
+            {
+                await Lift();
+            }
+            catch (Exception)
+            {
+            }
+
+            throw;
+        }
+
+        await Lift();
 
         return await SettledAsync(request, mark, timeout);
     }

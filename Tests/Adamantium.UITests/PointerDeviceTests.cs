@@ -385,6 +385,59 @@ public class PointerDeviceTests
         Assert.That(states, Is.EqualTo(new[] { HoldingState.Started, HoldingState.Canceled }));
     }
 
+    // With no loop running, the hold's timer ticks on the pool: the hold waits for whoever drains the loop's queue and
+    // is raised there, never on the timer's thread beside the one changing the tree.
+    [Test]
+    public void AHoldWithNoLoopRunning_IsRaisedByWhoeverDrains_NotOnTheTimersThread()
+    {
+        var states = new List<HoldingState>();
+        var threads = new List<System.Threading.Thread>();
+        _left.AddHandler(Gestures.HoldingEvent, new HoldingEventHandler((_, e) =>
+        {
+            states.Add(e.HoldingState);
+            threads.Add(System.Threading.Thread.CurrentThread);
+        }));
+
+        using (HoldingTimeOf(TimeSpan.FromMilliseconds(5)))
+        {
+            Send(RawPointerEventType.Down, 44, PointerType.Touch, new Vector2(20, 50), 0, MouseButtons.None);
+            System.Threading.Thread.Sleep(200);
+            var beforeDrain = states.Count;
+            LoopSignal.Drain();
+            Send(RawPointerEventType.Up, 44, PointerType.Touch, new Vector2(20, 50), 700, MouseButtons.None);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(beforeDrain, Is.Zero, "nothing raised on the timer's thread");
+                Assert.That(states, Is.EqualTo(new[] { HoldingState.Started, HoldingState.Completed }));
+                Assert.That(threads, Has.All.SameAs(System.Threading.Thread.CurrentThread));
+            });
+        }
+    }
+
+    [Test]
+    public void ATickLeftFromALiftedContact_DoesNotStartTheNextHoldOfItsId()
+    {
+        var states = new List<HoldingState>();
+        _left.AddHandler(Gestures.HoldingEvent, new HoldingEventHandler((_, e) => states.Add(e.HoldingState)));
+
+        using (HoldingTimeOf(TimeSpan.FromMilliseconds(5)))
+        {
+            Send(RawPointerEventType.Down, 45, PointerType.Touch, new Vector2(20, 50), 0, MouseButtons.None);
+            System.Threading.Thread.Sleep(200);
+            Send(RawPointerEventType.Up, 45, PointerType.Touch, new Vector2(20, 50), 300, MouseButtons.None);
+        }
+
+        using (HoldingTimeOf(TimeSpan.FromHours(1)))
+        {
+            Send(RawPointerEventType.Down, 45, PointerType.Touch, new Vector2(20, 50), 400, MouseButtons.None);
+            LoopSignal.Drain();
+            Send(RawPointerEventType.Up, 45, PointerType.Touch, new Vector2(20, 50), 500, MouseButtons.None);
+        }
+
+        Assert.That(states, Is.Empty);
+    }
+
     [Test]
     public void TheMouse_NeverHolds()
     {

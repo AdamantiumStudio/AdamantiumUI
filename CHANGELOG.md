@@ -1477,13 +1477,18 @@ All packages share one version.
   reflection, and the log says so once per type. A path is written only through a public setter (an `init` one
   included) - a tree's or a grid's path wrote a private one - and a tree's, a grid's and a collection view's paths now
   see what an object has through an interface and its public fields, but no longer a static property or field.
-- Raising a routed event allocates nothing and takes no lock once each handler type and element type has been seen:
-  handlers are called by a typed call made once per handler type instead of `DynamicInvoke`, an element's handlers and
-  an event's class handlers are read from arrays replaced whole on change, the class handlers of a type are picked
-  once, and the route needs no list - a pointer move through 20 levels went from 4.1 µs and 1.1 KB to 0.45-0.85 µs
-  and nothing. An exception a handler throws comes out as it is, no longer wrapped in a `TargetInvocationException`; a
-  handler of the usual `(object sender, args)` shape whose sender or args type does not fit the raise throws
-  `InvalidCastException` rather than `ArgumentException`.
+- Raising a routed event allocates nothing and takes no lock once each element type has been seen: a handler is called
+  directly, by a call the UI generator writes for every handler delegate an assembly declares (and every
+  `EventHandler<>` of routed args it names with `typeof`) and registers with `RoutedEventInvokers`, so no reflection runs
+  and nothing is generated at run time (iOS, NativeAOT) - an element's handlers and an event's class handlers are read
+  from arrays replaced whole on change, the class handlers of a type are picked once, and the route needs no list - a
+  pointer move through 20 levels went from 4.1 µs and 1.1 KB to 0.3-0.7 µs and nothing. A delegate declared where the
+  generator does not run is still called, through `DynamicInvoke`; one the generated code could not name without a
+  warning or an error - nested in a generic type, over a type parameter, `[Obsolete]` as an error or with its own id,
+  `[Experimental]` - is called that way too. An exception a handler throws comes out as it is, no longer wrapped in a
+  `TargetInvocationException`; a handler given a sender or args it does not take throws `InvalidCastException` where
+  the call is generated, `ArgumentException` through `DynamicInvoke`.
+- `MSAALeveChangedHandler` is spelled `MSAALevelChangedHandler`.
 - The menu key opens a text box's context menu under its caret, by the word the menu is about, not under the box's
   left edge; any element can say where by `ContextMenuPointFromKeyboard`.
 - A text box's placeholder shows while the box is empty with the keyboard in it too, as a browser's and the platforms'
@@ -1856,6 +1861,14 @@ All packages share one version.
   test windows side by side - showed one cue between them, and written from the hold timer's thread on a test run,
   it broke when two windows held at once (a test host crashed on it).
 - `EventManager.GetRoutedEvents()` lists the registered routed events; it always gave none.
+- A hold that an automation session plays settles before its contacts lift, so it starts where no loop runs, and its
+  contacts lift even when the wait fails. With no loop running, a hold starts when `LoopSignal` is drained - not on the
+  hold timer's thread - and a tick left from a contact already lifted does not start the next hold of its id.
+- A `PreviewGotKeyboardFocus` handler that sets `Handled` keeps the focus where it is; one that moves the focus
+  elsewhere wins, and the move it interrupted is dropped - it went on, and two elements lost the focus.
+- `PreviewGotKeyboardFocus` is raised on the element taking the focus, with `KeyboardGotFocusEventArgs`: it went to the
+  element losing it, with args its handlers could not take, so a handler made the focus move throw. `GotKeyboardFocus`
+  says where the focus came from - its `OldFocus` was the new element.
 - `SizeChanged` of the items a `StackPanel` or `WrapPanel` arranges in parallel, and of the elements inside them, is
   raised on the thread that runs the outermost such arrange, after its items and in their order, also when one of them
   throws: it was raised on pool threads, and a handler on the panel or above it ran there. A panel with fewer items,

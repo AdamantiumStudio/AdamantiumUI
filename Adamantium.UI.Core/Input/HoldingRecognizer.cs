@@ -37,7 +37,8 @@ internal sealed class HoldingRecognizer
 
     public void Cancel(Pointer pointer, uint timestamp) => Finish(pointer.Id, HoldingState.Canceled, timestamp);
 
-    /// <summary>The contact has rested long enough: called by its timer on the loop.</summary>
+    /// <summary>The contact has rested long enough: called by its timer on the loop - or, with no loop running, by
+    /// whoever drains <see cref="LoopSignal"/>; never on the timer's own thread.</summary>
     internal void Elapsed(uint id, uint timestamp)
     {
         if (!_holds.TryGetValue(id, out var hold) || hold.Started)
@@ -54,8 +55,27 @@ internal sealed class HoldingRecognizer
         Raise(hold, HoldingState.Started, timestamp);
     }
 
-    private void OnTick(object sender, EventArgs e) =>
-        Elapsed((uint)((DispatcherTimer)sender).Tag, (uint)Environment.TickCount);
+    private void OnTick(object sender, EventArgs e)
+    {
+        var timer = (DispatcherTimer)sender;
+        var timestamp = (uint)Environment.TickCount;
+        if (LoopSignal.IsClaimed || SynchronizationContext.Current != null)
+        {
+            ElapsedFor(timer, timestamp);
+            return;
+        }
+
+        LoopSignal.Post(() => ElapsedFor(timer, timestamp));
+    }
+
+    private void ElapsedFor(DispatcherTimer timer, uint timestamp)
+    {
+        var id = (uint)timer.Tag;
+        if (_holds.TryGetValue(id, out var hold) && hold.Timer == timer)
+        {
+            Elapsed(id, timestamp);
+        }
+    }
 
     private void Finish(uint id, HoldingState state, uint timestamp)
     {

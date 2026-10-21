@@ -160,7 +160,7 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
         RoutingStrategy.Direct, typeof(SizeChangedEventHandler), typeof(WindowBase));
 
     public static readonly RoutedEvent MSAALevelChangedEvent = EventManager.RegisterRoutedEvent("MSAALevelChanged",
-        RoutingStrategy.Direct, typeof(MSAALeveChangedHandler), typeof(WindowBase));
+        RoutingStrategy.Direct, typeof(MSAALevelChangedHandler), typeof(WindowBase));
         
     public static readonly RoutedEvent StateChangedEvent = EventManager.RegisterRoutedEvent("StateChanged",
         RoutingStrategy.Direct, typeof(StateChangedHandler), typeof(WindowBase));
@@ -992,7 +992,7 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
         remove => RemoveHandler(ClientSizeChangedEvent, value);
     }
         
-    public event MSAALeveChangedHandler MSAALevelChanged
+    public event MSAALevelChangedHandler MSAALevelChanged
     {
         add => AddHandler(MSAALevelChangedEvent, value);
         remove => RemoveHandler(MSAALevelChangedEvent, value);
