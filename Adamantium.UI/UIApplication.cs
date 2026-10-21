@@ -370,6 +370,8 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
                 return new Win32WindowWorker(uiContext);
             case Platform.OSX:
                 return new MacOSWindowWorker(uiContext);
+            case Platform.Linux:
+                return new Platforms.Wayland.WaylandWindowWorker(uiContext);
             default:
                 throw new NotSupportedException($"{Configuration.Platform} does not yet supported for windowing system");
         }

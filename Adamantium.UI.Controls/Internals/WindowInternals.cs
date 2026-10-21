@@ -29,11 +29,11 @@ internal static class WindowInternals
         }
     }
 
-    public static void SetSurfaceHandle(this IWindow window, IntPtr surfaceHandle)
+    public static void SetSurfaceHandle(this IWindow window, IntPtr surfaceHandle, IntPtr displayHandle = default)
     {
         if (window is IWindowInternals windowBase)
         {
-            windowBase.SetSurface(surfaceHandle);
+            windowBase.SetSurface(surfaceHandle, displayHandle);
         }
     }
     
