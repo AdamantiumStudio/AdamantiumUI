@@ -74,6 +74,21 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
     /// <summary>The serial of the last press or key: what a move or a resize of a window is asked for with.</summary>
     public uint LastInputSerial { get; private set; }
 
+    /// <summary>The serial of the last pointer button press: what a drag is started with.</summary>
+    internal uint PressSerial { get; private set; }
+
+    /// <summary>Whether a pointer button is held.</summary>
+    internal bool IsPressed => buttons != default;
+
+    /// <summary>The keys and buttons held now.</summary>
+    internal InputModifiers Modifiers => InputModifiers();
+
+    /// <summary>A pointer button went up over one of our windows.</summary>
+    internal event Action PointerReleased;
+
+    /// <summary>The window the pointer is in.</summary>
+    internal WaylandWindowWorker PointerWindow => pointerWindow;
+
     #region INativeMouse, INativeKeyboard, INativePlatformSettings
 
     // The desktop is the window's own client area under Wayland, in physical pixels like a Win32 desktop point.
@@ -248,6 +263,7 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
     {
         var window = pointerWindow?.Window;
         pointerWindow = null;
+        buttons = default;
         if (window == null)
         {
             return;
@@ -302,6 +318,14 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
 
         var flag = FlagOf(changed);
         buttons = pressed ? buttons | flag : buttons & ~flag;
+        if (pressed)
+        {
+            PressSerial = serial;
+        }
+        else
+        {
+            PointerReleased?.Invoke();
+        }
 
         if (worker?.Window == null || changed == MouseButtons.None)
         {

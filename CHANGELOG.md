@@ -15,8 +15,22 @@ All packages share one version.
   xkbcommon, letters following the layout and the rest their place, typed text, and repeats timed by the client at the
   rate the compositor gives. Cursors are the compositor's, by shape (`wp_cursor_shape_v1`). The loop waits on the
   compositor's socket and an eventfd, spinning nowhere. A Wayland client places no window and learns no desktop
-  position, so a window's client corner is the desktop's origin, and `SetPosition`, `Topmost`, click-through and the
-  drag ghost do nothing there yet; the clipboard stays in-process.
+  position, so a window's client corner is the desktop's origin, and `SetPosition`, `Topmost` and click-through do
+  nothing there.
+- The clipboard on Wayland, through `wl_data_device`: text, HTML and RTF as UTF-8 under every name they travel by
+  (XWayland's among them), files as a URI list, and formats of one's own under `application/x-adamantium-<name>`. The
+  bytes go through a pipe when another client asks for a type; what the application put on the clipboard itself is read
+  from memory, and a read waits for another client a second at most.
+- Drag and drop on Wayland, through the compositor (`start_drag`): a Wayland client is not told which window the
+  pointer is over while a button is held, so every mouse drag goes to the compositor, which moves the drag's icon - the
+  ghost - above every window and tells the window under the pointer. A drag that stays in the application offers a type
+  of its own only, which no other client takes, and arrives on our windows with its live payload; one that may leave
+  (`AllowExternalDrag`) offers what it carries as Windows does - files, the picture under its own encoding (or as a
+  BMP), HTML, RTF, formats of one's own, text last - each made only when a target asks for it. Drops from other
+  applications bring files, pictures, HTML, RTF and text, read only for the drop that takes them. The effect the target
+  settles on is asked for again while the pointer rests, so the compositor shows it and takes the drop. The cursor
+  during such a drag is the compositor's: `DragDropEventArgs.DragCursor` does not apply, as for a drag between
+  applications on Windows. A drag the application carries itself shows its ghost as a subsurface of the window.
 - `IWindow.SurfaceDisplayHandle`: the connection a window's surface belongs to where the platform needs one beside it -
   the `wl_display` - passed on to the presenter as `PresentationParameters.DisplayHandle`.
 - `PropertyGrid.ValueChangedCommand`: executed after each value written or taken back, with the change as its
@@ -1452,6 +1466,9 @@ All packages share one version.
 ### Changed
 
 - On `Adamantium.Vulkan` 1.0.4, as the engine is.
+- `INativeDragDrop.BeginDrag` takes `external`: false for a drag offered to the application's own windows only. A
+  platform whose in-app drags cannot learn the window under the pointer says so with `CarriesInAppDrags` (false by
+  default), and every mouse drag then goes through `BeginDrag`.
 - A window whose content has not changed draws its frame from a recording: the first clean frame of each frame slot
   records the op stream into a secondary command buffer, and the next ones only fingerprint the stream - nothing is
   sent to the GPU - and execute the recording while the fingerprint is the same. Whatever the stream reads live - a

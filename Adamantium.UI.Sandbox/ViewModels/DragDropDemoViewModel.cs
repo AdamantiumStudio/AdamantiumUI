@@ -111,7 +111,6 @@ public partial class DragDropDemoViewModel : TabPageViewModel
     private void DropExternal(object arg)
     {
         if (arg is not DragDropEventArgs e) return;
-        CollectPictures(e);
         // Land WHERE the drop happened: the engine reports the item the caret sat before (null = past the last one).
         // Appending regardless would throw away the insertion cue the user was aiming with.
         var at = e.InsertBefore is Models.DroppedEntry before && Dropped.IndexOf(before) is var index and >= 0 ? index : Dropped.Count;
@@ -148,6 +147,27 @@ public partial class DragDropDemoViewModel : TabPageViewModel
         return ItemsOf(e).Select(item => new Models.DroppedEntry(Models.DroppedKind.InApp, item));
     }
 
+    [Command]
+    private void DropPictures(object arg)
+    {
+        if (arg is DragDropEventArgs e) CollectPictures(e);
+    }
+
+    [Command]
+    private void DragOverPictures(object arg)
+    {
+        if (arg is DragDropEventArgs e && !HasPictures(e)) e.Effects = DragDropEffects.None;
+    }
+
+    private static bool HasPictures(DragDropEventArgs e) =>
+        e.Data != null && (e.Data.Contains(DataFormats.Image) ||
+                           (e.Data.Contains(DataFormats.Files) && (e.Data.IsDeferred(DataFormats.Files) ||
+                                                                    e.Data.Get(DataFormats.Files) is string[] files &&
+                                                                    files.Any(IsPictureFile))));
+
+    private static bool IsPictureFile(string file) =>
+        PictureExtensions.Contains(Path.GetExtension(file), StringComparer.OrdinalIgnoreCase);
+
     // Anything picture-shaped in the drop, kept as bytes. Two sources, because the two are genuinely different drags:
     // a browser or another app hands over the picture itself; Explorer only ever hands over file PATHS.
     private void CollectPictures(DragDropEventArgs e)
@@ -161,13 +181,13 @@ public partial class DragDropDemoViewModel : TabPageViewModel
         if (e.Data?.Get(DataFormats.Image) is byte[] { Length: > 0 } picture)
         {
             DroppedPictures.Insert(Math.Min(at, DroppedPictures.Count), new Models.DroppedPicture(picture));
-            at++;
+            return;
         }
 
         if (e.Data?.Get(DataFormats.Files) is not string[] files) return;
         foreach (var file in files)
         {
-            if (!PictureExtensions.Contains(Path.GetExtension(file), StringComparer.OrdinalIgnoreCase)) continue;
+            if (!IsPictureFile(file)) continue;
             try
             {
                 DroppedPictures.Insert(Math.Min(at, DroppedPictures.Count), new Models.DroppedPicture(File.ReadAllBytes(file)));

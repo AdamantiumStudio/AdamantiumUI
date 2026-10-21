@@ -923,8 +923,8 @@ public static partial class DragDrop
         // dropped into other applications), everything else stays on our own loop with its live CLR payload. Never
         // switched mid-drag - the platform loop is modal and has to own the gesture from the start.
         // The OS's drag loop follows the mouse; a finger or a pen carries the drag on our own loop.
-        _externalCapable = GetAllowExternalDrag((AdamantiumComponent)_source) && Native is { IsAvailable: true } &&
-                           DragPointer.Type == PointerType.Mouse;
+        _externalCapable = (GetAllowExternalDrag((AdamantiumComponent)_source) || Native is { CarriesInAppDrags: true }) &&
+                           Native is { IsAvailable: true } && DragPointer.Type == PointerType.Mouse;
         DragPointer.Capture(_source);   // so move/up keep coming once the pointer leaves the source
         // An external overlay (a screenshot tool) stealing capture must not hang the drag.
         _source.AddHandler(PointerEvents.PointerCaptureLostEvent, LostCaptureHandler, handledEventsToo: true);

@@ -30,6 +30,7 @@ public sealed unsafe class WaylandPlatform : IApplicationPlatform
 
         var registry = Display.GetRegistry();
         WlSeat seat = null;
+        WlDataDeviceManager dataDevices = null;
         registry.Global += (name, @interface, version) =>
         {
             switch (@interface)
@@ -57,6 +58,15 @@ public sealed unsafe class WaylandPlatform : IApplicationPlatform
                 case ZxdgDecorationManagerV1.InterfaceName:
                     Decorations = registry.Bind<ZxdgDecorationManagerV1>(name, 1);
                     break;
+                case WlShm.InterfaceName:
+                    Shm = registry.Bind<WlShm>(name, 1);
+                    break;
+                case WlSubcompositor.InterfaceName:
+                    Subcompositor = registry.Bind<WlSubcompositor>(name, 1);
+                    break;
+                case WlDataDeviceManager.InterfaceName:
+                    dataDevices = registry.Bind<WlDataDeviceManager>(name, Math.Min(version, 3));
+                    break;
             }
         };
         Display.Roundtrip();
@@ -75,6 +85,12 @@ public sealed unsafe class WaylandPlatform : IApplicationPlatform
 
         // The seat's devices and the keyboard's keymap, before the first window wants them.
         Display.Roundtrip();
+
+        if (dataDevices != null && seat != null)
+        {
+            DataDevice = new WaylandDataDevice(this, dataDevices, seat);
+            Clipboard.Current = new WaylandClipboard(this, DataDevice);
+        }
 
         Cursor.Platform = Seat;
         Mouse.Platform = Seat;
@@ -96,7 +112,16 @@ public sealed unsafe class WaylandPlatform : IApplicationPlatform
 
     public ZxdgDecorationManagerV1 Decorations { get; private set; }
 
+    public WlShm Shm { get; private set; }
+
+    public WlSubcompositor Subcompositor { get; private set; }
+
     internal WaylandSeat Seat { get; }
+
+    internal WaylandDataDevice DataDevice { get; }
+
+    /// <summary>Drag and drop, once the first window has registered with it.</summary>
+    internal WaylandDragDrop DragDrop { get; set; }
 
     public bool IsOnUIThread => uiThread == Thread.CurrentThread;
 
@@ -123,7 +148,7 @@ public sealed unsafe class WaylandPlatform : IApplicationPlatform
 
             fds[0] = new LinuxInterop.PollFd { Fd = Display.FileDescriptor, Events = LinuxInterop.PollIn };
             fds[1] = new LinuxInterop.PollFd { Fd = signalFd, Events = LinuxInterop.PollIn };
-            var ready = LinuxInterop.poll(fds, 2, Seat.RepeatTimeout());
+            var ready = LinuxInterop.poll(fds, 2, Sooner(Seat.RepeatTimeout(), DragDrop?.AskTimeout() ?? -1));
 
             if (ready > 0 && (fds[0].Revents & LinuxInterop.PollIn) != 0)
             {
@@ -144,8 +169,11 @@ public sealed unsafe class WaylandPlatform : IApplicationPlatform
             }
 
             Seat.Repeat();
+            DragDrop?.AskAgain();
         }
     }
+
+    private static int Sooner(int a, int b) => a < 0 ? b : b < 0 ? a : Math.Min(a, b);
 
     public void Signal()
     {
@@ -173,16 +201,26 @@ public sealed unsafe class WaylandPlatform : IApplicationPlatform
     }
 
     /// <summary>The window whose surface an event names; null for a surface that is not a window of ours.</summary>
-    internal WaylandWindowWorker Find(WlSurface surface)
-    {
-        if (surface == null)
-        {
-            return null;
-        }
+    internal WaylandWindowWorker Find(WlSurface surface) => surface == null ? null : Find(surface.Handle);
 
+    internal WaylandWindowWorker Find(nint surface)
+    {
         lock (windows)
         {
-            return windows.GetValueOrDefault(surface.Handle);
+            return windows.GetValueOrDefault(surface);
+        }
+    }
+
+    /// <summary>Runs on the thread that dispatches the compositor's events: at once from it, queued from any other.</summary>
+    internal void Invoke(Action action)
+    {
+        if (IsOnUIThread)
+        {
+            action();
+        }
+        else
+        {
+            _ = Threading.Dispatcher.CurrentDispatcher?.InvokeAsync(action);
         }
     }
 
@@ -199,5 +237,6 @@ public sealed unsafe class WaylandPlatform : IApplicationPlatform
     {
         resolver.RegisterSingleton<IApplicationPlatform, WaylandPlatform>();
         resolver.RegisterSingleton<IDragGhost, WaylandDragGhost>();
+        resolver.RegisterSingleton<INativeDragDrop, WaylandDragDrop>();
     }
 }

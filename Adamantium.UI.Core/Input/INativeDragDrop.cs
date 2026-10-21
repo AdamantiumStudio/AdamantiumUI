@@ -10,6 +10,10 @@ public interface INativeDragDrop
     /// The in-app drag-drop keeps working; only the crossing to other applications is off.</summary>
     bool IsAvailable { get; }
 
+    /// <summary>True where only the OS knows which window a drag is over (Wayland): every mouse drag then goes through
+    /// <see cref="BeginDrag"/>.</summary>
+    bool CarriesInAppDrags => false;
+
     /// <summary>Make <paramref name="window"/> a native drop target, delivering to <paramref name="sink"/>. Registered
     /// ONCE at window creation and left on for the window's life - never per drag. Call on the thread that owns the
     /// native window.</summary>
@@ -20,6 +24,8 @@ public interface INativeDragDrop
     void UnregisterDropTarget(IWindow window);
 
     /// <summary>Hands an in-app drag to the OS without blocking; false if it could not start. The outcome arrives via
-    /// <paramref name="completed"/> on the UI thread; <paramref name="ghost"/> is the OS drag image.</summary>
-    bool BeginDrag(IWindow source, IDataPackage data, DragDropEffects allowed, DragGhostImage ghost, Action<DragDropEffects> completed);
+    /// <paramref name="completed"/> on the UI thread; <paramref name="ghost"/> is the OS drag image. A drag that is not
+    /// <paramref name="external"/> reaches the application's own windows only.</summary>
+    bool BeginDrag(IWindow source, IDataPackage data, DragDropEffects allowed, DragGhostImage ghost, Action<DragDropEffects> completed,
+        bool external);
 }
