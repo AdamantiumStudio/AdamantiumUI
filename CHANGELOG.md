@@ -7,6 +7,10 @@ All packages share one version.
 
 ### Added
 
+- `Keyboard.HasRightToLeftLayout` (`INativeKeyboard.HasRightToLeftLayout`): whether a keyboard layout the user switches
+  between types a right-to-left script, as Hebrew or Arabic - for keys an editor gives to text direction only where
+  such text is typed. Windows reads the installed layouts live; Wayland reads the letter keys of each layout in the
+  keymap the compositor sends; macOS has no keyboard platform yet, so it says false there.
 - Windows on Linux, on a Wayland compositor (`Platforms/Wayland`). A window is a `wl_surface` in the `xdg_toplevel`
   role, drawn by its Vulkan swapchain: it takes the size and state the compositor configures, draws at the scale it
   prefers - fractional ones too, through a viewport - and is resized from its edges and moved by its title bar by the

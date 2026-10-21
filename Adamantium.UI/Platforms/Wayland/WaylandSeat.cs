@@ -1,35 +1,29 @@
-using System;
 using System.Collections.Generic;
+using System.Text;
+using System;
+using Adamantium.Core;
+using Adamantium.Fonts.Text;
+using Adamantium.Fonts;
 using Adamantium.Mathematics;
-using Adamantium.UI.Core;
-using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Input.Raw;
+using Adamantium.UI.Core.Input;
+using Adamantium.UI.Core;
 using Adamantium.Wayland;
 using KeyState = Adamantium.UI.Core.Input.KeyState;
 
 namespace Adamantium.UI.Platforms.Wayland;
 
-/// <summary>
-/// The seat: the pointer and the keyboard, and the live answers the framework asks the platform for - where the
-/// pointer is, what is held, which cursor shows, what the user set. Its events arrive on the thread running
-/// <see cref="WaylandPlatform.Run"/> and go on to the loop thread as raw input of the window they are in.
-/// <para>
-/// Wayland repeats no key: the client does, at the rate wl_keyboard.repeat_info gives, timed by the platform's wait.
-/// </para>
-/// </summary>
+/// <summary>The seat's pointer and keyboard, as raw input of the window they are in; key repeat is timed here.</summary>
 internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatformSettings, INativeCursors
 {
-    // linux/input-event-codes.h
     private const uint ButtonLeft = 0x110;
     private const uint ButtonRight = 0x111;
     private const uint ButtonMiddle = 0x112;
     private const uint ButtonSide = 0x113;
     private const uint ButtonExtra = 0x114;
 
-    // A wheel notch, as wl_pointer.axis_value120 and Windows both count it.
     private const int Notch = 120;
 
-    // A touchpad's continuous scroll, in surface pixels, taken as a notch every this many.
     private const double PixelsPerNotch = 15;
 
     private readonly WaylandPlatform platform;
@@ -52,8 +46,12 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
     private double wheelPixelsHorizontal;
     private uint wheelTime;
 
+    private static readonly (uint First, uint Last)[] EvdevLetterRows = [(16, 25), (30, 38), (44, 50)];
+
     private XkbKeyboard xkb;
+    private volatile bool hasRightToLeftLayout;
     private readonly HashSet<Key> keysDown = new();
+    private readonly object _keysDownLock = new();
     private int repeatRate = 25;
     private int repeatDelay = 600;
     private uint repeatCode;
@@ -91,7 +89,6 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
 
     #region INativeMouse, INativeKeyboard, INativePlatformSettings
 
-    // The desktop is the window's own client area under Wayland, in physical pixels like a Win32 desktop point.
     public PixelPoint Position
     {
         get
@@ -99,13 +96,13 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
             var scale = pointerWindow?.Scale ?? 1.0;
             return new PixelPoint(pointerPosition.X * scale, pointerPosition.Y * scale);
         }
-        // A client does not warp the pointer on Wayland.
+
         set { }
     }
 
     public bool IsKeyDown(Key key)
     {
-        lock (keysDown)
+        lock (_keysDownLock)
         {
             return keysDown.Contains(key);
         }
@@ -122,7 +119,8 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
         };
     }
 
-    // GTK's defaults: the desktop's own settings live in gsettings, which a client of the compositor does not read.
+    public bool HasRightToLeftLayout => hasRightToLeftLayout;
+
     public uint DoubleClickTime => 400;
 
     public Size DoubleClickSize => new(4, 4);
@@ -133,7 +131,7 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
 
     public Rect VirtualScreen => default;
 
-    public IReadOnlyList<ScreenInfo> Screens => Array.Empty<ScreenInfo>();
+    public IReadOnlyList<ScreenInfo> Screens => [];
 
     #endregion
 
@@ -253,7 +251,6 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
         pointerEnterSerial = serial;
         pointerPosition = new Vector2(x, y);
 
-        // The cursor belongs to the surface it was set for: a new entry starts from nothing.
         appliedShape = 0;
         cursorHidden = false;
         PointerMoved(0);
@@ -287,7 +284,6 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
             return;
         }
 
-        // On an edge the window is resized from, the cursor says so; anywhere else it is what the content asks for.
         var edge = worker.ResizeEdgeAt(pointerPosition);
         if (edge != XdgToplevel.ResizeEdge.None)
         {
@@ -309,7 +305,6 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
         var changed = ButtonOf(button);
         var pressed = state == WlPointer.ButtonState.Pressed;
 
-        // A press on an edge of a window drawing its own frame is the compositor's resize, not the content's click.
         if (pressed && changed == MouseButtons.Left && worker != null &&
             worker.BeginResize(worker.ResizeEdgeAt(pointerPosition), serial))
         {
@@ -340,18 +335,28 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
     private void OnAxis(uint time, WlPointer.Axis axis, double value)
     {
         wheelTime = time;
-        if (axis == WlPointer.Axis.VerticalScroll) wheelPixelsVertical += value;
-        else wheelPixelsHorizontal += value;
+        if (axis == WlPointer.Axis.VerticalScroll)
+        {
+            wheelPixelsVertical += value;
+        }
+        else
+        {
+            wheelPixelsHorizontal += value;
+        }
     }
 
     private void OnAxisValue120(WlPointer.Axis axis, int value120)
     {
-        if (axis == WlPointer.Axis.VerticalScroll) wheel120Vertical += value120;
-        else wheel120Horizontal += value120;
+        if (axis == WlPointer.Axis.VerticalScroll)
+        {
+            wheel120Vertical += value120;
+        }
+        else
+        {
+            wheel120Horizontal += value120;
+        }
     }
 
-    // A frame closes one gesture's worth of axis events: a wheel's notches when there are any, the pixels of a
-    // touchpad's scroll otherwise. Down is positive on Wayland and negative on Windows; right is positive on both.
     private void OnPointerFrame()
     {
         var vertical = wheel120Vertical != 0 ? wheel120Vertical : (int)Math.Round(wheelPixelsVertical / PixelsPerNotch * Notch);
@@ -420,12 +425,40 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
     {
         if (format != WlKeyboard.KeymapFormat.XkbV1)
         {
-            LinuxInterop.close(fd);
+            PosixInterop.Close(fd);
             return;
         }
 
         xkb?.Dispose();
         xkb = XkbKeyboard.FromKeymap(fd, size);
+        hasRightToLeftLayout = xkb != null && TypesRightToLeft(xkb);
+    }
+
+    private static bool TypesRightToLeft(XkbKeyboard keyboard)
+    {
+        var letters = new StringBuilder();
+        for (uint layout = 0; layout < keyboard.LayoutCount; layout++)
+        {
+            letters.Clear();
+            foreach (var (first, last) in EvdevLetterRows)
+            {
+                for (var code = first; code <= last; code++)
+                {
+                    var character = keyboard.Character(code, layout);
+                    if (character > 0 && Rune.IsValid(character))
+                    {
+                        letters.Append(char.ConvertFromUtf32(character));
+                    }
+                }
+            }
+
+            if (BidiParagraph.DirectionOf(letters.ToString().AsSpan()) == TextDirection.RightToLeft)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private void OnKeyboardEnter(uint serial, WlSurface surface, ReadOnlySpan<byte> keys)
@@ -433,12 +466,11 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
         keyboardWindow = platform.Find(surface);
     }
 
-    // What was held is let go of with the focus: the keys come up somewhere this window does not hear.
     private void OnKeyboardLeave(uint serial, WlSurface surface)
     {
         keyboardWindow = null;
         StopRepeat();
-        lock (keysDown)
+        lock (_keysDownLock)
         {
             keysDown.Clear();
         }
@@ -466,14 +498,13 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
         var key = KeyOf(code);
         if (state == WlKeyboard.KeyState.Pressed)
         {
-            lock (keysDown)
+            lock (_keysDownLock)
             {
                 keysDown.Add(key);
             }
 
             Press(code, key, time, repeated: false);
 
-            // A rate of zero is the user's "no repeat".
             if (xkb.Repeats(code) && repeatRate > 0)
             {
                 repeatCode = code;
@@ -482,7 +513,7 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
         }
         else
         {
-            lock (keysDown)
+            lock (_keysDownLock)
             {
                 keysDown.Remove(key);
             }
@@ -512,7 +543,6 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
 
     private void Press(uint code, Key key, uint time, bool repeated)
     {
-        // ...to THIS window when nothing in it is focused, as on Windows: see KeyboardDevice.ProcessEvent.
         var window = keyboardWindow?.Window;
         if (window == null)
         {
@@ -528,8 +558,6 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
         WaylandPlatform.DispatchInput(() => KeyboardDevice.CurrentDevice.ProcessEvent(
             new RawKeyboardEventArgs(key, RawKeyboardEventType.KeyDown, press, modifiers, time), window));
 
-        // Text is what the key types - unless Ctrl or Alt hold it, which make it a shortcut: Windows sends no WM_CHAR
-        // for those either. AltGr is not Alt here; what it types is text.
         var held = xkb.Modifiers;
         if ((held & (XkbModifiers.Control | XkbModifiers.Alt)) != 0)
         {
@@ -566,7 +594,6 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
         Press(repeatCode, KeyOf(repeatCode), (uint)Environment.TickCount64, repeated: true);
         repeatDue += 1000 / repeatRate;
 
-        // A wait that overslept does not repeat the key a burst of times to catch up.
         if (repeatDue < Environment.TickCount64)
         {
             repeatDue = Environment.TickCount64 + 1000 / repeatRate;

@@ -1,3 +1,4 @@
+using Adamantium.Core;
 using Adamantium.Wayland;
 
 namespace Adamantium.UI.Platforms.Wayland;
@@ -15,7 +16,7 @@ internal static unsafe class WaylandShm
             return null;
         }
 
-        var fd = LinuxInterop.memfd_create("adamantium-shm", LinuxInterop.MemFdCloseOnExec);
+        var fd = PosixInterop.MemFdCreate("adamantium-shm", PosixInterop.MemFdCloseOnExec);
         if (fd < 0)
         {
             return null;
@@ -27,7 +28,7 @@ internal static unsafe class WaylandShm
             {
                 for (var written = 0; written < size;)
                 {
-                    var count = (int)LinuxInterop.write(fd, bytes + written, (nuint)(size - written));
+                    var count = (int)PosixInterop.Write(fd, bytes + written, (nuint)(size - written));
                     if (count <= 0)
                     {
                         return null;
@@ -44,7 +45,7 @@ internal static unsafe class WaylandShm
         }
         finally
         {
-            LinuxInterop.close(fd);
+            PosixInterop.Close(fd);
         }
     }
 }
