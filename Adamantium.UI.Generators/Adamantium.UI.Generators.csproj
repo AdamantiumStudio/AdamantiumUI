@@ -42,6 +42,8 @@
 
     <ItemGroup>
       <ProjectReference Include="..\Adamantium.UI.Markup\Adamantium.UI.Markup.csproj" GeneratePathProperty="true" PrivateAssets="all" />
+      <!-- Not used here: referenced so the analyzers this project hands an application include the routed-event calls. -->
+      <ProjectReference Include="..\Adamantium.UI.EventGenerators\Adamantium.UI.EventGenerators.csproj" PrivateAssets="all" />
     </ItemGroup>
 
     <ItemGroup Condition="'$(UseEngineSource)' == 'true'">

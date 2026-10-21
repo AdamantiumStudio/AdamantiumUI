@@ -2,7 +2,7 @@
 
 public class EventSubscription
 {
-   private HandlerInvoker invoker;
+   private HandlerCall call;
 
    public Delegate Handler { get; set; }
 
@@ -11,13 +11,13 @@ public class EventSubscription
    internal void Invoke(object sender, RoutedEventArgs e)
    {
       var handler = Handler;
-      var call = invoker;
-      if (call == null || call.HandlerType != handler.GetType())
+      var known = call;
+      if (known == null || known.IsDynamic || known.DelegateType != handler.GetType())
       {
-         call = HandlerInvoker.For(handler.GetType());
-         invoker = call;
+         known = RoutedEventInvokers.For(handler.GetType());
+         call = known;
       }
 
-      call.Invoke(handler, sender, e);
+      known.Invoke(handler, sender, e);
    }
 }

@@ -23,6 +23,7 @@
     <ItemGroup>
         <ProjectReference Include="..\Adamantium.Navigation\Adamantium.Navigation.csproj" />
         <ProjectReference Include="..\Adamantium.UI.Markup\Adamantium.UI.Markup.csproj"/>
+        <ProjectReference Include="..\Adamantium.UI.EventGenerators\Adamantium.UI.EventGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
     </ItemGroup>
 
     <ItemGroup Condition="'$(UseEngineSource)' == 'true'">
