@@ -211,6 +211,7 @@ public class WindowRenderService : UiRenderService
     public override void EndDraw()
     {
         var t0 = Stopwatch.GetTimestamp();
+        RuntimeStats.LastWindowGpuMs = GraphicsDevice.LastGpuFrameMs;
         GraphicsDevice.EndDraw();
         // A failed acquire leaves nothing to copy into and nothing to present.
         if (GraphicsDevice.HasSwapchainImage)

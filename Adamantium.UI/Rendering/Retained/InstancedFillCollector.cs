@@ -244,8 +244,12 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
         // frame that follows the walk that filled them, so returning to a copy by frame index overwrites one that
         // in-flight replays are still drawing from.
         var copies = (int)Math.Max(1u, _device.MaxFramesInFlight);
-        var slot = _writeCursor % copies;
-        _writeCursor = (_writeCursor + 1) % copies;
+        if (_device.FrameTicket != _copyFrame)
+        {
+            TakeNextCopy(copies);
+        }
+
+        var slot = _copy % copies;
 
         foreach (var seg in _keys.Values)
         {
@@ -387,7 +391,44 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
         }
     }
 
-    private int _writeCursor;   // which ring copy the next walk writes (see BeginFrame)
+    private int _writeCursor;   // which ring copy the next frame that writes takes (see BeginFrame)
+    private int _copy;          // the ring copy this frame writes and draws from
+    private ulong _copyFrame = ulong.MaxValue;   // the device frame (its FrameTicket) that took it
+
+    private void TakeNextCopy(int copies)
+    {
+        _copy = _writeCursor % copies;
+        _writeCursor = (_writeCursor + 1) % copies;
+        _copyFrame = _device.FrameTicket;
+    }
+
+    // A patch has to land in a copy no frame in flight reads: the first write of a frame moves every key to the next copy
+    // and fills it with what the keys retain, then the patch goes on top. Same rule as BatchCollector.PrepareRetainedWrite.
+    private void PrepareRetainedWrite()
+    {
+        if (_device.FrameTicket == _copyFrame) return;
+
+        TakeNextCopy((int)Math.Max(1u, _device.MaxFramesInFlight));
+        foreach (var seg in _keys.Values)
+        {
+            seg.Gpu = Retake(seg.GpuRing, seg.Gpu, seg.Items, seg.Count);
+            seg.GradGpu = Retake(seg.GradGpuRing, seg.GradGpu, seg.GradItems, seg.GradCount);
+            seg.PatGpu = Retake(seg.PatGpuRing, seg.PatGpu, seg.PatItems, seg.PatCount);
+            seg.TexGpu = Retake(seg.TexGpuRing, seg.TexGpu, seg.TexItems, seg.TexCount);
+            seg.MatGpu = Retake(seg.MatGpuRing, seg.MatGpu, seg.MatItems, seg.MatCount);
+        }
+    }
+
+    private Buffer Retake<T>(Buffer[] ring, Buffer current, T[] items, int count) where T : struct
+    {
+        if (ring == null || _copy >= ring.Length) return current;
+
+        var next = ring[_copy];
+        if (count > 0) next.SetData(new ReadOnlySpan<T>(items, 0, count));
+        return next;
+    }
+
+    internal int CurrentCopy => _copy;
 
     // How long a key nobody draws is kept, and how often the cache is looked over. Both in FRAMES, and both generous:
     // forgetting a mesh costs re-tessellating it once, so the only thing a short memory would buy is a stutter when
@@ -499,7 +540,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
                 seg.GpuRing[i] = Buffer.New<GeometryInstance>(_device, (uint)seg.Items.Length,
                     BufferUsageFlags.StorageBuffer | BufferUsageFlags.ShaderDeviceAddress, Mem);
             }
-            seg.Gpu = seg.GpuRing[_writeCursor % copies];
+            seg.Gpu = seg.GpuRing[_copy % copies];
             seg.GpuCapacity = seg.Items.Length;
             seg.Recreated = true;
         }
@@ -549,7 +590,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
                 seg.GradGpuRing[i] = Buffer.New<GradientGeometryInstance>(_device, (uint)seg.GradItems.Length,
                     BufferUsageFlags.StorageBuffer | BufferUsageFlags.ShaderDeviceAddress, Mem);
             }
-            seg.GradGpu = seg.GradGpuRing[_writeCursor % copies];
+            seg.GradGpu = seg.GradGpuRing[_copy % copies];
             seg.GradGpuCapacity = seg.GradItems.Length;
             seg.GradRecreated = true;
         }
@@ -625,7 +666,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
                 seg.TexGpuRing[i] = Buffer.New<TextureGeometryInstance>(_device, (uint)seg.TexItems.Length,
                     BufferUsageFlags.StorageBuffer | BufferUsageFlags.ShaderDeviceAddress, Mem);
             }
-            seg.TexGpu = seg.TexGpuRing[_writeCursor % copies];
+            seg.TexGpu = seg.TexGpuRing[_copy % copies];
             seg.TexGpuCapacity = seg.TexItems.Length;
             seg.TexRecreated = true;
         }
@@ -697,7 +738,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
                 seg.PatGpuRing[i] = Buffer.New<PatternGeometryInstance>(_device, (uint)seg.PatItems.Length,
                     BufferUsageFlags.StorageBuffer | BufferUsageFlags.ShaderDeviceAddress, Mem);
             }
-            seg.PatGpu = seg.PatGpuRing[_writeCursor % copies];
+            seg.PatGpu = seg.PatGpuRing[_copy % copies];
             seg.PatGpuCapacity = seg.PatItems.Length;
             seg.PatRecreated = true;
         }
@@ -780,7 +821,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
                 seg.MatGpuRing[i] = Buffer.New<PatternGeometryInstance>(_device, (uint)seg.MatItems.Length,
                     BufferUsageFlags.StorageBuffer | BufferUsageFlags.ShaderDeviceAddress, Mem);
             }
-            seg.MatGpu = seg.MatGpuRing[_writeCursor % copies];
+            seg.MatGpu = seg.MatGpuRing[_copy % copies];
             seg.MatGpuCapacity = seg.MatItems.Length;
             seg.MatRecreated = true;
         }
@@ -909,6 +950,8 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
     {
         if (_pendingKeys.Count == 0 && _pendingUnits.Count == 0) return -1;
 
+        PrepareRetainedWrite();
+
         // Record this group's draws + upload each key's new instances NOW (recording frame). The record captures the
         // buffer range (first,count) per key so replay re-issues the exact same draw with no upload.
         var rec = TakeFlushRecord();
@@ -1004,6 +1047,10 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
     /// fringe/stroke, NO re-upload (the retained instance buffers still hold the bytes).</summary>
     public void ReplayFlush(int index, Rect2D fullScissor, Matrix4x4F projection)
         => DrawFlushRecord(_flushRecords[index], fullScissor, projection);
+
+    /// <summary>Whether a recorded flush draws backdrop materials, which copy the frame out of the render pass.</summary>
+    public bool FlushDrawsMaterials(int index)
+        => index >= 0 && index < _flushRecords.Count && _flushRecords[index].MatKeys.Count > 0;
 
     /// <summary>Give a recorded flush a freshly derived clip - its scissor is a world-space rect frozen when it flushed,
     /// so a viewport that moved since describes a different frame (see RenderCache.RefreshMovedScissors).</summary>
@@ -1515,6 +1562,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
     {
         if (key is not KeySegment seg || first < 0 || count <= 0 || first + count > seg.Count) return;
 
+        PrepareRetainedWrite();
         for (var i = 0; i < count; i++) seg.Items[first + i] = default;
         seg.Gpu?.SetData(seg.Items.AsSpan(first, count), (uint)(first * InstanceStride));
     }
@@ -1546,6 +1594,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
         if (key is not KeySegment seg || flush < 0 || flush >= _flushCount) return false;
         if (seg.Gpu == null) return false;
 
+        PrepareRetainedWrite();
         var rec = _flushRecords[flush];
         var index = rec.Keys.FindIndex(k => ReferenceEquals(k.Seg, seg));
         if (index < 0) return false;
@@ -1595,6 +1644,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
         // A key that has never drawn has no instance buffer yet - the walk builds it lazily on the first add, and a patch
         // that places the FIRST shape of a mesh is exactly that case. Same lazy build, same reason (a whole ring, not one
         // buffer, or this key spends its life writing a copy the frames in flight are still reading).
+        PrepareRetainedWrite();
         EnsureInstanceRing(seg);
         if (seg.Gpu == null) return -1;
         while (seg.Count + stageCount > seg.Items.Length) Array.Resize(ref seg.Items, seg.Items.Length * 2);
@@ -1627,7 +1677,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
                 BufferUsageFlags.StorageBuffer | BufferUsageFlags.ShaderDeviceAddress, Mem);
         }
 
-        seg.Gpu = seg.GpuRing[_writeCursor % copies];
+        seg.Gpu = seg.GpuRing[_copy % copies];
         seg.GpuCapacity = seg.Items.Length;
         seg.Recreated = true;
     }
@@ -1636,6 +1686,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
     {
         if (key is not KeySegment seg || seg.Gpu == null || slot < 0 || slot >= seg.Count) return;
 
+        PrepareRetainedWrite();
         seg.Items[slot] = item;
         seg.Gpu.SetData(seg.Items.AsSpan(slot, 1), (uint)(slot * InstanceStride));
     }
