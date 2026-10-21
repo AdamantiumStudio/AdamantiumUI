@@ -6,6 +6,7 @@ using Adamantium.MVVM;
 using Adamantium.Navigation;
 using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Collections;
 
 namespace Adamantium.UI.Sandbox.ViewModels;
@@ -31,7 +32,7 @@ public partial class LayoutViewModel : TabPageViewModel
         TilePreset = TilePresets[7];
         Fill(GalleryTiles, _galleryCount);
         Fill(FeaturedTiles, _featuredCount);
-        FeaturedTiles[0].IsFeatured = true;
+        Feature(FeaturedTiles[0]);
         ShowFeatured();
         ShowStand(_stand);
     }
@@ -75,9 +76,37 @@ public partial class LayoutViewModel : TabPageViewModel
     /// <summary>The tree the viewport panel lays its tiles out in, a fresh one of the layout picked.</summary>
     [Bindable] private TileRegion _viewportLayout;
 
-    /// <summary>The viewport panel's tiles, in the order it lays them out.</summary>
-    public IReadOnlyList<ColorRect> TiledItems { get; } =
-        Enumerable.Range(0, 4).Select(i => new ColorRect { Number = i + 1, Color = Palette[i] }).ToList();
+    /// <summary>The viewport panel's tiles, in the order it lays them out; a drag moves one to another place.</summary>
+    public ObservableCollection<ColorRect> TiledItems { get; } =
+        new(Enumerable.Range(0, 4).Select(i => new ColorRect { Number = i + 1, Color = Palette[i] }));
+
+    /// <summary>Moves the viewport tile dropped to where it was dropped.</summary>
+    [Command] private void DropViewportTile(object arg) => MoveTile(arg, TiledItems);
+
+    /// <summary>Moves the gallery tile dropped to where it was dropped.</summary>
+    [Command] private void DropGalleryTile(object arg) => MoveTile(arg, GalleryTiles);
+
+    /// <summary>Moves the featured layout's tile dropped to where it was dropped.</summary>
+    [Command] private void DropFeaturedTile(object arg) => MoveTile(arg, FeaturedTiles);
+
+    private static void MoveTile<T>(object arg, ObservableCollection<T> tiles) where T : class
+    {
+        if (arg is not DragDropEventArgs e || e.Data?.Get<T>() is not { } tile || tiles.IndexOf(tile) is not (>= 0 and var from))
+        {
+            return;
+        }
+
+        var to = e.InsertBefore is T before && tiles.IndexOf(before) is >= 0 and var at ? at : tiles.Count;
+        if (to > from)
+        {
+            to--;
+        }
+
+        if (to != from)
+        {
+            tiles.Move(from, to);
+        }
+    }
 
     /// <summary>Whether the first tile fills the panel alone.</summary>
     [Bindable, Affects(nameof(MaximizedTile))] private bool _maximizeFirstTile;
@@ -122,8 +151,16 @@ public partial class LayoutViewModel : TabPageViewModel
     /// <summary>The featured layout, made again when its side or share changes.</summary>
     [Bindable] private TileRegion _featuredLayout;
 
-    /// <summary>The featured layout's tiles; a click features one.</summary>
+    /// <summary>The featured layout's tiles; a tile's star features it, a drag moves one to another place.</summary>
     public ObservableCollection<ShowcaseTile> FeaturedTiles { get; } = [];
+
+    private void Feature(ShowcaseTile tile)
+    {
+        foreach (var each in FeaturedTiles)
+        {
+            each.IsFeatured = ReferenceEquals(each, tile);
+        }
+    }
 
     /// <summary>How many tiles the featured layout holds.</summary>
     [Bindable] private int _featuredCount = 8;
@@ -167,14 +204,6 @@ public partial class LayoutViewModel : TabPageViewModel
         {
             Shares = stripFirst ? [100 - FeaturedShare, FeaturedShare] : [FeaturedShare, 100 - FeaturedShare]
         };
-    }
-
-    private void Feature(ShowcaseTile tile)
-    {
-        foreach (var each in FeaturedTiles)
-        {
-            each.IsFeatured = ReferenceEquals(each, tile);
-        }
     }
 
     private void Fill(ObservableCollection<ShowcaseTile> tiles, int count)

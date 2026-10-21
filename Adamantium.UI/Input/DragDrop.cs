@@ -471,12 +471,12 @@ public static partial class DragDrop
         // The gap's index comes from the PANEL's own grid, not from ComputeInsertion: that one measures against the
         // containers, and the gap moves them, so feeding it back would make the gap chase itself between two slots.
         if (hostPanel is { SupportsDropGap: true } &&
-            hostPanel.TryGetDropSlot(DragPointer.GetPosition((IInputComponent)hostPanel), out var slot))
+            hostPanel.TryGetDropSlot(DragPointer.GetPosition((IInputComponent)hostPanel), LiftedFrom(list), out var slot))
         {
             ClearIndicatorVisual();
             _insertIndex = slot;
             _insertBefore = AnchorAt(list, slot);
-            SetDropGap(hostPanel, slot);
+            SetDropGap(hostPanel, slot, list);
             return;
         }
 
@@ -676,7 +676,10 @@ public static partial class DragDrop
     }
 
     // The panel currently holding a drop gap open, so it can be closed again from anywhere the cue is dropped.
-    private static VirtualizingPanel _gapPanel;
+    private static IDropGapPanel _gapPanel;
+
+    private static ItemsControl _liftedList;
+    private static System.Collections.IList _lifted;
 
     // A gap belongs to ONE panel at a time: moving to another list has to close the first, or a list the cursor left
     // would keep a hole in it for the rest of the gesture.
@@ -687,7 +690,7 @@ public static partial class DragDrop
         var items = list?.Items;
         if (items == null) return null;
 
-        var dragged = (list as ListBox)?.SelectedItems;
+        var dragged = LiftedFrom(list);
         for (var i = index; i >= 0 && i < items.Count; i++)
         {
             if (dragged?.Contains(items[i]) != true) return items[i];
@@ -696,16 +699,37 @@ public static partial class DragDrop
         return null;   // nothing but dragged items after the seam - append
     }
 
-    private static void SetDropGap(VirtualizingPanel panel, int index)
+    private static void SetDropGap(IDropGapPanel panel, int index, ItemsControl list = null)
     {
-        if (!ReferenceEquals(_gapPanel, panel) && _gapPanel != null) _gapPanel.DropGapIndex = -1;
+        if (!ReferenceEquals(_gapPanel, panel) && _gapPanel != null) _gapPanel.ShowDropGap(-1, null);
         _gapPanel = panel;
-        if (panel != null) panel.DropGapIndex = index;
+        panel?.ShowDropGap(index, index >= 0 && list != null ? LiftedFrom(list) : null);
+    }
+
+    private static System.Collections.IList LiftedFrom(ItemsControl list)
+    {
+        if (ReferenceEquals(_liftedList, list)) return _lifted;
+
+        _liftedList = list;
+        _lifted = null;
+        var host = list.ItemsHostPanel;
+        for (var c = _source as IUIComponent; c != null && host != null; c = c.VisualParent)
+        {
+            if (!ReferenceEquals(c.VisualParent, host)) continue;
+
+            if (c is not IFundamentalUIComponent { DataContext: { } pressed }) break;
+
+            var selected = (list as ListBox)?.SelectedItems;
+            _lifted = selected != null && selected.Contains(pressed) ? selected : new List<object> { pressed };
+            break;
+        }
+
+        return _lifted;
     }
 
     // The list asks its own items host - no walking the tree for it, and it answers before anything is realized, which
     // is what an EMPTY list needs (a drop into one is exactly when this matters).
-    private static VirtualizingPanel HostPanel(ItemsControl list) => list.ItemsHostPanel as VirtualizingPanel;
+    private static IDropGapPanel HostPanel(ItemsControl list) => list.ItemsHostPanel as IDropGapPanel;
 
     private static void ClearIndicator()
     {
@@ -1331,6 +1355,8 @@ public static partial class DragDrop
         _source = null;
         _data = null;
         _dragging = false;
+        _liftedList = null;
+        _lifted = null;
         _ghostBgra = null;
         _ghostShown = false;
         _presentedScale = _ghostBakeScale;   // next drag re-bakes _ghostBakeScale; keep them in step so first show doesn't resample

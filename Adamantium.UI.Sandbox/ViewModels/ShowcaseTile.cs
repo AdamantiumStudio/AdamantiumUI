@@ -22,11 +22,14 @@ public partial class ShowcaseTile
     public string Color { get; }
 
     /// <summary>Whether the tile is the featured one.</summary>
-    [Bindable, Affects(nameof(TileName))]
+    [Bindable, Affects(nameof(TileName), nameof(CanMove))]
     private bool _isFeatured;
 
     /// <summary>The tile of the layout it takes: the featured one, or the next in order.</summary>
     public string TileName => IsFeatured ? TileLayouts.FeaturedTile : null;
+
+    /// <summary>Whether the tile drags to another place: the featured one has its own tile.</summary>
+    public bool CanMove => !IsFeatured;
 
     /// <summary>Makes this tile the featured one.</summary>
     [Command]

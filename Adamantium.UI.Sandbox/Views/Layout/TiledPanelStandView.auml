@@ -5,7 +5,8 @@
     <!-- One of the layout tab's stands, under the key "TiledPanel": one panel three ways. Viewports: the layouts of 3D
          editors, picked by their thumbnails; the gaps drag, those in line together, and a double click shares a split
          evenly again. Gallery: any number of tiles in a flow, its limits, proportion and last row set here. Featured:
-         one tile large, the rest in a strip on the side picked; a click on a tile features it. -->
+         one tile large, the rest in a strip on the side picked; a tile's star features it. In all three a tile drags
+         to another place: it leaves its own, a gap opens where it would land and the others move aside. -->
     <Grid RowDefinitions="Auto,*">
         <SegmentedControl EnumType="{x:Type vm:TileShowcase}"
                           SelectedItem="{Binding TileShowcase, Mode=TwoWay}"
@@ -66,27 +67,39 @@
                         Margin="12,0,0,0"
                         AutomationProperties.AutomationId="ShareTilesEvenly"/>
             </StackPanel>
-            <ItemsControl Grid.Row="2"
-                          ItemsSource="{Binding TiledItems}"
-                          AutomationProperties.AutomationId="TiledPanelItems">
-                <ItemsControl.ItemsPanel>
+            <ListBox Grid.Row="2"
+                     ItemsSource="{Binding TiledItems}"
+                     Background="Transparent"
+                     DragDrop.AllowDrop="True" DragDrop.DropCommand="{Binding DropViewportTileCommand}"
+                     AutomationProperties.AutomationId="TiledPanelItems">
+                <ListBox.ItemsPanel>
                     <ItemsPanelTemplate>
                         <TiledPanel Layout="{Binding ViewportLayout}"
                                     MaximizedItem="{Binding MaximizedTile}"
                                     Spacing="6"/>
                     </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-                <ItemsControl.ItemTemplate>
+                </ListBox.ItemsPanel>
+                <ListBox.ItemContainerStyle>
+                    <Style Selector="ListBoxItem">
+                        <Setter Property="Margin" Value="0"/>
+                        <Setter Property="Padding" Value="3"/>
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                        <Setter Property="VerticalContentAlignment" Value="Stretch"/>
+                        <Setter Property="AutomationProperties.Name" Value="{Binding Number}"/>
+                    </Style>
+                </ListBox.ItemContainerStyle>
+                <ListBox.ItemTemplate>
                     <DataTemplate>
-                        <Border Background="{Binding Color, Converter={conv:StringToGradientBrushConverter}}" CornerRadius="4">
+                        <Border Background="{Binding Color, Converter={conv:StringToGradientBrushConverter}}" CornerRadius="4"
+                                DragDrop.AllowDrag="True" DragDrop.DragData="{Binding}">
                             <TextBlock Text="{Binding Number}"
                                        FontSize="32"
                                        HorizontalAlignment="Center"
                                        VerticalAlignment="Center"/>
                         </Border>
                     </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
+                </ListBox.ItemTemplate>
+            </ListBox>
         </Grid>
 
         <!-- Gallery -->
@@ -138,25 +151,37 @@
                     </SegmentedControl.ItemTemplate>
                 </SegmentedControl>
             </WrapPanel>
-            <ItemsControl Grid.Row="1"
-                          ItemsSource="{Binding GalleryTiles}"
-                          AutomationProperties.AutomationId="GalleryTiles">
-                <ItemsControl.ItemsPanel>
+            <ListBox Grid.Row="1"
+                     ItemsSource="{Binding GalleryTiles}"
+                     Background="Transparent"
+                     DragDrop.AllowDrop="True" DragDrop.DropCommand="{Binding DropGalleryTileCommand}"
+                     AutomationProperties.AutomationId="GalleryTiles">
+                <ListBox.ItemsPanel>
                     <ItemsPanelTemplate>
                         <TiledPanel Layout="{Binding GalleryLayout}" Spacing="6"/>
                     </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-                <ItemsControl.ItemTemplate>
+                </ListBox.ItemsPanel>
+                <ListBox.ItemContainerStyle>
+                    <Style Selector="ListBoxItem">
+                        <Setter Property="Margin" Value="0"/>
+                        <Setter Property="Padding" Value="3"/>
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                        <Setter Property="VerticalContentAlignment" Value="Stretch"/>
+                        <Setter Property="AutomationProperties.Name" Value="{Binding Number}"/>
+                    </Style>
+                </ListBox.ItemContainerStyle>
+                <ListBox.ItemTemplate>
                     <DataTemplate>
-                        <Border Background="{Binding Color, Converter={conv:StringToGradientBrushConverter}}" CornerRadius="4">
+                        <Border Background="{Binding Color, Converter={conv:StringToGradientBrushConverter}}" CornerRadius="4"
+                                DragDrop.AllowDrag="True" DragDrop.DragData="{Binding}">
                             <TextBlock Text="{Binding Number}"
                                        FontSize="20"
                                        HorizontalAlignment="Center"
                                        VerticalAlignment="Center"/>
                         </Border>
                     </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
+                </ListBox.ItemTemplate>
+            </ListBox>
         </Grid>
 
         <!-- Featured -->
@@ -208,37 +233,51 @@
                     </SegmentedControl.ItemTemplate>
                 </SegmentedControl>
             </WrapPanel>
-            <ItemsControl Grid.Row="1"
-                          ItemsSource="{Binding FeaturedTiles}"
-                          AutomationProperties.AutomationId="FeaturedTiles">
-                <ItemsControl.ItemsPanel>
+            <ListBox Grid.Row="1"
+                     ItemsSource="{Binding FeaturedTiles}"
+                     Background="Transparent"
+                     DragDrop.AllowDrop="True" DragDrop.DropCommand="{Binding DropFeaturedTileCommand}"
+                     AutomationProperties.AutomationId="FeaturedTiles">
+                <ListBox.ItemsPanel>
                     <ItemsPanelTemplate>
                         <TiledPanel Layout="{Binding FeaturedLayout}" Spacing="6"/>
                     </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-                <ItemsControl.ItemContainerStyle>
-                    <Style Selector="ContentPresenter">
+                </ListBox.ItemsPanel>
+                <ListBox.ItemContainerStyle>
+                    <Style Selector="ListBoxItem">
+                        <Setter Property="Margin" Value="0"/>
+                        <Setter Property="Padding" Value="3"/>
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                        <Setter Property="VerticalContentAlignment" Value="Stretch"/>
+                        <Setter Property="AutomationProperties.Name" Value="{Binding Number}"/>
                         <Setter Property="TiledPanel.Tile" Value="{Binding TileName}"/>
                     </Style>
-                </ItemsControl.ItemContainerStyle>
-                <ItemsControl.ItemTemplate>
+                </ListBox.ItemContainerStyle>
+                <ListBox.ItemTemplate>
                     <DataTemplate>
-                        <Button Command="{Binding FeatureCommand}"
-                                Padding="0"
-                                HorizontalContentAlignment="Stretch"
-                                VerticalContentAlignment="Stretch"
-                                ToolTipService.ToolTip="{Localize LayoutStrings.FeatureTile}"
-                                AutomationProperties.Name="{Binding Number}">
-                            <Border Background="{Binding Color, Converter={conv:StringToGradientBrushConverter}}" CornerRadius="4">
+                        <Border Background="{Binding Color, Converter={conv:StringToGradientBrushConverter}}" CornerRadius="4"
+                                DragDrop.AllowDrag="{Binding CanMove}" DragDrop.DragData="{Binding}">
+                            <Grid>
                                 <TextBlock Text="{Binding Number}"
                                            FontSize="20"
                                            HorizontalAlignment="Center"
                                            VerticalAlignment="Center"/>
-                            </Border>
-                        </Button>
+                                <Button Command="{Binding FeatureCommand}"
+                                        Visibility="{Binding CanMove, Converter={conv:BoolToVisibilityConverter}}"
+                                        HorizontalAlignment="Right"
+                                        VerticalAlignment="Top"
+                                        Margin="4"
+                                        Padding="4"
+                                        ToolTipService.ToolTip="{Localize LayoutStrings.FeatureTile}"
+                                        AutomationProperties.AutomationId="FeatureTile"
+                                        AutomationProperties.Name="{Localize LayoutStrings.FeatureTile}">
+                                    <IconPresenter Icon="{ResourceReference StarIcon}" Width="14" Height="14"/>
+                                </Button>
+                            </Grid>
+                        </Border>
                     </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
+                </ListBox.ItemTemplate>
+            </ListBox>
         </Grid>
     </Grid>
 </View>

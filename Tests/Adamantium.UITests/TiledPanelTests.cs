@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Linq;
 using Adamantium.Mathematics;
 using Adamantium.UI.Controls;
 using Adamantium.UI.Controls.Decorators;
@@ -5,6 +7,7 @@ using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.RoutedEvents;
+using Adamantium.UI.Core.Templates;
 using Adamantium.UI.Extensions;
 using NUnit.Framework;
 
@@ -280,6 +283,69 @@ public class TiledPanelTests
     }
 
     [Test]
+    public void ADropGap_TakesTheLiftedTile_AndTheOthersMoveAside()
+    {
+        var (panel, containers) = Hosted(TileLayouts.Four, "A", "B", "C", "D");
+
+        panel.ShowDropGap(0, new List<object> { "C" });
+        LayHosted(panel);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(containers["C"].Visibility, Is.EqualTo(Visibility.Collapsed), "the dragged tile leaves its place");
+            Assert.That(containers["A"].Bounds, Is.EqualTo(new Rect(102, 0, 98, 48)));
+            Assert.That(containers["B"].Bounds, Is.EqualTo(new Rect(0, 52, 98, 48)));
+            Assert.That(containers["D"].Bounds, Is.EqualTo(new Rect(102, 52, 98, 48)));
+        });
+
+        panel.ShowDropGap(-1, null);
+        LayHosted(panel);
+
+        Assert.That(containers["C"].Bounds, Is.EqualTo(new Rect(0, 52, 98, 48)), "closed, it is back");
+    }
+
+    [TestCase(20, 20, 0)]
+    [TestCase(150, 20, 1)]
+    [TestCase(150, 75, 4)]
+    public void TheDropSlot_IsTheGapItself_OrPastTheGapTheTileAfter(double x, double y, int expected)
+    {
+        var (panel, _) = Hosted(TileLayouts.Four, "A", "B", "C", "D");
+        panel.ShowDropGap(0, new List<object> { "C" });
+        LayHosted(panel);
+
+        Assert.That(panel.TryGetDropSlot(new Vector2(x, y), new List<object> { "C" }, out var index), Is.True);
+        Assert.That(index, Is.EqualTo(expected));
+    }
+
+    [TestCase(150, 75, 4)]
+    [TestCase(20, 75, 3)]
+    [TestCase(20, 20, 1)]
+    public void BeforeTheGapOpens_TheDropSlotAlreadyLeavesTheLiftedTileOut(double x, double y, int expected)
+    {
+        var (panel, _) = Hosted(TileLayouts.Four, "A", "B", "C", "D");
+
+        Assert.That(panel.TryGetDropSlot(new Vector2(x, y), new List<object> { "A" }, out var index), Is.True);
+        Assert.That(index, Is.EqualTo(expected));
+    }
+
+    [Test]
+    public void ANamedTileWhoseChildIsLifted_StaysEmpty()
+    {
+        var (panel, containers) = Hosted(TileLayouts.FeaturedBottom, "F", "B", "C", "D");
+        TiledPanel.SetTile(containers["F"], TileLayouts.FeaturedTile);
+        LayHosted(panel);
+
+        panel.ShowDropGap(3, new List<object> { "F" });
+        LayHosted(panel);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(containers["F"].Visibility, Is.EqualTo(Visibility.Collapsed));
+            Assert.That(containers["B"].Bounds.Height, Is.EqualTo(19.2).Within(1e-9), "no strip tile takes the large one");
+        });
+    }
+
+    [Test]
     public void AChangeOfTheLayout_LaysTheTilesOutAgain()
     {
         var layout = new TileSplit(Orientation.Horizontal, new Tile(), new Tile());
@@ -321,6 +387,35 @@ public class TiledPanelTests
         }
 
         return (panel, children);
+    }
+
+    private static (TiledPanel Panel, Dictionary<string, IUIComponent> Containers) Hosted(TileRegion layout,
+        params string[] items)
+    {
+        var list = new ItemsControl
+        {
+            ItemsSource = items.ToList(),
+            ItemsPanel = new ItemsPanelTemplate(() => new TemplateResult { RootComponent = new TiledPanel { Layout = layout } }),
+            Template = new ControlTemplate(() =>
+            {
+                var presenter = new ItemsPresenter();
+                var result = new TemplateResult { RootComponent = presenter };
+                result.RegisterName("PART_ItemsPresenter", presenter);
+                return result;
+            })
+        };
+        list.Measure(new Size(200, 100));
+        list.Arrange(new Rect(0, 0, 200, 100));
+        var panel = (TiledPanel)list.ItemsHostPanel;
+        var containers = panel.Children.Cast<IUIComponent>()
+            .ToDictionary(c => (string)((IFundamentalUIComponent)c).DataContext);
+        return (panel, containers);
+    }
+
+    private static void LayHosted(TiledPanel panel)
+    {
+        panel.Measure(new Size(200, 100), true);
+        panel.Arrange(new Rect(0, 0, 200, 100), true);
     }
 
     private static void Lay(TiledPanel panel)

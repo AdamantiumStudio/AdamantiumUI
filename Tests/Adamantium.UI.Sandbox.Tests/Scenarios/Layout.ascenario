@@ -47,8 +47,10 @@
   <Set Target="id=GalleryCount" Value="12" />
   <Absent Target="id=GalleryTiles/name=14" />
   <Click Target="id=TileShowcase/name=Featured" />
-  <Click Target="id=FeaturedTiles/type=Button,name=5" />
-  <Click Target="id=FeaturedTiles/type=Button,name=1" />
+  <Invoke Target="id=FeaturedTiles/type=ListItem,name=5/id=FeatureTile" />
+  <Wait Target="id=FeaturedTiles/type=ListItem,name=5/id=FeatureTile" Visibility="Collapsed" />
+  <Invoke Target="id=FeaturedTiles/type=ListItem,name=1/id=FeatureTile" />
+  <Wait Target="id=FeaturedTiles/type=ListItem,name=1/id=FeatureTile" Visibility="Collapsed" />
   <Click Target="id=TileShowcase/name=Viewports" />
   <Select Target="id=TilesStand" />
   <Wait Target="id=CellWidth" />

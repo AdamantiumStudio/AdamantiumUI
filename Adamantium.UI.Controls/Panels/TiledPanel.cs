@@ -1,8 +1,10 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using Adamantium.Core.Collections;
 using Adamantium.Mathematics;
+using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.RoutedEvents;
 using Adamantium.UI.Core.Input;
@@ -16,9 +18,10 @@ namespace Adamantium.UI.Controls.Panels;
 /// over; a child nothing takes is collapsed. <see cref="MaximizedItem"/> fills the panel alone. The gaps of the splits
 /// (<see cref="Spacing"/>) can be dragged, gaps in line moving together; a double click on one shares its splits evenly
 /// again, <see cref="ShareEvenly"/> every split. The panel owns its children's visibility. It fills the room it is
-/// given; where that is unbounded it asks only for its largest child, so it does not scroll.
+/// given; where that is unbounded it asks only for its largest child, so it does not scroll. Hosting a list's items, it
+/// opens a gap where a dragged item would drop: the items dragged out of it leave their tiles, the others move aside.
 /// </summary>
-public class TiledPanel : Panel
+public class TiledPanel : Panel, IDropGapPanel
 {
     private const double MinTileSize = 32;
     private const double GripSlack = 3;
@@ -33,6 +36,13 @@ public class TiledPanel : Panel
     private readonly List<Grip> _grips = new();
     private readonly List<Grip> _dragged = new();
     private TileRegion _watched;
+    private readonly List<IMeasurableComponent> _sequence = new();
+    private readonly Dictionary<IMeasurableComponent, Rect> _lastRects = new();
+    private readonly HashSet<UIComponent> _moving = new();
+    private int _gapIndex = -1;
+    private IList _lifted;
+    private UIComponent _gapCard;
+    private bool _animateMoves;
 
     public TiledPanel()
     {
@@ -85,6 +95,67 @@ public class TiledPanel : Panel
     /// <summary>Gives every part of every split an even share of its room again.</summary>
     public void ShareEvenly() => Layout?.ShareEvenly();
 
+    /// <summary>Whether the panel hosts a list's items, so a drag over it opens a gap.</summary>
+    public bool SupportsDropGap => Owner != null;
+
+    /// <summary>The index in the owner's items a drop at <paramref name="point"/> lands before, so that the gap takes the
+    /// tile under it: that tile, or past the gap the one after it, with the <paramref name="lifted"/> items left out;
+    /// the count for the end.</summary>
+    public bool TryGetDropSlot(Vector2 point, IList lifted, out int index)
+    {
+        index = -1;
+        var items = Owner?.Items;
+        if (items == null)
+        {
+            return false;
+        }
+
+        var gap = _gapCard != null && _gapIndex >= 0 ? _sequence.IndexOf((IMeasurableComponent)_gapCard) : -1;
+        var reach = Spacing / 2;
+        for (var q = 0; q < _sequence.Count; q++)
+        {
+            var entry = _sequence[q];
+            if (!_placed.TryGetValue(entry, out var rect) || !Near(rect, reach, point))
+            {
+                continue;
+            }
+
+            if (q == gap)
+            {
+                index = _gapIndex;
+                return true;
+            }
+
+            var anchor = gap >= 0 ? (q < gap ? _sequence[q] : Next(q + 1)) : Unlifted(q, lifted);
+            index = anchor != null ? IndexOf(items, anchor) : items.Count;
+            if (index < 0)
+            {
+                index = items.Count;
+            }
+
+            return true;
+        }
+
+        index = _gapIndex;
+        return gap >= 0;
+    }
+
+    /// <summary>Opens the gap before the item at <paramref name="index"/>, or closes it at -1; the
+    /// <paramref name="lifted"/> items leave their tiles while it is open.</summary>
+    public void ShowDropGap(int index, IList lifted)
+    {
+        lifted = index < 0 ? null : lifted;
+        if (index == _gapIndex && ReferenceEquals(lifted, _lifted))
+        {
+            return;
+        }
+
+        _gapIndex = index;
+        _lifted = lifted;
+        _animateMoves = true;
+        InvalidateMeasure();
+    }
+
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
@@ -101,6 +172,15 @@ public class TiledPanel : Panel
     {
         var finite = !double.IsInfinity(availableSize.Width) && !double.IsInfinity(availableSize.Height);
         Lay(finite ? availableSize : default);
+        if (_gapCard != null)
+        {
+            var open = _placed.TryGetValue((IMeasurableComponent)_gapCard, out var gapTile);
+            _gapCard.Visibility = open ? Visibility.Visible : Visibility.Collapsed;
+            if (open)
+            {
+                ((IMeasurableComponent)_gapCard).Measure(finite ? gapTile.Size : availableSize);
+            }
+        }
 
         var desired = default(Size);
         foreach (var child in Children)
@@ -123,14 +203,43 @@ public class TiledPanel : Panel
     protected override Size ArrangeOverride(Size finalSize)
     {
         Lay(finalSize);
-        foreach (var child in Children)
+        if (_gapIndex < 0 && !_animateMoves && _moving.Count > 0)
         {
-            if (child.Visibility != Visibility.Collapsed && _placed.TryGetValue(child, out var tile))
+            foreach (var element in _moving)
             {
-                child.Arrange(tile);
+                LayoutMotion.Promote(element, false);
             }
+
+            _moving.Clear();
         }
 
+        foreach (var child in Children)
+        {
+            if (child.Visibility == Visibility.Collapsed || !_placed.TryGetValue(child, out var tile))
+            {
+                _lastRects.Remove(child);
+                continue;
+            }
+
+            child.Arrange(tile);
+            if (_animateMoves && _lastRects.TryGetValue(child, out var before) && before != tile
+                && child is UIComponent element && tile.Width > 0 && tile.Height > 0)
+            {
+                LayoutMotion.Promote(element, true);
+                _moving.Add(element);
+                LayoutMotion.Morph(element, before.Location - tile.Location, before.Width / tile.Width,
+                    before.Height / tile.Height, () => Landed(element));
+            }
+
+            _lastRects[child] = tile;
+        }
+
+        if (_gapCard != null && _placed.TryGetValue((IMeasurableComponent)_gapCard, out var gapTile))
+        {
+            ((IMeasurableComponent)_gapCard).Arrange(gapTile);
+        }
+
+        _animateMoves = false;
         return finalSize;
     }
 
@@ -243,8 +352,93 @@ public class TiledPanel : Panel
 
     private void OnLayoutChanged(object sender, EventArgs e) => InvalidateMeasure();
 
+    private ItemsControl Owner => (VisualParent as ItemsPresenter)?.Owner;
+
+    private bool IsLifted(IMeasurableComponent child) =>
+        _lifted != null && child is IFundamentalUIComponent { DataContext: { } data } && _lifted.Contains(data);
+
+    private void OpenGap()
+    {
+        var items = Owner?.Items;
+        if (_gapIndex < 0 || items == null)
+        {
+            return;
+        }
+
+        var card = GapCard();
+        var at = _free.Count;
+        for (var i = _gapIndex; i < items.Count; i++)
+        {
+            if (_lifted?.Contains(items[i]) == true)
+            {
+                continue;
+            }
+
+            for (var f = 0; f < _free.Count; f++)
+            {
+                if (_free[f] is IFundamentalUIComponent { DataContext: { } data } && Equals(data, items[i]))
+                {
+                    at = f;
+                    break;
+                }
+            }
+
+            break;
+        }
+
+        _free.Insert(at, card);
+    }
+
+    private IMeasurableComponent GapCard()
+    {
+        if (_gapCard == null)
+        {
+            _gapCard = Owner?.DropPlaceholderTemplate?.Build(this).RootComponent as UIComponent ?? new Decorators.Border();
+            _gapCard.IsHitTestVisible = false;
+            AddVisualChild(_gapCard);
+        }
+
+        return (IMeasurableComponent)_gapCard;
+    }
+
+    private IMeasurableComponent Next(int from) => from < _sequence.Count ? _sequence[from] : null;
+
+    private IMeasurableComponent Unlifted(int position, IList lifted)
+    {
+        var seen = 0;
+        foreach (var entry in _sequence)
+        {
+            if (lifted != null && entry is IFundamentalUIComponent { DataContext: { } data } && lifted.Contains(data))
+            {
+                continue;
+            }
+
+            if (seen++ == position)
+            {
+                return entry;
+            }
+        }
+
+        return null;
+    }
+
+    private static bool Near(Rect rect, double reach, Vector2 point) =>
+        point.X >= rect.X - reach && point.X <= rect.Right + reach && point.Y >= rect.Y - reach
+        && point.Y <= rect.Bottom + reach;
+
+    private static int IndexOf(ItemCollection items, IMeasurableComponent entry) =>
+        entry is IFundamentalUIComponent { DataContext: { } data } ? items.IndexOf(data) : -1;
+
     private void OnChildrenChanged(object sender, NotifyCollectionChangedEventArgs e)
     {
+        if (e.Action == NotifyCollectionChangedAction.Reset)
+        {
+            _lastRects.Clear();
+            _sequence.Clear();
+            _free.Clear();
+            _placed.Clear();
+        }
+
         if (e.OldItems == null)
         {
             return;
@@ -252,10 +446,22 @@ public class TiledPanel : Panel
 
         foreach (var child in e.OldItems)
         {
-            if (child is IAdamantiumComponent component && !Children.Contains(child as IMeasurableComponent))
+            if (child is not IMeasurableComponent measurable || Children.Contains(measurable))
             {
-                component.ClearValue(VisibilityProperty);
+                continue;
             }
+
+            _lastRects.Remove(measurable);
+            _sequence.Remove(measurable);
+            ((IAdamantiumComponent)measurable).ClearValue(VisibilityProperty);
+        }
+    }
+
+    private void Landed(UIComponent element)
+    {
+        if (_gapIndex < 0 && _moving.Remove(element))
+        {
+            LayoutMotion.Promote(element, false);
         }
     }
 
@@ -309,7 +515,10 @@ public class TiledPanel : Panel
         _leaves.Clear();
         foreach (var child in Children)
         {
-            _free.Add(child);
+            if (!IsLifted(child))
+            {
+                _free.Add(child);
+            }
         }
 
         CollectLeaves(layout);
@@ -320,16 +529,22 @@ public class TiledPanel : Panel
                 continue;
             }
 
-            for (var i = 0; i < _free.Count; i++)
+            foreach (var child in Children)
             {
-                if (_free[i] is IAdamantiumComponent child && GetTile(child) == name)
+                if (child is not IAdamantiumComponent named || GetTile(named) != name)
                 {
-                    _tileChildren[tile] = _free[i];
-                    _free.RemoveAt(i);
-                    break;
+                    continue;
                 }
+
+                _tileChildren[tile] = IsLifted(child) ? null : child;
+                _free.Remove(child);
+                break;
             }
         }
+
+        OpenGap();
+        _sequence.Clear();
+        _sequence.AddRange(_free);
 
         foreach (var leaf in _leaves)
         {
@@ -378,7 +593,7 @@ public class TiledPanel : Panel
     {
         switch (region)
         {
-            case Tile tile when _tileChildren.TryGetValue(tile, out var child):
+            case Tile tile when _tileChildren.TryGetValue(tile, out var child) && child != null:
                 _placed[child] = room;
                 break;
             case TileFlow flow when _flowRanges.TryGetValue(flow, out var range):
