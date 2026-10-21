@@ -152,10 +152,15 @@ public class Theme : AdamantiumComponent, ITheme
 
     private static FontFamily _systemDefaultFontFamily;
 
+    private static readonly string[] LinuxFamilies = ["Noto Sans", "DejaVu Sans", "Liberation Sans", "Cantarell", "Ubuntu"];
+
     /// <summary>The per-platform system UI font - the single place the platform font choice lives, used as the default
-    /// for any theme that doesn't pick its own.</summary>
-    public static FontFamily SystemDefaultFontFamily => _systemDefaultFontFamily ??= new FontFamily(
-        OperatingSystem.IsWindows() ? "Segoe UI" : OperatingSystem.IsMacOS() ? "Helvetica" : "DejaVu Sans");
+    /// for any theme that doesn't pick its own. On Linux, the first of the usual distributions' fonts installed.</summary>
+    public static FontFamily SystemDefaultFontFamily => _systemDefaultFontFamily ??=
+        OperatingSystem.IsWindows() ? new FontFamily("Segoe UI")
+        : OperatingSystem.IsMacOS() ? new FontFamily("Helvetica")
+        : LinuxFamilies.Select(name => new FontFamily(name)).FirstOrDefault(family => family.IsInstalled)
+          ?? new FontFamily(LinuxFamilies[0]);
 
     // The font is the theme's runtime-mutable identity, like the accent brushes above: it's an AdamantiumProperty so a
     // change raises PropertyChanged and every consumer (a {ThemeResource FontFamily} binding in a style) refreshes live -

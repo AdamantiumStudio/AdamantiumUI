@@ -268,12 +268,18 @@ public sealed class AumlWorkspace : IDisposable
 
         try
         {
-            var watcher = new FileSystemWatcher(Path.GetDirectoryName(project), "*.dll")
+            var watcher = new FileSystemWatcher(Path.GetDirectoryName(project))
             {
-                NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite,
+                NotifyFilter = NotifyFilters.FileName | NotifyFilters.DirectoryName | NotifyFilters.LastWrite,
                 IncludeSubdirectories = true,
             };
-            watcher.Created += (_, _) => ScheduleInvalidate(project);
+            watcher.Created += (_, e) =>
+            {
+                if (Directory.Exists(e.FullPath) || e.FullPath.EndsWith(".dll", StringComparison.OrdinalIgnoreCase))
+                {
+                    ScheduleInvalidate(project);
+                }
+            };
             watcher.EnableRaisingEvents = true;
             _watchers[key] = watcher;
         }
