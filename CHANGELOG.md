@@ -1879,6 +1879,8 @@ All packages share one version.
 
 ### Fixed
 
+- Text and lines are sharp at a fractional scale on Wayland: the buffer was the logical size times the scale truncated
+  (1066 pixels for 800 at 4/3), one pixel short of what the compositor expects, and was stretched to fit; it is rounded.
 - A `PropertyGrid` editor is never shorter than a line of its font with its padding and border: `EditorHeight` was
   fitted to Segoe UI, and a font with taller lines (Noto Sans) had its text cut in Graphite's 19-pixel rows.
 - On Linux, the Japanese calendar no longer throws: ICU begins Meiji on 1868-10-23 while .NET supports the calendar
