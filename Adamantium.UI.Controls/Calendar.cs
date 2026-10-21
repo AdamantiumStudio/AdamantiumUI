@@ -560,19 +560,21 @@ public class Calendar : Control
     private SystemCalendar Counting() => ShownCulture().DateTimeFormat.Calendar;
 
     private DateTime? DateOf(int year, int month, int day, int era) =>
-        SafeAdd(() => Counting().ToDateTime(year, month, day, 0, 0, 0, 0, era));
+        Counted(SafeAdd(() => Counting().ToDateTime(year, month, day, 0, 0, 0, 0, era)));
+
+    private DateTime? Counted(DateTime? day) => day < Counting().FirstDay() ? null : day;
 
     private DateTime MonthStart(DateTime day)
     {
         var counting = Counting();
         return DateOf(counting.GetYear(day), counting.GetMonth(day), 1, counting.GetEra(day))
-               ?? counting.MinSupportedDateTime.Date;
+               ?? counting.FirstDay();
     }
 
     private DateTime YearStart(DateTime day)
     {
         var counting = Counting();
-        return YearStartOf(counting.GetYear(day), counting.GetEra(day)) ?? counting.MinSupportedDateTime.Date;
+        return YearStartOf(counting.GetYear(day), counting.GetEra(day)) ?? counting.FirstDay();
     }
 
     private DateTime? DecadeStart(DateTime day)
@@ -603,7 +605,7 @@ public class Calendar : Control
         var counting = Counting();
         if (DateOf(year, month, 1, era) is not { } date)
         {
-            var min = counting.MinSupportedDateTime.Date;
+            var min = counting.FirstDay();
             return counting.GetEra(min) == era && counting.GetYear(min) == year &&
                    (wholeYear || counting.GetMonth(min) == month)
                 ? min
@@ -623,7 +625,7 @@ public class Calendar : Control
     private DateTime? EraStart(int era)
     {
         var counting = Counting();
-        var from = DateOf(1, 1, 1, era) ?? counting.MinSupportedDateTime.Date;
+        var from = DateOf(1, 1, 1, era) ?? counting.FirstDay();
         var last = counting.MaxSupportedDateTime.Date;
         for (var day = from; day <= last && day < from.AddDays(400); day = day.AddDays(1))
         {
@@ -640,7 +642,7 @@ public class Calendar : Control
     {
         var counting = Counting();
         if (Array.IndexOf(counting.Eras, era) < 0 || Array.IndexOf(counting.Eras, era + 1) < 0 ||
-            EraStart(era + 1) is not { } next || next.AddDays(-1) < counting.MinSupportedDateTime.Date)
+            EraStart(era + 1) is not { } next || next.AddDays(-1) < counting.FirstDay())
         {
             return null;
         }
@@ -738,9 +740,9 @@ public class Calendar : Control
 
     private static int FirstOfDecade(int year) => Math.Max(1, year - year % 10);
 
-    private DateTime? AddMonths(DateTime day, int months) => SafeAdd(() => Counting().AddMonths(day, months));
+    private DateTime? AddMonths(DateTime day, int months) => Counted(SafeAdd(() => Counting().AddMonths(day, months)));
 
-    private DateTime? AddYears(DateTime day, int years) => SafeAdd(() => Counting().AddYears(day, years));
+    private DateTime? AddYears(DateTime day, int years) => Counted(SafeAdd(() => Counting().AddYears(day, years)));
 
     private bool SameMonth(DateTime a, DateTime b) => MonthStart(a) == MonthStart(b);
 
@@ -754,7 +756,7 @@ public class Calendar : Control
     private DateTime RangeStart()
     {
         var start = (DisplayDateStart ?? DateTime.MinValue).Date;
-        var supported = Counting().MinSupportedDateTime.Date;
+        var supported = Counting().FirstDay();
         return start < supported ? supported : start;
     }
 
@@ -1508,7 +1510,7 @@ public class Calendar : Control
         var today = DateTime.Today;
         var cursorVisible = IsFocusVisible;
         var selected = SelectedDates.ToHashSet();
-        var minimum = counting.MinSupportedDateTime.Date;
+        var minimum = counting.FirstDay();
         var maximum = counting.MaxSupportedDateTime.Date;
         var rowsShown = new bool[month.WeekNumbers.Count];
         for (var i = 0; i < month.DayButtons.Count; i++)

@@ -46,7 +46,7 @@ public class TextBlockParagraphTests
 
     private static double LineStart(TextBlock text, int line) => text.Layout.GetTextData()
         .Where(glyph => glyph.LineIndex == line && glyph.Symbol is not (' ' or '\n'))
-        .Min(glyph => (double)glyph.Rect.X);
+        .Min(glyph => glyph.PenX);
 
     [Test]
     public void EachParagraphEndsInASeparator_TheInlinesBetweenMakeOneOfTheirOwn()

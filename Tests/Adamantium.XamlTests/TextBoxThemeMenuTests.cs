@@ -143,20 +143,19 @@ public class TextBoxThemeMenuTests
     public void ABoxIsAsTallAsItsLeastLines_AndNoTallerThanItsMost()
     {
         UseFluent();
-        var one = new TextBox { AcceptsReturn = true, Text = "a" };
         var three = new TextBox { AcceptsReturn = true, Text = "a", MinLines = 3 };
         var two = new TextBox
         {
             AcceptsReturn = true, MaxLines = 2, Text = string.Join("\n", Enumerable.Range(0, 10).Select(i => $"line {i}")),
         };
         var twoLines = new TextBox { AcceptsReturn = true, Text = "a\nb" };
-        Shown(new StackPanel { Children = { one, three, two, twoLines } });
-        var line = twoLines.DesiredSize.Height - one.DesiredSize.Height;
+        var threeLines = new TextBox { AcceptsReturn = true, Text = "a\nb\nc" };
+        Shown(new StackPanel { Children = { three, two, twoLines, threeLines } });
 
-        Assume.That(line, Is.GreaterThan(5));
+        Assume.That(threeLines.DesiredSize.Height - twoLines.DesiredSize.Height, Is.GreaterThan(5));
         Assert.Multiple(() =>
         {
-            Assert.That(three.DesiredSize.Height - one.DesiredSize.Height, Is.EqualTo(2 * line).Within(1));
+            Assert.That(three.DesiredSize.Height, Is.EqualTo(threeLines.DesiredSize.Height).Within(1));
             Assert.That(two.DesiredSize.Height, Is.EqualTo(twoLines.DesiredSize.Height).Within(1));
         });
     }

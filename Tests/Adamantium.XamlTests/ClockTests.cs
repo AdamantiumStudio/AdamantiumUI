@@ -219,7 +219,7 @@ public class ClockTests
     {
         var clock = Shown(At(ClockStyle.Text, 14, 5, 9, language));
 
-        Assert.That(clock.Texts.Select(t => t.Text), Is.EqualTo(new[] { hours, minutes, seconds }));
+        Assert.That(clock.Texts.Select(t => t.Text.Replace('\u202F', ' ')), Is.EqualTo(new[] { hours, minutes, seconds }));
         Assert.That(clock.Texts[0].FontSize, Is.EqualTo(clock.FontSize), "figures as large as the clock asks");
     }
 

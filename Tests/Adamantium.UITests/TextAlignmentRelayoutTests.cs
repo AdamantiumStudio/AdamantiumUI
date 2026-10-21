@@ -25,7 +25,8 @@ public class TextAlignmentRelayoutTests
         TextTrimming = TextTrimming.CharEllipses
     };
 
-    private static double RightEdge(TextBlock block) => block.Layout.GetCaretStops().Last().X;
+    private static double RightEdge(TextBlock block) =>
+        block.Layout.GetTextData().Where(glyph => !char.IsWhiteSpace(glyph.Symbol)).Max(glyph => glyph.Rect.Right);
 
     [TestCase("Magenta", "Blue")]
     [TestCase("Blue", "Magenta")]

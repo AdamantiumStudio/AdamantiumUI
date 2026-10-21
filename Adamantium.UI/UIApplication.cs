@@ -39,7 +39,6 @@ using Adamantium.UI.Navigation;
 using Adamantium.UI.Platforms.MacOS;
 using Adamantium.UI.Rendering;
 using Adamantium.UI.Themes.FluentTheme;
-using Adamantium.Vulkan.Loader;
 using Serilog;
 using Serilog.Sinks.SystemConsole.Themes;
 using UnhandledExceptionEventArgs = Adamantium.UI.Core.RoutedEvents.UnhandledExceptionEventArgs;
@@ -92,11 +91,6 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
     private readonly object _debugToolsLock = new();
     private readonly Dictionary<Diagnostics.IDebugTool, bool> _debugTools = new();
     private readonly HashSet<Diagnostics.IDebugTool> _debugToolsToDetach = [];
-
-    static UIApplication()
-    {
-        VulkanDllMap.Register();
-    }
 
     protected UIApplication()
     {

@@ -683,17 +683,29 @@ public class PropertyRow : Control
         }
     }
 
+    private static double LineHeightOf(MeasurableUIComponent editor)
+    {
+        if (editor is not Control control)
+        {
+            return 0;
+        }
+
+        var font = control.ResolveFont(control.FontFamily ?? UIComponent.DefaultFontFamily);
+        var line = (font.LineAscent + font.LineDescent + font.LineGap) * control.FontSize / font.UnitsPerEm;
+        var chrome = control.Padding.Top + control.Padding.Bottom + control.BorderThickness.Top + control.BorderThickness.Bottom;
+        return Math.Ceiling(line + chrome);
+    }
+
     private void HookEditor()
     {
         _pendingEditor = false;
         _editor = FindEditor(this);
         if (_editor == null) return;
 
-        // One height for the whole inspector, stated rather than inherited: a control left to itself stands at whatever
-        // its own content asks for, and three kinds of editor then stand at three different heights. A check box keeps
-        // its square - it is a glyph, not a field.
         if (_editor is not ToggleButton && _editor is MeasurableUIComponent sized && Owner is { EditorHeight: > 0 })
-            sized.Height = Owner.EditorHeight;
+        {
+            sized.Height = Math.Max(Owner.EditorHeight, LineHeightOf(sized));
+        }
 
         Fill();
 

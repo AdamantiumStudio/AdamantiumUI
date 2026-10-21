@@ -9,6 +9,7 @@ namespace Adamantium.UITests;
 /// then marshals wrongly at runtime.
 /// </summary>
 [TestFixture]
+[Platform("Win")]
 public class SystemAppearanceReadTests
 {
     [Test]

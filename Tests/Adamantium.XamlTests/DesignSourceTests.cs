@@ -17,11 +17,12 @@ public class DesignSourceTests
 
         var code = AumlCodegenHarness.Generate(auml, out var errors);
 
+        var file = Regex.Escape(AumlCodegenHarness.Literal(AumlCodegenHarness.PathOf("MainWindow.auml")));
         Assert.That(errors, Is.Empty, AumlCodegenHarness.Errors(errors));
         Assert.Multiple(() =>
         {
-            Assert.That(code, Does.Match(@"Design\.Source\(this, ""C:\\\\Test\\\\MainWindow\.auml"", 1, \d+\)"), "the root");
-            Assert.That(code, Does.Match(@"Design\.Source\(\w+, ""C:\\\\Test\\\\MainWindow\.auml"", 3, \d+\)"), "the button, on its own line");
+            Assert.That(code, Does.Match($@"Design\.Source\(this, ""{file}"", 1, \d+\)"), "the root");
+            Assert.That(code, Does.Match($@"Design\.Source\(\w+, ""{file}"", 3, \d+\)"), "the button, on its own line");
             Assert.That(Regex.Matches(code, "#if DEBUG").Count, Is.EqualTo(Regex.Matches(code, @"Design\.Source\(").Count),
                 "every one only in a debug build: the path is the build machine's");
         });

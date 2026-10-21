@@ -53,7 +53,7 @@ public static class ScenarioAutomationIds
         var here = Path.GetDirectoryName(csprojPath);
         return project.Descendants()
             .Where(element => element.Name.LocalName == "ProjectReference" && element.Attribute("Include") is { } include && !include.Value.Contains("$("))
-            .Select(element => Path.GetDirectoryName(Path.GetFullPath(Path.Combine(here, element.Attribute("Include").Value))))
+            .Select(element => Path.GetDirectoryName(Path.GetFullPath(Path.Combine(here, element.Attribute("Include").Value.Replace('\\', '/')))))
             .Where(Directory.Exists)
             .ToList();
     }

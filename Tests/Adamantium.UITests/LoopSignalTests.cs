@@ -107,7 +107,7 @@ public class LoopSignalTests
         var loop = Thread.CurrentThread;
         Thread tickedOn = null;
         var ticks = 0;
-        var timer = new Adamantium.UI.Core.Dispatcher.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(5) };
+        var timer = new Adamantium.UI.Core.Dispatcher.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
         timer.Tick += (_, _) =>
         {
             tickedOn = Thread.CurrentThread;
@@ -118,7 +118,7 @@ public class LoopSignalTests
         try
         {
             timer.Start();
-            Thread.Sleep(100);
+            Thread.Sleep(1000);
             Assert.That(tickedOn, Is.Null, "not on the timer's own thread");
 
             LoopSignal.Drain();

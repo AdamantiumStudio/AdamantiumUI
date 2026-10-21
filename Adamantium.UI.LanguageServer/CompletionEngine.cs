@@ -999,7 +999,7 @@ public sealed class CompletionEngine
         {
             foreach (Match reference in Regex.Matches(ReadText(project), "<ProjectReference\\s+Include=\"([^\"$]+)\""))
             {
-                var referenced = Path.GetFullPath(Path.Combine(projectDir, reference.Groups[1].Value));
+                var referenced = Path.GetFullPath(Path.Combine(projectDir, reference.Groups[1].Value.Replace('\\', '/')));
                 var referencedText = ReadText(referenced);
                 if (!referencedText.Contains("Adamantium.Content.Build"))
                 {

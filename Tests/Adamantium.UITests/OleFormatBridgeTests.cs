@@ -16,6 +16,7 @@ namespace Adamantium.UITests;
 /// bug only shows up with non-ASCII content. So the header is parsed back the way Explorer, a browser or Word would.
 /// </summary>
 [TestFixture]
+[Platform("Win")]
 public class OleFormatBridgeTests
 {
     private static byte[] ReadGlobal(IntPtr global)
