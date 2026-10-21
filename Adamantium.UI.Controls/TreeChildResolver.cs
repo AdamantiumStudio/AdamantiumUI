@@ -1,17 +1,12 @@
 using System;
 using System.Collections;
-using System.Collections.Concurrent;
-using System.Linq.Expressions;
-using System.Reflection;
+using Adamantium.MVVM;
 
 namespace Adamantium.UI.Controls;
 
-// Resolves a node's children without a container by reflecting the template's ItemsSource path; compiled getters are
-// cached per (type, segment).
+// Resolves a node's children without a container by reading the template's ItemsSource path through PropertyAccessors.
 internal static class TreeChildResolver
 {
-    private static readonly ConcurrentDictionary<(Type, string), Func<object, object>> Getters = new();
-
     /// <summary>A getter that reads <paramref name="path"/> off a node and returns it as an <see cref="IEnumerable"/>
     /// (null when the path is empty, unresolved, or the value isn't enumerable).</summary>
     public static Func<object, IEnumerable> ForPath(string path)
@@ -26,8 +21,8 @@ internal static class TreeChildResolver
     }
 
     /// <summary>A getter that reads <paramref name="path"/> off a node and returns the VALUE, whatever it is - what a
-    /// data grid's cell needs, and by the same compiled-accessor route the tree uses for children: a cell may be asked
-    /// for on every row in the window, on every pass.</summary>
+    /// data grid's cell needs, and by the same accessor route the tree uses for children: a cell may be asked for on
+    /// every row in the window, on every pass.</summary>
     public static Func<object, object> ForValuePath(string path)
     {
         if (string.IsNullOrEmpty(path))
@@ -53,10 +48,8 @@ internal static class TreeChildResolver
         return node => Resolve(node, segments) is true;
     }
 
-    private static readonly ConcurrentDictionary<(Type, string), PropertyInfo> Props = new();
-
     /// <summary>A writer for any <paramref name="path"/>, converting to the member's type; returns false when it cannot
-    /// write.</summary>
+    /// write - the member has no public setter, or will not take the value.</summary>
     public static Func<object, object, bool> SetterForPath(string path)
     {
         if (string.IsNullOrEmpty(path))
@@ -67,24 +60,18 @@ internal static class TreeChildResolver
         var segments = path.Split('.');
         return (node, value) =>
         {
-            var target = node;
-            for (var i = 0; i < segments.Length - 1 && target != null; i++)
+            if (Leaf(node, segments) is not (var target, var accessor) || !accessor.CanWrite)
             {
-                target = Getter(target.GetType(), segments[i])?.Invoke(target);
+                return false;
             }
-
-            if (target == null) return false;
-
-            var prop = Props.GetOrAdd((target.GetType(), segments[^1]), static k => k.Item1.GetProperty(k.Item2));
-            if (prop is not { CanWrite: true }) return false;
 
             try
             {
-                var wanted = Nullable.GetUnderlyingType(prop.PropertyType) ?? prop.PropertyType;
+                var wanted = Nullable.GetUnderlyingType(accessor.ValueType) ?? accessor.ValueType;
                 var converted = value == null || wanted.IsInstanceOfType(value)
                     ? value
                     : Convert.ChangeType(value, wanted, Core.Localization.Languages.Culture);
-                prop.SetValue(target, converted);
+                accessor.SetValue(target, converted);
                 return true;
             }
             catch (Exception)
@@ -107,23 +94,27 @@ internal static class TreeChildResolver
         var segments = path.Split('.');
         return (node, value) =>
         {
-            var target = node;
-            for (var i = 0; i < segments.Length - 1 && target != null; i++)
+            if (Leaf(node, segments) is (var target, var accessor) && accessor.CanWrite)
             {
-                target = Getter(target.GetType(), segments[i])?.Invoke(target);
-            }
-
-            if (target == null)
-            {
-                return;
-            }
-
-            var prop = Props.GetOrAdd((target.GetType(), segments[^1]), static k => k.Item1.GetProperty(k.Item2));
-            if (prop is { CanWrite: true })
-            {
-                prop.SetValue(target, value);
+                accessor.SetValue(target, value);
             }
         };
+    }
+
+    private static (object Target, PropertyAccessor Accessor)? Leaf(object node, string[] segments)
+    {
+        var target = node;
+        for (var i = 0; i < segments.Length - 1 && target != null; i++)
+        {
+            target = PropertyAccessors.GetValue(target, segments[i]);
+        }
+
+        if (target == null || PropertyAccessors.Find(target.GetType(), segments[^1]) is not { } accessor)
+        {
+            return null;
+        }
+
+        return (target, accessor);
     }
 
     private static object Resolve(object node, string[] segments)
@@ -131,28 +122,9 @@ internal static class TreeChildResolver
         var current = node;
         foreach (var segment in segments)
         {
-            if (current == null)
-            {
-                return null;
-            }
-
-            current = Getter(current.GetType(), segment)?.Invoke(current);
+            current = PropertyAccessors.GetValue(current, segment);
         }
 
         return current;
     }
-
-    private static Func<object, object> Getter(Type type, string name)
-        => Getters.GetOrAdd((type, name), static key =>
-        {
-            var prop = key.Item1.GetProperty(key.Item2);
-            if (prop is not { CanRead: true })
-            {
-                return null;
-            }
-
-            var o = Expression.Parameter(typeof(object), "o");
-            var body = Expression.Convert(Expression.Property(Expression.Convert(o, key.Item1), prop), typeof(object));
-            return Expression.Lambda<Func<object, object>>(body, o).Compile();
-        });
 }

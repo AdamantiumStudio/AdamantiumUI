@@ -220,7 +220,7 @@ public class AncestorBindingExpression : BindingExpressionBase
             return false;
         }
 
-        return root.GetProperty(first) != null || BindingExpression.FindProperty(root.GetType(), first) != null;
+        return root.GetProperty(first) != null || Adamantium.MVVM.PropertyAccessors.Find(root.GetType(), first) != null;
     }
 
     // The first thing UP THE LOGICAL CHAIN that is actually in the visual tree - where a non-visual target's visual

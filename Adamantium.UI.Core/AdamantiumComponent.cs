@@ -5,6 +5,7 @@ using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Core;
 
+[Adamantium.MVVM.DescribeProperties]
 public abstract class AdamantiumComponent : IAdamantiumComponent
 {
     public UInt128 Uid { get; set; }

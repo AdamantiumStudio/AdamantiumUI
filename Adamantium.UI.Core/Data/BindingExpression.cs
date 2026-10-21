@@ -2,8 +2,7 @@
 using System.Collections.Concurrent;
 using System.ComponentModel;
 using System.Globalization;
-using System.Linq.Expressions;
-using System.Reflection;
+using Adamantium.MVVM;
 using Adamantium.UI.Core.Diagnostics;
 using Adamantium.UI.Core.Localization;
 using Adamantium.UI.Core.RoutedEvents;
@@ -19,14 +18,14 @@ public class BindingExpression : BindingExpressionBase
    public string SourcePropertyName { get; private set; }
 
    /// <inheritdoc/>
-   public override bool IsResolved => ResolvedSource != null && (_bindToSource || _sourceProperty != null || _leaf != null);
+   public override bool IsResolved => ResolvedSource != null && (_bindToSource || _source != null || _leaf != null);
 
    /// <inheritdoc/>
-   public override Type SourceType => _leaf?.Type ?? _sourceProperty?.PropertyType;
+   public override Type SourceType => _leaf?.ValueType ?? _source?.ValueType;
 
    /// <inheritdoc/>
    // A setter that is not public is the object's own, as in WPF: written back, it would change state nobody else may set.
-   public override bool IsSourceWritable => _leaf?.CanWrite ?? _sourceProperty is { SetMethod.IsPublic: true };
+   public override bool IsSourceWritable => _leaf?.CanWrite ?? _source is { CanWrite: true };
 
    /// <inheritdoc/>
    public override bool IsSourceEdited
@@ -71,8 +70,7 @@ public class BindingExpression : BindingExpressionBase
       return (component, component.GetProperty(SourcePropertyName));
    }
 
-   private PropertyInfo _sourceProperty;
-   private Func<object, object> _sourceGetter;   // compiled reader for _sourceProperty (the hot ComputeValue path)
+   private PropertyAccessor _source;
    private bool _bindToSource;   // empty path ({Binding}, {Binding ElementName=x}) -> the value IS the resolved source object
    private INotifyPropertyChanged _observed;
    private AdamantiumComponent _observedComponent;   // element source ({ElementName}) - observed via AdamantiumProperty changes, not INPC
@@ -84,87 +82,11 @@ public class BindingExpression : BindingExpressionBase
    private IUIComponent _awaitingAttach;
    private IFundamentalUIComponent _contextOwner;
 
-   internal static PropertyInfo FindProperty(Type type, string name)
-   {
-      for (var declaring = type; declaring != null; declaring = declaring.BaseType)
-      {
-         foreach (var property in declaring.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly))
-         {
-            if (property.Name == name && property.GetIndexParameters().Length == 0)
-            {
-               return property;
-            }
-         }
-      }
-
-      // ...then what the object has through an interface: a member an interface implements by default belongs to the
-      // object as much as one its class declares, and reading it through the interface reaches whichever answers.
-      foreach (var contract in type.GetInterfaces())
-      {
-         if (contract.GetProperty(name) is { } property && property.GetIndexParameters().Length == 0)
-         {
-            return property;
-         }
-      }
-
-      return null;
-   }
-
-   // Property-accessor cache: `GetType().GetProperty(name)` is a slow metadata search and `PropertyInfo.GetValue` a slow
-   // reflection invoke, and a virtualized list re-runs both for EVERY binding of EVERY recycled row on scroll (a fling can
-   // rebind hundreds of rows x ~15 bindings/frame). Cache the PropertyInfo + a COMPILED getter delegate per (type, name)
-   // so a rebind is a dictionary hit + a near-native call instead. Shared across all bindings, populated once per shape.
-   private static readonly ConcurrentDictionary<(Type, string), (PropertyInfo Prop, Func<object, object> Getter)> _accessors = new();
-
-   private static (PropertyInfo Prop, Func<object, object> Getter) GetAccessor(Type type, string name)
-      => _accessors.GetOrAdd((type, name), static key =>
-      {
-         var prop = FindProperty(key.Item1, key.Item2);
-         if (prop is not { CanRead: true }) return (prop, null);
-         var o = Expression.Parameter(typeof(object), "o");
-         var owner = prop.DeclaringType is { IsInterface: true } contract ? contract : key.Item1;
-         var body = Expression.Convert(Expression.Property(Expression.Convert(o, owner), prop), typeof(object));
-         return (prop, Expression.Lambda<Func<object, object>>(body, o).Compile());
-      });
-
    // A PATH THAT ENDS INSIDE A STRUCT (`Offset.X`, `Bounds.X`): the walk reaches a box - a copy made on the way - so a
    // read is frozen at the moment the path resolved and a write lands in the copy and is dropped, both silently. Such
    // a path is therefore walked fresh on every read and written back UP, and it is watched at the object the path
    // STARTS at, by its first segment: the box has nothing to announce.
-   private sealed record Hop(Type Type, bool CanWrite, Func<object, object> Get, Action<object, object> Set);
-
-   private static readonly ConcurrentDictionary<(Type, string), Hop> _hops = new();
-
-   // Fields as well as properties: the maths types are fields (Vector2.X), and a path that cannot see them cannot see
-   // a position.
-   private static Hop HopTo(Type type, string name) => _hops.GetOrAdd((type, name), static key =>
-   {
-      var (owner, member) = key;
-      var o = Expression.Parameter(typeof(object), "o");
-      var self = Expression.Convert(o, owner);
-
-      if (FindProperty(owner, member) is { } prop)
-      {
-         var from = prop.DeclaringType is { IsInterface: true } contract ? Expression.Convert(o, contract) : self;
-         var read = prop.CanRead
-            ? Expression.Lambda<Func<object, object>>(Expression.Convert(Expression.Property(from, prop), typeof(object)), o).Compile()
-            : null;
-
-         return new Hop(prop.PropertyType, prop.SetMethod is { IsPublic: true }, read, prop.SetValue);
-      }
-
-      if (owner.GetField(member) is { } field)
-      {
-         var read = Expression.Lambda<Func<object, object>>(
-            Expression.Convert(Expression.Field(self, field), typeof(object)), o).Compile();
-
-         return new Hop(field.FieldType, !field.IsInitOnly, read, field.SetValue);
-      }
-
-      return null;
-   });
-
-   private Hop _leaf;      // set only for a struct-ended path; the fast path leaves it null
+   private PropertyAccessor _leaf;      // set only for a struct-ended path; the fast path leaves it null
    private object[] _boxes;   // what each segment was read from, reused between walks
 
    public Binding Binding { get; set; }
@@ -414,8 +336,7 @@ public class BindingExpression : BindingExpressionBase
    private void ForgetResolution()
    {
       ResolvedSource = null;
-      _sourceProperty = null;
-      _sourceGetter = null;
+      _source = null;
       SourcePropertyName = null;
       _bindToSource = false;
       _leaf = null;
@@ -475,20 +396,13 @@ public class BindingExpression : BindingExpressionBase
             (_passed ??= []).Add((current, segments[i]));
          }
 
-         var accessor = GetAccessor(current.GetType(), segments[i]);
-         if (accessor.Prop != null)
-         {
-            current = accessor.Getter?.Invoke(current);
-         }
-         else if (HopTo(current.GetType(), segments[i]) is { } field)
-         {
-            current = field.Get(current);
-         }
-         else
+         if (PropertyAccessors.Find(current.GetType(), segments[i]) is not { } accessor)
          {
             ReportMissing(current.GetType(), segments[i]);
             return;
          }
+
+         current = Read(accessor, current);
       }
 
       if (current == null)
@@ -496,7 +410,7 @@ public class BindingExpression : BindingExpressionBase
 
       if (current.GetType().IsValueType)
       {
-         _leaf = HopTo(current.GetType(), segments[^1]);
+         _leaf = PropertyAccessors.Find(current.GetType(), segments[^1]);
          if (_leaf == null)
          {
             ReportMissing(current.GetType(), segments[^1]);
@@ -516,8 +430,8 @@ public class BindingExpression : BindingExpressionBase
 
       ResolvedSource = current;
       SourcePropertyName = segments[^1];
-      (_sourceProperty, _sourceGetter) = GetAccessor(current.GetType(), SourcePropertyName);
-      if (_sourceProperty == null)
+      _source = PropertyAccessors.Find(current.GetType(), SourcePropertyName);
+      if (_source == null)
       {
          ReportMissing(current.GetType(), SourcePropertyName);
       }
@@ -758,12 +672,16 @@ public class BindingExpression : BindingExpressionBase
       {
          if (!Walk()) return BindingBase.FallbackValue ?? AdamantiumProperty.UnsetValue;
 
-         var read = _leaf.Get(_boxes[^1]);
+         var read = Read(_leaf, _boxes[^1]);
          if (Binding.Converter != null) read = ConvertCached(read, targetType);
          return read ?? BindingBase.TargetNullValue ?? BindingBase.FallbackValue;
       }
-      if (_sourceProperty == null) return BindingBase.FallbackValue ?? AdamantiumProperty.UnsetValue;
-      var value = _sourceGetter != null ? _sourceGetter(ResolvedSource) : _sourceProperty.GetValue(ResolvedSource);
+      if (_source == null)
+      {
+         return BindingBase.FallbackValue ?? AdamantiumProperty.UnsetValue;
+      }
+
+      var value = Read(_source, ResolvedSource);
       if (Binding.Converter != null)
          value = ConvertCached(value, targetType);
       if (value == null)
@@ -847,7 +765,10 @@ public class BindingExpression : BindingExpressionBase
          if (current == null) return false;
 
          _boxes[i] = current;
-         if (i < _segments.Length - 1) current = HopTo(current.GetType(), _segments[i])?.Get?.Invoke(current);
+         if (i < _segments.Length - 1)
+         {
+            current = PropertyAccessors.GetValue(current, _segments[i]);
+         }
       }
 
       return true;
@@ -856,13 +777,13 @@ public class BindingExpression : BindingExpressionBase
    // The leaf into its box, then each box into whatever held it - until something that is not a copy is reached.
    private void Backfill(object written)
    {
-      _leaf.Set(_boxes[^1], written);
+      _leaf.SetValue(_boxes[^1], written);
 
       for (var i = _segments.Length - 1; i >= 1; i--)
       {
          if (!_boxes[i].GetType().IsValueType) return;
 
-         var into = HopTo(_boxes[i - 1].GetType(), _segments[i - 1]);
+         var into = PropertyAccessors.Find(_boxes[i - 1].GetType(), _segments[i - 1]);
          if (into is not { CanWrite: true }) return;
 
          if (_boxes[i - 1] is AdamantiumComponent component && component.GetProperty(_segments[i - 1]) is { } property)
@@ -872,17 +793,23 @@ public class BindingExpression : BindingExpressionBase
          }
          else
          {
-            into.Set(_boxes[i - 1], _boxes[i]);
+            into.SetValue(_boxes[i - 1], _boxes[i]);
          }
       }
    }
 
    private object ReadSource()
    {
-      if (_leaf == null) return _sourceProperty.GetValue(ResolvedSource);
+      if (_leaf == null)
+      {
+         return Read(_source, ResolvedSource);
+      }
 
-      return Walk() ? _leaf.Get(_boxes[^1]) : null;
+
+      return Walk() ? Read(_leaf, _boxes[^1]) : null;
    }
+
+   private static object Read(PropertyAccessor accessor, object from) => accessor.CanRead ? accessor.GetValue(from) : null;
 
    private void WriteSource(object written)
    {
@@ -900,7 +827,7 @@ public class BindingExpression : BindingExpressionBase
          return;
       }
 
-      _sourceProperty.SetValue(ResolvedSource, written);
+      _source.SetValue(ResolvedSource, written);
    }
 
    // Logged, not thrown, as WPF does: the write runs inside the target's change notification, and an exception there
@@ -914,7 +841,7 @@ public class BindingExpression : BindingExpressionBase
 
    public override void UpdateSource()
    {
-      var sourceType = _leaf?.Type ?? _sourceProperty?.PropertyType;
+      var sourceType = _leaf?.ValueType ?? _source?.ValueType;
       if (sourceType == null || !IsSourceWritable || TargetProperty == null) return;
       if (_leaf != null && !Walk()) return;
 

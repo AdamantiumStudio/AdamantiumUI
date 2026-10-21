@@ -304,8 +304,7 @@ public sealed class DockingAreaRegionAdapter : IRegionAdapter
     }
 
     private static bool DeclaresZone(object viewModel) =>
-        viewModel.GetType().GetProperty(nameof(IDockablePane.PaneZone),
-            System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance) != null;
+        Adamantium.MVVM.PropertyAccessors.FindDeclared(viewModel.GetType(), nameof(IDockablePane.PaneZone)) != null;
 
     private static void RetitlePanes(DockingArea area, Dictionary<object, string> panes)
     {

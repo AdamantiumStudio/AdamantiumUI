@@ -1474,6 +1474,7 @@ All packages share one version.
   time of the last window frame.
 - `Adamantium.UI.FX` compiles the UI's shaders with `Adamantium.Vulkan.Slang` 1.1.0 - Slang 2026.17, for Windows and
   Linux - and `Adamantium.UI` maps Vulkan's library on Linux too, with `Adamantium.Vulkan.Loader` 1.0.3.
+- `Adamantium.UI` takes `Adamantium.Vulkan` 1.0.4, the version the engine's graphics take.
 - Colors read as text go through the engine's two readers: `ColorPicker`'s hex box (still six or eight digits - it
   commits as it is typed) and the markup language server through `Colors.TryParse`, the language server reading
   `#RGB` and `#ARGB` as the framework now does and no "#" with 1, 2, 5 or 7 digits; a drawing's SVG colors
@@ -1481,6 +1482,15 @@ All packages share one version.
   `rebeccapurple` read, "zero" and an alpha that is no number no color.
 - `FontVariationList.Parse` reads axis values with the engine's `FontVariation.ParseList`, one reader for markup and
   documents; a value that is not finite (`wght=Infinity`) is refused now.
+- Bindings, a tree's child and expansion paths, a data grid's column paths, a collection view's sort, filter and group
+  properties and a docking pane's zone reach the properties of their objects through the engine's
+  `Adamantium.MVVM.PropertyAccessors` instead of reflection and compiled expressions, so nothing is generated at run
+  time (iOS, NativeAOT). The non-generic components of the framework and of an application are described by the
+  generator - `AdamantiumComponent` carries `[DescribeProperties]` - and so are its non-generic view models; an object
+  nothing describes (a generic component, a view written in markup, a plain object, a struct) is still reached, through
+  reflection, and the log says so once per type. A path is written only through a public setter (an `init` one
+  included) - a tree's or a grid's path wrote a private one - and a tree's, a grid's and a collection view's paths now
+  see what an object has through an interface and its public fields, but no longer a static property or field.
 - Raising a routed event allocates nothing and takes no lock once each element type has been seen: a handler is called
   directly, by a call the UI generator writes for every handler delegate an assembly declares (and every
   `EventHandler<>` of routed args it names with `typeof`) and registers with `RoutedEventInvokers`, so no reflection runs

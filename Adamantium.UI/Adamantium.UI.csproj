@@ -78,7 +78,7 @@
 
 	<ItemGroup Condition="'$(UseEngineSource)' == 'true'">
 		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.MVVM\Adamantium.MVVM.csproj" />
-		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.MVVM.Generators\Adamantium.MVVM.Generators.csproj" ReferenceOutputAssembly="false" PrivateAssets="none" />
+		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.MVVM.Generators\Adamantium.MVVM.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="none" />
 	</ItemGroup>
 
 	<ItemGroup Condition="'$(UseEngineSource)' != 'true'">
