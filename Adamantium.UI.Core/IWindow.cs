@@ -35,6 +35,10 @@ public interface IWindow : IRootVisualComponent, IContentControl
     IntPtr Handle { get; }
     
     IntPtr SurfaceHandle { get; }
+
+    /// <summary>The connection the surface belongs to, where the platform's Vulkan surface needs one beside it: the
+    /// wl_display on Wayland. Zero elsewhere.</summary>
+    IntPtr SurfaceDisplayHandle => IntPtr.Zero;
     
     bool IsClosed { get; }
         

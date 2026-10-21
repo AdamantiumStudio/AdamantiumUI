@@ -765,6 +765,8 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
         
     // Pointer to the surface for rendering on this window
     public abstract IntPtr SurfaceHandle { get; internal set; }
+
+    public IntPtr SurfaceDisplayHandle { get; private set; }
         
     public abstract IntPtr Handle { get; internal set; }
     public bool IsClosed { get; protected set; }
@@ -1009,9 +1011,10 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
         Handle = handle;
     }
 
-    public void SetSurface(IntPtr surfaceHandle)
+    public void SetSurface(IntPtr surfaceHandle, IntPtr displayHandle)
     {
         SurfaceHandle = surfaceHandle;
+        SurfaceDisplayHandle = displayHandle;
     }
 
     void IWindowInternals.OnSourceInitialized()

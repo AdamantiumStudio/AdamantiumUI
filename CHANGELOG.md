@@ -7,6 +7,18 @@ All packages share one version.
 
 ### Added
 
+- Windows on Linux, on a Wayland compositor (`Platforms/Wayland`). A window is a `wl_surface` in the `xdg_toplevel`
+  role, drawn by its Vulkan swapchain: it takes the size and state the compositor configures, draws at the scale it
+  prefers - fractional ones too, through a viewport - and is resized from its edges and moved by its title bar by the
+  compositor (`xdg_toplevel.resize`/`move`) when it draws its own frame. The pointer, the wheel (in 120ths of a notch,
+  as on Windows; a touchpad's pixels taken as notches) and the keyboard reach the window as on Windows: keys through
+  xkbcommon, letters following the layout and the rest their place, typed text, and repeats timed by the client at the
+  rate the compositor gives. Cursors are the compositor's, by shape (`wp_cursor_shape_v1`). The loop waits on the
+  compositor's socket and an eventfd, spinning nowhere. A Wayland client places no window and learns no desktop
+  position, so a window's client corner is the desktop's origin, and `SetPosition`, `Topmost`, click-through and the
+  drag ghost do nothing there yet; the clipboard stays in-process.
+- `IWindow.SurfaceDisplayHandle`: the connection a window's surface belongs to where the platform needs one beside it -
+  the `wl_display` - passed on to the presenter as `PresentationParameters.DisplayHandle`.
 - `PropertyGrid.ValueChangedCommand`: executed after each value written or taken back, with the change as its
   parameter - what `ValueChanged` says, for a view model bound from markup.
 - A way in for debugging tools: `UIApplication.AttachDebugTool` starts an `IDebugTool` on the application - its
@@ -1439,6 +1451,7 @@ All packages share one version.
 
 ### Changed
 
+- On `Adamantium.Vulkan` 1.0.4, as the engine is.
 - A window whose content has not changed draws its frame from a recording: the first clean frame of each frame slot
   records the op stream into a secondary command buffer, and the next ones only fingerprint the stream - nothing is
   sent to the GPU - and execute the recording while the fingerprint is the same. Whatever the stream reads live - a
