@@ -1,27 +1,22 @@
-using System;
 using System.Collections.Generic;
 using System.Threading;
+using System;
 using Adamantium.Core.DependencyInjection;
-using Adamantium.UI.Core;
+using Adamantium.Core;
 using Adamantium.UI.Core.Input;
+using Adamantium.UI.Core;
 using Adamantium.Wayland;
 
 namespace Adamantium.UI.Platforms.Wayland;
 
-/// <summary>
-/// The application on a Wayland compositor: the connection, the globals every window is made from, and the loop that
-/// waits on the compositor's socket. The thread that runs the loop is the one every event arrives on - pointer, keys,
-/// a window's configure - and from there it goes to the loop thread like a Win32 message would.
-/// <para>
-/// No position on the desktop exists under Wayland: a client never learns where its window is, nor places one. The
-/// desktop coordinates the framework asks for are the window's own, its client corner at the origin.
-/// </para>
-/// </summary>
+/// <summary>The application on a Wayland compositor: the connection, its globals, and the loop over its socket. Desktop
+/// coordinates are a window's own: Wayland gives a client no position on the desktop.</summary>
 public sealed unsafe class WaylandPlatform : IApplicationPlatform
 {
     private readonly Thread uiThread;
     private readonly int signalFd;
     private readonly Dictionary<nint, WaylandWindowWorker> windows = new();
+    private readonly object _windowsLock = new();
 
     public WaylandPlatform()
     {
@@ -35,14 +30,12 @@ public sealed unsafe class WaylandPlatform : IApplicationPlatform
         {
             switch (@interface)
             {
-                // wl_surface 6 says which scale it wants drawn at.
                 case WlCompositor.InterfaceName:
                     Compositor = registry.Bind<WlCompositor>(name, Math.Min(version, 6));
                     break;
                 case XdgWmBase.InterfaceName:
                     WmBase = registry.Bind<XdgWmBase>(name, Math.Min(version, 6));
                     break;
-                // wl_pointer 8 counts the wheel in 120ths of a notch, as Windows does.
                 case WlSeat.InterfaceName when seat == null:
                     seat = registry.Bind<WlSeat>(name, Math.Min(version, 9));
                     break;
@@ -77,13 +70,11 @@ public sealed unsafe class WaylandPlatform : IApplicationPlatform
                 "The Wayland compositor offers no wl_compositor or xdg_wm_base, so it can show no window.");
         }
 
-        // Unanswered, the compositor takes the application for hung and offers to end it.
         WmBase.Ping += serial => WmBase.Pong(serial);
 
-        signalFd = LinuxInterop.eventfd(0, LinuxInterop.EventFdNonBlock | LinuxInterop.EventFdCloseOnExec);
+        signalFd = PosixInterop.EventFd(0, PosixInterop.EventFdNonBlock | PosixInterop.EventFdCloseOnExec);
         Seat = new WaylandSeat(this, seat);
 
-        // The seat's devices and the keyboard's keymap, before the first window wants them.
         Display.Roundtrip();
 
         if (dataDevices != null && seat != null)
@@ -127,18 +118,14 @@ public sealed unsafe class WaylandPlatform : IApplicationPlatform
 
     public event Action Signaled;
 
-    /// <summary>
-    /// Waits on the compositor's socket and on <see cref="Signal"/> at once, with nothing spinning in between: a still
-    /// application takes no time. A held key's repeats are timed by the same wait.
-    /// </summary>
+    /// <summary>Waits on the compositor's socket and on <see cref="Signal"/> at once, spinning nowhere.</summary>
     public void Run(CancellationToken token)
     {
         using var wake = token.Register(Signal);
-        var fds = stackalloc LinuxInterop.PollFd[2];
+        var fds = stackalloc PosixPollFd[2];
 
         while (!token.IsCancellationRequested)
         {
-            // Another thread may have queued events since the last read; libwayland reads only with none queued.
             while (!Display.PrepareRead())
             {
                 Display.DispatchPending();
@@ -146,11 +133,11 @@ public sealed unsafe class WaylandPlatform : IApplicationPlatform
 
             Display.Flush();
 
-            fds[0] = new LinuxInterop.PollFd { Fd = Display.FileDescriptor, Events = LinuxInterop.PollIn };
-            fds[1] = new LinuxInterop.PollFd { Fd = signalFd, Events = LinuxInterop.PollIn };
-            var ready = LinuxInterop.poll(fds, 2, Sooner(Seat.RepeatTimeout(), DragDrop?.AskTimeout() ?? -1));
+            fds[0] = new PosixPollFd { Fd = Display.FileDescriptor, Events = PosixInterop.PollIn };
+            fds[1] = new PosixPollFd { Fd = signalFd, Events = PosixInterop.PollIn };
+            var ready = PosixInterop.Poll(fds, 2, Sooner(Seat.RepeatTimeout(), DragDrop?.AskTimeout() ?? -1));
 
-            if (ready > 0 && (fds[0].Revents & LinuxInterop.PollIn) != 0)
+            if (ready > 0 && (fds[0].Revents & PosixInterop.PollIn) != 0)
             {
                 Display.ReadEvents();
             }
@@ -161,10 +148,10 @@ public sealed unsafe class WaylandPlatform : IApplicationPlatform
 
             Display.DispatchPending();
 
-            if (ready > 0 && (fds[1].Revents & LinuxInterop.PollIn) != 0)
+            if (ready > 0 && (fds[1].Revents & PosixInterop.PollIn) != 0)
             {
                 ulong count;
-                LinuxInterop.read(signalFd, &count, sizeof(ulong));
+                PosixInterop.Read(signalFd, &count, sizeof(ulong));
                 Signaled?.Invoke();
             }
 
@@ -178,7 +165,7 @@ public sealed unsafe class WaylandPlatform : IApplicationPlatform
     public void Signal()
     {
         ulong one = 1;
-        LinuxInterop.write(signalFd, &one, sizeof(ulong));
+        PosixInterop.Write(signalFd, &one, sizeof(ulong));
     }
 
     /// <summary>Zero: a client cannot ask what is on the desktop, so a drag falls back to the client bounds.</summary>
@@ -186,7 +173,7 @@ public sealed unsafe class WaylandPlatform : IApplicationPlatform
 
     internal void Register(WaylandWindowWorker worker, nint surface)
     {
-        lock (windows)
+        lock (_windowsLock)
         {
             windows[surface] = worker;
         }
@@ -194,7 +181,7 @@ public sealed unsafe class WaylandPlatform : IApplicationPlatform
 
     internal void Unregister(nint surface)
     {
-        lock (windows)
+        lock (_windowsLock)
         {
             windows.Remove(surface);
         }
@@ -205,7 +192,7 @@ public sealed unsafe class WaylandPlatform : IApplicationPlatform
 
     internal WaylandWindowWorker Find(nint surface)
     {
-        lock (windows)
+        lock (_windowsLock)
         {
             return windows.GetValueOrDefault(surface);
         }
@@ -229,8 +216,14 @@ public sealed unsafe class WaylandPlatform : IApplicationPlatform
     internal static void DispatchInput(Action raise)
     {
         var dispatcher = Threading.Dispatcher.CurrentDispatcher;
-        if (dispatcher != null) dispatcher.Post(raise);
-        else raise();
+        if (dispatcher != null)
+        {
+            dispatcher.Post(raise);
+        }
+        else
+        {
+            raise();
+        }
     }
 
     public static void Initialize(IContainerRegistry resolver)

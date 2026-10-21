@@ -1,9 +1,10 @@
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System;
+using Adamantium.Core;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Input;
 using Adamantium.Wayland;
@@ -104,7 +105,7 @@ internal sealed unsafe class WaylandDataDevice
     /// <summary>What a drag offers other clients, each type made only when asked for; text last.</summary>
     public static List<(string Type, Func<byte[]> Produce)> Offers(IDataPackage package)
     {
-        var offers = new List<(string, Func<byte[]>)>();
+        List<(string, Func<byte[]>)> offers = [];
         void Add(string[] types, Func<byte[]> produce)
         {
             var once = new Lazy<byte[]>(produce);
@@ -120,8 +121,14 @@ internal sealed unsafe class WaylandDataDevice
 
         if (package.Get(DataFormats.Image) is byte[] { Length: > 0 } picture)
         {
-            if (PictureType(picture) is { } type) Add([type], () => picture);
-            else Add(["image/bmp"], () => DragPicture.Convert(picture));
+            if (PictureType(picture) is { } type)
+            {
+                Add([type], () => picture);
+            }
+            else
+            {
+                Add(["image/bmp"], () => DragPicture.Convert(picture));
+            }
         }
 
         foreach (var format in package.GetFormats())
@@ -191,7 +198,7 @@ internal sealed unsafe class WaylandDataDevice
         }
 
         var fds = stackalloc int[2];
-        if (LinuxInterop.pipe2(fds, LinuxInterop.OpenCloseOnExec) != 0)
+        if (PosixInterop.Pipe2(fds, PosixInterop.OpenCloseOnExec) != 0)
         {
             return null;
         }
@@ -202,12 +209,12 @@ internal sealed unsafe class WaylandDataDevice
         }
         catch (ObjectDisposedException)
         {
-            LinuxInterop.close(fds[0]);
-            LinuxInterop.close(fds[1]);
+            PosixInterop.Close(fds[0]);
+            PosixInterop.Close(fds[1]);
             return null;
         }
 
-        LinuxInterop.close(fds[1]);
+        PosixInterop.Close(fds[1]);
         platform.Display.Flush();
 
         try
@@ -216,7 +223,7 @@ internal sealed unsafe class WaylandDataDevice
         }
         finally
         {
-            LinuxInterop.close(fds[0]);
+            PosixInterop.Close(fds[0]);
         }
     }
 
@@ -232,9 +239,21 @@ internal sealed unsafe class WaylandDataDevice
 
     private static string TextOf(IDataPackage package)
     {
-        if (package.Get(DataFormats.Text) is string text) return text;
-        if (package.Get<string>() is { } single) return single;
-        if (package.Get<IEnumerable<string>>() is { } many) return string.Join(Environment.NewLine, many);
+        if (package.Get(DataFormats.Text) is string text)
+        {
+            return text;
+        }
+
+        if (package.Get<string>() is { } single)
+        {
+            return single;
+        }
+
+        if (package.Get<IEnumerable<string>>() is { } many)
+        {
+            return string.Join(Environment.NewLine, many);
+        }
+
         return null;
     }
 
@@ -259,18 +278,18 @@ internal sealed unsafe class WaylandDataDevice
     {
         using var result = new MemoryStream();
         var buffer = stackalloc byte[4096];
-        var poll = new LinuxInterop.PollFd { Fd = fd, Events = LinuxInterop.PollIn };
+        var poll = new PosixPollFd { Fd = fd, Events = PosixInterop.PollIn };
         var deadline = Environment.TickCount64 + ReadTimeout;
 
         while (true)
         {
             var left = (int)(deadline - Environment.TickCount64);
-            if (left <= 0 || LinuxInterop.poll(&poll, 1, left) <= 0)
+            if (left <= 0 || PosixInterop.Poll(&poll, 1, left) <= 0)
             {
                 return null;
             }
 
-            var count = (int)LinuxInterop.read(fd, buffer, 4096);
+            var count = (int)PosixInterop.Read(fd, buffer, 4096);
             if (count == 0)
             {
                 return result.ToArray();
@@ -335,63 +354,5 @@ internal sealed unsafe class WaylandDataDevice
         DragLeft?.Invoke();
         dragOffer?.Destroy();
         dragOffer = null;
-    }
-}
-
-/// <summary>A data offer and what it says about itself.</summary>
-internal sealed class WaylandOffer
-{
-    private readonly List<string> types = new();
-
-    public WaylandOffer(WlDataOffer proxy)
-    {
-        Proxy = proxy;
-        proxy.Offer += type =>
-        {
-            lock (types)
-            {
-                types.Add(type);
-            }
-        };
-        proxy.SourceActions += actions => SourceActions = actions;
-        proxy.Action += action => Action = action;
-    }
-
-    public WlDataOffer Proxy { get; }
-
-    public WlDataDeviceManager.DndAction SourceActions { get; private set; }
-
-    public WlDataDeviceManager.DndAction Action { get; private set; }
-
-    public bool Has(string type)
-    {
-        lock (types)
-        {
-            return types.Contains(type);
-        }
-    }
-
-    public string FirstOf(string[] wanted)
-    {
-        lock (types)
-        {
-            return wanted.FirstOrDefault(types.Contains);
-        }
-    }
-
-    public string First()
-    {
-        lock (types)
-        {
-            return types.FirstOrDefault();
-        }
-    }
-
-    public void Destroy()
-    {
-        if (Proxy.IsAlive)
-        {
-            Proxy.Destroy();
-        }
     }
 }

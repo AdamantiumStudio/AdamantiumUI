@@ -4,15 +4,10 @@ using Adamantium.UI.Platforms.Windows;
 
 namespace Adamantium.UI.Platforms.Wayland;
 
-/// <summary>
-/// What a Wayland key is in the framework's terms. wl_keyboard sends evdev codes - the key's place on the board - and
-/// the framework's <see cref="Key"/> is a Windows virtual key, which follows the layout for letters and the place for
-/// the rest. So a letter is taken from what the layout makes of the key, and everything else from where it is: on
-/// AZERTY the key left of Z is A, as on Windows; on a Russian layout it is the key in A's place, also as on Windows.
-/// </summary>
+/// <summary>Maps evdev key codes to the framework's keys: letters by the layout, the rest by their place, as on
+/// Windows.</summary>
 internal static class WaylandKeys
 {
-    // xkb keysyms of the Latin letters, lower and upper case.
     private const uint KeysymLowerA = 0x61;
     private const uint KeysymLowerZ = 0x7A;
     private const uint KeysymUpperA = 0x41;
@@ -51,7 +46,6 @@ internal static class WaylandKeys
         [189] = Key.F19, [190] = Key.F20, [191] = Key.F21, [192] = Key.F22, [193] = Key.F23, [194] = Key.F24,
     };
 
-    // With Num Lock off the keypad is the navigation block, as Windows reports it.
     private static readonly Dictionary<uint, Key> KeypadNavigation = new()
     {
         [71] = Key.Home, [72] = Key.UpArrow, [73] = Key.PageUp, [75] = Key.LeftArrow, [76] = Key.Clear,
@@ -59,7 +53,6 @@ internal static class WaylandKeys
         [83] = Key.Delete,
     };
 
-    // The keys whose evdev codes are not their PC scan codes: the extended block, behind 0xE0 on the wire.
     private static readonly Dictionary<uint, int> ExtendedScanCodes = new()
     {
         [96] = 0x1C, [97] = 0x1D, [98] = 0x35, [99] = 0x37, [100] = 0x38,
