@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Adamantium.MVVM;
+using Adamantium.UI.Controls;
 using Adamantium.UI.Controls.Buttons;
 using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Core;
@@ -98,6 +99,68 @@ public class RoutedCommandTests
         CommandManager.ExecuteFrom(Shout, null, field, otherInner);
 
         Assert.That(ran, Is.EqualTo(new object[] { otherInner }));
+    }
+
+    // A tool window over the window - an overlay card - is its host's, as a menu is its owner's: what is run in it goes on
+    // to the field the host's focus is in.
+    [Test]
+    public void ACommandRunInAnOverlayWindow_GoesToTheFieldWithTheHostsFocus()
+    {
+        var (outer, inner, field) = Tree();
+        var host = new Window { Width = 400, Height = 300, Content = outer };
+        Adamantium.UI.Extensions.WindowExtension.UpdateTree(host);
+        var ran = new List<object>();
+        CommandManager.GetCommandBindings(inner).Add(new CommandBinding(Shout, (s, _) => ran.Add(s)));
+        FocusManager.Focus(field);
+        var toolButton = new Button();
+        var tool = new StackPanel { Children = { toolButton } };
+        FocusManager.SetIsFocusScope(tool, true);
+        var overlay = new OverlayWindow
+        {
+            Template = new Adamantium.UI.Core.Templates.ControlTemplate(() =>
+                new Adamantium.UI.Core.Templates.TemplateResult { RootComponent = tool }),
+        };
+
+        host.ShowOverlayWindow(overlay);
+        Adamantium.UI.Extensions.WindowExtension.UpdateTree(host);
+        FocusManager.Focus(toolButton);
+        CommandManager.ExecuteFrom(Shout, null, toolButton, null);
+        overlay.Close();
+
+        Assert.That(ran, Is.EqualTo(new object[] { inner }));
+    }
+
+    // Opened from a place whose commands go to a target of their own - a ribbon's to its document - it keeps that target:
+    // with no field focused, what is run in it goes there.
+    [Test]
+    public void AnOverlayWindowOpenedFromAPlaceWithACommandTarget_SendsItsCommandsThere()
+    {
+        var (outer, inner, _) = Tree();
+        var opener = new Button();
+        var ribbon = new StackPanel { Children = { opener } };
+        CommandManager.SetCommandTarget(ribbon, inner);
+        outer.Children.Add(ribbon);
+        var host = new Window { Width = 400, Height = 300, Content = outer };
+        Adamantium.UI.Extensions.WindowExtension.UpdateTree(host);
+        var ran = new List<object>();
+        CommandManager.GetCommandBindings(inner).Add(new CommandBinding(Shout, (s, _) => ran.Add(s)));
+        FocusManager.Focus(opener);
+        var toolButton = new Button();
+        var tool = new StackPanel { Children = { toolButton } };
+        FocusManager.SetIsFocusScope(tool, true);
+        var overlay = new OverlayWindow
+        {
+            Template = new Adamantium.UI.Core.Templates.ControlTemplate(() =>
+                new Adamantium.UI.Core.Templates.TemplateResult { RootComponent = tool }),
+        };
+
+        host.ShowOverlayWindow(overlay);
+        Adamantium.UI.Extensions.WindowExtension.UpdateTree(host);
+        FocusManager.Focus(toolButton);
+        CommandManager.ExecuteFrom(Shout, null, toolButton, null);
+        overlay.Close();
+
+        Assert.That(ran, Is.EqualTo(new object[] { inner }));
     }
 
     [Test]
