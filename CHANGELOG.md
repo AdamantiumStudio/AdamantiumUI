@@ -1437,6 +1437,11 @@ All packages share one version.
 
 ### Changed
 
+- Colors read as text go through the engine's two readers: `ColorPicker`'s hex box (still six or eight digits - it
+  commits as it is typed) and the markup language server through `Colors.TryParse`, the language server reading
+  `#RGB` and `#ARGB` as the framework now does and no "#" with 1, 2, 5 or 7 digits; a drawing's SVG colors
+  (`CanvasSvgColor`) through `Css.TryParseColor` - rounded as browsers round them, CSS's "grey" spellings and
+  `rebeccapurple` read, "zero" and an alpha that is no number no color.
 - `FontVariationList.Parse` reads axis values with the engine's `FontVariation.ParseList`, one reader for markup and
   documents; a value that is not finite (`wght=Infinity`) is refused now.
 - Raising a routed event allocates nothing and takes no lock once each element type has been seen: the args call the
@@ -1801,6 +1806,10 @@ All packages share one version.
 
 ### Fixed
 
+- The cue of a finger or pen held still is kept with its contact (a weak table by `Pointer`), and comes down from the
+  window it went up in: the cues were one dictionary by pointer id for every window, so two contacts numbered alike -
+  test windows side by side - showed one cue between them, and written from the hold timer's thread on a test run,
+  it broke when two windows held at once (a test host crashed on it).
 - `EventManager.GetRoutedEvents()` lists the registered routed events; it always gave none.
 - `PreviewGotKeyboardFocus` is raised on the element taking the focus, with `KeyboardGotFocusEventArgs`: it went to the
   element losing it, with args its handlers could not take, so a handler made the focus move throw. `GotKeyboardFocus`

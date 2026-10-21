@@ -270,6 +270,60 @@ public class PointerDeviceTests
         });
     }
 
+    private static void Hold(IInputComponent target, Pointer pointer, HoldingState state) =>
+        target.RaiseEvent(new HoldingEventArgs(pointer, state, InputModifiers.None, 0)
+        {
+            RoutedEvent = Gestures.HoldingEvent,
+        });
+
+    private static int HoldCues(Window window) => window.Adorners.OfType<Adamantium.UI.Controls.HoldIndicator>().Count();
+
+    // A cue is kept with its contact: two contacts numbered alike - as test windows side by side number theirs - each
+    // show one in their own window, and the lift of one takes off only its own.
+    [Test]
+    public void TheCuesOfTwoContactsNumberedAlike_AreEachTheirOwn()
+    {
+        var other = new Border { Width = 100, Height = 100, Background = Brushes.Gray };
+        var otherWindow = new Window { Width = 100, Height = 100, Content = other };
+        WindowExtension.UpdateTree(otherWindow);
+        var here = new Pointer(7, PointerType.Touch, true);
+        var there = new Pointer(7, PointerType.Touch, true);
+        try
+        {
+            Hold(_left, here, HoldingState.Started);
+            Hold(other, there, HoldingState.Started);
+            var both = (HoldCues(_window), HoldCues(otherWindow));
+            Hold(_left, here, HoldingState.Completed);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(both, Is.EqualTo((1, 1)));
+                Assert.That(HoldCues(_window), Is.Zero);
+                Assert.That(HoldCues(otherWindow), Is.EqualTo(1));
+            });
+        }
+        finally
+        {
+            Hold(other, there, HoldingState.Canceled);
+            otherWindow.Close();
+        }
+    }
+
+    // An element taken out of the window while held - a row recycled, a template swapped - still takes the cue down
+    // with the lift: the cue comes off the window it went up in.
+    [Test]
+    public void TheCueOfAHeldElementTakenAway_ComesDownWithTheLift()
+    {
+        var pointer = new Pointer(8, PointerType.Touch, true);
+        Hold(_left, pointer, HoldingState.Started);
+        var shown = HoldCues(_window);
+        ((StackPanel)_window.Content).Children.Remove(_left);
+        Hold(_left, pointer, HoldingState.Completed);
+
+        Assert.That(shown, Is.EqualTo(1));
+        Assert.That(HoldCues(_window), Is.Zero);
+    }
+
     // The cue a hold wears is shown once: the lift takes it off the window and throws it away. Only taken off, it stayed
     // an inheritance child of the window, every hold of the session adding one.
     [Test]
