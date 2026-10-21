@@ -443,19 +443,15 @@ public class ColorPicker : Control
             return false;
         }
 
-        var s = text.Trim().TrimStart('#');
-        // #RGB / #RRGGBB default to opaque; #AARRGGBB carries alpha.
-        if (s.Length == 6)
-        {
-            s = "FF" + s;
-        }
-
-        if (s.Length != 8 || !uint.TryParse(s, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var argb))
+        // Six or eight hex digits, the "#" optional. A short form is left to markup: the box commits as it is typed,
+        // and "FF8" on the way to "FF8000" would rewrite it.
+        var digits = text.Trim().TrimStart('#');
+        if (digits.Length is not (6 or 8) || !Colors.TryParse("#" + digits, out var parsed))
         {
             return false;
         }
 
-        color = new Color((byte)(argb >> 16), (byte)(argb >> 8), (byte)argb, (byte)(argb >> 24));
+        color = parsed;
         return true;
     }
 
