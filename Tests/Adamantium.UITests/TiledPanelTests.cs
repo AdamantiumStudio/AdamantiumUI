@@ -243,7 +243,6 @@ public class TiledPanelTests
     }
 
     [TestCase(new[] { 60.0 }, 117.6)]
-    [TestCase(new[] { 0.0, 100 }, 0)]
     [TestCase(new[] { double.PositiveInfinity, 1 }, 194.04)]
     public void TheSharesReadAsPercents(double[] shares, double firstWidth)
     {
@@ -251,6 +250,19 @@ public class TiledPanelTests
         var (_, children) = Laid(layout, 2);
 
         Assert.That(children[0].Bounds.Width, Is.EqualTo(firstWidth).Within(1e-9));
+    }
+
+    [Test]
+    public void APartWithNoShare_LaysOutNothing()
+    {
+        var layout = new TileSplit(Orientation.Horizontal, new Tile(), new Tile()) { Shares = [0, 100] };
+        var (_, children) = Laid(layout, 2);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(children[0].Visibility, Is.EqualTo(Visibility.Collapsed), "nothing of it shows, its content neither");
+            Assert.That(children[1].Bounds.Width, Is.EqualTo(196).Within(1e-9));
+        });
     }
 
     [Test]
@@ -367,6 +379,30 @@ public class TiledPanelTests
             Assert.That(ContainerOf(panel, "N").Bounds.Width, Is.EqualTo(58).Within(1e-9));
             Assert.That(ContainerOf(panel, "A").Bounds.Width, Is.EqualTo(138).Within(1e-9));
         });
+    }
+
+    [Test]
+    public void OverATile_GripsMarkItsCorners_TheOneUnderThePointerHot()
+    {
+        var items = new ObservableCollection<string> { "A", "B" };
+        var (panel, window) = InWindowList(TileLayouts.TwoColumns, items, p => p.SplitTileCommand = new Act(_ => { }));
+
+        HoverAt(panel, new Vector2(195, 95));
+        Update(window);
+
+        var grips = panel.VisualChildren.OfType<TileGrip>().ToList();
+        Assert.Multiple(() =>
+        {
+            Assert.That(grips, Has.Count.EqualTo(4));
+            Assert.That(grips.Single(g => g.Corner == TileCorner.TopLeft).Bounds, Is.EqualTo(new Rect(102, 0, 16, 16)));
+            Assert.That(grips.Single(g => g.Corner == TileCorner.BottomRight).Bounds, Is.EqualTo(new Rect(184, 84, 16, 16)));
+            Assert.That(grips.Single(g => g.IsHot).Corner, Is.EqualTo(TileCorner.BottomRight));
+        });
+
+        HoverAt(panel, new Vector2(150, 50));
+        Update(window);
+
+        Assert.That(panel.VisualChildren.OfType<TileGrip>().Any(g => g.IsHot), Is.False, "away from the corners, none is hot");
     }
 
     [Test]
@@ -601,6 +637,16 @@ public class TiledPanelTests
         {
             RoutedEvent = PointerEvents.PreviewPointerPressedEvent,
             Properties = PointerPointProperties.FromMouse(InputModifiers.LeftMouseButton)
+        });
+    }
+
+    private static void HoverAt(TiledPanel panel, Vector2 at)
+    {
+        PointerDevice.Current.SetExternalMousePosition(panel, new PixelPoint(at.X, at.Y));
+        ((IObservableComponent)panel).RaiseEvent(new PointerEventArgs(Mouse.Pointer, InputModifiers.None, 0)
+        {
+            RoutedEvent = PointerEvents.PreviewPointerMovedEvent,
+            Properties = PointerPointProperties.FromMouse(InputModifiers.None)
         });
     }
 

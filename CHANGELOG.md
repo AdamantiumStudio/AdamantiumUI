@@ -29,7 +29,8 @@ All packages share one version.
   viewport layouts of 3D editors, a gallery, and a featured tile with the rest in a strip on any side. Hosting a
   list's items, a tile drags to another place: it leaves its own, a gap opens where it would land and the other
   tiles slide and resize into their new places. With `SplitTileCommand` a tile's corner dragged inward splits a new
-  tile off it - the view model gives it its item at the index the command is handed - and with `MergeTileCommand` a
+  tile off it - `TileGrip`s mark the corners of the tile the pointer is over, drawn by the theme, and the view model
+  gives the new tile its item at the index the command is handed - and with `MergeTileCommand` a
   border dragged all the way over a tile merges it away once the view model lets its item go.
 - `DragDrop.GhostAnchor`: where a source's ghost stands against the cursor - beside it (`Cursor`, the default) or held by
   the point it was grabbed at (`Grab`), as a large tile is carried.

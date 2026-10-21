@@ -105,6 +105,7 @@ public class AutomationAuditTests
         [typeof(TabItem)] = (T.TabItem, null),
         [typeof(TabItemsControl)] = (T.Group, null),
         [typeof(TabStripScroller)] = (null, "the tab strip's arrows; selecting a tab brings it into the strip"),
+        [typeof(TileGrip)] = (null, "a cue the tiled panel draws in a tile's corner; the panel takes the press"),
         [typeof(TilesHost)] = (T.Group, null),
         [typeof(TitleBar)] = (T.TitleBar, null),
         [typeof(ToggleSwitch)] = (T.Button, null),

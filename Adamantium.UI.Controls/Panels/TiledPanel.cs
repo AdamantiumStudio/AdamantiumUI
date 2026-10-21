@@ -21,7 +21,8 @@ namespace Adamantium.UI.Controls.Panels;
 /// again, <see cref="ShareEvenly"/> every split. The panel owns its children's visibility. It fills the room it is
 /// given; where that is unbounded it asks only for its largest child, so it does not scroll. Hosting a list's items, it
 /// opens a gap where a dragged item would drop: the items dragged out of it leave their tiles, the others move aside.
-/// With <see cref="SplitTileCommand"/> a tile's corner drags a new tile out of it, and with
+/// With <see cref="SplitTileCommand"/> a tile's corner drags a new tile out of it - a <see cref="TileGrip"/> marks each
+/// corner of the tile the pointer is over - and with
 /// <see cref="MergeTileCommand"/> a gap dragged all the way over a tile merges it away.
 /// </summary>
 public class TiledPanel : Panel, IDropGapPanel
@@ -56,11 +57,15 @@ public class TiledPanel : Panel, IDropGapPanel
     private TileSplit _splitPreview;
     private Tile _newTile;
     private int _newTileInsertAt = -1;
+    private readonly TileGrip[] _cornerGrips = new TileGrip[4];
+    private Tile _hoveredTile;
+    private TileCorner? _hotCorner;
 
     public TiledPanel()
     {
         Children.CollectionChanged += OnChildrenChanged;
         PreviewPointerPressed += OnPreviewPointerPressed;
+        PreviewPointerMoved += OnPreviewPointerMoved;
     }
 
     private readonly record struct Grip(TileSplit Split, int Index, bool Vertical, Rect Bar, double Start, double Room);
@@ -82,7 +87,7 @@ public class TiledPanel : Panel, IDropGapPanel
         nameof(MergeTileCommand), typeof(ICommand), typeof(TiledPanel), new PropertyMetadata(null));
 
     public static readonly AdamantiumProperty SplitGripSizeProperty = AdamantiumProperty.Register(nameof(SplitGripSize),
-        typeof(double), typeof(TiledPanel), new PropertyMetadata(12.0));
+        typeof(double), typeof(TiledPanel), new PropertyMetadata(16.0));
 
     public static readonly AdamantiumProperty TileProperty = AdamantiumProperty.RegisterAttached("Tile",
         typeof(string), typeof(AdamantiumComponent), new PropertyMetadata(null, PropertyMetadataOptions.AffectsParentMeasure));
@@ -285,6 +290,7 @@ public class TiledPanel : Panel, IDropGapPanel
             ((IMeasurableComponent)_gapCard).Arrange(gapTile);
         }
 
+        ArrangeCornerGrips();
         _animateMoves = false;
         return finalSize;
     }
@@ -358,6 +364,8 @@ public class TiledPanel : Panel, IDropGapPanel
         {
             ShowGripCursor(false, false, false);
         }
+
+        Hover(null, null);
     }
 
     protected override void OnPointerCaptureLost(PointerEventArgs e)
@@ -400,6 +408,93 @@ public class TiledPanel : Panel, IDropGapPanel
         _dragged.Clear();
         CommitMerges();
         e.Pointer.Capture(null);
+    }
+
+    private void OnPreviewPointerMoved(object sender, PointerEventArgs e)
+    {
+        if (_splitFrom != null || _dragged.Count > 0)
+        {
+            Hover(null, null);
+            return;
+        }
+
+        var point = e.GetPosition(this);
+        if (CornerAt(point, out var tile, out var room, out var corner))
+        {
+            Hover(tile, CornerOf(room, corner));
+            return;
+        }
+
+        Hover(SplittableAt(point), null);
+    }
+
+    private void Hover(Tile tile, TileCorner? corner)
+    {
+        if (ReferenceEquals(tile, _hoveredTile) && corner == _hotCorner)
+        {
+            return;
+        }
+
+        _hoveredTile = tile;
+        _hotCorner = corner;
+        InvalidateArrange();
+    }
+
+    private Tile SplittableAt(Vector2 point)
+    {
+        if (SplitGripSize <= 0 || SplitTileCommand == null || Maximized() != null || _gapIndex >= 0)
+        {
+            return null;
+        }
+
+        foreach (var (tile, rect) in _tileRects)
+        {
+            if (Near(rect, 0, point) && _tileChildren.TryGetValue(tile, out var child) && child != null
+                && !ReferenceEquals(child, _gapCard))
+            {
+                return tile;
+            }
+        }
+
+        return null;
+    }
+
+    private static TileCorner CornerOf(Rect room, Vector2 corner) =>
+        corner.Y == room.Y
+            ? corner.X == room.X ? TileCorner.TopLeft : TileCorner.TopRight
+            : corner.X == room.X ? TileCorner.BottomLeft : TileCorner.BottomRight;
+
+    private void ArrangeCornerGrips()
+    {
+        var shown = _hoveredTile != null && _splitFrom == null && _dragged.Count == 0 && SplitTileCommand != null
+                    && _tileRects.TryGetValue(_hoveredTile, out _);
+        if (!shown && _cornerGrips[0] == null)
+        {
+            return;
+        }
+
+        var size = SplitGripSize;
+        var room = shown ? _tileRects[_hoveredTile] : default;
+        for (var i = 0; i < _cornerGrips.Length; i++)
+        {
+            var corner = (TileCorner)i;
+            if (_cornerGrips[i] == null)
+            {
+                _cornerGrips[i] = new TileGrip { Corner = corner };
+                AddVisualChild(_cornerGrips[i]);
+                AddLogicalChild(_cornerGrips[i]);
+            }
+
+            var grip = _cornerGrips[i];
+            grip.IsHot = shown && _hotCorner == corner;
+            var right = corner is TileCorner.TopRight or TileCorner.BottomRight;
+            var bottom = corner is TileCorner.BottomLeft or TileCorner.BottomRight;
+            var rect = shown
+                ? new Rect(right ? room.Right - size : room.X, bottom ? room.Bottom - size : room.Y, size, size)
+                : default;
+            ((IMeasurableComponent)grip).Measure(new Size(rect.Width, rect.Height));
+            ((IMeasurableComponent)grip).Arrange(rect);
+        }
     }
 
     private void OnPreviewPointerPressed(object sender, PointerPressedEventArgs e)
@@ -946,10 +1041,14 @@ public class TiledPanel : Panel, IDropGapPanel
         var at = start;
         for (var i = 0; i < count; i++)
         {
-            var part = length * split.FractionOf(i);
-            LayRegion(split.Children[i], vertical
-                ? new Rect(at, room.Y, part, room.Height)
-                : new Rect(room.X, at, room.Width, part));
+            var fraction = split.FractionOf(i);
+            var part = length * fraction;
+            if (fraction > 0)
+            {
+                LayRegion(split.Children[i], vertical
+                    ? new Rect(at, room.Y, part, room.Height)
+                    : new Rect(room.X, at, room.Width, part));
+            }
             at += part;
             if (i < count - 1)
             {

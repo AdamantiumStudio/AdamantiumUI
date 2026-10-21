@@ -90,7 +90,7 @@
                 <ListBox.ItemContainerStyle>
                     <Style Selector="ListBoxItem">
                         <Setter Property="Margin" Value="0"/>
-                        <Setter Property="Padding" Value="3"/>
+                        <Setter Property="Padding" Value="0"/>
                         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
                         <Setter Property="VerticalContentAlignment" Value="Stretch"/>
                         <Setter Property="AutomationProperties.Name" Value="{Binding Number}"/>
@@ -172,7 +172,7 @@
                 <ListBox.ItemContainerStyle>
                     <Style Selector="ListBoxItem">
                         <Setter Property="Margin" Value="0"/>
-                        <Setter Property="Padding" Value="3"/>
+                        <Setter Property="Padding" Value="0"/>
                         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
                         <Setter Property="VerticalContentAlignment" Value="Stretch"/>
                         <Setter Property="AutomationProperties.Name" Value="{Binding Number}"/>
@@ -254,7 +254,7 @@
                 <ListBox.ItemContainerStyle>
                     <Style Selector="ListBoxItem">
                         <Setter Property="Margin" Value="0"/>
-                        <Setter Property="Padding" Value="3"/>
+                        <Setter Property="Padding" Value="0"/>
                         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
                         <Setter Property="VerticalContentAlignment" Value="Stretch"/>
                         <Setter Property="AutomationProperties.Name" Value="{Binding Number}"/>
