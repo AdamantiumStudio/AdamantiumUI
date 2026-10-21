@@ -1,11 +1,10 @@
-using System.Globalization;
 using Adamantium.Mathematics;
 using Adamantium.UI.Markup.CodeGeneration;
 
 namespace Adamantium.UI.LanguageServer;
 
-/// <summary>Colors as the framework reads them (<see cref="Colors"/>): a name in any case, or a "#" and up to eight hex
-/// digits; and the properties that take one - a brush or a color.</summary>
+/// <summary>Colors as the framework reads them (<see cref="Colors.TryParse"/>): a name in any case, or a "#" and three,
+/// four, six or eight hex digits; and the properties that take one - a brush or a color.</summary>
 public static class AumlColors
 {
     private const string BrushType = "Adamantium.UI.Core.Media.Brush";
@@ -16,28 +15,7 @@ public static class AumlColors
         type != null && (type.FullName == ColorType || type.FullName == BrushType || type.IsAssignableTo(BrushType));
 
     /// <summary>The color a value stands for; false when it is not one.</summary>
-    public static bool TryRead(string value, out Color color)
-    {
-        color = default;
-        var text = value?.Trim();
-        if (string.IsNullOrEmpty(text))
-        {
-            return false;
-        }
-
-        if (text[0] != '#')
-        {
-            return Colors.TryGetNamed(text, out color);
-        }
-
-        if (text.Length is < 2 or > 9 || !uint.TryParse(text.AsSpan(1), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out _))
-        {
-            return false;
-        }
-
-        color = Colors.Get(text);
-        return true;
-    }
+    public static bool TryRead(string value, out Color color) => Colors.TryParse(value, out color);
 
     /// <summary>The color as "#RRGGBB", or "#AARRGGBB" when it is not opaque.</summary>
     public static string Hex(Color color) => color.A == 255

@@ -1459,6 +1459,11 @@ All packages share one version.
   dropped for want of a free surface, on the panel's next ask.
 - `RuntimeStats.WindowFps` and `RuntimeStats.LastWindowGpuMs`: the frames the render thread draws a second and the GPU
   time of the last window frame.
+- Colors read as text go through the engine's two readers: `ColorPicker`'s hex box (still six or eight digits - it
+  commits as it is typed) and the markup language server through `Colors.TryParse`, the language server reading
+  `#RGB` and `#ARGB` as the framework now does and no "#" with 1, 2, 5 or 7 digits; a drawing's SVG colors
+  (`CanvasSvgColor`) through `Css.TryParseColor` - rounded as browsers round them, CSS's "grey" spellings and
+  `rebeccapurple` read, "zero" and an alpha that is no number no color.
 - `FontVariationList.Parse` reads axis values with the engine's `FontVariation.ParseList`, one reader for markup and
   documents; a value that is not finite (`wght=Infinity`) is refused now.
 - Raising a routed event allocates nothing and takes no lock once each handler type and element type has been seen:
@@ -1835,6 +1840,10 @@ All packages share one version.
 - A vector shape filled in the instanced batch was patched in place - a recolor, a shape blanked or replaced, a new one
   placed on a clean frame - in the copy the frames since the last walk were drawing from. The first patch of a frame
   moves every key to the next copy and fills it with what the keys hold, as the other batches do.
+- The cue of a finger or pen held still is kept with its contact (a weak table by `Pointer`), and comes down from the
+  window it went up in: the cues were one dictionary by pointer id for every window, so two contacts numbered alike -
+  test windows side by side - showed one cue between them, and written from the hold timer's thread on a test run,
+  it broke when two windows held at once (a test host crashed on it).
 - `EventManager.GetRoutedEvents()` lists the registered routed events; it always gave none.
 - `SizeChanged` of the items a `StackPanel` or `WrapPanel` arranges in parallel, and of the elements inside them, is
   raised on the thread that runs the outermost such arrange, after its items and in their order, also when one of them
