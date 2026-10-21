@@ -9,6 +9,10 @@ public static class Keyboard
    /// state then comes from what our own events have tracked (see <see cref="KeyboardDevice.IsKeyDown"/>).</summary>
    public static INativeKeyboard Platform { get; set; }
 
+   /// <summary>Whether a keyboard layout the user switches between types a right-to-left script, as Hebrew or Arabic;
+   /// false with no platform to ask.</summary>
+   public static bool HasRightToLeftLayout => Platform?.HasRightToLeftLayout == true;
+
    public static readonly RoutedEvent KeyDownEvent = EventManager.RegisterRoutedEvent("KeyDown",
       RoutingStrategy.Bubble, typeof(KeyEventHandler), typeof(Keyboard));
 

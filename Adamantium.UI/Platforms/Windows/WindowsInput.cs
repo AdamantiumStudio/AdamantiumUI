@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Runtime.InteropServices;
 using Adamantium.Mathematics;
 using Adamantium.UI.Core;
@@ -35,6 +36,31 @@ internal sealed class WindowsInput : INativeMouse, INativeKeyboard, INativePlatf
 
     // Toggles (Caps/Num/Scroll Lock) are a latched state, which only GetKeyState reports.
     public bool IsKeyToggled(Key key) => (Win32Interop.GetKeyState((uint)key) & KeyToggled) != 0;
+
+    // Read live: the user adds and removes layouts while an application runs. A layout's low word is its language.
+    public bool HasRightToLeftLayout
+    {
+        get
+        {
+            var layouts = new IntPtr[Win32Interop.GetKeyboardLayoutList(0, null)];
+            var count = Win32Interop.GetKeyboardLayoutList(layouts.Length, layouts);
+            for (var i = 0; i < count; i++)
+            {
+                try
+                {
+                    if (CultureInfo.GetCultureInfo((int)(layouts[i] & 0xFFFF)).TextInfo.IsRightToLeft)
+                    {
+                        return true;
+                    }
+                }
+                catch (ArgumentException)
+                {
+                }
+            }
+
+            return false;
+        }
+    }
 
     public uint DoubleClickTime => Win32Interop.GetDoubleClickTime();
 
