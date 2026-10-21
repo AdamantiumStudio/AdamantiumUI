@@ -19,6 +19,18 @@ All packages share one version.
   drag ghost do nothing there yet; the clipboard stays in-process.
 - `IWindow.SurfaceDisplayHandle`: the connection a window's surface belongs to where the platform needs one beside it -
   the `wl_display` - passed on to the presenter as `PresentationParameters.DisplayHandle`.
+- `TiledPanel`: lays its children out as tiles in the scheme `Layout` names (`TileLayout`: one, two side by side or
+  stacked, a large one with two or three beside it, four in a grid), in their order, collapsing any it has no tile for;
+  `MaximizedItem` - the child or its data - fills it alone. The gaps between tiles (`SplitterThickness`) drag
+  `ColumnSplit` and `RowSplit`, two-way by default, and a double click shares the room evenly again;
+  `ShareEvenly` does it across both.
+- `Expander.ExpandDuration`: the content unfolds in the layout and folds away over it - what lies past the expander
+  moves with it - and the chevron turns, one glyph turned by the direction instead of four swapped. The Fluent, Graphite
+  and macOS themes set 0.2 s; zero shows the change at once. A template unfolds the content with `RevealDecorator`
+  (`PART_Reveal`), which takes `Progress` of its child's size along the axis it opens on, and turns the chevron with a
+  `Transform` named `PART_GlyphTurn`.
+- `UniverseHost.Output`: the output the universe draws into the host's panel through, for a view model to tell
+  one panel's view of a universe from another's (`Mode=OneWayToSource`).
 - `PropertyGrid.ValueChangedCommand`: executed after each value written or taken back, with the change as its
   parameter - what `ValueChanged` says, for a view model bound from markup.
 - A way in for debugging tools: `UIApplication.AttachDebugTool` starts an `IDebugTool` on the application - its
@@ -1452,6 +1464,8 @@ All packages share one version.
 ### Changed
 
 - On `Adamantium.Vulkan` 1.0.4, as the engine is.
+- One universe can be shown by several `UniverseHost`s of one window at once, each panel a view of its own into it:
+  it is paused once none of the panels is in the window, and no longer when one of them leaves.
 - A window whose content has not changed draws its frame from a recording: the first clean frame of each frame slot
   records the op stream into a secondary command buffer, and the next ones only fingerprint the stream - nothing is
   sent to the GPU - and execute the recording while the fingerprint is the same. Whatever the stream reads live - a
@@ -1857,6 +1871,10 @@ All packages share one version.
 
 ### Fixed
 
+- A universe shown in a panel under a hidden or collapsed ancestor went on drawing it: the output read only the
+  panel's own visibility. It reads the ancestors' too, and asks for a frame when one of them is shown again.
+- A type whose `ClipToBounds` is on by default did not clip: the value the renderer reads only followed changes, and a
+  default is no change.
 - An `Expander`'s content always opened downward: the Fluent and Graphite templates read no `ExpandDirection`. The header
   now docks to the side the direction names - top, bottom, right or left - and the content opens on the other, with the
   hairline and the chevron following.

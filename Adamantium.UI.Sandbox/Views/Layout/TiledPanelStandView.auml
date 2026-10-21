@@ -1,0 +1,44 @@
+<View xmlns="http://adamantium/ui"
+      xmlns:x="http://adamantium/ui/xaml/extensions"
+      xmlns:conv="clr-namespace:Adamantium.UI.Sandbox.Converters"
+      xmlns:vm="clr-namespace:Adamantium.UI.Sandbox.ViewModels">
+    <!-- One of the layout tab's stands, under the key "TiledPanel": four tiles in the scheme picked, the first alone on
+         request; the gaps between them drag, and a double click on one shares the room evenly again. -->
+    <Grid RowDefinitions="Auto,*">
+        <StackPanel Orientation="Horizontal" MarginBottom="10">
+            <DropDown ItemsSource="{x:Static vm:LayoutViewModel.TileLayouts}"
+                      SelectedItem="{Binding TileLayout, Mode=TwoWay}"
+                      MinWidth="160"
+                      AutomationProperties.AutomationId="TileLayout"
+                      AutomationProperties.Name="{Localize LayoutStrings.TileLayout}"/>
+            <CheckBox Content="{Localize LayoutStrings.MaximizeFirstTile}"
+                      IsChecked="{Binding MaximizeFirstTile, Mode=TwoWay}"
+                      VerticalAlignment="Center"
+                      Margin="12,0,0,0"
+                      AutomationProperties.AutomationId="MaximizeFirstTile"/>
+        </StackPanel>
+        <ItemsControl Grid.Row="1"
+                      ItemsSource="{Binding TiledItems}"
+                      AutomationProperties.AutomationId="TiledPanelItems">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <TiledPanel Layout="{Binding TileLayout}"
+                                MaximizedItem="{Binding MaximizedTile}"
+                                ColumnSplit="{Binding TileColumnSplit}"
+                                RowSplit="{Binding TileRowSplit}"
+                                SplitterThickness="6"/>
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Border Background="{Binding Color, Converter={conv:StringToBrushConverter}}" CornerRadius="4">
+                        <TextBlock Text="{Binding Number}"
+                                   FontSize="32"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"/>
+                    </Border>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+    </Grid>
+</View>

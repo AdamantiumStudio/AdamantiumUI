@@ -22,6 +22,9 @@ namespace Adamantium.UI.Universes
         private OutputCursor cursor;
         private IWindow scaleSource;
         private IInputComponent listenedInput;
+        private readonly List<IUIComponent> watchedAncestors = [];
+        private readonly object ancestorsLock = new();
+        private bool watchingAncestors;
 
         public override UniverseOutputDescription Description { get; protected set; }
 
@@ -273,7 +276,14 @@ namespace Adamantium.UI.Universes
             listenedInput.PointerMoved += OnPointerMovedOrLeft;
             listenedInput.PointerExited += OnPointerMovedOrLeft;
             listenedInput.AttachedToVisualTreeEvent += OnAttachedToVisualTree;
+            listenedInput.DetachedFromVisualTreeEvent += OnDetachedFromVisualTree;
             listenedInput.PropertyChanged += OnInputPropertyChanged;
+            lock (ancestorsLock)
+            {
+                watchingAncestors = true;
+            }
+
+            WatchAncestors();
             listenedInput.SetValue(Gestures.IsManipulationEnabledProperty, true, ValuePriority.Default);
             listenedInput.AddHandler(Gestures.ManipulationEvent, new ManipulationEventHandler(OnManipulation));
             listenedInput.AddHandler(PointerEvents.PointerCanceledEvent, new PointerEventHandler(OnPointerCanceled),
@@ -310,7 +320,14 @@ namespace Adamantium.UI.Universes
             listenedInput.PointerMoved -= OnPointerMovedOrLeft;
             listenedInput.PointerExited -= OnPointerMovedOrLeft;
             listenedInput.AttachedToVisualTreeEvent -= OnAttachedToVisualTree;
+            listenedInput.DetachedFromVisualTreeEvent -= OnDetachedFromVisualTree;
             listenedInput.PropertyChanged -= OnInputPropertyChanged;
+            lock (ancestorsLock)
+            {
+                watchingAncestors = false;
+                UnwatchAncestors();
+            }
+
             listenedInput.ClearValue(Gestures.IsManipulationEnabledProperty, ValuePriority.Default);
             listenedInput.RemoveHandler(Gestures.ManipulationEvent, new ManipulationEventHandler(OnManipulation));
             listenedInput.RemoveHandler(PointerEvents.PointerCanceledEvent, new PointerEventHandler(OnPointerCanceled));
@@ -422,7 +439,7 @@ namespace Adamantium.UI.Universes
                     return OutputState.OutOfView;
                 }
 
-                if (InputComponent.Visibility != Visibility.Visible)
+                if (InputComponent.Visibility != Visibility.Visible || HasHiddenAncestor())
                 {
                     return OutputState.Hidden;
                 }
@@ -473,7 +490,16 @@ namespace Adamantium.UI.Universes
         private void OnAttachedToVisualTree(object sender, VisualTreeAttachmentEventArgs e)
         {
             WatchHostWindow();
+            WatchAncestors();
             Invalidate();
+        }
+
+        private void OnDetachedFromVisualTree(object sender, VisualTreeAttachmentEventArgs e)
+        {
+            lock (ancestorsLock)
+            {
+                UnwatchAncestors();
+            }
         }
 
         private void OnInputPropertyChanged(object sender, AdamantiumPropertyChangedEventArgs e)
@@ -482,6 +508,47 @@ namespace Adamantium.UI.Universes
             {
                 Invalidate();
             }
+        }
+
+        private void WatchAncestors()
+        {
+            lock (ancestorsLock)
+            {
+                UnwatchAncestors();
+                if (!watchingAncestors)
+                {
+                    return;
+                }
+
+                for (var ancestor = InputComponent.VisualParent; ancestor != null; ancestor = ancestor.VisualParent)
+                {
+                    ancestor.PropertyChanged += OnInputPropertyChanged;
+                    watchedAncestors.Add(ancestor);
+                }
+            }
+        }
+
+        private void UnwatchAncestors()
+        {
+            foreach (var ancestor in watchedAncestors)
+            {
+                ancestor.PropertyChanged -= OnInputPropertyChanged;
+            }
+
+            watchedAncestors.Clear();
+        }
+
+        private bool HasHiddenAncestor()
+        {
+            for (var ancestor = InputComponent.VisualParent; ancestor != null; ancestor = ancestor.VisualParent)
+            {
+                if (ancestor.Visibility != Visibility.Visible)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private void OnMouseMove(object sender, UnboundMouseEventArgs e)

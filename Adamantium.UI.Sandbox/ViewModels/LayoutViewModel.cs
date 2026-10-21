@@ -1,8 +1,10 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using Adamantium.MVVM;
 using Adamantium.Navigation;
+using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Core.Collections;
 
 namespace Adamantium.UI.Sandbox.ViewModels;
@@ -34,6 +36,30 @@ public partial class LayoutViewModel : TabPageViewModel
 
     private void ShowStand(LayoutStand stand)
         => _ = _regions.GetOrCreateRegion(RegionNames.LayoutStand).NavigateToInstanceAsync(this, stand.ToString());
+
+    // ── THE TILED PANEL STAND ─────────────────────────────────────────────────────────────────────────────────────
+
+    /// <summary>The schemes the tiled panel can lay its tiles out in, as the stand offers them.</summary>
+    public static IReadOnlyList<TileLayout> TileLayouts { get; } = Enum.GetValues<TileLayout>();
+
+    /// <summary>The scheme the tiled panel lays its tiles out in.</summary>
+    [Bindable] private TileLayout _tileLayout = TileLayout.Four;
+
+    /// <summary>The tiles, in the order the panel lays them out.</summary>
+    public IReadOnlyList<ColorRect> TiledItems { get; } =
+        Enumerable.Range(0, 4).Select(i => new ColorRect { Number = i + 1, Color = Palette[i] }).ToList();
+
+    /// <summary>Whether the first tile fills the panel alone.</summary>
+    [Bindable, Affects(nameof(MaximizedTile))] private bool _maximizeFirstTile;
+
+    /// <summary>The tile filling the panel alone, or null.</summary>
+    public ColorRect MaximizedTile => MaximizeFirstTile ? TiledItems[0] : null;
+
+    /// <summary>Where the gap between the left and the right tiles stands.</summary>
+    [Bindable] private double _tileColumnSplit = 0.5;
+
+    /// <summary>Where the gap between the top and the bottom tiles stands.</summary>
+    [Bindable] private double _tileRowSplit = 0.5;
 
     // ── THE SKELETON STAND ─────────────────────────────────────────────────────────────────────────────────────────
     // Nothing but the loading cards: a list that never binds an item, shown and hidden by a switch, with the garland's

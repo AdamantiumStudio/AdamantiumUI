@@ -9,30 +9,43 @@ namespace Adamantium.UI.Universes;
 
 /// <summary>
 /// Shows a universe made and owned elsewhere - by a view-model - in the <see cref="RenderTargetPanel"/> it is attached
-/// to. While the panel is in a window, the universe runs in that window's frames and draws into the panel; out of the
-/// tree it is paused. When the panel is discarded or shown another universe, the output goes and the universe it left
-/// is paused, staying with its owner. The host resumes only a universe it paused itself: one the application paused -
-/// a game paused from a toolbar - stays paused across a tab switched away and back. One universe is shown by one host
-/// at a time.
+/// to, through an output of its own (<see cref="Output"/>). While the panel is in a window, the universe runs and draws
+/// into the panel; once no panel showing it is in a window, it is paused. When the panel is discarded or shown another
+/// universe, the output goes, and the universe it left is paused if no other panel shows it, staying with its owner.
+/// The host resumes only a universe it paused itself: one the application paused - a game paused from a toolbar - stays
+/// paused across a tab switched away and back. One universe can be shown by several hosts of one window at once, each
+/// panel a view of its own into it.
 /// <code>
 /// &lt;RenderTargetPanel.Behaviors&gt;&lt;universes:UniverseHost Universe="{Binding Universe}"/&gt;&lt;/RenderTargetPanel.Behaviors&gt;
 /// </code>
 /// </summary>
 public class UniverseHost : Behavior<RenderTargetPanel>
 {
-    private static readonly ConditionalWeakTable<Universe, object> PausedByHost = new();
+    private static readonly ConditionalWeakTable<Universe, Hosting> Hostings = new();
 
     private RenderTargetPanel _panel;
     private Universe _shown;
+    private bool _inWindow;
 
     public static readonly AdamantiumProperty UniverseProperty = AdamantiumProperty.Register(nameof(Universe),
         typeof(Universe), typeof(UniverseHost), new PropertyMetadata(null, OnUniverseChanged));
+
+    public static readonly AdamantiumProperty OutputProperty = AdamantiumProperty.RegisterReadOnly(nameof(Output),
+        typeof(UniverseOutput), typeof(UniverseHost), new PropertyMetadata(null));
 
     /// <summary>The universe to show, or null for none.</summary>
     public Universe Universe
     {
         get => GetValue<Universe>(UniverseProperty);
         set => SetValue(UniverseProperty, value);
+    }
+
+    /// <summary>The output the universe draws into this panel through, or null while it shows none: what tells this
+    /// panel's view apart from the other panels' showing the same universe.</summary>
+    public UniverseOutput Output
+    {
+        get => GetValue<UniverseOutput>(OutputProperty);
+        private set => SetValue(OutputProperty, value);
     }
 
     private static void OnUniverseChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)
@@ -63,7 +76,7 @@ public class UniverseHost : Behavior<RenderTargetPanel>
 
     private void OnPanelDetachedFromVisualTree(object sender, VisualTreeAttachmentEventArgs e)
     {
-        PauseShown();
+        LeaveWindow();
     }
 
     private void Sync()
@@ -83,14 +96,11 @@ public class UniverseHost : Behavior<RenderTargetPanel>
         universes.Show(universe, window);
         if (_shown == null)
         {
-            universe.CreateOutputFromContext(_panel);
+            Output = universe.CreateOutputFromContext(_panel);
             _shown = universe;
         }
 
-        if (PausedByHost.Remove(universe))
-        {
-            universe.Resume();
-        }
+        EnterWindow();
     }
 
     private static IUniverseService UniverseService()
@@ -99,15 +109,38 @@ public class UniverseHost : Behavior<RenderTargetPanel>
         return context?.Resolve<IUniverseService>();
     }
 
-    private void PauseShown()
+    private void EnterWindow()
     {
-        if (_shown == null || _shown.IsPaused)
+        if (_inWindow)
         {
             return;
         }
 
-        _shown.Pause();
-        PausedByHost.AddOrUpdate(_shown, null);
+        _inWindow = true;
+        var hosting = Hostings.GetOrCreateValue(_shown);
+        hosting.InWindow++;
+        if (hosting.Paused)
+        {
+            hosting.Paused = false;
+            _shown.Resume();
+        }
+    }
+
+    private void LeaveWindow()
+    {
+        if (!_inWindow)
+        {
+            return;
+        }
+
+        _inWindow = false;
+        var hosting = Hostings.GetOrCreateValue(_shown);
+        hosting.InWindow--;
+        if (hosting.InWindow == 0 && !_shown.IsPaused)
+        {
+            _shown.Pause();
+            hosting.Paused = true;
+        }
     }
 
     private void Withdraw()
@@ -117,9 +150,16 @@ public class UniverseHost : Behavior<RenderTargetPanel>
             return;
         }
 
-        PauseShown();
+        LeaveWindow();
         _shown.RemoveWindowByContext(_panel);
         _panel.ClearSource();
         _shown = null;
+        Output = null;
+    }
+
+    private sealed class Hosting
+    {
+        public int InWindow;
+        public bool Paused;
     }
 }

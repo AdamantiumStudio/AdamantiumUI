@@ -15,6 +15,7 @@
         <Setter Property="FontSize" Value="{ResourceReference FontSizeBody}"/>
         <Setter Property="Padding" Value="{ResourceReference PaddingRow}"/>
         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        <Setter Property="ExpandDuration" Value="0:0:0.2"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Expander">
@@ -33,7 +34,12 @@
                                 <Image Grid.Column="0" x:Name="Glyph"
                                        Source="{ResourceReference ChevronRightIcon}"
                                        Width="8" Height="8" Margin="0 0 6 0"
-                                       VerticalAlignment="Center"/>
+                                       VerticalAlignment="Center"
+                                       RenderTransformOrigin="0.5,0.5">
+                                    <Image.RenderTransform>
+                                        <Transform x:Name="PART_GlyphTurn"/>
+                                    </Image.RenderTransform>
+                                </Image>
                                 <ContentPresenter Grid.Column="1"
                                         x:Name="PART_HeaderPresenter"
                                         VerticalAlignment="Center"
@@ -45,57 +51,36 @@
                             </Grid>
                         </Border>
 
-                        <Border x:Name="PART_Content" Visibility="Collapsed">
-                            <ContentPresenter
-                                    x:Name="PART_ContentPresenter"
-                                    HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                    VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
-                                    Content="{TemplateBinding Content}"
-                                    ContentTemplate="{TemplateBinding ContentTemplate}"/>
-                        </Border>
+                        <!-- The content unfolds as Fluent's does. -->
+                        <RevealDecorator x:Name="PART_Reveal"
+                                         Visibility="Collapsed"
+                                         Direction="{TemplateBinding ExpandDirection}">
+                            <Border x:Name="PART_Content">
+                                <ContentPresenter
+                                        x:Name="PART_ContentPresenter"
+                                        HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                        VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                        Content="{TemplateBinding Content}"
+                                        ContentTemplate="{TemplateBinding ContentTemplate}"/>
+                            </Border>
+                        </RevealDecorator>
                     </DockPanel>
                     <ControlTemplate.Triggers>
                         <!-- Where the header sits, and its hairline on the side towards the content. -->
                         <PropertyTrigger Property="ExpandDirection" Value="Up">
                             <Setter TargetName="PART_Header" Property="DockPanel.Dock" Value="Bottom"/>
                             <Setter TargetName="PART_Header" Property="BorderThickness" Value="0 1 0 0"/>
+                            <Setter TargetName="PART_Reveal" Property="VerticalAlignment" Value="Bottom"/>
                         </PropertyTrigger>
                         <PropertyTrigger Property="ExpandDirection" Value="Left">
                             <Setter TargetName="PART_Header" Property="DockPanel.Dock" Value="Right"/>
                             <Setter TargetName="PART_Header" Property="BorderThickness" Value="1 0 0 0"/>
-                            <Setter TargetName="Glyph" Property="Source" Value="{ResourceReference ChevronLeftIcon}"/>
+                            <Setter TargetName="PART_Reveal" Property="HorizontalAlignment" Value="Right"/>
                         </PropertyTrigger>
                         <PropertyTrigger Property="ExpandDirection" Value="Right">
                             <Setter TargetName="PART_Header" Property="DockPanel.Dock" Value="Left"/>
                             <Setter TargetName="PART_Header" Property="BorderThickness" Value="0 0 1 0"/>
                         </PropertyTrigger>
-                        <!-- The chevron as Fluent's: up or down, right while folded and into the content while open; to a
-                             side, where the content opens while folded and back to the header while open. -->
-                        <PropertyTrigger Property="IsExpanded" Value="true">
-                            <Setter TargetName="PART_Content" Property="Visibility" Value="Visible"/>
-                            <Setter TargetName="Glyph" Property="Source" Value="{ResourceReference ChevronDownIcon}"/>
-                        </PropertyTrigger>
-                        <MultiTrigger>
-                            <MultiTrigger.Conditions>
-                                <Condition Property="IsExpanded" Value="true"/>
-                                <Condition Property="ExpandDirection" Value="Up"/>
-                            </MultiTrigger.Conditions>
-                            <Setter TargetName="Glyph" Property="Source" Value="{ResourceReference ChevronUpIcon}"/>
-                        </MultiTrigger>
-                        <MultiTrigger>
-                            <MultiTrigger.Conditions>
-                                <Condition Property="IsExpanded" Value="true"/>
-                                <Condition Property="ExpandDirection" Value="Left"/>
-                            </MultiTrigger.Conditions>
-                            <Setter TargetName="Glyph" Property="Source" Value="{ResourceReference ChevronRightIcon}"/>
-                        </MultiTrigger>
-                        <MultiTrigger>
-                            <MultiTrigger.Conditions>
-                                <Condition Property="IsExpanded" Value="true"/>
-                                <Condition Property="ExpandDirection" Value="Right"/>
-                            </MultiTrigger.Conditions>
-                            <Setter TargetName="Glyph" Property="Source" Value="{ResourceReference ChevronLeftIcon}"/>
-                        </MultiTrigger>
                         <PropertyTrigger Property="IsPointerOver" Value="true">
                             <Setter TargetName="PART_Header" Property="Background"
                                     Value="{ObservableResource ControlFillColorTertiary}"/>

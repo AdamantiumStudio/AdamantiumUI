@@ -19,4 +19,7 @@
     <Phrase Key="OpensLeft" Text="Раскрывается влево"/>
     <Phrase Key="OpensRight" Text="Раскрывается вправо"/>
     <Phrase Key="ExpanderContent" Text="Содержимое открывается со стороны, противоположной заголовку, и сворачивается в него."/>
+    <Phrase Key="TiledPanel" Text="Плиточная панель"/>
+    <Phrase Key="TileLayout" Text="Схема"/>
+    <Phrase Key="MaximizeFirstTile" Text="Только первая плитка"/>
 </Language>

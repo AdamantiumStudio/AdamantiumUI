@@ -19,4 +19,7 @@
     <Phrase Key="OpensLeft" Text="Opens left"/>
     <Phrase Key="OpensRight" Text="Opens right"/>
     <Phrase Key="ExpanderContent" Text="The content opens on the side away from the header and folds back into it."/>
+    <Phrase Key="TiledPanel" Text="Tiled panel"/>
+    <Phrase Key="TileLayout" Text="Scheme"/>
+    <Phrase Key="MaximizeFirstTile" Text="The first tile alone"/>
 </Language>

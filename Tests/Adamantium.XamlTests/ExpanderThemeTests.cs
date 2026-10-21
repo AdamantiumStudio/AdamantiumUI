@@ -71,8 +71,37 @@ public class ExpanderThemeTests
         {
             Assert.That(expander.Template, Is.Not.Null, "a template that threw leaves the control with none at all");
             Assert.That(expander.GetTemplateChild("PART_Header"), Is.Not.Null, "the whole header is the button");
-            Assert.That(expander.GetTemplateChild("PART_Content"), Is.Not.Null, "and the host that folds away");
+            Assert.That(expander.GetTemplateChild("PART_Reveal"), Is.Not.Null, "and the host that folds away");
         });
+    }
+
+    [Test]
+    public void TheChevronFollowsTheWayTheContentOpens_UnderFluent()
+    {
+        Use(Fluent());
+        var expander = Built(new Expander { Header = "Transform", Content = "body", IsExpanded = true });
+        var turn = (Adamantium.UI.Core.Media.Transform)expander.GetTemplateChild("PART_GlyphTurn");
+        var down = turn.RotationAngle;
+
+        expander.ExpandDirection = ExpandDirection.Right;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(down, Is.EqualTo(90), "open downward, it points down");
+            Assert.That(turn.RotationAngle, Is.EqualTo(180), "open to the right, it points back at the header");
+        });
+    }
+
+    [Test]
+    public void UnderMacOs_WhichOpensOnlyDownward_TheChevronPointsDown()
+    {
+        Use(MacOs());
+        var expander = Built(new Expander
+            { Header = "Transform", Content = "body", IsExpanded = true, ExpandDirection = ExpandDirection.Up });
+
+        var turn = (Adamantium.UI.Core.Media.Transform)expander.GetTemplateChild("PART_GlyphTurn");
+
+        Assert.That(turn.RotationAngle, Is.EqualTo(90));
     }
 
     [Test]
@@ -95,7 +124,7 @@ public class ExpanderThemeTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(((IUIComponent)expander.GetTemplateChild("PART_Content")).Visibility,
+            Assert.That(((IUIComponent)expander.GetTemplateChild("PART_Reveal")).Visibility,
                 Is.EqualTo(Visibility.Collapsed), "COLLAPSED, not hidden - a hidden host is still measured");
             Assert.That(folded, Is.LessThan(150), $"folded, the section is a header ({folded}), not a header plus a body");
         });
@@ -104,7 +133,7 @@ public class ExpanderThemeTests
 
         // A child's Visibility change does not dirty the chain above it in this engine (the LayoutManager drains such a
         // node directly in the app), so the walk is dirtied by hand - as everywhere else these tests re-lay a subtree.
-        for (IUIComponent node = (IUIComponent)expander.GetTemplateChild("PART_Content"); node != null; node = node.VisualParent)
+        for (IUIComponent node = (IUIComponent)expander.GetTemplateChild("PART_Reveal"); node != null; node = node.VisualParent)
             (node as IMeasurableComponent)?.InvalidateMeasure();
 
         expander.Measure(new Size(400, 400), force: true);
@@ -112,7 +141,7 @@ public class ExpanderThemeTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(((IUIComponent)expander.GetTemplateChild("PART_Content")).Visibility,
+            Assert.That(((IUIComponent)expander.GetTemplateChild("PART_Reveal")).Visibility,
                 Is.EqualTo(Visibility.Visible));
             Assert.That(expander.DesiredSize.Height, Is.GreaterThan(folded + 100), "opened, the body is in the size");
         });

@@ -15,5 +15,9 @@ public enum LayoutStand
 
     /// <summary>An expander opening each of the four ways.</summary>
     [Display(Name = "Expanders")]
-    Expanders
+    Expanders,
+
+    /// <summary>Four tiles in a tiled panel's schemes, one maximized on request, the gaps dragged.</summary>
+    [Display(Name = "Tiled panel")]
+    TiledPanel
 }

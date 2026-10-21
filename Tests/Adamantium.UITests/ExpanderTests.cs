@@ -1,5 +1,13 @@
+using System;
 using System.ComponentModel;
+using Adamantium.Mathematics;
 using Adamantium.UI.Controls;
+using Adamantium.UI.Controls.Decorators;
+using Adamantium.UI.Controls.Panels;
+using Adamantium.UI.Core;
+using Adamantium.UI.Core.Media;
+using Adamantium.UI.Core.Media.Animation;
+using Adamantium.UI.Core.Templates;
 using Adamantium.UI.Controls.Text;
 using Adamantium.UI.Core.Data;
 using Adamantium.UI.Core.Input;
@@ -163,5 +171,118 @@ public class ExpanderTests
         model.Open = true;
         BindingUpdateQueue.Flush();
         Assert.That(expander.IsExpanded, Is.True, "the model still moves it AFTER a click - the binding survived");
+    }
+
+    [Test]
+    public void OnScreen_TheContentUnfoldsAndFoldsAwayOverItsDuration_AndTheChevronTurns()
+    {
+        var (expander, reveal, turn) = OnScreen(TimeSpan.FromSeconds(1));
+
+        expander.IsExpanded = true;
+        Assert.That(reveal.Visibility, Is.EqualTo(Visibility.Visible), "it is there to unfold");
+        AnimationManager.Tick(0.5);
+        Assert.Multiple(() =>
+        {
+            Assert.That(reveal.Progress, Is.InRange(0.01, 0.99), "half way, part of the content shows");
+            Assert.That(turn.RotationAngle, Is.InRange(1, 89), "and the chevron is turning");
+        });
+        AnimationManager.Tick(0.6);
+        Assert.Multiple(() =>
+        {
+            Assert.That(reveal.Progress, Is.EqualTo(1));
+            Assert.That(turn.RotationAngle, Is.EqualTo(90), "opening down, it points down");
+        });
+
+        expander.IsExpanded = false;
+        AnimationManager.Tick(0.5);
+        Assert.That(reveal.Visibility, Is.EqualTo(Visibility.Visible), "still folding away");
+        AnimationManager.Tick(0.6);
+        Assert.Multiple(() =>
+        {
+            Assert.That(reveal.Progress, Is.EqualTo(0));
+            Assert.That(reveal.Visibility, Is.EqualTo(Visibility.Collapsed), "folded, it is not measured");
+            Assert.That(turn.RotationAngle, Is.EqualTo(0));
+        });
+    }
+
+    [Test]
+    public void TakenOutMidFold_ItComesBackFolded_NotHalfWay()
+    {
+        var (expander, reveal, turn) = OnScreen(TimeSpan.FromSeconds(1));
+        var root = (Rendering.TestRoot)expander.VisualParent;
+        expander.IsExpanded = true;
+        AnimationManager.Tick(1.1);
+
+        expander.IsExpanded = false;
+        AnimationManager.Tick(0.4);
+        root.Remove(expander);
+        AnimationManager.CancelSubtree(expander);
+        root.Add(expander);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(reveal.Progress, Is.EqualTo(0));
+            Assert.That(reveal.Visibility, Is.EqualTo(Visibility.Collapsed));
+            Assert.That(turn.RotationAngle, Is.EqualTo(0));
+        });
+    }
+
+    [Test]
+    public void BeforeItIsLaidOut_AChangeShowsAtOnce()
+    {
+        var (expander, reveal, _) = Templated(TimeSpan.FromSeconds(1));
+        new Rendering.TestRoot(400, 400).Add(expander);
+
+        expander.IsExpanded = true;
+
+        Assert.That(reveal.Progress, Is.EqualTo(1), "a state bound in as the page comes up does not play");
+    }
+
+    [Test]
+    public void WithNoDuration_OrNotOnScreen_TheChangeShowsAtOnce()
+    {
+        var (instant, instantReveal, _) = OnScreen(TimeSpan.Zero);
+        var (offScreen, offScreenReveal, turn) = Templated(TimeSpan.FromSeconds(1));
+
+        instant.IsExpanded = true;
+        offScreenReveal.Direction = ExpandDirection.Right;
+        offScreen.IsExpanded = true;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(instantReveal.Progress, Is.EqualTo(1));
+            Assert.That(offScreenReveal.Progress, Is.EqualTo(1));
+            Assert.That(offScreenReveal.Visibility, Is.EqualTo(Visibility.Visible));
+            Assert.That(turn.RotationAngle, Is.EqualTo(180), "opening right, it points back at the header");
+        });
+    }
+
+    private static (Expander Expander, RevealDecorator Reveal, Transform Turn) OnScreen(TimeSpan duration)
+    {
+        var templated = Templated(duration);
+        new Rendering.TestRoot(400, 400).Add(templated.Expander);
+        templated.Expander.Measure(new Size(400, 400));
+        templated.Expander.Arrange(new Rect(0, 0, 400, 400));
+        return templated;
+    }
+
+    private static (Expander Expander, RevealDecorator Reveal, Transform Turn) Templated(TimeSpan duration)
+    {
+        var reveal = new RevealDecorator { Child = new Border { Height = 100 } };
+        var turn = new Transform();
+        var expander = new Expander
+        {
+            ExpandDuration = duration,
+            Template = new ControlTemplate(() =>
+            {
+                var header = new Border { Height = 20 };
+                var result = new TemplateResult { RootComponent = new StackPanel { Children = { header, reveal } } };
+                result.RegisterName("PART_Header", header);
+                result.RegisterName("PART_Reveal", reveal);
+                result.RegisterName("PART_GlyphTurn", turn);
+                return result;
+            })
+        };
+        return (expander, reveal, turn);
     }
 }

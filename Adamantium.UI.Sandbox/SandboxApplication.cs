@@ -90,5 +90,6 @@ public class SandboxApplication : Adamantium.UI.Universes.MultiverseApplication
         views.RegisterView<ViewModels.LayoutViewModel, Views.Layout.TilesStandView>(nameof(ViewModels.LayoutStand.Tiles));
         views.RegisterView<ViewModels.LayoutViewModel, Views.Layout.SkeletonsStandView>(nameof(ViewModels.LayoutStand.Skeletons));
         views.RegisterView<ViewModels.LayoutViewModel, Views.Layout.ExpandersStandView>(nameof(ViewModels.LayoutStand.Expanders));
+        views.RegisterView<ViewModels.LayoutViewModel, Views.Layout.TiledPanelStandView>(nameof(ViewModels.LayoutStand.TiledPanel));
     }
 }

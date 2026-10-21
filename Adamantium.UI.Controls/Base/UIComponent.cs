@@ -1060,6 +1060,10 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
     {
         RenderId = Guid.NewGuid();
 
+        // The mirror starts at the type's own default: a type that turns clipping on by default (RevealDecorator) has no
+        // change to announce it.
+        _clipToBounds = (bool)ClipToBoundsProperty.GetDefaultMetadata(GetType()).DefaultValue;
+
         // A visual root (e.g. a window) has no parent, so SetVisualParent never attaches it. Seed RootVisual to
         // itself here so the root reports IsAttachedToVisualTree = true.
         if (this is IRootVisualComponent root) RootVisual = root;
