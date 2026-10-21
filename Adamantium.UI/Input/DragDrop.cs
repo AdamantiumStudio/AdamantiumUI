@@ -438,7 +438,13 @@ public static partial class DragDrop
         ItemsControl list = null;
         for (var c = hit; c != null; c = c.VisualParent)
         {
-            if (c is ListBox or TreeView) { list = (ItemsControl)c; break; }
+            if (c is ListBox or TreeView
+                || c is ItemsControl { ItemsHostPanel: IDropGapPanel { SupportsDropGap: true } } gapList && GetAllowDrop(gapList)
+                && LiftedFrom(gapList) != null)
+            {
+                list = (ItemsControl)c;
+                break;
+            }
         }
 
         if (list == null || window is not IAdornerHost host)

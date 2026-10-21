@@ -6,7 +6,9 @@
          editors, picked by their thumbnails; the gaps drag, those in line together, and a double click shares a split
          evenly again. Gallery: any number of tiles in a flow, its limits, proportion and last row set here. Featured:
          one tile large, the rest in a strip on the side picked; a tile's star features it. In all three a tile drags
-         to another place: it leaves its own, a gap opens where it would land and the others move aside. -->
+         to another place: it leaves its own, a gap opens where it would land and the others move aside. In Viewports
+         a tile's corner dragged inward splits a new tile off it, and a border dragged all the way over a tile merges
+         it away. -->
     <Grid RowDefinitions="Auto,*">
         <SegmentedControl EnumType="{x:Type vm:TileShowcase}"
                           SelectedItem="{Binding TileShowcase, Mode=TwoWay}"
@@ -66,6 +68,10 @@
                         Command="{Binding ShareTilesEvenlyCommand}"
                         Margin="12,0,0,0"
                         AutomationProperties.AutomationId="ShareTilesEvenly"/>
+                <TextBlock Text="{Localize LayoutStrings.SplitHint}"
+                           Foreground="{ThemeResource TextFillColorSecondary}"
+                           VerticalAlignment="Center"
+                           Margin="16,0,0,0"/>
             </StackPanel>
             <ListBox Grid.Row="2"
                      ItemsSource="{Binding TiledItems}"
@@ -76,6 +82,8 @@
                     <ItemsPanelTemplate>
                         <TiledPanel Layout="{Binding ViewportLayout}"
                                     MaximizedItem="{Binding MaximizedTile}"
+                                    SplitTileCommand="{Binding SplitTileCommand}"
+                                    MergeTileCommand="{Binding MergeTileCommand}"
                                     Spacing="6"/>
                     </ItemsPanelTemplate>
                 </ListBox.ItemsPanel>

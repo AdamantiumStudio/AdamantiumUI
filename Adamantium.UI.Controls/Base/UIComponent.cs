@@ -1245,6 +1245,12 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
     // instead of walking the tree. Marked here, at the collection, because no caller can then forget.
     private void VisualChildrenCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
     {
+        if (e.Action == NotifyCollectionChangedAction.Move)
+        {
+            RenderDirty.MarkStructural(this);
+            return;
+        }
+
         Detach(e.OldItems);
         Attach(e.NewItems);
     }

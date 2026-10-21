@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using Adamantium.Core.Collections;
+using Adamantium.Core.Commands;
 using Adamantium.Mathematics;
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Core;
@@ -20,6 +21,8 @@ namespace Adamantium.UI.Controls.Panels;
 /// again, <see cref="ShareEvenly"/> every split. The panel owns its children's visibility. It fills the room it is
 /// given; where that is unbounded it asks only for its largest child, so it does not scroll. Hosting a list's items, it
 /// opens a gap where a dragged item would drop: the items dragged out of it leave their tiles, the others move aside.
+/// With <see cref="SplitTileCommand"/> a tile's corner drags a new tile out of it, and with
+/// <see cref="MergeTileCommand"/> a gap dragged all the way over a tile merges it away.
 /// </summary>
 public class TiledPanel : Panel, IDropGapPanel
 {
@@ -43,10 +46,21 @@ public class TiledPanel : Panel, IDropGapPanel
     private IList _lifted;
     private UIComponent _gapCard;
     private bool _animateMoves;
+    private readonly Dictionary<Tile, Rect> _tileRects = new();
+    private readonly List<(TileSplit Split, int Part)> _merging = new();
+    private readonly List<(TileSplit Split, TrackingCollection<double> Shares)> _sharesBefore = new();
+    private Tile _splitFrom;
+    private Rect _splitRoom;
+    private Vector2 _splitCorner;
+    private Vector2 _splitStart;
+    private TileSplit _splitPreview;
+    private Tile _newTile;
+    private int _newTileInsertAt = -1;
 
     public TiledPanel()
     {
         Children.CollectionChanged += OnChildrenChanged;
+        PreviewPointerPressed += OnPreviewPointerPressed;
     }
 
     private readonly record struct Grip(TileSplit Split, int Index, bool Vertical, Rect Bar, double Start, double Room);
@@ -60,6 +74,15 @@ public class TiledPanel : Panel, IDropGapPanel
 
     public static readonly AdamantiumProperty SpacingProperty = AdamantiumProperty.Register(nameof(Spacing),
         typeof(double), typeof(TiledPanel), new PropertyMetadata(4.0, PropertyMetadataOptions.AffectsMeasure));
+
+    public static readonly AdamantiumProperty SplitTileCommandProperty = AdamantiumProperty.Register(
+        nameof(SplitTileCommand), typeof(ICommand), typeof(TiledPanel), new PropertyMetadata(null));
+
+    public static readonly AdamantiumProperty MergeTileCommandProperty = AdamantiumProperty.Register(
+        nameof(MergeTileCommand), typeof(ICommand), typeof(TiledPanel), new PropertyMetadata(null));
+
+    public static readonly AdamantiumProperty SplitGripSizeProperty = AdamantiumProperty.Register(nameof(SplitGripSize),
+        typeof(double), typeof(TiledPanel), new PropertyMetadata(12.0));
 
     public static readonly AdamantiumProperty TileProperty = AdamantiumProperty.RegisterAttached("Tile",
         typeof(string), typeof(AdamantiumComponent), new PropertyMetadata(null, PropertyMetadataOptions.AffectsParentMeasure));
@@ -84,6 +107,29 @@ public class TiledPanel : Panel, IDropGapPanel
     {
         get => GetValue<double>(SpacingProperty);
         set => SetValue(SpacingProperty, value);
+    }
+
+    /// <summary>Asked for a child for a tile split off another, with the index in the items it is to take; the split is
+    /// undone unless one arrives. Null leaves tiles whole.</summary>
+    public ICommand SplitTileCommand
+    {
+        get => GetValue<ICommand>(SplitTileCommandProperty);
+        set => SetValue(SplitTileCommandProperty, value);
+    }
+
+    /// <summary>Asked to let go of the item - or the child - of a tile a gap was dragged all the way over; the tile goes
+    /// once the item does. Null stops a gap short of a tile.</summary>
+    public ICommand MergeTileCommand
+    {
+        get => GetValue<ICommand>(MergeTileCommandProperty);
+        set => SetValue(MergeTileCommandProperty, value);
+    }
+
+    /// <summary>How far in from a tile's corner a press starts splitting it.</summary>
+    public double SplitGripSize
+    {
+        get => GetValue<double>(SplitGripSizeProperty);
+        set => SetValue(SplitGripSizeProperty, value);
     }
 
     /// <summary>The name of the <see cref="Tile"/> a child takes.</summary>
@@ -269,6 +315,12 @@ public class TiledPanel : Panel, IDropGapPanel
             return;
         }
 
+        _sharesBefore.Clear();
+        foreach (var grip in _dragged)
+        {
+            _sharesBefore.Add((grip.Split, grip.Split.Shares));
+        }
+
         e.Pointer.Capture(this);
     }
 
@@ -276,9 +328,17 @@ public class TiledPanel : Panel, IDropGapPanel
     {
         base.OnPointerMoved(e);
         var position = e.GetPosition(this);
+        if (_splitFrom != null)
+        {
+            e.Handled = true;
+            DragSplit(position);
+            return;
+        }
+
         if (_dragged.Count > 0)
         {
             e.Handled = true;
+            _merging.Clear();
             foreach (var grip in _dragged)
             {
                 Move(Current(grip), grip.Vertical ? position.X : position.Y);
@@ -288,7 +348,7 @@ public class TiledPanel : Panel, IDropGapPanel
         }
 
         var (vertical, horizontal) = ReferenceEquals(e.OriginalSource, this) ? GripKindsAt(position) : (false, false);
-        ShowGripCursor(vertical, horizontal);
+        ShowGripCursor(vertical, horizontal, CornerAt(position, out _, out _, out _));
     }
 
     protected override void OnPointerExited(PointerEventArgs e)
@@ -296,7 +356,7 @@ public class TiledPanel : Panel, IDropGapPanel
         base.OnPointerExited(e);
         if (_dragged.Count == 0)
         {
-            ShowGripCursor(false, false);
+            ShowGripCursor(false, false, false);
         }
     }
 
@@ -305,13 +365,32 @@ public class TiledPanel : Panel, IDropGapPanel
         base.OnPointerCaptureLost(e);
         if (!IsPointerCaptured)
         {
+            if (_dragged.Count > 0)
+            {
+                foreach (var (split, shares) in _sharesBefore)
+                {
+                    split.SetCurrentValue(TileSplit.SharesProperty, shares);
+                }
+            }
+
             _dragged.Clear();
+            _merging.Clear();
+            _sharesBefore.Clear();
+            RevertSplit();
         }
     }
 
     protected override void OnPointerReleased(PointerReleasedEventArgs e)
     {
         base.OnPointerReleased(e);
+        if (_splitFrom != null)
+        {
+            e.Handled = true;
+            CommitSplit();
+            e.Pointer.Capture(null);
+            return;
+        }
+
         if (_dragged.Count == 0)
         {
             return;
@@ -319,8 +398,234 @@ public class TiledPanel : Panel, IDropGapPanel
 
         e.Handled = true;
         _dragged.Clear();
+        CommitMerges();
         e.Pointer.Capture(null);
     }
+
+    private void OnPreviewPointerPressed(object sender, PointerPressedEventArgs e)
+    {
+        if (e.ChangedButton != MouseButtons.Left || _splitFrom != null
+            || !CornerAt(e.GetPosition(this), out var tile, out var room, out var corner))
+        {
+            return;
+        }
+
+        e.Handled = true;
+        _splitFrom = tile;
+        _splitRoom = room;
+        _splitCorner = corner;
+        _splitStart = e.GetPosition(this);
+        e.Pointer.Capture(this);
+    }
+
+    private bool CornerAt(Vector2 point, out Tile tile, out Rect room, out Vector2 corner)
+    {
+        tile = null;
+        room = default;
+        corner = default;
+        var grip = SplitGripSize;
+        if (grip <= 0 || SplitTileCommand == null || Maximized() != null || _gapIndex >= 0
+            || GripKindsAt(point) != (false, false))
+        {
+            return false;
+        }
+
+        foreach (var (candidate, rect) in _tileRects)
+        {
+            if (!_tileChildren.TryGetValue(candidate, out var child) || child == null
+                || ReferenceEquals(child, _gapCard) || !Near(rect, 0, point))
+            {
+                continue;
+            }
+
+            var left = point.X - rect.X <= grip;
+            var right = rect.Right - point.X <= grip;
+            var top = point.Y - rect.Y <= grip;
+            var bottom = rect.Bottom - point.Y <= grip;
+            if ((left || right) && (top || bottom))
+            {
+                tile = candidate;
+                room = rect;
+                corner = new Vector2(left ? rect.X : rect.Right, top ? rect.Y : rect.Bottom);
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private void DragSplit(Vector2 position)
+    {
+        if (_splitPreview == null && !BeginSplit(position - _splitStart))
+        {
+            return;
+        }
+
+        var across = _splitPreview.Orientation == Orientation.Horizontal;
+        var start = across ? _splitRoom.X : _splitRoom.Y;
+        var length = (across ? _splitRoom.Width : _splitRoom.Height) - Spacing;
+        var first = Math.Clamp((across ? position.X : position.Y) - start - Spacing / 2, MinTileSize, length - MinTileSize);
+        _splitPreview.SetCurrentValue(TileSplit.SharesProperty,
+            new TrackingCollection<double> { first / length * 100, (length - first) / length * 100 });
+    }
+
+    private bool BeginSplit(Vector2 moved)
+    {
+        if (Math.Max(Math.Abs(moved.X), Math.Abs(moved.Y)) < GripSlack * 2)
+        {
+            return false;
+        }
+
+        var across = Math.Abs(moved.X) >= Math.Abs(moved.Y);
+        if ((across ? _splitRoom.Width : _splitRoom.Height) - Spacing < 2 * MinTileSize)
+        {
+            return false;
+        }
+
+        var newFirst = across ? _splitCorner.X == _splitRoom.X : _splitCorner.Y == _splitRoom.Y;
+        var parent = ParentOf(_splitFrom, Layout);
+        _newTile = new Tile();
+        _splitPreview = new TileSplit(across ? Orientation.Horizontal : Orientation.Vertical);
+        Replace(parent, _splitFrom, _splitPreview);
+        _splitPreview.Children.Add(newFirst ? _newTile : _splitFrom);
+        _splitPreview.Children.Add(newFirst ? _splitFrom : _newTile);
+        return true;
+    }
+
+    private void CommitSplit()
+    {
+        var preview = _splitPreview;
+        _newTileInsertAt = -1;
+        if (preview != null)
+        {
+            Assign(Layout ?? _everyChild);
+        }
+
+        var at = _newTileInsertAt;
+        _newTile = null;
+        if (preview != null)
+        {
+            var count = ItemCount();
+            var displaced = at >= 0 && at < count ? ItemAt(at) : null;
+            if (at >= 0 && SplitTileCommand is { } command && command.CanExecute(at))
+            {
+                command.Execute(at);
+            }
+
+            if (ItemCount() != count + 1 || at < 0 || at >= ItemCount() || ReferenceEquals(ItemAt(at), displaced))
+            {
+                RevertSplit(preview);
+            }
+        }
+
+        _splitFrom = null;
+        _splitPreview = null;
+        InvalidateMeasure();
+    }
+
+    private void RevertSplit() => RevertSplit(_splitPreview);
+
+    private void RevertSplit(TileSplit preview)
+    {
+        if (preview != null && _splitFrom != null)
+        {
+            var parent = ParentOf(preview, Layout);
+            preview.Children.Remove(_splitFrom);
+            Replace(parent, preview, _splitFrom);
+        }
+
+        _splitFrom = null;
+        _splitPreview = null;
+        _newTile = null;
+        InvalidateMeasure();
+    }
+
+    private void CommitMerges()
+    {
+        if (_merging.Count == 0)
+        {
+            return;
+        }
+
+        for (var i = _merging.Count - 1; i >= 0; i--)
+        {
+            var (split, part) = _merging[i];
+            if (part >= split.Children.Count || split.Children[part] is not Tile tile
+                || !_tileChildren.TryGetValue(tile, out var child) || child == null)
+            {
+                continue;
+            }
+
+            var item = ItemOf(child);
+            if (MergeTileCommand is { } command && command.CanExecute(item))
+            {
+                command.Execute(item);
+            }
+
+            if (Holds(item))
+            {
+                split.ShareOwnEvenly();
+                continue;
+            }
+
+            split.Children.RemoveAt(part);
+            if (split.Children.Count == 1 && ParentOf(split, Layout) is { } parent)
+            {
+                var remaining = split.Children[0];
+                split.Children.RemoveAt(0);
+                Replace(parent, split, remaining);
+            }
+        }
+
+        _merging.Clear();
+    }
+
+    private void Replace(TileSplit parent, TileRegion old, TileRegion fresh)
+    {
+        if (parent == null)
+        {
+            SetCurrentValue(LayoutProperty, fresh);
+            return;
+        }
+
+        parent.Children[parent.Children.IndexOf(old)] = fresh;
+    }
+
+    private static TileSplit ParentOf(TileRegion region, TileRegion root)
+    {
+        if (root is not TileSplit split)
+        {
+            return null;
+        }
+
+        foreach (var part in split.Children)
+        {
+            if (ReferenceEquals(part, region))
+            {
+                return split;
+            }
+
+            if (ParentOf(region, part) is { } found)
+            {
+                return found;
+            }
+        }
+
+        return null;
+    }
+
+    private int ItemCount() => Owner?.Items.Count ?? Children.Count;
+
+    private object ItemAt(int index) => Owner?.Items is { } items ? items[index] : Children[index];
+
+    private bool Holds(object item) =>
+        Owner?.Items is { } items ? items.IndexOf(item) >= 0 : item is IMeasurableComponent child && Children.Contains(child);
+
+    private object ItemOf(IMeasurableComponent child) =>
+        Owner != null && child is IFundamentalUIComponent { DataContext: { } data } ? data : child;
+
+    private int ItemIndexOf(IMeasurableComponent child) =>
+        Owner?.Items is { } items ? IndexOf(items, child) : Children.IndexOf(child);
 
     private static void LayoutChangedCallback(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
     {
@@ -478,9 +783,13 @@ public class TiledPanel : Panel, IDropGapPanel
         return grip;
     }
 
-    private void ShowGripCursor(bool vertical, bool horizontal)
+    private void ShowGripCursor(bool vertical, bool horizontal, bool corner)
     {
-        if (vertical || horizontal)
+        if (corner)
+        {
+            Cursor = Cursors.Crosshair;
+        }
+        else if (vertical || horizontal)
         {
             Cursor = vertical && horizontal ? Cursors.SizeAll : vertical ? Cursors.SizeEWE : Cursors.SizeNS;
         }
@@ -494,6 +803,7 @@ public class TiledPanel : Panel, IDropGapPanel
     {
         _placed.Clear();
         _grips.Clear();
+        _tileRects.Clear();
         var maximized = Maximized();
         if (maximized != null)
         {
@@ -546,8 +856,19 @@ public class TiledPanel : Panel, IDropGapPanel
         _sequence.Clear();
         _sequence.AddRange(_free);
 
+        if (_newTile != null)
+        {
+            _tileChildren[_newTile] = GapCard();
+        }
+
         foreach (var leaf in _leaves)
         {
+            if (ReferenceEquals(leaf, _newTile))
+            {
+                _newTileInsertAt = _free.Count > 0 ? ItemIndexOf(_free[0]) : ItemCount();
+                continue;
+            }
+
             if (leaf is Tile tile && !_tileChildren.ContainsKey(tile) && _free.Count > 0)
             {
                 _tileChildren[tile] = _free[0];
@@ -593,8 +914,13 @@ public class TiledPanel : Panel, IDropGapPanel
     {
         switch (region)
         {
-            case Tile tile when _tileChildren.TryGetValue(tile, out var child) && child != null:
-                _placed[child] = room;
+            case Tile tile:
+                _tileRects[tile] = room;
+                if (_tileChildren.TryGetValue(tile, out var child) && child != null)
+                {
+                    _placed[child] = room;
+                }
+
                 break;
             case TileFlow flow when _flowRanges.TryGetValue(flow, out var range):
                 LayFlow(flow, range.Start, range.Count, room);
@@ -740,7 +1066,20 @@ public class TiledPanel : Panel, IDropGapPanel
         }
 
         var partStart = grip.Start + before + grip.Index * gap;
-        var first = Math.Clamp(at - gap / 2 - partStart, MinTileSize, pair - MinTileSize);
+        var reach = at - gap / 2 - partStart;
+        var swallowed = reach <= 0 ? grip.Index : reach >= pair ? grip.Index + 1 : -1;
+        if (swallowed >= 0 && CanMergeAway(split, swallowed))
+        {
+            _merging.Add((split, swallowed));
+        }
+        else
+        {
+            swallowed = -1;
+        }
+
+        var first = swallowed == grip.Index ? 0
+            : swallowed == grip.Index + 1 ? pair
+            : Math.Clamp(reach, MinTileSize, pair - MinTileSize);
         var shares = new TrackingCollection<double>();
         for (var i = 0; i < count; i++)
         {
@@ -752,6 +1091,10 @@ public class TiledPanel : Panel, IDropGapPanel
 
         split.SetCurrentValue(TileSplit.SharesProperty, shares);
     }
+
+    private bool CanMergeAway(TileSplit split, int part) =>
+        MergeTileCommand is { } command && split.Children[part] is Tile tile
+        && _tileChildren.TryGetValue(tile, out var child) && child != null && command.CanExecute(ItemOf(child));
 
     private (bool Vertical, bool Horizontal) GripKindsAt(Vector2 point)
     {

@@ -22,6 +22,7 @@
     <Phrase Key="TiledPanel" Text="Плиточная панель"/>
     <Phrase Key="TileLayout" Text="Раскладка"/>
     <Phrase Key="MaximizeFirstTile" Text="Только первая плитка"/>
+    <Phrase Key="SplitHint" Text="Потяните угол плитки внутрь, чтобы разделить её; дотяните границу через плитку, чтобы слить её."/>
     <Phrase Key="ShareTilesEvenly" Text="Поровну"/>
     <Phrase Key="TileShowcase" Text="Витрина"/>
     <Phrase Key="Viewports" Text="Виды"/>

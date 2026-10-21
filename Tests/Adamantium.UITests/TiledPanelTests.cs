@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using Adamantium.Mathematics;
 using Adamantium.UI.Controls;
@@ -346,6 +348,152 @@ public class TiledPanelTests
     }
 
     [Test]
+    public void DraggingACornerInward_SplitsANewTileOff_ForTheItemTheViewModelGives()
+    {
+        var items = new ObservableCollection<string> { "A" };
+        var (panel, window) = InWindowList(TileLayouts.One, items,
+            p => p.SplitTileCommand = new Act(at => items.Insert((int)at, "N")));
+
+        PressCorner(panel, new Vector2(2, 2));
+        MoveTo(panel, new Vector2(60, 50));
+        MoveTo(panel, new Vector2(60, 50));
+        Update(window);
+        Release(panel);
+        Update(window);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(items, Is.EqualTo(new[] { "N", "A" }), "the new tile is on the side of the corner");
+            Assert.That(ContainerOf(panel, "N").Bounds.Width, Is.EqualTo(58).Within(1e-9));
+            Assert.That(ContainerOf(panel, "A").Bounds.Width, Is.EqualTo(138).Within(1e-9));
+        });
+    }
+
+    [Test]
+    public void ASplitNoItemArrivesFor_IsUndone()
+    {
+        var items = new ObservableCollection<string> { "A" };
+        var (panel, window) = InWindowList(TileLayouts.One, items, p => p.SplitTileCommand = new Act(_ => { }));
+
+        PressCorner(panel, new Vector2(2, 2));
+        MoveTo(panel, new Vector2(60, 50));
+        Release(panel);
+        Update(window);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(((TileSplit)panel.Layout).Children, Has.Count.EqualTo(1));
+            Assert.That(ContainerOf(panel, "A").Bounds.Width, Is.EqualTo(200));
+        });
+    }
+
+    [Test]
+    public void AGapDraggedAllTheWayOverATile_MergesItAway()
+    {
+        var items = new ObservableCollection<string> { "A", "B" };
+        var (panel, window) = InWindowList(TileLayouts.TwoColumns, items,
+            p => p.MergeTileCommand = new Act(item => items.Remove((string)item)));
+
+        Press(panel, new Vector2(100, 20));
+        MoveTo(panel, new Vector2(199, 20));
+        Release(panel);
+        Update(window);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(items, Is.EqualTo(new[] { "A" }));
+            Assert.That(((TileSplit)panel.Layout).Children, Has.Count.EqualTo(1), "the root stays the tree it was");
+            Assert.That(ContainerOf(panel, "A").Bounds.Width, Is.EqualTo(200));
+        });
+    }
+
+    [Test]
+    public void ASplitReleasedBeforeALayout_StillHandsTheRightIndex()
+    {
+        var items = new ObservableCollection<string> { "A", "B" };
+        var handed = -1;
+        var (panel, _) = InWindowList(TileLayouts.TwoColumns, items, p => p.SplitTileCommand = new Act(at =>
+        {
+            handed = (int)at;
+            items.Insert((int)at, "N");
+        }));
+
+        PressCorner(panel, new Vector2(198, 2));
+        MoveTo(panel, new Vector2(150, 50));
+        Release(panel);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(handed, Is.EqualTo(2), "the new tile right of B takes the place after it");
+            Assert.That(items, Is.EqualTo(new[] { "A", "B", "N" }));
+        });
+    }
+
+    [Test]
+    public void AMergeTheViewModelAnswersWithAnotherItem_KeepsTheTile()
+    {
+        var items = new ObservableCollection<string> { "A", "B", "C" };
+        var (panel, window) = InWindowList(TileLayouts.TwoColumns, items, p => p.MergeTileCommand = new Act(_ => items.Remove("C")));
+
+        Press(panel, new Vector2(100, 20));
+        MoveTo(panel, new Vector2(199, 20));
+        Release(panel);
+        Update(window);
+
+        Assert.That(((TileSplit)panel.Layout).Children, Has.Count.EqualTo(2));
+    }
+
+    [Test]
+    public void AMergeCutShort_GivesTheSharesBack()
+    {
+        var items = new ObservableCollection<string> { "A", "B" };
+        var (panel, window) = InWindowList(TileLayouts.TwoColumns, items, p => p.MergeTileCommand = new Act(_ => { }));
+
+        Press(panel, new Vector2(100, 20));
+        MoveTo(panel, new Vector2(199, 20));
+        Mouse.Pointer.Capture(null);
+        Update(window);
+
+        Assert.That(ContainerOf(panel, "B").Bounds.Width, Is.EqualTo(98).Within(1e-9));
+    }
+
+    [Test]
+    public void WhereGapsCross_APressDragsThem_AndSplitsNothing()
+    {
+        var items = new ObservableCollection<string> { "A", "B", "C", "D" };
+        var (panel, window) = InWindowList(TileLayouts.Four, items, p => p.SplitTileCommand = new Act(at => items.Insert((int)at, "N")));
+
+        PressCorner(panel, new Vector2(97, 47));
+
+        Assert.That(items, Has.Count.EqualTo(4));
+        Press(panel, new Vector2(100, 50));
+        MoveTo(panel, new Vector2(150, 60));
+        Release(panel);
+        Update(window);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(items, Has.Count.EqualTo(4), "no split");
+            Assert.That(ContainerOf(panel, "A").Bounds.Width, Is.EqualTo(148).Within(1e-9));
+            Assert.That(ContainerOf(panel, "A").Bounds.Height, Is.EqualTo(58).Within(1e-9));
+        });
+    }
+
+    [Test]
+    public void WithoutAMergeCommand_AGapStopsShortOfTheTile()
+    {
+        var items = new ObservableCollection<string> { "A", "B" };
+        var (panel, window) = InWindowList(TileLayouts.TwoColumns, items, _ => { });
+
+        Press(panel, new Vector2(100, 20));
+        MoveTo(panel, new Vector2(199, 20));
+        Release(panel);
+        Update(window);
+
+        Assert.That(ContainerOf(panel, "B").Bounds.Width, Is.EqualTo(32).Within(1e-9));
+    }
+
+    [Test]
     public void AChangeOfTheLayout_LaysTheTilesOutAgain()
     {
         var layout = new TileSplit(Orientation.Horizontal, new Tile(), new Tile());
@@ -410,6 +558,63 @@ public class TiledPanelTests
         var containers = panel.Children.Cast<IUIComponent>()
             .ToDictionary(c => (string)((IFundamentalUIComponent)c).DataContext);
         return (panel, containers);
+    }
+
+    private static (TiledPanel Panel, Window Window) InWindowList(TileRegion layout, ObservableCollection<string> items,
+        Action<TiledPanel> setUp)
+    {
+        TiledPanel panel = null;
+        var list = new ItemsControl
+        {
+            ItemsSource = items,
+            Width = 200,
+            Height = 100,
+            HorizontalAlignment = HorizontalAlignment.Left,
+            VerticalAlignment = VerticalAlignment.Top,
+            ItemsPanel = new ItemsPanelTemplate(() =>
+            {
+                panel = new TiledPanel { Layout = layout };
+                setUp(panel);
+                return new TemplateResult { RootComponent = panel };
+            }),
+            Template = new ControlTemplate(() =>
+            {
+                var presenter = new ItemsPresenter();
+                var result = new TemplateResult { RootComponent = presenter };
+                result.RegisterName("PART_ItemsPresenter", presenter);
+                return result;
+            })
+        };
+        var window = new Window { Width = 600, Height = 300, Content = list };
+        Update(window);
+        return (panel, window);
+    }
+
+    private static IUIComponent ContainerOf(TiledPanel panel, string item) =>
+        panel.Children.Cast<IUIComponent>().First(c => (string)((IFundamentalUIComponent)c).DataContext == item);
+
+    private static void PressCorner(TiledPanel panel, Vector2 at)
+    {
+        PointerDevice.Current.SetExternalMousePosition(panel, new PixelPoint(at.X, at.Y));
+        ((IObservableComponent)panel).RaiseEvent(new PointerPressedEventArgs(Mouse.Pointer, MouseButtons.Left,
+            InputModifiers.LeftMouseButton, 0)
+        {
+            RoutedEvent = PointerEvents.PreviewPointerPressedEvent,
+            Properties = PointerPointProperties.FromMouse(InputModifiers.LeftMouseButton)
+        });
+    }
+
+    private sealed class Act(Action<object> run) : Adamantium.Core.Commands.ICommand
+    {
+        public bool CanExecute(object parameter = null) => true;
+
+        public void Execute(object parameter = null) => run(parameter);
+
+        public event EventHandler CanExecuteChanged { add { } remove { } }
+
+        public void RaiseCanExecuteChanged()
+        {
+        }
     }
 
     private static void LayHosted(TiledPanel panel)

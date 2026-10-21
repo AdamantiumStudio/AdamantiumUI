@@ -10,8 +10,8 @@ public static class TileLayouts
     /// <summary>The name of the large tile of the featured layouts.</summary>
     public const string FeaturedTile = "Featured";
 
-    /// <summary>One tile over the whole panel.</summary>
-    public static TileRegion One => new Tile();
+    /// <summary>One tile over the whole panel, in a split of one part so that it can be split further.</summary>
+    public static TileRegion One => Split(Orientation.Horizontal, new Tile());
 
     /// <summary>Two tiles side by side.</summary>
     public static TileRegion TwoColumns => Split(Orientation.Horizontal, new Tile(), new Tile());

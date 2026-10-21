@@ -28,11 +28,14 @@ All packages share one version.
   double click shares a split evenly again and `ShareEvenly` every split. `TileLayouts` has the usual layouts: the
   viewport layouts of 3D editors, a gallery, and a featured tile with the rest in a strip on any side. Hosting a
   list's items, a tile drags to another place: it leaves its own, a gap opens where it would land and the other
-  tiles slide and resize into their new places.
+  tiles slide and resize into their new places. With `SplitTileCommand` a tile's corner dragged inward splits a new
+  tile off it - the view model gives it its item at the index the command is handed - and with `MergeTileCommand` a
+  border dragged all the way over a tile merges it away once the view model lets its item go.
 - `DragDrop.GhostAnchor`: where a source's ghost stands against the cursor - beside it (`Cursor`, the default) or held by
   the point it was grabbed at (`Grab`), as a large tile is carried.
 - `IDropGapPanel`: an items host that opens a real gap where a dragged item would drop instead of the insertion caret;
-  `VirtualizingPanel` and `TiledPanel` both are one, and the drag works with any.
+  `VirtualizingPanel` and `TiledPanel` both are one, and the drag works with any - in a `ListBox`, or in any
+  `ItemsControl` that allows the drop itself.
 - `Expander.ExpandDuration`: the content unfolds in the layout and folds away over it - what lies past the expander
   moves with it - and the chevron turns, one glyph turned by the direction instead of four swapped. The Fluent, Graphite
   and macOS themes set 0.2 s; zero shows the change at once. A template unfolds the content with `RevealDecorator`
@@ -1880,6 +1883,9 @@ All packages share one version.
 
 ### Fixed
 
+- An item moved in an `ItemsControl`'s source (`ObservableCollection.Move`) rebuilt every container of a panel that
+  does not virtualize, and a child moved in a panel's `Children` left the visual tree and came back: what the
+  containers held - a 3D view, a text being typed - was made again. The container now only changes place.
 - A drop into a list landed past an item of that list's selection that was not being dragged - after a touch drag,
   whose press selects nothing, or a drag from another list - so it fell one place off where the gap showed it. The
   items passed over are now only those dragged out of the list.

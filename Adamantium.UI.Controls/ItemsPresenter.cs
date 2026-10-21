@@ -149,7 +149,13 @@ public class ItemsPresenter : InputUIComponent
                 }
                 break;
 
-            default: // Reset (and Move, handled as a rebuild)
+            case NotifyCollectionChangedAction.Move when e.OldItems.Count == 1
+                                                         && generator.ContainerFromIndex(e.OldStartingIndex) is IMeasurableComponent moved:
+                generator.OnItemMoved(e.OldStartingIndex, e.NewStartingIndex);
+                _panel.Children.Move(_panel.Children.IndexOf(moved), e.NewStartingIndex);
+                break;
+
+            default:
                 Refresh();
                 break;
         }

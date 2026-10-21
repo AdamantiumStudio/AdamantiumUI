@@ -71,7 +71,24 @@ public partial class LayoutViewModel : TabPageViewModel
     /// <summary>The viewport layout picked.</summary>
     [Bindable] private TilePreset _tilePreset;
 
-    partial void OnTilePresetChanged(TilePreset value) => ViewportLayout = value?.Make();
+    partial void OnTilePresetChanged(TilePreset value)
+    {
+        ViewportLayout = value?.Make();
+        if (value == null)
+        {
+            return;
+        }
+
+        while (TiledItems.Count > value.Tiles.Count)
+        {
+            TiledItems.RemoveAt(TiledItems.Count - 1);
+        }
+
+        while (TiledItems.Count < value.Tiles.Count)
+        {
+            TiledItems.Add(NewViewportTile());
+        }
+    }
 
     /// <summary>The tree the viewport panel lays its tiles out in, a fresh one of the layout picked.</summary>
     [Bindable] private TileRegion _viewportLayout;
@@ -79,6 +96,25 @@ public partial class LayoutViewModel : TabPageViewModel
     /// <summary>The viewport panel's tiles, in the order it lays them out; a drag moves one to another place.</summary>
     public ObservableCollection<ColorRect> TiledItems { get; } =
         new(Enumerable.Range(0, 4).Select(i => new ColorRect { Number = i + 1, Color = Palette[i] }));
+
+    /// <summary>Gives a tile split off another a tile of its own, at the index the panel asks for.</summary>
+    [Command] private void SplitTile(object at) => TiledItems.Insert(Math.Clamp((int)at, 0, TiledItems.Count), NewViewportTile());
+
+    /// <summary>Lets go of the tile a border was dragged all the way over; the last one stays.</summary>
+    [Command]
+    private void MergeTile(object item)
+    {
+        if (TiledItems.Count > 1 && item is ColorRect tile)
+        {
+            TiledItems.Remove(tile);
+        }
+    }
+
+    private ColorRect NewViewportTile()
+    {
+        var number = TiledItems.Count == 0 ? 1 : TiledItems.Max(t => t.Number) + 1;
+        return new ColorRect { Number = number, Color = Palette[(number - 1) % Palette.Length] };
+    }
 
     /// <summary>Moves the viewport tile dropped to where it was dropped.</summary>
     [Command] private void DropViewportTile(object arg) => MoveTile(arg, TiledItems);

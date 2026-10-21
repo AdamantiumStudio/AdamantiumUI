@@ -447,6 +447,14 @@ public class ItemContainerGenerator
     /// (recycle the removed indices first).</summary>
     public void OnItemsRemoved(int index, int count) => Reindex(k => k >= index + count ? k - count : k);
 
+    /// <summary>Moves the realized index of the item moved from <paramref name="from"/> to <paramref name="to"/>, and
+    /// of those it passed over.</summary>
+    public void OnItemMoved(int from, int to) => Reindex(k =>
+        k == from ? to
+        : from < to && k > from && k <= to ? k - 1
+        : from > to && k >= to && k < from ? k + 1
+        : k);
+
     private void Reindex(System.Func<int, int> map)
     {
         var snapshot = new List<KeyValuePair<int, IUIComponent>>(_byIndex);
