@@ -1,0 +1,59 @@
+<View xmlns="http://adamantium/ui"
+      xmlns:x="http://adamantium/ui/xaml/extensions">
+    <!-- One of the layout tab's stands, navigated into its region under the key "Expanders": an expander opening each of
+         the four ways, its header on the side its direction names and its content on the other. Each sits against the
+         edge it opens away from, so the content has room to grow. -->
+    <Grid RowDefinitions="*,*"
+          ColumnDefinitions="*,*">
+        <Expander Grid.Row="0"
+                  Grid.Column="0"
+                  AutomationProperties.AutomationId="ExpanderDown"
+                  Header="{Localize LayoutStrings.OpensDown}"
+                  ExpandDirection="Down"
+                  HorizontalAlignment="Left"
+                  VerticalAlignment="Top"
+                  Width="260"
+                  Margin="12">
+            <TextBlock Text="{Localize LayoutStrings.ExpanderContent}"
+                       TextWrapping="WrapByWords"/>
+        </Expander>
+        <Expander Grid.Row="1"
+                  Grid.Column="0"
+                  AutomationProperties.AutomationId="ExpanderUp"
+                  Header="{Localize LayoutStrings.OpensUp}"
+                  ExpandDirection="Up"
+                  HorizontalAlignment="Left"
+                  VerticalAlignment="Bottom"
+                  Width="260"
+                  Margin="12">
+            <TextBlock Text="{Localize LayoutStrings.ExpanderContent}"
+                       TextWrapping="WrapByWords"/>
+        </Expander>
+        <Expander Grid.Row="0"
+                  Grid.Column="1"
+                  AutomationProperties.AutomationId="ExpanderLeft"
+                  Header="{Localize LayoutStrings.OpensLeft}"
+                  ExpandDirection="Left"
+                  HorizontalAlignment="Right"
+                  VerticalAlignment="Top"
+                  Height="160"
+                  Margin="12">
+            <TextBlock Text="{Localize LayoutStrings.ExpanderContent}"
+                       TextWrapping="WrapByWords"
+                       Width="180"/>
+        </Expander>
+        <Expander Grid.Row="1"
+                  Grid.Column="1"
+                  AutomationProperties.AutomationId="ExpanderRight"
+                  Header="{Localize LayoutStrings.OpensRight}"
+                  ExpandDirection="Right"
+                  HorizontalAlignment="Left"
+                  VerticalAlignment="Bottom"
+                  Height="160"
+                  Margin="12">
+            <TextBlock Text="{Localize LayoutStrings.ExpanderContent}"
+                       TextWrapping="WrapByWords"
+                       Width="180"/>
+        </Expander>
+    </Grid>
+</View>

@@ -20,6 +20,10 @@ public class UniverseService : IUniverseService
 
     private readonly List<IUniverse> _retired = [];
 
+    private readonly List<IUniverse> _suspended = [];
+
+    private bool _suspending;
+
     private readonly EntityWorld _world;
 
     public UniverseService(EntityWorld world = null)
@@ -47,6 +51,11 @@ public class UniverseService : IUniverseService
         lock (_locker)
         {
             _universes.Add(key);
+        }
+
+        if (service != null && wnd != null)
+        {
+            StartLoop(universe);
         }
 
         OnUniverseAdded?.Invoke(universe);
@@ -107,10 +116,66 @@ public class UniverseService : IUniverseService
                 _universes[index] = _universes[index] with { Window = window, Service = service };
             }
         }
+
+        if (service != null)
+        {
+            StartLoop(universe);
+        }
+    }
+
+    public void SuspendLoops()
+    {
+        List<IUniverse> holding;
+        lock (_locker)
+        {
+            _suspending = true;
+            holding = [.. _universes.Select(x => x.Universe), .. _retired];
+            _suspended.AddRange(holding);
+        }
+
+        foreach (var universe in holding)
+        {
+            universe.SuspendHostedLoop();
+        }
+    }
+
+    public void ResumeLoops()
+    {
+        List<IUniverse> held;
+        lock (_locker)
+        {
+            _suspending = false;
+            held = [.. _suspended];
+            _suspended.Clear();
+        }
+
+        foreach (var universe in held)
+        {
+            universe.ResumeHostedLoop();
+        }
+    }
+
+    private void StartLoop(IUniverse universe)
+    {
+        universe.StartHostedLoop();
+        bool hold;
+        lock (_locker)
+        {
+            hold = _suspending && !_suspended.Contains(universe);
+            if (hold)
+            {
+                _suspended.Add(universe);
+            }
+        }
+
+        if (hold)
+        {
+            universe.SuspendHostedLoop();
+        }
     }
 
     /// <summary>
-    /// Takes the universe out; it is stopped on the next <see cref="RunUniverses"/>, the thread that may wait the device idle.
+    /// Takes the universe out; it is stopped on the next <see cref="RetireRemoved"/>, waiting for its loop to end.
     /// </summary>
     public bool RemoveUniverse(IUniverse universe)
     {
@@ -128,7 +193,7 @@ public class UniverseService : IUniverseService
         }
     }
 
-    public void RunUniverses(IRenderService renderService, AppTime time)
+    public void RetireRemoved()
     {
         lock (_locker)
         {
@@ -137,23 +202,6 @@ public class UniverseService : IUniverseService
                 _retired[i].ShutDown();
             }
             _retired.Clear();
-
-            // Matched by window, not by service: the service drawing a window is replaced when the devices are made
-            // anew, the window is not. A universe created without a service is driven by whoever created it.
-            var window = (renderService as WindowRenderService)?.Window;
-            Parallel.ForEach(_universes, (item) =>
-            {
-                if (item.Service == null || window == null || !ReferenceEquals(item.Window, window))
-                {
-                    return;
-                }
-
-                item.Universe.RunOnce(time);
-            });
-            foreach (var key in _universes)
-            {
-                key.Universe.Submit();
-            }
         }
     }
 

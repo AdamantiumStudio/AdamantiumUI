@@ -48,7 +48,7 @@ internal abstract class BatchCollector<TItem> : BatchArena where TItem : struct
     // A ring of GPU copies, so a write never lands in a buffer that frames in flight are still reading.
     private Buffer<TItem>[] _ring;
     private int _current;              // ring slot this frame writes and draws from
-    private uint _writeFrame = uint.MaxValue;   // device frame the slot was last chosen for
+    private ulong _writeFrame = ulong.MaxValue;   // device frame (its FrameTicket) the slot was last chosen for
     private int _gpuCapacity;
 
     // Per copy: the bytes that copy currently holds, and how many of them are valid. The upload diffs the freshly baked
@@ -202,7 +202,15 @@ internal abstract class BatchCollector<TItem> : BatchArena where TItem : struct
         _indexById.Clear();
         _freeBlocks.Clear();
         EnsureRing(device);
-        SelectSlot(device);
+        if (device.FrameTicket != _writeFrame)
+        {
+            SelectSlot(device);
+        }
+        else if (_mirror[_current].Length < Items.Length)
+        {
+            Array.Resize(ref _mirror[_current], Items.Length);
+        }
+
         OnBeginFrame(device);
     }
 
@@ -241,15 +249,17 @@ internal abstract class BatchCollector<TItem> : BatchArena where TItem : struct
     {
         _current = _writeCursor % _ring.Length;
         _writeCursor = (_writeCursor + 1) % _ring.Length;
-        _writeFrame = device.CurrentFrame;
+        _writeFrame = device.FrameTicket;
         if (_mirror[_current].Length < Items.Length) Array.Resize(ref _mirror[_current], Items.Length);
     }
+
+    internal int CurrentCopy => _current;
 
     // A write that does NOT come from a walk (a partial patch replaying last frame's ops) still has to land in THIS
     // frame's copy, and that copy is a lap behind - bring it up to the retained data first, by diff, then patch it.
     protected void PrepareRetainedWrite(IGraphicsDevice device)
     {
-        if (_ring == null || device.CurrentFrame == _writeFrame) return;
+        if (_ring == null || device.FrameTicket == _writeFrame) return;
         SelectSlot(device);
 
         // Catch up to the high-water mark, not Count: slots past the cursor can still be issued and must match on every

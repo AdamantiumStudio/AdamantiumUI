@@ -85,9 +85,10 @@ public class SandboxApplication : Adamantium.UI.Universes.MultiverseApplication
         views.RegisterView<ViewModels.TextViewModel, Views.Text.TypesettingStandView>(
             nameof(ViewModels.TextStand.Typesetting));
 
-        // The layout tab the same way: the tiles and the skeleton cards, two views of one view-model.
+        // The layout tab the same way: the tiles, the skeleton cards and the expanders, views of one view-model.
         containerRegistry.RegisterSingleton<ViewModels.LayoutViewModel>();
         views.RegisterView<ViewModels.LayoutViewModel, Views.Layout.TilesStandView>(nameof(ViewModels.LayoutStand.Tiles));
         views.RegisterView<ViewModels.LayoutViewModel, Views.Layout.SkeletonsStandView>(nameof(ViewModels.LayoutStand.Skeletons));
+        views.RegisterView<ViewModels.LayoutViewModel, Views.Layout.ExpandersStandView>(nameof(ViewModels.LayoutStand.Expanders));
     }
 }

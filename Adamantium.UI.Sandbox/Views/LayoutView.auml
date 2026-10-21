@@ -21,6 +21,11 @@
                          Content="{Localize LayoutStrings.Skeletons}"
                          MarginRight="6"
                          IsChecked="{Binding Stand, Converter={conv:EnumToBoolConverter}, ConverterParameter=Skeletons, Mode=TwoWay}"/>
+            <RadioButton Classes="Toggle"
+                         AutomationProperties.AutomationId="ExpandersStand"
+                         Content="{Localize LayoutStrings.Expanders}"
+                         MarginRight="6"
+                         IsChecked="{Binding Stand, Converter={conv:EnumToBoolConverter}, ConverterParameter=Expanders, Mode=TwoWay}"/>
         </WrapPanel>
 
         <ContentControl Grid.Row="1"

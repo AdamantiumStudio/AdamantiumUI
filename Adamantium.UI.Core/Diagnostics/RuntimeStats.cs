@@ -11,6 +11,13 @@ public static class RuntimeStats
     /// <summary>True if the most recent layout pass hit the frame budget and deferred work to a later frame.</summary>
     public static bool LastPassBudgetDeferred;
 
+    /// <summary>Frames the render thread drew a second, over the last second.</summary>
+    public static double WindowFps;
+
+    /// <summary>GPU time of the last finished window frame, in milliseconds; other queues' work running meanwhile counts
+    /// too.</summary>
+    public static double LastWindowGpuMs;
+
     // Per-frame render-pipeline phase timings (ms), snapshots of the most recent frame. They make the
     // otherwise-invisible per-frame render cost measurable, so the
     // retained rewrite can be aimed at the phase that actually dominates (today the per-frame cache REBUILD, not layout).

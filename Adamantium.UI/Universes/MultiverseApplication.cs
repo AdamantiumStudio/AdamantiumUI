@@ -32,7 +32,17 @@ public abstract class MultiverseApplication : UIApplication
 
     private void ServiceManagerOnDrawStarted(IRenderService service, AppTime time)
     {
-        UniverseService.RunUniverses(service, time);
+        UniverseService.RetireRemoved();
+    }
+
+    protected override void OnDevicesRecreating()
+    {
+        UniverseService.SuspendLoops();
+    }
+
+    protected override void OnDevicesRecreated()
+    {
+        UniverseService.ResumeLoops();
     }
 
     private void ServiceManagerOnOnDrawFinished(IRenderService arg1, AppTime arg2)
