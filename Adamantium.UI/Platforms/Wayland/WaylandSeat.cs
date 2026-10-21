@@ -1,5 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Text;
+using Adamantium.Fonts;
+using Adamantium.Fonts.Text;
 using Adamantium.Mathematics;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Input;
@@ -52,7 +55,10 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
     private double wheelPixelsHorizontal;
     private uint wheelTime;
 
+    private static readonly (uint First, uint Last)[] EvdevLetterRows = [(16, 25), (30, 38), (44, 50)];
+
     private XkbKeyboard xkb;
+    private volatile bool hasRightToLeftLayout;
     private readonly HashSet<Key> keysDown = new();
     private int repeatRate = 25;
     private int repeatDelay = 600;
@@ -121,6 +127,9 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
             _ => false,
         };
     }
+
+    // Known as the keymap comes: it is read on the loop thread while the seat's thread may be replacing it.
+    public bool HasRightToLeftLayout => hasRightToLeftLayout;
 
     // GTK's defaults: the desktop's own settings live in gsettings, which a client of the compositor does not read.
     public uint DoubleClickTime => 400;
@@ -426,6 +435,34 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
 
         xkb?.Dispose();
         xkb = XkbKeyboard.FromKeymap(fd, size);
+        hasRightToLeftLayout = xkb != null && TypesRightToLeft(xkb);
+    }
+
+    private static bool TypesRightToLeft(XkbKeyboard keyboard)
+    {
+        var letters = new StringBuilder();
+        for (uint layout = 0; layout < keyboard.LayoutCount; layout++)
+        {
+            letters.Clear();
+            foreach (var (first, last) in EvdevLetterRows)
+            {
+                for (var code = first; code <= last; code++)
+                {
+                    var character = keyboard.Character(code, layout);
+                    if (character > 0 && Rune.IsValid(character))
+                    {
+                        letters.Append(char.ConvertFromUtf32(character));
+                    }
+                }
+            }
+
+            if (BidiParagraph.DirectionOf(letters.ToString().AsSpan()) == TextDirection.RightToLeft)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private void OnKeyboardEnter(uint serial, WlSurface surface, ReadOnlySpan<byte> keys)
