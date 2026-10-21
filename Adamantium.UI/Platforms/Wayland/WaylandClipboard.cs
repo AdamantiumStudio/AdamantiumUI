@@ -30,7 +30,10 @@ internal sealed class WaylandClipboard : IClipboard
 
     public void SetData(IDataPackage package)
     {
-        if (package == null) return;
+        if (package == null)
+        {
+            return;
+        }
 
         var data = WaylandDataDevice.Encode(package);
         if (data.Count > 0)

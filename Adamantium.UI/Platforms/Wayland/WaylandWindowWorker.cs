@@ -9,26 +9,10 @@ using Adamantium.Wayland;
 
 namespace Adamantium.UI.Platforms.Wayland;
 
-/// <summary>
-/// A window on Wayland: a wl_surface in the xdg_toplevel role, drawn by the window's Vulkan swapchain.
-/// <para>
-/// The compositor decides, the client follows: a configure says what size and state to take, the client acknowledges
-/// it and the next frame it presents is that size. When a configure leaves the size to the client - a window that is
-/// neither maximized nor being resized - the window keeps the size it asked for.
-/// </para>
-/// <para>
-/// Sizes are logical. The surface is drawn at the scale the compositor prefers and a viewport shows the drawing at the
-/// logical size, so a fractional scale draws as sharp as an integer one.
-/// </para>
-/// <para>
-/// A window drawing its own frame - the default - is resized from its edges by asking the compositor to do it
-/// (xdg_toplevel.resize), and moved by its title bar the same way (move). What Wayland does not let a client do is
-/// not done: no window is placed on the desktop, raised, kept on top or made click-through.
-/// </para>
-/// </summary>
+/// <summary>A window on Wayland: an xdg_toplevel surface drawn by its Vulkan swapchain, in logical sizes shown through a
+/// viewport at the compositor's scale.</summary>
 internal sealed class WaylandWindowWorker : IWindowWorkerService
 {
-    // How far in from an edge a press resizes the window, in logical pixels.
     private const double EdgeMargin = 6;
 
     private readonly WaylandPlatform platform;
@@ -42,20 +26,16 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
     private WpFractionalScaleV1 fractionalScale;
     private ZxdgToplevelDecorationV1 decoration;
 
-    // Plain-field snapshots of the window's settings, for the event thread, which must not read an AdamantiumProperty
-    // (see the same fields in Win32WindowWorker). Kept current on the loop thread.
     private bool chromeCustom;
     private WindowResizeMode chromeResizeMode;
     private WindowState chromeState;
     private WindowState lastWindowState;
 
-    // Logical sizes: what the window is, and what it goes back to from maximized.
     private int width;
     private int height;
     private int normalWidth;
     private int normalHeight;
 
-    // The configure in progress, applied when xdg_surface.configure closes it.
     private int pendingWidth;
     private int pendingHeight;
     private bool pendingMaximized;
@@ -80,11 +60,18 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
     /// <summary>The scale the compositor wants the window drawn at.</summary>
     public double Scale { get; private set; } = 1;
 
-    // The window is created at its requested size; a configure that names one overrides it.
     private static int InitialExtent(double preferred, double clientFallback, int defaultExtent)
     {
-        if (!double.IsNaN(preferred) && preferred > 0) return (int)preferred;
-        if (!double.IsNaN(clientFallback) && clientFallback > 0) return (int)clientFallback;
+        if (!double.IsNaN(preferred) && preferred > 0)
+        {
+            return (int)preferred;
+        }
+
+        if (!double.IsNaN(clientFallback) && clientFallback > 0)
+        {
+            return (int)clientFallback;
+        }
+
         return defaultExtent;
     }
 
@@ -126,7 +113,6 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
         toplevel.SetAppId(Assembly.GetEntryAssembly()?.GetName().Name ?? "adamantium");
         toplevel.SetMinSize((int)minWidth, (int)minHeight);
 
-        // Where the compositor would draw a frame (KDE), the window says whether it draws its own. GNOME draws none.
         if (platform.Decorations != null)
         {
             decoration = platform.Decorations.GetToplevelDecoration(toplevel);
@@ -140,7 +126,6 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
             toplevel.SetMaximized();
         }
 
-        // The first commit, with no buffer, asks for the first configure; the window shows with its first frame.
         surface.Commit();
         platform.Display.Flush();
         platform.Register(this, surface.Handle);
@@ -164,23 +149,29 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
 
     public void SetTitle(string title) => toplevel?.SetTitle(title ?? string.Empty);
 
-    // A client does not place its window on Wayland.
     public void SetPosition(double left, double top)
     {
     }
 
     public void SetSize(double clientWidth, double clientHeight)
     {
-        if (toplevel == null || reportingOsSize || double.IsNaN(clientWidth) || double.IsNaN(clientHeight)) return;
+        if (toplevel == null || reportingOsSize || double.IsNaN(clientWidth) || double.IsNaN(clientHeight))
+        {
+            return;
+        }
 
-        // Maximized, the compositor decides the size.
-        if (window.State != WindowState.Normal) return;
+        if (window.State != WindowState.Normal)
+        {
+            return;
+        }
 
         var w = (int)Math.Round(clientWidth);
         var h = (int)Math.Round(clientHeight);
-        if (w <= 0 || h <= 0 || (w == width && h == height)) return;
+        if (w <= 0 || h <= 0 || (w == width && h == height))
+        {
+            return;
+        }
 
-        // The swapchain follows ClientWidth/Height; the viewport shows it at this size from the frame that brings it.
         width = normalWidth = w;
         height = normalHeight = h;
         viewport?.SetDestination(w, h);
@@ -194,7 +185,6 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
 
     public void ShowWindow(WindowState windowState)
     {
-        // The window maps with its first frame, already presented by the time Show asks for it.
         switch (windowState)
         {
             case WindowState.Maximized:
@@ -206,12 +196,10 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
         }
     }
 
-    // Unmapping would take the buffer from under the swapchain; a hidden window is minimized instead by those who hide.
     public void HideWindow()
     {
     }
 
-    // xdg-activation wants a token from the input that asked for it; without one the compositor only marks the window.
     public void Activate()
     {
     }
@@ -220,12 +208,10 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
     {
     }
 
-    // A press grabs the pointer for the surface until it is released; there is nothing to take.
     public void SetMouseCapture(bool capture)
     {
     }
 
-    // The window's client corner is the origin of the only desktop a Wayland client knows.
     public PixelPoint ScreenToClient(PixelPoint screen) => screen;
 
     public PixelPoint ClientToScreen(PixelPoint client) => client;
@@ -241,7 +227,10 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
     public void BeginMoveDrag()
     {
         var seat = platform.Seat;
-        if (toplevel == null || seat.Proxy == null) return;
+        if (toplevel == null || seat.Proxy == null)
+        {
+            return;
+        }
 
         toplevel.Move(seat.Proxy, seat.LastInputSerial);
     }
@@ -266,10 +255,24 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
         }
 
         var edge = XdgToplevel.ResizeEdge.None;
-        if (point.X < EdgeMargin) edge |= XdgToplevel.ResizeEdge.Left;
-        else if (point.X >= width - EdgeMargin) edge |= XdgToplevel.ResizeEdge.Right;
-        if (point.Y < EdgeMargin) edge |= XdgToplevel.ResizeEdge.Top;
-        else if (point.Y >= height - EdgeMargin) edge |= XdgToplevel.ResizeEdge.Bottom;
+        if (point.X < EdgeMargin)
+        {
+            edge |= XdgToplevel.ResizeEdge.Left;
+        }
+        else if (point.X >= width - EdgeMargin)
+        {
+            edge |= XdgToplevel.ResizeEdge.Right;
+        }
+
+        if (point.Y < EdgeMargin)
+        {
+            edge |= XdgToplevel.ResizeEdge.Top;
+        }
+        else if (point.Y >= height - EdgeMargin)
+        {
+            edge |= XdgToplevel.ResizeEdge.Bottom;
+        }
+
         return edge;
     }
 
@@ -293,7 +296,6 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
         pendingMaximized = false;
         pendingActivated = false;
 
-        // An array of uint32 xdg_toplevel.state values.
         for (var i = 0; i + 4 <= states.Length; i += 4)
         {
             switch ((XdgToplevel.State)BitConverter.ToUInt32(states.Slice(i, 4)))
@@ -321,7 +323,6 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
         var h = pendingHeight;
         if (w <= 0 || h <= 0)
         {
-            // The size is the client's: what it had before it was maximized, or what it asked for.
             w = normalWidth;
             h = normalHeight;
         }
@@ -339,7 +340,6 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
             viewport?.SetDestination(w, h);
         }
 
-        // Minimized is not something Wayland reports: a window stays minimized until it is active again.
         WindowState? osState = pendingMaximized ? WindowState.Maximized : WindowState.Normal;
         if (chromeState == WindowState.Minimized && !pendingActivated)
         {
@@ -374,13 +374,15 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
 
         WaylandPlatform.DispatchInput(() =>
         {
-            if (closed) return;
+            if (closed)
+            {
+                return;
+            }
 
             if (reportedWidth.HasValue)
             {
                 window.Width = reportedWidth.Value;
                 window.Height = reportedHeight.Value;
-                // A report of what the compositor did, not a request: SetSize must not send it back (see Win32WindowWorker).
                 reportingOsSize = true;
                 window.ClientWidth = reportedWidth.Value;
                 window.ClientHeight = reportedHeight.Value;
@@ -398,7 +400,6 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
 
     private void OnPreferredBufferScale(int factor)
     {
-        // Without a viewport the buffer itself says its scale; with one, the viewport maps it.
         if (viewport == null)
         {
             surface.SetBufferScale(factor);
@@ -417,7 +418,10 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
         Scale = scale;
         WaylandPlatform.DispatchInput(() =>
         {
-            if (!closed) window.DpiScale = new Vector2(scale, scale);
+            if (!closed)
+            {
+                window.DpiScale = new Vector2(scale, scale);
+            }
         });
     }
 
@@ -454,11 +458,9 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
 
         Input.DragDrop.UnregisterNativeDropTarget(window);
 
-        // The renderer lets go of the swapchain and its surface here, before the wl_surface they draw to goes.
         UIContext.UIApplication.RemoveWindow(window);
         window.SetHandle(IntPtr.Zero);
 
-        // Destroyed on the thread that dispatches their events, so none arrives for an object half gone.
         _ = UIContext.UIApplication.ExecuteOnUIThreadAsync(() =>
         {
             decoration?.Destroy();
@@ -473,7 +475,10 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
 
     private void HandleActivation()
     {
-        if (closed) return;
+        if (closed)
+        {
+            return;
+        }
 
         window.SetIsActive(true);
         UIContext.UIApplication.SetActiveWindow(window);
@@ -485,7 +490,10 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
 
     private void HandleDeactivation()
     {
-        if (closed) return;
+        if (closed)
+        {
+            return;
+        }
 
         window.SetIsActive(false);
         UIContext.UIApplication.InactivateWindow(window);

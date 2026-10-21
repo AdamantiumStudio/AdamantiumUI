@@ -14,9 +14,13 @@ internal sealed class WaylandDragDrop : INativeDragDrop
 
     private static readonly string OwnType = $"application/x-adamantium-drag;pid={Environment.ProcessId}";
 
+    private static readonly string[] ForeignFormats =
+        [DataFormats.Files, DataFormats.Text, DataFormats.Html, DataFormats.Rtf, DataFormats.Image];
+
     private readonly WaylandPlatform platform;
     private readonly WaylandDataDevice device;
     private readonly Dictionary<IWindow, INativeDropSink> targets = new();
+    private readonly object _targetsLock = new();
 
     private WaylandOffer over;
     private IWindow overWindow;
@@ -61,7 +65,7 @@ internal sealed class WaylandDragDrop : INativeDragDrop
 
     public void RegisterDropTarget(IWindow window, INativeDropSink sink)
     {
-        lock (targets)
+        lock (_targetsLock)
         {
             targets[window] = sink;
         }
@@ -69,7 +73,7 @@ internal sealed class WaylandDragDrop : INativeDragDrop
 
     public void UnregisterDropTarget(IWindow window)
     {
-        lock (targets)
+        lock (_targetsLock)
         {
             targets.Remove(window);
         }
@@ -82,7 +86,7 @@ internal sealed class WaylandDragDrop : INativeDragDrop
         INativeDropSink sink = null;
         if (window != null)
         {
-            lock (targets)
+            lock (_targetsLock)
             {
                 sink = targets.GetValueOrDefault(window);
             }
@@ -194,7 +198,7 @@ internal sealed class WaylandDragDrop : INativeDragDrop
     private IDataPackage ForeignPackage(WaylandOffer offer)
     {
         var package = new DataPackage();
-        foreach (var format in new[] { DataFormats.Files, DataFormats.Text, DataFormats.Html, DataFormats.Rtf, DataFormats.Image })
+        foreach (var format in ForeignFormats)
         {
             var types = WaylandDataDevice.TypesOf(format);
             if (offer.FirstOf(types) != null)
