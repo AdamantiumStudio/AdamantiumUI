@@ -8,6 +8,7 @@ using Adamantium.Graphics.Core;
 using Adamantium.Imaging;
 using Adamantium.Mathematics;
 using Adamantium.UI.Controls;
+using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.RoutedEvents;
@@ -259,17 +260,7 @@ namespace Adamantium.UI.Universes
         
         protected virtual void InitializeInternal(OutputContext context)
         {
-            if (scaleSource != null)
-            {
-                scaleSource.DpiChanged -= HostDpiChanged;
-            }
-
-            scaleSource = HostWindow;
-            if (scaleSource != null)
-            {
-                scaleSource.DpiChanged += HostDpiChanged;
-            }
-
+            WatchHostWindow();
             StopListening();
             listenedInput = InputComponent;
             listenedInput.KeyDown += WindowOnKeyDown;
@@ -279,6 +270,10 @@ namespace Adamantium.UI.Universes
             listenedInput.PointerReleased += OnPointerReleased;
             listenedInput.PointerWheelChanged += OnPointerWheelChanged;
             listenedInput.RawMouseMove += OnMouseMove;
+            listenedInput.PointerMoved += OnPointerMovedOrLeft;
+            listenedInput.PointerExited += OnPointerMovedOrLeft;
+            listenedInput.AttachedToVisualTreeEvent += OnAttachedToVisualTree;
+            listenedInput.PropertyChanged += OnInputPropertyChanged;
             listenedInput.SetValue(Gestures.IsManipulationEnabledProperty, true, ValuePriority.Default);
             listenedInput.AddHandler(Gestures.ManipulationEvent, new ManipulationEventHandler(OnManipulation));
             listenedInput.AddHandler(PointerEvents.PointerCanceledEvent, new PointerEventHandler(OnPointerCanceled),
@@ -291,6 +286,7 @@ namespace Adamantium.UI.Universes
             if (scaleSource != null)
             {
                 scaleSource.DpiChanged -= HostDpiChanged;
+                scaleSource.StateChanged -= HostStateChanged;
                 scaleSource = null;
             }
 
@@ -311,6 +307,10 @@ namespace Adamantium.UI.Universes
             listenedInput.PointerReleased -= OnPointerReleased;
             listenedInput.PointerWheelChanged -= OnPointerWheelChanged;
             listenedInput.RawMouseMove -= OnMouseMove;
+            listenedInput.PointerMoved -= OnPointerMovedOrLeft;
+            listenedInput.PointerExited -= OnPointerMovedOrLeft;
+            listenedInput.AttachedToVisualTreeEvent -= OnAttachedToVisualTree;
+            listenedInput.PropertyChanged -= OnInputPropertyChanged;
             listenedInput.ClearValue(Gestures.IsManipulationEnabledProperty, ValuePriority.Default);
             listenedInput.RemoveHandler(Gestures.ManipulationEvent, new ManipulationEventHandler(OnManipulation));
             listenedInput.RemoveHandler(PointerEvents.PointerCanceledEvent, new PointerEventHandler(OnPointerCanceled));
@@ -442,6 +442,46 @@ namespace Adamantium.UI.Universes
         private void HostDpiChanged(object sender, EventArgs e)
         {
             OnHostScaleChanged();
+        }
+
+        private void OnPointerMovedOrLeft(object sender, PointerEventArgs e) => Invalidate();
+
+        private void WatchHostWindow()
+        {
+            var host = HostWindow;
+            if (ReferenceEquals(host, scaleSource))
+            {
+                return;
+            }
+
+            if (scaleSource != null)
+            {
+                scaleSource.DpiChanged -= HostDpiChanged;
+                scaleSource.StateChanged -= HostStateChanged;
+            }
+
+            scaleSource = host;
+            if (scaleSource != null)
+            {
+                scaleSource.DpiChanged += HostDpiChanged;
+                scaleSource.StateChanged += HostStateChanged;
+            }
+        }
+
+        private void HostStateChanged(object sender, StateChangedEventArgs e) => Invalidate();
+
+        private void OnAttachedToVisualTree(object sender, VisualTreeAttachmentEventArgs e)
+        {
+            WatchHostWindow();
+            Invalidate();
+        }
+
+        private void OnInputPropertyChanged(object sender, AdamantiumPropertyChangedEventArgs e)
+        {
+            if (e.Property == UIComponent.VisibilityProperty)
+            {
+                Invalidate();
+            }
         }
 
         private void OnMouseMove(object sender, UnboundMouseEventArgs e)

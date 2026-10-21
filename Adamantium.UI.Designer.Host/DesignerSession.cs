@@ -939,6 +939,8 @@ public sealed class DesignerSession : IDisposable
             var time = new AppTime { FramesCount = ++frame, FrameTime = dt, TotalTime = total };
             foreach (var universe in universes)
             {
+                if (universe.RunsOwnLoop) continue;
+
                 universe.RunOnce(time);
                 universe.Submit();
             }

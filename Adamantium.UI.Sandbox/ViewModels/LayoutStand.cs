@@ -11,5 +11,9 @@ public enum LayoutStand
 
     /// <summary>The loading skeleton cards, held on screen and tuned by hand.</summary>
     [Display(Name = "Skeletons")]
-    Skeletons
+    Skeletons,
+
+    /// <summary>An expander opening each of the four ways.</summary>
+    [Display(Name = "Expanders")]
+    Expanders
 }

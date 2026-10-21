@@ -32,7 +32,7 @@
 		<ProjectReference Include="..\Adamantium.UI.FX\Adamantium.UI.FX.csproj" />
 		<ProjectReference Include="..\Adamantium.UI.Markup\Adamantium.UI.Markup.csproj" />
 		<ProjectReference Include="..\Adamantium.UI.Themes\Adamantium.UI.Themes.csproj" />
-		<PackageReference Include="Adamantium.Vulkan.Loader" Version="1.0.2" />
+		<PackageReference Include="Adamantium.Vulkan.Loader" Version="1.0.3" />
 		<PackageReference Include="Adamantium.Vulkan" Version="1.0.3" />
 	</ItemGroup>
 

@@ -13,4 +13,10 @@
     <Phrase Key="PulseMax" Text="Максимум:"/>
     <Phrase Key="PulseSeconds" Text="Полцикла, с:"/>
     <Phrase Key="Cell" Text="Ячейка:"/>
+    <Phrase Key="Expanders" Text="Раскрывающиеся"/>
+    <Phrase Key="OpensDown" Text="Раскрывается вниз"/>
+    <Phrase Key="OpensUp" Text="Раскрывается вверх"/>
+    <Phrase Key="OpensLeft" Text="Раскрывается влево"/>
+    <Phrase Key="OpensRight" Text="Раскрывается вправо"/>
+    <Phrase Key="ExpanderContent" Text="Содержимое открывается со стороны, противоположной заголовку, и сворачивается в него."/>
 </Language>
