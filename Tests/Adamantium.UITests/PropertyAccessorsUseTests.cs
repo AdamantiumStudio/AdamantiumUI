@@ -25,7 +25,7 @@ public class PropertyAccessorsUseTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(width.Get(border), Is.EqualTo(40d));
+            Assert.That(width.GetValue(border), Is.EqualTo(40d));
             Assert.That(child.CanWrite, Is.True);
             Assert.That(text.ValueType, Is.EqualTo(typeof(string)));
             Assert.That(IsGenerated(width), Is.True);
@@ -49,7 +49,7 @@ public class PropertyAccessorsUseTests
     }
 
     private static bool IsGenerated(PropertyAccessor accessor) =>
-        accessor.Get?.Target is not System.Reflection.MemberInfo && accessor.Set?.Target is not System.Reflection.MemberInfo;
+        accessor.Getter?.Target is not System.Reflection.MemberInfo && accessor.Setter?.Target is not System.Reflection.MemberInfo;
 
     public sealed class Plain
     {

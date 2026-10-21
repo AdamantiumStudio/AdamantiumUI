@@ -402,7 +402,7 @@ public class BindingExpression : BindingExpressionBase
             return;
          }
 
-         current = accessor.Get?.Invoke(current);
+         current = Read(accessor, current);
       }
 
       if (current == null)
@@ -672,7 +672,7 @@ public class BindingExpression : BindingExpressionBase
       {
          if (!Walk()) return BindingBase.FallbackValue ?? AdamantiumProperty.UnsetValue;
 
-         var read = _leaf.Get(_boxes[^1]);
+         var read = Read(_leaf, _boxes[^1]);
          if (Binding.Converter != null) read = ConvertCached(read, targetType);
          return read ?? BindingBase.TargetNullValue ?? BindingBase.FallbackValue;
       }
@@ -681,7 +681,7 @@ public class BindingExpression : BindingExpressionBase
          return BindingBase.FallbackValue ?? AdamantiumProperty.UnsetValue;
       }
 
-      var value = _source.Get?.Invoke(ResolvedSource);
+      var value = Read(_source, ResolvedSource);
       if (Binding.Converter != null)
          value = ConvertCached(value, targetType);
       if (value == null)
@@ -767,7 +767,7 @@ public class BindingExpression : BindingExpressionBase
          _boxes[i] = current;
          if (i < _segments.Length - 1)
          {
-            current = PropertyAccessors.Find(current.GetType(), _segments[i])?.Get?.Invoke(current);
+            current = PropertyAccessors.GetValue(current, _segments[i]);
          }
       }
 
@@ -777,7 +777,7 @@ public class BindingExpression : BindingExpressionBase
    // The leaf into its box, then each box into whatever held it - until something that is not a copy is reached.
    private void Backfill(object written)
    {
-      _leaf.Set(_boxes[^1], written);
+      _leaf.SetValue(_boxes[^1], written);
 
       for (var i = _segments.Length - 1; i >= 1; i--)
       {
@@ -793,7 +793,7 @@ public class BindingExpression : BindingExpressionBase
          }
          else
          {
-            into.Set(_boxes[i - 1], _boxes[i]);
+            into.SetValue(_boxes[i - 1], _boxes[i]);
          }
       }
    }
@@ -802,12 +802,14 @@ public class BindingExpression : BindingExpressionBase
    {
       if (_leaf == null)
       {
-         return _source.Get?.Invoke(ResolvedSource);
+         return Read(_source, ResolvedSource);
       }
 
 
-      return Walk() ? _leaf.Get(_boxes[^1]) : null;
+      return Walk() ? Read(_leaf, _boxes[^1]) : null;
    }
+
+   private static object Read(PropertyAccessor accessor, object from) => accessor.CanRead ? accessor.GetValue(from) : null;
 
    private void WriteSource(object written)
    {
@@ -825,7 +827,7 @@ public class BindingExpression : BindingExpressionBase
          return;
       }
 
-      _source.Set(ResolvedSource, written);
+      _source.SetValue(ResolvedSource, written);
    }
 
    // Logged, not thrown, as WPF does: the write runs inside the target's change notification, and an exception there

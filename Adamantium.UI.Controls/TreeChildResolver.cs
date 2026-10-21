@@ -71,7 +71,7 @@ internal static class TreeChildResolver
                 var converted = value == null || wanted.IsInstanceOfType(value)
                     ? value
                     : Convert.ChangeType(value, wanted, Core.Localization.Languages.Culture);
-                accessor.Set(target, converted);
+                accessor.SetValue(target, converted);
                 return true;
             }
             catch (Exception)
@@ -96,7 +96,7 @@ internal static class TreeChildResolver
         {
             if (Leaf(node, segments) is (var target, var accessor) && accessor.CanWrite)
             {
-                accessor.Set(target, value);
+                accessor.SetValue(target, value);
             }
         };
     }
@@ -106,7 +106,7 @@ internal static class TreeChildResolver
         var target = node;
         for (var i = 0; i < segments.Length - 1 && target != null; i++)
         {
-            target = PropertyAccessors.Find(target.GetType(), segments[i])?.Get?.Invoke(target);
+            target = PropertyAccessors.GetValue(target, segments[i]);
         }
 
         if (target == null || PropertyAccessors.Find(target.GetType(), segments[^1]) is not { } accessor)
@@ -122,12 +122,7 @@ internal static class TreeChildResolver
         var current = node;
         foreach (var segment in segments)
         {
-            if (current == null)
-            {
-                return null;
-            }
-
-            current = PropertyAccessors.Find(current.GetType(), segment)?.Get?.Invoke(current);
+            current = PropertyAccessors.GetValue(current, segment);
         }
 
         return current;

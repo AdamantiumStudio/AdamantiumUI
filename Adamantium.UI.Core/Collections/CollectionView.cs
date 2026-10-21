@@ -272,12 +272,7 @@ public class CollectionView : IEnumerable, IReadOnlyList<object>, INotifyCollect
 
     private static object ValueOf(object item, string propertyName)
     {
-        if (item == null || propertyName == null)
-        {
-            return null;
-        }
-
-        return Adamantium.MVVM.PropertyAccessors.Find(item.GetType(), propertyName)?.Get?.Invoke(item);
+        return Adamantium.MVVM.PropertyAccessors.GetValue(item, propertyName);
     }
 
     private void OnSourceCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
