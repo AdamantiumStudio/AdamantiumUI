@@ -36,8 +36,8 @@ public class ForwardWindowRenderer : WindowRendererBase
     {
         // Viewport/scissor at the render resolution (ClientSize x RenderScale); the projection stays the logical
         // ClientSize, so RenderScale > 1 rasterizes the same layout into a larger target (crisp designer zoom).
-        var width = (uint)(Window.ClientWidth * RenderScale);
-        var height = (uint)(Window.ClientHeight * RenderScale);
+        var width = (uint)Math.Round(Window.ClientWidth * RenderScale);
+        var height = (uint)Math.Round(Window.ClientHeight * RenderScale);
 
         // New objects, never written into: the render thread draws the frame in flight with the ones it took, and a size
         // written under it changed that frame's scissor halfway through.

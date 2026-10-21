@@ -1,3 +1,4 @@
+using System;
 using System.Diagnostics;
 using System.Threading;
 using Adamantium.Core;
@@ -166,7 +167,7 @@ public class WindowRenderService : UiRenderService
              || windowRenderer.Presenter.LastPresenterState is PresenterState.OutOfDate or PresenterState.Suboptimal
              || trailing))
         {
-            windowRenderer.ResizePresenter((uint)(Window.ClientWidth * RenderScale), (uint)(Window.ClientHeight * RenderScale));
+            windowRenderer.ResizePresenter((uint)Math.Round(Window.ClientWidth * RenderScale), (uint)Math.Round(Window.ClientHeight * RenderScale));
         }
 
         GraphicsDevice.SetRenderTargets(windowRenderer.Presenter.RenderTarget);
@@ -231,7 +232,7 @@ public class WindowRenderService : UiRenderService
         windowRenderer.OnFrameEnded();
         if (!windowRenderer.IsRendererUpToDate)
         {
-            windowRenderer.ResizePresenter((uint)(Window.ClientWidth * RenderScale), (uint)(Window.ClientHeight * RenderScale));
+            windowRenderer.ResizePresenter((uint)Math.Round(Window.ClientWidth * RenderScale), (uint)Math.Round(Window.ClientHeight * RenderScale));
         }
 
         if (_pendingRenderer == null) return;

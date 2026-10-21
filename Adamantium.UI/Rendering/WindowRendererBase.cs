@@ -131,7 +131,7 @@ public abstract class WindowRendererBase : IWindowRenderer
         Window = window;
         Window.Renderer = this;
         SubscribeToEvents();
-        ResizePresenter((uint)(window.ClientWidth * RenderScale), (uint)(window.ClientHeight * RenderScale));
+        ResizePresenter((uint)Math.Round(window.ClientWidth * RenderScale), (uint)Math.Round(window.ClientHeight * RenderScale));
         InitializeWindowResources();
     }
 
@@ -145,8 +145,8 @@ public abstract class WindowRendererBase : IWindowRenderer
     {
         Parameters = new PresentationParameters(
             PresenterKind,
-            (uint)(Window.ClientWidth * RenderScale),
-            (uint)(Window.ClientHeight * RenderScale),
+            (uint)Math.Round(Window.ClientWidth * RenderScale),
+            (uint)Math.Round(Window.ClientHeight * RenderScale),
             Window.SurfaceHandle,
             Window.MSAALevel
         )
