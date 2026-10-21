@@ -3,8 +3,7 @@ using System.Runtime.InteropServices;
 namespace Adamantium.UI.Platforms.Wayland;
 
 /// <summary>The C library calls the Wayland side needs: the loop's poll over the compositor's socket and the eventfd
-/// <see cref="WaylandPlatform.Signal"/> writes to, the pipes clipboard data travels through, and the shared memory a
-/// drag's ghost is drawn in.</summary>
+/// <see cref="WaylandPlatform.Signal"/> writes to, and the pipes clipboard data travels through.</summary>
 internal static unsafe class LinuxInterop
 {
     private const string Library = "libc";

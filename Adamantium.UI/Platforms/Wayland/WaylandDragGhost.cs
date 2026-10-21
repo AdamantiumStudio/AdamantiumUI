@@ -4,21 +4,8 @@ using Adamantium.Wayland;
 
 namespace Adamantium.UI.Platforms.Wayland;
 
-/// <summary>
-/// The image that follows a drag the application carries itself - one a mouse does not make, or one made where the
-/// compositor has no drag and drop (a mouse drag goes to the compositor, see <see cref="WaylandDragDrop"/>, and its icon
-/// is the compositor's to move). It is a subsurface of the window the pointer is in: a Wayland client places no window of
-/// its own on the desktop, but it places a subsurface anywhere relative to its parent, and the compositor does not clip
-/// one to it. The drag's desktop point is a point of that window, so the ghost follows it past the window's edges.
-/// <para>
-/// What a subsurface cannot do is stand above other windows: one in front of the source window covers the ghost.
-/// </para>
-/// <para>
-/// A subsurface's position is its parent's state, so a move commits the window's surface: an empty commit, besides the
-/// frames the Vulkan presentation commits to it from the render thread. The requests go from the thread that dispatches
-/// the surfaces' events, so none is destroyed under its own event.
-/// </para>
-/// </summary>
+/// <summary>The ghost of a drag the application carries itself: a subsurface of the window the pointer is in. Mouse
+/// drags go to the compositor instead (<see cref="WaylandDragDrop"/>).</summary>
 internal sealed class WaylandDragGhost : IDragGhost
 {
     private readonly WaylandPlatform platform;
@@ -35,7 +22,6 @@ internal sealed class WaylandDragGhost : IDragGhost
 
     public uint Dpi => (uint)Math.Round(96 * ScaleOf(platform.Seat.PointerWindow));
 
-    // The drag stays in the window it started in until the button goes up: there is no other scale to cross onto.
     public event Action<uint> DpiChanged
     {
         add { }
@@ -98,10 +84,8 @@ internal sealed class WaylandDragGhost : IDragGhost
         platform.Display.Flush();
     }
 
-    // The window's scale, where a viewport shows a buffer drawn at it; 1 where none does.
     private double ScaleOf(WaylandWindowWorker window) => platform.Viewporter != null ? window?.Scale ?? 1 : 1;
 
-    // The ghost's surface, a child of the window's: made again when the drag is in another window than the last one.
     private bool AttachTo(WaylandWindowWorker window)
     {
         if (window?.Window == null)
@@ -119,7 +103,6 @@ internal sealed class WaylandDragGhost : IDragGhost
         parent = window;
         surface = platform.Compositor.CreateSurface();
 
-        // No input: the pointer goes through the ghost to the window under it.
         var region = platform.Compositor.CreateRegion();
         surface.SetInputRegion(region);
         region.Destroy();
@@ -130,13 +113,10 @@ internal sealed class WaylandDragGhost : IDragGhost
         }
 
         subsurface = platform.Subcompositor.GetSubsurface(surface, window.Surface);
-
-        // A new image shows when it is committed, not with the window's next frame.
         subsurface.SetDesync();
         return true;
     }
 
-    // Takes the ghost off the screen at once: a destroyed subsurface needs no commit of its parent.
     private void Detach()
     {
         if (surface == null)

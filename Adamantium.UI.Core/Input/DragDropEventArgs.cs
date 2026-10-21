@@ -33,8 +33,7 @@ public class DragDropEventArgs : RoutedEventArgs
     public DragDropEffects Effects { get; set; } = DragDropEffects.Move;
 
     /// <summary>Overrides the cursor chosen from <see cref="Effects"/> when set in <c>DragOver</c>; null keeps the
-    /// default. Ignored where the OS carries the drag and draws its cursor from the effect: a drag between applications,
-    /// and every mouse drag on Wayland.</summary>
+    /// default. Ignored when the OS carries the drag: between applications, and every mouse drag on Wayland.</summary>
     public Cursor DragCursor { get; set; }
 
     /// <summary>Index in the target's collection where the payload should be inserted (the position the insertion line

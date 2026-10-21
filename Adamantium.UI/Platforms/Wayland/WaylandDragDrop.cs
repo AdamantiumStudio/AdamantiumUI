@@ -6,34 +6,18 @@ using Adamantium.Wayland;
 
 namespace Adamantium.UI.Platforms.Wayland;
 
-/// <summary>
-/// Drag and drop through the compositor's wl_data_device: drops onto every window of ours, and drags out of them.
-/// <para>
-/// Under Wayland a drag the application carried itself could not leave the window it started in: the pointer stays
-/// with that window until the button goes up, and nothing says which window it is over. So every mouse drag goes to the
-/// compositor, which tells the window under the pointer - ours or another application's - and moves the drag's icon
-/// above everything. A drag meant for this application alone offers a type of its own only, which no other client
-/// takes; on a window of ours it arrives with its live payload, as on Windows.
-/// </para>
-/// <para>
-/// The compositor shows the action the target settled on, and lets go of a drop nobody accepts. The drop sink answers a
-/// move with the effect it settled on a loop pass before, so the answer is asked for again while the pointer rests, and
-/// the compositor has it before the button goes up.
-/// </para>
-/// </summary>
+/// <summary>Drag and drop through the compositor: every mouse drag goes to it, since only it knows which window the
+/// pointer is over. An in-app drag offers a private type only.</summary>
 internal sealed class WaylandDragDrop : INativeDragDrop
 {
-    // How often the effect is asked for again while the pointer rests over a window of ours.
     private const int AskInterval = 50;
 
-    // A drag of this process: no other client offers it, and no other client knows it.
     private static readonly string OwnType = $"application/x-adamantium-drag;pid={Environment.ProcessId}";
 
     private readonly WaylandPlatform platform;
     private readonly WaylandDataDevice device;
     private readonly Dictionary<IWindow, INativeDropSink> targets = new();
 
-    // The drag over one of our windows: event thread only.
     private WaylandOffer over;
     private IWindow overWindow;
     private WaylandWindowWorker overWorker;
@@ -45,7 +29,6 @@ internal sealed class WaylandDragDrop : INativeDragDrop
     private DragDropEffects answered;
     private long nextAsk;
 
-    // The drag this application started. Begun on the loop thread, run on the event thread.
     private volatile bool dragActive;
     private IDataPackage dragData;
     private DragDropEffects dragAllowed;
@@ -91,8 +74,6 @@ internal sealed class WaylandDragDrop : INativeDragDrop
             targets.Remove(window);
         }
     }
-
-    #region Drop target
 
     private void OnEnter(uint serial, WlSurface surface, double x, double y, WaylandOffer offer)
     {
@@ -162,8 +143,6 @@ internal sealed class WaylandDragDrop : INativeDragDrop
         var effect = sink.Drop(overWindow, overData, overPoint, platform.Seat.Modifiers, overAllowed);
         Forget();
 
-        // The drop reaches the loop thread after this; the offer stays until it has, for the bytes it reads from it,
-        // and then says what became of them.
         Threading.Dispatcher.CurrentDispatcher?.Post(() => platform.Invoke(() =>
         {
             if (effect != DragDropEffects.None && offer.Proxy.IsAlive)
@@ -176,8 +155,7 @@ internal sealed class WaylandDragDrop : INativeDragDrop
         }));
     }
 
-    /// <summary>Asks the window under a resting drag again for its effect: what it answered last was settled on
-    /// the move before.</summary>
+    /// <summary>Asks the window under a resting drag for its effect again.</summary>
     internal void AskAgain()
     {
         if (overSink != null && Environment.TickCount64 >= nextAsk)
@@ -189,7 +167,6 @@ internal sealed class WaylandDragDrop : INativeDragDrop
     /// <summary>How long the event loop may wait before <see cref="AskAgain"/>; -1 with no drag over us.</summary>
     internal int AskTimeout() => overSink == null ? -1 : (int)Math.Max(0, nextAsk - Environment.TickCount64);
 
-    // Tells the compositor what the target settled on: the action it shows, and whether a drop is taken at all.
     private void Answer(DragDropEffects effect)
     {
         nextAsk = Environment.TickCount64 + AskInterval;
@@ -214,7 +191,6 @@ internal sealed class WaylandDragDrop : INativeDragDrop
         overData = null;
     }
 
-    // Another client's offer, read when a target asks for a format: the bytes cross only for the drop that wants them.
     private IDataPackage ForeignPackage(WaylandOffer offer)
     {
         var package = new DataPackage();
@@ -232,10 +208,6 @@ internal sealed class WaylandDragDrop : INativeDragDrop
 
     private static PixelPoint PointOf(WaylandWindowWorker worker, double x, double y) =>
         new(x * worker.Scale, y * worker.Scale);
-
-    #endregion
-
-    #region Drag source
 
     public bool BeginDrag(IWindow source, IDataPackage data, DragDropEffects allowed, DragGhostImage ghost,
         Action<DragDropEffects> completed, bool external)
@@ -258,7 +230,6 @@ internal sealed class WaylandDragDrop : INativeDragDrop
     private void StartDrag(WaylandWindowWorker worker, List<(string Type, Func<byte[]> Produce)> offers, DragDropEffects allowed,
         DragGhostImage ghost)
     {
-        // The compositor starts a drag only inside the press that makes it.
         if (worker.Window == null || !platform.Seat.IsPressed)
         {
             EndDrag(DragDropEffects.None);
@@ -294,7 +265,6 @@ internal sealed class WaylandDragDrop : INativeDragDrop
         platform.Display.Flush();
     }
 
-    // The ghost as the drag's icon: its top-left at the pointer, moved by the offset the cursor has inside it.
     private void DrawIcon(DragGhostImage ghost, double scale)
     {
         var buffer = WaylandShm.CreateBuffer(platform, ghost.PremultipliedBgra, ghost.Width, ghost.Height);
@@ -325,7 +295,6 @@ internal sealed class WaylandDragDrop : INativeDragDrop
         buffer.Destroy();
     }
 
-    // A release the pointer still hears means the compositor never took the drag: it would have had the pointer.
     private void OnPointerReleased()
     {
         if (dragSource != null)
@@ -356,9 +325,6 @@ internal sealed class WaylandDragDrop : INativeDragDrop
         Threading.Dispatcher.CurrentDispatcher?.Post(() => completed?.Invoke(effect));
     }
 
-    #endregion
-
-    // Wayland has no link: what a drag allows of it is not offered.
     private static WlDataDeviceManager.DndAction ToAction(DragDropEffects effect) =>
         (effect & DragDropEffects.Move) != 0 ? WlDataDeviceManager.DndAction.Move
         : (effect & DragDropEffects.Copy) != 0 ? WlDataDeviceManager.DndAction.Copy

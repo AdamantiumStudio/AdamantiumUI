@@ -147,8 +147,6 @@ public partial class DragDropDemoViewModel : TabPageViewModel
         return ItemsOf(e).Select(item => new Models.DroppedEntry(Models.DroppedKind.InApp, item));
     }
 
-    // The pictures panel takes pictures only: anything else is refused while it is still over the panel, rather than
-    // dropped and then not shown.
     [Command]
     private void DropPictures(object arg)
     {
@@ -161,7 +159,6 @@ public partial class DragDropDemoViewModel : TabPageViewModel
         if (arg is DragDropEventArgs e && !HasPictures(e)) e.Effects = DragDropEffects.None;
     }
 
-    // Asks without reading: a picture or a file offered for later is only made for the drop that takes it.
     private static bool HasPictures(DragDropEventArgs e) =>
         e.Data != null && (e.Data.Contains(DataFormats.Image) ||
                            (e.Data.Contains(DataFormats.Files) && (e.Data.IsDeferred(DataFormats.Files) ||
@@ -172,9 +169,7 @@ public partial class DragDropDemoViewModel : TabPageViewModel
         PictureExtensions.Contains(Path.GetExtension(file), StringComparer.OrdinalIgnoreCase);
 
     // Anything picture-shaped in the drop, kept as bytes. Two sources, because the two are genuinely different drags:
-    // a browser or another app hands over the picture itself; Explorer only ever hands over file PATHS. A drop that has
-    // both carries ONE picture twice - the file is the same picture written out for the targets that read only files
-    // (DragDropOptions.OfferImagesAsFiles) - so the bytes win and the files are not read.
+    // a browser or another app hands over the picture itself; Explorer only ever hands over file PATHS.
     private void CollectPictures(DragDropEventArgs e)
     {
         // Land WHERE it was dropped, not at the end: the engine reports the item the insertion caret sat before

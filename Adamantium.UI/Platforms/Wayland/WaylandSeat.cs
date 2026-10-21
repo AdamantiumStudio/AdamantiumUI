@@ -74,20 +74,19 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
     /// <summary>The serial of the last press or key: what a move or a resize of a window is asked for with.</summary>
     public uint LastInputSerial { get; private set; }
 
-    /// <summary>The serial of the last press of a pointer button: what a drag is started with.</summary>
+    /// <summary>The serial of the last pointer button press: what a drag is started with.</summary>
     internal uint PressSerial { get; private set; }
 
-    /// <summary>Whether a pointer button is held: the compositor starts a drag only inside the press that makes it.</summary>
+    /// <summary>Whether a pointer button is held.</summary>
     internal bool IsPressed => buttons != default;
 
     /// <summary>The keys and buttons held now.</summary>
     internal InputModifiers Modifiers => InputModifiers();
 
-    /// <summary>A pointer button went up over one of our windows - which it does not during a drag the compositor
-    /// carries.</summary>
+    /// <summary>A pointer button went up over one of our windows.</summary>
     internal event Action PointerReleased;
 
-    /// <summary>The window the pointer is in - the one a press was in, for as long as the button is held.</summary>
+    /// <summary>The window the pointer is in.</summary>
     internal WaylandWindowWorker PointerWindow => pointerWindow;
 
     #region INativeMouse, INativeKeyboard, INativePlatformSettings
@@ -264,8 +263,6 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
     {
         var window = pointerWindow?.Window;
         pointerWindow = null;
-
-        // A leave with a button held is a drag the compositor took over: the release goes to it, not to us.
         buttons = default;
         if (window == null)
         {

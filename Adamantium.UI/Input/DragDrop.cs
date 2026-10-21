@@ -922,8 +922,7 @@ public static partial class DragDrop
         // Decided ONCE, here: an external-capable source runs the whole gesture through the OS drag loop (so it can be
         // dropped into other applications), everything else stays on our own loop with its live CLR payload. Never
         // switched mid-drag - the platform loop is modal and has to own the gesture from the start.
-        // The OS's drag loop follows the mouse; a finger or a pen carries the drag on our own loop. Where only the OS
-        // knows which of our windows the pointer is over (Wayland), it carries every mouse drag, in-app ones included.
+        // The OS's drag loop follows the mouse; a finger or a pen carries the drag on our own loop.
         _externalCapable = (GetAllowExternalDrag((AdamantiumComponent)_source) || Native is { CarriesInAppDrags: true }) &&
                            Native is { IsAvailable: true } && DragPointer.Type == PointerType.Mouse;
         DragPointer.Capture(_source);   // so move/up keep coming once the pointer leaves the source

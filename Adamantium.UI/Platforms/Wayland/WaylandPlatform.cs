@@ -86,7 +86,6 @@ public sealed unsafe class WaylandPlatform : IApplicationPlatform
         // The seat's devices and the keyboard's keymap, before the first window wants them.
         Display.Roundtrip();
 
-        // The OS clipboard in place of the in-process one, and drag and drop, where the compositor has them to give.
         if (dataDevices != null && seat != null)
         {
             DataDevice = new WaylandDataDevice(this, dataDevices, seat);
@@ -121,8 +120,7 @@ public sealed unsafe class WaylandPlatform : IApplicationPlatform
 
     internal WaylandDataDevice DataDevice { get; }
 
-    /// <summary>Drag and drop, once the first window has registered with it: the loop asks it again for a drop's
-    /// effect while the pointer rests.</summary>
+    /// <summary>Drag and drop, once the first window has registered with it.</summary>
     internal WaylandDragDrop DragDrop { get; set; }
 
     public bool IsOnUIThread => uiThread == Thread.CurrentThread;
@@ -175,7 +173,6 @@ public sealed unsafe class WaylandPlatform : IApplicationPlatform
         }
     }
 
-    // The sooner of two poll timeouts, -1 being none.
     private static int Sooner(int a, int b) => a < 0 ? b : b < 0 ? a : Math.Min(a, b);
 
     public void Signal()
@@ -214,8 +211,7 @@ public sealed unsafe class WaylandPlatform : IApplicationPlatform
         }
     }
 
-    /// <summary>Runs on the thread that dispatches the compositor's events: at once from it, queued from any other.
-    /// An object that has events is destroyed there, never under one of its own.</summary>
+    /// <summary>Runs on the thread that dispatches the compositor's events: at once from it, queued from any other.</summary>
     internal void Invoke(Action action)
     {
         if (IsOnUIThread)

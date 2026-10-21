@@ -57,7 +57,6 @@ public sealed class WindowsDragDrop : INativeDragDrop
         Win32Interop.RevokeDragDrop(registration.Handle);
     }
 
-    // Only external drags come here: an in-app one finds the window under the pointer with WindowFromPoint.
     public bool BeginDrag(IWindow source, IDataPackage data, DragDropEffects allowed, DragGhostImage ghost,
         Action<DragDropEffects> completed, bool external)
     {
