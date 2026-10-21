@@ -43,7 +43,8 @@ public class TextBoxAlignmentTests
         var lastWord = Prose.LastIndexOf(' ') + 1;
 
         Assert.That(justified.CaretRect(0).X, Is.EqualTo(left.CaretRect(0).X).Within(0.01));
-        Assert.That(justified.CaretRect(secondWord).X, Is.GreaterThan(left.CaretRect(secondWord).X + 1));
+        Assert.That(justified.CaretRect(FirstLineEnd(justified)).X, Is.EqualTo(Width).Within(2), "the first line reaches the edge");
+        Assert.That(justified.CaretRect(secondWord).X, Is.GreaterThan(left.CaretRect(secondWord).X + 0.01));
         Assert.That(justified.CaretRect(secondWord - 1).X, Is.EqualTo(left.CaretRect(secondWord - 1).X).Within(0.01),
             "the space starts where it did");
         Assert.That(justified.CaretRect(lastWord).X, Is.EqualTo(left.CaretRect(lastWord).X).Within(0.01),

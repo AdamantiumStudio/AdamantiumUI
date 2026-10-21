@@ -11,7 +11,7 @@ internal static class CalendarRange
     /// <summary>The first day a calendar counts: later than its MinSupportedDateTime where its first era begins later,
     /// as ICU's Meiji does (1868-10-23, while .NET supports the Japanese calendar from 1868-09-08).</summary>
     public static DateTime FirstDay(this SystemCalendar calendar) =>
-        FirstDays.GetOrAdd(calendar.GetType(), _ => FindFirstDay(calendar));
+        FirstDays.GetOrAdd(calendar.GetType(), static (_, counting) => FindFirstDay(counting), calendar);
 
     private static DateTime FindFirstDay(SystemCalendar calendar)
     {
@@ -23,11 +23,22 @@ internal static class CalendarRange
 
         var before = counted;
         var after = counted.AddYears(1);
+        if (!Counts(calendar, after))
+        {
+            return counted;
+        }
+
         while ((after - before).Days > 1)
         {
             var middle = before.AddDays((after - before).Days / 2);
-            if (Counts(calendar, middle)) after = middle;
-            else before = middle;
+            if (Counts(calendar, middle))
+            {
+                after = middle;
+            }
+            else
+            {
+                before = middle;
+            }
         }
 
         return after;

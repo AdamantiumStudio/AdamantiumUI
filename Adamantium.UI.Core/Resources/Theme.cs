@@ -7,6 +7,9 @@ namespace Adamantium.UI.Core.Resources;
 
 public class Theme : AdamantiumComponent, ITheme
 {
+    private static readonly string[] LinuxFamilies = ["Noto Sans", "DejaVu Sans", "Liberation Sans", "Cantarell", "Ubuntu"];
+    private static FontFamily _systemDefaultFontFamily;
+
     public Theme()
     {
         StyleSets = new StyleSetCollection();
@@ -149,10 +152,6 @@ public class Theme : AdamantiumComponent, ITheme
 
     // Perceptual luminance (Rec. 601): white text on a dark fill, black on a light one.
     private static Color OnAccent(Color c) => 0.299 * c.R + 0.587 * c.G + 0.114 * c.B < 140 ? White : Black;
-
-    private static FontFamily _systemDefaultFontFamily;
-
-    private static readonly string[] LinuxFamilies = ["Noto Sans", "DejaVu Sans", "Liberation Sans", "Cantarell", "Ubuntu"];
 
     /// <summary>The per-platform system UI font - the single place the platform font choice lives, used as the default
     /// for any theme that doesn't pick its own. On Linux, the first of the usual distributions' fonts installed.</summary>

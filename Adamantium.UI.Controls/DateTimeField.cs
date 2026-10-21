@@ -188,7 +188,7 @@ public class DateTimeField : Control, ISegmentHost
             case DateTimeSegmentKind.Period:
                 return (0, 1);
             case DateTimeSegmentKind.Era:
-                var eras = new[] { counting.GetEra(counting.FirstDay()), counting.GetEra(counting.MaxSupportedDateTime) };
+                int[] eras = [counting.GetEra(counting.FirstDay()), counting.GetEra(counting.MaxSupportedDateTime)];
                 return (eras.Min(), eras.Max());
             default:
                 return (0, 0);

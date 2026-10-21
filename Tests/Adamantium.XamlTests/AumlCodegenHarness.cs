@@ -17,15 +17,6 @@ namespace Adamantium.XamlTests;
 /// </summary>
 internal static class AumlCodegenHarness
 {
-    /// <summary>The project folder the generators are told of, as the build machine's OS writes it.</summary>
-    public static readonly string Root = OperatingSystem.IsWindows() ? @"C:\Test\" : "/Test/";
-
-    /// <summary>A file of the test project by its path relative to <see cref="Root"/>.</summary>
-    public static string PathOf(string relative) => Root + relative.Replace('/', System.IO.Path.DirectorySeparatorChar);
-
-    /// <summary>A path as a C# string literal writes it.</summary>
-    public static string Literal(string path) => path.Replace("\\", "\\\\");
-
     // Force the UI assemblies to load so AppDomain.GetAssemblies() (our reference set) includes them.
     private static readonly Type[] _seed =
     [
@@ -40,6 +31,15 @@ internal static class AumlCodegenHarness
         typeof(Adamantium.UI.Themes.FluentTheme.Fluent),   // the themes a blueprint starts on
         typeof(Adamantium.UI.Automation.AutomationSession),   // what a scenario's test runs on
     ];
+
+    /// <summary>The project folder the generators are told of, as the build machine's OS writes it.</summary>
+    public static readonly string Root = OperatingSystem.IsWindows() ? @"C:\Test\" : "/Test/";
+
+    /// <summary>A file of the test project by its path relative to <see cref="Root"/>.</summary>
+    public static string PathOf(string relative) => Root + relative.Replace('/', System.IO.Path.DirectorySeparatorChar);
+
+    /// <summary>A path as a C# string literal writes it.</summary>
+    public static string Literal(string path) => path.Replace("\\", "\\\\");
 
     public const string WindowHeader =
         "<Window x:Namespace=\"Test.App\" " +

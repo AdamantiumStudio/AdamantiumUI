@@ -613,9 +613,10 @@ public class CalendarTests
     }
 
     [Test]
-    [Platform("Win", Reason = "ICU gives ar-SA the Gregorian calendar")]
     public void ALanguageOfAnotherCalendar_CountsMonthsByIt()
     {
+        Assume.That(System.Globalization.CultureInfo.GetCultureInfo("ar-SA").Calendar,
+            Is.Not.InstanceOf<System.Globalization.GregorianCalendar>(), "ar-SA counts by Umm al-Qura here");
         var calendar = Shown(new Calendar { Language = "ar-SA", DisplayDate = October });
         var first = calendar.DayButtons.First(d => !d.IsInactive);
 
@@ -976,7 +977,8 @@ public class CalendarTests
 
     private static DateTime FirstCountedDay(System.Globalization.Calendar counting)
     {
-        for (var day = counting.MinSupportedDateTime.Date; ; day = day.AddDays(1))
+        var last = counting.MinSupportedDateTime.Date.AddYears(2);
+        for (var day = counting.MinSupportedDateTime.Date; day < last; day = day.AddDays(1))
         {
             try
             {
@@ -987,6 +989,9 @@ public class CalendarTests
             {
             }
         }
+
+        Assert.Fail("the calendar counts no day of its first two years");
+        return last;
     }
 
     [Test]
@@ -1090,9 +1095,10 @@ public class CalendarTests
     }
 
     [Test]
-    [Platform("Win", Reason = "ICU gives ar-SA the Gregorian calendar")]
     public void ALanguageWhoseCalendarEndsSooner_HoldsTheDatesWithinIt()
     {
+        Assume.That(System.Globalization.CultureInfo.GetCultureInfo("ar-SA").Calendar,
+            Is.Not.InstanceOf<System.Globalization.GregorianCalendar>(), "ar-SA counts by Umm al-Qura here");
         var calendar = Shown(new Calendar { DisplayDate = new DateTime(2100, 5, 1) });
         calendar.SelectedDate = new DateTime(2100, 5, 3);
 

@@ -1875,6 +1875,8 @@ All packages share one version.
 
 ### Fixed
 
+- A `PropertyGrid` editor is never shorter than a line of its font with its padding and border: `EditorHeight` was
+  fitted to Segoe UI, and a font with taller lines (Noto Sans) had its text cut in Graphite's 19-pixel rows.
 - On Linux, the Japanese calendar no longer throws: ICU begins Meiji on 1868-10-23 while .NET supports the calendar
   from 1868-09-08, and the days between are not counted - the `Calendar` and `DateTimeField` start from the first day
   the calendar counts.
@@ -1882,7 +1884,6 @@ All packages share one version.
   installed, not DejaVu Sans whether it is or not.
 - The language server follows a `ProjectReference` written with backslashes on Linux too, and notices a project's
   first build when its output folder and assembly appear at once.
-
 - An `Expander`'s content always opened downward: the Fluent and Graphite templates read no `ExpandDirection`. The header
   now docks to the side the direction names - top, bottom, right or left - and the content opens on the other, with the
   hairline and the chevron following.

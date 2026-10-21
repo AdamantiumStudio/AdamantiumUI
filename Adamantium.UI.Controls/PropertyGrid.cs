@@ -62,9 +62,8 @@ public class PropertyGrid : Control
     public static readonly AdamantiumProperty IndentProperty = AdamantiumProperty.Register(nameof(Indent),
         typeof(Double), typeof(PropertyGrid), new PropertyMetadata(14.0, PropertyMetadataOptions.AffectsMeasure));
 
-    /// <summary>How tall every editor in the inspector stands. ONE number, set by the theme: left to themselves a field
-    /// is as tall as a line of text, a spinner as tall as its buttons, and a list collapses when nobody filled it - and
-    /// the form reads as a pile. A check box is the exception and keeps its square.</summary>
+    /// <summary>How tall every editor in the inspector stands, check boxes aside: taller only where the editor's font
+    /// needs more for a line.</summary>
     public static readonly AdamantiumProperty EditorHeightProperty = AdamantiumProperty.Register(nameof(EditorHeight),
         typeof(Double), typeof(PropertyGrid), new PropertyMetadata(20.0, PropertyMetadataOptions.AffectsMeasure));
 
