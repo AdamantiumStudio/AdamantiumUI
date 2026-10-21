@@ -349,6 +349,7 @@ public partial class RenderCache
         _instancedFill?.Dispose();
         _transformTable?.Dispose();
         _offscreenLayers?.Dispose();
+        DisposeRecordings();
 
         _rectBatch = null;
         _ellipseBatch = null;

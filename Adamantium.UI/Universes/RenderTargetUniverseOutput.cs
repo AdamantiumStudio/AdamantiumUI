@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using Adamantium.Core.Events;
 using Adamantium.Multiverse;
 using Adamantium.Graphics;
@@ -25,6 +26,12 @@ public class RenderTargetUniverseOutput : UIUniverseOutput
     private SharedSurface _pendingSurface;
     private SurfaceFormat _format = SurfaceFormat.B8G8R8A8.UNorm;
     private ulong _lastProduced;
+    private ulong[] _written = [];
+    private ulong _demandSeen;
+    private Action _invalidate;
+    // Three: the frame drawn on the panel's ask goes to the surface of two frames back, given back by a copy already done,
+    // not to the one the copy of this ask is still reading behind the window's queued frames.
+    private const uint SurfaceBuffers = 3;
 
     internal RenderTargetUniverseOutput(IEventAggregator eventAggregator, OutputContext context) : base(eventAggregator)
     {
@@ -69,18 +76,61 @@ public class RenderTargetUniverseOutput : UIUniverseOutput
         if (rt?.ResolveTexture == null) return;
 
         HandOverPendingSurface();
-        if (StartSurfaceForNewSize(mainDevice, rt.ResolveTexture)) return;
+        if (StartSurfaceForNewSize(mainDevice, rt.ResolveTexture))
+        {
+            Invalidate();
+            return;
+        }
         if (_sharedSurface == null || _pendingSurface != null) return;
 
-        // Not over a frame the consumer has not read yet; a CPU check, so a paused consumer cannot stall the producer.
-        if (_sharedSurface.ConsumeValue < _lastProduced) return;
+        var index = FreeSurface();
+        if (index < 0) return;
 
         // Same queue as the resolve, so the copy is ordered after it. The wait is already met; it orders the consumer's
         // read before this write.
-        mainDevice.AddWaitSemaphore(_sharedSurface.ConsumeSemaphore, PipelineStageFlagBits2.AllTransferBit, _lastProduced);
-        mainDevice.RecordSharedSurfaceCopy(rt.ResolveTexture, _sharedSurface);
+        var target = _sharedSurface.SurfaceAt(index);
+        mainDevice.AddWaitSemaphore(target.ConsumeSemaphore, PipelineStageFlagBits2.AllTransferBit, _written[index]);
+        mainDevice.RecordSharedSurfaceCopy(rt.ResolveTexture, target);
         _lastProduced++;
-        mainDevice.AddSignalSemaphore(_sharedSurface.ProduceSemaphore, _lastProduced);
+        _written[index] = _lastProduced;
+        mainDevice.AddSignalSemaphore(target.ProduceSemaphore, _lastProduced);
+    }
+
+    /// <summary>Waits until the panel asks for a frame, so one is drawn per frame it shows, ready by its next ask; then
+    /// until the older surface is given back for it. Gives whether it was; if not, asks for a frame again on the panel's
+    /// next ask.</summary>
+    public override bool WaitUntilShown(TimeSpan timeout)
+    {
+        if (_sharedSurface == null || _pendingSurface != null) return true;
+
+        var start = Stopwatch.GetTimestamp();
+        _demandSeen = _sharedSurface.Descriptor.Demand.WaitBeyond(_demandSeen, timeout);
+        var left = timeout - Stopwatch.GetElapsedTime(start);
+        var oldest = OldestSurface();
+        var shown = _sharedSurface.SurfaceAt(oldest).WaitConsumed(_written[oldest], left > TimeSpan.Zero ? left : TimeSpan.Zero);
+        if (!shown)
+        {
+            _sharedSurface.Descriptor.Demand.WhenBeyond(_demandSeen, _invalidate ??= Invalidate);
+        }
+
+        return shown;
+    }
+
+    private int FreeSurface()
+    {
+        var oldest = OldestSurface();
+        return _sharedSurface.SurfaceAt(oldest).ConsumeValue >= _written[oldest] ? oldest : -1;
+    }
+
+    private int OldestSurface()
+    {
+        var oldest = 0;
+        for (var i = 1; i < _written.Length; i++)
+        {
+            if (_written[i] < _written[oldest]) oldest = i;
+        }
+
+        return oldest;
     }
 
     // A surface for a new size gets its first frame before the panel is given it, so the panel never draws an empty one;
@@ -97,7 +147,7 @@ public class RenderTargetUniverseOutput : UIUniverseOutput
         if (width == 0 || height == 0) return false;
         if (_sharedSurface != null && _sharedSurface.Width == width && _sharedSurface.Height == height) return false;
 
-        _pendingSurface = SharedSurface.CreateExportable(device, width, height, _format);
+        _pendingSurface = SharedSurface.CreateExportable(device, width, height, _format, bufferCount: SurfaceBuffers);
         device.RecordSharedSurfaceCopy(frame, _pendingSurface);
         device.AddSignalSemaphore(_pendingSurface.ProduceSemaphore, 1);
         return true;
@@ -111,6 +161,9 @@ public class RenderTargetUniverseOutput : UIUniverseOutput
         _sharedSurface = _pendingSurface;
         _pendingSurface = null;
         _lastProduced = 1;
+        _written = new ulong[_sharedSurface.BufferCount];
+        _written[0] = 1;
+        _demandSeen = 0;
         // Bound before the old surface is retired, so the panel's import of the old one is already started or never will be.
         nativeWindow.SetSource(_sharedSurface.Descriptor);
         RetireSurface(replaced);

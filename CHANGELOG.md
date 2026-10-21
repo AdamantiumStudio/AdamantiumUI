@@ -7,6 +7,8 @@ All packages share one version.
 
 ### Added
 
+- `PropertyGrid.ValueChangedCommand`: executed after each value written or taken back, with the change as its
+  parameter - what `ValueChanged` says, for a view model bound from markup.
 - A way in for debugging tools: `UIApplication.AttachDebugTool` starts an `IDebugTool` on the application - its
   windows, the frame verifier, the routed events - and `DetachDebugTool` or shutdown stops it. A tool watches a routed
   event with `RoutedEvent.AddObserver(IRoutedEventObserver)`: it is told every raise (even one nothing hears), every
@@ -1437,6 +1439,26 @@ All packages share one version.
 
 ### Changed
 
+- A window whose content has not changed draws its frame from a recording: the first clean frame of each frame slot
+  records the op stream into a secondary command buffer, and the next ones only fingerprint the stream - nothing is
+  sent to the GPU - and execute the recording while the fingerprint is the same. Whatever the stream reads live - a
+  brush, a clock, a fade - changes the fingerprint, and the frame is recorded again; a stream that keeps changing is
+  issued as before for a while, up to 32 frames, between tries. A frame with an off-screen layer or a backdrop material
+  - on a rectangle or on any shape - is issued as before, and so is every frame on a device without `VK_KHR_maintenance7`;
+  `ADAM_NO_RECORDED_REPLAY=1` turns recording off. The editor's window, 4K: a clean frame's op stream 1.2-1.5 ms, now
+  0.4-0.65 ms, 98% of clean frames executed from a recording.
+- A universe shown in the UI runs on a thread of its own, no longer in the window's frames: `IUniverseService.Show`
+  starts its loop, `RetireRemoved` takes the place of `RunUniverses`, and `SuspendLoops`/`ResumeLoops` hold the loops
+  while the devices are made again (`UIApplication.OnDevicesRecreating`/`OnDevicesRecreated`). A `RenderTargetPanel`
+  asks for a frame each time it takes one, and the universe draws one per ask into the free one of three surfaces; it
+  reads the pointer moving over the panel as a reason for frames under `FrameMode.OnDemand`. The editor, 4K, two
+  animated models: the window ran at 100 frames a second with the scene in its frames, now 260-370, the scene 210-290.
+- Under `FrameMode.OnDemand` a universe's output in the UI asks frames of itself alone (`UniverseOutput.Invalidate`):
+  for the pointer moving over the panel, for the panel shown again - its window restored, the panel back in the tree or
+  made visible - after a resize, until the surface of the new size is handed over to the panel, and after a frame
+  dropped for want of a free surface, on the panel's next ask.
+- `RuntimeStats.WindowFps` and `RuntimeStats.LastWindowGpuMs`: the frames the render thread draws a second and the GPU
+  time of the last window frame.
 - Colors read as text go through the engine's two readers: `ColorPicker`'s hex box (still six or eight digits - it
   commits as it is typed) and the markup language server through `Colors.TryParse`, the language server reading
   `#RGB` and `#ARGB` as the framework now does and no "#" with 1, 2, 5 or 7 digits; a drawing's SVG colors
@@ -1806,6 +1828,19 @@ All packages share one version.
 
 ### Fixed
 
+- An `Expander`'s content always opened downward: the Fluent and Graphite templates read no `ExpandDirection`. The header
+  now docks to the side the direction names - top, bottom, right or left - and the content opens on the other, with the
+  hairline and the chevron following.
+- Closing the main window could take the application down: the shutdown's handlers unloaded the services outside the
+  render gate, alongside a frame on the render thread and the closed window's own teardown. They run under the gate
+  now, once no frame can start.
+- A batched fill could be written into the copy the frame before, still on the GPU, was drawing from. A patch a whole
+  number of laps of frame slots after the batch last took a copy wrote in place - "the same frame" was told by the
+  frame SLOT, which comes round again; it goes by the device's frame count now (`FrameTicket`). And a frame that
+  patched and then walked took two copies, the second being the one in flight; it takes one.
+- A vector shape filled in the instanced batch was patched in place - a recolor, a shape blanked or replaced, a new one
+  placed on a clean frame - in the copy the frames since the last walk were drawing from. The first patch of a frame
+  moves every key to the next copy and fills it with what the keys hold, as the other batches do.
 - The cue of a finger or pen held still is kept with its contact (a weak table by `Pointer`), and comes down from the
   window it went up in: the cues were one dictionary by pointer id for every window, so two contacts numbered alike -
   test windows side by side - showed one cue between them, and written from the hold timer's thread on a test run,
