@@ -55,7 +55,7 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
     private double wheelPixelsHorizontal;
     private uint wheelTime;
 
-    private static readonly (uint First, uint Last)[] LetterRows = [(16, 25), (30, 38), (44, 50)];
+    private static readonly (uint First, uint Last)[] EvdevLetterRows = [(16, 25), (30, 38), (44, 50)];
 
     private XkbKeyboard xkb;
     private volatile bool hasRightToLeftLayout;
@@ -438,14 +438,13 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
         hasRightToLeftLayout = xkb != null && TypesRightToLeft(xkb);
     }
 
-    // A layout types right to left when its letter keys do: Q to P, A to L, Z to M as evdev numbers them.
     private static bool TypesRightToLeft(XkbKeyboard keyboard)
     {
         var letters = new StringBuilder();
         for (uint layout = 0; layout < keyboard.LayoutCount; layout++)
         {
             letters.Clear();
-            foreach (var (first, last) in LetterRows)
+            foreach (var (first, last) in EvdevLetterRows)
             {
                 for (var code = first; code <= last; code++)
                 {
