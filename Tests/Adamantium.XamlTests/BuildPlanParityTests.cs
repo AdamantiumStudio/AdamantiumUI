@@ -21,7 +21,7 @@ namespace Adamantium.XamlTests;
 [TestFixture]
 public class BuildPlanParityTests
 {
-    private const string SourcePath = @"C:\Test\MainWindow.auml";
+    private static readonly string SourcePath = AumlCodegenHarness.PathOf("MainWindow.auml");
 
     private FakeApp _app;
 

@@ -613,6 +613,7 @@ public class CalendarTests
     }
 
     [Test]
+    [Platform("Win", Reason = "ICU gives ar-SA the Gregorian calendar")]
     public void ALanguageOfAnotherCalendar_CountsMonthsByIt()
     {
         var calendar = Shown(new Calendar { Language = "ar-SA", DisplayDate = October });
@@ -969,7 +970,23 @@ public class CalendarTests
 
         ((ButtonBase)calendar.GetTemplateChild("PART_Previous")).PerformClick();
 
-        Assert.That(calendar.DisplayDate, Is.EqualTo(new DateTime(1868, 9, 8)), "Meiji 1, from the first day counted");
+        Assert.That(calendar.DisplayDate, Is.EqualTo(FirstCountedDay(new System.Globalization.JapaneseCalendar())),
+            "Meiji 1, from the first day counted");
+    }
+
+    private static DateTime FirstCountedDay(System.Globalization.Calendar counting)
+    {
+        for (var day = counting.MinSupportedDateTime.Date; ; day = day.AddDays(1))
+        {
+            try
+            {
+                counting.GetEra(day);
+                return day;
+            }
+            catch (ArgumentException)
+            {
+            }
+        }
     }
 
     [Test]
@@ -1073,6 +1090,7 @@ public class CalendarTests
     }
 
     [Test]
+    [Platform("Win", Reason = "ICU gives ar-SA the Gregorian calendar")]
     public void ALanguageWhoseCalendarEndsSooner_HoldsTheDatesWithinIt()
     {
         var calendar = Shown(new Calendar { DisplayDate = new DateTime(2100, 5, 1) });

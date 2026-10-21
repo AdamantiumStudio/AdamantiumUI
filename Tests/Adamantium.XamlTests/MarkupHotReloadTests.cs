@@ -76,7 +76,7 @@ public class MarkupHotReloadTests
 
         Assert.That(project.Errors, Is.Empty, string.Join(" | ", project.Errors));
         Assert.That(project.Source,
-            Does.Contain($"MarkupHotReload.Track(this, \"C:\\\\Test\\\\Page.auml\", \"{MarkupHash.Of(view)}\");"));
+            Does.Contain($"MarkupHotReload.Track(this, \"{AumlCodegenHarness.Literal(AumlCodegenHarness.PathOf("Page.auml"))}\", \"{MarkupHash.Of(view)}\");"));
     }
 
     [Test]
@@ -187,7 +187,7 @@ public class MarkupHotReloadTests
             new Dictionary<string, string> { [Adamantium.UI.Generators.AumlCodeBehindGenerator.HotReloadProperty] = "true" });
 
         Assert.That(project.Errors, Is.Empty, string.Join(" | ", project.Errors));
-        Assert.That(project.Source, Does.Contain($"MarkupHotReload.Track(this, \"C:\\\\Test\\\\Styles.auml\", \"{MarkupHash.Of(styles)}\");"));
+        Assert.That(project.Source, Does.Contain($"MarkupHotReload.Track(this, \"{AumlCodegenHarness.Literal(AumlCodegenHarness.PathOf("Styles.auml"))}\", \"{MarkupHash.Of(styles)}\");"));
     }
 
     [Test]

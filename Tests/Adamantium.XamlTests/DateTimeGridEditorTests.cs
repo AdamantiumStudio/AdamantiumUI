@@ -1284,6 +1284,7 @@ public class DateTimeGridEditorTests
     }
 
     [Test]
+    [Platform("Win", Reason = "ICU gives ar-SA the Gregorian calendar")]
     public void TheGroupsOfACalendarOfItsOwn_AreItsMonths()
     {
         var was = Languages.Current;

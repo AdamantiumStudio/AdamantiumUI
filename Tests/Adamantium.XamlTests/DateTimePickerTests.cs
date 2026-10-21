@@ -216,7 +216,7 @@ public class DateTimePickerTests
         Settle();
         var list = (ListBox)picker.DropDownContent;
 
-        Assert.That(list.SelectedItem, Is.EqualTo("2:00 PM"));
+        Assert.That(((string)list.SelectedItem).Replace('\u202F', ' '), Is.EqualTo("2:00 PM"));
     }
 
     [Test]
