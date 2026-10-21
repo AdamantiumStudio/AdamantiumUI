@@ -52,7 +52,7 @@ public sealed class RoutedEventInvokerGenerator : IIncrementalGenerator
     private static HandlerCallInfo Describe(INamedTypeSymbol type, Compilation compilation)
     {
         if (type is not { TypeKind: TypeKind.Delegate, DelegateInvokeMethod: { ReturnsVoid: true } invoke } ||
-            invoke.Parameters.Length != 2 || type.IsUnboundGenericType || !IsReachable(type) ||
+            invoke.Parameters.Length != 2 || type.IsUnboundGenericType ||
             compilation.GetTypeByMetadataName(ArgsName) is not { } argsBase)
         {
             return null;
@@ -60,10 +60,9 @@ public sealed class RoutedEventInvokerGenerator : IIncrementalGenerator
 
         var sender = invoke.Parameters[0];
         var args = invoke.Parameters[1];
-        var own = compilation.Assembly;
         if (sender.RefKind != RefKind.None || args.RefKind != RefKind.None || sender.Type.IsValueType ||
-            !DerivesFrom(args.Type, argsBase) ||
-            !CanBeNamed(type, own) || !CanBeNamed(sender.Type, own) || !CanBeNamed(args.Type, own))
+            !DerivesFrom(args.Type, argsBase) || !CanBeNamed(type, compilation) ||
+            !CanBeNamed(sender.Type, compilation) || !CanBeNamed(args.Type, compilation))
         {
             return null;
         }
@@ -72,12 +71,15 @@ public sealed class RoutedEventInvokerGenerator : IIncrementalGenerator
             args.Type.ToDisplayString(PlainFormat));
     }
 
-    private static bool CanBeNamed(ITypeSymbol type, IAssemblySymbol own) => type switch
+    private static bool CanBeNamed(ITypeSymbol type, Compilation compilation) => type switch
     {
-        { TypeKind: TypeKind.Error or TypeKind.Dynamic or TypeKind.Pointer or TypeKind.FunctionPointer or TypeKind.TypeParameter } => false,
-        IArrayTypeSymbol array => CanBeNamed(array.ElementType, own),
-        INamedTypeSymbol named => !RefusesUse(named, own) && named.TypeArguments.All(argument => CanBeNamed(argument, own)) &&
-                                  (named.ContainingType is null || CanBeNamed(named.ContainingType, own)),
+        { TypeKind: TypeKind.Error or TypeKind.Dynamic or TypeKind.Pointer or TypeKind.FunctionPointer } => false,
+        { TypeKind: TypeKind.TypeParameter } => false,
+        IArrayTypeSymbol array => CanBeNamed(array.ElementType, compilation),
+        INamedTypeSymbol named => !named.IsFileLocal && compilation.IsSymbolAccessibleWithin(named, compilation.Assembly) &&
+                                  !RefusesUse(named, compilation.Assembly) &&
+                                  named.TypeArguments.All(argument => CanBeNamed(argument, compilation)) &&
+                                  (named.ContainingType is null || CanBeNamed(named.ContainingType, compilation)),
         _ => true,
     };
 
@@ -107,20 +109,6 @@ public sealed class RoutedEventInvokerGenerator : IIncrementalGenerator
         }
 
         return false;
-    }
-
-    private static bool IsReachable(INamedTypeSymbol type)
-    {
-        for (var at = type; at is not null; at = at.ContainingType)
-        {
-            if (at.IsFileLocal ||
-                at.DeclaredAccessibility is not (Accessibility.Public or Accessibility.Internal or Accessibility.ProtectedOrInternal))
-            {
-                return false;
-            }
-        }
-
-        return type.TypeArguments.OfType<INamedTypeSymbol>().All(IsReachable);
     }
 
     private static void Emit(SourceProductionContext output, ImmutableArray<HandlerCallInfo> calls)

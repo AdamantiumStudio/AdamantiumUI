@@ -38,9 +38,12 @@ namespace Probe
 
     public class Host
     {
+        private class Hidden : RoutedEventArgs {}
         protected internal delegate void InnerHandler(object sender, PlainArgs e);
         public static System.Type Qualified = typeof(System.EventHandler<PlainArgs>);
         public static System.Type Global = typeof(global::System.EventHandler<GenArgs<int>>);
+        public static System.Type HiddenInArray = typeof(System.Action<Hidden[], RoutedEventArgs>);
+        public static System.Type HiddenArgs = typeof(System.EventHandler<GenArgs<Hidden>>);
     }
 }");
 
@@ -51,22 +54,56 @@ namespace Probe
                 .And.Contain("System.EventHandler<global::Probe.PlainArgs>")
                 .And.Contain("System.EventHandler<global::Probe.GenArgs<int>>"));
             Assert.That(generated, Does.Not.Contain("NestedHandler").And.Not.Contain("GenArgs<T>")
-                .And.Not.Contain("GoneHandler").And.Not.Contain("TrialHandler").And.Not.Contain("DynamicHandler"));
+                .And.Not.Contain("GoneHandler").And.Not.Contain("TrialHandler").And.Not.Contain("DynamicHandler")
+                .And.Not.Contain("Hidden"));
         });
     }
 
-    private static (string Generated, Diagnostic[] Diagnostics) Run(string source)
+    [Test]
+    public void AProtectedInternalTypeOfAnotherAssembly_IsLeftOut()
     {
-        var references = ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES"))
+        var library = CSharpCompilation.Create("RoutedEventLibrary",
+            [CSharpSyntaxTree.ParseText(@"
+namespace Lib
+{
+    public class Base
+    {
+        protected internal class InnerArgs : Adamantium.UI.Core.RoutedEvents.RoutedEventArgs {}
+    }
+}")],
+            References(),
+            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+
+        var (generated, diagnostics) = Run(@"
+namespace Probe
+{
+    public class Derived : Lib.Base
+    {
+        public static System.Type Named = typeof(System.EventHandler<InnerArgs>);
+    }
+}", library.ToMetadataReference());
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(diagnostics, Is.Empty);
+            Assert.That(generated, Does.Not.Contain("InnerArgs"));
+        });
+    }
+
+    private static MetadataReference[] References() =>
+        ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES"))
             .Split(Path.PathSeparator)
             .Where(p => p.Length > 0)
             .Append(typeof(RoutedEventArgs).Assembly.Location)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .Select(p => (MetadataReference)MetadataReference.CreateFromFile(p))
             .ToArray();
+
+    private static (string Generated, Diagnostic[] Diagnostics) Run(string source, params MetadataReference[] more)
+    {
         var compilation = CSharpCompilation.Create("RoutedEventProbe",
             [CSharpSyntaxTree.ParseText(source)],
-            references,
+            [.. References(), .. more],
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
 
         GeneratorDriver driver = CSharpGeneratorDriver.Create(new RoutedEventInvokerGenerator().AsSourceGenerator());

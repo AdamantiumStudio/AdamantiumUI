@@ -12,7 +12,7 @@ public class EventSubscription
    {
       var handler = Handler;
       var known = call;
-      if (known == null || known.DelegateType != handler.GetType())
+      if (known == null || known.IsDynamic || known.DelegateType != handler.GetType())
       {
          known = RoutedEventInvokers.For(handler.GetType());
          call = known;

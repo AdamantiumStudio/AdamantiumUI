@@ -1855,8 +1855,8 @@ All packages share one version.
 - A hold that an automation session plays settles before its contacts lift, so it starts where no loop runs, and its
   contacts lift even when the wait fails. With no loop running, a hold starts when `LoopSignal` is drained - not on the
   hold timer's thread - and a tick left from a contact already lifted does not start the next hold of its id.
-- A `PreviewGotKeyboardFocus` handler that sets `Handled` keeps the focus where it is, as in WPF; one that moves the
-  focus elsewhere wins, and the move it interrupted is dropped - it went on, and two elements lost the focus.
+- A `PreviewGotKeyboardFocus` handler that sets `Handled` keeps the focus where it is; one that moves the focus
+  elsewhere wins, and the move it interrupted is dropped - it went on, and two elements lost the focus.
 - `PreviewGotKeyboardFocus` is raised on the element taking the focus, with `KeyboardGotFocusEventArgs`: it went to the
   element losing it, with args its handlers could not take, so a handler made the focus move throw. `GotKeyboardFocus`
   says where the focus came from - its `OldFocus` was the new element.

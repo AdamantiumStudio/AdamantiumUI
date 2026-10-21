@@ -14,14 +14,15 @@ public static class RoutedEventInvokers
     private static readonly Action<Delegate, object, RoutedEventArgs> DynamicCall = Dynamic;
 
     /// <summary>Registers the call for handlers of <paramref name="delegateType"/>. Called from generated module
-    /// initializers; the first registration of a type wins.</summary>
+    /// initializers; the first registration of a type wins over later ones, and over the
+    /// <see cref="Delegate.DynamicInvoke"/> its handlers were called through before.</summary>
     public static void Register(Type delegateType, Action<Delegate, object, RoutedEventArgs> invoke)
     {
         ArgumentNullException.ThrowIfNull(delegateType);
         ArgumentNullException.ThrowIfNull(invoke);
 
-        Calls.AddOrUpdate(delegateType, static (type, call) => new HandlerCall(type, call),
-            static (type, known, call) => known.Invoke == DynamicCall ? new HandlerCall(type, call) : known, invoke);
+        Calls.AddOrUpdate(delegateType, static (type, call) => new HandlerCall(type, call, false),
+            static (type, known, call) => known.IsDynamic ? new HandlerCall(type, call, false) : known, invoke);
     }
 
     internal static HandlerCall For(Type delegateType)
@@ -32,7 +33,7 @@ public static class RoutedEventInvokers
         }
 
         RuntimeHelpers.RunModuleConstructor(delegateType.Module.ModuleHandle);
-        return Calls.GetOrAdd(delegateType, static type => new HandlerCall(type, DynamicCall));
+        return Calls.GetOrAdd(delegateType, static type => new HandlerCall(type, DynamicCall, true));
     }
 
     private static void Dynamic(Delegate handler, object sender, RoutedEventArgs e)

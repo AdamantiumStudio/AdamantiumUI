@@ -230,19 +230,31 @@ public sealed class AutomationExecutor
             return (InputSimulator.PutDown(paths, contacts), contacts);
         }, timeout);
 
+        Task Lift() => _host.RunOnLoopAsync(() =>
+        {
+            InputSimulator.Lift(down, contacts);
+            return true;
+        }, timeout);
+
         try
         {
             await Task.Delay(Gestures.HoldingTime + HoldMargin);
             await _host.WaitForIdleAsync(timeout);
         }
-        finally
+        catch (Exception)
         {
-            await _host.RunOnLoopAsync(() =>
+            try
             {
-                InputSimulator.Lift(down, contacts);
-                return true;
-            }, timeout);
+                await Lift();
+            }
+            catch (Exception)
+            {
+            }
+
+            throw;
         }
+
+        await Lift();
 
         return await SettledAsync(request, mark, timeout);
     }
