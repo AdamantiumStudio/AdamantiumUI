@@ -257,11 +257,12 @@
                 </Grid>
             </Border>
 
-            <!-- The drop, made visible. Everything picture-shaped that lands anywhere on this page shows up here: the
-                 payload is bytes in whatever encoding the source had, and the converter is what turns that into
-                 something an Image can draw - decoding by content, so PNG, JPEG, GIF and the rest all just work. -->
+            <!-- The drop, made visible. A picture dropped here shows up here, and only here: the payload is bytes in
+                 whatever encoding the source had, and the converter is what turns that into something an Image can
+                 draw - decoding by content, so PNG, JPEG, GIF and the rest all just work. -->
             <Border CornerRadius="8" Padding="12" Width="420" Height="360" MarginLeft="16" BorderThickness="2"
-                    DragDrop.AllowDrop="True" DragDrop.DropCommand="{Binding DropExternalCommand}">
+                    DragDrop.AllowDrop="True" DragDrop.DropCommand="{Binding DropPicturesCommand}"
+                    DragDrop.DragOverCommand="{Binding DragOverPicturesCommand}">
                 <Border.Styles>
                     <Style Selector="Border">
                         <Setter Property="Background" Value="{ResourceReference CardBackgroundFillColorDefault}"/>
