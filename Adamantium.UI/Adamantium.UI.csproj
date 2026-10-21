@@ -33,7 +33,7 @@
 		<ProjectReference Include="..\Adamantium.UI.Markup\Adamantium.UI.Markup.csproj" />
 		<ProjectReference Include="..\Adamantium.UI.Themes\Adamantium.UI.Themes.csproj" />
 		<PackageReference Include="Adamantium.Vulkan.Loader" Version="1.0.3" />
-		<PackageReference Include="Adamantium.Vulkan" Version="1.0.3" />
+		<PackageReference Include="Adamantium.Vulkan" Version="1.0.4" />
 	</ItemGroup>
 
 	<!-- For the applications this package goes into, not for this project: the AUML generator rides in this package -
@@ -92,6 +92,7 @@
 		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.ProceduralGeometry\Adamantium.ProceduralGeometry.csproj" />
 		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.MacOS\Adamantium.MacOS.csproj" />
 		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Win32\Adamantium.Win32.csproj" />
+		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Wayland\Adamantium.Wayland.csproj" />
 		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.XInput\Adamantium.XInput.csproj" />
 		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.GameInput\Adamantium.GameInput.csproj" />
 		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Core\Adamantium.Core.csproj"/>
@@ -113,6 +114,7 @@
 		<PackageReference Include="Adamantium.ProceduralGeometry" Version="$(AdamantiumEngineVersion)" />
 		<PackageReference Include="Adamantium.MacOS" Version="$(AdamantiumEngineVersion)" />
 		<PackageReference Include="Adamantium.Win32" Version="$(AdamantiumEngineVersion)" />
+		<PackageReference Include="Adamantium.Wayland" Version="$(AdamantiumEngineVersion)" />
 		<PackageReference Include="Adamantium.XInput" Version="$(AdamantiumEngineVersion)" />
 		<PackageReference Include="Adamantium.GameInput" Version="$(AdamantiumEngineVersion)" />
 		<PackageReference Include="Adamantium.Core" Version="$(AdamantiumEngineVersion)" />

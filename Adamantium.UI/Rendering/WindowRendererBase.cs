@@ -152,6 +152,7 @@ public abstract class WindowRendererBase : IWindowRenderer
         )
         {
             HInstanceHandle = Process.GetCurrentProcess().Handle,
+            DisplayHandle = Window.SurfaceDisplayHandle,
             // A see-through window is a property of the WINDOW, so it travels from there to the surface that composes it.
             TransparentComposition = Window.UseTransparentComposition,
             PresentPolicy = ResolvePresentPolicy()

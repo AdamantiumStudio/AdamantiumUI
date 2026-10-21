@@ -4,7 +4,7 @@ public interface IWindowInternals
 {
     void SetHandle(IntPtr handle);
     
-    void SetSurface(IntPtr surfaceHandle);
+    void SetSurface(IntPtr surfaceHandle, IntPtr displayHandle);
     
     void OnSourceInitialized();
     
