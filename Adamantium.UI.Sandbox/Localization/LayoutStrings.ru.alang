@@ -20,6 +20,42 @@
     <Phrase Key="OpensRight" Text="Раскрывается вправо"/>
     <Phrase Key="ExpanderContent" Text="Содержимое открывается со стороны, противоположной заголовку, и сворачивается в него."/>
     <Phrase Key="TiledPanel" Text="Плиточная панель"/>
-    <Phrase Key="TileLayout" Text="Схема"/>
+    <Phrase Key="TileLayout" Text="Раскладка"/>
     <Phrase Key="MaximizeFirstTile" Text="Только первая плитка"/>
+    <Phrase Key="ShareTilesEvenly" Text="Поровну"/>
+    <Phrase Key="TileShowcase" Text="Витрина"/>
+    <Phrase Key="Viewports" Text="Виды"/>
+    <Phrase Key="Gallery" Text="Галерея"/>
+    <Phrase Key="Featured" Text="Спикер"/>
+    <Phrase Key="TileCount" Text="Плиток:"/>
+    <Phrase Key="MaxColumns" Text="Макс. столбцов:"/>
+    <Phrase Key="MaxRows" Text="Макс. строк:"/>
+    <Phrase Key="TileAspect" Text="Пропорция"/>
+    <Phrase Key="Free" Text="Свободная"/>
+    <Phrase Key="Wide" Text="16:9"/>
+    <Phrase Key="Classic" Text="4:3"/>
+    <Phrase Key="Square" Text="1:1"/>
+    <Phrase Key="LastRow" Text="Последний ряд"/>
+    <Phrase Key="Left" Text="Слева"/>
+    <Phrase Key="Center" Text="По центру"/>
+    <Phrase Key="Right" Text="Справа"/>
+    <Phrase Key="Stretch" Text="Растянуть"/>
+    <Phrase Key="Top" Text="Сверху"/>
+    <Phrase Key="Bottom" Text="Снизу"/>
+    <Phrase Key="StripSide" Text="Сторона полосы"/>
+    <Phrase Key="FeaturedShare" Text="Доля спикера:"/>
+    <Phrase Key="StripLimit" Text="В полосе:"/>
+    <Phrase Key="FeatureTile" Text="Сделать спикером"/>
+    <Phrase Key="One" Text="Один"/>
+    <Phrase Key="TwoColumns" Text="Два рядом"/>
+    <Phrase Key="TwoRows" Text="Два друг над другом"/>
+    <Phrase Key="ThreeLeft" Text="Большой слева, два справа"/>
+    <Phrase Key="ThreeRight" Text="Два слева, большой справа"/>
+    <Phrase Key="ThreeTop" Text="Большой сверху, два снизу"/>
+    <Phrase Key="ThreeBottom" Text="Два сверху, большой снизу"/>
+    <Phrase Key="Four" Text="Четыре, два на два"/>
+    <Phrase Key="FourLeft" Text="Большой слева, три справа"/>
+    <Phrase Key="FourRight" Text="Три слева, большой справа"/>
+    <Phrase Key="FourTop" Text="Большой сверху, три снизу"/>
+    <Phrase Key="FourBottom" Text="Три сверху, большой снизу"/>
 </Language>

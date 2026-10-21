@@ -19,11 +19,14 @@ All packages share one version.
   drag ghost do nothing there yet; the clipboard stays in-process.
 - `IWindow.SurfaceDisplayHandle`: the connection a window's surface belongs to where the platform needs one beside it -
   the `wl_display` - passed on to the presenter as `PresentationParameters.DisplayHandle`.
-- `TiledPanel`: lays its children out as tiles in the scheme `Layout` names (`TileLayout`: one, two side by side or
-  stacked, a large one with two or three beside it, four in a grid), in their order, collapsing any it has no tile for;
-  `MaximizedItem` - the child or its data - fills it alone. The gaps between tiles (`SplitterThickness`) drag
-  `ColumnSplit` and `RowSplit`, two-way by default, and a double click shares the room evenly again;
-  `ShareEvenly` does it across both.
+- `TiledPanel`: lays its children out as tiles in a tree of regions (`Layout`), built in markup or code:
+  `TileSplit` cuts its room along `Orientation` into parts by `Shares` ("60,40"), `Tile` holds one child - the one whose
+  attached `TiledPanel.Tile` is its `Name`, else the next in order - and `TileFlow` fills the children left over left
+  to right, in as many columns as gives them the most room, within `MaxColumns` × `MaxRows`, keeping `AspectRatio`,
+  with the short last row where `LastRowAlignment` says. A child nothing takes is collapsed; `MaximizedItem` - the
+  child or its data - fills the panel alone. The gaps of the splits (`Spacing`) drag, gaps in line moving together, a
+  double click shares a split evenly again and `ShareEvenly` every split. `TileLayouts` has the usual layouts: the
+  viewport layouts of 3D editors, a gallery, and a featured tile with the rest in a strip on any side.
 - `Expander.ExpandDuration`: the content unfolds in the layout and folds away over it - what lies past the expander
   moves with it - and the chevron turns, one glyph turned by the direction instead of four swapped. The Fluent, Graphite
   and macOS themes set 0.2 s; zero shows the change at once. A template unfolds the content with `RevealDecorator`

@@ -1,49 +1,63 @@
 using System;
+using System.Collections.Generic;
+using System.Collections.Specialized;
+using Adamantium.Core.Collections;
 using Adamantium.Mathematics;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.RoutedEvents;
 using Adamantium.UI.Core.Input;
 
 namespace Adamantium.UI.Controls.Panels;
 
 /// <summary>
-/// Lays its children out as tiles in the scheme <see cref="Layout"/> names - one, two side by side or stacked, a large one
-/// with two or three beside it, four in a grid - in the order they come; a child the scheme has no tile for is collapsed.
-/// <see cref="MaximizedItem"/> fills the panel alone. The gaps between tiles (<see cref="SplitterThickness"/>) can be
-/// dragged, moving <see cref="ColumnSplit"/> and <see cref="RowSplit"/>; a double click on one shares the room evenly
-/// again across it, <see cref="ShareEvenly"/> across both. The panel owns its children's visibility.
+/// Lays its children out as tiles in the tree of regions <see cref="Layout"/> holds: splits into parts by share, single
+/// tiles, and flows of tiles for any number of children (<see cref="TileLayouts"/> has the usual layouts). A tile takes
+/// the child whose <see cref="TileProperty"/> is its name, else the next child in order; a flow takes the children left
+/// over; a child nothing takes is collapsed. <see cref="MaximizedItem"/> fills the panel alone. The gaps of the splits
+/// (<see cref="Spacing"/>) can be dragged, gaps in line moving together; a double click on one shares its splits evenly
+/// again, <see cref="ShareEvenly"/> every split. The panel owns its children's visibility. It fills the room it is
+/// given; where that is unbounded it asks only for its largest child, so it does not scroll.
 /// </summary>
 public class TiledPanel : Panel
 {
     private const double MinTileSize = 32;
     private const double GripSlack = 3;
 
-    private readonly Rect[] _tiles = new Rect[4];
-    private int _tileCount;
-    private bool _draggingColumn;
-    private bool _draggingRow;
+    private readonly TileFlow _everyChild = new();
+    private readonly List<IMeasurableComponent> _free = new();
+    private readonly Dictionary<Tile, IMeasurableComponent> _tileChildren = new();
+    private readonly Dictionary<TileFlow, (int Start, int Count)> _flowRanges = new();
+    private readonly List<IMeasurableComponent> _flowChildren = new();
+    private readonly List<TileRegion> _leaves = new();
+    private readonly Dictionary<IMeasurableComponent, Rect> _placed = new();
+    private readonly List<Grip> _grips = new();
+    private readonly List<Grip> _dragged = new();
+    private TileRegion _watched;
+
+    public TiledPanel()
+    {
+        Children.CollectionChanged += OnChildrenChanged;
+    }
+
+    private readonly record struct Grip(TileSplit Split, int Index, bool Vertical, Rect Bar, double Start, double Room);
 
     public static readonly AdamantiumProperty LayoutProperty = AdamantiumProperty.Register(nameof(Layout),
-        typeof(TileLayout), typeof(TiledPanel), new PropertyMetadata(TileLayout.Four, PropertyMetadataOptions.AffectsMeasure));
+        typeof(TileRegion), typeof(TiledPanel),
+        new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure, LayoutChangedCallback));
 
     public static readonly AdamantiumProperty MaximizedItemProperty = AdamantiumProperty.Register(nameof(MaximizedItem),
         typeof(object), typeof(TiledPanel), new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure));
 
-    public static readonly AdamantiumProperty ColumnSplitProperty = AdamantiumProperty.Register(nameof(ColumnSplit),
-        typeof(double), typeof(TiledPanel),
-        new PropertyMetadata(0.5, PropertyMetadataOptions.AffectsMeasure | PropertyMetadataOptions.BindsTwoWayByDefault));
+    public static readonly AdamantiumProperty SpacingProperty = AdamantiumProperty.Register(nameof(Spacing),
+        typeof(double), typeof(TiledPanel), new PropertyMetadata(4.0, PropertyMetadataOptions.AffectsMeasure));
 
-    public static readonly AdamantiumProperty RowSplitProperty = AdamantiumProperty.Register(nameof(RowSplit),
-        typeof(double), typeof(TiledPanel),
-        new PropertyMetadata(0.5, PropertyMetadataOptions.AffectsMeasure | PropertyMetadataOptions.BindsTwoWayByDefault));
+    public static readonly AdamantiumProperty TileProperty = AdamantiumProperty.RegisterAttached("Tile",
+        typeof(string), typeof(AdamantiumComponent), new PropertyMetadata(null, PropertyMetadataOptions.AffectsParentMeasure));
 
-    public static readonly AdamantiumProperty SplitterThicknessProperty = AdamantiumProperty.Register(
-        nameof(SplitterThickness), typeof(double), typeof(TiledPanel),
-        new PropertyMetadata(4.0, PropertyMetadataOptions.AffectsMeasure));
-
-    /// <summary>The scheme the children are laid out in.</summary>
-    public TileLayout Layout
+    /// <summary>The regions the children are laid out in; null lays every child in a <see cref="TileFlow"/>.</summary>
+    public TileRegion Layout
     {
-        get => GetValue<TileLayout>(LayoutProperty);
+        get => GetValue<TileRegion>(LayoutProperty);
         set => SetValue(LayoutProperty, value);
     }
 
@@ -55,56 +69,52 @@ public class TiledPanel : Panel
         set => SetValue(MaximizedItemProperty, value);
     }
 
-    /// <summary>Where the gap between the left and the right tiles stands, as a share of the width, from 0 to 1.</summary>
-    public double ColumnSplit
+    /// <summary>The gap between tiles; the gaps of splits are what is dragged.</summary>
+    public double Spacing
     {
-        get => GetValue<double>(ColumnSplitProperty);
-        set => SetValue(ColumnSplitProperty, value);
+        get => GetValue<double>(SpacingProperty);
+        set => SetValue(SpacingProperty, value);
     }
 
-    /// <summary>Where the gap between the top and the bottom tiles stands, as a share of the height, from 0 to 1.</summary>
-    public double RowSplit
+    /// <summary>The name of the <see cref="Tile"/> a child takes.</summary>
+    public static string GetTile(IAdamantiumComponent element) => element.GetValue<string>(TileProperty);
+
+    /// <summary>Sets the name of the <see cref="Tile"/> a child takes.</summary>
+    public static void SetTile(IAdamantiumComponent element, string value) => element.SetValue(TileProperty, value);
+
+    /// <summary>Gives every part of every split an even share of its room again.</summary>
+    public void ShareEvenly() => Layout?.ShareEvenly();
+
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
-        get => GetValue<double>(RowSplitProperty);
-        set => SetValue(RowSplitProperty, value);
+        base.OnAttachedToVisualTree(e);
+        Watch(Layout);
     }
 
-    /// <summary>How wide the gaps between tiles are; they are what is dragged.</summary>
-    public double SplitterThickness
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
-        get => GetValue<double>(SplitterThicknessProperty);
-        set => SetValue(SplitterThicknessProperty, value);
-    }
-
-    /// <summary>Gives every tile an even share of the room again: both gaps back to the middle.</summary>
-    public void ShareEvenly()
-    {
-        SetCurrentValue(ColumnSplitProperty, 0.5);
-        SetCurrentValue(RowSplitProperty, 0.5);
+        base.OnDetachedFromVisualTree(e);
+        Watch(null);
     }
 
     protected override Size MeasureOverride(Size availableSize)
     {
         var finite = !double.IsInfinity(availableSize.Width) && !double.IsInfinity(availableSize.Height);
-        var maximized = Maximized();
-        LayTiles(finite ? availableSize : default, maximized != null);
+        Lay(finite ? availableSize : default);
 
         var desired = default(Size);
-        var tile = 0;
         foreach (var child in Children)
         {
-            var shown = maximized != null ? ReferenceEquals(child, maximized) : tile < _tileCount;
+            var shown = _placed.TryGetValue(child, out var tile);
             child.Visibility = shown ? Visibility.Visible : Visibility.Collapsed;
             if (!shown)
             {
                 continue;
             }
 
-            var room = finite ? _tiles[maximized != null ? 0 : tile].Size : availableSize;
-            child.Measure(room);
+            child.Measure(finite ? tile.Size : availableSize);
             desired = new Size(Math.Max(desired.Width, child.DesiredSize.Width),
                 Math.Max(desired.Height, child.DesiredSize.Height));
-            tile++;
         }
 
         return finite ? availableSize : desired;
@@ -112,19 +122,13 @@ public class TiledPanel : Panel
 
     protected override Size ArrangeOverride(Size finalSize)
     {
-        var maximized = Maximized();
-        LayTiles(finalSize, maximized != null);
-
-        var tile = 0;
+        Lay(finalSize);
         foreach (var child in Children)
         {
-            if (child.Visibility == Visibility.Collapsed)
+            if (child.Visibility != Visibility.Collapsed && _placed.TryGetValue(child, out var tile))
             {
-                continue;
+                child.Arrange(tile);
             }
-
-            child.Arrange(_tiles[maximized != null ? 0 : Math.Min(tile, _tileCount - 1)]);
-            tile++;
         }
 
         return finalSize;
@@ -138,8 +142,8 @@ public class TiledPanel : Panel
             return;
         }
 
-        var (column, row) = GripsAt(e.GetPosition(this));
-        if (!column && !row)
+        GripsAt(e.GetPosition(this), _dragged);
+        if (_dragged.Count == 0)
         {
             return;
         }
@@ -147,13 +151,15 @@ public class TiledPanel : Panel
         e.Handled = true;
         if (e.ClickCount >= 2)
         {
-            if (column) SetCurrentValue(ColumnSplitProperty, 0.5);
-            if (row) SetCurrentValue(RowSplitProperty, 0.5);
+            foreach (var grip in _dragged)
+            {
+                grip.Split.ShareOwnEvenly();
+            }
+
+            _dragged.Clear();
             return;
         }
 
-        _draggingColumn = column;
-        _draggingRow = row;
         e.Pointer.Capture(this);
     }
 
@@ -161,23 +167,25 @@ public class TiledPanel : Panel
     {
         base.OnPointerMoved(e);
         var position = e.GetPosition(this);
-        if (_draggingColumn || _draggingRow)
+        if (_dragged.Count > 0)
         {
             e.Handled = true;
-            var gap = SplitterThickness;
-            if (_draggingColumn) SetCurrentValue(ColumnSplitProperty, Share(position.X, ActualWidth, gap));
-            if (_draggingRow) SetCurrentValue(RowSplitProperty, Share(position.Y, ActualHeight, gap));
+            foreach (var grip in _dragged)
+            {
+                Move(Current(grip), grip.Vertical ? position.X : position.Y);
+            }
+
             return;
         }
 
-        var (column, row) = ReferenceEquals(e.OriginalSource, this) ? GripsAt(position) : (false, false);
-        ShowGripCursor(column, row);
+        var (vertical, horizontal) = ReferenceEquals(e.OriginalSource, this) ? GripKindsAt(position) : (false, false);
+        ShowGripCursor(vertical, horizontal);
     }
 
     protected override void OnPointerExited(PointerEventArgs e)
     {
         base.OnPointerExited(e);
-        if (!_draggingColumn && !_draggingRow)
+        if (_dragged.Count == 0)
         {
             ShowGripCursor(false, false);
         }
@@ -188,16 +196,87 @@ public class TiledPanel : Panel
         base.OnPointerCaptureLost(e);
         if (!IsPointerCaptured)
         {
-            _draggingColumn = false;
-            _draggingRow = false;
+            _dragged.Clear();
         }
     }
 
-    private void ShowGripCursor(bool column, bool row)
+    protected override void OnPointerReleased(PointerReleasedEventArgs e)
     {
-        if (column || row)
+        base.OnPointerReleased(e);
+        if (_dragged.Count == 0)
         {
-            Cursor = column && row ? Cursors.SizeAll : column ? Cursors.SizeEWE : Cursors.SizeNS;
+            return;
+        }
+
+        e.Handled = true;
+        _dragged.Clear();
+        e.Pointer.Capture(null);
+    }
+
+    private static void LayoutChangedCallback(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
+    {
+        var panel = (TiledPanel)a;
+        if (panel.IsAttachedToVisualTree)
+        {
+            panel.Watch(e.NewValue as TileRegion);
+        }
+    }
+
+    private void Watch(TileRegion layout)
+    {
+        if (ReferenceEquals(_watched, layout))
+        {
+            return;
+        }
+
+        if (_watched != null)
+        {
+            _watched.Changed -= OnLayoutChanged;
+        }
+
+        _watched = layout;
+        if (layout != null)
+        {
+            layout.Changed += OnLayoutChanged;
+        }
+    }
+
+    private void OnLayoutChanged(object sender, EventArgs e) => InvalidateMeasure();
+
+    private void OnChildrenChanged(object sender, NotifyCollectionChangedEventArgs e)
+    {
+        if (e.OldItems == null)
+        {
+            return;
+        }
+
+        foreach (var child in e.OldItems)
+        {
+            if (child is IAdamantiumComponent component && !Children.Contains(child as IMeasurableComponent))
+            {
+                component.ClearValue(VisibilityProperty);
+            }
+        }
+    }
+
+    private Grip Current(Grip grip)
+    {
+        foreach (var laid in _grips)
+        {
+            if (ReferenceEquals(laid.Split, grip.Split) && laid.Index == grip.Index)
+            {
+                return laid;
+            }
+        }
+
+        return grip;
+    }
+
+    private void ShowGripCursor(bool vertical, bool horizontal)
+    {
+        if (vertical || horizontal)
+        {
+            Cursor = vertical && horizontal ? Cursors.SizeAll : vertical ? Cursors.SizeEWE : Cursors.SizeNS;
         }
         else if (Cursor != null)
         {
@@ -205,18 +284,340 @@ public class TiledPanel : Panel
         }
     }
 
-    protected override void OnPointerReleased(PointerReleasedEventArgs e)
+    private void Lay(Size size)
     {
-        base.OnPointerReleased(e);
-        if (!_draggingColumn && !_draggingRow)
+        _placed.Clear();
+        _grips.Clear();
+        var maximized = Maximized();
+        if (maximized != null)
+        {
+            _placed[maximized] = new Rect(0, 0, size.Width, size.Height);
+            return;
+        }
+
+        var layout = Layout ?? _everyChild;
+        Assign(layout);
+        LayRegion(layout, new Rect(0, 0, size.Width, size.Height));
+    }
+
+    private void Assign(TileRegion layout)
+    {
+        _free.Clear();
+        _tileChildren.Clear();
+        _flowRanges.Clear();
+        _flowChildren.Clear();
+        _leaves.Clear();
+        foreach (var child in Children)
+        {
+            _free.Add(child);
+        }
+
+        CollectLeaves(layout);
+        foreach (var leaf in _leaves)
+        {
+            if (leaf is not Tile { Name: { Length: > 0 } name } tile)
+            {
+                continue;
+            }
+
+            for (var i = 0; i < _free.Count; i++)
+            {
+                if (_free[i] is IAdamantiumComponent child && GetTile(child) == name)
+                {
+                    _tileChildren[tile] = _free[i];
+                    _free.RemoveAt(i);
+                    break;
+                }
+            }
+        }
+
+        foreach (var leaf in _leaves)
+        {
+            if (leaf is Tile tile && !_tileChildren.ContainsKey(tile) && _free.Count > 0)
+            {
+                _tileChildren[tile] = _free[0];
+                _free.RemoveAt(0);
+            }
+        }
+
+        foreach (var leaf in _leaves)
+        {
+            if (leaf is TileFlow flow)
+            {
+                var count = (int)Math.Min(_free.Count, Capacity(flow));
+                _flowRanges[flow] = (_flowChildren.Count, count);
+                for (var i = 0; i < count; i++)
+                {
+                    _flowChildren.Add(_free[i]);
+                }
+
+                _free.RemoveRange(0, count);
+            }
+        }
+    }
+
+    private void CollectLeaves(TileRegion region)
+    {
+        if (region is TileSplit split)
+        {
+            foreach (var part in split.Children)
+            {
+                CollectLeaves(part);
+            }
+        }
+        else if (region != null)
+        {
+            _leaves.Add(region);
+        }
+    }
+
+    private static long Capacity(TileFlow flow) =>
+        flow.MaxColumns > 0 && flow.MaxRows > 0 ? (long)flow.MaxColumns * flow.MaxRows : long.MaxValue;
+
+    private void LayRegion(TileRegion region, Rect room)
+    {
+        switch (region)
+        {
+            case Tile tile when _tileChildren.TryGetValue(tile, out var child):
+                _placed[child] = room;
+                break;
+            case TileFlow flow when _flowRanges.TryGetValue(flow, out var range):
+                LayFlow(flow, range.Start, range.Count, room);
+                break;
+            case TileSplit split:
+                LaySplit(split, room);
+                break;
+        }
+    }
+
+    private void LaySplit(TileSplit split, Rect room)
+    {
+        var count = split.Children.Count;
+        if (count == 0)
         {
             return;
         }
 
-        e.Handled = true;
-        _draggingColumn = false;
-        _draggingRow = false;
-        e.Pointer.Capture(null);
+        var gap = Spacing;
+        var vertical = split.Orientation == Orientation.Horizontal;
+        var start = vertical ? room.X : room.Y;
+        var length = Math.Max(0, (vertical ? room.Width : room.Height) - (count - 1) * gap);
+        var at = start;
+        for (var i = 0; i < count; i++)
+        {
+            var part = length * split.FractionOf(i);
+            LayRegion(split.Children[i], vertical
+                ? new Rect(at, room.Y, part, room.Height)
+                : new Rect(room.X, at, room.Width, part));
+            at += part;
+            if (i < count - 1)
+            {
+                var bar = vertical ? new Rect(at, room.Y, gap, room.Height) : new Rect(room.X, at, room.Width, gap);
+                _grips.Add(new Grip(split, i, vertical, bar, start, length));
+                at += gap;
+            }
+        }
+    }
+
+    private void LayFlow(TileFlow flow, int first, int count, Rect room)
+    {
+        if (count == 0)
+        {
+            return;
+        }
+
+        if (room.Width <= 0 || room.Height <= 0)
+        {
+            for (var i = 0; i < count; i++)
+            {
+                _placed[_flowChildren[first + i]] = new Rect(room.X, room.Y, 0, 0);
+            }
+
+            return;
+        }
+
+        var gap = Spacing;
+        var aspect = flow.AspectRatio > 0 ? flow.AspectRatio : 1;
+        var maxColumns = flow.MaxColumns > 0 ? Math.Min(flow.MaxColumns, count) : count;
+        var maxRows = flow.MaxRows > 0 ? flow.MaxRows : count;
+        var columns = maxColumns;
+        var best = -1.0;
+        for (var c = 1; c <= maxColumns; c++)
+        {
+            var r = (count + c - 1) / c;
+            if (r > maxRows)
+            {
+                continue;
+            }
+
+            var cellWidth = (room.Width - (c - 1) * gap) / c;
+            var cellHeight = (room.Height - (r - 1) * gap) / r;
+            var width = Math.Max(0, Math.Min(cellWidth, cellHeight * aspect));
+            if (width * width / aspect > best + 1e-9)
+            {
+                best = width * width / aspect;
+                columns = c;
+            }
+        }
+
+        var rows = (count + columns - 1) / columns;
+        var tileWidth = Math.Max(0, (room.Width - (columns - 1) * gap) / columns);
+        var tileHeight = Math.Max(0, (room.Height - (rows - 1) * gap) / rows);
+        if (flow.AspectRatio > 0)
+        {
+            tileWidth = Math.Min(tileWidth, tileHeight * aspect);
+            tileHeight = tileWidth / aspect;
+        }
+
+        var blockWidth = columns * tileWidth + (columns - 1) * gap;
+        var blockHeight = rows * tileHeight + (rows - 1) * gap;
+        var left = room.X + (room.Width - blockWidth) / 2;
+        var top = room.Y + (room.Height - blockHeight) / 2;
+        for (var row = 0; row < rows; row++)
+        {
+            var inRow = Math.Min(columns, count - row * columns);
+            var width = tileWidth;
+            var x = left;
+            if (inRow < columns)
+            {
+                switch (flow.LastRowAlignment)
+                {
+                    case HorizontalAlignment.Center:
+                        x += (columns - inRow) * (tileWidth + gap) / 2;
+                        break;
+                    case HorizontalAlignment.Right:
+                        x += (columns - inRow) * (tileWidth + gap);
+                        break;
+                    case HorizontalAlignment.Stretch:
+                        width = (blockWidth - (inRow - 1) * gap) / inRow;
+                        break;
+                }
+            }
+
+            var y = top + row * (tileHeight + gap);
+            for (var column = 0; column < inRow; column++)
+            {
+                _placed[_flowChildren[first + row * columns + column]] = new Rect(x + column * (width + gap), y, width, tileHeight);
+            }
+        }
+    }
+
+    private void Move(Grip grip, double at)
+    {
+        var split = grip.Split;
+        var count = split.Children.Count;
+        if (grip.Index + 1 >= count || grip.Room <= 0)
+        {
+            return;
+        }
+
+        var before = 0.0;
+        for (var i = 0; i < grip.Index; i++)
+        {
+            before += grip.Room * split.FractionOf(i);
+        }
+
+        var gap = Spacing;
+        var pair = grip.Room * (split.FractionOf(grip.Index) + split.FractionOf(grip.Index + 1));
+        if (pair <= 2 * MinTileSize)
+        {
+            return;
+        }
+
+        var partStart = grip.Start + before + grip.Index * gap;
+        var first = Math.Clamp(at - gap / 2 - partStart, MinTileSize, pair - MinTileSize);
+        var shares = new TrackingCollection<double>();
+        for (var i = 0; i < count; i++)
+        {
+            var part = i == grip.Index ? first
+                : i == grip.Index + 1 ? pair - first
+                : grip.Room * split.FractionOf(i);
+            shares.Add(part / grip.Room * 100);
+        }
+
+        split.SetCurrentValue(TileSplit.SharesProperty, shares);
+    }
+
+    private (bool Vertical, bool Horizontal) GripKindsAt(Vector2 point)
+    {
+        var vertical = false;
+        var horizontal = false;
+        foreach (var grip in _grips)
+        {
+            if (Near(grip, point))
+            {
+                vertical |= grip.Vertical;
+                horizontal |= !grip.Vertical;
+            }
+        }
+
+        return (vertical, horizontal);
+    }
+
+    private void GripsAt(Vector2 point, List<Grip> grips)
+    {
+        grips.Clear();
+        AddInLine(point, true, grips);
+        AddInLine(point, false, grips);
+    }
+
+    private void AddInLine(Vector2 point, bool vertical, List<Grip> grips)
+    {
+        var from = grips.Count;
+        foreach (var grip in _grips)
+        {
+            if (grip.Vertical == vertical && Near(grip, point))
+            {
+                grips.Add(grip);
+                break;
+            }
+        }
+
+        if (grips.Count == from)
+        {
+            return;
+        }
+
+        var line = Line(grips[from]);
+        var added = true;
+        while (added)
+        {
+            added = false;
+            foreach (var grip in _grips)
+            {
+                if (grip.Vertical != vertical || Math.Abs(Line(grip) - line) > 0.5 || grips.Contains(grip))
+                {
+                    continue;
+                }
+
+                for (var i = from; i < grips.Count; i++)
+                {
+                    if (Touch(grip, grips[i]))
+                    {
+                        grips.Add(grip);
+                        added = true;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    private static double Line(Grip grip) => grip.Vertical ? grip.Bar.X + grip.Bar.Width / 2 : grip.Bar.Y + grip.Bar.Height / 2;
+
+    private bool Touch(Grip a, Grip b)
+    {
+        var reach = Spacing + GripSlack;
+        return a.Vertical
+            ? a.Bar.Y <= b.Bar.Bottom + reach && b.Bar.Y <= a.Bar.Bottom + reach
+            : a.Bar.X <= b.Bar.Right + reach && b.Bar.X <= a.Bar.Right + reach;
+    }
+
+    private static bool Near(Grip grip, Vector2 point)
+    {
+        var bar = grip.Bar;
+        return point.X >= bar.X - GripSlack && point.X <= bar.Right + GripSlack
+            && point.Y >= bar.Y - GripSlack && point.Y <= bar.Bottom + GripSlack;
     }
 
     private IMeasurableComponent Maximized()
@@ -236,96 +637,5 @@ public class TiledPanel : Panel
         }
 
         return null;
-    }
-
-    private static double Share(double at, double length, double gap)
-    {
-        var room = length - gap;
-        if (room <= 2 * MinTileSize)
-        {
-            return 0.5;
-        }
-
-        return Math.Clamp((at - gap / 2) / room, MinTileSize / room, 1 - MinTileSize / room);
-    }
-
-    private (bool Column, bool Row) GripsAt(Vector2 point)
-    {
-        if (Maximized() != null)
-        {
-            return (false, false);
-        }
-
-        var size = new Size(ActualWidth, ActualHeight);
-        var gap = SplitterThickness;
-        var (left, top) = Splits(size, gap);
-        var nearColumn = Math.Abs(point.X - (left + gap / 2)) <= gap / 2 + GripSlack;
-        var nearRow = Math.Abs(point.Y - (top + gap / 2)) <= gap / 2 + GripSlack;
-        var inRightColumn = point.X >= left + gap;
-        var inBottomRow = point.Y >= top + gap;
-        return Layout switch
-        {
-            TileLayout.TwoColumns or TileLayout.FourLeft => (nearColumn, false),
-            TileLayout.TwoRows => (false, nearRow),
-            TileLayout.ThreeLeft => (nearColumn, nearRow && inRightColumn),
-            TileLayout.ThreeTop => (nearColumn && inBottomRow, nearRow),
-            TileLayout.Four => (nearColumn, nearRow),
-            _ => (false, false)
-        };
-    }
-
-    private (double Left, double Top) Splits(Size size, double gap) =>
-        (Math.Max(0, (size.Width - gap) * Math.Clamp(ColumnSplit, 0, 1)),
-            Math.Max(0, (size.Height - gap) * Math.Clamp(RowSplit, 0, 1)));
-
-    private void LayTiles(Size size, bool maximized)
-    {
-        var width = size.Width;
-        var height = size.Height;
-        if (maximized || Layout == TileLayout.One)
-        {
-            _tiles[0] = new Rect(0, 0, width, height);
-            _tileCount = 1;
-            return;
-        }
-
-        var gap = SplitterThickness;
-        var (left, top) = Splits(size, gap);
-        var right = left + gap;
-        var bottom = top + gap;
-        var rightWidth = Math.Max(0, width - right);
-        var bottomHeight = Math.Max(0, height - bottom);
-        switch (Layout)
-        {
-            case TileLayout.TwoColumns:
-                Set(new Rect(0, 0, left, height), new Rect(right, 0, rightWidth, height));
-                break;
-            case TileLayout.TwoRows:
-                Set(new Rect(0, 0, width, top), new Rect(0, bottom, width, bottomHeight));
-                break;
-            case TileLayout.ThreeLeft:
-                Set(new Rect(0, 0, left, height), new Rect(right, 0, rightWidth, top),
-                    new Rect(right, bottom, rightWidth, bottomHeight));
-                break;
-            case TileLayout.ThreeTop:
-                Set(new Rect(0, 0, width, top), new Rect(0, bottom, left, bottomHeight),
-                    new Rect(right, bottom, rightWidth, bottomHeight));
-                break;
-            case TileLayout.FourLeft:
-                var third = Math.Max(0, (height - 2 * gap) / 3);
-                Set(new Rect(0, 0, left, height), new Rect(right, 0, rightWidth, third),
-                    new Rect(right, third + gap, rightWidth, third), new Rect(right, 2 * (third + gap), rightWidth, third));
-                break;
-            default:
-                Set(new Rect(0, 0, left, top), new Rect(right, 0, rightWidth, top),
-                    new Rect(0, bottom, left, bottomHeight), new Rect(right, bottom, rightWidth, bottomHeight));
-                break;
-        }
-    }
-
-    private void Set(params ReadOnlySpan<Rect> tiles)
-    {
-        tiles.CopyTo(_tiles);
-        _tileCount = tiles.Length;
     }
 }
