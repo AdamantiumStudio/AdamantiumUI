@@ -68,6 +68,10 @@ public class KeyboardDevice
          var preview = new KeyboardGotFocusEventArgs(previous, component, navigationMethod, modifiers);
          preview.RoutedEvent = Keyboard.PreviewGotKeyboardFocusEvent;
          component?.RaiseEvent(preview);
+         if (preview.Handled || FocusedComponent != previous)
+         {
+            return FocusedComponent == component;
+         }
 
          FocusedComponent = component;
 

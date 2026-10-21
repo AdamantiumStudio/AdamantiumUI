@@ -1472,8 +1472,11 @@ All packages share one version.
   and nothing is generated at run time (iOS, NativeAOT) - an element's handlers and an event's class handlers are read
   from arrays replaced whole on change, the class handlers of a type are picked once, and the route needs no list - a
   pointer move through 20 levels went from 4.1 µs and 1.1 KB to 0.3-0.7 µs and nothing. A delegate declared where the
-  generator does not run is still called, through `DynamicInvoke`. An exception a handler throws comes out as it is, no
-  longer wrapped in a `TargetInvocationException`.
+  generator does not run is still called, through `DynamicInvoke`; one the generated code could not name without a
+  warning or an error - nested in a generic type, over a type parameter, `[Obsolete]` as an error or with its own id,
+  `[Experimental]` - is called that way too. An exception a handler throws comes out as it is, no longer wrapped in a
+  `TargetInvocationException`; a handler given a sender or args it does not take throws `InvalidCastException` where
+  the call is generated, `ArgumentException` through `DynamicInvoke`.
 - `MSAALeveChangedHandler` is spelled `MSAALevelChangedHandler`.
 - The menu key opens a text box's context menu under its caret, by the word the menu is about, not under the box's
   left edge; any element can say where by `ContextMenuPointFromKeyboard`.
@@ -1847,7 +1850,11 @@ All packages share one version.
   test windows side by side - showed one cue between them, and written from the hold timer's thread on a test run,
   it broke when two windows held at once (a test host crashed on it).
 - `EventManager.GetRoutedEvents()` lists the registered routed events; it always gave none.
-- A hold that an automation session plays settles before its contacts lift, so it starts where no loop runs.
+- A hold that an automation session plays settles before its contacts lift, so it starts where no loop runs, and its
+  contacts lift even when the wait fails. With no loop running, a hold starts when `LoopSignal` is drained - not on the
+  hold timer's thread - and a tick left from a contact already lifted does not start the next hold of its id.
+- A `PreviewGotKeyboardFocus` handler that sets `Handled` keeps the focus where it is, as in WPF; one that moves the
+  focus elsewhere wins, and the move it interrupted is dropped - it went on, and two elements lost the focus.
 - `PreviewGotKeyboardFocus` is raised on the element taking the focus, with `KeyboardGotFocusEventArgs`: it went to the
   element losing it, with args its handlers could not take, so a handler made the focus move throw. `GotKeyboardFocus`
   says where the focus came from - its `OldFocus` was the new element.

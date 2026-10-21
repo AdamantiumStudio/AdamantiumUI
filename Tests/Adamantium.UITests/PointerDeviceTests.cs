@@ -416,6 +416,29 @@ public class PointerDeviceTests
     }
 
     [Test]
+    public void ATickLeftFromALiftedContact_DoesNotStartTheNextHoldOfItsId()
+    {
+        var states = new List<HoldingState>();
+        _left.AddHandler(Gestures.HoldingEvent, new HoldingEventHandler((_, e) => states.Add(e.HoldingState)));
+
+        using (HoldingTimeOf(TimeSpan.FromMilliseconds(5)))
+        {
+            Send(RawPointerEventType.Down, 45, PointerType.Touch, new Vector2(20, 50), 0, MouseButtons.None);
+            System.Threading.Thread.Sleep(200);
+            Send(RawPointerEventType.Up, 45, PointerType.Touch, new Vector2(20, 50), 300, MouseButtons.None);
+        }
+
+        using (HoldingTimeOf(TimeSpan.FromHours(1)))
+        {
+            Send(RawPointerEventType.Down, 45, PointerType.Touch, new Vector2(20, 50), 400, MouseButtons.None);
+            LoopSignal.Drain();
+            Send(RawPointerEventType.Up, 45, PointerType.Touch, new Vector2(20, 50), 500, MouseButtons.None);
+        }
+
+        Assert.That(states, Is.Empty);
+    }
+
+    [Test]
     public void TheMouse_NeverHolds()
     {
         var states = new List<HoldingState>();

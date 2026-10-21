@@ -57,15 +57,24 @@ internal sealed class HoldingRecognizer
 
     private void OnTick(object sender, EventArgs e)
     {
-        var id = (uint)((DispatcherTimer)sender).Tag;
+        var timer = (DispatcherTimer)sender;
         var timestamp = (uint)Environment.TickCount;
         if (LoopSignal.IsClaimed || SynchronizationContext.Current != null)
         {
-            Elapsed(id, timestamp);
+            ElapsedFor(timer, timestamp);
             return;
         }
 
-        LoopSignal.Post(() => Elapsed(id, timestamp));
+        LoopSignal.Post(() => ElapsedFor(timer, timestamp));
+    }
+
+    private void ElapsedFor(DispatcherTimer timer, uint timestamp)
+    {
+        var id = (uint)timer.Tag;
+        if (_holds.TryGetValue(id, out var hold) && hold.Timer == timer)
+        {
+            Elapsed(id, timestamp);
+        }
     }
 
     private void Finish(uint id, HoldingState state, uint timestamp)

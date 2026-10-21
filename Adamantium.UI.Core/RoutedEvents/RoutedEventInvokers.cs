@@ -10,7 +10,8 @@ namespace Adamantium.UI.Core.RoutedEvents;
 /// NativeAOT). A delegate type nothing registered is called through <see cref="Delegate.DynamicInvoke"/>.</summary>
 public static class RoutedEventInvokers
 {
-    private static readonly ConcurrentDictionary<Type, Action<Delegate, object, RoutedEventArgs>> Invokers = new();
+    private static readonly ConcurrentDictionary<Type, HandlerCall> Calls = new();
+    private static readonly Action<Delegate, object, RoutedEventArgs> DynamicCall = Dynamic;
 
     /// <summary>Registers the call for handlers of <paramref name="delegateType"/>. Called from generated module
     /// initializers; the first registration of a type wins.</summary>
@@ -19,18 +20,19 @@ public static class RoutedEventInvokers
         ArgumentNullException.ThrowIfNull(delegateType);
         ArgumentNullException.ThrowIfNull(invoke);
 
-        Invokers.TryAdd(delegateType, invoke);
+        Calls.AddOrUpdate(delegateType, static (type, call) => new HandlerCall(type, call),
+            static (type, known, call) => known.Invoke == DynamicCall ? new HandlerCall(type, call) : known, invoke);
     }
 
-    internal static Action<Delegate, object, RoutedEventArgs> For(Type delegateType)
+    internal static HandlerCall For(Type delegateType)
     {
-        if (Invokers.TryGetValue(delegateType, out var invoke))
+        if (Calls.TryGetValue(delegateType, out var call))
         {
-            return invoke;
+            return call;
         }
 
         RuntimeHelpers.RunModuleConstructor(delegateType.Module.ModuleHandle);
-        return Invokers.TryGetValue(delegateType, out invoke) ? invoke : Dynamic;
+        return Calls.GetOrAdd(delegateType, static type => new HandlerCall(type, DynamicCall));
     }
 
     private static void Dynamic(Delegate handler, object sender, RoutedEventArgs e)

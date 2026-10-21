@@ -14,7 +14,7 @@ public class EventSubscription
       var known = call;
       if (known == null || known.DelegateType != handler.GetType())
       {
-         known = new HandlerCall(handler.GetType(), RoutedEventInvokers.For(handler.GetType()));
+         known = RoutedEventInvokers.For(handler.GetType());
          call = known;
       }
 
