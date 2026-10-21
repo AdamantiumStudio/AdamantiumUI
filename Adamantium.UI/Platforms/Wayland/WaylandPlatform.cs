@@ -1,10 +1,10 @@
+using System;
 using System.Collections.Generic;
 using System.Threading;
-using System;
-using Adamantium.Core.DependencyInjection;
 using Adamantium.Core;
-using Adamantium.UI.Core.Input;
+using Adamantium.Core.DependencyInjection;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Input;
 using Adamantium.Wayland;
 
 namespace Adamantium.UI.Platforms.Wayland;
@@ -147,6 +147,7 @@ public sealed unsafe class WaylandPlatform : IApplicationPlatform
             }
 
             Display.DispatchPending();
+            Seat.Flush();
 
             if (ready > 0 && (fds[1].Revents & PosixInterop.PollIn) != 0)
             {
@@ -231,5 +232,6 @@ public sealed unsafe class WaylandPlatform : IApplicationPlatform
         resolver.RegisterSingleton<IApplicationPlatform, WaylandPlatform>();
         resolver.RegisterSingleton<IDragGhost, WaylandDragGhost>();
         resolver.RegisterSingleton<INativeDragDrop, WaylandDragDrop>();
+        resolver.RegisterSingleton<ISyntheticPointerInput, WaylandSyntheticPointerInput>();
     }
 }

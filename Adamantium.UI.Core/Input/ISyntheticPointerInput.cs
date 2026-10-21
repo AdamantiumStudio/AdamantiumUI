@@ -11,7 +11,9 @@ public interface ISyntheticPointerInput
     /// <summary>Plays a gesture, frame by frame, and returns once the system has taken them all. Each frame holds every
     /// contact down at that moment, the same contact at the same index in every frame: one for a pen, up to ten fingers.
     /// <see cref="PointerType.Mouse"/> is not a contact and is refused.</summary>
-    void Inject(PointerType type, IReadOnlyList<IReadOnlyList<SyntheticPointerFrame>> frames);
+    /// <exception cref="InvalidOperationException">A contact would land on anything but <paramref name="window"/>: the
+    /// system presses whatever is on top there, and that must never be someone else's.</exception>
+    void Inject(IWindow window, PointerType type, IReadOnlyList<IReadOnlyList<SyntheticPointerFrame>> frames);
 }
 
 /// <summary>One contact in one frame of a synthetic gesture: it went down, moved, went up, or a pen went out of range

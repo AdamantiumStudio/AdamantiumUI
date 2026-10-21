@@ -122,17 +122,12 @@ internal static class InputSimulator
     // How far apart the system's frames come, as ISyntheticPointerInput plays them.
     private static readonly TimeSpan SystemFrameGap = TimeSpan.FromMilliseconds(16);
 
-    /// <summary>Contacts tapped together, or stroked along their paths, as desktop frames for the system's own input -
-    /// each frame holding every contact; a tap that rests <paramref name="hold"/> before it lifts is a long press.
-    /// Refused unless every contact lands on one window of this application, on top of the desktop there: the system
-    /// presses whatever window is there, and that must never be someone else's.</summary>
+    /// <summary>Contacts tapped together, or stroked along their paths, as desktop frames for the system's own input, all
+    /// on one window; a tap that rests <paramref name="hold"/> before it lifts is a long press.</summary>
     public static (IWindow Window, SyntheticPointerFrame[][] Frames) SystemFrames(IReadOnlyList<ContactPath> paths,
         IReadOnlyList<Contact> contacts, TimeSpan hold = default)
     {
         const int steps = 8;
-        var platform = UIApplication.Current?.Container is { } container && container.IsRegistered<IApplicationPlatform>()
-            ? container.Resolve<IApplicationPlatform>()
-            : null;
 
         IWindow window = null;
         var tracks = new List<List<Vector2>>();
@@ -145,13 +140,6 @@ internal static class InputSimulator
             }
 
             window = at;
-            var landing = window.ClientToScreen(start);
-            if (platform == null || platform.WindowFromScreenPoint(landing) != window.Handle)
-            {
-                throw new AutomationException(
-                    $"{path.Label} is not on top of the desktop at ({landing.X:0}, {landing.Y:0}): the system would press whatever is there.");
-            }
-
             // A held contact keeps reporting where it rests, a frame apart, as a digitizer does.
             var points = new List<Vector2> { start };
             points.AddRange(Enumerable.Repeat(start, (int)Math.Ceiling(hold / SystemFrameGap)));

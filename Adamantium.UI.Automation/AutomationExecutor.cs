@@ -325,7 +325,7 @@ public sealed class AutomationExecutor
                 return plan.Frames;
             }, timeout);
 
-            await Task.Run(() => input.Inject(type, frames));
+            await Task.Run(() => input.Inject((IWindow)window, type, frames));
             injected = true;
 
             var watch = Stopwatch.StartNew();
