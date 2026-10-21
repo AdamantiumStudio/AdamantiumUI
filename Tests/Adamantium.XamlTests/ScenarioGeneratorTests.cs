@@ -30,7 +30,7 @@ public class ScenarioGeneratorTests
         {
             Assert.That(scenario.Problems, Is.Empty);
             Assert.That(scenario.Steps[0], Is.EqualTo(
-                $"#line 3 \"{AumlCodegenHarness.Literal(AumlCodegenHarness.PathOf("Scenarios/Save.ascenario"))}\"\n" +
+                $"#line 3 \"{AumlCodegenHarness.PathOf("Scenarios/Save.ascenario")}\"\n" +
                 "await session.Find(global::Adamantium.UI.Automation.By.Id(\"Save\")).InvokeAsync();"));
             Assert.That(scenario.Steps[1], Does.StartWith("#line 4 ")
                 .And.Contain("Expectation(\"name\", \"Saved.\")")
