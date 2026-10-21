@@ -12,15 +12,4 @@ public class UnboundMouseEventArgs : PointerEventArgs
     }
 
     public Vector2 Delta { get; }
-
-    protected override void InvokeEventHandler(Delegate handler, object target)
-    {
-        if (handler is RawMouseEventHandler typed)
-        {
-            typed(target, this);
-            return;
-        }
-
-        base.InvokeEventHandler(handler, target);
-    }
 }

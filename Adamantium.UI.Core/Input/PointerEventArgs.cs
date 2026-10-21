@@ -22,15 +22,4 @@ public class PointerEventArgs : InputEventArgs
 
     /// <summary>The pointer in <paramref name="relativeTo"/>'s units, with what it reported for this event.</summary>
     public PointerPoint GetCurrentPoint(IInputComponent relativeTo) => new(Pointer, GetPosition(relativeTo), Properties);
-
-    protected override void InvokeEventHandler(Delegate handler, object target)
-    {
-        if (handler is PointerEventHandler typed)
-        {
-            typed(target, this);
-            return;
-        }
-
-        base.InvokeEventHandler(handler, target);
-    }
 }

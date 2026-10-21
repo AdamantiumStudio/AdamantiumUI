@@ -10,17 +10,6 @@ public class HoldingEventArgs : PointerEventArgs
     }
 
     public HoldingState HoldingState { get; }
-
-    protected override void InvokeEventHandler(Delegate handler, object target)
-    {
-        if (handler is HoldingEventHandler typed)
-        {
-            typed(target, this);
-            return;
-        }
-
-        base.InvokeEventHandler(handler, target);
-    }
 }
 
 public delegate void HoldingEventHandler(object sender, HoldingEventArgs e);

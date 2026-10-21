@@ -16,15 +16,4 @@ public class TextCompositionEventArgs : RoutedEventArgs
 
     /// <summary>Where the composition's own cursor stands in <see cref="Text"/>.</summary>
     public int CursorPosition { get; }
-
-    protected override void InvokeEventHandler(Delegate handler, object target)
-    {
-        if (handler is TextCompositionEventHandler typed)
-        {
-            typed(target, this);
-            return;
-        }
-
-        base.InvokeEventHandler(handler, target);
-    }
 }

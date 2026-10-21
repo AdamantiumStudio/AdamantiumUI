@@ -14,15 +14,4 @@ public class PointerWheelEventArgs : PointerEventArgs
     public int Delta { get; }
 
     public bool IsHorizontal { get; }
-
-    protected override void InvokeEventHandler(Delegate handler, object target)
-    {
-        if (handler is PointerWheelEventHandler typed)
-        {
-            typed(target, this);
-            return;
-        }
-
-        base.InvokeEventHandler(handler, target);
-    }
 }

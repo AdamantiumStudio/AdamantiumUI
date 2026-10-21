@@ -1439,13 +1439,14 @@ All packages share one version.
 
 - `FontVariationList.Parse` reads axis values with the engine's `FontVariation.ParseList`, one reader for markup and
   documents; a value that is not finite (`wght=Infinity`) is refused now.
-- Raising a routed event allocates nothing and takes no lock once each element type has been seen: the args call the
-  handler, as WPF's do - `RoutedEventArgs.InvokeEventHandler`, which each args class with a handler type of its own
-  overrides with a direct call, so a handler of the event's type runs with no reflection and nothing generated at run
-  time (iOS, NativeAOT) - an element's handlers and an event's class handlers are read from arrays replaced whole on
-  change, the class handlers of a type are picked once, and the route needs no list - a pointer move through 20 levels
-  went from 4.1 µs and 1.1 KB to 0.3-0.55 µs and nothing. A handler of a type no args class knows still runs, through
-  `DynamicInvoke`. An exception a handler throws comes out as it is, no longer wrapped in a `TargetInvocationException`.
+- Raising a routed event allocates nothing and takes no lock once each element type has been seen: a handler is called
+  directly, by a call the UI generator writes for every handler delegate an assembly declares (and every
+  `EventHandler<>` of routed args it names with `typeof`) and registers with `RoutedEventInvokers`, so no reflection runs
+  and nothing is generated at run time (iOS, NativeAOT) - an element's handlers and an event's class handlers are read
+  from arrays replaced whole on change, the class handlers of a type are picked once, and the route needs no list - a
+  pointer move through 20 levels went from 4.1 µs and 1.1 KB to 0.3-0.7 µs and nothing. A delegate declared where the
+  generator does not run is still called, through `DynamicInvoke`. An exception a handler throws comes out as it is, no
+  longer wrapped in a `TargetInvocationException`.
 - `MSAALeveChangedHandler` is spelled `MSAALevelChangedHandler`.
 - The menu key opens a text box's context menu under its caret, by the word the menu is about, not under the box's
   left edge; any element can say where by `ContextMenuPointFromKeyboard`.
@@ -1802,6 +1803,7 @@ All packages share one version.
 ### Fixed
 
 - `EventManager.GetRoutedEvents()` lists the registered routed events; it always gave none.
+- A hold that an automation session plays settles before its contacts lift, so it starts where no loop runs.
 - `PreviewGotKeyboardFocus` is raised on the element taking the focus, with `KeyboardGotFocusEventArgs`: it went to the
   element losing it, with args its handlers could not take, so a handler made the focus move throw. `GotKeyboardFocus`
   says where the focus came from - its `OldFocus` was the new element.

@@ -37,17 +37,6 @@ public class ManipulationEventArgs : InputEventArgs
     public double TotalScale { get; init; } = 1;
 
     public double TotalRotation { get; init; }
-
-    protected override void InvokeEventHandler(Delegate handler, object target)
-    {
-        if (handler is ManipulationEventHandler typed)
-        {
-            typed(target, this);
-            return;
-        }
-
-        base.InvokeEventHandler(handler, target);
-    }
 }
 
 public delegate void ManipulationEventHandler(object sender, ManipulationEventArgs e);

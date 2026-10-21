@@ -29,7 +29,7 @@ public class FontVariationListTests
             Is.EqualTo(new[] { "wght=650", "GRAD=-50.5" }));
     }
 
-    [TestCase("wgt=650")]
+    [TestCase("weight=650")]
     [TestCase("wght=heavy")]
     [TestCase("wght")]
     public void Parse_RefusesWhatIsNotAnAxisAndValue(string text)

@@ -11,8 +11,8 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests;
 
-// Every routed event of the framework calls a handler of its own type straight from its args class, never through
-// DynamicInvoke - which also keeps it working where no code can be generated at run time (iOS, NativeAOT).
+// Every routed event of the framework calls a handler of its own type through the call the generator wrote, never
+// through DynamicInvoke - which also keeps it working where no code can be generated at run time (iOS, NativeAOT).
 [TestFixture]
 public class RoutedEventArgsInvokeTests
 {

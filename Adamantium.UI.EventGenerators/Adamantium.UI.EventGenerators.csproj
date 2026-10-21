@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+		<TargetFramework>netstandard2.0</TargetFramework>
+		<Configurations>Debug;Release</Configurations>
+		<Platforms>AnyCPU</Platforms>
+		<LangVersion>latest</LangVersion>
+		<Nullable>disable</Nullable>
+		<EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+		<IsRoslynComponent>true</IsRoslynComponent>
+		<IsPackable>false</IsPackable>
+    </PropertyGroup>
+
+    <!-- Nothing but Roslyn: the libraries that declare routed-event handlers (UI.Core, UI.Controls) run it as an
+         analyzer before anything else of the UI is built. -->
+    <ItemGroup>
+        <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.3.0" PrivateAssets="all" />
+        <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="5.3.0" PrivateAssets="all" />
+    </ItemGroup>
+
+</Project>

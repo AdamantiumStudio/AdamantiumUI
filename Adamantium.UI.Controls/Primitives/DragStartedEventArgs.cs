@@ -11,15 +11,4 @@ public class DragStartedEventArgs:RoutedEventArgs
    {
       Offset = offset;
    }
-
-   protected override void InvokeEventHandler(Delegate handler, object target)
-   {
-      if (handler is DragStartedEventHandler typed)
-      {
-         typed(target, this);
-         return;
-      }
-
-      base.InvokeEventHandler(handler, target);
-   }
 }

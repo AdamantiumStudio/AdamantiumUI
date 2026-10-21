@@ -17,14 +17,4 @@ public class SizeChangedEventArgs:RoutedEventArgs
       HeightChanged = heightChanged;
    }
 
-   protected override void InvokeEventHandler(Delegate handler, object target)
-   {
-      if (handler is SizeChangedEventHandler typed)
-      {
-         typed(target, this);
-         return;
-      }
-
-      base.InvokeEventHandler(handler, target);
-   }
 }

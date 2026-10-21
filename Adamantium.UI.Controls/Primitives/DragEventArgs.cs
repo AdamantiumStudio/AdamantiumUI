@@ -11,15 +11,4 @@ public class DragEventArgs:RoutedEventArgs
    {
       Change = changedPoint;
    }
-
-   protected override void InvokeEventHandler(Delegate handler, object target)
-   {
-      if (handler is DragEventHandler typed)
-      {
-         typed(target, this);
-         return;
-      }
-
-      base.InvokeEventHandler(handler, target);
-   }
 }

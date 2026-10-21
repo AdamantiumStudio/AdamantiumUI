@@ -10,15 +10,4 @@ public class MSAALevelChangedEventArgs : RoutedEventArgs
     {
         MSAALevel = level;
     }
-
-    protected override void InvokeEventHandler(Delegate handler, object target)
-    {
-        if (handler is MSAALevelChangedHandler typed)
-        {
-            typed(target, this);
-            return;
-        }
-
-        base.InvokeEventHandler(handler, target);
-    }
 }

@@ -9,15 +9,4 @@ public class DragCompletedEventArgs:DragEventArgs
    {
       IsCanceled = isCanceled;
    }
-
-   protected override void InvokeEventHandler(Delegate handler, object target)
-   {
-      if (handler is DragCompletedEventHandler typed)
-      {
-         typed(target, this);
-         return;
-      }
-
-      base.InvokeEventHandler(handler, target);
-   }
 }
