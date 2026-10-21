@@ -1900,6 +1900,11 @@ All packages share one version.
   installed, not DejaVu Sans whether it is or not.
 - The language server follows a `ProjectReference` written with backslashes on Linux too, and notices a project's
   first build when its output folder and assembly appear at once.
+- A command run in an `OverlayWindow` - a slider of a tool window, its focus scope's own - reached nothing: the card
+  hung on the popup layer with no owner. It is its host window's logical child while it is shown, as a context menu
+  is its owner's, so the command goes on to the field the host's focus is in, and is asked of it. Opened from a place
+  whose commands go to a `CommandManager.CommandTarget` of their own - a ribbon's, to its document - it keeps that
+  target, so with no field focused what is run in it goes there.
 - An `Expander`'s content always opened downward: the Fluent and Graphite templates read no `ExpandDirection`. The header
   now docks to the side the direction names - top, bottom, right or left - and the content opens on the other, with the
   hairline and the chevron following.
