@@ -57,8 +57,9 @@ public sealed class WindowsDragDrop : INativeDragDrop
         Win32Interop.RevokeDragDrop(registration.Handle);
     }
 
+    // Only external drags come here: an in-app one finds the window under the pointer with WindowFromPoint.
     public bool BeginDrag(IWindow source, IDataPackage data, DragDropEffects allowed, DragGhostImage ghost,
-        Action<DragDropEffects> completed)
+        Action<DragDropEffects> completed, bool external)
     {
         // The hidden window is created during registration, on the pump thread - never from here (the loop thread).
         if (!IsAvailable || _dragActive || _messageWindow == null) return false;

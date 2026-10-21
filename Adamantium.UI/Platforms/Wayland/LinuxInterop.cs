@@ -2,8 +2,9 @@ using System.Runtime.InteropServices;
 
 namespace Adamantium.UI.Platforms.Wayland;
 
-/// <summary>The C library calls the Wayland loop waits with: one poll over the compositor's socket and an eventfd that
-/// <see cref="WaylandPlatform.Signal"/> writes to.</summary>
+/// <summary>The C library calls the Wayland side needs: the loop's poll over the compositor's socket and the eventfd
+/// <see cref="WaylandPlatform.Signal"/> writes to, the pipes clipboard data travels through, and the shared memory a
+/// drag's ghost is drawn in.</summary>
 internal static unsafe class LinuxInterop
 {
     private const string Library = "libc";
@@ -13,6 +14,10 @@ internal static unsafe class LinuxInterop
     public const int EventFdNonBlock = 0x800;
 
     public const int EventFdCloseOnExec = 0x80000;
+
+    public const int OpenCloseOnExec = 0x80000;
+
+    public const uint MemFdCloseOnExec = 0x1;
 
     [StructLayout(LayoutKind.Sequential)]
     public struct PollFd
@@ -36,4 +41,10 @@ internal static unsafe class LinuxInterop
 
     [DllImport(Library)]
     public static extern int close(int fd);
+
+    [DllImport(Library, SetLastError = true)]
+    public static extern int pipe2(int* fds, int flags);
+
+    [DllImport(Library, SetLastError = true)]
+    public static extern int memfd_create(string name, uint flags);
 }

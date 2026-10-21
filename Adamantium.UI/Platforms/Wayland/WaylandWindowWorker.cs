@@ -75,6 +75,8 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
     /// <summary>The window, or null once it is closed: events still on their way for it go nowhere.</summary>
     public IWindow Window => closed ? null : window;
 
+    internal WlSurface Surface => surface;
+
     /// <summary>The scale the compositor wants the window drawn at.</summary>
     public double Scale { get; private set; } = 1;
 
@@ -449,6 +451,8 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
 
         closed = true;
         platform.Unregister(surface.Handle);
+
+        Input.DragDrop.UnregisterNativeDropTarget(window);
 
         // The renderer lets go of the swapchain and its surface here, before the wl_surface they draw to goes.
         UIContext.UIApplication.RemoveWindow(window);
