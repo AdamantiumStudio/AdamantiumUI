@@ -22,6 +22,8 @@ public partial class RenderCache
     // (FlushBatches draws rects THEN text). Both batches share one clip GROUP (_batchScissor): a scissor (or text-atlas)
     // change flushes both together, preserving order.
     private RectBatchCollector _rectBatch;
+
+    internal RectBatchCollector RectBatch => _rectBatch;
     private EllipseBatchCollector _ellipseBatch;   // SDF family, same fill layer as rects (below text)
     private RegularPolygonCollector _polygonBatch; // ...and its polygon sibling, in that same fill layer
 
@@ -92,6 +94,8 @@ public partial class RenderCache
     // Own buffer manager, distinct from the per-unit geometry buffers.
     private GpuBufferManager _instanceBuffers;
     private InstancedFillCollector _instancedFill;
+
+    internal InstancedFillCollector InstancedFill => _instancedFill;
 
     // --- Retained draw (clean-frame op replay) ---
     // Non-clean frames record the ordered GPU op stream; clean frames replay it over the retained buffers instead of
@@ -570,6 +574,7 @@ public partial class RenderCache
         LastFrameReplayed = false;
         LastFrameWithheld = false;
         LastDrawPath = DrawPath.Walk;
+        LastRecordedReplay = RecordedReplay.Issued;
         DrawWalkMs = 0;
         _traceWhy = 0;
         try
@@ -759,10 +764,12 @@ public partial class RenderCache
             LastDrawPath = DrawPath.Replay;
             DrawMovedMs = System.Diagnostics.Stopwatch.GetElapsedTime(phase0).TotalMilliseconds;
             phase0 = System.Diagnostics.Stopwatch.GetTimestamp();
-            ExecuteOps(device, fullScissor);
+            ExecuteOpsRecorded(device, fullScissor);
             DrawOpsMs = System.Diagnostics.Stopwatch.GetElapsedTime(phase0).TotalMilliseconds;
             return;
         }
+
+        ForgetRecordedHashes();
 
         // Fast-path PARTIAL replay: a geometry-only partial that only recolored/updated already-batched tiles in place (no
         // splice). Patch just those slots, then replay - O(dirty). ONLY when nothing MOVED (!LastBuildTransformDirty):

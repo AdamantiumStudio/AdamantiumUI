@@ -18,9 +18,10 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Expander">
-                    <Grid RowDefinitions="Auto,Auto">
+                    <!-- The header docks to the side ExpandDirection names it for; the content fills the rest. -->
+                    <DockPanel LastChildFill="True">
                         <!-- A header's text does not select - see Fluent's Expander. -->
-                        <Border Grid.Row="0" x:Name="PART_Header"
+                        <Border DockPanel.Dock="Top" x:Name="PART_Header"
                                 TextBlock.IsTextSelectionEnabled="False"
                                 Background="{ObservableResource SolidBackgroundFillColorTertiary}"
                                 BorderBrush="{ObservableResource ControlStrokeColorDefault}"
@@ -44,7 +45,7 @@
                             </Grid>
                         </Border>
 
-                        <Border Grid.Row="1" x:Name="PART_Content" Visibility="Collapsed">
+                        <Border x:Name="PART_Content" Visibility="Collapsed">
                             <ContentPresenter
                                     x:Name="PART_ContentPresenter"
                                     HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
@@ -52,12 +53,49 @@
                                     Content="{TemplateBinding Content}"
                                     ContentTemplate="{TemplateBinding ContentTemplate}"/>
                         </Border>
-                    </Grid>
+                    </DockPanel>
                     <ControlTemplate.Triggers>
+                        <!-- Where the header sits, and its hairline on the side towards the content. -->
+                        <PropertyTrigger Property="ExpandDirection" Value="Up">
+                            <Setter TargetName="PART_Header" Property="DockPanel.Dock" Value="Bottom"/>
+                            <Setter TargetName="PART_Header" Property="BorderThickness" Value="0 1 0 0"/>
+                        </PropertyTrigger>
+                        <PropertyTrigger Property="ExpandDirection" Value="Left">
+                            <Setter TargetName="PART_Header" Property="DockPanel.Dock" Value="Right"/>
+                            <Setter TargetName="PART_Header" Property="BorderThickness" Value="1 0 0 0"/>
+                            <Setter TargetName="Glyph" Property="Source" Value="{ResourceReference ChevronLeftIcon}"/>
+                        </PropertyTrigger>
+                        <PropertyTrigger Property="ExpandDirection" Value="Right">
+                            <Setter TargetName="PART_Header" Property="DockPanel.Dock" Value="Left"/>
+                            <Setter TargetName="PART_Header" Property="BorderThickness" Value="0 0 1 0"/>
+                        </PropertyTrigger>
+                        <!-- The chevron as Fluent's: up or down, right while folded and into the content while open; to a
+                             side, where the content opens while folded and back to the header while open. -->
                         <PropertyTrigger Property="IsExpanded" Value="true">
                             <Setter TargetName="PART_Content" Property="Visibility" Value="Visible"/>
                             <Setter TargetName="Glyph" Property="Source" Value="{ResourceReference ChevronDownIcon}"/>
                         </PropertyTrigger>
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsExpanded" Value="true"/>
+                                <Condition Property="ExpandDirection" Value="Up"/>
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="Glyph" Property="Source" Value="{ResourceReference ChevronUpIcon}"/>
+                        </MultiTrigger>
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsExpanded" Value="true"/>
+                                <Condition Property="ExpandDirection" Value="Left"/>
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="Glyph" Property="Source" Value="{ResourceReference ChevronRightIcon}"/>
+                        </MultiTrigger>
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsExpanded" Value="true"/>
+                                <Condition Property="ExpandDirection" Value="Right"/>
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="Glyph" Property="Source" Value="{ResourceReference ChevronLeftIcon}"/>
+                        </MultiTrigger>
                         <PropertyTrigger Property="IsPointerOver" Value="true">
                             <Setter TargetName="PART_Header" Property="Background"
                                     Value="{ObservableResource ControlFillColorTertiary}"/>

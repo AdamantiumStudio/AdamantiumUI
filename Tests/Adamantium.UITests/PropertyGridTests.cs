@@ -2471,4 +2471,18 @@ public class PropertyGridTests
         Assert.That(said, Is.EqualTo(new[] { "before 3", "after 10" }),
             "the value before the write exists only between the two, and that is what undo is made of");
     }
+
+    [Test]
+    public void AWriteRunsTheValueChangedCommand()
+    {
+        var target = new Target { Scale = 3 };
+        var scale = new NumericProperty { Header = "Scale", Binding = new Binding("Scale") };
+        var grid = Built(Section(target, scale));
+        var command = new Recording();
+        grid.ValueChangedCommand = command;
+
+        grid.Write(RowOf(grid, scale), 10.0);
+        Assert.That(command.Ran, Is.InstanceOf<PropertyValuesChangedEventArgs>());
+        Assert.That(((PropertyValuesChangedEventArgs)command.Ran).Property, Is.SameAs(scale));
+    }
 }
