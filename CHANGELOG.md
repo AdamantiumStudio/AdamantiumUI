@@ -1461,6 +1461,7 @@ All packages share one version.
   time of the last window frame.
 - `Adamantium.UI.FX` compiles the UI's shaders with `Adamantium.Vulkan.Slang` 1.1.0 - Slang 2026.17, for Windows and
   Linux - and `Adamantium.UI` maps Vulkan's library on Linux too, with `Adamantium.Vulkan.Loader` 1.0.3.
+- `Adamantium.UI` takes `Adamantium.Vulkan` 1.0.4, the version the engine's graphics take.
 - Colors read as text go through the engine's two readers: `ColorPicker`'s hex box (still six or eight digits - it
   commits as it is typed) and the markup language server through `Colors.TryParse`, the language server reading
   `#RGB` and `#ARGB` as the framework now does and no "#" with 1, 2, 5 or 7 digits; a drawing's SVG colors
