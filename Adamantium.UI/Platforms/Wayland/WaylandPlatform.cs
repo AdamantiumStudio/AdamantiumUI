@@ -341,6 +341,5 @@ public sealed unsafe class WaylandPlatform : IApplicationPlatform
         resolver.RegisterSingleton<IDragGhost, WaylandDragGhost>();
         resolver.RegisterSingleton<INativeDragDrop, WaylandDragDrop>();
         resolver.RegisterSingleton<ISyntheticPointerInput, WaylandSyntheticPointerInput>();
-        resolver.RegisterSingleton<Core.Text.ISpellChecker, Linux.EnchantSpellChecker>();
     }
 }

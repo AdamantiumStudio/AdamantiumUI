@@ -1518,6 +1518,10 @@ All packages share one version.
 
 ### Changed
 
+- Each platform's builder registers its gamepads, where `MultiverseApplication` used to pick them by the system it ran
+  on: `WindowsPlatform.Initialize` registers `WindowsGamepadBackend` (GameInput, else XInput, chosen when first asked
+  for), and the new `LinuxPlatform.Initialize` registers the evdev gamepads and Enchant spell checking - what Linux
+  gives whatever draws the windows - before `WaylandPlatform.Initialize`.
 - `TextBoxBase.Paste(string)` is where pasted text goes in, from the clipboard or the primary selection alike;
   `PasteFromClipboard` hands it the clipboard's, and `PasswordBox` overrides `Paste` instead.
 - A window shown for the first time is activated only when its `ActivateOnShow` asks for it.
