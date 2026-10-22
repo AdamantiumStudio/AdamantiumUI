@@ -17,6 +17,11 @@
         <Setter Property="LoadingIndicatorText" Value="{Localize WindowStrings.SwitchingTheme}"/>
     </Style>
 
+    <!-- A dialog in a window of its own: its content sits as far in as in the in-window dialog. -->
+    <Style Selector="Window.Dialog">
+        <Setter Property="Padding" Value="{ResourceReference PaddingSurface}"/>
+    </Style>
+
     <Style Selector="Window">
         <Setter Property="Template">
             <Setter.Value>
@@ -39,7 +44,8 @@
                             <ContentPresenter x:Name="PART_ContentPresenter" Grid.Row="1"
                                     Content="{TemplateBinding Content}"
                                     ContentTemplate="{TemplateBinding ContentTemplate}"
-                                    ContentTemplateSelector="{TemplateBinding ContentTemplateSelector}"/>
+                                    ContentTemplateSelector="{TemplateBinding ContentTemplateSelector}"
+                                    Margin="{TemplateBinding Padding}"/>
 
                             <ResizeGripper x:Name="PART_ResizeGripper" Grid.Row="1"
                                     HorizontalAlignment="Right" VerticalAlignment="Bottom"

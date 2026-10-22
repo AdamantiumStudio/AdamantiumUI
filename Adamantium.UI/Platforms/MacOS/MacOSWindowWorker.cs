@@ -48,8 +48,7 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
         MacOSInterop.SetWindowDelegate(window.Handle, windowDelegate);
         macOsApp.AddWindow(window);
 
-        window.ClientWidth = (uint) window.Width;
-        window.ClientHeight = (uint) window.Height;
+        window.UpdateClientSizeFromPlatform((uint)window.Width, (uint)window.Height);
 
         MacOSInterop.AddWindowDidResizeCallback(windowDelegate,
             Marshal.GetFunctionPointerForDelegate(didResizeDelegate));
@@ -70,8 +69,7 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
         window.Height = (int)future.Height;
 
         var size = MacOSInterop.GetViewSize(window.Handle);
-        window.ClientWidth = (uint)size.Width;
-        window.ClientHeight = (uint) size.Height;
+        window.UpdateClientSizeFromPlatform((uint)size.Width, (uint)size.Height);
 
     }
         
@@ -81,8 +79,7 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
         window.Height = (int)current.Height;
 
         var size = MacOSInterop.GetViewSize(window.Handle);
-        window.ClientWidth = (uint)size.Width;
-        window.ClientHeight = (uint) size.Height;
+        window.UpdateClientSizeFromPlatform((uint)size.Width, (uint)size.Height);
     }
 
     public void SetTitle(string title)

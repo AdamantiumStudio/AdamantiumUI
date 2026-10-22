@@ -7,6 +7,14 @@ All packages share one version.
 
 ### Added
 
+- `IWindow.SizeToContent` (`Manual`, `Width`, `Height`, `WidthAndHeight`): a window that follows what its content asks
+  for on those sides, fitted again when the content's size changes, so a size the user gives it stays until then (the
+  fitted size coming back from the OS, rounded to its pixels, is not such a size). By default a window keeps the size
+  it is given. `WindowDialogHost` turns it on for the sides a dialog states no size of.
+- `IWindow.UpdateClientSizeFromPlatform`: the platform reports the client size it gave the window - a resize by its
+  border, maximize, restore, or an asked-for size coming back rounded - the way `UpdatePositionFromPlatform` reports a
+  move. Only a size the window did not ask for, in the normal state, ends `SizeToContent`; a size set from code
+  always does. The Win32, Wayland and macOS workers report through it, and set the state before the size.
 - Docking on Wayland: a panel torn off, and a floating window dragged by its title bar, ride under the pointer through
   `xdg_toplevel_drag` - the compositor carries the window in a drag of our own type, which no other client takes, and
   our windows are told where the pointer is over them. `WindowDragPointer` holds that point while such a drag lasts;
@@ -1987,6 +1995,37 @@ All packages share one version.
   panel's own visibility. It reads the ancestors' too, and asks for a frame when one of them is shown again.
 - A type whose `ClipToBounds` is on by default did not clip: the value the renderer reads only followed changes, and a
   default is no change.
+- A window whose content asks for less than the window - a dialog shown in a window of its own - drew its frame, title
+  bar and content at the content's size in a corner of the window, the rest left empty: a root was arranged at its
+  desired size. A root now takes the area it is given, without its `Width`/`Height`/`Min`/`Max` (a window's
+  `Width`/`Height` are its OS outer size); a window follows its content only with `SizeToContent`.
+  `WindowUniverseOutput` arranges its window at the client size too.
+- A docking panel out in a window of its own jumped to another place when the theme changed, and the application could
+  fail on Wayland: the swap builds the view anew, and the new `DockingArea` closed the old one's windows and opened its
+  own. The `DockingWorkspace` now hands the windows over; a floating root of the new arrangement that shows the same
+  panes takes its window, open where it is, and only the windows nothing takes are closed. Loading a layout reuses
+  the windows of the arrangement it replaces the same way. Panes a region opens in an area not built yet, and panes
+  that may only float, are now placed by the layout being loaded and not first where they asked to be: a pane out in
+  a window was opened in a second window as well, and the closing of that one discarded the pane - after the swap
+  the window showed a dead tab (wrong colors, no changed mark), and docking it back did nothing. A floating pane the
+  loaded layout leaves out takes a window of the replaced arrangement too.
+- A tool closed before a theme swap - or before a saved layout was loaded - came back open: a layout did not say which
+  tools were put away. `DockingLayoutSerializer.Save` takes them (`hidden`) and writes them with the side each comes
+  back to, with their restore keys and states; `ReadHidden` reads them, and `DockingArea.LoadLayout` keeps those tools
+  put away. A layout also keeps the pane worked in (`activePane`, `ReadActivePane`), so the accent comes back with the
+  arrangement instead of landing on whatever was opened last. A load that puts an open tool away raises `PaneClosed`
+  and takes the accent off it; a view rebuilt by a theme swap does not announce tools closed long before. A layout
+  loaded into an area not built yet is applied once it is built, so markup arriving later no longer replaces it.
+- A dialog fitted to its content in a window of its own (`SizeToContent`) was centered at the size it started with,
+  then grew from its corner. It is moved back to center as it is fitted, until it first shows or is moved, and kept
+  inside the screen's work area.
+- A docking layout file with a value of the wrong kind in one of its tables, or a table named twice, threw on load or
+  migration instead of being read as far as it could.
+- A dialog in the window's overlay sat twice as far in as the same dialog in a window of its own: the view carried a
+  margin of its own on top of the overlay's padding. The window `WindowDialogHost` opens wears the class `Dialog`,
+  which every theme pads as its overlay window; the window templates now apply `Padding` to their content.
+- A picture chosen by its full path - from a file dialog on Linux and macOS - was not shown: a rooted path read as a
+  relative URI, and `BitmapImage` only loads an absolute `file` URI.
 - Markup hot reload listed a file as changed - and applied it again on save - when the watcher read it half written:
   a save reports itself as soon as it empties the file. A gathered file whose text is again what was applied is
   dropped before it is listed or applied (`MarkupHotReload.ChangedFiles`). Seen on Linux, where inotify reports the

@@ -18,6 +18,9 @@ namespace Adamantium.XamlTests;
 [TestFixture]
 public class CanvasTextureTests
 {
+    private static readonly string Leaf = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "pictures", "leaf.png");
+    private static readonly string Bark = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "pictures", "bark.png");
+
     private FakeApp _app;
 
     [OneTimeSetUp]
@@ -127,7 +130,7 @@ public class CanvasTextureTests
 
         Assert.That(row, Is.Not.Null, "the panel offers a selected texture no source");
 
-        Assert.That(row.Owner.Write(row, "C:/pictures/leaf.png"), Is.True, "the panel refused the file");
+        Assert.That(row.Owner.Write(row, Leaf), Is.True, "the panel refused the file");
 
         var picture = item.Tiled;
 
@@ -135,7 +138,7 @@ public class CanvasTextureTests
         {
             Assert.That(picture?.Source, Is.Not.Null, "the file did not reach the picture");
             Assert.That((picture?.Source as BitmapImage)?.UriSource?.OriginalString,
-                Is.EqualTo("C:/pictures/leaf.png"), "it shows another file than the one chosen");
+                Is.EqualTo(Leaf), "it shows another file than the one chosen");
         });
 
         // ...AND A COLOR WRITTEN AFTERWARDS LEAVES IT ALONE. The two are different things about the element - what it
@@ -161,7 +164,7 @@ public class CanvasTextureTests
 
         // ...AND THE ROW SAYS SO IN ITS TIP: a file two folders deep does not fit the cell, and which file this is is
         // the one question the row asks.
-        Assert.That(row.ToolTip, Is.EqualTo("C:/pictures/leaf.png"), "the path is not repeated in the tip");
+        Assert.That(row.ToolTip, Is.EqualTo(Leaf), "the path is not repeated in the tip");
     }
 
     // A FILE CHOSEN BY POINTING is written exactly as a typed one: through the grid, so the edit is reported once and
@@ -181,12 +184,31 @@ public class CanvasTextureTests
 
         row.Owner.ValueChanged += (_, _) => reported++;
 
-        ((ImageSourceProperty)row.Definition).Pick("C:/pictures/bark.png");
+        ((ImageSourceProperty)row.Definition).Pick(Bark);
 
         Assert.Multiple(() =>
         {
             Assert.That(item.Tiled?.Source, Is.Not.Null, "the chosen file never reached the picture");
             Assert.That(reported, Is.EqualTo(1), "the edit was not reported the way a typed one is");
+        });
+    }
+
+    [Test]
+    public void APickedFileByItsSystemsPath_ReachesThePictureAsAFile()
+    {
+        Use(new Adamantium.UI.Themes.FluentTheme.Fluent());
+
+        var (window, canvas) = Stage();
+        var item = Placed(canvas, new Rect(20, 20, 200, 150));
+        Settle(window);
+
+        ((ImageSourceProperty)Row(canvas, "Source").Definition).Pick(Bark);
+
+        var source = (item.Tiled?.Source as Adamantium.UI.Core.Media.Imaging.BitmapImage)?.UriSource;
+        Assert.Multiple(() =>
+        {
+            Assert.That(source?.IsAbsoluteUri, Is.True, "the picture was given a relative address");
+            Assert.That(source?.LocalPath, Is.EqualTo(Bark));
         });
     }
 
@@ -251,7 +273,7 @@ public class CanvasTextureTests
 
         Settle(window);
 
-        Row(canvas, "Source").Owner.Write(Row(canvas, "Source"), "C:/pictures/bark.png");
+        Row(canvas, "Source").Owner.Write(Row(canvas, "Source"), Bark);
 
         Settle(window);
 
@@ -324,7 +346,7 @@ public class CanvasTextureTests
 
         var source = Row(canvas, "Source");
 
-        source.Owner.Write(source, "C:/pictures/bark.png");
+        source.Owner.Write(source, Bark);
 
         Settle(window);
 

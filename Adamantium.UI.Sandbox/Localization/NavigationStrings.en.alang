@@ -29,4 +29,11 @@
     <Phrase Key="CloseFromViewModel" Text="Close from VM"/>
     <Phrase Key="ModalOverlay" Text="Modal overlay"/>
     <Phrase Key="ModalOverlayMessage" Text="This modal dims and blocks the window behind it. Drag me by the title bar."/>
+
+    <Phrase Key="OpenClickThroughWindow" Text="Click-through window"/>
+    <Phrase Key="ClickThroughWindow" Text="Click-through window"/>
+    <Phrase Key="ClickThroughHint" Text="Put this window over something you can click, then let it pass clicks: a click on the window reaches what is behind it."/>
+    <Phrase Key="PassClicks" Text="Pass clicks for 10 s"/>
+    <Phrase Key="ClickThroughCountdown" Text="Clicks pass through - {seconds} s left"/>
+    <Phrase Key="ClickThroughOff" Text="Clicks stop here"/>
 </Language>

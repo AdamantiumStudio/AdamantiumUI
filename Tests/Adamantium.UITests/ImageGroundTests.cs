@@ -17,6 +17,9 @@ namespace Adamantium.UITests;
 [TestFixture]
 public class ImageGroundTests
 {
+    private static readonly string NoSuchPicture =
+        System.IO.Path.Combine(System.IO.Path.GetTempPath(), "no", "such", "folder", "no-such-picture.png");
+
     private sealed class Recorder : IDrawingContext
     {
         public RecordingDrawingSession Session { get; } = new();
@@ -88,7 +91,7 @@ public class ImageGroundTests
         var image = new Adamantium.UI.Controls.Image
         {
             Background = ground,
-            Source = new BitmapImage(new Uri("C:/no/such/folder/no-such-picture.png")),
+            Source = new BitmapImage(new Uri(NoSuchPicture)),
             ShowsForeground = false,
             Width = 200,
             Height = 150
@@ -114,7 +117,7 @@ public class ImageGroundTests
         var image = new Image
         {
             Background = new SolidColorBrush(Colors.Tomato),
-            Source = new BitmapImage(new Uri("C:/no/such/folder/no-such-picture.png")),
+            Source = new BitmapImage(new Uri(NoSuchPicture)),
             Width = 200,
             Height = 150
         };

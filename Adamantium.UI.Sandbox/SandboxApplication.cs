@@ -45,6 +45,7 @@ public class SandboxApplication : Adamantium.UI.Universes.MultiverseApplication
         Container.Resolve<IWindowShellRegistry>().Register<DragDropWindow>("dragdrop");
         // Its caption carries the quick-access bar, so it needs a window of its own.
         Container.Resolve<IWindowShellRegistry>().Register<RibbonWindow>("ribbon");
+        Container.Resolve<IWindowShellRegistry>().Register<ClickThroughWindow>("clickthrough");
         // Shared demo setting (single instance) so the title-bar command and the Navigation-tab toggle see the same flag.
         containerRegistry.RegisterInstance<ViewModels.WindowDemoSettings>(new ViewModels.WindowDemoSettings());
         // The brushes tab keeps ONE view-model behind a region: the stands are separate views navigated into it, and

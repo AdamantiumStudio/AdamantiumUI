@@ -52,6 +52,33 @@
   <Invoke Target="id=DockingView/name=Reset" />
   <Expect Target="id=DockingView/type=TabItem,name=Scene" Selected="True" />
   <Wait Target="id=DockingView/type=TabItem,name=Game" />
+  <!-- A floating window survives a theme swap. -->
+  <Dock Target="id=DockingView/type=TabItem,name=Console" Position="None" />
+  <Wait Target="id=DockingWindow,name=Console" />
+  <Window Target="id=DockingWindow" Action="Maximize" />
+  <Wait Target="id=DockingWindow" Window="Maximized" />
+  <Expand Target="class=SlidePanel,name=Diagnostics" />
+  <Select Target="id=ThemeChooser/name=Graphite" />
+  <Invoke Target="id=SwitchTheme" />
+  <WaitIdle />
+  <Expect Target="id=DockingWindow,name=Console" Window="Maximized" />
+  <Window Target="id=DockingWindow" Action="Restore" />
+  <Dock Target="id=DockingWindow/type=TabItem,name=Console" Position="Fill" Beside="id=DockingView/type=TabItem,name=Output" />
+  <Absent Target="id=DockingWindow" />
+  <!-- A region-opened pane in a window docks back after a theme swap. -->
+  <Select Target="id=PaneChoice/name=Assets" />
+  <Select Target="id=PlaceChoice/name=Center" />
+  <Invoke Target="id=DockingView/name=Navigate" />
+  <Dock Target="id=DockingView/type=TabItem,name=Assets" Position="None" />
+  <Wait Target="id=DockingWindow,name=Assets" />
+  <Select Target="id=ThemeChooser/name=Fluent" />
+  <Invoke Target="id=SwitchTheme" />
+  <WaitIdle />
+  <Dock Target="id=DockingWindow/type=TabItem,name=Assets" Position="Fill" Beside="id=DockingView/type=TabItem,name=Game" />
+  <Absent Target="id=DockingWindow" />
+  <Invoke Target="id=DockingView/type=TabItem,name=Assets/id=CloseTab" />
+  <Absent Target="id=DockingView/type=TabItem,name=Assets" />
+  <Collapse Target="class=SlidePanel,name=Diagnostics" />
   <!-- Back as the page opens. -->
   <Select Target="id=PaneChoice/name=Assets" />
   <Select Target="id=PlaceChoice/name=Center" />
