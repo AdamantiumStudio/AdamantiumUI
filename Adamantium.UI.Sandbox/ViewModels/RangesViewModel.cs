@@ -20,10 +20,14 @@ public partial class RangesViewModel : TabPageViewModel
     private const double InitialMaximum = 100;
     private const double InitialSpanStart = 20;
     private const double InitialSpanEnd = 70;
+    private const double InitialOffset = 15;
 
     [Bindable] private double _value = InitialValue;
 
     [Bindable] private double _maximum = InitialMaximum;
+
+    /// <summary>A value either side of zero, on a slider that fills from zero to it.</summary>
+    [Bindable] private double _offset = InitialOffset;
 
     /// <summary>Swaps the pair in every one of the showcase NumericUpDowns at once - the placements are fixed per box,
     /// so this one switch shows that the order is independent of where the buttons sit.</summary>
@@ -67,6 +71,7 @@ public partial class RangesViewModel : TabPageViewModel
         // control publishes back here - so setting it while the ceiling is still lower would lose it for good.
         Maximum = InitialMaximum;
         Value = InitialValue;
+        Offset = InitialOffset;
 
         // Same reasoning between the two bounds, which clamp against EACH OTHER: move the one traveling away from the
         // other first. Coming down, that is the start (it has room below); going up, it is the end.

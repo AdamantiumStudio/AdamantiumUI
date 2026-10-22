@@ -48,6 +48,11 @@ All packages share one version.
   of the desktop - false on Wayland, where the docking compass is then drawn inside the area it covers.
 - Automation: `window <selector> hide | show`; `state` tells the default font and the monitors; `theme --variant System`
   follows the desktop's appearance.
+- `RangeSlider` with the keyboard: the thumbs of both bounds take the focus (Tab goes from one to the other) in every
+  theme, and the arrows move the bound whose thumb has it by `SmallChange`, Page Up and Page Down by `LargeChange`, Home
+  and End to the ends of the scale, as far as the other bound lets it.
+- `Slider.FillOrigin`: the value the accent fill runs from to the thumb, to either side of it - a default or a zero in
+  the middle of the scale; unset, the fill runs from the start of the scale as before.
 
 - Touch on Wayland (`wl_touch`): every finger is a pointer of its own (`PointerType.Touch`), its contact area from the
   compositor's shape, raised when the compositor closes its frame - or once the events read are dispatched, where it

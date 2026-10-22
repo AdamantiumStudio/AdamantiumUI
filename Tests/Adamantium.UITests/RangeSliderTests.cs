@@ -50,6 +50,97 @@ public class RangeSliderTests
         Assert.That(badges.TrueForAll(badge => badge.IsDiscarded), Is.True);
     }
 
+    // Each bound's thumb takes the keyboard in every theme; the keys move the bound whose thumb has it, as far as the
+    // other bound lets it.
+    [TestCase(typeof(Adamantium.UI.Themes.FluentTheme.RangeSliderStyleSet))]
+    [TestCase(typeof(Adamantium.UI.Themes.GraphiteTheme.RangeSliderStyleSet))]
+    [TestCase(typeof(Adamantium.UI.Themes.MacOsTheme.MacOsRangeSliderStyleSet))]
+    public void TheKeys_MoveTheBoundWhoseThumbHasThem(System.Type styleSet)
+    {
+        var slider = NewSlider();
+        slider.SmallChange = 1;
+        slider.LargeChange = 10;
+        slider.Width = 200;
+        var set = (Adamantium.UI.Core.Resources.StyleSet)System.Activator.CreateInstance(styleSet);
+        set.Initialize(null);
+        foreach (var style in set.Styles)
+        {
+            style.Attach(slider);
+        }
+
+        var root = new Adamantium.UI.Controls.Decorators.Border { Width = 400, Height = 100, Child = slider };
+        Adamantium.UI.Extensions.WindowExtension.UpdateTree(root);
+        Adamantium.UI.Extensions.WindowExtension.UpdateTree(root);
+        var track = (RangeTrack)slider.GetTemplateChild("PART_Track");
+
+        void Press(Thumb thumb, Adamantium.UI.Core.Input.Key key) =>
+            thumb.RaiseEvent(new Adamantium.UI.Core.Input.KeyEventArgs(Adamantium.UI.Core.Input.KeyboardDevice.CurrentDevice,
+                key, Adamantium.UI.Core.Input.InputModifiers.None, 0)
+            {
+                RoutedEvent = Adamantium.UI.Core.Input.Keyboard.KeyDownEvent
+            });
+
+        Press(track.LowerThumb, Adamantium.UI.Core.Input.Key.RightArrow);
+        var raised = slider.LowerValue;
+        Press(track.LowerThumb, Adamantium.UI.Core.Input.Key.PageDown);
+        var paged = slider.LowerValue;
+        Press(track.UpperThumb, Adamantium.UI.Core.Input.Key.Home);
+        var stopped = (slider.LowerValue, slider.UpperValue);
+        Press(track.UpperThumb, Adamantium.UI.Core.Input.Key.End);
+        Press(track.LowerThumb, Adamantium.UI.Core.Input.Key.Home);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(track.LowerThumb.Focusable && track.UpperThumb.Focusable, Is.True);
+            Assert.That(raised, Is.EqualTo(21));
+            Assert.That(paged, Is.EqualTo(11));
+            Assert.That(stopped, Is.EqualTo((11.0, 11.0)), "the end stops at the start");
+            Assert.That((slider.LowerValue, slider.UpperValue), Is.EqualTo((0.0, 100.0)));
+        });
+    }
+
+    // A key takes a bound only as far as the other lets it - and asks no further: the other bound moving later does not
+    // drag it along. With ticks, a step is a tick at least, so a smaller one does not snap back where it was.
+    [Test]
+    public void AKey_TakesABoundOnlyAsFarAsTheOtherLetsIt()
+    {
+        var slider = NewSlider();
+        slider.Width = 200;
+        var set = new Adamantium.UI.Themes.MacOsTheme.MacOsRangeSliderStyleSet();
+        set.Initialize(null);
+        foreach (var style in set.Styles)
+        {
+            style.Attach(slider);
+        }
+
+        var root = new Adamantium.UI.Controls.Decorators.Border { Width = 400, Height = 100, Child = slider };
+        Adamantium.UI.Extensions.WindowExtension.UpdateTree(root);
+        Adamantium.UI.Extensions.WindowExtension.UpdateTree(root);
+        var track = (RangeTrack)slider.GetTemplateChild("PART_Track");
+
+        void Press(Thumb thumb, Adamantium.UI.Core.Input.Key key) =>
+            thumb.RaiseEvent(new Adamantium.UI.Core.Input.KeyEventArgs(Adamantium.UI.Core.Input.KeyboardDevice.CurrentDevice,
+                key, Adamantium.UI.Core.Input.InputModifiers.None, 0)
+            {
+                RoutedEvent = Adamantium.UI.Core.Input.Keyboard.KeyDownEvent
+            });
+
+        Press(track.UpperThumb, Adamantium.UI.Core.Input.Key.Home);
+        var met = (slider.LowerValue, slider.UpperValue);
+        Press(track.LowerThumb, Adamantium.UI.Core.Input.Key.LeftArrow);
+        var lowered = (slider.LowerValue, slider.UpperValue);
+        slider.IsSnapToTickEnabled = true;
+        slider.TickFrequency = 5;
+        Press(track.UpperThumb, Adamantium.UI.Core.Input.Key.RightArrow);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(met, Is.EqualTo((20.0, 20.0)));
+            Assert.That(lowered, Is.EqualTo((19.0, 20.0)), "the end stays where the keys put it");
+            Assert.That(slider.UpperValue, Is.EqualTo(25), "a tick at least");
+        });
+    }
+
     [Test]
     public void TheBoundsCannotCross()
     {

@@ -368,6 +368,66 @@ public class RangeSlider : RangeLimitsBase
         }
     }
 
+    /// <summary>Moves the bound whose thumb has the keyboard: arrows by <see cref="RangeLimitsBase.SmallChange"/> (up and
+    /// right raise it), Page Up and Page Down by <see cref="RangeLimitsBase.LargeChange"/>, Home and End to the ends of
+    /// the scale - as far as the other bound lets it.</summary>
+    protected override void OnKeyDown(KeyEventArgs e)
+    {
+        base.OnKeyDown(e);
+        if (!IsEnabled || e.Handled || _track == null)
+        {
+            return;
+        }
+
+        var lower = IsWithin(e.OriginalSource as IUIComponent, _track.LowerThumb);
+        if (!lower && !IsWithin(e.OriginalSource as IUIComponent, _track.UpperThumb))
+        {
+            return;
+        }
+
+        var value = lower ? LowerValue : UpperValue;
+        var ticks = IsSnapToTickEnabled && TickFrequency > 0;
+        var small = ticks ? Math.Max(SmallChange, TickFrequency) : SmallChange;
+        var large = ticks ? Math.Max(LargeChange, TickFrequency) : LargeChange;
+        double? moved = e.Key switch
+        {
+            Key.RightArrow or Key.UpArrow => SnapToTick(value + small),
+            Key.LeftArrow or Key.DownArrow => SnapToTick(value - small),
+            Key.PageUp => SnapToTick(value + large),
+            Key.PageDown => SnapToTick(value - large),
+            Key.Home => Minimum,
+            Key.End => Maximum,
+            _ => null,
+        };
+        if (moved is not { } to)
+        {
+            return;
+        }
+
+        e.Handled = true;
+        if (lower)
+        {
+            SetLowerFromInput(Math.Clamp(to, Minimum, Math.Max(Minimum, UpperValue - MinimumRange)));
+        }
+        else
+        {
+            SetUpperFromInput(Math.Clamp(to, Math.Min(Maximum, LowerValue + MinimumRange), Maximum));
+        }
+    }
+
+    private static bool IsWithin(IUIComponent node, IUIComponent ancestor)
+    {
+        for (; node != null && ancestor != null; node = node.VisualParent)
+        {
+            if (ReferenceEquals(node, ancestor))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private static double Center(Thumb thumb, bool vertical)
     {
         if (thumb == null) return 0;
