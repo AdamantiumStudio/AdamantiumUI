@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Threading;
 using Adamantium.Core;
 using Adamantium.Graphics.Core;
 using Adamantium.Graphics.Core.Presentation;
@@ -131,7 +132,7 @@ public abstract class WindowRendererBase : IWindowRenderer
         Window = window;
         Window.Renderer = this;
         SubscribeToEvents();
-        ResizePresenter((uint)(window.ClientWidth * RenderScale), (uint)(window.ClientHeight * RenderScale));
+        ResizePresenterToWindow();
         InitializeWindowResources();
     }
 
@@ -145,8 +146,8 @@ public abstract class WindowRendererBase : IWindowRenderer
     {
         Parameters = new PresentationParameters(
             PresenterKind,
-            (uint)(Window.ClientWidth * RenderScale),
-            (uint)(Window.ClientHeight * RenderScale),
+            (uint)Math.Round(Window.ClientWidth * RenderScale),
+            (uint)Math.Round(Window.ClientHeight * RenderScale),
             Window.SurfaceHandle,
             Window.MSAALevel
         )
@@ -189,6 +190,19 @@ public abstract class WindowRendererBase : IWindowRenderer
 
     public void ResizePresenter(uint width, uint height)
     {
+        Resize(width, height);
+        IsRendererUpToDate = true;
+    }
+
+    public void ResizePresenterToWindow()
+    {
+        IsRendererUpToDate = true;
+        Thread.MemoryBarrier();
+        Resize((uint)Math.Round(Window.ClientWidth * RenderScale), (uint)Math.Round(Window.ClientHeight * RenderScale));
+    }
+
+    private void Resize(uint width, uint height)
+    {
         // Re-read transparency and present policy on every rebuild, the only moment a swapchain can pick them up.
         if (Window != null && Presenter != null)
         {
@@ -201,7 +215,6 @@ public abstract class WindowRendererBase : IWindowRenderer
         }
 
         Presenter.Resize(width, height);
-        IsRendererUpToDate = true;
     }
 
     /// <summary>The presenter no longer matches its window: rebuild it at the next frame boundary. The frame loop

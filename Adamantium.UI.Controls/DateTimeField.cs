@@ -188,7 +188,7 @@ public class DateTimeField : Control, ISegmentHost
             case DateTimeSegmentKind.Period:
                 return (0, 1);
             case DateTimeSegmentKind.Era:
-                var eras = new[] { counting.GetEra(counting.MinSupportedDateTime), counting.GetEra(counting.MaxSupportedDateTime) };
+                int[] eras = [counting.GetEra(counting.FirstDay()), counting.GetEra(counting.MaxSupportedDateTime)];
                 return (eras.Min(), eras.Max());
             default:
                 return (0, 0);
@@ -981,7 +981,7 @@ public class DateTimeField : Control, ISegmentHost
 
         if (date == null && counting.Eras.Length > 1)
         {
-            var first = counting.MinSupportedDateTime;
+            var first = counting.FirstDay();
             var last = counting.MaxSupportedDateTime;
             var start = FirstDayWhere(first, last, d => counting.GetEra(d) >= era);
             var after = FirstDayWhere(first, last, d => counting.GetEra(d) > era);
@@ -1152,7 +1152,7 @@ public class DateTimeField : Control, ISegmentHost
     private (DateTime Start, DateTime End) EraBounds(int era)
     {
         var counting = Counting();
-        var first = counting.MinSupportedDateTime.Date;
+        var first = counting.FirstDay();
         var last = counting.MaxSupportedDateTime.Date;
         if (counting.Eras.Length < 2)
         {
@@ -1188,7 +1188,7 @@ public class DateTimeField : Control, ISegmentHost
     private DateTime Counted(DateTime date)
     {
         var counting = Counting();
-        return date < counting.MinSupportedDateTime ? counting.MinSupportedDateTime
+        return date < counting.FirstDay() ? counting.FirstDay()
             : date > counting.MaxSupportedDateTime ? counting.MaxSupportedDateTime
             : date;
     }

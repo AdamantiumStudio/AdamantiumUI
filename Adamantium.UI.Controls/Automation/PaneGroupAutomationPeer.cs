@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Controls.Docking;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Automation;
@@ -56,6 +58,28 @@ public class PaneGroupAutomationPeer : TabControlAutomationPeer, IDockProvider
             }
         }
     }
+
+    protected override IReadOnlyList<AutomationPeer> ChildrenCore()
+    {
+        var group = (PaneGroup)Owner;
+        var children = new List<AutomationPeer>();
+        if (group.GetTemplateChild("PART_Header") is UIComponent { Visibility: Visibility.Visible })
+        {
+            foreach (var part in CaptionButtons)
+            {
+                if (group.GetTemplateChild(part) is UIComponent { Visibility: Visibility.Visible } button
+                    && button.GetAutomationPeer() is { } peer)
+                {
+                    children.Add(peer);
+                }
+            }
+        }
+
+        children.AddRange(base.ChildrenCore());
+        return children;
+    }
+
+    private static readonly string[] CaptionButtons = ["PART_AutoHideButton", "PART_CloseButton"];
 
     private Pane[] Panes() => [.. ((PaneGroup)Owner).Items.OfType<Pane>()];
 

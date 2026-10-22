@@ -144,7 +144,7 @@ public sealed class AutomationExecutor
             if (!string.IsNullOrWhiteSpace(variantName))
             {
                 var variant = ThemeVariant.Parse(variantName);
-                if (theme == null || !theme.VariantsByKey.ContainsKey(variant))
+                if (theme == null || (!variant.FollowsSystem && !theme.VariantsByKey.ContainsKey(variant)))
                 {
                     throw new AutomationException($"The theme has no variant '{variantName}'.");
                 }
@@ -325,7 +325,7 @@ public sealed class AutomationExecutor
                 return plan.Frames;
             }, timeout);
 
-            await Task.Run(() => input.Inject(type, frames));
+            await Task.Run(() => input.Inject((IWindow)window, type, frames));
             injected = true;
 
             var watch = Stopwatch.StartNew();
@@ -501,6 +501,12 @@ public sealed class AutomationExecutor
                 break;
             case AutomationCommand.Close:
                 Pattern<IWindowProvider>(peer, PatternId.Window).Close();
+                break;
+            case AutomationCommand.Hide:
+                OnDispatcher(WindowOf(peer).Hide);
+                break;
+            case AutomationCommand.Show:
+                OnDispatcher(WindowOf(peer).Show);
                 break;
             case AutomationCommand.Select:
                 Pattern<ISelectionItemProvider>(peer, PatternId.SelectionItem).Select();
@@ -974,18 +980,20 @@ public sealed class AutomationExecutor
         }
 
         var size = owner.RenderSize;
+        var shown = InputSimulator.Shown(owner);
         var bounds = peer.BoundingRectangle;
         var presses = PressedParts(peer).Select(part => part.BoundingRectangle).ToList();
         foreach (var x in (double[])[0.5, 0.25, 0.75, 0.125, 0.375, 0.625, 0.875])
         {
-            var at = new Vector2(bounds.X + bounds.Width * x, bounds.Y + bounds.Height / 2);
+            var local = shown.X + shown.Width * x;
+            var at = new Vector2(bounds.X + bounds.Width * local / size.Width, bounds.Y + bounds.Height / 2);
             if (!presses.Any(part => at.X >= part.X && at.X < part.X + part.Width && at.Y >= part.Y && at.Y < part.Y + part.Height))
             {
-                return new Vector2(size.Width * x, size.Height / 2);
+                return new Vector2(local, size.Height / 2);
             }
         }
 
-        return new Vector2(size.Width / 2, size.Height / 2);
+        return InputSimulator.Middle(owner);
     }
 
     private static IEnumerable<AutomationPeer> PressedParts(AutomationPeer peer) =>
@@ -1206,6 +1214,21 @@ public sealed class AutomationExecutor
         (peer as UIComponentAutomationPeer)?.Owner ?? throw new AutomationException(peer is IScrollItemProvider
             ? $"{Label(peer)} has no element yet; scroll it into view first."
             : $"{Label(peer)} stands for no element of the tree.");
+
+    private static void OnDispatcher(Action action)
+    {
+        if (UIAppContext.Current?.Dispatcher is { } dispatcher)
+        {
+            _ = dispatcher.InvokeAsync(action);
+        }
+        else
+        {
+            action();
+        }
+    }
+
+    private static IWindow WindowOf(AutomationPeer peer) =>
+        OwnerOf(peer) as IWindow ?? throw new AutomationException($"{Label(peer)} is not a window.");
 
     private static ElementInfo Info(AutomationPeer peer)
     {

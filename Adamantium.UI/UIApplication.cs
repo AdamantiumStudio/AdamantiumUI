@@ -39,7 +39,6 @@ using Adamantium.UI.Navigation;
 using Adamantium.UI.Platforms.MacOS;
 using Adamantium.UI.Rendering;
 using Adamantium.UI.Themes.FluentTheme;
-using Adamantium.Vulkan.Loader;
 using Serilog;
 using Serilog.Sinks.SystemConsole.Themes;
 using UnhandledExceptionEventArgs = Adamantium.UI.Core.RoutedEvents.UnhandledExceptionEventArgs;
@@ -86,17 +85,16 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
     private long _requestsAtRecord;
     private long _loadsAtRecord;
     private readonly HashSet<IWindow> _minimizedWindows = [];
+    private readonly HashSet<IWindow> _hiddenWindows = [];
+    private IWindow[] _arrivingWindows = [];
+    private int _arrivingAt;
+    private readonly HashSet<IWindow> _closedOnArrival = [];
     private string _unrecordedBecause;
     private readonly List<TaskCompletionSource> _idleWaiters = [];
     private long _idleFrame = -1;
     private readonly object _debugToolsLock = new();
     private readonly Dictionary<Diagnostics.IDebugTool, bool> _debugTools = new();
     private readonly HashSet<Diagnostics.IDebugTool> _debugToolsToDetach = [];
-
-    static UIApplication()
-    {
-        VulkanDllMap.Register();
-    }
 
     protected UIApplication()
     {
@@ -334,10 +332,59 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
     }
 
     /// <summary>Tears the window down right away, never queued: a frame late, the render thread would draw into a
-    /// surface that is already gone.</summary>
+    /// surface that is already gone. A window closed before its first frame is never registered.</summary>
     public void RemoveWindow(IWindow window)
     {
+        lock (_hiddenWindows)
+        {
+            _hiddenWindows.Remove(window);
+        }
+
+        lock (applicationLocker)
+        {
+            if (addedWindows.Remove(window))
+            {
+                ForgetWindow(window);
+                return;
+            }
+
+            var arriving = Array.IndexOf(_arrivingWindows, window);
+            if (arriving >= 0 && arriving >= _arrivingAt)
+            {
+                _closedOnArrival.Add(window);
+                ForgetWindow(window);
+                return;
+            }
+        }
+
         OnWindowRemoved(window);
+    }
+
+    /// <summary>Stops drawing into the window, or starts again. <paramref name="betweenFrames"/> runs once no frame
+    /// draws into it any more.</summary>
+    internal void SetWindowHidden(IWindow window, bool hidden, Action betweenFrames = null)
+    {
+        lock (_renderGate)
+        {
+            lock (_hiddenWindows)
+            {
+                if (hidden)
+                {
+                    _hiddenWindows.Add(window);
+                }
+                else
+                {
+                    _hiddenWindows.Remove(window);
+                }
+            }
+
+            if (windowToSystem.TryGetValue(window, out var service))
+            {
+                service.Hidden = hidden;
+            }
+
+            betweenFrames?.Invoke();
+        }
     }
 
     public void SetActiveWindow(IWindow window)
@@ -524,7 +571,16 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
     private void CreateWindowService(IWindow window)
     {
         var windowService = EntityWorld.CreateService<WindowRenderService>(EntityWorld, window);
-        windowToSystem.Add(window, windowService);
+        lock (_renderGate)
+        {
+            lock (_hiddenWindows)
+            {
+                windowService.Hidden = _hiddenWindows.Contains(window);
+            }
+
+            windowToSystem.Add(window, windowService);
+        }
+
         var entity = new Entity();
         entity.AddComponent(window);
         windowToEntity[window] = entity;
@@ -565,7 +621,11 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
             }
         }
         EntityWorld.ForceUpdate();
+        ForgetWindow(window);
+    }
 
+    private void ForgetWindow(IWindow window)
+    {
         if (window == ActiveWindow)
         {
             ActiveWindow = null;
@@ -1165,7 +1225,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
             bool restored;
             lock (_minimizedWindows)
             {
-                if (service.Window.State == WindowState.Minimized)
+                if (service.Window.State == WindowState.Minimized || service.Hidden)
                 {
                     _minimizedWindows.Add(service.Window);
                     continue;
@@ -1355,10 +1415,39 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
 
             arrived = addedWindows.ToArray();
             addedWindows.Clear();
+            _arrivingWindows = arrived;
         }
 
-        foreach (var window in arrived) 
-            OnWindowAdded(window);
+        try
+        {
+            for (var i = 0; i < arrived.Length; i++)
+            {
+                var window = arrived[i];
+                lock (applicationLocker)
+                {
+                    _arrivingAt = i;
+                    if (_closedOnArrival.Remove(window)) continue;
+                }
+
+                OnWindowAdded(window);
+                bool closed;
+                lock (applicationLocker)
+                {
+                    closed = _closedOnArrival.Remove(window);
+                }
+
+                if (closed) OnWindowRemoved(window);
+            }
+        }
+        finally
+        {
+            lock (applicationLocker)
+            {
+                _arrivingWindows = [];
+                _arrivingAt = 0;
+                _closedOnArrival.Clear();
+            }
+        }
     }
 
     protected void CheckExitConditions()

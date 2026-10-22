@@ -2,8 +2,8 @@ using Adamantium.Core.DependencyInjection;
 using Adamantium.Graphics;
 using Adamantium.Graphics.Core;
 using Adamantium.UI.Core;
+using Adamantium.UI.Platforms.Linux;
 using Adamantium.UI.Platforms.MacOS;
-using Adamantium.UI.Platforms.Wayland;
 using Adamantium.UI.Platforms.Windows;
 
 namespace Adamantium.UI;
@@ -22,7 +22,7 @@ public static class ApplicationBuilder
                 MacOSPlatform.Initialize(container);
                 break;
             case Platform.Linux:
-                WaylandPlatform.Initialize(container);
+                LinuxPlatform.Initialize(container);
                 break;
         }
     }

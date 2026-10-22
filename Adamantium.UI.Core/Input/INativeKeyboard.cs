@@ -8,4 +8,8 @@ public interface INativeKeyboard
 
     /// <summary>Is the key TOGGLED on (Caps Lock, Num Lock, Scroll Lock)?</summary>
     bool IsKeyToggled(Key key);
+
+    /// <summary>Whether a keyboard layout the user switches between types a right-to-left script, as Hebrew or
+    /// Arabic.</summary>
+    bool HasRightToLeftLayout { get; }
 }

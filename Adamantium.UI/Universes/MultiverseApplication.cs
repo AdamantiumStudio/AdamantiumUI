@@ -1,11 +1,7 @@
-using System;
 using Adamantium.Core;
 using Adamantium.Core.DependencyInjection;
 using Adamantium.ECS;
-using Adamantium.GameInput;
 using Adamantium.Multiverse;
-using Adamantium.Multiverse.Input;
-using Adamantium.XInput;
 
 namespace Adamantium.UI.Universes;
 
@@ -58,15 +54,6 @@ public abstract class MultiverseApplication : UIApplication
         containerRegistry.RegisterSingleton<IUniverseService>(UniverseService);
         containerRegistry.RegisterSingleton<IOutputFactory, UIOutputFactory>();
         containerRegistry.RegisterSingleton<IWindowingPlatform, UIWindowingPlatform>();
-        if (!containerRegistry.IsRegistered<IGamepadBackend>() && OperatingSystem.IsWindows())
-        {
-            containerRegistry.RegisterSingleton<IGamepadBackend>(CreateWindowsGamepadBackend());
-        }
-    }
-
-    private static IGamepadBackend CreateWindowsGamepadBackend()
-    {
-        return GameInputGamepadBackend.TryCreate(out var gameInput) ? gameInput : new XInputGamepadBackend();
     }
 
     protected override void OnBeforeEndScene()

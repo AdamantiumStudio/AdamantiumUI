@@ -1,3 +1,4 @@
+using System;
 using System.Diagnostics;
 using System.Threading;
 using Adamantium.Core;
@@ -135,12 +136,15 @@ public class WindowRenderService : UiRenderService
         }
     }
 
+    /// <summary>Hidden by its platform: nothing is drawn into the window until it is shown again.</summary>
+    internal bool Hidden { get; set; }
+
     public override bool BeginDraw()
     {
         // Unloaded, but still in the draw list until its removal propagates.
         if (windowRenderer?.Presenter == null) return false;
 
-        if (Window.State == WindowState.Minimized)
+        if (Window.State == WindowState.Minimized || Hidden)
         {
             return false;
         }
@@ -166,7 +170,7 @@ public class WindowRenderService : UiRenderService
              || windowRenderer.Presenter.LastPresenterState is PresenterState.OutOfDate or PresenterState.Suboptimal
              || trailing))
         {
-            windowRenderer.ResizePresenter((uint)(Window.ClientWidth * RenderScale), (uint)(Window.ClientHeight * RenderScale));
+            windowRenderer.ResizePresenterToWindow();
         }
 
         GraphicsDevice.SetRenderTargets(windowRenderer.Presenter.RenderTarget);
@@ -231,7 +235,7 @@ public class WindowRenderService : UiRenderService
         windowRenderer.OnFrameEnded();
         if (!windowRenderer.IsRendererUpToDate)
         {
-            windowRenderer.ResizePresenter((uint)(Window.ClientWidth * RenderScale), (uint)(Window.ClientHeight * RenderScale));
+            windowRenderer.ResizePresenterToWindow();
         }
 
         if (_pendingRenderer == null) return;

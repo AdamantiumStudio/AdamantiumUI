@@ -20,6 +20,9 @@ public static class SystemAppearance
         }
     }
 
+    /// <summary>The family of the desktop's interface font, where the platform says; null elsewhere.</summary>
+    public static string FontFamily { get; set; }
+
     /// <summary>Raised when the OS appearance actually changes - day turning to night, or the user flipping the
     /// setting. Handlers must not throw.</summary>
     public static event EventHandler Changed;

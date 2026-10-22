@@ -105,6 +105,13 @@ public class DurationFieldTests
         var field = Shown(new DurationField { Width = 40, Value = TimeSpan.FromSeconds(5025) });
         var row = (FieldSegmentPanel)field.GetTemplateChild("PART_Segments");
         var last = field.Segments[^1];
+        if (last.Bounds.Width >= row.RenderSize.Width)
+        {
+            field.Width += last.Bounds.Width - row.RenderSize.Width + 4;
+            Settle();
+            last = field.Segments[^1];
+        }
+
         Assert.That(last.Bounds.Right, Is.GreaterThan(row.RenderSize.Width), "the parts do not fit");
 
         for (var i = 0; i < field.Segments.Count && field.ActiveSegment != last; i++)

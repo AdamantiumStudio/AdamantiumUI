@@ -399,6 +399,7 @@ public class TextBoxEditingTests
     // The system's own spelling, with the English dictionary every Windows has.
     [Test]
     [SupportedOSPlatform("windows")]
+    [Platform("Win")]
     public void TheWindowsChecker_FindsAMisspelledWord_AndWhatItMayBe()
     {
         var checker = new WindowsSpellChecker();
@@ -416,6 +417,7 @@ public class TextBoxEditingTests
     // own, so a wrong one beside the symbol still is.
     [Test]
     [SupportedOSPlatform("windows")]
+    [Platform("Win")]
     public void TheWindowsChecker_ChecksWordsJoinedByASymbol_EachOnItsOwn()
     {
         var checker = new WindowsSpellChecker();
@@ -432,6 +434,7 @@ public class TextBoxEditingTests
 
     [Test]
     [SupportedOSPlatform("windows")]
+    [Platform("Win")]
     public void TheWindowsChecker_IgnoresAWordForEveryTagOfTheSameDictionary()
     {
         var checker = new WindowsSpellChecker();

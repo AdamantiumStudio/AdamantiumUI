@@ -34,6 +34,12 @@ public enum AutomationCommand
     /// <summary>Closes the target window.</summary>
     Close,
 
+    /// <summary>Hides the target window; it stays open, to be shown again.</summary>
+    Hide,
+
+    /// <summary>Shows the target window again.</summary>
+    Show,
+
     Select,
 
     /// <summary>A left click in the middle of the target, by input simulated inside the application.</summary>

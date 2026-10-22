@@ -78,6 +78,11 @@ public sealed class OverlayWindowManager
         focusReturn.Capture();
 
         _windows.Add(window);
+        (_host as IFundamentalUIComponent)?.AddLogicalChild(window.HostPopup);
+        if (CommandManager.GetCommandTarget(FocusManager.Focused) is { } target)
+        {
+            CommandManager.SetCommandTarget(window.HostPopup, target);
+        }
         _host.PopupLayer.Add(window.HostPopup);
         Normalize();
         KeepPinnedOnTop(window);
@@ -95,6 +100,7 @@ public sealed class OverlayWindowManager
             window.Closed -= OnClosed;
             window.KeyDown -= OnHostKeyDown;
             _host.PopupLayer.Remove(window.HostPopup);
+            (_host as IFundamentalUIComponent)?.RemoveLogicalChild(window.HostPopup);
             if (window.ScrimPopup != null) _host.PopupLayer.Remove(window.ScrimPopup);
 
             // The popups are this manager's, made for this showing: they go. The window is not - whoever made it may show

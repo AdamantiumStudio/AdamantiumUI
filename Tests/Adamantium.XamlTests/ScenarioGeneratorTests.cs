@@ -16,7 +16,7 @@ public class ScenarioGeneratorTests
     private const string Header = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<Scenario xmlns=\"http://adamantium/automation/scenario\"";
 
     private static ScenarioFile Read(string steps, string attributes = "", string file = "Save") =>
-        ScenarioTranslator.Read($@"C:\Test\Scenarios\{file}.ascenario", $"{Header}{attributes}>\n{steps}\n</Scenario>");
+        ScenarioTranslator.Read(AumlCodegenHarness.PathOf($"Scenarios/{file}.ascenario"), $"{Header}{attributes}>\n{steps}\n</Scenario>");
 
     private static GeneratedProject Generate(IReadOnlyDictionary<string, string> files, string application = "App") =>
         AumlCodegenHarness.Project(files, application == null ? null : new Dictionary<string, string> { ["AdamantiumScenarioApplication"] = application });
@@ -30,7 +30,7 @@ public class ScenarioGeneratorTests
         {
             Assert.That(scenario.Problems, Is.Empty);
             Assert.That(scenario.Steps[0], Is.EqualTo(
-                "#line 3 \"C:\\Test\\Scenarios\\Save.ascenario\"\n" +
+                $"#line 3 \"{AumlCodegenHarness.PathOf("Scenarios/Save.ascenario")}\"\n" +
                 "await session.Find(global::Adamantium.UI.Automation.By.Id(\"Save\")).InvokeAsync();"));
             Assert.That(scenario.Steps[1], Does.StartWith("#line 4 ")
                 .And.Contain("Expectation(\"name\", \"Saved.\")")
@@ -82,7 +82,7 @@ public class ScenarioGeneratorTests
     [Test]
     public void AFileOutsideTheScenarioNamespace_IsRefused_NotSkipped()
     {
-        var scenario = ScenarioTranslator.Read(@"C:\Test\Scenarios\Save.ascenario", "<Scenario>\n  <Set Target=\"id=Notes\" />\n</Scenario>");
+        var scenario = ScenarioTranslator.Read(AumlCodegenHarness.PathOf("Scenarios/Save.ascenario"), "<Scenario>\n  <Set Target=\"id=Notes\" />\n</Scenario>");
 
         Assert.That(scenario.Problems.Select(problem => (problem.Id, problem.Line)), Is.EqualTo(new[] { ("AUS002", 1) }));
     }
@@ -141,7 +141,7 @@ public class ScenarioGeneratorTests
 
         var error = project.Errors.Single();
         var where = error.Location.GetMappedLineSpan();
-        Assert.That((where.Path, where.StartLinePosition.Line + 1), Is.EqualTo((@"C:\Test\Scenarios\Save.ascenario", 4)), error.ToString());
+        Assert.That((where.Path, where.StartLinePosition.Line + 1), Is.EqualTo((AumlCodegenHarness.PathOf("Scenarios/Save.ascenario"), 4)), error.ToString());
     }
 
     [Test]

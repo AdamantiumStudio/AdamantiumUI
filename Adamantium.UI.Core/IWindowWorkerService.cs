@@ -61,5 +61,9 @@ public interface IWindowWorkerService
     /// platforms without a native move loop.</summary>
     public void BeginMoveDrag();
 
+    /// <summary>The same, for a window held at <paramref name="grab"/>, a logical point of it - one not under the pointer
+    /// yet, such as a panel just torn off.</summary>
+    public void BeginMoveDrag(Mathematics.Vector2 grab) => BeginMoveDrag();
+
     public IUIContext UIContext { get; }
 }

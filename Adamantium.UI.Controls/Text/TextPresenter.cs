@@ -52,6 +52,14 @@ public sealed class TextPresenter : InputUIComponent
     protected override void OnPointerPressed(PointerPressedEventArgs e)
     {
         base.OnPointerPressed(e);
+        if (Owner != null && e.ChangedButton == MouseButtons.Middle && Clipboard.PrimarySelection != null)
+        {
+            var at = e.GetPosition(this);
+            Owner.SurfacePastePrimary(at.X, at.Y);
+            e.Handled = true;
+            return;
+        }
+
         if (Owner == null || e.ChangedButton != MouseButtons.Left)
         {
             return;

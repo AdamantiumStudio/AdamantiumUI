@@ -279,7 +279,8 @@ public static partial class DragDrop
         // relationship our own floating ghost has.
         var ghost = new DragGhostImage(_ghostBgra, _ghostW, _ghostH, 0, 0);
         _nativeDragActive = true;
-        if (Native?.BeginDrag(SourceWindow(source as IUIComponent), _data, _allowedEffects, ghost, OnNativeDragCompleted) == true) return;
+        var external = GetAllowExternalDrag((AdamantiumComponent)source);
+        if (Native?.BeginDrag(SourceWindow(source as IUIComponent), _data, _allowedEffects, ghost, OnNativeDragCompleted, external) == true) return;
 
         _nativeDragActive = false;
         CancelDrag();   // the platform refused to start - end the gesture cleanly instead of leaving it half-armed

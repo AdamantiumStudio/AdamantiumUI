@@ -4,6 +4,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Adamantium.Mathematics;
+using Adamantium.UI.Core;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Input.Raw;
 using Adamantium.Win32;
@@ -19,8 +20,24 @@ internal sealed class WindowsSyntheticPointerInput : ISyntheticPointerInput
     // About a frame apart, as a hand's reports come: the system coalesces frames that arrive closer.
     private static readonly TimeSpan FrameGap = TimeSpan.FromMilliseconds(16);
 
-    public void Inject(PointerType type, IReadOnlyList<IReadOnlyList<SyntheticPointerFrame>> frames)
+    private readonly IApplicationPlatform platform;
+
+    public WindowsSyntheticPointerInput(IApplicationPlatform platform)
     {
+        this.platform = platform;
+    }
+
+    public void Inject(IWindow window, PointerType type, IReadOnlyList<IReadOnlyList<SyntheticPointerFrame>> frames)
+    {
+        foreach (var contact in frames[0])
+        {
+            if (platform.WindowFromScreenPoint(contact.Screen) != window.Handle)
+            {
+                throw new InvalidOperationException(
+                    $"({contact.Screen.X:0}, {contact.Screen.Y:0}) is not on top of the desktop: the system would press whatever is there.");
+            }
+        }
+
         var inputType = type switch
         {
             PointerType.Touch => PointerInputType.Touch,

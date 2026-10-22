@@ -1294,6 +1294,7 @@ public class TabControl : Selector
         _tabStrip = GetTemplateChild("PART_TabStrip") as TabStripScroller;
         _overflow = GetTemplateChild("PART_TabOverflow") as ToggleButton;
         _overflowPopup = GetTemplateChild("PART_TabOverflowPopup") as Popup;
+        _scrollPending = true;
 
         // The flyout's list is built on first open, outside this template's namescope.
         _overflowList = null;
@@ -1382,7 +1383,8 @@ public class TabControl : Selector
         return rows;
     }
 
-    internal void SelectOverflowRow(int index)
+    /// <summary>Selects the tab that a row of the ▾ list stands for.</summary>
+    internal virtual void SelectOverflowRow(int index)
     {
         if (index < 0 || index >= Items.Count) return;
         SelectedIndex = index;

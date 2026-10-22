@@ -262,6 +262,12 @@ public class TextStyleTests
     [Test]
     public void ABoldsWeight_AndAnItalicsSlant_YieldToAStyleOnThemOrInside_NotToOneAround()
     {
+        var family = Adamantium.UI.Controls.Base.UIComponent.DefaultFontFamily;
+        Assume.That(family.GetFont(FontWeight.Light, FontStyle.Normal, FontStretch.Normal).Weight, Is.EqualTo(FontWeight.Light),
+            "the family has a Light face");
+        Assume.That(family.GetFont(FontWeight.Black, FontStyle.Normal, FontStretch.Normal).Weight, Is.EqualTo(FontWeight.Black),
+            "the family has a Black face");
+
         var light = new CharacterStyle { FontWeight = FontWeight.Light, FontStyle = FontStyle.Normal };
         var inside = new Bold();
         inside.Inlines.Add(new Run { Text = "a", CharacterStyle = light });

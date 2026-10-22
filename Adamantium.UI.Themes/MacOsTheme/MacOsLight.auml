@@ -60,16 +60,9 @@
          as a Mac's tab strip does: a sunk gray rail with one raised capsule on it. -->
     <PaletteColor Key="SegmentedTrackColor" Color="#E1E1E3"/>
 
-    <!-- The same groove again, as a COLOR, for the fade that dissolves tabs at the ends of a scrolling strip. Its own
-         pair rather than the one key twice: a palette key is served as a BRUSH by default, and a brush handed to
-         GradientStop.Color is an InvalidCastException on every recorded frame - the scene then records nothing at all
-         and the window comes up empty. A slot decides the serving, so a key used in both slots is two keys. -->
-    <PaletteColor Key="SegmentedTrackFadeColor" Color="#E6E1E1E3" As="Color"/>
-    <PaletteColor Key="SegmentedTrackFadeColorTransparent" Color="#00E1E1E3" As="Color"/>
-
-    <!-- The ribbon band's own fade, for the same reason and in the same pair: the row of groups scrolls on the BAND,
-         which is the well rather than the window, so a fade to the window color would smear the wrong gray across the
-         last group. As="Color" - these sit on GradientStop.Color. -->
+    <!-- The ribbon band's own fade: the row of groups scrolls on the BAND, which is the well rather than the window,
+         so a fade to the window color would smear the wrong gray across the last group. As="Color" - these sit on
+         GradientStop.Color, and a key served as a brush there is an InvalidCastException on every recorded frame. -->
     <PaletteColor Key="BandFadeColor" Color="#E6FFFFFF" As="Color"/>
     <PaletteColor Key="BandFadeColorTransparent" Color="#00FFFFFF" As="Color"/>
 

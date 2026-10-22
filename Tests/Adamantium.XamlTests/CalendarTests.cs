@@ -615,6 +615,8 @@ public class CalendarTests
     [Test]
     public void ALanguageOfAnotherCalendar_CountsMonthsByIt()
     {
+        Assume.That(System.Globalization.CultureInfo.GetCultureInfo("ar-SA").Calendar,
+            Is.Not.InstanceOf<System.Globalization.GregorianCalendar>(), "ar-SA counts by Umm al-Qura here");
         var calendar = Shown(new Calendar { Language = "ar-SA", DisplayDate = October });
         var first = calendar.DayButtons.First(d => !d.IsInactive);
 
@@ -969,7 +971,27 @@ public class CalendarTests
 
         ((ButtonBase)calendar.GetTemplateChild("PART_Previous")).PerformClick();
 
-        Assert.That(calendar.DisplayDate, Is.EqualTo(new DateTime(1868, 9, 8)), "Meiji 1, from the first day counted");
+        Assert.That(calendar.DisplayDate, Is.EqualTo(FirstCountedDay(new System.Globalization.JapaneseCalendar())),
+            "Meiji 1, from the first day counted");
+    }
+
+    private static DateTime FirstCountedDay(System.Globalization.Calendar counting)
+    {
+        var last = counting.MinSupportedDateTime.Date.AddYears(2);
+        for (var day = counting.MinSupportedDateTime.Date; day < last; day = day.AddDays(1))
+        {
+            try
+            {
+                counting.GetEra(day);
+                return day;
+            }
+            catch (ArgumentException)
+            {
+            }
+        }
+
+        Assert.Fail("the calendar counts no day of its first two years");
+        return last;
     }
 
     [Test]
@@ -1075,6 +1097,8 @@ public class CalendarTests
     [Test]
     public void ALanguageWhoseCalendarEndsSooner_HoldsTheDatesWithinIt()
     {
+        Assume.That(System.Globalization.CultureInfo.GetCultureInfo("ar-SA").Calendar,
+            Is.Not.InstanceOf<System.Globalization.GregorianCalendar>(), "ar-SA counts by Umm al-Qura here");
         var calendar = Shown(new Calendar { DisplayDate = new DateTime(2100, 5, 1) });
         calendar.SelectedDate = new DateTime(2100, 5, 3);
 

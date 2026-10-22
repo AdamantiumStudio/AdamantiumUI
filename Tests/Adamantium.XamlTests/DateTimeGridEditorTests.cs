@@ -1286,6 +1286,8 @@ public class DateTimeGridEditorTests
     [Test]
     public void TheGroupsOfACalendarOfItsOwn_AreItsMonths()
     {
+        Assume.That(System.Globalization.CultureInfo.GetCultureInfo("ar-SA").Calendar,
+            Is.Not.InstanceOf<System.Globalization.GregorianCalendar>(), "ar-SA counts by Umm al-Qura here");
         var was = Languages.Current;
         try
         {

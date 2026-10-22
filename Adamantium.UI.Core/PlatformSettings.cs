@@ -35,6 +35,10 @@ public static class PlatformSettings
    /// <summary>The monitors connected now, in PHYSICAL pixels; empty when the platform does not say.</summary>
    public static IReadOnlyList<ScreenInfo> Screens => Platform?.Screens ?? [];
 
+   /// <summary>Whether a window can be put at a point of the desktop. Where it cannot, an overlay is drawn inside the
+   /// window it covers.</summary>
+   public static bool CanPlaceWindows => Platform?.CanPlaceWindows ?? true;
+
    /// <summary>Whether a saved window rectangle is still reachable: its top-left and a grabbable caption strip are on a
    /// monitor. True when the platform cannot tell.</summary>
    public static bool IsOnScreen(Rect bounds)

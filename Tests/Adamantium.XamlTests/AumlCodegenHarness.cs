@@ -32,6 +32,15 @@ internal static class AumlCodegenHarness
         typeof(Adamantium.UI.Automation.AutomationSession),   // what a scenario's test runs on
     ];
 
+    /// <summary>The project folder the generators are told of, as the build machine's OS writes it.</summary>
+    public static readonly string Root = OperatingSystem.IsWindows() ? @"C:\Test\" : "/Test/";
+
+    /// <summary>A file of the test project by its path relative to <see cref="Root"/>.</summary>
+    public static string PathOf(string relative) => Root + relative.Replace('/', System.IO.Path.DirectorySeparatorChar);
+
+    /// <summary>A path as a C# string literal writes it.</summary>
+    public static string Literal(string path) => path.Replace("\\", "\\\\");
+
     public const string WindowHeader =
         "<Window x:Namespace=\"Test.App\" " +
         "xmlns=\"http://adamantium/ui\" " +
@@ -94,12 +103,12 @@ internal static class AumlCodegenHarness
         var optionsProvider = new DictOptionsProvider(new Dictionary<string, string>
         {
             ["build_property.RootNamespace"] = "Test.App",
-            ["build_property.projectdir"] = @"C:\Test\",
+            ["build_property.projectdir"] = Root,
         });
 
         var driver = CSharpGeneratorDriver.Create(
             generators: [new AumlCodeBehindGenerator().AsSourceGenerator()],
-            additionalTexts: [new InMemoryAdditionalText(@"C:\Test\MainWindow.auml", auml)],
+            additionalTexts: [new InMemoryAdditionalText(PathOf("MainWindow.auml"), auml)],
             parseOptions: null,
             optionsProvider: optionsProvider,
             driverOptions: new GeneratorDriverOptions(IncrementalGeneratorOutputKind.None, trackIncrementalGeneratorSteps: true));
@@ -117,7 +126,7 @@ internal static class AumlCodegenHarness
         var options = new Dictionary<string, string>
         {
             ["build_property.RootNamespace"] = "Test.App",
-            ["build_property.projectdir"] = @"C:\Test\",
+            ["build_property.projectdir"] = Root,
         };
         foreach (var property in properties ?? new Dictionary<string, string>())
         {
@@ -130,7 +139,7 @@ internal static class AumlCodegenHarness
                 new AumlCodeBehindGenerator().AsSourceGenerator(), new LanguageTableGenerator().AsSourceGenerator(),
                 new Adamantium.UI.Generators.Scenarios.ScenarioTestGenerator().AsSourceGenerator()
             ],
-            additionalTexts: files.Select(f => (AdditionalText)new InMemoryAdditionalText(@"C:\Test\" + f.Key.Replace('/', '\\'), f.Value)),
+            additionalTexts: files.Select(f => (AdditionalText)new InMemoryAdditionalText(PathOf(f.Key), f.Value)),
             parseOptions: null,
             optionsProvider: new DictOptionsProvider(options));
 
@@ -150,12 +159,12 @@ internal static class AumlCodegenHarness
     {
         var driver = CSharpGeneratorDriver.Create(
             generators: [new AumlCodeBehindGenerator().AsSourceGenerator()],
-            additionalTexts: [new InMemoryAdditionalText(@"C:\Test\" + relativePath.Replace('/', '\\'), auml)],
+            additionalTexts: [new InMemoryAdditionalText(PathOf(relativePath), auml)],
             parseOptions: null,
             optionsProvider: new DictOptionsProvider(new Dictionary<string, string>
             {
                 ["build_property.RootNamespace"] = "Test.App",
-                ["build_property.projectdir"] = @"C:\Test\",
+                ["build_property.projectdir"] = Root,
             }));
 
         if (!compile)
@@ -193,12 +202,12 @@ internal static class AumlCodegenHarness
         var optionsProvider = new DictOptionsProvider(new Dictionary<string, string>
         {
             ["build_property.RootNamespace"] = "Test.App",
-            ["build_property.projectdir"] = @"C:\Test\",
+            ["build_property.projectdir"] = Root,
         });
 
         return CSharpGeneratorDriver.Create(
             generators: [new AumlCodeBehindGenerator().AsSourceGenerator()],
-            additionalTexts: [new InMemoryAdditionalText(@"C:\Test\MainWindow.auml", auml)],
+            additionalTexts: [new InMemoryAdditionalText(PathOf("MainWindow.auml"), auml)],
             parseOptions: null,
             optionsProvider: optionsProvider);
     }

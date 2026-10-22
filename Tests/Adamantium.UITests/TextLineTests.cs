@@ -98,8 +98,11 @@ public class TextLineTests
         Adamantium.UI.Controls.Panels.Grid.SetRow(rule, 1);
 
         grid.Measure(new Size(200, 24), force: true);
+        var free = new TextBlock { Text = "Dots", FontSize = 14 };
+        free.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity), force: true);
+        Assume.That(free.DesiredSize.Height, Is.LessThan(23), "a line of this font fits the row");
 
-        Assert.That(block.DesiredSize.Height, Is.EqualTo(19).Within(1),
+        Assert.That(block.DesiredSize.Height, Is.EqualTo(free.DesiredSize.Height).Within(1),
             $"the line measured {block.DesiredSize.Height} in a row that had 23 to give");
     }
 

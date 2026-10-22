@@ -100,6 +100,10 @@ public class DockingArea : Panel
             System.Math.Max(0, availableSize.Height - top - bottom));
 
         _tree?.Measure(middle);
+        if (_compassInline)
+        {
+            _compass.Measure(availableSize);
+        }
 
         var tree = _tree == null ? default : _tree.DesiredSize;
         return new Size(
@@ -127,6 +131,10 @@ public class DockingArea : Panel
         ArrangeBar(DockZone.Right, new Rect(finalSize.Width - right, 0, right, finalSize.Height));
         ArrangeBar(DockZone.Top, new Rect(left, 0, bandWidth, top));
         ArrangeBar(DockZone.Bottom, new Rect(left, finalSize.Height - bottom, bandWidth, bottom));
+        if (_compassInline)
+        {
+            _compass.Arrange(new Rect(0, 0, finalSize.Width, finalSize.Height));
+        }
 
         return finalSize;
     }
@@ -1388,6 +1396,10 @@ public class DockingArea : Panel
         }
 
         _tree = visual;
+        if (_compassInline)
+        {
+            wanted.Add(_compass);
+        }
 
         // Only touch the children when they actually differ - an unchanged area must not be torn down and rebuilt.
         if (!SameChildren(Children, wanted))
@@ -1451,6 +1463,7 @@ public class DockingArea : Panel
     private DockCompassWindow _compassWindow;
 
     private bool _overlayShown;
+    private bool _compassInline;
 
     /// <summary>The compass shown during a docking drag - a control, so a theme can style it.</summary>
     public DockCompass Compass => _compass;
@@ -1462,6 +1475,18 @@ public class DockingArea : Panel
     // laid out inside it and left the area's own edges unreachable, so an edge anchor had nowhere to go.
     private void ShowOverlay()
     {
+        if (WindowDragPointer.IsActive || !PlatformSettings.CanPlaceWindows)
+        {
+            if (!_compassInline)
+            {
+                _compassInline = true;
+                Children.Add(_compass);
+                InvalidateMeasure();
+            }
+
+            return;
+        }
+
         // Position PHYSICAL (a desktop point), size LOGICAL - see WindowBase.Left.
         var origin = this.PointToScreen(Vector2.Zero);
         var bounds = new Rect(0, 0, RenderSize.Width, RenderSize.Height);
@@ -1484,7 +1509,17 @@ public class DockingArea : Panel
         _compassWindow.Show();
     }
 
-    private void HideOverlay() => _compassWindow?.Hide();
+    private void HideOverlay()
+    {
+        if (_compassInline)
+        {
+            _compassInline = false;
+            Children.Remove(_compass);
+            InvalidateMeasure();
+        }
+
+        _compassWindow?.Hide();
+    }
 
     // What the current drag may do, read once per DRAG - asking per mouse move would walk the tree hundreds of times a
     // second - and re-read when a DIFFERENT window is picked up: a floating window can be grabbed by its caption at any
@@ -1851,7 +1886,7 @@ public class DockingArea : Panel
             window.WindowMoveCompleted += (_, _) => DropWindow(window, root);
 
             // The platform's own move loop: the window rides under the cursor with Aero Snap intact.
-            window.DragMove();
+            window.DragMove(new Vector2(grabX / DpiScale.X, window.TitleBarHeight / 2));
         });
     }
 
@@ -1859,6 +1894,13 @@ public class DockingArea : Panel
     // position lags; converted from physical here.
     private Vector2 PointerIn()
     {
+        if (WindowDragPointer.IsActive)
+        {
+            return ReferenceEquals(RootVisual, WindowDragPointer.Window)
+                ? WindowDragPointer.Position - this.PointToScreen(Vector2.Zero).ToLogical(DpiScale)
+                : new Vector2(-1, -1);
+        }
+
         return (Mouse.ScreenCoordinates - this.PointToScreen(Vector2.Zero)).ToLogical(DpiScale);
     }
 
