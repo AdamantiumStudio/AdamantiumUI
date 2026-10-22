@@ -103,7 +103,7 @@ public static class ScenarioTestEmitter
                 .AppendLine("                global::System.IO.Path.Combine(global::System.AppContext.BaseDirectory,")
                 .AppendLine($"                    global::System.OperatingSystem.IsWindows() ? {SymbolDisplay.FormatLiteral(application + ".exe", true)} : " +
                             $"{SymbolDisplay.FormatLiteral(application, true)}),")
-                .AppendLine("                new global::Adamantium.UI.Automation.LaunchOptions { FreshData = true });")
+                .AppendLine("                new global::Adamantium.UI.Automation.LaunchOptions { FreshData = true, VirtualDisplay = true });")
                 .AppendLine("        await using var opened = running is { Length: > 0 } ? await session.CloseWindowsOpenedFromNowAsync() : null;");
             foreach (var step in file.Steps)
             {

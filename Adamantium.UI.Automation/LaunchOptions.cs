@@ -35,4 +35,8 @@ public sealed class LaunchOptions
     /// true by default. A frame that parts from the tree is an error in the <see cref="ErrorJournal"/>, so the step after
     /// which it was drawn fails - what a broken render cache shows is caught by a run, not by someone's eye.</summary>
     public bool VerifyFrames { get; set; } = true;
+
+    /// <summary>Whether the application is shown on a virtual monitor of its own rather than on the desktop, so it takes
+    /// no focus from whoever works there. Linux only, with Mutter; elsewhere it shows on the desktop.</summary>
+    public bool VirtualDisplay { get; set; }
 }

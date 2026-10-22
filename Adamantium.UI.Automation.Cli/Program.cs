@@ -24,6 +24,8 @@ public static class Program
 
           start --exe <path> [--tab <Id>] [--theme <Name>]   start an instance with the agent and wait for its window;
                                                               beside the sandbox, the sandbox when no --exe is named
+          start ... --virtual                                 on Linux, on a virtual monitor of its own instead of the
+                                                              desktop: it takes no one's focus
           stop                                                close it
           windows                                             the open windows
           tree [<selector>] [--depth <n>] [--out <file>]      the automation tree
@@ -138,7 +140,13 @@ public static class Program
             return Fail($"An instance already answers on pipe '{pipe}'. Close it first: adam-auto stop", 1);
         }
 
-        var options = new LaunchOptions { PipeName = pipe, StartTimeout = StartTimeout, CloseOnDispose = false };
+        var options = new LaunchOptions
+        {
+            PipeName = pipe,
+            StartTimeout = StartTimeout,
+            CloseOnDispose = false,
+            VirtualDisplay = arguments.Flag("virtual")
+        };
         if (arguments.Option("theme") is { } theme)
         {
             options.Environment["ADAM_THEME"] = theme;

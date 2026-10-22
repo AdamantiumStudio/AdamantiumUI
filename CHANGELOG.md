@@ -15,6 +15,10 @@ All packages share one version.
   border, maximize, restore, or an asked-for size coming back rounded - the way `UpdatePositionFromPlatform` reports a
   move. Only a size the window did not ask for, in the normal state, ends `SizeToContent`; a size set from code
   always does. The Win32, Wayland and macOS workers report through it, and set the state before the size.
+- `LaunchOptions.VirtualDisplay` (`adam-auto start --virtual`): on Linux the application is started by a headless Mutter
+  with a virtual monitor of its own, on a D-Bus session of its own, and the compositor exits with it - it shows nowhere
+  on the desktop and takes no one's focus. Generated scenario tests use it, so a run no longer pulls the focus away for
+  every scenario. Without Mutter the application shows on the desktop, which is said on standard error.
 - Docking on Wayland: a panel torn off, and a floating window dragged by its title bar, ride under the pointer through
   `xdg_toplevel_drag` - the compositor carries the window in a drag of our own type, which no other client takes, and
   our windows are told where the pointer is over them. `WindowDragPointer` holds that point while such a drag lasts;
