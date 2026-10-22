@@ -442,7 +442,7 @@ public class TextBoxTests
     [Test]
     public void ALineOfFallbackGlyphs_KeepsTheLineOfTheFieldsFont()
     {
-        if (!System.IO.File.Exists(@"C:\Windows\Fonts\seguiemj.ttf"))
+        if (!System.IO.File.Exists(System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Fonts), "seguiemj.ttf")))
         {
             Assert.Ignore("Segoe UI Emoji is not installed here.");
         }

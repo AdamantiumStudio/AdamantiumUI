@@ -17,7 +17,7 @@ public class DataPackageFormatTests
     {
         var produced = 0;
         var package = new DataPackage();
-        package.SetDeferred(DataFormats.Files, () => { produced++; return new[] { @"C:\heavy.bin" }; });
+        package.SetDeferred(DataFormats.Files, () => { produced++; return new[] { System.IO.Path.Combine(System.IO.Path.GetTempPath(), "heavy.bin") }; });
 
         Assert.That(package.Contains(DataFormats.Files), Is.True, "the format must be on offer from the start");
         Assert.That(package.GetFormats(), Does.Contain(DataFormats.Files));

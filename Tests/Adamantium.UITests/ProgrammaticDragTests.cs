@@ -174,11 +174,12 @@ public class ProgrammaticDragTests
         {
             var package = new DataPackage();
             package.Set(DataFormats.Image, TinyPng);
-            package.Set(DataFormats.Files, new[] { @"C:\the-source-said-so.png" });
+            var said = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "the-source-said-so.png");
+            package.Set(DataFormats.Files, new[] { said });
 
             DragDrop.DoDragDrop(_source, package);
 
-            Assert.That(package.Get(DataFormats.Files), Is.EqualTo(new[] { @"C:\the-source-said-so.png" }));
+            Assert.That(package.Get(DataFormats.Files), Is.EqualTo(new[] { said }));
         }
         finally
         {
