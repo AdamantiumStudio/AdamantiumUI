@@ -60,7 +60,7 @@ public static class Program
           disconnect <socket> [<socket>]                      part a socket from one, or from all it is joined to
           dock <pane> top|left|bottom|right|fill|none [--beside <pane>]   dock a pane or a panel: to an edge, into the
                                                               documents, out into a window; beside a pane's panel
-          window <selector> minimize | maximize | restore | close
+          window <selector> minimize | maximize | restore | close | hide | show
           set <selector> <value>                              write a value: text, or a number
           caret <selector> <line>[:<col>] [--to <line>[:<col>]]
                                                               put the caret in a text, or select up to --to; lines
@@ -71,12 +71,14 @@ public static class Program
           wait <selector> [--timeout 5s]                      wait until something matches
           wait <selector> <key>=<value>... [--timeout 5s]     wait until it matches, as expect checks it
           wait-idle                                           wait until the application has settled
-          state                                               keyboard focus, windows, open popups
+          state                                               keyboard focus, windows, open popups, the default
+                                                              font, monitors
           shot [<selector>] [--out shot.png]                  a picture of it, or of the first window, to look at
           memory                                              collect all garbage, then the managed heap and private
                                                               memory left - one reading of a leak hunt
           theme [<name>] [--variant <name>]                   move onto a theme and variant once the swap settles;
-                                                              alone, which one is in use and which there are
+                                                              alone, which one is in use and which there are;
+                                                              --variant System follows the desktop's
           mark | errors [--since <mark>]                      the error journal: its newest entry, what came after a mark
           expect <selector> <key>=<value>...                  fail unless it matches: name, id, type, class, value, toggle,
                                                               selected, expanded, min, max, hscroll, vscroll, window, zoom,

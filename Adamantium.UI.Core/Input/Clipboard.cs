@@ -32,6 +32,9 @@ public static class Clipboard
     /// <summary>The active provider. A platform sets this to the OS clipboard; until then an in-process store is used.</summary>
     public static IClipboard Current { get; set; } = new InProcessClipboard();
 
+    /// <summary>The selection a middle click pastes, where the platform has one; null elsewhere.</summary>
+    public static IPrimarySelection PrimarySelection { get; set; }
+
     public static string GetText() => Current?.GetText() ?? string.Empty;
 
     /// <summary>Whether there is text to paste, without reading it.</summary>

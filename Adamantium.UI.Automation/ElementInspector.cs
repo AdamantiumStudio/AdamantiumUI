@@ -112,6 +112,15 @@ internal static class ElementInspector
             }
         }
 
+        text.Append("font: ").AppendLine(UIComponent.DefaultFontFamily?.Source ?? "none");
+        foreach (var screen in PlatformSettings.Screens)
+        {
+            var b = screen.Bounds;
+            text.Append("screen: ").Append(screen.Id).Append(string.Create(CultureInfo.InvariantCulture,
+                $" {b.X:0},{b.Y:0} {b.Width:0}x{b.Height:0} scale {screen.Scale:0.##}"));
+            text.AppendLine(screen.IsPrimary ? " primary" : string.Empty);
+        }
+
         return text.ToString();
     }
 

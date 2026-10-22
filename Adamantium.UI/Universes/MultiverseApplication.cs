@@ -62,6 +62,10 @@ public abstract class MultiverseApplication : UIApplication
         {
             containerRegistry.RegisterSingleton<IGamepadBackend>(CreateWindowsGamepadBackend());
         }
+        else if (!containerRegistry.IsRegistered<IGamepadBackend>() && OperatingSystem.IsLinux())
+        {
+            containerRegistry.RegisterSingleton<IGamepadBackend>(new Multiverse.Input.Evdev.EvdevGamepadBackend());
+        }
     }
 
     private static IGamepadBackend CreateWindowsGamepadBackend()

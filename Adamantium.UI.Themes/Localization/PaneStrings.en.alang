@@ -5,4 +5,6 @@
     <Phrase Key="Save" Text="Save"/>
     <Phrase Key="DontSave" Text="Don't save"/>
     <Phrase Key="Cancel" Text="Cancel"/>
+    <Phrase Key="AutoHide" Text="Auto hide"/>
+    <Phrase Key="CloseActive" Text="Close"/>
 </Language>

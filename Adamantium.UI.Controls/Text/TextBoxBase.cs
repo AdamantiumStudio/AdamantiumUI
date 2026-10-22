@@ -933,6 +933,8 @@ public abstract class TextBoxBase : Control, ITextStyleUser, Adamantium.UI.Core.
 
     private bool HasSelection => SelectionLength > 0;
 
+    private bool _primaryQueued;
+
     private int Clamp(int index) => Math.Clamp(index, 0, TextLength);
 
     private (int start, int end) SelectionRange()
@@ -1338,11 +1340,13 @@ public abstract class TextBoxBase : Control, ITextStyleUser, Adamantium.UI.Core.
         ReplaceSelection(string.Empty);
     }
 
-    protected virtual void PasteFromClipboard()
+    protected virtual void PasteFromClipboard() => Paste(Clipboard.GetText());
+
+    /// <summary>Puts pasted text in place of the selection: from the clipboard, or the primary selection a middle click
+    /// pastes.</summary>
+    protected virtual void Paste(string text)
     {
-        if (IsReadOnly) return;
-        var text = Clipboard.GetText();
-        if (string.IsNullOrEmpty(text)) return;
+        if (IsReadOnly || string.IsNullOrEmpty(text)) return;
         text = text.Replace("\r\n", "\n").Replace("\r", "\n").Replace((char)0x2028, '\n').Replace((char)0x2029, '\n'); // normalize line endings
         if (!AcceptsNewLines) text = text.Replace("\n", " ");        // single-line: newlines become spaces
         ReplaceSelection(Entered(text));
@@ -1425,6 +1429,14 @@ public abstract class TextBoxBase : Control, ITextStyleUser, Adamantium.UI.Core.
         Focus();
         var (index, after) = HitFromPoint(localX - _textOx, localY - _textOy);
         MoveCaretTo(index, extend, afterPrevious: after);
+    }
+
+    internal void SurfacePastePrimary(double localX, double localY)
+    {
+        if (IsReadOnly || Clipboard.PrimarySelection is not { } primary) return;
+        var text = primary.GetText();
+        SurfacePointerDown(localX, localY, false);
+        Paste(text);
     }
 
     internal void SurfacePointerMove(double localX, double localY)
@@ -1914,10 +1926,22 @@ public abstract class TextBoxBase : Control, ITextStyleUser, Adamantium.UI.Core.
         CommandManager.InvalidateRequerySuggested(tb);
     }
 
+    private void QueuePrimarySelection()
+    {
+        if (_primaryQueued || !HasSelection || !IsFocused || !GivesTextAway || Clipboard.PrimarySelection == null) return;
+        _primaryQueued = true;
+        LoopSignal.Post(() =>
+        {
+            _primaryQueued = false;
+            if (HasSelection && IsFocused) Clipboard.PrimarySelection?.SetText(DisplayedText(SelectedText()));
+        });
+    }
+
     private static void OnCaretOrSelectionChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
     {
         if (a is not TextBoxBase box) return;
         box.InvalidateSurface();
+        box.QueuePrimarySelection();
         CommandManager.InvalidateRequerySuggested(box);
         if (AutomationEvents.IsListening && box.FindAutomationPeer() != null)
             AutomationEvents.Raise(box, AutomationEvent.TextSelectionChanged);

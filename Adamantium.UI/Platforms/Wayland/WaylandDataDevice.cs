@@ -274,7 +274,8 @@ internal sealed unsafe class WaylandDataDevice
         .Select(line => new Uri(line.Trim()).LocalPath)
         .ToArray();
 
-    private static byte[] ReadToEnd(int fd)
+    /// <summary>What a client writes into the pipe until it closes it; null when it does not finish in time.</summary>
+    internal static byte[] ReadToEnd(int fd)
     {
         using var result = new MemoryStream();
         var buffer = stackalloc byte[4096];

@@ -34,4 +34,7 @@ public interface INativePlatformSettings
 
     /// <summary>The monitors connected now; empty when unknown.</summary>
     IReadOnlyList<ScreenInfo> Screens { get; }
+
+    /// <summary>Whether a window can be put at a point of the desktop; Wayland places windows itself.</summary>
+    bool CanPlaceWindows => true;
 }

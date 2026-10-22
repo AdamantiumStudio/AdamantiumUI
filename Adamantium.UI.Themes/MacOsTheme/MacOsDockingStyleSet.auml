@@ -161,7 +161,7 @@
                                         Content="{TemplateBinding Title}"
                                         FontSize="{ResourceReference FontSizeChrome}"
                                         Foreground="{ResourceReference TextFillColorSecondary}"/>
-                                <Button x:Name="PART_AutoHideButton" Grid.Column="1"
+                                <Button x:Name="PART_AutoHideButton" Grid.Column="1" AutomationProperties.Name="{Localize PaneStrings.AutoHide}"
                                         Classes="DockCaptionButton" VerticalAlignment="Center">
                                     <!-- The same thumbtack the card window's caption uses. Drawn, never typed - a glyph
                                          depends on a font having it, and the one this started as is missing from most
@@ -172,7 +172,7 @@
                                             Fill="{ResourceReference TextFillColorSecondary}"
                                             HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Button>
-                                <Button x:Name="PART_CloseButton" Grid.Column="2"
+                                <Button x:Name="PART_CloseButton" Grid.Column="2" AutomationProperties.Name="{Localize PaneStrings.CloseActive}"
                                         Classes="DockCaptionButton" VerticalAlignment="Center">
                                     <Path Data="M0,0 L8,8 M8,0 L0,8"
                                             Stroke="{ResourceReference TextFillColorSecondary}" StrokeThickness="1.1"
@@ -193,12 +193,14 @@
                                     ContentTemplateSelector="{TemplateBinding SelectedContentTemplateSelector}"/>
                         </Border>
 
-                        <!-- Tabs BELOW the content, which is where a tool window keeps them while it is docked. -->
-                        <TabStripScroller x:Name="PART_TabStrip" Grid.Row="2" Grid.Column="1" Orientation="Horizontal">
-                            <!-- Auto both ways: a Grid with no definitions stretches to whatever it is offered, and this
-                                 one sits in the Auto column of a folded strip - so it made the narrow column as wide as
-                                 the body used to be. -->
-                            <Grid x:Name="StripFill" RowDefinitions="Auto" ColumnDefinitions="Auto">
+                        <!-- Tabs BELOW the content, which is where a tool window keeps them while it is docked. The strip
+                             and its ▾ move as ONE row: the folded triggers below put the whole row on an edge. -->
+                        <Grid x:Name="StripRow" Grid.Row="2" Grid.Column="1" RowDefinitions="*,Auto" ColumnDefinitions="*,Auto">
+                        <TabStripScroller x:Name="PART_TabStrip" Orientation="Horizontal">
+                            <!-- No Auto along the strip: an Auto track measures the tab panel unbounded, and it then pans
+                                 nowhere. Across the strip no bound is offered anyway, so a folded column stays as narrow
+                                 as a turned label. -->
+                            <Grid x:Name="StripContent">
                                 <ItemsPresenter x:Name="PART_ItemsPresenter"/>
                                 <!-- Silenced like every other bar in this theme (the selection is the capsule the pane
                                      itself wears), and kept because the control places and slides it BY NAME. -->
@@ -211,6 +213,31 @@
                                         IsHitTestVisible="False"/>
                             </Grid>
                         </TabStripScroller>
+                        <!-- Every tab as a list, shown by the control once they overflow - see the TabControl template.
+                             Focusable=False: chrome, not a keyboard destination. -->
+                        <ToggleButton x:Name="PART_TabOverflow" AutomationProperties.Name="{Localize TabStrings.MoreTabs}"
+                                      Grid.Column="1" VerticalAlignment="Center"
+                                      Focusable="False"
+                                      Classes="SegmentedOverflow"
+                                      MinWidth="24" MinHeight="20" Padding="4 0" Visibility="Collapsed">
+                            <Image Source="{ResourceReference ChevronDownIcon}"
+                                   Width="{ResourceReference DropDownIconSize}"
+                                   Height="{ResourceReference DropDownIconSize}"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </ToggleButton>
+                        <!-- Opens UPWARD: the strip sits at the bottom of the panel, often at the bottom of the window. -->
+                        <Popup x:Name="PART_TabOverflowPopup" Grid.Column="1" Placement="Top" FlipToFit="True" VerticalOffset="-2">
+                            <Popup.ChildTemplate>
+                                <ControlTemplate TargetType="Popup">
+                                    <Border Background="{ResourceReference CardBackgroundFillColorDefault}"
+                                            BorderBrush="{ResourceReference ControlStrokeColorDefault}"
+                                            BorderThickness="1" CornerRadius="{ResourceReference CornerRadiusDefault}" Padding="4">
+                                        <ListBox x:Name="PART_TabOverflowList" Classes="TabOverflowList" MinWidth="160"/>
+                                    </Border>
+                                </ControlTemplate>
+                            </Popup.ChildTemplate>
+                        </Popup>
+                        </Grid>
 
                         <!-- A revealed panel's body in a popup over the neighbors, placed against the group, not the
                              inset tab strip; its tabs stay on the edge. -->
@@ -241,7 +268,7 @@
                                                     Content="{TemplateBinding Title}"
                                                     FontSize="{ResourceReference FontSizeChrome}"
                                                     Foreground="{ResourceReference TextFillColorSecondary}"/>
-                                            <Button x:Name="PART_FlyoutAutoHideButton" Grid.Column="1"
+                                            <Button x:Name="PART_FlyoutAutoHideButton" Grid.Column="1" AutomationProperties.Name="{Localize PaneStrings.AutoHide}"
                                                     Classes="DockCaptionButton" VerticalAlignment="Center">
                                                 <!-- Hollow: this panel is NOT docked - that is the whole reason it is a
                                                      flyout. Pressing it is what docks it, and the tack fills in. -->
@@ -250,7 +277,7 @@
                                                         Fill="Transparent"
                                                         HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                             </Button>
-                                            <Button x:Name="PART_FlyoutCloseButton" Grid.Column="2"
+                                            <Button x:Name="PART_FlyoutCloseButton" Grid.Column="2" AutomationProperties.Name="{Localize PaneStrings.CloseActive}"
                                                     Classes="DockCaptionButton" VerticalAlignment="Center">
                                                 <Path Data="M0,0 L8,8 M8,0 L0,8"
                                                         Stroke="{ResourceReference TextFillColorSecondary}" StrokeThickness="1.1"
@@ -296,7 +323,7 @@
                         </PropertyTrigger>
                         <!-- One tab in a window of its own is not a choice, so there is no strip to make it with. -->
                         <PropertyTrigger Property="ShowTabStrip" Value="false">
-                            <Setter TargetName="PART_TabStrip" Property="Visibility" Value="Collapsed"/>
+                            <Setter TargetName="StripRow" Property="Visibility" Value="Collapsed"/>
                         </PropertyTrigger>
                         <!-- The bar runs beside the body by default - along the top of the strip below it; Outer moves it
                              to the strip's far edge, under the tabs. -->
@@ -309,7 +336,7 @@
                             <Setter TargetName="PART_Header" Property="Visibility" Value="Collapsed"/>
                             <Setter TargetName="Body" Property="Visibility" Value="Collapsed"/>
                             <Setter TargetName="Chrome" Property="BorderThickness" Value="0"/>
-                            <Setter TargetName="StripFill" Property="Background" Value="{ResourceReference DockFoldedStripFill}"/>
+                            <Setter TargetName="StripRow" Property="Background" Value="{ResourceReference DockFoldedStripFill}"/>
                         </PropertyTrigger>
                         <!-- Which way the flyout opens, and how big it is: OUT of the edge the strip is on, as far
                              across as the panel is worth docked and as long as the strip itself. Stated per edge
@@ -353,7 +380,7 @@
                             <Setter TargetName="Chrome" Property="BorderThickness" Value="0"/>
                             <!-- The strip gets a fill of its own instead, which is what makes it READ as a put-away
                                  panel rather than as some tabs floating on the background. -->
-                            <Setter TargetName="StripFill" Property="Background" Value="{ResourceReference DockFoldedStripFill}"/>
+                            <Setter TargetName="StripRow" Property="Background" Value="{ResourceReference DockFoldedStripFill}"/>
                         </PropertyTrigger>
                         <!-- Folded against a SIDE, the tabs queue DOWN a narrow column on THAT edge - not along the
                              bottom band, which belongs to a docked panel. Moving the strip between cells is what keeps
@@ -364,8 +391,16 @@
                                 <Condition Property="Edge" Value="Left"/>
                             </MultiTrigger.Conditions>
                             <Setter TargetName="PART_TabStrip" Property="Orientation" Value="Vertical"/>
-                            <Setter TargetName="PART_TabStrip" Property="Grid.Row" Value="1"/>
-                            <Setter TargetName="PART_TabStrip" Property="Grid.Column" Value="0"/>
+                            <Setter TargetName="StripRow" Property="Grid.Row" Value="1"/>
+                            <Setter TargetName="StripRow" Property="Grid.Column" Value="0"/>
+                            <!-- Down the column: the ▾ goes under the tabs, centred and as small as the document
+                                 strip's on a side. -->
+                            <Setter TargetName="PART_TabOverflow" Property="Grid.Row" Value="1"/>
+                            <Setter TargetName="PART_TabOverflow" Property="Grid.Column" Value="0"/>
+                            <Setter TargetName="PART_TabOverflow" Property="HorizontalAlignment" Value="Center"/>
+                            <Setter TargetName="PART_TabOverflow" Property="MinWidth" Value="20"/>
+                            <Setter TargetName="PART_TabOverflow" Property="MinHeight" Value="22"/>
+                            <Setter TargetName="PART_TabOverflow" Property="Padding" Value="0 4"/>
                             <Setter Property="ItemsPanel">
                                 <Setter.Value>
                                     <ItemsPanelTemplate><TabPanel Orientation="Vertical"/></ItemsPanelTemplate>
@@ -378,8 +413,14 @@
                                 <Condition Property="Edge" Value="Right"/>
                             </MultiTrigger.Conditions>
                             <Setter TargetName="PART_TabStrip" Property="Orientation" Value="Vertical"/>
-                            <Setter TargetName="PART_TabStrip" Property="Grid.Row" Value="1"/>
-                            <Setter TargetName="PART_TabStrip" Property="Grid.Column" Value="2"/>
+                            <Setter TargetName="StripRow" Property="Grid.Row" Value="1"/>
+                            <Setter TargetName="StripRow" Property="Grid.Column" Value="2"/>
+                            <Setter TargetName="PART_TabOverflow" Property="Grid.Row" Value="1"/>
+                            <Setter TargetName="PART_TabOverflow" Property="Grid.Column" Value="0"/>
+                            <Setter TargetName="PART_TabOverflow" Property="HorizontalAlignment" Value="Center"/>
+                            <Setter TargetName="PART_TabOverflow" Property="MinWidth" Value="20"/>
+                            <Setter TargetName="PART_TabOverflow" Property="MinHeight" Value="22"/>
+                            <Setter TargetName="PART_TabOverflow" Property="Padding" Value="0 4"/>
                             <Setter Property="ItemsPanel">
                                 <Setter.Value>
                                     <ItemsPanelTemplate><TabPanel Orientation="Vertical"/></ItemsPanelTemplate>

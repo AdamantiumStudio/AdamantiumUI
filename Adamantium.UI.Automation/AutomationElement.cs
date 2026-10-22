@@ -212,6 +212,12 @@ public sealed class AutomationElement
     /// <summary>Closes it, when it is a window.</summary>
     public Task CloseAsync() => RunAsync(AutomationCommand.Close);
 
+    /// <summary>Hides it, when it is a window, which stays open.</summary>
+    public Task HideAsync() => RunAsync(AutomationCommand.Hide);
+
+    /// <summary>Shows it again, when it is a hidden window.</summary>
+    public Task ShowAsync() => RunAsync(AutomationCommand.Show);
+
     /// <summary>Opens what it holds: a drop-down's list, a submenu, a branch.</summary>
     public Task ExpandAsync() => RunAsync(AutomationCommand.Expand);
 

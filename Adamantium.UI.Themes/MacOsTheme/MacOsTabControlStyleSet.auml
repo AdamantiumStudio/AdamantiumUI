@@ -224,34 +224,6 @@
                                                    IsHitTestVisible="False"/>
                                     </Grid>
                                 </TabStripScroller>
-                                <!-- The strip has no arrows (it pans on the wheel), so the fade is the ONLY thing
-                                     saying there are tabs past the edge. A SIBLING of the scroller, in its cell:
-                                     inside it, it would pan away with the tabs it is meant to be dissolving. It fades
-                                     to the GROOVE here, not to the window - that is what it now lies on. -->
-                                <Border x:Name="BackFade" Grid.Row="1" Grid.Column="1"
-                                        Width="39"
-                                        HorizontalAlignment="Left"
-                                        Visibility="Collapsed"
-                                        IsHitTestVisible="False">
-                                    <Border.Background>
-                                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                                            <GradientStop Offset="0" Color="{ObservableResource SegmentedTrackFadeColor}"/>
-                                            <GradientStop Offset="1" Color="{ObservableResource SegmentedTrackFadeColorTransparent}"/>
-                                        </LinearGradientBrush>
-                                    </Border.Background>
-                                </Border>
-                                <Border x:Name="ForwardFade" Grid.Row="1" Grid.Column="1"
-                                        Width="39"
-                                        HorizontalAlignment="Right"
-                                        Visibility="Collapsed"
-                                        IsHitTestVisible="False">
-                                    <Border.Background>
-                                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                                            <GradientStop Offset="0" Color="{ObservableResource SegmentedTrackFadeColorTransparent}"/>
-                                            <GradientStop Offset="1" Color="{ObservableResource SegmentedTrackFadeColor}"/>
-                                        </LinearGradientBrush>
-                                    </Border.Background>
-                                </Border>
                                 <!-- Not focusable; centered, not stretched, so it never sets the row taller than the
                                      segments. -->
                                 <ToggleButton x:Name="PART_TabOverflow" AutomationProperties.Name="{Localize TabStrings.MoreTabs}" Grid.Row="1" Grid.Column="2" VerticalAlignment="Center"
@@ -310,12 +282,6 @@
                         </PropertyTrigger>
                         <PropertyTrigger Property="HasUnpinnedTabs" Value="false">
                             <Setter TargetName="PART_TabStrip" Property="Visibility" Value="Collapsed"/>
-                        </PropertyTrigger>
-                        <PropertyTrigger Property="CanScrollTabsBack" Value="true">
-                            <Setter TargetName="BackFade" Property="Visibility" Value="Visible"/>
-                        </PropertyTrigger>
-                        <PropertyTrigger Property="CanScrollTabsForward" Value="true">
-                            <Setter TargetName="ForwardFade" Property="Visibility" Value="Visible"/>
                         </PropertyTrigger>
                         <!-- ONE row: the pinned list moves down beside the others, in the first column, and stops
                              spanning the width. A WRAPPING panel measured unbounded in an Auto column answers with the
@@ -376,30 +342,6 @@
                                                    IsHitTestVisible="False"/>
                                     </Grid>
                                 </TabStripScroller>
-                                <Border x:Name="BackFade" Grid.Column="0"
-                                        Width="39"
-                                        HorizontalAlignment="Left"
-                                        Visibility="Collapsed"
-                                        IsHitTestVisible="False">
-                                    <Border.Background>
-                                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                                            <GradientStop Offset="0" Color="{ObservableResource SegmentedTrackFadeColor}"/>
-                                            <GradientStop Offset="1" Color="{ObservableResource SegmentedTrackFadeColorTransparent}"/>
-                                        </LinearGradientBrush>
-                                    </Border.Background>
-                                </Border>
-                                <Border x:Name="ForwardFade" Grid.Column="0"
-                                        Width="39"
-                                        HorizontalAlignment="Right"
-                                        Visibility="Collapsed"
-                                        IsHitTestVisible="False">
-                                    <Border.Background>
-                                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                                            <GradientStop Offset="0" Color="{ObservableResource SegmentedTrackFadeColorTransparent}"/>
-                                            <GradientStop Offset="1" Color="{ObservableResource SegmentedTrackFadeColor}"/>
-                                        </LinearGradientBrush>
-                                    </Border.Background>
-                                </Border>
                                 <ToggleButton x:Name="PART_TabOverflow" AutomationProperties.Name="{Localize TabStrings.MoreTabs}" Grid.Column="1" VerticalAlignment="Center"
                                               Focusable="False"
                                               Classes="SegmentedOverflow"
@@ -429,12 +371,6 @@
                         </PropertyTrigger>
                         <PropertyTrigger Property="HasStretchedTab" Value="true">
                             <Setter TargetName="StripTrack" Property="Background" Value="Transparent"/>
-                        </PropertyTrigger>
-                        <PropertyTrigger Property="CanScrollTabsBack" Value="true">
-                            <Setter TargetName="BackFade" Property="Visibility" Value="Visible"/>
-                        </PropertyTrigger>
-                        <PropertyTrigger Property="CanScrollTabsForward" Value="true">
-                            <Setter TargetName="ForwardFade" Property="Visibility" Value="Visible"/>
                         </PropertyTrigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -474,30 +410,6 @@
                                                    IsHitTestVisible="False"/>
                                     </Grid>
                                 </TabStripScroller>
-                                <Border x:Name="BackFade" Grid.Row="0"
-                                        Height="39"
-                                        VerticalAlignment="Top"
-                                        Visibility="Collapsed"
-                                        IsHitTestVisible="False">
-                                    <Border.Background>
-                                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                            <GradientStop Offset="0" Color="{ObservableResource EdgeFadeColor}"/>
-                                            <GradientStop Offset="1" Color="{ObservableResource EdgeFadeColorTransparent}"/>
-                                        </LinearGradientBrush>
-                                    </Border.Background>
-                                </Border>
-                                <Border x:Name="ForwardFade" Grid.Row="0"
-                                        Height="39"
-                                        VerticalAlignment="Bottom"
-                                        Visibility="Collapsed"
-                                        IsHitTestVisible="False">
-                                    <Border.Background>
-                                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                            <GradientStop Offset="0" Color="{ObservableResource EdgeFadeColorTransparent}"/>
-                                            <GradientStop Offset="1" Color="{ObservableResource EdgeFadeColor}"/>
-                                        </LinearGradientBrush>
-                                    </Border.Background>
-                                </Border>
                                 <ToggleButton x:Name="PART_TabOverflow" AutomationProperties.Name="{Localize TabStrings.MoreTabs}" Grid.Row="1" HorizontalAlignment="Center"
                                               Focusable="False"
                                               Classes="SegmentedOverflow"
@@ -540,12 +452,6 @@
                     <ControlTemplate.Triggers>
                         <PropertyTrigger Property="ShowTabStrip" Value="false">
                             <Setter TargetName="StripTrack" Property="Visibility" Value="Collapsed"/>
-                        </PropertyTrigger>
-                        <PropertyTrigger Property="CanScrollTabsBack" Value="true">
-                            <Setter TargetName="BackFade" Property="Visibility" Value="Visible"/>
-                        </PropertyTrigger>
-                        <PropertyTrigger Property="CanScrollTabsForward" Value="true">
-                            <Setter TargetName="ForwardFade" Property="Visibility" Value="Visible"/>
                         </PropertyTrigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -598,30 +504,6 @@
                                                    IsHitTestVisible="False"/>
                                     </Grid>
                                 </TabStripScroller>
-                                <Border x:Name="BackFade" Grid.Row="0"
-                                        Height="39"
-                                        VerticalAlignment="Top"
-                                        Visibility="Collapsed"
-                                        IsHitTestVisible="False">
-                                    <Border.Background>
-                                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                            <GradientStop Offset="0" Color="{ObservableResource EdgeFadeColor}"/>
-                                            <GradientStop Offset="1" Color="{ObservableResource EdgeFadeColorTransparent}"/>
-                                        </LinearGradientBrush>
-                                    </Border.Background>
-                                </Border>
-                                <Border x:Name="ForwardFade" Grid.Row="0"
-                                        Height="39"
-                                        VerticalAlignment="Bottom"
-                                        Visibility="Collapsed"
-                                        IsHitTestVisible="False">
-                                    <Border.Background>
-                                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                            <GradientStop Offset="0" Color="{ObservableResource EdgeFadeColorTransparent}"/>
-                                            <GradientStop Offset="1" Color="{ObservableResource EdgeFadeColor}"/>
-                                        </LinearGradientBrush>
-                                    </Border.Background>
-                                </Border>
                                 <ToggleButton x:Name="PART_TabOverflow" AutomationProperties.Name="{Localize TabStrings.MoreTabs}" Grid.Row="1" HorizontalAlignment="Center"
                                               Focusable="False"
                                               Classes="SegmentedOverflow"
@@ -648,12 +530,6 @@
                     <ControlTemplate.Triggers>
                         <PropertyTrigger Property="ShowTabStrip" Value="false">
                             <Setter TargetName="StripTrack" Property="Visibility" Value="Collapsed"/>
-                        </PropertyTrigger>
-                        <PropertyTrigger Property="CanScrollTabsBack" Value="true">
-                            <Setter TargetName="BackFade" Property="Visibility" Value="Visible"/>
-                        </PropertyTrigger>
-                        <PropertyTrigger Property="CanScrollTabsForward" Value="true">
-                            <Setter TargetName="ForwardFade" Property="Visibility" Value="Visible"/>
                         </PropertyTrigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

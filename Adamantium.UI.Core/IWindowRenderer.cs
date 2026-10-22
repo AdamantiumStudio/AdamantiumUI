@@ -50,6 +50,10 @@ public interface IWindowRenderer : IDisposable
     public void ResizePresenter(PresentationParameters parameters);
     public void ResizePresenter(uint width, uint height);
 
+    /// <summary>Sizes the presenter to the window as it is now. A size or scale that changes while this runs leaves the
+    /// presenter stale for the next frame instead of being lost.</summary>
+    public void ResizePresenterToWindow();
+
     /// <summary>The presenter no longer matches the window it presents (its transparency was toggled, say). Marks it
     /// stale so it is rebuilt at the next frame boundary - never in place, since the render thread may be mid-frame
     /// with the very swapchain that would be destroyed.</summary>

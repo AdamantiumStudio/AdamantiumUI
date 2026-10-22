@@ -718,6 +718,9 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
     /// <summary>Begins an OS-driven move of the window (custom-chrome caption drag). Wired from a title bar's press.</summary>
     public void DragMove() => WindowWorkerService?.BeginMoveDrag();
 
+    /// <summary>Begins an OS-driven move of the window held at <paramref name="grab"/>, a logical point of it.</summary>
+    public void DragMove(Vector2 grab) => WindowWorkerService?.BeginMoveDrag(grab);
+
     /// <summary>Minimizes the window (title bar minimize button).</summary>
     public void Minimize() => State = WindowState.Minimized;
 
@@ -909,7 +912,8 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
     private Size FrameSize() =>
         UseCustomChrome ? default : new Size(Math.Max(0, Width - ClientWidth * DpiScale.X), Math.Max(0, Height - ClientHeight * DpiScale.Y));
 
-    private string PlacementName() => PlacementKey ?? GetType().FullName;
+    /// <summary>The name the window's place is remembered under: <see cref="PlacementKey"/>, or its type.</summary>
+    public string PlacementName() => PlacementKey ?? GetType().FullName;
 
     /// <summary>The platform side of this window - an OS window and its message loop. A window drawn inside something
     /// else has none and returns null; everything that talks to the worker then does nothing.</summary>
@@ -1038,6 +1042,9 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
 
     /// <summary>The move loop ended - the button is up and the window has settled. Where a drop is committed.</summary>
     public event EventHandler WindowMoveCompleted;
+
+    /// <summary>Whether anyone follows this window's moves: a platform then reports the drag even where it costs more.</summary>
+    public bool IsMoveTracked => WindowMoving != null || WindowMoveCompleted != null;
 
     public void RaiseWindowMoving() => WindowMoving?.Invoke(this, EventArgs.Empty);
 
