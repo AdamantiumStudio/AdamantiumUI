@@ -11,7 +11,7 @@ namespace Adamantium.UI.Platforms.Wayland;
 
 /// <summary>The application on a Wayland compositor: the connection, its globals, and the loop over its socket. Desktop
 /// coordinates are a window's own: Wayland gives a client no position on the desktop.</summary>
-public sealed unsafe class WaylandPlatform : IApplicationPlatform
+public sealed unsafe class WaylandPlatform : IApplicationPlatform, Linux.IPortalParent
 {
     private readonly Thread uiThread;
     private readonly int signalFd;
@@ -125,7 +125,6 @@ public sealed unsafe class WaylandPlatform : IApplicationPlatform
             Clipboard.Current = new WaylandClipboard(this, DataDevice);
         }
 
-        FileDialog.Platform = new Linux.PortalFileDialog(ParentName);
         if (sessions != null)
         {
             Session = new WaylandSession(sessions, AppId);
@@ -188,10 +187,6 @@ public sealed unsafe class WaylandPlatform : IApplicationPlatform
 
     /// <summary>The seat's drawing tablets; null where the compositor has none.</summary>
     internal WaylandTablet Tablet { get; }
-
-    /// <summary>The desktop's appearance and font, through its portal, read before the first theme is made; null
-    /// without one.</summary>
-    internal static Linux.DesktopPortalSettings DesktopSettings { get; private set; }
 
     /// <summary>The monitors.</summary>
     internal WaylandOutputs Outputs { get; } = new();
@@ -295,7 +290,7 @@ public sealed unsafe class WaylandPlatform : IApplicationPlatform
         }
     }
 
-    private string ParentName(IntPtr owner)
+    string Linux.IPortalParent.PortalParentOf(IntPtr owner)
     {
         if (owner == IntPtr.Zero)
         {
@@ -336,7 +331,6 @@ public sealed unsafe class WaylandPlatform : IApplicationPlatform
 
     public static void Initialize(IContainerRegistry resolver)
     {
-        DesktopSettings ??= Linux.DesktopPortalSettings.Open();
         resolver.RegisterSingleton<IApplicationPlatform, WaylandPlatform>();
         resolver.RegisterSingleton<IDragGhost, WaylandDragGhost>();
         resolver.RegisterSingleton<INativeDragDrop, WaylandDragDrop>();
