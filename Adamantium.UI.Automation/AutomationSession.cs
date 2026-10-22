@@ -302,6 +302,18 @@ public sealed class AutomationSession : IAsyncDisposable
             variables[ApplicationData.FolderVariable] = data;
         }
 
+        if (options.VirtualDisplay && VirtualDisplay.Wrap(path, options.Arguments) is { } virtualStart)
+        {
+            virtualStart.WorkingDirectory = options.WorkingDirectory ?? Path.GetDirectoryName(path);
+            foreach (var variable in variables)
+            {
+                virtualStart.Environment[variable.Key] = variable.Value;
+            }
+
+            virtualStart.Environment.Remove("DISPLAY");
+            return Process.Start(virtualStart);
+        }
+
         var start = new ProcessStartInfo(path, options.Arguments ?? string.Empty)
         {
             WorkingDirectory = options.WorkingDirectory ?? Path.GetDirectoryName(path)

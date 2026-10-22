@@ -20,7 +20,7 @@ public static class ScenarioTestEmitter
     public const string AttachVariable = "ADAM_SCENARIO_PIPE";
 
     public static void Emit(SourceProductionContext output, ImmutableArray<ScenarioFile> files, string rootNamespace, string application,
-        bool testable)
+        bool testable, string font = null)
     {
         if (files.IsEmpty)
         {
@@ -94,6 +94,17 @@ public static class ScenarioTestEmitter
                 test.AppendLine($"    [global::NUnit.Framework.Explicit({SymbolDisplay.FormatLiteral(file.ExplicitReason, true)})]");
             }
 
+            if (file.Platforms.Count > 0)
+            {
+                var include = string.Join(",", file.Platforms.Select(platform => platform switch
+                {
+                    "Windows" => "Win",
+                    "MacOS" => "MacOsX",
+                    _ => platform
+                }));
+                test.AppendLine($"    [global::NUnit.Framework.Platform(Include = {SymbolDisplay.FormatLiteral(include, true)})]");
+            }
+
             test.AppendLine($"    public async global::System.Threading.Tasks.Task {file.Name}()")
                 .AppendLine("    {")
                 .AppendLine($"        var running = global::System.Environment.GetEnvironmentVariable({SymbolDisplay.FormatLiteral(AttachVariable, true)});")
@@ -103,7 +114,10 @@ public static class ScenarioTestEmitter
                 .AppendLine("                global::System.IO.Path.Combine(global::System.AppContext.BaseDirectory,")
                 .AppendLine($"                    global::System.OperatingSystem.IsWindows() ? {SymbolDisplay.FormatLiteral(application + ".exe", true)} : " +
                             $"{SymbolDisplay.FormatLiteral(application, true)}),")
-                .AppendLine("                new global::Adamantium.UI.Automation.LaunchOptions { FreshData = true });")
+                .AppendLine("                new global::Adamantium.UI.Automation.LaunchOptions { FreshData = true, VirtualDisplay = true" +
+                            (string.IsNullOrWhiteSpace(font)
+                                ? " });"
+                                : $", Environment = {{ [\"ADAM_UI_FONT\"] = {SymbolDisplay.FormatLiteral(font, true)} }} }});"))
                 .AppendLine("        await using var opened = running is { Length: > 0 } ? await session.CloseWindowsOpenedFromNowAsync() : null;");
             foreach (var step in file.Steps)
             {

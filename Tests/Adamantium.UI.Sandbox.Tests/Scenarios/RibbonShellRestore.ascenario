@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Scenario xmlns="http://adamantium/automation/scenario" Platforms="Windows" Description="The ribbon shell, opened again from the gallery while minimized, comes back as it was: it used to come back on screen still reading Minimized, taking no sizes and no input. Windows only: a Wayland window is brought back only by an activation the compositor grants for real input, which an in-application command is not.">
+  <Invoke Target="id=OpenRibbon" />
+  <Wait Target="id=RibbonWindow/id=StatusLine" Timeout="30s" />
+  <Window Target="id=RibbonWindow" Action="Minimize" />
+  <Invoke Target="id=OpenRibbon" />
+  <Expect Target="id=RibbonWindow" Window="Normal" />
+  <Click Target="id=Band/name=Duplicate" />
+  <Expect Target="id=StatusLine" Name="Duplicated the selection." />
+  <Window Target="id=RibbonWindow" Action="Close" />
+  <Absent Target="id=RibbonWindow" />
+</Scenario>

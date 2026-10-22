@@ -43,8 +43,8 @@ internal sealed class WaylandTouch
 
     private void OnDown(uint serial, uint time, WlSurface surface, int id, double x, double y)
     {
-        seat.NoteInput(serial);
         var worker = platform.Find(surface);
+        seat.NoteInput(serial, worker);
         var position = new Vector2(x, y);
         if (seat.TouchSuppressed || worker?.Window == null || worker.BeginResize(worker.ResizeEdgeAt(position), serial))
         {

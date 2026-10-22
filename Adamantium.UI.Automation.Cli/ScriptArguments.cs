@@ -6,7 +6,7 @@ namespace Adamantium.UI.Automation.Cli;
 
 internal sealed class ScriptArguments
 {
-    private static readonly string[] Flags = ["allow-errors", "add", "before", "after", "barrel", "eraser", "os", "themes", "memory"];
+    private static readonly string[] Flags = ["allow-errors", "add", "before", "after", "barrel", "eraser", "os", "themes", "memory", "virtual"];
 
     private readonly List<string> _positional = [];
     private readonly Dictionary<string, string> _options = new(StringComparer.OrdinalIgnoreCase);

@@ -29,4 +29,11 @@
     <Phrase Key="CloseFromViewModel" Text="Закрыть из VM"/>
     <Phrase Key="ModalOverlay" Text="Модальный оверлей"/>
     <Phrase Key="ModalOverlayMessage" Text="Это модальное окно затемняет и блокирует окно под собой. Тяните за заголовок."/>
+
+    <Phrase Key="OpenClickThroughWindow" Text="Окно, прозрачное для мыши"/>
+    <Phrase Key="ClickThroughWindow" Text="Окно, прозрачное для мыши"/>
+    <Phrase Key="ClickThroughHint" Text="Положите это окно поверх чего-нибудь кликабельного и включите пропуск кликов: клик по окну попадёт в то, что под ним."/>
+    <Phrase Key="PassClicks" Text="Пропускать клики 10 с"/>
+    <Phrase Key="ClickThroughCountdown" Text="Клики проходят насквозь - осталось {seconds} с"/>
+    <Phrase Key="ClickThroughOff" Text="Клики останавливаются здесь"/>
 </Language>

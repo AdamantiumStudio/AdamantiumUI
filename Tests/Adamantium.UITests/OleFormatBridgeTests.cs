@@ -19,6 +19,8 @@ namespace Adamantium.UITests;
 [Platform("Win")]
 public class OleFormatBridgeTests
 {
+    private static readonly string Exported = Path.Combine(Path.GetTempPath(), "exported.txt");
+
     private static byte[] ReadGlobal(IntPtr global)
     {
         var size = (int)Win32Interop.GlobalSize(global);
@@ -78,7 +80,7 @@ public class OleFormatBridgeTests
     {
         var produced = 0;
         var package = new DataPackage();
-        package.SetDeferred(DataFormats.Files, () => { produced++; return new[] { @"C:\exported.txt" }; });
+        package.SetDeferred(DataFormats.Files, () => { produced++; return new[] { Exported }; });
 
         using var data = new Win32DataObject(package);
         var formats = data.Formats;
@@ -92,7 +94,7 @@ public class OleFormatBridgeTests
     {
         var produced = 0;
         var package = new DataPackage();
-        package.SetDeferred(DataFormats.Files, () => { produced++; return new[] { @"C:\exported.txt" }; });
+        package.SetDeferred(DataFormats.Files, () => { produced++; return new[] { Exported }; });
 
         using var data = new Win32DataObject(package);
         var request = new FORMATETC

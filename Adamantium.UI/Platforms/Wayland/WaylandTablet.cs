@@ -58,7 +58,7 @@ internal sealed class WaylandTablet
             proxy.ProximityOut += () => left = true;
             proxy.Down += serial =>
             {
-                owner.seat.NoteInput(serial);
+                owner.seat.NoteInput(serial, worker);
                 inContact = wentDown = true;
             };
             proxy.Up += () =>
@@ -106,11 +106,13 @@ internal sealed class WaylandTablet
             {
                 Raise(RawPointerEventType.Down, time);
             }
-            else if (wentUp)
+
+            if (wentUp)
             {
                 Raise(RawPointerEventType.Up, time);
             }
-            else if (moved || entered)
+
+            if (!wentDown && !wentUp && (moved || entered))
             {
                 Raise(RawPointerEventType.Move, time);
             }
@@ -140,7 +142,7 @@ internal sealed class WaylandTablet
                 IsPrimary = true,
                 Properties = new PointerPointProperties
                 {
-                    IsLeftButtonPressed = inContact,
+                    IsLeftButtonPressed = eventType == RawPointerEventType.Down || (eventType != RawPointerEventType.Up && inContact),
                     Pressure = pressure,
                     XTilt = (float)tilt.X,
                     YTilt = (float)tilt.Y,

@@ -12,7 +12,25 @@ All packages share one version.
   nearest inline's over its span's, over the block's; a value changed inside one set already draws the text again. The
   glyph batch carries a shadow's or a glow's soft edge and a reflection's fade. The sandbox's Decorations & Effects page
   shows each.
-
+- `IWindow.SizeToContent` (`Manual`, `Width`, `Height`, `WidthAndHeight`): a window that follows what its content asks
+  for on those sides, fitted again when the content's size changes, so a size the user gives it stays until then (the
+  fitted size coming back from the OS, rounded to its pixels, is not such a size). By default a window keeps the size
+  it is given. `WindowDialogHost` turns it on for the sides a dialog states no size of.
+- `IWindow.UpdateClientSizeFromPlatform`: the platform reports the client size it gave the window - a resize by its
+  border, maximize, restore, or an asked-for size coming back rounded - the way `UpdatePositionFromPlatform` reports a
+  move. Only a size the window did not ask for, in the normal state, ends `SizeToContent`; a size set from code
+  always does. The Win32, Wayland and macOS workers report through it, and set the state before the size.
+- `LaunchOptions.VirtualDisplay` (`adam-auto start --virtual`): on Linux the application is started by a headless Mutter
+  with a virtual monitor of its own, on a D-Bus session of its own, and the compositor exits with it - it shows nowhere
+  on the desktop and takes no one's focus. Generated scenario tests use it, so a run no longer pulls the focus away for
+  every scenario. Without Mutter the application shows on the desktop, which is said on standard error.
+- Scenarios for some systems only: `<Scenario Platforms="Windows Linux MacOS">` names where one runs, and its test is
+  skipped elsewhere - for what one system does by design and another refuses, as a Wayland compositor refuses to raise
+  a window for a command no input asked for.
+- `Theme.UIFontVariable` (`ADAM_UI_FONT`): a family name or a font file, relative to the application, to draw the
+  interface in instead of the system's; one that is neither keeps the system's, which is said on standard error. The `AdamantiumScenarioFont` MSBuild property passes it to every generated
+  scenario test, so what scenarios measure in text is the same on every system.
+- A scenario's expected number can be a range, `Value="180..195"`, for what a system rounds its own way.
 - Docking on Wayland: a panel torn off, and a floating window dragged by its title bar, ride under the pointer through
   `xdg_toplevel_drag` - the compositor carries the window in a drag of our own type, which no other client takes, and
   our windows are told where the pointer is over them. `WindowDragPointer` holds that point while such a drag lasts;
@@ -1990,6 +2008,18 @@ All packages share one version.
   side counts its offset.
 - A submenu that holds something other than rows - a `ColorPalette` - closed under the pointer a moment after it moved
   in from its row, as only rows held a submenu open: the pointer anywhere on a submenu's card holds it now.
+- A quick stroke that left a thin drag source before it went past the drag threshold started no drag: only the source
+  heard the moves until then. Its window hears them too now.
+- A press on a drag source released over something else left the source waiting for its drag: the pointer back over
+  it with no button held started one, and the next click dropped it. A move with no button held ends the press now.
+- `Hide` on a Wayland window before its first frame was dropped, and the window showed; it stays hidden until `Show`.
+- A drag made by automation on Wayland was handed to the compositor's drag loop, which follows only the real pointer,
+  and never ended; a made gesture now carries its drag on the application's own loop. The simulated stroke's first
+  step goes past the threshold on one axis, as it is measured, not only along the diagonal.
+- A Wayland window committed its first frame before acknowledging the compositor's first configure, which Mutter
+  reports as a buggy client; nothing is drawn into it until that configure.
+- `Activate` on Wayland named the window being raised as the one the input happened in, so the compositor turned the
+  request down when the input was in another of the application's windows; it names the window of the last input.
 - An item moved in an `ItemsControl`'s source (`ObservableCollection.Move`) rebuilt every container of a panel that
   does not virtualize, and a child moved in a panel's `Children` left the visual tree and came back: what the
   containers held - a 3D view, a text being typed - was made again. The container now only changes place.
@@ -2000,6 +2030,37 @@ All packages share one version.
   panel's own visibility. It reads the ancestors' too, and asks for a frame when one of them is shown again.
 - A type whose `ClipToBounds` is on by default did not clip: the value the renderer reads only followed changes, and a
   default is no change.
+- A window whose content asks for less than the window - a dialog shown in a window of its own - drew its frame, title
+  bar and content at the content's size in a corner of the window, the rest left empty: a root was arranged at its
+  desired size. A root now takes the area it is given, without its `Width`/`Height`/`Min`/`Max` (a window's
+  `Width`/`Height` are its OS outer size); a window follows its content only with `SizeToContent`.
+  `WindowUniverseOutput` arranges its window at the client size too.
+- A docking panel out in a window of its own jumped to another place when the theme changed, and the application could
+  fail on Wayland: the swap builds the view anew, and the new `DockingArea` closed the old one's windows and opened its
+  own. The `DockingWorkspace` now hands the windows over; a floating root of the new arrangement that shows the same
+  panes takes its window, open where it is, and only the windows nothing takes are closed. Loading a layout reuses
+  the windows of the arrangement it replaces the same way. Panes a region opens in an area not built yet, and panes
+  that may only float, are now placed by the layout being loaded and not first where they asked to be: a pane out in
+  a window was opened in a second window as well, and the closing of that one discarded the pane - after the swap
+  the window showed a dead tab (wrong colors, no changed mark), and docking it back did nothing. A floating pane the
+  loaded layout leaves out takes a window of the replaced arrangement too.
+- A tool closed before a theme swap - or before a saved layout was loaded - came back open: a layout did not say which
+  tools were put away. `DockingLayoutSerializer.Save` takes them (`hidden`) and writes them with the side each comes
+  back to, with their restore keys and states; `ReadHidden` reads them, and `DockingArea.LoadLayout` keeps those tools
+  put away. A layout also keeps the pane worked in (`activePane`, `ReadActivePane`), so the accent comes back with the
+  arrangement instead of landing on whatever was opened last. A load that puts an open tool away raises `PaneClosed`
+  and takes the accent off it; a view rebuilt by a theme swap does not announce tools closed long before. A layout
+  loaded into an area not built yet is applied once it is built, so markup arriving later no longer replaces it.
+- A dialog fitted to its content in a window of its own (`SizeToContent`) was centered at the size it started with,
+  then grew from its corner. It is moved back to center as it is fitted, until it first shows or is moved, and kept
+  inside the screen's work area.
+- A docking layout file with a value of the wrong kind in one of its tables, or a table named twice, threw on load or
+  migration instead of being read as far as it could.
+- A dialog in the window's overlay sat twice as far in as the same dialog in a window of its own: the view carried a
+  margin of its own on top of the overlay's padding. The window `WindowDialogHost` opens wears the class `Dialog`,
+  which every theme pads as its overlay window; the window templates now apply `Padding` to their content.
+- A picture chosen by its full path - from a file dialog on Linux and macOS - was not shown: a rooted path read as a
+  relative URI, and `BitmapImage` only loads an absolute `file` URI.
 - Markup hot reload listed a file as changed - and applied it again on save - when the watcher read it half written:
   a save reports itself as soon as it empties the file. A gathered file whose text is again what was applied is
   dropped before it is listed or applied (`MarkupHotReload.ChangedFiles`). Seen on Linux, where inotify reports the

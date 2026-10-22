@@ -106,16 +106,17 @@ public class DockingWorkspace
     // two different arrangements under one name.
     internal void Attach(DockingArea area)
     {
-        // One area at a time: release the outgoing area's floating windows and carry the arrangement to the new one, or each
+        // One area at a time: carry the arrangement and the outgoing area's floating windows to the new one, or each
         // re-entry stacks windows and resets the layout.
         string carried = null;
+        List<DockingWindow> windows = null;
         if (_area != null && !ReferenceEquals(_area, area))
         {
             carried = _area.SaveLayout();
             _area.PaneClosing -= OnPaneClosing;
             _area.PaneClosed -= OnPaneClosed;
             _area.PaneMigrating -= OnPaneMigrating;
-            _area.ReleaseFloatingWindows();
+            windows = _area.TakeFloatingWindows();
         }
 
         _area = area;
@@ -126,7 +127,14 @@ public class DockingWorkspace
 
         // AFTER the wiring, so a pane the saved tree names and this area has not got is asked for through the events
         // the new area is now subscribed to (DockingArea.LoadLayout raises PaneRestoreRequested for exactly those).
-        if (!string.IsNullOrEmpty(carried)) area.LoadLayout(carried);
+        if (!string.IsNullOrEmpty(carried))
+        {
+            area.LoadLayout(carried, windows, carriedOver: true);
+        }
+        else
+        {
+            DockingArea.CloseWindows(windows);
+        }
 
         Ready?.Invoke(this, EventArgs.Empty);
     }

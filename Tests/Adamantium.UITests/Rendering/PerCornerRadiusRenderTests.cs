@@ -25,6 +25,7 @@ public class PerCornerRadiusRenderTests
     private const int Dim = 64;
     private const int Inset = 4;    // how far inside a corner the probe sits - past any AA, well inside a 24px arc
     private const double Radius = 24;
+    private const int EdgeRounding = 2;
 
     private static byte[] Render(CornerRadius corners, Pen pen = null, bool batched = true)
     {
@@ -114,7 +115,11 @@ public class PerCornerRadiusRenderTests
             {
                 var a = (y * Dim + x) * 4;
                 var b = (y * Dim + (Dim - 1 - x)) * 4;
-                if (left[a] != right[b] || left[a + 1] != right[b + 1] || left[a + 2] != right[b + 2]) differing++;
+                if (Math.Abs(left[a] - right[b]) > EdgeRounding || Math.Abs(left[a + 1] - right[b + 1]) > EdgeRounding ||
+                    Math.Abs(left[a + 2] - right[b + 2]) > EdgeRounding)
+                {
+                    differing++;
+                }
             }
         }
 

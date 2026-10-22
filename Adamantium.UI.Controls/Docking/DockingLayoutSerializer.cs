@@ -16,6 +16,8 @@ namespace Adamantium.UI.Controls.Docking;
 /// it can still produce; the caller's <c>keepPane</c> decides what is saved.</summary>
 public static class DockingLayoutSerializer
 {
+    private static readonly string[] PaneTables = ["restore", "states", "hidden"];
+
     public const int Version = 1;
 
     /// <param name="restoreKeyOf">What the application needs in order to make a pane again (<see cref="Pane.RestoreKey"/>).
@@ -23,8 +25,11 @@ public static class DockingLayoutSerializer
     /// recreated instead of silently dropped.</param>
     /// <param name="stateOf">A pane's own state - what it scrolled to, which of its tabs was open - or null.</param>
     /// <param name="layoutVersion">The application's version of its panes, so a later one can tell an old file.</param>
+    /// <param name="hidden">Tools put away, with the zone each comes back to - so a closed tool stays closed.</param>
+    /// <param name="activePane">The pane being worked in, which is worked in again once the layout is loaded.</param>
     public static string Save(DockingLayout layout, Func<string, bool> keepPane = null, Func<string, string> restoreKeyOf = null,
-        Func<string, string> stateOf = null, int layoutVersion = 0)
+        Func<string, string> stateOf = null, int layoutVersion = 0, IEnumerable<KeyValuePair<string, DockZone>> hidden = null,
+        string activePane = null)
     {
         if (layout == null) return null;
 
@@ -35,10 +40,24 @@ public static class DockingLayoutSerializer
             writer.WriteNumber("version", Version);
             if (layoutVersion != 0) writer.WriteNumber("layoutVersion", layoutVersion);
 
+            var put = new Dictionary<string, DockZone>();
+            foreach (var pair in hidden ?? [])
+            {
+                if (keepPane?.Invoke(pair.Key) != false)
+                {
+                    put[pair.Key] = pair.Value;
+                }
+            }
+
+            if (activePane != null && keepPane?.Invoke(activePane) != false)
+            {
+                writer.WriteString("active", activePane);
+            }
+
             // id -> what makes it again, for the ones that need making. Written once for the whole layout rather than
             // beside every mention: a pane appears in exactly one group, but the table reads far better than a key
             // buried in a tree, and a future reader can see at a glance what a file expects the application to provide.
-            var keys = CollectRestoreKeys(layout, keepPane, restoreKeyOf);
+            var keys = CollectRestoreKeys(layout, keepPane, restoreKeyOf, put.Keys);
             if (keys.Count > 0)
             {
                 writer.WriteStartObject("restore");
@@ -46,11 +65,22 @@ public static class DockingLayoutSerializer
                 writer.WriteEndObject();
             }
 
-            var states = CollectRestoreKeys(layout, keepPane, stateOf);
+            var states = CollectRestoreKeys(layout, keepPane, stateOf, put.Keys);
             if (states.Count > 0)
             {
                 writer.WriteStartObject("states");
                 foreach (var pair in states) writer.WriteString(pair.Key, pair.Value);
+                writer.WriteEndObject();
+            }
+
+            if (put.Count > 0)
+            {
+                writer.WriteStartObject("hidden");
+                foreach (var pair in put)
+                {
+                    writer.WriteString(pair.Key, pair.Value.ToString());
+                }
+
                 writer.WriteEndObject();
             }
 
@@ -75,6 +105,21 @@ public static class DockingLayoutSerializer
     /// <summary>What each pane said of its own state when the layout was saved: pane id -> state.</summary>
     public static IReadOnlyDictionary<string, string> ReadStates(string text) => ReadTable(text, "states");
 
+    /// <summary>The tools that were put away when the layout was saved: pane id -> the zone it comes back to.</summary>
+    public static IReadOnlyDictionary<string, DockZone> ReadHidden(string text)
+    {
+        var hidden = new Dictionary<string, DockZone>();
+        foreach (var pair in ReadTable(text, "hidden"))
+        {
+            if (Enum.TryParse<DockZone>(pair.Value, out var zone))
+            {
+                hidden[pair.Key] = zone;
+            }
+        }
+
+        return hidden;
+    }
+
     private static Dictionary<string, string> ReadTable(string text, string name)
     {
         var keys = new Dictionary<string, string>();
@@ -90,8 +135,10 @@ public static class DockingLayoutSerializer
 
             foreach (var pair in table.EnumerateObject())
             {
-                var key = pair.Value.GetString();
-                if (!string.IsNullOrEmpty(key)) keys[pair.Name] = key;
+                if (pair.Value.ValueKind == JsonValueKind.String && pair.Value.GetString() is { Length: > 0 } key)
+                {
+                    keys[pair.Name] = key;
+                }
             }
         }
         catch (JsonException)
@@ -103,20 +150,28 @@ public static class DockingLayoutSerializer
     }
 
     /// <summary>The application's version of its panes a layout was saved with; 0 when it gave none.</summary>
-    public static int ReadLayoutVersion(string text)
+    public static int ReadLayoutVersion(string text) => ReadRoot(text, root =>
+        root.TryGetProperty("layoutVersion", out var version) && version.TryGetInt32(out var value) ? value : 0);
+
+    /// <summary>The pane that was being worked in when the layout was saved, or null.</summary>
+    public static string ReadActivePane(string text) => ReadRoot(text, root =>
+        root.TryGetProperty("active", out var active) && active.ValueKind == JsonValueKind.String ? active.GetString() : null);
+
+    private static T ReadRoot<T>(string text, Func<JsonElement, T> read)
     {
-        if (string.IsNullOrWhiteSpace(text)) return 0;
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return default;
+        }
 
         try
         {
             using var document = JsonDocument.Parse(text);
-            return document.RootElement.TryGetProperty("layoutVersion", out var version) && version.TryGetInt32(out var value)
-                ? value
-                : 0;
+            return read(document.RootElement);
         }
         catch (JsonException)
         {
-            return 0;
+            return default;
         }
     }
 
@@ -129,7 +184,7 @@ public static class DockingLayoutSerializer
         JsonNode root;
         try
         {
-            root = JsonNode.Parse(text);
+            root = JsonNode.Parse(text, documentOptions: new JsonDocumentOptions { AllowDuplicateProperties = false });
         }
         catch (JsonException)
         {
@@ -138,13 +193,18 @@ public static class DockingLayoutSerializer
 
         if (root is not JsonObject layout) return text;
 
-        foreach (var table in new[] { "restore", "states" })
+        foreach (var table in PaneTables)
         {
             if (layout[table] is not JsonObject entries) continue;
 
             var renamed = new JsonObject();
             foreach (var pair in entries.ToList()) renamed[rename(pair.Key) ?? pair.Key] = pair.Value?.DeepClone();
             layout[table] = renamed;
+        }
+
+        if (layout["active"] is JsonValue value && value.TryGetValue<string>(out var active))
+        {
+            layout["active"] = rename(active) ?? active;
         }
 
         RenameIn(layout["roots"]);
@@ -180,10 +240,16 @@ public static class DockingLayoutSerializer
         }
     }
 
-    private static Dictionary<string, string> CollectRestoreKeys(DockingLayout layout, Func<string, bool> keep, Func<string, string> keyOf)
+    private static Dictionary<string, string> CollectRestoreKeys(DockingLayout layout, Func<string, bool> keep, Func<string, string> keyOf,
+        IEnumerable<string> hidden)
     {
         var keys = new Dictionary<string, string>();
         if (keyOf == null) return keys;
+
+        foreach (var id in hidden)
+        {
+            Collect(id);
+        }
 
         foreach (var root in layout.Roots)
         {
@@ -237,7 +303,7 @@ public static class DockingLayoutSerializer
             layout.Normalize();
             return layout.Main != null ? layout : null;
         }
-        catch (JsonException)
+        catch (Exception unreadable) when (unreadable is JsonException or InvalidOperationException or FormatException)
         {
             return null;
         }

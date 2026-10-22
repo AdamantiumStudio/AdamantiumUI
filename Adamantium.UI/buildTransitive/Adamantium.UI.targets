@@ -29,6 +29,7 @@
   <ItemGroup>
     <CompilerVisibleProperty Include="AdamantiumAumlHotReload" />
     <CompilerVisibleProperty Include="AdamantiumScenarioApplication" />
+    <CompilerVisibleProperty Include="AdamantiumScenarioFont" />
     <CompilerVisibleProperty Include="RootNamespace" />
     <CompilerVisibleProperty Include="ProjectDir" />
     <CompilerVisibleProperty Include="NeutralLanguage" />

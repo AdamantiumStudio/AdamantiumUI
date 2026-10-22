@@ -24,6 +24,10 @@ public interface IWindow : IRootVisualComponent, IContentControl
     /// position afterwards (a layout being saved) writes down where it used to be.</summary>
     void UpdatePositionFromPlatform(double left, double top);
 
+    /// <summary>The platform reports the client size it gave the window. Only a size the window did not ask for ends
+    /// <see cref="SizeToContent"/>.</summary>
+    void UpdateClientSizeFromPlatform(double clientWidth, double clientHeight);
+
     /// <summary>Record where the OS just put this window, callable from ANY thread - see
     /// <see cref="IRootVisualComponent.LivePosition"/>. Separate from
     /// <see cref="UpdatePositionFromPlatform"/> because that one writes bindable properties and must be marshaled to
@@ -49,6 +53,10 @@ public interface IWindow : IRootVisualComponent, IContentControl
     bool AnalyticAntialiasing { get; set; }
 
     WindowState State { get; set; }
+
+    /// <summary>Which sides of the window follow what its content asks for; <see cref="Core.SizeToContent.Manual"/>
+    /// keeps the size the window is given.</summary>
+    SizeToContent SizeToContent { get; set; }
 
     /// <summary>When true the OS frame is removed (WM_NCCALCSIZE reclaims the non-client area) and the window draws its
     /// own chrome (title bar) - the modern borderless look. WS_THICKFRAME is kept so native resize borders, Aero Snap,

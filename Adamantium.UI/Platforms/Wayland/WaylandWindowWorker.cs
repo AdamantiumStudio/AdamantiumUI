@@ -47,8 +47,12 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
     private string title = string.Empty;
     private int minWidth;
     private int minHeight;
+    private readonly object mapLock = new();
     private bool hidden;
-    private volatile bool remapping;
+    private bool remapping;
+    private bool configuredUnmapped;
+    private bool unmapping;
+    private long presentedWhenShown;
     private ZxdgExportedV2 exported;
     private XdgToplevelSessionV1 toplevelSession;
     private string exportedHandle;
@@ -137,6 +141,8 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
         }
 
         ApplyInputRegion(window.TransparentToInput);
+        remapping = true;
+        ((UIApplication)UIContext.UIApplication).SetWindowHidden(window, true);
         surface.Commit();
         platform.Display.Flush();
         platform.Register(this, surface.Handle);
@@ -144,8 +150,7 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
         window.SetHandle(surface.Handle);
         window.SetSurfaceHandle(surface.Handle, platform.Display.Handle);
         window.DpiScale = new Vector2(Scale, Scale);
-        window.ClientWidth = width;
-        window.ClientHeight = height;
+        window.UpdateClientSizeFromPlatform(width, height);
 
         Input.DragDrop.RegisterNativeDropTarget(window);
         UIContext.ThemeEngine.ApplyCurrentTheme(window);
@@ -241,13 +246,25 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
 
     public void ShowWindow(WindowState windowState)
     {
-        if (hidden && !closed)
+        lock (mapLock)
         {
-            hidden = false;
-            remapping = true;
-            SendToplevelState();
-            surface.Commit();
-            platform.Display.Flush();
+            if (hidden && !closed)
+            {
+                hidden = false;
+                if (configuredUnmapped)
+                {
+                    configuredUnmapped = false;
+                    presentedWhenShown = Presented();
+                    ((UIApplication)UIContext.UIApplication).SetWindowHidden(window, false);
+                    var shown = window;
+                    WaylandPlatform.DispatchInput(() => shown.InvalidateRender(true));
+                }
+                else if (!remapping)
+                {
+                    remapping = true;
+                    platform.Queue(Remap);
+                }
+            }
         }
 
         switch (windowState)
@@ -263,19 +280,94 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
 
     public void HideWindow()
     {
-        if (hidden || closed || surface == null || window.Renderer is not { FirstFrameProcessed: true })
+        lock (mapLock)
+        {
+            if (hidden || closed || surface == null)
+            {
+                return;
+            }
+
+            hidden = true;
+            if (remapping)
+            {
+                return;
+            }
+
+            var shownAt = presentedWhenShown;
+            ((UIApplication)UIContext.UIApplication).SetWindowHidden(window, true, () =>
+            {
+                if (Presented() == shownAt)
+                {
+                    configuredUnmapped = true;
+                }
+                else
+                {
+                    platform.Queue(Unmap);
+                }
+            });
+        }
+    }
+
+    private long Presented() => window.Renderer?.PresentedFrames ?? 0;
+
+    private void Remap()
+    {
+        if (closed)
         {
             return;
         }
 
-        hidden = true;
-        remapping = false;
-        ((UIApplication)UIContext.UIApplication).SetWindowHidden(window, true, () =>
+        SendToplevelState();
+        surface.Commit();
+        platform.Display.Flush();
+    }
+
+    private void Unmap()
+    {
+        if (closed)
         {
-            surface.Attach(null, 0, 0);
-            surface.Commit();
-            platform.Display.Flush();
-        });
+            return;
+        }
+
+        surface.Attach(null, 0, 0);
+        surface.Commit();
+        lock (mapLock)
+        {
+            unmapping = true;
+        }
+
+        var fence = platform.Display.Proxy.Sync();
+        fence.Done += _ =>
+        {
+            lock (mapLock)
+            {
+                unmapping = false;
+            }
+        };
+        platform.Display.Flush();
+    }
+
+    private void OnMapped()
+    {
+        lock (mapLock)
+        {
+            if (closed || !remapping)
+            {
+                return;
+            }
+
+            remapping = false;
+            if (hidden)
+            {
+                configuredUnmapped = true;
+                return;
+            }
+
+            presentedWhenShown = Presented();
+            ((UIApplication)UIContext.UIApplication).SetWindowHidden(window, false);
+        }
+
+        window.InvalidateRender(true);
     }
 
     /// <summary>The handle another client names this window by (xdg_foreign), made on first ask; null where the
@@ -333,7 +425,8 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
             token.SetSerial(seat.LastInputSerial, seat.Proxy);
         }
 
-        var focused = seat?.KeyboardWindow is { IsLive: true } keyboardWindow ? keyboardWindow
+        var focused = seat?.LastInputWindow is { IsLive: true } inputWindow ? inputWindow
+            : seat?.KeyboardWindow is { IsLive: true } keyboardWindow ? keyboardWindow
             : seat?.PointerWindow is { IsLive: true } pointerWindow ? pointerWindow
             : null;
         if (focused != null)
@@ -499,24 +592,26 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
 
     private void OnSurfaceConfigure(uint serial)
     {
+        bool awaited;
+        lock (mapLock)
+        {
+            if (unmapping)
+            {
+                return;
+            }
+
+            awaited = remapping;
+        }
+
         xdgSurface.AckConfigure(serial);
         if (closed)
         {
             return;
         }
 
-        if (remapping)
+        if (awaited)
         {
-            remapping = false;
-            var shown = window;
-            WaylandPlatform.DispatchInput(() =>
-            {
-                if (!closed && !hidden)
-                {
-                    ((UIApplication)UIContext.UIApplication).SetWindowHidden(shown, false);
-                    shown.InvalidateRender(true);
-                }
-            });
+            WaylandPlatform.DispatchInput(OnMapped);
         }
 
         var w = pendingWidth;
@@ -579,21 +674,20 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
                 return;
             }
 
-            if (reportedWidth.HasValue)
-            {
-                window.Width = reportedWidth.Value;
-                window.Height = reportedHeight.Value;
-                reportingOsSize = true;
-                window.ClientWidth = reportedWidth.Value;
-                window.ClientHeight = reportedHeight.Value;
-                reportingOsSize = false;
-            }
-
             if (osState.HasValue && window.State != osState.Value)
             {
                 window.StateChanged -= WindowOnStateChanged;
                 window.State = osState.Value;
                 window.StateChanged += WindowOnStateChanged;
+            }
+
+            if (reportedWidth.HasValue)
+            {
+                window.Width = reportedWidth.Value;
+                window.Height = reportedHeight.Value;
+                reportingOsSize = true;
+                window.UpdateClientSizeFromPlatform(reportedWidth.Value, reportedHeight.Value);
+                reportingOsSize = false;
             }
         });
     }
@@ -663,7 +757,7 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
 
         _ = UIContext.UIApplication.ExecuteOnUIThreadAsync(() =>
         {
-            platform.Seat.ForgetLock(this);
+            platform.Seat.Forget(this);
             exported?.Destroy();
             toplevelSession?.Destroy();
             decoration?.Destroy();

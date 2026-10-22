@@ -16,9 +16,11 @@ public partial class NavigationDemoViewModel : TabPageViewModel
     private int _overlayCounter;
     private readonly IDialogService _dialogService;
     private readonly IOverlayService _overService;
+    private readonly INavigationService _navigation;
 
     public NavigationDemoViewModel(INavigationService navigation, WindowDemoSettings windowSettings, IDialogService dialogService, IOverlayService overService) : base("Navigation")
     {
+        _navigation = navigation;
         WindowSettings = windowSettings;
         _dialogService = dialogService;
         _overService = overService;
@@ -57,6 +59,10 @@ public partial class NavigationDemoViewModel : TabPageViewModel
     private void ShowOverlayWindow() =>
         _ = _overService.ShowOverlayAsync<OverlayDemoViewModel>(
             new NavigationParameters().Add("title", NavigationStrings.OverlayWindowNumbered(++_overlayCounter)));
+
+    [Command]
+    private void OpenClickThroughWindow() =>
+        _ = _navigation.OpenWindowAsync<ClickThroughWindowViewModel>(singleInstance: true);
 
     // A modal dialog on the overlay (dims + blocks the content behind), draggable by its title bar. Awaited: the button
     // stays disabled while the modal is up, which is the intended modal behavior.

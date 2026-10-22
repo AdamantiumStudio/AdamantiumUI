@@ -803,7 +803,7 @@ public class MeasurableUIComponent : ObservableUIComponent, IName, IMeasurableCo
 
             if (this is IRootVisualComponent)
             {
-                size = DesiredSize;
+                size = sizeMinusMargins;
             }
 
             if (UseLayoutRounding)

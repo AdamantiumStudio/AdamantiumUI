@@ -88,8 +88,16 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
     /// <summary>The serial of the last press or key: what a move or a resize of a window is asked for with.</summary>
     public uint LastInputSerial { get; private set; }
 
-    /// <summary>Takes a press of another device - a finger - as the input a move or a resize of a window is asked with.</summary>
-    internal void NoteInput(uint serial) => LastInputSerial = serial;
+    /// <summary>The window <see cref="LastInputSerial"/> came in on: a compositor checks the serial against it.</summary>
+    internal WaylandWindowWorker LastInputWindow { get; private set; }
+
+    /// <summary>Takes a press or a key, of any device, as the input a move, a resize or an activation of a window is
+    /// asked with.</summary>
+    internal void NoteInput(uint serial, WaylandWindowWorker window)
+    {
+        LastInputSerial = serial;
+        LastInputWindow = window;
+    }
 
     /// <summary>An id no pointer of the framework has: each finger and pen contact is a pointer of its own.</summary>
     internal uint NextPointerId() => ++lastPointerId;
@@ -310,9 +318,14 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
         platform.Display.Flush();
     }
 
-    /// <summary>Drops the hold of a window that is going away.</summary>
-    internal void ForgetLock(WaylandWindowWorker worker)
+    /// <summary>Drops what the seat holds of a window that is going away: its pointer lock and its last input.</summary>
+    internal void Forget(WaylandWindowWorker worker)
     {
+        if (LastInputWindow == worker)
+        {
+            LastInputWindow = null;
+        }
+
         if (lockedWindow != worker || lockedPointer == null)
         {
             return;
@@ -507,7 +520,7 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
 
     private void OnPointerButton(uint serial, uint time, uint button, WlPointer.ButtonState state)
     {
-        LastInputSerial = serial;
+        NoteInput(serial, pointerWindow);
         var worker = pointerWindow;
         var changed = ButtonOf(button);
         var pressed = state == WlPointer.ButtonState.Pressed;
@@ -719,7 +732,7 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
 
     private void OnKey(uint serial, uint time, uint code, WlKeyboard.KeyState state)
     {
-        LastInputSerial = serial;
+        NoteInput(serial, keyboardWindow);
         if (xkb == null)
         {
             return;

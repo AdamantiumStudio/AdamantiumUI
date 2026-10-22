@@ -121,6 +121,7 @@ public class LoopSignalTests
             Thread.Sleep(1000);
             Assert.That(tickedOn, Is.Null, "not on the timer's own thread");
 
+            timer.Interval = TimeSpan.FromHours(1);
             LoopSignal.Drain();
             timer.Stop();
         }

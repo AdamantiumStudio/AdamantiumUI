@@ -60,7 +60,7 @@ public class DynamicRelayoutTests
             log.Add($"=== AFTER FRAME 2: image={image.Bounds} panel={panel.Bounds} button={button.Bounds} ===");
 
             foreach (var line in log) TestContext.WriteLine(line);
-            System.IO.File.WriteAllLines(@"C:\Temp\layout-trace.txt", log);
+            System.IO.File.WriteAllLines(System.IO.Path.Combine(System.IO.Path.GetTempPath(), "layout-trace.txt"), log);
 
             Assert.Multiple(() =>
             {

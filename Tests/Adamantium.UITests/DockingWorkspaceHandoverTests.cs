@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 using Adamantium.Mathematics;
 using Adamantium.Navigation;
 using Adamantium.UI.Controls.Panels;
@@ -69,5 +70,31 @@ public class DockingWorkspaceHandoverTests
 
         Assert.That(workspace.Save(), Is.EqualTo(before),
             "the workspace is where the arrangement lives - a new control must be given it, not start from scratch");
+    }
+
+    [Test]
+    public async Task AToolClosedBeforeTheViewIsRebuilt_StaysClosed()
+    {
+        var workspace = new DockingWorkspace();
+        var first = SplitArea();
+        first.AddPane(new Pane { Id = "hierarchy", Header = "hierarchy", Kind = PaneKind.Tool }, DockZone.Right);
+        workspace.Attach(first);
+        await first.ClosePaneAsync("hierarchy");
+
+        var second = Rooted(new DockingArea());
+        second.AddPane(new Pane { Id = "scene", Header = "scene" }, DockZone.Center);
+        second.AddPane(new Pane { Id = "inspector", Header = "inspector", Kind = PaneKind.Tool }, DockZone.Right);
+        second.AddPane(new Pane { Id = "hierarchy", Header = "hierarchy", Kind = PaneKind.Tool }, DockZone.Right);
+        workspace.Attach(second);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(second.Layout.FindGroup("hierarchy"), Is.Null, "not opened again");
+            Assert.That(second.HiddenPanes, Does.Contain("hierarchy"), "but put away, to be brought back");
+        });
+
+        Assert.That(second.RestorePane("hierarchy"), Is.True);
+        Assert.That(second.Layout.ZoneOf(second.Layout.FindGroup("hierarchy")), Is.EqualTo(DockZone.Right),
+            "back on the side it was closed on");
     }
 }

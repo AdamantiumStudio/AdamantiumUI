@@ -21,10 +21,11 @@
   <Expect Target="id=SelectedPlanet" Name="Mars" />
   <Touch Target="id=SingleList/name=Earth" Gesture="Tap" />
   <Expect Target="id=SelectedPlanet" Name="Earth" />
-  <!-- A finger scrolls the list it is in, not the page around it. -->
+  <!-- A finger scrolls the list it is in, not the page around it - less the few pixels that go to recognizing the drag,
+       more of them where the system's drag threshold is wider, so it is a range. -->
   <Wait Target="id=ListsView/id=LargeList" />
   <Touch Target="id=LargeList" Gesture="Drag" From="100,60" To="100,5" />
-  <Expect Target="id=LargeList" VScroll="8.7" />
+  <Expect Target="id=LargeList" VScroll="8.5..10" />
   <Expect Target="id=ListsView>type=Pane" VScroll="0" />
   <!-- ...and the row it began on is not selected: a finger picks a row on its tap. -->
   <Expect Target="id=LargeList/type=ListItem,name=Item 00001" Selected="False" />

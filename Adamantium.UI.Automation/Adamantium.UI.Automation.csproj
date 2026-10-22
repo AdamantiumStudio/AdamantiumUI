@@ -15,4 +15,8 @@
         <ProjectReference Include="..\Adamantium.UI\Adamantium.UI.csproj" PrivateAssets="none" />
     </ItemGroup>
 
+    <ItemGroup>
+        <InternalsVisibleTo Include="Adamantium.XamlTests" />
+    </ItemGroup>
+
 </Project>

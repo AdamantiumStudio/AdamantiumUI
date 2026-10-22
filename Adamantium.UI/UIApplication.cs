@@ -570,7 +570,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
 
     private void CreateWindowService(IWindow window)
     {
-        var windowService = EntityWorld.CreateService<WindowRenderService>(EntityWorld, window);
+        var windowService = new WindowRenderService(EntityWorld, window);
         lock (_renderGate)
         {
             lock (_hiddenWindows)
@@ -578,6 +578,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
                 windowService.Hidden = _hiddenWindows.Contains(window);
             }
 
+            EntityWorld.AddService(windowService);
             windowToSystem.Add(window, windowService);
         }
 

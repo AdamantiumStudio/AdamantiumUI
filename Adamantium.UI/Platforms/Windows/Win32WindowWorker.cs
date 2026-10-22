@@ -223,8 +223,7 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
         Win32Interop.GetClientRect(window.Handle, out var client);
         // ClientWidth/Height are LOGICAL (DIP) = physical px / DPI scale (per-axis). The renderer sizes the swapchain
         // back up by RenderScale (= DpiScale); the projection + layout stay logical. On a 100% monitor this is identity.
-        this.window.ClientWidth = client.Width / this.window.DpiScale.X;
-        this.window.ClientHeight = client.Height / this.window.DpiScale.Y;
+        this.window.UpdateClientSizeFromPlatform(client.Width / this.window.DpiScale.X, client.Height / this.window.DpiScale.Y);
 
         // Accept drops from OTHER applications for this window's whole life - registered here, on the thread that owns
         // the HWND (OLE requires that), never per drag. Silently does nothing when the OS bridge is unavailable.
@@ -957,17 +956,6 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
 
         DispatchInput(() =>
         {
-            window.Width = w;
-            window.Height = h;
-            // These writes REPORT what the OS did; they do not ask for anything. Say so, or SetSize takes them for a
-            // request and pushes them back - and since they are marshaled here (a frame or more after the message), the
-            // number it pushes is already stale, the OS resizes to it, reports THAT, and the window shakes for good.
-            _reportingOsSize = true;
-            // ClientWidth/Height logical (DIP) = physical / DPI, by the scale in force when this runs on the loop thread.
-            window.ClientWidth = cw / window.DpiScale.X;
-            window.ClientHeight = ch / window.DpiScale.Y;
-            _reportingOsSize = false;
-
             if (osState.HasValue && window.State != osState.Value)
             {
                 // Detach the managed->OS driver first so this OS-originated sync doesn't bounce back into ShowWindow.
@@ -976,6 +964,16 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
                 window.State = osState.Value;
                 window.StateChanged += WindowOnStateChanged;
             }
+
+            window.Width = w;
+            window.Height = h;
+            // These writes REPORT what the OS did; they do not ask for anything. Say so, or SetSize takes them for a
+            // request and pushes them back - and since they are marshaled here (a frame or more after the message), the
+            // number it pushes is already stale, the OS resizes to it, reports THAT, and the window shakes for good.
+            _reportingOsSize = true;
+            // ClientWidth/Height logical (DIP) = physical / DPI, by the scale in force when this runs on the loop thread.
+            window.UpdateClientSizeFromPlatform(cw / window.DpiScale.X, ch / window.DpiScale.Y);
+            _reportingOsSize = false;
         });
     }
 

@@ -6,7 +6,8 @@ using System.Linq;
 namespace Adamantium.UI.Automation;
 
 /// <summary>What an element is expected to show: a key - <c>name</c>, <c>value</c>, <c>toggle</c>, <c>zoom</c>... or the
-/// name of any of its control's properties - and the text it should read as.</summary>
+/// name of any of its control's properties - and the text it should read as, or a range of numbers it should fall in,
+/// <c>180..195</c>, for what the system's own settings move - a pinch's zoom starts past its drag threshold.</summary>
 public readonly record struct Expectation(string Key, string Value)
 {
     /// <summary>The keys read off the element itself; any other key names a property of its control.</summary>
@@ -53,9 +54,19 @@ public readonly record struct Expectation(string Key, string Value)
     internal static List<string> Misses(ElementDetails details, IEnumerable<Expectation> expected) =>
         expected
             .Select(expectation => (expectation.Key, expectation.Value, Actual: Actual(details, expectation.Key)))
-            .Where(check => check.Actual != check.Value)
+            .Where(check => check.Actual != check.Value && !InRange(check.Actual, check.Value))
             .Select(check => $"  {check.Key}: expected \"{check.Value}\", was \"{check.Actual}\"")
             .ToList();
+
+    private static bool InRange(string actual, string expected)
+    {
+        var bounds = expected?.Split("..");
+        return bounds is { Length: 2 } && Number(bounds[0]) is { } low && Number(bounds[1]) is { } high &&
+               Number(actual) is { } value && value >= low && value <= high;
+    }
+
+    private static double? Number(string text) =>
+        double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out var value) ? value : null;
 
     private static string Invariant(double? number) => number?.ToString(CultureInfo.InvariantCulture);
 
