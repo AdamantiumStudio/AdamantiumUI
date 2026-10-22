@@ -60,6 +60,9 @@ public class TiledPanel : Panel, IDropGapPanel
     private readonly TileGrip[] _cornerGrips = new TileGrip[4];
     private Tile _hoveredTile;
     private TileCorner? _hotCorner;
+    private Pointer _gesturePointer;
+    private IInputComponent _escapeRoot;
+    private KeyEventHandler _escapeHandler;
 
     public TiledPanel()
     {
@@ -211,12 +214,14 @@ public class TiledPanel : Panel, IDropGapPanel
     {
         base.OnAttachedToVisualTree(e);
         Watch(Layout);
+        HookEscape();
     }
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnDetachedFromVisualTree(e);
         Watch(null);
+        UnhookEscape();
     }
 
     protected override Size MeasureOverride(Size availableSize)
@@ -327,7 +332,7 @@ public class TiledPanel : Panel, IDropGapPanel
             _sharesBefore.Add((grip.Split, grip.Split.Shares));
         }
 
-        e.Pointer.Capture(this);
+        BeginGesture(e.Pointer);
     }
 
     protected override void OnPointerMoved(PointerEventArgs e)
@@ -373,6 +378,8 @@ public class TiledPanel : Panel, IDropGapPanel
         base.OnPointerCaptureLost(e);
         if (!IsPointerCaptured)
         {
+            UnhookEscape();
+            _gesturePointer = null;
             if (_dragged.Count > 0)
             {
                 foreach (var (split, shares) in _sharesBefore)
@@ -510,7 +517,43 @@ public class TiledPanel : Panel, IDropGapPanel
         _splitRoom = room;
         _splitCorner = corner;
         _splitStart = e.GetPosition(this);
-        e.Pointer.Capture(this);
+        BeginGesture(e.Pointer);
+    }
+
+    private void BeginGesture(Pointer pointer)
+    {
+        _gesturePointer = pointer;
+        pointer.Capture(this);
+        HookEscape();
+    }
+
+    private void HookEscape()
+    {
+        if (_escapeRoot != null || _gesturePointer == null || RootVisual is not IInputComponent root)
+        {
+            return;
+        }
+
+        _escapeRoot = root;
+        _escapeHandler ??= OnGestureKey;
+        root.AddHandler(Keyboard.PreviewKeyDownEvent, _escapeHandler);
+    }
+
+    private void UnhookEscape()
+    {
+        _escapeRoot?.RemoveHandler(Keyboard.PreviewKeyDownEvent, _escapeHandler);
+        _escapeRoot = null;
+    }
+
+    private void OnGestureKey(object sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Escape || e.Handled || (_splitFrom == null && _dragged.Count == 0))
+        {
+            return;
+        }
+
+        e.Handled = true;
+        _gesturePointer?.Capture(null);
     }
 
     private bool CornerAt(Vector2 point, out Tile tile, out Rect room, out Vector2 corner)

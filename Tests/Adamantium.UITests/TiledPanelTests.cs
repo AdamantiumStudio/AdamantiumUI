@@ -494,6 +494,81 @@ public class TiledPanelTests
     }
 
     [Test]
+    public void EscapeDuringASplit_UndoesIt_AndAsksTheViewModelNothing()
+    {
+        var items = new ObservableCollection<string> { "A" };
+        var asked = false;
+        var (panel, window) = InWindowList(TileLayouts.One, items, p => p.SplitTileCommand = new Act(_ => asked = true));
+
+        PressCorner(panel, new Vector2(2, 2));
+        MoveTo(panel, new Vector2(60, 50));
+        Update(window);
+        PressEscape(window);
+        MoveTo(panel, new Vector2(80, 50));
+        Release(panel);
+        Update(window);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(asked, Is.False);
+            Assert.That(((TileSplit)panel.Layout).Children, Has.Count.EqualTo(1));
+            Assert.That(ContainerOf(panel, "A").Bounds.Width, Is.EqualTo(200));
+        });
+    }
+
+    [Test]
+    public void EscapeDuringAMerge_GivesTheSharesBack_AndKeepsTheTile()
+    {
+        var items = new ObservableCollection<string> { "A", "B" };
+        var (panel, window) = InWindowList(TileLayouts.TwoColumns, items,
+            p => p.MergeTileCommand = new Act(item => items.Remove((string)item)));
+
+        Press(panel, new Vector2(100, 20));
+        MoveTo(panel, new Vector2(199, 20));
+        PressEscape(window);
+        Release(panel);
+        Update(window);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(items, Is.EqualTo(new[] { "A", "B" }));
+            Assert.That(ContainerOf(panel, "B").Bounds.Width, Is.EqualTo(98).Within(1e-9));
+        });
+    }
+
+    [Test]
+    public void EscapeOutsideAGesture_IsLeftToOthers()
+    {
+        var items = new ObservableCollection<string> { "A", "B" };
+        var (panel, window) = InWindowList(TileLayouts.TwoColumns, items, p => p.MergeTileCommand = new Act(_ => { }));
+
+        Assert.That(PressEscape(window), Is.False, "before any drag");
+
+        Press(panel, new Vector2(100, 20));
+        MoveTo(panel, new Vector2(120, 20));
+        Release(panel);
+
+        Assert.That(PressEscape(window), Is.False, "after a drag let go");
+    }
+
+    [Test]
+    public void AnEscapeSomethingElseTook_LeavesTheGestureGoing()
+    {
+        var items = new ObservableCollection<string> { "A", "B" };
+        var (panel, window) = InWindowList(TileLayouts.TwoColumns, items,
+            p => p.MergeTileCommand = new Act(item => items.Remove((string)item)));
+        ((IObservableComponent)window).AddHandler(Keyboard.PreviewKeyDownEvent,
+            new KeyEventHandler((_, e) => e.Handled = true));
+
+        Press(panel, new Vector2(100, 20));
+        MoveTo(panel, new Vector2(199, 20));
+        PressEscape(window);
+        Release(panel);
+
+        Assert.That(items, Is.EqualTo(new[] { "A" }), "the popup closed by that Escape is all it undoes");
+    }
+
+    [Test]
     public void WhereGapsCross_APressDragsThem_AndSplitsNothing()
     {
         var items = new ObservableCollection<string> { "A", "B", "C", "D" };
@@ -703,6 +778,16 @@ public class TiledPanelTests
             RoutedEvent = PointerEvents.PointerMovedEvent,
             Properties = PointerPointProperties.FromMouse(InputModifiers.LeftMouseButton)
         });
+    }
+
+    private static bool PressEscape(Window window)
+    {
+        var args = new KeyEventArgs(KeyboardDevice.CurrentDevice, Key.Escape, InputModifiers.None, 0)
+        {
+            RoutedEvent = Keyboard.PreviewKeyDownEvent
+        };
+        ((IObservableComponent)window).RaiseEvent(args);
+        return args.Handled;
     }
 
     private static void Release(TiledPanel panel)

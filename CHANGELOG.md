@@ -31,7 +31,8 @@ All packages share one version.
   tiles slide and resize into their new places. With `SplitTileCommand` a tile's corner dragged inward splits a new
   tile off it - `TileGrip`s mark the corners of the tile the pointer is over, drawn by the theme, and the view model
   gives the new tile its item at the index the command is handed - and with `MergeTileCommand` a
-  border dragged all the way over a tile merges it away once the view model lets its item go.
+  border dragged all the way over a tile merges it away once the view model lets its item go. Escape in the middle of
+  a drag of a border or a corner gives the layout back as it was and asks the view model nothing.
 - `DragDrop.GhostAnchor`: where a source's ghost stands against the cursor - beside it (`Cursor`, the default) or held by
   the point it was grabbed at (`Grab`), as a large tile is carried.
 - `IDropGapPanel`: an items host that opens a real gap where a dragged item would drop instead of the insertion caret;
