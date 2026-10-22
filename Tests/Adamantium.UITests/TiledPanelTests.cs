@@ -424,6 +424,89 @@ public class TiledPanelTests
     }
 
     [Test]
+    public void ASplitDraggedBackToItsEdge_IsGoneAtOnce_AndLetGoAsksTheViewModelNothing()
+    {
+        var items = new ObservableCollection<string> { "A" };
+        var asked = false;
+        var (panel, window) = InWindowList(TileLayouts.One, items, p => p.SplitTileCommand = new Act(_ => asked = true));
+
+        PressCorner(panel, new Vector2(2, 2));
+        MoveTo(panel, new Vector2(60, 50));
+        MoveTo(panel, new Vector2(0, 50));
+        Update(window);
+        var heldWidth = ContainerOf(panel, "A").Bounds.Width;
+        Release(panel);
+        Update(window);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(heldWidth, Is.EqualTo(200), "while held, the old tile already has the room back");
+            Assert.That(asked, Is.False);
+            Assert.That(((TileSplit)panel.Layout).Children, Has.Count.EqualTo(1));
+            Assert.That(ContainerOf(panel, "A").Bounds.Width, Is.EqualTo(200));
+        });
+    }
+
+    [Test]
+    public void ASplitDraggedBackToItsEdgeAndInAgain_IsMadeAfterAll()
+    {
+        var items = new ObservableCollection<string> { "A" };
+        var (panel, window) = InWindowList(TileLayouts.One, items,
+            p => p.SplitTileCommand = new Act(at => items.Insert((int)at, "N")));
+
+        PressCorner(panel, new Vector2(2, 2));
+        MoveTo(panel, new Vector2(60, 50));
+        MoveTo(panel, new Vector2(0, 50));
+        MoveTo(panel, new Vector2(60, 50));
+        Update(window);
+        Release(panel);
+        Update(window);
+
+        Assert.That(items, Is.EqualTo(new[] { "N", "A" }));
+    }
+
+    [Test]
+    public void ASplitFromARightCornerDraggedBackToTheRightEdge_SplitsNothing()
+    {
+        var items = new ObservableCollection<string> { "A" };
+        var asked = false;
+        var (panel, window) = InWindowList(TileLayouts.One, items, p => p.SplitTileCommand = new Act(_ => asked = true));
+
+        PressCorner(panel, new Vector2(198, 2));
+        MoveTo(panel, new Vector2(140, 50));
+        MoveTo(panel, new Vector2(200, 50));
+        Release(panel);
+        Update(window);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(asked, Is.False);
+            Assert.That(((TileSplit)panel.Layout).Children, Has.Count.EqualTo(1));
+        });
+    }
+
+    [Test]
+    public void ACornerFirstDraggedOutward_SplitsTheWayItIsThenDraggedIn()
+    {
+        var items = new ObservableCollection<string> { "A" };
+        var (panel, window) = InWindowList(TileLayouts.One, items,
+            p => p.SplitTileCommand = new Act(at => items.Insert((int)at, "N")));
+
+        PressCorner(panel, new Vector2(2, 2));
+        MoveTo(panel, new Vector2(-20, 2));
+        MoveTo(panel, new Vector2(2, 60));
+        Update(window);
+        Release(panel);
+        Update(window);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(items, Is.EqualTo(new[] { "N", "A" }));
+            Assert.That(ContainerOf(panel, "N").Bounds, Is.EqualTo(new Rect(0, 0, 200, 58)), "the new tile on top");
+        });
+    }
+
+    [Test]
     public void AGapDraggedAllTheWayOverATile_MergesItAway()
     {
         var items = new ObservableCollection<string> { "A", "B" };

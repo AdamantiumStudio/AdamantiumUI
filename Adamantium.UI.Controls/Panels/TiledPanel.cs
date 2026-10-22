@@ -602,19 +602,29 @@ public class TiledPanel : Panel, IDropGapPanel
         var across = _splitPreview.Orientation == Orientation.Horizontal;
         var start = across ? _splitRoom.X : _splitRoom.Y;
         var length = (across ? _splitRoom.Width : _splitRoom.Height) - Spacing;
-        var first = Math.Clamp((across ? position.X : position.Y) - start - Spacing / 2, MinTileSize, length - MinTileSize);
+        var reach = (across ? position.X : position.Y) - start - Spacing / 2;
+        var newFirst = ReferenceEquals(_splitPreview.Children[0], _newTile);
+        if ((newFirst ? reach : length - reach) <= 0)
+        {
+            Unsplit(_splitPreview);
+            return;
+        }
+
+        var first = Math.Clamp(reach, MinTileSize, length - MinTileSize);
         _splitPreview.SetCurrentValue(TileSplit.SharesProperty,
             new TrackingCollection<double> { first / length * 100, (length - first) / length * 100 });
     }
 
     private bool BeginSplit(Vector2 moved)
     {
-        if (Math.Max(Math.Abs(moved.X), Math.Abs(moved.Y)) < GripSlack * 2)
+        var inX = _splitCorner.X == _splitRoom.X ? moved.X : -moved.X;
+        var inY = _splitCorner.Y == _splitRoom.Y ? moved.Y : -moved.Y;
+        if (Math.Max(inX, inY) < GripSlack * 2)
         {
             return false;
         }
 
-        var across = Math.Abs(moved.X) >= Math.Abs(moved.Y);
+        var across = inX >= inY;
         if ((across ? _splitRoom.Width : _splitRoom.Height) - Spacing < 2 * MinTileSize)
         {
             return false;
@@ -665,6 +675,12 @@ public class TiledPanel : Panel, IDropGapPanel
 
     private void RevertSplit(TileSplit preview)
     {
+        Unsplit(preview);
+        _splitFrom = null;
+    }
+
+    private void Unsplit(TileSplit preview)
+    {
         if (preview != null && _splitFrom != null)
         {
             var parent = ParentOf(preview, Layout);
@@ -672,7 +688,6 @@ public class TiledPanel : Panel, IDropGapPanel
             Replace(parent, preview, _splitFrom);
         }
 
-        _splitFrom = null;
         _splitPreview = null;
         _newTile = null;
         InvalidateMeasure();
