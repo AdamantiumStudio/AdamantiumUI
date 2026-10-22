@@ -11,7 +11,7 @@ namespace Adamantium.UI.Platforms.Wayland;
 
 /// <summary>The application on a Wayland compositor: the connection, its globals, and the loop over its socket. Desktop
 /// coordinates are a window's own: Wayland gives a client no position on the desktop.</summary>
-public sealed unsafe class WaylandPlatform : IApplicationPlatform
+public sealed unsafe class WaylandPlatform : IApplicationPlatform, Linux.IPortalParent
 {
     private readonly Thread uiThread;
     private readonly int signalFd;
@@ -26,6 +26,10 @@ public sealed unsafe class WaylandPlatform : IApplicationPlatform
         var registry = Display.GetRegistry();
         WlSeat seat = null;
         WlDataDeviceManager dataDevices = null;
+        ZwpPrimarySelectionDeviceManagerV1 primarySelections = null;
+        ZwpTabletManagerV2 tablets = null;
+        XdgSessionManagerV1 sessions = null;
+        ZwpTextInputManagerV3 textInputs = null;
         registry.Global += (name, @interface, version) =>
         {
             switch (@interface)
@@ -57,11 +61,48 @@ public sealed unsafe class WaylandPlatform : IApplicationPlatform
                 case WlSubcompositor.InterfaceName:
                     Subcompositor = registry.Bind<WlSubcompositor>(name, 1);
                     break;
+                case XdgToplevelDragManagerV1.InterfaceName:
+                    ToplevelDrags = registry.Bind<XdgToplevelDragManagerV1>(name, 1);
+                    break;
+                case ZwpPrimarySelectionDeviceManagerV1.InterfaceName:
+                    primarySelections = registry.Bind<ZwpPrimarySelectionDeviceManagerV1>(name, 1);
+                    break;
+                case ZwpRelativePointerManagerV1.InterfaceName:
+                    RelativePointers = registry.Bind<ZwpRelativePointerManagerV1>(name, 1);
+                    break;
+                case ZwpTextInputManagerV3.InterfaceName:
+                    textInputs = registry.Bind<ZwpTextInputManagerV3>(name, 1);
+                    break;
+                case XdgSessionManagerV1.InterfaceName:
+                    sessions = registry.Bind<XdgSessionManagerV1>(name, 1);
+                    break;
+                case ZwpTabletManagerV2.InterfaceName:
+                    tablets = registry.Bind<ZwpTabletManagerV2>(name, 1);
+                    break;
+                case ZxdgExporterV2.InterfaceName:
+                    Exporter = registry.Bind<ZxdgExporterV2>(name, 1);
+                    break;
+                case ZwpPointerGesturesV1.InterfaceName:
+                    PointerGestures = registry.Bind<ZwpPointerGesturesV1>(name, 1);
+                    break;
+                case ZwpPointerConstraintsV1.InterfaceName:
+                    PointerConstraints = registry.Bind<ZwpPointerConstraintsV1>(name, 1);
+                    break;
+                case XdgActivationV1.InterfaceName:
+                    Activation = registry.Bind<XdgActivationV1>(name, 1);
+                    break;
                 case WlDataDeviceManager.InterfaceName:
                     dataDevices = registry.Bind<WlDataDeviceManager>(name, Math.Min(version, 3));
                     break;
+                case WlOutput.InterfaceName:
+                    Outputs.Add(name, registry.Bind<WlOutput>(name, Math.Min(version, 4)));
+                    break;
+                case ZxdgOutputManagerV1.InterfaceName:
+                    Outputs.SetManager(registry.Bind<ZxdgOutputManagerV1>(name, Math.Min(version, 3)));
+                    break;
             }
         };
+        registry.GlobalRemove += Outputs.Remove;
         Display.Roundtrip();
 
         if (Compositor == null || WmBase == null)
@@ -80,7 +121,27 @@ public sealed unsafe class WaylandPlatform : IApplicationPlatform
         if (dataDevices != null && seat != null)
         {
             DataDevice = new WaylandDataDevice(this, dataDevices, seat);
+            WindowDrag = new WaylandWindowDrag(this, DataDevice);
             Clipboard.Current = new WaylandClipboard(this, DataDevice);
+        }
+
+        if (sessions != null)
+        {
+            Session = new WaylandSession(sessions, AppId);
+        }
+        if (textInputs != null && seat != null)
+        {
+            TextInput = new WaylandTextInput(this, textInputs, seat);
+        }
+
+        if (tablets != null && seat != null)
+        {
+            Tablet = new WaylandTablet(this, Seat, tablets.GetTabletSeat(seat));
+        }
+
+        if (primarySelections != null && seat != null)
+        {
+            Clipboard.PrimarySelection = new WaylandPrimarySelection(this, primarySelections, seat);
         }
 
         Cursor.Platform = Seat;
@@ -103,6 +164,33 @@ public sealed unsafe class WaylandPlatform : IApplicationPlatform
 
     public ZxdgDecorationManagerV1 Decorations { get; private set; }
 
+    public XdgToplevelDragManagerV1 ToplevelDrags { get; private set; }
+
+    public XdgActivationV1 Activation { get; private set; }
+
+    public ZwpRelativePointerManagerV1 RelativePointers { get; private set; }
+
+    public ZwpPointerConstraintsV1 PointerConstraints { get; private set; }
+
+    public ZwpPointerGesturesV1 PointerGestures { get; private set; }
+
+    public ZxdgExporterV2 Exporter { get; private set; }
+
+    /// <summary>What the compositor knows the application by.</summary>
+    internal static string AppId => System.Reflection.Assembly.GetEntryAssembly()?.GetName().Name ?? "adamantium";
+
+    /// <summary>The session that brings windows back where they were; null where the compositor keeps none.</summary>
+    internal WaylandSession Session { get; }
+
+    /// <summary>The input method; null where the compositor has none.</summary>
+    internal WaylandTextInput TextInput { get; }
+
+    /// <summary>The seat's drawing tablets; null where the compositor has none.</summary>
+    internal WaylandTablet Tablet { get; }
+
+    /// <summary>The monitors.</summary>
+    internal WaylandOutputs Outputs { get; } = new();
+
     public WlShm Shm { get; private set; }
 
     public WlSubcompositor Subcompositor { get; private set; }
@@ -110,6 +198,9 @@ public sealed unsafe class WaylandPlatform : IApplicationPlatform
     internal WaylandSeat Seat { get; }
 
     internal WaylandDataDevice DataDevice { get; }
+
+    /// <summary>A window carried in a drag; null where the compositor has no drag and drop.</summary>
+    internal WaylandWindowDrag WindowDrag { get; }
 
     /// <summary>Drag and drop, once the first window has registered with it.</summary>
     internal WaylandDragDrop DragDrop { get; set; }
@@ -197,6 +288,17 @@ public sealed unsafe class WaylandPlatform : IApplicationPlatform
         {
             return windows.GetValueOrDefault(surface);
         }
+    }
+
+    string Linux.IPortalParent.PortalParentOf(IntPtr owner)
+    {
+        if (owner == IntPtr.Zero)
+        {
+            owner = UIAppContext.Current?.UIContext?.UIApplication?.ActiveWindow?.Handle ?? IntPtr.Zero;
+        }
+
+        var handle = Find(owner)?.ExportHandle();
+        return handle == null ? string.Empty : "wayland:" + handle;
     }
 
     /// <summary>Runs on the thread that dispatches the compositor's events: at once from it, queued from any other.</summary>

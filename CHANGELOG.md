@@ -7,6 +7,48 @@ All packages share one version.
 
 ### Added
 
+- Docking on Wayland: a panel torn off, and a floating window dragged by its title bar, ride under the pointer through
+  `xdg_toplevel_drag` - the compositor carries the window in a drag of our own type, which no other client takes, and
+  our windows are told where the pointer is over them. `WindowDragPointer` holds that point while such a drag lasts;
+  `DockingArea` aims and drops by it, with its compass drawn inside the area. `WindowBase.DragMove(Vector2 grab)` and
+  `IWindowWorkerService.BeginMoveDrag(Vector2 grab)` start a move held at a point of the window that is not under the
+  pointer yet, as a panel just torn off; `WindowBase.IsMoveTracked` says that something follows the window's moves -
+  only such windows are carried as a drag, the rest are moved by `xdg_toplevel.move`.
+- A tool panel's tabs say they overflow as a document strip's do, in every theme: a ▾ listing every tab, and the tabs
+  fading out at each edge they went past - along the bottom while docked, down the column once folded against a side.
+- `TabStripScroller.EdgeFadeExtent`: tabs that run past an edge fade out over this many pixels, through the strip's own
+  opacity mask - only while something is past an edge, so a strip that fits stays an ordinary element. Every theme's
+  tab strips fade this way instead of laying a gradient of the window's color over the tabs, which left a visible band
+  wherever the strip lay on another ground (a folded panel's tinted strip). Graphite fades over `TabEdgeFadeExtent`.
+  A folded panel's tint lies under the strip, not in it, so only the tabs fade and the tint runs on to the ▾.
+- More of Linux, on Wayland and the desktop's portals:
+  - click-through windows (`TransparentToInput`), as an empty input region;
+  - `Hide` unmaps a window and `Show` maps it again; nothing is drawn into it meanwhile;
+  - `Activate` through `xdg_activation`, with the token a launcher passes in `XDG_ACTIVATION_TOKEN` for the first
+    window; without recent input of ours the compositor may only mark the window as wanting attention;
+  - the primary selection: `Clipboard.PrimarySelection` (`IPrimarySelection`), null where the platform has none. Text
+    boxes give it what is selected in them, the password box excepted, and a middle click pastes it where it lands;
+  - `PlatformSettings.Screens` and `VirtualScreen` from `wl_output` and `xdg_output`, as monitors come and go;
+  - the pointer held still with its moves as deltas (`SetRelativeMouseMode`), through pointer constraints and relative
+    pointer;
+  - dead keys and the Compose key, by the user's locale;
+  - custom cursors (`new Cursor(path)`) from .cur, .ico and PNG files, shown 32 logical pixels across as on Windows;
+  - the desktop's interface font as the themes' default (`SystemAppearance.FontFamily`), and its light or dark
+    appearance followed as it changes, from the Settings portal;
+  - a touchpad's pinch as the wheel with Ctrl held, as Windows hands it on;
+  - open and save dialogs (`FileDialog`) through the FileChooser portal, modal to their window;
+  - pens and erasers of a drawing tablet (`tablet-v2`) as pen pointers, with pressure, tilt, twist and the barrel
+    button;
+  - windows that remember their place (`RemembersPlacement`) get it back from the compositor by their
+    `WindowBase.PlacementName()`, through `xdg_session_management`;
+  - spelling through Enchant, with the user's own word list shared by every application;
+  - input methods such as IBus through `text-input-v3`: text being composed as a composition, chosen text as text;
+  - gamepads through the Linux input devices.
+- `PlatformSettings.CanPlaceWindows` (`INativePlatformSettings.CanPlaceWindows`): whether a window can be put at a point
+  of the desktop - false on Wayland, where the docking compass is then drawn inside the area it covers.
+- Automation: `window <selector> hide | show`; `state` tells the default font and the monitors; `theme --variant System`
+  follows the desktop's appearance.
+
 - Touch on Wayland (`wl_touch`): every finger is a pointer of its own (`PointerType.Touch`), its contact area from the
   compositor's shape, raised when the compositor closes its frame - or once the events read are dispatched, where it
   closes none. A finger on the edge of a window drawing its own frame resizes it, as the mouse does.
@@ -27,8 +69,7 @@ All packages share one version.
   xkbcommon, letters following the layout and the rest their place, typed text, and repeats timed by the client at the
   rate the compositor gives. Cursors are the compositor's, by shape (`wp_cursor_shape_v1`). The loop waits on the
   compositor's socket and an eventfd, spinning nowhere. A Wayland client places no window and learns no desktop
-  position, so a window's client corner is the desktop's origin, and `SetPosition`, `Topmost` and click-through do
-  nothing there.
+  position, so a window's client corner is the desktop's origin, and `SetPosition` and `Topmost` do nothing there.
 - The clipboard on Wayland, through `wl_data_device`: text, HTML and RTF as UTF-8 under every name they travel by
   (XWayland's among them), files as a URI list, and formats of one's own under `application/x-adamantium-<name>`. The
   bytes go through a pipe when another client asks for a type; what the application put on the clipboard itself is read
@@ -1477,6 +1518,17 @@ All packages share one version.
 
 ### Changed
 
+- Each platform's builder registers its gamepads, where `MultiverseApplication` used to pick them by the system it ran
+  on: `WindowsPlatform.Initialize` registers `WindowsGamepadBackend` (GameInput, else XInput, chosen when first asked
+  for), and the new `LinuxPlatform.Initialize` registers the evdev gamepads and Enchant spell checking - what Linux
+  gives whatever draws the windows - before `WaylandPlatform.Initialize`. The desktop's settings and file dialogs
+  through its portals moved there from the Wayland platform too; the window a dialog belongs to is named by the display
+  server (`IPortalParent`).
+- `TextBoxBase.Paste(string)` is where pasted text goes in, from the clipboard or the primary selection alike;
+  `PasteFromClipboard` hands it the clipboard's, and `PasswordBox` overrides `Paste` instead.
+- A window shown for the first time is activated only when its `ActivateOnShow` asks for it.
+- The automation presses, drags and drops in the middle of what shows of an element, not of the whole of it: a column
+  header half under the edge of its table is taken by its visible half.
 - `ISyntheticPointerInput.Inject` takes the window the contacts are played on and refuses a contact that would land
   on anything else, checked right before the system takes it; the automation's planner no longer checks it.
 - On `Adamantium.Vulkan` 1.0.4, as the engine is.
@@ -1850,6 +1902,8 @@ All packages share one version.
 
 ### Removed
 
+- The macOS theme's `SegmentedTrackFadeColor` and `SegmentedTrackFadeColorTransparent`: tab strips fade by a mask now,
+  into whatever lies beneath them, and need no color to fade to.
 - `DateTimeFieldSegmentAutomationPeer`: `FieldSegmentAutomationPeer` is the peer of every part of a field, a date's
   and a length's alike.
 - Text drawn into a target of its own and laid over the element (the engine's `FontRenderer.UseDirectTextDraw` off):
@@ -1889,6 +1943,32 @@ All packages share one version.
 
 ### Fixed
 
+- Markup hot reload listed a file as changed - and applied it again on save - when the watcher read it half written:
+  a save reports itself as soon as it empties the file. A gathered file whose text is again what was applied is
+  dropped before it is listed or applied (`MarkupHotReload.ChangedFiles`). Seen on Linux, where inotify reports the
+  emptying at once.
+- A theme swap scrolled a tab strip back to its start, the selected tab out of view: the new template's strip starts
+  unpanned, and the selected tab is now brought into view again.
+- A panel put away against a side stayed as wide as its tabs had been lying flat: tabs added while it was docked turned
+  when it folded, and the strip, behind its tab panel's measure boundary, kept the old width. `TabStripScroller` now
+  re-measures itself when its panel's size across the strip changes.
+- A press on a put-away panel's ▾ revealed the panel, whose flyout then fought the list for the press: the ▾ opened and
+  closed out of turn. Only a press on a tab reveals the panel now, and a tab picked from the ▾ list reveals it too.
+- A dock panel's caption buttons were out of reach of automation and screen readers: `PaneGroupAutomationPeer` lists
+  them first, as they come on screen, named "Auto hide" and "Close" (`PaneStrings.AutoHide`, `PaneStrings.CloseActive`
+  - it closes the active pane, not the panel).
+- A tool panel's tabs did not pan with the wheel: the `TabPanel` - arranged at its whole length and translated by the
+  strip - took that length for its viewport and clamped the pan back to zero. Document strips panned only because
+  their edge fades' triggers re-measured the strip on every pan. The strip now tells the panel the length it shows,
+  and reads the panel's length whenever the panel changes it - the panel is a measure boundary, so a tab added to a
+  strip that fitted left the strip unaware it overflowed. A tool panel's strip also measured its tabs unbounded
+  through an Auto column.
+- A window's size or scale that changed while the render thread was rebuilding its swapchain was lost: the swapchain
+  kept the old size until the next resize, so the picture was stretched and clicks missed what they were drawn over -
+  seen at the start of a window on a fractional-scale monitor. `IWindowRenderer.ResizePresenterToWindow()` sizes the
+  presenter to the window and leaves a change made meanwhile for the next frame.
+- A window closed before its first frame - a tooltip or a popup closed by a theme switch - was registered for drawing
+  all the same, with a swapchain made on its destroyed surface: on Wayland the compositor then closed the connection.
 - Text and lines are sharp at a fractional scale on Wayland: the buffer was the logical size times the scale truncated
   (1066 pixels for 800 at 4/3), one pixel short of what the compositor expects, and was stretched to fit; it is rounded.
 - A `PropertyGrid` editor is never shorter than a line of its font with its padding and border: `EditorHeight` was

@@ -128,16 +128,16 @@ public class PasswordBox : TextBoxBase
     {
     }
 
-    /// <summary>Pastes the first line of the clipboard, without control characters: a password copied with the line
+    /// <summary>Pastes the first line of the text, without control characters: a password copied with the line
     /// break after it must not gain a character nobody sees.</summary>
-    protected override void PasteFromClipboard()
+    protected override void Paste(string text)
     {
         if (IsReadOnly)
         {
             return;
         }
 
-        var text = (Clipboard.GetText() ?? string.Empty).TrimStart('\r', '\n', LineSeparator, ParagraphSeparator);
+        text = (text ?? string.Empty).TrimStart('\r', '\n', LineSeparator, ParagraphSeparator);
         var lineEnd = text.IndexOfAny(['\r', '\n', LineSeparator, ParagraphSeparator]);
         if (lineEnd >= 0)
         {

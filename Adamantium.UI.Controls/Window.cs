@@ -43,7 +43,7 @@ public class Window : WindowBase
             WindowWorkerService.ShowWindow(state);
             // Pull the window to the foreground when it first appears (ShowWindow alone doesn't steal focus from the
             // launching foreground window). Applies to the main window (OnStartup) and any window opened from a VM.
-            if (firstDisplay) Activate();
+            if (firstDisplay && ActivateOnShow) Activate();
         }
     }
         

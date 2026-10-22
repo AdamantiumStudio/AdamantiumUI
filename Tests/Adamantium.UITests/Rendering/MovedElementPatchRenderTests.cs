@@ -5,6 +5,7 @@ using Adamantium.Graphics.Core;
 using Adamantium.Graphics.Fonts;
 using Adamantium.Imaging;
 using Adamantium.Mathematics;
+using Adamantium.ProceduralGeometry;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Graphics;
 using Adamantium.UI.Core.Media;
@@ -341,6 +342,90 @@ public class MovedElementPatchRenderTests
         var patched = Pixels(scene.Renderer);
         AssertMatchesAFullWalk(scene, patched,
             "the motion node under the mover must be carried - its slot is the only thing that moves its subtree");
+    }
+
+    // A tab strip under its edge fade: a layer away from the window's corner, panned, holding a translucent close cross
+    // over another translucent stroke. Both strokes borrow depth as scratch, so each has to reset its own bounds in the
+    // LAYER's pixels, not the window's.
+    [TestCase(false)]
+    [TestCase(true)]
+    public void ACrossInAPannedStripUnderAMask_IsDrawnWhole(bool revealAfterThePan)
+    {
+        using var reference = StripScene(masked: false, revealAfterThePan: false);
+        reference.Mover.Bounds = new Rect(-12, 0, 160, 32);
+        reference.Draw();
+
+        using var scene = StripScene(masked: true, revealAfterThePan);
+        scene.Mover.Bounds = new Rect(-12, 0, 160, 32);
+        scene.Draw();
+        if (revealAfterThePan)
+        {
+            scene.Rider.Visibility = Visibility.Visible;
+            scene.Draw();
+        }
+
+        scene.Draw();
+        scene.Draw();
+
+        var whole = BrightPixels(Pixels(reference.Renderer));
+        Assert.That(whole, Is.GreaterThan(0), "the cross shows without the mask");
+        Assert.That(BrightPixels(Pixels(scene.Renderer)), Is.EqualTo(whole), "and as much of it under the mask");
+        AssertMatchesAFullWalk(scene, Pixels(scene.Renderer), "the panned strip must be laid down as a walk draws it");
+    }
+
+    private static Scene StripScene(bool masked, bool revealAfterThePan)
+    {
+        var device = GpuTestDevice.Device;
+        var factory = new RenderUnitFactory(device, new StubResourceFactory());
+        var renderer = new OffscreenTestRenderer(device, factory, Dim, Dim) { ClearColor = Colors.Black };
+
+        var stage = Placed(new Rect(0, 0, Dim, Dim));
+        var strip = Placed(new Rect(12, 40, 80, 32));
+        strip.ClipToBounds = true;
+        if (masked)
+        {
+            strip.OpacityMask = new LinearGradientBrush([
+                new GradientStop(Colors.Black, 0),
+                new GradientStop(Colors.Black, 0.7),
+                new GradientStop(Colors.Transparent, 1)
+            ]) { StartPoint = new Vector2(0, 0.5), EndPoint = new Vector2(1, 0.5) };
+        }
+
+        stage.Add(strip);
+
+        var node = Placed(new Rect(0, 0, 160, 32));
+        node.IsRenderMotionNode = true;
+        strip.Add(node);
+
+        var tab = Placed(new Rect(16, 0, 48, 32));
+        tab.RenderAction = s => s.DrawRectangle(Brushes.Gray, new Rect(0, 0, 48, 32), new CornerRadius(4));
+        node.Add(tab);
+
+        var band = new SVGParser().Parse("M0,12 L24,12");
+        var button = Placed(new Rect(20, 4, 24, 24));
+        button.RenderAction = s => s.DrawGeometry(null, band, new Pen(new SolidColorBrush(Color.FromRgba(128, 128, 128, 200)), 24));
+        button.Visibility = revealAfterThePan ? Visibility.Hidden : Visibility.Visible;
+        tab.Add(button);
+
+        var cross = new SVGParser().Parse("M0,0 L8,8 M8,0 L0,8");
+        var glyph = Placed(new Rect(7.5, 7.5, 9, 9));
+        glyph.RenderAction = s => s.DrawGeometry(null, cross, new Pen(new SolidColorBrush(Color.FromRgba(255, 255, 255, 200)), 1));
+        button.Add(glyph);
+
+        var scene = new Scene { Renderer = renderer, Root = new VisualRoot(stage, Dim, Dim), Mover = node, Rider = button };
+        scene.Draw();
+        return scene;
+    }
+
+    private static int BrightPixels(byte[] pixels)
+    {
+        var count = 0;
+        for (var i = 0; i < pixels.Length; i += 4)
+        {
+            if (pixels[i] > 160 && pixels[i + 1] > 160 && pixels[i + 2] > 160) count++;
+        }
+
+        return count;
     }
 
     // The unit factory needs one, but nothing here draws a texture or text.

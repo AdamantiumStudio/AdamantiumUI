@@ -271,6 +271,20 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent
     /// a uniform-cell panel overrides it so a sub-pixel move that stays within the current row skips the re-window.</summary>
     protected virtual bool RealizedWindowMovesFor(Vector2 from, Vector2 to) => true;
 
+    /// <summary>The window a host shows of this panel when it arranges the panel at its whole length and pans it by
+    /// translating (a tab strip): neither the measured nor the arranged size is the viewport then. Null takes them.</summary>
+    internal Size? HostViewport
+    {
+        get => _hostViewport;
+        set
+        {
+            _hostViewport = value;
+            if (value is { } viewport) _viewport = viewport;
+        }
+    }
+
+    private Size? _hostViewport;
+
     protected override Size MeasureOverride(Size availableSize)
     {
         if (!IsItemsHost) return MeasurePlain(availableSize);
@@ -286,7 +300,7 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent
             _extent = extent;
             // An unbounded axis is a size probe, not a viewport: keep the known viewport there, falling back to the
             // extent only if the axis was never measured.
-            _viewport = new Size(
+            _viewport = HostViewport ?? new Size(
                 double.IsInfinity(availableSize.Width) ? (_viewport.Width > 0 ? _viewport.Width : extent.Width) : availableSize.Width,
                 double.IsInfinity(availableSize.Height) ? (_viewport.Height > 0 ? _viewport.Height : extent.Height) : availableSize.Height);
             // The DESIRED size still answers that question honestly: the extent on an unbounded axis, the slot on a
@@ -323,10 +337,10 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent
         _inLayout = true;
         try
         {
-            _viewport = finalSize;
+            _viewport = HostViewport ?? finalSize;
             // Position against the SAME offset the measure realized/decided visibility with - NOT a fresh _offset (which
             // a mid-pass scroll may have moved). _offset itself is left as-is so the next pass picks up that newer value.
-            var arrangeOffset = ClampOffset(_passOffset, _extent, finalSize);
+            var arrangeOffset = ClampOffset(_passOffset, _extent, _viewport);
             ArrangeVirtualized(finalSize, arrangeOffset);
             HideUnmappedContainers();
             var grew = Arranged(_assumedWindow.Width, finalSize.Width, out var width)

@@ -443,8 +443,44 @@ internal static class InputSimulator
         });
     }
 
-    public static Vector2 Middle(UIComponent element) =>
-        new(element.RenderSize.Width / 2, element.RenderSize.Height / 2);
+    /// <summary>The middle of what shows of <paramref name="element"/>, in its own coordinates - see <see cref="Shown"/>.</summary>
+    public static Vector2 Middle(UIComponent element)
+    {
+        var shown = Shown(element);
+        return new Vector2(shown.X + shown.Width / 2, shown.Y + shown.Height / 2);
+    }
+
+    /// <summary>What the clipping ancestors leave of <paramref name="element"/> to see, in its own coordinates; all of
+    /// it when nothing shows.</summary>
+    public static Rect Shown(UIComponent element)
+    {
+        var whole = new Rect(0, 0, element.RenderSize.Width, element.RenderSize.Height);
+        var shown = InWindow(element);
+        for (var node = element.VisualParent as UIComponent; node != null; node = node.VisualParent as UIComponent)
+        {
+            if (node.ClipToBounds || node.VisualParent == null)
+            {
+                shown = shown.Intersect(InWindow(node));
+            }
+        }
+
+        if (shown.Width <= 0 || shown.Height <= 0)
+        {
+            return whole;
+        }
+
+        var toLocal = Matrix4x4F.Invert(element.WorldTransform);
+        var topLeft = Vector3F.TransformCoordinate(new Vector3F((float)shown.X, (float)shown.Y, 0), toLocal);
+        var bottomRight = Vector3F.TransformCoordinate(new Vector3F((float)shown.Right, (float)shown.Bottom, 0), toLocal);
+        return new Rect(new Vector2(topLeft.X, topLeft.Y), new Vector2(bottomRight.X, bottomRight.Y));
+    }
+
+    private static Rect InWindow(UIComponent element)
+    {
+        var topLeft = InWindow(element, Vector2.Zero);
+        var bottomRight = InWindow(element, new Vector2(element.RenderSize.Width, element.RenderSize.Height));
+        return new Rect(topLeft, bottomRight);
+    }
 
     private static Vector2 InWindow(UIComponent element, Vector2 local)
     {

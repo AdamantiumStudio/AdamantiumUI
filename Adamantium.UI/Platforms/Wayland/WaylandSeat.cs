@@ -43,7 +43,18 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
     private Vector2 pointerPosition;
     private InputModifiers buttons;
     private WpCursorShapeDeviceV1.Shape appliedShape;
+    private string appliedImage;
+    private Cursor appliedCursor;
+    private WlSurface cursorSurface;
+    private WpViewport cursorViewport;
+    private readonly Dictionary<(string, int), WaylandCursorImage> cursorImages = new();
     private bool cursorHidden;
+    private ZwpPointerGesturePinchV1 pinch;
+    private double pinchScale;
+    private double pinchNotches;
+    private ZwpRelativePointerV1 relativePointer;
+    private ZwpLockedPointerV1 lockedPointer;
+    private WaylandWindowWorker lockedWindow;
 
     private int wheel120Vertical;
     private int wheel120Horizontal;
@@ -100,6 +111,9 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
 
     /// <summary>The window the pointer is in.</summary>
     internal WaylandWindowWorker PointerWindow => pointerWindow;
+
+    /// <summary>The window the keyboard is in.</summary>
+    internal WaylandWindowWorker KeyboardWindow => keyboardWindow;
 
     /// <summary>While set, fingers that go down are not raised: the system's own warm-up touches.</summary>
     internal bool TouchSuppressed
@@ -159,9 +173,11 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
 
     public Size DragThreshold => new(8, 8);
 
-    public Rect VirtualScreen => default;
+    public Rect VirtualScreen => platform.Outputs.VirtualScreen;
 
-    public IReadOnlyList<ScreenInfo> Screens => [];
+    public IReadOnlyList<ScreenInfo> Screens => platform.Outputs.Screens;
+
+    public bool CanPlaceWindows => false;
 
     #endregion
 
@@ -171,9 +187,16 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
     /// protocol the compositor's own arrow stays.</summary>
     public void Apply(Cursor cursor)
     {
+        appliedCursor = cursor;
         if (cursor == null || cursor.Type == CursorType.None)
         {
             HideCursor();
+            return;
+        }
+
+        if (cursor.Type == CursorType.Custom && cursor.FilePath is { Length: > 0 } path)
+        {
+            SetImage(path);
             return;
         }
 
@@ -190,7 +213,127 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
 
         device.SetShape(pointerEnterSerial, shape);
         appliedShape = shape;
+        appliedImage = null;
         cursorHidden = false;
+    }
+
+    private void SetImage(string path)
+    {
+        var worker = pointerWindow;
+        if (pointer == null || worker == null || (!cursorHidden && appliedImage == path))
+        {
+            return;
+        }
+
+        var wanted = (int)Math.Round(WaylandCursorImage.LogicalSize * worker.Scale);
+        if (!cursorImages.TryGetValue((path, wanted), out var image))
+        {
+            image = WaylandCursorImage.Load(path, wanted);
+            cursorImages[(path, wanted)] = image;
+        }
+
+        var buffer = image == null ? null : WaylandShm.CreateBuffer(platform, image.Pixels, image.Width, image.Height);
+        if (buffer == null)
+        {
+            SetShape(WpCursorShapeDeviceV1.Shape.Default);
+            return;
+        }
+
+        cursorSurface ??= platform.Compositor.CreateSurface();
+        double perPixel;
+        if (platform.Viewporter != null)
+        {
+            cursorViewport ??= platform.Viewporter.GetViewport(cursorSurface);
+            perPixel = (double)WaylandCursorImage.LogicalSize / image.Width;
+            cursorViewport.SetDestination(WaylandCursorImage.LogicalSize, Math.Max(1, (int)Math.Round(image.Height * perPixel)));
+        }
+        else
+        {
+            var bufferScale = Math.Max(1, (int)Math.Round((double)image.Width / WaylandCursorImage.LogicalSize));
+            if (image.Width % bufferScale != 0 || image.Height % bufferScale != 0)
+            {
+                bufferScale = 1;
+            }
+
+            cursorSurface.SetBufferScale(bufferScale);
+            perPixel = 1.0 / bufferScale;
+        }
+
+        cursorSurface.Attach(buffer, 0, 0);
+        cursorSurface.DamageBuffer(0, 0, image.Width, image.Height);
+        cursorSurface.Commit();
+        buffer.Destroy();
+        pointer.SetCursor(pointerEnterSerial, cursorSurface, (int)Math.Round(image.HotX * perPixel),
+            (int)Math.Round(image.HotY * perPixel));
+        appliedShape = 0;
+        appliedImage = path;
+        cursorHidden = false;
+    }
+
+    /// <summary>Holds the pointer still in the window, hidden, and raises its moves as deltas until
+    /// <see cref="UnlockPointer"/>.</summary>
+    internal void LockPointer(WaylandWindowWorker worker)
+    {
+        if (pointer == null || platform.RelativePointers == null || platform.PointerConstraints == null ||
+            lockedPointer != null || worker.Surface == null)
+        {
+            return;
+        }
+
+        if (relativePointer == null)
+        {
+            relativePointer = platform.RelativePointers.GetRelativePointer(pointer);
+            relativePointer.RelativeMotion += OnRelativeMotion;
+        }
+
+        lockedWindow = worker;
+        lockedPointer = platform.PointerConstraints.LockPointer(worker.Surface, pointer, null,
+            ZwpPointerConstraintsV1.Lifetime.Persistent);
+        HideCursor();
+        platform.Display.Flush();
+    }
+
+    /// <summary>Lets the pointer go, showing it at <paramref name="at"/>, a logical point of the window it was held in.</summary>
+    internal void UnlockPointer(Vector2 at)
+    {
+        if (lockedPointer == null)
+        {
+            return;
+        }
+
+        lockedPointer.SetCursorPositionHint(at.X, at.Y);
+        lockedWindow.Surface.Commit();
+        lockedPointer.Destroy();
+        lockedPointer = null;
+        lockedWindow = null;
+        Apply(appliedCursor ?? Cursor.Default);
+        platform.Display.Flush();
+    }
+
+    /// <summary>Drops the hold of a window that is going away.</summary>
+    internal void ForgetLock(WaylandWindowWorker worker)
+    {
+        if (lockedWindow != worker || lockedPointer == null)
+        {
+            return;
+        }
+
+        lockedPointer.Destroy();
+        lockedPointer = null;
+        lockedWindow = null;
+    }
+
+    private void OnRelativeMotion(uint utimeHi, uint utimeLo, double dx, double dy, double dxUnaccel, double dyUnaccel)
+    {
+        var worker = lockedWindow;
+        if (lockedPointer == null || worker?.Window == null)
+        {
+            return;
+        }
+
+        var time = (uint)((((ulong)utimeHi << 32) | utimeLo) / 1000);
+        var args = new RawMouseDeltaEventArgs(new Vector2(dx, dy) * worker.Scale, worker.Window, InputModifiers(), time);
+        WaylandPlatform.DispatchInput(() => PointerDevice.Current.ProcessDelta(args));
     }
 
     private void HideCursor()
@@ -241,9 +384,22 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
             pointer.AxisValue120 += OnAxisValue120;
             pointer.Frame += OnPointerFrame;
             cursorShape = platform.CursorShapes?.GetPointer(pointer);
+            pinch = platform.PointerGestures?.GetPinchGesture(pointer);
+            if (pinch != null)
+            {
+                pinch.Begin += (_, _, _, _) => (pinchScale, pinchNotches) = (1, 0);
+                pinch.Update += OnPinchUpdate;
+            }
         }
         else if (!hasPointer && pointer != null)
         {
+            lockedPointer?.Destroy();
+            lockedPointer = null;
+            lockedWindow = null;
+            relativePointer?.Destroy();
+            relativePointer = null;
+            pinch?.Destroy();
+            pinch = null;
             cursorShape?.Destroy();
             cursorShape = null;
             pointer.Release();
@@ -293,6 +449,7 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
         pointerPosition = new Vector2(x, y);
 
         appliedShape = 0;
+        appliedImage = null;
         cursorHidden = false;
         PointerMoved(0);
     }
@@ -431,6 +588,28 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
         }
     }
 
+    private void OnPinchUpdate(uint time, double dx, double dy, double scale, double rotation)
+    {
+        var window = pointerWindow?.Window;
+        if (window == null || scale <= 0)
+        {
+            return;
+        }
+
+        pinchNotches += Math.Log(scale / pinchScale) / Math.Log(1.1);
+        pinchScale = scale;
+        var delta = (int)Math.Truncate(pinchNotches * Notch);
+        if (delta == 0)
+        {
+            return;
+        }
+
+        pinchNotches -= (double)delta / Notch;
+        var args = new RawPointerWheelEventArgs(delta, window, pointerPosition,
+            InputModifiers() | Core.Input.InputModifiers.LeftControl, time, false);
+        WaylandPlatform.DispatchInput(() => PointerDevice.Current.ProcessEvent(args));
+    }
+
     private void DispatchWheel(IWindow window, int delta, bool horizontal)
     {
         var args = new RawPointerWheelEventArgs(delta, window, pointerPosition, InputModifiers(), wheelTime, horizontal);
@@ -520,6 +699,7 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
     {
         keyboardWindow = null;
         StopRepeat();
+        xkb?.ResetCompose();
         lock (_keysDownLock)
         {
             keysDown.Clear();
@@ -615,6 +795,19 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
         }
 
         var text = xkb.Text(code);
+        if (!repeated)
+        {
+            switch (xkb.Compose(code, out var composed))
+            {
+                case XkbComposeStatus.Composing:
+                case XkbComposeStatus.Cancelled:
+                    return;
+                case XkbComposeStatus.Composed:
+                    text = composed;
+                    break;
+            }
+        }
+
         if (text.Length > 0 && text[0] >= 32 && text[0] != 127)
         {
             WaylandPlatform.DispatchInput(() => KeyboardDevice.CurrentDevice.ProcessEvent(

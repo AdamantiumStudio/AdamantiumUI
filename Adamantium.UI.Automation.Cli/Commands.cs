@@ -164,7 +164,9 @@ internal static class Commands
         "maximize" => target.SetWindowStateAsync(WindowState.Maximized),
         "restore" => target.SetWindowStateAsync(WindowState.Normal),
         "close" => target.CloseAsync(),
-        _ => throw new AutomationException("window <selector> minimize | maximize | restore | close")
+        "hide" => target.HideAsync(),
+        "show" => target.ShowAsync(),
+        _ => throw new AutomationException("window <selector> minimize | maximize | restore | close | hide | show")
     };
 
     private static Task Touch(AutomationElement target, ScriptArguments arguments)

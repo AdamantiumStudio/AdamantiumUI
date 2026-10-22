@@ -44,6 +44,15 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
 
     private bool reportingOsSize;
 
+    private string title = string.Empty;
+    private int minWidth;
+    private int minHeight;
+    private bool hidden;
+    private volatile bool remapping;
+    private ZxdgExportedV2 exported;
+    private XdgToplevelSessionV1 toplevelSession;
+    private string exportedHandle;
+
     public WaylandWindowWorker(IUIContext uiContext)
     {
         UIContext = uiContext;
@@ -56,6 +65,11 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
     public IWindow Window => closed ? null : window;
 
     internal WlSurface Surface => surface;
+
+    internal XdgToplevel Toplevel => toplevel;
+
+    /// <summary>Whether the window is open and its surface still there to name in a request.</summary>
+    internal bool IsLive => !closed && surface is { IsAlive: true };
 
     /// <summary>The scale the compositor wants the window drawn at.</summary>
     public double Scale { get; private set; } = 1;
@@ -81,8 +95,8 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
         chromeCustom = window.UseCustomChrome;
         chromeResizeMode = window.ResizeMode;
         chromeState = window.State;
-        var minWidth = !double.IsNaN(window.MinWidth) && window.MinWidth > 0 ? window.MinWidth : 320;
-        var minHeight = !double.IsNaN(window.MinHeight) && window.MinHeight > 0 ? window.MinHeight : 120;
+        minWidth = !double.IsNaN(window.MinWidth) && window.MinWidth > 0 ? (int)window.MinWidth : 320;
+        minHeight = !double.IsNaN(window.MinHeight) && window.MinHeight > 0 ? (int)window.MinHeight : 120;
 
         width = normalWidth = InitialExtent(window.ClientWidth, window.Width, 800);
         height = normalHeight = InitialExtent(window.ClientHeight, window.Height, 600);
@@ -110,22 +124,19 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
         toplevel = xdgSurface.GetToplevel();
         toplevel.Configure += OnToplevelConfigure;
         toplevel.Close += () => WaylandPlatform.DispatchInput(() => Window?.Close());
-        toplevel.SetAppId(Assembly.GetEntryAssembly()?.GetName().Name ?? "adamantium");
-        toplevel.SetMinSize((int)minWidth, (int)minHeight);
-
         if (platform.Decorations != null)
         {
             decoration = platform.Decorations.GetToplevelDecoration(toplevel);
-            decoration.SetMode(chromeCustom
-                ? ZxdgToplevelDecorationV1.Mode.ClientSide
-                : ZxdgToplevelDecorationV1.Mode.ServerSide);
         }
 
-        if (chromeState == WindowState.Maximized)
+        SendToplevelState();
+        if (platform.Session != null &&
+            window is Adamantium.UI.Controls.WindowBase { RemembersPlacement: true, ActivateOnShow: true } remembered)
         {
-            toplevel.SetMaximized();
+            toplevelSession = platform.Session.Restore(toplevel, remembered.PlacementName());
         }
 
+        ApplyInputRegion(window.TransparentToInput);
         surface.Commit();
         platform.Display.Flush();
         platform.Register(this, surface.Handle);
@@ -147,7 +158,23 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
 
     private void WindowOnResizeModeChanged(object sender, EventArgs e) => chromeResizeMode = window.ResizeMode;
 
-    public void SetTitle(string title) => toplevel?.SetTitle(title ?? string.Empty);
+    public void SetTitle(string title)
+    {
+        this.title = title ?? string.Empty;
+        toplevel?.SetTitle(this.title);
+    }
+
+    private void SendToplevelState()
+    {
+        toplevel.SetAppId(WaylandPlatform.AppId);
+        toplevel.SetTitle(title);
+        toplevel.SetMinSize(minWidth, minHeight);
+        decoration?.SetMode(chromeCustom ? ZxdgToplevelDecorationV1.Mode.ClientSide : ZxdgToplevelDecorationV1.Mode.ServerSide);
+        if (chromeState == WindowState.Maximized)
+        {
+            toplevel.SetMaximized();
+        }
+    }
 
     public void SetPosition(double left, double top)
     {
@@ -181,10 +208,48 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
 
     public void UpdateOverlayTraits()
     {
+        var transparent = window.TransparentToInput;
+        platform.Invoke(() =>
+        {
+            if (closed)
+            {
+                return;
+            }
+
+            ApplyInputRegion(transparent);
+            if (!hidden)
+            {
+                surface.Commit();
+            }
+
+            platform.Display.Flush();
+        });
+    }
+
+    private void ApplyInputRegion(bool transparent)
+    {
+        if (!transparent)
+        {
+            surface.SetInputRegion(null);
+            return;
+        }
+
+        var region = platform.Compositor.CreateRegion();
+        surface.SetInputRegion(region);
+        region.Destroy();
     }
 
     public void ShowWindow(WindowState windowState)
     {
+        if (hidden && !closed)
+        {
+            hidden = false;
+            remapping = true;
+            SendToplevelState();
+            surface.Commit();
+            platform.Display.Flush();
+        }
+
         switch (windowState)
         {
             case WindowState.Maximized:
@@ -198,10 +263,96 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
 
     public void HideWindow()
     {
+        if (hidden || closed || surface == null || window.Renderer is not { FirstFrameProcessed: true })
+        {
+            return;
+        }
+
+        hidden = true;
+        remapping = false;
+        ((UIApplication)UIContext.UIApplication).SetWindowHidden(window, true, () =>
+        {
+            surface.Attach(null, 0, 0);
+            surface.Commit();
+            platform.Display.Flush();
+        });
     }
 
-    public void Activate()
+    /// <summary>The handle another client names this window by (xdg_foreign), made on first ask; null where the
+    /// compositor cannot export it or does not answer in time.</summary>
+    internal string ExportHandle()
     {
+        if (exportedHandle != null || platform.Exporter == null)
+        {
+            return exportedHandle;
+        }
+
+        var answered = new System.Threading.Tasks.TaskCompletionSource();
+        platform.Invoke(() =>
+        {
+            if (closed || exported != null)
+            {
+                answered.TrySetResult();
+                return;
+            }
+
+            exported = platform.Exporter.ExportToplevel(surface);
+            exported.HandleEvent += handle =>
+            {
+                exportedHandle = handle;
+                answered.TrySetResult();
+            };
+            platform.Display.Flush();
+        });
+        answered.Task.Wait(TimeSpan.FromSeconds(1));
+        return exportedHandle;
+    }
+
+    public void Activate() => platform.Invoke(RequestActivation);
+
+    private void RequestActivation()
+    {
+        if (closed || platform.Activation == null)
+        {
+            return;
+        }
+
+        var launchToken = Environment.GetEnvironmentVariable("XDG_ACTIVATION_TOKEN");
+        if (!string.IsNullOrEmpty(launchToken))
+        {
+            Environment.SetEnvironmentVariable("XDG_ACTIVATION_TOKEN", null);
+            platform.Activation.Activate(launchToken, surface);
+            platform.Display.Flush();
+            return;
+        }
+
+        var seat = platform.Seat;
+        var token = platform.Activation.GetActivationToken();
+        if (seat != null && seat.LastInputSerial != 0)
+        {
+            token.SetSerial(seat.LastInputSerial, seat.Proxy);
+        }
+
+        var focused = seat?.KeyboardWindow is { IsLive: true } keyboardWindow ? keyboardWindow
+            : seat?.PointerWindow is { IsLive: true } pointerWindow ? pointerWindow
+            : null;
+        if (focused != null)
+        {
+            token.SetSurface(focused.Surface);
+        }
+
+        token.Done += value =>
+        {
+            token.Destroy();
+            if (!closed)
+            {
+                platform.Activation.Activate(value, surface);
+            }
+
+            platform.Display.Flush();
+        };
+        token.Commit();
+        platform.Display.Flush();
     }
 
     public void RaiseWithoutActivation()
@@ -218,14 +369,49 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
 
     public void SetRelativeMouseMode(bool enabled, PixelPoint restoreScreen)
     {
+        var at = new Vector2(restoreScreen.X / Scale, restoreScreen.Y / Scale);
+        platform.Invoke(() =>
+        {
+            if (closed)
+            {
+                return;
+            }
+
+            if (enabled)
+            {
+                platform.Seat.LockPointer(this);
+            }
+            else
+            {
+                platform.Seat.UnlockPointer(at);
+            }
+        });
     }
+
+    /// <summary>Whether the window takes text from the input method; on unless it says otherwise.</summary>
+    internal bool WantsInputMethod { get; private set; } = true;
 
     public void SetInputMethodEnabled(bool enabled)
     {
+        WantsInputMethod = enabled;
+        platform.Invoke(() => platform.TextInput?.Update());
     }
 
     public void BeginMoveDrag()
     {
+        var pointer = platform.Seat.Pointer;
+        BeginMoveDrag(pointer.Window == this ? pointer.Position : Vector2.Zero);
+    }
+
+    /// <summary>A window someone follows the moves of is carried in a drag the compositor reports over our other
+    /// windows; any other is moved by the compositor alone.</summary>
+    public void BeginMoveDrag(Vector2 grab)
+    {
+        if (window is Adamantium.UI.Controls.WindowBase { IsMoveTracked: true } && platform.WindowDrag?.Start(this, grab) == true)
+        {
+            return;
+        }
+
         var seat = platform.Seat;
         if (toplevel == null || seat.Proxy == null)
         {
@@ -317,6 +503,20 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
         if (closed)
         {
             return;
+        }
+
+        if (remapping)
+        {
+            remapping = false;
+            var shown = window;
+            WaylandPlatform.DispatchInput(() =>
+            {
+                if (!closed && !hidden)
+                {
+                    ((UIApplication)UIContext.UIApplication).SetWindowHidden(shown, false);
+                    shown.InvalidateRender(true);
+                }
+            });
         }
 
         var w = pendingWidth;
@@ -463,6 +663,9 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
 
         _ = UIContext.UIApplication.ExecuteOnUIThreadAsync(() =>
         {
+            platform.Seat.ForgetLock(this);
+            exported?.Destroy();
+            toplevelSession?.Destroy();
             decoration?.Destroy();
             viewport?.Destroy();
             fractionalScale?.Destroy();

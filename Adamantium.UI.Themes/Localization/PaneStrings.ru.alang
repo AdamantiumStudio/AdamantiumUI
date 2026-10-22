@@ -5,4 +5,6 @@
     <Phrase Key="Save" Text="Сохранить"/>
     <Phrase Key="DontSave" Text="Не сохранять"/>
     <Phrase Key="Cancel" Text="Отмена"/>
+    <Phrase Key="AutoHide" Text="Автоматически скрывать"/>
+    <Phrase Key="CloseActive" Text="Закрыть"/>
 </Language>

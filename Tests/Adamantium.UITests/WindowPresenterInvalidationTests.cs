@@ -66,6 +66,7 @@ public class WindowPresenterInvalidationTests
         public void Present() => throw new NotSupportedException();
         public void ResizePresenter(PresentationParameters parameters) => throw new NotSupportedException();
         public void ResizePresenter(uint width, uint height) => throw new NotSupportedException();
+        public void ResizePresenterToWindow() => throw new NotSupportedException();
         public void Dispose() { }
     }
 }

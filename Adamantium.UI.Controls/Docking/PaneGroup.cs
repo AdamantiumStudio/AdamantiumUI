@@ -113,14 +113,30 @@ public class PaneGroup : TabControl, Panels.IPaneMinimum
         AddHandler(PointerEvents.PreviewPointerPressedEvent, new PointerPressedEventHandler(OnPreviewDown), handledEventsToo: true);
     }
 
-    // A click on a put-away strip REVEALS the panel; only the auto-hide button puts it back. Glancing at a tool and keeping it open
-    // are different things, which is why this is three states and not a flag.
+    // A click on a put-away strip's TAB reveals the panel; only the auto-hide button puts it back. Glancing at a tool and keeping
+    // it open are different things, which is why this is three states and not a flag.
     private void OnPreviewDown(object sender, PointerPressedEventArgs e)
     {
         // Touching a panel is what makes it the one being worked in - anywhere in it, tab strip, caption or body.
         Area?.MakeActive(this);
 
+        if (State == PaneGroupState.Collapsed && OnATab(e.OriginalSource as IUIComponent)) Area?.Reveal(this);
+    }
+
+    /// <summary>A put-away panel shows the tab picked from its ▾ list, as a press on that tab does.</summary>
+    internal override void SelectOverflowRow(int index)
+    {
         if (State == PaneGroupState.Collapsed) Area?.Reveal(this);
+        base.SelectOverflowRow(index);
+    }
+
+    private bool OnATab(IUIComponent source)
+    {
+        for (var n = source; n != null && !ReferenceEquals(n, this); n = n.VisualParent)
+        {
+            if (n is Pane) return true;
+        }
+        return false;
     }
 
     /// <summary>The panel being worked in - ONE across the whole layout, floating windows included. Only its border is

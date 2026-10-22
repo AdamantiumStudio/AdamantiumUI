@@ -52,6 +52,7 @@ public static class MarkupHotReload
         {
             lock (Sync)
             {
+                DropApplied();
                 return Changed.ToList();
             }
         }
@@ -181,6 +182,9 @@ public static class MarkupHotReload
 
     private static string HashOf(string text) => text == null ? null : MarkupHash.Of(text);
 
+    private static void DropApplied() =>
+        Changed.RemoveWhere(path => Taken.TryGetValue(path, out var taken) && !IsNewSave(path, taken));
+
     private static void RefreshWindows()
     {
         foreach (var window in UIAppContext.Current?.Windows ?? [])
@@ -239,6 +243,7 @@ public static class MarkupHotReload
     {
         lock (Sync)
         {
+            DropApplied();
             var paths = Changed.Union(alsoChanged.Select(Path.GetFullPath), StringComparer.OrdinalIgnoreCase).ToList();
             Changed.Clear();
             var due = new List<TrackedMarkup>(paths.Count);

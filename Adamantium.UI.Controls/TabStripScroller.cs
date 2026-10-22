@@ -5,6 +5,7 @@ using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Input;
+using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls;
@@ -145,6 +146,19 @@ public class TabStripScroller : InputUIComponent, IContainer
         set => SetValue(AutoScrollRateProperty, value);
     }
 
+    /// <summary>How far the tabs fade out at an edge they run past, in pixels: an opacity mask over the strip, so they
+    /// dissolve into whatever lies beneath it. The mask is there only while tabs are past an edge. Zero turns it off.
+    /// The strip owns its <see cref="UIComponent.OpacityMask"/>: one set on it from outside is replaced.</summary>
+    public static readonly AdamantiumProperty EdgeFadeExtentProperty = AdamantiumProperty.Register(
+        nameof(EdgeFadeExtent), typeof(double), typeof(TabStripScroller),
+        new PropertyMetadata(39.0, PropertyMetadataOptions.AffectsArrange));
+
+    public double EdgeFadeExtent
+    {
+        get => GetValue<double>(EdgeFadeExtentProperty);
+        set => SetValue(EdgeFadeExtentProperty, value);
+    }
+
     /// <summary>Pans when a drag is held near an EDGE of the strip, by how far past that edge's margin it is. One rule
     /// in one place, because three things drag over a strip - a tab being reordered, a whole window being docked, and a
     /// payload being dragged over - and they must feel the same.</summary>
@@ -232,6 +246,40 @@ public class TabStripScroller : InputUIComponent, IContainer
         ScrollStateChanged?.Invoke(this, EventArgs.Empty);
     }
 
+    private double _fadeBack = -1;
+    private double _fadeForward = -1;
+    private bool _fadeHorizontal;
+
+    private void UpdateEdgeFade()
+    {
+        var share = _viewport > 0 ? Math.Min(EdgeFadeExtent / _viewport, 0.5) : 0;
+        var back = CanScrollBack ? share : 0;
+        var forward = CanScrollForward ? share : 0;
+        if (back.Equals(_fadeBack) && forward.Equals(_fadeForward) && IsHorizontal == _fadeHorizontal) return;
+
+        _fadeBack = back;
+        _fadeForward = forward;
+        _fadeHorizontal = IsHorizontal;
+        if (back <= 0 && forward <= 0)
+        {
+            SetCurrentValue(OpacityMaskProperty, null);
+            return;
+        }
+
+        var stops = new GradientStopCollection
+        {
+            new GradientStop(back > 0 ? Colors.Transparent : Colors.Black, 0),
+            new GradientStop(Colors.Black, back),
+            new GradientStop(Colors.Black, 1 - forward),
+            new GradientStop(forward > 0 ? Colors.Transparent : Colors.Black, 1)
+        };
+        SetCurrentValue(OpacityMaskProperty, new LinearGradientBrush(stops)
+        {
+            StartPoint = IsHorizontal ? new Vector2(0, 0.5) : new Vector2(0.5, 0),
+            EndPoint = IsHorizontal ? new Vector2(1, 0.5) : new Vector2(0.5, 1)
+        });
+    }
+
     private static void OnChildChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
     {
         var scroller = (TabStripScroller)a;
@@ -261,11 +309,19 @@ public class TabStripScroller : InputUIComponent, IContainer
             : (IsHorizontal
                 ? new Size(double.PositiveInfinity, availableSize.Height)
                 : new Size(availableSize.Width, double.PositiveInfinity));
-        child.Measure(probe);
+        _measuringChild = true;
+        try
+        {
+            child.Measure(probe);
+        }
+        finally
+        {
+            _measuringChild = false;
+        }
+
         var d = child.DesiredSize;
-        _extent = Delegating
-            ? (IsHorizontal ? _inner.Extent.Width : _inner.Extent.Height)
-            : (IsHorizontal ? d.Width : d.Height);
+        _extent = Delegating ? InnerExtent : (IsHorizontal ? d.Width : d.Height);
+        if (Delegating) _innerAcross = InnerAcross;
 
         // Take the child's cross size, but only as much of the axis as offered (so we clip, never overflow the parent).
         return IsHorizontal
@@ -279,8 +335,11 @@ public class TabStripScroller : InputUIComponent, IContainer
         if (child != null)
         {
             _viewport = IsHorizontal ? finalSize.Width : finalSize.Height;
+            if (_inner is VirtualizingPanel panel) panel.HostViewport = finalSize;
+            if (Delegating) _extent = InnerExtent;
             ClampOffset();
             UpdateScrollState();
+            UpdateEdgeFade();
             PushOffset();
             // The panned child is a render MOTION NODE: its subtree bakes in ITS space and rides its transform-table
             // slot, so a pan rewrites one matrix and replays the recorded frame instead of re-walking the window.
@@ -328,17 +387,36 @@ public class TabStripScroller : InputUIComponent, IContainer
         var found = Child is IUIComponent root ? ScrollableContent.FindIn(root) : null;
         if (ReferenceEquals(found, _inner)) return;
         if (_inner != null) _inner.ScrollMetricsChanged -= OnInnerMetricsChanged;
+        if (_inner is VirtualizingPanel left) left.HostViewport = null;
         _inner = found;
         if (_inner != null) _inner.ScrollMetricsChanged += OnInnerMetricsChanged;
     }
 
-    // The panel re-clamped or re-realized: re-translate so the shift follows its realized offset. Guarded on an actual
-    // change - this also fires from the panel's own arrange, and an unconditional invalidate would loop.
+    // The panel re-measured or re-realized on its own, which a virtualizing panel does not report upward: re-measure if its
+    // size across changed, else re-translate. Guarded on a change - this also fires from the panel's arrange.
     private void OnInnerMetricsChanged(object sender, EventArgs e)
     {
+        if (!_measuringChild && !InnerAcross.Equals(_innerAcross))
+        {
+            InvalidateMeasure();
+            return;
+        }
+
         var realized = IsHorizontal ? _inner.RealizedOffset.X : _inner.RealizedOffset.Y;
-        if (!realized.Equals(_lastShift)) InvalidateArrange();
+        var extent = InnerExtent;
+        if (realized.Equals(_lastShift) && extent.Equals(_extent)) return;
+
+        _extent = extent;
+        InvalidateArrange();
     }
+
+    private double InnerExtent => IsHorizontal ? _inner.Extent.Width : _inner.Extent.Height;
+
+    private double InnerAcross => IsHorizontal ? _inner.Extent.Height : _inner.Extent.Width;
+
+    private double _innerAcross = double.NaN;
+
+    private bool _measuringChild;
 
     private double _lastShift = double.NaN;
 

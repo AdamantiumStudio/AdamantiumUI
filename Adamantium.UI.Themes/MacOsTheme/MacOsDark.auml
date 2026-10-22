@@ -62,11 +62,6 @@
          goes darker than #323232 while the selected capsule rises to ControlFillColorDefault (#545456) above it. -->
     <PaletteColor Key="SegmentedTrackColor" Color="#2A2A2C"/>
 
-    <!-- The same groove as a COLOR, for the strip's edge fade - see MacOsLight for why one key cannot serve both
-         slots. -->
-    <PaletteColor Key="SegmentedTrackFadeColor" Color="#E62A2A2C" As="Color"/>
-    <PaletteColor Key="SegmentedTrackFadeColorTransparent" Color="#002A2A2C" As="Color"/>
-
     <!-- The ribbon band's own fade - see MacOsLight. The band is the well, so the fade is the well's color. -->
     <PaletteColor Key="BandFadeColor" Color="#E6232325" As="Color"/>
     <PaletteColor Key="BandFadeColorTransparent" Color="#00232325" As="Color"/>

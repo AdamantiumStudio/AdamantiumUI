@@ -158,7 +158,8 @@ public class Theme : AdamantiumComponent, ITheme
     public static FontFamily SystemDefaultFontFamily => _systemDefaultFontFamily ??=
         OperatingSystem.IsWindows() ? new FontFamily("Segoe UI")
         : OperatingSystem.IsMacOS() ? new FontFamily("Helvetica")
-        : LinuxFamilies.Select(name => new FontFamily(name)).FirstOrDefault(family => family.IsInstalled)
+        : new[] { SystemAppearance.FontFamily }.Concat(LinuxFamilies).Where(name => name != null)
+              .Select(name => new FontFamily(name)).FirstOrDefault(family => family.IsInstalled)
           ?? new FontFamily(LinuxFamilies[0]);
 
     // The font is the theme's runtime-mutable identity, like the accent brushes above: it's an AdamantiumProperty so a

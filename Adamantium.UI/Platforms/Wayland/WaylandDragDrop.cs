@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Adamantium.Mathematics;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Input;
 using Adamantium.Wayland;
@@ -23,6 +24,7 @@ internal sealed class WaylandDragDrop : INativeDragDrop
     private readonly object _targetsLock = new();
 
     private WaylandOffer over;
+    private WaylandWindowWorker windowDragOver;
     private IWindow overWindow;
     private WaylandWindowWorker overWorker;
     private INativeDropSink overSink;
@@ -81,6 +83,25 @@ internal sealed class WaylandDragDrop : INativeDragDrop
 
     private void OnEnter(uint serial, WlSurface surface, double x, double y, WaylandOffer offer)
     {
+        windowDragOver = null;
+        if (offer != null && offer.Has(WaylandWindowDrag.WindowType) && platform.WindowDrag is { IsActive: true } windowDrag)
+        {
+            over = null;
+            overSink = null;
+            windowDragOver = platform.Find(surface);
+            if (windowDragOver?.Window == null)
+            {
+                windowDragOver = null;
+                offer.Proxy.Accept(serial, null);
+                return;
+            }
+
+            offer.Proxy.Accept(serial, WaylandWindowDrag.WindowType);
+            offer.Proxy.SetActions(WlDataDeviceManager.DndAction.Move, WlDataDeviceManager.DndAction.Move);
+            windowDrag.Over(windowDragOver, new Vector2(x, y));
+            return;
+        }
+
         var worker = platform.Find(surface);
         var window = worker?.Window;
         INativeDropSink sink = null;
@@ -116,6 +137,12 @@ internal sealed class WaylandDragDrop : INativeDragDrop
 
     private void OnMotion(double x, double y)
     {
+        if (windowDragOver != null)
+        {
+            platform.WindowDrag.Over(windowDragOver, new Vector2(x, y));
+            return;
+        }
+
         if (overSink == null)
         {
             return;
@@ -127,6 +154,13 @@ internal sealed class WaylandDragDrop : INativeDragDrop
 
     private void OnLeave()
     {
+        if (windowDragOver != null)
+        {
+            windowDragOver = null;
+            platform.WindowDrag.Left();
+            return;
+        }
+
         var sink = overSink;
         var window = overWindow;
         Forget();
@@ -135,6 +169,16 @@ internal sealed class WaylandDragDrop : INativeDragDrop
 
     private void OnDrop()
     {
+        if (windowDragOver != null)
+        {
+            windowDragOver = null;
+            var dropped = device.TakeDragOffer();
+            dropped?.Proxy.Finish();
+            dropped?.Destroy();
+            platform.Display.Flush();
+            return;
+        }
+
         var sink = overSink;
         var offer = device.TakeDragOffer();
         if (sink == null || offer == null)
