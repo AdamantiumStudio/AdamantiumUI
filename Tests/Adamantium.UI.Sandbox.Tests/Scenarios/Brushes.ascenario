@@ -15,9 +15,10 @@
   <Zoom Target="id=LiveFractal" Percent="1000" />
   <Expect Target="id=LiveFractal" Zoom="1000" />
   <Zoom Target="id=LiveFractal" Percent="110" />
-  <!-- Two fingers drawn apart pinch it in about their middle, less the few pixels that go to recognizing the pinch. -->
+  <!-- Two fingers drawn apart pinch it in about their middle, less the few pixels that go to recognizing the pinch - more
+       of them where the system's drag threshold is wider, so it is a range. -->
   <Pinch Target="id=LiveFractal" Scale="3" />
-  <Expect Target="id=LiveFractal" Zoom="312.7" />
+  <Expect Target="id=LiveFractal" Zoom="305..315" />
   <Zoom Target="id=LiveFractal" Percent="110" />
   <Pan Target="id=LiveFractal" By="120,-40" />
   <Pan Target="id=LiveFractal" By="-120,40" />

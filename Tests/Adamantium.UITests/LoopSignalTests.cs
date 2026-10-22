@@ -121,6 +121,8 @@ public class LoopSignalTests
             Thread.Sleep(1000);
             Assert.That(tickedOn, Is.Null, "not on the timer's own thread");
 
+            // No tick comes due while the loop catches up: one that did would be a new one, not one of those it stalled.
+            timer.Interval = TimeSpan.FromHours(1);
             LoopSignal.Drain();
             timer.Stop();
         }

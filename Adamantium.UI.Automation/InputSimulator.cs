@@ -271,12 +271,26 @@ internal static class InputSimulator
 
     // The first few pixels of a hand's stroke, still over what it pressed: a drag starts once the pointer has gone past
     // the threshold over its source, and a first step an eighth of a long way across would leave the source before that.
+    // Eight units, and past the platform's own threshold on one axis, as it is measured - physical pixels, so as many
+    // units is past it at any scale.
     private static Vector2 LeadIn(Vector2 start, Vector2 end)
     {
+        const double least = 8;
+        var threshold = PlatformSettings.DragThreshold;
         var way = end - start;
         var length = way.Length();
-        return length <= 8 ? end : start + way * (8 / length);
+        if (length <= least)
+        {
+            return end;
+        }
+
+        var share = Math.Max(least / length,
+            Math.Min(PastThreshold(threshold.Width, way.X), PastThreshold(threshold.Height, way.Y)));
+        return share >= 1 ? end : start + way * (float)share;
     }
+
+    private static double PastThreshold(double threshold, double along) =>
+        along == 0 ? 1 : (threshold + 1) / Math.Abs(along);
 
     private static void Stroke(IWindow window, Vector2 start, Vector2 end)
     {

@@ -49,6 +49,7 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
     private int minHeight;
     private bool hidden;
     private volatile bool remapping;
+    private bool configuredUnmapped;
     private ZxdgExportedV2 exported;
     private XdgToplevelSessionV1 toplevelSession;
     private string exportedHandle;
@@ -137,6 +138,8 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
         }
 
         ApplyInputRegion(window.TransparentToInput);
+        remapping = true;
+        ((UIApplication)UIContext.UIApplication).SetWindowHidden(window, true);
         surface.Commit();
         platform.Display.Flush();
         platform.Register(this, surface.Handle);
@@ -243,10 +246,19 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
         if (hidden && !closed)
         {
             hidden = false;
-            remapping = true;
-            SendToplevelState();
-            surface.Commit();
-            platform.Display.Flush();
+            if (configuredUnmapped)
+            {
+                configuredUnmapped = false;
+                ((UIApplication)UIContext.UIApplication).SetWindowHidden(window, false);
+                window.InvalidateRender(true);
+            }
+            else
+            {
+                remapping = true;
+                SendToplevelState();
+                surface.Commit();
+                platform.Display.Flush();
+            }
         }
 
         switch (windowState)
@@ -262,13 +274,19 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
 
     public void HideWindow()
     {
-        if (hidden || closed || surface == null || window.Renderer is not { FirstFrameProcessed: true })
+        if (hidden || closed || surface == null)
         {
             return;
         }
 
+        // Before its configure nothing can have been drawn: it stays unmapped, and the configure leaves it hidden.
+        if (remapping)
+        {
+            hidden = true;
+            return;
+        }
+
         hidden = true;
-        remapping = false;
         ((UIApplication)UIContext.UIApplication).SetWindowHidden(window, true, () =>
         {
             surface.Attach(null, 0, 0);
@@ -332,7 +350,8 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
             token.SetSerial(seat.LastInputSerial, seat.Proxy);
         }
 
-        var focused = seat?.KeyboardWindow is { IsLive: true } keyboardWindow ? keyboardWindow
+        var focused = seat?.LastInputWindow is { IsLive: true } inputWindow ? inputWindow
+            : seat?.KeyboardWindow is { IsLive: true } keyboardWindow ? keyboardWindow
             : seat?.PointerWindow is { IsLive: true } pointerWindow ? pointerWindow
             : null;
         if (focused != null)
@@ -506,15 +525,23 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
 
         if (remapping)
         {
-            remapping = false;
             var shown = window;
             WaylandPlatform.DispatchInput(() =>
             {
-                if (!closed && !hidden)
+                if (closed || !remapping)
                 {
-                    ((UIApplication)UIContext.UIApplication).SetWindowHidden(shown, false);
-                    shown.InvalidateRender(true);
+                    return;
                 }
+
+                remapping = false;
+                if (hidden)
+                {
+                    configuredUnmapped = true;
+                    return;
+                }
+
+                ((UIApplication)UIContext.UIApplication).SetWindowHidden(shown, false);
+                shown.InvalidateRender(true);
             });
         }
 
@@ -661,7 +688,7 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
 
         _ = UIContext.UIApplication.ExecuteOnUIThreadAsync(() =>
         {
-            platform.Seat.ForgetLock(this);
+            platform.Seat.Forget(this);
             exported?.Destroy();
             toplevelSession?.Destroy();
             decoration?.Destroy();

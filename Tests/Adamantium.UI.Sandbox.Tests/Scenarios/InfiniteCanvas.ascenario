@@ -4,11 +4,12 @@
   <Wait Target="id=Canvas" />
   <Select Target="id=PART_Inspector/name=Graph - nodes and the wires between them" />
   <Zoom Target="id=Canvas" Percent="100" />
-  <!-- Two fingers drawn apart pinch the camera in about their middle; drawn together, out again. -->
+  <!-- Two fingers drawn apart pinch the camera in about their middle; drawn together, out again. The zoom starts past the
+       system's drag threshold, so it is a range. -->
   <Pinch Target="id=Canvas" Scale="2" />
-  <Expect Target="id=Canvas" Zoom="185.7" />
+  <Expect Target="id=Canvas" Zoom="180..195" />
   <Pinch Target="id=Canvas" Scale="0.5" />
-  <Expect Target="id=Canvas" Zoom="99" />
+  <Expect Target="id=Canvas" Zoom="95..100" />
   <Zoom Target="id=Canvas" Percent="100" />
   <Expect Target="id=PART_MiniMap/type=Image" Name="The whole plane, the part in view framed" />
   <Scroll Target="id=Canvas>name=Mix" />
@@ -71,7 +72,7 @@
   <Expect Target="id=ItemCountLabel" Name="3 items" />
   <Zoom Target="id=Canvas" Percent="100" />
   <Pinch Target="id=Canvas" Scale="2" />
-  <Expect Target="id=Canvas" Zoom="185.7" />
+  <Expect Target="id=Canvas" Zoom="180..195" />
   <Expect Target="id=ItemCountLabel" Name="3 items" />
   <!-- Back as the page opens: the camera at 1:1, the strokes and the clear taken back, the select tool in hand. The two
        fingers down together were one gesture, so their strokes go back in one step. -->

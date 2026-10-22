@@ -132,6 +132,40 @@ public class ScenarioGeneratorTests
     }
 
     [Test]
+    public void AScenarioForSomeSystems_RunsOnlyOnThem_OnAVirtualMonitor()
+    {
+        var project = Generate(new Dictionary<string, string>
+        {
+            ["Scenarios/Folders.ascenario"] = $"{Header} Platforms=\"Linux MacOS\">\n  <Invoke Target=\"id=Save\" />\n</Scenario>",
+            ["Scenarios/Wrong.ascenario"] = $"{Header} Platforms=\"Amiga\">\n  <Invoke Target=\"id=Save\" />\n</Scenario>"
+        });
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(project.Source, Does.Contain("[global::NUnit.Framework.Platform(Include = \"Linux,MacOsX\")]")
+                .And.Contain("VirtualDisplay = true"));
+            Assert.That(project.Errors.Select(e => e.Id), Does.Contain("AUS002"), "a system it does not know is an error");
+        });
+    }
+
+    [Test]
+    public void TheScenarioFont_IsGivenToTheApplicationItLaunches()
+    {
+        var project = AumlCodegenHarness.Project(
+            new Dictionary<string, string> { ["Scenarios/Save.ascenario"] = $"{Header}>\n  <Invoke Target=\"id=Save\" />\n</Scenario>" },
+            new Dictionary<string, string> { ["AdamantiumScenarioApplication"] = "App", ["AdamantiumScenarioFont"] = "Fonts/Ui.ttf" });
+
+        Assert.That(project.Source, Does.Contain("Environment = { [\"ADAM_UI_FONT\"] = \"Fonts/Ui.ttf\" }"));
+    }
+
+    [Test]
+    public void ArgumentsForAVirtualMonitor_AreSplitAsAProcessSplitsThem()
+    {
+        Assert.That(Adamantium.UI.Automation.VirtualDisplay.Split("--page  \"Two words\" a\\\"b c:\\dir\\ \"\" $HOME *"),
+            Is.EqualTo(new[] { "--page", "Two words", "a\"b", "c:\\dir\\", "", "$HOME", "*" }));
+    }
+
+    [Test]
     public void AControlTypeThatIsNone_IsACompileError_AtTheScenariosLine()
     {
         var project = Generate(new Dictionary<string, string>

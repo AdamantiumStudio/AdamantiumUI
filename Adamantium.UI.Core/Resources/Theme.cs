@@ -153,14 +153,42 @@ public class Theme : AdamantiumComponent, ITheme
     // Perceptual luminance (Rec. 601): white text on a dark fill, black on a light one.
     private static Color OnAccent(Color c) => 0.299 * c.R + 0.587 * c.G + 0.114 * c.B < 140 ? White : Black;
 
+    /// <summary>The variable naming the UI font every theme starts from instead of the system's - a family or a font
+    /// file, a relative path taken from the application's folder - so a run lays out the same on every system.</summary>
+    public const string UIFontVariable = "ADAM_UI_FONT";
+
     /// <summary>The per-platform system UI font - the single place the platform font choice lives, used as the default
-    /// for any theme that doesn't pick its own. On Linux, the first of the usual distributions' fonts installed.</summary>
-    public static FontFamily SystemDefaultFontFamily => _systemDefaultFontFamily ??=
-        OperatingSystem.IsWindows() ? new FontFamily("Segoe UI")
+    /// for any theme that doesn't pick its own. On Linux, the first of the usual distributions' fonts installed;
+    /// <see cref="UIFontVariable"/> names another.</summary>
+    public static FontFamily SystemDefaultFontFamily => _systemDefaultFontFamily ??= Named(Environment.GetEnvironmentVariable(UIFontVariable)) ??
+        (OperatingSystem.IsWindows() ? new FontFamily("Segoe UI")
         : OperatingSystem.IsMacOS() ? new FontFamily("Helvetica")
         : new[] { SystemAppearance.FontFamily }.Concat(LinuxFamilies).Where(name => name != null)
               .Select(name => new FontFamily(name)).FirstOrDefault(family => family.IsInstalled)
-          ?? new FontFamily(LinuxFamilies[0]);
+          ?? new FontFamily(LinuxFamilies[0]));
+
+    private static FontFamily Named(string font)
+    {
+        if (string.IsNullOrWhiteSpace(font))
+        {
+            return null;
+        }
+
+        var file = System.IO.Path.GetFullPath(font, AppContext.BaseDirectory);
+        if (System.IO.File.Exists(file))
+        {
+            return new FontFamily(new Uri(file));
+        }
+
+        var family = new FontFamily(font);
+        if (family.IsInstalled)
+        {
+            return family;
+        }
+
+        Console.Error.WriteLine($"{UIFontVariable}: '{font}' is neither a font file nor an installed family; the system's UI font is used.");
+        return null;
+    }
 
     // The font is the theme's runtime-mutable identity, like the accent brushes above: it's an AdamantiumProperty so a
     // change raises PropertyChanged and every consumer (a {ThemeResource FontFamily} binding in a style) refreshes live -

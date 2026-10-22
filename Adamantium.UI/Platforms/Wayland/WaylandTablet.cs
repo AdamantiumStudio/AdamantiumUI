@@ -58,7 +58,7 @@ internal sealed class WaylandTablet
             proxy.ProximityOut += () => left = true;
             proxy.Down += serial =>
             {
-                owner.seat.NoteInput(serial);
+                owner.seat.NoteInput(serial, worker);
                 inContact = wentDown = true;
             };
             proxy.Up += () =>

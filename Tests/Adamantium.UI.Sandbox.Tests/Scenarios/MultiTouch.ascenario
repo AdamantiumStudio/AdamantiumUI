@@ -81,7 +81,8 @@
   <Expect Target="id=List4/name=4.3" Selected="True" />
   <Expect Target="id=List7/name=7.3" Selected="True" />
   <Expect Target="id=List10/name=10.3" Selected="True" />
-  <!-- Drawn up together, each scrolls its own list, all alike, and picks nothing more. -->
+  <!-- Drawn up together, each scrolls its own list, all alike, and picks nothing more. How far is a range: the few pixels
+       that go to recognizing the drag are more where the system's drag threshold is wider. -->
   <Touches Gesture="Drag" By="0,-150">
     <Finger Target="id=List1" />
     <Finger Target="id=List2" />
@@ -94,9 +95,9 @@
     <Finger Target="id=List9" />
     <Finger Target="id=List10" />
   </Touches>
-  <Expect Target="id=List1" VScroll="22.3" />
-  <Expect Target="id=List5" VScroll="22.3" />
-  <Expect Target="id=List10" VScroll="22.3" />
+  <Expect Target="id=List1" VScroll="22..25" />
+  <Expect Target="id=List5" VScroll="22..25" />
+  <Expect Target="id=List10" VScroll="22..25" />
   <Expect Target="id=List10/name=10.3" Selected="True" />
   <!-- Back as the page opens. -->
   <Invoke Target="id=ResetTouches" />

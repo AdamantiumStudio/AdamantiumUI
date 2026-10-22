@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Text;
 
 namespace Adamantium.UI.Automation;
 
@@ -39,19 +41,82 @@ internal static class VirtualDisplay
             start.ArgumentList.Add(argument);
         }
 
-        if (string.IsNullOrWhiteSpace(arguments))
+        start.ArgumentList.Add(path);
+        foreach (var argument in Split(arguments ?? string.Empty))
         {
-            start.ArgumentList.Add(path);
-        }
-        else
-        {
-            start.ArgumentList.Add("/bin/sh");
-            start.ArgumentList.Add("-c");
-            start.ArgumentList.Add($"exec \"$0\" {arguments}");
-            start.ArgumentList.Add(path);
+            start.ArgumentList.Add(argument);
         }
 
         return start;
+    }
+
+    /// <summary>The arguments of a command line, split as <see cref="ProcessStartInfo.Arguments"/> splits them: blanks
+    /// part them, double quotes hold blanks in, and a backslash escapes a quote.</summary>
+    internal static List<string> Split(string line)
+    {
+        List<string> arguments = [];
+        var current = new StringBuilder();
+        var quoted = false;
+        var any = false;
+        for (var i = 0; i < line.Length; i++)
+        {
+            var c = line[i];
+            if (c == '\\')
+            {
+                var slashes = 0;
+                while (i < line.Length && line[i] == '\\')
+                {
+                    slashes++;
+                    i++;
+                }
+
+                if (i < line.Length && line[i] == '"')
+                {
+                    current.Append('\\', slashes / 2);
+                    if (slashes % 2 == 1)
+                    {
+                        current.Append('"');
+                    }
+                    else
+                    {
+                        quoted = !quoted;
+                    }
+                }
+                else
+                {
+                    current.Append('\\', slashes);
+                    i--;
+                }
+
+                any = true;
+            }
+            else if (c == '"')
+            {
+                quoted = !quoted;
+                any = true;
+            }
+            else if (char.IsWhiteSpace(c) && !quoted)
+            {
+                if (any)
+                {
+                    arguments.Add(current.ToString());
+                    current.Clear();
+                    any = false;
+                }
+            }
+            else
+            {
+                current.Append(c);
+                any = true;
+            }
+        }
+
+        if (any)
+        {
+            arguments.Add(current.ToString());
+        }
+
+        return arguments;
     }
 
     private static string OnPath(string name)
