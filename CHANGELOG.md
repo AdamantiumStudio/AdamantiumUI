@@ -1983,6 +1983,13 @@ All packages share one version.
 
 ### Fixed
 
+- A popup placed beside its target (`Placement` `Right` or `Left`) with `FlipToFit` opens on the other side when its
+  own side has no room for it, as it already did above and below: a submenu at the window's right edge opens to the
+  left of its row instead of being pushed back over the menu, and a submenu of it goes on leftward. A flipped popup's
+  offset is mirrored, so it keeps its gap from the target instead of overlapping it, and the room a popup needs on its
+  side counts its offset.
+- A submenu that holds something other than rows - a `ColorPalette` - closed under the pointer a moment after it moved
+  in from its row, as only rows held a submenu open: the pointer anywhere on a submenu's card holds it now.
 - An item moved in an `ItemsControl`'s source (`ObservableCollection.Move`) rebuilt every container of a panel that
   does not virtualize, and a child moved in a panel's `Children` left the visual tree and came back: what the
   containers held - a 3D view, a text being typed - was made again. The container now only changes place.

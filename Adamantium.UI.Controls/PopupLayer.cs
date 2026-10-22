@@ -20,6 +20,7 @@ public class PopupLayer
     private readonly List<Popup> _popups = [];
     private readonly Dictionary<IUIComponent, Rect> _lastRect = new();   // last arranged slot per popup child (arrange gate)
     private readonly Dictionary<IUIComponent, Size> _lastRoom = new();   // last room a StaysBesideTarget child was measured in
+    private readonly HashSet<IUIComponent> _flippedAcross = [];
     // _popups/_lastRect are READ on the render (loop) thread (UpdateLayout/Roots) and MUTATED on the pump thread
     // (Popup.Open/Close -> Add/Remove: a dialog opened from a command, a light-dismissed menu). Without this a popup
     // opened/closed mid-render corrupts the enumeration ("Collection was modified"). Guard every touch.
@@ -120,6 +121,7 @@ public class PopupLayer
         // Iterate a snapshot: a popup can open/close (Add/Remove on the pump thread) while this lays out on the render thread.
         Popup[] snapshot;
         lock (_sync) snapshot = _popups.ToArray();
+        _flippedAcross.Clear();
 
         foreach (var popup in snapshot)
         {
@@ -169,7 +171,8 @@ public class PopupLayer
 
             // Never larger than the window (a degenerate huge content can't blow up the render target).
             size = new Size(Math.Min(size.Width, windowSize.Width), Math.Min(size.Height, windowSize.Height));
-            var pos = ComputePosition(popup, size, windowSize);
+            var pos = ComputePosition(popup, size, windowSize, popup.FlipToFit && InFlippedCard(popup), out var across);
+            if (across) _flippedAcross.Add(child);
             if (double.IsNaN(pos.X) || double.IsNaN(pos.Y)) continue;
 
             ArrangeIfNeeded(child, new Rect(pos.X, pos.Y, size.Width, size.Height), remeasured);
@@ -287,7 +290,14 @@ public class PopupLayer
         };
     }
 
-    private static Vector2 ComputePosition(Popup popup, Size size, Size windowSize)
+    private bool InFlippedCard(Popup popup)
+    {
+        IUIComponent node = popup.EffectiveTarget;
+        while (node?.VisualParent != null) node = node.VisualParent;
+        return node != null && _flippedAcross.Contains(node);
+    }
+
+    private static Vector2 ComputePosition(Popup popup, Size size, Size windowSize, bool swapped, out bool flippedAcross)
     {
         double tx = 0, ty = 0, tw = 0, th = 0;
         if (popup.EffectiveTarget is { } target)
@@ -298,28 +308,40 @@ public class PopupLayer
 
         var cx = Align(tx, tw, size.Width);
         var cy = Align(ty, th, size.Height);
+        var dx = popup.HorizontalOffset;
+        var dy = popup.VerticalOffset;
+        var across = false;
         double x, y;
         switch (popup.Placement)
         {
-            case PlacementMode.Top:      x = cx; y = FlipY(ty - size.Height, ty + th, above: true);   break;
-            case PlacementMode.Left:     x = tx - size.Width;  y = cy;             break;
-            case PlacementMode.Right:    x = tx + tw;          y = cy;             break;
-            case PlacementMode.Center:   x = tx + (tw - size.Width) / 2; y = ty + (th - size.Height) / 2; break;
-            case PlacementMode.Relative: x = tx; y = ty;                           break;
-            default:                     x = cx; y = FlipY(ty + th, ty - size.Height, above: false);  break;   // Bottom
+            case PlacementMode.Top:      x = cx + dx; y = Pick(ty - size.Height + dy, ty + th - dy, size.Height, windowSize.Height, out _); break;
+            case PlacementMode.Left:     x = Side(tx - size.Width + dx, tx + tw - dx); y = cy + dy; break;
+            case PlacementMode.Right:    x = Side(tx + tw + dx, tx - size.Width - dx); y = cy + dy; break;
+            case PlacementMode.Center:   x = tx + (tw - size.Width) / 2 + dx; y = ty + (th - size.Height) / 2 + dy; break;
+            case PlacementMode.Relative: x = tx + dx; y = ty + dy; break;
+            default:                     x = cx + dx; y = Pick(ty + th + dy, ty - size.Height - dy, size.Height, windowSize.Height, out _); break;   // Bottom
         }
 
-        // Edge-aware flip: keep the natural side while the popup fits there OR it has at least as much room as the other
-        // side; otherwise flip. So near the bottom edge a Bottom popup opens upward, and when it fits NEITHER side it
-        // opens on the roomier one (then the clamp below keeps it fully in the window). `above` = the primary side is
-        // above the target. `primary`/`flipped` are the y for each side.
-        double FlipY(double primary, double flipped, bool above)
+        flippedAcross = across;
+
+        // Edge-aware flip: keep the natural side while the popup fits there OR overruns the window no more than on the
+        // other side; otherwise flip, its offset mirrored. So near the bottom edge a Bottom popup opens upward, and when it
+        // fits NEITHER side it opens on the roomier one (then the clamp below keeps it fully in the window).
+        double Pick(double primary, double flipped, double extent, double room, out bool took)
         {
-            if (!popup.FlipToFit) return primary;
-            var roomPrimary = above ? ty : windowSize.Height - (ty + th);
-            var roomFlipped = above ? windowSize.Height - (ty + th) : ty;
-            return (size.Height <= roomPrimary || roomPrimary >= roomFlipped) ? primary : flipped;
+            took = popup.FlipToFit && Overrun(flipped, extent, room) < Overrun(primary, extent, room);
+            return took ? flipped : primary;
         }
+
+        double Side(double own, double other)
+        {
+            var at = swapped ? Pick(other, own, size.Width, windowSize.Width, out var back)
+                : Pick(own, other, size.Width, windowSize.Width, out back);
+            across = back != swapped;
+            return at;
+        }
+
+        static double Overrun(double at, double extent, double room) => Math.Max(0, -at) + Math.Max(0, at + extent - room);
 
         double Align(double start, double length, double extent) => popup.PlacementAlignment switch
         {
@@ -327,8 +349,6 @@ public class PopupLayer
             PlacementAlignment.End => start + length - extent,
             _ => start + (length - extent) / 2
         };
-        x += popup.HorizontalOffset;
-        y += popup.VerticalOffset;
 
         // Never leave the window.
         x = Math.Clamp(x, 0, Math.Max(0, windowSize.Width - size.Width));
