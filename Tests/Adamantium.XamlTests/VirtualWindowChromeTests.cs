@@ -23,7 +23,6 @@ public class VirtualWindowChromeTests
         UIAppContext.Initialize(_app, null);
     }
 
-    // The theme is made after the application is reset: its resource references resolve as it is built.
     private void Use(string name)
     {
         _app.ResourceManager = new ResourceManager();
@@ -80,8 +79,6 @@ public class VirtualWindowChromeTests
         Assert.That(TitleBarOf(window)?.Visibility, Is.EqualTo(Visibility.Collapsed));
     }
 
-    // A dialog's window is given its size and shows a little content in it: the window - its frame and title bar - is
-    // the size it was given, not its content's.
     [TestCase("Fluent")]
     [TestCase("Graphite")]
     [TestCase("MacOs")]
@@ -103,8 +100,6 @@ public class VirtualWindowChromeTests
         });
     }
 
-    // Width and Height are set as an OS window's are - its outer size - which made it a measure boundary the content's
-    // changes never got past.
     [Test]
     public void AWindowSizedToContent_FollowsItsContentUntilGivenASizeFromOutside()
     {
@@ -138,7 +133,6 @@ public class VirtualWindowChromeTests
         });
     }
 
-    // At 125% a fitted 421 is 526 pixels, which the OS reports back as 420.8: its own size coming back, not a new one.
     [Test]
     public void TheOsReportingTheFittedSizeBack_DoesNotEndTheFitting()
     {
@@ -151,7 +145,6 @@ public class VirtualWindowChromeTests
         ((Adamantium.UI.Controls.Text.TextBlock)window.Content).Text = "Apply the changes to the whole scene?";
         Settle(window);
 
-        // Reports come a frame or more late: the first fit's comes after the second fit was asked for.
         window.UpdateClientSizeFromPlatform(first.Width - 0.2, first.Height - 0.4);
 
         Assert.That(window.SizeToContent, Is.EqualTo(SizeToContent.WidthAndHeight));
@@ -205,7 +198,6 @@ public class VirtualWindowChromeTests
         Assert.That(new Size(window.ClientWidth, window.ClientHeight), Is.EqualTo(new Size(440, 260)));
     }
 
-    // A dialog shown in a window of its own sits as far in as the same dialog in the window's overlay.
     [TestCase("Fluent", 20)]
     [TestCase("Graphite", 8)]
     [TestCase("MacOs", 20)]
@@ -246,8 +238,6 @@ public class VirtualWindowChromeTests
         }
     }
 
-    // Width and Height of a window are the OS window's outer size - on Windows in physical pixels, frame included - not
-    // the area it lays out in.
     [Test]
     public void AWindowsOuterSizeDoesNotStretchItsLayout()
     {

@@ -1195,18 +1195,12 @@ public class DockingArea : Panel
     public event EventHandler<PaneRestoringEventArgs> PaneRestoring;
 
     /// <summary>Restores a saved arrangement of known panes; unknown ids are dropped. A pane open now that it leaves out
-    /// stays open - a document among the documents, the rest by their <see cref="Pane.Zone"/> - unless it is a tool the
-    /// arrangement had put away: that one is put away, and <see cref="PaneClosed"/> says so. The pane worked in when it
-    /// was saved is worked in again. An area not built yet takes the arrangement when it is. False when the text is
-    /// unreadable or names no known pane.</summary>
+    /// stays open, unless it is a tool the arrangement had put away. False when the text is unreadable or names no known
+    /// pane.</summary>
     public bool LoadLayout(string state) => LoadLayout(state, null);
 
-    /// <summary><see cref="LoadLayout(string)"/>, showing the floating roots in <paramref name="windows"/> - those of an
-    /// area this one replaces - where they show the same panes. The rest are closed. Panes asked for before the area was
-    /// built are placed by the layout, and only those it leaves out where they asked to be: placed first, a pane asking
-    /// for a window of its own got one the layout then took away again. <paramref name="carriedOver"/>: the arrangement
-    /// of the area this one replaces, so a tool it puts away was closed long ago and is not announced closed again.
-    /// </summary>
+    /// <summary><see cref="LoadLayout(string)"/> that shows floating roots in the replaced area's <paramref name="windows"/>
+    /// where they show the same panes; <paramref name="carriedOver"/> announces no tool closed.</summary>
     internal bool LoadLayout(string state, List<DockingWindow> windows, bool carriedOver = false)
     {
         EnsureLayout(openDeferred: false);
@@ -2418,8 +2412,7 @@ public class DockingArea : Panel
         Owner.CloseEmptyWindows();
     }
 
-    /// <summary>Takes this floating area's window back - to close it ourselves, so its user-close handler does not carry
-    /// the panes off, or to hand it to the next arrangement.</summary>
+    /// <summary>Takes this floating area's window back, so its user-close handler does not carry the panes off.</summary>
     private DockingWindow TakeWindow()
     {
         var window = _window;
@@ -2448,8 +2441,7 @@ public class DockingArea : Panel
     /// visits, six windows).</summary>
     internal void ReleaseFloatingWindows() => CloseWindows(TakeFloatingWindows());
 
-    /// <summary>Takes back every floating window this area opened, still open, for the next arrangement to show its roots
-    /// in: a window closed and opened again is placed anew by the system - on Wayland always.</summary>
+    /// <summary>Takes back every floating window this area opened, still open, for the next arrangement.</summary>
     internal List<DockingWindow> TakeFloatingWindows()
     {
         List<DockingWindow> windows = [];

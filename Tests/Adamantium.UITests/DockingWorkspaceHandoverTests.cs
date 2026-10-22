@@ -72,7 +72,6 @@ public class DockingWorkspaceHandoverTests
             "the workspace is where the arrangement lives - a new control must be given it, not start from scratch");
     }
 
-    // A theme swap rebuilds the view, and every pane is opened again in the new area - the closed tool too.
     [Test]
     public async Task AToolClosedBeforeTheViewIsRebuilt_StaysClosed()
     {

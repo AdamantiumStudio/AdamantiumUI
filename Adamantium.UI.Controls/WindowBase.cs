@@ -694,18 +694,15 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
         typeof(SizeToContent), typeof(WindowBase),
         new PropertyMetadata(SizeToContent.Manual, PropertyMetadataOptions.AffectsMeasure));
 
-    /// <summary>Which sides of the window follow what its content asks for, fitted again as the content changes; by
-    /// default none, and the window keeps the size it is given. A size the window is given otherwise - the user
-    /// resizing it, the system, code - turns it back to <see cref="SizeToContent.Manual"/>, as in WPF. A maximized or
-    /// minimized window is not fitted.</summary>
+    /// <summary>Which sides of the window follow its content. A size given from outside turns it back to
+    /// <see cref="SizeToContent.Manual"/>.</summary>
     public SizeToContent SizeToContent
     {
         get => GetValue<SizeToContent>(SizeToContentProperty);
         set => SetValue(SizeToContentProperty, value);
     }
 
-    /// <summary>Not while sized to its content, whatever its Width and Height (its outer size): a child that changes size
-    /// has to reach the window to fit it again.</summary>
+    /// <summary>Not while sized to its content: a child that changes size has to reach the window.</summary>
     public override bool IsMeasureBoundary => SizeToContent == SizeToContent.Manual && base.IsMeasureBoundary;
 
     protected override Size MeasureOverride(Size availableSize)

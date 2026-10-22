@@ -11,9 +11,8 @@ namespace Adamantium.UI.Navigation;
 
 /// <summary>Window dialog host: shows the dialog in its OWN window (a shell from the window registry) instead of an
 /// in-window overlay. Loads the resolved view into the shell and closes it when the view model raises RequestClose;
-/// the title-bar close also completes the dialog (as Cancel), without asking it. A dialog that states no size of its own
-/// gets a window as big as its view and the window's frame. The window wears the class <c>Dialog</c>, which the themes
-/// give the in-window dialog's padding. Lifecycle/result via <see cref="DialogSession"/>.
+/// the title-bar close also completes the dialog (as Cancel), without asking it. A dialog with no size of its own is fitted
+/// to its view; the window wears the class <c>Dialog</c>. Lifecycle/result via <see cref="DialogSession"/>.
 /// NOT yet modal - input to the owner window is not blocked; that wiring is a follow-up.</summary>
 public sealed class WindowDialogHost : IDialogHost
 {

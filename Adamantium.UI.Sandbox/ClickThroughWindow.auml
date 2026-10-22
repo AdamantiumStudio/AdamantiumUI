@@ -1,0 +1,9 @@
+<Window x:Namespace="Adamantium.UI.Sandbox"
+        xmlns="http://adamantium/ui"
+        xmlns:x="http://adamantium/ui/xaml/extensions"
+        x:CreateInDesignTime="False"
+        Title="{Localize NavigationStrings.ClickThroughWindow}"
+        TransparentToInput="{Binding ClickThrough}"
+        Width="420"
+        Height="240">
+</Window>

@@ -12,8 +12,7 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests;
 
-/// <summary>A tool put away stays put away through a saved layout and through a view built anew - a theme swap rebuilds
-/// the view, and every pane is opened again in the new area, the closed tool too.</summary>
+/// <summary>A tool put away stays put away through a saved layout and through a view built anew.</summary>
 [TestFixture]
 public class DockingHiddenToolsTests
 {
@@ -83,7 +82,6 @@ public class DockingHiddenToolsTests
     {
         var workspace = await WorkspaceWithClosedHierarchy();
 
-        // No markup of its own: the panes wait for the first layout pass, which comes after the workspace attached.
         var second = new DockingArea();
         second.AddPane(new Pane { Id = "scene", Header = "scene" }, DockZone.Center);
         second.AddPane(Tool("inspector"), DockZone.Right);

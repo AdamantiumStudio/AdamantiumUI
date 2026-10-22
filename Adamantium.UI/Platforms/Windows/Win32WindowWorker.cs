@@ -956,7 +956,6 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
 
         DispatchInput(() =>
         {
-            // The state FIRST: a maximized size read while the window still says Normal is a size the user gave it.
             if (osState.HasValue && window.State != osState.Value)
             {
                 // Detach the managed->OS driver first so this OS-originated sync doesn't bounce back into ShowWindow.

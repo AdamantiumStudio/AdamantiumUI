@@ -1,0 +1,17 @@
+<View xmlns="http://adamantium/ui">
+    <StackPanel Orientation="Vertical"
+                Margin="20">
+        <TextBlock Text="{Localize NavigationStrings.ClickThroughHint}"
+                   TextWrapping="WrapByWords"
+                   MarginBottom="12"/>
+        <TextBlock AutomationProperties.AutomationId="ClickThroughStatus"
+                   Text="{Binding Status}"
+                   FontSize="16"
+                   MarginBottom="16"/>
+        <Button Content="{Localize NavigationStrings.PassClicks}"
+                Command="{Binding PassClicksCommand}"
+                HorizontalAlignment="Left"
+                Height="32"
+                Padding="16 0"/>
+    </StackPanel>
+</View>

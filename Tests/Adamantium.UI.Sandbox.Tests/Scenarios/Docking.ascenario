@@ -52,8 +52,7 @@
   <Invoke Target="id=DockingView/name=Reset" />
   <Expect Target="id=DockingView/type=TabItem,name=Scene" Selected="True" />
   <Wait Target="id=DockingView/type=TabItem,name=Game" />
-  <!-- A theme swap builds the page's view anew, and the new docking area takes over the window a pane is out in: it is
-       still there, still maximized, and docks back like any other. -->
+  <!-- A floating window survives a theme swap. -->
   <Dock Target="id=DockingView/type=TabItem,name=Console" Position="None" />
   <Wait Target="id=DockingWindow,name=Console" />
   <Window Target="id=DockingWindow" Action="Maximize" />
@@ -66,8 +65,7 @@
   <Window Target="id=DockingWindow" Action="Restore" />
   <Dock Target="id=DockingWindow/type=TabItem,name=Console" Position="Fill" Beside="id=DockingView/type=TabItem,name=Output" />
   <Absent Target="id=DockingWindow" />
-  <!-- A pane the region opened, out in a window: the region opens it again in the new area, and it docks back after
-       the swap and closes like any other. -->
+  <!-- A region-opened pane in a window docks back after a theme swap. -->
   <Select Target="id=PaneChoice/name=Assets" />
   <Select Target="id=PlaceChoice/name=Center" />
   <Invoke Target="id=DockingView/name=Navigate" />

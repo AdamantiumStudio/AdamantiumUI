@@ -190,8 +190,6 @@ public class CanvasTextureTests
         });
     }
 
-    // A path as the system's file dialog gives it - "/home/..." on Linux, which a Uri made relative-or-absolute takes for a
-    // relative one, and a relative picture threw where it is set.
     [Test]
     public void APickedFileByItsSystemsPath_ReachesThePictureAsAFile()
     {

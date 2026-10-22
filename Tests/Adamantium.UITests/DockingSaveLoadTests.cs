@@ -140,8 +140,7 @@ public class DockingSaveLoadTests
         });
     }
 
-    /// <summary>A tool put away is written down with the side it comes back to - unless it is not to be saved at all - and
-    /// a renamed pane keeps its entry.</summary>
+    /// <summary>A tool put away is written down with its side, and a renamed pane keeps its entry.</summary>
     [Test]
     public void PutAwayTools_AreWrittenWithTheirSide()
     {

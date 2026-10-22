@@ -26,4 +26,11 @@
   <Resize Target="id=OverlayWindow" Size="480,300" />
   <Window Target="id=OverlayWindow" Action="Close" />
   <Absent Target="id=OverlayWindow" />
+  <!-- The click-through window, closed by automation: a click cannot reach it. -->
+  <Invoke Target="id=OpenClickThroughWindow" />
+  <Wait Target="id=ClickThroughWindow/id=ClickThroughStatus" Name="Clicks stop here" />
+  <Invoke Target="id=ClickThroughWindowView/type=Button" />
+  <Wait Target="id=ClickThroughStatus" Name="Clicks pass through - 10 s left" />
+  <Window Target="id=ClickThroughWindow" Action="Close" />
+  <Absent Target="id=ClickThroughWindow" />
 </Scenario>
