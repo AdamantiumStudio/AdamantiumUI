@@ -5,12 +5,15 @@ using Adamantium.Navigation;
 using Adamantium.UI.Controls;
 using Adamantium.UI.Controls.Navigation;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Resources;
 
 namespace Adamantium.UI.Navigation;
 
 /// <summary>Window dialog host: shows the dialog in its OWN window (a shell from the window registry) instead of an
 /// in-window overlay. Loads the resolved view into the shell and closes it when the view model raises RequestClose;
-/// the title-bar close also completes the dialog (as Cancel), without asking it. Lifecycle/result via <see cref="DialogSession"/>.
+/// the title-bar close also completes the dialog (as Cancel), without asking it. A dialog that states no size of its own
+/// gets a window as big as its view and the window's frame. The window wears the class <c>Dialog</c>, which the themes
+/// give the in-window dialog's padding. Lifecycle/result via <see cref="DialogSession"/>.
 /// NOT yet modal - input to the owner window is not blocked; that wiring is a follow-up.</summary>
 public sealed class WindowDialogHost : IDialogHost
 {
@@ -56,6 +59,7 @@ public sealed class WindowDialogHost : IDialogHost
             }
             shell = created;
             shell.RemembersPlacement = false;
+            shell.Classes = new Classes([.. shell.Classes ?? [], "Dialog"]);
 
             shell.Title = !string.IsNullOrEmpty(aware?.Title) ? aware.Title : dialog?.Title ?? string.Empty;
             if (string.IsNullOrEmpty(aware?.Title) && dialog is INotifyPropertyChanged observed)
@@ -73,6 +77,13 @@ public sealed class WindowDialogHost : IDialogHost
             }
             shell.ClientWidth = aware is { Width: > 0 } ? aware.Width : 440;
             shell.ClientHeight = aware is { Height: > 0 } ? aware.Height : 260;
+            shell.SizeToContent = (aware is { Width: > 0 }, aware is { Height: > 0 }) switch
+            {
+                (false, false) => SizeToContent.WidthAndHeight,
+                (false, true) => SizeToContent.Width,
+                (true, false) => SizeToContent.Height,
+                _ => SizeToContent.Manual
+            };
 
             // Show FIRST (it attaches the window to the application and builds its tree + render service + theme), THEN
             // load the content, so the view joins a live, themed window (same order as WindowNavigationBackend).

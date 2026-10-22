@@ -67,7 +67,7 @@ public sealed class BitmapImage : BitmapSource
       if (adamantiumAdamantiumComponent is BitmapImage bitmap)
       {
          var uri = (Uri)e.NewValue;
-         if (uri.IsFile)
+         if (uri is { IsAbsoluteUri: true, IsFile: true })
          {
             // Load OFF the UI thread: decoding (especially every frame of an animated APNG/GIF) is heavy and froze the UI
             // while a view full of images was being built (a multi-second tab-switch hang). Consumers await LoadTask

@@ -66,7 +66,7 @@ namespace Adamantium.UI.Universes
             var height = (uint)window.ClientHeight;
             RequestResize(width, height);
             window.Measure(new Size(width, height));
-            window.Arrange(new Rect(window.DesiredSize));
+            window.Arrange(new Rect(0, 0, window.ClientWidth, window.ClientHeight));
         }
 
         protected override void SwitchContext(OutputContext context)

@@ -1043,6 +1043,11 @@ public class ImageSourceProperty : PropertyDefinition
     {
         if (String.IsNullOrWhiteSpace(path)) return null;
 
+        if (System.IO.Path.IsPathRooted(path))
+        {
+            return new BitmapImage(new Uri(System.IO.Path.GetFullPath(path)));
+        }
+
         return Uri.TryCreate(path, UriKind.RelativeOrAbsolute, out var uri) ? new BitmapImage(uri) : null;
     }
 

@@ -190,6 +190,28 @@ public class CanvasTextureTests
         });
     }
 
+    // A path as the system's file dialog gives it - "/home/..." on Linux, which a Uri made relative-or-absolute takes for a
+    // relative one, and a relative picture threw where it is set.
+    [Test]
+    public void APickedFileByItsSystemsPath_ReachesThePictureAsAFile()
+    {
+        Use(new Adamantium.UI.Themes.FluentTheme.Fluent());
+
+        var (window, canvas) = Stage();
+        var item = Placed(canvas, new Rect(20, 20, 200, 150));
+        Settle(window);
+
+        var path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "pictures", "bark.png");
+        ((ImageSourceProperty)Row(canvas, "Source").Definition).Pick(path);
+
+        var source = (item.Tiled?.Source as Adamantium.UI.Core.Media.Imaging.BitmapImage)?.UriSource;
+        Assert.Multiple(() =>
+        {
+            Assert.That(source?.IsAbsoluteUri, Is.True, "the picture was given a relative address");
+            Assert.That(source?.LocalPath, Is.EqualTo(path));
+        });
+    }
+
     // ITS CORNERS ARE ROUNDED like a button's - asked of the surface BY NAME, the way a binding asks, so the next
     // thing that rounds its corners needs nothing added here to be reachable.
     [Test]

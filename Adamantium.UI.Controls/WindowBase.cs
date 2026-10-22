@@ -22,6 +22,10 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
     private IWindowRenderer _renderer;
     private protected bool _opensMaximized;
     private bool _inputMethodOff;
+    private bool _fitting;
+    private bool _centering;
+    private Size _fitted = new(double.NaN, double.NaN);
+    private ScreenInfo _centeredOn;
     protected IWindowWorkerService WindowWorkerService { get; private set; }
 
     public IWindowRenderer DefaultRenderer { get; set; }
@@ -226,7 +230,17 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
     private static void PositionChangedCallback(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
     {
         // Before the OS window exists the value is simply remembered - it is read when the window is created.
-        if (a is WindowBase window && !window._positionFromPlatform)
+        if (a is not WindowBase window)
+        {
+            return;
+        }
+
+        if (!window._centering)
+        {
+            window._centeredOn = null;
+        }
+
+        if (!window._positionFromPlatform)
         {
             window.WindowWorkerService?.SetPosition(window.Left, window.Top);
         }
@@ -586,7 +600,7 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
         // Tell the OS window, exactly as a Left/Top change does. Without this the client size was a managed number the
         // window itself never followed: it kept whatever it was created with, so nothing could be resized from code
         // after it opened (found on the docking compass overlay, which is re-sized to the area it covers).
-        component.WindowWorkerService?.SetSize(component.ClientWidth, component.ClientHeight);
+        component.SizeGivenFromOutside();
 
         old.Width = oldWidth;
         old.Height = component.Height;
@@ -606,7 +620,7 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
 
         // No forced full walks - see ClientWidthChangedCallBack: the resize settle marks honestly now, so it splices.
 
-        component.WindowWorkerService?.SetSize(component.ClientWidth, component.ClientHeight);
+        component.SizeGivenFromOutside();
 
         var old = new Size(component.Width, oldHeight);
         var newSize = new Size(component.Width, newHeight);
@@ -658,6 +672,122 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
         get => GetValue<bool>(UseCustomChromeProperty);
         set => SetValue(UseCustomChromeProperty, value);
     }
+
+    public static readonly AdamantiumProperty SizeToContentProperty = AdamantiumProperty.Register(nameof(SizeToContent),
+        typeof(SizeToContent), typeof(WindowBase),
+        new PropertyMetadata(SizeToContent.Manual, PropertyMetadataOptions.AffectsMeasure));
+
+    /// <summary>Which sides of the window follow what its content asks for, fitted again as the content changes; by
+    /// default none, and the window keeps the size it is given. A size the window is given otherwise - the user
+    /// resizing it, the system, code - turns it back to <see cref="SizeToContent.Manual"/>, as in WPF. A maximized or
+    /// minimized window is not fitted.</summary>
+    public SizeToContent SizeToContent
+    {
+        get => GetValue<SizeToContent>(SizeToContentProperty);
+        set => SetValue(SizeToContentProperty, value);
+    }
+
+    /// <summary>Not while sized to its content, whatever its Width and Height (its outer size): a child that changes size
+    /// has to reach the window to fit it again.</summary>
+    public override bool IsMeasureBoundary => SizeToContent == SizeToContent.Manual && base.IsMeasureBoundary;
+
+    protected override Size MeasureOverride(Size availableSize)
+    {
+        var sizing = SizeToContent;
+        if (sizing == SizeToContent.Manual)
+        {
+            return base.MeasureOverride(availableSize);
+        }
+
+        var byWidth = sizing is SizeToContent.Width or SizeToContent.WidthAndHeight;
+        var byHeight = sizing is SizeToContent.Height or SizeToContent.WidthAndHeight;
+        var content = base.MeasureOverride(new Size(
+            byWidth ? double.PositiveInfinity : availableSize.Width,
+            byHeight ? double.PositiveInfinity : availableSize.Height));
+        if (State == WindowState.Normal)
+        {
+            FitTo(byWidth ? Fitted(content.Width, MinWidth, MaxWidth) : double.NaN,
+                byHeight ? Fitted(content.Height, MinHeight, MaxHeight) : double.NaN);
+        }
+
+        return content;
+    }
+
+    private static double Fitted(double content, double min, double max) =>
+        double.IsFinite(content) && content > 0 ? Math.Ceiling(Math.Clamp(content, min, Math.Max(min, max))) : double.NaN;
+
+    private void FitTo(double width, double height)
+    {
+        var changesWidth = !double.IsNaN(width) && !width.Equals(ClientWidth);
+        var changesHeight = !double.IsNaN(height) && !height.Equals(ClientHeight);
+        if (!changesWidth && !changesHeight)
+        {
+            return;
+        }
+
+        var before = new Size(ClientWidth, ClientHeight);
+        _fitting = true;
+        try
+        {
+            if (changesWidth)
+            {
+                ClientWidth = width;
+            }
+
+            if (changesHeight)
+            {
+                ClientHeight = height;
+            }
+        }
+        finally
+        {
+            _fitting = false;
+        }
+
+        _fitted = new Size(ClientWidth, ClientHeight);
+        WindowWorkerService?.SetSize(ClientWidth, ClientHeight);
+
+        if (Renderer is { FirstFrameProcessed: true })
+        {
+            _centeredOn = null;
+        }
+
+        if (_centeredOn is not { } screen)
+        {
+            return;
+        }
+
+        var area = screen.WorkArea;
+        _centering = true;
+        try
+        {
+            Position = new PixelPoint(
+                Math.Max(area.X, Position.X - Math.Round((ClientWidth - before.Width) * screen.Scale / 2)),
+                Math.Max(area.Y, Position.Y - Math.Round((ClientHeight - before.Height) * screen.Scale / 2)));
+        }
+        finally
+        {
+            _centering = false;
+        }
+    }
+
+    private void SizeGivenFromOutside()
+    {
+        if (_fitting)
+        {
+            return;
+        }
+
+        if (SizeToContent != SizeToContent.Manual && !EchoesTheFit())
+        {
+            SetCurrentValue(SizeToContentProperty, SizeToContent.Manual);
+        }
+
+        WindowWorkerService?.SetSize(ClientWidth, ClientHeight);
+    }
+
+    private bool EchoesTheFit() =>
+        Math.Abs(ClientWidth - _fitted.Width) * DpiScale.X <= 1 && Math.Abs(ClientHeight - _fitted.Height) * DpiScale.Y <= 1;
 
     public WindowResizeMode ResizeMode
     {
@@ -864,12 +994,15 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
         {
             var corner = owner.LivePosition;
             var ownerBounds = new Rect(corner.X, corner.Y, owner.Width, owner.Height);
-            Position = WindowPlacer.Center(ownerBounds, SizeOn(WindowPlacer.ScreenOf(ownerBounds, screens)));
+            var screen = WindowPlacer.ScreenOf(ownerBounds, screens);
+            Position = WindowPlacer.Center(ownerBounds, SizeOn(screen));
+            _centeredOn = screen;
         }
         else if (StartupLocation != WindowStartupLocation.Manual)
         {
             var screen = WindowPlacer.ScreenAt(Mouse.ScreenCoordinates, screens);
             Position = WindowPlacer.Center(screen.WorkArea, SizeOn(screen));
+            _centeredOn = screen;
         }
     }
 

@@ -50,6 +50,10 @@ public interface IWindow : IRootVisualComponent, IContentControl
 
     WindowState State { get; set; }
 
+    /// <summary>Which sides of the window follow what its content asks for; <see cref="Core.SizeToContent.Manual"/>
+    /// keeps the size the window is given.</summary>
+    SizeToContent SizeToContent { get; set; }
+
     /// <summary>When true the OS frame is removed (WM_NCCALCSIZE reclaims the non-client area) and the window draws its
     /// own chrome (title bar) - the modern borderless look. WS_THICKFRAME is kept so native resize borders, Aero Snap,
     /// the drop shadow and maximize-to-work-area still work. Read by the platform worker.</summary>

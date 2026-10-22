@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using Adamantium.Mathematics;
 using Adamantium.Navigation;
@@ -137,6 +138,32 @@ public class DockingSaveLoadTests
             Assert.That(back.FindGroup("game"), Is.Null);
             Assert.That(documents.ActiveIndex, Is.EqualTo(0), "the tab that was active went with it, so the first stands in");
         });
+    }
+
+    /// <summary>A tool put away is written down with the side it comes back to - unless it is not to be saved at all - and
+    /// a renamed pane keeps its entry.</summary>
+    [Test]
+    public void PutAwayTools_AreWrittenWithTheirSide()
+    {
+        var text = DockingLayoutSerializer.Save(Editor(), keepPane: id => id != "console",
+            hidden: [new("output", DockZone.Bottom), new("console", DockZone.Bottom)]);
+        var renamed = DockingLayoutSerializer.RenamePanes(text, id => id == "output" ? "log" : id);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(DockingLayoutSerializer.ReadHidden(text),
+                Is.EqualTo(new Dictionary<string, DockZone> { ["output"] = DockZone.Bottom }));
+            Assert.That(DockingLayoutSerializer.ReadHidden(renamed).Keys, Is.EqualTo(new[] { "log" }));
+        });
+    }
+
+    /// <summary>A file that names one table twice is left as it is by a migration, not a crash.</summary>
+    [Test]
+    public void AFileWithATableTwice_IsNotACrashToMigrate()
+    {
+        var text = DockingLayoutSerializer.Save(Editor()).Replace("\"version\"", "\"hidden\": {}, \"hidden\": {}, \"version\"");
+
+        Assert.That(DockingLayoutSerializer.RenamePanes(text, id => id), Is.EqualTo(text));
     }
 
     /// <summary>An id the application cannot produce any more is dropped on LOAD, and a group left empty by that goes
