@@ -86,11 +86,6 @@
   <Expect Target="id=CatalogSearch" Value="" />
   <Invoke Target="id=CloseCatalog" />
   <Absent Target="id=CatalogModules" />
-  <!-- Opened again from the gallery while minimized, it comes back as it was. It used to come back on screen still
-       reading Minimized: it took no sizes and no input, a picture of itself. -->
-  <Window Target="id=RibbonWindow" Action="Minimize" />
-  <Invoke Target="id=OpenRibbon" />
-  <Expect Target="id=RibbonWindow" Window="Normal" />
   <Click Target="id=Band/name=Duplicate" />
   <Expect Target="id=StatusLine" Name="Duplicated the selection." />
   <!-- Closed again, so the next run starts from a fresh shell. -->

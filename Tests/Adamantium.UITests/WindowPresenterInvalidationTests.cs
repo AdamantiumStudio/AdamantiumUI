@@ -51,6 +51,7 @@ public class WindowPresenterInvalidationTests
         public IDrawingContext DrawingContext => null;
         public bool IsRendererUpToDate => true;
         public bool FirstFrameProcessed => true;
+        public long PresentedFrames => 0;
         public double RenderScale { get; set; } = 1.0;
         public GraphicsPresenter Presenter => null;
 

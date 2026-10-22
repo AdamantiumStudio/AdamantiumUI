@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Scenario xmlns="http://adamantium/automation/scenario" Description="The Trees page: a lazily read file system - a drive opened, a folder chosen, the view model told to open what is chosen, its children read, the drive closed again. Folders every Windows has, so it runs on any machine.">
+<Scenario xmlns="http://adamantium/automation/scenario" Platforms="Windows" Description="The Trees page: a lazily read file system - a drive opened, a folder chosen, the view model told to open what is chosen, its children read, the drive closed again. Folders every Windows has; TreesUnix is the same on Linux and macOS.">
   <Select Target="id=GalleryTabs/id=Trees" />
   <Wait Target="id=Files/type=TreeItem" Timeout="20s" />
   <Expand Target='id=Files/name="C:\\"' />

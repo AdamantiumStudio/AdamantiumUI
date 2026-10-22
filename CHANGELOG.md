@@ -15,6 +15,17 @@ All packages share one version.
   border, maximize, restore, or an asked-for size coming back rounded - the way `UpdatePositionFromPlatform` reports a
   move. Only a size the window did not ask for, in the normal state, ends `SizeToContent`; a size set from code
   always does. The Win32, Wayland and macOS workers report through it, and set the state before the size.
+- `LaunchOptions.VirtualDisplay` (`adam-auto start --virtual`): on Linux the application is started by a headless Mutter
+  with a virtual monitor of its own, on a D-Bus session of its own, and the compositor exits with it - it shows nowhere
+  on the desktop and takes no one's focus. Generated scenario tests use it, so a run no longer pulls the focus away for
+  every scenario. Without Mutter the application shows on the desktop, which is said on standard error.
+- Scenarios for some systems only: `<Scenario Platforms="Windows Linux MacOS">` names where one runs, and its test is
+  skipped elsewhere - for what one system does by design and another refuses, as a Wayland compositor refuses to raise
+  a window for a command no input asked for.
+- `Theme.UIFontVariable` (`ADAM_UI_FONT`): a family name or a font file, relative to the application, to draw the
+  interface in instead of the system's; one that is neither keeps the system's, which is said on standard error. The `AdamantiumScenarioFont` MSBuild property passes it to every generated
+  scenario test, so what scenarios measure in text is the same on every system.
+- A scenario's expected number can be a range, `Value="180..195"`, for what a system rounds its own way.
 - Docking on Wayland: a panel torn off, and a floating window dragged by its title bar, ride under the pointer through
   `xdg_toplevel_drag` - the compositor carries the window in a drag of our own type, which no other client takes, and
   our windows are told where the pointer is over them. `WindowDragPointer` holds that point while such a drag lasts;
@@ -1985,6 +1996,18 @@ All packages share one version.
 
 ### Fixed
 
+- A quick stroke that left a thin drag source before it went past the drag threshold started no drag: only the source
+  heard the moves until then. Its window hears them too now.
+- A press on a drag source released over something else left the source waiting for its drag: the pointer back over
+  it with no button held started one, and the next click dropped it. A move with no button held ends the press now.
+- `Hide` on a Wayland window before its first frame was dropped, and the window showed; it stays hidden until `Show`.
+- A drag made by automation on Wayland was handed to the compositor's drag loop, which follows only the real pointer,
+  and never ended; a made gesture now carries its drag on the application's own loop. The simulated stroke's first
+  step goes past the threshold on one axis, as it is measured, not only along the diagonal.
+- A Wayland window committed its first frame before acknowledging the compositor's first configure, which Mutter
+  reports as a buggy client; nothing is drawn into it until that configure.
+- `Activate` on Wayland named the window being raised as the one the input happened in, so the compositor turned the
+  request down when the input was in another of the application's windows; it names the window of the last input.
 - An item moved in an `ItemsControl`'s source (`ObservableCollection.Move`) rebuilt every container of a panel that
   does not virtualize, and a child moved in a panel's `Children` left the visual tree and came back: what the
   containers held - a 3D view, a text being typed - was made again. The container now only changes place.

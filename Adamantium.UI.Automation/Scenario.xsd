@@ -129,8 +129,24 @@
         <xs:annotation><xs:documentation>Why the test runs only when asked for by name - real input through the system, say;
           left out of a run of all the scenarios.</xs:documentation></xs:annotation>
       </xs:attribute>
+      <xs:attribute name="Platforms" type="PlatformList">
+        <xs:annotation><xs:documentation>The systems the scenario runs on - one that reads what only they have, such as
+          their folders; skipped elsewhere. Every system when left out.</xs:documentation></xs:annotation>
+      </xs:attribute>
     </xs:complexType>
   </xs:element>
+
+  <xs:simpleType name="PlatformList">
+    <xs:list>
+      <xs:simpleType>
+        <xs:restriction base="xs:string">
+          <xs:enumeration value="Windows" />
+          <xs:enumeration value="Linux" />
+          <xs:enumeration value="MacOS" />
+        </xs:restriction>
+      </xs:simpleType>
+    </xs:list>
+  </xs:simpleType>
 
   <xs:simpleType name="Identifier">
     <xs:restriction base="xs:string">

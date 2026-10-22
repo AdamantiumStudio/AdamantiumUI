@@ -132,6 +132,49 @@ public class ScenarioGeneratorTests
     }
 
     [Test]
+    public void AScenarioForSomeSystems_RunsOnlyOnThem_OnAVirtualMonitor()
+    {
+        var project = Generate(new Dictionary<string, string>
+        {
+            ["Scenarios/Folders.ascenario"] = $"{Header} Platforms=\"Linux MacOS\">\n  <Invoke Target=\"id=Save\" />\n</Scenario>",
+            ["Scenarios/Wrong.ascenario"] = $"{Header} Platforms=\"Amiga\">\n  <Invoke Target=\"id=Save\" />\n</Scenario>"
+        });
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(project.Source, Does.Contain("[global::NUnit.Framework.Platform(Include = \"Linux,MacOsX\")]")
+                .And.Contain("VirtualDisplay = true"));
+            Assert.That(project.Errors.Where(e => e.Id == "AUS002").Select(e => System.IO.Path.GetFileName(e.Location.GetMappedLineSpan().Path)),
+                Is.EqualTo(new[] { "Wrong.ascenario" }), "a system it does not know is an error, in the file that names it");
+        });
+    }
+
+    [Test]
+    public void TheScenarioFont_IsGivenToTheApplicationItLaunches()
+    {
+        var project = AumlCodegenHarness.Project(
+            new Dictionary<string, string> { ["Scenarios/Save.ascenario"] = $"{Header}>\n  <Invoke Target=\"id=Save\" />\n</Scenario>" },
+            new Dictionary<string, string> { ["AdamantiumScenarioApplication"] = "App", ["AdamantiumScenarioFont"] = "Fonts/Ui.ttf" });
+
+        Assert.That(project.Source, Does.Contain("Environment = { [\"ADAM_UI_FONT\"] = \"Fonts/Ui.ttf\" }"));
+    }
+
+    [TestCase("--page  \"Two words\" a\\\"b c:\\dir\\ \"\" $HOME *")]
+    [TestCase("\"a\"\"b\" \"say \"\"hi\"\" now\" \"x\\\\\"\"")]
+    [TestCase("a\nb\r\vc \t d")]
+    [TestCase("\\\\\\\"q\\\\\\\\\"r s\" t\\")]
+    [Platform(Exclude = "Win", Reason = "A virtual monitor is Linux's; Windows hands the line over whole.")]
+    public void ArgumentsForAVirtualMonitor_AreSplitAsAProcessSplitsThem(string line)
+    {
+        var parse = typeof(System.Diagnostics.Process).GetMethod("ParseArgumentsIntoList",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        var expected = new List<string>();
+        parse.Invoke(null, [line, expected]);
+
+        Assert.That(Adamantium.UI.Automation.VirtualDisplay.Split(line), Is.EqualTo(expected));
+    }
+
+    [Test]
     public void AControlTypeThatIsNone_IsACompileError_AtTheScenariosLine()
     {
         var project = Generate(new Dictionary<string, string>

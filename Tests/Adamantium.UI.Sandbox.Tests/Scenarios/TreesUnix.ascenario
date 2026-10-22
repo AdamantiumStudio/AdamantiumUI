@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Scenario xmlns="http://adamantium/automation/scenario" Platforms="Linux MacOS" Description="The Trees page: a lazily read file system - the root opened, a folder chosen, the view model told to open what is chosen, its children read, the root closed again. Folders every Linux and macOS has; Trees is the same on Windows.">
+  <Select Target="id=GalleryTabs/id=Trees" />
+  <Wait Target="id=Files/type=TreeItem" Timeout="20s" />
+  <Expand Target='id=Files/name="/"' />
+  <Expect Target='id=Files/name="/"' Expanded="Expanded" />
+  <Scroll Target='id=Files/name="/"/name=usr' />
+  <Click Target='id=Files/name="/"/name=usr' />
+  <Expect Target='id=Files/name="/"/name=usr' Selected="True" />
+  <Invoke Target="id=TreesView/name=Expand selected (from VM)" />
+  <Expect Target='id=Files/name="/"/name=usr' Expanded="Expanded" />
+  <Wait Target='id=Files/name="/"/name=usr/name=bin' Timeout="10s" />
+  <Collapse Target='id=Files/name="/"' />
+  <Expect Target='id=Files/name="/"' Expanded="Collapsed" />
+</Scenario>

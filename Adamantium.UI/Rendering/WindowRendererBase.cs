@@ -14,6 +14,8 @@ namespace Adamantium.UI.Rendering;
 
 public abstract class WindowRendererBase : IWindowRenderer
 {
+    private long _presentedFrames;
+
     protected Viewport Viewport { get; set; }
     protected Rect2D Scissor { get; set; }
     protected Rect2D ClipRect { get; set; }
@@ -76,6 +78,8 @@ public abstract class WindowRendererBase : IWindowRenderer
     }
 
     public bool FirstFrameProcessed { get; private set; }
+
+    public long PresentedFrames => Interlocked.Read(ref _presentedFrames);
 
     private double _renderScale = 1.0;
 
@@ -236,8 +240,11 @@ public abstract class WindowRendererBase : IWindowRenderer
         // BeginDraw start and set true only after a successful Submit, so a frame skipped/aborted during resize churn
         // (no acquire/submit) does NOT re-present a stale, not-reacquired swapchain image with an unsignaled semaphore
         // - the pair of VUIDs that lost the device on drag-resize.
-        if (GraphicsDevice.CanPresent)
-            Presenter?.Present();
+        if (GraphicsDevice.CanPresent && Presenter != null)
+        {
+            Presenter.Present();
+            Interlocked.Increment(ref _presentedFrames);
+        }
 
         if (Window.ShouldDisplayWindow)
         {

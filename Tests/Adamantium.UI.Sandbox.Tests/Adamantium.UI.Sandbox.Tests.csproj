@@ -12,6 +12,8 @@
         <LangVersion>latest</LangVersion>
 
         <AdamantiumScenarioApplication>Adamantium.UI.Sandbox</AdamantiumScenarioApplication>
+        <!-- One font on every system, so what a scenario expects of a layout does not hang on the system's own. -->
+        <AdamantiumScenarioFont>Content/SandboxContent/Fonts/RobotoFlex-Variable.ttf</AdamantiumScenarioFont>
     </PropertyGroup>
 
     <ItemGroup>

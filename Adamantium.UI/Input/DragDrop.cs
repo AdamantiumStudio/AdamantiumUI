@@ -145,6 +145,7 @@ public static partial class DragDrop
 
     // ------------------------------------------------------------------ session state (one drag at a time, app-global)
     private static IInputComponent _source;      // the pressed source; armed until the threshold, then dragging
+    private static IInputComponent _sourceRoot;  // the source's window, which hears the moves that leave it while armed
     private static Pointer _pointer;             // the pointer that pressed it: the mouse, a finger or a pen
     private static PixelPoint _startScreen;
     private static Vector2? _grabPoint;
@@ -256,11 +257,36 @@ public static partial class DragDrop
     private static readonly PointerEventHandler MoveHandler = OnMove;
     private static readonly PointerReleasedEventHandler UpHandler = OnUp;
     private static readonly PointerEventHandler LostCaptureHandler = OnLostCapture;
+    private static readonly PointerEventHandler ArmedMoveHandler = OnArmedMove;
 
     private static void Attach(IInputComponent source)
     {
         source.AddHandler(PointerEvents.PointerMovedEvent, MoveHandler, handledEventsToo: true);
         source.AddHandler(PointerEvents.PointerReleasedEvent, UpHandler, handledEventsToo: true);
+        _sourceRoot?.RemoveHandler(PointerEvents.PointerMovedEvent, ArmedMoveHandler);
+        _sourceRoot = (source as IUIComponent)?.RootVisual is IInputComponent root && !ReferenceEquals(root, source) ? root : null;
+        _sourceRoot?.AddHandler(PointerEvents.PointerMovedEvent, ArmedMoveHandler, handledEventsToo: true);
+    }
+
+    private static void OnArmedMove(object sender, PointerEventArgs e)
+    {
+        if (!_dragging && !CapturedElsewhere(e.Pointer))
+        {
+            OnMove(sender, e);
+        }
+    }
+
+    private static bool CapturedElsewhere(Pointer pointer)
+    {
+        for (var at = pointer.Captured as IUIComponent; at != null; at = at.VisualParent)
+        {
+            if (ReferenceEquals(at, _source))
+            {
+                return false;
+            }
+        }
+
+        return pointer.Captured != null;
     }
 
     // A press starts a drag when it landed on a drag handle - or when the source declares none at all, which is the
@@ -300,6 +326,13 @@ public static partial class DragDrop
         if (_source == null || !ReferenceEquals(e.Pointer, DragPointer)) return;
         if (!_dragging)
         {
+            if (DragPointer.Properties.Buttons == MouseButtons.None)
+            {
+                Detach(_source);
+                Reset();
+                return;
+            }
+
             if (!PlatformSettings.ExceedsDragThreshold(DragPointer.GetScreenPosition() - _startScreen)) return;
             // A finger in a list it can scroll carries a row only once it has held it: until then its move is a scroll.
             if (!ScrollContentPresenter.LetsFingerCarry(e.Pointer, (IUIComponent)_source)) return;
@@ -960,9 +993,8 @@ public static partial class DragDrop
         // Decided ONCE, here: an external-capable source runs the whole gesture through the OS drag loop (so it can be
         // dropped into other applications), everything else stays on our own loop with its live CLR payload. Never
         // switched mid-drag - the platform loop is modal and has to own the gesture from the start.
-        // The OS's drag loop follows the mouse; a finger or a pen carries the drag on our own loop.
         _externalCapable = (GetAllowExternalDrag((AdamantiumComponent)_source) || Native is { CarriesInAppDrags: true }) &&
-                           Native is { IsAvailable: true } && DragPointer.Type == PointerType.Mouse;
+                           Native is { IsAvailable: true } && DragPointer.Type == PointerType.Mouse && Mouse.Platform?.Window == null;
         DragPointer.Capture(_source);   // so move/up keep coming once the pointer leaves the source
         // An external overlay (a screenshot tool) stealing capture must not hang the drag.
         _source.AddHandler(PointerEvents.PointerCaptureLostEvent, LostCaptureHandler, handledEventsToo: true);
@@ -1246,6 +1278,8 @@ public static partial class DragDrop
         source.RemoveHandler(PointerEvents.PointerMovedEvent, MoveHandler);
         source.RemoveHandler(PointerEvents.PointerReleasedEvent, UpHandler);
         source.RemoveHandler(PointerEvents.PointerCaptureLostEvent, LostCaptureHandler);
+        _sourceRoot?.RemoveHandler(PointerEvents.PointerMovedEvent, ArmedMoveHandler);
+        _sourceRoot = null;
     }
 
     private static void CompleteDrop()
