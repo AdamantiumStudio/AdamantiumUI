@@ -7,6 +7,12 @@ All packages share one version.
 
 ### Added
 
+- Text outline, shadow, glow and reflection, as Word draws them: `TextOutline`, `TextShadow`, `TextGlow` and
+  `TextReflection` (`Adamantium.UI.Core.Media`, made in markup), set on a `TextBlock` or on a run or span of it - the
+  nearest inline's over its span's, over the block's; a value changed inside one set already draws the text again. The
+  glyph batch carries a shadow's or a glow's soft edge and a reflection's fade. The sandbox's Decorations & Effects page
+  shows each.
+
 - Docking on Wayland: a panel torn off, and a floating window dragged by its title bar, ride under the pointer through
   `xdg_toplevel_drag` - the compositor carries the window in a drag of our own type, which no other client takes, and
   our windows are told where the pointer is over them. `WindowDragPointer` holds that point while such a drag lasts;

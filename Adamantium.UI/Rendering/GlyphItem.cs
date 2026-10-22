@@ -30,7 +30,8 @@ public struct GlyphItem
     /// <summary>.x = a 'COLR' version 1 layer's paint record plus one, or 0, as
     /// <see cref="Adamantium.Graphics.Fonts.FontItem.Paint"/> holds it (<see cref="LocalRect"/> is then the pen and
     /// baseline, and the pixels per font unit); .y = the element's opacity raised to 2.2, which the layer's own colors
-    /// take; .zw reserved.</summary>
+    /// take; .z = the width of a shadow's or a glow's soft edge, as FontItem.Synthesis.w holds it; .w = the share of a
+    /// reflection's quad it fades over, as FontItem.Paint.z holds it.</summary>
     public Vector4F Paint;
 
     /// <summary>A glyph of a font on the way between two key instances, as
@@ -41,7 +42,8 @@ public struct GlyphItem
     /// <summary>.x = the atlas layer of <see cref="SecondSource"/>; .y = how far the glyph is from the first key to the
     /// second, as <see cref="Adamantium.Graphics.Fonts.FontItem.Second"/> holds them; .z = the glyph's turn in vertical
     /// text, radians clockwise about <see cref="LocalRect"/>'s corner, as
-    /// <see cref="Adamantium.Graphics.Fonts.FontItem.Rotation"/> holds it.</summary>
+    /// <see cref="Adamantium.Graphics.Fonts.FontItem.Rotation"/> holds it; .w = how strong a reflection starts, as
+    /// FontItem.Paint.w holds it.</summary>
     public Vector4F Second;
 
     /// <summary>The glyph's cell in the layout's units, as <see cref="Adamantium.Graphics.Fonts.FontItem.Cell"/> holds

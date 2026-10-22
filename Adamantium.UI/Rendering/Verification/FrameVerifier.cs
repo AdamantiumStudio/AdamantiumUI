@@ -341,7 +341,8 @@ internal sealed class FrameVerifier : IRenderCacheObserver
             if (unit is RenderUnits.TextRenderUnit { TextComponent: { GlyphRun: { } glyphs } text } textUnit && glyphs.Count == count)
             {
                 var before = _alarmCount;
-                CheckGlyphs(live, slots, component, fact, live.GlyphAt(first), text, glyphs.Glyphs[0].HasOwnColor);
+                CheckGlyphs(live, slots, component, fact, live.GlyphAt(first + count - 1), text,
+                    glyphs.Glyphs[count - 1].HasOwnColor);
                 if (_alarmCount > before)
                 {
                     Alarm($"  ...{ComponentText.Of(component)} \"{(component as Controls.Text.TextBlock)?.Text}\" owns glyphs " +

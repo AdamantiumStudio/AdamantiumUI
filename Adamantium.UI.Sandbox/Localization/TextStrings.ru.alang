@@ -123,6 +123,14 @@
     <Phrase Key="RunShiftRun" Text="смещённый участок"/>
     <Phrase Key="DecorationFlagsTitle" Text="Линии по имени: под текстом, сквозь него и над ним, и волнистая — как у орфографической ошибки:"/>
     <Phrase Key="DecorationLinesTitle" Text="Линии оформления, каждая со своей кистью, толщиной, пунктиром и смещением:"/>
+    <Phrase Key="GlyphLooksTitle" Text="Контур, тень, свечение и отражение, как в Word, под текстом:"/>
+    <Phrase Key="Outline" Text="Контур"/>
+    <Phrase Key="Shadow" Text="Тень"/>
+    <Phrase Key="Glow" Text="Свечение"/>
+    <Phrase Key="Reflection" Text="Отражение"/>
+    <Phrase Key="RunLooksPlain" Text="Своё у отдельного рана: может "/>
+    <Phrase Key="RunLooksGlowing" Text="светиться"/>
+    <Phrase Key="RunLooksOutlined" Text=" или выделяться."/>
     <Phrase Key="TextEffectsTitle" Text="Эффекты текста: буквы повёрнуты, подняты, увеличены и перекрашены на своих местах — вокруг своего центра или угла элемента; строка, каретка и выделение остаются, как их разложили:"/>
     <Phrase Key="TextEffectsWaveTitle" Text="Анимация: у каждой буквы свой эффект, его преобразование или кисть анимируется по имени, одна буква за другой:"/>
     <Phrase Key="EffectWave" Text="Волна"/>
