@@ -157,6 +157,17 @@ public class DockingSaveLoadTests
         });
     }
 
+    /// <summary>A hand-edited file with a number or a flag of the wrong kind is unreadable, not a crash.</summary>
+    [TestCase("{\"version\":\"1\",\"roots\":[]}")]
+    [TestCase("{\"version\":1.5,\"roots\":[]}")]
+    [TestCase("{\"version\":1,\"roots\":[{\"main\":\"yes\"}]}")]
+    [TestCase("{\"version\":1,\"roots\":[{\"main\":true,\"bounds\":[\"a\",0,0,0]}]}")]
+    public void AValueOfTheWrongKind_IsUnreadable(string text)
+    {
+        Assert.That(() => DockingLayoutSerializer.Load(text), Throws.Nothing);
+        Assert.That(DockingLayoutSerializer.Load(text), Is.Null);
+    }
+
     /// <summary>A file that names one table twice is left as it is by a migration, not a crash.</summary>
     [Test]
     public void AFileWithATableTwice_IsNotACrashToMigrate()

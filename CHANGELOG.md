@@ -11,6 +11,10 @@ All packages share one version.
   for on those sides, fitted again when the content's size changes, so a size the user gives it stays until then (the
   fitted size coming back from the OS, rounded to its pixels, is not such a size). By default a window keeps the size
   it is given. `WindowDialogHost` turns it on for the sides a dialog states no size of.
+- `IWindow.UpdateClientSizeFromPlatform`: the platform reports the client size it gave the window - a resize by its
+  border, maximize, restore, or an asked-for size coming back rounded - the way `UpdatePositionFromPlatform` reports a
+  move. Only a size the window did not ask for, in the normal state, ends `SizeToContent`; a size set from code
+  always does. The Win32, Wayland and macOS workers report through it, and set the state before the size.
 - Docking on Wayland: a panel torn off, and a floating window dragged by its title bar, ride under the pointer through
   `xdg_toplevel_drag` - the compositor carries the window in a drag of our own type, which no other client takes, and
   our windows are told where the pointer is over them. `WindowDragPointer` holds that point while such a drag lasts;

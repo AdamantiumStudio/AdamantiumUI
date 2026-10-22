@@ -147,11 +147,48 @@ public class VirtualWindowChromeTests
         window.DpiScale = new Vector2(1.25f, 1.25f);
         window.SizeToContent = SizeToContent.WidthAndHeight;
         Settle(window);
+        var first = new Size(window.ClientWidth, window.ClientHeight);
+        ((Adamantium.UI.Controls.Text.TextBlock)window.Content).Text = "Apply the changes to the whole scene?";
+        Settle(window);
 
-        window.ClientWidth -= 0.2;
-        window.ClientHeight -= 0.4;
+        // Reports come a frame or more late: the first fit's comes after the second fit was asked for.
+        window.UpdateClientSizeFromPlatform(first.Width - 0.2, first.Height - 0.4);
 
         Assert.That(window.SizeToContent, Is.EqualTo(SizeToContent.WidthAndHeight));
+    }
+
+    [Test]
+    public void TheOsMaximizingAFittedWindow_DoesNotEndTheFitting_ButTheUserResizingItDoes()
+    {
+        var window = Attached("Fluent", customChrome: true);
+        window.Content = new Adamantium.UI.Controls.Text.TextBlock { Text = "Apply?" };
+        window.SizeToContent = SizeToContent.WidthAndHeight;
+        Settle(window);
+
+        window.State = WindowState.Maximized;
+        window.UpdateClientSizeFromPlatform(1920, 1080);
+        var maximized = window.SizeToContent;
+        window.State = WindowState.Normal;
+        window.UpdateClientSizeFromPlatform(window.ClientWidth + 120, window.ClientHeight);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(maximized, Is.EqualTo(SizeToContent.WidthAndHeight), "maximized is not given a size");
+            Assert.That(window.SizeToContent, Is.EqualTo(SizeToContent.Manual), "a border drawn out is");
+        });
+    }
+
+    [Test]
+    public void ASizeSetFromCode_EndsTheFitting_EvenOneItHadBefore()
+    {
+        var window = Attached("Fluent", customChrome: true);
+        window.Content = new Adamantium.UI.Controls.Text.TextBlock { Text = "Apply?" };
+        window.SizeToContent = SizeToContent.WidthAndHeight;
+        Settle(window);
+
+        window.ClientWidth -= 0.2;
+
+        Assert.That(window.SizeToContent, Is.EqualTo(SizeToContent.Manual));
     }
 
     [Test]

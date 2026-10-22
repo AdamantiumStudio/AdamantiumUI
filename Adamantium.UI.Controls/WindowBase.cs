@@ -24,7 +24,9 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
     private bool _inputMethodOff;
     private bool _fitting;
     private bool _centering;
-    private Size _fitted = new(double.NaN, double.NaN);
+    private bool _sizeFromPlatform;
+    private readonly Size[] _asked = [new(double.NaN, double.NaN), new(double.NaN, double.NaN), new(double.NaN, double.NaN), new(double.NaN, double.NaN)];
+    private int _lastAsked;
     private ScreenInfo _centeredOn;
     protected IWindowWorkerService WindowWorkerService { get; private set; }
 
@@ -235,7 +237,7 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
             return;
         }
 
-        if (!window._centering)
+        if (!window._centering && !window._positionFromPlatform)
         {
             window._centeredOn = null;
         }
@@ -270,6 +272,21 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
         }
     }
         
+    /// <inheritdoc/>
+    public void UpdateClientSizeFromPlatform(double clientWidth, double clientHeight)
+    {
+        _sizeFromPlatform = true;
+        try
+        {
+            ClientWidth = clientWidth;
+            ClientHeight = clientHeight;
+        }
+        finally
+        {
+            _sizeFromPlatform = false;
+        }
+    }
+
     public static readonly AdamantiumProperty TitleProperty = AdamantiumProperty.Register(nameof(Title),
         typeof(String), typeof(WindowBase), new PropertyMetadata(String.Empty, TitleChangedCallback));
 
@@ -744,8 +761,7 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
             _fitting = false;
         }
 
-        _fitted = new Size(ClientWidth, ClientHeight);
-        WindowWorkerService?.SetSize(ClientWidth, ClientHeight);
+        AskForSize();
 
         if (Renderer is { FirstFrameProcessed: true })
         {
@@ -762,8 +778,8 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
         try
         {
             Position = new PixelPoint(
-                Math.Max(area.X, Position.X - Math.Round((ClientWidth - before.Width) * screen.Scale / 2)),
-                Math.Max(area.Y, Position.Y - Math.Round((ClientHeight - before.Height) * screen.Scale / 2)));
+                Math.Max(area.X, Position.X - HalfOf(ClientWidth - before.Width, screen.Scale)),
+                Math.Max(area.Y, Position.Y - HalfOf(ClientHeight - before.Height, screen.Scale)));
         }
         finally
         {
@@ -778,16 +794,39 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
             return;
         }
 
-        if (SizeToContent != SizeToContent.Manual && !EchoesTheFit())
+        var ends = !_sizeFromPlatform || (State == WindowState.Normal && !EchoesAnAskedSize());
+        if (ends && SizeToContent != SizeToContent.Manual)
         {
             SetCurrentValue(SizeToContentProperty, SizeToContent.Manual);
         }
 
+        if (!_sizeFromPlatform)
+        {
+            AskForSize();
+        }
+    }
+
+    private void AskForSize()
+    {
+        _lastAsked = (_lastAsked + 1) % _asked.Length;
+        _asked[_lastAsked] = new Size(ClientWidth, ClientHeight);
         WindowWorkerService?.SetSize(ClientWidth, ClientHeight);
     }
 
-    private bool EchoesTheFit() =>
-        Math.Abs(ClientWidth - _fitted.Width) * DpiScale.X <= 1 && Math.Abs(ClientHeight - _fitted.Height) * DpiScale.Y <= 1;
+    private bool EchoesAnAskedSize()
+    {
+        foreach (var asked in _asked)
+        {
+            if (Math.Abs(ClientWidth - asked.Width) * DpiScale.X <= 1 && Math.Abs(ClientHeight - asked.Height) * DpiScale.Y <= 1)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static double HalfOf(double change, double scale) => double.IsNaN(change) ? 0 : Math.Round(change * scale / 2);
 
     public WindowResizeMode ResizeMode
     {

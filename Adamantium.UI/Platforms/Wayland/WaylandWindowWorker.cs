@@ -144,8 +144,7 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
         window.SetHandle(surface.Handle);
         window.SetSurfaceHandle(surface.Handle, platform.Display.Handle);
         window.DpiScale = new Vector2(Scale, Scale);
-        window.ClientWidth = width;
-        window.ClientHeight = height;
+        window.UpdateClientSizeFromPlatform(width, height);
 
         Input.DragDrop.RegisterNativeDropTarget(window);
         UIContext.ThemeEngine.ApplyCurrentTheme(window);
@@ -579,21 +578,20 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
                 return;
             }
 
-            if (reportedWidth.HasValue)
-            {
-                window.Width = reportedWidth.Value;
-                window.Height = reportedHeight.Value;
-                reportingOsSize = true;
-                window.ClientWidth = reportedWidth.Value;
-                window.ClientHeight = reportedHeight.Value;
-                reportingOsSize = false;
-            }
-
             if (osState.HasValue && window.State != osState.Value)
             {
                 window.StateChanged -= WindowOnStateChanged;
                 window.State = osState.Value;
                 window.StateChanged += WindowOnStateChanged;
+            }
+
+            if (reportedWidth.HasValue)
+            {
+                window.Width = reportedWidth.Value;
+                window.Height = reportedHeight.Value;
+                reportingOsSize = true;
+                window.UpdateClientSizeFromPlatform(reportedWidth.Value, reportedHeight.Value);
+                reportingOsSize = false;
             }
         });
     }

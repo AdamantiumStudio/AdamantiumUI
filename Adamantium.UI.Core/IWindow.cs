@@ -24,6 +24,11 @@ public interface IWindow : IRootVisualComponent, IContentControl
     /// position afterwards (a layout being saved) writes down where it used to be.</summary>
     void UpdatePositionFromPlatform(double left, double top);
 
+    /// <summary>The PLATFORM sized the window - a resize by its border, maximize, restore, or the size it was asked for
+    /// coming back rounded to its pixels - and reports the client size it ended up with, without the window asking for it
+    /// again. Only a size the window did not ask for ends <see cref="SizeToContent"/>.</summary>
+    void UpdateClientSizeFromPlatform(double clientWidth, double clientHeight);
+
     /// <summary>Record where the OS just put this window, callable from ANY thread - see
     /// <see cref="IRootVisualComponent.LivePosition"/>. Separate from
     /// <see cref="UpdatePositionFromPlatform"/> because that one writes bindable properties and must be marshaled to

@@ -303,7 +303,7 @@ public static class DockingLayoutSerializer
             layout.Normalize();
             return layout.Main != null ? layout : null;
         }
-        catch (JsonException)
+        catch (Exception unreadable) when (unreadable is JsonException or InvalidOperationException or FormatException)
         {
             return null;
         }

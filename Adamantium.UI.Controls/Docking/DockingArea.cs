@@ -1260,10 +1260,14 @@ public class DockingArea : Panel
             }
             finally
             {
-                PlaceAfterLayout(waiting);
+                PlaceAfterLayout(waiting, applied);
                 if (applied)
                 {
                     SettleActive(state);
+                }
+                else
+                {
+                    OpenWindowsOfUnshownRoots();
                 }
             }
         });
@@ -1285,13 +1289,24 @@ public class DockingArea : Panel
         }
     }
 
-    private void PlaceAfterLayout(List<(Pane Pane, DockZone Zone)> waiting)
+    private void PlaceAfterLayout(List<(Pane Pane, DockZone Zone)> waiting, bool arranged)
     {
         foreach (var (pane, zone) in waiting)
         {
             if (Layout.FindGroup(pane.Id) == null && !Owner._hidden.ContainsKey(pane.Id))
             {
-                Place(pane.Id, pane, zone, rearranging: true);
+                Place(pane.Id, pane, zone, rearranging: arranged);
+            }
+        }
+    }
+
+    private void OpenWindowsOfUnshownRoots()
+    {
+        foreach (var root in Layout.Roots)
+        {
+            if (!root.IsMain && !Owner._satellites.Any(area => ReferenceEquals(area._root, root)))
+            {
+                OpenWindowFor(root, TitleOf(root), root.Bounds, TakeWindowFor(root, Owner._spareWindows));
             }
         }
     }
