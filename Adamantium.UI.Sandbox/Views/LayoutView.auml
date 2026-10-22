@@ -26,6 +26,11 @@
                          Content="{Localize LayoutStrings.Expanders}"
                          MarginRight="6"
                          IsChecked="{Binding Stand, Converter={conv:EnumToBoolConverter}, ConverterParameter=Expanders, Mode=TwoWay}"/>
+            <RadioButton Classes="Toggle"
+                         AutomationProperties.AutomationId="TiledPanelStand"
+                         Content="{Localize LayoutStrings.TiledPanel}"
+                         MarginRight="6"
+                         IsChecked="{Binding Stand, Converter={conv:EnumToBoolConverter}, ConverterParameter=TiledPanel, Mode=TwoWay}"/>
         </WrapPanel>
 
         <ContentControl Grid.Row="1"

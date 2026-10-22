@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<StyleSet xmlns="http://adamantium/ui"
+          xmlns:x="http://adamantium/ui/xaml/extensions">
+
+    <!-- TileGrip: the corner of a tile that splits it. An accent bracket hugging the corner, faint while the pointer
+         is only over the tile, full once it is on the corner itself. Each corner draws its own two sides: a mirroring
+         transform would turn the bracket's winding and the GPU would cull it. -->
+    <Style Selector="TileGrip">
+        <Setter Property="BorderBrush" Value="{ThemeResource AccentFillColorDefault}"/>
+        <Setter Property="BorderThickness" Value="3,3,0,0"/>
+        <Setter Property="CornerRadius" Value="4,0,0,0"/>
+        <Setter Property="Opacity" Value="0.6"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TileGrip">
+                    <Border BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="{TemplateBinding CornerRadius}"/>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style Selector="TileGrip">
+        <PropertyTrigger Property="IsHot" Value="true">
+            <Setter Property="Opacity" Value="1"/>
+        </PropertyTrigger>
+        <PropertyTrigger Property="Corner" Value="TopRight">
+            <Setter Property="BorderThickness" Value="0,3,3,0"/>
+            <Setter Property="CornerRadius" Value="0,4,0,0"/>
+        </PropertyTrigger>
+        <PropertyTrigger Property="Corner" Value="BottomLeft">
+            <Setter Property="BorderThickness" Value="3,0,0,3"/>
+            <Setter Property="CornerRadius" Value="0,0,0,4"/>
+        </PropertyTrigger>
+        <PropertyTrigger Property="Corner" Value="BottomRight">
+            <Setter Property="BorderThickness" Value="0,0,3,3"/>
+            <Setter Property="CornerRadius" Value="0,0,4,0"/>
+        </PropertyTrigger>
+    </Style>
+
+</StyleSet>

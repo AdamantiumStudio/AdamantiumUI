@@ -85,6 +85,7 @@
         <StyleInclude Source="{x:Type mac:MacOsDropInsertionIndicatorStyleSet}"/>
         <StyleInclude Source="{x:Type mac:MacOsHoldIndicatorStyleSet}"/>
         <StyleInclude Source="{x:Type mac:MacOsDragHandleStyleSet}"/>
+        <StyleInclude Source="{x:Type mac:MacOsTileGripStyleSet}"/>
         <StyleInclude Source="{x:Type mac:MacOsMenuStyleSet}"/>
         <StyleInclude Source="{x:Type mac:MacOsOverlayWindowStyleSet}"/>
         <StyleInclude Source="{x:Type mac:MacOsTreeViewStyleSet}"/>

@@ -48,6 +48,11 @@ public static partial class DragDrop
     public static readonly AdamantiumProperty UseDropGapProperty = AdamantiumProperty.RegisterAttached(
         "UseDropGap", typeof(bool), typeof(AdamantiumComponent), new PropertyMetadata(true));
 
+    /// <summary>Where a source's ghost stands against the cursor: beside it (default) or held where it was grabbed. A
+    /// custom drag template is always beside it - it has no point that was grabbed.</summary>
+    public static readonly AdamantiumProperty GhostAnchorProperty = AdamantiumProperty.RegisterAttached(
+        "GhostAnchor", typeof(DragGhostAnchor), typeof(AdamantiumComponent), new PropertyMetadata(DragGhostAnchor.Cursor));
+
     // Live drag feedback (set by the engine as the cursor moves over a drag): IsDragOver is true on the AllowDrop target
     // currently under the cursor - drive a highlight off it with a trigger. DragOverCommand fires on that target every move
     // so a view-model can decide "can THIS payload land here right now" (and later adjust the cursor).
@@ -99,6 +104,8 @@ public static partial class DragDrop
     public static bool GetAllowDrop(AdamantiumComponent e) => e.GetValue<bool>(AllowDropProperty);
     public static void SetAllowDrop(AdamantiumComponent e, bool value) => e.SetValue(AllowDropProperty, value);
 
+    public static DragGhostAnchor GetGhostAnchor(AdamantiumComponent e) => e.GetValue<DragGhostAnchor>(GhostAnchorProperty);
+    public static void SetGhostAnchor(AdamantiumComponent e, DragGhostAnchor value) => e.SetValue(GhostAnchorProperty, value);
     public static bool GetUseDropGap(AdamantiumComponent e) => e.GetValue<bool>(UseDropGapProperty);
     public static void SetUseDropGap(AdamantiumComponent e, bool value) => e.SetValue(UseDropGapProperty, value);
 
@@ -140,6 +147,7 @@ public static partial class DragDrop
     private static IInputComponent _source;      // the pressed source; armed until the threshold, then dragging
     private static Pointer _pointer;             // the pointer that pressed it: the mouse, a finger or a pen
     private static PixelPoint _startScreen;
+    private static Vector2? _grabPoint;
 
     // What carries the drag: the pointer that pressed the source, or the mouse for a drag started from code.
     private static Pointer DragPointer => _pointer ?? Mouse.Pointer;
@@ -430,7 +438,13 @@ public static partial class DragDrop
         ItemsControl list = null;
         for (var c = hit; c != null; c = c.VisualParent)
         {
-            if (c is ListBox or TreeView) { list = (ItemsControl)c; break; }
+            if (c is ListBox or TreeView
+                || c is ItemsControl { ItemsHostPanel: IDropGapPanel { SupportsDropGap: true } } gapList && GetAllowDrop(gapList)
+                && LiftedFrom(gapList) != null)
+            {
+                list = (ItemsControl)c;
+                break;
+            }
         }
 
         if (list == null || window is not IAdornerHost host)
@@ -471,12 +485,12 @@ public static partial class DragDrop
         // The gap's index comes from the PANEL's own grid, not from ComputeInsertion: that one measures against the
         // containers, and the gap moves them, so feeding it back would make the gap chase itself between two slots.
         if (hostPanel is { SupportsDropGap: true } &&
-            hostPanel.TryGetDropSlot(DragPointer.GetPosition((IInputComponent)hostPanel), out var slot))
+            hostPanel.TryGetDropSlot(DragPointer.GetPosition((IInputComponent)hostPanel), LiftedFrom(list), out var slot))
         {
             ClearIndicatorVisual();
             _insertIndex = slot;
             _insertBefore = AnchorAt(list, slot);
-            SetDropGap(hostPanel, slot);
+            SetDropGap(hostPanel, slot, list);
             return;
         }
 
@@ -676,7 +690,10 @@ public static partial class DragDrop
     }
 
     // The panel currently holding a drop gap open, so it can be closed again from anywhere the cue is dropped.
-    private static VirtualizingPanel _gapPanel;
+    private static IDropGapPanel _gapPanel;
+
+    private static ItemsControl _liftedList;
+    private static System.Collections.IList _lifted;
 
     // A gap belongs to ONE panel at a time: moving to another list has to close the first, or a list the cursor left
     // would keep a hole in it for the rest of the gesture.
@@ -687,7 +704,7 @@ public static partial class DragDrop
         var items = list?.Items;
         if (items == null) return null;
 
-        var dragged = (list as ListBox)?.SelectedItems;
+        var dragged = LiftedFrom(list);
         for (var i = index; i >= 0 && i < items.Count; i++)
         {
             if (dragged?.Contains(items[i]) != true) return items[i];
@@ -696,16 +713,37 @@ public static partial class DragDrop
         return null;   // nothing but dragged items after the seam - append
     }
 
-    private static void SetDropGap(VirtualizingPanel panel, int index)
+    private static void SetDropGap(IDropGapPanel panel, int index, ItemsControl list = null)
     {
-        if (!ReferenceEquals(_gapPanel, panel) && _gapPanel != null) _gapPanel.DropGapIndex = -1;
+        if (!ReferenceEquals(_gapPanel, panel) && _gapPanel != null) _gapPanel.ShowDropGap(-1, null);
         _gapPanel = panel;
-        if (panel != null) panel.DropGapIndex = index;
+        panel?.ShowDropGap(index, index >= 0 && list != null ? LiftedFrom(list) : null);
+    }
+
+    private static System.Collections.IList LiftedFrom(ItemsControl list)
+    {
+        if (ReferenceEquals(_liftedList, list)) return _lifted;
+
+        _liftedList = list;
+        _lifted = null;
+        var host = list.ItemsHostPanel;
+        for (var c = _source as IUIComponent; c != null && host != null; c = c.VisualParent)
+        {
+            if (!ReferenceEquals(c.VisualParent, host)) continue;
+
+            if (c is not IFundamentalUIComponent { DataContext: { } pressed }) break;
+
+            var selected = (list as ListBox)?.SelectedItems;
+            _lifted = selected != null && selected.Contains(pressed) ? selected : new List<object> { pressed };
+            break;
+        }
+
+        return _lifted;
     }
 
     // The list asks its own items host - no walking the tree for it, and it answers before anything is realized, which
     // is what an EMPTY list needs (a drop into one is exactly when this matters).
-    private static VirtualizingPanel HostPanel(ItemsControl list) => list.ItemsHostPanel as VirtualizingPanel;
+    private static IDropGapPanel HostPanel(ItemsControl list) => list.ItemsHostPanel as IDropGapPanel;
 
     private static void ClearIndicator()
     {
@@ -951,6 +989,9 @@ public static partial class DragDrop
         // element itself (an exact copy of the row). A multi-selection shows this single ghost plus a count badge, not a
         // stack of every selected row.
         IReadOnlyList<IUIComponent> body = BuildDragTemplate(_source) is { } custom ? [custom] : [(IUIComponent)_source];
+        _grabPoint = ReferenceEquals(body[0], _source) && GetGhostAnchor((AdamantiumComponent)_source) == DragGhostAnchor.Grab
+            ? SourceClientPoint(_startScreen)
+            : null;
         _badgePart = default;
         var badge = _dragCount > 1 ? BuildCountBadge(_dragCount) : null;
 
@@ -1140,8 +1181,7 @@ public static partial class DragDrop
     private static void ShowOrMoveGhost()
     {
         if (_ghostBgra == null) return;
-        var s = DragPointer.GetScreenPosition();
-        int x = (int)s.X + DragDropOptions.GhostCursorOffset, y = (int)s.Y + DragDropOptions.GhostCursorOffset;
+        var (x, y) = GhostCorner(_ghostShown ? _presentedScale : _ghostBakeScale);
         if (_ghostShown)
         {
             Ghost?.Move(x, y);                                  // same monitor -> cheap reposition; a DPI crossing re-scales via OnGhostDpiChanged
@@ -1157,13 +1197,23 @@ public static partial class DragDrop
 
     // Re-scale the ghost the instant it crosses onto a monitor of a different DPI (driven by IDragGhost.DpiChanged, event-based
     // - no per-frame polling). Re-uploads the resampled bitmap at the current cursor so the ghost keeps its physical size.
+    private static (int X, int Y) GhostCorner(double scale)
+    {
+        var s = DragPointer.GetScreenPosition();
+        if (_grabPoint is { } grab)
+        {
+            return ((int)Math.Round(s.X - grab.X * scale), (int)Math.Round(s.Y - grab.Y * scale));
+        }
+
+        return ((int)s.X + DragDropOptions.GhostCursorOffset, (int)s.Y + DragDropOptions.GhostCursorOffset);
+    }
+
     private static void OnGhostDpiChanged(uint dpi)
     {
         if (!_ghostShown || _ghostBgra == null) return;
         var scale = dpi / 96.0;
         if (Math.Abs(scale - _presentedScale) < 0.001) return;
-        var s = DragPointer.GetScreenPosition();
-        int x = (int)s.X + DragDropOptions.GhostCursorOffset, y = (int)s.Y + DragDropOptions.GhostCursorOffset;
+        var (x, y) = GhostCorner(scale);
         var (bgra, w, h) = ScaleGhost(scale);
         Ghost?.Show(bgra, w, h, x, y);
         _presentedScale = scale;
@@ -1331,6 +1381,9 @@ public static partial class DragDrop
         _source = null;
         _data = null;
         _dragging = false;
+        _grabPoint = null;
+        _liftedList = null;
+        _lifted = null;
         _ghostBgra = null;
         _ghostShown = false;
         _presentedScale = _ghostBakeScale;   // next drag re-bakes _ghostBakeScale; keep them in step so first show doesn't resample

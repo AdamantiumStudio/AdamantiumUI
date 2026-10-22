@@ -12,6 +12,7 @@
         <Setter Property="FontSize" Value="{ResourceReference FontSizeBody}"/>
         <Setter Property="Padding" Value="0 4"/>
         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        <Setter Property="ExpandDuration" Value="0:0:0.2"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Expander">
@@ -27,7 +28,12 @@
                                 <Image Grid.Column="0" x:Name="Glyph"
                                        Source="{ResourceReference ChevronRightIcon}"
                                        Width="9" Height="9" Margin="0 0 6 0"
-                                       VerticalAlignment="Center"/>
+                                       VerticalAlignment="Center"
+                                       RenderTransformOrigin="0.5,0.5">
+                                    <Image.RenderTransform>
+                                        <Transform x:Name="PART_GlyphTurn"/>
+                                    </Image.RenderTransform>
+                                </Image>
                                 <ContentPresenter Grid.Column="1"
                                         x:Name="PART_HeaderPresenter"
                                         VerticalAlignment="Center"
@@ -40,22 +46,18 @@
                         </Border>
 
                         <!-- Indented under the triangle, not boxed: the indent is what says "this belongs to that". -->
-                        <Border Grid.Row="1" x:Name="PART_Content"
-                                Visibility="Collapsed"
-                                Margin="15 2 0 6">
-                            <ContentPresenter
-                                    x:Name="PART_ContentPresenter"
-                                    HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                    VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
-                                    Content="{TemplateBinding Content}"
-                                    ContentTemplate="{TemplateBinding ContentTemplate}"/>
-                        </Border>
+                        <RevealDecorator Grid.Row="1" x:Name="PART_Reveal" Visibility="Collapsed">
+                            <Border x:Name="PART_Content" Margin="15 2 0 6">
+                                <ContentPresenter
+                                        x:Name="PART_ContentPresenter"
+                                        HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                        VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                        Content="{TemplateBinding Content}"
+                                        ContentTemplate="{TemplateBinding ContentTemplate}"/>
+                            </Border>
+                        </RevealDecorator>
                     </Grid>
                     <ControlTemplate.Triggers>
-                        <PropertyTrigger Property="IsExpanded" Value="true">
-                            <Setter TargetName="PART_Content" Property="Visibility" Value="Visible"/>
-                            <Setter TargetName="Glyph" Property="Source" Value="{ResourceReference ChevronDownIcon}"/>
-                        </PropertyTrigger>
                         <PropertyTrigger Property="IsPointerOver" Value="true">
                             <Setter TargetName="PART_Header" Property="Background"
                                     Value="{ResourceReference SubtleFillColorSecondary}"/>

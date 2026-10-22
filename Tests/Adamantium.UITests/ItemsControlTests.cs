@@ -481,6 +481,39 @@ public class ItemsControlTests
         });
     }
 
+    /// <summary>An item moved in the source keeps its container: it only changes place, it is never torn down and made
+    /// again, nor taken out of the tree on the way - what it hosts (a 3D view, a text being typed) stays alive.</summary>
+    [Test]
+    public void MovedItem_KeepsItsContainer_AndNeverLeavesTheTree()
+    {
+        var items = new ObservableCollection<string> { "A", "B", "C", "D" };
+        var ic = new ItemsControl
+        {
+            ItemsSource = items,
+            ItemsPanel = new ItemsPanelTemplate(() => new TemplateResult { RootComponent = new Grid() })
+        };
+        ic.Template = ItemsPresenterTemplate();
+        var window = new Window { Width = 400, Height = 300, Content = ic };
+        WindowExtension.UpdateTree(window);
+
+        var panel = ic.ItemsHostPanel;
+        var moved = (Adamantium.UI.Controls.Base.UIComponent)panel.Children[0];
+        var detached = 0;
+        moved.DetachedFromVisualTreeEvent += (_, _) => detached++;
+
+        items.Move(0, 2);
+        WindowExtension.UpdateTree(window);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(panel.Children.IndexOf((IMeasurableComponent)moved), Is.EqualTo(2));
+            Assert.That(panel.VisualChildren.ElementAt(2), Is.SameAs(moved), "the paint order follows");
+            Assert.That(ic.ItemContainerGenerator.ContainerFromIndex(2), Is.SameAs(moved));
+            Assert.That(detached, Is.Zero);
+            Assert.That(moved.IsAttachedToVisualTree, Is.True);
+        });
+    }
+
     /// <summary>
     /// The drop gap is a REAL empty slot in the layout, not a nudge applied on top of it: everything from the insertion
     /// index on moves along by one, so a tile pushed past the end of its line WRAPS to the next one. That is the whole

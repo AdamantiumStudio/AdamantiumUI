@@ -91,6 +91,7 @@
     <StyleInclude Source="{x:Type editor:DropInsertionIndicatorStyleSet}"/>
     <StyleInclude Source="{x:Type editor:HoldIndicatorStyleSet}"/>
     <StyleInclude Source="{x:Type editor:DragHandleStyleSet}"/>
+    <StyleInclude Source="{x:Type editor:TileGripStyleSet}"/>
     <StyleInclude Source="{x:Type editor:TitleBarStyleSet}"/>
     <StyleInclude Source="{x:Type editor:ResizeGripperStyleSet}"/>
     <StyleInclude Source="{x:Type editor:WindowStyleSet}"/>

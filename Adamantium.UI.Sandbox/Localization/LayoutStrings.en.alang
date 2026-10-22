@@ -19,4 +19,44 @@
     <Phrase Key="OpensLeft" Text="Opens left"/>
     <Phrase Key="OpensRight" Text="Opens right"/>
     <Phrase Key="ExpanderContent" Text="The content opens on the side away from the header and folds back into it."/>
+    <Phrase Key="TiledPanel" Text="Tiled panel"/>
+    <Phrase Key="TileLayout" Text="Layout"/>
+    <Phrase Key="MaximizeFirstTile" Text="The first tile alone"/>
+    <Phrase Key="SplitHint" Text="Drag a tile's corner inward to split it; drag a border all the way over a tile to merge it."/>
+    <Phrase Key="ShareTilesEvenly" Text="Share evenly"/>
+    <Phrase Key="TileShowcase" Text="Showcase"/>
+    <Phrase Key="Viewports" Text="Viewports"/>
+    <Phrase Key="Gallery" Text="Gallery"/>
+    <Phrase Key="Featured" Text="Featured"/>
+    <Phrase Key="TileCount" Text="Tiles:"/>
+    <Phrase Key="MaxColumns" Text="Max columns:"/>
+    <Phrase Key="MaxRows" Text="Max rows:"/>
+    <Phrase Key="TileAspect" Text="Proportion"/>
+    <Phrase Key="Free" Text="Free"/>
+    <Phrase Key="Wide" Text="16:9"/>
+    <Phrase Key="Classic" Text="4:3"/>
+    <Phrase Key="Square" Text="1:1"/>
+    <Phrase Key="LastRow" Text="Last row"/>
+    <Phrase Key="Left" Text="Left"/>
+    <Phrase Key="Center" Text="Center"/>
+    <Phrase Key="Right" Text="Right"/>
+    <Phrase Key="Stretch" Text="Stretch"/>
+    <Phrase Key="Top" Text="Top"/>
+    <Phrase Key="Bottom" Text="Bottom"/>
+    <Phrase Key="StripSide" Text="Strip side"/>
+    <Phrase Key="FeaturedShare" Text="Featured share:"/>
+    <Phrase Key="StripLimit" Text="In the strip:"/>
+    <Phrase Key="FeatureTile" Text="Feature this tile"/>
+    <Phrase Key="One" Text="One"/>
+    <Phrase Key="TwoColumns" Text="Two side by side"/>
+    <Phrase Key="TwoRows" Text="Two stacked"/>
+    <Phrase Key="ThreeLeft" Text="Large left, two right"/>
+    <Phrase Key="ThreeRight" Text="Two left, large right"/>
+    <Phrase Key="ThreeTop" Text="Large top, two below"/>
+    <Phrase Key="ThreeBottom" Text="Two on top, large below"/>
+    <Phrase Key="Four" Text="Four, two by two"/>
+    <Phrase Key="FourLeft" Text="Large left, three right"/>
+    <Phrase Key="FourRight" Text="Three left, large right"/>
+    <Phrase Key="FourTop" Text="Large top, three below"/>
+    <Phrase Key="FourBottom" Text="Three on top, large below"/>
 </Language>

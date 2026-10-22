@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
@@ -15,7 +16,7 @@ namespace Adamantium.UI.Controls.Panels;
 
 /// <summary>Base for panels that virtualize an <see cref="ItemsControl"/>'s items; subclasses supply only the geometry.
 /// Set <see cref="IsVirtualizing"/> to false for small mixed-height hosts, which then realize and stack every item.</summary>
-public abstract class VirtualizingPanel : Panel, IScrollableContent
+public abstract class VirtualizingPanel : Panel, IScrollableContent, IDropGapPanel
 {
     private Size _extent;
     private Size _viewport;
@@ -143,6 +144,10 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent
         index = -1;
         return false;
     }
+
+    void IDropGapPanel.ShowDropGap(int index, IList lifted) => DropGapIndex = index;
+
+    bool IDropGapPanel.TryGetDropSlot(Vector2 point, IList lifted, out int index) => TryGetDropSlot(point, out index);
 
     /// <summary>Whether this panel actually opens <see cref="DropGapIndex"/> in its layout. False (the default) means the
     /// drag shows its insertion caret instead - the two are alternatives, never both, since they mark the same place.</summary>
@@ -621,21 +626,10 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent
     // Where each item last sat, keyed by the data item: containers are recycled onto other items.
     private readonly Dictionary<object, Vector2> _lastItemPos = new();
     private int _animatedGap = -1;   // the gap the last animated pass ran for
-    private static readonly TimeSpan LayoutMoveDuration = TimeSpan.FromSeconds(0.18);
 
     // Rows promoted for the duration of an open gap. A promotion costs a transform slot, so it is not left behind: the
     // moment the gap closes they all go back to being ordinary children.
     private readonly HashSet<UIComponent> _promoted = new();
-
-    // Makes a row carry its own subtree (or stop), marking it so the render side re-bakes; idempotent.
-    private static void AsMotionNode(UIComponent row, bool on)
-    {
-        if (row.IsRenderMotionNode == on) return;
-
-        row.IsRenderMotionNode = on;
-        RenderDirty.MarkTransform(row);
-        RenderDirty.MarkSubtreeGeometry(row);   // its subtree is baked in a DIFFERENT space now - re-take the record
-    }
 
     /// <summary>Animates tiles that layout just moved from their previous place to the new one via the render transform;
     /// layout stays the authority. New items and scrolling animate nothing.</summary>
@@ -644,7 +638,7 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent
         // Gap closed: nothing is traveling any more, so give the slots back.
         if (DropGapIndex < 0 && _promoted.Count > 0)
         {
-            foreach (var row in _promoted) AsMotionNode(row, false);
+            foreach (var row in _promoted) LayoutMotion.Promote(row, false);
             _promoted.Clear();
         }
 
@@ -675,7 +669,7 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent
             // applies its slot matrix to everything beneath - so the parts that live only in a shared-mesh arena travel
             // with it. Without this the row rode an ANCESTOR's slot: the row's own movement never reached its drag grip,
             // and the grip stayed where the row had been while the rest of it left. Measured at 23 px apart mid-slide.
-            AsMotionNode(container, true);
+            LayoutMotion.Promote(container, true);
             _promoted.Add(container);
 
             // ...and the record still has to be re-taken, because a gap shift moves only the rows BELOW it and one
@@ -683,18 +677,10 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent
             RenderDirty.MarkSubtreeGeometry(container);
 
             if (!animate) continue;
-            if (container.RenderTransform is not { } transform)
-            {
-                transform = new Transform();
-                container.RenderTransform = transform;
-            }
 
             // Start where it WAS and run to zero: the element is already arranged at its new place, so the transform only
-            // carries the leftover distance. FillBehavior.Stop leaves nothing behind once it lands.
-            transform.BeginAnimation(Transform.TranslateXProperty,
-                new DoubleAnimation { From = before.X - now.X, To = 0, Duration = LayoutMoveDuration, FillBehavior = FillBehavior.Stop });
-            transform.BeginAnimation(Transform.TranslateYProperty,
-                new DoubleAnimation { From = before.Y - now.Y, To = 0, Duration = LayoutMoveDuration, FillBehavior = FillBehavior.Stop });
+            // carries the leftover distance.
+            LayoutMotion.Slide(container, before - now);
         }
     }
 

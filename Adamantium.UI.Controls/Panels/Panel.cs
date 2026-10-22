@@ -137,6 +137,10 @@ public abstract class Panel: InputUIComponent, IContainer, INavigablePanel
             }
             break;
 
+         case NotifyCollectionChangedAction.Move:
+            LogicalChildrenCollection.Move(e.OldStartingIndex, e.NewStartingIndex);
+            VisualChildrenCollection.Move(e.OldStartingIndex, e.NewStartingIndex);
+            break;
          case NotifyCollectionChangedAction.Reset:
             LogicalChildrenCollection.Clear();
             VisualChildrenCollection.Clear();

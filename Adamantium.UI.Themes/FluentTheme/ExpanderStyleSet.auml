@@ -2,8 +2,9 @@
 <StyleSet xmlns="http://adamantium/ui"
           xmlns:x="http://adamantium/ui/xaml/extensions">
 
-    <!-- Expander: the whole PART_Header toggles; folded content is Collapsed so it is not measured; the header docks to
-         the side ExpandDirection names and the content opens on the other. -->
+    <!-- Expander: the whole PART_Header toggles; the content unfolds in PART_Reveal and is Collapsed once folded, so it
+         is not measured; the header docks to the side ExpandDirection names and the content opens on the other; the
+         chevron turns with it. -->
 
     <Style Selector="Expander">
         <Setter Property="Background" Value="Transparent"/>
@@ -14,6 +15,7 @@
         <Setter Property="FontSize" Value="{ResourceReference FontSizeBody}"/>
         <Setter Property="Padding" Value="12 8"/>
         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        <Setter Property="ExpandDuration" Value="0:0:0.2"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Expander">
@@ -34,7 +36,12 @@
                                     <Image Grid.Column="0" x:Name="Glyph"
                                            Source="{ResourceReference ChevronRightIcon}"
                                            Width="10" Height="10" Margin="0 0 8 0"
-                                           VerticalAlignment="Center"/>
+                                           VerticalAlignment="Center"
+                                           RenderTransformOrigin="0.5,0.5">
+                                        <Image.RenderTransform>
+                                            <Transform x:Name="PART_GlyphTurn"/>
+                                        </Image.RenderTransform>
+                                    </Image>
                                     <ContentPresenter Grid.Column="1"
                                             x:Name="PART_HeaderPresenter"
                                             VerticalAlignment="Center"
@@ -46,18 +53,21 @@
                                 </Grid>
                             </Border>
 
-                            <Border x:Name="PART_Content"
-                                    Visibility="Collapsed"
-                                    Padding="{TemplateBinding Padding}"
-                                    BorderBrush="{TemplateBinding BorderBrush}"
-                                    BorderThickness="0 1 0 0">
-                                <ContentPresenter
-                                        x:Name="PART_ContentPresenter"
-                                        HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                        VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
-                                        Content="{TemplateBinding Content}"
-                                        ContentTemplate="{TemplateBinding ContentTemplate}"/>
-                            </Border>
+                            <RevealDecorator x:Name="PART_Reveal"
+                                             Visibility="Collapsed"
+                                             Direction="{TemplateBinding ExpandDirection}">
+                                <Border x:Name="PART_Content"
+                                        Padding="{TemplateBinding Padding}"
+                                        BorderBrush="{TemplateBinding BorderBrush}"
+                                        BorderThickness="0 1 0 0">
+                                    <ContentPresenter
+                                            x:Name="PART_ContentPresenter"
+                                            HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                            VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                            Content="{TemplateBinding Content}"
+                                            ContentTemplate="{TemplateBinding ContentTemplate}"/>
+                                </Border>
+                            </RevealDecorator>
                         </DockPanel>
                     </Border>
                     <ControlTemplate.Triggers>
@@ -65,43 +75,17 @@
                         <PropertyTrigger Property="ExpandDirection" Value="Up">
                             <Setter TargetName="PART_Header" Property="DockPanel.Dock" Value="Bottom"/>
                             <Setter TargetName="PART_Content" Property="BorderThickness" Value="0 0 0 1"/>
+                            <Setter TargetName="PART_Reveal" Property="VerticalAlignment" Value="Bottom"/>
                         </PropertyTrigger>
                         <PropertyTrigger Property="ExpandDirection" Value="Left">
                             <Setter TargetName="PART_Header" Property="DockPanel.Dock" Value="Right"/>
                             <Setter TargetName="PART_Content" Property="BorderThickness" Value="0 0 1 0"/>
-                            <Setter TargetName="Glyph" Property="Source" Value="{ResourceReference ChevronLeftIcon}"/>
+                            <Setter TargetName="PART_Reveal" Property="HorizontalAlignment" Value="Right"/>
                         </PropertyTrigger>
                         <PropertyTrigger Property="ExpandDirection" Value="Right">
                             <Setter TargetName="PART_Header" Property="DockPanel.Dock" Value="Left"/>
                             <Setter TargetName="PART_Content" Property="BorderThickness" Value="1 0 0 0"/>
                         </PropertyTrigger>
-                        <!-- Up or down, the chevron points right while folded and into the content while open; to a
-                             side, it points where the content opens while folded and back to the header while open. -->
-                        <PropertyTrigger Property="IsExpanded" Value="true">
-                            <Setter TargetName="PART_Content" Property="Visibility" Value="Visible"/>
-                            <Setter TargetName="Glyph" Property="Source" Value="{ResourceReference ChevronDownIcon}"/>
-                        </PropertyTrigger>
-                        <MultiTrigger>
-                            <MultiTrigger.Conditions>
-                                <Condition Property="IsExpanded" Value="true"/>
-                                <Condition Property="ExpandDirection" Value="Up"/>
-                            </MultiTrigger.Conditions>
-                            <Setter TargetName="Glyph" Property="Source" Value="{ResourceReference ChevronUpIcon}"/>
-                        </MultiTrigger>
-                        <MultiTrigger>
-                            <MultiTrigger.Conditions>
-                                <Condition Property="IsExpanded" Value="true"/>
-                                <Condition Property="ExpandDirection" Value="Left"/>
-                            </MultiTrigger.Conditions>
-                            <Setter TargetName="Glyph" Property="Source" Value="{ResourceReference ChevronRightIcon}"/>
-                        </MultiTrigger>
-                        <MultiTrigger>
-                            <MultiTrigger.Conditions>
-                                <Condition Property="IsExpanded" Value="true"/>
-                                <Condition Property="ExpandDirection" Value="Right"/>
-                            </MultiTrigger.Conditions>
-                            <Setter TargetName="Glyph" Property="Source" Value="{ResourceReference ChevronLeftIcon}"/>
-                        </MultiTrigger>
                         <PropertyTrigger Property="IsPointerOver" Value="true">
                             <Setter TargetName="PART_Header" Property="Background"
                                     Value="{ResourceReference SubtleFillColorSecondary}"/>

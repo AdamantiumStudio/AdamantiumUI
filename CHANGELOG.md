@@ -86,6 +86,33 @@ All packages share one version.
   applications on Windows. A drag the application carries itself shows its ghost as a subsurface of the window.
 - `IWindow.SurfaceDisplayHandle`: the connection a window's surface belongs to where the platform needs one beside it -
   the `wl_display` - passed on to the presenter as `PresentationParameters.DisplayHandle`.
+- `TiledPanel`: lays its children out as tiles in a tree of regions (`Layout`), built in markup or code:
+  `TileSplit` cuts its room along `Orientation` into parts by `Shares` ("60,40"), `Tile` holds one child - the one whose
+  attached `TiledPanel.Tile` is its `Name`, else the next in order - and `TileFlow` fills the children left over left
+  to right, in as many columns as gives them the most room, within `MaxColumns` × `MaxRows`, keeping `AspectRatio`,
+  with the short last row where `LastRowAlignment` says. A child nothing takes is collapsed; `MaximizedItem` - the
+  child or its data - fills the panel alone. The gaps of the splits (`Spacing`) drag, gaps in line moving together, a
+  double click shares a split evenly again and `ShareEvenly` every split. `TileLayouts` has the usual layouts: the
+  viewport layouts of 3D editors, a gallery, and a featured tile with the rest in a strip on any side. Hosting a
+  list's items, a tile drags to another place: it leaves its own, a gap opens where it would land and the other
+  tiles slide and resize into their new places. With `SplitTileCommand` a tile's corner dragged inward splits a new
+  tile off it - `TileGrip`s mark the corners of the tile the pointer is over, drawn by the theme, and the view model
+  gives the new tile its item at the index the command is handed - and with `MergeTileCommand` a
+  border dragged all the way over a tile merges it away once the view model lets its item go. A corner dragged back
+  to the edge it splits from takes the new tile away again, and letting go there splits nothing. Escape in the middle of
+  a drag of a border or a corner gives the layout back as it was and asks the view model nothing.
+- `DragDrop.GhostAnchor`: where a source's ghost stands against the cursor - beside it (`Cursor`, the default) or held by
+  the point it was grabbed at (`Grab`), as a large tile is carried.
+- `IDropGapPanel`: an items host that opens a real gap where a dragged item would drop instead of the insertion caret;
+  `VirtualizingPanel` and `TiledPanel` both are one, and the drag works with any - in a `ListBox`, or in any
+  `ItemsControl` that allows the drop itself.
+- `Expander.ExpandDuration`: the content unfolds in the layout and folds away over it - what lies past the expander
+  moves with it - and the chevron turns, one glyph turned by the direction instead of four swapped. The Fluent, Graphite
+  and macOS themes set 0.2 s; zero shows the change at once. A template unfolds the content with `RevealDecorator`
+  (`PART_Reveal`), which takes `Progress` of its child's size along the axis it opens on, and turns the chevron with a
+  `Transform` named `PART_GlyphTurn`.
+- `UniverseHost.Output`: the output the universe draws into the host's panel through, for a view model to tell
+  one panel's view of a universe from another's (`Mode=OneWayToSource`).
 - `PropertyGrid.ValueChangedCommand`: executed after each value written or taken back, with the change as its
   parameter - what `ValueChanged` says, for a view model bound from markup.
 - A way in for debugging tools: `UIApplication.AttachDebugTool` starts an `IDebugTool` on the application - its
@@ -1532,6 +1559,8 @@ All packages share one version.
 - `ISyntheticPointerInput.Inject` takes the window the contacts are played on and refuses a contact that would land
   on anything else, checked right before the system takes it; the automation's planner no longer checks it.
 - On `Adamantium.Vulkan` 1.0.4, as the engine is.
+- One universe can be shown by several `UniverseHost`s of one window at once, each panel a view of its own into it:
+  it is paused once none of the panels is in the window, and no longer when one of them leaves.
 - The engine maps the Vulkan loader itself: `UIApplication` no longer registers it, nor references `Adamantium.Vulkan.Loader`.
 - `INativeDragDrop.BeginDrag` takes `external`: false for a drag offered to the application's own windows only. A
   platform whose in-app drags cannot learn the window under the pointer says so with `CarriesInAppDrags` (false by
@@ -1943,6 +1972,16 @@ All packages share one version.
 
 ### Fixed
 
+- An item moved in an `ItemsControl`'s source (`ObservableCollection.Move`) rebuilt every container of a panel that
+  does not virtualize, and a child moved in a panel's `Children` left the visual tree and came back: what the
+  containers held - a 3D view, a text being typed - was made again. The container now only changes place.
+- A drop into a list landed past an item of that list's selection that was not being dragged - after a touch drag,
+  whose press selects nothing, or a drag from another list - so it fell one place off where the gap showed it. The
+  items passed over are now only those dragged out of the list.
+- A universe shown in a panel under a hidden or collapsed ancestor went on drawing it: the output read only the
+  panel's own visibility. It reads the ancestors' too, and asks for a frame when one of them is shown again.
+- A type whose `ClipToBounds` is on by default did not clip: the value the renderer reads only followed changes, and a
+  default is no change.
 - Markup hot reload listed a file as changed - and applied it again on save - when the watcher read it half written:
   a save reports itself as soon as it empties the file. A gathered file whose text is again what was applied is
   dropped before it is listed or applied (`MarkupHotReload.ChangedFiles`). Seen on Linux, where inotify reports the

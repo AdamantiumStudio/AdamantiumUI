@@ -33,6 +33,25 @@
   <Set Target="id=SkeletonStagger" Value="80" />
   <Toggle Target="id=ShowSkeletons" />
   <Wait Target="id=SkeletonGrid" IsLoadingItems="False" />
+  <!-- The tiled panel stand: a viewport layout picked by its thumbnail, a gallery grown and shrunk, a tile featured by
+       a click and the first featured again. -->
+  <Select Target="id=TiledPanelStand" />
+  <Wait Target="id=TilePresets" />
+  <Select Target="id=TilePresets/type=ListItem,name=FourLeft" />
+  <Expect Target="id=TilePresets/type=ListItem,name=FourLeft" Selected="True" />
+  <Select Target="id=TilePresets/type=ListItem,name=Four" />
+  <Expect Target="id=TilePresets/type=ListItem,name=Four" Selected="True" />
+  <Click Target="id=TileShowcase/name=Gallery" />
+  <Set Target="id=GalleryCount" Value="14" />
+  <Wait Target="id=GalleryTiles/name=14" Offscreen="False" />
+  <Set Target="id=GalleryCount" Value="12" />
+  <Absent Target="id=GalleryTiles/name=14" />
+  <Click Target="id=TileShowcase/name=Featured" />
+  <Invoke Target="id=FeaturedTiles/type=ListItem,name=5/id=FeatureTile" />
+  <Wait Target="id=FeaturedTiles/type=ListItem,name=5/id=FeatureTile" Visibility="Collapsed" />
+  <Invoke Target="id=FeaturedTiles/type=ListItem,name=1/id=FeatureTile" />
+  <Wait Target="id=FeaturedTiles/type=ListItem,name=1/id=FeatureTile" Visibility="Collapsed" />
+  <Click Target="id=TileShowcase/name=Viewports" />
   <Select Target="id=TilesStand" />
   <Wait Target="id=CellWidth" />
 </Scenario>

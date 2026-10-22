@@ -1,0 +1,291 @@
+<View xmlns="http://adamantium/ui"
+      xmlns:x="http://adamantium/ui/xaml/extensions"
+      xmlns:conv="clr-namespace:Adamantium.UI.Sandbox.Converters"
+      xmlns:vm="clr-namespace:Adamantium.UI.Sandbox.ViewModels">
+    <!-- One of the layout tab's stands, under the key "TiledPanel": one panel three ways. Viewports: the layouts of 3D
+         editors, picked by their thumbnails; the gaps drag, those in line together, and a double click shares a split
+         evenly again. Gallery: any number of tiles in a flow, its limits, proportion and last row set here. Featured:
+         one tile large, the rest in a strip on the side picked; a tile's star features it. In all three a tile drags
+         to another place: it leaves its own, a gap opens where it would land and the others move aside. In Viewports
+         a tile's corner dragged inward splits a new tile off it, and a border dragged all the way over a tile merges
+         it away. -->
+    <Grid RowDefinitions="Auto,*">
+        <SegmentedControl EnumType="{x:Type vm:TileShowcase}"
+                          SelectedItem="{Binding TileShowcase, Mode=TwoWay}"
+                          HorizontalAlignment="Left"
+                          MarginBottom="10"
+                          AutomationProperties.AutomationId="TileShowcase"
+                          AutomationProperties.Name="{Localize LayoutStrings.TileShowcase}">
+            <SegmentedControl.ItemTemplate>
+                <DataTemplate>
+                    <TextBlock Text="{Localize LayoutStrings, Key={Binding}}"/>
+                </DataTemplate>
+            </SegmentedControl.ItemTemplate>
+        </SegmentedControl>
+
+        <!-- Viewports -->
+        <Grid Grid.Row="1" RowDefinitions="Auto,Auto,*"
+              Visibility="{Binding TileShowcase, Converter={conv:EnumVisibilityConverter}, ConverterParameter=Viewports}">
+            <ListBox ItemsSource="{Binding TilePresets}"
+                     SelectedItem="{Binding TilePreset, Mode=TwoWay}"
+                     AutomationProperties.AutomationId="TilePresets"
+                     AutomationProperties.Name="{Localize LayoutStrings.TileLayout}">
+                <ListBox.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <WrapPanel Orientation="Horizontal"/>
+                    </ItemsPanelTemplate>
+                </ListBox.ItemsPanel>
+                <ListBox.ItemContainerStyle>
+                    <Style Selector="ListBoxItem">
+                        <Setter Property="ToolTipService.ToolTip" Value="{Localize LayoutStrings, Key={Binding Name}}"/>
+                        <Setter Property="AutomationProperties.Name" Value="{Binding Name}"/>
+                    </Style>
+                </ListBox.ItemContainerStyle>
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <ItemsControl ItemsSource="{Binding Tiles}" Width="72" Height="48" IsHitTestVisible="False">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <TiledPanel Layout="{Binding Thumbnail}" Spacing="2"/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="{Binding Color, Converter={conv:StringToGradientBrushConverter}}"
+                                            CornerRadius="2"/>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+            <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,10">
+                <CheckBox Content="{Localize LayoutStrings.MaximizeFirstTile}"
+                          IsChecked="{Binding MaximizeFirstTile, Mode=TwoWay}"
+                          VerticalAlignment="Center"
+                          AutomationProperties.AutomationId="MaximizeFirstTile"/>
+                <Button Content="{Localize LayoutStrings.ShareTilesEvenly}"
+                        Command="{Binding ShareTilesEvenlyCommand}"
+                        Margin="12,0,0,0"
+                        AutomationProperties.AutomationId="ShareTilesEvenly"/>
+                <TextBlock Text="{Localize LayoutStrings.SplitHint}"
+                           Foreground="{ThemeResource TextFillColorSecondary}"
+                           VerticalAlignment="Center"
+                           Margin="16,0,0,0"/>
+            </StackPanel>
+            <ListBox Grid.Row="2"
+                     ItemsSource="{Binding TiledItems}"
+                     Background="Transparent"
+                     DragDrop.AllowDrop="True" DragDrop.DropCommand="{Binding DropViewportTileCommand}"
+                     AutomationProperties.AutomationId="TiledPanelItems">
+                <ListBox.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <TiledPanel Layout="{Binding ViewportLayout}"
+                                    MaximizedItem="{Binding MaximizedTile}"
+                                    SplitTileCommand="{Binding SplitTileCommand}"
+                                    MergeTileCommand="{Binding MergeTileCommand}"
+                                    Spacing="6"/>
+                    </ItemsPanelTemplate>
+                </ListBox.ItemsPanel>
+                <ListBox.ItemContainerStyle>
+                    <Style Selector="ListBoxItem">
+                        <Setter Property="Margin" Value="0"/>
+                        <Setter Property="Padding" Value="0"/>
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                        <Setter Property="VerticalContentAlignment" Value="Stretch"/>
+                        <Setter Property="AutomationProperties.Name" Value="{Binding Number}"/>
+                    </Style>
+                </ListBox.ItemContainerStyle>
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <Border Background="{Binding Color, Converter={conv:StringToGradientBrushConverter}}" CornerRadius="4"
+                                DragDrop.GhostAnchor="Grab" DragDrop.AllowDrag="True" DragDrop.DragData="{Binding}">
+                            <TextBlock Text="{Binding Number}"
+                                       FontSize="32"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"/>
+                        </Border>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </Grid>
+
+        <!-- Gallery -->
+        <Grid Grid.Row="1" RowDefinitions="Auto,*"
+              Visibility="{Binding TileShowcase, Converter={conv:EnumVisibilityConverter}, ConverterParameter=Gallery}">
+            <WrapPanel Orientation="Horizontal" MarginBottom="10">
+                <TextBlock x:Name="GalleryCountLabel" Text="{Localize LayoutStrings.TileCount}" VerticalAlignment="Center"/>
+                <Slider Width="140" Minimum="1" Maximum="40" TickFrequency="1" IsSnapToTickEnabled="true"
+                        Value="{Binding GalleryCount, Mode=TwoWay}" MarginLeft="8"
+                        AutomationProperties.AutomationId="GalleryCount"
+                        AutomationProperties.LabeledBy="{Binding ElementName=GalleryCountLabel}"/>
+                <TextBlock Text="{Binding GalleryCount}" Width="28" VerticalAlignment="Center" MarginLeft="8"/>
+
+                <TextBlock x:Name="GalleryColumnsLabel" Text="{Localize LayoutStrings.MaxColumns}" VerticalAlignment="Center" MarginLeft="16"/>
+                <Slider Width="100" Minimum="0" Maximum="8" TickFrequency="1" IsSnapToTickEnabled="true"
+                        Value="{Binding GalleryMaxColumns, Mode=TwoWay}" MarginLeft="8"
+                        AutomationProperties.AutomationId="GalleryMaxColumns"
+                        AutomationProperties.LabeledBy="{Binding ElementName=GalleryColumnsLabel}"/>
+                <TextBlock Text="{Binding GalleryMaxColumns}" Width="20" VerticalAlignment="Center" MarginLeft="8"/>
+
+                <TextBlock x:Name="GalleryRowsLabel" Text="{Localize LayoutStrings.MaxRows}" VerticalAlignment="Center" MarginLeft="16"/>
+                <Slider Width="100" Minimum="0" Maximum="8" TickFrequency="1" IsSnapToTickEnabled="true"
+                        Value="{Binding GalleryMaxRows, Mode=TwoWay}" MarginLeft="8"
+                        AutomationProperties.AutomationId="GalleryMaxRows"
+                        AutomationProperties.LabeledBy="{Binding ElementName=GalleryRowsLabel}"/>
+                <TextBlock Text="{Binding GalleryMaxRows}" Width="20" VerticalAlignment="Center" MarginLeft="8"/>
+
+                <SegmentedControl EnumType="{x:Type vm:TileAspect}"
+                                  SelectedItem="{Binding GalleryAspect, Mode=TwoWay}"
+                                  MarginLeft="16"
+                                  AutomationProperties.AutomationId="GalleryAspect"
+                                  AutomationProperties.Name="{Localize LayoutStrings.TileAspect}">
+                    <SegmentedControl.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Localize LayoutStrings, Key={Binding}}"/>
+                        </DataTemplate>
+                    </SegmentedControl.ItemTemplate>
+                </SegmentedControl>
+
+                <SegmentedControl EnumType="{x:Type HorizontalAlignment}"
+                                  SelectedItem="{Binding GalleryLastRow, Mode=TwoWay}"
+                                  MarginLeft="16"
+                                  AutomationProperties.AutomationId="GalleryLastRow"
+                                  AutomationProperties.Name="{Localize LayoutStrings.LastRow}">
+                    <SegmentedControl.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Localize LayoutStrings, Key={Binding}}"/>
+                        </DataTemplate>
+                    </SegmentedControl.ItemTemplate>
+                </SegmentedControl>
+            </WrapPanel>
+            <ListBox Grid.Row="1"
+                     ItemsSource="{Binding GalleryTiles}"
+                     Background="Transparent"
+                     DragDrop.AllowDrop="True" DragDrop.DropCommand="{Binding DropGalleryTileCommand}"
+                     AutomationProperties.AutomationId="GalleryTiles">
+                <ListBox.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <TiledPanel Layout="{Binding GalleryLayout}" Spacing="6"/>
+                    </ItemsPanelTemplate>
+                </ListBox.ItemsPanel>
+                <ListBox.ItemContainerStyle>
+                    <Style Selector="ListBoxItem">
+                        <Setter Property="Margin" Value="0"/>
+                        <Setter Property="Padding" Value="0"/>
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                        <Setter Property="VerticalContentAlignment" Value="Stretch"/>
+                        <Setter Property="AutomationProperties.Name" Value="{Binding Number}"/>
+                    </Style>
+                </ListBox.ItemContainerStyle>
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <Border Background="{Binding Color, Converter={conv:StringToGradientBrushConverter}}" CornerRadius="4"
+                                DragDrop.GhostAnchor="Grab" DragDrop.AllowDrag="True" DragDrop.DragData="{Binding}">
+                            <TextBlock Text="{Binding Number}"
+                                       FontSize="20"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"/>
+                        </Border>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </Grid>
+
+        <!-- Featured -->
+        <Grid Grid.Row="1" RowDefinitions="Auto,*"
+              Visibility="{Binding TileShowcase, Converter={conv:EnumVisibilityConverter}, ConverterParameter=Featured}">
+            <WrapPanel Orientation="Horizontal" MarginBottom="10">
+                <TextBlock x:Name="FeaturedCountLabel" Text="{Localize LayoutStrings.TileCount}" VerticalAlignment="Center"/>
+                <Slider Width="120" Minimum="2" Maximum="20" TickFrequency="1" IsSnapToTickEnabled="true"
+                        Value="{Binding FeaturedCount, Mode=TwoWay}" MarginLeft="8"
+                        AutomationProperties.AutomationId="FeaturedCount"
+                        AutomationProperties.LabeledBy="{Binding ElementName=FeaturedCountLabel}"/>
+                <TextBlock Text="{Binding FeaturedCount}" Width="28" VerticalAlignment="Center" MarginLeft="8"/>
+
+                <SegmentedControl EnumType="{x:Type Dock}"
+                                  SelectedItem="{Binding FeaturedSide, Mode=TwoWay}"
+                                  MarginLeft="16"
+                                  AutomationProperties.AutomationId="FeaturedSide"
+                                  AutomationProperties.Name="{Localize LayoutStrings.StripSide}">
+                    <SegmentedControl.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Localize LayoutStrings, Key={Binding}}"/>
+                        </DataTemplate>
+                    </SegmentedControl.ItemTemplate>
+                </SegmentedControl>
+
+                <TextBlock x:Name="FeaturedShareLabel" Text="{Localize LayoutStrings.FeaturedShare}" VerticalAlignment="Center" MarginLeft="16"/>
+                <Slider Width="120" Minimum="50" Maximum="90" TickFrequency="5" IsSnapToTickEnabled="true"
+                        Value="{Binding FeaturedShare, Mode=TwoWay}" MarginLeft="8"
+                        AutomationProperties.AutomationId="FeaturedShare"
+                        AutomationProperties.LabeledBy="{Binding ElementName=FeaturedShareLabel}"/>
+                <TextBlock Text="{Binding FeaturedShare, StringFormat='{0}%'}" Width="36" VerticalAlignment="Center" MarginLeft="8"/>
+
+                <TextBlock x:Name="StripLimitLabel" Text="{Localize LayoutStrings.StripLimit}" VerticalAlignment="Center" MarginLeft="16"/>
+                <Slider Width="100" Minimum="0" Maximum="10" TickFrequency="1" IsSnapToTickEnabled="true"
+                        Value="{Binding FeaturedStripLimit, Mode=TwoWay}" MarginLeft="8"
+                        AutomationProperties.AutomationId="FeaturedStripLimit"
+                        AutomationProperties.LabeledBy="{Binding ElementName=StripLimitLabel}"/>
+                <TextBlock Text="{Binding FeaturedStripLimit}" Width="20" VerticalAlignment="Center" MarginLeft="8"/>
+
+                <SegmentedControl EnumType="{x:Type vm:TileAspect}"
+                                  SelectedItem="{Binding FeaturedAspect, Mode=TwoWay}"
+                                  MarginLeft="16"
+                                  AutomationProperties.AutomationId="FeaturedAspect"
+                                  AutomationProperties.Name="{Localize LayoutStrings.TileAspect}">
+                    <SegmentedControl.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Localize LayoutStrings, Key={Binding}}"/>
+                        </DataTemplate>
+                    </SegmentedControl.ItemTemplate>
+                </SegmentedControl>
+            </WrapPanel>
+            <ListBox Grid.Row="1"
+                     ItemsSource="{Binding FeaturedTiles}"
+                     Background="Transparent"
+                     DragDrop.AllowDrop="True" DragDrop.DropCommand="{Binding DropFeaturedTileCommand}"
+                     AutomationProperties.AutomationId="FeaturedTiles">
+                <ListBox.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <TiledPanel Layout="{Binding FeaturedLayout}" Spacing="6"/>
+                    </ItemsPanelTemplate>
+                </ListBox.ItemsPanel>
+                <ListBox.ItemContainerStyle>
+                    <Style Selector="ListBoxItem">
+                        <Setter Property="Margin" Value="0"/>
+                        <Setter Property="Padding" Value="0"/>
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                        <Setter Property="VerticalContentAlignment" Value="Stretch"/>
+                        <Setter Property="AutomationProperties.Name" Value="{Binding Number}"/>
+                        <Setter Property="TiledPanel.Tile" Value="{Binding TileName}"/>
+                    </Style>
+                </ListBox.ItemContainerStyle>
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <Border Background="{Binding Color, Converter={conv:StringToGradientBrushConverter}}" CornerRadius="4"
+                                DragDrop.GhostAnchor="Grab" DragDrop.AllowDrag="{Binding CanMove}" DragDrop.DragData="{Binding}">
+                            <Grid>
+                                <TextBlock Text="{Binding Number}"
+                                           FontSize="20"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"/>
+                                <Button Command="{Binding FeatureCommand}"
+                                        Visibility="{Binding CanMove, Converter={conv:BoolToVisibilityConverter}}"
+                                        HorizontalAlignment="Right"
+                                        VerticalAlignment="Top"
+                                        Margin="4"
+                                        Padding="4"
+                                        ToolTipService.ToolTip="{Localize LayoutStrings.FeatureTile}"
+                                        AutomationProperties.AutomationId="FeatureTile"
+                                        AutomationProperties.Name="{Localize LayoutStrings.FeatureTile}">
+                                    <IconPresenter Icon="{ResourceReference StarIcon}" Width="14" Height="14"/>
+                                </Button>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </Grid>
+    </Grid>
+</View>
