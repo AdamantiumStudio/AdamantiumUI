@@ -41,7 +41,10 @@
                                 </Thumb>
                             </RangeTrack.CenterThumb>
                             <RangeTrack.LowerThumb>
-                                <Thumb Width="20" Height="20" AutomationProperties.Name="{Localize RangeSliderStrings.Lower}">
+                                <!-- Each bound's thumb takes the keyboard: Tab goes from one to the other, the arrows
+                                     move the one that has it. -->
+                                <Thumb Width="20" Height="20" Focusable="True"
+                                       AutomationProperties.Name="{Localize RangeSliderStrings.Lower}">
                                     <Thumb.Template>
                                         <ControlTemplate TargetType="Thumb">
                                             <Border CornerRadius="10"
@@ -51,7 +54,8 @@
                                 </Thumb>
                             </RangeTrack.LowerThumb>
                             <RangeTrack.UpperThumb>
-                                <Thumb Width="20" Height="20" AutomationProperties.Name="{Localize RangeSliderStrings.Upper}">
+                                <Thumb Width="20" Height="20" Focusable="True"
+                                       AutomationProperties.Name="{Localize RangeSliderStrings.Upper}">
                                     <Thumb.Template>
                                         <ControlTemplate TargetType="Thumb">
                                             <Border CornerRadius="10"

@@ -161,6 +161,64 @@ public class SliderTests
         });
     }
 
+    // From an origin inside the scale the fill runs between it and the thumb, to either side of it.
+    [TestCase(Orientation.Horizontal, 80)]
+    [TestCase(Orientation.Horizontal, 20)]
+    [TestCase(Orientation.Vertical, 80)]
+    [TestCase(Orientation.Vertical, 20)]
+    public void TheFill_RunsFromItsOrigin_ToTheThumb(Orientation orientation, double value)
+    {
+        var slider = new Slider { Minimum = 0, Maximum = 100, Value = value, FillOrigin = 50, Orientation = orientation };
+        slider.Template = SliderTemplate(orientation);
+        var horizontal = orientation == Orientation.Horizontal;
+        var root = new Border { Width = horizontal ? 240 : 24, Height = horizontal ? 24 : 240, Child = slider };
+        Settle(root);
+
+        var fill = (Border)slider.GetTemplateChild("PART_SelectionRange");
+        var track = (Track)slider.GetTemplateChild("PART_Track");
+        var thumb = track.Thumb.Bounds;
+        var thumbAt = horizontal ? thumb.X + thumb.Width / 2 : thumb.Y + thumb.Height / 2;
+        var originAt = track.ThumbCenterFromFraction(0.5);
+        var fillStart = horizontal ? fill.Bounds.X : fill.Bounds.Y;
+        var fillLength = horizontal ? fill.RenderSize.Width : fill.RenderSize.Height;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(fillLength, Is.EqualTo(System.Math.Abs(thumbAt - originAt)).Within(1.0));
+            Assert.That(fillStart, Is.EqualTo(System.Math.Min(thumbAt, originAt)).Within(1.0));
+        });
+    }
+
+    // Without an origin the fill's own margin is the template's; one set and taken off gives it back. An origin at the
+    // start of the scale fills as none does.
+    [Test]
+    public void TheFillsMargin_IsTheTemplatesWithoutAnOrigin()
+    {
+        var slider = new Slider { Minimum = 0, Maximum = 100, Value = 60 };
+        slider.Template = SliderTemplate(Orientation.Horizontal);
+        var root = new Border { Width = 240, Height = 24, Child = slider };
+        Settle(root);
+        var fill = (Border)slider.GetTemplateChild("PART_SelectionRange");
+        fill.Margin = new Thickness(6, 0, 6, 0);
+        Settle(root);
+        var plain = (fill.Margin, fill.RenderSize.Width);
+
+        slider.FillOrigin = 0;
+        Settle(root);
+        var fromStart = fill.RenderSize.Width;
+        slider.FillOrigin = 50;
+        Settle(root);
+        slider.FillOrigin = double.NaN;
+        Settle(root);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(plain.Margin, Is.EqualTo(new Thickness(6, 0, 6, 0)));
+            Assert.That(fromStart, Is.EqualTo(plain.Width).Within(1.0));
+            Assert.That(fill.Margin, Is.EqualTo(new Thickness(6, 0, 6, 0)));
+        });
+    }
+
     [Test]
     public void Vertical_InitialFill_SizedToValueFractionAfterLayout()
     {

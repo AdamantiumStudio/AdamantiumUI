@@ -78,6 +78,15 @@
                         TickFrequency="1"
                         IsSnapToTickEnabled="true"
                         IsValueToolTipEnabled="true"/>
+                <TextBlock x:Name="OffsetLabel" Text="{Localize RangesStrings.Offset}" Margin="0,8,0,0"/>
+                <Slider AutomationProperties.AutomationId="OffsetSlider" AutomationProperties.LabeledBy="{Binding ElementName=OffsetLabel}" Width="240"
+                        Value="{Binding Offset, Mode=TwoWay}"
+                        Minimum="-50"
+                        Maximum="50"
+                        FillOrigin="0"
+                        TickFrequency="1"
+                        IsSnapToTickEnabled="true"
+                        IsValueToolTipEnabled="true"/>
                 <Button AutomationProperties.AutomationId="ResetAll" Content="{Localize RangesStrings.ResetAll}" Command="{Binding ResetCommand}" MinWidth="130" Height="34"/>
             </StackPanel>
         </StackPanel>

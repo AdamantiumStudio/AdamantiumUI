@@ -26,6 +26,8 @@ public class Slider : RangeBase
     private Track _track;
     private MeasurableUIComponent _selectionRange;   // PART_SelectionRange - the accent fill (start..thumb)
     private double _dragStartValue;
+    private bool _fillMarginSet;
+    private Thickness _fillMargin;
     private Popup _valueToolTip;                      // value badge shown over the thumb while dragging (opt-in)
     private TextBlock _valueToolTipText;
 
@@ -44,6 +46,9 @@ public class Slider : RangeBase
 
     public static readonly AdamantiumProperty IsMoveToPointEnabledProperty = AdamantiumProperty.Register(
         nameof(IsMoveToPointEnabled), typeof(bool), typeof(Slider), new PropertyMetadata(false));
+
+    public static readonly AdamantiumProperty FillOriginProperty = AdamantiumProperty.Register(nameof(FillOrigin),
+        typeof(double), typeof(Slider), new PropertyMetadata(double.NaN, OnFillOriginChanged));
 
     static Slider()
     {
@@ -92,6 +97,23 @@ public class Slider : RangeBase
         set => SetValue(IsValueToolTipEnabledProperty, value);
     }
 
+    /// <summary>The value the accent fill runs from to the thumb, to either side of it - a default or a zero in the
+    /// middle of the scale; NaN (the default) fills from the start of the scale.</summary>
+    public double FillOrigin
+    {
+        get => GetValue<double>(FillOriginProperty);
+        set => SetValue(FillOriginProperty, value);
+    }
+
+    private static void OnFillOriginChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (a is Slider slider)
+        {
+            slider.UpdateFill();
+            slider.ForceArrangeFill();
+        }
+    }
+
     public override void OnApplyTemplate()
     {
         base.OnApplyTemplate();
@@ -99,6 +121,7 @@ public class Slider : RangeBase
 
         _track = GetTemplateChild("PART_Track") as Track;
         _selectionRange = GetTemplateChild("PART_SelectionRange") as MeasurableUIComponent;
+        _fillMarginSet = false;
         if (_track != null)
         {
             _track.SizeChanged += OnTrackSizeChanged;
@@ -295,12 +318,51 @@ public class Slider : RangeBase
         if (full <= 0) return;
 
         // The fill ends at the thumb center, asked of the Track; before its first arrange the fraction seeds it.
+        var horizontal = Orientation == Orientation.Horizontal;
         var center = _track.ThumbCenterFromFraction(fraction);
         var length = double.IsNaN(center)
             ? fraction * full
-            : Orientation == Orientation.Horizontal ? center : full - center;
+            : horizontal ? center : full - center;
 
-        if (Orientation == Orientation.Horizontal)
+        if (double.IsNaN(FillOrigin))
+        {
+            if (_fillMarginSet)
+            {
+                _selectionRange.ClearValue(MarginProperty);
+                if (!_selectionRange.Margin.Equals(_fillMargin))
+                {
+                    _selectionRange.SetValue(MarginProperty, _fillMargin);
+                }
+
+                _fillMarginSet = false;
+            }
+        }
+        else
+        {
+            var originFraction = range > 0 ? Math.Clamp((FillOrigin - Minimum) / range, 0.0, 1.0) : 0.0;
+            var originCenter = _track.ThumbCenterFromFraction(originFraction);
+            var origin = originFraction <= 0 ? 0
+                : originFraction >= 1 ? full
+                : double.IsNaN(originCenter) ? originFraction * full
+                : horizontal ? originCenter : full - originCenter;
+            var start = Math.Min(origin, length);
+            length = Math.Abs(length - origin);
+            if (!_fillMarginSet)
+            {
+                _fillMargin = _selectionRange.Margin;
+            }
+
+            var margin = horizontal
+                ? new Thickness(_fillMargin.Left + start, _fillMargin.Top, _fillMargin.Right, _fillMargin.Bottom)
+                : new Thickness(_fillMargin.Left, _fillMargin.Top, _fillMargin.Right, _fillMargin.Bottom + start);
+            if (!_fillMarginSet || !_selectionRange.Margin.Equals(margin))
+            {
+                _selectionRange.SetValue(MarginProperty, margin);
+                _fillMarginSet = true;
+            }
+        }
+
+        if (horizontal)
             SetIfChanged(WidthProperty, length, _selectionRange.Width);
         else
             SetIfChanged(HeightProperty, length, _selectionRange.Height);

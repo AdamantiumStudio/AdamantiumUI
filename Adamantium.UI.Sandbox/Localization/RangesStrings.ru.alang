@@ -4,6 +4,7 @@
     <Phrase Key="Range" Text="Диапазон (две границы на одной шкале):"/>
     <Phrase Key="Maximum" Text="Максимум (перемасштабирует всё выше):"/>
     <Phrase Key="ResetAll" Text="Сбросить всё"/>
+    <Phrase Key="Offset" Text="Смещение (заливка от нуля):"/>
 
     <Phrase Key="NumericTitle" Text="Числовое поле со стрелками"/>
     <Phrase Key="Split" Text="Раздельно"/>
