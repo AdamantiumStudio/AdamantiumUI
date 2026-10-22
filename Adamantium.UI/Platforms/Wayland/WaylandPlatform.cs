@@ -314,6 +314,20 @@ public sealed unsafe class WaylandPlatform : IApplicationPlatform, Linux.IPortal
         }
     }
 
+    /// <summary>Runs on the thread that dispatches the compositor's events, after whatever is queued there - from that
+    /// thread too, so requests queued from different threads reach the compositor in the order they were queued.</summary>
+    internal void Queue(Action action)
+    {
+        if (Threading.Dispatcher.CurrentDispatcher is { } dispatcher)
+        {
+            _ = dispatcher.InvokeAsync(action);
+        }
+        else
+        {
+            action();
+        }
+    }
+
     /// <summary>Raises on the loop thread what came in on this one, in the order it came - as the Win32 worker does
     /// with its messages: the visual tree is not to be touched from here.</summary>
     internal static void DispatchInput(Action raise)

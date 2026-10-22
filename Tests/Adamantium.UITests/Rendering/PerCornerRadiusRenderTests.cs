@@ -25,7 +25,7 @@ public class PerCornerRadiusRenderTests
     private const int Dim = 64;
     private const int Inset = 4;    // how far inside a corner the probe sits - past any AA, well inside a 24px arc
     private const double Radius = 24;
-    private const int EdgeRounding = 2;   // a mirrored edge pixel's coverage may round a step or two apart on some GPUs
+    private const int EdgeRounding = 2;
 
     private static byte[] Render(CornerRadius corners, Pen pen = null, bool batched = true)
     {

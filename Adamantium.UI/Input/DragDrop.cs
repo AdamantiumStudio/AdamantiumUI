@@ -259,8 +259,6 @@ public static partial class DragDrop
     private static readonly PointerEventHandler LostCaptureHandler = OnLostCapture;
     private static readonly PointerEventHandler ArmedMoveHandler = OnArmedMove;
 
-    // The window hears a move too, for a quick stroke that leaves a thin source before it crosses the threshold. The
-    // source still hears it first once it is carried, so a scroll area around it sees it taken.
     private static void Attach(IInputComponent source)
     {
         source.AddHandler(PointerEvents.PointerMovedEvent, MoveHandler, handledEventsToo: true);
@@ -272,10 +270,23 @@ public static partial class DragDrop
 
     private static void OnArmedMove(object sender, PointerEventArgs e)
     {
-        if (!_dragging)
+        if (!_dragging && !CapturedElsewhere(e.Pointer))
         {
             OnMove(sender, e);
         }
+    }
+
+    private static bool CapturedElsewhere(Pointer pointer)
+    {
+        for (var at = pointer.Captured as IUIComponent; at != null; at = at.VisualParent)
+        {
+            if (ReferenceEquals(at, _source))
+            {
+                return false;
+            }
+        }
+
+        return pointer.Captured != null;
     }
 
     // A press starts a drag when it landed on a drag handle - or when the source declares none at all, which is the
@@ -315,7 +326,6 @@ public static partial class DragDrop
         if (_source == null || !ReferenceEquals(e.Pointer, DragPointer)) return;
         if (!_dragging)
         {
-            // Released somewhere the source did not hear: the press is over, and a move with nothing held drags nothing.
             if (DragPointer.Properties.Buttons == MouseButtons.None)
             {
                 Detach(_source);
@@ -983,8 +993,6 @@ public static partial class DragDrop
         // Decided ONCE, here: an external-capable source runs the whole gesture through the OS drag loop (so it can be
         // dropped into other applications), everything else stays on our own loop with its live CLR payload. Never
         // switched mid-drag - the platform loop is modal and has to own the gesture from the start.
-        // The OS's drag loop follows the system mouse; a finger, a pen or a gesture made inside the application - which the
-        // OS never sees - carries the drag on our own loop.
         _externalCapable = (GetAllowExternalDrag((AdamantiumComponent)_source) || Native is { CarriesInAppDrags: true }) &&
                            Native is { IsAvailable: true } && DragPointer.Type == PointerType.Mouse && Mouse.Platform?.Window == null;
         DragPointer.Capture(_source);   // so move/up keep coming once the pointer leaves the source

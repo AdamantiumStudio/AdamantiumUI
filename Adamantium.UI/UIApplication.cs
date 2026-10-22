@@ -570,15 +570,15 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
 
     private void CreateWindowService(IWindow window)
     {
-        // Under the gate: a frame must not find the service before it knows the window is hidden.
+        var windowService = new WindowRenderService(EntityWorld, window);
         lock (_renderGate)
         {
-            var windowService = EntityWorld.CreateService<WindowRenderService>(EntityWorld, window);
             lock (_hiddenWindows)
             {
                 windowService.Hidden = _hiddenWindows.Contains(window);
             }
 
+            EntityWorld.AddService(windowService);
             windowToSystem.Add(window, windowService);
         }
 

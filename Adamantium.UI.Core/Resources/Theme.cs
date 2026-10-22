@@ -177,7 +177,19 @@ public class Theme : AdamantiumComponent, ITheme
         var file = System.IO.Path.GetFullPath(font, AppContext.BaseDirectory);
         if (System.IO.File.Exists(file))
         {
-            return new FontFamily(new Uri(file));
+            try
+            {
+                var read = new FontFamily(new Uri(file));
+                if (read.Fonts.Count > 0)
+                {
+                    return read;
+                }
+            }
+            catch (Exception e)
+            {
+                Console.Error.WriteLine($"{UIFontVariable}: '{file}' cannot be read as a font ({e.Message}); the system's UI font is used.");
+                return null;
+            }
         }
 
         var family = new FontFamily(font);

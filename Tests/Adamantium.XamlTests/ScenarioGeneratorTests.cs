@@ -144,7 +144,8 @@ public class ScenarioGeneratorTests
         {
             Assert.That(project.Source, Does.Contain("[global::NUnit.Framework.Platform(Include = \"Linux,MacOsX\")]")
                 .And.Contain("VirtualDisplay = true"));
-            Assert.That(project.Errors.Select(e => e.Id), Does.Contain("AUS002"), "a system it does not know is an error");
+            Assert.That(project.Errors.Where(e => e.Id == "AUS002").Select(e => System.IO.Path.GetFileName(e.Location.GetMappedLineSpan().Path)),
+                Is.EqualTo(new[] { "Wrong.ascenario" }), "a system it does not know is an error, in the file that names it");
         });
     }
 
@@ -158,11 +159,19 @@ public class ScenarioGeneratorTests
         Assert.That(project.Source, Does.Contain("Environment = { [\"ADAM_UI_FONT\"] = \"Fonts/Ui.ttf\" }"));
     }
 
-    [Test]
-    public void ArgumentsForAVirtualMonitor_AreSplitAsAProcessSplitsThem()
+    [TestCase("--page  \"Two words\" a\\\"b c:\\dir\\ \"\" $HOME *")]
+    [TestCase("\"a\"\"b\" \"say \"\"hi\"\" now\" \"x\\\\\"\"")]
+    [TestCase("a\nb\r\vc \t d")]
+    [TestCase("\\\\\\\"q\\\\\\\\\"r s\" t\\")]
+    [Platform(Exclude = "Win", Reason = "A virtual monitor is Linux's; Windows hands the line over whole.")]
+    public void ArgumentsForAVirtualMonitor_AreSplitAsAProcessSplitsThem(string line)
     {
-        Assert.That(Adamantium.UI.Automation.VirtualDisplay.Split("--page  \"Two words\" a\\\"b c:\\dir\\ \"\" $HOME *"),
-            Is.EqualTo(new[] { "--page", "Two words", "a\"b", "c:\\dir\\", "", "$HOME", "*" }));
+        var parse = typeof(System.Diagnostics.Process).GetMethod("ParseArgumentsIntoList",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        var expected = new List<string>();
+        parse.Invoke(null, [line, expected]);
+
+        Assert.That(Adamantium.UI.Automation.VirtualDisplay.Split(line), Is.EqualTo(expected));
     }
 
     [Test]

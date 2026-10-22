@@ -50,8 +50,9 @@ internal static class VirtualDisplay
         return start;
     }
 
-    /// <summary>The arguments of a command line, split as <see cref="ProcessStartInfo.Arguments"/> splits them: blanks
-    /// part them, double quotes hold blanks in, and a backslash escapes a quote.</summary>
+    /// <summary>The arguments of a command line, split as <see cref="ProcessStartInfo.Arguments"/> splits them: spaces
+    /// and tabs part them, double quotes hold them in, a backslash escapes a quote, and two quotes inside quotes are
+    /// one.</summary>
     internal static List<string> Split(string line)
     {
         List<string> arguments = [];
@@ -70,21 +71,14 @@ internal static class VirtualDisplay
                     i++;
                 }
 
-                if (i < line.Length && line[i] == '"')
+                if (i < line.Length && line[i] == '"' && slashes % 2 == 1)
                 {
                     current.Append('\\', slashes / 2);
-                    if (slashes % 2 == 1)
-                    {
-                        current.Append('"');
-                    }
-                    else
-                    {
-                        quoted = !quoted;
-                    }
+                    current.Append('"');
                 }
                 else
                 {
-                    current.Append('\\', slashes);
+                    current.Append('\\', i < line.Length && line[i] == '"' ? slashes / 2 : slashes);
                     i--;
                 }
 
@@ -92,10 +86,19 @@ internal static class VirtualDisplay
             }
             else if (c == '"')
             {
-                quoted = !quoted;
+                if (quoted && i + 1 < line.Length && line[i + 1] == '"')
+                {
+                    current.Append('"');
+                    i++;
+                }
+                else
+                {
+                    quoted = !quoted;
+                }
+
                 any = true;
             }
-            else if (char.IsWhiteSpace(c) && !quoted)
+            else if ((c == ' ' || c == '\t') && !quoted)
             {
                 if (any)
                 {

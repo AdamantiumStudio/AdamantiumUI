@@ -11,6 +11,9 @@ public interface IWindowRenderer : IDisposable
     public bool IsRendererUpToDate { get; }
     public bool FirstFrameProcessed { get; }
 
+    /// <summary>How many frames were handed to the presenter so far: one more each time the window got a new picture.</summary>
+    public long PresentedFrames { get; }
+
     /// <summary>Render resolution multiplier over the window's logical size: presenter + viewport are sized
     /// ClientSize x RenderScale, while the projection stays the logical size. 1 = on-screen 1:1; the designer sets it
     /// to the zoom factor so geometry/text re-rasterize crisply at design x scale.</summary>

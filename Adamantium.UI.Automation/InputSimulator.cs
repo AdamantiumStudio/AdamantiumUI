@@ -271,8 +271,6 @@ internal static class InputSimulator
 
     // The first few pixels of a hand's stroke, still over what it pressed: a drag starts once the pointer has gone past
     // the threshold over its source, and a first step an eighth of a long way across would leave the source before that.
-    // Eight units, and past the platform's own threshold on one axis, as it is measured - physical pixels, so as many
-    // units is past it at any scale.
     private static Vector2 LeadIn(Vector2 start, Vector2 end)
     {
         const double least = 8;
