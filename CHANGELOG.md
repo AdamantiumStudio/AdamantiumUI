@@ -1937,6 +1937,10 @@ All packages share one version.
 
 ### Fixed
 
+- Markup hot reload listed a file as changed - and applied it again on save - when the watcher read it half written:
+  a save reports itself as soon as it empties the file. A gathered file whose text is again what was applied is
+  dropped before it is listed or applied (`MarkupHotReload.ChangedFiles`). Seen on Linux, where inotify reports the
+  emptying at once.
 - A theme swap scrolled a tab strip back to its start, the selected tab out of view: the new template's strip starts
   unpanned, and the selected tab is now brought into view again.
 - A panel put away against a side stayed as wide as its tabs had been lying flat: tabs added while it was docked turned

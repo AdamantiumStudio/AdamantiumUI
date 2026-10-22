@@ -284,6 +284,20 @@ public class MarkupHotReloadTests
         Assert.That(MarkupHotReload.ChangedFiles, Is.Empty);
     }
 
+    // A save reports itself as soon as it empties the file, and the watcher can read it then, before the text is back.
+    [Test]
+    public void ASaveSeenHalfWritten_IsNotLeftChangedOnceItIsWhatWasApplied()
+    {
+        Built(Panel("Before"));
+        MarkupHotReload.Mode = MarkupReloadMode.Manual;
+
+        File.WriteAllText(_file, string.Empty);
+        MarkupHotReload.NotifyChanged(_file);
+        File.WriteAllText(_file, Panel("Before"));
+
+        Assert.That(MarkupHotReload.ChangedFiles, Is.Empty);
+    }
+
     // The watcher's reports of a save arrive while it is being applied. One that read the hash last taken before the
     // apply took the save, and gathered it after, put an applied save back on the list.
     [Test]
