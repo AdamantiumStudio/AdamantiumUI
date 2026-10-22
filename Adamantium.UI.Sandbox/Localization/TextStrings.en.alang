@@ -124,6 +124,14 @@
     <Phrase Key="RunShiftAfter" Text="in its middle."/>
     <Phrase Key="DecorationFlagsTitle" Text="Lines by name: under, through and over the text, and the wavy line of a spelling error:"/>
     <Phrase Key="DecorationLinesTitle" Text="Decoration lines, each with its own brush, thickness, dashes and offset:"/>
+    <Phrase Key="GlyphLooksTitle" Text="Outline, shadow, glow and reflection, as Word draws them, under the text:"/>
+    <Phrase Key="Outline" Text="Outline"/>
+    <Phrase Key="Shadow" Text="Shadow"/>
+    <Phrase Key="Glow" Text="Glow"/>
+    <Phrase Key="Reflection" Text="Reflection"/>
+    <Phrase Key="RunLooksPlain" Text="A run of its own may "/>
+    <Phrase Key="RunLooksGlowing" Text="glow"/>
+    <Phrase Key="RunLooksOutlined" Text=" or stand out."/>
     <Phrase Key="TextEffectsTitle" Text="Text effects: characters turned, raised, scaled and recolored where they stand, about each one's center or the element's corner; the line, the caret and selection stay as they were laid out:"/>
     <Phrase Key="TextEffectsWaveTitle" Text="Animated: each letter an effect of its own, its transform or brush animated by name, one after another:"/>
     <Phrase Key="EffectWave" Text="Wave"/>

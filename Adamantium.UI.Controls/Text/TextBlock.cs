@@ -15,7 +15,7 @@ using Adamantium.UI.Core.RoutedEvents;
 namespace Adamantium.UI.Controls.Text;
 
 public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource, ITextStyleUser,
-    Adamantium.UI.Core.Resources.IResolvesOwnResources
+    Adamantium.UI.Core.Resources.IResolvesOwnResources, IInkOverhang
 {
     public static readonly AdamantiumProperty TextProperty = AdamantiumProperty.Register(nameof(Text),
         typeof(string), typeof(TextBlock),
@@ -163,6 +163,22 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
     public static readonly AdamantiumProperty StrokeProperty = AdamantiumProperty.Register(nameof(Stroke),
     typeof(Brush), typeof(TextBlock),
     new PropertyMetadata(Brushes.Transparent, PropertyMetadataOptions.BindsTwoWayByDefault | PropertyMetadataOptions.AffectsRender));
+
+    public static readonly AdamantiumProperty TextOutlineProperty = AdamantiumProperty.Register(nameof(TextOutline),
+        typeof(TextOutline), typeof(TextBlock),
+        new PropertyMetadata(null, PropertyMetadataOptions.AffectsRender, OnGlyphLookChanged));
+
+    public static readonly AdamantiumProperty TextShadowProperty = AdamantiumProperty.Register(nameof(TextShadow),
+        typeof(TextShadow), typeof(TextBlock),
+        new PropertyMetadata(null, PropertyMetadataOptions.AffectsRender, OnGlyphLookChanged));
+
+    public static readonly AdamantiumProperty TextGlowProperty = AdamantiumProperty.Register(nameof(TextGlow),
+        typeof(TextGlow), typeof(TextBlock),
+        new PropertyMetadata(null, PropertyMetadataOptions.AffectsRender, OnGlyphLookChanged));
+
+    public static readonly AdamantiumProperty TextReflectionProperty = AdamantiumProperty.Register(nameof(TextReflection),
+        typeof(TextReflection), typeof(TextBlock),
+        new PropertyMetadata(null, PropertyMetadataOptions.AffectsRender, OnGlyphLookChanged));
 
     private static void TextParametersChangedCallback(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
     {
@@ -967,6 +983,126 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         set => SetValue(StrokeProperty, value);
     }
 
+    /// <summary>A line round each letter, where an inline sets none of its own.</summary>
+    public TextOutline TextOutline
+    {
+        get => GetValue<TextOutline>(TextOutlineProperty);
+        set => SetValue(TextOutlineProperty, value);
+    }
+
+    /// <summary>A shadow of the letters, where an inline sets none of its own.</summary>
+    public TextShadow TextShadow
+    {
+        get => GetValue<TextShadow>(TextShadowProperty);
+        set => SetValue(TextShadowProperty, value);
+    }
+
+    /// <summary>A glow round the letters, where an inline sets none of its own.</summary>
+    public TextGlow TextGlow
+    {
+        get => GetValue<TextGlow>(TextGlowProperty);
+        set => SetValue(TextGlowProperty, value);
+    }
+
+    /// <summary>A reflection of the letters below their lines, where an inline sets none of its own.</summary>
+    public TextReflection TextReflection
+    {
+        get => GetValue<TextReflection>(TextReflectionProperty);
+        set => SetValue(TextReflectionProperty, value);
+    }
+
+    private static void OnGlyphLookChanged(AdamantiumComponent d, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (d is not TextBlock block)
+        {
+            return;
+        }
+
+        EventHandler redraw = block.OnGlyphLookValueChanged;
+        switch (e.NewValue)
+        {
+            case TextOutline outline:
+                outline.Changed += redraw;
+                block.Follow(e.Property, () => outline.Changed -= redraw);
+                break;
+            case TextShadow shadow:
+                shadow.Changed += redraw;
+                block.Follow(e.Property, () => shadow.Changed -= redraw);
+                break;
+            case TextGlow glow:
+                glow.Changed += redraw;
+                block.Follow(e.Property, () => glow.Changed -= redraw);
+                break;
+            case TextReflection reflection:
+                reflection.Changed += redraw;
+                block.Follow(e.Property, () => reflection.Changed -= redraw);
+                break;
+            default:
+                block.Follow(e.Property, null);
+                break;
+        }
+    }
+
+    private void OnGlyphLookValueChanged(object sender, EventArgs e) => InvalidateRender(false);
+
+    private Thickness _inkOverhang;
+    private double _reflectionDistance = -1;
+
+    /// <summary>How far the letters' outlines, shadows, glows and reflections reach past the block, as last drawn.</summary>
+    public Thickness InkOverhang => _inkOverhang;
+
+    internal void ApplyGlyphLooks()
+    {
+        _textLayout.GlyphOutline = TextOutline?.ToGlyphOutline();
+        _textLayout.GlyphShadow = TextShadow?.ToGlyphShadow();
+        _textLayout.GlyphGlow = TextGlow?.ToGlyphGlow();
+        _textLayout.GlyphReflection = TextReflection?.ToGlyphReflection();
+        Span<double> reach = stackalloc double[4];
+        _reflectionDistance = -1;
+        Reach(reach, _textLayout.GlyphOutline, _textLayout.GlyphShadow, _textLayout.GlyphGlow, _textLayout.GlyphReflection);
+        if (_textLayout.AttributedText is { } attributed)
+        {
+            foreach (var run in attributed.Runs)
+            {
+                Reach(reach, run.Attributes.Outline, run.Attributes.Shadow, run.Attributes.Glow, run.Attributes.Reflection);
+            }
+        }
+
+        _inkOverhang = new Thickness(reach[0], reach[1], reach[2], reach[3]);
+    }
+
+    internal Thickness OverhangOf(Size frame) =>
+        _reflectionDistance < 0
+            ? _inkOverhang
+            : new Thickness(_inkOverhang.Left, _inkOverhang.Top, _inkOverhang.Right,
+                Math.Max(_inkOverhang.Bottom, frame.Height + _reflectionDistance));
+
+    private void Reach(Span<double> reach, GlyphOutline outline, GlyphShadow shadow, GlyphGlow glow, GlyphReflection reflection)
+    {
+        var around = Math.Max(Finite(outline?.Width), Finite(glow?.Radius));
+        for (var side = 0; side < 4; side++)
+        {
+            reach[side] = Math.Max(reach[side], around);
+        }
+
+        if (shadow != null)
+        {
+            var blur = Finite(shadow.Blur);
+            reach[0] = Math.Max(reach[0], blur - Math.Min(0, Finite(shadow.OffsetX)));
+            reach[1] = Math.Max(reach[1], blur - Math.Min(0, Finite(shadow.OffsetY)));
+            reach[2] = Math.Max(reach[2], blur + Math.Max(0, Finite(shadow.OffsetX)));
+            reach[3] = Math.Max(reach[3], blur + Math.Max(0, Finite(shadow.OffsetY)));
+        }
+
+        if (reflection != null)
+        {
+            _reflectionDistance = Math.Max(_reflectionDistance, Finite(reflection.Distance));
+            reach[3] = Math.Max(reach[3], RenderSize.Height + Finite(reflection.Distance));
+        }
+    }
+
+    private static double Finite(double? value) => value is { } number && double.IsFinite(number) ? Math.Abs(number) : 0;
+
     // --- Bindable inline runs -----------------------------------------------------------------------------------------
     // When Inlines has content it REPLACES Text: the runs lay out as one attributed text, so they shape, wrap and align
     // together. Each inline is a logical child (so it inherits this block's DataContext and its {Binding}s resolve), and
@@ -1573,6 +1709,10 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         double? shift = null;
         BaselineAlignment? alignment = null;
         List<TextDecorationLine> lines = null;
+        TextOutline outline = null;
+        TextShadow shadow = null;
+        TextGlow glow = null;
+        TextReflection reflection = null;
         var foregroundAt = -1;
         var weightAt = -1;
         var fontStyleAt = -1;
@@ -1647,6 +1787,10 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
             kerning = inline.Kerning ?? kerning;
             shift = inline.BaselineShift ?? shift;
             alignment = inline.BaselineAlignment ?? alignment;
+            outline = inline.TextOutline ?? outline;
+            shadow = inline.TextShadow ?? shadow;
+            glow = inline.TextGlow ?? glow;
+            reflection = inline.TextReflection ?? reflection;
         }
 
         decorations |= looks;
@@ -1711,6 +1855,10 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
             Background = (background as SolidColorBrush)?.Color,
             Decorations = decorations == TextDecorations.None && !styleLines ? null : decorations,
             DecorationLines = lines,
+            Outline = outline?.ToGlyphOutline(),
+            Shadow = shadow?.ToGlyphShadow(),
+            Glow = glow?.ToGlyphGlow(),
+            Reflection = reflection?.ToGlyphReflection(),
         };
     }
 
@@ -2030,6 +2178,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         DrawSelection(session, window, shift);
         var parameters = GetTextRenderingParameters(shift, DesiredSize);
         var effects = DrawnEffects(shift);
+        ApplyGlyphLooks();
         if (window is { } own)
         {
             session.DrawText(parameters, DesiredSize, _textLayout, Foreground, Background, Stroke, effects, own);
@@ -2051,6 +2200,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
     internal void RenderFrame(IDrawingSession session, RectangleF frame, Size size)
     {
         EnsureLayout();
+        ApplyGlyphLooks();
         var margin = (float)FontSize;
         var window = new RectangleF(frame.X - margin, frame.Y - margin, frame.Width + 2 * margin, frame.Height + 2 * margin);
         var shift = new Vector2F(-frame.X, -frame.Y);

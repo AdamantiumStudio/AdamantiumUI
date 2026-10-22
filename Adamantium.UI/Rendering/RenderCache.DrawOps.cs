@@ -419,7 +419,9 @@ public partial class RenderCache
         // bake into the GPU draw, not a fresh WorldTransform read: layout runs on another thread, so a re-read could differ
         // (cull says "inside" while the GPU paints it outside -> the off-viewport spill).
         var scissorSize = ApplySnap(component).RenderSize;
-        var bounds = new Rect(0, 0, scissorSize.Width, scissorSize.Height).TransformToAABB(worldTransform);
+        var ink = component is IInkOverhang overhang ? overhang.InkOverhang : default;
+        var bounds = new Rect(-ink.Left, -ink.Top, scissorSize.Width + ink.Left + ink.Right,
+            scissorSize.Height + ink.Top + ink.Bottom).TransformToAABB(worldTransform);
         cull = bounds.Right <= logical.X || bounds.X >= logical.Right || bounds.Bottom <= logical.Y || bounds.Y >= logical.Bottom;
 
         clipped = true;

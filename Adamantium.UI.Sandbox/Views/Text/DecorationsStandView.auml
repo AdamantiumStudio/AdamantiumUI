@@ -74,6 +74,66 @@
             </TextBlock.Inlines>
         </TextBlock>
 
+        <!-- Word's text effects: an outline, a shadow, a glow and a reflection drawn from each letter's own distance field,
+             under the text - on a whole block, and on a run of its own. -->
+        <TextBlock Text="{Localize TextStrings.GlyphLooksTitle}"
+                   Margin="0,20,0,6"/>
+        <WrapPanel Orientation="Horizontal">
+            <TextBlock AutomationProperties.AutomationId="OutlineSample"
+                       Text="{Localize TextStrings.Outline}"
+                       FontSize="44"
+                       Margin="0,0,24,8">
+                <TextBlock.TextOutline>
+                    <TextOutline Color="#F87171" Width="2"/>
+                </TextBlock.TextOutline>
+            </TextBlock>
+            <TextBlock AutomationProperties.AutomationId="ShadowSample"
+                       Text="{Localize TextStrings.Shadow}"
+                       FontSize="44"
+                       Margin="0,0,24,8">
+                <TextBlock.TextShadow>
+                    <TextShadow Color="#99000000" OffsetX="3" OffsetY="3" Blur="3"/>
+                </TextBlock.TextShadow>
+            </TextBlock>
+            <TextBlock AutomationProperties.AutomationId="GlowSample"
+                       Text="{Localize TextStrings.Glow}"
+                       FontSize="44"
+                       Margin="0,0,24,8">
+                <TextBlock.TextGlow>
+                    <TextGlow Color="#C0FBBF24" Radius="5"/>
+                </TextBlock.TextGlow>
+            </TextBlock>
+            <TextBlock AutomationProperties.AutomationId="ReflectionSample"
+                       Text="{Localize TextStrings.Reflection}"
+                       FontSize="44"
+                       Margin="0,0,24,40">
+                <TextBlock.TextReflection>
+                    <TextReflection Opacity="0.45" Distance="1" Size="0.6"/>
+                </TextBlock.TextReflection>
+            </TextBlock>
+        </WrapPanel>
+        <TextBlock AutomationProperties.AutomationId="RunLooksSample"
+                   FontSize="32"
+                   HorizontalAlignment="Left">
+            <TextBlock.Inlines>
+                <Run Text="{Localize TextStrings.RunLooksPlain}"/>
+                <Run Text="{Localize TextStrings.RunLooksGlowing}"
+                     Foreground="#FEF3C7">
+                    <Run.TextGlow>
+                        <TextGlow Color="#C0F59E0B" Radius="4"/>
+                    </Run.TextGlow>
+                </Run>
+                <Run Text="{Localize TextStrings.RunLooksOutlined}">
+                    <Run.TextOutline>
+                        <TextOutline Color="#60A5FA" Width="1.5"/>
+                    </Run.TextOutline>
+                    <Run.TextShadow>
+                        <TextShadow Color="#80000000" OffsetX="2" OffsetY="2" Blur="2"/>
+                    </Run.TextShadow>
+                </Run>
+            </TextBlock.Inlines>
+        </TextBlock>
+
         <!-- Text effects, as WPF's: a range drawn moved and recolored, the layout as it is. -->
         <TextBlock Text="{Localize TextStrings.TextEffectsTitle}"
                    Margin="0,20,0,6"/>

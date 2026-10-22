@@ -76,11 +76,24 @@ public abstract class Inline : FundamentalUIComponent, ITextStyleUser, Adamantiu
         nameof(BaselineAlignment), typeof(BaselineAlignment?), typeof(Inline),
         new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure));
 
+    public static readonly AdamantiumProperty TextOutlineProperty = AdamantiumProperty.Register(nameof(TextOutline),
+        typeof(TextOutline), typeof(Inline), new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure));
+
+    public static readonly AdamantiumProperty TextShadowProperty = AdamantiumProperty.Register(nameof(TextShadow),
+        typeof(TextShadow), typeof(Inline), new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure));
+
+    public static readonly AdamantiumProperty TextGlowProperty = AdamantiumProperty.Register(nameof(TextGlow),
+        typeof(TextGlow), typeof(Inline), new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure));
+
+    public static readonly AdamantiumProperty TextReflectionProperty = AdamantiumProperty.Register(nameof(TextReflection),
+        typeof(TextReflection), typeof(Inline), new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure));
+
     private static readonly AdamantiumProperty[] Overrides =
     [
         ForegroundProperty, FontFamilyProperty, FontSizeProperty, BackgroundProperty, TextDecorationsProperty,
         FontWeightProperty, FontStyleProperty, FontStretchProperty, FontSynthesisProperty, FontFeaturesProperty, FontVariationsProperty,
         LanguageProperty, ColorPaletteProperty, TrackingProperty, KerningProperty, BaselineShiftProperty,
+        TextOutlineProperty, TextShadowProperty, TextGlowProperty, TextReflectionProperty,
     ];
 
     private TextDecorationCollection _decorationLines;
@@ -195,6 +208,34 @@ public abstract class Inline : FundamentalUIComponent, ITextStyleUser, Adamantiu
     {
         get => GetValue<int?>(ColorPaletteProperty);
         set => SetValue(ColorPaletteProperty, value);
+    }
+
+    /// <summary>A line round each letter of this inline; null takes the enclosing span's, then the TextBlock's.</summary>
+    public TextOutline TextOutline
+    {
+        get => GetValue<TextOutline>(TextOutlineProperty);
+        set => SetValue(TextOutlineProperty, value);
+    }
+
+    /// <summary>A shadow of this inline's letters; null takes the enclosing span's, then the TextBlock's.</summary>
+    public TextShadow TextShadow
+    {
+        get => GetValue<TextShadow>(TextShadowProperty);
+        set => SetValue(TextShadowProperty, value);
+    }
+
+    /// <summary>A glow round this inline's letters; null takes the enclosing span's, then the TextBlock's.</summary>
+    public TextGlow TextGlow
+    {
+        get => GetValue<TextGlow>(TextGlowProperty);
+        set => SetValue(TextGlowProperty, value);
+    }
+
+    /// <summary>A reflection of this inline's letters; null takes the enclosing span's, then the TextBlock's.</summary>
+    public TextReflection TextReflection
+    {
+        get => GetValue<TextReflection>(TextReflectionProperty);
+        set => SetValue(TextReflectionProperty, value);
     }
 
     /// <summary>Space added after each character of this inline, in thousandths of an em; null takes the enclosing
@@ -479,9 +520,44 @@ public abstract class Inline : FundamentalUIComponent, ITextStyleUser, Adamantiu
             Rebake();
         }
 
+        if (e.Property == TextOutlineProperty || e.Property == TextShadowProperty || e.Property == TextGlowProperty ||
+            e.Property == TextReflectionProperty)
+        {
+            Watch(e.Property, e.NewValue);
+        }
+
         if (e.Property.GetDefaultMetadata(GetType())?.AffectsMeasure == true)
         {
             RaiseChanged();
         }
     }
+
+    private void Watch(AdamantiumProperty property, object look)
+    {
+        EventHandler changed = OnGlyphLookChanged;
+        switch (look)
+        {
+            case TextOutline outline:
+                outline.Changed += changed;
+                Follow(property, () => outline.Changed -= changed);
+                break;
+            case TextShadow shadow:
+                shadow.Changed += changed;
+                Follow(property, () => shadow.Changed -= changed);
+                break;
+            case TextGlow glow:
+                glow.Changed += changed;
+                Follow(property, () => glow.Changed -= changed);
+                break;
+            case TextReflection reflection:
+                reflection.Changed += changed;
+                Follow(property, () => reflection.Changed -= changed);
+                break;
+            default:
+                Follow(property, null);
+                break;
+        }
+    }
+
+    private void OnGlyphLookChanged(object sender, EventArgs e) => RaiseChanged();
 }

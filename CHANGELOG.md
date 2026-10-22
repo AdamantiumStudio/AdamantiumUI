@@ -7,6 +7,11 @@ All packages share one version.
 
 ### Added
 
+- Text outline, shadow, glow and reflection, as Word draws them: `TextOutline`, `TextShadow`, `TextGlow` and
+  `TextReflection` (`Adamantium.UI.Core.Media`, made in markup), set on a `TextBlock` or on a run or span of it - the
+  nearest inline's over its span's, over the block's; a value changed inside one set already draws the text again. The
+  glyph batch carries a shadow's or a glow's soft edge and a reflection's fade. The sandbox's Decorations & Effects page
+  shows each.
 - `IWindow.SizeToContent` (`Manual`, `Width`, `Height`, `WidthAndHeight`): a window that follows what its content asks
   for on those sides, fitted again when the content's size changes, so a size the user gives it stays until then (the
   fitted size coming back from the OS, rounded to its pixels, is not such a size). By default a window keeps the size
@@ -1996,6 +2001,13 @@ All packages share one version.
 
 ### Fixed
 
+- A popup placed beside its target (`Placement` `Right` or `Left`) with `FlipToFit` opens on the other side when its
+  own side has no room for it, as it already did above and below: a submenu at the window's right edge opens to the
+  left of its row instead of being pushed back over the menu, and a submenu of it goes on leftward. A flipped popup's
+  offset is mirrored, so it keeps its gap from the target instead of overlapping it, and the room a popup needs on its
+  side counts its offset.
+- A submenu that holds something other than rows - a `ColorPalette` - closed under the pointer a moment after it moved
+  in from its row, as only rows held a submenu open: the pointer anywhere on a submenu's card holds it now.
 - A quick stroke that left a thin drag source before it went past the drag threshold started no drag: only the source
   heard the moves until then. Its window hears them too now.
 - A press on a drag source released over something else left the source waiting for its drag: the pointer back over

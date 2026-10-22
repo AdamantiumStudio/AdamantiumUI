@@ -1,5 +1,6 @@
 using System.Collections.Specialized;
 using Adamantium.Core.Commands;
+using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Dispatcher;
 using Adamantium.UI.Core.Input;
@@ -250,13 +251,25 @@ public class MenuItem : ItemsControl, IHeaderedItemsControl
     {
         if (_submenuPopup != null) _submenuPopup.ContentBuilt -= OnSubmenuContentBuilt;
         _submenuPopup = null;
+        HoldOpenOver(null);
     }
 
     private Popup _submenuPopup;
+    private InputUIComponent _card;
+
+    private void HoldOpenOver(InputUIComponent card)
+    {
+        if (_card != null) _card.PointerEntered -= OnCardPointerEntered;
+        _card = card;
+        if (_card != null) _card.PointerEntered += OnCardPointerEntered;
+    }
+
+    private void OnCardPointerEntered(object sender, PointerEventArgs e) => CancelCloseTimer();
 
     private void OnSubmenuContentBuilt(object sender, EventArgs e)
     {
         var popup = (Popup)sender;
+        HoldOpenOver(popup.ChildValue as InputUIComponent);
         _scroll = popup.FindContentChild("PART_MenuScroll") as ScrollViewer;
         // Scrolling this item's submenu list closes any open grandchild submenu so it doesn't ride along with its row.
         if (_scroll != null)
@@ -334,6 +347,7 @@ public class MenuItem : ItemsControl, IHeaderedItemsControl
     private void OnCloseTick(object sender, EventArgs e)
     {
         _closeTimer.Stop();
+        if (_card is { IsPointerOver: true }) return;
         IsSubmenuOpen = false;
     }
 

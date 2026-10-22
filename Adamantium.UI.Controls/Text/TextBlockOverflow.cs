@@ -15,7 +15,7 @@ namespace Adamantium.UI.Controls.Text;
 /// then through the room each of these gives, so a paragraph, its hyphenation and its baseline grid run on across them;
 /// it is drawn, selected and clicked here as in the block, in the block's formatting. One block's text at a time: a
 /// second block reaching it ends its chain before it. Collapsed, or out of the tree, it ends the chain.</summary>
-public class TextBlockOverflow : InputUIComponent
+public class TextBlockOverflow : InputUIComponent, IInkOverhang
 {
     public static readonly AdamantiumProperty OverflowContentTargetProperty = AdamantiumProperty.Register(
         nameof(OverflowContentTarget), typeof(TextBlockOverflow), typeof(TextBlockOverflow),
@@ -156,6 +156,9 @@ public class TextBlockOverflow : InputUIComponent
         ContentSource?.OverflowArranged();
         return finalSize;
     }
+
+    /// <summary>How far the letters' effects reach past this frame: as far as past the block whose text it shows.</summary>
+    public Thickness InkOverhang => ContentSource?.OverhangOf(RenderSize) ?? default;
 
     protected override void OnRender(IDrawingContext context)
     {
