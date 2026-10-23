@@ -339,13 +339,13 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
     private void OnRelativeMotion(uint utimeHi, uint utimeLo, double dx, double dy, double dxUnaccel, double dyUnaccel)
     {
         var worker = lockedWindow;
-        if (lockedPointer == null || worker?.Window == null)
+        if (lockedPointer == null || worker?.InputWindow is not { } window)
         {
             return;
         }
 
         var time = (uint)((((ulong)utimeHi << 32) | utimeLo) / 1000);
-        var args = new RawMouseDeltaEventArgs(new Vector2(dx, dy) * worker.Scale, worker.Window, InputModifiers(), time);
+        var args = new RawMouseDeltaEventArgs(new Vector2(dx, dy) * worker.Scale, window, InputModifiers(), time);
         WaylandPlatform.DispatchInput(() => PointerDevice.Current.ProcessDelta(args));
     }
 
@@ -499,8 +499,13 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
     {
         var worker = pointerWindow;
         Publish(worker);
-        if (worker?.Window == null)
+        if (worker?.InputWindow is not { } window)
         {
+            if (worker?.Window != null)
+            {
+                Apply(Cursor.Default);
+            }
+
             return;
         }
 
@@ -514,7 +519,7 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
             Apply(Mouse.OverrideCursor ?? Mouse.Cursor);
         }
 
-        var args = new RawPointerEventArgs(RawPointerEventType.Move, worker.Window, pointerPosition, InputModifiers(), time);
+        var args = new RawPointerEventArgs(RawPointerEventType.Move, window, pointerPosition, InputModifiers(), time);
         WaylandPlatform.DispatchInput(() => PointerDevice.Current.ProcessEvent(args));
     }
 
@@ -525,7 +530,7 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
         var changed = ButtonOf(button);
         var pressed = state == WlPointer.ButtonState.Pressed;
 
-        if (pressed && changed == MouseButtons.Left && worker != null &&
+        if (pressed && changed == MouseButtons.Left && worker?.InputWindow != null &&
             worker.BeginResize(worker.ResizeEdgeAt(pointerPosition), serial))
         {
             return;
@@ -542,12 +547,12 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
             PointerReleased?.Invoke();
         }
 
-        if (worker?.Window == null || changed == MouseButtons.None)
+        if ((pressed ? worker?.InputWindow : worker?.Window) is not { } window || changed == MouseButtons.None)
         {
             return;
         }
 
-        var args = new RawPointerEventArgs(pressed ? RawPointerEventType.Down : RawPointerEventType.Up, worker.Window,
+        var args = new RawPointerEventArgs(pressed ? RawPointerEventType.Down : RawPointerEventType.Up, window,
             pointerPosition, InputModifiers(), time) { ChangedButton = changed };
         WaylandPlatform.DispatchInput(() => PointerDevice.Current.ProcessEvent(args));
     }
@@ -584,7 +589,7 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
         wheel120Vertical = wheel120Horizontal = 0;
         wheelPixelsVertical = wheelPixelsHorizontal = 0;
 
-        var window = pointerWindow?.Window;
+        var window = pointerWindow?.InputWindow;
         if (window == null)
         {
             return;
@@ -603,7 +608,7 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
 
     private void OnPinchUpdate(uint time, double dx, double dy, double scale, double rotation)
     {
-        var window = pointerWindow?.Window;
+        var window = pointerWindow?.InputWindow;
         if (window == null || scale <= 0)
         {
             return;
@@ -706,6 +711,10 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
     private void OnKeyboardEnter(uint serial, WlSurface surface, ReadOnlySpan<byte> keys)
     {
         keyboardWindow = platform.Find(surface);
+        if (keyboardWindow is { InputWindow: null, Window: not null })
+        {
+            keyboardWindow.ActivateBlocker();
+        }
     }
 
     private void OnKeyboardLeave(uint serial, WlSurface surface)
@@ -786,7 +795,7 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
 
     private void Press(uint code, Key key, uint time, bool repeated)
     {
-        var window = keyboardWindow?.Window;
+        var window = keyboardWindow?.InputWindow;
         if (window == null)
         {
             return;

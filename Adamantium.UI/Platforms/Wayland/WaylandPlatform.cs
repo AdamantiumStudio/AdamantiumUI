@@ -99,6 +99,9 @@ public sealed unsafe class WaylandPlatform : IApplicationPlatform, Linux.IPortal
                 case XdgActivationV1.InterfaceName:
                     Activation = registry.Bind<XdgActivationV1>(name, 1);
                     break;
+                case XdgWmDialogV1.InterfaceName:
+                    Dialogs = registry.Bind<XdgWmDialogV1>(name, 1);
+                    break;
                 case WlDataDeviceManager.InterfaceName:
                     dataDevices = registry.Bind<WlDataDeviceManager>(name, Math.Min(version, 3));
                     break;
@@ -187,6 +190,9 @@ public sealed unsafe class WaylandPlatform : IApplicationPlatform, Linux.IPortal
     public XdgToplevelDragManagerV1 ToplevelDrags { get; private set; }
 
     public XdgActivationV1 Activation { get; private set; }
+
+    /// <summary>Marks toplevels as dialogs of their parents, modal or not; null where the compositor offers none.</summary>
+    public XdgWmDialogV1 Dialogs { get; private set; }
 
     public ZwpRelativePointerManagerV1 RelativePointers { get; private set; }
 
@@ -320,6 +326,25 @@ public sealed unsafe class WaylandPlatform : IApplicationPlatform, Linux.IPortal
         lock (_windowsLock)
         {
             return windows.GetValueOrDefault(surface);
+        }
+    }
+
+    /// <summary>Guards which modal windows keep which windows of this connection from input.</summary>
+    internal readonly object ModalLock = new();
+
+    /// <summary>Fills <paramref name="others"/> with the windows of this connection other than <paramref name="worker"/>:
+    /// those a modal window keeps from input.</summary>
+    internal void CollectOthers(WaylandWindowWorker worker, List<WaylandWindowWorker> others)
+    {
+        lock (_windowsLock)
+        {
+            foreach (var other in windows.Values)
+            {
+                if (other != worker)
+                {
+                    others.Add(other);
+                }
+            }
         }
     }
 

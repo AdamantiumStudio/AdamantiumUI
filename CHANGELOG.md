@@ -46,9 +46,16 @@ All packages share one version.
   is disabled while any modal window blocks it and enabled again before the last of them is hidden or goes, whichever
   thread closes it, so activation returns to the owner - unless something else disabled it, as a system file dialog
   does its owner; a modal window is never blocked itself, and a click on a blocked one gets the system's beep and
-  arrow. Wayland and macOS are to follow. `IWindow.Owner`: the window it opens over and is closed with - one refusing
-  to close is freed from it instead - and, on Windows so far (`IWindowWorkerService.SetOwner`), stays above and is
-  minimized with; a window cannot own itself or a window that owns it (`ArgumentException`), a modal or closed window
+  arrow. On Wayland the compositor is told the window is a modal dialog of its owner (`xdg_wm_dialog_v1`), and the
+  application's other windows of the time take no press, key, wheel, touch, pen or drop while any modal window blocks
+  them, nor a close or a resize from the compositor. A window being blocked lets go of the keyboard focus and the
+  pointer capture held in it - a press begun before clicks nothing when released after - and its activation moves no
+  focus into it; the keyboard coming to one brings the modal window back. A window shown modally is not blocked by the
+  modal windows already up, only by those opened over it; an owned window keeps its owner, and a modal one its
+  modality, when hidden and shown again. macOS is to follow.
+  `IWindow.Owner`: the window it opens over and is closed with - one refusing to close is freed from it instead - and,
+  on Windows and Wayland (`IWindowWorkerService.SetOwner`, `xdg_toplevel.set_parent`), stays above and is minimized
+  with; a window cannot own itself or a window that owns it (`ArgumentException`), a modal or closed window
   takes no new owner, and one that `Closing` let close takes no owned windows (`InvalidOperationException`). A dialog
   with no owner takes the active window, else the main one. Ownership goes through the interface alone, so any
   `IWindow` can own and be owned: `IWindow` gains `Owner`, `IsModal`, `ShowDialogAsync`, and `AddOwnedWindow`,
