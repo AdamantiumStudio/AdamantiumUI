@@ -15,6 +15,7 @@ namespace Adamantium.UI.Platforms.Wayland;
 internal sealed class WaylandWindowWorker : IWindowWorkerService
 {
     private const double EdgeMargin = 6;
+    private const int IconScale = 1;
 
     private readonly WaylandPlatform platform;
     private IWindow window;
@@ -191,12 +192,40 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
     private void SendToplevelState()
     {
         toplevel.SetAppId(WaylandPlatform.AppId);
+        SendIcon();
         toplevel.SetTitle(title);
         toplevel.SetMinSize(minWidth, minHeight);
         decoration?.SetMode(chromeCustom ? ZxdgToplevelDecorationV1.Mode.ClientSide : ZxdgToplevelDecorationV1.Mode.ServerSide);
         if (chromeState == WindowState.Maximized)
         {
             toplevel.SetMaximized();
+        }
+    }
+
+    private void SendIcon()
+    {
+        if (platform.ToplevelIcons is not { } icons || platform.Icon is not { } appIcon)
+        {
+            return;
+        }
+
+        var icon = icons.CreateIcon();
+        icon.SetName(WaylandPlatform.AppId);
+        List<WlBuffer> buffers = [];
+        foreach (var picture in appIcon.Pictures)
+        {
+            if (WaylandShm.CreateBuffer(platform, picture.PremultipliedBgra, picture.Size, picture.Size) is { } buffer)
+            {
+                icon.AddBuffer(buffer, IconScale);
+                buffers.Add(buffer);
+            }
+        }
+
+        icons.SetIcon(toplevel, icon);
+        icon.Destroy();
+        foreach (var buffer in buffers)
+        {
+            buffer.Destroy();
         }
     }
 

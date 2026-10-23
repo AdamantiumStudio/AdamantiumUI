@@ -17,6 +17,8 @@ public sealed unsafe class WaylandPlatform : IApplicationPlatform, Linux.IPortal
     private readonly int signalFd;
     private readonly Dictionary<nint, WaylandWindowWorker> windows = new();
     private readonly object _windowsLock = new();
+    private Linux.ApplicationIcon icon;
+    private bool iconRead;
 
     public WaylandPlatform() : this(true)
     {
@@ -101,6 +103,9 @@ public sealed unsafe class WaylandPlatform : IApplicationPlatform, Linux.IPortal
                     break;
                 case XdgWmDialogV1.InterfaceName:
                     Dialogs = registry.Bind<XdgWmDialogV1>(name, 1);
+                    break;
+                case XdgToplevelIconManagerV1.InterfaceName:
+                    ToplevelIcons = registry.Bind<XdgToplevelIconManagerV1>(name, 1);
                     break;
                 case WlDataDeviceManager.InterfaceName:
                     dataDevices = registry.Bind<WlDataDeviceManager>(name, Math.Min(version, 3));
@@ -193,6 +198,25 @@ public sealed unsafe class WaylandPlatform : IApplicationPlatform, Linux.IPortal
 
     /// <summary>Marks toplevels as dialogs of their parents, modal or not; null where the compositor offers none.</summary>
     public XdgWmDialogV1 Dialogs { get; private set; }
+
+    /// <summary>Gives toplevels their icon; null where the compositor offers none (GNOME takes it from the desktop entry).
+    /// </summary>
+    public XdgToplevelIconManagerV1 ToplevelIcons { get; private set; }
+
+    /// <summary>The application's icon, read the first time it is asked for; null where it carries none.</summary>
+    internal Linux.ApplicationIcon Icon
+    {
+        get
+        {
+            if (!iconRead)
+            {
+                icon = Linux.ApplicationIcon.Load();
+                iconRead = true;
+            }
+
+            return icon;
+        }
+    }
 
     public ZwpRelativePointerManagerV1 RelativePointers { get; private set; }
 
