@@ -47,15 +47,13 @@ public class Window : WindowBase
         }
     }
         
-    public override void Close()
+    protected override void CloseCore()
     {
         // Cancel a deferred show, as Hide does, or a window closed before its first frame appears afterwards.
         ShouldDisplayWindow = false;
-        IsClosed = true;
-        OnClosed();
     }
 
-    public override void Hide()
+    protected override void HideCore()
     {
         // Cancel a deferred show too, or a window hidden before its first frame reappears after it.
         ShouldDisplayWindow = false;

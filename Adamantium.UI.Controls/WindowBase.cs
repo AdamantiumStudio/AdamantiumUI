@@ -14,6 +14,7 @@ using Adamantium.UI.Core.Localization;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.Resources;
 using Adamantium.UI.Core.RoutedEvents;
+using System.Runtime.ExceptionServices;
 
 namespace Adamantium.UI.Controls;
 
@@ -28,6 +29,13 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
     private readonly Size[] _asked = [new(double.NaN, double.NaN), new(double.NaN, double.NaN), new(double.NaN, double.NaN), new(double.NaN, double.NaN)];
     private int _lastAsked;
     private ScreenInfo _centeredOn;
+    private IWindow _owner;
+    private readonly object _ownedLock = new();
+    private readonly List<IWindow> _owned = [];
+    private bool _ownsNoMore;
+    private readonly object _dialogLock = new();
+    private volatile bool _isModal;
+    private TaskCompletionSource _dialogClosed;
     protected IWindowWorkerService WindowWorkerService { get; private set; }
 
     public IWindowRenderer DefaultRenderer { get; set; }
@@ -938,7 +946,7 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
     public IntPtr SurfaceDisplayHandle { get; private set; }
         
     public abstract IntPtr Handle { get; internal set; }
-    public bool IsClosed { get; protected set; }
+    public bool IsClosed { get; private set; }
 
     public abstract Vector2 PointToClient(PixelPoint point);
     public abstract PixelPoint PointToScreen(Vector2 point);
@@ -1026,7 +1034,7 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
         }
 
         if (StartupLocation == WindowStartupLocation.CenterOwner
-            && context.UIApplication?.ActiveWindow is WindowBase owner && !ReferenceEquals(owner, this))
+            && (_owner ?? context.UIApplication?.ActiveWindow) is { } owner && !ReferenceEquals(owner, this))
         {
             var corner = owner.LivePosition;
             var ownerBounds = new Rect(corner.X, corner.Y, owner.Width, owner.Height);
@@ -1124,8 +1132,189 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
         
     }
     public abstract void Show();
-    public abstract void Close();
-    public abstract void Hide();
+
+    /// <summary>Hides the window; a modal one stops being modal first, so its owner takes input again.</summary>
+    public void Hide()
+    {
+        var dialogClosed = EndDialog();
+        HideCore();
+        dialogClosed?.TrySetResult();
+    }
+
+    /// <summary>Takes the window off the screen, the way this kind of window does.</summary>
+    protected abstract void HideCore();
+
+    /// <summary>Takes the window off the screen for good, the way this kind of window does; runs once
+    /// <see cref="Closing"/> has let it close, before anyone hears it closed.</summary>
+    protected abstract void CloseCore();
+
+    /// <summary>The window this one belongs to: it stays above it, is minimized with it, opens over its middle and is
+    /// closed with it.</summary>
+    public IWindow Owner
+    {
+        get => _owner;
+        set
+        {
+            if (ReferenceEquals(_owner, value))
+            {
+                return;
+            }
+            if (_isModal)
+            {
+                throw new InvalidOperationException("The owner of a modal window cannot change.");
+            }
+            if (IsClosed || value is { IsClosed: true })
+            {
+                throw new InvalidOperationException("A closed window neither owns nor is owned.");
+            }
+            if (value != null && IsOwnedBy(value, this))
+            {
+                throw new ArgumentException("A window cannot own itself, nor a window that owns it.", nameof(value));
+            }
+            if (value != null && !value.AddOwnedWindow(this))
+            {
+                throw new InvalidOperationException("A closing window takes no new owned windows.");
+            }
+
+            _owner?.RemoveOwnedWindow(this);
+            _owner = value;
+            WindowWorkerService?.SetOwner(_owner);
+        }
+    }
+
+    /// <summary>Whether the window is shown modally (<see cref="ShowDialogAsync"/>): the application's other windows,
+    /// those that were there when it was shown, take no input until it closes or is hidden.</summary>
+    public bool IsModal => _isModal;
+
+    /// <summary>Shows the window modally over its <see cref="Owner"/>: the application's other windows, those that are
+    /// there now, take no input until this window closes or is hidden, which ends the task; how they are kept from input
+    /// is the platform's. With no owner, the active window becomes it, else the application's main window. A window
+    /// already closed ends the task at once.</summary>
+    public Task ShowDialogAsync()
+    {
+        TaskCompletionSource dialogClosed;
+        lock (_dialogLock)
+        {
+            if (IsClosed)
+            {
+                return Task.CompletedTask;
+            }
+            if (_dialogClosed != null)
+            {
+                return _dialogClosed.Task;
+            }
+            dialogClosed = _dialogClosed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        }
+
+        try
+        {
+            if (_owner == null)
+            {
+                var application = (UIContext ?? UIAppContext.Current?.UIContext)?.UIApplication;
+                Owner = CanOwn(application?.ActiveWindow) ?? CanOwn(application?.MainWindow);
+            }
+            Show();
+        }
+        catch (Exception e)
+        {
+            EndDialog()?.TrySetException(e);
+            throw;
+        }
+
+        lock (_dialogLock)
+        {
+            if (!ReferenceEquals(_dialogClosed, dialogClosed) || IsClosed)
+            {
+                return dialogClosed.Task;
+            }
+            _isModal = true;
+        }
+        WindowWorkerService?.UpdateModal();
+        return dialogClosed.Task;
+    }
+
+    private TaskCompletionSource EndDialog()
+    {
+        TaskCompletionSource dialogClosed;
+        bool wasModal;
+        lock (_dialogLock)
+        {
+            wasModal = _isModal;
+            _isModal = false;
+            dialogClosed = _dialogClosed;
+            _dialogClosed = null;
+        }
+        if (wasModal)
+        {
+            WindowWorkerService?.UpdateModal();
+        }
+        return dialogClosed;
+    }
+
+    private IWindow CanOwn(IWindow window) =>
+        window is { IsClosed: false } && !IsOwnedBy(window, this) ? window : null;
+
+    private static bool IsOwnedBy(IWindow window, IWindow by)
+    {
+        for (var owner = window; owner != null; owner = owner.Owner)
+        {
+            if (ReferenceEquals(owner, by))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /// <inheritdoc/>
+    public bool AddOwnedWindow(IWindow window)
+    {
+        lock (_ownedLock)
+        {
+            if (_ownsNoMore)
+            {
+                return false;
+            }
+            if (!_owned.Contains(window))
+            {
+                _owned.Add(window);
+            }
+            return true;
+        }
+    }
+
+    /// <inheritdoc/>
+    public void RemoveOwnedWindow(IWindow window)
+    {
+        lock (_ownedLock)
+        {
+            _owned.Remove(window);
+        }
+    }
+
+    /// <inheritdoc/>
+    public void LeaveOwner()
+    {
+        var dialogClosed = EndDialog();
+        _owner?.RemoveOwnedWindow(this);
+        _owner = null;
+        WindowWorkerService?.SetOwner(null);
+        dialogClosed?.TrySetResult();
+    }
+
+    private IWindow TakeOwned()
+    {
+        lock (_ownedLock)
+        {
+            if (_owned.Count == 0)
+            {
+                return null;
+            }
+            var owned = _owned[^1];
+            _owned.RemoveAt(_owned.Count - 1);
+            return owned;
+        }
+    }
 
     /// <summary>Bring this window to the foreground (restoring it if minimized). Platform-specific via the window worker.</summary>
     public void Activate() => WindowWorkerService?.Activate();
@@ -1219,12 +1408,15 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
 
     public void RaiseWindowMoveCompleted() => WindowMoveCompleted?.Invoke(this, EventArgs.Empty);
 
-    protected void OnClosed()
+    /// <summary>Closes the window, unless a <see cref="Closing"/> handler cancels it; the windows it owns close before it
+    /// is heard closed.</summary>
+    public void Close()
     {
         var closingArgs = new WindowClosingEventArgs();
         Closing?.Invoke(this, closingArgs);
         if (!closingArgs.Cancel)
         {
+            CloseCore();
             RememberPlacement();
             // The theme manager outlives every window, so a closed one that stayed subscribed would be kept alive by it.
             var themes = UIAppContext.Current?.ThemeManager;
@@ -1234,8 +1426,57 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
                 themes.ThemeChanged -= OnThemeChanged;
             }
             Languages.Changed -= OnLanguageChanged;
-            Closed?.Invoke(this, EventArgs.Empty);
-            LoopSignal.Post(DiscardClosed);
+            lock (_dialogLock)
+            {
+                IsClosed = true;
+            }
+            lock (_ownedLock)
+            {
+                _ownsNoMore = true;
+            }
+            Exception ownedFailure = null;
+            while (TakeOwned() is { } owned)
+            {
+                if (!ReferenceEquals(owned.Owner, this))
+                {
+                    continue;
+                }
+                try
+                {
+                    owned.Close();
+                }
+                catch (Exception e)
+                {
+                    ownedFailure ??= e;
+                }
+                try
+                {
+                    if (!owned.IsClosed && ReferenceEquals(owned.Owner, this))
+                    {
+                        owned.LeaveOwner();
+                    }
+                }
+                catch (Exception e)
+                {
+                    ownedFailure ??= e;
+                }
+            }
+            _owner?.RemoveOwnedWindow(this);
+            var dialogClosed = EndDialog();
+            _owner = null;
+            try
+            {
+                Closed?.Invoke(this, EventArgs.Empty);
+            }
+            finally
+            {
+                dialogClosed?.TrySetResult();
+                LoopSignal.Post(DiscardClosed);
+            }
+            if (ownedFailure != null)
+            {
+                ExceptionDispatchInfo.Throw(ownedFailure);
+            }
         }
     }
 

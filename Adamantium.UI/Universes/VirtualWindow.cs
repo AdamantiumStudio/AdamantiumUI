@@ -21,7 +21,7 @@ public class VirtualWindow : Window, IVirtualWindow
         Visibility = Visibility.Visible;
     }
 
-    public override void Hide()
+    protected override void HideCore()
     {
         Visibility = Visibility.Collapsed;
     }

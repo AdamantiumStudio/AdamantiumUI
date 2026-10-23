@@ -12,6 +12,21 @@ All packages share one version.
   nearest inline's over its span's, over the block's; a value changed inside one set already draws the text again. The
   glyph batch carries a shadow's or a glow's soft edge and a reflection's fade. The sandbox's Decorations & Effects page
   shows each.
+- `IWindow.ShowDialogAsync()`: a native modal window - the application's other windows, those open when it is shown,
+  take no input until it closes or is hidden, which ends the task (`IsModal` says so meanwhile); a window already closed
+  ends it at once. How they are kept from input is the platform's (`IWindowWorkerService.UpdateModal`): on Windows each
+  is disabled while any modal window blocks it and enabled again before the last of them is hidden or goes, whichever
+  thread closes it, so activation returns to the owner - unless something else disabled it, as a system file dialog
+  does its owner; a modal window is never blocked itself, and a click on a blocked one gets the system's beep and
+  arrow. Wayland and macOS are to follow. `IWindow.Owner`: the window it opens over and is closed with - one refusing
+  to close is freed from it instead - and, on Windows so far (`IWindowWorkerService.SetOwner`), stays above and is
+  minimized with; a window cannot own itself or a window that owns it (`ArgumentException`), a modal or closed window
+  takes no new owner, and one that `Closing` let close takes no owned windows (`InvalidOperationException`). A dialog
+  with no owner takes the active window, else the main one. Ownership goes through the interface alone, so any
+  `IWindow` can own and be owned: `IWindow` gains `Owner`, `IsModal`, `ShowDialogAsync`, and `AddOwnedWindow`,
+  `RemoveOwnedWindow` and `LeaveOwner` for the owner's count of its windows. `WindowDialogHost` shows its dialogs so,
+  closes one that is hidden, and puts the keyboard on the dialog's first control as the overlay does unless the view put
+  it somewhere already. Sandbox: Navigation → Show modal window.
 - `IWindow.SizeToContent` (`Manual`, `Width`, `Height`, `WidthAndHeight`): a window that follows what its content asks
   for on those sides, fitted again when the content's size changes, so a size the user gives it stays until then (the
   fitted size coming back from the OS, rounded to its pixels, is not such a size). By default a window keeps the size
@@ -1574,6 +1589,10 @@ All packages share one version.
 
 ### Changed
 
+- `WindowBase.Close` and `Hide` are no longer abstract: the base does them, so a modal window always stops being modal,
+  and a window type overrides `CloseCore` and `HideCore` for what it does itself (`VirtualWindow` collapses in
+  `HideCore`). `WindowBase.OnClosed` is gone - `Close` raises `Closing` and `Closed` itself - and `IsClosed` is set by
+  the base alone (its setter is private).
 - Each platform's builder registers its gamepads, where `MultiverseApplication` used to pick them by the system it ran
   on: `WindowsPlatform.Initialize` registers `WindowsGamepadBackend` (GameInput, else XInput, chosen when first asked
   for), and the new `LinuxPlatform.Initialize` registers the evdev gamepads and Enchant spell checking - what Linux
@@ -2020,6 +2039,8 @@ All packages share one version.
   reports as a buggy client; nothing is drawn into it until that configure.
 - `Activate` on Wayland named the window being raised as the one the input happened in, so the compositor turned the
   request down when the input was in another of the application's windows; it names the window of the last input.
+- A window whose `Closing` handler canceled the close said it was closed (`IsClosed`) and dropped a show it had
+  deferred, so a dialog host never closed it again and docking passed it over; it is closed only once `Closing` lets it.
 - An item moved in an `ItemsControl`'s source (`ObservableCollection.Move`) rebuilt every container of a panel that
   does not virtualize, and a child moved in a panel's `Children` left the visual tree and came back: what the
   containers held - a 3D view, a text being typed - was made again. The container now only changes place.

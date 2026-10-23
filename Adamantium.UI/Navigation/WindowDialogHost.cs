@@ -5,15 +5,17 @@ using Adamantium.Navigation;
 using Adamantium.UI.Controls;
 using Adamantium.UI.Controls.Navigation;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Resources;
+using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Navigation;
 
 /// <summary>Window dialog host: shows the dialog in its OWN window (a shell from the window registry) instead of an
 /// in-window overlay. Loads the resolved view into the shell and closes it when the view model raises RequestClose;
 /// the title-bar close also completes the dialog (as Cancel), without asking it. A dialog with no size of its own is fitted
-/// to its view; the window wears the class <c>Dialog</c>. Lifecycle/result via <see cref="DialogSession"/>.
-/// NOT yet modal - input to the owner window is not blocked; that wiring is a follow-up.</summary>
+/// to its view; the window wears the class <c>Dialog</c>. It is modal, owned by the window active when it opened, else
+/// the main window. Lifecycle/result via <see cref="DialogSession"/>.</summary>
 public sealed class WindowDialogHost : IDialogHost
 {
     private readonly IUIApplication _application;
@@ -33,6 +35,7 @@ public sealed class WindowDialogHost : IDialogHost
     {
         WindowBase shell = null;
         var closed = false;
+        var asker = _application.ActiveWindow ?? _application.MainWindow;
         var session = await DialogSession.BeginAsync(dialogViewModel, parameters, () =>
         {
             if (shell == null || closed)
@@ -58,6 +61,10 @@ public sealed class WindowDialogHost : IDialogHost
             }
             shell = created;
             shell.RemembersPlacement = false;
+            if (asker is { IsClosed: false })
+            {
+                shell.Owner = asker;
+            }
             shell.Classes = new Classes([.. shell.Classes ?? [], "Dialog"]);
 
             shell.Title = !string.IsNullOrEmpty(aware?.Title) ? aware.Title : dialog?.Title ?? string.Empty;
@@ -86,14 +93,36 @@ public sealed class WindowDialogHost : IDialogHost
 
             // Show FIRST (it attaches the window to the application and builds its tree + render service + theme), THEN
             // load the content, so the view joins a live, themed window (same order as WindowNavigationBackend).
-            shell.Show();
-            shell.Content = _viewLocator.ResolveView(dialogViewModel);
+            var shown = shell.ShowDialogAsync();
+            var view = _viewLocator.ResolveView(dialogViewModel);
+            if (view is IInputComponent loading)
+            {
+                void OnLoaded(object sender, RoutedEventArgs e)
+                {
+                    loading.Loaded -= OnLoaded;
+                    if (!shell.IsKeyboardFocusWithin)
+                    {
+                        KeyboardNavigation.MoveInto(shell);
+                    }
+                }
+
+                loading.Loaded += OnLoaded;
+            }
+            shell.Content = view;
 
             shell.Closed += (_, _) =>
             {
                 closed = true;
                 session.Close(DialogResult.Cancel());
             };
+
+            _ = shown.ContinueWith(_ => _application.ExecuteOnUIThreadAsync(() =>
+            {
+                if (!shell.IsClosed)
+                {
+                    shell.Close();
+                }
+            }), TaskScheduler.Default);
 
             shell.Show();
         });
