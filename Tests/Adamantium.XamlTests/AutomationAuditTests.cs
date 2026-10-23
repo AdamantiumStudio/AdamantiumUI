@@ -103,6 +103,7 @@ public class AutomationAuditTests
         [typeof(Separator)] = (T.Separator, null),
         [typeof(SlidePanel)] = (T.Pane, null),
         [typeof(Slider)] = (T.Slider, null),
+        [typeof(SplashWindow)] = (T.Window, null),
         [typeof(TabControl)] = (T.Tab, null),
         [typeof(TabItem)] = (T.TabItem, null),
         [typeof(TabItemsControl)] = (T.Group, null),

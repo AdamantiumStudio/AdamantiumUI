@@ -64,6 +64,8 @@ public sealed class AutomationExecutor
                     return await IdleAndHealthyAsync(request, timeout);
                 case AutomationCommand.WaitFor:
                     return await WaitForAsync(request.Target, timeout);
+                case AutomationCommand.WaitStarted:
+                    return await WaitStartedAsync(timeout);
                 case AutomationCommand.Shutdown:
                     await _host.ShutdownAsync();
                     return AutomationReply.Done();
@@ -1044,6 +1046,22 @@ public sealed class AutomationExecutor
             : double.TryParse(part, NumberStyles.Float, CultureInfo.InvariantCulture, out var percent)
                 ? percent
                 : throw new FormatException($"'{part}' is not a percent.");
+    }
+
+    private async Task<AutomationReply> WaitStartedAsync(TimeSpan timeout)
+    {
+        var watch = Stopwatch.StartNew();
+        while (_host.IsStarting)
+        {
+            if (watch.Elapsed >= timeout)
+            {
+                return AutomationReply.Failed($"The application did not start within {timeout.TotalSeconds:0.#} s: its splash window is still up.");
+            }
+
+            await Task.Delay(WaitStep);
+        }
+
+        return AutomationReply.Done();
     }
 
     private async Task<AutomationReply> WaitForAsync(string target, TimeSpan timeout)

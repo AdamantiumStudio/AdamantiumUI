@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Theme xmlns="http://adamantium/ui"
+       xmlns:x="http://adamantium/ui/xaml/extensions"
+       xmlns:splash="clr-namespace:Adamantium.UI.Themes.SplashTheme"
+       Name="Splash">
+
+  <!-- What a splash window wears: it is shown before the application's theme is made, so it borrows nothing from one -
+       no resources, no style of another theme. -->
+
+  <Theme.StyleIncludes>
+    <StyleInclude Source="{x:Type splash:SplashWindowStyleSet}"/>
+  </Theme.StyleIncludes>
+
+</Theme>

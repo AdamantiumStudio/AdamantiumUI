@@ -58,7 +58,7 @@ namespace Adamantium.UI.Generators
                 var (((parsed, compilation), properties), languages) = source;
 
                 var resourceDictionaries = new List<ResourceDictionaryInfo>();
-                var blueprints = new List<(string File, string ClassName)>();
+                var blueprints = new List<(string File, string ClassName, string SplashWindow)>();
 
                 if (string.IsNullOrEmpty(properties.RootNamespace))
                 {
@@ -157,7 +157,7 @@ namespace Adamantium.UI.Generators
                             // mistake in it and not also "no Main".
                             if (aumlMetadataContainer?.RootEntityType == EntityType.ApplicationBlueprint)
                             {
-                                blueprints.Add((aumlDoc.RelativeFilePath, null));
+                                blueprints.Add((aumlDoc.RelativeFilePath, null, null));
                             }
 
                             continue;
@@ -193,7 +193,8 @@ namespace Adamantium.UI.Generators
 
                         if (aumlMetadataContainer.RootEntityType == EntityType.ApplicationBlueprint)
                         {
-                            blueprints.Add((aumlDoc.RelativeFilePath, aumlMetadataContainer.FullClassName));
+                            blueprints.Add((aumlDoc.RelativeFilePath, aumlMetadataContainer.FullClassName,
+                                ApplicationEntryPoint.SplashWindowOf(aumlMetadataContainer)));
                         }
                     }
                     catch (System.Exception ex)

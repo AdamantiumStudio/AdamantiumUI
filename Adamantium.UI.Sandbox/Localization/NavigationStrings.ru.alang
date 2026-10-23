@@ -34,6 +34,7 @@
     <Phrase Key="ModalWindowMessage" Text="Отдельное окно: пока оно открыто, окно, которому оно принадлежит, не принимает ввод."/>
 
     <Phrase Key="OpenClickThroughWindow" Text="Окно, прозрачное для мыши"/>
+    <Phrase Key="ShowSplash" Text="Заставка"/>
     <Phrase Key="ClickThroughWindow" Text="Окно, прозрачное для мыши"/>
     <Phrase Key="ClickThroughHint" Text="Положите это окно поверх чего-нибудь кликабельного и включите пропуск кликов: клик по окну попадёт в то, что под ним."/>
     <Phrase Key="PassClicks" Text="Пропускать клики 10 с"/>

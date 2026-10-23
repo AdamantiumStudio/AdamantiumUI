@@ -8,8 +8,11 @@ namespace Adamantium.UI.Core.TypeParsers;
 public class SelectorParser : ITypeParser<StyleSelector>
 {
     private static readonly object IndexGate = new();
-    private static Dictionary<string, Type> _typesByName;
-    private static int _indexedAssemblies;
+    private static readonly Dictionary<string, Type> TypesByName = [];
+    private static readonly HashSet<Assembly> SeenAssemblies = [];
+    private static readonly HashSet<string> UIAssemblyNames = [typeof(IFundamentalUIComponent).Assembly.GetName().Name];
+    private static readonly List<(Assembly Assembly, string[] References)> WaitingAssemblies = [];
+    private static int _seenAssemblyCount;
 
     public StyleSelector Parse(string value)
     {
@@ -62,33 +65,75 @@ public class SelectorParser : ITypeParser<StyleSelector>
     {
         lock (IndexGate)
         {
-            var assemblies = AppDomain.CurrentDomain.GetAssemblies();
-            if (_typesByName == null || assemblies.Length != _indexedAssemblies)
-            {
-                _typesByName = IndexByName(assemblies);
-                _indexedAssemblies = assemblies.Length;
-            }
-
-            return _typesByName.TryGetValue(name, out var type) ? type : null;
+            IndexLoadedAssemblies();
+            return TypesByName.TryGetValue(name, out var type) ? type : null;
         }
     }
 
-    private static Dictionary<string, Type> IndexByName(Assembly[] assemblies)
+    /// <summary>Takes the types of the assemblies loaded since the last time into the index selectors name types by -
+    /// from any thread, so it can be done ahead of the first style.</summary>
+    internal static void IndexLoadedAssemblies()
     {
-        var index = new Dictionary<string, Type>();
-        foreach (var type in assemblies.SelectMany(Adamantium.Core.Reflection.LoadableTypes.Of))
+        lock (IndexGate)
         {
-            if (!index.TryGetValue(type.Name, out var held))
+            var assemblies = AppDomain.CurrentDomain.GetAssemblies();
+            if (assemblies.Length != _seenAssemblyCount)
             {
-                index[type.Name] = type;
+                IndexNewAssemblies(assemblies);
+                _seenAssemblyCount = assemblies.Length;
             }
-            else if (!IsControl(held) && IsControl(type))
+        }
+    }
+
+    private static void IndexNewAssemblies(Assembly[] assemblies)
+    {
+        foreach (var assembly in assemblies)
+        {
+            if (SeenAssemblies.Add(assembly))
             {
-                index[type.Name] = type;
+                WaitingAssemblies.Add((assembly, ReferencesOf(assembly)));
             }
         }
 
-        return index;
+        bool indexed;
+        do
+        {
+            indexed = false;
+            for (var i = 0; i < WaitingAssemblies.Count;)
+            {
+                var (assembly, references) = WaitingAssemblies[i];
+                if (!assembly.IsDynamic && !UIAssemblyNames.Contains(assembly.GetName().Name) &&
+                    !references.Any(UIAssemblyNames.Contains))
+                {
+                    i++;
+                    continue;
+                }
+
+                WaitingAssemblies.RemoveAt(i);
+                UIAssemblyNames.Add(assembly.GetName().Name);
+                Index(assembly);
+                indexed = true;
+            }
+        }
+        while (indexed);
+    }
+
+    private static string[] ReferencesOf(Assembly assembly) =>
+        assembly.IsDynamic ? [] : [.. assembly.GetReferencedAssemblies().Select(reference => reference.Name)];
+
+    private static void Index(Assembly assembly)
+    {
+        foreach (var type in Adamantium.Core.Reflection.LoadableTypes.Of(assembly))
+        {
+            if (!TypesByName.TryGetValue(type.Name, out var held))
+            {
+                TypesByName[type.Name] = type;
+            }
+            else if (!IsControl(held) && IsControl(type))
+            {
+                TypesByName[type.Name] = type;
+            }
+        }
     }
 
     private static bool IsControl(Type type) => typeof(IFundamentalUIComponent).IsAssignableFrom(type);

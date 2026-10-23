@@ -58,7 +58,9 @@
                     SelectionIndicatorPlacement="{Binding IndicatorPlacement}"
                     ContentTransition="{Binding SlideMode}"
                     DeferContent="True"
-                    ShowCloseButton="True">
+                    ShowCloseButton="True"
+                    IsVirtualizing="True"
+                    TabWidth="120">
             <!-- A tab body is thousands of elements; it is built off the loop thread, so the tab itself opens at once
                  and shows this until its content is ready. -->
             <TabControl.LoadingTemplate>
@@ -77,12 +79,14 @@
             <TabControl.ItemContainerStyle>
                 <Style Selector="TabItem">
                     <Setter Property="AutomationProperties.AutomationId" Value="{Binding Header}"/>
+                    <Setter Property="ToolTip" Value="{Localize GalleryStrings, Key={Binding Header}}"/>
                 </Style>
             </TabControl.ItemContainerStyle>
             <!-- A tab names its page by the key of its title among the gallery's phrases. -->
             <TabControl.ItemTemplate>
                 <DataTemplate>
-                    <TextBlock Text="{Localize GalleryStrings, Key={Binding Header}}" VerticalTextAlignment="Center"/>
+                    <TextBlock Text="{Localize GalleryStrings, Key={Binding Header}}" VerticalTextAlignment="Center"
+                               TextTrimming="CharEllipses"/>
                 </DataTemplate>
             </TabControl.ItemTemplate>
             <TabControl.ContentTemplateSelector>

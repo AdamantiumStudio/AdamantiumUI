@@ -1,6 +1,9 @@
 using System.Collections.Generic;
 using Adamantium.UI.Controls.Base;
+using Adamantium.UI.Core;
 using Adamantium.UI.Core.Automation;
+using Adamantium.UI.Core.Data;
+using Adamantium.UI.Core.Resources;
 
 namespace Adamantium.UI.Controls.Automation;
 
@@ -67,6 +70,42 @@ public class ItemsControlAutomationPeer : UIComponentAutomationPeer
         _ when item.GetType().GetMethod(nameof(ToString), Type.EmptyTypes)?.DeclaringType == typeof(object) => string.Empty,
         _ => item.ToString()
     };
+
+    /// <summary>The automation id of an item with no element; none by default - the same item may stand in a closed
+    /// menu while its element shows elsewhere, and one id must not find both.</summary>
+    protected internal virtual string AutomationIdOfItem(object item) => string.Empty;
+
+    /// <summary>The automation id the item container style would give an item's element - a binding there read on the
+    /// item - for a control whose unmade items are the same ones it shows, made later.</summary>
+    protected string AutomationIdFromContainerStyle(object item)
+    {
+        if (((ItemsControl)Owner).ItemContainerStyle is not { } style)
+        {
+            return string.Empty;
+        }
+
+        foreach (var setter in style.Setters)
+        {
+            if (setter is not Setter { Property: { } path } declared ||
+                AdamantiumPropertyMap.ResolveProperty(typeof(UIComponent), path) != AutomationProperties.AutomationIdProperty)
+            {
+                continue;
+            }
+
+            if (declared.Value is not BindingBase binding)
+            {
+                return declared.Value as string ?? string.Empty;
+            }
+
+            var probe = new BoundValue();
+            probe.PointAt(item, binding);
+            var id = probe.Value as string;
+            probe.Release();
+            return id ?? string.Empty;
+        }
+
+        return string.Empty;
+    }
 
     /// <summary>Whether an item with no element is selected; false when the control does not select.</summary>
     protected internal virtual bool IsItemSelected(object item) => Owner switch

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Adamantium.UI.Generators.Roslyn;
+using Adamantium.UI.Markup.AST;
 using Adamantium.UI.Markup.CodeGeneration;
 using Adamantium.UI.Markup.Localization;
 using Microsoft.CodeAnalysis;
@@ -15,7 +16,8 @@ public static class ApplicationEntryPoint
     private const string ApplicationBaseName = "Adamantium.UI.UIApplication";
 
     /// <summary>Checks the project's blueprints and, when they make one application, writes its entry point.</summary>
-    public static void Emit(SourceProductionContext context, Compilation compilation, IReadOnlyList<(string File, string ClassName)> blueprints,
+    public static void Emit(SourceProductionContext context, Compilation compilation,
+        IReadOnlyList<(string File, string ClassName, string SplashWindow)> blueprints,
         AumlSourceGenerator codeGenerator, string rootNamespace)
     {
         if (blueprints.Count == 0)
@@ -50,8 +52,16 @@ public static class ApplicationEntryPoint
             return;
         }
 
-        codeGenerator.GenerateApplicationEntry(new RoslynOutputSink(context), blueprint.ClassName,
+        codeGenerator.GenerateApplicationEntry(new RoslynOutputSink(context), blueprint.ClassName, blueprint.SplashWindow,
             applications[0].ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), rootNamespace);
+    }
+
+    /// <summary>The splash window a blueprint names, as generated code writes it, or null when it names none.</summary>
+    public static string SplashWindowOf(AumlMetadataContainer blueprint)
+    {
+        var property = (blueprint.RootNode as AumlAstObjectNode)?.Children.OfType<AumlAstPropertyNode>()
+            .FirstOrDefault(p => p.Property is AumlAstPropertyReference { Name: "SplashWindow", IsAttachedProperty: false });
+        return property == null ? null : blueprint.TypeResolver.Resolve(property.GetFullTypeValue())?.QualifiedName;
     }
 
     private static bool IsApplication(INamedTypeSymbol type)

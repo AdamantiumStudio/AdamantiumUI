@@ -23,6 +23,9 @@ public interface IAutomationHost
     /// <summary>Waits until layout, bindings and queued work have caught up with what was just done.</summary>
     Task WaitForIdleAsync(TimeSpan timeout);
 
+    /// <summary>Whether the application is still starting under its splash window; a host with no splash never is.</summary>
+    bool IsStarting => false;
+
     /// <summary>Closes the application.</summary>
     Task ShutdownAsync();
 }

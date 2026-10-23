@@ -18,8 +18,16 @@ public sealed unsafe class WaylandPlatform : IApplicationPlatform, Linux.IPortal
     private readonly Dictionary<nint, WaylandWindowWorker> windows = new();
     private readonly object _windowsLock = new();
 
-    public WaylandPlatform()
+    public WaylandPlatform() : this(true)
     {
+    }
+
+    /// <summary>A connection of its own for the splash window when not <paramref name="application"/>: the seat for its
+    /// input and nothing the application keeps - no clipboard, drag and drop, session, input method or tablet - and no
+    /// claim on the input devices every window shares.</summary>
+    internal WaylandPlatform(bool application)
+    {
+        IsApplication = application;
         uiThread = Thread.CurrentThread;
         Display = WaylandDisplay.Connect();
 
@@ -117,6 +125,10 @@ public sealed unsafe class WaylandPlatform : IApplicationPlatform, Linux.IPortal
         Seat = new WaylandSeat(this, seat);
 
         Display.Roundtrip();
+        if (!application)
+        {
+            return;
+        }
 
         if (dataDevices != null && seat != null)
         {
@@ -151,6 +163,14 @@ public sealed unsafe class WaylandPlatform : IApplicationPlatform, Linux.IPortal
     }
 
     public WaylandDisplay Display { get; }
+
+    /// <summary>Whether this is the application's connection, not the splash window's own.</summary>
+    internal bool IsApplication { get; }
+
+    /// <summary>The dispatcher running this connection's loop; the application's when unset.</summary>
+    internal Threading.Dispatcher Dispatcher { get; set; }
+
+    private Threading.Dispatcher OwnDispatcher => Dispatcher ?? Threading.Dispatcher.CurrentDispatcher;
 
     public WlCompositor Compositor { get; private set; }
 
@@ -254,6 +274,19 @@ public sealed unsafe class WaylandPlatform : IApplicationPlatform, Linux.IPortal
 
     private static int Sooner(int a, int b) => a < 0 ? b : b < 0 ? a : Math.Min(a, b);
 
+    /// <summary>Closes a connection of its own once its loop has ended; the application's lasts as long as the process.
+    /// </summary>
+    internal void Disconnect()
+    {
+        if (IsApplication)
+        {
+            throw new InvalidOperationException("The application's connection is never closed.");
+        }
+
+        Display.Dispose();
+        PosixInterop.Close(signalFd);
+    }
+
     public void Signal()
     {
         ulong one = 1;
@@ -310,7 +343,7 @@ public sealed unsafe class WaylandPlatform : IApplicationPlatform, Linux.IPortal
         }
         else
         {
-            _ = Threading.Dispatcher.CurrentDispatcher?.InvokeAsync(action);
+            _ = OwnDispatcher?.InvokeAsync(action);
         }
     }
 
@@ -318,7 +351,7 @@ public sealed unsafe class WaylandPlatform : IApplicationPlatform, Linux.IPortal
     /// thread too, so requests queued from different threads reach the compositor in the order they were queued.</summary>
     internal void Queue(Action action)
     {
-        if (Threading.Dispatcher.CurrentDispatcher is { } dispatcher)
+        if (OwnDispatcher is { } dispatcher)
         {
             _ = dispatcher.InvokeAsync(action);
         }

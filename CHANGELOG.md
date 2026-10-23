@@ -14,6 +14,27 @@ All packages share one version.
   lights under the pointer (`IsInteractive`); to automation it is then a button, otherwise text, and a press goes by
   it. Its words are not selectable. One style set serves every theme. The sandbox's Menus page shows one.
   `ButtonBase.TakesPresses`: a button that lets a press go by while it has nothing to do.
+- A splash window: `SplashWindow`, named by the blueprint's `SplashWindow` (or `UIApplication.SplashType` in code), is
+  shown as soon as there is a device and a loop to draw it, on a thread, a dispatcher and a connection to the desktop of
+  its own (a Wayland connection on Linux, a message loop on Windows), while the blueprint, the themes, the services
+  and the startup window are made on the application's thread; what of that changes the live UI - the blueprint's
+  resources and style sets, the first theme, the language - is applied on the loop. It closes once a window of the
+  application's own has drawn, or once the start is over without showing one (a minimized or hidden window, none). It
+  takes no focus. It wears a theme of its own (`Adamantium.UI.Themes.SplashTheme.Splash`, or one its markup names
+  through `ThemeContext.Theme`), never the application's, and carries a close button (`ShowCloseButton`): closing it
+  before the hand-over cancels the start - `UIApplication.StartupCancellation` is cancelled (an
+  `OperationCanceledException` for it ends the start quietly), the startup window is not shown and the application
+  ends - and `Elapsed`, how long it has been up, for a ticking timer. It never becomes the application's active
+  window, so no dialog takes it for its owner. `UIApplication.HoldSplash` keeps it up until what it returns is
+  disposed - for a start that opens its first window later, from work of its own - and `UIApplication.IsStarting`
+  tells whether the start is still under it. `IUIApplication.ShowSplash` shows it again while the application runs,
+  where closing it cancels nothing. Not on macOS yet. The sandbox starts with one (`SandboxSplashWindow`) and shows it
+  again from the Navigation tab.
+- `IWindow.IsDisplayed`: whether a window is up on the desktop - shown, with its first frame, and not hidden since.
+- `AutomationCommand.WaitStarted` and `IAutomationHost.IsStarting`: automation waits for an application's start to
+  be over, its splash window gone.
+- `IUIContext.Dispatcher`: the dispatcher on whose thread a context's windows talk to the desktop - the application's,
+  or the splash window's own.
 - Text outline, shadow, glow and reflection, as Word draws them: `TextOutline`, `TextShadow`, `TextGlow` and
   `TextReflection` (`Adamantium.UI.Core.Media`, made in markup), set on a `TextBlock` or on a run or span of it - the
   nearest inline's over its span's, over the block's; a value changed inside one set already draws the text again. The
@@ -1600,6 +1621,25 @@ All packages share one version.
   and a window type overrides `CloseCore` and `HideCore` for what it does itself (`VirtualWindow` collapses in
   `HideCore`). `WindowBase.OnClosed` is gone - `Close` raises `Closing` and `Closed` itself - and `IsClosed` is set by
   the base alone (its setter is private).
+- A window that wears a theme of its own (`ThemeContext.Theme` set on the window) is left alone by the application's
+  theme swaps: it is not restyled for them and shows no busy overlay. A window's text is laid out again for a new
+  language, and `ResourceManager.NotifyResourcesChanged` takes effect, on the loop thread, whichever thread asks.
+- The theme manager is in the container from the moment the application is made, not from `RegisterServices`.
+- `AutomationSession.LaunchAsync` returns once the application has started, within the start timeout - its first
+  window may be the splash window - and reports an application that exits while it starts instead of failing on the
+  broken pipe. An application starting under its splash window is not idle until it has handed over.
+- An application shows its first frame sooner:
+  - the main graphics device is created, and the shaders precompiled, while the blueprint, the themes and the
+    language are read;
+  - the system font, the type index of style selectors and the UI effect are made ready on the thread pool meanwhile;
+  - on Linux the desktop's settings are read from the portal alongside the rest of startup, and `SystemAppearance`
+    waits for them when first asked;
+  - the selector type index takes only the assemblies loaded since it last looked, and of those only the ones that can
+    hold UI types; it used to index every type of every assembly again each time one more was loaded.
+- `Theme.SystemDefaultFontFamily` is picked and loaded once, safely from any thread.
+- A tab a virtualizing tab strip has not made yet carries, to automation, the id its tab would get from the item
+  container style, so a tab out of sight is found and selected by its id. Other items controls give their unmade items
+  no id, as before.
 - Each platform's builder registers its gamepads, where `MultiverseApplication` used to pick them by the system it ran
   on: `WindowsPlatform.Initialize` registers `WindowsGamepadBackend` (GameInput, else XInput, chosen when first asked
   for), and the new `LinuxPlatform.Initialize` registers the evdev gamepads and Enchant spell checking - what Linux

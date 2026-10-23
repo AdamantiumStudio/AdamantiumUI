@@ -152,7 +152,11 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
         window.DpiScale = new Vector2(Scale, Scale);
         window.UpdateClientSizeFromPlatform(width, height);
 
-        Input.DragDrop.RegisterNativeDropTarget(window);
+        if (platform.IsApplication)
+        {
+            Input.DragDrop.RegisterNativeDropTarget(window);
+        }
+
         UIContext.ThemeEngine.ApplyCurrentTheme(window);
         UIContext.UIApplication.AddWindow(window);
 
@@ -750,12 +754,15 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
         closed = true;
         platform.Unregister(surface.Handle);
 
-        Input.DragDrop.UnregisterNativeDropTarget(window);
+        if (platform.IsApplication)
+        {
+            Input.DragDrop.UnregisterNativeDropTarget(window);
+        }
 
         UIContext.UIApplication.RemoveWindow(window);
         window.SetHandle(IntPtr.Zero);
 
-        _ = UIContext.UIApplication.ExecuteOnUIThreadAsync(() =>
+        platform.Queue(() =>
         {
             platform.Seat.Forget(this);
             exported?.Destroy();

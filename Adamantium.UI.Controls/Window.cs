@@ -4,6 +4,8 @@ namespace Adamantium.UI.Controls;
 
 public class Window : WindowBase
 {
+    private volatile bool _displayed;
+
     public override IntPtr SurfaceHandle { get; internal set; }
     public override IntPtr Handle { get; internal set; }
 
@@ -41,6 +43,7 @@ public class Window : WindowBase
             var state = _opensMaximized ? WindowState.Maximized : State;
             _opensMaximized = false;
             WindowWorkerService.ShowWindow(state);
+            _displayed = true;
             // Pull the window to the foreground when it first appears (ShowWindow alone doesn't steal focus from the
             // launching foreground window). Applies to the main window (OnStartup) and any window opened from a VM.
             if (firstDisplay && ActivateOnShow) Activate();
@@ -51,12 +54,16 @@ public class Window : WindowBase
     {
         // Cancel a deferred show, as Hide does, or a window closed before its first frame appears afterwards.
         ShouldDisplayWindow = false;
+        _displayed = false;
     }
 
     protected override void HideCore()
     {
         // Cancel a deferred show too, or a window hidden before its first frame reappears after it.
         ShouldDisplayWindow = false;
+        _displayed = false;
         WindowWorkerService.HideWindow();
     }
+
+    public override bool IsDisplayed => _displayed;
 }

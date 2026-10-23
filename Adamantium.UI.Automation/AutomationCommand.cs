@@ -179,5 +179,9 @@ public enum AutomationCommand
     /// <summary>Moves the application onto the theme named by <see cref="AutomationRequest.Value"/> and the variant named
     /// by the first of <see cref="AutomationRequest.Properties"/>, either left out to keep it, and waits for the swap to
     /// settle. Answers with the theme and variant in use on the first line, then a line per theme with its variants.</summary>
-    Theme
+    Theme,
+
+    /// <summary>Waits until the application has started: its splash window, if it shows one, has handed over to a window
+    /// of its own and closed.</summary>
+    WaitStarted
 }

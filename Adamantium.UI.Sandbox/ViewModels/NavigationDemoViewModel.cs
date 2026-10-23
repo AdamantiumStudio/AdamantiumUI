@@ -2,6 +2,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Adamantium.MVVM;
 using Adamantium.Navigation;
+using Adamantium.UI.Core;
 using Adamantium.UI.Sandbox.Localization;
 
 namespace Adamantium.UI.Sandbox.ViewModels;
@@ -17,10 +18,13 @@ public partial class NavigationDemoViewModel : TabPageViewModel
     private readonly IDialogService _dialogService;
     private readonly IOverlayService _overService;
     private readonly INavigationService _navigation;
+    private readonly IUIApplication _application;
 
-    public NavigationDemoViewModel(INavigationService navigation, WindowDemoSettings windowSettings, IDialogService dialogService, IOverlayService overService) : base("Navigation")
+    public NavigationDemoViewModel(INavigationService navigation, WindowDemoSettings windowSettings, IDialogService dialogService,
+        IOverlayService overService, IUIApplication application) : base("Navigation")
     {
         _navigation = navigation;
+        _application = application;
         WindowSettings = windowSettings;
         _dialogService = dialogService;
         _overService = overService;
@@ -63,6 +67,9 @@ public partial class NavigationDemoViewModel : TabPageViewModel
     [Command]
     private void OpenClickThroughWindow() =>
         _ = _navigation.OpenWindowAsync<ClickThroughWindowViewModel>(singleInstance: true);
+
+    [Command]
+    private void ShowSplash() => _application.ShowSplash();
 
     // A modal dialog on the overlay (dims + blocks the content behind), draggable by its title bar. Awaited: the button
     // stays disabled while the modal is up, which is the intended modal behavior.

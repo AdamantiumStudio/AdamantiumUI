@@ -13,4 +13,8 @@ public sealed class ApplicationBlueprintAttribute : Attribute
     }
 
     public Type BlueprintType { get; }
+
+    /// <summary>The blueprint's splash window: read without making the blueprint, whose resources are not wanted that
+    /// early.</summary>
+    public Type SplashWindow { get; set; }
 }

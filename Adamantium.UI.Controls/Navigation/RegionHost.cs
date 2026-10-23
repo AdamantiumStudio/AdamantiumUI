@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
@@ -37,16 +38,20 @@ internal static class RegionHost
     /// <summary>The window is closing: every region shown in it and by nothing outside it goes from
     /// <paramref name="manager"/>, letting go of its view models - the next window asking for the name gets a fresh one.
     /// A region a host outside the window still shows (a docked pane torn off into another window) stays.</summary>
-    internal static void ReleaseRegionsIn(IUIComponent window, IRegionManager manager)
-    {
-        if (manager == null) return;
+    internal static void ReleaseRegionsIn(IUIComponent window, IRegionManager manager) => ReleaseRegionsIn(window, () => manager);
 
+    /// <summary>As the other, asking for the manager only when the window shows a region: a window closed before the
+    /// application's services are registered - the splash window - shows none.</summary>
+    internal static void ReleaseRegionsIn(IUIComponent window, Func<IRegionManager> manager)
+    {
         var regions = new List<IRegion>();
         Collect(window, regions);
+        if (regions.Count == 0 || manager() is not { } owner) return;
+
         foreach (var region in regions)
         {
             if (ShownOutside(region, window)) continue;
-            Observe(manager.RemoveRegionAsync(region));
+            Observe(owner.RemoveRegionAsync(region));
         }
     }
 

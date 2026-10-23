@@ -31,30 +31,31 @@ internal sealed class DesktopPortalSettings : IDisposable
     private readonly DBusConnection bus;
     private readonly IDisposable changes;
 
-    private DesktopPortalSettings(DBusConnection bus)
+    private DesktopPortalSettings(DBusConnection bus, bool? prefersDark, string fontFamily)
     {
         this.bus = bus;
+        PrefersDark = prefersDark;
+        FontFamily = fontFamily;
         changes = bus.Subscribe(Portal, PortalPath, Settings, "SettingChanged", OnSettingChanged);
     }
 
-    /// <summary>Connects to the portal and takes over its settings; null where there is no session bus or no portal.</summary>
+    /// <summary>Whether the desktop asked for a dark appearance when opened; null where it does not say.</summary>
+    public bool? PrefersDark { get; }
+
+    /// <summary>The family of the desktop's interface font when opened; null where it does not say.</summary>
+    public string FontFamily { get; }
+
+    /// <summary>Connects to the portal, reads its settings and follows them as they change; null where there is no
+    /// session bus or no portal.</summary>
     public static DesktopPortalSettings Open()
     {
         DBusConnection bus = null;
         try
         {
             bus = DBusConnection.ConnectSession();
-            if (Read(bus, Appearance, ColorScheme) is uint scheme)
-            {
-                SystemAppearance.PrefersDark = scheme == 1;
-            }
-
-            if (Read(bus, GnomeInterface, FontName) is string font)
-            {
-                SystemAppearance.FontFamily = FamilyOf(font);
-            }
-
-            return new DesktopPortalSettings(bus);
+            var prefersDark = Read(bus, Appearance, ColorScheme) is uint scheme ? scheme == 1 : (bool?)null;
+            var fontFamily = Read(bus, GnomeInterface, FontName) is string font ? FamilyOf(font) : null;
+            return new DesktopPortalSettings(bus, prefersDark, fontFamily);
         }
         catch (Exception e) when (e is DBusException or SocketException or IOException or InvalidCastException
                                       or OperationCanceledException)

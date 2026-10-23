@@ -771,7 +771,7 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
 
         // Detach only styles that are leaving, so staying setters never flicker to default and back; leavers go first,
         // since marker setters are undone by property alone.
-        var incoming = UIAppContext.Current.ThemeManager?.FindStylesForComponent(this);
+        var incoming = ThemeContext.For(this)?.FindStylesForComponent(this);
         var own = StylesOrNull;   // not Styles: a component with no local styles must not grow one to be re-themed
 
         // BACKWARDS by index rather than over a ToArray() copy: DetachStyles removes from this very collection, so a

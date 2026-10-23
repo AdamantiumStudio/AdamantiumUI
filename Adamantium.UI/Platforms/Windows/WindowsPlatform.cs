@@ -14,12 +14,25 @@ public class WindowsPlatform : IApplicationPlatform
     private DispatcherWin32NativeSourceWrapper window;
     private uint dispatchMessage;
 
-    public WindowsPlatform()
+    public WindowsPlatform() : this(true)
     {
+    }
+
+    /// <summary>A message loop of its own for the splash window when not <paramref name="application"/>, on the thread
+    /// that makes it: it claims nothing every window shares - the clipboard, the cursors, the input devices, the file
+    /// dialogs, OLE.</summary>
+    internal WindowsPlatform(bool application)
+    {
+        IsApplication = application;
         uiThread = Thread.CurrentThread;
         window = new DispatcherWin32NativeSourceWrapper();
         window.AddHook(WndProc);
         dispatchMessage = Messages.RegisterWindowMessage("DispatcherProcessingMessage");
+        if (!application)
+        {
+            return;
+        }
+
         Clipboard.Current = new WindowsClipboard();   // swap the in-process default for the real OS clipboard
         Cursor.Platform = new WindowsCursors();       // IDC_* shapes for the neutral CursorType catalog
 
@@ -33,8 +46,17 @@ public class WindowsPlatform : IApplicationPlatform
         WindowsOle.Initialize();   // OLE on THIS (the UI) thread - the precondition for OS drag-drop on every window
     }
 
+    /// <summary>Whether this is the application's loop, not the splash window's own.</summary>
+    internal bool IsApplication { get; }
+
     public void Run(CancellationToken token)
     {
+        if (!IsApplication)
+        {
+            WaitForMessages(token);
+            return;
+        }
+
         while (!token.IsCancellationRequested)
         {
             while (Messages.PeekMessage(out var msg, IntPtr.Zero, 0, 0, PeekMessageFlag.Remove))
@@ -45,6 +67,28 @@ public class WindowsPlatform : IApplicationPlatform
         }
     }
         
+    private void WaitForMessages(CancellationToken token)
+    {
+        using var wake = token.Register(Signal);
+        while (!token.IsCancellationRequested && Messages.GetMessage(out var msg, IntPtr.Zero, 0, 0) > 0)
+        {
+            Messages.TranslateMessage(ref msg);
+            Messages.DispatchMessage(ref msg);
+        }
+    }
+
+    /// <summary>Destroys the splash window's message window once its loop has ended, on the thread that made it; the
+    /// application's lasts as long as the process.</summary>
+    internal void Disconnect()
+    {
+        if (IsApplication)
+        {
+            throw new InvalidOperationException("The application's message loop is never closed.");
+        }
+
+        window.Dispose();
+    }
+
     private IntPtr WndProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam, ref bool handled)
     {
         WindowMessages message = (WindowMessages) msg;

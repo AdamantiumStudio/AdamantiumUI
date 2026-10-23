@@ -8,7 +8,7 @@ namespace Adamantium.UI.Core.Resources;
 public class Theme : AdamantiumComponent, ITheme
 {
     private static readonly string[] LinuxFamilies = ["Noto Sans", "DejaVu Sans", "Liberation Sans", "Cantarell", "Ubuntu"];
-    private static FontFamily _systemDefaultFontFamily;
+    private static readonly Lazy<FontFamily> SystemDefault = new(PickSystemDefaultFontFamily);
 
     public Theme()
     {
@@ -159,8 +159,11 @@ public class Theme : AdamantiumComponent, ITheme
 
     /// <summary>The per-platform system UI font - the single place the platform font choice lives, used as the default
     /// for any theme that doesn't pick its own. On Linux, the first of the usual distributions' fonts installed;
-    /// <see cref="UIFontVariable"/> names another.</summary>
-    public static FontFamily SystemDefaultFontFamily => _systemDefaultFontFamily ??= Named(Environment.GetEnvironmentVariable(UIFontVariable)) ??
+    /// <see cref="UIFontVariable"/> names another. Picked and loaded once, from whichever thread asks first; the rest
+    /// wait for it.</summary>
+    public static FontFamily SystemDefaultFontFamily => SystemDefault.Value;
+
+    private static FontFamily PickSystemDefaultFontFamily() => Named(Environment.GetEnvironmentVariable(UIFontVariable)) ??
         (OperatingSystem.IsWindows() ? new FontFamily("Segoe UI")
         : OperatingSystem.IsMacOS() ? new FontFamily("Helvetica")
         : new[] { SystemAppearance.FontFamily }.Concat(LinuxFamilies).Where(name => name != null)

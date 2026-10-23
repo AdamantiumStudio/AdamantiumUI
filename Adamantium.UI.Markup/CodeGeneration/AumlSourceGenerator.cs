@@ -64,16 +64,18 @@ public class AumlSourceGenerator : IAumlSourceGenerator
         output.Emit("Adamantium.UI.AssemblyAttributes", sb.ToString());
     }
 
-    /// <summary>Names the blueprint to the assembly and writes the entry point that runs the application. A blueprint whose
-    /// markup failed (<paramref name="blueprintFullName"/> null) is not named; the entry point is written all the same.</summary>
-    public void GenerateApplicationEntry(ICodeOutputSink output, string blueprintFullName, string applicationQualifiedName,
-        string rootNamespace)
+    /// <summary>Names the blueprint to the assembly, with its splash window when it has one, and writes the entry point
+    /// that runs the application. A blueprint whose markup failed (<paramref name="blueprintFullName"/> null) is not
+    /// named; the entry point is written all the same.</summary>
+    public void GenerateApplicationEntry(ICodeOutputSink output, string blueprintFullName, string splashWindowQualifiedName,
+        string applicationQualifiedName, string rootNamespace)
     {
         var textGenerator = new TextGenerator();
         textGenerator.WriteLine(_sourceGeneratorNotice);
         if (blueprintFullName != null)
         {
-            textGenerator.WriteLine($"[assembly: global::Adamantium.UI.ApplicationModel.ApplicationBlueprintAttribute(typeof(global::{blueprintFullName}))]");
+            var splash = splashWindowQualifiedName == null ? string.Empty : $", SplashWindow = typeof({splashWindowQualifiedName})";
+            textGenerator.WriteLine($"[assembly: global::Adamantium.UI.ApplicationModel.ApplicationBlueprintAttribute(typeof(global::{blueprintFullName}){splash})]");
             textGenerator.NewLine();
         }
 

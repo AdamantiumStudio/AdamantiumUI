@@ -37,6 +37,10 @@
                 <Button AutomationProperties.AutomationId="OpenClickThroughWindow"
                         Content="{Localize NavigationStrings.OpenClickThroughWindow}"
                         Command="{Binding OpenClickThroughWindowCommand}"
+                        Height="32" Margin="0,0,8,0"/>
+                <Button AutomationProperties.AutomationId="ShowSplash"
+                        Content="{Localize NavigationStrings.ShowSplash}"
+                        Command="{Binding ShowSplashCommand}"
                         Height="32"/>
             </StackPanel>
         </StackPanel>
