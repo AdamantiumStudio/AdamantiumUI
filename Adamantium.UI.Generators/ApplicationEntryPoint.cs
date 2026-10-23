@@ -17,7 +17,7 @@ public static class ApplicationEntryPoint
 
     /// <summary>Checks the project's blueprints and, when they make one application, writes its entry point.</summary>
     public static void Emit(SourceProductionContext context, Compilation compilation,
-        IReadOnlyList<(string File, string ClassName, string SplashWindow)> blueprints,
+        IReadOnlyList<(string File, string ClassName, string SplashWindow, string StartupWindow)> blueprints,
         AumlSourceGenerator codeGenerator, string rootNamespace)
     {
         if (blueprints.Count == 0)
@@ -53,14 +53,19 @@ public static class ApplicationEntryPoint
         }
 
         codeGenerator.GenerateApplicationEntry(new RoslynOutputSink(context), blueprint.ClassName, blueprint.SplashWindow,
-            applications[0].ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), rootNamespace);
+            blueprint.StartupWindow, applications[0].ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat), rootNamespace);
     }
 
     /// <summary>The splash window a blueprint names, as generated code writes it, or null when it names none.</summary>
-    public static string SplashWindowOf(AumlMetadataContainer blueprint)
+    public static string SplashWindowOf(AumlMetadataContainer blueprint) => WindowOf(blueprint, "SplashWindow");
+
+    /// <summary>The startup window a blueprint names, as generated code writes it, or null when it names none.</summary>
+    public static string StartupWindowOf(AumlMetadataContainer blueprint) => WindowOf(blueprint, "StartupWindow");
+
+    private static string WindowOf(AumlMetadataContainer blueprint, string name)
     {
         var property = (blueprint.RootNode as AumlAstObjectNode)?.Children.OfType<AumlAstPropertyNode>()
-            .FirstOrDefault(p => p.Property is AumlAstPropertyReference { Name: "SplashWindow", IsAttachedProperty: false });
+            .FirstOrDefault(p => p.Property is AumlAstPropertyReference { IsAttachedProperty: false } reference && reference.Name == name);
         return property == null ? null : blueprint.TypeResolver.Resolve(property.GetFullTypeValue())?.QualifiedName;
     }
 

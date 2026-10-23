@@ -48,6 +48,23 @@ public class WindowPlacementTests
     }
 
     [Test]
+    public void APlacementLiesWhereTheWindowGoesBack_InThatScreensPixels() =>
+        Assert.That(WindowPlacer.Bounds(On("DISPLAY2", 100, 50), [Primary, Second]), Is.EqualTo(new Rect(2020, 50, 1200, 900)));
+
+    [Test]
+    public void AMaximizedPlacementLiesOverTheWholeWorkArea()
+    {
+        var maximized = On("DISPLAY1", 100, 50);
+        maximized.IsMaximized = true;
+
+        Assert.That(WindowPlacer.Bounds(maximized, [Primary, Second]), Is.EqualTo(Primary.WorkArea));
+    }
+
+    [Test]
+    public void APlacementWhoseScreenIsGoneLiesNowhere() =>
+        Assert.That(WindowPlacer.Bounds(On("DISPLAY2", 100, 50), [Primary]), Is.Null);
+
+    [Test]
     public void CenteredAWindowStandsInTheMiddleOfTheArea() =>
         Assert.That(WindowPlacer.Center(Primary.WorkArea, new Size(800, 600)), Is.EqualTo(new PixelPoint(560, 220)));
 

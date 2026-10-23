@@ -10,7 +10,8 @@ namespace Adamantium.UI.Controls;
 /// <summary>The window an application shows while it starts: shown at once, on a thread and a connection to the desktop
 /// of its own, before the themes, the services and the main window are made, and closed when the main window has drawn.
 /// Closing it before then cancels the start. It wears a theme of its own, never the application's, which is not made
-/// yet when it appears.</summary>
+/// yet when it appears. It is in the task bar while it is up and, where the platform does that, stays above the main
+/// window.</summary>
 public class SplashWindow : Window
 {
     public static readonly AdamantiumProperty ShowCloseButtonProperty = AdamantiumProperty.Register(nameof(ShowCloseButton),
@@ -30,7 +31,6 @@ public class SplashWindow : Window
         ResizeModeProperty.OverrideMetadata(typeof(SplashWindow), new PropertyMetadata(WindowResizeMode.NoResize));
         RemembersPlacementProperty.OverrideMetadata(typeof(SplashWindow), new PropertyMetadata(false));
         StartupLocationProperty.OverrideMetadata(typeof(SplashWindow), new PropertyMetadata(WindowStartupLocation.CenterScreen));
-        ActivateOnShowProperty.OverrideMetadata(typeof(SplashWindow), new PropertyMetadata(false));
     }
 
     /// <summary>Whether the template shows the button that closes the window - which, before the hand-over, cancels the
@@ -43,6 +43,12 @@ public class SplashWindow : Window
 
     /// <summary>How long the window has been up, in tenths of a second: what a ticking timer binds to.</summary>
     public TimeSpan Elapsed => GetValue<TimeSpan>(ElapsedProperty);
+
+    internal WindowPlacement StartupPlacement { get; set; }
+
+    private protected override WindowPlacement CenteredOver => StartupPlacement;
+
+    internal void StayAbove(IWindow window) => WindowWorkerService?.SetOwner(window);
 
     public SplashWindow()
     {

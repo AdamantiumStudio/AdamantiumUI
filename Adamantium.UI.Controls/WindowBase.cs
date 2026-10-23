@@ -1043,6 +1043,15 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
             return;
         }
 
+        if (StartupLocation != WindowStartupLocation.Manual && CenteredOver is { } over
+            && WindowPlacer.Bounds(over, screens) is { } overBounds)
+        {
+            var screen = WindowPlacer.ScreenOf(overBounds, screens);
+            Position = WindowPlacer.Center(overBounds, SizeOn(screen));
+            _centeredOn = screen;
+            return;
+        }
+
         if (StartupLocation == WindowStartupLocation.CenterOwner
             && (_owner ?? context.UIApplication?.ActiveWindow) is { } owner && !ReferenceEquals(owner, this))
         {
@@ -1060,6 +1069,8 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
         }
     }
 
+    private protected virtual WindowPlacement CenteredOver => null;
+
     private Size SizeOn(ScreenInfo screen) =>
         new(ExtentOn(screen, ClientWidth, Width, 800), ExtentOn(screen, ClientHeight, Height, 600));
 
@@ -1076,16 +1087,24 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
 
     private void RememberPlacement()
     {
+        if (RemembersPlacement && ActivateOnShow && LivePlacement() is { } placement)
+        {
+            UIContext.Resolve<IWindowPlacementStore>().Save(PlacementName(), placement);
+        }
+    }
+
+    internal WindowPlacement LivePlacement()
+    {
         var bounds = WindowWorkerService?.RestoreBounds ?? default;
         var screens = PlatformSettings.Screens;
-        if (!RemembersPlacement || !ActivateOnShow || Design.IsDesignMode || bounds.Width <= 0 || screens.Count == 0)
+        if (Design.IsDesignMode || bounds.Width <= 0 || screens.Count == 0)
         {
-            return;
+            return null;
         }
 
         var screen = WindowPlacer.ScreenOf(bounds, screens);
         var frame = FrameSize();
-        UIContext.Resolve<IWindowPlacementStore>().Save(PlacementName(), new WindowPlacement
+        return new WindowPlacement
         {
             ScreenId = screen.Id,
             Left = bounds.X - screen.WorkArea.X,
@@ -1093,7 +1112,7 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
             ClientWidth = (bounds.Width - frame.Width) / DpiScale.X,
             ClientHeight = (bounds.Height - frame.Height) / DpiScale.Y,
             IsMaximized = State == WindowState.Maximized
-        });
+        };
     }
 
     private Size FrameSize() =>
