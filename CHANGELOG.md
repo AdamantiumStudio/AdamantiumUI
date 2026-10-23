@@ -7,6 +7,13 @@ All packages share one version.
 
 ### Added
 
+- `StatusBar` and `StatusBarItem`: the strip along the bottom of a window or a document, as an IDE's. Its fields line
+  up from the left, a field docked right (`DockPanel.Dock="Right"`) from the right, a vertical `Separator` between
+  groups, any other element as it is; data items are shown in fields of their own. A field with a `Command` or a
+  `ContextMenu` acts on a press - runs the command, or opens the menu over it and closes it on the next press - and
+  lights under the pointer (`IsInteractive`); to automation it is then a button, otherwise text, and a press goes by
+  it. Its words are not selectable. One style set serves every theme. The sandbox's Menus page shows one.
+  `ButtonBase.TakesPresses`: a button that lets a press go by while it has nothing to do.
 - Text outline, shadow, glow and reflection, as Word draws them: `TextOutline`, `TextShadow`, `TextGlow` and
   `TextReflection` (`Adamantium.UI.Core.Media`, made in markup), set on a `TextBlock` or on a run or span of it - the
   nearest inline's over its span's, over the block's; a value changed inside one set already draws the text again. The

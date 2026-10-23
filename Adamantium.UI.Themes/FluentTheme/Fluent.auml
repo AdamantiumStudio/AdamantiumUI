@@ -64,6 +64,7 @@
         <!-- Where text does not select: captions of things a press already means something on. -->
         <StyleInclude Source="{x:Type shared:TextSelectionStyleSet}"/>
         <StyleInclude Source="{x:Type shared:ColorPaletteStyleSet}"/>
+        <StyleInclude Source="{x:Type shared:StatusBarStyleSet}"/>
         <StyleInclude Source="{x:Type shared:CalendarStyleSet}"/>
         <StyleInclude Source="{x:Type fluent:ItemsControlStyleSet}"/>
         <StyleInclude Source="{x:Type fluent:ListBoxStyleSet}"/>

@@ -18,8 +18,20 @@ public partial class MenusViewModel : TabPageViewModel
 
     [Bindable] private string _pickedFrom;
 
+    /// <summary>The line endings the status bar's field shows; its menu changes them.</summary>
+    [Bindable] private string _lineEnding = "CRLF";
+
     /// <summary>The menu tree, built in the VM. The view binds ContextMenu.ItemsSource to it.</summary>
     public ObservableCollection<MenuNode> MenuItems { get; }
+
+    /// <summary>The menu of the status bar's line endings field.</summary>
+    public ObservableCollection<MenuNode> LineEndings { get; }
+
+    /// <summary>What the status bar's caret field does on a press.</summary>
+    public AdamantiumCommand GoToLineCommand { get; }
+
+    /// <summary>What the status bar's zoom field does on a press.</summary>
+    public AdamantiumCommand ResetZoomCommand { get; }
 
     public MenusViewModel() : base("Menus")
     {
@@ -57,6 +69,20 @@ public partial class MenusViewModel : TabPageViewModel
             MenuNode.Divider(),
             MenuNode.Leaf(nameof(MenusStrings.Properties), new AdamantiumCommand(() => Record(nameof(MenusStrings.Properties)))),
         ];
+
+        LineEndings =
+        [
+            MenuNode.Leaf("CRLF", new AdamantiumCommand(() => EndLines("CRLF"))),
+            MenuNode.Leaf("LF", new AdamantiumCommand(() => EndLines("LF"))),
+        ];
+        GoToLineCommand = new AdamantiumCommand(() => Record(nameof(MenusStrings.GoToLine), nameof(MenusStrings.StatusBar)));
+        ResetZoomCommand = new AdamantiumCommand(() => Record(nameof(MenusStrings.ResetZoom), nameof(MenusStrings.StatusBar)));
+    }
+
+    private void EndLines(string ending)
+    {
+        LineEnding = ending;
+        Record(ending, nameof(MenusStrings.StatusBar));
     }
 
     private void Record(string item, string from = null)

@@ -69,6 +69,10 @@ public abstract class ButtonBase : ContentControl
     /// its pressed look and is not clicked by the lift. A repeat button says no - holding it is how it repeats.</summary>
     protected virtual bool LongPressCancelsClick => true;
 
+    /// <summary>Whether a press is the button's: it takes the pointer, shows itself pressed and clicks. A button that
+    /// only tells for now - a status bar field with nothing to do - lets the press go by.</summary>
+    protected virtual bool TakesPresses => true;
+
     private void OnHolding(object sender, HoldingEventArgs e)
     {
         if (e.HoldingState == HoldingState.Started && LongPressCancelsClick) IsPressed = false;
@@ -206,7 +210,7 @@ public abstract class ButtonBase : ContentControl
     protected override void OnPointerPressed(PointerPressedEventArgs e)
     {
         base.OnPointerPressed(e);
-        if (!IsEnabled || e.ChangedButton != MouseButtons.Left || e.Handled)
+        if (!IsEnabled || !TakesPresses || e.ChangedButton != MouseButtons.Left || e.Handled)
         {
             return;
         }

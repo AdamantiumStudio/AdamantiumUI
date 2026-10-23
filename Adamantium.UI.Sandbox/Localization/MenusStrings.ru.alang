@@ -21,4 +21,10 @@
     <Phrase Key="Reveal" Text="Показать в Проводнике"/>
     <Phrase Key="RemoveFromList" Text="Убрать из списка"/>
     <Phrase Key="Properties" Text="Свойства…"/>
+
+    <Phrase Key="StatusBar" Text="Строка статуса"/>
+    <Phrase Key="StatusHint" Text="Поля с командой или меню отвечают на щелчок и подсвечиваются под указателем; «Готово» — только текст. Масштаб прижат вправо."/>
+    <Phrase Key="StatusReady" Text="Готово"/>
+    <Phrase Key="StatusCaret" Text="Стр 12, Стлб 5"/>
+    <Phrase Key="GoToLine" Text="Перейти к строке"/>
 </Language>
