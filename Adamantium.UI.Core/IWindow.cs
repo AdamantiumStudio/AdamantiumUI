@@ -45,7 +45,11 @@ public interface IWindow : IRootVisualComponent, IContentControl
     IntPtr SurfaceDisplayHandle => IntPtr.Zero;
     
     bool IsClosed { get; }
-        
+
+    /// <summary>Whether the window is up on the desktop: shown, with its first frame, and not hidden since. A window
+    /// with no OS window of its own is up for as long as it is open.</summary>
+    bool IsDisplayed => !IsClosed;
+
     MSAALevel MSAALevel { get; set; }
 
     /// <summary>Toggles the GPU analytic anti-aliasing (coverage fringe on fills + feathered strokes). True = on.

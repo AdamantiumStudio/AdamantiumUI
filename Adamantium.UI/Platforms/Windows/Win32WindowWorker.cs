@@ -18,6 +18,7 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
     //private WindowBase window;
     private IWindow window;
     private readonly Dictionary<uint, HandleMessage> messageTable;
+    private readonly bool _application;
 
     private bool isOverSizeFrame;
     private bool trackMouse;
@@ -63,10 +64,14 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
     {
         UIContext = uiContext;
         collectBlocked = CollectBlocked;
+        _application = uiContext.Resolve<IApplicationPlatform>() is not WindowsPlatform { IsApplication: false };
 
         // What the OS is asking for RIGHT NOW, before any window is up: a theme set to follow the system must open in
         // the right appearance, not correct itself after the first change notification arrives.
-        Core.Resources.SystemAppearance.PrefersDark = Win32Interop.SystemPrefersDarkAppearance();
+        if (_application)
+        {
+            Core.Resources.SystemAppearance.PrefersDark = Win32Interop.SystemPrefersDarkAppearance();
+        }
 
 
         messageTable = new Dictionary<uint, HandleMessage>();
@@ -242,7 +247,10 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
 
         // Accept drops from OTHER applications for this window's whole life - registered here, on the thread that owns
         // the HWND (OLE requires that), never per drag. Silently does nothing when the OS bridge is unavailable.
-        Input.DragDrop.RegisterNativeDropTarget(this.window);
+        if (_application)
+        {
+            Input.DragDrop.RegisterNativeDropTarget(this.window);
+        }
 
         UIContext.ThemeEngine.ApplyCurrentTheme(this.window);
         UIContext.UIApplication.AddWindow(this.window);
@@ -682,10 +690,14 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
             window.SetHandle(IntPtr.Zero);
             // Revoke the OLE drop target on the SAME (HWND-owning) thread and before the window dies - revoking after
             // DestroyWindow leaves the registration dangling on a handle the OS may hand to someone else.
-            _ = UIContext.UIApplication.ExecuteOnUIThreadAsync(() =>
+            _ = UIContext.Dispatcher.InvokeAsync(() =>
             {
                 Automation.UiaBridge.Disconnect(closing);
-                Input.DragDrop.UnregisterNativeDropTarget(closing);
+                if (_application)
+                {
+                    Input.DragDrop.UnregisterNativeDropTarget(closing);
+                }
+
                 source.Destroy();
             });
         }

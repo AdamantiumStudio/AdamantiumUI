@@ -33,4 +33,10 @@
   <Wait Target="id=ClickThroughStatus" Name="Clicks pass through - 10 s left" />
   <Window Target="id=ClickThroughWindow" Action="Close" />
   <Absent Target="id=ClickThroughWindow" />
+  <!-- The splash window again, on its own thread; its close button closes it and nothing else. -->
+  <Invoke Target="id=ShowSplash" />
+  <Wait Target="id=SandboxSplashWindow/id=Close" />
+  <Invoke Target="id=SandboxSplashWindow/id=Close" />
+  <Absent Target="id=SandboxSplashWindow" />
+  <Wait Target="id=ShowSplash" />
 </Scenario>

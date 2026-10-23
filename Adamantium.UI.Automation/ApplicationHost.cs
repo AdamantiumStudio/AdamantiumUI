@@ -19,6 +19,8 @@ public sealed class ApplicationHost : IAutomationHost
 
     public IReadOnlyList<IWindow> Windows => _application.Windows;
 
+    public bool IsStarting => _application.IsStarting;
+
     public IVisualRenderer Renderer => _application.Container.Resolve<IVisualRenderer>();
 
     public async Task<T> RunOnLoopAsync<T>(Func<T> work, TimeSpan timeout)

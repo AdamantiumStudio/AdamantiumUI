@@ -1,0 +1,20 @@
+<SplashWindow x:Namespace="Adamantium.UI.Sandbox"
+              xmlns="http://adamantium/ui"
+              xmlns:x="http://adamantium/ui/xaml/extensions"
+              xmlns:conv="clr-namespace:Adamantium.UI.Sandbox.Converters"
+              x:CreateInDesignTime="False"
+              Title="Adamantium Sandbox"
+              Width="560"
+              Height="320">
+    <Grid Margin="36,32" RowDefinitions="*,Auto">
+        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+            <TextBlock Text="Adamantium" FontSize="44" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+            <TextBlock Text="Sandbox" FontSize="20" Opacity="0.6" HorizontalAlignment="Center"/>
+        </StackPanel>
+        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center">
+            <BusyIndicator IsActive="True" Width="22" Height="22"/>
+            <TextBlock Margin="12,0,0,0" VerticalAlignment="Center" Opacity="0.8"
+                       Text="{Ancestor SplashWindow, Elapsed, Converter={conv:ElapsedConverter}}"/>
+        </StackPanel>
+    </Grid>
+</SplashWindow>

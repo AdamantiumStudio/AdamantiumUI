@@ -129,7 +129,9 @@ internal sealed class WaylandTablet
 
         private void Raise(RawPointerEventType eventType, uint time)
         {
-            var window = worker?.Window;
+            var window = eventType is RawPointerEventType.Up or RawPointerEventType.LeaveWindow
+                ? worker?.Window
+                : worker?.InputWindow;
             if (window == null)
             {
                 return;

@@ -46,7 +46,7 @@ internal sealed class WaylandTouch
         var worker = platform.Find(surface);
         seat.NoteInput(serial, worker);
         var position = new Vector2(x, y);
-        if (seat.TouchSuppressed || worker?.Window == null || worker.BeginResize(worker.ResizeEdgeAt(position), serial))
+        if (seat.TouchSuppressed || worker?.InputWindow == null || worker.BeginResize(worker.ResizeEdgeAt(position), serial))
         {
             contacts[id] = new Contact(0, null, false) { Ignored = true };
             return;

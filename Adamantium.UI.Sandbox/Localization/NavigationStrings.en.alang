@@ -34,6 +34,7 @@
     <Phrase Key="ModalWindowMessage" Text="A window of its own: the window it belongs to takes no input until it closes."/>
 
     <Phrase Key="OpenClickThroughWindow" Text="Click-through window"/>
+    <Phrase Key="ShowSplash" Text="Splash screen"/>
     <Phrase Key="ClickThroughWindow" Text="Click-through window"/>
     <Phrase Key="ClickThroughHint" Text="Put this window over something you can click, then let it pass clicks: a click on the window reaches what is behind it."/>
     <Phrase Key="PassClicks" Text="Pass clicks for 10 s"/>

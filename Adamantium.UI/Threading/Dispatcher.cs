@@ -155,6 +155,17 @@ public sealed class Dispatcher : IDispatcher
         AddToDict(dispatcher);
     }
 
+    /// <summary>Forgets a dispatcher whose loop has ended, so its thread no longer passes <see cref="CheckAccess"/>.
+    /// </summary>
+    internal void Detach()
+    {
+        appPlatform.Signaled -= OnPlatformSignaled;
+        lock (collectionLocker)
+        {
+            dispatchers.Remove(Context);
+        }
+    }
+
     /// <summary>
     /// Queues <paramref name="action"/> for the UI loop thread (next Update, before layout), waking the loop; runs inline
     /// when already on it.

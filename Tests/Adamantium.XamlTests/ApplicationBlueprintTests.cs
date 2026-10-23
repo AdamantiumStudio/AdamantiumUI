@@ -60,6 +60,36 @@ public class ApplicationBlueprintTests
         Assert.That(project.Source, Does.Contain("[global::System.STAThread]"));
     }
 
+    // Read before the blueprint is made: its resources are not wanted that early, and making it costs the start.
+    [Test]
+    public void TheSplashWindow_IsNamedToTheAssemblyWithTheBlueprint()
+    {
+        var project = AumlCodegenHarness.Project(Files(
+            ("AppBlueprint.auml", $"<ApplicationBlueprint {Namespaces} StartupWindow=\"MainWindow\" SplashWindow=\"Splash\"/>"),
+            ("Splash.auml", $"<SplashWindow {Namespaces}><Grid/></SplashWindow>")), sources: [Application]);
+        Assert.That(project.Errors, Is.Empty, string.Join(" | ", project.Errors.Select(e => e.GetMessage())));
+
+        var assembly = project.Load();
+        var blueprint = (IApplicationBlueprint)Activator.CreateInstance(assembly.GetType("Test.App.AppBlueprint"));
+        Assert.Multiple(() =>
+        {
+            Assert.That(assembly.GetCustomAttribute<ApplicationBlueprintAttribute>()?.SplashWindow,
+                Is.EqualTo(assembly.GetType("Test.App.Splash")));
+            Assert.That(((ApplicationBlueprint)blueprint).SplashWindow, Is.EqualTo(assembly.GetType("Test.App.Splash")),
+                "and the blueprint holds it too");
+        });
+    }
+
+    [Test]
+    public void ABlueprintWithNoSplashWindow_NamesNone() =>
+        Assert.That(AumlCodegenHarness.Project(Files(("AppBlueprint.auml", Blueprint)), sources: [Application]).Load()
+            .GetCustomAttribute<ApplicationBlueprintAttribute>()?.SplashWindow, Is.Null);
+
+    [Test]
+    public void ASplashWindowThatIsNoSplashWindow_FailsTheBuild() =>
+        Assert.That(Errors(Files(("AppBlueprint.auml", $"<ApplicationBlueprint {Namespaces} SplashWindow=\"MainWindow\"/>")), [Application]),
+            Has.Some.Contains("MainWindow is not a SplashWindow: ApplicationBlueprint.SplashWindow"));
+
     [Test]
     public void TheBlueprint_HoldsWhatItsMarkupSays()
     {

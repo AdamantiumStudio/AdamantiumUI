@@ -164,6 +164,8 @@ public class ThemeManager : IThemeManager
         _swapping = [];
         foreach (var window in windows)
         {
+            if (window is AdamantiumComponent scoped && ThemeContext.GetTheme(scoped) != null) continue;
+
             if (window is IUIComponent visual) _swapping.Add(visual);
             window.InvalidateStyles();
         }

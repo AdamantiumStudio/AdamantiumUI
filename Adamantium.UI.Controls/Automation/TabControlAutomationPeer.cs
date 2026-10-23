@@ -26,6 +26,9 @@ public class TabControlAutomationPeer : ItemsControlAutomationPeer, ISelectionPr
 
     protected override UIComponent ContainerAt(int index) => ((TabControl)Owner).ContainerOfTab(index) as UIComponent;
 
+    /// <summary>A tab a virtualizing strip has not made yet is found by the id its tab will have.</summary>
+    protected internal override string AutomationIdOfItem(object item) => AutomationIdFromContainerStyle(item);
+
     protected override IReadOnlyList<AutomationPeer> ChildrenCore()
     {
         var tabs = (TabControl)Owner;

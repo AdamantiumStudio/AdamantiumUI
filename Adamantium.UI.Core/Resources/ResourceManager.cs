@@ -191,6 +191,12 @@ public class ResourceManager : IResourceManager
 
     public void NotifyResourcesChanged()
     {
+        if (LoopSignal.IsClaimed && !LoopSignal.IsLoopThread)
+        {
+            LoopSignal.Post(NotifyResourcesChanged);
+            return;
+        }
+
         // A resource VALUE changed IN PLACE (an inline dictionary entry was reassigned) rather than a whole dictionary
         // being added/removed: drop the cached lookups so the next resolve re-reads, and mark dirty so the coalesced
         // ResourcesChanged fires this pass - live {ObservableResource}s then pick up the new value.

@@ -16,6 +16,9 @@ public class ApplicationBlueprint : AdamantiumComponent, IApplicationBlueprint
     public static readonly AdamantiumProperty StartupWindowProperty = AdamantiumProperty.Register(nameof(StartupWindow),
         typeof(Type), typeof(ApplicationBlueprint), new PropertyMetadata(null));
 
+    public static readonly AdamantiumProperty SplashWindowProperty = AdamantiumProperty.Register(nameof(SplashWindow),
+        typeof(Type), typeof(ApplicationBlueprint), new PropertyMetadata(null));
+
     public static readonly AdamantiumProperty StartupThemeProperty = AdamantiumProperty.Register(nameof(StartupTheme),
         typeof(Type), typeof(ApplicationBlueprint), new PropertyMetadata(null));
 
@@ -34,6 +37,15 @@ public class ApplicationBlueprint : AdamantiumComponent, IApplicationBlueprint
     {
         get => GetValue<Type>(StartupWindowProperty);
         set => SetValue(StartupWindowProperty, value);
+    }
+
+    /// <summary>The window shown while the application starts, until the startup window has drawn; unset shows none.
+    /// </summary>
+    [TypeOf(typeof(SplashWindow))]
+    public Type SplashWindow
+    {
+        get => GetValue<Type>(SplashWindowProperty);
+        set => SetValue(SplashWindowProperty, value);
     }
 
     /// <summary>The theme the application opens on: Fluent (when unset), Graphite, MacOs or one of the project's own.</summary>

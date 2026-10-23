@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="utf-8"?>
+<StyleSet xmlns="http://adamantium/ui"
+          xmlns:x="http://adamantium/ui/xaml/extensions">
+
+    <Style Selector="SplashWindow">
+        <Setter Property="Background" Value="#1F1F23"/>
+        <Setter Property="Foreground" Value="#F2F2F2"/>
+        <Setter Property="BorderBrush" Value="#3A3A40"/>
+    </Style>
+
+    <Style Selector="SplashWindow">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="SplashWindow">
+                    <Border Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1">
+                        <Grid>
+                            <ContentPresenter x:Name="PART_ContentPresenter"
+                                    Content="{TemplateBinding Content}"
+                                    ContentTemplate="{TemplateBinding ContentTemplate}"
+                                    ContentTemplateSelector="{TemplateBinding ContentTemplateSelector}"
+                                    Margin="{TemplateBinding Padding}"/>
+                            <Button x:Name="PART_CloseButton" Classes="SplashClose"
+                                    HorizontalAlignment="Right" VerticalAlignment="Top"
+                                    Foreground="{TemplateBinding Foreground}"
+                                    AutomationProperties.AutomationId="Close"
+                                    AutomationProperties.Name="Close">
+                                <Path Data="M0,0 L10,10 M10,0 L0,10"
+                                        Stroke="{TemplateBinding Foreground}" StrokeThickness="1"
+                                        HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Button>
+                        </Grid>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style Selector="SplashWindow">
+        <PropertyTrigger Property="ShowCloseButton" Value="false">
+            <Setter TargetName="PART_CloseButton" Property="Visibility" Value="Collapsed"/>
+        </PropertyTrigger>
+    </Style>
+
+    <!-- Text and a spinner, which a splash window shows most: nothing else of a theme reaches it. -->
+    <Style Selector="TextBlock">
+        <Setter Property="Foreground" Value="#F2F2F2"/>
+    </Style>
+
+    <Style Selector="BusyIndicator">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="BusyIndicator">
+                    <Grid>
+                        <Ellipse Stroke="#3A3A40" StrokeThickness="3" Fill="Transparent" EllipseType="EdgeToEdge"/>
+                        <Ellipse Stroke="#4CC2FF" StrokeThickness="3" Fill="Transparent" EllipseType="EdgeToEdge"
+                                 StartAngle="0" StopAngle="90" RenderTransformOrigin="0.5,0.5">
+                            <Ellipse.RenderTransform>
+                                <Transform x:Name="RingSpin"/>
+                            </Ellipse.RenderTransform>
+                        </Ellipse>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Stopped on the way out: a looping animation on a detached element is a leak. -->
+    <Style Selector="BusyIndicator">
+        <PropertyTrigger Property="IsActive" Value="True">
+            <PropertyTrigger.EnterActions>
+                <RunAnimationAction TargetName="RingSpin">
+                    <Animation Duration="0:0:1.1" IterationCount="Infinity">
+                        <KeyFrame Cue="0"><Setter Property="RotationAngle" Value="0"/></KeyFrame>
+                        <KeyFrame Cue="1"><Setter Property="RotationAngle" Value="360"/></KeyFrame>
+                    </Animation>
+                </RunAnimationAction>
+            </PropertyTrigger.EnterActions>
+            <PropertyTrigger.ExitActions>
+                <StopAnimationAction TargetName="RingSpin"/>
+            </PropertyTrigger.ExitActions>
+        </PropertyTrigger>
+    </Style>
+
+    <Style Selector="Button.SplashClose">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BackgroundPointerOver" Value="#E81123"/>
+        <Setter Property="BackgroundPressed" Value="#F1707A"/>
+        <Setter Property="Width" Value="46"/>
+        <Setter Property="Height" Value="32"/>
+        <Setter Property="Focusable" Value="False"/>
+    </Style>
+
+    <Style Selector="Button.SplashClose">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Chrome" Background="{TemplateBinding Background}">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
+                                Content="{TemplateBinding Content}"/>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style Selector="Button.SplashClose">
+        <PropertyTrigger Property="IsPointerOver" Value="true">
+            <Setter TargetName="Chrome" Property="Background" Value="{TemplateBinding BackgroundPointerOver}"/>
+        </PropertyTrigger>
+        <PropertyTrigger Property="IsPressed" Value="true">
+            <Setter TargetName="Chrome" Property="Background" Value="{TemplateBinding BackgroundPressed}"/>
+        </PropertyTrigger>
+    </Style>
+
+</StyleSet>

@@ -89,7 +89,7 @@ internal sealed class WaylandDragDrop : INativeDragDrop
             over = null;
             overSink = null;
             windowDragOver = platform.Find(surface);
-            if (windowDragOver?.Window == null)
+            if (windowDragOver?.InputWindow == null)
             {
                 windowDragOver = null;
                 offer.Proxy.Accept(serial, null);
@@ -103,7 +103,7 @@ internal sealed class WaylandDragDrop : INativeDragDrop
         }
 
         var worker = platform.Find(surface);
-        var window = worker?.Window;
+        var window = worker?.InputWindow;
         INativeDropSink sink = null;
         if (window != null)
         {

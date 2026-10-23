@@ -1,6 +1,7 @@
 <ApplicationBlueprint xmlns="http://adamantium/ui"
                       xmlns:x="http://adamantium/ui/xaml/extensions"
-                      StartupWindow="MainWindow">
+                      StartupWindow="MainWindow"
+                      SplashWindow="SandboxSplashWindow">
     <ApplicationBlueprint.Resources>
         <ResourceLink Source="ModuleIcons"/>
         <ResourceLink Source="RibbonShellIcons"/>

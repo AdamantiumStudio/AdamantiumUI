@@ -948,6 +948,10 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
     public abstract IntPtr Handle { get; internal set; }
     public bool IsClosed { get; private set; }
 
+    /// <summary>Whether the window is up on the desktop: shown, with its first frame, and not hidden since. A window with
+    /// no OS window of its own is up for as long as it is open.</summary>
+    public virtual bool IsDisplayed => !IsClosed;
+
     public abstract Vector2 PointToClient(PixelPoint point);
     public abstract PixelPoint PointToScreen(Vector2 point);
 
@@ -993,7 +997,7 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
         {
             themes.ThemeChanging += OnThemeChanging;
             themes.ThemeChanged += OnThemeChanged;
-            IsThemeChanging = themes.IsThemeChanging;   // a window opened mid-swap already shows the busy state
+            IsThemeChanging = themes.IsThemeChanging && ThemeContext.GetTheme(this) == null;   // a window opened mid-swap already shows the busy state
         }
 
         Languages.Changed += OnLanguageChanged;
@@ -1001,6 +1005,12 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
 
     private void OnLanguageChanged(object sender, EventArgs e)
     {
+        if (LoopSignal.IsClaimed && !LoopSignal.IsLoopThread)
+        {
+            LoopSignal.Post(() => OnLanguageChanged(sender, e));
+            return;
+        }
+
         foreach (var node in GetVisualDescendants())
         {
             if (node is TextBoxBase box)
@@ -1097,9 +1107,15 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
     protected virtual IWindowWorkerService CreateWindowWorker(IUIContext context) =>
         UIAppContext.PlatformService.GetWindowWorker(context);
 
-    private void OnThemeChanging(object sender, ThemeChangedEventArgs e) => IsThemeChanging = true;
+    private void OnThemeChanging(object sender, ThemeChangedEventArgs e)
+    {
+        if (ThemeContext.GetTheme(this) == null) IsThemeChanging = true;
+    }
 
-    private void OnThemeChanged(object sender, ThemeChangedEventArgs e) => IsThemeChanging = false;
+    private void OnThemeChanged(object sender, ThemeChangedEventArgs e)
+    {
+        if (ThemeContext.GetTheme(this) == null) IsThemeChanging = false;
+    }
 
     protected virtual void InitializeComponent()
     {
@@ -1483,7 +1499,7 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
     private void DiscardClosed()
     {
         // Before the discard, while the tree still says which regions this window showed.
-        Navigation.RegionHost.ReleaseRegionsIn(this, UIAppContext.Current?.UIContext?.Resolve<Adamantium.Navigation.IRegionManager>());
+        Navigation.RegionHost.ReleaseRegionsIn(this, () => UIAppContext.Current?.UIContext?.Resolve<Adamantium.Navigation.IRegionManager>());
         AdornerLayer.Clear();
         AdornerLayer.SetFocus(null);
         DiscardedVisuals.PublishSubtree(this);

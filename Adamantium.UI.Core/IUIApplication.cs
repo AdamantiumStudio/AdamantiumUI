@@ -39,6 +39,14 @@ public interface IUIApplication
 
     public Task ExecuteOnUIThreadAsync(Action action);
 
+    /// <summary>Shows the splash window as the start shows it - on a thread, a dispatcher and a connection to the desktop
+    /// of its own - while the application runs. It stays until its own close button closes it, which cancels nothing.
+    /// Nothing happens when the application has no splash window, or the platform shows none - nor by default, for an
+    /// application with no desktop.</summary>
+    void ShowSplash()
+    {
+    }
+
     /// <summary>
     /// Enables or disables fixed framerate
     /// </summary>

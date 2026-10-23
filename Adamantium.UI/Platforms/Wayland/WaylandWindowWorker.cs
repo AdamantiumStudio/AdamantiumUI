@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Reflection;
 using Adamantium.Mathematics;
 using Adamantium.UI.Controls.Internals;
@@ -56,6 +57,13 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
     private ZxdgExportedV2 exported;
     private XdgToplevelSessionV1 toplevelSession;
     private string exportedHandle;
+    private XdgDialogV1 dialog;
+    private IWindow owner;
+    private readonly List<WaylandWindowWorker> blockedWindows = [];
+    private readonly HashSet<WaylandWindowWorker> blockers = [];
+    private readonly HashSet<WaylandWindowWorker> exempt = [];
+    private bool blocking;
+    private volatile bool inputBlocked;
 
     public WaylandWindowWorker(IUIContext uiContext)
     {
@@ -67,6 +75,9 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
 
     /// <summary>The window, or null once it is closed: events still on their way for it go nowhere.</summary>
     public IWindow Window => closed ? null : window;
+
+    /// <summary>The window input goes to: null while it is closed, or while a modal window keeps it from input.</summary>
+    internal IWindow InputWindow => inputBlocked ? null : Window;
 
     internal WlSurface Surface => surface;
 
@@ -127,13 +138,17 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
         xdgSurface.Configure += OnSurfaceConfigure;
         toplevel = xdgSurface.GetToplevel();
         toplevel.Configure += OnToplevelConfigure;
-        toplevel.Close += () => WaylandPlatform.DispatchInput(() => Window?.Close());
+        toplevel.Close += () => WaylandPlatform.DispatchInput(() => InputWindow?.Close());
         if (platform.Decorations != null)
         {
             decoration = platform.Decorations.GetToplevelDecoration(toplevel);
         }
 
         SendToplevelState();
+        if (window.Owner != null)
+        {
+            ParentTo(window.Owner);
+        }
         if (platform.Session != null &&
             window is Adamantium.UI.Controls.WindowBase { RemembersPlacement: true, ActivateOnShow: true } remembered)
         {
@@ -152,7 +167,11 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
         window.DpiScale = new Vector2(Scale, Scale);
         window.UpdateClientSizeFromPlatform(width, height);
 
-        Input.DragDrop.RegisterNativeDropTarget(window);
+        if (platform.IsApplication)
+        {
+            Input.DragDrop.RegisterNativeDropTarget(window);
+        }
+
         UIContext.ThemeEngine.ApplyCurrentTheme(window);
         UIContext.UIApplication.AddWindow(window);
 
@@ -210,6 +229,169 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
     }
 
     public Rect RestoreBounds => default;
+
+    public void SetOwner(IWindow owner)
+    {
+        platform.Invoke(() =>
+        {
+            if (closed)
+            {
+                return;
+            }
+
+            ParentTo(owner);
+            platform.Display.Flush();
+        });
+    }
+
+    private void ParentTo(IWindow owner)
+    {
+        this.owner = owner;
+        SendParent();
+    }
+
+    private void SendParent()
+    {
+        toplevel.SetParent(owner == null ? null : platform.Find(owner.Handle)?.Toplevel);
+    }
+
+    public void UpdateModal()
+    {
+        List<WaylandWindowWorker> changed;
+        lock (platform.ModalLock)
+        {
+            var modal = window.IsModal && !closed;
+            if (modal == blocking)
+            {
+                return;
+            }
+
+            blocking = modal;
+            if (modal)
+            {
+                exempt.UnionWith(blockers);
+                platform.CollectOthers(this, blockedWindows);
+                foreach (var other in blockedWindows)
+                {
+                    other.blockers.Add(this);
+                }
+
+                changed = [.. blockedWindows];
+            }
+            else
+            {
+                foreach (var other in blockedWindows)
+                {
+                    other.blockers.Remove(this);
+                }
+
+                changed = [.. blockedWindows];
+                blockedWindows.Clear();
+                exempt.Clear();
+            }
+
+            Recount();
+            foreach (var other in changed)
+            {
+                other.Recount();
+            }
+        }
+
+        platform.Invoke(SendModal);
+    }
+
+    private void SendModal()
+    {
+        bool modal;
+        lock (platform.ModalLock)
+        {
+            modal = blocking;
+        }
+
+        if (closed || platform.Dialogs == null || (dialog == null && !modal))
+        {
+            return;
+        }
+
+        dialog ??= platform.Dialogs.GetXdgDialog(toplevel);
+        if (modal)
+        {
+            dialog.SetModal();
+        }
+        else
+        {
+            dialog.UnsetModal();
+        }
+
+        platform.Display.Flush();
+    }
+
+    private void Recount()
+    {
+        var blocked = false;
+        foreach (var blocker in blockers)
+        {
+            if (!blocking || !exempt.Contains(blocker))
+            {
+                blocked = true;
+                break;
+            }
+        }
+
+        if (blocked == inputBlocked)
+        {
+            return;
+        }
+
+        inputBlocked = blocked;
+        if (blocked)
+        {
+            WaylandPlatform.DispatchInput(LetGo);
+        }
+    }
+
+    private void LetGo()
+    {
+        if (Window is not { } shown)
+        {
+            return;
+        }
+
+        if (Mouse.Pointer.Captured is IUIComponent captured && RootOf(captured) == shown)
+        {
+            Mouse.Pointer.Capture(null);
+        }
+
+        FocusManager.LeaveWindow(shown);
+    }
+
+    private static IUIComponent RootOf(IUIComponent node)
+    {
+        while (node?.VisualParent is { } parent)
+        {
+            node = parent;
+        }
+
+        return node;
+    }
+
+    /// <summary>Asks for the modal window keeping this one from input to be activated: the keyboard came here.</summary>
+    internal void ActivateBlocker()
+    {
+        WaylandWindowWorker modal = null;
+        lock (platform.ModalLock)
+        {
+            foreach (var blocker in blockers)
+            {
+                if (blocker.blocking)
+                {
+                    modal = blocker;
+                }
+            }
+        }
+
+        modal?.Activate();
+    }
 
     public void UpdateOverlayTraits()
     {
@@ -318,6 +500,12 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
         }
 
         SendToplevelState();
+        if (owner != null)
+        {
+            SendParent();
+        }
+
+        SendModal();
         surface.Commit();
         platform.Display.Flush();
     }
@@ -749,17 +937,30 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
 
         closed = true;
         platform.Unregister(surface.Handle);
+        lock (platform.ModalLock)
+        {
+            foreach (var blocker in blockers)
+            {
+                blocker.blockedWindows.Remove(this);
+            }
 
-        Input.DragDrop.UnregisterNativeDropTarget(window);
+            blockers.Clear();
+        }
+
+        if (platform.IsApplication)
+        {
+            Input.DragDrop.UnregisterNativeDropTarget(window);
+        }
 
         UIContext.UIApplication.RemoveWindow(window);
         window.SetHandle(IntPtr.Zero);
 
-        _ = UIContext.UIApplication.ExecuteOnUIThreadAsync(() =>
+        platform.Queue(() =>
         {
             platform.Seat.Forget(this);
             exported?.Destroy();
             toplevelSession?.Destroy();
+            dialog?.Destroy();
             decoration?.Destroy();
             viewport?.Destroy();
             fractionalScale?.Destroy();
@@ -778,6 +979,11 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
         }
 
         window.SetIsActive(true);
+        if (inputBlocked)
+        {
+            return;
+        }
+
         UIContext.UIApplication.SetActiveWindow(window);
         if (!FocusManager.TryRestoreFocus(window))
         {

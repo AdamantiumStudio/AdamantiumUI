@@ -95,6 +95,12 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
     private readonly object _debugToolsLock = new();
     private readonly Dictionary<Diagnostics.IDebugTool, bool> _debugTools = new();
     private readonly HashSet<Diagnostics.IDebugTool> _debugToolsToDetach = [];
+    private SplashHost _splash;
+    private readonly CancellationTokenSource _startupCancellation = new();
+    private volatile bool _startupDone;
+    private volatile bool _showingStartupWindow;
+    private int _splashHolds;
+    private bool _loopStarted;
 
     protected UIApplication()
     {
@@ -127,7 +133,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         RegisterBasicServices(Container);
         
         applicationLoopThread = new Thread(ApplicationLoopThread);
-        
+
         ConfigureLogging();
     }
 
@@ -389,7 +395,10 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
 
     public void SetActiveWindow(IWindow window)
     {
-        ActiveWindow = window;
+        if (window is not SplashWindow)
+        {
+            ActiveWindow = window;
+        }
     }
 
     public void InactivateWindow(IWindow window)
@@ -430,6 +439,9 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
     public static readonly AdamantiumProperty StartupTypeProperty = AdamantiumProperty.Register(nameof(StartupType),
         typeof(Type), typeof(UIApplication), new PropertyMetadata(null));
 
+    public static readonly AdamantiumProperty SplashTypeProperty = AdamantiumProperty.Register(nameof(SplashType),
+        typeof(Type), typeof(UIApplication), new PropertyMetadata(null));
+
     public static readonly AdamantiumProperty StartupThemeProperty = AdamantiumProperty.Register(nameof(StartupTheme),
         typeof(Type), typeof(UIApplication), new PropertyMetadata(null));
 
@@ -452,6 +464,23 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         get => GetValue<Type>(StartupTypeProperty);
         set => SetValue(StartupTypeProperty, value);
     }
+
+    /// <summary>The window shown while the application starts, until its first window has drawn. The blueprint states
+    /// it; a value set in code before <see cref="Run()"/> wins. Unset shows none. With one, the loop already draws while
+    /// <see cref="OnStartup"/> runs, as it does while any later window is made.</summary>
+    public Type SplashType
+    {
+        get => GetValue<Type>(SplashTypeProperty);
+        set => SetValue(SplashTypeProperty, value);
+    }
+
+    /// <summary>Canceled when the splash window is closed before the application has shown a window of its own: the
+    /// start is abandoned, and a long one can stop early by it.</summary>
+    public CancellationToken StartupCancellation => _startupCancellation.Token;
+
+    /// <summary>Whether the application is still starting under its splash window: until a window of its own has drawn
+    /// and the splash window has closed.</summary>
+    public bool IsStarting => _splash is { IsRunning: true };
 
     /// <summary>The theme the application opens on: Fluent (when unset), Graphite, MacOs or one of the application's
     /// own, which is added to the themes. The application's blueprint states it; a value set in code wins over the
@@ -595,7 +624,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
 
         windowsCollection.Add(window);
 
-        if (!firstWindowAdded)
+        if (!firstWindowAdded && window != _splash?.Window)
         {
             firstWindowAdded = true;
         }
@@ -641,20 +670,39 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
     private void Initialize()
     {
         if (IsInitialized) return;
-        
+
         cancellationTokenSource = new CancellationTokenSource();
+        _ = Task.Run(() => Theme.SystemDefaultFontFamily);
+        _ = Task.Run(Core.TypeParsers.SelectorParser.IndexLoadedAssemblies);
+        _ = Task.Run(() => System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(FX.UIBasicEffect).TypeHandle));
         Threading.Dispatcher.Initialize(UIContext);
         Dispatcher = Threading.Dispatcher.CurrentDispatcher;
         GraphicsDeviceService.IsInDebugMode = EnableGraphicsDebug;
-        GraphicsDeviceService.CreateMainDevice("Adamantium Main");
-        // Before any window, so a crash while creating shaders costs a child process, not the application.
-        ShaderPrecompiler.EnsureCompiled(GraphicsDeviceService.ResourceLoaderDevice as GraphicsDevice);
+        var devices = Task.Run(() =>
+        {
+            GraphicsDeviceService.CreateMainDevice("Adamantium Main");
+            // Before any window, so a crash while creating shaders costs a child process, not the application.
+            ShaderPrecompiler.EnsureCompiled(GraphicsDeviceService.ResourceLoaderDevice as GraphicsDevice);
+        });
+
+        if (StartWithSplash())
+        {
+            devices.GetAwaiter().GetResult();
+            EntityWorld.Initialize();
+            StartLoop();
+        }
+
         ReadBlueprint();
         LoadThemes();
         LoadLanguage();
+        devices.GetAwaiter().GetResult();
         SubscribeToEvents();
-        
-        EntityWorld.Initialize();
+
+        if (!_loopStarted)
+        {
+            EntityWorld.Initialize();
+        }
+
         OnInitialize();
         RegisterServices(Container);
         _visualRenderer = Container.Resolve<IVisualRenderer>();   // its device is created on the first snapshot
@@ -722,18 +770,47 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         TakeFromBlueprint(StartupLanguageProperty, blueprint.StartupLanguage);
         TakeFromBlueprint(ShutDownModeProperty, blueprint.ShutDownMode);
 
-        if (blueprint.Resources != null)
+        OnLoop(() =>
         {
-            ResourceManager.AddSource(this, blueprint.Resources, ResourceScope.Global);
+            if (blueprint.Resources != null)
+            {
+                ResourceManager.AddSource(this, blueprint.Resources, ResourceScope.Global);
+            }
+
+            foreach (var include in blueprint.StyleIncludes ?? [])
+            {
+                if (include.Source != null)
+                {
+                    ThemeManager.AddStyleSet(include.Source);
+                }
+            }
+        });
+    }
+
+    private void OnLoop(Action work)
+    {
+        if (!_loopStarted)
+        {
+            work();
+            return;
         }
 
-        foreach (var include in blueprint.StyleIncludes ?? [])
+        var done = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        LoopSignal.Post(() =>
         {
-            if (include.Source != null)
+            try
             {
-                ThemeManager.AddStyleSet(include.Source);
+                work();
+                done.SetResult();
             }
-        }
+            catch (Exception e)
+            {
+                done.SetException(e);
+            }
+        });
+        Task.WaitAny([done.Task], cancellationTokenSource.Token);
+        done.Task.GetAwaiter().GetResult();
+        StartupCancellation.ThrowIfCancellationRequested();
     }
 
     private void TakeFromBlueprint(AdamantiumProperty property, object value)
@@ -746,7 +823,8 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
 
     private void LoadLanguage()
     {
-        Languages.Current = string.IsNullOrEmpty(StartupLanguage) ? Languages.Available.FirstOrDefault() : StartupLanguage;
+        var language = string.IsNullOrEmpty(StartupLanguage) ? Languages.Available.FirstOrDefault() : StartupLanguage;
+        OnLoop(() => Languages.Current = language);
     }
 
     private void LoadThemes()
@@ -772,15 +850,17 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
                 $"No theme is named '{requested}'. The themes are: {string.Join(", ", ThemeManager.Themes.Select(t => t.Name))}.");
         }
 
-        ThemeManager.SetTheme(startOn);
-
         var variant = StartupThemeVariant;
-        if (!variant.IsUnspecified && !ThemeManager.SetVariant(variant))
+        OnLoop(() =>
         {
-            throw new InvalidOperationException(
-                $"The theme '{startOn.Name}' has no variant '{variant}'. Its variants are: {string.Join(", ", startOn.VariantsByKey.Keys)}" +
-                (variant.FollowsSystem ? "; System needs a light and a dark one." : "."));
-        }
+            ThemeManager.SetTheme(startOn);
+            if (!variant.IsUnspecified && !ThemeManager.SetVariant(variant))
+            {
+                throw new InvalidOperationException(
+                    $"The theme '{startOn.Name}' has no variant '{variant}'. Its variants are: {string.Join(", ", startOn.VariantsByKey.Keys)}" +
+                    (variant.FollowsSystem ? "; System needs a light and a dark one." : "."));
+            }
+        });
     }
 
     private void SubscribeToEvents()
@@ -796,11 +876,11 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         containerRegistry.RegisterInstance<IAdamantiumApplication>(this);
         containerRegistry.RegisterInstance<IUIApplication>(this);
         containerRegistry.RegisterInstance<EntityWorld>(EntityWorld);
+        containerRegistry.RegisterSingleton<IThemeManager>(ThemeManager);
     }
 
     protected virtual void RegisterServices(IContainerRegistry containerRegistry)
     {
-        containerRegistry.RegisterSingleton<IThemeManager>(ThemeManager);
         // Off-screen renderer for drag ghosts and brush bakes; an app may register its own before base.
         if (!containerRegistry.IsRegistered<IVisualRenderer>())
             containerRegistry.RegisterSingleton<IVisualRenderer, VisualRenderer>();
@@ -882,7 +962,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
 
     protected void OnWindowActivated(IWindow obj)
     {
-        ActiveWindow = obj;
+        SetActiveWindow(obj);
     }
     
     protected void OnWindowDeactivated(IWindow obj)
@@ -894,8 +974,46 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
     {
         if (IsRunning) return;
 
-        Initialize();
-        OnStartupInternal();
+        try
+        {
+            Initialize();
+            StartupCancellation.ThrowIfCancellationRequested();
+            OnStartupInternal();
+        }
+        catch (OperationCanceledException) when (StartupCancellation.IsCancellationRequested || _isShuttingDown)
+        {
+        }
+        catch
+        {
+            if (_loopStarted)
+            {
+                ShutDown();
+            }
+            else
+            {
+                _splash?.Abandon();
+            }
+
+            throw;
+        }
+
+        _startupDone = true;
+        Interlocked.MemoryBarrier();
+        if (StartupCancellation.IsCancellationRequested || _isShuttingDown)
+        {
+            ShutDown();
+            return;
+        }
+
+        StartLoop();
+        Dispatcher.Run(cancellationTokenSource.Token);
+    }
+
+    private void StartLoop()
+    {
+        if (_loopStarted) return;
+        _loopStarted = true;
+
         if (RenderThreadOptions.RenderThreadEnabled)
         {
             renderThread = new Thread(RenderThread) { IsBackground = true, Name = "AdamantiumRenderThread" };
@@ -904,7 +1022,107 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
             renderThread.Start();
         }
         applicationLoopThread.Start();
-        Dispatcher.Run(cancellationTokenSource.Token);
+    }
+
+    private bool StartWithSplash()
+    {
+        if (SplashWindowType() is not { } type)
+        {
+            return false;
+        }
+
+        _splash = new SplashHost(this, type);
+        _splash.Canceled += CancelStartup;
+        _splash.Start();
+        return true;
+    }
+
+    public void ShowSplash()
+    {
+        if (SplashWindowType() is { } type)
+        {
+            new SplashHost(this, type).Start();
+        }
+    }
+
+    private Type SplashWindowType()
+    {
+        var type = SplashType ?? GetType().Assembly.GetCustomAttribute<ApplicationBlueprintAttribute>()?.SplashWindow;
+        return Configuration.Platform is Platform.Linux or Platform.Windows ? type : null;
+    }
+
+    private void CancelStartup()
+    {
+        _startupCancellation.Cancel();
+        if (_startupDone)
+        {
+            ShutDown();
+        }
+    }
+
+    /// <summary>Keeps the splash window up - past the first frame of the startup window, or while the start opens its
+    /// first window later, from work of its own - until what is returned is disposed.</summary>
+    public IDisposable HoldSplash()
+    {
+        Interlocked.Increment(ref _splashHolds);
+        return new SplashHold(this);
+    }
+
+    private sealed class SplashHold(UIApplication application) : IDisposable
+    {
+        private int _released;
+
+        public void Dispose()
+        {
+            if (Interlocked.Exchange(ref _released, 1) == 0)
+            {
+                Interlocked.Decrement(ref application._splashHolds);
+                LoopSignal.Request();
+            }
+        }
+    }
+
+    private void HandOverFromSplash()
+    {
+        if (_splash is not { IsHandedOver: false } || Volatile.Read(ref _splashHolds) > 0) return;
+
+        var awaited = !_startupDone || _showingStartupWindow || WindowsArriving();
+        foreach (var window in Windows)
+        {
+            if (window == _splash.Window)
+            {
+                continue;
+            }
+
+            if (window.IsDisplayed && window.Renderer is { PresentedFrames: > 0 })
+            {
+                _splash.HandOver();
+                return;
+            }
+
+            awaited |= window.ShouldDisplayWindow && window.State != WindowState.Minimized;
+        }
+
+        if (!awaited)
+        {
+            _splash.HandOver();
+        }
+    }
+
+    private bool WindowsArriving()
+    {
+        lock (applicationLocker)
+        {
+            foreach (var window in addedWindows)
+            {
+                if (window != _splash.Window)
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     public void Run(IWindow window)
@@ -955,8 +1173,16 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
 
     private async void ShowMainWindow(IWindow window)
     {
-        await Navigation.ArriveInWindowAsync(window.DataContext);
-        window.Show();
+        _showingStartupWindow = true;
+        try
+        {
+            await Navigation.ArriveInWindowAsync(window.DataContext);
+            window.Show();
+        }
+        finally
+        {
+            _showingStartupWindow = false;
+        }
     }
 
     private void ApplicationLoopThread()
@@ -1054,6 +1280,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         // Snapshots are recorded here, on the loop thread, once the frame has settled; they are drawn on the render thread.
         _visualRenderer?.RecordPendingSnapshots();
 
+        HandOverFromSplash();
         CheckExitConditions();
         if (GraphicsDeviceService.DeviceUpdateNeeded)
         {
@@ -1114,6 +1341,11 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
 
     private string FindIdleBlocker()
     {
+        if (IsStarting)
+        {
+            return "the start, until a window of the application's own has drawn and the splash window has closed";
+        }
+
         if (LoopSignal.HasPostedWork)
         {
             return "work posted to the loop";
@@ -1533,6 +1765,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
             FreeResources();
         }
 
+        _splash?.Abandon();
         Stopped?.Invoke(this, EventArgs.Empty);
     }
 

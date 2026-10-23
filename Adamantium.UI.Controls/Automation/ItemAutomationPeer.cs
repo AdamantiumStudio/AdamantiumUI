@@ -26,7 +26,7 @@ public class ItemAutomationPeer : AutomationPeer, ISelectionItemProvider, IScrol
 
     public override string Name => ItemsOwner.NameOfItem(Item);
 
-    public override string AutomationId => string.Empty;
+    public override string AutomationId => ItemsOwner.AutomationIdOfItem(Item);
 
     public override string HelpText => string.Empty;
 

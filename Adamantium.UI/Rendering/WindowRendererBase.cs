@@ -248,11 +248,7 @@ public abstract class WindowRendererBase : IWindowRenderer
 
         if (Window.ShouldDisplayWindow)
         {
-            // Dispatcher.CurrentDispatcher.Invoke(() =>
-            // {
-            //     Window.Show();
-            // });
-            Window.UIContext.UIApplication.ExecuteOnUIThread(() => Window.Show());
+            Window.UIContext.Dispatcher.Invoke(() => Window.Show());
         }
     }
     

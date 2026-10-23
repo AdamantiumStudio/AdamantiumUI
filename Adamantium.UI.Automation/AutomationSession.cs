@@ -97,7 +97,25 @@ public sealed class AutomationSession : IAsyncDisposable
                 _closeOnDispose = options.CloseOnDispose,
                 _dataFolder = data
             };
-            await session.Find(By.Type(AutomationControlType.Window)).WaitForAsync(timeout);
+            try
+            {
+                await session.Find(By.Type(AutomationControlType.Window)).WaitForAsync(timeout);
+                await session.RunAsync(new AutomationRequest
+                {
+                    Command = AutomationCommand.WaitStarted, TimeoutMs = (int)timeout.TotalMilliseconds
+                });
+            }
+            catch (IOException) when (process.WaitForExit(TimeSpan.FromSeconds(1)))
+            {
+                await channel.DisposeAsync();
+                throw new AutomationException($"{Path.GetFileName(path)} exited with code {process.ExitCode} while it started.");
+            }
+            catch
+            {
+                await channel.DisposeAsync();
+                throw;
+            }
+
             return session;
         }
         catch
