@@ -7,6 +7,9 @@ All packages share one version.
 
 ### Added
 
+- `Popup.ClosesOnClick`, attached to a button in a popup: a click on it closes the popup once its command has run - a
+  card's "Go" or "Apply" closes the card without the view model having to. An Enter nothing in a popup took presses
+  its visible, enabled default button (`IsDefault`), as in a window, whose keys never reach a popup's content.
 - A Large ribbon command's label takes up to two lines, as Office's: a label of two or more words is broken where the
   wider line is narrowest, so the command takes less of the band's width. `Ribbon.LabelLines` (also `LabelLines` on
   the ribbon's commands), inherited, sets how many - 2 by default, 1 for one line; a Medium label stays one line

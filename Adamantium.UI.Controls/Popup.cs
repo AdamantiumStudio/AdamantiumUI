@@ -2,7 +2,9 @@ using System;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Adamantium.UI.Controls.Base;
+using Adamantium.UI.Controls.Buttons;
 using Adamantium.UI.Controls.Panels;
+using Adamantium.UI.Controls.Primitives;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Input;
@@ -69,10 +71,23 @@ public class Popup : MeasurableUIComponent, IContainer
     public static readonly AdamantiumProperty IgnoreTargetPressProperty = AdamantiumProperty.Register(nameof(IgnoreTargetPress),
         typeof(bool), typeof(Popup), new PropertyMetadata(false));
 
+    /// <summary>Whether a click on this button closes the popup it is shown in, once its command has run - a card's "Go"
+    /// or "Apply".</summary>
+    public static readonly AdamantiumProperty ClosesOnClickProperty = AdamantiumProperty.RegisterAttached("ClosesOnClick",
+        typeof(bool), typeof(ButtonBase), new PropertyMetadata(false));
+
     private IPopupHost _host;   // the window layer this popup is registered with while open
     private PointerPressedEventHandler _lightDismiss;   // window preview-press handler while an open, !KeepOpen popup is shown
     private KeyEventHandler _escapeDismiss;          // ...and its keyboard half (Escape)
     private IInputComponent _escapeContentRoot;      // the popup's own content root, hooked alongside the window (see HookEscape)
+    private RoutedEventHandler _contentClick;
+    private KeyEventHandler _contentEnter;
+    private IInputComponent _contentRoot;
+
+    public static bool GetClosesOnClick(IAdamantiumComponent element) => element.GetValue<bool>(ClosesOnClickProperty);
+
+    public static void SetClosesOnClick(IAdamantiumComponent element, bool value) =>
+        element.SetValue(ClosesOnClickProperty, value);
 
     public bool IsOpen
     {
@@ -230,6 +245,11 @@ public class Popup : MeasurableUIComponent, IContainer
         // it in place; the popup layer measures/arranges/renders it in the overlay.
         if (e.OldValue is IMeasurableComponent oldChild) popup.LogicalChildrenCollection.Remove(oldChild);
         if (e.NewValue is IMeasurableComponent newChild) popup.LogicalChildrenCollection.Add(newChild);
+        if (popup._isShowing)
+        {
+            popup.UnhookContent();
+            popup.HookContent();
+        }
     }
 
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
@@ -344,6 +364,7 @@ public class Popup : MeasurableUIComponent, IContainer
         _isShowing = true;
         if (!KeepOpen) HookLightDismiss();   // click-outside-to-close, hosted centrally here (see OnGlobalPreviewDown)
         if (DismissOnEscape) HookEscape();   // ...and Escape, which a KeepOpen drawer wants just as much
+        HookContent();
         AnnounceShown(AutomationEvent.MenuOpened);
     }
 
@@ -376,6 +397,7 @@ public class Popup : MeasurableUIComponent, IContainer
 
         UnhookLightDismiss(host);
         UnhookEscape(host);
+        UnhookContent();
         host?.PopupLayer.Remove(this);   // the layer un-records the overlay root - see PopupLayer.Remove
         // The focus goes back to whatever opened this - but only if it is still in here, where it is about to be
         // stranded. See FocusReturn.
@@ -511,6 +533,74 @@ public class Popup : MeasurableUIComponent, IContainer
     }
 
     private void Dismiss() => SetCurrentValue(IsOpenProperty, false);
+
+    private void HookContent()
+    {
+        _contentRoot = Child as IInputComponent;
+        if (_contentRoot == null)
+        {
+            return;
+        }
+
+        _contentClick ??= OnContentClick;
+        _contentEnter ??= OnContentKey;
+        _contentRoot.AddHandler(ButtonBase.ClickEvent, _contentClick, handledEventsToo: true);
+        _contentRoot.AddHandler(Keyboard.KeyDownEvent, _contentEnter, handledEventsToo: true);
+    }
+
+    private void UnhookContent()
+    {
+        if (_contentRoot == null)
+        {
+            return;
+        }
+
+        _contentRoot.RemoveHandler(ButtonBase.ClickEvent, _contentClick);
+        _contentRoot.RemoveHandler(Keyboard.KeyDownEvent, _contentEnter);
+        _contentRoot = null;
+    }
+
+    private void OnContentClick(object sender, RoutedEventArgs e)
+    {
+        if (e.OriginalSource is ButtonBase button && GetClosesOnClick(button))
+        {
+            Dismiss();
+        }
+    }
+
+    private void OnContentKey(object sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Enter || e.Handled || _contentRoot == null || DefaultButtonIn(_contentRoot) is not { } button)
+        {
+            return;
+        }
+
+        button.PerformClick();
+        e.Handled = true;
+    }
+
+    private static Button DefaultButtonIn(IUIComponent root)
+    {
+        if (root.Visibility != Visibility.Visible || !root.IsEnabled)
+        {
+            return null;
+        }
+
+        if (root is Button { IsDefault: true } button)
+        {
+            return button;
+        }
+
+        foreach (var child in root.VisualChildren)
+        {
+            if (DefaultButtonIn(child) is { } found)
+            {
+                return found;
+            }
+        }
+
+        return null;
+    }
 
     private static bool IsWithin(IUIComponent node, IUIComponent ancestor)
     {
