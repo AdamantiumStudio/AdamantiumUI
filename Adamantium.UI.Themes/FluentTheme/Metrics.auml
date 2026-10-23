@@ -122,7 +122,8 @@
     <!-- A LARGE button - icon over label - and a small one, side by side in a row of three. -->
     <sys:Double x:Key="RibbonButtonLargeHeight">56</sys:Double>
     <sys:Double x:Key="RibbonButtonMinWidth">56</sys:Double>
-    <Thickness x:Key="RibbonButtonPadding">8 6</Thickness>
+    <!-- 4 above and below: a 32px icon over two lines of label fits the band's row. -->
+    <Thickness x:Key="RibbonButtonPadding">8 4</Thickness>
     <Thickness x:Key="RibbonButtonPaddingSmall">4 2</Thickness>
     <sys:Double x:Key="RibbonMenuItemHeight">48</sys:Double>
     <Thickness x:Key="RibbonBackstagePadding">20 0</Thickness>

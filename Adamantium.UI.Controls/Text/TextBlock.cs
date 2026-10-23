@@ -76,6 +76,10 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         typeof(int), typeof(TextBlock),
         new PropertyMetadata(0, PropertyMetadataOptions.AffectsMeasure));
 
+    public static readonly AdamantiumProperty BalanceLinesProperty = AdamantiumProperty.Register(nameof(BalanceLines),
+        typeof(bool), typeof(TextBlock),
+        new PropertyMetadata(false, PropertyMetadataOptions.AffectsMeasure));
+
     public static readonly AdamantiumProperty CharacterStyleProperty = AdamantiumProperty.Register(nameof(CharacterStyle),
         typeof(CharacterStyle), typeof(TextBlock), new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure));
 
@@ -228,6 +232,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
     private LineStackingStrategy _lastLineStacking;
     private double _lastLineSpacing;
     private int _lastMaxLines;
+    private bool _lastBalanceLines;
     private TextLineBounds _lastLineBounds;
     private const float Unbounded = 1e7f;
 
@@ -342,6 +347,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         _textLayout.LineStacking = LineStackingStrategy;
         _textLayout.LineSpacing = LineSpacing;
         _textLayout.MaxLines = MaxLines;
+        _textLayout.BalanceLines = BalanceLines;
         _textLayout.LineBounds = TextLineBounds;
 
         // Boundary: an explicit Width, else the available width for wrapping or trimming blocks; plain NoWrap labels stay
@@ -374,7 +380,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
             && Equals(_lastBaselineGrid, baselineGrid)
             && _lastLineHeight.Equals(LineHeight)
             && _lastLineStacking == LineStackingStrategy && _lastLineSpacing.Equals(LineSpacing)
-            && _lastMaxLines == MaxLines && _lastLineBounds == TextLineBounds
+            && _lastMaxLines == MaxLines && _lastBalanceLines == BalanceLines && _lastLineBounds == TextLineBounds
             && ShapesLike(_lastShaping, shaping);
         if (sameInputs && _lastWidth.Equals(width) && _lastHeight.Equals(height))
         {
@@ -503,6 +509,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         _lastLineStacking = LineStackingStrategy;
         _lastLineSpacing = LineSpacing;
         _lastMaxLines = MaxLines;
+        _lastBalanceLines = BalanceLines;
         _lastLineBounds = TextLineBounds;
         return _cachedSize;
 
@@ -868,6 +875,16 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
     {
         get => GetValue<int>(MaxLinesProperty);
         set => SetValue(MaxLinesProperty, value);
+    }
+
+    /// <summary>Whether text wrapped by words takes the narrowest width that keeps its lines - <see cref="MaxLines"/> of
+    /// them, or as many as wrapping at the full width gives - so they come out about equally long, as CSS's
+    /// text-wrap: balance; the lines are still aligned in the full width. With MaxLines 2 a label of two or more words
+    /// goes on two lines. Meant for short text: the text is laid out several times. Off by default.</summary>
+    public bool BalanceLines
+    {
+        get => GetValue<bool>(BalanceLinesProperty);
+        set => SetValue(BalanceLinesProperty, value);
     }
 
     /// <summary>The named character style of the block's text, as an inline's: over <see cref="ParagraphStyle"/>, under

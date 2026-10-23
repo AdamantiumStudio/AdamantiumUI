@@ -36,6 +36,15 @@ public class RibbonToggleButton : ToggleButton
 
     public static readonly AdamantiumProperty MaxSizeProperty = Ribbon.MaxSizeProperty;
 
+    public static readonly AdamantiumProperty LabelLinesProperty = Ribbon.LabelLinesProperty;
+
+    /// <summary>The most lines the label takes when the command is drawn Large; see <see cref="Ribbon.LabelLinesProperty"/>.</summary>
+    public int LabelLines
+    {
+        get => GetValue<int>(LabelLinesProperty);
+        set => SetValue(LabelLinesProperty, value);
+    }
+
     /// <summary>The size this command is CURRENTLY drawn at - the group's answer, never the author's.</summary>
     public RibbonSize Size
     {

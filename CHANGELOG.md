@@ -7,6 +7,14 @@ All packages share one version.
 
 ### Added
 
+- A Large ribbon command's label takes up to two lines, as Office's: a label of two or more words is broken where the
+  wider line is narrowest, so the command takes less of the band's width. `Ribbon.LabelLines` (also `LabelLines` on
+  the ribbon's commands), inherited, sets how many - 2 by default, 1 for one line; a Medium label stays one line
+  beside the icon. The lines are centered, and a drop-down's or split button's arrow stands on a line of its own under
+  them. `TextBlock.BalanceLines`
+  (the engine's `TextLayout.BalanceLines`): wrapped text takes the narrowest width that keeps its lines, as CSS's
+  `text-wrap: balance`. `ContentPresenter.TextWrapping`, `MaxLines` and `BalanceLines` pass to the label it makes for
+  string content.
 - `StatusBar` and `StatusBarItem`: the strip along the bottom of a window or a document, as an IDE's. Its fields line
   up from the left, a field docked right (`DockPanel.Dock="Right"`) from the right, a vertical `Separator` between
   groups, any other element as it is; data items are shown in fields of their own. A field with a `Command` or a
@@ -1624,6 +1632,11 @@ All packages share one version.
 
 ### Changed
 
+- A Large ribbon command alone in its column stands the group's full height, its content at the top
+  (`VerticalContentAlignment` of the ribbon's commands is `Top` at Large, `Center` at Medium and Small), so commands
+  whose labels take one line and two keep their icons in one row and light plates of one height. A Large split
+  button's drop-down part reaches the bottom. The Fluent and macOS bands are 114 high (were 106), and Fluent's Large
+  commands 4 apart from the top and bottom (were 6), so an icon, two lines of label and an arrow fit.
 - `WindowBase.Close` and `Hide` are no longer abstract: the base does them, so a modal window always stops being modal,
   and a window type overrides `CloseCore` and `HideCore` for what it does itself (`VirtualWindow` collapses in
   `HideCore`). `WindowBase.OnClosed` is gone - `Close` raises `Closing` and `Closed` itself - and `IsClosed` is set by
