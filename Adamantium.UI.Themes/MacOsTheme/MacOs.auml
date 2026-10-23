@@ -36,6 +36,7 @@
         <StyleInclude Source="{x:Type shared:BusyEffectsStyleSet}"/>
         <StyleInclude Source="{x:Type shared:TextSelectionStyleSet}"/>
         <StyleInclude Source="{x:Type shared:ColorPaletteStyleSet}"/>
+        <StyleInclude Source="{x:Type shared:StatusBarStyleSet}"/>
         <StyleInclude Source="{x:Type shared:CalendarStyleSet}"/>
         <StyleInclude Source="{x:Type mac:MacOsBorderStyleSet}"/>
         <StyleInclude Source="{x:Type mac:MacOsContentControlStyleSet}"/>

@@ -39,6 +39,7 @@
          forms and change only tempo and grounds. -->
     <StyleInclude Source="{x:Type shared:TextSelectionStyleSet}"/>
     <StyleInclude Source="{x:Type shared:ColorPaletteStyleSet}"/>
+    <StyleInclude Source="{x:Type shared:StatusBarStyleSet}"/>
     <StyleInclude Source="{x:Type shared:CalendarStyleSet}"/>
     <StyleInclude Source="{x:Type editor:ButtonStyleSet}"/>
     <StyleInclude Source="{x:Type editor:ToggleButtonStyleSet}"/>

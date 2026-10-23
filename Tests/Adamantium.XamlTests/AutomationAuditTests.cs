@@ -86,6 +86,8 @@ public class AutomationAuditTests
         [typeof(RibbonGalleryGroupHeader)] = (T.Text, null),
         [typeof(SegmentedControl)] = (T.List, null),
         [typeof(SegmentedControlItem)] = (T.ListItem, null),
+        [typeof(StatusBar)] = (T.StatusBar, null),
+        [typeof(StatusBarItem)] = (T.Text, null),
         [typeof(RibbonGroup)] = (T.Group, null),
         [typeof(RibbonQuickAccess)] = (T.ToolBar, null),
         [typeof(RibbonQuickAccessMenuItem)] = (T.MenuItem, null),

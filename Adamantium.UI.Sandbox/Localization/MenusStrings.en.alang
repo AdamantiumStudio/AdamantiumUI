@@ -21,4 +21,10 @@
     <Phrase Key="Reveal" Text="Reveal in Explorer"/>
     <Phrase Key="RemoveFromList" Text="Remove from list"/>
     <Phrase Key="Properties" Text="Properties…"/>
+
+    <Phrase Key="StatusBar" Text="Status bar"/>
+    <Phrase Key="StatusHint" Text="Fields with a command or a menu act on a click and light under the pointer; Ready only tells. The zoom is docked right."/>
+    <Phrase Key="StatusReady" Text="Ready"/>
+    <Phrase Key="StatusCaret" Text="Ln 12, Col 5"/>
+    <Phrase Key="GoToLine" Text="Go to line"/>
 </Language>

@@ -45,6 +45,44 @@
                        Foreground="{ResourceReference TextFillColorPrimary}"/>
         </StackPanel>
 
+        <TextBlock Text="{Localize MenusStrings.StatusBar}"
+                   FontSize="16"
+                   MarginTop="28"
+                   MarginBottom="4"/>
+        <TextBlock Text="{Localize MenusStrings.StatusHint}"
+                   FontSize="13"
+                   Foreground="{ResourceReference TextFillColorSecondary}"
+                   MarginBottom="10"/>
+        <StatusBar AutomationProperties.AutomationId="DemoStatusBar">
+            <StatusBarItem Content="{Localize MenusStrings.StatusReady}"/>
+            <Separator Orientation="Vertical"/>
+            <StatusBarItem Content="{Localize MenusStrings.StatusCaret}"
+                           Command="{Binding GoToLineCommand}"
+                           AutomationProperties.AutomationId="StatusCaret"/>
+            <StatusBarItem Content="{Binding LineEnding}"
+                           AutomationProperties.AutomationId="StatusLineEndings">
+                <StatusBarItem.ContextMenu>
+                    <ContextMenu ItemsSource="{Binding LineEndings}">
+                        <ContextMenu.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Title}"/>
+                            </DataTemplate>
+                        </ContextMenu.ItemTemplate>
+                        <ContextMenu.ItemContainerStyle>
+                            <Style Selector="MenuItem">
+                                <Setter Property="Command" Value="{Binding Command}"/>
+                            </Style>
+                        </ContextMenu.ItemContainerStyle>
+                    </ContextMenu>
+                </StatusBarItem.ContextMenu>
+            </StatusBarItem>
+            <StatusBarItem Content="UTF-8"/>
+            <StatusBarItem Content="100%"
+                           DockPanel.Dock="Right"
+                           Command="{Binding ResetZoomCommand}"
+                           AutomationProperties.AutomationId="StatusZoom"/>
+        </StatusBar>
+
     </StackPanel>
     </ScrollViewer>
 </View>
