@@ -10,6 +10,12 @@ public interface ITextProvider
 
     int SelectionLength { get; }
 
+    /// <summary>Where the caret is - either end of the selection; by default its end.</summary>
+    int CaretIndex => SelectionStart + SelectionLength;
+
+    /// <summary>Whether the text may hold more than one line; false by default.</summary>
+    bool IsMultiline => false;
+
     /// <summary>Selects <paramref name="length"/> characters from <paramref name="start"/>, backwards when it is negative,
     /// the caret at <paramref name="start"/> + <paramref name="length"/>; a length of 0 puts the caret there.</summary>
     void Select(int start, int length);

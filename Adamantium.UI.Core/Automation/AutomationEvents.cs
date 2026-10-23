@@ -14,9 +14,9 @@ public static class AutomationEvents
     /// ancestor automation knows, when the element itself has no peer.</summary>
     public static void Raise(IUIComponent element, AutomationEvent automationEvent)
     {
-        if (Raised != null && PeerOf(element, out var owner) is { } peer)
+        if (Raised is { } raised && PeerOf(element, out var owner) is { } peer)
         {
-            Raised(owner, new AutomationEventArgs(owner, peer, automationEvent));
+            raised(owner, new AutomationEventArgs(owner, peer, automationEvent));
         }
     }
 
@@ -25,9 +25,9 @@ public static class AutomationEvents
     /// nobody holds the old value, so the element being built is not reported as changing.</summary>
     public static void RaisePropertyChanged(IUIComponent element, AutomationProperty property, object oldValue, object newValue)
     {
-        if (Raised != null && !Equals(oldValue, newValue) && element?.FindAutomationPeer() is { } peer)
+        if (Raised is { } raised && !Equals(oldValue, newValue) && element?.FindAutomationPeer() is { } peer)
         {
-            Raised(element, new AutomationEventArgs(element, peer, AutomationEvent.PropertyChanged, property, oldValue, newValue));
+            raised(element, new AutomationEventArgs(element, peer, AutomationEvent.PropertyChanged, property, oldValue, newValue));
         }
     }
 

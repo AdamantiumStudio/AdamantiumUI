@@ -26,6 +26,10 @@ public class TextBoxAutomationPeer : UIComponentAutomationPeer, IValueProvider, 
 
     public int SelectionLength => Math.Abs(Box().SelectionLength);
 
+    public int CaretIndex => Box().CaretIndex;
+
+    public bool IsMultiline => Box().AcceptsReturn;
+
     /// <summary>Writes the text as a current value, so a binding on it keeps following.</summary>
     public void SetValue(string value)
     {

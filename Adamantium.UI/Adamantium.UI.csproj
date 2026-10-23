@@ -45,6 +45,7 @@
 	<ItemGroup>
 		<ProjectReference Include="..\Adamantium.UI.Generators\Adamantium.UI.Generators.csproj" ReferenceOutputAssembly="false" />
 		<None Include="buildTransitive\Adamantium.UI.targets" Pack="true" PackagePath="buildTransitive" />
+		<None Include="buildTransitive\Adamantium.UI.ApplicationIcon.targets" Pack="true" PackagePath="buildTransitive" />
 	</ItemGroup>
 
 	<Target Name="PackAumlGenerator">
