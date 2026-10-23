@@ -1,5 +1,7 @@
 <Project>
 
+  <Import Project="$(MSBuildThisFileDirectory)Adamantium.UI.ApplicationIcon.targets" />
+
   <!-- What a project needs for its .auml files to become classes: the files handed to the generator, and the two build
        properties it reads. A project that lists its .auml files itself keeps its list: those are not added twice.
        AdamantiumAumlAutoInclude=false turns the automatic list off. -->

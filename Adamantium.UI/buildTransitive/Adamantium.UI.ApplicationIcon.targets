@@ -1,0 +1,23 @@
+<Project>
+
+  <!-- The application's icon, carried in its assembly for the desktops that take it from the running application
+       (Linux): AdamantiumIcon - a .png or an .ico - or else ApplicationIcon, the one Windows puts into the executable.
+       AdamantiumDesktopEntry=false: on Linux no desktop entry is written for the application, so the desktop shows the
+       icon only where it takes it from the window. -->
+  <PropertyGroup>
+    <_AdamantiumApplicationIconImported>true</_AdamantiumApplicationIconImported>
+    <_AdamantiumApplicationIcon Condition="'$(AdamantiumIcon)' != ''">$(AdamantiumIcon)</_AdamantiumApplicationIcon>
+    <_AdamantiumApplicationIcon Condition="'$(AdamantiumIcon)' == ''">$(ApplicationIcon)</_AdamantiumApplicationIcon>
+  </PropertyGroup>
+
+  <!-- WithCulture=false: an icon named like icon.ru.png stays in the application, not in a satellite assembly. -->
+  <ItemGroup Condition="'$(_AdamantiumApplicationIcon)' != '' And '$(OutputType)' != 'Library' And
+                        '@(EmbeddedResource->WithMetadataValue('LogicalName', 'Adamantium.ApplicationIcon'))' == ''">
+    <EmbeddedResource Include="$(_AdamantiumApplicationIcon)" LogicalName="Adamantium.ApplicationIcon" WithCulture="false" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(AdamantiumDesktopEntry)' == 'false'">
+    <AssemblyMetadata Include="Adamantium.DesktopEntry" Value="false" />
+  </ItemGroup>
+
+</Project>

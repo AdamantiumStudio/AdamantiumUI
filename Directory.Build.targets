@@ -27,6 +27,11 @@
     <CompilerVisibleProperty Include="AdamantiumAumlHotReload" />
   </ItemGroup>
 
+  <!-- The repository's applications carry their icon as the package's do; a project that imports the package's targets
+       itself has it from them. -->
+  <Import Project="$(MSBuildThisFileDirectory)Adamantium.UI\buildTransitive\Adamantium.UI.ApplicationIcon.targets"
+          Condition="'$(_AdamantiumApplicationIconImported)' != 'true'" />
+
   <!-- Packages are made against the published engine packages. Packed from the engine's source, the analyzer-only
        references to its projects would turn into package dependencies. -->
   <Target Name="PackAgainstEnginePackages" BeforeTargets="GenerateNuspec" Condition="'$(UseEngineSource)' == 'true' And '$(IsPackable)' == 'true'">

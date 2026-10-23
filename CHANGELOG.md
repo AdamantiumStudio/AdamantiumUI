@@ -15,6 +15,21 @@ All packages share one version.
   (the engine's `TextLayout.BalanceLines`): wrapped text takes the narrowest width that keeps its lines, as CSS's
   `text-wrap: balance`. `ContentPresenter.TextWrapping`, `MaxLines` and `BalanceLines` pass to the label it makes for
   string content.
+- Accessibility on Linux: the application registers on the desktop's accessibility bus (AT-SPI) and serves what
+  automation knows - its windows and elements with their roles, names, states, actions, values, text and selection -
+  to Orca, the magnifier and other assistive technologies, and tells them of focus, state, name, value, text and
+  window changes while one listens. The bridge starts in the background; `NO_AT_BRIDGE=1` keeps it off. Their
+  questions are answered on the application's loop, one at a time; one the loop does not reach in time is refused and
+  not carried out later. Text offsets count characters, not UTF-16 units. Positions are given within the window, in
+  its logical pixels: Wayland tells no position on the screen. The splash window is not shown to them.
+- The window icon on Linux. The build carries the application's icon in its assembly - `AdamantiumIcon` (a .png or an
+  .ico) or else `ApplicationIcon`, the one Windows puts into the executable. Every window gives it to a compositor
+  that takes icons from windows (`xdg_toplevel_icon_v1`: KDE, wlroots); for GNOME, which takes it from the desktop
+  entry named by the window's app id, the application writes its own entry into the user's data folder - hidden from
+  the application list - with the icon in the icon theme, never over an entry that is not its own, and again only
+  when it changed. `AdamantiumDesktopEntry=false` in the project writes none.
+- `ITextProvider.CaretIndex` (either end of the selection; by default its end) and `ITextProvider.IsMultiline`;
+  `TextBoxAutomationPeer` gives them from the box's caret and `AcceptsReturn`.
 - `StatusBar` and `StatusBarItem`: the strip along the bottom of a window or a document, as an IDE's. Its fields line
   up from the left, a field docked right (`DockPanel.Dock="Right"`) from the right, a vertical `Separator` between
   groups, any other element as it is; data items are shown in fields of their own. A field with a `Command` or a
