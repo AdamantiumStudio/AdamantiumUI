@@ -785,7 +785,9 @@
         <!-- Large centers (nothing to line up with); the smaller sizes go LEFT - in a column they stand under one
              another, and a ragged left edge is the first thing the eye catches. -->
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
-        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <!-- Large stands the band's full height with its icon at the top, so commands whose labels take one line and two
+             keep their icons in one row; the smaller sizes center (triggers below). -->
+        <Setter Property="VerticalContentAlignment" Value="Top"/>
         <Setter Property="Foreground" Value="{ObservableResource TextFillColorPrimary}"/>
         <Setter Property="BackgroundPointerOver" Value="{ResourceReference SubtleFillColorSecondary}"/>
         <Setter Property="BackgroundPressed" Value="{ResourceReference SubtleFillColorTertiary}"/>
@@ -842,6 +844,9 @@
                             <ContentPresenter x:Name="PART_ContentPresenter" Grid.Row="1" Grid.Column="0"
                                     Margin="{ResourceReference RibbonCaptionMargin}"
                                     HorizontalAlignment="Center" VerticalAlignment="Center"
+                                    TextWrapping="WrapByWords"
+                                    MaxLines="{TemplateBinding LabelLines}"
+                                    BalanceLines="True"
                                     Foreground="{TemplateBinding Foreground}"
                                     FontSize="{TemplateBinding FontSize}"
                                     Content="{TemplateBinding Content}"
@@ -874,6 +879,8 @@
             <Setter TargetName="PART_ContentPresenter" Property="Grid.Row" Value="0"/>
             <Setter TargetName="PART_ContentPresenter" Property="Grid.Column" Value="1"/>
             <Setter TargetName="PART_ContentPresenter" Property="Margin" Value="{ResourceReference RibbonIconLabelGap}"/>
+            <!-- Beside the icon the label is one line: LabelLines is for a Large command's. -->
+            <Setter TargetName="PART_ContentPresenter" Property="TextWrapping" Value="NoWrap"/>
             <!-- The whole command goes left: in a column the icons must start at one x. On the CONTROL, so it flows
                  through the one template binding. -->
             <Setter Property="HorizontalContentAlignment" Value="Left"/>
@@ -892,10 +899,12 @@
         <PropertyTrigger Property="Ribbon.Size" Value="Medium">
             <Setter Property="MinWidth" Value="0"/>
             <Setter Property="Padding" Value="{ResourceReference RibbonButtonPaddingSmall}"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
         </PropertyTrigger>
         <PropertyTrigger Property="Ribbon.Size" Value="Small">
             <Setter Property="MinWidth" Value="0"/>
             <Setter Property="Padding" Value="{ResourceReference RibbonButtonPaddingSmall}"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
         </PropertyTrigger>
     </Style>
 
@@ -928,6 +937,9 @@
                             <ContentPresenter x:Name="PART_ContentPresenter" Grid.Row="1" Grid.Column="0"
                                     Margin="{ResourceReference RibbonCaptionMargin}"
                                     HorizontalAlignment="Center" VerticalAlignment="Center"
+                                    TextWrapping="WrapByWords"
+                                    MaxLines="{TemplateBinding LabelLines}"
+                                    BalanceLines="True"
                                     Foreground="{TemplateBinding Foreground}"
                                     FontSize="{TemplateBinding FontSize}"
                                     Content="{TemplateBinding Content}"
@@ -1322,6 +1334,9 @@
                             <ContentPresenter x:Name="PART_ContentPresenter" Grid.Row="1" Grid.Column="0"
                                     Margin="{ResourceReference RibbonCaptionMargin}"
                                     HorizontalAlignment="Center" VerticalAlignment="Center"
+                                    TextWrapping="WrapByWords"
+                                    MaxLines="{TemplateBinding LabelLines}"
+                                    BalanceLines="True"
                                     Foreground="{TemplateBinding Foreground}"
                                     FontSize="{TemplateBinding FontSize}"
                                     Content="{TemplateBinding Content}"
@@ -1457,8 +1472,12 @@
                              underneath - and the triggers below move the rule and the arrow into the right-hand column
                              for the smaller sizes. A large command is a stack, so an arrow floating beside it reads as
                              something that fell off rather than as the button's other half. -->
-                        <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="Auto,Auto,Auto"
-                                VerticalAlignment="{TemplateBinding VerticalContentAlignment}">
+                        <!-- Large stands the band's full height and the drop-down part takes what the action part
+                             leaves, so the whole lower half opens the menu. -->
+                        <Grid x:Name="SplitLayout"
+                                RowDefinitions="Auto,Auto,*"
+                                ColumnDefinitions="Auto,Auto,Auto"
+                                VerticalAlignment="Stretch">
                             <!-- The command's OWN padding, not a fixed one: the size triggers tighten Padding for
                                  Medium and Small, and a hardcoded value here made the split button far bigger than its
                                  neighbors - the column stretched to fit it, and the icons beside it floated in the
@@ -1486,6 +1505,9 @@
                                     <ContentPresenter x:Name="PART_ContentPresenter" Grid.Row="1" Grid.Column="0"
                                             Margin="{ResourceReference RibbonCaptionMargin}"
                                             HorizontalAlignment="Center" VerticalAlignment="Center"
+                                            TextWrapping="WrapByWords"
+                                            MaxLines="{TemplateBinding LabelLines}"
+                                            BalanceLines="True"
                                             Foreground="{TemplateBinding Foreground}"
                                             FontSize="{TemplateBinding FontSize}"
                                             Content="{TemplateBinding Content}"
@@ -1501,14 +1523,14 @@
                                     Fill="{ResourceReference ControlStrokeColorDefault}"/>
 
                             <!-- A real element with a size, not a glyph in a corner: the control asks this part where
-                                 the pointer is. -->
+                                 the pointer is. At Large it reaches the bottom, the arrow at its top. -->
                             <Border x:Name="PART_DropDownArea" Grid.Row="2" Grid.Column="0"
                                     Padding="{ResourceReference RibbonSplitDropDownPadding}"
                                     CornerRadius="0">
                                 <Path x:Name="DropDownGlyph"
                                         Data="M0,0 L4,4 L8,0"
                                         StrokeThickness="{ResourceReference StrokeThinValue}"
-                                        HorizontalAlignment="Center" VerticalAlignment="Center"
+                                        HorizontalAlignment="Center" VerticalAlignment="Top"
                                         Stroke="{TemplateBinding Foreground}"/>
                             </Border>
                         </Grid>
@@ -1522,6 +1544,8 @@
          Small drops the dividing rule as well - a command this small cannot afford the furniture the large one wears. -->
     <Style Selector="RibbonSplitButton">
         <PropertyTrigger Property="Ribbon.Size" Value="Medium">
+            <Setter TargetName="SplitLayout" Property="VerticalAlignment" Value="Center"/>
+            <Setter TargetName="DropDownGlyph" Property="VerticalAlignment" Value="Center"/>
             <Setter TargetName="ActionArea" Property="CornerRadius" Value="{ResourceReference RibbonSplitLeadingRadius}"/>
             <Setter TargetName="SplitRule" Property="Grid.Row" Value="0"/>
             <Setter TargetName="SplitRule" Property="Grid.Column" Value="1"/>
@@ -1535,6 +1559,8 @@
             <Setter TargetName="PART_DropDownArea" Property="CornerRadius" Value="{ResourceReference RibbonSplitTrailingRadius}"/>
         </PropertyTrigger>
         <PropertyTrigger Property="Ribbon.Size" Value="Small">
+            <Setter TargetName="SplitLayout" Property="VerticalAlignment" Value="Center"/>
+            <Setter TargetName="DropDownGlyph" Property="VerticalAlignment" Value="Center"/>
             <Setter TargetName="ActionArea" Property="CornerRadius" Value="{ResourceReference RibbonSplitLeadingRadius}"/>
             <Setter TargetName="SplitRule" Property="Visibility" Value="Collapsed"/>
             <Setter TargetName="PART_DropDownArea" Property="Grid.Row" Value="0"/>

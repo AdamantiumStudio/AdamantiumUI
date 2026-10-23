@@ -15,6 +15,7 @@ namespace Adamantium.UI.Controls;
 public class ContentPresenter : InputUIComponent
 {
     private IUIComponent _currentRoot;
+    private TextBlock _label;
     private TemplateResult _currentTemplateResult;
     private DataTemplate _currentTemplate;   // so a recycled container can reuse the visual
     // The key the current visual waits under in ParkedVisuals while it is away.
@@ -80,6 +81,40 @@ public class ContentPresenter : InputUIComponent
     {
         get => GetValue<TextTrimming>(TextTrimmingProperty);
         set => SetValue(TextTrimmingProperty, value);
+    }
+
+    /// <summary>How the label generated for string content wraps. Default NoWrap: one line.</summary>
+    public static readonly AdamantiumProperty TextWrappingProperty = AdamantiumProperty.Register(nameof(TextWrapping),
+        typeof(TextWrapping), typeof(ContentPresenter),
+        new PropertyMetadata(TextWrapping.NoWrap, PropertyMetadataOptions.AffectsMeasure, OnLinesChanged));
+
+    public TextWrapping TextWrapping
+    {
+        get => GetValue<TextWrapping>(TextWrappingProperty);
+        set => SetValue(TextWrappingProperty, value);
+    }
+
+    /// <summary>The most lines of the label generated for string content (<see cref="TextBlock.MaxLines"/>); 0, the
+    /// default, for any number.</summary>
+    public static readonly AdamantiumProperty MaxLinesProperty = AdamantiumProperty.Register(nameof(MaxLines),
+        typeof(int), typeof(ContentPresenter),
+        new PropertyMetadata(0, PropertyMetadataOptions.AffectsMeasure, OnLinesChanged));
+
+    public int MaxLines
+    {
+        get => GetValue<int>(MaxLinesProperty);
+        set => SetValue(MaxLinesProperty, value);
+    }
+
+    /// <summary>Whether the label generated for string content balances its lines (<see cref="TextBlock.BalanceLines"/>).</summary>
+    public static readonly AdamantiumProperty BalanceLinesProperty = AdamantiumProperty.Register(nameof(BalanceLines),
+        typeof(bool), typeof(ContentPresenter),
+        new PropertyMetadata(false, PropertyMetadataOptions.AffectsMeasure, OnLinesChanged));
+
+    public bool BalanceLines
+    {
+        get => GetValue<bool>(BalanceLinesProperty);
+        set => SetValue(BalanceLinesProperty, value);
     }
 
     static ContentPresenter()
@@ -176,6 +211,7 @@ public class ContentPresenter : InputUIComponent
         _currentTemplateResult = null;
         _currentTemplate = null;
         _builtFor = null;
+        _label = null;
 
         if (newContent != null)
             BuildCurrent(newContent);
@@ -206,6 +242,11 @@ public class ContentPresenter : InputUIComponent
             _currentTemplateResult = parkedBuilt;
             _currentTemplate = parkedTemplate;
             _builtFor = newContent;
+            if (parkedTemplate == null && newContent is not IUIComponent && parkedRoot is TextBlock parkedLabel)
+            {
+                _label = parkedLabel;
+                PassLinesTo(parkedLabel);
+            }
 
             AddVisualChild(_currentRoot);
             AddLogicalChild(_currentRoot);
@@ -267,6 +308,9 @@ public class ContentPresenter : InputUIComponent
 
                 textBlock.SetBinding(nameof(TextBlock.TextTrimming),
                     new Core.Data.Binding(nameof(TextTrimming)) { Source = this });
+
+                _label = textBlock;
+                PassLinesTo(textBlock);
                 _currentRoot = textBlock;
             }
         }
@@ -619,6 +663,35 @@ public class ContentPresenter : InputUIComponent
         var waiting = _afterTransition;
         _afterTransition = null;
         waiting?.Invoke();
+    }
+
+    private static void OnLinesChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (a is ContentPresenter presenter && presenter._label != null
+                                            && ReferenceEquals(presenter._currentRoot, presenter._label))
+        {
+            presenter.PassLinesTo(presenter._label);
+        }
+    }
+
+    private void PassLinesTo(TextBlock label)
+    {
+        Pass(TextBlock.TextWrappingProperty, TextWrapping != TextWrapping.NoWrap, TextWrapping);
+        Pass(TextBlock.MaxLinesProperty, MaxLines != 0, MaxLines);
+        Pass(TextBlock.BalanceLinesProperty, BalanceLines, BalanceLines);
+        label.InvalidateMeasure();
+
+        void Pass(AdamantiumProperty labels, bool set, object value)
+        {
+            if (set)
+            {
+                label.SetValue(labels, value);
+            }
+            else if (label.GetValueSource(labels) == ValuePriority.Local)
+            {
+                label.ClearValue(labels);
+            }
+        }
     }
 
     private static void OnContentTemplateChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)

@@ -8,8 +8,9 @@ using Adamantium.UI.Core.Input;
 namespace Adamantium.UI.Controls.Panels;
 
 /// <summary>The items host of a <see cref="RibbonGroup"/>: commands packed into COLUMNS. A <see cref="RibbonSize.Large"/>
-/// one fills a column alone, smaller ones stack up to <see cref="RowsPerColumn"/> deep, a <see cref="Separator"/> takes
-/// a column and ends the run beside it. Each command's drawn size is decided here too.</summary>
+/// one fills a column alone and stands its full height, smaller ones stack up to <see cref="RowsPerColumn"/>
+/// deep, a <see cref="Separator"/> takes a column and ends the run beside it. Each command's drawn size is decided
+/// here too.</summary>
 public class RibbonGroupPanel : Panel
 {
     public static readonly AdamantiumProperty RowsPerColumnProperty = AdamantiumProperty.Register(nameof(RowsPerColumn),
@@ -160,13 +161,15 @@ public class RibbonGroupPanel : Panel
                 gap = Math.Max(gap, (finalSize.Height - filled) / (column.Count - 1));
             }
 
+            var full = column.Count == 1 && column[0] is RibbonButton or RibbonToggleButton
+                                          && Ribbon.GetSize((IAdamantiumComponent)column[0]) == RibbonSize.Large;
             double y = 0;
             foreach (var child in column)
             {
                 // Never taller than the room LEFT: arranged at its wish, a command taller than the band hangs out of
                 // the bottom and is clipped there - which for a gallery took its chevron off. (Measured: 75 available,
                 // 90 handed out.) A control given less shows less; the gallery scrolls.
-                var childHeight = Math.Min(child.DesiredSize.Height, Math.Max(0, finalSize.Height - y));
+                var childHeight = full ? finalSize.Height : Math.Min(child.DesiredSize.Height, Math.Max(0, finalSize.Height - y));
                 child.Arrange(new Rect(x, y, _columnWidths[i], childHeight));
                 y += childHeight + gap;
             }

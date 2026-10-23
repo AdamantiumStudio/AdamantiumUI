@@ -105,6 +105,19 @@ public class Ribbon : Selector
     public static void SetRowAlignment(IAdamantiumComponent element, RibbonRowAlignment value) =>
         element.SetValue(RowAlignmentProperty, value);
 
+    /// <summary>The most lines the label of a command drawn Large takes; 2 by default, as Office's: a label of two or more
+    /// words is broken where the wider line is narrowest, so the command takes less of the band's width. 1 keeps every
+    /// label on one line; less than 1 counts as 1. A Medium label stands beside the icon on one line. Inherited: set on
+    /// the ribbon, a group or one command.</summary>
+    public static readonly AdamantiumProperty LabelLinesProperty = AdamantiumProperty.RegisterAttached("LabelLines",
+        typeof(int), typeof(AdamantiumComponent),
+        new PropertyMetadata(2, PropertyMetadataOptions.Inherits | PropertyMetadataOptions.AffectsMeasure, null,
+            static (_, value) => value is int lines ? Math.Max(lines, 1) : value));
+
+    public static int GetLabelLines(IAdamantiumComponent element) => element.GetValue<int>(LabelLinesProperty);
+
+    public static void SetLabelLines(IAdamantiumComponent element, int value) => element.SetValue(LabelLinesProperty, value);
+
     public static RibbonSize GetSize(IAdamantiumComponent element) => element.GetValue<RibbonSize>(SizeProperty);
 
     public static void SetSize(IAdamantiumComponent element, RibbonSize value) => element.SetValue(SizeProperty, value);
