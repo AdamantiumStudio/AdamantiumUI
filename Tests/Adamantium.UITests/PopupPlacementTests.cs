@@ -88,6 +88,58 @@ public class PopupPlacementTests
         Assert.That(card.Bounds.X, Is.EqualTo(left));
     }
 
+    // A target zoomed by a layout transform is drawn twice its size: the card opens under its drawn edge, not under the
+    // box it was laid out in.
+    [Test]
+    public void UnderAScaledTarget_TheCardOpensAtItsDrawnEdge()
+    {
+        var card = OpenedAtScaledTarget(new Popup { Placement = PlacementMode.Bottom, PlacementAlignment = PlacementAlignment.End });
+
+        Assert.That(card.Bounds.Y, Is.EqualTo(190), "under the target's drawn bottom");
+        Assert.That(card.Bounds.X, Is.EqualTo(340), "its end at the target's drawn right");
+    }
+
+    // A menu opened at a point of a zoomed target - a right click on a zoomed page - opens where that point is drawn.
+    [Test]
+    public void AtAPointOfAScaledTarget_TheCardOpensWhereThePointIsDrawn()
+    {
+        var card = OpenedAtScaledTarget(new Popup
+        {
+            Placement = PlacementMode.Relative, HorizontalOffset = 10, VerticalOffset = 5
+        });
+
+        Assert.That(card.Bounds.X, Is.EqualTo(220));
+        Assert.That(card.Bounds.Y, Is.EqualTo(160));
+    }
+
+    // A 100 x 20 target at (200, 150) drawn at twice its size; the card is 60 x 80.
+    private static Border OpenedAtScaledTarget(Popup popup)
+    {
+        var target = new Border { Width = 100, Height = 20 };
+        var holder = new Grid
+        {
+            Margin = new Thickness(200, 150, 0, 0),
+            HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top,
+            LayoutTransform = new Adamantium.UI.Core.Media.Transform { ScaleX = 2, ScaleY = 2 }
+        };
+        holder.Children.Add(target);
+        var card = new Border { Width = 60, Height = 80 };
+        popup.PlacementTarget = target;
+        popup.Child = card;
+        var host = new Grid();
+        host.Children.Add(holder);
+        host.Children.Add(popup);
+        var window = new Window { Width = 800, Height = 600, Content = host };
+        for (var i = 0; i < 5; i++)
+        {
+            WindowExtension.UpdateTree(window);
+        }
+
+        popup.IsOpen = true;
+        window.PopupLayer.UpdateLayout(new Size(800, 600));
+        return card;
+    }
+
     [Test]
     public void ALeftCardWithNoRoomOnItsSide_FlipsToTheRight()
     {

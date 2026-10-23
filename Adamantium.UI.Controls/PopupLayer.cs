@@ -278,16 +278,36 @@ public class PopupLayer
         var unbounded = double.PositiveInfinity;
         if (popup.EffectiveTarget is not { } target) return new Size(unbounded, unbounded);
 
-        var t = target.WorldTransform.TranslationVector;
-        var size = target.RenderSize;
+        var box = TargetBox(target);
         return popup.Placement switch
         {
-            PlacementMode.Top => new Size(unbounded, Math.Max(0, t.Y + popup.VerticalOffset)),
-            PlacementMode.Left => new Size(Math.Max(0, t.X + popup.HorizontalOffset), unbounded),
-            PlacementMode.Right => new Size(Math.Max(0, windowSize.Width - (t.X + size.Width) - popup.HorizontalOffset), unbounded),
-            PlacementMode.Bottom => new Size(unbounded, Math.Max(0, windowSize.Height - (t.Y + size.Height) - popup.VerticalOffset)),
+            PlacementMode.Top => new Size(unbounded, Math.Max(0, box.Y + popup.VerticalOffset)),
+            PlacementMode.Left => new Size(Math.Max(0, box.X + popup.HorizontalOffset), unbounded),
+            PlacementMode.Right => new Size(Math.Max(0, windowSize.Width - box.Right - popup.HorizontalOffset), unbounded),
+            PlacementMode.Bottom => new Size(unbounded, Math.Max(0, windowSize.Height - box.Bottom - popup.VerticalOffset)),
             _ => new Size(unbounded, unbounded)
         };
+    }
+
+    private static Rect TargetBox(IUIComponent target)
+    {
+        var world = target.WorldTransform;
+        var size = target.RenderSize;
+        double minX = double.MaxValue, minY = double.MaxValue, maxX = double.MinValue, maxY = double.MinValue;
+        Take(0, 0);
+        Take(size.Width, 0);
+        Take(0, size.Height);
+        Take(size.Width, size.Height);
+        return new Rect(minX, minY, maxX - minX, maxY - minY);
+
+        void Take(double x, double y)
+        {
+            var corner = Vector3F.TransformCoordinate(new Vector3F((float)x, (float)y, 0), world);
+            minX = Math.Min(minX, corner.X);
+            minY = Math.Min(minY, corner.Y);
+            maxX = Math.Max(maxX, corner.X);
+            maxY = Math.Max(maxY, corner.Y);
+        }
     }
 
     private bool InFlippedCard(Popup popup)
@@ -302,8 +322,8 @@ public class PopupLayer
         double tx = 0, ty = 0, tw = 0, th = 0;
         if (popup.EffectiveTarget is { } target)
         {
-            var t = target.WorldTransform.TranslationVector;   // target's origin in window space
-            tx = t.X; ty = t.Y; tw = target.RenderSize.Width; th = target.RenderSize.Height;
+            var box = TargetBox(target);
+            tx = box.X; ty = box.Y; tw = box.Width; th = box.Height;
         }
 
         var cx = Align(tx, tw, size.Width);
@@ -318,7 +338,7 @@ public class PopupLayer
             case PlacementMode.Left:     x = Side(tx - size.Width + dx, tx + tw - dx); y = cy + dy; break;
             case PlacementMode.Right:    x = Side(tx + tw + dx, tx - size.Width - dx); y = cy + dy; break;
             case PlacementMode.Center:   x = tx + (tw - size.Width) / 2 + dx; y = ty + (th - size.Height) / 2 + dy; break;
-            case PlacementMode.Relative: x = tx + dx; y = ty + dy; break;
+            case PlacementMode.Relative: (x, y) = AtTargetPoint(dx, dy); break;
             default:                     x = cx + dx; y = Pick(ty + th + dy, ty - size.Height - dy, size.Height, windowSize.Height, out _); break;   // Bottom
         }
 
@@ -342,6 +362,17 @@ public class PopupLayer
         }
 
         static double Overrun(double at, double extent, double room) => Math.Max(0, -at) + Math.Max(0, at + extent - room);
+
+        (double X, double Y) AtTargetPoint(double ox, double oy)
+        {
+            if (popup.EffectiveTarget is not { } at)
+            {
+                return (tx + ox, ty + oy);
+            }
+
+            var point = Vector3F.TransformCoordinate(new Vector3F((float)ox, (float)oy, 0), at.WorldTransform);
+            return (point.X, point.Y);
+        }
 
         double Align(double start, double length, double extent) => popup.PlacementAlignment switch
         {

@@ -107,6 +107,71 @@ public class InputHitTestTests
         });
     }
 
+    // The designer's pick and a drag's auto-scroll look-up walk as hit testing does: an authored element under a layout
+    // transform is found where it is drawn, not where it was laid out.
+    [Test]
+    public void GetVisualsAt_FindsALayoutTransformedElementWhereItIsDrawn()
+    {
+        var inner = new Border { Width = 40, Height = 20, Background = Brushes.White,
+            HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top };
+        var holder = new Grid { HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top,
+            LayoutTransform = new Transform { ScaleX = 2, ScaleY = 2 } };
+        holder.Children.Add(inner);
+        var root = new Grid { Width = 400, Height = 300 };
+        root.Children.Add(holder);
+        root.Measure(new Size(400, 300));
+        root.Arrange(new Rect(0, 0, 400, 300));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(((IUIComponent)root).GetVisualsAt(new Vector2(70, 30)), Does.Contain(inner),
+                "drawn at twice its size");
+            Assert.That(((IUIComponent)root).GetVisualsAt(new Vector2(90, 50)), Does.Not.Contain(inner),
+                "and nowhere else");
+        });
+    }
+
+    private sealed class Root : Grid, IRootVisualComponent
+    {
+        public Vector2 PointToClient(PixelPoint point) => new((float)point.X, (float)point.Y);
+        public PixelPoint PointToScreen(Vector2 point) => new(point.X, point.Y);
+        public PixelPoint Position { get; set; }
+        public void AttachContextAndInitialize(IUIContext context) { }
+        public double Left { get; set; }
+        public double Top { get; set; }
+        public string Title { get; set; }
+        public double ClientWidth { get; set; }
+        public double ClientHeight { get; set; }
+        public IUIContext UIContext => null;
+    }
+
+    // An element's own point and the desktop's go through the transforms between it and its window both ways.
+    [Test]
+    public void PointToScreenAndBack_GoThroughALayoutTransform()
+    {
+        var inner = new Border { Width = 40, Height = 20,
+            HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top };
+        var holder = new Grid { Margin = new Thickness(10, 10, 0, 0),
+            HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top,
+            LayoutTransform = new Transform { ScaleX = 2, ScaleY = 2 } };
+        holder.Children.Add(inner);
+        var root = new Root { Width = 400, Height = 300 };
+        root.Children.Add(holder);
+        root.Measure(new Size(400, 300));
+        root.Arrange(new Rect(0, 0, 400, 300));
+
+        var screen = inner.PointToScreen(new Vector2(5, 5));
+        var back = inner.PointToClient(screen);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(screen.X, Is.EqualTo(20).Within(0.5), "10 in, then 5 at twice the size");
+            Assert.That(screen.Y, Is.EqualTo(20).Within(0.5));
+            Assert.That(back.X, Is.EqualTo(5).Within(0.5));
+            Assert.That(back.Y, Is.EqualTo(5).Within(0.5));
+        });
+    }
+
     // A control painted ON TOP of a full-size background panel (overlapping siblings): clicking it must hit the control,
     // not the panel behind it. (Designer repro: selecting a control kept selecting the background panel.)
     [Test]

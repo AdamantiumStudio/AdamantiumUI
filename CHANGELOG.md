@@ -2087,6 +2087,12 @@ All packages share one version.
 
 ### Fixed
 
+- A render or layout transform is taken into account where it was not: `GetVisualsAt` (the designer's pick, the
+  scrollable a drag scrolls) finds an element where it is drawn, as hit testing already did, and a disabled element
+  takes the press where it is drawn; a popup opens at a scaled or turned target's drawn edge, and one placed `Relative`
+  (a menu at a click) where that point of the target is drawn; an element's `PointToClient` and `PointToScreen` go
+  through every offset and transform between it and its window (they added up the elements' offsets only), so a
+  render panel's mouse-look puts the cursor back where it was under a transformed ancestor too.
 - A popup placed beside its target (`Placement` `Right` or `Left`) with `FlipToFit` opens on the other side when its
   own side has no room for it, as it already did above and below: a submenu at the window's right edge opens to the
   left of its row instead of being pushed back over the menu, and a submenu of it goes on leftward. A flipped popup's
