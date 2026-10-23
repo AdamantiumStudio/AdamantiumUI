@@ -63,40 +63,29 @@ public static class UIExtensions
    }
 
    /// <summary>A desktop point (physical) in this element's OWN logical coordinates: converted at the root, then back
-   /// down by everything between it and the element.</summary>
+   /// down through every offset and render or layout transform between it and the element.</summary>
    public static Vector2 PointToClient(this IUIComponent visualComponent, PixelPoint point)
    {
-      var pair = GetRootAndAbsolutePosition(visualComponent);
-      // MINUS: the root gives the point in ITS coordinates, and the element sits at pair.Value inside it. This used to
-      // add - and to add the element's offset to the SCREEN point, before any conversion - which is the kind of mistake
-      // that compiles while every value in the expression is a bare vector. It was invisible because every caller asks
-      // this of a ROOT, where the offset is zero.
-      return pair.Key.PointToClient(point) - pair.Value;
+      var root = RootOf(visualComponent);
+      return root.TranslatePoint(root.PointToClient(point), visualComponent);
    }
 
-   /// <summary>A point of this element's own logical coordinates as a desktop point (physical pixels).</summary>
+   /// <summary>A point of this element's own logical coordinates as a desktop point (physical pixels), through every
+   /// offset and render or layout transform between the element and its root.</summary>
    public static PixelPoint PointToScreen(this IUIComponent visualComponent, Vector2 point)
    {
-      var pair = GetRootAndAbsolutePosition(visualComponent);
-      return pair.Key.PointToScreen(point + pair.Value);
+      var root = RootOf(visualComponent);
+      return root.PointToScreen(visualComponent.TranslatePoint(point, root));
    }
 
-   private static KeyValuePair<IRootVisualComponent, Vector2> GetRootAndAbsolutePosition(this IUIComponent visualComponent)
+   private static IRootVisualComponent RootOf(IUIComponent visualComponent)
    {
-      Vector2 p = new Vector2();
-
-      while (!(visualComponent is IRootVisualComponent))
+      while (visualComponent is not IRootVisualComponent)
       {
-         p += visualComponent.ClipRectangle.Location;
-
-         visualComponent = visualComponent.VisualParent;
-
-         if (visualComponent == null)
-         {
-            throw new InvalidOperationException("Control is not attached to visual tree.");
-         }
+         visualComponent = visualComponent.VisualParent
+                           ?? throw new InvalidOperationException("Control is not attached to visual tree.");
       }
 
-      return new KeyValuePair<IRootVisualComponent, Vector2>((IRootVisualComponent)visualComponent, p);
-   } 
+      return (IRootVisualComponent)visualComponent;
+   }
 }

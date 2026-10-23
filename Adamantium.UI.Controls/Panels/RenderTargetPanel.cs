@@ -196,7 +196,7 @@ public class RenderTargetPanel : Grid
       _looking = true;
       // Remember the panel-relative cursor so it reappears there on release; the exact inverse of PointToScreen, so it
       // does not drift across engage cycles.
-      _engagePoint = ScreenToPanel(Mouse.Pointer.GetScreenPosition());
+      _engagePoint = this.PointToClient(Mouse.Pointer.GetScreenPosition());
       Focus();
       Mouse.Pointer.Capture(this);
       (RootVisual as WindowBase)?.SetRelativeMouseMode(true, default);
@@ -229,17 +229,6 @@ public class RenderTargetPanel : Grid
       _rightDown = false;
       _middleDown = false;
       Disengage();
-   }
-
-   // Exact inverse of this.PointToScreen (screen -> panel-relative): the screen point in root-client coords minus the
-   // ClipRectangle offsets PointToScreen accumulates, so the two compose to identity (no per-cycle drift).
-   private Vector2 ScreenToPanel(PixelPoint screen)
-   {
-      var rootLocal = RootVisual.PointToClient(screen);
-      var offset = default(Mathematics.Vector2);
-      for (IUIComponent c = this; c != null && c is not IRootVisualComponent; c = c.VisualParent)
-         offset += c.ClipRectangle.Location;
-      return rootLocal - offset;
    }
 
    protected override void OnPointerPressed(PointerPressedEventArgs e)
