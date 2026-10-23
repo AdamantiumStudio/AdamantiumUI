@@ -26,6 +26,15 @@ public interface IWindowWorkerService
     /// changing a number nobody reads again.</summary>
     public void UpdateOverlayTraits();
 
+    /// <summary>Keeps the window above <paramref name="owner"/> and minimized with it; null frees it.</summary>
+    public void SetOwner(IWindow owner) { }
+
+    /// <summary>Applies <see cref="IWindow.IsModal"/> as it is now, done by the time it returns: while a window is modal,
+    /// the application's other windows that were there when it became modal take no input; one that something else
+    /// keeps from input stays so. Called before the window is hidden or destroyed, so activation
+    /// goes back to its owner.</summary>
+    public void UpdateModal() { }
+
     public void ShowWindow(WindowState windowState);
 
     public void HideWindow();

@@ -9,6 +9,7 @@
     <Phrase Key="DialogsAsWindows" Text="Показывать диалоги отдельными окнами"/>
     <Phrase Key="ShowOverlayWindow" Text="Показать окно-оверлей"/>
     <Phrase Key="ShowModalOverlay" Text="Показать модальный оверлей"/>
+    <Phrase Key="ShowModalWindow" Text="Показать модальное окно"/>
     <Phrase Key="ItemsControlRegion" Text="Регион ItemsControl"/>
     <Phrase Key="AddCard" Text="Добавить карточку"/>
     <Phrase Key="Clear" Text="Очистить"/>
@@ -29,6 +30,8 @@
     <Phrase Key="CloseFromViewModel" Text="Закрыть из VM"/>
     <Phrase Key="ModalOverlay" Text="Модальный оверлей"/>
     <Phrase Key="ModalOverlayMessage" Text="Это модальное окно затемняет и блокирует окно под собой. Тяните за заголовок."/>
+    <Phrase Key="ModalWindow" Text="Модальное окно"/>
+    <Phrase Key="ModalWindowMessage" Text="Отдельное окно: пока оно открыто, окно, которому оно принадлежит, не принимает ввод."/>
 
     <Phrase Key="OpenClickThroughWindow" Text="Окно, прозрачное для мыши"/>
     <Phrase Key="ClickThroughWindow" Text="Окно, прозрачное для мыши"/>

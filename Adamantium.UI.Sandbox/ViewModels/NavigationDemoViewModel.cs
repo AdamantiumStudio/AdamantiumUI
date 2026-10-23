@@ -74,6 +74,14 @@ public partial class NavigationDemoViewModel : TabPageViewModel
                 .Add("message", NavigationStrings.ModalOverlayMessage),
             DialogHostKind.Overlay);
 
+    [Command]
+    private Task ShowWindowModal() =>
+        _dialogService.ShowDialogAsync<ConfirmDialogViewModel>(
+            new NavigationParameters()
+                .Add("title", NavigationStrings.ModalWindow)
+                .Add("message", NavigationStrings.ModalWindowMessage),
+            DialogHostKind.Window);
+
     [Command] private Task GoHome() => Region.NavigateToAsync<HomePageViewModel>();
 
     [Command] private Task OpenDetails() =>

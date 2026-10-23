@@ -66,6 +66,28 @@ public interface IWindow : IRootVisualComponent, IContentControl
     /// <summary>How the user may resize the window (honored by the custom-chrome hit-test). Default CanResize.</summary>
     WindowResizeMode ResizeMode { get; }
 
+    /// <summary>The window this one belongs to: it opens over its middle, is closed with it and, where the platform does
+    /// that, stays above it and is minimized with it. Null for none.</summary>
+    IWindow Owner { get; set; }
+
+    /// <summary>Whether the window is shown modally: the application's other windows, those that were there when it was
+    /// shown, take no input until it closes or is hidden.</summary>
+    bool IsModal { get; }
+
+    /// <summary>Shows the window modally over its <see cref="Owner"/>; the task ends when it closes or is hidden.</summary>
+    Task ShowDialogAsync();
+
+    /// <summary>Counts <paramref name="window"/> among the windows this one owns, to be closed with it; false once
+    /// <see cref="Closing"/> has let this window close, when it takes no more. Called by the owned window's
+    /// <see cref="Owner"/>.</summary>
+    bool AddOwnedWindow(IWindow window);
+
+    /// <summary>Stops counting <paramref name="window"/> among the windows this one owns.</summary>
+    void RemoveOwnedWindow(IWindow window);
+
+    /// <summary>Frees the window from its owner, which closes without it; a modal window stops being modal.</summary>
+    void LeaveOwner();
+
     // Overlay traits. Settable, and they take effect on a window that is already open: a property that can only be set
     // before the window exists is one that silently does nothing afterwards, which is worse than not having it.
 

@@ -12,5 +12,6 @@ internal sealed class FakeContext(IDependencyResolver resolver) : IUIContext
     // Settable: a test about what a THEME does to a control has to run the real engine (a ThemeManager is one), not the
     // no-op - with the stub in place the control is marked styled and never gets a template at all.
     public IThemeEngine ThemeEngine { get; set; } = new FakeThemeEngine();
-    public IUIApplication UIApplication => null;
+    // Settable: a test about what windows do to each other needs the application that lists them.
+    public IUIApplication UIApplication { get; set; }
 }

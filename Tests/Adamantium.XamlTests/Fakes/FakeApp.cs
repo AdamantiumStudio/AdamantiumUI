@@ -16,7 +16,7 @@ internal sealed class FakeApp(IDependencyResolver resolver) : IUIApplication
 {
     public IUIContext UIContext { get; } = new FakeContext(resolver);
     public IWindow MainWindow { get; set; }
-    public IWindow ActiveWindow => null;
+    public IWindow ActiveWindow { get; set; }
     public IReadOnlyList<IWindow> Windows { get; set; } = Array.Empty<IWindow>();
     public INavigationService Navigation => null;
     public IResourceManager ResourceManager { get; set; }
@@ -24,7 +24,7 @@ internal sealed class FakeApp(IDependencyResolver resolver) : IUIApplication
     // an application that has no theme manager at all - it would exercise a path the real application never takes.
     public IThemeManager ThemeManager { get; set; }
     public IGraphicsContext GraphicsContext => null;
-    public IDispatcher Dispatcher => null;
+    public IDispatcher Dispatcher { get; set; }
     public void AddWindow(IWindow window) { }
     public void RemoveWindow(IWindow window) { }
     public void SetActiveWindow(IWindow window) { }

@@ -23,6 +23,15 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
     private bool trackMouse;
     private bool osMouseCaptured;
     private Win32NativeWindowWrapper source;
+    private int windowThread;
+
+    private static readonly uint BlockMessage = Messages.RegisterWindowMessage("Adamantium.ModalBlock");
+    private readonly List<IntPtr> blockedWindows = [];
+    private readonly Win32Interop.EnumThreadWndProc collectBlocked;
+    private bool blocking;
+    private int blockedBy;
+    private bool disabledByBlock;
+    private bool disabledElsewhere;
 
     // Relative mouse mode: toggled on the pump thread via RelativeModeMessage; moves feed deltas and re-center the cursor.
     // RenderTargetPanel owns the saved cursor position.
@@ -53,6 +62,7 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
     public Win32WindowWorker(IUIContext uiContext)
     {
         UIContext = uiContext;
+        collectBlocked = CollectBlocked;
 
         // What the OS is asking for RIGHT NOW, before any window is up: a theme set to follow the system must open in
         // the right appearance, not correct itself after the first change notification arrives.
@@ -113,6 +123,8 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
         messageTable[BeginMoveDragMessage] = HandleBeginMoveDrag;
         messageTable[RelativeModeMessage] = HandleRelativeModeMessage;
         messageTable[InputMethodMessage] = HandleInputMethodMessage;
+        messageTable[ModalMessage] = HandleModalMessage;
+        messageTable[BlockMessage] = HandleBlockMessage;
     }
 
     // Posted by BeginMoveDrag so the caption-drag handoff runs on the HWND's thread; lParam packs the screen cursor.
@@ -123,6 +135,8 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
     private const uint RelativeModeMessage = (uint)WindowMessages.App + 2;
 
     private const uint InputMethodMessage = (uint)WindowMessages.App + 3;
+
+    private const uint ModalMessage = (uint)WindowMessages.App + 4;
 
     // Initial OS-window extent: prefer the explicit Width/Height; if unset, fall back to the requested CLIENT size (a
     // window can be sized by its client area alone - e.g. one opened from a view model), then a sane default so it is
@@ -137,6 +151,7 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
     public void SetWindow(IWindow window)
     {
         this.window = window;
+        windowThread = Environment.CurrentManagedThreadId;
         // Snapshot the chrome config (read once here, on the setup thread, before the loop runs) so the WndProc never
         // has to touch a lockable AdamantiumProperty. State is kept current by WindowOnStateChanged / HandleSysCommand.
         chromeCustom = window.UseCustomChrome;
@@ -156,7 +171,7 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
         var classStyle = WindowClassStyle.OwnDC | WindowClassStyle.DoubleClicks; //| WindowClassStyle.VerticalRedraw | WindowClassStyle.HorizontalRedraw;
         // No WS_EX_ACCEPTFILES: the partial WM_DROPFILES path is replaced by a full OLE drop target (registered below),
         // which carries text and arbitrary formats too - and reports drag-over live instead of only the final drop.
-        var wndStyleEx = WindowStyleEx.Appwindow;
+        var wndStyleEx = window.Owner == null ? WindowStyleEx.Appwindow : default;
         var wndStyle = //WindowStyle.Popup |
             WindowStyle.Overlappedwindow | WindowStyle.Maximizebox | WindowStyle.Minimizebox |
             WindowStyle.Clipsiblings | WindowStyle.Clipchildren | WindowStyle.Sizeframe;
@@ -179,7 +194,7 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
             (int)window.Top,
             InitialExtent(window.Width, window.ClientWidth, 800),
             InitialExtent(window.Height, window.ClientHeight, 600),
-            IntPtr.Zero);
+            window.Owner?.Handle ?? IntPtr.Zero);
         this.window.SetHandle(source.Handle);
         
         if (source.Handle == IntPtr.Zero) 
@@ -402,7 +417,7 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
         style = Set(style, WindowStyleEx.Transparent, window.TransparentToInput);
         style = Set(style, WindowStyleEx.Layered, window.WindowOpacity < 1.0);
         style = Set(style, WindowStyleEx.Noactivate | WindowStyleEx.Toolwindow, !window.ActivateOnShow);
-        style = Set(style, WindowStyleEx.Appwindow, window.ActivateOnShow);
+        style = Set(style, WindowStyleEx.Appwindow, window.ActivateOnShow && window.Owner == null);
 
         Win32Interop.SetWindowLong(source.Handle, WindowLongType.Exstyle, new IntPtr((long)style));
 
@@ -504,6 +519,96 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
                 break;
         }
         Win32Interop.ShowWindow(source.Handle, windowShowStyle);
+    }
+
+    public void SetOwner(IWindow owner)
+    {
+        if (source == null || source.Handle == IntPtr.Zero)
+        {
+            return;
+        }
+        Win32Interop.SetWindowLong(source.Handle, WindowLongType.HwndParent, owner?.Handle ?? IntPtr.Zero);
+        UpdateOverlayTraits();
+    }
+
+    public void UpdateModal()
+    {
+        if (source == null || source.Handle == IntPtr.Zero)
+        {
+            return;
+        }
+        if (Environment.CurrentManagedThreadId == windowThread)
+        {
+            ApplyModal();
+            return;
+        }
+        Messages.SendMessage(source.Handle, ModalMessage, IntPtr.Zero, IntPtr.Zero);
+    }
+
+    private IntPtr HandleModalMessage(WindowMessages windowMessage, IntPtr wParam, IntPtr lParam, out bool handled)
+    {
+        handled = true;
+        ApplyModal();
+        return IntPtr.Zero;
+    }
+
+    private void ApplyModal()
+    {
+        if (window.IsModal == blocking)
+        {
+            return;
+        }
+        blocking = window.IsModal;
+        if (blocking)
+        {
+            UpdateBlocked();
+            Win32Interop.EnumThreadWindows(Win32Interop.GetCurrentThreadId(), collectBlocked, IntPtr.Zero);
+        }
+        var block = blocking ? new IntPtr(1) : IntPtr.Zero;
+        foreach (var blocked in blockedWindows)
+        {
+            Messages.SendMessage(blocked, BlockMessage, block, IntPtr.Zero);
+        }
+        if (!blocking)
+        {
+            blockedWindows.Clear();
+            UpdateBlocked();
+        }
+    }
+
+    private void UpdateBlocked()
+    {
+        var blocked = blockedBy > 0 && !blocking;
+        if (blocked == disabledByBlock)
+        {
+            return;
+        }
+        disabledByBlock = blocked;
+        if (blocked)
+        {
+            disabledElsewhere = Win32Interop.EnableWindow(source.Handle, false);
+        }
+        else if (!disabledElsewhere)
+        {
+            Win32Interop.EnableWindow(source.Handle, true);
+        }
+    }
+
+    private bool CollectBlocked(IntPtr hWnd, IntPtr lParam)
+    {
+        if (hWnd != source.Handle)
+        {
+            blockedWindows.Add(hWnd);
+        }
+        return true;
+    }
+
+    private IntPtr HandleBlockMessage(WindowMessages windowMessage, IntPtr wParam, IntPtr lParam, out bool handled)
+    {
+        handled = true;
+        blockedBy += wParam != IntPtr.Zero ? 1 : -1;
+        UpdateBlocked();
+        return IntPtr.Zero;
     }
 
     public void HideWindow()
@@ -1432,6 +1537,10 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
     private IntPtr HandleSetCursor(WindowMessages windowMessage, IntPtr wParam, IntPtr lParam, out bool handled)
     {
         handled = false;
+        if ((short)(long)lParam == (short)NcHitTest.Error)
+        {
+            return IntPtr.Zero;
+        }
         Cursor.Platform?.Apply(Mouse.OverrideCursor ?? Mouse.Cursor);   // a drag's override wins
         if (isOverSizeFrame)
         {
