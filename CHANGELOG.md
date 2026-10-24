@@ -7,6 +7,8 @@ All packages share one version.
 
 ### Added
 
+- `UIApplication.CreateGraphicsSettings()`: what the application asks of Vulkan - extensions, layers, the descriptor
+  model - overridable; the engine's defaults otherwise.
 - `FileDialog.OpenFolder(OpenFolderRequest)`: asks for a folder through the platform's own dialog - the shell's open
   dialog choosing folders on Windows, the FileChooser portal on Linux - and returns its path, or null when the user
   chose nothing. `IFileDialogPlatform` gains `OpenFolder`.
@@ -2156,6 +2158,8 @@ All packages share one version.
 
 ### Fixed
 
+- The backdrop's blur pyramid read each level through a view of every level, the one being drawn into among them, as
+  shader-read-only; each step now reads the level above alone (`Texture.GetLevelTexture`).
 - `UIApplication.EnableGraphicsDebug` was registered under the name `EnableGraphicsDebugProperty`, so markup could not
   set it.
 - A render or layout transform is taken into account where it was not: `GetVisualsAt` (the designer's pick, the

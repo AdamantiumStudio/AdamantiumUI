@@ -138,7 +138,8 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         ThemeManager = CreateThemeManager(Container);
         UIContext =  new UIContext(Container, this);
 
-        GraphicsDeviceService = new GraphicsDeviceService(Container.Resolve<IGraphicsDeviceFactory>(), EnableGraphicsDebug);
+        GraphicsDeviceService = new GraphicsDeviceService(Container.Resolve<IGraphicsDeviceFactory>(), EnableGraphicsDebug,
+            CreateGraphicsSettings());
         GraphicsDeviceService.DeviceLost += OnDeviceLost;
         Container.RegisterInstance<IGraphicsDeviceService>(GraphicsDeviceService);
         Container.RegisterSingleton<IResourceFactory, ResourceFactory>();
@@ -158,6 +159,11 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
     {
         return new ThemeManager(Container);
     }
+
+    /// <summary>How the application sets Vulkan up: the engine's settings, to add extensions or layers to, or to choose
+    /// how shaders reach their resources. Called once, while the application is constructed - before any field of a
+    /// subclass is set.</summary>
+    protected virtual GraphicsSettings CreateGraphicsSettings() => GraphicsSettings.CreateDefault();
 
     protected virtual IResourceManager CreateResourceManager()
     {

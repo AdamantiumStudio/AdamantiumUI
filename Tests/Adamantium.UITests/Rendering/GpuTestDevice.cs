@@ -1,3 +1,4 @@
+using System;
 using Adamantium.Graphics;
 using Adamantium.Graphics.Core;
 using NUnit.Framework;
@@ -22,13 +23,27 @@ public class GpuTestDevice
             {
                 if (_device == null)
                 {
-                    _main = MainGraphicsDevice.Create(new GraphicsDeviceFactory(), 3, "UITests", true);
+                    _main = MainGraphicsDevice.Create(new GraphicsDeviceFactory(), Settings(), "UITests", true);
                     _device = _main.CreateRenderDevice();
                 }
 
                 return _device;
             }
         }
+    }
+
+    /// <summary>The default settings, with the descriptor model the run asks for:
+    /// <c>dotnet test -- TestRunParameters.Parameter(name="DescriptorModel", value="Sets")</c> runs every GPU test on
+    /// descriptor sets on a device that has the heap.</summary>
+    private static GraphicsSettings Settings()
+    {
+        var settings = GraphicsSettings.CreateDefault();
+        if (Enum.TryParse<DescriptorModel>(TestContext.Parameters.Get("DescriptorModel", ""), out var model))
+        {
+            settings.DescriptorModel = model;
+        }
+
+        return settings;
     }
 
     /// <summary>Waits idle and frees retired resources, which otherwise wait for a next frame that tests never begin.
