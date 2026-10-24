@@ -31,14 +31,14 @@ internal sealed class PortalFileDialog : IFileDialogPlatform
 
     public string Save(SaveFileRequest request)
     {
-        var options = Options(request.FileTypes);
-        if (request.FileName is { Length: > 0 } name)
+        var options = Options(request?.FileTypes);
+        if (request?.FileName is { Length: > 0 } name)
         {
             options["current_name"] = DBusVariant.String(name);
         }
 
-        var path = Ask("SaveFile", request.Owner, request.Title ?? "Save", options);
-        if (path != null && request.DefaultExtension is { Length: > 0 } extension && Path.GetExtension(path).Length == 0)
+        var path = Ask("SaveFile", request?.Owner ?? IntPtr.Zero, request?.Title ?? "Save", options);
+        if (path != null && request?.DefaultExtension is { Length: > 0 } extension && Path.GetExtension(path).Length == 0)
         {
             path += "." + extension;
         }
@@ -46,7 +46,18 @@ internal sealed class PortalFileDialog : IFileDialogPlatform
         return path;
     }
 
-    public string Open(OpenFileRequest request) => Ask("OpenFile", request.Owner, request.Title ?? "Open", Options(request.FileTypes));
+    public string Open(OpenFileRequest request) =>
+        Ask("OpenFile", request?.Owner ?? IntPtr.Zero, request?.Title ?? "Open", Options(request?.FileTypes));
+
+    // A portal older than FileChooser 3 does not know "directory" and lets a file be chosen: that is no answer here.
+    public string OpenFolder(OpenFolderRequest request) =>
+        Ask("OpenFile", request?.Owner ?? IntPtr.Zero, request?.Title ?? "Choose a folder", FolderOptions()) is { } path
+        && Directory.Exists(path)
+            ? path
+            : null;
+
+    /// <summary>The options of an open dialog that chooses a folder.</summary>
+    public static Dictionary<string, DBusVariant> FolderOptions() => new() { ["directory"] = DBusVariant.Boolean(true) };
 
     /// <summary>The filters for these file types, as the portal takes them: glob patterns, the first one selected.</summary>
     public static Dictionary<string, DBusVariant> Options(IReadOnlyList<FileType> fileTypes)
@@ -119,14 +130,16 @@ internal sealed class PortalFileDialog : IFileDialogPlatform
         }
     }
 
-    /// <summary>The path a Response signal carries; null when the user chose nothing.</summary>
+    /// <summary>The path a Response signal carries; null when the user chose nothing, or something that is not a local
+    /// file.</summary>
     internal static string Chosen(DBusMessage response)
     {
         var reader = response.Reader();
         var code = reader.ReadUInt32();
         var results = (Dictionary<object, object>)reader.ReadValue("a{sv}");
         return code == 0 && results.TryGetValue("uris", out var uris) && ((DBusVariant)uris).Value is List<object> { Count: > 0 } list
-            ? new Uri((string)list[0]).LocalPath
+               && Uri.TryCreate((string)list[0], UriKind.Absolute, out var uri) && uri.IsFile
+            ? uri.LocalPath
             : null;
     }
 }

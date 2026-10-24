@@ -15,6 +15,12 @@ public class PortalFileDialogTests
     }
 
     [Test]
+    public void AnAnswerThatIsNotALocalFile_GivesNothing()
+    {
+        Assert.That(PortalFileDialog.Chosen(Response(0, "sftp://host/home/me/dir")), Is.Null);
+    }
+
+    [Test]
     public void ACanceledDialog_GivesNothing()
     {
         Assert.That(PortalFileDialog.Chosen(Response(1, null)), Is.Null);
@@ -34,6 +40,15 @@ public class PortalFileDialogTests
             Assert.That(((List<object>)first[1]).ConvertAll(p => ((object[])p)[1]), Is.EqualTo(new[] { "*.json", "*.JSON" }));
             Assert.That(options["current_filter"].Value, Is.SameAs(first));
         });
+    }
+
+    [Test]
+    public void AFolderIsAskedForAsADirectory()
+    {
+        var options = PortalFileDialog.FolderOptions();
+
+        Assert.That(options["directory"].Signature, Is.EqualTo("b"));
+        Assert.That(options["directory"].Value, Is.EqualTo(true));
     }
 
     private static DBusMessage Response(uint code, string uri) =>

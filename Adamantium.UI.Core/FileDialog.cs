@@ -19,4 +19,7 @@ public static class FileDialog
 
     /// <summary>Asks which file to open, and returns its full path - or null if the user chose nothing.</summary>
     public static string Open(OpenFileRequest request) => Platform?.Open(request);
+
+    /// <summary>Asks for a folder, and returns its full path - or null if the user chose nothing.</summary>
+    public static string OpenFolder(OpenFolderRequest request) => Platform?.OpenFolder(request);
 }
