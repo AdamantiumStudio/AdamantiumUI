@@ -266,6 +266,14 @@ public class Popup : MeasurableUIComponent, IContainer
         if (e.NewValue is IMeasurableComponent newChild) popup.LogicalChildrenCollection.Add(newChild);
         if (popup._isShowing)
         {
+            // The new content belongs to the window the old one did: what walks out of an overlay - the focus ring, the
+            // window remembering where its keyboard was - finds the way back through this record.
+            if (e.OldValue is IUIComponent oldRoot && OverlayRootHost.TryGetValue(oldRoot, out var host))
+            {
+                UnregisterOverlayRoot(oldRoot);
+                if (e.NewValue is IUIComponent newRoot) RegisterOverlayRoot(newRoot, host, popup);
+            }
+
             popup.UnhookContent();
             popup.HookContent();
         }

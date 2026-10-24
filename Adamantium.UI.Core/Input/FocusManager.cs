@@ -413,9 +413,11 @@ public static class FocusManager
    // The last focused element per window, restored when that window is activated; weak so closed windows can go.
    private static readonly ConditionalWeakTable<IUIComponent, IInputComponent> FocusByRoot = new();
 
+   // The window an element is in - through the popup that shows it, for a popup's content, whose visual tree ends at
+   // its overlay root: focus in a window's popup is that window's to remember, release and restore.
    private static IUIComponent RootOf(IUIComponent node)
    {
-      while (node?.VisualParent is { } parent) node = parent;
+      while (node != null && ParentOf(node) is { } parent) node = parent;
       return node;
    }
 
