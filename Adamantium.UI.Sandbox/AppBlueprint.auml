@@ -6,6 +6,7 @@
         <ResourceLink Source="ModuleIcons"/>
         <ResourceLink Source="RibbonShellIcons"/>
         <ResourceLink Source="CaptionIcons"/>
+        <ResourceLink Source="StatusIcons"/>
     </ApplicationBlueprint.Resources>
     <ApplicationBlueprint.StyleIncludes>
         <StyleInclude Source="RibbonShellStyleSet"/>

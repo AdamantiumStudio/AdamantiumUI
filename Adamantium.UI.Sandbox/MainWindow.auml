@@ -113,7 +113,30 @@
                     <DropDown AutomationProperties.AutomationId="DescriptorModel"
                               ItemsSource="{Binding DescriptorModels}"
                               SelectedItem="{Binding DescriptorModel, Mode=TwoWay}"
-                              Margin="0,0,0,4"/>
+                              Margin="0,0,0,4">
+                        <DropDown.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="{Binding Model}" VerticalAlignment="Center"/>
+                                    <Image AutomationProperties.AutomationId="NotSupported"
+                                           Source="{ResourceReference NotSupportedIcon}"
+                                           Width="14"
+                                           Height="14"
+                                           Margin="8,0,0,0"
+                                           VerticalAlignment="Center"
+                                           Foreground="{ResourceReference SystemFillColorCaution}"
+                                           Visibility="{Binding IsUnsupported, Converter={conv:BoolToVisibilityConverter}}"
+                                           ToolTipService.ToolTip="{Localize MainStrings.NotSupportedOnThisGpu}"
+                                           ToolTipService.ShowOnDisabled="True"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </DropDown.ItemTemplate>
+                        <DropDown.ItemContainerStyle>
+                            <Style Selector="DropDownItem">
+                                <Setter Property="IsEnabled" Value="{Binding IsSupported}"/>
+                            </Style>
+                        </DropDown.ItemContainerStyle>
+                    </DropDown>
                     <TextBlock AutomationProperties.AutomationId="DescriptorModelInUse"
                                Text="{Localize MainStrings.DescriptorsInUse, model={Binding DescriptorModelInUse}}"
                                Foreground="{ResourceReference TextFillColorSecondary}"

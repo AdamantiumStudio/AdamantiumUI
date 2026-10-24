@@ -140,8 +140,10 @@ public sealed class PointerDevice
     }
 
     /// <summary>What a pointer is over at <paramref name="p"/> (client units) of <paramref name="rootComponent"/>: open
-    /// popups first, newest on top, then the window content - the element a press there reaches.</summary>
-    public static IInputComponent HitTestTopmost(IInputComponent rootComponent, Vector2 p, bool boundsForContent = false)
+    /// popups first, newest on top, then the window content - the element a press there reaches. With
+    /// <paramref name="hover"/>, the element hovered instead, as <see cref="InputExtensions.HitTest"/> takes it.</summary>
+    public static IInputComponent HitTestTopmost(IInputComponent rootComponent, Vector2 p, bool boundsForContent = false,
+        bool hover = false)
     {
         if (rootComponent is IWindow window)
         {
@@ -153,7 +155,7 @@ public sealed class PointerDevice
                     continue;
                 }
 
-                if (InputExtensions.HitTest(popups[i], p) is { } popupHit)
+                if (InputExtensions.HitTest(popups[i], p, hover) is { } popupHit)
                 {
                     return popupHit;
                 }
@@ -165,13 +167,13 @@ public sealed class PointerDevice
             }
         }
 
-        var pixel = InputExtensions.HitTest(rootComponent, p);
+        var pixel = InputExtensions.HitTest(rootComponent, p, hover);
         if (!boundsForContent)
         {
             return pixel;
         }
 
-        var bounds = InputExtensions.HitTestBounds(rootComponent, p);
+        var bounds = InputExtensions.HitTestBounds(rootComponent, p, hover);
         if (pixel == null)
         {
             return bounds;
@@ -294,7 +296,7 @@ public sealed class PointerDevice
 
     private IInputComponent SetPointerOver(Pointer pointer, IInputComponent root, Vector2 p, InputModifiers modifiers, uint timestamp)
     {
-        var element = HitTestTopmost(root, p, boundsForContent: true) ?? root;
+        var element = HitTestTopmost(root, p, boundsForContent: true, hover: true) ?? root;
         ChangePointerOver(pointer, element, modifiers, timestamp);
         return pointer.DirectlyOver;
     }

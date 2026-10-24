@@ -242,7 +242,7 @@ internal sealed class UiaBridge
     public UiaProvider ProviderAt(PixelPoint screen)
     {
         var client = Window.PointToClient(screen);
-        return ProviderOf(PointerDevice.HitTestTopmost(Window, client) as IUIComponent);
+        return ProviderOf(PointerDevice.HitTestTopmost(Window, client, hover: true) as IUIComponent);
     }
 
     public static nint ComPointer(object instance) =>

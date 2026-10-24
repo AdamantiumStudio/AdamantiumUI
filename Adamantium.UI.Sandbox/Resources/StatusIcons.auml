@@ -1,0 +1,35 @@
+<ResourceDictionary xmlns:x="http://adamantium/ui/xaml/extensions"
+        xmlns="http://adamantium/ui">
+
+    <!-- Marks beside a choice, drawn in a 14-unit box like the caption icons; the stroke is CurrentColor, the Foreground
+         of the Image showing it. -->
+
+    <DrawingImage x:Key="NotSupportedIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="-0.5,-0.5,14,14"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Stroke="CurrentColor"
+                             StrokeThickness="1">
+                <GeometryDrawing.Geometry>
+                    <EllipseGeometry Center="6.5,6.5"
+                                     RadiusX="6"
+                                     RadiusY="6"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M6.5,3 L6.5,8"
+                             Stroke="CurrentColor"
+                             StrokeThickness="1.5"/>
+            <GeometryDrawing Brush="CurrentColor">
+                <GeometryDrawing.Geometry>
+                    <EllipseGeometry Center="6.5,10"
+                                     RadiusX="0.9"
+                                     RadiusY="0.9"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+        </DrawingGroup>
+    </DrawingImage>
+
+</ResourceDictionary>

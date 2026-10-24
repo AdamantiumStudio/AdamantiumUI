@@ -85,6 +85,32 @@ public class DropDownEditableThemeTests
         });
     }
 
+    [TestCase("Fluent")]
+    [TestCase("Graphite")]
+    [TestCase("MacOs")]
+    public void TheNameOfADisabledItem_Typed_PicksNothing(string theme)
+    {
+        Use(theme);
+        var ran = new List<object>();
+        var fonts = new DropDown
+        {
+            IsEditable = true, SelectedValuePath = "Content", Command = new AdamantiumCommand<object>(ran.Add),
+            Items = { new DropDownItem { Content = "Arial" }, new DropDownItem { Content = "Georgia", IsEnabled = false } }
+        };
+        Lay(fonts);
+        fonts.SelectedIndex = 0;
+        ran.Clear();
+
+        Value(fonts).SetValue("georgia");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(fonts.SelectedIndex, Is.EqualTo(0));
+            Assert.That(ran, Is.Empty);
+            Assert.That(Value(fonts).Value, Is.EqualTo("Arial"), "the box reads as the item still chosen");
+        });
+    }
+
     // A size no item has is run as a number, as the items are; what is no number is not taken.
     [TestCase("Fluent")]
     [TestCase("Graphite")]

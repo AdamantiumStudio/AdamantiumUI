@@ -21,6 +21,13 @@ public static class ToolTipService
     public static readonly AdamantiumProperty PlacementProperty = AdamantiumProperty.RegisterAttached(
         "Placement", typeof(PlacementMode), typeof(AdamantiumComponent), new PropertyMetadata(PlacementMode.Bottom));
 
+    /// <summary>Whether the element takes hover and shows its tooltip though it or an ancestor is disabled - the "why"
+    /// beside something that cannot be used (default false).</summary>
+    public static readonly AdamantiumProperty ShowOnDisabledProperty = DisabledHover.ShowOnDisabledProperty;
+
+    public static bool GetShowOnDisabled(AdamantiumComponent element) => element.GetValue<bool>(ShowOnDisabledProperty);
+    public static void SetShowOnDisabled(AdamantiumComponent element, bool value) => element.SetValue(ShowOnDisabledProperty, value);
+
     public static object GetToolTip(AdamantiumComponent element) => element.GetValue(ToolTipProperty);
     public static void SetToolTip(AdamantiumComponent element, object value) => element.SetValue(ToolTipProperty, value);
 
@@ -44,12 +51,11 @@ public static class ToolTipService
         // Idempotent: (re)wire hover only while a tooltip is set. Unsubscribe first so re-setting doesn't double-hook.
         input.PointerEntered -= OnPointerEntered;
         input.PointerExited -= OnPointerExited;
-        input.PreviewPointerPressed -= OnPointerPressed;
         if (e.NewValue != null)
         {
+            WatchPresses();
             input.PointerEntered += OnPointerEntered;
             input.PointerExited += OnPointerExited;
-            input.PreviewPointerPressed += OnPointerPressed;
         }
         else if (ReferenceEquals(_pending, input))
         {
@@ -72,11 +78,36 @@ public static class ToolTipService
         if (ReferenceEquals(sender, _pending) && !_pending.IsPointerOver) Hide();
     }
 
+    private static bool _watchingPresses;
+
+    private static void WatchPresses()
+    {
+        if (_watchingPresses) return;
+
+        _watchingPresses = true;
+        PointerEvents.PreviewPointerPressedEvent.RegisterClassHandler<IInputComponent>(
+            new PointerPressedEventHandler(OnPointerPressed), handledEventsToo: true);
+    }
+
     // A press acts on the element: its tip, up or still to come, goes, and comes again only on the next hover - a
-    // button that drops a menu had its tip drawn over the menu.
+    // button that drops a menu had its tip drawn over the menu. One shown on disabled is under a press its disabled
+    // ancestor takes.
     private static void OnPointerPressed(object sender, PointerPressedEventArgs e)
     {
-        if (ReferenceEquals(sender, _pending)) Hide();
+        if (!ReferenceEquals(sender, e.OriginalSource) || _pending is not IUIComponent owner ||
+            e.OriginalSource is not IUIComponent pressed) return;
+
+        if (IsWithin(pressed, owner) || IsWithin(owner, pressed)) Hide();
+    }
+
+    private static bool IsWithin(IUIComponent node, IUIComponent ancestor)
+    {
+        for (; node != null; node = node.VisualParent)
+        {
+            if (ReferenceEquals(node, ancestor)) return true;
+        }
+
+        return false;
     }
 
     // A menu or a list dropped open takes the card of anything outside it away.

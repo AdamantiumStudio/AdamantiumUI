@@ -39,7 +39,10 @@ public class SandboxApplication : Adamantium.UI.Universes.MultiverseApplication
     protected override Adamantium.Graphics.Core.GraphicsSettings CreateGraphicsSettings()
     {
         var settings = base.CreateGraphicsSettings();
-        settings.DescriptorModel = DescriptorModelChoice.Read();
+        var chosen = DescriptorModelChoice.Read();
+        settings.DescriptorModel = chosen == Adamantium.Graphics.Core.DescriptorModel.Heap
+            ? Adamantium.Graphics.Core.DescriptorModel.Auto
+            : chosen;
         return settings;
     }
 

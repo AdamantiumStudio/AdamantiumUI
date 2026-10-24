@@ -173,13 +173,33 @@ public class ToolTipServiceTests
         Show(one, window);
         Assume.That(Shared<Popup>("_popup").IsOpen, Is.True, "the tip is up");
 
-        Call("OnPointerPressed", one, null);
+        Call("OnPointerPressed", one, PressOn(one));
 
         Assert.Multiple(() =>
         {
             Assert.That(Shared<Popup>("_popup").IsOpen, Is.False);
             Assert.That(Shared<Popup>("_popup").DismissOnEscape, Is.False);
         });
+    }
+
+    private static Adamantium.UI.Core.Input.PointerPressedEventArgs PressOn(IInputComponent element) =>
+        new(Adamantium.UI.Core.Input.Mouse.Pointer, Adamantium.UI.Core.Input.MouseButtons.Left,
+            Adamantium.UI.Core.Input.InputModifiers.None, 0) { OriginalSource = element };
+
+    // The "why" beside what cannot be used: the press goes to the disabled element, and the tip goes with it.
+    [Test]
+    public void APressOnTheDisabledElement_TakesDownTheTipShownOnDisabledInsideIt()
+    {
+        var (one, _, _, _, window) = Owners();
+        ToolTipService.SetShowOnDisabled(one, true);
+        var row = (StackPanel)window.Content;
+        row.IsEnabled = false;
+        Show(one, window);
+        Assume.That(Shared<Popup>("_popup").IsOpen, Is.True, "the tip is up");
+
+        Call("OnPointerPressed", row, PressOn(row));
+
+        Assert.That(Shared<Popup>("_popup").IsOpen, Is.False);
     }
 
     // While a menu is open, the tip of anything outside it is not drawn over its rows.

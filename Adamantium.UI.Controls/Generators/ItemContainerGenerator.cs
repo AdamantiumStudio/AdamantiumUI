@@ -186,6 +186,32 @@ public class ItemContainerGenerator
         return container;
     }
 
+    /// <summary>What <paramref name="read"/> says of the container of the item at <paramref name="index"/>, without
+    /// keeping one: a realized container is read as it is, an item that is its own container as written; otherwise a
+    /// container is made or taken from the pool, read and pooled again. An element item that is not its own container is
+    /// not taken from where it stands to be looked at: <paramref name="read"/> gets null.</summary>
+    public T Inspect<T>(int index, Func<IUIComponent, T> read)
+    {
+        if (_byIndex.TryGetValue(index, out var existing)) return read(existing);
+
+        var item = _owner.Items[index];
+        if (item is IUIComponent element) return read(_owner.IsItemItsOwnContainer(item) ? element : null);
+
+        var fit = PoolFitFor(item);
+        var container = fit >= 0 ? PoolTake(fit) : _owner.GetContainerForItem(item);
+        _generated.Add(container);
+        _owner.PrepareContainer(container, item);
+        try
+        {
+            return read(container);
+        }
+        finally
+        {
+            _owner.ClearContainer(container);
+            PoolPush(container);
+        }
+    }
+
     /// <summary>Reconciles the realized set to exactly [<paramref name="first"/>, <paramref name="last"/>], rebinding
     /// containers that left the window in place. Idempotent; returns the surplus containers when the window shrank.</summary>
     public IReadOnlyList<IUIComponent> SetWindow(int first, int last, double budgetMs = double.MaxValue, int minBinds = 0,

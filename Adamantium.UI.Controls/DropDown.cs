@@ -162,8 +162,24 @@ public class DropDown : Selector
         if (count == 0) return;
 
         var from = _highlightedIndex < 0 ? (delta > 0 ? -1 : count) : _highlightedIndex;
-        Highlight(Math.Clamp(from + delta, 0, count - 1));
+        var next = NextSelectable(from, delta);
+        if (next >= 0) Highlight(next);
     }
+
+    private int NextSelectable(int from, int delta)
+    {
+        for (var index = from + delta; index >= 0 && index < Items.Count; index += delta)
+        {
+            if (IsSelectable(index)) return index;
+        }
+
+        return -1;
+    }
+
+    private int SelectableOrNone(int index) => index >= 0 && IsSelectable(index) ? index : -1;
+
+    private bool IsSelectable(int index) =>
+        ItemContainerGenerator.Inspect(index, container => container is not DropDownItem { IsEnabled: false });
 
     private void Highlight(int index)
     {
@@ -183,7 +199,8 @@ public class DropDown : Selector
     // about the choice once, not once per arrow key.
     private void Commit()
     {
-        if (_highlightedIndex >= 0 && _highlightedIndex != SelectedIndex) SelectSingle(_highlightedIndex);
+        if (_highlightedIndex >= 0 && _highlightedIndex != SelectedIndex && IsSelectable(_highlightedIndex))
+            SelectSingle(_highlightedIndex);
         IsDropDownOpen = false;
     }
 
@@ -205,11 +222,8 @@ public class DropDown : Selector
         var count = Items.Count;
         if (count == 0) return;
         var from = SelectedIndex < 0 ? (e.Delta < 0 ? -1 : count) : SelectedIndex;   // start at an edge when unset
-        var next = Math.Clamp(from + (e.Delta < 0 ? 1 : -1), 0, count - 1);
-        if (next == SelectedIndex) return;   // already at that end of the list: leave the wheel unhandled so the page
-                                             // under the cursor keeps scrolling - the same chaining rule ScrollViewer
-                                             // follows at its own edge. Swallowing it here dead-ended the wheel on
-                                             // every drop-down it passed over.
+        var next = NextSelectable(from, e.Delta < 0 ? 1 : -1);
+        if (next < 0 || next == SelectedIndex) return;
         SelectedIndex = next;
         e.Handled = true;
     }
@@ -419,7 +433,7 @@ public class DropDown : Selector
         if (e.Property != TextBox.TextProperty || _writingText) return;
 
         _edited = true;
-        if (IsDropDownOpen) Highlight(IndexOf(_text.Text, prefix: true));
+        if (IsDropDownOpen) Highlight(SelectableOrNone(IndexOf(_text.Text, prefix: true)));
     }
 
     private void OnTextEnterPressed(object sender, KeyEventArgs e)
@@ -465,7 +479,11 @@ public class DropDown : Selector
         var typed = _text.Text.Trim();
         _edited = false;
         var index = typed.Length == 0 ? -1 : IndexOf(typed, prefix: false);
-        if (index >= 0 && index != SelectedIndex)
+        if (index >= 0 && !IsSelectable(index))
+        {
+            FocusManager.FocusToReturnTo(this)?.Focus();
+        }
+        else if (index >= 0 && index != SelectedIndex)
         {
             SelectSingle(index);
         }
@@ -572,6 +590,8 @@ public class DropDown : Selector
     // One highlight shared by mouse and keyboard: the pointer moving onto a row moves it, so Enter commits that row.
     internal void HighlightFromContainer(DropDownItem container)
     {
+        if (!container.IsEnabled) return;
+
         var index = ItemContainerGenerator.IndexFromContainer(container);
         if (index >= 0) Highlight(index);
     }
@@ -579,6 +599,8 @@ public class DropDown : Selector
     // A row was clicked: select its item and dismiss.
     internal void SelectFromContainer(DropDownItem container)
     {
+        if (!container.IsEnabled) return;
+
         var index = ItemContainerGenerator.IndexFromContainer(container);
         if (index >= 0) SelectSingle(index);
         IsDropDownOpen = false;
