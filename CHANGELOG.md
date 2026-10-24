@@ -1690,6 +1690,8 @@ All packages share one version.
 
 ### Changed
 
+- `Adamantium.Vulkan` 1.1.0 and `Adamantium.Vulkan.ShaderObjectLayer` 1.0.0: an application gets the shader-object
+  layer, for GPUs whose driver has no shader objects.
 - Enter in a single-line `TextBox` is no longer kept by the box: what is subscribed to `EnterPressed` keeps it by
   setting `Handled`, and an Enter nothing kept goes on up to the default button (`IsDefault`) of the `Window` or
   `Popup` the box is in, as in WPF - a card's address field submits the card. `NumericUpDown` and `PropertyRow` keep
