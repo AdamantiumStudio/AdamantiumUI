@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Threading;
 using Adamantium.Graphics.Core;
 using Adamantium.Mathematics;
 using Adamantium.UI.Core;
@@ -37,6 +38,8 @@ public partial class RenderCache
     private readonly ConcurrentQueue<RenderPacket> _published = new();   // recorded, awaiting the applier
     private readonly ConcurrentBag<RenderPacket> _spare = new();         // consumed, back for reuse
     private RenderPacket _packet;                                        // the one being recorded right now
+    private int _changesPublished;
+    private Matrix4x4F _publishedProjection;
 
     private readonly Dictionary<IUIComponent, float> _opacityChain = new();   // memo of OpacityChain, like _worldCache
     private readonly Dictionary<IUIComponent, int> _opacitySlotCache = new();   // memo of OpacitySlotOf, same lifetime
@@ -95,6 +98,12 @@ public partial class RenderCache
     // CPU pre-transform text batch aggregator. Lazy on the first Render with a device
     // (GPU-free test renders never batch). Frame-scoped state lives inside it.
     private TextBatchCollector _textBatch;
+
+    /// <summary>How many recorded packets wait for the applier.</summary>
+    internal int PublishedCount => _published.Count;
+
+    /// <summary>How many of them show anything new.</summary>
+    internal int ChangesPublished => Volatile.Read(ref _changesPublished);
 
     /// <summary>Builds units from a FLAT list of components (the adorner stage), not a tree walk. Components cache by
     /// RenderId as in the tree build; units of components no longer in the list are disposed. For overlays outside the
@@ -247,8 +256,27 @@ public partial class RenderCache
         }
 
         CaptureEffects();
-        _published.Enqueue(_packet);
+        Publish(true);
         _packet = null;
+    }
+
+    private void Publish(bool changes)
+    {
+        _packet.Changes = changes;
+        if (changes)
+        {
+            Interlocked.Increment(ref _changesPublished);
+        }
+
+        _published.Enqueue(_packet);
+    }
+
+    private void Taken(RenderPacket packet)
+    {
+        if (packet.Changes)
+        {
+            Interlocked.Decrement(ref _changesPublished);
+        }
     }
 
     /// <summary>The apply half of an overlay build, on the thread that owns the device: realizes the recorded packets in
@@ -261,6 +289,7 @@ public partial class RenderCache
         var applied = false;
         while (_published.TryDequeue(out var packet))
         {
+            Taken(packet);
             ApplyComponentsPacket(packet);
             packet.Reset(RenderBuildKind.Clean);
             _spare.Add(packet);

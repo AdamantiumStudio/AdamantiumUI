@@ -558,8 +558,16 @@ public partial class RenderCache
             _preRenderMachineryVersion = machinery;
         }
 
-        foreach (var unit in _preRenderUnits) unit.PreRender();
+        AwaitsFrame = false;
+        foreach (var unit in _preRenderUnits)
+        {
+            unit.PreRender();
+            AwaitsFrame |= unit.AwaitsFrame;
+        }
     }
+
+    /// <summary>After <see cref="PreRender"/>: a unit waits for a frame submitted elsewhere.</summary>
+    internal bool AwaitsFrame { get; private set; }
 
     /// <summary>Renders every cached unit with no scissor management. Used by GPU-free tests (no device).</summary>
     public void Render() => Render(null, default);

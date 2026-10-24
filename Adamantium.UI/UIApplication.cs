@@ -51,6 +51,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
     private readonly object applicationLocker = new object();
     
     private Dictionary<IWindow, WindowRenderService> windowToSystem;
+    private WindowRenderService[] _windowServices = [];
     private readonly Dictionary<IWindow, Entity> windowToEntity = new();
 
     private double accumulatedFrameTime;
@@ -78,6 +79,22 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
     private int _framesInFlight;
     private AppTime _renderAppTime;   // time of the newest recorded frame
     private const int MaxFramesInFlight = 2;
+    private const int RetainedLogRuns = 10;
+    private const long LogSizeLimitBytes = 32L * 1024 * 1024;
+    private const int IdleWakeMs = 250;
+    private const double StallFrameSeconds = 1.0 / 20.0;
+    private const double StallAnimationStep = 0.004;
+    private const int DiscardReleasesPerFrame = 128;
+    private long _loopFrameDue;
+    private IVisualRenderer _visualRenderer;
+    private bool _recordedThisFrame;
+    private const int LoopExitWaitMs = 2000;
+    private const double LowestLoopRate = 60;
+    private long _frameRequestsRecorded = -1;
+    private bool _withheldSinceShown;
+    private bool _recordSkipped;
+
+    private readonly record struct Claims(bool AnyDrawn, bool AnyDrawable, bool LeftWaiting);
 
     private long _publishedFrame;
     private bool _drawFailing;
@@ -149,10 +166,6 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         return resourceManager;
     }
 
-    // A capped file per launch, the last few kept: one file a day grew to 149 MB and mixed the runs together.
-    private const int RetainedLogRuns = 10;
-    private const long LogSizeLimitBytes = 32L * 1024 * 1024;
-
     private void ConfigureLogging()
     {
         var directory = Path.Combine(AppContext.BaseDirectory, "logs");
@@ -189,7 +202,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
     public static UIApplication Current { get; private set; }
 
     public static readonly AdamantiumProperty EnableGraphicsDebugProperty =
-        AdamantiumProperty.Register(nameof(EnableGraphicsDebugProperty), typeof(bool), typeof(UIApplication),
+        AdamantiumProperty.Register(nameof(EnableGraphicsDebug), typeof(bool), typeof(UIApplication),
             new PropertyMetadata(false, GraphicsDebugChangedCallback));
 
     private static void GraphicsDebugChangedCallback(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
@@ -212,6 +225,86 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
     /// Set it at startup: swapchains that already exist are not rebuilt.</summary>
     public Graphics.Core.Presentation.PresentPolicy PresentPolicy { get; set; } =
         Graphics.Core.Presentation.PresentPolicy.Adaptive;
+
+    public static readonly AdamantiumProperty UpdateRateProperty = AdamantiumProperty.Register(nameof(UpdateRate),
+        typeof(uint), typeof(UIApplication), new PropertyMetadata(IUIApplication.DefaultUpdateRate, RefreshRatesChanged));
+
+    /// <summary>How often the loop updates at most, in hertz; 120 by default. Below it the loop keeps the pace of the
+    /// fastest window, and no slower than 60 so input is not held up.</summary>
+    public uint UpdateRate
+    {
+        get => GetValue<uint>(UpdateRateProperty);
+        set => SetValue(UpdateRateProperty, value);
+    }
+
+    /// <summary>The pace the loop keeps now, in hertz.</summary>
+    public double LoopRate { get; private set; } = IUIApplication.DefaultUpdateRate;
+
+    public static readonly AdamantiumProperty RefreshRateProperty = AdamantiumProperty.Register(nameof(RefreshRate),
+        typeof(uint), typeof(UIApplication), new PropertyMetadata(0u, RefreshRatesChanged));
+
+    public static readonly AdamantiumProperty MinimumRefreshRateProperty = AdamantiumProperty.Register(
+        nameof(MinimumRefreshRate), typeof(uint), typeof(UIApplication), new PropertyMetadata(0u, RefreshRatesChanged));
+
+    public static readonly AdamantiumProperty MaximumRefreshRateProperty = AdamantiumProperty.Register(
+        nameof(MaximumRefreshRate), typeof(uint?), typeof(UIApplication), new PropertyMetadata(null, RefreshRatesChanged));
+
+    public static readonly AdamantiumProperty UnlimitedRefreshRateProperty = AdamantiumProperty.Register(
+        nameof(UnlimitedRefreshRate), typeof(bool), typeof(UIApplication), new PropertyMetadata(false, UnlimitedRefreshRateChanged));
+
+    private static void RefreshRatesChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e) =>
+        LoopSignal.Request();
+
+    private static void UnlimitedRefreshRateChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (Equals(e.OldValue, e.NewValue) || component is not UIApplication application)
+        {
+            return;
+        }
+
+        foreach (var window in application.Windows)
+        {
+            if (window.UnlimitedRefreshRate == null)
+            {
+                window.Renderer?.InvalidatePresenter();
+            }
+        }
+
+        LoopSignal.Request();
+    }
+
+    /// <summary>The windows' <see cref="IWindow.UnlimitedRefreshRate"/> where they set none; false by default.</summary>
+    public bool UnlimitedRefreshRate
+    {
+        get => GetValue<bool>(UnlimitedRefreshRateProperty);
+        set => SetValue(UnlimitedRefreshRateProperty, value);
+    }
+
+    /// <summary>Whether <paramref name="window"/> draws unlimited: its own choice, or the application's.</summary>
+    internal static bool RunsUnlimited(IWindow window) =>
+        window.UnlimitedRefreshRate ?? Current?.UnlimitedRefreshRate ?? false;
+
+    /// <summary>The windows' <see cref="IWindow.RefreshRate"/> where they set none; 0 by default.</summary>
+    public uint RefreshRate
+    {
+        get => GetValue<uint>(RefreshRateProperty);
+        set => SetValue(RefreshRateProperty, value);
+    }
+
+    /// <summary>The windows' <see cref="IWindow.MinimumRefreshRate"/> where they set none; 0 by default.</summary>
+    public uint MinimumRefreshRate
+    {
+        get => GetValue<uint>(MinimumRefreshRateProperty);
+        set => SetValue(MinimumRefreshRateProperty, value);
+    }
+
+    /// <summary>The windows' <see cref="IWindow.MaximumRefreshRate"/> where they set none; null, the default, is their
+    /// monitor's rate.</summary>
+    public uint? MaximumRefreshRate
+    {
+        get => GetValue<uint?>(MaximumRefreshRateProperty);
+        set => SetValue(MaximumRefreshRateProperty, value);
+    }
 
     /// <summary>The frame verifier: off by default, switched on at run time to hunt a rendering bug.</summary>
     public Rendering.Verification.FrameVerification FrameVerification { get; } = new();
@@ -581,6 +674,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
             EntityWorld.RemoveAllEntities();
             EntityWorld.ForceUpdate();
             windowToSystem.Clear();
+            SnapshotWindowServices();
             windowToEntity.Clear();
             foreach (var window in Windows)
             {
@@ -609,6 +703,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
 
             EntityWorld.AddService(windowService);
             windowToSystem.Add(window, windowService);
+            SnapshotWindowServices();
         }
 
         var entity = new Entity();
@@ -644,6 +739,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         {
             service.UnloadContent();
             windowToSystem.Remove(window);
+            SnapshotWindowServices();
             lock (_minimizedWindows)
             {
                 _minimizedWindows.Remove(window);
@@ -1242,9 +1338,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
                         Update(appTime);
                         _requestsAtRecord = LoopSignal.Requests;
                         _loadsAtRecord = BitmapImage.LoadsFinished;
-                        RecordRenderFrame();
-                        DispatchRenderFrame(appTime);
-
+                        RecordIfOwed(appTime);
                         UpdateAppTime(accumulatedFrameTime);
                         accumulatedFrameTime = 0;
                     }
@@ -1254,9 +1348,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
                     Update(appTime);
                     _requestsAtRecord = LoopSignal.Requests;
                     _loadsAtRecord = BitmapImage.LoadsFinished;
-                    RecordRenderFrame();
-                    DispatchRenderFrame(appTime);
-
+                    RecordIfOwed(appTime);
                     UpdateAppTime(frameTime);
                 }
 
@@ -1270,39 +1362,108 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         }
     }
 
-    /// <summary>How often the loop updates at most while something moves; the presented rate belongs to the render thread.</summary>
-    public static uint UpdateRateHz { get; set; } = 120;
-
-    // A safety net only: every source of work signals the loop, so this turns a forgotten one into a late frame.
-    private const int IdleWakeMs = 250;
-
-    private long _loopFrameStart;
-
-    // Records snapshots on the loop thread and draws them on the render thread.
-    private IVisualRenderer _visualRenderer;
-
-    /// <summary>A window's swapchain lags the size of its surface, so the window is being resized right now. Set anew
-    /// every frame by the render service.</summary>
-    public static bool SwapchainTrailing { get; set; }
-
-    // Paced to UpdateRateHz, then blocked on the loop signal when nothing is dirty or animating: the loop signals itself,
-    // so the signal alone would spin it.
-    private void WaitForWork()
+    private void RecordIfOwed(AppTime time)
     {
-        // Uncapped while a window is resized: a frame shows the window as it was when the frame started.
-        if (!SwapchainTrailing)
+        var requests = LoopSignal.FrameRequests;
+        if (!FrameOwed(requests))
         {
-            var target = 1000.0 / Math.Max(1, UpdateRateHz);
-            var elapsed = Stopwatch.GetElapsedTime(_loopFrameStart).TotalMilliseconds;
-            var remaining = target - elapsed;
-            if (remaining >= 1.0) LoopSignal.Pause(remaining, cancellationTokenSource.Token);
+            return;
         }
 
-        // Every stage counts, popups and adorners included.
-        if (!RenderDirty.AnyHasWork && !AnimationManager.HasActiveAnimations)
-            LoopSignal.Wait(IdleWakeMs, cancellationTokenSource.Token);
+        RecordRenderFrame();
+        DispatchRenderFrame(time);
+        if (_recordedThisFrame)
+        {
+            _frameRequestsRecorded = requests;
+        }
+    }
 
-        _loopFrameStart = Stopwatch.GetTimestamp();
+    private bool FrameOwed(long requests)
+    {
+        if (!(RenderThreadOptions.RenderThreadEnabled && renderThread != null))
+        {
+            return true;
+        }
+
+        if (RenderDirty.AnyHasWork || AnimationManager.IsSettling || Compositor.NeedsRecord
+            || requests != _frameRequestsRecorded)
+        {
+            return true;
+        }
+
+        lock (_minimizedWindows)
+        {
+            foreach (var service in Volatile.Read(ref _windowServices))
+            {
+                if (!service.Hidden && service.Window.State != WindowState.Minimized
+                    && _minimizedWindows.Contains(service.Window))
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private void SnapshotWindowServices()
+    {
+        var services = new WindowRenderService[windowToSystem.Count];
+        windowToSystem.Values.CopyTo(services, 0);
+        Volatile.Write(ref _windowServices, services);
+    }
+
+    /// <summary>A window's swapchain lags the size of its surface, so the window is being resized right now. Set by the
+    /// render thread's every pass over the windows.</summary>
+    public static bool SwapchainTrailing { get; set; }
+
+    private void WaitForWork()
+    {
+        LoopRate = ResolveLoopRate();
+
+        var period = (long)Math.Round(Stopwatch.Frequency / LoopRate);
+        var due = _loopFrameDue + period;
+        if (!SwapchainTrailing)
+        {
+            var remaining = Stopwatch.GetElapsedTime(Stopwatch.GetTimestamp(), due).TotalMilliseconds;
+            if (remaining >= 1.0)
+            {
+                LoopSignal.Pause(remaining, cancellationTokenSource.Token);
+            }
+        }
+
+        if (!RenderDirty.AnyHasWork && !AnimationManager.HasActiveAnimations)
+        {
+            LoopSignal.Wait(IdleWakeMs, cancellationTokenSource.Token);
+        }
+
+        var start = Stopwatch.GetTimestamp();
+        _loopFrameDue = Math.Abs(start - due) < period ? due : start;
+    }
+
+    private double ResolveLoopRate()
+    {
+        var ceiling = (double)Math.Max(1u, UpdateRate);
+        var fastest = 0.0;
+        var unlimited = false;
+        foreach (var service in Volatile.Read(ref _windowServices))
+        {
+            var rate = service.ResolveRefreshRates(this);
+            if (service.Window.State == WindowState.Minimized || service.Hidden)
+            {
+                continue;
+            }
+
+            unlimited |= rate <= 0;
+            fastest = Math.Max(fastest, rate);
+        }
+
+        if (unlimited || fastest <= 0)
+        {
+            return ceiling;
+        }
+
+        return Math.Min(ceiling, Math.Max(fastest, Math.Min(LowestLoopRate, ceiling)));
     }
 
     private void OnCycleFinishedInternal()
@@ -1466,8 +1627,11 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
     {
         // An animation started in this frame's layout captured where its element stood before it was arranged.
         Compositor.RefreshBases();
-        if (RenderThreadOptions.SingleThreaded || DisableRendering) return;
         _recordedThisFrame = false;
+        if (RenderThreadOptions.SingleThreaded || DisableRendering)
+        {
+            return;
+        }
 
         var threaded = RenderThreadOptions.RenderThreadEnabled && renderThread != null;
 
@@ -1477,14 +1641,14 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         if (threaded && Volatile.Read(ref _framesInFlight) >= MaxFramesInFlight)
         {
             _unrecordedBecause = "the render thread is frames behind";
+            Volatile.Write(ref _recordSkipped, true);
             return;
         }
 
         // Cleared only if every window recorded: one without a renderer yet records nothing, and its marks must stay.
-        // A copy, since recording may open windows; not under _renderGate, which would lock the loop to the render thread.
+        // A snapshot, since recording may open windows; not under _renderGate, which would lock the loop to the render thread.
         var recordedAll = true;
-        var services = new WindowRenderService[windowToSystem.Count];
-        windowToSystem.Values.CopyTo(services, 0);
+        var services = Volatile.Read(ref _windowServices);
 
         foreach (var service in services)
         {
@@ -1518,8 +1682,6 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         if (threaded && recordedAll) RenderDirty.Clear();
     }
 
-    private bool _recordedThisFrame;
-
     // Returns whether the frame drew. Never clears RenderDirty: this may run on the render thread.
     private bool ExecuteDrawSequence(AppTime appTime)
     {
@@ -1528,15 +1690,20 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         var drew = BeginScene();
         if (drew)
         {
+            var windowsDrew = false;
             try
             {
-                Draw(appTime);
+                windowsDrew = Draw(appTime);
                 OnBeforeEndScene();
             }
             finally
             {
                 EndScene();
-                RuntimeStats.PresentedFrames++;   // the real frame rate once rendering has its own thread
+
+                if (windowsDrew)
+                {
+                    RuntimeStats.PresentedFrames++;
+                }
             }
         }
 
@@ -1570,6 +1737,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         _renderAppTime = appTime;
         Interlocked.Increment(ref _publishedFrame);
         Interlocked.Increment(ref _framesInFlight);
+        RenderSignal.Wake();
     }
 
     private void CountWindowFrame()
@@ -1583,45 +1751,123 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         _countingSince = Stopwatch.GetTimestamp();
     }
 
-    // Draws at its own pace with whatever the loop has published; with nothing new it replays the retained frame.
     private void RenderThread()
+    {
+        RenderSignal.Attach();
+        try
+        {
+            RunRenderThread();
+        }
+        finally
+        {
+            RenderSignal.Detach();
+        }
+    }
+
+    private void RunRenderThread()
     {
         while (!cancellationTokenSource.IsCancellationRequested)
         {
-            // The gate keeps teardown and shutdown out of a frame; cancellation is re-checked inside it.
+            long now;
+            long due;
+
             lock (_renderGate)
             {
-                if (cancellationTokenSource.IsCancellationRequested) break;
-                var drawing = Volatile.Read(ref _publishedFrame);
-                Interlocked.Exchange(ref _framesInFlight, 0);   // the apply drains whatever was published
+                if (cancellationTokenSource.IsCancellationRequested)
+                {
+                    break;
+                }
+
+                now = Stopwatch.GetTimestamp();
                 try
                 {
-                    var withheld = Rendering.RenderCache.WithheldFrames;
-                    ExecuteDrawSequence(_renderAppTime);
-                    CountWindowFrame();
-                    if (Rendering.RenderCache.WithheldFrames == withheld)
+                    var published = Volatile.Read(ref _publishedFrame);
+                    due = ClaimFrames(now, out var claims);
+                    var unshown = published != Volatile.Read(ref _presentedFrame) && !claims.LeftWaiting
+                                  && (!_withheldSinceShown || !claims.AnyDrawable);
+                    if (due <= now || unshown || _visualRenderer?.HasPendingDraws == true)
                     {
-                        Volatile.Write(ref _presentedFrame, drawing);
+                        DrawClaimedFrames(published, claims);
+                        continue;
                     }
-                    _drawFailing = false;
-                    ReleaseIdleWaiters();
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine(ex);
-
-                    // Logged as an error once per run of failed frames: a frame that throws throws again on the next,
-                    // and nothing reaches the screen meanwhile - which nobody can tell from the window.
-                    if (!_drawFailing)
-                    {
-                        _drawFailing = true;
-                        Serilog.Log.Logger.Error(ex, "A frame failed to draw; frames are not reaching the screen");
-                    }
-
-                    UnhandledException?.Invoke(this, new UnhandledExceptionEventArgs(ex));
+                    ReportFailedFrame(ex);
+                    due = FramePacer.Never;
                 }
             }
+
+            var wait = due == FramePacer.Never
+                ? IdleWakeMs
+                : Math.Clamp(Stopwatch.GetElapsedTime(now, due).TotalMilliseconds, 1, IdleWakeMs);
+            RenderSignal.Wait(TimeSpan.FromMilliseconds(wait), cancellationTokenSource.Token);
         }
+    }
+
+    private long ClaimFrames(long now, out Claims claims)
+    {
+        var next = FramePacer.Never;
+        bool drawn = false, drawable = false, waiting = false, trailing = false;
+        foreach (var service in windowToSystem.Values)
+        {
+            next = Math.Min(next, service.ClaimFrame(now));
+            drawn |= service.DrawsThisFrame;
+            drawable |= service.CanDraw;
+            waiting |= service.CanDraw && service.HasRecordedChange && !service.DrawsThisFrame;
+            trailing |= service.IsTrailing;
+        }
+
+        SwapchainTrailing = trailing;
+        claims = new Claims(drawn, drawable, waiting);
+        return next;
+    }
+
+    private void DrawClaimedFrames(long drawing, Claims claims)
+    {
+        Interlocked.Exchange(ref _framesInFlight, 0);
+        if (Volatile.Read(ref _recordSkipped))
+        {
+            Volatile.Write(ref _recordSkipped, false);
+            LoopSignal.Request();
+        }
+
+        var withheld = Rendering.RenderCache.WithheldFrames;
+        ExecuteDrawSequence(_renderAppTime);
+        if (claims.AnyDrawn)
+        {
+            CountWindowFrame();
+        }
+
+        var heldBack = Rendering.RenderCache.WithheldFrames != withheld;
+        if (heldBack)
+        {
+            _withheldSinceShown = true;
+        }
+        else if (claims.AnyDrawn)
+        {
+            _withheldSinceShown = false;
+        }
+
+        if (!heldBack && !claims.LeftWaiting && (!_withheldSinceShown || !claims.AnyDrawable))
+        {
+            Volatile.Write(ref _presentedFrame, drawing);
+        }
+
+        _drawFailing = false;
+        ReleaseIdleWaiters();
+    }
+
+    private void ReportFailedFrame(Exception exception)
+    {
+        Console.WriteLine(exception);
+        if (!_drawFailing)
+        {
+            _drawFailing = true;
+            Serilog.Log.Logger.Error(exception, "A frame failed to draw; frames are not reaching the screen");
+        }
+
+        UnhandledException?.Invoke(this, new UnhandledExceptionEventArgs(exception));
     }
 
     // Block the calling thread until an item arrives (or shutdown cancels the token, which throws OperationCanceledException).
@@ -1735,12 +1981,6 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         return GraphicsDeviceService.IsReady;
     }
 
-    // Slower than ~20 fps is a stall - a build, JIT or wake-up hitch - not animation time.
-    private const double StallFrameSeconds = 1.0 / 20.0;
-
-    // How far animations move through a stall: almost a pause, yet still progress under a sustained low rate.
-    private const double StallAnimationStep = 0.004;
-
     protected void Update(AppTime frameTime)
     {
         // Input first, before anything touches the visual tree.
@@ -1755,12 +1995,10 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         if (frameTime.FrameTime < StallFrameSeconds) DiscardedVisuals.Drain(DiscardReleasesPerFrame);
     }
 
-    // Clears a theme swap's thousand-odd parts within a second, without ever making a frame late.
-    private const int DiscardReleasesPerFrame = 128;
-
-    protected void Draw(AppTime frameTime)
+    /// <summary>Draws every window due a frame; true when one did.</summary>
+    protected bool Draw(AppTime frameTime)
     {
-        EntityWorld.ServiceManager.Draw(frameTime);
+        return EntityWorld.ServiceManager.Draw(frameTime);
     }
 
     protected virtual void OnBeforeEndScene()
@@ -1784,17 +2022,24 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
 
         // Cancel so no frame starts, then take the gate to wait out the one in flight; the render thread then exits by itself.
         cancellationTokenSource.Cancel();
+        if (applicationLoopThread is { IsAlive: true } loop && loop != Thread.CurrentThread
+            && Thread.CurrentThread != renderThread && !Monitor.IsEntered(_renderGate))
+        {
+            loop.Join(LoopExitWaitMs);
+        }
+
         lock (_renderGate)
         {
             // Under the gate: its handlers unload the services, which a frame or a closing window's teardown may be using.
             ShuttingDown?.Invoke(this, EventArgs.Empty);
             ContentUnloading?.Invoke(this, EventArgs.Empty);
             // Windows may still be open under OnExplicitShutDown; their services go before the device.
-            foreach (var service in new List<WindowRenderService>(windowToSystem.Values))
+            foreach (var service in _windowServices)
             {
                 service.UnloadContent();
             }
             windowToSystem.Clear();
+            SnapshotWindowServices();
             FreeResources();
         }
 

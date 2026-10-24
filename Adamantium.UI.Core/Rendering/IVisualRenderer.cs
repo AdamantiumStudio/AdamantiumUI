@@ -53,4 +53,7 @@ public interface IVisualRenderer
     /// <summary>App-loop plumbing, RENDER thread: finishes a live snapshot - draw the recorded caches into off-screen
     /// targets and deliver the bitmaps. Called every frame by the device-owning thread; a no-op when nothing is queued.</summary>
     void DrawPendingSnapshots();
+
+    /// <summary>A recorded snapshot waits for <see cref="DrawPendingSnapshots"/>.</summary>
+    bool HasPendingDraws { get; }
 }

@@ -13,6 +13,10 @@
         Height="720"
         AnalyticAntialiasing="{Binding AnalyticAa, Mode=TwoWay}"
         PresentPolicy="{Binding PresentPolicy, Mode=TwoWay}"
+        RefreshRate="{Binding RefreshRate}"
+        MinimumRefreshRate="{Binding MinimumRefreshRate}"
+        MaximumRefreshRate="{Binding MaximumRefreshRate}"
+        UnlimitedRefreshRate="{Binding UnlimitedRefreshRate}"
         ResizeMode="{Binding WindowResizeMode, Mode=TwoWay}"
         LeftWindowCommands="{Binding LeftWindowCommands}"
         RightWindowCommands="{Binding RightWindowCommands}"
@@ -59,60 +63,97 @@
              independent of the right-side toggle, which drives the plate above. -->
         <SlidePanel Placement="Right" Width="264" Header="{Localize MainStrings.Diagnostics}"
                     IsOpen="{Binding DiagnosticsPanelOpen, Mode=TwoWay}">
-            <StackPanel Orientation="Vertical">
-                <!-- The application's language and theme, HERE because this panel opens from the caption of every page:
-                     every string of the framework and every number a binding writes follow the language at once. The
-                     theme list is every REGISTERED theme; picking one and Switch re-templates the whole application,
-                     while Dark / Light only rewrites the palette's colors in place. -->
-                <TextBlock Text="{Localize MainStrings.Language}" Margin="0,0,0,4"/>
-                <DropDown ItemsSource="{Binding AvailableLanguages}"
-                          SelectedItem="{Binding Language, Mode=TwoWay}"
-                          Margin="0,0,0,12"/>
-                <TextBlock Text="{Localize MainStrings.Theme}" Margin="0,0,0,4"/>
-                <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,8">
-                    <DropDown AutomationProperties.AutomationId="ThemeChooser"
-                              ItemsSource="{Binding AvailableThemes}"
-                              SelectedItem="{Binding SelectedThemeName, Mode=TwoWay}"/>
-                    <Button AutomationProperties.AutomationId="SwitchTheme"
-                            Grid.Column="1"
-                            Content="{Localize MainStrings.SwitchTheme}"
-                            Command="{Binding SwitchThemeCommand}"
-                            Margin="8,0,0,0"/>
-                </Grid>
-                <Button AutomationProperties.AutomationId="ToggleVariant"
-                        Content="{Localize MainStrings.ToggleVariant}"
-                        HorizontalAlignment="Stretch"
-                        Margin="0,0,0,16">
-                    <Button.Behaviors>
-                        <behaviors:ToggleThemeBehavior/>
-                    </Button.Behaviors>
-                </Button>
-                <!-- Analytic AA on/off, live: the render service re-reads Window.AnalyticAntialiasing every frame, so this
-                     flips the coverage fringe and feathered strokes WITHOUT rebuilding the render cache - an A/B of an
-                     edge artifact, which is why it belongs with the diagnostics rather than in the window chrome. -->
-                <ToggleSwitch Content="{Localize MainStrings.AnalyticAa}"
-                              IsChecked="{Binding AnalyticAa, Mode=TwoWay}"
+            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <StackPanel Orientation="Vertical">
+                    <!-- The application's language and theme, HERE because this panel opens from the caption of every page:
+                         every string of the framework and every number a binding writes follow the language at once. The
+                         theme list is every REGISTERED theme; picking one and Switch re-templates the whole application,
+                         while Dark / Light only rewrites the palette's colors in place. -->
+                    <TextBlock Text="{Localize MainStrings.Language}" Margin="0,0,0,4"/>
+                    <DropDown ItemsSource="{Binding AvailableLanguages}"
+                              SelectedItem="{Binding Language, Mode=TwoWay}"
                               Margin="0,0,0,12"/>
-                <!-- The frame verifier: checks what the render cache draws with against the tree while a rendering bug
-                     is hunted; the plate shows its counts, the verify folder its log. -->
-                <ToggleSwitch Content="{Localize MainStrings.VerifyFrames}"
-                              AutomationProperties.AutomationId="VerifyFrames"
-                              IsChecked="{Binding VerifyFrames, Mode=TwoWay}"
+                    <TextBlock Text="{Localize MainStrings.Theme}" Margin="0,0,0,4"/>
+                    <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,8">
+                        <DropDown AutomationProperties.AutomationId="ThemeChooser"
+                                  ItemsSource="{Binding AvailableThemes}"
+                                  SelectedItem="{Binding SelectedThemeName, Mode=TwoWay}"/>
+                        <Button AutomationProperties.AutomationId="SwitchTheme"
+                                Grid.Column="1"
+                                Content="{Localize MainStrings.SwitchTheme}"
+                                Command="{Binding SwitchThemeCommand}"
+                                Margin="8,0,0,0"/>
+                    </Grid>
+                    <Button AutomationProperties.AutomationId="ToggleVariant"
+                            Content="{Localize MainStrings.ToggleVariant}"
+                            HorizontalAlignment="Stretch"
+                            Margin="0,0,0,16">
+                        <Button.Behaviors>
+                            <behaviors:ToggleThemeBehavior/>
+                        </Button.Behaviors>
+                    </Button>
+                    <!-- Analytic AA on/off, live: the render service re-reads Window.AnalyticAntialiasing every frame, so
+                         this flips the coverage fringe and feathered strokes WITHOUT rebuilding the render cache - an A/B of
+                         an edge artifact, which is why it belongs with the diagnostics rather than in the window chrome. -->
+                    <ToggleSwitch Content="{Localize MainStrings.AnalyticAa}"
+                                  IsChecked="{Binding AnalyticAa, Mode=TwoWay}"
+                                  Margin="0,0,0,12"/>
+                    <!-- The frame verifier: checks what the render cache draws with against the tree while a rendering bug
+                         is hunted; the plate shows its counts, the verify folder its log. -->
+                    <ToggleSwitch Content="{Localize MainStrings.VerifyFrames}"
+                                  AutomationProperties.AutomationId="VerifyFrames"
+                                  IsChecked="{Binding VerifyFrames, Mode=TwoWay}"
+                                  Margin="0,0,0,12"/>
+                    <!-- Present mode; changing it rebuilds the swapchain, so the picture blinks once. -->
+                    <TextBlock Text="{Localize MainStrings.Presentation}" Margin="0,0,0,4"/>
+                    <DropDown ItemsSource="{Binding PresentPolicies}"
+                              SelectedItem="{Binding PresentPolicy, Mode=TwoWay}"
                               Margin="0,0,0,12"/>
-                <!-- Present mode; changing it rebuilds the swapchain, so the picture blinks once. -->
-                <TextBlock Text="{Localize MainStrings.Presentation}" Margin="0,0,0,4"/>
-                <DropDown ItemsSource="{Binding PresentPolicies}"
-                          SelectedItem="{Binding PresentPolicy, Mode=TwoWay}"
-                          Margin="0,0,0,12"/>
-                <TextBlock FontSize="13"
-                           Foreground="LightGreen"
-                           TextWrapping="WrapBySymbols"
-                           Text="diagnostics…">
-                    <TextBlock.Behaviors>
-                        <behaviors:DiagnosticsOverlayBehavior/>
-                    </TextBlock.Behaviors>
-                </TextBlock>
-            </StackPanel>
+                    <TextBlock Text="{Localize MainStrings.UpdateRate}"
+                               Margin="0,0,0,4"/>
+                    <NumericUpDown Value="{Binding UpdateRate, Mode=TwoWay, Converter={conv:RateToNumberConverter}}"
+                                   AutomationProperties.AutomationId="UpdateRate"
+                                   Minimum="1"
+                                   Maximum="1000"
+                                   Margin="0,0,0,8"/>
+                    <ToggleSwitch Content="{Localize MainStrings.UnlimitedRefreshRate}"
+                                  AutomationProperties.AutomationId="UnlimitedRefreshRate"
+                                  IsChecked="{Binding UnlimitedRefreshRate, Mode=TwoWay}"
+                                  Margin="0,0,0,8"/>
+                    <TextBlock Text="{Localize MainStrings.RefreshRate}"
+                               Margin="0,0,0,4"/>
+                    <NumericUpDown Value="{Binding RefreshRate, Mode=TwoWay, Converter={conv:RateToNumberConverter}}"
+                                   AutomationProperties.AutomationId="RefreshRate"
+                                   Minimum="0"
+                                   Maximum="1000"
+                                   Placeholder="{Localize MainStrings.AsTheApplication}"
+                                   Margin="0,0,0,8"/>
+                    <TextBlock Text="{Localize MainStrings.MinimumRefreshRate}"
+                               Margin="0,0,0,4"/>
+                    <NumericUpDown Value="{Binding MinimumRefreshRate, Mode=TwoWay, Converter={conv:RateToNumberConverter}}"
+                                   AutomationProperties.AutomationId="MinimumRefreshRate"
+                                   Minimum="0"
+                                   Maximum="1000"
+                                   Placeholder="{Localize MainStrings.AsTheApplication}"
+                                   Margin="0,0,0,8"/>
+                    <TextBlock Text="{Localize MainStrings.MaximumRefreshRate}"
+                               Margin="0,0,0,4"/>
+                    <NumericUpDown Value="{Binding MaximumRefreshRate, Mode=TwoWay, Converter={conv:RateToNumberConverter}}"
+                                   AutomationProperties.AutomationId="MaximumRefreshRate"
+                                   Minimum="0"
+                                   Maximum="1000"
+                                   Placeholder="{Localize MainStrings.AsTheApplication}"
+                                   Margin="0,0,0,12"/>
+                    <TextBlock FontSize="13"
+                               Foreground="LightGreen"
+                               TextWrapping="WrapBySymbols"
+                               Text="diagnostics…">
+                        <TextBlock.Behaviors>
+                            <behaviors:DiagnosticsOverlayBehavior/>
+                        </TextBlock.Behaviors>
+                    </TextBlock>
+                </StackPanel>
+            </ScrollViewer>
         </SlidePanel>
     </Grid>
 </Window>

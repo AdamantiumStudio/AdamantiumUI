@@ -52,6 +52,10 @@ public class WindowPresenterInvalidationTests
         public bool IsRendererUpToDate => true;
         public bool FirstFrameProcessed => true;
         public long PresentedFrames => 0;
+        public int RecordedFrames => 0;
+        public int ChangedFrames => 0;
+        public long FrameRequests => 0;
+        public void RequestFrame() { }
         public double RenderScale { get; set; } = 1.0;
         public GraphicsPresenter Presenter => null;
 

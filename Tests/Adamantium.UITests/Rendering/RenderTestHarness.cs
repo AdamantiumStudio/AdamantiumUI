@@ -112,6 +112,7 @@ internal sealed class FakeRenderUnit : IRenderUnit
         LastTransform = transform;
     }
     public bool NeedsPreRender => false;
+    public bool AwaitsFrame => false;
 
     public void PreRender() => PreRenderCount++;
     public void Render() => RenderCount++;

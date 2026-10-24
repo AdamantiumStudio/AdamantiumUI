@@ -216,7 +216,7 @@ public sealed class VisualRenderer : IVisualRenderer
 
             _drawQueue.Enqueue((built.Value.Cache, built.Value.Width, built.Value.Height, built.Value.Clear,
                 built.Value.Scale, onReady));
-            LoopSignal.Request();   // ensure a frame runs so the render thread drains the draw queue
+            RenderSignal.Wake();
         }
         catch (Exception ex)
         {
@@ -224,6 +224,8 @@ public sealed class VisualRenderer : IVisualRenderer
             UIAppContext.Current?.Dispatcher.Post(() => onReady(null));
         }
     }
+
+    public bool HasPendingDraws => !_drawQueue.IsEmpty;
 
     /// <summary>RENDER-thread half of a snapshot: draw each recorded cache into an off-screen RT, read it back and deliver the bitmap on
     /// the UI thread. Called by the render thread (which alone owns the shared VkDevice) at a frame boundary.</summary>

@@ -2,6 +2,7 @@
     <Phrase Key="MenuButton" Select="visible" True="Hide menu" False="Show menu"/>
     <Phrase Key="CameraSpeed" Text="Camera speed"/>
     <Phrase Key="ResetCamera" Text="Reset camera"/>
+    <Phrase Key="FramesOnDemand" Text="Frames on demand"/>
     <Phrase Key="Tool" Text="Tool"/>
     <Phrase Key="Select" Text="Select"/>
     <Phrase Key="Move" Text="Move"/>

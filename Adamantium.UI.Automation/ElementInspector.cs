@@ -113,7 +113,7 @@ internal static class ElementInspector
         }
 
         text.Append("font: ").AppendLine(UIComponent.DefaultFontFamily?.Source ?? "none");
-        foreach (var screen in PlatformSettings.Screens)
+        foreach (var screen in Displays.Screens)
         {
             var b = screen.Bounds;
             text.Append("screen: ").Append(screen.Id).Append(string.Create(CultureInfo.InvariantCulture,

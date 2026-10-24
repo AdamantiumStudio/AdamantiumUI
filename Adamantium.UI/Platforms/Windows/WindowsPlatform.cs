@@ -41,6 +41,7 @@ public class WindowsPlatform : IApplicationPlatform
         Mouse.Platform = input;
         Keyboard.Platform = input;
         PlatformSettings.Platform = input;
+        Displays.Platform = new WindowsDisplays();
         DesktopWallpaper.Platform = new WindowsDesktopWallpaper();   // what Mica shows: the picture behind the WINDOW
         FileDialog.Platform = new WindowsFileDialog();               // where a file goes is the user's to say
         WindowsOle.Initialize();   // OLE on THIS (the UI) thread - the precondition for OS drag-drop on every window
@@ -49,6 +50,8 @@ public class WindowsPlatform : IApplicationPlatform
     /// <summary>Whether this is the application's loop, not the splash window's own.</summary>
     internal bool IsApplication { get; }
 
+    /// <summary>Runs the message loop until <paramref name="token"/> is cancelled. The application's asks for 1 ms timers
+    /// while it runs, so a wait for a frame is not rounded up to the 15.6 ms system tick.</summary>
     public void Run(CancellationToken token)
     {
         if (!IsApplication)
@@ -57,16 +60,24 @@ public class WindowsPlatform : IApplicationPlatform
             return;
         }
 
-        while (!token.IsCancellationRequested)
+        Win32Interop.TimeBeginPeriod(1);
+        try
         {
-            while (Messages.PeekMessage(out var msg, IntPtr.Zero, 0, 0, PeekMessageFlag.Remove))
+            while (!token.IsCancellationRequested)
             {
-                Messages.TranslateMessage(ref msg);
-                Messages.DispatchMessage(ref msg);
+                while (Messages.PeekMessage(out var msg, IntPtr.Zero, 0, 0, PeekMessageFlag.Remove))
+                {
+                    Messages.TranslateMessage(ref msg);
+                    Messages.DispatchMessage(ref msg);
+                }
             }
         }
+        finally
+        {
+            Win32Interop.TimeEndPeriod(1);
+        }
     }
-        
+
     private void WaitForMessages(CancellationToken token)
     {
         using var wake = token.Register(Signal);

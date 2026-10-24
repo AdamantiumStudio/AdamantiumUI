@@ -17,13 +17,17 @@ public partial class MainViewModel
     private readonly INavigationService _navigation;
     private readonly WindowDemoSettings _settings;
     private readonly IDialogService _dialogs;
+    private readonly IUIApplication _application;
     private bool _followsThemes;
 
-    public MainViewModel(INavigationService navigation, WindowDemoSettings settings, IDialogService dialogs)
+    public MainViewModel(INavigationService navigation, WindowDemoSettings settings, IDialogService dialogs,
+        IUIApplication application)
     {
         _navigation = navigation;
         _settings = settings;
         _dialogs = dialogs;
+        _application = application;
+        _updateRate = application.UpdateRate;
     }
 
     // The dialog host follows the Navigation-tab toggle: an in-window overlay, or a separate window.
@@ -105,6 +109,15 @@ public partial class MainViewModel
 
     [Bindable] private Adamantium.Graphics.Core.Presentation.PresentPolicy _presentPolicy =
         Adamantium.Graphics.Core.Presentation.PresentPolicy.Inherit;
+
+    [Bindable] private uint? _updateRate;
+    [Bindable] private bool _unlimitedRefreshRate;
+    [Bindable] private uint? _refreshRate;
+    [Bindable] private uint? _minimumRefreshRate;
+    [Bindable] private uint? _maximumRefreshRate;
+
+    partial void OnUpdateRateChanged(uint? value) =>
+        _application.UpdateRate = value ?? IUIApplication.DefaultUpdateRate;
 
     /// <summary>Every theme the application has registered, by name - what the theme chooser lists.
     /// <para>Read from the manager each time rather than captured: themes are registered while the application comes

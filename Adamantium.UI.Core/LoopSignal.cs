@@ -24,6 +24,7 @@ public static class LoopSignal
 
     private static int _posted;
     private static long _requests;
+    private static long _frameRequests;
 
     private static int _loopThread;
     private static int _claimed;
@@ -55,6 +56,9 @@ public static class LoopSignal
     /// <summary>How many times the loop has been asked for a frame or handed work so far; a number that moved since a
     /// moment means something asked after it.</summary>
     public static long Requests => Interlocked.Read(ref _requests);
+
+    /// <summary>How many times a frame was asked for by <see cref="Request"/>; posted work does not count.</summary>
+    public static long FrameRequests => Interlocked.Read(ref _frameRequests);
 
     /// <summary>Queues work to run on the loop thread (drained at the start of the next frame). Its arrival is itself a wake.</summary>
     public static void Post(Action action)
@@ -103,6 +107,7 @@ public static class LoopSignal
     /// <summary>Something changed - the loop owes another frame. Idempotent and near-free; safe from any thread.</summary>
     public static void Request()
     {
+        Interlocked.Increment(ref _frameRequests);
         Interlocked.Increment(ref _requests);
         if (Interlocked.Exchange(ref _wakePending, 1) == 0)
         {

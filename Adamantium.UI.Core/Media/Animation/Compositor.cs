@@ -255,9 +255,60 @@ public static class Compositor
     private static int _opacityEntries;
     private static long _frame;
     private static long _recorded;
+    private static long _recordedFrame = -1;
 
     // A record this many loop frames older than the newest is never drawn again, so what it alone still played can go.
     private const long StaleRecordFrames = 600;
+
+    /// <summary>Whether the render thread plays an animation in <paramref name="root"/>'s tree, or of a brush, which any
+    /// tree may paint with.</summary>
+    public static bool IsPlayingIn(IRootVisualComponent root)
+    {
+        lock (Gate)
+        {
+            return PlaysIn(Entries, root) || PlaysIn(Retiring, root);
+        }
+    }
+
+    private static bool PlaysIn(List<Entry> entries, IRootVisualComponent root)
+    {
+        foreach (var entry in entries)
+        {
+            if (entry.Owner == null || ReferenceEquals(entry.Owner.RootVisual, root))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>Whether an animation waits for a record to be drawn: one taken over since the last record does not play
+    /// before it, one released plays on until it.</summary>
+    public static bool NeedsRecord
+    {
+        get
+        {
+            var recorded = Interlocked.Read(ref _recordedFrame);
+            lock (Gate)
+            {
+                if (Retiring.Count > 0)
+                {
+                    return true;
+                }
+
+                foreach (var entry in Entries)
+                {
+                    if (entry.TakenInFrame > recorded)
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+        }
+    }
 
     /// <summary>The loop frame being built. A render packet carries the number of the frame that recorded it.</summary>
     public static long Frame => Interlocked.Read(ref _frame);
@@ -279,7 +330,11 @@ public static class Compositor
     }
 
     /// <summary>The loop frame has been recorded and handed to the render thread. Loop thread.</summary>
-    public static void FrameRecorded() => Interlocked.Increment(ref _recorded);
+    public static void FrameRecorded()
+    {
+        Interlocked.Exchange(ref _recordedFrame, Frame);
+        Interlocked.Increment(ref _recorded);
+    }
 
     /// <summary>Whether a frame recorded after <paramref name="recorded"/> was read has been handed to the render thread -
     /// what has to happen before the loop thread starts work that holds it, so what it put up first is on screen. Under a

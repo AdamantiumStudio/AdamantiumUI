@@ -121,6 +121,23 @@ public interface IWindow : IRootVisualComponent, IContentControl
     /// application-wide default for the usual case where it is set once.</summary>
     Adamantium.Graphics.Core.Presentation.PresentPolicy PresentPolicy { get; set; }
 
+    /// <summary>A steady frame rate in hertz, over the minimum and maximum; 0 lets the rate vary, null follows the
+    /// application.</summary>
+    uint? RefreshRate { get; set; }
+
+    /// <summary>Frames a second at least, even when nothing changes; 0 none then, null follows the application.</summary>
+    uint? MinimumRefreshRate { get; set; }
+
+    /// <summary>Frames a second at most; 0 unlimited, null follows the application.</summary>
+    uint? MaximumRefreshRate { get; set; }
+
+    /// <summary>Draws frame after frame as fast as it can, whatever changed and whatever the other rates say, presenting
+    /// without waiting for the monitor: the mode to measure in. Null follows the application.</summary>
+    bool? UnlimitedRefreshRate { get; set; }
+
+    /// <summary>The refresh rate of the window's monitor in hertz, set by the platform; 0 when unknown.</summary>
+    double DisplayRefreshRate { get; set; }
+
     /// <summary>The ONE draggable caption region (client DIP): the bounds of the title bar's drag-area element. A point
     /// inside it is HTCAPTION (native window drag + Aero Snap); everything else - commands, buttons - stays HTCLIENT and
     /// clickable. A TitleBar publishes this on layout; the platform worker reads it (a plain Rect, thread-safe) from the

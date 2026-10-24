@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using Adamantium.Mathematics;
 using Adamantium.UI.Controls.Internals;
@@ -26,6 +27,9 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
     private XdgToplevel toplevel;
     private WpViewport viewport;
     private WpFractionalScaleV1 fractionalScale;
+
+    private readonly List<WlOutput> shownOn = [];
+    private readonly object shownOnLock = new();
     private ZxdgToplevelDecorationV1 decoration;
 
     private bool chromeCustom;
@@ -119,6 +123,10 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
         window.Closed += OnWindowClosed;
 
         surface = platform.Compositor.CreateSurface();
+        surface.Enter += OnEnterOutput;
+        surface.Leave += OnLeaveOutput;
+        platform.Outputs.Changed += UpdateDisplayRefreshRate;
+        UpdateDisplayRefreshRate();
         if (platform.FractionalScale != null)
         {
             fractionalScale = platform.FractionalScale.GetFractionalScale(surface);
@@ -909,6 +917,42 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
         });
     }
 
+    private void OnEnterOutput(WlOutput output)
+    {
+        if (output == null)
+        {
+            return;
+        }
+
+        lock (shownOnLock)
+        {
+            shownOn.Add(output);
+        }
+
+        UpdateDisplayRefreshRate();
+    }
+
+    private void OnLeaveOutput(WlOutput output)
+    {
+        lock (shownOnLock)
+        {
+            shownOn.RemoveAll(o => !o.IsAlive || (output != null && o.Handle == output.Handle));
+        }
+
+        UpdateDisplayRefreshRate();
+    }
+
+    private void UpdateDisplayRefreshRate()
+    {
+        lock (shownOnLock)
+        {
+            shownOn.RemoveAll(o => !o.IsAlive || !platform.Outputs.Knows(o));
+            window.DisplayRefreshRate = shownOn.Count > 0
+                ? platform.Outputs.RefreshRateOf(shownOn)
+                : platform.Outputs.Screens.Select(s => s.RefreshRate).DefaultIfEmpty(0).Max();
+        }
+    }
+
     private void OnPreferredBufferScale(int factor)
     {
         if (viewport == null)
@@ -987,6 +1031,7 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
         platform.Queue(() =>
         {
             platform.Seat.Forget(this);
+            platform.Outputs.Changed -= UpdateDisplayRefreshRate;
             exported?.Destroy();
             toplevelSession?.Destroy();
             dialog?.Destroy();

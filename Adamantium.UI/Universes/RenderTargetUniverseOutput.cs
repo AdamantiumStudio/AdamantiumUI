@@ -7,6 +7,7 @@ using Adamantium.Graphics.Core;
 using Adamantium.Graphics.Core.Presentation;
 using Adamantium.Imaging;
 using Adamantium.UI.Controls.Panels;
+using Adamantium.UI.Core;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.RoutedEvents;
 using Adamantium.Vulkan.Core;
@@ -29,6 +30,7 @@ public class RenderTargetUniverseOutput : UIUniverseOutput
     private ulong[] _written = [];
     private ulong _demandSeen;
     private Action _invalidate;
+    private (SharedSurfaceDescriptor Descriptor, ulong Frame) _unannounced;
     // Three: the frame drawn on the panel's ask goes to the surface of two frames back, given back by a copy already done,
     // not to the one the copy of this ask is still reading behind the window's queued frames.
     private const uint SurfaceBuffers = 3;
@@ -94,6 +96,24 @@ public class RenderTargetUniverseOutput : UIUniverseOutput
         _lastProduced++;
         _written[index] = _lastProduced;
         mainDevice.AddSignalSemaphore(target.ProduceSemaphore, _lastProduced);
+        _unannounced = (_sharedSurface.Descriptor, _lastProduced);
+    }
+
+    public override void DisplayContent()
+    {
+        base.DisplayContent();
+        var (descriptor, frame) = _unannounced;
+        if (descriptor == null)
+        {
+            return;
+        }
+
+        _unannounced = default;
+        descriptor.NoteSubmitted(frame);
+        if (nativeWindow.RootVisual is IWindow window)
+        {
+            (window.Renderer ?? window.DefaultRenderer)?.RequestFrame();
+        }
     }
 
     /// <summary>Waits until the panel asks for a frame, so one is drawn per frame it shows, ready by its next ask; then
@@ -150,6 +170,7 @@ public class RenderTargetUniverseOutput : UIUniverseOutput
         _pendingSurface = SharedSurface.CreateExportable(device, width, height, _format, bufferCount: SurfaceBuffers);
         device.RecordSharedSurfaceCopy(frame, _pendingSurface);
         device.AddSignalSemaphore(_pendingSurface.ProduceSemaphore, 1);
+        _unannounced = (_pendingSurface.Descriptor, 1);
         return true;
     }
 

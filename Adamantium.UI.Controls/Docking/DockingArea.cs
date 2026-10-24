@@ -1650,7 +1650,7 @@ public class DockingArea : Panel
     // laid out inside it and left the area's own edges unreachable, so an edge anchor had nowhere to go.
     private void ShowOverlay()
     {
-        if (WindowDragPointer.IsActive || !PlatformSettings.CanPlaceWindows)
+        if (WindowDragPointer.IsActive || !Displays.CanPlaceWindows)
         {
             if (!_compassInline)
             {
@@ -2003,7 +2003,7 @@ public class DockingArea : Panel
         // A remembered place is only worth using while it still exists: a layout saved with a panel on a second monitor
         // is opened on a machine that no longer has one, and a window put back there is one nobody can reach - not even
         // to close it. Then it cascades, exactly like a window that was never anywhere.
-        var placed = at.Width > 0 && at.Height > 0 && PlatformSettings.IsOnScreen(at) &&
+        var placed = at.Width > 0 && at.Height > 0 && Displays.IsOnScreen(at) &&
                      kept is null or { State: WindowState.Normal };
         var area = Float(root, title, out var window, placed ? new Size(at.Width, at.Height) : default, kept);
 

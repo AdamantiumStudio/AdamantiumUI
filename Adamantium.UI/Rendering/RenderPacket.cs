@@ -97,10 +97,21 @@ internal sealed class RenderPacket
     /// <summary>Components the recorder found out of the tree and not parked, when <see cref="Reconcile"/> is set.</summary>
     public readonly List<IUIComponent> Departed = new();
 
+    /// <summary>Whether drawing it shows anything the last packet did not; set when it is published.</summary>
+    public bool Changes;
+
+    /// <summary>Whether it carries anything to apply beyond a replay of what was drawn.</summary>
+    public bool CarriesChanges =>
+        Kind != RenderBuildKind.Clean || Draws.Count > 0 || MovedNodes.Count > 0 || PartialDirty.Count > 0
+        || Effects.Count > 0 || SnapDelta.Count > 0 || SnapReset || IsTransformDirty || Moved.Count > 0 || TransformUnknown
+        || ClearMemos || Removed.Count > 0 || Undrawn.Count > 0 || Reranks.Count > 0 || Renumbered || Reconcile
+        || Departed.Count > 0;
+
     /// <summary>Reset for reuse (the packet is pooled per cache; a Clean frame produces an empty one).</summary>
     public void Reset(RenderBuildKind kind)
     {
         Kind = kind;
+        Changes = false;
         Draws.Clear();
         MovedNodes.Clear();
         PartialDirty.Clear();

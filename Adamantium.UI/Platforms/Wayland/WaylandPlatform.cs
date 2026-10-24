@@ -168,6 +168,7 @@ public sealed unsafe class WaylandPlatform : IApplicationPlatform, Linux.IPortal
         Mouse.Platform = Seat;
         Keyboard.Platform = Seat;
         PlatformSettings.Platform = Seat;
+        Displays.Platform = Outputs;
     }
 
     public WaylandDisplay Display { get; }

@@ -47,6 +47,16 @@ public interface IUIApplication
     {
     }
 
+    /// <summary>How often the loop updates at most, in hertz; an application with no loop of its own keeps 120.</summary>
+    uint UpdateRate
+    {
+        get => DefaultUpdateRate;
+        set { }
+    }
+
+    /// <summary>The <see cref="UpdateRate"/> of an application that sets none.</summary>
+    const uint DefaultUpdateRate = 120;
+
     /// <summary>
     /// Enables or disables fixed framerate
     /// </summary>

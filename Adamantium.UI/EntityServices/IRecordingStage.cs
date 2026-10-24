@@ -5,4 +5,10 @@ namespace Adamantium.UI.EntityServices;
 internal interface IRecordingStage
 {
     void Record();
+
+    /// <summary>A frame it recorded waits to be drawn.</summary>
+    bool HasRecordedFrame { get; }
+
+    /// <summary>After its pre-render: a picture it shows waits for a frame submitted elsewhere.</summary>
+    bool AwaitsFrame { get; }
 }

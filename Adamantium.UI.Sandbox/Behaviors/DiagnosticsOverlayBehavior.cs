@@ -1,14 +1,16 @@
 using System;
+using System.Threading;
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Controls.Text;
 using Adamantium.UI.Core.Behaviors;
 using Adamantium.UI.Core.Diagnostics;
+using Adamantium.UI.Core.Dispatcher;
 using Adamantium.UI.Core.Media.Animation;
 
 namespace Adamantium.UI.Sandbox.Behaviors;
 
-/// <summary>Shows live engine diagnostics (layout, bindings, animations) in a <see cref="TextBlock"/>, sampling every frame
-/// on the <see cref="AnimationManager"/> heartbeat but rewriting the text about four times a second.</summary>
+/// <summary>Shows live engine diagnostics (layout, bindings, animations) in a <see cref="TextBlock"/>: sampled on every
+/// frame the loop runs, the text rewritten about four times a second, and once only while nothing is drawn.</summary>
 public class DiagnosticsOverlayBehavior : Behavior<TextBlock>
 {
     // The PLATE is permanent - it shows what a frame costs, on screen, and that is cheap. Its FILE DUMPS are not: eight
@@ -35,6 +37,15 @@ public class DiagnosticsOverlayBehavior : Behavior<TextBlock>
     private int _windowFrames;
     private bool _windowDeferred;
     private bool _running;
+    private TextBlock _target;
+    private bool _ticking;
+    private DispatcherTimer _refresh;
+    private Adamantium.UI.UIApplication _application;
+    private long _lastSample;
+    private bool _idleShown;
+    private int _quietRefreshes;
+    private static long _plateWrites;
+    private long _plateWritesSeen;
     private int _traceWindows;
     private int _peakLayout;     // busiest layout-invalidation second seen so far
     private long _peakUnits, _lastCreated, _lastUpdated, _lastCommands;   // busiest build second
@@ -133,20 +144,95 @@ public class DiagnosticsOverlayBehavior : Behavior<TextBlock>
         Adamantium.UI.Core.VisualTreeNotifications.ShownOrHidden += OnHiddenFlipped;
         Adamantium.UI.Core.VisualTreeNotifications.ClipChanged += OnClipChanged;
 
-        _lastMeasure = MeasurableUIComponent.TotalMeasureCalls;
-        _lastArrange = MeasurableUIComponent.TotalArrangeCalls;
-        _lastBindings = RuntimeStats.BindingUpdatesApplied;
         _running = true;
+        _target = target;
         FrameTrace.Enabled = Dumps;
         LayoutTrace.Counting = Dumps;
-        AnimationManager.AddEndlessTicker(dt => Advance(target, dt));
+        StartTicking();
+    }
+
+    private void StartTicking()
+    {
+        if (_ticking || !_running || !Shown(_target))
+        {
+            return;
+        }
+
+        _application = Adamantium.UI.UIApplication.Current;
+        if (_application == null)
+        {
+            return;
+        }
+
+        _ticking = true;
+        _fenceWait ??= Adamantium.Graphics.GraphicsDevice.MeasureFenceWait();
+        _lastSample = System.Diagnostics.Stopwatch.GetTimestamp();
+        _idleShown = false;
+        _quietRefreshes = 0;
+        ResetWindow();
+        TakeBaselines();
+        _application.CycleFinished += OnCycleFinished;
+        _refresh ??= new DispatcherTimer { Interval = TimeSpan.FromSeconds(RefreshSeconds) };
+        _refresh.Tick += OnRefresh;
+        _refresh.Start();
+    }
+
+    private void StopTicking()
+    {
+        if (!_ticking)
+        {
+            return;
+        }
+
+        _ticking = false;
+        _fenceWait?.Dispose();
+        _fenceWait = null;
+        _application.CycleFinished -= OnCycleFinished;
+        _refresh.Tick -= OnRefresh;
+        _refresh.Stop();
+    }
+
+    private void OnCycleFinished(object sender, EventArgs e)
+    {
+        var now = System.Diagnostics.Stopwatch.GetTimestamp();
+        Sample(System.Diagnostics.Stopwatch.GetElapsedTime(_lastSample, now).TotalSeconds);
+        _lastSample = now;
+    }
+
+    private void OnRefresh(object sender, EventArgs e)
+    {
+        if (!_running || !Shown(_target)
+            || !System.Linq.Enumerable.Contains(_application.Windows, (Adamantium.UI.Core.IWindow)_target.RootVisual))
+        {
+            StopTicking();
+            return;
+        }
+
+        Publish(_target);
+    }
+
+    private static bool Shown(Adamantium.UI.Core.IUIComponent element)
+    {
+        if (element?.RootVisual is not Adamantium.UI.Core.IWindow)
+        {
+            return false;
+        }
+
+        for (var node = element; node != null; node = node.VisualParent)
+        {
+            if (node.Visibility != Adamantium.UI.Core.Visibility.Visible)
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     protected override void OnDetached(TextBlock target)
     {
         _running = false;
-        _fenceWait?.Dispose();
-        _fenceWait = null;
+        StopTicking();
         Adamantium.UI.Core.VisualTreeNotifications.Attached -= OnTreeAttached;
         Adamantium.UI.Core.VisualTreeNotifications.Detached -= OnTreeDetached;
         Adamantium.UI.Core.VisualTreeNotifications.VisibilityChanged -= OnVisibilityFlipped;
@@ -154,42 +240,38 @@ public class DiagnosticsOverlayBehavior : Behavior<TextBlock>
         Adamantium.UI.Core.VisualTreeNotifications.ClipChanged -= OnClipChanged;
     }
 
-    private void MeasureWhileShown(TextBlock target)
+    private void OnTreeAttached(Adamantium.UI.Core.IUIComponent c)
     {
-        var visible = target.IsAttachedToVisualTree;
-        for (Adamantium.UI.Core.IUIComponent node = target; visible && node != null; node = node.VisualParent)
-        {
-            visible = node.Visibility == Adamantium.UI.Core.Visibility.Visible;
-        }
-
-        var shown = Dumps || visible;
-        if (shown && _fenceWait == null)
-        {
-            _fenceWait = Adamantium.Graphics.GraphicsDevice.MeasureFenceWait();
-        }
-        else if (!shown && _fenceWait != null)
-        {
-            _fenceWait.Dispose();
-            _fenceWait = null;
-        }
+        NoteChurn("attached", c);
+        StartTickingFor(c);
     }
-
-    private void OnTreeAttached(Adamantium.UI.Core.IUIComponent c) => NoteChurn("attached", c);
 
     private void OnTreeDetached(Adamantium.UI.Core.IUIComponent c) => NoteChurn("detached", c);
 
-    private void OnVisibilityFlipped(Adamantium.UI.Core.IUIComponent c) => NoteChurn("collapsed-flip", c);
+    private void OnVisibilityFlipped(Adamantium.UI.Core.IUIComponent c)
+    {
+        NoteChurn("collapsed-flip", c);
+        StartTickingFor(c);
+    }
 
-    private void OnHiddenFlipped(Adamantium.UI.Core.IUIComponent c) => NoteChurn("hidden-flip", c);
+    private void OnHiddenFlipped(Adamantium.UI.Core.IUIComponent c)
+    {
+        NoteChurn("hidden-flip", c);
+        StartTickingFor(c);
+    }
+
+    private void StartTickingFor(Adamantium.UI.Core.IUIComponent changed)
+    {
+        if (_target != null && changed.RootVisual == _target.RootVisual)
+        {
+            StartTicking();
+        }
+    }
 
     private void OnClipChanged(Adamantium.UI.Core.IUIComponent c) => NoteChurn("clip", c);
 
-    private bool Advance(TextBlock target, double dt)
+    private void Sample(double dt)
     {
-        if (!_running) return true;   // detached -> let the heartbeat drop this ticker
-        MeasureWhileShown(target);
-
-        // Accumulate this frame's samples cheaply; only rewrite the TextBlock once the refresh window elapses.
         _windowElapsed += dt;
         _windowFrames++;
         if (RuntimeStats.LastLayoutPassMs > _windowMaxLayoutMs) _windowMaxLayoutMs = RuntimeStats.LastLayoutPassMs;
@@ -228,8 +310,32 @@ public class DiagnosticsOverlayBehavior : Behavior<TextBlock>
             _drawArena = RuntimeStats.LastDrawArenaPaintMs;
             _drawBrush = RuntimeStats.LastDrawBrushRepaintMs;
         }
-        if (_windowElapsed < RefreshSeconds) return false;
+    }
 
+    private void Publish(TextBlock target)
+    {
+        var writes = Interlocked.Read(ref _plateWrites);
+        var othersDrew = RuntimeStats.PresentedFrames - _lastPresented > writes - _plateWritesSeen;
+        _plateWritesSeen = writes;
+        if (!othersDrew)
+        {
+            if (!_idleShown && ++_quietRefreshes >= 2)
+            {
+                target.Text = "idle: no frame drawn";
+                _idleShown = true;
+                Interlocked.Increment(ref _plateWrites);
+            }
+
+            ResetWindow();
+            TakeBaselines();
+            return;
+        }
+
+        _idleShown = false;
+        _quietRefreshes = 0;
+        Interlocked.Increment(ref _plateWrites);
+        _windowFrames = Math.Max(1, _windowFrames);
+        _windowElapsed = Math.Max(_windowElapsed, RefreshSeconds);
         var measure = MeasurableUIComponent.TotalMeasureCalls;
         var arrange = MeasurableUIComponent.TotalArrangeCalls;
         var bindings = RuntimeStats.BindingUpdatesApplied;
@@ -324,6 +430,8 @@ public class DiagnosticsOverlayBehavior : Behavior<TextBlock>
             // Everything the loop actually DID this second, at its worst. Compared against the pacing budget below.
             var work = _windowMaxRecord + _windowMaxApply + _windowMaxLayoutMs + _windowMaxWait
                        + _windowMaxPresent + _secMaxProcs;
+            var pace = Adamantium.UI.UIApplication.Current?.LoopRate ?? 0;
+            var budget = pace > 0 ? 1000.0 / pace : 0;
 
             var build = $"record max {_windowMaxRecord:F2} ms   apply max {_windowMaxApply:F2} ms\n" +
                         $"units created {created}   updated {updated}   commands {commands}\n" +
@@ -337,12 +445,11 @@ public class DiagnosticsOverlayBehavior : Behavior<TextBlock>
                         $"render frame rest: preRender {_windowMaxPre:F2}  beginDraw {_windowMaxBegin:F2}  " +
                         $"overlays {_windowMaxProcs:F2}  endDraw {_windowMaxEnd:F2}  submit {_windowMaxSubmit:F2}  " +
                         $"present {_windowMaxPresent:F2} ms\n" +
-                        $"loop frame max {_secMaxFrame:F2} ms (paced to {Adamantium.UI.UIApplication.UpdateRateHz} Hz " +
-                        $"= {1000.0 / Math.Max(1, Adamantium.UI.UIApplication.UpdateRateHz):F2} ms)   " +
+                        $"loop frame max {_secMaxFrame:F2} ms (paced to {pace:F0} Hz = {budget:F2} ms)   " +
                         $"processors max {_secMaxProcs:F2} ms\n" +
                         // Work against the pacing budget, not the frame, whose remainder is sleep; only overrun means the
                         // loop is behind.
-                        $"work {work:F2} ms of budget   over budget {Math.Max(0, work - 1000.0 / Math.Max(1, Adamantium.UI.UIApplication.UpdateRateHz)):F2} ms\n";
+                        $"work {work:F2} ms of budget   over budget {(budget > 0 ? Math.Max(0, work - budget) : 0):F2} ms\n";
             System.IO.File.WriteAllText(System.IO.Path.Combine(LogDirectory, "build.log"), build);
             if (created + updated > _peakUnits)
             {
@@ -381,12 +488,25 @@ public class DiagnosticsOverlayBehavior : Behavior<TextBlock>
 
         _lastMeasure = measure; _lastArrange = arrange; _lastBindings = bindings;
         _secondLoopFrames += _windowFrames;
+        ResetWindow();
+    }
+
+    private void TakeBaselines()
+    {
+        _lastMeasure = MeasurableUIComponent.TotalMeasureCalls;
+        _lastArrange = MeasurableUIComponent.TotalArrangeCalls;
+        _lastBindings = RuntimeStats.BindingUpdatesApplied;
+        _lastPresented = RuntimeStats.PresentedFrames;
+        _lastGcPause = GC.GetTotalPauseDuration();
+    }
+
+    private void ResetWindow()
+    {
         _windowElapsed = 0; _windowFrames = 0; _windowMaxLayoutMs = 0; _windowDeferred = false;
         _windowMaxRecord = 0; _windowMaxApply = 0;
         _windowMaxWait = 0; _windowMaxPresent = 0; _windowGcMs = 0;
         _secMaxFrame = 0; _secMaxProcs = 0; _windowMaxProcs = 0; _windowMaxDraw = 0;
         _windowMaxBegin = 0; _windowMaxEnd = 0; _windowMaxSubmit = 0; _windowMaxPre = 0;
         _sumLayout = _sumBuild = _sumProc = _sumDraw = _sumProcs = _sumWait = _sumPresent = 0;
-        return false;   // keep ticking
     }
 }

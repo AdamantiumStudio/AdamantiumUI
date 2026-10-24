@@ -15,6 +15,7 @@ public class ForwardWindowRenderer : WindowRendererBase
 {
     private readonly RenderCache _renderCache;
     private volatile FrameVerifier _verifier;
+    private double _lastRecordMs;
 
     public ForwardWindowRenderer(IGraphicsDevice device, IRenderUnitFactory renderUnitFactory) : base(device, renderUnitFactory)
     {
@@ -156,9 +157,15 @@ public class ForwardWindowRenderer : WindowRendererBase
         var preRenderStart = Stopwatch.GetTimestamp();
         _renderCache.PreRender();
         RuntimeStats.LastPreRenderMs = Stopwatch.GetElapsedTime(preRenderStart).TotalMilliseconds;
+        if (_renderCache.AwaitsFrame)
+        {
+            RequestFrame();
+        }
     }
 
-    private double _lastRecordMs;
+    public override int RecordedFrames => _renderCache.PublishedCount;
+
+    public override int ChangedFrames => _renderCache.ChangesPublished;
 
     // DEVICE-FREE record half: walk the tree + component.Render into the packet. No GPU, so it is safe to run
     // at loop level after the whole Update phase (before BeginDraw's fence). ApplyData realizes what this records.

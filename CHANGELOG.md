@@ -7,6 +7,22 @@ All packages share one version.
 
 ### Added
 
+- Frame rates: `RefreshRate`, `MinimumRefreshRate` and `MaximumRefreshRate` on the application (`uint`, the maximum
+  `uint?`) and on every window (`uint?`; null, the default, follows the application's), in hertz. A window shows a
+  frame when something in it changed, no sooner than one maximum period after the last - by default the exact refresh
+  rate of its monitor, 0 for no limit - and when nothing changes it shows one a minimum period after the last, or none
+  with a minimum of 0, the default. A steady `RefreshRate` above 0 gives a frame on every beat whatever changed, over
+  the other two. The render thread sleeps between frames instead of drawing the same picture again: a still window
+  costs nothing, and news is a window's own - a recorded frame that changes something in it, a hosted scene's frame in
+  it (`IWindowRenderer.RequestFrame`), the compositor's animations in it (`Compositor.IsPlayingIn`). Frames that only
+  replay its picture wait, up to 64, for its next frame.
+  `UnlimitedRefreshRate` (application `bool`, window `bool?`) draws frame after frame as fast as the device goes, still
+  or not, over the other rates and presenting without waiting for the monitor - for measuring.
+  `IWindow.DisplayRefreshRate` and `ScreenInfo.RefreshRate` tell the monitor's rate (Windows, Wayland); unknown, it is
+  taken for 60.
+  `RenderSignal`, `IWindowRenderer.RecordedFrames` / `ChangedFrames` / `FrameRequests`, `IRenderUnit.AwaitsFrame`,
+  `IVisualRenderer.HasPendingDraws`, `Compositor.NeedsRecord` and `LoopSignal.FrameRequests` (frames asked for, not
+  work posted) for it.
 - `Hyperlink.Open(Uri)`: what a link no `RequestNavigate` handler took does - a web or mail address opens in the
   system's own handler, any other goes nowhere - for other controls with links to do the same.
 - `Popup.ClosesOnClick`, attached to a button in a popup: a click on it closes the popup once its command has run - a
@@ -139,7 +155,7 @@ All packages share one version.
     window; without recent input of ours the compositor may only mark the window as wanting attention;
   - the primary selection: `Clipboard.PrimarySelection` (`IPrimarySelection`), null where the platform has none. Text
     boxes give it what is selected in them, the password box excepted, and a middle click pastes it where it lands;
-  - `PlatformSettings.Screens` and `VirtualScreen` from `wl_output` and `xdg_output`, as monitors come and go;
+  - `Displays.Screens` and `VirtualScreen` from `wl_output` and `xdg_output`, as monitors come and go;
   - the pointer held still with its moves as deltas (`SetRelativeMouseMode`), through pointer constraints and relative
     pointer;
   - dead keys and the Compose key, by the user's locale;
@@ -155,7 +171,7 @@ All packages share one version.
   - spelling through Enchant, with the user's own word list shared by every application;
   - input methods such as IBus through `text-input-v3`: text being composed as a composition, chosen text as text;
   - gamepads through the Linux input devices.
-- `PlatformSettings.CanPlaceWindows` (`INativePlatformSettings.CanPlaceWindows`): whether a window can be put at a point
+- `Displays.CanPlaceWindows` (`IDisplayPlatform.CanPlaceWindows`): whether a window can be put at a point
   of the desktop - false on Wayland, where the docking compass is then drawn inside the area it covers.
 - Automation: `window <selector> hide | show`; `state` tells the default font and the monitors; `theme --variant System`
   follows the desktop's appearance.
@@ -1382,7 +1398,9 @@ All packages share one version.
   maximized if it was (`RemembersPlacement`, on by default; `PlacementKey` for several windows of one type). A screen no
   longer connected leaves it to `StartupLocation`. The places are kept by `IWindowPlacementStore` - by default
   `FileWindowPlacementStore`, a file in the user's local application data - and dialogs in windows are not remembered.
-- `PlatformSettings.Screens` (`ScreenInfo`: id, bounds, work area, scale) and `IWindowWorkerService.RestoreBounds`.
+- `Displays.Screens`, `VirtualScreen` and `IsOnScreen` (`ScreenInfo`: id, bounds, work area, scale), told by the
+  platform's `IDisplayPlatform` registered on `Displays.Platform` - monitors are output, kept apart from the input
+  settings of `PlatformSettings` - and `IWindowWorkerService.RestoreBounds`.
 - `IRegionManager.NavigateToAsync<TViewModel>(regionName, ...)`: a named region navigated in one call. A region no
   control has declared yet is created, and the control that declares it later shows what it navigated to.
 - The language server underlines a type in `{x:Type}` and a type or member in `{x:Static}` that the build would not find,
@@ -1661,6 +1679,13 @@ All packages share one version.
 
 ### Changed
 
+- `UIApplication.UpdateRate` (also `IUIApplication.UpdateRate`; 120 by default, settable from markup too) replaces the
+  static `UpdateRateHz`: the most the loop updates at. Below it the loop keeps the pace of the fastest shown window, and
+  no slower than 60 so input is not held up; `UIApplication.LoopRate` tells the pace it keeps. A loop frame that changed nothing - a timer that touched nothing, an
+  endless ticker between its changes, a caret between blinks - records no frame. `UIApplication.Draw` tells whether a
+  window drew.
+- Windows: the application asks for 1 ms timers (`timeBeginPeriod`) while its message loop runs, so a wait for a
+  144 Hz frame is not a 64 Hz one.
 - A Large ribbon command alone in its column stands the group's full height, its content at the top
   (`VerticalContentAlignment` of the ribbon's commands is `Top` at Large, `Center` at Medium and Small), so commands
   whose labels take one line and two keep their icons in one row and light plates of one height. A Large split
@@ -2116,6 +2141,8 @@ All packages share one version.
 
 ### Fixed
 
+- `UIApplication.EnableGraphicsDebug` was registered under the name `EnableGraphicsDebugProperty`, so markup could not
+  set it.
 - A render or layout transform is taken into account where it was not: `GetVisualsAt` (the designer's pick, the
   scrollable a drag scrolls) finds an element where it is drawn, as hit testing already did, and a disabled element
   takes the press where it is drawn; a popup opens at a scaled or turned target's drawn edge, and one placed `Relative`
