@@ -4,6 +4,8 @@
     <Phrase Key="AnalyticAa" Text="Analytic AA"/>
     <Phrase Key="VerifyFrames" Text="Verify frames"/>
     <Phrase Key="Presentation" Text="Presentation"/>
+    <Phrase Key="Descriptors" Text="Descriptors, from the next start"/>
+    <Phrase Key="DescriptorsInUse" Text="In use: {model}"/>
     <Phrase Key="UpdateRate" Text="Update rate at most, Hz"/>
     <Phrase Key="UnlimitedRefreshRate" Text="Unlimited frames (measure)"/>
     <Phrase Key="RefreshRate" Text="Steady frame rate, Hz (0 - varying)"/>

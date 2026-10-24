@@ -36,6 +36,13 @@ public class SandboxApplication : Adamantium.UI.Universes.MultiverseApplication
         }
     }
 
+    protected override Adamantium.Graphics.Core.GraphicsSettings CreateGraphicsSettings()
+    {
+        var settings = base.CreateGraphicsSettings();
+        settings.DescriptorModel = DescriptorModelChoice.Read();
+        return settings;
+    }
+
     protected override void RegisterServices(IContainerRegistry containerRegistry)
     {
         base.RegisterServices(containerRegistry);

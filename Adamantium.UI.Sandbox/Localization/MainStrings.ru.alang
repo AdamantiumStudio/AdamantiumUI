@@ -4,6 +4,8 @@
     <Phrase Key="AnalyticAa" Text="Аналитическое сглаживание"/>
     <Phrase Key="VerifyFrames" Text="Сверка кадров"/>
     <Phrase Key="Presentation" Text="Вывод кадров"/>
+    <Phrase Key="Descriptors" Text="Дескрипторы, со следующего запуска"/>
+    <Phrase Key="DescriptorsInUse" Text="Сейчас: {model}"/>
     <Phrase Key="UpdateRate" Text="Частота обновления, не выше, Гц"/>
     <Phrase Key="UnlimitedRefreshRate" Text="Кадры без ограничения (замеры)"/>
     <Phrase Key="RefreshRate" Text="Ровная частота, Гц (0 — переменная)"/>

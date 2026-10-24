@@ -7,6 +7,10 @@ All packages share one version.
 
 ### Added
 
+- `UIApplication.CreateGraphicsSettings()`: what the application asks of Vulkan - extensions, layers, the descriptor
+  model - overridable; the engine's defaults otherwise.
+- Sandbox: the diagnostics panel chooses the descriptor model (Auto, Heap, Sets) for the next start and shows the one in
+  use.
 - `FileDialog.OpenFolder(OpenFolderRequest)`: asks for a folder through the platform's own dialog - the shell's open
   dialog choosing folders on Windows, the FileChooser portal on Linux - and returns its path, or null when the user
   chose nothing. `IFileDialogPlatform` gains `OpenFolder`.
@@ -1686,6 +1690,8 @@ All packages share one version.
 
 ### Changed
 
+- `Adamantium.Vulkan` 1.1.0 and `Adamantium.Vulkan.ShaderObjectLayer` 1.0.0: an application gets the shader-object
+  layer, for GPUs whose driver has no shader objects.
 - Enter in a single-line `TextBox` is no longer kept by the box: what is subscribed to `EnterPressed` keeps it by
   setting `Handled`, and an Enter nothing kept goes on up to the default button (`IsDefault`) of the `Window` or
   `Popup` the box is in, as in WPF - a card's address field submits the card. `NumericUpDown` and `PropertyRow` keep
@@ -2156,6 +2162,8 @@ All packages share one version.
 
 ### Fixed
 
+- The backdrop's blur pyramid read each level through a view of every level, the one being drawn into among them, as
+  shader-read-only; each step now reads the level above alone (`Texture.GetLevelTexture`).
 - `UIApplication.EnableGraphicsDebug` was registered under the name `EnableGraphicsDebugProperty`, so markup could not
   set it.
 - A render or layout transform is taken into account where it was not: `GetVisualsAt` (the designer's pick, the

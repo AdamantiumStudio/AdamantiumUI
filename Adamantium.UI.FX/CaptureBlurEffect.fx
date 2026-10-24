@@ -4,7 +4,8 @@
 #include "Includes/CommonData.fxh"
 
 // The level being READ, and the size of the level being written. The source level is explicit because the pyramid is
-// walked one step at a time and each step reads exactly one level - never whatever the hardware would pick.
+// walked one step at a time and each step reads exactly one level - never whatever the hardware would pick. The capture
+// binds that level as a view of its own, so it is level 0 of the view.
 float4 BlurStep;   // .x source level, .yz destination size in texels, .w spare
 
 struct BlurVSOutput

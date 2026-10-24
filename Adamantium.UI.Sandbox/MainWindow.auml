@@ -109,6 +109,15 @@
                     <DropDown ItemsSource="{Binding PresentPolicies}"
                               SelectedItem="{Binding PresentPolicy, Mode=TwoWay}"
                               Margin="0,0,0,12"/>
+                    <TextBlock Text="{Localize MainStrings.Descriptors}" Margin="0,0,0,4"/>
+                    <DropDown AutomationProperties.AutomationId="DescriptorModel"
+                              ItemsSource="{Binding DescriptorModels}"
+                              SelectedItem="{Binding DescriptorModel, Mode=TwoWay}"
+                              Margin="0,0,0,4"/>
+                    <TextBlock AutomationProperties.AutomationId="DescriptorModelInUse"
+                               Text="{Localize MainStrings.DescriptorsInUse, model={Binding DescriptorModelInUse}}"
+                               Foreground="{ResourceReference TextFillColorSecondary}"
+                               Margin="0,0,0,12"/>
                     <TextBlock Text="{Localize MainStrings.UpdateRate}"
                                Margin="0,0,0,4"/>
                     <NumericUpDown Value="{Binding UpdateRate, Mode=TwoWay, Converter={conv:RateToNumberConverter}}"
