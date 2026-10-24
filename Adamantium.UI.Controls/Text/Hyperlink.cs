@@ -69,17 +69,29 @@ public class Hyperlink : Span
 
         var navigate = new HyperlinkNavigateEventArgs(uri);
         RequestNavigate?.Invoke(this, navigate);
-        if (navigate.Handled || !uri.IsAbsoluteUri || uri.Scheme is not ("http" or "https" or "mailto"))
+        if (!navigate.Handled)
         {
-            return;
+            Open(uri);
+        }
+    }
+
+    /// <summary>Opens <paramref name="uri"/> as a link no handler took: hands a web or mail address to the system's own
+    /// handler; false for any other scheme, which goes nowhere, or when the system refuses to start a handler.</summary>
+    public static bool Open(Uri uri)
+    {
+        if (uri is not { IsAbsoluteUri: true } || uri.Scheme is not ("http" or "https" or "mailto"))
+        {
+            return false;
         }
 
         try
         {
             Process.Start(new ProcessStartInfo(uri.AbsoluteUri) { UseShellExecute = true })?.Dispose();
+            return true;
         }
         catch (Win32Exception)
         {
+            return false;
         }
     }
 
