@@ -1059,10 +1059,7 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
         }
 
         UIContext.UIApplication.SetActiveWindow(window);
-        if (!FocusManager.TryRestoreFocus(window))
-        {
-            KeyboardNavigation.MoveInto(window, NavigationMethod.Unspecified);
-        }
+        ActivatedWindowFocus.Restore(window);
     }
 
     private void HandleDeactivation()
