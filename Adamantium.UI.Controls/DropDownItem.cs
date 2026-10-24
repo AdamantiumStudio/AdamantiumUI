@@ -41,7 +41,7 @@ public class DropDownItem : ListBoxItem
     protected override void OnPointerPressed(PointerPressedEventArgs e)
     {
         base.OnPointerPressed(e);
-        if (e.ChangedButton == MouseButtons.Left)
+        if (IsEnabled && e.ChangedButton == MouseButtons.Left)
         {
             (Owner ?? FindOwnerLogically())?.SelectFromContainer(this);
         }
@@ -53,7 +53,7 @@ public class DropDownItem : ListBoxItem
     protected override void OnKeyDown(KeyEventArgs e)
     {
         base.OnKeyDown(e);
-        if (e.Handled || e.Key is not (Key.Enter or Key.Space))
+        if (e.Handled || !IsEnabled || e.Key is not (Key.Enter or Key.Space))
             return;
 
         (Owner ?? FindOwnerLogically())?.SelectFromContainer(this);

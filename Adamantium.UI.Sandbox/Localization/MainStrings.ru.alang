@@ -6,6 +6,7 @@
     <Phrase Key="Presentation" Text="Вывод кадров"/>
     <Phrase Key="Descriptors" Text="Дескрипторы, со следующего запуска"/>
     <Phrase Key="DescriptorsInUse" Text="Сейчас: {model}"/>
+    <Phrase Key="NotSupportedOnThisGpu" Text="Не поддерживается на этом GPU"/>
     <Phrase Key="UpdateRate" Text="Частота обновления, не выше, Гц"/>
     <Phrase Key="UnlimitedRefreshRate" Text="Кадры без ограничения (замеры)"/>
     <Phrase Key="RefreshRate" Text="Ровная частота, Гц (0 — переменная)"/>

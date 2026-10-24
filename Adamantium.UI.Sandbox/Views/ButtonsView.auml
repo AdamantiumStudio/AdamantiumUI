@@ -1,6 +1,7 @@
 <View xmlns="http://adamantium/ui"
       xmlns:x="http://adamantium/ui/xaml/extensions"
-      xmlns:vm="clr-namespace:Adamantium.UI.Sandbox.ViewModels">
+      xmlns:vm="clr-namespace:Adamantium.UI.Sandbox.ViewModels"
+      xmlns:conv="clr-namespace:Adamantium.UI.Sandbox.Converters">
     <!-- DataContext is the ButtonsViewModel, injected by the TabControl's content presenter (no x:ViewModel here). -->
     <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
         <StackPanel Orientation="Vertical" Margin="24">
@@ -138,9 +139,24 @@
                                 <Border Background="{Binding Swatch}" Width="16" Height="16"
                                         CornerRadius="3" Margin="0,0,8,0" VerticalAlignment="Center"/>
                                 <TextBlock Text="{Binding Name}" VerticalAlignment="Center"/>
+                                <Image AutomationProperties.AutomationId="Unavailable"
+                                       Source="{ResourceReference NotSupportedIcon}"
+                                       Width="14"
+                                       Height="14"
+                                       Margin="8,0,0,0"
+                                       VerticalAlignment="Center"
+                                       Foreground="{ResourceReference SystemFillColorCaution}"
+                                       Visibility="{Binding IsUnavailable, Converter={conv:BoolToVisibilityConverter}}"
+                                       ToolTipService.ToolTip="{Localize ButtonsStrings.OutOfStock}"
+                                       ToolTipService.ShowOnDisabled="True"/>
                             </StackPanel>
                         </DataTemplate>
                     </DropDown.ItemTemplate>
+                    <DropDown.ItemContainerStyle>
+                        <Style Selector="DropDownItem">
+                            <Setter Property="IsEnabled" Value="{Binding IsAvailable}"/>
+                        </Style>
+                    </DropDown.ItemContainerStyle>
                 </DropDown>
                 <TextBlock Text="{Localize ButtonsStrings.Color, color={Binding SelectedColor.Name}}" VerticalAlignment="Center" Margin="14,0,0,0"/>
             </StackPanel>

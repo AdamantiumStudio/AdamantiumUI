@@ -64,6 +64,7 @@ public partial class ButtonsViewModel : TabPageViewModel
         new ColorOption("Forest", "#107C10"),
         new ColorOption("Grape", "#8764B8"),
         new ColorOption("Ember", "#CA5010"),
+        new ColorOption("Gold", "#C19C00", isAvailable: false),
         new ColorOption("Rose", "#C42B72"),
     ];
     [Bindable] private ColorOption _selectedColor;

@@ -125,7 +125,7 @@ internal sealed partial class AtSpiBridge
         }
 
         AutomationPeer found = null;
-        for (var node = PointerDevice.HitTestTopmost(root, window.PointToClient(screen)) as UIComponent;
+        for (var node = PointerDevice.HitTestTopmost(root, window.PointToClient(screen), hover: true) as UIComponent;
              node != null && found == null;
              node = node.VisualParent as UIComponent)
         {

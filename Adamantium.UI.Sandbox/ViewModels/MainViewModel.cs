@@ -31,7 +31,6 @@ public partial class MainViewModel
         _application = application;
         _graphics = graphics;
         _updateRate = application.UpdateRate;
-        _descriptorModel = DescriptorModelChoice.Read();
     }
 
     // The dialog host follows the Navigation-tab toggle: an in-window overlay, or a separate window.
@@ -123,14 +122,81 @@ public partial class MainViewModel
     partial void OnUpdateRateChanged(uint? value) =>
         _application.UpdateRate = value ?? IUIApplication.DefaultUpdateRate;
 
-    public DescriptorModel[] DescriptorModels { get; } = System.Enum.GetValues<DescriptorModel>();
+    private IReadOnlyList<DescriptorModelOption> _descriptorModels;
+    private DescriptorModelOption _descriptorModel;
 
-    [Bindable] private DescriptorModel _descriptorModel;
+    /// <summary>Every descriptor model, each saying whether this GPU has it.</summary>
+    public IReadOnlyList<DescriptorModelOption> DescriptorModels
+    {
+        get
+        {
+            if (_descriptorModels != null) return _descriptorModels;
 
-    partial void OnDescriptorModelChanged(DescriptorModel value) => DescriptorModelChoice.Write(value);
+            var options = DescriptorModelOptions();
+            if (_graphics.MainGraphicsDevice != null) _descriptorModels = options;
+            return options;
+        }
+    }
+
+    /// <summary>The descriptor model the next start asks for; one this GPU lacks is not taken.</summary>
+    public DescriptorModelOption DescriptorModel
+    {
+        get
+        {
+            if (_descriptorModel != null) return _descriptorModel;
+
+            var chosen = ChosenDescriptorModel();
+            if (_graphics.MainGraphicsDevice != null) _descriptorModel = chosen;
+            return chosen;
+        }
+        set
+        {
+            if (ReferenceEquals(value, _descriptorModel)) return;
+
+            if (value is { IsSupported: true })
+            {
+                _descriptorModel = value;
+                DescriptorModelChoice.Write(value.Model);
+            }
+
+            RaisePropertyChanged(nameof(DescriptorModel));
+        }
+    }
+
+    private IReadOnlyList<DescriptorModelOption> DescriptorModelOptions()
+    {
+        var hasHeap = _graphics.MainGraphicsDevice?.GraphicsAdapter.SupportsDescriptorHeap ?? true;
+        var options = new List<DescriptorModelOption>();
+        foreach (var model in System.Enum.GetValues<Adamantium.Graphics.Core.DescriptorModel>())
+        {
+            var supported = model != Adamantium.Graphics.Core.DescriptorModel.Heap || hasHeap;
+            options.Add(new DescriptorModelOption(model, supported));
+        }
+
+        return options;
+    }
+
+    private DescriptorModelOption ChosenDescriptorModel()
+    {
+        var saved = DescriptorModelChoice.Read();
+        DescriptorModelOption chosen = null;
+        DescriptorModelOption auto = null;
+        foreach (var option in DescriptorModels)
+        {
+            if (option.Model == saved) chosen = option;
+            if (option.Model == Adamantium.Graphics.Core.DescriptorModel.Auto) auto = option;
+        }
+
+        if (chosen is { IsSupported: true } || _graphics.MainGraphicsDevice == null) return chosen ?? auto;
+
+        Serilog.Log.Logger.Warning("Descriptor model {Model} is not supported on this GPU - the sandbox starts on Auto", saved);
+        DescriptorModelChoice.Write(auto.Model);
+        return auto;
+    }
 
     /// <summary>The descriptor model the device runs on now.</summary>
-    public DescriptorModel DescriptorModelInUse => _graphics.MainGraphicsDevice?.DescriptorModel ?? DescriptorModel.Auto;
+    public Adamantium.Graphics.Core.DescriptorModel DescriptorModelInUse =>
+        _graphics.MainGraphicsDevice?.DescriptorModel ?? Adamantium.Graphics.Core.DescriptorModel.Auto;
 
     /// <summary>Every theme the application has registered, by name - what the theme chooser lists.
     /// <para>Read from the manager each time rather than captured: themes are registered while the application comes

@@ -62,6 +62,11 @@
         <PropertyTrigger Property="IsPressed" Value="true">
             <Setter TargetName="ItemBorder" Property="Background" Value="{TemplateBinding BackgroundPressed}"/>
         </PropertyTrigger>
+        <!-- Above the selected trigger: a row that cannot be chosen now still reads as the current value. -->
+        <PropertyTrigger Property="IsEnabled" Value="false">
+            <Setter TargetName="ItemBorder" Property="Background" Value="{TemplateBinding Background}"/>
+            <Setter TargetName="PART_ContentPresenter" Property="Foreground" Value="{ResourceReference TextFillColorDisabled}"/>
+        </PropertyTrigger>
         <PropertyTrigger Property="IsSelected" Value="true">
             <Setter TargetName="ItemBorder" Property="Background" Value="{TemplateBinding BackgroundSelected}"/>
             <Setter TargetName="PART_ContentPresenter" Property="Foreground" Value="{TemplateBinding ForegroundSelected}"/>

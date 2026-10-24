@@ -7,6 +7,17 @@ All packages share one version.
 
 ### Added
 
+- `ToolTipService.ShowOnDisabled`: an element marked with it takes the pointer's hover - and shows its tooltip - though
+  it or an ancestor is disabled; a press on it reaches the disabled element, which ignores it. The "why" beside what
+  cannot be used. `InputExtensions.HitTest`, `GetInputElementsAt`, `HitTestBounds` and `PointerDevice.HitTestTopmost`
+  take `hover`: what the pointer is over, such an element included, against what a press reaches.
+- `DropDown` takes disabled rows: a `DropDownItem` with `IsEnabled` false (from an `ItemContainerStyle` binding, say) is
+  shown grayed and cannot be chosen - not by a click, not by Enter, not by typing its name; the arrows and the wheel
+  step over it, and the pointer does not mark it. A closed list keeps no row for what it looked at.
+- `ItemContainerGenerator.Inspect`: reads the container of an item without keeping one.
+- Sandbox: the Diagnostics panel shows the Heap descriptor model always and disables it, with a "!" that says why, on a
+  GPU without the descriptor heap; a saved choice the GPU lacks starts on Auto. The Buttons tab's color list has an
+  out-of-stock entry the same way.
 - `UIApplication.CreateGraphicsSettings()`: what the application asks of Vulkan - extensions, layers, the descriptor
   model - overridable; the engine's defaults otherwise.
 - Sandbox: the diagnostics panel chooses the descriptor model (Auto, Heap, Sets) for the next start and shows the one in
@@ -1690,7 +1701,7 @@ All packages share one version.
 
 ### Changed
 
-- `Adamantium.Vulkan` 1.1.0 and `Adamantium.Vulkan.ShaderObjectLayer` 1.0.0: an application gets the shader-object
+- `Adamantium.Vulkan` 1.1.0 and `Adamantium.Vulkan.ShaderObjectLayer` 1.0.1: an application gets the shader-object
   layer, for GPUs whose driver has no shader objects.
 - Enter in a single-line `TextBox` is no longer kept by the box: what is subscribed to `EnterPressed` keeps it by
   setting `Handled`, and an Enter nothing kept goes on up to the default button (`IsDefault`) of the `Window` or

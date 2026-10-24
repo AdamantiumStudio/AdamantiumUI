@@ -4,17 +4,20 @@ namespace Adamantium.UI.Core.Input;
 
 public static class InputExtensions
 {
-   public static IInputComponent HitTest(this IUIComponent root, Vector2 p)
+   /// <summary>The top-most input element under <paramref name="p"/>. With <paramref name="hover"/>, an element inside a
+   /// disabled one that is marked <see cref="DisabledHover.ShowOnDisabledProperty"/> is found too: what the pointer is
+   /// over, never what a press reaches.</summary>
+   public static IInputComponent HitTest(this IUIComponent root, Vector2 p, bool hover = false)
    {
-      return root.GetInputElementsAt(p).FirstOrDefault();
+      return root.GetInputElementsAt(p, hover).FirstOrDefault();
    }
 
    /// <summary>The input elements under <paramref name="p"/>, front to back (reverse paint order), so
-   /// <see cref="HitTest"/> returns the top-most.</summary>
-   public static IEnumerable<IInputComponent> GetInputElementsAt(this IUIComponent root, Vector2 p)
+   /// <see cref="HitTest"/> returns the top-most; <paramref name="hover"/> as there.</summary>
+   public static IEnumerable<IInputComponent> GetInputElementsAt(this IUIComponent root, Vector2 p, bool hover = false)
    {
       var result = new List<IInputComponent>();
-      Collect(root, p, result);
+      Collect(root, p, result, false, hover);
       return result;
    }
 
@@ -53,15 +56,15 @@ public static class InputExtensions
    }
 
    /// <summary>The top-most input element whose bounds contain <paramref name="p"/>, skipping the narrow phase; the
-   /// mouse-over fallback when <see cref="HitTest"/> misses.</summary>
-   public static IInputComponent HitTestBounds(this IUIComponent root, Vector2 p)
+   /// mouse-over fallback when <see cref="HitTest"/> misses; <paramref name="hover"/> as there.</summary>
+   public static IInputComponent HitTestBounds(this IUIComponent root, Vector2 p, bool hover = false)
    {
       var result = new List<IInputComponent>();
-      Collect(root, p, result, boundsOnly: true);
+      Collect(root, p, result, true, hover);
       return result.FirstOrDefault();
    }
 
-   private static void Collect(IUIComponent element, Vector2 p, List<IInputComponent> result, bool boundsOnly = false)
+   private static void Collect(IUIComponent element, Vector2 p, List<IInputComponent> result, bool boundsOnly, bool hover)
    {
       if (element.Visibility != Visibility.Visible || !element.IsHitTestVisible)
          return;
@@ -75,6 +78,12 @@ public static class InputExtensions
       // not walked.
       if (!element.IsEnabled)
       {
+         if (hover && (!element.ClipToBounds || inBox))
+         {
+            foreach (var child in HitTestChildren(element, local))
+               CollectShownOnDisabled(child, local, result, boundsOnly);
+         }
+
          if (element is IInputComponent off && inBox) result.Add(off);
 
          return;
@@ -86,13 +95,30 @@ public static class InputExtensions
          return;
 
       foreach (var child in HitTestChildren(element, local))
-         Collect(child, local, result, boundsOnly);
+         Collect(child, local, result, boundsOnly, hover);
 
       // Narrow phase: only an INPUT element is a hit target (non-input visuals are pure pass-through containers), the
       // point must be inside its box (broad), and on its actual geometry, not just inside its bounding box - so a click
       // in a shape's empty bbox corner falls through to whatever is really there. boundsOnly skips the geometry test
       // (the mouse-over fallback: bounds containment is enough).
       if (inBox && element is IInputComponent input && (boundsOnly || element.HitTestCore(local)))
+         result.Add(input);
+   }
+
+   private static void CollectShownOnDisabled(IUIComponent element, Vector2 p, List<IInputComponent> result, bool boundsOnly)
+   {
+      if (element.Visibility != Visibility.Visible || !element.IsHitTestVisible)
+         return;
+
+      var inBox = Place(element, p, out var local);
+      if (element.ClipToBounds && !inBox)
+         return;
+
+      foreach (var child in HitTestChildren(element, local))
+         CollectShownOnDisabled(child, local, result, boundsOnly);
+
+      if (inBox && element is IInputComponent input && element.GetValue<bool>(DisabledHover.ShowOnDisabledProperty) &&
+          (boundsOnly || element.HitTestCore(local)))
          result.Add(input);
    }
 
