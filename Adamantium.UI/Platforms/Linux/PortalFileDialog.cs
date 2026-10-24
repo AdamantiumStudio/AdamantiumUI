@@ -48,6 +48,12 @@ internal sealed class PortalFileDialog : IFileDialogPlatform
 
     public string Open(OpenFileRequest request) => Ask("OpenFile", request.Owner, request.Title ?? "Open", Options(request.FileTypes));
 
+    public string OpenFolder(OpenFolderRequest request) =>
+        Ask("OpenFile", request.Owner, request.Title ?? "Choose a folder", FolderOptions());
+
+    /// <summary>The options of an open dialog that chooses a folder.</summary>
+    public static Dictionary<string, DBusVariant> FolderOptions() => new() { ["directory"] = DBusVariant.Boolean(true) };
+
     /// <summary>The filters for these file types, as the portal takes them: glob patterns, the first one selected.</summary>
     public static Dictionary<string, DBusVariant> Options(IReadOnlyList<FileType> fileTypes)
     {

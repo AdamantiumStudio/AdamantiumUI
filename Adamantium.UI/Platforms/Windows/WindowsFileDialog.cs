@@ -65,6 +65,39 @@ internal sealed class WindowsFileDialog : IFileDialogPlatform
         }
     }
 
+    [SupportedOSPlatform("windows")]
+    public string OpenFolder(OpenFolderRequest request)
+    {
+        var clsid = ShellDialog.ClsidFileOpenDialog;
+        var iid = ShellDialog.IidFileOpenDialog;
+
+        if (Win32Interop.CoCreateInstance(ref clsid, IntPtr.Zero, Win32Interop.ClsCtxInprocServer, ref iid,
+                out var instance) != 0 || instance is not IFileOpenDialog dialog)
+            return null;
+
+        try
+        {
+            if (dialog.GetOptions(out var options) == 0)
+            {
+                dialog.SetOptions(options | ShellDialog.PickFolders | ShellDialog.ForceFileSystem |
+                                  ShellDialog.PathMustExist);
+            }
+
+            if (!string.IsNullOrEmpty(request?.Title)) dialog.SetTitle(request.Title);
+
+            if (Named(request?.Key) is { } id) dialog.SetClientGuid(ref id);
+
+            if (dialog.Show(Owner(request?.Owner ?? IntPtr.Zero)) != 0) return null;
+            if (dialog.GetResult(out var item) != 0) return null;
+
+            return PathOf(item);
+        }
+        finally
+        {
+            Marshal.ReleaseComObject(dialog);
+        }
+    }
+
     private static void Prepare(IFileOpenDialog dialog, OpenFileRequest request)
     {
         // A file being OPENED has to be there - both the file and the folder it is named in. Added to the dialog's own

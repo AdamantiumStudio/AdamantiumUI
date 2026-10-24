@@ -7,6 +7,9 @@ All packages share one version.
 
 ### Added
 
+- `FileDialog.OpenFolder(OpenFolderRequest)`: asks for a folder through the platform's own dialog - the shell's open
+  dialog choosing folders on Windows, the FileChooser portal on Linux - and returns its path, or null when the user
+  chose nothing. `IFileDialogPlatform` gains `OpenFolder`.
 - Frame rates: `RefreshRate`, `MinimumRefreshRate` and `MaximumRefreshRate` on the application (`uint`, the maximum
   `uint?`) and on every window (`uint?`; null, the default, follows the application's), in hertz. A window shows a
   frame when something in it changed, no sooner than one maximum period after the last - by default the exact refresh

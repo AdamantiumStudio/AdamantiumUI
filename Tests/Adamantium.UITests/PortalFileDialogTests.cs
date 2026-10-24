@@ -36,6 +36,15 @@ public class PortalFileDialogTests
         });
     }
 
+    [Test]
+    public void AFolderIsAskedForAsADirectory()
+    {
+        var options = PortalFileDialog.FolderOptions();
+
+        Assert.That(options["directory"].Signature, Is.EqualTo("b"));
+        Assert.That(options["directory"].Value, Is.EqualTo(true));
+    }
+
     private static DBusMessage Response(uint code, string uri) =>
         DBusMessage.MethodCall("x.y", "/x", "x.y", "Response", "ua{sv}", writer =>
         {

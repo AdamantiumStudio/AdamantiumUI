@@ -9,4 +9,7 @@ public interface IFileDialogPlatform
 
     /// <summary>The same for opening: the path of an EXISTING file, or null when the user canceled.</summary>
     string Open(OpenFileRequest request);
+
+    /// <summary>The same for choosing a folder: the path of an EXISTING folder, or null when the user canceled.</summary>
+    string OpenFolder(OpenFolderRequest request);
 }
