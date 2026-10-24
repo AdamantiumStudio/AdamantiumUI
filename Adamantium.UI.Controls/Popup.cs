@@ -71,6 +71,15 @@ public class Popup : MeasurableUIComponent, IContainer
     public static readonly AdamantiumProperty IgnoreTargetPressProperty = AdamantiumProperty.Register(nameof(IgnoreTargetPress),
         typeof(bool), typeof(Popup), new PropertyMetadata(false));
 
+    public static readonly AdamantiumProperty InitialFocusProperty = AdamantiumProperty.Register(nameof(InitialFocus),
+        typeof(InputUIComponent), typeof(Popup), new PropertyMetadata(null, static (a, _) =>
+        {
+            if (a is Popup { _isShowing: true } popup)
+            {
+                popup.FocusInitially();
+            }
+        }));
+
     /// <summary>Whether a click on this button closes the popup it is shown in, once its command has run - a card's "Go"
     /// or "Apply".</summary>
     public static readonly AdamantiumProperty ClosesOnClickProperty = AdamantiumProperty.RegisterAttached("ClosesOnClick",
@@ -83,6 +92,7 @@ public class Popup : MeasurableUIComponent, IContainer
     private RoutedEventHandler _contentClick;
     private KeyEventHandler _contentEnter;
     private IInputComponent _contentRoot;
+    private IInputComponent _focusedAtOpen;
 
     public static bool GetClosesOnClick(IAdamantiumComponent element) => element.GetValue<bool>(ClosesOnClickProperty);
 
@@ -218,6 +228,15 @@ public class Popup : MeasurableUIComponent, IContainer
     {
         get => GetValue<bool>(IgnoreTargetPressProperty);
         set => SetValue(IgnoreTargetPressProperty, value);
+    }
+
+    /// <summary>The element inside the popup that takes the keyboard as it opens - a card's first field, so what is typed
+    /// after the shortcut that opened it goes there. One that is not shown in the popup then, or cannot take the keyboard,
+    /// is passed over; null leaves the keyboard where it was.</summary>
+    public InputUIComponent InitialFocus
+    {
+        get => GetValue<InputUIComponent>(InitialFocusProperty);
+        set => SetValue(InitialFocusProperty, value);
     }
 
     /// <summary>Raised when the popup closes (explicitly OR via light-dismiss) so an owner can sync its UI - e.g. un-press
@@ -365,7 +384,62 @@ public class Popup : MeasurableUIComponent, IContainer
         if (!KeepOpen) HookLightDismiss();   // click-outside-to-close, hosted centrally here (see OnGlobalPreviewDown)
         if (DismissOnEscape) HookEscape();   // ...and Escape, which a KeepOpen drawer wants just as much
         HookContent();
+        FocusInitially();
         AnnounceShown(AutomationEvent.MenuOpened);
+    }
+
+    private void FocusInitially()
+    {
+        LayerPass -= OnFocusPass;
+        _focusedAtOpen = FocusManager.Focused;
+        if (!TryFocusInitially())
+        {
+            LayerPass += OnFocusPass;
+        }
+    }
+
+    private void OnFocusPass(object sender, EventArgs e)
+    {
+        LayerPass -= OnFocusPass;
+        if (ReferenceEquals(FocusManager.Focused, _focusedAtOpen))
+        {
+            TryFocusInitially();
+        }
+
+        _focusedAtOpen = null;
+    }
+
+    private bool TryFocusInitially()
+    {
+        if (InitialFocus is not { } target)
+        {
+            return true;
+        }
+
+        if (target.RootVisual == null || !IsShownInside(target))
+        {
+            return false;
+        }
+
+        return FocusManager.Focus(target, FocusManager.IsFocusVisible ? NavigationMethod.Tab : NavigationMethod.Unspecified);
+    }
+
+    private bool IsShownInside(IUIComponent element)
+    {
+        for (var node = element; node != null; node = node.VisualParent)
+        {
+            if (node.Visibility != Visibility.Visible)
+            {
+                return false;
+            }
+
+            if (ReferenceEquals(node, ChildValue))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private void AnnounceShown(AutomationEvent shown)
@@ -395,6 +469,8 @@ public class Popup : MeasurableUIComponent, IContainer
         _isShowing = false;
         _host = null;
 
+        LayerPass -= OnFocusPass;
+        _focusedAtOpen = null;
         UnhookLightDismiss(host);
         UnhookEscape(host);
         UnhookContent();

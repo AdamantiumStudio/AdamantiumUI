@@ -79,7 +79,7 @@ public class Hyperlink : Span
     /// handler; false for any other scheme, which goes nowhere, or when the system refuses to start a handler.</summary>
     public static bool Open(Uri uri)
     {
-        if (uri is not { IsAbsoluteUri: true } || uri.Scheme is not ("http" or "https" or "mailto"))
+        if (!CanOpen(uri))
         {
             return false;
         }
@@ -94,6 +94,10 @@ public class Hyperlink : Span
             return false;
         }
     }
+
+    /// <summary>Whether <paramref name="uri"/> is an address <see cref="Open"/> hands to the system: a web or mail one.</summary>
+    public static bool CanOpen(Uri uri) =>
+        uri is { IsAbsoluteUri: true } && uri.Scheme is "http" or "https" or "mailto";
 
     private TextBlock Block()
     {

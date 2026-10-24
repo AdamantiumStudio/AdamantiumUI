@@ -195,6 +195,20 @@ public class HyperlinkTests
     [TestCase(null)]
     public void AnythingButAWebOrMailAddress_IsNotHandedToTheSystem(string address)
     {
-        Assert.That(Hyperlink.Open(address == null ? null : new Uri(address, UriKind.RelativeOrAbsolute)), Is.False);
+        var uri = address == null ? null : new Uri(address, UriKind.RelativeOrAbsolute);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(Hyperlink.CanOpen(uri), Is.False);
+            Assert.That(Hyperlink.Open(uri), Is.False);
+        });
+    }
+
+    [TestCase("https://example.com/a")]
+    [TestCase("http://example.com")]
+    [TestCase("mailto:someone@example.com")]
+    public void AWebOrMailAddress_CanBeOpened(string address)
+    {
+        Assert.That(Hyperlink.CanOpen(new Uri(address)), Is.True);
     }
 }

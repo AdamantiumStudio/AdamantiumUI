@@ -23,6 +23,10 @@ All packages share one version.
   `RenderSignal`, `IWindowRenderer.RecordedFrames` / `ChangedFrames` / `FrameRequests`, `IRenderUnit.AwaitsFrame`,
   `IVisualRenderer.HasPendingDraws`, `Compositor.NeedsRecord` and `LoopSignal.FrameRequests` (frames asked for, not
   work posted) for it.
+- `Popup.InitialFocus`: the element inside a popup that takes the keyboard each time it opens - a card's first field,
+  so what is typed after the shortcut that opened it goes there. Closing gives the keyboard back as before.
+- `Hyperlink.CanOpen(Uri)`: whether `Hyperlink.Open` has a handler to give an address to - a control can tell a link
+  that goes somewhere from one that goes nowhere before it is clicked.
 - `Hyperlink.Open(Uri)`: what a link no `RequestNavigate` handler took does - a web or mail address opens in the
   system's own handler, any other goes nowhere - for other controls with links to do the same.
 - `Popup.ClosesOnClick`, attached to a button in a popup: a click on it closes the popup once its command has run - a
