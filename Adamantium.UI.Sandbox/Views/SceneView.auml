@@ -34,6 +34,10 @@
                            StringFormat="N2"/>
             <Button AutomationProperties.AutomationId="ResetCamera" Content="{Localize SceneStrings.ResetCamera}" Command="{Binding ResetCameraCommand}"
                     MinWidth="120" Height="30" MarginTop="10"/>
+            <ToggleSwitch AutomationProperties.AutomationId="FramesOnDemand"
+                          Content="{Localize SceneStrings.FramesOnDemand}"
+                          IsChecked="{Binding FramesOnDemand, Mode=TwoWay}"
+                          MarginTop="10"/>
             <TextBlock Text="{Localize SceneStrings.Tool}"
                        MarginTop="10"
                        MarginBottom="4"

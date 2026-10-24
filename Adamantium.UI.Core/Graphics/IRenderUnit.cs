@@ -21,11 +21,14 @@ public interface IRenderUnit : IDisposable
     void SetFadeSlot(int slot);
     void DeferDispose();
     void Update(Matrix4x4F transform, Matrix4x4F projection, double renderScale);
-    /// <summary>Out-of-render-pass work recorded before BeginRendering (e.g. shared-surface latch copies).</summary>
     /// <summary>Has this unit anything to do out of the render pass? Asked before the call, because the sweep visits
     /// every unit of every group on every frame and for most of them the answer is no.</summary>
     bool NeedsPreRender { get; }
 
+    /// <summary>After <see cref="PreRender"/>: its picture waits for a frame submitted elsewhere.</summary>
+    bool AwaitsFrame { get; }
+
+    /// <summary>Out-of-render-pass work recorded before BeginRendering (e.g. shared-surface latch copies).</summary>
     void PreRender();
     void Render();
     void UpdateWithDrawCommand(IDrawCommand command);

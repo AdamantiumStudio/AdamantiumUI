@@ -352,6 +352,7 @@ public partial class RenderCache
     /// draw state while the marks are still there, then CLEARS them - they are this surface's own.</summary>
     public void RecordFrame(IRootVisualComponent visualRoot)
     {
+        var hadWork = Dirty.HasWork;
         _packet = RentPacket();
         Dirty.BeginRecord();
         RecordFrameCore(visualRoot);
@@ -365,7 +366,8 @@ public partial class RenderCache
         CollectDeparted();
         DropRecordScratch();
         Observer?.Recorded(_packet);
-        _published.Enqueue(_packet);   // hand it over; the applier drains the queue (see ApplyFrame)
+        Publish(hadWork || _packet.CarriesChanges || _packet.ProjectionMatrix != _publishedProjection);
+        _publishedProjection = _packet.ProjectionMatrix;
         _packet = null;
 
         // The marks are consumed: everything this record needed is in the packet. Clearing them HERE - by the surface

@@ -35,7 +35,7 @@
   <Toggle Target="id=DataGridView/name=Search panel" />
   <Set Target="id=PART_SearchPanel/id=PART_Text" Value="P-00042" />
   <Invoke Target="id=PART_SearchPanel/id=PART_Find" />
-  <Expect Target="id=MatchesLabel" Name="1 of 1" />
+  <Wait Target="id=MatchesLabel" Name="1 of 1" />
   <Set Target="id=PART_SearchPanel/id=PART_Text" Value="" />
   <Invoke Target="id=PART_SearchPanel/id=PART_Close" />
   <Expect Target="id=DataGridView/name=Search panel" Toggle="Off" />

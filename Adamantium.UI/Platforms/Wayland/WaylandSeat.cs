@@ -181,12 +181,6 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
 
     public Size DragThreshold => new(8, 8);
 
-    public Rect VirtualScreen => platform.Outputs.VirtualScreen;
-
-    public IReadOnlyList<ScreenInfo> Screens => platform.Outputs.Screens;
-
-    public bool CanPlaceWindows => false;
-
     #endregion
 
     #region INativeCursors

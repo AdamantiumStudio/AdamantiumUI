@@ -1,21 +1,14 @@
 <View xmlns="http://adamantium/ui"
-      xmlns:x="http://adamantium/ui/xaml/extensions"
-      xmlns:behaviors="clr-namespace:Adamantium.UI.Sandbox.Behaviors">
-    <!-- A BENCH, not a showcase: the numbers at the top are the point. Two sections ask the same question from opposite
-         sides - many ANIMATIONS against many PAINTERS of one animated brush - so a frame's cost can be attributed to one
-         or the other instead of guessed at. Written after 25 orphaned loading pulses took the presented rate from ~900
-         to ~200 while the loop never moved: the leak is fixed, the price of an animation is still worth watching. -->
+      xmlns:x="http://adamantium/ui/xaml/extensions">
+    <!-- A BENCH, not a showcase: the diagnostics plate's numbers are the point. Two sections ask the same question from
+         opposite sides - many ANIMATIONS against many PAINTERS of one animated brush - so a frame's cost can be
+         attributed to one or the other instead of guessed at. Written after 25 orphaned loading pulses took the presented
+         rate from ~900 to ~200 while the loop never moved: the leak is fixed, the price of an animation is still worth
+         watching. -->
     <ScrollViewer Margin="24" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
     <StackPanel Orientation="Vertical">
         <TextBlock Text="{Localize AnimationsStrings.Title}" FontSize="20"/>
 
-        <Border Margin="0,16,0,0" Padding="10" Background="#CC202020">
-            <TextBlock FontSize="13" Foreground="LightGreen" TextWrapping="WrapBySymbols" Text="collecting...">
-                <TextBlock.Behaviors>
-                    <behaviors:DiagnosticsOverlayBehavior/>
-                </TextBlock.Behaviors>
-            </TextBlock>
-        </Border>
         <TextBlock x:Name="ManyHeading" Text="{Localize AnimationsStrings.Many}" FontSize="16" Margin="0,28,0,0"/>
         <TextBlock Opacity="0.7" TextWrapping="WrapByWords"
                    Text="{Localize AnimationsStrings.ManyHint}"/>

@@ -21,9 +21,6 @@ public class DragThresholdTests
         public Size DragThreshold => new(4, 4);
 
         public uint HoverTime => 400;
-
-        public Rect VirtualScreen => default;
-        public IReadOnlyList<ScreenInfo> Screens => [];
     }
 
     private INativePlatformSettings _previous;

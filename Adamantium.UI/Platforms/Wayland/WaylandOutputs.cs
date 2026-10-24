@@ -7,7 +7,7 @@ using Adamantium.Wayland;
 namespace Adamantium.UI.Platforms.Wayland;
 
 /// <summary>The monitors (wl_output, with their logical place from xdg_output), as they come and go.</summary>
-internal sealed class WaylandOutputs
+internal sealed class WaylandOutputs : IDisplayPlatform
 {
     private readonly object sync = new();
     private readonly Dictionary<uint, Output> outputs = new();
@@ -45,6 +45,9 @@ internal sealed class WaylandOutputs
             return new Rect(left, top, right - left, bottom - top);
         }
     }
+
+    /// <summary>False: Wayland does not let a client put a window at a desktop point.</summary>
+    public bool CanPlaceWindows => false;
 
     public void SetManager(ZxdgOutputManagerV1 xdgOutputs)
     {
@@ -87,6 +90,47 @@ internal sealed class WaylandOutputs
         Update();
     }
 
+    /// <summary>A monitor came, went or changed; on the Wayland thread.</summary>
+    public event Action Changed;
+
+    /// <summary>Whether <paramref name="proxy"/> is a monitor connected now.</summary>
+    public bool Knows(WlOutput proxy)
+    {
+        lock (sync)
+        {
+            foreach (var output in outputs.Values)
+            {
+                if (output.Proxy.Handle == proxy.Handle)
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>The fastest refresh rate among <paramref name="shownOn"/>, in hertz; 0 when none says.</summary>
+    public double RefreshRateOf(IEnumerable<WlOutput> shownOn)
+    {
+        var fastest = 0.0;
+        lock (sync)
+        {
+            foreach (var proxy in shownOn)
+            {
+                foreach (var output in outputs.Values)
+                {
+                    if (output.Proxy.Handle == proxy.Handle)
+                    {
+                        fastest = Math.Max(fastest, output.RefreshRate);
+                    }
+                }
+            }
+        }
+
+        return fastest;
+    }
+
     private void Update()
     {
         lock (sync)
@@ -96,6 +140,8 @@ internal sealed class WaylandOutputs
             var placeScale = known.Count == 0 ? 1 : known.Max(o => o.Scale);
             screens = known.Select(o => o.ToScreen(o == primary, placeScale)).ToArray();
         }
+
+        Changed?.Invoke();
     }
 
     private sealed class Output
@@ -111,12 +157,13 @@ internal sealed class WaylandOutputs
         {
             this.proxy = proxy;
             this.changed = changed;
-            proxy.ModeEvent += (flags, width, height, _) =>
+            proxy.ModeEvent += (flags, width, height, refresh) =>
             {
                 if ((flags & WlOutput.Mode.Current) != 0)
                 {
                     Width = width;
                     Height = height;
+                    RefreshRate = refresh / 1000.0;
                 }
             };
             proxy.Scale += factor => integerScale = Math.Max(1, factor);
@@ -125,6 +172,10 @@ internal sealed class WaylandOutputs
         }
 
         public string Name { get; private set; }
+
+        public WlOutput Proxy => proxy;
+
+        public double RefreshRate { get; private set; }
 
         public int Width { get; private set; }
 
@@ -165,7 +216,7 @@ internal sealed class WaylandOutputs
             var width = logicalWidth > 0 ? Math.Round(logicalWidth * scale) : Width;
             var height = logicalHeight > 0 ? Math.Round(logicalHeight * scale) : Height;
             var bounds = new Rect(LogicalX * placeScale, LogicalY * placeScale, width, height);
-            return new ScreenInfo(Name ?? $"{LogicalX},{LogicalY}", bounds, bounds, scale, isPrimary);
+            return new ScreenInfo(Name ?? $"{LogicalX},{LogicalY}", bounds, bounds, scale, isPrimary, RefreshRate);
         }
 
         public void Release()

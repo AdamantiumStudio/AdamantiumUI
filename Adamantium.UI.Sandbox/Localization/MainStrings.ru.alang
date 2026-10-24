@@ -4,6 +4,12 @@
     <Phrase Key="AnalyticAa" Text="Аналитическое сглаживание"/>
     <Phrase Key="VerifyFrames" Text="Сверка кадров"/>
     <Phrase Key="Presentation" Text="Вывод кадров"/>
+    <Phrase Key="UpdateRate" Text="Частота обновления, не выше, Гц"/>
+    <Phrase Key="UnlimitedRefreshRate" Text="Кадры без ограничения (замеры)"/>
+    <Phrase Key="RefreshRate" Text="Ровная частота, Гц (0 — переменная)"/>
+    <Phrase Key="MinimumRefreshRate" Text="Наименьшая частота, Гц (0 — в простое нет кадров)"/>
+    <Phrase Key="MaximumRefreshRate" Text="Наибольшая частота, Гц (0 — без ограничения)"/>
+    <Phrase Key="AsTheApplication" Text="как у приложения"/>
     <Phrase Key="Language" Text="Язык"/>
     <Phrase Key="Theme" Text="Тема"/>
     <Phrase Key="SwitchTheme" Text="Сменить"/>

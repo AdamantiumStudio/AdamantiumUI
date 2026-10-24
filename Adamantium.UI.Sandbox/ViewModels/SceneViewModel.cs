@@ -6,6 +6,7 @@ using Adamantium.Graphics.Core;
 using Adamantium.Graphics.Core.Models;
 using Adamantium.Mathematics;
 using Adamantium.MVVM;
+using Adamantium.Multiverse;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Dispatcher;
 using Adamantium.UI.Sandbox.Content;
@@ -39,6 +40,18 @@ public partial class SceneViewModel : TabPageViewModel
     [Bindable]
     private Light _light;
 
+    /// <summary>Whether the scene draws only when something changes in it, not every frame the window shows.</summary>
+    [Bindable]
+    private bool _framesOnDemand = true;
+
+    partial void OnFramesOnDemandChanged(bool value)
+    {
+        if (Universe != null)
+        {
+            Universe.FrameMode = value ? FrameMode.OnDemand : FrameMode.Continuous;
+        }
+    }
+
     private async Task Start(IUniverseService universes, IGraphicsDeviceService graphics, IDependencyContainer container)
     {
         try
@@ -47,6 +60,7 @@ public partial class SceneViewModel : TabPageViewModel
                 () => new DemoUniverse(graphics, graphics.IsInDebugMode, container));
             universe.UseTool(Tool);
             universe.IsSimulationPaused = IsMenuVisible;
+            universe.FrameMode = FramesOnDemand ? FrameMode.OnDemand : FrameMode.Continuous;
             Universe = universe;
             Status = SceneStatus.Ready;
 

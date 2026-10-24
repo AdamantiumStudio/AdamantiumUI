@@ -93,6 +93,9 @@ public abstract class UIRenderComponent : DeferredDisposableObject
     /// <summary>Out-of-render-pass work, recorded before BeginRendering. Base is a no-op.</summary>
     public virtual void PreRender() { }
 
+    /// <summary>A frame of what it shows was submitted elsewhere and has not been taken in yet.</summary>
+    public virtual bool AwaitsFrame => false;
+
     public virtual void Render()
     {
         if (_vertexCount == 0) return;
@@ -317,6 +320,8 @@ public class ImageRenderComponent : UIRenderComponent
     /// <summary>When set, this image is backed by an externally produced shared surface. Sampled via the private
     /// <see cref="UIRenderComponent.Texture"/>, refreshed each frame by the latch in <see cref="PreRender"/>.</summary>
     public SharedSurface SharedSource { get; set; }
+
+    public override bool AwaitsFrame => SharedSource?.AwaitsFrame == true;
 
     // Draws the import's copy of the newest frame, not the surface: the producer writes its next frame into the surface
     // once the copy is done, while this frame and later ones still sample the copy.

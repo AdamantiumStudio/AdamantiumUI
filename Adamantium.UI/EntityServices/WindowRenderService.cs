@@ -12,6 +12,7 @@ using Adamantium.Mathematics;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Graphics;
 using Adamantium.UI.Core.Media;
+using Adamantium.UI.Core.Media.Animation;
 using Adamantium.UI.Core.Resources;
 using Adamantium.UI.Core.RoutedEvents;
 using Adamantium.UI.Extensions;
@@ -21,10 +22,19 @@ namespace Adamantium.UI.EntityServices;
 
 public class WindowRenderService : UiRenderService
 {
+    private const int MaxRecordedFrames = 64;
+    private const double UnknownDisplayRate = 60;
+
     private IWindowRenderer windowRenderer;
     private IWindowRenderer _pendingRenderer;
     private IThemeManager _themeManager;
     private readonly IGraphicsDevice _injectedDevice;
+    private long _seenRequests = -1;
+    private long _claimedRequests;
+    private bool _drawsThisFrame;
+    private bool _canDraw;
+    private bool _trailing;
+    private volatile bool _unlimited;
 
     public IWindow Window { get; private set; }
 
@@ -45,6 +55,7 @@ public class WindowRenderService : UiRenderService
         _injectedDevice = renderDevice;
         _themeManager = DependencyResolver.Resolve<IThemeManager>();
         CreateResources();
+        ResolveRefreshRates(UIApplication.Current);
     }
 
     private void CreateResources()
@@ -132,12 +143,105 @@ public class WindowRenderService : UiRenderService
     {
         foreach (var processor in Processors)
         {
-            if (processor is IRecordingStage stage) stage.Record();
+            if (processor is IRecordingStage stage)
+            {
+                stage.Record();
+            }
         }
+    }
+
+    private bool StageHasRecordedFrame()
+    {
+        foreach (var processor in Processors)
+        {
+            if (processor is IRecordingStage { HasRecordedFrame: true })
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private bool StageAwaitsFrame()
+    {
+        foreach (var processor in Processors)
+        {
+            if (processor is IRecordingStage { AwaitsFrame: true })
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>Hidden by its platform: nothing is drawn into the window until it is shown again.</summary>
     internal bool Hidden { get; set; }
+
+    /// <summary>When this window's frames are due.</summary>
+    internal FramePacer Pacer { get; } = new();
+
+    /// <summary>Loop thread: hands the pacer the window's rates; gives the fastest it takes frames at, 0 unlimited.</summary>
+    internal double ResolveRefreshRates(UIApplication application)
+    {
+        _unlimited = UIApplication.RunsUnlimited(Window);
+        if (_unlimited)
+        {
+            return 0;
+        }
+
+        var display = Window.DisplayRefreshRate > 0 ? Window.DisplayRefreshRate : UnknownDisplayRate;
+        double steady = Window.RefreshRate ?? application?.RefreshRate ?? 0;
+        double minimum = Window.MinimumRefreshRate ?? application?.MinimumRefreshRate ?? 0;
+        var maximum = (double?)(Window.MaximumRefreshRate ?? application?.MaximumRefreshRate) ?? display;
+        Pacer.SetRates(steady, minimum, maximum);
+        return steady > 0 ? steady : maximum;
+    }
+
+    /// <summary>The window draws in the frame last claimed.</summary>
+    internal bool DrawsThisFrame => _drawsThisFrame;
+
+    /// <summary>The window could draw when its frame was last claimed: not minimized, hidden or without a presenter.</summary>
+    internal bool CanDraw => _canDraw;
+
+    /// <summary>A frame recorded for the window waits to show something new.</summary>
+    internal bool HasRecordedChange => windowRenderer?.ChangedFrames > 0 || StageHasRecordedFrame();
+
+    /// <summary>Its swapchain lagged its surface when its frame was last claimed: it is being resized.</summary>
+    internal bool IsTrailing => _trailing;
+
+    /// <summary>Render thread: decides whether the window draws in the coming frame; gives when its frame is due.</summary>
+    internal long ClaimFrame(long now)
+    {
+        _drawsThisFrame = false;
+        _trailing = false;
+        _canDraw = windowRenderer?.Presenter != null && Window.State != WindowState.Minimized && !Hidden;
+        if (!_canDraw)
+        {
+            return FramePacer.Never;
+        }
+
+        var requests = windowRenderer.FrameRequests;
+        var presenter = windowRenderer.Presenter;
+        var recorded = windowRenderer.RecordedFrames;
+        _trailing = presenter.NeedsRebuild;
+        var rebuild = !windowRenderer.IsRendererUpToDate || _trailing || _pendingRenderer != null
+                      || recorded >= MaxRecordedFrames;
+        var news = requests != _seenRequests || HasRecordedChange || Compositor.IsPlayingIn(Window)
+                   || presenter.LastPresenterState is PresenterState.OutOfDate or PresenterState.Suboptimal
+                   || Graphics.Fonts.FontAtlasStore.HasPendingGlyphs;
+        var due = rebuild || _unlimited ? now : Pacer.Due(now, news);
+        if (due > now)
+        {
+            return due;
+        }
+
+        _drawsThisFrame = true;
+        _claimedRequests = requests;
+        Pacer.Drew(now, due);
+        return due;
+    }
 
     public override bool BeginDraw()
     {
@@ -149,14 +253,19 @@ public class WindowRenderService : UiRenderService
             return false;
         }
 
+        if (Thread.CurrentThread == RenderThreadOptions.RenderThread && !_drawsThisFrame)
+        {
+            return false;
+        }
+
         // App-global, but windows render one after another.
         Rendering.RenderUnits.AnalyticAa.Enabled = Window?.AnalyticAntialiasing ?? true;
         GraphicsDevice.ClearColor = (Window?.Background as SolidColorBrush)?.Color ?? Colors.Black;
         var trailing = windowRenderer.Presenter?.NeedsRebuild ?? false;
-
-        // Resizing dirties nothing in the tree, so a trailing swapchain must wake the loop itself. Assigned every frame,
-        // or it would latch.
-        UIApplication.SwapchainTrailing = trailing;
+        if (RenderThreadOptions.RenderThread == null)
+        {
+            UIApplication.SwapchainTrailing = trailing;
+        }
 
         if (trailing)
         {
@@ -194,8 +303,13 @@ public class WindowRenderService : UiRenderService
                 {
                     windowRenderer.ApplyData();
                 }
+                _seenRequests = _claimedRequests;
                 windowRenderer.PreRender();
                 PreRenderProcessors();
+                if (StageAwaitsFrame())
+                {
+                    windowRenderer.RequestFrame();
+                }
             });
         }
         finally

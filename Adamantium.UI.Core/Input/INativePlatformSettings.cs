@@ -27,14 +27,4 @@ public interface INativePlatformSettings
     /// threshold, the GTK/Qt start-drag distance) - honoring it is the difference between "clicks sometimes
     /// drag by accident" and the app feeling like the rest of the system.</summary>
     Size DragThreshold { get; }
-
-    /// <summary>All monitors as one rectangle in physical pixels, for checking that a saved window position is still
-    /// reachable; empty when unknown.</summary>
-    Rect VirtualScreen { get; }
-
-    /// <summary>The monitors connected now; empty when unknown.</summary>
-    IReadOnlyList<ScreenInfo> Screens { get; }
-
-    /// <summary>Whether a window can be put at a point of the desktop; Wayland places windows itself.</summary>
-    bool CanPlaceWindows => true;
 }

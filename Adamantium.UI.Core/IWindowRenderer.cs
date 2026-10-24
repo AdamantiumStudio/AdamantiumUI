@@ -14,6 +14,19 @@ public interface IWindowRenderer : IDisposable
     /// <summary>How many frames were handed to the presenter so far: one more each time the window got a new picture.</summary>
     public long PresentedFrames { get; }
 
+    /// <summary>How many frames recorded on the loop wait to be drawn.</summary>
+    public int RecordedFrames { get; }
+
+    /// <summary>How many of the <see cref="RecordedFrames"/> show anything new; the others only replay the picture.</summary>
+    public int ChangedFrames { get; }
+
+    /// <summary>How many times <see cref="RequestFrame"/> was called.</summary>
+    public long FrameRequests { get; }
+
+    /// <summary>Asks for a frame of this window alone: something it shows changed without the loop, such as a hosted
+    /// scene's frame. Safe from any thread.</summary>
+    public void RequestFrame();
+
     /// <summary>Render resolution multiplier over the window's logical size: presenter + viewport are sized
     /// ClientSize x RenderScale, while the projection stays the logical size. 1 = on-screen 1:1; the designer sets it
     /// to the zoom factor so geometry/text re-rasterize crisply at design x scale.</summary>

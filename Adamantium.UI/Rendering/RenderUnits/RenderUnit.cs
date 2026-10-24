@@ -322,6 +322,8 @@ public abstract class RenderUnit<TPayload> : DeferredDisposableObject, IRenderUn
     /// was three virtual calls to do nothing. Asked as a field read instead.</summary>
     public bool NeedsPreRender => _geometryRenderer != null || _fillFringeRenderer != null || _strokeRenderer != null;
 
+    public bool AwaitsFrame => _geometryRenderer?.AwaitsFrame == true;
+
     public virtual void PreRender()
     {
         GeometryRenderer?.PreRender();

@@ -23,6 +23,7 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
     private IWindowRenderer _renderer;
     private protected bool _opensMaximized;
     private bool _inputMethodOff;
+    private double _displayRefreshRate;
     private bool _fitting;
     private bool _centering;
     private bool _sizeFromPlatform;
@@ -400,6 +401,71 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
     {
         get => GetValue<PresentPolicy>(PresentPolicyProperty);
         set => SetValue(PresentPolicyProperty, value);
+    }
+
+    public static readonly AdamantiumProperty RefreshRateProperty = AdamantiumProperty.Register(nameof(RefreshRate),
+        typeof(uint?), typeof(WindowBase), new PropertyMetadata(null, RefreshRatesChanged));
+
+    public static readonly AdamantiumProperty MinimumRefreshRateProperty = AdamantiumProperty.Register(
+        nameof(MinimumRefreshRate), typeof(uint?), typeof(WindowBase), new PropertyMetadata(null, RefreshRatesChanged));
+
+    public static readonly AdamantiumProperty MaximumRefreshRateProperty = AdamantiumProperty.Register(
+        nameof(MaximumRefreshRate), typeof(uint?), typeof(WindowBase), new PropertyMetadata(null, RefreshRatesChanged));
+
+    public static readonly AdamantiumProperty UnlimitedRefreshRateProperty = AdamantiumProperty.Register(
+        nameof(UnlimitedRefreshRate), typeof(bool?), typeof(WindowBase), new PropertyMetadata(null, UnlimitedRefreshRateChanged));
+
+    private static void RefreshRatesChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e) =>
+        LoopSignal.Request();
+
+    private static void UnlimitedRefreshRateChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (Equals(e.OldValue, e.NewValue))
+        {
+            return;
+        }
+
+        (component as WindowBase)?.Renderer?.InvalidatePresenter();
+        LoopSignal.Request();
+    }
+
+    public uint? RefreshRate
+    {
+        get => GetValue<uint?>(RefreshRateProperty);
+        set => SetValue(RefreshRateProperty, value);
+    }
+
+    public uint? MinimumRefreshRate
+    {
+        get => GetValue<uint?>(MinimumRefreshRateProperty);
+        set => SetValue(MinimumRefreshRateProperty, value);
+    }
+
+    public uint? MaximumRefreshRate
+    {
+        get => GetValue<uint?>(MaximumRefreshRateProperty);
+        set => SetValue(MaximumRefreshRateProperty, value);
+    }
+
+    public bool? UnlimitedRefreshRate
+    {
+        get => GetValue<bool?>(UnlimitedRefreshRateProperty);
+        set => SetValue(UnlimitedRefreshRateProperty, value);
+    }
+
+    public double DisplayRefreshRate
+    {
+        get => System.Threading.Volatile.Read(ref _displayRefreshRate);
+        set
+        {
+            if (System.Threading.Volatile.Read(ref _displayRefreshRate) == value)
+            {
+                return;
+            }
+
+            System.Threading.Volatile.Write(ref _displayRefreshRate, value);
+            LoopSignal.Request();
+        }
     }
 
     /// <summary>Uniform translucency of the whole window, 0..1. Composed by the desktop, so the content underneath
@@ -1026,7 +1092,7 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
 
     private void PlaceOnScreen(IUIContext context)
     {
-        var screens = PlatformSettings.Screens;
+        var screens = Displays.Screens;
         if (!ActivateOnShow || Design.IsDesignMode || screens.Count == 0)
         {
             return;
@@ -1077,7 +1143,7 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
     private void RememberPlacement()
     {
         var bounds = WindowWorkerService?.RestoreBounds ?? default;
-        var screens = PlatformSettings.Screens;
+        var screens = Displays.Screens;
         if (!RemembersPlacement || !ActivateOnShow || Design.IsDesignMode || bounds.Width <= 0 || screens.Count == 0)
         {
             return;

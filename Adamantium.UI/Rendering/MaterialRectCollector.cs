@@ -497,7 +497,7 @@ internal sealed class MaterialRectCollector : SdfBatchCollector<MaterialRectItem
         // The virtual screen, moved into the window - the same subtraction the wallpaper does, and physical on both
         // sides for the same reason (see WallpaperRect). No desktop is needed for the picture itself, only for the
         // extent it is stretched over.
-        var screen = PlatformSettings.VirtualScreen;
+        var screen = Displays.VirtualScreen;
         if (screen.Width <= 0 || screen.Height <= 0) return frame;   // no desktop geometry: behave as Window
 
         var window = WindowBounds;
@@ -524,7 +524,7 @@ internal sealed class MaterialRectCollector : SdfBatchCollector<MaterialRectItem
         // and a timestamp, compared as one record, and only re-read when that comparison differs.
         _wallpaper.Ensure(CenterOf(window));
 
-        var placement = _wallpaper.Placement(PlatformSettings.VirtualScreen);
+        var placement = _wallpaper.Placement(Displays.VirtualScreen);
         if (placement.Width <= 0 || placement.Height <= 0) return Vector4F.Zero;
 
         // Both origins are already physical pixels, which the shader works in; do not scale by the render scale again.

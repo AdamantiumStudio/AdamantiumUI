@@ -16,7 +16,9 @@ namespace Adamantium.UI.Platforms.Windows;
 internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
 {
     //private WindowBase window;
+
     private IWindow window;
+    private IntPtr monitor;
     private readonly Dictionary<uint, HandleMessage> messageTable;
     private readonly bool _application;
 
@@ -87,6 +89,8 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
         messageTable[(uint)WindowMessages.Moving] = HandleMoving;
         messageTable[(uint)WindowMessages.Exitsizemove] = HandleExitSizeMove;
         messageTable[(uint)WindowMessages.Dpichanged] = HandleDpiChanged;
+        messageTable[(uint)WindowMessages.Move] = HandleMonitorChange;
+        messageTable[(uint)WindowMessages.Displaychange] = HandleMonitorChange;
         messageTable[(uint)WindowMessages.Settingchange] = HandleSettingChange;
         messageTable[(uint)WindowMessages.Keydown] = HandleKeyDown;
         messageTable[(uint)WindowMessages.Syskeydown] = HandleKeyDown;
@@ -231,6 +235,8 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
         }
 
         this.window.DpiScale = ReadDpiScale(source.Handle);   // initial per-monitor DPI (PMv2)
+        monitor = Win32Interop.MonitorFromWindow(source.Handle, Win32Interop.MonitorDefaultToNearest);
+        this.window.DisplayRefreshRate = WindowsDisplays.RefreshRateOf(monitor);
 
         // Creation took the logical geometry as physical; re-apply it now that the monitor's scale is known - the client
         // size when one was asked for, the outer one otherwise.
@@ -1140,6 +1146,24 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
         if (chromeState != WindowState.Minimized)
         {
             ReportOsSize(null);
+        }
+
+        return IntPtr.Zero;
+    }
+
+    private IntPtr HandleMonitorChange(WindowMessages windowMessage, IntPtr wParam, IntPtr lParam, out bool handled)
+    {
+        handled = false;
+        if (window == null)
+        {
+            return IntPtr.Zero;
+        }
+
+        var now = Win32Interop.MonitorFromWindow(window.Handle, Win32Interop.MonitorDefaultToNearest);
+        if (now != monitor || windowMessage == WindowMessages.Displaychange)
+        {
+            monitor = now;
+            window.DisplayRefreshRate = WindowsDisplays.RefreshRateOf(now);
         }
 
         return IntPtr.Zero;

@@ -4,6 +4,12 @@
     <Phrase Key="AnalyticAa" Text="Analytic AA"/>
     <Phrase Key="VerifyFrames" Text="Verify frames"/>
     <Phrase Key="Presentation" Text="Presentation"/>
+    <Phrase Key="UpdateRate" Text="Update rate at most, Hz"/>
+    <Phrase Key="UnlimitedRefreshRate" Text="Unlimited frames (measure)"/>
+    <Phrase Key="RefreshRate" Text="Steady frame rate, Hz (0 - varying)"/>
+    <Phrase Key="MinimumRefreshRate" Text="Minimum frame rate, Hz (0 - none when still)"/>
+    <Phrase Key="MaximumRefreshRate" Text="Maximum frame rate, Hz (0 - unlimited)"/>
+    <Phrase Key="AsTheApplication" Text="as the application"/>
     <Phrase Key="Language" Text="Language"/>
     <Phrase Key="Theme" Text="Theme"/>
     <Phrase Key="SwitchTheme" Text="Switch"/>

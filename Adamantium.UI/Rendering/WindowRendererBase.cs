@@ -15,6 +15,9 @@ namespace Adamantium.UI.Rendering;
 public abstract class WindowRendererBase : IWindowRenderer
 {
     private long _presentedFrames;
+    private long _frameRequests;
+    private volatile bool _isRendererUpToDate;
+    private double _renderScale = 1.0;
 
     protected Viewport Viewport { get; set; }
     protected Rect2D Scissor { get; set; }
@@ -68,9 +71,6 @@ public abstract class WindowRendererBase : IWindowRenderer
 
     public IDrawingContext DrawingContext { get; }
 
-    private volatile bool _isRendererUpToDate;
-    // Cleared on the LOOP thread (a size/DPI/MSAA change) and set on the RENDER thread (after ResizePresenter);
-    // volatile so the render thread promptly observes a pending resize instead of a cached value.
     public bool IsRendererUpToDate
     {
         get => _isRendererUpToDate;
@@ -81,7 +81,17 @@ public abstract class WindowRendererBase : IWindowRenderer
 
     public long PresentedFrames => Interlocked.Read(ref _presentedFrames);
 
-    private double _renderScale = 1.0;
+    public virtual int RecordedFrames => 0;
+
+    public virtual int ChangedFrames => 0;
+
+    public long FrameRequests => Interlocked.Read(ref _frameRequests);
+
+    public void RequestFrame()
+    {
+        Interlocked.Increment(ref _frameRequests);
+        RenderSignal.Wake();
+    }
 
     // Render resolution multiplier (1 = on-screen 1:1). The presenter + viewport are sized ClientSize x RenderScale,
     // the projection stays ClientSize - so the designer renders crisply at design x scale (zoom) without changing layout.
@@ -170,6 +180,11 @@ public abstract class WindowRendererBase : IWindowRenderer
     /// builds the parameters, so Inherit never reaches a presenter and no other code has to know the rule.</summary>
     private PresentPolicy ResolvePresentPolicy()
     {
+        if (UIApplication.RunsUnlimited(Window))
+        {
+            return PresentPolicy.Immediate;
+        }
+
         if (Window.PresentPolicy != PresentPolicy.Inherit) return Window.PresentPolicy;
 
         var app = UIApplication.Current?.PresentPolicy ?? PresentPolicy.Adaptive;
@@ -240,7 +255,7 @@ public abstract class WindowRendererBase : IWindowRenderer
         // BeginDraw start and set true only after a successful Submit, so a frame skipped/aborted during resize churn
         // (no acquire/submit) does NOT re-present a stale, not-reacquired swapchain image with an unsignaled semaphore
         // - the pair of VUIDs that lost the device on drag-resize.
-        if (GraphicsDevice.CanPresent && Presenter != null)
+        if (GraphicsDevice.CanPresent && Presenter is { CanPresent: true })
         {
             Presenter.Present();
             Interlocked.Increment(ref _presentedFrames);
