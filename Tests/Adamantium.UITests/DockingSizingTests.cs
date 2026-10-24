@@ -51,6 +51,32 @@ public class DockingSizingTests
         }
     }
 
+    /// <summary>A rebuild of an unchanged split keeps its divider and makes none to throw away; a divider the layout no
+    /// longer has is let go of. A thrown-away divider stayed subscribed to the application's resources and held the area
+    /// - and the window round it - for good.</summary>
+    [Test]
+    public void ADividerIsMadeOnlyWhenWanted_AndLetGoOfWhenNot()
+    {
+        var area = Area(Group("scene", DockZone.Center));
+        area.AddPane(new Pane { Header = "tool", Id = "tool", Kind = PaneKind.Tool }, DockZone.Left);
+        Lay(area, 700, 600);
+        var divider = Descendants(area).OfType<PaneSplitter>().Single();
+        var made = new System.Collections.Generic.List<PaneSplitter>();
+
+        area.Rebuild();
+        Lay(area, 700, 600);
+        made.AddRange(Descendants(area).OfType<PaneSplitter>());
+        area.RemovePane("tool");
+        Lay(area, 700, 600);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(made, Is.EqualTo(new[] { divider }), "the same divider, and no other");
+            Assert.That(Descendants(area).OfType<PaneSplitter>(), Is.Empty);
+            Assert.That(divider.IsDiscarded, Is.True, "the divider the layout lost is let go of");
+        });
+    }
+
     /// <summary>
     /// Every tool docked against the center is paid for by the center, so without a floor enough of them
     /// squeeze it out of existence - measured before the fix at 60px against a stated minimum of 200.

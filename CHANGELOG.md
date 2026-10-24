@@ -2186,6 +2186,11 @@ All packages share one version.
 
 ### Fixed
 
+- `DockingArea` made a new divider for every split on every rebuild and threw it away when the split had not changed,
+  and kept the dividers a changed split no longer had: each stayed subscribed to the application's resources and held
+  the area - and its window - for good. An editor window closed and reopened in one process stayed in memory every
+  time. A divider is made only when a split's children change, a live one is reused, and one no longer wanted is let
+  go of.
 - A fade that started in the same frame as a text block re-issued its run (a button disabled while its label changed)
   left the other text under it at full alpha: the splice now hands such a frame to the walk, as the plain patch did.
 - The backdrop's blur pyramid read each level through a view of every level, the one being drawn into among them, as
