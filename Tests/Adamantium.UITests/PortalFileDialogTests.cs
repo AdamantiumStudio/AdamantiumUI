@@ -15,6 +15,12 @@ public class PortalFileDialogTests
     }
 
     [Test]
+    public void AnAnswerThatIsNotALocalFile_GivesNothing()
+    {
+        Assert.That(PortalFileDialog.Chosen(Response(0, "sftp://host/home/me/dir")), Is.Null);
+    }
+
+    [Test]
     public void ACanceledDialog_GivesNothing()
     {
         Assert.That(PortalFileDialog.Chosen(Response(1, null)), Is.Null);
