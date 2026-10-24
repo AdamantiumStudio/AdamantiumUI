@@ -646,7 +646,10 @@ public class Popup : MeasurableUIComponent, IContainer
 
     private void OnContentKey(object sender, KeyEventArgs e)
     {
-        if (e.Key != Key.Enter || e.Handled || _contentRoot == null || DefaultButtonIn(_contentRoot) is not { } button)
+        const InputModifiers chords = InputModifiers.LeftControl | InputModifiers.RightControl | InputModifiers.LeftShift |
+                                      InputModifiers.RightShift | InputModifiers.LeftAlt | InputModifiers.RightAlt;
+        if (e.Key != Key.Enter || e.Handled || e.IsRepeated || (e.Modifiers & chords) != 0 || _contentRoot == null ||
+            DefaultButtonIn(_contentRoot) is not { } button)
         {
             return;
         }

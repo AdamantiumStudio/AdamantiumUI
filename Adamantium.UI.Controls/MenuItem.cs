@@ -384,7 +384,11 @@ public class MenuItem : ItemsControl, IHeaderedItemsControl
     protected override void OnKeyDown(KeyEventArgs e)
     {
         base.OnKeyDown(e);
-        if (e.Handled || e.IsRepeated || e.Key is not (Key.Enter or Key.Space)) return;
+        if (e.Handled || e.IsRepeated || e.Key is not (Key.Enter or Key.Space) ||
+            (e.Key == Key.Enter && !ReferenceEquals(e.OriginalSource, this)))
+        {
+            return;
+        }
 
         if (Invoke()) e.Handled = true;
     }

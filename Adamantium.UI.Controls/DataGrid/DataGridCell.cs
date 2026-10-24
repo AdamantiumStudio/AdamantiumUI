@@ -386,7 +386,8 @@ public class DataGridCell : ContentControl
     private void OnEditorEnter(object sender, KeyEventArgs e)
     {
         var back = (e.Modifiers & (InputModifiers.LeftShift | InputModifiers.RightShift)) != 0;
-        if (OwningGrid()?.FinishEditAndStep(back) == true) e.Handled = true;
+        OwningGrid()?.FinishEditAndStep(back);
+        e.Handled = true;
     }
 
     protected override void OnPreviewKeyDown(KeyEventArgs e)

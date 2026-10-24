@@ -429,9 +429,11 @@ public class DropDown : Selector
             _edited = false;
             Commit();
             ShowText();
+            e.Handled = true;
             return;
         }
 
+        e.Handled = IsDropDownOpen;
         IsDropDownOpen = false;
         CommitText();
     }

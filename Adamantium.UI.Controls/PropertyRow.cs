@@ -780,10 +780,7 @@ public class PropertyRow : Control
         return null;
     }
 
-    private void OnEditorEntered(object sender, KeyEventArgs e)
-    {
-        if (Commit()) e.Handled = true;
-    }
+    private void OnEditorEntered(object sender, KeyEventArgs e) => e.Handled = !Commit();
 
     private void OnEditorLostFocus(object sender, RoutedEventArgs e) => Commit();
 
