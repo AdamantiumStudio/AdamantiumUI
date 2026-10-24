@@ -22,6 +22,26 @@ public static class WindowPlacer
             Math.Clamp(area.Y + placement.Top, area.Y, Math.Max(area.Y, area.Bottom - size.Height)));
     }
 
+    /// <summary>Where a window put back at <paramref name="placement"/> lies - the whole work area when it was maximized;
+    /// null when its screen is no longer connected. The frame is left out: the client size is all a placement keeps.</summary>
+    public static Rect? Bounds(WindowPlacement placement, IReadOnlyList<ScreenInfo> screens)
+    {
+        var screen = screens.FirstOrDefault(s => s.Id == placement.ScreenId);
+        if (screen == null)
+        {
+            return null;
+        }
+
+        if (placement.IsMaximized)
+        {
+            return screen.WorkArea;
+        }
+
+        var size = new Size(placement.ClientWidth * screen.Scale, placement.ClientHeight * screen.Scale);
+        var corner = Restore(placement, screens, size).Value;
+        return new Rect(corner.X, corner.Y, size.Width, size.Height);
+    }
+
     /// <summary>The top-left that puts a window of <paramref name="size"/> in the middle of <paramref name="area"/>, its
     /// caption never above the area's top.</summary>
     public static PixelPoint Center(Rect area, Size size) =>

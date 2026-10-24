@@ -23,6 +23,7 @@ public class DiagnosticsOverlayBehavior : Behavior<TextBlock>
 
     private const double RefreshSeconds = 0.25;   // rewrite the text ~4x/sec - readable, and cheap (no per-frame raster)
 
+    private IDisposable _fenceWait;
     private long _lastMeasure, _lastArrange, _lastBindings, _lastPresented;
     private double _windowElapsed, _windowMaxLayoutMs;
     private double _sumLayout, _sumBuild, _sumProc, _sumDraw, _sumProcs;   // per-frame sums -> averages over the window
@@ -164,6 +165,7 @@ public class DiagnosticsOverlayBehavior : Behavior<TextBlock>
         }
 
         _ticking = true;
+        _fenceWait ??= Adamantium.Graphics.GraphicsDevice.MeasureFenceWait();
         _lastSample = System.Diagnostics.Stopwatch.GetTimestamp();
         _idleShown = false;
         _quietRefreshes = 0;
@@ -183,6 +185,8 @@ public class DiagnosticsOverlayBehavior : Behavior<TextBlock>
         }
 
         _ticking = false;
+        _fenceWait?.Dispose();
+        _fenceWait = null;
         _application.CycleFinished -= OnCycleFinished;
         _refresh.Tick -= OnRefresh;
         _refresh.Stop();

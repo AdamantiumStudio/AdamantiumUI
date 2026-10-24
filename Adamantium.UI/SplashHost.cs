@@ -15,20 +15,24 @@ internal sealed class SplashHost
 {
     private readonly UIApplication _application;
     private readonly Type _windowType;
+    private readonly WindowPlacement _startupPlacement;
     private readonly CancellationTokenSource _stop = new();
     private Threading.Dispatcher _dispatcher;
     private IApplicationPlatform _platform;
     private SplashWindow _window;
+    private IWindow _below;
     private int _handedOver;
     private int _closing;
     private int _closed;
     private int _closable;
     private volatile bool _running;
 
-    public SplashHost(UIApplication application, Type windowType)
+    /// <param name="startupPlacement">Where the startup window was remembered: the splash window appears over it.</param>
+    public SplashHost(UIApplication application, Type windowType, WindowPlacement startupPlacement)
     {
         _application = application;
         _windowType = windowType;
+        _startupPlacement = startupPlacement;
     }
 
     /// <summary>Raised when the window is closed before the application handed over: the start is cancelled. A splash
@@ -64,6 +68,19 @@ internal sealed class SplashHost
         {
             CloseOnLoop();
         }
+    }
+
+    /// <summary>Keeps the window above <paramref name="below"/>, the application's main window, while both are up: from
+    /// now, or from when the window is shown.</summary>
+    public void KeepAbove(IWindow below)
+    {
+        Volatile.Write(ref _below, below);
+        if (!_running || Window is not { } window)
+        {
+            return;
+        }
+
+        _dispatcher.InvokeAsync(() => StayAbove(window));
     }
 
     /// <summary>Ends the splash window's loop and its connection because the application is ending - after its windows'
@@ -123,14 +140,24 @@ internal sealed class SplashHost
             ThemeContext.SetTheme(window, new Themes.SplashTheme.Splash());
         }
 
+        window.StartupPlacement = _startupPlacement;
         Volatile.Write(ref _window, window);
         window.AttachContextAndInitialize(new SplashUIContext(_application.UIContext, _platform, _dispatcher));
         window.Closed += OnClosed;
         Interlocked.Exchange(ref _closable, 1);
         window.Show();
+        StayAbove(window);
         if (IsHandedOver)
         {
             CloseOnLoop();
+        }
+    }
+
+    private void StayAbove(SplashWindow window)
+    {
+        if (!window.IsClosed && Volatile.Read(ref _below) is { IsClosed: false } below)
+        {
+            window.StayAbove(below);
         }
     }
 

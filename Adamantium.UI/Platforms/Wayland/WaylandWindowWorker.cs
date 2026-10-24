@@ -629,7 +629,7 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
 
     private void RequestActivation()
     {
-        if (closed || platform.Activation == null)
+        if (closed || platform.Activation == null || !platform.IsApplication)
         {
             return;
         }

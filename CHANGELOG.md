@@ -23,6 +23,11 @@ All packages share one version.
   `RenderSignal`, `IWindowRenderer.RecordedFrames` / `ChangedFrames` / `FrameRequests`, `IRenderUnit.AwaitsFrame`,
   `IVisualRenderer.HasPendingDraws`, `Compositor.NeedsRecord` and `LoopSignal.FrameRequests` (frames asked for, not
   work posted) for it.
+- `Hyperlink.Open(Uri)`: what a link no `RequestNavigate` handler took does - a web or mail address opens in the
+  system's own handler, any other goes nowhere - for other controls with links to do the same.
+- `Popup.ClosesOnClick`, attached to a button in a popup: a click on it closes the popup once its command has run - a
+  card's "Go" or "Apply" closes the card without the view model having to. An Enter nothing in a popup took presses
+  its visible, enabled default button (`IsDefault`), as in a window, whose keys never reach a popup's content.
 - A Large ribbon command's label takes up to two lines, as Office's: a label of two or more words is broken where the
   wider line is narrowest, so the command takes less of the band's width. `Ribbon.LabelLines` (also `LabelLines` on
   the ribbon's commands), inherited, sets how many - 2 by default, 1 for one line; a Medium label stays one line
@@ -59,12 +64,21 @@ All packages share one version.
   and the startup window are made on the application's thread; what of that changes the live UI - the blueprint's
   resources and style sets, the first theme, the language - is applied on the loop. It closes once a window of the
   application's own has drawn, or once the start is over without showing one (a minimized or hidden window, none). It
-  takes no focus. It wears a theme of its own (`Adamantium.UI.Themes.SplashTheme.Splash`, or one its markup names
-  through `ThemeContext.Theme`), never the application's, and carries a close button (`ShowCloseButton`): closing it
-  before the hand-over cancels the start - `UIApplication.StartupCancellation` is cancelled (an
-  `OperationCanceledException` for it ends the start quietly), the startup window is not shown and the application
-  ends - and `Elapsed`, how long it has been up, for a ticking timer. It never becomes the application's active
-  window, so no dialog takes it for its owner. `UIApplication.HoldSplash` keeps it up until what it returns is
+  appears where the startup window will: in the middle of the place that window was remembered at, on its screen (the
+  blueprint generator puts the startup window into `ApplicationBlueprintAttribute.StartupWindow` so it is known that
+  early), or in the middle of the screen under the pointer when it has no remembered place; `WindowPlacer.Bounds`
+  tells where a remembered place lies. At the start that place is read from the file store, as the application's own
+  `IWindowPlacementStore` is not registered yet, under the startup window's type, as its `PlacementKey` is not known
+  yet; shown again while the application runs, it appears over the main window where that is now. On Wayland the
+  compositor places it, and the launch's activation token is left to the startup window. It is a window of the task
+  bar, brought back from there when another application covers it. On Windows the main window becomes its owner once
+  it is made, so the splash window stays above it, and is hidden while it is minimized. It wears a theme of its own
+  (`Adamantium.UI.Themes.SplashTheme.Splash`, or one its markup names through `ThemeContext.Theme`), never the
+  application's - its border does not take the application's accent either - and carries a close button
+  (`ShowCloseButton`): closing it before the hand-over cancels the start - `UIApplication.StartupCancellation` is
+  cancelled (an `OperationCanceledException` for it ends the start quietly), the startup window is not shown and the
+  application ends - and `Elapsed`, how long it has been up, for a ticking timer. It takes the keyboard while it is
+  active, but it is never the application's `ActiveWindow`, so no dialog takes it for its owner. `UIApplication.HoldSplash` keeps it up until what it returns is
   disposed - for a start that opens its first window later, from work of its own - and `UIApplication.IsStarting`
   tells whether the start is still under it. `IUIApplication.ShowSplash` shows it again while the application runs,
   where closing it cancels nothing. Not on macOS yet. The sandbox starts with one (`SandboxSplashWindow`) and shows it

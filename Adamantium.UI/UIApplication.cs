@@ -723,6 +723,11 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         {
             firstWindowAdded = true;
         }
+
+        if (window == MainWindow)
+        {
+            _splash?.KeepAbove(window);
+        }
     }
 
     private void OnWindowRemoved(IWindow window)
@@ -1127,7 +1132,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
             return false;
         }
 
-        _splash = new SplashHost(this, type);
+        _splash = CreateSplash(type);
         _splash.Canceled += CancelStartup;
         _splash.Start();
         return true;
@@ -1137,8 +1142,36 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
     {
         if (SplashWindowType() is { } type)
         {
-            new SplashHost(this, type).Start();
+            var splash = CreateSplash(type);
+            if (MainWindow != null)
+            {
+                splash.KeepAbove(MainWindow);
+            }
+
+            splash.Start();
         }
+    }
+
+    private SplashHost CreateSplash(Type type) => new(this, type, StartupPlacement());
+
+    private WindowPlacement StartupPlacement()
+    {
+        if (MainWindow is WindowBase { IsDisplayed: true } shown)
+        {
+            return shown.LivePlacement();
+        }
+
+        var startup = StartupType ?? GetType().Assembly.GetCustomAttribute<ApplicationBlueprintAttribute>()?.StartupWindow;
+        var placementName = MainWindow is WindowBase main ? main.PlacementName() : startup?.FullName;
+        if (placementName == null)
+        {
+            return null;
+        }
+
+        var placements = Container.IsRegistered<IWindowPlacementStore>()
+            ? Container.Resolve<IWindowPlacementStore>()
+            : new FileWindowPlacementStore();
+        return placements.Load(placementName);
     }
 
     private Type SplashWindowType()

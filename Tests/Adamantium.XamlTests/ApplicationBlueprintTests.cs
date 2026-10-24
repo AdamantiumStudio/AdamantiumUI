@@ -77,6 +77,8 @@ public class ApplicationBlueprintTests
                 Is.EqualTo(assembly.GetType("Test.App.Splash")));
             Assert.That(((ApplicationBlueprint)blueprint).SplashWindow, Is.EqualTo(assembly.GetType("Test.App.Splash")),
                 "and the blueprint holds it too");
+            Assert.That(assembly.GetCustomAttribute<ApplicationBlueprintAttribute>()?.StartupWindow,
+                Is.EqualTo(assembly.GetType("Test.App.MainWindow")), "with the startup window, which it appears over");
         });
     }
 

@@ -451,7 +451,7 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
 
     private void WatchAccent()
     {
-        var manager = UIAppContext.Current?.ThemeManager;
+        var manager = _application ? UIAppContext.Current?.ThemeManager : null;
         if (manager == null) return;
 
         manager.ThemeChanged -= OnThemeChangedForBorder;
