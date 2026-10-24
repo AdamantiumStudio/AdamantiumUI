@@ -476,24 +476,36 @@ public class NumericUpDown : RangeLimitsBase
 
     /// <summary>Take what is typed as the value. An empty box is EMPTY, not zero - that is the whole reason the value is
     /// nullable - and anything that is not a number at all is simply not taken.</summary>
-    private void ReadEntry()
+    private bool ReadEntry()
     {
-        if (string.IsNullOrWhiteSpace(_text.Text)) SetCurrentValue(ValueProperty, null);
-        else if (TryParse(_text.Text, out var parsed)) SetValueFromInput(parsed);
+        if (string.IsNullOrWhiteSpace(_text.Text))
+        {
+            SetCurrentValue(ValueProperty, null);
+            return true;
+        }
+
+        if (!TryParse(_text.Text, out var parsed))
+        {
+            return false;
+        }
+
+        SetValueFromInput(parsed);
+        return true;
     }
 
-    private void OnTextEnterPressed(object sender, KeyEventArgs e) => CommitText();
+    private void OnTextEnterPressed(object sender, KeyEventArgs e) => e.Handled = !CommitText();
 
     private void OnTextLostFocus(object sender, RoutedEventArgs e) => CommitText();
 
     /// <summary>Read the entry back, then write the value out again - which both re-formats what parsed and restores
     /// what did not, so the box can never be left showing something the value is not.</summary>
-    private void CommitText()
+    private bool CommitText()
     {
-        if (_text == null) return;
+        if (_text == null) return true;
 
-        if (IsManualEntryEnabled && !IsReadOnly) ReadEntry();
+        var read = !IsManualEntryEnabled || IsReadOnly || ReadEntry();
         UpdateText();
+        return read;
     }
 
     // --- Stepping ---------------------------------------------------------------------------------------------------

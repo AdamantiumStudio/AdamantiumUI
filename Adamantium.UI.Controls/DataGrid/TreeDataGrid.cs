@@ -2683,6 +2683,24 @@ public partial class TreeDataGrid : Selector
     /// <summary>The whole of what Enter means in a table: finish what is open, then step the frame down - back up with
     /// Shift. Stated ONCE because two things ask for it: the grid's own key handling, and a text editor, which raises
     /// its Enter as an event of its own and consumes the key before the grid ever sees it.</summary>
+    private bool OwnsEnter(object source)
+    {
+        for (var node = source as IUIComponent; node != null; node = node.VisualParent)
+        {
+            if (node is DataGridCell cell)
+            {
+                return ReferenceEquals(cell, source) || cell.IsEditing;
+            }
+
+            if (ReferenceEquals(node, this))
+            {
+                return ReferenceEquals(node, source);
+            }
+        }
+
+        return false;
+    }
+
     internal bool FinishEditAndStep(bool back)
     {
         // The strip MAKES THE RECORD and goes no further: there is no cell below a record that does not exist yet, and
@@ -3034,7 +3052,8 @@ public partial class TreeDataGrid : Selector
 
     /// <summary>The grid owns the keys that drive walking and editing: the arrows move the active cell (Shift extends
     /// from the anchor), F2 opens it, Escape leaves an edit without writing - and, with nothing open, takes the search
-    /// strip away. Enter never reaches here - the editor claims it and asks for the commit itself.</summary>
+    /// strip away. Enter from the grid, a cell or an open cell's editor finishes the edit and steps a row; one from a field
+    /// of a cell's template or of a row's details is left to that field.</summary>
     protected override void OnKeyDown(KeyEventArgs e)
     {
         base.OnKeyDown(e);
@@ -3068,7 +3087,7 @@ public partial class TreeDataGrid : Selector
 
             // The grid answers for Enter, not only the text editor: a single-line field raises EnterPressed of its own
             // and a list does not, so an edit made ENTIRELY of a choice had no explicit way to be finished at all.
-            case Key.Enter:
+            case Key.Enter when OwnsEnter(e.OriginalSource):
                 e.Handled = FinishEditAndStep(shift);
                 break;
 

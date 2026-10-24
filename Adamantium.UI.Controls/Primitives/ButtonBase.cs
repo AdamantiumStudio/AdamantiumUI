@@ -302,7 +302,7 @@ public abstract class ButtonBase : ContentControl
                 if (ClickMode == ClickMode.Press) OnClick();
                 e.Handled = true;
                 break;
-            case Key.Enter:
+            case Key.Enter when !e.Handled && ReferenceEquals(e.OriginalSource, this):
                 OnClick();
                 e.Handled = true;
                 break;

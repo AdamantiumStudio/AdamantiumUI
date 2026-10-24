@@ -1683,6 +1683,14 @@ All packages share one version.
 
 ### Changed
 
+- Enter in a single-line `TextBox` is no longer kept by the box: what is subscribed to `EnterPressed` keeps it by
+  setting `Handled`, and an Enter nothing kept goes on up to the default button (`IsDefault`) of the `Window` or
+  `Popup` the box is in, as in WPF - a card's address field submits the card. `NumericUpDown` and `PropertyRow` keep
+  an Enter whose value they refuse and pass on one they took in, an editable `DropDown` keeps the Enter that picks
+  from its open list, a grid cell's editor every Enter, and a `TreeDataGrid` acts only on an Enter from itself, a cell
+  or an open cell's editor. A button or a menu row acts only on an Enter of its own, not one from a field inside it.
+  A window's default button is pressed only by a plain, unrepeated Enter, and only one that is shown and enabled with
+  all its ancestors.
 - `UIApplication.UpdateRate` (also `IUIApplication.UpdateRate`; 120 by default, settable from markup too) replaces the
   static `UpdateRateHz`: the most the loop updates at. Below it the loop keeps the pace of the fastest shown window, and
   no slower than 60 so input is not held up; `UIApplication.LoopRate` tells the pace it keeps. A loop frame that changed nothing - a timer that touched nothing, an

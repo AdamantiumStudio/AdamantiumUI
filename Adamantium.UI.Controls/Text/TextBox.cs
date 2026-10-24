@@ -136,7 +136,9 @@ public class TextBox : TextBoxBase
 
     protected override string DisplayedText(string text) => _shown.Of(text, TextTransform, Language);
 
-    /// <summary>Raised when Enter is pressed while <see cref="AcceptsReturn"/> is off; a host can commit/submit here.</summary>
+    /// <summary>Raised when Enter is pressed while <see cref="AcceptsReturn"/> is off; a host can commit/submit here, and
+    /// sets <see cref="RoutedEventArgs.Handled"/> to keep the key. Left unhandled, Enter goes on up - to the default
+    /// button of the window or popup the box is in.</summary>
     public event KeyEventHandler EnterPressed;
 
     /// <summary>Empties the box as one edit, which undo brings back. A read-only box is left alone.</summary>
@@ -186,11 +188,14 @@ public class TextBox : TextBoxBase
             return;
         }
 
-        if (e.Key == Key.Enter)
+        if (e.Key == Key.Enter && AcceptsReturn)
         {
-            if (AcceptsReturn) ReplaceSelection("\n");
-            else EnterPressed?.Invoke(this, e);
+            ReplaceSelection("\n");
             e.Handled = true;
+        }
+        else if (e.Key == Key.Enter)
+        {
+            EnterPressed?.Invoke(this, e);
         }
     }
 

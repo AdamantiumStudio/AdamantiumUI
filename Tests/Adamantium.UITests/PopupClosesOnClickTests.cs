@@ -128,21 +128,49 @@ public class PopupClosesOnClickTests
     }
 
     [Test]
-    public void EnterInAField_IsTheFields_AsInAWindow()
+    public void EnterInANumberField_TakesItsNumberIn_ThenPressesTheDefaultButton_ButKeepsANumberItRefuses()
     {
         var go = new Counted();
         var (popup, _, _, field, window) = Card(go);
+        go.Read = () => field.Value;
         var box = TextBoxIn(field);
+        box.Text = "abc";
+
+        box.RaiseEvent(Press(Key.Enter, box));
+        Settle(window);
+        var refused = (go.Runs, popup.IsOpen);
         box.Text = "7";
+        box.RaiseEvent(Press(Key.Enter, box));
+        Settle(window);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(refused, Is.EqualTo((0, true)), "what is not a number keeps the card");
+            Assert.That(go.Runs, Is.EqualTo(1));
+            Assert.That(go.Seen, Is.EqualTo(7.0), "the number is in before the button runs");
+            Assert.That(popup.IsOpen, Is.False);
+        });
+    }
+
+    [Test]
+    public void EnterInASingleLineBox_PressesTheDefaultButton_AsInAWindow()
+    {
+        var go = new Counted();
+        var (popup, _, _, field, window) = Card(go);
+        var box = new TextBox();
+        go.Read = () => box.Text;
+        ((StackPanel)field.VisualParent).Children.Add(box);
+        Settle(window);
+        box.Text = "https://example.com";
 
         box.RaiseEvent(Press(Key.Enter, box));
         Settle(window);
 
         Assert.Multiple(() =>
         {
-            Assert.That(field.Value, Is.EqualTo(7.0), "the field took its number in");
-            Assert.That(go.Runs, Is.Zero);
-            Assert.That(popup.IsOpen, Is.True);
+            Assert.That(go.Runs, Is.EqualTo(1));
+            Assert.That(go.Seen, Is.EqualTo("https://example.com"));
+            Assert.That(popup.IsOpen, Is.False);
         });
     }
 
