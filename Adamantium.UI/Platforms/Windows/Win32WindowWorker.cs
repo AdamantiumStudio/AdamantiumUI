@@ -1598,13 +1598,7 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
     {
         window.SetIsActive(true);
         UIContext.UIApplication.SetActiveWindow(window);
-        // Back to where the keyboard was in THIS window; a window being seen for the first time has nowhere to go back
-        // to, so it starts at its first stop - otherwise it would come up with no focus at all and stay dead until
-        // something in it was clicked. Unspecified, not Tab: activation is not a keyboard move, so no ring lights up.
-        if (!FocusManager.TryRestoreFocus(window))
-        {
-            KeyboardNavigation.MoveInto(window, NavigationMethod.Unspecified);
-        }
+        FocusManager.EnterWindow(window);
     }
 
     private void HandleDeactivation()

@@ -413,9 +413,11 @@ public static class FocusManager
    // The last focused element per window, restored when that window is activated; weak so closed windows can go.
    private static readonly ConditionalWeakTable<IUIComponent, IInputComponent> FocusByRoot = new();
 
+   // The window an element is in - through the popup that shows it, for a popup's content, whose visual tree ends at
+   // its overlay root: focus in a window's popup is that window's to remember, release and restore.
    private static IUIComponent RootOf(IUIComponent node)
    {
-      while (node?.VisualParent is { } parent) node = parent;
+      while (node != null && ParentOf(node) is { } parent) node = parent;
       return node;
    }
 
@@ -443,6 +445,18 @@ public static class FocusManager
          return false;
 
       return Focus(remembered);
+   }
+
+   /// <summary>The window is active: the focus goes back where it was in it - in one of its popups too - and a window
+   /// seen for the first time, with nowhere to go back to, starts at its first stop; otherwise it would come up with no
+   /// focus at all and stay dead until something in it was clicked. Unspecified, not Tab: activation is not a keyboard
+   /// move, so no ring lights up.</summary>
+   public static void EnterWindow(IInputComponent root)
+   {
+      if (!TryRestoreFocus(root))
+      {
+         KeyboardNavigation.MoveInto(root, NavigationMethod.Unspecified);
+      }
    }
 
    /// <summary>The window is no longer active: remember where the focus was in it and let it go. Keeping it would leave
