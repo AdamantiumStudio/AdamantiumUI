@@ -177,6 +177,11 @@
             <Setter TargetName="Rule" Property="Height" Value="{ResourceReference StrokeAccentValue}"/>
             <Setter TargetName="PART_Border" Property="Background" Value="{ResourceReference ControlFillColorDefault}"/>
         </PropertyTrigger>
+        <!-- What is in it is wrong, as its source says: said over hover and focus alike. -->
+        <PropertyTrigger Property="Validation.HasError" Value="true">
+            <Setter TargetName="Rule" Property="Background" Value="{ObservableResource SystemFillColorCritical}"/>
+            <Setter TargetName="Rule" Property="Height" Value="{ResourceReference StrokeAccentValue}"/>
+        </PropertyTrigger>
         <PropertyTrigger Property="IsEnabled" Value="false">
             <Setter TargetName="PART_TextPresenter" Property="Foreground"
                     Value="{ObservableResource TextFillColorDisabled}"/>

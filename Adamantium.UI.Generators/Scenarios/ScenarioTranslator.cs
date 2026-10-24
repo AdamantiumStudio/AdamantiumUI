@@ -90,7 +90,7 @@ public static class ScenarioTranslator
 
         var platforms = root.Attribute("Platforms")?.Value.Split((char[])[' ', '\t', '\r', '\n'], StringSplitOptions.RemoveEmptyEntries);
         return new ScenarioFile(path, name, nameLine, root.Attribute("Description")?.Value, root.Attribute("Explicit")?.Value, steps,
-            problems, platforms);
+            problems, platforms, root.Attribute("Arguments")?.Value);
     }
 
     private static string Step(XElement step, string path)

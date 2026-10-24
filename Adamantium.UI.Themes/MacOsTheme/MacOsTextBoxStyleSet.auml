@@ -166,6 +166,10 @@
         <PropertyTrigger Property="IsFocused" Value="true">
             <Setter TargetName="PART_Border" Property="BorderBrush" Value="{ThemeResource AccentFillColorDefault}"/>
         </PropertyTrigger>
+        <!-- What is in it is wrong, as its source says: said over focus too. -->
+        <PropertyTrigger Property="Validation.HasError" Value="true">
+            <Setter TargetName="PART_Border" Property="BorderBrush" Value="{ObservableResource SystemFillColorCritical}"/>
+        </PropertyTrigger>
         <PropertyTrigger Property="IsEnabled" Value="false">
             <Setter TargetName="PART_Border" Property="Background" Value="{ResourceReference ControlFillColorDisabled}"/>
             <Setter TargetName="PART_TextPresenter" Property="Foreground" Value="{ObservableResource TextFillColorDisabled}"/>

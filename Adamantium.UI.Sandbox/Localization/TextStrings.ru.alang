@@ -30,6 +30,9 @@
     <Phrase Key="PasswordToggleTitle" Text="Тот же пароль, привязанный к тому же свойству; здесь глаз — переключатель:"/>
     <Phrase Key="PasswordBound" Count="count" One="Во вью-модели: {count} символ" Few="Во вью-модели: {count} символа" Many="Во вью-модели: {count} символов" Other="Во вью-модели: {count} символа"/>
     <Phrase Key="ReadOnly" Text="Только чтение:"/>
+    <Phrase Key="CheckedTitle" Text="Проверяется вью-моделью (пустое или с цифры в начале — ошибка):"/>
+    <Phrase Key="NameEmpty" Text="Введите имя."/>
+    <Phrase Key="NameStartsWithDigit" Text="Имя не может начинаться с цифры."/>
     <Phrase Key="MultiLine" Text="Многострочное (AcceptsReturn, без переноса → прокрутка по H и V):"/>
     <Phrase Key="BindableRuns" Text="Привязываемые Run:"/>
     <Phrase Key="YouTyped" Text="Вы набрали:"/>

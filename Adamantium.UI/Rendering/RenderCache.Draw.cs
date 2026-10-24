@@ -2918,6 +2918,7 @@ public partial class RenderCache
         foreach (var comp in _partialDirty)
         {
             OpacitySlotOf(device, comp);   // the fade itself, on the component - see TryPartialReplay
+            if (_fadeSlotJustCreated) return SpliceRefused("fadeSlotCreated");
 
             if (!_groupById.TryGetValue(comp.RenderId, out var group)) continue;   // no drawn units - contributes nothing
 

@@ -30,6 +30,9 @@
     <Phrase Key="PasswordToggleTitle" Text="The same password, bound to the same property; here the eye is a switch:"/>
     <Phrase Key="PasswordBound" Count="count" One="In the view model: {count} character" Other="In the view model: {count} characters"/>
     <Phrase Key="ReadOnly" Text="Read-only:"/>
+    <Phrase Key="CheckedTitle" Text="Checked by the view-model (empty, or starting with a digit, is wrong):"/>
+    <Phrase Key="NameEmpty" Text="Enter a name."/>
+    <Phrase Key="NameStartsWithDigit" Text="A name cannot start with a digit."/>
     <Phrase Key="MultiLine" Text="Multi-line (AcceptsReturn, no wrap → H + V scroll):"/>
     <Phrase Key="BindableRuns" Text="Bindable runs:"/>
     <Phrase Key="YouTyped" Text="You typed:"/>

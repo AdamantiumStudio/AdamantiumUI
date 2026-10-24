@@ -159,6 +159,21 @@ public class ScenarioGeneratorTests
         Assert.That(project.Source, Does.Contain("Environment = { [\"ADAM_UI_FONT\"] = \"Fonts/Ui.ttf\" }"));
     }
 
+    [Test]
+    public void TheScenariosArguments_AreTheCommandLineOfTheApplicationItLaunches()
+    {
+        var project = Generate(new Dictionary<string, string>
+        {
+            ["Scenarios/Opened.ascenario"] = $"{Header} Arguments=\"Solutions/Game/Game.adamantium\">\n  <Invoke Target=\"id=Save\" />\n</Scenario>"
+        });
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(project.Errors, Is.Empty);
+            Assert.That(project.Source, Does.Contain("Arguments = \"Solutions/Game/Game.adamantium\""));
+        });
+    }
+
     [TestCase("--page  \"Two words\" a\\\"b c:\\dir\\ \"\" $HOME *")]
     [TestCase("\"a\"\"b\" \"say \"\"hi\"\" now\" \"x\\\\\"\"")]
     [TestCase("a\nb\r\vc \t d")]

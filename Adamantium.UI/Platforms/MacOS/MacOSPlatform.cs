@@ -49,5 +49,6 @@ public class MacOSPlatform : IApplicationPlatform
     public static void Initialize(IContainerRegistry resolver)
     {
         resolver.RegisterSingleton<IApplicationPlatform, MacOSPlatform>();
+        FileManager.Platform = new FinderFileManager();
     }
 }

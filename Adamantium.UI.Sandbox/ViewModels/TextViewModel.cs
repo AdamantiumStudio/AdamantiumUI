@@ -44,6 +44,9 @@ public partial class TextViewModel : TabPageViewModel
     // Emoji from the fallback font among the letters, so selecting across them can be checked from the start.
     [Bindable, Affects(nameof(MessageLength))] private string _message = "The quick brown fox \U0001F98A jumps over the lazy dog \U0001F436 \U0001F600\U0001F389\U0001F44D";
 
+    /// <summary>A name the view-model checks, for the field that marks itself while it is wrong.</summary>
+    public ProjectNameCheck NameCheck { get; } = new();
+
     // Multi-line editor content: hard newlines, a line of nothing but emoji (taller than the others), and a long line to
     // show soft wrapping.
     [Bindable] private string _notes = "Multi-line editor \U0001F4DD\n\U0001F600\U0001F389\U0001F44D\U0001F30D\U0001F680\nEnter inserts a newline; Up/Down move between lines.\nThis long line has no explicit breaks so it soft-wraps at the box width when TextWrapping is on, and you can select across several lines at once \U0001F3AF.";

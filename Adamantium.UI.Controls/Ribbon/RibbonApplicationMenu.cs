@@ -431,7 +431,9 @@ public class RibbonApplicationMenu : Selector
     /// panel lights only the row under the pointer, so it shows no choice at all.</summary>
     protected override bool IsItemSelected(object item) => IsBackstage && base.IsItemSelected(item);
 
-    protected internal override bool IsItemItsOwnContainer(object item) => item is RibbonApplicationMenuItem;
+    /// <summary>A row written in the menu stands as itself, and so does a <see cref="Separator"/> between groups of rows.
+    /// </summary>
+    protected internal override bool IsItemItsOwnContainer(object item) => item is RibbonApplicationMenuItem or Separator;
 
     protected internal override IUIComponent GetContainerForItem(object item)
     {

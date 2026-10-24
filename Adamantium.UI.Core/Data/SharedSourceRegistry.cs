@@ -5,12 +5,15 @@ using System.Runtime.CompilerServices;
 
 namespace Adamantium.UI.Core.Data;
 
-// Fans a shared source out to its bindings through one PropertyChanged subscription; subscribers sit in a weak set, so
-// add/remove is O(1) instead of rebuilding a multicast list. The subscription goes with the last binding that leaves.
+// Fans a shared source out to its bindings through one subscription per event - PropertyChanged, and ErrorsChanged for a
+// source that says what is wrong with its values; subscribers sit in a weak set, so add/remove is O(1) instead of
+// rebuilding a multicast list, and a source never pins the elements bound to it. The subscription goes with the last
+// binding that leaves.
 internal static class SharedSourceRegistry
 {
     // source (WEAK key -> the registry never pins a source) -> its single fan-out entry.
     private static readonly ConditionalWeakTable<INotifyPropertyChanged, SourceEntry> _bySource = new();
+    private static readonly ConditionalWeakTable<INotifyDataErrorInfo, ErrorEntry> _byErrorSource = new();
 
     private static readonly object _tableGate = new();
 
@@ -36,20 +39,35 @@ internal static class SharedSourceRegistry
         }
     }
 
-    private sealed class SourceEntry
+    public static void SubscribeErrors(INotifyDataErrorInfo source, BindingExpression binding)
+    {
+        lock (_tableGate)
+        {
+            _byErrorSource.GetValue(source, static s => new ErrorEntry(s)).Add(binding);
+        }
+    }
+
+    public static void UnsubscribeErrors(INotifyDataErrorInfo source, BindingExpression binding)
+    {
+        lock (_tableGate)
+        {
+            if (!_byErrorSource.TryGetValue(source, out var entry) || !entry.Remove(binding))
+            {
+                return;
+            }
+
+            entry.Detach();
+            _byErrorSource.Remove(source);
+        }
+    }
+
+    private abstract class Entry
     {
         private static readonly object Present = new();
         // Weak SET of subscribers: O(1) add/remove, and a subscriber whose target was GC'd is dropped automatically.
         private readonly ConditionalWeakTable<BindingExpression, object> _subscribers = new();
         private readonly object _gate = new();
-        private readonly INotifyPropertyChanged _source;
         private int _count;
-
-        public SourceEntry(INotifyPropertyChanged source)
-        {
-            _source = source;
-            source.PropertyChanged += OnSourceChanged;
-        }
 
         public void Add(BindingExpression b)
         {
@@ -75,12 +93,12 @@ internal static class SharedSourceRegistry
             }
         }
 
-        public void Detach() => _source.PropertyChanged -= OnSourceChanged;
+        public abstract void Detach();
 
         // Snapshot subscribers under the gate, then call out outside it, since a producer binding may re-enter
         // Subscribe/Unsubscribe. A snapshot of its OWN per fire: a subscriber can make the source fire again before this
         // one is through, and a shared one would be emptied under it.
-        private void OnSourceChanged(object sender, PropertyChangedEventArgs e)
+        protected void Fire<TArgs>(object sender, TArgs e, Action<BindingExpression, object, TArgs> call)
         {
             var pool = ArrayPool<BindingExpression>.Shared;
             BindingExpression[] fire;
@@ -108,7 +126,7 @@ internal static class SharedSourceRegistry
             {
                 for (var i = 0; i < n; i++)
                 {
-                    fire[i].OnSourcePropertyChanged(sender, e);
+                    call(fire[i], sender, e);
                 }
             }
             finally
@@ -117,5 +135,37 @@ internal static class SharedSourceRegistry
                 pool.Return(fire);
             }
         }
+    }
+
+    private sealed class SourceEntry : Entry
+    {
+        private readonly INotifyPropertyChanged _source;
+
+        public SourceEntry(INotifyPropertyChanged source)
+        {
+            _source = source;
+            source.PropertyChanged += OnSourceChanged;
+        }
+
+        public override void Detach() => _source.PropertyChanged -= OnSourceChanged;
+
+        private void OnSourceChanged(object sender, PropertyChangedEventArgs e) =>
+            Fire(sender, e, static (binding, s, args) => binding.OnSourcePropertyChanged(s, args));
+    }
+
+    private sealed class ErrorEntry : Entry
+    {
+        private readonly INotifyDataErrorInfo _source;
+
+        public ErrorEntry(INotifyDataErrorInfo source)
+        {
+            _source = source;
+            source.ErrorsChanged += OnErrorsChanged;
+        }
+
+        public override void Detach() => _source.ErrorsChanged -= OnErrorsChanged;
+
+        private void OnErrorsChanged(object sender, DataErrorsChangedEventArgs e) =>
+            Fire(sender, e, static (binding, s, args) => binding.OnSourceErrorsChanged(s, args));
     }
 }

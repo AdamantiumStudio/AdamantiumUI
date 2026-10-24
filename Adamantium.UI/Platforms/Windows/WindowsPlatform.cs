@@ -44,6 +44,7 @@ public class WindowsPlatform : IApplicationPlatform
         Displays.Platform = new WindowsDisplays();
         DesktopWallpaper.Platform = new WindowsDesktopWallpaper();   // what Mica shows: the picture behind the WINDOW
         FileDialog.Platform = new WindowsFileDialog();               // where a file goes is the user's to say
+        FileManager.Platform = new ExplorerFileManager();
         WindowsOle.Initialize();   // OLE on THIS (the UI) thread - the precondition for OS drag-drop on every window
     }
 
