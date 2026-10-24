@@ -16,6 +16,7 @@ public sealed class DispatcherTimer : IDisposable
     private bool _isEnabled;
     private int _generation;
     private int _queued;
+    private long _dueAt;
 
     public DispatcherTimer()
     {
@@ -73,17 +74,29 @@ public sealed class DispatcherTimer : IDisposable
     {
         var due = firstDelay <= TimeSpan.Zero ? TimeSpan.FromMilliseconds(1) : firstDelay;
         var period = _interval <= TimeSpan.Zero ? TimeSpan.FromMilliseconds(1) : _interval;
+        // A millisecond's leeway: the system timer may round its due time down.
+        var leeway = due > TimeSpan.FromMilliseconds(1) ? due - TimeSpan.FromMilliseconds(1) : TimeSpan.Zero;
+        Volatile.Write(ref _dueAt, System.Diagnostics.Stopwatch.GetTimestamp()
+                                   + (long)(leeway.TotalSeconds * System.Diagnostics.Stopwatch.Frequency));
         _timer.Change(due, period);
     }
 
+    // A callback of the old schedule can still be under way, or only starting, when Stop and Start renew the timer: the
+    // generation is read before anything else, and a tick before the new start's own delay is that callback's.
     private void OnTimerTick(object state)
     {
-        if (!_isEnabled) return;
+        var generation = Volatile.Read(ref _generation);
+        if (!_isEnabled || System.Diagnostics.Stopwatch.GetTimestamp() < Volatile.Read(ref _dueAt)) return;
         if (LoopSignal.IsClaimed)
         {
             if (Interlocked.Exchange(ref _queued, 1) == 0)
             {
-                var generation = Volatile.Read(ref _generation);
+                if (generation != Volatile.Read(ref _generation))
+                {
+                    Volatile.Write(ref _queued, 0);
+                    return;
+                }
+
                 LoopSignal.Post(() => RaiseQueued(generation));
             }
         }
