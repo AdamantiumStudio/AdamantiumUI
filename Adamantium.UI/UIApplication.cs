@@ -160,9 +160,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         return new ThemeManager(Container);
     }
 
-    /// <summary>How the application sets Vulkan up: the engine's settings, to add extensions or layers to, or to choose
-    /// how shaders reach their resources. Called once, while the application is constructed - before any field of a
-    /// subclass is set.</summary>
+    /// <summary>What the application asks of Vulkan. Called from the constructor, before a subclass's fields are set.</summary>
     protected virtual GraphicsSettings CreateGraphicsSettings() => GraphicsSettings.CreateDefault();
 
     protected virtual IResourceManager CreateResourceManager()

@@ -223,7 +223,6 @@ internal sealed class BackdropCapture : IDisposable
             gd.SetViewports(new Viewport { Width = nw, Height = nh, MaxDepth = 1.0f });
             gd.SetScissors(info.RenderArea);
 
-            // The level above alone: a view of every level would name the one being drawn into as shader-read-only.
             _blur.SourceTexture.SetResource(texture.GetLevelTexture(level - 1));
             _blur.SourceSampler.SetResource(SamplerStates.LinearClampToEdge);
             _blur.BlurStep.SetValue(new Vector4F(0, nw, nh, 0));
