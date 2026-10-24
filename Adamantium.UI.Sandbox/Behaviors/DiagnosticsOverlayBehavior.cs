@@ -21,6 +21,7 @@ public class DiagnosticsOverlayBehavior : Behavior<TextBlock>
 
     private const double RefreshSeconds = 0.25;   // rewrite the text ~4x/sec - readable, and cheap (no per-frame raster)
 
+    private IDisposable _fenceWait;
     private long _lastMeasure, _lastArrange, _lastBindings, _lastPresented;
     private double _windowElapsed, _windowMaxLayoutMs;
     private double _sumLayout, _sumBuild, _sumProc, _sumDraw, _sumProcs;   // per-frame sums -> averages over the window
@@ -144,11 +145,33 @@ public class DiagnosticsOverlayBehavior : Behavior<TextBlock>
     protected override void OnDetached(TextBlock target)
     {
         _running = false;
+        _fenceWait?.Dispose();
+        _fenceWait = null;
         Adamantium.UI.Core.VisualTreeNotifications.Attached -= OnTreeAttached;
         Adamantium.UI.Core.VisualTreeNotifications.Detached -= OnTreeDetached;
         Adamantium.UI.Core.VisualTreeNotifications.VisibilityChanged -= OnVisibilityFlipped;
         Adamantium.UI.Core.VisualTreeNotifications.ShownOrHidden -= OnHiddenFlipped;
         Adamantium.UI.Core.VisualTreeNotifications.ClipChanged -= OnClipChanged;
+    }
+
+    private void MeasureWhileShown(TextBlock target)
+    {
+        var visible = target.IsAttachedToVisualTree;
+        for (Adamantium.UI.Core.IUIComponent node = target; visible && node != null; node = node.VisualParent)
+        {
+            visible = node.Visibility == Adamantium.UI.Core.Visibility.Visible;
+        }
+
+        var shown = Dumps || visible;
+        if (shown && _fenceWait == null)
+        {
+            _fenceWait = Adamantium.Graphics.GraphicsDevice.MeasureFenceWait();
+        }
+        else if (!shown && _fenceWait != null)
+        {
+            _fenceWait.Dispose();
+            _fenceWait = null;
+        }
     }
 
     private void OnTreeAttached(Adamantium.UI.Core.IUIComponent c) => NoteChurn("attached", c);
@@ -164,6 +187,7 @@ public class DiagnosticsOverlayBehavior : Behavior<TextBlock>
     private bool Advance(TextBlock target, double dt)
     {
         if (!_running) return true;   // detached -> let the heartbeat drop this ticker
+        MeasureWhileShown(target);
 
         // Accumulate this frame's samples cheaply; only rewrite the TextBlock once the refresh window elapses.
         _windowElapsed += dt;
