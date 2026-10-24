@@ -1059,7 +1059,7 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
         }
 
         UIContext.UIApplication.SetActiveWindow(window);
-        ActivatedWindowFocus.Restore(window);
+        FocusManager.EnterWindow(window);
     }
 
     private void HandleDeactivation()

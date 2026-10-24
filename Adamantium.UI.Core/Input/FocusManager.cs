@@ -447,6 +447,18 @@ public static class FocusManager
       return Focus(remembered);
    }
 
+   /// <summary>The window is active: the focus goes back where it was in it - in one of its popups too - and a window
+   /// seen for the first time, with nowhere to go back to, starts at its first stop; otherwise it would come up with no
+   /// focus at all and stay dead until something in it was clicked. Unspecified, not Tab: activation is not a keyboard
+   /// move, so no ring lights up.</summary>
+   public static void EnterWindow(IInputComponent root)
+   {
+      if (!TryRestoreFocus(root))
+      {
+         KeyboardNavigation.MoveInto(root, NavigationMethod.Unspecified);
+      }
+   }
+
    /// <summary>The window is no longer active: remember where the focus was in it and let it go. Keeping it would leave
    /// the ring lit in a window the keyboard has left, and leave the ONE focused element pointing into a window that no
    /// longer receives keys - which is what stopped the newly activated window from responding at all.</summary>

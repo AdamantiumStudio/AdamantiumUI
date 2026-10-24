@@ -5,7 +5,6 @@ using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Templates;
 using Adamantium.UI.Extensions;
-using Adamantium.UI.Platforms;
 using NUnit.Framework;
 
 namespace Adamantium.UITests;
@@ -13,9 +12,9 @@ namespace Adamantium.UITests;
 // Focus in a window's popup is that window's: kept when the window is activated - a backstage the application starts on
 // takes the keyboard before its window first comes up - released when it is left, and back in the popup when it is
 // activated again, not on the window's first stop behind it. Each test calls what the platform's window worker calls:
-// LeaveWindow when a window is deactivated, ActivatedWindowFocus.Restore when it is activated.
+// LeaveWindow when a window is deactivated, EnterWindow when it is activated.
 [TestFixture]
-public class ActivatedWindowFocusTests
+public class WindowFocusTests
 {
     [TearDown]
     public void TearDown() => FocusManager.Focus(null);
@@ -26,7 +25,7 @@ public class ActivatedWindowFocusTests
         var (window, outside, inside, _) = WindowWithPopup();
         FocusManager.Focus(inside);
 
-        ActivatedWindowFocus.Restore(window);
+        FocusManager.EnterWindow(window);
 
         Assert.That(FocusManager.Focused, Is.SameAs(inside));
         Assert.That(outside.IsFocused, Is.False);
@@ -37,7 +36,7 @@ public class ActivatedWindowFocusTests
     {
         var (window, outside, _, _) = WindowWithPopup();
 
-        ActivatedWindowFocus.Restore(window);
+        FocusManager.EnterWindow(window);
 
         Assert.That(FocusManager.Focused, Is.SameAs(outside));
     }
@@ -48,14 +47,14 @@ public class ActivatedWindowFocusTests
         var (window, _, inside, _) = WindowWithPopup();
         var (other, otherButton) = PlainWindow();
         FocusManager.Focus(inside);
-        ActivatedWindowFocus.Restore(window);
+        FocusManager.EnterWindow(window);
 
         FocusManager.LeaveWindow(window);
         Assert.That(FocusManager.Focused, Is.Null, "a window left lets go of the focus in its popup too");
-        ActivatedWindowFocus.Restore(other);
+        FocusManager.EnterWindow(other);
         Assert.That(FocusManager.Focused, Is.SameAs(otherButton));
         FocusManager.LeaveWindow(other);
-        ActivatedWindowFocus.Restore(window);
+        FocusManager.EnterWindow(window);
 
         Assert.That(FocusManager.Focused, Is.SameAs(inside));
     }
@@ -80,9 +79,9 @@ public class ActivatedWindowFocusTests
         var (other, _) = PlainWindow();
 
         FocusManager.LeaveWindow(window);
-        ActivatedWindowFocus.Restore(other);
+        FocusManager.EnterWindow(other);
         FocusManager.LeaveWindow(other);
-        ActivatedWindowFocus.Restore(window);
+        FocusManager.EnterWindow(window);
 
         Assert.That(FocusManager.Focused, Is.SameAs(inDialog));
         dialog.Close();
@@ -97,7 +96,7 @@ public class ActivatedWindowFocusTests
         WindowExtension.UpdateTree(empty);
 
         FocusManager.LeaveWindow(window);
-        ActivatedWindowFocus.Restore(empty);
+        FocusManager.EnterWindow(empty);
 
         Assert.That(FocusManager.Focused, Is.Not.SameAs(inside));
     }
@@ -110,7 +109,7 @@ public class ActivatedWindowFocusTests
         FocusManager.LeaveWindow(window);
         inside.IsEnabled = false;
 
-        ActivatedWindowFocus.Restore(window);
+        FocusManager.EnterWindow(window);
 
         Assert.That(FocusManager.Focused, Is.SameAs(outside));
     }
@@ -126,7 +125,7 @@ public class ActivatedWindowFocusTests
 
         Assert.That(Popup.HostOf(swapped), Is.SameAs(window));
         Assert.That(Popup.HostOf(inside), Is.Null, "the content swapped out is no longer the window's");
-        ActivatedWindowFocus.Restore(window);
+        FocusManager.EnterWindow(window);
         Assert.That(FocusManager.Focused, Is.SameAs(swapped));
     }
 
