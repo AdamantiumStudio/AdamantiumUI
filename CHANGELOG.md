@@ -7,6 +7,19 @@ All packages share one version.
 
 ### Added
 
+- Field validation: a binding whose source implements `INotifyDataErrorInfo` carries the errors of the bound property
+  onto its target element - `Validation.HasError`, `Validation.Errors`, `Validation.Error`; the errors of all of an
+  element's bindings together. The errors changing leaves the value in the target alone, and the source holds the
+  elements bound to it weakly, as for its property changes. The text box of every theme marks itself in the critical color while it has an error.
+  Sandbox: Text › Editing has a name field its view-model checks.
+- `UpdateSourceTrigger` works on `{Binding}`: `LostFocus` writes a two-way binding back once the target loses the focus
+  - at once when it changes without the focus - `Explicit` only on `UpdateSource()`, `Default` takes the target
+  property's metadata default and otherwise writes as the target changes, as before. Markup takes
+  `{Binding ..., UpdateSourceTrigger=LostFocus}`.
+- `FileManager.ShowItem(path)`: the desktop's file manager opens the file's folder with the file selected - through
+  `org.freedesktop.FileManager1` on Linux, Explorer on Windows, the Finder on macOS.
+- `RibbonApplicationMenu` takes a `Separator` between its rows.
+- A scenario's `Arguments` are the command line of the application it starts - a document to open, say.
 - `ToolTipService.ShowOnDisabled`: an element marked with it takes the pointer's hover - and shows its tooltip - though
   it or an ancestor is disabled; a press on it reaches the disabled element, which ignores it. The "why" beside what
   cannot be used. `InputExtensions.HitTest`, `GetInputElementsAt`, `HitTestBounds` and `PointerDevice.HitTestTopmost`
@@ -2173,6 +2186,13 @@ All packages share one version.
 
 ### Fixed
 
+- `DockingArea` made a new divider for every split on every rebuild and threw it away when the split had not changed,
+  and kept the dividers a changed split no longer had: each stayed subscribed to the application's resources and held
+  the area - and its window - for good. An editor window closed and reopened in one process stayed in memory every
+  time. A divider is made only when a split's children change, a live one is reused, and one no longer wanted is let
+  go of.
+- A fade that started in the same frame as a text block re-issued its run (a button disabled while its label changed)
+  left the other text under it at full alpha: the splice now hands such a frame to the walk, as the plain patch did.
 - The backdrop's blur pyramid read each level through a view of every level, the one being drawn into among them, as
   shader-read-only; each step now reads the level above alone (`Texture.GetLevelTexture`).
 - `UIApplication.EnableGraphicsDebug` was registered under the name `EnableGraphicsDebugProperty`, so markup could not

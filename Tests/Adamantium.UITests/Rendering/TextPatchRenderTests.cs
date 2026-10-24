@@ -232,6 +232,21 @@ public class TextPatchRenderTests
         AssertMatchesAFullWalk(scene, Pixels(scene.Renderer), "with no tail of the longer text left behind");
     }
 
+    // A disabled button's content fades as its text is redrawn: the fade's new slot has to reach the text the splice
+    // does not re-stage - the neighbor with a color of its own drew at full alpha.
+    [Test]
+    public void AFadeStartedWithAReIssuedRun_ReachesTheNeighborToo()
+    {
+        using var scene = NewScene("600 fps", "steady");
+        var panel = (Adamantium.UI.Controls.Base.UIComponent)scene.Blocks[0].VisualParent;
+
+        panel.Opacity = 0.4;
+        scene.Blocks[0].Text = "1200 fps";
+        scene.Draw();
+
+        AssertMatchesAFullWalk(scene, Pixels(scene.Renderer), "both blocks must be drawn at the panel's alpha");
+    }
+
     [Test]
     public void ColorChangeAlone_IsPatched()
     {

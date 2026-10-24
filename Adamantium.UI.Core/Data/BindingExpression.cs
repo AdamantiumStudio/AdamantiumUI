@@ -150,6 +150,7 @@ public class BindingExpression : BindingExpressionBase
       if (ReferenceEquals(newObserved, previousObserved) && previousObserved != null)
       {
          WatchPassed();
+         WatchErrors();
 
          // The target already holds this value, so skip the re-push; a producer still republishes for its parent.
          if (IsProducer) Refresh();
@@ -166,7 +167,9 @@ public class BindingExpression : BindingExpressionBase
       {
          UpdateSource();
          if (Target != null) Target.PropertyChanged += OnTargetPropertyChanged;
+         WatchFocus();
          WatchPassed();
+         WatchErrors();
          return;
       }
 
@@ -186,17 +189,80 @@ public class BindingExpression : BindingExpressionBase
       }
       if (Mode == BindingMode.TwoWay && !IsProducer && Target != null)
          Target.PropertyChanged += OnTargetPropertyChanged;
+      WatchFocus();
       WatchPassed();
+      WatchErrors();
    }
 
    public override void CloseConnection()
    {
       Languages.Unfollow(this);
+      UnwatchErrors();
       UnwatchPassed();
       _passed?.Clear();
       StopAwaitingAttach();
       WatchContextOwner(null);
       ReleaseSource();
+   }
+
+   private INotifyDataErrorInfo _errorSource;
+   private string _errorProperty;
+   private bool _errorsPending;
+
+   private void WatchErrors()
+   {
+      var source = !IsProducer && Target is AdamantiumComponent ? ResolvedSource as INotifyDataErrorInfo : null;
+      if (!ReferenceEquals(source, _errorSource))
+      {
+         if (_errorSource != null) SharedSourceRegistry.UnsubscribeErrors(_errorSource, this);
+         _errorSource = source;
+         if (_errorSource != null) SharedSourceRegistry.SubscribeErrors(_errorSource, this);
+      }
+
+      _errorProperty = source != null ? SourcePropertyName : null;
+      ShowErrors();
+   }
+
+   private void UnwatchErrors()
+   {
+      if (_errorSource != null)
+      {
+         SharedSourceRegistry.UnsubscribeErrors(_errorSource, this);
+         _errorSource = null;
+      }
+
+      _errorProperty = null;
+      ShowErrors();
+   }
+
+   // Called by SharedSourceRegistry. Only the errors are read again: the value the target holds - typed and not yet
+   // written back, say - is left alone.
+   internal void OnSourceErrorsChanged(object sender, DataErrorsChangedEventArgs e)
+   {
+      if (!string.IsNullOrEmpty(e.PropertyName) && e.PropertyName != _errorProperty) return;
+
+      _errorsPending = true;
+      if (BindingBase?.IsImmediate == true) ApplyPending();
+      else BindingUpdateQueue.Enqueue(this);
+   }
+
+   private void ShowErrors()
+   {
+      if (Target is not AdamantiumComponent element || (_errorSource == null && !HasValidationError)) return;
+
+      List<string> errors = null;
+      if (_errorSource is { HasErrors: true } && _errorProperty != null && _errorSource.GetErrors(_errorProperty) is { } said)
+      {
+         foreach (var error in said)
+         {
+            if (error?.ToString() is { Length: > 0 } text) (errors ??= []).Add(text);
+         }
+      }
+
+      if (errors == null && !HasValidationError) return;
+
+      HasValidationError = errors != null;
+      Validation.Set(element, this, (IReadOnlyList<string>)errors ?? Array.Empty<string>());
    }
 
    private object ContextRoot()
@@ -260,6 +326,8 @@ public class BindingExpression : BindingExpressionBase
       }
       if ((Mode == BindingMode.TwoWay || Mode == BindingMode.OneWayToSource) && !IsProducer && Target != null)
          Target.PropertyChanged -= OnTargetPropertyChanged;
+      UnwatchFocus();
+      _sourceBehind = false;
    }
 
    private void WatchPassed()
@@ -596,9 +664,13 @@ public class BindingExpression : BindingExpressionBase
    // to the target) - same path as a source change, just deferred to the per-frame flush.
    internal override void ApplyPending()
    {
+      var errorsOnly = _errorsPending && !ValuePending;
+      _errorsPending = false;
+      ValuePending = false;
       if (!_reconnectPending)
       {
-         Refresh();
+         if (!errorsOnly) Refresh();
+         if (_errorSource != null) ShowErrors();
          return;
       }
 
@@ -615,8 +687,72 @@ public class BindingExpression : BindingExpressionBase
          return;
       }
 
-      if (Mode is BindingMode.TwoWay or BindingMode.OneWayToSource && e.Property == TargetProperty)
-         UpdateSource();
+      if (Mode is not (BindingMode.TwoWay or BindingMode.OneWayToSource) || e.Property != TargetProperty) return;
+
+      switch (Trigger)
+      {
+         case UpdateSourceTrigger.Explicit:
+            break;
+         case UpdateSourceTrigger.LostFocus when Target is IInputComponent input && HoldsFocus(input):
+            _sourceBehind = true;
+            break;
+         default:
+            UpdateSource();
+            break;
+      }
+   }
+
+   // The binding's own trigger, else the target property's default for the target's type; PropertyChanged when neither
+   // says.
+   private UpdateSourceTrigger Trigger
+   {
+      get
+      {
+         var trigger = Binding.UpdateSourceTrigger;
+         if (trigger == UpdateSourceTrigger.Default && TargetProperty != null && Target != null)
+         {
+            trigger = TargetProperty.GetDefaultMetadata(Target.GetType())?.DefaultUpdateSourceTrigger ?? UpdateSourceTrigger.Default;
+         }
+
+         return trigger == UpdateSourceTrigger.Default ? UpdateSourceTrigger.PropertyChanged : trigger;
+      }
+   }
+
+   private bool _sourceBehind;
+   private IInputComponent _focusWatched;
+
+   private void WatchFocus()
+   {
+      var watched = Mode is BindingMode.TwoWay or BindingMode.OneWayToSource && !IsProducer &&
+                    Trigger == UpdateSourceTrigger.LostFocus
+         ? Target as IInputComponent
+         : null;
+      if (ReferenceEquals(watched, _focusWatched)) return;
+
+      if (_focusWatched != null) _focusWatched.LostFocus -= OnTargetLostFocus;
+      _focusWatched = watched;
+      if (_focusWatched != null) _focusWatched.LostFocus += OnTargetLostFocus;
+   }
+
+   private void UnwatchFocus()
+   {
+      if (_focusWatched != null) _focusWatched.LostFocus -= OnTargetLostFocus;
+      _focusWatched = null;
+   }
+
+   private void OnTargetLostFocus(object sender, RoutedEventArgs e)
+   {
+      if (_sourceBehind && !HoldsFocus((IInputComponent)sender)) UpdateSource();
+   }
+
+   private static bool HoldsFocus(IInputComponent target)
+   {
+      for (var node = Input.FocusManager.Focused as IUIComponent; node != null; node = node.VisualParent)
+      {
+         if (ReferenceEquals(node, target)) return true;
+      }
+
+      return false;
    }
 
    // Top-level: push to the target property. Producer: publish ProducedValue for a parent MultiBinding.
@@ -841,6 +977,7 @@ public class BindingExpression : BindingExpressionBase
 
    public override void UpdateSource()
    {
+      _sourceBehind = false;
       var sourceType = _leaf?.ValueType ?? _source?.ValueType;
       if (sourceType == null || !IsSourceWritable || TargetProperty == null) return;
       if (_leaf != null && !Walk()) return;

@@ -129,11 +129,16 @@ public abstract class BindingExpressionBase
    public virtual void UpdateTarget()
    { }
 
+   /// <summary>Whether a change of the value waits for the flush, as against only something about it - its errors.
+   /// </summary>
+   private protected bool ValuePending;
+
    // F2: queue this expression for the once-per-frame coalesced flush instead of pushing synchronously - unless the
    // binding opted into immediate application (a side-effect binding). Used for RUNTIME source changes; the initial
    // connect push stays synchronous.
    protected void ScheduleUpdate()
    {
+      ValuePending = true;
       // Only a TOP-LEVEL binding (one that writes to a UI target) is batched. A producer (TargetProperty == null, a
       // MultiBinding child) feeds its parent synchronously - it's combinator plumbing, not a target write, and is also
       // exercised in isolation with no frame to flush it. IsImmediate opts a side-effect binding back to synchronous.

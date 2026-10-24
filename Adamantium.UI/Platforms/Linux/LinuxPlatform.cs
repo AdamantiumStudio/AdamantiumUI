@@ -47,6 +47,7 @@ public static class LinuxPlatform
         }
         FileDialog.Platform = new PortalFileDialog(owner =>
             (container.Resolve<IApplicationPlatform>() as IPortalParent)?.PortalParentOf(owner) ?? string.Empty);
+        FileManager.Platform = new DesktopFileManager();
         container.RegisterSingleton<ISpellChecker, EnchantSpellChecker>();
         container.RegisterSingleton<IGamepadBackend, EvdevGamepadBackend>();
         WaylandPlatform.Initialize(container);

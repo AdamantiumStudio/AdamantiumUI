@@ -2686,6 +2686,7 @@ public class DockingArea : Panel
                 PaneHost.SetPaneLength(host, split.Length);
 
                 var wanted = new List<IMeasurableComponent>();
+                var drags = new List<bool>();
                 PaneNode previous = null;
 
                 foreach (var child in split.Children)
@@ -2695,16 +2696,11 @@ public class DockingArea : Panel
 
                     if (wanted.Count > 0)
                     {
-                        // The one moment the controls answer back: a finished drag is the user stating a size.
-                        var grip = new PaneSplitter();
-                        grip.DragCompleted += (_, _) => SyncLengthsToModel();
-
                         // A divider beside a PUT-AWAY panel does not drag: that panel's size is MEASURED (its strip), so
                         // the model refuses the dragged pixels and the panel just stays stretched. The gap is a seam,
                         // not a handle.
-                        grip.IsHitTestVisible = !IsPutAway(previous) && !IsPutAway(child);
-
-                        wanted.Add(grip);
+                        wanted.Add(null);
+                        drags.Add(!IsPutAway(previous) && !IsPutAway(child));
                     }
 
                     wanted.Add(visual);
@@ -2716,18 +2712,43 @@ public class DockingArea : Panel
                 // Touch the children only when they actually differ - an unchanged split must not disturb its subtree.
                 if (!SameChildren(host, wanted))
                 {
+                    var spare = new Queue<PaneSplitter>();
+                    foreach (var live in host.Children)
+                    {
+                        if (live is PaneSplitter splitter) spare.Enqueue(splitter);
+                    }
+
                     host.Children.Clear();
-                    foreach (var visual in wanted) host.Children.Add(visual);
+                    var divider = 0;
+                    foreach (var visual in wanted)
+                    {
+                        if (visual != null)
+                        {
+                            host.Children.Add(visual);
+                            continue;
+                        }
+
+                        var grip = spare.Count > 0 ? spare.Dequeue() : NewGrip();
+                        grip.IsHitTestVisible = drags[divider++];
+                        host.Children.Add(grip);
+                    }
+
+                    foreach (var unused in spare)
+                    {
+                        unused.DragCompleted -= OnGripDragCompleted;
+                        DiscardedVisuals.PublishSubtree(unused);
+                    }
                 }
                 else
                 {
                     // Live splitters are KEPT (interchangeable - they carry a position, not an identity), so the one
                     // thing that does change is carried across: folding leaves the shape untouched, and the divider of
                     // a folded panel stayed draggable without this.
+                    var divider = 0;
                     for (var i = 0; i < wanted.Count; i++)
                     {
-                        if (wanted[i] is PaneSplitter fresh && host.Children[i] is PaneSplitter live)
-                            live.IsHitTestVisible = fresh.IsHitTestVisible;
+                        if (wanted[i] == null && host.Children[i] is PaneSplitter live)
+                            live.IsHitTestVisible = drags[divider++];
                     }
                 }
 
@@ -2779,12 +2800,21 @@ public class DockingArea : Panel
         for (var i = 0; i < wanted.Count; i++)
         {
             // Splitters are interchangeable - they carry no identity, only a position between two neighbors.
-            if (wanted[i] is PaneSplitter && children[i] is PaneSplitter) continue;
+            if (wanted[i] == null && children[i] is PaneSplitter) continue;
             if (!ReferenceEquals(children[i], wanted[i])) return false;
         }
 
         return true;
     }
+
+    private PaneSplitter NewGrip()
+    {
+        var grip = new PaneSplitter();
+        grip.DragCompleted += OnGripDragCompleted;
+        return grip;
+    }
+
+    private void OnGripDragCompleted(object sender, Primitives.DragCompletedEventArgs e) => SyncLengthsToModel();
 
     // The control for a group node - the one it already had, or a new one for a node a split has just created.
     private PaneGroup GroupFor(PaneGroupNode node)

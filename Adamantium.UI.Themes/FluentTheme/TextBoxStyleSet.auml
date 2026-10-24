@@ -167,6 +167,10 @@
             <Setter TargetName="PART_Border" Property="BorderBrush" Value="{ThemeResource AccentFillColorDefault}"/>
             <Setter TargetName="PART_Border" Property="Background" Value="{ResourceReference ControlFillColorSecondary}"/>
         </PropertyTrigger>
+        <!-- What is in it is wrong, as its source says: said over hover and focus alike. -->
+        <PropertyTrigger Property="Validation.HasError" Value="true">
+            <Setter TargetName="PART_Border" Property="BorderBrush" Value="{ObservableResource SystemFillColorCritical}"/>
+        </PropertyTrigger>
     </Style>
 
     <!-- DateTimeField and DurationField: the same field, its parts side by side where the text box has its text. -->

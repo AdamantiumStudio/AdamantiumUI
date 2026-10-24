@@ -1414,6 +1414,7 @@ public class AumlLowering
     private const string MultiBindingFqn = "global::Adamantium.UI.Core.Data.MultiBinding";
     private const string PropertyPathFqn = "global::Adamantium.UI.Core.PropertyPath";
     private const string BindingModeFqn = "global::Adamantium.UI.Core.Data.BindingMode";
+    private const string UpdateSourceTriggerFqn = "global::Adamantium.UI.Core.Data.UpdateSourceTrigger";
     private const string ValueConverterFqn = "global::Adamantium.UI.Core.Data.IValueConverter";
     private const string MultiValueConverterFqn = "global::Adamantium.UI.Core.Data.IMultiValueConverter";
     private const string LocalizeFqn = "global::Adamantium.UI.Core.Localization.Localize";
@@ -1658,6 +1659,14 @@ public class AumlLowering
                 if ((value as AumlAstTextNode)?.Text is { Length: > 0 } mode)
                 {
                     _writer.Add(new AssignStep(binding, "Mode", new MemberValue(Type(BindingModeFqn), mode)));
+                }
+
+                break;
+            case "UpdateSourceTrigger" when !isMulti:
+                if ((value as AumlAstTextNode)?.Text?.Trim() is { Length: > 0 } trigger)
+                {
+                    _writer.Add(new AssignStep(binding, "UpdateSourceTrigger",
+                        new MemberValue(Type(UpdateSourceTriggerFqn), trigger)));
                 }
 
                 break;

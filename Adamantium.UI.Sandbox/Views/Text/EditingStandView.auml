@@ -91,6 +91,18 @@
         <TextBlock Text="{Localize TextStrings.PasswordBound, count={Binding PasswordLength}}" Margin="0,6,0,0"
                    Foreground="{ResourceReference TextFillColorSecondary}"/>
 
+        <!-- Validation: the view-model says what is wrong (INotifyDataErrorInfo); the box marks itself from
+             Validation.HasError, the line under it says why. -->
+        <TextBlock x:Name="CheckedLabel" Text="{Localize TextStrings.CheckedTitle}" Margin="0,16,0,6"/>
+        <StackPanel DataContext="{Binding NameCheck}">
+            <TextBox AutomationProperties.AutomationId="CheckedName" AutomationProperties.LabeledBy="{Binding ElementName=CheckedLabel}"
+                     Text="{Binding Name, Mode=TwoWay}"
+                     Width="520" HorizontalAlignment="Left"/>
+            <TextBlock AutomationProperties.AutomationId="CheckedNameError"
+                       Text="{Binding Error}" Margin="0,6,0,0"
+                       Foreground="{ObservableResource SystemFillColorCritical}"/>
+        </StackPanel>
+
         <TextBlock x:Name="ReadOnlyLabel" Text="{Localize TextStrings.ReadOnly}" Margin="0,16,0,6"/>
         <TextBox AutomationProperties.AutomationId="ReadOnlyMessage" AutomationProperties.LabeledBy="{Binding ElementName=ReadOnlyLabel}"
                  Text="{Binding Message}" IsReadOnly="True"

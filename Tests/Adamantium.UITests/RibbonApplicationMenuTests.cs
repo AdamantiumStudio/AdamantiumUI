@@ -45,6 +45,26 @@ public class RibbonApplicationMenuTests
         return menu;
     }
 
+    // A separator parts groups of rows: it stands in the rail as itself, and the backstage opens past it on a page.
+    [Test]
+    public void ASeparator_StandsAsItself_AndIsNoPage()
+    {
+        var separator = new Separator();
+        var menu = new RibbonApplicationMenu { Header = "File", Template = RailTemplate(), IsBackstage = true };
+        menu.Items.Add(separator);
+        menu.Items.Add(Row("Open", "open page"));
+        menu.Measure(new Size(200, 400));
+        menu.Arrange(new Rect(0, 0, 200, 400));
+
+        menu.IsOpen = true;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(menu.ItemContainerGenerator.ContainerFromIndex(0), Is.SameAs(separator));
+            Assert.That(menu.SelectedPage, Is.EqualTo("open page"));
+        });
+    }
+
     // A logical child, or the window's DataContext never reaches the rows and every {Binding} on them is dead.
     [Test]
     public void TheMenuInTheSlot_IsALogicalChildOfTheRibbon()

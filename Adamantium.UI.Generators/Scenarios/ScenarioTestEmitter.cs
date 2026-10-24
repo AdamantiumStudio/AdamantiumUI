@@ -115,6 +115,9 @@ public static class ScenarioTestEmitter
                 .AppendLine($"                    global::System.OperatingSystem.IsWindows() ? {SymbolDisplay.FormatLiteral(application + ".exe", true)} : " +
                             $"{SymbolDisplay.FormatLiteral(application, true)}),")
                 .AppendLine("                new global::Adamantium.UI.Automation.LaunchOptions { FreshData = true, VirtualDisplay = true" +
+                            (file.Arguments is { } arguments
+                                ? $", Arguments = {SymbolDisplay.FormatLiteral(arguments, true)}"
+                                : string.Empty) +
                             (string.IsNullOrWhiteSpace(font)
                                 ? " });"
                                 : $", Environment = {{ [\"ADAM_UI_FONT\"] = {SymbolDisplay.FormatLiteral(font, true)} }} }});"))
