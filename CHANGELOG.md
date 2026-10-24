@@ -7,6 +7,8 @@ All packages share one version.
 
 ### Added
 
+- `Hyperlink.Open(Uri)`: what a link no `RequestNavigate` handler took does - a web or mail address opens in the
+  system's own handler, any other goes nowhere - for other controls with links to do the same.
 - `Popup.ClosesOnClick`, attached to a button in a popup: a click on it closes the popup once its command has run - a
   card's "Go" or "Apply" closes the card without the view model having to. An Enter nothing in a popup took presses
   its visible, enabled default button (`IsDefault`), as in a window, whose keys never reach a popup's content.

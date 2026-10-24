@@ -188,4 +188,13 @@ public class HyperlinkTests
         Assert.That(links[0].ControlType, Is.EqualTo(AutomationControlType.Hyperlink));
         Assert.That(clicks, Is.EqualTo(1));
     }
+
+    [TestCase("file:///C:/no-such-folder/no-such-program.exe")]
+    [TestCase("custom-scheme://thing")]
+    [TestCase("relative/page.html")]
+    [TestCase(null)]
+    public void AnythingButAWebOrMailAddress_IsNotHandedToTheSystem(string address)
+    {
+        Assert.That(Hyperlink.Open(address == null ? null : new Uri(address, UriKind.RelativeOrAbsolute)), Is.False);
+    }
 }
