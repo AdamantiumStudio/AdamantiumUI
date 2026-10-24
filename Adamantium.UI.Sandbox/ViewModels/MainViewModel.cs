@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Adamantium.Graphics.Core;
 using Adamantium.MVVM;
 using Adamantium.Navigation;
 using Adamantium.UI.Controls;
@@ -18,16 +19,19 @@ public partial class MainViewModel
     private readonly WindowDemoSettings _settings;
     private readonly IDialogService _dialogs;
     private readonly IUIApplication _application;
+    private readonly IGraphicsDeviceService _graphics;
     private bool _followsThemes;
 
     public MainViewModel(INavigationService navigation, WindowDemoSettings settings, IDialogService dialogs,
-        IUIApplication application)
+        IUIApplication application, IGraphicsDeviceService graphics)
     {
         _navigation = navigation;
         _settings = settings;
         _dialogs = dialogs;
         _application = application;
+        _graphics = graphics;
         _updateRate = application.UpdateRate;
+        _descriptorModel = DescriptorModelChoice.Read();
     }
 
     // The dialog host follows the Navigation-tab toggle: an in-window overlay, or a separate window.
@@ -118,6 +122,15 @@ public partial class MainViewModel
 
     partial void OnUpdateRateChanged(uint? value) =>
         _application.UpdateRate = value ?? IUIApplication.DefaultUpdateRate;
+
+    public DescriptorModel[] DescriptorModels { get; } = System.Enum.GetValues<DescriptorModel>();
+
+    [Bindable] private DescriptorModel _descriptorModel;
+
+    partial void OnDescriptorModelChanged(DescriptorModel value) => DescriptorModelChoice.Write(value);
+
+    /// <summary>The descriptor model the device runs on now.</summary>
+    public DescriptorModel DescriptorModelInUse => _graphics.MainGraphicsDevice?.DescriptorModel ?? DescriptorModel.Auto;
 
     /// <summary>Every theme the application has registered, by name - what the theme chooser lists.
     /// <para>Read from the manager each time rather than captured: themes are registered while the application comes

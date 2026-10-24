@@ -9,6 +9,8 @@ All packages share one version.
 
 - `UIApplication.CreateGraphicsSettings()`: what the application asks of Vulkan - extensions, layers, the descriptor
   model - overridable; the engine's defaults otherwise.
+- Sandbox: the diagnostics panel chooses the descriptor model (Auto, Heap, Sets) for the next start and shows the one in
+  use.
 - `FileDialog.OpenFolder(OpenFolderRequest)`: asks for a folder through the platform's own dialog - the shell's open
   dialog choosing folders on Windows, the FileChooser portal on Linux - and returns its path, or null when the user
   chose nothing. `IFileDialogPlatform` gains `OpenFolder`.
