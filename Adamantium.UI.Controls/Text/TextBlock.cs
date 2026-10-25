@@ -3212,7 +3212,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         if (_links.Count > 0 && ReferenceEquals(e.OriginalSource, this) && !_focusingForSelection &&
             !_selectionHoldsFocus)
         {
-            var backwards = (Keyboard.Modifiers & (InputModifiers.LeftShift | InputModifiers.RightShift)) != 0;
+            var backwards = (FocusManager.ModifiersOf(e) & (InputModifiers.LeftShift | InputModifiers.RightShift)) != 0;
             _focusedLink = backwards ? _links.Count - 1 : 0;
             InvalidateRender(false);
         }
@@ -3323,7 +3323,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
             return;
         }
 
-        var modifiers = Keyboard.Modifiers;
+        var modifiers = e.Modifiers;
         if ((modifiers & others) != 0)
         {
             return;

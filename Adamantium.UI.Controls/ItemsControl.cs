@@ -192,11 +192,14 @@ public class ItemsControl : Control, IContainer, IKeyboardEntry
     }
 
     /// <summary>Drops the presenter with its template; it holds the panel, every container and the recycle pool, which a
-    /// theme swap would otherwise leak.</summary>
+    /// theme swap would otherwise leak. The generator lets go of the containers it made too: they go with the template,
+    /// and the next presenter makes its own - handed one of these, it showed a row the old template had taken down with it
+    /// (a list under a collapsed panel through a theme swap).</summary>
     public override void OnRemoveTemplate()
     {
         base.OnRemoveTemplate();
         _presenter = null;
+        ItemContainerGenerator.Clear();
     }
 
     /// <summary>Connect an items host that arrives AFTER OnApplyTemplate - e.g. a MenuItem whose PART_ItemsPresenter lives in

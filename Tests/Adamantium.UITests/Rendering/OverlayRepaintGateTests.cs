@@ -35,15 +35,37 @@ public class OverlayRepaintGateTests
         MakeGeometryValid(root, glyph);
 
         var gate = new OverlayRebuildGate();
-        gate.HasChanged(flat, scope, 1);                       // first sight of this set - always a rebuild
-        Assert.That(gate.HasChanged(flat, scope, 1), Is.False, "nothing moved: the stage must not redraw");
+        gate.HasChanged(flat, scope, 1, default);                       // first sight of this set - always a rebuild
+        Assert.That(gate.HasChanged(flat, scope, 1, default), Is.False, "nothing moved: the stage must not redraw");
 
         // The trigger's write. Same shape, same commands, same place - only the color the shader composes.
         glyph.Opacity = 0;
 
-        Assert.That(gate.HasChanged(flat, scope, 1), Is.True,
+        Assert.That(gate.HasChanged(flat, scope, 1, default), Is.True,
             "a recolor inside the stage must open the gate, or the picture keeps the old opacity forever");
-        Assert.That(gate.HasChanged(flat, scope, 1), Is.False, "...and once redrawn, it settles again");
+        Assert.That(gate.HasChanged(flat, scope, 1, default), Is.False, "...and once redrawn, it settles again");
+    }
+
+    // A window that grew - a dialog fitting its content round an error line - projects through another matrix: the
+    // focus ring recorded through the old one stood a few pixels off the field it rings.
+    [Test]
+    public void AWindowOfAnotherSizeOpensTheGate()
+    {
+        var scope = RenderDirtyRouter.NewScope();
+        var root = new Border();
+        root.ClaimRenderScope(scope);
+
+        var flat = new List<IUIComponent> { root };
+        MakeGeometryValid(root);
+        var small = Adamantium.Mathematics.Matrix4x4F.OrthoOffCenterLH(0, 580, 400, 0, 0, 1);
+        var grown = Adamantium.Mathematics.Matrix4x4F.OrthoOffCenterLH(0, 580, 420, 0, 0, 1);
+
+        var gate = new OverlayRebuildGate();
+        gate.HasChanged(flat, scope, 1, small);
+        Assert.That(gate.HasChanged(flat, scope, 1, small), Is.False);
+
+        Assert.That(gate.HasChanged(flat, scope, 1, grown), Is.True, "the stage must be recorded through the new projection");
+        Assert.That(gate.HasChanged(flat, scope, 1, grown), Is.False, "...and once it is, it settles again");
     }
 
     [Test]
@@ -57,15 +79,15 @@ public class OverlayRepaintGateTests
         MakeGeometryValid(root);
 
         var gate = new OverlayRebuildGate();
-        gate.HasChanged(flat, scope, 1.5);
-        Assert.That(gate.HasChanged(flat, scope, 1.5), Is.False);
+        gate.HasChanged(flat, scope, 1.5, default);
+        Assert.That(gate.HasChanged(flat, scope, 1.5, default), Is.False);
 
         // A window of 1800 x 1200 px at 150% and one of 1200 x 800 px at 100% are the same 1200 x 800 DIPs: the layout,
         // the positions and the marks stay as they were, only the scale the stage bakes at changes.
-        Assert.That(gate.HasChanged(flat, scope, 1.0), Is.True,
+        Assert.That(gate.HasChanged(flat, scope, 1.0, default), Is.True,
             "the stage must bake at the new scale, or an open slide panel is drawn past the window's edge");
-        Assert.That(gate.HasChanged(flat, scope, 1.0), Is.False, "...and once rebaked, it settles again");
-        Assert.That(gate.HasChanged(flat, scope, 1.5), Is.True, "moving back is a change too");
+        Assert.That(gate.HasChanged(flat, scope, 1.0, default), Is.False, "...and once rebaked, it settles again");
+        Assert.That(gate.HasChanged(flat, scope, 1.5, default), Is.True, "moving back is a change too");
     }
 
     [Test]
@@ -83,12 +105,12 @@ public class OverlayRepaintGateTests
         MakeGeometryValid(root, stranger);
 
         var gate = new OverlayRebuildGate();
-        gate.HasChanged(flat, mine, 1);
-        Assert.That(gate.HasChanged(flat, mine, 1), Is.False);
+        gate.HasChanged(flat, mine, 1, default);
+        Assert.That(gate.HasChanged(flat, mine, 1, default), Is.False);
 
         stranger.Opacity = 0.5;
 
-        Assert.That(gate.HasChanged(flat, mine, 1), Is.False,
+        Assert.That(gate.HasChanged(flat, mine, 1, default), Is.False,
             "a hovered menu item is no reason for the adorner stage to redraw itself");
     }
 
@@ -103,8 +125,8 @@ public class OverlayRepaintGateTests
         MakeGeometryValid(root);
 
         var gate = new OverlayRebuildGate();
-        gate.HasChanged(flat, scope, 1);
-        Assert.That(gate.HasChanged(flat, scope, 1), Is.False);
+        gate.HasChanged(flat, scope, 1, default);
+        Assert.That(gate.HasChanged(flat, scope, 1, default), Is.False);
 
         root.Opacity = 0;
 
@@ -112,7 +134,7 @@ public class OverlayRepaintGateTests
         // Asking the sets directly is what made the defect invisible; the gate must survive this.
         scope.Clear();
 
-        Assert.That(gate.HasChanged(flat, scope, 1), Is.True,
+        Assert.That(gate.HasChanged(flat, scope, 1, default), Is.True,
             "the recolor happened - a clear by another thread must not swallow it");
     }
 }

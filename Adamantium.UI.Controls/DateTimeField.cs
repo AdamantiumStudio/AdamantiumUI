@@ -250,7 +250,7 @@ public class DateTimeField : Control, ISegmentHost
 
         if (_active < 0)
         {
-            Activate((Keyboard.Modifiers & Shift) != 0 ? LastEditable() : NextEditable(-1, 1));
+            Activate((FocusManager.ModifiersOf(e) & Shift) != 0 ? LastEditable() : NextEditable(-1, 1));
         }
     }
 

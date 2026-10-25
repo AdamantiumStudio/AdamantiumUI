@@ -94,7 +94,8 @@ public class RenderTargetPanel : Grid
       {
          var backwards = (e.Modifiers & (InputModifiers.LeftShift | InputModifiers.RightShift)) != 0;
          e.Handled = KeyboardNavigation.MoveToArea(backwards)
-                     || KeyboardNavigation.Move(backwards ? FocusNavigationDirection.Previous : FocusNavigationDirection.Next);
+                     || KeyboardNavigation.Move(backwards ? FocusNavigationDirection.Previous : FocusNavigationDirection.Next,
+                         e.Modifiers);
       }
    }
 

@@ -668,7 +668,7 @@ public class MeasurableUIComponent : ObservableUIComponent, IName, IMeasurableCo
         {
             LayoutTrace.Log($"  ARRANGE {LayoutName}: SKIP rect={rect} bounds={Bounds}");
         }
-        
+
         // if (LogicalParent != null)
         // {
         //     Location = Bounds.Location + ((IUIComponent)LogicalParent).Location;

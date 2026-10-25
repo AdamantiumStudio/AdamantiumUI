@@ -90,6 +90,19 @@ public class DurationFieldTests
     private static string Shown(TextBlock[] literals) =>
         string.Concat(literals.Where(t => t.Visibility == Visibility.Visible).Select(t => t.Text));
 
+    // Shift as the key that brought the focus carried it, not as the keyboard's own state has it - an automation's
+    // Shift+Tab came in at the first part.
+    [Test]
+    public void ComingInByShiftTab_StartsAtTheLastPart()
+    {
+        var field = Shown(new DurationField { Value = TimeSpan.FromSeconds(5025) }, focused: false);
+
+        FocusManager.Focus(field, NavigationMethod.Tab, InputModifiers.LeftShift);
+        Settle();
+
+        Assert.That(field.ActiveSegment, Is.SameAs(field.Segments[^1]));
+    }
+
     [Test]
     public void ThePartBeingTyped_IsFilledInTheAccent_ByDefault()
     {

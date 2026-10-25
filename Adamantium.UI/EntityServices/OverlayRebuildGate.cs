@@ -22,11 +22,22 @@ internal sealed class OverlayRebuildGate
 
     private double _seenRenderScale;
 
+    private Matrix4x4F _seenProjection;
+
     private long _seenReleases;
 
-    public bool HasChanged(IReadOnlyList<IUIComponent> flat, RenderDirtyScope scope, double renderScale)
+    public bool HasChanged(IReadOnlyList<IUIComponent> flat, RenderDirtyScope scope, double renderScale,
+        Matrix4x4F projection)
     {
         var changed = false;
+
+        // A window that changed size draws through another projection: what was recorded through the old one lands where
+        // the window was, a focus ring a few pixels off the field it rings.
+        if (!projection.Equals(_seenProjection))
+        {
+            _seenProjection = projection;
+            changed = true;
+        }
 
         // Elements released since the last record: the stage's cache lets go of what it kept for them only once it has
         // applied a packet recorded after their release, and an idle stage would otherwise never record one. Once the

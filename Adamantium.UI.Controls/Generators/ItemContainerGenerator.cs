@@ -423,18 +423,23 @@ public class ItemContainerGenerator
             (pooled as Core.FundamentalUIComponent)?.Revive();
         }
 
-        var handedIn = new HashSet<IUIComponent>();
-        foreach (var item in _owner.Items)
+        // Nothing generated - a template removed again, a control discarded after its template went - nothing to read the
+        // items for, which can be a whole source.
+        if (_generated.Count > 0)
         {
-            if (item is IUIComponent element)
+            var handedIn = new HashSet<IUIComponent>();
+            foreach (var item in _owner.Items)
             {
-                handedIn.Add(element);
+                if (item is IUIComponent element)
+                {
+                    handedIn.Add(element);
+                }
             }
-        }
 
-        foreach (var container in _generated)
-        {
-            Discard(container, handedIn);
+            foreach (var container in _generated)
+            {
+                Discard(container, handedIn);
+            }
         }
 
         _byIndex.Clear();
