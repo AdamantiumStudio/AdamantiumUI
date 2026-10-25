@@ -1714,6 +1714,8 @@ All packages share one version.
 
 ### Changed
 
+- The packages', the sandbox's and the VS Code extension's icons are the redrawn Adamantium family: the mark and the
+  letters drawn in Inter. The extension is 0.3.5.
 - `Adamantium.Vulkan` 1.1.0 and `Adamantium.Vulkan.ShaderObjectLayer` 1.0.1: an application gets the shader-object
   layer, for GPUs whose driver has no shader objects.
 - Enter in a single-line `TextBox` is no longer kept by the box: what is subscribed to `EnterPressed` keeps it by
