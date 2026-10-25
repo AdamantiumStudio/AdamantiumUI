@@ -2205,6 +2205,9 @@ All packages share one version.
 
 ### Fixed
 
+- The wallpaper backdrop of a picture of 16 bits a channel - a 12-bit JPEG, a 16-bit PNG or TIFF - came out in noise:
+  each channel was read as two of 8 bits. It reads their high bytes now; a JPEG wallpaper of any size takes the
+  eighth-scale preview, the engine's new JPEG decoder making one for every file.
 - The focus ring stayed where it was when its window changed size - a dialog growing round an error line left the ring
   a few pixels off the field. The popup and adorner stages now record again when the window's projection changes.
 - Shift+Tab sent by the automation agent moved the focus forward, and into a date, duration or linked text it landed at

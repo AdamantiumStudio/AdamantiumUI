@@ -205,14 +205,12 @@ internal sealed class WallpaperBackdrop : IDisposable
 
         try
         {
-            // THE DECODE IS THE COST, and it is enormous: a 4K photograph measured 6.4 SECONDS through the engine's own
-            // JPEG decoder, against 5 ms for everything this class then does with the pixels. It has no scaled-decode
-            // path to ask for a thumbnail instead, so the answer is to pay it once and keep the result - the same trade
-            // the shader binary cache makes, for the same reason.
+            // The decode is the cost - other formats in full, JPEG at an eighth but still read whole - so it is paid
+            // once and the result kept, the same trade the shader binary cache makes.
             var cacheFile = CacheFileFor(path);
             if (TryLoadCached(cacheFile, out var cached, out picture, out width, out height)) return cached;
 
-            var source = LoadSmallestUsable(path, out var downscale);
+            var source = LoadSmallestUsable(path, out picture);
             if (source == null || source.Width == 0 || source.Height == 0) return null;
 
             var pixels = source.GetRawPixels(0);
@@ -224,16 +222,14 @@ internal sealed class WallpaperBackdrop : IDisposable
             if (bytesPerPixel < 3) return null;
             var stride = (int)srcWidth * bytesPerPixel;
 
-            // The size the DESKTOP laid the picture out at, which is what decides where it lands (see Placement) - and
-            // that is the ORIGINAL, even when what came back was an eighth of it. Scaled back up here, once.
-            picture = new Size(srcWidth * downscale, srcHeight * downscale);
-
             var scale = Math.Max(srcWidth, srcHeight) / (double)PreparedLongEdge;
             width = (uint)Math.Max(1, srcWidth / scale);
             height = (uint)Math.Max(1, srcHeight / scale);
 
+            var wide = IsSixteenBit(description.Format);
+            if (!wide && bytesPerPixel > 4) return null;
             var result = Shrink(pixels, srcWidth, srcHeight, stride, bytesPerPixel, width, height,
-                IsBgr(description.Format));
+                IsBgr(description.Format), wide);
 
             SaveCached(cacheFile, result, picture, width, height);
             return result;
@@ -307,10 +303,11 @@ internal sealed class WallpaperBackdrop : IDisposable
         }
     }
 
-    // Decodes JPEG at 1/8 scale (DC coefficients only); other formats fully.
-    private static IRawBitmap LoadSmallestUsable(string path, out int downscale)
+    // Decodes JPEG at 1/8 scale (DC coefficients only); other formats fully. The picture's own size comes out as well:
+    // an eighth rounds up, so it is not eight times the preview's.
+    private static IRawBitmap LoadSmallestUsable(string path, out Size picture)
     {
-        downscale = 1;
+        picture = default;
         var extension = System.IO.Path.GetExtension(path);
         var isJpeg = string.Equals(extension, ".jpg", StringComparison.OrdinalIgnoreCase)
                      || string.Equals(extension, ".jpeg", StringComparison.OrdinalIgnoreCase);
@@ -320,16 +317,13 @@ internal sealed class WallpaperBackdrop : IDisposable
             try
             {
                 using var stream = System.IO.File.OpenRead(path);
-                var preview = new Imaging.Jpeg.Decoder.JpegDecoder(stream).DecodePreview();
-                if (preview != null)
+                var decoder = new Imaging.Jpeg.JpegDecoder(stream);
+                var size = decoder.Size;
+                if (size.Height > 0)
                 {
-                    downscale = 8;
-                    return preview;
+                    picture = new Size(size.Width, size.Height);
+                    return decoder.DecodePreview();
                 }
-            }
-            catch (Imaging.Jpeg.Decoder.PreviewNotAvailableException)
-            {
-                // This picture's blocks do not divide its size; decode it in full below.
             }
             catch (Exception)
             {
@@ -338,13 +332,22 @@ internal sealed class WallpaperBackdrop : IDisposable
         }
 
         using var full = System.IO.File.OpenRead(path);
-        return BitmapLoader.Load(full);
+        var bitmap = BitmapLoader.Load(full);
+        if (bitmap != null)
+        {
+            picture = new Size(bitmap.Width, bitmap.Height);
+        }
+
+        return bitmap;
     }
 
     // Averages (not samples, which would shimmer) a strided subset of each cell, so work scales with the output size.
+    // Channels of 16 bits are read by their high byte, as eight would be.
     private static byte[] Shrink(byte[] src, uint srcWidth, uint srcHeight, int stride, int bytesPerPixel,
-        uint width, uint height, bool bgr)
+        uint width, uint height, bool bgr, bool wide)
     {
+        var channel = wide ? 2 : 1;
+        var high = wide ? 1 : 0;
         var dst = new byte[width * height * 4];
 
         // At most this many samples per axis inside one output cell - so a cell costs at most 16 reads no matter how
@@ -369,11 +372,11 @@ internal sealed class WallpaperBackdrop : IDisposable
                     var row = (long)sy * stride;
                     for (var sx = x0; sx < x1 && sx < srcWidth; sx += stepX)
                     {
-                        var i = row + (long)sx * bytesPerPixel;
-                        if (i + 2 >= src.Length) continue;
-                        r += src[i + (bgr ? 2 : 0)];
-                        g += src[i + 1];
-                        b += src[i + (bgr ? 0 : 2)];
+                        var i = row + (long)sx * bytesPerPixel + high;
+                        if (i + 2 * channel >= src.Length) continue;
+                        r += src[i + (bgr ? 2 : 0) * channel];
+                        g += src[i + channel];
+                        b += src[i + (bgr ? 0 : 2) * channel];
                         n++;
                     }
                 }
@@ -389,6 +392,9 @@ internal sealed class WallpaperBackdrop : IDisposable
 
         return dst;
     }
+
+    private static bool IsSixteenBit(Vulkan.Core.Format format)
+        => format == Vulkan.Core.Format.R16G16B16A16_UNORM || format == Vulkan.Core.Format.R16G16B16_UNORM;
 
     private static bool IsBgr(Vulkan.Core.Format format)
         => format == Vulkan.Core.Format.B8G8R8A8_UNORM
