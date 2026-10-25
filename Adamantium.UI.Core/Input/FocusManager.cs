@@ -134,7 +134,7 @@ public static class FocusManager
 
       var previous = Focused;
       Focused = null;
-      AnnounceFocusMove(previous, null, NavigationMethod.Unspecified);
+      AnnounceFocusMove(previous, null, NavigationMethod.Unspecified, InputModifiers.None);
    }
 
    /// <summary>Moves the focus out of <paramref name="hidden"/>, which has just stopped being shown, onto the nearest
@@ -157,7 +157,10 @@ public static class FocusManager
          }
       }
 
+      // Let go of, not moved by a click: the keyboard is as much in use as it was, for what takes the focus next.
+      var ringVisible = IsFocusVisible;
       Release(Focused);
+      IsFocusVisible = ringVisible;
    }
 
    private static bool IsShown(IUIComponent element)
@@ -218,7 +221,7 @@ public static class FocusManager
          // Announce the move HERE, not only on the mouse path. Focus set programmatically - which is every keyboard
          // move, and every control that focuses itself - used to change nothing visible at all, because the events that
          // drive IsFocused were raised by the mouse handler alone.
-         AnnounceFocusMove(previous, component, navigationMethod);
+         AnnounceFocusMove(previous, component, navigationMethod, modifiers);
 
          if (scope != null)
          {
@@ -287,14 +290,16 @@ public static class FocusManager
    // One place that tells everyone the focus moved: the two elements themselves, and every element that gained or lost
    // "the focus is somewhere inside me" (the same ancestor-chain machinery IsPointerOver runs on - a composite control has
    // to know the focus is in its editor without being the focused element itself).
-   private static void AnnounceFocusMove(IInputComponent previous, IInputComponent current, NavigationMethod method)
+   private static void AnnounceFocusMove(IInputComponent previous, IInputComponent current, NavigationMethod method,
+      InputModifiers modifiers)
    {
       IsFocusVisible = method is NavigationMethod.Tab or NavigationMethod.Directional;
 
       // A fresh args per raise: RaiseEvent only fills Source/OriginalSource when they are null, so one shared object
-      // would carry the LOST element into the GOT event - and IsFocused is derived from exactly that.
+      // would carry the LOST element into the GOT event - and IsFocused is derived from exactly that. The GOT one says
+      // how the focus came, and with which modifiers: Shift+Tab arriving at a field of parts starts at its last.
       previous?.RaiseEvent(new RoutedEventArgs(LostFocusEvent));
-      current?.RaiseEvent(new RoutedEventArgs(GotFocusEvent));
+      current?.RaiseEvent(new KeyboardGotFocusEventArgs(previous, current, method, modifiers) { RoutedEvent = GotFocusEvent });
 
       AncestorState.Transition(previous, current,
          Keyboard.GotKeyboardFocusWithinEvent, Keyboard.LostKeyboardFocusWithinEvent,
@@ -312,6 +317,12 @@ public static class FocusManager
 
       CommandManager.InvalidateRequerySuggested();
    }
+
+   /// <summary>The modifiers held as the focus came, as <paramref name="gotFocus"/> - a <see cref="GotFocusEvent"/> -
+   /// carries them, and as the keyboard holds them: a key that moved it says so itself, and focus given by a control in
+   /// answer to a key it handled (a grid's cell editor on Shift+Tab) is read off the keyboard.</summary>
+   public static InputModifiers ModifiersOf(RoutedEventArgs gotFocus) =>
+      (gotFocus is KeyboardGotFocusEventArgs focus ? focus.Modifiers : InputModifiers.None) | Keyboard.Modifiers;
 
    public static bool GetIsFocusScope(IAdamantiumComponent element) => element.GetValue<bool>(IsFocusScopeProperty);
 

@@ -7,6 +7,19 @@ All packages share one version.
 
 ### Added
 
+- `UIApplication.StartupThemeName`: the theme the application opens on, by name, as the user chose it and the
+  application remembered - set before `Run()`, so the first window opens in it rather than swapping to it. Wins over
+  `StartupTheme`; `ADAM_THEME` wins over it; a name no theme has is passed over.
+- Escape in a popup presses the `IsCancel` button of its content, as Enter presses the `IsDefault` one and as both do
+  in a window: a form in a ribbon's backstage steps back to its page instead of the backstage closing with what was
+  typed. With no Cancel button shown, Escape closes the popup as before.
+- `KeyboardNavigation.TakesFocusWhenShown`: an element that has it takes the keyboard, at its first stop, each time it
+  is made visible, once what lays it out - its window, or the overlay it is in, such as a ribbon's backstage - has laid
+  it out - a form shown in place of the tile that asked for it gets the focus instead of leaving it to whatever held the
+  tile. Content a template builds a pass later is waited for over a few passes while the focus stays where it was; once
+  the user has gone elsewhere it is let be. With the ring if the keyboard is in use; not in a window that is not the
+  active one, not while an ancestor is not shown or out of a window or of a closed overlay, and not when the focus is
+  inside it already. A focus let go of because its element was hidden keeps the ring as it was, for what takes it next.
 - Field validation: a binding whose source implements `INotifyDataErrorInfo` carries the errors of the bound property
   onto its target element - `Validation.HasError`, `Validation.Errors`, `Validation.Error`; the errors of all of an
   element's bindings together. The errors changing leaves the value in the target alone, and the source holds the
@@ -134,11 +147,13 @@ All packages share one version.
   is disabled while any modal window blocks it and enabled again before the last of them is hidden or goes, whichever
   thread closes it, so activation returns to the owner - unless something else disabled it, as a system file dialog
   does its owner; a modal window is never blocked itself, and a click on a blocked one gets the system's beep and
-  arrow. On Wayland the compositor is told the window is a modal dialog of its owner (`xdg_wm_dialog_v1`), and the
-  application's other windows of the time take no press, key, wheel, touch, pen or drop while any modal window blocks
-  them, nor a close or a resize from the compositor. A window being blocked lets go of the keyboard focus and the
-  pointer capture held in it - a press begun before clicks nothing when released after - and its activation moves no
-  focus into it; the keyboard coming to one brings the modal window back. A window shown modally is not blocked by the
+  arrow. On Wayland the window is parented on its owner - not marked a modal dialog (`xdg_wm_dialog_v1`): Mutter
+  attaches such a dialog to its owner and moves the owner when the dialog is dragged - and the application's other
+  windows of the time take no press, key, wheel, touch, pen or drop while any modal window blocks them, nor a close or
+  a resize from the compositor. A window being blocked lets go of the keyboard focus and the pointer capture held in
+  it - a press begun before clicks nothing when released after - and is not made the active one: the keyboard coming
+  to it brings the modal window back, of modals opened over modals the one not blocked itself. A window shown modally
+  is not blocked by the
   modal windows already up, only by those opened over it; an owned window keeps its owner, and a modal one its
   modality, when hidden and shown again. macOS is to follow.
   `IWindow.Owner`: the window it opens over and is closed with - one refusing to close is freed from it instead - and,
@@ -2190,6 +2205,18 @@ All packages share one version.
 
 ### Fixed
 
+- The focus ring stayed where it was when its window changed size - a dialog growing round an error line left the ring
+  a few pixels off the field. The popup and adorner stages now record again when the window's projection changes.
+- Shift+Tab sent by the automation agent moved the focus forward, and into a date, duration or linked text it landed at
+  the first part: the direction was read from the keyboard's own state, which a simulated key never touches. It is read
+  from the key now, and the focus hands the key's modifiers on to what it lands on (`GotFocus` is raised with
+  `KeyboardGotFocusEventArgs`; `FocusManager.ModifiersOf` reads them together with the keyboard's).
+- On Wayland a Shift held before the keyboard came to the window, or latched by Sticky Keys, was not seen: Shift+Tab
+  went forward. The keys held at the keyboard's arrival count as down, and the modifiers xkb has in effect go with
+  every key and pointer event.
+- A list under a collapsed panel through a theme swap, shown again, put the rows of its old template back - rows
+  already thrown away with that template, left in the window. An items control's generator now lets go of its
+  containers with the template, and the new one makes its own.
 - `DockingArea` made a new divider for every split on every rebuild and threw it away when the split had not changed,
   and kept the dividers a changed split no longer had: each stayed subscribed to the application's resources and held
   the area - and its window - for good. An editor window closed and reopened in one process stayed in memory every

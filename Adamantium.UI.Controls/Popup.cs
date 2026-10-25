@@ -593,6 +593,15 @@ public class Popup : MeasurableUIComponent, IContainer
         if (e.Key != Key.Escape || e.Handled) return;
         if (OpenDismissable.Count == 0 || !ReferenceEquals(OpenDismissable[^1], this)) return;
 
+        // A form in it with a Cancel button: Escape is that button, as in a window - a ribbon's backstage steps back from
+        // its form to its page instead of closing with what was typed. The next Escape closes it.
+        if (_contentRoot != null && ButtonIn(_contentRoot, b => b.IsCancel) is { } cancel)
+        {
+            cancel.PerformClick();
+            e.Handled = true;
+            return;
+        }
+
         var args = new RoutedEventArgs();
         DismissRequested?.Invoke(this, args);
         if (!args.Handled)
@@ -652,12 +661,24 @@ public class Popup : MeasurableUIComponent, IContainer
         }
     }
 
+    // Enter presses the content's IsDefault button, Escape its IsCancel one - as in a window. Escape on a popup that
+    // closes on it is taken on the window's preview stream first (OnGlobalPreviewKey), which asks the same.
     private void OnContentKey(object sender, KeyEventArgs e)
     {
         const InputModifiers chords = InputModifiers.LeftControl | InputModifiers.RightControl | InputModifiers.LeftShift |
                                       InputModifiers.RightShift | InputModifiers.LeftAlt | InputModifiers.RightAlt;
-        if (e.Key != Key.Enter || e.Handled || e.IsRepeated || (e.Modifiers & chords) != 0 || _contentRoot == null ||
-            DefaultButtonIn(_contentRoot) is not { } button)
+        if (e.Handled || e.IsRepeated || (e.Modifiers & chords) != 0 || _contentRoot == null)
+        {
+            return;
+        }
+
+        var button = e.Key switch
+        {
+            Key.Enter => ButtonIn(_contentRoot, b => b.IsDefault),
+            Key.Escape => ButtonIn(_contentRoot, b => b.IsCancel),
+            _ => null
+        };
+        if (button == null)
         {
             return;
         }
@@ -666,21 +687,21 @@ public class Popup : MeasurableUIComponent, IContainer
         e.Handled = true;
     }
 
-    private static Button DefaultButtonIn(IUIComponent root)
+    private static Button ButtonIn(IUIComponent root, Func<Button, bool> match)
     {
         if (root.Visibility != Visibility.Visible || !root.IsEnabled)
         {
             return null;
         }
 
-        if (root is Button { IsDefault: true } button)
+        if (root is Button button && match(button))
         {
             return button;
         }
 
         foreach (var child in root.VisualChildren)
         {
-            if (DefaultButtonIn(child) is { } found)
+            if (ButtonIn(child, match) is { } found)
             {
                 return found;
             }

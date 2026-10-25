@@ -628,7 +628,33 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
         WaylandPlatform.DispatchInput(() => PointerDevice.Current.ProcessEvent(args));
     }
 
-    private InputModifiers InputModifiers() => KeyboardDevice.CurrentDevice.Modifiers | buttons;
+    private InputModifiers InputModifiers() => KeyModifiers() | buttons;
+
+    // The modifier keys held, and those xkb has in effect without a key held - latched or locked by Sticky Keys.
+    private Core.Input.InputModifiers KeyModifiers()
+    {
+        var modifiers = KeyboardDevice.CurrentDevice.Modifiers;
+        var effective = xkb?.Modifiers ?? XkbModifiers.None;
+        if ((effective & XkbModifiers.Shift) != 0 &&
+            (modifiers & (Core.Input.InputModifiers.LeftShift | Core.Input.InputModifiers.RightShift)) == 0)
+        {
+            modifiers |= Core.Input.InputModifiers.LeftShift;
+        }
+
+        if ((effective & XkbModifiers.Control) != 0 &&
+            (modifiers & (Core.Input.InputModifiers.LeftControl | Core.Input.InputModifiers.RightControl)) == 0)
+        {
+            modifiers |= Core.Input.InputModifiers.LeftControl;
+        }
+
+        if ((effective & XkbModifiers.Alt) != 0 &&
+            (modifiers & (Core.Input.InputModifiers.LeftAlt | Core.Input.InputModifiers.RightAlt)) == 0)
+        {
+            modifiers |= Core.Input.InputModifiers.LeftAlt;
+        }
+
+        return modifiers;
+    }
 
     private static MouseButtons ButtonOf(uint button) => button switch
     {
@@ -705,6 +731,19 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
     private void OnKeyboardEnter(uint serial, WlSurface surface, ReadOnlySpan<byte> keys)
     {
         keyboardWindow = platform.Find(surface);
+
+        // The keys already held as the keyboard comes here: a Shift pressed in another window is down for this one too.
+        if (xkb != null)
+        {
+            lock (_keysDownLock)
+            {
+                foreach (var code in System.Runtime.InteropServices.MemoryMarshal.Cast<byte, uint>(keys))
+                {
+                    keysDown.Add(KeyOf(code));
+                }
+            }
+        }
+
         if (keyboardWindow is { InputWindow: null, Window: not null })
         {
             keyboardWindow.ActivateBlocker();
@@ -777,7 +816,7 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
                     PreviousState = KeyState.Down, CurrentState = KeyState.Up, RepeatCount = 1,
                     PhysicalKey = WaylandKeys.ToHidUsage(code), PressTime = time,
                 };
-                var modifiers = KeyboardDevice.CurrentDevice.Modifiers;
+                var modifiers = KeyModifiers();
                 WaylandPlatform.DispatchInput(() => KeyboardDevice.CurrentDevice.ProcessEvent(
                     new RawKeyboardEventArgs(key, RawKeyboardEventType.KeyUp, press, modifiers, time), window));
             }
@@ -800,7 +839,7 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
             PreviousState = repeated ? KeyState.Down : KeyState.Up, CurrentState = KeyState.Down, RepeatCount = 1,
             PhysicalKey = WaylandKeys.ToHidUsage(code), PressTime = time,
         };
-        var modifiers = KeyboardDevice.CurrentDevice.Modifiers;
+        var modifiers = KeyModifiers();
         WaylandPlatform.DispatchInput(() => KeyboardDevice.CurrentDevice.ProcessEvent(
             new RawKeyboardEventArgs(key, RawKeyboardEventType.KeyDown, press, modifiers, time), window));
 

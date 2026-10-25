@@ -81,8 +81,9 @@ public class AdornerRenderProcessor : EntityProcessor<WindowRenderService>, IRec
             Flatten(adorner, _flat);
         }
 
-        if (_gate.HasChanged(_flat, _scope, AssociatedService.RenderScale))
-            _cache.RecordComponents(_flat, window.GetProjectionMatrix());
+        var projection = window.GetProjectionMatrix();
+        if (_gate.HasChanged(_flat, _scope, AssociatedService.RenderScale, projection))
+            _cache.RecordComponents(_flat, projection);
     }
 
     /// <summary>Applies what <see cref="Record"/> recorded, after the fence wait, and runs the per-frame GPU work.</summary>

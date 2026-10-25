@@ -542,6 +542,9 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
     public static readonly AdamantiumProperty StartupThemeProperty = AdamantiumProperty.Register(nameof(StartupTheme),
         typeof(Type), typeof(UIApplication), new PropertyMetadata(null));
 
+    public static readonly AdamantiumProperty StartupThemeNameProperty = AdamantiumProperty.Register(nameof(StartupThemeName),
+        typeof(string), typeof(UIApplication), new PropertyMetadata(null));
+
     public static readonly AdamantiumProperty StartupThemeVariantProperty = AdamantiumProperty.Register(nameof(StartupThemeVariant),
         typeof(ThemeVariant), typeof(UIApplication), new PropertyMetadata(default(ThemeVariant)));
 
@@ -586,6 +589,16 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
     {
         get => GetValue<Type>(StartupThemeProperty);
         set => SetValue(StartupThemeProperty, value);
+    }
+
+    /// <summary>The theme the application opens on, by name - "Fluent", "Graphite", "macOS" - as the user chose it and the
+    /// application remembered: wins over <see cref="StartupTheme"/>, and the ADAM_THEME environment variable over it. A
+    /// name no theme has is passed over for <see cref="StartupTheme"/>, since a remembered choice can outlive its theme.
+    /// </summary>
+    public string StartupThemeName
+    {
+        get => GetValue<string>(StartupThemeNameProperty);
+        set => SetValue(StartupThemeNameProperty, value);
     }
 
     /// <summary>The variant of the theme the application opens on: Light, Dark, System - which follows the operating
@@ -948,7 +961,8 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
 
         // ADAM_THEME wins over StartupTheme: a theme is fully exercised only when current from the first frame.
         var requested = Environment.GetEnvironmentVariable("ADAM_THEME");
-        var startOn = string.IsNullOrEmpty(requested) ? StartupThemeInstance() ?? fluent : ThemeManager[requested];
+        var named = string.IsNullOrEmpty(StartupThemeName) ? null : ThemeManager[StartupThemeName];
+        var startOn = string.IsNullOrEmpty(requested) ? named ?? StartupThemeInstance() ?? fluent : ThemeManager[requested];
         if (startOn == null)
         {
             throw new InvalidOperationException(

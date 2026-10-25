@@ -214,7 +214,7 @@ public class DurationField : Control, ISegmentHost
 
         if (_active < 0 && _segments.Count > 0)
         {
-            Activate((Keyboard.Modifiers & Shift) != 0 ? _segments.Count - 1 : 0);
+            Activate((FocusManager.ModifiersOf(e) & Shift) != 0 ? _segments.Count - 1 : 0);
         }
     }
 

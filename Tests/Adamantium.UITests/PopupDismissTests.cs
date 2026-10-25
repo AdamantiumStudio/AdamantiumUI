@@ -143,4 +143,35 @@ public class PopupDismissTests
             Assert.That(menu.IsOpen, Is.True, "a card opened from the menu is inside it");
         });
     }
+
+    // A form in a popup - a ribbon backstage's New Solution - answers Escape with its Cancel button, as in a window: the
+    // popup stays, the form steps back. With no Cancel button shown, Escape closes the popup.
+    [Test]
+    public void EscapeOnAPopupWithACancelButton_PressesIt_ThenClosesThePopup()
+    {
+        var cancel = new Adamantium.UI.Controls.Buttons.Button { IsCancel = true, Width = 40, Height = 20 };
+        var form = new StackPanel { Children = { cancel } };
+        cancel.Click += (_, _) => form.Visibility = Visibility.Collapsed;
+        var popup = new Popup { IsOpen = true, Child = new StackPanel { Children = { form } } };
+        var window = new Window { Width = 400, Height = 300, Content = new StackPanel { Children = { popup } } };
+        Settle(window);
+
+        void Escape() => ((IInputComponent)window).RaiseEvent(
+            new KeyEventArgs(KeyboardDevice.CurrentDevice, Key.Escape, InputModifiers.None, 0)
+            {
+                RoutedEvent = Keyboard.PreviewKeyDownEvent
+            });
+
+        Escape();
+        Settle(window);
+        Assert.Multiple(() =>
+        {
+            Assert.That(form.Visibility, Is.EqualTo(Visibility.Collapsed), "Escape pressed Cancel");
+            Assert.That(popup.IsOpen, Is.True, "and the popup stayed");
+        });
+
+        Escape();
+        Settle(window);
+        Assert.That(popup.IsOpen, Is.False, "no Cancel shown: Escape closes it");
+    }
 }

@@ -62,7 +62,6 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
     private ZxdgExportedV2 exported;
     private XdgToplevelSessionV1 toplevelSession;
     private string exportedHandle;
-    private XdgDialogV1 dialog;
     private IWindow owner;
     private readonly List<WaylandWindowWorker> blockedWindows = [];
     private readonly HashSet<WaylandWindowWorker> blockers = [];
@@ -333,34 +332,6 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
                 other.Recount();
             }
         }
-
-        platform.Invoke(SendModal);
-    }
-
-    private void SendModal()
-    {
-        bool modal;
-        lock (platform.ModalLock)
-        {
-            modal = blocking;
-        }
-
-        if (closed || platform.Dialogs == null || (dialog == null && !modal))
-        {
-            return;
-        }
-
-        dialog ??= platform.Dialogs.GetXdgDialog(toplevel);
-        if (modal)
-        {
-            dialog.SetModal();
-        }
-        else
-        {
-            dialog.UnsetModal();
-        }
-
-        platform.Display.Flush();
     }
 
     private void Recount()
@@ -412,7 +383,8 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
         return node;
     }
 
-    /// <summary>Asks for the modal window keeping this one from input to be activated: the keyboard came here.</summary>
+    /// <summary>Asks for the modal window keeping this one from input to be activated: the keyboard came here. Of modals
+    /// opened over modals, the one nothing keeps from input itself.</summary>
     internal void ActivateBlocker()
     {
         WaylandWindowWorker modal = null;
@@ -420,7 +392,7 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
         {
             foreach (var blocker in blockers)
             {
-                if (blocker.blocking)
+                if (blocker.blocking && (modal == null || !blocker.inputBlocked))
                 {
                     modal = blocker;
                 }
@@ -542,7 +514,6 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
             SendParent();
         }
 
-        SendModal();
         surface.Commit();
         platform.Display.Flush();
     }
@@ -1034,7 +1005,6 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
             platform.Outputs.Changed -= UpdateDisplayRefreshRate;
             exported?.Destroy();
             toplevelSession?.Destroy();
-            dialog?.Destroy();
             decoration?.Destroy();
             viewport?.Destroy();
             fractionalScale?.Destroy();
@@ -1052,12 +1022,13 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
             return;
         }
 
-        window.SetIsActive(true);
+        // A window a modal keeps from input is not the active one: the keyboard coming to it hands it on to the modal.
         if (inputBlocked)
         {
             return;
         }
 
+        window.SetIsActive(true);
         UIContext.UIApplication.SetActiveWindow(window);
         FocusManager.EnterWindow(window);
     }

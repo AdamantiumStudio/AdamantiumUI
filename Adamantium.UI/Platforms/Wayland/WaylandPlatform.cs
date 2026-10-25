@@ -101,9 +101,6 @@ public sealed unsafe class WaylandPlatform : IApplicationPlatform, Linux.IPortal
                 case XdgActivationV1.InterfaceName:
                     Activation = registry.Bind<XdgActivationV1>(name, 1);
                     break;
-                case XdgWmDialogV1.InterfaceName:
-                    Dialogs = registry.Bind<XdgWmDialogV1>(name, 1);
-                    break;
                 case XdgToplevelIconManagerV1.InterfaceName:
                     ToplevelIcons = registry.Bind<XdgToplevelIconManagerV1>(name, 1);
                     break;
@@ -196,9 +193,6 @@ public sealed unsafe class WaylandPlatform : IApplicationPlatform, Linux.IPortal
     public XdgToplevelDragManagerV1 ToplevelDrags { get; private set; }
 
     public XdgActivationV1 Activation { get; private set; }
-
-    /// <summary>Marks toplevels as dialogs of their parents, modal or not; null where the compositor offers none.</summary>
-    public XdgWmDialogV1 Dialogs { get; private set; }
 
     /// <summary>Gives toplevels their icon; null where the compositor offers none (GNOME takes it from the desktop entry).
     /// </summary>

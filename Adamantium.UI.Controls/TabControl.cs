@@ -978,13 +978,13 @@ public class TabControl : Selector
         WireTabStripAffordances();
     }
 
-    /// <summary>Clears the realized containers on removal, not on apply: a template is applied more than once, and
-    /// clearing then threw away containers the strip's hosts had just built.</summary>
+    /// <summary>Lets go of the strip's parts. The realized containers are cleared by the base, on removal, not on apply: a
+    /// template is applied more than once, and clearing then threw away containers the strip's hosts had just built.
+    /// </summary>
     public override void OnRemoveTemplate()
     {
         base.OnRemoveTemplate();
         DetachTabStripAffordances();
-        ItemContainerGenerator.Clear();
         _tabStrip = null;
         _overflow = null;
         _overflowPopup = null;

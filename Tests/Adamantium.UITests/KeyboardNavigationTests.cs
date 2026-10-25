@@ -797,11 +797,173 @@ public class KeyboardNavigationTests
         });
     }
 
-    private static void PressOn(Button element, Key key) =>
-        element.RaiseEvent(new KeyEventArgs(KeyboardDevice.CurrentDevice, key, InputModifiers.None, 0)
+    private static void PressOn(Button element, Key key, InputModifiers modifiers = InputModifiers.None) =>
+        element.RaiseEvent(new KeyEventArgs(KeyboardDevice.CurrentDevice, key, modifiers, 0)
         {
             RoutedEvent = Keyboard.KeyDownEvent
         });
+
+    // The key says which way: Shift held is on the key that came, whatever the keyboard's own state says - an
+    // automation's Shift+Tab went forward.
+    [Test]
+    public void ShiftTabOnTheKey_WalksBack()
+    {
+        var a = NewButton("a");
+        var b = NewButton("b");
+        var c = NewButton("c");
+        var stack = new StackPanel();
+        stack.Children.Add(a);
+        stack.Children.Add(b);
+        stack.Children.Add(c);
+        Root(stack);
+        FocusManager.Focus(b, NavigationMethod.Tab);
+
+        PressOn(b, Key.Tab, InputModifiers.LeftShift);
+
+        Assert.That(FocusManager.Focused, Is.SameAs(a));
+    }
+
+    // A form shown in place of the tile that asked for it: the focus goes to its first field, not to whatever holds the
+    // hidden tile.
+    [TestCase(NavigationMethod.Mouse, false)]
+    [TestCase(NavigationMethod.Tab, true)]
+    public void ShownWithTakesFocusWhenShown_TakesTheFocus(NavigationMethod asked, bool ring)
+    {
+        var (window, tile, form, field) = TileAndForm();
+        FocusManager.Focus(tile, asked);
+
+        tile.Visibility = Visibility.Collapsed;
+        form.Visibility = Visibility.Visible;
+        for (var i = 0; i < 5; i++) WindowExtension.UpdateTree(window);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(FocusManager.Focused, Is.SameAs(field));
+            Assert.That(FocusManager.IsFocusVisible, Is.EqualTo(ring), "the ring as the keyboard was in use");
+        });
+    }
+
+    // The keyboard is the active window's: a form shown in another takes nothing.
+    [Test]
+    public void ShownInAWindowNotActive_TakesNothing()
+    {
+        var (window, tile, form, _) = TileAndForm();
+        FocusManager.Focus(tile, NavigationMethod.Mouse);
+        window.SetIsActive(false);
+
+        form.Visibility = Visibility.Visible;
+        for (var i = 0; i < 5; i++) WindowExtension.UpdateTree(window);
+
+        Assert.That(FocusManager.Focused, Is.SameAs(tile));
+    }
+
+    // Nowhere to stop when it was laid out, and the user went elsewhere meanwhile: it is let be, not taken from there.
+    [Test]
+    public void NothingToFocusOnceShown_TheUserGoneElsewhere_TakesNothingLater()
+    {
+        var (window, tile, form, field) = TileAndForm();
+        field.IsEnabled = false;
+        FocusManager.Focus(tile, NavigationMethod.Mouse);
+
+        form.Visibility = Visibility.Visible;
+        for (var i = 0; i < 5; i++) WindowExtension.UpdateTree(window);
+        var elsewhere = NewButton("elsewhere");
+        ((StackPanel)window.Content).Children.Add(elsewhere);
+        for (var i = 0; i < 2; i++) WindowExtension.UpdateTree(window);
+        FocusManager.Focus(elsewhere, NavigationMethod.Mouse);
+        field.IsEnabled = true;
+        form.Width = 150;
+        for (var i = 0; i < 5; i++) WindowExtension.UpdateTree(window);
+
+        Assert.That(FocusManager.Focused, Is.SameAs(elsewhere));
+    }
+
+    // Content that comes a pass later - a view a template builds - is waited for while the focus stays put.
+    [Test]
+    public void ContentComingAPassLater_IsWaitedFor()
+    {
+        var (window, tile, form, field) = TileAndForm();
+        field.IsEnabled = false;
+        FocusManager.Focus(tile, NavigationMethod.Mouse);
+
+        form.Visibility = Visibility.Visible;
+        WindowExtension.UpdateTree(window);
+        field.IsEnabled = true;
+        form.Width = 150;
+        for (var i = 0; i < 5; i++) WindowExtension.UpdateTree(window);
+
+        Assert.That(FocusManager.Focused, Is.SameAs(field));
+    }
+
+    // In an overlay - the backstage of a ribbon - it is the overlay's layout that lays it out, and the focus goes there.
+    [Test]
+    public void ShownInAnOpenPopup_TakesTheFocus()
+    {
+        var field = NewButton("field");
+        var form = new StackPanel { Visibility = Visibility.Collapsed, Children = { field } };
+        KeyboardNavigation.SetTakesFocusWhenShown(form, true);
+        var popup = new Popup { Child = new StackPanel { Width = 200, Children = { form } } };
+        var tile = NewButton("tile");
+        var window = new Window { Width = 400, Height = 300, Content = new StackPanel { Children = { tile, popup } } };
+        window.SetIsActive(true);
+        WindowExtension.UpdateTree(window);
+        popup.IsOpen = true;
+        Settle(window);
+        FocusManager.Focus(tile, NavigationMethod.Mouse);
+
+        form.Visibility = Visibility.Visible;
+        Settle(window);
+
+        Assert.That(FocusManager.Focused, Is.SameAs(field));
+    }
+
+    // Closed before it was laid out: nothing in it takes the keys.
+    [Test]
+    public void ShownInAPopupClosedBeforeItWasLaidOut_TakesNothing()
+    {
+        var field = NewButton("field");
+        var form = new StackPanel { Visibility = Visibility.Collapsed, Children = { field } };
+        KeyboardNavigation.SetTakesFocusWhenShown(form, true);
+        var popup = new Popup { Child = new StackPanel { Width = 200, Children = { form } } };
+        var tile = NewButton("tile");
+        var window = new Window { Width = 400, Height = 300, Content = new StackPanel { Children = { tile, popup } } };
+        window.SetIsActive(true);
+        WindowExtension.UpdateTree(window);
+        popup.IsOpen = true;
+        Settle(window);
+        FocusManager.Focus(tile, NavigationMethod.Mouse);
+
+        form.Visibility = Visibility.Visible;
+        popup.IsOpen = false;
+        Settle(window);
+
+        Assert.That(FocusManager.Focused, Is.SameAs(tile));
+    }
+
+    private static void Settle(Window window)
+    {
+        for (var i = 0; i < 4; i++)
+        {
+            window.PopupLayer.UpdateLayout(new Adamantium.Mathematics.Size(400, 300));
+            WindowExtension.UpdateTree(window);
+        }
+    }
+
+    private static (Window Window, Button Tile, StackPanel Form, Button Field) TileAndForm()
+    {
+        var tile = NewButton("tile");
+        var field = NewButton("field");
+        var form = new StackPanel { Visibility = Visibility.Collapsed };
+        KeyboardNavigation.SetTakesFocusWhenShown(form, true);
+        form.Children.Add(field);
+        var stack = new StackPanel();
+        stack.Children.Add(tile);
+        stack.Children.Add(form);
+        var window = new Window { Width = 200, Height = 100, Content = stack };
+        window.SetIsActive(true);
+        for (var i = 0; i < 5; i++) WindowExtension.UpdateTree(window);
+        return (window, tile, form, field);
+    }
 
     private static (Button A, Button B) TwoButtonsInAWindow()
     {

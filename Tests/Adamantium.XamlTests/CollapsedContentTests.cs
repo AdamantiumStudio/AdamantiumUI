@@ -1,6 +1,7 @@
 using Adamantium.Core.DependencyInjection;
 using Adamantium.UI.Controls;
 using Adamantium.UI.Controls.Buttons;
+using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Controls.Text;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Resources;
@@ -212,5 +213,45 @@ public class CollapsedContentTests
         Assert.That(themes.IsThemeChanging, Is.False, "precondition: the swap finished");
         Assert.That(text.LogicalParent, Is.SameAs(button));
         Assert.That(text.DataContext, Is.SameAs(model));
+    }
+
+    // A list under a collapsed panel through a theme swap - the editor's recent solutions while its settings were shown -
+    // then shown: its rows were left in the window, thrown away. Shown all along, its rows are the new panel's alone.
+    [TestCase(true)]
+    [TestCase(false)]
+    public async System.Threading.Tasks.Task AList_ThroughAThemeSwap_IsWholeWhenShown(bool collapsed)
+    {
+        var themes = (ThemeManager)_app.ThemeManager;
+        var graphite = new Adamantium.UI.Themes.GraphiteTheme.Graphite();
+        themes.AddTheme(graphite.Name, graphite);
+
+        var items = new System.Collections.ObjectModel.ObservableCollection<string> { "Sample", "Gone", "Third" };
+        var list = new ItemsControl { ItemsSource = items };
+        var panel = new StackPanel { Children = { list } };
+        var window = new Window { Width = 400, Height = 300, ClientWidth = 400, ClientHeight = 300, Content = panel };
+        _app.Windows = [window];
+        await using var session = Adamantium.UI.Automation.AutomationSession.InProcess(window);
+        await session.WaitForIdleAsync();
+        if (collapsed)
+        {
+            panel.Visibility = Visibility.Collapsed;
+            await session.WaitForIdleAsync();
+        }
+
+        themes.SetTheme(graphite);
+        for (var frame = 0; frame < 100 && themes.IsThemeChanging; frame++)
+        {
+            Adamantium.UI.Core.Media.Animation.AnimationManager.Tick(0.05);
+            await session.WaitForIdleAsync();
+        }
+
+        Assert.That(themes.IsThemeChanging, Is.False, "precondition: the swap finished");
+        items.RemoveAt(1);   // ...and the list changes while still collapsed
+        items.Add("Added");
+        panel.Visibility = Visibility.Visible;
+        Assert.DoesNotThrowAsync(() => session.WaitForIdleAsync(), "no row thrown away while in the window");
+        var rows = (IUIComponent)list.GetTemplateChild("PART_ItemsPresenter");
+        Assert.That(list.ItemContainerGenerator.Realize(2).VisualParent?.VisualParent, Is.SameAs(rows),
+            "the rows are the new template's");
     }
 }

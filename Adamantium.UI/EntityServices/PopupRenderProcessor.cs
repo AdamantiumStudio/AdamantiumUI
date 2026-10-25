@@ -66,8 +66,9 @@ public class PopupRenderProcessor : EntityProcessor<WindowRenderService>, IRecor
         var flat = Flatten(window.PopupRoots, window);
         foreach (var root in window.PopupRoots) ClaimScope(root);
 
-        if (_gate.HasChanged(flat, _scope, AssociatedService.RenderScale))
-            _cache.RecordComponents(flat, window.GetProjectionMatrix());
+        var projection = window.GetProjectionMatrix();
+        if (_gate.HasChanged(flat, _scope, AssociatedService.RenderScale, projection))
+            _cache.RecordComponents(flat, projection);
     }
 
     /// <summary>Applies what <see cref="Record"/> recorded, after the fence wait, and runs the per-frame GPU work.</summary>

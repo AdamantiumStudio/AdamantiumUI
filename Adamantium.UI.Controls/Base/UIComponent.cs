@@ -122,6 +122,10 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
         {
             FocusManager.LeaveHidden(component);
         }
+        else if (KeyboardNavigation.GetTakesFocusWhenShown(component))
+        {
+            KeyboardNavigation.TakeFocusWhenLaidOut(component);
+        }
 
         if (previous == Visibility.Collapsed)
         {

@@ -530,15 +530,15 @@ public class TextEffectTests
         {
             var gate = new Adamantium.UI.EntityServices.OverlayRebuildGate();
             var text = new TextBlock { Text = "abc" };
-            gate.HasChanged([], scope, 1);
-            var idle = gate.HasChanged([], scope, 1);
+            gate.HasChanged([], scope, 1, default);
+            var idle = gate.HasChanged([], scope, 1, default);
 
             scope.MarkEffects(text);
 
             Assert.Multiple(() =>
             {
                 Assert.That(idle, Is.False);
-                Assert.That(gate.HasChanged([], scope, 1), Is.True);
+                Assert.That(gate.HasChanged([], scope, 1, default), Is.True);
             });
         }
         finally

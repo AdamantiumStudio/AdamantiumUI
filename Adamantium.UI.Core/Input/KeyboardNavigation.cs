@@ -55,6 +55,18 @@ public static class KeyboardNavigation
     public static void SetDirectionalNavigation(IAdamantiumComponent element, KeyboardNavigationMode value) =>
         element.SetValue(DirectionalNavigationProperty, value);
 
+    /// <summary>Whether the element takes the keyboard, at its first stop, each time it is made visible: a form shown in
+    /// place of the tile that asked for it gets the focus, rather than it falling back to whatever holds the hidden tile.
+    /// </summary>
+    public static readonly AdamantiumProperty TakesFocusWhenShownProperty = AdamantiumProperty.RegisterAttached(
+        "TakesFocusWhenShown", typeof(bool), typeof(AdamantiumComponent), new PropertyMetadata(false));
+
+    public static bool GetTakesFocusWhenShown(IAdamantiumComponent element) =>
+        element.GetValue<bool>(TakesFocusWhenShownProperty);
+
+    public static void SetTakesFocusWhenShown(IAdamantiumComponent element, bool value) =>
+        element.SetValue(TakesFocusWhenShownProperty, value);
+
     /// <summary>Declares this element a focus AREA: a whole region of the interface Ctrl+Tab steps between, the way Tab
     /// steps between controls. Coming back to an area comes back to the place in it the keyboard left, so a Ctrl+Tab out
     /// and back is not a way to lose your place. An overlay window declares itself one, and so does a window's content -
@@ -146,8 +158,9 @@ public static class KeyboardNavigation
     }
 
     /// <summary>Moves the focus one step. Public because navigation is also something an app asks for directly (a
-    /// wizard's Next button moving into the first field of the page it just showed).</summary>
-    public static bool Move(FocusNavigationDirection direction)
+    /// wizard's Next button moving into the first field of the page it just showed). <paramref name="modifiers"/> are the
+    /// key's, handed on to what takes the focus.</summary>
+    public static bool Move(FocusNavigationDirection direction, InputModifiers modifiers = InputModifiers.None)
     {
         if (FocusManager.Focused is not { } current)
             return false;
@@ -156,7 +169,8 @@ public static class KeyboardNavigation
         if (target == null || ReferenceEquals(target, current))
             return false;
 
-        return FocusManager.Focus(target, IsTabbing(direction) ? NavigationMethod.Tab : NavigationMethod.Directional);
+        return FocusManager.Focus(target, IsTabbing(direction) ? NavigationMethod.Tab : NavigationMethod.Directional,
+            modifiers);
     }
 
     /// <summary>Steps the focus to the next declared focus AREA (Ctrl+Tab), or the previous one (Ctrl+Shift+Tab). It
@@ -210,6 +224,62 @@ public static class KeyboardNavigation
 
     // Which window an element belongs to: the one that hosts it if it is on an overlay, otherwise its own visual root.
     private static object WindowOf(IUIComponent node) => HostOf?.Invoke(node) ?? RootOf(node);
+
+    private const int TakeFocusPasses = 8;
+
+    /// <summary>Takes the keyboard into <paramref name="element"/>, just made visible and asking for it through
+    /// <see cref="TakesFocusWhenShownProperty"/>, once whatever lays it out - its window, or the overlay it is in - has
+    /// laid it out: at its first stop, with the ring if the keyboard is in use. Content still to come (a view a template
+    /// builds a pass later) is waited for over a few passes, but only while the focus stays where it was at the first:
+    /// once the user has gone elsewhere, it is let be. Not in a window that is not the active one, nor while it or an
+    /// ancestor is not shown, nor out of the tree - or of a closed overlay.</summary>
+    internal static void TakeFocusWhenLaidOut(IUIComponent element)
+    {
+        var layout = LayoutManager.For(element);
+        var passes = 0;
+        IInputComponent focusThen = null;
+        void Take(object sender, EventArgs e)
+        {
+            if (passes == 0)
+            {
+                focusThen = FocusManager.Focused;
+            }
+
+            var done = !ReferenceEquals(FocusManager.Focused, focusThen) || !IsShown(element) || IsFocusWithin(element)
+                       || WindowOf(element) is IWindow { IsActive: false }
+                       || MoveInto(element, FocusManager.IsFocusVisible ? NavigationMethod.Tab : NavigationMethod.Unspecified)
+                       || ++passes >= TakeFocusPasses;
+            if (done)
+            {
+                layout.PlacesSettled -= Take;
+            }
+        }
+
+        layout.PlacesSettled += Take;
+    }
+
+    // Visible up to a window, or up to an overlay still hosted on one.
+    private static bool IsShown(IUIComponent element)
+    {
+        IUIComponent top = null;
+        for (var node = element; node != null; node = node.VisualParent)
+        {
+            if (node.Visibility != Visibility.Visible) return false;
+            top = node;
+        }
+
+        return top is IWindow || HostOf?.Invoke(element) != null;
+    }
+
+    private static bool IsFocusWithin(IUIComponent element)
+    {
+        for (var node = FocusManager.Focused as IUIComponent; node != null; node = node.VisualParent)
+        {
+            if (ReferenceEquals(node, element)) return true;
+        }
+
+        return false;
+    }
 
     /// <summary>The declared areas that can be stepped to from <paramref name="from"/>, in declaration order: on screen,
     /// and belonging to the SAME window. A window keeps its areas until they are collected, and a closed one's are as
@@ -270,13 +340,13 @@ public static class KeyboardNavigation
         // Ctrl+Tab steps between AREAS, not between controls - so it is answered before the ordinary tab order, and it is
         // answered even when the focus is in another tree entirely (an overlay window is hosted detached, so the root
         // check below would refuse it).
-        if (e.Key == Key.Tab && IsControlDown)
+        if (e.Key == Key.Tab && IsControlDown(e.Modifiers))
         {
-            if (MoveToArea(IsShiftDown)) e.Handled = true;
+            if (MoveToArea(IsShiftDown(e.Modifiers))) e.Handled = true;
             return;
         }
 
-        var direction = DirectionOf(e.Key);
+        var direction = DirectionOf(e.Key, e.Modifiers);
         if (direction == null)
             return;
 
@@ -291,7 +361,7 @@ public static class KeyboardNavigation
             if (FirstStop(root, direction.Value) is not { } first)
                 return;
 
-            FocusManager.Focus(first, NavigationMethod.Tab);
+            FocusManager.Focus(first, NavigationMethod.Tab, e.Modifiers);
             e.Handled = true;
             return;
         }
@@ -308,7 +378,7 @@ public static class KeyboardNavigation
             return;
         }
 
-        if (Move(direction.Value))
+        if (Move(direction.Value, e.Modifiers))
             e.Handled = true;
     }
 
@@ -328,9 +398,9 @@ public static class KeyboardNavigation
         return component;
     }
 
-    private static FocusNavigationDirection? DirectionOf(Key key) => key switch
+    private static FocusNavigationDirection? DirectionOf(Key key, InputModifiers modifiers) => key switch
     {
-        Key.Tab => IsShiftDown ? FocusNavigationDirection.Previous : FocusNavigationDirection.Next,
+        Key.Tab => IsShiftDown(modifiers) ? FocusNavigationDirection.Previous : FocusNavigationDirection.Next,
         Key.LeftArrow => FocusNavigationDirection.Left,
         Key.RightArrow => FocusNavigationDirection.Right,
         Key.UpArrow => FocusNavigationDirection.Up,
@@ -338,11 +408,11 @@ public static class KeyboardNavigation
         _ => null
     };
 
-    private static bool IsShiftDown =>
-        (Keyboard.Modifiers & (InputModifiers.LeftShift | InputModifiers.RightShift)) != 0;
+    private static bool IsShiftDown(InputModifiers modifiers) =>
+        (modifiers & (InputModifiers.LeftShift | InputModifiers.RightShift)) != 0;
 
-    private static bool IsControlDown =>
-        (Keyboard.Modifiers & (InputModifiers.LeftControl | InputModifiers.RightControl)) != 0;
+    private static bool IsControlDown(InputModifiers modifiers) =>
+        (modifiers & (InputModifiers.LeftControl | InputModifiers.RightControl)) != 0;
 
     private static bool IsTabbing(FocusNavigationDirection direction) =>
         direction is FocusNavigationDirection.Next or FocusNavigationDirection.Previous;
