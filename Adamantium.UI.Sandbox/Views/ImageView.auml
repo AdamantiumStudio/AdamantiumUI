@@ -111,6 +111,20 @@
                     <Image Width="188" Height="150" Source="Content/SandboxContent/Textures/ColoredImage.jpg" CornerRadius="14" Opacity="{Binding Opacity}"/>
                 </StackPanel>
                 <StackPanel Margin="8">
+                    <TextBlock Text="TIFF (Deflate, tiles, alpha)"/>
+                    <Image Width="188"
+                           Height="150"
+                           Source="Content/SandboxContent/Textures/photo-alpha.tif"
+                           Opacity="{Binding Opacity}"/>
+                </StackPanel>
+                <StackPanel Margin="8">
+                    <TextBlock Text="TIFF (CCITT G4 scan)"/>
+                    <Image Width="188"
+                           Height="150"
+                           Source="Content/SandboxContent/Textures/scan-g4.tif"
+                           Opacity="{Binding Opacity}"/>
+                </StackPanel>
+                <StackPanel Margin="8">
                     <TextBlock Text="{Localize ImageStrings.MipLevel}"/>
                     <Image Width="188" Height="150" Source="Content/SandboxContent/Textures/elephant.png" MipLevel="2" Opacity="{Binding Opacity}"/>
                 </StackPanel>
