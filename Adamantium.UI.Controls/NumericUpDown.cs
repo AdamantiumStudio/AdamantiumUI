@@ -131,7 +131,25 @@ public class NumericUpDown : RangeLimitsBase
     public static readonly AdamantiumProperty RepeatIntervalProperty = AdamantiumProperty.Register(
         nameof(RepeatInterval), typeof(int), typeof(NumericUpDown), new PropertyMetadata(33));
 
+    public static readonly AdamantiumProperty CommandProperty = AdamantiumProperty.Register(nameof(Command),
+        typeof(ICommand), typeof(NumericUpDown), new PropertyMetadata(null, OnCommandChanged));
+
+    private CommandSourceListener<NumericUpDown> _commandListener;
+    private bool _committing;
+
     public event EventHandler<NullableValueChangedEventArgs> ValueChanged;
+
+    /// <summary>What a number the user puts in runs, given the number, as a ribbon's width box sets the width of the
+    /// picture selected: a step, a scrub, the wheel or a typed number; a value set from outside or moved by the limits
+    /// runs nothing. The focus stays in the box while it is stepped or typed in, and goes back to the field the
+    /// command acted on with Enter. The number a routed command answers with is shown, so the box follows what it
+    /// stands for; <see cref="Value"/> then follows the command, not a binding. While the command cannot run, the box
+    /// is disabled.</summary>
+    public ICommand Command
+    {
+        get => GetValue<ICommand>(CommandProperty);
+        set => SetValue(CommandProperty, value);
+    }
 
     /// <summary>The value ran into <see cref="RangeLimitsBase.Minimum"/> - a step asked for less than the range holds.</summary>
     public event EventHandler MinimumReached;
@@ -409,6 +427,44 @@ public class NumericUpDown : RangeLimitsBase
         box.ValueChanged?.Invoke(box, new NullableValueChangedEventArgs(oldValue, newValue));
     }
 
+    private static void OnCommandChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
+    {
+        var box = (NumericUpDown)a;
+        box._commandListener ??= new CommandSourceListener<NumericUpDown>(box, static b => b.UpdateCommandState());
+        box._commandListener.Listen(e.NewValue as ICommand);
+        box.UpdateCommandState();
+    }
+
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+        _commandListener?.Attached();
+    }
+
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnDetachedFromVisualTree(e);
+        _commandListener?.Detached();
+    }
+
+    private void UpdateCommandState()
+    {
+        var state = CommandManager.QueryFrom(Command, null, this, null);
+        SetCurrentValue(IsEnabledProperty, state.CanExecute);
+        if (Command is RoutedCommand)
+        {
+            SetCurrentValue(ValueProperty, state.Value switch
+            {
+                double number => (double?)number,
+                float number => number,
+                long number => number,
+                int number => number,
+                decimal number => (double)number,
+                _ => null,
+            });
+        }
+    }
+
     /// <summary>A limit moved: re-map the request through the coercion, so a value clamped by the old range is restored
     /// when the new one has room for it.</summary>
     protected override void ReCoerceSelection() => CoerceValue(ValueProperty);
@@ -484,6 +540,11 @@ public class NumericUpDown : RangeLimitsBase
             return true;
         }
 
+        if (Value is { } shown && _text.Text == FormatValue(shown))
+        {
+            return true;
+        }
+
         if (!TryParse(_text.Text, out var parsed))
         {
             return false;
@@ -493,7 +554,18 @@ public class NumericUpDown : RangeLimitsBase
         return true;
     }
 
-    private void OnTextEnterPressed(object sender, KeyEventArgs e) => e.Handled = !CommitText();
+    private void OnTextEnterPressed(object sender, KeyEventArgs e)
+    {
+        _committing = true;
+        try
+        {
+            e.Handled = !CommitText();
+        }
+        finally
+        {
+            _committing = false;
+        }
+    }
 
     private void OnTextLostFocus(object sender, RoutedEventArgs e) => CommitText();
 
@@ -546,11 +618,18 @@ public class NumericUpDown : RangeLimitsBase
         return SmallChange * (1 << doublings);
     }
 
-    private void SetValueFromInput(double value)
+    private void SetValueFromInput(double value) => PutIn(Snap(value));
+
+    internal void PutIn(double value)
     {
         // SetCurrentValue, not a plain assignment: a Local write outranks a {Binding} and would freeze a data-bound
         // control for good - the source could never move it again (the same note as on Slider).
-        SetCurrentValue(ValueProperty, Snap(value));
+        var before = Value;
+        SetCurrentValue(ValueProperty, value);
+        if (Command is { } command && Value is { } number && number != before)
+        {
+            CommandManager.ExecuteFrom(command, number, this, null, _committing);
+        }
     }
 
     /// <summary>Rounded to a whole number of steps FROM ZERO, so 0.1-steps land on 0.3 rather than on 0.30000000000004,

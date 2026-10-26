@@ -3,8 +3,9 @@ using Adamantium.UI.Core.Automation;
 
 namespace Adamantium.UI.Controls.Automation;
 
-/// <summary>The peer of a <see cref="RibbonGroup"/>: a group called by its header, whose children are its commands. A
-/// group the band has collapsed to one button opens and closes its commands, and wears that button's key tip.</summary>
+/// <summary>The peer of a <see cref="RibbonGroup"/>: a group called by its header, whose children are its commands - the
+/// boxes of a grid put in it among them. A group the band has collapsed to one button opens and closes its commands, and
+/// wears that button's key tip.</summary>
 public class RibbonGroupAutomationPeer : ItemsControlAutomationPeer, IExpandCollapseProvider
 {
     private readonly RibbonGroup _group;
@@ -41,6 +42,8 @@ public class RibbonGroupAutomationPeer : ItemsControlAutomationPeer, IExpandColl
     public void Collapse() => _group.SetCurrentValue(RibbonGroup.IsDropDownOpenProperty, false);
 
     protected override AutomationControlType ItemControlType => AutomationControlType.Button;
+
+    protected override bool ShowsWhatPanelsHold => true;
 
     protected override string NameCore() => _group.Header as string;
 }
