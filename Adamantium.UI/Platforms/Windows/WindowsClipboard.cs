@@ -1,15 +1,16 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.InteropServices;
 using Adamantium.UI.Core.Input;
 using Adamantium.Win32;
 
 namespace Adamantium.UI.Platforms.Windows;
 
-/// <summary>The Win32 clipboard - text (CF_UNICODETEXT), HTML, RTF and registered formats of one's own - registered on
-/// <see cref="Clipboard.Current"/> by the Windows platform. All calls run on the UI (message-pump) thread, as clipboard
-/// ownership is thread-affine. Every operation is best-effort: if the OS clipboard stays locked by another app, it fails
-/// quietly rather than throwing into the input handler.</summary>
+/// <summary>The Win32 clipboard - text (CF_UNICODETEXT), HTML, RTF, pictures and registered formats of one's own -
+/// registered on <see cref="Clipboard.Current"/> by the Windows platform. All calls run on the UI (message-pump)
+/// thread, as clipboard ownership is thread-affine. Every operation is best-effort: if the OS clipboard stays locked by
+/// another app, it fails quietly rather than throwing into the input handler.</summary>
 internal sealed class WindowsClipboard : IClipboard
 {
     // Another application - the clipboard history among them - opens the clipboard as soon as it changes; a few short
@@ -84,6 +85,22 @@ internal sealed class WindowsClipboard : IClipboard
         var blocks = new List<(uint Id, IntPtr Global)>();
         foreach (var format in package.GetFormats())
         {
+            if (format == DataFormats.Image && package.Get(format) is byte[] { Length: > 0 } picture)
+            {
+                if (OleDataBridge.PictureFormat(picture) is var named and not 0 &&
+                    OleDataBridge.CreateBytesGlobal(picture) is var encoded && encoded != IntPtr.Zero)
+                {
+                    blocks.Add((named, encoded));
+                }
+
+                if (Dib(picture) is var dib && dib != IntPtr.Zero)
+                {
+                    blocks.Add((Win32Interop.CF_DIB, dib));
+                }
+
+                continue;
+            }
+
             var block = package.Get(format) switch
             {
                 string text when format == DataFormats.Text =>
@@ -125,11 +142,20 @@ internal sealed class WindowsClipboard : IClipboard
         finally { Win32Interop.CloseClipboard(); }
     }
 
-    public bool Contains(string format) => Id(format) is var id and not 0 && Win32Interop.IsClipboardFormatAvailable(id);
+    public bool Contains(string format) => format == DataFormats.Image
+        ? Win32Interop.IsClipboardFormatAvailable(Win32Interop.CF_DIB) ||
+          Win32Interop.IsClipboardFormatAvailable(OleDataBridge.TiffFormat) ||
+          OleDataBridge.PictureFormats.Any(id => Win32Interop.IsClipboardFormatAvailable(id))
+        : Id(format) is var id and not 0 && Win32Interop.IsClipboardFormatAvailable(id);
 
     public object GetData(string format)
     {
         if (format == DataFormats.Text) return Contains(format) ? GetText() : null;
+        if (format == DataFormats.Image)
+        {
+            return Contains(format) ? GetPicture() : null;
+        }
+
         if (!Contains(format) || !Open()) return null;
         try
         {
@@ -141,6 +167,48 @@ internal sealed class WindowsClipboard : IClipboard
                 DataFormats.Rtf => System.Text.Encoding.ASCII.GetString(bytes).TrimEnd('\0'),
                 _ => bytes,
             };
+        }
+        finally { Win32Interop.CloseClipboard(); }
+    }
+
+    private static IntPtr Dib(byte[] picture)
+    {
+        try
+        {
+            return OleDataBridge.CreateDibGlobal(picture);
+        }
+        catch (Exception)
+        {
+            return IntPtr.Zero;
+        }
+    }
+
+    private static byte[] GetPicture()
+    {
+        if (!Open())
+        {
+            return null;
+        }
+
+        try
+        {
+            foreach (var id in OleDataBridge.PictureFormats)
+            {
+                if (Win32Interop.GetClipboardData(id) is var handle && handle != IntPtr.Zero &&
+                    OleDataBridge.BytesOf(handle) is { Length: > 0 } encoded)
+                {
+                    return OleDataBridge.Unpadded(encoded);
+                }
+            }
+
+            var dib = Win32Interop.GetClipboardData(Win32Interop.CF_DIB);
+            if (dib != IntPtr.Zero && OleDataBridge.BytesOf(dib) is { Length: > 40 } bytes)
+            {
+                return OleDataBridge.BmpFileFromDib(bytes);
+            }
+
+            var tiff = Win32Interop.GetClipboardData(OleDataBridge.TiffFormat);
+            return tiff != IntPtr.Zero && OleDataBridge.BytesOf(tiff) is { Length: > 0 } read ? read : null;
         }
         finally { Win32Interop.CloseClipboard(); }
     }

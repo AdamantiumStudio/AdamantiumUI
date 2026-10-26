@@ -73,22 +73,63 @@ internal static class OleDataBridge
     {
         // Verbatim, every one of them: the payload is "an encoded picture", not "a PNG", so nothing here decodes or
         // re-encodes anything. That matters - re-encoding an incoming animated GIF would cost seconds on a drop.
-        foreach (var format in new[] { PngFormat }.Concat(
-                     new[] { "JFIF", "JPEG", "image/jpeg", "GIF", "image/gif", "TIFF", "image/bmp" }
-                         .Select(Win32Interop.RegisterClipboardFormat)))
+        foreach (var format in PictureFormats)
         {
-            if (ReadRegisteredBytes(data, format) is { Length: > 0 } encoded) return encoded;
+            if (ReadRegisteredBytes(data, format) is { Length: > 0 } encoded)
+            {
+                return Unpadded(encoded);
+            }
         }
 
         // CF_DIB is a .bmp with its 14-byte file header sliced off - putting one back makes it a picture file again,
         // which is a header write rather than a conversion.
         if (ReadRegisteredBytes(data, (ushort)Win32Interop.CF_DIB) is { Length: > 40 } dib) return BmpFileFromDib(dib);
-        return null;
+        return ReadRegisteredBytes(data, TiffFormat) is { Length: > 0 } tiff ? tiff : null;
+    }
+
+    /// <summary>The registered formats an encoded picture comes under, in the order a reader prefers them: PNG first,
+    /// then JPEG, GIF and BMP under the names applications give them. CF_DIB, a raw bitmap, comes after these, and
+    /// <see cref="TiffFormat"/> last, as fewer readers take it.</summary>
+    public static IReadOnlyList<ushort> PictureFormats { get; } =
+    [
+        PngFormat,
+        .. new[] { "JFIF", "JPEG", "image/jpeg", "GIF", "image/gif", "image/bmp" }
+            .Select(Win32Interop.RegisterClipboardFormat),
+    ];
+
+    /// <summary>The registered format of a TIFF picture.</summary>
+    public static ushort TiffFormat { get; } = Win32Interop.RegisterClipboardFormat("TIFF");
+
+    /// <summary>An encoded picture without the zeros its block may run on with: a BMP as long as its header says, a
+    /// PNG, JPEG or GIF up to the end it closes with. Anything else, or a picture that does not end so, as it came.
+    /// </summary>
+    public static byte[] Unpadded(byte[] encoded)
+    {
+        var extension = Input.DragPicture.Extension(encoded);
+        var length = extension switch
+        {
+            ".bmp" when encoded.Length >= 54 && BitConverter.ToInt32(encoded, 2) is >= 54 and var size &&
+                        size < encoded.Length => size,
+            ".png" or ".jpg" or ".gif" => Array.FindLastIndex(encoded, b => b != 0) + 1,
+            _ => encoded.Length,
+        };
+        ReadOnlySpan<byte> end = extension switch
+        {
+            ".png" => [0xAE, 0x42, 0x60, 0x82],
+            ".jpg" => [0xFF, 0xD9],
+            ".gif" => [0x3B],
+            _ => ReadOnlySpan<byte>.Empty,
+        };
+
+        return length == encoded.Length || encoded.AsSpan(length).ContainsAnyExcept((byte)0) ||
+               !encoded.AsSpan(0, length).EndsWith(end)
+            ? encoded
+            : encoded[..length];
     }
 
     /// <summary>A packed DIB wrapped back into a BMP file. The pixel offset has to account for what sits between the
     /// header and the pixels: the 12-byte mask table of a BI_BITFIELDS image, or a palette for the low bit depths.</summary>
-    private static byte[] BmpFileFromDib(byte[] dib)
+    public static byte[] BmpFileFromDib(byte[] dib)
     {
         const int fileHeaderSize = 14;
         var headerSize = BitConverter.ToInt32(dib, 0);
