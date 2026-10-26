@@ -39,4 +39,53 @@ public class WindowsClipboardTests
         clipboard.SetText("plain");
         Assert.That(clipboard.Contains("Adamantium Test Format"), Is.False, "a new copy replaces every format");
     }
+
+    [Test]
+    public void APicture_GoesOnAsItCameAndAsABitmap_AndComesBackAsItCame()
+    {
+        var clipboard = new WindowsClipboard();
+        var png = Convert.FromBase64String(
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==");
+        var package = new DataPackage();
+        package.Set(DataFormats.Image, png);
+
+        clipboard.SetData(package);
+        var read = clipboard.GetData(DataFormats.Image) as byte[];
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(clipboard.Contains(DataFormats.Image), Is.True);
+            Assert.That(read, Is.EqualTo(png), "the PNG itself, not decoded again, nor run on with zeros");
+            Assert.That(Adamantium.Win32.Win32Interop.IsClipboardFormatAvailable(Adamantium.Win32.Win32Interop.CF_DIB),
+                Is.True, "and a bitmap for the applications that know only that");
+        });
+
+        clipboard.SetText("plain");
+        Assert.That(clipboard.Contains(DataFormats.Image), Is.False);
+    }
+
+    [Test]
+    public void APictureFromAnotherApplication_LosesTheZerosItsBlockRanOnWith_AndNothingElse()
+    {
+        var png = Convert.FromBase64String(
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==");
+        byte[] jpeg = [0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x00, 0xFF, 0xD9];
+        var bmp = new byte[70];
+        bmp[0] = (byte)'B';
+        bmp[1] = (byte)'M';
+        BitConverter.GetBytes(58).CopyTo(bmp, 2);
+        bmp[57] = 0x11;
+        var wrongSize = (byte[])bmp.Clone();
+        BitConverter.GetBytes(10).CopyTo(wrongSize, 2);
+        byte[] unclosedGif = [(byte)'G', (byte)'I', (byte)'F', (byte)'8', 0x01, 0x00, 0x00, 0x00];
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(OleDataBridge.Unpadded([.. png, 0, 0, 0]), Is.EqualTo(png));
+            Assert.That(OleDataBridge.Unpadded([.. jpeg, 0, 0]), Is.EqualTo(jpeg));
+            Assert.That(OleDataBridge.Unpadded(bmp), Is.EqualTo(bmp[..58]), "a BMP as long as its header says");
+            Assert.That(OleDataBridge.Unpadded(wrongSize), Is.EqualTo(wrongSize), "a size no BMP has");
+            Assert.That(OleDataBridge.Unpadded(unclosedGif), Is.EqualTo(unclosedGif), "a GIF that does not close");
+        });
+    }
 }

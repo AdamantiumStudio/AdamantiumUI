@@ -9,6 +9,10 @@ All packages share one version.
 
 - `IResourceFactory.MaxTextureDimension` and `MaxTextureArrayLayers`: the device's limits on the textures it makes,
   which every factory states.
+- The Windows clipboard carries pictures (`DataFormats.Image`): a picture copied goes on as it came, under the name of
+  its encoding, and as CF_DIB for the applications that know only that; one copied elsewhere - PNG, JPEG, GIF, BMP,
+  a bare CF_DIB, Paint's, or last a TIFF - is read as it came, without the zeros its block runs on with, a CF_DIB made
+  a BMP file again.
 - `UIApplication.StartupThemeName`: the theme the application opens on, by name, as the user chose it and the
   application remembered - set before `Run()`, so the first window opens in it rather than swapping to it. Wins over
   `StartupTheme`; `ADAM_THEME` wins over it; a name no theme has is passed over.
@@ -1731,6 +1735,9 @@ All packages share one version.
 
 ### Changed
 
+- A `TextBlock`'s text runs on both sides of an exclusion in the middle, as the engine lays it now; Up and Down in
+  selectable text go to the row above or below on the caret's side (`TextLayout.GetLineBeyond`), not across to the
+  line beside it.
 - `Adamantium.Vulkan` 1.2.0, as the engine takes it: Metal surfaces on Apple's platforms, and every output structure
   sent with its `sType`.
 - The packages', the sandbox's and the VS Code extension's icons are the redrawn Adamantium family: the mark and the

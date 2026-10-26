@@ -3192,15 +3192,10 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
     private CaretPosition LineAway(CaretPosition from, int step)
     {
         var (x, line) = _textLayout.GetCaretPoint(from);
-        var target = line + step;
+        var target = _textLayout.GetLineBeyond(line, x, step > 0);
         if (target < 0)
         {
-            return new CaretPosition(0);
-        }
-
-        if (target >= _textLayout.LineCount)
-        {
-            return new CaretPosition(_lastText?.Length ?? 0);
+            return step > 0 ? new CaretPosition(_lastText?.Length ?? 0) : new CaretPosition(0);
         }
 
         return Snapped(_textLayout.HitTestLine(target, x));
