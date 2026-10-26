@@ -59,8 +59,9 @@ internal sealed class ApplicationIcon
         {
             var frame = bitmap.MipLevelsCount > 1 ? bitmap.GetMipLevelData(level) : bitmap.GetFrameData(0);
             var (width, height) = ((int)frame.Description.Width, (int)frame.Description.Height);
+            var levelPixels = bitmap.MipLevelsCount > 1 ? Rgba(frame.RawPixels, width * height) : bitmap.GetRgba8Pixels();
             if (width != height || width == 0 || pictures.Exists(picture => picture.Size == width) ||
-                Rgba(frame.RawPixels, width * height) is not { } rgba)
+                levelPixels is not { } rgba)
             {
                 continue;
             }

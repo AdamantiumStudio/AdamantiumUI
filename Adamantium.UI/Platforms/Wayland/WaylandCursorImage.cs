@@ -88,14 +88,13 @@ internal sealed class WaylandCursorImage
     private static WaylandCursorImage FromPng(byte[] png, int hotX, int hotY)
     {
         var bitmap = BitmapLoader.Load(new MemoryStream(png));
-        if (bitmap == null || bitmap.PixelFormat.SizeInBytes != 4)
+        if (bitmap?.GetRgba8Pixels() is not { } rgba)
         {
             return null;
         }
 
         var width = (int)bitmap.Width;
         var height = (int)bitmap.Height;
-        var rgba = bitmap.GetRawPixels(0);
         var pixels = new byte[width * height * 4];
         for (var i = 0; i < pixels.Length; i += 4)
         {

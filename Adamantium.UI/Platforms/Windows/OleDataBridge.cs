@@ -351,14 +351,11 @@ internal static class OleDataBridge
         var bitmap = BitmapLoader.Load(new System.IO.MemoryStream(png));
         if (bitmap == null) return null;
 
-        var pixels = bitmap.GetRawPixels(0);
+        // RGBA of 8 bits, whatever the decoder handed back; the DIB wants BGRA.
+        var pixels = bitmap.GetRgba8Pixels();
         int width = (int)bitmap.Width, height = (int)bitmap.Height;
         var stride = width * 4;
         if (pixels == null || pixels.Length < stride * height) return null;
-
-        // The decoder hands back RGBA; the DIB wants BGRA. Anything else we do not claim to understand.
-        var swap = bitmap.PixelFormat == SurfaceFormat.R8G8B8A8.UNorm;
-        if (!swap && bitmap.PixelFormat != SurfaceFormat.B8G8R8A8.UNorm) return null;
 
         // BI_BITFIELDS with an explicit mask table, NOT the simpler BI_RGB - because that is byte-for-byte what Windows
         // itself puts on the clipboard for a 32-bit image, and the picky consumers (Paint 3D among them) reject the
@@ -385,11 +382,6 @@ internal static class OleDataBridge
         {
             var source = y * stride;
             var target = pixelsAt + (height - 1 - y) * stride;   // flip: the DIB's first row is the image's last
-            if (!swap)
-            {
-                Buffer.BlockCopy(pixels, source, bytes, target, stride);
-                continue;
-            }
             for (var x = 0; x < stride; x += 4)
             {
                 bytes[target + x] = pixels[source + x + 2];

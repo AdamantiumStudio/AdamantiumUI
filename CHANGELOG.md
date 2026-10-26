@@ -2205,6 +2205,11 @@ All packages share one version.
 
 ### Fixed
 
+- Pictures of 16 bits a channel - 16-bit PNG and TIFF, 12-bit JPEG - were refused as a Linux application icon, a
+  Wayland cursor and a Windows clipboard bitmap: they are read as RGBA of 8 bits (`GetRgba8Pixels`) there now. Dragged
+  out, they come as a whole BMP - the engine's BMP encoder takes them.
+- Automation snapshots are written as their pixels' own BGRA: they swapped red and blue themselves and still said
+  BGRA, which the engine's encoders now honor.
 - The wallpaper backdrop of a picture of 16 bits a channel - a 12-bit JPEG, a 16-bit PNG or TIFF - came out in noise:
   each channel was read as two of 8 bits. It reads their high bytes now; a JPEG wallpaper of any size takes the
   eighth-scale preview, the engine's new JPEG decoder making one for every file.
