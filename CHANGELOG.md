@@ -1734,6 +1734,9 @@ All packages share one version.
 
 ### Changed
 
+- A `TextBlock`'s text runs on both sides of an exclusion in the middle, as the engine lays it now; Up and Down in
+  selectable text go to the row above or below on the caret's side (`TextLayout.GetLineBeyond`), not across to the
+  line beside it.
 - `Adamantium.Vulkan` 1.2.0, as the engine takes it: Metal surfaces on Apple's platforms, and every output structure
   sent with its `sType`.
 - The packages', the sandbox's and the VS Code extension's icons are the redrawn Adamantium family: the mark and the

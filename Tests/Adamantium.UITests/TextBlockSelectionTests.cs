@@ -6,6 +6,7 @@ using Adamantium.UI.Controls.Decorators;
 using Adamantium.UI.Controls.Text;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Input;
+using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.RoutedEvents;
 using Adamantium.UI.Extensions;
 using NUnit.Framework;
@@ -1084,6 +1085,27 @@ public class TextBlockSelectionTests
         Pointer(block, PointerEvents.PointerReleasedEvent, new Vector2(to.X, to.Y + 2), InputModifiers.None);
 
         Assert.That(block.SelectedText, Is.EqualTo("ello"));
+    }
+
+    // Around an exclusion in the middle two lines share a row: Down goes to the row below, on its own side.
+    [Test]
+    public void BesideAnExclusion_DownGoesToTheRowBelow_NotAcrossIt()
+    {
+        var block = Laid(new TextBlock
+        {
+            Text = string.Join(' ', Enumerable.Repeat("words that run around a picture in the middle", 8)),
+            TextWrapping = TextWrapping.WrapByWords,
+            Width = 400,
+            Exclusions = ExclusionList.Parse("160,0,80,200"),
+        });
+        var layout = block.Layout;
+        Assume.That(layout.GetLine(1).Top, Is.EqualTo(layout.GetLine(0).Top).Within(1e-3), "two lines in a row");
+
+        block.Focus();
+        block.Select(0, 0);
+        Key(block, Adamantium.UI.Core.Input.Key.DownArrow, InputModifiers.LeftShift);
+
+        Assert.That(block.SelectedText.Length, Is.InRange(layout.GetLine(2).Start, layout.GetLine(2).End));
     }
 
     // Down vertical lines the arrows turn with the text: Down goes along the line, Left to the next line.
