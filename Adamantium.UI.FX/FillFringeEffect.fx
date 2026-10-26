@@ -98,7 +98,6 @@ technique FillFringe
     // Draw (graphics): rasterize the fringe ring; alpha ramps with coverage.
     pass Draw
     {
-        EffectName = "FillFringeEffect";
         VertexShader = FillFringeVS;
         PixelShader = FillFringePS;
     }

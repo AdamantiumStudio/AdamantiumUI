@@ -56,10 +56,9 @@ struct NodeSlot
 };
 
 // ---- Bound resources and the records both effects read ----------------------------------------------------------
-// One bound texture per segment, used by brushes and by the halo's baked distance field (HaloFieldDistance). At t2/s2
-// because FontEffect's glyph atlas occupies t1.
-Texture2D SourceTexture : register(t2);
-SamplerState SourceSampler : register(s2);
+// One bound texture per segment, used by brushes and by the halo's baked distance field (HaloFieldDistance).
+Texture2D SourceTexture;
+SamplerState SourceSampler;
 
 // One PROCEDURAL fill instance on arbitrary geometry. Shared because its FILL is a brush (BrushEffect evaluates the
 // pattern from it) while its FRINGE is not: a one-pixel ring does not evaluate a pattern, it just takes the brush's low
