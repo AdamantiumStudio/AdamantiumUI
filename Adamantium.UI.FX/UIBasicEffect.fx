@@ -4,7 +4,7 @@ float4x4 wvp;
 float4x4 world;
 
 float4 fillColor;
-sampler sampleType;
+SamplerState sampleType;
 Texture2D shaderTexture;
 
 // An animation's frames are layers of one texture; the layer to show arrives as an effect constant, one frame per draw.
@@ -32,6 +32,7 @@ float4 texTint = float4(1, 1, 1, 1);
 float texRepeat;      // 1 = the tile repeats; 0 = a single copy, which must never wrap
 float texMirror;      // mirror flags: 1 = X, 2 = Y, 3 = both
 
+[shader("vertex")]
 VERTEX_OUTPUT UIVertexShader(UI_VERTEX input)
 {
     VERTEX_OUTPUT output;
@@ -44,6 +45,7 @@ VERTEX_OUTPUT UIVertexShader(UI_VERTEX input)
 	return output;
 }
 
+[shader("fragment")]
 float4 SolidColor_PS(VERTEX_OUTPUT input) : SV_TARGET
 {
 	float4 result = fillColor;
@@ -51,6 +53,7 @@ float4 SolidColor_PS(VERTEX_OUTPUT input) : SV_TARGET
     return result;
 }
 
+[shader("fragment")]
 float4 Textured_PS(VERTEX_OUTPUT input) : SV_TARGET
 {
    //float4 color = shaderTexture.Sample(sampleType, input.uv0) * fillColor;
@@ -63,6 +66,7 @@ float4 Textured_PS(VERTEX_OUTPUT input) : SV_TARGET
 }
 
 // The shape's own box, not the mesh's uv0: a tessellated outline has no mapping baked into it.
+[shader("vertex")]
 VERTEX_OUTPUT TexturedFillVS(UI_VERTEX input)
 {
     VERTEX_OUTPUT output;
@@ -74,6 +78,7 @@ VERTEX_OUTPUT TexturedFillVS(UI_VERTEX input)
     return output;
 }
 
+[shader("fragment")]
 float4 TexturedFill_PS(VERTEX_OUTPUT input) : SV_TARGET
 {
     // 0..1 across the shape's box -> TILE space -> the content's rect inside one tile -> the source's sub-rectangle.
@@ -102,6 +107,7 @@ float4 TexturedFill_PS(VERTEX_OUTPUT input) : SV_TARGET
     return color;
 }
 
+[shader("fragment")]
 float4 TexturedArray_PS(VERTEX_OUTPUT input) : SV_TARGET
 {
    float4 color = shaderTextureArray.Sample(sampleType, float3(input.uv0, textureLayer));
@@ -120,6 +126,7 @@ float4 PaletteTexel(int2 p, int2 size, int layer)
 
 // Indices cannot be filtered - a blend of two palette numbers is a third, unrelated color - so the four neighbors are
 // looked up first and their COLORS blended, which is what a linear sample of the full-color frame gives.
+[shader("fragment")]
 float4 PalettedArray_PS(VERTEX_OUTPUT input) : SV_TARGET
 {
    uint width, height, layers;

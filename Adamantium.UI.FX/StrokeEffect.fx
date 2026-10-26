@@ -687,22 +687,18 @@ technique Stroke
     // Expand (compute): continuous polyline -> miter ribbon + round-join disc fans, written via BDA. Plain Draw.
     pass Expand
     {
-        // Slang ignores this (targets spirv_1_6); kept non-zero for the parser.
-        EffectName = "StrokeEffect";
         ComputeShader = StrokeExpandCS;
     }
 
     // DashCut (compute): one-pass dash/trim cut, single thread, writes the VkDrawIndirectCommand. DrawIndirect.
     pass DashCut
     {
-        EffectName = "StrokeEffect";
         ComputeShader = StrokeDashCutCS;
     }
 
     // Draw (graphics): rasterize the compute-produced ribbon with a solid color.
     pass Draw
     {
-        EffectName = "StrokeEffect";
         VertexShader = StrokeVS;
         PixelShader = StrokePS;
     }
@@ -710,14 +706,12 @@ technique Stroke
     // UnionDepth / UnionDraw (graphics): the two passes a TRANSLUCENT stroke takes so its self-overlaps blend once.
     pass UnionDepth
     {
-        EffectName = "StrokeEffect";
         VertexShader = StrokeVS;
         PixelShader = StrokeUnionDepthPS;
     }
 
     pass UnionDraw
     {
-        EffectName = "StrokeEffect";
         VertexShader = StrokeVS;
         PixelShader = StrokeUnionDrawPS;
     }

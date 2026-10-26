@@ -69,7 +69,6 @@ technique CaptureBlur
 {
     pass Down
     {
-        EffectName = "CaptureBlurEffect";
         VertexShader = CaptureBlurVS;
         PixelShader = CaptureBlurPS;
     }

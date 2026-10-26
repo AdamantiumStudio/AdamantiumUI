@@ -106,7 +106,6 @@ technique LayerComposite
 {
     pass Draw
     {
-        EffectName = "LayerCompositeEffect";
         VertexShader = LayerCompositeVS;
         PixelShader = LayerCompositePS;
     }
