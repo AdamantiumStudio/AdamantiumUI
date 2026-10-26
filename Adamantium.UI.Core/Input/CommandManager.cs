@@ -255,7 +255,13 @@ public static class CommandManager
     /// <summary>Runs a command source's command when it can run; from a scope that
     /// <see cref="FocusManager.ReturnsFocusProperty"/>, the focus then goes back to the field it acted on - or, when the
     /// <see cref="CommandTargetProperty"/> took it, to that target.</summary>
-    public static void ExecuteFrom(ICommand command, object parameter, IInputComponent source, IInputComponent target)
+    public static void ExecuteFrom(ICommand command, object parameter, IInputComponent source, IInputComponent target) =>
+        ExecuteFrom(command, parameter, source, target, true);
+
+    /// <summary>Runs a command source's command when it can run; with <paramref name="returnsFocus"/> false the focus
+    /// stays where it is, as in a number box stepped from the keyboard, which goes on taking steps.</summary>
+    public static void ExecuteFrom(ICommand command, object parameter, IInputComponent source, IInputComponent target,
+        bool returnsFocus)
     {
         var from = source as IUIComponent;
         var field = from != null ? FocusManager.FocusToReturnTo(from) : null;
@@ -285,7 +291,7 @@ public static class CommandManager
             ran = false;
         }
 
-        if (ran)
+        if (ran && returnsFocus)
         {
             FocusManager.ReturnFocus(field, before);
         }

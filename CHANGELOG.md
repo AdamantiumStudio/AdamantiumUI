@@ -7,6 +7,12 @@ All packages share one version.
 
 ### Added
 
+- `NumericUpDown.Command`: a number the user puts in - a step, a scrub, the wheel, a typed number, automation's -
+  runs the command, given the number: a ribbon's width box sets the width of the picture selected. A value set from
+  outside or moved by the limits runs nothing. The focus stays in the box while it is stepped or typed in and goes back
+  to the field with Enter. The number a routed command answers with is shown, none when it answers with none; while
+  the command cannot run, the box is disabled.
+- `CommandManager.ExecuteFrom(..., returnsFocus)`: runs a command source's command and leaves the focus where it is.
 - `IResourceFactory.MaxTextureDimension` and `MaxTextureArrayLayers`: the device's limits on the textures it makes,
   which every factory states.
 - The Windows clipboard carries pictures (`DataFormats.Image`): a picture copied goes on as it came, under the name of
@@ -2214,6 +2220,10 @@ All packages share one version.
 
 ### Fixed
 
+- Leaving a `NumericUpDown`, or pressing Enter in it, with its text as it was shown put the shown number in - 453.5433
+  shown as 453.54 became 453.54. Text left as shown now puts nothing in.
+- A grid of labelled boxes in a ribbon's group showed to automation as a stand-in button that could do nothing, the
+  boxes in it out of reach. They are the group's children now (`ItemsControlAutomationPeer.ShowsWhatPanelsHold`).
 - A picture larger than the device's textures - past its maxImageDimension2D - went to the GPU as it was. It goes up
   shrunk to fit (`ImageShrink`), each texel the average of the pixels it covers, once for every device of that
   limit; the picture keeps its own pixels and size, so it is laid out, sliced, tiled, copied and saved as before. An

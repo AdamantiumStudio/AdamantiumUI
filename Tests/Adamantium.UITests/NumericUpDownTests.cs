@@ -57,6 +57,45 @@ public class NumericUpDownTests
         button.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent, button) { RoutedEvent = ButtonBase.ClickEvent });
     }
 
+    private sealed class Recorded : Adamantium.Core.Commands.ICommand
+    {
+        public readonly System.Collections.Generic.List<object> Ran = [];
+
+        public event System.EventHandler CanExecuteChanged { add { } remove { } }
+
+        public bool CanExecute(object parameter = null) => true;
+
+        public void Execute(object parameter = null) => Ran.Add(parameter);
+
+        public void RaiseCanExecuteChanged()
+        {
+        }
+    }
+
+    // A width of 453.5433 shows as 453.54: leaving the box without typing must not put 453.54 in.
+    [Test]
+    public void LeavingTheBoxWithItsTextAsShown_PutsNothingIn_AndATypedNumberRunsTheCommand()
+    {
+        var box = NewBox(value: 1, max: 1000);
+        var command = new Recorded();
+        box.Culture = CultureInfo.InvariantCulture;
+        box.StringFormat = "0.##";
+        box.Command = command;
+        box.Value = 453.5433;
+        var text = TextOf(box);
+
+        text.RaiseEvent(new RoutedEventArgs(Adamantium.UI.Core.Input.FocusManager.LostFocusEvent));
+        var left = box.Value;
+        text.Text = "300";
+        text.RaiseEvent(new RoutedEventArgs(Adamantium.UI.Core.Input.FocusManager.LostFocusEvent));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(left, Is.EqualTo(453.5433));
+            Assert.That(command.Ran, Is.EqualTo(new object[] { 300.0 }));
+        });
+    }
+
     [Test]
     public void AStepMovesTheValueBySmallChange()
     {

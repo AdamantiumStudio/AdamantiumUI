@@ -23,6 +23,10 @@ public class ItemsControlAutomationPeer : UIComponentAutomationPeer
     /// <summary>What an item is to automation while it has no element of its own.</summary>
     protected virtual AutomationControlType ItemControlType => AutomationControlType.ListItem;
 
+    /// <summary>Whether an item shown that has no peer of its own, as a grid of boxes in a ribbon's group, stands for
+    /// the elements in it rather than for one item: for a control whose items are not picked one at a time.</summary>
+    protected virtual bool ShowsWhatPanelsHold => false;
+
     /// <summary>Scrolls through the scroll viewer of its own template that holds its items, when it has one.</summary>
     public override object GetPattern(PatternId pattern) =>
         pattern == PatternId.Scroll ? ScrollOfItems() : base.GetPattern(pattern);
@@ -53,7 +57,18 @@ public class ItemsControlAutomationPeer : UIComponentAutomationPeer
         {
             var item = owner.Items[index];
             var container = ContainerAt(index) ?? item as UIComponent;
-            children.Add(container?.GetAutomationPeer() ?? PeerFor(item));
+            if (container?.GetAutomationPeer() is { } peer)
+            {
+                children.Add(peer);
+            }
+            else if (ShowsWhatPanelsHold && container?.VisualParent != null)
+            {
+                Collect(container, children);
+            }
+            else
+            {
+                children.Add(PeerFor(item));
+            }
         }
 
         (_itemPeers, _keptPeers) = (_keptPeers, _itemPeers);
