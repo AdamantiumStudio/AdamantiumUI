@@ -7,6 +7,11 @@ All packages share one version.
 
 ### Added
 
+- The Windows clipboard carries pictures (`DataFormats.Image`): a picture copied goes on as it came, under the name of
+  its encoding, and as CF_DIB for the applications that know only that; one copied elsewhere - PNG, JPEG, GIF, BMP,
+  a bare CF_DIB, Paint's, or last a TIFF - is read as it came, without the zeros its block runs on with, a CF_DIB made
+  a BMP file again.
+
 - `UIApplication.StartupThemeName`: the theme the application opens on, by name, as the user chose it and the
   application remembered - set before `Run()`, so the first window opens in it rather than swapping to it. Wins over
   `StartupTheme`; `ADAM_THEME` wins over it; a name no theme has is passed over.
