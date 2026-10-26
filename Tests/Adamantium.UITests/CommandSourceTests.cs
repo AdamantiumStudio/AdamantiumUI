@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Adamantium.UI.Controls;
+using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Controls.Buttons;
 using Adamantium.UI.Controls.Panels;
@@ -321,6 +322,71 @@ public class CommandSourceTests
             Assert.That(mixed, Is.EqualTo("mixed"));
             Assert.That(ran, Is.EqualTo(new object[] { 14.0 }), "showing the answer runs nothing");
         });
+    }
+
+    // A picture's width box: it shows the width the command answers with, none when nothing is selected, and a number
+    // the user puts in runs it - not one set from outside or moved by the limits; while the command cannot run, the box
+    // is off, and on again once it has no command.
+    [Test]
+    public void ANumericUpDownWithARoutedCommand_ShowsItsValue_AndANumberPutInRunsIt()
+    {
+        object width = 120.0;
+        var can = true;
+        var ran = new List<object>();
+        var box = new NumericUpDown { Command = Bold, Minimum = 1, Maximum = 1000 };
+        var view = new StackPanel { Children = { box } };
+        CommandManager.GetCommandBindings(view).Add(new CommandBinding(Bold, (_, e) => ran.Add(e.Parameter), (_, e) =>
+        {
+            e.CanExecute = can;
+            e.Value = width;
+        }));
+        Shown(view);
+        Requery();
+        var shown = (box.Value, box.IsEnabled);
+
+        width = 64;
+        CommandManager.InvalidateRequerySuggested();
+        Requery();
+        var integer = box.Value;
+        box.Value = 80;
+        ((NumericUpDownAutomationPeer)box.GetAutomationPeer()).SetValue(90.0);
+        box.Maximum = 50;
+        width = null;
+        can = false;
+        CommandManager.InvalidateRequerySuggested();
+        Requery();
+        var none = (box.Value, box.IsEnabled);
+        box.Command = null;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(shown, Is.EqualTo(((double?)120.0, true)));
+            Assert.That(integer, Is.EqualTo(64.0));
+            Assert.That(none, Is.EqualTo(((double?)null, false)));
+            Assert.That(ran, Is.EqualTo(new object[] { 90.0 }), "only the number put in runs");
+            Assert.That(box.IsEnabled, Is.True, "no command, nothing to wait for");
+        });
+    }
+
+    // A number box on a ribbon goes on taking steps: the command it runs leaves the focus in it.
+    [Test]
+    public void ANumberPutInARibbonsBox_LeavesTheFocusInIt()
+    {
+        var (field, editor) = Editor();
+        CommandManager.GetCommandBindings(editor).Add(new CommandBinding(Bold, (_, _) => { }, (_, e) => e.CanExecute = true));
+        var box = new NumericUpDown { Command = Bold, Focusable = true };
+        var ribbon = new StackPanel { Children = { box } };
+        FocusManager.SetIsFocusScope(ribbon, true);
+        FocusManager.SetReturnsFocus(ribbon, true);
+        Shown(editor, ribbon);
+        FocusManager.Focus(field);
+        Requery();
+
+        FocusManager.Focus(box);
+        var focused = FocusManager.Focused;
+        ((NumericUpDownAutomationPeer)box.GetAutomationPeer()).SetValue(5.0);
+
+        Assert.That(FocusManager.Focused, Is.SameAs(focused));
     }
 
     // A click on a ribbon's command lands the focus on the button; once the command has run, it is back in the field.

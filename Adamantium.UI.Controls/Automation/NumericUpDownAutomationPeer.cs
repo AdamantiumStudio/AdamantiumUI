@@ -32,7 +32,8 @@ public class NumericUpDownAutomationPeer : UIComponentAutomationPeer, IValueProv
 
     public double LargeChange => _numeric.LargeChange;
 
-    /// <summary>Writes the number as a current value, clamped to the range as typing it would be.</summary>
+    /// <summary>Puts the number in as the user would, clamped to the range as typing it would be; it runs the box's
+    /// command.</summary>
     public void SetValue(string value)
     {
         if (!double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var number))
@@ -63,6 +64,6 @@ public class NumericUpDownAutomationPeer : UIComponentAutomationPeer, IValueProv
             throw new InvalidOperationException($"'{AutomationId}' is read-only.");
         }
 
-        Owner.SetCurrentValue(NumericUpDown.ValueProperty, number);
+        _numeric.PutIn(number);
     }
 }
