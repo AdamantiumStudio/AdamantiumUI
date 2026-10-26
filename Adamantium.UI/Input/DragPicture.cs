@@ -25,7 +25,7 @@ internal static class DragPicture
     /// single most expensive thing in this whole subsystem - see <see cref="Convert"/>.</summary>
     public static bool IsPng(byte[] picture) => picture is [0x89, (byte)'P', (byte)'N', (byte)'G', ..];
 
-    // Kept off the drag's hot path: PNG encoding takes seconds (~17 s at 960x540), so BMP is the default.
+    // Kept off the drag's hot path: encoding PNG costs far more than BMP's copy, so BMP is the default.
     public static byte[] Convert(byte[] encoded, ImageFileType format = ImageFileType.Bmp)
     {
         try

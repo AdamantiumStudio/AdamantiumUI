@@ -18,7 +18,7 @@ internal static class DragImageFile
         // A file nobody can open is not a fallback: a TGA or a DDS is converted, while the encodings the world already
         // reads are written verbatim - no needless re-encode, and the extension tells the truth about the bytes.
         // Converted to BMP rather than PNG on purpose: it is the same picture to every application that opens it, and
-        // our PNG encoder costs SECONDS where BMP costs milliseconds (see DragPicture.Convert).
+        // encoding PNG costs far more than BMP's copy (see DragPicture.Convert).
         var extension = DragPicture.Extension(picture);
         if (extension == null)
         {
