@@ -181,6 +181,9 @@ public sealed class BitmapImage : BitmapSource
    {
       if (!UseFrameArrayTextures) return;
       if (_frameArrayTexture != null || _rawBitmap == null || FrameCount <= 1) return;
+      // Frames larger or more than the device's arrays hold stay on the single-image path, shrunk there to fit.
+      if (PixelWidth > factory.MaxTextureDimension || PixelHeight > factory.MaxTextureDimension
+          || FrameCount > factory.MaxTextureArrayLayers) return;
       if (Interlocked.Exchange(ref _frameArrayRequested, 1) != 0) return;   // one build, however many images show it
 
       Task.Run(() =>
@@ -243,7 +246,14 @@ public sealed class BitmapImage : BitmapSource
          }
          catch
          {
-            // A failed build must leave the animation on the single-image path, not kill the loader thread.
+            // A failed build must leave the animation on the single-image path, not kill the loader thread - and not
+            // hold a palette for an array that never came.
+            if (_frameArrayTexture == null)
+            {
+               var palette = _framePalette;
+               _framePalette = null;
+               Retire(palette);
+            }
          }
       });
    }

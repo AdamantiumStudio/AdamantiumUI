@@ -1,4 +1,5 @@
-﻿using Adamantium.Graphics.Core;
+﻿using System.Runtime.InteropServices;
+using Adamantium.Graphics.Core;
 using Adamantium.Imaging;
 using Adamantium.UI.Core.Graphics;
 using Adamantium.Vulkan.Core;
@@ -32,7 +33,10 @@ public unsafe class BitmapSource : ImageSource
       Layout = ImageLayout.ShaderReadOnlyOptimal;
    }
 
+   private readonly object _textureLock = new();
    private byte[] _pixels;
+   private volatile Fitted _fitted;
+   private volatile Refusal _refused;
 
    /// <summary>The CPU pixel buffer (may be null once uploaded to a GPU texture). For readback consumers - e.g. the
    /// drag ghost, which needs the raw bytes to hand the OS compositor.</summary>
@@ -58,19 +62,41 @@ public unsafe class BitmapSource : ImageSource
    
    public ImageLayout Layout { get; set; }
    
-   public void* NativePointer => Texture == null ? null : Texture.NativePointer;
+   public void* NativePointer
+   {
+      get
+      {
+         var texture = Texture;
+         return texture == null ? null : texture.NativePointer;
+      }
+   }
 
    public void Save(Uri filePath, ImageFileType fileType)
    {
-      Texture.Save(filePath.IsAbsoluteUri ? filePath.AbsolutePath : filePath.LocalPath, fileType);
+      var path = filePath.IsAbsoluteUri ? filePath.AbsolutePath : filePath.LocalPath;
+      var pixels = _pixels;
+      if (_fitted?.Source == pixels && pixels != null)
+      {
+         using var image = Adamantium.Imaging.Image.New2D(PixelWidth, PixelHeight, 1, SurfaceLayout);
+         Marshal.Copy(pixels, 0, image.DataPointer, pixels.Length);
+         image.Save(path, fileType);
+         return;
+      }
+
+      Texture.Save(path, fileType);
    }
    
    /// <summary>Retires the texture instead of destroying it: frames in flight may still sample it, and freeing it under
    /// them loses the device.</summary>
    protected override void ReleaseUnmanagedResources()
    {
-      var texture = Texture;
-      Texture = null;
+      ITexture texture;
+      lock (_textureLock)
+      {
+         texture = Texture;
+         Texture = null;
+      }
+
       Retire(texture);
    }
 
@@ -97,38 +123,88 @@ public unsafe class BitmapSource : ImageSource
       _pixels = pixels;
    }
 
+   /// <summary>The texture of these pixels on the device <paramref name="factory"/> makes textures for - made when there
+   /// is none or it died with its device. Null while the pixels are still coming, once the source is disposed, and
+   /// for pixels the device refuses; larger than the device's textures, they go up shrunk to fit, once for every
+   /// device of that limit, the picture keeping its own pixels and size.</summary>
    public virtual ITexture GetOrCreateTexture(IResourceFactory factory)
    {
-      // Thrown away while another thread was about to draw it - a bake evicted under the render thread: no texture, the
-      // same answer a picture still decoding gives, and the element that drew it re-records with what replaced it.
+      var current = Texture;
       if (IsDisposed)
       {
          return null;
       }
 
-      // A texture dies with its device; after a device swap it is made again from the pixels.
-      if (Texture == null || Texture.IsDisposed)
+      if (current is { IsDisposed: false })
       {
-         // Decode still in flight: null, and the caller retries on a later render.
-         if (_pixels == null) return null;
-
-         var textureDescription = new TextureDescription
-         {
-            Width = PixelWidth,
-            Height = PixelHeight,
-            Dimension = TextureDimension.Texture2D,
-            Format = SurfaceLayout,
-            Depth = 1,
-            InitialLayout = ImageLayout.Undefined,
-            ImageAspect = ImageAspectFlagBits.ColorBit,
-            DesiredImageLayout = Layout,
-            MipLevels = 1,
-            ArrayLayers = 1
-         };
-
-         Texture = factory.CreateTexture(textureDescription, _pixels);
+         return current;
       }
 
-      return Texture;
+      var source = _pixels;
+      var limit = factory.MaxTextureDimension;
+      if (source == null || _refused is { } refused && refused.Source == source && refused.Limit == limit)
+      {
+         return null;
+      }
+
+      var (pixels, width, height) = (source, PixelWidth, PixelHeight);
+      if (width > limit || height > limit)
+      {
+         if (!ImageShrink.Supports(SurfaceLayout))
+         {
+            _refused = new Refusal(source, limit);
+            return null;
+         }
+
+         var fitted = _fitted;
+         if (fitted == null || fitted.Source != source || fitted.Limit != limit)
+         {
+            var shrunk = ImageShrink.FitWithin(source, PixelWidth, PixelHeight, SurfaceLayout, limit, limit,
+               out var fittedWidth, out var fittedHeight);
+            _fitted = fitted = new Fitted(source, limit, shrunk, fittedWidth, fittedHeight);
+         }
+
+         (pixels, width, height) = (fitted.Pixels, fitted.Width, fitted.Height);
+      }
+
+      var textureDescription = new TextureDescription
+      {
+         Width = width,
+         Height = height,
+         Dimension = TextureDimension.Texture2D,
+         Format = SurfaceLayout,
+         Depth = 1,
+         InitialLayout = ImageLayout.Undefined,
+         ImageAspect = ImageAspectFlagBits.ColorBit,
+         DesiredImageLayout = Layout,
+         MipLevels = 1,
+         ArrayLayers = 1
+      };
+
+      lock (_textureLock)
+      {
+         current = Texture;
+         if (IsDisposed || current is { IsDisposed: false })
+         {
+            return IsDisposed ? null : current;
+         }
+
+         try
+         {
+            current = factory.CreateTexture(textureDescription, pixels);
+         }
+         catch (NotSupportedException)
+         {
+            _refused = new Refusal(source, limit);
+            return null;
+         }
+
+         Texture = current;
+         return current;
+      }
    }
+
+   private sealed record Fitted(byte[] Source, uint Limit, byte[] Pixels, uint Width, uint Height);
+
+   private sealed record Refusal(byte[] Source, uint Limit);
 }
