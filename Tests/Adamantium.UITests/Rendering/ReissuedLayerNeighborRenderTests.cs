@@ -201,6 +201,9 @@ public class ReissuedLayerNeighborRenderTests
     // The unit factory needs one, but nothing here draws a texture or text.
     private sealed class StubResourceFactory : IResourceFactory
     {
+        public uint MaxTextureDimension => uint.MaxValue;
+        public uint MaxTextureArrayLayers => uint.MaxValue;
+
         public ITexture CreateTexture(TextureDescription description, byte[] pixelData) => throw new NotSupportedException();
         public ITexture CreateTextureArray(TextureDescription description, IReadOnlyList<byte[]> layers) => throw new NotSupportedException();
         public ITexture ImportSharedSurface(SharedSurfaceDescriptor descriptor) => throw new NotSupportedException();

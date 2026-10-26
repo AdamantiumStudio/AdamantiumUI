@@ -7,11 +7,12 @@ All packages share one version.
 
 ### Added
 
+- `IResourceFactory.MaxTextureDimension` and `MaxTextureArrayLayers`: the device's limits on the textures it makes,
+  which every factory states.
 - The Windows clipboard carries pictures (`DataFormats.Image`): a picture copied goes on as it came, under the name of
   its encoding, and as CF_DIB for the applications that know only that; one copied elsewhere - PNG, JPEG, GIF, BMP,
   a bare CF_DIB, Paint's, or last a TIFF - is read as it came, without the zeros its block runs on with, a CF_DIB made
   a BMP file again.
-
 - `UIApplication.StartupThemeName`: the theme the application opens on, by name, as the user chose it and the
   application remembered - set before `Run()`, so the first window opens in it rather than swapping to it. Wins over
   `StartupTheme`; `ADAM_THEME` wins over it; a name no theme has is passed over.
@@ -2213,6 +2214,16 @@ All packages share one version.
 
 ### Fixed
 
+- A picture larger than the device's textures - past its maxImageDimension2D - went to the GPU as it was. It goes up
+  shrunk to fit (`ImageShrink`), each texel the average of the pixels it covers, once for every device of that
+  limit; the picture keeps its own pixels and size, so it is laid out, sliced, tiled, copied and saved as before. An
+  animation's frames larger or more than the device's texture arrays hold play from single textures, shrunk the same
+  way. An animation whose texture array fails to be made no longer keeps its palette texture. A picture the device
+  refuses to make a texture of is not drawn, and not asked for again every frame - it failed the frame before.
+- `ImageSource.Dispose` freed the texture before saying it was disposed: a render thread asking for the texture in
+  between made it again, and that texture was never freed - or, reading it as it went, threw
+  `NullReferenceException`. The source is marked disposed first, and the texture is made and let go of under one
+  lock, so neither side misses the other and two threads asking at once make one.
 - Pictures of 16 bits a channel - 16-bit PNG and TIFF, 12-bit JPEG - were refused as a Linux application icon, a
   Wayland cursor and a Windows clipboard bitmap: they are read as RGBA of 8 bits (`GetRgba8Pixels`) there now. Dragged
   out, they come as a whole BMP - the engine's BMP encoder takes them.

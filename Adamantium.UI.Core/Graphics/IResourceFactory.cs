@@ -7,6 +7,12 @@ namespace Adamantium.UI.Core.Graphics;
 
 public interface IResourceFactory
 {
+    /// <summary>The widest and tallest 2D texture the device makes (its maxImageDimension2D).</summary>
+    uint MaxTextureDimension { get; }
+
+    /// <summary>The most layers a texture array of the device has (its maxImageArrayLayers).</summary>
+    uint MaxTextureArrayLayers { get; }
+
     ITexture CreateTexture(TextureDescription description, byte[] pixelData);
 
     /// <summary>One texture whose ARRAY LAYERS are <paramref name="layers"/> - an animation's frames, uploaded once and

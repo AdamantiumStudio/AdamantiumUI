@@ -914,6 +914,9 @@ public class LayerOpacityRenderTests
 
     private sealed class StubResourceFactory : IResourceFactory
     {
+        public uint MaxTextureDimension => uint.MaxValue;
+        public uint MaxTextureArrayLayers => uint.MaxValue;
+
         private FontRenderer _fontRenderer;
 
         public ITexture CreateTexture(TextureDescription description, byte[] pixelData) => throw new NotSupportedException();

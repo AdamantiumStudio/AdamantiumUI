@@ -16,6 +16,10 @@ internal sealed class DeviceResourceFactory : IResourceFactory
 
     public DeviceResourceFactory(IGraphicsDevice device) => _device = device;
 
+    public uint MaxTextureDimension => _device.Adapter.AdapterProperties.Limits.MaxImageDimension2D;
+
+    public uint MaxTextureArrayLayers => _device.Adapter.AdapterProperties.Limits.MaxImageArrayLayers;
+
     public ITexture CreateTexture(TextureDescription description, byte[] pixelData)
         => _device.CreateTexture(description, pixelData);
 

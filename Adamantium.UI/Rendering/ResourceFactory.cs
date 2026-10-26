@@ -18,6 +18,12 @@ public class ResourceFactory : IResourceFactory
         _graphicsDeviceService = graphicsDeviceService;
     }
     
+    public uint MaxTextureDimension =>
+        _graphicsDeviceService.ResourceLoaderDevice.Adapter.AdapterProperties.Limits.MaxImageDimension2D;
+
+    public uint MaxTextureArrayLayers =>
+        _graphicsDeviceService.ResourceLoaderDevice.Adapter.AdapterProperties.Limits.MaxImageArrayLayers;
+
     public ITexture CreateTexture(TextureDescription description, byte[] pixelData)
     {
         return _graphicsDeviceService.ResourceLoaderDevice.CreateTexture(description, pixelData);

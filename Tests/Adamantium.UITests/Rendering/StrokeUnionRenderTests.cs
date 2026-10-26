@@ -130,6 +130,9 @@ public class StrokeUnionRenderTests
     // The unit factory needs one, but nothing here draws a texture or text.
     private sealed class StubResourceFactory : Adamantium.UI.Core.Graphics.IResourceFactory
     {
+        public uint MaxTextureDimension => uint.MaxValue;
+        public uint MaxTextureArrayLayers => uint.MaxValue;
+
         public Adamantium.Graphics.Core.ITexture CreateTexture(Adamantium.Graphics.Core.TextureDescription description, byte[] pixelData) => throw new System.NotSupportedException();
         public Adamantium.Graphics.Core.ITexture CreateTextureArray(Adamantium.Graphics.Core.TextureDescription description, System.Collections.Generic.IReadOnlyList<byte[]> layers) => throw new System.NotSupportedException();
         public Adamantium.Graphics.Core.ITexture ImportSharedSurface(Adamantium.Graphics.Core.SharedSurfaceDescriptor descriptor) => throw new System.NotSupportedException();

@@ -32,6 +32,9 @@ public class TextRoundedClipRenderTests
 
     private sealed class FontResourceFactory : IResourceFactory
     {
+        public uint MaxTextureDimension => uint.MaxValue;
+        public uint MaxTextureArrayLayers => uint.MaxValue;
+
         private readonly Dictionary<IGraphicsDevice, FontRenderer> _renderers = new();
 
         public ITexture CreateTexture(TextureDescription description, byte[] pixelData) => throw new NotSupportedException();
