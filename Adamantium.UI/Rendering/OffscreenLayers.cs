@@ -27,6 +27,20 @@ internal sealed class OffscreenLayers : IDisposable
     /// <summary>How many layers this frame laid down the texture they already held.</summary>
     public int Reused { get; private set; }
 
+    internal uint TallestLayerTexture
+    {
+        get
+        {
+            var tallest = 0u;
+            foreach (var entry in _cached.Values)
+            {
+                tallest = Math.Max(tallest, entry.TextureHeight);
+            }
+
+            return tallest;
+        }
+    }
+
     internal int LayersHoldingBands
     {
         get
@@ -254,7 +268,7 @@ internal sealed class OffscreenLayers : IDisposable
     /// (left, top, right, bottom) where its ancestors cut what it drew short: the drawing goes on past them, so nothing
     /// fades there.</summary>
     public void End(IGraphicsDevice device, float alpha, Rect2D scissor, in LayerMask mask, float soft, Vector4F softCut,
-        in LayerMirror mirror, Rect2D mirrorScissor)
+        in LayerMirror mirror, Rect2D mirrorScissor, Vector4F clipBox, Vector4F clipRadii)
     {
         if (device is not GraphicsDevice gd || _open.Count == 0)
         {
@@ -332,10 +346,11 @@ internal sealed class OffscreenLayers : IDisposable
         {
             if (mirror.Shows)
             {
-                Composite(gd, open, alpha, mirrorScissor, mask, softTexture, bands, mirror, 2f);
+                Composite(gd, open, alpha, mirrorScissor, mask, softTexture, bands, mirror, 2f, clipBox, clipRadii);
             }
 
-            Composite(gd, open, alpha, scissor, mask, softTexture, bands, mirror, mirror.Shows ? 1f : 0f);
+            Composite(gd, open, alpha, scissor, mask, softTexture, bands, mirror, mirror.Shows ? 1f : 0f, clipBox,
+                clipRadii);
         }
     }
 
@@ -446,7 +461,7 @@ internal sealed class OffscreenLayers : IDisposable
             ImageUsageFlagBits.SampledBit, ImageLayout.ShaderReadOnlyOptimal, name);
 
     private void Composite(GraphicsDevice gd, OpenOffscreenLayer open, float alpha, Rect2D scissor, in LayerMask mask,
-        IRenderTarget soft, IRenderTarget bands, in LayerMirror mirror, float role)
+        IRenderTarget soft, IRenderTarget bands, in LayerMirror mirror, float role, Vector4F clipBox, Vector4F clipRadii)
     {
         if (gd.CurrentViewports.Length == 0)
         {
@@ -482,6 +497,8 @@ internal sealed class OffscreenLayers : IDisposable
         _composite.MirrorFade.SetValue(new Vector4F(mirror.FadeLength, 0f, 0f, role));
         _composite.MirrorQuad.SetValue(new Vector4F(mirroredLeft, mirroredLeft + region.Extent.Width,
             mirroredTop + region.Extent.Height, Math.Abs(mirror.OffsetX) * 0.5f));
+        _composite.ClipBox.SetValue(clipBox);
+        _composite.ClipRadii.SetValue(clipRadii);
         _composite.SoftOn.SetValue(soft != null ? 1f : 0f);
         _composite.SoftTexture.SetResource(soft ?? open.Color);
         _composite.BandsOn.SetValue(bands != null ? 1f : 0f);

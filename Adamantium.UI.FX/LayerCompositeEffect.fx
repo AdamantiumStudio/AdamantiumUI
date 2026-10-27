@@ -2,6 +2,7 @@
 // group's opacity - so where its children overlap, the background shows through as much as anywhere else.
 
 #include "Includes/CommonData.fxh"
+#include "Includes/ClipMath.fxh"
 #include "Includes/GradientMath.fxh"
 
 // Where the layer goes, in device pixels from the viewport's corner: .xy its top-left corner, .zw its size. The texture
@@ -41,6 +42,11 @@ float SoftOn;
 // BandsOn is 1. Same region, same texels.
 Texture2D BandsTexture;
 float BandsOn;
+
+// A rounded clip the layer is laid down under, in window device pixels: .xy its corner, .zw its size (none at zero
+// size), its radii as CornerRadius. A layer drawn whole is cut by it here rather than in its texture.
+float4 ClipBox;
+float4 ClipRadii;
 
 // The layer's own region on the window, in device pixels: where a texel of it was drawn.
 float4 SourceRegion;
@@ -168,7 +174,7 @@ float4 LayerCompositePS(LayerVSOutput input) : SV_Target
     // Only where the element itself leaves room: what it draws solid stays in front of the floor.
     float4 laid = role < 1.5 ? self * (1.0 - under)
                              : lerp(self, mirror, MirrorStrength(here.y) * (1.0 - self.a)) * under;
-    return laid * LayerAlpha;
+    return laid * (LayerAlpha * ClipCoverage(input.Position.xy, ClipBox, ClipRadii));
 }
 
 technique LayerComposite

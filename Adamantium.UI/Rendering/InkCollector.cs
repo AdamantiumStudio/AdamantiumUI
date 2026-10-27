@@ -37,6 +37,7 @@ internal sealed class InkCollector : SdfBatchCollector<InkSegmentItem>
         ProjectionParam = Effect.Projection;
         ViewportSizeParam = Effect.ViewportSize;
         TargetOriginParam = Effect.TargetOrigin;
+        ViewportOriginParam = Effect.ViewportOrigin;
         InstancesAddressParam = Effect.InstancesAddress;
         TransformsAddressParam = Effect.TransformsAddress;
     }

@@ -697,6 +697,83 @@ public class SoftEdgeReflectionRenderTests
         });
     }
 
+    // Scrolled half out of a clipping viewport, the element is cut where the viewport ends, its reflection is not: what
+    // the viewport hides of the element is mirrored where it can be seen.
+    [Test]
+    public void AReflection_IsWholeWhenAClipAboveCutsTheElement()
+    {
+        var root = new TestRoot(64, 128);
+        var viewport = new TestControl { ClipToBounds = true };
+        viewport.Bounds = new Rect(0, 20, 64, 108);
+        viewport.RenderSize = new Size(64, 108);
+        var element = new TestControl
+        {
+            Reflection = new Reflection { Size = 1, Opacity = 1, Fade = 0 },
+            RenderAction = s => s
+                .DrawRectangle(Brushes.Red, new Rect(0, 0, 40, 20))
+                .DrawRectangle(Brushes.Lime, new Rect(0, 20, 40, 20))
+        };
+        element.Bounds = new Rect(4, -10, 40, 40);
+        element.RenderSize = new Size(40, 40);
+        viewport.Add(element);
+        root.Add(viewport);
+
+        // The element spans rows 10 to 50, the viewport hides it above row 20; the floor at 50 mirrors rows 10 to 20
+        // at 80 to 90.
+        var px = Render(root, (24, 15), (24, 25), (24, 85));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(Blue(px[0]), Is.GreaterThan(240), "above the viewport, the element is cut");
+            Assert.That(Red(px[1]), Is.GreaterThan(240), "inside it, its red top");
+            Assert.That(Red(px[2]), Is.GreaterThan(240), "and the hidden part of that red, mirrored");
+        });
+    }
+
+    // Past the window's top edge too: what lies above the window is drawn into the layer and mirrored into view.
+    [Test]
+    public void AReflection_IsWholeWhenTheElementGoesPastTheWindow()
+    {
+        var (root, element) = Element(e => e.Reflection = new Reflection { Size = 1, Opacity = 1, Fade = 0 });
+        element.Bounds = new Rect(4, -10, 40, 40);
+
+        // The element spans rows -10 to 30; the floor at 30 mirrors rows -10 to 0 at 60 to 70.
+        var px = Render(root, (24, 5), (24, 65));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(Red(px[0]), Is.GreaterThan(240), "its red top, in view");
+            Assert.That(Red(px[1]), Is.GreaterThan(240), "and the red above the window, mirrored");
+        });
+    }
+
+    // Drawn whole, the element is still laid down under the rounded clip above it.
+    [Test]
+    public void AReflectedElement_IsStillCutByARoundedClipAbove()
+    {
+        var root = new TestRoot(64, 128);
+        var rounded = new TestControl { ClipToBounds = true, ClipCornerRadius = new ProceduralGeometry.CornerRadius(16) };
+        rounded.Bounds = new Rect(0, 0, 64, 128);
+        rounded.RenderSize = new Size(64, 128);
+        var element = new TestControl
+        {
+            Reflection = new Reflection { Size = 1, Opacity = 1 },
+            RenderAction = s => s.DrawRectangle(Brushes.Red, new Rect(0, 0, 40, 40))
+        };
+        element.Bounds = new Rect(0, 0, 40, 40);
+        element.RenderSize = new Size(40, 40);
+        rounded.Add(element);
+        root.Add(rounded);
+
+        var px = Render(root, (1, 1), (20, 20));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(Blue(px[0]), Is.GreaterThan(240), "the rounded corner cuts it");
+            Assert.That(Red(px[1]), Is.GreaterThan(240), "inside, the element");
+        });
+    }
+
     // What the element's own clip cuts away is not drawn, so the floor is not under it.
     [Test]
     public void AReflection_StandsUnderWhatTheClipLeaves()
