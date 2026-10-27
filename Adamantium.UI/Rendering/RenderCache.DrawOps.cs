@@ -55,6 +55,12 @@ public partial class RenderCache
                     case RenderOpKind.LayerEnd:
                         EndOffscreenLayer(device, op.Layer, fullScissor);
                         break;
+                    case RenderOpKind.BandsBegin:
+                        BeginOwnBands(device, op.Layer, fullScissor);
+                        break;
+                    case RenderOpKind.BandsEnd:
+                        _offscreenLayers?.EndBands(device);
+                        break;
                     case RenderOpKind.Unit:
                         // Per-unit draws bake their world at record time while batches follow slots live, so re-point the
                         // ones whose batched half moved this frame (see RepointIfItMoved).
@@ -728,7 +734,10 @@ public partial class RenderCache
         // LAYER is the same: its group is where the walk opens the layer.
         if (drawCommands.Count == 0 && (clones is { Count: > 0 } || WantsLayer(component)))
         {
-            var hostGroup = BuildUnitsFor(component, drawCommands, projectionMatrix);
+            // As below: clean, it did not re-record and its own units stand; dirty, it now draws nothing of its own.
+            var hostGroup = wasGeometryValid && _groupById.TryGetValue(component.RenderId, out var held)
+                ? held
+                : BuildUnitsFor(component, drawCommands, projectionMatrix);
             hostGroup.Clones = clones;
             hostGroup.CloneSteps = cloneSteps;
             hostGroup.CloneStagger = cloneStagger;
@@ -839,7 +848,6 @@ public partial class RenderCache
 
         removed += ReleaseSlotsOf(_clipOwners, Departed, ReleaseClipSlot);
         removed += ReleaseSlotsOf(_fadeOwners, Departed, ReleaseFadeSlot);
-        removed += ReleaseSlotsOf(_bandOwners, Departed, ReleaseBandSlot);
 
         // ...and layout snapshots of discarded template parts, which leave through teardown, not through the packet.
         // Tested by the discard mark: a destroyed part's RenderParent chain can still reach a live ancestor.

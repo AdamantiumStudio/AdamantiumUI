@@ -37,6 +37,11 @@ float4 MaskParams;
 Texture2D SoftTexture;
 float SoftOn;
 
+// A soft-edged element's own glow and shadow, drawn apart from what the fade reaches and laid under it, read where
+// BandsOn is 1. Same region, same texels.
+Texture2D BandsTexture;
+float BandsOn;
+
 // The layer's own region on the window, in device pixels: where a texel of it was drawn.
 float4 SourceRegion;
 
@@ -109,7 +114,9 @@ float4 LayerAt(float2 inRegion, float2 pixel)
         soft = saturate(2.0 * SoftTexture.SampleLevel(SourceSampler, uv, 0).r - 1.0);
     }
 
-    return SourceTexture.SampleLevel(SourceSampler, uv, 0) * (MaskAt(pixel) * soft * inside);
+    float4 drawn = SourceTexture.SampleLevel(SourceSampler, uv, 0) * soft;
+    float4 bands = BandsOn > 0.5 ? BandsTexture.SampleLevel(SourceSampler, uv, 0) : float4(0.0, 0.0, 0.0, 0.0);
+    return (drawn + bands * (1.0 - drawn.a)) * (MaskAt(pixel) * inside);
 }
 
 // The reflection's strength on a window row: none above the floor, gathering to full by where the mirrored element
