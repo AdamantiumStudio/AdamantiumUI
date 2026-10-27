@@ -12,9 +12,6 @@ public static class TypeParserCheck
 
     private static readonly HashSet<string> Registered =
     [
-        "Adamantium.Mathematics.Color",
-        "Adamantium.Mathematics.Thickness",
-        "Adamantium.Mathematics.Vector2",
         "System.Uri",
         "System.TimeSpan",
         "Adamantium.Core.Collections.TrackingCollection<double>",

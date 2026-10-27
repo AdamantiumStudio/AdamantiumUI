@@ -67,14 +67,11 @@
 		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.MVVM.Generators\Adamantium.MVVM.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
 		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.EffectsCompiler\Adamantium.EffectsCompiler.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="true" />
 		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Mathematics\Adamantium.Mathematics.csproj" />
-		<!-- No SetTargetFramework: Fonts targets netstandard2.0 alone, and forcing it made a second build of the same
-		     project into the same folder, racing the first one for its dll. -->
-		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Fonts\Adamantium.Fonts.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="true" />
-		<!-- netstandard2.0 analyzer deps for the source generators above (Roslyn analyzers must be netstandard2.0).
+		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Fonts\Adamantium.Fonts.csproj" />
+		<!-- netstandard2.0 analyzer dep for the source generators above (Roslyn analyzers must be netstandard2.0).
 		     Analyzer-ONLY so the netstandard2.0 build isn't copied into this net10.0 output - runtime/compile
-		     Core+Mathematics come from the normal net10.0 refs above. -->
+		     Core comes from the normal net10.0 ref above. -->
 		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Core\Adamantium.Core.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" SetTargetFramework="TargetFramework=netstandard2.0" />
-		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Mathematics\Adamantium.Mathematics.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" SetTargetFramework="TargetFramework=netstandard2.0" />
 	</ItemGroup>
 
 	<ItemGroup Condition="'$(UseEngineSource)' != 'true'">

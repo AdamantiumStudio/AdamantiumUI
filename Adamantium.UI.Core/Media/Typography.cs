@@ -1,4 +1,4 @@
-using Adamantium.Fonts.Shaping;
+using Adamantium.Core.Fonts.Shaping;
 
 namespace Adamantium.UI.Core.Media;
 

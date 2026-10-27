@@ -24,22 +24,17 @@
     <ItemGroup Condition="'$(UseEngineSource)' == 'true'">
         <ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Core\Adamantium.Core.csproj" />
         <ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Mathematics\Adamantium.Mathematics.csproj" />
-        <!-- netstandard2.0 analyzer deps for the source generator above (Roslyn analyzers must be netstandard2.0).
+        <!-- netstandard2.0 analyzer dep for the source generator above (Roslyn analyzers must be netstandard2.0).
              Analyzer-ONLY so the netstandard2.0 build isn't copied into this net10.0 output - runtime/compile
-             Core+Mathematics come from the normal net10.0 refs above. -->
+             Core comes from the normal net10.0 ref above. -->
         <ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Core\Adamantium.Core.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" SetTargetFramework="TargetFramework=netstandard2.0" />
-        <ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Mathematics\Adamantium.Mathematics.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" SetTargetFramework="TargetFramework=netstandard2.0" />
-        <ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Fonts\Adamantium.Fonts.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
     </ItemGroup>
 
-    <!-- The same netstandard2.0 analyzer deps, taken from the packages' own netstandard2.0 builds. -->
+    <!-- The same netstandard2.0 analyzer dep, taken from the package's own netstandard2.0 build. -->
     <ItemGroup Condition="'$(UseEngineSource)' != 'true'">
         <PackageReference Include="Adamantium.Core" Version="$(AdamantiumEngineVersion)" GeneratePathProperty="true" />
-        <PackageReference Include="Adamantium.Mathematics" Version="$(AdamantiumEngineVersion)" GeneratePathProperty="true" />
-        <PackageReference Include="Adamantium.Fonts" Version="$(AdamantiumEngineVersion)" GeneratePathProperty="true" />
+        <PackageReference Include="Adamantium.Mathematics" Version="$(AdamantiumEngineVersion)" />
         <Analyzer Include="$(PkgAdamantium_Core)\lib\netstandard2.0\Adamantium.Core.dll" Condition="'$(PkgAdamantium_Core)' != ''" />
-        <Analyzer Include="$(PkgAdamantium_Mathematics)\lib\netstandard2.0\Adamantium.Mathematics.dll" Condition="'$(PkgAdamantium_Mathematics)' != ''" />
-        <Analyzer Include="$(PkgAdamantium_Fonts)\lib\netstandard2.0\Adamantium.Fonts.dll" Condition="'$(PkgAdamantium_Fonts)' != ''" />
     </ItemGroup>
 
     <!-- The themes' strings: language tables (Localization\*.alang) the themes name in {Localize}. -->

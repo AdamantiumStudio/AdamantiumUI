@@ -527,7 +527,7 @@ internal sealed class MarkupStructureCheck
 
         if (set.TryGetValue("Value", out var value) && value.Values.Count == 1 && value.Values[0].IsTextNode() &&
             value.GetTextValue()?.Trim() is { } text &&
-            (DefaultAumlTransformer.ExpectedLiteral(propertyType, text) ?? MarkupValueChecks.Problem(propertyType.FullName, text)) is { } expected)
+            (DefaultAumlTransformer.ExpectedLiteral(propertyType, text) ?? MarkupValueChecks.Problem(propertyType, text)) is { } expected)
         {
             var valueAt = value.Property;
             Report(MarkupMessages.InvalidLiteral(text, TypeParserCheck.ValueTypeOf(propertyType).Name, name, expected, valueAt.Line, valueAt.Position), valueAt);

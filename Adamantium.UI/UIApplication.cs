@@ -1396,6 +1396,19 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         }
     }
 
+    private bool IsAnyWindowDrawn()
+    {
+        foreach (var service in Volatile.Read(ref _windowServices))
+        {
+            if (!service.Hidden && service.Window.State != WindowState.Minimized)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private bool FrameOwed(long requests)
     {
         if (!(RenderThreadOptions.RenderThreadEnabled && renderThread != null))
@@ -1609,7 +1622,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
             return "a running animation";
         }
 
-        if (Graphics.Fonts.FontAtlasStore.HasPendingGlyphs)
+        if (Graphics.Fonts.FontAtlasStore.HasPendingGlyphs && IsAnyWindowDrawn())
         {
             return "glyphs still being made";
         }

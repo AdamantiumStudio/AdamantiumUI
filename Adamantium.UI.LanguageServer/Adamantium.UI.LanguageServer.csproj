@@ -16,6 +16,15 @@
 		<ProjectReference Include="..\Adamantium.UI.Generators\Adamantium.UI.Generators.csproj" />
 	</ItemGroup>
 
+	<!-- Colors as the framework reads them. -->
+	<ItemGroup Condition="'$(UseEngineSource)' == 'true'">
+		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Mathematics\Adamantium.Mathematics.csproj" />
+	</ItemGroup>
+
+	<ItemGroup Condition="'$(UseEngineSource)' != 'true'">
+		<PackageReference Include="Adamantium.Mathematics" Version="$(AdamantiumEngineVersion)" />
+	</ItemGroup>
+
 	<ItemGroup>
 		<EmbeddedResource Include="Localization\*.alang" LogicalName="Localization/%(Filename)%(Extension)" WithCulture="false" />
 	</ItemGroup>

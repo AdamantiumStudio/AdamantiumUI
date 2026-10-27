@@ -60,6 +60,19 @@ public class FontFeaturesMarkupTests
         Assert.That(errors.Select(e => e.GetMessage()), Has.Some.Contains("'Semibld' is not a font weight"));
     }
 
+    // A run's weight and width may be left unset, so they are nullable: the check used to miss them, and the misspelling
+    // threw only where the view was built.
+    [TestCase("FontWeight=\"Semibld\"", "'Semibld' is not a font weight")]
+    [TestCase("FontStretch=\"Condensd\"", "Condensd")]
+    public void AMisspelledWeightOrWidthOfARun_FailsTheBuild(string attribute, string said)
+    {
+        AumlCodegenHarness.Generate(WindowWith(
+            $"<TextBlock><TextBlock.Inlines><Run Text=\"heavy\" {attribute}/></TextBlock.Inlines></TextBlock>"),
+            out var errors);
+
+        Assert.That(errors.Select(e => e.GetMessage()), Has.Some.Contains(said));
+    }
+
     [Test]
     public void AMisspelledFeature_FailsTheBuild()
     {

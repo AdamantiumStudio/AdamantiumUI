@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Scenario xmlns="http://adamantium/automation/scenario" Description="The only window, minimized by its caption button, goes at once, with no input after the click: on Wayland the request waited in the connection's buffer for the next frame, and a minimized window draws none, so it stayed on screen until the pointer moved. The compositor's answer - the window no longer active - shows the request reached it. The main window alone, settled, its button invoked: another window drawing a frame, a frame still on its way, or the button drawn pressed would carry the request along.">
+  <Wait Target="id=MainWindow" IsActive="True" />
+  <WaitIdle />
+  <Invoke Target="id=MainWindow/id=Minimize" />
+  <Wait Target="id=MainWindow" IsActive="False" Timeout="2s" />
+</Scenario>

@@ -8,8 +8,8 @@ using Adamantium.UI.Core.Media.Animation;
 using NUnit.Framework;
 using FontFamily = Adamantium.UI.Core.Media.FontFamily;
 using FontStyle = Adamantium.Fonts.FontStyle;
-using FontWeight = Adamantium.Fonts.FontWeight;
-using FontStretch = Adamantium.Fonts.FontStretch;
+using FontWeight = Adamantium.Core.Fonts.FontWeight;
+using FontStretch = Adamantium.Core.Fonts.FontStretch;
 
 namespace Adamantium.UITests;
 

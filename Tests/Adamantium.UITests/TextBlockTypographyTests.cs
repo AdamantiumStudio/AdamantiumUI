@@ -2,6 +2,8 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using Adamantium.Core.Fonts;
+using Adamantium.Core.Fonts.Shaping;
 using Adamantium.Fonts;
 using Adamantium.Fonts.Shaping;
 using Adamantium.Graphics.Fonts;

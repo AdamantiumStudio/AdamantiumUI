@@ -458,15 +458,7 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
             }
         }
 
-        switch (windowState)
-        {
-            case WindowState.Maximized:
-                toplevel?.SetMaximized();
-                break;
-            case WindowState.Minimized:
-                toplevel?.SetMinimized();
-                break;
-        }
+        RequestState(windowState, unmaximize: false);
     }
 
     public void HideWindow()
@@ -954,22 +946,39 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
     private void WindowOnStateChanged(object sender, StateChangedEventArgs e)
     {
         if (e.State == WindowState.Minimized && chromeState != WindowState.Minimized)
+        {
             lastWindowState = chromeState;
+        }
 
         var previous = chromeState;
         chromeState = e.State;
-        switch (e.State)
+        RequestState(e.State,
+            e.State == WindowState.Normal && (previous == WindowState.Maximized || lastWindowState == WindowState.Maximized));
+    }
+
+    private void RequestState(WindowState state, bool unmaximize)
+    {
+        if (toplevel == null)
+        {
+            return;
+        }
+
+        switch (state)
         {
             case WindowState.Maximized:
-                toplevel?.SetMaximized();
+                toplevel.SetMaximized();
                 break;
             case WindowState.Minimized:
-                toplevel?.SetMinimized();
+                toplevel.SetMinimized();
                 break;
-            case WindowState.Normal when previous == WindowState.Maximized || lastWindowState == WindowState.Maximized:
-                toplevel?.UnsetMaximized();
+            case WindowState.Normal when unmaximize:
+                toplevel.UnsetMaximized();
                 break;
+            default:
+                return;
         }
+
+        platform.Display.Flush();
     }
 
     private void OnWindowClosed(object sender, EventArgs e)
