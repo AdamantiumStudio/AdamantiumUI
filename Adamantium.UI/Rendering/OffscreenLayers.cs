@@ -118,8 +118,10 @@ internal sealed class OffscreenLayers : IDisposable
 
     /// <summary>Closes the innermost layer, goes back to the target it was opened over and lays the layer down there with
     /// <paramref name="alpha"/> and <paramref name="mask"/>, cut by <paramref name="scissor"/> (device pixels of the
-    /// window).</summary>
-    public void End(IGraphicsDevice device, float alpha, Rect2D scissor, in LayerMask mask)
+    /// window); and again, mirrored under the element and cut by <paramref name="mirrorScissor"/>, where
+    /// <paramref name="mirror"/> shows.</summary>
+    public void End(IGraphicsDevice device, float alpha, Rect2D scissor, in LayerMask mask, in LayerMirror mirror,
+        Rect2D mirrorScissor)
     {
         if (device is not GraphicsDevice gd || _open.Count == 0)
         {
@@ -157,11 +159,17 @@ internal sealed class OffscreenLayers : IDisposable
 
         if (alpha > 0f)
         {
-            Composite(gd, open, alpha, scissor, mask);
+            if (mirror.Shows)
+            {
+                Composite(gd, open, alpha, mirrorScissor, mask, mirror);
+            }
+
+            Composite(gd, open, alpha, scissor, mask, default);
         }
     }
 
-    private void Composite(GraphicsDevice gd, OpenOffscreenLayer open, float alpha, Rect2D scissor, in LayerMask mask)
+    private void Composite(GraphicsDevice gd, OpenOffscreenLayer open, float alpha, Rect2D scissor, in LayerMask mask,
+        in LayerMirror mirror)
     {
         if (gd.CurrentViewports.Length == 0)
         {
@@ -183,8 +191,18 @@ internal sealed class OffscreenLayers : IDisposable
         gd.PrimitiveTopology = PrimitiveTopology.TriangleStrip;
         gd.VertexType = null;
 
-        _composite.LayerBox.SetValue(new Vector4F(region.Offset.X - viewport.X, region.Offset.Y - viewport.Y,
+        var top = mirror.Shows
+            ? 2f * mirror.Bottom + mirror.Gap - (region.Offset.Y + region.Extent.Height)
+            : region.Offset.Y;
+        _composite.LayerBox.SetValue(new Vector4F(region.Offset.X - viewport.X, top - viewport.Y,
             region.Extent.Width, region.Extent.Height));
+        _composite.SourceRegion.SetValue(new Vector4F(region.Offset.X, region.Offset.Y, region.Extent.Width,
+            region.Extent.Height));
+        _composite.Mirror.SetValue(mirror.Shows
+            ? new Vector4F(mirror.Opacity, mirror.Bottom + mirror.Gap, Math.Max(mirror.Length, 1f), 1f)
+            : default);
+        _composite.Soft.SetValue(mask.Soft);
+        _composite.SoftRadii.SetValue(mask.SoftRadii);
         _composite.LayerTexels.SetValue(new Vector4F(
             region.Extent.Width / (float)open.TextureWidth, region.Extent.Height / (float)open.TextureHeight, 0, 0));
         _composite.LayerAlpha.SetValue(alpha);

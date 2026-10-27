@@ -218,6 +218,24 @@ public abstract class TileBrush : Brush
         }
     }
 
+    internal static readonly AdamantiumProperty ColorAdjustmentProperty = AdamantiumProperty.Register(
+        nameof(ColorAdjustment), typeof(Vector4F), typeof(TileBrush),
+        new PropertyMetadata(default(Vector4F), PropertyMetadataOptions.AffectsPaint));
+
+    internal Vector4F ColorAdjustment
+    {
+        get => GetValue<Vector4F>(ColorAdjustmentProperty);
+        set
+        {
+            if (IsFrozen)
+            {
+                return;
+            }
+
+            SetValue(ColorAdjustmentProperty, value);
+        }
+    }
+
     /// <summary>What this brush paints with, as the render path wants it. Every tile brush has content and the paths
     /// that sample it care only THAT there is some - so they ask here rather than testing for each brush in turn, which
     /// is how a new one would silently draw nothing.</summary>
@@ -249,6 +267,7 @@ public abstract class TileBrush : Brush
         clone.RotationAngle = RotationAngle;
         clone.RotationCenter = RotationCenter;
         clone.Tint = Tint;
+        clone.ColorAdjustment = ColorAdjustment;
         clone.Opacity = Opacity;
     }
 }

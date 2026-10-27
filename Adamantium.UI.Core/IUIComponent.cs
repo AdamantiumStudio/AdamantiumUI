@@ -23,6 +23,15 @@ public interface IUIComponent : IFundamentalUIComponent
     /// does. A solid color and every gradient brush mask by their alpha; any other brush masks by its Opacity alone.</summary>
     Media.Brush OpacityMask { get; }
 
+    /// <summary>How far in from its outline this element and its subtree fade away to nothing, in pixels, following its
+    /// rounded corners: a picture whose edges melt into the page. Zero is a hard edge. Everything the element draws
+    /// fades, its own shadow and glow included. It draws the element as a layer, as <see cref="IsLayer"/> does.</summary>
+    double SoftEdge { get; }
+
+    /// <summary>A mirror image of this element and its subtree under its bottom edge, fading away downward. It draws the
+    /// element as a layer, as <see cref="IsLayer"/> does.</summary>
+    Media.Reflection Reflection { get; }
+
     /// <summary>How this clip's corners are rounded (TL, TR, BR, BL). A scissor is square, so rounding is applied by the
     /// shaders; zero means the plain rectangular clip. Unset falls back to the container's own CornerRadius, where it
     /// has one - see UIComponent.ClipCornerRadius.</summary>

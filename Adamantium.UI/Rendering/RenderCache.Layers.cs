@@ -65,32 +65,94 @@ public partial class RenderCache
         var scissor = ResolveScissor(layer, World(layer), fullScissor, out _, out _);
         var alpha = LayerAlpha(layer);
         var mask = MaskOf(layer, fullScissor, ref alpha);
-        _offscreenLayers.End(device, alpha, scissor, mask);
+        var mirror = MirrorOf(layer);
+        _offscreenLayers.End(device, alpha, scissor, mask, mirror,
+            mirror.Shows ? MirrorScissor(layer, fullScissor) : scissor);
     }
+
+    private (float Width, float Height, float Scale) BoxPixels(IUIComponent layer)
+    {
+        var size = ApplySnap(layer).RenderSize;
+        var world = World(layer);
+        var scale = (float)_renderScale;
+        var across = MathF.Sqrt(world.M11 * world.M11 + world.M12 * world.M12) * scale;
+        var down = MathF.Sqrt(world.M21 * world.M21 + world.M22 * world.M22) * scale;
+        return ((float)size.Width * across, (float)size.Height * down, MathF.Min(across, down));
+    }
+
+    private LayerMirror MirrorOf(IUIComponent layer)
+    {
+        if (layer.Reflection is not { Shows: true } reflection)
+        {
+            return default;
+        }
+
+        var size = ApplySnap(layer).RenderSize;
+        var (_, height, scale) = BoxPixels(layer);
+        if (!(height > 0))
+        {
+            return default;
+        }
+
+        var world = World(layer);
+        var bottom = float.MinValue;
+        foreach (var (x, y) in (ReadOnlySpan<(float, float)>)[(0f, 0f), ((float)size.Width, 0f), (0f, (float)size.Height),
+                     ((float)size.Width, (float)size.Height)])
+        {
+            var w = x * world.M14 + y * world.M24 + world.M44;
+            if (MathF.Abs(w) > 1e-6f)
+            {
+                bottom = MathF.Max(bottom, (x * world.M12 + y * world.M22 + world.M42) / w * (float)_renderScale);
+            }
+        }
+
+        return bottom == float.MinValue
+            ? default
+            : new LayerMirror(true, bottom, (float)reflection.Distance * scale,
+                (float)Math.Min(reflection.Size, 1) * height, (float)Math.Clamp(reflection.Opacity, 0, 1));
+    }
+
+    private Rect2D MirrorScissor(IUIComponent layer, Rect2D fullScissor) =>
+        ApplySnap(layer).RenderParent is { } parent
+            ? ResolveScissor(parent, World(parent), fullScissor, out _, out _)
+            : fullScissor;
 
     private LayerMask MaskOf(IUIComponent layer, Rect2D fullScissor, ref float alpha)
     {
         var brush = layer.OpacityMask?.Snapshot;
-        if (brush == null)
+        var soft = default(Vector4F);
+        var radii = default(Vector4F);
+        if (layer.SoftEdge > 0)
+        {
+            var (width, height, scale) = BoxPixels(layer);
+            if (width > 0 && height > 0)
+            {
+                soft = new Vector4F(width, height, (float)layer.SoftEdge * scale, 0f);
+                radii = layer.ClipRadii * scale;
+            }
+        }
+
+        if (brush != null)
+        {
+            alpha *= (float)brush.Opacity;
+            if (brush is SolidColorBrush solid)
+            {
+                alpha *= solid.Color.ToVector4().W;
+            }
+        }
+
+        var gradient = brush as GradientBrush;
+        if ((gradient == null && soft.Z <= 0) || !MaskBox(layer, fullScissor, out var toBox))
         {
             return default;
         }
 
-        alpha *= (float)brush.Opacity;
-        if (brush is SolidColorBrush solid)
+        var u = new Vector4F(toBox.M11, toBox.M21, toBox.M31, 0f);
+        var v = new Vector4F(toBox.M12, toBox.M22, toBox.M32, 0f);
+        var w = new Vector4F(toBox.M13, toBox.M23, toBox.M33, 0f);
+        if (gradient == null)
         {
-            alpha *= solid.Color.ToVector4().W;
-            return default;
-        }
-
-        if (brush is not GradientBrush gradient)
-        {
-            return default;
-        }
-
-        if (!MaskBox(layer, fullScissor, out var toBox))
-        {
-            return default;
+            return new LayerMask(0f, default, default, u, v, w, default, default, default, default, default, soft, radii);
         }
 
         var type = GradientBake.PackGeometry(gradient, out var geom0, out var geom1);
@@ -102,14 +164,16 @@ public partial class RenderCache
             type,
             geom0,
             geom1,
-            new Vector4F(toBox.M11, toBox.M21, toBox.M31, 0f),
-            new Vector4F(toBox.M12, toBox.M22, toBox.M32, 0f),
-            new Vector4F(toBox.M13, toBox.M23, toBox.M33, 0f),
+            u,
+            v,
+            w,
             new Vector4F(colors[0].W, colors[1].W, colors[2].W, colors[3].W),
             new Vector4F(colors[4].W, colors[5].W, colors[6].W, colors[7].W),
             new Vector4F(offsets[0], offsets[1], offsets[2], offsets[3]),
             new Vector4F(offsets[4], offsets[5], offsets[6], offsets[7]),
-            new Vector4F(count, (float)gradient.SpreadMethod, 0f, 0f));
+            new Vector4F(count, (float)gradient.SpreadMethod, 0f, 0f),
+            soft,
+            radii);
     }
 
     // From a window pixel (x, y, 1) to the mask's box, homogeneous: (u, v, q), the box point at (u / q, v / q). The box is
@@ -150,7 +214,9 @@ public partial class RenderCache
         return true;
     }
 
-    private static bool WantsLayer(IUIComponent component) => component.IsLayer || component.OpacityMask != null;
+    private static bool WantsLayer(IUIComponent component) => component.IsLayer || component.OpacityMask != null ||
+                                                              component.SoftEdge > 0 ||
+                                                              component.Reflection is { Shows: true };
 
     private void RecordLayerMark(RenderOpKind kind, IUIComponent layer, long order)
     {
@@ -220,6 +286,11 @@ public partial class RenderCache
                 Mix(ref print, scissor.Extent.Width);
                 Mix(ref print, scissor.Extent.Height);
                 MixRoundedClip(ref print, unit.Component, fullScissor);
+            }
+
+            if (i > start && MirrorOf(group.Component) is { Shows: true } mirror)
+            {
+                bottom = System.Math.Max(bottom, (mirror.Bottom + mirror.Gap + mirror.Length) / _renderScale);
             }
         }
 

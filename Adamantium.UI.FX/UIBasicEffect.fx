@@ -1,4 +1,5 @@
 #include "Includes/CommonData.fxh"
+#include "Includes/ColorMath.fxh"
 
 float4x4 wvp;
 float4x4 world;
@@ -29,6 +30,7 @@ float4 texRotation;   // 2x2 mapping a fragment back into the unturned grid, row
 float4 texDrawn;      // the content's rect inside ONE tile, as (offsetX, offsetY, scaleX, scaleY) in 0..1 of it
 float4 texUvRect;     // the sub-rectangle of the source one copy samples
 float4 texTint = float4(1, 1, 1, 1);
+float4 texAdjust;     // the picture's colors, before the tint - see AdjustColor
 float texRepeat;      // 1 = the tile repeats; 0 = a single copy, which must never wrap
 float texMirror;      // mirror flags: 1 = X, 2 = Y, 3 = both
 
@@ -97,7 +99,9 @@ float4 TexturedFill_PS(VERTEX_OUTPUT input) : SV_TARGET
 
     // SampleLevel, not Sample: frac() makes uv discontinuous at every tile seam, and the derivative Sample picks its mip
     // by spikes there - one column of pixels drawn from the smallest mip, i.e. a thin line down each seam.
-    float4 color = shaderTexture.SampleLevel(sampleType, uv, 0.0) * texTint;
+    float4 color = shaderTexture.SampleLevel(sampleType, uv, 0.0);
+    color.rgb = AdjustColor(color.rgb, texAdjust);
+    color *= texTint;
 
     // Outside the content's rect inside its tile there is nothing to paint - the gap a Uniform fit leaves.
     float inside = step(0.0, n.x) * step(n.x, 1.0) * step(0.0, n.y) * step(n.y, 1.0);
