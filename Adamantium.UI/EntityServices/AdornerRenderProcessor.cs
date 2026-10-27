@@ -100,6 +100,8 @@ public class AdornerRenderProcessor : EntityProcessor<WindowRenderService>, IRec
 
     public bool AwaitsFrame => _cache?.AwaitsFrame == true;
 
+    public bool Moves => _cache?.Moves == true;
+
     /// <summary>Is what this adorner decorates hosted on the window's popup overlay (rather than in its content)?</summary>
     internal static bool IsHostedOnOverlay(IUIComponent adorner, IWindow window)
     {

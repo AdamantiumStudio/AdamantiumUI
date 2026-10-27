@@ -41,9 +41,11 @@ float4 SoftRadii;
 // The layer's own region on the window, in device pixels: where a texel of it was drawn.
 float4 SourceRegion;
 
-// The reflection draw (.w = 1): the layer laid down mirrored under the element, .x strong where it starts on window row .y
-// and gone .z pixels further down.
+// The reflection draw (.z > 0): the layer laid down mirrored under the element, below the floor on window row .w; .x
+// strong down to row .y, where the mirrored element begins, and gone .z pixels further down.
 float4 Mirror;
+
+float Mirrored() { return step(0.5, Mirror.z); }
 
 // Between two stops closer than a pixel, a one-pixel ramp centered on them, as the fills do.
 float MaskRamp(float t, float aa)
@@ -120,20 +122,22 @@ LayerVSOutput LayerCompositeVS(uint id : SV_VertexID)
     float2 pixel = LayerBox.xy + o.Uv * LayerBox.zw;
     o.Position = float4(pixel / max(ViewportSize, float2(1.0, 1.0)) * 2.0 - 1.0, 0.0, 1.0);
     // The reflection is placed upside down, so its top row samples the layer's bottom one.
-    o.Uv.y = lerp(o.Uv.y, 1.0 - o.Uv.y, Mirror.w);
+    o.Uv.y = lerp(o.Uv.y, 1.0 - o.Uv.y, Mirrored());
     return o;
 }
 
 // The layer was blended onto transparent black, so its color already carries its alpha: scaled here as a whole, and by
 // the mask and the soft edge where there are, and laid down with the premultiplied "over". The reflection asks both of
-// the pixel it mirrors, and fades from where it starts on down.
+// the pixel it mirrors. It shows only below the floor, where it meets what the element draws there (its glow) as a mirror
+// does, and fades from where the mirrored element begins on down.
 [shader("fragment")]
 float4 LayerCompositePS(LayerVSOutput input) : SV_Target
 {
     float2 here = SurfacePixel(input.Position.xy);
-    float2 source = lerp(here, SourceRegion.xy + input.Uv * SourceRegion.zw, Mirror.w);
-    float below = here.y - Mirror.y;
-    float fade = lerp(1.0, Mirror.x * step(0.0, below) * saturate(1.0 - below / max(Mirror.z, 1.0)), Mirror.w);
+    float mirrored = Mirrored();
+    float2 source = lerp(here, SourceRegion.xy + input.Uv * SourceRegion.zw, mirrored);
+    float below = max(here.y - Mirror.y, 0.0);
+    float fade = lerp(1.0, Mirror.x * step(Mirror.w, here.y) * saturate(1.0 - below / max(Mirror.z, 1.0)), mirrored);
     float mask = MaskAt(source) * SoftAt(source) * fade;
     return SourceTexture.SampleLevel(SourceSampler, input.Uv * LayerTexels.xy, 0) * (LayerAlpha * mask);
 }

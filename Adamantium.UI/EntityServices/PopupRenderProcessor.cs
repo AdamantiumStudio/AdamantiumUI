@@ -85,6 +85,8 @@ public class PopupRenderProcessor : EntityProcessor<WindowRenderService>, IRecor
 
     public bool AwaitsFrame => _cache?.AwaitsFrame == true;
 
+    public bool Moves => _cache?.Moves == true;
+
     private readonly OverlayRebuildGate _gate = new();
 
     // This stage's own marks. One per stage, not per popup: they are recorded, gated and cleared together - and the

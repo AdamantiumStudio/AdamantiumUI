@@ -44,6 +44,17 @@ internal sealed class PatternRectCollector : BrushSdfCollector<PatternRectItem>
 
     protected override void BindSegment(int index) => _kind = _segKinds[index];
 
+    // A flowing noise carries its animate flag in the sign of its octaves; a pattern's pack means something else there.
+    protected override bool Moves(int first, int count)
+    {
+        foreach (ref readonly var item in Items.AsSpan(first, count))
+        {
+            if (item.Params.Y >= PatternBrushRecord.NoiseBase && item.Noise.X < 0f) return true;
+        }
+
+        return false;
+    }
+
     /// <summary>Still the pending segment's kind? A change flushes the batch - the caller asks this before adding,
     /// mirroring TextureBatchCollector.SameTexture.</summary>
     public bool SameKind(int kind) => !Active || _kind == kind;

@@ -154,6 +154,32 @@ public class SoftEdgeReflectionRenderTests
         });
     }
 
+    // Raised by its distance, the element stands over a floor half that far down: below the floor its mirror image meets
+    // its own glow as a mirror would, rather than cut off where the mirrored element begins.
+    [Test]
+    public void AReflection_MirrorsTheGlowBelowTheFloor()
+    {
+        var glow = new Aura { Radius = 10, Color = Colors.White, Opacity = 1 };
+        var (plain, _) = Element(e => e.Aura = glow);
+        var (mirrored, _) = Element(e =>
+        {
+            e.Aura = glow;
+            e.Reflection = new Reflection { Size = 1, Opacity = 1, Distance = 8 };
+        });
+
+        // Edge at row 44, floor at 48, the mirrored element from row 52.
+        var between = (24, 50);
+        var above = (24, 46);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(Red(Render(mirrored, between)[0]), Is.GreaterThan(Red(Render(plain, between)[0]) + 20),
+                "the glow's mirror image shows between the floor and the mirrored element");
+            Assert.That(Red(Render(mirrored, above)[0]), Is.EqualTo(Red(Render(plain, above)[0])).Within(3),
+                "above the floor, only the element itself");
+        });
+    }
+
     [Test]
     public void AReflectionsDistance_LeavesAGapUnderTheEdge()
     {
