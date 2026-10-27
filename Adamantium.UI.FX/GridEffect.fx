@@ -5,6 +5,8 @@
 #include "Includes/ClipMath.fxh"
 #include "Includes/ShapeMath.fxh"
 
+CanvasGridData* Grids;
+
 // One grid instance. All float4 - there is exactly ONE of these in a draw, so packing colors into bytes would buy
 // nothing and cost the question of how the two of them align against the fields after.
 struct CanvasGridData
@@ -36,12 +38,12 @@ struct GridPSInput
 [shader("vertex")]
 GridPSInput CanvasGridVS(uint vertexId : SV_VertexID, uint instanceId : SV_InstanceID)
 {
-    CanvasGridData* items = (CanvasGridData*)InstancesAddress;
+    CanvasGridData* items = Grids;
     CanvasGridData it = items[instanceId];
 
     GridPSInput o;
     float2 corner = float2(vertexId & 1u, (vertexId >> 1u) & 1u);
-    NodeSlot* nodes = (NodeSlot*)TransformsAddress;
+    NodeSlot* nodes = Transforms;
     float4x4 nodeWorld = nodes[(uint)it.Params.x].World;
     float2 px = SlotPixelScale(nodeWorld);
 
@@ -92,7 +94,7 @@ float LevelCoverage(float2 world, float step, float pixelsPerUnit, float halfWid
 [shader("pixel")]
 float4 CanvasGridPS(GridPSInput i) : SV_Target
 {
-    CanvasGridData* items = (CanvasGridData*)InstancesAddress;
+    CanvasGridData* items = Grids;
     CanvasGridData it = items[i.InstId];
 
     float marks = it.Params.y;

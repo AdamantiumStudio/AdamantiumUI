@@ -22,8 +22,8 @@ public class RendererTeardownTests
     public void AClosedRenderer_LeavesNoEffectBehind()
     {
         var device = GpuTestDevice.Device;
-        var pool = device.DefaultEffectPool;
-        var before = pool.RegisteredEffects.Count;
+        var effects = device.MainDevice.ShaderHotReload;
+        var before = effects.GetEffects(device).Count;
         var renderer = new OffscreenTestRenderer(device, new RenderUnitFactory(device, new DeviceResourceFactory(device)), Dim, Dim);
 
         var control = new TestControl
@@ -35,10 +35,10 @@ public class RendererTeardownTests
         control.RenderSize = new Size(32, 32);
         control.RenderTransform = new Transform { TranslateX = 16, TranslateY = 16 };
         Assert.That(renderer.RenderFrame(new VisualRoot(control, Dim, Dim)), Is.True);
-        Assert.That(pool.RegisteredEffects.Count, Is.GreaterThan(before), "the frame built no effect to leave behind");
+        Assert.That(effects.GetEffects(device).Count, Is.GreaterThan(before), "the frame built no effect to leave behind");
 
         renderer.Dispose();
 
-        Assert.That(pool.RegisteredEffects.Count, Is.EqualTo(before));
+        Assert.That(effects.GetEffects(device).Count, Is.EqualTo(before));
     }
 }

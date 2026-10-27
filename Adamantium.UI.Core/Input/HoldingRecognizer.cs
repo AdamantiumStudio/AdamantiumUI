@@ -19,8 +19,32 @@ internal sealed class HoldingRecognizer
 
         var timer = new DispatcherTimer { Interval = Gestures.HoldingTime, Tag = pointer.Id };
         timer.Tick += OnTick;
-        _holds[pointer.Id] = new Hold(pointer, target, pointer.ScreenPosition, modifiers, timer);
+        _holds[pointer.Id] = new Hold(pointer, target, pointer.ScreenPosition, modifiers, timer, timestamp);
         timer.Start();
+    }
+
+    /// <summary>Starts the hold of every contact pressed <see cref="Gestures.HoldingTime"/> or longer before
+    /// <paramref name="timestamp"/> whose timer's tick has not reached the loop yet: a busy loop takes the next pointer
+    /// event first, and a press held long enough is a hold whatever the loop was doing.</summary>
+    public void StartDue(uint timestamp)
+    {
+        while (FindDue(timestamp) is { } hold)
+        {
+            Elapsed(hold.Pointer.Id, unchecked(hold.Pressed + (uint)Gestures.HoldingTime.TotalMilliseconds));
+        }
+    }
+
+    private Hold FindDue(uint timestamp)
+    {
+        foreach (var hold in _holds.Values)
+        {
+            if (!hold.Started && unchecked((int)(timestamp - hold.Pressed)) >= Gestures.HoldingTime.TotalMilliseconds)
+            {
+                return hold;
+            }
+        }
+
+        return null;
     }
 
     // A contact that strays past the drag threshold is a drag, not a hold.
@@ -105,8 +129,10 @@ internal sealed class HoldingRecognizer
         });
 
     private sealed class Hold(Pointer pointer, IInputComponent target, PixelPoint from, InputModifiers modifiers,
-        DispatcherTimer timer)
+        DispatcherTimer timer, uint pressed)
     {
+        public uint Pressed { get; } = pressed;
+
         public Pointer Pointer { get; } = pointer;
 
         public IInputComponent Target { get; } = target;

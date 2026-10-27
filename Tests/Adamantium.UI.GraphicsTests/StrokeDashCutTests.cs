@@ -253,10 +253,10 @@ public class StrokeDashCutTests
     private static void SetCommon(Effect effect, Adamantium.Graphics.Buffer points, Adamantium.Graphics.Buffer output,
         Adamantium.Graphics.Buffer pattern, Adamantium.Graphics.Buffer indirect)
     {
-        effect.Parameters["PointsAddress"].SetValue(points.GetDeviceAddress());
-        effect.Parameters["OutputAddress"].SetValue(output.GetDeviceAddress());
-        effect.Parameters["PatternAddress"].SetValue(pattern.GetDeviceAddress());
-        effect.Parameters["IndirectAddress"].SetValue(indirect.GetDeviceAddress());
+        effect.Parameters["Points"].SetValue(points.GetDeviceAddress());
+        effect.Parameters["Output"].SetValue(output.GetDeviceAddress());
+        effect.Parameters["Pattern"].SetValue(pattern.GetDeviceAddress());
+        effect.Parameters["Indirect"].SetValue(indirect.GetDeviceAddress());
         effect.Parameters["DashMode"].SetValue(1u);
     }
 

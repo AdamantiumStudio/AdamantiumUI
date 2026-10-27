@@ -8,6 +8,7 @@ using Adamantium.Vulkan.Core;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Graphics;
 using Adamantium.UI.Core.Media;
+using Adamantium.UI.FX;
 
 namespace Adamantium.UI.Rendering;
 
@@ -20,6 +21,8 @@ internal sealed class HaloRectCollector : ShapeSdfCollector<HaloRectItem>
     public HaloRectCollector() : base(256) { }
 
     protected override IEffectPass DrawPass => Effect.BatchHaloPass;
+
+    protected override EffectParameter GetInstances(BatchEffect effect) => effect.HaloRects;
 
     // Arbitrary geometry reads its distance from a baked field, and a field binds per DRAW - so one is bound per SEGMENT,
     // the way the textured batch binds its source. Analytic shapes need none, which is why a segment may have no field

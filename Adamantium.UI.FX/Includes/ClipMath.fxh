@@ -1,6 +1,6 @@
 // ---- ROUNDED CLIPPING -------------------------------------------------------------------------------------------
 // The clip lives in a transform-table slot (row 0 rect in device px, row 1 radii), read in the vertex stage via the
-// includer's NodeSlot/TransformsAddress and applied as antialiased coverage.
+// includer's Transforms and applied as antialiased coverage.
 
 // The radius of the corner this point belongs to (x TL, y TR, z BR, w BL, as CornerRadius; y is down). Every rounded-rect
 // helper uses it, keeping the corners independent.
@@ -33,7 +33,7 @@ float4 ClipShapeBox(float slotIndex)
 {
     if (slotIndex < 0.0) return float4(0.0, 0.0, 0.0, 0.0);
 
-    NodeSlot* nodes = (NodeSlot*)TransformsAddress;
+    NodeSlot* nodes = Transforms;
     NodeSlot clip = nodes[(uint)slotIndex];
     if (clip.Params.x < 0.5) return float4(0.0, 0.0, 0.0, 0.0);
 
@@ -45,7 +45,7 @@ float4 ClipShapeRadii(float slotIndex)
 {
     if (slotIndex < 0.0) return float4(0.0, 0.0, 0.0, 0.0);
 
-    NodeSlot* nodes = (NodeSlot*)TransformsAddress;
+    NodeSlot* nodes = Transforms;
     NodeSlot clip = nodes[(uint)slotIndex];
     if (clip.Params.x < 0.5) return float4(0.0, 0.0, 0.0, 0.0);
 
@@ -59,7 +59,7 @@ void ClipShapeBoxAndRadii(float slotIndex, out float4 box, out float4 radii)
     radii = float4(0.0, 0.0, 0.0, 0.0);
     if (slotIndex < 0.0) return;
 
-    NodeSlot* nodes = (NodeSlot*)TransformsAddress;
+    NodeSlot* nodes = Transforms;
     NodeSlot clip = nodes[(uint)slotIndex];
     if (clip.Params.x < 0.5) return;
 
@@ -73,7 +73,7 @@ float ClipCoverageBySlot(float2 fragment, float slotIndex)
 {
     if (slotIndex < 0.0) return 1.0;
 
-    NodeSlot* nodes = (NodeSlot*)TransformsAddress;
+    NodeSlot* nodes = Transforms;
     NodeSlot clip = nodes[(uint)slotIndex];
     if (clip.Params.x < 0.5) return 1.0;
 

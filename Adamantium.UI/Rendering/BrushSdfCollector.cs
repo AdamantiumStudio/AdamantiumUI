@@ -1,4 +1,5 @@
 using Adamantium.Graphics.Core;
+using Adamantium.Graphics.Core.EffectsFramework;
 using Adamantium.UI.FX;
 
 namespace Adamantium.UI.Rendering;
@@ -21,7 +22,10 @@ internal abstract class BrushSdfCollector<TItem> : SdfBatchCollector<TItem> wher
         ProjectionParam = Effect.Projection;
         ViewportSizeParam = Effect.ViewportSize;
         TargetOriginParam = Effect.TargetOrigin;
-        InstancesAddressParam = Effect.InstancesAddress;
-        TransformsAddressParam = Effect.TransformsAddress;
+        InstancesParam = GetInstances(Effect);
+        TransformsParam = Effect.Transforms;
     }
+
+    /// <summary>The pointer of the effect this collector's instances are read through.</summary>
+    protected abstract EffectParameter GetInstances(BrushEffect effect);
 }

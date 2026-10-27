@@ -5,6 +5,8 @@
 #include "Includes/ClipMath.fxh"
 #include "Includes/ShapeMath.fxh"
 
+ArrowRecord* Arrows;
+
 // One record, one arrow. All float4, like every other batch record.
 struct ArrowRecord
 {
@@ -29,12 +31,12 @@ struct ArrowPSInput
 [shader("vertex")]
 ArrowPSInput ArrowVS(uint vertexId : SV_VertexID, uint instanceId : SV_InstanceID)
 {
-    ArrowRecord* items = (ArrowRecord*)InstancesAddress;
+    ArrowRecord* items = Arrows;
     ArrowRecord it = items[instanceId];
 
     ArrowPSInput o;
 
-    NodeSlot* nodes = (NodeSlot*)TransformsAddress;
+    NodeSlot* nodes = Transforms;
     float4x4 nodeWorld = nodes[(uint)it.Params.y].World;
     float2 px = SlotPixelScale(nodeWorld);
     float iso = min(px.x, px.y);
@@ -77,7 +79,7 @@ float ArrowDistanceToSegment(float2 p, float2 a, float2 b)
 [shader("pixel")]
 float4 ArrowPS(ArrowPSInput i) : SV_Target
 {
-    ArrowRecord* items = (ArrowRecord*)InstancesAddress;
+    ArrowRecord* items = Arrows;
     ArrowRecord it = items[i.InstId];
 
     float2 from = it.Ends.xy;

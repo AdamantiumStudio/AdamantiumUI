@@ -7,6 +7,7 @@ using Adamantium.UI.Core;
 using Adamantium.UI.Core.Graphics;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.Media.Imaging;
+using Adamantium.UI.FX;
 using Adamantium.UI.Rendering.Payloads;
 using Adamantium.Vulkan.Core;
 
@@ -24,6 +25,8 @@ internal sealed class TextureBatchCollector : BrushSdfCollector<TextureItem>
     public TextureBatchCollector() : base(256) { }
 
     protected override IEffectPass DrawPass => Effect.TextureSdfPass;
+
+    protected override EffectParameter GetInstances(BrushEffect effect) => effect.TextureRects;
 
     protected override void OnBeginFrame(IGraphicsDevice device)
     {

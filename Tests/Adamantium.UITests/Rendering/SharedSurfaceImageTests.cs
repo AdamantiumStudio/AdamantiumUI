@@ -23,6 +23,8 @@ public class SharedSurfaceImageTests
     public void Produce()
     {
         var device = GpuTestDevice.Device;
+        Assume.That(SharedSurface.CanExport(device) && SharedSurface.CanImport(device), Is.True,
+            $"{device.Adapter.AdapterProperties.DeviceName} cannot share timeline semaphores");
         _factory = new DeviceResourceFactory(device);
         _first = SharedSurface.CreateExportable(device, 8, 8, SurfaceFormat.B8G8R8A8.UNorm);
         _second = SharedSurface.CreateExportable(device, 16, 16, SurfaceFormat.B8G8R8A8.UNorm);
@@ -33,9 +35,9 @@ public class SharedSurfaceImageTests
     public void Free()
     {
         GpuTestDevice.Reclaim();
-        _first.Dispose();
-        _second.Dispose();
-        _third.Dispose();
+        _first?.Dispose();
+        _second?.Dispose();
+        _third?.Dispose();
     }
 
     [Test]

@@ -45,7 +45,7 @@ public struct FractalRectItem
     /// packed into <see cref="Stroke1"/>.w. A pattern longer than one ON/GAP period lives here.</summary>
     public Vector4F Dash;
 
-    /// <summary>Perturbation deep-zoom: .x = reference-orbit start index into the shared orbit buffer (OrbitAddress),
+    /// <summary>Perturbation deep-zoom: .x = reference-orbit start index into the shared orbit buffer (Orbits),
     /// .y = orbit length, .z = deep flag (1 = iterate the perturbation path), .w = reserved.</summary>
     public Vector4F Ref;
 

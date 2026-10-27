@@ -5,6 +5,8 @@
 #include "Includes/ClipMath.fxh"
 #include "Includes/ShapeMath.fxh"
 
+InkRecord* InkSegments;
+
 // One record. All float4, and the same shape for both kinds - a buffer of one type is a buffer the draw can index
 // without knowing which kind a slot holds.
 struct InkRecord
@@ -33,7 +35,7 @@ struct InkPSInput
 [shader("vertex")]
 InkPSInput InkSegmentVS(uint vertexId : SV_VertexID, uint instanceId : SV_InstanceID)
 {
-    InkRecord* items = (InkRecord*)InstancesAddress;
+    InkRecord* items = InkSegments;
     InkRecord it = items[instanceId];
 
     InkPSInput o;
@@ -51,7 +53,7 @@ InkPSInput InkSegmentVS(uint vertexId : SV_VertexID, uint instanceId : SV_Instan
         return o;
     }
 
-    NodeSlot* nodes = (NodeSlot*)TransformsAddress;
+    NodeSlot* nodes = Transforms;
     float4x4 nodeWorld = nodes[(uint)it.Params.y].World;
     float2 px = SlotPixelScale(nodeWorld);
     float iso = min(px.x, px.y);
@@ -111,7 +113,7 @@ float2 PixelToLocal(float2 fragment, float2 interpolated, float4x4 nodeWorld)
 [shader("pixel")]
 float4 InkSegmentPS(InkPSInput i) : SV_Target
 {
-    InkRecord* items = (InkRecord*)InstancesAddress;
+    InkRecord* items = InkSegments;
     InkRecord it = items[i.InstId];
 
     // Both offsets are counted FROM THIS RECORD, because the draw bases the buffer at the run it is flushing - see the
@@ -125,7 +127,7 @@ float4 InkSegmentPS(InkPSInput i) : SV_Target
     float nearest = 1e30;
     uint owner = 0u;
 
-    NodeSlot* nodes = (NodeSlot*)TransformsAddress;
+    NodeSlot* nodes = Transforms;
     float2 at = PixelToLocal(i.Position.xy, i.Local, nodes[(uint)it.Params.y].World);
     float2 previous = items[first].Segment.xy;
     float previousHalf = items[first].Clip.w;

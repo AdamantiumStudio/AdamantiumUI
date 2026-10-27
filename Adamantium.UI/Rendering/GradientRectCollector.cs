@@ -5,6 +5,7 @@ using Adamantium.Graphics.Core.EffectsFramework;
 using Adamantium.Mathematics;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Media;
+using Adamantium.UI.FX;
 using Adamantium.UI.Rendering.Payloads;
 using Adamantium.Vulkan.Core;
 
@@ -21,6 +22,8 @@ internal sealed class GradientRectCollector : BrushSdfCollector<GradientRectItem
     public GradientRectCollector() : base(1024) { }
 
     protected override IEffectPass DrawPass => Effect.GradientSdfPass;
+
+    protected override EffectParameter GetInstances(BrushEffect effect) => effect.GradientRects;
 
     // Batchable = a gradient (linear/radial) fill, a batchable pen (none or a solid stroke the SDF shader draws), and
     // uniform corner radius. Mirrors RectangleRenderUnit.IsGradientBatchable.
