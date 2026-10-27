@@ -243,10 +243,11 @@ public sealed class AutomationExecutor
         {
             await Task.Delay(Gestures.HoldingTime);
             var limit = timeout < HoldConfirmation ? timeout : HoldConfirmation;
-            var watch = Stopwatch.StartNew();
+            Stopwatch watch = null;
             while (true)
             {
                 await _host.WaitForIdleAsync(timeout);
+                watch ??= Stopwatch.StartNew();
                 if (!await _host.RunOnLoopAsync(() => Waiting(contacts), timeout))
                 {
                     break;
