@@ -146,6 +146,68 @@ public class WholeLayerReflectionRenderTests
         return column;
     }
 
+    // A stroke draws by itself, its projection baked into it. In a layer drawn whole - kept drawn again each frame by a
+    // living glow - a replayed frame lays it down in the layer's space as a walk does: when nothing changes, and when
+    // something else moves.
+    [TestCase(false)]
+    [TestCase(true)]
+    public void AStrokeInAReflectedElement_ReplaysAsItWalks(bool otherMoves)
+    {
+        using var renderer = NewRenderer();
+        var stage = Placed(new Rect(0, 0, W, H));
+        stage.RenderAction = s => s.DrawRectangle(Brushes.Blue, new Rect(0, 0, W, H));
+        var element = RedLime(new Rect(4, 10, 40, 40));
+        element.RenderAction = s => s
+            .DrawRectangle(Brushes.Lime, new Rect(0, 0, 40, 40))
+            .DrawGeometry(null, new RectangleGeometry(new Rect(4, 4, 32, 12)), new Pen(Brushes.Red, 4));
+        var living = Placed(new Rect(30, 30, 6, 6));
+        living.RenderAction = s => s.DrawRectangle(Brushes.White, new Rect(0, 0, 6, 6));
+        living.Aura = new Aura { Radius = 2, Color = Colors.White, Opacity = 1, Turbulence = 1, Flow = 0 };
+        element.Add(living);
+        stage.Add(element);
+        var mover = Placed(new Rect(50, 100, 10, 10));
+        mover.IsRenderMotionNode = true;
+        mover.RenderAction = s => s.DrawRectangle(Brushes.White, new Rect(0, 0, 10, 10));
+        stage.Add(mover);
+        var root = new VisualRoot(stage, W, H);
+        Draw(renderer, root);
+        Draw(renderer, root);
+
+        if (otherMoves)
+        {
+            mover.Bounds = new Rect(50, 110, 10, 10);
+        }
+
+        Draw(renderer, root);
+        var replayed = renderer.Cache.LastFrameReplayed;
+        var drawn = Pixels(renderer);
+        RenderDirty.MarkStructural();
+        Draw(renderer, root);
+        var walked = Pixels(renderer);
+
+        var differing = 0;
+        var first = "";
+        for (var y = 0; y < H; y++)
+        {
+            for (var x = 0; x < W; x++)
+            {
+                if (Math.Abs(Red(drawn, x, y) - Red(walked, x, y)) > 32)
+                {
+                    if (differing++ == 0)
+                    {
+                        first = $"first at ({x},{y}): {Red(drawn, x, y)} against {Red(walked, x, y)}";
+                    }
+                }
+            }
+        }
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(replayed, Is.True, "a replayed frame");
+            Assert.That(differing, Is.Zero, first);
+        });
+    }
+
     [TestCase(0)]
     [TestCase(4)]
     public void AnOwnClipCarriedPastTheWindow_KeepsTheReflectionWhole(int radius)
