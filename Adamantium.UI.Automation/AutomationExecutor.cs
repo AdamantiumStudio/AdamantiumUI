@@ -32,8 +32,9 @@ public sealed class AutomationExecutor
     // The option of a touch or pen tap held past the holding time before it lifts: a long press.
     internal const string HoldGesture = "hold";
 
-    // A little past the holding time, so the hold has certainly started before the contact lifts.
     private static readonly TimeSpan HoldMargin = TimeSpan.FromMilliseconds(150);
+
+    private static readonly TimeSpan HoldConfirmation = TimeSpan.FromSeconds(5);
 
     private const int MostFingers = 10;
     private const char LineSeparator = (char)0x2028;
@@ -241,6 +242,12 @@ public sealed class AutomationExecutor
         try
         {
             await Task.Delay(Gestures.HoldingTime + HoldMargin);
+            var watch = Stopwatch.StartNew();
+            while (watch.Elapsed < HoldConfirmation && !await _host.RunOnLoopAsync(() => Holding(contacts), timeout))
+            {
+                await Task.Delay(WaitStep);
+            }
+
             await _host.WaitForIdleAsync(timeout);
         }
         catch (Exception)
@@ -259,6 +266,30 @@ public sealed class AutomationExecutor
         await Lift();
 
         return await SettledAsync(request, mark, timeout);
+    }
+
+    private static bool Holding(IReadOnlyList<Contact> contacts)
+    {
+        foreach (var contact in contacts)
+        {
+            if (contact.Properties.IsBarrelButtonPressed)
+            {
+                continue;
+            }
+
+            var held = false;
+            foreach (var pointer in PointerDevice.Current.Pointers)
+            {
+                held |= pointer.Id == contact.Id && pointer.IsHolding;
+            }
+
+            if (!held)
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private (ContactPath[] Paths, Contact[] Contacts) Contacts(AutomationRequest request)
