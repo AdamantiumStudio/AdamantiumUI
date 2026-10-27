@@ -1762,6 +1762,10 @@ All packages share one version.
 
 ### Changed
 
+- The AUML and effect generators no longer load `Adamantium.Mathematics` or `Adamantium.Fonts`: font weights,
+  stretches and feature lists are checked at build through the font types `Adamantium.Core` holds now, and `Color`,
+  `Thickness` and `Vector2` are known to parse by the `[TypeParser]` they carry. The analyzer references to the netstandard2.0 builds of
+  `Adamantium.Mathematics` and `Adamantium.Fonts` are gone, from the projects and from what `Adamantium.UI` packs.
 - The UI's effects take typed pointers, `T* X;`, for what they read and write by address. Each effect has a pointer for
   each kind of instance it draws in place of the one `InstancesAddress` every kind was cast from - `BatchEffect`
   `Geometries`, `PatternGeometries`, `Rects`, `Ellipses`, `Polygons`, `HaloRects`, `LivingHalos`; `BrushEffect`
@@ -2248,6 +2252,13 @@ All packages share one version.
 
 ### Fixed
 
+- On Wayland, a window minimized by its caption button stayed on screen until the pointer moved: the request waited in
+  the connection's buffer for the next frame, and a minimized window draws none. Minimizing, maximizing and restoring
+  are sent to the compositor at once.
+- Waiting for the application to settle - an automation step, say - never ended while every window was minimized and
+  glyphs waited to be uploaded: they land only in a frame, and no window drew one.
+- A misspelt weight or width of a run or a span (`FontWeight?`, `FontStretch?`) passed the build and threw where the
+  view was built: the build checks values of a nullable property's type too now.
 - A finger or pen held still for the holding time could tap instead of hold - lifted, or joined by a second finger
   that took it into a manipulation: the hold's timer reaches the loop on its own, and a busy loop took the next event
   first. The next pointer event now starts every hold its time says is due before anything answers it.

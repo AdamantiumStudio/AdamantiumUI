@@ -382,7 +382,7 @@ public static class AumlValidator
         var propertyType = model.GetPropertyType(element, propertyName);
         var value = property.Values.FirstOrDefault();
         if (value is not null && value.IsTextNode()
-            && MarkupValueChecks.Problem(propertyType?.FullName, value.GetTextValue()) is { } problem)
+            && MarkupValueChecks.Problem(propertyType, value.GetTextValue()) is { } problem)
         {
             diagnostics.Add(At(reference, propertyName.Length, problem));
             return;

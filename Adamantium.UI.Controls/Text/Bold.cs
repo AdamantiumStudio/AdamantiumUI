@@ -9,6 +9,6 @@ public class Bold : Span
     static Bold()
     {
         FontWeightProperty.OverrideMetadata(typeof(Bold),
-            new PropertyMetadata((Adamantium.Fonts.FontWeight?)Adamantium.Fonts.FontWeight.Bold));
+            new PropertyMetadata((Adamantium.Core.Fonts.FontWeight?)Adamantium.Core.Fonts.FontWeight.Bold));
     }
 }

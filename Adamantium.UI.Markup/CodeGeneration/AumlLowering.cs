@@ -250,7 +250,7 @@ public class AumlLowering
                 }
 
                 if (prop.Values.Count == 1 && prop.Values[0].IsTextNode()
-                    && MarkupValueChecks.Problem(resolvedType.FullName, prop.GetTextValue()) is { } problem)
+                    && MarkupValueChecks.Problem(resolvedType, prop.GetTextValue()) is { } problem)
                 {
                     diagnostics.ReportError(Metadata.ClassName,
                         $"{propRef.Name}=\"{prop.GetTextValue()}\" (line {prop.Line}): {problem}", propRef);

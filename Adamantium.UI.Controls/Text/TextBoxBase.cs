@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Adamantium.Core.Fonts;
 using Adamantium.Fonts;
 using Adamantium.Graphics.Fonts;
 using Adamantium.Mathematics;

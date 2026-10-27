@@ -1,7 +1,7 @@
 using System.Collections;
 using System.Runtime.CompilerServices;
+using Adamantium.Core.Fonts.Shaping;
 using Adamantium.Core.TypeParsing;
-using Adamantium.Fonts.Shaping;
 
 namespace Adamantium.UI.Core.Media;
 

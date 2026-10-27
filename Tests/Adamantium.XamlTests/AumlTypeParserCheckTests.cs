@@ -27,6 +27,8 @@ public class AumlTypeParserCheckTests
     [TestCase("<TextBlock FontWeight=\"SemiBold\"/>")]
     [TestCase("<Border Background=\"#FF0000\"/>")]
     [TestCase("<Border Margin=\"1,2,3,4\"/>")]
+    [TestCase("<SolidColorBrush Color=\"#FF336699\"/>")]
+    [TestCase("<Border RenderTransformOrigin=\"0.5,0.5\"/>")]
     [TestCase("<Border HorizontalAlignment=\"Left\"/>")]
     [TestCase("<TextBlock WordSpacing=\"80% 100% 133%\"/>")]
     [TestCase("<TextBlock LetterSpacing=\"-5% 0% 10%\" Tracking=\"50\"/>")]

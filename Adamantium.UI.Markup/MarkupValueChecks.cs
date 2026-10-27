@@ -1,5 +1,6 @@
-using Adamantium.Fonts;
-using Adamantium.Fonts.Shaping;
+using Adamantium.Core.Fonts;
+using Adamantium.Core.Fonts.Shaping;
+using Adamantium.UI.Markup.CodeGeneration;
 using Adamantium.UI.Markup.Localization;
 
 namespace Adamantium.UI.Markup;
@@ -14,20 +15,27 @@ public static class MarkupValueChecks
     private static readonly Dictionary<string, Func<string, string>> Checks = new()
     {
         ["Adamantium.UI.Core.Media.FontFeatureList"] = FontFeatures,
-        ["Adamantium.Fonts.FontWeight"] = FontWeightValue,
-        ["Adamantium.Fonts.FontStretch"] = FontStretchValue,
+        ["Adamantium.Core.Fonts.FontWeight"] = FontWeightValue,
+        ["Adamantium.Core.Fonts.FontStretch"] = FontStretchValue,
     };
 
-    /// <summary>What is wrong with <paramref name="value"/> for a property of the type named
-    /// <paramref name="typeFullName"/>; null when nothing is, or when the type has no check.</summary>
-    public static string Problem(string typeFullName, string value)
+    /// <summary>What is wrong with <paramref name="value"/> for a property of <paramref name="type"/> - of a
+    /// <c>Nullable&lt;T&gt;</c>, of T, where null is no problem; null when nothing is, or when the type has no check.
+    /// </summary>
+    public static string Problem(IResolvedType type, string value)
     {
-        if (typeFullName == null || value == null || !Checks.TryGetValue(typeFullName, out var check))
+        if (type == null || value == null)
         {
             return null;
         }
 
-        return check(value);
+        var valueType = TypeParserCheck.ValueTypeOf(type);
+        if (!ReferenceEquals(valueType, type) && TypeParserCheck.IsNullLiteral(value))
+        {
+            return null;
+        }
+
+        return valueType.FullName != null && Checks.TryGetValue(valueType.FullName, out var check) ? check(value) : null;
     }
 
     private static string FontFeatures(string value)
