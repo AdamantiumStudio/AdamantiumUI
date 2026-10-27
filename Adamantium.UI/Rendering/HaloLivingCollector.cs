@@ -8,6 +8,7 @@ using Adamantium.Vulkan.Core;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Graphics;
 using Adamantium.UI.Core.Media;
+using Adamantium.UI.FX;
 
 namespace Adamantium.UI.Rendering;
 
@@ -23,6 +24,8 @@ internal sealed class HaloLivingCollector : ShapeSdfCollector<HaloLivingItem>
     public HaloLivingCollector() : base(64) { }
 
     protected override IEffectPass DrawPass => Effect.BatchHaloLivingPass;
+
+    protected override EffectParameter GetInstances(BatchEffect effect) => effect.LivingHalos;
 
     protected override void OnBeginFrame(IGraphicsDevice device)
     {

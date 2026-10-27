@@ -9,6 +9,15 @@
 #include "Includes/StrokeMath.fxh"
 #include "Includes/NoiseMath.fxh"
 
+// The draw's instances, by the kind it draws.
+GeometryInstance* Geometries;
+PatternGeomData* PatternGeometries;
+RectData* Rects;
+EllipseData* Ellipses;
+PolygonData* Polygons;
+HaloRectData* HaloRects;
+HaloLivingData* LivingHalos;
+
 
 
 
@@ -100,11 +109,11 @@ struct FillPSInput
 [shader("vertex")]
 FillPSInput InstancedFillVS(UI_VERTEX v, uint instanceId : SV_InstanceID)
 {
-    GeometryInstance* instances = (GeometryInstance*)InstancesAddress;
+    GeometryInstance* instances = Geometries;
     GeometryInstance inst = instances[instanceId];
     // local -> slot space -> world. The slot matrix lives in the transform table, so a node move rewrites 64 bytes there
     // and every instance under it follows without this buffer being touched (same scheme as the SDF batches).
-    NodeSlot* nodes = (NodeSlot*)TransformsAddress;
+    NodeSlot* nodes = Transforms;
     float4 world = mul(mul(float4(v.position.xyz, 1.0), inst.Local), nodes[(uint)inst.Params.x].World);
     FillPSInput o;
     o.Position = mul(world, Projection);
@@ -130,9 +139,9 @@ float4 InstancedFillPS(FillPSInput input) : SV_Target
 [shader("vertex")]
 FringePSInput InstancedFringeVS(FringeVertex v, uint instanceId : SV_InstanceID)
 {
-    GeometryInstance* instances = (GeometryInstance*)InstancesAddress;
+    GeometryInstance* instances = Geometries;
     GeometryInstance inst = instances[instanceId];
-    NodeSlot* nodes = (NodeSlot*)TransformsAddress;
+    NodeSlot* nodes = Transforms;
     float4x4 m = mul(mul(inst.Local, nodes[(uint)inst.Params.x].World), Projection);
 
     FringePSInput o;
@@ -166,9 +175,9 @@ float4 InstancedFringePS(FringePSInput input) : SV_Target
 [shader("vertex")]
 FringePSInput InstancedPatternFringeVS(FringeVertex v, uint instanceId : SV_InstanceID)
 {
-    PatternGeomData* items = (PatternGeomData*)InstancesAddress;
+    PatternGeomData* items = PatternGeometries;
     PatternGeomData it = items[instanceId];
-    NodeSlot* nodes = (NodeSlot*)TransformsAddress;
+    NodeSlot* nodes = Transforms;
     float4x4 m = mul(mul(it.Local, nodes[(uint)it.Params.w].World), Projection);
 
     FringePSInput o;
@@ -206,7 +215,7 @@ struct RectData
 [shader("vertex")]
 PSInput RectBatchInstancedVS(uint vertexId : SV_VertexID, uint instanceId : SV_InstanceID)
 {
-    RectData* items = (RectData*)InstancesAddress;
+    RectData* items = Rects;
     RectData item = items[instanceId];
 
     PSInput o;
@@ -215,7 +224,7 @@ PSInput RectBatchInstancedVS(uint vertexId : SV_VertexID, uint instanceId : SV_I
     // The SDF inputs (Local/Half) keep the RECT's own ORIENTATION, so rounded corners + strokes are correct under
     // rotation, but are measured in DEVICE PIXELS (SlotPixelScale) so one AA width fits both axes even when the slot
     // scales them differently. A slot with no scale gives (1,1) and this is the identity of the old code.
-    NodeSlot* nodes = (NodeSlot*)TransformsAddress;
+    NodeSlot* nodes = Transforms;
     float4x4 nodeWorld = nodes[(uint)item.Params.y].World;
     float2 px = SlotPixelScale(nodeWorld);
     float iso = min(px.x, px.y);   // stroke width / radius / dashes are one number: an anisotropic slot has no exact answer
@@ -373,14 +382,14 @@ struct EllipseData
 [shader("vertex")]
 EllipsePSInput EllipseBatchInstancedVS(uint vertexId : SV_VertexID, uint instanceId : SV_InstanceID)
 {
-    EllipseData* items = (EllipseData*)InstancesAddress;
+    EllipseData* items = Ellipses;
     EllipseData item = items[instanceId];
 
     EllipsePSInput o;
     float2 corner = float2(vertexId & 1u, (vertexId >> 1u) & 1u);
     // Node-local -> world via the transform table (slot 0 = identity), and the SDF inputs in DEVICE PIXELS - same
     // scheme, and same reason, as RectBatchInstancedVS (see SlotPixelScale).
-    NodeSlot* nodes = (NodeSlot*)TransformsAddress;
+    NodeSlot* nodes = Transforms;
     float4x4 nodeWorld = nodes[(uint)item.Params.x].World;
     float2 px = SlotPixelScale(nodeWorld);
     float iso = min(px.x, px.y);
@@ -442,12 +451,12 @@ struct PolygonPSInput
 [shader("vertex")]
 PolygonPSInput PolygonBatchInstancedVS(uint vertexId : SV_VertexID, uint instanceId : SV_InstanceID)
 {
-    PolygonData* items = (PolygonData*)InstancesAddress;
+    PolygonData* items = Polygons;
     PolygonData item = items[instanceId];
 
     PolygonPSInput o;
     float2 corner = float2(vertexId & 1u, (vertexId >> 1u) & 1u);
-    NodeSlot* nodes = (NodeSlot*)TransformsAddress;
+    NodeSlot* nodes = Transforms;
     float4x4 nodeWorld = nodes[(uint)item.Params.x].World;
     float2 px = SlotPixelScale(nodeWorld);
     float iso = min(px.x, px.y);
@@ -527,12 +536,12 @@ struct HaloPSInput
 [shader("vertex")]
 HaloPSInput HaloRectInstancedVS(uint vertexId : SV_VertexID, uint instanceId : SV_InstanceID)
 {
-    HaloRectData* items = (HaloRectData*)InstancesAddress;
+    HaloRectData* items = HaloRects;
     HaloRectData it = items[instanceId];
 
     HaloPSInput o;
     float2 corner = float2(vertexId & 1u, (vertexId >> 1u) & 1u);
-    NodeSlot* nodes = (NodeSlot*)TransformsAddress;
+    NodeSlot* nodes = Transforms;
     float4x4 nodeWorld = nodes[(uint)it.Params.y].World;
     float2 px = SlotPixelScale(nodeWorld);
     float iso = min(px.x, px.y);
@@ -593,7 +602,7 @@ float HaloFieldDistance(float2 p, float2 half, float rangePx, float inflate, out
 [shader("fragment")]
 float4 HaloRectPS(HaloPSInput input) : SV_Target
 {
-    HaloRectData* items = (HaloRectData*)InstancesAddress;
+    HaloRectData* items = HaloRects;
     HaloRectData it = items[input.InstId];
 
     float isEllipse = it.Params.z;
@@ -658,12 +667,12 @@ struct HaloLivingData
 [shader("vertex")]
 HaloPSInput HaloLivingVS(uint vertexId : SV_VertexID, uint instanceId : SV_InstanceID)
 {
-    HaloLivingData* items = (HaloLivingData*)InstancesAddress;
+    HaloLivingData* items = LivingHalos;
     HaloLivingData it = items[instanceId];
 
     HaloPSInput o;
     float2 corner = float2(vertexId & 1u, (vertexId >> 1u) & 1u);
-    NodeSlot* nodes = (NodeSlot*)TransformsAddress;
+    NodeSlot* nodes = Transforms;
     float4x4 nodeWorld = nodes[(uint)it.Params.y].World;
     float2 px = SlotPixelScale(nodeWorld);
     float iso = min(px.x, px.y);
@@ -713,7 +722,7 @@ float4 LivingPalette(HaloLivingData it, float t)
 [shader("fragment")]
 float4 HaloLivingPS(HaloPSInput input) : SV_Target
 {
-    HaloLivingData* items = (HaloLivingData*)InstancesAddress;
+    HaloLivingData* items = LivingHalos;
     HaloLivingData it = items[input.InstId];
 
     float isEllipse = it.Params.z;

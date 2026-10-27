@@ -244,6 +244,49 @@ public class PointerDeviceTests
         Send(RawPointerEventType.LeaveWindow, 34, PointerType.Touch, Vector2.Zero, 0, MouseButtons.None);
     }
 
+    // The hold's tick reaches the loop on its own, and a busy loop took the lift first: a finger held on a button for
+    // longer than the holding time clicked it. The lift's own time says it was held.
+    [Test]
+    public void AFingerLiftedPastTheHoldingTime_HoldsThoughTheTickHasNotCome()
+    {
+        var button = HostedButton();
+        var clicks = 0;
+        var states = new List<HoldingState>();
+        button.Click += (_, _) => clicks++;
+        button.AddHandler(Gestures.HoldingEvent, new HoldingEventHandler((_, e) => states.Add(e.HoldingState)));
+
+        using (HoldingTimeOf(TimeSpan.FromSeconds(1)))
+        {
+            Send(RawPointerEventType.Down, 47, PointerType.Touch, new Vector2(50, 50), 1000, MouseButtons.None);
+            Send(RawPointerEventType.Up, 47, PointerType.Touch, new Vector2(50, 50), 2100, MouseButtons.None);
+        }
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(states, Is.EqualTo(new[] { HoldingState.Started, HoldingState.Completed }));
+            Assert.That(clicks, Is.Zero);
+        });
+    }
+
+    // A second finger landing on a busy loop canceled the first one's hold before its tick came, though the first had been
+    // down past the holding time: whether it held hung on how busy the loop was.
+    [Test]
+    public void ASecondFingerPastTheHoldingTime_FindsTheFirstHolding()
+    {
+        var states = new List<HoldingState>();
+        _left.AddHandler(Gestures.HoldingEvent, new HoldingEventHandler((_, e) => states.Add(e.HoldingState)));
+
+        using (HoldingTimeOf(TimeSpan.FromSeconds(1)))
+        {
+            Send(RawPointerEventType.Down, 48, PointerType.Touch, new Vector2(20, 50), 1000, MouseButtons.None);
+            Send(RawPointerEventType.Down, 49, PointerType.Touch, new Vector2(30, 50), 2100, MouseButtons.None);
+            Send(RawPointerEventType.Up, 49, PointerType.Touch, new Vector2(30, 50), 2200, MouseButtons.None);
+            Send(RawPointerEventType.Up, 48, PointerType.Touch, new Vector2(20, 50), 2300, MouseButtons.None);
+        }
+
+        Assert.That(states.FirstOrDefault(), Is.EqualTo(HoldingState.Started));
+    }
+
     // A finger held still on a button holds: the hold starts, the button lets go of the press, and the lift completes
     // the hold instead of clicking.
     [Test]
@@ -425,7 +468,7 @@ public class PointerDeviceTests
         {
             Send(RawPointerEventType.Down, 45, PointerType.Touch, new Vector2(20, 50), 0, MouseButtons.None);
             System.Threading.Thread.Sleep(200);
-            Send(RawPointerEventType.Up, 45, PointerType.Touch, new Vector2(20, 50), 300, MouseButtons.None);
+            Send(RawPointerEventType.Up, 45, PointerType.Touch, new Vector2(20, 50), 3, MouseButtons.None);
         }
 
         using (HoldingTimeOf(TimeSpan.FromHours(1)))

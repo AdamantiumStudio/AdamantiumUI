@@ -28,6 +28,8 @@ internal sealed class EllipseBatchCollector : ShapeSdfCollector<EllipseItem>
 
     protected override IEffectPass DrawPass => Effect.BatchEllipsePass;
 
+    protected override EffectParameter GetInstances(BatchEffect effect) => effect.Ellipses;
+
     // A visible solid fill with no pen or a solid one; sectors and segments included (EllipseCutDistance). Keep in step
     // with EllipseRenderUnit.IsSdfBatchable.
     /// <summary>THE one statement of what this batch draws - the render unit asks THIS, never its own copy.</summary>

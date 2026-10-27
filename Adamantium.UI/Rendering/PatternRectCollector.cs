@@ -6,6 +6,7 @@ using Adamantium.Graphics.Core.EffectsFramework;
 using Adamantium.Mathematics;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Media;
+using Adamantium.UI.FX;
 using Adamantium.UI.Rendering.Payloads;
 using Adamantium.Vulkan.Core;
 
@@ -19,6 +20,8 @@ internal sealed class PatternRectCollector : BrushSdfCollector<PatternRectItem>
     public static bool Enabled = true;
 
     public PatternRectCollector() : base(512) { }
+
+    protected override EffectParameter GetInstances(BrushEffect effect) => effect.PatternRects;
 
     // One kind per segment: each kind is its own pass (BrushEffect.fx, techniques Pattern and Noise).
     private int _kind;

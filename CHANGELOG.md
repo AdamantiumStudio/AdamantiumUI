@@ -1762,6 +1762,13 @@ All packages share one version.
 
 ### Changed
 
+- The UI's effects take typed pointers, `T* X;`, for what they read and write by address. Each effect has a pointer for
+  each kind of instance it draws in place of the one `InstancesAddress` every kind was cast from - `BatchEffect`
+  `Geometries`, `PatternGeometries`, `Rects`, `Ellipses`, `Polygons`, `HaloRects`, `LivingHalos`; `BrushEffect`
+  `GradientRects`, `GradientGeometries`, `PatternRects`, `PatternGeometries`, `TextureRects`, `TextureGeometries`,
+  `FractalRects`; `MaterialEffect` `MaterialRects`, `MaterialGeometries`; `ArrowEffect` `Arrows`, `GridEffect` `Grids`,
+  `InkEffect` `InkSegments` - and `Transforms`, `Orbits` and `StrokeEffect`'s `Points`, `Output`, `Indirect` and
+  `Pattern` in place of their `...Address`.
 - A `TextBlock`'s text runs on both sides of an exclusion in the middle, as the engine lays it now; Up and Down in
   selectable text go to the row above or below on the caret's side (`TextLayout.GetLineBeyond`), not across to the
   line beside it.
@@ -2241,6 +2248,11 @@ All packages share one version.
 
 ### Fixed
 
+- A finger or pen held still for the holding time could tap instead of hold - lifted, or joined by a second finger
+  that took it into a manipulation: the hold's timer reaches the loop on its own, and a busy loop took the next event
+  first. The next pointer event now starts every hold its time says is due before anything answers it.
+- With no deep-zoom fractal live, the fractal batch cleared the reference orbits' address by writing four bytes of the
+  eight, so the address kept the upper half of the last one.
 - Automation: a touch or pen hold could lift before the application had started the hold - its timer's tick
   reaches the loop on its own queue - and became a tap, a button clicked or a context menu not opened. A hold now
   lifts once the application holds every contact it means to, and settles before the lift; one that never starts

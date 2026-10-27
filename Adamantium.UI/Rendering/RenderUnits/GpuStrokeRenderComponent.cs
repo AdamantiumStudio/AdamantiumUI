@@ -322,8 +322,8 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
             var vertices = c.VertexBuffer.Acquire(c.VertexBytes, out var writeVertices);
             if (!writeVertices) continue;   // continuous static: this slot already holds the expanded ribbon
 
-            _effect.PointsAddress.SetValue(points.GetDeviceAddress());
-            _effect.OutputAddress.SetValue(vertices.GetDeviceAddress());
+            _effect.Points.SetValue(points.GetDeviceAddress());
+            _effect.Output.SetValue(vertices.GetDeviceAddress());
             _effect.PointCount.SetValue(c.PointCount);
             _effect.IsClosed.SetValue(c.IsClosed ? 1u : 0u);
             _effect.DashMode.SetValue(_useCut ? 1u : 0u);
@@ -343,8 +343,8 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
 
             if (_useCut)
             {
-                _effect.IndirectAddress.SetValue(c.IndirectBuffer.GetDeviceAddress());
-                _effect.PatternAddress.SetValue(c.PatternBuffer.GetDeviceAddress());
+                _effect.Indirect.SetValue(c.IndirectBuffer.GetDeviceAddress());
+                _effect.Pattern.SetValue(c.PatternBuffer.GetDeviceAddress());
                 _effect.PatternCount.SetValue(_hasDashes ? (uint)_pen.DashStrokeArray.Count : 0u);
                 _effect.MaxVertices.SetValue(c.VertexCount);
                 // The phase is in PERIODS, so it becomes pixels here - which is exactly the arithmetic the author would

@@ -24,6 +24,8 @@ internal sealed class RegularPolygonCollector : ShapeSdfCollector<PolygonItem>
 
     protected override IEffectPass DrawPass => Effect.BatchPolygonPass;
 
+    protected override EffectParameter GetInstances(BatchEffect effect) => effect.Polygons;
+
     /// <summary>THE one statement of what this batch draws - the render unit asks THIS, never its own copy.</summary>
     public static bool WantsBatch(RegularPolygonPayload p)
     {

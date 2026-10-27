@@ -303,6 +303,7 @@ public sealed class PointerDevice
 
     private void Move(Pointer pointer, IInputComponent root, Vector2 p, InputModifiers modifiers, uint timestamp)
     {
+        Holding.StartDue(timestamp);
         if (pointer.IsManipulating)
         {
             Manipulations.Move(pointer, modifiers, timestamp);
@@ -331,6 +332,7 @@ public sealed class PointerDevice
 
     private void Down(Pointer pointer, IInputComponent root, Vector2 p, MouseButtons button, InputModifiers modifiers, uint timestamp)
     {
+        Holding.StartDue(timestamp);
         var hit = pointer.Captured ?? HitTestTopmost(root, p);
         if (hit != null && Manipulations.Join(pointer, hit, modifiers, timestamp))
         {
@@ -374,6 +376,7 @@ public sealed class PointerDevice
 
     private void Up(Pointer pointer, IInputComponent root, Vector2 p, MouseButtons button, InputModifiers modifiers, uint timestamp)
     {
+        Holding.StartDue(timestamp);
         if (pointer.IsManipulating)
         {
             Manipulations.Up(pointer, modifiers, timestamp);

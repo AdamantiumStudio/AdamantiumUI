@@ -3,6 +3,7 @@ using Adamantium.UI.Core.Graphics;
 using Adamantium.Mathematics;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Media;
+using Adamantium.UI.FX;
 using Adamantium.UI.Rendering.Payloads;
 using Adamantium.Vulkan.Core;
 
@@ -20,6 +21,8 @@ internal sealed class GradientEllipseCollector : BrushSdfCollector<GradientRectI
     public GradientEllipseCollector() : base(1024) { }
 
     protected override IEffectPass DrawPass => Effect.GradientSdfPass;
+
+    protected override EffectParameter GetInstances(BrushEffect effect) => effect.GradientRects;
 
     // Batchable = a gradient (linear/radial) fill, a batchable pen, a FULL ellipse. Mirrors EllipseRenderUnit.IsGradientBatchable.
     /// <summary>THE one statement of what this batch draws - the render unit asks THIS, never its own copy.</summary>

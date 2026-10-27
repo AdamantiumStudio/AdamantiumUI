@@ -38,8 +38,8 @@ internal sealed class InkCollector : SdfBatchCollector<InkSegmentItem>
         ViewportSizeParam = Effect.ViewportSize;
         TargetOriginParam = Effect.TargetOrigin;
         ViewportOriginParam = Effect.ViewportOrigin;
-        InstancesAddressParam = Effect.InstancesAddress;
-        TransformsAddressParam = Effect.TransformsAddress;
+        InstancesParam = Effect.InkSegments;
+        TransformsParam = Effect.Transforms;
     }
 
     /// <summary>THE one statement of what this batch draws - the render unit asks THIS, never its own copy.</summary>

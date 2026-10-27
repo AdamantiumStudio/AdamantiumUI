@@ -55,8 +55,8 @@ internal sealed class MaterialRectCollector : SdfBatchCollector<MaterialRectItem
         ProjectionParam = Effect.Projection;
         ViewportSizeParam = Effect.ViewportSize;
         TargetOriginParam = Effect.TargetOrigin;
-        InstancesAddressParam = Effect.InstancesAddress;
-        TransformsAddressParam = Effect.TransformsAddress;
+        InstancesParam = Effect.MaterialRects;
+        TransformsParam = Effect.Transforms;
     }
 
     /// <summary>The pass the segment being drawn needs. A material is a SOURCE plus a TREATMENT, and both are decided
