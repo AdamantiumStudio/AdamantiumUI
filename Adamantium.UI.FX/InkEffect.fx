@@ -92,6 +92,10 @@ float DistanceToSegment(float2 p, float2 a, float2 b, float ra, float rb)
     return min(along, min(length(pa) - ra, length(p - b) - rb));
 }
 
+// Where the viewport's corner lies, in the window's device pixels: zero for the window, a layer's region when it draws
+// in its own.
+float2 ViewportOrigin;
+
 // The fragment's node-local position, rebuilt from its pixel. Interpolated, each segment's quad arrives at its own
 // rounding of the same pixel, and where two segments are all but equally near they name different owners - the pixel is
 // then drawn twice or not at all. From the pixel and the node's matrix every quad computes bit-identical numbers. A
@@ -105,7 +109,7 @@ float2 PixelToLocal(float2 fragment, float2 interpolated, float4x4 nodeWorld)
     float2 halfVp = ViewportSize * 0.5;
     float2 ax = mul(float4(1.0, 0.0, 0.0, 0.0), m).xy * halfVp;
     float2 ay = mul(float4(0.0, 1.0, 0.0, 0.0), m).xy * halfVp;
-    float2 d = SurfacePixel(fragment) - (mul(float4(0.0, 0.0, 0.0, 1.0), m).xy + 1.0) * halfVp;
+    float2 d = SurfacePixel(fragment) - (ViewportOrigin + (mul(float4(0.0, 0.0, 0.0, 1.0), m).xy + 1.0) * halfVp);
     float det = ax.x * ay.y - ax.y * ay.x;
     return float2(d.x * ay.y - d.y * ay.x, ax.x * d.y - ax.y * d.x) / det;
 }

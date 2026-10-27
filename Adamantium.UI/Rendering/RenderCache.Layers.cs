@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Adamantium.Graphics;
 using Adamantium.Graphics.Core;
 using Adamantium.Graphics.Fonts;
 using Adamantium.Mathematics;
@@ -18,15 +19,13 @@ public partial class RenderCache
     private const double TextOverhang = 0.25;
     private const ulong PrintSeed = 0xCBF29CE484222325UL;
 
-    private readonly Stack<(int End, IUIComponent Layer)> _layerWalk = new();
+    // Whole: whether it was opened drawn whole - asked once, as the reflection can change while the frame draws.
+    private readonly Stack<(int End, IUIComponent Layer, bool Whole)> _layerWalk = new();
+    private readonly Stack<bool> _replayWhole = new();
     private OffscreenLayers _offscreenLayers;
     private long _framePaintEpoch;
 
-    // The opacity slots of soft-edged layers' own bands, under the elements' own key; see BandSlotOf.
-    private const int OwnBandsKey = -2;
-    private readonly Dictionary<IUIComponent, int> _bandOwners = new();
-
-    // The group whose own outer bands this walk drew under its layer, so its units do not draw them in it again.
+    // The group whose own outer bands this walk drew apart from its layer, so its units do not draw them in it again.
     private ControlGroup _bandsDrawnUnder;
 
     // A soft-edged layer's sides its ancestors cut short, from the scan that opened it to the close that blurs it.
@@ -36,7 +35,8 @@ public partial class RenderCache
     // whose edge is its outline.
     private Vector4F CutSides(IUIComponent layer, double left, double top, double right, double bottom, Rect2D fullScissor)
     {
-        var ancestors = MirrorScissor(layer, fullScissor);
+        // Drawn whole, only the window cuts what it holds.
+        var ancestors = DrawsWhole(layer) ? fullScissor : MirrorScissor(layer, fullScissor);
         var own = ResolveScissor(layer, World(layer), fullScissor, out _, out _);
         var ancestorsRight = ancestors.Offset.X + (double)ancestors.Extent.Width;
         var ancestorsBottom = ancestors.Offset.Y + (double)ancestors.Extent.Height;
@@ -49,21 +49,105 @@ public partial class RenderCache
                 : 0f);
     }
 
-    // A soft-edged layer draws its own outer bands under itself, out of the fade's reach - unless an opacity mask is laid
-    // over it, which has to reach them too, so they stay in it.
-    private bool DrawsOwnBandsUnder(IUIComponent layer) => SoftOf(layer) > 0f && layer.OpacityMask == null;
+    // A soft-edged layer keeps its own outer bands apart from what it draws: they are laid down under it, with it.
+    private bool DrawsOwnBandsUnder(IUIComponent layer) => SoftOf(layer) > 0f;
 
-    // A soft edge fades what the element draws, never the glow and the shadow around it: those go down first, under its
-    // layer, so the fade cannot reach them.
-    private void DrawOwnBandsUnder(IGraphicsDevice device, ControlGroup group, Rect2D fullScissor, ref bool scissorNarrowed)
+    // A reflected layer holds its subtree whole, not cut by the clips above it - what a scroll hides of the element may
+    // still show in its reflection; those clips cut what it lays down instead.
+    private bool DrawsWhole(IUIComponent component) => component.Reflection is { Shows: true } && OpensLayer(component);
+
+    // Where a layer drawn whole may draw: the window, and the rows its reflection shows of it wherever they lie - past
+    // the window too, for a part scrolled out of it is mirrored back into view.
+    private Rect2D WholeBounds(IUIComponent layer, Rect2D window)
+    {
+        var mirror = MirrorOf(layer);
+        var shown = MirrorScissor(layer, window);
+        // The rows the reflection lies on and can be seen on: a tall element whose reflection is out of view draws none.
+        var shownTop = MathF.Max(shown.Offset.Y, mirror.Floor);
+        var shownBottom = MathF.Min(shown.Offset.Y + shown.Extent.Height, mirror.Ends);
+        if (!mirror.Shows || shown.Extent.Width == 0 || !(shownBottom > shownTop))
+        {
+            return window;
+        }
+
+        var twice = 2f * mirror.Floor;
+        var left = Math.Min(window.Offset.X, (int)MathF.Floor(shown.Offset.X - mirror.OffsetX));
+        var top = Math.Min(window.Offset.Y, (int)MathF.Floor(twice - shownBottom));
+        var right = Math.Max(window.Offset.X + (int)window.Extent.Width,
+            (int)MathF.Ceiling(shown.Offset.X + shown.Extent.Width - mirror.OffsetX));
+        var bottom = Math.Max(window.Offset.Y + (int)window.Extent.Height, (int)MathF.Ceiling(twice - shownTop));
+        return new Rect2D
+        {
+            Offset = new Offset2D { X = left, Y = top },
+            Extent = new Extent2D { Width = (uint)(right - left), Height = (uint)(bottom - top) }
+        };
+    }
+
+    // A layer drawn whole draws in its own region: its viewport, a projection onto it and its bounds for every
+    // scissor, so what lies past the window reaches its texture. LeaveWhole gives the window's back.
+    private readonly Stack<(Rect2D Full, Matrix4x4F Projection, Viewport Viewport)> _wholeFrames = new();
+
+    private Rect2D EnterWhole(IGraphicsDevice device, Rect2D region, Rect2D fullScissor)
+    {
+        var gd = device as GraphicsDevice;
+        var viewport = gd is { CurrentViewports.Length: > 0 } ? gd.CurrentViewports[0] : default;
+        _wholeFrames.Push((fullScissor, _projectionMatrix, viewport));
+        if (gd == null || region.Extent.Width == 0 || region.Extent.Height == 0 || !(viewport.Width > 0)
+            || !(viewport.Height > 0))
+        {
+            return region;
+        }
+
+        // The window's clip space onto the region's: a window pixel lands on the same surface pixel as before.
+        var width = (float)region.Extent.Width;
+        var height = (float)region.Extent.Height;
+        var onto = Matrix4x4F.Identity;
+        onto.M11 = viewport.Width / width;
+        onto.M22 = viewport.Height / height;
+        onto.M41 = onto.M11 - 1f + 2f * (viewport.X - region.Offset.X) / width;
+        onto.M42 = onto.M22 - 1f + 2f * (viewport.Y - region.Offset.Y) / height;
+        _projectionMatrix *= onto;
+        gd.SetViewports(new Viewport
+        {
+            X = region.Offset.X, Y = region.Offset.Y, Width = width, Height = height,
+            MinDepth = viewport.MinDepth, MaxDepth = viewport.MaxDepth
+        });
+        gd.SetScissors(region);
+        return region;
+    }
+
+    private Rect2D LeaveWhole(IGraphicsDevice device)
+    {
+        var (full, projection, viewport) = _wholeFrames.Pop();
+        _projectionMatrix = projection;
+        if (device is GraphicsDevice gd && viewport.Width > 0)
+        {
+            gd.SetViewports(viewport);
+            gd.SetScissors(full);
+        }
+
+        return full;
+    }
+
+    // A soft edge fades what the element draws, never the glow and the shadow around it: those go into a texture of the
+    // layer's own, beside the one the fade reaches, and are laid down under it - mirrored, faded and masked with it.
+    private void DrawOwnBandsUnder(IGraphicsDevice device, ControlGroup group, int start, int end, Rect2D fullScissor,
+        ref bool scissorNarrowed)
     {
         // Recorded at this group's rank: what is spliced in before it must stay under its bands.
         if (_recording)
         {
             _recordOrder = group.Order;
+            RecordLayerMark(RenderOpKind.BandsBegin, group.Component, group.Order);
         }
 
-        var slot = BandSlotOf(device, group.Component);
+        var region = BeginOwnBands(device, group.Component, fullScissor, start, end);
+        var whole = DrawsWhole(group.Component);
+        if (whole)
+        {
+            fullScissor = EnterWhole(device, region, fullScissor);
+        }
+
         foreach (var unit in group.Units)
         {
             if (!HaloRectCollector.WantsBatch(unit.RenderData) && !HaloLivingCollector.WantsBatch(unit.RenderData))
@@ -80,7 +164,7 @@ public partial class RenderCache
 
             // Readied as the walk readies it: a shape's band reads the distance field its update bakes.
             unit.SetEffectiveOpacity(EffectiveOpacity(unit.Component));
-            unit.SetFadeSlot(slot);
+            unit.SetFadeSlot(OpacitySlotOf(device, unit.Component));
             var (clipBox, clipRadii) = RoundedClipShape(unit.Component, fullScissor);
             unit.RenderData.RoundedClipBox = clipBox;
             unit.RenderData.RoundedClipRadii = clipRadii;
@@ -90,47 +174,47 @@ public partial class RenderCache
         }
 
         FlushBatches(device, fullScissor, ref scissorNarrowed);
+        _offscreenLayers.EndBands(device);
+        if (whole)
+        {
+            LeaveWhole(device);
+            scissorNarrowed = false;
+        }
+
+        if (_recording)
+        {
+            RecordLayerMark(RenderOpKind.BandsEnd, group.Component, group.Order);
+        }
+
         _bandsDrawnUnder = group;
     }
 
-    // Bands under a layer are laid down as the layer is: at its own opacity over the chain above it - a slot of their own,
-    // since the element's slot holds 1 for what draws inside it.
-    private int BandSlotOf(IGraphicsDevice device, IUIComponent layer)
-    {
-        if (_transformTable == null)
-        {
-            return -1;
-        }
-
-        var snapshot = ApplySnap(layer);
-        var parent = snapshot.RenderParent != null ? OpacitySlotOf(device, snapshot.RenderParent) : -1;
-        var slot = _transformTable.AcquireOpacitySlot(layer.RenderId, OwnBandsKey);
-        _bandOwners[layer] = slot;
-        _transformTable.SetAlpha(device, slot, snapshot.Opacity);
-        _transformTable.SetOpacityParent(device, slot, parent);
-        if (_transformTable.IsSlotLive(slot))
-        {
-            return slot;
-        }
-
-        // Not in this frame's buffer yet: the parent's alpha for one frame, and the next one bakes the slot in.
-        _fadeSlotJustCreated = true;
-        return parent;
-    }
-
-    private void ReleaseBandSlot(IUIComponent owner) => _transformTable?.ReleaseOpacitySlot(owner.RenderId, OwnBandsKey);
-
-    private bool ReplayOffscreenLayer(IGraphicsDevice device, IUIComponent layer, Rect2D fullScissor)
+    private Rect2D BeginOwnBands(IGraphicsDevice device, IUIComponent layer, Rect2D fullScissor)
     {
         var start = GroupIndexOf(layer);
-        return BeginOffscreenLayer(device, layer, fullScissor, start, start < 0 ? -1 : CloneSubtreeEnd(start), true);
+        return BeginOwnBands(device, layer, fullScissor, start, start < 0 ? -1 : CloneSubtreeEnd(start));
+    }
+
+    private Rect2D BeginOwnBands(IGraphicsDevice device, IUIComponent layer, Rect2D fullScissor, int start, int end)
+    {
+        _offscreenLayers ??= new OffscreenLayers();
+        var region = LayerRegion(layer, fullScissor, start, end);
+        _offscreenLayers.BeginBands(device, layer, region);
+        return region;
+    }
+
+    private bool ReplayOffscreenLayer(IGraphicsDevice device, IUIComponent layer, Rect2D fullScissor, out Rect2D region)
+    {
+        var start = GroupIndexOf(layer);
+        return BeginOffscreenLayer(device, layer, fullScissor, start, start < 0 ? -1 : CloneSubtreeEnd(start), true,
+            out region);
     }
 
     private bool BeginOffscreenLayer(IGraphicsDevice device, IUIComponent layer, Rect2D fullScissor, int start, int end,
-        bool allowReuse)
+        bool allowReuse, out Rect2D region)
     {
         _offscreenLayers ??= new OffscreenLayers();
-        var region = ScanLayer(layer, fullScissor, start, end, out var print, out var reusable);
+        region = ScanLayer(layer, fullScissor, start, end, out var print, out var reusable);
         return _offscreenLayers.Begin(device, layer, region, print, reusable, allowReuse);
     }
 
@@ -138,12 +222,21 @@ public partial class RenderCache
 
     internal int LayersReused => _offscreenLayers?.Reused ?? 0;
 
-    private void CloseOffscreenLayer(IGraphicsDevice device, Rect2D fullScissor, ref bool scissorNarrowed)
+    internal int LayersHoldingBands => _offscreenLayers?.LayersHoldingBands ?? 0;
+
+    internal uint TallestLayerTexture => _offscreenLayers?.TallestLayerTexture ?? 0;
+
+    private void CloseOffscreenLayer(IGraphicsDevice device, ref Rect2D fullScissor, ref bool scissorNarrowed)
     {
-        var (end, layer) = _layerWalk.Pop();
+        var (end, layer, whole) = _layerWalk.Pop();
         if (device != null)
         {
             FlushBatches(device, fullScissor, ref scissorNarrowed);
+            if (whole)
+            {
+                fullScissor = LeaveWhole(device);
+                scissorNarrowed = false;
+            }
         }
 
         EndOffscreenLayer(device, layer, fullScissor);
@@ -160,14 +253,21 @@ public partial class RenderCache
             return;
         }
 
-        var scissor = ResolveScissor(layer, World(layer), fullScissor, out _, out _);
+        var whole = DrawsWhole(layer);
+        var scissor = !whole ? ResolveScissor(layer, World(layer), fullScissor, out _, out _)
+            : LaidDownClip(layer) is { } laidDown ? ToFramebufferScissor(laidDown, fullScissor)
+            : fullScissor;
         var alpha = LayerAlpha(layer);
         var mask = MaskOf(layer, fullScissor, ref alpha);
         var mirror = MirrorOf(layer);
         var soft = SoftOf(layer);
         var cut = soft > 0f && _softCut.Remove(layer, out var sides) ? sides : default;
+        // Drawn whole, the rounded clip above it cuts what it lays down; otherwise it cut what it drew already.
+        var (clipBox, clipRadii) = whole && ApplySnap(layer).RenderParent is { } parent
+            ? RoundedClipShape(parent, fullScissor)
+            : default;
         _offscreenLayers.End(device, alpha, scissor, mask, soft, cut, mirror,
-            mirror.Shows ? MirrorScissor(layer, fullScissor) : scissor);
+            mirror.Shows ? MirrorScissor(layer, fullScissor) : scissor, clipBox, clipRadii);
     }
 
     private (float Width, float Height, float Scale) BoxPixels(IUIComponent layer)
@@ -195,6 +295,7 @@ public partial class RenderCache
         }
 
         var world = World(layer);
+        var top = float.MaxValue;
         var bottom = float.MinValue;
         foreach (var (x, y) in (ReadOnlySpan<(float, float)>)[(0f, 0f), ((float)size.Width, 0f), (0f, (float)size.Height),
                      ((float)size.Width, (float)size.Height)])
@@ -202,7 +303,9 @@ public partial class RenderCache
             var w = x * world.M14 + y * world.M24 + world.M44;
             if (MathF.Abs(w) > 1e-6f)
             {
-                bottom = MathF.Max(bottom, (x * world.M12 + y * world.M22 + world.M42) / w * (float)_renderScale);
+                var row = (x * world.M12 + y * world.M22 + world.M42) / w * (float)_renderScale;
+                top = MathF.Min(top, row);
+                bottom = MathF.Max(bottom, row);
             }
         }
 
@@ -211,9 +314,86 @@ public partial class RenderCache
             return default;
         }
 
-        var length = (float)Math.Min(reflection.Size, 1) * height;
-        return new LayerMirror(true, bottom, (float)reflection.OffsetX * scale, (float)reflection.OffsetY * scale, length,
-            (float)Math.Clamp(reflection.Fade, 0, 1) * length, (float)Math.Clamp(reflection.Opacity, 0, 1));
+        // What it mirrors is all it draws, its glow and shadow above it too: Size is a share of that.
+        var (drawnTop, drawnBottom) = DrawnRows(layer);
+        drawnTop = MathF.Min(top, drawnTop);
+        drawnBottom = MathF.Max(bottom, drawnBottom);
+        var length = (float)Math.Min(reflection.Size, 1) * (drawnBottom - drawnTop);
+        return new LayerMirror(true, drawnBottom, (float)reflection.OffsetX * scale, (float)reflection.OffsetY * scale,
+            length, (float)Math.Clamp(reflection.Fade, 0, 1) * length, (float)Math.Clamp(reflection.Opacity, 0, 1));
+    }
+
+    // The first and the past-last rows, in device pixels, of what the layer's subtree draws: its glow and shadow as far
+    // as they reach up and down, not as far as they reach any way; text by its box, not by the room left for its
+    // overhang; cut where a clip inside the layer cuts it - those above it cut the reflection too, and scrolling must
+    // not move it.
+    private (float Top, float Bottom) DrawnRows(IUIComponent layer)
+    {
+        var start = GroupIndexOf(layer);
+        if (start < 0)
+        {
+            return (float.MaxValue, float.MinValue);
+        }
+
+        var end = CloneSubtreeEnd(start);
+        var top = double.MaxValue;
+        var bottom = double.MinValue;
+        for (var i = start; i < end; i++)
+        {
+            foreach (var unit in _groups[i].Units)
+            {
+                var world = World(unit.Component);
+                var size = ApplySnap(unit.Component).RenderSize;
+                var ink = (unit is TextRenderUnit ? new Rect(0, 0, size.Width, size.Height) : LocalInk(unit, size, false))
+                    .TransformToAABB(world);
+                // Bands are drawn at the lesser of the two scales.
+                var iso = System.Math.Min(world.M11, world.M22);
+                var up = unit.RenderData == null ? 0 : Reach(unit.RenderData, -1f) * iso;
+                var down = unit.RenderData == null ? 0 : Reach(unit.RenderData, 1f) * iso;
+                var drawnTop = ink.Y - up;
+                var drawnBottom = ink.Bottom + down;
+                for (var c = unit.Component; c != null; c = ApplySnap(c).RenderParent)
+                {
+                    var snap = ApplySnap(c);
+                    if (snap.ClipToBounds)
+                    {
+                        var box = new Rect(0, 0, snap.RenderSize.Width, snap.RenderSize.Height).TransformToAABB(World(c));
+                        drawnTop = System.Math.Max(drawnTop, box.Y);
+                        drawnBottom = System.Math.Min(drawnBottom, box.Bottom);
+                    }
+
+                    if (ReferenceEquals(c, layer))
+                    {
+                        break;
+                    }
+                }
+
+                top = System.Math.Min(top, drawnTop);
+                bottom = System.Math.Max(bottom, drawnBottom);
+            }
+        }
+
+        return bottom == double.MinValue
+            ? (float.MaxValue, float.MinValue)
+            : ((float)(top * _renderScale), (float)(bottom * _renderScale));
+    }
+
+    // How far past the outline the bands reach up (-1) or down (1).
+    private static double Reach(RenderData data, float down)
+    {
+        // A band switched off is kept, transparent: it draws nothing there.
+        var reach = data.LivingHalo is { Inner: false } living && (living.StopCount > 0 || living.Color.W > 0f)
+            ? living.Reach
+            : 0.0;
+        foreach (var band in data.Halo ?? [])
+        {
+            if (!band.Inner && !band.IsEmpty && band.Color.W > 0f)
+            {
+                reach = System.Math.Max(reach, band.Spread + band.Softness + down * band.Offset.Y);
+            }
+        }
+
+        return reach;
     }
 
     private Rect2D MirrorScissor(IUIComponent layer, Rect2D fullScissor) =>
@@ -329,6 +509,11 @@ public partial class RenderCache
     {
         print = PrintSeed;
         reusable = false;
+        if (DrawsWhole(layer))
+        {
+            fullScissor = WholeBounds(layer, fullScissor);
+        }
+
         var layerWorld = World(layer);
         var clip = ResolveScissor(layer, layerWorld, fullScissor, out _, out _);
         if (start < 0)
@@ -342,7 +527,12 @@ public partial class RenderCache
         reusable = Core.Media.Brush.PaintEpoch == _framePaintEpoch && !MovedByTheCompositor(layer);
         var hasText = false;
         // A soft-edged layer's own bands are drawn under it, not in it.
-        var ownBandsOutside = DrawsOwnBandsUnder(layer);
+        var soft = SoftOf(layer) > 0f;
+        var ownBands = DrawsOwnBandsUnder(layer);
+        var drawnLeft = double.MaxValue;
+        var drawnTop = double.MaxValue;
+        var drawnRight = double.MinValue;
+        var drawnBottom = double.MinValue;
         // How far the reflections inside reach sideways: the whole drawing moved by each, which covers any subtree.
         var mirrorsLeft = 0.0;
         var mirrorsRight = 0.0;
@@ -368,12 +558,22 @@ public partial class RenderCache
             foreach (var unit in group.Units)
             {
                 var world = World(unit.Component);
-                var ink = LocalInk(unit, ApplySnap(unit.Component).RenderSize, !(ownBandsOutside && i == start))
-                    .TransformToAABB(world);
+                var size = ApplySnap(unit.Component).RenderSize;
+                var ink = LocalInk(unit, size).TransformToAABB(world);
                 left = System.Math.Min(left, ink.X);
                 top = System.Math.Min(top, ink.Y);
                 right = System.Math.Max(right, ink.Right);
                 bottom = System.Math.Max(bottom, ink.Bottom);
+                if (soft)
+                {
+                    // What fades is what it draws: its own bands lie past that outline, and a clip cutting only them cuts
+                    // no edge of it.
+                    var drawn = ownBands && i == start ? LocalInk(unit, size, false).TransformToAABB(world) : ink;
+                    drawnLeft = System.Math.Min(drawnLeft, drawn.X);
+                    drawnTop = System.Math.Min(drawnTop, drawn.Y);
+                    drawnRight = System.Math.Max(drawnRight, drawn.Right);
+                    drawnBottom = System.Math.Max(drawnBottom, drawn.Bottom);
+                }
                 if (!reusable)
                 {
                     continue;
@@ -393,8 +593,7 @@ public partial class RenderCache
 
             if (i > start && MirrorOf(group.Component) is { Shows: true } mirror)
             {
-                bottom = System.Math.Max(bottom, (mirror.Bottom + System.Math.Max(mirror.OffsetY, 0f) + mirror.Length)
-                                                 / _renderScale);
+                bottom = System.Math.Max(bottom, (mirror.Ends - System.Math.Min(mirror.OffsetY, 0f)) / _renderScale);
                 mirrorsLeft = System.Math.Min(mirrorsLeft, mirror.OffsetX / _renderScale);
                 mirrorsRight = System.Math.Max(mirrorsRight, mirror.OffsetX / _renderScale);
             }
@@ -406,9 +605,9 @@ public partial class RenderCache
             return new Rect2D { Offset = new Offset2D(), Extent = new Extent2D() };
         }
 
-        if (SoftOf(layer) > 0f)
+        if (soft && drawnLeft <= drawnRight)
         {
-            _softCut[layer] = CutSides(layer, left, top, right, bottom, fullScissor);
+            _softCut[layer] = CutSides(layer, drawnLeft, drawnTop, drawnRight, drawnBottom, fullScissor);
         }
 
         left += mirrorsLeft;

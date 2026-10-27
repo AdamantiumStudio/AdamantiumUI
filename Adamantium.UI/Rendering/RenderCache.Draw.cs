@@ -14,7 +14,7 @@ namespace Adamantium.UI.Rendering;
 
 // What one recorded draw IS. At namespace scope because an ARENA is asked whether a recorded op draws it (see
 // BatchArena.MatchesOp) - the instanced fill is drawn by a flush op, not by a segment op, and that is its own business.
-internal enum RenderOpKind : byte { Scissor, Unit, Segment, InstancedFlush, LayerBegin, LayerEnd }
+internal enum RenderOpKind : byte { Scissor, Unit, Segment, InstancedFlush, LayerBegin, LayerEnd, BandsBegin, BandsEnd }
 
 public partial class RenderCache
 {
@@ -968,23 +968,22 @@ public partial class RenderCache
                 FlushBatches(device, fullScissor, ref scissorNarrowed);
                 if (DrawsOwnBandsUnder(layer))
                 {
-                    DrawOwnBandsUnder(device, group, fullScissor, ref scissorNarrowed);
-                }
-                else if (_bandOwners.Remove(layer))
-                {
-                    ReleaseBandSlot(layer);
+                    DrawOwnBandsUnder(device, group, groupIndex, layerEnd, fullScissor, ref scissorNarrowed);
                 }
 
-                BeginOffscreenLayer(device, layer, fullScissor, groupIndex, layerEnd, false);
-                _layerWalk.Push((layerEnd, layer));
+                BeginOffscreenLayer(device, layer, fullScissor, groupIndex, layerEnd, false, out var region);
+                var whole = DrawsWhole(layer);
+                if (whole)
+                {
+                    fullScissor = EnterWhole(device, region, fullScissor);
+                    scissorNarrowed = false;
+                }
+
+                _layerWalk.Push((layerEnd, layer, whole));
                 if (_recording)
                 {
                     RecordLayerMark(RenderOpKind.LayerBegin, layer, group.Order);
                 }
-            }
-            else if (_bandOwners.Count > 0 && _bandOwners.Remove(group.Component))
-            {
-                ReleaseBandSlot(group.Component);
             }
 
             foreach (var unit in group.Units)
@@ -1913,13 +1912,13 @@ public partial class RenderCache
 
             while (cloneRun == null && _layerWalk.Count > 0 && groupIndex >= _layerWalk.Peek().End - 1)
             {
-                CloseOffscreenLayer(device, fullScissor, ref scissorNarrowed);
+                CloseOffscreenLayer(device, ref fullScissor, ref scissorNarrowed);
             }
         }
 
         while (_layerWalk.Count > 0)
         {
-            CloseOffscreenLayer(device, fullScissor, ref scissorNarrowed);
+            CloseOffscreenLayer(device, ref fullScissor, ref scissorNarrowed);
         }
 
         _cloneMatrix = null;   // a run that ended on the last group leaves it set otherwise
@@ -2142,11 +2141,6 @@ public partial class RenderCache
 
         if (OpensLayer(owner))
         {
-            if (_bandOwners.TryGetValue(owner, out var bands))
-            {
-                _transformTable.SetAlpha(device, bands, entry.Alpha);
-            }
-
             entry.MarkApplied();
         }
         else
@@ -2860,17 +2854,17 @@ public partial class RenderCache
         var haloClip = RoundedClipSlot(u.Component, _frameScissor);   // the patch writes what the walk writes
         var haloFade = u.FadeSlot;
 
-        // The outer bands of a soft-edged layer lie under it, faded as it is laid down and filling under its edge.
-        var underLayer = u.Component != null && _bandOwners.ContainsKey(u.Component) && DrawsOwnBandsUnder(u.Component);
-        var outerFade = underLayer ? BandSlotOf(device, u.Component) : haloFade;
-        var underWidth = underLayer ? u.Component.SoftEdge : 0;
+        // The outer bands of a soft-edged layer fill on under its fading edge.
+        var underWidth = u.Component != null && OpensLayer(u.Component) && DrawsOwnBandsUnder(u.Component)
+            ? u.Component.SoftEdge
+            : 0;
         PatchStillHalo(device, _haloUnder, u.RenderData.Halo, inner: false, runs.UnderFirst, runs.UnderCount,
-            shape, corners, kind, bakeWorld, opacity, transformSlot, fieldRange, haloClip, outerFade, underWidth);
+            shape, corners, kind, bakeWorld, opacity, transformSlot, fieldRange, haloClip, haloFade, underWidth);
         PatchStillHalo(device, _haloOver, u.RenderData.Halo, inner: true, runs.OverFirst, runs.OverCount,
             shape, corners, kind, bakeWorld, opacity, transformSlot, fieldRange, haloClip, haloFade, 0);
 
         PatchLivingHalo(device, _haloLivingUnder, u.RenderData.LivingHalo, inner: false, runs.LivingUnder,
-            shape, corners, kind, bakeWorld, opacity, transformSlot, fieldRange, haloClip, outerFade, underWidth);
+            shape, corners, kind, bakeWorld, opacity, transformSlot, fieldRange, haloClip, haloFade, underWidth);
         PatchLivingHalo(device, _haloLivingOver, u.RenderData.LivingHalo, inner: true, runs.LivingOver,
             shape, corners, kind, bakeWorld, opacity, transformSlot, fieldRange, haloClip, haloFade, 0);
     }

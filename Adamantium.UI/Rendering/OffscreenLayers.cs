@@ -27,6 +27,37 @@ internal sealed class OffscreenLayers : IDisposable
     /// <summary>How many layers this frame laid down the texture they already held.</summary>
     public int Reused { get; private set; }
 
+    internal uint TallestLayerTexture
+    {
+        get
+        {
+            var tallest = 0u;
+            foreach (var entry in _cached.Values)
+            {
+                tallest = Math.Max(tallest, entry.TextureHeight);
+            }
+
+            return tallest;
+        }
+    }
+
+    internal int LayersHoldingBands
+    {
+        get
+        {
+            var count = 0;
+            foreach (var entry in _cached.Values)
+            {
+                if (entry.BandsRing != null)
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+    }
+
     /// <summary>Starts a frame: counts from zero and gives up the textures of layers not drawn for a while.</summary>
     public void BeginFrame(IGraphicsDevice device)
     {
@@ -50,6 +81,11 @@ internal sealed class OffscreenLayers : IDisposable
         {
             var idle = _cached[owner];
             Release(gd, idle.Ring);
+            if (idle.BandsRing != null)
+            {
+                Release(gd, idle.BandsRing);
+            }
+
             if (idle.SoftRing != null)
             {
                 Release(gd, idle.SoftRing);
@@ -60,6 +96,107 @@ internal sealed class OffscreenLayers : IDisposable
         }
 
         _idle.Clear();
+    }
+
+    /// <summary>Opens the texture <paramref name="owner"/>'s own bands - its glow, its shadow - are drawn into, over the
+    /// <paramref name="region"/> its layer covers: they are laid down under the layer, with it, apart from what its soft
+    /// edge fades. <see cref="EndBands"/> goes back to the target it was opened over.</summary>
+    public void BeginBands(IGraphicsDevice device, object owner, Rect2D region)
+    {
+        if (device is not GraphicsDevice gd || gd.CurrentRenderTarget == null
+            || region.Extent.Width == 0 || region.Extent.Height == 0)
+        {
+            _bands.Push(default);
+            return;
+        }
+
+        if (!_cached.TryGetValue(owner, out var entry))
+        {
+            entry = new CachedLayer();
+            _cached[owner] = entry;
+        }
+
+        entry.LastUsed = _frame;
+        EnsureRing(gd, entry, region.Extent.Width, region.Extent.Height);
+        EnsureBands(gd, entry);
+        var slot = (entry.BandsLatest + 1) % entry.BandsRing.Length;
+        var target = entry.BandsRing[slot];
+        _bands.Push(new OpenBands(gd.CurrentRenderTarget, gd.CurrentDepthStencilBuffer, gd.TargetOrigin, gd.ClearColor,
+            gd.MSAALevel, target, entry, slot));
+
+        gd.SuspendRendering();
+        gd.InsertImageMemoryBarrier(gd.CurrentCommandBuffer, target,
+            AccessFlagBits2.ShaderReadBit, AccessFlagBits2.ColorAttachmentWriteBit,
+            ImageLayout.Undefined, ImageLayout.ColorAttachmentOptimal,
+            PipelineStageFlagBits2.FragmentShaderBit, PipelineStageFlagBits2.ColorAttachmentOutputBit);
+        gd.SetRenderTargets(target);
+        gd.SetDepthBuffer(null);
+        gd.ClearColor = Colors.Transparent;
+        gd.MSAALevel = MSAALevel.None;
+        gd.BeginRendering(gd.CurrentCommandBuffer);
+        gd.TargetOrigin = new NativePoint(region.Offset.X, region.Offset.Y);
+    }
+
+    /// <summary>Closes the bands <see cref="BeginBands"/> opened, keeping them for the layer laid down this frame.</summary>
+    public void EndBands(IGraphicsDevice device)
+    {
+        if (device is not GraphicsDevice gd || _bands.Count == 0)
+        {
+            return;
+        }
+
+        var open = _bands.Pop();
+        if (open.Texture == null)
+        {
+            return;
+        }
+
+        gd.SuspendRendering();
+        gd.InsertImageMemoryBarrier(gd.CurrentCommandBuffer, open.Texture,
+            AccessFlagBits2.ColorAttachmentWriteBit, AccessFlagBits2.ShaderReadBit,
+            ImageLayout.ColorAttachmentOptimal, ImageLayout.ShaderReadOnlyOptimal,
+            PipelineStageFlagBits2.ColorAttachmentOutputBit, PipelineStageFlagBits2.FragmentShaderBit);
+        gd.SetRenderTargets(open.Target);
+        gd.SetDepthBuffer(open.Depth);
+        gd.ClearColor = open.Clear;
+        gd.MSAALevel = open.Samples;
+        gd.TargetOrigin = open.Origin;
+        gd.ResumeRendering();
+
+        open.Entry.BandsLatest = open.Slot;
+        open.Entry.BandsFrame = _frame;
+    }
+
+    private readonly record struct OpenBands(IRenderTarget Target, IDepthStencilBuffer Depth, NativePoint Origin,
+        Color Clear, MSAALevel Samples, IRenderTarget Texture, CachedLayer Entry, int Slot);
+
+    private readonly Stack<OpenBands> _bands = new();
+
+    private static void EnsureBands(GraphicsDevice gd, CachedLayer entry)
+    {
+        if (entry.BandsRing != null && entry.BandsRing.Length == entry.Ring.Length
+            && entry.BandsWidth == entry.TextureWidth && entry.BandsHeight == entry.TextureHeight)
+        {
+            return;
+        }
+
+        if (entry.BandsRing != null)
+        {
+            Release(gd, entry.BandsRing);
+        }
+
+        var format = entry.Ring[0].SurfaceFormat;
+        entry.BandsWidth = entry.TextureWidth;
+        entry.BandsHeight = entry.TextureHeight;
+        entry.BandsRing = new IRenderTarget[entry.Ring.Length];
+        for (var i = 0; i < entry.BandsRing.Length; i++)
+        {
+            entry.BandsRing[i] = gd.CreateRenderTarget(entry.TextureWidth, entry.TextureHeight, MSAALevel.None, format,
+                ImageUsageFlagBits.SampledBit, ImageLayout.ShaderReadOnlyOptimal, $"LayerBands:{i}");
+        }
+
+        entry.BandsLatest = -1;
+        entry.BandsFrame = -1;
     }
 
     /// <summary>Opens <paramref name="owner"/>'s layer over <paramref name="region"/> (window device pixels). True means
@@ -131,7 +268,7 @@ internal sealed class OffscreenLayers : IDisposable
     /// (left, top, right, bottom) where its ancestors cut what it drew short: the drawing goes on past them, so nothing
     /// fades there.</summary>
     public void End(IGraphicsDevice device, float alpha, Rect2D scissor, in LayerMask mask, float soft, Vector4F softCut,
-        in LayerMirror mirror, Rect2D mirrorScissor)
+        in LayerMirror mirror, Rect2D mirrorScissor, Vector4F clipBox, Vector4F clipRadii)
     {
         if (device is not GraphicsDevice gd || _open.Count == 0)
         {
@@ -195,15 +332,25 @@ internal sealed class OffscreenLayers : IDisposable
             ReleaseSoft(gd, entry);
         }
 
+        if (soft <= 0f && entry.BandsRing != null)
+        {
+            Release(gd, entry.BandsRing);
+            entry.BandsRing = null;
+            entry.BandsLatest = -1;
+            entry.BandsFrame = -1;
+        }
+
         var softTexture = soft > 0f ? entry.SoftRing?[open.Slot] : null;
+        var bands = entry.BandsFrame == _frame && entry.BandsLatest >= 0 ? entry.BandsRing[entry.BandsLatest] : null;
         if (alpha > 0f)
         {
             if (mirror.Shows)
             {
-                Composite(gd, open, alpha, mirrorScissor, mask, softTexture, mirror, 2f);
+                Composite(gd, open, alpha, mirrorScissor, mask, softTexture, bands, mirror, 2f, clipBox, clipRadii);
             }
 
-            Composite(gd, open, alpha, scissor, mask, softTexture, mirror, mirror.Shows ? 1f : 0f);
+            Composite(gd, open, alpha, scissor, mask, softTexture, bands, mirror, mirror.Shows ? 1f : 0f, clipBox,
+                clipRadii);
         }
     }
 
@@ -314,7 +461,7 @@ internal sealed class OffscreenLayers : IDisposable
             ImageUsageFlagBits.SampledBit, ImageLayout.ShaderReadOnlyOptimal, name);
 
     private void Composite(GraphicsDevice gd, OpenOffscreenLayer open, float alpha, Rect2D scissor, in LayerMask mask,
-        IRenderTarget soft, in LayerMirror mirror, float role)
+        IRenderTarget soft, IRenderTarget bands, in LayerMirror mirror, float role, Vector4F clipBox, Vector4F clipRadii)
     {
         if (gd.CurrentViewports.Length == 0)
         {
@@ -337,7 +484,7 @@ internal sealed class OffscreenLayers : IDisposable
         gd.VertexType = null;
 
         // The mirrored layer: flipped about the floor halfway down the gap, moved sideways by its own offset.
-        var floor = mirror.Bottom + mirror.OffsetY * 0.5f;
+        var floor = mirror.Floor;
         var mirroredLeft = region.Offset.X + mirror.OffsetX;
         var mirroredTop = 2f * floor - (region.Offset.Y + region.Extent.Height);
         var left = role > 1.5f ? mirroredLeft : region.Offset.X;
@@ -346,13 +493,16 @@ internal sealed class OffscreenLayers : IDisposable
             region.Extent.Width, region.Extent.Height));
         _composite.SourceRegion.SetValue(new Vector4F(region.Offset.X, region.Offset.Y, region.Extent.Width,
             region.Extent.Height));
-        var ends = mirror.Bottom + mirror.OffsetY + mirror.Length;
-        _composite.Mirror.SetValue(new Vector4F(mirror.Opacity, mirror.Bottom + mirror.OffsetY, ends, floor));
+        _composite.Mirror.SetValue(new Vector4F(mirror.Opacity, mirror.Begins, mirror.Ends, floor));
         _composite.MirrorFade.SetValue(new Vector4F(mirror.FadeLength, 0f, 0f, role));
         _composite.MirrorQuad.SetValue(new Vector4F(mirroredLeft, mirroredLeft + region.Extent.Width,
             mirroredTop + region.Extent.Height, Math.Abs(mirror.OffsetX) * 0.5f));
+        _composite.ClipBox.SetValue(clipBox);
+        _composite.ClipRadii.SetValue(clipRadii);
         _composite.SoftOn.SetValue(soft != null ? 1f : 0f);
         _composite.SoftTexture.SetResource(soft ?? open.Color);
+        _composite.BandsOn.SetValue(bands != null ? 1f : 0f);
+        _composite.BandsTexture.SetResource(bands ?? open.Color);
         _composite.LayerTexels.SetValue(new Vector4F(
             region.Extent.Width / (float)open.TextureWidth, region.Extent.Height / (float)open.TextureHeight, 0, 0));
         _composite.LayerAlpha.SetValue(alpha);
@@ -461,6 +611,11 @@ internal sealed class OffscreenLayers : IDisposable
             foreach (var soft in entry.SoftRing ?? [])
             {
                 (soft as IDisposable)?.Dispose();
+            }
+
+            foreach (var bands in entry.BandsRing ?? [])
+            {
+                (bands as IDisposable)?.Dispose();
             }
 
             (entry.SoftScratch as IDisposable)?.Dispose();

@@ -538,7 +538,7 @@ internal sealed class FrameVerifier : IRenderCacheObserver
         }
 
         var drawn = live.SlotClipBox(clip);
-        var expected = live.ClipBoxOf(fact.Size, fact.World);
+        var expected = live.ClipBoxOf(owner, fact.Size, fact.World);
         if (Math.Abs(drawn.X - expected.X) > 1.5f || Math.Abs(drawn.Y - expected.Y) > 1.5f
             || Math.Abs(drawn.Z - expected.Z) > 1.5f || Math.Abs(drawn.W - expected.W) > 1.5f)
         {

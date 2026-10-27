@@ -21,6 +21,9 @@ internal abstract class SdfBatchCollector<TItem> : BatchCollector<TItem> where T
     // rather than looked up by name: a dictionary hit per parameter per draw is exactly the cost the batch exists to remove.
     protected EffectParameter ProjectionParam, ViewportSizeParam, TargetOriginParam, InstancesParam, TransformsParam;
 
+    // Where the viewport's corner lies in the window's pixels, for an effect that rebuilds a position from its pixel.
+    protected EffectParameter ViewportOriginParam;
+
     /// <summary>Create the effect if it is not there yet and point the four parameters above at it. Called at the start
     /// of every frame, so it must be cheap once the effect exists.</summary>
     protected abstract void EnsureEffect(IGraphicsDevice device);
@@ -104,6 +107,7 @@ internal abstract class SdfBatchCollector<TItem> : BatchCollector<TItem> where T
         var vp = ((GraphicsDevice)device).CurrentViewports;
         if (vp is { Length: > 0 }) ViewportSizeParam.SetValue(new Vector2F(vp[0].Width, vp[0].Height));
         TargetOriginParam.SetValue(new Vector2F(device.TargetOrigin.X, device.TargetOrigin.Y));
+        ViewportOriginParam?.SetValue(vp is { Length: > 0 } ? new Vector2F(vp[0].X, vp[0].Y) : default);
         device.PrimitiveTopology = PrimitiveTopology.TriangleStrip;
 
         device.VertexType = null;
