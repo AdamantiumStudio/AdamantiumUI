@@ -259,6 +259,7 @@ public class GeometryRenderComponent : UIRenderComponent
         UIBasicEffect.TexDrawn.SetValue(layout.Drawn);
         UIBasicEffect.TexUvRect.SetValue(layout.UvRect);
         UIBasicEffect.TexTint.SetValue(tint);
+        UIBasicEffect.TexAdjust.SetValue(image.ColorAdjustment);
         UIBasicEffect.TexRepeat.SetValue(layout.Repeats ? 1f : 0f);
         UIBasicEffect.TexMirror.SetValue(layout.Mirror);
         UIBasicEffect.ShaderTexture.SetResource(texture);

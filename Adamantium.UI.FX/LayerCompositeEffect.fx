@@ -33,6 +33,18 @@ float4 MaskOffsets0;
 float4 MaskOffsets1;
 float4 MaskParams;
 
+// Soft edges: the element's box in device pixels (.xy) and how far in from its outline it fades away (.z), through the
+// same box mapping as the mask; zero = a hard edge. Its corners in device pixels: TL, TR, BR, BL.
+float4 Soft;
+float4 SoftRadii;
+
+// The layer's own region on the window, in device pixels: where a texel of it was drawn.
+float4 SourceRegion;
+
+// The reflection draw (.w = 1): the layer laid down mirrored under the element, .x strong where it starts on window row .y
+// and gone .z pixels further down.
+float4 Mirror;
+
 // Between two stops closer than a pixel, a one-pixel ramp centered on them, as the fills do.
 float MaskRamp(float t, float aa)
 {
@@ -75,6 +87,23 @@ float MaskAt(float2 pixel)
     return MaskRamp(t, min(fwidth(t), fwidth(frac(t + 0.5))));
 }
 
+// From its outline in, rounded as its corners are: 1 deeper than the fade, 0 on the outline and outside.
+float SoftAt(float2 pixel)
+{
+    if (Soft.z <= 0.0) return 1.0;
+    float3 p = float3(pixel, 1.0);
+    float q = dot(MaskW.xyz, p);
+    if (abs(q) < 1e-6) return 0.0;
+    float2 box = float2(dot(MaskU.xyz, p), dot(MaskV.xyz, p)) / q;
+    float2 extent = Soft.xy * 0.5;
+    float2 local = (box - 0.5) * Soft.xy;
+    float r = local.x < 0.0 ? (local.y < 0.0 ? SoftRadii.x : SoftRadii.w) : (local.y < 0.0 ? SoftRadii.y : SoftRadii.z);
+    r = min(r, min(extent.x, extent.y));
+    float2 corner = abs(local) - extent + r;
+    float d = min(max(corner.x, corner.y), 0.0) + length(max(corner, float2(0.0, 0.0))) - r;
+    return saturate(-d / Soft.z);
+}
+
 struct LayerVSOutput
 {
     float4 Position : SV_Position;
@@ -90,15 +119,22 @@ LayerVSOutput LayerCompositeVS(uint id : SV_VertexID)
     o.Uv = float2(id & 1, (id >> 1) & 1);
     float2 pixel = LayerBox.xy + o.Uv * LayerBox.zw;
     o.Position = float4(pixel / max(ViewportSize, float2(1.0, 1.0)) * 2.0 - 1.0, 0.0, 1.0);
+    // The reflection is placed upside down, so its top row samples the layer's bottom one.
+    o.Uv.y = lerp(o.Uv.y, 1.0 - o.Uv.y, Mirror.w);
     return o;
 }
 
 // The layer was blended onto transparent black, so its color already carries its alpha: scaled here as a whole, and by
-// the mask where there is one, and laid down with the premultiplied "over".
+// the mask and the soft edge where there are, and laid down with the premultiplied "over". The reflection asks both of
+// the pixel it mirrors, and fades from where it starts on down.
 [shader("fragment")]
 float4 LayerCompositePS(LayerVSOutput input) : SV_Target
 {
-    float mask = MaskAt(SurfacePixel(input.Position.xy));
+    float2 here = SurfacePixel(input.Position.xy);
+    float2 source = lerp(here, SourceRegion.xy + input.Uv * SourceRegion.zw, Mirror.w);
+    float below = here.y - Mirror.y;
+    float fade = lerp(1.0, Mirror.x * step(0.0, below) * saturate(1.0 - below / max(Mirror.z, 1.0)), Mirror.w);
+    float mask = MaskAt(source) * SoftAt(source) * fade;
     return SourceTexture.SampleLevel(SourceSampler, input.Uv * LayerTexels.xy, 0) * (LayerAlpha * mask);
 }
 

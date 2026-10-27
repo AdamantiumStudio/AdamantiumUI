@@ -193,6 +193,68 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
         RenderDirty.MarkStructural(component);
     }
 
+    public static readonly AdamantiumProperty SoftEdgeProperty = AdamantiumProperty.Register(nameof(SoftEdge),
+        typeof(double), typeof(UIComponent),
+        new PropertyMetadata(0.0, PropertyMetadataOptions.AffectsRender, OnSoftEdgeChanged));
+
+    private static void OnSoftEdgeChanged(AdamantiumComponent d, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (d is not UIComponent component)
+        {
+            return;
+        }
+
+        var edge = component.GetValue<double>(SoftEdgeProperty);
+        var had = component._softEdge > 0;
+        component._softEdge = double.IsFinite(edge) && edge > 0 ? edge : 0;
+        component.ReconsiderLayer(had != component._softEdge > 0);
+    }
+
+    private void ReconsiderLayer(bool layerChanged)
+    {
+        if (layerChanged)
+        {
+            RenderDirty.MarkStructural(this);
+        }
+        else
+        {
+            InvalidateRender(false);
+        }
+    }
+
+    public static readonly AdamantiumProperty ReflectionProperty = AdamantiumProperty.Register(nameof(Reflection),
+        typeof(Reflection), typeof(UIComponent),
+        new PropertyMetadata(null, PropertyMetadataOptions.AffectsRender, OnReflectionChanged));
+
+    private static void OnReflectionChanged(AdamantiumComponent d, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (d is not UIComponent component)
+        {
+            return;
+        }
+
+        if (e.NewValue is Reflection reflection)
+        {
+            reflection.Changed += component.OnReflectionValuesChanged;
+            component.Follow(ReflectionProperty, () => reflection.Changed -= component.OnReflectionValuesChanged);
+        }
+        else
+        {
+            component.Follow(ReflectionProperty, null);
+        }
+
+        component._reflection = component.GetValue<Reflection>(ReflectionProperty);
+        component.OnReflectionValuesChanged(null, EventArgs.Empty);
+    }
+
+    private void OnReflectionValuesChanged(object sender, EventArgs e)
+    {
+        var shows = _reflection is { Shows: true };
+        var had = _reflectionShows;
+        _reflectionShows = shows;
+        ReconsiderLayer(had != shows);
+    }
+
     /// <summary>The clip's corner rounding when <see cref="ClipToBounds"/> is on. Unset takes the container's own corners, so
     /// a rounded Border clips the way it looks.</summary>
     public static readonly AdamantiumProperty ClipCornerRadiusProperty = AdamantiumProperty.Register(
@@ -987,6 +1049,9 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
     private bool _clipToBounds;
     private bool _isLayer;
     private Brush _opacityMask;
+    private double _softEdge;
+    private Reflection _reflection;
+    private bool _reflectionShows;
 
     /// <summary>Field mirror (see <see cref="ZIndex"/>): read by every layout SNAPSHOT and every draw command - ~10000 of
     /// each per frame on a tile grid.</summary>
@@ -1010,6 +1075,19 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
         set => SetValue(OpacityMaskProperty, value);
     }
 
+    /// <summary>See <see cref="IUIComponent.SoftEdge"/>.</summary>
+    public double SoftEdge
+    {
+        get => _softEdge;
+        set => SetValue(SoftEdgeProperty, value);
+    }
+
+    /// <summary>See <see cref="IUIComponent.Reflection"/>.</summary>
+    public Reflection Reflection
+    {
+        get => _reflection;
+        set => SetValue(ReflectionProperty, value);
+    }
     public Double Opacity
     {
         get => _opacity;   // field mirror (hot path: composed per drawn component); the setter still goes through the store

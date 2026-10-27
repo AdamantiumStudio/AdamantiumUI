@@ -13,4 +13,8 @@ internal readonly record struct LayerMask(
     Vector4F Alpha1,
     Vector4F Offsets0,
     Vector4F Offsets1,
-    Vector4F Params);
+    Vector4F Params,
+    Vector4F Soft,
+    Vector4F SoftRadii);
+
+internal readonly record struct LayerMirror(bool Shows, float Bottom, float Gap, float Length, float Opacity);

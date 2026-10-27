@@ -1,0 +1,60 @@
+using System;
+using Adamantium.UI.Core.RoutedEvents;
+
+namespace Adamantium.UI.Core.Media;
+
+/// <summary>An element's mirror image under its bottom edge, fading away downward, as a picture standing on glass. It
+/// mirrors what of the element is in view. Layout does not grow to fit it; leave room with <c>Margin</c> or a clipping
+/// ancestor cuts it.</summary>
+public sealed class Reflection : AdamantiumComponent
+{
+    public static readonly AdamantiumProperty IsEnabledProperty = AdamantiumProperty.Register(nameof(IsEnabled),
+        typeof(bool), typeof(Reflection), new PropertyMetadata(true, OnChanged));
+
+    public static readonly AdamantiumProperty SizeProperty = AdamantiumProperty.Register(nameof(Size),
+        typeof(double), typeof(Reflection), new PropertyMetadata(0.5, OnChanged));
+
+    public static readonly AdamantiumProperty DistanceProperty = AdamantiumProperty.Register(nameof(Distance),
+        typeof(double), typeof(Reflection), new PropertyMetadata(0.0, OnChanged));
+
+    public static readonly AdamantiumProperty OpacityProperty = AdamantiumProperty.Register(nameof(Opacity),
+        typeof(double), typeof(Reflection), new PropertyMetadata(0.5, OnChanged));
+
+    /// <summary>Switch the reflection off without losing its settings.</summary>
+    public bool IsEnabled
+    {
+        get => GetValue<bool>(IsEnabledProperty);
+        set => SetValue(IsEnabledProperty, value);
+    }
+
+    /// <summary>How much of the element the reflection shows before it has faded away, as a share of its height: 0.5
+    /// shows the lower half, mirrored; at most 1.</summary>
+    public double Size
+    {
+        get => GetValue<double>(SizeProperty);
+        set => SetValue(SizeProperty, value);
+    }
+
+    /// <summary>The gap between the element's bottom edge and the reflection, in pixels.</summary>
+    public double Distance
+    {
+        get => GetValue<double>(DistanceProperty);
+        set => SetValue(DistanceProperty, value);
+    }
+
+    /// <summary>How strong the reflection is where it starts, under the edge; it fades from there to nothing.</summary>
+    public double Opacity
+    {
+        get => GetValue<double>(OpacityProperty);
+        set => SetValue(OpacityProperty, value);
+    }
+
+    /// <summary>Whether it draws anything at all.</summary>
+    public bool Shows => IsEnabled && Size > 0 && Opacity > 0 && double.IsFinite(Size) && double.IsFinite(Distance);
+
+    /// <summary>Raised when any value changes, so the element wearing it can draw again.</summary>
+    public event EventHandler Changed;
+
+    private static void OnChanged(AdamantiumComponent d, AdamantiumPropertyChangedEventArgs e)
+        => (d as Reflection)?.Changed?.Invoke(d, EventArgs.Empty);
+}

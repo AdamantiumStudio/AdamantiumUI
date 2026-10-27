@@ -7,6 +7,18 @@ All packages share one version.
 
 ### Added
 
+- `UIComponent.SoftEdge`: the element and its subtree fade in from its outline over this many pixels, following its
+  rounded corners (`ClipRadii`) - a picture whose edges melt into the page. `UIComponent.Reflection` (`Reflection`:
+  `Size` as a share of the height, `Distance`, `Opacity`, `IsEnabled`): its mirror image under its bottom edge, fading
+  away downward, at most its own height. Both are the element's own, as `Shadow` and `Aura` are, drawn through its
+  layer as `OpacityMask` is - a reflection switched off costs none; layout does not grow for the reflection, and only
+  the element's own clip is not applied to it. The soft edge fades everything the element draws, its own shadow and
+  glow included; the reflection mirrors what of the element is in view.
+- `Image` clips by its own `CornerRadius` when `ClipToBounds` is on, as `Border` does, and a soft edge on it follows
+  those corners.
+- `Image.Brightness`, `Image.Contrast`, `Image.Saturation`: the picture's colors, each leaving it as it is at its
+  default; saturation 0 with a color `FilterBrush` recolors it in that color's shades. A plain picture only - an
+  animation, a drawing and a live surface are drawn as they are.
 - `NumericUpDown.Command`: a number the user puts in - a step, a scrub, the wheel, a typed number, automation's -
   runs the command, given the number: a ribbon's width box sets the width of the picture selected. A value set from
   outside or moved by the limits runs nothing. The focus stays in the box while it is stepped or typed in and goes back
