@@ -971,8 +971,15 @@ public partial class RenderCache
                     DrawOwnBandsUnder(device, group, groupIndex, layerEnd, fullScissor, ref scissorNarrowed);
                 }
 
-                BeginOffscreenLayer(device, layer, fullScissor, groupIndex, layerEnd, false);
-                _layerWalk.Push((layerEnd, layer));
+                BeginOffscreenLayer(device, layer, fullScissor, groupIndex, layerEnd, false, out var region);
+                var whole = DrawsWhole(layer);
+                if (whole)
+                {
+                    fullScissor = EnterWhole(device, region, fullScissor);
+                    scissorNarrowed = false;
+                }
+
+                _layerWalk.Push((layerEnd, layer, whole));
                 if (_recording)
                 {
                     RecordLayerMark(RenderOpKind.LayerBegin, layer, group.Order);
@@ -1905,13 +1912,13 @@ public partial class RenderCache
 
             while (cloneRun == null && _layerWalk.Count > 0 && groupIndex >= _layerWalk.Peek().End - 1)
             {
-                CloseOffscreenLayer(device, fullScissor, ref scissorNarrowed);
+                CloseOffscreenLayer(device, ref fullScissor, ref scissorNarrowed);
             }
         }
 
         while (_layerWalk.Count > 0)
         {
-            CloseOffscreenLayer(device, fullScissor, ref scissorNarrowed);
+            CloseOffscreenLayer(device, ref fullScissor, ref scissorNarrowed);
         }
 
         _cloneMatrix = null;   // a run that ended on the last group leaves it set otherwise
