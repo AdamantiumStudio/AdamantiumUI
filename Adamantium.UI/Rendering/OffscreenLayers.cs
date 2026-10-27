@@ -199,7 +199,8 @@ internal sealed class OffscreenLayers : IDisposable
         _composite.SourceRegion.SetValue(new Vector4F(region.Offset.X, region.Offset.Y, region.Extent.Width,
             region.Extent.Height));
         _composite.Mirror.SetValue(mirror.Shows
-            ? new Vector4F(mirror.Opacity, mirror.Bottom + mirror.Gap, Math.Max(mirror.Length, 1f), 1f)
+            ? new Vector4F(mirror.Opacity, mirror.Bottom + mirror.Gap, Math.Max(mirror.Length, 1f),
+                mirror.Bottom + mirror.Gap * 0.5f)
             : default);
         _composite.Soft.SetValue(mask.Soft);
         _composite.SoftRadii.SetValue(mask.SoftRadii);

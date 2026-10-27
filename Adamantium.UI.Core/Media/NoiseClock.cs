@@ -36,4 +36,15 @@ internal static class NoiseClock
     {
         if (_active > 0) _active--;
     }
+
+    /// <summary>Whether <see cref="Time"/> is moving: its ticker runs and the speed is not zero.</summary>
+    public static bool Advancing => _registered && Speed != 0;
+
+    /// <summary>The animation manager dropped every ticker, this one's too: start from nothing.</summary>
+    public static void Reset()
+    {
+        _active = 0;
+        _registered = false;
+        Speed = 1.0;
+    }
 }

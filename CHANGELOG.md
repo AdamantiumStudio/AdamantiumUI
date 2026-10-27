@@ -2235,6 +2235,12 @@ All packages share one version.
 
 ### Fixed
 
+- A living aura, an animated `NoiseBrush` and an animated `FractalBrush` froze in a window with a varying frame rate
+  (`RefreshRate` 0, the default) - their clock ran, but nothing asked for a frame. A frame that draws one now asks for
+  the next, in a window, a popup and an adorner layer alike; with nothing moving left, the frames stop.
+- A reflection cut off what the element draws below its edge - its glow, its shadow - in a hard line with square ends
+  wherever it started, worst with a `Distance`. The element now stands over a floor half its distance down: below the
+  floor its mirror image meets its own glow as a mirror would, fading from where the mirrored element begins.
 - Leaving a `NumericUpDown`, or pressing Enter in it, with its text as it was shown put the shown number in - 453.5433
   shown as 453.54 became 453.54. Text left as shown now puts nothing in.
 - A grid of labelled boxes in a ribbon's group showed to automation as a stand-in button that could do nothing, the

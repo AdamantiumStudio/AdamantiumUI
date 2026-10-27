@@ -359,6 +359,7 @@ internal abstract class BatchCollector<TItem> : BatchArena where TItem : struct
 
         var s = _segments[index];
         if (s.Count == 0) return;   // re-issued to nothing - nothing left to draw
+        if (!DrewMoving) DrewMoving = Moves((int)s.First, (int)s.Count);
         device.SetScissors(s.Scissor);
         BindSegment(index);
         DrawSegment(device, _ring[_current], s.Count, s.First, projection);
@@ -743,6 +744,13 @@ internal abstract class BatchCollector<TItem> : BatchArena where TItem : struct
 
     /// <summary>Hook: restore the per-segment state captured by <see cref="OnSegmentRecorded"/> before its draw. Base no-op.</summary>
     protected virtual void BindSegment(int index) { }
+
+    /// <summary>Whether a segment drawn since this was last cleared holds an instance that changes with time alone.</summary>
+    public bool DrewMoving { get; set; }
+
+    /// <summary>Hook: whether any of these instances changes with time alone, so its picture wants the next frame. Base:
+    /// none does.</summary>
+    protected virtual bool Moves(int first, int count) => false;
 
     // Does slot i already hold, in this copy, exactly what we baked? A blittable per-item bytewise compare (the items are
     // unmanaged Vector4F structs), SIMD-accelerated by SequenceEqual - cheap relative to the GPU upload it lets us skip.

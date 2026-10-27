@@ -110,6 +110,16 @@ internal sealed class FractalRectCollector : BrushSdfCollector<FractalRectItem>
         _orbitUploaded = false;
     }
 
+    protected override bool Moves(int first, int count)
+    {
+        foreach (ref readonly var item in Items.AsSpan(first, count))
+        {
+            if (item.Julia.Z > 0.5f) return true;
+        }
+
+        return false;
+    }
+
     // Feed the shared morph clock to the shader before drawing (only the fractal pass reads Time): a static fractal ignores
     // it; an Animate one drifts C by it. FractalClock advances only while an animating fractal is live, so this is 0 otherwise.
     protected override void DrawSegment(IGraphicsDevice device, Buffer<FractalRectItem> buffer, uint count, uint firstInstance, Matrix4x4F projection)

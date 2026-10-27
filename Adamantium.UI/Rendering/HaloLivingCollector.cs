@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Adamantium.Graphics;
 using Adamantium.Graphics.Core;
@@ -43,6 +44,17 @@ internal sealed class HaloLivingCollector : ShapeSdfCollector<HaloLivingItem>
     }
 
     protected override void BindSegment(int index) => _field = _segState[index];
+
+    // The reach wanders only while it flows: at Flow 0 the shader's phase is 0 whatever the clock says.
+    protected override bool Moves(int first, int count)
+    {
+        foreach (ref readonly var item in Items.AsSpan(first, count))
+        {
+            if (item.Field.Y > 0f && item.Field.Z != 0f) return true;
+        }
+
+        return false;
+    }
 
     public bool SameField(ITexture field) => field == null || _field == null || _field == field;
 

@@ -569,6 +569,25 @@ public partial class RenderCache
     /// <summary>After <see cref="PreRender"/>: a unit waits for a frame submitted elsewhere.</summary>
     internal bool AwaitsFrame { get; private set; }
 
+    /// <summary>Its last frame drew something that changes with time alone - a living aura, a flowing noise, a morphing
+    /// fractal - so the surface it draws on wants the next frame.</summary>
+    internal bool Moves { get; private set; }
+
+    private void ForgetMoving()
+    {
+        if (_haloLivingUnder != null) _haloLivingUnder.DrewMoving = false;
+        if (_haloLivingOver != null) _haloLivingOver.DrewMoving = false;
+        if (_patternBatch != null) _patternBatch.DrewMoving = false;
+        if (_fractalBatch != null) _fractalBatch.DrewMoving = false;
+        if (_instancedFill != null) _instancedFill.DrewMoving = false;
+    }
+
+    // Only while its clock moves: a stopped one draws the same picture again.
+    private bool DrewMoving() =>
+        (Core.Media.NoiseClock.Advancing && (_haloLivingUnder?.DrewMoving == true || _haloLivingOver?.DrewMoving == true
+                                  || _patternBatch?.DrewMoving == true || _instancedFill?.DrewMoving == true))
+        || (Core.Media.FractalClock.Advancing && _fractalBatch?.DrewMoving == true);
+
     /// <summary>Renders every cached unit with no scissor management. Used by GPU-free tests (no device).</summary>
     public void Render() => Render(null, default);
 
@@ -585,6 +604,7 @@ public partial class RenderCache
         LastRecordedReplay = RecordedReplay.Issued;
         DrawWalkMs = 0;
         _traceWhy = 0;
+        ForgetMoving();
         try
         {
             RenderCore(device, fullScissor);
@@ -592,6 +612,7 @@ public partial class RenderCache
         finally
         {
             DrawReplayed = LastFrameReplayed;
+            Moves = DrewMoving();
 
             // Swept here, after the frame is finished, and on replayed frames too, which RenderCore returns early from.
             if (_leftTheOrder.Count > 0 && device != null)

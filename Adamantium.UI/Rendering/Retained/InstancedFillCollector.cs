@@ -942,6 +942,20 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
         if (logicalBounds.Bottom > _fB) _fB = logicalBounds.Bottom;
     }
 
+    /// <summary>Whether a group drawn since this was last cleared holds a noise that flows with time alone.</summary>
+    public bool DrewMoving { get; set; }
+
+    // A flowing noise carries its animate flag in the sign of its octaves; a pattern's pack means something else there.
+    private static bool Flows(ReadOnlySpan<PatternGeometryInstance> items)
+    {
+        foreach (ref readonly var item in items)
+        {
+            if (item.Params.Y >= PatternBrushRecord.NoiseBase && item.Noise.X < 0f) return true;
+        }
+
+        return false;
+    }
+
     /// <summary>Draw the pending clip group: each key's new instances as one instanced call (fills), then the collected
     /// units' fringe/stroke ON TOP (fill-under-fringe). Records the group into a pooled <see cref="FlushRecord"/> and
     /// draws THROUGH it (so the immediate draw and a later clean-frame replay share one path). Returns the record index
@@ -1206,6 +1220,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
             _device.SetScissors(rec.Scissor);
             foreach (var (seg, first, count, kind) in rec.PatKeys)
             {
+                if (!DrewMoving) DrewMoving = Flows(seg.PatItems.AsSpan((int)first, (int)count));
                 brush.InstancesAddress.SetValue(seg.PatGpu.GetDeviceAddress() + (ulong)(first * PatInstanceStride));
                 _device.SetVertexBuffer(seg.VtxBuffer);
                 _device.PrimitiveTopology = seg.Topology;

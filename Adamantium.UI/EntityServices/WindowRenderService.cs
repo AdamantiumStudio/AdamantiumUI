@@ -324,6 +324,23 @@ public class WindowRenderService : UiRenderService
         var t0 = Stopwatch.GetTimestamp();
         DrawProcessors(appTime);
         RuntimeStats.LastProcessorsMs = Stopwatch.GetElapsedTime(t0).TotalMilliseconds;
+        if (StageMoves())
+        {
+            windowRenderer?.RequestFrame();
+        }
+    }
+
+    private bool StageMoves()
+    {
+        foreach (var processor in Processors)
+        {
+            if (processor is IRecordingStage { Moves: true })
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public override void EndDraw()
