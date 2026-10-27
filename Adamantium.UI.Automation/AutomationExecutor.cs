@@ -32,8 +32,9 @@ public sealed class AutomationExecutor
     // The option of a touch or pen tap held past the holding time before it lifts: a long press.
     internal const string HoldGesture = "hold";
 
-    // A little past the holding time, so the hold has certainly started before the contact lifts.
     private static readonly TimeSpan HoldMargin = TimeSpan.FromMilliseconds(150);
+
+    private static readonly TimeSpan HoldConfirmation = TimeSpan.FromSeconds(5);
 
     private const int MostFingers = 10;
     private const char LineSeparator = (char)0x2028;
@@ -240,7 +241,27 @@ public sealed class AutomationExecutor
 
         try
         {
-            await Task.Delay(Gestures.HoldingTime + HoldMargin);
+            await Task.Delay(Gestures.HoldingTime);
+            var limit = timeout < HoldConfirmation ? timeout : HoldConfirmation;
+            Stopwatch watch = null;
+            while (true)
+            {
+                await _host.WaitForIdleAsync(timeout);
+                watch ??= Stopwatch.StartNew();
+                if (!await _host.RunOnLoopAsync(() => Waiting(contacts), timeout))
+                {
+                    break;
+                }
+
+                if (watch.Elapsed >= limit)
+                {
+                    throw new AutomationException(
+                        $"The contacts were held {Gestures.HoldingTime.TotalMilliseconds:0} ms and more, but the hold never started.");
+                }
+
+                await Task.Delay(WaitStep);
+            }
+
             await _host.WaitForIdleAsync(timeout);
         }
         catch (Exception)
@@ -259,6 +280,19 @@ public sealed class AutomationExecutor
         await Lift();
 
         return await SettledAsync(request, mark, timeout);
+    }
+
+    private static bool Waiting(IReadOnlyList<Contact> contacts)
+    {
+        foreach (var contact in contacts)
+        {
+            if (PointerDevice.Current.Holding.IsWaiting(contact.Id))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private (ContactPath[] Paths, Contact[] Contacts) Contacts(AutomationRequest request)

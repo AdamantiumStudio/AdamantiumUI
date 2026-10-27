@@ -2241,6 +2241,10 @@ All packages share one version.
 
 ### Fixed
 
+- Automation: a touch or pen hold could lift before the application had started the hold - its timer's tick
+  reaches the loop on its own queue - and became a tap, a button clicked or a context menu not opened. A hold now
+  lifts once the application holds every contact it means to, and settles before the lift; one that never starts
+  is an error, not a tap.
 - An element drawn through a layer of its own - `IsLayer`, `OpacityMask`, `SoftEdge`, `Reflection` - vanished
   whenever the whole window was walked again for something else (a window maximized, a tab added) while it had not
   changed itself: the walk took its untouched drawing for no drawing at all. With nothing else changing, it stayed gone.
