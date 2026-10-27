@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Adamantium.Graphics.Core;
@@ -165,7 +165,8 @@ public partial class RenderCache
 
     // Collect this unit's LIVING aura - the band whose reach wanders. Its own collector and its own pass: a still band
     // must not pay for the noise, so the two are never mixed into one draw.
-    private bool CollectLivingHalo(IGraphicsDevice device, IRenderUnit unit, Matrix4x4F wt, Rect2D scissor, bool inner)
+    private bool CollectLivingHalo(IGraphicsDevice device, IRenderUnit unit, Matrix4x4F wt, Rect2D scissor, bool inner,
+        double underWidth = 0)
     {
         if (unit.RenderData.LivingHalo is not { } band || band.Inner != inner) return false;
         if (!TryHaloShape(unit, out var shape, out var corners, out var kind, out var field, out var fieldRange)) return false;
@@ -185,7 +186,8 @@ public partial class RenderCache
         // OWN alpha only - the same split every batched fill makes.
         FadeBySlot(unit);
         if (!batch.TryAdd(band, shape, corners, kind, bakeWorld, unit.RenderData.Opacity, scissor, bounds,
-                band.Color, slot, field, fieldRange, RoundedClipSlot(unit.Component, _frameScissor), unit.FadeSlot))
+                band.Color, slot, field, fieldRange, RoundedClipSlot(unit.Component, _frameScissor), unit.FadeSlot,
+                underWidth))
         {
             return false;
         }
@@ -201,7 +203,8 @@ public partial class RenderCache
     // Collect this unit's soft bands (aura / shadow) into the halo batch. The SHAPE comes from the payload - only a rect
     // or a full ellipse has a signed distance to read, and arbitrary geometry is a separate story (a distance field baked
     // per mesh key). A shape that has none simply wears no band rather than getting a wrong one.
-    private bool CollectHalo(IGraphicsDevice device, IRenderUnit unit, Matrix4x4F wt, Rect2D scissor, bool inner)
+    private bool CollectHalo(IGraphicsDevice device, IRenderUnit unit, Matrix4x4F wt, Rect2D scissor, bool inner,
+        double underWidth = 0)
     {
         var bands = unit.RenderData.Halo;
         if (!HaloRectCollector.HasSide(bands, inner)) return false;
@@ -230,7 +233,7 @@ public partial class RenderCache
         FadeBySlot(unit);   // the chain comes from the slot now - the color carries the element's own alpha only
         if (!batch.TryAdd(bands, inner, shape, corners, kind, bakeWorld,
                 unit.RenderData.Opacity, scissor, haloBounds, slot, field, fieldRange,
-                RoundedClipSlot(unit.Component, _frameScissor), unit.FadeSlot))
+                RoundedClipSlot(unit.Component, _frameScissor), unit.FadeSlot, underWidth))
         {
             return false;
         }
@@ -836,6 +839,7 @@ public partial class RenderCache
 
         removed += ReleaseSlotsOf(_clipOwners, Departed, ReleaseClipSlot);
         removed += ReleaseSlotsOf(_fadeOwners, Departed, ReleaseFadeSlot);
+        removed += ReleaseSlotsOf(_bandOwners, Departed, ReleaseBandSlot);
 
         // ...and layout snapshots of discarded template parts, which leave through teardown, not through the packet.
         // Tested by the discard mark: a destroyed part's RenderParent chain can still reach a live ancestor.

@@ -240,11 +240,19 @@ internal sealed class TransformTable
         _cpu[slot].Params.Y = -1f;
         _version[slot]++;
 
+        // ...and the copy this frame draws from: it was brought up to date before the slot was handed out, so a draw this
+        // frame would read the stranger's alpha there - none, at worst - until the next frame caught up.
+        if (_gpu != null && slot < _gpuCapacity) Upload(slot);
+
         _opacitySlotByOwner[(ownerId, key)] = slot;
         return slot;
     }
 
     public bool TryGetOpacitySlot(Guid ownerId, out int slot) => _opacitySlotByOwner.TryGetValue((ownerId, -1), out slot);
+
+    /// <summary>The alpha the copy this frame draws from holds for <paramref name="slot"/>, read back - for tests.</summary>
+    internal float DrawnAlphaAt(int slot) =>
+        _gpu == null || slot >= _gpuCapacity ? float.NaN : _gpu[_current].GetData<NodeSlot>()[slot].Params.X;
 
     /// <summary>The alpha a slot carries RIGHT NOW, chain already folded in - the same number the shaders read. For the
     /// draws that cannot read the table themselves: a per-unit overlay (a stroke, a fringe) is re-issued by the CPU on

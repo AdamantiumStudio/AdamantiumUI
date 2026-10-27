@@ -18,6 +18,7 @@ internal sealed class OffscreenLayers : IDisposable
     private readonly Dictionary<object, CachedLayer> _cached = new();
     private readonly List<object> _idle = [];
     private LayerCompositeEffect _composite;
+    private LayerSoftEdgeEffect _soft;
     private long _frame;
 
     /// <summary>How many layers this frame drew their subtree into their texture.</summary>
@@ -47,7 +48,14 @@ internal sealed class OffscreenLayers : IDisposable
 
         foreach (var owner in _idle)
         {
-            Release(gd, _cached[owner].Ring);
+            var idle = _cached[owner];
+            Release(gd, idle.Ring);
+            if (idle.SoftRing != null)
+            {
+                Release(gd, idle.SoftRing);
+                Release(gd, new[] { idle.SoftScratch });
+            }
+
             _cached.Remove(owner);
         }
 
@@ -117,11 +125,13 @@ internal sealed class OffscreenLayers : IDisposable
     }
 
     /// <summary>Closes the innermost layer, goes back to the target it was opened over and lays the layer down there with
-    /// <paramref name="alpha"/> and <paramref name="mask"/>, cut by <paramref name="scissor"/> (device pixels of the
-    /// window); and again, mirrored under the element and cut by <paramref name="mirrorScissor"/>, where
-    /// <paramref name="mirror"/> shows.</summary>
-    public void End(IGraphicsDevice device, float alpha, Rect2D scissor, in LayerMask mask, in LayerMirror mirror,
-        Rect2D mirrorScissor)
+    /// <paramref name="alpha"/> and <paramref name="mask"/>, faded <paramref name="soft"/> device pixels in from what it
+    /// drew, cut by <paramref name="scissor"/> (device pixels of the window); and its reflection, cut by
+    /// <paramref name="mirrorScissor"/>, where <paramref name="mirror"/> shows. <paramref name="softCut"/> marks the sides
+    /// (left, top, right, bottom) where its ancestors cut what it drew short: the drawing goes on past them, so nothing
+    /// fades there.</summary>
+    public void End(IGraphicsDevice device, float alpha, Rect2D scissor, in LayerMask mask, float soft, Vector4F softCut,
+        in LayerMirror mirror, Rect2D mirrorScissor)
     {
         if (device is not GraphicsDevice gd || _open.Count == 0)
         {
@@ -134,42 +144,177 @@ internal sealed class OffscreenLayers : IDisposable
             return;
         }
 
+        var entry = open.Entry;
+        var blur = soft > 0f && (!open.Reused || entry.Soft != soft || entry.SoftRing == null);
+        if (!open.Reused || blur)
+        {
+            // Back to the target the layer was opened over: a reused layer never left it, so it is the current one.
+            var target = open.Reused ? gd.CurrentRenderTarget : open.Target;
+            var depth = open.Reused ? gd.CurrentDepthStencilBuffer : open.Depth;
+            var clear = open.Reused ? gd.ClearColor : open.Clear;
+            var samples = open.Reused ? gd.MSAALevel : open.Samples;
+            var origin = open.Reused ? gd.TargetOrigin : open.Origin;
+
+            gd.SuspendRendering();
+            if (!open.Reused)
+            {
+                gd.InsertImageMemoryBarrier(gd.CurrentCommandBuffer, open.Color,
+                    AccessFlagBits2.ColorAttachmentWriteBit, AccessFlagBits2.ShaderReadBit,
+                    ImageLayout.ColorAttachmentOptimal, ImageLayout.ShaderReadOnlyOptimal,
+                    PipelineStageFlagBits2.ColorAttachmentOutputBit, PipelineStageFlagBits2.FragmentShaderBit);
+            }
+
+            if (blur)
+            {
+                BlurCoverage(gd, open, soft, softCut);
+            }
+
+            gd.SetRenderTargets(target);
+            gd.SetDepthBuffer(depth);
+            gd.ClearColor = clear;
+            gd.MSAALevel = samples;
+            gd.TargetOrigin = origin;
+            gd.ResumeRendering();
+        }
+
         if (!open.Reused)
         {
-            gd.SuspendRendering();
-            gd.InsertImageMemoryBarrier(gd.CurrentCommandBuffer, open.Color,
-                AccessFlagBits2.ColorAttachmentWriteBit, AccessFlagBits2.ShaderReadBit,
-                ImageLayout.ColorAttachmentOptimal, ImageLayout.ShaderReadOnlyOptimal,
-                PipelineStageFlagBits2.ColorAttachmentOutputBit, PipelineStageFlagBits2.FragmentShaderBit);
-
-            gd.SetRenderTargets(open.Target);
-            gd.SetDepthBuffer(open.Depth);
-            gd.ClearColor = open.Clear;
-            gd.MSAALevel = open.Samples;
-            gd.TargetOrigin = open.Origin;
-            gd.ResumeRendering();
-
-            var entry = open.Entry;
             entry.Latest = open.Slot;
             entry.Print = open.Print;
             entry.Valid = open.Reusable;
             entry.Width = open.Region.Extent.Width;
             entry.Height = open.Region.Extent.Height;
+            if (!blur)
+            {
+                entry.Soft = 0f;
+            }
         }
 
+        if (soft <= 0f && entry.SoftRing != null)
+        {
+            ReleaseSoft(gd, entry);
+        }
+
+        var softTexture = soft > 0f ? entry.SoftRing?[open.Slot] : null;
         if (alpha > 0f)
         {
             if (mirror.Shows)
             {
-                Composite(gd, open, alpha, mirrorScissor, mask, mirror);
+                Composite(gd, open, alpha, mirrorScissor, mask, softTexture, mirror, 2f);
             }
 
-            Composite(gd, open, alpha, scissor, mask, default);
+            Composite(gd, open, alpha, scissor, mask, softTexture, mirror, mirror.Shows ? 1f : 0f);
         }
     }
 
+    // How deep inside what the layer drew each texel lies: its coverage blurred across, then down, into the slot's own
+    // texture beside the color, so a reused layer keeps it.
+    private void BlurCoverage(GraphicsDevice gd, OpenOffscreenLayer open, float soft, Vector4F cut)
+    {
+        var entry = open.Entry;
+        EnsureSoft(gd, entry);
+        _soft ??= new LayerSoftEdgeEffect(gd);
+
+        var viewport = gd.CurrentViewports.Length > 0 ? gd.CurrentViewports[0] : default;
+        var scissor = gd.CurrentScissors.Length > 0 ? gd.CurrentScissors[0] : default;
+        var origin = gd.TargetOrigin;
+        var blend = gd.ColorBlendEnabled;
+        var region = open.Region;
+        var area = new Rect2D { Offset = new Offset2D(), Extent = region.Extent };
+        var texelX = 1f / open.TextureWidth;
+        var texelY = 1f / open.TextureHeight;
+        var limit = new Vector4F(region.Extent.Width * texelX, region.Extent.Height * texelY, texelX, texelY);
+        var sigma = soft * 0.5f;
+
+        BlurPass(gd, open.Color, entry.SoftScratch, area, new Vector4F(texelX, 0f, sigma, 0f), limit, cut);
+        BlurPass(gd, entry.SoftScratch, entry.SoftRing[open.Slot], area, new Vector4F(0f, texelY, sigma, 1f), limit, cut);
+        entry.Soft = soft;
+
+        gd.TargetOrigin = origin;
+        gd.SetViewports(viewport);
+        gd.SetScissors(scissor);
+        gd.ColorBlendEnabled = blend;
+    }
+
+    private void BlurPass(GraphicsDevice gd, IRenderTarget source, IRenderTarget target, Rect2D area, Vector4F axis,
+        Vector4F limit, Vector4F cut)
+    {
+        var commandBuffer = gd.CurrentCommandBuffer;
+        gd.InsertImageMemoryBarrier(commandBuffer, target,
+            AccessFlagBits2.ShaderReadBit, AccessFlagBits2.ColorAttachmentWriteBit,
+            ImageLayout.Undefined, ImageLayout.ColorAttachmentOptimal,
+            PipelineStageFlagBits2.FragmentShaderBit, PipelineStageFlagBits2.ColorAttachmentOutputBit);
+        gd.SetRenderTargets(target);
+        gd.SetDepthBuffer(null);
+        gd.ClearColor = Colors.Transparent;
+        gd.MSAALevel = MSAALevel.None;
+        gd.BeginRendering(commandBuffer);
+        gd.TargetOrigin = default;
+        gd.SetViewports(new Viewport { Width = area.Extent.Width, Height = area.Extent.Height, MaxDepth = 1.0f });
+        gd.SetScissors(area);
+        gd.ColorBlendEnabled = false;
+        gd.DepthTestEnabled = false;
+        gd.DepthWriteEnable = false;
+        gd.PrimitiveTopology = PrimitiveTopology.TriangleList;
+        gd.VertexType = null;
+
+        _soft.BlurAxis.SetValue(axis);
+        _soft.BlurLimit.SetValue(limit);
+        _soft.BlurCut.SetValue(cut);
+        _soft.SourceTexture.SetResource(source);
+        _soft.SourceSampler.SetResource(SamplerStates.LinearClampToEdge);
+        _soft.LayerSoftEdgeBlurPass.Apply();
+        gd.Draw(3, 1);
+        gd.SuspendRendering();
+
+        gd.InsertImageMemoryBarrier(commandBuffer, target,
+            AccessFlagBits2.ColorAttachmentWriteBit, AccessFlagBits2.ShaderReadBit,
+            ImageLayout.ColorAttachmentOptimal, ImageLayout.ShaderReadOnlyOptimal,
+            PipelineStageFlagBits2.ColorAttachmentOutputBit, PipelineStageFlagBits2.FragmentShaderBit);
+    }
+
+    private static void EnsureSoft(GraphicsDevice gd, CachedLayer entry)
+    {
+        if (entry.SoftRing != null && entry.SoftRing.Length == entry.Ring.Length && entry.SoftWidth == entry.TextureWidth
+            && entry.SoftHeight == entry.TextureHeight)
+        {
+            return;
+        }
+
+        if (entry.SoftRing != null)
+        {
+            ReleaseSoft(gd, entry);
+        }
+
+        var format = entry.Ring[0].SurfaceFormat;
+        entry.SoftWidth = entry.TextureWidth;
+        entry.SoftHeight = entry.TextureHeight;
+        entry.SoftRing = new IRenderTarget[entry.Ring.Length];
+        for (var i = 0; i < entry.SoftRing.Length; i++)
+        {
+            entry.SoftRing[i] = SoftTarget(gd, entry, format, $"LayerSoft:{i}");
+        }
+
+        entry.SoftScratch = SoftTarget(gd, entry, format, "LayerSoftScratch");
+        entry.Soft = 0f;
+    }
+
+    private static void ReleaseSoft(GraphicsDevice gd, CachedLayer entry)
+    {
+        Release(gd, entry.SoftRing);
+        Release(gd, new[] { entry.SoftScratch });
+        entry.SoftRing = null;
+        entry.SoftScratch = null;
+        entry.Soft = 0f;
+    }
+
+    private static IRenderTarget SoftTarget(GraphicsDevice gd, CachedLayer entry, Adamantium.Imaging.SurfaceFormat format,
+        string name) =>
+        gd.CreateRenderTarget(entry.TextureWidth, entry.TextureHeight, MSAALevel.None, format,
+            ImageUsageFlagBits.SampledBit, ImageLayout.ShaderReadOnlyOptimal, name);
+
     private void Composite(GraphicsDevice gd, OpenOffscreenLayer open, float alpha, Rect2D scissor, in LayerMask mask,
-        in LayerMirror mirror)
+        IRenderTarget soft, in LayerMirror mirror, float role)
     {
         if (gd.CurrentViewports.Length == 0)
         {
@@ -191,19 +336,23 @@ internal sealed class OffscreenLayers : IDisposable
         gd.PrimitiveTopology = PrimitiveTopology.TriangleStrip;
         gd.VertexType = null;
 
-        var top = mirror.Shows
-            ? 2f * mirror.Bottom + mirror.Gap - (region.Offset.Y + region.Extent.Height)
-            : region.Offset.Y;
-        _composite.LayerBox.SetValue(new Vector4F(region.Offset.X - viewport.X, top - viewport.Y,
+        // The mirrored layer: flipped about the floor halfway down the gap, moved sideways by its own offset.
+        var floor = mirror.Bottom + mirror.OffsetY * 0.5f;
+        var mirroredLeft = region.Offset.X + mirror.OffsetX;
+        var mirroredTop = 2f * floor - (region.Offset.Y + region.Extent.Height);
+        var left = role > 1.5f ? mirroredLeft : region.Offset.X;
+        var top = role > 1.5f ? mirroredTop : region.Offset.Y;
+        _composite.LayerBox.SetValue(new Vector4F(left - viewport.X, top - viewport.Y,
             region.Extent.Width, region.Extent.Height));
         _composite.SourceRegion.SetValue(new Vector4F(region.Offset.X, region.Offset.Y, region.Extent.Width,
             region.Extent.Height));
-        _composite.Mirror.SetValue(mirror.Shows
-            ? new Vector4F(mirror.Opacity, mirror.Bottom + mirror.Gap, Math.Max(mirror.Length, 1f),
-                mirror.Bottom + mirror.Gap * 0.5f)
-            : default);
-        _composite.Soft.SetValue(mask.Soft);
-        _composite.SoftRadii.SetValue(mask.SoftRadii);
+        var ends = mirror.Bottom + mirror.OffsetY + mirror.Length;
+        _composite.Mirror.SetValue(new Vector4F(mirror.Opacity, mirror.Bottom + mirror.OffsetY, ends, floor));
+        _composite.MirrorFade.SetValue(new Vector4F(mirror.FadeLength, 0f, 0f, role));
+        _composite.MirrorQuad.SetValue(new Vector4F(mirroredLeft, mirroredLeft + region.Extent.Width,
+            mirroredTop + region.Extent.Height, Math.Abs(mirror.OffsetX) * 0.5f));
+        _composite.SoftOn.SetValue(soft != null ? 1f : 0f);
+        _composite.SoftTexture.SetResource(soft ?? open.Color);
         _composite.LayerTexels.SetValue(new Vector4F(
             region.Extent.Width / (float)open.TextureWidth, region.Extent.Height / (float)open.TextureHeight, 0, 0));
         _composite.LayerAlpha.SetValue(alpha);
@@ -308,11 +457,20 @@ internal sealed class OffscreenLayers : IDisposable
             {
                 (color as IDisposable)?.Dispose();
             }
+
+            foreach (var soft in entry.SoftRing ?? [])
+            {
+                (soft as IDisposable)?.Dispose();
+            }
+
+            (entry.SoftScratch as IDisposable)?.Dispose();
         }
 
         _levels.Clear();
         _cached.Clear();
         _composite?.Dispose();
         _composite = null;
+        _soft?.Dispose();
+        _soft = null;
     }
 }

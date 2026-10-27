@@ -104,7 +104,7 @@ internal sealed class HaloRectCollector : ShapeSdfCollector<HaloRectItem>
     /// the shape and the caller falls back to drawing nothing rather than something wrong.</summary>
     public bool TryAdd(HaloBand[] bands, bool inner, Rect destinationRect, ProceduralGeometry.CornerRadius corners, HaloShape shape,
         Matrix4x4F world, double opacity, Rect2D scissor, Rect logicalBounds, int transformSlot = 0,
-        ITexture field = null, double fieldRange = 0, int clipSlot = -1, int fadeSlot = -1)
+        ITexture field = null, double fieldRange = 0, int clipSlot = -1, int fadeSlot = -1, double underWidth = 0)
     {
         if (bands == null || bands.Length == 0) return false;
 
@@ -119,7 +119,7 @@ internal sealed class HaloRectCollector : ShapeSdfCollector<HaloRectItem>
 
         LastFirst = Count;
         var added = BakeInto(Items.AsSpan(Count, bands.Length), bands, inner, destinationRect, corners, shape, world,
-            opacity, transformSlot, fieldRange, clipSlot, fadeSlot);
+            opacity, transformSlot, fieldRange, clipSlot, fadeSlot, underWidth);
         if (added == 0) return false;
 
         Count += added;
@@ -128,6 +128,10 @@ internal sealed class HaloRectCollector : ShapeSdfCollector<HaloRectItem>
         MarkPending(scissor, logicalBounds);
         return true;
     }
+
+    /// <summary>Which side of the outline a band is drawn on, as the shader reads it: 1 inside; 0 outside; -1 outside and
+    /// <paramref name="underWidth"/> under the shape as well, for an element whose own edge fades into it.</summary>
+    public static float Side(bool inner, double underWidth) => inner ? 1f : underWidth > 0 ? -1f : 0f;
 
     /// <summary>Where the last <see cref="TryAdd"/> put its bands, so a patch can re-bake them in place instead of
     /// waiting for the next walk to write the arena again.</summary>
@@ -141,7 +145,7 @@ internal sealed class HaloRectCollector : ShapeSdfCollector<HaloRectItem>
     /// </summary>
     public static int BakeInto(Span<HaloRectItem> dst, HaloBand[] bands, bool inner, Rect destinationRect,
         ProceduralGeometry.CornerRadius corners, HaloShape shape, Matrix4x4F world, double opacity,
-        int transformSlot, double fieldRange, int clipSlot = -1, int fadeSlot = -1)
+        int transformSlot, double fieldRange, int clipSlot = -1, int fadeSlot = -1, double underWidth = 0)
     {
         // The bake goes into the instance and the slot applies on top, like every fill family; in slot units, as the
         // band fields are.
@@ -162,13 +166,14 @@ internal sealed class HaloRectCollector : ShapeSdfCollector<HaloRectItem>
             {
                 Bounds = new Vector4F((float)(destinationRect.X * sx + tx), (float)(destinationRect.Y * sy + ty),
                     (float)(destinationRect.Width * sx), (float)(destinationRect.Height * sy)),
-                Params = new Vector4F(RectBatchCollector.MaxOf(radii), transformSlot, (float)shape, band.Inner ? 1f : 0f),
+                Params = new Vector4F(RectBatchCollector.MaxOf(radii), transformSlot, (float)shape,
+                    Side(band.Inner, underWidth)),
                 Radii = radii,
                 Band = new Vector4F(band.Offset.X * iso, band.Offset.Y * iso, band.Spread * iso, band.Softness * iso),
                 Color = new Color(color),
                 // .y = the rounded clip's slot, .z = the opacity slot (-1 = none for either): a band is cut - and
                 // faded - by an ancestor exactly like the fill it sits under.
-                Field = new Vector4F((float)fieldRange * iso, clipSlot, fadeSlot, 0)
+                Field = new Vector4F((float)fieldRange * iso, clipSlot, fadeSlot, (float)(underWidth * iso))
             };
         }
 

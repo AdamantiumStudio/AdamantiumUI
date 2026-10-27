@@ -194,7 +194,7 @@
     <Phrase Key="SoftEdge" Text="МЯГКИЕ КРАЯ — элемент тает к своему контуру"/>
     <Phrase Key="ReflectionOn" Text="ОТРАЖЕНИЕ — как на стекле"/>
     <Phrase Key="ReflectionSize" Text="Размер — какая доля высоты отражается"/>
-    <Phrase Key="ReflectionDistance" Text="Расстояние от нижнего края"/>
+    <Phrase Key="ReflectionFade" Text="Затухание — какая доля видимого отражения тает к его концу"/>
     <Phrase Key="ReflectionOpacity" Text="Непрозрачность у края"/>
 
     <!-- The members of every enum a stand offers, said by their names. -->

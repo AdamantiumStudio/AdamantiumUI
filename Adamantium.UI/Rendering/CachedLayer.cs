@@ -13,4 +13,11 @@ internal sealed class CachedLayer
     public uint Width;
     public uint Height;
     public long LastUsed;
+
+    // Soft edges: a slot's blurred coverage beside its color, the pass between, and the width the latest was blurred at.
+    public IRenderTarget[] SoftRing;
+    public IRenderTarget SoftScratch;
+    public uint SoftWidth;
+    public uint SoftHeight;
+    public float Soft;
 }

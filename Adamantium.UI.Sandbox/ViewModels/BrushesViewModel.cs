@@ -790,12 +790,16 @@ public partial class BrushesViewModel : TabPageViewModel
     [Bindable] private double _softEdge;
     [Bindable] private bool _reflectionOn;
     [Bindable] private double _reflectionSize = 0.5;
-    [Bindable] private double _reflectionDistance;
+    [Bindable] private double _reflectionFade = 1;
+    [Bindable] private double _reflectionOffsetX;
+    [Bindable] private double _reflectionOffsetY;
     [Bindable] private double _reflectionOpacity = 0.5;
 
     partial void OnReflectionOnChanged(bool value) => LiveReflection.IsEnabled = value;
     partial void OnReflectionSizeChanged(double value) => LiveReflection.Size = value;
-    partial void OnReflectionDistanceChanged(double value) => LiveReflection.Distance = value;
+    partial void OnReflectionFadeChanged(double value) => LiveReflection.Fade = value;
+    partial void OnReflectionOffsetXChanged(double value) => LiveReflection.OffsetX = value;
+    partial void OnReflectionOffsetYChanged(double value) => LiveReflection.OffsetY = value;
     partial void OnReflectionOpacityChanged(double value) => LiveReflection.Opacity = value;
 
     /// <summary>The preview slot every "paint it on a shape" stand draws into. One number, in one place: the stands were

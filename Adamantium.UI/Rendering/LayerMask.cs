@@ -13,8 +13,10 @@ internal readonly record struct LayerMask(
     Vector4F Alpha1,
     Vector4F Offsets0,
     Vector4F Offsets1,
-    Vector4F Params,
-    Vector4F Soft,
-    Vector4F SoftRadii);
+    Vector4F Params);
 
-internal readonly record struct LayerMirror(bool Shows, float Bottom, float Gap, float Length, float Opacity);
+/// <summary>A reflection in window device pixels: mirrored about the floor halfway down <see cref="OffsetY"/> under
+/// <see cref="Bottom"/>, moved <see cref="OffsetX"/> sideways, showing <see cref="Length"/> rows of which the last
+/// <see cref="FadeLength"/> fade away.</summary>
+internal readonly record struct LayerMirror(bool Shows, float Bottom, float OffsetX, float OffsetY, float Length,
+    float FadeLength, float Opacity);

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using Adamantium.Graphics.Core;
@@ -939,6 +939,7 @@ public partial class RenderCache
         var cloneIndex = 0;
         ControlGroup cloneHost = null;
         var recordingBeforeClones = _recording;
+        _bandsDrawnUnder = null;
 
         for (var groupIndex = 0; groupIndex < _groups.Count; groupIndex++)
         {
@@ -965,12 +966,25 @@ public partial class RenderCache
                 var layer = group.Component;
                 var layerEnd = CloneSubtreeEnd(groupIndex);
                 FlushBatches(device, fullScissor, ref scissorNarrowed);
+                if (DrawsOwnBandsUnder(layer))
+                {
+                    DrawOwnBandsUnder(device, group, fullScissor, ref scissorNarrowed);
+                }
+                else if (_bandOwners.Remove(layer))
+                {
+                    ReleaseBandSlot(layer);
+                }
+
                 BeginOffscreenLayer(device, layer, fullScissor, groupIndex, layerEnd, false);
                 _layerWalk.Push((layerEnd, layer));
                 if (_recording)
                 {
                     RecordLayerMark(RenderOpKind.LayerBegin, layer, group.Order);
                 }
+            }
+            else if (_bandOwners.Count > 0 && _bandOwners.Remove(group.Component))
+            {
+                ReleaseBandSlot(group.Component);
             }
 
             foreach (var unit in group.Units)
@@ -1077,12 +1091,14 @@ public partial class RenderCache
                     FlushBatches(device, fullScissor, ref scissorNarrowed);
                 }
                 // Both sides are collected HERE, before the fill - only their FLUSH positions differ, and the flush is
-                // what decides paint order. Collecting the inner one later would mean finding this unit again.
-                var under = CollectHalo(device, unit, wt, scissor, inner: false);
+                // what decides paint order. Collecting the inner one later would mean finding this unit again. The outer
+                // ones of a soft-edged layer went down under it already.
+                var drawnUnder = ReferenceEquals(group, _bandsDrawnUnder);
+                var under = !drawnUnder && CollectHalo(device, unit, wt, scissor, inner: false);
                 var over = CollectHalo(device, unit, wt, scissor, inner: true);
-                under |= CollectLivingHalo(device, unit, wt, scissor, inner: false);
+                under |= !drawnUnder && CollectLivingHalo(device, unit, wt, scissor, inner: false);
                 over |= CollectLivingHalo(device, unit, wt, scissor, inner: true);
-                if ((under || over) && _recording)
+                if ((under || over || drawnUnder) && _recording)
                 {
                     group.NotBatchable("halo");   // a band is not a rect slot; the fast-path patch can't reproduce it
                 }
@@ -2126,6 +2142,11 @@ public partial class RenderCache
 
         if (OpensLayer(owner))
         {
+            if (_bandOwners.TryGetValue(owner, out var bands))
+            {
+                _transformTable.SetAlpha(device, bands, entry.Alpha);
+            }
+
             entry.MarkApplied();
         }
         else
@@ -2838,28 +2859,34 @@ public partial class RenderCache
         var opacity = u.RenderData.Opacity;
         var haloClip = RoundedClipSlot(u.Component, _frameScissor);   // the patch writes what the walk writes
         var haloFade = u.FadeSlot;
+
+        // The outer bands of a soft-edged layer lie under it, faded as it is laid down and filling under its edge.
+        var underLayer = u.Component != null && _bandOwners.ContainsKey(u.Component) && DrawsOwnBandsUnder(u.Component);
+        var outerFade = underLayer ? BandSlotOf(device, u.Component) : haloFade;
+        var underWidth = underLayer ? u.Component.SoftEdge : 0;
         PatchStillHalo(device, _haloUnder, u.RenderData.Halo, inner: false, runs.UnderFirst, runs.UnderCount,
-            shape, corners, kind, bakeWorld, opacity, transformSlot, fieldRange, haloClip, haloFade);
+            shape, corners, kind, bakeWorld, opacity, transformSlot, fieldRange, haloClip, outerFade, underWidth);
         PatchStillHalo(device, _haloOver, u.RenderData.Halo, inner: true, runs.OverFirst, runs.OverCount,
-            shape, corners, kind, bakeWorld, opacity, transformSlot, fieldRange, haloClip, haloFade);
+            shape, corners, kind, bakeWorld, opacity, transformSlot, fieldRange, haloClip, haloFade, 0);
 
         PatchLivingHalo(device, _haloLivingUnder, u.RenderData.LivingHalo, inner: false, runs.LivingUnder,
-            shape, corners, kind, bakeWorld, opacity, transformSlot, fieldRange, haloClip, haloFade);
+            shape, corners, kind, bakeWorld, opacity, transformSlot, fieldRange, haloClip, outerFade, underWidth);
         PatchLivingHalo(device, _haloLivingOver, u.RenderData.LivingHalo, inner: true, runs.LivingOver,
-            shape, corners, kind, bakeWorld, opacity, transformSlot, fieldRange, haloClip, haloFade);
+            shape, corners, kind, bakeWorld, opacity, transformSlot, fieldRange, haloClip, haloFade, 0);
     }
 
     private readonly HaloRectItem[] _haloPatchStage = new HaloRectItem[8];
 
     private void PatchStillHalo(IGraphicsDevice device, HaloRectCollector batch, Core.Media.HaloBand[] bands, bool inner,
         int first, int count, Rect shape, ProceduralGeometry.CornerRadius corners, HaloShape kind,
-        Matrix4x4F bakeWorld, double opacity, int transformSlot, double fieldRange, int clipSlot, int fadeSlot)
+        Matrix4x4F bakeWorld, double opacity, int transformSlot, double fieldRange, int clipSlot, int fadeSlot,
+        double underWidth)
     {
         if (batch == null || count <= 0 || bands == null) return;
 
         var room = System.Math.Min(count, _haloPatchStage.Length);
         var written = HaloRectCollector.BakeInto(_haloPatchStage.AsSpan(0, room), bands, inner, shape, corners, kind,
-            bakeWorld, opacity, transformSlot, fieldRange, clipSlot, fadeSlot);
+            bakeWorld, opacity, transformSlot, fieldRange, clipSlot, fadeSlot, underWidth);
 
         // Fewer bands than the walk recorded means one went dark; the splice owns that, and rewriting a PREFIX here
         // would leave the rest painting the old color. Left to the refusal above.
@@ -2870,11 +2897,12 @@ public partial class RenderCache
 
     private void PatchLivingHalo(IGraphicsDevice device, HaloLivingCollector batch, Core.Media.LivingBand? band, bool inner,
         int slot, Rect shape, ProceduralGeometry.CornerRadius corners, HaloShape kind,
-        Matrix4x4F bakeWorld, double opacity, int transformSlot, double fieldRange, int clipSlot, int fadeSlot)
+        Matrix4x4F bakeWorld, double opacity, int transformSlot, double fieldRange, int clipSlot, int fadeSlot,
+        double underWidth)
     {
         if (batch == null || slot < 0 || band is not { } live || live.Inner != inner) return;
         if (!HaloLivingCollector.BakeItem(live, shape, corners, kind, bakeWorld, opacity, live.Color, transformSlot,
-                fieldRange, clipSlot, fadeSlot, out var item))
+                fieldRange, clipSlot, fadeSlot, out var item, underWidth))
         {
             return;
         }

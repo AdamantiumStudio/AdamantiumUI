@@ -625,9 +625,11 @@ float4 HaloRectPS(HaloPSInput input) : SV_Target
     float a = lerp(aOuter, aInner, step(0.5, inner));
 
     // Clipped to the correct side of the REAL outline, as CSS clips a box-shadow: an outer band is not painted beneath
-    // the shape (or a translucent card would darken itself), an inner one never leaves it.
+    // the shape (or a translucent card would darken itself), an inner one never leaves it. Under a soft-edged element
+    // (-1) the outer band goes on beneath it, so the edge fades into the glow rather than into a gap before it.
     float aa = max(fwidth(dShape), 1e-4);
-    a *= lerp(saturate(dShape / aa + 0.5), saturate(-dShape / aa + 0.5), step(0.5, inner));
+    a *= lerp(lerp(saturate(dShape / aa + 0.5), saturate(1.0 + dShape / max(it.Field.w * sc, 1e-3)), step(inner, -0.5)),
+              saturate(-dShape / aa + 0.5), step(0.5, inner));
 
     // A sampled band also fades out as the field runs out of range - see HaloFieldDistance.
     a *= lerp(1.0, bandFade, sampled);
@@ -753,7 +755,8 @@ float4 HaloLivingPS(HaloPSInput input) : SV_Target
     float a = lerp(aOuter, aInner, step(0.5, inner));
 
     float aa = max(fwidth(dShape), 1e-4);
-    a *= lerp(saturate(dShape / aa + 0.5), saturate(-dShape / aa + 0.5), step(0.5, inner));
+    a *= lerp(lerp(saturate(dShape / aa + 0.5), saturate(1.0 + dShape / max(it.Ramp.w * sc, 1e-3)), step(inner, -0.5)),
+              saturate(-dShape / aa + 0.5), step(0.5, inner));
     a *= lerp(1.0, bandFade, sampled);
 
     // The hue rides its OWN sample, not the wander. Coloring by the wander ties each end of the palette to a fixed
