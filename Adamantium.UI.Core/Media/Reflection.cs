@@ -3,8 +3,9 @@ using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Core.Media;
 
-/// <summary>An element's mirror image under its bottom edge, as a picture standing on glass. It mirrors what of the element
-/// is in view. Layout does not grow to fit it; leave room with <c>Margin</c> or a clipping ancestor cuts it.</summary>
+/// <summary>An element's mirror image under all it draws - its own glow and shadow too - as a picture standing on glass.
+/// It mirrors what of the element is in view. Layout does not grow to fit it; leave room with <c>Margin</c> or a
+/// clipping ancestor cuts it.</summary>
 public sealed class Reflection : AdamantiumComponent
 {
     public static readonly AdamantiumProperty IsEnabledProperty = AdamantiumProperty.Register(nameof(IsEnabled),
@@ -32,8 +33,8 @@ public sealed class Reflection : AdamantiumComponent
         set => SetValue(IsEnabledProperty, value);
     }
 
-    /// <summary>How much of the element the reflection shows, as a share of its height: 0.5 shows the lower half,
-    /// mirrored; at most 1, the whole of it.</summary>
+    /// <summary>How much the reflection shows, as a share of the height of all the element draws, its glow and shadow
+    /// included: 0.5 shows the lower half, mirrored; at most 1, the whole of it.</summary>
     public double Size
     {
         get => GetValue<double>(SizeProperty);
@@ -55,7 +56,8 @@ public sealed class Reflection : AdamantiumComponent
         set => SetValue(OffsetXProperty, value);
     }
 
-    /// <summary>The gap between the element's bottom edge and the reflection, in pixels.</summary>
+    /// <summary>The gap between the lowest of what the element draws - its edge, or its glow or shadow below it - and
+    /// the reflection, in pixels.</summary>
     public double OffsetY
     {
         get => GetValue<double>(OffsetYProperty);

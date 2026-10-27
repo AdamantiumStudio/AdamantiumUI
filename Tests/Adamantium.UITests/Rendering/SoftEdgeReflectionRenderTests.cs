@@ -359,6 +359,34 @@ public class SoftEdgeReflectionRenderTests
         Assert.That(Red(afterChange), Is.EqualTo(Red(Render(fresh, outside)[0])).Within(4));
     }
 
+    // A soft-edged element's own glow is part of it: its reflection mirrors that too.
+    [Test]
+    public void ASoftEdgedElementsReflection_MirrorsItsGlowToo()
+    {
+        var glow = new Aura { Radius = 10, Color = Colors.White, Opacity = 1 };
+        var (plain, _) = Element(e =>
+        {
+            e.Aura = glow;
+            e.Reflection = new Reflection { Size = 1, Opacity = 1 };
+        });
+        var (soft, _) = Element(e =>
+        {
+            e.Aura = glow;
+            e.SoftEdge = 4;
+            e.Reflection = new Reflection { Size = 1, Opacity = 1 };
+        });
+
+        // The glow gone by row 54, the floor there: six rows below it, the mirror image of the glow three rows under the
+        // element's edge, before the mirrored element begins at 64.
+        var mirroredGlow = (24, 60);
+        var p = Red(Render(plain, mirroredGlow)[0]);
+        Assert.Multiple(() =>
+        {
+            Assert.That(p, Is.GreaterThan(40));
+            Assert.That(Red(Render(soft, mirroredGlow)[0]), Is.EqualTo(p).Within(8));
+        });
+    }
+
     // Only what the element draws fades: its own glow stays whole around it.
     [Test]
     public void ASoftEdge_LeavesTheElementsOwnGlowWhole()
@@ -416,10 +444,10 @@ public class SoftEdgeReflectionRenderTests
         });
     }
 
-    // Raised by its distance, the element stands over a floor half that far down: below the floor its mirror image meets
-    // its own glow as a mirror would, rather than cut off where the mirrored element begins.
+    // The floor lies under all the element draws, its glow too: the reflection turns the whole of it over, its glow
+    // first, and leaves the element's own glow whole above.
     [Test]
-    public void AReflection_MirrorsTheGlowBelowTheFloor()
+    public void AReflection_TurnsOverTheGlowUnderIt()
     {
         var glow = new Aura { Radius = 10, Color = Colors.White, Opacity = 1 };
         var (plain, _) = Element(e => e.Aura = glow);
@@ -429,16 +457,42 @@ public class SoftEdgeReflectionRenderTests
             e.Reflection = new Reflection { Size = 1, Opacity = 1, OffsetY = 8 };
         });
 
-        // Edge at row 44, floor at 48, the mirrored element from row 52.
-        var between = (24, 50);
-        var above = (24, 46);
+        // Edge at row 44, the glow gone by 54, floor at 58, the mirrored glow from 62, the mirrored element from 72.
+        (int, int)[] rows = [(24, 47), (24, 58), (24, 66), (24, 76)];
+        var m = Render(mirrored, rows);
+        var p = Render(plain, rows);
 
         Assert.Multiple(() =>
         {
-            Assert.That(Red(Render(mirrored, between)[0]), Is.GreaterThan(Red(Render(plain, between)[0]) + 20),
-                "the glow's mirror image shows between the floor and the mirrored element");
-            Assert.That(Red(Render(mirrored, above)[0]), Is.EqualTo(Red(Render(plain, above)[0])).Within(3),
-                "above the floor, only the element itself");
+            Assert.That(Red(m[0]), Is.EqualTo(Red(p[0])).Within(3), "above the floor, only the element itself");
+            Assert.That(Red(p[0]), Is.GreaterThan(40), "its glow there");
+            Assert.That(Red(m[1]), Is.EqualTo(Red(p[1])).Within(3), "between the glow and its mirror image, nothing");
+            Assert.That(Red(m[2]), Is.GreaterThan(Red(p[2]) + 20), "the glow's mirror image");
+            Assert.That(Green(m[3]), Is.GreaterThan(150), "then the element's lime half");
+        });
+    }
+
+    // A shadow thrown down reaches past the glow: the floor goes under it, so the mirrored shadow keeps its round
+    // corners instead of starting at the floor as a straight cut.
+    [Test]
+    public void AReflection_TurnsOverTheShadowWhole()
+    {
+        var (root, _) = Element(e =>
+        {
+            e.Shadow = new Shadow { OffsetX = 0, OffsetY = 10, BlurRadius = 6, Color = Colors.White, Opacity = 1 };
+            e.Reflection = new Reflection { Size = 1, Opacity = 1, Fade = 0 };
+        });
+
+        // The shadow's bottom edge at row 54 and its blur gone by 60: the floor there, and its mirror image fading in
+        // from there down as it fades out above.
+        var px = Render(root, (24, 56), (24, 63), (24, 58), (24, 61), (24, 70));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(Red(px[0]), Is.InRange(40, 200), "the shadow's blur, half way out");
+            Assert.That(Red(px[1]), Is.EqualTo(Red(px[0])).Within(8), "the mirror image, as strong as what it mirrors");
+            Assert.That(Red(px[3]), Is.EqualTo(Red(px[2])).Within(8));
+            Assert.That(Red(px[4]), Is.GreaterThan(240), "then the mirrored shadow itself");
         });
     }
 
@@ -490,14 +544,13 @@ public class SoftEdgeReflectionRenderTests
         var (melting, _) = Element(e => e.Reflection = new Reflection { Size = 1, Opacity = 1, Fade = 1 });
 
         // Thirty rows under the edge, three quarters of the way down the mirrored element; and past its end.
-        var row = (24, 74);
-        var past = (24, 88);
+        var px = Render(sharp, (24, 74), (24, 88));
 
         Assert.Multiple(() =>
         {
-            Assert.That(Red(Render(sharp, row)[0]), Is.GreaterThan(230), "no fade: shown at full strength");
-            Assert.That(Red(Render(melting, row)[0]), Is.LessThan(120), "faded all the way: mostly gone there");
-            Assert.That(Red(Render(sharp, past)[0]), Is.LessThan(10), "past its end, nothing either way");
+            Assert.That(Red(px[0]), Is.GreaterThan(230), "no fade: shown at full strength");
+            Assert.That(Red(Render(melting, (24, 74))[0]), Is.LessThan(120), "faded all the way: mostly gone there");
+            Assert.That(Red(px[1]), Is.LessThan(10), "past its end, nothing either way");
         });
     }
 
@@ -601,6 +654,106 @@ public class SoftEdgeReflectionRenderTests
         Assert.That(renderer.RenderFrame(root), Is.True);
 
         Assert.That(renderer.Cache.LayersRedrawn + renderer.Cache.LayersReused, Is.Zero);
+    }
+
+    [Test]
+    public void ASoftEdgeTakenAway_GivesUpTheBandsTexturesOfALayerThatStays()
+    {
+        var (root, element) = Element(e =>
+        {
+            e.Aura = new Aura { Radius = 8, Color = Colors.White, Opacity = 1 };
+            e.Reflection = new Reflection { Size = 1, Opacity = 1 };
+            e.SoftEdge = 6;
+        });
+        var factory = new RenderUnitFactory(_device, new StubResourceFactory());
+        using var renderer = new OffscreenTestRenderer(_device, factory, 64, 128) { ClearColor = Colors.Blue };
+        Assert.That(renderer.RenderFrame(root), Is.True);
+        Assert.That(renderer.Cache.LayersHoldingBands, Is.EqualTo(1));
+
+        element.SoftEdge = 0;
+        Assert.That(renderer.RenderFrame(root), Is.True);
+
+        Assert.That(renderer.Cache.LayersRedrawn + renderer.Cache.LayersReused, Is.EqualTo(1), "the reflection keeps the layer");
+        Assert.That(renderer.Cache.LayersHoldingBands, Is.Zero);
+    }
+
+    // A whole reflection is all the element draws: the glow above its top edge too, not cut where the element ends.
+    [Test]
+    public void AWholeReflection_KeepsTheGlowAboveTheElement()
+    {
+        var (root, _) = Element(e =>
+        {
+            e.Aura = new Aura { Radius = 10, Color = Colors.White, Opacity = 1 };
+            e.Reflection = new Reflection { Size = 1, Opacity = 1, Fade = 0 };
+        });
+
+        // The glow gone by row 54, the floor there: row 1, over the top edge, mirrored at row 106.
+        var px = Render(root, (24, 1), (24, 106));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(Red(px[0]), Is.GreaterThan(40), "the glow over the element's top edge");
+            Assert.That(Red(px[1]), Is.EqualTo(Red(px[0])).Within(12), "and its mirror image, whole");
+        });
+    }
+
+    // What the element's own clip cuts away is not drawn, so the floor is not under it.
+    [Test]
+    public void AReflection_StandsUnderWhatTheClipLeaves()
+    {
+        var root = new TestRoot(64, 128);
+        var element = new TestControl { ClipToBounds = true, Reflection = new Reflection { Size = 1, Opacity = 1 } };
+        element.Bounds = new Rect(4, 4, 40, 40);
+        element.RenderSize = new Size(40, 40);
+        var tall = new TestControl { RenderAction = s => s.DrawRectangle(Brushes.Lime, new Rect(0, 0, 40, 400)) };
+        tall.Bounds = new Rect(0, 0, 40, 400);
+        tall.RenderSize = new Size(40, 400);
+        element.Add(tall);
+        root.Add(element);
+
+        var px = Render(root, (24, 50));
+
+        Assert.That(Green(px[0]), Is.GreaterThan(200), "the reflection right under the element's edge");
+    }
+
+    // Squeezed across, the shadow is drawn at the lesser scale: the floor lies where it ends, not further down.
+    [Test]
+    public void AReflection_UnderASqueezedElement_MeetsItsShadow()
+    {
+        var (root, _) = Element(e =>
+        {
+            e.RenderTransform = new Transform { ScaleX = 0.5, ScaleY = 1 };
+            e.Shadow = new Shadow { OffsetY = 10, BlurRadius = 2, Color = Colors.White, Opacity = 1 };
+            e.Reflection = new Reflection { Size = 1, Opacity = 1 };
+        });
+
+        // The shadow, five pixels down at half scale, ends by row 50: the floor there, row 47 mirrored at row 52.
+        var px = Render(root, (10, 47), (10, 52));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(Red(px[0]), Is.GreaterThan(200), "the shadow under the element");
+            Assert.That(Red(px[1]), Is.GreaterThan(200), "its mirror image, right under the floor");
+        });
+    }
+
+    // A full walk re-records only what changed: a layer that did not change keeps what it draws. It used to lose it, and
+    // with nothing else changing no frame came to bring it back - the element was simply gone.
+    [TestCase("reflection")]
+    [TestCase("soft edge")]
+    [TestCase("layer")]
+    public void AFullWalk_LeavesAnUnchangedLayerDrawn(string kind)
+    {
+        var (root, _) = Element(e =>
+        {
+            e.Reflection = kind == "reflection" ? new Reflection { Size = 1, Opacity = 1 } : null;
+            e.SoftEdge = kind == "soft edge" ? 4 : 0;
+            e.IsLayer = kind == "layer";
+        });
+
+        var px = RenderChanged(root, () => RenderDirty.MarkStructural(), (24, 30));
+
+        Assert.That(Green(px[0]), Is.GreaterThan(240), "the lime half, still there");
     }
 
     [Test]

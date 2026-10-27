@@ -211,7 +211,6 @@ public partial class RenderCache
     {
         ReleaseSlotsOf(_clipOwners, NotDrawn, ReleaseClipSlot);
         ReleaseSlotsOf(_fadeOwners, NotDrawn, ReleaseFadeSlot);
-        ReleaseSlotsOf(_bandOwners, NotDrawn, ReleaseBandSlot);
         ReleaseSlotsOf(_nodeRefreshed, NotDrawn, ReleaseNodeSlot);
         _drawnChains.Clear();
     }
@@ -427,7 +426,6 @@ public partial class RenderCache
         _built = false;
         _clipOwners.Clear();
         _fadeOwners.Clear();
-        _bandOwners.Clear();
         _copyFades.Clear();
         _copyFadeSlots.Clear();
         _compositedFallback.Clear();   // the old tree's, like the rest - and a snapshot cache may not draw again for long
@@ -542,7 +540,6 @@ public partial class RenderCache
 
         ReleaseSlotsOf(_clipOwners, ReleasedBeforeApplied, ReleaseClipSlot);
         ReleaseSlotsOf(_fadeOwners, ReleasedBeforeApplied, ReleaseFadeSlot);
-        ReleaseSlotsOf(_bandOwners, ReleasedBeforeApplied, ReleaseBandSlot);
         ReleaseSlotsOf(_nodeRefreshed, ReleasedBeforeApplied, ReleaseNodeSlot);
     }
 

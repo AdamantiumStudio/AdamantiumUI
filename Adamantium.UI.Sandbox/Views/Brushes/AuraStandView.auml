@@ -8,11 +8,13 @@
         <StackPanel Orientation="Horizontal" MarginBottom="20">
             <!-- A MID-TONE backdrop on purpose: the other stands sit on near-black, but a dark shadow is invisible
                  there and a bright aura blows out. This one has to show both at once. -->
-            <Border Width="420" Height="300" Margin="10" Background="#485061">
+            <!-- The figure at the top, the room under it for the reflection: that lies under all the figure draws, its
+                 shadow too, and a whole one is as tall again. -->
+            <Border Width="420" Height="580" Margin="10" Background="#485061">
                 <!-- The clip goes HERE when it is asked for, not on the panel: this box is exactly the figure plus its
                      margin, so the margin then decides how much of the band survives. On the panel it would never
                      bite - the panel is far bigger than any band - and the rule would stay invisible. -->
-                <Grid HorizontalAlignment="Center" VerticalAlignment="Center" ClipToBounds="{Binding HaloClip}">
+                <Grid HorizontalAlignment="Center" VerticalAlignment="Top" ClipToBounds="{Binding HaloClip}">
                     <Rectangle Width="180" Height="120"
                                Fill="#E2E8F0"
                                Margin="{Binding HaloMargin, Converter={conv:DoubleToThicknessConverter}}"

@@ -20,4 +20,11 @@ internal sealed class CachedLayer
     public uint SoftWidth;
     public uint SoftHeight;
     public float Soft;
+
+    // A soft-edged layer's own bands, drawn apart from what the fade reaches: the slot drawn last, and in which frame.
+    public IRenderTarget[] BandsRing;
+    public uint BandsWidth;
+    public uint BandsHeight;
+    public int BandsLatest = -1;
+    public long BandsFrame = -1;
 }

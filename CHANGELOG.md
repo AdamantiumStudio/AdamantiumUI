@@ -10,13 +10,14 @@ All packages share one version.
 - `UIComponent.SoftEdge`: the element and its subtree fade in over this many pixels from the outline of what they
   draw, whatever its shape - an ellipse, a star, a glyph, a picture's own transparency - a picture whose edges melt into
   the page. Its own glow and shadow stay whole and go on under the faded edge, so it melts into them.
-  `UIComponent.Reflection` (`Reflection`: `Size` as a share of the height, `Fade` - how much of that melts away toward
-  its end, `OffsetX`, `OffsetY`, `Opacity`, `IsEnabled`): its mirror image under its bottom edge, about a floor half
-  `OffsetY` down, meeting the element's own glow below the floor without a seam. Both are the element's own, as
-  `Shadow` and `Aura` are, drawn through its layer as `OpacityMask` is - a reflection switched off costs none; layout
-  does not grow for the reflection, and only the element's own clip is not applied to it. The reflection mirrors what
-  of the element is in view; a soft-edged element's own glow is not in its reflection. Content thinner than about the
-  soft edge's width fades out altogether; where an ancestor's clip cuts the element, it does not fade there.
+  `UIComponent.Reflection` (`Reflection`: `Size` - how much of it shows, `Fade` - how much of that melts away toward
+  its end, `OffsetX`, `OffsetY`, `Opacity`, `IsEnabled`): all the element draws turned over under it - its own glow
+  and shadow too, a soft-edged one's as well - about a floor half `OffsetY` below the lowest of it, so a shadow thrown
+  down is mirrored whole, its corners round, and the glow meets its mirror image without a seam; `Size` is a share of
+  all it draws, so a whole one keeps the glow over its top edge too. Both are the element's own, as `Shadow` and `Aura` are, drawn through its layer as `OpacityMask`
+  is - a reflection switched off costs none; layout does not grow for the reflection, and only the element's own clip
+  is not applied to it. The reflection mirrors what of the element is in view. Content thinner than about the soft
+  edge's width fades out altogether; where an ancestor's clip cuts the element, it does not fade there.
 - `Image` clips by its own `CornerRadius` when `ClipToBounds` is on, as `Border` does, and a soft edge on it follows
   those corners. `Rectangle` does the same with its `CornerRadius`: a clipping `Rectangle` now clips rounded, no longer
   square, and a soft edge on it no longer stops short at the corners.
@@ -2238,6 +2239,11 @@ All packages share one version.
 
 ### Fixed
 
+- An element drawn through a layer of its own - `IsLayer`, `OpacityMask`, `SoftEdge`, `Reflection` - vanished
+  whenever the whole window was walked again for something else (a window maximized, a tab added) while it had not
+  changed itself: the walk took its untouched drawing for no drawing at all. With nothing else changing, it stayed gone.
+- A soft-edged element's own glow and shadow were laid down beside its layer, not in it: the reflection left them out,
+  and a shadow ran on below the floor to a square end.
 - An opacity slot handed out in the middle of a frame reached the GPU only the frame after: whatever the slot drew
   that frame read no alpha and did not show - and with nothing else to draw, it stayed that way until something did.
 - A living aura, an animated `NoiseBrush` and an animated `FractalBrush` froze in a window with a varying frame rate
