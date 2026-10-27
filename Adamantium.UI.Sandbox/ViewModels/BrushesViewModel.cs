@@ -785,6 +785,19 @@ public partial class BrushesViewModel : TabPageViewModel
     partial void OnShadowOpacityChanged(double value) => LiveShadow.Opacity = value;
     partial void OnShadowInnerChanged(bool value) => LiveShadow.Inner = value;
 
+    public Reflection LiveReflection { get; } = new Reflection { IsEnabled = false };
+
+    [Bindable] private double _softEdge;
+    [Bindable] private bool _reflectionOn;
+    [Bindable] private double _reflectionSize = 0.5;
+    [Bindable] private double _reflectionDistance;
+    [Bindable] private double _reflectionOpacity = 0.5;
+
+    partial void OnReflectionOnChanged(bool value) => LiveReflection.IsEnabled = value;
+    partial void OnReflectionSizeChanged(double value) => LiveReflection.Size = value;
+    partial void OnReflectionDistanceChanged(double value) => LiveReflection.Distance = value;
+    partial void OnReflectionOpacityChanged(double value) => LiveReflection.Opacity = value;
+
     /// <summary>The preview slot every "paint it on a shape" stand draws into. One number, in one place: the stands were
     /// 500x280 and 300x200 by hand, and the star - a Polygon, which carries authored coordinates and does NOT stretch to
     /// its slot - was cut for the big one and reused in the small ones, where it drew past the edge onto the neighbor

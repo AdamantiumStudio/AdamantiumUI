@@ -49,7 +49,7 @@ public enum LiveStand
     [Display(Name = "Material")]
     Material,
 
-    /// <summary>Not a fill at all: a band drawn OUTSIDE the element, as a glow or a shadow.</summary>
-    [Display(Name = "Aura / Shadow")]
+    /// <summary>Not a fill at all: the element's own effects - a glow or a shadow outside it, soft edges, a reflection.</summary>
+    [Display(Name = "Aura / Shadow / Reflection")]
     Aura
 }

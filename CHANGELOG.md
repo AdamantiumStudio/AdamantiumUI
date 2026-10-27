@@ -15,7 +15,10 @@ All packages share one version.
   the element's own clip is not applied to it. The soft edge fades everything the element draws, its own shadow and
   glow included; the reflection mirrors what of the element is in view.
 - `Image` clips by its own `CornerRadius` when `ClipToBounds` is on, as `Border` does, and a soft edge on it follows
-  those corners.
+  those corners. `Rectangle` does the same with its `CornerRadius`: a clipping `Rectangle` now clips rounded, no longer
+  square, and a soft edge on it no longer stops short at the corners.
+- Sandbox: soft edges and the reflection on the brushes tab's aura and shadow stand, the picture's colors on the Image
+  tab.
 - `Image.Brightness`, `Image.Contrast`, `Image.Saturation`: the picture's colors, each leaving it as it is at its
   default; saturation 0 with a color `FilterBrush` recolors it in that color's shades. A plain picture only - an
   animation, a drawing and a live surface are drawn as they are.
