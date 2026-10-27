@@ -2,6 +2,7 @@
 // group's opacity - so where its children overlap, the background shows through as much as anywhere else.
 
 #include "Includes/CommonData.fxh"
+#include "Includes/ClipMath.fxh"
 #include "Includes/GradientMath.fxh"
 
 // Where the layer goes, in device pixels from the viewport's corner: .xy its top-left corner, .zw its size. The texture
@@ -32,6 +33,37 @@ float4 MaskAlpha1;
 float4 MaskOffsets0;
 float4 MaskOffsets1;
 float4 MaskParams;
+
+// Soft edges: how deep inside what the layer drew each texel lies (LayerSoftEdgeEffect), read where SoftOn is 1.
+Texture2D SoftTexture;
+float SoftOn;
+
+// A soft-edged element's own glow and shadow, drawn apart from what the fade reaches and laid under it, read where
+// BandsOn is 1. Same region, same texels.
+Texture2D BandsTexture;
+float BandsOn;
+
+// A rounded clip the layer is laid down under, in window device pixels: .xy its corner, .zw its size (none at zero
+// size), its radii as CornerRadius. A layer drawn whole is cut by it here rather than in its texture.
+float4 ClipBox;
+float4 ClipRadii;
+
+// The layer's own region on the window, in device pixels: where a texel of it was drawn.
+float4 SourceRegion;
+
+// A reflection, in window device pixels: .x its strength, .y the row where the mirrored element begins, .z the row where
+// it is gone, .w the floor - the row it shows from.
+float4 Mirror;
+
+// .x the rows over which it fades out before Mirror.z; .w what this draw is: 0 the layer alone, 1 the layer over its
+// reflection (it leaves what lies below the floor and inside the mirrored layer to the reflection), 2 the reflection.
+float4 MirrorFade;
+
+// The mirrored layer on the window: .xy its first and past-last columns, .z its past-last row; .w half its sideways
+// offset, in pixels.
+float4 MirrorQuad;
+
+float Role() { return MirrorFade.w; }
 
 // Between two stops closer than a pixel, a one-pixel ramp centered on them, as the fills do.
 float MaskRamp(float t, float aa)
@@ -75,6 +107,34 @@ float MaskAt(float2 pixel)
     return MaskRamp(t, min(fwidth(t), fwidth(frac(t + 0.5))));
 }
 
+// What the layer drew at a point of its region (0..1 across it), with its mask and soft edge: premultiplied, nothing
+// outside the region.
+float4 LayerAt(float2 inRegion, float2 pixel)
+{
+    float inside = all(inRegion >= 0.0) && all(inRegion < 1.0) ? 1.0 : 0.0;
+    float2 uv = saturate(inRegion) * LayerTexels.xy;
+    float soft = 1.0;
+    if (SoftOn > 0.5)
+    {
+        // The blurred coverage is one half on the outline and one deep inside: from 0 to 1 in between, smoothly.
+        soft = saturate(2.0 * SoftTexture.SampleLevel(SourceSampler, uv, 0).r - 1.0);
+    }
+
+    float4 drawn = SourceTexture.SampleLevel(SourceSampler, uv, 0) * soft;
+    float4 bands = BandsOn > 0.5 ? BandsTexture.SampleLevel(SourceSampler, uv, 0) : float4(0.0, 0.0, 0.0, 0.0);
+    return (drawn + bands * (1.0 - drawn.a)) * (MaskAt(pixel) * inside);
+}
+
+// The reflection's strength on a window row: none above the floor, gathering to full by where the mirrored element
+// begins - or half its sideways offset down, moved aside it meets the glow above in another place - full on to where
+// its fade begins, nothing past its end.
+float MirrorStrength(float row)
+{
+    float gather = max(max(Mirror.y - Mirror.w, MirrorQuad.w), 1.0);
+    return Mirror.x * step(Mirror.w, row) * saturate((row - Mirror.w) / gather)
+           * saturate((Mirror.z - row) / max(MirrorFade.x, 1.0));
+}
+
 struct LayerVSOutput
 {
     float4 Position : SV_Position;
@@ -90,16 +150,31 @@ LayerVSOutput LayerCompositeVS(uint id : SV_VertexID)
     o.Uv = float2(id & 1, (id >> 1) & 1);
     float2 pixel = LayerBox.xy + o.Uv * LayerBox.zw;
     o.Position = float4(pixel / max(ViewportSize, float2(1.0, 1.0)) * 2.0 - 1.0, 0.0, 1.0);
+    // The reflection is placed upside down, so its top row samples the layer's bottom one.
+    o.Uv.y = lerp(o.Uv.y, 1.0 - o.Uv.y, step(1.5, Role()));
     return o;
 }
 
 // The layer was blended onto transparent black, so its color already carries its alpha: scaled here as a whole, and by
-// the mask where there is one, and laid down with the premultiplied "over".
+// the mask and the soft edge where there are, and laid down with the premultiplied "over".
+//
+// Below the floor, where the reflection lies, ONE draw lays down both: what the element itself draws there (its glow,
+// its shadow) and the mirror image, mixed by the reflection's strength. Laid one over the other they added up, and the
+// glow came out brighter below the floor than above it - a seam along it.
 [shader("fragment")]
 float4 LayerCompositePS(LayerVSOutput input) : SV_Target
 {
-    float mask = MaskAt(SurfacePixel(input.Position.xy));
-    return SourceTexture.SampleLevel(SourceSampler, input.Uv * LayerTexels.xy, 0) * (LayerAlpha * mask);
+    float2 here = SurfacePixel(input.Position.xy);
+    float2 hereInRegion = (here - SourceRegion.xy) / max(SourceRegion.zw, float2(1.0, 1.0));
+    float role = Role();
+    float4 self = LayerAt(hereInRegion, here);
+    float4 mirror = LayerAt(input.Uv, SourceRegion.xy + input.Uv * SourceRegion.zw);
+    float under = role > 0.5 && here.y >= Mirror.w && here.y < MirrorQuad.z
+                  && here.x >= MirrorQuad.x && here.x < MirrorQuad.y ? 1.0 : 0.0;
+    // Only where the element itself leaves room: what it draws solid stays in front of the floor.
+    float4 laid = role < 1.5 ? self * (1.0 - under)
+                             : lerp(self, mirror, MirrorStrength(here.y) * (1.0 - self.a)) * under;
+    return laid * (LayerAlpha * ClipCoverage(input.Position.xy, ClipBox, ClipRadii));
 }
 
 technique LayerComposite

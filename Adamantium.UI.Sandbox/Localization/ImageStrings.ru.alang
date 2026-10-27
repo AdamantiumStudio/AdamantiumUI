@@ -8,6 +8,11 @@
     <Phrase Key="BoxHeight" Text="Высота рамки:"/>
     <Phrase Key="ElementSize" Text="Размер элемента:"/>
 
+    <Phrase Key="PictureColors" Text="Цвета картинки"/>
+    <Phrase Key="Brightness" Text="Яркость"/>
+    <Phrase Key="Contrast" Text="Контраст"/>
+    <Phrase Key="Saturation" Text="Насыщенность"/>
+
     <Phrase Key="Formats" Text="Форматы и анимация"/>
     <Phrase Key="OpacityLabel" Text="Непрозрачность:"/>
     <Phrase Key="MipLevel" Text="PNG (мип-уровень 2)"/>

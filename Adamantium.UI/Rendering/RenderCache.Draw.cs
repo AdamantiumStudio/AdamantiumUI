@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using Adamantium.Graphics.Core;
@@ -14,7 +14,7 @@ namespace Adamantium.UI.Rendering;
 
 // What one recorded draw IS. At namespace scope because an ARENA is asked whether a recorded op draws it (see
 // BatchArena.MatchesOp) - the instanced fill is drawn by a flush op, not by a segment op, and that is its own business.
-internal enum RenderOpKind : byte { Scissor, Unit, Segment, InstancedFlush, LayerBegin, LayerEnd }
+internal enum RenderOpKind : byte { Scissor, Unit, Segment, InstancedFlush, LayerBegin, LayerEnd, BandsBegin, BandsEnd }
 
 public partial class RenderCache
 {
@@ -569,6 +569,25 @@ public partial class RenderCache
     /// <summary>After <see cref="PreRender"/>: a unit waits for a frame submitted elsewhere.</summary>
     internal bool AwaitsFrame { get; private set; }
 
+    /// <summary>Its last frame drew something that changes with time alone - a living aura, a flowing noise, a morphing
+    /// fractal - so the surface it draws on wants the next frame.</summary>
+    internal bool Moves { get; private set; }
+
+    private void ForgetMoving()
+    {
+        if (_haloLivingUnder != null) _haloLivingUnder.DrewMoving = false;
+        if (_haloLivingOver != null) _haloLivingOver.DrewMoving = false;
+        if (_patternBatch != null) _patternBatch.DrewMoving = false;
+        if (_fractalBatch != null) _fractalBatch.DrewMoving = false;
+        if (_instancedFill != null) _instancedFill.DrewMoving = false;
+    }
+
+    // Only while its clock moves: a stopped one draws the same picture again.
+    private bool DrewMoving() =>
+        (Core.Media.NoiseClock.Advancing && (_haloLivingUnder?.DrewMoving == true || _haloLivingOver?.DrewMoving == true
+                                  || _patternBatch?.DrewMoving == true || _instancedFill?.DrewMoving == true))
+        || (Core.Media.FractalClock.Advancing && _fractalBatch?.DrewMoving == true);
+
     /// <summary>Renders every cached unit with no scissor management. Used by GPU-free tests (no device).</summary>
     public void Render() => Render(null, default);
 
@@ -585,6 +604,7 @@ public partial class RenderCache
         LastRecordedReplay = RecordedReplay.Issued;
         DrawWalkMs = 0;
         _traceWhy = 0;
+        ForgetMoving();
         try
         {
             RenderCore(device, fullScissor);
@@ -592,6 +612,7 @@ public partial class RenderCache
         finally
         {
             DrawReplayed = LastFrameReplayed;
+            Moves = DrewMoving();
 
             // Swept here, after the frame is finished, and on replayed frames too, which RenderCore returns early from.
             if (_leftTheOrder.Count > 0 && device != null)
@@ -918,6 +939,7 @@ public partial class RenderCache
         var cloneIndex = 0;
         ControlGroup cloneHost = null;
         var recordingBeforeClones = _recording;
+        _bandsDrawnUnder = null;
 
         for (var groupIndex = 0; groupIndex < _groups.Count; groupIndex++)
         {
@@ -944,8 +966,20 @@ public partial class RenderCache
                 var layer = group.Component;
                 var layerEnd = CloneSubtreeEnd(groupIndex);
                 FlushBatches(device, fullScissor, ref scissorNarrowed);
-                BeginOffscreenLayer(device, layer, fullScissor, groupIndex, layerEnd, false);
-                _layerWalk.Push((layerEnd, layer));
+                if (DrawsOwnBandsUnder(layer))
+                {
+                    DrawOwnBandsUnder(device, group, groupIndex, layerEnd, fullScissor, ref scissorNarrowed);
+                }
+
+                BeginOffscreenLayer(device, layer, fullScissor, groupIndex, layerEnd, false, out var region);
+                var whole = DrawsWhole(layer);
+                if (whole)
+                {
+                    fullScissor = EnterWhole(device, region, fullScissor);
+                    scissorNarrowed = false;
+                }
+
+                _layerWalk.Push((layerEnd, layer, whole));
                 if (_recording)
                 {
                     RecordLayerMark(RenderOpKind.LayerBegin, layer, group.Order);
@@ -1056,12 +1090,14 @@ public partial class RenderCache
                     FlushBatches(device, fullScissor, ref scissorNarrowed);
                 }
                 // Both sides are collected HERE, before the fill - only their FLUSH positions differ, and the flush is
-                // what decides paint order. Collecting the inner one later would mean finding this unit again.
-                var under = CollectHalo(device, unit, wt, scissor, inner: false);
+                // what decides paint order. Collecting the inner one later would mean finding this unit again. The outer
+                // ones of a soft-edged layer went down under it already.
+                var drawnUnder = ReferenceEquals(group, _bandsDrawnUnder);
+                var under = !drawnUnder && CollectHalo(device, unit, wt, scissor, inner: false);
                 var over = CollectHalo(device, unit, wt, scissor, inner: true);
-                under |= CollectLivingHalo(device, unit, wt, scissor, inner: false);
+                under |= !drawnUnder && CollectLivingHalo(device, unit, wt, scissor, inner: false);
                 over |= CollectLivingHalo(device, unit, wt, scissor, inner: true);
-                if ((under || over) && _recording)
+                if ((under || over || drawnUnder) && _recording)
                 {
                     group.NotBatchable("halo");   // a band is not a rect slot; the fast-path patch can't reproduce it
                 }
@@ -1876,13 +1912,13 @@ public partial class RenderCache
 
             while (cloneRun == null && _layerWalk.Count > 0 && groupIndex >= _layerWalk.Peek().End - 1)
             {
-                CloseOffscreenLayer(device, fullScissor, ref scissorNarrowed);
+                CloseOffscreenLayer(device, ref fullScissor, ref scissorNarrowed);
             }
         }
 
         while (_layerWalk.Count > 0)
         {
-            CloseOffscreenLayer(device, fullScissor, ref scissorNarrowed);
+            CloseOffscreenLayer(device, ref fullScissor, ref scissorNarrowed);
         }
 
         _cloneMatrix = null;   // a run that ended on the last group leaves it set otherwise
@@ -2817,28 +2853,34 @@ public partial class RenderCache
         var opacity = u.RenderData.Opacity;
         var haloClip = RoundedClipSlot(u.Component, _frameScissor);   // the patch writes what the walk writes
         var haloFade = u.FadeSlot;
+
+        // The outer bands of a soft-edged layer fill on under its fading edge.
+        var underWidth = u.Component != null && OpensLayer(u.Component) && DrawsOwnBandsUnder(u.Component)
+            ? u.Component.SoftEdge
+            : 0;
         PatchStillHalo(device, _haloUnder, u.RenderData.Halo, inner: false, runs.UnderFirst, runs.UnderCount,
-            shape, corners, kind, bakeWorld, opacity, transformSlot, fieldRange, haloClip, haloFade);
+            shape, corners, kind, bakeWorld, opacity, transformSlot, fieldRange, haloClip, haloFade, underWidth);
         PatchStillHalo(device, _haloOver, u.RenderData.Halo, inner: true, runs.OverFirst, runs.OverCount,
-            shape, corners, kind, bakeWorld, opacity, transformSlot, fieldRange, haloClip, haloFade);
+            shape, corners, kind, bakeWorld, opacity, transformSlot, fieldRange, haloClip, haloFade, 0);
 
         PatchLivingHalo(device, _haloLivingUnder, u.RenderData.LivingHalo, inner: false, runs.LivingUnder,
-            shape, corners, kind, bakeWorld, opacity, transformSlot, fieldRange, haloClip, haloFade);
+            shape, corners, kind, bakeWorld, opacity, transformSlot, fieldRange, haloClip, haloFade, underWidth);
         PatchLivingHalo(device, _haloLivingOver, u.RenderData.LivingHalo, inner: true, runs.LivingOver,
-            shape, corners, kind, bakeWorld, opacity, transformSlot, fieldRange, haloClip, haloFade);
+            shape, corners, kind, bakeWorld, opacity, transformSlot, fieldRange, haloClip, haloFade, 0);
     }
 
     private readonly HaloRectItem[] _haloPatchStage = new HaloRectItem[8];
 
     private void PatchStillHalo(IGraphicsDevice device, HaloRectCollector batch, Core.Media.HaloBand[] bands, bool inner,
         int first, int count, Rect shape, ProceduralGeometry.CornerRadius corners, HaloShape kind,
-        Matrix4x4F bakeWorld, double opacity, int transformSlot, double fieldRange, int clipSlot, int fadeSlot)
+        Matrix4x4F bakeWorld, double opacity, int transformSlot, double fieldRange, int clipSlot, int fadeSlot,
+        double underWidth)
     {
         if (batch == null || count <= 0 || bands == null) return;
 
         var room = System.Math.Min(count, _haloPatchStage.Length);
         var written = HaloRectCollector.BakeInto(_haloPatchStage.AsSpan(0, room), bands, inner, shape, corners, kind,
-            bakeWorld, opacity, transformSlot, fieldRange, clipSlot, fadeSlot);
+            bakeWorld, opacity, transformSlot, fieldRange, clipSlot, fadeSlot, underWidth);
 
         // Fewer bands than the walk recorded means one went dark; the splice owns that, and rewriting a PREFIX here
         // would leave the rest painting the old color. Left to the refusal above.
@@ -2849,11 +2891,12 @@ public partial class RenderCache
 
     private void PatchLivingHalo(IGraphicsDevice device, HaloLivingCollector batch, Core.Media.LivingBand? band, bool inner,
         int slot, Rect shape, ProceduralGeometry.CornerRadius corners, HaloShape kind,
-        Matrix4x4F bakeWorld, double opacity, int transformSlot, double fieldRange, int clipSlot, int fadeSlot)
+        Matrix4x4F bakeWorld, double opacity, int transformSlot, double fieldRange, int clipSlot, int fadeSlot,
+        double underWidth)
     {
         if (batch == null || slot < 0 || band is not { } live || live.Inner != inner) return;
         if (!HaloLivingCollector.BakeItem(live, shape, corners, kind, bakeWorld, opacity, live.Color, transformSlot,
-                fieldRange, clipSlot, fadeSlot, out var item))
+                fieldRange, clipSlot, fadeSlot, out var item, underWidth))
         {
             return;
         }

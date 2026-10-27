@@ -104,6 +104,8 @@ public static class AnimationManager
         ActiveSet.Clear();
         Holders.Clear();
         Compositor.Reset();
+        NoiseClock.Reset();
+        FractalClock.Reset();
     }
 
     /// <summary>Registers a custom per-frame ticker driven by the same heartbeat as animations: <paramref name="advance"/>

@@ -1090,12 +1090,37 @@ public partial class RenderCache
             var s = ApplySnap(owner);
             if (!s.ClipToBounds || s.ClipRadii == Vector4F.Zero) continue;
 
-            var box = ToFramebufferScissor(new Rect(0, 0, s.RenderSize.Width, s.RenderSize.Height)
-                .TransformToAABB(World(owner)), fullScissor);
-            _transformTable.SetClip(null, slot,
-                new Vector4F(box.Offset.X, box.Offset.Y, box.Extent.Width, box.Extent.Height),
-                s.ClipRadii * (float)_renderScale);
+            _transformTable.SetClip(null, slot, ClipBox(owner, s, fullScissor), s.ClipRadii * (float)_renderScale);
         }
+    }
+
+    // A rounded clip's box in device pixels, cut to the window - but whole inside a layer drawn whole, which draws past
+    // the window and would have the clip's corners come round at the window's edge.
+    private Vector4F ClipBox(IUIComponent owner, LayoutSnapshot s, Vulkan.Core.Rect2D fullScissor) =>
+        ClipBox(owner, new Rect(0, 0, s.RenderSize.Width, s.RenderSize.Height).TransformToAABB(World(owner)), fullScissor);
+
+    private Vector4F ClipBox(IUIComponent owner, Rect box, Vulkan.Core.Rect2D fullScissor)
+    {
+        if (!InsideWhole(owner))
+        {
+            var cut = ToFramebufferScissor(box, fullScissor);
+            return new Vector4F(cut.Offset.X, cut.Offset.Y, cut.Extent.Width, cut.Extent.Height);
+        }
+
+        var left = (float)Math.Floor(box.X * _renderScale);
+        var top = (float)Math.Floor(box.Y * _renderScale);
+        return new Vector4F(left, top, (float)Math.Ceiling(box.Right * _renderScale) - left,
+            (float)Math.Ceiling(box.Bottom * _renderScale) - top);
+    }
+
+    private bool InsideWhole(IUIComponent c)
+    {
+        for (; c != null; c = ApplySnap(c).RenderParent)
+        {
+            if (DrawsWhole(c)) return true;
+        }
+
+        return false;
     }
 
     // The nearest rounded clip's slot only; outer ancestors still clip rectangularly through the scissor.
@@ -1108,12 +1133,14 @@ public partial class RenderCache
         for (var owner = c; owner != null; owner = ApplySnap(owner).RenderParent)
         {
             var s = ApplySnap(owner);
-            if (!s.ClipToBounds || s.ClipRadii == Vector4F.Zero) continue;
+            if (!s.ClipToBounds || s.ClipRadii == Vector4F.Zero)
+            {
+                // What a layer drawn whole holds is not cut above it: its composite takes those clips.
+                if (DrawsWhole(owner)) break;
+                continue;
+            }
 
-            var box = ToFramebufferScissor(new Rect(0, 0, s.RenderSize.Width, s.RenderSize.Height)
-                .TransformToAABB(World(owner)), fullScissor);
-
-            var boxVec = new Vector4F(box.Offset.X, box.Offset.Y, box.Extent.Width, box.Extent.Height);
+            var boxVec = ClipBox(owner, s, fullScissor);
             var radiiVec = s.ClipRadii * (float)_renderScale;
             slot = _transformTable.AcquireClipSlot(owner.RenderId);
             _transformTable.SetClip(null, slot, boxVec, radiiVec);
@@ -1149,7 +1176,8 @@ public partial class RenderCache
         var s = ApplySnap(c);
         // An adorner takes its clip from the viewports above its TARGET (see AdornerClip), which no single ancestor
         // names - so it is its own group rather than being merged with anything.
-        var owner = s.ClipToBounds ? c
+        // A layer drawn whole stops the clip chain too (see CumulativeClip): its subtree is cut by nothing above it.
+        var owner = s.ClipToBounds || DrawsWhole(c) ? c
             : !c.ClippedByRenderParent && s.RenderParent != null ? c
             : ClipOwnerOf(s.RenderParent);
 
@@ -1165,6 +1193,14 @@ public partial class RenderCache
         if (_clipCache.TryGetValue(c, out var cached)) return cached;
         var s = ApplySnap(c);
         // An adorner skips its TARGET's own clip and, above it, obeys only the VIEWPORTS - see ClippedByRenderParent.
+        // A layer drawn whole holds itself and its subtree cut by its own clip only; see LaidDownClip.
+        if (DrawsWhole(c))
+        {
+            var own = OwnClip(c);
+            _clipCache[c] = own;
+            return own;
+        }
+
         var parentClip = c.ClippedByRenderParent || s.RenderParent == null
             ? CumulativeClip(s.RenderParent)
             : AdornerClip(ApplySnap(s.RenderParent).RenderParent, c);
@@ -1176,6 +1212,20 @@ public partial class RenderCache
         }
         _clipCache[c] = result;
         return result;
+    }
+
+    // Where a layer drawn whole is laid down: its own clip and every one above it.
+    private Rect? LaidDownClip(IUIComponent layer)
+    {
+        var own = OwnClip(layer);
+        var above = CumulativeClip(ApplySnap(layer).RenderParent);
+        return own is { } o ? above is { } a ? a.Intersect(o) : o : above;
+    }
+
+    private Rect? OwnClip(IUIComponent c)
+    {
+        var s = ApplySnap(c);
+        return s.ClipToBounds ? new Rect(0, 0, s.RenderSize.Width, s.RenderSize.Height).TransformToAABB(World(c)) : null;
     }
 
     private Rect? AdornerClip(IUIComponent node, IUIComponent adorner)

@@ -148,6 +148,80 @@ public class ImageCornerRenderTests
         });
     }
 
+    private static (byte R, byte G, byte B) Middle(System.Action<Adamantium.UI.Controls.Image> set) =>
+        Middle(set, (At + Size / 2, At + Size / 2));
+
+    private static (byte R, byte G, byte B) Middle(System.Action<Adamantium.UI.Controls.Image> set, (int X, int Y) at)
+    {
+        var image = new Adamantium.UI.Controls.Image
+        {
+            Source = _source,
+            Stretch = Stretch.Fill,
+            Width = Size,
+            Height = Size
+        };
+        set(image);
+        image.Bounds = new Rect(0, 0, Size, Size);
+        image.RenderSize = new Size(Size, Size);
+        image.RenderTransform = new Transform { TranslateX = At, TranslateY = At };
+
+        Assert.That(_renderer.RenderFrame(new VisualRoot(image, Dim, Dim)), Is.True);
+        using var img = _renderer.RenderTarget.ResolveTexture.ReadbackToImage();
+        var pixels = new byte[(int)img.TotalSizeInBytes];
+        Marshal.Copy(img.DataPointer, pixels, 0, pixels.Length);
+        return At_(pixels, at.X, at.Y);
+    }
+
+    // The red picture's own gray is 0.2126 of its red: that is what no saturation leaves.
+    [Test]
+    public void NoSaturation_LeavesThePicturesGrays_AndAColorFilterRecolorsThem()
+    {
+        var gray = Middle(i => i.Saturation = 0);
+        var blue = Middle(i =>
+        {
+            i.Saturation = 0;
+            i.FilterBrush = new SolidColorBrush(Colors.Blue);
+        });
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(gray.R, Is.EqualTo(gray.G).Within(2), "gray: red and green alike");
+            Assert.That(gray.G, Is.EqualTo(gray.B).Within(2), "and blue");
+            Assert.That(gray.R, Is.InRange(48, 60), "at the red's own lightness");
+            Assert.That((blue.R, blue.G), Is.EqualTo(((byte)0, (byte)0)), "recolored in blue's shades");
+            Assert.That(blue.B, Is.EqualTo(gray.B).Within(2));
+        });
+    }
+
+    // Thirteen pixels in along the diagonal from the corner of a picture rounded by 40 lies under three pixels inside its
+    // rounding: still in a 4 px soft edge that follows the corner, though thirteen deep in its square box.
+    [Test]
+    public void ASoftEdge_FollowsThePicturesOwnCorners()
+    {
+        var corner = Middle(i =>
+        {
+            i.CornerRadius = new CornerRadius(Radius);
+            i.SoftEdge = 4;
+        }, (At + 13, At + 13));
+
+        Assert.That(corner.R, Is.InRange(100, 235));
+    }
+
+    [Test]
+    public void Brightness_AndContrast_ChangeThePicturesColors()
+    {
+        var dark = Middle(i => i.Brightness = -0.5);
+        var flat = Middle(i => i.Contrast = -1);
+        var plain = Middle(_ => { });
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(plain.R, Is.GreaterThan(240), "as it is");
+            Assert.That(dark.R, Is.LessThan(plain.R - 40), "darker");
+            Assert.That(flat.R, Is.EqualTo(flat.G).Within(2), "no contrast: the middle gray");
+        });
+    }
+
     // ...AND THE CUT IS FADED, not stepped. Walked diagonally across the rounding: a mesh's edge jumps from nothing to
     // the picture between two neighboring pixels, an analytic one spends a pixel or two on the way. At least one
     // in-between value is what separates them, and a stepped edge has none.

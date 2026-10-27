@@ -337,7 +337,8 @@ internal sealed class TextureBatchCollector : BrushSdfCollector<TextureItem>
             Rotation = layout.Rotation,
             Drawn = layout.Drawn,
             UvRect = layout.UvRect,
-            Tint = tint
+            Tint = tint,
+            Adjust = brush.ColorAdjustment
         };
     }
 }

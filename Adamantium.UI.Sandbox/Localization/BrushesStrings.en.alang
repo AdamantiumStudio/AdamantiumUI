@@ -11,7 +11,7 @@
     <Phrase Key="Drawing" Text="Drawing"/>
     <Phrase Key="Visual" Text="Visual"/>
     <Phrase Key="Material" Text="Material"/>
-    <Phrase Key="AuraShadow" Text="Aura / Shadow"/>
+    <Phrase Key="AuraShadow" Text="Aura / Shadow / Reflection"/>
     <Phrase Key="PaintItOn" Text="Paint it on"/>
 
     <!-- What every stand has. -->
@@ -173,7 +173,7 @@
     <Phrase Key="TintColor" Text="Tint color"/>
 
     <!-- Aura / shadow. -->
-    <Phrase Key="AuraTitle" Text="Aura / Shadow — live (the band is drawn OUTSIDE the element; the margin is yours to leave)"/>
+    <Phrase Key="AuraTitle" Text="Aura / Shadow / Reflection — live (the band is drawn OUTSIDE the element; the margin is yours to leave)"/>
     <Phrase Key="ClipToBox" Text="Clip to the element's box"/>
     <Phrase Key="MarginHint" Text="Margin — layout, not a band setting. With the clip on, drop it below the radius and the band is cut: bounds are never grown to fit a glow."/>
     <Phrase Key="AuraOn" Text="AURA — no direction"/>
@@ -191,6 +191,11 @@
     <Phrase Key="BlurRadius" Text="Blur radius — how soft the edge is"/>
     <Phrase Key="ShadowSpread" Text="Spread — how HIGH it floats (negative peeks out from one edge)"/>
     <Phrase Key="ShadowInner" Text="Inner (inset — the pressed look)"/>
+    <Phrase Key="SoftEdge" Text="SOFT EDGES — the element fades toward its outline"/>
+    <Phrase Key="ReflectionOn" Text="REFLECTION — as on glass"/>
+    <Phrase Key="ReflectionSize" Text="Size — how much of all it draws it mirrors"/>
+    <Phrase Key="ReflectionFade" Text="Fade — how much of what it shows melts away toward its end"/>
+    <Phrase Key="ReflectionOpacity" Text="Opacity at the edge"/>
 
     <!-- The members of every enum a stand offers, said by their names. -->
     <Phrase Key="Linear" Text="Linear"/>

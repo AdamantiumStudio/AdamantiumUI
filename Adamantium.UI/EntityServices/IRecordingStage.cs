@@ -11,4 +11,7 @@ internal interface IRecordingStage
 
     /// <summary>After its pre-render: a picture it shows waits for a frame submitted elsewhere.</summary>
     bool AwaitsFrame { get; }
+
+    /// <summary>Its last frame drew something that changes with time alone, so it wants the next one.</summary>
+    bool Moves { get; }
 }

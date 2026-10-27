@@ -11,6 +11,7 @@
 #include "Includes/NoiseMath.fxh"
 #include "Includes/BrushData.fxh"
 #include "Includes/GradientMath.fxh"
+#include "Includes/ColorMath.fxh"
 
 // GPU-resident FRACTAL REFERENCE ORBITS (perturbation deep-zoom): a flat float2[] holding every deep-zoom fractal
 // instance's reference orbit Z_n concatenated. Each FractalRectData.Ref.x is this instance's START INDEX into it and
@@ -1256,6 +1257,7 @@ struct TexRectData
     float4 UvRect;     // sub-rectangle of the source: x, y, w, h (normalized)
     uint8_t4 Tint;     // multiplied into the sample, straight RGBA in four bytes
     float4 Clip;       // .x = the ROUNDED CLIP's slot, or -1; .yzw spare
+    float4 Adjust;     // before the tint, zero for none: .x brightness, .y contrast - 1, .z saturation - 1
 };
 
 struct TexPSInput
@@ -1337,7 +1339,9 @@ float4 TexRectPS(TexPSInput input) : SV_Target
     // SampleLevel, not Sample: frac() above makes uv DISCONTINUOUS at every tile seam, so the hardware's derivative -
     // which is what Sample picks a mip level by - spikes there and that one column of pixels is drawn from the smallest
     // mip. That is the thin line down each seam. The level is explicit here because the footprint is ours to state.
-    float4 fill = SourceTexture.SampleLevel(SourceSampler, uv, 0.0) * (float4(it.Tint) * (1.0 / 255.0));
+    float4 fill = SourceTexture.SampleLevel(SourceSampler, uv, 0.0);
+    fill.rgb = AdjustColor(fill.rgb, it.Adjust);
+    fill *= float4(it.Tint) * (1.0 / 255.0);
 
     // A SQUARE piece is drawn CRISP, not feathered. Nine-slice cuts a picture into nine quads that share edges, and a
     // coverage ramp puts 0.5 on both sides of every shared edge - alpha-composited that is ~0.75, a dark hairline down

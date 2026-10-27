@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Adamantium.Graphics.Core;
@@ -22,6 +22,8 @@ public partial class RenderCache
         // contiguous range of the stream - and saying it this way is what makes the structure of a recorded frame legible:
         // the stream is a flat list, the layers are what it MEANS.
         var reusedDepth = 0;
+        var bandsWhole = false;
+        _replayWhole.Clear();
         foreach (var layer in _layers)
             for (var i = layer.OpFirst; i < layer.OpFirst + layer.OpCount; i++)
             {
@@ -34,6 +36,11 @@ public partial class RenderCache
                     }
                     else if (op.Kind == RenderOpKind.LayerEnd && --reusedDepth == 0)
                     {
+                        if (_replayWhole.Pop())
+                        {
+                            fullScissor = LeaveWhole(device);
+                        }
+
                         EndOffscreenLayer(device, op.Layer, fullScissor);
                     }
 
@@ -43,22 +50,60 @@ public partial class RenderCache
                 switch (op.Kind)
                 {
                     case RenderOpKind.Scissor:
-                        device.SetScissors(op.Scissor);
+                        device.SetScissors(_wholeFrames.Count > 0 ? WholeScissor(op.Clip, fullScissor) : op.Scissor);
                         break;
                     case RenderOpKind.LayerBegin:
-                        if (ReplayOffscreenLayer(device, op.Layer, fullScissor))
+                        if (ReplayOffscreenLayer(device, op.Layer, fullScissor, out var region))
                         {
                             reusedDepth = 1;
                         }
 
+                        var whole = DrawsWhole(op.Layer);
+                        _replayWhole.Push(whole);
+                        if (whole)
+                        {
+                            fullScissor = EnterWhole(device, region, fullScissor);
+                        }
+
                         break;
                     case RenderOpKind.LayerEnd:
+                        if (_replayWhole.Pop())
+                        {
+                            fullScissor = LeaveWhole(device);
+                        }
+
                         EndOffscreenLayer(device, op.Layer, fullScissor);
                         break;
+                    case RenderOpKind.BandsBegin:
+                        var bands = BeginOwnBands(device, op.Layer, fullScissor);
+                        bandsWhole = DrawsWhole(op.Layer);
+                        if (bandsWhole)
+                        {
+                            fullScissor = EnterWhole(device, bands, fullScissor);
+                        }
+
+                        break;
+                    case RenderOpKind.BandsEnd:
+                        _offscreenLayers?.EndBands(device);
+                        if (bandsWhole)
+                        {
+                            fullScissor = LeaveWhole(device);
+                            bandsWhole = false;
+                        }
+
+                        break;
                     case RenderOpKind.Unit:
-                        // Per-unit draws bake their world at record time while batches follow slots live, so re-point the
-                        // ones whose batched half moved this frame (see RepointIfItMoved).
-                        RepointIfItMoved(op.Unit);
+                        // Per-unit draws bake their world and projection at record time while batches follow slots live,
+                        // so re-point the ones whose batched half moved this frame (see RepointIfItMoved) - and, in a layer
+                        // drawn whole, every one: its projection follows the region.
+                        if (_wholeFrames.Count > 0 && op.Unit.Component is { } owner)
+                        {
+                            op.Unit.Update(World(owner), _projectionMatrix, _renderScale);
+                        }
+                        else
+                        {
+                            RepointIfItMoved(op.Unit);
+                        }
                         if (IsCopyFade(op.Fade))
                         {
                             op.Unit.SetFadeSlot(op.Fade);
@@ -68,6 +113,11 @@ public partial class RenderCache
                         op.Unit.Render();
                         break;
                     case RenderOpKind.Segment:
+                        if (_wholeFrames.Count > 0)
+                        {
+                            ArenaOf(op.Batch)?.SetSegmentScissor(op.SegId, WholeScissor(op.Clip, fullScissor));
+                        }
+
                         switch (op.Batch)
                         {
                             case 0: _rectBatch.DrawRecordedSegment(device, op.SegId, fullScissor, _projectionMatrix); break;
@@ -90,11 +140,21 @@ public partial class RenderCache
                         }
                         break;
                     case RenderOpKind.InstancedFlush:
+                        if (_wholeFrames.Count > 0)
+                        {
+                            _instancedFill.SetFlushScissor(op.SegId, WholeScissor(op.Clip, fullScissor));
+                        }
+
                         _instancedFill.ReplayFlush(op.SegId, fullScissor, _projectionMatrix);
                         break;
                 }
             }
     }
+
+    // In a layer drawn whole a recorded clip is re-derived against the region it draws in this frame: the one it was
+    // recorded or refreshed against may be the window's, or a region since moved.
+    private Rect2D WholeScissor(IUIComponent owner, Rect2D region) =>
+        owner != null && CumulativeClip(owner) is { } logical ? ToFramebufferScissor(logical, region) : region;
 
     // Gives a per-unit draw (re-issued by the CPU on replay) its slot's current composed alpha times its own.
     private void RefreshOverlayFade(IRenderUnit unit)
@@ -165,7 +225,8 @@ public partial class RenderCache
 
     // Collect this unit's LIVING aura - the band whose reach wanders. Its own collector and its own pass: a still band
     // must not pay for the noise, so the two are never mixed into one draw.
-    private bool CollectLivingHalo(IGraphicsDevice device, IRenderUnit unit, Matrix4x4F wt, Rect2D scissor, bool inner)
+    private bool CollectLivingHalo(IGraphicsDevice device, IRenderUnit unit, Matrix4x4F wt, Rect2D scissor, bool inner,
+        double underWidth = 0)
     {
         if (unit.RenderData.LivingHalo is not { } band || band.Inner != inner) return false;
         if (!TryHaloShape(unit, out var shape, out var corners, out var kind, out var field, out var fieldRange)) return false;
@@ -185,7 +246,8 @@ public partial class RenderCache
         // OWN alpha only - the same split every batched fill makes.
         FadeBySlot(unit);
         if (!batch.TryAdd(band, shape, corners, kind, bakeWorld, unit.RenderData.Opacity, scissor, bounds,
-                band.Color, slot, field, fieldRange, RoundedClipSlot(unit.Component, _frameScissor), unit.FadeSlot))
+                band.Color, slot, field, fieldRange, RoundedClipSlot(unit.Component, _frameScissor), unit.FadeSlot,
+                underWidth))
         {
             return false;
         }
@@ -194,6 +256,7 @@ public partial class RenderCache
 
         if (inner) _haloOverOwner = unit.Component;
         _batchScissor = scissor;
+        _batchClip = ClipOwnerOf(unit.Component);   // the replay re-derives the segment's scissor from it
         _batchOpen = true;
         return true;
     }
@@ -201,7 +264,8 @@ public partial class RenderCache
     // Collect this unit's soft bands (aura / shadow) into the halo batch. The SHAPE comes from the payload - only a rect
     // or a full ellipse has a signed distance to read, and arbitrary geometry is a separate story (a distance field baked
     // per mesh key). A shape that has none simply wears no band rather than getting a wrong one.
-    private bool CollectHalo(IGraphicsDevice device, IRenderUnit unit, Matrix4x4F wt, Rect2D scissor, bool inner)
+    private bool CollectHalo(IGraphicsDevice device, IRenderUnit unit, Matrix4x4F wt, Rect2D scissor, bool inner,
+        double underWidth = 0)
     {
         var bands = unit.RenderData.Halo;
         if (!HaloRectCollector.HasSide(bands, inner)) return false;
@@ -230,7 +294,7 @@ public partial class RenderCache
         FadeBySlot(unit);   // the chain comes from the slot now - the color carries the element's own alpha only
         if (!batch.TryAdd(bands, inner, shape, corners, kind, bakeWorld,
                 unit.RenderData.Opacity, scissor, haloBounds, slot, field, fieldRange,
-                RoundedClipSlot(unit.Component, _frameScissor), unit.FadeSlot))
+                RoundedClipSlot(unit.Component, _frameScissor), unit.FadeSlot, underWidth))
         {
             return false;
         }
@@ -240,6 +304,7 @@ public partial class RenderCache
 
         if (inner) _haloOverOwner = unit.Component;
         _batchScissor = scissor;
+        _batchClip = ClipOwnerOf(unit.Component);   // the replay re-derives the segment's scissor from it
         _batchOpen = true;
         return true;
     }
@@ -725,7 +790,10 @@ public partial class RenderCache
         // LAYER is the same: its group is where the walk opens the layer.
         if (drawCommands.Count == 0 && (clones is { Count: > 0 } || WantsLayer(component)))
         {
-            var hostGroup = BuildUnitsFor(component, drawCommands, projectionMatrix);
+            // As below: clean, it did not re-record and its own units stand; dirty, it now draws nothing of its own.
+            var hostGroup = wasGeometryValid && _groupById.TryGetValue(component.RenderId, out var held)
+                ? held
+                : BuildUnitsFor(component, drawCommands, projectionMatrix);
             hostGroup.Clones = clones;
             hostGroup.CloneSteps = cloneSteps;
             hostGroup.CloneStagger = cloneStagger;

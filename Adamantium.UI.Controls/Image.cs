@@ -38,6 +38,15 @@ public class Image : InputUIComponent, IDesignTimeAnimatedMedia
    public static readonly AdamantiumProperty FilterBrushProperty = AdamantiumProperty.Register(nameof(FilterBrush),
       typeof(Brush), typeof(Image), new PropertyMetadata(Brushes.White, PropertyMetadataOptions.AffectsRender));
 
+   public static readonly AdamantiumProperty BrightnessProperty = AdamantiumProperty.Register(nameof(Brightness),
+      typeof(double), typeof(Image), new PropertyMetadata(0.0, PropertyMetadataOptions.AffectsRender));
+
+   public static readonly AdamantiumProperty ContrastProperty = AdamantiumProperty.Register(nameof(Contrast),
+      typeof(double), typeof(Image), new PropertyMetadata(0.0, PropertyMetadataOptions.AffectsRender));
+
+   public static readonly AdamantiumProperty SaturationProperty = AdamantiumProperty.Register(nameof(Saturation),
+      typeof(double), typeof(Image), new PropertyMetadata(1.0, PropertyMetadataOptions.AffectsRender));
+
    /// <summary>The ground under the picture, rounded by <see cref="CornerRadius"/>; gives a sourceless image something
    /// visible. <see cref="BackgroundState"/> decides when it is drawn.</summary>
    public static readonly AdamantiumProperty BackgroundProperty = AdamantiumProperty.Register(nameof(Background),
@@ -77,7 +86,8 @@ public class Image : InputUIComponent, IDesignTimeAnimatedMedia
 
    public static readonly AdamantiumProperty CornerRadiusProperty = AdamantiumProperty.Register(nameof(CornerRadius),
       typeof(CornerRadius), typeof(Image),
-      new PropertyMetadata(new CornerRadius(0), PropertyMetadataOptions.AffectsRender));
+      new PropertyMetadata(new CornerRadius(0), PropertyMetadataOptions.AffectsRender,
+         (d, _) => NotifyOwnCornersChanged(d)));
    
    public static readonly AdamantiumProperty DelayProperty = AdamantiumProperty.Register(nameof(Delay),
       typeof(UInt32), typeof(Image),
@@ -320,6 +330,30 @@ public class Image : InputUIComponent, IDesignTimeAnimatedMedia
    {
       get => GetValue<Brush>(FilterBrushProperty);
       set => SetValue(FilterBrushProperty, value);
+   }
+
+   /// <summary>Added to every color of the picture, from -1 (black) through 0 (as it is) to 1 (white).</summary>
+   public double Brightness
+   {
+      get => GetValue<double>(BrightnessProperty);
+      set => SetValue(BrightnessProperty, value);
+   }
+
+   /// <summary>How far the picture's colors are pushed from the middle gray, from -1 (all gray) through 0 (as it is);
+   /// 1 doubles it.</summary>
+   public double Contrast
+   {
+      get => GetValue<double>(ContrastProperty);
+      set => SetValue(ContrastProperty, value);
+   }
+
+   /// <summary>How colorful the picture is: 0 is its grays alone, 1 as it is, 2 twice as colorful. With
+   /// <see cref="FilterBrush"/> a color, 0 recolors the picture in that color's shades. Applies to a plain picture;
+   /// an animation, a drawing and a live surface are drawn as they are.</summary>
+   public double Saturation
+   {
+      get => GetValue<double>(SaturationProperty);
+      set => SetValue(SaturationProperty, value);
    }
 
    public Stretch Stretch
@@ -603,6 +637,12 @@ public class Image : InputUIComponent, IDesignTimeAnimatedMedia
    protected override AutomationPeer OnCreateAutomationPeer() =>
       TemplatedParent == null ? new ImageAutomationPeer(this) : null;
 
+   protected override Vector4F OwnCornerRadii()
+   {
+      var r = CornerRadius;
+      return new Vector4F((float)r.TopLeft, (float)r.TopRight, (float)r.BottomRight, (float)r.BottomLeft);
+   }
+
    protected override void OnRender(IDrawingContext context)
    {
       base.OnRender(context);
@@ -707,9 +747,13 @@ public class Image : InputUIComponent, IDesignTimeAnimatedMedia
       // The FILTER is what this control has always called its tint - a color multiplied into every sampled pixel -
       // and the brush says the same thing in its own words. White is "leave it alone", which is both defaults.
       _tiling.Tint = FilterBrush is SolidColorBrush color ? color.Color : Colors.White;
+      _tiling.ColorAdjustment = new Vector4F((float)Finite(Brightness, 0), (float)Finite(Contrast, 0),
+         (float)Finite(Saturation, 1) - 1f, 0f);
 
       return _tiling;
    }
+
+   private static double Finite(double value, double otherwise) => double.IsFinite(value) ? value : otherwise;
 
    // "Empty" is NOT ONLY "no source named": a picture that has been named but has not finished loading shows nothing
    // either, and the ground is wanted most exactly then - that is the moment a hole would be mistaken for a fault.

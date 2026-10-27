@@ -7,6 +7,27 @@ All packages share one version.
 
 ### Added
 
+- `UIComponent.SoftEdge`: the element and its subtree fade in over this many pixels from the outline of what they
+  draw, whatever its shape - an ellipse, a star, a glyph, a picture's own transparency - a picture whose edges melt into
+  the page. Its own glow and shadow stay whole and go on under the faded edge, so it melts into them.
+  `UIComponent.Reflection` (`Reflection`: `Size` - how much of it shows, `Fade` - how much of that melts away toward
+  its end, `OffsetX`, `OffsetY`, `Opacity`, `IsEnabled`): all the element draws turned over under it - its own glow
+  and shadow too, a soft-edged one's as well - about a floor half `OffsetY` below the lowest of it, so a shadow thrown
+  down is mirrored whole, its corners round, and the glow meets its mirror image without a seam; `Size` is a share of
+  all it draws, so a whole one keeps the glow over its top edge too. Both are the element's own, as `Shadow` and `Aura` are, drawn through its layer as `OpacityMask`
+  is - a reflection switched off costs none; layout does not grow for the reflection, and only the element's own clip
+  is not applied to it. A reflected element is drawn whole into its layer, in the layer's own region: what a scroll or
+  the window's edge hides of it is still mirrored into view, and the clips above it - rounded ones too - cut what it lays
+  down, the element and its reflection each where they lie. Content thinner than about the soft edge's width fades out
+  altogether; where an ancestor's clip cuts the element, it does not fade there.
+- `Image` clips by its own `CornerRadius` when `ClipToBounds` is on, as `Border` does, and a soft edge on it follows
+  those corners. `Rectangle` does the same with its `CornerRadius`: a clipping `Rectangle` now clips rounded, no longer
+  square, and a soft edge on it no longer stops short at the corners.
+- Sandbox: soft edges and the reflection on the brushes tab's aura and shadow stand, the picture's colors on the Image
+  tab.
+- `Image.Brightness`, `Image.Contrast`, `Image.Saturation`: the picture's colors, each leaving it as it is at its
+  default; saturation 0 with a color `FilterBrush` recolors it in that color's shades. A plain picture only - an
+  animation, a drawing and a live surface are drawn as they are.
 - `NumericUpDown.Command`: a number the user puts in - a step, a scrub, the wheel, a typed number, automation's -
   runs the command, given the number: a ribbon's width box sets the width of the picture selected. A value set from
   outside or moved by the limits runs nothing. The focus stays in the box while it is stepped or typed in and goes back
@@ -2224,6 +2245,20 @@ All packages share one version.
   reaches the loop on its own queue - and became a tap, a button clicked or a context menu not opened. A hold now
   lifts once the application holds every contact it means to, and settles before the lift; one that never starts
   is an error, not a tap.
+- An element drawn through a layer of its own - `IsLayer`, `OpacityMask`, `SoftEdge`, `Reflection` - vanished
+  whenever the whole window was walked again for something else (a window maximized, a tab added) while it had not
+  changed itself: the walk took its untouched drawing for no drawing at all. With nothing else changing, it stayed gone.
+- A soft-edged element's own glow and shadow were laid down beside its layer, not in it: the reflection left them out,
+  and a shadow ran on below the floor to a square end. Replayed after a move, they also took the clip of whatever was
+  drawn before them.
+- An opacity slot handed out in the middle of a frame reached the GPU only the frame after: whatever the slot drew
+  that frame read no alpha and did not show - and with nothing else to draw, it stayed that way until something did.
+- A living aura, an animated `NoiseBrush` and an animated `FractalBrush` froze in a window with a varying frame rate
+  (`RefreshRate` 0, the default) - their clock ran, but nothing asked for a frame. A frame that draws one now asks for
+  the next, in a window, a popup and an adorner layer alike; with nothing moving left, the frames stop.
+- A reflection cut off what the element draws below its edge - its glow, its shadow - in a hard line with square ends
+  wherever it started, worst with a `Distance`. The element now stands over a floor half its distance down: below the
+  floor its mirror image meets its own glow as a mirror would, fading from where the mirrored element begins.
 - Leaving a `NumericUpDown`, or pressing Enter in it, with its text as it was shown put the shown number in - 453.5433
   shown as 453.54 became 453.54. Text left as shown now puts nothing in.
 - A grid of labelled boxes in a ribbon's group showed to automation as a stand-in button that could do nothing, the

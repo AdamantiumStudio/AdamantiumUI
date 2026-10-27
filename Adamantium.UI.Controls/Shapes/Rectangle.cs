@@ -1,4 +1,5 @@
-﻿using Adamantium.ProceduralGeometry;
+﻿using Adamantium.Mathematics;
+using Adamantium.ProceduralGeometry;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Graphics;
 using Adamantium.UI.Core.Media;
@@ -22,12 +23,19 @@ public class Rectangle : Shape
    public static readonly AdamantiumProperty CornerRadiusProperty = AdamantiumProperty.Register(nameof(CornerRadius),
       typeof(CornerRadius), typeof(Rectangle),
       new PropertyMetadata(new CornerRadius(0),
-         PropertyMetadataOptions.AffectsRender));
+         PropertyMetadataOptions.AffectsRender, (d, _) => NotifyOwnCornersChanged(d)));
 
    public CornerRadius CornerRadius
    {
       get => GetValue<CornerRadius>(CornerRadiusProperty);
       set => SetValue(CornerRadiusProperty, value);
+   }
+
+   /// <inheritdoc />
+   protected override Vector4F OwnCornerRadii()
+   {
+      var r = CornerRadius;
+      return new Vector4F((float)r.TopLeft, (float)r.TopRight, (float)r.BottomRight, (float)r.BottomLeft);
    }
 
    protected override void OnRender(IDrawingContext context)
