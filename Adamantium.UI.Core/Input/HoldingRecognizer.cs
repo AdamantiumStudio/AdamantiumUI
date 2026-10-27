@@ -37,6 +37,9 @@ internal sealed class HoldingRecognizer
 
     public void Cancel(Pointer pointer, uint timestamp) => Finish(pointer.Id, HoldingState.Canceled, timestamp);
 
+    /// <summary>Whether the contact <paramref name="id"/> is down and still waiting out the holding time.</summary>
+    internal bool IsWaiting(uint id) => _holds.TryGetValue(id, out var hold) && !hold.Started;
+
     /// <summary>The contact has rested long enough: called by its timer on the loop - or, with no loop running, by
     /// whoever drains <see cref="LoopSignal"/>; never on the timer's own thread.</summary>
     internal void Elapsed(uint id, uint timestamp)

@@ -241,14 +241,25 @@ public sealed class AutomationExecutor
 
         try
         {
-            await Task.Delay(Gestures.HoldingTime + HoldMargin);
+            await Task.Delay(Gestures.HoldingTime);
+            var limit = timeout < HoldConfirmation ? timeout : HoldConfirmation;
             var watch = Stopwatch.StartNew();
-            while (watch.Elapsed < HoldConfirmation && !await _host.RunOnLoopAsync(() => Holding(contacts), timeout))
+            while (true)
             {
+                await _host.WaitForIdleAsync(timeout);
+                if (!await _host.RunOnLoopAsync(() => Waiting(contacts), timeout))
+                {
+                    break;
+                }
+
+                if (watch.Elapsed >= limit)
+                {
+                    throw new AutomationException(
+                        $"The contacts were held {Gestures.HoldingTime.TotalMilliseconds:0} ms and more, but the hold never started.");
+                }
+
                 await Task.Delay(WaitStep);
             }
-
-            await _host.WaitForIdleAsync(timeout);
         }
         catch (Exception)
         {
@@ -268,28 +279,17 @@ public sealed class AutomationExecutor
         return await SettledAsync(request, mark, timeout);
     }
 
-    private static bool Holding(IReadOnlyList<Contact> contacts)
+    private static bool Waiting(IReadOnlyList<Contact> contacts)
     {
         foreach (var contact in contacts)
         {
-            if (contact.Properties.IsBarrelButtonPressed)
+            if (PointerDevice.Current.Holding.IsWaiting(contact.Id))
             {
-                continue;
-            }
-
-            var held = false;
-            foreach (var pointer in PointerDevice.Current.Pointers)
-            {
-                held |= pointer.Id == contact.Id && pointer.IsHolding;
-            }
-
-            if (!held)
-            {
-                return false;
+                return true;
             }
         }
 
-        return true;
+        return false;
     }
 
     private (ContactPath[] Paths, Contact[] Contacts) Contacts(AutomationRequest request)
