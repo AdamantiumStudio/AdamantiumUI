@@ -260,6 +260,8 @@ public sealed class AutomationExecutor
 
                 await Task.Delay(WaitStep);
             }
+
+            await _host.WaitForIdleAsync(timeout);
         }
         catch (Exception)
         {
