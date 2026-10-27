@@ -98,16 +98,79 @@ internal sealed class OffscreenLayers : IDisposable
         _idle.Clear();
     }
 
+    /// <summary>The space drawing lands in, inside an open layer; outside one it is the caller's own.</summary>
+    public DrawSpace Space { get; private set; }
+
+    /// <summary>Whether drawing lands in a layer's own space - its own, or one it is drawn inside of.</summary>
+    public bool InOwnSpace => _spaces.Count > 0 && Space.Own;
+
+    /// <summary>The space the innermost open layer was opened in, which its close goes back to, and whether it was opened
+    /// drawn whole.</summary>
+    public (DrawSpace Outer, bool Whole) Closing => (_spaces.Peek().Outer, _spaces.Peek().Whole);
+
+    // One for every open layer and bands, whatever became of them: what to go back to, decided when they opened.
+    private readonly Stack<(DrawSpace Outer, Viewport Viewport, bool Whole)> _spaces = new();
+
+    // Into the space drawing lands in from here: the one it was in - the given projection and bounds - or, drawn whole,
+    // the region's own: its viewport and a projection onto it, so a window pixel lands on the same surface pixel and what
+    // lies past the window is drawn too.
+    private DrawSpace EnterSpace(GraphicsDevice gd, Rect2D region, Matrix4x4F projection, Rect2D bounds, bool whole)
+    {
+        var outer = new DrawSpace(projection, bounds, _spaces.Count > 0 && Space.Own);
+        var viewport = gd is { CurrentViewports.Length: > 0 } ? gd.CurrentViewports[0] : default;
+        _spaces.Push((outer, viewport, whole));
+        if (!whole)
+        {
+            return Space = outer;
+        }
+
+        if (gd == null || region.Extent.Width == 0 || region.Extent.Height == 0 || !(viewport.Width > 0)
+            || !(viewport.Height > 0))
+        {
+            return Space = outer with { Bounds = region, Own = true };
+        }
+
+        var width = (float)region.Extent.Width;
+        var height = (float)region.Extent.Height;
+        var onto = Matrix4x4F.Identity;
+        onto.M11 = viewport.Width / width;
+        onto.M22 = viewport.Height / height;
+        onto.M41 = onto.M11 - 1f + 2f * (viewport.X - region.Offset.X) / width;
+        onto.M42 = onto.M22 - 1f + 2f * (viewport.Y - region.Offset.Y) / height;
+        gd.SetViewports(new Viewport
+        {
+            X = region.Offset.X, Y = region.Offset.Y, Width = width, Height = height,
+            MinDepth = viewport.MinDepth, MaxDepth = viewport.MaxDepth
+        });
+        gd.SetScissors(region);
+        return Space = new DrawSpace(outer.Projection * onto, region, true);
+    }
+
+    private void LeaveSpace(GraphicsDevice gd)
+    {
+        var (outer, viewport, whole) = _spaces.Pop();
+        if (whole && gd != null && viewport.Width > 0)
+        {
+            gd.SetViewports(viewport);
+            gd.SetScissors(outer.Bounds);
+        }
+
+        Space = outer;
+    }
+
     /// <summary>Opens the texture <paramref name="owner"/>'s own bands - its glow, its shadow - are drawn into, over the
     /// <paramref name="region"/> its layer covers: they are laid down under the layer, with it, apart from what its soft
-    /// edge fades. <see cref="EndBands"/> goes back to the target it was opened over.</summary>
-    public void BeginBands(IGraphicsDevice device, object owner, Rect2D region)
+    /// edge fades. Drawn <paramref name="whole"/>, in the region's own space; otherwise in the one opened over, its
+    /// <paramref name="projection"/> and <paramref name="bounds"/>. <see cref="EndBands"/> goes back to the target and the
+    /// space it was opened over.</summary>
+    public DrawSpace BeginBands(IGraphicsDevice device, object owner, Rect2D region, Matrix4x4F projection, Rect2D bounds,
+        bool whole)
     {
         if (device is not GraphicsDevice gd || gd.CurrentRenderTarget == null
             || region.Extent.Width == 0 || region.Extent.Height == 0)
         {
             _bands.Push(default);
-            return;
+            return EnterSpace(device as GraphicsDevice, region, projection, bounds, whole);
         }
 
         if (!_cached.TryGetValue(owner, out var entry))
@@ -135,20 +198,19 @@ internal sealed class OffscreenLayers : IDisposable
         gd.MSAALevel = MSAALevel.None;
         gd.BeginRendering(gd.CurrentCommandBuffer);
         gd.TargetOrigin = new NativePoint(region.Offset.X, region.Offset.Y);
+        return EnterSpace(gd, region, projection, bounds, whole);
     }
 
-    /// <summary>Closes the bands <see cref="BeginBands"/> opened, keeping them for the layer laid down this frame.</summary>
-    public void EndBands(IGraphicsDevice device)
+    /// <summary>Closes the bands <see cref="BeginBands"/> opened, keeping them for the layer laid down this frame, and
+    /// gives back the space they were opened in.</summary>
+    public DrawSpace EndBands(IGraphicsDevice device)
     {
-        if (device is not GraphicsDevice gd || _bands.Count == 0)
-        {
-            return;
-        }
-
+        var gd = device as GraphicsDevice;
         var open = _bands.Pop();
-        if (open.Texture == null)
+        LeaveSpace(gd);
+        if (gd == null || open.Texture == null)
         {
-            return;
+            return Space;
         }
 
         gd.SuspendRendering();
@@ -165,6 +227,7 @@ internal sealed class OffscreenLayers : IDisposable
 
         open.Entry.BandsLatest = open.Slot;
         open.Entry.BandsFrame = _frame;
+        return Space;
     }
 
     private readonly record struct OpenBands(IRenderTarget Target, IDepthStencilBuffer Depth, NativePoint Origin,
@@ -199,16 +262,20 @@ internal sealed class OffscreenLayers : IDisposable
         entry.BandsFrame = -1;
     }
 
-    /// <summary>Opens <paramref name="owner"/>'s layer over <paramref name="region"/> (window device pixels). True means
-    /// its texture already holds a drawing with this <paramref name="print"/>: draw nothing until <see cref="End"/>, which
+    /// <summary>Opens <paramref name="owner"/>'s layer over <paramref name="region"/> (window device pixels) and gives the
+    /// space drawing lands in: drawn <paramref name="whole"/>, the region's own; otherwise the one opened over, its
+    /// <paramref name="projection"/> and <paramref name="bounds"/>. <paramref name="reused"/> means its
+    /// texture already holds a drawing with this <paramref name="print"/>: draw nothing until <see cref="End"/>, which
     /// lays it down. Otherwise drawing lands in a fresh texture, kept for reuse when <paramref name="reusable"/>.</summary>
-    public bool Begin(IGraphicsDevice device, object owner, Rect2D region, ulong print, bool reusable, bool allowReuse)
+    public DrawSpace Begin(IGraphicsDevice device, object owner, Rect2D region, ulong print, bool reusable,
+        bool allowReuse, Matrix4x4F projection, Rect2D bounds, bool whole, out bool reused)
     {
+        reused = false;
         if (device is not GraphicsDevice gd || gd.CurrentRenderTarget == null
             || region.Extent.Width == 0 || region.Extent.Height == 0)
         {
             _open.Push(default);
-            return false;
+            return EnterSpace(device as GraphicsDevice, region, projection, bounds, whole);
         }
 
         if (!_cached.TryGetValue(owner, out var entry))
@@ -224,7 +291,8 @@ internal sealed class OffscreenLayers : IDisposable
             _open.Push(new OpenOffscreenLayer(null, null, default, default, default, entry.Ring[entry.Latest],
                 entry.TextureWidth, entry.TextureHeight, region, entry, entry.Latest, print, true, true));
             Reused++;
-            return true;
+            reused = true;
+            return EnterSpace(gd, region, projection, bounds, whole);
         }
 
         EnsureRing(gd, entry, region.Extent.Width, region.Extent.Height);
@@ -258,7 +326,7 @@ internal sealed class OffscreenLayers : IDisposable
         gd.BeginRendering(commandBuffer);
         gd.TargetOrigin = new NativePoint(region.Offset.X, region.Offset.Y);
         Redrawn++;
-        return false;
+        return EnterSpace(gd, region, projection, bounds, whole);
     }
 
     /// <summary>Closes the innermost layer, goes back to the target it was opened over and lays the layer down there with
@@ -266,18 +334,15 @@ internal sealed class OffscreenLayers : IDisposable
     /// drew, cut by <paramref name="scissor"/> (device pixels of the window); and its reflection, cut by
     /// <paramref name="mirrorScissor"/>, where <paramref name="mirror"/> shows. <paramref name="softCut"/> marks the sides
     /// (left, top, right, bottom) where its ancestors cut what it drew short: the drawing goes on past them, so nothing
-    /// fades there.</summary>
+    /// fades there. Drawing goes back to the space the layer was opened in (<see cref="Closing"/>).</summary>
     public void End(IGraphicsDevice device, float alpha, Rect2D scissor, in LayerMask mask, float soft, Vector4F softCut,
         in LayerMirror mirror, Rect2D mirrorScissor, Vector4F clipBox, Vector4F clipRadii)
     {
-        if (device is not GraphicsDevice gd || _open.Count == 0)
-        {
-            return;
-        }
-
+        var gd = device as GraphicsDevice;
         var open = _open.Pop();
-        if (open.Color == null)
+        if (gd == null || open.Color == null)
         {
+            LeaveSpace(gd);
             return;
         }
 
@@ -340,6 +405,8 @@ internal sealed class OffscreenLayers : IDisposable
             entry.BandsFrame = -1;
         }
 
+        // Laid down in the space it was opened in.
+        LeaveSpace(gd);
         var softTexture = soft > 0f ? entry.SoftRing?[open.Slot] : null;
         var bands = entry.BandsFrame == _frame && entry.BandsLatest >= 0 ? entry.BandsRing[entry.BandsLatest] : null;
         if (alpha > 0f)

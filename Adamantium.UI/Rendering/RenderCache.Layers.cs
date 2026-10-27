@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using Adamantium.Graphics;
 using Adamantium.Graphics.Core;
 using Adamantium.Graphics.Fonts;
 using Adamantium.Mathematics;
@@ -19,9 +18,7 @@ public partial class RenderCache
     private const double TextOverhang = 0.25;
     private const ulong PrintSeed = 0xCBF29CE484222325UL;
 
-    // Whole: whether it was opened drawn whole - asked once, as the reflection can change while the frame draws.
-    private readonly Stack<(int End, IUIComponent Layer, bool Whole)> _layerWalk = new();
-    private readonly Stack<bool> _replayWhole = new();
+    private readonly Stack<(int End, IUIComponent Layer)> _layerWalk = new();
     private OffscreenLayers _offscreenLayers;
     private long _framePaintEpoch;
 
@@ -83,51 +80,8 @@ public partial class RenderCache
         };
     }
 
-    // A layer drawn whole draws in its own region: its viewport, a projection onto it and its bounds for every
-    // scissor, so what lies past the window reaches its texture. LeaveWhole gives the window's back.
-    private readonly Stack<(Rect2D Full, Matrix4x4F Projection, Viewport Viewport)> _wholeFrames = new();
-
-    private Rect2D EnterWhole(IGraphicsDevice device, Rect2D region, Rect2D fullScissor)
-    {
-        var gd = device as GraphicsDevice;
-        var viewport = gd is { CurrentViewports.Length: > 0 } ? gd.CurrentViewports[0] : default;
-        _wholeFrames.Push((fullScissor, _projectionMatrix, viewport));
-        if (gd == null || region.Extent.Width == 0 || region.Extent.Height == 0 || !(viewport.Width > 0)
-            || !(viewport.Height > 0))
-        {
-            return region;
-        }
-
-        // The window's clip space onto the region's: a window pixel lands on the same surface pixel as before.
-        var width = (float)region.Extent.Width;
-        var height = (float)region.Extent.Height;
-        var onto = Matrix4x4F.Identity;
-        onto.M11 = viewport.Width / width;
-        onto.M22 = viewport.Height / height;
-        onto.M41 = onto.M11 - 1f + 2f * (viewport.X - region.Offset.X) / width;
-        onto.M42 = onto.M22 - 1f + 2f * (viewport.Y - region.Offset.Y) / height;
-        _projectionMatrix *= onto;
-        gd.SetViewports(new Viewport
-        {
-            X = region.Offset.X, Y = region.Offset.Y, Width = width, Height = height,
-            MinDepth = viewport.MinDepth, MaxDepth = viewport.MaxDepth
-        });
-        gd.SetScissors(region);
-        return region;
-    }
-
-    private Rect2D LeaveWhole(IGraphicsDevice device)
-    {
-        var (full, projection, viewport) = _wholeFrames.Pop();
-        _projectionMatrix = projection;
-        if (device is GraphicsDevice gd && viewport.Width > 0)
-        {
-            gd.SetViewports(viewport);
-            gd.SetScissors(full);
-        }
-
-        return full;
-    }
+    // Drawing inside a layer drawn whole, or inside one drawn in such a layer's space.
+    private bool InOwnSpace => _offscreenLayers?.InOwnSpace == true;
 
     // A soft edge fades what the element draws, never the glow and the shadow around it: those go into a texture of the
     // layer's own, beside the one the fade reaches, and are laid down under it - mirrored, faded and masked with it.
@@ -141,13 +95,7 @@ public partial class RenderCache
             RecordLayerMark(RenderOpKind.BandsBegin, group.Component, group.Order);
         }
 
-        var region = BeginOwnBands(device, group.Component, fullScissor, start, end);
-        var whole = DrawsWhole(group.Component);
-        if (whole)
-        {
-            fullScissor = EnterWhole(device, region, fullScissor);
-        }
-
+        fullScissor = OpenBands(device, group.Component, fullScissor, start, end);
         foreach (var unit in group.Units)
         {
             if (!HaloRectCollector.WantsBatch(unit.RenderData) && !HaloLivingCollector.WantsBatch(unit.RenderData))
@@ -174,13 +122,7 @@ public partial class RenderCache
         }
 
         FlushBatches(device, fullScissor, ref scissorNarrowed);
-        _offscreenLayers.EndBands(device);
-        if (whole)
-        {
-            LeaveWhole(device);
-            scissorNarrowed = false;
-        }
-
+        CloseBands(device);
         if (_recording)
         {
             RecordLayerMark(RenderOpKind.BandsEnd, group.Component, group.Order);
@@ -189,33 +131,45 @@ public partial class RenderCache
         _bandsDrawnUnder = group;
     }
 
-    private Rect2D BeginOwnBands(IGraphicsDevice device, IUIComponent layer, Rect2D fullScissor)
+    // The pairs below open and close a layer, and its bands, in the space it draws in. Whether it is drawn whole is asked
+    // once, when it opens; its close goes back to what it was opened in. Each returns the bounds every scissor keeps
+    // within from there, and the device's scissor is on them: it is on the full one when a layer opens or closes, as
+    // the batches are flushed first.
+    private Rect2D OpenBands(IGraphicsDevice device, IUIComponent layer, Rect2D fullScissor)
     {
         var start = GroupIndexOf(layer);
-        return BeginOwnBands(device, layer, fullScissor, start, start < 0 ? -1 : CloneSubtreeEnd(start));
+        return OpenBands(device, layer, fullScissor, start, start < 0 ? -1 : CloneSubtreeEnd(start));
     }
 
-    private Rect2D BeginOwnBands(IGraphicsDevice device, IUIComponent layer, Rect2D fullScissor, int start, int end)
+    private Rect2D OpenBands(IGraphicsDevice device, IUIComponent layer, Rect2D fullScissor, int start, int end)
     {
         _offscreenLayers ??= new OffscreenLayers();
-        var region = LayerRegion(layer, fullScissor, start, end);
-        _offscreenLayers.BeginBands(device, layer, region);
-        return region;
+        return DrawIn(_offscreenLayers.BeginBands(device, layer, LayerRegion(layer, fullScissor, start, end),
+            _projectionMatrix, fullScissor, DrawsWhole(layer)));
     }
 
-    private bool ReplayOffscreenLayer(IGraphicsDevice device, IUIComponent layer, Rect2D fullScissor, out Rect2D region)
+    private Rect2D CloseBands(IGraphicsDevice device) => DrawIn(_offscreenLayers.EndBands(device));
+
+    private Rect2D ReplayLayer(IGraphicsDevice device, IUIComponent layer, Rect2D fullScissor, out bool reused)
     {
         var start = GroupIndexOf(layer);
-        return BeginOffscreenLayer(device, layer, fullScissor, start, start < 0 ? -1 : CloneSubtreeEnd(start), true,
-            out region);
+        return OpenLayer(device, layer, fullScissor, start, start < 0 ? -1 : CloneSubtreeEnd(start), true, out reused);
     }
 
-    private bool BeginOffscreenLayer(IGraphicsDevice device, IUIComponent layer, Rect2D fullScissor, int start, int end,
-        bool allowReuse, out Rect2D region)
+    private Rect2D OpenLayer(IGraphicsDevice device, IUIComponent layer, Rect2D fullScissor, int start, int end,
+        bool allowReuse, out bool reused)
     {
         _offscreenLayers ??= new OffscreenLayers();
-        region = ScanLayer(layer, fullScissor, start, end, out var print, out var reusable);
-        return _offscreenLayers.Begin(device, layer, region, print, reusable, allowReuse);
+        var region = ScanLayer(layer, fullScissor, start, end, out var print, out var reusable);
+        return DrawIn(_offscreenLayers.Begin(device, layer, region, print, reusable, allowReuse, _projectionMatrix,
+            fullScissor, DrawsWhole(layer), out reused));
+    }
+
+    // Draws in the space from here: its projection, and its bounds for the caller's full scissor.
+    private Rect2D DrawIn(DrawSpace space)
+    {
+        _projectionMatrix = space.Projection;
+        return space.Bounds;
     }
 
     internal int LayersRedrawn => _offscreenLayers?.Redrawn ?? 0;
@@ -228,32 +182,20 @@ public partial class RenderCache
 
     private void CloseOffscreenLayer(IGraphicsDevice device, ref Rect2D fullScissor, ref bool scissorNarrowed)
     {
-        var (end, layer, whole) = _layerWalk.Pop();
-        if (device != null)
-        {
-            FlushBatches(device, fullScissor, ref scissorNarrowed);
-            if (whole)
-            {
-                fullScissor = LeaveWhole(device);
-                scissorNarrowed = false;
-            }
-        }
-
-        EndOffscreenLayer(device, layer, fullScissor);
+        var (end, layer) = _layerWalk.Pop();
+        FlushBatches(device, fullScissor, ref scissorNarrowed);
+        fullScissor = CloseLayer(device, layer);
         if (_recording)
         {
             RecordLayerMark(RenderOpKind.LayerEnd, layer, _groups[end - 1].Order + 1);
         }
     }
 
-    private void EndOffscreenLayer(IGraphicsDevice device, IUIComponent layer, Rect2D fullScissor)
+    // Closes the innermost layer and lays it down in the space it was opened in, which is drawn in again.
+    private Rect2D CloseLayer(IGraphicsDevice device, IUIComponent layer)
     {
-        if (device == null || _offscreenLayers == null)
-        {
-            return;
-        }
-
-        var whole = DrawsWhole(layer);
+        var (outer, whole) = _offscreenLayers.Closing;
+        var fullScissor = DrawIn(outer);
         var scissor = !whole ? ResolveScissor(layer, World(layer), fullScissor, out _, out _)
             : LaidDownClip(layer) is { } laidDown ? ToFramebufferScissor(laidDown, fullScissor)
             : fullScissor;
@@ -268,6 +210,7 @@ public partial class RenderCache
             : default;
         _offscreenLayers.End(device, alpha, scissor, mask, soft, cut, mirror,
             mirror.Shows ? MirrorScissor(layer, fullScissor) : scissor, clipBox, clipRadii);
+        return fullScissor;
     }
 
     private (float Width, float Height, float Scale) BoxPixels(IUIComponent layer)

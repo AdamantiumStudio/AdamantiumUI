@@ -971,15 +971,8 @@ public partial class RenderCache
                     DrawOwnBandsUnder(device, group, groupIndex, layerEnd, fullScissor, ref scissorNarrowed);
                 }
 
-                BeginOffscreenLayer(device, layer, fullScissor, groupIndex, layerEnd, false, out var region);
-                var whole = DrawsWhole(layer);
-                if (whole)
-                {
-                    fullScissor = EnterWhole(device, region, fullScissor);
-                    scissorNarrowed = false;
-                }
-
-                _layerWalk.Push((layerEnd, layer, whole));
+                fullScissor = OpenLayer(device, layer, fullScissor, groupIndex, layerEnd, false, out _);
+                _layerWalk.Push((layerEnd, layer));
                 if (_recording)
                 {
                     RecordLayerMark(RenderOpKind.LayerBegin, layer, group.Order);
