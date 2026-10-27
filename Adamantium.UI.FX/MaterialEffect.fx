@@ -8,6 +8,10 @@
 #include "Includes/NoiseMath.fxh"
 #include "Includes/BrushData.fxh"
 
+// The draw's instances, by the kind it draws.
+MaterialRectData* MaterialRects;
+PatternGeomData* MaterialGeometries;
+
 // ---- BACKDROP MATERIALS: a fill made from what is ALREADY DRAWN behind the element ---------------------------------
 // Frame pixel to source uv (.xy scale, .zw offset), one per segment and set at draw time, so mica's wallpaper stays put
 // when the window moves.
@@ -460,12 +464,12 @@ struct MaterialPSInput
 [shader("vertex")]
 MaterialPSInput MaterialRectInstancedVS(uint vertexId : SV_VertexID, uint instanceId : SV_InstanceID)
 {
-    MaterialRectData* items = (MaterialRectData*)InstancesAddress;
+    MaterialRectData* items = MaterialRects;
     MaterialRectData it = items[instanceId];
 
     MaterialPSInput o;
     float2 corner = float2(vertexId & 1u, (vertexId >> 1u) & 1u);
-    NodeSlot* nodes = (NodeSlot*)TransformsAddress;
+    NodeSlot* nodes = Transforms;
     float4x4 nodeWorld = nodes[(uint)it.Params.y].World;
     float2 px = SlotPixelScale(nodeWorld);
     float iso = min(px.x, px.y);
@@ -517,7 +521,7 @@ float BlurLevelOf(float texelsPerUnit, float scale)
 [shader("fragment")]
 float4 MaterialFrostedPS(MaterialPSInput input) : SV_Target
 {
-    MaterialRectData* items = (MaterialRectData*)InstancesAddress;
+    MaterialRectData* items = MaterialRects;
     MaterialRectData it = items[input.InstId];
 
     float isPolygon = step(it.Params.x, -1.5);
@@ -574,7 +578,7 @@ float GlassCurve(float d, float rim)
 [shader("fragment")]
 float4 MaterialGlassPS(MaterialPSInput input) : SV_Target
 {
-    MaterialRectData* items = (MaterialRectData*)InstancesAddress;
+    MaterialRectData* items = MaterialRects;
     MaterialRectData it = items[input.InstId];
 
     float isPolygon = step(it.Params.x, -1.5);
@@ -635,7 +639,7 @@ float4 MaterialGlassPS(MaterialPSInput input) : SV_Target
 [shader("fragment")]
 float4 MaterialSheenPS(MaterialPSInput input) : SV_Target
 {
-    MaterialRectData* items = (MaterialRectData*)InstancesAddress;
+    MaterialRectData* items = MaterialRects;
     MaterialRectData it = items[input.InstId];
 
     float isPolygon = step(it.Params.x, -1.5);
@@ -658,7 +662,7 @@ float4 MaterialSheenPS(MaterialPSInput input) : SV_Target
 [shader("fragment")]
 float4 MaterialMetalPS(MaterialPSInput input) : SV_Target
 {
-    MaterialRectData* items = (MaterialRectData*)InstancesAddress;
+    MaterialRectData* items = MaterialRects;
     MaterialRectData it = items[input.InstId];
 
     float isPolygon = step(it.Params.x, -1.5);
@@ -684,7 +688,7 @@ float4 MaterialMetalPS(MaterialPSInput input) : SV_Target
 [shader("fragment")]
 float4 MaterialWoodPS(MaterialPSInput input) : SV_Target
 {
-    MaterialRectData* items = (MaterialRectData*)InstancesAddress;
+    MaterialRectData* items = MaterialRects;
     MaterialRectData it = items[input.InstId];
 
     float isPolygon = step(it.Params.x, -1.5);
@@ -724,11 +728,11 @@ struct MaterialMeshPSInput
 [shader("vertex")]
 MaterialMeshPSInput MaterialFillVS(UI_VERTEX v, uint instanceId : SV_InstanceID)
 {
-    PatternGeomData* items = (PatternGeomData*)InstancesAddress;
+    PatternGeomData* items = MaterialGeometries;
     PatternGeomData it = items[instanceId];
 
     // local -> slot space -> world, as PatternFillVS and the other instanced fills do it.
-    NodeSlot* nodes = (NodeSlot*)TransformsAddress;
+    NodeSlot* nodes = Transforms;
     float4 world = mul(mul(float4(v.position.xyz, 1.0), it.Local), nodes[(uint)it.Params.w].World);
 
     MaterialMeshPSInput o;
@@ -745,7 +749,7 @@ MaterialMeshPSInput MaterialFillVS(UI_VERTEX v, uint instanceId : SV_InstanceID)
 [shader("fragment")]
 float4 MaterialFrostedMeshPS(MaterialMeshPSInput input) : SV_Target
 {
-    PatternGeomData* items = (PatternGeomData*)InstancesAddress;
+    PatternGeomData* items = MaterialGeometries;
     PatternGeomData it = items[input.InstId];
 
     // Params.y pins the picture to the ELEMENT - here, the fragment's place within the mesh's own local bounds.
@@ -770,7 +774,7 @@ float4 MaterialFrostedMeshPS(MaterialMeshPSInput input) : SV_Target
 [shader("fragment")]
 float4 MaterialGlassMeshPS(MaterialMeshPSInput input) : SV_Target
 {
-    PatternGeomData* items = (PatternGeomData*)InstancesAddress;
+    PatternGeomData* items = MaterialGeometries;
     PatternGeomData it = items[input.InstId];
 
     float strength = it.Color3.z;
@@ -813,7 +817,7 @@ float4 MaterialGlassMeshPS(MaterialMeshPSInput input) : SV_Target
 [shader("fragment")]
 float4 MaterialSheenMeshPS(MaterialMeshPSInput input) : SV_Target
 {
-    PatternGeomData* items = (PatternGeomData*)InstancesAddress;
+    PatternGeomData* items = MaterialGeometries;
     PatternGeomData it = items[input.InstId];
 
     // The same surface the SDF pass draws, read in the mesh's own local space so a velvet path and a velvet rectangle
@@ -830,7 +834,7 @@ float4 MaterialSheenMeshPS(MaterialMeshPSInput input) : SV_Target
 [shader("fragment")]
 float4 MaterialMetalMeshPS(MaterialMeshPSInput input) : SV_Target
 {
-    PatternGeomData* items = (PatternGeomData*)InstancesAddress;
+    PatternGeomData* items = MaterialGeometries;
     PatternGeomData it = items[input.InstId];
 
     float2 halfSize = max(it.LocalBounds.zw * 0.5, float2(1.0, 1.0));
@@ -853,7 +857,7 @@ float4 MaterialMetalMeshPS(MaterialMeshPSInput input) : SV_Target
 [shader("fragment")]
 float4 MaterialWoodMeshPS(MaterialMeshPSInput input) : SV_Target
 {
-    PatternGeomData* items = (PatternGeomData*)InstancesAddress;
+    PatternGeomData* items = MaterialGeometries;
     PatternGeomData it = items[input.InstId];
 
     float2 halfSize = max(it.LocalBounds.zw * 0.5, float2(1.0, 1.0));

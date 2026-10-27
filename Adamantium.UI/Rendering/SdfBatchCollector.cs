@@ -17,9 +17,9 @@ internal abstract class SdfBatchCollector<TItem> : BatchCollector<TItem> where T
 
     // WHICH effect feeds this collector is the subclass's business: the shapes draw through BatchEffect and the brushes
     // through BrushEffect (see BrushEffect.fx - two effects because one parameter block could not hold both). What the
-    // draw needs is the four parameters BOTH declare, held as fields rather than looked up by name: a dictionary hit per
-    // parameter per draw is exactly the cost the batch exists to remove.
-    protected EffectParameter ProjectionParam, ViewportSizeParam, TargetOriginParam, InstancesAddressParam, TransformsAddressParam;
+    // draw needs is the parameters BOTH declare and the pointer to this collector's kind of instance, held as fields
+    // rather than looked up by name: a dictionary hit per parameter per draw is exactly the cost the batch exists to remove.
+    protected EffectParameter ProjectionParam, ViewportSizeParam, TargetOriginParam, InstancesParam, TransformsParam;
 
     // Where the viewport's corner lies in the window's pixels, for an effect that rebuilds a position from its pixel.
     protected EffectParameter ViewportOriginParam;
@@ -111,8 +111,8 @@ internal abstract class SdfBatchCollector<TItem> : BatchCollector<TItem> where T
         device.PrimitiveTopology = PrimitiveTopology.TriangleStrip;
 
         device.VertexType = null;
-        InstancesAddressParam.SetValue(buffer.GetDeviceAddress() + firstInstance * (ulong)Stride);
-        TransformsAddressParam.SetValue(TransformsAddress);
+        InstancesParam.SetValue(buffer.GetDeviceAddress() + firstInstance * (ulong)Stride);
+        TransformsParam.SetValue(TransformsAddress);
 
         DrawPass.Apply();
         device.Draw(4, count, 0, 0);

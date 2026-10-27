@@ -194,7 +194,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
 
         _brush = ToDispose(new BrushEffect(_device));
         _brush.Projection.SetValue(projection);
-        _brush.TransformsAddress.SetValue(TransformsAddress);
+        _brush.Transforms.SetValue(TransformsAddress);
         var vp = _device.CurrentViewports;
         if (vp is { Length: > 0 }) _brush.ViewportSize.SetValue(new Vector2F(vp[0].Width, vp[0].Height));
         _brush.TargetOrigin.SetValue(TargetOrigin());
@@ -212,7 +212,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
 
         _material = ToDispose(new Adamantium.UI.FX.MaterialEffect(_device));
         _material.Projection.SetValue(projection);
-        _material.TransformsAddress.SetValue(TransformsAddress);
+        _material.Transforms.SetValue(TransformsAddress);
         var vp = _device.CurrentViewports;
         if (vp is { Length: > 0 }) _material.ViewportSize.SetValue(new Vector2F(vp[0].Width, vp[0].Height));
         _material.TargetOrigin.SetValue(TargetOrigin());
@@ -1140,7 +1140,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
                 // Its own mark, not the group's: a key stamps where it sits in the paint order, so the fringes below
                 // can tell what is under them from what is over them.
                 _device.StencilReference = rec.MarkFor(i);
-                _effect.InstancesAddress.SetValue(seg.Gpu.GetDeviceAddress() + (ulong)(first * InstanceStride));
+                _effect.Geometries.SetValue(seg.Gpu.GetDeviceAddress() + (ulong)(first * InstanceStride));
                 _device.SetVertexBuffer(seg.VtxBuffer);
                 _device.PrimitiveTopology = seg.Topology;
                 _effect.BatchFillPass.Apply();
@@ -1179,7 +1179,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
                 // belongs there; its own fill and every later key of the group carry a mark at least this high and cut
                 // it, which is what keeps [all fills][all fringes] indistinguishable from true paint order.
                 _device.StencilReference = rec.MarkFor(i);
-                _effect.InstancesAddress.SetValue(seg.Gpu.GetDeviceAddress() + (ulong)(first * InstanceStride));
+                _effect.Geometries.SetValue(seg.Gpu.GetDeviceAddress() + (ulong)(first * InstanceStride));
                 _device.SetVertexBuffer(seg.RingBuffer);
                 _effect.BatchFringePass.Apply();
                 _device.Draw(seg.RingVertexCount, count);
@@ -1199,7 +1199,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
             _device.SetScissors(rec.Scissor);
             foreach (var (seg, first, count) in rec.GradKeys)
             {
-                brush.InstancesAddress.SetValue(seg.GradGpu.GetDeviceAddress() + (ulong)(first * GradInstanceStride));
+                brush.GradientGeometries.SetValue(seg.GradGpu.GetDeviceAddress() + (ulong)(first * GradInstanceStride));
                 _device.SetVertexBuffer(seg.VtxBuffer);
                 _device.PrimitiveTopology = seg.Topology;
                 brush.GradientMeshPass.Apply();
@@ -1221,7 +1221,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
             foreach (var (seg, first, count, kind) in rec.PatKeys)
             {
                 if (!DrewMoving) DrewMoving = Flows(seg.PatItems.AsSpan((int)first, (int)count));
-                brush.InstancesAddress.SetValue(seg.PatGpu.GetDeviceAddress() + (ulong)(first * PatInstanceStride));
+                brush.PatternGeometries.SetValue(seg.PatGpu.GetDeviceAddress() + (ulong)(first * PatInstanceStride));
                 _device.SetVertexBuffer(seg.VtxBuffer);
                 _device.PrimitiveTopology = seg.Topology;
                 MeshPassFor(brush, kind).Apply();
@@ -1246,7 +1246,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
                 // one last, so drawing without binding samples whatever descriptor sits there - in practice the glyph
                 // atlas, smeared across the frame. See TextureBatchCollector.DrawSegment.
                 if (texture == null) continue;
-                brush.InstancesAddress.SetValue(seg.TexGpu.GetDeviceAddress() + (ulong)(first * TexInstanceStride));
+                brush.TextureGeometries.SetValue(seg.TexGpu.GetDeviceAddress() + (ulong)(first * TexInstanceStride));
                 brush.SourceTexture.SetResource(texture);
                 brush.SourceSampler.SetResource(SamplerStates.LinearClampToEdge);
                 _device.SetVertexBuffer(seg.VtxBuffer);
@@ -1268,7 +1268,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
             SetupInstancedState(projection);
             var material = Material(projection);
             material.Projection.SetValue(projection);
-            material.TransformsAddress.SetValue(TransformsAddress);
+            material.Transforms.SetValue(TransformsAddress);
             _device.SetScissors(rec.Scissor);
             foreach (var (seg, first, count, wallpaper, treatment, region, source, anchor) in rec.MatKeys)
             {
@@ -1278,7 +1278,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
                 if (MaterialRectCollector.NeedsBackdrop(treatment)
                     && !Backdrop.BindSource(_device, wallpaper, region, source, anchor,
                         material.SourceTexture, material.SourceSampler, material.SourceUv)) continue;
-                material.InstancesAddress.SetValue(seg.MatGpu.GetDeviceAddress() + (ulong)(first * PatInstanceStride));
+                material.MaterialGeometries.SetValue(seg.MatGpu.GetDeviceAddress() + (ulong)(first * PatInstanceStride));
                 _device.SetVertexBuffer(seg.VtxBuffer);
                 _device.PrimitiveTopology = seg.Topology;
                 (treatment switch
@@ -1306,7 +1306,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
             foreach (var (seg, first, count) in rec.GradKeys)
             {
                 if (seg.RingBuffer == null) continue;
-                brush.InstancesAddress.SetValue(seg.GradGpu.GetDeviceAddress() + (ulong)(first * GradInstanceStride));
+                brush.GradientGeometries.SetValue(seg.GradGpu.GetDeviceAddress() + (ulong)(first * GradInstanceStride));
                 _device.SetVertexBuffer(seg.RingBuffer);
                 brush.GradientFringePass.Apply();
                 _device.Draw(seg.RingVertexCount, count);
@@ -1324,7 +1324,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
             foreach (var (seg, first, count, _) in rec.PatKeys)   // the ring is flat-colored: kind does not change the pass
             {
                 if (seg.RingBuffer == null) continue;
-                _effect.InstancesAddress.SetValue(seg.PatGpu.GetDeviceAddress() + (ulong)(first * PatInstanceStride));
+                _effect.PatternGeometries.SetValue(seg.PatGpu.GetDeviceAddress() + (ulong)(first * PatInstanceStride));
                 _device.SetVertexBuffer(seg.RingBuffer);
                 _effect.BatchPatternFringePass.Apply();
                 _device.Draw(seg.RingVertexCount, count);
@@ -1342,7 +1342,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
             foreach (var (seg, first, count, texture) in rec.TexKeys)
             {
                 if (seg.RingBuffer == null || texture == null) continue;
-                brush.InstancesAddress.SetValue(seg.TexGpu.GetDeviceAddress() + (ulong)(first * TexInstanceStride));
+                brush.TextureGeometries.SetValue(seg.TexGpu.GetDeviceAddress() + (ulong)(first * TexInstanceStride));
                 brush.SourceTexture.SetResource(texture);
                 brush.SourceSampler.SetResource(SamplerStates.LinearClampToEdge);
                 _device.SetVertexBuffer(seg.RingBuffer);
@@ -1381,9 +1381,9 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
         // Written every time - see SdfBatchCollector.DrawSegment for why a "same as last time" cache is not this
         // collector's to keep: an off-screen bake draws through the same effect with its own projection in between.
         _effect.Projection.SetValue(projection);
-        _effect.TransformsAddress.SetValue(TransformsAddress);
+        _effect.Transforms.SetValue(TransformsAddress);
         if (_brush != null) _brush.Projection.SetValue(projection);
-        if (_brush != null) _brush.TransformsAddress.SetValue(TransformsAddress);
+        if (_brush != null) _brush.Transforms.SetValue(TransformsAddress);
         var origin = TargetOrigin();
         _effect.TargetOrigin.SetValue(origin);
         _brush?.TargetOrigin.SetValue(origin);

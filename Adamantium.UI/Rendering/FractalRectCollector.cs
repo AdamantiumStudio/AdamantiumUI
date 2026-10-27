@@ -6,6 +6,7 @@ using Adamantium.Graphics.Core.EffectsFramework;
 using Adamantium.Mathematics;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Media;
+using Adamantium.UI.FX;
 using Adamantium.UI.Rendering.Payloads;
 using Adamantium.Vulkan.Core;
 
@@ -63,6 +64,8 @@ internal sealed class FractalRectCollector : BrushSdfCollector<FractalRectItem>
     private readonly List<int> _segKinds = new();
 
     public FractalRectCollector() : base(256) { }
+
+    protected override EffectParameter GetInstances(BrushEffect effect) => effect.FractalRects;
 
     protected override IEffectPass DrawPass => _kind switch
     {
@@ -128,7 +131,7 @@ internal sealed class FractalRectCollector : BrushSdfCollector<FractalRectItem>
         Effect.Time.SetValue((float)FractalClock.Time);
 
         // Publish the reference-orbit buffer (perturbation deep path). Uploaded ONCE per frame on the first segment; the
-        // shader only dereferences OrbitAddress when an instance's Ref.z (deep flag) is set, so 0 is safe when none are deep.
+        // shader only dereferences Orbits when an instance's Ref.z (deep flag) is set, so 0 is safe when none are deep.
         if (_orbitCount > 0)
         {
             if (!_orbitUploaded)
@@ -152,11 +155,11 @@ internal sealed class FractalRectCollector : BrushSdfCollector<FractalRectItem>
                 _orbitRing[_orbitRingIndex].SetData(_orbitCpu.AsSpan(0, _orbitCount), 0);
                 _orbitUploaded = true;
             }
-            Effect.OrbitAddress.SetValue(_orbitRing[_orbitRingIndex].GetDeviceAddress());
+            Effect.Orbits.SetValue(_orbitRing[_orbitRingIndex].GetDeviceAddress());
         }
         else
         {
-            Effect.OrbitAddress.SetValue(0);
+            Effect.Orbits.SetValue(0UL);
         }
 
         base.DrawSegment(device, buffer, count, firstInstance, projection);

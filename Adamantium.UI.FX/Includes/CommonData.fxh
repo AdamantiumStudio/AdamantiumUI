@@ -24,10 +24,9 @@ float4x4 Projection;
 // other pass ignores it. Unset (0) = no drift, so a static fractal renders fine before the loop starts feeding it.
 float Time;
 
-// Per-instance data by BUFFER DEVICE ADDRESS (BDA), not a descriptor-heap StructuredBuffer: the SV_InstanceID-indexed
-// StructuredBuffer form did not bind/read on this device (the fill rasterized nothing - World came out garbage), while
-// BDA is the engine's proven GPU-storage pattern (see StrokeEffect/FillFringeEffect: uint64_t address + (T*)addr).
-uint64_t InstancesAddress;
+// Per-instance data comes by pointer, each effect declaring one for each kind of instance it draws: a buffer device
+// address, not a descriptor-heap StructuredBuffer - the SV_InstanceID-indexed StructuredBuffer form did not bind/read on
+// this device (the fill rasterized nothing - World came out garbage).
 
 float2 ViewportSize;      // render target size in DEVICE pixels - the NDC <-> pixel basis for the fringe offset
 
@@ -45,7 +44,7 @@ float FringePixels;       // fringe width in DEVICE pixels
 
 // The transform table (Rendering/TransformTable.cs): one world matrix per motion node, by instance slot; slot 0 is
 // identity for world-baked instances.
-uint64_t TransformsAddress;
+NodeSlot* Transforms;
 
 // One table entry: the node's matrix and opacity. Params.x alpha (1 opaque), .y parent opacity slot (-1 none, composed
 // on the CPU), .zw reserved; 16-byte aligned.

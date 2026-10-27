@@ -28,6 +28,8 @@ internal sealed class RectBatchCollector : ShapeSdfCollector<RectItem>
 
     protected override IEffectPass DrawPass => Effect.BatchRectPass;
 
+    protected override EffectParameter GetInstances(BatchEffect effect) => effect.Rects;
+
     /// <summary>The single rule for what this batch draws (a visible solid fill, no pen or a solid one, any four corners);
     /// render units ask it too, so the two never drift.</summary>
     public static bool WantsBatch(RectanglePayload p)

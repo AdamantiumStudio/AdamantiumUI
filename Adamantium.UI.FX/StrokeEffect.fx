@@ -4,8 +4,8 @@
 // straight end frames of its piece (a dash, trim run or open contour).
 
 // --- StrokeExpand (compute) globals ---
-uint64_t PointsAddress;   // float2[] polyline points (PointCount of them)
-uint64_t OutputAddress;   // float[] output vertices, 8 floats each (see WriteVert)
+float2* Points;           // polyline points (PointCount of them)
+float* Output;            // output vertices, 8 floats each (see WriteVert)
 uint PointCount;          // continuous mode: polyline points. dash mode: piece-points (2 per dash piece).
 uint IsClosed;            // 0 = open polyline (flat ends), 1 = closed loop (wrap-around miters + closing pair)
 uint StartCap;            // start cap: 0 = flat, 1 = square, 2 = convex round, 3 = convex tri, 4 = concave tri, 5 = concave round
@@ -19,8 +19,8 @@ float HalfThickness;
 float Fringe;             // AA feather width in geometry-LOCAL units (~1 device px / scale); ribbon/discs widen by Fringe/2
 
 // --- one-pass GPU cut (DashMode == 1): the GPU walks the contour by arc length and emits dash/trim pieces ---
-uint64_t IndirectAddress; // VkDrawIndirectCommand the cut writes (vertexCount = GPU-decided draw size)
-uint64_t PatternAddress;  // float[] dash pattern (on,off,...); PatternCount entries, 0 = solid (one piece over trim)
+uint* Indirect;           // VkDrawIndirectCommand the cut writes (vertexCount = GPU-decided draw size)
+float* Pattern;           // dash pattern (on,off,...); PatternCount entries, 0 = solid (one piece over trim)
 uint PatternCount;
 uint MaxVertices;         // output capacity guard for the cut (CPU sizes it from a worst-case piece bound)
 float DashOffset;
@@ -103,7 +103,7 @@ float EndExtend(uint i)
 // miter, length clamped so a sharp corner can't shoot the tip to infinity.
 void OffsetPair(uint i, out float2 plus, out float2 minus)
 {
-    float2* points = (float2*)PointsAddress;
+    float2* points = Points;
     float2 p = points[i];
 
     float hw = HalfThickness + Fringe * 0.5;   // widen the ribbon by the AA feather; v carries +/-hw (see EmitQuad)
@@ -144,7 +144,7 @@ void OffsetPair(uint i, out float2 plus, out float2 minus)
 // length long before the walk gets there.
 void PointAtArc(float target, out float2 pos, out float2 dir)
 {
-    float2* points = (float2*)PointsAddress;
+    float2* points = Points;
     uint segCount = IsClosed != 0u ? PointCount : PointCount - 1u;
     pos = points[0];
     dir = normalize(points[1] - points[0]);
@@ -237,8 +237,8 @@ uint EmitDisc(float* outVerts, uint base, uint maxTris, float2 V, float arcA, fl
 [numthreads(64, 1, 1)]
 void StrokeExpandCS(uint3 tid : SV_DispatchThreadID)
 {
-    float2* points = (float2*)PointsAddress;
-    float* outVerts = (float*)OutputAddress;
+    float2* points = Points;
+    float* outVerts = Output;
 
     // Continuous polyline, one thread per point. Fixed per-point slot: a segment quad then a join fan.
     if (tid.x >= PointCount)
@@ -414,10 +414,10 @@ void StrokeDashCutCS(uint3 tid : SV_DispatchThreadID)
     if (tid.x != 0u)
         return;
 
-    float2* points = (float2*)PointsAddress;
-    float* outVerts = (float*)OutputAddress;
-    float* pattern = (float*)PatternAddress;
-    uint* indirect = (uint*)IndirectAddress;
+    float2* points = Points;
+    float* outVerts = Output;
+    float* pattern = Pattern;
+    uint* indirect = Indirect;
     uint segCount = IsClosed != 0u ? PointCount : PointCount - 1u;
 
     float total = 0.0;

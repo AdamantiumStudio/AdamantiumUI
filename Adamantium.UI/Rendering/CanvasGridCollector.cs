@@ -34,8 +34,8 @@ internal sealed class CanvasGridCollector : SdfBatchCollector<CanvasGridItem>
         ProjectionParam = Effect.Projection;
         ViewportSizeParam = Effect.ViewportSize;
         TargetOriginParam = Effect.TargetOrigin;
-        InstancesAddressParam = Effect.InstancesAddress;
-        TransformsAddressParam = Effect.TransformsAddress;
+        InstancesParam = Effect.Grids;
+        TransformsParam = Effect.Transforms;
     }
 
     /// <summary>THE one statement of what this batch draws - the render unit asks THIS, never its own copy.</summary>

@@ -13,10 +13,19 @@
 #include "Includes/GradientMath.fxh"
 #include "Includes/ColorMath.fxh"
 
-// GPU-resident FRACTAL REFERENCE ORBITS (perturbation deep-zoom): a flat float2[] holding every deep-zoom fractal
-// instance's reference orbit Z_n concatenated. Each FractalRectData.Ref.x is this instance's START INDEX into it and
-// .y the length. Zero (address 0) when no deep-zoom fractal is live - the shader only dereferences it on the deep path.
-uint64_t OrbitAddress;
+// The draw's instances, by the kind it draws.
+GradientRectData* GradientRects;
+GradGeomData* GradientGeometries;
+PatternRectData* PatternRects;
+PatternGeomData* PatternGeometries;
+TexRectData* TextureRects;
+TextureGeomData* TextureGeometries;
+FractalRectData* FractalRects;
+
+// GPU-resident FRACTAL REFERENCE ORBITS (perturbation deep-zoom): every deep-zoom fractal instance's reference orbit Z_n
+// concatenated. Each FractalRectData.Ref.x is this instance's START INDEX into it and .y the length. Null when no
+// deep-zoom fractal is live - the shader only dereferences it on the deep path.
+float4* Orbits;
 
 // ---- GradientRect: the SDF rect batch filled with a linear or radial gradient (up to 8 stops) per fragment. Matches
 // the CPU GradientRectItem; strokes via CompositeFillStroke.
@@ -144,7 +153,7 @@ struct GradPSInput
 [shader("vertex")]
 GradPSInput GradientRectInstancedVS(uint vertexId : SV_VertexID, uint instanceId : SV_InstanceID)
 {
-    GradientRectData* items = (GradientRectData*)InstancesAddress;
+    GradientRectData* items = GradientRects;
     GradientRectData it = items[instanceId];
 
     GradPSInput o;
@@ -152,7 +161,7 @@ GradPSInput GradientRectInstancedVS(uint vertexId : SV_VertexID, uint instanceId
     // Node-local -> world via the transform table (slot in Geom1.w - Geom1.z is the shape flag; slot 0 = identity),
     // and the SDF inputs in DEVICE PIXELS, same as RectBatchInstancedVS. The gradient uv is Local/Half - a RATIO - so
     // the change of unit leaves the gradient itself untouched; the STROKE record is not a ratio, hence Scale.
-    NodeSlot* nodes = (NodeSlot*)TransformsAddress;
+    NodeSlot* nodes = Transforms;
     float4x4 nodeWorld = nodes[(uint)it.Geom1.w].World;
     float2 px = SlotPixelScale(nodeWorld);
     float iso = min(px.x, px.y);
@@ -181,7 +190,7 @@ GradPSInput GradientRectInstancedVS(uint vertexId : SV_VertexID, uint instanceId
 [shader("fragment")]
 float4 GradientPS(GradPSInput input) : SV_Target
 {
-    GradientRectData* items = (GradientRectData*)InstancesAddress;
+    GradientRectData* items = GradientRects;
     GradientRectData it = items[input.InstId];
 
     float shape = it.Geom1.z;          // 0 rect, 1 ellipse, 2 regular polygon (its numbers ride in Radii)
@@ -270,7 +279,7 @@ struct GradFillPSInput
 [shader("vertex")]
 GradFillPSInput GradientFillVS(UI_VERTEX v, uint instanceId : SV_InstanceID)
 {
-    GradGeomData* items = (GradGeomData*)InstancesAddress;
+    GradGeomData* items = GradientGeometries;
     // FIELD BY FIELD, not a copy of the whole record: this stage needs four float4s out of it and never looks at a
     // stop, and pulling the struct in wholesale drags the eight FOUR-BYTE colors through the vertex stage with it.
     float4x4 local = items[instanceId].Local;
@@ -279,7 +288,7 @@ GradFillPSInput GradientFillVS(UI_VERTEX v, uint instanceId : SV_InstanceID)
     float4 clip = items[instanceId].Clip;
     // local -> slot space -> world, as InstancedFillVS: the slot matrix lives in the transform table, so a node move
     // rewrites 64 bytes there and every instance under it follows without this buffer being touched.
-    NodeSlot* nodes = (NodeSlot*)TransformsAddress;
+    NodeSlot* nodes = Transforms;
     float4 world = mul(mul(float4(v.position.xyz, 1.0), local), nodes[(uint)geom1.w].World);
 
     GradFillPSInput o;
@@ -326,7 +335,7 @@ float4 GradGeomColor(GradGeomData it, float2 local)
 [shader("fragment")]
 float4 GradientFillPS(GradFillPSInput input) : SV_Target
 {
-    GradGeomData* items = (GradGeomData*)InstancesAddress;
+    GradGeomData* items = GradientGeometries;
     float4 c = GradGeomColor(items[input.InstId], input.Local);
     return float4(c.rgb, c.a * input.Fade * ClipCoverage(input.Position.xy, input.ClipBox, input.ClipRadii));
 }
@@ -348,13 +357,13 @@ struct GradFringePSInput
 [shader("vertex")]
 GradFringePSInput InstancedGradientFringeVS(FringeVertex v, uint instanceId : SV_InstanceID)
 {
-    GradGeomData* items = (GradGeomData*)InstancesAddress;
+    GradGeomData* items = GradientGeometries;
     // Field by field, as GradientFillVS - the stops have no business in a vertex stage.
     float4x4 local = items[instanceId].Local;
     float4 geom1 = items[instanceId].Geom1;
     float4 gparams = items[instanceId].Params;
     float4 clip = items[instanceId].Clip;
-    NodeSlot* nodes = (NodeSlot*)TransformsAddress;
+    NodeSlot* nodes = Transforms;
     float4x4 m = mul(mul(local, nodes[(uint)geom1.w].World), Projection);
 
     GradFringePSInput o;
@@ -373,7 +382,7 @@ GradFringePSInput InstancedGradientFringeVS(FringeVertex v, uint instanceId : SV
 [shader("fragment")]
 float4 InstancedGradientFringePS(GradFringePSInput input) : SV_Target
 {
-    GradGeomData* items = (GradGeomData*)InstancesAddress;
+    GradGeomData* items = GradientGeometries;
     float4 c = GradGeomColor(items[input.InstId], input.Local);
     c.a *= saturate(input.Coverage) * input.Fade   // 1 at the contour -> 0 at the outer edge
          * ClipCoverage(input.Position.xy, input.ClipBox, input.ClipRadii);
@@ -424,13 +433,13 @@ struct PatternPSInput
 [shader("vertex")]
 PatternPSInput PatternRectInstancedVS(uint vertexId : SV_VertexID, uint instanceId : SV_InstanceID)
 {
-    PatternRectData* items = (PatternRectData*)InstancesAddress;
+    PatternRectData* items = PatternRects;
     PatternRectData it = items[instanceId];
 
     PatternPSInput o;
     float2 corner = float2(vertexId & 1u, (vertexId >> 1u) & 1u);
     // SDF inputs in DEVICE PIXELS, same scheme as RectBatchInstancedVS (see SlotPixelScale).
-    NodeSlot* nodes = (NodeSlot*)TransformsAddress;
+    NodeSlot* nodes = Transforms;
     float4x4 nodeWorld = nodes[(uint)it.Params.w].World;
     float2 px = SlotPixelScale(nodeWorld);
     float iso = min(px.x, px.y);
@@ -1098,7 +1107,7 @@ float4 PatternFillColor(PatternFill it, int ptype, float2 pTopLeft, float2 cente
 
 float4 PatternSdfShade(PatternPSInput input, int kind)
 {
-    PatternRectData* items = (PatternRectData*)InstancesAddress;
+    PatternRectData* items = PatternRects;
     PatternRectData it = items[input.InstId];
 
     // The baked corner radius is the shape flag: >= 0 a rect, -1 an ellipse, -2 a regular polygon (whose corners, start
@@ -1162,10 +1171,10 @@ struct PatFillPSInput
 [shader("vertex")]
 PatFillPSInput PatternFillVS(UI_VERTEX v, uint instanceId : SV_InstanceID)
 {
-    PatternGeomData* items = (PatternGeomData*)InstancesAddress;
+    PatternGeomData* items = PatternGeometries;
     PatternGeomData it = items[instanceId];
     // local -> slot space -> world, as InstancedFillVS / GradientFillVS.
-    NodeSlot* nodes = (NodeSlot*)TransformsAddress;
+    NodeSlot* nodes = Transforms;
     float4 world = mul(mul(float4(v.position.xyz, 1.0), it.Local), nodes[(uint)it.Params.w].World);
 
     PatFillPSInput o;
@@ -1185,7 +1194,7 @@ PatFillPSInput PatternFillVS(UI_VERTEX v, uint instanceId : SV_InstanceID)
 
 float4 PatternMeshShade(PatFillPSInput input, int kind)
 {
-    PatternGeomData* items = (PatternGeomData*)InstancesAddress;
+    PatternGeomData* items = PatternGeometries;
     PatternGeomData it = items[input.InstId];
 
     PatternFill pd;
@@ -1275,12 +1284,12 @@ struct TexPSInput
 [shader("vertex")]
 TexPSInput TexRectInstancedVS(uint vertexId : SV_VertexID, uint instanceId : SV_InstanceID)
 {
-    TexRectData* items = (TexRectData*)InstancesAddress;
+    TexRectData* items = TextureRects;
     TexRectData it = items[instanceId];
 
     TexPSInput o;
     float2 corner = float2(vertexId & 1u, (vertexId >> 1u) & 1u);
-    NodeSlot* nodes = (NodeSlot*)TransformsAddress;
+    NodeSlot* nodes = Transforms;
     float4x4 nodeWorld = nodes[(uint)it.Params.y].World;
     float2 px = SlotPixelScale(nodeWorld);
     float iso = min(px.x, px.y);
@@ -1303,7 +1312,7 @@ TexPSInput TexRectInstancedVS(uint vertexId : SV_VertexID, uint instanceId : SV_
 [shader("fragment")]
 float4 TexRectPS(TexPSInput input) : SV_Target
 {
-    TexRectData* items = (TexRectData*)InstancesAddress;
+    TexRectData* items = TextureRects;
     TexRectData it = items[input.InstId];
 
     // A NEGATIVE baked corner radius is the ELLIPSE shape flag (a rect passes radius >= 0) - same signal the pattern
@@ -1390,9 +1399,9 @@ struct TexFillPSInput
 [shader("vertex")]
 TexFillPSInput TexFillVS(UI_VERTEX v, uint instanceId : SV_InstanceID)
 {
-    TextureGeomData* items = (TextureGeomData*)InstancesAddress;
+    TextureGeomData* items = TextureGeometries;
     TextureGeomData it = items[instanceId];
-    NodeSlot* nodes = (NodeSlot*)TransformsAddress;
+    NodeSlot* nodes = Transforms;
     float4 world = mul(mul(float4(v.position.xyz, 1.0), it.Local), nodes[(uint)it.Params.w].World);
 
     TexFillPSInput o;
@@ -1409,7 +1418,7 @@ TexFillPSInput TexFillVS(UI_VERTEX v, uint instanceId : SV_InstanceID)
 [shader("fragment")]
 float4 TexFillPS(TexFillPSInput input) : SV_Target
 {
-    TextureGeomData* items = (TextureGeomData*)InstancesAddress;
+    TextureGeomData* items = TextureGeometries;
     TextureGeomData it = items[input.InstId];
 
     // 0..1 across the shape's box -> TILE space -> the content's rect inside one tile -> the source's sub-rectangle.
@@ -1453,9 +1462,9 @@ struct TexFringePSInput
 [shader("vertex")]
 TexFringePSInput InstancedTexFringeVS(FringeVertex v, uint instanceId : SV_InstanceID)
 {
-    TextureGeomData* items = (TextureGeomData*)InstancesAddress;
+    TextureGeomData* items = TextureGeometries;
     TextureGeomData it = items[instanceId];
-    NodeSlot* nodes = (NodeSlot*)TransformsAddress;
+    NodeSlot* nodes = Transforms;
     float4x4 m = mul(mul(it.Local, nodes[(uint)it.Params.w].World), Projection);
 
     TexFringePSInput o;
@@ -1474,7 +1483,7 @@ TexFringePSInput InstancedTexFringeVS(FringeVertex v, uint instanceId : SV_Insta
 [shader("fragment")]
 float4 TexFringePS(TexFringePSInput input) : SV_Target
 {
-    TextureGeomData* items = (TextureGeomData*)InstancesAddress;
+    TextureGeomData* items = TextureGeometries;
     TextureGeomData it = items[input.InstId];
 
     // The ring is expanded a pixel OUTWARD, so its outer edge lies just outside the shape's box: clamp before mapping,
@@ -1514,7 +1523,7 @@ struct FractalRectData
     float4 Stroke0;      // width_px, align, dashOn, dashGap
     float4 Stroke1;      // dashOffset, trimStart, trimEnd, flags
     float4 Dash;         // dash runs 2..5 (device px); runs 0 and 1 ride in Stroke0.zw, the count in Stroke1.w
-    float4 Ref;          // perturbation: .x orbit start index (into OrbitAddress), .y orbit length, .zw the delta offset
+    float4 Ref;          // perturbation: .x orbit start index (into Orbits), .y orbit length, .zw the delta offset
     float4 Clip;         // .x = the ROUNDED CLIP's slot, or -1; .yzw spare
 };
 
@@ -1534,14 +1543,14 @@ struct FractalPSInput
 [shader("vertex")]
 FractalPSInput FractalRectInstancedVS(uint vertexId : SV_VertexID, uint instanceId : SV_InstanceID)
 {
-    FractalRectData* items = (FractalRectData*)InstancesAddress;
+    FractalRectData* items = FractalRects;
     FractalRectData it = items[instanceId];
 
     FractalPSInput o;
     float2 corner = float2(vertexId & 1u, (vertexId >> 1u) & 1u);
     // SDF inputs in DEVICE PIXELS, same scheme as RectBatchInstancedVS. The fractal plane is Local/Half - a RATIO - so
     // the change of unit leaves the image itself untouched; only the stroke record needs Scale.
-    NodeSlot* nodes = (NodeSlot*)TransformsAddress;
+    NodeSlot* nodes = Transforms;
     float4x4 nodeWorld = nodes[(uint)it.Params.z].World;
     float2 px = SlotPixelScale(nodeWorld);
     float iso = min(px.x, px.y);
@@ -1602,7 +1611,7 @@ float4 NewtonColor(float2 z, int maxIt, bool animate, float4 c1, float4 c2)
 // and the formula test leaves the hot loop.
 float4 FractalShade(FractalPSInput input, int formula, bool deep)
 {
-    FractalRectData* items = (FractalRectData*)InstancesAddress;
+    FractalRectData* items = FractalRects;
     FractalRectData it = items[input.InstId];
 
     float lim = min(input.Half.x, input.Half.y);
@@ -1634,14 +1643,14 @@ float4 FractalShade(FractalPSInput input, int formula, bool deep)
         }
 
         // PERTURBATION deep-zoom path (armed only for Quadratic z2+c past the deep threshold): iterate the SMALL delta
-        // from a high-precision reference orbit (Z_n from OrbitAddress) so the whole shader stays float32 - no fp64, no wall.
+        // from a high-precision reference orbit (Z_n from Orbits) so the whole shader stays float32 - no fp64, no wall.
         // NOTE: the .fx parser does NOT accept unary '!', so bail flags are tested as (escaped) / (escaped == false).
         if (deep)   // the DEEP pass; the collector batches those instances apart, so Ref carries a reference orbit here
         {
             // One orbit step is a HI/LO pair: .xy the float that holds most of Z_n, .zw the residue it could not. A single
             // float carries an O(1) reference to ~1e-7 ABSOLUTE, and at zoom 1e8 the whole view is 1.5e-8 across - the
             // reference missed by more than the picture. The pair carries ~1e-14.
-            float4* orbit = (float4*)OrbitAddress;
+            float4* orbit = Orbits;
             uint ofs = (uint)it.Ref.x;
             int rlen = (int)it.Ref.y;
             // pixel offset from the REFERENCE point: (pixel - view center) + (view center - C_ref). The second term
@@ -2074,7 +2083,7 @@ technique Texture
 // The backdrop materials live in MaterialEffect.fx.
 
 // Escape-time fractals: z = z^2 + c per fragment, colored by the smooth escape count, with a perturbation path for
-// deep zoom (see OrbitAddress). No Fill/Fringe - a fractal fills a rect, and its edge is the rect's own SDF.
+// deep zoom (see Orbits). No Fill/Fringe - a fractal fills a rect, and its edge is the rect's own SDF.
 technique Fractal
 {
     pass QuadraticSdf
