@@ -114,6 +114,29 @@ public class SoftEdgeReflectionRenderTests
     }
 
     [Test]
+    public void ASoftEdge_FollowsARectanglesOwnCorners()
+    {
+        var root = new TestRoot(64, 128);
+        var rectangle = new Adamantium.UI.Controls.Shapes.Rectangle
+        {
+            Fill = Brushes.Red,
+            CornerRadius = new ProceduralGeometry.CornerRadius(12),
+            SoftEdge = 4
+        };
+        root.Add(rectangle);
+        rectangle.Measure(new Size(40, 40));
+        rectangle.Arrange(new Rect(4, 4, 40, 40));
+
+        var px = Render(root, (8, 8), (24, 24));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(Red(px[0]), Is.InRange(20, 150), "past a square fade, still in the rounded one");
+            Assert.That(Red(px[1]), Is.GreaterThan(240), "the middle in full");
+        });
+    }
+
+    [Test]
     public void AReflection_MirrorsTheElementUnderItsBottomEdge_AndFadesAway()
     {
         var (root, _) = Element(e => e.Reflection = new Reflection { Size = 1, Opacity = 1 });

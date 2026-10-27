@@ -11,7 +11,7 @@
     <Phrase Key="Drawing" Text="Рисунок"/>
     <Phrase Key="Visual" Text="Визуал"/>
     <Phrase Key="Material" Text="Материал"/>
-    <Phrase Key="AuraShadow" Text="Аура / тень"/>
+    <Phrase Key="AuraShadow" Text="Аура / тень / отражение"/>
     <Phrase Key="PaintItOn" Text="Чем рисовать"/>
 
     <!-- What every stand has. -->
@@ -173,7 +173,7 @@
     <Phrase Key="TintColor" Text="Цвет оттенка"/>
 
     <!-- Aura / shadow. -->
-    <Phrase Key="AuraTitle" Text="Аура / тень — вживую (полоса рисуется СНАРУЖИ элемента; отступ оставляете вы)"/>
+    <Phrase Key="AuraTitle" Text="Аура / тень / отражение — вживую (полоса рисуется СНАРУЖИ элемента; отступ оставляете вы)"/>
     <Phrase Key="ClipToBox" Text="Обрезать по рамке элемента"/>
     <Phrase Key="MarginHint" Text="Отступ — это раскладка, а не настройка полосы. С обрезкой опустите его ниже радиуса, и полоса обрежется: границы никогда не растут под свечение."/>
     <Phrase Key="AuraOn" Text="АУРА — без направления"/>
@@ -191,6 +191,11 @@
     <Phrase Key="BlurRadius" Text="Радиус размытия — насколько мягкий край"/>
     <Phrase Key="ShadowSpread" Text="Разлив — как ВЫСОКО парит (отрицательный выглядывает с одного края)"/>
     <Phrase Key="ShadowInner" Text="Внутрь (вдавленный вид)"/>
+    <Phrase Key="SoftEdge" Text="МЯГКИЕ КРАЯ — элемент тает к своему контуру"/>
+    <Phrase Key="ReflectionOn" Text="ОТРАЖЕНИЕ — как на стекле"/>
+    <Phrase Key="ReflectionSize" Text="Размер — какая доля высоты отражается"/>
+    <Phrase Key="ReflectionDistance" Text="Расстояние от нижнего края"/>
+    <Phrase Key="ReflectionOpacity" Text="Непрозрачность у края"/>
 
     <!-- The members of every enum a stand offers, said by their names. -->
     <Phrase Key="Linear" Text="Линейный"/>

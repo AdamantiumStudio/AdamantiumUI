@@ -18,13 +18,13 @@
                                Margin="{Binding HaloMargin, Converter={conv:DoubleToThicknessConverter}}"
                                CornerRadius="{Binding HaloRadius, Converter={conv:DoubleToCornerRadiusConverter}}"
                                Aura="{Binding LiveAura}"
-                               Shadow="{Binding LiveShadow}"
+                               Shadow="{Binding LiveShadow}" SoftEdge="{Binding SoftEdge}" Reflection="{Binding LiveReflection}"
                                Visibility="{Binding PreviewShape, Converter={conv:EnumVisibilityConverter}, ConverterParameter=Rectangle}"/>
                     <Ellipse Width="180" Height="120"
                              Fill="#E2E8F0"
                              Margin="{Binding HaloMargin, Converter={conv:DoubleToThicknessConverter}}"
                              Aura="{Binding LiveAura}"
-                             Shadow="{Binding LiveShadow}"
+                             Shadow="{Binding LiveShadow}" SoftEdge="{Binding SoftEdge}" Reflection="{Binding LiveReflection}"
                              Visibility="{Binding PreviewShape, Converter={conv:EnumVisibilityConverter}, ConverterParameter=Ellipse}"/>
                     <!-- Tessellated shapes: their band reads a distance field baked per mesh, so it follows a
                          concave outline - the star's notches keep their own glow instead of being bridged over. -->
@@ -36,7 +36,7 @@
                              VerticalAlignment="Center"
                              Margin="{Binding HaloMargin, Converter={conv:DoubleToThicknessConverter}}"
                              Aura="{Binding LiveAura}"
-                             Shadow="{Binding LiveShadow}"
+                             Shadow="{Binding LiveShadow}" SoftEdge="{Binding SoftEdge}" Reflection="{Binding LiveReflection}"
                              Visibility="{Binding PreviewShape, Converter={conv:EnumVisibilityConverter}, ConverterParameter=Polygon}"/>
                     <Polygon Points="{Binding HaloStar}"
                              Fill="#E2E8F0"
@@ -44,7 +44,7 @@
                              VerticalAlignment="Center"
                              Margin="{Binding HaloMargin, Converter={conv:DoubleToThicknessConverter}}"
                              Aura="{Binding LiveAura}"
-                             Shadow="{Binding LiveShadow}"
+                             Shadow="{Binding LiveShadow}" SoftEdge="{Binding SoftEdge}" Reflection="{Binding LiveReflection}"
                              Visibility="{Binding PreviewShape, Converter={conv:EnumVisibilityConverter}, ConverterParameter=Star}"/>
                 </Grid>
             </Border>
@@ -161,52 +161,90 @@
                 </StackPanel>
             </StackPanel>
             <!-- The shadow's own column: the two sets are independent, and stacking them made one tall strip nobody
-                 could take in at a glance. -->
-            <StackPanel AutomationProperties.LabeledBy="{Binding ElementName=ShadowOnToggle}" Orientation="Vertical" Width="300" MarginLeft="24" VerticalAlignment="Center">
-                <CheckBox x:Name="ShadowOnToggle" Content="{Localize BrushesStrings.ShadowOn}" IsChecked="{Binding ShadowOn, Mode=TwoWay}" FontSize="14" MarginBottom="6"/>
-                <TextBlock x:Name="OffsetLabel" Text="{Localize BrushesStrings.Offset}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
-                <StackPanel AutomationProperties.Name="X" Orientation="Horizontal" MarginBottom="6">
-                    <Slider AutomationProperties.LabeledBy="{Binding ElementName=OffsetLabel}" Value="{Binding ShadowOffsetX, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="-40" Maximum="40" Width="186"/>
-                    <NumericUpDown AutomationProperties.LabeledBy="{Binding ElementName=OffsetLabel}" Width="88" Minimum="-40" Maximum="40" SmallChange="1"
-                                   SnapsToSmallChange="true" StringFormat="N0"
-                                   IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
-                                   Value="{Binding ShadowOffsetX, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6"/>
+                 could take in at a glance. Soft edges and the reflection sit under it, where the column is short. -->
+            <StackPanel Orientation="Vertical" Width="300" MarginLeft="24" VerticalAlignment="Center">
+                <StackPanel AutomationProperties.LabeledBy="{Binding ElementName=ShadowOnToggle}" Orientation="Vertical" MarginBottom="20">
+                    <CheckBox x:Name="ShadowOnToggle" Content="{Localize BrushesStrings.ShadowOn}" IsChecked="{Binding ShadowOn, Mode=TwoWay}" FontSize="14" MarginBottom="6"/>
+                    <TextBlock x:Name="OffsetLabel" Text="{Localize BrushesStrings.Offset}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                    <StackPanel AutomationProperties.Name="X" Orientation="Horizontal" MarginBottom="6">
+                        <Slider AutomationProperties.LabeledBy="{Binding ElementName=OffsetLabel}" Value="{Binding ShadowOffsetX, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="-40" Maximum="40" Width="186"/>
+                        <NumericUpDown AutomationProperties.LabeledBy="{Binding ElementName=OffsetLabel}" Width="88" Minimum="-40" Maximum="40" SmallChange="1"
+                                       SnapsToSmallChange="true" StringFormat="N0"
+                                       IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
+                                       Value="{Binding ShadowOffsetX, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6"/>
+                    </StackPanel>
+                    <StackPanel AutomationProperties.Name="Y" Orientation="Horizontal" MarginBottom="10">
+                        <Slider AutomationProperties.LabeledBy="{Binding ElementName=OffsetLabel}" Value="{Binding ShadowOffsetY, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="-40" Maximum="40" Width="186"/>
+                        <NumericUpDown AutomationProperties.LabeledBy="{Binding ElementName=OffsetLabel}" Width="88" Minimum="-40" Maximum="40" SmallChange="1"
+                                       SnapsToSmallChange="true" StringFormat="N0"
+                                       IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
+                                       Value="{Binding ShadowOffsetY, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6"/>
+                    </StackPanel>
+                    <TextBlock x:Name="BlurRadiusLabel" Text="{Localize BrushesStrings.BlurRadius}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                    <StackPanel Orientation="Horizontal" MarginBottom="10">
+                        <Slider AutomationProperties.LabeledBy="{Binding ElementName=BlurRadiusLabel}" Value="{Binding ShadowBlur, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="0" Maximum="60" Width="186"/>
+                        <NumericUpDown AutomationProperties.LabeledBy="{Binding ElementName=BlurRadiusLabel}" Width="88" Minimum="0" Maximum="60" SmallChange="1"
+                                       SnapsToSmallChange="true" StringFormat="N0"
+                                       IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
+                                       Value="{Binding ShadowBlur, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6"/>
+                    </StackPanel>
+                    <TextBlock x:Name="ShadowSpreadLabel" Text="{Localize BrushesStrings.ShadowSpread}"
+                               TextWrapping="WrapByWords" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                    <StackPanel Orientation="Horizontal" MarginBottom="10">
+                        <Slider AutomationProperties.LabeledBy="{Binding ElementName=ShadowSpreadLabel}" Value="{Binding ShadowSpread, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="-20" Maximum="30" Width="186"/>
+                        <NumericUpDown AutomationProperties.LabeledBy="{Binding ElementName=ShadowSpreadLabel}" Width="88" Minimum="-20" Maximum="30" SmallChange="1"
+                                       SnapsToSmallChange="true" StringFormat="N0"
+                                       IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
+                                       Value="{Binding ShadowSpread, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6"/>
+                    </StackPanel>
+                    <TextBlock x:Name="ShadowOpacityLabel" Text="{Localize BrushesStrings.Opacity}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                    <StackPanel Orientation="Horizontal" MarginBottom="10">
+                        <Slider AutomationProperties.LabeledBy="{Binding ElementName=ShadowOpacityLabel}" Value="{Binding ShadowOpacity, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="0" Maximum="1" Width="186"/>
+                        <NumericUpDown AutomationProperties.LabeledBy="{Binding ElementName=ShadowOpacityLabel}" Width="88" Minimum="0" Maximum="1" SmallChange="0.05"
+                                       SnapsToSmallChange="true" StringFormat="N2"
+                                       IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
+                                       Value="{Binding ShadowOpacity, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6"/>
+                    </StackPanel>
+                    <CheckBox Content="{Localize BrushesStrings.ShadowInner}" IsChecked="{Binding ShadowInner, Mode=TwoWay}" MarginBottom="6"/>
+                    <TextBlock x:Name="ShadowColorLabel" Text="{Localize BrushesStrings.Color}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                    <ColorPickerButton AutomationProperties.LabeledBy="{Binding ElementName=ShadowColorLabel}" Width="48" Height="32" SelectedColor="{Binding ShadowColor, Mode=TwoWay}"/>
                 </StackPanel>
-                <StackPanel AutomationProperties.Name="Y" Orientation="Horizontal" MarginBottom="10">
-                    <Slider AutomationProperties.LabeledBy="{Binding ElementName=OffsetLabel}" Value="{Binding ShadowOffsetY, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="-40" Maximum="40" Width="186"/>
-                    <NumericUpDown AutomationProperties.LabeledBy="{Binding ElementName=OffsetLabel}" Width="88" Minimum="-40" Maximum="40" SmallChange="1"
-                                   SnapsToSmallChange="true" StringFormat="N0"
-                                   IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
-                                   Value="{Binding ShadowOffsetY, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6"/>
+                <!-- Soft edges and the reflection: drawn through the element's own layer, so they cost nothing while off. -->
+                <StackPanel AutomationProperties.LabeledBy="{Binding ElementName=ReflectionOnToggle}" Orientation="Vertical">
+                    <TextBlock x:Name="SoftEdgeLabel" Text="{Localize BrushesStrings.SoftEdge}" TextWrapping="WrapByWords" FontSize="14" MarginBottom="2"/>
+                    <StackPanel Orientation="Horizontal" MarginBottom="14">
+                        <Slider AutomationProperties.LabeledBy="{Binding ElementName=SoftEdgeLabel}" Value="{Binding SoftEdge, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="0" Maximum="60" Width="186"/>
+                        <NumericUpDown AutomationProperties.LabeledBy="{Binding ElementName=SoftEdgeLabel}" Width="88" Minimum="0" Maximum="60" SmallChange="1"
+                                       SnapsToSmallChange="true" StringFormat="N0"
+                                       IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
+                                       Value="{Binding SoftEdge, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6"/>
+                    </StackPanel>
+                    <CheckBox x:Name="ReflectionOnToggle" Content="{Localize BrushesStrings.ReflectionOn}" IsChecked="{Binding ReflectionOn, Mode=TwoWay}" FontSize="14" MarginBottom="6"/>
+                    <TextBlock x:Name="ReflectionSizeLabel" Text="{Localize BrushesStrings.ReflectionSize}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                    <StackPanel Orientation="Horizontal" MarginBottom="10">
+                        <Slider AutomationProperties.LabeledBy="{Binding ElementName=ReflectionSizeLabel}" Value="{Binding ReflectionSize, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="0" Maximum="1" Width="186"/>
+                        <NumericUpDown AutomationProperties.LabeledBy="{Binding ElementName=ReflectionSizeLabel}" Width="88" Minimum="0" Maximum="1" SmallChange="0.05"
+                                       SnapsToSmallChange="true" StringFormat="N2"
+                                       IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
+                                       Value="{Binding ReflectionSize, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6"/>
+                    </StackPanel>
+                    <TextBlock x:Name="ReflectionDistanceLabel" Text="{Localize BrushesStrings.ReflectionDistance}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                    <StackPanel Orientation="Horizontal" MarginBottom="10">
+                        <Slider AutomationProperties.LabeledBy="{Binding ElementName=ReflectionDistanceLabel}" Value="{Binding ReflectionDistance, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="0" Maximum="40" Width="186"/>
+                        <NumericUpDown AutomationProperties.LabeledBy="{Binding ElementName=ReflectionDistanceLabel}" Width="88" Minimum="0" Maximum="40" SmallChange="1"
+                                       SnapsToSmallChange="true" StringFormat="N0"
+                                       IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
+                                       Value="{Binding ReflectionDistance, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6"/>
+                    </StackPanel>
+                    <TextBlock x:Name="ReflectionOpacityLabel" Text="{Localize BrushesStrings.ReflectionOpacity}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                    <StackPanel Orientation="Horizontal">
+                        <Slider AutomationProperties.LabeledBy="{Binding ElementName=ReflectionOpacityLabel}" Value="{Binding ReflectionOpacity, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="0" Maximum="1" Width="186"/>
+                        <NumericUpDown AutomationProperties.LabeledBy="{Binding ElementName=ReflectionOpacityLabel}" Width="88" Minimum="0" Maximum="1" SmallChange="0.05"
+                                       SnapsToSmallChange="true" StringFormat="N2"
+                                       IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
+                                       Value="{Binding ReflectionOpacity, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6"/>
+                    </StackPanel>
                 </StackPanel>
-                <TextBlock x:Name="BlurRadiusLabel" Text="{Localize BrushesStrings.BlurRadius}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
-                <StackPanel Orientation="Horizontal" MarginBottom="10">
-                    <Slider AutomationProperties.LabeledBy="{Binding ElementName=BlurRadiusLabel}" Value="{Binding ShadowBlur, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="0" Maximum="60" Width="186"/>
-                    <NumericUpDown AutomationProperties.LabeledBy="{Binding ElementName=BlurRadiusLabel}" Width="88" Minimum="0" Maximum="60" SmallChange="1"
-                                   SnapsToSmallChange="true" StringFormat="N0"
-                                   IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
-                                   Value="{Binding ShadowBlur, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6"/>
-                </StackPanel>
-                <TextBlock x:Name="ShadowSpreadLabel" Text="{Localize BrushesStrings.ShadowSpread}"
-                           TextWrapping="WrapByWords" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
-                <StackPanel Orientation="Horizontal" MarginBottom="10">
-                    <Slider AutomationProperties.LabeledBy="{Binding ElementName=ShadowSpreadLabel}" Value="{Binding ShadowSpread, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="-20" Maximum="30" Width="186"/>
-                    <NumericUpDown AutomationProperties.LabeledBy="{Binding ElementName=ShadowSpreadLabel}" Width="88" Minimum="-20" Maximum="30" SmallChange="1"
-                                   SnapsToSmallChange="true" StringFormat="N0"
-                                   IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
-                                   Value="{Binding ShadowSpread, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6"/>
-                </StackPanel>
-                <TextBlock x:Name="ShadowOpacityLabel" Text="{Localize BrushesStrings.Opacity}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
-                <StackPanel Orientation="Horizontal" MarginBottom="10">
-                    <Slider AutomationProperties.LabeledBy="{Binding ElementName=ShadowOpacityLabel}" Value="{Binding ShadowOpacity, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="0" Maximum="1" Width="186"/>
-                    <NumericUpDown AutomationProperties.LabeledBy="{Binding ElementName=ShadowOpacityLabel}" Width="88" Minimum="0" Maximum="1" SmallChange="0.05"
-                                   SnapsToSmallChange="true" StringFormat="N2"
-                                   IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
-                                   Value="{Binding ShadowOpacity, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6"/>
-                </StackPanel>
-                <CheckBox Content="{Localize BrushesStrings.ShadowInner}" IsChecked="{Binding ShadowInner, Mode=TwoWay}" MarginBottom="6"/>
-                <TextBlock x:Name="ShadowColorLabel" Text="{Localize BrushesStrings.Color}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
-                <ColorPickerButton AutomationProperties.LabeledBy="{Binding ElementName=ShadowColorLabel}" Width="48" Height="32" SelectedColor="{Binding ShadowColor, Mode=TwoWay}"/>
             </StackPanel>
         </StackPanel>
     </StackPanel>

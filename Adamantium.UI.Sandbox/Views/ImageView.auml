@@ -87,6 +87,49 @@
                 </StackPanel>
             </StackPanel>
 
+            <!-- The picture's own colors. Soft edges and the reflection belong to every element, so they live with the
+                 aura and the shadow on the brushes tab. -->
+            <Border Height="1" Background="{ResourceReference ControlFillColorTertiary}" Margin="0,24,0,0"/>
+            <TextBlock Text="{Localize ImageStrings.PictureColors}" FontSize="18" Margin="0,20,0,12"/>
+            <StackPanel Orientation="Horizontal">
+                <Grid Width="440" Height="220">
+                    <Image AutomationProperties.AutomationId="ColorsPicture"
+                           Width="280" Height="200"
+                           Source="Content/SandboxContent/Textures/ColoredImage.jpg"
+                           Stretch="UniformToFill"
+                           Brightness="{Binding Brightness}"
+                           Contrast="{Binding Contrast}"
+                           Saturation="{Binding Saturation}"/>
+                </Grid>
+
+                <StackPanel Orientation="Vertical" Width="300" Margin="24,0,0,0" VerticalAlignment="Center">
+                    <TextBlock x:Name="BrightnessLabel" Text="{Localize ImageStrings.Brightness}" Foreground="{ResourceReference TextFillColorSecondary}" Margin="0,0,0,2"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                        <Slider AutomationProperties.AutomationId="PictureBrightness" AutomationProperties.LabeledBy="{Binding ElementName=BrightnessLabel}" Value="{Binding Brightness, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="-1" Maximum="1" Width="186"/>
+                        <NumericUpDown AutomationProperties.LabeledBy="{Binding ElementName=BrightnessLabel}" Width="88" Minimum="-1" Maximum="1" SmallChange="0.05"
+                                       SnapsToSmallChange="true" StringFormat="N2"
+                                       IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
+                                       Value="{Binding Brightness, Mode=TwoWay}" VerticalAlignment="Center" Margin="6,0,0,0"/>
+                    </StackPanel>
+                    <TextBlock x:Name="ContrastLabel" Text="{Localize ImageStrings.Contrast}" Foreground="{ResourceReference TextFillColorSecondary}" Margin="0,0,0,2"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                        <Slider AutomationProperties.AutomationId="PictureContrast" AutomationProperties.LabeledBy="{Binding ElementName=ContrastLabel}" Value="{Binding Contrast, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="-1" Maximum="1" Width="186"/>
+                        <NumericUpDown AutomationProperties.LabeledBy="{Binding ElementName=ContrastLabel}" Width="88" Minimum="-1" Maximum="1" SmallChange="0.05"
+                                       SnapsToSmallChange="true" StringFormat="N2"
+                                       IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
+                                       Value="{Binding Contrast, Mode=TwoWay}" VerticalAlignment="Center" Margin="6,0,0,0"/>
+                    </StackPanel>
+                    <TextBlock x:Name="SaturationLabel" Text="{Localize ImageStrings.Saturation}" Foreground="{ResourceReference TextFillColorSecondary}" Margin="0,0,0,2"/>
+                    <StackPanel Orientation="Horizontal">
+                        <Slider AutomationProperties.AutomationId="PictureSaturation" AutomationProperties.LabeledBy="{Binding ElementName=SaturationLabel}" Value="{Binding Saturation, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="0" Maximum="2" Width="186"/>
+                        <NumericUpDown AutomationProperties.LabeledBy="{Binding ElementName=SaturationLabel}" Width="88" Minimum="0" Maximum="2" SmallChange="0.05"
+                                       SnapsToSmallChange="true" StringFormat="N2"
+                                       IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
+                                       Value="{Binding Saturation, Mode=TwoWay}" VerticalAlignment="Center" Margin="6,0,0,0"/>
+                    </StackPanel>
+                </StackPanel>
+            </StackPanel>
+
             <Border Height="1" Background="{ResourceReference ControlFillColorTertiary}" Margin="0,24,0,0"/>
             <TextBlock Text="{Localize ImageStrings.Formats}" FontSize="18" Margin="0,20,0,12"/>
 

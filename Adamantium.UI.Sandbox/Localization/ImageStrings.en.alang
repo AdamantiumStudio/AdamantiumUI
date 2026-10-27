@@ -8,6 +8,11 @@
     <Phrase Key="BoxHeight" Text="Box height:"/>
     <Phrase Key="ElementSize" Text="Element size:"/>
 
+    <Phrase Key="PictureColors" Text="Picture colors"/>
+    <Phrase Key="Brightness" Text="Brightness"/>
+    <Phrase Key="Contrast" Text="Contrast"/>
+    <Phrase Key="Saturation" Text="Saturation"/>
+
     <Phrase Key="Formats" Text="Formats and animation"/>
     <Phrase Key="OpacityLabel" Text="Opacity:"/>
     <Phrase Key="MipLevel" Text="PNG (mip level 2)"/>

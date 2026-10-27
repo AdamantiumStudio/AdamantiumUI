@@ -32,4 +32,8 @@ public partial class ImageViewModel : TabPageViewModel
     [Bindable] private VerticalAlignment _verticalAlignment = VerticalAlignment.Stretch;
     [Bindable] private double _boxWidth = 320;
     [Bindable] private double _boxHeight = 220;
+
+    [Bindable] private double _brightness;
+    [Bindable] private double _contrast;
+    [Bindable] private double _saturation = 1;
 }

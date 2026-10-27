@@ -32,7 +32,7 @@
   <Wait Target="id=Stand/id=VisualStandView" />
   <Select Target="id=BrushesView/name=Material" />
   <Wait Target="id=Stand/id=MaterialStandView" />
-  <Select Target='id=BrushesView/name="Aura / Shadow"' />
+  <Select Target='id=BrushesView/name="Aura / Shadow / Reflection"' />
   <Wait Target="id=Stand/id=AuraStandView" />
   <Select Target="id=BrushesView/name=Gradients" />
   <Wait Target="id=Stand/id=GradientStandView" />
