@@ -2220,6 +2220,10 @@ All packages share one version.
 
 ### Fixed
 
+- Automation: a touch or pen hold could lift before the application had started the hold - its timer's tick
+  reaches the loop on its own queue - and became a tap, a button clicked or a context menu not opened. A hold now
+  lifts once the application holds every contact it means to, and settles before the lift; one that never starts
+  is an error, not a tap.
 - Leaving a `NumericUpDown`, or pressing Enter in it, with its text as it was shown put the shown number in - 453.5433
   shown as 453.54 became 453.54. Text left as shown now puts nothing in.
 - A grid of labelled boxes in a ribbon's group showed to automation as a stand-in button that could do nothing, the
