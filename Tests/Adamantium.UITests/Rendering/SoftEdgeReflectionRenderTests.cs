@@ -46,11 +46,46 @@ public class SoftEdgeReflectionRenderTests
         return (root, element);
     }
 
-    private uint[] Render(TestRoot root, params (int X, int Y)[] at)
+    private uint[] Render(TestRoot root, params (int X, int Y)[] at) => Render(root, new StubResourceFactory(), at);
+
+    private uint[] Render(TestRoot root, IResourceFactory resources, params (int X, int Y)[] at)
     {
-        var factory = new RenderUnitFactory(_device, new StubResourceFactory());
+        var factory = new RenderUnitFactory(_device, resources);
         using var renderer = new OffscreenTestRenderer(_device, factory, 64, 128) { ClearColor = Colors.Blue };
         Assert.That(renderer.RenderFrame(root), Is.True);
+        Assert.That(renderer.RenderFrame(root), Is.True);
+        var path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"soft_{Guid.NewGuid():N}.png");
+        renderer.Save(path, ImageFileType.Png);
+        try
+        {
+            var px = Image.Load(path).GetPixelBuffer(0, 0);
+            var pixels = new uint[at.Length];
+            for (var i = 0; i < at.Length; i++)
+            {
+                pixels[i] = px.GetPixel<uint>(at[i].X, at[i].Y);
+            }
+
+            return pixels;
+        }
+        finally
+        {
+            System.IO.File.Delete(path);
+        }
+    }
+
+    // Drawn, changed, drawn again by the same renderer: what the cache keeps across the change is what is tested.
+    private uint[] RenderChanged(TestRoot root, Action change, params (int X, int Y)[] at) =>
+        RenderChanged(root, new StubResourceFactory(), change, at);
+
+    private uint[] RenderChanged(TestRoot root, IResourceFactory resources, Action change, params (int X, int Y)[] at)
+    {
+        var factory = new RenderUnitFactory(_device, resources);
+        using var renderer = new OffscreenTestRenderer(_device, factory, 64, 128) { ClearColor = Colors.Blue };
+        Assert.That(renderer.RenderFrame(root), Is.True);
+        RenderDirty.Clear();
+        Assert.That(renderer.RenderFrame(root), Is.True);
+        RenderDirty.Clear();
+        change();
         Assert.That(renderer.RenderFrame(root), Is.True);
         var path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"soft_{Guid.NewGuid():N}.png");
         renderer.Save(path, ImageFileType.Png);
@@ -86,31 +121,258 @@ public class SoftEdgeReflectionRenderTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(Red(px[0]), Is.LessThan(60), "barely there a pixel in from the edge");
-            Assert.That(Red(px[1]), Is.InRange(80, 170), "half way through the fade, about half");
+            Assert.That(Red(px[0]), Is.LessThan(90), "faint a pixel in from the edge");
+            Assert.That(Red(px[1]), Is.InRange(150, 225), "half way through the fade, most of it - it eases in");
             Assert.That(Red(px[2]), Is.GreaterThan(240), "past the fade, all of it");
         });
     }
 
+    // The fade follows what the element draws, not its box: a corner the clip rounds fades along the curve.
     [Test]
-    public void ASoftEdge_FollowsTheRoundedCorners()
+    public void ASoftEdge_FollowsWhatTheElementDraws()
     {
         var (square, _) = Element(e => e.SoftEdge = 4);
         var (rounded, _) = Element(e =>
         {
             e.SoftEdge = 4;
+            e.ClipToBounds = true;
             e.ClipCornerRadius = new ProceduralGeometry.CornerRadius(12);
         });
 
-        var corner = (7, 7);
-        var squareCorner = Render(square, corner)[0];
-        var roundedCorner = Render(rounded, corner)[0];
+        var px = (8, 8);
+        Assert.Multiple(() =>
+        {
+            Assert.That(Red(Render(square, px)[0]), Is.GreaterThan(220), "four pixels in from both square edges, nearly all");
+            Assert.That(Red(Render(rounded, px)[0]), Is.InRange(40, 190), "a pixel and a half inside the curve, fading");
+        });
+    }
+
+    [Test]
+    public void ASoftEdge_FollowsAnEllipse()
+    {
+        var (root, _) = Element(e =>
+        {
+            e.SoftEdge = 6;
+            e.RenderAction = s => s.DrawEllipse(new Rect(0, 0, 40, 40), Brushes.Red, 0, 360, ProceduralGeometry.Shapes.EllipseType.EdgeToEdge);
+        });
+
+        // On the diagonal, two pixels inside the circle; and its middle.
+        var px = Render(root, (11, 11), (24, 24));
 
         Assert.Multiple(() =>
         {
-            Assert.That(Red(squareCorner), Is.GreaterThan(120), "three pixels in from a square corner, most of it");
-            Assert.That(Red(roundedCorner), Is.LessThan(10), "outside the rounded one, nothing");
+            Assert.That(Red(px[0]), Is.LessThan(170), "near the curve, fading");
+            Assert.That(Red(px[1]), Is.GreaterThan(240), "the middle in full");
         });
+    }
+
+    // A layer kept from the frame before is faded again when only the width changes.
+    [Test]
+    public void ASoftEdgeChanged_OnAKeptLayer_FadesAgain()
+    {
+        var (root, element) = Element(e => e.SoftEdge = 2);
+
+        var px = RenderChanged(root, () => element.SoftEdge = 12, (6, 19), (24, 19));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(Red(px[0]), Is.LessThan(120), "two pixels in, deep in the wider fade");
+            Assert.That(Red(px[1]), Is.GreaterThan(240), "the middle in full");
+        });
+    }
+
+    // A container that draws nothing itself keeps its layer when only its child is drawn; widening its soft edge must
+    // fade that kept drawing again, over the target it was laid on.
+    [Test]
+    public void ASoftEdgeChanged_OnAContainerKeptWhole_FadesAgain()
+    {
+        var root = new TestRoot(64, 128);
+        var holder = new TestControl { SoftEdge = 2 };
+        holder.Bounds = new Rect(4, 4, 40, 40);
+        holder.RenderSize = new Size(40, 40);
+        var child = new TestControl { RenderAction = s => s.DrawRectangle(Brushes.Lime, new Rect(0, 0, 40, 40)) };
+        child.Bounds = new Rect(0, 0, 40, 40);
+        child.RenderSize = new Size(40, 40);
+        holder.Add(child);
+        root.Add(holder);
+
+        var px = RenderChanged(root, () => holder.SoftEdge = 12, (6, 24));
+
+        Assert.That(Green(px[0]), Is.LessThan(120), "two pixels in, deep in the wider fade");
+    }
+
+    // The window's edge is no outline: an element running past it does not fade there.
+    [Test]
+    public void ASoftEdge_DoesNotFadeWhereAClipCutsTheDrawing()
+    {
+        var (root, _) = Element(e =>
+        {
+            e.SoftEdge = 8;
+            e.Bounds = new Rect(-30, 4, 60, 40);
+            e.RenderSize = new Size(60, 40);
+            e.RenderAction = s => s.DrawRectangle(Brushes.Red, new Rect(0, 0, 60, 40));
+        });
+
+        var px = Render(root, (1, 24), (28, 24));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(Red(px[0]), Is.GreaterThan(240), "thirty pixels in, at the window's edge: in full");
+            Assert.That(Red(px[1]), Is.LessThan(120), "two pixels in from its own edge: fading");
+        });
+    }
+
+    // An element that clips itself fades at its own edge even where its content runs on past the window: its own clip,
+    // not the window's, is what cuts it there.
+    [Test]
+    public void ASoftEdge_FadesAtItsOwnClip_ThoughItsContentRunsPastTheWindow()
+    {
+        var root = new TestRoot(64, 128);
+        var holder = new TestControl { SoftEdge = 8, ClipToBounds = true };
+        holder.Bounds = new Rect(20, 4, 30, 40);
+        holder.RenderSize = new Size(30, 40);
+        var child = new TestControl { RenderAction = s => s.DrawRectangle(Brushes.Lime, new Rect(0, 0, 100, 40)) };
+        child.Bounds = new Rect(-40, 0, 100, 40);
+        child.RenderSize = new Size(100, 40);
+        holder.Add(child);
+        root.Add(holder);
+
+        var px = Render(root, (21, 24));
+
+        Assert.That(Green(px[0]), Is.LessThan(120), "a pixel inside its own left edge, faded");
+    }
+
+    // A shape whose band reads a distance field baked from its mesh wears it from its very first frame, soft-edged too.
+    [TestCase(false)]
+    [TestCase(true)]
+    public void AShapesGlow_ShowsFromItsFirstFrame_UnderASoftEdge(bool shownLater)
+    {
+        var root = new TestRoot(64, 128);
+        var star = new Adamantium.UI.Controls.Shapes.Polygon
+        {
+            Points = new Adamantium.UI.Core.Collections.PointsCollection
+            {
+                new Vector2(20, 0), new Vector2(26, 14), new Vector2(40, 14), new Vector2(29, 23), new Vector2(33, 38),
+                new Vector2(20, 29), new Vector2(7, 38), new Vector2(11, 23), new Vector2(0, 14), new Vector2(14, 14)
+            },
+            Fill = Brushes.Lime,
+            Aura = new Aura { Radius = 8, Color = Colors.White, Opacity = 1 },
+            SoftEdge = 4
+        };
+        root.Add(star);
+        star.Measure(new Size(40, 40));
+        star.Arrange(new Rect(12, 12, 40, 40));
+
+        // Just above the top point, outside the shape: only the glow can be there.
+        var resources = new DeviceResourceFactory(_device);
+        uint[] px;
+        if (shownLater)
+        {
+            star.Visibility = Visibility.Collapsed;
+            px = RenderChanged(root, resources, () =>
+            {
+                star.Visibility = Visibility.Visible;
+                star.Measure(new Size(40, 40));
+                star.Arrange(new Rect(12, 12, 40, 40));
+            }, (32, 10));
+        }
+        else
+        {
+            px = Render(root, resources, (32, 10));
+        }
+
+        Assert.That(Red(px[0]), Is.GreaterThan(40));
+    }
+
+    // An opacity mask reaches everything the element shows, its glow included.
+    [Test]
+    public void AnOpacityMask_HidesASoftEdgedElementsGlowToo()
+    {
+        var (root, _) = Element(e =>
+        {
+            e.Aura = new Aura { Radius = 10, Color = Colors.White, Opacity = 1 };
+            e.SoftEdge = 6;
+            e.OpacityMask = new SolidColorBrush(Colors.White) { Opacity = 0 };
+        });
+
+        Assert.That(Red(Render(root, (24, 2))[0]), Is.LessThan(10));
+    }
+
+    // Under a translucent soft-edged element its glow lies only under the fading rim, not across it.
+    [Test]
+    public void ASoftEdgedGlow_LiesUnderTheRimOnly()
+    {
+        var glow = new Aura { Radius = 10, Color = Colors.White, Opacity = 1 };
+        var (soft, _) = Element(e =>
+        {
+            e.Aura = glow;
+            e.SoftEdge = 6;
+            e.Opacity = 0.3;
+        });
+        var (plain, _) = Element(e =>
+        {
+            e.Aura = glow;
+            e.IsLayer = true;
+            e.Opacity = 0.3;
+        });
+
+        // In the lime half, which has no red: any red there is the white glow showing through.
+        var middle = (24, 30);
+        Assert.Multiple(() =>
+        {
+            Assert.That(Red(Render(plain, middle)[0]), Is.LessThan(10), "a translucent layer with no glow beneath it");
+            Assert.That(Red(Render(soft, middle)[0]), Is.LessThan(10), "nor under the soft-edged one's middle");
+        });
+    }
+
+    [Test]
+    public void ASoftEdgedElement_IsAsTranslucentAsItsOpacity()
+    {
+        var (soft, _) = Element(e =>
+        {
+            e.SoftEdge = 6;
+            e.Opacity = 0.3;
+        });
+
+        Assert.That(Green(Render(soft, (24, 30))[0]), Is.InRange(66, 86), "lime at three tenths");
+    }
+
+    [Test]
+    public void AnOpacityChange_ReachesTheGlowUnderASoftEdge()
+    {
+        var glow = new Aura { Radius = 10, Color = Colors.White, Opacity = 1 };
+        var (changed, element) = Element(e =>
+        {
+            e.Aura = glow;
+            e.SoftEdge = 6;
+        });
+        var (fresh, _) = Element(e =>
+        {
+            e.Aura = glow;
+            e.SoftEdge = 6;
+            e.Opacity = 0.3;
+        });
+
+        var outside = (24, 2);
+        var afterChange = RenderChanged(changed, () => element.Opacity = 0.3, outside)[0];
+
+        Assert.That(Red(afterChange), Is.EqualTo(Red(Render(fresh, outside)[0])).Within(4));
+    }
+
+    // Only what the element draws fades: its own glow stays whole around it.
+    [Test]
+    public void ASoftEdge_LeavesTheElementsOwnGlowWhole()
+    {
+        var glow = new Aura { Radius = 10, Color = Colors.White, Opacity = 1 };
+        var (plain, _) = Element(e => e.Aura = glow);
+        var (soft, _) = Element(e =>
+        {
+            e.Aura = glow;
+            e.SoftEdge = 8;
+        });
+
+        var outside = (24, 2);   // two pixels above the top edge
+        Assert.That(Red(Render(soft, outside)[0]), Is.EqualTo(Red(Render(plain, outside)[0])).Within(4));
     }
 
     [Test]
@@ -131,7 +393,7 @@ public class SoftEdgeReflectionRenderTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(Red(px[0]), Is.InRange(20, 150), "past a square fade, still in the rounded one");
+            Assert.That(Red(px[0]), Is.InRange(40, 190), "a pixel and a half inside its rounded corner, fading");
             Assert.That(Red(px[1]), Is.GreaterThan(240), "the middle in full");
         });
     }
@@ -164,7 +426,7 @@ public class SoftEdgeReflectionRenderTests
         var (mirrored, _) = Element(e =>
         {
             e.Aura = glow;
-            e.Reflection = new Reflection { Size = 1, Opacity = 1, Distance = 8 };
+            e.Reflection = new Reflection { Size = 1, Opacity = 1, OffsetY = 8 };
         });
 
         // Edge at row 44, floor at 48, the mirrored element from row 52.
@@ -180,10 +442,69 @@ public class SoftEdgeReflectionRenderTests
         });
     }
 
+    // Right under the edge, beside the element, its glow runs on into the reflection's: a row below the floor no brighter
+    // than the row above it, however strong the reflection.
     [Test]
-    public void AReflectionsDistance_LeavesAGapUnderTheEdge()
+    public void AReflection_MeetsTheGlowWithoutASeam()
     {
-        var (root, _) = Element(e => e.Reflection = new Reflection { Size = 1, Opacity = 1, Distance = 8 });
+        var (root, _) = Element(e =>
+        {
+            e.Aura = new Aura { Radius = 10, Color = Colors.White, Opacity = 1 };
+            e.Reflection = new Reflection { Size = 1, Opacity = 0.5 };
+        });
+
+        var px = Render(root, (1, 43), (1, 44));
+
+        Assert.That(Red(px[1]), Is.EqualTo(Red(px[0])).Within(12));
+    }
+
+    // Raised less than nothing, the floor lies inside the element: what it draws solid stays in front of it.
+    [Test]
+    public void ANegativeOffsetY_KeepsTheElementWhole()
+    {
+        var (root, _) = Element(e => e.Reflection = new Reflection { Size = 1, Opacity = 1, OffsetY = -8, OffsetX = 20 });
+
+        var px = Render(root, (24, 42));
+
+        Assert.That(Green(px[0]), Is.GreaterThan(240), "the element's own lime, two rows above its edge");
+    }
+
+    [Test]
+    public void AReflectionsOffsetX_MovesItSideways()
+    {
+        var (root, _) = Element(e => e.Reflection = new Reflection { Size = 1, Opacity = 1, OffsetX = 10 });
+
+        var px = Render(root, (50, 54), (6, 54));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(Green(px[0]), Is.GreaterThan(150), "the lime half, moved past the element's right edge");
+            Assert.That(Blue(px[1]), Is.GreaterThan(240), "and none of it where it moved away from");
+        });
+    }
+
+    [Test]
+    public void AReflectionsFade_DecidesHowMuchOfItMelts()
+    {
+        var (sharp, _) = Element(e => e.Reflection = new Reflection { Size = 1, Opacity = 1, Fade = 0 });
+        var (melting, _) = Element(e => e.Reflection = new Reflection { Size = 1, Opacity = 1, Fade = 1 });
+
+        // Thirty rows under the edge, three quarters of the way down the mirrored element; and past its end.
+        var row = (24, 74);
+        var past = (24, 88);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(Red(Render(sharp, row)[0]), Is.GreaterThan(230), "no fade: shown at full strength");
+            Assert.That(Red(Render(melting, row)[0]), Is.LessThan(120), "faded all the way: mostly gone there");
+            Assert.That(Red(Render(sharp, past)[0]), Is.LessThan(10), "past its end, nothing either way");
+        });
+    }
+
+    [Test]
+    public void AReflectionsOffsetY_LeavesAGapUnderTheEdge()
+    {
+        var (root, _) = Element(e => e.Reflection = new Reflection { Size = 1, Opacity = 1, OffsetY = 8 });
 
         var px = Render(root, (24, 47), (24, 54));
 
@@ -218,7 +539,7 @@ public class SoftEdgeReflectionRenderTests
         Assert.That(renderer.RenderFrame(root), Is.True);
         RenderDirty.Clear();
 
-        reflection.Distance = 20;
+        reflection.OffsetY = 20;
         Assert.That(renderer.RenderFrame(root), Is.True);
         RenderDirty.Clear();
 

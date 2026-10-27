@@ -7,13 +7,16 @@ All packages share one version.
 
 ### Added
 
-- `UIComponent.SoftEdge`: the element and its subtree fade in from its outline over this many pixels, following its
-  rounded corners (`ClipRadii`) - a picture whose edges melt into the page. `UIComponent.Reflection` (`Reflection`:
-  `Size` as a share of the height, `Distance`, `Opacity`, `IsEnabled`): its mirror image under its bottom edge, fading
-  away downward, at most its own height. Both are the element's own, as `Shadow` and `Aura` are, drawn through its
-  layer as `OpacityMask` is - a reflection switched off costs none; layout does not grow for the reflection, and only
-  the element's own clip is not applied to it. The soft edge fades everything the element draws, its own shadow and
-  glow included; the reflection mirrors what of the element is in view.
+- `UIComponent.SoftEdge`: the element and its subtree fade in over this many pixels from the outline of what they
+  draw, whatever its shape - an ellipse, a star, a glyph, a picture's own transparency - a picture whose edges melt into
+  the page. Its own glow and shadow stay whole and go on under the faded edge, so it melts into them.
+  `UIComponent.Reflection` (`Reflection`: `Size` as a share of the height, `Fade` - how much of that melts away toward
+  its end, `OffsetX`, `OffsetY`, `Opacity`, `IsEnabled`): its mirror image under its bottom edge, about a floor half
+  `OffsetY` down, meeting the element's own glow below the floor without a seam. Both are the element's own, as
+  `Shadow` and `Aura` are, drawn through its layer as `OpacityMask` is - a reflection switched off costs none; layout
+  does not grow for the reflection, and only the element's own clip is not applied to it. The reflection mirrors what
+  of the element is in view; a soft-edged element's own glow is not in its reflection. Content thinner than about the
+  soft edge's width fades out altogether; where an ancestor's clip cuts the element, it does not fade there.
 - `Image` clips by its own `CornerRadius` when `ClipToBounds` is on, as `Border` does, and a soft edge on it follows
   those corners. `Rectangle` does the same with its `CornerRadius`: a clipping `Rectangle` now clips rounded, no longer
   square, and a soft edge on it no longer stops short at the corners.
@@ -2235,6 +2238,8 @@ All packages share one version.
 
 ### Fixed
 
+- An opacity slot handed out in the middle of a frame reached the GPU only the frame after: whatever the slot drew
+  that frame read no alpha and did not show - and with nothing else to draw, it stayed that way until something did.
 - A living aura, an animated `NoiseBrush` and an animated `FractalBrush` froze in a window with a varying frame rate
   (`RefreshRate` 0, the default) - their clock ran, but nothing asked for a frame. A frame that draws one now asks for
   the next, in a window, a popup and an adorner layer alike; with nothing moving left, the frames stop.

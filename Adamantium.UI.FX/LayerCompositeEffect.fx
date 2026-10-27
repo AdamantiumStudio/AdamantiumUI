@@ -33,19 +33,26 @@ float4 MaskOffsets0;
 float4 MaskOffsets1;
 float4 MaskParams;
 
-// Soft edges: the element's box in device pixels (.xy) and how far in from its outline it fades away (.z), through the
-// same box mapping as the mask; zero = a hard edge. Its corners in device pixels: TL, TR, BR, BL.
-float4 Soft;
-float4 SoftRadii;
+// Soft edges: how deep inside what the layer drew each texel lies (LayerSoftEdgeEffect), read where SoftOn is 1.
+Texture2D SoftTexture;
+float SoftOn;
 
 // The layer's own region on the window, in device pixels: where a texel of it was drawn.
 float4 SourceRegion;
 
-// The reflection draw (.z > 0): the layer laid down mirrored under the element, below the floor on window row .w; .x
-// strong down to row .y, where the mirrored element begins, and gone .z pixels further down.
+// A reflection, in window device pixels: .x its strength, .y the row where the mirrored element begins, .z the row where
+// it is gone, .w the floor - the row it shows from.
 float4 Mirror;
 
-float Mirrored() { return step(0.5, Mirror.z); }
+// .x the rows over which it fades out before Mirror.z; .w what this draw is: 0 the layer alone, 1 the layer over its
+// reflection (it leaves what lies below the floor and inside the mirrored layer to the reflection), 2 the reflection.
+float4 MirrorFade;
+
+// The mirrored layer on the window: .xy its first and past-last columns, .z its past-last row; .w half its sideways
+// offset, in pixels.
+float4 MirrorQuad;
+
+float Role() { return MirrorFade.w; }
 
 // Between two stops closer than a pixel, a one-pixel ramp centered on them, as the fills do.
 float MaskRamp(float t, float aa)
@@ -89,21 +96,30 @@ float MaskAt(float2 pixel)
     return MaskRamp(t, min(fwidth(t), fwidth(frac(t + 0.5))));
 }
 
-// From its outline in, rounded as its corners are: 1 deeper than the fade, 0 on the outline and outside.
-float SoftAt(float2 pixel)
+// What the layer drew at a point of its region (0..1 across it), with its mask and soft edge: premultiplied, nothing
+// outside the region.
+float4 LayerAt(float2 inRegion, float2 pixel)
 {
-    if (Soft.z <= 0.0) return 1.0;
-    float3 p = float3(pixel, 1.0);
-    float q = dot(MaskW.xyz, p);
-    if (abs(q) < 1e-6) return 0.0;
-    float2 box = float2(dot(MaskU.xyz, p), dot(MaskV.xyz, p)) / q;
-    float2 extent = Soft.xy * 0.5;
-    float2 local = (box - 0.5) * Soft.xy;
-    float r = local.x < 0.0 ? (local.y < 0.0 ? SoftRadii.x : SoftRadii.w) : (local.y < 0.0 ? SoftRadii.y : SoftRadii.z);
-    r = min(r, min(extent.x, extent.y));
-    float2 corner = abs(local) - extent + r;
-    float d = min(max(corner.x, corner.y), 0.0) + length(max(corner, float2(0.0, 0.0))) - r;
-    return saturate(-d / Soft.z);
+    float inside = all(inRegion >= 0.0) && all(inRegion < 1.0) ? 1.0 : 0.0;
+    float2 uv = saturate(inRegion) * LayerTexels.xy;
+    float soft = 1.0;
+    if (SoftOn > 0.5)
+    {
+        // The blurred coverage is one half on the outline and one deep inside: from 0 to 1 in between, smoothly.
+        soft = saturate(2.0 * SoftTexture.SampleLevel(SourceSampler, uv, 0).r - 1.0);
+    }
+
+    return SourceTexture.SampleLevel(SourceSampler, uv, 0) * (MaskAt(pixel) * soft * inside);
+}
+
+// The reflection's strength on a window row: none above the floor, gathering to full by where the mirrored element
+// begins - or half its sideways offset down, moved aside it meets the glow above in another place - full on to where
+// its fade begins, nothing past its end.
+float MirrorStrength(float row)
+{
+    float gather = max(max(Mirror.y - Mirror.w, MirrorQuad.w), 1.0);
+    return Mirror.x * step(Mirror.w, row) * saturate((row - Mirror.w) / gather)
+           * saturate((Mirror.z - row) / max(MirrorFade.x, 1.0));
 }
 
 struct LayerVSOutput
@@ -122,24 +138,30 @@ LayerVSOutput LayerCompositeVS(uint id : SV_VertexID)
     float2 pixel = LayerBox.xy + o.Uv * LayerBox.zw;
     o.Position = float4(pixel / max(ViewportSize, float2(1.0, 1.0)) * 2.0 - 1.0, 0.0, 1.0);
     // The reflection is placed upside down, so its top row samples the layer's bottom one.
-    o.Uv.y = lerp(o.Uv.y, 1.0 - o.Uv.y, Mirrored());
+    o.Uv.y = lerp(o.Uv.y, 1.0 - o.Uv.y, step(1.5, Role()));
     return o;
 }
 
 // The layer was blended onto transparent black, so its color already carries its alpha: scaled here as a whole, and by
-// the mask and the soft edge where there are, and laid down with the premultiplied "over". The reflection asks both of
-// the pixel it mirrors. It shows only below the floor, where it meets what the element draws there (its glow) as a mirror
-// does, and fades from where the mirrored element begins on down.
+// the mask and the soft edge where there are, and laid down with the premultiplied "over".
+//
+// Below the floor, where the reflection lies, ONE draw lays down both: what the element itself draws there (its glow,
+// its shadow) and the mirror image, mixed by the reflection's strength. Laid one over the other they added up, and the
+// glow came out brighter below the floor than above it - a seam along it.
 [shader("fragment")]
 float4 LayerCompositePS(LayerVSOutput input) : SV_Target
 {
     float2 here = SurfacePixel(input.Position.xy);
-    float mirrored = Mirrored();
-    float2 source = lerp(here, SourceRegion.xy + input.Uv * SourceRegion.zw, mirrored);
-    float below = max(here.y - Mirror.y, 0.0);
-    float fade = lerp(1.0, Mirror.x * step(Mirror.w, here.y) * saturate(1.0 - below / max(Mirror.z, 1.0)), mirrored);
-    float mask = MaskAt(source) * SoftAt(source) * fade;
-    return SourceTexture.SampleLevel(SourceSampler, input.Uv * LayerTexels.xy, 0) * (LayerAlpha * mask);
+    float2 hereInRegion = (here - SourceRegion.xy) / max(SourceRegion.zw, float2(1.0, 1.0));
+    float role = Role();
+    float4 self = LayerAt(hereInRegion, here);
+    float4 mirror = LayerAt(input.Uv, SourceRegion.xy + input.Uv * SourceRegion.zw);
+    float under = role > 0.5 && here.y >= Mirror.w && here.y < MirrorQuad.z
+                  && here.x >= MirrorQuad.x && here.x < MirrorQuad.y ? 1.0 : 0.0;
+    // Only where the element itself leaves room: what it draws solid stays in front of the floor.
+    float4 laid = role < 1.5 ? self * (1.0 - under)
+                             : lerp(self, mirror, MirrorStrength(here.y) * (1.0 - self.a)) * under;
+    return laid * LayerAlpha;
 }
 
 technique LayerComposite

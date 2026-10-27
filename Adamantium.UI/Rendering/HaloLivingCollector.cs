@@ -84,7 +84,7 @@ internal sealed class HaloLivingCollector : ShapeSdfCollector<HaloLivingItem>
 
     public bool TryAdd(LivingBand band, Rect destinationRect, ProceduralGeometry.CornerRadius corners, HaloShape shape, Matrix4x4F world,
         double opacity, Rect2D scissor, Rect logicalBounds, Vector4F color, int transformSlot = 0,
-        ITexture field = null, double fieldRange = 0, int clipSlot = -1, int fadeSlot = -1)
+        ITexture field = null, double fieldRange = 0, int clipSlot = -1, int fadeSlot = -1, double underWidth = 0)
     {
         const float eps = 1e-4f;
         if (System.Math.Abs(world.M12) > eps || System.Math.Abs(world.M21) > eps)
@@ -95,7 +95,7 @@ internal sealed class HaloLivingCollector : ShapeSdfCollector<HaloLivingItem>
         EnsureCpuCapacity(Count + 1);
         if (Count + 1 > GpuCapacity) return false;
 
-        if (!BakeItem(band, destinationRect, corners, shape, world, opacity, color, transformSlot, fieldRange, clipSlot, fadeSlot, out var baked))
+        if (!BakeItem(band, destinationRect, corners, shape, world, opacity, color, transformSlot, fieldRange, clipSlot, fadeSlot, out var baked, underWidth))
             return false;
 
         Items[Count++] = baked;
@@ -108,7 +108,7 @@ internal sealed class HaloLivingCollector : ShapeSdfCollector<HaloLivingItem>
     /// band that has faded to nothing).</summary>
     public static bool BakeItem(LivingBand band, Rect destinationRect, ProceduralGeometry.CornerRadius corners,
         HaloShape shape, Matrix4x4F world, double opacity, Vector4F color, int transformSlot, double fieldRange,
-        int clipSlot, int fadeSlot, out HaloLivingItem item)
+        int clipSlot, int fadeSlot, out HaloLivingItem item, double underWidth = 0)
     {
         item = default;
         const float eps = 1e-4f;
@@ -126,14 +126,15 @@ internal sealed class HaloLivingCollector : ShapeSdfCollector<HaloLivingItem>
         {
             Bounds = new Vector4F((float)(destinationRect.X * sx + tx), (float)(destinationRect.Y * sy + ty),
                 (float)(destinationRect.Width * sx), (float)(destinationRect.Height * sy)),
-            Params = new Vector4F(RectBatchCollector.MaxOf(radii), transformSlot, (float)shape, band.Inner ? 1f : 0f),
+            Params = new Vector4F(RectBatchCollector.MaxOf(radii), transformSlot, (float)shape,
+                HaloRectCollector.Side(band.Inner, underWidth)),
             Radii = radii,
             Band = new Vector4F(0, 0, band.Spread * iso, band.Softness * iso),
             Field = new Vector4F((float)fieldRange * iso, band.Turbulence, band.Flow, band.Detail),
             Color = new Color(color),
             // .y = the rounded clip's slot, .z = the opacity slot (-1 = none for either) - Field is full here, so both
             // ride in the ramp's spare components.
-            Ramp = new Vector4F(band.StopCount, clipSlot, fadeSlot, 0)
+            Ramp = new Vector4F(band.StopCount, clipSlot, fadeSlot, (float)(underWidth * iso))
         };
 
         if (band.Palette is { Length: >= 8 } p && band.Offsets is { Length: >= 8 } o)

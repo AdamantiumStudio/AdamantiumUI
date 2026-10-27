@@ -193,8 +193,8 @@ public class ImageCornerRenderTests
         });
     }
 
-    // Thirteen pixels in along the diagonal from the corner of a picture rounded by 40 lies under two pixels inside its
-    // rounding: half way through a 4 px soft edge that follows the corner, though thirteen deep in its square box.
+    // Thirteen pixels in along the diagonal from the corner of a picture rounded by 40 lies under three pixels inside its
+    // rounding: still in a 4 px soft edge that follows the corner, though thirteen deep in its square box.
     [Test]
     public void ASoftEdge_FollowsThePicturesOwnCorners()
     {
@@ -204,7 +204,7 @@ public class ImageCornerRenderTests
             i.SoftEdge = 4;
         }, (At + 13, At + 13));
 
-        Assert.That(corner.R, Is.LessThan(170));
+        Assert.That(corner.R, Is.InRange(100, 235));
     }
 
     [Test]

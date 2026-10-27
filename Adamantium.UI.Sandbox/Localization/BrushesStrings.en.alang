@@ -194,7 +194,7 @@
     <Phrase Key="SoftEdge" Text="SOFT EDGES — the element fades toward its outline"/>
     <Phrase Key="ReflectionOn" Text="REFLECTION — as on glass"/>
     <Phrase Key="ReflectionSize" Text="Size — how much of the height it mirrors"/>
-    <Phrase Key="ReflectionDistance" Text="Distance from the bottom edge"/>
+    <Phrase Key="ReflectionFade" Text="Fade — how much of what it shows melts away toward its end"/>
     <Phrase Key="ReflectionOpacity" Text="Opacity at the edge"/>
 
     <!-- The members of every enum a stand offers, said by their names. -->

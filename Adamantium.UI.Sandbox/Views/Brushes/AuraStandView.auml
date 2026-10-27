@@ -228,13 +228,28 @@
                                        IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
                                        Value="{Binding ReflectionSize, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6"/>
                     </StackPanel>
-                    <TextBlock x:Name="ReflectionDistanceLabel" Text="{Localize BrushesStrings.ReflectionDistance}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                    <TextBlock x:Name="ReflectionFadeLabel" Text="{Localize BrushesStrings.ReflectionFade}" TextWrapping="WrapByWords" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                     <StackPanel Orientation="Horizontal" MarginBottom="10">
-                        <Slider AutomationProperties.LabeledBy="{Binding ElementName=ReflectionDistanceLabel}" Value="{Binding ReflectionDistance, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="0" Maximum="40" Width="186"/>
-                        <NumericUpDown AutomationProperties.LabeledBy="{Binding ElementName=ReflectionDistanceLabel}" Width="88" Minimum="0" Maximum="40" SmallChange="1"
+                        <Slider AutomationProperties.LabeledBy="{Binding ElementName=ReflectionFadeLabel}" Value="{Binding ReflectionFade, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="0" Maximum="1" Width="186"/>
+                        <NumericUpDown AutomationProperties.LabeledBy="{Binding ElementName=ReflectionFadeLabel}" Width="88" Minimum="0" Maximum="1" SmallChange="0.05"
+                                       SnapsToSmallChange="true" StringFormat="N2"
+                                       IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
+                                       Value="{Binding ReflectionFade, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6"/>
+                    </StackPanel>
+                    <TextBlock x:Name="ReflectionOffsetLabel" Text="{Localize BrushesStrings.Offset}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
+                    <StackPanel AutomationProperties.Name="X" Orientation="Horizontal" MarginBottom="6">
+                        <Slider AutomationProperties.LabeledBy="{Binding ElementName=ReflectionOffsetLabel}" Value="{Binding ReflectionOffsetX, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="-40" Maximum="40" Width="186"/>
+                        <NumericUpDown AutomationProperties.LabeledBy="{Binding ElementName=ReflectionOffsetLabel}" Width="88" Minimum="-40" Maximum="40" SmallChange="1"
                                        SnapsToSmallChange="true" StringFormat="N0"
                                        IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
-                                       Value="{Binding ReflectionDistance, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6"/>
+                                       Value="{Binding ReflectionOffsetX, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6"/>
+                    </StackPanel>
+                    <StackPanel AutomationProperties.Name="Y" Orientation="Horizontal" MarginBottom="10">
+                        <Slider AutomationProperties.LabeledBy="{Binding ElementName=ReflectionOffsetLabel}" Value="{Binding ReflectionOffsetY, Mode=TwoWay}" IsValueToolTipEnabled="True" Minimum="-40" Maximum="40" Width="186"/>
+                        <NumericUpDown AutomationProperties.LabeledBy="{Binding ElementName=ReflectionOffsetLabel}" Width="88" Minimum="-40" Maximum="40" SmallChange="1"
+                                       SnapsToSmallChange="true" StringFormat="N0"
+                                       IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
+                                       Value="{Binding ReflectionOffsetY, Mode=TwoWay}" VerticalAlignment="Center" MarginLeft="6"/>
                     </StackPanel>
                     <TextBlock x:Name="ReflectionOpacityLabel" Text="{Localize BrushesStrings.ReflectionOpacity}" Foreground="{ResourceReference TextFillColorSecondary}" MarginBottom="2"/>
                     <StackPanel Orientation="Horizontal">
