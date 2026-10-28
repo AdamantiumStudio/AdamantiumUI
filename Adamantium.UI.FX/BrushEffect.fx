@@ -462,15 +462,8 @@ PatternPSInput PatternRectInstancedVS(uint vertexId : SV_VertexID, uint instance
 }
 
 
-// --- Alternative base noise for NoiseBrush.NoiseType: texture-free, returning ~[-1,1] like SimplexNoise. Hash21 (Dave
-// Hoskins' hash12) lives in NoiseMath.fxh. ---
-
-float2 Hash22(float2 p)
-{
-    float3 p3 = frac(p.xyx * float3(0.1031, 0.1030, 0.0973));
-    p3 += dot(p3, p3.yzx + 33.33);
-    return frac((p3.xx + p3.yz) * p3.zy);
-}
+// --- Alternative base noise for NoiseBrush.NoiseType: texture-free, returning ~[-1,1] like SimplexNoise. The hashes
+// live in NoiseMath.fxh. ---
 
 // Value noise: bilinearly interpolate a random value per lattice point (smoothstep fade). Blockier than gradient noise.
 float ValueNoise(float2 v)
