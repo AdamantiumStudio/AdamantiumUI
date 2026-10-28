@@ -25,16 +25,16 @@ public class LayoutPerfTests
     private sealed class CountingWrapPanel : WrapPanel
     {
         public int MeasureOverrides, ArrangeOverrides;
-        protected override Size MeasureOverride(Size availableSize) { MeasureOverrides++; return base.MeasureOverride(availableSize); }
-        protected override Size ArrangeOverride(Size finalSize) { ArrangeOverrides++; return base.ArrangeOverride(finalSize); }
+        protected override Size<double> MeasureOverride(Size<double> availableSize) { MeasureOverrides++; return base.MeasureOverride(availableSize); }
+        protected override Size<double> ArrangeOverride(Size<double> finalSize) { ArrangeOverrides++; return base.ArrangeOverride(finalSize); }
     }
 
     // A visual root with a client viewport, mirroring a window (so the WrapPanel gets a finite scroll viewport and
     // virtualizes to the visible grid instead of realizing all items).
     private sealed class TestWindowRoot : Grid, IRootVisualComponent
     {
-        public Vector2 PointToClient(PixelPoint point) => new((float)point.X, (float)point.Y);
-        public PixelPoint PointToScreen(Vector2 point) => new(point.X, point.Y);
+        public Vector2<double> PointToClient(PixelPoint point) => new((float)point.X, (float)point.Y);
+        public PixelPoint PointToScreen(Vector2<double> point) => new(point.X, point.Y);
         public PixelPoint Position { get; set; }
         public void AttachContextAndInitialize(IUIContext context) { }
         public double Left { get; set; }
@@ -107,7 +107,7 @@ public class LayoutPerfTests
         var cp = (CountingWrapPanel)panel;
         cp.MeasureOverrides = 0; cp.ArrangeOverrides = 0;
 
-        panel.SetOffset(new Vector2(0, (float)y));
+        panel.SetOffset(new Vector2<double>(0, (float)y));
 
         var sw = Stopwatch.StartNew();
         WindowExtension.UpdateTree(root);
@@ -175,7 +175,7 @@ public class LayoutPerfTests
         for (var i = 0; i < 40 && stable < 3; i++)
         {
             y += 7;
-            panel.SetOffset(new Vector2(0, (float)y));
+            panel.SetOffset(new Vector2<double>(0, (float)y));
             WindowExtension.UpdateTree(root);
             var count = ic.ItemContainerGenerator.RealizedCount;
             stable = count == previous ? stable + 1 : 0;
@@ -192,7 +192,7 @@ public class LayoutPerfTests
             var s0 = RenderDirty.TotalStructuralMarks;
 
             y += 7;                                           // fractional (sub-cell) scroll, CONTINUOUS (no Settle)
-            panel.SetOffset(new Vector2(0, (float)y));
+            panel.SetOffset(new Vector2<double>(0, (float)y));
             WindowExtension.UpdateTree(root);
 
             var measures = MeasurableUIComponent.TotalMeasureCalls - m0;
@@ -227,7 +227,7 @@ public class LayoutPerfTests
         for (var i = 0; i < 40 && stable < 3; i++)
         {
             y += 7;
-            panel.SetOffset(new Vector2(0, (float)y));
+            panel.SetOffset(new Vector2<double>(0, (float)y));
             WindowExtension.UpdateTree(root);
             var count = ic.ItemContainerGenerator.RealizedCount;
             stable = count == previous ? stable + 1 : 0;
@@ -244,7 +244,7 @@ public class LayoutPerfTests
             var ring0 = ic.ItemContainerGenerator.RealizedCount;
 
             y += 7;
-            panel.SetOffset(new Vector2(0, (float)y));
+            panel.SetOffset(new Vector2<double>(0, (float)y));
             WindowExtension.UpdateTree(root);
 
             var parks = VirtualizingPanel.ParkCalls - parks0;
@@ -268,7 +268,7 @@ public class LayoutPerfTests
         var (root, ic, panel) = BuildTiles(6000, 24);
         Settle(root, ic);
         double y = 500;
-        for (var i = 0; i < 5; i++) { y += 7; panel.SetOffset(new Vector2(0, (float)y)); WindowExtension.UpdateTree(root); }
+        for (var i = 0; i < 5; i++) { y += 7; panel.SetOffset(new Vector2<double>(0, (float)y)); WindowExtension.UpdateTree(root); }
         var realized = ic.ItemContainerGenerator.RealizedCount;
         var bound = realized;   // offset-baked re-arranges the WHOLE window (>= realized); absolute re-arranges ~one row
         TestContext.WriteLine($"=== Arrange short-circuit (6000 @24, fractional scroll, realized={realized}, bound<{bound}) ===");
@@ -278,7 +278,7 @@ public class LayoutPerfTests
         {
             var c0 = MeasurableUIComponent.TotalArrangeCores;
             y += 7;
-            panel.SetOffset(new Vector2(0, (float)y));
+            panel.SetOffset(new Vector2<double>(0, (float)y));
             WindowExtension.UpdateTree(root);
             var cores = MeasurableUIComponent.TotalArrangeCores - c0;
             TestContext.WriteLine($"step {step,2}: arrangeCores={cores}");

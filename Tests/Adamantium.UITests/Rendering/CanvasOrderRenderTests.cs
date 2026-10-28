@@ -81,7 +81,7 @@ public class CanvasOrderRenderTests
         // An application runs a pass per frame and never notices; a test that renders one frame has to say so.
         for (var pass = 0; pass < 2; pass++)
         {
-            canvas.Measure(new Size(Dim, Dim));
+            canvas.Measure(new Size<double>(Dim, Dim));
             canvas.Arrange(new Rect(0, 0, Dim, Dim));
         }
 
@@ -153,10 +153,10 @@ public class CanvasOrderRenderTests
 
     private static StrokeItem Ink(Color color)
     {
-        var ink = new StrokeItem(new Vector2(-40, 0), new SolidColorBrush(color), 40);
+        var ink = new StrokeItem(new Vector2<double>(-40, 0), new SolidColorBrush(color), 40);
 
-        ink.Add(new Vector2(-40, 0));
-        ink.Add(new Vector2(40, 0));
+        ink.Add(new Vector2<double>(-40, 0));
+        ink.Add(new Vector2<double>(40, 0));
 
         return ink;
     }
@@ -220,10 +220,10 @@ public class CanvasOrderRenderTests
     {
         var canvas = Canvas();
         var box = Box(Colors.Red);
-        var ink = new StrokeItem(new Vector2(-40, 0), new SolidColorBrush(Colors.Lime), 30);
+        var ink = new StrokeItem(new Vector2<double>(-40, 0), new SolidColorBrush(Colors.Lime), 30);
 
-        ink.Add(new Vector2(-40, 0));
-        ink.Add(new Vector2(40, 0));
+        ink.Add(new Vector2<double>(-40, 0));
+        ink.Add(new Vector2<double>(40, 0));
 
         canvas.Scene.Add(box);
         canvas.Scene.Add(ink);
@@ -293,10 +293,10 @@ public class CanvasOrderRenderTests
         };
         var element = new ElementItem(picture, new Rect(-40, -40, 80, 80));
 
-        var ink = new StrokeItem(new Vector2(-40, 0), new SolidColorBrush(Colors.Red), 4);
+        var ink = new StrokeItem(new Vector2<double>(-40, 0), new SolidColorBrush(Colors.Red), 4);
 
-        ink.Add(new Vector2(-40, 0));
-        ink.Add(new Vector2(-30, 0));
+        ink.Add(new Vector2<double>(-40, 0));
+        ink.Add(new Vector2<double>(-30, 0));
 
         canvas.Scene.Add(element);
         canvas.Scene.Add(ink);
@@ -360,10 +360,10 @@ public class CanvasOrderRenderTests
         };
         var element = new ElementItem(picture, new Rect(-40, -40, 80, 80));
 
-        var ink = new StrokeItem(new Vector2(-40, 0), new SolidColorBrush(Colors.Red), 4);
+        var ink = new StrokeItem(new Vector2<double>(-40, 0), new SolidColorBrush(Colors.Red), 4);
 
-        ink.Add(new Vector2(-40, 0));
-        ink.Add(new Vector2(-30, 0));
+        ink.Add(new Vector2<double>(-40, 0));
+        ink.Add(new Vector2<double>(-30, 0));
 
         canvas.Scene.Add(element);
         canvas.Scene.Add(ink);
@@ -391,7 +391,7 @@ public class CanvasOrderRenderTests
         // Twice, for the reason given in Middle: the stack is filled by the first pass and placed by the second.
         for (var pass = 0; pass < 2; pass++)
         {
-            canvas.Measure(new Size(Dim, Dim));
+            canvas.Measure(new Size<double>(Dim, Dim));
             canvas.Arrange(new Rect(0, 0, Dim, Dim));
         }
     }

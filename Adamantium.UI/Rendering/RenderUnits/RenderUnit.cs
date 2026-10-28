@@ -136,7 +136,7 @@ public abstract class RenderUnit<TPayload> : DeferredDisposableObject, IRenderUn
 
     // Every outline contour of a solid-color stroke (combined/group geometry yields several), each as its raw points
     // plus whether it is a closed loop. False (CPU fallback) only for a non-solid brush or a geometry with no contour.
-    private static bool TryGetSolidContours(Pen pen, Geometry geometry, out List<(Adamantium.Mathematics.Vector2[] Points, bool IsClosed)> contours)
+    private static bool TryGetSolidContours(Pen pen, Geometry geometry, out List<(Adamantium.Mathematics.Vector2<double>[] Points, bool IsClosed)> contours)
     {
         contours = null;
         if (pen.Brush is not SolidColorBrush) return false;
@@ -144,7 +144,7 @@ public abstract class RenderUnit<TPayload> : DeferredDisposableObject, IRenderUn
         var mesh = geometry?.Mesh;
         if (mesh == null || mesh.Contours.Count == 0) return false;
 
-        List<(Adamantium.Mathematics.Vector2[], bool)> list = [];
+        List<(Adamantium.Mathematics.Vector2<double>[], bool)> list = [];
         foreach (var contour in mesh.Contours)
         {
             if (contour.Points is not { Length: >= 2 }) continue;
@@ -162,10 +162,10 @@ public abstract class RenderUnit<TPayload> : DeferredDisposableObject, IRenderUn
     // normalize(0) -> a garbage segment normal -> a random miter direction, i.e. a spike. The mesh/flattener can emit these
     // (a closing point repeating the start, a curve sampled down to a near-cusp). A closed loop also drops a trailing point
     // coincident with the first (the wrap is implicit).
-    private static Adamantium.Mathematics.Vector2[] DedupPoints(Adamantium.Mathematics.Vector2[] pts, bool closed)
+    private static Adamantium.Mathematics.Vector2<double>[] DedupPoints(Adamantium.Mathematics.Vector2<double>[] pts, bool closed)
     {
         const double epsSq = 1e-6;
-        List<Adamantium.Mathematics.Vector2> outv = [pts[0]];
+        List<Adamantium.Mathematics.Vector2<double>> outv = [pts[0]];
         for (var i = 1; i < pts.Length; i++)
         {
             var d = pts[i] - outv[^1];
@@ -218,12 +218,12 @@ public abstract class RenderUnit<TPayload> : DeferredDisposableObject, IRenderUn
     }
 
     // The closed contours (>= 3 points) of a solid fill that get an analytic-AA fringe. Null when there are none.
-    private static List<(Adamantium.Mathematics.Vector2[] Points, bool IsClosed)> BuildFillContours(Geometry geometry)
+    private static List<(Adamantium.Mathematics.Vector2<double>[] Points, bool IsClosed)> BuildFillContours(Geometry geometry)
     {
         var mesh = geometry?.Mesh;
         if (mesh == null || mesh.Contours.Count == 0) return null;
 
-        List<(Adamantium.Mathematics.Vector2[] Points, bool IsClosed)> contours = [];
+        List<(Adamantium.Mathematics.Vector2<double>[] Points, bool IsClosed)> contours = [];
         foreach (var contour in mesh.Contours)
             if (contour.IsGeometryClosed && contour.Points is { Length: >= 3 })
                 contours.Add((contour.Points, true));

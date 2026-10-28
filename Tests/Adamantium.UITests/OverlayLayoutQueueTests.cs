@@ -24,7 +24,7 @@ public class OverlayLayoutQueueTests
         var host = new StackPanel();
         host.Children.Add(popup);
         var window = new Window { Width = 400, Height = 300, Content = host };
-        var size = new Size(400, 300);
+        var size = new Size<double>(400, 300);
         WindowExtension.UpdateTree(window);
         popup.IsOpen = true;
         window.PopupLayer.UpdateLayout(size);
@@ -47,7 +47,7 @@ public class OverlayLayoutQueueTests
         var host = new StackPanel();
         host.Children.Add(popup);
         var window = new Window { Width = 400, Height = 300, Content = host };
-        var size = new Size(400, 300);
+        var size = new Size<double>(400, 300);
         WindowExtension.UpdateTree(window);
         popup.IsOpen = true;
 
@@ -63,10 +63,10 @@ public class OverlayLayoutQueueTests
     {
         public int Measured;
 
-        protected override Size MeasureOverride(Size availableSize)
+        protected override Size<double> MeasureOverride(Size<double> availableSize)
         {
             if (++Measured == 1) LayoutManager.For(this).InvalidateMeasureNextPass(this);
-            return new Size(10, 10);
+            return new Size<double>(10, 10);
         }
     }
 }

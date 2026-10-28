@@ -14,7 +14,7 @@ public class CanvasArrangeTests
     private static (InfiniteCanvas Canvas, CanvasScene Scene) Stage()
     {
         var canvas = new InfiniteCanvas();
-        canvas.Measure(new Size(800, 600), force: true);
+        canvas.Measure(new Size<double>(800, 600), force: true);
         canvas.Arrange(new Rect(0, 0, 800, 600));
 
         var scene = new CanvasScene();
@@ -36,7 +36,7 @@ public class CanvasArrangeTests
         scene.Add(far);
         canvas.Select(far, false);
 
-        Assert.That(canvas.VisibleWorld.Contains(new Vector2(9200, 7150)), Is.False, "it was in view to begin with");
+        Assert.That(canvas.VisibleWorld.Contains(new Vector2<double>(9200, 7150)), Is.False, "it was in view to begin with");
 
         Assert.That(canvas.FitSelection(), Is.True);
 
@@ -44,8 +44,8 @@ public class CanvasArrangeTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(seen.Contains(new Vector2(far.World.X, far.World.Y)), Is.True, "its corner is off screen");
-            Assert.That(seen.Contains(new Vector2(far.World.X + far.World.Width, far.World.Y + far.World.Height)),
+            Assert.That(seen.Contains(new Vector2<double>(far.World.X, far.World.Y)), Is.True, "its corner is off screen");
+            Assert.That(seen.Contains(new Vector2<double>(far.World.X + far.World.Width, far.World.Y + far.World.Height)),
                 Is.True, "its far corner is off screen");
         });
     }
@@ -75,7 +75,7 @@ public class CanvasArrangeTests
         canvas.Fit(new Rect(500, 400, 0, 0));
 
         Assert.That(canvas.Scale, Is.EqualTo(was).Within(0.001));
-        Assert.That(canvas.VisibleWorld.Contains(new Vector2(500, 400)), Is.True);
+        Assert.That(canvas.VisibleWorld.Contains(new Vector2<double>(500, 400)), Is.True);
     }
 
     // FIT ALL is about what is on the plane OF THE CURRENT MODE: what the other mode holds is not being looked at.
@@ -88,7 +88,7 @@ public class CanvasArrangeTests
 
         Assert.That(canvas.FitAll(), Is.True);
 
-        Assert.That(canvas.VisibleWorld.Contains(new Vector2(40000, 40000)), Is.False,
+        Assert.That(canvas.VisibleWorld.Contains(new Vector2<double>(40000, 40000)), Is.False,
             "the camera flew off to a node the drawing mode does not even show");
     }
 
@@ -109,12 +109,12 @@ public class CanvasArrangeTests
         public int Order { get; set; }
         public bool IsPlaced => false;
         public CanvasHandles Handles => CanvasHandles.None;
-        public bool HitTest(Vector2 world, double tolerance) => false;
+        public bool HitTest(Vector2<double> world, double tolerance) => false;
         public void Render(Adamantium.UI.Core.Graphics.IDrawingSession session, InfiniteCanvas canvas) { }
 
         public int Moves { get; private set; }
 
-        public void Move(Vector2 worldDelta) => Moves++;
+        public void Move(Vector2<double> worldDelta) => Moves++;
         public void Resize(Rect world) { }
     }
 

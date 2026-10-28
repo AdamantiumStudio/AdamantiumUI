@@ -21,7 +21,7 @@ public class VisualRendererQueueTests
         ImageSource delivered = null;
         var called = false;
 
-        renderer.RequestRender(new Border(), new Size(8, 8), 1.0, Colors.Transparent, image =>
+        renderer.RequestRender(new Border(), new Size<double>(8, 8), 1.0, Colors.Transparent, image =>
         {
             called = true;
             delivered = image;
@@ -48,7 +48,7 @@ public class VisualRendererQueueTests
     {
         var renderer = new VisualRenderer(null, null);
 
-        Assert.DoesNotThrow(() => renderer.RequestRender(null, new Size(8, 8), 1.0, null, _ => { }));
-        Assert.DoesNotThrow(() => renderer.RequestRender(new Border(), new Size(8, 8), 1.0, null, null));
+        Assert.DoesNotThrow(() => renderer.RequestRender(null, new Size<double>(8, 8), 1.0, null, _ => { }));
+        Assert.DoesNotThrow(() => renderer.RequestRender(new Border(), new Size<double>(8, 8), 1.0, null, null));
     }
 }

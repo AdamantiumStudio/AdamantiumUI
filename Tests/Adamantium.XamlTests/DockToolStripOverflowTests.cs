@@ -45,7 +45,7 @@ public class DockToolStripOverflowTests
         themes.SetTheme(theme);
     }
 
-    private static PaneGroup Group(PaneGroupState state, DockZone edge, Size size, int tabs = 12,
+    private static PaneGroup Group(PaneGroupState state, DockZone edge, Size<double> size, int tabs = 12,
         PaneKind kind = PaneKind.Tool)
     {
         var group = new PaneGroup { Kind = kind, State = state, Edge = edge };
@@ -60,7 +60,7 @@ public class DockToolStripOverflowTests
         return group;
     }
 
-    private static void Settle(PaneGroup group, Size size)
+    private static void Settle(PaneGroup group, Size<double> size)
     {
         Adamantium.UI.Extensions.WindowExtension.UpdateTree(group);
         Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
@@ -93,7 +93,7 @@ public class DockToolStripOverflowTests
     public void AnOverflowingDockedStripShowsTheChevronAndFadesTheFarEdge(Func<Theme> theme)
     {
         Use(theme());
-        var group = Group(PaneGroupState.Docked, DockZone.Bottom, new Size(220, 300));
+        var group = Group(PaneGroupState.Docked, DockZone.Bottom, new Size<double>(220, 300));
 
         Assert.That(group.CanScrollTabsForward, Is.True, "twelve tabs do not fit in 220 pixels");
         Assert.That(VisibilityOf(group, "PART_TabOverflow"), Is.EqualTo(Visibility.Visible), "the ▾");
@@ -105,7 +105,7 @@ public class DockToolStripOverflowTests
     public void AStripThatFitsShowsNeitherTheChevronNorAMask(Func<Theme> theme)
     {
         Use(theme());
-        var group = Group(PaneGroupState.Docked, DockZone.Bottom, new Size(800, 300), tabs: 2);
+        var group = Group(PaneGroupState.Docked, DockZone.Bottom, new Size<double>(800, 300), tabs: 2);
 
         Assert.Multiple(() =>
         {
@@ -118,10 +118,10 @@ public class DockToolStripOverflowTests
     public void AStripPannedOffItsStartFadesBothEdges(Func<Theme> theme)
     {
         Use(theme());
-        var group = Group(PaneGroupState.Docked, DockZone.Bottom, new Size(220, 300));
+        var group = Group(PaneGroupState.Docked, DockZone.Bottom, new Size<double>(220, 300));
 
         ((Pane)group.Items[0]).RaiseEvent(Notch(-120));
-        Settle(group, new Size(220, 300));
+        Settle(group, new Size<double>(220, 300));
 
         Assert.That(group.CanScrollTabsBack, Is.True, "a notch down pans the first tab out of view");
         Assert.That(MaskEnds(group), Is.EqualTo((0f, 0f)), "tabs past both edges");
@@ -134,7 +134,7 @@ public class DockToolStripOverflowTests
         foreach (var theme in Themes)
         {
             Use(theme());
-            var group = Group(PaneGroupState.Collapsed, edge, new Size(300, 160));
+            var group = Group(PaneGroupState.Collapsed, edge, new Size<double>(300, 160));
             var mask = (LinearGradientBrush)Strip(group).OpacityMask;
 
             Assert.Multiple(() =>
@@ -293,7 +293,7 @@ public class DockToolStripOverflowTests
         {
             Adamantium.UI.Extensions.WindowExtension.UpdateTree(window);
             Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
-            window.Measure(new Size(1000, 400));
+            window.Measure(new Size<double>(1000, 400));
             window.Arrange(new Rect(0, 0, 1000, 400));
         }
     }
@@ -311,7 +311,7 @@ public class DockToolStripOverflowTests
         foreach (var theme in Themes)
         {
             Use(theme());
-            var group = Group(PaneGroupState.Collapsed, edge, new Size(300, 160));
+            var group = Group(PaneGroupState.Collapsed, edge, new Size<double>(300, 160));
             var strip = Strip(group);
             var tint = _app.ResourceManager.FindResource(group, "DockFoldedStripFill") switch
             {
@@ -372,11 +372,11 @@ public class DockToolStripOverflowTests
     private void WheelPans(Func<Theme> theme, PaneKind kind)
     {
         Use(theme());
-        var group = Group(PaneGroupState.Docked, DockZone.None, new Size(220, 300), kind: kind);
+        var group = Group(PaneGroupState.Docked, DockZone.None, new Size<double>(220, 300), kind: kind);
 
         var args = Notch(-120);
         ((Pane)group.Items[0]).RaiseEvent(args);
-        Settle(group, new Size(220, 300));
+        Settle(group, new Size<double>(220, 300));
 
         Assert.Multiple(() =>
         {

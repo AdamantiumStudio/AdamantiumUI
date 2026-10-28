@@ -94,7 +94,7 @@ public class ContextMenuDeferredCardTests
         var (menu, window) = Hosted();
         var target = new Button { Width = 80, Height = 24 };
 
-        menu.Open(target, new Vector2(37, 11));
+        menu.Open(target, new Vector2<double>(37, 11));
         for (var i = 0; i < 3; i++) WindowExtension.UpdateTree(window);
 
         var popup = PopupOf(menu);

@@ -15,8 +15,8 @@ public class LayoutPropagationTests
 {
     private sealed class TestWindowRoot : Grid, IRootVisualComponent
     {
-        public Vector2 PointToClient(PixelPoint point) => new((float)point.X, (float)point.Y);
-        public PixelPoint PointToScreen(Vector2 point) => new(point.X, point.Y);
+        public Vector2<double> PointToClient(PixelPoint point) => new((float)point.X, (float)point.Y);
+        public PixelPoint PointToScreen(Vector2<double> point) => new(point.X, point.Y);
         public PixelPoint Position { get; set; }
         public void AttachContextAndInitialize(IUIContext context) { }
         public double Left { get; set; }
@@ -36,7 +36,7 @@ public class LayoutPropagationTests
         var root = new TestWindowRoot { Width = 400, Height = 400, ClientWidth = 400, ClientHeight = 400 };
         root.Children.Add(middle);
 
-        root.Measure(new Size(400, 400));
+        root.Measure(new Size<double>(400, 400));
         root.Arrange(new Rect(0, 0, 400, 400));
         Assert.That(middle.DesiredSize.Width, Is.EqualTo(50).Within(0.5), "the wrapper starts at its child's size");
 
@@ -67,7 +67,7 @@ public class LayoutPropagationTests
 
         var root = new TestWindowRoot { Width = 400, Height = 400, ClientWidth = 400, ClientHeight = 400 };
         root.Children.Add(strip);
-        root.Measure(new Size(400, 400));
+        root.Measure(new Size<double>(400, 400));
         root.Arrange(new Rect(0, 0, 400, 400));
         Assert.That(tab.DesiredSize.Height, Is.EqualTo(29).Within(0.5));
 

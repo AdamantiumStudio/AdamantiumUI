@@ -90,7 +90,7 @@ public class TextRoundedClipRenderTests
         };
 
         var root = new VisualRoot(box, Dim, Dim);
-        ((IMeasurableComponent)root).Measure(new Size(Dim, Dim));
+        ((IMeasurableComponent)root).Measure(new Size<double>(Dim, Dim));
         ((IMeasurableComponent)root).Arrange(new Rect(0, 0, Dim, Dim));
 
         RenderDirty.MarkStructural();

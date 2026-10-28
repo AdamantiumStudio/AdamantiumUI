@@ -59,7 +59,7 @@ public class TabForegroundFollowsSelectionTests
     private static void Frame(TabItem tab)
     {
         Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
-        tab.Measure(new Size(200, 32));
+        tab.Measure(new Size<double>(200, 32));
     }
 
     private static ContentPresenter PresenterOf(TabItem tab)
@@ -138,7 +138,7 @@ public class TabForegroundFollowsSelectionTests
         var red = Color.FromRgba(220, 40, 40, 255);
         var green = Color.FromRgba(40, 200, 90, 255);
         var presenter = new ContentPresenter { Content = "Shapes", Foreground = new SolidColorBrush(red) };
-        presenter.Measure(new Size(200, 32));
+        presenter.Measure(new Size<double>(200, 32));
         var label = presenter.VisualChildren.OfType<TextBlock>().FirstOrDefault();
         Assert.That(label, Is.Not.Null, "the string content never became a TextBlock");
         Assume.That(ColorOf(label.Foreground), Is.EqualTo(red), "precondition: the label starts in the presenter's color");
@@ -147,7 +147,7 @@ public class TabForegroundFollowsSelectionTests
         // A source change on an ELEMENT source is coalesced into the per-frame binding queue, so a test has to stand in
         // for the frame that would drain it.
         Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
-        presenter.Measure(new Size(200, 32));
+        presenter.Measure(new Size<double>(200, 32));
 
         Assert.That(ColorOf(presenter.VisualChildren.OfType<TextBlock>().First().Foreground), Is.EqualTo(green),
             "the label kept the color the presenter held when the text was built");
@@ -172,14 +172,14 @@ public class TabForegroundFollowsSelectionTests
                 return new Adamantium.UI.Core.Templates.TemplateResult { RootComponent = text };
             })
         };
-        presenter.Measure(new Size(200, 32));
+        presenter.Measure(new Size<double>(200, 32));
         var label = presenter.VisualChildren.OfType<TextBlock>().FirstOrDefault();
         Assert.That(label, Is.Not.Null, "the content template never produced a TextBlock");
         Assume.That(ColorOf(label.Foreground), Is.EqualTo(red), "precondition: the label starts in the presenter's color");
 
         presenter.Foreground = new SolidColorBrush(green);
         Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
-        presenter.Measure(new Size(200, 32));
+        presenter.Measure(new Size<double>(200, 32));
 
         Assert.That(ColorOf(presenter.VisualChildren.OfType<TextBlock>().First().Foreground), Is.EqualTo(green),
             "a templated label froze on the color the presenter held when the template was built");

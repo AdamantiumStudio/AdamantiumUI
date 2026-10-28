@@ -17,7 +17,7 @@ public class CanvasMiniMap : InputUIComponent, ICanvasPart
 {
     private Rect _world;
     private double _scale;
-    private Vector2 _origin;
+    private Vector2<double> _origin;
 
     public static readonly AdamantiumProperty CanvasProperty = AdamantiumProperty.Register(nameof(Canvas),
         typeof(InfiniteCanvas), typeof(CanvasMiniMap),
@@ -105,7 +105,7 @@ public class CanvasMiniMap : InputUIComponent, ICanvasPart
         // One scale for both axes, so the map is not a squashed picture of the plane: which way round things are is the
         // whole of what a map says.
         _scale = Math.Min(size.Width / _world.Width, size.Height / _world.Height);
-        _origin = new Vector2(
+        _origin = new Vector2<double>(
             (size.Width - _world.Width * _scale) / 2,
             (size.Height - _world.Height * _scale) / 2);
 
@@ -187,11 +187,11 @@ public class CanvasMiniMap : InputUIComponent, ICanvasPart
 
     /// <summary>Points the camera at whatever is under a place ON THE MAP. What a press does, and the whole of what a
     /// press does - so this is where the arithmetic is, and a test can ask it without a window.</summary>
-    internal void Look(Vector2 at)
+    internal void Look(Vector2<double> at)
     {
         if (Canvas == null || _scale <= 0) return;
 
-        Canvas.CenterOn(new Vector2(
+        Canvas.CenterOn(new Vector2<double>(
             _world.X + (at.X - _origin.X) / _scale,
             _world.Y + (at.Y - _origin.Y) / _scale));
     }

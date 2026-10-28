@@ -47,35 +47,28 @@ public struct TransformValues
 
     /// <summary>Compose these values into the transform matrix. Pure: no property reads, no shared state.
     /// <see cref="ShiftX"/>/<see cref="ShiftY"/> are left out: they need the owner's size.</summary>
-    public readonly Matrix4x4 ToMatrix()
+    public readonly Matrix4x4<double> ToMatrix()
     {
         // Z scale MUST be 1: the two-arg ctor left it 0, which zeroed the matrix's Z row (M33 = 0) - harmless for the
         // flat z=0 quads' positions, but the perspective sandwich below computes its w-term THROUGH M33
         // (M34 = M33 * -1/d), so the whole 3D depth silently collapsed to an affine tilt.
-        var scaling = new Vector3(ScaleX, ScaleY, 1);
-        var translation = new Vector3((float)TranslateX, (float)TranslateY, 0);
-        var rotationCenter = new Vector3((float)RotationCenterX, (float)RotationCenterY, 0);
-        var scalingCenter = Vector3.Zero;
-        var scalingRotation = Quaternion.Identity;
+        var scaling = new Vector3<double>(ScaleX, ScaleY, 1);
+        var translation = new Vector3<double>((float)TranslateX, (float)TranslateY, 0);
+        var rotationCenter = new Vector3<double>((float)RotationCenterX, (float)RotationCenterY, 0);
+        var scalingCenter = Vector3<double>.Zero;
+        var scalingRotation = Quaternion<double>.Identity;
 
         // Z spin (the classic 2D angle) composed with the 3D X/Y rotations (pitch/yaw) - one quaternion, rotated around
         // the same center, so the 2D-only case is bit-identical to before (RotationX/Y = 0 -> pure UnitZ rotation).
-        var rotation = Quaternion.RotationYawPitchRoll(
-            MathHelper.DegreesToRadians(RotationY),
-            MathHelper.DegreesToRadians(RotationX),
-            MathHelper.DegreesToRadians(RotationAngle));
+        var rotation = Quaternion.CreateFromYawPitchRoll<double>(
+            double.DegreesToRadians(RotationY),
+            double.DegreesToRadians(RotationX),
+            double.DegreesToRadians(RotationAngle));
 
-        Matrix4x4.Transformation(
-            ref scalingCenter,
-            ref scalingRotation,
-            ref scaling,
-            ref rotationCenter,
-            ref rotation,
-            ref translation,
-            out var matrix);
+        var matrix = Matrix4x4.CreateTransformation(scalingCenter, scalingRotation, scaling, rotationCenter, rotation, translation);
 
-        var toCenter = Matrix4x4.Translation(-(float)RotationCenterX, -(float)RotationCenterY, 0);
-        var fromCenter = Matrix4x4.Translation((float)RotationCenterX, (float)RotationCenterY, 0);
+        var toCenter = Matrix4x4.CreateTranslation<double>(-(float)RotationCenterX, -(float)RotationCenterY, 0);
+        var fromCenter = Matrix4x4.CreateTranslation<double>((float)RotationCenterX, (float)RotationCenterY, 0);
 
         // SHEAR, around the same center and applied FIRST - in the element's own space, before scale/rotate/translate.
         // Row-vector convention (v * M), so x' = x + y*tan(SkewX) is M21 and y' = y + x*tan(SkewY) is M12. WPF splits this
@@ -83,9 +76,9 @@ public struct TransformValues
         // innermost is the one that reads as "italicize this element" rather than "shear the world it sits in".
         if (SkewX != 0 || SkewY != 0)
         {
-            var skew = Matrix4x4.Identity;
-            skew.M21 = Math.Tan(MathHelper.DegreesToRadians(SkewX));
-            skew.M12 = Math.Tan(MathHelper.DegreesToRadians(SkewY));
+            var skew = Matrix4x4<double>.Identity;
+            skew.M21 = Math.Tan((float)double.DegreesToRadians(SkewX));
+            skew.M12 = Math.Tan((float)double.DegreesToRadians(SkewY));
             matrix = toCenter * skew * fromCenter * matrix;
         }
 
@@ -95,7 +88,7 @@ public struct TransformValues
         var d = Perspective;
         if (d > 0)
         {
-            var persp = Matrix4x4.Identity;
+            var persp = Matrix4x4<double>.Identity;
             persp.M34 = -1.0 / d;
             matrix = matrix * toCenter * persp * fromCenter;
         }

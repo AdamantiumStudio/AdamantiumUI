@@ -17,7 +17,7 @@ public class CanvasClearTests
     private static (InfiniteCanvas Canvas, CanvasScene Scene, TrackingCollection<ICanvasNode> Nodes) Stage()
     {
         var canvas = new InfiniteCanvas();
-        canvas.Measure(new Size(800, 600), force: true);
+        canvas.Measure(new Size<double>(800, 600), force: true);
         canvas.Arrange(new Rect(0, 0, 800, 600));
 
         var scene = new CanvasScene();

@@ -80,7 +80,7 @@ public class OverflowMenuRowThemeTests
         control.ApplyCurrentTheme();
         Adamantium.UI.Extensions.WindowExtension.UpdateTree(control);
         Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
-        control.Measure(new Size(width, height));
+        control.Measure(new Size<double>(width, height));
         control.Arrange(new Rect(0, 0, width, height));
         return control;
     }

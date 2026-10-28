@@ -13,7 +13,7 @@ public partial class InfiniteCanvas
 
     /// <summary>Offers a dropped wire to whoever is listening. Called by the gesture; true when somebody took it.
     /// </summary>
-    internal bool OfferWire(ElementItem item, CanvasNodePin pin, Vector2 world)
+    internal bool OfferWire(ElementItem item, CanvasNodePin pin, Vector2<double> world)
     {
         if (WireDropped != null)
         {
@@ -50,7 +50,7 @@ public partial class InfiniteCanvas
     /// <summary>Where the list opens, in SCREEN pixels from the canvas's corner - under the pointer, which is where the
     /// hand already is.</summary>
     public static readonly AdamantiumProperty PaletteAtProperty = AdamantiumProperty.Register(nameof(PaletteAt),
-        typeof(Vector2), typeof(InfiniteCanvas), new PropertyMetadata(Vector2.Zero));
+        typeof(Vector2<double>), typeof(InfiniteCanvas), new PropertyMetadata(Vector2<double>.Zero));
 
     /// <summary>What was picked out of the list - an entry of <see cref="NodeKinds"/>, not a word. PICKING IS THE
     /// ANSWER: a list opened by a gesture is answered by choosing from it, so writing here puts that node on the plane
@@ -67,9 +67,9 @@ public partial class InfiniteCanvas
 
     public Visibility PaletteFace => GetValue<Visibility>(PaletteFaceProperty);
 
-    public Vector2 PaletteAt
+    public Vector2<double> PaletteAt
     {
-        get => GetValue<Vector2>(PaletteAtProperty);
+        get => GetValue<Vector2<double>>(PaletteAtProperty);
         set => SetValue(PaletteAtProperty, value);
     }
 
@@ -81,7 +81,7 @@ public partial class InfiniteCanvas
 
     private ElementItem _askedFrom;
     private CanvasNodePin _askedPin;
-    private Vector2 _askedWorld;
+    private Vector2<double> _askedWorld;
 
     private static void OnPaletteOpenChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)
     {
@@ -98,9 +98,9 @@ public partial class InfiniteCanvas
 
     /// <summary>Opens the list of kinds at that point in the world, for whoever wants a node there and has no wire to
     /// join - the tool that places one, or a double click on empty plane.</summary>
-    public Boolean AskForNode(Vector2 world) => OpenPalette(null, null, world);
+    public Boolean AskForNode(Vector2<double> world) => OpenPalette(null, null, world);
 
-    private bool OpenPalette(ElementItem item, CanvasNodePin pin, Vector2 world)
+    private bool OpenPalette(ElementItem item, CanvasNodePin pin, Vector2<double> world)
     {
         if (NodeKinds == null || Nodes == null) return false;
 

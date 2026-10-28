@@ -22,12 +22,12 @@ public partial class InfiniteCanvas : Control, ISceneFollower
     private bool _zoomActive;
     private bool _zoomTickerRegistered;
     private double _targetScale = 1;
-    private Vector2 _zoomAnchorScreen;
-    private Vector2 _zoomAnchorWorld;
+    private Vector2<double> _zoomAnchorScreen;
+    private Vector2<double> _zoomAnchorWorld;
     private bool _panning;
     private Pointer _panPointer;
-    private Vector2 _panFrom;
-    private Vector2 _panOffsetFrom;
+    private Vector2<double> _panFrom;
+    private Vector2<double> _panOffsetFrom;
     private bool _spaceHeld;
     private bool _cameraPlaced;
 
@@ -63,8 +63,8 @@ public partial class InfiniteCanvas : Control, ISceneFollower
     private TextLayout _readout;
     private FontFamily _readoutFont;
     private string _readoutText;
-    private Size _readoutSize;
-    private Vector2 _pointer;
+    private Size<double> _readoutSize;
+    private Vector2<double> _pointer;
     private bool _pointerInside;
 
     private ContentPresenter _overlay;
@@ -80,12 +80,12 @@ public partial class InfiniteCanvas : Control, ISceneFollower
     private readonly EraseTool _penEraser = new();
     private uint? _erasing;
     private bool _overlayMoved;
-    private Vector2 _overlayFrom;
-    private Vector2 _overlayAt;
+    private Vector2<double> _overlayFrom;
+    private Vector2<double> _overlayAt;
 
     // Where the pointer is being PULLED, or nothing. Kept rather than recomputed while drawing, because the mark has to
     // be on screen before the press - nobody can aim at a point that only appears once it has been hit.
-    private Vector2? _snap;
+    private Vector2<double>? _snap;
 
 
     // ONE brush, kept and re-pointed rather than made each frame: it is the parameter block the grid shader reads, and
@@ -100,8 +100,8 @@ public partial class InfiniteCanvas : Control, ISceneFollower
 
     /// <summary>Where the world's origin sits on screen, in pixels.</summary>
     public static readonly AdamantiumProperty OffsetProperty = AdamantiumProperty.Register(nameof(Offset),
-        typeof(Vector2), typeof(InfiniteCanvas),
-        new PropertyMetadata(Vector2.Zero,
+        typeof(Vector2<double>), typeof(InfiniteCanvas),
+        new PropertyMetadata(Vector2<double>.Zero,
             PropertyMetadataOptions.AffectsRender | PropertyMetadataOptions.BindsTwoWayByDefault, OnCameraChanged));
 
     /// <summary>How far the camera may zoom out and in: a practical default, not a precision limit, since drawing receives
@@ -143,8 +143,8 @@ public partial class InfiniteCanvas : Control, ISceneFollower
     /// <summary>The world point <c>Home</c> goes to, and the zoom it goes there at. The world's origin at one to one
     /// until something says otherwise - <see cref="RememberViewCommand"/> is what says otherwise.</summary>
     public static readonly AdamantiumProperty HomeAtProperty = AdamantiumProperty.Register(nameof(HomeAt),
-        typeof(Vector2), typeof(InfiniteCanvas),
-        new PropertyMetadata(Vector2.Zero, PropertyMetadataOptions.BindsTwoWayByDefault, OnHomeChanged));
+        typeof(Vector2<double>), typeof(InfiniteCanvas),
+        new PropertyMetadata(Vector2<double>.Zero, PropertyMetadataOptions.BindsTwoWayByDefault, OnHomeChanged));
 
     public static readonly AdamantiumProperty HomeScaleProperty = AdamantiumProperty.Register(nameof(HomeScale),
         typeof(Double), typeof(InfiniteCanvas),
@@ -185,7 +185,7 @@ public partial class InfiniteCanvas : Control, ISceneFollower
     {
         if (component is not InfiniteCanvas canvas) return;
 
-        var kept = canvas.HomeAt != Vector2.Zero || Math.Abs(canvas.HomeScale - 1) > 1e-6;
+        var kept = canvas.HomeAt != Vector2<double>.Zero || Math.Abs(canvas.HomeScale - 1) > 1e-6;
 
         canvas.SetValue(KeepsHomeFaceProperty, kept ? Visibility.Visible : Visibility.Collapsed);
     }
@@ -198,7 +198,7 @@ public partial class InfiniteCanvas : Control, ISceneFollower
 
     public void ForgetView()
     {
-        HomeAt = Vector2.Zero;
+        HomeAt = Vector2<double>.Zero;
         HomeScale = 1;
         RememberLayout();
     }
@@ -233,9 +233,9 @@ public partial class InfiniteCanvas : Control, ISceneFollower
         set => SetValue(RemembersToolProperty, value);
     }
 
-    public Vector2 HomeAt
+    public Vector2<double> HomeAt
     {
-        get => GetValue<Vector2>(HomeAtProperty);
+        get => GetValue<Vector2<double>>(HomeAtProperty);
         set => SetValue(HomeAtProperty, value);
     }
 
@@ -388,8 +388,8 @@ public partial class InfiniteCanvas : Control, ISceneFollower
     /// <see cref="CanvasOverlayPlacement.Free"/>: screen pixels from the canvas's top-left. Dragging the panel writes
     /// it.</summary>
     public static readonly AdamantiumProperty OverlayOffsetProperty = AdamantiumProperty.Register(nameof(OverlayOffset),
-        typeof(Vector2), typeof(InfiniteCanvas),
-        new PropertyMetadata(Vector2.Zero, PropertyMetadataOptions.AffectsArrange | PropertyMetadataOptions.BindsTwoWayByDefault,
+        typeof(Vector2<double>), typeof(InfiniteCanvas),
+        new PropertyMetadata(Vector2<double>.Zero, PropertyMetadataOptions.AffectsArrange | PropertyMetadataOptions.BindsTwoWayByDefault,
             OnOverlayChanged));
 
     /// <summary>Whether the overlay can be dragged around the canvas by its own background.</summary>
@@ -529,7 +529,7 @@ public partial class InfiniteCanvas : Control, ISceneFollower
     /// <see cref="Nodes"/>, which is the only way anything gets onto the graph.
     /// <para>Returns what was added, or null when there is no collection to add to: a canvas showing a graph it was
     /// never given cannot grow one.</para></summary>
-    public ICanvasNode AddNode(String kind, Vector2 at) => _graph.Add(kind, at);
+    public ICanvasNode AddNode(String kind, Vector2<double> at) => _graph.Add(kind, at);
 
     /// <summary>What the canvas is being used AS - a drawing, or a graph of nodes. See <see cref="CanvasMode"/> for why
     /// this is a mode and not a filter the user sets.
@@ -916,9 +916,9 @@ public partial class InfiniteCanvas : Control, ISceneFollower
         set => SetValue(ScaleProperty, value);
     }
 
-    public Vector2 Offset
+    public Vector2<double> Offset
     {
-        get => GetValue<Vector2>(OffsetProperty);
+        get => GetValue<Vector2<double>>(OffsetProperty);
         set => SetValue(OffsetProperty, value);
     }
 
@@ -1030,9 +1030,9 @@ public partial class InfiniteCanvas : Control, ISceneFollower
         set => SetValue(OverlayPlacementProperty, value);
     }
 
-    public Vector2 OverlayOffset
+    public Vector2<double> OverlayOffset
     {
-        get => GetValue<Vector2>(OverlayOffsetProperty);
+        get => GetValue<Vector2<double>>(OverlayOffsetProperty);
         set => SetValue(OverlayOffsetProperty, value);
     }
 
@@ -1081,7 +1081,7 @@ public partial class InfiniteCanvas : Control, ISceneFollower
 
     /// <summary>Where a world point would be pulled to, and whether anything pulled it. The crossings of the grid AS
     /// DRAWN - the coarsened step, not the declared one - so what snaps is what can be seen to snap.</summary>
-    public bool TrySnap(Vector2 world, out Vector2 snapped)
+    public bool TrySnap(Vector2<double> world, out Vector2<double> snapped)
     {
         snapped = world;
 
@@ -1094,7 +1094,7 @@ public partial class InfiniteCanvas : Control, ISceneFollower
         var step = EffectiveGridSpacing;
         if (!SnapToGrid || step <= 0 || GridStyle == CanvasGridStyle.None) return false;
 
-        var nearest = new Vector2(Math.Round(world.X / step) * step, Math.Round(world.Y / step) * step);
+        var nearest = new Vector2<double>(Math.Round(world.X / step) * step, Math.Round(world.Y / step) * step);
         if ((nearest - world).Length() > ScreenToWorldLength(SnapDistance)) return false;
 
         snapped = nearest;
@@ -2029,7 +2029,7 @@ public partial class InfiniteCanvas : Control, ISceneFollower
     /// <para>The one question every tool asks before deciding what a press means, so it is asked in one place: a tool
     /// that answered it for itself would pick with a different reach than the selection does, and the two would
     /// disagree about what was clicked.</para></summary>
-    public ICanvasItem ItemAt(Vector2 world)
+    public ICanvasItem ItemAt(Vector2<double> world)
     {
         if (Scene == null) return null;
 

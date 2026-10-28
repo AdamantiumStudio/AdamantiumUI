@@ -506,7 +506,7 @@ public class TextRenderComponent : UIRenderComponent
     {
         if (GlyphRun == null) return;
         var textArea = RenderingParameters.TextArea;
-        var mvp = Matrix4x4F.Translation(textArea.X, textArea.Y, 5)
+        var mvp = Matrix4x4.CreateTranslation<float>(textArea.X, textArea.Y, 5)
                   * RenderData.TransformMatrix
                   * RenderData.ProjectionMatrix;
         var foreground = ((SolidColorBrush)Foreground).Color;

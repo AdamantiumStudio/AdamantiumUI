@@ -13,12 +13,12 @@ internal static class CanvasTouch
         item.X <= world.X + world.Width && item.X + item.Width >= world.X &&
         item.Y <= world.Y + world.Height && item.Y + item.Height >= world.Y;
 
-    public static Vector2[] Corners(Rect r) =>
+    public static Vector2<double>[] Corners(Rect r) =>
     [
         new(r.X, r.Y), new(r.X + r.Width, r.Y), new(r.X + r.Width, r.Y + r.Height), new(r.X, r.Y + r.Height)
     ];
 
-    public static bool AllInside(IReadOnlyList<Vector2> points, Rect r)
+    public static bool AllInside(IReadOnlyList<Vector2<double>> points, Rect r)
     {
         foreach (var p in points)
         {
@@ -28,7 +28,7 @@ internal static class CanvasTouch
         return true;
     }
 
-    public static bool RunTouches(IReadOnlyList<Vector2> points, double reach, Rect world)
+    public static bool RunTouches(IReadOnlyList<Vector2<double>> points, double reach, Rect world)
     {
         if (points.Count == 0) return false;
 
@@ -43,7 +43,7 @@ internal static class CanvasTouch
         return false;
     }
 
-    public static bool SegmentMeets(Vector2 a, Vector2 b, Rect r)
+    public static bool SegmentMeets(Vector2<double> a, Vector2<double> b, Rect r)
     {
         var t0 = 0.0;
         var t1 = 1.0;
@@ -56,10 +56,10 @@ internal static class CanvasTouch
                && Clip(dy, r.Y + r.Height - a.Y, ref t0, ref t1);
     }
 
-    public static bool ConvexOverlap(IReadOnlyList<Vector2> a, IReadOnlyList<Vector2> b) =>
+    public static bool ConvexOverlap(IReadOnlyList<Vector2<double>> a, IReadOnlyList<Vector2<double>> b) =>
         !Separates(a, a, b) && !Separates(b, a, b);
 
-    public static bool CircleOverlap(IReadOnlyList<Vector2> polygon, Vector2 center, double radius)
+    public static bool CircleOverlap(IReadOnlyList<Vector2<double>> polygon, Vector2<double> center, double radius)
     {
         if (ConvexContains(polygon, center)) return true;
 
@@ -71,7 +71,7 @@ internal static class CanvasTouch
         return false;
     }
 
-    public static bool ConvexContains(IReadOnlyList<Vector2> polygon, Vector2 p)
+    public static bool ConvexContains(IReadOnlyList<Vector2<double>> polygon, Vector2<double> p)
     {
         var sign = 0;
         for (var i = 0; i < polygon.Count; i++)
@@ -89,7 +89,7 @@ internal static class CanvasTouch
         return sign != 0;
     }
 
-    public static Vector2[] Thick(Vector2 from, Vector2 to, double reach)
+    public static Vector2<double>[] Thick(Vector2<double> from, Vector2<double> to, double reach)
     {
         var dx = to.X - from.X;
         var dy = to.Y - from.Y;
@@ -111,7 +111,7 @@ internal static class CanvasTouch
         ];
     }
 
-    public static double Distance(Vector2 point, Vector2 from, Vector2 to)
+    public static double Distance(Vector2<double> point, Vector2<double> from, Vector2<double> to)
     {
         var dx = to.X - from.X;
         var dy = to.Y - from.Y;
@@ -146,7 +146,7 @@ internal static class CanvasTouch
         return true;
     }
 
-    private static bool Separates(IReadOnlyList<Vector2> edges, IReadOnlyList<Vector2> a, IReadOnlyList<Vector2> b)
+    private static bool Separates(IReadOnlyList<Vector2<double>> edges, IReadOnlyList<Vector2<double>> a, IReadOnlyList<Vector2<double>> b)
     {
         for (var i = 0; i < edges.Count; i++)
         {
@@ -165,7 +165,7 @@ internal static class CanvasTouch
         return false;
     }
 
-    private static void Project(IReadOnlyList<Vector2> points, double nx, double ny, out double min, out double max)
+    private static void Project(IReadOnlyList<Vector2<double>> points, double nx, double ny, out double min, out double max)
     {
         min = double.MaxValue;
         max = double.MinValue;

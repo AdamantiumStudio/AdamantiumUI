@@ -22,20 +22,20 @@ public class LayoutTransformTests
     // which is what lets these tests read the footprint directly.
     private sealed class FixedContent : MeasurableUIComponent
     {
-        private readonly Size _content;
+        private readonly Size<double> _content;
         public FixedContent(double w = 100, double h = 50)
         {
-            _content = new Size(w, h);
+            _content = new Size<double>(w, h);
             HorizontalAlignment = HorizontalAlignment.Left;
             VerticalAlignment = VerticalAlignment.Top;
         }
-        protected override Size MeasureOverride(Size availableSize) => _content;
+        protected override Size<double> MeasureOverride(Size<double> availableSize) => _content;
     }
 
     // A rotated footprint comes out of a matrix, so it lands a few millionths off a round number. The SCALE tests can
     // compare exactly (scaling is a multiply); rotation cannot, and pretending otherwise only produces failures that say
     // "50.0000043 is not 50".
-    private static void AssertSize(Size actual, double width, double height, string because = null)
+    private static void AssertSize(Size<double> actual, double width, double height, string because = null)
     {
         Assert.Multiple(() =>
         {
@@ -48,13 +48,13 @@ public class LayoutTransformTests
     public void NoTransform_SizesUnchanged()
     {
         var c = new FixedContent();
-        c.Measure(new Size(1280, 720));
+        c.Measure(new Size<double>(1280, 720));
         c.Arrange(new Rect(0, 0, 1280, 720));
         Assert.Multiple(() =>
         {
-            Assert.That(c.DesiredSize, Is.EqualTo(new Size(100, 50)));
-            Assert.That(c.RenderSize, Is.EqualTo(new Size(100, 50)));
-            Assert.That(c.Bounds.Size, Is.EqualTo(new Size(100, 50)));
+            Assert.That(c.DesiredSize, Is.EqualTo(new Size<double>(100, 50)));
+            Assert.That(c.RenderSize, Is.EqualTo(new Size<double>(100, 50)));
+            Assert.That(c.Bounds.Size, Is.EqualTo(new Size<double>(100, 50)));
         });
     }
 
@@ -62,20 +62,20 @@ public class LayoutTransformTests
     public void Scale_Measure_ReportsOuterFootprint()
     {
         var c = new FixedContent { LayoutTransform = new Transform { ScaleX = 2, ScaleY = 2 } };
-        c.Measure(new Size(1280, 720));
-        Assert.That(c.DesiredSize, Is.EqualTo(new Size(200, 100)));
+        c.Measure(new Size<double>(1280, 720));
+        Assert.That(c.DesiredSize, Is.EqualTo(new Size<double>(200, 100)));
     }
 
     [Test]
     public void Scale_Arrange_RenderSizeInner_BoundsOuter()
     {
         var c = new FixedContent { LayoutTransform = new Transform { ScaleX = 2, ScaleY = 2 } };
-        c.Measure(new Size(1280, 720));
+        c.Measure(new Size<double>(1280, 720));
         c.Arrange(new Rect(0, 0, 1280, 720));
         Assert.Multiple(() =>
         {
-            Assert.That(c.RenderSize, Is.EqualTo(new Size(100, 50)), "content renders at its own (inner) size");
-            Assert.That(c.Bounds.Size, Is.EqualTo(new Size(200, 100)), "footprint = content x scale");
+            Assert.That(c.RenderSize, Is.EqualTo(new Size<double>(100, 50)), "content renders at its own (inner) size");
+            Assert.That(c.Bounds.Size, Is.EqualTo(new Size<double>(200, 100)), "footprint = content x scale");
             // ActualWidth must be the INNER size (= RenderSize): controls draw geometry at ActualWidth, and LocalTransform
             // scales it - if ActualWidth were the outer footprint the transform would scale it AGAIN (double-scale).
             Assert.That(c.ActualWidth, Is.EqualTo(100), "ActualWidth is the inner size (geometry is drawn here, then scaled)");
@@ -88,7 +88,7 @@ public class LayoutTransformTests
     public void Rotate90_Measure_SwapsTheFootprint()
     {
         var c = new FixedContent { LayoutTransform = new Transform { RotationAngle = 90 } };
-        c.Measure(new Size(1280, 720));
+        c.Measure(new Size<double>(1280, 720));
         AssertSize(c.DesiredSize, 50, 100);
     }
 
@@ -97,7 +97,7 @@ public class LayoutTransformTests
     public void RotateMinus90_Measure_SwapsTheFootprintToo()
     {
         var c = new FixedContent { LayoutTransform = new Transform { RotationAngle = -90 } };
-        c.Measure(new Size(1280, 720));
+        c.Measure(new Size<double>(1280, 720));
         AssertSize(c.DesiredSize, 50, 100);
     }
 
@@ -106,7 +106,7 @@ public class LayoutTransformTests
     public void Rotate180_Measure_KeepsTheFootprint()
     {
         var c = new FixedContent { LayoutTransform = new Transform { RotationAngle = 180 } };
-        c.Measure(new Size(1280, 720));
+        c.Measure(new Size<double>(1280, 720));
         AssertSize(c.DesiredSize, 100, 50);
     }
 
@@ -117,7 +117,7 @@ public class LayoutTransformTests
     public void Rotate45_Measure_ReportsTheBoundingBox()
     {
         var c = new FixedContent { LayoutTransform = new Transform { RotationAngle = 45 } };
-        c.Measure(new Size(1280, 720));
+        c.Measure(new Size<double>(1280, 720));
 
         var expected = (100 + 50) / System.Math.Sqrt(2);
         Assert.Multiple(() =>
@@ -133,7 +133,7 @@ public class LayoutTransformTests
     public void Rotate90_Arrange_RenderSizeInner_BoundsTurned()
     {
         var c = new FixedContent { LayoutTransform = new Transform { RotationAngle = 90 } };
-        c.Measure(new Size(1280, 720));
+        c.Measure(new Size<double>(1280, 720));
         c.Arrange(new Rect(0, 0, 1280, 720));
 
         Assert.Multiple(() =>
@@ -148,7 +148,7 @@ public class LayoutTransformTests
     public void Rotate90_DrawsInsideTheFootprintItReserved()
     {
         var c = new FixedContent { LayoutTransform = new Transform { RotationAngle = 90 } };
-        c.Measure(new Size(1280, 720));
+        c.Measure(new Size<double>(1280, 720));
         c.Arrange(new Rect(0, 0, 1280, 720));
 
         var corners = TransformedCorners(c);
@@ -167,7 +167,7 @@ public class LayoutTransformTests
     public void Scale_DrawsInsideTheFootprintItReserved()
     {
         var c = new FixedContent { LayoutTransform = new Transform { ScaleX = 2, ScaleY = 2 } };
-        c.Measure(new Size(1280, 720));
+        c.Measure(new Size<double>(1280, 720));
         c.Arrange(new Rect(0, 0, 1280, 720));
 
         var corners = TransformedCorners(c);
@@ -191,10 +191,10 @@ public class LayoutTransformTests
         double minX = double.MaxValue, minY = double.MaxValue, maxX = double.MinValue, maxY = double.MinValue;
         foreach (var corner in new[]
                  {
-                     new Vector2(0, 0),
-                     new Vector2(size.Width, 0),
-                     new Vector2(0, size.Height),
-                     new Vector2(size.Width, size.Height)
+                     new Vector2<double>(0, 0),
+                     new Vector2<double>(size.Width, 0),
+                     new Vector2<double>(0, size.Height),
+                     new Vector2<double>(size.Width, size.Height)
                  })
         {
             var x = corner.X * matrix.M11 + corner.Y * matrix.M21 + matrix.M41;
@@ -220,7 +220,7 @@ public class LayoutTransformTests
         panel.Children.Add(first);
         panel.Children.Add(second);
 
-        panel.Measure(new Size(1280, 720));
+        panel.Measure(new Size<double>(1280, 720));
         panel.Arrange(new Rect(0, 0, 1280, 720));
 
         Assert.Multiple(() =>
@@ -255,7 +255,7 @@ public class LayoutTransformTests
             })
         };
 
-        presenter.Measure(new Size(1280, 720));
+        presenter.Measure(new Size<double>(1280, 720));
 
         AssertSize(presenter.DesiredSize, 50, 100, "the presenter is as big as its turned content, not as its flat content");
     }
@@ -264,28 +264,28 @@ public class LayoutTransformTests
     public void NonUniformScale_Measure()
     {
         var c = new FixedContent { LayoutTransform = new Transform { ScaleX = 2, ScaleY = 3 } };
-        c.Measure(new Size(1280, 720));
-        Assert.That(c.DesiredSize, Is.EqualTo(new Size(200, 150)));
+        c.Measure(new Size<double>(1280, 720));
+        Assert.That(c.DesiredSize, Is.EqualTo(new Size<double>(200, 150)));
     }
 
     [Test]
     public void ExplicitSize_Scale_Measure()
     {
         var c = new FixedContent { Width = 100, Height = 50, LayoutTransform = new Transform { ScaleX = 1.5, ScaleY = 1.5 } };
-        c.Measure(new Size(1280, 720));
-        Assert.That(c.DesiredSize, Is.EqualTo(new Size(150, 75)));
+        c.Measure(new Size<double>(1280, 720));
+        Assert.That(c.DesiredSize, Is.EqualTo(new Size<double>(150, 75)));
     }
 
     [Test]
     public void ExplicitSize_Scale_Arrange_FootprintScales()
     {
         var c = new FixedContent { Width = 100, Height = 50, LayoutTransform = new Transform { ScaleX = 1.5, ScaleY = 1.5 } };
-        c.Measure(new Size(1280, 720));
+        c.Measure(new Size<double>(1280, 720));
         c.Arrange(new Rect(0, 0, 1280, 720));
         Assert.Multiple(() =>
         {
-            Assert.That(c.Bounds.Size, Is.EqualTo(new Size(150, 75)), "explicit-size element footprint must scale too");
-            Assert.That(c.RenderSize, Is.EqualTo(new Size(100, 50)), "content stays its own explicit size");
+            Assert.That(c.Bounds.Size, Is.EqualTo(new Size<double>(150, 75)), "explicit-size element footprint must scale too");
+            Assert.That(c.RenderSize, Is.EqualTo(new Size<double>(100, 50)), "content stays its own explicit size");
         });
     }
 
@@ -294,8 +294,8 @@ public class LayoutTransformTests
     {
         // A StackPanel/WrapPanel measures with an infinite main axis - the transform math must not produce NaN.
         var c = new FixedContent { LayoutTransform = new Transform { ScaleX = 2, ScaleY = 2 } };
-        c.Measure(new Size(double.PositiveInfinity, 720));
-        Assert.That(c.DesiredSize, Is.EqualTo(new Size(200, 100)));
+        c.Measure(new Size<double>(double.PositiveInfinity, 720));
+        Assert.That(c.DesiredSize, Is.EqualTo(new Size<double>(200, 100)));
     }
 
     [Test]
@@ -303,14 +303,14 @@ public class LayoutTransformTests
     {
         var t = new Transform { ScaleX = 2, ScaleY = 2 };
         var c = new FixedContent { LayoutTransform = t };
-        c.Measure(new Size(1280, 720));
-        Assert.That(c.DesiredSize, Is.EqualTo(new Size(200, 100)));
+        c.Measure(new Size<double>(1280, 720));
+        Assert.That(c.DesiredSize, Is.EqualTo(new Size<double>(200, 100)));
 
         t.ScaleX = 3;   // changing a LayoutTransform value must invalidate the owner's measure
         Assert.That(c.IsMeasureValid, Is.False, "value change must invalidate measure");
 
-        c.Measure(new Size(1280, 720));
-        Assert.That(c.DesiredSize, Is.EqualTo(new Size(300, 100)));
+        c.Measure(new Size<double>(1280, 720));
+        Assert.That(c.DesiredSize, Is.EqualTo(new Size<double>(300, 100)));
     }
 
     [Test]
@@ -325,7 +325,7 @@ public class LayoutTransformTests
         panel.Children.Add(b);
         panel.Children.Add(c);
 
-        panel.Measure(new Size(1280, 720));
+        panel.Measure(new Size<double>(1280, 720));
         panel.Arrange(new Rect(0, 0, 1280, 720));
 
         Assert.Multiple(() =>

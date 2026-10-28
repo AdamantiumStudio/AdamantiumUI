@@ -181,7 +181,7 @@ internal sealed class RectBatchCollector : ShapeSdfCollector<RectItem>
     /// <see cref="Vector4F"/> and back only rounds it twice for nothing.</summary>
     internal static Color WithOpacity(Color color, double opacity)
     {
-        color.A = Color.ToByte((int)(color.A * opacity));
+        color.A = byte.CreateSaturating((int)(color.A * opacity));
         return color;
     }
 

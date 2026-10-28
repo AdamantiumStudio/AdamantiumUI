@@ -52,7 +52,7 @@ public class RibbonQuickAccessTransferTests
         band.Children.Add(button);
         Ribbon.SetAddToQuickAccessCommand(band, new Spy(a => seen = a as RibbonQuickAccessEventArgs));
 
-        band.Measure(new Size(400, 200));
+        band.Measure(new Size<double>(400, 200));
         band.Arrange(new Rect(0, 0, 400, 200));
 
         Ribbon.RequestQuickAccess(button, add: true);

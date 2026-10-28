@@ -18,13 +18,13 @@ internal sealed class VisualRoot : MeasurableUIComponent, IRootVisualComponent
         if (_content != null) AddVisualChild(_content);
     }
 
-    protected override Size MeasureOverride(Size availableSize)
+    protected override Size<double> MeasureOverride(Size<double> availableSize)
     {
         if (_content is IMeasurableComponent measurable) measurable.Measure(availableSize);
         return availableSize;
     }
 
-    protected override Size ArrangeOverride(Size finalSize)
+    protected override Size<double> ArrangeOverride(Size<double> finalSize)
     {
         if (_content is IMeasurableComponent measurable) measurable.Arrange(new Rect(finalSize));
         return finalSize;
@@ -45,6 +45,6 @@ internal sealed class VisualRoot : MeasurableUIComponent, IRootVisualComponent
     public void AttachContextAndInitialize(IUIContext context) { }
     // Identity: with no OS window there is no display scale to cross, so the two units coincide here.
     public PixelPoint Position { get; set; }
-    public Vector2 PointToClient(PixelPoint point) => new((float)point.X, (float)point.Y);
-    public PixelPoint PointToScreen(Vector2 point) => new(point.X, point.Y);
+    public Vector2<double> PointToClient(PixelPoint point) => new((float)point.X, (float)point.Y);
+    public PixelPoint PointToScreen(Vector2<double> point) => new(point.X, point.Y);
 }

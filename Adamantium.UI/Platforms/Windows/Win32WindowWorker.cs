@@ -747,15 +747,15 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
 
     // OS mouse messages carry PHYSICAL client px; the layout / hit-test work in logical DIP. Divide by the window's DPI
     // scale so the tracked position + reported GetPosition are logical (identity at 100%). Screen coords stay physical.
-    private Vector2 ToLogical(Vector2 physicalClient)
+    private Vector2<double> ToLogical(Vector2<double> physicalClient)
     {
         var dpi = window.DpiScale;
-        return new Vector2(physicalClient.X / dpi.X, physicalClient.Y / dpi.Y);
+        return new Vector2<double>(physicalClient.X / dpi.X, physicalClient.Y / dpi.Y);
     }
 
     // A DESKTOP point out of a Win32 message. Named, so the physical->typed step is visible at the boundary rather than
     // an implicit conversion somewhere downstream.
-    private static PixelPoint ToPixel(Vector2 screen) => new(screen.X, screen.Y);
+    private static PixelPoint ToPixel(Vector2<double> screen) => new(screen.X, screen.Y);
 
 
     // The OS move loop swallows mouse input, so WM_MOVING and WM_EXITSIZEMOVE are the only view of a caption drag (e.g.
@@ -919,7 +919,7 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
             // ONLY sizing region. A point in its published rect hit-tests as the bottom-right corner, so WS_THICKFRAME's
             // native resize runs from the grip. Plain-Rect read (thread-safe), like CaptionDragRect below.
             var dpi = window.DpiScale;
-            var gripDip = new Vector2((pt.X - r.Left) / dpi.X, (pt.Y - r.Top) / dpi.Y);
+            var gripDip = new Vector2<double>((pt.X - r.Left) / dpi.X, (pt.Y - r.Top) / dpi.Y);
             if (window.ResizeGripRect.Contains(gripDip)) result = NcHitTest.Bottomright;
         }
 
@@ -1136,7 +1136,7 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
         // Update DpiScale (loop thread) BEFORE SetWindowPos: SetWindowPos synchronously fires WM_SIZE -> HandleResize,
         // which marshals ClientWidth = physical / DpiScale. Queuing the scale update ahead of it (one FIFO) makes that
         // divide use the NEW scale. Setting DpiScale also fires DpiChanged -> the renderer re-scales RenderScale.
-        var scale = new Vector2(dpiX / 96.0, dpiY / 96.0);
+        var scale = new Vector2<double>(dpiX / 96.0, dpiY / 96.0);
         DispatchInput(() => window.DpiScale = scale);
 
         var r = Marshal.PtrToStructure<RECT>(lParam);
@@ -1170,12 +1170,12 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
     }
 
     // The window's current-monitor DPI as a per-axis scale (1,1 = 96 DPI / 100%). Falls back to 1,1 if the query fails.
-    private static Vector2 ReadDpiScale(IntPtr hwnd)
+    private static Vector2<double> ReadDpiScale(IntPtr hwnd)
     {
         var monitor = Win32Interop.MonitorFromWindow(hwnd, Win32Interop.MonitorDefaultToNearest);
         if (Win32Interop.GetDpiForMonitor(monitor, Win32Interop.MdtEffectiveDpi, out var dpiX, out var dpiY) == 0 && dpiX > 0)
-            return new Vector2(dpiX / 96.0, dpiY / 96.0);
-        return new Vector2(1, 1);
+            return new Vector2<double>(dpiX / 96.0, dpiY / 96.0);
+        return new Vector2<double>(1, 1);
     }
 
     // Decode WM_KEY*'s bit-packed LPARAM HERE, so the neutral input layer receives what the press MEANS (was it already
@@ -1346,7 +1346,7 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
             if (dx != 0 || dy != 0)
             {
                 Win32Interop.SetCursorPos(_recenterScreen.X, _recenterScreen.Y);
-                var rawArgs = new RawMouseDeltaEventArgs(new Vector2(dx, dy), window,
+                var rawArgs = new RawMouseDeltaEventArgs(new Vector2<double>(dx, dy), window,
                     WindowsMouseDeviceExtension.GetKeyModifiers(windowMessage, wParam), GetTimeStamp());
                 DispatchInput(() => PointerDevice.Current.ProcessDelta(rawArgs));
             }
@@ -1379,7 +1379,7 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
     private IntPtr HandleMouseLeave(WindowMessages windowMessage, IntPtr wParam, IntPtr lParam, out bool handled)
     {
         trackMouse = false;
-        var eventArgs = new RawPointerEventArgs(RawPointerEventType.LeaveWindow, window, Vector2.Zero,
+        var eventArgs = new RawPointerEventArgs(RawPointerEventType.LeaveWindow, window, Vector2<double>.Zero,
             KeyboardDevice.CurrentDevice.Modifiers, GetTimeStamp());
         DispatchInput(() => PointerDevice.Current.ProcessEvent(eventArgs));
         handled = true;

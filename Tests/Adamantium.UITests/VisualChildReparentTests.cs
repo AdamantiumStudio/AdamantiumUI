@@ -18,7 +18,7 @@ public class VisualChildReparentTests
         var panel = new StackPanel { Orientation = Orientation.Horizontal };
         foreach (var child in children) panel.Children.Add(child);
 
-        panel.Measure(new Size(400, 200));
+        panel.Measure(new Size<double>(400, 200));
         panel.Arrange(new Rect(0, 0, 400, 200));
         return panel;
     }
@@ -50,7 +50,7 @@ public class VisualChildReparentTests
     {
         var moved = new Border { Width = 50, Height = 20 };
         var from = new Border { Child = moved };
-        from.Measure(new Size(400, 200));
+        from.Measure(new Size<double>(400, 200));
         from.Arrange(new Rect(0, 0, 400, 200));
 
         var to = Laid();
@@ -71,7 +71,7 @@ public class VisualChildReparentTests
     {
         var moved = new Border { Width = 50, Height = 20 };
         var from = new TabStripScroller { Child = moved };
-        from.Measure(new Size(400, 200));
+        from.Measure(new Size<double>(400, 200));
         from.Arrange(new Rect(0, 0, 400, 200));
 
         Laid().Children.Add(moved);
@@ -89,16 +89,16 @@ public class VisualChildReparentTests
     {
         var moved = new Border { Width = 50, Height = 20 };
         var from = new ContentPresenter { Content = moved };
-        from.Measure(new Size(400, 200));
+        from.Measure(new Size<double>(400, 200));
         from.Arrange(new Rect(0, 0, 400, 200));
 
         var to = Laid(new Border { Width = 30, Height = 20 });
         to.Children.Add(moved);   // second in the strip, so it belongs at x=30
 
         // The presenter laid out LAST: if it still claims the child, its placement is the one left standing.
-        to.Measure(new Size(400, 200));
+        to.Measure(new Size<double>(400, 200));
         to.Arrange(new Rect(0, 0, 400, 200));
-        from.Measure(new Size(400, 200));
+        from.Measure(new Size<double>(400, 200));
         from.Arrange(new Rect(0, 0, 400, 200));
 
         Assert.Multiple(() =>
@@ -124,9 +124,9 @@ public class VisualChildReparentTests
 
         // The OLD parent laid out last, deliberately: if it still claims the child, its answer is the one left standing.
         // Whose turn comes last is an accident of tree order, which is exactly why it must not decide anything.
-        to.Measure(new Size(400, 200));
+        to.Measure(new Size<double>(400, 200));
         to.Arrange(new Rect(0, 0, 400, 200));
-        from.Measure(new Size(400, 200));
+        from.Measure(new Size<double>(400, 200));
         from.Arrange(new Rect(0, 0, 400, 200));
 
         Assert.That(moved.Bounds.X, Is.EqualTo(0).Within(0.5),

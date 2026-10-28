@@ -106,7 +106,7 @@ public class VisualBrushTests
         var brush = new VisualBrush(new Border());
 
         Assert.That(brush.ContentSource, Is.Null, "no picture yet - the fill must draw nothing, not guess");
-        Assert.That(brush.ContentSize, Is.EqualTo(default(Size)));
+        Assert.That(brush.ContentSize, Is.EqualTo(default(Size<double>)));
         Assert.That(brush.NeedsBake, Is.True);
     }
 
@@ -119,7 +119,7 @@ public class VisualBrushTests
         brush.Deliver(picture);
 
         Assert.That(brush.ContentSource, Is.SameAs(picture));
-        Assert.That(brush.ContentSize, Is.EqualTo(new Size(8, 8)), "the picture's own pixels are the content size");
+        Assert.That(brush.ContentSize, Is.EqualTo(new Size<double>(8, 8)), "the picture's own pixels are the content size");
     }
 
     // The render path reads a SNAPSHOT, and a fresh one is published on every property change. If the picture belonged

@@ -24,7 +24,7 @@ public class CanvasCommandTests
 
         Adamantium.UI.Extensions.WindowExtension.UpdateTree(window);
 
-        canvas.Measure(new Size(800, 600), force: true);
+        canvas.Measure(new Size<double>(800, 600), force: true);
         canvas.Arrange(new Rect(0, 0, 800, 600));
 
         var scene = new CanvasScene();
@@ -43,7 +43,7 @@ public class CanvasCommandTests
     public void AShapeMadeFromDataMovesWithIt()
     {
         var canvas = new InfiniteCanvas { Scene = new CanvasScene() };
-        canvas.Measure(new Size(800, 600), force: true);
+        canvas.Measure(new Size<double>(800, 600), force: true);
         canvas.Arrange(new Rect(0, 0, 800, 600));
 
         var model = new Graph.PlacedObject
@@ -61,7 +61,7 @@ public class CanvasCommandTests
 
         Assert.That(drawn, Is.Not.Null, "the object never reached the plane");
 
-        drawn.Move(new Vector2(40, 15));
+        drawn.Move(new Vector2<double>(40, 15));
 
         Assert.Multiple(() =>
         {
@@ -82,7 +82,7 @@ public class CanvasCommandTests
         Assert.That(canvas.RedoCommand.CanExecute(), Is.False);
 
         canvas.BeginEdit("Move");
-        item.Move(new Vector2(10, 0));
+        item.Move(new Vector2<double>(10, 0));
         canvas.EndEdit();
 
         Assert.That(canvas.UndoCommand.CanExecute(), Is.True, "something was done and undo stayed off");
@@ -211,7 +211,7 @@ public class CanvasCommandTests
         var window = new Window { Width = 800, Height = 600, Content = canvas };
 
         Adamantium.UI.Extensions.WindowExtension.UpdateTree(window);
-        canvas.Measure(new Size(800, 600), force: true);
+        canvas.Measure(new Size<double>(800, 600), force: true);
         canvas.Arrange(new Rect(0, 0, 800, 600));
 
         canvas.Scene.Add(Box(0, 0));
@@ -272,7 +272,7 @@ public class CanvasCommandTests
         var canvas = new InfiniteCanvas { Scene = new CanvasScene() };
         var window = new Window { Width = 800, Height = 600, Content = canvas };
         Adamantium.UI.Extensions.WindowExtension.UpdateTree(window);
-        canvas.Measure(new Size(800, 600), force: true);
+        canvas.Measure(new Size<double>(800, 600), force: true);
         canvas.Arrange(new Rect(0, 0, 800, 600));
         canvas.Scene.Add(Box(0, 0));
         canvas.ConfirmsDelete = true;

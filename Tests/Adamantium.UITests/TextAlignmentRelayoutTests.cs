@@ -57,7 +57,7 @@ public class TextAlignmentRelayoutTests
         var window = new Window { Width = 600, Height = 200, Content = new Grid { Width = 440, Children = { detail } } };
         Settle(window);
 
-        detail.Measure(new Size(200, double.PositiveInfinity), force: true);
+        detail.Measure(new Size<double>(200, double.PositiveInfinity), force: true);
         Settle(window);
 
         Assert.That(RightEdge(detail), Is.EqualTo(detail.RenderSize.Width).Within(1.0),

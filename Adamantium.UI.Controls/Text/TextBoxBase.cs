@@ -384,7 +384,7 @@ public abstract class TextBoxBase : Control, ITextStyleUser, Adamantium.UI.Core.
 
     /// <summary>The index of the character at <paramref name="point"/>, in this box's own coordinates: the caret stop
     /// nearest to it.</summary>
-    public int GetCharacterIndexFromPoint(Vector2 point)
+    public int GetCharacterIndexFromPoint(Vector2<double> point)
     {
         if (_presenter == null)
         {
@@ -450,13 +450,13 @@ public abstract class TextBoxBase : Control, ITextStyleUser, Adamantium.UI.Core.
     /// scrolls.</summary>
     protected virtual (int Least, int Most) LineLimits => (0, 0);
 
-    protected override Size MeasureOverride(Size availableSize)
+    protected override Size<double> MeasureOverride(Size<double> availableSize)
     {
         ApplyLineLimits();
         return base.MeasureOverride(availableSize);
     }
 
-    protected override Size ArrangeOverride(Size finalSize)
+    protected override Size<double> ArrangeOverride(Size<double> finalSize)
     {
         var size = base.ArrangeOverride(finalSize);
         KeepTheRightEdge();
@@ -490,7 +490,7 @@ public abstract class TextBoxBase : Control, ITextStyleUser, Adamantium.UI.Core.
         var x = Math.Max(0, extent - viewport - fromRight);
         if (!x.Equals(offset.X))
         {
-            _scrollViewer.SetScrollOffset(new Vector2(x, offset.Y));
+            _scrollViewer.SetScrollOffset(new Vector2<double>(x, offset.Y));
         }
     }
 
@@ -736,7 +736,7 @@ public abstract class TextBoxBase : Control, ITextStyleUser, Adamantium.UI.Core.
         else
         {
             // Down vertical lines the length a line may take is the field's height.
-            var area = Vertical ? new Size(double.NaN, width) : new Size(width, double.NaN);
+            var area = Vertical ? new Size<double>(double.NaN, width) : new Size<double>(width, double.NaN);
             var size = shaping == null && misspelled.Count == 0 && !styled
                 ? _textLayout.ProcessText(text, FontSize, area,
                     wrapping, TextTrimming.None,
@@ -873,7 +873,7 @@ public abstract class TextBoxBase : Control, ITextStyleUser, Adamantium.UI.Core.
             : new Rect(_textOx + caret.X, _textOy + caret.Y, CaretWidth, caret.Height);
     }
 
-    protected internal override Vector2 ContextMenuPointFromKeyboard
+    protected internal override Vector2<double> ContextMenuPointFromKeyboard
     {
         get
         {
@@ -883,9 +883,9 @@ public abstract class TextBoxBase : Control, ITextStyleUser, Adamantium.UI.Core.
             }
 
             var caret = SurfaceCaret(CaretIndex);
-            var at = _presenter.TranslatePoint(new Vector2(caret.X, caret.Bottom), this);
+            var at = _presenter.TranslatePoint(new Vector2<double>(caret.X, caret.Bottom), this);
             // A caret scrolled out of sight opens it at the box's nearest edge, not off where the line went.
-            return new Vector2(Math.Clamp(at.X, 0, RenderSize.Width), Math.Clamp(at.Y, 0, RenderSize.Height));
+            return new Vector2<double>(Math.Clamp(at.X, 0, RenderSize.Width), Math.Clamp(at.Y, 0, RenderSize.Height));
         }
     }
 
@@ -1365,9 +1365,9 @@ public abstract class TextBoxBase : Control, ITextStyleUser, Adamantium.UI.Core.
 
     // --- Surface callbacks (the TextPresenter measures / renders / hit-tests through these) -----------------------
 
-    internal Size MeasureSurface(double availableWidth) => MeasureSurface(new Size(availableWidth, double.PositiveInfinity));
+    internal Size<double> MeasureSurface(double availableWidth) => MeasureSurface(new Size<double>(availableWidth, double.PositiveInfinity));
 
-    internal Size MeasureSurface(Size available)
+    internal Size<double> MeasureSurface(Size<double> available)
     {
         var length = Vertical ? available.Height : available.Width;
         _wrapWidth = length;   // soft wrap breaks at the viewport's length along the lines
@@ -1383,8 +1383,8 @@ public abstract class TextBoxBase : Control, ITextStyleUser, Adamantium.UI.Core.
             ? length
             : _textWidth + CaretWidth;
         return Vertical
-            ? new Size(_columnsWidth + FloatStripHeight(), along)
-            : new Size(along, ContentHeight + FloatStripHeight());
+            ? new Size<double>(_columnsWidth + FloatStripHeight(), along)
+            : new Size<double>(along, ContentHeight + FloatStripHeight());
     }
 
     internal void ArrangeSurface(double width) => AlignMixedLines(width);
@@ -1509,7 +1509,7 @@ public abstract class TextBoxBase : Control, ITextStyleUser, Adamantium.UI.Core.
         return (start, end);
     }
 
-    internal void RenderSurface(IDrawingSession session, Size size)
+    internal void RenderSurface(IDrawingSession session, Size<double> size)
     {
         EnsureLayout();
 
@@ -1696,7 +1696,7 @@ public abstract class TextBoxBase : Control, ITextStyleUser, Adamantium.UI.Core.
         return rects;
     }
 
-    private TextRenderingParameters BuildTextParameters(Brush color, double originX, double originY, Size size)
+    private TextRenderingParameters BuildTextParameters(Brush color, double originX, double originY, Size<double> size)
     {
         return new TextRenderingParameters
         {
@@ -1705,7 +1705,7 @@ public abstract class TextBoxBase : Control, ITextStyleUser, Adamantium.UI.Core.
             TextTrimming = TextTrimming.None,
             TextWrapping = TextWrapping,
             Color = (color as SolidColorBrush)?.Color ?? Colors.White,
-            TextArea = new Rectangle(new Vector2F((float)originX, (float)originY), size)
+            TextArea = new Rectangle<int>(new Vector2F((float)originX, (float)originY).As<int>(), size.As<int>())
         };
     }
 
@@ -1738,13 +1738,13 @@ public abstract class TextBoxBase : Control, ITextStyleUser, Adamantium.UI.Core.
 
         if (shaping == null)
         {
-            _placeholderLayout.ProcessText(Placeholder, fontSize, new Size(double.NaN, double.NaN),
+            _placeholderLayout.ProcessText(Placeholder, fontSize, new Size<double>(double.NaN, double.NaN),
                 TextWrapping.NoWrap, TextTrimming.None, HorizontalTextAlignment.Left, VerticalTextAlignment.Top);
         }
         else
         {
             _placeholderLayout.ProcessText(new AttributedText(Placeholder, shaping), fontSize,
-                new Size(double.NaN, double.NaN), TextWrapping.NoWrap, TextTrimming.None, HorizontalTextAlignment.Left,
+                new Size<double>(double.NaN, double.NaN), TextWrapping.NoWrap, TextTrimming.None, HorizontalTextAlignment.Left,
                 VerticalTextAlignment.Top);
         }
 
@@ -1756,7 +1756,7 @@ public abstract class TextBoxBase : Control, ITextStyleUser, Adamantium.UI.Core.
         }
     }
 
-    private void RenderPlaceholder(IDrawingSession session, Size size)
+    private void RenderPlaceholder(IDrawingSession session, Size<double> size)
     {
         EnsurePlaceholderShaped(FontSize);
         var (x, y) = PlaceholderAt(size);
@@ -1764,7 +1764,7 @@ public abstract class TextBoxBase : Control, ITextStyleUser, Adamantium.UI.Core.
     }
 
     // Where the placeholder stands: on the text's first line, along it as the text would stand.
-    private (double X, double Y) PlaceholderAt(Size size)
+    private (double X, double Y) PlaceholderAt(Size<double> size)
     {
         var along = Math.Floor(AlignedStart(
             Math.Max(0, (Vertical ? size.Height : size.Width) - _placeholderLayout.GetLine(0).Width),
@@ -1787,7 +1787,7 @@ public abstract class TextBoxBase : Control, ITextStyleUser, Adamantium.UI.Core.
 
     // Floating label: interpolate font size (full -> shrunk), Y (text position -> top strip) and color (placeholder ->
     // accent) by _floatProgress.
-    private void RenderFloatingPlaceholder(IDrawingSession session, Size size)
+    private void RenderFloatingPlaceholder(IDrawingSession session, Size<double> size)
     {
         var t = _floatProgress;
         var floatFs = FontSize + (FontSize * FloatScale - FontSize) * t;

@@ -44,7 +44,7 @@ public static class ParkedVisuals
     /// <summary>Parks <paramref name="root"/> under <paramref name="key"/>. Call before removing it, so the removal reads
     /// as "coming back"; the caller does the removing.</summary>
     public static void Keep(object owner, object key, IUIComponent root, TemplateResult built = null, DataTemplate template = null,
-        Mathematics.Size hostSize = default)
+        Mathematics.Size<double> hostSize = default)
     {
         if (owner == null || key == null || root == null) return;
 
@@ -67,7 +67,7 @@ public static class ParkedVisuals
     /// <summary>Takes the visual kept under <paramref name="key"/>, if any. Not unparked here: attach it first, then
     /// <see cref="ParkedSubtree.Unpark"/>.</summary>
     public static bool TryTake(object owner, object key, IUIComponent host, out IUIComponent root, out TemplateResult built,
-        out DataTemplate template, out Mathematics.Size hostSize)
+        out DataTemplate template, out Mathematics.Size<double> hostSize)
     {
         root = null;
         built = null;
@@ -222,7 +222,7 @@ public static class ParkedVisuals
     }
 
     private readonly record struct Entry(IUIComponent Root, TemplateResult Built, DataTemplate Template,
-        NavigationCacheMode Mode, Mathematics.Size HostSize, World World);
+        NavigationCacheMode Mode, Mathematics.Size<double> HostSize, World World);
 
     // PaletteVersion too: a variant switch recolors brushes without moving ThemeVersion, and a parked subtree cannot hear it.
     private readonly record struct World(IRootVisualComponent RootVisual, int ThemeVersion, int PaletteVersion);

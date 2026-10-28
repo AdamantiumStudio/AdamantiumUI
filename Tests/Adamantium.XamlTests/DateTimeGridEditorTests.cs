@@ -82,7 +82,7 @@ public class DateTimeGridEditorTests
         {
             WindowExtension.UpdateTree(_window);
             BindingUpdateQueue.Flush();
-            ((IMeasurableComponent)_window.Content).Measure(new Size(900, 600));
+            ((IMeasurableComponent)_window.Content).Measure(new Size<double>(900, 600));
             ((IMeasurableComponent)_window.Content).Arrange(new Rect(0, 0, 900, 600));
         }
     }

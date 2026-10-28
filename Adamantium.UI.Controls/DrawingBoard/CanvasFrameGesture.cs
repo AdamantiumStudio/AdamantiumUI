@@ -13,8 +13,8 @@ public sealed class CanvasFrameGesture
     private readonly List<Rect> _startBounds = new();
 
     private Rect _startFrame;
-    private Vector2 _from;
-    private Vector2 _applied;
+    private Vector2<double> _from;
+    private Vector2<double> _applied;
     private double _leastWidth;
     private double _leastHeight;
 
@@ -25,11 +25,11 @@ public sealed class CanvasFrameGesture
 
     /// <summary>Take hold. Remembers the frame and every item's box as they are NOW: a drag is measured from where it
     /// started, so that running the pointer back and forth leaves the drawing where it began.</summary>
-    public void Begin(InfiniteCanvas canvas, CanvasHandle handle, Vector2 world)
+    public void Begin(InfiniteCanvas canvas, CanvasHandle handle, Vector2<double> world)
     {
         Handle = handle;
         _from = world;
-        _applied = Vector2.Zero;
+        _applied = Vector2<double>.Zero;
         _startFrame = canvas.SelectionBounds ?? new Rect(0, 0, 0, 0);
 
         _startBounds.Clear();
@@ -56,7 +56,7 @@ public sealed class CanvasFrameGesture
         _leastHeight = _startFrame.Height * shrinkY;
     }
 
-    public void MoveTo(InfiniteCanvas canvas, Vector2 world)
+    public void MoveTo(InfiniteCanvas canvas, Vector2<double> world)
     {
         if (!IsActive || canvas.Selection.Count == 0) return;
 
@@ -109,7 +109,7 @@ public sealed class CanvasFrameGesture
         }
     }
 
-    private static Rect Stretch(Rect from, CanvasHandle grip, Vector2 delta, double leastWidth, double leastHeight)
+    private static Rect Stretch(Rect from, CanvasHandle grip, Vector2<double> delta, double leastWidth, double leastHeight)
     {
         var left = from.X;
         var top = from.Y;

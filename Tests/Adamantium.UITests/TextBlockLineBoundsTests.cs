@@ -19,7 +19,7 @@ public class TextBlockLineBoundsTests
             VerticalTextAlignment = alignment,
             TextLineBounds = bounds,
         };
-        text.Measure(new Size(500, 500));
+        text.Measure(new Size<double>(500, 500));
         return text;
     }
 
@@ -56,7 +56,7 @@ public class TextBlockLineBoundsTests
         var full = text.DesiredSize.Height;
 
         text.TextLineBounds = TextLineBounds.TrimToBaseline;
-        text.Measure(new Size(500, 500));
+        text.Measure(new Size<double>(500, 500));
 
         Assert.That(text.DesiredSize.Height, Is.LessThan(full));
     }

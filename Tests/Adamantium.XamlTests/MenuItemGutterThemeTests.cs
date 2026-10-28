@@ -52,7 +52,7 @@ public class MenuItemGutterThemeTests
         var rows = new StackPanel { Width = 300, Children = { plain, checkedRow } };
         rows.ApplyCurrentTheme();
         Adamantium.UI.Extensions.WindowExtension.UpdateTree(rows);
-        rows.Measure(new Size(300, 200));
+        rows.Measure(new Size<double>(300, 200));
         rows.Arrange(new Rect(0, 0, 300, 200));
 
         var plainLabel = (IUIComponent)plain.GetTemplateChild("PART_ContentPresenter");

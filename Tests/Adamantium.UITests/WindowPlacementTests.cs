@@ -20,7 +20,7 @@ public class WindowPlacementTests
     [Test]
     public void AWindowGoesBackToItsScreen()
     {
-        var position = WindowPlacer.Restore(On("DISPLAY2", 100, 50), [Primary, Second], new Size(800, 600));
+        var position = WindowPlacer.Restore(On("DISPLAY2", 100, 50), [Primary, Second], new Size<double>(800, 600));
 
         Assert.That(position, Is.EqualTo(new PixelPoint(2020, 50)));
     }
@@ -30,19 +30,19 @@ public class WindowPlacementTests
     {
         var movedLeft = new ScreenInfo("DISPLAY2", new Rect(-2560, 0, 2560, 1440), new Rect(-2560, 0, 2560, 1440), 1.5, false);
 
-        var position = WindowPlacer.Restore(On("DISPLAY2", 100, 50), [Primary, movedLeft], new Size(800, 600));
+        var position = WindowPlacer.Restore(On("DISPLAY2", 100, 50), [Primary, movedLeft], new Size<double>(800, 600));
 
         Assert.That(position, Is.EqualTo(new PixelPoint(-2460, 50)));
     }
 
     [Test]
     public void AWindowWhoseScreenIsGoneHasNoPlaceToGoBackTo() =>
-        Assert.That(WindowPlacer.Restore(On("DISPLAY2", 100, 50), [Primary], new Size(800, 600)), Is.Null);
+        Assert.That(WindowPlacer.Restore(On("DISPLAY2", 100, 50), [Primary], new Size<double>(800, 600)), Is.Null);
 
     [Test]
     public void AWindowGoesBackInsideTheWorkArea()
     {
-        var position = WindowPlacer.Restore(On("DISPLAY1", 1900, 1000), [Primary], new Size(800, 600));
+        var position = WindowPlacer.Restore(On("DISPLAY1", 1900, 1000), [Primary], new Size<double>(800, 600));
 
         Assert.That(position, Is.EqualTo(new PixelPoint(1120, 440)));
     }
@@ -66,11 +66,11 @@ public class WindowPlacementTests
 
     [Test]
     public void CenteredAWindowStandsInTheMiddleOfTheArea() =>
-        Assert.That(WindowPlacer.Center(Primary.WorkArea, new Size(800, 600)), Is.EqualTo(new PixelPoint(560, 220)));
+        Assert.That(WindowPlacer.Center(Primary.WorkArea, new Size<double>(800, 600)), Is.EqualTo(new PixelPoint(560, 220)));
 
     [Test]
     public void CenteredAWindowTallerThanTheAreaKeepsItsCaptionOnScreen() =>
-        Assert.That(WindowPlacer.Center(Primary.WorkArea, new Size(800, 1200)).Y, Is.EqualTo(0));
+        Assert.That(WindowPlacer.Center(Primary.WorkArea, new Size<double>(800, 1200)).Y, Is.EqualTo(0));
 
     [Test]
     public void AWindowBelongsToTheScreenThatHoldsMostOfIt() =>

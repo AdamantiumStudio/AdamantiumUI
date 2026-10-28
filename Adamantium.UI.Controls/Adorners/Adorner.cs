@@ -71,7 +71,7 @@ public class Adorner : TemplatedUIComponent
     /// <summary>Where the adorner goes in the adorned element's space, once it knows how big it came out. A frame fills
     /// the target; a BADGE (a key tip) hangs off an edge and is the reason this is asked at all - the stage used to lay
     /// out frames only, so anything else was themed but never sized and drew nothing.</summary>
-    public virtual Rect PlaceIn(Size desired) => AdornedBounds;
+    public virtual Rect PlaceIn(Size<double> desired) => AdornedBounds;
 
     /// <summary>Set by the adorner stage once it has applied the theme (so a themed frame is templated, not re-themed each
     /// frame). Reset if the adorner is reused for a different element.</summary>

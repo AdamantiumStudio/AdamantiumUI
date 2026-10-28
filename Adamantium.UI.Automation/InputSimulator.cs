@@ -16,7 +16,7 @@ internal static class InputSimulator
         Click(element, label, button, Middle(element));
 
     /// <summary>A click at <paramref name="local"/>, a point in the element's own units.</summary>
-    public static void Click(UIComponent element, string label, MouseButtons button, Vector2 local)
+    public static void Click(UIComponent element, string label, MouseButtons button, Vector2<double> local)
     {
         using var pointer = SimulatedPointer.Install();
         var (window, point) = HoverAt(element, label, local);
@@ -31,7 +31,7 @@ internal static class InputSimulator
     public static void Hover(UIComponent element, string label) => Hover(element, label, Middle(element));
 
     /// <summary>The pointer brought over <paramref name="local"/>, a point in the element's own units.</summary>
-    public static void Hover(UIComponent element, string label, Vector2 local)
+    public static void Hover(UIComponent element, string label, Vector2<double> local)
     {
         using var pointer = SimulatedPointer.Install();
         HoverAt(element, label, local);
@@ -53,7 +53,7 @@ internal static class InputSimulator
         }
     }
 
-    public static void Drag(UIComponent element, string label, Vector2 from, Vector2 to)
+    public static void Drag(UIComponent element, string label, Vector2<double> from, Vector2<double> to)
     {
         using var pointer = SimulatedPointer.Install();
         var (window, start) = HoverAt(element, label, from);
@@ -69,7 +69,7 @@ internal static class InputSimulator
 
     /// <summary>Contacts put down together, each at its path's start, and left there; <see cref="Lift"/> ends them.
     /// Every place is checked before the first goes down.</summary>
-    public static (IWindow Window, Vector2 Point)[] PutDown(IReadOnlyList<ContactPath> paths, IReadOnlyList<Contact> contacts,
+    public static (IWindow Window, Vector2<double> Point)[] PutDown(IReadOnlyList<ContactPath> paths, IReadOnlyList<Contact> contacts,
         uint? timestamp = null)
     {
         var down = paths.Select(path => ContactAt(path.Element, path.Label, path.From)).ToArray();
@@ -81,7 +81,7 @@ internal static class InputSimulator
         return down;
     }
 
-    public static void Lift(IReadOnlyList<(IWindow Window, Vector2 Point)> down, IReadOnlyList<Contact> contacts,
+    public static void Lift(IReadOnlyList<(IWindow Window, Vector2<double> Point)> down, IReadOnlyList<Contact> contacts,
         uint? timestamp = null)
     {
         for (var i = 0; i < down.Count; i++)
@@ -130,7 +130,7 @@ internal static class InputSimulator
         const int steps = 8;
 
         IWindow window = null;
-        var tracks = new List<List<Vector2>>();
+        var tracks = new List<List<Vector2<double>>>();
         foreach (var path in paths)
         {
             var (at, start) = ContactAt(path.Element, path.Label, path.From);
@@ -141,7 +141,7 @@ internal static class InputSimulator
 
             window = at;
             // A held contact keeps reporting where it rests, a frame apart, as a digitizer does.
-            var points = new List<Vector2> { start };
+            var points = new List<Vector2<double>> { start };
             points.AddRange(Enumerable.Repeat(start, (int)Math.Ceiling(hold / SystemFrameGap)));
             if (path.To is { } local)
             {
@@ -179,7 +179,7 @@ internal static class InputSimulator
     }
 
     // Where a contact lands, refused if something else is there: a finger has no hover to find out with first.
-    private static (IWindow Window, Vector2 Point) ContactAt(UIComponent element, string label, Vector2 local)
+    private static (IWindow Window, Vector2<double> Point) ContactAt(UIComponent element, string label, Vector2<double> local)
     {
         if (element.RootVisual is not IWindow window)
         {
@@ -202,12 +202,12 @@ internal static class InputSimulator
     {
         if (contact.Type == PointerType.Pen)
         {
-            Send(RawPointerEventType.LeaveWindow, window, Vector2.Zero, contact, timestamp);
+            Send(RawPointerEventType.LeaveWindow, window, Vector2<double>.Zero, contact, timestamp);
         }
     }
 
     // No button is named: which one a finger or a pen presses is the pointer device's to say.
-    private static void Send(RawPointerEventType type, IWindow window, Vector2 point, Contact contact, uint timestamp) =>
+    private static void Send(RawPointerEventType type, IWindow window, Vector2<double> point, Contact contact, uint timestamp) =>
         PointerDevice.Current.ProcessEvent(new RawPointerEventArgs(type, (IInputComponent)window, point, InputModifiers.None, timestamp)
         {
             PointerId = contact.Id,
@@ -220,8 +220,8 @@ internal static class InputSimulator
     /// <paramref name="target"/> - a point that has to be on <paramref name="within"/> - as a hand carrying one onto
     /// the other would. The point is where the target stands before anything moves: a list that opens a gap for the
     /// carried row places it by that, not by where the gap pushes its rows.</summary>
-    public static void DragOnto(UIComponent source, string sourceLabel, Vector2 from, UIComponent target, string targetLabel,
-        Vector2 at, UIComponent within)
+    public static void DragOnto(UIComponent source, string sourceLabel, Vector2<double> from, UIComponent target, string targetLabel,
+        Vector2<double> at, UIComponent within)
     {
         if (source.RootVisual is not IUIComponent root || target.RootVisual is not IWindow targetWindow)
         {
@@ -245,7 +245,7 @@ internal static class InputSimulator
         var end = ReferenceEquals(targetWindow, window)
             ? InWindow(target, at)
             : window.PointToClient(targetWindow.PointToScreen(InWindow(target, at)));
-        IWindow Over(Vector2 point) => !ReferenceEquals(targetWindow, window) && Holds(targetWindow, window.PointToScreen(point))
+        IWindow Over(Vector2<double> point) => !ReferenceEquals(targetWindow, window) && Holds(targetWindow, window.PointToScreen(point))
             ? targetWindow
             : window;
 
@@ -271,7 +271,7 @@ internal static class InputSimulator
 
     // The first few pixels of a hand's stroke, still over what it pressed: a drag starts once the pointer has gone past
     // the threshold over its source, and a first step an eighth of a long way across would leave the source before that.
-    private static Vector2 LeadIn(Vector2 start, Vector2 end)
+    private static Vector2<double> LeadIn(Vector2<double> start, Vector2<double> end)
     {
         const double least = 8;
         var threshold = PlatformSettings.DragThreshold;
@@ -290,7 +290,7 @@ internal static class InputSimulator
     private static double PastThreshold(double threshold, double along) =>
         along == 0 ? 1 : (threshold + 1) / Math.Abs(along);
 
-    private static void Stroke(IWindow window, Vector2 start, Vector2 end)
+    private static void Stroke(IWindow window, Vector2<double> start, Vector2<double> end)
     {
         const int steps = 8;
         Send(RawPointerEventType.Down, window, start, InputModifiers.LeftMouseButton, MouseButtons.Left);
@@ -307,7 +307,7 @@ internal static class InputSimulator
     /// <summary>Whether a pointer at <paramref name="local"/> of <paramref name="element"/> would be on
     /// <paramref name="within"/> - on screen, and not under something else, another of the application's windows
     /// included.</summary>
-    public static bool Reaches(UIComponent element, Vector2 local, UIComponent within)
+    public static bool Reaches(UIComponent element, Vector2<double> local, UIComponent within)
     {
         if (element.RootVisual is not IWindow window || window is not IUIComponent root)
         {
@@ -330,7 +330,7 @@ internal static class InputSimulator
         return app.Windows.FirstOrDefault(w => w.Handle == top) is not { } ours || ReferenceEquals(ours, window);
     }
 
-    private static (IWindow Window, Vector2 Point) HoverAt(UIComponent element, string label, Vector2 local)
+    private static (IWindow Window, Vector2<double> Point) HoverAt(UIComponent element, string label, Vector2<double> local)
     {
         if (element.RootVisual is not IWindow window)
         {
@@ -440,7 +440,7 @@ internal static class InputSimulator
     }
 
     // The event goes to window; the pointer is over the window named, another one only while a captured gesture is over it.
-    private static void Send(RawPointerEventType type, IWindow window, Vector2 point, InputModifiers modifiers,
+    private static void Send(RawPointerEventType type, IWindow window, Vector2<double> point, InputModifiers modifiers,
         MouseButtons changed = MouseButtons.None, IWindow over = null)
     {
         if (Mouse.Platform is SimulatedPointer pointer)
@@ -456,10 +456,10 @@ internal static class InputSimulator
     }
 
     /// <summary>The middle of what shows of <paramref name="element"/>, in its own coordinates - see <see cref="Shown"/>.</summary>
-    public static Vector2 Middle(UIComponent element)
+    public static Vector2<double> Middle(UIComponent element)
     {
         var shown = Shown(element);
-        return new Vector2(shown.X + shown.Width / 2, shown.Y + shown.Height / 2);
+        return new Vector2<double>(shown.X + shown.Width / 2, shown.Y + shown.Height / 2);
     }
 
     /// <summary>What the clipping ancestors leave of <paramref name="element"/> to see, in its own coordinates; all of
@@ -484,20 +484,20 @@ internal static class InputSimulator
         var toLocal = Matrix4x4F.Invert(element.WorldTransform);
         var topLeft = Vector3F.TransformCoordinate(new Vector3F((float)shown.X, (float)shown.Y, 0), toLocal);
         var bottomRight = Vector3F.TransformCoordinate(new Vector3F((float)shown.Right, (float)shown.Bottom, 0), toLocal);
-        return new Rect(new Vector2(topLeft.X, topLeft.Y), new Vector2(bottomRight.X, bottomRight.Y));
+        return new Rect(new Vector2<double>(topLeft.X, topLeft.Y), new Vector2<double>(bottomRight.X, bottomRight.Y));
     }
 
     private static Rect InWindow(UIComponent element)
     {
-        var topLeft = InWindow(element, Vector2.Zero);
-        var bottomRight = InWindow(element, new Vector2(element.RenderSize.Width, element.RenderSize.Height));
+        var topLeft = InWindow(element, Vector2<double>.Zero);
+        var bottomRight = InWindow(element, new Vector2<double>(element.RenderSize.Width, element.RenderSize.Height));
         return new Rect(topLeft, bottomRight);
     }
 
-    private static Vector2 InWindow(UIComponent element, Vector2 local)
+    private static Vector2<double> InWindow(UIComponent element, Vector2<double> local)
     {
         var point = Vector3F.TransformCoordinate(new Vector3F((float)local.X, (float)local.Y, 0), element.WorldTransform);
-        return new Vector2(point.X, point.Y);
+        return new Vector2<double>(point.X, point.Y);
     }
 
     private static bool IsWithin(IUIComponent node, IUIComponent element)

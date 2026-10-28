@@ -18,7 +18,7 @@ namespace Adamantium.UITests;
 [TestFixture]
 public class RotatedTabLabelTests
 {
-    private static readonly Size Unbounded = new(double.PositiveInfinity, double.PositiveInfinity);
+    private static readonly Size<double> Unbounded = new(double.PositiveInfinity, double.PositiveInfinity);
 
     private static TextBlock Label()
     {
@@ -124,7 +124,7 @@ public class RotatedTabLabelTests
         var asked = scroller.DesiredSize.Width;
 
         // Pass two: here is exactly that, and nothing more.
-        scroller.Measure(new Size(asked, 400));
+        scroller.Measure(new Size<double>(asked, 400));
 
         Assert.That(scroller.DesiredSize.Width, Is.EqualTo(asked).Within(0.5),
             "the strip must still fit in the width it asked for");

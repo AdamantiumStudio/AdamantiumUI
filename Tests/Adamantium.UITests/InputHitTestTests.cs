@@ -24,10 +24,10 @@ public class InputHitTestTests
         var root = new Grid();
         root.Children.Add(border);
 
-        root.Measure(new Size(100, 50));
+        root.Measure(new Size<double>(100, 50));
         root.Arrange(new Rect(0, 0, 100, 50));
 
-        var hit = ((IInputComponent)root).HitTest(new Vector2(50, 25));
+        var hit = ((IInputComponent)root).HitTest(new Vector2<double>(50, 25));
 
         Assert.That(hit, Is.SameAs(inner), "the button inside the Border must be the hit target, not the Grid");
     }
@@ -43,10 +43,10 @@ public class InputHitTestTests
 
         root.Children.Add(button);
 
-        root.Measure(new Size(100, 50));
+        root.Measure(new Size<double>(100, 50));
         root.Arrange(new Rect(0, 0, 100, 50));
 
-        var hit = ((IInputComponent)root).HitTest(new Vector2(50, 25));
+        var hit = ((IInputComponent)root).HitTest(new Vector2<double>(50, 25));
 
         Assert.That(hit, Is.SameAs(button), "the press went through the disabled button to what was behind it");
     }
@@ -64,20 +64,20 @@ public class InputHitTestTests
         var root = new Grid { Width = 400, Height = 300 };
         root.Children.Add(holder);
 
-        root.Measure(new Size(400, 300));
+        root.Measure(new Size<double>(400, 300));
         root.Arrange(new Rect(0, 0, 400, 300));
 
         // Doubled about its own top-left corner, so what was drawn at (30,10) is now drawn at (60,20).
-        holder.RenderTransformOrigin = Vector2.Zero;
+        holder.RenderTransformOrigin = Vector2<double>.Zero;
         holder.RenderTransform = new Transform { ScaleX = 2, ScaleY = 2 };
 
         var at = holder.Bounds.Location;
 
         Assert.Multiple(() =>
         {
-            Assert.That(((IInputComponent)root).HitTest(new Vector2(at.X + 60, at.Y + 20)), Is.SameAs(inner),
+            Assert.That(((IInputComponent)root).HitTest(new Vector2<double>(at.X + 60, at.Y + 20)), Is.SameAs(inner),
                 "the scaled element was not found where it is drawn");
-            Assert.That(((IInputComponent)root).HitTest(new Vector2(at.X + 90, at.Y + 50)), Is.Not.SameAs(inner),
+            Assert.That(((IInputComponent)root).HitTest(new Vector2<double>(at.X + 90, at.Y + 50)), Is.Not.SameAs(inner),
                 "it was found outside the box it is drawn in");
         });
     }
@@ -94,14 +94,14 @@ public class InputHitTestTests
         holder.Children.Add(inner);
         var root = new Grid { Width = 400, Height = 300 };
         root.Children.Add(holder);
-        root.Measure(new Size(400, 300));
+        root.Measure(new Size<double>(400, 300));
         root.Arrange(new Rect(0, 0, 400, 300));
 
-        var local = Pointer.ToLocal(holder, new Vector2(60, 30));
+        var local = Pointer.ToLocal(holder, new Vector2<double>(60, 30));
 
         Assert.Multiple(() =>
         {
-            Assert.That(((IInputComponent)root).HitTest(new Vector2(70, 30)), Is.SameAs(inner), "drawn at twice its size");
+            Assert.That(((IInputComponent)root).HitTest(new Vector2<double>(70, 30)), Is.SameAs(inner), "drawn at twice its size");
             Assert.That(local.X, Is.EqualTo(30).Within(0.5), "the pointer in the content's own units");
             Assert.That(local.Y, Is.EqualTo(15).Within(0.5));
         });
@@ -119,22 +119,22 @@ public class InputHitTestTests
         holder.Children.Add(inner);
         var root = new Grid { Width = 400, Height = 300 };
         root.Children.Add(holder);
-        root.Measure(new Size(400, 300));
+        root.Measure(new Size<double>(400, 300));
         root.Arrange(new Rect(0, 0, 400, 300));
 
         Assert.Multiple(() =>
         {
-            Assert.That(((IUIComponent)root).GetVisualsAt(new Vector2(70, 30)), Does.Contain(inner),
+            Assert.That(((IUIComponent)root).GetVisualsAt(new Vector2<double>(70, 30)), Does.Contain(inner),
                 "drawn at twice its size");
-            Assert.That(((IUIComponent)root).GetVisualsAt(new Vector2(90, 50)), Does.Not.Contain(inner),
+            Assert.That(((IUIComponent)root).GetVisualsAt(new Vector2<double>(90, 50)), Does.Not.Contain(inner),
                 "and nowhere else");
         });
     }
 
     private sealed class Root : Grid, IRootVisualComponent
     {
-        public Vector2 PointToClient(PixelPoint point) => new((float)point.X, (float)point.Y);
-        public PixelPoint PointToScreen(Vector2 point) => new(point.X, point.Y);
+        public Vector2<double> PointToClient(PixelPoint point) => new((float)point.X, (float)point.Y);
+        public PixelPoint PointToScreen(Vector2<double> point) => new(point.X, point.Y);
         public PixelPoint Position { get; set; }
         public void AttachContextAndInitialize(IUIContext context) { }
         public double Left { get; set; }
@@ -157,10 +157,10 @@ public class InputHitTestTests
         holder.Children.Add(inner);
         var root = new Root { Width = 400, Height = 300 };
         root.Children.Add(holder);
-        root.Measure(new Size(400, 300));
+        root.Measure(new Size<double>(400, 300));
         root.Arrange(new Rect(0, 0, 400, 300));
 
-        var screen = inner.PointToScreen(new Vector2(5, 5));
+        var screen = inner.PointToScreen(new Vector2<double>(5, 5));
         var back = inner.PointToClient(screen);
 
         Assert.Multiple(() =>
@@ -183,10 +183,10 @@ public class InputHitTestTests
         root.Children.Add(background);
         root.Children.Add(foreground);
 
-        root.Measure(new Size(200, 200));
+        root.Measure(new Size<double>(200, 200));
         root.Arrange(new Rect(0, 0, 200, 200));
 
-        var hit = ((IInputComponent)root).HitTest(new Vector2(50, 25));   // inside the foreground button
+        var hit = ((IInputComponent)root).HitTest(new Vector2<double>(50, 25));   // inside the foreground button
 
         Assert.That(hit, Is.SameAs(foreground), "the foreground control must be hit, not the background panel behind it");
     }
@@ -201,10 +201,10 @@ public class InputHitTestTests
         var root = new Grid();
         root.Children.Add(panel);
 
-        root.Measure(new Size(300, 300));
+        root.Measure(new Size<double>(300, 300));
         root.Arrange(new Rect(0, 0, 300, 300));
 
-        var hit = ((IInputComponent)root).HitTest(new Vector2(50, 25));   // inside the button
+        var hit = ((IInputComponent)root).HitTest(new Vector2<double>(50, 25));   // inside the button
 
         Assert.That(hit, Is.SameAs(button), "the child control must be hit, not its containing panel");
     }
@@ -225,10 +225,10 @@ public class InputHitTestTests
         root.Children.Add(background);
         root.Children.Add(shape);
 
-        root.Measure(new Size(200, 200));
+        root.Measure(new Size<double>(200, 200));
         root.Arrange(new Rect(0, 0, 200, 200));
 
-        var hit = ((IInputComponent)root).HitTest(new Vector2(100, 100));   // the center = center of the centered shape
+        var hit = ((IInputComponent)root).HitTest(new Vector2<double>(100, 100));   // the center = center of the centered shape
 
         Assert.That(hit, Is.SameAs(shape), "the centered shape must be hit, not the background panel behind it");
     }
@@ -249,10 +249,10 @@ public class InputHitTestTests
         var panel = new RenderTargetPanel();   // the user's root container (a Grid that composites a surface)
         panel.Children.Add(border);
 
-        panel.Measure(new Size(1280, 720));
+        panel.Measure(new Size<double>(1280, 720));
         panel.Arrange(new Rect(0, 0, 1280, 720));
 
-        var p = new Vector2(640, 360);   // dead center = inside the centered Border
+        var p = new Vector2<double>(640, 360);   // dead center = inside the centered Border
         var inputHit = ((IInputComponent)panel).HitTest(p);
         var visualHit = ((IUIComponent)panel).GetVisualsAt(p).FirstOrDefault();
 
@@ -292,7 +292,7 @@ public class InputHitTestTests
         var grip = new Border { Width = 7, Height = 100, Cursor = Cursors.SizeEWE };
         panel.Child = grip;
 
-        panel.Measure(new Size(200, 100), force: true);
+        panel.Measure(new Size<double>(200, 100), force: true);
         panel.Arrange(new Rect(0, 0, 200, 100));
 
         PointAt(grip);

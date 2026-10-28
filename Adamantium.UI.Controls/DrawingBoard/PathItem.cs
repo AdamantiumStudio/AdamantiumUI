@@ -102,7 +102,7 @@ public partial class PathItem : AdamantiumViewModel, ICanvasItem, ICanvasTransfo
     public ICanvasItem Copy() =>
         new PathItem(Data, Fill, Stroke, Thickness) { World = World, Transform = Transform, FillRule = FillRule };
 
-    public void Move(Vector2 worldDelta) =>
+    public void Move(Vector2<double> worldDelta) =>
         World = new Rect(World.X + worldDelta.X, World.Y + worldDelta.Y, World.Width, World.Height);
 
     public void Resize(Rect world) =>
@@ -111,7 +111,7 @@ public partial class PathItem : AdamantiumViewModel, ICanvasItem, ICanvasTransfo
     /// <summary>Hit when the point is in its box. The contour itself would be the honest answer, and a filled one can
     /// only say so by being tessellated - which is a mesh per question. An imported drawing is picked from a list or
     /// by a band round it far more often than by a press inside one of its holes.</summary>
-    public bool HitTest(Vector2 world, double tolerance) => World.Inflate(tolerance).Contains(world);
+    public bool HitTest(Vector2<double> world, double tolerance) => World.Inflate(tolerance).Contains(world);
 
     public void Render(IDrawingSession session, InfiniteCanvas canvas)
     {
@@ -134,12 +134,12 @@ public partial class PathItem : AdamantiumViewModel, ICanvasItem, ICanvasTransfo
         var sx = _source.Width > 1e-9 ? box.Width / _source.Width : 1;
         var sy = _source.Height > 1e-9 ? box.Height / _source.Height : 1;
 
-        var into = Matrix4x4F.Translation((float)-_source.X, (float)-_source.Y, 0)
-                   * Matrix4x4F.Scaling((float)sx, (float)sy, 1)
-                   * Matrix4x4F.Translation((float)box.X, (float)box.Y, 0);
+        var into = Matrix4x4.CreateTranslation<float>((float)-_source.X, (float)-_source.Y, 0)
+                   * Matrix4x4.CreateScale<float>((float)sx, (float)sy, 1)
+                   * Matrix4x4.CreateTranslation<float>((float)box.X, (float)box.Y, 0);
 
         if (Transform.Angle == 0 && Transform.SkewX == 0 && Transform.SkewY == 0) return into;
 
-        return into * Transform.Matrix(new Vector2(box.X + box.Width / 2, box.Y + box.Height / 2));
+        return into * Transform.Matrix(new Vector2<double>(box.X + box.Width / 2, box.Y + box.Height / 2));
     }
 }

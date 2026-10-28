@@ -66,7 +66,7 @@ public class DateTimePickerTests
         for (var i = 0; i < 5; i++)
         {
             WindowExtension.UpdateTree(_window);
-            _window.PopupLayer.UpdateLayout(new Adamantium.Mathematics.Size(_window.Width, _window.Height));
+            _window.PopupLayer.UpdateLayout(new Adamantium.Mathematics.Size<double>(_window.Width, _window.Height));
             Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
         }
     }

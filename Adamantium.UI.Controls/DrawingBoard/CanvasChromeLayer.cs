@@ -15,7 +15,7 @@ public class CanvasChromeLayer : Panel
 
     /// <summary>The layer itself is not a hit target, so presses between panes reach the plane; its panes are still tested,
     /// which <c>IsHitTestVisible</c> would prevent.</summary>
-    public override bool HitTestCore(Vector2 localPoint) => false;
+    public override bool HitTestCore(Vector2<double> localPoint) => false;
 
     public static readonly AdamantiumProperty PaneInsetProperty = AdamantiumProperty.Register(nameof(PaneInset),
         typeof(Thickness), typeof(CanvasChromeLayer),
@@ -164,19 +164,19 @@ public class CanvasChromeLayer : Panel
         Children.CollectionChanged += (_, _) => Gather();
     }
 
-    protected override Size MeasureOverride(Size availableSize)
+    protected override Size<double> MeasureOverride(Size<double> availableSize)
     {
         var width = Double.IsInfinity(availableSize.Width) ? 0 : availableSize.Width;
         var height = Double.IsInfinity(availableSize.Height) ? 0 : availableSize.Height;
 
-        foreach (var child in Children) child.Measure(new Size(width, height));
+        foreach (var child in Children) child.Measure(new Size<double>(width, height));
 
         // Nothing of its own: the layer is a place, not a thing with a size. Asking for room would push the canvas's
         // own measure around, and the canvas is the one that decides how big the plane's window is.
-        return new Size();
+        return new Size<double>();
     }
 
-    protected override Size ArrangeOverride(Size finalSize)
+    protected override Size<double> ArrangeOverride(Size<double> finalSize)
     {
 
         var inset = PaneInset;
@@ -283,11 +283,11 @@ public class CanvasChromeLayer : Panel
 
     // Above the selection frame if it fits there, below it if it does not - which is what a context bar has to do, or
     // it covers the very thing it is about as soon as the selection is near the top of the viewport.
-    private Vector2 AboveSelection(Size size, Size room, Thickness inset)
+    private Vector2<double> AboveSelection(Size<double> size, Size<double> room, Thickness inset)
     {
         if (Owner is not { } canvas || canvas.SelectionBounds is not { } world)
         {
-            return new Vector2(inset.Left, inset.Top);
+            return new Vector2<double>(inset.Left, inset.Top);
         }
 
         // Against the FRAME and not the box it is round: the frame stands off the selection by half a grip, and a bar
@@ -299,7 +299,7 @@ public class CanvasChromeLayer : Panel
 
         if (y < inset.Top) y = frame.Y + frame.Height + PaneGap;
 
-        return new Vector2(x, y);
+        return new Vector2<double>(x, y);
     }
 
     private double Total(CanvasPanePlacement placement, double gap, bool vertical)

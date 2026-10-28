@@ -88,8 +88,8 @@ public class TextBlockOverflowTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(block.DesiredSize, Is.EqualTo(new Size(200, 60)));
-            Assert.That(first.DesiredSize, Is.EqualTo(new Size(200, 60)));
+            Assert.That(block.DesiredSize, Is.EqualTo(new Size<double>(200, 60)));
+            Assert.That(first.DesiredSize, Is.EqualTo(new Size<double>(200, 60)));
             Assert.That(second.DesiredSize.Height, Is.EqualTo(System.Math.Ceiling(bottom)).Within(1e-6));
         });
     }
@@ -117,7 +117,7 @@ public class TextBlockOverflowTests
         Assert.That(own, Is.Not.Empty);
         Assert.That(shown, Is.Not.Empty);
         Assert.That(block.Layout.GetLine(shown[0]).Start, Is.EqualTo(block.Layout.GetLine(own[^1]).End));
-        Assert.That(overflow.DesiredSize, Is.EqualTo(new Size(120, 200)));
+        Assert.That(overflow.DesiredSize, Is.EqualTo(new Size<double>(120, 200)));
     }
 
     [Test]
@@ -202,7 +202,7 @@ public class TextBlockOverflowTests
             WindowExtension.UpdateTree(_window);
         }
 
-        double Phase(IUIComponent element, double y) => ((element.TranslatePoint(new Vector2(0, y), panel).Y % 24) + 24) % 24;
+        double Phase(IUIComponent element, double y) => ((element.TranslatePoint(new Vector2<double>(0, y), panel).Y % 24) + 24) % 24;
         var own = block.Layout.GetLine(LinesIn(block, 0)[0]).Baseline;
         var shown = block.Layout.GetLine(LinesIn(block, 1)[0]).Baseline - first.Frame.Value.Y;
 
@@ -231,8 +231,8 @@ public class TextBlockOverflowTests
             WindowExtension.UpdateTree(_window);
         }
 
-        var center = button.TranslatePoint(new Vector2(button.RenderSize.Width / 2, button.RenderSize.Height / 2), _window);
-        var under = second.TranslatePoint(new Vector2(0, 0), _window);
+        var center = button.TranslatePoint(new Vector2<double>(button.RenderSize.Width / 2, button.RenderSize.Height / 2), _window);
+        var under = second.TranslatePoint(new Vector2<double>(0, 0), _window);
         Assume.That(center.Y, Is.GreaterThan(under.Y), "the button stands in the second overflow");
 
         IUIComponent hit = (IUIComponent)_window.HitTest(center);
@@ -359,7 +359,7 @@ public class TextBlockOverflowTests
     // The pointer is given in the window's units.
     private PixelPoint At(TextBlockOverflow overflow, double x, double y)
     {
-        var point = overflow.TranslatePoint(new Vector2(x, y), _window);
+        var point = overflow.TranslatePoint(new Vector2<double>(x, y), _window);
         return new PixelPoint(point.X, point.Y);
     }
 

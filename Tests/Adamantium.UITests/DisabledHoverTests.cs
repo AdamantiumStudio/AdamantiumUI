@@ -22,7 +22,7 @@ public class DisabledHoverTests
         var panel = new StackPanel { Orientation = Orientation.Horizontal, IsEnabled = !disabled };
         panel.Children.Add(marked);
         panel.Children.Add(plain);
-        panel.Measure(new Size(200, 50), force: true);
+        panel.Measure(new Size<double>(200, 50), force: true);
         panel.Arrange(new Rect(0, 0, 200, 50));
         return (panel, marked, plain);
     }
@@ -32,7 +32,7 @@ public class DisabledHoverTests
     {
         var (panel, marked, _) = Laid(disabled: true);
 
-        Assert.That(panel.HitTest(new Vector2(10, 10), hover: true), Is.SameAs(marked));
+        Assert.That(panel.HitTest(new Vector2<double>(10, 10), hover: true), Is.SameAs(marked));
     }
 
     [Test]
@@ -40,7 +40,7 @@ public class DisabledHoverTests
     {
         var (panel, marked, _) = Laid(disabled: true);
 
-        Assert.That(panel.HitTest(new Vector2(10, 10)), Is.Not.SameAs(marked));
+        Assert.That(panel.HitTest(new Vector2<double>(10, 10)), Is.Not.SameAs(marked));
     }
 
     [Test]
@@ -52,10 +52,10 @@ public class DisabledHoverTests
         ToolTipService.SetShowOnDisabled(button, true);
         var panel = new StackPanel { IsEnabled = false };
         panel.Children.Add(button);
-        panel.Measure(new Size(200, 50), force: true);
+        panel.Measure(new Size<double>(200, 50), force: true);
         panel.Arrange(new Rect(0, 0, 200, 50));
 
-        if (panel.HitTest(new Vector2(10, 10)) is { } pressed) PointerInput.Press(pressed);
+        if (panel.HitTest(new Vector2<double>(10, 10)) is { } pressed) PointerInput.Press(pressed);
 
         Assert.That(clicks, Is.Zero);
     }
@@ -65,7 +65,7 @@ public class DisabledHoverTests
     {
         var (panel, _, plain) = Laid(disabled: true);
 
-        Assert.That(panel.HitTest(new Vector2(30, 10), hover: true), Is.Not.SameAs(plain));
+        Assert.That(panel.HitTest(new Vector2<double>(30, 10), hover: true), Is.Not.SameAs(plain));
     }
 
     [Test]
@@ -75,8 +75,8 @@ public class DisabledHoverTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(panel.HitTest(new Vector2(10, 10)), Is.SameAs(marked));
-            Assert.That(panel.HitTest(new Vector2(30, 10)), Is.SameAs(plain));
+            Assert.That(panel.HitTest(new Vector2<double>(10, 10)), Is.SameAs(marked));
+            Assert.That(panel.HitTest(new Vector2<double>(30, 10)), Is.SameAs(plain));
         });
     }
 }

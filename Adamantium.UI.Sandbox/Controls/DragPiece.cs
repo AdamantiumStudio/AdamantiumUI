@@ -11,7 +11,7 @@ namespace Adamantium.UI.Sandbox.Controls;
 public class DragPiece : ContentControl
 {
     private bool _dragging;
-    private Vector2 _pressedAt;
+    private Vector2<double> _pressedAt;
     private double _startLeft, _startTop;
 
     protected override void OnContentChanged(object oldContent, object newContent)
@@ -55,7 +55,7 @@ public class DragPiece : ContentControl
         e.Handled = true;
     }
 
-    private Vector2 PointerInRoot(PointerEventArgs e)
+    private Vector2<double> PointerInRoot(PointerEventArgs e)
     {
         IUIComponent root = this;
         while (root.VisualParent is { } parent) root = parent;

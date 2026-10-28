@@ -25,4 +25,4 @@ internal readonly record struct Contact(PointerType Type, uint Id, PointerPointP
         }, PressureTo: pressureTo);
 }
 
-internal readonly record struct ContactPath(UIComponent Element, string Label, Vector2 From, Vector2? To);
+internal readonly record struct ContactPath(UIComponent Element, string Label, Vector2<double> From, Vector2<double>? To);

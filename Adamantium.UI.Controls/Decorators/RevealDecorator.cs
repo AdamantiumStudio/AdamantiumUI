@@ -41,7 +41,7 @@ public class RevealDecorator : Decorator
 
     private bool OpensVertically => Direction is ExpandDirection.Down or ExpandDirection.Up;
 
-    protected override Size MeasureOverride(Size availableSize)
+    protected override Size<double> MeasureOverride(Size<double> availableSize)
     {
         var progress = Progress;
         if (progress <= 0)
@@ -56,11 +56,11 @@ public class RevealDecorator : Decorator
         }
 
         return OpensVertically
-            ? new Size(full.Width, full.Height * progress)
-            : new Size(full.Width * progress, full.Height);
+            ? new Size<double>(full.Width, full.Height * progress)
+            : new Size<double>(full.Width * progress, full.Height);
     }
 
-    protected override Size ArrangeOverride(Size finalSize)
+    protected override Size<double> ArrangeOverride(Size<double> finalSize)
     {
         var progress = Progress;
         if (progress >= 1 || Child is not { } child)
@@ -83,6 +83,6 @@ public class RevealDecorator : Decorator
             ? new Rect(0, offset, finalSize.Width, whole)
             : new Rect(offset, 0, whole, finalSize.Height);
         child.Arrange(slot.Deflate(Padding));
-        return vertical ? new Size(finalSize.Width, shown) : new Size(shown, finalSize.Height);
+        return vertical ? new Size<double>(finalSize.Width, shown) : new Size<double>(shown, finalSize.Height);
     }
 }

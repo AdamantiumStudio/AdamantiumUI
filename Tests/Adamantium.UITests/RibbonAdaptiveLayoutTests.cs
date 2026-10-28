@@ -35,7 +35,7 @@ public class RibbonAdaptiveLayoutTests
             }
         }
 
-        protected override Size MeasureOverride(Size availableSize)
+        protected override Size<double> MeasureOverride(Size<double> availableSize)
         {
             Width = _extra + Ribbon.GetSize(this) switch
             {
@@ -158,7 +158,7 @@ public class RibbonAdaptiveLayoutTests
 
     private static void LayoutAt(RibbonGroupsPanel panel, double width)
     {
-        panel.Measure(new Size(double.PositiveInfinity, 106));
+        panel.Measure(new Size<double>(double.PositiveInfinity, 106));
         panel.Arrange(new Rect(0, 0, width, 106));
     }
 

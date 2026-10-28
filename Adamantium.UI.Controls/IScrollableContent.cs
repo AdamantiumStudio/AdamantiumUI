@@ -9,19 +9,19 @@ namespace Adamantium.UI.Controls;
 public interface IScrollableContent
 {
     /// <summary>Total size of the scrolled content.</summary>
-    Size Extent { get; }
+    Size<double> Extent { get; }
 
     /// <summary>Size of the visible window onto the content.</summary>
-    Size Viewport { get; }
+    Size<double> Viewport { get; }
 
     /// <summary>Top-left of the viewport within the extent; always within [0, Extent - Viewport].</summary>
-    Vector2 Offset { get; }
+    Vector2<double> Offset { get; }
 
     /// <summary>The offset the content's LAST layout pass actually realized/arranged its window for (a virtualizing panel
     /// snapshots this at measure). A host translating the content must use THIS - not <see cref="Offset"/>, which can be a
     /// newer value the window hasn't realized yet - so the translation and the realized window agree and the leading edge
     /// never shows a gap. For a non-virtualizing content it equals <see cref="Offset"/>.</summary>
-    Vector2 RealizedOffset { get; }
+    Vector2<double> RealizedOffset { get; }
 
     /// <summary>Whether the viewer permits scrolling on the horizontal axis (the content measures unbounded there).</summary>
     bool CanScrollHorizontally { get; set; }
@@ -31,7 +31,7 @@ public interface IScrollableContent
 
     /// <summary>The viewer requests a new scroll position; the content clamps it, applies it, and raises
     /// <see cref="ScrollMetricsChanged"/> if anything actually changed.</summary>
-    void SetOffset(Vector2 offset);
+    void SetOffset(Vector2<double> offset);
 
     /// <summary>Raised whenever <see cref="Extent"/>, <see cref="Viewport"/>, or <see cref="Offset"/> changes, so the
     /// viewer can refresh its scrollbars.</summary>

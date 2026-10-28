@@ -555,7 +555,7 @@ namespace Adamantium.UI.Universes
         {
             var mouseInput = new MouseInput();
             mouseInput.InputType = InputType.RawDelta;
-            mouseInput.Delta = e.Delta;
+            mouseInput.Delta = e.Delta.As<float>();
             OnMouseInput(mouseInput);
         }
 

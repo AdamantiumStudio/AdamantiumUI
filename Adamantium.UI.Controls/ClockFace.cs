@@ -97,7 +97,7 @@ public class ClockFace : Control
     /// <summary>How large a face given no size of its own is drawn.</summary>
     public const double NaturalSize = 160;
 
-    protected override Size MeasureOverride(Size availableSize)
+    protected override Size<double> MeasureOverride(Size<double> availableSize)
     {
         var side = Math.Min(availableSize.Width, availableSize.Height);
         side = double.IsFinite(side) ? side : NaturalSize;
@@ -107,11 +107,11 @@ public class ClockFace : Control
             Scale();
         }
 
-        base.MeasureOverride(new Size(side, side));
-        return new Size(side, side);
+        base.MeasureOverride(new Size<double>(side, side));
+        return new Size<double>(side, side);
     }
 
-    protected override Size ArrangeOverride(Size finalSize)
+    protected override Size<double> ArrangeOverride(Size<double> finalSize)
     {
         var side = Math.Min(finalSize.Width, finalSize.Height);
         var square = new Rect((finalSize.Width - side) / 2, (finalSize.Height - side) / 2, side, side);
@@ -151,7 +151,7 @@ public class ClockFace : Control
                 {
                     Classes = Classes.Parse(hour ? "ClockFaceHourTick" : "ClockFaceTick"),
                     RenderTransform = new Transform { RotationAngle = minute * 6 },
-                    RenderTransformOrigin = new Vector2(0.5, 0.5),
+                    RenderTransformOrigin = new Vector2<double>(0.5, 0.5),
                     IsHitTestVisible = false,
                     Tag = hour,
                 };

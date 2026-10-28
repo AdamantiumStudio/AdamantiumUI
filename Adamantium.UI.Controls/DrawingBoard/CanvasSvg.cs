@@ -211,8 +211,8 @@ public static class CanvasSvg
             case CanvasShape.Arrow:
             {
                 var ends = shape.Points;
-                var from = ends.Count > 0 ? ends[0] : new Vector2(box.X, box.Y);
-                var to = ends.Count > 1 ? ends[1] : new Vector2(box.X + box.Width, box.Y + box.Height);
+                var from = ends.Count > 0 ? ends[0] : new Vector2<double>(box.X, box.Y);
+                var to = ends.Count > 1 ? ends[1] : new Vector2<double>(box.X + box.Width, box.Y + box.Height);
 
                 element = new XElement(Svg + "line",
                     new XAttribute("x1", Num(from.X)), new XAttribute("y1", Num(from.Y)),
@@ -288,7 +288,7 @@ public static class CanvasSvg
         Paint(element, "stroke", shape.Stroke);
         element.Add(new XAttribute("stroke-width", Num(shape.Thickness)));
 
-        Turn(element, shape.Transform, new Vector2(box.X + box.Width / 2, box.Y + box.Height / 2));
+        Turn(element, shape.Transform, new Vector2<double>(box.X + box.Width / 2, box.Y + box.Height / 2));
 
         return element;
     }
@@ -335,7 +335,7 @@ public static class CanvasSvg
 
         if (path.Thickness > 0) element.Add(new XAttribute("stroke-width", Num(path.Thickness)));
 
-        Turn(element, path.Transform, new Vector2(path.World.X + path.World.Width / 2,
+        Turn(element, path.Transform, new Vector2<double>(path.World.X + path.World.Width / 2,
             path.World.Y + path.World.Height / 2));
 
         return element;
@@ -443,7 +443,7 @@ public static class CanvasSvg
         return null;
     }
 
-    private static void Turn(XElement element, CanvasTransform turn, Vector2 about)
+    private static void Turn(XElement element, CanvasTransform turn, Vector2<double> about)
     {
         if (turn.Angle == 0 && turn.SkewX == 0 && turn.SkewY == 0) return;
 
@@ -676,8 +676,8 @@ public static class CanvasSvg
 
     private static ICanvasItem Run(XElement element, string mine)
     {
-        var from = new Vector2(Number(element, "x1", 0), Number(element, "y1", 0));
-        var to = new Vector2(Number(element, "x2", 0), Number(element, "y2", 0));
+        var from = new Vector2<double>(Number(element, "x1", 0), Number(element, "y1", 0));
+        var to = new Vector2<double>(Number(element, "x2", 0), Number(element, "y2", 0));
         var arrow = mine == "arrow" || element.Attribute("marker-end") != null ||
                     element.Attribute("marker-start") != null;
 
@@ -728,7 +728,7 @@ public static class CanvasSvg
 
         var family = (string)element.Attribute("font-family");
 
-        return new TextItem(new Vector2(Number(element, "x", 0), Number(element, "y", 0)), words,
+        return new TextItem(new Vector2<double>(Number(element, "x", 0), Number(element, "y", 0)), words,
             Fill(element, "fill") ?? Brushes.Black, Number(element, "font-size", 16),
             String.IsNullOrWhiteSpace(family) ? null : new FontFamily(family));
     }
@@ -768,9 +768,9 @@ public static class CanvasSvg
         return path;
     }
 
-    private static List<Vector2> Points(string text)
+    private static List<Vector2<double>> Points(string text)
     {
-        var points = new List<Vector2>();
+        var points = new List<Vector2<double>>();
 
         if (String.IsNullOrWhiteSpace(text)) return points;
 
@@ -778,13 +778,13 @@ public static class CanvasSvg
 
         for (var i = 0; i + 1 < parts.Length; i += 2)
         {
-            points.Add(new Vector2(Parse(parts[i]), Parse(parts[i + 1])));
+            points.Add(new Vector2<double>(Parse(parts[i]), Parse(parts[i + 1])));
         }
 
         return points;
     }
 
-    private static Rect Bounds(IReadOnlyList<Vector2> points)
+    private static Rect Bounds(IReadOnlyList<Vector2<double>> points)
     {
         double left = Double.MaxValue, top = Double.MaxValue, right = Double.MinValue, bottom = Double.MinValue;
 
@@ -974,7 +974,7 @@ public static class CanvasSvg
         };
     }
 
-    private static Vector2 Mapped(double[] m, double x, double y) =>
+    private static Vector2<double> Mapped(double[] m, double x, double y) =>
         new(m[0] * x + m[2] * y + m[4], m[1] * x + m[3] * y + m[5]);
 
     private static Brush Fill(XElement element, string attribute)

@@ -17,7 +17,7 @@ namespace Adamantium.UITests;
 public class PolygonResizeLayoutTests
 {
     private static PointsCollection Triangle(double w, double h) =>
-        new([new Vector2(w / 2, 0), new Vector2(w, h), new Vector2(0, h)]);
+        new([new Vector2<double>(w / 2, 0), new Vector2<double>(w, h), new Vector2<double>(0, h)]);
 
     // The stand's own shape: a fixed panel, a centered box, and three figures of which one is visible.
     private static (Polygon shape, Border panel, Window window) Stand(double w, double h)

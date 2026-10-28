@@ -39,7 +39,7 @@ public class TabStripEdgeFadeTests
             return result;
         });
 
-        ((IMeasurableComponent)control).Measure(new Size(width, 40));
+        ((IMeasurableComponent)control).Measure(new Size<double>(width, 40));
         ((IMeasurableComponent)control).Arrange(new Rect(0, 0, width, 40));
         return control;
     }
@@ -64,7 +64,7 @@ public class TabStripEdgeFadeTests
         var control = Strip(6, 300);
         Assert.That(ScrollerOf(control).OpacityMask, Is.InstanceOf<LinearGradientBrush>(), "overflowing: tabs fade out");
 
-        ((IMeasurableComponent)control).Measure(new Size(1000, 40));
+        ((IMeasurableComponent)control).Measure(new Size<double>(1000, 40));
         ((IMeasurableComponent)control).Arrange(new Rect(0, 0, 1000, 40));
 
         Assert.That(ScrollerOf(control).OpacityMask, Is.Null, "fitting: no mask, so no layer of its own");
@@ -81,7 +81,7 @@ public class TabStripEdgeFadeTests
         scroller.Pan(100);
         for (var pass = 0; pass < 3; pass++)
         {
-            ((IMeasurableComponent)control).Measure(new Size(300, 40));
+            ((IMeasurableComponent)control).Measure(new Size<double>(300, 40));
             ((IMeasurableComponent)control).Arrange(new Rect(0, 0, 300, 40));
             Adamantium.UI.Extensions.WindowExtension.UpdateTree(control);
         }
@@ -100,7 +100,7 @@ public class TabStripEdgeFadeTests
         scroller.Pan(1000);
         for (var pass = 0; pass < 3; pass++)
         {
-            ((IMeasurableComponent)control).Measure(new Size(measured, 40));
+            ((IMeasurableComponent)control).Measure(new Size<double>(measured, 40));
             ((IMeasurableComponent)control).Arrange(new Rect(0, 0, 300, 40));
             Adamantium.UI.Extensions.WindowExtension.UpdateTree(control);
         }
@@ -123,7 +123,7 @@ public class TabStripEdgeFadeTests
         for (var pass = 0; pass < 3; pass++)
         {
             Adamantium.UI.Extensions.WindowExtension.UpdateTree(control);
-            ((IMeasurableComponent)control).Measure(new Size(300, 40));
+            ((IMeasurableComponent)control).Measure(new Size<double>(300, 40));
             ((IMeasurableComponent)control).Arrange(new Rect(0, 0, 300, 40));
         }
 
@@ -136,7 +136,7 @@ public class TabStripEdgeFadeTests
     {
         var control = Strip(6, 300);
         ScrollerOf(control).EdgeFadeExtent = 0;
-        ((IMeasurableComponent)control).Measure(new Size(301, 40));
+        ((IMeasurableComponent)control).Measure(new Size<double>(301, 40));
         ((IMeasurableComponent)control).Arrange(new Rect(0, 0, 301, 40));
 
         Assert.That(ScrollerOf(control).OpacityMask, Is.Null);

@@ -141,7 +141,7 @@ public class RibbonGalleryTests
             panel.Children.Add(child);
         }
 
-        panel.Measure(new Size(400, 400));
+        panel.Measure(new Size<double>(400, 400));
         panel.Arrange(new Rect(0, 0, panel.DesiredSize.Width, panel.DesiredSize.Height));
 
         Assert.Multiple(() =>
@@ -385,9 +385,9 @@ public class RibbonGalleryPanelTests
     {
         var panel = Panel(12, 4, 2);
 
-        ((IMeasurableComponent)panel).Measure(Size.Infinity);
+        ((IMeasurableComponent)panel).Measure(Size<double>.Infinity);
 
-        Assert.That(panel.DesiredSize, Is.EqualTo(new Size(80, 20)), "4 x 20 wide, 2 x 10 tall - not all three rows");
+        Assert.That(panel.DesiredSize, Is.EqualTo(new Size<double>(80, 20)), "4 x 20 wide, 2 x 10 tall - not all three rows");
     }
 
     [Test]
@@ -395,14 +395,14 @@ public class RibbonGalleryPanelTests
     {
         var panel = Panel(12, 4, 2);
 
-        ((IMeasurableComponent)panel).Measure(Size.Infinity);
+        ((IMeasurableComponent)panel).Measure(Size<double>.Infinity);
         ((IMeasurableComponent)panel).Arrange(new Rect(0, 0, 80, 20));
 
         Assert.Multiple(() =>
         {
-            Assert.That(panel.Children[0].Bounds.Location, Is.EqualTo(new Vector2(0, 0)));
-            Assert.That(panel.Children[3].Bounds.Location, Is.EqualTo(new Vector2(60, 0)));
-            Assert.That(panel.Children[4].Bounds.Location, Is.EqualTo(new Vector2(0, 10)), "row two starts a new line");
+            Assert.That(panel.Children[0].Bounds.Location, Is.EqualTo(new Vector2<double>(0, 0)));
+            Assert.That(panel.Children[3].Bounds.Location, Is.EqualTo(new Vector2<double>(60, 0)));
+            Assert.That(panel.Children[4].Bounds.Location, Is.EqualTo(new Vector2<double>(0, 10)), "row two starts a new line");
         });
     }
 
@@ -412,13 +412,13 @@ public class RibbonGalleryPanelTests
         var panel = Panel(12, 4, 2);
         panel.FirstRow = 1;
 
-        ((IMeasurableComponent)panel).Measure(Size.Infinity);
+        ((IMeasurableComponent)panel).Measure(Size<double>.Infinity);
         ((IMeasurableComponent)panel).Arrange(new Rect(0, 0, 80, 20));
 
         Assert.Multiple(() =>
         {
-            Assert.That(panel.Children[0].Bounds.Location, Is.EqualTo(new Vector2(0, -10)), "row one is clipped away");
-            Assert.That(panel.Children[4].Bounds.Location, Is.EqualTo(new Vector2(0, 0)));
+            Assert.That(panel.Children[0].Bounds.Location, Is.EqualTo(new Vector2<double>(0, -10)), "row one is clipped away");
+            Assert.That(panel.Children[4].Bounds.Location, Is.EqualTo(new Vector2<double>(0, 0)));
         });
     }
 

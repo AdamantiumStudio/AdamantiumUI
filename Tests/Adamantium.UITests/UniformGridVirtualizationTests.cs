@@ -69,7 +69,7 @@ public class UniformGridVirtualizationTests
         for (var i = 0; i < 3; i++)
         {
             Adamantium.UI.Extensions.WindowExtension.UpdateTree(ic);
-            ic.Measure(new Size(ViewWidth, ViewHeight));
+            ic.Measure(new Size<double>(ViewWidth, ViewHeight));
             ic.Arrange(new Rect(0, 0, ViewWidth, ViewHeight));
         }
     }
@@ -131,7 +131,7 @@ public class UniformGridVirtualizationTests
         var ic = GridOfRows();
         var panel = PanelOf(ic);
 
-        panel.SetOffset(new Vector2(0, 40 * RowPitch));
+        panel.SetOffset(new Vector2<double>(0, 40 * RowPitch));
         Settle(ic);
 
         var realized = ic.ItemContainerGenerator.RealizedIndices.ToList();
@@ -240,11 +240,11 @@ public class UniformGridVirtualizationTests
         var grid = new UniformGrid { MinColumnWidth = 100 };
         for (var i = 0; i < 6; i++) grid.Children.Add(new Border());
 
-        grid.Measure(new Size(300, 100));
+        grid.Measure(new Size<double>(300, 100));
         grid.Arrange(new Rect(0, 0, 300, 100));
         var wide = grid.EffectiveColumns;
 
-        grid.Measure(new Size(150, 100));
+        grid.Measure(new Size<double>(150, 100));
         grid.Arrange(new Rect(0, 0, 150, 100));
 
         Assert.Multiple(() =>
@@ -260,13 +260,13 @@ public class UniformGridVirtualizationTests
         var grid = new UniformGrid { Columns = 2 };
         for (var i = 0; i < 4; i++) grid.Children.Add(new Border());
 
-        grid.Measure(new Size(200, 100));
+        grid.Measure(new Size<double>(200, 100));
         grid.Arrange(new Rect(0, 0, 200, 100));
 
         Assert.Multiple(() =>
         {
             Assert.That(grid.Children[3].Bounds, Is.EqualTo(new Rect(100, 50, 100, 50)));
-            Assert.That(grid.CellSize, Is.EqualTo(new Size(100, 50)));
+            Assert.That(grid.CellSize, Is.EqualTo(new Size<double>(100, 50)));
         });
     }
 }

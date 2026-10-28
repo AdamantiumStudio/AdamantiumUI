@@ -38,7 +38,7 @@ public class PaneHostTests
         split.Children.Add(left);
         split.Children.Add(right);
 
-        split.Measure(new Size(404, 100));
+        split.Measure(new Size<double>(404, 100));
         split.Arrange(new Rect(0, 0, 404, 100));
 
         // 404 minus one 4px divider = 400 to share: 300 and 100.
@@ -61,7 +61,7 @@ public class PaneHostTests
         var last = Star();
         split.Children.Add(last);
 
-        split.Measure(new Size(100, 50));
+        split.Measure(new Size<double>(100, 50));
         split.Arrange(new Rect(0, 0, 100, 50));
 
         Assert.That(last.Bounds.X + last.Bounds.Width, Is.EqualTo(100).Within(1e-9), "the far edge is reached exactly");
@@ -76,7 +76,7 @@ public class PaneHostTests
         split.Children.Add(top);
         split.Children.Add(bottom);
 
-        split.Measure(new Size(200, 400));
+        split.Measure(new Size<double>(200, 400));
         split.Arrange(new Rect(0, 0, 200, 400));
 
         Assert.Multiple(() =>
@@ -99,7 +99,7 @@ public class PaneHostTests
         split.Children.Add(splitter);
         split.Children.Add(right);
 
-        split.Measure(new Size(208, 100));
+        split.Measure(new Size<double>(208, 100));
         split.Arrange(new Rect(0, 0, 208, 100));
 
         // 208 minus one 8px gap = 200 shared: 100 each, with the grip filling the gap between them.
@@ -123,7 +123,7 @@ public class PaneHostTests
         split.Children.Add(documents);
         split.Children.Add(console);
 
-        split.Measure(new Size(300, 500));
+        split.Measure(new Size<double>(300, 500));
         split.Arrange(new Rect(0, 0, 300, 500));
 
         Assert.Multiple(() =>
@@ -146,7 +146,7 @@ public class PaneHostTests
         split.Children.Add(center);
         split.Children.Add(inspector);
 
-        split.Measure(new Size(500, 100));
+        split.Measure(new Size<double>(500, 100));
         split.Arrange(new Rect(0, 0, 500, 100));
 
         Assert.Multiple(() =>
@@ -171,10 +171,10 @@ public class PaneHostTests
         split.Children.Add(documents);
         split.Children.Add(inspector);
 
-        split.Measure(new Size(1000, 100));
+        split.Measure(new Size<double>(1000, 100));
         split.Arrange(new Rect(0, 0, 1000, 100));
 
-        split.Measure(new Size(1400, 100));
+        split.Measure(new Size<double>(1400, 100));
         split.Arrange(new Rect(0, 0, 1400, 100));
 
         Assert.Multiple(() =>
@@ -199,11 +199,11 @@ public class PaneHostTests
         split.Children.Add(inspector);
         split.Children.Add(console);
 
-        split.Measure(new Size(1000, 100));
+        split.Measure(new Size<double>(1000, 100));
         split.Arrange(new Rect(0, 0, 1000, 100));
 
         split.Children.Remove(console);
-        split.Measure(new Size(1000, 100));
+        split.Measure(new Size<double>(1000, 100));
         split.Arrange(new Rect(0, 0, 1000, 100));
 
         Assert.Multiple(() =>
@@ -224,7 +224,7 @@ public class PaneHostTests
         split.Children.Add(documents);
         split.Children.Add(greedy);
 
-        split.Measure(new Size(1000, 100));
+        split.Measure(new Size<double>(1000, 100));
         split.Arrange(new Rect(0, 0, 1000, 100));
 
         Assert.That(documents.Bounds.Width, Is.EqualTo(100).Within(0.5), "a tenth of the row is left to stand in");
@@ -239,7 +239,7 @@ public class PaneHostTests
         split.Children.Add(a);
         split.Children.Add(b);
 
-        split.Measure(new Size(300, 100));
+        split.Measure(new Size<double>(300, 100));
         split.Arrange(new Rect(0, 0, 300, 100));
 
         Assert.That(a.Bounds.Width, Is.EqualTo(150).Within(0.5), "saying nothing means one share of the leftovers");
@@ -256,9 +256,9 @@ public class PaneHostTests
         split.Children.Add(top);
         split.Children.Add(Fixed(50));
 
-        split.Measure(new Size(200, double.PositiveInfinity));
+        split.Measure(new Size<double>(200, double.PositiveInfinity));
 
-        Assert.That(split.DesiredSize, Is.EqualTo(new Size(200, 84)));
+        Assert.That(split.DesiredSize, Is.EqualTo(new Size<double>(200, 84)));
     }
 
     [Test]
@@ -272,8 +272,8 @@ public class PaneHostTests
         split.Children.Add(left);
         split.Children.Add(right);
 
-        split.Measure(new Size(400, double.PositiveInfinity));
+        split.Measure(new Size<double>(400, double.PositiveInfinity));
 
-        Assert.That(split.DesiredSize, Is.EqualTo(new Size(400, 70)));
+        Assert.That(split.DesiredSize, Is.EqualTo(new Size<double>(400, 70)));
     }
 }

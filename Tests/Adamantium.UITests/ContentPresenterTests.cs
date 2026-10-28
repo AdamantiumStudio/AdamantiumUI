@@ -26,14 +26,14 @@ public class ContentPresenterRebindTests
     {
         var template = new DataTemplate(() => new TemplateResult { RootComponent = new Border { Child = new Border() } });
         var cp = new ContentPresenter { ContentTemplate = template, Content = new object() };
-        cp.Measure(new Size(24, 24));
+        cp.Measure(new Size<double>(24, 24));
         cp.Arrange(new Rect(0, 0, 24, 24));
 
         var m0 = MeasurableUIComponent.TotalMeasureCalls;
         // Exactly what ItemsControl.PrepareContainer does on a recycled rebind (same template):
         cp.DataContext = new object();
         cp.Content = new object();
-        cp.Measure(new Size(24, 24));   // the panel re-measures the container at the (unchanged) cell
+        cp.Measure(new Size<double>(24, 24));   // the panel re-measures the container at the (unchanged) cell
 
         var measures = MeasurableUIComponent.TotalMeasureCalls - m0;
         Assert.That(measures, Is.LessThanOrEqualTo(1),
@@ -46,12 +46,12 @@ public class ContentPresenterRebindTests
     public void ContentReplace_DifferentSizedElement_ResizesPresenter()
     {
         var cp = new ContentPresenter { Content = new Border { Width = 10, Height = 10 } };
-        cp.Measure(Size.Infinity);
-        Assert.That(cp.DesiredSize, Is.EqualTo(new Size(10, 10)));
+        cp.Measure(Size<double>.Infinity);
+        Assert.That(cp.DesiredSize, Is.EqualTo(new Size<double>(10, 10)));
 
         cp.Content = new Border { Width = 50, Height = 40 };
-        cp.Measure(Size.Infinity);
-        Assert.That(cp.DesiredSize, Is.EqualTo(new Size(50, 40)),
+        cp.Measure(Size<double>.Infinity);
+        Assert.That(cp.DesiredSize, Is.EqualTo(new Size<double>(50, 40)),
             "replacing content with a bigger element must re-measure and resize the presenter");
     }
 
@@ -64,15 +64,15 @@ public class ContentPresenterRebindTests
         var turned = new DataTemplate(() => new TemplateResult { RootComponent = new Border { Width = 20, Height = 60 } });
 
         var cp = new ContentPresenter { ContentTemplate = flat, Content = new object() };
-        cp.Measure(Size.Infinity);
+        cp.Measure(Size<double>.Infinity);
         cp.Arrange(new Rect(0, 0, 60, 20));
-        Assert.That(cp.DesiredSize, Is.EqualTo(new Size(60, 20)));
+        Assert.That(cp.DesiredSize, Is.EqualTo(new Size<double>(60, 20)));
 
         cp.ContentTemplate = turned;
         Assert.That(cp.IsMeasureValid, Is.False, "swapping ContentTemplate must invalidate measure");
 
-        cp.Measure(Size.Infinity);
-        Assert.That(cp.DesiredSize, Is.EqualTo(new Size(20, 60)),
+        cp.Measure(Size<double>.Infinity);
+        Assert.That(cp.DesiredSize, Is.EqualTo(new Size<double>(20, 60)),
             "the presenter must show the NEW template, not keep the visual built from the old one");
     }
 
@@ -81,15 +81,15 @@ public class ContentPresenterRebindTests
     public void ContentTemplateSelectorSwap_RebuildsTheVisual()
     {
         var cp = new ContentPresenter { Content = new object() };
-        cp.Measure(Size.Infinity);
+        cp.Measure(Size<double>.Infinity);
         cp.Arrange(new Rect(0, 0, 10, 10));
 
         cp.ContentTemplateSelector = new FixedTemplateSelector(
             new DataTemplate(() => new TemplateResult { RootComponent = new Border { Width = 20, Height = 60 } }));
         Assert.That(cp.IsMeasureValid, Is.False, "swapping ContentTemplateSelector must invalidate measure");
 
-        cp.Measure(Size.Infinity);
-        Assert.That(cp.DesiredSize, Is.EqualTo(new Size(20, 60)));
+        cp.Measure(Size<double>.Infinity);
+        Assert.That(cp.DesiredSize, Is.EqualTo(new Size<double>(20, 60)));
     }
 
     // A template root that binds its Content to its own DataContext (`Content="{Binding}"` - the item itself, no path)
@@ -126,11 +126,11 @@ public class ContentPresenterRebindTests
         });
 
         var cp = new ContentPresenter { ContentTemplate = flat, Content = new object() };
-        cp.Measure(Size.Infinity);
+        cp.Measure(Size<double>.Infinity);
         cp.Arrange(new Rect(0, 0, 80, 24));
 
         cp.ContentTemplate = turned;
-        cp.Measure(Size.Infinity);
+        cp.Measure(Size<double>.Infinity);
 
         Assert.Multiple(() =>
         {
@@ -164,12 +164,12 @@ public class ContentPresenterTests
     public void StringRebind_ReusesAutoTextBlock()
     {
         var presenter = new ContentPresenter { Content = "a" };
-        presenter.Measure(new Size(120, 30));
+        presenter.Measure(new Size<double>(120, 30));
         var first = presenter.VisualChildren.OfType<TextBlock>().FirstOrDefault();
         Assert.That(first, Is.Not.Null, "string content is hosted in an auto-generated TextBlock");
 
         presenter.Content = "b";                 // a recycled container rebinding to another string item
-        presenter.Measure(new Size(120, 30), force: true);
+        presenter.Measure(new Size<double>(120, 30), force: true);
         var second = presenter.VisualChildren.OfType<TextBlock>().FirstOrDefault();
 
         Assert.Multiple(() =>
@@ -208,7 +208,7 @@ public class ContentPresenterTests
             ContentTemplateSelector = new NameTemplateSelector(),
             Content = vm
         };
-        cp.Measure(new Size(200, 100));
+        cp.Measure(new Size<double>(200, 100));
         cp.Arrange(new Rect(0, 0, 200, 100));
 
         Assert.Multiple(() =>
@@ -233,12 +233,12 @@ public class ContentPresenterTests
         var host = new Adamantium.UI.Controls.Panels.StackPanel
             { DataContext = new ItemVm { Payload = new ItemVm { Name = "first" } } };
         host.Children.Add(row);
-        host.Measure(new Size(200, 100));
+        host.Measure(new Size<double>(200, 100));
         host.Arrange(new Rect(0, 0, 200, 100));
         var before = row.VisualChildren.OfType<TextBlock>().First().Text;
 
         host.DataContext = new ItemVm { Payload = new ItemVm { Name = "second" } };   // the container is rebound
-        host.Measure(new Size(200, 100), force: true);
+        host.Measure(new Size<double>(200, 100), force: true);
         host.Arrange(new Rect(0, 0, 200, 100));
 
         Assert.Multiple(() =>
@@ -264,7 +264,7 @@ public class ContentPresenterTests
             return r;
         });
         var cp = new ContentPresenter { DataContext = new ItemVm { Name = "Ambient" }, ContentTemplate = template, Content = vm };
-        cp.Measure(new Size(200, 100));
+        cp.Measure(new Size<double>(200, 100));
         cp.Arrange(new Rect(0, 0, 200, 100));
 
         var tb = cp.VisualChildren.OfType<TextBlock>().First();
@@ -276,7 +276,7 @@ public class ContentPresenterTests
     public void ElementContentTakenByAnotherPresenter_IsNotDetachedByTheOldOne()
     {
         var body = new TextBlock { Text = "body" };
-        var slot = new Size(100, 100);
+        var slot = new Size<double>(100, 100);
 
         var first = new ContentPresenter { Content = body };
         first.Measure(slot);
@@ -305,7 +305,7 @@ public class ContentPresenterTests
         });
 
         var vm = new ItemVm { Name = "page" };
-        var slot = new Size(100, 100);
+        var slot = new Size<double>(100, 100);
 
         var first = new ContentPresenter { ContentTemplate = template, Content = vm };
         first.Measure(slot);
@@ -332,7 +332,7 @@ public class ContentPresenterTests
     public void AnAuthoredTextContent_TakesItsColorFromWhicheverPresenterHoldsIt()
     {
         var authored = new TextBlock { Text = "body" };
-        var slot = new Size(100, 100);
+        var slot = new Size<double>(100, 100);
 
         // The presenter it starts in, holding the color a torn-down one ends up with.
         var dim = new ContentPresenter { Foreground = Brushes.Transparent, Content = authored };
@@ -361,7 +361,7 @@ public class ContentPresenterTests
     public void TrimmingSetAfterTheLabelIsBuilt_ReachesTheLabel()
     {
         var presenter = new ContentPresenter { Content = "a caption" };
-        presenter.Measure(new Size(120, 30));
+        presenter.Measure(new Size<double>(120, 30));
         var label = presenter.VisualChildren.OfType<TextBlock>().Single();
 
         presenter.TextTrimming = TextTrimming.CharEllipses;

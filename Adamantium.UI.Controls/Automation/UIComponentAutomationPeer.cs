@@ -123,10 +123,10 @@ public class UIComponentAutomationPeer : AutomationPeer
     }
 
     /// <summary>How many of the owner's own units one screen pixel is, across and down.</summary>
-    protected Vector2 UnitsPerPixel()
+    protected Vector2<double> UnitsPerPixel()
     {
         var bounds = BoundingRectangle;
-        return new Vector2(bounds.Width > 0 ? Owner.RenderSize.Width / bounds.Width : 1,
+        return new Vector2<double>(bounds.Width > 0 ? Owner.RenderSize.Width / bounds.Width : 1,
             bounds.Height > 0 ? Owner.RenderSize.Height / bounds.Height : 1);
     }
 
@@ -168,7 +168,7 @@ public class UIComponentAutomationPeer : AutomationPeer
         }
 
         var world = element.WorldTransform;
-        Vector2[] corners = [new(local.X, local.Y), new(local.Right, local.Y), new(local.X, local.Bottom), new(local.Right, local.Bottom)];
+        Vector2<double>[] corners = [new(local.X, local.Y), new(local.Right, local.Y), new(local.X, local.Bottom), new(local.Right, local.Bottom)];
         var left = double.MaxValue;
         var top = double.MaxValue;
         var right = double.MinValue;
@@ -176,7 +176,7 @@ public class UIComponentAutomationPeer : AutomationPeer
         foreach (var corner in corners)
         {
             var client = Vector3F.TransformCoordinate(new Vector3F((float)corner.X, (float)corner.Y, 0), world);
-            var screen = root.PointToScreen(new Vector2(client.X, client.Y));
+            var screen = root.PointToScreen(new Vector2<double>(client.X, client.Y));
             left = Math.Min(left, screen.X);
             top = Math.Min(top, screen.Y);
             right = Math.Max(right, screen.X);
@@ -187,12 +187,12 @@ public class UIComponentAutomationPeer : AutomationPeer
     }
 
     /// <summary>A point on screen in <paramref name="element"/>'s own units.</summary>
-    protected static Vector2 LocalPoint(UIComponent element, PixelPoint screen)
+    protected static Vector2<double> LocalPoint(UIComponent element, PixelPoint screen)
     {
-        var client = element.RootVisual?.PointToClient(screen) ?? Vector2.Zero;
+        var client = element.RootVisual?.PointToClient(screen) ?? Vector2<double>.Zero;
         var local = Vector3F.TransformCoordinate(new Vector3F((float)client.X, (float)client.Y, 0),
             Matrix4x4F.Invert(element.WorldTransform));
-        return new Vector2(local.X, local.Y);
+        return new Vector2<double>(local.X, local.Y);
     }
 
     private bool OutsideWhatShowsIt()

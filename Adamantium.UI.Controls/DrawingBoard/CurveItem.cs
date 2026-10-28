@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using Adamantium.Core;
 using Adamantium.MVVM;
 using Adamantium.Mathematics;
@@ -17,12 +18,12 @@ public class CurveItem : AdamantiumViewModel, ICanvasItem, ICanvasPoints
     private readonly InkBrush _ink = new();
     private Vector2F[] _screen;
 
-    private readonly List<Vector2> _points = new();
+    private readonly List<Vector2<double>> _points = new();
 
     private CanvasCurve _kind;
     private int _degree;
 
-    public CurveItem(CanvasCurve kind, IEnumerable<Vector2> points, Brush stroke, double thickness)
+    public CurveItem(CanvasCurve kind, IEnumerable<Vector2<double>> points, Brush stroke, double thickness)
     {
         Kind = kind;
         Stroke = stroke;
@@ -46,7 +47,7 @@ public class CurveItem : AdamantiumViewModel, ICanvasItem, ICanvasPoints
         IsUniform = IsUniform
     };
 
-    public IReadOnlyList<Vector2> Points => _points;
+    public IReadOnlyList<Vector2<double>> Points => _points;
 
     public Brush Stroke { get; set; }
 
@@ -109,7 +110,7 @@ public class CurveItem : AdamantiumViewModel, ICanvasItem, ICanvasPoints
         }
     }
 
-    public void MovePoint(int index, Vector2 world)
+    public void MovePoint(int index, Vector2<double> world)
     {
         if (index < 0 || index >= _points.Count) return;
 
@@ -127,10 +128,10 @@ public class CurveItem : AdamantiumViewModel, ICanvasItem, ICanvasPoints
     }
 
     /// <summary>Adds a point to the end - what the tool does while the curve is being drawn.</summary>
-    public void Add(Vector2 world) => _points.Add(world);
+    public void Add(Vector2<double> world) => _points.Add(world);
 
 
-    public void Move(Vector2 worldDelta)
+    public void Move(Vector2<double> worldDelta)
     {
         var was = Bounds;
         for (var i = 0; i < _points.Count; i++) _points[i] += worldDelta;
@@ -148,7 +149,7 @@ public class CurveItem : AdamantiumViewModel, ICanvasItem, ICanvasPoints
 
         for (var i = 0; i < _points.Count; i++)
         {
-            _points[i] = new Vector2(
+            _points[i] = new Vector2<double>(
                 world.X + (_points[i].X - from.X) * sx,
                 world.Y + (_points[i].Y - from.Y) * sy);
         }
@@ -158,7 +159,7 @@ public class CurveItem : AdamantiumViewModel, ICanvasItem, ICanvasPoints
 
     /// <summary>Whether a point is on the LINE - not in the box round it. The box of a curve is mostly empty, and a
     /// curve picked up by its emptiness would swallow everything under it.</summary>
-    public bool HitTest(Vector2 world, double tolerance)
+    public bool HitTest(Vector2<double> world, double tolerance)
     {
         var along = Walk();
         if (along.Count < 2) return along.Count == 1 && Distance(world, along[0], along[0]) <= tolerance;
@@ -182,7 +183,7 @@ public class CurveItem : AdamantiumViewModel, ICanvasItem, ICanvasPoints
     /// <para>Given rather than added, because drawing runs on its own thread: a tool that added a point, drew and took
     /// it off again was racing every click, and a curve placed with six clicks came out with twenty-one points.</para>
     /// </summary>
-    public void Render(IDrawingSession session, InfiniteCanvas canvas, Vector2? extra)
+    public void Render(IDrawingSession session, InfiniteCanvas canvas, Vector2<double>? extra)
     {
         if (canvas == null) return;
 
@@ -194,7 +195,7 @@ public class CurveItem : AdamantiumViewModel, ICanvasItem, ICanvasPoints
 
         // The control points in SCREEN coordinates - the curve is then walked in the same units, so how finely it is
         // sampled follows how big it actually is on screen rather than how big it is on the plane.
-        var control = new List<Vector2>(count);
+        var control = new List<Vector2<double>>(count);
         for (var i = 0; i < _points.Count; i++) control.Add(canvas.WorldToScreen(_points[i]));
         if (extra.HasValue) control.Add(canvas.WorldToScreen(extra.Value));
 
@@ -240,7 +241,7 @@ public class CurveItem : AdamantiumViewModel, ICanvasItem, ICanvasPoints
     // How finely to sample, from how long the line through the control points is ON SCREEN: about a sample every four
     // pixels, floored so a short curve is still a curve and capped so a curve dragged across a wall of monitors does
     // not hand the pass a polyline nobody can see the detail of.
-    private static int StepsFor(List<Vector2> control)
+    private static int StepsFor(List<Vector2<double>> control)
     {
         double reach = 0;
         for (var i = 1; i < control.Count; i++) reach += (control[i] - control[i - 1]).Length();
@@ -250,34 +251,41 @@ public class CurveItem : AdamantiumViewModel, ICanvasItem, ICanvasPoints
 
     // The curve as a polyline - what is DRAWN and what hit-testing measures against, in whatever units it was handed.
     // One walk for both, so what is picked is exactly what is seen.
-    private static List<Vector2> Walk(List<Vector2> points, CanvasCurve kind, int degree, bool uniform, int steps)
+    private static List<Vector2<double>> Walk(List<Vector2<double>> points, CanvasCurve kind, int degree, bool uniform, int steps)
     {
         if (points.Count < 2) return points;
 
+        var controls = CollectionsMarshal.AsSpan(points);
+        var line = new List<Vector2<double>>();
         switch (kind)
         {
             case CanvasCurve.BSpline:
-                return MathHelper.GetBSpline2(points, (uint)steps);
+                MathHelper.Curves.AppendQuadraticBSpline<double>(controls, steps, line);
+                break;
 
             case CanvasCurve.Nurbs:
-                return new List<Vector2>(MathHelper.GetNurbsCurve(points,
-                    degree > 0 ? degree : points.Count - 1, uniform, 1.0 / steps));
+                var top = points.Count - 1;
+                MathHelper.Curves.AppendNurbs<double>(controls, [], degree > 0 ? Math.Min(degree, top) : top, uniform, steps, line);
+                break;
 
             default:
                 // One Bezier over all points, of degree N for N+1 points: interior points pull the line without lying on it.
-                return MathHelper.GetBezier(points, (uint)steps);
+                MathHelper.Curves.AppendBezier<double>(controls, steps, line);
+                break;
         }
+
+        return line;
     }
 
     /// <summary>The curve AS IT IS DRAWN - the control points walked into a line, in world units. What anything that
     /// has to follow the curve rather than state it reads: picking it, and writing it out to a format that has no
     /// splines of its own.</summary>
-    public IReadOnlyList<Vector2> Sampled => Walk();
+    public IReadOnlyList<Vector2<double>> Sampled => Walk();
 
     // The curve in WORLD units, sampled finely enough that picking it agrees with seeing it at any zoom.
-    private List<Vector2> Walk() => Walk(_points, Kind, Degree, IsUniform, 128);
+    private List<Vector2<double>> Walk() => Walk(_points, Kind, Degree, IsUniform, 128);
 
-    private static double Distance(Vector2 point, Vector2 from, Vector2 to)
+    private static double Distance(Vector2<double> point, Vector2<double> from, Vector2<double> to)
     {
         var dx = to.X - from.X;
         var dy = to.Y - from.Y;

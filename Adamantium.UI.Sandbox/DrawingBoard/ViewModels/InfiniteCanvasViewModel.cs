@@ -289,11 +289,11 @@ public partial class InfiniteCanvasViewModel : TabPageViewModel
         { Name = "Button", Icon = "CanvasToolButtonIcon", Description = "drag out a button" };
 
     public ICanvasTool CheckTool { get; } =
-        new ElementTool(() => new CheckBox { Content = "Check me" }, new Size(130, 28))
+        new ElementTool(() => new CheckBox { Content = "Check me" }, new Size<double>(130, 28))
         { Name = "Check box", Icon = "CanvasToolCheckBoxIcon", Description = "drag out a checkbox" };
 
     public ICanvasTool BoxTool { get; } =
-        new ElementTool(() => new TextBox { Text = "Editable" }, new Size(160, 30))
+        new ElementTool(() => new TextBox { Text = "Editable" }, new Size<double>(160, 30))
         { Name = "Text box", Icon = "CanvasToolTextBoxIcon", Description = "drag out a text box" };
 
     /// <summary>A TEXTURE - a surface to paint a picture on. The engine's own tool, not one of this page's: what it
@@ -470,7 +470,7 @@ public partial class InfiniteCanvasViewModel : TabPageViewModel
 
     [Bindable] private double _scale = 1;
 
-    [Bindable] private Vector2 _offset;
+    [Bindable] private Vector2<double> _offset;
 
     /// <summary>The zoom for the view bar as a multiplier ("0.4x"), matching the other camera readouts.</summary>
     public string ZoomText => string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0:0.###}x", _scale);

@@ -75,7 +75,7 @@ internal sealed class CanvasGraphHost
 
     /// <summary>A node of that kind, at that place, INTO the collection - which is the only way anything joins the
     /// graph. Null when there is no collection to add to.</summary>
-    public ICanvasNode Add(string kind, Vector2 at)
+    public ICanvasNode Add(string kind, Vector2<double> at)
     {
         if (_nodes is not IList<ICanvasNode> list) return null;
 

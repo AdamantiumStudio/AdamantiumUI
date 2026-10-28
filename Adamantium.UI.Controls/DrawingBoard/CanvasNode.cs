@@ -19,7 +19,7 @@ public class CanvasNode : ContentControl
 {
     private readonly ObservableCollection<CanvasNodePin> _inputs = new();
     private readonly ObservableCollection<CanvasNodePin> _outputs = new();
-    private readonly Dictionary<CanvasNodePin, Vector2> _places = new();
+    private readonly Dictionary<CanvasNodePin, Vector2<double>> _places = new();
 
     private IUIComponent _header;
     private IUIComponent _content;
@@ -382,7 +382,7 @@ public class CanvasNode : ContentControl
         if (ui.RenderTransform is { } already) return already;
 
         var transform = new Transform();
-        ui.RenderTransformOrigin = Vector2.Zero;
+        ui.RenderTransformOrigin = Vector2<double>.Zero;
         ui.RenderTransform = transform;
 
         return transform;
@@ -536,7 +536,7 @@ public class CanvasNode : ContentControl
 
     /// <summary>Where a socket is in this node's coordinates, as the template placed it; null before layout or for a foreign
     /// pin. Recorded once per layout, since it is asked constantly.</summary>
-    public Vector2? Where(CanvasNodePin pin)
+    public Vector2<double>? Where(CanvasNodePin pin)
     {
         if (pin == null) return null;
 
@@ -548,7 +548,7 @@ public class CanvasNode : ContentControl
     /// <summary>Which socket is at a point given in this node's own coordinates, or null. What the gesture that draws
     /// connections asks: a socket is a small thing to aim at, so <paramref name="reach"/> widens it by however much the
     /// hand is allowed to miss by.</summary>
-    public CanvasNodePin PinAt(Vector2 local, Double reach = 0)
+    public CanvasNodePin PinAt(Vector2<double> local, Double reach = 0)
     {
         // Not while it is FOLDED: every socket of a side is at one point then, so any answer here would be a guess at
         // which one was meant - and a wire quietly attached to the wrong socket is worse than one that would not go on.
@@ -613,7 +613,7 @@ public class CanvasNode : ContentControl
         return true;
     }
 
-    protected override Size ArrangeOverride(Size finalSize)
+    protected override Size<double> ArrangeOverride(Size<double> finalSize)
     {
         var size = base.ArrangeOverride(finalSize);
 

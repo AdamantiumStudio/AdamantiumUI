@@ -91,7 +91,7 @@ public partial class SceneViewModel : TabPageViewModel
 
     // Where the camera stood the first time we saw it. Remembered rather than assumed: whatever the engine placed it
     // at IS home, and that is the one place a lost person can be put back.
-    private Vector3? _home;
+    private Vector3<double>? _home;
     private QuaternionF _homeRotation;
 
     private void OnPulse(object sender, EventArgs e)
@@ -260,7 +260,7 @@ public partial class SceneViewModel : TabPageViewModel
 
     private static double ConeOf(Light light)
     {
-        return MathHelper.RadiansToDegrees(light.OuterSpotAngle) * 2;
+        return float.RadiansToDegrees(light.OuterSpotAngle) * 2;
     }
 
     partial void OnLightIntensityChanged(double value)
@@ -280,7 +280,7 @@ public partial class SceneViewModel : TabPageViewModel
     {
         if (_light != null)
         {
-            _light.OuterSpotAngle = MathHelper.DegreesToRadians(Math.Clamp(value, 2, 179) / 2);
+            _light.OuterSpotAngle = (float)double.DegreesToRadians(Math.Clamp(value, 2, 179) / 2);
         }
     }
 

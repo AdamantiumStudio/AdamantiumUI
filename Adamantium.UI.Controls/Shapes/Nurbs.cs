@@ -31,9 +31,14 @@ public class Nurbs : BSpline
     protected override void OnRender(IDrawingContext context)
     {
         // Same eval as BSpline but WITH weights. Samples fully controls curvature. FRESH geometry (see CubicBezierCurve).
-        var count = (int)System.Math.Max(Samples, 2u);
-        var pts = MathHelper.ResampleByArcLength(
-            MathHelper.GetNurbsCurve(Points, Weights, ResolveDegree(), IsUniform, 1.0 / 256.0), count);
+        if (Points.Count < 2)
+        {
+            return;
+        }
+
+        var dense = new List<Vector2<double>>();
+        MathHelper.Curves.AppendNurbs<double>([.. Points], [.. Weights ?? []], ResolveDegree(), IsUniform, 256, dense);
+        var pts = ResampledEvenly(dense, Samples);
         var geometry = new StreamGeometry { IsClosed = false };
         geometry.Open().BeginFigure(pts[0], false, false).PolylineLineTo(pts.Skip(1), true);
 

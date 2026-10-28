@@ -25,7 +25,7 @@ public class LayoutDetachedNodeSettleTests
         root.Children.Add(child);
 
         var manager = LayoutManager.For(root);
-        ((IMeasurableComponent)root).Measure(new Size(200, 200));
+        ((IMeasurableComponent)root).Measure(new Size<double>(200, 200));
         ((IMeasurableComponent)root).Arrange(new Rect(0, 0, 200, 200));
         manager.ExecuteLayoutPass();
         Assert.That(manager.IsSettled, Is.True, "precondition: a quiet tree owes nothing");
@@ -53,7 +53,7 @@ public class LayoutDetachedNodeSettleTests
         root.Children.Add(hidden);
 
         var manager = LayoutManager.For(root);
-        ((IMeasurableComponent)root).Measure(new Size(200, 200));
+        ((IMeasurableComponent)root).Measure(new Size<double>(200, 200));
         ((IMeasurableComponent)root).Arrange(new Rect(0, 0, 200, 200));
         manager.ExecuteLayoutPass();
         Assert.That(((IMeasurableComponent)child).IsMeasureValid, Is.False, "precondition: a collapsed subtree is not measured");
@@ -74,7 +74,7 @@ public class LayoutDetachedNodeSettleTests
         root.Children.Add(child);
 
         var manager = LayoutManager.For(root);
-        ((IMeasurableComponent)root).Measure(new Size(200, 200));
+        ((IMeasurableComponent)root).Measure(new Size<double>(200, 200));
         ((IMeasurableComponent)root).Arrange(new Rect(0, 0, 200, 200));
         manager.ExecuteLayoutPass();
 
@@ -97,14 +97,14 @@ public class LayoutDetachedNodeSettleTests
     {
         var root = new Grid();
         var manager = LayoutManager.For(root);
-        ((IMeasurableComponent)root).Measure(new Size(200, 200));
+        ((IMeasurableComponent)root).Measure(new Size<double>(200, 200));
         ((IMeasurableComponent)root).Arrange(new Rect(0, 0, 200, 200));
         manager.ExecuteLayoutPass();
 
         var part = new Grid();
         var child = new Border();
         part.Children.Add(child);
-        ((IMeasurableComponent)part).Measure(new Size(100, 100));
+        ((IMeasurableComponent)part).Measure(new Size<double>(100, 100));
         ((IMeasurableComponent)part).Arrange(new Rect(0, 0, 100, 100));
         var partManager = LayoutManager.For(part);
         partManager.ExecuteLayoutPass();
@@ -129,7 +129,7 @@ public class LayoutDetachedNodeSettleTests
     {
         var root = new Grid();
         var manager = LayoutManager.For(root);
-        ((IMeasurableComponent)root).Measure(new Size(200, 200));
+        ((IMeasurableComponent)root).Measure(new Size<double>(200, 200));
         ((IMeasurableComponent)root).Arrange(new Rect(0, 0, 200, 200));
         manager.ExecuteLayoutPass();
 
@@ -156,7 +156,7 @@ public class LayoutDetachedNodeSettleTests
     {
         var child = new Border();
         part.Children.Add(child);
-        ((IMeasurableComponent)part).Measure(new Size(100, 100));
+        ((IMeasurableComponent)part).Measure(new Size<double>(100, 100));
         ((IMeasurableComponent)part).Arrange(new Rect(0, 0, 100, 100));
         LayoutManager.For(part).ExecuteLayoutPass();
         ((IMeasurableComponent)child).InvalidateMeasure();

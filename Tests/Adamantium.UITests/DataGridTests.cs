@@ -62,7 +62,7 @@ public class DataGridTests
         for (IUIComponent node = grid.ItemsHostPanel; node != null; node = node.VisualParent)
             (node as IMeasurableComponent)?.InvalidateMeasure();
 
-        grid.Measure(new Size(width, height));
+        grid.Measure(new Size<double>(width, height));
         grid.Arrange(new Rect(0, 0, width, height));
     }
 
@@ -203,7 +203,7 @@ public class DataGridTests
         var grid = Grid(a, b);
         grid.ItemsSource = Flat(3);
 
-        grid.Measure(new Size(400, 200));
+        grid.Measure(new Size<double>(400, 200));
         grid.Arrange(new Rect(0, 0, 400, 200));
 
         var row = grid.ItemContainerGenerator.ContainerFromIndex(0) as DataGridRow;
@@ -224,7 +224,7 @@ public class DataGridTests
         var grid = Grid(new DataGridTextColumn { Binding = new Binding("Note"), Width = new GridLength(100) });
         grid.ItemsSource = Flat(2);
 
-        grid.Measure(new Size(400, 200));
+        grid.Measure(new Size<double>(400, 200));
         grid.Arrange(new Rect(0, 0, 400, 200));
 
         var row = grid.ItemContainerGenerator.ContainerFromIndex(0) as DataGridRow;
@@ -240,7 +240,7 @@ public class DataGridTests
         grid.AlternationCount = 2;
         grid.ItemsSource = Flat(4);
 
-        grid.Measure(new Size(400, 200));
+        grid.Measure(new Size<double>(400, 200));
         grid.Arrange(new Rect(0, 0, 400, 200));
 
         var bands = Enumerable.Range(0, 4)
@@ -326,7 +326,7 @@ public class DataGridTests
         var (grid, root) = Tree(first, second, third);
         grid.ExpanderColumnIndex = 2;
         grid.Expand(root);
-        grid.Measure(new Size(400, 200));
+        grid.Measure(new Size<double>(400, 200));
         grid.Arrange(new Rect(0, 0, 400, 200));
 
         var child = grid.ItemContainerGenerator.ContainerFromIndex(1) as DataGridRow;
@@ -368,7 +368,7 @@ public class DataGridTests
         grid.Indent = 20;
         grid.ExpanderSize = 16;
         grid.Expand(root);
-        grid.Measure(new Size(400, 200));
+        grid.Measure(new Size<double>(400, 200));
         grid.Arrange(new Rect(0, 0, 400, 200));
 
         var rootRow = grid.ItemContainerGenerator.ContainerFromIndex(0) as DataGridRow;
@@ -769,7 +769,7 @@ public class DataGridTests
         Assert.That(row.CellAt(2), Is.Null, "outside the window to begin with, so no cell on this row");
 
         pinned.FrozenSide = DataGridFrozenSide.Right;
-        grid.Measure(new Size(400, 200));
+        grid.Measure(new Size<double>(400, 200));
         grid.Arrange(new Rect(0, 0, 400, 200));
 
         Assert.That(row.CellAt(2), Is.Not.Null, "pinned means realized on every row, and at once - not after a scroll");
@@ -786,7 +786,7 @@ public class DataGridTests
         Assert.That(grid.Columns[1].Offset, Is.EqualTo(100), "second in line to begin with");
 
         grid.Columns[1].FrozenSide = DataGridFrozenSide.Left;
-        grid.Measure(new Size(400, 200));
+        grid.Measure(new Size<double>(400, 200));
         grid.Arrange(new Rect(0, 0, 400, 200));
 
         Assert.Multiple(() =>
@@ -980,7 +980,7 @@ public class DataGridTests
 
         // The first pass applies the template, and only then is there a panel to build the switches into.
         ((IMeasurableComponent)chooser).InvalidateMeasure();
-        chooser.Measure(new Size(200, 400));
+        chooser.Measure(new Size<double>(200, 400));
         chooser.Arrange(new Rect(0, 0, 200, 400));
         return chooser;
     }
@@ -2364,7 +2364,7 @@ public class DataGridTests
     private static DataGridHeadersPresenter Headers(TreeDataGrid grid)
     {
         var headers = new DataGridHeadersPresenter { Owner = grid };
-        headers.Measure(new Size(400, 26));
+        headers.Measure(new Size<double>(400, 26));
         headers.Arrange(new Rect(0, 0, 400, 26));
         return headers;
     }
@@ -2436,7 +2436,7 @@ public class DataGridTests
 
         var headers = Headers(grid);
         grid.SortBy(grid.Columns[0]);
-        headers.Measure(new Size(400, 26));
+        headers.Measure(new Size<double>(400, 26));
 
         Assert.Multiple(() =>
         {
@@ -2445,7 +2445,7 @@ public class DataGridTests
         });
 
         grid.SortBy(grid.Columns[0], descending: true);
-        headers.Measure(new Size(400, 26));
+        headers.Measure(new Size<double>(400, 26));
         Assert.That(HeaderOf(headers, 0).SortDirection, Is.EqualTo(DataGridSortDirection.Descending));
     }
 
@@ -2745,7 +2745,7 @@ public class DataGridTests
 
         grid.FilterFor(grid.Columns[0]).First.Value = "Item 1";
         grid.ApplyFilters();
-        headers.Measure(new Size(400, 26));
+        headers.Measure(new Size<double>(400, 26));
 
         Assert.That(HeaderOf(headers, 0).IsFiltered, Is.True);
     }
@@ -2755,7 +2755,7 @@ public class DataGridTests
     {
         var grid = Grid(new DataGridTextColumn { Binding = new Binding("Name"), Width = new GridLength(80) });
         grid.ItemsSource = Flat(2);
-        grid.Measure(new Size(400, 200));
+        grid.Measure(new Size<double>(400, 200));
         grid.Arrange(new Rect(0, 0, 400, 200));
 
         grid.Columns.Add(new DataGridTextColumn { Binding = new Binding("Note"), Width = new GridLength(120) });
@@ -3067,7 +3067,7 @@ public class DataGridTests
         Assert.That(headers.SeparatorAt(100), Is.EqualTo(0), "unscrolled, the pinned edge is where it is drawn");
 
         grid.HorizontalOffset = 40;
-        headers.Measure(new Size(200, 26));
+        headers.Measure(new Size<double>(200, 26));
         headers.Arrange(new Rect(0, 0, 200, 26));
 
         Assert.Multiple(() =>
@@ -3099,10 +3099,10 @@ public class DataGridTests
 
         // Measured CLEAN against the window as it stands, and only then does the scroll happen.
         grid.HorizontalOffset = 300;
-        row.Measure(new Size(220, 28));
+        row.Measure(new Size<double>(220, 28));
         Assert.That(((IMeasurableComponent)row).IsMeasureValid, Is.True);
 
-        grid.Measure(new Size(220, 200));
+        grid.Measure(new Size<double>(220, 200));
 
         Assert.That(((IMeasurableComponent)row).IsMeasureValid, Is.False,
             "the grid's measure moved the window, so the rows that build from it are stale");
@@ -4335,7 +4335,7 @@ public class DataGridTests
         // has no size of its own without a theme, so it is given one and laid out again: the gesture is answered
         // against WHERE the chips are.
         ((IMeasurableComponent)panel).InvalidateMeasure();
-        panel.Measure(new Size(400, 30));
+        panel.Measure(new Size<double>(400, 30));
         panel.Arrange(new Rect(0, 0, 400, 30));
 
         foreach (var chip in ChipsOf(panel))
@@ -4347,7 +4347,7 @@ public class DataGridTests
                 (node as IMeasurableComponent)?.InvalidateMeasure();
         }
 
-        panel.Measure(new Size(400, 30));
+        panel.Measure(new Size<double>(400, 30));
         panel.Arrange(new Rect(0, 0, 400, 30));
         return panel;
     }
@@ -4408,7 +4408,7 @@ public class DataGridTests
             return result;
         });
         ((IMeasurableComponent)panel).InvalidateMeasure();
-        panel.Measure(new Size(400, 30));
+        panel.Measure(new Size<double>(400, 30));
         var chip = panel.Chips.Single();
 
         grid.RemoveSort(grid.Columns[0]);
@@ -4585,7 +4585,7 @@ public class DataGridTests
         Relayout(grid);
 
         var footer = new DataGridFooterPresenter { Owner = grid };
-        footer.Measure(new Size(400, 24));
+        footer.Measure(new Size<double>(400, 24));
         footer.Arrange(new Rect(0, 0, 400, 24));
 
         var cells = footer.VisualChildren.OfType<DataGridFooterCell>().ToList();
@@ -4607,11 +4607,11 @@ public class DataGridTests
         var grid = GroupableGrid(4);
         Relayout(grid);
         var footer = new DataGridFooterPresenter { Owner = grid };
-        footer.Measure(new Size(400, 24));
+        footer.Measure(new Size<double>(400, 24));
         var leaving = footer.VisualChildren.OfType<DataGridFooterCell>().Last();
 
         grid.Columns.RemoveAt(grid.Columns.Count - 1);
-        footer.Measure(new Size(400, 24));
+        footer.Measure(new Size<double>(400, 24));
         while (DiscardedVisuals.Drain(64) > 0) { }
 
         Assert.That(leaving.IsDiscarded, Is.True);
@@ -4628,7 +4628,7 @@ public class DataGridTests
         Relayout(grid);
 
         var footer = new DataGridFooterPresenter { Owner = grid };
-        footer.Measure(new Size(400, 24));
+        footer.Measure(new Size<double>(400, 24));
         footer.Arrange(new Rect(0, 0, 400, 24));
 
         var cell = footer.VisualChildren.OfType<DataGridFooterCell>().ElementAt(1);
@@ -4638,7 +4638,7 @@ public class DataGridTests
         grid.InvalidateColumns();
         Relayout(grid);
 
-        footer.Measure(new Size(400, 24));
+        footer.Measure(new Size<double>(400, 24));
         footer.Arrange(new Rect(0, 0, 400, 24));
 
         Assert.That(cell.Bounds.Width, Is.EqualTo(180), "and follows the column that was widened");
@@ -4655,7 +4655,7 @@ public class DataGridTests
         Relayout(grid, width: 200);
 
         var footer = new DataGridFooterPresenter { Owner = grid };
-        footer.Measure(new Size(200, 24));
+        footer.Measure(new Size<double>(200, 24));
         footer.Arrange(new Rect(0, 0, 200, 24));
 
         var cell = footer.VisualChildren.OfType<DataGridFooterCell>().ElementAt(1);
@@ -4667,7 +4667,7 @@ public class DataGridTests
         // is never invalidated is never re-placed - that is the whole defect, not the arithmetic below.
         Assert.That(((IMeasurableComponent)footer).IsMeasureValid, Is.False, "the strip was told the columns moved");
 
-        footer.Measure(new Size(200, 24));
+        footer.Measure(new Size<double>(200, 24));
         footer.Arrange(new Rect(0, 0, 200, 24));
 
         Assert.That(cell.Bounds.X, Is.EqualTo(40), "and it moves with them");
@@ -4683,7 +4683,7 @@ public class DataGridTests
         column.AggregateFormat = "Σ {0:N0}";
 
         var footer = new DataGridFooterPresenter { Owner = grid };
-        footer.Measure(new Size(400, 24));
+        footer.Measure(new Size<double>(400, 24));
 
         var cell = footer.VisualChildren.OfType<DataGridFooterCell>().ElementAt(1);
         Assert.That(cell.Content, Is.EqualTo("Σ 10"));
@@ -5453,7 +5453,7 @@ public class DataGridTests
         Assert.That(HeaderOf(headers, 0).CanFilter, Is.True, "on by default - a table you cannot narrow is a report");
 
         grid.CanUserFilterColumns = false;
-        headers.Measure(new Size(400, 26));
+        headers.Measure(new Size<double>(400, 26));
         headers.Arrange(new Rect(0, 0, 400, 26));
 
         Assert.That(HeaderOf(headers, 0).CanFilter, Is.False);
@@ -5605,7 +5605,7 @@ public class DataGridTests
     private static DataGridNewRowPresenter NewRow(TreeDataGrid grid)
     {
         var strip = new DataGridNewRowPresenter { Owner = grid };
-        strip.Measure(new Size(400, 26));
+        strip.Measure(new Size<double>(400, 26));
         strip.Arrange(new Rect(0, 0, 400, 26));
         return strip;
     }
@@ -5666,7 +5666,7 @@ public class DataGridTests
 
         grid.Columns.Insert(0, new DataGridTextColumn { Binding = new Binding("Name"), Width = new GridLength(100) });
         Relayout(grid);
-        strip.Measure(new Size(400, 26));
+        strip.Measure(new Size<double>(400, 26));
 
         Assert.Multiple(() =>
         {
@@ -5689,7 +5689,7 @@ public class DataGridTests
         var name = grid.Columns[0];
 
         grid.Columns.RemoveAt(0);
-        strip.Measure(new Size(400, 26));
+        strip.Measure(new Size<double>(400, 26));
 
         Assert.Multiple(() =>
         {
@@ -5698,7 +5698,7 @@ public class DataGridTests
         });
 
         grid.Columns.Insert(0, name);
-        strip.Measure(new Size(400, 26));
+        strip.Measure(new Size<double>(400, 26));
 
         Assert.Multiple(() =>
         {
@@ -5718,7 +5718,7 @@ public class DataGridTests
         strip.CellAt(0).EditedValue = "typing";
 
         grid.MoveColumn(0, 1);
-        strip.Measure(new Size(400, 26));
+        strip.Measure(new Size<double>(400, 26));
 
         Assert.Multiple(() =>
         {
@@ -5778,7 +5778,7 @@ public class DataGridTests
             Assert.That(strip.IsFilling, Is.True, "what was typed is still there");
         });
 
-        strip.Measure(new Size(400, 26));
+        strip.Measure(new Size<double>(400, 26));
         Assert.Multiple(() =>
         {
             Assert.That(grid.CommitEdit(), Is.True);

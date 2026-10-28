@@ -26,7 +26,7 @@ public class DrawingImageOwnerTests
     {
         var first = Icon();
         var image = new Image { Source = first };
-        image.Measure(new Size(16, 16));
+        image.Measure(new Size<double>(16, 16));
         Assume.That(first.InheritanceParent, Is.SameAs(image), "showing the icon makes the image its owner");
 
         image.Source = Icon();
@@ -43,7 +43,7 @@ public class DrawingImageOwnerTests
         var group = new DrawingGroup { Transform = transform, Children = { shape } };
         var icon = new DrawingImage { Drawing = group };
         var image = new Image { Source = icon };
-        image.Measure(new Size(16, 16));
+        image.Measure(new Size<double>(16, 16));
         Assume.That(transform.InheritanceParent, Is.SameAs(group));
         Assume.That(brush.InheritanceParent, Is.SameAs(shape));
 

@@ -24,7 +24,7 @@ public class DepartureFromTheRecordTests
     private const int Dim = 96;
 
     private static TestControl Placed(Rect bounds) =>
-        new() { Bounds = bounds, RenderSize = new Size(bounds.Width, bounds.Height) };
+        new() { Bounds = bounds, RenderSize = new Size<double>(bounds.Width, bounds.Height) };
 
     private static (byte R, byte G, byte B) Pixel(OffscreenTestRenderer renderer, int x, int y)
     {

@@ -10,15 +10,15 @@ public sealed class CanvasPointerEventArgs
 {
     /// <summary>Where the pointer is, in the world - already pulled to the grid when the canvas pulled it, so a tool
     /// never has to know that snapping exists. This is what a tool PLACES things at.</summary>
-    public Vector2 World { get; init; }
+    public Vector2<double> World { get; init; }
 
     /// <summary>Where the pointer actually is, with no snap applied. This is what a tool PICKS with: a snap says where a
     /// new thing goes, not where an existing one is, and hit-testing the pulled point means aiming at a line and
     /// selecting whatever happens to be at the nearest grid crossing instead.</summary>
-    public Vector2 Pointer { get; init; }
+    public Vector2<double> Pointer { get; init; }
 
     /// <summary>Where it is on screen, in pixels.</summary>
-    public Vector2 Screen { get; init; }
+    public Vector2<double> Screen { get; init; }
 
     /// <summary>Whether <see cref="World"/> was pulled to a grid mark rather than being where the pointer actually is.
     /// </summary>

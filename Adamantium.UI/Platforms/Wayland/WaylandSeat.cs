@@ -33,14 +33,14 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
     private WlKeyboard keyboard;
     private volatile WaylandTouch touch;
     private volatile bool touchSuppressed;
-    private WaylandPointerSnapshot pointerSnapshot = new(null, Vector2.Zero, 0);
+    private WaylandPointerSnapshot pointerSnapshot = new(null, Vector2<double>.Zero, 0);
     private uint lastPointerId = PointerDevice.MouseId;
     private WpCursorShapeDeviceV1 cursorShape;
 
     private WaylandWindowWorker pointerWindow;
     private WaylandWindowWorker keyboardWindow;
     private uint pointerEnterSerial;
-    private Vector2 pointerPosition;
+    private Vector2<double> pointerPosition;
     private InputModifiers buttons;
     private WpCursorShapeDeviceV1.Shape appliedShape;
     private string appliedImage;
@@ -175,11 +175,11 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
 
     public uint DoubleClickTime => 400;
 
-    public Size DoubleClickSize => new(4, 4);
+    public Size<double> DoubleClickSize => new(4, 4);
 
     public uint HoverTime => 500;
 
-    public Size DragThreshold => new(8, 8);
+    public Size<double> DragThreshold => new(8, 8);
 
     #endregion
 
@@ -296,7 +296,7 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
     }
 
     /// <summary>Lets the pointer go, showing it at <paramref name="at"/>, a logical point of the window it was held in.</summary>
-    internal void UnlockPointer(Vector2 at)
+    internal void UnlockPointer(Vector2<double> at)
     {
         if (lockedPointer == null)
         {
@@ -339,7 +339,7 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
         }
 
         var time = (uint)((((ulong)utimeHi << 32) | utimeLo) / 1000);
-        var args = new RawMouseDeltaEventArgs(new Vector2(dx, dy) * worker.Scale, window, InputModifiers(), time);
+        var args = new RawMouseDeltaEventArgs(new Vector2<double>(dx, dy) * worker.Scale, window, InputModifiers(), time);
         WaylandPlatform.DispatchInput(() => PointerDevice.Current.ProcessDelta(args));
     }
 
@@ -453,7 +453,7 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
     {
         pointerWindow = platform.Find(surface);
         pointerEnterSerial = serial;
-        pointerPosition = new Vector2(x, y);
+        pointerPosition = new Vector2<double>(x, y);
 
         appliedShape = 0;
         appliedImage = null;
@@ -472,7 +472,7 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
             return;
         }
 
-        var args = new RawPointerEventArgs(RawPointerEventType.LeaveWindow, window, Vector2.Zero, InputModifiers(), 0);
+        var args = new RawPointerEventArgs(RawPointerEventType.LeaveWindow, window, Vector2<double>.Zero, InputModifiers(), 0);
         WaylandPlatform.DispatchInput(() => PointerDevice.Current.ProcessEvent(args));
     }
 
@@ -485,7 +485,7 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
 
     private void OnPointerMotion(uint time, double x, double y)
     {
-        pointerPosition = new Vector2(x, y);
+        pointerPosition = new Vector2<double>(x, y);
         PointerMoved(time);
     }
 

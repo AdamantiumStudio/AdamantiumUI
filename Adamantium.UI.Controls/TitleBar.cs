@@ -269,7 +269,7 @@ public class TitleBar : Control
     // After arrange, publish the drag-area element's bounds (in window-client coords) as the window's ONE draggable
     // caption region. The worker's WM_NCHITTEST checks a point against this rect only - a plain Rect, safe to read from
     // the OS message thread. Everything outside it (commands, buttons) stays HTCLIENT and clickable.
-    protected override Size ArrangeOverride(Size finalSize)
+    protected override Size<double> ArrangeOverride(Size<double> finalSize)
     {
         var size = base.ArrangeOverride(finalSize);
         var window = OwnerWindow;
@@ -279,7 +279,7 @@ public class TitleBar : Control
         return size;
     }
 
-    private Thickness CenteringFor(Size size)
+    private Thickness CenteringFor(Size<double> size)
     {
         if (TitleAlignment != HorizontalAlignment.Center || _dragArea == null)
         {

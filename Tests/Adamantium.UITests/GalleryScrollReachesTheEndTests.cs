@@ -21,7 +21,7 @@ public class GalleryScrollReachesTheEndTests
         var panel = new RibbonGalleryPanel { Columns = 2, Rows = 2 };
         for (var i = 0; i < 6; i++) panel.Children.Add(new ContentPresenter { Width = 20, Height = 30 });
 
-        panel.Measure(new Size(200, viewportHeight));
+        panel.Measure(new Size<double>(200, viewportHeight));
         panel.Arrange(new Rect(0, 0, 200, viewportHeight));
 
         return (panel, 30);

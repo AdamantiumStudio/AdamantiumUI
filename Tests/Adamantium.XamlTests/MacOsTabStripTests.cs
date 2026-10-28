@@ -51,7 +51,7 @@ public class MacOsTabStripTests
         control.ApplyCurrentTheme();
         Adamantium.UI.Extensions.WindowExtension.UpdateTree(control);
         Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
-        control.Measure(new Size(600, 400));
+        control.Measure(new Size<double>(600, 400));
         control.Arrange(new Rect(0, 0, 600, 400));
         return control;
     }
@@ -115,7 +115,7 @@ public class MacOsTabStripTests
         group.ApplyCurrentTheme();
         Adamantium.UI.Extensions.WindowExtension.UpdateTree(group);
         Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
-        group.Measure(new Size(300, 400));
+        group.Measure(new Size<double>(300, 400));
         group.Arrange(new Rect(0, 0, 300, 400));
 
         Assert.Multiple(() =>
@@ -140,7 +140,7 @@ public class MacOsTabStripTests
         picker.ApplyCurrentTheme();
         Adamantium.UI.Extensions.WindowExtension.UpdateTree(picker);
         Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
-        picker.Measure(new Size(700, 400));
+        picker.Measure(new Size<double>(700, 400));
         picker.Arrange(new Rect(0, 0, 700, 400));
 
         Assert.Multiple(() =>
@@ -165,7 +165,7 @@ public class MacOsTabStripTests
         picker.ApplyCurrentTheme();
         Adamantium.UI.Extensions.WindowExtension.UpdateTree(picker);
         Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
-        picker.Measure(new Size(700, 400));
+        picker.Measure(new Size<double>(700, 400));
         picker.Arrange(new Rect(0, 0, 700, 400));
 
         var hue = picker.GetTemplateChild("PART_HueThumb") as Adamantium.UI.Controls.Decorators.Border;

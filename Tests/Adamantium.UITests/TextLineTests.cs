@@ -18,7 +18,7 @@ public class TextLineTests
     private static TextBlock Line(string words, double size = 14)
     {
         var block = new TextBlock { Text = words, FontSize = size };
-        block.Measure(new Size(400, 400), force: true);
+        block.Measure(new Size<double>(400, 400), force: true);
 
         return block;
     }
@@ -52,10 +52,10 @@ public class TextLineTests
             TextTrimming = Adamantium.Graphics.Fonts.TextTrimming.CharEllipses
         };
 
-        block.Measure(new Size(60, double.PositiveInfinity), force: true);
+        block.Measure(new Size<double>(60, double.PositiveInfinity), force: true);
         var fitted = block.DesiredSize.Height;
 
-        block.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity), force: true);
+        block.Measure(new Size<double>(double.PositiveInfinity, double.PositiveInfinity), force: true);
         var free = block.DesiredSize.Height;
 
         Assert.That(fitted, Is.EqualTo(free), $"fitted into a slot it is {fitted} tall, with room it is {free}");
@@ -97,9 +97,9 @@ public class TextLineTests
         grid.Children.Add(rule);
         Adamantium.UI.Controls.Panels.Grid.SetRow(rule, 1);
 
-        grid.Measure(new Size(200, 24), force: true);
+        grid.Measure(new Size<double>(200, 24), force: true);
         var free = new TextBlock { Text = "Dots", FontSize = 14 };
-        free.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity), force: true);
+        free.Measure(new Size<double>(double.PositiveInfinity, double.PositiveInfinity), force: true);
         Assume.That(free.DesiredSize.Height, Is.LessThan(23), "a line of this font fits the row");
 
         Assert.That(block.DesiredSize.Height, Is.EqualTo(free.DesiredSize.Height).Within(1),

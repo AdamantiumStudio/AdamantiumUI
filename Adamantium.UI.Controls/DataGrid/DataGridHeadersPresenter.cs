@@ -50,7 +50,7 @@ public class DataGridHeadersPresenter : Panel
     private int _pressed = -1;
     private int _dragging = -1;
     private int _dropTarget = -1;
-    private Vector2 _pressAt;
+    private Vector2<double> _pressAt;
     private DataGridRowHeader _corner;
 
     /// <summary>The corner above the number strip, or null while the table shows no numbers.</summary>
@@ -134,25 +134,25 @@ public class DataGridHeadersPresenter : Panel
         }
     }
 
-    protected override Size MeasureOverride(Size availableSize)
+    protected override Size<double> MeasureOverride(Size<double> availableSize)
     {
         Sync();
 
         var columns = Owner?.Columns;
-        if (columns == null || columns.Count == 0) return new Size();
+        if (columns == null || columns.Count == 0) return new Size<double>();
 
         double height = 0;
         foreach (var pair in _headers)
         {
             if (pair.Key >= columns.Count) continue;
-            pair.Value.Measure(new Size(columns[pair.Key].ActualWidth, availableSize.Height));
+            pair.Value.Measure(new Size<double>(columns[pair.Key].ActualWidth, availableSize.Height));
             height = Math.Max(height, pair.Value.DesiredSize.Height);
         }
 
-        return new Size(Owner.ColumnsWidth, height);
+        return new Size<double>(Owner.ColumnsWidth, height);
     }
 
-    protected override Size ArrangeOverride(Size finalSize)
+    protected override Size<double> ArrangeOverride(Size<double> finalSize)
     {
         var columns = Owner?.Columns;
         if (columns == null) return finalSize;
@@ -171,7 +171,7 @@ public class DataGridHeadersPresenter : Panel
         // ...and the corner stands over the whole left zone - the toggles AND the numbers - from the very edge.
         if (_corner is { Visibility: Visibility.Visible })
         {
-            var head = new Size(Owner.LeftStripsLeading, finalSize.Height);
+            var head = new Size<double>(Owner.LeftStripsLeading, finalSize.Height);
             _corner.Measure(head);
             _corner.Arrange(new Rect(0, 0, head.Width, head.Height));
         }

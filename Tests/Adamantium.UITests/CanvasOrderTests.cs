@@ -36,7 +36,7 @@ public class CanvasOrderTests
         // half its assertions without ever having drawn.
         var canvas = new InfiniteCanvas { Scene = new CanvasScene(), Ink = Brushes.Black, Template = Template() };
 
-        canvas.Measure(new Size(800, 600));
+        canvas.Measure(new Size<double>(800, 600));
         canvas.Arrange(new Rect(0, 0, 800, 600));
 
         return canvas;
@@ -44,10 +44,10 @@ public class CanvasOrderTests
 
     private static StrokeItem Ink()
     {
-        var ink = new StrokeItem(new Vector2(0, 0), Brushes.Black, 2);
+        var ink = new StrokeItem(new Vector2<double>(0, 0), Brushes.Black, 2);
 
-        ink.Add(new Vector2(0, 0));
-        ink.Add(new Vector2(50, 50));
+        ink.Add(new Vector2<double>(0, 0));
+        ink.Add(new Vector2<double>(50, 50));
 
         return ink;
     }
@@ -122,7 +122,7 @@ public class CanvasOrderTests
         canvas.Place(Ink());
         canvas.Scene.Add(Picture());
 
-        canvas.Measure(new Size(800, 600));
+        canvas.Measure(new Size<double>(800, 600));
         canvas.Arrange(new Rect(0, 0, 800, 600));
 
         var stack = canvas.GetTemplateChild("PART_Layers") as Adamantium.UI.Controls.Panels.Panel;
@@ -154,7 +154,7 @@ public class CanvasOrderTests
 
         for (var i = 0; i < 10; i++) canvas.Scene.Add(Picture());
 
-        canvas.Measure(new Size(800, 600));
+        canvas.Measure(new Size<double>(800, 600));
         canvas.Arrange(new Rect(0, 0, 800, 600));
 
         var stack = canvas.GetTemplateChild("PART_Layers") as Adamantium.UI.Controls.Panels.Panel;
@@ -174,7 +174,7 @@ public class CanvasOrderTests
         canvas.Place(first);
         canvas.Place(second);
 
-        canvas.Measure(new Size(800, 600));
+        canvas.Measure(new Size<double>(800, 600));
         canvas.Arrange(new Rect(0, 0, 800, 600));
 
         var drawn = Layer(canvas);
@@ -183,7 +183,7 @@ public class CanvasOrderTests
         Assert.That(Painted(drawn), Is.EqualTo(new ICanvasItem[] { first, second }), "they start as they were added");
 
         canvas.Scene.BringToFront(first);
-        canvas.Measure(new Size(800, 600));
+        canvas.Measure(new Size<double>(800, 600));
         canvas.Arrange(new Rect(0, 0, 800, 600));
 
         Assert.That(Painted(Layer(canvas)), Is.EqualTo(new ICanvasItem[] { second, first }),
@@ -200,7 +200,7 @@ public class CanvasOrderTests
         canvas.Scene.Add(first);
         canvas.Scene.Add(second);
 
-        canvas.Measure(new Size(800, 600));
+        canvas.Measure(new Size<double>(800, 600));
         canvas.Arrange(new Rect(0, 0, 800, 600));
 
         var host = Hosting(canvas);
@@ -209,7 +209,7 @@ public class CanvasOrderTests
         Assert.That(At(host, first), Is.LessThan(At(host, second)), "they start as they were added");
 
         canvas.Scene.BringToFront(first);
-        canvas.Measure(new Size(800, 600));
+        canvas.Measure(new Size<double>(800, 600));
         canvas.Arrange(new Rect(0, 0, 800, 600));
 
         host = Hosting(canvas);
@@ -411,8 +411,8 @@ public class CanvasOrderTests
         canvas.Tool = tool;
         canvas.Scene.Add(Picture());
 
-        tool.OnPressed(canvas, Pointer(new Vector2(10, 10)));
-        tool.OnMoved(canvas, Pointer(new Vector2(60, 40)));
+        tool.OnPressed(canvas, Pointer(new Vector2<double>(10, 10)));
+        tool.OnMoved(canvas, Pointer(new Vector2<double>(60, 40)));
 
         var glass = new Rendering.RecordingDrawingSession();
 
@@ -436,7 +436,7 @@ public class CanvasOrderTests
 
         var group = canvas.GroupSelection();
 
-        canvas.Measure(new Size(800, 600));
+        canvas.Measure(new Size<double>(800, 600));
         canvas.Arrange(new Rect(0, 0, 800, 600));
 
         Assert.That(group, Is.Not.Null, "nothing was gathered at all");
@@ -455,20 +455,20 @@ public class CanvasOrderTests
         var pen = new PenTool();
 
         canvas.Tool = texture;
-        texture.OnPressed(canvas, Pointer(new Vector2(0, 0)));
-        texture.OnMoved(canvas, Pointer(new Vector2(120, 90)));
-        texture.OnReleased(canvas, Pointer(new Vector2(120, 90)));
+        texture.OnPressed(canvas, Pointer(new Vector2<double>(0, 0)));
+        texture.OnMoved(canvas, Pointer(new Vector2<double>(120, 90)));
+        texture.OnReleased(canvas, Pointer(new Vector2<double>(120, 90)));
 
         canvas.Tool = pen;
 
         for (var stroke = 0; stroke < 2; stroke++)
         {
-            pen.OnPressed(canvas, Pointer(new Vector2(10, 10 + stroke * 20)));
-            pen.OnMoved(canvas, Pointer(new Vector2(90, 40 + stroke * 20)));
-            pen.OnReleased(canvas, Pointer(new Vector2(90, 40 + stroke * 20)));
+            pen.OnPressed(canvas, Pointer(new Vector2<double>(10, 10 + stroke * 20)));
+            pen.OnMoved(canvas, Pointer(new Vector2<double>(90, 40 + stroke * 20)));
+            pen.OnReleased(canvas, Pointer(new Vector2<double>(90, 40 + stroke * 20)));
         }
 
-        canvas.Measure(new Size(800, 600));
+        canvas.Measure(new Size<double>(800, 600));
         canvas.Arrange(new Rect(0, 0, 800, 600));
 
         var placed = new List<ICanvasItem>(canvas.ItemsHere());
@@ -486,7 +486,7 @@ public class CanvasOrderTests
         canvas.SelectMany(placed, false);
         canvas.GroupSelection();
 
-        canvas.Measure(new Size(800, 600));
+        canvas.Measure(new Size<double>(800, 600));
         canvas.Arrange(new Rect(0, 0, 800, 600));
 
         Assert.That(Hosted(canvas), Does.Contain(picture.Element), "the picture went off the plane when it was gathered");
@@ -507,7 +507,7 @@ public class CanvasOrderTests
         canvas.Scene.Add(picture);
         canvas.Select(picture, false);
 
-        var over = canvas.WorldToScreen(new Vector2(50, 40));
+        var over = canvas.WorldToScreen(new Vector2<double>(50, 40));
 
         canvas.Tool = new SelectTool();
         canvas.ShowPointerAt(over);
@@ -573,7 +573,7 @@ public class CanvasOrderTests
         canvas.Scene.Add(over);
         canvas.SelectMany(new List<ICanvasItem> { under, over }, false);
 
-        canvas.Measure(new Size(800, 600));
+        canvas.Measure(new Size<double>(800, 600));
         canvas.Arrange(new Rect(0, 0, 800, 600));
 
         var somewhere = canvas.ChromeGoesAfter(over) || canvas.ChromeGoesBefore(over) || canvas.ChromeGoesOnGlass;
@@ -603,7 +603,7 @@ public class CanvasOrderTests
         canvas.Scene.Add(Ink());
         canvas.Select(moved, false);
         canvas.Scene.BringToFront(moved);
-        canvas.Measure(new Size(800, 600));
+        canvas.Measure(new Size<double>(800, 600));
         canvas.Arrange(new Rect(0, 0, 800, 600));
 
         Assert.That(canvas.ChromeGoesAfter(moved), Is.True, "the frame stayed behind the thing it is round");
@@ -780,7 +780,7 @@ public class CanvasOrderTests
         Assert.That(back.Order, Is.EqualTo(1), "the one it went under was not renumbered");
     }
 
-    private static CanvasPointerEventArgs Pointer(Vector2 at) => new()
+    private static CanvasPointerEventArgs Pointer(Vector2<double> at) => new()
     {
         World = at,
         Pointer = at,

@@ -51,7 +51,7 @@ public interface IUIComponent : IFundamentalUIComponent
     /// <summary>Geometry is stale because what it draws changed, not because of layout; cleared by
     /// <see cref="Render"/>.</summary>
     bool GeometryStaleByContent { get; }
-    Size RenderSize { get; set; }
+    Size<double> RenderSize { get; set; }
     //Vector2 Location { get; }
     Visibility Visibility { get; set; }
     Rect Bounds { get; set; }
@@ -64,7 +64,7 @@ public interface IUIComponent : IFundamentalUIComponent
     /// <summary>The shadow this component casts, if any. Same record-time rule as <see cref="Aura"/>.</summary>
     Media.Shadow Shadow { get; set; }
 
-    Vector2 ClipPosition { get; set; }
+    Vector2<double> ClipPosition { get; set; }
     IUIComponent VisualParent { get; }
 
     /// <summary>The component in whose coordinate space this one is DRAWN - normally the visual parent. An adorner is not
@@ -137,7 +137,7 @@ public interface IUIComponent : IFundamentalUIComponent
     /// <summary>The point <see cref="RenderTransform"/> turns/scales about, as a FRACTION of the element's own size (0.5,0.5
     /// = its center). Relative, so one template stays centered at any size. Read by the compositor when it composes the
     /// element's matrix itself.</summary>
-    Vector2 RenderTransformOrigin { get; set; }
+    Vector2<double> RenderTransformOrigin { get; set; }
 
     Matrix4x4F WorldTransform { get; }
 
@@ -164,7 +164,7 @@ public interface IUIComponent : IFundamentalUIComponent
 
     /// <summary>Narrow-phase hit test of a local point against the element's own geometry; the default is its bounds,
     /// shapes override it.</summary>
-    bool HitTestCore(Vector2 localPoint);
+    bool HitTestCore(Vector2<double> localPoint);
 
     void Render(IDrawingContext context);
     

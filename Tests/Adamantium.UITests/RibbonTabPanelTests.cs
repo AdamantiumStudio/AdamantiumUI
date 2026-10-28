@@ -31,7 +31,7 @@ public class RibbonTabPanelTests
 
     private static void LayoutAt(RibbonTabPanel panel, double width, double height = 60)
     {
-        ((IMeasurableComponent)panel).Measure(new Size(width, height));
+        ((IMeasurableComponent)panel).Measure(new Size<double>(width, height));
         ((IMeasurableComponent)panel).Arrange(new Rect(0, 0, width, height));
     }
 

@@ -1,3 +1,4 @@
+using System;
 using Adamantium.Core;
 using Adamantium.MVVM;
 using Adamantium.Mathematics;
@@ -49,7 +50,7 @@ public sealed class BorderSettings : AdamantiumViewModel
         {
             if (!SetProperty(ref _alpha, value)) return;
 
-            var a = (byte)MathHelper.Clamp(value * 255.0, 0.0, 255.0);
+            var a = (byte)Math.Clamp(value * 255.0, 0.0, 255.0);
             var c = BorderBrush.Color;
             BorderBrush.Color = new Color(c.R, c.G, c.B, a);
             SwatchBrush.Color = new Color(c.R, c.G, c.B, a);

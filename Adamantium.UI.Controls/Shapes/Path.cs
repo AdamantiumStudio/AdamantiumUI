@@ -82,9 +82,9 @@ public class Path : Shape
         set { _fillRuleSet = true; SetValue(FillRuleProperty, value); }
     }
 
-    protected override Size MeasureOverride(Size availableSize)
+    protected override Size<double> MeasureOverride(Size<double> availableSize)
     {
-        if (Data == null) return new Size(0, 0);
+        if (Data == null) return new Size<double>(0, 0);
         Data.RecalculateBounds();
         // Use the mesh contours for the exact miter extent only if the geometry is already tessellated (e.g. by a
         // prior render). Forcing ProcessGeometry here is unsafe: a boolean CombinedGeometry yields an empty mesh at
@@ -106,7 +106,7 @@ public class Path : Shape
     // Tight hit test: point-in-geometry over the mesh contours (even-odd) for a filled path, plus proximity to a
     // contour edge for the stroke. Falls back to the bounding box only if the mesh isn't built yet. This excludes the
     // empty parts of the (often large) bounding box - e.g. between the teeth/inside the gaps of a combined geometry.
-    public override bool HitTestCore(Vector2 localPoint)
+    public override bool HitTestCore(Vector2<double> localPoint)
     {
         var mesh = Data?.Mesh;
         if (mesh?.Contours == null || mesh.Contours.Count == 0) return base.HitTestCore(localPoint);

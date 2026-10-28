@@ -17,12 +17,12 @@ public class BezierLine : BezierCurveBase
             PropertyMetadataOptions.AffectsRender));
 
     public static readonly AdamantiumProperty ControlPoint1Property = AdamantiumProperty.Register(nameof(ControlPoint1),
-        typeof(Vector2), typeof(BezierLine),
-        new PropertyMetadata(default(Vector2), PropertyMetadataOptions.AffectsRender));
+        typeof(Vector2<double>), typeof(BezierLine),
+        new PropertyMetadata(default(Vector2<double>), PropertyMetadataOptions.AffectsRender));
 
     public static readonly AdamantiumProperty ControlPoint2Property = AdamantiumProperty.Register(nameof(ControlPoint2),
-        typeof(Vector2), typeof(BezierLine),
-        new PropertyMetadata(default(Vector2), PropertyMetadataOptions.AffectsRender));
+        typeof(Vector2<double>), typeof(BezierLine),
+        new PropertyMetadata(default(Vector2<double>), PropertyMetadataOptions.AffectsRender));
 
     public BezierType BezierType
     {
@@ -30,15 +30,15 @@ public class BezierLine : BezierCurveBase
         set => SetValue(BezierTypeProperty, value);
     }
         
-    public Vector2 ControlPoint1
+    public Vector2<double> ControlPoint1
     {
-        get => GetValue<Vector2>(ControlPoint1Property);
+        get => GetValue<Vector2<double>>(ControlPoint1Property);
         set => SetValue(ControlPoint1Property, value);
     }
         
-    public Vector2 ControlPoint2
+    public Vector2<double> ControlPoint2
     {
-        get => GetValue<Vector2>(ControlPoint2Property);
+        get => GetValue<Vector2<double>>(ControlPoint2Property);
         set => SetValue(ControlPoint2Property, value);
     }
 

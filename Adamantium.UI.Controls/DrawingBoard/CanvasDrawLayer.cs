@@ -56,7 +56,7 @@ public class CanvasDrawLayer : MeasurableUIComponent
     // "none" - it has no children and nothing of its own to measure - and a thing of no size draws nothing, wherever
     // its items happen to be. What it draws is placed from the camera and not from this box, so the box is simply
     // whatever it has been given.
-    protected override Size MeasureOverride(Size availableSize) =>
+    protected override Size<double> MeasureOverride(Size<double> availableSize) =>
         new(Double.IsInfinity(availableSize.Width) ? 0 : availableSize.Width,
             Double.IsInfinity(availableSize.Height) ? 0 : availableSize.Height);
 

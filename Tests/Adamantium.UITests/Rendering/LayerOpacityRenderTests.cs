@@ -37,12 +37,12 @@ public class LayerOpacityRenderTests
         var root = new TestRoot(64, 64);
         var group = new TestControl { Opacity = 0.5, IsLayer = layer };
         group.Bounds = new Rect(4, 4, 40, 30);
-        group.RenderSize = new Size(40, 30);
+        group.RenderSize = new Size<double>(40, 30);
         foreach (var x in new[] { 0.0, 10.0 })
         {
             var square = new TestControl { RenderAction = s => s.DrawRectangle(Brushes.Red, new Rect(0, 0, 20, 20)) };
             square.Bounds = new Rect(x, 0, 20, 20);
-            square.RenderSize = new Size(20, 20);
+            square.RenderSize = new Size<double>(20, 20);
             group.Add(square);
         }
 
@@ -118,13 +118,13 @@ public class LayerOpacityRenderTests
         var root = new TestRoot(64, 64);
         var clip = new TestControl { ClipToBounds = true };
         clip.Bounds = new Rect(0, 0, 20, 64);
-        clip.RenderSize = new Size(20, 64);
+        clip.RenderSize = new Size<double>(20, 64);
         var group = new TestControl { Opacity = 0.5, IsLayer = true };
         group.Bounds = new Rect(4, 4, 40, 30);
-        group.RenderSize = new Size(40, 30);
+        group.RenderSize = new Size<double>(40, 30);
         var square = new TestControl { RenderAction = s => s.DrawRectangle(Brushes.Red, new Rect(0, 0, 30, 20)) };
         square.Bounds = new Rect(0, 0, 30, 20);
-        square.RenderSize = new Size(30, 20);
+        square.RenderSize = new Size<double>(30, 20);
         group.Add(square);
         clip.Add(group);
         root.Add(clip);
@@ -143,13 +143,13 @@ public class LayerOpacityRenderTests
         var root = new TestRoot(64, 64);
         var clip = new TestControl { ClipToBounds = true, ClipCornerRadius = new ProceduralGeometry.CornerRadius(4) };
         clip.Bounds = new Rect(16, 16, 48, 48);
-        clip.RenderSize = new Size(48, 48);
+        clip.RenderSize = new Size<double>(48, 48);
         var group = new TestControl { Opacity = 0.5, IsLayer = true };
         group.Bounds = new Rect(8, 8, 20, 20);
-        group.RenderSize = new Size(20, 20);
+        group.RenderSize = new Size<double>(20, 20);
         var square = new TestControl { RenderAction = s => s.DrawRectangle(Brushes.Red, new Rect(0, 0, 20, 20)) };
         square.Bounds = new Rect(0, 0, 20, 20);
-        square.RenderSize = new Size(20, 20);
+        square.RenderSize = new Size<double>(20, 20);
         group.Add(square);
         clip.Add(group);
         root.Add(clip);
@@ -187,7 +187,7 @@ public class LayerOpacityRenderTests
             Child = group
         };
         var root = new VisualRoot(new Border { Padding = new Thickness(40), Child = clip }, dim, dim);
-        ((IMeasurableComponent)root).Measure(new Size(dim, dim));
+        ((IMeasurableComponent)root).Measure(new Size<double>(dim, dim));
         ((IMeasurableComponent)root).Arrange(new Rect(0, 0, dim, dim));
 
         var factory = new RenderUnitFactory(_device, new StubResourceFactory());
@@ -214,15 +214,15 @@ public class LayerOpacityRenderTests
     [Test]
     public void ASiblingThatStartsDrawingBeforeALayer_IsPatchedInOutsideIt()
     {
-        var stage = new TestControl { Bounds = new Rect(0, 0, 64, 64), RenderSize = new Size(64, 64) };
-        var sibling = new TestControl { Bounds = new Rect(0, 40, 64, 20), RenderSize = new Size(64, 20) };
+        var stage = new TestControl { Bounds = new Rect(0, 0, 64, 64), RenderSize = new Size<double>(64, 64) };
+        var sibling = new TestControl { Bounds = new Rect(0, 40, 64, 20), RenderSize = new Size<double>(64, 20) };
         stage.Add(sibling);
         var group = new TestControl { Opacity = 0.5, IsLayer = true };
         group.Bounds = new Rect(4, 4, 30, 30);
-        group.RenderSize = new Size(30, 30);
+        group.RenderSize = new Size<double>(30, 30);
         var square = new TestControl { RenderAction = s => s.DrawRectangle(Brushes.Red, new Rect(0, 0, 30, 30)) };
         square.Bounds = new Rect(0, 0, 30, 30);
-        square.RenderSize = new Size(30, 30);
+        square.RenderSize = new Size<double>(30, 30);
         group.Add(square);
         stage.Add(group);
         var root = new VisualRoot(stage, 64, 64);
@@ -265,13 +265,13 @@ public class LayerOpacityRenderTests
         var root = new TestRoot(64, 64);
         var group = new TestControl { Opacity = 0.5, IsLayer = true };
         group.Bounds = new Rect(4, 4, 20, 20);
-        group.RenderSize = new Size(20, 20);
+        group.RenderSize = new Size<double>(20, 20);
         var inside = new TestControl { RenderAction = s => s.DrawRectangle(Brushes.Red, new Rect(0, 0, 20, 20)) };
         inside.Bounds = new Rect(0, 0, 20, 20);
-        inside.RenderSize = new Size(20, 20);
+        inside.RenderSize = new Size<double>(20, 20);
         var outside = new TestControl { RenderAction = s => s.DrawRectangle(Brushes.Red, new Rect(0, 0, 20, 20)) };
         outside.Bounds = new Rect(30, 0, 20, 20);
-        outside.RenderSize = new Size(20, 20);
+        outside.RenderSize = new Size<double>(20, 20);
         group.Add(inside);
         group.Add(outside);
         root.Add(group);
@@ -292,14 +292,14 @@ public class LayerOpacityRenderTests
         var root = new TestRoot(64, 64);
         var group = new TestControl { Opacity = 0.5, IsLayer = true };
         group.Bounds = new Rect(4, 4, 10, 10);
-        group.RenderSize = new Size(10, 10);
-        var placed = Matrix4x4F.Scaling(3f) * Matrix4x4F.Translation(4, 4, 0);
+        group.RenderSize = new Size<double>(10, 10);
+        var placed = Matrix4x4.CreateScale<float>(3f) * Matrix4x4.CreateTranslation<float>(4, 4, 0);
         var icon = new TestControl
         {
             RenderAction = s => s.DrawGeometry(Brushes.Red, new RectangleGeometry(new Rect(0, 0, 10, 10)), null, placed)
         };
         icon.Bounds = new Rect(0, 0, 10, 10);
-        icon.RenderSize = new Size(10, 10);
+        icon.RenderSize = new Size<double>(10, 10);
         group.Add(icon);
         root.Add(group);
 
@@ -319,13 +319,13 @@ public class LayerOpacityRenderTests
         var root = new TestRoot(64, 64);
         var group = new TestControl { Opacity = 0.5, IsLayer = true };
         group.Bounds = new Rect(20, 10, 30, 30);
-        group.RenderSize = new Size(30, 30);
+        group.RenderSize = new Size<double>(30, 30);
         var framed = new TestControl
         {
             RenderAction = s => s.DrawRectangle(null, new Rect(0, 0, 30, 30), new Pen(Brushes.Red, 10))
         };
         framed.Bounds = new Rect(0, 0, 30, 30);
-        framed.RenderSize = new Size(30, 30);
+        framed.RenderSize = new Size<double>(30, 30);
         group.Add(framed);
         root.Add(group);
 
@@ -348,7 +348,7 @@ public class LayerOpacityRenderTests
             RenderAction = s => s.DrawRectangle(Brushes.Red, new Rect(0, 0, 40, 20))
         };
         bar.Bounds = new Rect(4, 4, 40, 20);
-        bar.RenderSize = new Size(40, 20);
+        bar.RenderSize = new Size<double>(40, 20);
         root.Add(bar);
         return (root, bar);
     }
@@ -358,8 +358,8 @@ public class LayerOpacityRenderTests
         new GradientStop(Colors.Black, 1)
     ])
     {
-        StartPoint = new Vector2(0, 0.5),
-        EndPoint = new Vector2(1, 0.5)
+        StartPoint = new Vector2<double>(0, 0.5),
+        EndPoint = new Vector2<double>(1, 0.5)
     };
 
     [Test]
@@ -388,7 +388,7 @@ public class LayerOpacityRenderTests
             RenderAction = s => s.DrawRectangle(Brushes.Red, new Rect(0, 0, 20, 10))
         };
         bar.Bounds = new Rect(4, 4, 20, 10);
-        bar.RenderSize = new Size(20, 10);
+        bar.RenderSize = new Size<double>(20, 10);
         root.Add(bar);
 
         var (left, right) = Render(root, (6, 14), (42, 14));
@@ -412,8 +412,8 @@ public class LayerOpacityRenderTests
             new GradientStop(Colors.Transparent, 1)
         ])
         {
-            StartPoint = new Vector2(0, 0.5),
-            EndPoint = new Vector2(1, 0.5)
+            StartPoint = new Vector2<double>(0, 0.5),
+            EndPoint = new Vector2<double>(1, 0.5)
         };
 
         var unmasked = CountColors(Turned(null));
@@ -441,7 +441,7 @@ public class LayerOpacityRenderTests
                 .DrawRectangle(Brushes.Lime, new Rect(20, 0, 20, 20))
         };
         bar.Bounds = new Rect(12, 20, 40, 20);
-        bar.RenderSize = new Size(40, 20);
+        bar.RenderSize = new Size<double>(40, 20);
         root.Add(bar);
         return root;
     }
@@ -492,10 +492,10 @@ public class LayerOpacityRenderTests
         var root = new TestRoot(64, 64);
         var holder = new TestControl { OpacityMask = FadeIn() };
         holder.Bounds = new Rect(4, 4, 0, 0);
-        holder.RenderSize = new Size(0, 0);
+        holder.RenderSize = new Size<double>(0, 0);
         var bar = new TestControl { RenderAction = s => s.DrawRectangle(Brushes.Red, new Rect(0, 0, 40, 20)) };
         bar.Bounds = new Rect(0, 0, 40, 20);
-        bar.RenderSize = new Size(40, 20);
+        bar.RenderSize = new Size<double>(40, 20);
         holder.Add(bar);
         root.Add(holder);
 
@@ -588,13 +588,13 @@ public class LayerOpacityRenderTests
         var root = new TestRoot(64, 64);
         var outer = new TestControl { Opacity = 0.5, IsLayer = true };
         outer.Bounds = new Rect(4, 4, 40, 30);
-        outer.RenderSize = new Size(40, 30);
+        outer.RenderSize = new Size<double>(40, 30);
         var inner = new TestControl { Opacity = 0.5, IsLayer = true };
         inner.Bounds = new Rect(0, 0, 40, 30);
-        inner.RenderSize = new Size(40, 30);
+        inner.RenderSize = new Size<double>(40, 30);
         var square = new TestControl { RenderAction = s => s.DrawRectangle(Brushes.Red, new Rect(0, 0, 20, 20)) };
         square.Bounds = new Rect(0, 0, 20, 20);
-        square.RenderSize = new Size(20, 20);
+        square.RenderSize = new Size<double>(20, 20);
         inner.Add(square);
         outer.Add(inner);
         root.Add(outer);
@@ -616,10 +616,10 @@ public class LayerOpacityRenderTests
             RenderAction = s => s.DrawRectangle(Brushes.Red, new Rect(0, 0, 40, 30))
         };
         group.Bounds = new Rect(4, 4, 40, 30);
-        group.RenderSize = new Size(40, 30);
+        group.RenderSize = new Size<double>(40, 30);
         var square = new TestControl { RenderAction = s => s.DrawRectangle(Brushes.Red, new Rect(0, 0, 20, 20)) };
         square.Bounds = new Rect(0, 0, 20, 20);
-        square.RenderSize = new Size(20, 20);
+        square.RenderSize = new Size<double>(20, 20);
         group.Add(square);
         root.Add(group);
 
@@ -727,13 +727,13 @@ public class LayerOpacityRenderTests
         var root = new TestRoot(64, 64);
         var outer = new TestControl { IsLayer = true };
         outer.Bounds = new Rect(4, 4, 40, 30);
-        outer.RenderSize = new Size(40, 30);
+        outer.RenderSize = new Size<double>(40, 30);
         var inner = new TestControl { OpacityMask = mask };
         inner.Bounds = new Rect(0, 0, 20, 20);
-        inner.RenderSize = new Size(20, 20);
+        inner.RenderSize = new Size<double>(20, 20);
         var square = new TestControl { RenderAction = s => s.DrawRectangle(Brushes.Red, new Rect(0, 0, 20, 20)) };
         square.Bounds = new Rect(0, 0, 20, 20);
-        square.RenderSize = new Size(20, 20);
+        square.RenderSize = new Size<double>(20, 20);
         inner.Add(square);
         outer.Add(inner);
         root.Add(outer);
@@ -764,10 +764,10 @@ public class LayerOpacityRenderTests
         var root = new TestRoot(64, 64);
         var group = new TestControl { Opacity = 0.5, IsLayer = true };
         group.Bounds = new Rect(4, 4, 40, 30);
-        group.RenderSize = new Size(40, 30);
+        group.RenderSize = new Size<double>(40, 30);
         var square = new TestControl { RenderAction = s => s.DrawRectangle(paint, new Rect(0, 0, 20, 20)) };
         square.Bounds = new Rect(0, 0, 20, 20);
-        square.RenderSize = new Size(20, 20);
+        square.RenderSize = new Size<double>(20, 20);
         group.Add(square);
         root.Add(group);
 
@@ -801,7 +801,7 @@ public class LayerOpacityRenderTests
             RenderAction = s => s.DrawRectangle(new NoiseBrush(), new Rect(0, 0, 10, 10))
         };
         noisy.Bounds = new Rect(30, 0, 10, 10);
-        noisy.RenderSize = new Size(10, 10);
+        noisy.RenderSize = new Size<double>(10, 10);
         group.Add(noisy);
 
         var factory = new RenderUnitFactory(_device, new StubResourceFactory());
@@ -856,12 +856,12 @@ public class LayerOpacityRenderTests
         {
             var group = new TestControl { Opacity = 0.5, IsLayer = layer };
             group.Bounds = new Rect(x, 4, 56, 40);
-            group.RenderSize = new Size(56, 40);
+            group.RenderSize = new Size<double>(56, 40);
             foreach (var dx in new[] { 0.0, 16.0 })
             {
                 var circle = new TestControl { RenderAction = s => s.DrawEllipse(new Rect(0, 0, 32, 32), Brushes.Red, 0, 360, Adamantium.ProceduralGeometry.Shapes.EllipseType.Sector, null, 0) };
                 circle.Bounds = new Rect(dx, 0, 32, 32);
-                circle.RenderSize = new Size(32, 32);
+                circle.RenderSize = new Size<double>(32, 32);
                 group.Add(circle);
             }
 
@@ -890,7 +890,7 @@ public class LayerOpacityRenderTests
         root.Remove(group);
         var node = new TestControl { IsRenderMotionNode = true };
         node.Bounds = new Rect(0, 0, 64, 64);
-        node.RenderSize = new Size(64, 64);
+        node.RenderSize = new Size<double>(64, 64);
         node.Add(group);
         root.Add(node);
 

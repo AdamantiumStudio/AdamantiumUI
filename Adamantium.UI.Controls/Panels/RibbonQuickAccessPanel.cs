@@ -13,7 +13,7 @@ public class RibbonQuickAccessPanel : Panel
     private readonly List<IUIComponent> _published = [];
     private readonly Dictionary<IMeasurableComponent, double> _naturalWidth = new();
 
-    protected override Size MeasureOverride(Size availableSize)
+    protected override Size<double> MeasureOverride(Size<double> availableSize)
     {
         double width = 0, height = 0;
         _overflow.Clear();
@@ -49,7 +49,7 @@ public class RibbonQuickAccessPanel : Panel
             owner?.SetOverflow(_published);
         }
 
-        return new Size(width, height);
+        return new Size<double>(width, height);
     }
 
     /// <summary>What the command asks for when it is shown. A collapsed one measures to zero, so the width it had while
@@ -62,7 +62,7 @@ public class RibbonQuickAccessPanel : Panel
             return remembered;
         }
 
-        child.Measure(new Size(double.PositiveInfinity, height));
+        child.Measure(new Size<double>(double.PositiveInfinity, height));
         var width = child.DesiredSize.Width;
         _naturalWidth[child] = width;
         return width;
@@ -95,7 +95,7 @@ public class RibbonQuickAccessPanel : Panel
         return Math.Max(0, available - owner.OverflowButtonWidth);
     }
 
-    protected override Size ArrangeOverride(Size finalSize)
+    protected override Size<double> ArrangeOverride(Size<double> finalSize)
     {
         double x = 0;
         foreach (var child in Children)
@@ -110,7 +110,7 @@ public class RibbonQuickAccessPanel : Panel
             x += width;
         }
 
-        return new Size(x, finalSize.Height);
+        return new Size<double>(x, finalSize.Height);
     }
 
     private static bool Same(List<IUIComponent> a, List<IUIComponent> b)

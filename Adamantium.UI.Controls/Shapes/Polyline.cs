@@ -40,13 +40,13 @@ public class Polyline : CurveBase
         set => SetValue(PointsProperty, value);
     }
 
-    protected override Size MeasureOverride(Size availableSize)
+    protected override Size<double> MeasureOverride(Size<double> availableSize)
     {
-        if (Points == null || Points.Count == 0) return Size.Zero;
+        if (Points == null || Points.Count == 0) return Size<double>.Zero;
         
         var maxX = Points.Select(x=>x.X).Max();
         var maxY = Points.Select(y=>y.Y).Max();
-        Rect = new Rect(Vector2.Zero, new Vector2(maxX, maxY));
+        Rect = new Rect(Vector2<double>.Zero, new Vector2<double>(maxX, maxY));
         return base.MeasureOverride(availableSize);
     }
 

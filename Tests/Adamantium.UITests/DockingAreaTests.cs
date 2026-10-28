@@ -55,7 +55,7 @@ public class DockingAreaTests
         area.Children.Add(Group("scene", DockZone.Center));
         var window = new Window { Width = 400, Height = 300, Content = area };
         Adamantium.UI.Extensions.WindowExtension.UpdateTree(window);
-        area.Measure(new Size(400, 300));
+        area.Measure(new Size<double>(400, 300));
         Assume.That(WindowListenersTo(window, area), Is.GreaterThan(0), "the area follows its window");
 
         DiscardedVisuals.Publish(area);
@@ -75,7 +75,7 @@ public class DockingAreaTests
         area.Children.Add(right);
         area.Children.Add(bottom);
 
-        area.Measure(new Size(1000, 800));
+        area.Measure(new Size<double>(1000, 800));
         area.Arrange(new Rect(0, 0, 1000, 800));
 
         Assert.Multiple(() =>
@@ -104,7 +104,7 @@ public class DockingAreaTests
         var right = Group("inspector", DockZone.Right);
         area.Children.Add(right);
 
-        area.Measure(new Size(506, 400));
+        area.Measure(new Size<double>(506, 400));
         area.Arrange(new Rect(0, 0, 506, 400));
 
         Assert.That(right.Bounds.X + right.Bounds.Width, Is.EqualTo(506).Within(0.5),
@@ -126,14 +126,14 @@ public class DockingAreaTests
         area.Children.Add(center);
         area.Children.Add(console);
 
-        area.Measure(new Size(1000, 800));
+        area.Measure(new Size<double>(1000, 800));
         area.Arrange(new Rect(0, 0, 1000, 800));
 
         // "game" joins the console's row, to its right - the bottom row now runs HORIZONTALLY.
         Assert.That(area.Layout.MovePane("game", area.Layout.FindGroup("console"), DockZone.Right), Is.True);
         area.Rebuild();
 
-        area.Measure(new Size(1000, 800));
+        area.Measure(new Size<double>(1000, 800));
         area.Arrange(new Rect(0, 0, 1000, 800));
 
         // Asserted on what is on SCREEN, not on the model's fractions: the hint is spent by the host during layout, so
@@ -184,7 +184,7 @@ public class DockingAreaTests
 
         var root = new TestWindowRoot { Width = 1000, Height = 800, ClientWidth = 1000, ClientHeight = 800 };
         root.Children.Add(area);
-        root.Measure(new Size(1000, 800));
+        root.Measure(new Size<double>(1000, 800));
         root.Arrange(new Rect(0, 0, 1000, 800));
 
         var node = area.Layout.FindGroup("inspector");
@@ -192,7 +192,7 @@ public class DockingAreaTests
         area.Rebuild();
         Assert.That(area.Layout.RevealGroup(node), Is.True);
         area.Rebuild();
-        area.Measure(new Size(1000, 800));
+        area.Measure(new Size<double>(1000, 800));
         area.Arrange(new Rect(0, 0, 1000, 800));
 
         Assert.That(node.State, Is.EqualTo(PaneGroupState.Revealed), "showing, but not pinned");
@@ -209,8 +209,8 @@ public class DockingAreaTests
 
     private sealed class TestWindowRoot : Grid, IRootVisualComponent
     {
-        public Vector2 PointToClient(PixelPoint point) => new((float)point.X, (float)point.Y);
-        public PixelPoint PointToScreen(Vector2 point) => new(point.X, point.Y);
+        public Vector2<double> PointToClient(PixelPoint point) => new((float)point.X, (float)point.Y);
+        public PixelPoint PointToScreen(Vector2<double> point) => new(point.X, point.Y);
         public PixelPoint Position { get; set; }
         public void AttachContextAndInitialize(IUIContext context) { }
         public double Left { get; set; }
@@ -228,7 +228,7 @@ public class DockingAreaTests
         var only = Group("scene", DockZone.Center);
         area.Children.Add(only);
 
-        area.Measure(new Size(640, 480));
+        area.Measure(new Size<double>(640, 480));
         area.Arrange(new Rect(0, 0, 640, 480));
 
         Assert.Multiple(() =>
@@ -253,7 +253,7 @@ public class DockingAreaTests
         grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
         grid.Children.Add(area);
 
-        grid.Measure(new Size(1000, 800));
+        grid.Measure(new Size<double>(1000, 800));
         grid.Arrange(new Rect(0, 0, 1000, 800));
 
         Assert.Multiple(() =>

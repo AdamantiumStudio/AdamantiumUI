@@ -99,7 +99,7 @@ public class SliderTests
         var root = new Border { Width = 240, Height = 24, Child = slider };
         Settle(root);
         var thumb = ((Track)slider.GetTemplateChild("PART_Track")).Thumb;
-        thumb.RaiseEvent(new DragStartedEventArgs(Vector2.Zero) { RoutedEvent = Thumb.DragStartedEvent });
+        thumb.RaiseEvent(new DragStartedEventArgs(Vector2<double>.Zero) { RoutedEvent = Thumb.DragStartedEvent });
         var badge = FindBadge(slider);
         Assume.That(badge, Is.Not.Null, "a drag shows the badge");
 

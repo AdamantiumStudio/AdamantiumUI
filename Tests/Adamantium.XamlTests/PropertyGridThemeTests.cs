@@ -69,7 +69,7 @@ public class PropertyGridThemeTests
         grid.ApplyCurrentTheme();
         Adamantium.UI.Extensions.WindowExtension.UpdateTree(grid);
         Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
-        grid.Measure(new Size(360, 400));
+        grid.Measure(new Size<double>(360, 400));
         grid.Arrange(new Rect(0, 0, 360, 400));
         return grid;
     }
@@ -257,7 +257,7 @@ public class PropertyGridThemeTests
         var grid = Built();
 
         grid.NameColumnWidth = 200;
-        grid.Measure(new Size(360, 400), force: true);
+        grid.Measure(new Size<double>(360, 400), force: true);
         grid.Arrange(new Rect(0, 0, 360, 400));
 
         foreach (var section in grid.Sections)
@@ -296,7 +296,7 @@ public class PropertyGridThemeTests
 
         for (var pass = 0; pass < 3; pass++)
         {
-            grid.Measure(new Size(240, 400), force: true);
+            grid.Measure(new Size<double>(240, 400), force: true);
             grid.Arrange(new Rect(0, 0, 240, 400));
         }
 
@@ -401,7 +401,7 @@ public class PropertyGridThemeTests
         // leaves less than a line needs and the letters are drawn past the bottom of their box - which is what reads as
         // text sitting low, and what no alignment can correct.
         var loose = new Adamantium.UI.Controls.Text.TextBlock { Text = "entity", FontSize = text.FontSize };
-        loose.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity), force: true);
+        loose.Measure(new Size<double>(double.PositiveInfinity, double.PositiveInfinity), force: true);
 
         // Within a pixel and a half of the line it wants: a hairline rule and a rounded row can cost one, and one is not
         // what this is about - the case that started it was thirteen pixels holding nineteen.

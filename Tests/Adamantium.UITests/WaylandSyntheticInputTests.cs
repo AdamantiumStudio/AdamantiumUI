@@ -39,8 +39,8 @@ public class WaylandSyntheticInputTests
     [Test]
     public void APlacement_TurnsAWindowPointIntoAStreamPoint()
     {
-        var placement = new WaylandSyntheticPlacement(null, null, new Vector2(300, 200), 0.75);
+        var placement = new WaylandSyntheticPlacement(null, null, new Vector2<double>(300, 200), 0.75);
 
-        Assert.That(placement.ToStream(new Vector2(30, 15)), Is.EqualTo(new Vector2(340, 220)));
+        Assert.That(placement.ToStream(new Vector2<double>(30, 15)), Is.EqualTo(new Vector2<double>(340, 220)));
     }
 }

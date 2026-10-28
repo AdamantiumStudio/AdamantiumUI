@@ -16,11 +16,11 @@ public class StructPathBindingTests
     private sealed class Camera : AdamantiumComponent
     {
         public static readonly AdamantiumProperty WhereProperty = AdamantiumProperty.Register(nameof(Where),
-            typeof(Vector2), typeof(Camera), new PropertyMetadata(Vector2.Zero));
+            typeof(Vector2<double>), typeof(Camera), new PropertyMetadata(Vector2<double>.Zero));
 
-        public Vector2 Where
+        public Vector2<double> Where
         {
-            get => GetValue<Vector2>(WhereProperty);
+            get => GetValue<Vector2<double>>(WhereProperty);
             set => SetValue(WhereProperty, value);
         }
     }
@@ -39,7 +39,7 @@ public class StructPathBindingTests
     [Test]
     public void AFieldInsideAStructIsRead()
     {
-        var camera = new Camera { Where = new Vector2(120, 40) };
+        var camera = new Camera { Where = new Vector2<double>(120, 40) };
 
         Assert.That(Bound(camera, "Where.X").Width, Is.EqualTo(120));
     }
@@ -47,10 +47,10 @@ public class StructPathBindingTests
     [Test]
     public void MovingTheWholeStructMovesTheRow()
     {
-        var camera = new Camera { Where = new Vector2(120, 40) };
+        var camera = new Camera { Where = new Vector2<double>(120, 40) };
         var border = Bound(camera, "Where.X");
 
-        camera.Where = new Vector2(360, 40);
+        camera.Where = new Vector2<double>(360, 40);
         BindingUpdateQueue.Flush();
 
         Assert.That(border.Width, Is.EqualTo(360), "the row is reading a copy taken when it was bound");
@@ -59,7 +59,7 @@ public class StructPathBindingTests
     [Test]
     public void WritingOneNumberWritesItIntoTheWholeStruct()
     {
-        var camera = new Camera { Where = new Vector2(120, 40) };
+        var camera = new Camera { Where = new Vector2<double>(120, 40) };
         var border = Bound(camera, "Where.X");
 
         border.Width = 500;
@@ -99,7 +99,7 @@ public class StructPathBindingTests
     [Test]
     public void APathThroughAStructToNothingSaysNothing()
     {
-        var camera = new Camera { Where = new Vector2(120, 40) };
+        var camera = new Camera { Where = new Vector2<double>(120, 40) };
         var border = Bound(camera, "Where.Nowhere");
 
         Assert.That(border.Width, Is.EqualTo(new Border().Width), "a path to nothing wrote something anyway");

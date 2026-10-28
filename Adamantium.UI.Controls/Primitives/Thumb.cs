@@ -83,12 +83,12 @@ public class Thumb : Control
    {
    }
 
-   private List<Size> sizes = new List<Size>();
+   private List<Size<double>> sizes = new List<Size<double>>();
    public Thumb()
    {
    }
 
-   private Vector2 dragStartPoint;
+   private Vector2<double> dragStartPoint;
 
    public void CancelDrag()
    {
@@ -152,14 +152,14 @@ public class Thumb : Control
       RaiseEvent(new DragCompletedEventArgs(delta, false) { RoutedEvent = DragCompletedEvent });
    }
 
-   private Vector2 DragPosition(PointerEventArgs e)
+   private Vector2<double> DragPosition(PointerEventArgs e)
    {
       IUIComponent root = this;
       while (root.VisualParent is { } parent) root = parent;
       return root is IInputComponent ric ? e.GetPosition(ric) : e.GetPosition(this);
    }
 
-   protected override Size MeasureOverride(Size availableSize)
+   protected override Size<double> MeasureOverride(Size<double> availableSize)
    {
       sizes.Clear();
       foreach (var child in VisualChildren)
@@ -173,10 +173,10 @@ public class Thumb : Control
 
       // No measurable children (e.g. a thumb/splitter with no template applied): desire nothing rather than indexing
       // an empty list. The element's own explicit Width/Height is still applied by Measure (Constrain).
-      return sizes.Count > 0 ? sizes[0] : new Size();
+      return sizes.Count > 0 ? sizes[0] : new Size<double>();
    }
 
-   protected override Size ArrangeOverride(Size finalSize)
+   protected override Size<double> ArrangeOverride(Size<double> finalSize)
    {
       // The thumb fills the slot it was arranged into (e.g. the rect a Track computed for it), with its template child
       // - if any - stretched to fill. Returning the child's size instead collapsed an untemplated thumb to nothing.

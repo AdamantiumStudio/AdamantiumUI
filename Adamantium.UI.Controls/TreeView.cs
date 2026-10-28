@@ -492,7 +492,7 @@ public class TreeView : ItemsControl
         }
 
         _applyingOffset = true;
-        _scrollViewer.SetScrollOffset(new Vector2(0, _desiredOffset));
+        _scrollViewer.SetScrollOffset(new Vector2<double>(0, _desiredOffset));
         var y = _scrollViewer.ScrollOffset.Y;
         _applyingOffset = false;
         // Give up ONLY when we actually reached the target, or when the content is measured (maxY > 0) yet genuinely too

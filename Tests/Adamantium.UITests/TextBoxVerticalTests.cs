@@ -18,7 +18,7 @@ public class TextBoxVerticalTests
     private static TextBox Box(string text, TextWrapping wrapping = TextWrapping.NoWrap, double height = double.PositiveInfinity)
     {
         var box = new TextBox { Text = text, WritingMode = WritingMode.VerticalRightToLeft, TextWrapping = wrapping };
-        box.MeasureSurface(new Size(double.PositiveInfinity, height));
+        box.MeasureSurface(new Size<double>(double.PositiveInfinity, height));
         return box;
     }
 
@@ -45,8 +45,8 @@ public class TextBoxVerticalTests
     [Test]
     public void AWrappingField_WrapsAtItsHeight()
     {
-        var line = Box(Words).MeasureSurface(new Size(double.PositiveInfinity, double.PositiveInfinity));
-        var wrapped = Box(Words, TextWrapping.WrapByWords, 100).MeasureSurface(new Size(double.PositiveInfinity, 100));
+        var line = Box(Words).MeasureSurface(new Size<double>(double.PositiveInfinity, double.PositiveInfinity));
+        var wrapped = Box(Words, TextWrapping.WrapByWords, 100).MeasureSurface(new Size<double>(double.PositiveInfinity, 100));
 
         Assert.Multiple(() =>
         {

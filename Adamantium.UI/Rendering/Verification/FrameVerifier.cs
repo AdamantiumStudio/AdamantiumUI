@@ -653,5 +653,5 @@ internal sealed class FrameVerifier : IRenderCacheObserver
             ? $"({m.M41:0.##}, {m.M42:0.##})"
             : $"({m.M41:0.##}, {m.M42:0.##}) [{m.M11:0.###} {m.M12:0.###}; {m.M21:0.###} {m.M22:0.###}]";
 
-    private static string Dims(Size size) => $"{size.Width:0.##}x{size.Height:0.##}";
+    private static string Dims(Size<double> size) => $"{size.Width:0.##}x{size.Height:0.##}";
 }

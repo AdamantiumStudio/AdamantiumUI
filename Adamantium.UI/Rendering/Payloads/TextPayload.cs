@@ -9,7 +9,7 @@ namespace Adamantium.UI.Rendering.Payloads;
 
 public class TextPayload(
     TextRenderingParameters renderingParameters,
-    Size desiredSize,
+    Size<double> desiredSize,
     TextLayout textLayout,
     Brush foreground,
     Brush background,
@@ -27,7 +27,7 @@ public class TextPayload(
     public Matrix4x4F LocalTransform { get; } = localTransform ?? Matrix4x4F.Identity;
 
     public TextRenderingParameters TextRenderingParameters { get; } = renderingParameters;
-    public Size DesiredSize { get; } = desiredSize;
+    public Size<double> DesiredSize { get; } = desiredSize;
     public TextLayout TextLayout { get; } = textLayout;
     // A text snapshot: TextBlock reshapes one TextLayout in place, so only this string tells payloads apart.
     public string Text { get; } = textLayout?.Text;

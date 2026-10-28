@@ -368,8 +368,8 @@ public class CanvasElementLookTests
 
             // Turned a quarter, the long box stands up: a point off its LONG side is now outside it, and one off the
             // short side is inside.
-            Assert.That(item.HitTest(new Vector2(100, 90), 1), Is.True, "a point on the turned control missed it");
-            Assert.That(item.HitTest(new Vector2(190, 20), 1), Is.False, "a point beside the turned control hit it");
+            Assert.That(item.HitTest(new Vector2<double>(100, 90), 1), Is.True, "a point on the turned control missed it");
+            Assert.That(item.HitTest(new Vector2<double>(190, 20), 1), Is.False, "a point beside the turned control hit it");
         });
     }
 

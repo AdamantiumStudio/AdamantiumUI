@@ -59,7 +59,7 @@ internal static class DrawingImageRaster
 
     // The exact bake, else a stand-in, else null; a missing exact bake is always queued here, even when a stand-in is
     // returned. Render-thread safe.
-    public static BitmapSource Get(DrawingImage image, Size size, IUIComponent owner, Vector4F slice = default)
+    public static BitmapSource Get(DrawingImage image, Size<double> size, IUIComponent owner, Vector4F slice = default)
     {
         DropStaleBakes();
         if (owner != null) _owners.AddOrUpdate(owner, null);
@@ -155,7 +155,7 @@ internal static class DrawingImageRaster
     /// <summary>Queue a bake for a size that has none yet, and repaint whoever asked once it exists. Called from
     /// <see cref="Get"/> on every miss, so it has to be cheap: a size already baked or already queued does nothing.
     /// </summary>
-    private static void Request(DrawingImage image, Size size, IUIComponent owner, Vector4F slice)
+    private static void Request(DrawingImage image, Size<double> size, IUIComponent owner, Vector4F slice)
     {
         if (slice == default) slice = WholePicture;
         var key = KeyOf(image, size, DeviceScaleOf(owner), slice);
@@ -175,7 +175,7 @@ internal static class DrawingImageRaster
         // filed under is handed to every later ask for that key.
         var palette = _bakedPalette;
         var asked = slice;
-        dispatcher.Post(() => Bake(key, new Size(key.Width, key.Height), owner, palette, asked));
+        dispatcher.Post(() => Bake(key, new Size<double>(key.Width, key.Height), owner, palette, asked));
     }
 
     /// <summary>Throw away everything baked from this drawing - its picture changed, so every size of it is now wrong.</summary>
@@ -267,7 +267,7 @@ internal static class DrawingImageRaster
     // The device scale is PART of the key: the same drawing at the same logical size needs a different number of pixels
     // on a 150% display than on a 100% one, and one standing in for the other is exactly the blur this was meant to
     // avoid. Quantized to a hundredth so a scale that arrives as 1.4999999 does not key a second bake.
-    private static (DrawingImage Image, int Width, int Height, int Scale, int Slice) KeyOf(DrawingImage image, Size size, double deviceScale, Vector4F slice)
+    private static (DrawingImage Image, int Width, int Height, int Scale, int Slice) KeyOf(DrawingImage image, Size<double> size, double deviceScale, Vector4F slice)
     {
         var longest = System.Math.Max(size.Width, size.Height);
         if (longest <= 0)
@@ -314,7 +314,7 @@ internal static class DrawingImageRaster
     // LOOP thread. Baked THROUGH the vector path - an Image showing the drawing draws exactly what the on-screen one
     // does - and QUEUED, never rendered here: the GPU half shares one device with the render thread, so submitting it
     // from this thread interleaved with a live frame and the bake came back with one shape wearing another's color.
-    private static void Bake((DrawingImage Image, int Width, int Height, int Scale, int Slice) key, Size size, IUIComponent owner, int palette, Vector4F slice)
+    private static void Bake((DrawingImage Image, int Width, int Height, int Scale, int Slice) key, Size<double> size, IUIComponent owner, int palette, Vector4F slice)
     {
         var renderer = Renderer;
         if (renderer == null)

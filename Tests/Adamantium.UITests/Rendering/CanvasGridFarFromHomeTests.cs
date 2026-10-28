@@ -18,7 +18,7 @@ public class CanvasGridFarFromHomeTests
 
     private static double Period => Spacing * Coarsening * Scale;
 
-    private static CanvasGridItem Baked(Vector2 offset)
+    private static CanvasGridItem Baked(Vector2<double> offset)
     {
         var brush = new CanvasGridBrush
         {
@@ -48,7 +48,7 @@ public class CanvasGridFarFromHomeTests
     [TestCase(-4_500_000)]
     public void WhatReachesTheShaderNeverGrows(double far)
     {
-        var item = Baked(new Vector2(far, far * 0.5));
+        var item = Baked(new Vector2<double>(far, far * 0.5));
 
         Assert.Multiple(() =>
         {
@@ -64,8 +64,8 @@ public class CanvasGridFarFromHomeTests
     [Test]
     public void MovingByWholeCellsChangesNothing()
     {
-        var home = Baked(new Vector2(17.5, -4.25));
-        var away = Baked(new Vector2(17.5 + Period * 90_000, -4.25 - Period * 12_345));
+        var home = Baked(new Vector2<double>(17.5, -4.25));
+        var away = Baked(new Vector2<double>(17.5 + Period * 90_000, -4.25 - Period * 12_345));
 
         Assert.Multiple(() =>
         {
@@ -81,8 +81,8 @@ public class CanvasGridFarFromHomeTests
     public void ASubPixelPanStillMovesTheGrid()
     {
         var far = Period * 40_000 + 13.0;   // a long way out, and not on a cell boundary
-        var still = Baked(new Vector2(far, far));
-        var nudged = Baked(new Vector2(far + 0.25, far));
+        var still = Baked(new Vector2<double>(far, far));
+        var nudged = Baked(new Vector2<double>(far + 0.25, far));
 
         Assert.That(nudged.Camera.X, Is.Not.EqualTo(still.Camera.X),
             "a quarter-pixel pan came out as no movement at all - the lattice steps instead of sliding");
@@ -93,8 +93,8 @@ public class CanvasGridFarFromHomeTests
     [Test]
     public void TheAxesAreKeptButPennedIn()
     {
-        var near = Baked(new Vector2(300, 200));
-        var far = Baked(new Vector2(9_000_000, -9_000_000));
+        var near = Baked(new Vector2<double>(300, 200));
+        var far = Baked(new Vector2<double>(9_000_000, -9_000_000));
 
         Assert.Multiple(() =>
         {

@@ -110,7 +110,7 @@ public static class CanvasLayoutSerializer
                     canvas.Scale = Number(camera, "scale", canvas.Scale);
 
                 if (canvas.RemembersCamera && camera.TryGetProperty("x", out _))
-                    canvas.Look(new Vector2(Number(camera, "x", 0), Number(camera, "y", 0)));
+                    canvas.Look(new Vector2<double>(Number(camera, "x", 0), Number(camera, "y", 0)));
             }
 
             if (canvas.RemembersTool && root.TryGetProperty("tool", out var tool)
@@ -172,7 +172,7 @@ public static class CanvasLayoutSerializer
                 pane.Placement = where;
             }
 
-            pane.Anchor = new Vector2(Number(said, "x", pane.Anchor.X), Number(said, "y", pane.Anchor.Y));
+            pane.Anchor = new Vector2<double>(Number(said, "x", pane.Anchor.X), Number(said, "y", pane.Anchor.Y));
 
             if (said.TryGetProperty("width", out var wide) && wide.ValueKind == JsonValueKind.Number)
                 pane.Width = Math.Max(pane.MinResizeWidth, wide.GetDouble());
@@ -210,7 +210,7 @@ public static class CanvasLayoutSerializer
         }
     }
 
-    private static void Where(Utf8JsonWriter writer, string what, Vector2 at, double scale)
+    private static void Where(Utf8JsonWriter writer, string what, Vector2<double> at, double scale)
     {
         writer.WriteStartObject(what);
         writer.WriteNumber("x", at.X);
@@ -219,14 +219,14 @@ public static class CanvasLayoutSerializer
         writer.WriteEndObject();
     }
 
-    private static bool Read(JsonElement said, out Vector2 at, out double scale)
+    private static bool Read(JsonElement said, out Vector2<double> at, out double scale)
     {
-        at = Vector2.Zero;
+        at = Vector2<double>.Zero;
         scale = 1;
 
         if (said.ValueKind != JsonValueKind.Object) return false;
 
-        at = new Vector2(Number(said, "x", 0), Number(said, "y", 0));
+        at = new Vector2<double>(Number(said, "x", 0), Number(said, "y", 0));
         scale = Number(said, "scale", 1);
         return true;
     }

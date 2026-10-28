@@ -107,21 +107,21 @@ public class MultiTouchTests
     {
         var list = Hosted(1, _ => Scroller())[0];
 
-        Send(RawPointerEventType.Down, 0, new Vector2(50, 250));
-        Send(RawPointerEventType.Move, 0, new Vector2(50, 200));
+        Send(RawPointerEventType.Down, 0, new Vector2<double>(50, 250));
+        Send(RawPointerEventType.Move, 0, new Vector2<double>(50, 200));
         for (var i = 1; i < fingers; i++)
         {
-            Send(RawPointerEventType.Down, i, new Vector2(20 + 6 * i, 120));
-            Send(RawPointerEventType.Move, i, new Vector2(20 + 6 * i, 20));
+            Send(RawPointerEventType.Down, i, new Vector2<double>(20 + 6 * i, 120));
+            Send(RawPointerEventType.Move, i, new Vector2<double>(20 + 6 * i, 20));
         }
 
-        Send(RawPointerEventType.Move, 0, new Vector2(50, 190));
+        Send(RawPointerEventType.Move, 0, new Vector2<double>(50, 190));
 
         Assert.That(list.Offset.Y, Is.EqualTo(60).Within(0.5), "only the first finger drives the list");
 
         for (var i = 0; i < fingers; i++)
         {
-            Send(RawPointerEventType.Up, i, new Vector2(20 + 6 * i, 20));
+            Send(RawPointerEventType.Up, i, new Vector2<double>(20 + 6 * i, 20));
         }
     }
 
@@ -189,19 +189,19 @@ public class MultiTouchTests
     {
         var pad = Hosted(1, _ => Pad())[0];
 
-        Send(RawPointerEventType.Move, 0, new Vector2(10, 10), kind: PointerType.Pen);
+        Send(RawPointerEventType.Move, 0, new Vector2<double>(10, 10), kind: PointerType.Pen);
         for (var i = 1; i < contacts; i++)
         {
-            Send(RawPointerEventType.Down, i, new Vector2(10 + 8 * i, 50));
+            Send(RawPointerEventType.Down, i, new Vector2<double>(10 + 8 * i, 50));
         }
 
         for (var i = 1; i < contacts; i++)
         {
-            Send(RawPointerEventType.Up, i, new Vector2(10 + 8 * i, 50));
+            Send(RawPointerEventType.Up, i, new Vector2<double>(10 + 8 * i, 50));
             Assert.That(pad.IsPointerOver, Is.True, $"finger {i} lifted, the pen and the others are still over it");
         }
 
-        Send(RawPointerEventType.LeaveWindow, 0, Vector2.Zero, kind: PointerType.Pen);
+        Send(RawPointerEventType.LeaveWindow, 0, Vector2<double>.Zero, kind: PointerType.Pen);
         Assert.That(pad.IsPointerOver, Is.False, "the last one has gone");
     }
 
@@ -214,10 +214,10 @@ public class MultiTouchTests
         pad.AddHandler(PointerEvents.PointerPressedEvent,
             new PointerPressedEventHandler((_, e) => counts.Add(e.ClickCount)), handledEventsToo: true);
 
-        Send(RawPointerEventType.Down, 0, new Vector2(50, 50), 1000);
-        Send(RawPointerEventType.Up, 0, new Vector2(50, 50), 1050);
-        Send(RawPointerEventType.Down, 1, new Vector2(51, 50), 1150);
-        Send(RawPointerEventType.Up, 1, new Vector2(51, 50), 1200);
+        Send(RawPointerEventType.Down, 0, new Vector2<double>(50, 50), 1000);
+        Send(RawPointerEventType.Up, 0, new Vector2<double>(50, 50), 1050);
+        Send(RawPointerEventType.Down, 1, new Vector2<double>(51, 50), 1150);
+        Send(RawPointerEventType.Up, 1, new Vector2<double>(51, 50), 1200);
 
         Assert.That(counts, Is.EqualTo(new[] { 1, 2 }));
     }
@@ -256,9 +256,9 @@ public class MultiTouchTests
         return elements;
     }
 
-    private static Vector2 MiddleOf(int column, double y) => new(Column * column + Column / 2, y);
+    private static Vector2<double> MiddleOf(int column, double y) => new(Column * column + Column / 2, y);
 
-    private void Send(RawPointerEventType type, int finger, Vector2 at, uint timestamp = 0, PointerType kind = PointerType.Touch) =>
+    private void Send(RawPointerEventType type, int finger, Vector2<double> at, uint timestamp = 0, PointerType kind = PointerType.Touch) =>
         PointerDevice.Current.ProcessEvent(new RawPointerEventArgs(type, _window, at, InputModifiers.None, timestamp)
         {
             PointerId = FirstId + (uint)finger,

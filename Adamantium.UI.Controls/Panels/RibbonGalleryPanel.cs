@@ -140,7 +140,7 @@ public class RibbonGalleryPanel : Panel
         }
     }
 
-    protected override Size MeasureOverride(Size availableSize)
+    protected override Size<double> MeasureOverride(Size<double> availableSize)
     {
         _cellWidth = 0;
         _cellHeight = 0;
@@ -150,7 +150,7 @@ public class RibbonGalleryPanel : Panel
         {
             if (child.Visibility != Visibility.Visible) continue;
 
-            child.Measure(Size.Infinity);
+            child.Measure(Size<double>.Infinity);
             if (child is RibbonGalleryGroupHeader)
             {
                 headerWidth = Math.Max(headerWidth, child.DesiredSize.Width);
@@ -177,7 +177,7 @@ public class RibbonGalleryPanel : Panel
         var shown = Math.Min(Math.Max(1, Rows), _rows.Count);
         var height = shown > 0 ? _rows[shown - 1].Top + _rows[shown - 1].Height : _cellHeight;
 
-        return new Size(Math.Max(columns * _cellWidth, headerWidth), height);
+        return new Size<double>(Math.Max(columns * _cellWidth, headerWidth), height);
     }
 
     private double _arrangedHeight;
@@ -188,7 +188,7 @@ public class RibbonGalleryPanel : Panel
         ? Math.Max(1, Rows)
         : Math.Max(1, (int)(_arrangedHeight / _cellHeight));
 
-    protected override Size ArrangeOverride(Size finalSize)
+    protected override Size<double> ArrangeOverride(Size<double> finalSize)
     {
         _arrangedHeight = finalSize.Height;
 

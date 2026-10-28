@@ -88,7 +88,7 @@ public class ToolTipServiceTests
     {
         Call("Show", owner);
         Settle(window);
-        Shared<ToolTip>("_toolTip").Measure(new Adamantium.Mathematics.Size(300, 200), force: true);
+        Shared<ToolTip>("_toolTip").Measure(new Adamantium.Mathematics.Size<double>(300, 200), force: true);
     }
 
     [Test]

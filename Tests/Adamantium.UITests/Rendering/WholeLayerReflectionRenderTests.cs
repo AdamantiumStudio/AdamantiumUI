@@ -24,7 +24,7 @@ public class WholeLayerReflectionRenderTests
     public void TearDown() => AnimationManager.Reset();
 
     private static TestControl Placed(Rect bounds) =>
-        new() { Bounds = bounds, RenderSize = new Size(bounds.Width, bounds.Height) };
+        new() { Bounds = bounds, RenderSize = new Size<double>(bounds.Width, bounds.Height) };
 
     // Red over lime, 40x40, mirrored whole with no fade.
     private static TestControl RedLime(Rect bounds)

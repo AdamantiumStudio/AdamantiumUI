@@ -39,5 +39,5 @@ public class DropInsertionIndicator : Adorner
     /// and the adorner stage re-lays every adorner out on EVERY frame. Without this override the engine's own Arrange was
     /// overwritten a frame later: the indicator ended up stretched over the entire list, and the template's centered bar
     /// then drew one motionless line down the middle of it - which is exactly what a drop caret must never be.</summary>
-    public override Rect PlaceIn(Size desired) => TargetRect.IsEmpty ? AdornedBounds : TargetRect;
+    public override Rect PlaceIn(Size<double> desired) => TargetRect.IsEmpty ? AdornedBounds : TargetRect;
 }

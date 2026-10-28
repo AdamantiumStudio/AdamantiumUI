@@ -22,7 +22,7 @@ public class InfiniteCanvasTests
     private static InfiniteCanvas Sized(double width = 400, double height = 300)
     {
         var canvas = new InfiniteCanvas();
-        canvas.Measure(new Size(width, height), force: true);
+        canvas.Measure(new Size<double>(width, height), force: true);
         canvas.Arrange(new Rect(0, 0, width, height));
 
         return canvas;
@@ -35,7 +35,7 @@ public class InfiniteCanvasTests
     {
         var canvas = Sized();
 
-        Assert.That(canvas.WorldToScreen(Vector2.Zero), Is.EqualTo(new Vector2(200, 150)));
+        Assert.That(canvas.WorldToScreen(Vector2<double>.Zero), Is.EqualTo(new Vector2<double>(200, 150)));
     }
 
     [Test]
@@ -44,7 +44,7 @@ public class InfiniteCanvasTests
         var canvas = Sized();
         canvas.Scale = 2.5;
 
-        var world = new Vector2(137.5, -42.25);
+        var world = new Vector2<double>(137.5, -42.25);
         var back = canvas.ScreenToWorld(canvas.WorldToScreen(world));
 
         Assert.Multiple(() =>
@@ -62,12 +62,12 @@ public class InfiniteCanvasTests
         var canvas = Sized();
         var start = canvas.Offset;
 
-        canvas.PanBy(new Vector2(1_000_000, -2_500_000));
+        canvas.PanBy(new Vector2<double>(1_000_000, -2_500_000));
 
         Assert.Multiple(() =>
         {
-            Assert.That(canvas.Offset, Is.EqualTo(start + new Vector2(1_000_000, -2_500_000)));
-            Assert.That(canvas.ScreenToWorld(canvas.WorldToScreen(new Vector2(3, 4))).X, Is.EqualTo(3).Within(1e-6));
+            Assert.That(canvas.Offset, Is.EqualTo(start + new Vector2<double>(1_000_000, -2_500_000)));
+            Assert.That(canvas.ScreenToWorld(canvas.WorldToScreen(new Vector2<double>(3, 4))).X, Is.EqualTo(3).Within(1e-6));
         });
     }
 
@@ -77,7 +77,7 @@ public class InfiniteCanvasTests
     public void ZoomingAtAPointKeepsTheWorldUnderItStill()
     {
         var canvas = Sized();
-        var at = new Vector2(320, 90);
+        var at = new Vector2<double>(320, 90);
         var before = canvas.ScreenToWorld(at);
 
         canvas.SetScaleAt(at, 7.5);
@@ -124,7 +124,7 @@ public class InfiniteCanvasTests
     public void TheVisibleWorldIsWhatTheViewportShows()
     {
         var canvas = Sized(400, 300);
-        canvas.SetScaleAt(new Vector2(200, 150), 2);
+        canvas.SetScaleAt(new Vector2<double>(200, 150), 2);
 
         var seen = canvas.VisibleWorld;
         Assert.Multiple(() =>
@@ -144,7 +144,7 @@ public class InfiniteCanvasTests
 
         canvas.ScaleToFit(wanted, padding: 0);
 
-        var center = canvas.WorldToScreen(new Vector2(1100, 1050));
+        var center = canvas.WorldToScreen(new Vector2<double>(1100, 1050));
         Assert.Multiple(() =>
         {
             Assert.That(center.X, Is.EqualTo(200).Within(1e-6));
@@ -161,11 +161,11 @@ public class InfiniteCanvasTests
         var canvas = Sized(400, 300);
         var wanted = new Rect(500, 0, 50, 50);
 
-        Assert.That(canvas.WorldToScreen(new Vector2(500, 0)).X, Is.GreaterThan(400), "off to the right to begin with");
+        Assert.That(canvas.WorldToScreen(new Vector2<double>(500, 0)).X, Is.GreaterThan(400), "off to the right to begin with");
 
         canvas.BringIntoView(wanted);
 
-        var middle = canvas.WorldToScreen(new Vector2(525, 25));
+        var middle = canvas.WorldToScreen(new Vector2<double>(525, 25));
         Assert.Multiple(() =>
         {
             Assert.That(canvas.Scale, Is.EqualTo(1), "untouched");
@@ -179,11 +179,11 @@ public class InfiniteCanvasTests
     public void BringingSomethingPartlyInView_MovesItJustInside()
     {
         var canvas = Sized(400, 300);
-        var corner = canvas.ScreenToWorld(new Vector2(380, 100));
+        var corner = canvas.ScreenToWorld(new Vector2<double>(380, 100));
 
         canvas.BringIntoView(new Rect(corner.X, corner.Y, 50, 50));
 
-        Assert.That(canvas.WorldToScreen(new Vector2(corner.X + 50, corner.Y)).X, Is.EqualTo(400).Within(1e-6));
+        Assert.That(canvas.WorldToScreen(new Vector2<double>(corner.X + 50, corner.Y)).X, Is.EqualTo(400).Within(1e-6));
     }
 
     // A thing with no size yet - a node not built - is a point; brought into view it stands inside, not on the edge,
@@ -195,7 +195,7 @@ public class InfiniteCanvasTests
 
         canvas.BringIntoView(new Rect(-5000, 3000, 0, 0));
 
-        var at = canvas.WorldToScreen(new Vector2(-5000, 3000));
+        var at = canvas.WorldToScreen(new Vector2<double>(-5000, 3000));
         Assert.That(at.X > 0 && at.X < 400 && at.Y > 0 && at.Y < 300, Is.True, $"at {at}");
     }
 
@@ -203,15 +203,15 @@ public class InfiniteCanvasTests
     public void HomeIsTheOriginInTheMiddleAtOneToOne()
     {
         var canvas = Sized(400, 300);
-        canvas.SetScaleAt(new Vector2(10, 10), 12);
-        canvas.PanBy(new Vector2(5000, -7000));
+        canvas.SetScaleAt(new Vector2<double>(10, 10), 12);
+        canvas.PanBy(new Vector2<double>(5000, -7000));
 
         canvas.ResetCamera();
 
         Assert.Multiple(() =>
         {
             Assert.That(canvas.Scale, Is.EqualTo(1));
-            Assert.That(canvas.WorldToScreen(Vector2.Zero), Is.EqualTo(new Vector2(200, 150)));
+            Assert.That(canvas.WorldToScreen(Vector2<double>.Zero), Is.EqualTo(new Vector2<double>(200, 150)));
         });
     }
 
@@ -242,9 +242,9 @@ public class InfiniteCanvasTests
     [Test]
     public void AStrokeKeepsItsPointsRelativeToItself()
     {
-        var stroke = new StrokeItem(new Vector2(1_000_000, -500_000), Brushes.White, 2);
-        stroke.Add(new Vector2(1_000_010, -500_000));
-        stroke.Add(new Vector2(1_000_020, -499_990));
+        var stroke = new StrokeItem(new Vector2<double>(1_000_000, -500_000), Brushes.White, 2);
+        stroke.Add(new Vector2<double>(1_000_010, -500_000));
+        stroke.Add(new Vector2<double>(1_000_020, -499_990));
 
         Assert.Multiple(() =>
         {
@@ -254,7 +254,7 @@ public class InfiniteCanvasTests
         });
 
         // Moving it is ONE field: the points do not know where in the world they are.
-        stroke.Origin = new Vector2(0, 0);
+        stroke.Origin = new Vector2<double>(0, 0);
         Assert.That(stroke.Points[1].At, Is.EqualTo(new Vector2F(20, 10)));
         // The leftmost point is ten along, and the ink reaches half its width beyond it.
         Assert.That(stroke.Bounds.X, Is.EqualTo(9).Within(1e-9), "and the bounds follow the origin");
@@ -263,9 +263,9 @@ public class InfiniteCanvasTests
     [Test]
     public void AStrokesBoundsHoldItsInk()
     {
-        var stroke = new StrokeItem(new Vector2(100, 100), Brushes.White, 4);
-        stroke.Add(new Vector2(100, 100));
-        stroke.Add(new Vector2(140, 130));
+        var stroke = new StrokeItem(new Vector2<double>(100, 100), Brushes.White, 4);
+        stroke.Add(new Vector2<double>(100, 100));
+        stroke.Add(new Vector2<double>(140, 130));
 
         var bounds = stroke.Bounds;
         Assert.Multiple(() =>
@@ -282,16 +282,16 @@ public class InfiniteCanvasTests
     [Test]
     public void AStrokeIsHitAlongItsWholeLength()
     {
-        var stroke = new StrokeItem(new Vector2(0, 0), Brushes.White, 4);
-        stroke.Add(new Vector2(0, 0));
-        stroke.Add(new Vector2(100, 0));
+        var stroke = new StrokeItem(new Vector2<double>(0, 0), Brushes.White, 4);
+        stroke.Add(new Vector2<double>(0, 0));
+        stroke.Add(new Vector2<double>(100, 0));
 
         Assert.Multiple(() =>
         {
-            Assert.That(stroke.HitTest(new Vector2(50, 1), 0), Is.True, "inside the ink");
-            Assert.That(stroke.HitTest(new Vector2(50, 3), 0), Is.False, "beyond it");
-            Assert.That(stroke.HitTest(new Vector2(50, 3), 2), Is.True, "but within the tolerance");
-            Assert.That(stroke.HitTest(new Vector2(140, 0), 2), Is.False, "past the end is past the stroke");
+            Assert.That(stroke.HitTest(new Vector2<double>(50, 1), 0), Is.True, "inside the ink");
+            Assert.That(stroke.HitTest(new Vector2<double>(50, 3), 0), Is.False, "beyond it");
+            Assert.That(stroke.HitTest(new Vector2<double>(50, 3), 2), Is.True, "but within the tolerance");
+            Assert.That(stroke.HitTest(new Vector2<double>(140, 0), 2), Is.False, "past the end is past the stroke");
         });
     }
 
@@ -299,12 +299,12 @@ public class InfiniteCanvasTests
     [Test]
     public void ASingleTapIsAStroke()
     {
-        var stroke = new StrokeItem(new Vector2(10, 10), Brushes.White, 6);
-        stroke.Add(new Vector2(10, 10));
+        var stroke = new StrokeItem(new Vector2<double>(10, 10), Brushes.White, 6);
+        stroke.Add(new Vector2<double>(10, 10));
 
         Assert.Multiple(() =>
         {
-            Assert.That(stroke.HitTest(new Vector2(11, 11), 0), Is.True);
+            Assert.That(stroke.HitTest(new Vector2<double>(11, 11), 0), Is.True);
             Assert.That(stroke.Bounds.Width, Is.EqualTo(6).Within(1e-9));
         });
     }
@@ -316,11 +316,11 @@ public class InfiniteCanvasTests
     {
         var scene = new CanvasScene();
 
-        var near = new StrokeItem(new Vector2(0, 0), Brushes.White, 1);
-        near.Add(new Vector2(10, 10));
+        var near = new StrokeItem(new Vector2<double>(0, 0), Brushes.White, 1);
+        near.Add(new Vector2<double>(10, 10));
 
-        var far = new StrokeItem(new Vector2(100_000, 100_000), Brushes.White, 1);
-        far.Add(new Vector2(100_010, 100_010));
+        var far = new StrokeItem(new Vector2<double>(100_000, 100_000), Brushes.White, 1);
+        far.Add(new Vector2<double>(100_010, 100_010));
 
         scene.Add(near);
         scene.Add(far);
@@ -336,7 +336,7 @@ public class InfiniteCanvasTests
         var told = 0;
         scene.Changed += (_, _) => told++;
 
-        var stroke = new StrokeItem(Vector2.Zero, Brushes.White, 1);
+        var stroke = new StrokeItem(Vector2<double>.Zero, Brushes.White, 1);
         scene.Add(stroke);
         Assert.That(told, Is.EqualTo(1));
 
@@ -353,18 +353,18 @@ public class InfiniteCanvasTests
     {
         var scene = new CanvasScene();
 
-        var under = new StrokeItem(Vector2.Zero, Brushes.White, 4);
-        under.Add(new Vector2(0, 0));
-        under.Add(new Vector2(100, 0));
+        var under = new StrokeItem(Vector2<double>.Zero, Brushes.White, 4);
+        under.Add(new Vector2<double>(0, 0));
+        under.Add(new Vector2<double>(100, 0));
 
-        var over = new StrokeItem(Vector2.Zero, Brushes.Red, 4);
-        over.Add(new Vector2(0, 0));
-        over.Add(new Vector2(100, 0));
+        var over = new StrokeItem(Vector2<double>.Zero, Brushes.Red, 4);
+        over.Add(new Vector2<double>(0, 0));
+        over.Add(new Vector2<double>(100, 0));
 
         scene.Add(under);
         scene.Add(over);
 
-        Assert.That(scene.HitTest(new Vector2(50, 0), 0), Is.SameAs(over));
+        Assert.That(scene.HitTest(new Vector2<double>(50, 0), 0), Is.SameAs(over));
     }
 
     // What the shader is handed. The grid is ONE rectangle whose pixels decide for themselves whether they are on a
@@ -376,7 +376,7 @@ public class InfiniteCanvasTests
         var brush = new CanvasGridBrush
         {
             Marks = CanvasGridMarks.Lines,
-            Offset = new Vector2(120, 40),
+            Offset = new Vector2<double>(120, 40),
             Scale = 2.5,
             Spacing = 200,
             Coarsening = 10,
@@ -480,9 +480,9 @@ public class InfiniteCanvasTests
 
     private static StrokeItem Straight(double from, double to, double y = 0, double thickness = 1)
     {
-        var stroke = new StrokeItem(new Vector2(from, y), Brushes.White, thickness);
-        stroke.Add(new Vector2(from, y));
-        stroke.Add(new Vector2(to, y));
+        var stroke = new StrokeItem(new Vector2<double>(from, y), Brushes.White, thickness);
+        stroke.Add(new Vector2<double>(from, y));
+        stroke.Add(new Vector2<double>(to, y));
 
         return stroke;
     }
@@ -500,7 +500,7 @@ public class InfiniteCanvasTests
         var stroke = Straight(0, 100);
         var pieces = new List<StrokeItem>();
 
-        Assert.That(stroke.Erase(new Vector2(50, 0), 10, pieces), Is.True);
+        Assert.That(stroke.Erase(new Vector2<double>(50, 0), 10, pieces), Is.True);
         Assert.That(pieces, Has.Count.EqualTo(2));
 
         Assert.Multiple(() =>
@@ -525,7 +525,7 @@ public class InfiniteCanvasTests
         var stroke = Straight(-200, 200, thickness: thickness);
         var pieces = new List<StrokeItem>();
 
-        Assert.That(stroke.Erase(new Vector2(0, 0), 4, pieces), Is.True);
+        Assert.That(stroke.Erase(new Vector2<double>(0, 0), 4, pieces), Is.True);
         Assert.That(pieces, Has.Count.EqualTo(2));
         Assert.That(PaintedGap(pieces[0], pieces[1]), Is.EqualTo(8).Within(1e-6));
     }
@@ -536,7 +536,7 @@ public class InfiniteCanvasTests
         var stroke = Straight(0, 100);
         var pieces = new List<StrokeItem>();
 
-        Assert.That(stroke.Erase(new Vector2(0, 0), 20, pieces), Is.True);
+        Assert.That(stroke.Erase(new Vector2<double>(0, 0), 20, pieces), Is.True);
         Assert.That(pieces, Has.Count.EqualTo(1));
         Assert.That(pieces[0].Bounds.X, Is.EqualTo(20).Within(1e-6));
     }
@@ -549,7 +549,7 @@ public class InfiniteCanvasTests
         var stroke = Straight(0, 20);
         var pieces = new List<StrokeItem>();
 
-        Assert.That(stroke.Erase(new Vector2(10, 0), 40, pieces), Is.True);
+        Assert.That(stroke.Erase(new Vector2<double>(10, 0), 40, pieces), Is.True);
         Assert.That(pieces, Is.Empty);
     }
 
@@ -566,7 +566,7 @@ public class InfiniteCanvasTests
         scene.Add(over);
 
         var pieces = new List<StrokeItem>();
-        Assert.That(under.Erase(new Vector2(50, 0), 10, pieces), Is.True);
+        Assert.That(under.Erase(new Vector2<double>(50, 0), 10, pieces), Is.True);
         Assert.That(scene.Replace(under, pieces), Is.True);
 
         Assert.That(scene.Items, Has.Count.EqualTo(3));
@@ -584,7 +584,7 @@ public class InfiniteCanvasTests
         var stroke = Straight(0, 100);
         var pieces = new List<StrokeItem>();
 
-        Assert.That(stroke.Erase(new Vector2(50, 80), 10, pieces), Is.False);
+        Assert.That(stroke.Erase(new Vector2<double>(50, 80), 10, pieces), Is.False);
         Assert.That(pieces, Is.Empty);
         Assert.That(stroke.Points, Has.Count.EqualTo(2));
     }
@@ -599,7 +599,7 @@ public class InfiniteCanvasTests
 
         canvas.ZoomTo(item);
 
-        var middle = canvas.WorldToScreen(new Vector2(4050, 4050));
+        var middle = canvas.WorldToScreen(new Vector2<double>(4050, 4050));
 
         Assert.Multiple(() =>
         {
@@ -622,7 +622,7 @@ public class InfiniteCanvasTests
 
         Assert.That(canvas.Offset, Is.Not.EqualTo(before));
 
-        var middle = canvas.WorldToScreen(new Vector2(-800, -900));
+        var middle = canvas.WorldToScreen(new Vector2<double>(-800, -900));
 
         Assert.Multiple(() =>
         {
@@ -788,8 +788,8 @@ public class InfiniteCanvasTests
         canvas.Scene = new CanvasScene();
         canvas.Scale = scale;
 
-        var tool = new ElementTool(what ?? (() => new CanvasNode()), new Size(190, 110));
-        var at = new Vector2(0, 0);
+        var tool = new ElementTool(what ?? (() => new CanvasNode()), new Size<double>(190, 110));
+        var at = new Vector2<double>(0, 0);
         var args = new CanvasPointerEventArgs
         {
             World = at,
@@ -813,7 +813,7 @@ public class InfiniteCanvasTests
     {
         var layer = new CanvasElementLayer { Owner = Sized() };
         layer.Sync(new List<ElementItem> { item });
-        layer.Measure(new Size(400, 300), force: true);
+        layer.Measure(new Size<double>(400, 300), force: true);
         layer.Arrange(new Rect(0, 0, 400, 300));
     }
 }

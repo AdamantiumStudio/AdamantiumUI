@@ -25,7 +25,7 @@ public partial class StrokeItem : AdamantiumViewModel, ICanvasItem
     private float[] _widths;
     private readonly InkBrush _ink = new();
 
-    public StrokeItem(Vector2 origin, Brush brush, double thickness)
+    public StrokeItem(Vector2<double> origin, Brush brush, double thickness)
     {
         Origin = origin;
         Brush = brush;
@@ -37,14 +37,14 @@ public partial class StrokeItem : AdamantiumViewModel, ICanvasItem
     public ICanvasItem Copy()
     {
         var copy = new StrokeItem(Origin, Brush?.Copy(), Thickness);
-        foreach (var point in _points) copy.Add(new Vector2(Origin.X + point.At.X, Origin.Y + point.At.Y), point.Pressure);
+        foreach (var point in _points) copy.Add(new Vector2<double>(Origin.X + point.At.X, Origin.Y + point.At.Y), point.Pressure);
 
         return copy;
     }
 
     /// <summary>Where the stroke's own coordinates start, in the world.</summary>
     [Bindable, Affects(nameof(X), nameof(Y), nameof(Bounds))]
-    public partial Vector2 Origin { get; set; }
+    public partial Vector2<double> Origin { get; set; }
 
     public Brush Brush { get; set; }
 
@@ -66,13 +66,13 @@ public partial class StrokeItem : AdamantiumViewModel, ICanvasItem
     public double X
     {
         get => Bounds.X;
-        set => Move(new Vector2(value - Bounds.X, 0));
+        set => Move(new Vector2<double>(value - Bounds.X, 0));
     }
 
     public double Y
     {
         get => Bounds.Y;
-        set => Move(new Vector2(0, value - Bounds.Y));
+        set => Move(new Vector2<double>(0, value - Bounds.Y));
     }
 
     public double Width
@@ -109,13 +109,13 @@ public partial class StrokeItem : AdamantiumViewModel, ICanvasItem
 
     /// <summary>Adds a point, in WORLD coordinates - the stroke works out the offset itself, so nothing outside it has
     /// to know that it keeps its points relative to anything.</summary>
-    public void Add(Vector2 world, float pressure = 1f) =>
+    public void Add(Vector2<double> world, float pressure = 1f) =>
         Append(new Vector2F((float)(world.X - Origin.X), (float)(world.Y - Origin.Y)), pressure);
 
     /// <summary>Moves the LAST point, in WORLD coordinates. This is what a line drawn point to point needs: between two
     /// clicks there is one vertex that follows the pointer, and it is moved rather than recorded - otherwise everywhere
     /// the pointer passed on the way would end up in the stroke.</summary>
-    public void MoveLast(Vector2 world)
+    public void MoveLast(Vector2<double> world)
     {
         if (_points.Count == 0) return;
 
@@ -129,7 +129,7 @@ public partial class StrokeItem : AdamantiumViewModel, ICanvasItem
 
     /// <summary>Moves the whole stroke. ONE field: the points are offsets from the origin, which is the reason they are
     /// kept that way.</summary>
-    public void Move(Vector2 worldDelta) => Origin += worldDelta;
+    public void Move(Vector2<double> worldDelta) => Origin += worldDelta;
 
     /// <summary>Scales the stroke into a new box, ink and all - a stroke made twice the size is drawn with a pen twice
     /// as wide, which is what happens to a drawing that is enlarged.</summary>
@@ -175,15 +175,15 @@ public partial class StrokeItem : AdamantiumViewModel, ICanvasItem
     /// <summary>Rubs a round hole in the stroke, cutting at the circle's crossings, and returns the pieces left (none, one or
     /// two).</summary>
     /// <returns>Whether anything was rubbed out at all.</returns>
-    public bool Erase(Vector2 center, double radius, List<StrokeItem> pieces)
+    public bool Erase(Vector2<double> center, double radius, List<StrokeItem> pieces)
     {
         if (_points.Count == 0 || radius <= 0) return false;
 
         // Cut half the ink width further, so the pieces' round caps do not close the hole again.
         var reach = radius + Thickness / 2;
 
-        var runs = new List<List<(Vector2 At, float Pressure)>>();
-        List<(Vector2 At, float Pressure)> run = null;
+        var runs = new List<List<(Vector2<double> At, float Pressure)>>();
+        List<(Vector2<double> At, float Pressure)> run = null;
         var cut = false;
 
         // A stroke of ONE point is a dot: it is either under the eraser or it is not. Its own reach is what makes it
@@ -241,12 +241,12 @@ public partial class StrokeItem : AdamantiumViewModel, ICanvasItem
         return true;
     }
 
-    private static (Vector2 At, float Pressure) Between((Vector2 At, float Pressure) from, (Vector2 At, float Pressure) to,
+    private static (Vector2<double> At, float Pressure) Between((Vector2<double> At, float Pressure) from, (Vector2<double> At, float Pressure) to,
         double t) => (At(from.At, to.At, t), from.Pressure + (to.Pressure - from.Pressure) * (float)t);
 
     // The piece of a segment that falls inside a circle, as a pair of fractions of its length, or nothing when none of
     // it does. Solving |A + t(B-A) - C| = R for t, and keeping only what lies on the segment itself.
-    private static (double Enter, double Leave)? Inside(Vector2 from, Vector2 to, Vector2 center, double radius)
+    private static (double Enter, double Leave)? Inside(Vector2<double> from, Vector2<double> to, Vector2<double> center, double radius)
     {
         var dx = to.X - from.X;
         var dy = to.Y - from.Y;
@@ -271,7 +271,7 @@ public partial class StrokeItem : AdamantiumViewModel, ICanvasItem
         return enter >= leave ? null : (enter, leave);
     }
 
-    private static Vector2 At(Vector2 from, Vector2 to, double t) =>
+    private static Vector2<double> At(Vector2<double> from, Vector2<double> to, double t) =>
         new(from.X + (to.X - from.X) * t, from.Y + (to.Y - from.Y) * t);
 
     /// <summary>Drops the last point - the vertex that was still following the pointer when the line was finished.
@@ -430,8 +430,8 @@ public partial class StrokeItem : AdamantiumViewModel, ICanvasItem
     {
         if (last <= first + 1) return;
 
-        var from = new Vector2(source[first].At.X, source[first].At.Y);
-        var to = new Vector2(source[last].At.X, source[last].At.Y);
+        var from = new Vector2<double>(source[first].At.X, source[first].At.Y);
+        var to = new Vector2<double>(source[last].At.X, source[last].At.Y);
 
         var worst = 0.0;
         var at = first;
@@ -440,7 +440,7 @@ public partial class StrokeItem : AdamantiumViewModel, ICanvasItem
         {
             var along = (double)(i - first) / (last - first);
             var pressure = source[first].Pressure + (source[last].Pressure - source[first].Pressure) * along;
-            var distance = Math.Max(Distance(new Vector2(source[i].At.X, source[i].At.Y), from, to),
+            var distance = Math.Max(Distance(new Vector2<double>(source[i].At.X, source[i].At.Y), from, to),
                 Math.Abs(source[i].Pressure - pressure) * halfWidth);
             if (distance <= worst) continue;
 
@@ -455,12 +455,12 @@ public partial class StrokeItem : AdamantiumViewModel, ICanvasItem
         Walk(source, at, last, tolerance, halfWidth, kept);
     }
 
-    public bool HitTest(Vector2 world, double tolerance)
+    public bool HitTest(Vector2<double> world, double tolerance)
     {
         if (_points.Count == 0) return false;
 
         var reach = tolerance + Thickness / 2;
-        var local = new Vector2(world.X - Origin.X, world.Y - Origin.Y);
+        var local = new Vector2<double>(world.X - Origin.X, world.Y - Origin.Y);
 
         if (_points.Count == 1) return Distance(local, At(0), At(0)) <= reach;
 
@@ -531,8 +531,8 @@ public partial class StrokeItem : AdamantiumViewModel, ICanvasItem
         // The rectangle is the stroke's own box on screen: it is what the record measures overlap and clipping by, and
         // the pass places each capsule from the points rather than from it.
         var box = Bounds;
-        var topLeft = canvas.WorldToScreen(new Vector2(box.X, box.Y));
-        var bottomRight = canvas.WorldToScreen(new Vector2(box.X + box.Width, box.Y + box.Height));
+        var topLeft = canvas.WorldToScreen(new Vector2<double>(box.X, box.Y));
+        var bottomRight = canvas.WorldToScreen(new Vector2<double>(box.X + box.Width, box.Y + box.Height));
 
         session.DrawRectangle(_ink,
             new Rect(topLeft.X, topLeft.Y, bottomRight.X - topLeft.X, bottomRight.Y - topLeft.Y));
@@ -545,14 +545,14 @@ public partial class StrokeItem : AdamantiumViewModel, ICanvasItem
         brush is SolidColorBrush solid ? solid.Color : new Color(0, 0, 0, 0);
 
 
-    private Vector2 At(int index) => new(_points[index].At.X, _points[index].At.Y);
+    private Vector2<double> At(int index) => new(_points[index].At.X, _points[index].At.Y);
 
-    private Vector2 World(int index) =>
+    private Vector2<double> World(int index) =>
         new(Origin.X + _points[index].At.X, Origin.Y + _points[index].At.Y);
 
     // Distance from a point to a segment. The degenerate case (both ends the same) falls out of the clamp, so a single
     // tap does not need a branch of its own.
-    private static double Distance(Vector2 point, Vector2 from, Vector2 to)
+    private static double Distance(Vector2<double> point, Vector2<double> from, Vector2<double> to)
     {
         var dx = to.X - from.X;
         var dy = to.Y - from.Y;

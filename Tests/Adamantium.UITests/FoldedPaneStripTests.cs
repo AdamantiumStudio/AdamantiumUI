@@ -19,7 +19,7 @@ public class FoldedPaneStripTests
         var strip = new StackPanel { Orientation = Orientation.Vertical };
         strip.Children.Add(pane);
 
-        strip.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        strip.Measure(new Size<double>(double.PositiveInfinity, double.PositiveInfinity));
         Assert.That(strip.IsMeasureValid, Is.True, "measured once, so the change below is the only thing under test");
 
         pane.LabelRotation = PaneLabelRotation.Left;

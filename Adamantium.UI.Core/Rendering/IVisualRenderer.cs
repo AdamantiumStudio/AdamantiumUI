@@ -17,7 +17,7 @@ public interface IVisualRenderer
     /// its GPU resources - dispose it when done. Pass a fresh / detached visual (hosting reparents it); a live on-screen
     /// element is baked separately without reparenting.
     /// </summary>
-    ImageSource Render(IUIComponent visual, Size size, double scale = 1.0, Color? clearColor = null);
+    ImageSource Render(IUIComponent visual, Size<double> size, double scale = 1.0, Color? clearColor = null);
 
     /// <summary>
     /// Parses <paramref name="aumlText"/> into a fresh visual tree and renders it (UWP's <c>XamlReader.Load</c> +
@@ -25,7 +25,7 @@ public interface IVisualRenderer
     /// Returns null if the markup does not produce a visual. Self-contained markup renders best - a snippet leaning on theme
     /// resources may not resolve them without a live context.
     /// </summary>
-    ImageSource Render(string aumlText, Size size, double scale = 1.0, Color? clearColor = null);
+    ImageSource Render(string aumlText, Size<double> size, double scale = 1.0, Color? clearColor = null);
 
     /// <summary>Renders the visual at its OWN desired size (measured unconstrained) - the RenderTargetBitmap default, so the
     /// whole element is captured and never clipped by a fixed size.</summary>
@@ -44,7 +44,7 @@ public interface IVisualRenderer
     /// <see cref="Render(IUIComponent, Size, double, Color?)"/> anywhere a window is on screen - that one submits and
     /// waits on the shared GPU device from the caller's thread, which races the window's own frame.
     /// </summary>
-    void RequestRender(IUIComponent visual, Size size, double scale, Color? clearColor, Action<ImageSource> onReady);
+    void RequestRender(IUIComponent visual, Size<double> size, double scale, Color? clearColor, Action<ImageSource> onReady);
 
     /// <summary>App-loop plumbing, LOOP thread: records a live snapshot - read the queued live subtrees and build their
     /// caches (device-free). Called every frame at a quiescent boundary; a no-op when nothing is queued. Not for general use.</summary>

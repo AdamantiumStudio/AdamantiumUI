@@ -45,7 +45,7 @@ public class KeyTipAdorner : Adorner
     /// must be told the decoration reaches outside - or a strip that clips adorners would shave it.</summary>
     public override double ClipStandoff => 12;
 
-    public override Rect PlaceIn(Size badge)
+    public override Rect PlaceIn(Size<double> badge)
     {
         var target = AdornedBounds;
 

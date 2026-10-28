@@ -15,7 +15,7 @@ public class CanvasMiniMapTests
     private static (CanvasMiniMap Map, InfiniteCanvas Canvas, CanvasScene Scene) Stage()
     {
         var canvas = new InfiniteCanvas();
-        canvas.Measure(new Size(800, 600), force: true);
+        canvas.Measure(new Size<double>(800, 600), force: true);
         canvas.Arrange(new Rect(0, 0, 800, 600));
 
         var scene = new CanvasScene();
@@ -28,7 +28,7 @@ public class CanvasMiniMapTests
             ViewBrush = Brushes.Red
         };
 
-        map.Measure(new Size(200, 150), force: true);
+        map.Measure(new Size<double>(200, 150), force: true);
         map.Arrange(new Rect(0, 0, 200, 150));
 
         return (map, canvas, scene);
@@ -100,7 +100,7 @@ public class CanvasMiniMapTests
         var (map, canvas, scene) = Stage();
         scene.Add(Box(0, 0));
 
-        canvas.CenterOn(new Vector2(50000, 40000));
+        canvas.CenterOn(new Vector2<double>(50000, 40000));
 
         var drawn = Drawn(map);
 
@@ -122,17 +122,17 @@ public class CanvasMiniMapTests
         Drawn(map);
 
         // The far corner of the map is the far corner of the plane.
-        map.Look(new Vector2(199, 149));
+        map.Look(new Vector2<double>(199, 149));
         var far = canvas.VisibleWorld;
 
-        map.Look(new Vector2(1, 1));
+        map.Look(new Vector2<double>(1, 1));
         var near = canvas.VisibleWorld;
 
         Assert.Multiple(() =>
         {
             Assert.That(far.X, Is.GreaterThan(near.X), "both ends of the map take the camera to the same place");
             Assert.That(far.Y, Is.GreaterThan(near.Y));
-            Assert.That(far.Contains(new Vector2(4050, 3030)), Is.True,
+            Assert.That(far.Contains(new Vector2<double>(4050, 3030)), Is.True,
                 "the far corner of the map is not the far corner of the plane");
         });
     }

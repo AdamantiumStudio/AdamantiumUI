@@ -48,7 +48,7 @@ public class RibbonCollapsedAndGalleryThemeTests
         control.ApplyCurrentTheme();
         Adamantium.UI.Extensions.WindowExtension.UpdateTree(control);
         Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
-        control.Measure(new Size(width, height));
+        control.Measure(new Size<double>(width, height));
         control.Arrange(new Rect(0, 0, width, height));
     }
 
@@ -59,7 +59,7 @@ public class RibbonCollapsedAndGalleryThemeTests
         group.ApplyVariant(group.Variants.Count - 1);
 
         // At its own width, as the band places it.
-        group.Measure(new Size(double.PositiveInfinity, 100));
+        group.Measure(new Size<double>(double.PositiveInfinity, 100));
         group.Arrange(new Rect(0, 0, group.DesiredSize.Width, 100));
         return group;
     }
@@ -253,7 +253,7 @@ public class RibbonCollapsedAndGalleryThemeTests
 
         first.Header = "A caption far wider than its one command";
         Lay(row, 2000, 100);
-        first.Measure(new Size(double.PositiveInfinity, 100));
+        first.Measure(new Size<double>(double.PositiveInfinity, 100));
 
         Assert.Multiple(() =>
         {

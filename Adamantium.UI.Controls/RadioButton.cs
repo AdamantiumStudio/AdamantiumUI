@@ -101,7 +101,7 @@ public class RadioButton : ToggleButton
 
     // A radio button can't stretch: its ring + label are a fixed visual. It reports the size it actually draws (not the
     // slot it was handed) so ActualWidth/RenderSize/ClipRectangle stop lying - see ContentControl.ArrangeContentSize.
-    protected override Size ArrangeOverride(Size finalSize) => ArrangeContentSize(finalSize);
+    protected override Size<double> ArrangeOverride(Size<double> finalSize) => ArrangeContentSize(finalSize);
 
     protected override AutomationPeer OnCreateAutomationPeer() => new RadioButtonAutomationPeer(this);
 }

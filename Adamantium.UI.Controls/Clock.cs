@@ -378,7 +378,7 @@ public class Clock : Control
         {
             Classes = Classes.Parse(classes),
             RenderTransform = new Transform(),
-            RenderTransformOrigin = new Vector2(0.5, 1),
+            RenderTransformOrigin = new Vector2<double>(0.5, 1),
         };
         _hands.Add(hand, 0, length, RadialAnchor.Hand);
         return hand;
@@ -492,7 +492,7 @@ public class Clock : Control
         {
             Classes = Classes.Parse("ClockFlipCard"),
             RenderTransform = new Transform(),
-            RenderTransformOrigin = new Vector2(0.5, 0.5),
+            RenderTransformOrigin = new Vector2<double>(0.5, 0.5),
             Child = new TextBlock
             {
                 Classes = Classes.Parse("ClockFlipFigure"),

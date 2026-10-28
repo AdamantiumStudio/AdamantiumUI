@@ -69,7 +69,7 @@ public class HaloTogglePatchRenderTests
             Shadow = withShadow ? new Shadow { OffsetY = 1, BlurRadius = 3, Color = Colors.Blue, Opacity = 1.0 } : null
         };
         control.Bounds = new Rect(0, 0, Size, Size);
-        control.RenderSize = new Size(Size, Size);
+        control.RenderSize = new Size<double>(Size, Size);
         control.RenderTransform = new Transform { TranslateX = At, TranslateY = At };
 
         var scene = new Scene { Control = control, Aura = aura, Root = new VisualRoot(control, Dim, Dim) };
@@ -135,7 +135,7 @@ public class HaloTogglePatchRenderTests
         ((IContainer)host).AddOrSetChildComponent(shadowed);
 
         var root = new VisualRoot(host, Dim, Dim);
-        ((IMeasurableComponent)root).Measure(new Size(Dim, Dim));
+        ((IMeasurableComponent)root).Measure(new Size<double>(Dim, Dim));
         ((IMeasurableComponent)root).Arrange(new Rect(0, 0, Dim, Dim));
         Assert.That(_renderer.RenderFrame(root), Is.True);
         RenderDirty.Clear();
@@ -181,7 +181,7 @@ public class HaloTogglePatchRenderTests
             Shadow = new Shadow { OffsetY = 1, BlurRadius = 3, Color = Colors.Blue, Opacity = 1.0 }
         };
         control.Bounds = new Rect(0, 0, Size, Size);
-        control.RenderSize = new Size(Size, Size);
+        control.RenderSize = new Size<double>(Size, Size);
         control.RenderTransform = new Transform { TranslateX = At, TranslateY = At };
         var scene = new Scene { Control = control, Root = new VisualRoot(control, Dim, Dim) };
         scene.Draw();

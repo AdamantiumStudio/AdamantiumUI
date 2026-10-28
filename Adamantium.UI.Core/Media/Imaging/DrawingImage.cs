@@ -132,9 +132,9 @@ public class DrawingImage : ImageSource
 
         // Move the viewbox origin to zero BEFORE scaling: an icon whose shapes start at (8,8) must not keep that gap
         // scaled up with it, the same way a shape's own leading gap would otherwise be baked into its size.
-        var transform = Matrix4x4F.Translation((float)-viewbox.X, (float)-viewbox.Y, 0) *
-                        Matrix4x4F.Scaling(scaleX, scaleY, 1) *
-                        Matrix4x4F.Translation((float)destination.X, (float)destination.Y, 0);
+        var transform = Matrix4x4.CreateTranslation<float>((float)-viewbox.X, (float)-viewbox.Y, 0) *
+                        Matrix4x4.CreateScale<float>(scaleX, scaleY, 1) *
+                        Matrix4x4.CreateTranslation<float>((float)destination.X, (float)destination.Y, 0);
 
         drawing.Render(session, transform, currentColor);
     }

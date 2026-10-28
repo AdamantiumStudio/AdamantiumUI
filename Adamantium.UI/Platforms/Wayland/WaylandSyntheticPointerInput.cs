@@ -130,7 +130,7 @@ internal sealed class WaylandSyntheticPointerInput : ISyntheticPointerInput, IDi
         Play(frames, worker);
     }
 
-    private void Place(WaylandWindowWorker worker, IEnumerable<Vector2> landings)
+    private void Place(WaylandWindowWorker worker, IEnumerable<Vector2<double>> landings)
     {
         foreach (var landing in landings)
         {
@@ -140,7 +140,7 @@ internal sealed class WaylandSyntheticPointerInput : ISyntheticPointerInput, IDi
             }
 
             if (placement?.Worker == worker && worker.Window is { } window &&
-                Lands(placement, new Vector2(window.ClientWidth / 2, window.ClientHeight / 2)))
+                Lands(placement, new Vector2<double>(window.ClientWidth / 2, window.ClientHeight / 2)))
             {
                 throw Covered(landing);
             }
@@ -198,7 +198,7 @@ internal sealed class WaylandSyntheticPointerInput : ISyntheticPointerInput, IDi
         }
     }
 
-    private void EnsureTouchscreen(WaylandWindowWorker worker, Vector2 landing)
+    private void EnsureTouchscreen(WaylandWindowWorker worker, Vector2<double> landing)
     {
         if (platform.Seat.HasTouch)
         {
@@ -230,13 +230,13 @@ internal sealed class WaylandSyntheticPointerInput : ISyntheticPointerInput, IDi
         }
     }
 
-    private static Vector2 Local(WaylandWindowWorker worker, PixelPoint screen) =>
+    private static Vector2<double> Local(WaylandWindowWorker worker, PixelPoint screen) =>
         new(screen.X / worker.Scale, screen.Y / worker.Scale);
 
-    private static InvalidOperationException Covered(Vector2 local) =>
+    private static InvalidOperationException Covered(Vector2<double> local) =>
         new($"({local.X:0}, {local.Y:0}) of the window is under another one: the system would press that.");
 
-    private bool Lands(WaylandSyntheticPlacement at, Vector2 local)
+    private bool Lands(WaylandSyntheticPlacement at, Vector2<double> local)
     {
         var point = at.ToStream(local);
         return Probe(at.Monitor, point.X, point.Y, at.Worker) is { } seen &&
@@ -266,7 +266,7 @@ internal sealed class WaylandSyntheticPointerInput : ISyntheticPointerInput, IDi
                     {
                         var scale = (second.X - first.X) / dx;
                         return new WaylandSyntheticPlacement(worker, monitor,
-                            new Vector2(x - first.X / scale, y - first.Y / scale), scale);
+                            new Vector2<double>(x - first.X / scale, y - first.Y / scale), scale);
                     }
                 }
             }
@@ -275,7 +275,7 @@ internal sealed class WaylandSyntheticPointerInput : ISyntheticPointerInput, IDi
         return null;
     }
 
-    private Vector2? Probe(GnomeMonitorStream monitor, double x, double y, WaylandWindowWorker worker)
+    private Vector2<double>? Probe(GnomeMonitorStream monitor, double x, double y, WaylandWindowWorker worker)
     {
         var before = platform.Seat.Pointer;
         pointerChanged.Reset();

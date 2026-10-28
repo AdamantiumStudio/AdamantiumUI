@@ -20,7 +20,7 @@ public class CanvasElementLayer : Panel
     /// <summary>NOT ITSELF A TARGET - the same reason <see cref="CanvasChromeLayer"/> is not. A panel catches the mouse
     /// across its whole box here, and this one is the size of the canvas: left as it was, the plane underneath could
     /// not be pressed at all. The controls it holds are still hit-tested; the empty space between them is not.</summary>
-    public override bool HitTestCore(Vector2 localPoint) => false;
+    public override bool HitTestCore(Vector2<double> localPoint) => false;
 
     public CanvasElementLayer()
     {
@@ -119,7 +119,7 @@ public class CanvasElementLayer : Panel
         return null;
     }
 
-    protected override Size MeasureOverride(Size availableSize)
+    protected override Size<double> MeasureOverride(Size<double> availableSize)
     {
         Core.Diagnostics.LayoutTrace.Count(typeof(CanvasElementLayer), "measure-pass");
 
@@ -134,7 +134,7 @@ public class CanvasElementLayer : Panel
 
             if (!item.SizeFollowsContent)
             {
-                Children[i].Measure(new Size(world.Width, world.Height));
+                Children[i].Measure(new Size<double>(world.Width, world.Height));
                 continue;
             }
 
@@ -142,7 +142,7 @@ public class CanvasElementLayer : Panel
             // box can only ever answer "it fits", which is what a node with four sockets in a two-socket box said while
             // drawing them over each other, and what a node narrower than its own labels said while spilling out of its
             // frame.
-            Children[i].Measure(new Size(Double.PositiveInfinity, Double.PositiveInfinity));
+            Children[i].Measure(new Size<double>(Double.PositiveInfinity, Double.PositiveInfinity));
             var natural = Children[i].DesiredSize;
 
             // WHAT IT NEEDS, told to the item: the measure is the only place this is known, and a grip pulling the
@@ -156,7 +156,7 @@ public class CanvasElementLayer : Panel
             // at that width, because a control given more room can use it and come out shorter.
             if (width - natural.Width > 0.5)
             {
-                Children[i].Measure(new Size(width, Double.PositiveInfinity), force: true);
+                Children[i].Measure(new Size<double>(width, Double.PositiveInfinity), force: true);
                 height = Children[i].DesiredSize.Height;
             }
 
@@ -170,10 +170,10 @@ public class CanvasElementLayer : Panel
 
         // Nothing of its own: the layer is a place, not a thing with a size. Asking for room would push the canvas's
         // own measure around, and the canvas is the one that decides how big the plane's window is.
-        return new Size();
+        return new Size<double>();
     }
 
-    protected override Size ArrangeOverride(Size finalSize)
+    protected override Size<double> ArrangeOverride(Size<double> finalSize)
     {
         if (Owner == null) return finalSize;
 
@@ -182,7 +182,7 @@ public class CanvasElementLayer : Panel
         for (var i = 0; i < Children.Count && i < _items.Count; i++)
         {
             var world = _items[i].World;
-            var at = Owner.WorldToScreen(new Vector2(world.X, world.Y));
+            var at = Owner.WorldToScreen(new Vector2<double>(world.X, world.Y));
 
             // Placed in SCREEN pixels but sized in WORLD units, and then scaled about its own top-left: the camera is a
             // transform on a finished control, never a new layout for it.
@@ -208,7 +208,7 @@ public class CanvasElementLayer : Panel
                 visual.RenderTransform = transform;
             }
 
-            visual.RenderTransformOrigin = Vector2.Zero;
+            visual.RenderTransformOrigin = Vector2<double>.Zero;
             transform.ScaleX = scale;
             transform.ScaleY = scale;
 

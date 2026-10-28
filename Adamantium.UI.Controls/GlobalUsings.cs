@@ -1,3 +1,13 @@
 global using Vector2 = Adamantium.Mathematics.Vector2;
 global using Adamantium.Mathematics;
 global using ICommand = Adamantium.Core.Commands.ICommand;
+global using Vector2F = Adamantium.Mathematics.Vector2<float>;
+global using Vector3F = Adamantium.Mathematics.Vector3<float>;
+global using Vector4F = Adamantium.Mathematics.Vector4<float>;
+global using QuaternionF = Adamantium.Mathematics.Quaternion<float>;
+global using Matrix3x2F = Adamantium.Mathematics.Matrix3x2<float>;
+global using Matrix3x3F = Adamantium.Mathematics.Matrix3x3<float>;
+global using Matrix4x4F = Adamantium.Mathematics.Matrix4x4<float>;
+global using RectangleF = Adamantium.Mathematics.Rectangle<float>;
+global using SizeF = Adamantium.Mathematics.Size<float>;
+global using ViewportF = Adamantium.Mathematics.Viewport<float>;

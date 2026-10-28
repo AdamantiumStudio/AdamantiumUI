@@ -36,7 +36,7 @@ public class RegularPolygonRenderTests
 
             var stage = new TestControl
             {
-                Bounds = new Rect(0, 0, Dim, Dim), RenderSize = new Size(Dim, Dim), RenderTransform = turn,
+                Bounds = new Rect(0, 0, Dim, Dim), RenderSize = new Size<double>(Dim, Dim), RenderTransform = turn,
             };
             var box = rect ?? new Rect(0, 0, Dim, Dim);
             stage.RenderAction = s => s.DrawRegularPolygon(fill ?? Brushes.White, box, corners, pen, ringThickness, startAngle);
@@ -119,7 +119,7 @@ public class RegularPolygonRenderTests
         var device = GpuTestDevice.Device;
         var factory = new RenderUnitFactory(device, new StubResourceFactory());
         using var renderer = new OffscreenTestRenderer(device, factory, Dim, Dim) { ClearColor = Colors.Black };
-        var stage = new TestControl { Bounds = new Rect(0, 0, Dim, Dim), RenderSize = new Size(Dim, Dim) };
+        var stage = new TestControl { Bounds = new Rect(0, 0, Dim, Dim), RenderSize = new Size<double>(Dim, Dim) };
         stage.RenderAction = s => s.DrawEllipse(new Rect(0, 0, Dim, Dim), Brushes.White, 0, 360,
             Adamantium.ProceduralGeometry.Shapes.EllipseType.Sector);
         Assert.That(renderer.RenderFrame(new VisualRoot(stage, Dim, Dim)), Is.True);
@@ -294,8 +294,8 @@ public class RegularPolygonRenderTests
 
     private static Brush Gradient() => new LinearGradientBrush
     {
-        StartPoint = new Vector2(0, 0),
-        EndPoint = new Vector2(1, 1),
+        StartPoint = new Vector2<double>(0, 0),
+        EndPoint = new Vector2<double>(1, 1),
         GradientStops =
         {
             new GradientStop(new Color((byte)37, (byte)99, (byte)235, (byte)255), 0),

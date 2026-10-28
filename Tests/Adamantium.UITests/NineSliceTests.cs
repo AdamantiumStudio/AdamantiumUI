@@ -244,7 +244,7 @@ public class NineSliceTests
     [Test]
     public void TheTexelInsetFollowsTheTextureAndNotTheSource()
     {
-        var bake = NineSlice.Bake(Brush(), new Rect(0, 0, 300, 300), 1.0, 0, -1, texels: new Size(400, 400));
+        var bake = NineSlice.Bake(Brush(), new Rect(0, 0, 300, 300), 1.0, 0, -1, texels: new Size<double>(400, 400));
 
         Assert.That(bake[0].UvRect.X, Is.EqualTo(0.5 / 400).Within(1e-6), "half a texel OF THE BAKE, not of the drawing");
         Assert.That(bake[0].UvRect.X, Is.Not.EqualTo(Texel / 2).Within(1e-6), "which is not what the 100-unit source would give");
@@ -265,17 +265,17 @@ public class NineSliceTests
             // 40 out of a quarter of the source: the corner is 1:1 only when the source is 160 across - which is WIDER
             // than the 120-wide panel it dresses. Baking at the shape is what used to happen, and it is exactly the
             // 25% the corner was missing.
-            Assert.That(NineSlice.BakeSize(brush, new Size(120, 120)).Width, Is.EqualTo(160).Within(1e-6),
+            Assert.That(NineSlice.BakeSize(brush, new Size<double>(120, 120)).Width, Is.EqualTo(160).Within(1e-6),
                 "the corner asks for more than the whole shape");
 
             // A wide panel stretches the CENTER, and that band then asks for the most - which is the shape's size, give
             // or take the corners. The old behavior, and still right when it is the demanding one.
-            Assert.That(NineSlice.BakeSize(brush, new Size(900, 200)).Width, Is.EqualTo((900 - 80) / 0.5).Within(1e-6));
+            Assert.That(NineSlice.BakeSize(brush, new Size<double>(900, 200)).Width, Is.EqualTo((900 - 80) / 0.5).Within(1e-6));
 
             // A REPEATED edge draws its motif at the motif's own size however long the strip is, so it asks for nothing
             // beyond the source and the corner's demand is all that is left - however wide the panel.
             brush.EdgeMode = NineSliceEdgeMode.Repeat;
-            Assert.That(NineSlice.BakeSize(brush, new Size(900, 200)).Width, Is.EqualTo(160).Within(1e-6));
+            Assert.That(NineSlice.BakeSize(brush, new Size<double>(900, 200)).Width, Is.EqualTo(160).Within(1e-6));
         });
     }
 
@@ -289,12 +289,12 @@ public class NineSliceTests
         brush.Slice = new Thickness(0.01);
         brush.Border = new Thickness(40);
 
-        Assert.That(NineSlice.BakeSize(brush, new Size(200, 200)).Width, Is.EqualTo(2048).Within(1e-6));
+        Assert.That(NineSlice.BakeSize(brush, new Size<double>(200, 200)).Width, Is.EqualTo(2048).Within(1e-6));
     }
 
     [Test]
     public void ABrushWithNoSourceIsBakedAtTheShape()
     {
-        Assert.That(NineSlice.BakeSize(new NineSliceBrush(), new Size(120, 80)), Is.EqualTo(new Size(120, 80)));
+        Assert.That(NineSlice.BakeSize(new NineSliceBrush(), new Size<double>(120, 80)), Is.EqualTo(new Size<double>(120, 80)));
     }
 }

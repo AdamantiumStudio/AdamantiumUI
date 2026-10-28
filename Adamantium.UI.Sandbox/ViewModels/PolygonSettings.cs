@@ -1,3 +1,4 @@
+using System;
 using Adamantium.Core;
 using Adamantium.MVVM;
 using Adamantium.Mathematics;
@@ -43,7 +44,7 @@ public sealed class PolygonSettings : AdamantiumViewModel
             if (!SetProperty(ref _strokeAlpha, value)) return;
 
             var c = StrokeBrush.Color;
-            StrokeBrush.Color = new Color(c.R, c.G, c.B, (byte)MathHelper.Clamp(value * 255.0, 0.0, 255.0));
+            StrokeBrush.Color = new Color(c.R, c.G, c.B, (byte)Math.Clamp(value * 255.0, 0.0, 255.0));
         }
     }
 

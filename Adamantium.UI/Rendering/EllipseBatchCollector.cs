@@ -126,8 +126,8 @@ internal sealed class EllipseBatchCollector : ShapeSdfCollector<EllipseItem>
         // this case closed (its `isClosed` asks only about the sweep), so cutting here also split the two paths.
         if (p.SweepAngle >= 360.0) return new Vector4F(0, 0, 0, ring);
 
-        var start = MathHelper.DegreesToRadians(p.StartAngle);
-        var end = start + MathHelper.DegreesToRadians(p.SweepAngle);
+        var start = (float)double.DegreesToRadians(p.StartAngle);
+        var end = start + (float)double.DegreesToRadians(p.SweepAngle);
         // A BAND's ends are RADIAL, whichever closing was asked for. A chord across a band is not a shape anybody means by
         // a ring gauge or a donut slice, and it is also the closing the tessellated fallback cannot reproduce: there the
         // ring is the outer shape minus the inner one, and only the radial ends of the two line up exactly.

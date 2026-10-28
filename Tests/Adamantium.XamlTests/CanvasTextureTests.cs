@@ -71,14 +71,14 @@ public class CanvasTextureTests
 
         canvas.Tool = tool;
 
-        tool.OnPressed(canvas, Pointer(new Vector2(box.X, box.Y)));
-        tool.OnMoved(canvas, Pointer(new Vector2(box.X + box.Width, box.Y + box.Height)));
-        tool.OnReleased(canvas, Pointer(new Vector2(box.X + box.Width, box.Y + box.Height)));
+        tool.OnPressed(canvas, Pointer(new Vector2<double>(box.X, box.Y)));
+        tool.OnMoved(canvas, Pointer(new Vector2<double>(box.X + box.Width, box.Y + box.Height)));
+        tool.OnReleased(canvas, Pointer(new Vector2<double>(box.X + box.Width, box.Y + box.Height)));
 
         return canvas.ItemsHere().OfType<ElementItem>().Last();
     }
 
-    private static CanvasPointerEventArgs Pointer(Vector2 at) => new()
+    private static CanvasPointerEventArgs Pointer(Vector2<double> at) => new()
     {
         World = at,
         Pointer = at,
@@ -354,7 +354,7 @@ public class CanvasTextureTests
 
         // The picture behind a path that names no real file has no size, and nothing is taken from it: a texture
         // squashed to nothing by a file that failed to load is worse than one left as it was.
-        var was = new Vector2(item.Width, item.Height);
+        var was = new Vector2<double>(item.Width, item.Height);
 
         inspector.ActualSizeCommand.Execute(null);
 
@@ -362,7 +362,7 @@ public class CanvasTextureTests
 
         if (picture == null || picture.Width <= 0 || picture.Height <= 0)
         {
-            Assert.That(new Vector2(item.Width, item.Height), Is.EqualTo(was),
+            Assert.That(new Vector2<double>(item.Width, item.Height), Is.EqualTo(was),
                 "a picture with no size of its own resized the texture anyway");
             return;
         }

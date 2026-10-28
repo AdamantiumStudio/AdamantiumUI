@@ -26,26 +26,26 @@ public partial class InfiniteCanvas
     /// <summary>The piece of the world a viewport THAT SIZE would show - asked for by whoever knows the size before the
     /// canvas does, which is the arrange pass that sets <see cref="IUIComponent.RenderSize"/> in the first place.
     /// </summary>
-    public Rect WorldAcross(Size viewport)
+    public Rect WorldAcross(Size<double> viewport)
     {
-        var topLeft = ScreenToWorld(Vector2.Zero);
-        var bottomRight = ScreenToWorld(new Vector2(viewport.Width, viewport.Height));
+        var topLeft = ScreenToWorld(Vector2<double>.Zero);
+        var bottomRight = ScreenToWorld(new Vector2<double>(viewport.Width, viewport.Height));
 
         return new Rect(topLeft.X, topLeft.Y, bottomRight.X - topLeft.X, bottomRight.Y - topLeft.Y);
     }
 
     /// <summary>Where a world point lands on screen. Public because no drawing tool can be written without it.</summary>
-    public Vector2 WorldToScreen(Vector2 world) => world * Scale + Offset;
+    public Vector2<double> WorldToScreen(Vector2<double> world) => world * Scale + Offset;
 
     /// <summary>What a screen point is in the world.</summary>
-    public Vector2 ScreenToWorld(Vector2 screen) => (screen - Offset) * (1.0 / Scale);
+    public Vector2<double> ScreenToWorld(Vector2<double> screen) => (screen - Offset) * (1.0 / Scale);
 
     /// <summary>A length measured on SCREEN, said in world units. Every tolerance - what counts as a hit, how close a
     /// snap pulls - is a screen distance: at 20x nobody can hit a thin line given in world units.</summary>
     public Double ScreenToWorldLength(Double screenPixels) => screenPixels / Scale;
 
     /// <summary>Moves the camera by a distance measured on screen.</summary>
-    public void PanBy(Vector2 screenDelta) => SetCurrentValue(OffsetProperty, Offset + screenDelta);
+    public void PanBy(Vector2<double> screenDelta) => SetCurrentValue(OffsetProperty, Offset + screenDelta);
 
     /// <summary>The part of the viewport a person can actually see the plane through: everything a DOCKED pane has
     /// taken is gone from it. The honest answer to "where is the middle", which a minimap or a ruler wants and
@@ -71,12 +71,12 @@ public partial class InfiniteCanvas
         var room = UsableBounds;
         if (world.Width <= 0 || world.Height <= 0 || room.Width <= 0 || room.Height <= 0) return;
 
-        var usable = new Size(Math.Max(1, room.Width - padding * 2), Math.Max(1, room.Height - padding * 2));
+        var usable = new Size<double>(Math.Max(1, room.Width - padding * 2), Math.Max(1, room.Height - padding * 2));
         var scale = Math.Clamp(Math.Min(usable.Width / world.Width, usable.Height / world.Height), MinScale, MaxScale);
 
         StopZoom();
         SetCurrentValue(ScaleProperty, scale);
-        CenterOn(new Vector2(world.X + world.Width / 2, world.Y + world.Height / 2));
+        CenterOn(new Vector2<double>(world.X + world.Width / 2, world.Y + world.Height / 2));
     }
 
     /// <summary>Puts the camera on ONE item: centered, and zoomed so it fills the usable viewport. A flat item - a line
@@ -106,35 +106,35 @@ public partial class InfiniteCanvas
         var size = RenderSize;
         if (size.Width <= 0 || size.Height <= 0) return;
 
-        var topLeft = WorldToScreen(new Vector2(world.X, world.Y));
-        var bottomRight = WorldToScreen(new Vector2(world.X + world.Width, world.Y + world.Height));
+        var topLeft = WorldToScreen(new Vector2<double>(world.X, world.Y));
+        var bottomRight = WorldToScreen(new Vector2<double>(world.X + world.Width, world.Y + world.Height));
 
         if (bottomRight.X <= 0 || topLeft.X >= size.Width || bottomRight.Y <= 0 || topLeft.Y >= size.Height)
         {
-            CenterOn(new Vector2(world.X + world.Width / 2, world.Y + world.Height / 2));
+            CenterOn(new Vector2<double>(world.X + world.Width / 2, world.Y + world.Height / 2));
             return;
         }
 
         var dx = Shift(topLeft.X, bottomRight.X, size.Width);
         var dy = Shift(topLeft.Y, bottomRight.Y, size.Height);
 
-        if (dx != 0 || dy != 0) PanBy(new Vector2(dx, dy));
+        if (dx != 0 || dy != 0) PanBy(new Vector2<double>(dx, dy));
     }
 
     /// <summary>The world point in the middle of the usable viewport - the one thing about the camera that means the
     /// same in a window of another size, which is why it and not the origin in pixels is what gets written down.
     /// </summary>
-    public Vector2 Looking
+    public Vector2<double> Looking
     {
         get
         {
             var room = UsableBounds;
 
-            return ScreenToWorld(new Vector2(room.X + room.Width / 2, room.Y + room.Height / 2));
+            return ScreenToWorld(new Vector2<double>(room.X + room.Width / 2, room.Y + room.Height / 2));
         }
     }
 
-    private Vector2? _lookWanted;
+    private Vector2<double>? _lookWanted;
     private Thickness _lastInset = new(-1);
 
     private static bool Same(Thickness one, Thickness other) =>
@@ -143,7 +143,7 @@ public partial class InfiniteCanvas
 
     /// <summary>Look at a world point - now, or as soon as the canvas is on screen: a saved setup arrives before the
     /// first layout, and a viewport of nothing has no middle.</summary>
-    public void Look(Vector2 world)
+    public void Look(Vector2<double> world)
     {
         if (RenderSize is { Width: > 0, Height: > 0 })
         {
@@ -157,16 +157,16 @@ public partial class InfiniteCanvas
 
     /// <summary>Puts a world point in the middle of the USABLE viewport - the middle of what is not behind a docked
     /// panel.</summary>
-    public void CenterOn(Vector2 world) => CenterOn(world, RenderSize);
+    public void CenterOn(Vector2<double> world) => CenterOn(world, RenderSize);
 
     // ...against a viewport SAID rather than read. Inside an arrange pass RenderSize is still what the canvas used to
     // be - this pass is what sets it - and centering then lands against a size of nothing.
-    private void CenterOn(Vector2 world, Size viewport)
+    private void CenterOn(Vector2<double> world, Size<double> viewport)
     {
         var taken = _chromeLayer?.Inset() ?? new Thickness(0);
         var width = Math.Max(1, viewport.Width - taken.Left - taken.Right);
         var height = Math.Max(1, viewport.Height - taken.Top - taken.Bottom);
-        var middle = new Vector2(taken.Left + width / 2, taken.Top + height / 2);
+        var middle = new Vector2<double>(taken.Left + width / 2, taken.Top + height / 2);
 
         SetCurrentValue(OffsetProperty, middle - world * Scale);
     }
@@ -191,7 +191,7 @@ public partial class InfiniteCanvas
 
         StopZoom();
 
-        var middle = new Vector2(world.X + world.Width / 2, world.Y + world.Height / 2);
+        var middle = new Vector2<double>(world.X + world.Width / 2, world.Y + world.Height / 2);
         var margin = Math.Clamp(FitMargin, 0, 0.45);
 
         if (world.Width > 1e-6 && world.Height > 1e-6)
@@ -266,11 +266,11 @@ public partial class InfiniteCanvas
     {
         var room = UsableBounds;
 
-        ZoomAt(new Vector2(room.X + room.Width / 2, room.Y + room.Height / 2), factor);
+        ZoomAt(new Vector2<double>(room.X + room.Width / 2, room.Y + room.Height / 2), factor);
     }
 
     /// <summary>Zooms about a point ON SCREEN, keeping the world under it still - what the wheel does.</summary>
-    public void ZoomAt(Vector2 screen, Double factor)
+    public void ZoomAt(Vector2<double> screen, Double factor)
     {
         var basis = _zoomActive ? _targetScale : Scale;
         var wanted = Math.Clamp(basis * factor, MinScale, MaxScale);
@@ -287,7 +287,7 @@ public partial class InfiniteCanvas
     }
 
     /// <summary>Sets the scale straight, with no easing, keeping a screen point still.</summary>
-    public void SetScaleAt(Vector2 screen, Double scale)
+    public void SetScaleAt(Vector2<double> screen, Double scale)
     {
         var world = ScreenToWorld(screen);
 
@@ -315,7 +315,7 @@ public partial class InfiniteCanvas
         if (_holdingPoint || _zoomActive || was <= 0 || !_cameraPlaced) return;
 
         var room = UsableBounds;
-        var middle = new Vector2(room.X + room.Width / 2, room.Y + room.Height / 2);
+        var middle = new Vector2<double>(room.X + room.Width / 2, room.Y + room.Height / 2);
         var world = (middle - Offset) * (1.0 / was);
 
         SetCurrentValue(OffsetProperty, middle - world * Scale);
@@ -536,7 +536,7 @@ public partial class InfiniteCanvas
 
     // ONE rectangle for the whole ground: the shader decides per pixel, from the world coordinate under it, whether it
     // is on a mark. A rectangle per mark was about a thousand a frame at 1:1 and could anti-alias none of them.
-    private void DrawGround(IDrawingSession session, Size size)
+    private void DrawGround(IDrawingSession session, Size<double> size)
     {
         _ground.Marks = (CanvasGridMarks)GridStyle;
         _ground.Offset = Offset;
@@ -581,7 +581,7 @@ public partial class InfiniteCanvas
 
     // The plate that says where the pointer is, BESIDE it: a number drawn where the mark is would cover the very
     // crossing it is about.
-    private void DrawReadout(IDrawingSession session, Vector2 world)
+    private void DrawReadout(IDrawingSession session, Vector2<double> world)
     {
         if (!ShowsPointerReadout || !_pointerInside || ReadoutSize <= 0) return;
         if (HandleBrush is not { } plate || SelectionBrush is not SolidColorBrush ink) return;
@@ -615,14 +615,14 @@ public partial class InfiniteCanvas
                 TextTrimming = TextTrimming.None,
                 TextWrapping = TextWrapping.NoWrap,
                 Color = ink.Color,
-                TextArea = new Rectangle(
-                    new Vector2F((float)(box.X + padding), (float)(box.Y + padding)), size)
+                TextArea = new Rectangle<int>(
+                    new Vector2F((float)(box.X + padding), (float)(box.Y + padding)).As<int>(), size.As<int>())
             },
             size, _readout, SelectionBrush, Brushes.Transparent, Brushes.Transparent);
     }
 
     // Shaped only when the digits actually change - the pointer moves far more often than the numbers it is over do.
-    private Size ShapeReadout(string text)
+    private Size<double> ShapeReadout(string text)
     {
         var font = UIComponent.DefaultFontFamily;
         if (font == null) return default;
@@ -636,7 +636,7 @@ public partial class InfiniteCanvas
 
         if (_readoutText == text) return _readoutSize;
 
-        _readoutSize = _readout.ProcessText(text, ReadoutSize, new Size(double.NaN, double.NaN), TextWrapping.NoWrap,
+        _readoutSize = _readout.ProcessText(text, ReadoutSize, new Size<double>(double.NaN, double.NaN), TextWrapping.NoWrap,
             TextTrimming.None, HorizontalTextAlignment.Left, VerticalTextAlignment.Top, false);
         _readoutText = text;
 
@@ -663,10 +663,10 @@ public partial class InfiniteCanvas
             var about = WorldToScreen(SelectionMiddle);
             var corner = new[]
             {
-                turn.Apply(new Vector2(frame.X, frame.Y), about),
-                turn.Apply(new Vector2(frame.X + frame.Width, frame.Y), about),
-                turn.Apply(new Vector2(frame.X + frame.Width, frame.Y + frame.Height), about),
-                turn.Apply(new Vector2(frame.X, frame.Y + frame.Height), about)
+                turn.Apply(new Vector2<double>(frame.X, frame.Y), about),
+                turn.Apply(new Vector2<double>(frame.X + frame.Width, frame.Y), about),
+                turn.Apply(new Vector2<double>(frame.X + frame.Width, frame.Y + frame.Height), about),
+                turn.Apply(new Vector2<double>(frame.X, frame.Y + frame.Height), about)
             };
 
             for (var i = 0; i < 4; i++) session.DrawLine(corner[i], corner[(i + 1) % 4], pen);
@@ -755,8 +755,8 @@ public partial class InfiniteCanvas
     /// <summary>A world rectangle as it lands on screen.</summary>
     public Rect ToScreen(Rect world)
     {
-        var topLeft = WorldToScreen(new Vector2(world.X, world.Y));
-        var bottomRight = WorldToScreen(new Vector2(world.X + world.Width, world.Y + world.Height));
+        var topLeft = WorldToScreen(new Vector2<double>(world.X, world.Y));
+        var bottomRight = WorldToScreen(new Vector2<double>(world.X + world.Width, world.Y + world.Height));
 
         return new Rect(topLeft.X, topLeft.Y, bottomRight.X - topLeft.X, bottomRight.Y - topLeft.Y);
     }
@@ -883,7 +883,7 @@ public partial class InfiniteCanvas
         _overlayFrom = e.GetPosition(this);
         _overlayAt = OverlayPlacement == CanvasOverlayPlacement.Free
             ? OverlayOffset
-            : new Vector2(_overlayRoot.Bounds.X, _overlayRoot.Bounds.Y);
+            : new Vector2<double>(_overlayRoot.Bounds.X, _overlayRoot.Bounds.Y);
 
         _draggingOverlay = true;
 
@@ -934,7 +934,7 @@ public partial class InfiniteCanvas
 
         // Kept INSIDE the canvas: a panel dragged off the edge is a panel nobody can get back.
         SetCurrentValue(OverlayPlacementProperty, CanvasOverlayPlacement.Free);
-        SetCurrentValue(OverlayOffsetProperty, new Vector2(
+        SetCurrentValue(OverlayOffsetProperty, new Vector2<double>(
             Math.Clamp(wanted.X, 0, Math.Max(0, room.Width - size.Width)),
             Math.Clamp(wanted.Y, 0, Math.Max(0, room.Height - size.Height))));
 
@@ -1034,7 +1034,7 @@ public partial class InfiniteCanvas
 
     // Cuts layers from the one paint order, a layer per run of same-sort items, for the viewport passed in (not RenderSize,
     // which this pass is setting).
-    private void SyncElements(Size viewport)
+    private void SyncElements(Size<double> viewport)
     {
         if (_layers == null || _sceneTaken) return;
 
@@ -1066,7 +1066,7 @@ public partial class InfiniteCanvas
     // MATCHED BY SORT, and only then rebuilt: a layer that is already the right kind keeps the controls it is holding.
     // Emptying the stack and filling it again would take every control off the plane and put it back - re-templated,
     // re-recorded, and with whatever it was in the middle of gone.
-    private void Restack(Size viewport)
+    private void Restack(Size<double> viewport)
     {
         var changed = false;
 
@@ -1186,7 +1186,7 @@ public partial class InfiniteCanvas
 
     // The world's origin starts in the MIDDLE of the viewport: a plane whose origin sits off in a corner reads as one
     // that has been scrolled away from, which on something with no edges is the one impression to avoid.
-    protected override Size ArrangeOverride(Size finalSize)
+    protected override Size<double> ArrangeOverride(Size<double> finalSize)
     {
         var size = base.ArrangeOverride(finalSize);
 
@@ -1194,7 +1194,7 @@ public partial class InfiniteCanvas
         if (!_cameraPlaced && finalSize is { Width: > 0, Height: > 0 })
         {
             _cameraPlaced = true;
-            SetCurrentValue(OffsetProperty, new Vector2(finalSize.Width / 2, finalSize.Height / 2));
+            SetCurrentValue(OffsetProperty, new Vector2<double>(finalSize.Width / 2, finalSize.Height / 2));
         }
 
         // A view asked for before there was a viewport - and only once the panels have stopped moving: the middle is

@@ -14,10 +14,10 @@ public sealed class RadialGradientBrush : GradientBrush
     // PAINT, every one of them: a gradient's geometry is RELATIVE to the filled bounds, so moving the center or the radius
     // re-colors the same pixels - it never changes the element's shape or its layout (see Brush.Opacity).
     public static readonly AdamantiumProperty CenterProperty = AdamantiumProperty.Register(nameof(Center),
-        typeof(Vector2), typeof(RadialGradientBrush), new PropertyMetadata(new Vector2(0.5f, 0.5f), PropertyMetadataOptions.AffectsPaint));
+        typeof(Vector2<double>), typeof(RadialGradientBrush), new PropertyMetadata(new Vector2<double>(0.5f, 0.5f), PropertyMetadataOptions.AffectsPaint));
 
     public static readonly AdamantiumProperty GradientOriginProperty = AdamantiumProperty.Register(nameof(GradientOrigin),
-        typeof(Vector2), typeof(RadialGradientBrush), new PropertyMetadata(new Vector2(0.5f, 0.5f), PropertyMetadataOptions.AffectsPaint));
+        typeof(Vector2<double>), typeof(RadialGradientBrush), new PropertyMetadata(new Vector2<double>(0.5f, 0.5f), PropertyMetadataOptions.AffectsPaint));
 
     public static readonly AdamantiumProperty RadiusXProperty = AdamantiumProperty.Register(nameof(RadiusX),
         typeof(double), typeof(RadialGradientBrush), new PropertyMetadata(0.5, PropertyMetadataOptions.AffectsPaint));
@@ -26,16 +26,16 @@ public sealed class RadialGradientBrush : GradientBrush
         typeof(double), typeof(RadialGradientBrush), new PropertyMetadata(0.5, PropertyMetadataOptions.AffectsPaint));
 
     /// <summary>The ellipse center (relative). The stops lay out from <see cref="GradientOrigin"/> to this ellipse's edge.</summary>
-    public Vector2 Center
+    public Vector2<double> Center
     {
-        get => GetValue<Vector2>(CenterProperty);
+        get => GetValue<Vector2<double>>(CenterProperty);
         set { if (IsFrozen) return; SetValue(CenterProperty, value); }
     }
 
     /// <summary>Where offset 0 sits (relative). Defaults to the center; move it for an off-center "spotlight".</summary>
-    public Vector2 GradientOrigin
+    public Vector2<double> GradientOrigin
     {
-        get => GetValue<Vector2>(GradientOriginProperty);
+        get => GetValue<Vector2<double>>(GradientOriginProperty);
         set { if (IsFrozen) return; SetValue(GradientOriginProperty, value); }
     }
 

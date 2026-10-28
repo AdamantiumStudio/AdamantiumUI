@@ -52,10 +52,10 @@ public abstract class CalendarButtonBase : ButtonBase
 
     internal abstract int Column { get; }
 
-    protected override Size MeasureOverride(Size availableSize)
+    protected override Size<double> MeasureOverride(Size<double> availableSize)
     {
         var content = base.MeasureOverride(availableSize);
         var padding = Padding;
-        return new Size(content.Width + padding.Left + padding.Right, content.Height + padding.Top + padding.Bottom);
+        return new Size<double>(content.Width + padding.Left + padding.Right, content.Height + padding.Top + padding.Bottom);
     }
 }

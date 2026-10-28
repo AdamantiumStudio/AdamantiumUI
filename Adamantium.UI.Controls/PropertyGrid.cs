@@ -1108,7 +1108,7 @@ public class PropertyGrid : Control
         foreach (var row in _rows) row.ApplyNameWidth();
     }
 
-    protected override Size ArrangeOverride(Size finalSize)
+    protected override Size<double> ArrangeOverride(Size<double> finalSize)
     {
         var size = base.ArrangeOverride(finalSize);
 

@@ -10,7 +10,7 @@ namespace Adamantium.UI.Core.Graphics;
 
 public interface IDrawingSession
 {
-    IDrawingSession DrawLine(Vector2 start, Vector2 end, Pen pen);
+    IDrawingSession DrawLine(Vector2<double> start, Vector2<double> end, Pen pen);
     IDrawingSession DrawRectangle(Brush brush, Rect destinationRect, Pen pen = null);
     IDrawingSession DrawRectangle(Brush brush, Rect destinationRect, CornerRadius corners, Pen pen = null);
 
@@ -47,7 +47,7 @@ public interface IDrawingSession
     /// chosen in the shader. Advancing an animation therefore uploads nothing and allocates nothing.</summary>
     IDrawingSession DrawImageFrame(ImageSource image, Brush filter, Rect destinationRect, CornerRadius corners, int frameLayer);
     IDrawingSession DrawText(TextRenderingParameters renderingParameters, 
-        Size desiredSize, 
+        Size<double> desiredSize, 
         TextLayout textLayout,
         Brush foreground, 
         Brush background,
@@ -56,7 +56,7 @@ public interface IDrawingSession
     /// one: a <see cref="Media.Drawings.Drawing"/> puts several runs at their own spots inside a single element, and the
     /// text area cannot say where - it aligns the run WITHIN the layout, while the quad itself is placed by the unit.</summary>
     IDrawingSession DrawText(TextRenderingParameters renderingParameters,
-        Size desiredSize,
+        Size<double> desiredSize,
         TextLayout textLayout,
         Brush foreground,
         Brush background,
@@ -65,7 +65,7 @@ public interface IDrawingSession
     /// <summary>Draws the text with <paramref name="effects"/>: ranges of it moved and recolored, the layout as it
     /// is.</summary>
     IDrawingSession DrawText(TextRenderingParameters renderingParameters,
-        Size desiredSize,
+        Size<double> desiredSize,
         TextLayout textLayout,
         Brush foreground,
         Brush background,
@@ -74,7 +74,7 @@ public interface IDrawingSession
     /// <summary>Draws only the glyphs of the layout touching <paramref name="window"/>, in its units: a block drawing one
     /// frame of a layout another block owns.</summary>
     IDrawingSession DrawText(TextRenderingParameters renderingParameters,
-        Size desiredSize,
+        Size<double> desiredSize,
         TextLayout textLayout,
         Brush foreground,
         Brush background,

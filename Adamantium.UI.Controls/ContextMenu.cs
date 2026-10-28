@@ -73,16 +73,16 @@ public class ContextMenu : ItemsControl
     // A flyout occupies NO space where it is authored - its rows live in the popup overlay. Measuring to zero is not
     // enough: a stretching slot arranges it to the whole cell anyway, and being last in z-order it then swallows every
     // press meant for what it sits over (the quick-access buttons went dead under their own overflow menu).
-    protected override Size MeasureOverride(Size availableSize)
+    protected override Size<double> MeasureOverride(Size<double> availableSize)
     {
         base.MeasureOverride(availableSize);
-        return Size.Zero;
+        return Size<double>.Zero;
     }
 
-    protected override Size ArrangeOverride(Size finalSize)
+    protected override Size<double> ArrangeOverride(Size<double> finalSize)
     {
-        base.ArrangeOverride(Size.Zero);
-        return Size.Zero;
+        base.ArrangeOverride(Size<double>.Zero);
+        return Size<double>.Zero;
     }
 
     /// <summary>Puts the keyboard on the menu's first row. What a menu opened BY THE KEYBOARD owes its user - the rows
@@ -120,12 +120,12 @@ public class ContextMenu : ItemsControl
 
     /// <summary>Opens the menu AT <paramref name="point"/> (in <paramref name="target"/>-local coordinates) - the right-click
     /// entry point: places relative to the target's top-left, then offsets to the click point.</summary>
-    public void Open(UIComponent target, Vector2 point) => OpenAt(target, point, point);
+    public void Open(UIComponent target, Vector2<double> point) => OpenAt(target, point, point);
 
     // The keyboard opens the menu at a place of its own choosing, not at a point anybody pointed at.
-    internal void OpenFromKeyboard(UIComponent target, Vector2 point) => OpenAt(target, point, null);
+    internal void OpenFromKeyboard(UIComponent target, Vector2<double> point) => OpenAt(target, point, null);
 
-    private void OpenAt(UIComponent target, Vector2 point, Vector2? pointed)
+    private void OpenAt(UIComponent target, Vector2<double> point, Vector2<double>? pointed)
     {
         Opening?.Invoke(this, new ContextMenuOpeningEventArgs(target, pointed));
         Placement = PlacementMode.Relative;

@@ -12,7 +12,7 @@ public class PolyCubicBezierSegment : PathSegment
         
     }
 
-    public PolyCubicBezierSegment(IEnumerable<Vector2> points, bool isStroked)
+    public PolyCubicBezierSegment(IEnumerable<Vector2<double>> points, bool isStroked)
     {
         Points = new PointsCollection(points);
         IsStroked = isStroked;
@@ -47,7 +47,7 @@ public class PolyCubicBezierSegment : PathSegment
         RaiseComponentUpdated();
     }
 
-    internal override Vector2[] ProcessSegment(Vector2 currentPoint)
+    internal override Vector2<double>[] ProcessSegment(Vector2<double> currentPoint)
     {
         var bezierPoints = new List<CubicBezierPoint>();
         for (int i = 0; i < Points.Count; i += 3)
@@ -60,16 +60,16 @@ public class PolyCubicBezierSegment : PathSegment
         }
 
 
-        var points = new List<Vector2>();
+        var points = new List<Vector2<double>>();
         foreach (var bezierPoint in bezierPoints)
         {
-            var result = MathHelper.GetCubicBezier(
+            MathHelper.Curves.AppendCubicBezier(
                 bezierPoint.Point1,
                 bezierPoint.ControlPoint1,
                 bezierPoint.ControlPoint2,
                 bezierPoint.Point2,
-                20);
-            points.AddRange(result);
+                20,
+                points);
         }
 
         return points.ToArray();

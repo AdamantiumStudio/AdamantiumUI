@@ -39,10 +39,10 @@ public class UniformGrid : VirtualizingPanel
    private double _naturalWidth;
    private double _naturalHeight;
    private int _lastItemCount = -1;
-   private Size _lastConstraint;
+   private Size<double> _lastConstraint;
    private int _lastFirstRow;
    private double _lastViewportHeight;
-   private Vector2 _lastMeasuredOffset = new(double.NaN, double.NaN);
+   private Vector2<double> _lastMeasuredOffset = new(double.NaN, double.NaN);
    private bool _cellGrew;
    private System.Action<IUIComponent> _onSlotBound;
 
@@ -92,7 +92,7 @@ public class UniformGrid : VirtualizingPanel
    /// <summary>One cell as of the last arrange, gaps excluded. This is the grid's whole point stated as a number: the
    /// counts are authored and the cell is DERIVED from the space, so anything that takes space away (a border, padding)
    /// costs every cell a fraction of a pixel instead of costing the line a whole column.</summary>
-   public Size CellSize { get; private set; }
+   public Size<double> CellSize { get; private set; }
 
    /// <summary>Along an axis whose count is not set every cell is as big as the biggest item, so there an item's
    /// re-measure has to reach the grid. A virtualizing grid that shares out both axes is a boundary like any other.</summary>
@@ -105,13 +105,13 @@ public class UniformGrid : VirtualizingPanel
 
    private double RowPitch => _cellHeight + RowSpacing;
 
-   protected override Size MeasurePlain(Size availableSize)
+   protected override Size<double> MeasurePlain(Size<double> availableSize)
    {
       GetDimensions(Children.Count, availableSize.Width, out var rows, out var columns);
-      if (rows == 0 || columns == 0) return new Size();
+      if (rows == 0 || columns == 0) return new Size<double>();
 
       // The spacing eats into the space available for cells, so each cell is (available - total gaps) / count.
-      var cell = new Size(
+      var cell = new Size<double>(
          (availableSize.Width - (columns - 1) * ColumnSpacing) / columns,
          (availableSize.Height - (rows - 1) * RowSpacing) / rows);
       double maxWidth = 0, maxHeight = 0;
@@ -122,11 +122,11 @@ public class UniformGrid : VirtualizingPanel
          if (child.DesiredSize.Height > maxHeight) maxHeight = child.DesiredSize.Height;
       }
       // Every cell is the largest child's size; the grid is that times the count, plus the gaps between them.
-      return new Size(maxWidth * columns + (columns - 1) * ColumnSpacing,
+      return new Size<double>(maxWidth * columns + (columns - 1) * ColumnSpacing,
                       maxHeight * rows + (rows - 1) * RowSpacing);
    }
 
-   protected override Size ArrangePlain(Size finalSize)
+   protected override Size<double> ArrangePlain(Size<double> finalSize)
    {
       GetDimensions(Children.Count, finalSize.Width, out var rows, out var columns);
       if (rows == 0 || columns == 0) return finalSize;
@@ -135,7 +135,7 @@ public class UniformGrid : VirtualizingPanel
       var cellHeight = (finalSize.Height - (rows - 1) * RowSpacing) / rows;
       EffectiveColumns = columns;
       EffectiveRows = rows;
-      CellSize = new Size(cellWidth, cellHeight);
+      CellSize = new Size<double>(cellWidth, cellHeight);
       var index = 0;
       foreach (var child in Children)
       {
@@ -147,7 +147,7 @@ public class UniformGrid : VirtualizingPanel
       return finalSize;
    }
 
-   protected override Size MeasureVirtualized(Size availableSize, Vector2 offset)
+   protected override Size<double> MeasureVirtualized(Size<double> availableSize, Vector2<double> offset)
    {
       var generator = Owner.ItemContainerGenerator;
       var count = Owner.Items.Count;
@@ -156,7 +156,7 @@ public class UniformGrid : VirtualizingPanel
          foreach (var parked in generator.SetWindow(0, -1)) ParkContainer(parked);
          _rows = _columns = 0;
          _lastItemCount = 0;
-         return new Size();
+         return new Size<double>();
       }
 
       GetDimensions(count, availableSize.Width, out _rows, out _columns);
@@ -165,7 +165,7 @@ public class UniformGrid : VirtualizingPanel
       var sharedWidth = Math.Max(0, (availableSize.Width - (_columns - 1) * ColumnSpacing) / _columns);
       var sharedHeight = Math.Max(0, (availableSize.Height - (_rows - 1) * RowSpacing) / _rows);
 
-      var constraint = new Size(_sharesWidth ? sharedWidth : double.PositiveInfinity,
+      var constraint = new Size<double>(_sharesWidth ? sharedWidth : double.PositiveInfinity,
                                 _sharesHeight ? sharedHeight : double.PositiveInfinity);
       if (count != _lastItemCount || constraint != _lastConstraint)
       {
@@ -247,11 +247,11 @@ public class UniformGrid : VirtualizingPanel
       return GridExtent();
    }
 
-   protected override void ArrangeVirtualized(Size finalSize, Vector2 offset)
+   protected override void ArrangeVirtualized(Size<double> finalSize, Vector2<double> offset)
    {
       EffectiveColumns = _columns;
       EffectiveRows = _rows;
-      CellSize = new Size(_cellWidth, _cellHeight);
+      CellSize = new Size<double>(_cellWidth, _cellHeight);
 
       var generator = Owner.ItemContainerGenerator;
       foreach (var index in generator.RealizedIndices)
@@ -273,7 +273,7 @@ public class UniformGrid : VirtualizingPanel
       return true;
    }
 
-   protected override bool RealizedWindowMovesFor(Vector2 from, Vector2 to)
+   protected override bool RealizedWindowMovesFor(Vector2<double> from, Vector2<double> to)
    {
       if (!VirtualizesRows) return false;
 
@@ -316,7 +316,7 @@ public class UniformGrid : VirtualizingPanel
       return IsItemsHost ? Owner.ItemContainerGenerator.ContainerFromIndex(next) : Children[next];
    }
 
-   private Size GridExtent() =>
+   private Size<double> GridExtent() =>
       new(_columns * _cellWidth + (_columns - 1) * ColumnSpacing, _rows * _cellHeight + (_rows - 1) * RowSpacing);
 
    private Rect SlotRect(int index) =>
@@ -335,7 +335,7 @@ public class UniformGrid : VirtualizingPanel
       _cellGrew |= GrowCell(cell.DesiredSize);
    }
 
-   private bool GrowCell(Size desired)
+   private bool GrowCell(Size<double> desired)
    {
       var grew = false;
       if (!_sharesWidth && desired.Width > _naturalWidth)

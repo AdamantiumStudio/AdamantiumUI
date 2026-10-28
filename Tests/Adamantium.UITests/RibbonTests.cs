@@ -58,7 +58,7 @@ public class RibbonTests
     public void TheStripsContainers_AreHeaders_NotTheTabs()
     {
         var ribbon = WithTabs("Home", "View");
-        ribbon.Measure(new Size(800, 200));
+        ribbon.Measure(new Size<double>(800, 200));
         ribbon.Arrange(new Rect(0, 0, 800, 200));
 
         var container = ribbon.ItemContainerGenerator.ContainerFromIndex(0);
@@ -76,7 +76,7 @@ public class RibbonTests
     public void TheHeader_FollowsTheTabsLabel()
     {
         var ribbon = WithTabs("Home", "View");
-        ribbon.Measure(new Size(800, 200));
+        ribbon.Measure(new Size<double>(800, 200));
         ribbon.Arrange(new Rect(0, 0, 800, 200));
         var header = (RibbonTabHeader)ribbon.ItemContainerGenerator.ContainerFromIndex(0);
 
@@ -90,7 +90,7 @@ public class RibbonTests
     public void SelectingATab_LightsItsHeaderAndOnlyThatOne()
     {
         var ribbon = WithTabs("Home", "View", "Help");
-        ribbon.Measure(new Size(800, 200));
+        ribbon.Measure(new Size<double>(800, 200));
         ribbon.Arrange(new Rect(0, 0, 800, 200));
 
         ribbon.SelectedIndex = 2;
@@ -131,7 +131,7 @@ public class RibbonTests
     {
         var panel = new RibbonGroupPanel();
         foreach (var child in children) panel.Children.Add(child);
-        panel.Measure(Size.Infinity);
+        panel.Measure(Size<double>.Infinity);
         panel.Arrange(new Rect(0, 0, panel.DesiredSize.Width, panel.DesiredSize.Height));
         return panel;
     }
@@ -242,7 +242,7 @@ public class RibbonTests
 
         var panel = new RibbonGroupPanel();
         foreach (var child in new IMeasurableComponent[] { large, a, b, c, lone }) panel.Children.Add(child);
-        panel.Measure(Size.Infinity);
+        panel.Measure(Size<double>.Infinity);
         panel.Arrange(new Rect(0, 0, panel.DesiredSize.Width, 80));   // a band taller than the tallest column
 
         Assert.Multiple(() =>
@@ -269,7 +269,7 @@ public class RibbonTests
         var panel = new RibbonGroupPanel();
         panel.Children.Add(top);
         panel.Children.Add(bottom);
-        panel.Measure(Size.Infinity);
+        panel.Measure(Size<double>.Infinity);
         panel.Arrange(new Rect(0, 0, panel.DesiredSize.Width, panel.DesiredSize.Height));
 
         Assert.Multiple(() =>
@@ -616,7 +616,7 @@ public class RibbonTests
         panel.Children.Add(narrow);
         panel.Children.Add(wide);
 
-        panel.Measure(new Size(double.PositiveInfinity, 100));
+        panel.Measure(new Size<double>(double.PositiveInfinity, 100));
         panel.Arrange(new Rect(0, 0, 150, 100));
 
         Assert.Multiple(() =>

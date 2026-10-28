@@ -47,7 +47,7 @@ public class SeparatorThemeTests
     {
         separator.ApplyCurrentTheme();
         Adamantium.UI.Extensions.WindowExtension.UpdateTree(separator);
-        separator.Measure(new Size(200, 40));
+        separator.Measure(new Size<double>(200, 40));
         separator.Arrange(new Rect(0, 0, 200, 40));
         return separator;
     }

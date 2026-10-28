@@ -83,7 +83,7 @@ public class AdornerLayoutTests
 
         public override bool FillsAdornedBounds => true;
 
-        protected override Size MeasureOverride(Size availableSize)
+        protected override Size<double> MeasureOverride(Size<double> availableSize)
         {
             Measures++;
             return base.MeasureOverride(availableSize);

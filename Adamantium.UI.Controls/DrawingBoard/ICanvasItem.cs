@@ -60,7 +60,7 @@ public interface ICanvasItem : INotifyPropertyChanged
 
     /// <summary>Whether a world point is ON this item. The tolerance is a WORLD length the canvas works out from a
     /// screen one - what counts as a hit has to be the same distance under the cursor at any zoom.</summary>
-    bool HitTest(Vector2 world, double tolerance);
+    bool HitTest(Vector2<double> world, double tolerance);
 
     /// <summary>Whether a world rectangle touches what this item draws - what a selection band asks. The box by default;
     /// an item whose box is mostly empty (an outline, a stroke, a frame) answers by what it draws, as its hit test does.</summary>
@@ -72,11 +72,11 @@ public interface ICanvasItem : INotifyPropertyChanged
 
     /// <summary>Moves it by a WORLD distance. Separate from <see cref="Resize"/> because moving is the one edit an item
     /// can always do exactly - a stroke moves by one field, not by a walk over its points.</summary>
-    void Move(Vector2 worldDelta);
+    void Move(Vector2<double> worldDelta);
 
     /// <summary>The least it can be resized to, in world units; zero for ink and shapes, the content's own size for a
     /// control.</summary>
-    Size Smallest => new();
+    Size<double> Smallest => new();
 
     /// <summary>Puts it inside a new box, in WORLD units - what a resize grip does. Afterwards <see cref="Bounds"/> is
     /// that box, so dragging a grip a second time starts from where the first one left off instead of drifting.</summary>

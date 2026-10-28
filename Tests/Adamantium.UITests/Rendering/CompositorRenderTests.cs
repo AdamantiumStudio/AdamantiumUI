@@ -47,7 +47,7 @@ public class CompositorRenderTests
         var root = new TestRoot(64, 64);
         var control = new TestControl { RenderAction = s => s.DrawRectangle(Brushes.Red, new Rect(0, 0, 16, 16)) };
         control.Bounds = new Rect(0, 24, 16, 16);
-        control.RenderSize = new Size(16, 16);
+        control.RenderSize = new Size<double>(16, 16);
         var transform = new Transform();
         control.RenderTransform = transform;
         root.Add(control);
@@ -94,7 +94,7 @@ public class CompositorRenderTests
             RenderAction = s => s.DrawRectangle(Brushes.Red, new Rect(0, 0, 16, 16))
         };
         control.Bounds = new Rect(0, 24, 16, 16);
-        control.RenderSize = new Size(16, 16);
+        control.RenderSize = new Size<double>(16, 16);
 
         var transform = new Transform();
         control.RenderTransform = transform;
@@ -149,10 +149,10 @@ public class CompositorRenderTests
         var control = new TestControl
         {
             RenderAction = s => s.DrawRectangle(Brushes.Red, new Rect(0, 0, 24, 8)),
-            RenderTransformOrigin = new Vector2(0.5, 0.5)   // its own center
+            RenderTransformOrigin = new Vector2<double>(0.5, 0.5)   // its own center
         };
         control.Bounds = new Rect(20, 28, 24, 8);           // a 24x8 bar centered at (32,32) - NOT at the window origin
-        control.RenderSize = new Size(24, 8);
+        control.RenderSize = new Size<double>(24, 8);
 
         var transform = new Transform();
         control.RenderTransform = transform;
@@ -204,7 +204,7 @@ public class CompositorRenderTests
         var root = new TestRoot(64, 64);
         var control = new TestControl { RenderAction = s => s.DrawRectangle(brush, new Rect(0, 0, 40, 40)) };
         control.Bounds = new Rect(12, 12, 40, 40);
-        control.RenderSize = new Size(40, 40);
+        control.RenderSize = new Size<double>(40, 40);
         root.Add(control);
 
         new PulseAnimation { Property = "Opacity", Min = 0.1, Max = 0.9, Duration = System.TimeSpan.FromSeconds(4) }.Apply(brush);
@@ -237,7 +237,7 @@ public class CompositorRenderTests
         var root = new TestRoot(64, 64);
         var control = new TestControl { RenderAction = s => s.DrawRectangle(Brushes.Red, new Rect(0, 0, 40, 40)) };
         control.Bounds = new Rect(12, 12, 40, 40);
-        control.RenderSize = new Size(40, 40);
+        control.RenderSize = new Size<double>(40, 40);
         root.Add(control);
 
         control.BeginAnimation(Adamantium.UI.Controls.Base.UIComponent.OpacityProperty,
@@ -277,10 +277,10 @@ public class CompositorRenderTests
         var root = new TestRoot(64, 64);
         var page = new TestControl();
         page.Bounds = new Rect(0, 0, 64, 64);
-        page.RenderSize = new Size(64, 64);
+        page.RenderSize = new Size<double>(64, 64);
         var first = new TestControl { RenderAction = s => s.DrawRectangle(Brushes.Red, new Rect(0, 0, 16, 16)) };
         first.Bounds = new Rect(4, 4, 16, 16);
-        first.RenderSize = new Size(16, 16);
+        first.RenderSize = new Size<double>(16, 16);
         page.Add(first);
         root.Add(page);
         Assert.That(renderer.RenderFrame(root), Is.True);
@@ -292,7 +292,7 @@ public class CompositorRenderTests
 
         var late = new TestControl { RenderAction = s => s.DrawRectangle(Brushes.Red, new Rect(0, 0, 16, 16)) };
         late.Bounds = new Rect(24, 24, 16, 16);
-        late.RenderSize = new Size(16, 16);
+        late.RenderSize = new Size<double>(16, 16);
         page.Add(late);
         Assert.That(renderer.RenderFrame(root), Is.True);
 
@@ -320,7 +320,7 @@ public class CompositorRenderTests
         var root = new TestRoot(64, 64);
         var page = new TestControl();
         page.Bounds = new Rect(0, 0, 64, 64);
-        page.RenderSize = new Size(64, 64);
+        page.RenderSize = new Size<double>(64, 64);
         var red = Square(Brushes.Red, 24);
         var green = Square(Brushes.Lime, 24);
         page.Add(red);
@@ -452,7 +452,7 @@ public class CompositorRenderTests
         var square = new TestControl();
         if (brush != null) square.RenderAction = s => s.DrawRectangle(brush, new Rect(0, 0, size, size));
         square.Bounds = new Rect(at, at, size, size);
-        square.RenderSize = new Size(size, size);
+        square.RenderSize = new Size<double>(size, size);
         return square;
     }
 
@@ -483,12 +483,12 @@ public class CompositorRenderTests
         var root = new TestRoot(64, 64);
         var card = new TestControl { RenderCloneStagger = TimeSpan.FromSeconds(1) };
         card.Bounds = new Rect(0, 24, 16, 16);
-        card.RenderSize = new Size(16, 16);
+        card.RenderSize = new Size<double>(16, 16);
         var fill = new TestControl { RenderAction = s => s.DrawRectangle(Brushes.Red, new Rect(0, 0, 16, 16)) };
         fill.Bounds = new Rect(0, 0, 16, 16);
-        fill.RenderSize = new Size(16, 16);
+        fill.RenderSize = new Size<double>(16, 16);
         card.Add(fill);
-        card.RenderClones = [Matrix4x4F.Translation(0, 0, 0), Matrix4x4F.Translation(24, 0, 0), Matrix4x4F.Translation(48, 0, 0)];
+        card.RenderClones = [Matrix4x4.CreateTranslation<float>(0, 0, 0), Matrix4x4.CreateTranslation<float>(24, 0, 0), Matrix4x4.CreateTranslation<float>(48, 0, 0)];
         root.Add(card);
 
         fill.BeginAnimation(Adamantium.UI.Controls.Base.UIComponent.OpacityProperty,
@@ -533,10 +533,10 @@ public class CompositorRenderTests
         var root = new TestRoot(128, 128);
         var card = new TestControl { RenderCloneStagger = TimeSpan.FromMilliseconds(2) };
         card.Bounds = new Rect(0, 0, 2, 2);
-        card.RenderSize = new Size(2, 2);
+        card.RenderSize = new Size<double>(2, 2);
         var fill = new TestControl { RenderAction = s => s.DrawRectangle(Brushes.Red, new Rect(0, 0, 2, 2)) };
         fill.Bounds = new Rect(0, 0, 2, 2);
-        fill.RenderSize = new Size(2, 2);
+        fill.RenderSize = new Size<double>(2, 2);
         card.Add(fill);
         root.Add(card);
 
@@ -545,7 +545,7 @@ public class CompositorRenderTests
             var cells = new Matrix4x4F[count];
             for (var i = 0; i < count; i++)
             {
-                cells[i] = Matrix4x4F.Translation(i % 64 * 2, i / 64 * 2, 0);   // copy i in the 2 px cell (i % 64, i / 64)
+                cells[i] = Matrix4x4.CreateTranslation<float>(i % 64 * 2, i / 64 * 2, 0);   // copy i in the 2 px cell (i % 64, i / 64)
             }
 
             return cells;
@@ -683,7 +683,7 @@ public class CompositorRenderTests
             })
         };
         root.Add(list);
-        list.Measure(new Size(200, 120));
+        list.Measure(new Size<double>(200, 120));
         list.Arrange(new Rect(0, 0, 200, 120));
         LayoutManager.GetOrCreate(list).ExecuteLayoutPass();
 

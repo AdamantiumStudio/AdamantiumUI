@@ -8,7 +8,6 @@ using Adamantium.Mathematics;
 using Adamantium.UI.Controls;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.RoutedEvents;
-using Rectangle = Adamantium.Mathematics.Rectangle;
 
 namespace Adamantium.UI.Universes
 {
@@ -48,7 +47,7 @@ namespace Adamantium.UI.Universes
             Width = (uint)window.ClientWidth;
             Height = (uint)window.ClientHeight;
             Handle = window.Handle;
-            ClientBounds = new Rectangle(0, 0, (int)Description.Width, (int)Description.Height);
+            ClientBounds = new Rectangle<int>(0, 0, (int)Description.Width, (int)Description.Height);
             UpdateViewportAndScissor((uint)ClientBounds.Width, (uint)ClientBounds.Height);
             
             base.InitializeInternal(context);
@@ -65,7 +64,7 @@ namespace Adamantium.UI.Universes
             var width = (uint)window.ClientWidth;
             var height = (uint)window.ClientHeight;
             RequestResize(width, height);
-            window.Measure(new Size(width, height));
+            window.Measure(new Size<double>(width, height));
             window.Arrange(new Rect(0, 0, window.ClientWidth, window.ClientHeight));
         }
 

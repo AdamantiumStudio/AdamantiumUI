@@ -112,13 +112,13 @@ public class GroupItem : AdamantiumViewModel, ICanvasItem
     public double X
     {
         get => Bounds.X;
-        set => Move(new Vector2(value - Bounds.X, 0));
+        set => Move(new Vector2<double>(value - Bounds.X, 0));
     }
 
     public double Y
     {
         get => Bounds.Y;
-        set => Move(new Vector2(0, value - Bounds.Y));
+        set => Move(new Vector2<double>(0, value - Bounds.Y));
     }
 
     public double Width
@@ -133,7 +133,7 @@ public class GroupItem : AdamantiumViewModel, ICanvasItem
         set => Resize(new Rect(Bounds.X, Bounds.Y, Bounds.Width, Math.Max(1e-9, value)));
     }
 
-    public void Move(Vector2 worldDelta)
+    public void Move(Vector2<double> worldDelta)
     {
         if (worldDelta.X == 0 && worldDelta.Y == 0)
         {
@@ -183,7 +183,7 @@ public class GroupItem : AdamantiumViewModel, ICanvasItem
 
     /// <summary>Hit when any CHILD is - not when the group's box is. A group of two things far apart has a box that is
     /// mostly empty, and picking it up by that emptiness would make everything under it unreachable.</summary>
-    public bool HitTest(Vector2 world, double tolerance)
+    public bool HitTest(Vector2<double> world, double tolerance)
     {
         foreach (var child in _children)
         {
@@ -206,7 +206,7 @@ public class GroupItem : AdamantiumViewModel, ICanvasItem
 
     /// <summary>The child under a point, or null. What "entering" a group means: a second click goes past the group to
     /// the thing inside it. Topmost first, because that is what the eye picked.</summary>
-    public ICanvasItem Pick(Vector2 world, double tolerance)
+    public ICanvasItem Pick(Vector2<double> world, double tolerance)
     {
         for (var i = _children.Count - 1; i >= 0; i--)
         {

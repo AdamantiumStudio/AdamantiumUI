@@ -74,7 +74,7 @@ internal sealed class TextureBatchCollector : BrushSdfCollector<TextureItem>
     /// <summary>The GPU texture a brush samples, or null - either it is not a textured brush, or its source is still
     /// decoding (in which case the next re-render picks it up, the way ImageRenderUnit does). ONE statement of "which
     /// brushes carry a texture", asked by every render unit that can route here rather than restated per shape.</summary>
-    internal static ITexture BrushTexture(Brush brush, IResourceFactory factory, Size size = default, IUIComponent owner = null)
+    internal static ITexture BrushTexture(Brush brush, IResourceFactory factory, Size<double> size = default, IUIComponent owner = null)
     {
         var source = brush switch
         {
@@ -309,7 +309,7 @@ internal sealed class TextureBatchCollector : BrushSdfCollector<TextureItem>
         items = brush switch
         {
             NineSliceBrush nine => NineSlice.Bake(nine, bounds, opacity, transformSlot, fadeSlot, sx, sy,
-                texture == null ? default : new Size(texture.Width, texture.Height)),
+                texture == null ? default : new Size<double>(texture.Width, texture.Height)),
             TileBrush tile => [Single(tile, bounds, radius, radii, opacity, transformSlot, fadeSlot, sx, sy)],
             _ => null
         };

@@ -46,7 +46,7 @@ public class DataGridThemePartsTests
         control.ApplyCurrentTheme();
         Adamantium.UI.Extensions.WindowExtension.UpdateTree(control);
         Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
-        control.Measure(new Size(400, 300));
+        control.Measure(new Size<double>(400, 300));
         control.Arrange(new Rect(0, 0, 400, 300));
         return control;
     }
@@ -89,7 +89,7 @@ public class DataGridThemePartsTests
         Use(theme);
         var header = Built(new DataGridColumnHeader { Content = "Unit Price", CanFilter = true });
 
-        header.Measure(new Size(36, 26), force: true);
+        header.Measure(new Size<double>(36, 26), force: true);
         header.Arrange(new Rect(0, 0, 36, 26));
 
         var funnel = (IUIComponent)header.GetTemplateChild("PART_FilterButton");
@@ -193,7 +193,7 @@ public class DataGridThemePartsTests
         Built(grid);
 
         var view = FirstHeader(grid).OpenFilter();
-        view.Measure(new Size(260, 460));
+        view.Measure(new Size<double>(260, 460));
         view.Arrange(new Rect(0, 0, 260, 460));
 
         var list = (ListBox)view.GetTemplateChild("PART_Values");
@@ -258,7 +258,7 @@ public class DataGridThemePartsTests
         grid.ApplyCurrentTheme();
         Adamantium.UI.Extensions.WindowExtension.UpdateTree(grid);
         Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
-        grid.Measure(new Size(600, 300));
+        grid.Measure(new Size<double>(600, 300));
         grid.Arrange(new Rect(0, 0, 600, 300));
 
         var scroll = (ScrollViewer)grid.GetTemplateChild("PART_ScrollHost");
@@ -277,7 +277,7 @@ public class DataGridThemePartsTests
         // ...and once it IS scrolled, a header has to stand over its own column. The rows are moved by the scroller
         // translating their whole panel; the header strip is outside it and moves itself - two mechanisms for one
         // number, and applying that number twice on one side is exactly how they came apart.
-        scroll.SetScrollOffset(new Vector2(300, 0));
+        scroll.SetScrollOffset(new Vector2<double>(300, 0));
 
         // The strip's own invalidation is drained by the LayoutManager in the app; here the valid Border above it would
         // short-circuit the walk, so the chain is dirtied by hand - as everywhere else these tests re-lay a subtree.
@@ -285,7 +285,7 @@ public class DataGridThemePartsTests
         for (IUIComponent node = header; node != null; node = node.VisualParent)
             (node as IMeasurableComponent)?.InvalidateMeasure();
 
-        grid.Measure(new Size(600, 300), force: true);
+        grid.Measure(new Size<double>(600, 300), force: true);
         grid.Arrange(new Rect(0, 0, 600, 300));
         var scrolledRow = (IUIComponent)grid.ItemContainerGenerator.ContainerFromIndex(0);
         Assert.That(scrolledRow.RenderSize.Width, Is.EqualTo(1200).Within(1),

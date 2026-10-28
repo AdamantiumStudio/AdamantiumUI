@@ -279,7 +279,7 @@ public class BaselineGridTests
         var outer = new StackPanel { BaselineGridStep = Step, Children = { new Border { Height = 7 }, scroller } };
         var window = new Window { Width = 400, Height = 600, Content = outer };
         Update(window);
-        ((IScrollableContent)scroller).SetOffset(new Vector2(0, 1250));
+        ((IScrollableContent)scroller).SetOffset(new Vector2<double>(0, 1250));
         WindowExtension.UpdateTree(window);
         var rows = list.ItemContainerGenerator.RealizedIndices
             .Select(index => list.ItemContainerGenerator.ContainerFromIndex(index))
@@ -374,7 +374,7 @@ public class BaselineGridTests
         popup.IsOpen = true;
         for (var i = 0; i < 4; i++)
         {
-            window.PopupLayer.UpdateLayout(new Size(800, 600));
+            window.PopupLayer.UpdateLayout(new Size<double>(800, 600));
             WindowExtension.UpdateTree(window);
         }
 
@@ -440,7 +440,7 @@ public class BaselineGridTests
         popup.IsOpen = true;
         for (var i = 0; i < 4; i++)
         {
-            window.PopupLayer.UpdateLayout(new Size(800, 600));
+            window.PopupLayer.UpdateLayout(new Size<double>(800, 600));
             WindowExtension.UpdateTree(window);
         }
 
@@ -459,7 +459,7 @@ public class BaselineGridTests
         Update(window);
         var before = blocks.SelectMany(block => Baselines(block, panel)).ToArray();
         var fromAbove = blocks.SelectMany(block => Baselines(block, outer)).ToArray();
-        scroller.SetOffset(new Vector2(0, 13));
+        scroller.SetOffset(new Vector2<double>(0, 13));
         Update(window);
 
         Assert.Multiple(() =>

@@ -16,7 +16,7 @@ public class CanvasNodesSourceTests
     private static (InfiniteCanvas canvas, CanvasScene scene, TrackingCollection<ICanvasNode> nodes) Stage()
     {
         var canvas = new InfiniteCanvas { Mode = CanvasMode.Nodes };
-        canvas.Measure(new Size(800, 600), force: true);
+        canvas.Measure(new Size<double>(800, 600), force: true);
         canvas.Arrange(new Rect(0, 0, 800, 600));
 
         var scene = new CanvasScene();
@@ -145,7 +145,7 @@ public class CanvasNodesSourceTests
         nodes.Add(model);
 
         var item = canvas.ItemsHere().OfType<ElementItem>().Single();
-        item.Move(new Vector2(40, 15));
+        item.Move(new Vector2<double>(40, 15));
         scene.Touch();
 
         Assert.Multiple(() =>
@@ -184,13 +184,13 @@ public class CanvasNodesSourceTests
 
         // A CANVAS TOLD NOTHING ABOUT KINDS MAKES NOTHING: a node is the application's object, and the control has none
         // of its own to reach for - the same way an items control has no item type.
-        Assert.That(canvas.AddNode("Lerp", new Vector2(120, 80)), Is.Null,
+        Assert.That(canvas.AddNode("Lerp", new Vector2<double>(120, 80)), Is.Null,
             "the canvas invented a node of its own");
         Assert.That(nodes, Is.Empty);
 
         canvas.NodeKinds = new TrackingCollection<ICanvasNodeKind> { new Sort("Lerp") };
 
-        var made = canvas.AddNode("Lerp", new Vector2(120, 80));
+        var made = canvas.AddNode("Lerp", new Vector2<double>(120, 80));
 
         Assert.Multiple(() =>
         {
@@ -210,7 +210,7 @@ public class CanvasNodesSourceTests
         var (canvas, _, nodes) = Stage();
         canvas.NodeKinds = new TrackingCollection<ICanvasNodeKind> { new Sort("Lerp", 3, 1) };
 
-        canvas.AddNode("Lerp", Vector2.Zero);
+        canvas.AddNode("Lerp", Vector2<double>.Zero);
 
         Assert.Multiple(() =>
         {
@@ -835,7 +835,7 @@ public class CanvasNodesSourceTests
         nodes.Add(model);
 
         var item = canvas.ItemsHere().OfType<ElementItem>().Single();
-        var middle = new Vector2(item.World.X + item.World.Width / 2, item.World.Y + item.World.Height / 2);
+        var middle = new Vector2<double>(item.World.X + item.World.Width / 2, item.World.Y + item.World.Height / 2);
 
         tool.OnPressed(canvas, new CanvasPointerEventArgs
         {
@@ -900,7 +900,7 @@ public class CanvasNodesSourceTests
         var (canvas, _, nodes) = Stage();
         var lerp = new Sort("Lerp");
         canvas.NodeKinds = new TrackingCollection<ICanvasNodeKind> { new Sort("Add"), lerp };
-        canvas.PaletteAt = new Vector2(40, 60);
+        canvas.PaletteAt = new Vector2<double>(40, 60);
 
         canvas.IsPaletteOpen = true;
         canvas.PickedKind = lerp;
@@ -961,7 +961,7 @@ public class CanvasNodesSourceTests
 
         Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
 
-        canvas.AskForNode(new Vector2(0, 0));
+        canvas.AskForNode(new Vector2<double>(0, 0));
         Pick(list);
 
         Assert.Multiple(() =>
@@ -971,7 +971,7 @@ public class CanvasNodesSourceTests
             Assert.That(list.SelectedItem, Is.Null, "the list kept a pick the canvas has already answered");
         });
 
-        canvas.AskForNode(new Vector2(200, 200));
+        canvas.AskForNode(new Vector2<double>(200, 200));
         Pick(list);
 
         Assert.That(nodes, Has.Count.EqualTo(2), "the same kind picked a second time put nothing on the plane");

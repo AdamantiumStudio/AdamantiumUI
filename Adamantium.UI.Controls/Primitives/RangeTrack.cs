@@ -128,7 +128,7 @@ public class RangeTrack : Panel
         if (e.NewValue is MeasurableUIComponent newPart) track.Children.Add(newPart);
     }
 
-    protected override Size MeasureOverride(Size availableSize)
+    protected override Size<double> MeasureOverride(Size<double> availableSize)
     {
         foreach (var child in Children)
             child.Measure(availableSize);
@@ -136,11 +136,11 @@ public class RangeTrack : Panel
         // The track fills the trough; only the thumb's cross-size is an intrinsic demand.
         var thumb = (LowerThumb ?? UpperThumb)?.DesiredSize ?? default;
         return Orientation == Orientation.Vertical
-            ? new Size(thumb.Width, 0)
-            : new Size(0, thumb.Height);
+            ? new Size<double>(thumb.Width, 0)
+            : new Size<double>(0, thumb.Height);
     }
 
-    protected override Size ArrangeOverride(Size finalSize)
+    protected override Size<double> ArrangeOverride(Size<double> finalSize)
     {
         var vertical = Orientation == Orientation.Vertical;
         var trackLength = vertical ? finalSize.Height : finalSize.Width;
@@ -232,14 +232,14 @@ public class RangeTrack : Panel
     }
 
     /// <summary>The LOWER bound whose thumb would be centered on <paramref name="point"/> (track-local space).</summary>
-    public double LowerValueFromPoint(Vector2 point) => ValueFromPoint(point, 0);
+    public double LowerValueFromPoint(Vector2<double> point) => ValueFromPoint(point, 0);
 
     /// <summary>The UPPER bound whose thumb would be centered on <paramref name="point"/>. Its lead-in differs from the
     /// lower one's by the lower thumb plus the reserved band, which both sit before it - mapping a point the same way for
     /// both is what made a click land on the wrong value.</summary>
-    public double UpperValueFromPoint(Vector2 point) => ValueFromPoint(point, _thumbAlong + MinimumBandLength);
+    public double UpperValueFromPoint(Vector2<double> point) => ValueFromPoint(point, _thumbAlong + MinimumBandLength);
 
-    private double ValueFromPoint(Vector2 point, double leadIn)
+    private double ValueFromPoint(Vector2<double> point, double leadIn)
     {
         if (_remaining <= 0) return Minimum;
 

@@ -152,7 +152,7 @@ public abstract class Panel: InputUIComponent, IContainer, INavigablePanel
 
    protected override void OnRender(IDrawingContext context)
    {
-      context.ForControl(this).DrawRectangle(Background, new Rect(new Size(ActualWidth, ActualHeight)));
+      context.ForControl(this).DrawRectangle(Background, new Rect(new Size<double>(ActualWidth, ActualHeight)));
   }
 
    // No HitTestCore override: a panel is hit across its bounds with or without a Background. Use IsHitTestVisible="False"

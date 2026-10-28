@@ -519,12 +519,12 @@ public class AnimationTests
 
         var first = new Border();
         presenter.Content = first;
-        presenter.Measure(new Size(200, 100), force: true);
+        presenter.Measure(new Size<double>(200, 100), force: true);
         presenter.Arrange(new Rect(0, 0, 200, 100));
 
         var second = new Border();
         presenter.Content = second;
-        presenter.Measure(new Size(200, 100), force: true);
+        presenter.Measure(new Size<double>(200, 100), force: true);
         presenter.Arrange(new Rect(0, 0, 200, 100));
 
         Assert.That(presenter.GetVisualDescendants(), Does.Contain(first), "outgoing content kept during the slide");

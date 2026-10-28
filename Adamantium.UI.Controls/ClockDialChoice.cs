@@ -68,7 +68,7 @@ internal sealed class ClockDialChoice
         _hand = new Border
         {
             Width = 2, Height = Outer, Classes = Classes.Parse("ClockDialHand"),
-            RenderTransformOrigin = new Vector2(0.5, 1), RenderTransform = _turn,
+            RenderTransformOrigin = new Vector2<double>(0.5, 1), RenderTransform = _turn,
         };
         Canvas.SetLeft(_hand, Center - 1);
         Canvas.SetTop(_hand, Center - Outer);

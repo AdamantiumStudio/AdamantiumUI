@@ -31,7 +31,7 @@ public class GridStarShrinkTests
         // Measured UNBOUNDED, arranged into a slot - which is how a pane of Auto length is laid out (PaneHost asks the
         // child how much it needs with no limit, then arranges it into the answer). A star has no share of an unbounded
         // width, so nothing is resolved at measure and the arrange is the only pass that sizes it.
-        var unbounded = new Size(double.PositiveInfinity, 40);
+        var unbounded = new Size<double>(double.PositiveInfinity, 40);
 
         grid.Measure(unbounded);
         grid.Arrange(new Rect(0, 0, 70, 40));

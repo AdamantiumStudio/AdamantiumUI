@@ -19,7 +19,7 @@ public class PopupLayer
 {
     private readonly List<Popup> _popups = [];
     private readonly Dictionary<IUIComponent, Rect> _lastRect = new();   // last arranged slot per popup child (arrange gate)
-    private readonly Dictionary<IUIComponent, Size> _lastRoom = new();   // last room a StaysBesideTarget child was measured in
+    private readonly Dictionary<IUIComponent, Size<double>> _lastRoom = new();   // last room a StaysBesideTarget child was measured in
     private readonly HashSet<IUIComponent> _flippedAcross = [];
     // _popups/_lastRect are READ on the render (loop) thread (UpdateLayout/Roots) and MUTATED on the pump thread
     // (Popup.Open/Close -> Add/Remove: a dialog opened from a command, a light-dismissed menu). Without this a popup
@@ -43,7 +43,7 @@ public class PopupLayer
 
     /// <summary>The window's client size from the last layout pass - what a popup caps its scrollable content to so a menu
     /// taller than the window scrolls instead of clipping. Zero until the first sized pass.</summary>
-    public Size WindowSize { get; private set; }
+    public Size<double> WindowSize { get; private set; }
 
     /// <summary>The window this layer belongs to. A popup's child is rendered DETACHED - it has no visual path back to
     /// the window - so anything that has to walk out of an overlay (the focus ring looking for the layer to draw itself
@@ -113,7 +113,7 @@ public class PopupLayer
     /// Re-evaluate every open popup's position from its target's CURRENT world position (so it follows a moving target)
     /// and lay its child out there, clamped inside the window. Called each frame, after the main layout, before render.
     /// </summary>
-    public void UpdateLayout(Size windowSize)
+    public void UpdateLayout(Size<double> windowSize)
     {
         if (!IsFinitePositive(windowSize.Width) || !IsFinitePositive(windowSize.Height)) return;   // window not sized yet
         WindowSize = windowSize;
@@ -152,7 +152,7 @@ public class PopupLayer
             // Measure unconstrained for the content's own size - or within the room on its side of the target, for one
             // that stays beside it, again whenever that room changes - only when dirty; NaN or non-positive sizes must not
             // reach arrange or the renderer.
-            var available = new Size(double.PositiveInfinity, double.PositiveInfinity);
+            var available = new Size<double>(double.PositiveInfinity, double.PositiveInfinity);
             var roomChanged = false;
             if (popup.StaysBesideTarget)
             {
@@ -170,7 +170,7 @@ public class PopupLayer
             if (!IsFinitePositive(size.Width) || !IsFinitePositive(size.Height)) continue;
 
             // Never larger than the window (a degenerate huge content can't blow up the render target).
-            size = new Size(Math.Min(size.Width, windowSize.Width), Math.Min(size.Height, windowSize.Height));
+            size = new Size<double>(Math.Min(size.Width, windowSize.Width), Math.Min(size.Height, windowSize.Height));
             var pos = ComputePosition(popup, size, windowSize, popup.FlipToFit && InFlippedCard(popup), out var across);
             if (across) _flippedAcross.Add(child);
             if (double.IsNaN(pos.X) || double.IsNaN(pos.Y)) continue;
@@ -182,14 +182,14 @@ public class PopupLayer
     // Dock a child to a window edge. The CROSS axis (along the edge) ALWAYS fills the window. The MAIN axis (thickness,
     // the slide direction) is the child's own content/explicit size, unless <paramref name="fill"/> is set - then it
     // fills the window too (a full-window panel). Pinned to the edge; clamped to the window.
-    private void LayoutDocked(Dock edge, bool fill, MeasurableUIComponent child, Size win)
+    private void LayoutDocked(Dock edge, bool fill, MeasurableUIComponent child, Size<double> win)
     {
         var horizontal = edge is Dock.Left or Dock.Right;   // main (thickness) axis is horizontal
 
         // Cross axis constrained to the window; main axis to the window when filling, else free (content/explicit).
         var measureW = horizontal ? (fill ? win.Width : double.PositiveInfinity) : win.Width;
         var measureH = horizontal ? win.Height : (fill ? win.Height : double.PositiveInfinity);
-        var remeasured = RemeasureIfDirty(child, new Size(measureW, measureH));
+        var remeasured = RemeasureIfDirty(child, new Size<double>(measureW, measureH));
 
         var d = child.DesiredSize;
         var w = horizontal ? (fill ? win.Width : d.Width) : win.Width;
@@ -205,7 +205,7 @@ public class PopupLayer
 
     // Re-measures a dirty overlay subtree and returns whether it did. A deep dirty node does not dirty its ancestors, so
     // the whole subtree is invalidated first for the measure to reach it.
-    private static bool RemeasureIfDirty(MeasurableUIComponent child, Size available, bool force = false)
+    private static bool RemeasureIfDirty(MeasurableUIComponent child, Size<double> available, bool force = false)
     {
         if (!force && !NeedsLayout(child)) return false;
         InvalidateSubtree(child);
@@ -273,19 +273,19 @@ public class PopupLayer
 
     private static bool IsFinitePositive(double v) => !double.IsNaN(v) && !double.IsInfinity(v) && v > 0;
 
-    private static Size RoomBeside(Popup popup, Size windowSize)
+    private static Size<double> RoomBeside(Popup popup, Size<double> windowSize)
     {
         var unbounded = double.PositiveInfinity;
-        if (popup.EffectiveTarget is not { } target) return new Size(unbounded, unbounded);
+        if (popup.EffectiveTarget is not { } target) return new Size<double>(unbounded, unbounded);
 
         var box = TargetBox(target);
         return popup.Placement switch
         {
-            PlacementMode.Top => new Size(unbounded, Math.Max(0, box.Y + popup.VerticalOffset)),
-            PlacementMode.Left => new Size(Math.Max(0, box.X + popup.HorizontalOffset), unbounded),
-            PlacementMode.Right => new Size(Math.Max(0, windowSize.Width - box.Right - popup.HorizontalOffset), unbounded),
-            PlacementMode.Bottom => new Size(unbounded, Math.Max(0, windowSize.Height - box.Bottom - popup.VerticalOffset)),
-            _ => new Size(unbounded, unbounded)
+            PlacementMode.Top => new Size<double>(unbounded, Math.Max(0, box.Y + popup.VerticalOffset)),
+            PlacementMode.Left => new Size<double>(Math.Max(0, box.X + popup.HorizontalOffset), unbounded),
+            PlacementMode.Right => new Size<double>(Math.Max(0, windowSize.Width - box.Right - popup.HorizontalOffset), unbounded),
+            PlacementMode.Bottom => new Size<double>(unbounded, Math.Max(0, windowSize.Height - box.Bottom - popup.VerticalOffset)),
+            _ => new Size<double>(unbounded, unbounded)
         };
     }
 
@@ -317,7 +317,7 @@ public class PopupLayer
         return node != null && _flippedAcross.Contains(node);
     }
 
-    private static Vector2 ComputePosition(Popup popup, Size size, Size windowSize, bool swapped, out bool flippedAcross)
+    private static Vector2<double> ComputePosition(Popup popup, Size<double> size, Size<double> windowSize, bool swapped, out bool flippedAcross)
     {
         double tx = 0, ty = 0, tw = 0, th = 0;
         if (popup.EffectiveTarget is { } target)
@@ -384,6 +384,6 @@ public class PopupLayer
         // Never leave the window.
         x = Math.Clamp(x, 0, Math.Max(0, windowSize.Width - size.Width));
         y = Math.Clamp(y, 0, Math.Max(0, windowSize.Height - size.Height));
-        return new Vector2((float)x, (float)y);
+        return new Vector2<double>((float)x, (float)y);
     }
 }

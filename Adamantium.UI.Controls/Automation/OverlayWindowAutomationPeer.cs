@@ -65,7 +65,7 @@ public class OverlayWindowAutomationPeer : UIComponentAutomationPeer, IWindowPro
 
         var bounds = BoundingRectangle;
         var units = UnitsPerPixel();
-        _window.MoveCard(new Mathematics.Vector2((x - bounds.X) * units.X, (y - bounds.Y) * units.Y));
+        _window.MoveCard(new Mathematics.Vector2<double>((x - bounds.X) * units.X, (y - bounds.Y) * units.Y));
     }
 
     public void Resize(double width, double height)

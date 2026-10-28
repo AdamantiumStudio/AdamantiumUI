@@ -32,7 +32,7 @@ public class DockingSizingTests
 
     private static void Lay(DockingArea area, double width, double height)
     {
-        area.Measure(new Size(width, height));
+        area.Measure(new Size<double>(width, height));
         area.Arrange(new Rect(0, 0, width, height));
     }
 

@@ -15,7 +15,7 @@ public class ConnectGesture
     private ElementItem _fromItem;
     private CanvasNodePin _fromPin;
     private CanvasNode _opened;
-    private Vector2 _at;
+    private Vector2<double> _at;
 
     /// <summary>Whether a wire is being pulled right now. The tool holding this asks before doing anything of its own.
     /// </summary>
@@ -31,7 +31,7 @@ public class ConnectGesture
 
     /// <summary>Takes the press if it landed on a socket. False means it did not, and the tool should go on as usual.
     /// </summary>
-    public bool Press(InfiniteCanvas canvas, Vector2 world)
+    public bool Press(InfiniteCanvas canvas, Vector2<double> world)
     {
         if (canvas?.Scene == null) return false;
         if (!Socket(canvas, world, out _fromItem, out _fromPin)) return false;
@@ -52,7 +52,7 @@ public class ConnectGesture
     }
 
     /// <summary>Follows the pointer while a wire is out. False when there is none.</summary>
-    public bool Move(InfiniteCanvas canvas, Vector2 world)
+    public bool Move(InfiniteCanvas canvas, Vector2<double> world)
     {
         if (_fromPin == null) return false;
 
@@ -66,7 +66,7 @@ public class ConnectGesture
     // node has one stub a side and cannot say which socket is meant, so a wire let go over it read as a drop on
     // nothing - and offered to make a NEW node instead of wiring the one being pointed at. Opening it puts the sockets
     // back under the pointer and the drop means what it looks like.
-    private void Spring(InfiniteCanvas canvas, Vector2 world)
+    private void Spring(InfiniteCanvas canvas, Vector2<double> world)
     {
         var node = NodeAt(canvas, world);
         if (ReferenceEquals(node, _opened)) return;
@@ -87,7 +87,7 @@ public class ConnectGesture
         _opened = null;
     }
 
-    private static CanvasNode NodeAt(InfiniteCanvas canvas, Vector2 world)
+    private static CanvasNode NodeAt(InfiniteCanvas canvas, Vector2<double> world)
     {
         if (canvas?.Scene == null) return null;
 
@@ -104,7 +104,7 @@ public class ConnectGesture
 
     /// <summary>Lets the wire go. It becomes a real one if it landed on a socket that may be joined to the one it came
     /// from, and vanishes otherwise - a wire dropped on nothing is a gesture abandoned, not an error.</summary>
-    public bool Release(InfiniteCanvas canvas, Vector2 world)
+    public bool Release(InfiniteCanvas canvas, Vector2<double> world)
     {
         if (_fromPin == null) return false;
 
@@ -159,7 +159,7 @@ public class ConnectGesture
 
     /// <summary>What a socket under the pointer offers, for a tool deciding which cursor to wear. Null when there is
     /// none there.</summary>
-    public CanvasNodePin Under(InfiniteCanvas canvas, Vector2 world) =>
+    public CanvasNodePin Under(InfiniteCanvas canvas, Vector2<double> world) =>
         canvas?.Scene != null && Socket(canvas, world, out _, out var pin) ? pin : null;
 
     /// <summary>What the wire is drawn in while it is over a socket that will not take it. Null draws it in the source
@@ -168,7 +168,7 @@ public class ConnectGesture
 
     /// <summary>Whether the socket under the pointer right now would take this wire. False while nothing is being
     /// pulled, and false over empty plane - which is not a refusal, just nothing to say.</summary>
-    public bool OverRefusal(InfiniteCanvas canvas, Vector2 world)
+    public bool OverRefusal(InfiniteCanvas canvas, Vector2<double> world)
     {
         if (_fromPin == null || canvas?.Scene == null) return false;
         if (!Socket(canvas, world, out var toItem, out var toPin)) return false;
@@ -262,7 +262,7 @@ public class ConnectGesture
 
     // WHICH socket a world point is on, and the node carrying it. The item's box is where the node was arranged, so a
     // world point becomes a node point once the box's corner is taken off it.
-    private bool Socket(InfiniteCanvas canvas, Vector2 world, out ElementItem item, out CanvasNodePin pin)
+    private bool Socket(InfiniteCanvas canvas, Vector2<double> world, out ElementItem item, out CanvasNodePin pin)
     {
         item = null;
         pin = null;
@@ -274,7 +274,7 @@ public class ConnectGesture
         {
             if (candidate is not ElementItem element || element.Element is not CanvasNode node) continue;
 
-            var local = new Vector2(world.X - element.World.X, world.Y - element.World.Y);
+            var local = new Vector2<double>(world.X - element.World.X, world.Y - element.World.Y);
             if (node.PinAt(local, reach) is not { } found) continue;
 
             item = element;
@@ -285,10 +285,10 @@ public class ConnectGesture
         return false;
     }
 
-    private static Vector2? Where(ElementItem item, CanvasNodePin pin)
+    private static Vector2<double>? Where(ElementItem item, CanvasNodePin pin)
     {
         if (item?.Element is not CanvasNode node || node.Where(pin) is not { } local) return null;
 
-        return new Vector2(item.World.X + local.X, item.World.Y + local.Y);
+        return new Vector2<double>(item.World.X + local.X, item.World.Y + local.Y);
     }
 }

@@ -52,7 +52,7 @@ public class ColorPaletteTests
         component.ApplyCurrentTheme();
         Adamantium.UI.Extensions.WindowExtension.UpdateTree(component);
         Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
-        component.Measure(new Size(600, 400));
+        component.Measure(new Size<double>(600, 400));
         component.Arrange(new Rect(0, 0, 600, 400));
     }
 

@@ -31,7 +31,7 @@ public class TouchTrail : InputUIComponent
     public static readonly AdamantiumProperty ContactsProperty = AdamantiumProperty.Register(nameof(Contacts),
         typeof(string), typeof(TouchTrail), new PropertyMetadata(string.Empty));
 
-    private readonly Dictionary<uint, (Vector2 At, float Pressure)> _down = new();
+    private readonly Dictionary<uint, (Vector2<double> At, float Pressure)> _down = new();
     private readonly PointerPressedEventHandler _onPressed;
     private readonly PointerEventHandler _onMoved;
     private readonly PointerReleasedEventHandler _onReleased;

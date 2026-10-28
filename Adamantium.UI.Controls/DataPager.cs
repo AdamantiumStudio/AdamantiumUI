@@ -541,7 +541,7 @@ public class DataPager : Control
     ];
 
     /// <inheritdoc/>
-    protected override Size MeasureOverride(Size availableSize)
+    protected override Size<double> MeasureOverride(Size<double> availableSize)
     {
         // AN UNBOUNDED OR EMPTY OFFER IS A QUESTION, NOT A WIDTH. Infinity is a parent asking how big this would like to
         // be; zero is a star column that has not been resolved yet, and it arrives on the first pass of every layout
@@ -554,7 +554,7 @@ public class DataPager : Control
         // Grid clamps its own desired size to what it was offered and the row overflows INSIDE it, so "too wide" never
         // shows up as a number bigger than the offer - which is why the first version of this shed nothing at all and
         // the narrow pager drew its numbers over the size picker. What the row WANTS is only visible with no limit.
-        var unbounded = new Size(Double.PositiveInfinity, availableSize.Height);
+        var unbounded = new Size<double>(Double.PositiveInfinity, availableSize.Height);
         var wanted = base.MeasureOverride(unbounded).Width;
         RecordPartWidths();
 

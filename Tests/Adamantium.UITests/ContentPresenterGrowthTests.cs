@@ -22,17 +22,17 @@ public class ContentPresenterGrowthTests
         var content = new Border { Width = 50, Height = 20 };
         var presenter = new ContentPresenter { Content = content };
 
-        presenter.Measure(new Size(double.PositiveInfinity, 38));
+        presenter.Measure(new Size<double>(double.PositiveInfinity, 38));
         Assert.That(presenter.DesiredSize.Width, Is.EqualTo(50), "precondition");
 
         // Grown and re-measured on its own, exactly as the layout manager does before reaching the presenter.
         content.Width = 80;
-        content.Measure(new Size(double.PositiveInfinity, 38));
+        content.Measure(new Size<double>(double.PositiveInfinity, 38));
         Assert.That(content.IsMeasureValid, Is.True, "precondition: the content is valid again, at its NEW size");
 
         // ...and now the presenter's turn, at the SAME constraint it had before.
         presenter.InvalidateMeasure();
-        presenter.Measure(new Size(double.PositiveInfinity, 38));
+        presenter.Measure(new Size<double>(double.PositiveInfinity, 38));
 
         Assert.That(presenter.DesiredSize.Width, Is.EqualTo(80));
     }
@@ -41,7 +41,7 @@ public class ContentPresenterGrowthTests
     {
         public int Measures;
 
-        protected override Size MeasureOverride(Size availableSize)
+        protected override Size<double> MeasureOverride(Size<double> availableSize)
         {
             Measures++;
             return base.MeasureOverride(availableSize);
@@ -56,11 +56,11 @@ public class ContentPresenterGrowthTests
         var content = new CountingBorder { Width = 50, Height = 20 };
         var presenter = new ContentPresenter { Content = content };
 
-        presenter.Measure(new Size(double.PositiveInfinity, 38));
+        presenter.Measure(new Size<double>(double.PositiveInfinity, 38));
         var walks = content.Measures;
 
         presenter.InvalidateMeasure();
-        presenter.Measure(new Size(double.PositiveInfinity, 38));
+        presenter.Measure(new Size<double>(double.PositiveInfinity, 38));
 
         Assert.That(content.Measures, Is.EqualTo(walks),
             "nothing changed underneath, so the subtree must not be measured again");

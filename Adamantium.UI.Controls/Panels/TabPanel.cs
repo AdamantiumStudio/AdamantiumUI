@@ -114,7 +114,7 @@ public class TabPanel : VirtualizingPanel
     private bool StretchesTheOnlyTab(int count) =>
         count == 1 && (VisualParent as ItemsPresenter)?.Owner is TabControl { StretchSingleTab: true };
 
-    protected override Size MeasurePlain(Size availableSize)
+    protected override Size<double> MeasurePlain(Size<double> availableSize)
     {
         var horizontal = IsHorizontal;
         // Unbounded main axis so each tab takes exactly its content extent - unless a uniform slot is set, which every
@@ -126,8 +126,8 @@ public class TabPanel : VirtualizingPanel
             ? (horizontal ? availableSize.Height : availableSize.Width)
             : uniformCross;
         var childConstraint = horizontal
-            ? new Size(mainConstraint, crossConstraint)
-            : new Size(crossConstraint, mainConstraint);
+            ? new Size<double>(mainConstraint, crossConstraint)
+            : new Size<double>(crossConstraint, mainConstraint);
 
         double main = 0, cross = 0;
         foreach (var child in Children)
@@ -140,10 +140,10 @@ public class TabPanel : VirtualizingPanel
         }
 
         if (!double.IsNaN(uniformCross)) cross = uniformCross;
-        return horizontal ? new Size(main, cross) : new Size(cross, main);
+        return horizontal ? new Size<double>(main, cross) : new Size<double>(cross, main);
     }
 
-    protected override Size ArrangePlain(Size finalSize)
+    protected override Size<double> ArrangePlain(Size<double> finalSize)
     {
         var horizontal = IsHorizontal;
         // Cross = the content extent clamped to the slot (honest bounds - a strip only occupies what it stacks).
@@ -157,7 +157,7 @@ public class TabPanel : VirtualizingPanel
         {
             var only = Children[0];
             only.Arrange(horizontal ? new Rect(0, 0, finalSize.Width, cross) : new Rect(0, 0, cross, finalSize.Height));
-            return horizontal ? new Size(finalSize.Width, cross) : new Size(cross, finalSize.Height);
+            return horizontal ? new Size<double>(finalSize.Width, cross) : new Size<double>(cross, finalSize.Height);
         }
 
         var uniform = UniformExtent;
@@ -170,10 +170,10 @@ public class TabPanel : VirtualizingPanel
             main += step;
         }
 
-        return horizontal ? new Size(main, cross) : new Size(cross, main);
+        return horizontal ? new Size<double>(main, cross) : new Size<double>(cross, main);
     }
 
-    protected override Size MeasureVirtualized(Size availableSize, Vector2 offset)
+    protected override Size<double> MeasureVirtualized(Size<double> availableSize, Vector2<double> offset)
     {
         var horizontal = IsHorizontal;
         var count = Owner.Items.Count;
@@ -182,7 +182,7 @@ public class TabPanel : VirtualizingPanel
             foreach (var c in Owner.ItemContainerGenerator.SetWindow(0, -1)) ParkContainer(c);
             _extents.Clear();
             _starts.Clear();
-            return new Size();
+            return new Size<double>();
         }
 
         var uniformCross = UniformCross;
@@ -194,8 +194,8 @@ public class TabPanel : VirtualizingPanel
         var uniform = UniformExtent;
         var mainConstraint = double.IsNaN(uniform) ? double.PositiveInfinity : uniform;
         var childConstraint = horizontal
-            ? new Size(mainConstraint, crossAvailable)
-            : new Size(crossAvailable, mainConstraint);
+            ? new Size<double>(mainConstraint, crossAvailable)
+            : new Size<double>(crossAvailable, mainConstraint);
 
         var mainViewport = horizontal ? availableSize.Width : availableSize.Height;
         double effectiveViewport;
@@ -254,10 +254,10 @@ public class TabPanel : VirtualizingPanel
         var cross = !double.IsNaN(uniformCross) ? uniformCross
             : crossMax > 0 ? crossMax : _lastCross;
         var extent = TotalMain(count);
-        return horizontal ? new Size(extent, cross) : new Size(cross, extent);
+        return horizontal ? new Size<double>(extent, cross) : new Size<double>(cross, extent);
     }
 
-    protected override void ArrangeVirtualized(Size finalSize, Vector2 offset)
+    protected override void ArrangeVirtualized(Size<double> finalSize, Vector2<double> offset)
     {
         var horizontal = IsHorizontal;
         var count = Owner.Items.Count;

@@ -43,7 +43,7 @@ public class BrushRepaintByIndexTests
             RenderAction = s => s.DrawGeometry(brush, new RectangleGeometry(new Rect(20, 20, 60, 60)))
         };
         content.Bounds = new Rect(0, 0, Dim, Dim);
-        content.RenderSize = new Size(Dim, Dim);
+        content.RenderSize = new Size<double>(Dim, Dim);
 
         var root = new VisualRoot(content, Dim, Dim);
         Assert.That(renderer.RenderFrame(root), Is.True, "off-screen frame must render");
@@ -78,10 +78,10 @@ public class BrushRepaintByIndexTests
         var pen = new Pen(brush, 8);
         var content = new TestControl
         {
-            RenderAction = s => s.DrawGeometry(null, new LineGeometry(new Vector2(20, 60), new Vector2(100, 60)), pen)
+            RenderAction = s => s.DrawGeometry(null, new LineGeometry(new Vector2<double>(20, 60), new Vector2<double>(100, 60)), pen)
         };
         content.Bounds = new Rect(0, 0, Dim, Dim);
-        content.RenderSize = new Size(Dim, Dim);
+        content.RenderSize = new Size<double>(Dim, Dim);
 
         var root = new VisualRoot(content, Dim, Dim);
         Assert.That(renderer.RenderFrame(root), Is.True, "off-screen frame must render");
@@ -134,8 +134,8 @@ public class BrushRepaintByIndexTests
         };
         // A real control lays ITSELF out - exactly what VisualRenderer does, and what an Image needs before it draws.
         var root = new VisualRoot(image, Dim, Dim);
-        ((IMeasurableComponent)root).Measure(new Size(Dim, Dim));
-        ((IMeasurableComponent)root).Arrange(new Rect(new Size(Dim, Dim)));
+        ((IMeasurableComponent)root).Measure(new Size<double>(Dim, Dim));
+        ((IMeasurableComponent)root).Arrange(new Rect(new Size<double>(Dim, Dim)));
 
         Assert.That(renderer.RenderFrame(root), Is.True, "off-screen frame must render");
 

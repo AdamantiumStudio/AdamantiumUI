@@ -35,7 +35,7 @@ public class ContentPresenter : InputUIComponent
     private bool _transitionRunning;
     private Action _afterTransition;
     private bool _lastContentRebuilt;
-    private Size _lastArrangeSize = new(double.NaN, double.NaN);
+    private Size<double> _lastArrangeSize = new(double.NaN, double.NaN);
     // Supersedes a background build whose content has already been replaced.
     private int _deferToken;
     private bool _deferInFlight;
@@ -43,8 +43,8 @@ public class ContentPresenter : InputUIComponent
     // One background build at a time, process-wide: overlapping builds see a circular dependency that does not exist.
     private static readonly System.Threading.SemaphoreSlim BuildQueue = new(1, 1);
 
-    private Size _lastMeasuredInner;   // without this element's margin/transform
-    private Size _lastContentDesired;
+    private Size<double> _lastMeasuredInner;   // without this element's margin/transform
+    private Size<double> _lastContentDesired;
 
     public static readonly AdamantiumProperty ContentProperty = AdamantiumProperty.Register(nameof(Content),
         typeof(object), typeof(ContentPresenter), new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure, OnContentPropertyChanged));
@@ -412,7 +412,7 @@ public class ContentPresenter : InputUIComponent
             // Left before it was ready: a view that asked to be kept is parked like one that was on screen.
             if (built?.RootComponent is { } finished && ParkedVisuals.ShouldKeep(finished) && CanComeBack(content))
             {
-                ParkedVisuals.Keep(ParkOwner, content, finished, built, template, new Size(Double.NaN, Double.NaN));
+                ParkedVisuals.Keep(ParkOwner, content, finished, built, template, new Size<double>(Double.NaN, Double.NaN));
                 return;
             }
 
@@ -643,7 +643,7 @@ public class ContentPresenter : InputUIComponent
         foreach (var child in node.VisualChildren) CollectForDiscard(child);
     }
 
-    private void StartTransition(Size size)
+    private void StartTransition(Size<double> size)
     {
         ClipToBounds = true;
         _transitionRunning = true;
@@ -753,7 +753,7 @@ public class ContentPresenter : InputUIComponent
         set => SetValue(TransitionDurationProperty, value);
     }
 
-    protected override Size MeasureOverride(Size availableSize)
+    protected override Size<double> MeasureOverride(Size<double> availableSize)
     {
         _lastContentRebuilt = UpdateVisualContent(Content);
 
@@ -781,7 +781,7 @@ public class ContentPresenter : InputUIComponent
         return size;
     }
 
-    protected override Size ArrangeOverride(Size finalSize)
+    protected override Size<double> ArrangeOverride(Size<double> finalSize)
     {
         // A pending transition is not "nothing changed": a kept view comes back arrange-valid at the same size, and
         // skipping swallowed its entrance. Nor is a root arranged into another slot - one adopted after a deferred build

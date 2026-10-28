@@ -54,7 +54,7 @@ public class MacOsSliderKnobReachTests
         slider.ApplyCurrentTheme();
         Adamantium.UI.Extensions.WindowExtension.UpdateTree(slider);
         Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
-        slider.Measure(new Size(Width, Height));
+        slider.Measure(new Size<double>(Width, Height));
         slider.Arrange(new Rect(0, 0, Width, Height));
 
         var rail = slider.GetTemplateChild("Rail") as IUIComponent;

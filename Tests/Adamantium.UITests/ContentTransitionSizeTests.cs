@@ -14,7 +14,7 @@ namespace Adamantium.UITests;
 [TestFixture]
 public class ContentTransitionSizeTests
 {
-    private static readonly Size Host = new(400, 2000);
+    private static readonly Size<double> Host = new(400, 2000);
 
     private static void Frame(ContentPresenter presenter, double tick)
     {

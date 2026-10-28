@@ -19,7 +19,7 @@ public class DockCompassTests
 
     private static readonly Rect Target = new(100, 200, 400, 300);
 
-    private static Vector2 Center => new(Target.X + Target.Width / 2, Target.Y + Target.Height / 2);
+    private static Vector2<double> Center => new(Target.X + Target.Width / 2, Target.Y + Target.Height / 2);
 
     [Test]
     public void TheCenterIndicator_MeansJoinTheseTabs()
@@ -34,10 +34,10 @@ public class DockCompassTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(DockCompass.ZoneAt(Target, new Vector2(Center.X - step, Center.Y), Size, Gap), Is.EqualTo(DockZone.Left));
-            Assert.That(DockCompass.ZoneAt(Target, new Vector2(Center.X + step, Center.Y), Size, Gap), Is.EqualTo(DockZone.Right));
-            Assert.That(DockCompass.ZoneAt(Target, new Vector2(Center.X, Center.Y - step), Size, Gap), Is.EqualTo(DockZone.Top));
-            Assert.That(DockCompass.ZoneAt(Target, new Vector2(Center.X, Center.Y + step), Size, Gap), Is.EqualTo(DockZone.Bottom));
+            Assert.That(DockCompass.ZoneAt(Target, new Vector2<double>(Center.X - step, Center.Y), Size, Gap), Is.EqualTo(DockZone.Left));
+            Assert.That(DockCompass.ZoneAt(Target, new Vector2<double>(Center.X + step, Center.Y), Size, Gap), Is.EqualTo(DockZone.Right));
+            Assert.That(DockCompass.ZoneAt(Target, new Vector2<double>(Center.X, Center.Y - step), Size, Gap), Is.EqualTo(DockZone.Top));
+            Assert.That(DockCompass.ZoneAt(Target, new Vector2<double>(Center.X, Center.Y + step), Size, Gap), Is.EqualTo(DockZone.Bottom));
         });
     }
 
@@ -48,9 +48,9 @@ public class DockCompassTests
     {
         Assert.Multiple(() =>
         {
-            Assert.That(DockCompass.ZoneAt(Target, new Vector2(Target.X + 4, Target.Y + 4), Size, Gap), Is.EqualTo(DockZone.None),
+            Assert.That(DockCompass.ZoneAt(Target, new Vector2<double>(Target.X + 4, Target.Y + 4), Size, Gap), Is.EqualTo(DockZone.None),
                 "a corner of the group is not a target");
-            Assert.That(DockCompass.ZoneAt(Target, new Vector2(Center.X + Size / 2 + Gap / 2, Center.Y), Size, Gap),
+            Assert.That(DockCompass.ZoneAt(Target, new Vector2<double>(Center.X + Size / 2 + Gap / 2, Center.Y), Size, Gap),
                 Is.EqualTo(DockZone.None), "the gap between two indicators is not a target");
         });
     }
@@ -78,7 +78,7 @@ public class DockCompassTests
         var compass = new DockCompass { IndicatorSize = Size, IndicatorGap = Gap };
         compass.AimAt(group, armed);
 
-        compass.Measure(new Size(800, 300));
+        compass.Measure(new Size<double>(800, 300));
         compass.Arrange(new Rect(0, 0, 800, 300));
         return compass;
     }
@@ -132,10 +132,10 @@ public class DockCompassTests
     {
         Assert.Multiple(() =>
         {
-            Assert.That(DockCompass.EdgeZoneAt(Area, new Vector2(Inset + Size / 2, 400), Size, Inset), Is.EqualTo(DockZone.Left));
-            Assert.That(DockCompass.EdgeZoneAt(Area, new Vector2(1000 - Inset - Size / 2, 400), Size, Inset), Is.EqualTo(DockZone.Right));
-            Assert.That(DockCompass.EdgeZoneAt(Area, new Vector2(500, Inset + Size / 2), Size, Inset), Is.EqualTo(DockZone.Top));
-            Assert.That(DockCompass.EdgeZoneAt(Area, new Vector2(500, 800 - Inset - Size / 2), Size, Inset), Is.EqualTo(DockZone.Bottom));
+            Assert.That(DockCompass.EdgeZoneAt(Area, new Vector2<double>(Inset + Size / 2, 400), Size, Inset), Is.EqualTo(DockZone.Left));
+            Assert.That(DockCompass.EdgeZoneAt(Area, new Vector2<double>(1000 - Inset - Size / 2, 400), Size, Inset), Is.EqualTo(DockZone.Right));
+            Assert.That(DockCompass.EdgeZoneAt(Area, new Vector2<double>(500, Inset + Size / 2), Size, Inset), Is.EqualTo(DockZone.Top));
+            Assert.That(DockCompass.EdgeZoneAt(Area, new Vector2<double>(500, 800 - Inset - Size / 2), Size, Inset), Is.EqualTo(DockZone.Bottom));
         });
     }
 
@@ -146,11 +146,11 @@ public class DockCompassTests
     {
         Assert.Multiple(() =>
         {
-            Assert.That(DockCompass.EdgeZoneAt(Area, new Vector2(500, 400), Size, Inset), Is.EqualTo(DockZone.None),
+            Assert.That(DockCompass.EdgeZoneAt(Area, new Vector2<double>(500, 400), Size, Inset), Is.EqualTo(DockZone.None),
                 "the middle of the area is not an edge");
-            Assert.That(DockCompass.EdgeZoneAt(Area, new Vector2(2, 400), Size, Inset), Is.EqualTo(DockZone.None),
+            Assert.That(DockCompass.EdgeZoneAt(Area, new Vector2<double>(2, 400), Size, Inset), Is.EqualTo(DockZone.None),
                 "nor is the very edge - the anchor is inset from it");
-            Assert.That(DockCompass.EdgeZoneAt(Area, new Vector2(Inset + Size / 2, 60), Size, Inset), Is.EqualTo(DockZone.None),
+            Assert.That(DockCompass.EdgeZoneAt(Area, new Vector2<double>(Inset + Size / 2, 60), Size, Inset), Is.EqualTo(DockZone.None),
                 "the left anchor is centered, not a strip running the whole side");
         });
     }

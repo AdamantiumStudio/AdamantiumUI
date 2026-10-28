@@ -13,7 +13,7 @@ public static class WindowDragPointer
     public static IWindow Window { get; private set; }
 
     /// <summary>The pointer's logical point in <see cref="Window"/>.</summary>
-    public static Vector2 Position { get; private set; }
+    public static Vector2<double> Position { get; private set; }
 
     public static void Begin()
     {
@@ -21,7 +21,7 @@ public static class WindowDragPointer
         Window = null;
     }
 
-    public static void Update(IWindow window, Vector2 position)
+    public static void Update(IWindow window, Vector2<double> position)
     {
         Window = window;
         Position = position;

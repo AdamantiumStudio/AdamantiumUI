@@ -50,7 +50,7 @@ public class RibbonMinimizeTests
         var ribbon = new Ribbon { Template = RibbonTemplate() };
         foreach (var header in headers) ribbon.Items.Add(new RibbonTab { Header = header });
 
-        ribbon.Measure(new Size(800, 200));
+        ribbon.Measure(new Size<double>(800, 200));
         ribbon.Arrange(new Rect(0, 0, 800, 200));
         return ribbon;
     }

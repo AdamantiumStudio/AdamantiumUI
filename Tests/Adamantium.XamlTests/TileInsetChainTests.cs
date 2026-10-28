@@ -140,7 +140,7 @@ public class TileInsetChainTests
         list.ApplyCurrentTheme();
         Adamantium.UI.Extensions.WindowExtension.UpdateTree(list);
         Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
-        list.Measure(new Size(800, 600));
+        list.Measure(new Size<double>(800, 600));
         list.Arrange(new Rect(0, 0, 800, 600));
     }
 

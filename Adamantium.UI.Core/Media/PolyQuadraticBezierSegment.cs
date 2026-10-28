@@ -12,7 +12,7 @@ public class PolyQuadraticBezierSegment : PathSegment
         
     }
 
-    public PolyQuadraticBezierSegment(IEnumerable<Vector2> points, bool isStroked)
+    public PolyQuadraticBezierSegment(IEnumerable<Vector2<double>> points, bool isStroked)
     {
         Points = new PointsCollection(points);
         IsStroked = isStroked;
@@ -45,7 +45,7 @@ public class PolyQuadraticBezierSegment : PathSegment
         RaiseComponentUpdated();
     }
     
-    internal override Vector2[] ProcessSegment(Vector2 currentPoint)
+    internal override Vector2<double>[] ProcessSegment(Vector2<double> currentPoint)
     {
         var bezierPoints = new List<QuadraticBezierPoint>();
         for (int i = 0; i < Points.Count; i+=2)
@@ -56,11 +56,10 @@ public class PolyQuadraticBezierSegment : PathSegment
             currentPoint = p2;
         }
 
-        var points = new List<Vector2>();
+        var points = new List<Vector2<double>>();
         foreach (var bezierPoint in bezierPoints)
         {
-            var result = MathHelper.GetQuadraticBezier(bezierPoint.Point1, bezierPoint.ControlPoint, bezierPoint.Point2, 20);
-            points.AddRange(result);
+            MathHelper.Curves.AppendQuadraticBezier(bezierPoint.Point1, bezierPoint.ControlPoint, bezierPoint.Point2, 20, points);
         }
 
         return points.ToArray();

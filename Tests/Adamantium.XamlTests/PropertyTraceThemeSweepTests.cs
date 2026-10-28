@@ -65,7 +65,7 @@ public class PropertyTraceThemeSweepTests
             control.ApplyCurrentTheme();
             Adamantium.UI.Extensions.WindowExtension.UpdateTree(control);
             Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
-            control.Measure(new Size(400, 300));
+            control.Measure(new Size<double>(400, 300));
             control.Arrange(new Rect(0, 0, 400, 300));
             return true;
         }

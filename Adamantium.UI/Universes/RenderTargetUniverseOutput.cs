@@ -6,12 +6,12 @@ using Adamantium.Graphics;
 using Adamantium.Graphics.Core;
 using Adamantium.Graphics.Core.Presentation;
 using Adamantium.Imaging;
+using Adamantium.Mathematics;
 using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.RoutedEvents;
 using Adamantium.Vulkan.Core;
-using Rectangle = Adamantium.Mathematics.Rectangle;
 
 namespace Adamantium.UI.Universes;
 
@@ -67,7 +67,7 @@ public class RenderTargetUniverseOutput : UIUniverseOutput
         PixelsPerPoint = HostScale;
         Width = InPixels(nativeWindow.ActualWidth);
         Height = InPixels(nativeWindow.ActualHeight);
-        ClientBounds = new Rectangle(0, 0, (int)Description.Width, (int)Description.Height);
+        ClientBounds = new Rectangle<int>(0, 0, (int)Description.Width, (int)Description.Height);
         UpdateViewportAndScissor((uint)ClientBounds.Width, (uint)ClientBounds.Height);
         base.InitializeInternal(context);
     }

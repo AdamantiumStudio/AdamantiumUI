@@ -147,7 +147,7 @@ public class InlineUIContainerTests
     {
         public int Measures { get; private set; }
 
-        protected override Size MeasureOverride(Size availableSize)
+        protected override Size<double> MeasureOverride(Size<double> availableSize)
         {
             Measures++;
             return base.MeasureOverride(availableSize);

@@ -8,7 +8,7 @@ namespace Adamantium.UI.Controls.DrawingBoard;
 /// placing is never interrupted by a dialog.</summary>
 public class TextureTool : ElementTool
 {
-    public TextureTool() : base(Surface, new Size(200, 200))
+    public TextureTool() : base(Surface, new Size<double>(200, 200))
     {
         Name = "Texture";
         Icon = "CanvasToolTextureIcon";

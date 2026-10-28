@@ -16,7 +16,7 @@ public class PenTool : ICanvasTool
     private const float LightestWeight = 0.15f;
     private const float HeaviestWeight = 2f;
 
-    private readonly Dictionary<uint, (StrokeItem Stroke, Vector2 From)> _freehand = new();
+    private readonly Dictionary<uint, (StrokeItem Stroke, Vector2<double> From)> _freehand = new();
     private StrokeItem _drawing;
     private bool _chaining;
 

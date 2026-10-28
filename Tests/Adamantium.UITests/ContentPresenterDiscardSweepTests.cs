@@ -23,7 +23,7 @@ public class ContentPresenterDiscardSweepTests
         var presenter = new ContentPresenter();
         var body = new StackPanel();
         presenter.Content = body;
-        presenter.Measure(new Size(100, 100));
+        presenter.Measure(new Size<double>(100, 100));
 
         Assert.That(VisualChildCount(presenter), Is.EqualTo(1), "the presenter is showing it to begin with");
 
@@ -45,9 +45,9 @@ public class ContentPresenterDiscardSweepTests
         var going = new StackPanel();
         var coming = new StackPanel();
         presenter.Content = going;
-        presenter.Measure(new Size(100, 100));
+        presenter.Measure(new Size<double>(100, 100));
         presenter.Content = coming;
-        presenter.Measure(new Size(100, 100));
+        presenter.Measure(new Size<double>(100, 100));
         Assume.That(VisualChildCount(presenter), Is.EqualTo(2), "both are on screen while it slides");
 
         DiscardedVisuals.Publish(going);
@@ -68,7 +68,7 @@ public class ContentPresenterDiscardSweepTests
         var presenter = new ContentPresenter();
         var body = new StackPanel();
         presenter.Content = body;
-        presenter.Measure(new Size(100, 100));
+        presenter.Measure(new Size<double>(100, 100));
 
         var home = new Adamantium.UI.Controls.Decorators.Border { Child = body };
 

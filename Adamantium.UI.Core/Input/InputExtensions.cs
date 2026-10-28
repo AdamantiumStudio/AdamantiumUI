@@ -7,14 +7,14 @@ public static class InputExtensions
    /// <summary>The top-most input element under <paramref name="p"/>. With <paramref name="hover"/>, an element inside a
    /// disabled one that is marked <see cref="DisabledHover.ShowOnDisabledProperty"/> is found too: what the pointer is
    /// over, never what a press reaches.</summary>
-   public static IInputComponent HitTest(this IUIComponent root, Vector2 p, bool hover = false)
+   public static IInputComponent HitTest(this IUIComponent root, Vector2<double> p, bool hover = false)
    {
       return root.GetInputElementsAt(p, hover).FirstOrDefault();
    }
 
    /// <summary>The input elements under <paramref name="p"/>, front to back (reverse paint order), so
    /// <see cref="HitTest"/> returns the top-most; <paramref name="hover"/> as there.</summary>
-   public static IEnumerable<IInputComponent> GetInputElementsAt(this IUIComponent root, Vector2 p, bool hover = false)
+   public static IEnumerable<IInputComponent> GetInputElementsAt(this IUIComponent root, Vector2<double> p, bool hover = false)
    {
       var result = new List<IInputComponent>();
       Collect(root, p, result, false, hover);
@@ -27,14 +27,14 @@ public static class InputExtensions
    /// so it uses <see cref="GetInputElementsAt"/>; the DESIGNER, however, must be able to select ANY authored element,
    /// not only interactive ones - that is what this is for.
    /// </summary>
-   public static IEnumerable<IUIComponent> GetVisualsAt(this IUIComponent root, Vector2 p)
+   public static IEnumerable<IUIComponent> GetVisualsAt(this IUIComponent root, Vector2<double> p)
    {
       var result = new List<IUIComponent>();
       CollectVisuals(root, p, result);
       return result;
    }
 
-   private static void CollectVisuals(IUIComponent element, Vector2 p, List<IUIComponent> result)
+   private static void CollectVisuals(IUIComponent element, Vector2<double> p, List<IUIComponent> result)
    {
       if (element.Visibility != Visibility.Visible
           || !element.IsHitTestVisible)
@@ -57,14 +57,14 @@ public static class InputExtensions
 
    /// <summary>The top-most input element whose bounds contain <paramref name="p"/>, skipping the narrow phase; the
    /// mouse-over fallback when <see cref="HitTest"/> misses; <paramref name="hover"/> as there.</summary>
-   public static IInputComponent HitTestBounds(this IUIComponent root, Vector2 p, bool hover = false)
+   public static IInputComponent HitTestBounds(this IUIComponent root, Vector2<double> p, bool hover = false)
    {
       var result = new List<IInputComponent>();
       Collect(root, p, result, true, hover);
       return result.FirstOrDefault();
    }
 
-   private static void Collect(IUIComponent element, Vector2 p, List<IInputComponent> result, bool boundsOnly, bool hover)
+   private static void Collect(IUIComponent element, Vector2<double> p, List<IInputComponent> result, bool boundsOnly, bool hover)
    {
       if (element.Visibility != Visibility.Visible || !element.IsHitTestVisible)
          return;
@@ -105,7 +105,7 @@ public static class InputExtensions
          result.Add(input);
    }
 
-   private static void CollectShownOnDisabled(IUIComponent element, Vector2 p, List<IInputComponent> result, bool boundsOnly)
+   private static void CollectShownOnDisabled(IUIComponent element, Vector2<double> p, List<IInputComponent> result, bool boundsOnly)
    {
       if (element.Visibility != Visibility.Visible || !element.IsHitTestVisible)
          return;
@@ -122,7 +122,7 @@ public static class InputExtensions
          result.Add(input);
    }
 
-   private static bool Place(IUIComponent element, Vector2 p, out Vector2 local)
+   private static bool Place(IUIComponent element, Vector2<double> p, out Vector2<double> local)
    {
       if (element.RenderTransform == null && element.LayoutTransform == null)
       {
@@ -132,7 +132,7 @@ public static class InputExtensions
 
       var back = Matrix4x4F.Invert(element.LocalTransform);
       var mapped = Vector3F.TransformCoordinate(new Vector3F((float)p.X, (float)p.Y, 0), back);
-      local = new Vector2(mapped.X, mapped.Y);
+      local = new Vector2<double>(mapped.X, mapped.Y);
       var size = element.RenderSize;
       return local.X >= 0 && local.Y >= 0 && local.X <= size.Width && local.Y <= size.Height;
    }
@@ -140,7 +140,7 @@ public static class InputExtensions
    // The children to recurse into for a hit-test, front-to-back. A container that can spatially resolve the point (a
    // virtualizing panel) returns just the candidate(s) - O(1) instead of walking thousands of tiles; else recurse ALL
    // visual children in paint order.
-   private static IEnumerable<IUIComponent> HitTestChildren(IUIComponent element, Vector2 local)
+   private static IEnumerable<IUIComponent> HitTestChildren(IUIComponent element, Vector2<double> local)
    {
       if (element is IHitTestChildren provider)
       {

@@ -373,7 +373,7 @@ public sealed class DesignerSession : IDisposable
     {
         if (_lastWindow is not IUIComponent root) return false;
 
-        for (var node = root.GetVisualsAt(new Vector2(x, y)).FirstOrDefault(); node != null; node = node.VisualParent)
+        for (var node = root.GetVisualsAt(new Vector2<double>(x, y)).FirstOrDefault(); node != null; node = node.VisualParent)
         {
             if (node is not TabItem tab) continue;
 
@@ -411,7 +411,7 @@ public sealed class DesignerSession : IDisposable
     {
         if (_lastWindow is not IUIComponent root) return false;
 
-        var hit = root.GetVisualsAt(new Vector2(x, y)).FirstOrDefault();
+        var hit = root.GetVisualsAt(new Vector2<double>(x, y)).FirstOrDefault();
         for (var node = hit; node != null; node = node.VisualParent)
         {
             if (node is not Expander expander) continue;
@@ -995,7 +995,7 @@ public sealed class DesignerSession : IDisposable
         // non-input visual like a Border or a Shape. HitTest returns only IInputComponent targets, so clicking a bare
         // Border fell through to the nearest interactive element behind it (e.g. the containing panel) - the "selects the
         // background panel, not the control in front" bug.
-        var hit = root.GetVisualsAt(new Vector2(x, y)).FirstOrDefault();
+        var hit = root.GetVisualsAt(new Vector2<double>(x, y)).FirstOrDefault();
         for (var current = hit; current is not null; current = current.VisualParent)
         {
             if (_lastSourceMap.TryGetValue(current, out var span))
@@ -1096,11 +1096,11 @@ public sealed class DesignerSession : IDisposable
             return RenderResult.Fail("no live session to scroll in", null);
 
         var handled = false;
-        if (delta != 0 && _lastWindow is IInputComponent root && PointerDevice.HitTestTopmost(root, new Vector2(x, y)) is { } hit)
+        if (delta != 0 && _lastWindow is IInputComponent root && PointerDevice.HitTestTopmost(root, new Vector2<double>(x, y)) is { } hit)
         {
             // Where the pointer is, for a control that zooms or steps about it (a ZoomBox, a canvas); nothing else here
             // moves the mouse.
-            PointerDevice.Current.SetExternalMousePosition(root, root.PointToScreen(new Vector2(x, y)));
+            PointerDevice.Current.SetExternalMousePosition(root, root.PointToScreen(new Vector2<double>(x, y)));
             var args = new PointerWheelEventArgs(Mouse.Pointer, InputModifiers.None, delta, 0, horizontal)
             {
                 RoutedEvent = PointerEvents.PreviewPointerWheelChangedEvent

@@ -158,9 +158,9 @@ internal sealed class ManipulationRecognizer
         });
     }
 
-    private readonly record struct Step(Vector2 Translation, double Scale, double Rotation)
+    private readonly record struct Step(Vector2<double> Translation, double Scale, double Rotation)
     {
-        public static Step None => new(Vector2.Zero, 1, 0);
+        public static Step None => new(Vector2<double>.Zero, 1, 0);
 
         public Step Then(Step next) => new(Translation + next.Translation, Scale * next.Scale, Rotation + next.Rotation);
     }
@@ -169,10 +169,10 @@ internal sealed class ManipulationRecognizer
     {
         private readonly HashSet<Pointer> _reported = new();
         private readonly Dictionary<Pointer, PixelPoint> _landed = new();
-        private Vector2 _middle;
+        private Vector2<double> _middle;
         private double _spread;
         private double _angle;
-        private Vector2 _panned;
+        private Vector2<double> _panned;
         private double _spreadChanged;
         private double _turned;
 
@@ -186,7 +186,7 @@ internal sealed class ManipulationRecognizer
 
         public Step Total { get; set; } = Step.None;
 
-        public Vector2 Origin => _middle;
+        public Vector2<double> Origin => _middle;
 
         public bool Blocked { get; private set; }
 
@@ -284,7 +284,7 @@ internal sealed class ManipulationRecognizer
         }
 
         public Step Filter(Step step) => new(
-            Recognized.HasFlag(ManipulationKinds.Pan) ? step.Translation : Vector2.Zero,
+            Recognized.HasFlag(ManipulationKinds.Pan) ? step.Translation : Vector2<double>.Zero,
             Recognized.HasFlag(ManipulationKinds.Pinch) ? step.Scale : 1,
             Recognized.HasFlag(ManipulationKinds.Rotate) ? step.Rotation : 0);
 
@@ -293,16 +293,16 @@ internal sealed class ManipulationRecognizer
             _reported.Clear();
             if (!Started)
             {
-                (_panned, _spreadChanged, _turned) = (Vector2.Zero, 0, 0);
+                (_panned, _spreadChanged, _turned) = (Vector2<double>.Zero, 0, 0);
             }
 
             (_middle, _spread, _angle) = Measure();
         }
 
-        private (Vector2 Middle, double Spread, double Angle) Measure()
+        private (Vector2<double> Middle, double Spread, double Angle) Measure()
         {
             var points = Fingers.Select(finger => finger.GetPosition(Target)).ToList();
-            var middle = Vector2.Zero;
+            var middle = Vector2<double>.Zero;
             foreach (var point in points)
             {
                 middle += point;

@@ -63,7 +63,7 @@ public partial class CanvasFrameItem : AdamantiumViewModel, ICanvasItem
 
     /// <summary>ONLY THE TITLE STRIP answers the pointer. A frame is mostly empty by design - what is inside it is the
     /// point - and one that could be picked up by its middle would be a sheet nobody could click through.</summary>
-    public bool HitTest(Vector2 world, double tolerance)
+    public bool HitTest(Vector2<double> world, double tolerance)
     {
         var strip = new Rect(World.X - tolerance, World.Y - tolerance,
             World.Width + tolerance * 2, TitleHeight + tolerance * 2);
@@ -109,8 +109,8 @@ public partial class CanvasFrameItem : AdamantiumViewModel, ICanvasItem
         {
             if (ReferenceEquals(item, this) || item is ConnectionItem) continue;
             var box = item.Bounds;
-            if (World.Contains(new Vector2(box.X, box.Y)) &&
-                World.Contains(new Vector2(box.X + box.Width, box.Y + box.Height)))
+            if (World.Contains(new Vector2<double>(box.X, box.Y)) &&
+                World.Contains(new Vector2<double>(box.X + box.Width, box.Y + box.Height)))
             {
                 _caught.Add(item);
             }
@@ -120,7 +120,7 @@ public partial class CanvasFrameItem : AdamantiumViewModel, ICanvasItem
     /// <summary>Lets go of what was caught - the drag is over.</summary>
     public void Release() => _caught.Clear();
 
-    public void Move(Vector2 worldDelta)
+    public void Move(Vector2<double> worldDelta)
     {
         foreach (var item in _caught) item.Move(worldDelta);
 
@@ -140,8 +140,8 @@ public partial class CanvasFrameItem : AdamantiumViewModel, ICanvasItem
     {
         if (canvas == null || World.Width <= 0 || World.Height <= 0) return;
 
-        var topLeft = canvas.WorldToScreen(new Vector2(World.X, World.Y));
-        var bottomRight = canvas.WorldToScreen(new Vector2(World.X + World.Width, World.Y + World.Height));
+        var topLeft = canvas.WorldToScreen(new Vector2<double>(World.X, World.Y));
+        var bottomRight = canvas.WorldToScreen(new Vector2<double>(World.X + World.Width, World.Y + World.Height));
         var box = new Rect(topLeft.X, topLeft.Y, bottomRight.X - topLeft.X, bottomRight.Y - topLeft.Y);
 
         var width = Thickness > 0 ? Math.Max(Thickness * canvas.Scale, 1.0) : 0;
@@ -159,7 +159,7 @@ public partial class CanvasFrameItem : AdamantiumViewModel, ICanvasItem
 
         // Inset from the corner, so it never sits on the outline.
         var inset = Thickness + 2;
-        _label.Origin = new Vector2(World.X + inset, World.Y + inset);
+        _label.Origin = new Vector2<double>(World.X + inset, World.Y + inset);
         _label.Render(session, canvas);
     }
 

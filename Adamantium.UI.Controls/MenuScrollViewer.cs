@@ -49,7 +49,7 @@ public class MenuScrollViewer : ScrollViewer
     {
         var maxY = Math.Max(0, ExtentSize.Height - ViewportSize.Height);
         var y = Math.Clamp(ScrollOffset.Y + delta, 0, maxY);
-        SetScrollOffset(new Vector2(ScrollOffset.X, (float)y));
+        SetScrollOffset(new Vector2<double>(ScrollOffset.X, (float)y));
     }
 
     private void UpdateArrows()

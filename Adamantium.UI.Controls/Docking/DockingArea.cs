@@ -89,7 +89,7 @@ public class DockingArea : Panel
     // The area is TWO things: the split tree in the middle, and the four strips of PUT-AWAY panels along its edges. The
     // strips are not in the tree, so they are laid out around it and nothing inside the tree can move them.
 
-    protected override Size MeasureOverride(Size availableSize)
+    protected override Size<double> MeasureOverride(Size<double> availableSize)
     {
         EnsureLayout(fromLayoutPass: true);
         if (_owner == null)
@@ -102,7 +102,7 @@ public class DockingArea : Panel
         var top = MeasureBar(DockZone.Top, availableSize);
         var bottom = MeasureBar(DockZone.Bottom, availableSize);
 
-        var middle = new Size(
+        var middle = new Size<double>(
             System.Math.Max(0, availableSize.Width - left - right),
             System.Math.Max(0, availableSize.Height - top - bottom));
 
@@ -113,12 +113,12 @@ public class DockingArea : Panel
         }
 
         var tree = _tree == null ? default : _tree.DesiredSize;
-        return new Size(
+        return new Size<double>(
             double.IsInfinity(availableSize.Width) ? left + right + tree.Width : availableSize.Width,
             double.IsInfinity(availableSize.Height) ? top + bottom + tree.Height : availableSize.Height);
     }
 
-    protected override Size ArrangeOverride(Size finalSize)
+    protected override Size<double> ArrangeOverride(Size<double> finalSize)
     {
         EnsureLayout(fromLayoutPass: true);
 
@@ -165,7 +165,7 @@ public class DockingArea : Panel
     /// <summary>The visual for the split tree - one child among the strips, and the only one that grows.</summary>
     private IMeasurableComponent _tree;
 
-    private double MeasureBar(DockZone edge, Size availableSize)
+    private double MeasureBar(DockZone edge, Size<double> availableSize)
     {
         var across = 0.0;
 
@@ -251,7 +251,7 @@ public class DockingArea : Panel
 
         if (VisualOf(node) is not IUIComponent visual || visual.RenderSize.Width <= 0) return default;
 
-        var at = (visual.PointToScreen(Vector2.Zero) - this.PointToScreen(Vector2.Zero)).ToLogical(DpiScale);
+        var at = (visual.PointToScreen(Vector2<double>.Zero) - this.PointToScreen(Vector2<double>.Zero)).ToLogical(DpiScale);
         return new Rect(at.X, at.Y, visual.RenderSize.Width, visual.RenderSize.Height);
     }
 
@@ -1663,7 +1663,7 @@ public class DockingArea : Panel
         }
 
         // Position PHYSICAL (a desktop point), size LOGICAL - see WindowBase.Left.
-        var origin = this.PointToScreen(Vector2.Zero);
+        var origin = this.PointToScreen(Vector2<double>.Zero);
         var bounds = new Rect(0, 0, RenderSize.Width, RenderSize.Height);
 
         // Built at FULL size before Show: a window sized after creation was never laid out at all (measured -
@@ -1717,9 +1717,9 @@ public class DockingArea : Panel
 
     /// <summary>Where the group under a point sits, in THIS area's coordinates, and what a drop there would do. The
     /// point is in the area's own space; <paramref name="allowed"/> is what the dragged panes permit.</summary>
-    private DockTarget Resolve(Vector2 point, DockZone allowed)
+    private DockTarget Resolve(Vector2<double> point, DockZone allowed)
     {
-        var origin = this.PointToScreen(Vector2.Zero);
+        var origin = this.PointToScreen(Vector2<double>.Zero);
         var scale = DpiScale;
         var area = new Rect(0, 0, RenderSize.Width, RenderSize.Height);
 
@@ -1733,7 +1733,7 @@ public class DockingArea : Panel
             if (pair.Key.State == PaneGroupState.Collapsed) continue;
 
             var group = pair.Value;
-            var at = (group.PointToScreen(Vector2.Zero) - origin).ToLogical(scale);
+            var at = (group.PointToScreen(Vector2<double>.Zero) - origin).ToLogical(scale);
             var size = group.RenderSize;
             if (point.X < at.X || point.Y < at.Y || point.X > at.X + size.Width || point.Y > at.Y + size.Height) continue;
 
@@ -1827,7 +1827,7 @@ public class DockingArea : Panel
 
         // How far along its tab the pointer took hold, read BEFORE the rebuild - the window is then placed so the grip
         // on its caption is the same one, instead of jumping to the middle of a window nobody grabbed there.
-        var grabX = e.ScreenPosition.X - pane.PointToScreen(Vector2.Zero).X;
+        var grabX = e.ScreenPosition.X - pane.PointToScreen(Vector2<double>.Zero).X;
 
         Rebuild();   // the pane leaves this tree before the floating area claims it: one component, one parent
 
@@ -1857,7 +1857,7 @@ public class DockingArea : Panel
         if (Refuses(new PaneTearingOffEventArgs([..node.PaneIds], isWholePanel: true))) return false;
 
         var title = control.Title?.ToString();
-        var grabX = screenPosition.X - control.PointToScreen(Vector2.Zero).X;
+        var grabX = screenPosition.X - control.PointToScreen(Vector2<double>.Zero).X;
 
         // The panel keeps the size it was docked at - read before it leaves the tree.
         var was = control.RenderSize;
@@ -1887,7 +1887,7 @@ public class DockingArea : Panel
 
     // Opens a floating window for a root, shown through an AREA of its own. size = what the panel occupied where it
     // came from, so the tear-off feels like picking that panel up; zero falls back to the authored default.
-    private DockingArea Float(DockingRoot root, string title, out DockingWindow window, Size size = default,
+    private DockingArea Float(DockingRoot root, string title, out DockingWindow window, Size<double> size = default,
         DockingWindow kept = null)
     {
         var area = new DockingArea(Owner, root);
@@ -2005,7 +2005,7 @@ public class DockingArea : Panel
         // to close it. Then it cascades, exactly like a window that was never anywhere.
         var placed = at.Width > 0 && at.Height > 0 && Displays.IsOnScreen(at) &&
                      kept is null or { State: WindowState.Normal };
-        var area = Float(root, title, out var window, placed ? new Size(at.Width, at.Height) : default, kept);
+        var area = Float(root, title, out var window, placed ? new Size<double>(at.Width, at.Height) : default, kept);
 
         UIAppContext.Current.Dispatcher.InvokeAsync(() =>
         {
@@ -2032,7 +2032,7 @@ public class DockingArea : Panel
             }
             else if (fresh)
             {
-                var origin = this.PointToScreen(Vector2.Zero);
+                var origin = this.PointToScreen(Vector2<double>.Zero);
                 var step = 32 * Owner._satellites.Count;
                 window.Left = origin.X + 60 + step;
                 window.Top = origin.Y + 60 + step;
@@ -2108,25 +2108,25 @@ public class DockingArea : Panel
             FollowWindowMoves(area, window, root);
 
             // The platform's own move loop: the window rides under the cursor with Aero Snap intact.
-            window.DragMove(new Vector2(grabX / DpiScale.X, window.TitleBarHeight / 2));
+            window.DragMove(new Vector2<double>(grabX / DpiScale.X, window.TitleBarHeight / 2));
         });
     }
 
     // The pointer in this area's logical coordinates during a window drag, read from the mouse since the window's own
     // position lags; converted from physical here.
-    private Vector2 PointerIn()
+    private Vector2<double> PointerIn()
     {
         if (WindowDragPointer.IsActive)
         {
             return ReferenceEquals(RootVisual, WindowDragPointer.Window)
-                ? WindowDragPointer.Position - this.PointToScreen(Vector2.Zero).ToLogical(DpiScale)
-                : new Vector2(-1, -1);
+                ? WindowDragPointer.Position - this.PointToScreen(Vector2<double>.Zero).ToLogical(DpiScale)
+                : new Vector2<double>(-1, -1);
         }
 
-        return (Mouse.ScreenCoordinates - this.PointToScreen(Vector2.Zero)).ToLogical(DpiScale);
+        return (Mouse.ScreenCoordinates - this.PointToScreen(Vector2<double>.Zero)).ToLogical(DpiScale);
     }
 
-    private Vector2 DpiScale => RootVisual is IWindow window ? window.DpiScale : Vector2.One;
+    private Vector2<double> DpiScale => RootVisual is IWindow window ? window.DpiScale : Vector2<double>.One;
 
     // Which area of the family the pointer is over, and what a drop there would do. EVERY area is asked: that is what
     // lets a panel be dropped into a floating window as well as into the main one.
@@ -2134,7 +2134,7 @@ public class DockingArea : Panel
     {
         DockingArea hit = null;
         var target = default(DockTarget);
-        var point = Vector2.Zero;
+        var point = Vector2<double>.Zero;
 
         // First move of THIS window: read what its panes permit. Once per drag, not per move.
         if (!ReferenceEquals(Owner._draggedWindow, window))
@@ -2204,7 +2204,7 @@ public class DockingArea : Panel
         set => SetValue(SpringLoadDelayProperty, value);
     }
 
-    private void SpringLoad(DockingArea area, DockTarget target, Vector2 point)
+    private void SpringLoad(DockingArea area, DockTarget target, Vector2<double> point)
     {
         PaneGroup group = null;
         if (area != null && target.Node is PaneGroupNode node) area._groupsByNode.TryGetValue(node, out group);
@@ -2234,20 +2234,20 @@ public class DockingArea : Panel
 
     // Pans a group's strip when the drag is held near its edge. The rule lives in the strip - a dragged tab and a
     // dragged window must feel the same.
-    private void AutoScrollStrip(PaneGroup group, Vector2 point)
+    private void AutoScrollStrip(PaneGroup group, Vector2<double> point)
     {
         if (group.GetTemplateChild("PART_TabStrip") is not TabStripScroller strip) return;
 
-        var at = (strip.PointToScreen(Vector2.Zero) - this.PointToScreen(Vector2.Zero)).ToLogical(DpiScale);
+        var at = (strip.PointToScreen(Vector2<double>.Zero) - this.PointToScreen(Vector2<double>.Zero)).ToLogical(DpiScale);
         var along = strip.Orientation == Orientation.Vertical ? point.Y - at.Y : point.X - at.X;
 
         strip.PanNear(along, strip.AutoScrollMargin, strip.AutoScrollRate);
     }
 
     // The pane whose TAB is under a point, in this area's coordinates - or null between tabs.
-    private Pane PaneAt(PaneGroup group, Vector2 point)
+    private Pane PaneAt(PaneGroup group, Vector2<double> point)
     {
-        var origin = this.PointToScreen(Vector2.Zero);
+        var origin = this.PointToScreen(Vector2<double>.Zero);
         var scale = DpiScale;
 
         for (var i = 0; i < group.Items.Count; i++)
@@ -2255,7 +2255,7 @@ public class DockingArea : Panel
             if (group.ItemContainerGenerator.ContainerFromIndex(i) is not Pane pane) continue;
             if (pane.Visibility != Visibility.Visible) continue;
 
-            var at = (pane.PointToScreen(Vector2.Zero) - origin).ToLogical(scale);
+            var at = (pane.PointToScreen(Vector2<double>.Zero) - origin).ToLogical(scale);
             var size = pane.RenderSize;
             if (point.X < at.X || point.Y < at.Y || point.X > at.X + size.Width || point.Y > at.Y + size.Height) continue;
 

@@ -42,7 +42,7 @@ public class TabStripScrollerTests
     public void RealizesAllTabs_WhenViewportFitsThem()
     {
         var ic = StripControl(8);              // 8 * 80 = 640
-        ic.Measure(new Size(1000, 100));       // fits
+        ic.Measure(new Size<double>(1000, 100));       // fits
         ic.Arrange(new Rect(0, 0, 1000, 100));
 
         Assert.That(ic.ItemContainerGenerator.RealizedCount, Is.EqualTo(8));
@@ -52,7 +52,7 @@ public class TabStripScrollerTests
     public void RealizedTabs_AreVisualChildrenOfTheStrip_WithNonZeroBounds()
     {
         var ic = StripControl(8);
-        ic.Measure(new Size(1000, 100));
+        ic.Measure(new Size<double>(1000, 100));
         ic.Arrange(new Rect(0, 0, 1000, 100));
 
         var panel = ic.ItemsHostPanel;
@@ -88,7 +88,7 @@ public class TabStripScrollerTests
             result.RegisterName("PART_ItemsPresenter", presenter);
             return result;
         });
-        ic.Measure(new Size(1000, 100));
+        ic.Measure(new Size<double>(1000, 100));
         ic.Arrange(new Rect(0, 0, 1000, 100));
 
         var children = ic.ItemsHostPanel.VisualChildren.ToList();
@@ -116,7 +116,7 @@ public class TabStripScrollerTests
         grid.Children.Add(top);
         grid.Children.Add(bottom);
 
-        grid.Measure(new Size(200, 300));
+        grid.Measure(new Size<double>(200, 300));
         grid.Arrange(new Rect(0, 0, 200, 300));
 
         Assert.Multiple(() =>
@@ -145,7 +145,7 @@ public class TabStripScrollerTests
         Grid.SetRow(bottom, 1);
         grid.Children.Add(top);
         grid.Children.Add(bottom);
-        grid.Measure(new Size(200, 300));
+        grid.Measure(new Size<double>(200, 300));
         grid.Arrange(new Rect(0, 0, 200, 300));
 
         Assert.That(bottom.Bounds.Y, Is.EqualTo(40).Within(0.5),
@@ -156,7 +156,7 @@ public class TabStripScrollerTests
     public void RealizesOnlyTheVisibleTabs_WhenTheViewportIsNarrow()
     {
         var ic = StripControl(8);              // 640 wide, 80px a tab
-        ic.Measure(new Size(200, 100));        // narrower than the strip -> overflows, and only the window is realized
+        ic.Measure(new Size<double>(200, 100));        // narrower than the strip -> overflows, and only the window is realized
         ic.Arrange(new Rect(0, 0, 200, 100));
 
         // 200px of viewport holds 2.5 tabs; the panel keeps a two-tab buffer either side, so the window is small but
@@ -185,7 +185,7 @@ public class TabStripScrollerTests
             result.RegisterName("PART_ItemsPresenter", presenter);
             return result;
         });
-        tc.Measure(new Size(1000, 100));
+        tc.Measure(new Size<double>(1000, 100));
         tc.Arrange(new Rect(0, 0, 1000, 100));
         return (tc, tabs);
     }
@@ -219,7 +219,7 @@ public class TabStripScrollerTests
         // first: the panel is a measure boundary and there is no layout manager here.
         for (IUIComponent n = tc.ItemsHostPanel; n != null; n = n.VisualParent)
             (n as IMeasurableComponent)?.InvalidateMeasure();
-        tc.Measure(new Size(1000, 100));
+        tc.Measure(new Size<double>(1000, 100));
         tc.Arrange(new Rect(0, 0, 1000, 100));
         Assert.Multiple(() =>
         {
@@ -254,7 +254,7 @@ public class TabStripScrollerTests
         panel.Children.Add(new Border { Width = 40, Height = 20 });
         panel.Children.Add(new Border { Width = 100, Height = 20 });
         panel.Children.Add(new Border { Width = 60, Height = 20 });
-        panel.Measure(new Size(1000, 100));
+        panel.Measure(new Size<double>(1000, 100));
         panel.Arrange(new Rect(0, 0, 1000, 100));
 
         var tabs = panel.Children.Cast<IMeasurableComponent>().ToList();
@@ -278,7 +278,7 @@ public class TabStripScrollerTests
             Orientation = Orientation.Horizontal,
             Child = new Border { Width = 800, Height = 30 }
         };
-        scroller.Measure(new Size(300, 30));       // viewport 300 < 800 extent -> overflows
+        scroller.Measure(new Size<double>(300, 30));       // viewport 300 < 800 extent -> overflows
         scroller.Arrange(new Rect(0, 0, 300, 30));
 
         Assert.Multiple(() =>
@@ -288,7 +288,7 @@ public class TabStripScrollerTests
         });
 
         scroller.LineScroll(+1);                   // pan toward the end
-        scroller.Measure(new Size(300, 30));
+        scroller.Measure(new Size<double>(300, 30));
         scroller.Arrange(new Rect(0, 0, 300, 30));
         Assert.That(scroller.CanScrollBack, Is.True, "panned off the start -> content is now hidden before the viewport");
     }
@@ -309,7 +309,7 @@ public class TabStripScrollerTests
         grid.Children.Add(strip);
         grid.Children.Add(overflow);
 
-        grid.Measure(new Size(300, 30));
+        grid.Measure(new Size<double>(300, 30));
         grid.Arrange(new Rect(0, 0, 300, 30));
         Assert.That(overflow.Bounds.Width, Is.EqualTo(0).Within(0.5), "collapsed -> not laid out");
 
@@ -351,7 +351,7 @@ public class TabStripScrollerTests
     public void TabWidth_GivesEveryTabTheSameSlot()
     {
         var (tc, tabs) = WidthStrip(tabWidth: 100, count: 4);
-        tc.Measure(new Size(1000, 100));
+        tc.Measure(new Size<double>(1000, 100));
         tc.Arrange(new Rect(0, 0, 1000, 100));
 
         Assert.Multiple(() =>
@@ -368,13 +368,13 @@ public class TabStripScrollerTests
     public void IsVirtualizing_IsTheSwitch_AndOffMeansEveryTabIsBuilt()
     {
         var (tc, _) = WidthStrip(tabWidth: 100, count: 40);
-        tc.Measure(new Size(300, 100));       // three slots' worth of viewport against forty tabs
+        tc.Measure(new Size<double>(300, 100));       // three slots' worth of viewport against forty tabs
         tc.Arrange(new Rect(0, 0, 300, 100));
         Assert.That(tc.ItemContainerGenerator.RealizedCount, Is.LessThan(40),
             "a uniform slot is exact without a container, so only the window is built");
 
         var (plain, _) = WidthStrip(tabWidth: double.NaN, count: 40, virtualizing: false);
-        plain.Measure(new Size(300, 100));
+        plain.Measure(new Size<double>(300, 100));
         plain.Arrange(new Rect(0, 0, 300, 100));
         Assert.That(plain.ItemContainerGenerator.RealizedCount, Is.EqualTo(40),
             "content-sized tabs have no position until measured, so none may be left out");
@@ -386,7 +386,7 @@ public class TabStripScrollerTests
     public void IsVirtualizing_TakesEffectWithoutAScroll()
     {
         var (tc, _) = WidthStrip(tabWidth: 100, count: 40, virtualizing: false);
-        tc.Measure(new Size(300, 100));
+        tc.Measure(new Size<double>(300, 100));
         tc.Arrange(new Rect(0, 0, 300, 100));
         Assert.That(tc.ItemContainerGenerator.RealizedCount, Is.EqualTo(40), "off: every tab is built");
 
@@ -395,7 +395,7 @@ public class TabStripScrollerTests
         // Measured directly, as the layout manager measures a dirty boundary - going through the control would stop at
         // the presenter, which is still valid. It re-runs only because the switch marked the PANEL, which is the fix.
         var panel = (IMeasurableComponent)tc.ItemsHostPanel;
-        panel.Measure(new Size(300, 100));
+        panel.Measure(new Size<double>(300, 100));
         panel.Arrange(new Rect(0, 0, 300, 100));
 
         Assert.That(tc.ItemContainerGenerator.RealizedCount, Is.LessThan(40),
@@ -407,7 +407,7 @@ public class TabStripScrollerTests
     public void IsVirtualizing_WithNoTabWidth_FallsBackToADefaultSlot()
     {
         var (tc, _) = WidthStrip(tabWidth: double.NaN, count: 200);
-        tc.Measure(new Size(400, 100));
+        tc.Measure(new Size<double>(400, 100));
         tc.Arrange(new Rect(0, 0, 400, 100));
 
         Assert.That(tc.ItemContainerGenerator.RealizedCount, Is.LessThan(200),
@@ -469,7 +469,7 @@ public class TabStripScrollerTests
     public void Drag_Reorders_OnAVirtualizedStripToo()
     {
         var (tc, tabs) = WidthStrip(tabWidth: 100, count: 40);
-        tc.Measure(new Size(300, 100));
+        tc.Measure(new Size<double>(300, 100));
         tc.Arrange(new Rect(0, 0, 300, 100));
         Assert.That(tc.ItemContainerGenerator.RealizedCount, Is.LessThan(40), "the strip really is virtualized here");
 
@@ -510,7 +510,7 @@ public class TabStripScrollerTests
         // UNBOUNDED across, which is how a side strip is really measured (it sits in an Auto column, so the question
         // asked of it is "how wide would you like to be?"). On a bounded axis a virtualizing panel answers with the slot
         // it was offered, by contract, and the question would not be asked at all.
-        tc.Measure(new Size(double.PositiveInfinity, 600));
+        tc.Measure(new Size<double>(double.PositiveInfinity, 600));
 
         var panel = (IMeasurableComponent)tc.ItemsHostPanel;
         Assert.That(panel.DesiredSize.Width, Is.EqualTo(120).Within(0.5),
@@ -540,7 +540,7 @@ public class TabStripScrollerTests
             return result;
         });
 
-        ic.Measure(new Size(600, 100));   // no TabControl anywhere above it - the "cannot tell yet" case
+        ic.Measure(new Size<double>(600, 100));   // no TabControl anywhere above it - the "cannot tell yet" case
 
         Assert.That(ic.ItemContainerGenerator.RealizedCount, Is.LessThan(500),
             "not knowing the slot is not the same as knowing there is none");

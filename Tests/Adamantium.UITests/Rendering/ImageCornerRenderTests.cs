@@ -69,7 +69,7 @@ public class ImageCornerRenderTests
         };
 
         image.Bounds = new Rect(0, 0, Size, Size);
-        image.RenderSize = new Size(Size, Size);
+        image.RenderSize = new Size<double>(Size, Size);
         image.RenderTransform = new Transform { TranslateX = At, TranslateY = At };
 
         var root = new VisualRoot(image, Dim, Dim);
@@ -125,7 +125,7 @@ public class ImageCornerRenderTests
         };
 
         image.Bounds = new Rect(0, 0, Size, Size);
-        image.RenderSize = new Size(Size, Size);
+        image.RenderSize = new Size<double>(Size, Size);
         image.RenderTransform = new Transform { TranslateX = At, TranslateY = At };
 
         var root = new VisualRoot(image, Dim, Dim);
@@ -162,7 +162,7 @@ public class ImageCornerRenderTests
         };
         set(image);
         image.Bounds = new Rect(0, 0, Size, Size);
-        image.RenderSize = new Size(Size, Size);
+        image.RenderSize = new Size<double>(Size, Size);
         image.RenderTransform = new Transform { TranslateX = At, TranslateY = At };
 
         Assert.That(_renderer.RenderFrame(new VisualRoot(image, Dim, Dim)), Is.True);

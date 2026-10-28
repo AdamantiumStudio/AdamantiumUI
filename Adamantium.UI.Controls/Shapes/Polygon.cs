@@ -57,9 +57,9 @@ public class Polygon : Shape
         set => SetValue(FillRuleProperty, value);
     }
 
-    protected override Size MeasureOverride(Size availableSize)
+    protected override Size<double> MeasureOverride(Size<double> availableSize)
     {
-        if (Points == null || Points.Count < 2) return new Size(0, 0);
+        if (Points == null || Points.Count < 2) return new Size<double>(0, 0);
         return MeasureStrokedGeometry(Rect.FromPoints(Points), [(Points.ToArray(), true)]);
     }
 

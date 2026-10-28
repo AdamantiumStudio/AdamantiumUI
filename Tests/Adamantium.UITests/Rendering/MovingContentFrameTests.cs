@@ -37,7 +37,7 @@ public class MovingContentFrameTests
     {
         var control = new TestControl { RenderAction = s => draw(s), Aura = aura };
         control.Bounds = new Rect(0, 0, 40, 40);
-        control.RenderSize = new Size(40, 40);
+        control.RenderSize = new Size<double>(40, 40);
         control.RenderTransform = new Transform { TranslateX = 28, TranslateY = 28 };
         var root = new VisualRoot(control, Dim, Dim);
         Assert.That(_renderer.RenderFrame(root), Is.True);
@@ -109,7 +109,7 @@ public class MovingContentFrameTests
         var root = new TestRoot(Dim, Dim);
         var rectangle = new Adamantium.UI.Controls.Shapes.Rectangle { Fill = brush };
         root.Add(rectangle);
-        rectangle.Measure(new Size(40, 40));
+        rectangle.Measure(new Size<double>(40, 40));
         rectangle.Arrange(new Rect(4, 4, 40, 40));
         _renderer.RenderFrame(root);
         _renderer.RenderFrame(root);

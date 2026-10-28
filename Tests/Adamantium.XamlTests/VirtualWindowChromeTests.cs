@@ -49,7 +49,7 @@ public class VirtualWindowChromeTests
         window.AttachContextAndInitialize(_app.UIContext);
         Adamantium.UI.Extensions.WindowExtension.UpdateTree(window);
         Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
-        window.Measure(new Size(800, 600));
+        window.Measure(new Size<double>(800, 600));
         window.Arrange(new Rect(0, 0, 800, 600));
         return window;
     }
@@ -95,7 +95,7 @@ public class VirtualWindowChromeTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(window.Bounds.Size, Is.EqualTo(new Size(440, 260)), "the window fills its area");
+            Assert.That(window.Bounds.Size, Is.EqualTo(new Size<double>(440, 260)), "the window fills its area");
             Assert.That(TitleBarOf(window).Bounds.Width, Is.GreaterThan(400), "and so does its title bar");
         });
     }
@@ -112,7 +112,7 @@ public class VirtualWindowChromeTests
         window.Height = 300;
         window.SizeToContent = SizeToContent.WidthAndHeight;
         Settle(window);
-        var fitted = new Size(window.ClientWidth, window.ClientHeight);
+        var fitted = new Size<double>(window.ClientWidth, window.ClientHeight);
 
         text.Text = "Apply the changes to the whole scene, every layer of it?";
         Settle(window);
@@ -126,7 +126,7 @@ public class VirtualWindowChromeTests
         {
             Assert.That(fitted.Width, Is.LessThan(440), "fitted to the content's width");
             Assert.That(fitted.Height, Is.LessThan(260), "and height");
-            Assert.That(window.Bounds.Size, Is.EqualTo(new Size(window.ClientWidth, window.ClientHeight)));
+            Assert.That(window.Bounds.Size, Is.EqualTo(new Size<double>(window.ClientWidth, window.ClientHeight)));
             Assert.That(refitted, Is.GreaterThan(fitted.Width), "and fitted again when the content grew");
             Assert.That(window.SizeToContent, Is.EqualTo(SizeToContent.Manual), "a size given from outside ends the fitting");
             Assert.That(window.ClientWidth, Is.EqualTo(700), "and is kept");
@@ -138,10 +138,10 @@ public class VirtualWindowChromeTests
     {
         var window = Attached("Fluent", customChrome: true);
         window.Content = new Adamantium.UI.Controls.Text.TextBlock { Text = "Apply?" };
-        window.DpiScale = new Vector2(1.25f, 1.25f);
+        window.DpiScale = new Vector2<double>(1.25f, 1.25f);
         window.SizeToContent = SizeToContent.WidthAndHeight;
         Settle(window);
-        var first = new Size(window.ClientWidth, window.ClientHeight);
+        var first = new Size<double>(window.ClientWidth, window.ClientHeight);
         ((Adamantium.UI.Controls.Text.TextBlock)window.Content).Text = "Apply the changes to the whole scene?";
         Settle(window);
 
@@ -195,7 +195,7 @@ public class VirtualWindowChromeTests
         window.SizeToContent = SizeToContent.WidthAndHeight;
         Settle(window);
 
-        Assert.That(new Size(window.ClientWidth, window.ClientHeight), Is.EqualTo(new Size(440, 260)));
+        Assert.That(new Size<double>(window.ClientWidth, window.ClientHeight), Is.EqualTo(new Size<double>(440, 260)));
     }
 
     [TestCase("Fluent", 20)]
@@ -251,6 +251,6 @@ public class VirtualWindowChromeTests
             Adamantium.UI.Extensions.WindowExtension.UpdateTree(window);
         }
 
-        Assert.That(window.Bounds.Size, Is.EqualTo(new Size(440, 260)));
+        Assert.That(window.Bounds.Size, Is.EqualTo(new Size<double>(440, 260)));
     }
 }

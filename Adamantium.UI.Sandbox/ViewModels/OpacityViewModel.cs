@@ -30,23 +30,23 @@ public partial class OpacityViewModel : TabPageViewModel
     private static PointsCollection MakeStar(double width, double height)
     {
         const double innerRatio = 0.382;
-        var unit = new Vector2[10];
-        var min = new Vector2(double.MaxValue, double.MaxValue);
-        var max = new Vector2(double.MinValue, double.MinValue);
+        var unit = new Vector2<double>[10];
+        var min = new Vector2<double>(double.MaxValue, double.MaxValue);
+        var max = new Vector2<double>(double.MinValue, double.MinValue);
         for (var i = 0; i < unit.Length; i++)
         {
             var angle = -Math.PI / 2 + i * Math.PI / 5;
             var radius = i % 2 == 0 ? 1.0 : innerRatio;
-            unit[i] = new Vector2(Math.Cos(angle) * radius, Math.Sin(angle) * radius);
-            min = Vector2.Min(min, unit[i]);
-            max = Vector2.Max(max, unit[i]);
+            unit[i] = new Vector2<double>(Math.Cos(angle) * radius, Math.Sin(angle) * radius);
+            min = Vector2<double>.Min(min, unit[i]);
+            max = Vector2<double>.Max(max, unit[i]);
         }
 
         var scale = Math.Min(width / (max.X - min.X), height / (max.Y - min.Y));
-        var points = new Vector2[unit.Length];
+        var points = new Vector2<double>[unit.Length];
         for (var i = 0; i < unit.Length; i++)
         {
-            points[i] = new Vector2((unit[i].X - min.X) * scale, (unit[i].Y - min.Y) * scale);
+            points[i] = new Vector2<double>((unit[i].X - min.X) * scale, (unit[i].Y - min.Y) * scale);
         }
         return new PointsCollection(points);
     }

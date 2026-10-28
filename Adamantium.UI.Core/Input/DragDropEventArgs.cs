@@ -7,7 +7,7 @@ namespace Adamantium.UI.Core.Input;
 /// <see cref="Data"/>, set <see cref="Effects"/>. Handled also suppresses the command.</summary>
 public class DragDropEventArgs : RoutedEventArgs
 {
-    public DragDropEventArgs(IDataPackage data, object source, Vector2 position)
+    public DragDropEventArgs(IDataPackage data, object source, Vector2<double> position)
     {
         Data = data;
         DragSource = source;
@@ -27,7 +27,7 @@ public class DragDropEventArgs : RoutedEventArgs
     public object SourceItemsSource { get; set; }
 
     /// <summary>Pointer position in the drop target's coordinate space.</summary>
-    public Vector2 Position { get; }
+    public Vector2<double> Position { get; }
 
     /// <summary>What the target will do with the payload - set by the target; drives the cursor and the source's outcome.</summary>
     public DragDropEffects Effects { get; set; } = DragDropEffects.Move;

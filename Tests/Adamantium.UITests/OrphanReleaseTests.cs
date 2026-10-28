@@ -37,7 +37,7 @@ public class OrphanReleaseTests
         var group = new PaneGroup { Name = "documents", Zone = DockZone.Center };
         foreach (var pane in panes) group.Items.Add(pane);
         area.Children.Add(group);
-        area.Measure(new Adamantium.Mathematics.Size(1000, 800));
+        area.Measure(new Adamantium.Mathematics.Size<double>(1000, 800));
         area.Arrange(new Adamantium.UI.Core.Rect(0, 0, 1000, 800));
         return area;
     }

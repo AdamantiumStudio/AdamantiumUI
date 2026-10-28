@@ -62,7 +62,7 @@ public class AbuttingEdgeSeamRenderTests
         ((IContainer)host).AddOrSetChildComponent(lower);
 
         var root = new VisualRoot(host, Dim, Dim);
-        ((IMeasurableComponent)root).Measure(new Size(Dim, Dim));
+        ((IMeasurableComponent)root).Measure(new Size<double>(Dim, Dim));
         ((IMeasurableComponent)root).Arrange(new Rect(0, 0, Dim, Dim));
         Assert.That(_renderer.RenderFrame(root), Is.True);
         RenderDirty.Clear();

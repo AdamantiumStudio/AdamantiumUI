@@ -35,7 +35,7 @@ public class CanvasChromeTests
         foreach (var pane in panes) layer.Children.Add(pane);
 
         layer.Sync();
-        layer.Measure(new Size(Room, Room), force: true);
+        layer.Measure(new Size<double>(Room, Room), force: true);
         layer.Arrange(new Rect(0, 0, Room, Room));
 
         return layer;
@@ -103,7 +103,7 @@ public class CanvasChromeTests
     {
         var pane = Pane(CanvasPanePlacement.Free, width: 80, height: 40);
 
-        pane.Anchor = CanvasPane.AnchorFor(new Vector2(123, 77), new Size(Room, Room), new Size(80, 40));
+        pane.Anchor = CanvasPane.AnchorFor(new Vector2<double>(123, 77), new Size<double>(Room, Room), new Size<double>(80, 40));
         Laid(pane);
 
         Assert.That(pane.Bounds.X, Is.EqualTo(123).Within(0.5));
@@ -119,15 +119,15 @@ public class CanvasChromeTests
         var layer = Laid(pane);
 
         // Three quarters of the way across and a quarter of the way down.
-        pane.Anchor = new Vector2(0.75, 0.25);
-        layer.Measure(new Size(Room, Room), force: true);
+        pane.Anchor = new Vector2<double>(0.75, 0.25);
+        layer.Measure(new Size<double>(Room, Room), force: true);
         layer.Arrange(new Rect(0, 0, Room, Room));
 
         Assert.That(pane.Bounds.X, Is.EqualTo(0.75 * (Room - 80)).Within(0.5));
 
         var wider = Room * 2;
 
-        layer.Measure(new Size(wider, wider), force: true);
+        layer.Measure(new Size<double>(wider, wider), force: true);
         layer.Arrange(new Rect(0, 0, wider, wider));
 
         Assert.Multiple(() =>
@@ -142,7 +142,7 @@ public class CanvasChromeTests
     public void APaneIsNeverPlacedOffTheEdge()
     {
         var pane = Pane(CanvasPanePlacement.Free, width: 80, height: 40);
-        pane.Anchor = new Vector2(5, 5);
+        pane.Anchor = new Vector2<double>(5, 5);
         Laid(pane);
 
         Assert.That(pane.Bounds.X, Is.EqualTo(Room - 80));
@@ -230,8 +230,8 @@ public class CanvasChromeTests
         var pane = Pane(CanvasPanePlacement.Free, width: 120, height: 60);
         var layer = Laid(pane);
 
-        pane.Anchor = new Vector2(0.5, 0.5);
-        layer.Measure(new Size(Room, Room), force: true);
+        pane.Anchor = new Vector2<double>(0.5, 0.5);
+        layer.Measure(new Size<double>(Room, Room), force: true);
         layer.Arrange(new Rect(0, 0, Room, Room));
 
         var left = pane.Bounds.X;
@@ -240,9 +240,9 @@ public class CanvasChromeTests
         // THE PANE'S OWN ARITHMETIC, the same two calls a press and a move make. The drag itself cannot be staged - it
         // reads the pointer off the device - but what it does to the pane is this and nothing else.
         pane.HoldingEdge(pulled, left, right);
-        pane.SizeTo(180, new Size(Room, Room));
+        pane.SizeTo(180, new Size<double>(Room, Room));
 
-        layer.Measure(new Size(Room, Room), force: true);
+        layer.Measure(new Size<double>(Room, Room), force: true);
         layer.Arrange(new Rect(0, 0, Room, Room));
 
         if (pulled == Dock.Right)

@@ -15,20 +15,20 @@ public class FieldSegmentPanel : Panel
         ClipToBounds = true;
     }
 
-    protected override Size MeasureOverride(Size availableSize)
+    protected override Size<double> MeasureOverride(Size<double> availableSize)
     {
         double width = 0, height = 0;
         foreach (var child in Children)
         {
-            child.Measure(new Size(double.PositiveInfinity, availableSize.Height));
+            child.Measure(new Size<double>(double.PositiveInfinity, availableSize.Height));
             width += child.DesiredSize.Width;
             height = Math.Max(height, child.DesiredSize.Height);
         }
 
-        return new Size(width, height);
+        return new Size<double>(width, height);
     }
 
-    protected override Size ArrangeOverride(Size finalSize)
+    protected override Size<double> ArrangeOverride(Size<double> finalSize)
     {
         double total = 0, start = 0, end = 0;
         var typing = false;

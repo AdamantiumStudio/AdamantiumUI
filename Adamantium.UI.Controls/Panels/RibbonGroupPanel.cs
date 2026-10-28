@@ -107,7 +107,7 @@ public class RibbonGroupPanel : Panel
         return nearest ?? row;
     }
 
-    protected override Size MeasureOverride(Size availableSize)
+    protected override Size<double> MeasureOverride(Size<double> availableSize)
     {
         // Until something CHOOSES, the commands are drawn the way their authors asked.
         if (_applied < 0) Apply(0);
@@ -116,7 +116,7 @@ public class RibbonGroupPanel : Panel
     }
 
     // Cut into columns and measured unbounded: a measure constraint is not the viewport.
-    private Size MeasurePacked()
+    private Size<double> MeasurePacked()
     {
         Repartition();
 
@@ -126,7 +126,7 @@ public class RibbonGroupPanel : Panel
             double columnWidth = 0, columnHeight = 0;
             foreach (var child in _columns[i])
             {
-                child.Measure(Size.Infinity);
+                child.Measure(Size<double>.Infinity);
                 columnWidth = Math.Max(columnWidth, child.DesiredSize.Width);
                 columnHeight += child.DesiredSize.Height + (columnHeight > 0 ? RowSpacing : 0);
             }
@@ -136,10 +136,10 @@ public class RibbonGroupPanel : Panel
             height = Math.Max(height, columnHeight);
         }
 
-        return new Size(width, height);
+        return new Size<double>(width, height);
     }
 
-    protected override Size ArrangeOverride(Size finalSize)
+    protected override Size<double> ArrangeOverride(Size<double> finalSize)
     {
         // As Office lays a group out: every column starts at the top, its commands one under another with RowSpacing
         // between them - Word's two rows of font commands stand at the top, not touching. Spread, the gaps share what
@@ -177,7 +177,7 @@ public class RibbonGroupPanel : Panel
             x += _columnWidths[i];
         }
 
-        return new Size(x, finalSize.Height);
+        return new Size<double>(x, finalSize.Height);
     }
 
     // --- Variants: the ways this group can be drawn, and what each of them costs in width ---------------------------

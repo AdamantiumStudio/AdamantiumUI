@@ -43,8 +43,8 @@ internal sealed class TestRoot : UIComponent, IRootVisualComponent
     public double ClientHeight { get; set; }
     public IUIContext UIContext => null;
     public void AttachContextAndInitialize(IUIContext context) { }
-    public Vector2 PointToClient(PixelPoint point) => new((float)point.X, (float)point.Y);
-    public PixelPoint PointToScreen(Vector2 point) => new(point.X, point.Y);
+    public Vector2<double> PointToClient(PixelPoint point) => new((float)point.X, (float)point.Y);
+    public PixelPoint PointToScreen(Vector2<double> point) => new(point.X, point.Y);
         public PixelPoint Position { get; set; }
 }
 

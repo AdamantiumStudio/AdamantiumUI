@@ -15,7 +15,7 @@ public sealed class EllipseGeometry : Geometry
       typeof(Double), typeof(EllipseGeometry), new PropertyMetadata((Double)0, PropertyMetadataOptions.AffectsMeasure));
 
    public static readonly AdamantiumProperty CenterProperty = AdamantiumProperty.Register(nameof(Center),
-      typeof(Vector2), typeof(EllipseGeometry), new PropertyMetadata(Vector2.Zero, PropertyMetadataOptions.AffectsArrange));
+      typeof(Vector2<double>), typeof(EllipseGeometry), new PropertyMetadata(Vector2<double>.Zero, PropertyMetadataOptions.AffectsArrange));
 
    public static readonly AdamantiumProperty StartAngleProperty = AdamantiumProperty.Register(nameof(StartAngle),
       typeof(Double), typeof(EllipseGeometry), new PropertyMetadata((Double)0, PropertyMetadataOptions.AffectsRender));
@@ -57,9 +57,9 @@ public sealed class EllipseGeometry : Geometry
       set => SetValue(EllipseTypeProperty, value);
    }
 
-   public Vector2 Center
+   public Vector2<double> Center
    {
-      get => GetValue<Vector2>(CenterProperty);
+      get => GetValue<Vector2<double>>(CenterProperty);
       set => SetValue(CenterProperty, value);
    }
 
@@ -81,9 +81,9 @@ public sealed class EllipseGeometry : Geometry
       IsClosed = true;
    }
 
-   public EllipseGeometry(Vector2 center, Double radiusX, Double radiusY, Double startAngle = 0, Double sweepAngle = 360, EllipseType ellipseType = EllipseType.Sector) : this()
+   public EllipseGeometry(Vector2<double> center, Double radiusX, Double radiusY, Double startAngle = 0, Double sweepAngle = 360, EllipseType ellipseType = EllipseType.Sector) : this()
    {
-      bounds = new Rect(center - new Vector2(radiusX, radiusY), new Size(radiusX * 2, radiusY * 2));
+      bounds = new Rect(center - new Vector2<double>(radiusX, radiusY), new Size<double>(radiusX * 2, radiusY * 2));
       Center = center;
       RadiusX = radiusX;
       RadiusY = radiusY;
@@ -102,12 +102,12 @@ public sealed class EllipseGeometry : Geometry
       SweepAngle = sweepAngle;
       EllipseType = ellipseType;
          
-      var translation = Matrix4x4.Translation(Center.X, Center.Y, 0);
+      var translation = Matrix4x4.CreateTranslation<double>(Center.X, Center.Y, 0);
          
       Mesh = Shapes.Ellipse.GenerateGeometry(
          geometryType, 
          EllipseType,
-         new Vector2(rect.Width, rect.Height), 
+         new Vector2<double>(rect.Width, rect.Height), 
          StartAngle, 
          SweepAngle,
          tessellation: TesselationFactor,
@@ -123,7 +123,7 @@ public sealed class EllipseGeometry : Geometry
 
    public override void RecalculateBounds()
    {
-      bounds = new Rect(Center - new Vector2(RadiusX, RadiusY), new Size(RadiusX * 2, RadiusY * 2));
+      bounds = new Rect(Center - new Vector2<double>(RadiusX, RadiusY), new Size<double>(RadiusX * 2, RadiusY * 2));
       if (Transform != null)
       {
          bounds = bounds.TransformToAABB(Transform.Matrix);

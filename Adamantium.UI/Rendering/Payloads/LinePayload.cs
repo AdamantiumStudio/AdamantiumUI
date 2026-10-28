@@ -5,11 +5,11 @@ using Adamantium.UI.Core.Media;
 
 namespace Adamantium.UI.Rendering.Payloads;
 
-public class LinePayload(Vector2 lineStart, Vector2 lineEnd, Pen pen) : IEquatable<LinePayload>, IRenderCachePolicy
+public class LinePayload(Vector2<double> lineStart, Vector2<double> lineEnd, Pen pen) : IEquatable<LinePayload>, IRenderCachePolicy
 {
-    public Vector2 LineStart { get; } = lineStart;
+    public Vector2<double> LineStart { get; } = lineStart;
 
-    public Vector2 LineEnd { get; } = lineEnd;
+    public Vector2<double> LineEnd { get; } = lineEnd;
 
     // A COPY, taken on the record thread - the caller keeps editing its own pen (caps, join, dash array are all
     // reachable) while the applier reads those very fields to build the stroke. Same fix as GeometryPayload.

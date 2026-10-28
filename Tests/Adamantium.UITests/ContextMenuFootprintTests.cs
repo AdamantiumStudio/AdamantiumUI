@@ -34,14 +34,14 @@ public class ContextMenuFootprintTests
     {
         var (_, menu, _) = Row();
 
-        Assert.That(menu.Bounds.Size, Is.EqualTo(Size.Zero));
+        Assert.That(menu.Bounds.Size, Is.EqualTo(Size<double>.Zero));
     }
 
     [Test]
     public void AnInlineMenuDoesNotSwallowThePressBeneathIt()
     {
         var (button, _, window) = Row();
-        var middle = new Vector2(button.Bounds.X + button.Bounds.Width / 2, button.Bounds.Y + button.Bounds.Height / 2);
+        var middle = new Vector2<double>(button.Bounds.X + button.Bounds.Width / 2, button.Bounds.Y + button.Bounds.Height / 2);
 
         var hit = InputExtensions.HitTest(window, middle);
 

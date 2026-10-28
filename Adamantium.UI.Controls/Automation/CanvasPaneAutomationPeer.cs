@@ -37,7 +37,7 @@ public class CanvasPaneAutomationPeer : PaneAutomationPeer, ITransformProvider
 
         var bounds = BoundingRectangle;
         var units = UnitsPerPixel();
-        _pane.MoveBy(new Vector2((x - bounds.X) * units.X, (y - bounds.Y) * units.Y));
+        _pane.MoveBy(new Vector2<double>((x - bounds.X) * units.X, (y - bounds.Y) * units.Y));
     }
 
     /// <summary>Widens or narrows it; its height follows what it holds.</summary>

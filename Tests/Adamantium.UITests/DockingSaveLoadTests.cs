@@ -202,7 +202,7 @@ public class DockingSaveLoadTests
         area.Children.Add(AreaGroup("documents", DockZone.Center, "scene"));
         area.Children.Add(AreaGroup("tools", DockZone.Right, "inspector", "hierarchy"));
 
-        area.Measure(new Size(1000, 800));
+        area.Measure(new Size<double>(1000, 800));
         area.Arrange(new Rect(0, 0, 1000, 800));
 
         // The arrangement worth remembering: the tools put away against their edge, looking at the second tab.
@@ -240,11 +240,11 @@ public class DockingSaveLoadTests
     {
         var before = new DockingArea { DividerThickness = 0 };
         before.Children.Add(AreaGroup("documents", DockZone.Center, "scene"));
-        before.Measure(new Size(1000, 800));
+        before.Measure(new Size<double>(1000, 800));
         before.Arrange(new Rect(0, 0, 1000, 800));
 
         before.AddPane(new Pane { Header = "Assets", Id = "Assets", RestoreKey = "page:Assets" });
-        before.Measure(new Size(1000, 800));
+        before.Measure(new Size<double>(1000, 800));
         before.Arrange(new Rect(0, 0, 1000, 800));
 
         var saved = before.SaveLayout();
@@ -253,7 +253,7 @@ public class DockingSaveLoadTests
         // A fresh area, as after a restart: only what the markup declares exists.
         var after = new DockingArea { DividerThickness = 0 };
         after.Children.Add(AreaGroup("documents", DockZone.Center, "scene"));
-        after.Measure(new Size(1000, 800));
+        after.Measure(new Size<double>(1000, 800));
         after.Arrange(new Rect(0, 0, 1000, 800));
 
         var asked = "";
@@ -281,7 +281,7 @@ public class DockingSaveLoadTests
     {
         var before = new DockingArea { DividerThickness = 0 };
         before.Children.Add(AreaGroup("documents", DockZone.Center, "scene"));
-        before.Measure(new Size(1000, 800));
+        before.Measure(new Size<double>(1000, 800));
         before.Arrange(new Rect(0, 0, 1000, 800));
         before.AddPane(new Pane { Header = "Assets", Id = "Assets", RestoreKey = "page:Assets" });
 
@@ -289,7 +289,7 @@ public class DockingSaveLoadTests
 
         var after = new DockingArea { DividerThickness = 0 };
         after.Children.Add(AreaGroup("documents", DockZone.Center, "scene"));
-        after.Measure(new Size(1000, 800));
+        after.Measure(new Size<double>(1000, 800));
         after.Arrange(new Rect(0, 0, 1000, 800));
         after.PaneRestoring += (_, e) => e.Pane = null;
 

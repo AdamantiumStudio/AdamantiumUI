@@ -16,7 +16,7 @@ public sealed class Pointer
     internal MouseButtons ContactButton;
     internal uint LastClickTime;
     internal IInputComponent LastClicked;
-    internal Vector2 LastClickPosition;
+    internal Vector2<double> LastClickPosition;
 
     internal Pointer(uint id, PointerType type, bool isPrimary)
     {
@@ -103,7 +103,7 @@ public sealed class Pointer
     }
 
     /// <summary>Where the pointer is, in <paramref name="relativeTo"/>'s own units.</summary>
-    public Vector2 GetPosition(IInputComponent relativeTo)
+    public Vector2<double> GetPosition(IInputComponent relativeTo)
     {
         IUIComponent root = relativeTo;
         while (root.VisualParent != null)
@@ -115,14 +115,14 @@ public sealed class Pointer
         return ToLocal(relativeTo, clientRoot.PointToClient(ScreenPosition));
     }
 
-    internal static Vector2 ToLocal(IUIComponent element, Vector2 client)
+    internal static Vector2<double> ToLocal(IUIComponent element, Vector2<double> client)
     {
         if (Transformed(element))
         {
             var local = Vector3F.TransformCoordinate(new Vector3F((float)client.X, (float)client.Y, 0),
                 Matrix4x4F.Invert(element.WorldTransform));
 
-            return new Vector2(local.X, local.Y);
+            return new Vector2<double>(local.X, local.Y);
         }
 
         for (var v = element; v != null; v = v.VisualParent)

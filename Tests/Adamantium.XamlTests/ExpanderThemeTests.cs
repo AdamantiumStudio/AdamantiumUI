@@ -42,7 +42,7 @@ public class ExpanderThemeTests
         expander.ApplyCurrentTheme();
         Adamantium.UI.Extensions.WindowExtension.UpdateTree(expander);
         Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
-        expander.Measure(new Size(400, 400));
+        expander.Measure(new Size<double>(400, 400));
         expander.Arrange(new Rect(0, 0, 400, 400));
         return expander;
     }
@@ -136,7 +136,7 @@ public class ExpanderThemeTests
         for (IUIComponent node = (IUIComponent)expander.GetTemplateChild("PART_Reveal"); node != null; node = node.VisualParent)
             (node as IMeasurableComponent)?.InvalidateMeasure();
 
-        expander.Measure(new Size(400, 400), force: true);
+        expander.Measure(new Size<double>(400, 400), force: true);
         expander.Arrange(new Rect(0, 0, 400, 400));
 
         Assert.Multiple(() =>

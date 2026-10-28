@@ -113,8 +113,8 @@ internal sealed partial class AtSpiBridge
         return new PixelPoint((int)Math.Round(left * scale.X), (int)Math.Round(top * scale.Y));
     }
 
-    private static Vector2 ScaleOf(AutomationPeer peer) =>
-        (peer as UIComponentAutomationPeer)?.Owner?.RootVisual is IWindow { DpiScale: { X: > 0, Y: > 0 } scale } ? scale : Vector2.One;
+    private static Vector2<double> ScaleOf(AutomationPeer peer) =>
+        (peer as UIComponentAutomationPeer)?.Owner?.RootVisual is IWindow { DpiScale: { X: > 0, Y: > 0 } scale } ? scale : Vector2<double>.One;
 
     private static AutomationPeer ChildAt(AutomationPeer peer, PixelPoint screen)
     {

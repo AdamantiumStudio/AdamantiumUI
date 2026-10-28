@@ -78,7 +78,7 @@ public class LongTextBandRenderTests
 
     private void Draw()
     {
-        ((IMeasurableComponent)_root).Measure(new Size(Dim, Dim));
+        ((IMeasurableComponent)_root).Measure(new Size<double>(Dim, Dim));
         ((IMeasurableComponent)_root).Arrange(new Rect(0, 0, Dim, Dim));
         Assert.That(_renderer.RenderFrame(_root), Is.True, "off-screen frame must render");
         RenderDirty.Clear();
@@ -207,7 +207,7 @@ public class LongTextBandRenderTests
     [Test]
     public void ACopyElsewhere_BuildsTheWholeText()
     {
-        _canvas.RenderClones = [Matrix4x4F.Identity, Matrix4x4F.Translation(Dim / 2f, (float)-Offset(200), 0)];
+        _canvas.RenderClones = [Matrix4x4F.Identity, Matrix4x4.CreateTranslation<float>(Dim / 2f, (float)-Offset(200), 0)];
         RenderDirty.MarkStructural();
         Draw();
 

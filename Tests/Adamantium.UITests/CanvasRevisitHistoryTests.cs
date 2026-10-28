@@ -19,7 +19,7 @@ public class CanvasRevisitHistoryTests
         TrackingCollection<ICanvasNode> nodes, TrackingCollection<ICanvasObject> objects)
     {
         var canvas = new InfiniteCanvas { Mode = CanvasMode.Nodes, History = history };
-        canvas.Measure(new Size(800, 600), force: true);
+        canvas.Measure(new Size<double>(800, 600), force: true);
         canvas.Arrange(new Rect(0, 0, 800, 600));
 
         canvas.Scene = scene;
@@ -259,7 +259,7 @@ public class CanvasRevisitHistoryTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(item.HitTest(new Vector2(50, 25), 0), Is.False);
+            Assert.That(item.HitTest(new Vector2<double>(50, 25), 0), Is.False);
             Assert.That(item.Touches(new Rect(0, 0, 200, 200)), Is.False);
         });
     }
@@ -298,7 +298,7 @@ public class CanvasRevisitHistoryTests
     {
         for (var pass = 0; pass < 2; pass++)
         {
-            canvas.Measure(new Size(800, 600), force: true);
+            canvas.Measure(new Size<double>(800, 600), force: true);
             canvas.Arrange(new Rect(0, 0, 800, 600));
             Adamantium.UI.Extensions.WindowExtension.UpdateTree(canvas);
         }

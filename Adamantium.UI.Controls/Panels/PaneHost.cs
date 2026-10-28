@@ -88,7 +88,7 @@ public class PaneHost : Panel, IPaneMinimum
         set => SetValue(DividerThicknessProperty, value);
     }
 
-    protected override Size MeasureOverride(Size availableSize)
+    protected override Size<double> MeasureOverride(Size<double> availableSize)
     {
         var horizontal = Orientation == Orientation.Horizontal;
         var total = horizontal ? availableSize.Width : availableSize.Height;
@@ -106,8 +106,8 @@ public class PaneHost : Panel, IPaneMinimum
             if (child is PaneSplitter || !GetPaneLength(child).IsAuto) continue;
 
             child.Measure(horizontal
-                ? new Size(double.PositiveInfinity, across)
-                : new Size(across, double.PositiveInfinity));
+                ? new Size<double>(double.PositiveInfinity, across)
+                : new Size<double>(across, double.PositiveInfinity));
         }
 
         Distribute(along);
@@ -116,13 +116,13 @@ public class PaneHost : Panel, IPaneMinimum
         foreach (var child in Children)
         {
             var size = child is PaneSplitter ? DividerThickness : _sizes[placed++];
-            child.Measure(horizontal ? new Size(size, across) : new Size(across, size));
+            child.Measure(horizontal ? new Size<double>(size, across) : new Size<double>(across, size));
         }
 
         return Fit(horizontal, total, across);
     }
 
-    private Size MeasureUnbounded(bool horizontal, double across)
+    private Size<double> MeasureUnbounded(bool horizontal, double across)
     {
         var along = Math.Max(0, ContentCount - 1) * DividerThickness;
 
@@ -130,13 +130,13 @@ public class PaneHost : Panel, IPaneMinimum
         {
             if (child is PaneSplitter)
             {
-                child.Measure(horizontal ? new Size(DividerThickness, across) : new Size(across, DividerThickness));
+                child.Measure(horizontal ? new Size<double>(DividerThickness, across) : new Size<double>(across, DividerThickness));
                 continue;
             }
 
             var length = GetPaneLength(child);
             var extent = length.IsPixel ? length.Value : double.PositiveInfinity;
-            child.Measure(horizontal ? new Size(extent, across) : new Size(across, extent));
+            child.Measure(horizontal ? new Size<double>(extent, across) : new Size<double>(across, extent));
 
             var desired = DesiredOf(child);
             along += length.IsPixel ? length.Value : horizontal ? desired.Width : desired.Height;
@@ -145,14 +145,14 @@ public class PaneHost : Panel, IPaneMinimum
         return Fit(horizontal, along, across);
     }
 
-    private Size Fit(bool horizontal, double along, double across)
+    private Size<double> Fit(bool horizontal, double along, double across)
     {
         if (double.IsInfinity(across))
         {
             across = WidestAcross(horizontal);
         }
 
-        return horizontal ? new Size(along, across) : new Size(across, along);
+        return horizontal ? new Size<double>(along, across) : new Size<double>(across, along);
     }
 
     private double WidestAcross(bool horizontal)
@@ -172,10 +172,10 @@ public class PaneHost : Panel, IPaneMinimum
         return widest;
     }
 
-    private static Size DesiredOf(IUIComponent child) =>
+    private static Size<double> DesiredOf(IUIComponent child) =>
         child is IMeasurableComponent measurable ? measurable.DesiredSize : default;
 
-    protected override Size ArrangeOverride(Size finalSize)
+    protected override Size<double> ArrangeOverride(Size<double> finalSize)
     {
         var horizontal = Orientation == Orientation.Horizontal;
         var total = horizontal ? finalSize.Width : finalSize.Height;

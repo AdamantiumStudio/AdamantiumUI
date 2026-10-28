@@ -106,7 +106,7 @@ public class PropertyGridTests
         var grid = new PropertyGrid { Template = Chrome() };
         foreach (var section in sections) grid.Sections.Add(section);
 
-        grid.Measure(new Size(400, 400), force: true);
+        grid.Measure(new Size<double>(400, 400), force: true);
         grid.Arrange(new Rect(0, 0, 400, 400));
         return grid;
     }
@@ -150,7 +150,7 @@ public class PropertyGridTests
                 row.Template = chrome;
                 // The row's OWN pass, not the grid's: the editor is built by the presenter during measure and picked up
                 // in arrange, and a grid that has already settled will not walk down to a child again.
-                row.Measure(new Size(400, 40), force: true);
+                row.Measure(new Size<double>(400, 40), force: true);
                 row.Arrange(new Rect(0, 0, 400, 40));
             }
         }
@@ -718,7 +718,7 @@ public class PropertyGridTests
 
         // A wire is not an ElementItem at all, so "Model.IsCollapsed" finds nothing on it - which is exactly what a
         // selection of a whole graph hands the line.
-        grid.SelectedObjects = new object[] { Item(first), new StrokeItem(Vector2.Zero, Brushes.White, 2), Item(second) };
+        grid.SelectedObjects = new object[] { Item(first), new StrokeItem(Vector2<double>.Zero, Brushes.White, 2), Item(second) };
 
         Settle(grid);
         TemplateRows(grid);
@@ -739,7 +739,7 @@ public class PropertyGridTests
 
     private static void Settle(PropertyGrid grid)
     {
-        grid.Measure(new Size(400, 400), force: true);
+        grid.Measure(new Size<double>(400, 400), force: true);
         grid.Arrange(new Rect(0, 0, 400, 400));
         Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
     }
@@ -1026,7 +1026,7 @@ public class PropertyGridTests
         var grid = new PropertyGrid { Template = Chrome(), SelectedObjects = new[] { one, two } };
 
         grid.Sections.Add(section);
-        grid.Measure(new Size(400, 400), force: true);
+        grid.Measure(new Size<double>(400, 400), force: true);
         grid.Arrange(new Rect(0, 0, 400, 400));
 
         Assert.That(scale.Inspected, Is.Null, "one of several selected objects was taken as what the line is about");
@@ -1156,7 +1156,7 @@ public class PropertyGridTests
             return result;
         });
 
-        row.Measure(new Size(400, 40), force: true);
+        row.Measure(new Size<double>(400, 40), force: true);
         row.Arrange(new Rect(0, 0, 400, 40));
 
         PointerInput.Press(label);
@@ -1190,7 +1190,7 @@ public class PropertyGridTests
             return result;
         });
 
-        row.Measure(new Size(400, 40), force: true);
+        row.Measure(new Size<double>(400, 40), force: true);
         row.Arrange(new Rect(0, 0, 400, 40));
 
         PointerInput.Press(value);
@@ -1220,7 +1220,7 @@ public class PropertyGridTests
             return result;
         });
 
-        row.Measure(new Size(400, 40), force: true);
+        row.Measure(new Size<double>(400, 40), force: true);
         row.Arrange(new Rect(0, 0, 400, 40));
 
         PointerInput.Press(button);
@@ -1282,7 +1282,7 @@ public class PropertyGridTests
         grid.SelectedObjects = targets;
 
         // Again, because the selection arrives AFTER the first pass and a row finds its editor once a pass has run.
-        grid.Measure(new Size(400, 400), force: true);
+        grid.Measure(new Size<double>(400, 400), force: true);
         grid.Arrange(new Rect(0, 0, 400, 400));
         return grid;
     }
@@ -1997,7 +1997,7 @@ public class PropertyGridTests
         var grid = Built();
         grid.AutoGenerateSections = true;
         grid.SelectedObjects = targets;
-        grid.Measure(new Size(400, 400), force: true);
+        grid.Measure(new Size<double>(400, 400), force: true);
         grid.Arrange(new Rect(0, 0, 400, 400));
         return grid;
     }
@@ -2043,7 +2043,7 @@ public class PropertyGridTests
         var oldSections = new List<PropertySection>(old.Displayed);
 
         old.SelectedObjects = null;
-        old.Measure(new Size(400, 400), force: true);
+        old.Measure(new Size<double>(400, 400), force: true);
         old.Arrange(new Rect(0, 0, 400, 400));
 
         Assert.Multiple(() =>

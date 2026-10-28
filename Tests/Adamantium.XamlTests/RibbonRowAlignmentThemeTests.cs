@@ -62,7 +62,7 @@ public class RibbonRowAlignmentThemeTests
         group.ApplyCurrentTheme();
         Adamantium.UI.Extensions.WindowExtension.UpdateTree(group);
         Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
-        group.Measure(new Size(400, 120));
+        group.Measure(new Size<double>(400, 120));
         group.Arrange(new Rect(0, 0, 400, 120));
 
         var panel = group.GetVisualDescendants().OfType<RibbonGroupPanel>().Single();

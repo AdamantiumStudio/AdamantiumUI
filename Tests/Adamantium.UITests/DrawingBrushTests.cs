@@ -28,7 +28,7 @@ public class DrawingBrushTests
     {
         var image = new DrawingImage { Drawing = Square(0, 0, 10) };
         var owner = new Adamantium.UI.Controls.Decorators.Border();
-        DrawingImageRaster.Get(image, new Size(16, 16), owner);
+        DrawingImageRaster.Get(image, new Size<double>(16, 16), owner);
 
         var redrawn = false;
         void Seen(IUIComponent component) => redrawn |= ReferenceEquals(component, owner);
@@ -71,7 +71,7 @@ public class DrawingBrushTests
     {
         var brush = new DrawingBrush(new DrawingGroup { Children = { Square(0, 0, 10), Square(10, 0, 14) } });
 
-        Assert.That(brush.ContentSize, Is.EqualTo(new Size(24, 14)), "the union of the two squares, not either alone");
+        Assert.That(brush.ContentSize, Is.EqualTo(new Size<double>(24, 14)), "the union of the two squares, not either alone");
     }
 
     // Swapping the drawing must not swap the IMAGE: the image is the bake key, so a new one would throw away every
@@ -151,7 +151,7 @@ public class DrawingBrushTests
 
         var layout = ImageTiling.Layout(brush, new Rect(0, 0, 200, 200), 1.0, 1.0);
 
-        Assert.That(brush.ContentSize, Is.EqualTo(new Size(30, 20)));
+        Assert.That(brush.ContentSize, Is.EqualTo(new Size<double>(30, 20)));
         Assert.That(layout.Drawn.Z, Is.EqualTo(1f).Within(1e-4), "the wide axis fills the tile");
         Assert.That(layout.Drawn.W, Is.EqualTo(20f / 30f).Within(1e-4), "the other keeps the 3:2 ratio");
     }
@@ -233,7 +233,7 @@ public class DrawingBrushTests
                 Geometry = new RectangleGeometry(new Rect(0, 0, 8, 8)), Brush = new SolidColorBrush(Colors.White)
             }
         };
-        DrawingImageRaster.Get(icon, new Size(16, 16), owner);
+        DrawingImageRaster.Get(icon, new Size<double>(16, 16), owner);
         return new System.WeakReference(owner);
     }
 

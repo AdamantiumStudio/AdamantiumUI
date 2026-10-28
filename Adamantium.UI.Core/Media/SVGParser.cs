@@ -113,7 +113,7 @@ public class SVGParser
         }
     }
 
-    private static string Pair(Vector2 point) => $"{Num(point.X)} {Num(point.Y)}";
+    private static string Pair(Vector2<double> point) => $"{Num(point.X)} {Num(point.Y)}";
 
     private static string Num(double value) => value.ToString("0.####", CultureInfo.InvariantCulture);
 }

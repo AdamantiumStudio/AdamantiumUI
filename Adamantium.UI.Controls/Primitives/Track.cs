@@ -126,7 +126,7 @@ public class Track : Panel
         if (e.NewValue is MeasurableUIComponent newPart) track.Children.Add(newPart);
     }
 
-    protected override Size MeasureOverride(Size availableSize)
+    protected override Size<double> MeasureOverride(Size<double> availableSize)
     {
         foreach (var child in Children)
             child.Measure(availableSize);
@@ -134,11 +134,11 @@ public class Track : Panel
         // The track stretches to fill the trough; the thumb's cross-size is the only intrinsic demand.
         var thumb = Thumb?.DesiredSize ?? default;
         return Orientation == Orientation.Vertical
-            ? new Size(thumb.Width, 0)
-            : new Size(0, thumb.Height);
+            ? new Size<double>(thumb.Width, 0)
+            : new Size<double>(0, thumb.Height);
     }
 
-    protected override Size ArrangeOverride(Size finalSize)
+    protected override Size<double> ArrangeOverride(Size<double> finalSize)
     {
         var vertical = Orientation == Orientation.Vertical;
         var trackLength = vertical ? finalSize.Height : finalSize.Width;
@@ -146,7 +146,7 @@ public class Track : Panel
 
         var range = Maximum - Minimum;
         var viewport = Math.Max(0, ViewportSize);
-        var thumbDesired = Thumb?.DesiredSize ?? new Size(MinThumbLength, MinThumbLength);
+        var thumbDesired = Thumb?.DesiredSize ?? new Size<double>(MinThumbLength, MinThumbLength);
 
         // Thumb size ALONG the track + ACROSS it. Scrollbar (viewport > 0): a viewport-proportional bar that fills the
         // cross thickness. Slider (viewport == 0): a fixed handle at the theme's own Thumb size, centered across the track
@@ -228,7 +228,7 @@ public class Track : Panel
 
     /// <summary>Maps a point in the track's local space to the Value whose thumb would be CENTERED on it - used by a
     /// move-to-point slider click. Honors orientation and <see cref="IsDirectionReversed"/>.</summary>
-    public double ValueFromPoint(Vector2 point)
+    public double ValueFromPoint(Vector2<double> point)
     {
         if (_remaining <= 0) return Minimum;   // thumb fills the track - nowhere to move
         var pos = Orientation == Orientation.Vertical ? point.Y : point.X;
@@ -239,7 +239,7 @@ public class Track : Panel
 
     /// <summary>The Value at which the thumb edge facing <paramref name="point"/> reaches it, so a repeating page step can
     /// stop at the pointer. <paramref name="increasing"/> gives the step direction.</summary>
-    public double PageLimitFromPoint(Vector2 point, bool increasing)
+    public double PageLimitFromPoint(Vector2<double> point, bool increasing)
     {
         if (_remaining <= 0) return increasing ? Maximum : Minimum;
         var pos = Orientation == Orientation.Vertical ? point.Y : point.X;

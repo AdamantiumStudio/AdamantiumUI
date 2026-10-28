@@ -21,8 +21,8 @@ public class RetemplatedContentPaintOrderTests
 {
     private sealed class Root : Grid, IRootVisualComponent
     {
-        public Vector2 PointToClient(PixelPoint point) => new((float)point.X, (float)point.Y);
-        public PixelPoint PointToScreen(Vector2 point) => new(point.X, point.Y);
+        public Vector2<double> PointToClient(PixelPoint point) => new((float)point.X, (float)point.Y);
+        public PixelPoint PointToScreen(Vector2<double> point) => new(point.X, point.Y);
         public PixelPoint Position { get; set; }
         public void AttachContextAndInitialize(IUIContext context) { }
         public double Left { get; set; }
@@ -53,7 +53,7 @@ public class RetemplatedContentPaintOrderTests
     {
         for (var pass = 0; pass < 2; pass++)
         {
-            root.Measure(new Size(400, 300), force: true);
+            root.Measure(new Size<double>(400, 300), force: true);
             root.Arrange(new Rect(0, 0, 400, 300));
         }
 

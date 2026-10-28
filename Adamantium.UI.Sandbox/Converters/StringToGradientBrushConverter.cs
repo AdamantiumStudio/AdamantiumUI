@@ -35,16 +35,16 @@ public sealed class StringToGradientBrushConverter : IValueConverter
         {
             return new RadialGradientBrush(stops)
             {
-                Center = new Vector2(0.5f, 0.5f),
-                GradientOrigin = new Vector2(0.35f, 0.32f),   // off-center highlight -> a soft "spotlight"
+                Center = new Vector2<double>(0.5f, 0.5f),
+                GradientOrigin = new Vector2<double>(0.35f, 0.32f),   // off-center highlight -> a soft "spotlight"
                 RadiusX = 0.6,
                 RadiusY = 0.6
             };
         }
         return new LinearGradientBrush(stops)
         {
-            StartPoint = new Vector2(0f, 0f),
-            EndPoint = new Vector2(1f, 1f)   // corner-to-corner diagonal
+            StartPoint = new Vector2<double>(0f, 0f),
+            EndPoint = new Vector2<double>(1f, 1f)   // corner-to-corner diagonal
         };
     }
 

@@ -14,7 +14,7 @@ namespace Adamantium.UITests;
 [TestFixture]
 public class PagerButtonFloorTests
 {
-    private static Size Measure(MeasurableUIComponent element)
+    private static Size<double> Measure(MeasurableUIComponent element)
     {
         var root = new Border { Width = 400, Height = 100, Child = element };
         Adamantium.UI.Extensions.WindowExtension.UpdateTree(root);

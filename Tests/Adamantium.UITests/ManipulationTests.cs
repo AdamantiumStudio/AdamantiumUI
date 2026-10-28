@@ -25,7 +25,7 @@ public class ManipulationTests
 {
     private const uint FirstId = 80;
     private const double Pixel = 1;
-    private static readonly Vector2 Middle = new(500, 300);
+    private static readonly Vector2<double> Middle = new(500, 300);
 
     private Window _window;
     private Border _pad;
@@ -63,7 +63,7 @@ public class ManipulationTests
     {
         foreach (var left in PointerDevice.Current.Pointers.Where(p => p.Id >= FirstId && p.Id < FirstId + 10).ToList())
         {
-            Send(RawPointerEventType.Cancel, (int)(left.Id - FirstId), Vector2.Zero);
+            Send(RawPointerEventType.Cancel, (int)(left.Id - FirstId), Vector2<double>.Zero);
         }
 
         Gestures.HoldingTime = _holdingTime;
@@ -103,10 +103,10 @@ public class ManipulationTests
         Down(fingers, radius: 100);
         for (var step = 1; step <= 6; step++)
         {
-            MoveAll(fingers, 100, offset: new Vector2(10 * step, 5 * step));
+            MoveAll(fingers, 100, offset: new Vector2<double>(10 * step, 5 * step));
         }
 
-        Up(fingers, 100, new Vector2(60, 30));
+        Up(fingers, 100, new Vector2<double>(60, 30));
 
         var last = Of(ManipulationState.Delta)[^1];
         Assert.Multiple(() =>
@@ -146,9 +146,9 @@ public class ManipulationTests
         var clicks = 0;
         _button.Click += (_, _) => clicks++;
 
-        Send(RawPointerEventType.Down, 0, new Vector2(400, 300));
-        Send(RawPointerEventType.Move, 0, new Vector2(402, 301));
-        Send(RawPointerEventType.Up, 0, new Vector2(402, 301));
+        Send(RawPointerEventType.Down, 0, new Vector2<double>(400, 300));
+        Send(RawPointerEventType.Move, 0, new Vector2<double>(402, 301));
+        Send(RawPointerEventType.Up, 0, new Vector2<double>(402, 301));
 
         Assert.Multiple(() =>
         {
@@ -164,28 +164,28 @@ public class ManipulationTests
     {
         var clicks = 0;
         _button.Click += (_, _) => clicks++;
-        Send(RawPointerEventType.Down, 0, new Vector2(400, 300));
+        Send(RawPointerEventType.Down, 0, new Vector2<double>(400, 300));
         for (var i = 1; i < fingers; i++)
         {
-            Send(RawPointerEventType.Down, i, new Vector2(600 + 30 * i, 300));
+            Send(RawPointerEventType.Down, i, new Vector2<double>(600 + 30 * i, 300));
         }
 
         Assert.That(_button.IsPressed, Is.True, "still a press until a gesture is recognized");
 
         for (var step = 1; step <= 3; step++)
         {
-            Send(RawPointerEventType.Move, 0, new Vector2(400 - 10 * step, 300));
+            Send(RawPointerEventType.Move, 0, new Vector2<double>(400 - 10 * step, 300));
             for (var i = 1; i < fingers; i++)
             {
-                Send(RawPointerEventType.Move, i, new Vector2(600 + 30 * i + 10 * step, 300));
+                Send(RawPointerEventType.Move, i, new Vector2<double>(600 + 30 * i + 10 * step, 300));
             }
         }
 
         var pressed = _button.IsPressed;
-        Send(RawPointerEventType.Up, 0, new Vector2(370, 300));
+        Send(RawPointerEventType.Up, 0, new Vector2<double>(370, 300));
         for (var i = 1; i < fingers; i++)
         {
-            Send(RawPointerEventType.Up, i, new Vector2(630 + 30 * i, 300));
+            Send(RawPointerEventType.Up, i, new Vector2<double>(630 + 30 * i, 300));
         }
 
         Assert.Multiple(() =>
@@ -207,20 +207,20 @@ public class ManipulationTests
         Down(2, radius: 100);
         for (var step = 1; step <= 3; step++)
         {
-            MoveAll(2, 100, offset: new Vector2(10 * step, 0));
+            MoveAll(2, 100, offset: new Vector2<double>(10 * step, 0));
         }
 
         pressed = 0;
-        Send(RawPointerEventType.Down, 2, new Vector2(400, 300));
+        Send(RawPointerEventType.Down, 2, new Vector2<double>(400, 300));
         for (var step = 4; step <= 6; step++)
         {
-            MoveAll(2, 100, offset: new Vector2(10 * step, 0));
-            Send(RawPointerEventType.Move, 2, new Vector2(400 + 10 * (step - 3), 300));
+            MoveAll(2, 100, offset: new Vector2<double>(10 * step, 0));
+            Send(RawPointerEventType.Move, 2, new Vector2<double>(400 + 10 * (step - 3), 300));
         }
 
         var last = Of(ManipulationState.Delta)[^1];
-        Up(2, 100, new Vector2(60, 0));
-        Send(RawPointerEventType.Up, 2, new Vector2(430, 300));
+        Up(2, 100, new Vector2<double>(60, 0));
+        Send(RawPointerEventType.Up, 2, new Vector2<double>(430, 300));
         Assert.Multiple(() =>
         {
             Assert.That(pressed, Is.Zero, "the third finger pressed nothing");
@@ -234,14 +234,14 @@ public class ManipulationTests
     public void TheGesture_GoesOnWithOneFinger_AndCompletesWithTheLast()
     {
         Down(2, radius: 100);
-        MoveAll(2, 100, offset: new Vector2(10, 0));
-        Send(RawPointerEventType.Up, 1, At(1, 2, 100, new Vector2(10, 0)));
+        MoveAll(2, 100, offset: new Vector2<double>(10, 0));
+        Send(RawPointerEventType.Up, 1, At(1, 2, 100, new Vector2<double>(10, 0)));
         var before = Of(ManipulationState.Delta)[^1].TotalTranslation;
 
-        Send(RawPointerEventType.Move, 0, At(0, 2, 100, new Vector2(30, 0)));
+        Send(RawPointerEventType.Move, 0, At(0, 2, 100, new Vector2<double>(30, 0)));
         var after = Of(ManipulationState.Delta)[^1];
         var completedBeforeLast = Of(ManipulationState.Completed).Count;
-        Send(RawPointerEventType.Up, 0, At(0, 2, 100, new Vector2(30, 0)));
+        Send(RawPointerEventType.Up, 0, At(0, 2, 100, new Vector2<double>(30, 0)));
 
         Assert.Multiple(() =>
         {
@@ -256,17 +256,17 @@ public class ManipulationTests
     [Test]
     public void AFingerThatMovedAlone_MakesNoGesture_WhenASecondLands()
     {
-        Send(RawPointerEventType.Down, 0, new Vector2(200, 300));
+        Send(RawPointerEventType.Down, 0, new Vector2<double>(200, 300));
         for (var x = 220; x <= 300; x += 20)
         {
-            Send(RawPointerEventType.Move, 0, new Vector2(x, 300));
+            Send(RawPointerEventType.Move, 0, new Vector2<double>(x, 300));
         }
 
-        Send(RawPointerEventType.Down, 1, new Vector2(700, 300));
-        Send(RawPointerEventType.Move, 0, new Vector2(301, 300));
-        Send(RawPointerEventType.Move, 1, new Vector2(700, 301));
-        Send(RawPointerEventType.Up, 1, new Vector2(700, 301));
-        Send(RawPointerEventType.Up, 0, new Vector2(301, 300));
+        Send(RawPointerEventType.Down, 1, new Vector2<double>(700, 300));
+        Send(RawPointerEventType.Move, 0, new Vector2<double>(301, 300));
+        Send(RawPointerEventType.Move, 1, new Vector2<double>(700, 301));
+        Send(RawPointerEventType.Up, 1, new Vector2<double>(700, 301));
+        Send(RawPointerEventType.Up, 0, new Vector2<double>(301, 300));
 
         Assert.That(_events, Is.Empty);
     }
@@ -275,13 +275,13 @@ public class ManipulationTests
     [Test]
     public void FingersTogether_AreInAGesture_UntilOneIsLeftAlone()
     {
-        Send(RawPointerEventType.Down, 0, new Vector2(200, 300));
+        Send(RawPointerEventType.Down, 0, new Vector2<double>(200, 300));
         var alone = Finger(0).IsInGesture;
-        Send(RawPointerEventType.Down, 1, new Vector2(700, 300));
+        Send(RawPointerEventType.Down, 1, new Vector2<double>(700, 300));
         var together = (Finger(0).IsInGesture, Finger(1).IsInGesture);
-        Send(RawPointerEventType.Up, 1, new Vector2(700, 300));
+        Send(RawPointerEventType.Up, 1, new Vector2<double>(700, 300));
         var leftAlone = Finger(0).IsInGesture;
-        Send(RawPointerEventType.Up, 0, new Vector2(200, 300));
+        Send(RawPointerEventType.Up, 0, new Vector2<double>(200, 300));
 
         Assert.Multiple(() =>
         {
@@ -298,11 +298,11 @@ public class ManipulationTests
         var clicks = 0;
         _button.Click += (_, _) => clicks++;
 
-        Send(RawPointerEventType.Down, 0, new Vector2(400, 300));
-        Send(RawPointerEventType.Down, 1, new Vector2(700, 300));
-        Send(RawPointerEventType.Move, 1, new Vector2(800, 300));
-        Send(RawPointerEventType.Up, 1, new Vector2(800, 300));
-        Send(RawPointerEventType.Up, 0, new Vector2(400, 300));
+        Send(RawPointerEventType.Down, 0, new Vector2<double>(400, 300));
+        Send(RawPointerEventType.Down, 1, new Vector2<double>(700, 300));
+        Send(RawPointerEventType.Move, 1, new Vector2<double>(800, 300));
+        Send(RawPointerEventType.Up, 1, new Vector2<double>(800, 300));
+        Send(RawPointerEventType.Up, 0, new Vector2<double>(400, 300));
 
         Assert.Multiple(() =>
         {
@@ -316,10 +316,10 @@ public class ManipulationTests
 
     private List<ManipulationEventArgs> Of(ManipulationState state) => [.. _events.Where(e => e.State == state)];
 
-    private static Vector2 At(int finger, int fingers, double radius, Vector2 offset = default, double turn = 0)
+    private static Vector2<double> At(int finger, int fingers, double radius, Vector2<double> offset = default, double turn = 0)
     {
         var angle = (360.0 * finger / fingers + turn) * Math.PI / 180;
-        return Middle + offset + new Vector2(Math.Cos(angle) * radius, Math.Sin(angle) * radius);
+        return Middle + offset + new Vector2<double>(Math.Cos(angle) * radius, Math.Sin(angle) * radius);
     }
 
     private void Down(int fingers, double radius)
@@ -330,7 +330,7 @@ public class ManipulationTests
         }
     }
 
-    private void MoveAll(int fingers, double radius, Vector2 offset = default, double turn = 0)
+    private void MoveAll(int fingers, double radius, Vector2<double> offset = default, double turn = 0)
     {
         for (var i = 0; i < fingers; i++)
         {
@@ -338,7 +338,7 @@ public class ManipulationTests
         }
     }
 
-    private void Up(int fingers, double radius, Vector2 offset = default, double turn = 0)
+    private void Up(int fingers, double radius, Vector2<double> offset = default, double turn = 0)
     {
         for (var i = 0; i < fingers; i++)
         {
@@ -346,7 +346,7 @@ public class ManipulationTests
         }
     }
 
-    private void Send(RawPointerEventType type, int finger, Vector2 at) =>
+    private void Send(RawPointerEventType type, int finger, Vector2<double> at) =>
         PointerDevice.Current.ProcessEvent(new RawPointerEventArgs(type, _window, at, InputModifiers.None, 0)
         {
             PointerId = FirstId + (uint)finger,

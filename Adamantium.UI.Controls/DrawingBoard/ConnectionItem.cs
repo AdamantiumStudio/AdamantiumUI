@@ -84,9 +84,9 @@ public class ConnectionItem : AdamantiumViewModel, ICanvasItem
 
     /// <summary>Where the wire leaves and arrives, in WORLD units. False while either node has not been laid out - which
     /// is every frame before the first one, and any frame in which a node is off screen and was never arranged.</summary>
-    public bool Ends(out Vector2 from, out Vector2 to)
+    public bool Ends(out Vector2<double> from, out Vector2<double> to)
     {
-        from = to = Vector2.Zero;
+        from = to = Vector2<double>.Zero;
 
         if (At(_from, FromPin) is not { } start || At(_to, ToPin) is not { } finish) return false;
 
@@ -98,7 +98,7 @@ public class ConnectionItem : AdamantiumViewModel, ICanvasItem
     // The bend the wire has ACTUALLY taken - the detour it worked out when it was last drawn, or the plain one before
     // the first frame. Asked by the box and the hit test, which have no canvas to work a detour out from and must in
     // any case agree with what is on the screen.
-    private void Taken(Vector2 from, Vector2 to, out Vector2 first, out Vector2 second)
+    private void Taken(Vector2<double> from, Vector2<double> to, out Vector2<double> first, out Vector2<double> second)
     {
         if (_routed)
         {
@@ -110,7 +110,7 @@ public class ConnectionItem : AdamantiumViewModel, ICanvasItem
         Bend(from, to, out first, out second);
     }
 
-    public bool HitTest(Vector2 world, double tolerance)
+    public bool HitTest(Vector2<double> world, double tolerance)
     {
         if (!Ends(out var from, out var to)) return false;
 
@@ -155,7 +155,7 @@ public class ConnectionItem : AdamantiumViewModel, ICanvasItem
 
     /// <summary>Nothing. A wire is where its sockets are; moving it would mean moving them, and they belong to their
     /// nodes.</summary>
-    public void Move(Vector2 worldDelta)
+    public void Move(Vector2<double> worldDelta)
     {
     }
 
@@ -247,12 +247,12 @@ public class ConnectionItem : AdamantiumViewModel, ICanvasItem
     private static Rect Everywhere =>
         new(Double.MinValue / 4, Double.MinValue / 4, Double.MaxValue / 2, Double.MaxValue / 2);
 
-    internal static void Bend(Vector2 from, Vector2 to, out Vector2 first, out Vector2 second)
+    internal static void Bend(Vector2<double> from, Vector2<double> to, out Vector2<double> first, out Vector2<double> second)
     {
         var reach = Math.Max(Math.Abs(to.X - from.X) * 0.5, 40);
 
-        first = new Vector2(from.X + reach, from.Y);
-        second = new Vector2(to.X - reach, to.Y);
+        first = new Vector2<double>(from.X + reach, from.Y);
+        second = new Vector2<double>(to.X - reach, to.Y);
     }
 
     /// <summary>Whether this wire goes ROUND the nodes in its way rather than through them. On, and here to be turned
@@ -262,12 +262,12 @@ public class ConnectionItem : AdamantiumViewModel, ICanvasItem
 
     // Where the bend actually went last time it was worked out. Remembered because the BOX and the HIT TEST have to
     // agree with what is drawn, and they are asked without a canvas to work it out from.
-    private Vector2 _first;
-    private Vector2 _second;
+    private Vector2<double> _first;
+    private Vector2<double> _second;
     private bool _routed;
 
     // The bend, lifted up or down until it clears the node in its way; not a path-finder, and two deep it draws through.
-    private void Route(InfiniteCanvas canvas, Vector2 from, Vector2 to, out Vector2 first, out Vector2 second)
+    private void Route(InfiniteCanvas canvas, Vector2<double> from, Vector2<double> to, out Vector2<double> first, out Vector2<double> second)
     {
         Bend(from, to, out first, out second);
         if (!Routes || canvas == null) return;
@@ -296,8 +296,8 @@ public class ConnectionItem : AdamantiumViewModel, ICanvasItem
             foreach (var sign in Sides)
             {
                 var lift = sign * step * push;
-                var a = new Vector2(first.X, first.Y + lift);
-                var b = new Vector2(second.X, second.Y + lift);
+                var a = new Vector2<double>(first.X, first.Y + lift);
+                var b = new Vector2<double>(second.X, second.Y + lift);
 
                 if (!Clear(from, a, b, to, blockers)) continue;
 
@@ -312,7 +312,7 @@ public class ConnectionItem : AdamantiumViewModel, ICanvasItem
 
     // Whether the curve misses everything in the list. Walked, like the hit test: the crossing of a cubic and a box has
     // no answer worth writing down, and a few dozen samples is under a pixel at any zoom.
-    private static bool Clear(Vector2 from, Vector2 first, Vector2 second, Vector2 to, List<Rect> blockers)
+    private static bool Clear(Vector2<double> from, Vector2<double> first, Vector2<double> second, Vector2<double> to, List<Rect> blockers)
     {
         for (var step = 1; step < 24; step++)
         {
@@ -328,7 +328,7 @@ public class ConnectionItem : AdamantiumViewModel, ICanvasItem
         return true;
     }
 
-    private static Rect Box(Vector2 from, Vector2 to, Vector2 first, Vector2 second)
+    private static Rect Box(Vector2<double> from, Vector2<double> to, Vector2<double> first, Vector2<double> second)
     {
         var lowX = Math.Min(Math.Min(from.X, to.X), Math.Min(first.X, second.X));
         var lowY = Math.Min(Math.Min(from.Y, to.Y), Math.Min(first.Y, second.Y));
@@ -340,11 +340,11 @@ public class ConnectionItem : AdamantiumViewModel, ICanvasItem
 
     // Where a socket is in WORLD units: the node is arranged into the item's own box, so a point in the node's
     // coordinates is that point from the box's corner.
-    private static Vector2? At(ElementItem item, CanvasNodePin pin)
+    private static Vector2<double>? At(ElementItem item, CanvasNodePin pin)
     {
         if (item?.Element is not CanvasNode node || node.Where(pin) is not { } local) return null;
 
-        return new Vector2(item.World.X + local.X, item.World.Y + local.Y);
+        return new Vector2<double>(item.World.X + local.X, item.World.Y + local.Y);
     }
 
     // Where a pin sits on its node: which side and how far along. A pin not on the node is kept as it is.
@@ -394,16 +394,16 @@ public class ConnectionItem : AdamantiumViewModel, ICanvasItem
         }
     }
 
-    internal static Vector2 Along(Vector2 a, Vector2 b, Vector2 c, Vector2 d, double t)
+    internal static Vector2<double> Along(Vector2<double> a, Vector2<double> b, Vector2<double> c, Vector2<double> d, double t)
     {
         var s = 1 - t;
         var x = s * s * s * a.X + 3 * s * s * t * b.X + 3 * s * t * t * c.X + t * t * t * d.X;
         var y = s * s * s * a.Y + 3 * s * s * t * b.Y + 3 * s * t * t * c.Y + t * t * t * d.Y;
 
-        return new Vector2(x, y);
+        return new Vector2<double>(x, y);
     }
 
-    private static double Distance(Vector2 point, Vector2 a, Vector2 b)
+    private static double Distance(Vector2<double> point, Vector2<double> a, Vector2<double> b)
     {
         var abx = b.X - a.X;
         var aby = b.Y - a.Y;

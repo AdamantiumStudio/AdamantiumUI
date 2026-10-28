@@ -39,7 +39,7 @@ public class ColorPickerFlyoutSurfaceTests
         picker.ApplyCurrentTheme();
         Adamantium.UI.Extensions.WindowExtension.UpdateTree(picker);
         Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
-        picker.Measure(new Size(700, 400));
+        picker.Measure(new Size<double>(700, 400));
         picker.Arrange(new Rect(0, 0, 700, 400));
         return picker;
     }

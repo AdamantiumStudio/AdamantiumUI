@@ -43,7 +43,7 @@ public class LayerPatchRenderTests
 
     private static TestControl Placed(Rect bounds)
     {
-        var c = new TestControl { Bounds = bounds, RenderSize = new Size(bounds.Width, bounds.Height) };
+        var c = new TestControl { Bounds = bounds, RenderSize = new Size<double>(bounds.Width, bounds.Height) };
         return c;
     }
 

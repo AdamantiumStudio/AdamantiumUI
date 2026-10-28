@@ -55,11 +55,11 @@ public class KeyTipBadgeThemeTests
         command.ApplyCurrentTheme();
         Adamantium.UI.Extensions.WindowExtension.UpdateTree(command);
         Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
-        command.Measure(new Size(double.PositiveInfinity, 100));
+        command.Measure(new Size<double>(double.PositiveInfinity, 100));
         command.Arrange(new Rect(command.DesiredSize));
         var icon = ((IUIComponent)command.GetTemplateChild("PART_Icon")).TransformBoundsToVisual(command);
 
-        var badge = new KeyTipAdorner(command, "FP", KeyTipPlacement.Bottom).PlaceIn(new Size(18, 16));
+        var badge = new KeyTipAdorner(command, "FP", KeyTipPlacement.Bottom).PlaceIn(new Size<double>(18, 16));
 
         Assert.Multiple(() =>
         {

@@ -64,7 +64,7 @@ public class DrawingContext : IDrawingContext, IDrawingContextInternal, IDrawing
       return this;
    }
 
-   IDrawingSession IDrawingSession.DrawLine(Vector2 start, Vector2 end, Pen pen)
+   IDrawingSession IDrawingSession.DrawLine(Vector2<double> start, Vector2<double> end, Pen pen)
    {
       var payload = new LinePayload(start, end, pen);
       CreateCommand(payload);
@@ -200,7 +200,7 @@ public class DrawingContext : IDrawingContext, IDrawingContextInternal, IDrawing
       throw new NotImplementedException();
    }
    
-   IDrawingSession IDrawingSession.DrawText(TextRenderingParameters renderingParameters, Size desiredSize, TextLayout textLayout, Brush foreground, Brush background, Brush stroke)
+   IDrawingSession IDrawingSession.DrawText(TextRenderingParameters renderingParameters, Size<double> desiredSize, TextLayout textLayout, Brush foreground, Brush background, Brush stroke)
    {
       // Only emit the text's background rect when it's actually visible. Every TextBlock passed its Background here
       // (default Brushes.Transparent), so each list item's text was creating an invisible fill unit + fringe on top of
@@ -212,7 +212,7 @@ public class DrawingContext : IDrawingContext, IDrawingContextInternal, IDrawing
       return this;
    }
 
-   IDrawingSession IDrawingSession.DrawText(TextRenderingParameters renderingParameters, Size desiredSize, TextLayout textLayout, Brush foreground, Brush background, Brush stroke, Matrix4x4F transform)
+   IDrawingSession IDrawingSession.DrawText(TextRenderingParameters renderingParameters, Size<double> desiredSize, TextLayout textLayout, Brush foreground, Brush background, Brush stroke, Matrix4x4F transform)
    {
       if (background.IsVisible())
          CreateCommand(new RectanglePayload(background, new Rect(desiredSize), CornerRadius.Empty, null));
@@ -221,7 +221,7 @@ public class DrawingContext : IDrawingContext, IDrawingContextInternal, IDrawing
       return this;
    }
 
-   IDrawingSession IDrawingSession.DrawText(TextRenderingParameters renderingParameters, Size desiredSize, TextLayout textLayout, Brush foreground, Brush background, Brush stroke, IReadOnlyList<GlyphEffect> effects)
+   IDrawingSession IDrawingSession.DrawText(TextRenderingParameters renderingParameters, Size<double> desiredSize, TextLayout textLayout, Brush foreground, Brush background, Brush stroke, IReadOnlyList<GlyphEffect> effects)
    {
       if (background.IsVisible())
          CreateCommand(new RectanglePayload(background, new Rect(desiredSize), CornerRadius.Empty, null));
@@ -230,7 +230,7 @@ public class DrawingContext : IDrawingContext, IDrawingContextInternal, IDrawing
       return this;
    }
 
-   IDrawingSession IDrawingSession.DrawText(TextRenderingParameters renderingParameters, Size desiredSize, TextLayout textLayout, Brush foreground, Brush background, Brush stroke, IReadOnlyList<GlyphEffect> effects, RectangleF window)
+   IDrawingSession IDrawingSession.DrawText(TextRenderingParameters renderingParameters, Size<double> desiredSize, TextLayout textLayout, Brush foreground, Brush background, Brush stroke, IReadOnlyList<GlyphEffect> effects, RectangleF window)
    {
       if (background.IsVisible())
          CreateCommand(new RectanglePayload(background, new Rect(desiredSize), CornerRadius.Empty, null));

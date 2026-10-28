@@ -72,7 +72,7 @@ public interface IWindowWorkerService
 
     /// <summary>The same, for a window held at <paramref name="grab"/>, a logical point of it - one not under the pointer
     /// yet, such as a panel just torn off.</summary>
-    public void BeginMoveDrag(Mathematics.Vector2 grab) => BeginMoveDrag();
+    public void BeginMoveDrag(Mathematics.Vector2<double> grab) => BeginMoveDrag();
 
     public IUIContext UIContext { get; }
 }

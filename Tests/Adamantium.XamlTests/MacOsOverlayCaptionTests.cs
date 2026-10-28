@@ -42,7 +42,7 @@ public class MacOsOverlayCaptionTests
         window.ApplyCurrentTheme();
         Adamantium.UI.Extensions.WindowExtension.UpdateTree(window);
         Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
-        window.Measure(new Size(400, 200));
+        window.Measure(new Size<double>(400, 200));
         window.Arrange(new Rect(0, 0, 400, 200));
         return window;
     }

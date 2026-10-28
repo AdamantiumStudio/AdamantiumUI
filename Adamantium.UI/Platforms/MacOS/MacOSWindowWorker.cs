@@ -6,7 +6,6 @@ using Adamantium.Mathematics;
 using Adamantium.UI.AggregatorEvents;
 using Adamantium.UI.Controls.Internals;
 using Adamantium.UI.Core;
-using Rectangle = Adamantium.Mathematics.Rectangle;
 
 namespace Adamantium.UI.Platforms.MacOS;
 
@@ -38,7 +37,7 @@ public class MacOSWindowWorker : AdamantiumComponent, IWindowWorkerService
                        OSXWindowStyle.Miniaturizable | 
                        OSXWindowStyle.Closable;
          var handle = MacOSInterop.CreateWindow(
-            new Rectangle((int)window.Left, 0, (int)window.Width, (int)window.Height),  
+            new Rectangle<int>((int)window.Left, 0, (int)window.Width, (int)window.Height),  
             (uint)wndStyle, 
             window.Title);
          this.window.SetHandle(handle);

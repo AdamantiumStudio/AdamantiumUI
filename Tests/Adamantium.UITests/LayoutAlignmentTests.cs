@@ -17,7 +17,7 @@ public class LayoutAlignmentTests
     // the alignment clamp in ArrangeCore is what determines the final size.
     private sealed class FixedContent : MeasurableUIComponent
     {
-        protected override Size MeasureOverride(Size availableSize) => new Size(100, 50);
+        protected override Size<double> MeasureOverride(Size<double> availableSize) => new Size<double>(100, 50);
     }
 
     [Test]
@@ -29,8 +29,8 @@ public class LayoutAlignmentTests
             VerticalAlignment = VerticalAlignment.Top
         };
 
-        c.Measure(new Size(1280, 720));
-        Assert.That(c.DesiredSize, Is.EqualTo(new Size(100, 50)));
+        c.Measure(new Size<double>(1280, 720));
+        Assert.That(c.DesiredSize, Is.EqualTo(new Size<double>(100, 50)));
 
         c.Arrange(new Rect(0, 0, 1280, 720));
 
@@ -50,7 +50,7 @@ public class LayoutAlignmentTests
             VerticalAlignment = VerticalAlignment.Stretch
         };
 
-        c.Measure(new Size(1280, 720));
+        c.Measure(new Size<double>(1280, 720));
         c.Arrange(new Rect(0, 0, 1280, 720));
 
         Assert.Multiple(() =>

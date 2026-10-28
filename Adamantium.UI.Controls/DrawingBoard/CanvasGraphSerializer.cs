@@ -144,7 +144,7 @@ public static class CanvasGraphSerializer
         if (camera.TryGetProperty("x", out var x) && camera.TryGetProperty("y", out var y) &&
             x.TryGetDouble(out var left) && y.TryGetDouble(out var top))
         {
-            canvas.SetCurrentValue(InfiniteCanvas.OffsetProperty, new Vector2(left, top));
+            canvas.SetCurrentValue(InfiniteCanvas.OffsetProperty, new Vector2<double>(left, top));
         }
     }
 

@@ -56,7 +56,7 @@ public class CanvasZoomHostTests
     {
         for (var pass = 0; pass < 2; pass++)
         {
-            canvas.Measure(new Size(800, 600), force: true);
+            canvas.Measure(new Size<double>(800, 600), force: true);
             canvas.Arrange(new Rect(0, 0, 800, 600));
             Adamantium.UI.Extensions.WindowExtension.UpdateTree(canvas);
         }
@@ -71,7 +71,7 @@ public class CanvasZoomHostTests
         canvas.Scene.Reset([new ElementItem(null, new Rect(300, 200, 50, 50)), item]);
         Lay(canvas);
 
-        var corner = canvas.WorldToScreen(new Vector2(item.World.X, item.World.Y));
+        var corner = canvas.WorldToScreen(new Vector2<double>(item.World.X, item.World.Y));
         Assert.Multiple(() =>
         {
             Assert.That(control.Bounds.X, Is.EqualTo(corner.X).Within(0.5));
@@ -89,10 +89,10 @@ public class CanvasZoomHostTests
         var (canvas, item, control) = Stage();
 
         canvas.Scale = scale;
-        canvas.Offset = new Vector2(400, 300);
+        canvas.Offset = new Vector2<double>(400, 300);
         Lay(canvas);
 
-        var corner = canvas.WorldToScreen(new Vector2(item.World.X, item.World.Y));
+        var corner = canvas.WorldToScreen(new Vector2<double>(item.World.X, item.World.Y));
         var turn = ((IUIComponent)control).RenderTransform;
 
         Assert.Multiple(() =>
@@ -128,15 +128,15 @@ public class CanvasZoomHostTests
 
         Lay(canvas);
         canvas.Scale = scale;
-        canvas.Offset = new Vector2(400, 300);
+        canvas.Offset = new Vector2<double>(400, 300);
         Lay(canvas);
 
-        var tool = new ElementTool(() => new Button(), new Size(140, 32));
+        var tool = new ElementTool(() => new Button(), new Size<double>(140, 32));
         var where = new CanvasPointerEventArgs
         {
-            World = new Vector2(0, 0),
-            Pointer = new Vector2(0, 0),
-            Screen = canvas.WorldToScreen(new Vector2(0, 0)),
+            World = new Vector2<double>(0, 0),
+            Pointer = new Vector2<double>(0, 0),
+            Screen = canvas.WorldToScreen(new Vector2<double>(0, 0)),
             Button = MouseButtons.Left,
             ClickCount = 1
         };
@@ -174,11 +174,11 @@ public class CanvasZoomHostTests
         Lay(canvas);
 
         // Looking somewhere well away from the world's origin, which is where the drift showed.
-        canvas.Offset = new Vector2(-1200, -900);
+        canvas.Offset = new Vector2<double>(-1200, -900);
         Lay(canvas);
 
         var room = canvas.UsableBounds;
-        var middle = new Vector2(room.X + room.Width / 2, room.Y + room.Height / 2);
+        var middle = new Vector2<double>(room.X + room.Width / 2, room.Y + room.Height / 2);
         var was = canvas.ScreenToWorld(middle);
 
         canvas.Scale = scale;
@@ -201,7 +201,7 @@ public class CanvasZoomHostTests
     {
         var (canvas, _, control) = Stage();
 
-        canvas.Offset = new Vector2(400, 300);
+        canvas.Offset = new Vector2<double>(400, 300);
         Lay(canvas);
 
         var was = control.RenderSize;

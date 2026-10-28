@@ -177,15 +177,15 @@ public partial class BrushesViewModel : TabPageViewModel
         var half = Math.Max(_gradientSpan, 0.01) * 0.5;
         var dx = Math.Cos(radians) * half;
         var dy = Math.Sin(radians) * half;
-        LiveLinear.StartPoint = new Vector2(0.5 - dx, 0.5 - dy);
-        LiveLinear.EndPoint = new Vector2(0.5 + dx, 0.5 + dy);
+        LiveLinear.StartPoint = new Vector2<double>(0.5 - dx, 0.5 - dy);
+        LiveLinear.EndPoint = new Vector2<double>(0.5 + dx, 0.5 + dy);
 
-        LiveRadial.Center = new Vector2(0.5, 0.5);
-        LiveRadial.GradientOrigin = new Vector2(0.5, 0.5);
+        LiveRadial.Center = new Vector2<double>(0.5, 0.5);
+        LiveRadial.GradientOrigin = new Vector2<double>(0.5, 0.5);
         LiveRadial.RadiusX = _gradientRadius;
         LiveRadial.RadiusY = _gradientRadius;
 
-        LiveConic.Center = new Vector2(0.5, 0.5);
+        LiveConic.Center = new Vector2<double>(0.5, 0.5);
         LiveConic.StartAngle = _gradientStartAngle;
     }
 
@@ -277,7 +277,7 @@ public partial class BrushesViewModel : TabPageViewModel
             },
             new GeometryDrawing
             {
-                Geometry = new EllipseGeometry { Center = new Vector2(8, 8), RadiusX = 5, RadiusY = 5 },
+                Geometry = new EllipseGeometry { Center = new Vector2<double>(8, 8), RadiusX = 5, RadiusY = 5 },
                 Brush = new SolidColorBrush(new Color(56, 189, 248, 255))
             },
             new GeometryDrawing
@@ -828,23 +828,23 @@ public partial class BrushesViewModel : TabPageViewModel
     private static PointsCollection Star(double width, double height)
     {
         const double innerRatio = 0.382;
-        var unit = new Vector2[10];
-        var min = new Vector2(double.MaxValue, double.MaxValue);
-        var max = new Vector2(double.MinValue, double.MinValue);
+        var unit = new Vector2<double>[10];
+        var min = new Vector2<double>(double.MaxValue, double.MaxValue);
+        var max = new Vector2<double>(double.MinValue, double.MinValue);
         for (var i = 0; i < unit.Length; i++)
         {
             var angle = -Math.PI / 2 + i * Math.PI / 5;
             var radius = i % 2 == 0 ? 1.0 : innerRatio;
-            unit[i] = new Vector2(Math.Cos(angle) * radius, Math.Sin(angle) * radius);
-            min = Vector2.Min(min, unit[i]);
-            max = Vector2.Max(max, unit[i]);
+            unit[i] = new Vector2<double>(Math.Cos(angle) * radius, Math.Sin(angle) * radius);
+            min = Vector2<double>.Min(min, unit[i]);
+            max = Vector2<double>.Max(max, unit[i]);
         }
 
         var scale = Math.Min(width / (max.X - min.X), height / (max.Y - min.Y));
-        var points = new Vector2[unit.Length];
+        var points = new Vector2<double>[unit.Length];
         for (var i = 0; i < unit.Length; i++)
         {
-            points[i] = new Vector2((unit[i].X - min.X) * scale, (unit[i].Y - min.Y) * scale);
+            points[i] = new Vector2<double>((unit[i].X - min.X) * scale, (unit[i].Y - min.Y) * scale);
         }
         return new PointsCollection(points);
     }
@@ -931,7 +931,7 @@ public partial class BrushesViewModel : TabPageViewModel
     public FractalBrush LiveFractal { get; } = new FractalBrush
     {
         Fractal = FractalType.Julia,
-        C = new Vector2(-0.8f, 0.156f),
+        C = new Vector2<double>(-0.8f, 0.156f),
         Zoom = 1.1,
         Iterations = 160,
         MorphSpeed = 1.0,
@@ -992,12 +992,12 @@ public partial class BrushesViewModel : TabPageViewModel
 
     partial void OnFractalCxChanged(double value)
     {
-        LiveFractal.C = new Vector2((float)value, (float)_fractalCy);
+        LiveFractal.C = new Vector2<double>((float)value, (float)_fractalCy);
     }
 
     partial void OnFractalCyChanged(double value)
     {
-        LiveFractal.C = new Vector2((float)_fractalCx, (float)value);
+        LiveFractal.C = new Vector2<double>((float)_fractalCx, (float)value);
     }
 
     partial void OnFractalCenterXChanged(double value) => ApplyCenter();   // base center, driven by mouse pan/zoom (FractalView)
@@ -1024,8 +1024,8 @@ public partial class BrushesViewModel : TabPageViewModel
     {
         // Doubles throughout, with coarse and fine center parts kept apart, so deep zoom keeps its precision.
         var span = 1.5 / Math.Max(Math.Pow(10, _fractalZoomExp), 1e-4);
-        LiveFractal.Center = new Vector2(_fractalCenterX, _fractalCenterY);
-        LiveFractal.CenterFine = new Vector2(
+        LiveFractal.Center = new Vector2<double>(_fractalCenterX, _fractalCenterY);
+        LiveFractal.CenterFine = new Vector2<double>(
             _fractalCenterFineX + _fractalFineX * span,
             _fractalCenterFineY + _fractalFineY * span);
     }

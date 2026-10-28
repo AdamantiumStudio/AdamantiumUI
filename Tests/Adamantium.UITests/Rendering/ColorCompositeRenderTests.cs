@@ -70,9 +70,9 @@ public class ColorCompositeRenderTests
 
         public TextLayout Layout { get; }
 
-        protected override Size MeasureOverride(Size availableSize)
+        protected override Size<double> MeasureOverride(Size<double> availableSize)
         {
-            return Layout.ProcessText(new AttributedText(_text), Size, new Size(double.NaN, double.NaN),
+            return Layout.ProcessText(new AttributedText(_text), Size, new Size<double>(double.NaN, double.NaN),
                 TextWrapping.NoWrap, TextTrimming.None, HorizontalTextAlignment.Left, VerticalTextAlignment.Top);
         }
 
@@ -85,7 +85,7 @@ public class ColorCompositeRenderTests
                 TextWrapping = TextWrapping.NoWrap,
                 TextTrimming = TextTrimming.None,
                 Color = Colors.White,
-                TextArea = new Rectangle(new Vector2F(), DesiredSize)
+                TextArea = new Rectangle<int>(new Vector2F().As<int>(), DesiredSize.As<int>())
             };
             context.ForControl(this).DrawText(parameters, DesiredSize, Layout, Brushes.White, Brushes.Transparent,
                 Brushes.Transparent);
@@ -152,17 +152,17 @@ public class ColorCompositeRenderTests
         return [color.R / 255.0 * a, color.G / 255.0 * a, color.B / 255.0 * a, a];
     }
 
-    private static RectangleF Box(Rectangle bounds, Matrix3x2 transform)
+    private static RectangleF Box(Rectangle<int> bounds, Matrix3x2<double> transform)
     {
-        var a = Matrix3x2.TransformPoint(transform, new Vector2(bounds.X, bounds.Y));
-        var b = Matrix3x2.TransformPoint(transform, new Vector2(bounds.X + bounds.Width, bounds.Y + bounds.Height));
+        var a = Vector2<double>.Transform(new Vector2<double>(bounds.X, bounds.Y), transform);
+        var b = Vector2<double>.Transform(new Vector2<double>(bounds.X + bounds.Width, bounds.Y + bounds.Height), transform);
         var minX = Math.Min(a.X, b.X);
         var minY = Math.Min(a.Y, b.Y);
         return new RectangleF((float)minX, (float)minY, (float)(Math.Max(a.X, b.X) - minX), (float)(Math.Max(a.Y, b.Y) - minY));
     }
 
     private static bool TryFindPoint(RectangleF backdrop, RectangleF source, bool inBackdrop, bool inSource,
-        out Vector2 point)
+        out Vector2<double> point)
     {
         for (var y = Math.Min(backdrop.Y, source.Y); y <= Math.Max(backdrop.Bottom, source.Bottom); y += 10)
         {
@@ -171,7 +171,7 @@ public class ColorCompositeRenderTests
                 if (Inside(backdrop, x, y) == inBackdrop && Inside(source, x, y) == inSource &&
                     Far(backdrop, x, y) && Far(source, x, y))
                 {
-                    point = new Vector2(x, y);
+                    point = new Vector2<double>(x, y);
                     return true;
                 }
             }
@@ -356,7 +356,7 @@ public class ColorCompositeRenderTests
         FontAtlasStore.SynchronousFill = true;
         try
         {
-            ((IMeasurableComponent)root).Measure(new Size(Width, Height));
+            ((IMeasurableComponent)root).Measure(new Size<double>(Width, Height));
             ((IMeasurableComponent)root).Arrange(new Rect(0, 0, Width, Height));
             Assert.That(renderer.RenderFrame(root), Is.True, "off-screen frame must render");
             RenderDirty.Clear();

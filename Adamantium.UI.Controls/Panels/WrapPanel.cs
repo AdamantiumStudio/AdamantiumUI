@@ -18,7 +18,7 @@ public class WrapPanel : VirtualizingPanel, IHitTestChildren
    // The grid answers where a drop lands, from the SAME arithmetic the hit-test uses. The cell size, the column count and
    // the origin are all unaffected by an open gap - only which item sits in which slot is - so the answer does not move
    // when the gap does, and the feedback loop that made the gap flicker between two slots cannot form.
-   public override bool TryGetDropSlot(Vector2 point, out int index)
+   public override bool TryGetDropSlot(Vector2<double> point, out int index)
    {
       index = -1;
       // A cell of 1 is the UNSEEDED value, not a real one: an empty list returns from measure before SeedCell runs, so
@@ -152,7 +152,7 @@ public class WrapPanel : VirtualizingPanel, IHitTestChildren
 
    private const double LineTolerance = 0.5;   // two children are on one line when their line coordinates agree to this
 
-   IReadOnlyList<IUIComponent> IHitTestChildren.GetHitTestChildren(Vector2 local)
+   IReadOnlyList<IUIComponent> IHitTestChildren.GetHitTestChildren(Vector2<double> local)
    {
       if (!IsItemsHost) return null;
       var horizontal = Orientation == Orientation.Horizontal;
@@ -192,7 +192,7 @@ public class WrapPanel : VirtualizingPanel, IHitTestChildren
 
    // The previous measure's offset, telling an active scroll from a static fill; the fill gets a guaranteed generous slice
    // rather than whatever the frame has left.
-   private Vector2 _lastMeasuredOffset = new(double.NaN, double.NaN);
+   private Vector2<double> _lastMeasuredOffset = new(double.NaN, double.NaN);
 
    // The last FINITE viewport extent on the scroll axis. When a measure comes in with an infinite scroll-axis viewport (a
    // ScrollViewer probing its content's extent, e.g. the first measure on tab-entry), we realize a window sized to this
@@ -278,10 +278,10 @@ public class WrapPanel : VirtualizingPanel, IHitTestChildren
    { }
 
    // ---- Plain container layout (a WrapPanel used with explicit Children; behavior unchanged) -----------------
-   protected override Size MeasurePlain(Size availableSize)
+   protected override Size<double> MeasurePlain(Size<double> availableSize)
    {
-      Size desiredSize = new Size();
-      Size lineSize = new Size();
+      Size<double> desiredSize = new Size<double>();
+      Size<double> lineSize = new Size<double>();
       var itemWidth = ItemWidth;
       var itemHeight = ItemHeight;
 
@@ -316,9 +316,9 @@ public class WrapPanel : VirtualizingPanel, IHitTestChildren
 
       foreach (var child in Children)
       {
-         child.Measure(new Size(childAvailableWidth, childAvailableHeight));
+         child.Measure(new Size<double>(childAvailableWidth, childAvailableHeight));
 
-         var childSize = new Size(child.DesiredSize);
+         var childSize = child.DesiredSize;
          if (!Double.IsNaN(itemWidth))
          {
             childSize.Width = ItemWidth;
@@ -378,15 +378,15 @@ public class WrapPanel : VirtualizingPanel, IHitTestChildren
       return desiredSize;
    }
 
-   protected override Size ArrangePlain(Size finalSize)
+   protected override Size<double> ArrangePlain(Size<double> finalSize)
    {
       double accumulated = 0;
-      var lineSize = new Size();
+      var lineSize = new Size<double>();
       int firstChildInLineindex = 0;
       for (int i = 0; i < Children.Count; i++)
       {
          var child = Children[i];
-         var childSize = new Size(child.DesiredSize);
+         var childSize = child.DesiredSize;
          if (!Double.IsNaN(ItemWidth))
          {
             childSize.Width = ItemWidth;
@@ -450,7 +450,7 @@ public class WrapPanel : VirtualizingPanel, IHitTestChildren
       double accumulatedY = 0;
       foreach (var control in controls)
       {
-         var childSize = new Size(control.DesiredSize);
+         var childSize = control.DesiredSize;
          if (!Double.IsNaN(ItemWidth))
          {
             childSize.Width = ItemWidth;
@@ -484,7 +484,7 @@ public class WrapPanel : VirtualizingPanel, IHitTestChildren
    // It shifts only when that top line changes - i.e. when the scroll offset crosses a whole-row boundary. A sub-pixel
    // scroll that stays within the current row leaves the window (and every realized container) exactly as it was, so the
    // base can skip re-realizing it and just slide + track the thumb. Cell not measured yet (_cellScroll <= 0) -> re-realize.
-   protected override bool RealizedWindowMovesFor(Vector2 from, Vector2 to)
+   protected override bool RealizedWindowMovesFor(Vector2<double> from, Vector2<double> to)
    {
       if (_cellScroll <= 0) return true;
       var horizontal = Orientation == Orientation.Horizontal;
@@ -497,7 +497,7 @@ public class WrapPanel : VirtualizingPanel, IHitTestChildren
 
    // ---- Virtualized 2D layout (items host): uniform cell -> only the visible grid window is realized -----------
 
-   protected override Size MeasureVirtualized(Size availableSize, Vector2 offset)
+   protected override Size<double> MeasureVirtualized(Size<double> availableSize, Vector2<double> offset)
    {
       var horizontal = Orientation == Orientation.Horizontal;
       var count = Owner.Items.Count;
@@ -505,7 +505,7 @@ public class WrapPanel : VirtualizingPanel, IHitTestChildren
       {
          foreach (var c in Owner.ItemContainerGenerator.SetWindow(0, -1)) ParkContainer(c);
          _lastItemCount = 0;
-         return new Size();
+         return new Size<double>();
       }
 
       var viewportFlow = horizontal ? availableSize.Width : availableSize.Height;
@@ -593,12 +593,12 @@ public class WrapPanel : VirtualizingPanel, IHitTestChildren
       var flowExtent = _columns * _cellFlow;
       var scrollExtent = totalLines * _cellScroll;
 
-      return horizontal ? new Size(flowExtent, scrollExtent) : new Size(scrollExtent, flowExtent);
+      return horizontal ? new Size<double>(flowExtent, scrollExtent) : new Size<double>(scrollExtent, flowExtent);
    }
 
    private readonly List<int> _arrangeIndexBuf = [];   // reused each arrange - no per-frame List alloc over the window
 
-   protected override void ArrangeVirtualized(Size finalSize, Vector2 offset)
+   protected override void ArrangeVirtualized(Size<double> finalSize, Vector2<double> offset)
    {
       var horizontal = Orientation == Orientation.Horizontal;
 
@@ -710,19 +710,19 @@ public class WrapPanel : VirtualizingPanel, IHitTestChildren
 
    // Measure constraint for one item: an axis pinned by ItemWidth/ItemHeight is constrained to the cell; an unspecified
    // axis is left free so the item reports its natural size and we can grow the cell to fit it (text stays on one line).
-   private Size CellConstraint(bool horizontal)
+   private Size<double> CellConstraint(bool horizontal)
    {
       // Both axes pinned: the measured size is unused, so a constant unbounded constraint lets cell changes skip
       // re-measuring (items only re-arrange).
-      if (!double.IsNaN(ItemWidth) && !double.IsNaN(ItemHeight)) return Size.Infinity;
+      if (!double.IsNaN(ItemWidth) && !double.IsNaN(ItemHeight)) return Size<double>.Infinity;
 
       var flow = (horizontal ? !double.IsNaN(ItemWidth) : !double.IsNaN(ItemHeight)) ? _cellFlow : double.PositiveInfinity;
       var scroll = (horizontal ? !double.IsNaN(ItemHeight) : !double.IsNaN(ItemWidth)) ? _cellScroll : double.PositiveInfinity;
-      return horizontal ? new Size(flow, scroll) : new Size(scroll, flow);
+      return horizontal ? new Size<double>(flow, scroll) : new Size<double>(scroll, flow);
    }
 
    // Grow the uniform cell to fit a measured item, but never along an axis the user pinned via ItemWidth/ItemHeight.
-   private bool GrowCell(bool horizontal, Size desired)
+   private bool GrowCell(bool horizontal, Size<double> desired)
    {
       var grew = false;
       var flowExplicit = horizontal ? !double.IsNaN(ItemWidth) : !double.IsNaN(ItemHeight);

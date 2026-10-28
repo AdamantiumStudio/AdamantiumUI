@@ -37,7 +37,7 @@ public class EllipseCutRenderTests
             var factory = new RenderUnitFactory(device, new StubResourceFactory());
             using var renderer = new OffscreenTestRenderer(device, factory, Dim, Dim) { ClearColor = Colors.Black };
 
-            var stage = new TestControl { Bounds = new Rect(0, 0, Dim, Dim), RenderSize = new Size(Dim, Dim) };
+            var stage = new TestControl { Bounds = new Rect(0, 0, Dim, Dim), RenderSize = new Size<double>(Dim, Dim) };
             var box = rect ?? new Rect(0, 0, Dim, Dim);
             stage.RenderAction = s => s.DrawEllipse(box, fill, startAngle, sweepAngle, type, pen, ringThickness);
 
@@ -336,7 +336,7 @@ public class EllipseCutRenderTests
             var factory = new RenderUnitFactory(device, new StubResourceFactory());
             using var renderer = new OffscreenTestRenderer(device, factory, Dim, Dim) { ClearColor = Colors.Black };
 
-            var stage = new TestControl { Bounds = new Rect(0, 0, Dim, Dim), RenderSize = new Size(Dim, Dim) };
+            var stage = new TestControl { Bounds = new Rect(0, 0, Dim, Dim), RenderSize = new Size<double>(Dim, Dim) };
             stage.RenderAction = s => s.DrawEllipse(new Rect(0, 0, Dim, Dim), Brushes.White, 0, 90, EllipseType.Sector);
             // The flip about the box's own center, which is what the ring's transform amounts to.
             stage.RenderTransform = new Transform { ScaleY = -1.0, RotationCenterX = Half, RotationCenterY = Half };

@@ -149,7 +149,7 @@ public class AdornerRenderProcessor : EntityProcessor<WindowRenderService>, IRec
         }
         else
         {
-            measurable.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+            measurable.Measure(new Size<double>(double.PositiveInfinity, double.PositiveInfinity));
             measurable.Arrange(a.PlaceIn(measurable.DesiredSize));
         }
 

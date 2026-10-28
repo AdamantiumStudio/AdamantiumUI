@@ -64,7 +64,7 @@ public static class UIExtensions
 
    /// <summary>A desktop point (physical) in this element's OWN logical coordinates: converted at the root, then back
    /// down through every offset and render or layout transform between it and the element.</summary>
-   public static Vector2 PointToClient(this IUIComponent visualComponent, PixelPoint point)
+   public static Vector2<double> PointToClient(this IUIComponent visualComponent, PixelPoint point)
    {
       var root = RootOf(visualComponent);
       return root.TranslatePoint(root.PointToClient(point), visualComponent);
@@ -72,7 +72,7 @@ public static class UIExtensions
 
    /// <summary>A point of this element's own logical coordinates as a desktop point (physical pixels), through every
    /// offset and render or layout transform between the element and its root.</summary>
-   public static PixelPoint PointToScreen(this IUIComponent visualComponent, Vector2 point)
+   public static PixelPoint PointToScreen(this IUIComponent visualComponent, Vector2<double> point)
    {
       var root = RootOf(visualComponent);
       return root.PointToScreen(visualComponent.TranslatePoint(point, root));

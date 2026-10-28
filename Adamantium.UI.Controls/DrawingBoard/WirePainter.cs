@@ -17,7 +17,7 @@ internal sealed class WirePainter
     private readonly InkBrush _ink = new();
     private Vector2F[] _points;
 
-    public void Draw(IDrawingSession session, InfiniteCanvas canvas, Vector2 from, Vector2 to, Brush stroke,
+    public void Draw(IDrawingSession session, InfiniteCanvas canvas, Vector2<double> from, Vector2<double> to, Brush stroke,
         double thickness)
     {
         ConnectionItem.Bend(from, to, out var first, out var second);
@@ -26,8 +26,8 @@ internal sealed class WirePainter
 
     /// <summary>...along a curve whose bend is already decided - what a wire that has been ROUTED round the nodes in
     /// its way hands over, having worked out where to go.</summary>
-    public void Draw(IDrawingSession session, InfiniteCanvas canvas, Vector2 from, Vector2 first, Vector2 second,
-        Vector2 to, Brush stroke, double thickness)
+    public void Draw(IDrawingSession session, InfiniteCanvas canvas, Vector2<double> from, Vector2<double> first, Vector2<double> second,
+        Vector2<double> to, Brush stroke, double thickness)
     {
         if (session == null || canvas == null || stroke is not SolidColorBrush solid) return;
 

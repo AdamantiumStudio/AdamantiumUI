@@ -332,31 +332,31 @@ public class DataGridNewRowPresenter : Panel
         Owner?.Focus();
     }
 
-    protected override Size MeasureOverride(Size availableSize)
+    protected override Size<double> MeasureOverride(Size<double> availableSize)
     {
         Sync();
 
         var columns = Owner?.Columns;
-        if (columns == null || columns.Count == 0) return new Size();
+        if (columns == null || columns.Count == 0) return new Size<double>();
 
         double height = 0;
         foreach (var pair in _cells)
         {
             if (pair.Key >= columns.Count) continue;
 
-            pair.Value.Measure(new Size(columns[pair.Key].ActualWidth, availableSize.Height));
+            pair.Value.Measure(new Size<double>(columns[pair.Key].ActualWidth, availableSize.Height));
             height = System.Math.Max(height, pair.Value.DesiredSize.Height);
         }
 
         if (_head is { Visibility: Visibility.Visible })
         {
-            _head.Measure(new Size(Owner.LeftStripsLeading, availableSize.Height));
+            _head.Measure(new Size<double>(Owner.LeftStripsLeading, availableSize.Height));
         }
 
-        return new Size(Owner.ColumnsWidth, height);
+        return new Size<double>(Owner.ColumnsWidth, height);
     }
 
-    protected override Size ArrangeOverride(Size finalSize)
+    protected override Size<double> ArrangeOverride(Size<double> finalSize)
     {
         var columns = Owner?.Columns;
         if (columns == null) return finalSize;

@@ -193,7 +193,7 @@ public class ParallelArrangeSizeChangedTests
         var (panel, items) = Panel();
         var stray = new Border();
         panel.Children.Add(stray);
-        stray.Measure(new Size(100, 10));
+        stray.Measure(new Size<double>(100, 10));
         var heard = Listen(panel, out _);
 
         ParallelArrange.Run(panel, Count, PositionIn(items), i =>
@@ -220,7 +220,7 @@ public class ParallelArrangeSizeChangedTests
             var item = new Border();
             items.Add(item);
             panel.Children.Add(item);
-            item.Measure(new Size(100, 10));
+            item.Measure(new Size<double>(100, 10));
         }
 
         return (panel, items);

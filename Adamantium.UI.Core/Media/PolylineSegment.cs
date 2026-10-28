@@ -12,7 +12,7 @@ public class PolylineSegment : PathSegment
         
     }
 
-    public PolylineSegment(IEnumerable<Vector2> points, bool isStroked)
+    public PolylineSegment(IEnumerable<Vector2<double>> points, bool isStroked)
     {
         Points = new PointsCollection(points);
         IsStroked = isStroked;
@@ -43,7 +43,7 @@ public class PolylineSegment : PathSegment
         set => SetValue(PointsProperty, value);
     }
 
-    internal override Vector2[] ProcessSegment(Vector2 currentPoint)
+    internal override Vector2<double>[] ProcessSegment(Vector2<double> currentPoint)
     {
         return Points.ToArray();
     }

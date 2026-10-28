@@ -60,7 +60,7 @@ public class SegmentedControlLayoutTests
         host.ApplyCurrentTheme();
         Adamantium.UI.Extensions.WindowExtension.UpdateTree(host);
         Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
-        host.Measure(new Size(900, 600));
+        host.Measure(new Size<double>(900, 600));
         host.Arrange(new Rect(0, 0, 900, 600));
 
         Assert.Multiple(() =>

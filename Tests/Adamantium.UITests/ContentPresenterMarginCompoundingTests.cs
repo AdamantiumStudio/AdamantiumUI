@@ -20,13 +20,13 @@ public class ContentPresenterMarginCompoundingTests
     {
         var presenter = Presenter(new Thickness(0, 4, 0, 0));
 
-        presenter.Measure(Size.Infinity);
+        presenter.Measure(Size<double>.Infinity);
         var first = presenter.DesiredSize;
 
         for (var i = 0; i < 5; i++)
         {
             presenter.InvalidateMeasure();
-            presenter.Measure(Size.Infinity);
+            presenter.Measure(Size<double>.Infinity);
         }
 
         Assert.That(presenter.DesiredSize, Is.EqualTo(first),
@@ -45,7 +45,7 @@ public class ContentPresenterMarginCompoundingTests
             for (var i = 0; i < 4; i++)
             {
                 p.InvalidateMeasure();
-                p.Measure(Size.Infinity);
+                p.Measure(Size<double>.Infinity);
             }
         }
 

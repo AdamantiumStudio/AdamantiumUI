@@ -55,7 +55,7 @@ public class CanvasPenAndFingersTests
     {
         foreach (var left in PointerDevice.Current.Pointers.Where(p => p.Id >= FingerId && p.Id <= PenId).ToList())
         {
-            Send(RawPointerEventType.Cancel, left.Id, left.Type, Vector2.Zero);
+            Send(RawPointerEventType.Cancel, left.Id, left.Type, Vector2<double>.Zero);
         }
 
         Gestures.HoldingTime = _holdingTime;
@@ -69,20 +69,20 @@ public class CanvasPenAndFingersTests
     {
         for (var i = 0; i < fingers; i++)
         {
-            Send(RawPointerEventType.Down, FingerId + (uint)i, PointerType.Touch, new Vector2(100 + 150 * i, 100));
+            Send(RawPointerEventType.Down, FingerId + (uint)i, PointerType.Touch, new Vector2<double>(100 + 150 * i, 100));
         }
 
         for (var step = 1; step <= 4; step++)
         {
             for (var i = 0; i < fingers; i++)
             {
-                Send(RawPointerEventType.Move, FingerId + (uint)i, PointerType.Touch, new Vector2(100 + 150 * i, 100 + 30 * step));
+                Send(RawPointerEventType.Move, FingerId + (uint)i, PointerType.Touch, new Vector2<double>(100 + 150 * i, 100 + 30 * step));
             }
         }
 
         for (var i = 0; i < fingers; i++)
         {
-            Send(RawPointerEventType.Up, FingerId + (uint)i, PointerType.Touch, new Vector2(100 + 150 * i, 220));
+            Send(RawPointerEventType.Up, FingerId + (uint)i, PointerType.Touch, new Vector2<double>(100 + 150 * i, 220));
         }
 
         Assert.That(Strokes, Has.Length.EqualTo(fingers), "a stroke for each finger, and no pinch among straight lines");
@@ -91,8 +91,8 @@ public class CanvasPenAndFingersTests
     [Test]
     public void APen_DrawsAsWideAsItPresses_AndAFingerAtFullWidth()
     {
-        Stroke(PenId, PointerType.Pen, new Vector2(100, 100), new Vector2(300, 100), pressure: 0.3f);
-        Stroke(FingerId, PointerType.Touch, new Vector2(100, 300), new Vector2(300, 300));
+        Stroke(PenId, PointerType.Pen, new Vector2<double>(100, 100), new Vector2<double>(300, 100), pressure: 0.3f);
+        Stroke(FingerId, PointerType.Touch, new Vector2<double>(100, 300), new Vector2<double>(300, 300));
 
         Assert.Multiple(() =>
         {
@@ -108,10 +108,10 @@ public class CanvasPenAndFingersTests
     [Test]
     public void APressureBumpOnAStraightLine_SurvivesSmoothing()
     {
-        var stroke = new StrokeItem(Vector2.Zero, Brushes.Black, 10);
+        var stroke = new StrokeItem(Vector2<double>.Zero, Brushes.Black, 10);
         for (var i = 0; i <= 20; i++)
         {
-            stroke.Add(new Vector2(i * 10, 0), 0.2f + 0.8f * (1 - Math.Abs(i - 10) / 10f));
+            stroke.Add(new Vector2<double>(i * 10, 0), 0.2f + 0.8f * (1 - Math.Abs(i - 10) / 10f));
         }
 
         stroke.Smooth(0.6, 4);
@@ -122,10 +122,10 @@ public class CanvasPenAndFingersTests
     [Test]
     public void APenUpsideDown_Erases_WhateverTheToolInHand()
     {
-        Stroke(FingerId, PointerType.Touch, new Vector2(100, 300), new Vector2(600, 300));
+        Stroke(FingerId, PointerType.Touch, new Vector2<double>(100, 300), new Vector2<double>(600, 300));
         var drawn = Strokes.Length;
 
-        Stroke(PenId, PointerType.Pen, new Vector2(350, 200), new Vector2(350, 400), eraser: true);
+        Stroke(PenId, PointerType.Pen, new Vector2<double>(350, 200), new Vector2<double>(350, 400), eraser: true);
 
         Assert.Multiple(() =>
         {
@@ -141,12 +141,12 @@ public class CanvasPenAndFingersTests
         _canvas.FingerInk = CanvasFingerInk.Never;
         var before = _canvas.Offset;
 
-        Stroke(FingerId, PointerType.Touch, new Vector2(300, 300), new Vector2(380, 340));
+        Stroke(FingerId, PointerType.Touch, new Vector2<double>(300, 300), new Vector2<double>(380, 340));
 
         Assert.Multiple(() =>
         {
             Assert.That(Strokes, Is.Empty);
-            Assert.That(_canvas.Offset - before, Is.EqualTo(new Vector2(80, 40)));
+            Assert.That(_canvas.Offset - before, Is.EqualTo(new Vector2<double>(80, 40)));
         });
     }
 
@@ -155,12 +155,12 @@ public class CanvasPenAndFingersTests
     {
         _canvas.FingerInk = CanvasFingerInk.WhenNoPen;
 
-        Send(RawPointerEventType.Move, PenId, PointerType.Pen, new Vector2(800, 500));
-        Stroke(FingerId, PointerType.Touch, new Vector2(100, 100), new Vector2(200, 100));
+        Send(RawPointerEventType.Move, PenId, PointerType.Pen, new Vector2<double>(800, 500));
+        Stroke(FingerId, PointerType.Touch, new Vector2<double>(100, 100), new Vector2<double>(200, 100));
         var withPen = Strokes.Length;
 
-        Send(RawPointerEventType.LeaveWindow, PenId, PointerType.Pen, new Vector2(800, 500));
-        Stroke(FingerId, PointerType.Touch, new Vector2(100, 300), new Vector2(200, 300));
+        Send(RawPointerEventType.LeaveWindow, PenId, PointerType.Pen, new Vector2<double>(800, 500));
+        Stroke(FingerId, PointerType.Touch, new Vector2<double>(100, 300), new Vector2<double>(200, 300));
 
         Assert.Multiple(() =>
         {
@@ -173,23 +173,23 @@ public class CanvasPenAndFingersTests
     [Test]
     public void APinch_TakesBackItsFingersStrokes_AndThePenGoesOn()
     {
-        Send(RawPointerEventType.Down, PenId, PointerType.Pen, new Vector2(800, 100), 0.8f);
-        Send(RawPointerEventType.Move, PenId, PointerType.Pen, new Vector2(800, 140), 0.8f);
+        Send(RawPointerEventType.Down, PenId, PointerType.Pen, new Vector2<double>(800, 100), 0.8f);
+        Send(RawPointerEventType.Move, PenId, PointerType.Pen, new Vector2<double>(800, 140), 0.8f);
 
-        Send(RawPointerEventType.Down, FingerId, PointerType.Touch, new Vector2(400, 300));
-        Send(RawPointerEventType.Down, FingerId + 1, PointerType.Touch, new Vector2(500, 300));
+        Send(RawPointerEventType.Down, FingerId, PointerType.Touch, new Vector2<double>(400, 300));
+        Send(RawPointerEventType.Down, FingerId + 1, PointerType.Touch, new Vector2<double>(500, 300));
         for (var step = 1; step <= 4; step++)
         {
-            Send(RawPointerEventType.Move, FingerId, PointerType.Touch, new Vector2(400 - 15 * step, 300));
-            Send(RawPointerEventType.Move, FingerId + 1, PointerType.Touch, new Vector2(500 + 15 * step, 300));
+            Send(RawPointerEventType.Move, FingerId, PointerType.Touch, new Vector2<double>(400 - 15 * step, 300));
+            Send(RawPointerEventType.Move, FingerId + 1, PointerType.Touch, new Vector2<double>(500 + 15 * step, 300));
         }
 
         var scale = _canvas.Scale;
-        Send(RawPointerEventType.Up, FingerId, PointerType.Touch, new Vector2(340, 300));
-        Send(RawPointerEventType.Up, FingerId + 1, PointerType.Touch, new Vector2(560, 300));
+        Send(RawPointerEventType.Up, FingerId, PointerType.Touch, new Vector2<double>(340, 300));
+        Send(RawPointerEventType.Up, FingerId + 1, PointerType.Touch, new Vector2<double>(560, 300));
 
-        Send(RawPointerEventType.Move, PenId, PointerType.Pen, new Vector2(800, 200), 0.8f);
-        Send(RawPointerEventType.Up, PenId, PointerType.Pen, new Vector2(800, 200), 0.8f);
+        Send(RawPointerEventType.Move, PenId, PointerType.Pen, new Vector2<double>(800, 200), 0.8f);
+        Send(RawPointerEventType.Up, PenId, PointerType.Pen, new Vector2<double>(800, 200), 0.8f);
 
         Assert.Multiple(() =>
         {
@@ -206,15 +206,15 @@ public class CanvasPenAndFingersTests
         _canvas.FingerInk = CanvasFingerInk.Never;
         var before = _canvas.Offset;
 
-        Send(RawPointerEventType.Down, FingerId, PointerType.Touch, new Vector2(100, 400));
-        Send(RawPointerEventType.Move, FingerId, PointerType.Touch, new Vector2(130, 400));
-        Stroke(PenId, PointerType.Pen, new Vector2(500, 100), new Vector2(700, 200));
-        Send(RawPointerEventType.Up, FingerId, PointerType.Touch, new Vector2(130, 400));
+        Send(RawPointerEventType.Down, FingerId, PointerType.Touch, new Vector2<double>(100, 400));
+        Send(RawPointerEventType.Move, FingerId, PointerType.Touch, new Vector2<double>(130, 400));
+        Stroke(PenId, PointerType.Pen, new Vector2<double>(500, 100), new Vector2<double>(700, 200));
+        Send(RawPointerEventType.Up, FingerId, PointerType.Touch, new Vector2<double>(130, 400));
 
         Assert.Multiple(() =>
         {
             Assert.That(Strokes, Has.Length.EqualTo(1));
-            Assert.That(_canvas.Offset - before, Is.EqualTo(new Vector2(30, 0)), "only the finger moved the plane");
+            Assert.That(_canvas.Offset - before, Is.EqualTo(new Vector2<double>(30, 0)), "only the finger moved the plane");
             Assert.That(_canvas.History.CanUndo, Is.True, "the pen's stroke is a step to take back");
         });
     }
@@ -226,15 +226,15 @@ public class CanvasPenAndFingersTests
         _canvas.FingerInk = CanvasFingerInk.WhenNoPen;
         var before = _canvas.Offset;
 
-        Send(RawPointerEventType.Down, PenId, PointerType.Pen, new Vector2(300, 100));
-        Send(RawPointerEventType.Move, PenId, PointerType.Pen, new Vector2(350, 100));
-        Send(RawPointerEventType.Down, FingerId, PointerType.Touch, new Vector2(400, 400));
-        Send(RawPointerEventType.Move, FingerId, PointerType.Touch, new Vector2(420, 410));
-        Send(RawPointerEventType.Move, PenId, PointerType.Pen, new Vector2(450, 100));
-        Send(RawPointerEventType.Up, FingerId, PointerType.Touch, new Vector2(420, 410));
-        Send(RawPointerEventType.Move, PenId, PointerType.Pen, new Vector2(550, 100));
-        Send(RawPointerEventType.Up, PenId, PointerType.Pen, new Vector2(550, 100));
-        Send(RawPointerEventType.LeaveWindow, PenId, PointerType.Pen, new Vector2(550, 100));
+        Send(RawPointerEventType.Down, PenId, PointerType.Pen, new Vector2<double>(300, 100));
+        Send(RawPointerEventType.Move, PenId, PointerType.Pen, new Vector2<double>(350, 100));
+        Send(RawPointerEventType.Down, FingerId, PointerType.Touch, new Vector2<double>(400, 400));
+        Send(RawPointerEventType.Move, FingerId, PointerType.Touch, new Vector2<double>(420, 410));
+        Send(RawPointerEventType.Move, PenId, PointerType.Pen, new Vector2<double>(450, 100));
+        Send(RawPointerEventType.Up, FingerId, PointerType.Touch, new Vector2<double>(420, 410));
+        Send(RawPointerEventType.Move, PenId, PointerType.Pen, new Vector2<double>(550, 100));
+        Send(RawPointerEventType.Up, PenId, PointerType.Pen, new Vector2<double>(550, 100));
+        Send(RawPointerEventType.LeaveWindow, PenId, PointerType.Pen, new Vector2<double>(550, 100));
 
         Assert.Multiple(() =>
         {
@@ -249,17 +249,17 @@ public class CanvasPenAndFingersTests
     public void TwoPeopleDrawingApart_DoNotPinch()
     {
         var scale = _canvas.Scale;
-        Send(RawPointerEventType.Down, FingerId, PointerType.Touch, new Vector2(400, 300));
-        Send(RawPointerEventType.Move, FingerId, PointerType.Touch, new Vector2(380, 300));
-        Send(RawPointerEventType.Down, FingerId + 1, PointerType.Touch, new Vector2(500, 300));
+        Send(RawPointerEventType.Down, FingerId, PointerType.Touch, new Vector2<double>(400, 300));
+        Send(RawPointerEventType.Move, FingerId, PointerType.Touch, new Vector2<double>(380, 300));
+        Send(RawPointerEventType.Down, FingerId + 1, PointerType.Touch, new Vector2<double>(500, 300));
         for (var step = 1; step <= 6; step++)
         {
-            Send(RawPointerEventType.Move, FingerId, PointerType.Touch, new Vector2(380 - 20 * step, 300));
-            Send(RawPointerEventType.Move, FingerId + 1, PointerType.Touch, new Vector2(500 + 20 * step, 300 + 10 * step));
+            Send(RawPointerEventType.Move, FingerId, PointerType.Touch, new Vector2<double>(380 - 20 * step, 300));
+            Send(RawPointerEventType.Move, FingerId + 1, PointerType.Touch, new Vector2<double>(500 + 20 * step, 300 + 10 * step));
         }
 
-        Send(RawPointerEventType.Up, FingerId, PointerType.Touch, new Vector2(260, 300));
-        Send(RawPointerEventType.Up, FingerId + 1, PointerType.Touch, new Vector2(620, 360));
+        Send(RawPointerEventType.Up, FingerId, PointerType.Touch, new Vector2<double>(260, 300));
+        Send(RawPointerEventType.Up, FingerId + 1, PointerType.Touch, new Vector2<double>(620, 360));
 
         Assert.Multiple(() =>
         {
@@ -272,10 +272,10 @@ public class CanvasPenAndFingersTests
     [Test]
     public void APressureRamp_StaysARamp_ThroughSmoothing()
     {
-        var stroke = new StrokeItem(Vector2.Zero, Brushes.Black, 10);
+        var stroke = new StrokeItem(Vector2<double>.Zero, Brushes.Black, 10);
         for (var i = 0; i <= 20; i++)
         {
-            stroke.Add(new Vector2(i * 10, 0), 0.2f + 0.04f * i);
+            stroke.Add(new Vector2<double>(i * 10, 0), 0.2f + 0.04f * i);
         }
 
         stroke.Smooth(0.6, 4);
@@ -292,15 +292,15 @@ public class CanvasPenAndFingersTests
     [Test]
     public void APressureRamp_RoundACorner_StaysARamp()
     {
-        var stroke = new StrokeItem(Vector2.Zero, Brushes.Black, 10);
+        var stroke = new StrokeItem(Vector2<double>.Zero, Brushes.Black, 10);
         for (var i = 0; i <= 10; i++)
         {
-            stroke.Add(new Vector2(i * 10, 0), 0.2f + 0.04f * i);
+            stroke.Add(new Vector2<double>(i * 10, 0), 0.2f + 0.04f * i);
         }
 
         for (var i = 1; i <= 10; i++)
         {
-            stroke.Add(new Vector2(100, i * 10), 0.6f + 0.04f * i);
+            stroke.Add(new Vector2<double>(100, i * 10), 0.6f + 0.04f * i);
         }
 
         stroke.Smooth(0.6, 4);
@@ -317,14 +317,14 @@ public class CanvasPenAndFingersTests
     [Test]
     public void Erasing_KeepsWhatThePiecesWerePressedWith()
     {
-        var stroke = new StrokeItem(Vector2.Zero, Brushes.Black, 4);
+        var stroke = new StrokeItem(Vector2<double>.Zero, Brushes.Black, 4);
         for (var i = 0; i <= 10; i++)
         {
-            stroke.Add(new Vector2(i * 10, 0), 0.4f);
+            stroke.Add(new Vector2<double>(i * 10, 0), 0.4f);
         }
 
         var pieces = new System.Collections.Generic.List<StrokeItem>();
-        stroke.Erase(new Vector2(50, 0), 5, pieces);
+        stroke.Erase(new Vector2<double>(50, 0), 5, pieces);
 
         Assert.Multiple(() =>
         {
@@ -336,16 +336,16 @@ public class CanvasPenAndFingersTests
     [Test]
     public void SavedAndLoaded_AStrokeKeepsItsPressure()
     {
-        var stroke = new StrokeItem(Vector2.Zero, new SolidColorBrush(Colors.Red), 4);
-        stroke.Add(new Vector2(0, 0), 0.3f);
-        stroke.Add(new Vector2(50, 0), 1.2f);
+        var stroke = new StrokeItem(Vector2<double>.Zero, new SolidColorBrush(Colors.Red), 4);
+        stroke.Add(new Vector2<double>(0, 0), 0.3f);
+        stroke.Add(new Vector2<double>(50, 0), 1.2f);
 
         var loaded = (StrokeItem)CanvasSvg.Load(CanvasSvg.Save([stroke])).Single();
 
         Assert.That(loaded.Points.Select(point => point.Pressure), Is.EqualTo(new[] { 0.3f, 1.2f }).Within(1e-3));
     }
 
-    private void Stroke(uint id, PointerType type, Vector2 from, Vector2 to, float pressure = 0.5f, bool eraser = false)
+    private void Stroke(uint id, PointerType type, Vector2<double> from, Vector2<double> to, float pressure = 0.5f, bool eraser = false)
     {
         Send(RawPointerEventType.Down, id, type, from, pressure, eraser);
         for (var step = 1; step <= 8; step++)
@@ -360,7 +360,7 @@ public class CanvasPenAndFingersTests
         }
     }
 
-    private void Send(RawPointerEventType kind, uint id, PointerType type, Vector2 at, float pressure = 0.5f,
+    private void Send(RawPointerEventType kind, uint id, PointerType type, Vector2<double> at, float pressure = 0.5f,
         bool eraser = false)
     {
         if (kind == RawPointerEventType.Down) _down.Add(id);

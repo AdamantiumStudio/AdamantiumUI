@@ -97,7 +97,7 @@ public class TilesHost : ItemsControl
         if (a is TilesHost host) host.AssignFragments();
     }
 
-    protected override Size ArrangeOverride(Size finalSize)
+    protected override Size<double> ArrangeOverride(Size<double> finalSize)
     {
         var size = base.ArrangeOverride(finalSize);
         // Tiles have their final bounds now: hand each one the shared photo and its gap-true UV fragment. Repeat
@@ -231,11 +231,11 @@ public class TilesHost : ItemsControl
 
         // Diagonal wave: a tile's start delay is its (x+y) position across the board normalized into WaveDuration.
         double maxDiag = 0;
-        var centers = new Vector2[_tiles.Count];
+        var centers = new Vector2<double>[_tiles.Count];
         for (var i = 0; i < _tiles.Count; i++)
         {
             var rect = RectInHost(_tiles[i]);
-            centers[i] = new Vector2(rect.X + rect.Width / 2, rect.Y + rect.Height / 2);
+            centers[i] = new Vector2<double>(rect.X + rect.Width / 2, rect.Y + rect.Height / 2);
             maxDiag = Math.Max(maxDiag, centers[i].X + centers[i].Y);
         }
         var wave = WaveDuration;

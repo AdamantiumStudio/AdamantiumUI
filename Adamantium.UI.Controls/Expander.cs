@@ -149,7 +149,7 @@ public class Expander : ContentControl
         ShowState(animate: false);
     }
 
-    protected override Size ArrangeOverride(Size finalSize)
+    protected override Size<double> ArrangeOverride(Size<double> finalSize)
     {
         _arranged = true;
         return base.ArrangeOverride(finalSize);

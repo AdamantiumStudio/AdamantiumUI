@@ -57,7 +57,7 @@ public abstract class TileBrush : Brush
     /// looks the same turned about any point, but a SINGLE copy turned about the shape's center swings away across it
     /// instead of spinning where it lies.</summary>
     public static readonly AdamantiumProperty RotationCenterProperty = AdamantiumProperty.Register(nameof(RotationCenter),
-        typeof(Vector2), typeof(TileBrush), new PropertyMetadata(new Vector2(0.5, 0.5), PropertyMetadataOptions.AffectsPaint));
+        typeof(Vector2<double>), typeof(TileBrush), new PropertyMetadata(new Vector2<double>(0.5, 0.5), PropertyMetadataOptions.AffectsPaint));
 
     /// <summary>Multiplied into every sampled pixel. White (the default) draws the content as it is; a color tints it,
     /// which is how one grayscale skin serves several themes.</summary>
@@ -78,9 +78,9 @@ public abstract class TileBrush : Brush
         }
     }
 
-    public Vector2 RotationCenter
+    public Vector2<double> RotationCenter
     {
-        get => GetValue<Vector2>(RotationCenterProperty);
+        get => GetValue<Vector2<double>>(RotationCenterProperty);
         set
         {
             if (IsFrozen)
@@ -244,11 +244,11 @@ public abstract class TileBrush : Brush
     /// <summary>The content's own size, in its own units. A picture's is its PIXELS - <c>ImageSource.Width</c> is
     /// already scaled by its DPI, and fitting against that stretches a high-DPI image; a vector's own bounds ARE its
     /// natural size. Zero when there is no content yet, which every consumer must read as "nothing to draw".</summary>
-    public virtual Size ContentSize => ContentSource switch
+    public virtual Size<double> ContentSize => ContentSource switch
     {
-        Imaging.BitmapSource bitmap => new Size(bitmap.PixelWidth, bitmap.PixelHeight),
+        Imaging.BitmapSource bitmap => new Size<double>(bitmap.PixelWidth, bitmap.PixelHeight),
         null => default,
-        var source => new Size(source.Width, source.Height)
+        var source => new Size<double>(source.Width, source.Height)
     };
 
     /// <summary>Copy this brush's tiling onto <paramref name="clone"/>. Subclasses call it from their own clone so the

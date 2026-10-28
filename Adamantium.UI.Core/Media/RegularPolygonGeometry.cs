@@ -95,8 +95,8 @@ public sealed class RegularPolygonGeometry : Geometry
 
         // Shapes.Polygon takes RADII (it multiplies cos/sin by them), and centers the shape on the origin - so the mesh
         // is moved to the rect the same way the ellipse's is.
-        var radii = new Vector2(rect.Width / 2, rect.Height / 2);
-        var translation = Matrix4x4.Translation((float)(rect.X + rect.Width / 2), (float)(rect.Y + rect.Height / 2), 0);
+        var radii = new Vector2<double>(rect.Width / 2, rect.Height / 2);
+        var translation = Matrix4x4.CreateTranslation<double>((float)(rect.X + rect.Width / 2), (float)(rect.Y + rect.Height / 2), 0);
         Mesh = Shapes.Polygon.GenerateGeometry(geometryType, radii, Corners, StartAngle, translation);
     }
 }

@@ -117,8 +117,8 @@ public class CanvasConnectionTests
         var wire = new ConnectionItem(left, Node(left).OutputPins[0], right, Node(right).InputPins[0]);
         wire.Ends(out var was, out _);
 
-        right.Move(new Vector2(0, 90));
-        left.Move(new Vector2(40, 0));
+        right.Move(new Vector2<double>(0, 90));
+        left.Move(new Vector2<double>(40, 0));
 
         wire.Ends(out var now, out var arrives);
 
@@ -174,7 +174,7 @@ public class CanvasConnectionTests
         var (left, right, _, _) = Graph();
 
         var canvas = new InfiniteCanvas();
-        canvas.Measure(new Size(800, 600), force: true);
+        canvas.Measure(new Size<double>(800, 600), force: true);
         canvas.Arrange(new Rect(0, 0, 800, 600));
 
         var session = new RecordingDrawingSession();
@@ -199,7 +199,7 @@ public class CanvasConnectionTests
         var (left, right, _, _) = Graph();
 
         var canvas = new InfiniteCanvas();
-        canvas.Measure(new Size(800, 600), force: true);
+        canvas.Measure(new Size<double>(800, 600), force: true);
         canvas.Arrange(new Rect(0, 0, 800, 600));
 
         var session = new RecordingDrawingSession();
@@ -208,7 +208,7 @@ public class CanvasConnectionTests
         wire.Render(session, canvas);
         var was = ((InkBrush)session.Rectangles[0].Brush).Revision;
 
-        right.Move(new Vector2(60, 0));
+        right.Move(new Vector2<double>(60, 0));
         wire.Render(session, canvas);
 
         Assert.That(((InkBrush)session.Rectangles[1].Brush).Revision, Is.GreaterThan(was));
@@ -254,7 +254,7 @@ public class CanvasConnectionTests
         var canvas = Canvas(left, right);
         var select = (SelectTool)canvas.Tool;
 
-        var middle = new Vector2(left.World.X + left.World.Width / 2, left.World.Y + left.World.Height / 2);
+        var middle = new Vector2<double>(left.World.X + left.World.Width / 2, left.World.Y + left.World.Height / 2);
 
         Assert.Multiple(() =>
         {
@@ -299,7 +299,7 @@ public class CanvasConnectionTests
 
         select.Wires.Press(canvas, At(left, Node(left).OutputPins[0]));
         select.Wires.Move(canvas, Middle(right));
-        select.Wires.Move(canvas, new Vector2(right.World.X + right.World.Width + 400, right.World.Y));
+        select.Wires.Move(canvas, new Vector2<double>(right.World.X + right.World.Width + 400, right.World.Y));
 
         Assert.That(Node(right).IsCollapsed, Is.True, "a node the wire only passed over was left open");
     }
@@ -334,7 +334,7 @@ public class CanvasConnectionTests
         });
     }
 
-    private static Vector2 Middle(ElementItem item) =>
+    private static Vector2<double> Middle(ElementItem item) =>
         new(item.World.X + item.World.Width / 2, item.World.Y + item.World.Height / 2);
 
     // THE WHOLE CHAIN, from the graph's own objects and back to them: a node in the collection is on the plane, a wire
@@ -375,18 +375,18 @@ public class CanvasConnectionTests
         var window = new Window { Width = 800, Height = 600, Content = layer };
         Settle(window);
 
-        canvas.Measure(new Size(800, 600), force: true);
+        canvas.Measure(new Size<double>(800, 600), force: true);
         canvas.Arrange(new Rect(0, 0, 800, 600));
 
         var pin = ((CanvasNode)item.Element).OutputPins[0];
-        var from = ((CanvasNode)item.Element).Where(pin) ?? Vector2.Zero;
+        var from = ((CanvasNode)item.Element).Where(pin) ?? Vector2<double>.Zero;
 
         var select = (SelectTool)canvas.Tool;
 
-        Assert.That(select.Wires.Press(canvas, new Vector2(item.World.X + from.X, item.World.Y + from.Y)), Is.True,
+        Assert.That(select.Wires.Press(canvas, new Vector2<double>(item.World.X + from.X, item.World.Y + from.Y)), Is.True,
             "the press missed the socket, so this proves nothing");
 
-        select.Wires.Release(canvas, new Vector2(500, 300));
+        select.Wires.Release(canvas, new Vector2<double>(500, 300));
 
         Assert.That(canvas.IsPaletteOpen, Is.True, "the wire was let go over nothing and nothing was offered");
 
@@ -558,12 +558,12 @@ public class CanvasConnectionTests
         // Well outside a 400x300 viewport - the origin sits in the middle of one - and well inside a 1600x1200 one.
         nodes.Add(Node("Lerp", 500, 300));
 
-        canvas.Measure(new Size(400, 300), force: true);
+        canvas.Measure(new Size<double>(400, 300), force: true);
         canvas.Arrange(new Rect(0, 0, 400, 300));
 
         Assert.That(Hosted(canvas), Has.Count.EqualTo(1), "the far node was hosted while it could not be seen");
 
-        canvas.Measure(new Size(1600, 1200), force: true);
+        canvas.Measure(new Size<double>(1600, 1200), force: true);
         canvas.Arrange(new Rect(0, 0, 1600, 1200));
 
         Assert.That(Hosted(canvas), Has.Count.EqualTo(2),
@@ -649,8 +649,8 @@ public class CanvasConnectionTests
         var canvas = Canvas(left, right);
         var select = (SelectTool)canvas.Tool;
 
-        var from = new Vector2(left.World.X - 40, left.World.Y - 40);
-        var to = new Vector2(right.World.X + right.World.Width + 40, right.World.Y + right.World.Height + 40);
+        var from = new Vector2<double>(left.World.X - 40, left.World.Y - 40);
+        var to = new Vector2<double>(right.World.X + right.World.Width + 40, right.World.Y + right.World.Height + 40);
 
         select.OnPressed(canvas, Pointer(from));
         select.OnMoved(canvas, Pointer(to));
@@ -676,8 +676,8 @@ public class CanvasConnectionTests
         Use(ThemeNamed("Fluent"));
         var (canvas, _, left, right, _) = Wired();
 
-        var from = new Vector2(left.World.X - 40, left.World.Y - 40);
-        var to = new Vector2(right.World.X + right.World.Width + 40, right.World.Y + right.World.Height + 40);
+        var from = new Vector2<double>(left.World.X - 40, left.World.Y - 40);
+        var to = new Vector2<double>(right.World.X + right.World.Width + 40, right.World.Y + right.World.Height + 40);
 
         var select = (SelectTool)canvas.Tool;
         select.OnPressed(canvas, Pointer(from));
@@ -704,8 +704,8 @@ public class CanvasConnectionTests
         Use(ThemeNamed("Fluent"));
         var (canvas, _, left, right, select) = Wired();
 
-        var from = new Vector2(left.World.X - 60, left.World.Y - 60);
-        var to = new Vector2(right.World.X + right.World.Width + 60, right.World.Y + right.World.Height + 60);
+        var from = new Vector2<double>(left.World.X - 60, left.World.Y - 60);
+        var to = new Vector2<double>(right.World.X + right.World.Width + 60, right.World.Y + right.World.Height + 60);
 
         select.OnPressed(canvas, Pointer(from));
         select.OnMoved(canvas, Pointer(to));
@@ -720,13 +720,13 @@ public class CanvasConnectionTests
 
         // ...and a SECOND band, over one of them, leaves it open too.
         select.OnPressed(canvas, Pointer(from));
-        select.OnMoved(canvas, Pointer(new Vector2(left.World.X + left.World.Width + 10, left.World.Y + left.World.Height + 10)));
-        select.OnReleased(canvas, Pointer(new Vector2(left.World.X + left.World.Width + 10, left.World.Y + left.World.Height + 10)));
+        select.OnMoved(canvas, Pointer(new Vector2<double>(left.World.X + left.World.Width + 10, left.World.Y + left.World.Height + 10)));
+        select.OnReleased(canvas, Pointer(new Vector2<double>(left.World.X + left.World.Width + 10, left.World.Y + left.World.Height + 10)));
 
         Assert.That(Node(left).IsCollapsed, Is.False, "the node folded on the second band");
     }
 
-    private static CanvasPointerEventArgs Pointer(Vector2 world) =>
+    private static CanvasPointerEventArgs Pointer(Vector2<double> world) =>
         new()
         {
             World = world, Pointer = world, Screen = world,
@@ -756,7 +756,7 @@ public class CanvasConnectionTests
         // A GRAPH, which is the only place a wire exists at all: a canvas being used as a drawing does not offer nodes,
         // and a gesture that joins two of them has nothing to take hold of.
         var canvas = new InfiniteCanvas { Mode = CanvasMode.Nodes };
-        canvas.Measure(new Size(800, 600), force: true);
+        canvas.Measure(new Size<double>(800, 600), force: true);
         canvas.Arrange(new Rect(0, 0, 800, 600));
 
         var scene = new CanvasScene();
@@ -770,11 +770,11 @@ public class CanvasConnectionTests
 
     // A socket's place on the PLANE: the node is arranged into the item's box, so its own coordinates start at the
     // box's corner.
-    private static Vector2 At(ElementItem item, CanvasNodePin pin)
+    private static Vector2<double> At(ElementItem item, CanvasNodePin pin)
     {
         var local = ((CanvasNode)item.Element).Where(pin).Value;
 
-        return new Vector2(item.World.X + local.X, item.World.Y + local.Y);
+        return new Vector2<double>(item.World.X + local.X, item.World.Y + local.Y);
     }
 
     // A wire is the color of the socket it LEAVES, read when it is drawn and not remembered from when it was made -
@@ -786,7 +786,7 @@ public class CanvasConnectionTests
         var (left, right, _, _) = Graph();
 
         var canvas = new InfiniteCanvas();
-        canvas.Measure(new Size(800, 600), force: true);
+        canvas.Measure(new Size<double>(800, 600), force: true);
         canvas.Arrange(new Rect(0, 0, 800, 600));
 
         var output = Node(left).OutputPins[0];
@@ -817,7 +817,7 @@ public class CanvasConnectionTests
         var wire = new ConnectionItem(left, Node(left).OutputPins[0], right, Node(right).InputPins[0]);
         wire.Ends(out var from, out var to);
 
-        var corner = new Vector2(Math.Min(from.X, to.X) + 4, Math.Min(from.Y, to.Y) - 40);
+        var corner = new Vector2<double>(Math.Min(from.X, to.X) + 4, Math.Min(from.Y, to.Y) - 40);
 
         Assert.Multiple(() =>
         {
@@ -897,7 +897,7 @@ public class CanvasConnectionTests
         var (canvas, scene, left, right, tool) = Wired();
 
         tool.Wires.Press(canvas, At(right, Node(right).InputPins[0]));
-        tool.Wires.Release(canvas, new Vector2(-4000, -4000));
+        tool.Wires.Release(canvas, new Vector2<double>(-4000, -4000));
 
         Assert.Multiple(() =>
         {
@@ -996,7 +996,7 @@ public class CanvasConnectionTests
         {
             Assert.That(tool.Wires.OverRefusal(canvas, At(right, Node(right).InputPins[1])), Is.True,
                 "a socket that will not take the wire looks willing");
-            Assert.That(tool.Wires.OverRefusal(canvas, new Vector2(-4000, -4000)), Is.False,
+            Assert.That(tool.Wires.OverRefusal(canvas, new Vector2<double>(-4000, -4000)), Is.False,
                 "empty plane is not a refusal - there is nothing there to refuse");
         });
     }
@@ -1015,7 +1015,7 @@ public class CanvasConnectionTests
         canvas.WireDropped += (_, e) => offered = e;
 
         tool.Wires.Press(canvas, At(left, Node(left).OutputPins[0]));
-        tool.Wires.Release(canvas, new Vector2(-500, 260));
+        tool.Wires.Release(canvas, new Vector2<double>(-500, 260));
 
         Assert.Multiple(() =>
         {
@@ -1141,7 +1141,7 @@ public class CanvasConnectionTests
 
     // A point ON the wire as it was actually drawn, by walking its own hit test outwards - the wire keeps the bend it
     // took, and this is what reads it back without opening it up.
-    private static Vector2 Crosses(ConnectionItem wire, Vector2 from, Vector2 to, double t)
+    private static Vector2<double> Crosses(ConnectionItem wire, Vector2<double> from, Vector2<double> to, double t)
     {
         // The box the wire reports already holds the bend it took; walking the curve again needs its control points,
         // and the honest way to get at them from outside is to ask the wire where it is - which is what HitTest does.
@@ -1153,10 +1153,10 @@ public class CanvasConnectionTests
         // The Y the wire is at for this X, found by asking the wire itself.
         for (var y = box.Y; y <= box.Y + box.Height; y += 1)
         {
-            if (wire.HitTest(new Vector2(x, y), 2)) return new Vector2(x, y);
+            if (wire.HitTest(new Vector2<double>(x, y), 2)) return new Vector2<double>(x, y);
         }
 
-        return new Vector2(x, from.Y);
+        return new Vector2<double>(x, from.Y);
     }
 
     // A WIRE IS A STEP. Drawing one is a change to the graph like any other, and one that could not be taken back would
@@ -1197,7 +1197,7 @@ public class CanvasConnectionTests
 
         canvas.BeginEdit("Gesture");
         tool.Wires.Press(canvas, At(right, Node(right).InputPins[0]));
-        tool.Wires.Release(canvas, new Vector2(-4000, -4000));
+        tool.Wires.Release(canvas, new Vector2<double>(-4000, -4000));
         canvas.EndEdit();
 
         Assert.That(Wires(scene), Is.Zero);

@@ -141,7 +141,7 @@ public class StackPanel : VirtualizingPanel
 
    // ---- Plain container layout (unchanged behavior: a StackPanel used with explicit Children) ------------------
 
-   protected override Size MeasurePlain(Size availableSize)
+   protected override Size<double> MeasurePlain(Size<double> availableSize)
    {
       double childAvailableWidth = double.PositiveInfinity;
       double childAvailableHeight = double.PositiveInfinity;
@@ -190,9 +190,9 @@ public class StackPanel : VirtualizingPanel
             }
          }
 
-         child.Measure(new Size(childAvailableWidth, childAvailableHeight));
+         child.Measure(new Size<double>(childAvailableWidth, childAvailableHeight));
          if (child.Visibility == Visibility.Collapsed) continue;
-         Size size = child.DesiredSize;
+         Size<double> size = child.DesiredSize;
          stacked++;
 
          if (Orientation == Orientation.Vertical)
@@ -212,10 +212,10 @@ public class StackPanel : VirtualizingPanel
       if (Orientation == Orientation.Vertical) measuredHeight += gaps;
       else measuredWidth += gaps;
 
-      return new Size(measuredWidth, measuredHeight);
+      return new Size<double>(measuredWidth, measuredHeight);
    }
 
-   protected override Size ArrangePlain(Size finalSize)
+   protected override Size<double> ArrangePlain(Size<double> finalSize)
    {
       var horizontal = Orientation == Orientation.Horizontal;
 
@@ -256,26 +256,26 @@ public class StackPanel : VirtualizingPanel
          }
       }
 
-      return horizontal ? new Size(main, cross) : new Size(cross, main);
+      return horizontal ? new Size<double>(main, cross) : new Size<double>(cross, main);
    }
 
    // ---- Virtualized layout (items host): realize only the visible window, scroll along Orientation -------------
 
-   protected override Size MeasureVirtualized(Size availableSize, Vector2 offset)
+   protected override Size<double> MeasureVirtualized(Size<double> availableSize, Vector2<double> offset)
    {
       var vertical = Orientation == Orientation.Vertical;
       var count = Owner.Items.Count;
       if (count == 0)
       {
          foreach (var c in Owner.ItemContainerGenerator.SetWindow(0, -1)) ParkContainer(c);
-         return new Size();
+         return new Size<double>();
       }
 
       var crossAvailable = vertical ? availableSize.Width : availableSize.Height;
       var mainViewport = vertical ? availableSize.Height : availableSize.Width;
       var childConstraint = vertical
-         ? new Size(crossAvailable, double.PositiveInfinity)
-         : new Size(double.PositiveInfinity, crossAvailable);
+         ? new Size<double>(crossAvailable, double.PositiveInfinity)
+         : new Size<double>(double.PositiveInfinity, crossAvailable);
 
       // Non-virtualized host (a small mixed-height menu): realize + measure EVERY item at its OWN extent and stack them by
       // cumulative offset, so a short row (a separator) takes only its own height instead of a uniform cell.
@@ -299,7 +299,7 @@ public class StackPanel : VirtualizingPanel
             runningMain += vertical ? container.DesiredSize.Height : container.DesiredSize.Width;
             crossMaxAll = Math.Max(crossMaxAll, vertical ? container.DesiredSize.Width : container.DesiredSize.Height);
          }
-         return vertical ? new Size(crossMaxAll, runningMain) : new Size(runningMain, crossMaxAll);
+         return vertical ? new Size<double>(crossMaxAll, runningMain) : new Size<double>(runningMain, crossMaxAll);
       }
 
       // Probe the item at the last window start for the uniform extent, never an exception item. Keep the last good size
@@ -366,10 +366,10 @@ public class StackPanel : VirtualizingPanel
       // count pitches less the trailing gap: the last item ends the extent, the gap after it does not exist. Plus what
       // the odd ones out add on top - the stack is uniform EXCEPT for them, and the scrollbar has to know it.
       var mainExtent = count * Pitch + ExtraBefore(count) - Math.Max(0, Spacing);
-      return vertical ? new Size(crossMax, mainExtent) : new Size(mainExtent, crossMax);
+      return vertical ? new Size<double>(crossMax, mainExtent) : new Size<double>(mainExtent, crossMax);
    }
 
-   protected override void ArrangeVirtualized(Size finalSize, Vector2 offset)
+   protected override void ArrangeVirtualized(Size<double> finalSize, Vector2<double> offset)
    {
       var vertical = Orientation == Orientation.Vertical;
       var cross = vertical ? finalSize.Width : finalSize.Height;
@@ -432,7 +432,7 @@ public class StackPanel : VirtualizingPanel
 
    /// <summary>Which slot a drop lands in, from the STACK's own arithmetic rather than from where the containers
    /// currently sit - the gap moves those, and an index read off them would chase itself. See VirtualizingPanel.</summary>
-   public override bool TryGetDropSlot(Vector2 point, out int index)
+   public override bool TryGetDropSlot(Vector2<double> point, out int index)
    {
       index = -1;
       if (!IsItemsHost || !IsVirtualizing || _itemExtent <= 1) return false;

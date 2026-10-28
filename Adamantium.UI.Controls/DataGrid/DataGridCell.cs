@@ -548,9 +548,9 @@ public class DataGridCell : ContentControl
     /// <summary>Content is PUSHED RIGHT by <see cref="Indent"/> - that shift is the whole of what depth looks like in a
     /// tree table. The cell keeps its column's width whatever its content wants: the grid decided the widths once for
     /// everyone.</summary>
-    protected override Size MeasureOverride(Size availableSize) => base.MeasureOverride(availableSize);
+    protected override Size<double> MeasureOverride(Size<double> availableSize) => base.MeasureOverride(availableSize);
 
-    protected override Size ArrangeOverride(Size finalSize)
+    protected override Size<double> ArrangeOverride(Size<double> finalSize)
     {
         foreach (var visual in VisualChildren)
         {

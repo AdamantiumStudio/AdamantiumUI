@@ -66,7 +66,7 @@ public class GeometryGroup : Geometry, IContainer
 
     public override void RecalculateBounds()
     {
-        var points = new List<Vector2>();
+        var points = new List<Vector2<double>>();
         
         foreach (var child in Children)
         {

@@ -15,18 +15,18 @@ public class ElementTool : ICanvasTool
 {
     private readonly Func<IUIComponent> _make;
 
-    private Vector2 _from;
+    private Vector2<double> _from;
     private Rect? _box;
 
-    public ElementTool(Func<IUIComponent> make, Size natural = default)
+    public ElementTool(Func<IUIComponent> make, Size<double> natural = default)
     {
         _make = make;
-        Natural = natural.Width > 0 && natural.Height > 0 ? natural : new Size(140, 32);
+        Natural = natural.Width > 0 && natural.Height > 0 ? natural : new Size<double>(140, 32);
     }
 
     /// <summary>The size a control gets when it is CLICKED rather than dragged out, in SCREEN pixels - the size the hand
     /// asked for by not saying one.</summary>
-    public Size Natural { get; }
+    public Size<double> Natural { get; }
 
     public bool IsBusy => false;
 
@@ -129,6 +129,6 @@ public class ElementTool : ICanvasTool
         canvas.Repaint();
     }
 
-    private static Rect Between(Vector2 from, Vector2 to) =>
+    private static Rect Between(Vector2<double> from, Vector2<double> to) =>
         new(Math.Min(from.X, to.X), Math.Min(from.Y, to.Y), Math.Abs(to.X - from.X), Math.Abs(to.Y - from.Y));
 }

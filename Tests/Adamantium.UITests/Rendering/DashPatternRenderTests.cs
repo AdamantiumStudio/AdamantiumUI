@@ -32,7 +32,7 @@ public class DashPatternRenderTests
         var factory = new RenderUnitFactory(device, new StubResourceFactory());
         using var renderer = new OffscreenTestRenderer(device, factory, Dim, Dim) { ClearColor = Colors.Black };
 
-        var stage = new TestControl { Bounds = new Rect(0, 0, Dim, Dim), RenderSize = new Size(Dim, Dim) };
+        var stage = new TestControl { Bounds = new Rect(0, 0, Dim, Dim), RenderSize = new Size<double>(Dim, Dim) };
         stage.RenderAction = s => s.DrawRectangle(Brushes.Transparent, new Rect(8, 8, Dim - 16, Dim - 16), new CornerRadius(6), pen);
 
         var root = new VisualRoot(stage, Dim, Dim);

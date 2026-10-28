@@ -9,12 +9,12 @@ public sealed class CanvasArrowBrush : Brush
     /// <summary>Where the arrow starts, in the drawing element's own coordinates - the end <see cref="StartHead"/> sits
     /// on.</summary>
     public static readonly AdamantiumProperty FromProperty = AdamantiumProperty.Register(nameof(From),
-        typeof(Vector2), typeof(CanvasArrowBrush),
-        new PropertyMetadata(Vector2.Zero, PropertyMetadataOptions.AffectsPaint));
+        typeof(Vector2<double>), typeof(CanvasArrowBrush),
+        new PropertyMetadata(Vector2<double>.Zero, PropertyMetadataOptions.AffectsPaint));
 
     public static readonly AdamantiumProperty ToProperty = AdamantiumProperty.Register(nameof(To),
-        typeof(Vector2), typeof(CanvasArrowBrush),
-        new PropertyMetadata(Vector2.Zero, PropertyMetadataOptions.AffectsPaint));
+        typeof(Vector2<double>), typeof(CanvasArrowBrush),
+        new PropertyMetadata(Vector2<double>.Zero, PropertyMetadataOptions.AffectsPaint));
 
     /// <summary>How thick the shaft is, in the same units as the ends.</summary>
     public static readonly AdamantiumProperty ThicknessProperty = AdamantiumProperty.Register(nameof(Thickness),
@@ -48,15 +48,15 @@ public sealed class CanvasArrowBrush : Brush
     public static readonly AdamantiumProperty RevisionProperty = AdamantiumProperty.Register(nameof(Revision),
         typeof(int), typeof(CanvasArrowBrush), new PropertyMetadata(0, PropertyMetadataOptions.AffectsPaint));
 
-    public Vector2 From
+    public Vector2<double> From
     {
-        get => GetValue<Vector2>(FromProperty);
+        get => GetValue<Vector2<double>>(FromProperty);
         set => SetValue(FromProperty, value);
     }
 
-    public Vector2 To
+    public Vector2<double> To
     {
-        get => GetValue<Vector2>(ToProperty);
+        get => GetValue<Vector2<double>>(ToProperty);
         set => SetValue(ToProperty, value);
     }
 

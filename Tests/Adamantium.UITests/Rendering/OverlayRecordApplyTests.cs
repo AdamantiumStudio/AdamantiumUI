@@ -33,7 +33,7 @@ public class OverlayRecordApplyTests
     {
         var control = new Border { Width = 10, Height = 10, Background = Brushes.Red };
         _root.Add(control);
-        control.Measure(new Size(10, 10));
+        control.Measure(new Size<double>(10, 10));
         control.Arrange(new Rect(x, 0, 10, 10));
         return control;
     }

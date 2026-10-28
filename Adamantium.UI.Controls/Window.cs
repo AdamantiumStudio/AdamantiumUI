@@ -9,12 +9,12 @@ public class Window : WindowBase
     public override IntPtr SurfaceHandle { get; internal set; }
     public override IntPtr Handle { get; internal set; }
 
-    public override Vector2 PointToClient(PixelPoint point)
+    public override Vector2<double> PointToClient(PixelPoint point)
     {
         return ScreenToClient(point);
     }
 
-    public override PixelPoint PointToScreen(Vector2 point)
+    public override PixelPoint PointToScreen(Vector2<double> point)
     {
         return ClientToScreen(point);
     }

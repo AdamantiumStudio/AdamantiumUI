@@ -1048,13 +1048,13 @@ public class TextBlockSelectionTests
     });
 
     // The middle of a character where the block shows it.
-    private static Vector2 Shown(TextBlock block, int index)
+    private static Vector2<double> Shown(TextBlock block, int index)
     {
         var rect = block.Layout.GetRangeRects(index, index + 1).Single();
-        return new Vector2(rect.X + block.LinesShift() + rect.Width / 2, rect.Y + rect.Height / 2);
+        return new Vector2<double>(rect.X + block.LinesShift() + rect.Width / 2, rect.Y + rect.Height / 2);
     }
 
-    private static void Pointer(TextBlock block, RoutedEvent routed, Vector2 at, InputModifiers held)
+    private static void Pointer(TextBlock block, RoutedEvent routed, Vector2<double> at, InputModifiers held)
     {
         PointerDevice.Current.SetExternalMousePosition(block, new PixelPoint(at.X, at.Y));
         var properties = PointerPointProperties.FromMouse(held);
@@ -1080,9 +1080,9 @@ public class TextBlockSelectionTests
 
         var from = Shown(block, 1);
         var to = Shown(block, 4);
-        Pointer(block, PointerEvents.PointerPressedEvent, new Vector2(from.X, from.Y - 2), InputModifiers.LeftMouseButton);
-        Pointer(block, PointerEvents.PointerMovedEvent, new Vector2(to.X, to.Y + 2), InputModifiers.LeftMouseButton);
-        Pointer(block, PointerEvents.PointerReleasedEvent, new Vector2(to.X, to.Y + 2), InputModifiers.None);
+        Pointer(block, PointerEvents.PointerPressedEvent, new Vector2<double>(from.X, from.Y - 2), InputModifiers.LeftMouseButton);
+        Pointer(block, PointerEvents.PointerMovedEvent, new Vector2<double>(to.X, to.Y + 2), InputModifiers.LeftMouseButton);
+        Pointer(block, PointerEvents.PointerReleasedEvent, new Vector2<double>(to.X, to.Y + 2), InputModifiers.None);
 
         Assert.That(block.SelectedText, Is.EqualTo("ello"));
     }

@@ -32,8 +32,8 @@ public class CanvasPane : ContentControl
     private PointerPressedEventHandler _onPressed;
     private PointerEventHandler _onMoved;
     private PointerReleasedEventHandler _onReleased;
-    private Vector2 _from;
-    private Vector2 _at;
+    private Vector2<double> _from;
+    private Vector2<double> _at;
 
     static CanvasPane()
     {
@@ -57,8 +57,8 @@ public class CanvasPane : ContentControl
     /// <summary>Where a free pane sits, as a fraction of the room it can travel across (0 near edge, 1 far). Not
     /// pixels: a panel parked by the right edge would end up in the middle of a wider window.</summary>
     public static readonly AdamantiumProperty AnchorProperty = AdamantiumProperty.Register(nameof(Anchor),
-        typeof(Vector2), typeof(CanvasPane),
-        new PropertyMetadata(Vector2.Zero,
+        typeof(Vector2<double>), typeof(CanvasPane),
+        new PropertyMetadata(Vector2<double>.Zero,
             PropertyMetadataOptions.AffectsParentArrange | PropertyMetadataOptions.BindsTwoWayByDefault));
 
     public static readonly AdamantiumProperty IsOpenProperty = AdamantiumProperty.Register(nameof(IsOpen),
@@ -174,9 +174,9 @@ public class CanvasPane : ContentControl
     }
 
     /// <summary>Where it sits under <see cref="CanvasPanePlacement.Free"/> - see <see cref="AnchorProperty"/>.</summary>
-    public Vector2 Anchor
+    public Vector2<double> Anchor
     {
-        get => GetValue<Vector2>(AnchorProperty);
+        get => GetValue<Vector2<double>>(AnchorProperty);
         set => SetValue(AnchorProperty, value);
     }
 
@@ -381,7 +381,7 @@ public class CanvasPane : ContentControl
     /// <summary>Puts the pane at that width, leaving the edge that is NOT being pulled where it was: an anchor is a
     /// fraction of the travel, which shrinks as the pane widens, so a width written on its own slides it sideways.
     /// </summary>
-    internal void SizeTo(double width, Size room)
+    internal void SizeTo(double width, Size<double> room)
     {
         Width = width;
 
@@ -390,7 +390,7 @@ public class CanvasPane : ContentControl
         var left = _sizingSide == Dock.Left ? _rightAtPress - width : _leftAtPress;
 
         SetCurrentValue(AnchorProperty,
-            AnchorFor(new Vector2(Math.Max(0, left), Bounds.Y), room, new Size(width, RenderSize.Height)));
+            AnchorFor(new Vector2<double>(Math.Max(0, left), Bounds.Y), room, new Size<double>(width, RenderSize.Height)));
     }
 
     private static void OnCanResizeChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e) =>
@@ -447,7 +447,7 @@ public class CanvasPane : ContentControl
 
     private void Toggle()
     {
-        var at = new Vector2(Bounds.X, Bounds.Y);
+        var at = new Vector2<double>(Bounds.X, Bounds.Y);
         SetCurrentValue(IsOpenProperty, !IsOpen);
 
         if (Layer == null || Placement != CanvasPanePlacement.Free)
@@ -512,7 +512,7 @@ public class CanvasPane : ContentControl
         if (!onGrip && !IsChrome(e.OriginalSource)) return;
 
         _from = e.GetPosition(Layer);
-        _at = new Vector2(Bounds.X, Bounds.Y);
+        _at = new Vector2<double>(Bounds.X, Bounds.Y);
         _dragging = true;
 
         // Taken only when NOBODY below took it. The grip captures the press for itself, and stealing that would leave
@@ -554,21 +554,21 @@ public class CanvasPane : ContentControl
 
     // Kept INSIDE the canvas: a pane dragged off the edge is a pane nobody can get back, and there is no edge on the
     // plane itself to find it by.
-    private void MoveTo(Vector2 wanted, Size room, Size size)
+    private void MoveTo(Vector2<double> wanted, Size<double> room, Size<double> size)
     {
         SetCurrentValue(PlacementProperty, CanvasPanePlacement.Free);
-        SetCurrentValue(AnchorProperty, AnchorFor(new Vector2(
+        SetCurrentValue(AnchorProperty, AnchorFor(new Vector2<double>(
             Math.Clamp(wanted.X, 0, Math.Max(0, room.Width - size.Width)),
             Math.Clamp(wanted.Y, 0, Math.Max(0, room.Height - size.Height))), room, size));
     }
 
     /// <summary>Moves the pane by an offset in the canvas's pixels, as a drag by its grip that far does - kept inside the
     /// canvas, stuck to an edge when let go near one.</summary>
-    internal void MoveBy(Vector2 offset)
+    internal void MoveBy(Vector2<double> offset)
     {
         if (Layer == null) return;
 
-        MoveTo(new Vector2(Bounds.X, Bounds.Y) + offset, Layer.RenderSize, RenderSize);
+        MoveTo(new Vector2<double>(Bounds.X, Bounds.Y) + offset, Layer.RenderSize, RenderSize);
         StickToEdge();
         Settled();
     }
@@ -622,11 +622,11 @@ public class CanvasPane : ContentControl
     // When the hand lets go: the canvas writes down the finished state, not every pixel passed through on the way.
     private void Settled() => Canvas?.RememberLayout();
 
-    private Vector2? _pending;
+    private Vector2<double>? _pending;
 
     /// <summary>Puts the pane at a point in screen pixels, once - what "open under the pointer" means. The layer turns
     /// it into an <see cref="Anchor"/> when the room and the pane's own size are both known.</summary>
-    public void PlaceAt(Vector2 screenPoint)
+    public void PlaceAt(Vector2<double> screenPoint)
     {
         _pending = screenPoint;
         SetCurrentValue(PlacementProperty, CanvasPanePlacement.Free);
@@ -634,9 +634,9 @@ public class CanvasPane : ContentControl
     }
 
     /// <summary>The point this was asked to open at, if it has not been placed yet. For the layer.</summary>
-    public bool TakePending(out Vector2 at)
+    public bool TakePending(out Vector2<double> at)
     {
-        at = _pending ?? Vector2.Zero;
+        at = _pending ?? Vector2<double>.Zero;
 
         var had = _pending.HasValue;
         _pending = null;
@@ -644,12 +644,12 @@ public class CanvasPane : ContentControl
     }
 
     /// <summary>Pixels into the fraction of the travel they are; nothing to travel across answers zero.</summary>
-    public static Vector2 AnchorFor(Vector2 at, Size room, Size size) =>
+    public static Vector2<double> AnchorFor(Vector2<double> at, Size<double> room, Size<double> size) =>
         new(room.Width - size.Width is var across and > 0 ? Math.Clamp(at.X / across, 0, 1) : 0,
             room.Height - size.Height is var down and > 0 ? Math.Clamp(at.Y / down, 0, 1) : 0);
 
     /// <summary>...and back: where a fraction puts the pane, in pixels.</summary>
-    public static Vector2 PlaceOf(Vector2 anchor, Size room, Size size) =>
+    public static Vector2<double> PlaceOf(Vector2<double> anchor, Size<double> room, Size<double> size) =>
         new(anchor.X * Math.Max(0, room.Width - size.Width), anchor.Y * Math.Max(0, room.Height - size.Height));
 
     // Dropped near an edge, the pane takes that edge. Which SLOT of the edge is decided by where along it the pane

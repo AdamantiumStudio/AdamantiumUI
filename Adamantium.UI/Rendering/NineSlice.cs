@@ -28,7 +28,7 @@ internal static class NineSlice
 
     /// <summary>The logical size to bake a vector source at for this shape: the largest N/F over bands drawn N units
     /// long from a source fraction F, so corners stay 1:1.</summary>
-    public static Size BakeSize(NineSliceBrush brush, Size shape)
+    public static Size<double> BakeSize(NineSliceBrush brush, Size<double> shape)
     {
         var source = brush?.Source;
         if (source == null) return shape;
@@ -43,7 +43,7 @@ internal static class NineSlice
         // than the source already has; only a STRETCHED one grows with the shape.
         var repeat = brush.EdgeMode != NineSliceEdgeMode.Stretch;
 
-        return new Size(
+        return new Size<double>(
             Axis(border.Left > 0 ? border.Left : slice.Left * sourceWidth,
                 border.Right > 0 ? border.Right : slice.Right * sourceWidth,
                 slice.Left, slice.Right, shape.Width, sourceWidth, repeat),
@@ -75,7 +75,7 @@ internal static class NineSlice
     /// <param name="texels">The bound texture's size, for the half-texel inset; unset means the source's own (differs for a
     /// baked vector source).</param>
     public static TextureItem[] Bake(NineSliceBrush brush, Rect bounds, double opacity, int transformSlot, int fadeSlot,
-        double scaleX = 1.0, double scaleY = 1.0, Size texels = default)
+        double scaleX = 1.0, double scaleY = 1.0, Size<double> texels = default)
     {
         var source = brush.Source;
         if (source == null) return null;

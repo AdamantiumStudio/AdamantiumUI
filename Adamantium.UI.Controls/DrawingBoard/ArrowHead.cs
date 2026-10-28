@@ -10,8 +10,8 @@ public static class ArrowHead
     /// <summary>The tip, and the two corners of the head's base, for a head pointing from <paramref name="from"/>
     /// toward <paramref name="tip"/>. False when the two points are on top of each other and there is no direction to
     /// point in.</summary>
-    public static bool Points(Vector2 from, Vector2 tip, double thickness, double lengthRatio, double widthRatio,
-        out Vector2 left, out Vector2 right)
+    public static bool Points(Vector2<double> from, Vector2<double> tip, double thickness, double lengthRatio, double widthRatio,
+        out Vector2<double> left, out Vector2<double> right)
     {
         left = right = tip;
 
@@ -31,8 +31,8 @@ public static class ArrowHead
         var baseX = tip.X - dx * length;
         var baseY = tip.Y - dy * length;
 
-        left = new Vector2(baseX - dy * half, baseY + dx * half);
-        right = new Vector2(baseX + dy * half, baseY - dx * half);
+        left = new Vector2<double>(baseX - dy * half, baseY + dx * half);
+        right = new Vector2<double>(baseX + dy * half, baseY - dx * half);
 
         return true;
     }

@@ -1762,6 +1762,13 @@ All packages share one version.
 
 ### Changed
 
+- The UI works on the engine's generic mathematics: a point or a size in the API is `Vector2<double>` or
+  `Size<double>`, a matrix `Matrix4x4<float>`..., and each project of the UI declares the float names (`Vector2F`,
+  `Matrix4x4F`, `RectangleF`...) as aliases of its own. Curves are sampled at their parameter's exact steps, not rounded
+  to four places; a NURBS reaches its last point, a NURBS of a degree above its points takes the highest it can, an arc
+  is turned in radians without a pass through float, and a stroke's joins and round caps follow. A color blended with
+  another, or made from a fraction, rounds to the nearest byte instead of cutting the fraction off - a theme's hover and
+  pressed shades may differ by one in a channel.
 - The AUML and effect generators no longer load `Adamantium.Mathematics` or `Adamantium.Fonts`: font weights,
   stretches and feature lists are checked at build through the font types `Adamantium.Core` holds now, and `Color`,
   `Thickness` and `Vector2` are known to parse by the `[TypeParser]` they carry. The analyzer references to the netstandard2.0 builds of

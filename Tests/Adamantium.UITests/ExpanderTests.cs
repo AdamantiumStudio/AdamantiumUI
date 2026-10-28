@@ -261,7 +261,7 @@ public class ExpanderTests
     {
         var templated = Templated(duration);
         new Rendering.TestRoot(400, 400).Add(templated.Expander);
-        templated.Expander.Measure(new Size(400, 400));
+        templated.Expander.Measure(new Size<double>(400, 400));
         templated.Expander.Arrange(new Rect(0, 0, 400, 400));
         return templated;
     }

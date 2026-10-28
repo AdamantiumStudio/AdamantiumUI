@@ -14,7 +14,7 @@ public static class LayoutHelper
     /// <param name="element">The control.</param>
     /// <param name="constraints">The space available for the control.</param>
     /// <returns>The control's size.</returns>
-    public static Size ApplyLayoutConstraints(this MeasurableUIComponent element, Size constraints)
+    public static Size<double> ApplyLayoutConstraints(this MeasurableUIComponent element, Size<double> constraints)
     {
         try
         {
@@ -24,7 +24,7 @@ public static class LayoutHelper
             width = Math.Max(width, element.MinWidth);
             height = Math.Min(height, element.MaxHeight);
             height = Math.Max(height, element.MinHeight);
-            return new Size(width, height);
+            return new Size<double>(width, height);
         }
         catch (Exception e)
         {

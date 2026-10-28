@@ -15,7 +15,7 @@ public class VisualChildDetachTests
         var panel = new StackPanel();
         foreach (var child in children) panel.Children.Add(child);
 
-        panel.Measure(new Size(200, 200));
+        panel.Measure(new Size<double>(200, 200));
         panel.Arrange(new Rect(0, 0, 200, 200));
         return panel;
     }
@@ -68,7 +68,7 @@ public class VisualChildDetachTests
         var live = new Border { Width = 80, Height = 30 };
         panel.Children.Add(live);
 
-        panel.Measure(new Size(200, 200));
+        panel.Measure(new Size<double>(200, 200));
         panel.Arrange(new Rect(0, 0, 200, 200));
 
         Assert.Multiple(() =>

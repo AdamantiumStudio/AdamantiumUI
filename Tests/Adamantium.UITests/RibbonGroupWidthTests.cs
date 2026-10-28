@@ -18,7 +18,7 @@ public class RibbonGroupWidthTests
     // real command's template does through its Ribbon.Size triggers.
     private sealed class SizedCommand : Border
     {
-        protected override Size MeasureOverride(Size availableSize)
+        protected override Size<double> MeasureOverride(Size<double> availableSize)
         {
             Width = Ribbon.GetSize(this) switch
             {
@@ -41,7 +41,7 @@ public class RibbonGroupWidthTests
             panel.Children.Add(command);
         }
 
-        panel.Measure(Size.Infinity);
+        panel.Measure(Size<double>.Infinity);
         return panel;
     }
 
@@ -101,7 +101,7 @@ public class RibbonGroupWidthTests
         var before = panel.WidthAt(0);
 
         panel.Children.Add(new SizedCommand());
-        panel.Measure(Size.Infinity);
+        panel.Measure(Size<double>.Infinity);
 
         Assert.That(panel.WidthAt(0), Is.EqualTo(before + 60), "the third command is paid for at the roomiest variant");
     }

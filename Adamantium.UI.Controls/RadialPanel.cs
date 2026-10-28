@@ -30,20 +30,20 @@ internal sealed class RadialPanel : Panel
         Children.Clear();
     }
 
-    protected override Size MeasureOverride(Size availableSize)
+    protected override Size<double> MeasureOverride(Size<double> availableSize)
     {
         foreach (var child in Children)
         {
-            child.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+            child.Measure(new Size<double>(double.PositiveInfinity, double.PositiveInfinity));
         }
 
         var side = Math.Min(availableSize.Width, availableSize.Height);
-        return double.IsInfinity(side) ? Size.Zero : new Size(side, side);
+        return double.IsInfinity(side) ? Size<double>.Zero : new Size<double>(side, side);
     }
 
-    protected override Size ArrangeOverride(Size finalSize)
+    protected override Size<double> ArrangeOverride(Size<double> finalSize)
     {
-        var center = new Vector2(finalSize.Width / 2, finalSize.Height / 2);
+        var center = new Vector2<double>(finalSize.Width / 2, finalSize.Height / 2);
         var outer = Math.Min(finalSize.Width, finalSize.Height) / 2;
         foreach (var child in Children)
         {

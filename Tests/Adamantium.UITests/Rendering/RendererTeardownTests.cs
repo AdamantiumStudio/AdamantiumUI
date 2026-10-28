@@ -32,7 +32,7 @@ public class RendererTeardownTests
             Aura = new Aura { Radius = 8, Color = Colors.Red, Opacity = 1.0 }
         };
         control.Bounds = new Rect(0, 0, 32, 32);
-        control.RenderSize = new Size(32, 32);
+        control.RenderSize = new Size<double>(32, 32);
         control.RenderTransform = new Transform { TranslateX = 16, TranslateY = 16 };
         Assert.That(renderer.RenderFrame(new VisualRoot(control, Dim, Dim)), Is.True);
         Assert.That(effects.GetEffects(device).Count, Is.GreaterThan(before), "the frame built no effect to leave behind");

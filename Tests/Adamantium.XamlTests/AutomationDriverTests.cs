@@ -229,8 +229,8 @@ public class AutomationDriverTests
     public async Task FingersDrawnTogether_EachEndsByTheOffset([Values(2, 10)] int fingers)
     {
         var row = Pads(fingers, out _);
-        var travel = new Dictionary<uint, Vector2>();
-        var from = new Dictionary<uint, Vector2>();
+        var travel = new Dictionary<uint, Vector2<double>>();
+        var from = new Dictionary<uint, Vector2<double>>();
         row.AddHandler(PointerEvents.PointerPressedEvent,
             new PointerPressedEventHandler((_, e) => from[e.Pointer.Id] = e.GetPosition(row)), handledEventsToo: true);
         row.AddHandler(PointerEvents.PointerReleasedEvent,
@@ -243,7 +243,7 @@ public class AutomationDriverTests
         Assert.Multiple(() =>
         {
             Assert.That(travel, Has.Count.EqualTo(fingers));
-            Assert.That(travel.Values, Is.All.EqualTo(new Vector2(0, 20)));
+            Assert.That(travel.Values, Is.All.EqualTo(new Vector2<double>(0, 20)));
         });
     }
 
@@ -405,7 +405,7 @@ public class AutomationDriverTests
             Assert.That(moves, Is.GreaterThan(1), "the pointer travels with the button held");
         });
 
-        static string At(string what, Adamantium.Mathematics.Vector2 point) =>
+        static string At(string what, Adamantium.Mathematics.Vector2<double> point) =>
             System.FormattableString.Invariant($"{what} {point.X:0},{point.Y:0}");
     }
 

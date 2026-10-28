@@ -55,7 +55,7 @@ public class DeferredAnimationTests
         root.Children.Add(border);
         var host = new Adamantium.UI.Controls.Window { Width = 100, Height = 100 };
         host.Content = root;
-        ((Adamantium.UI.Core.IMeasurableComponent)host).Measure(new Size(100, 100));
+        ((Adamantium.UI.Core.IMeasurableComponent)host).Measure(new Size<double>(100, 100));
 
         Assert.That(AnimationManager.ActiveCount, Is.GreaterThan(before),
             "the request waited for the element to go up - it must be running now");

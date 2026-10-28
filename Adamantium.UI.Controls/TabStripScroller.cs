@@ -275,8 +275,8 @@ public class TabStripScroller : InputUIComponent, IContainer
         };
         SetCurrentValue(OpacityMaskProperty, new LinearGradientBrush(stops)
         {
-            StartPoint = IsHorizontal ? new Vector2(0, 0.5) : new Vector2(0.5, 0),
-            EndPoint = IsHorizontal ? new Vector2(1, 0.5) : new Vector2(0.5, 1)
+            StartPoint = IsHorizontal ? new Vector2<double>(0, 0.5) : new Vector2<double>(0.5, 0),
+            EndPoint = IsHorizontal ? new Vector2<double>(1, 0.5) : new Vector2<double>(0.5, 1)
         });
     }
 
@@ -295,10 +295,10 @@ public class TabStripScroller : InputUIComponent, IContainer
         }
     }
 
-    protected override Size MeasureOverride(Size availableSize)
+    protected override Size<double> MeasureOverride(Size<double> availableSize)
     {
         var child = Child;
-        if (child == null) return Size.Zero;
+        if (child == null) return Size<double>.Zero;
 
         ResolveInner();
 
@@ -307,8 +307,8 @@ public class TabStripScroller : InputUIComponent, IContainer
         var probe = Delegating
             ? availableSize
             : (IsHorizontal
-                ? new Size(double.PositiveInfinity, availableSize.Height)
-                : new Size(availableSize.Width, double.PositiveInfinity));
+                ? new Size<double>(double.PositiveInfinity, availableSize.Height)
+                : new Size<double>(availableSize.Width, double.PositiveInfinity));
         _measuringChild = true;
         try
         {
@@ -325,11 +325,11 @@ public class TabStripScroller : InputUIComponent, IContainer
 
         // Take the child's cross size, but only as much of the axis as offered (so we clip, never overflow the parent).
         return IsHorizontal
-            ? new Size(Math.Min(d.Width, availableSize.Width), d.Height)
-            : new Size(d.Width, Math.Min(d.Height, availableSize.Height));
+            ? new Size<double>(Math.Min(d.Width, availableSize.Width), d.Height)
+            : new Size<double>(d.Width, Math.Min(d.Height, availableSize.Height));
     }
 
-    protected override Size ArrangeOverride(Size finalSize)
+    protected override Size<double> ArrangeOverride(Size<double> finalSize)
     {
         var child = Child;
         if (child != null)
@@ -376,7 +376,7 @@ public class TabStripScroller : InputUIComponent, IContainer
     private void PushOffset()
     {
         if (!Delegating) return;
-        var wanted = IsHorizontal ? new Vector2((float)_offset, 0) : new Vector2(0, (float)_offset);
+        var wanted = IsHorizontal ? new Vector2<double>((float)_offset, 0) : new Vector2<double>(0, (float)_offset);
         if (_inner.Offset != wanted) _inner.SetOffset(wanted);
     }
 

@@ -10,9 +10,9 @@ namespace Adamantium.UI.Rendering;
 internal static class FringeGeometry
 {
     /// <summary>Each drawable contour (>= 3 points) with the sign that makes its fringe feather AWAY from the fill.</summary>
-    public static List<(Vector2[] Points, float Winding)> Build(IReadOnlyList<(Vector2[] Points, bool IsClosed)> contours)
+    public static List<(Vector2<double>[] Points, float Winding)> Build(IReadOnlyList<(Vector2<double>[] Points, bool IsClosed)> contours)
     {
-        List<(Vector2[] Points, float Winding)> built = [];
+        List<(Vector2<double>[] Points, float Winding)> built = [];
         foreach (var (points, _) in contours)
         {
             if (points is not { Length: >= 3 }) continue;   // a fill contour needs at least a triangle
@@ -26,7 +26,7 @@ internal static class FringeGeometry
 
     /// <summary>The ring's triangles for one mesh's contours, laid out as ONE vertex list (6 verts per contour segment,
     /// contours back to back) so a shared ring is a single draw.</summary>
-    public static FringeVertex[] BuildRing(List<(Vector2[] Points, float Winding)> contours)
+    public static FringeVertex[] BuildRing(List<(Vector2<double>[] Points, float Winding)> contours)
     {
         var total = 0;
         foreach (var (points, _) in contours) total += points.Length * 6;
@@ -62,7 +62,7 @@ internal static class FringeGeometry
 
     // The two adjacent edge directions at contour point i, with Winding folded into their sign (reversing a direction
     // reverses its 90-degree normal, which is how a hole feathers inward). Closed loop => i always has both neighbors.
-    private static void EdgeDirs(Vector2[] points, int i, float winding, out Vector2F d0, out Vector2F d1)
+    private static void EdgeDirs(Vector2<double>[] points, int i, float winding, out Vector2F d0, out Vector2F d1)
     {
         var n = points.Length;
         var prev = (i + n - 1) % n;
@@ -71,7 +71,7 @@ internal static class FringeGeometry
         d1 = SafeDir(points[next] - points[i]) * winding;
     }
 
-    private static Vector2F SafeDir(Vector2 v)
+    private static Vector2F SafeDir(Vector2<double> v)
     {
         var len = Math.Sqrt(v.X * v.X + v.Y * v.Y);
         if (len <= 1e-9) return Vector2F.Zero;   // duplicate contour points would otherwise produce a NaN direction
@@ -82,7 +82,7 @@ internal static class FringeGeometry
     // must feather INWARD (toward the hole), opposite an outer contour. Winding alone can't tell them apart (the
     // tessellator emits holes with the same winding as outers), so flip holes here. A probe VERTEX is used, not the
     // centroid - a frame-shaped outer's centroid can fall inside its own hole and misclassify it.
-    private static void ApplyNesting(List<(Vector2[] Points, float Winding)> built)
+    private static void ApplyNesting(List<(Vector2<double>[] Points, float Winding)> built)
     {
         for (var i = 0; i < built.Count; i++)
         {
@@ -95,7 +95,7 @@ internal static class FringeGeometry
     }
 
     // Ray-cast point-in-polygon (used to find a contour's even-odd nesting depth -> hole vs outer).
-    private static bool PointInPolygon(Vector2 p, Vector2[] poly)
+    private static bool PointInPolygon(Vector2<double> p, Vector2<double>[] poly)
     {
         var inside = false;
         for (int i = 0, j = poly.Length - 1; i < poly.Length; j = i++)
@@ -107,7 +107,7 @@ internal static class FringeGeometry
         return inside;
     }
 
-    private static double SignedArea(Vector2[] p)
+    private static double SignedArea(Vector2<double>[] p)
     {
         double a = 0;
         for (int i = 0, n = p.Length; i < n; i++)

@@ -32,7 +32,7 @@ public class RibbonGroupsPanel : Panel
     private IUIComponent SelectedHeader() =>
         this.GetVisualAncestors().OfType<Ribbon>().FirstOrDefault()?.SelectedHeader;
 
-    protected override Size MeasureOverride(Size availableSize)
+    protected override Size<double> MeasureOverride(Size<double> availableSize)
     {
         double width = 0, height = 0;
         foreach (var child in Children)
@@ -40,15 +40,15 @@ public class RibbonGroupsPanel : Panel
             if (child.Visibility != Visibility.Visible) continue;
 
             // Unbounded: what a group GETS is the arrange slot, and the variant is chosen from that.
-            child.Measure(new Size(double.PositiveInfinity, availableSize.Height));
+            child.Measure(new Size<double>(double.PositiveInfinity, availableSize.Height));
             width += child.DesiredSize.Width;
             height = Math.Max(height, child.DesiredSize.Height);
         }
 
-        return new Size(width, height);
+        return new Size<double>(width, height);
     }
 
-    protected override Size ArrangeOverride(Size finalSize)
+    protected override Size<double> ArrangeOverride(Size<double> finalSize)
     {
         // From the SLOT, never the measure constraint - a parent may measure unbounded just to learn our natural size.
         ChooseVariants(finalSize.Width);
@@ -60,7 +60,7 @@ public class RibbonGroupsPanel : Panel
             if (child.Visibility != Visibility.Visible) continue;
 
             // The chosen variant may have just changed the sizes underneath it.
-            child.Measure(new Size(double.PositiveInfinity, finalSize.Height));
+            child.Measure(new Size<double>(double.PositiveInfinity, finalSize.Height));
 
             var width = WidthOf(child);
             _slots.Add((child, x, width));
@@ -73,7 +73,7 @@ public class RibbonGroupsPanel : Panel
         _extent = x;
         _viewport = finalSize.Width;
         Clamp();
-        return new Size(finalSize.Width, finalSize.Height);
+        return new Size<double>(finalSize.Width, finalSize.Height);
     }
 
     // --- Scrolling the row -------------------------------------------------------------------------------------------

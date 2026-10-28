@@ -19,17 +19,17 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
     // threshold keeps a plain click on interactive content from being swallowed as a pan.
     private const double PanThreshold = 4;
     private bool _isPanning;
-    private Vector2 _panStartPoint;
-    private Vector2 _panStartOffset;
+    private Vector2<double> _panStartPoint;
+    private Vector2<double> _panStartOffset;
 
     private Pointer _finger;
-    private Vector2 _fingerStart;
-    private Vector2 _fingerStartOffset;
+    private Vector2<double> _fingerStart;
+    private Vector2<double> _fingerStartOffset;
     private bool _fingerScrolling;
 
-    private Size _extent;
-    private Size _viewport;
-    private Vector2 _offset;
+    private Size<double> _extent;
+    private Size<double> _viewport;
+    private Vector2<double> _offset;
 
     // --- Inertia (kinetic) scrolling: smooth wheel + flick momentum, driven by the AnimationManager heartbeat. The feel
     // is per-instance (tunable per control via the ScrollViewer that owns this presenter), not hardcoded. ---
@@ -48,8 +48,8 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
 
     private bool _inertiaActive;        // logically scrolling under inertia
     private bool _inertiaRegistered;    // a ticker is registered with the AnimationManager
-    private Vector2? _inertiaTarget;    // set => smooth-to-target (wheel); null => flick (velocity) mode
-    private Vector2 _inertiaVelocity;   // px/s, flick mode
+    private Vector2<double>? _inertiaTarget;    // set => smooth-to-target (wheel); null => flick (velocity) mode
+    private Vector2<double> _inertiaVelocity;   // px/s, flick mode
 
     // Pan velocity tracking, to fling on release.
     private uint _lastMoveTimestamp;
@@ -57,8 +57,8 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
 
     // How long a hand may rest before it lifts and still flick: longer than a frame or two, shorter than a pause.
     private const uint FlickRestMs = 100;
-    private Vector2 _lastMoveOffset;
-    private Vector2 _panVelocity;
+    private Vector2<double> _lastMoveOffset;
+    private Vector2<double> _panVelocity;
 
     /// <summary>Enables inertial scrolling (smooth wheel + flick momentum). On by default; a ScrollViewer/theme can
     /// turn it off to get instant scrolling back.</summary>
@@ -74,8 +74,8 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
 
     private bool Delegating => CanContentScroll && _inner != null;
 
-    private Size _measuredSlot;
-    private Size _answered;
+    private Size<double> _measuredSlot;
+    private Size<double> _answered;
     private bool _measuring;
 
     public ScrollContentPresenter()
@@ -97,16 +97,16 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
     /// the exception rather than the rule.</summary>
     public override bool ClipsAdorners => true;
 
-    public Size Extent => Delegating ? _inner.Extent : _extent;
+    public Size<double> Extent => Delegating ? _inner.Extent : _extent;
 
-    public Size Viewport => _viewport;
+    public Size<double> Viewport => _viewport;
 
-    public Vector2 Offset => Delegating ? _inner.Offset : _offset;
+    public Vector2<double> Offset => Delegating ? _inner.Offset : _offset;
 
     // The offset our LAST arrange actually translated the content to (see IScrollableContent.RealizedOffset). When we
     // delegate to a virtualizing panel, that's the offset ITS window was realized for; a physical (non-delegating) content
     // arranges to _offset directly, so it's just _offset.
-    public Vector2 RealizedOffset => Delegating ? _inner.RealizedOffset : _offset;
+    public Vector2<double> RealizedOffset => Delegating ? _inner.RealizedOffset : _offset;
 
     public bool CanScrollHorizontally { get; set; } = true;
 
@@ -120,14 +120,14 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
 
     public event EventHandler ScrollMetricsChanged;
 
-    public void SetOffset(Vector2 offset)
+    public void SetOffset(Vector2<double> offset)
     {
         StopInertia();   // a direct (scrollbar / programmatic) offset set cancels any in-flight inertia
         SetOffsetCore(offset);
     }
 
     // The actual offset set, WITHOUT canceling inertia - used by the inertia ticker itself.
-    private void SetOffsetCore(Vector2 offset)
+    private void SetOffsetCore(Vector2<double> offset)
     {
         if (Delegating)
         {
@@ -144,7 +144,7 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
 
     /// <summary>Smoothly scrolls by <paramref name="delta"/> (the wheel path): eases toward an accumulating target, so
     /// rapid notches add up instead of jumping. Instant set when inertia is off.</summary>
-    public void AnimateScrollBy(Vector2 delta)
+    public void AnimateScrollBy(Vector2<double> delta)
     {
         if (!IsInertiaEnabled)
         {
@@ -159,7 +159,7 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
         EnsureInertiaTicker();
     }
 
-    private void StartFlick(Vector2 velocity)
+    private void StartFlick(Vector2<double> velocity)
     {
         _inertiaVelocity = velocity;
         _inertiaTarget = null;
@@ -188,7 +188,7 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
         if (!_inertiaActive) { _inertiaRegistered = false; return true; }
 
         var before = Offset;
-        Vector2 next;
+        Vector2<double> next;
         if (_inertiaTarget.HasValue)
         {
             var t = 1.0 - Math.Exp(-InertiaSmoothRate * dt);
@@ -252,8 +252,8 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
         // i.e. the offset moves opposite the pointer.
         var delta = PanningMode switch
         {
-            PanningMode.HorizontalOnly => new Vector2(raw.X, 0),
-            PanningMode.VerticalOnly => new Vector2(0, raw.Y),
+            PanningMode.HorizontalOnly => new Vector2<double>(raw.X, 0),
+            PanningMode.VerticalOnly => new Vector2<double>(0, raw.Y),
             _ => raw
         };
         SetOffsetCore(_panStartOffset - delta);   // pan drives the offset directly (Down already stopped inertia)
@@ -387,7 +387,7 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
         for (var at = element?.VisualParent; at != null; at = at.VisualParent)
         {
             if (at is ScrollContentPresenter { IsTouchScrollEnabled: true } presenter &&
-                presenter.Scrollable(Vector2.One) != Vector2.Zero)
+                presenter.Scrollable(Vector2<double>.One) != Vector2<double>.Zero)
             {
                 return false;
             }
@@ -397,10 +397,10 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
     }
 
     // A drag along the axes this content can actually move on; the others stay put.
-    private Vector2 Scrollable(Vector2 drag)
+    private Vector2<double> Scrollable(Vector2<double> drag)
     {
         var extent = Extent;
-        return new Vector2(
+        return new Vector2<double>(
             CanScrollHorizontally && extent.Width > _viewport.Width ? drag.X : 0,
             CanScrollVertically && extent.Height > _viewport.Height ? drag.Y : 0);
     }
@@ -427,7 +427,7 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
         _isPanning = false;
     }
 
-    protected override Size MeasureOverride(Size availableSize)
+    protected override Size<double> MeasureOverride(Size<double> availableSize)
     {
         // The content stands at its own top, wherever it is scrolled to.
         (VisualChildren.FirstOrDefault() as Base.MeasurableUIComponent)?.PlaceAt(0, double.NaN);
@@ -452,8 +452,8 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
                 // before it resolves the row), not telling us the whole content is on screen. Taking it for a viewport
                 // wipes the scroll range and zeroes the offset every pass - the list then refuses to scroll. The viewport
                 // is what ARRANGE hands us; measure only answers with a desired size.
-                if (!double.IsInfinity(availableSize.Width)) _viewport = new Size(availableSize.Width, _viewport.Height);
-                if (!double.IsInfinity(availableSize.Height)) _viewport = new Size(_viewport.Width, availableSize.Height);
+                if (!double.IsInfinity(availableSize.Width)) _viewport = new Size<double>(availableSize.Width, _viewport.Height);
+                if (!double.IsInfinity(availableSize.Height)) _viewport = new Size<double>(_viewport.Width, availableSize.Height);
                 RaiseMetricsChanged();
                 // The content capped by the slot, as on the physical path below: a list shorter than its popup's
                 // MaxHeight shrinks to its rows instead of padding out to the cap.
@@ -465,7 +465,7 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
 
         // Physical path: measure the content unbounded on every axis the viewer allows scrolling, so it reports its
         // natural extent; constrained on a disabled axis so it fits.
-        var constraint = new Size(
+        var constraint = new Size<double>(
             CanScrollHorizontally ? double.PositiveInfinity : availableSize.Width,
             CanScrollVertically ? double.PositiveInfinity : availableSize.Height);
 
@@ -480,12 +480,12 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
         // viewport: a viewer measured content-to-fit but capped by MaxHeight (e.g. a DropDown popup) must shrink to its
         // content when it's shorter than the cap, not pad out to the cap. A viewer that should FILL a fixed slot still
         // does - its Stretch alignment fills at ARRANGE regardless of this (smaller) desired size.
-        return new Size(
+        return new Size<double>(
             double.IsInfinity(availableSize.Width) ? extent.Width : Math.Min(extent.Width, availableSize.Width),
             double.IsInfinity(availableSize.Height) ? extent.Height : Math.Min(extent.Height, availableSize.Height));
     }
 
-    protected override Size ArrangeOverride(Size finalSize)
+    protected override Size<double> ArrangeOverride(Size<double> finalSize)
     {
         _viewport = finalSize;
 
@@ -535,7 +535,7 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
 
     private static IScrollableContent FindInner(IUIComponent root) => ScrollableContent.FindIn(root);
 
-    private Vector2 _lastTranslatedInnerOffset;
+    private Vector2<double> _lastTranslatedInnerOffset;
 
     private void OnInnerMetricsChanged(object sender, EventArgs e)
     {
@@ -546,16 +546,16 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
         RaiseMetricsChanged();
     }
 
-    private Size ContentInSlot(Size slot) => new(
+    private Size<double> ContentInSlot(Size<double> slot) => new(
         double.IsInfinity(slot.Width) ? _inner.Extent.Width : Math.Min(_inner.Extent.Width, slot.Width),
         double.IsInfinity(slot.Height) ? _inner.Extent.Height : Math.Min(_inner.Extent.Height, slot.Height));
 
     private void RaiseMetricsChanged() => ScrollMetricsChanged?.Invoke(this, EventArgs.Empty);
 
-    private static Vector2 ClampOffset(Vector2 offset, Size extent, Size viewport)
+    private static Vector2<double> ClampOffset(Vector2<double> offset, Size<double> extent, Size<double> viewport)
     {
         var maxX = Math.Max(0, extent.Width - viewport.Width);
         var maxY = Math.Max(0, extent.Height - viewport.Height);
-        return new Vector2(Math.Clamp(offset.X, 0, maxX), Math.Clamp(offset.Y, 0, maxY));
+        return new Vector2<double>(Math.Clamp(offset.X, 0, maxX), Math.Clamp(offset.Y, 0, maxY));
     }
 }

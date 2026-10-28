@@ -50,7 +50,7 @@ public class ItemsControlTests
             result.RegisterName("PART_ItemsPresenter", presenter);
             return result;
         });
-        ic.Measure(new Size(500, 500));
+        ic.Measure(new Size<double>(500, 500));
         ic.Arrange(new Rect(0, 0, 500, 500));
         return ic;
     }
@@ -85,7 +85,7 @@ public class ItemsControlTests
         var ic = new RecordingItemsControl { Template = ItemsPresenterTemplate() };
         ic.Items.Add(authored);
 
-        ic.Measure(new Size(500, 500));
+        ic.Measure(new Size<double>(500, 500));
         ic.Arrange(new Rect(0, 0, 500, 500));
 
         Assert.That(ic.Prepared, Does.Contain((authored, (object)authored)));
@@ -100,7 +100,7 @@ public class ItemsControlTests
         var ic = new ItemsControl { Template = ItemsPresenterTemplate() };
         ic.Items.Add(authored);
 
-        ic.Measure(new Size(500, 500));
+        ic.Measure(new Size<double>(500, 500));
         ic.Arrange(new Rect(0, 0, 500, 500));
 
         Assert.That(authored.Content, Is.EqualTo("written by hand"));
@@ -154,7 +154,7 @@ public class ItemsControlTests
             return new TemplateResult { RootComponent = inner };
         });
 
-        owner.Measure(new Size(500, 500));
+        owner.Measure(new Size<double>(500, 500));
         owner.Arrange(new Rect(0, 0, 500, 500));
 
         Assert.That(button.VisualParent, Is.SameAs(inner.ItemsHostPanel));
@@ -211,7 +211,7 @@ public class ItemsControlTests
         var first = free.VisualParent;
 
         ic.ItemsPanel = new ItemsPanelTemplate(() => new TemplateResult { RootComponent = new Grid() });
-        ic.Measure(new Size(500, 500));
+        ic.Measure(new Size<double>(500, 500));
         ic.Arrange(new Rect(0, 0, 500, 500));
 
         Assert.Multiple(() =>
@@ -230,7 +230,7 @@ public class ItemsControlTests
 
         var ic = new ItemsControl { ItemTemplate = template, ItemsSource = items };
         ic.Template = ItemsPresenterTemplate();              // default ItemsPanel = vertical (virtualizing) StackPanel
-        ic.Measure(new Size(100, 300));
+        ic.Measure(new Size<double>(100, 300));
         ic.Arrange(new Rect(0, 0, 100, 300));
 
         var gen = ic.ItemContainerGenerator;
@@ -246,8 +246,8 @@ public class ItemsControlTests
         });
 
         // Scroll to the middle (item ~250 = 5000/20): the window must move there and stay bounded.
-        scroll.SetOffset(new Vector2(0, 5000));
-        panel.Measure(new Size(100, 300), true);
+        scroll.SetOffset(new Vector2<double>(0, 5000));
+        panel.Measure(new Size<double>(100, 300), true);
         panel.Arrange(new Rect(0, 0, 100, 300), true);
 
         var realized = gen.RealizedIndices.ToList();
@@ -262,8 +262,8 @@ public class ItemsControlTests
     private static void ScrollTo(ItemsControl list, double offset)
     {
         var panel = list.ItemsHostPanel;
-        ((IScrollableContent)panel).SetOffset(new Vector2(0, offset));
-        panel.Measure(new Size(100, 300), true);
+        ((IScrollableContent)panel).SetOffset(new Vector2<double>(0, offset));
+        panel.Measure(new Size<double>(100, 300), true);
         panel.Arrange(new Rect(0, 0, 100, 300), true);
     }
 
@@ -278,7 +278,7 @@ public class ItemsControlTests
             ItemsSource = Enumerable.Range(0, 1000).Cast<object>().ToList(),
             Template = ItemsPresenterTemplate()
         };
-        list.Measure(new Size(100, 300));
+        list.Measure(new Size<double>(100, 300));
         list.Arrange(new Rect(0, 0, 100, 300));
         var generator = list.ItemContainerGenerator;
         var first = (ListBoxItem)generator.ContainerFromIndex(0);
@@ -317,7 +317,7 @@ public class ItemsControlTests
             ItemsSource = items,
             Template = ItemsPresenterTemplate()
         };
-        list.Measure(new Size(100, 300));
+        list.Measure(new Size<double>(100, 300));
         list.Arrange(new Rect(0, 0, 100, 300));
         return list;
     }
@@ -396,7 +396,7 @@ public class ItemsControlTests
         var root = new StackPanel();
         root.Children.Add(before);
         root.Children.Add(list);
-        root.Measure(new Size(100, 400));
+        root.Measure(new Size<double>(100, 400));
         root.Arrange(new Rect(0, 0, 100, 400));
         var generator = list.ItemContainerGenerator;
         FocusManager.Focus((ListBoxItem)generator.ContainerFromIndex(3));
@@ -420,7 +420,7 @@ public class ItemsControlTests
         root.Children.Add(before);
         root.Children.Add(list);
         root.Children.Add(after);
-        root.Measure(new Size(100, 400));
+        root.Measure(new Size<double>(100, 400));
         root.Arrange(new Rect(0, 0, 100, 400));
         return (root, before, after);
     }
@@ -533,7 +533,7 @@ public class ItemsControlTests
             })
         };
         ic.Template = ItemsPresenterTemplate();
-        ic.Measure(new Size(200, 300));            // 4 columns
+        ic.Measure(new Size<double>(200, 300));            // 4 columns
         ic.Arrange(new Rect(0, 0, 200, 300));
 
         var gen = ic.ItemContainerGenerator;
@@ -543,7 +543,7 @@ public class ItemsControlTests
 
         var panel = (VirtualizingPanel)ic.ItemsHostPanel;
         panel.DropGapIndex = 1;
-        panel.Measure(new Size(200, 300), true);
+        panel.Measure(new Size<double>(200, 300), true);
         panel.Arrange(new Rect(0, 0, 200, 300), true);
 
         Assert.Multiple(() =>
@@ -574,11 +574,11 @@ public class ItemsControlTests
             })
         };
         ic.Template = ItemsPresenterTemplate();
-        ic.Measure(new Size(200, 300));            // 4 columns of 50
+        ic.Measure(new Size<double>(200, 300));            // 4 columns of 50
         ic.Arrange(new Rect(0, 0, 200, 300));
 
         var panel = (VirtualizingPanel)ic.ItemsHostPanel;
-        var overSlot6 = new Vector2(110, 60);      // column 2, line 1
+        var overSlot6 = new Vector2<double>(110, 60);      // column 2, line 1
 
         Assert.That(panel.TryGetDropSlot(overSlot6, out var before), Is.True);
         Assert.That(before, Is.EqualTo(6), "column 2 of line 1");
@@ -586,7 +586,7 @@ public class ItemsControlTests
         foreach (var gap in new[] { 0, 5, 6, 7, 11 })
         {
             panel.DropGapIndex = gap;
-            panel.Measure(new Size(200, 300), true);
+            panel.Measure(new Size<double>(200, 300), true);
             panel.Arrange(new Rect(0, 0, 200, 300), true);
 
             Assert.That(panel.TryGetDropSlot(overSlot6, out var withGap), Is.True);
@@ -612,7 +612,7 @@ public class ItemsControlTests
             })
         };
         ic.Template = ItemsPresenterTemplate();
-        ic.Measure(new Size(200, 300));            // 4 columns (200/50), 6 visible rows (300/50)
+        ic.Measure(new Size<double>(200, 300));            // 4 columns (200/50), 6 visible rows (300/50)
         ic.Arrange(new Rect(0, 0, 200, 300));
 
         var gen = ic.ItemContainerGenerator;
@@ -629,8 +629,8 @@ public class ItemsControlTests
         });
 
         // Scroll down to line 20 (1000 / 50): the realized grid window moves there.
-        scroll.SetOffset(new Vector2(0, 1000));
-        panel.Measure(new Size(200, 300), true);
+        scroll.SetOffset(new Vector2<double>(0, 1000));
+        panel.Measure(new Size<double>(200, 300), true);
         panel.Arrange(new Rect(0, 0, 200, 300), true);
 
         var realized = gen.RealizedIndices.ToList();
@@ -666,7 +666,7 @@ public class ItemsControlTests
             ic.Template = ItemsPresenterTemplate();
             var gen = ic.ItemContainerGenerator;
 
-            ic.Measure(new Size(300, 300));
+            ic.Measure(new Size<double>(300, 300));
             ic.Arrange(new Rect(0, 0, 300, 300));
             var panel = ic.ItemsHostPanel;
             var scroll = (IScrollableContent)panel;
@@ -685,7 +685,7 @@ public class ItemsControlTests
             var passes = 0;
             while (gen.RealizedCount < 600 && passes < 200)
             {
-                panel.Measure(new Size(300, 300), true);
+                panel.Measure(new Size<double>(300, 300), true);
                 panel.Arrange(new Rect(0, 0, 300, 300), true);
                 Assert.That(gen.RealizedCount - prev, Is.LessThanOrEqualTo(slice), "a pass grows the window by at most one bind slice");
                 prev = gen.RealizedCount;
@@ -716,7 +716,7 @@ public class ItemsControlTests
         };
         ic.Template = ItemsPresenterTemplate();
 
-        ic.Measure(new Size(300, 300));
+        ic.Measure(new Size<double>(300, 300));
         ic.Arrange(new Rect(0, 0, 300, 300));
         var panel = (WrapPanel)ic.ItemsHostPanel;
         var gen = ic.ItemContainerGenerator;
@@ -724,7 +724,7 @@ public class ItemsControlTests
         // Slider up: grow the cell 30 -> 120. Panel re-measures + re-arranges its realized window.
         panel.ItemWidth = 120;
         panel.ItemHeight = 120;
-        panel.Measure(new Size(300, 300), true);
+        panel.Measure(new Size<double>(300, 300), true);
         panel.Arrange(new Rect(0, 0, 300, 300), true);
 
         Assert.Multiple(() =>
@@ -780,7 +780,7 @@ public class ItemsControlTests
         lb.Items.Add(label);
         lb.Items.Add("b");
         lb.Items.Add("c");
-        lb.Measure(new Size(200, 200));
+        lb.Measure(new Size<double>(200, 200));
         lb.Arrange(new Rect(0, 0, 200, 200));
 
         var generator = lb.ItemContainerGenerator;
@@ -807,7 +807,7 @@ public class ItemsControlTests
         var label = new TextBlock { Text = "own" };
         var lb = new ListBox { ItemContainerStyle = containerStyle, Template = ItemsPresenterTemplate() };
         lb.Items.Add(label);
-        lb.Measure(new Size(200, 200));
+        lb.Measure(new Size<double>(200, 200));
         lb.Arrange(new Rect(0, 0, 200, 200));
         var wrapper = (ListBoxItem)lb.ItemContainerGenerator.ContainerFromIndex(0);
 
@@ -860,14 +860,14 @@ public class ItemsControlTests
             ItemTemplate = new DataTemplate(() => new TemplateResult { RootComponent = new Border() })
         };
         lb.Template = ItemsPresenterTemplate();
-        lb.Measure(new Size(300, 300));
+        lb.Measure(new Size<double>(300, 300));
         lb.Arrange(new Rect(0, 0, 300, 300));
         var panel = (WrapPanel)lb.ItemsHostPanel;
         var gen = lb.ItemContainerGenerator;
 
         panel.ItemWidth = 120;
         panel.ItemHeight = 120;
-        panel.Measure(new Size(300, 300), true);
+        panel.Measure(new Size<double>(300, 300), true);
         panel.Arrange(new Rect(0, 0, 300, 300), true);
 
         Assert.Multiple(() =>
@@ -901,9 +901,9 @@ public class ItemsControlTests
             Content = content
         };
 
-        item.Measure(Size.Infinity);
+        item.Measure(Size<double>.Infinity);
         item.Arrange(new Rect(0, 0, 30, 30));
-        item.Measure(Size.Infinity);              // cell grew; constraint unchanged -> measure gate-skips
+        item.Measure(Size<double>.Infinity);              // cell grew; constraint unchanged -> measure gate-skips
         item.Arrange(new Rect(0, 0, 120, 120));   // only arrange carries the grown cell
 
         Assert.Multiple(() =>
@@ -931,17 +931,17 @@ public class ItemsControlTests
             ItemTemplate = new DataTemplate(() => new TemplateResult { RootComponent = new Border() })
         };
         ic.Template = ItemsPresenterTemplate();
-        ic.Measure(new Size(300, 300));
+        ic.Measure(new Size<double>(300, 300));
         ic.Arrange(new Rect(0, 0, 300, 300));
         var panel = (WrapPanel)ic.ItemsHostPanel;
         var scroll = (IScrollableContent)panel;
         var gen = ic.ItemContainerGenerator;
 
         // Scroll far down (rebinds the realized containers to far indices) AND grow the cell in the same relayout.
-        scroll.SetOffset(new Vector2(0, 2000));
+        scroll.SetOffset(new Vector2<double>(0, 2000));
         panel.ItemWidth = 120;
         panel.ItemHeight = 120;
-        panel.Measure(new Size(300, 300), true);
+        panel.Measure(new Size<double>(300, 300), true);
         panel.Arrange(new Rect(0, 0, 300, 300), true);
 
         Assert.Multiple(() =>
@@ -1067,7 +1067,7 @@ public class ItemsControlTests
             })
         };
         ic.Template = ItemsPresenterTemplate();
-        ic.Measure(new Size(320, 240));
+        ic.Measure(new Size<double>(320, 240));
         ic.Arrange(new Rect(0, 0, 320, 240));
 
         var gen = ic.ItemContainerGenerator;
@@ -1076,8 +1076,8 @@ public class ItemsControlTests
 
         void LayoutAt(double y)
         {
-            scroll.SetOffset(new Vector2(0, y));
-            panel.Measure(new Size(320, 240), true);
+            scroll.SetOffset(new Vector2<double>(0, y));
+            panel.Measure(new Size<double>(320, 240), true);
             panel.Arrange(new Rect(0, 0, 320, 240), true);
         }
 
@@ -1122,7 +1122,7 @@ public class ItemsControlTests
             ItemTemplate = new DataTemplate(() => new TemplateResult { RootComponent = new Border { Height = 20 } })
         };
         ic.Template = ItemsPresenterTemplate();
-        ic.Measure(new Size(100, 300));
+        ic.Measure(new Size<double>(100, 300));
         ic.Arrange(new Rect(0, 0, 100, 300));
 
         var gen = ic.ItemContainerGenerator;
@@ -1135,8 +1135,8 @@ public class ItemsControlTests
         // Scroll through the entire 10k list a viewport at a time.
         for (double y = 0; y <= scroll.Extent.Height - 300; y += 300)
         {
-            scroll.SetOffset(new Vector2(0, y));
-            panel.Measure(new Size(100, 300), true);
+            scroll.SetOffset(new Vector2<double>(0, y));
+            panel.Measure(new Size<double>(100, 300), true);
             panel.Arrange(new Rect(0, 0, 100, 300), true);
 
             foreach (var i in gen.RealizedIndices)
@@ -1165,7 +1165,7 @@ public class ItemsControlTests
         // A ScrollContentPresenter (CanContentScroll) hosting the items control must delegate its scroll surface to the
         // inner virtualizing panel - WPF's CanContentScroll on the IScrollableContent seam.
         var scp = new ScrollContentPresenter { CanContentScroll = true, Content = ic };
-        scp.Measure(new Size(100, 300));
+        scp.Measure(new Size<double>(100, 300));
         scp.Arrange(new Rect(0, 0, 100, 300));
 
         var surface = (IScrollableContent)scp;
@@ -1175,8 +1175,8 @@ public class ItemsControlTests
         Assert.That(surface.Extent.Height, Is.EqualTo(10000 * 20).Within(1), "SCP delegates extent to the inner panel");
 
         // Scrolling via the SCP reaches the panel; drive the panel layout to realize the new window.
-        surface.SetOffset(new Vector2(0, 5000));
-        panel.Measure(new Size(100, 300), true);
+        surface.SetOffset(new Vector2<double>(0, 5000));
+        panel.Measure(new Size<double>(100, 300), true);
         panel.Arrange(new Rect(0, 0, 100, 300), true);
 
         Assert.Multiple(() =>
@@ -1201,7 +1201,7 @@ public class ItemsControlTests
         ic.Template = ItemsPresenterTemplate();
         var scp = new ScrollContentPresenter { CanContentScroll = true, Content = ic };
 
-        scp.Measure(new Size(400, 300));
+        scp.Measure(new Size<double>(400, 300));
 
         Assert.Multiple(() =>
         {
@@ -1391,7 +1391,7 @@ public class ItemsControlTests
         var panel = ic.ItemsHostPanel;
         var scroll = (IScrollableContent)panel;
 
-        void Scroll(double y) { scroll.SetOffset(new Vector2(0, y)); Adamantium.UI.Extensions.WindowExtension.UpdateTree(host); }
+        void Scroll(double y) { scroll.SetOffset(new Vector2<double>(0, y)); Adamantium.UI.Extensions.WindowExtension.UpdateTree(host); }
 
         Assert.Multiple(() =>
         {
@@ -1437,7 +1437,7 @@ public class ItemsControlTests
         var gen = ic.ItemContainerGenerator;
         var surface = (IScrollableContent)scp;
 
-        void Scroll(double y) { surface.SetOffset(new Vector2(0, y)); Adamantium.UI.Extensions.WindowExtension.UpdateTree(host); }
+        void Scroll(double y) { surface.SetOffset(new Vector2<double>(0, y)); Adamantium.UI.Extensions.WindowExtension.UpdateTree(host); }
 
         static double WorldY(IUIComponent c) =>
             new Rect(0, 0, c.RenderSize.Width, c.RenderSize.Height).TransformToAABB(c.WorldTransform).Y;
@@ -1497,7 +1497,7 @@ public class ItemsControlTests
             for (var step = 0; step < 600; step++)   // 600 * 17 = 10200 > extent, so it sweeps the whole list and back
             {
                 off += step < 300 ? 17 : -17;        // forward then backward, to exercise both recycle directions
-                surface.SetOffset(new Vector2(0, off));
+                surface.SetOffset(new Vector2<double>(0, off));
                 Adamantium.UI.Extensions.WindowExtension.UpdateTree(host);
                 var actual = surface.Offset.Y;
 
@@ -1550,10 +1550,10 @@ public class ItemsControlTests
         var gen = ic.ItemContainerGenerator;
         var panel = ic.ItemsHostPanel;
         var surface = (IScrollableContent)scp;
-        static Vector2 World(IUIComponent c)
+        static Vector2<double> World(IUIComponent c)
         {
             var p = new Rect(0, 0, c.RenderSize.Width, c.RenderSize.Height).TransformToAABB(c.WorldTransform);
-            return new Vector2((float)p.X, (float)p.Y);
+            return new Vector2<double>((float)p.X, (float)p.Y);
         }
 
         Assert.Multiple(() =>
@@ -1562,7 +1562,7 @@ public class ItemsControlTests
             for (var step = 0; step < 600; step++)
             {
                 off += step < 300 ? 17 : -17;
-                surface.SetOffset(new Vector2(0, off));
+                surface.SetOffset(new Vector2<double>(0, off));
                 Adamantium.UI.Extensions.WindowExtension.UpdateTree(host);
                 var actual = surface.Offset.Y;
 
@@ -1622,7 +1622,7 @@ public class ItemsControlTests
         {
             foreach (var y in new double[] { 0, 200, 1000, 5000, 200, 0 })
             {
-                surface.SetOffset(new Vector2(0, y));
+                surface.SetOffset(new Vector2<double>(0, y));
                 Adamantium.UI.Extensions.WindowExtension.UpdateTree(host);
                 var (node, dup) = FindDuplicateChild(host);
                 Assert.That(dup, Is.Null,
@@ -1647,7 +1647,7 @@ public class ItemsControlTests
 
         var ic = new ItemsControl { ItemTemplate = template, ItemsSource = people };
         ic.Template = ItemsPresenterTemplate();
-        ic.Measure(new Size(100, 300));
+        ic.Measure(new Size<double>(100, 300));
         ic.Arrange(new Rect(0, 0, 100, 300));
 
         var gen = ic.ItemContainerGenerator;
@@ -1656,8 +1656,8 @@ public class ItemsControlTests
 
         void ScrollTo(double y)
         {
-            scroll.SetOffset(new Vector2(0, y));
-            panel.Measure(new Size(100, 300), true);
+            scroll.SetOffset(new Vector2<double>(0, y));
+            panel.Measure(new Size<double>(100, 300), true);
             panel.Arrange(new Rect(0, 0, 100, 300), true);
         }
 
@@ -1701,7 +1701,7 @@ public class ItemsControlTests
         void Relayout()
         {
             var panel = ic.ItemsHostPanel;
-            panel.Measure(new Size(500, 500), true);
+            panel.Measure(new Size<double>(500, 500), true);
             panel.Arrange(new Rect(0, 0, 500, 500), true);
         }
 
@@ -1754,7 +1754,7 @@ public class ItemsControlTests
             ItemsSource = new[] { 0, 1, 2, 3 }.Cast<object>().ToList()
         };
         ic.Template = ItemsPresenterTemplate();
-        ic.Measure(new Size(200, 500));
+        ic.Measure(new Size<double>(200, 500));
         ic.Arrange(new Rect(0, 0, 200, 500));
 
         var gen = ic.ItemContainerGenerator;
@@ -1781,7 +1781,7 @@ public class ItemsControlTests
             })
         };
         ic.Template = ItemsPresenterTemplate();
-        ic.Measure(new Size(200, 500));
+        ic.Measure(new Size<double>(200, 500));
         ic.Arrange(new Rect(0, 0, 200, 500));
 
         var scroll = (IScrollableContent)ic.ItemsHostPanel;
@@ -1802,7 +1802,7 @@ public class ItemsControlTests
     {
         var ic = new CustomContainerItemsControl { ItemsSource = new[] { "a", "b" } };
         ic.Template = ItemsPresenterTemplate();
-        ic.Measure(new Size(200, 500));
+        ic.Measure(new Size<double>(200, 500));
         ic.Arrange(new Rect(0, 0, 200, 500));
 
         var gen = ic.ItemContainerGenerator;
@@ -1821,7 +1821,7 @@ public class ItemsControlTests
 
         var ic = new ItemsControl { ItemContainerStyle = style, ItemsSource = new[] { "a", "b", "c" } };
         ic.Template = ItemsPresenterTemplate();
-        ic.Measure(new Size(200, 500));
+        ic.Measure(new Size<double>(200, 500));
         ic.Arrange(new Rect(0, 0, 200, 500));
 
         var gen = ic.ItemContainerGenerator;
@@ -1863,7 +1863,7 @@ public class ItemsControlTests
         // ItemsSource bound to the view-model's collection (resolves against DataContext = vm).
         BindingEngine.SetBinding(ic, ItemsControl.ItemsSourceProperty, new Binding("People"));
         ic.Template = ItemsPresenterTemplate();
-        ic.Measure(new Size(200, 500));
+        ic.Measure(new Size<double>(200, 500));
         ic.Arrange(new Rect(0, 0, 200, 500));
 
         var gen = ic.ItemContainerGenerator;
@@ -1880,7 +1880,7 @@ public class ItemsControlTests
         // measure propagation means re-measuring ic alone wouldn't re-cascade into the still-valid panel ancestors.
         vm.People.Add(new ItemVm { Name = "Carol" });
         var panel = ic.ItemsHostPanel;
-        panel.Measure(new Size(200, 500), true);
+        panel.Measure(new Size<double>(200, 500), true);
         panel.Arrange(new Rect(0, 0, 200, 500), true);
         Assert.That(NameAt(2), Is.EqualTo("Carol"), "VM collection add -> new container");
     }
@@ -1899,7 +1899,7 @@ public class ItemsControlTests
             result.RegisterName("PART_ItemsPresenter", presenter);
             return result;
         });
-        ic.Measure(new Size(500, 500));
+        ic.Measure(new Size<double>(500, 500));
         ic.Arrange(new Rect(0, 0, 500, 500));
 
         var gen = ic.ItemContainerGenerator;
@@ -1932,7 +1932,7 @@ public class ItemsControlTests
         var root = new MenuItem { ItemTemplate = hdt, ItemsSource = items };
         root.Template = ItemsPresenterTemplate();
 
-        Assert.DoesNotThrow(() => { root.Measure(new Size(300, 300)); root.Arrange(new Rect(0, 0, 300, 300)); },
+        Assert.DoesNotThrow(() => { root.Measure(new Size<double>(300, 300)); root.Arrange(new Rect(0, 0, 300, 300)); },
             "realizing a menu that mixes MenuItem rows and a separator node must not throw");
 
         var gen = root.ItemContainerGenerator;
@@ -1959,7 +1959,7 @@ public class ItemsControlTests
 
         var root = new MenuItem { ItemTemplate = hdt, ItemsSource = new[] { parent, leaf } };
         root.Template = ItemsPresenterTemplate();
-        root.Measure(new Size(300, 300));
+        root.Measure(new Size<double>(300, 300));
         root.Arrange(new Rect(0, 0, 300, 300));
 
         var gen = root.ItemContainerGenerator;

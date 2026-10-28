@@ -66,7 +66,7 @@ internal sealed class WindowsInput : INativeMouse, INativeKeyboard, INativePlatf
 
     // SM_CXDOUBLECLK/SM_CYDOUBLECLK - the box the second click has to land in. Read live, like the rest: a mouse the
     // user swapped mid-session brings its own settings.
-    public Size DoubleClickSize => new(
+    public Size<double> DoubleClickSize => new(
         Win32Interop.GetSystemMetrics(SystemMetrics.Cxdoubleclk),
         Win32Interop.GetSystemMetrics(SystemMetrics.Cydoubleclk));
 
@@ -82,7 +82,7 @@ internal sealed class WindowsInput : INativeMouse, INativeKeyboard, INativePlatf
 
     // SM_CXDRAG/SM_CYDRAG - the user's own "how far before it's a drag" setting (Control Panel / registry). Read live
     // rather than cached: the user can change it while the app runs, and it is queried once per gesture, not per frame.
-    public Size DragThreshold => new(
+    public Size<double> DragThreshold => new(
         Win32Interop.GetSystemMetrics(SystemMetrics.Cxdrag),
         Win32Interop.GetSystemMetrics(SystemMetrics.Cydrag));
 }

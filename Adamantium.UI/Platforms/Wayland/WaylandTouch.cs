@@ -45,7 +45,7 @@ internal sealed class WaylandTouch
     {
         var worker = platform.Find(surface);
         seat.NoteInput(serial, worker);
-        var position = new Vector2(x, y);
+        var position = new Vector2<double>(x, y);
         if (seat.TouchSuppressed || worker?.InputWindow == null || worker.BeginResize(worker.ResizeEdgeAt(position), serial))
         {
             contacts[id] = new Contact(0, null, false) { Ignored = true };
@@ -61,7 +61,7 @@ internal sealed class WaylandTouch
     {
         if (contacts.TryGetValue(id, out var contact) && !contact.Ignored)
         {
-            contact.Position = new Vector2(x, y);
+            contact.Position = new Vector2<double>(x, y);
             Queue(RawPointerEventType.Move, contact, time);
         }
     }
@@ -79,7 +79,7 @@ internal sealed class WaylandTouch
     {
         if (contacts.TryGetValue(id, out var contact) && !contact.Ignored)
         {
-            contact.Axes = new Vector2(major, minor);
+            contact.Axes = new Vector2<double>(major, minor);
             Reshape(contact);
         }
     }
@@ -150,7 +150,7 @@ internal sealed class WaylandTouch
 
     private static Rect Area(Contact contact)
     {
-        if (contact.Axes == Vector2.Zero)
+        if (contact.Axes == Vector2<double>.Zero)
         {
             return default;
         }
@@ -199,14 +199,14 @@ internal sealed class WaylandTouch
 
         public bool InContact { get; set; } = true;
 
-        public Vector2 Position { get; set; }
+        public Vector2<double> Position { get; set; }
 
-        public Vector2 Axes { get; set; }
+        public Vector2<double> Axes { get; set; }
 
         public double Orientation { get; set; }
     }
 
     private readonly record struct TouchEvent(
-        RawPointerEventType Type, uint PointerId, WaylandWindowWorker Worker, bool IsPrimary, Vector2 Position, uint Time,
+        RawPointerEventType Type, uint PointerId, WaylandWindowWorker Worker, bool IsPrimary, Vector2<double> Position, uint Time,
         bool InContact, Rect Area);
 }

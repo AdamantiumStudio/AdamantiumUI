@@ -563,7 +563,7 @@ public class RibbonGallery : Selector
     }
 
     // How many rows FIT is only known once the panel has been given its height, so the clamp is re-asked here.
-    protected override Size ArrangeOverride(Size finalSize)
+    protected override Size<double> ArrangeOverride(Size<double> finalSize)
     {
         var size = base.ArrangeOverride(finalSize);
         Clamp();
