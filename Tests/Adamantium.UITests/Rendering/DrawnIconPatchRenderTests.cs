@@ -37,7 +37,7 @@ public class DrawnIconPatchRenderTests
 
         public int Count { get; set; }
 
-        protected override Size MeasureOverride(Size availableSize) => new(32, Dim);
+        protected override Size<double> MeasureOverride(Size<double> availableSize) => new(32, Dim);
 
         protected override void OnRender(IDrawingContext context)
         {
@@ -63,14 +63,14 @@ public class DrawnIconPatchRenderTests
 
         public Pen Outline { get; set; }
 
-        protected override Size MeasureOverride(Size availableSize) => new(32, Dim);
+        protected override Size<double> MeasureOverride(Size<double> availableSize) => new(32, Dim);
 
         protected override void OnRender(IDrawingContext context)
         {
             var session = context.ForControl(this);
             for (var i = 0; i < Count; i++)
             {
-                session.DrawGeometry(_fill, _shape, Outline, Matrix4x4F.Translation(10, 40 + i * 24, 0));
+                session.DrawGeometry(_fill, _shape, Outline, Matrix4x4.CreateTranslation<float>(10, 40 + i * 24, 0));
             }
         }
     }
@@ -85,7 +85,7 @@ public class DrawnIconPatchRenderTests
 
         public void Draw()
         {
-            ((IMeasurableComponent)Root).Measure(new Size(Dim, Dim));
+            ((IMeasurableComponent)Root).Measure(new Size<double>(Dim, Dim));
             ((IMeasurableComponent)Root).Arrange(new Rect(0, 0, Dim, Dim));
             Assert.That(Renderer.RenderFrame(Root), Is.True, "off-screen frame must render");
             RenderDirty.Clear();

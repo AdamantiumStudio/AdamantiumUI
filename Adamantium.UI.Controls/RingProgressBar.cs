@@ -127,7 +127,7 @@ public class RingProgressBar : RangeBase
     // default), reported on BOTH axes and used to measure the template. A Shape sizes its render rect to the space it is
     // measured with, so measuring against the square keeps the ring's Ellipses in step with the control instead of painting
     // to the (possibly unbounded) available space.
-    protected override Size MeasureOverride(Size availableSize)
+    protected override Size<double> MeasureOverride(Size<double> availableSize)
     {
         var w = Width;
         var h = Height;
@@ -137,7 +137,7 @@ public class RingProgressBar : RangeBase
         else if (!double.IsNaN(h)) side = h;
         else side = MinWidth;
 
-        var square = new Size(side, side);
+        var square = new Size<double>(side, side);
         base.MeasureOverride(square);
         return square;
     }

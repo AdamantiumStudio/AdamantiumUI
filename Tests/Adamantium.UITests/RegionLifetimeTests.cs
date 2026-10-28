@@ -134,7 +134,7 @@ public class RegionLifetimeTests
     public void APaneMadeForAViewModel_GoesWhenItLeavesTheRegion()
     {
         var area = new Adamantium.UI.Controls.Docking.DockingArea();
-        area.Measure(new Adamantium.Mathematics.Size(800, 600));
+        area.Measure(new Adamantium.Mathematics.Size<double>(800, 600));
         var region = new Adamantium.Navigation.Region("docking", new NoResolver(), null);
         new DockingAreaRegionAdapter(new ViewLocator()).Attach(region, area);
         var document = new Document();

@@ -338,7 +338,7 @@ public class AutomationCoverageTests
         await using var _ = session;
         var shown = await session.Find(By.Name("Left behind")).GetAsync();
 
-        canvas.PanBy(new Vector2(50000, 50000));
+        canvas.PanBy(new Vector2<double>(50000, 50000));
         await session.WaitForIdleAsync();
         var left = await session.Find(By.Name("Left behind")).GetAsync();
 
@@ -583,7 +583,7 @@ public class AutomationCoverageTests
         await session.Find(By.Id("Inside")).PressKeysAsync(keys);
         await session.WaitForIdleAsync();
         var copy = await session.Find(By.Id("Menu")).Find(By.Name("Copy")).GetAsync();
-        var below = inside.TranslatePoint(new Vector2(0, inside.RenderSize.Height), panel);
+        var below = inside.TranslatePoint(new Vector2<double>(0, inside.RenderSize.Height), panel);
 
         Assert.Multiple(() =>
         {

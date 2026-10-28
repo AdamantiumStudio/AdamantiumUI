@@ -40,7 +40,7 @@ public class RibbonApplicationMenuTests
         var menu = new RibbonApplicationMenu { Header = "File", Template = RailTemplate() };
         foreach (var row in rows) menu.Items.Add(row);
 
-        menu.Measure(new Size(200, 400));
+        menu.Measure(new Size<double>(200, 400));
         menu.Arrange(new Rect(0, 0, 200, 400));
         return menu;
     }
@@ -53,7 +53,7 @@ public class RibbonApplicationMenuTests
         var menu = new RibbonApplicationMenu { Header = "File", Template = RailTemplate(), IsBackstage = true };
         menu.Items.Add(separator);
         menu.Items.Add(Row("Open", "open page"));
-        menu.Measure(new Size(200, 400));
+        menu.Measure(new Size<double>(200, 400));
         menu.Arrange(new Rect(0, 0, 200, 400));
 
         menu.IsOpen = true;

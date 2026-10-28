@@ -8,7 +8,7 @@ public static class WindowPlacer
 {
     /// <summary>Where a window of <paramref name="size"/> goes back to: its remembered screen, kept inside that screen's
     /// work area; null when the screen is no longer connected.</summary>
-    public static PixelPoint? Restore(WindowPlacement placement, IReadOnlyList<ScreenInfo> screens, Size size)
+    public static PixelPoint? Restore(WindowPlacement placement, IReadOnlyList<ScreenInfo> screens, Size<double> size)
     {
         var screen = screens.FirstOrDefault(s => s.Id == placement.ScreenId);
         if (screen == null)
@@ -37,14 +37,14 @@ public static class WindowPlacer
             return screen.WorkArea;
         }
 
-        var size = new Size(placement.ClientWidth * screen.Scale, placement.ClientHeight * screen.Scale);
+        var size = new Size<double>(placement.ClientWidth * screen.Scale, placement.ClientHeight * screen.Scale);
         var corner = Restore(placement, screens, size).Value;
         return new Rect(corner.X, corner.Y, size.Width, size.Height);
     }
 
     /// <summary>The top-left that puts a window of <paramref name="size"/> in the middle of <paramref name="area"/>, its
     /// caption never above the area's top.</summary>
-    public static PixelPoint Center(Rect area, Size size) =>
+    public static PixelPoint Center(Rect area, Size<double> size) =>
         new(area.X + (area.Width - size.Width) / 2, Math.Max(area.Y, area.Y + (area.Height - size.Height) / 2));
 
     /// <summary>The screen that holds most of <paramref name="bounds"/>; the primary one when none holds any.</summary>

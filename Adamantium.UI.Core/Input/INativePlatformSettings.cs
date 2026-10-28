@@ -15,7 +15,7 @@ public interface INativePlatformSettings
     /// <c>SM_CXDOUBLECLK</c>/<c>SM_CYDOUBLECLK</c>). A double click is two clicks in the SAME PLACE, not merely two in
     /// quick succession - without this a run of quick clicks anywhere on a surface keeps counting up, and any gesture
     /// that means something on the second one fires where nobody asked for it.</summary>
-    Size DoubleClickSize { get; }
+    Size<double> DoubleClickSize { get; }
 
     /// <summary>How long the pointer must rest before the OS calls it a HOVER, in milliseconds - the user's own dwell
     /// preference (Win32 <c>SPI_GETMOUSEHOVERTIME</c>, macOS the springing delay). Every "hold still and something
@@ -26,5 +26,5 @@ public interface INativePlatformSettings
     /// Every desktop OS exposes this as a user setting (Win32 <c>SM_CXDRAG</c>/<c>SM_CYDRAG</c>, macOS's drag
     /// threshold, the GTK/Qt start-drag distance) - honoring it is the difference between "clicks sometimes
     /// drag by accident" and the app feeling like the rest of the system.</summary>
-    Size DragThreshold { get; }
+    Size<double> DragThreshold { get; }
 }

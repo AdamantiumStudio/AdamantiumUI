@@ -148,7 +148,7 @@ public static partial class DragDrop
     private static IInputComponent _sourceRoot;  // the source's window, which hears the moves that leave it while armed
     private static Pointer _pointer;             // the pointer that pressed it: the mouse, a finger or a pen
     private static PixelPoint _startScreen;
-    private static Vector2? _grabPoint;
+    private static Vector2<double>? _grabPoint;
 
     // What carries the drag: the pointer that pressed the source, or the mouse for a drag started from code.
     private static Pointer DragPointer => _pointer ?? Mouse.Pointer;
@@ -178,7 +178,7 @@ public static partial class DragDrop
 
     // Timer-driven auto-scroll: the ScrollViewer being scrolled + how far (px, signed) to move each tick.
     private static ScrollViewer _autoScrollViewer;
-    private static Vector2 _autoScrollPerTick;
+    private static Vector2<double> _autoScrollPerTick;
     private static DispatcherTimer _autoScrollTimer;
 
     // The insertion cue: which items host, the caret's rect + orientation, and the resulting insert index handed to the drop.
@@ -556,7 +556,7 @@ public static partial class DragDrop
 
         const double thickness = 8.0;
         var pItem = DragPointer.GetPosition((IInputComponent)container);
-        var top = new Vector2(DragPointer.GetPosition((IInputComponent)tree).X - pItem.X,
+        var top = new Vector2<double>(DragPointer.GetPosition((IInputComponent)tree).X - pItem.X,
                               DragPointer.GetPosition((IInputComponent)tree).Y - pItem.Y);   // container top-left in tree coords
         var size = container.RenderSize;
         _dropTarget = container.DataContext;   // the node (BindRow sets DataContext = node)
@@ -643,8 +643,8 @@ public static partial class DragDrop
 
         IUIComponent nearest = null;
         var nearestIndex = -1;
-        Vector2 nearestPItem = default;
-        var nearestSize = default(Size);
+        Vector2<double> nearestPItem = default;
+        var nearestSize = default(Size<double>);
         var best = double.MaxValue;
         foreach (var i in list.ItemContainerGenerator.RealizedIndices)
         {
@@ -825,12 +825,12 @@ public static partial class DragDrop
             var size = sv.RenderSize;
             // Both axes: an area that scrolls sideways (a wrap flow, a tab strip) needs the edge to pull just as much as
             // a vertical list does. Each axis is measured on its own, so a corner drags diagonally.
-            var pull = new Vector2(
+            var pull = new Vector2<double>(
                 (float)EdgePull(local.X, size.Width, band),
                 (float)EdgePull(local.Y, size.Height, band));
             if (pull.X == 0 && pull.Y == 0) continue;
 
-            pull = new Vector2(CanScroll(sv, pull.X, horizontal: true) ? pull.X : 0,
+            pull = new Vector2<double>(CanScroll(sv, pull.X, horizontal: true) ? pull.X : 0,
                                CanScroll(sv, pull.Y, horizontal: false) ? pull.Y : 0);
             if (pull.X == 0 && pull.Y == 0)
             {
@@ -840,7 +840,7 @@ public static partial class DragDrop
 
             var speed = GetAutoScrollSpeed((AdamantiumComponent)sv) * (AutoScrollTickMs / 1000.0);   // px/sec -> px/tick
             _autoScrollViewer = sv;
-            _autoScrollPerTick = new Vector2((float)(pull.X * speed), (float)(pull.Y * speed));
+            _autoScrollPerTick = new Vector2<double>((float)(pull.X * speed), (float)(pull.Y * speed));
             _autoScrollTimer ??= CreateAutoScrollTimer();
             if (!_autoScrollTimer.IsEnabled) _autoScrollTimer.Start();
             return;
@@ -1090,9 +1090,9 @@ public static partial class DragDrop
             // arrange AT it - a stretching template fills the row (matching what it replaces) instead of shrinking to ~50px.
             var rowWidth = (source as IUIComponent)?.RenderSize.Width ?? 0;
             var measurable = (IMeasurableComponent)root;
-            measurable.Measure(new Size(rowWidth > 0 ? rowWidth : 4096, double.PositiveInfinity));
+            measurable.Measure(new Size<double>(rowWidth > 0 ? rowWidth : 4096, double.PositiveInfinity));
             var arrangeWidth = rowWidth > 0 ? rowWidth : measurable.DesiredSize.Width;
-            measurable.Arrange(new Rect(new Size(arrangeWidth, measurable.DesiredSize.Height)));
+            measurable.Arrange(new Rect(new Size<double>(arrangeWidth, measurable.DesiredSize.Height)));
             return root;
         }
         catch
@@ -1170,7 +1170,7 @@ public static partial class DragDrop
                 Child = text,
             };
             var m = (IMeasurableComponent)badge;
-            m.Measure(new Size(4096, 4096));
+            m.Measure(new Size<double>(4096, 4096));
             m.Arrange(new Rect(m.DesiredSize));
             return badge;
         }
@@ -1328,7 +1328,7 @@ public static partial class DragDrop
     // cross-window, same app - the ghost is a topmost window so the drop can land in another of our windows or the same
     // one). Screen-coordinate hit-test: find the window under the cursor, then hit-test its tree. HitTest ignores capture,
     // so it finds the real element even though the source holds mouse capture during the drag.
-    private static IUIComponent HitTestDropTarget(out Vector2 positionInTarget)
+    private static IUIComponent HitTestDropTarget(out Vector2<double> positionInTarget)
     {
         positionInTarget = default;
         var screen = DragScreenPoint;
@@ -1345,7 +1345,7 @@ public static partial class DragDrop
     /// starts the gesture carries it too. A source with no window above it (a drag started programmatically on a
     /// detached control) has no client space for the point to be in, and says so with the origin rather than passing a
     /// desktop point off as a local one - which is what this used to do, and what only looked right at 100%.</summary>
-    private static Vector2 SourceClientPoint(PixelPoint screen)
+    private static Vector2<double> SourceClientPoint(PixelPoint screen)
     {
         if (_source is not IUIComponent source) return default;
 

@@ -16,9 +16,9 @@ public class EraseTool : ICanvasTool
     private readonly List<StrokeItem> _pieces = new();
 
     private bool _erasing;
-    private Vector2 _at;
+    private Vector2<double> _at;
     private bool _over;
-    private Vector2 _last;
+    private Vector2<double> _last;
 
     public EraseTool(CanvasEraseMode mode = CanvasEraseMode.Point)
     {
@@ -117,7 +117,7 @@ public class EraseTool : ICanvasTool
         _over = false;
     }
 
-    private void Rub(InfiniteCanvas canvas, Vector2 world)
+    private void Rub(InfiniteCanvas canvas, Vector2<double> world)
     {
         if (canvas.Scene is not { } scene) return;
 

@@ -17,7 +17,7 @@ namespace Adamantium.UITests;
 [TestFixture]
 public class DeferredContentTests
 {
-    private static readonly Size Host = new(100, 100);
+    private static readonly Size<double> Host = new(100, 100);
 
     // A view that asks to be kept - what x:KeepAlive states in markup, which generated code-behind overrides the same way.
     private sealed class KeptBorder : Border
@@ -44,12 +44,12 @@ public class DeferredContentTests
         return false;
     }
 
-    private static Size? SizeOfChild(ContentPresenter presenter) =>
+    private static Size<double>? SizeOfChild(ContentPresenter presenter) =>
         presenter.VisualChildren.FirstOrDefault() is IMeasurableComponent child ? child.DesiredSize : null;
 
     // While a swap plays there are TWO children - the one leaving and the one arriving - so "what is on screen" is a
     // question about the whole set, not about the first of them.
-    private static bool HasChild(ContentPresenter presenter, Size size) =>
+    private static bool HasChild(ContentPresenter presenter, Size<double> size) =>
         presenter.VisualChildren.OfType<IMeasurableComponent>().Any(c => c.DesiredSize == size);
 
     [SetUp]
@@ -71,10 +71,10 @@ public class DeferredContentTests
         };
 
         presenter.Measure(Host);
-        Assert.That(SizeOfChild(presenter), Is.EqualTo(new Size(8, 8)),
+        Assert.That(SizeOfChild(presenter), Is.EqualTo(new Size<double>(8, 8)),
             "the LOADING visual stands in the content's place from the first measure");
 
-        Assert.That(PumpUntil(() => SizeOfChild(presenter) == new Size(40, 30), presenter), Is.True,
+        Assert.That(PumpUntil(() => SizeOfChild(presenter) == new Size<double>(40, 30), presenter), Is.True,
             "the real content has to appear once it has been built");
     }
 
@@ -108,18 +108,18 @@ public class DeferredContentTests
         presenter.ContentTemplate = new DataTemplate(() => new TemplateResult { RootComponent = new Border { Width = 12, Height = 12 } });
         presenter.Content = second;
 
-        Assert.That(PumpUntil(() => SizeOfChild(presenter) == new Size(12, 12), presenter), Is.True,
+        Assert.That(PumpUntil(() => SizeOfChild(presenter) == new Size<double>(12, 12), presenter), Is.True,
             "the content the user actually chose has to be the one that shows");
 
         // Give the superseded build every chance to land on top of it.
         PumpUntil(() => false, presenter, seconds: 0.3);
-        Assert.That(SizeOfChild(presenter), Is.EqualTo(new Size(12, 12)),
+        Assert.That(SizeOfChild(presenter), Is.EqualTo(new Size<double>(12, 12)),
             "a build the user walked away from must never replace the content they chose");
 
         // ...and it was kept, not destroyed: coming back takes it out of the park instead of building it again.
         presenter.ContentTemplate = firstTemplate;
         presenter.Content = first;
-        Assert.That(PumpUntil(() => SizeOfChild(presenter) == new Size(40, 30), presenter), Is.True,
+        Assert.That(PumpUntil(() => SizeOfChild(presenter) == new Size<double>(40, 30), presenter), Is.True,
             "returning to the tab has to show the content that was built while it was away");
         Assert.That(firstBuilds, Is.EqualTo(1), "the finished build was parked, so the return must not build it again");
     }
@@ -144,7 +144,7 @@ public class DeferredContentTests
             presenter.Measure(Host);   // the frame the switch lands in
         }
 
-        Assert.That(PumpUntil(() => SizeOfChild(presenter) == new Size(80, 80), presenter), Is.True,
+        Assert.That(PumpUntil(() => SizeOfChild(presenter) == new Size<double>(80, 80), presenter), Is.True,
             "the content the user stopped at has to be the one that shows - and it has to show at all");
     }
 
@@ -217,7 +217,7 @@ public class DeferredContentTests
 
         presenter.Measure(Host);
 
-        Assert.That(PumpUntil(() => SizeOfChild(presenter) == new Size(40, 30), presenter), Is.True,
+        Assert.That(PumpUntil(() => SizeOfChild(presenter) == new Size<double>(40, 30), presenter), Is.True,
             "a failed background build must not leave the spinner standing - the content is built here instead");
     }
 
@@ -239,7 +239,7 @@ public class DeferredContentTests
         // one-shot, or there would be nothing to defer.
         var window = new Window { Width = 100, Height = 100, Content = presenter };
         ((IMeasurableComponent)window).Measure(Host);
-        Assert.That(PumpUntil(() => SizeOfChild(presenter) == new Size(40, 30), presenter), Is.True, "first content arrives");
+        Assert.That(PumpUntil(() => SizeOfChild(presenter) == new Size<double>(40, 30), presenter), Is.True, "first content arrives");
 
         presenter.ContentTransition = ContentTransition.SlideLeft;
         presenter.TransitionDuration = 0.5;
@@ -251,14 +251,14 @@ public class DeferredContentTests
 
         // The build lands well inside the half-second the swap takes; until it is over, nothing new may appear.
         PumpUntil(() => false, presenter, seconds: 0.25);
-        Assert.That(HasChild(presenter, new Size(60, 50)), Is.False,
+        Assert.That(HasChild(presenter, new Size<double>(60, 50)), Is.False,
             "while the tab that is leaving is still sliding, the content it would slide over must not be swapped in");
-        Assert.That(HasChild(presenter, new Size(8, 8)), Is.False,
+        Assert.That(HasChild(presenter, new Size<double>(8, 8)), Is.False,
             "...and the spinner belongs to the tab being entered, not to the one leaving");
-        Assert.That(HasChild(presenter, new Size(40, 30)), Is.True, "what is on screen is the tab on its way out");
+        Assert.That(HasChild(presenter, new Size<double>(40, 30)), Is.True, "what is on screen is the tab on its way out");
 
         // ...and once the swap is over, it takes its place.
-        Assert.That(PumpUntil(() => SizeOfChild(presenter) == new Size(60, 50), presenter, seconds: 5, tick: 0.1), Is.True,
+        Assert.That(PumpUntil(() => SizeOfChild(presenter) == new Size<double>(60, 50), presenter, seconds: 5, tick: 0.1), Is.True,
             "the content takes its place as soon as the swap it belongs to is done");
     }
 
@@ -277,7 +277,7 @@ public class DeferredContentTests
 
         var window = new Window { Width = 100, Height = 100, Content = presenter };
         ((IMeasurableComponent)window).Measure(Host);
-        Assert.That(PumpUntil(() => SizeOfChild(presenter) == new Size(40, 30), presenter), Is.True, "first content arrives");
+        Assert.That(PumpUntil(() => SizeOfChild(presenter) == new Size<double>(40, 30), presenter), Is.True, "first content arrives");
 
         presenter.ContentTransition = ContentTransition.SlideLeft;
         presenter.TransitionDuration = 0.5;
@@ -290,8 +290,8 @@ public class DeferredContentTests
         var spinnerFirst = false;
         Assert.That(PumpUntil(() =>
         {
-            if (HasChild(presenter, new Size(60, 50))) return true;
-            spinnerFirst |= HasChild(presenter, new Size(8, 8));
+            if (HasChild(presenter, new Size<double>(60, 50))) return true;
+            spinnerFirst |= HasChild(presenter, new Size<double>(8, 8));
             return false;
         }, presenter, seconds: 5, tick: 0.1), Is.True, "the content arrives");
         Assert.That(spinnerFirst, Is.True, "the spinner is up for a frame before the content is put up");
@@ -315,7 +315,7 @@ public class DeferredContentTests
         new Rendering.TestRoot(100, 100).Add(presenter);
         presenter.Measure(Host);
 
-        Assert.That(SizeOfChild(presenter), Is.EqualTo(new Size(40, 30)),
+        Assert.That(SizeOfChild(presenter), Is.EqualTo(new Size<double>(40, 30)),
             "a bake has only the frame it was asked for - its content cannot be left for later");
     }
 }

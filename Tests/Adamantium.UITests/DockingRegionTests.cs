@@ -117,7 +117,7 @@ public class DockingRegionTests
         tools.Items.Add(new Pane { Header = "inspector", Id = "inspector", Kind = PaneKind.Tool, Content = "no view model" });
         area.Children.Add(tools);
 
-        area.Measure(new Size(1000, 800));
+        area.Measure(new Size<double>(1000, 800));
         area.Arrange(new Rect(0, 0, 1000, 800));
 
         var resolver = new Resolver();

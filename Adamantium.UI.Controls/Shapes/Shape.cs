@@ -1,4 +1,5 @@
 ﻿using System.Globalization;
+using System.Runtime.InteropServices;
 using Adamantium.Core.Collections;
 using Adamantium.Graphics.Core.Models;
 using Adamantium.Mathematics;
@@ -25,35 +26,35 @@ public abstract class Shape : InputUIComponent
    // extent (TryComputeStrokeBounds mirrors StrokeEffect.fx, including the clamped miter spikes at sharp corners such as
    // star tips). The geometry keeps its authored coordinates (WPF Stretch=None); the element grows to include the stroke
    // so it no longer pokes past the control. With no visible stroke the bounds collapse to the bare geometry.
-   protected Size MeasureStrokedGeometry(Rect geometryBounds, IReadOnlyList<(Vector2[] Points, bool IsClosed)> contours = null)
+   protected Size<double> MeasureStrokedGeometry(Rect geometryBounds, IReadOnlyList<(Vector2<double>[] Points, bool IsClosed)> contours = null)
    {
       var thickness = IsVisibleBrush(Stroke) ? StrokeThickness : 0.0;
       var half = thickness / 2.0;
 
-      var min = new Vector2(double.MaxValue);
-      var max = new Vector2(double.MinValue);
+      var min = new Vector2<double>(double.MaxValue);
+      var max = new Vector2<double>(double.MinValue);
 
       // Floor: the geometry bbox grown by half the stroke. Always valid (a non-empty geometry never collapses to 0) and
       // exact for round/bevel joins and smooth outlines. Combined/group geometries whose contours aren't exposed at
       // measure time rely on this floor instead of collapsing.
       if (geometryBounds.Width > 0 || geometryBounds.Height > 0)
       {
-         min = new Vector2(geometryBounds.X - half, geometryBounds.Y - half);
-         max = new Vector2(geometryBounds.X + geometryBounds.Width + half, geometryBounds.Y + geometryBounds.Height + half);
+         min = new Vector2<double>(geometryBounds.X - half, geometryBounds.Y - half);
+         max = new Vector2<double>(geometryBounds.X + geometryBounds.Width + half, geometryBounds.Y + geometryBounds.Height + half);
       }
 
       // Refinement: union the exact stroke extent, which reaches past the bbox floor at sharp MITER corners (star tips).
       if (TryComputeStrokeBounds(contours, thickness, StrokeLineJoin, StartLineCap, EndLineCap, out var smin, out var smax))
       {
-         min = Vector2.Min(min, smin);
-         max = Vector2.Max(max, smax);
+         min = Vector2<double>.Min(min, smin);
+         max = Vector2<double>.Max(max, smax);
       }
 
       if (max.X < min.X || max.Y < min.Y)
       {
          RenderBounds = default;
          Rect = default;
-         return new Size(0, 0);
+         return new Size<double>(0, 0);
       }
 
       // WPF Stretch=None: the geometry keeps its authored coordinates (a Line's X1/Y1, a Path's points), so the element
@@ -61,16 +62,16 @@ public abstract class Shape : InputUIComponent
       // and the stroke overhang (which fixes the stroke poking past the control without moving the shape). RenderBounds
       // is the stroke's actual bbox in that same local space, used by the adorner to frame it tightly.
       RenderBounds = new Rect(min, max);
-      var size = new Size(Math.Max(max.X, 0), Math.Max(max.Y, 0));
+      var size = new Size<double>(Math.Max(max.X, 0), Math.Max(max.Y, 0));
       Rect = new Rect(size);
       return size;
    }
 
    // Extracts the outline contours (raw polyline points + closed flag) from a processed geometry mesh, mirroring the
    // stroke render path (RenderUnit.TryGetSolidContours) so the measured bounds match what is actually stroked.
-   protected static List<(Vector2[] Points, bool IsClosed)> GetContours(Mesh mesh)
+   protected static List<(Vector2<double>[] Points, bool IsClosed)> GetContours(Mesh mesh)
    {
-      List<(Vector2[], bool)> list = [];
+      List<(Vector2<double>[], bool)> list = [];
       if (mesh?.Contours != null)
       {
          foreach (var contour in mesh.Contours)
@@ -85,12 +86,12 @@ public abstract class Shape : InputUIComponent
    // half-thickness inflate misses at sharp corners. A closed contour has no caps (every vertex is a join); an open one
    // caps its two ends. MUST stay in sync with StrokeEffect.fx / GpuStrokeRenderComponent.
    protected static bool TryComputeStrokeBounds(
-      IReadOnlyList<(Vector2[] Points, bool IsClosed)> contours,
+      IReadOnlyList<(Vector2<double>[] Points, bool IsClosed)> contours,
       double thickness, PenLineJoin join, PenLineCap startCap, PenLineCap endCap,
-      out Vector2 min, out Vector2 max)
+      out Vector2<double> min, out Vector2<double> max)
    {
-      min = new Vector2(double.MaxValue);
-      max = new Vector2(double.MinValue);
+      min = new Vector2<double>(double.MaxValue);
+      max = new Vector2<double>(double.MinValue);
       var any = false;
       var half = thickness / 2.0;
 
@@ -110,13 +111,13 @@ public abstract class Shape : InputUIComponent
                var dir = SafeNormalize(isStart ? points[1] - points[0] : points[n - 1] - points[n - 2]);
                var cap = isStart ? startCap : endCap;
                var p0 = isStart ? p - dir * (CapShift(cap) * half) : p + dir * (CapShift(cap) * half);
-               var perp = new Vector2(-dir.Y, dir.X);
+               var perp = new Vector2<double>(-dir.Y, dir.X);
                Include(ref min, ref max, ref any, p0 + perp * half);
                Include(ref min, ref max, ref any, p0 - perp * half);
                if (cap != PenLineCap.Flat)   // round/triangle cap fans reach up to half beyond the endpoint
                {
-                  Include(ref min, ref max, ref any, p + new Vector2(half, half));
-                  Include(ref min, ref max, ref any, p - new Vector2(half, half));
+                  Include(ref min, ref max, ref any, p + new Vector2<double>(half, half));
+                  Include(ref min, ref max, ref any, p - new Vector2<double>(half, half));
                }
             }
             else
@@ -125,17 +126,17 @@ public abstract class Shape : InputUIComponent
                var d1 = SafeNormalize(points[(i + 1) % n] - p);
                if ((d0.X == 0 && d0.Y == 0) || (d1.X == 0 && d1.Y == 0))   // degenerate segment: basic half disc
                {
-                  Include(ref min, ref max, ref any, p + new Vector2(half, half));
-                  Include(ref min, ref max, ref any, p - new Vector2(half, half));
+                  Include(ref min, ref max, ref any, p + new Vector2<double>(half, half));
+                  Include(ref min, ref max, ref any, p - new Vector2<double>(half, half));
                   continue;
                }
 
-               var n0 = new Vector2(-d0.Y, d0.X);
-               var n1 = new Vector2(-d1.Y, d1.X);
+               var n0 = new Vector2<double>(-d0.Y, d0.X);
+               var n1 = new Vector2<double>(-d1.Y, d1.X);
                if (join == PenLineJoin.Miter)
                {
                   var miter = SafeNormalize(n0 + n1);
-                  var denom = Math.Max(Vector2.Dot(miter, n0), 0.25);   // matches the shader: spike capped at 4*half
+                  var denom = Math.Max(Vector2<double>.Dot(miter, n0), 0.25);   // matches the shader: spike capped at 4*half
                   var len = half / denom;
                   Include(ref min, ref max, ref any, p + miter * len);
                   Include(ref min, ref max, ref any, p - miter * len);
@@ -148,8 +149,8 @@ public abstract class Shape : InputUIComponent
                   Include(ref min, ref max, ref any, p - n1 * half);
                   if (join == PenLineJoin.Round)
                   {
-                     Include(ref min, ref max, ref any, p + new Vector2(half, half));
-                     Include(ref min, ref max, ref any, p - new Vector2(half, half));
+                     Include(ref min, ref max, ref any, p + new Vector2<double>(half, half));
+                     Include(ref min, ref max, ref any, p - new Vector2<double>(half, half));
                   }
                }
             }
@@ -159,17 +160,17 @@ public abstract class Shape : InputUIComponent
       return any;
    }
 
-   private static void Include(ref Vector2 min, ref Vector2 max, ref bool any, Vector2 p)
+   private static void Include(ref Vector2<double> min, ref Vector2<double> max, ref bool any, Vector2<double> p)
    {
-      min = Vector2.Min(min, p);
-      max = Vector2.Max(max, p);
+      min = Vector2<double>.Min(min, p);
+      max = Vector2<double>.Max(max, p);
       any = true;
    }
 
-   private static Vector2 SafeNormalize(Vector2 v)
+   private static Vector2<double> SafeNormalize(Vector2<double> v)
    {
       var len = Math.Sqrt(v.X * v.X + v.Y * v.Y);
-      return len < 1e-9 ? default : new Vector2(v.X / len, v.Y / len);
+      return len < 1e-9 ? default : new Vector2<double>(v.X / len, v.Y / len);
    }
 
    // Cap shift along the segment direction in units of half-thickness (matches StrokeEffect.fx CapShift): square
@@ -438,7 +439,7 @@ public abstract class Shape : InputUIComponent
    // shape's bounding box but off the shape itself doesn't select it. These helpers are the shared 2D math.
 
    /// <summary>Shortest distance from <paramref name="p"/> to the segment a-b (both in the shape's local space).</summary>
-   protected static double DistanceToSegment(Vector2 p, Vector2 a, Vector2 b)
+   protected static double DistanceToSegment(Vector2<double> p, Vector2<double> a, Vector2<double> b)
    {
       var abx = b.X - a.X;
       var aby = b.Y - a.Y;
@@ -449,14 +450,23 @@ public abstract class Shape : InputUIComponent
       return Math.Sqrt(dx * dx + dy * dy);
    }
 
+   /// <summary>A curve sampled densely along its parameter, resampled to <paramref name="samples"/> points - two at
+   /// least, a straight chord - evenly along its length.</summary>
+   protected static Vector2<double>[] ResampledEvenly(List<Vector2<double>> dense, uint samples)
+   {
+      var points = new Vector2<double>[Math.Max(samples, 2u)];
+      MathHelper.Polyline.Resample<double>(CollectionsMarshal.AsSpan(dense), points);
+      return points;
+   }
+
    /// <summary>A brush that paints something (non-null, not the transparent brush, non-zero alpha) - so an unfilled
    /// shape doesn't hit-test on its empty interior, only on its stroke.</summary>
    protected static bool IsVisibleBrush(Brush brush) =>
       brush != null && brush != Brushes.Transparent && !(brush is SolidColorBrush { Color.A: 0 });
 
-   protected override Size MeasureOverride(Size availableSize)
+   protected override Size<double> MeasureOverride(Size<double> availableSize)
    {
-      Size shapeSize = Rect.Size;
+      Size<double> shapeSize = Rect.Size;
 
       // The shape's natural (intrinsic) size, captured before Rect is recomputed below. This is what the shape reports
       // to layout: a Stretch-aligned shape with no explicit size desires its intrinsic size (0 for a box shape like
@@ -465,7 +475,7 @@ public abstract class Shape : InputUIComponent
       double naturalWidth = Rect.Width + Rect.X;
       double naturalHeight = Rect.Height + Rect.Y;
 
-      Size desiredSize = new Size(availableSize.Width, availableSize.Height).Deflate(new Thickness(StrokeThickness/2));
+      Size<double> desiredSize = new Size<double>(availableSize.Width, availableSize.Height).Deflate(new Thickness(StrokeThickness/2));
 
       if (double.IsInfinity(availableSize.Width))
       {
@@ -525,12 +535,12 @@ public abstract class Shape : InputUIComponent
       RenderBounds = new Rect(shapeSize);
 
       // Report the intrinsic size to layout (explicit Width/Height win); Rect above still fills for rendering.
-      return new Size(
+      return new Size<double>(
          double.IsNaN(Width) ? naturalWidth : Width,
          double.IsNaN(Height) ? naturalHeight : Height);
    }
 
-   protected override Size ArrangeOverride(Size finalSize)
+   protected override Size<double> ArrangeOverride(Size<double> finalSize)
    {
       // WPF Shape arrange: Stretch != None fills the arranged slot. Box shapes (Rectangle/Ellipse) default Stretch=Fill,
       // so a Stretch shape in a layout cell renders at the cell size even when it was measured unbounded (which reports

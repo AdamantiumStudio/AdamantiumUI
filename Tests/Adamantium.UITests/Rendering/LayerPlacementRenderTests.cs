@@ -48,7 +48,7 @@ public class LayerPlacementRenderTests
     }
 
     private static TestControl Placed(Rect bounds) =>
-        new() { Bounds = bounds, RenderSize = new Size(bounds.Width, bounds.Height) };
+        new() { Bounds = bounds, RenderSize = new Size<double>(bounds.Width, bounds.Height) };
 
     // Cards stacked in the TOP band (disjoint, so one segment holds them all), each followed by an empty sibling whose rank
     // therefore lands INSIDE that segment's paint span - which is what makes it a placement question at all.

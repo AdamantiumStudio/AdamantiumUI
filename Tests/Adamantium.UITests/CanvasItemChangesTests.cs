@@ -30,7 +30,7 @@ public class CanvasItemChangesTests
         yield return new TestCaseData(new ShapeItem(CanvasShape.Rectangle, new Rect(0, 0, 40, 20), Brushes.White, 1))
             .SetName("Shape");
         yield return new TestCaseData(Stroke()).SetName("Stroke");
-        yield return new TestCaseData(new TextItem(new Vector2(0, 0), "words", Brushes.White, 12)).SetName("Text");
+        yield return new TestCaseData(new TextItem(new Vector2<double>(0, 0), "words", Brushes.White, 12)).SetName("Text");
         yield return new TestCaseData(new PathItem("M0,0 L40,20", null, Brushes.White)).SetName("Path");
         yield return new TestCaseData(new ElementItem(new Border(), new Rect(0, 0, 40, 20))).SetName("Element");
         yield return new TestCaseData(new GroupItem([Stroke()])).SetName("Group");
@@ -38,9 +38,9 @@ public class CanvasItemChangesTests
 
     private static StrokeItem Stroke()
     {
-        var stroke = new StrokeItem(new Vector2(0, 0), Brushes.White, 2);
-        stroke.Add(new Vector2(0, 0));
-        stroke.Add(new Vector2(40, 20));
+        var stroke = new StrokeItem(new Vector2<double>(0, 0), Brushes.White, 2);
+        stroke.Add(new Vector2<double>(0, 0));
+        stroke.Add(new Vector2<double>(40, 20));
         return stroke;
     }
 
@@ -49,7 +49,7 @@ public class CanvasItemChangesTests
     {
         var heard = Heard(item);
 
-        item.Move(new Vector2(5, 7));
+        item.Move(new Vector2<double>(5, 7));
 
         Assert.That(heard, Does.Contain("X").And.Contain("Y").And.Contain("Bounds"));
     }
@@ -60,7 +60,7 @@ public class CanvasItemChangesTests
     {
         var heard = Heard(item);
 
-        item.Move(new Vector2(0, 0));
+        item.Move(new Vector2<double>(0, 0));
 
         Assert.That(heard, Is.Empty);
     }
@@ -92,7 +92,7 @@ public class CanvasItemChangesTests
     [Test]
     public void ResizingTextSaysItsNewFontSizeAndPlace()
     {
-        var text = new TextItem(new Vector2(0, 0), "words", Brushes.White, 12);
+        var text = new TextItem(new Vector2<double>(0, 0), "words", Brushes.White, 12);
         var box = text.Bounds;
         var heard = Heard(text);
 
@@ -106,13 +106,13 @@ public class CanvasItemChangesTests
     [Test]
     public void ACurveAndAFrameSayTheirBox()
     {
-        var curve = new CurveItem(CanvasCurve.Bezier, [new Vector2(0, 0), new Vector2(40, 20)], Brushes.White, 2);
+        var curve = new CurveItem(CanvasCurve.Bezier, [new Vector2<double>(0, 0), new Vector2<double>(40, 20)], Brushes.White, 2);
         var frame = new CanvasFrameItem(new Rect(0, 0, 200, 100), "Notes", Brushes.White);
         var curveHeard = Heard(curve);
         var frameHeard = Heard(frame);
 
-        curve.MovePoint(1, new Vector2(60, 30));
-        frame.Move(new Vector2(10, 10));
+        curve.MovePoint(1, new Vector2<double>(60, 30));
+        frame.Move(new Vector2<double>(10, 10));
 
         Assert.Multiple(() =>
         {
@@ -128,7 +128,7 @@ public class CanvasItemChangesTests
 
         var grid = new PropertyGrid { Template = Chrome() };
         grid.Sections.Add(section);
-        grid.Measure(new Size(400, 400), force: true);
+        grid.Measure(new Size<double>(400, 400), force: true);
         grid.Arrange(new Rect(0, 0, 400, 400));
         return grid;
     }
@@ -168,7 +168,7 @@ public class CanvasItemChangesTests
 
         Assert.That(Shown(grid, x), Is.EqualTo(0.0), "the line was not showing the item to begin with");
 
-        shape.Move(new Vector2(25, 0));
+        shape.Move(new Vector2<double>(25, 0));
 
         Assert.That(Shown(grid, x), Is.EqualTo(25.0));
     }
@@ -185,7 +185,7 @@ public class CanvasItemChangesTests
 
         Assert.That(grid.Write(row, 100.0), Is.True, "the line refused the number");
 
-        shape.Move(new Vector2(10, 0));
+        shape.Move(new Vector2<double>(10, 0));
 
         Assert.That(Shown(grid, x), Is.EqualTo(110.0));
     }
@@ -204,19 +204,19 @@ public class CanvasItemChangesTests
         section.Properties.Add(y);
         grid.Sections.Add(section);
         grid.SelectedObjects = shapes;
-        grid.Measure(new Size(400, 400), force: true);
+        grid.Measure(new Size<double>(400, 400), force: true);
         grid.Arrange(new Rect(0, 0, 400, 400));
         var row = Row(grid, y);
 
         Assert.That(row.IsMixed, Is.False, "four at the same height read as disagreeing");
 
-        shapes[2].Move(new Vector2(0, 5));
+        shapes[2].Move(new Vector2<double>(0, 5));
         Assert.That(row.IsMixed, Is.True, "one moved away and they still read as agreeing");
 
-        shapes[2].Move(new Vector2(0, -5));
+        shapes[2].Move(new Vector2<double>(0, -5));
         Assert.That(row.IsMixed, Is.False, "back in line and they still read as disagreeing");
 
-        foreach (var shape in shapes) shape.Move(new Vector2(0, 7));
+        foreach (var shape in shapes) shape.Move(new Vector2<double>(0, 7));
         Assert.Multiple(() =>
         {
             Assert.That(row.IsMixed, Is.False, "all moved together and they read as disagreeing");
@@ -261,7 +261,7 @@ public class CanvasItemChangesTests
         var groups = Inspecting(group, groupWidth, groupHeight);
 
         Assert.DoesNotThrow(() => stroke.Resize(new Rect(0, 0, 160, 80)), "resizing a stroke");
-        Assert.DoesNotThrow(() => stroke.MoveLast(new Vector2(300, 200)), "pulling a stroke's last point");
+        Assert.DoesNotThrow(() => stroke.MoveLast(new Vector2<double>(300, 200)), "pulling a stroke's last point");
         Assert.DoesNotThrow(() => stroke.RemoveLast(), "taking a stroke's last point away");
         Assert.DoesNotThrow(() => group.Resize(new Rect(0, 0, 160, 80)), "resizing a group");
 

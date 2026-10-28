@@ -38,7 +38,7 @@ public class VisualRootRenderTests
             }
         };
         content.Bounds = new Rect(0, 0, 120, 80);
-        content.RenderSize = new Size(120, 80);
+        content.RenderSize = new Size<double>(120, 80);
 
         // The whole point: host the control on a VisualRoot (not the test's own TestRoot) and render THAT.
         var root = new VisualRoot(content, 120, 80);
@@ -70,8 +70,8 @@ public class VisualRootRenderTests
 
         // Exactly what VisualRenderer does: host + Measure/Arrange (NOT manual Bounds), then render.
         var root = new VisualRoot(visual, 220, 140);
-        ((IMeasurableComponent)root).Measure(new Size(220, 140));
-        ((IMeasurableComponent)root).Arrange(new Rect(new Size(220, 140)));
+        ((IMeasurableComponent)root).Measure(new Size<double>(220, 140));
+        ((IMeasurableComponent)root).Arrange(new Rect(new Size<double>(220, 140)));
 
         Assert.That(renderer.RenderFrame(root), Is.True);
 

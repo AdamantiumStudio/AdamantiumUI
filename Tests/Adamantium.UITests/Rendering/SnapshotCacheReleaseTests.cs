@@ -65,7 +65,7 @@ public class SnapshotCacheReleaseTests
         var root = new TestRoot(32, 32);
         control = new TestControl { RenderAction = s => s.DrawRectangle(Brushes.Red, new Rect(0, 0, 8, 8)) };
         control.Bounds = new Rect(0, 0, 8, 8);
-        control.RenderSize = new Size(8, 8);
+        control.RenderSize = new Size<double>(8, 8);
         root.Add(control);
         return root;
     }

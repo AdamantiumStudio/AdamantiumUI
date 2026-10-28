@@ -436,7 +436,7 @@ public partial class RenderCache
     // in the count/type change. `order` (the paint rank) rides WITH the draw, so a group appearing for the first time is
     // placed without the applier ever reading the recorder's rank map.
     private void ApplyReRender(IUIComponent component, IReadOnlyList<IDrawCommand> drawCommands, long order,
-        IReadOnlyList<Adamantium.Mathematics.Matrix4x4F> clones = null, IReadOnlyList<int> cloneSteps = null,
+        IReadOnlyList<Matrix4x4F> clones = null, IReadOnlyList<int> cloneSteps = null,
         System.TimeSpan cloneStagger = default)
     {
         _groupById.TryGetValue(component.RenderId, out var group);

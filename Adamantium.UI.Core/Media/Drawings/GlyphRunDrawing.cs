@@ -33,7 +33,7 @@ public class GlyphRunDrawing : Drawing
         typeof(Brush), typeof(GlyphRunDrawing), new PropertyMetadata(null, ForegroundChangedCallback));
 
     public static readonly AdamantiumProperty OriginProperty = AdamantiumProperty.Register(nameof(Origin),
-        typeof(Vector2), typeof(GlyphRunDrawing), new PropertyMetadata(default(Vector2)));
+        typeof(Vector2<double>), typeof(GlyphRunDrawing), new PropertyMetadata(default(Vector2<double>)));
 
     public static readonly AdamantiumProperty BoxProperty = AdamantiumProperty.Register(nameof(Box),
         typeof(Rect), typeof(GlyphRunDrawing), new PropertyMetadata(default(Rect)));
@@ -71,9 +71,9 @@ public class GlyphRunDrawing : Drawing
     }
 
     /// <summary>The run's top-left corner in the drawing's own coordinates. Ignored once <see cref="Box"/> is set.</summary>
-    public Vector2 Origin
+    public Vector2<double> Origin
     {
-        get => GetValue<Vector2>(OriginProperty);
+        get => GetValue<Vector2<double>>(OriginProperty);
         set => SetValue(OriginProperty, value);
     }
 
@@ -135,13 +135,13 @@ public class GlyphRunDrawing : Drawing
     /// text out, while this is what records the layout's Text/FontSize and marks it dirty - which is what later builds
     /// the glyph atlas. Called directly, the short one returns a correct size and leaves the layout with no atlas and no
     /// glyphs at all, so the run measured right and drew nothing. NaN = no wrap boundary (the overload maps it).</summary>
-    private static Size Shape(TextLayout layout, string text, double fontSize, Size area,
+    private static Size<double> Shape(TextLayout layout, string text, double fontSize, Size<double> area,
         HorizontalTextAlignment horizontal, VerticalTextAlignment vertical) =>
         layout.ProcessText(text, fontSize, area, TextWrapping.NoWrap, TextTrimming.None, horizontal, vertical);
 
     // Natural size, no box: NaN = no wrap boundary (the overload maps it).
-    private static Size Shape(TextLayout layout, string text, double fontSize) =>
-        Shape(layout, text, fontSize, new Size(double.NaN, double.NaN), HorizontalTextAlignment.Left,
+    private static Size<double> Shape(TextLayout layout, string text, double fontSize) =>
+        Shape(layout, text, fontSize, new Size<double>(double.NaN, double.NaN), HorizontalTextAlignment.Left,
             VerticalTextAlignment.Top);
 
     private static TextRenderingParameters Parameters(Brush foreground, Rect area,
@@ -154,8 +154,8 @@ public class GlyphRunDrawing : Drawing
             TextTrimming = TextTrimming.None,
             TextWrapping = TextWrapping.NoWrap,
             Color = (foreground as SolidColorBrush)?.Color ?? Colors.White,
-            TextArea = new Rectangle(new Vector2F((float)area.X, (float)area.Y),
-                new Size(area.Width, area.Height))
+            TextArea = new Rectangle<int>(new Vector2F((float)area.X, (float)area.Y).As<int>(),
+                new Size<double>(area.Width, area.Height).As<int>())
         };
 
     public override Rect Bounds
@@ -190,8 +190,8 @@ public class GlyphRunDrawing : Drawing
         var layout = EnsureLayout(fontSize);
 
         var box = Box;
-        Size desired;
-        Vector2 corner;
+        Size<double> desired;
+        Vector2<double> corner;
 
         if (box.IsEmpty)
         {
@@ -203,15 +203,15 @@ public class GlyphRunDrawing : Drawing
             // Shape INTO the box and let the LAYOUT align the run in it. Doing that arithmetic out here means centering on
             // the line box, and the ink does not sit centered inside a line box - ascender and descender space are not
             // symmetric - so the text came out visibly low. The layout is the only thing that knows those metrics.
-            desired = new Size(box.Width * scale, box.Height * scale);
+            desired = new Size<double>(box.Width * scale, box.Height * scale);
             Shape(layout, text, fontSize, desired, HorizontalAlignment, VerticalAlignment);
-            corner = new Vector2(box.X, box.Y);
+            corner = new Vector2<double>(box.X, box.Y);
         }
 
         // The quad's TOP-LEFT. Measured, not assumed: placing it by the center put the text half its own width and
         // height further down and right, which is what a top-left anchor does with a center handed to it.
         var placed = new Rect(corner.X, corner.Y, 0, 0).TransformToAABB(transform);
-        var place = Matrix4x4F.Translation((float)placed.X, (float)placed.Y, 0);
+        var place = Matrix4x4.CreateTranslation<float>((float)placed.X, (float)placed.Y, 0);
         var foreground = CurrentColorBrush.Resolve(Foreground, currentColor);
         var parameters = Parameters(foreground, new Rect(0, 0, desired.Width, desired.Height),
             HorizontalAlignment, VerticalAlignment);

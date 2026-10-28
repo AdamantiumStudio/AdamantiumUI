@@ -34,7 +34,7 @@ public class CanvasNodeAutomationPeer : ContentControlAutomationPeer, ITransform
     {
         var bounds = BoundingRectangle;
         Edit("Move", (item, worldPerPixel) =>
-            item.Move(new Vector2((x - bounds.X) * worldPerPixel, (y - bounds.Y) * worldPerPixel)));
+            item.Move(new Vector2<double>((x - bounds.X) * worldPerPixel, (y - bounds.Y) * worldPerPixel)));
     }
 
     public void Resize(double width, double height) =>

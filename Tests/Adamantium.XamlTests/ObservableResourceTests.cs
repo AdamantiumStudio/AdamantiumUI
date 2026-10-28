@@ -86,8 +86,8 @@ public class ObservableResourceTests
     // A visual root, so the tree attach that brings an unloaded element back actually happens.
     private sealed class Root : Adamantium.UI.Controls.Panels.Grid, IRootVisualComponent
     {
-        public Adamantium.Mathematics.Vector2 PointToClient(PixelPoint point) => new((float)point.X, (float)point.Y);
-        public PixelPoint PointToScreen(Adamantium.Mathematics.Vector2 point) => new(point.X, point.Y);
+        public Adamantium.Mathematics.Vector2<double> PointToClient(PixelPoint point) => new((float)point.X, (float)point.Y);
+        public PixelPoint PointToScreen(Adamantium.Mathematics.Vector2<double> point) => new(point.X, point.Y);
         public PixelPoint Position { get; set; }
         public void AttachContextAndInitialize(IUIContext context) { }
         public double Left { get; set; }

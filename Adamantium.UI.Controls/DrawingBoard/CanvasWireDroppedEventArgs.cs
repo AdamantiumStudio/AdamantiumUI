@@ -16,10 +16,10 @@ public sealed class CanvasWireDroppedEventArgs : EventArgs
 
     /// <summary>Where it was let go, in WORLD units - where the new node goes, and where a list of them should open.
     /// </summary>
-    public Vector2 World { get; init; }
+    public Vector2<double> World { get; init; }
 
     /// <summary>Where it was let go on the SCREEN, in pixels - what a popup is placed by.</summary>
-    public Vector2 Screen { get; init; }
+    public Vector2<double> Screen { get; init; }
 
     /// <summary>Set by whoever takes the offer. Nobody taking it is the ordinary case and not a failure: a wire
     /// dropped on nothing is a gesture abandoned.</summary>

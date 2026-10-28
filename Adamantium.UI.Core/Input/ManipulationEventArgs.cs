@@ -21,10 +21,10 @@ public class ManipulationEventArgs : InputEventArgs
     public int Contacts { get; init; }
 
     /// <summary>The middle of the fingers, the point a pinch scales and a rotation turns about.</summary>
-    public Vector2 Origin { get; init; }
+    public Vector2<double> Origin { get; init; }
 
     /// <summary>How far the fingers moved since the last step.</summary>
-    public Vector2 Translation { get; init; }
+    public Vector2<double> Translation { get; init; }
 
     /// <summary>How much the fingers spread since the last step: above 1 apart, below 1 together.</summary>
     public double Scale { get; init; } = 1;
@@ -32,7 +32,7 @@ public class ManipulationEventArgs : InputEventArgs
     /// <summary>How far the fingers turned since the last step, in degrees, clockwise on screen.</summary>
     public double Rotation { get; init; }
 
-    public Vector2 TotalTranslation { get; init; }
+    public Vector2<double> TotalTranslation { get; init; }
 
     public double TotalScale { get; init; } = 1;
 

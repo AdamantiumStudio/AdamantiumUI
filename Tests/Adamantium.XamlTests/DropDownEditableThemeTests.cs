@@ -50,7 +50,7 @@ public class DropDownEditableThemeTests
         drop.ApplyCurrentTheme();
         Adamantium.UI.Extensions.WindowExtension.UpdateTree(drop);
         Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
-        drop.Measure(new Size(200, 40));
+        drop.Measure(new Size<double>(200, 40));
         drop.Arrange(new Rect(0, 0, 200, 40));
     }
 

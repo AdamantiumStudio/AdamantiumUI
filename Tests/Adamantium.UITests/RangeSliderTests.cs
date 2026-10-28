@@ -32,7 +32,7 @@ public class RangeSliderTests
         Adamantium.UI.Extensions.WindowExtension.UpdateTree(root);
         Adamantium.UI.Extensions.WindowExtension.UpdateTree(root);
         var thumb = ((RangeTrack)slider.GetTemplateChild("PART_Track")).LowerThumb;
-        thumb.RaiseEvent(new DragStartedEventArgs(Adamantium.Mathematics.Vector2.Zero) { RoutedEvent = Thumb.DragStartedEvent });
+        thumb.RaiseEvent(new DragStartedEventArgs(Adamantium.Mathematics.Vector2<double>.Zero) { RoutedEvent = Thumb.DragStartedEvent });
         var badges = new System.Collections.Generic.List<Popup>();
         foreach (var child in slider.LogicalChildren)
         {

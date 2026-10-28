@@ -40,7 +40,7 @@ public class SoftEdgeReflectionRenderTests
                 .DrawRectangle(Brushes.Lime, new Rect(0, 20, 40, 20))
         };
         element.Bounds = new Rect(4, 4, 40, 40);
-        element.RenderSize = new Size(40, 40);
+        element.RenderSize = new Size<double>(40, 40);
         set(element);
         root.Add(element);
         return (root, element);
@@ -189,10 +189,10 @@ public class SoftEdgeReflectionRenderTests
         var root = new TestRoot(64, 128);
         var holder = new TestControl { SoftEdge = 2 };
         holder.Bounds = new Rect(4, 4, 40, 40);
-        holder.RenderSize = new Size(40, 40);
+        holder.RenderSize = new Size<double>(40, 40);
         var child = new TestControl { RenderAction = s => s.DrawRectangle(Brushes.Lime, new Rect(0, 0, 40, 40)) };
         child.Bounds = new Rect(0, 0, 40, 40);
-        child.RenderSize = new Size(40, 40);
+        child.RenderSize = new Size<double>(40, 40);
         holder.Add(child);
         root.Add(holder);
 
@@ -209,7 +209,7 @@ public class SoftEdgeReflectionRenderTests
         {
             e.SoftEdge = 8;
             e.Bounds = new Rect(-30, 4, 60, 40);
-            e.RenderSize = new Size(60, 40);
+            e.RenderSize = new Size<double>(60, 40);
             e.RenderAction = s => s.DrawRectangle(Brushes.Red, new Rect(0, 0, 60, 40));
         });
 
@@ -230,10 +230,10 @@ public class SoftEdgeReflectionRenderTests
         var root = new TestRoot(64, 128);
         var holder = new TestControl { SoftEdge = 8, ClipToBounds = true };
         holder.Bounds = new Rect(20, 4, 30, 40);
-        holder.RenderSize = new Size(30, 40);
+        holder.RenderSize = new Size<double>(30, 40);
         var child = new TestControl { RenderAction = s => s.DrawRectangle(Brushes.Lime, new Rect(0, 0, 100, 40)) };
         child.Bounds = new Rect(-40, 0, 100, 40);
-        child.RenderSize = new Size(100, 40);
+        child.RenderSize = new Size<double>(100, 40);
         holder.Add(child);
         root.Add(holder);
 
@@ -252,15 +252,15 @@ public class SoftEdgeReflectionRenderTests
         {
             Points = new Adamantium.UI.Core.Collections.PointsCollection
             {
-                new Vector2(20, 0), new Vector2(26, 14), new Vector2(40, 14), new Vector2(29, 23), new Vector2(33, 38),
-                new Vector2(20, 29), new Vector2(7, 38), new Vector2(11, 23), new Vector2(0, 14), new Vector2(14, 14)
+                new Vector2<double>(20, 0), new Vector2<double>(26, 14), new Vector2<double>(40, 14), new Vector2<double>(29, 23), new Vector2<double>(33, 38),
+                new Vector2<double>(20, 29), new Vector2<double>(7, 38), new Vector2<double>(11, 23), new Vector2<double>(0, 14), new Vector2<double>(14, 14)
             },
             Fill = Brushes.Lime,
             Aura = new Aura { Radius = 8, Color = Colors.White, Opacity = 1 },
             SoftEdge = 4
         };
         root.Add(star);
-        star.Measure(new Size(40, 40));
+        star.Measure(new Size<double>(40, 40));
         star.Arrange(new Rect(12, 12, 40, 40));
 
         // Just above the top point, outside the shape: only the glow can be there.
@@ -272,7 +272,7 @@ public class SoftEdgeReflectionRenderTests
             px = RenderChanged(root, resources, () =>
             {
                 star.Visibility = Visibility.Visible;
-                star.Measure(new Size(40, 40));
+                star.Measure(new Size<double>(40, 40));
                 star.Arrange(new Rect(12, 12, 40, 40));
             }, (32, 10));
         }
@@ -414,7 +414,7 @@ public class SoftEdgeReflectionRenderTests
             SoftEdge = 4
         };
         root.Add(rectangle);
-        rectangle.Measure(new Size(40, 40));
+        rectangle.Measure(new Size<double>(40, 40));
         rectangle.Arrange(new Rect(4, 4, 40, 40));
 
         var px = Render(root, (8, 8), (24, 24));
@@ -629,14 +629,14 @@ public class SoftEdgeReflectionRenderTests
         var root = new TestRoot(64, 128);
         var outer = new TestControl { IsLayer = true };
         outer.Bounds = new Rect(0, 0, 64, 50);
-        outer.RenderSize = new Size(64, 50);
+        outer.RenderSize = new Size<double>(64, 50);
         var element = new TestControl
         {
             Reflection = new Reflection { Size = 1, Opacity = 1 },
             RenderAction = s => s.DrawRectangle(Brushes.Lime, new Rect(0, 0, 40, 40))
         };
         element.Bounds = new Rect(4, 4, 40, 40);
-        element.RenderSize = new Size(40, 40);
+        element.RenderSize = new Size<double>(40, 40);
         outer.Add(element);
         root.Add(outer);
 
@@ -705,7 +705,7 @@ public class SoftEdgeReflectionRenderTests
         var root = new TestRoot(64, 128);
         var viewport = new TestControl { ClipToBounds = true };
         viewport.Bounds = new Rect(0, 20, 64, 108);
-        viewport.RenderSize = new Size(64, 108);
+        viewport.RenderSize = new Size<double>(64, 108);
         var element = new TestControl
         {
             Reflection = new Reflection { Size = 1, Opacity = 1, Fade = 0 },
@@ -714,7 +714,7 @@ public class SoftEdgeReflectionRenderTests
                 .DrawRectangle(Brushes.Lime, new Rect(0, 20, 40, 20))
         };
         element.Bounds = new Rect(4, -10, 40, 40);
-        element.RenderSize = new Size(40, 40);
+        element.RenderSize = new Size<double>(40, 40);
         viewport.Add(element);
         root.Add(viewport);
 
@@ -754,14 +754,14 @@ public class SoftEdgeReflectionRenderTests
         var root = new TestRoot(64, 128);
         var rounded = new TestControl { ClipToBounds = true, ClipCornerRadius = new ProceduralGeometry.CornerRadius(16) };
         rounded.Bounds = new Rect(0, 0, 64, 128);
-        rounded.RenderSize = new Size(64, 128);
+        rounded.RenderSize = new Size<double>(64, 128);
         var element = new TestControl
         {
             Reflection = new Reflection { Size = 1, Opacity = 1 },
             RenderAction = s => s.DrawRectangle(Brushes.Red, new Rect(0, 0, 40, 40))
         };
         element.Bounds = new Rect(0, 0, 40, 40);
-        element.RenderSize = new Size(40, 40);
+        element.RenderSize = new Size<double>(40, 40);
         rounded.Add(element);
         root.Add(rounded);
 
@@ -781,10 +781,10 @@ public class SoftEdgeReflectionRenderTests
         var root = new TestRoot(64, 128);
         var element = new TestControl { ClipToBounds = true, Reflection = new Reflection { Size = 1, Opacity = 1 } };
         element.Bounds = new Rect(4, 4, 40, 40);
-        element.RenderSize = new Size(40, 40);
+        element.RenderSize = new Size<double>(40, 40);
         var tall = new TestControl { RenderAction = s => s.DrawRectangle(Brushes.Lime, new Rect(0, 0, 40, 400)) };
         tall.Bounds = new Rect(0, 0, 40, 400);
-        tall.RenderSize = new Size(40, 400);
+        tall.RenderSize = new Size<double>(40, 400);
         element.Add(tall);
         root.Add(element);
 
@@ -839,10 +839,10 @@ public class SoftEdgeReflectionRenderTests
         var root = new TestRoot(64, 128);
         var holder = new TestControl { SoftEdge = 6 };
         holder.Bounds = new Rect(4, 4, 0, 0);
-        holder.RenderSize = new Size(0, 0);
+        holder.RenderSize = new Size<double>(0, 0);
         var bar = new TestControl { RenderAction = s => s.DrawRectangle(Brushes.Red, new Rect(0, 0, 40, 20)) };
         bar.Bounds = new Rect(0, 0, 40, 20);
-        bar.RenderSize = new Size(40, 20);
+        bar.RenderSize = new Size<double>(40, 20);
         holder.Add(bar);
         root.Add(holder);
 

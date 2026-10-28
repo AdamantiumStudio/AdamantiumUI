@@ -55,7 +55,7 @@ public class DepartedSlotsRenderTests
 
     private static void Frame(OffscreenTestRenderer renderer, VisualRoot root)
     {
-        ((IMeasurableComponent)root).Measure(new Size(Dim, Dim));
+        ((IMeasurableComponent)root).Measure(new Size<double>(Dim, Dim));
         ((IMeasurableComponent)root).Arrange(new Rect(0, 0, Dim, Dim));
         RenderDirty.MarkStructural();
         Assert.That(renderer.RenderFrame(root), Is.True, "off-screen frame must render");

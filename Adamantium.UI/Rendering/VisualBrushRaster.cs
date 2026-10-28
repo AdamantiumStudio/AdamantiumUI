@@ -186,16 +186,16 @@ internal static class VisualBrushRaster
         }
     }
 
-    private static Size DetachedSize(IUIComponent visual)
+    private static Size<double> DetachedSize(IUIComponent visual)
     {
         if (visual is not IMeasurableComponent measurable)
         {
             return default;
         }
 
-        measurable.Measure(new Size(4096, 4096));
+        measurable.Measure(new Size<double>(4096, 4096));
         var desired = measurable.DesiredSize;
-        return new Size(System.Math.Max(1, desired.Width), System.Math.Max(1, desired.Height));
+        return new Size<double>(System.Math.Max(1, desired.Width), System.Math.Max(1, desired.Height));
     }
 
     private static Source Watch(IUIComponent visual, VisualBrush brush, IUIComponent owner)

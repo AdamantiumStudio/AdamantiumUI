@@ -20,7 +20,7 @@ public class CanvasModeTests
     private static InfiniteCanvas Sized(double width = 800, double height = 600)
     {
         var canvas = new InfiniteCanvas();
-        canvas.Measure(new Size(width, height), force: true);
+        canvas.Measure(new Size<double>(width, height), force: true);
         canvas.Arrange(new Rect(0, 0, width, height));
 
         return canvas;
@@ -54,7 +54,7 @@ public class CanvasModeTests
         // Asked through the INTERFACE, which is how the canvas asks.
         ICanvasItem node = Node("Multiply", new Rect(0, 0, 160, 90));
         ICanvasItem button = new ElementItem(new Button(), new Rect(0, 0, 100, 30));
-        ICanvasItem stroke = new StrokeItem(Vector2.Zero, Brushes.White, 2);
+        ICanvasItem stroke = new StrokeItem(Vector2<double>.Zero, Brushes.White, 2);
 
         Assert.Multiple(() =>
         {
@@ -250,8 +250,8 @@ public class CanvasModeTests
         // A caret in a fresh piece, which is what a press with the text tool leaves.
         text.OnPressed(canvas, new CanvasPointerEventArgs
         {
-            World = new Vector2(10, 10),
-            Pointer = new Vector2(10, 10),
+            World = new Vector2<double>(10, 10),
+            Pointer = new Vector2<double>(10, 10),
             Button = MouseButtons.Left,
             ClickCount = 1
         });

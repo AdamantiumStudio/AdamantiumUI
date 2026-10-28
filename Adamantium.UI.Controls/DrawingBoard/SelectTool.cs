@@ -18,9 +18,9 @@ public class SelectTool : ICanvasTool
 
     private CanvasHandle _grip;
     private Rect _startFrame;
-    private Vector2 _from;
-    private Vector2 _fromPointer;
-    private Vector2 _applied;
+    private Vector2<double> _from;
+    private Vector2<double> _fromPointer;
+    private Vector2<double> _applied;
     private Rect? _band;
     private bool _bandExtends;
 
@@ -57,7 +57,7 @@ public class SelectTool : ICanvasTool
 
         _from = e.World;
         _fromPointer = e.Pointer;
-        _applied = Vector2.Zero;
+        _applied = Vector2<double>.Zero;
 
         // No GRIP branch here any more: the frame belongs to the canvas, which answers presses on its grips before any
         // tool is asked - so resizing works under every tool and not only under this one. What is left for the tool is
@@ -197,8 +197,8 @@ public class SelectTool : ICanvasTool
 
         if (_band is not { } band || canvas.RubberBandBrush == null && canvas.SelectionBrush == null) return;
 
-        var topLeft = canvas.WorldToScreen(new Vector2(band.X, band.Y));
-        var bottomRight = canvas.WorldToScreen(new Vector2(band.X + band.Width, band.Y + band.Height));
+        var topLeft = canvas.WorldToScreen(new Vector2<double>(band.X, band.Y));
+        var bottomRight = canvas.WorldToScreen(new Vector2<double>(band.X + band.Width, band.Y + band.Height));
 
         session.DrawRectangle(canvas.RubberBandBrush,
             new Rect(topLeft.X, topLeft.Y, bottomRight.X - topLeft.X, bottomRight.Y - topLeft.Y),
@@ -267,7 +267,7 @@ public class SelectTool : ICanvasTool
 
     // Which edges a grip moves. Never allowed to turn inside out: an edge dragged past its opposite stops there, because
     // a frame that flipped would swap which grip the hand is holding halfway through the drag.
-    private static Rect Stretch(Rect from, CanvasHandle grip, Vector2 delta, double least)
+    private static Rect Stretch(Rect from, CanvasHandle grip, Vector2<double> delta, double least)
     {
         var left = from.X;
         var top = from.Y;
@@ -287,7 +287,7 @@ public class SelectTool : ICanvasTool
     }
 
     // The scene yields in PAINT order, so the last one that answers is the one on top - which is the one a press meant.
-    private static ICanvasItem Topmost(InfiniteCanvas canvas, Vector2 world) => canvas.ItemAt(world);
+    private static ICanvasItem Topmost(InfiniteCanvas canvas, Vector2<double> world) => canvas.ItemAt(world);
 
     // Everything the band TOUCHES, not everything it swallows whole. A band that only counted what it contained entirely
     // would refuse to take a long stroke however carefully it was drawn round it.

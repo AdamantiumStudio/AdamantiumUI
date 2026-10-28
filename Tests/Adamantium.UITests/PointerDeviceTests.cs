@@ -49,14 +49,14 @@ public class PointerDeviceTests
     public void TearDown()
     {
         Mouse.Pointer.Capture(null);
-        Send(RawPointerEventType.LeaveWindow, PointerDevice.MouseId, PointerType.Mouse, Vector2.Zero, 0);
+        Send(RawPointerEventType.LeaveWindow, PointerDevice.MouseId, PointerType.Mouse, Vector2<double>.Zero, 0);
     }
 
     [Test]
     public void TwoFingers_EachHoldTheirOwnElement()
     {
-        Send(RawPointerEventType.Down, 10, PointerType.Touch, new Vector2(50, 50), 0);
-        Send(RawPointerEventType.Down, 11, PointerType.Touch, new Vector2(150, 50), 0);
+        Send(RawPointerEventType.Down, 10, PointerType.Touch, new Vector2<double>(50, 50), 0);
+        Send(RawPointerEventType.Down, 11, PointerType.Touch, new Vector2<double>(150, 50), 0);
 
         var first = Finger(10);
         var second = Finger(11);
@@ -72,7 +72,7 @@ public class PointerDeviceTests
         // The first finger slides over the second one's element and stays with its own.
         var movedOnLeft = 0;
         _left.PointerMoved += (_, _) => movedOnLeft++;
-        Send(RawPointerEventType.Move, 10, PointerType.Touch, new Vector2(150, 50), 0);
+        Send(RawPointerEventType.Move, 10, PointerType.Touch, new Vector2<double>(150, 50), 0);
 
         Assert.Multiple(() =>
         {
@@ -101,8 +101,8 @@ public class PointerDeviceTests
         held.AddHandler(PointerEvents.PointerPressedEvent,
             new PointerPressedEventHandler((_, e) => e.Pointer.Capture(held)), handledEventsToo: true);
 
-        Send(RawPointerEventType.Down, PointerDevice.MouseId, PointerType.Mouse, new Vector2(60, 60), 0);
-        Send(RawPointerEventType.Move, PointerDevice.MouseId, PointerType.Mouse, new Vector2(130, 60), 0);
+        Send(RawPointerEventType.Down, PointerDevice.MouseId, PointerType.Mouse, new Vector2<double>(60, 60), 0);
+        Send(RawPointerEventType.Move, PointerDevice.MouseId, PointerType.Mouse, new Vector2<double>(130, 60), 0);
 
         Assert.That(Mouse.Pointer.Captured, Is.SameAs(held));
         Assert.That(Mouse.Pointer.DirectlyOver, Is.SameAs(first), "90 into the panel is still the first of its two");
@@ -111,11 +111,11 @@ public class PointerDeviceTests
     [Test]
     public void ALiftedFinger_IsGoneAndLetsGo()
     {
-        Send(RawPointerEventType.Down, 10, PointerType.Touch, new Vector2(50, 50), 0);
-        Send(RawPointerEventType.Down, 11, PointerType.Touch, new Vector2(150, 50), 0);
+        Send(RawPointerEventType.Down, 10, PointerType.Touch, new Vector2<double>(50, 50), 0);
+        Send(RawPointerEventType.Down, 11, PointerType.Touch, new Vector2<double>(150, 50), 0);
         var first = Finger(10);
 
-        Send(RawPointerEventType.Up, 10, PointerType.Touch, new Vector2(50, 50), 0);
+        Send(RawPointerEventType.Up, 10, PointerType.Touch, new Vector2<double>(50, 50), 0);
 
         Assert.Multiple(() =>
         {
@@ -125,7 +125,7 @@ public class PointerDeviceTests
             Assert.That(Finger(11).Captured, Is.SameAs(_right), "the other finger still holds its own");
         });
 
-        Send(RawPointerEventType.Cancel, 11, PointerType.Touch, new Vector2(150, 50), 0);
+        Send(RawPointerEventType.Cancel, 11, PointerType.Touch, new Vector2<double>(150, 50), 0);
 
         Assert.Multiple(() =>
         {
@@ -144,12 +144,12 @@ public class PointerDeviceTests
             if (e.Pointer.Type == PointerType.Mouse) mouseClicks = e.ClickCount;
         }), handledEventsToo: true);
 
-        Send(RawPointerEventType.Down, PointerDevice.MouseId, PointerType.Mouse, new Vector2(50, 50), 1000);
-        Send(RawPointerEventType.Up, PointerDevice.MouseId, PointerType.Mouse, new Vector2(50, 50), 1010);
-        Send(RawPointerEventType.Down, 20, PointerType.Touch, new Vector2(150, 50), 1020);
-        Send(RawPointerEventType.Up, 20, PointerType.Touch, new Vector2(150, 50), 1030);
-        Send(RawPointerEventType.Down, PointerDevice.MouseId, PointerType.Mouse, new Vector2(50, 50), 1040);
-        Send(RawPointerEventType.Up, PointerDevice.MouseId, PointerType.Mouse, new Vector2(50, 50), 1050);
+        Send(RawPointerEventType.Down, PointerDevice.MouseId, PointerType.Mouse, new Vector2<double>(50, 50), 1000);
+        Send(RawPointerEventType.Up, PointerDevice.MouseId, PointerType.Mouse, new Vector2<double>(50, 50), 1010);
+        Send(RawPointerEventType.Down, 20, PointerType.Touch, new Vector2<double>(150, 50), 1020);
+        Send(RawPointerEventType.Up, 20, PointerType.Touch, new Vector2<double>(150, 50), 1030);
+        Send(RawPointerEventType.Down, PointerDevice.MouseId, PointerType.Mouse, new Vector2<double>(50, 50), 1040);
+        Send(RawPointerEventType.Up, PointerDevice.MouseId, PointerType.Mouse, new Vector2<double>(50, 50), 1050);
 
         Assert.That(mouseClicks, Is.EqualTo(2));
     }
@@ -169,8 +169,8 @@ public class PointerDeviceTests
         var clicks = 0;
         button.Click += (_, _) => clicks++;
 
-        Send(RawPointerEventType.Down, 30, PointerType.Touch, new Vector2(50, 50), 0, MouseButtons.None);
-        Send(RawPointerEventType.Up, 30, PointerType.Touch, new Vector2(50, 50), 0, MouseButtons.Right);
+        Send(RawPointerEventType.Down, 30, PointerType.Touch, new Vector2<double>(50, 50), 0, MouseButtons.None);
+        Send(RawPointerEventType.Up, 30, PointerType.Touch, new Vector2<double>(50, 50), 0, MouseButtons.Right);
 
         Assert.That(clicks, Is.EqualTo(1));
     }
@@ -181,11 +181,11 @@ public class PointerDeviceTests
         bool? held = null;
         _left.PointerMoved += (_, e) => held = e.Properties.IsLeftButtonPressed;
 
-        Send(RawPointerEventType.Down, 31, PointerType.Touch, new Vector2(50, 50), 0, MouseButtons.None);
-        Send(RawPointerEventType.Move, 31, PointerType.Touch, new Vector2(60, 50), 0, MouseButtons.None);
+        Send(RawPointerEventType.Down, 31, PointerType.Touch, new Vector2<double>(50, 50), 0, MouseButtons.None);
+        Send(RawPointerEventType.Move, 31, PointerType.Touch, new Vector2<double>(60, 50), 0, MouseButtons.None);
 
         Assert.That(held, Is.True);
-        Send(RawPointerEventType.Up, 31, PointerType.Touch, new Vector2(60, 50), 0, MouseButtons.None);
+        Send(RawPointerEventType.Up, 31, PointerType.Touch, new Vector2<double>(60, 50), 0, MouseButtons.None);
     }
 
     // A pen's barrel held as its tip touches is the right button - the pen's way of asking for a context menu.
@@ -197,8 +197,8 @@ public class PointerDeviceTests
             new PointerPressedEventHandler((_, e) => pressed = e.ChangedButton), handledEventsToo: true);
 
         var barrel = new PointerPointProperties { IsBarrelButtonPressed = true };
-        Send(RawPointerEventType.Down, 32, PointerType.Pen, new Vector2(50, 50), 0, MouseButtons.Left, barrel);
-        Send(RawPointerEventType.Up, 32, PointerType.Pen, new Vector2(50, 50), 0, MouseButtons.Left, barrel);
+        Send(RawPointerEventType.Down, 32, PointerType.Pen, new Vector2<double>(50, 50), 0, MouseButtons.Left, barrel);
+        Send(RawPointerEventType.Up, 32, PointerType.Pen, new Vector2<double>(50, 50), 0, MouseButtons.Left, barrel);
 
         Assert.That(pressed, Is.EqualTo(MouseButtons.Right));
     }
@@ -218,10 +218,10 @@ public class PointerDeviceTests
         _left.PointerMoved += (_, e) => moveHeldLeft = e.Properties.IsLeftButtonPressed;
 
         var barrel = new PointerPointProperties { IsBarrelButtonPressed = true };
-        Send(RawPointerEventType.Down, 33, PointerType.Pen, new Vector2(50, 50), 0, MouseButtons.None);
-        Send(RawPointerEventType.Move, 33, PointerType.Pen, new Vector2(55, 50), 0, MouseButtons.None, barrel);
-        Send(RawPointerEventType.Up, 33, PointerType.Pen, new Vector2(55, 50), 0, MouseButtons.None, barrel);
-        Send(RawPointerEventType.LeaveWindow, 33, PointerType.Pen, Vector2.Zero, 0, MouseButtons.None);
+        Send(RawPointerEventType.Down, 33, PointerType.Pen, new Vector2<double>(50, 50), 0, MouseButtons.None);
+        Send(RawPointerEventType.Move, 33, PointerType.Pen, new Vector2<double>(55, 50), 0, MouseButtons.None, barrel);
+        Send(RawPointerEventType.Up, 33, PointerType.Pen, new Vector2<double>(55, 50), 0, MouseButtons.None, barrel);
+        Send(RawPointerEventType.LeaveWindow, 33, PointerType.Pen, Vector2<double>.Zero, 0, MouseButtons.None);
 
         Assert.Multiple(() =>
         {
@@ -238,10 +238,10 @@ public class PointerDeviceTests
         bool? held = null;
         _left.PointerMoved += (_, e) => held = e.Properties.IsLeftButtonPressed;
 
-        Send(RawPointerEventType.Move, 34, PointerType.Touch, new Vector2(50, 50), 0, MouseButtons.None);
+        Send(RawPointerEventType.Move, 34, PointerType.Touch, new Vector2<double>(50, 50), 0, MouseButtons.None);
 
         Assert.That(held, Is.False);
-        Send(RawPointerEventType.LeaveWindow, 34, PointerType.Touch, Vector2.Zero, 0, MouseButtons.None);
+        Send(RawPointerEventType.LeaveWindow, 34, PointerType.Touch, Vector2<double>.Zero, 0, MouseButtons.None);
     }
 
     // The hold's tick reaches the loop on its own, and a busy loop took the lift first: a finger held on a button for
@@ -257,8 +257,8 @@ public class PointerDeviceTests
 
         using (HoldingTimeOf(TimeSpan.FromSeconds(1)))
         {
-            Send(RawPointerEventType.Down, 47, PointerType.Touch, new Vector2(50, 50), 1000, MouseButtons.None);
-            Send(RawPointerEventType.Up, 47, PointerType.Touch, new Vector2(50, 50), 2100, MouseButtons.None);
+            Send(RawPointerEventType.Down, 47, PointerType.Touch, new Vector2<double>(50, 50), 1000, MouseButtons.None);
+            Send(RawPointerEventType.Up, 47, PointerType.Touch, new Vector2<double>(50, 50), 2100, MouseButtons.None);
         }
 
         Assert.Multiple(() =>
@@ -278,10 +278,10 @@ public class PointerDeviceTests
 
         using (HoldingTimeOf(TimeSpan.FromSeconds(1)))
         {
-            Send(RawPointerEventType.Down, 48, PointerType.Touch, new Vector2(20, 50), 1000, MouseButtons.None);
-            Send(RawPointerEventType.Down, 49, PointerType.Touch, new Vector2(30, 50), 2100, MouseButtons.None);
-            Send(RawPointerEventType.Up, 49, PointerType.Touch, new Vector2(30, 50), 2200, MouseButtons.None);
-            Send(RawPointerEventType.Up, 48, PointerType.Touch, new Vector2(20, 50), 2300, MouseButtons.None);
+            Send(RawPointerEventType.Down, 48, PointerType.Touch, new Vector2<double>(20, 50), 1000, MouseButtons.None);
+            Send(RawPointerEventType.Down, 49, PointerType.Touch, new Vector2<double>(30, 50), 2100, MouseButtons.None);
+            Send(RawPointerEventType.Up, 49, PointerType.Touch, new Vector2<double>(30, 50), 2200, MouseButtons.None);
+            Send(RawPointerEventType.Up, 48, PointerType.Touch, new Vector2<double>(20, 50), 2300, MouseButtons.None);
         }
 
         Assert.That(states.FirstOrDefault(), Is.EqualTo(HoldingState.Started));
@@ -300,10 +300,10 @@ public class PointerDeviceTests
 
         using (HoldingTimeOf(TimeSpan.FromHours(1)))
         {
-            Send(RawPointerEventType.Down, 40, PointerType.Touch, new Vector2(50, 50), 0, MouseButtons.None);
+            Send(RawPointerEventType.Down, 40, PointerType.Touch, new Vector2<double>(50, 50), 0, MouseButtons.None);
             PointerDevice.Current.Holding.Elapsed(40, 600);
             Assert.That(button.IsPressed, Is.False, "the held button let go of the press");
-            Send(RawPointerEventType.Up, 40, PointerType.Touch, new Vector2(50, 50), 700, MouseButtons.None);
+            Send(RawPointerEventType.Up, 40, PointerType.Touch, new Vector2<double>(50, 50), 700, MouseButtons.None);
         }
 
         Assert.Multiple(() =>
@@ -376,10 +376,10 @@ public class PointerDeviceTests
         Adamantium.UI.Controls.HoldIndicator cue;
         using (HoldingTimeOf(TimeSpan.FromHours(1)))
         {
-            Send(RawPointerEventType.Down, 43, PointerType.Touch, new Vector2(50, 50), 0, MouseButtons.None);
+            Send(RawPointerEventType.Down, 43, PointerType.Touch, new Vector2<double>(50, 50), 0, MouseButtons.None);
             PointerDevice.Current.Holding.Elapsed(43, 600);
             cue = _window.Adorners.OfType<Adamantium.UI.Controls.HoldIndicator>().SingleOrDefault();
-            Send(RawPointerEventType.Up, 43, PointerType.Touch, new Vector2(50, 50), 700, MouseButtons.None);
+            Send(RawPointerEventType.Up, 43, PointerType.Touch, new Vector2<double>(50, 50), 700, MouseButtons.None);
         }
 
         Assume.That(cue, Is.Not.Null, "the hold showed its cue");
@@ -400,10 +400,10 @@ public class PointerDeviceTests
 
         using (HoldingTimeOf(TimeSpan.FromHours(1)))
         {
-            Send(RawPointerEventType.Down, 41, PointerType.Touch, new Vector2(20, 50), 0, MouseButtons.None);
-            Send(RawPointerEventType.Move, 41, PointerType.Touch, new Vector2(60, 50), 0, MouseButtons.None);
+            Send(RawPointerEventType.Down, 41, PointerType.Touch, new Vector2<double>(20, 50), 0, MouseButtons.None);
+            Send(RawPointerEventType.Move, 41, PointerType.Touch, new Vector2<double>(60, 50), 0, MouseButtons.None);
             PointerDevice.Current.Holding.Elapsed(41, 600);
-            Send(RawPointerEventType.Up, 41, PointerType.Touch, new Vector2(60, 50), 700, MouseButtons.None);
+            Send(RawPointerEventType.Up, 41, PointerType.Touch, new Vector2<double>(60, 50), 700, MouseButtons.None);
         }
 
         Assert.That(states, Is.Empty);
@@ -418,11 +418,11 @@ public class PointerDeviceTests
 
         using (HoldingTimeOf(TimeSpan.FromHours(1)))
         {
-            Send(RawPointerEventType.Down, 42, PointerType.Pen, new Vector2(20, 50), 0, MouseButtons.None);
+            Send(RawPointerEventType.Down, 42, PointerType.Pen, new Vector2<double>(20, 50), 0, MouseButtons.None);
             PointerDevice.Current.Holding.Elapsed(42, 600);
-            Send(RawPointerEventType.Move, 42, PointerType.Pen, new Vector2(60, 50), 650, MouseButtons.None);
-            Send(RawPointerEventType.Up, 42, PointerType.Pen, new Vector2(60, 50), 700, MouseButtons.None);
-            Send(RawPointerEventType.LeaveWindow, 42, PointerType.Pen, Vector2.Zero, 700, MouseButtons.None);
+            Send(RawPointerEventType.Move, 42, PointerType.Pen, new Vector2<double>(60, 50), 650, MouseButtons.None);
+            Send(RawPointerEventType.Up, 42, PointerType.Pen, new Vector2<double>(60, 50), 700, MouseButtons.None);
+            Send(RawPointerEventType.LeaveWindow, 42, PointerType.Pen, Vector2<double>.Zero, 700, MouseButtons.None);
         }
 
         Assert.That(states, Is.EqualTo(new[] { HoldingState.Started, HoldingState.Canceled }));
@@ -443,11 +443,11 @@ public class PointerDeviceTests
 
         using (HoldingTimeOf(TimeSpan.FromMilliseconds(5)))
         {
-            Send(RawPointerEventType.Down, 44, PointerType.Touch, new Vector2(20, 50), 0, MouseButtons.None);
+            Send(RawPointerEventType.Down, 44, PointerType.Touch, new Vector2<double>(20, 50), 0, MouseButtons.None);
             System.Threading.Thread.Sleep(200);
             var beforeDrain = states.Count;
             LoopSignal.Drain();
-            Send(RawPointerEventType.Up, 44, PointerType.Touch, new Vector2(20, 50), 700, MouseButtons.None);
+            Send(RawPointerEventType.Up, 44, PointerType.Touch, new Vector2<double>(20, 50), 700, MouseButtons.None);
 
             Assert.Multiple(() =>
             {
@@ -466,16 +466,16 @@ public class PointerDeviceTests
 
         using (HoldingTimeOf(TimeSpan.FromMilliseconds(5)))
         {
-            Send(RawPointerEventType.Down, 45, PointerType.Touch, new Vector2(20, 50), 0, MouseButtons.None);
+            Send(RawPointerEventType.Down, 45, PointerType.Touch, new Vector2<double>(20, 50), 0, MouseButtons.None);
             System.Threading.Thread.Sleep(200);
-            Send(RawPointerEventType.Up, 45, PointerType.Touch, new Vector2(20, 50), 3, MouseButtons.None);
+            Send(RawPointerEventType.Up, 45, PointerType.Touch, new Vector2<double>(20, 50), 3, MouseButtons.None);
         }
 
         using (HoldingTimeOf(TimeSpan.FromHours(1)))
         {
-            Send(RawPointerEventType.Down, 45, PointerType.Touch, new Vector2(20, 50), 400, MouseButtons.None);
+            Send(RawPointerEventType.Down, 45, PointerType.Touch, new Vector2<double>(20, 50), 400, MouseButtons.None);
             LoopSignal.Drain();
-            Send(RawPointerEventType.Up, 45, PointerType.Touch, new Vector2(20, 50), 500, MouseButtons.None);
+            Send(RawPointerEventType.Up, 45, PointerType.Touch, new Vector2<double>(20, 50), 500, MouseButtons.None);
         }
 
         Assert.That(states, Is.Empty);
@@ -487,9 +487,9 @@ public class PointerDeviceTests
         var states = new List<HoldingState>();
         _left.AddHandler(Gestures.HoldingEvent, new HoldingEventHandler((_, e) => states.Add(e.HoldingState)));
 
-        Send(RawPointerEventType.Down, PointerDevice.MouseId, PointerType.Mouse, new Vector2(50, 50), 0);
+        Send(RawPointerEventType.Down, PointerDevice.MouseId, PointerType.Mouse, new Vector2<double>(50, 50), 0);
         PointerDevice.Current.Holding.Elapsed(PointerDevice.MouseId, 600);
-        Send(RawPointerEventType.Up, PointerDevice.MouseId, PointerType.Mouse, new Vector2(50, 50), 700);
+        Send(RawPointerEventType.Up, PointerDevice.MouseId, PointerType.Mouse, new Vector2<double>(50, 50), 700);
 
         Assert.That(states, Is.Empty);
     }
@@ -522,11 +522,11 @@ public class PointerDeviceTests
     private static Pointer Finger(uint id) => PointerDevice.Current.Pointers.Single(p => p.Id == id);
 
     // The left button for a press or a release, as a platform says it for the mouse.
-    private void Send(RawPointerEventType type, uint id, PointerType pointerType, Vector2 at, uint timestamp) =>
+    private void Send(RawPointerEventType type, uint id, PointerType pointerType, Vector2<double> at, uint timestamp) =>
         Send(type, id, pointerType, at, timestamp,
             type is RawPointerEventType.Down or RawPointerEventType.Up ? MouseButtons.Left : MouseButtons.None);
 
-    private void Send(RawPointerEventType type, uint id, PointerType pointerType, Vector2 at, uint timestamp,
+    private void Send(RawPointerEventType type, uint id, PointerType pointerType, Vector2<double> at, uint timestamp,
         MouseButtons button, PointerPointProperties properties = default)
     {
         PointerDevice.Current.ProcessEvent(new RawPointerEventArgs(type, _window, at, InputModifiers.None, timestamp)

@@ -50,7 +50,7 @@ public class MenuItemSubmenuTests
         }
 
         ((Popup)parent.GetTemplateChild("PART_SubmenuPopup")).IsOpen = true;
-        window.PopupLayer.UpdateLayout(new Size(400, 300));
+        window.PopupLayer.UpdateLayout(new Size<double>(400, 300));
     }
 
     [Test]

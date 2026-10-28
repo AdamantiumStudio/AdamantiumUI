@@ -188,7 +188,7 @@ public class DockCompass : Panel
 
     /// <summary>Which indicator a point falls on for a group occupying <paramref name="target"/>, or
     /// <see cref="DockZone.None"/>. Static and pure: this is what the drop asks too, so the two can never disagree.</summary>
-    public static DockZone ZoneAt(Rect target, Vector2 point, double indicatorSize, double gap)
+    public static DockZone ZoneAt(Rect target, Vector2<double> point, double indicatorSize, double gap)
     {
         var cx = target.X + target.Width / 2;
         var cy = target.Y + target.Height / 2;
@@ -210,7 +210,7 @@ public class DockCompass : Panel
     /// <summary>Which EDGE anchor a point falls on for an area occupying <paramref name="area"/>, or
     /// <see cref="DockZone.None"/>. Asked before <see cref="ZoneAt"/>: the edges belong to the area and the cross to
     /// whichever group is under the pointer, and an edge anchor is the more specific answer where they meet.</summary>
-    public static DockZone EdgeZoneAt(Rect area, Vector2 point, double indicatorSize, double inset)
+    public static DockZone EdgeZoneAt(Rect area, Vector2<double> point, double indicatorSize, double inset)
     {
         for (var i = 0; i < EdgeZones.Length; i++)
         {
@@ -289,13 +289,13 @@ public class DockCompass : Panel
         return new Rect(cx + dx - half, cy + dy - half, size, size);
     }
 
-    protected override Size MeasureOverride(Size availableSize)
+    protected override Size<double> MeasureOverride(Size<double> availableSize)
     {
         foreach (var child in Children) child.Measure(availableSize);
         return availableSize;
     }
 
-    protected override Size ArrangeOverride(Size finalSize)
+    protected override Size<double> ArrangeOverride(Size<double> finalSize)
     {
 
         var area = new Rect(0, 0, finalSize.Width, finalSize.Height);

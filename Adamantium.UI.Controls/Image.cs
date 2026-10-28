@@ -605,7 +605,7 @@ public class Image : InputUIComponent, IDesignTimeAnimatedMedia
    // IDesignTimeAnimatedMedia / DesignTimeMediaClock). Same advance logic as runtime.
    public bool AdvanceDesignTime(double deltaSeconds) => AdvancePlayback(deltaSeconds);
 
-   protected override Size MeasureOverride(Size availableSize)
+   protected override Size<double> MeasureOverride(Size<double> availableSize)
    {
       // Before the size is read: a drawing source's extent can itself come from bindings inside the drawing.
       EnsureDrawingAttached();
@@ -614,22 +614,22 @@ public class Image : InputUIComponent, IDesignTimeAnimatedMedia
       {
          var source = Source;
 
-         var size = CalculateScaling(Stretch, availableSize, new Size(source.Width, source.Height));
+         var size = CalculateScaling(Stretch, availableSize, new Size<double>(source.Width, source.Height));
          return size;
       }
 
-      return Size.Zero;
+      return Size<double>.Zero;
    }
 
-   protected override Size ArrangeOverride(Size finalSize)
+   protected override Size<double> ArrangeOverride(Size<double> finalSize)
    {
       // Stretch alignment takes the whole slot and OnRender centers the picture in it; other alignments shrink to the
       // fitted picture. No source still takes its slot, so an unfilled image remains selectable.
       var fitted = Source != null
-         ? CalculateScaling(Stretch, finalSize, new Size(Source.Width, Source.Height))
-         : Size.Zero;
+         ? CalculateScaling(Stretch, finalSize, new Size<double>(Source.Width, Source.Height))
+         : Size<double>.Zero;
 
-      return new Size(
+      return new Size<double>(
          HorizontalAlignment == HorizontalAlignment.Stretch ? finalSize.Width : fitted.Width,
          VerticalAlignment == VerticalAlignment.Stretch ? finalSize.Height : fitted.Height);
    }
@@ -680,7 +680,7 @@ public class Image : InputUIComponent, IDesignTimeAnimatedMedia
 
       // Scale per Stretch and center: a smaller fit gets equal margins, a larger one is cropped equally on both sides,
       // which is what keeps None, UniformToFill and Fill distinct.
-      var fitted = CalculateScaling(Stretch, Bounds.Size, new Size(Source.Width, Source.Height));
+      var fitted = CalculateScaling(Stretch, Bounds.Size, new Size<double>(Source.Width, Source.Height));
       var visibleU = fitted.Width > 0 ? Math.Min(1.0, Bounds.Width / fitted.Width) : 1.0;
       var visibleV = fitted.Height > 0 ? Math.Min(1.0, Bounds.Height / fitted.Height) : 1.0;
       var width = Math.Min(fitted.Width, Bounds.Width);
@@ -764,7 +764,7 @@ public class Image : InputUIComponent, IDesignTimeAnimatedMedia
       _ => !ShowsForeground || Source == null || (_frame ?? Source) is BitmapImage { IsLoaded: false }
    };
 
-   private Size CalculateScaling(Stretch stretch, Size destinationSize, Size sourceSize)
+   private Size<double> CalculateScaling(Stretch stretch, Size<double> destinationSize, Size<double> sourceSize)
    {
       double sizeX = sourceSize.Width;
       double sizeY = sourceSize.Height;
@@ -840,6 +840,6 @@ public class Image : InputUIComponent, IDesignTimeAnimatedMedia
          }
       }
 
-      return new Size( sizeX * scaleX,  sizeY * scaleY);
+      return new Size<double>( sizeX * scaleX,  sizeY * scaleY);
    }
 }

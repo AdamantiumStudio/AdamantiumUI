@@ -15,14 +15,14 @@ public class CanvasCurveTests
     private static InfiniteCanvas Sized(double width = 400, double height = 300)
     {
         var canvas = new InfiniteCanvas();
-        canvas.Measure(new Size(width, height), force: true);
+        canvas.Measure(new Size<double>(width, height), force: true);
         canvas.Arrange(new Rect(0, 0, width, height));
 
         return canvas;
     }
 
     private static CurveItem Curve(CanvasCurve kind = CanvasCurve.Bezier) =>
-        new(kind, [new Vector2(0, 0), new Vector2(20, -40), new Vector2(60, 40), new Vector2(100, 0)],
+        new(kind, [new Vector2<double>(0, 0), new Vector2<double>(20, -40), new Vector2<double>(60, 40), new Vector2<double>(100, 0)],
             Brushes.White, 2);
 
     // AS INK, and never as a geometry. A geometry is cached by its CONTENT, a curve is built in screen coordinates and
@@ -64,7 +64,7 @@ public class CanvasCurveTests
     {
         var session = new RecordingDrawingSession();
 
-        new CurveItem(CanvasCurve.Bezier, [new Vector2(0, 0)], Brushes.White, 2).Render(session, Sized());
+        new CurveItem(CanvasCurve.Bezier, [new Vector2<double>(0, 0)], Brushes.White, 2).Render(session, Sized());
 
         Assert.That(session.Rectangles, Is.Empty);
     }
@@ -75,9 +75,9 @@ public class CanvasCurveTests
     public void AnExtraPointIsDrawnWithoutBeingKept()
     {
         var session = new RecordingDrawingSession();
-        var curve = new CurveItem(CanvasCurve.Bezier, [new Vector2(0, 0)], Brushes.White, 2);
+        var curve = new CurveItem(CanvasCurve.Bezier, [new Vector2<double>(0, 0)], Brushes.White, 2);
 
-        curve.Render(session, Sized(), new Vector2(50, 50));
+        curve.Render(session, Sized(), new Vector2<double>(50, 50));
 
         Assert.Multiple(() =>
         {
@@ -92,12 +92,12 @@ public class CanvasCurveTests
     public void ACurveIsHitOnTheLine()
     {
         var curve = new CurveItem(CanvasCurve.Bezier,
-            [new Vector2(0, 0), new Vector2(40, 0), new Vector2(60, 0), new Vector2(100, 0)], Brushes.White, 2);
+            [new Vector2<double>(0, 0), new Vector2<double>(40, 0), new Vector2<double>(60, 0), new Vector2<double>(100, 0)], Brushes.White, 2);
 
         Assert.Multiple(() =>
         {
-            Assert.That(curve.HitTest(new Vector2(50, 0), 1), Is.True);
-            Assert.That(curve.HitTest(new Vector2(50, 60), 1), Is.False);
+            Assert.That(curve.HitTest(new Vector2<double>(50, 0), 1), Is.True);
+            Assert.That(curve.HitTest(new Vector2<double>(50, 60), 1), Is.False);
         });
     }
 
@@ -121,7 +121,7 @@ public class CanvasCurveTests
         canvas.Scene = scene;
         canvas.Select(curve, false);
 
-        var corner = canvas.WorldToScreen(new Vector2(curve.Bounds.X, curve.Bounds.Y));
+        var corner = canvas.WorldToScreen(new Vector2<double>(curve.Bounds.X, curve.Bounds.Y));
 
         Assert.Multiple(() =>
         {
@@ -147,7 +147,7 @@ public class CanvasCurveTests
         Assert.Multiple(() =>
         {
             Assert.That(canvas.PointHandleAt(second), Is.EqualTo(1));
-            Assert.That(canvas.PointHandleAt(new Vector2(second.X + 60, second.Y)), Is.EqualTo(-1));
+            Assert.That(canvas.PointHandleAt(new Vector2<double>(second.X + 60, second.Y)), Is.EqualTo(-1));
         });
     }
 
@@ -158,11 +158,11 @@ public class CanvasCurveTests
         var curve = Curve();
         var others = new[] { curve.Points[0], curve.Points[2], curve.Points[3] };
 
-        curve.MovePoint(1, new Vector2(-500, -500));
+        curve.MovePoint(1, new Vector2<double>(-500, -500));
 
         Assert.Multiple(() =>
         {
-            Assert.That(curve.Points[1], Is.EqualTo(new Vector2(-500, -500)));
+            Assert.That(curve.Points[1], Is.EqualTo(new Vector2<double>(-500, -500)));
             Assert.That(curve.Points[0], Is.EqualTo(others[0]));
             Assert.That(curve.Points[2], Is.EqualTo(others[1]));
             Assert.That(curve.Points[3], Is.EqualTo(others[2]));
@@ -192,11 +192,11 @@ public class CanvasCurveTests
     public void OnlyTheFirstAndLastPointsLieOnABezier(int count)
     {
         var session = new RecordingDrawingSession();
-        var points = new System.Collections.Generic.List<Vector2>();
+        var points = new System.Collections.Generic.List<Vector2<double>>();
 
         // A zig-zag: no interior point is anywhere near where the curve between its neighbors would pass, so one found
         // on the line is one the walk put there.
-        for (var i = 0; i < count; i++) points.Add(new Vector2(i * 30, i % 2 == 0 ? 0 : -50));
+        for (var i = 0; i < count; i++) points.Add(new Vector2<double>(i * 30, i % 2 == 0 ? 0 : -50));
 
         var curve = new CurveItem(CanvasCurve.Bezier, points, Brushes.White, 2);
         var canvas = Sized(800, 600);
@@ -223,8 +223,8 @@ public class CanvasCurveTests
     [TestCase(6, 5)]
     public void ABeziersDegreeFollowsItsPoints(int count, int degree)
     {
-        var points = new System.Collections.Generic.List<Vector2>();
-        for (var i = 0; i < count; i++) points.Add(new Vector2(i * 30, i % 2 == 0 ? 0 : -50));
+        var points = new System.Collections.Generic.List<Vector2<double>>();
+        for (var i = 0; i < count; i++) points.Add(new Vector2<double>(i * 30, i % 2 == 0 ? 0 : -50));
 
         var curve = new CurveItem(CanvasCurve.Bezier, points, Brushes.White, 2);
 
@@ -239,7 +239,7 @@ public class CanvasCurveTests
     }
 
     // Whether the drawn line passes through a point, in the same screen units the pass was handed.
-    private static bool Touches(InkBrush ink, Vector2 at)
+    private static bool Touches(InkBrush ink, Vector2<double> at)
     {
         for (var i = 0; i < ink.Count; i++)
         {
@@ -275,7 +275,7 @@ public class CanvasCurveTests
     [Test]
     public void TwoPointsAreABezierOfDegreeOne()
     {
-        var curve = new CurveItem(CanvasCurve.Bezier, [new Vector2(0, 0), new Vector2(50, 50)], Brushes.White, 2);
+        var curve = new CurveItem(CanvasCurve.Bezier, [new Vector2<double>(0, 0), new Vector2<double>(50, 50)], Brushes.White, 2);
 
         Assert.That(curve.Degree, Is.EqualTo(1));
 

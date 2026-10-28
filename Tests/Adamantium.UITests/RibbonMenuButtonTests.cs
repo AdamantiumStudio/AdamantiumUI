@@ -127,8 +127,8 @@ public class RibbonMenuButtonTests
     // GetPosition walks up to a ROOT visual, so the button has to hang under one - a bare Border throws.
     private sealed class TestWindowRoot : Grid, IRootVisualComponent
     {
-        public Vector2 PointToClient(PixelPoint point) => new((float)point.X, (float)point.Y);
-        public PixelPoint PointToScreen(Vector2 point) => new(point.X, point.Y);
+        public Vector2<double> PointToClient(PixelPoint point) => new((float)point.X, (float)point.Y);
+        public PixelPoint PointToScreen(Vector2<double> point) => new(point.X, point.Y);
         public PixelPoint Position { get; set; }
         public void AttachContextAndInitialize(IUIContext context) { }
         public double Left { get; set; }
@@ -145,7 +145,7 @@ public class RibbonMenuButtonTests
         var button = new RibbonSplitButton { Template = SplitTemplate(), Command = command };
         var root = new TestWindowRoot { Width = 200, Height = 40, ClientWidth = 200, ClientHeight = 40 };
         root.Children.Add(button);
-        root.Measure(new Size(200, 40));
+        root.Measure(new Size<double>(200, 40));
         root.Arrange(new Rect(0, 0, 200, 40));
         return (button, command);
     }
@@ -227,7 +227,7 @@ public class RibbonMenuButtonTests
 
         var panel = new RibbonGroupPanel();
         panel.Children.Add(button);
-        panel.Measure(Size.Infinity);
+        panel.Measure(Size<double>.Infinity);
 
         Assert.That(Ribbon.GetSize(button), Is.EqualTo(RibbonSize.Medium));
     }

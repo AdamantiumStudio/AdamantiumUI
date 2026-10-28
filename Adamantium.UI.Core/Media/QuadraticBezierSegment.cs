@@ -9,7 +9,7 @@ public class QuadraticBezierSegment : BezierSegmentBase
         
     }
 
-    public QuadraticBezierSegment(Vector2 controlPoint, Vector2 point, bool isStroked)
+    public QuadraticBezierSegment(Vector2<double> controlPoint, Vector2<double> point, bool isStroked)
     {
         ControlPoint = controlPoint;
         Point = point;
@@ -17,20 +17,19 @@ public class QuadraticBezierSegment : BezierSegmentBase
     }
     
     public static readonly AdamantiumProperty ControlPointProperty =
-        AdamantiumProperty.Register(nameof(ControlPoint), typeof(Vector2), typeof(QuadraticBezierSegment),
-            new PropertyMetadata(Vector2.Zero, PropertyMetadataOptions.AffectsMeasure));
+        AdamantiumProperty.Register(nameof(ControlPoint), typeof(Vector2<double>), typeof(QuadraticBezierSegment),
+            new PropertyMetadata(Vector2<double>.Zero, PropertyMetadataOptions.AffectsMeasure));
 
-    public Vector2 ControlPoint
+    public Vector2<double> ControlPoint
     {
-        get => GetValue<Vector2>(ControlPointProperty);
+        get => GetValue<Vector2<double>>(ControlPointProperty);
         set => SetValue(ControlPointProperty, value);
     }
     
-    internal override Vector2[] ProcessSegment(Vector2 currentPoint)
+    internal override Vector2<double>[] ProcessSegment(Vector2<double> currentPoint)
     {
-        // Dense uniform-t base, then EVEN arc-length resample (~3px) - smooth stroke, no sub-pixel bunching.
-        var fine = MathHelper.GetQuadraticBezier(currentPoint, ControlPoint, Point, 256);
-        var count = System.Math.Clamp((int)(MathHelper.PolylineLength(fine) / 3.0), 8, 256);
-        return MathHelper.ResampleByArcLength(fine, count);
+        var dense = new List<Vector2<double>>();
+        MathHelper.Curves.AppendQuadraticBezier(currentPoint, ControlPoint, Point, 256, dense);
+        return ResampledEvenly(dense);
     }
 }

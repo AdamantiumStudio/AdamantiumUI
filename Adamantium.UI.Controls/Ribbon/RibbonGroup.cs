@@ -184,14 +184,14 @@ public class RibbonGroup : ItemsControl, IHeaderedItemsControl
         var drawn = CurrentVariant;
         Packing.Apply(index);
         RemeasureFromCommands();
-        Measure(new Size(double.PositiveInfinity, _bandHeight));
+        Measure(new Size<double>(double.PositiveInfinity, _bandHeight));
         var width = DesiredSize.Width;
 
         if (index != drawn)
         {
             Packing.Apply(drawn);
             RemeasureFromCommands();
-            Measure(new Size(double.PositiveInfinity, _bandHeight));
+            Measure(new Size<double>(double.PositiveInfinity, _bandHeight));
         }
 
         return width;
@@ -230,14 +230,14 @@ public class RibbonGroup : ItemsControl, IHeaderedItemsControl
             }
 
             InvalidateMeasure();
-            Measure(new Size(double.PositiveInfinity, _bandHeight));
+            Measure(new Size<double>(double.PositiveInfinity, _bandHeight));
             if (DesiredSize.Width > 0) _collapsedCost = DesiredSize.Width;
         }
 
         return Math.Max(CollapsedWidth, double.IsNaN(_collapsedCost) ? 0 : _collapsedCost);
     }
 
-    protected override Size MeasureOverride(Size availableSize)
+    protected override Size<double> MeasureOverride(Size<double> availableSize)
     {
         _bandHeight = availableSize.Height;
         return base.MeasureOverride(availableSize);

@@ -35,9 +35,9 @@ public class CanvasFrameTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(frame.HitTest(new Vector2(200, 10), 2), Is.True, "the title strip does not take a press");
-            Assert.That(frame.HitTest(new Vector2(1, 150), 2), Is.True, "the left edge does not take a press");
-            Assert.That(frame.HitTest(new Vector2(200, 150), 2), Is.False,
+            Assert.That(frame.HitTest(new Vector2<double>(200, 10), 2), Is.True, "the title strip does not take a press");
+            Assert.That(frame.HitTest(new Vector2<double>(1, 150), 2), Is.True, "the left edge does not take a press");
+            Assert.That(frame.HitTest(new Vector2<double>(200, 150), 2), Is.False,
                 "the middle of a frame swallows presses meant for what is inside it");
         });
     }
@@ -51,7 +51,7 @@ public class CanvasFrameTests
         var outside = new ShapeItem(CanvasShape.Rectangle, new Rect(900, 60, 80, 40), Brushes.White, 2);
 
         frame.Catch(new ICanvasItem[] { frame, inside, outside });
-        frame.Move(new Vector2(100, 50));
+        frame.Move(new Vector2<double>(100, 50));
 
         Assert.Multiple(() =>
         {
@@ -72,8 +72,8 @@ public class CanvasFrameTests
         frame.Catch(new ICanvasItem[] { frame, elsewhere });
 
         // The frame is dragged over it - and must not pick it up on the way.
-        frame.Move(new Vector2(200, 0));
-        frame.Move(new Vector2(50, 0));
+        frame.Move(new Vector2<double>(200, 0));
+        frame.Move(new Vector2<double>(50, 0));
 
         Assert.That(elsewhere.World.X, Is.EqualTo(500).Within(0.01), "the frame swept something up as it passed");
     }
@@ -87,7 +87,7 @@ public class CanvasFrameTests
 
         frame.Catch(new ICanvasItem[] { inside });
         frame.Release();
-        frame.Move(new Vector2(100, 0));
+        frame.Move(new Vector2<double>(100, 0));
 
         Assert.That(inside.World.X, Is.EqualTo(40).Within(0.01), "the frame is still holding on after the drag");
     }
@@ -104,7 +104,7 @@ public class CanvasFrameTests
             right, ((CanvasNode)right.Element).InputPins[0]);
 
         frame.Catch(new ICanvasItem[] { left, right, wire });
-        frame.Move(new Vector2(10, 0));
+        frame.Move(new Vector2<double>(10, 0));
 
         Assert.That(left.World.X, Is.EqualTo(30).Within(0.01), "the nodes did not come along");
     }
@@ -130,7 +130,7 @@ public class CanvasFrameTests
     [Test]
     public void AGripStopsWhereTheControlStopsFitting()
     {
-        var item = new ElementItem(new Button(), new Rect(0, 0, 200, 80)) { Smallest = new Size(120, 40) };
+        var item = new ElementItem(new Button(), new Rect(0, 0, 200, 80)) { Smallest = new Size<double>(120, 40) };
 
         item.Resize(new Rect(0, 0, 1, 1));
 
@@ -147,21 +147,21 @@ public class CanvasFrameTests
     public void TheFrameItselfStopsAtTheNeediestItem()
     {
         var canvas = new InfiniteCanvas { Scene = new CanvasScene() };
-        canvas.Measure(new Size(800, 600), force: true);
+        canvas.Measure(new Size<double>(800, 600), force: true);
         canvas.Arrange(new Rect(0, 0, 800, 600));
 
         var roomy = new ElementItem(new Button(), new Rect(0, 0, 200, 80));
-        var tight = new ElementItem(new Button(), new Rect(200, 0, 200, 80)) { Smallest = new Size(150, 40) };
+        var tight = new ElementItem(new Button(), new Rect(200, 0, 200, 80)) { Smallest = new Size<double>(150, 40) };
 
         canvas.Scene.Add(roomy);
         canvas.Scene.Add(tight);
         canvas.SelectMany(new ICanvasItem[] { roomy, tight }, false);
 
         var gesture = new CanvasFrameGesture();
-        gesture.Begin(canvas, CanvasHandle.Right, new Vector2(400, 40));
+        gesture.Begin(canvas, CanvasHandle.Right, new Vector2<double>(400, 40));
 
         // Pulled hard enough to collapse it - the frame is 400 wide and the drag takes 10000 off it.
-        gesture.MoveTo(canvas, new Vector2(-9600, 40));
+        gesture.MoveTo(canvas, new Vector2<double>(-9600, 40));
         gesture.End();
 
         Assert.Multiple(() =>

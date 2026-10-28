@@ -52,7 +52,7 @@ public class QuickAccessPlacementTests
         ribbon.ApplyCurrentTheme();
         Adamantium.UI.Extensions.WindowExtension.UpdateTree(ribbon);
         Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
-        ribbon.Measure(new Size(900, double.PositiveInfinity));
+        ribbon.Measure(new Size<double>(900, double.PositiveInfinity));
         ribbon.Arrange(new Rect(0, 0, 900, ribbon.DesiredSize.Height));
 
         TestContext.WriteLine($"ribbon desired={ribbon.DesiredSize} groupsArea={ribbon.GroupsAreaHeight}");
@@ -82,7 +82,7 @@ public class QuickAccessPlacementTests
         ribbon.ApplyCurrentTheme();
         Adamantium.UI.Extensions.WindowExtension.UpdateTree(ribbon);
         Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
-        ribbon.Measure(new Size(900, double.PositiveInfinity));
+        ribbon.Measure(new Size<double>(900, double.PositiveInfinity));
         ribbon.Arrange(new Rect(0, 0, 900, ribbon.DesiredSize.Height));
 
         var host = bar.ItemsHostPanel;
@@ -126,7 +126,7 @@ public class QuickAccessPlacementTests
         ribbon.ApplyCurrentTheme();
         Adamantium.UI.Extensions.WindowExtension.UpdateTree(ribbon);
         Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
-        ribbon.Measure(new Size(900, double.PositiveInfinity));
+        ribbon.Measure(new Size<double>(900, double.PositiveInfinity));
         ribbon.Arrange(new Rect(0, 0, 900, ribbon.DesiredSize.Height));
 
         var before = (SolidColorBrush)bar.Foreground;
@@ -137,7 +137,7 @@ public class QuickAccessPlacementTests
         _app.ThemeManager.AddTheme(macOs.Name, macOs);
         _app.ThemeManager.SetTheme(macOs);
         Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
-        ribbon.Measure(new Size(900, double.PositiveInfinity));
+        ribbon.Measure(new Size<double>(900, double.PositiveInfinity));
         ribbon.Arrange(new Rect(0, 0, 900, ribbon.DesiredSize.Height));
 
         var after = (SolidColorBrush)bar.Foreground;
@@ -165,7 +165,7 @@ public class QuickAccessPlacementTests
         cell.ApplyCurrentTheme();
         Adamantium.UI.Extensions.WindowExtension.UpdateTree(cell);
         Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
-        cell.Measure(new Size(200, 200));
+        cell.Measure(new Size<double>(200, 200));
         cell.Arrange(new Rect(0, 0, 200, 200));
 
         var presenter = cell.GetTemplateChild("PART_ContentPresenter") as UIComponent;
@@ -175,7 +175,7 @@ public class QuickAccessPlacementTests
         _app.ThemeManager.AddTheme(macOs.Name, macOs);
         _app.ThemeManager.SetTheme(macOs);
         Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
-        cell.Measure(new Size(200, 200));
+        cell.Measure(new Size<double>(200, 200));
         cell.Arrange(new Rect(0, 0, 200, 200));
 
         presenter = cell.GetTemplateChild("PART_ContentPresenter") as UIComponent;

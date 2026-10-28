@@ -39,7 +39,7 @@ public class FillFringeRenderTests
             RenderAction = s => s.DrawGeometry(brush, new RectangleGeometry(new Rect(10, 10, 40, 40)))
         };
         content.Bounds = new Rect(0, 0, Dim, Dim);
-        content.RenderSize = new Size(Dim, Dim);
+        content.RenderSize = new Size<double>(Dim, Dim);
         if (scale != 1.0) content.RenderTransform = new Transform { ScaleX = scale, ScaleY = scale };
 
         var root = new VisualRoot(content, Dim, Dim);
@@ -112,8 +112,8 @@ public class FillFringeRenderTests
 
         var brush = new LinearGradientBrush
         {
-            StartPoint = new Vector2(0, 0),
-            EndPoint = new Vector2(1, 0),
+            StartPoint = new Vector2<double>(0, 0),
+            EndPoint = new Vector2<double>(1, 0),
             GradientStops = { new GradientStop(Colors.Red, 0), new GradientStop(Colors.Blue, 1) }
         };
         var content = new TestControl
@@ -121,7 +121,7 @@ public class FillFringeRenderTests
             RenderAction = s => s.DrawGeometry(brush, new RectangleGeometry(new Rect(10, 10, 40, 40)))
         };
         content.Bounds = new Rect(0, 0, Dim, Dim);
-        content.RenderSize = new Size(Dim, Dim);
+        content.RenderSize = new Size<double>(Dim, Dim);
 
         var root = new VisualRoot(content, Dim, Dim);
         Assert.That(renderer.RenderFrame(root), Is.True);
@@ -162,7 +162,7 @@ public class FillFringeRenderTests
             RenderAction = s => s.DrawGeometry(brush, new RectangleGeometry(new Rect(10, 10, 40, 40)))
         };
         content.Bounds = new Rect(0, 0, Dim, Dim);
-        content.RenderSize = new Size(Dim, Dim);
+        content.RenderSize = new Size<double>(Dim, Dim);
 
         var root = new VisualRoot(content, Dim, Dim);
         Assert.That(renderer.RenderFrame(root), Is.True);

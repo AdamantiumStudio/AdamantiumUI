@@ -33,7 +33,7 @@ public class RibbonRowAlignmentTests
 
     private static void Lay(Border host)
     {
-        host.Measure(new Size(200, BandHeight));
+        host.Measure(new Size<double>(200, BandHeight));
         host.Arrange(new Rect(0, 0, 200, BandHeight));
     }
 
@@ -109,7 +109,7 @@ public class RibbonRowAlignmentTests
         Ribbon.SetRowAlignment(ribbon, RibbonRowAlignment.Spread);
         Ribbon.SetRowAlignment(host, RibbonRowAlignment.Top);
 
-        ribbon.Measure(new Size(200, BandHeight));
+        ribbon.Measure(new Size<double>(200, BandHeight));
         ribbon.Arrange(new Rect(0, 0, 200, BandHeight));
 
         Assert.That(Tops(panel), Is.EqualTo(new[] { 0, CommandHeight + panel.RowSpacing }));

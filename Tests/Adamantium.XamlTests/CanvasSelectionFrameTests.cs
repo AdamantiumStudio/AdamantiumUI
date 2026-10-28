@@ -53,9 +53,9 @@ public class CanvasSelectionFrameTests
             }
             else
             {
-                var stroke = new StrokeItem(new Vector2(i * 100, 0), Brushes.White, 2);
-                stroke.Add(new Vector2(i * 100, 0));
-                stroke.Add(new Vector2(i * 100 + 40, 20));
+                var stroke = new StrokeItem(new Vector2<double>(i * 100, 0), Brushes.White, 2);
+                stroke.Add(new Vector2<double>(i * 100, 0));
+                stroke.Add(new Vector2<double>(i * 100 + 40, 20));
                 item = stroke;
             }
 
@@ -73,7 +73,7 @@ public class CanvasSelectionFrameTests
         {
             Adamantium.UI.Extensions.WindowExtension.UpdateTree(canvas);
             Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
-            canvas.Measure(new Size(900, 600), force: true);
+            canvas.Measure(new Size<double>(900, 600), force: true);
             canvas.Arrange(new Rect(0, 0, 900, 600));
         }
     }
@@ -166,7 +166,7 @@ public class CanvasSelectionFrameTests
         var heard = new List<string>();
         frame.PropertyChanged += (_, e) => heard.Add(e.PropertyName);
 
-        foreach (var item in canvas.Selection) item.Move(new Vector2(25, 0));
+        foreach (var item in canvas.Selection) item.Move(new Vector2<double>(25, 0));
         canvas.Scene.Touch();
 
         Assert.Multiple(() =>

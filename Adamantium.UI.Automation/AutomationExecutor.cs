@@ -315,7 +315,7 @@ public sealed class AutomationExecutor
             throw new AutomationException($"Fingers go on 1 to {MostFingers} elements, not {request.Targets?.Length ?? 0}.");
         }
 
-        Vector2? offset = string.IsNullOrEmpty(request.Value) ? null : Point(request.Value);
+        Vector2<double>? offset = string.IsNullOrEmpty(request.Value) ? null : Point(request.Value);
         var paths = request.Targets.Select(target =>
         {
             var peer = Enabled(Resolve(target));
@@ -745,7 +745,7 @@ public sealed class AutomationExecutor
         Pattern<IRangeValueProvider>(peer, PatternId.RangeValue).SetValue(number);
     }
 
-    private static (Vector2 From, Vector2 To) DragPoints(string value)
+    private static (Vector2<double> From, Vector2<double> To) DragPoints(string value)
     {
         var points = (value ?? string.Empty).Split(' ', StringSplitOptions.RemoveEmptyEntries);
         if (points.Length != 2)
@@ -758,7 +758,7 @@ public sealed class AutomationExecutor
 
     // Where a contact goes, the same for the application's input and the system's: a tap in the middle - of a part
     // where the part stands - or a stroke between two points in the target's own units.
-    private static (UIComponent Element, Vector2 From, Vector2? To) ContactPlace(AutomationPeer peer, AutomationRequest request)
+    private static (UIComponent Element, Vector2<double> From, Vector2<double>? To) ContactPlace(AutomationPeer peer, AutomationRequest request)
     {
         if (!string.IsNullOrEmpty(request.Value))
         {
@@ -770,7 +770,7 @@ public sealed class AutomationExecutor
         return (element, middle, null);
     }
 
-    private static (UIComponent Element, Vector2 Middle) TapPoint(AutomationPeer peer)
+    private static (UIComponent Element, Vector2<double> Middle) TapPoint(AutomationPeer peer)
     {
         if (peer is IElementPartPeer part)
         {
@@ -789,7 +789,7 @@ public sealed class AutomationExecutor
         }
 
         var turn = 0.0;
-        var pan = Vector2.Zero;
+        var pan = Vector2<double>.Zero;
         foreach (var option in request.Properties ?? [])
         {
             if (option == SystemInput)
@@ -817,8 +817,8 @@ public sealed class AutomationExecutor
         var reach = Math.Min(element.RenderSize.Width, element.RenderSize.Height) / 4;
         return
         [
-            .. new[] { -1, 1 }.Select(side => new ContactPath(element, Label(peer), middle + new Vector2(side * reach, 0),
-                middle + pan + new Vector2(Math.Cos(turn), Math.Sin(turn)) * (side * reach * scale)))
+            .. new[] { -1, 1 }.Select(side => new ContactPath(element, Label(peer), middle + new Vector2<double>(side * reach, 0),
+                middle + pan + new Vector2<double>(Math.Cos(turn), Math.Sin(turn)) * (side * reach * scale)))
         ];
     }
 
@@ -886,20 +886,20 @@ public sealed class AutomationExecutor
             ? notches
             : throw new FormatException($"'{text}' is not a number of wheel notches, as -3 or 2.");
 
-    private static Vector2 Point(string text)
+    private static Vector2<double> Point(string text)
     {
         var parts = (text ?? string.Empty).Split(',');
         if (parts.Length == 2
             && double.TryParse(parts[0], NumberStyles.Float, CultureInfo.InvariantCulture, out var x)
             && double.TryParse(parts[1], NumberStyles.Float, CultureInfo.InvariantCulture, out var y))
         {
-            return new Vector2(x, y);
+            return new Vector2<double>(x, y);
         }
 
         throw new FormatException($"'{text}' is not a pair: x,y.");
     }
 
-    private static void MoveBy(AutomationPeer peer, Vector2 offset)
+    private static void MoveBy(AutomationPeer peer, Vector2<double> offset)
     {
         var transform = Pattern<ITransformProvider>(peer, PatternId.Transform);
         if (!transform.CanMove)
@@ -912,7 +912,7 @@ public sealed class AutomationExecutor
         transform.Move(bounds.X + offset.X * pixels.X, bounds.Y + offset.Y * pixels.Y);
     }
 
-    private static void ResizeTo(AutomationPeer peer, Vector2 size)
+    private static void ResizeTo(AutomationPeer peer, Vector2<double> size)
     {
         var transform = Pattern<ITransformProvider>(peer, PatternId.Transform);
         if (!transform.CanResize)
@@ -963,7 +963,7 @@ public sealed class AutomationExecutor
         if (side == null)
         {
             InputSimulator.DragOnto(OwnerOf(peer), Label(peer), Grip(peer), owner, Label(target),
-                new Vector2(owner.RenderSize.Width / 2, owner.RenderSize.Height / 2), owner);
+                new Vector2<double>(owner.RenderSize.Width / 2, owner.RenderSize.Height / 2), owner);
             return;
         }
 
@@ -988,8 +988,8 @@ public sealed class AutomationExecutor
             // The last: just past it, else the far end of what holds it, else its own trailing part - whichever the
             // pointer can reach. A list that opens a gap reads only the first two as after it.
             var size = owner.RenderSize;
-            var end = within.TranslatePoint(new Vector2(within.RenderSize.Width - 3, within.RenderSize.Height - 3), owner);
-            Vector2[] points = across
+            var end = within.TranslatePoint(new Vector2<double>(within.RenderSize.Width - 3, within.RenderSize.Height - 3), owner);
+            Vector2<double>[] points = across
                 ? [new(size.Width + 3, size.Height / 2), new(end.X, size.Height / 2), new(size.Width * 0.85, size.Height / 2)]
                 : [new(size.Width / 2, size.Height + 3), new(size.Width / 2, end.Y), new(size.Width / 2, size.Height * 0.85)];
             var at = points.FirstOrDefault(point => InputSimulator.Reaches(owner, point, within), points[0]);
@@ -997,22 +997,22 @@ public sealed class AutomationExecutor
         }
     }
 
-    private static Vector2 Leading(UIComponent element, bool across) => across
-        ? new Vector2(element.RenderSize.Width * 0.15, element.RenderSize.Height / 2)
-        : new Vector2(element.RenderSize.Width / 2, element.RenderSize.Height * 0.15);
+    private static Vector2<double> Leading(UIComponent element, bool across) => across
+        ? new Vector2<double>(element.RenderSize.Width * 0.15, element.RenderSize.Height / 2)
+        : new Vector2<double>(element.RenderSize.Width / 2, element.RenderSize.Height * 0.15);
 
     private static bool Beside(Rect neighbor, Rect bounds) =>
         Math.Abs(neighbor.Y + neighbor.Height / 2 - (bounds.Y + bounds.Height / 2)) < bounds.Height / 2;
 
     // Where a hand takes it: by its grip, when a drag has to start there; else its middle, or along its middle line, off
     // any part of it that acts on a press of its own - a narrow column header is mostly its funnel.
-    private static Vector2 Grip(AutomationPeer peer)
+    private static Vector2<double> Grip(AutomationPeer peer)
     {
         var owner = OwnerOf(peer);
         if (UI.Input.DragDrop.GetDragHandles(owner).FirstOrDefault() is { } handle)
         {
             var grip = handle.TransformBoundsToVisual(owner);
-            return new Vector2(grip.X + grip.Width / 2, grip.Y + grip.Height / 2);
+            return new Vector2<double>(grip.X + grip.Width / 2, grip.Y + grip.Height / 2);
         }
 
         var size = owner.RenderSize;
@@ -1022,10 +1022,10 @@ public sealed class AutomationExecutor
         foreach (var x in (double[])[0.5, 0.25, 0.75, 0.125, 0.375, 0.625, 0.875])
         {
             var local = shown.X + shown.Width * x;
-            var at = new Vector2(bounds.X + bounds.Width * local / size.Width, bounds.Y + bounds.Height / 2);
+            var at = new Vector2<double>(bounds.X + bounds.Width * local / size.Width, bounds.Y + bounds.Height / 2);
             if (!presses.Any(part => at.X >= part.X && at.X < part.X + part.Width && at.Y >= part.Y && at.Y < part.Y + part.Height))
             {
-                return new Vector2(local, size.Height / 2);
+                return new Vector2<double>(local, size.Height / 2);
             }
         }
 
@@ -1058,11 +1058,11 @@ public sealed class AutomationExecutor
     }
 
     /// <summary>The screen pixels one of the element's own units takes, across and down.</summary>
-    private static Vector2 PixelsPerUnit(AutomationPeer peer)
+    private static Vector2<double> PixelsPerUnit(AutomationPeer peer)
     {
         var size = OwnerOf(peer).RenderSize;
         var bounds = peer.BoundingRectangle;
-        return new Vector2(size.Width > 0 ? bounds.Width / size.Width : 1, size.Height > 0 ? bounds.Height / size.Height : 1);
+        return new Vector2<double>(size.Width > 0 ? bounds.Width / size.Width : 1, size.Height > 0 ? bounds.Height / size.Height : 1);
     }
 
     private static (double Horizontal, double Vertical) ScrollPercents(string value)
@@ -1259,7 +1259,7 @@ public sealed class AutomationExecutor
     private static T Pattern<T>(AutomationPeer peer, PatternId pattern) where T : class =>
         peer.GetPattern(pattern) as T ?? throw new AutomationException($"{Label(peer)} cannot {pattern}.");
 
-    private static Vector2 MiddleOf(IElementPartPeer part, AutomationPeer peer) =>
+    private static Vector2<double> MiddleOf(IElementPartPeer part, AutomationPeer peer) =>
         part.Middle ?? throw new AutomationException($"{Label(peer)} is not laid out on screen.");
 
     private static UIComponent OwnerOf(AutomationPeer peer) =>

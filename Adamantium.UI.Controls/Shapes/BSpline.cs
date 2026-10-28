@@ -48,9 +48,14 @@ public class BSpline : Polyline
     {
         // Samples fully controls curvature (count 2 -> straight chord). FRESH geometry (see CubicBezierCurve). A B-spline
         // is a NON-rational NURBS: the general basis with all weights = 1 (null).
-        var count = (int)System.Math.Max(Samples, 2u);
-        var pts = MathHelper.ResampleByArcLength(
-            MathHelper.GetNurbsCurve(Points, null, ResolveDegree(), IsUniform, 1.0 / 256.0), count);
+        if (Points.Count < 2)
+        {
+            return;
+        }
+
+        var dense = new List<Vector2<double>>();
+        MathHelper.Curves.AppendNurbs<double>([.. Points], [], ResolveDegree(), IsUniform, 256, dense);
+        var pts = ResampledEvenly(dense, Samples);
         var geometry = new StreamGeometry { IsClosed = false };
         geometry.Open().BeginFigure(pts[0], false, false).PolylineLineTo(pts.Skip(1), true);
 

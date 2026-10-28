@@ -78,7 +78,7 @@ public class RenderTargetPanel : Grid
    private bool _leftDown;   // Drag mode: left button held on the panel
    private bool _rightDown;  // Drag mode: right button held on the panel
    private bool _middleDown;
-   private Vector2 _engagePoint;   // panel-relative cursor position at engage; restored (as screen) on release
+   private Vector2<double> _engagePoint;   // panel-relative cursor position at engage; restored (as screen) on release
 
    // Esc is the always-available escape hatch out of mouse-look (frees the hidden cursor), the safety net for
    // Continuous mode and any missed button-up.
@@ -160,7 +160,7 @@ public class RenderTargetPanel : Grid
 
    protected override void OnRender(IDrawingContext context)
    {
-      var rect = new Rect(new Size(ActualWidth, ActualHeight));
+      var rect = new Rect(new Size<double>(ActualWidth, ActualHeight));
       var session = context.ForControl(this);
       // Read once: the producer may rebind it from its own thread.
       var image = _image;

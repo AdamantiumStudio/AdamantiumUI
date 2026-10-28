@@ -27,8 +27,8 @@ public static class WavyLine
             var fraction = (next - x) / step;
             var from = up ? bottom : top;
             var to = from + (up ? top - bottom : bottom - top) * fraction;
-            session.DrawLine(down ? new Vector2(from, x) : new Vector2(x, from),
-                down ? new Vector2(to, next) : new Vector2(next, to), pen);
+            session.DrawLine(down ? new Vector2<double>(from, x) : new Vector2<double>(x, from),
+                down ? new Vector2<double>(to, next) : new Vector2<double>(next, to), pen);
             x = next;
             up = !up;
         }

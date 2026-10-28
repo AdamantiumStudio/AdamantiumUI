@@ -62,7 +62,7 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
     }
 
     public GpuStrokeRenderComponent(IGraphicsDevice device, UIBasicEffect uiBasicEffect, StrokeEffect effect,
-        IReadOnlyList<(Vector2[] Points, bool IsClosed)> contours, Pen pen, GpuBufferManager bufferManager) : base(device, uiBasicEffect, null, bufferManager)
+        IReadOnlyList<(Vector2<double>[] Points, bool IsClosed)> contours, Pen pen, GpuBufferManager bufferManager) : base(device, uiBasicEffect, null, bufferManager)
     {
         _device = (GraphicsDevice)device;   // Dispatch/BufferBarrier/DrawIndirect live on the concrete device
         _effect = effect;
@@ -114,12 +114,12 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
     // count + closedness) and the pen stays size-compatible, rewrite the points in place and re-expand - no new
     // component, no allocation. Returns false (caller rebuilds) for the dash/cut path (its output size depends on arc
     // length) or any topology/pen-size change.
-    public bool TryUpdateGeometry(IReadOnlyList<(Vector2[] Points, bool IsClosed)> contours, Pen pen)
+    public bool TryUpdateGeometry(IReadOnlyList<(Vector2<double>[] Points, bool IsClosed)> contours, Pen pen)
     {
         if (_useCut) return false;
         if (!IsPenSizeCompatible(pen)) return false;
 
-        var valid = new List<(Vector2[] Points, bool IsClosed)>();
+        var valid = new List<(Vector2<double>[] Points, bool IsClosed)>();
         foreach (var (points, isClosed) in contours)
             if (points is { Length: >= 2 }) valid.Add((points, isClosed));
 
@@ -139,7 +139,7 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
         return true;
     }
 
-    private static float[] ToFloats(Vector2[] points)
+    private static float[] ToFloats(Vector2<double>[] points)
     {
         var floats = new float[points.Length * 2];
         for (var i = 0; i < points.Length; i++)
@@ -152,7 +152,7 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
 
     // How much the dash pattern must stretch for a WHOLE number of periods to go round this closed contour. Never more
     // than half a period either way, so the dashes keep the length they were authored with to within a few percent.
-    private static float FitScale(Vector2[] points, Pen pen)
+    private static float FitScale(Vector2<double>[] points, Pen pen)
     {
         var period = 0.0;
         foreach (var entry in pen.DashStrokeArray) period += entry;
@@ -172,7 +172,7 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
     }
 
     // Builds the GPU buffers for one contour. Returns null for a degenerate contour (no thread/vertex work).
-    private Contour BuildContour(Vector2[] points, bool isClosed)
+    private Contour BuildContour(Vector2<double>[] points, bool isClosed)
     {
         if (points.Length < 2) return null;
 
@@ -238,7 +238,7 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
     // allowance for corner splits. A piece is exactly its 6 quad verts (caps are a mask, they emit nothing), plus one
     // corner join per segment (a round disc, or up to 3 bevel/miter triangles). Capped. This is the only CPU work
     // dashing does - an O(points) length sum, no per-piece tessellation - so animated dashes cost the CPU nothing.
-    private static uint DashOutputCapacity(Vector2[] pts, bool closed, Pen pen, uint roundSegments)
+    private static uint DashOutputCapacity(Vector2<double>[] pts, bool closed, Pen pen, uint roundSegments)
     {
         int n = pts.Length;
         int segs = closed ? n : n - 1;

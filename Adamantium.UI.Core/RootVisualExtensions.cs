@@ -9,7 +9,7 @@ public static class RootVisualExtensions
        // SYMMETRIC depth range: flat UI sits at z = 0, but a 3D-rotated element (a flipping tile) swings its vertices to
        // z = +-(its size) - with near = 0 the negative half was DEPTH-CLIPPED and the element vanished as soon as it
        // tilted. A symmetric range keeps rotated content inside NDC on both sides (and preserves real z for 3D layering).
-       return Matrix4x4F.OrthoOffCenter(
+       return Matrix4x4.CreateOrthoOffCenter<float>(
             0,
             (float)visualRoot.ClientWidth,
             0,

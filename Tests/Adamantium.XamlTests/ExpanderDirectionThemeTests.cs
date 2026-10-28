@@ -38,8 +38,8 @@ public class ExpanderDirectionThemeTests
         var expander = Built(theme, direction);
         var header = Part(expander, "PART_Header");
         var content = Part(expander, "PART_Content");
-        var headerAt = header.TranslatePoint(Vector2.Zero, expander);
-        var contentAt = content.TranslatePoint(Vector2.Zero, expander);
+        var headerAt = header.TranslatePoint(Vector2<double>.Zero, expander);
+        var contentAt = content.TranslatePoint(Vector2<double>.Zero, expander);
 
         switch (direction)
         {
@@ -82,7 +82,7 @@ public class ExpanderDirectionThemeTests
         expander.ApplyCurrentTheme();
         Adamantium.UI.Extensions.WindowExtension.UpdateTree(expander);
         Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
-        expander.Measure(new Size(400, 400));
+        expander.Measure(new Size<double>(400, 400));
         expander.Arrange(new Rect(0, 0, 400, 400));
         return expander;
     }

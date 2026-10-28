@@ -75,7 +75,7 @@ public class MinimumCellTilesTests
             Template = ItemsPresenterTemplate()
         };
 
-        ic.Measure(new Size(ViewW, ViewH));
+        ic.Measure(new Size<double>(ViewW, ViewH));
         ic.Arrange(new Rect(0, 0, ViewW, ViewH));
         return ic;
     }

@@ -8,24 +8,24 @@ public class LineGeometry : Geometry
    private Rect bounds;
 
    public static readonly AdamantiumProperty StartPointProperty =
-      AdamantiumProperty.Register(nameof(StartPoint), typeof(Vector2), typeof(LineGeometry),
-         new PropertyMetadata(new Vector2(0), PropertyMetadataOptions.AffectsMeasure));
+      AdamantiumProperty.Register(nameof(StartPoint), typeof(Vector2<double>), typeof(LineGeometry),
+         new PropertyMetadata(new Vector2<double>(0), PropertyMetadataOptions.AffectsMeasure));
       
    public static readonly AdamantiumProperty EndPointProperty =
-      AdamantiumProperty.Register(nameof(EndPoint), typeof(Vector2), typeof(LineGeometry),
-         new PropertyMetadata(new Vector2(0), PropertyMetadataOptions.AffectsMeasure));
+      AdamantiumProperty.Register(nameof(EndPoint), typeof(Vector2<double>), typeof(LineGeometry),
+         new PropertyMetadata(new Vector2<double>(0), PropertyMetadataOptions.AffectsMeasure));
 
    public override Rect Bounds => bounds;
 
-   public Vector2 StartPoint
+   public Vector2<double> StartPoint
    {
-      get => GetValue<Vector2>(StartPointProperty);
+      get => GetValue<Vector2<double>>(StartPointProperty);
       set => SetValue(StartPointProperty, value);
    }
 
-   public Vector2 EndPoint
+   public Vector2<double> EndPoint
    {
-      get => GetValue<Vector2>(EndPointProperty);
+      get => GetValue<Vector2<double>>(EndPointProperty);
       set => SetValue(EndPointProperty, value);
    }
 
@@ -38,7 +38,7 @@ public class LineGeometry : Geometry
       IsClosedProperty.OverrideMetadata(typeof(LineGeometry), new PropertyMetadata(false));
    }
 
-   public LineGeometry(Vector2 startPoint, Vector2 endPoint) : this()
+   public LineGeometry(Vector2<double> startPoint, Vector2<double> endPoint) : this()
    {
       StartPoint = startPoint;
       EndPoint = endPoint;
@@ -64,6 +64,6 @@ public class LineGeometry : Geometry
 
    private void CreateLine()
    {
-      Mesh.AddContour(new [] { (Vector3)StartPoint, (Vector3)EndPoint }, false);
+      Mesh.AddContour(new [] { (Vector3<double>)StartPoint, (Vector3<double>)EndPoint }, false);
    }
 }

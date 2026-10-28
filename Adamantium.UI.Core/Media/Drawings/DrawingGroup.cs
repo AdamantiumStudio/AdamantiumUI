@@ -127,7 +127,7 @@ public class DrawingGroup : Drawing
     {
         var own = Transform;
         // The group's own placement happens FIRST, in its parent's coordinates, so it pre-multiplies what came down.
-        var combined = own == null ? transform : (Matrix4x4F)own.Matrix * transform;
+        var combined = own == null ? transform : own.Matrix.As<float>() * transform;
 
         foreach (var child in Children)
         {

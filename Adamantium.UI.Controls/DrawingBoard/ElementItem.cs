@@ -115,7 +115,7 @@ public class ElementItem : AdamantiumViewModel, ICanvasItem, ICanvasTransformed
 
     /// <summary>The least it may be resized to, in world units: measured for content-sized items, otherwise zero unless the
     /// application sets it.</summary>
-    public Size Smallest { get; set; }
+    public Size<double> Smallest { get; set; }
 
     /// <summary>A copy of a node (frame and sockets, not the application's content); null for any other control, which the
     /// engine cannot recreate.</summary>
@@ -287,7 +287,7 @@ public class ElementItem : AdamantiumViewModel, ICanvasItem, ICanvasTransformed
         }
     }
 
-    private Vector2 Middle => new(World.X + World.Width / 2, World.Y + World.Height / 2);
+    private Vector2<double> Middle => new(World.X + World.Width / 2, World.Y + World.Height / 2);
 
     private CanvasTransform _transform = CanvasTransform.None;
 
@@ -317,7 +317,7 @@ public class ElementItem : AdamantiumViewModel, ICanvasItem, ICanvasTransformed
         set => Transform = Transform with { SkewY = value };
     }
 
-    public void Move(Vector2 worldDelta) =>
+    public void Move(Vector2<double> worldDelta) =>
         World = new Rect(World.X + worldDelta.X, World.Y + worldDelta.Y, World.Width, World.Height);
 
     public void Resize(Rect world)
@@ -335,7 +335,7 @@ public class ElementItem : AdamantiumViewModel, ICanvasItem, ICanvasTransformed
         Place(new Rect(world.X, world.Y, width, height), width);
     }
 
-    public bool HitTest(Vector2 world, double tolerance)
+    public bool HitTest(Vector2<double> world, double tolerance)
     {
         // Nothing to point at: no canvas has shown it yet.
         if (Element == null)

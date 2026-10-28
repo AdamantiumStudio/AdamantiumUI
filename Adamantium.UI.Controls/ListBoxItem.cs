@@ -100,7 +100,7 @@ public class ListBoxItem : ContentControl, ISelectable
     // the whole selection survives long enough to be dragged. If the pointer moves first (a drag begins) the collapse is
     // canceled and the selection is kept; a release without moving applies it (the ordinary "click picks just this one").
     private bool _deferSelect;
-    private Vector2 _downPoint;
+    private Vector2<double> _downPoint;
 
     private ListBox OwnerListBox => this.GetVisualAncestors().OfType<ListBox>().FirstOrDefault();
 

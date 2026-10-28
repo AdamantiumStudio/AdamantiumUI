@@ -93,7 +93,7 @@ public class AsyncGlyphFillTests
             // Each frame adopts whatever the workers finished; five seconds is a ceiling for the harness, not a target.
             while (sw.Elapsed.TotalSeconds < 5)
             {
-                ((IMeasurableComponent)root).Measure(new Size(Dim, Dim));
+                ((IMeasurableComponent)root).Measure(new Size<double>(Dim, Dim));
                 ((IMeasurableComponent)root).Arrange(new Rect(0, 0, Dim, Dim));
                 Assert.That(renderer.RenderFrame(root), Is.True, "off-screen frame must render");
                 RenderDirty.MarkStructural();
@@ -128,7 +128,7 @@ public class AsyncGlyphFillTests
             stack.Children.Add(block);
             var root = new VisualRoot(stack, Dim, Dim);
 
-            ((IMeasurableComponent)root).Measure(new Size(Dim, Dim));
+            ((IMeasurableComponent)root).Measure(new Size<double>(Dim, Dim));
             ((IMeasurableComponent)root).Arrange(new Rect(0, 0, Dim, Dim));
             Assert.That(renderer.RenderFrame(root), Is.True, "off-screen frame must render");
             RenderDirty.Clear();

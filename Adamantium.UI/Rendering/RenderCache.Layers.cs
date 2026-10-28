@@ -732,7 +732,7 @@ public partial class RenderCache
         return -1;
     }
 
-    private static Rect LocalInk(IRenderUnit unit, Size size, bool bands = true)
+    private static Rect LocalInk(IRenderUnit unit, Size<double> size, bool bands = true)
     {
         var ink = new Rect(0, 0, size.Width, size.Height);
         var pen = 0.0;

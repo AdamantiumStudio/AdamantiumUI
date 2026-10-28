@@ -16,11 +16,11 @@ public class CanvasNodeSocket : Border
 
     /// <summary>The middle of it, in the coordinates of <paramref name="within"/> - the node, usually. Null while the
     /// node has not been laid out, which is every frame before the first one.</summary>
-    public Vector2? MiddleIn(IUIComponent within)
+    public Vector2<double>? MiddleIn(IUIComponent within)
     {
         if (within == null || RenderSize.Width <= 0 || RenderSize.Height <= 0) return null;
 
-        return this.TranslatePoint(new Vector2(RenderSize.Width / 2, RenderSize.Height / 2), within);
+        return this.TranslatePoint(new Vector2<double>(RenderSize.Width / 2, RenderSize.Height / 2), within);
     }
 
     protected override AutomationPeer OnCreateAutomationPeer() =>

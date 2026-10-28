@@ -13,19 +13,19 @@ public sealed class PathFigure : AdamantiumComponent
         typeof(bool), typeof(PathFigure), new PropertyMetadata(true, PropertyMetadataOptions.AffectsRender));
     
     public static readonly AdamantiumProperty StartPointProperty = AdamantiumProperty.Register(nameof(StartPoint),
-        typeof(Vector2), typeof(PathFigure),
-        new PropertyMetadata(Vector2.Zero, PropertyMetadataOptions.AffectsMeasure));
+        typeof(Vector2<double>), typeof(PathFigure),
+        new PropertyMetadata(Vector2<double>.Zero, PropertyMetadataOptions.AffectsMeasure));
 
     public static readonly AdamantiumProperty SegmentsProperty = AdamantiumProperty.Register(nameof(Segments),
         typeof(PathSegmentCollection), typeof(PathFigure),
         new PropertyMetadata(null,
             PropertyMetadataOptions.AffectsMeasure | PropertyMetadataOptions.AffectsParentArrange, SegmentsChangedCallback));
     
-    internal List<Vector2> Points { get; }
+    internal List<Vector2<double>> Points { get; }
 
     public PathFigure()
     {
-        Points = new List<Vector2>();
+        Points = new List<Vector2<double>>();
         Segments = new PathSegmentCollection();
     }
 
@@ -78,9 +78,9 @@ public sealed class PathFigure : AdamantiumComponent
         set => SetValue(IsFilledProperty, value);
     }
 
-    public Vector2 StartPoint
+    public Vector2<double> StartPoint
     {
-        get => GetValue<Vector2>(StartPointProperty);
+        get => GetValue<Vector2<double>>(StartPointProperty);
         set => SetValue(StartPointProperty, value);
     }
 

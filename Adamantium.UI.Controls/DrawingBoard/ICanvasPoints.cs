@@ -8,9 +8,9 @@ namespace Adamantium.UI.Controls.DrawingBoard;
 public interface ICanvasPoints
 {
     /// <summary>The points, in WORLD units, in the order they are joined.</summary>
-    IReadOnlyList<Vector2> Points { get; }
+    IReadOnlyList<Vector2<double>> Points { get; }
 
     /// <summary>Moves one of them. The canvas calls this while a point handle is dragged; anything the item has to
     /// rebuild because of it - a cached curve, a bounding box - it rebuilds here.</summary>
-    void MovePoint(int index, Vector2 world);
+    void MovePoint(int index, Vector2<double> world);
 }

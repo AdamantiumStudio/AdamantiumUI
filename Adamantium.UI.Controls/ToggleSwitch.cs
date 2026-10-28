@@ -17,5 +17,5 @@ public class ToggleSwitch : ToggleButton
 
     // A switch can't stretch: its pill track + thumb + label are a fixed visual. Report the size it actually draws (not
     // the slot it was handed) so ActualWidth/RenderSize/ClipRectangle stop lying - see ContentControl.ArrangeContentSize.
-    protected override Size ArrangeOverride(Size finalSize) => ArrangeContentSize(finalSize);
+    protected override Size<double> ArrangeOverride(Size<double> finalSize) => ArrangeContentSize(finalSize);
 }

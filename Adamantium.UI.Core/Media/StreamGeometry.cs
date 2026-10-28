@@ -49,7 +49,7 @@ public sealed class StreamGeometry : Geometry
     {
         context.ProcessFigures();
         var contours = context.GetContours();
-        var points = new List<Vector2>();
+        var points = new List<Vector2<double>>();
         foreach (var contour in contours)
         {
             points.AddRange(contour.Points);

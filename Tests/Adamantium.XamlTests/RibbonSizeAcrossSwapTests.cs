@@ -49,7 +49,7 @@ public class RibbonSizeAcrossSwapTests
     {
         Adamantium.UI.Extensions.WindowExtension.UpdateTree(c);
         Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
-        c.Measure(new Size(300, 120));
+        c.Measure(new Size<double>(300, 120));
         c.Arrange(new Rect(0, 0, 300, 120));
     }
 

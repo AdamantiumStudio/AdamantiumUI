@@ -34,19 +34,19 @@ public class Viewbox : Decorator
         set => SetValue(StretchDirectionProperty, value);
     }
 
-    protected override Size MeasureOverride(Size availableSize)
+    protected override Size<double> MeasureOverride(Size<double> availableSize)
     {
         var child = Child;
-        if (child == null) return new Size(0, 0);
+        if (child == null) return new Size<double>(0, 0);
 
         // Measure the child unconstrained for its natural size, then report the size it will occupy once scaled to fit.
-        child.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        child.Measure(new Size<double>(double.PositiveInfinity, double.PositiveInfinity));
         var natural = child.DesiredSize;
         var (sx, sy) = ComputeScale(availableSize, natural);
-        return new Size(natural.Width * sx, natural.Height * sy);
+        return new Size<double>(natural.Width * sx, natural.Height * sy);
     }
 
-    protected override Size ArrangeOverride(Size finalSize)
+    protected override Size<double> ArrangeOverride(Size<double> finalSize)
     {
         var child = Child;
         if (child == null) return finalSize;
@@ -69,7 +69,7 @@ public class Viewbox : Decorator
 
     // The per-axis scale that maps the content size into the available size for the current Stretch, then clamped by
     // StretchDirection. Mirrors Image.CalculateScaling (WPF's Viewbox.ComputeScaleFactor).
-    private (double X, double Y) ComputeScale(Size available, Size content)
+    private (double X, double Y) ComputeScale(Size<double> available, Size<double> content)
     {
         var scaleX = 1.0;
         var scaleY = 1.0;

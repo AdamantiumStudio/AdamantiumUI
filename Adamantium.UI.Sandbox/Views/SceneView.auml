@@ -34,10 +34,6 @@
                            StringFormat="N2"/>
             <Button AutomationProperties.AutomationId="ResetCamera" Content="{Localize SceneStrings.ResetCamera}" Command="{Binding ResetCameraCommand}"
                     MinWidth="120" Height="30" MarginTop="10"/>
-            <ToggleSwitch AutomationProperties.AutomationId="FramesOnDemand"
-                          Content="{Localize SceneStrings.FramesOnDemand}"
-                          IsChecked="{Binding FramesOnDemand, Mode=TwoWay}"
-                          MarginTop="10"/>
             <TextBlock Text="{Localize SceneStrings.Tool}"
                        MarginTop="10"
                        MarginBottom="4"
@@ -181,14 +177,20 @@
         </StackPanel>
 
         <!-- What the UNIVERSE'S OWN rendering costs, opposite corner - not the rate the panel ticks it at, which would
-             only ever report the interface back. -->
-        <StackPanel Orientation="Vertical" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="16"
-                    IsHitTestVisible="False">
+             only ever report the interface back - and, above it, whether it draws only when something changes. -->
+        <StackPanel Orientation="Vertical" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="16">
+            <ToggleSwitch AutomationProperties.AutomationId="FramesOnDemand"
+                          Content="{Localize SceneStrings.FramesOnDemand}"
+                          IsChecked="{Binding FramesOnDemand, Mode=TwoWay}"
+                          HorizontalAlignment="Right"
+                          MarginBottom="8"/>
             <TextBlock Text="{Binding Fps, StringFormat='FPS: {0:F0}'}"
                        HorizontalAlignment="Right"
+                       IsHitTestVisible="False"
                        FontSize="18" Foreground="{ResourceReference TextFillColorPrimary}"/>
             <TextBlock Text="{Localize SceneStrings.FrameCost, ms={Binding FrameCostMs}}"
                        HorizontalAlignment="Right" MarginTop="2"
+                       IsHitTestVisible="False"
                        Foreground="{ResourceReference TextFillColorSecondary}"/>
         </StackPanel>
 

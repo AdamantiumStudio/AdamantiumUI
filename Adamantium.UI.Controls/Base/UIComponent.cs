@@ -16,12 +16,12 @@ namespace Adamantium.UI.Controls.Base;
 
 public class UIComponent : FundamentalUIComponent, IUIComponent
 {
-    private Size renderSize;
+    private Size<double> renderSize;
     private AutomationPeer _automationPeer;
     private bool _automationPeerMade;
 
     protected bool sizeChanged;
-    protected Size previousRenderSize;
+    protected Size<double> previousRenderSize;
 
     #region Adamantium properties
     
@@ -1167,9 +1167,9 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
         }
     }
 
-    public Size RenderSize
+    public Size<double> RenderSize
     {
-        get => Visibility == Visibility.Collapsed ? Size.Zero : renderSize;
+        get => Visibility == Visibility.Collapsed ? Size<double>.Zero : renderSize;
         set
         {
             if (renderSize != value)
@@ -1307,7 +1307,7 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
     /// </summary>
     /// <param name="size">The size.</param>
     /// <returns>True if the size is invalid; otherwise false.</returns>
-    protected static bool IsInvalidSize(Size size)
+    protected static bool IsInvalidSize(Size<double> size)
     {
         return size.Width < 0 || size.Height < 0 ||
                Double.IsInfinity(size.Width) || Double.IsInfinity(size.Height) ||
@@ -1319,9 +1319,9 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
     /// </summary>
     /// <param name="size">The size.</param>
     /// <returns>The non-negative size.</returns>
-    protected static Size NonNegative(Size size)
+    protected static Size<double> NonNegative(Size<double> size)
     {
-        return new Size(Math.Max(size.Width, 0), Math.Max(size.Height, 0));
+        return new Size<double>(Math.Max(size.Width, 0), Math.Max(size.Height, 0));
     }
 
     // Every visual-children change names the components that entered or left, so the render cache splices the paint order
@@ -1403,7 +1403,7 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
     /// <summary>Narrow-phase hit test (see <see cref="IUIComponent.HitTestCore"/>). Default: anywhere inside the
     /// element's box - the hit-test walk already broad-phase-checked the bounds. Shapes override this with their real
     /// geometry so a click off the shape (but inside its bounding box) doesn't select it.</summary>
-    public virtual bool HitTestCore(Vector2 localPoint) => true;
+    public virtual bool HitTestCore(Vector2<double> localPoint) => true;
 
     /// <summary>Scroll every enclosing <see cref="ScrollViewer"/> the minimum needed to make this element visible (WPF's
     /// <c>BringIntoView</c>). Walks the visual tree from here outward, so nested viewers all scroll (innermost first).
@@ -1415,7 +1415,7 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
             (node as ScrollViewer)?.BringDescendantIntoView(this);
     }
 
-    public Vector2 ClipPosition { get; set; }
+    public Vector2<double> ClipPosition { get; set; }
 
     public IUIComponent VisualParent { get; private set; }
 
@@ -1469,12 +1469,12 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
     /// <summary>The point <see cref="RenderTransform"/> rotates and scales around, as a fraction of this element's size
     /// ((0.5,0.5) is the center); on the element because only it knows the size.</summary>
     public static readonly AdamantiumProperty RenderTransformOriginProperty = AdamantiumProperty.Register(
-        nameof(RenderTransformOrigin), typeof(Vector2), typeof(UIComponent),
-        new PropertyMetadata(default(Vector2), RenderTransformOriginChanged));
+        nameof(RenderTransformOrigin), typeof(Vector2<double>), typeof(UIComponent),
+        new PropertyMetadata(default(Vector2<double>), RenderTransformOriginChanged));
 
-    public Vector2 RenderTransformOrigin
+    public Vector2<double> RenderTransformOrigin
     {
-        get => GetValue<Vector2>(RenderTransformOriginProperty);
+        get => GetValue<Vector2<double>>(RenderTransformOriginProperty);
         set => SetValue(RenderTransformOriginProperty, value);
     }
 
@@ -1495,11 +1495,11 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
     {
         get
         {
-            var localTransform = Matrix4x4F.Translation((float)Bounds.Location.X, (float)Bounds.Location.Y, 0);
+            var localTransform = Matrix4x4.CreateTranslation<float>((float)Bounds.Location.X, (float)Bounds.Location.Y, 0);
             var renderTransform = RenderTransform;
             if (renderTransform != null)
             {
-                var matrix = (Matrix4x4F)renderTransform.Matrix;
+                var matrix = renderTransform.Matrix.As<float>();
 
                 // Apply the transform AROUND the render-transform origin: move that point to the local origin, transform,
                 // move it back. Resolved from the element's CURRENT size, so the same template stays centered at any size.
@@ -1508,13 +1508,13 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
                 {
                     var ox = (float)(origin.X * RenderSize.Width);
                     var oy = (float)(origin.Y * RenderSize.Height);
-                    matrix = Matrix4x4F.Translation(-ox, -oy, 0) * matrix * Matrix4x4F.Translation(ox, oy, 0);
+                    matrix = Matrix4x4.CreateTranslation<float>(-ox, -oy, 0) * matrix * Matrix4x4.CreateTranslation<float>(ox, oy, 0);
                 }
 
                 var shift = renderTransform.Shift;
                 if (shift.X != 0 || shift.Y != 0)
                 {
-                    matrix *= Matrix4x4F.Translation((float)(shift.X * RenderSize.Width), (float)(shift.Y * RenderSize.Height), 0);
+                    matrix *= Matrix4x4.CreateTranslation<float>((float)(shift.X * RenderSize.Width), (float)(shift.Y * RenderSize.Height), 0);
                 }
 
                 localTransform = matrix * localTransform;
@@ -1526,14 +1526,14 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
             var layoutTransform = LayoutTransform;
             if (layoutTransform != null)
             {
-                var matrix = (Matrix4x4F)layoutTransform.Matrix;
+                var matrix = layoutTransform.Matrix.As<float>();
 
                 // ...and then brought back to the corner of that box. Layout reserved a BOUNDING BOX, so the content has
                 // to start where the box starts. Scaling about the origin lands there by itself, which is why this was
                 // never missed; rotation does not - a quarter turn sends the content a full width to the left of the
                 // space set aside for it (measured: drawn across -50..0 where the box was 0..50).
                 var (offsetX, offsetY) = TopLeftOf(matrix, RenderSize);
-                localTransform = matrix * Matrix4x4F.Translation((float)-offsetX, (float)-offsetY, 0) * localTransform;
+                localTransform = matrix * Matrix4x4.CreateTranslation<float>((float)-offsetX, (float)-offsetY, 0) * localTransform;
             }
 
             return localTransform;
@@ -1544,7 +1544,7 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
     /// applied to it - which is what has to be subtracted to bring the transformed content back to the origin of the
     /// box layout reserved for it. Only the two axes matter here; the four corners are checked because a rotation can
     /// put any of them leftmost.</summary>
-    private static (double X, double Y) TopLeftOf(Matrix4x4F matrix, Size size)
+    private static (double X, double Y) TopLeftOf(Matrix4x4F matrix, Size<double> size)
     {
         var w = size.Width;
         var h = size.Height;

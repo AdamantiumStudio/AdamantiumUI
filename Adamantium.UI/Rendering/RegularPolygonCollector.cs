@@ -52,7 +52,7 @@ internal sealed class RegularPolygonCollector : ShapeSdfCollector<PolygonItem>
     /// free: corners, start angle in RADIANS, ring thickness in device px. One statement, read by this batch and by the
     /// gradient/pattern/texture siblings that paint the same shape with another source of color.</summary>
     internal static Vector4F ShapeNumbers(RegularPolygonPayload p, float scale) =>
-        new(p.Corners, (float)MathHelper.DegreesToRadians(p.StartAngle), (float)(p.RingThickness * scale), 0);
+        new(p.Corners, (float)(float)double.DegreesToRadians(p.StartAngle), (float)(p.RingThickness * scale), 0);
 
     public bool TryAdd(RegularPolygonPayload p, Matrix4x4F world, double opacity, Rect2D scissor, Rect logicalBounds, int transformSlot = 0,
         int clipSlot = -1, int fadeSlot = -1)
@@ -82,7 +82,7 @@ internal sealed class RegularPolygonCollector : ShapeSdfCollector<PolygonItem>
         item = new PolygonItem
         {
             Bounds = new Vector4F((float)(r.X * sx + tx), (float)(r.Y * sy + ty), (float)(r.Width * sx), (float)(r.Height * sy)),
-            Params = new Vector4F(transformSlot, p.Corners, (float)(p.RingThickness * sx), (float)MathHelper.DegreesToRadians(p.StartAngle)),
+            Params = new Vector4F(transformSlot, p.Corners, (float)(p.RingThickness * sx), (float)(float)double.DegreesToRadians(p.StartAngle)),
             Color = color,
             StrokeColor = new Color(strokeColor),
             Stroke0 = stroke0,

@@ -441,7 +441,7 @@ public class TabItem : ContentControl, ISelectable, ISpringLoadable
         Owner?.RequestClose(this);
     }
 
-    private Vector2 _pressPos;
+    private Vector2<double> _pressPos;
     private bool _pressed;
     private bool _dragging;
 

@@ -11,7 +11,7 @@ public class NurbsSegment : BSplineSegment
         
     }
 
-    public NurbsSegment(IEnumerable<Vector2> points, bool isUniform, bool useCustomDegree, int degree, bool isStroked)
+    public NurbsSegment(IEnumerable<Vector2<double>> points, bool isUniform, bool useCustomDegree, int degree, bool isStroked)
     {
         Points = new PointsCollection(points);
         IsUniform = isUniform;
@@ -83,21 +83,18 @@ public class NurbsSegment : BSplineSegment
         return currentDegree;
     }
 
-    internal override Vector2[] ProcessSegment(Vector2 currentPoint)
+    internal override Vector2<double>[] ProcessSegment(Vector2<double> currentPoint)
     {
-        var points = new PointsCollection();
-        points.Add(currentPoint);
-        points.AddRange(Points);
-        var degree = points.Count - 1;
-        if (UseCustomDegree)
+        Vector2<double>[] controls = [currentPoint, .. Points];
+        if (controls.Length < 2)
         {
-            degree = CustomDegree;
+            return [];
         }
 
-        // Dense base, then EVEN arc-length resample (~3px) - smooth stroke, no sub-pixel bunching.
-        var fine = MathHelper.GetNurbsCurve(points, degree, IsUniform, 1.0 / 256.0);
-        var count = System.Math.Clamp((int)(MathHelper.PolylineLength(fine) / 3.0), 8, 256);
-        return MathHelper.ResampleByArcLength(fine, count);
+        var degree = UseCustomDegree ? Math.Clamp(CustomDegree, 1, controls.Length - 1) : controls.Length - 1;
+        var dense = new List<Vector2<double>>();
+        MathHelper.Curves.AppendNurbs<double>(controls, [], degree, IsUniform, 256, dense);
+        return ResampledEvenly(dense);
     }
 
     

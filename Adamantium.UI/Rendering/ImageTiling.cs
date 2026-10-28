@@ -125,7 +125,7 @@ internal static class ImageTiling
     /// <summary>The size a VECTOR source is baked at: the rectangle its picture is actually DRAWN in. A drawing maps
     /// its viewbox onto whatever box the bake is given, so baking at the fill box and fitting afterwards squashes it
     /// twice - which is why Stretch did nothing at all on a drawing.</summary>
-    public static Size BakeSize(TileBrush brush, Size box)
+    public static Size<double> BakeSize(TileBrush brush, Size<double> box)
     {
         // The unit being fitted is the VIEWBOX's slice, not the whole drawing: a tile shows the slice, so the slice is
         // what has to arrive at the tile's resolution. Sizing the whole picture instead meant a viewbox of 0.3 baked
@@ -133,7 +133,7 @@ internal static class ImageTiling
         // to cross where a full viewbox took 1.
         var slice = SliceOf(brush);
         var whole = brush.ContentSize;
-        var content = new Size(whole.Width * slice.Z, whole.Height * slice.W);
+        var content = new Size<double>(whole.Width * slice.Z, whole.Height * slice.W);
         if (content.Width <= 0 || content.Height <= 0 || box.Width <= 0 || box.Height <= 0)
         {
             return box;
@@ -176,7 +176,7 @@ internal static class ImageTiling
 
     // The part of the source a tile shows, always as a 0..1 sub-rectangle - absolute units are stated in the content's
     // own units (a picture's texels), so they are divided by its size here and the shader only ever sees normalized uv.
-    private static Vector4F Viewbox(TileBrush brush, Size content)
+    private static Vector4F Viewbox(TileBrush brush, Size<double> content)
     {
         var viewbox = brush.Viewbox;
         if (brush.ViewboxUnits == BrushMappingMode.Absolute)
@@ -251,15 +251,15 @@ internal static class ImageTiling
     }
 
     // One tile's size in the same units the caller's box is in - what a bake has to be made at.
-    private static Size TileSize(TileBrush brush, Size box)
+    private static Size<double> TileSize(TileBrush brush, Size<double> box)
     {
         var viewport = brush.Viewport;
         if (brush.ViewportUnits == BrushMappingMode.Absolute)
         {
-            return new Size(viewport.Width, viewport.Height);
+            return new Size<double>(viewport.Width, viewport.Height);
         }
 
-        return new Size(viewport.Width * box.Width, viewport.Height * box.Height);
+        return new Size<double>(viewport.Width * box.Width, viewport.Height * box.Height);
     }
 
     private static double OffsetX(AlignmentX alignment) => alignment switch
@@ -276,7 +276,7 @@ internal static class ImageTiling
         _ => 0.5
     };
 
-    private static Size Scaled(Size size, double scale) => new(size.Width * scale, size.Height * scale);
+    private static Size<double> Scaled(Size<double> size, double scale) => new(size.Width * scale, size.Height * scale);
 
     private static float Mirror(TileMode mode) => mode switch
     {

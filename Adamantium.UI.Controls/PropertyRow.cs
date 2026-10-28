@@ -338,7 +338,7 @@ public class PropertyRow : Control
         }
     }
 
-    protected override Size ArrangeOverride(Size finalSize)
+    protected override Size<double> ArrangeOverride(Size<double> finalSize)
     {
         var size = base.ArrangeOverride(finalSize);
 

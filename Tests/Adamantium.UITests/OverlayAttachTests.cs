@@ -24,7 +24,7 @@ public class OverlayAttachTests
         var window = new Window { Width = 400, Height = 300, Content = host };
         WindowExtension.UpdateTree(window);
         popup.IsOpen = true;
-        window.PopupLayer.UpdateLayout(new Size(400, 300));
+        window.PopupLayer.UpdateLayout(new Size<double>(400, 300));
         Assert.That(card.IsAttachedToVisualTree, Is.True, "precondition: the popup's card is in the window's tree");
 
         var row = new Border();

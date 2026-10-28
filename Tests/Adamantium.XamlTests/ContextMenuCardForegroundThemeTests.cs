@@ -56,7 +56,7 @@ public class ContextMenuCardForegroundThemeTests
         {
             window.ApplyCurrentTheme();
             Adamantium.UI.Extensions.WindowExtension.UpdateTree(window);
-            window.PopupLayer.UpdateLayout(new Size(window.Width, window.Height));
+            window.PopupLayer.UpdateLayout(new Size<double>(window.Width, window.Height));
             Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
         }
     }

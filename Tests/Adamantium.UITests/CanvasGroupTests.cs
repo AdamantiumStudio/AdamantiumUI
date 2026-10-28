@@ -15,7 +15,7 @@ public class CanvasGroupTests
     private static InfiniteCanvas Sized(double width = 400, double height = 300)
     {
         var canvas = new InfiniteCanvas();
-        canvas.Measure(new Size(width, height), force: true);
+        canvas.Measure(new Size<double>(width, height), force: true);
         canvas.Arrange(new Rect(0, 0, width, height));
 
         return canvas;
@@ -33,7 +33,7 @@ public class CanvasGroupTests
 
         Assert.That(group.Bounds, Is.EqualTo(new Rect(0, 0, 100, 50)));
 
-        group.Children[0].Move(new Vector2(-20, 0));
+        group.Children[0].Move(new Vector2<double>(-20, 0));
 
         Assert.That(group.Bounds, Is.EqualTo(new Rect(-20, 0, 120, 50)));
     }
@@ -66,8 +66,8 @@ public class CanvasGroupTests
         Assert.Multiple(() =>
         {
             // ON the first box's outline: these are hollow rectangles, so their own middles belong to nobody either.
-            Assert.That(group.HitTest(new Vector2(0, 5), 0.5), Is.True);
-            Assert.That(group.HitTest(new Vector2(50, 25), 0.5), Is.False, "the empty middle belongs to nobody");
+            Assert.That(group.HitTest(new Vector2<double>(0, 5), 0.5), Is.True);
+            Assert.That(group.HitTest(new Vector2<double>(50, 25), 0.5), Is.False, "the empty middle belongs to nobody");
         });
     }
 

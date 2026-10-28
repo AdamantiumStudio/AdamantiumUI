@@ -270,7 +270,7 @@ public class TabControlTests
             r.AddTemplateBinding(cp, "ContentTemplate", new TemplateBinding { Path = "HeaderTemplate" });
             return r;
         });
-        tab.Measure(new Size(200, 50));
+        tab.Measure(new Size<double>(200, 50));
         tab.Arrange(new Rect(0, 0, 200, 50));
 
         var presenter = (ContentPresenter)tab.GetTemplateChild("PART_ContentPresenter");

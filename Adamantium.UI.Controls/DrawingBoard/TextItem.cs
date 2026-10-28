@@ -23,12 +23,12 @@ public partial class TextItem : AdamantiumViewModel, ICanvasItem
     private FontFamily _layoutFont;
     private string _shapedText;
     private double _shapedSize = double.NaN;
-    private Size _measured;
+    private Size<double> _measured;
     private string _drawnText;
     private double _drawnSize = double.NaN;
-    private Size _drawn;
+    private Size<double> _drawn;
 
-    public TextItem(Vector2 origin, string text, Brush brush, double fontSize, FontFamily font = null)
+    public TextItem(Vector2<double> origin, string text, Brush brush, double fontSize, FontFamily font = null)
     {
         Origin = origin;
         Text = text ?? string.Empty;
@@ -42,7 +42,7 @@ public partial class TextItem : AdamantiumViewModel, ICanvasItem
 
     /// <summary>Where the text starts, in the world - its top-left corner.</summary>
     [Bindable, Affects(nameof(X), nameof(Y), nameof(Bounds))]
-    public partial Vector2 Origin { get; set; }
+    public partial Vector2<double> Origin { get; set; }
 
     public string Text { get; set; }
 
@@ -82,13 +82,13 @@ public partial class TextItem : AdamantiumViewModel, ICanvasItem
     public double X
     {
         get => Bounds.X;
-        set => Move(new Vector2(value - Bounds.X, 0));
+        set => Move(new Vector2<double>(value - Bounds.X, 0));
     }
 
     public double Y
     {
         get => Bounds.Y;
-        set => Move(new Vector2(0, value - Bounds.Y));
+        set => Move(new Vector2<double>(0, value - Bounds.Y));
     }
 
     public double Width
@@ -124,7 +124,7 @@ public partial class TextItem : AdamantiumViewModel, ICanvasItem
         }
     }
 
-    public void Move(Vector2 worldDelta) => Origin += worldDelta;
+    public void Move(Vector2<double> worldDelta) => Origin += worldDelta;
 
     /// <summary>Resizing text sets its SIZE, not a scale on top of it: a box twice as tall is text twice as big, which is
     /// the same thing a designer means by dragging the corner of a label.</summary>
@@ -138,10 +138,10 @@ public partial class TextItem : AdamantiumViewModel, ICanvasItem
         // Only away from zero: a floor in world units is a floor on the ZOOM - typed at 1000x the text is a hundredth
         // of a unit tall, and 0.01 stopped it a third of the way down.
         FontSize = Math.Max(1e-6, FontSize * world.Height / was.Height);
-        Origin = new Vector2(world.X, world.Y);
+        Origin = new Vector2<double>(world.X, world.Y);
     }
 
-    public bool HitTest(Vector2 world, double tolerance)
+    public bool HitTest(Vector2<double> world, double tolerance)
     {
         var box = Bounds;
 
@@ -171,7 +171,7 @@ public partial class TextItem : AdamantiumViewModel, ICanvasItem
                 TextTrimming = TextTrimming.None,
                 TextWrapping = TextWrapping.NoWrap,
                 Color = solid.Color,
-                TextArea = new Rectangle(new Vector2F((float)at.X, (float)at.Y), size)
+                TextArea = new Rectangle<int>(new Vector2F((float)at.X, (float)at.Y).As<int>(), size.As<int>())
             },
             size, _draw, Brush, Brushes.Transparent, Brushes.Transparent);
     }
@@ -180,7 +180,7 @@ public partial class TextItem : AdamantiumViewModel, ICanvasItem
     // less than one, so a world size of 0.014 measured one whole unit square - a frame the size of the sky round a word.
     private const double MeasuringSize = 64;
 
-    private Size MeasureAt(double fontSize)
+    private Size<double> MeasureAt(double fontSize)
     {
         if (!EnsureFont()) return default;
 
@@ -193,11 +193,11 @@ public partial class TextItem : AdamantiumViewModel, ICanvasItem
 
         var times = fontSize / MeasuringSize;
 
-        return new Size(_measured.Width * times, _measured.Height * times);
+        return new Size<double>(_measured.Width * times, _measured.Height * times);
     }
 
     // ...and the layout that is actually handed to the drawing, shaped at the size it will appear on screen.
-    private Size ShapeForDrawing(double fontSize)
+    private Size<double> ShapeForDrawing(double fontSize)
     {
         if (!EnsureFont()) return default;
         if (_drawnText == Text && _drawnSize.Equals(fontSize)) return _drawn;
@@ -209,8 +209,8 @@ public partial class TextItem : AdamantiumViewModel, ICanvasItem
         return _drawn;
     }
 
-    private Size Shape(TextLayout layout, double fontSize) =>
-        layout.ProcessText(Text, fontSize, new Size(double.NaN, double.NaN), TextWrapping.NoWrap,
+    private Size<double> Shape(TextLayout layout, double fontSize) =>
+        layout.ProcessText(Text, fontSize, new Size<double>(double.NaN, double.NaN), TextWrapping.NoWrap,
             TextTrimming.None, HorizontalTextAlignment.Left, VerticalTextAlignment.Top, false);
 
     // A typeface is fixed per layout, so a different face is a different layout - the same rule TextBlock follows.

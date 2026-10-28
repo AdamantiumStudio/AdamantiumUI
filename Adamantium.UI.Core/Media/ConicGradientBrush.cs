@@ -15,15 +15,15 @@ public sealed class ConicGradientBrush : GradientBrush
     // PAINT, both: the sweep is RELATIVE to the filled bounds, so moving the center or turning the start angle re-colors
     // the same pixels - never the element's shape or its layout (see Brush.Opacity).
     public static readonly AdamantiumProperty CenterProperty = AdamantiumProperty.Register(nameof(Center),
-        typeof(Vector2), typeof(ConicGradientBrush), new PropertyMetadata(new Vector2(0.5f, 0.5f), PropertyMetadataOptions.AffectsPaint));
+        typeof(Vector2<double>), typeof(ConicGradientBrush), new PropertyMetadata(new Vector2<double>(0.5f, 0.5f), PropertyMetadataOptions.AffectsPaint));
 
     public static readonly AdamantiumProperty StartAngleProperty = AdamantiumProperty.Register(nameof(StartAngle),
         typeof(double), typeof(ConicGradientBrush), new PropertyMetadata(0.0, PropertyMetadataOptions.AffectsPaint));
 
     /// <summary>The point (relative) the angle sweeps around. Default is the center of the bounds.</summary>
-    public Vector2 Center
+    public Vector2<double> Center
     {
-        get => GetValue<Vector2>(CenterProperty);
+        get => GetValue<Vector2<double>>(CenterProperty);
         set
         {
             if (IsFrozen) return;

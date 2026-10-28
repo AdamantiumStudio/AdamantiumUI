@@ -282,14 +282,14 @@ public class Slider : RangeBase
         ForceArrangeFill();
     }
 
-    protected override Size ArrangeOverride(Size finalSize)
+    protected override Size<double> ArrangeOverride(Size<double> finalSize)
     {
         // Honest cross-axis: a horizontal slider is only as tall as its content (rail + thumb), NOT the whole slot - else
         // its ClipRectangle swallows clicks/hovers across the slot and blocks other controls' input. Stretch stays on the
         // MAIN axis. (Mirror of ProgressBar.)
         finalSize = Orientation == Orientation.Horizontal
-            ? new Size(finalSize.Width, Math.Min(finalSize.Height, DesiredSize.Height))
-            : new Size(Math.Min(finalSize.Width, DesiredSize.Width), finalSize.Height);
+            ? new Size<double>(finalSize.Width, Math.Min(finalSize.Height, DesiredSize.Height))
+            : new Size<double>(Math.Min(finalSize.Width, DesiredSize.Width), finalSize.Height);
 
         var size = base.ArrangeOverride(finalSize);
         // The track fills the slider, so the arranged main-axis length is the fill's 100%.
@@ -373,7 +373,7 @@ public class Slider : RangeBase
     private void ForceArrangeFill()
     {
         if (_selectionRange is not IMeasurableComponent m || m.PreviousArrangeSlot is not { } slot) return;
-        _selectionRange.Measure(new Size(slot.Width, slot.Height), force: true);
+        _selectionRange.Measure(new Size<double>(slot.Width, slot.Height), force: true);
         _selectionRange.Arrange(slot);
     }
 

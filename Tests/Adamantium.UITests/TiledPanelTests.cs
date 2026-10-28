@@ -137,7 +137,7 @@ public class TiledPanelTests
     {
         var (panel, children) = Made(TileLayouts.Gallery, 2);
 
-        panel.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity), force: true);
+        panel.Measure(new Size<double>(double.PositiveInfinity, double.PositiveInfinity), force: true);
         panel.Arrange(new Rect(0, 0, 200, 100));
 
         Assert.Multiple(() =>
@@ -186,8 +186,8 @@ public class TiledPanelTests
     {
         var (panel, children, window) = InWindow(TileLayouts.Four, 4);
 
-        Press(panel, new Vector2(100, 20));
-        MoveTo(panel, new Vector2(150, 20));
+        Press(panel, new Vector2<double>(100, 20));
+        MoveTo(panel, new Vector2<double>(150, 20));
         Release(panel);
         Update(window);
 
@@ -206,7 +206,7 @@ public class TiledPanelTests
         var (panel, children, window) = InWindow(layout, 4);
         var gapX = children[0].Bounds.Right + 2;
 
-        Press(panel, new Vector2(gapX, 50), clicks: 2);
+        Press(panel, new Vector2<double>(gapX, 50), clicks: 2);
         Update(window);
 
         Assert.That(children[0].Bounds.Width, Is.EqualTo(98).Within(1e-9));
@@ -216,12 +216,12 @@ public class TiledPanelTests
     public void DoubleClickingAGap_LeavesTheSplitsInsideAlone()
     {
         var (panel, children, window) = InWindow(TileLayouts.Four, 4);
-        Press(panel, new Vector2(100, 20));
-        MoveTo(panel, new Vector2(150, 20));
+        Press(panel, new Vector2<double>(100, 20));
+        MoveTo(panel, new Vector2<double>(150, 20));
         Release(panel);
         Update(window);
 
-        Press(panel, new Vector2(20, 50), clicks: 2);
+        Press(panel, new Vector2<double>(20, 50), clicks: 2);
         Update(window);
 
         Assert.That(children[0].Bounds.Width, Is.EqualTo(148).Within(1e-9));
@@ -232,10 +232,10 @@ public class TiledPanelTests
     {
         var (panel, children, window) = InWindow(TileLayouts.TwoColumns, 2);
 
-        Press(panel, new Vector2(100, 20));
+        Press(panel, new Vector2<double>(100, 20));
         panel.Width = 400;
         Update(window);
-        MoveTo(panel, new Vector2(150, 20));
+        MoveTo(panel, new Vector2<double>(150, 20));
         Release(panel);
         Update(window);
 
@@ -280,7 +280,7 @@ public class TiledPanelTests
     {
         var (panel, children) = Made(new TileFlow(), 2);
         panel.Spacing = 25;
-        panel.Measure(new Size(30, 5), force: true);
+        panel.Measure(new Size<double>(30, 5), force: true);
         panel.Arrange(new Rect(0, 0, 30, 5));
 
         Assert.That(children[1].Bounds, Is.EqualTo(new Rect(27.5, 0, 2.5, 5)));
@@ -327,7 +327,7 @@ public class TiledPanelTests
         panel.ShowDropGap(0, new List<object> { "C" });
         LayHosted(panel);
 
-        Assert.That(panel.TryGetDropSlot(new Vector2(x, y), new List<object> { "C" }, out var index), Is.True);
+        Assert.That(panel.TryGetDropSlot(new Vector2<double>(x, y), new List<object> { "C" }, out var index), Is.True);
         Assert.That(index, Is.EqualTo(expected));
     }
 
@@ -338,7 +338,7 @@ public class TiledPanelTests
     {
         var (panel, _) = Hosted(TileLayouts.Four, "A", "B", "C", "D");
 
-        Assert.That(panel.TryGetDropSlot(new Vector2(x, y), new List<object> { "A" }, out var index), Is.True);
+        Assert.That(panel.TryGetDropSlot(new Vector2<double>(x, y), new List<object> { "A" }, out var index), Is.True);
         Assert.That(index, Is.EqualTo(expected));
     }
 
@@ -366,9 +366,9 @@ public class TiledPanelTests
         var (panel, window) = InWindowList(TileLayouts.One, items,
             p => p.SplitTileCommand = new Act(at => items.Insert((int)at, "N")));
 
-        PressCorner(panel, new Vector2(2, 2));
-        MoveTo(panel, new Vector2(60, 50));
-        MoveTo(panel, new Vector2(60, 50));
+        PressCorner(panel, new Vector2<double>(2, 2));
+        MoveTo(panel, new Vector2<double>(60, 50));
+        MoveTo(panel, new Vector2<double>(60, 50));
         Update(window);
         Release(panel);
         Update(window);
@@ -387,7 +387,7 @@ public class TiledPanelTests
         var items = new ObservableCollection<string> { "A", "B" };
         var (panel, window) = InWindowList(TileLayouts.TwoColumns, items, p => p.SplitTileCommand = new Act(_ => { }));
 
-        HoverAt(panel, new Vector2(195, 95));
+        HoverAt(panel, new Vector2<double>(195, 95));
         Update(window);
 
         var grips = panel.VisualChildren.OfType<TileGrip>().ToList();
@@ -399,7 +399,7 @@ public class TiledPanelTests
             Assert.That(grips.Single(g => g.IsHot).Corner, Is.EqualTo(TileCorner.BottomRight));
         });
 
-        HoverAt(panel, new Vector2(150, 50));
+        HoverAt(panel, new Vector2<double>(150, 50));
         Update(window);
 
         Assert.That(panel.VisualChildren.OfType<TileGrip>().Any(g => g.IsHot), Is.False, "away from the corners, none is hot");
@@ -411,8 +411,8 @@ public class TiledPanelTests
         var items = new ObservableCollection<string> { "A" };
         var (panel, window) = InWindowList(TileLayouts.One, items, p => p.SplitTileCommand = new Act(_ => { }));
 
-        PressCorner(panel, new Vector2(2, 2));
-        MoveTo(panel, new Vector2(60, 50));
+        PressCorner(panel, new Vector2<double>(2, 2));
+        MoveTo(panel, new Vector2<double>(60, 50));
         Release(panel);
         Update(window);
 
@@ -430,9 +430,9 @@ public class TiledPanelTests
         var asked = false;
         var (panel, window) = InWindowList(TileLayouts.One, items, p => p.SplitTileCommand = new Act(_ => asked = true));
 
-        PressCorner(panel, new Vector2(2, 2));
-        MoveTo(panel, new Vector2(60, 50));
-        MoveTo(panel, new Vector2(0, 50));
+        PressCorner(panel, new Vector2<double>(2, 2));
+        MoveTo(panel, new Vector2<double>(60, 50));
+        MoveTo(panel, new Vector2<double>(0, 50));
         Update(window);
         var heldWidth = ContainerOf(panel, "A").Bounds.Width;
         Release(panel);
@@ -454,10 +454,10 @@ public class TiledPanelTests
         var (panel, window) = InWindowList(TileLayouts.One, items,
             p => p.SplitTileCommand = new Act(at => items.Insert((int)at, "N")));
 
-        PressCorner(panel, new Vector2(2, 2));
-        MoveTo(panel, new Vector2(60, 50));
-        MoveTo(panel, new Vector2(0, 50));
-        MoveTo(panel, new Vector2(60, 50));
+        PressCorner(panel, new Vector2<double>(2, 2));
+        MoveTo(panel, new Vector2<double>(60, 50));
+        MoveTo(panel, new Vector2<double>(0, 50));
+        MoveTo(panel, new Vector2<double>(60, 50));
         Update(window);
         Release(panel);
         Update(window);
@@ -472,9 +472,9 @@ public class TiledPanelTests
         var asked = false;
         var (panel, window) = InWindowList(TileLayouts.One, items, p => p.SplitTileCommand = new Act(_ => asked = true));
 
-        PressCorner(panel, new Vector2(198, 2));
-        MoveTo(panel, new Vector2(140, 50));
-        MoveTo(panel, new Vector2(200, 50));
+        PressCorner(panel, new Vector2<double>(198, 2));
+        MoveTo(panel, new Vector2<double>(140, 50));
+        MoveTo(panel, new Vector2<double>(200, 50));
         Release(panel);
         Update(window);
 
@@ -492,9 +492,9 @@ public class TiledPanelTests
         var (panel, window) = InWindowList(TileLayouts.One, items,
             p => p.SplitTileCommand = new Act(at => items.Insert((int)at, "N")));
 
-        PressCorner(panel, new Vector2(2, 2));
-        MoveTo(panel, new Vector2(-20, 2));
-        MoveTo(panel, new Vector2(2, 60));
+        PressCorner(panel, new Vector2<double>(2, 2));
+        MoveTo(panel, new Vector2<double>(-20, 2));
+        MoveTo(panel, new Vector2<double>(2, 60));
         Update(window);
         Release(panel);
         Update(window);
@@ -513,8 +513,8 @@ public class TiledPanelTests
         var (panel, window) = InWindowList(TileLayouts.TwoColumns, items,
             p => p.MergeTileCommand = new Act(item => items.Remove((string)item)));
 
-        Press(panel, new Vector2(100, 20));
-        MoveTo(panel, new Vector2(199, 20));
+        Press(panel, new Vector2<double>(100, 20));
+        MoveTo(panel, new Vector2<double>(199, 20));
         Release(panel);
         Update(window);
 
@@ -537,8 +537,8 @@ public class TiledPanelTests
             items.Insert((int)at, "N");
         }));
 
-        PressCorner(panel, new Vector2(198, 2));
-        MoveTo(panel, new Vector2(150, 50));
+        PressCorner(panel, new Vector2<double>(198, 2));
+        MoveTo(panel, new Vector2<double>(150, 50));
         Release(panel);
 
         Assert.Multiple(() =>
@@ -554,8 +554,8 @@ public class TiledPanelTests
         var items = new ObservableCollection<string> { "A", "B", "C" };
         var (panel, window) = InWindowList(TileLayouts.TwoColumns, items, p => p.MergeTileCommand = new Act(_ => items.Remove("C")));
 
-        Press(panel, new Vector2(100, 20));
-        MoveTo(panel, new Vector2(199, 20));
+        Press(panel, new Vector2<double>(100, 20));
+        MoveTo(panel, new Vector2<double>(199, 20));
         Release(panel);
         Update(window);
 
@@ -568,8 +568,8 @@ public class TiledPanelTests
         var items = new ObservableCollection<string> { "A", "B" };
         var (panel, window) = InWindowList(TileLayouts.TwoColumns, items, p => p.MergeTileCommand = new Act(_ => { }));
 
-        Press(panel, new Vector2(100, 20));
-        MoveTo(panel, new Vector2(199, 20));
+        Press(panel, new Vector2<double>(100, 20));
+        MoveTo(panel, new Vector2<double>(199, 20));
         Mouse.Pointer.Capture(null);
         Update(window);
 
@@ -583,11 +583,11 @@ public class TiledPanelTests
         var asked = false;
         var (panel, window) = InWindowList(TileLayouts.One, items, p => p.SplitTileCommand = new Act(_ => asked = true));
 
-        PressCorner(panel, new Vector2(2, 2));
-        MoveTo(panel, new Vector2(60, 50));
+        PressCorner(panel, new Vector2<double>(2, 2));
+        MoveTo(panel, new Vector2<double>(60, 50));
         Update(window);
         PressEscape(window);
-        MoveTo(panel, new Vector2(80, 50));
+        MoveTo(panel, new Vector2<double>(80, 50));
         Release(panel);
         Update(window);
 
@@ -606,8 +606,8 @@ public class TiledPanelTests
         var (panel, window) = InWindowList(TileLayouts.TwoColumns, items,
             p => p.MergeTileCommand = new Act(item => items.Remove((string)item)));
 
-        Press(panel, new Vector2(100, 20));
-        MoveTo(panel, new Vector2(199, 20));
+        Press(panel, new Vector2<double>(100, 20));
+        MoveTo(panel, new Vector2<double>(199, 20));
         PressEscape(window);
         Release(panel);
         Update(window);
@@ -627,8 +627,8 @@ public class TiledPanelTests
 
         Assert.That(PressEscape(window), Is.False, "before any drag");
 
-        Press(panel, new Vector2(100, 20));
-        MoveTo(panel, new Vector2(120, 20));
+        Press(panel, new Vector2<double>(100, 20));
+        MoveTo(panel, new Vector2<double>(120, 20));
         Release(panel);
 
         Assert.That(PressEscape(window), Is.False, "after a drag let go");
@@ -643,8 +643,8 @@ public class TiledPanelTests
         ((IObservableComponent)window).AddHandler(Keyboard.PreviewKeyDownEvent,
             new KeyEventHandler((_, e) => e.Handled = true));
 
-        Press(panel, new Vector2(100, 20));
-        MoveTo(panel, new Vector2(199, 20));
+        Press(panel, new Vector2<double>(100, 20));
+        MoveTo(panel, new Vector2<double>(199, 20));
         PressEscape(window);
         Release(panel);
 
@@ -657,11 +657,11 @@ public class TiledPanelTests
         var items = new ObservableCollection<string> { "A", "B", "C", "D" };
         var (panel, window) = InWindowList(TileLayouts.Four, items, p => p.SplitTileCommand = new Act(at => items.Insert((int)at, "N")));
 
-        PressCorner(panel, new Vector2(97, 47));
+        PressCorner(panel, new Vector2<double>(97, 47));
 
         Assert.That(items, Has.Count.EqualTo(4));
-        Press(panel, new Vector2(100, 50));
-        MoveTo(panel, new Vector2(150, 60));
+        Press(panel, new Vector2<double>(100, 50));
+        MoveTo(panel, new Vector2<double>(150, 60));
         Release(panel);
         Update(window);
 
@@ -679,8 +679,8 @@ public class TiledPanelTests
         var items = new ObservableCollection<string> { "A", "B" };
         var (panel, window) = InWindowList(TileLayouts.TwoColumns, items, _ => { });
 
-        Press(panel, new Vector2(100, 20));
-        MoveTo(panel, new Vector2(199, 20));
+        Press(panel, new Vector2<double>(100, 20));
+        MoveTo(panel, new Vector2<double>(199, 20));
         Release(panel);
         Update(window);
 
@@ -746,7 +746,7 @@ public class TiledPanelTests
                 return result;
             })
         };
-        list.Measure(new Size(200, 100));
+        list.Measure(new Size<double>(200, 100));
         list.Arrange(new Rect(0, 0, 200, 100));
         var panel = (TiledPanel)list.ItemsHostPanel;
         var containers = panel.Children.Cast<IUIComponent>()
@@ -787,7 +787,7 @@ public class TiledPanelTests
     private static IUIComponent ContainerOf(TiledPanel panel, string item) =>
         panel.Children.Cast<IUIComponent>().First(c => (string)((IFundamentalUIComponent)c).DataContext == item);
 
-    private static void PressCorner(TiledPanel panel, Vector2 at)
+    private static void PressCorner(TiledPanel panel, Vector2<double> at)
     {
         PointerDevice.Current.SetExternalMousePosition(panel, new PixelPoint(at.X, at.Y));
         ((IObservableComponent)panel).RaiseEvent(new PointerPressedEventArgs(Mouse.Pointer, MouseButtons.Left,
@@ -798,7 +798,7 @@ public class TiledPanelTests
         });
     }
 
-    private static void HoverAt(TiledPanel panel, Vector2 at)
+    private static void HoverAt(TiledPanel panel, Vector2<double> at)
     {
         PointerDevice.Current.SetExternalMousePosition(panel, new PixelPoint(at.X, at.Y));
         ((IObservableComponent)panel).RaiseEvent(new PointerEventArgs(Mouse.Pointer, InputModifiers.None, 0)
@@ -823,13 +823,13 @@ public class TiledPanelTests
 
     private static void LayHosted(TiledPanel panel)
     {
-        panel.Measure(new Size(200, 100), true);
+        panel.Measure(new Size<double>(200, 100), true);
         panel.Arrange(new Rect(0, 0, 200, 100), true);
     }
 
     private static void Lay(TiledPanel panel)
     {
-        panel.Measure(new Size(200, 100), force: true);
+        panel.Measure(new Size<double>(200, 100), force: true);
         panel.Arrange(new Rect(0, 0, 200, 100));
     }
 
@@ -841,7 +841,7 @@ public class TiledPanelTests
         }
     }
 
-    private static void Press(TiledPanel panel, Vector2 at, int clicks = 1)
+    private static void Press(TiledPanel panel, Vector2<double> at, int clicks = 1)
     {
         PointerDevice.Current.SetExternalMousePosition(panel, new PixelPoint(at.X, at.Y));
         ((IObservableComponent)panel).RaiseEvent(new PointerPressedEventArgs(Mouse.Pointer, MouseButtons.Left,
@@ -853,7 +853,7 @@ public class TiledPanelTests
         });
     }
 
-    private static void MoveTo(TiledPanel panel, Vector2 at)
+    private static void MoveTo(TiledPanel panel, Vector2<double> at)
     {
         PointerDevice.Current.SetExternalMousePosition(panel, new PixelPoint(at.X, at.Y));
         ((IObservableComponent)panel).RaiseEvent(new PointerEventArgs(Mouse.Pointer, InputModifiers.LeftMouseButton, 0)

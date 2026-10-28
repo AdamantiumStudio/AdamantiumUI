@@ -44,7 +44,7 @@ public class CanvasNodeThemeTests
         node.ApplyCurrentTheme();
         Adamantium.UI.Extensions.WindowExtension.UpdateTree(node);
         Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
-        node.Measure(new Size(600, 600));
+        node.Measure(new Size<double>(600, 600));
         node.Arrange(new Rect(0, 0, 600, 600));
         return node;
     }
@@ -428,7 +428,7 @@ public class CanvasNodeThemeTests
         Assert.Multiple(() =>
         {
             Assert.That(node.PinAt(at), Is.SameAs(node.InputPins[1]));
-            Assert.That(node.PinAt(new Vector2(at.X + 60, at.Y)), Is.Null, "the middle of the node is not a socket");
+            Assert.That(node.PinAt(new Vector2<double>(at.X + 60, at.Y)), Is.Null, "the middle of the node is not a socket");
         });
     }
 
@@ -487,7 +487,7 @@ public class CanvasNodeThemeTests
 
         var input = node.Where(node.InputPins[0]);
         var output = node.Where(node.OutputPins[0]);
-        var middle = body.TranslatePoint(new Vector2(body.RenderSize.Width / 2, 0), node);
+        var middle = body.TranslatePoint(new Vector2<double>(body.RenderSize.Width / 2, 0), node);
 
         Assert.Multiple(() =>
         {
@@ -823,13 +823,13 @@ public class CanvasNodeThemeTests
         Settle(window);
 
         var fold = node.GetTemplateChild("PART_Fold") as IUIComponent;
-        var was = fold.TranslatePoint(new Vector2(0, 0), node);
+        var was = fold.TranslatePoint(new Vector2<double>(0, 0), node);
 
         node.IsCollapsed = true;
         Built(node);
         Settle(window);
 
-        var now = fold.TranslatePoint(new Vector2(0, 0), node);
+        var now = fold.TranslatePoint(new Vector2<double>(0, 0), node);
 
         Assert.That(now.X, Is.EqualTo(was.X).Within(1.5),
             "the switch moved sideways as the node folded, so the click that opens it again lands on nothing");
@@ -1061,7 +1061,7 @@ public class CanvasNodeThemeTests
         Assert.That(Sized(1), Is.EqualTo(Sized(0.1)), "and the same going the other way");
     }
 
-    private static Size Sized(double scale)
+    private static Size<double> Sized(double scale)
     {
         var node = new CanvasNode { Title = "Multiply", Inputs = 2, Outputs = 1 };
         var layer = new CanvasElementLayer { Owner = new InfiniteCanvas { Scale = scale } };

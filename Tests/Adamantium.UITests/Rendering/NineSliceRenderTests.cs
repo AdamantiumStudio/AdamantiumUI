@@ -149,7 +149,7 @@ public class NineSliceRenderTests
             RenderAction = s => s.DrawRectangle(brush, new Rect(0, 0, w, h))
         };
         control.Bounds = new Rect(0, 0, w, h);
-        control.RenderSize = new Size(w, h);
+        control.RenderSize = new Size<double>(w, h);
         // A FRACTIONAL offset, which is what layout hands a frame standing in a WrapPanel with margins - and what an
         // integer-aligned test never sees. Piece boundaries then land between device pixels.
         control.RenderTransform = new Transform { TranslateX = 10.4, TranslateY = 10.4 };
@@ -227,7 +227,7 @@ public class NineSliceRenderTests
             RenderAction = s => s.DrawRectangle(brush, new Rect(0, 0, Frame, Frame))
         };
         control.Bounds = new Rect(0, 0, Frame, Frame);
-        control.RenderSize = new Size(Frame, Frame);
+        control.RenderSize = new Size<double>(Frame, Frame);
         control.RenderTransform = new Transform { TranslateX = 20, TranslateY = 20 };
 
         var root = new VisualRoot(control, Dim, Dim);
@@ -275,7 +275,7 @@ public class NineSliceRenderTests
             RenderAction = s => s.DrawRectangle(brush, new Rect(0, 0, Frame, Frame))
         };
         control.Bounds = new Rect(0, 0, Frame, Frame);
-        control.RenderSize = new Size(Frame, Frame);
+        control.RenderSize = new Size<double>(Frame, Frame);
         control.RenderTransform = new Transform { TranslateX = 20, TranslateY = 20 };
 
         var root = new VisualRoot(control, Dim, Dim);
@@ -306,7 +306,7 @@ public class NineSliceRenderTests
             RenderAction = s => s.DrawRectangle(new ImageBrush(_source), new Rect(0, 0, Frame, Frame))
         };
         control.Bounds = new Rect(0, 0, Frame, Frame);
-        control.RenderSize = new Size(Frame, Frame);
+        control.RenderSize = new Size<double>(Frame, Frame);
         control.RenderTransform = new Transform { TranslateX = 20, TranslateY = 20 };
 
         var root = new VisualRoot(control, Dim, Dim);

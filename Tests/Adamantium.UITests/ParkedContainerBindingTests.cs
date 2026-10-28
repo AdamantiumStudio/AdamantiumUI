@@ -68,7 +68,7 @@ public class ParkedContainerBindingTests
         });
 
         var ic = new ItemsControl { ItemTemplate = template, ItemsSource = rows, Template = ItemsPresenterTemplate() };
-        ic.Measure(new Size(100, 300));
+        ic.Measure(new Size<double>(100, 300));
         ic.Arrange(new Rect(0, 0, 100, 300));
 
         var gen = ic.ItemContainerGenerator;
@@ -79,13 +79,13 @@ public class ParkedContainerBindingTests
 
         // One item less of viewport: the edge index leaves the window with nothing entering, so it is surplus and the
         // panel parks it - Collapsed, and every binding in it closed.
-        panel.Measure(new Size(100, 300 - ItemExtent), true);
+        panel.Measure(new Size<double>(100, 300 - ItemExtent), true);
         panel.Arrange(new Rect(0, 0, 100, 300 - ItemExtent), true);
         Assert.That(gen.ContainerFromIndex(edge), Is.Null, "the edge container must actually have been parked");
 
         // ...and back. The one slot that is missing is the one that container just held, so the pool returns it to its
         // own item and PrepareContainer writes a DataContext it already has.
-        panel.Measure(new Size(100, 300), true);
+        panel.Measure(new Size<double>(100, 300), true);
         panel.Arrange(new Rect(0, 0, 100, 300), true);
         var revived = gen.ContainerFromIndex(edge);
 

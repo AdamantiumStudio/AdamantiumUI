@@ -29,11 +29,11 @@ public class UnloadedOnDiscardTests
         var unloaded = 0;
         body.Unloaded += (_, _) => unloaded++;
         presenter.Content = body;
-        presenter.Measure(new Size(100, 100));
+        presenter.Measure(new Size<double>(100, 100));
         body.Render(new DrawingContext());
 
         presenter.Content = new Border();
-        presenter.Measure(new Size(100, 100));
+        presenter.Measure(new Size<double>(100, 100));
         Drain();
 
         Assert.That(unloaded, Is.EqualTo(1), "content released by its presenter never heard Unloaded");
@@ -47,10 +47,10 @@ public class UnloadedOnDiscardTests
         var unloaded = 0;
         body.Unloaded += (_, _) => unloaded++;
         presenter.Content = body;
-        presenter.Measure(new Size(100, 100));
+        presenter.Measure(new Size<double>(100, 100));
 
         presenter.Content = new Border();
-        presenter.Measure(new Size(100, 100));
+        presenter.Measure(new Size<double>(100, 100));
         Drain();
 
         Assert.That(unloaded, Is.Zero, "an element that never loaded was unloaded");

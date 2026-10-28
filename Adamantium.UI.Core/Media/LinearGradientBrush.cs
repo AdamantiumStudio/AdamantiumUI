@@ -13,20 +13,20 @@ public sealed class LinearGradientBrush : GradientBrush
 
     // PAINT: the axis is RELATIVE to the filled bounds, so turning it re-colors the same pixels (see Brush.Opacity).
     public static readonly AdamantiumProperty StartPointProperty = AdamantiumProperty.Register(nameof(StartPoint),
-        typeof(Vector2), typeof(LinearGradientBrush), new PropertyMetadata(new Vector2(0, 0), PropertyMetadataOptions.AffectsPaint));
+        typeof(Vector2<double>), typeof(LinearGradientBrush), new PropertyMetadata(new Vector2<double>(0, 0), PropertyMetadataOptions.AffectsPaint));
 
     public static readonly AdamantiumProperty EndPointProperty = AdamantiumProperty.Register(nameof(EndPoint),
-        typeof(Vector2), typeof(LinearGradientBrush), new PropertyMetadata(new Vector2(1, 1), PropertyMetadataOptions.AffectsPaint));
+        typeof(Vector2<double>), typeof(LinearGradientBrush), new PropertyMetadata(new Vector2<double>(1, 1), PropertyMetadataOptions.AffectsPaint));
 
-    public Vector2 StartPoint
+    public Vector2<double> StartPoint
     {
-        get => GetValue<Vector2>(StartPointProperty);
+        get => GetValue<Vector2<double>>(StartPointProperty);
         set { if (IsFrozen) return; SetValue(StartPointProperty, value); }
     }
 
-    public Vector2 EndPoint
+    public Vector2<double> EndPoint
     {
-        get => GetValue<Vector2>(EndPointProperty);
+        get => GetValue<Vector2<double>>(EndPointProperty);
         set { if (IsFrozen) return; SetValue(EndPointProperty, value); }
     }
 

@@ -14,7 +14,7 @@ public class InertiaScrollTests
     private static ScrollContentPresenter MakeScroller()
     {
         var scp = new ScrollContentPresenter { Content = new Border { Height = 1000 } };
-        scp.Measure(new Size(100, 300));   // content extent 1000, viewport 300 -> scrollable
+        scp.Measure(new Size<double>(100, 300));   // content extent 1000, viewport 300 -> scrollable
         scp.Arrange(new Rect(0, 0, 100, 300));
         return scp;
     }
@@ -25,7 +25,7 @@ public class InertiaScrollTests
         AnimationManager.Reset();
         var scp = MakeScroller();
 
-        scp.AnimateScrollBy(new Vector2(0, 200));
+        scp.AnimateScrollBy(new Vector2<double>(0, 200));
         Assert.That(scp.Offset.Y, Is.EqualTo(0).Within(0.01), "a smooth scroll must not jump instantly - it eases over frames");
 
         for (var i = 0; i < 120 && AnimationManager.HasActiveAnimations; i++)
@@ -45,7 +45,7 @@ public class InertiaScrollTests
         var scp = MakeScroller();
         scp.IsInertiaEnabled = false;
 
-        scp.AnimateScrollBy(new Vector2(0, 150));
+        scp.AnimateScrollBy(new Vector2<double>(0, 150));
         Assert.That(scp.Offset.Y, Is.EqualTo(150).Within(0.5), "with inertia off, the scroll applies instantly");
         Assert.That(AnimationManager.HasActiveAnimations, Is.False, "no ticker is registered when inertia is off");
     }

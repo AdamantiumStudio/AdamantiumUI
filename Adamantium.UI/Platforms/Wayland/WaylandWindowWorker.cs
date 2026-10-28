@@ -172,7 +172,7 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
 
         window.SetHandle(surface.Handle);
         window.SetSurfaceHandle(surface.Handle, platform.Display.Handle);
-        window.DpiScale = new Vector2(Scale, Scale);
+        window.DpiScale = new Vector2<double>(Scale, Scale);
         window.UpdateClientSizeFromPlatform(width, height);
 
         if (platform.IsApplication)
@@ -650,7 +650,7 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
 
     public void SetRelativeMouseMode(bool enabled, PixelPoint restoreScreen)
     {
-        var at = new Vector2(restoreScreen.X / Scale, restoreScreen.Y / Scale);
+        var at = new Vector2<double>(restoreScreen.X / Scale, restoreScreen.Y / Scale);
         platform.Invoke(() =>
         {
             if (closed)
@@ -681,12 +681,12 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
     public void BeginMoveDrag()
     {
         var pointer = platform.Seat.Pointer;
-        BeginMoveDrag(pointer.Window == this ? pointer.Position : Vector2.Zero);
+        BeginMoveDrag(pointer.Window == this ? pointer.Position : Vector2<double>.Zero);
     }
 
     /// <summary>A window someone follows the moves of is carried in a drag the compositor reports over our other
     /// windows; any other is moved by the compositor alone.</summary>
-    public void BeginMoveDrag(Vector2 grab)
+    public void BeginMoveDrag(Vector2<double> grab)
     {
         if (window is Adamantium.UI.Controls.WindowBase { IsMoveTracked: true } && platform.WindowDrag?.Start(this, grab) == true)
         {
@@ -704,7 +704,7 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
 
     /// <summary>The edge a press at this point resizes the window from: none unless the window draws its own frame,
     /// can be resized, and is not maximized.</summary>
-    internal XdgToplevel.ResizeEdge ResizeEdgeAt(Vector2 point)
+    internal XdgToplevel.ResizeEdge ResizeEdgeAt(Vector2<double> point)
     {
         if (!chromeCustom || chromeState != WindowState.Normal || closed)
         {
@@ -938,7 +938,7 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
         {
             if (!closed)
             {
-                window.DpiScale = new Vector2(scale, scale);
+                window.DpiScale = new Vector2<double>(scale, scale);
             }
         });
     }

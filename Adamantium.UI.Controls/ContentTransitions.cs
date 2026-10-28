@@ -18,7 +18,7 @@ internal static class ContentTransitions
     /// first content, which just slides in). <paramref name="onOutgoingComplete"/> fires when the outgoing slide-out
     /// finishes (or immediately if there is nothing to slide out) so the caller removes the old content then.
     /// </summary>
-    public static void Run(ContentTransition direction, double durationSeconds, Size size,
+    public static void Run(ContentTransition direction, double durationSeconds, Size<double> size,
         IUIComponent incoming, IUIComponent outgoing, Action onOutgoingComplete, IEasingFunction easing = null)
     {
         if (direction == ContentTransition.None || (incoming == null && outgoing == null))

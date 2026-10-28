@@ -16,8 +16,8 @@ public class DockingWorkspaceHandoverTests
     /// <summary>A visual root with a client viewport, mirroring a window's role (the shape the other docking tests use).</summary>
     private sealed class TestWindowRoot : Grid, IRootVisualComponent
     {
-        public Vector2 PointToClient(PixelPoint point) => new((float)point.X, (float)point.Y);
-        public PixelPoint PointToScreen(Vector2 point) => new(point.X, point.Y);
+        public Vector2<double> PointToClient(PixelPoint point) => new((float)point.X, (float)point.Y);
+        public PixelPoint PointToScreen(Vector2<double> point) => new(point.X, point.Y);
         public PixelPoint Position { get; set; }
         public void AttachContextAndInitialize(IUIContext context) { }
         public double Left { get; set; }

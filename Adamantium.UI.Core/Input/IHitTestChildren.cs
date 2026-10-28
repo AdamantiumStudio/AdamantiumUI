@@ -13,5 +13,5 @@ public interface IHitTestChildren
 {
     /// <summary>The children (in the element's local space) the point <paramref name="localPoint"/> could hit, or null
     /// to let the caller walk all visual children.</summary>
-    IReadOnlyList<IUIComponent> GetHitTestChildren(Vector2 localPoint);
+    IReadOnlyList<IUIComponent> GetHitTestChildren(Vector2<double> localPoint);
 }

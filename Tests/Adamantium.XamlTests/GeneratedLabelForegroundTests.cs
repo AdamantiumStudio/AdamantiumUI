@@ -51,7 +51,7 @@ public class GeneratedLabelForegroundTests
         window.AttachContextAndInitialize(_app.UIContext);
         Adamantium.UI.Extensions.WindowExtension.UpdateTree(window);
         Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
-        window.Measure(new Size(400, 300));
+        window.Measure(new Size<double>(400, 300));
         window.Arrange(new Rect(0, 0, 400, 300));
 
         var label = Find<TextBlock>(Find<Adamantium.UI.Controls.Panels.StackPanel>(page));

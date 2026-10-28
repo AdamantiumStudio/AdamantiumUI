@@ -105,7 +105,7 @@ public class TextTransformLanguageTests
         window.AttachContextAndInitialize(_app.UIContext);
         Update(window);
         var scroller = Find<ScrollViewer>(box);
-        scroller.SetScrollOffset(new Adamantium.Mathematics.Vector2(0, 300));
+        scroller.SetScrollOffset(new Adamantium.Mathematics.Vector2<double>(0, 300));
         Update(window);
         Assume.That(scroller.ScrollOffset.Y, Is.EqualTo(300).Within(1));
 

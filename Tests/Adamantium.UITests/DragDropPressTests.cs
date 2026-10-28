@@ -48,23 +48,23 @@ public class DragDropPressTests
     [Test]
     public void AStrokeThatLeavesTheSourceBeforeTheThreshold_StillCarriesIt()
     {
-        Send(RawPointerEventType.Down, new Vector2(50, 50), InputModifiers.LeftMouseButton, MouseButtons.Left);
-        Send(RawPointerEventType.Move, new Vector2(50, 150), InputModifiers.LeftMouseButton);
+        Send(RawPointerEventType.Down, new Vector2<double>(50, 50), InputModifiers.LeftMouseButton, MouseButtons.Left);
+        Send(RawPointerEventType.Move, new Vector2<double>(50, 150), InputModifiers.LeftMouseButton);
         Assert.That(_started, Is.EqualTo(1), "the first move heard is already off the source, and past the threshold");
 
-        Send(RawPointerEventType.Up, new Vector2(50, 150), InputModifiers.None, MouseButtons.Left);
+        Send(RawPointerEventType.Up, new Vector2<double>(50, 150), InputModifiers.None, MouseButtons.Left);
         Assert.That(_completed, Is.EqualTo(1));
     }
 
     [Test]
     public void APressReleasedOffTheSource_DragsNothingAfterwards()
     {
-        Send(RawPointerEventType.Down, new Vector2(98, 50), InputModifiers.LeftMouseButton, MouseButtons.Left);
-        Send(RawPointerEventType.Up, new Vector2(102, 50), InputModifiers.None, MouseButtons.Left);
-        Send(RawPointerEventType.Move, new Vector2(50, 50), InputModifiers.None);
-        Send(RawPointerEventType.Move, new Vector2(50, 150), InputModifiers.None);
-        Send(RawPointerEventType.Down, new Vector2(150, 50), InputModifiers.LeftMouseButton, MouseButtons.Left);
-        Send(RawPointerEventType.Up, new Vector2(150, 50), InputModifiers.None, MouseButtons.Left);
+        Send(RawPointerEventType.Down, new Vector2<double>(98, 50), InputModifiers.LeftMouseButton, MouseButtons.Left);
+        Send(RawPointerEventType.Up, new Vector2<double>(102, 50), InputModifiers.None, MouseButtons.Left);
+        Send(RawPointerEventType.Move, new Vector2<double>(50, 50), InputModifiers.None);
+        Send(RawPointerEventType.Move, new Vector2<double>(50, 150), InputModifiers.None);
+        Send(RawPointerEventType.Down, new Vector2<double>(150, 50), InputModifiers.LeftMouseButton, MouseButtons.Left);
+        Send(RawPointerEventType.Up, new Vector2<double>(150, 50), InputModifiers.None, MouseButtons.Left);
 
         Assert.Multiple(() =>
         {
@@ -76,21 +76,21 @@ public class DragDropPressTests
     [Test]
     public void AStrokeSomethingElseTookTheMouseFor_CarriesNothing()
     {
-        Send(RawPointerEventType.Down, new Vector2(50, 50), InputModifiers.LeftMouseButton, MouseButtons.Left);
+        Send(RawPointerEventType.Down, new Vector2<double>(50, 50), InputModifiers.LeftMouseButton, MouseButtons.Left);
         Mouse.Pointer.Capture(_pads[1]);
-        Send(RawPointerEventType.Move, new Vector2(50, 150), InputModifiers.LeftMouseButton);
+        Send(RawPointerEventType.Move, new Vector2<double>(50, 150), InputModifiers.LeftMouseButton);
 
         Assert.That(_started, Is.Zero, "what took the mouse - a scroll area panning - has the stroke");
 
-        Send(RawPointerEventType.Up, new Vector2(50, 150), InputModifiers.None, MouseButtons.Left);
+        Send(RawPointerEventType.Up, new Vector2<double>(50, 150), InputModifiers.None, MouseButtons.Left);
         Mouse.Pointer.Capture(null);
-        Send(RawPointerEventType.Move, new Vector2(50, 50), InputModifiers.None);
+        Send(RawPointerEventType.Move, new Vector2<double>(50, 50), InputModifiers.None);
     }
 
     private static Border Pad() =>
         new() { Width = 100, Height = 100, Background = Adamantium.UI.Core.Media.Brushes.Gray };
 
-    private void Send(RawPointerEventType type, Vector2 at, InputModifiers modifiers, MouseButtons changed = MouseButtons.None) =>
+    private void Send(RawPointerEventType type, Vector2<double> at, InputModifiers modifiers, MouseButtons changed = MouseButtons.None) =>
         PointerDevice.Current.ProcessEvent(new RawPointerEventArgs(type, _window, at, modifiers, 0) { ChangedButton = changed });
 
     private sealed class TestCommand(Action<object> run) : ICommand

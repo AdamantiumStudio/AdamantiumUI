@@ -81,7 +81,7 @@ public class DockingRegionBindingTests
         documents.Items.Add(new Pane { Header = "scene", Id = "scene" });
         area.Children.Add(documents);
 
-        area.Measure(new Size(1000, 800));
+        area.Measure(new Size<double>(1000, 800));
         area.Arrange(new Rect(0, 0, 1000, 800));
 
         var region = new Adamantium.Navigation.Region("docking", new NoResolver(), null);

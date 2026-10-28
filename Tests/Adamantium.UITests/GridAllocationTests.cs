@@ -41,7 +41,7 @@ public class GridAllocationTests
     public void MeasuringAnUnchangedGridAgain_AllocatesAlmostNothing()
     {
         var grid = Built();
-        var slot = new Size(200, 100);
+        var slot = new Size<double>(200, 100);
 
         // Warm: the first pass is where the objects are made, and the layout system's own one-time work happens.
         for (var i = 0; i < 5; i++) grid.Measure(slot, force: true);

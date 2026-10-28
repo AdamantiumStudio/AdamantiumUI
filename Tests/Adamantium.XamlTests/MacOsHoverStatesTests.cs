@@ -44,7 +44,7 @@ public class MacOsHoverStatesTests
         chip.ApplyCurrentTheme();
         Adamantium.UI.Extensions.WindowExtension.UpdateTree(chip);
         Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
-        chip.Measure(new Size(40, 30));
+        chip.Measure(new Size<double>(40, 30));
         chip.Arrange(new Rect(0, 0, 40, 30));
 
         var plate = chip.GetTemplateChild("InnerBorder") as Border;

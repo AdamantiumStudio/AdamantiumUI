@@ -16,7 +16,7 @@ public class CanvasBandSelectionTests
     private static (InfiniteCanvas canvas, CanvasScene scene) Stage(CanvasMode mode = CanvasMode.Drawing)
     {
         var canvas = new InfiniteCanvas { Mode = mode };
-        canvas.Measure(new Size(800, 600), force: true);
+        canvas.Measure(new Size<double>(800, 600), force: true);
         canvas.Arrange(new Rect(0, 0, 800, 600));
 
         var scene = new CanvasScene();
@@ -40,7 +40,7 @@ public class CanvasBandSelectionTests
 
     private static CanvasPointerEventArgs At(double x, double y)
     {
-        var p = new Vector2(x, y);
+        var p = new Vector2<double>(x, y);
         return new CanvasPointerEventArgs { World = p, Pointer = p, Screen = p, Button = MouseButtons.Left, ClickCount = 1 };
     }
 
@@ -116,12 +116,12 @@ public class CanvasBandSelectionTests
     public void AFreehandLoop_IsTakenOnlyWhereItsInkIs()
     {
         var (canvas, scene) = Stage();
-        var loop = new StrokeItem(new Vector2(0, 0), Brushes.White, 2);
-        loop.Add(new Vector2(0, 0));
-        loop.Add(new Vector2(300, 0));
-        loop.Add(new Vector2(300, 300));
-        loop.Add(new Vector2(0, 300));
-        loop.Add(new Vector2(0, 0));
+        var loop = new StrokeItem(new Vector2<double>(0, 0), Brushes.White, 2);
+        loop.Add(new Vector2<double>(0, 0));
+        loop.Add(new Vector2<double>(300, 0));
+        loop.Add(new Vector2<double>(300, 300));
+        loop.Add(new Vector2<double>(0, 300));
+        loop.Add(new Vector2<double>(0, 0));
         scene.Add(loop);
 
         Assert.Multiple(() =>

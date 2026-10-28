@@ -86,7 +86,7 @@ public class ViewModelWiringTests
         };
         new ContentControl().AddLogicalChild(presenter);
 
-        presenter.Measure(new Size(100, 100));
+        presenter.Measure(new Size<double>(100, 100));
 
         Assert.That(built?.DataContext, Is.SameAs(given));
         Assert.That(CountedViewModel.Made, Is.EqualTo(1), "only the view model the presenter was given");

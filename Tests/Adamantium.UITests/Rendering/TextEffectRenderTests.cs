@@ -77,7 +77,7 @@ public class TextEffectRenderTests
 
     private void Draw()
     {
-        ((IMeasurableComponent)_root).Measure(new Size(Width, Height));
+        ((IMeasurableComponent)_root).Measure(new Size<double>(Width, Height));
         ((IMeasurableComponent)_root).Arrange(new Rect(0, 0, Width, Height));
         Assert.That(_renderer.RenderFrame(_root), Is.True, "off-screen frame must render");
         RenderDirty.Clear();

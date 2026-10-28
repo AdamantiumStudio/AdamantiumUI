@@ -31,7 +31,7 @@ public sealed class RectangleGeometry : Geometry
       
    }
    
-   public RectangleGeometry(Size size) : this(new Rect(size), new CornerRadius(0))
+   public RectangleGeometry(Size<double> size) : this(new Rect(size), new CornerRadius(0))
    {
       
    }
@@ -60,7 +60,7 @@ public sealed class RectangleGeometry : Geometry
       bounds = rect;
       CornerRadius = corners;
 
-      var translation = Matrix4x4.Translation((float)rect.Width / 2 + (float)rect.X,
+      var translation = Matrix4x4.CreateTranslation<double>((float)rect.Width / 2 + (float)rect.X,
          (float)rect.Height / 2 + (float)rect.Y, 0);
       Mesh = Shapes.Rectangle.GenerateGeometry(
          geometryType, 

@@ -35,11 +35,11 @@ public class RotatedGeometryFringeTests
             var factory = new RenderUnitFactory(device, new StubResourceFactory());
             using var renderer = new OffscreenTestRenderer(device, factory, Dim, Dim) { ClearColor = Colors.Black };
 
-            var stage = new TestControl { Bounds = new Rect(0, 0, Dim, Dim), RenderSize = new Size(Dim, Dim) };
+            var stage = new TestControl { Bounds = new Rect(0, 0, Dim, Dim), RenderSize = new Size<double>(Dim, Dim) };
             var bar = new RectangleGeometry(new Rect(8, 26, 48, 12));
-            var turn = Matrix4x4F.Translation(-Dim / 2f, -Dim / 2f, 0)
-                       * Matrix4x4F.RotationZ((float)(Math.PI / 6))
-                       * Matrix4x4F.Translation(Dim / 2f, Dim / 2f, 0);
+            var turn = Matrix4x4.CreateTranslation<float>(-Dim / 2f, -Dim / 2f, 0)
+                       * Matrix4x4.CreateRotationZ<float>((float)(Math.PI / 6))
+                       * Matrix4x4.CreateTranslation<float>(Dim / 2f, Dim / 2f, 0);
             stage.RenderAction = s => s.DrawGeometry(Brushes.White, bar, null, turn);
 
             var root = new VisualRoot(stage, Dim, Dim);
@@ -92,12 +92,12 @@ public class RotatedGeometryFringeTests
         var factory = new RenderUnitFactory(device, new StubResourceFactory());
         using var renderer = new OffscreenTestRenderer(device, factory, Dim, Dim) { ClearColor = Colors.Black };
 
-        var stage = new TestControl { Bounds = new Rect(0, 0, Dim, Dim), RenderSize = new Size(Dim, Dim) };
+        var stage = new TestControl { Bounds = new Rect(0, 0, Dim, Dim), RenderSize = new Size<double>(Dim, Dim) };
         // A disc: all curve, nothing else, so the count below measures only how finely it was cut.
         var small = new RectangleGeometry(new Rect(0, 0, 16, 16), new CornerRadius(8));
         var large = new RectangleGeometry(new Rect(0, 0, 48, 48), new CornerRadius(24));
-        var place = Matrix4x4F.Translation(8, 8, 0);
-        var blowUp = Matrix4x4F.Scaling(3f, 3f, 1f) * Matrix4x4F.Translation(8, 8, 0);
+        var place = Matrix4x4.CreateTranslation<float>(8, 8, 0);
+        var blowUp = Matrix4x4.CreateScale<float>(3f, 3f, 1f) * Matrix4x4.CreateTranslation<float>(8, 8, 0);
 
         stage.RenderAction = byTransform
             ? s => s.DrawGeometry(Brushes.White, small, null, blowUp)
@@ -134,17 +134,17 @@ public class RotatedGeometryFringeTests
         var factory = new RenderUnitFactory(device, new StubResourceFactory());
         using var renderer = new OffscreenTestRenderer(device, factory, Dim, Dim) { ClearColor = Colors.Black };
 
-        var stage = new TestControl { Bounds = new Rect(0, 0, Dim, Dim), RenderSize = new Size(Dim, Dim) };
+        var stage = new TestControl { Bounds = new Rect(0, 0, Dim, Dim), RenderSize = new Size<double>(Dim, Dim) };
         // The badge's own proportions: authored in 24 units and blown up to the box, which is what an Image does to a
         // DrawingImage (see DrawingImage.Render).
         var scale = Dim / 24f;
         var card = new RectangleGeometry(new Rect(0, 0, 24, 24), new CornerRadius(4));
         var bar = new RectangleGeometry(new Rect(10.5, 3, 3, 18), new CornerRadius(1.5));
         var cross = new RectangleGeometry(new Rect(3, 10.5, 18, 3), new CornerRadius(1.5));
-        var fit = Matrix4x4F.Scaling(scale, scale, 1f);
-        var turn = Matrix4x4F.Translation(-12, -12, 0)
-                   * Matrix4x4F.RotationZ((float)(Math.PI / 6))
-                   * Matrix4x4F.Translation(12, 12, 0) * fit;
+        var fit = Matrix4x4.CreateScale<float>(scale, scale, 1f);
+        var turn = Matrix4x4.CreateTranslation<float>(-12, -12, 0)
+                   * Matrix4x4.CreateRotationZ<float>((float)(Math.PI / 6))
+                   * Matrix4x4.CreateTranslation<float>(12, 12, 0) * fit;
 
         // Three FLAT tones, so "softened" can be counted exactly: anything that is none of them is a blend, and only an
         // anti-aliased edge produces one.

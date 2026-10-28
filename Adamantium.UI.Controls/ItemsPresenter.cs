@@ -161,14 +161,14 @@ public class ItemsPresenter : InputUIComponent
         }
     }
 
-    protected override Size MeasureOverride(Size availableSize)
+    protected override Size<double> MeasureOverride(Size<double> availableSize)
     {
-        if (_panel is not IMeasurableComponent measurable) return new Size();
+        if (_panel is not IMeasurableComponent measurable) return new Size<double>();
         measurable.Measure(availableSize);
         return measurable.DesiredSize;
     }
 
-    protected override Size ArrangeOverride(Size finalSize)
+    protected override Size<double> ArrangeOverride(Size<double> finalSize)
     {
         if (_panel is IMeasurableComponent measurable)
             measurable.Arrange(new Rect(finalSize));

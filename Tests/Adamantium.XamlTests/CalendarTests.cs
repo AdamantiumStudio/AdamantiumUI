@@ -127,7 +127,7 @@ public class CalendarTests
 
     private void PointTo(CalendarDayButton day)
     {
-        var point = day.TranslatePoint(new Vector2(day.RenderSize.Width / 2, day.RenderSize.Height / 2), _window);
+        var point = day.TranslatePoint(new Vector2<double>(day.RenderSize.Width / 2, day.RenderSize.Height / 2), _window);
         PointerDevice.Current.SetExternalMousePosition(_window, new PixelPoint(point.X, point.Y));
     }
 
@@ -497,7 +497,7 @@ public class CalendarTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(calendar.RenderSize, Is.EqualTo(new Size(700, 600)));
+            Assert.That(calendar.RenderSize, Is.EqualTo(new Size<double>(700, 600)));
             Assert.That(day.RenderSize.Width, Is.GreaterThan(90), "a seventh of the width");
             Assert.That(day.RenderSize.Height, Is.GreaterThan(80), "a sixth of what the header leaves");
         });
@@ -510,7 +510,7 @@ public class CalendarTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(calendar.RenderSize, Is.EqualTo(new Size(140, 140)));
+            Assert.That(calendar.RenderSize, Is.EqualTo(new Size<double>(140, 140)));
             Assert.That(calendar.DayButtons.Max(d => d.RenderSize.Width), Is.LessThanOrEqualTo(140 / 7.0));
         });
     }

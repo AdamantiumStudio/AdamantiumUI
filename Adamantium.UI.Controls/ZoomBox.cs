@@ -18,15 +18,15 @@ public class ZoomBox : ContentControl
     private ContentPresenter _surface;
     private readonly Transform _scale = new();   // reused as the surface's LayoutTransform (a fresh one would re-promote each change)
     private bool _syncingOffset;                 // guards the ScrollViewer <-> OffsetX/Y two-way sync from bouncing
-    private Vector2? _pendingOffset;             // zoom-to-cursor target, applied once the extent reflects the new scale
+    private Vector2<double>? _pendingOffset;             // zoom-to-cursor target, applied once the extent reflects the new scale
 
     // Smooth zoom: the wheel accumulates a TARGET scale, and a heartbeat ticker eases the live scale toward it (instead of
     // jumping per event), keeping the anchor content-point under the cursor the whole way.
     private double _targetScale = 1;
     private bool _zoomActive;
     private bool _zoomTickerRegistered;
-    private Vector2 _zoomAnchorViewport;
-    private Vector2 _zoomAnchorContent;
+    private Vector2<double> _zoomAnchorViewport;
+    private Vector2<double> _zoomAnchorContent;
 
     public static readonly AdamantiumProperty ScaleXProperty = AdamantiumProperty.Register(nameof(ScaleX),
         typeof(double), typeof(ZoomBox),
@@ -170,7 +170,7 @@ public class ZoomBox : ContentControl
     private static void OnOffsetChanged(AdamantiumComponent d, AdamantiumPropertyChangedEventArgs e)
     {
         if (d is not ZoomBox z || z._scroll == null || z._syncingOffset) return;
-        z._scroll.SetScrollOffset(new Vector2((float)z.OffsetX, (float)z.OffsetY));
+        z._scroll.SetScrollOffset(new Vector2<double>((float)z.OffsetX, (float)z.OffsetY));
     }
 
     private void OnWheel(object sender, PointerWheelEventArgs e)
@@ -249,7 +249,7 @@ public class ZoomBox : ContentControl
 
         if (_scroll != null && next != ScaleX)
         {
-            var middle = new Vector2((float)(_scroll.ViewportSize.Width / 2), (float)(_scroll.ViewportSize.Height / 2));
+            var middle = new Vector2<double>((float)(_scroll.ViewportSize.Width / 2), (float)(_scroll.ViewportSize.Height / 2));
             _pendingOffset = (_scroll.ScrollOffset + middle) * (float)(next / ScaleX) - middle;
         }
 

@@ -18,7 +18,7 @@ public class PointerEventArgs : InputEventArgs
     public PointerPointProperties Properties { get; init; }
 
     /// <summary>Where the pointer is, in <paramref name="relativeTo"/>'s own units.</summary>
-    public Vector2 GetPosition(IInputComponent relativeTo) => Pointer.GetPosition(relativeTo);
+    public Vector2<double> GetPosition(IInputComponent relativeTo) => Pointer.GetPosition(relativeTo);
 
     /// <summary>The pointer in <paramref name="relativeTo"/>'s units, with what it reported for this event.</summary>
     public PointerPoint GetCurrentPoint(IInputComponent relativeTo) => new(Pointer, GetPosition(relativeTo), Properties);

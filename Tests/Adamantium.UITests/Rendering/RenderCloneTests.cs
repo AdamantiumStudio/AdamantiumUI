@@ -45,7 +45,7 @@ public class RenderCloneTests
     }
 
     private static IReadOnlyList<Matrix4x4F> Clones(int count) =>
-        Enumerable.Range(0, count).Select(i => Matrix4x4F.Translation(i * 20, 0, 0)).ToArray();
+        Enumerable.Range(0, count).Select(i => Matrix4x4.CreateTranslation<float>(i * 20, 0, 0)).ToArray();
 
     private int RenderCountOf(IUIComponent component) =>
         _factory.Created.Where(u => ReferenceEquals(u.Component, component)).Sum(u => u.RenderCount);

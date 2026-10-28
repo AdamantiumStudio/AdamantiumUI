@@ -40,7 +40,7 @@ public class DroppedUnitRepaintTests
 
     private static readonly Geometry Shape = new RectangleGeometry(new Rect(0, 0, 20, 20));
 
-    private static Matrix4x4F Place(float x) => Matrix4x4F.Translation(x, 10, 0);
+    private static Matrix4x4F Place(float x) => Matrix4x4.CreateTranslation<float>(x, 10, 0);
 
     private static Scene NewScene()
     {
@@ -49,10 +49,10 @@ public class DroppedUnitRepaintTests
         var renderer = new OffscreenTestRenderer(device, new RenderUnitFactory(device, new DeviceResourceFactory(device)),
             Dim, Dim) { ClearColor = Colors.Black };
         var fill = new SolidColorBrush(new Color((byte)250, (byte)40, (byte)40, (byte)255));
-        var stage = new TestControl { Bounds = new Rect(0, 0, Dim, Dim), RenderSize = new Size(Dim, Dim) };
-        var owner = new TestControl { Bounds = new Rect(0, 0, Dim, 40), RenderSize = new Size(Dim, 40) };
+        var stage = new TestControl { Bounds = new Rect(0, 0, Dim, Dim), RenderSize = new Size<double>(Dim, Dim) };
+        var owner = new TestControl { Bounds = new Rect(0, 0, Dim, 40), RenderSize = new Size<double>(Dim, 40) };
         owner.RenderAction = s => s.DrawGeometry(fill, Shape, null, Place(10)).DrawGeometry(fill, Shape, null, Place(40));
-        var neighbor = new TestControl { Bounds = new Rect(0, 0, Dim, 40), RenderSize = new Size(Dim, 40) };
+        var neighbor = new TestControl { Bounds = new Rect(0, 0, Dim, 40), RenderSize = new Size<double>(Dim, 40) };
         var blue = new SolidColorBrush(new Color((byte)40, (byte)40, (byte)250, (byte)255));
         neighbor.RenderAction = s => s.DrawGeometry(blue, Shape, null, Place(70));
         stage.Add(owner);

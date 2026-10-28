@@ -53,7 +53,7 @@ public class CanvasPaneSizerTests
         pane.ApplyCurrentTheme();
         Adamantium.UI.Extensions.WindowExtension.UpdateTree(pane);
         Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
-        pane.Measure(new Size(600, 600));
+        pane.Measure(new Size<double>(600, 600));
         pane.Arrange(new Rect(0, 0, 600, 600));
         return pane;
     }
@@ -310,7 +310,7 @@ public class CanvasPaneSizerTests
         // a window's layout pass alone leaves every pane standing at nothing.
         for (var pass = 0; pass < 2; pass++)
         {
-            canvas.Measure(new Size(1000, 700), force: true);
+            canvas.Measure(new Size<double>(1000, 700), force: true);
             canvas.Arrange(new Rect(0, 0, 1000, 700));
         }
 
@@ -328,11 +328,11 @@ public class CanvasPaneSizerTests
 
         // In the WINDOW's coordinates: a hit-test descends by subtracting each element's own origin, so the point has
         // to be the sum of them.
-        var at = new Vector2(box.Width / 2, box.Height / 2);
+        var at = new Vector2<double>(box.Width / 2, box.Height / 2);
 
         for (var up = (IUIComponent)sizer; up != null && up != window; up = up.VisualParent)
         {
-            at = new Vector2(at.X + up.Bounds.X, at.Y + up.Bounds.Y);
+            at = new Vector2<double>(at.X + up.Bounds.X, at.Y + up.Bounds.Y);
         }
 
         var hit = ((IUIComponent)window).HitTest(at);
@@ -428,7 +428,7 @@ public class CanvasPaneSizerTests
         var grip = pane.GetTemplateChild("PART_Grip") as ButtonBase;
         var width = pane.Width;
         var placement = pane.Placement;
-        var at = new Vector2(pane.Bounds.X, pane.Bounds.Y);
+        var at = new Vector2<double>(pane.Bounds.X, pane.Bounds.Y);
 
         grip.PerformClick();
         Laid(window, canvas);
@@ -457,7 +457,7 @@ public class CanvasPaneSizerTests
         grip.PerformClick();
         Laid(window, canvas);
         pane.Placement = CanvasPanePlacement.Free;
-        pane.Anchor = new Vector2(1, 0);
+        pane.Anchor = new Vector2<double>(1, 0);
         Laid(window, canvas);
 
         Assert.That(pane.Bounds.X + pane.RenderSize.Width, Is.EqualTo(canvas.RenderSize.Width).Within(0.5),
@@ -476,7 +476,7 @@ public class CanvasPaneSizerTests
 
         for (var pass = 0; pass < 2; pass++)
         {
-            canvas.Measure(new Size(1000, 700), force: true);
+            canvas.Measure(new Size<double>(1000, 700), force: true);
             canvas.Arrange(new Rect(0, 0, 1000, 700));
         }
 

@@ -39,7 +39,7 @@ public class RibbonStripToBandNavigationTests
             return result;
         });
 
-        ((IMeasurableComponent)ribbon).Measure(new Size(800, 200));
+        ((IMeasurableComponent)ribbon).Measure(new Size<double>(800, 200));
         ((IMeasurableComponent)ribbon).Arrange(new Rect(0, 0, 800, 200));
         return ribbon;
     }
@@ -126,7 +126,7 @@ public class RibbonStripToBandNavigationTests
         row.Children.Add(a);
         row.Children.Add(b);
 
-        ((IMeasurableComponent)row).Measure(new Size(double.PositiveInfinity, 100));
+        ((IMeasurableComponent)row).Measure(new Size<double>(double.PositiveInfinity, 100));
         ((IMeasurableComponent)row).Arrange(new Rect(0, 0, 400, 100));
 
         Assert.Multiple(() =>

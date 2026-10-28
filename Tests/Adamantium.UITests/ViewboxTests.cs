@@ -16,7 +16,7 @@ public class ViewboxTests
         var child = new Border { Width = 10, Height = 10 };
         var box = new Viewbox { Child = child };
 
-        box.Measure(new Size(200, 100));
+        box.Measure(new Size<double>(200, 100));
         box.Arrange(new Rect(0, 0, 200, 100));
 
         Assert.Multiple(() =>

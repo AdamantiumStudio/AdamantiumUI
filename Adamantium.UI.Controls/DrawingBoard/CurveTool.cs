@@ -10,7 +10,7 @@ namespace Adamantium.UI.Controls.DrawingBoard;
 public class CurveTool : ICanvasTool
 {
     private CurveItem _making;
-    private Vector2 _pointer;
+    private Vector2<double> _pointer;
 
     public CurveTool(CanvasCurve kind = CanvasCurve.Bezier)
     {

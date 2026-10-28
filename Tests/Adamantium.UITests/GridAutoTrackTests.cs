@@ -38,7 +38,7 @@ public class GridAutoTrackTests
     public void AutoTracks_DoNotGrowIntoSpareRoom()
     {
         var grid = TwoAutoColumns(16, 24);
-        grid.Measure(Size.Infinity);
+        grid.Measure(Size<double>.Infinity);
         grid.Arrange(new Rect(0, 0, 200, 10));
 
         Assert.Multiple(() =>
@@ -54,7 +54,7 @@ public class GridAutoTrackTests
     public void AutoTracks_AreThemselvesAtAnExactFit()
     {
         var grid = TwoAutoColumns(16, 24);
-        grid.Measure(Size.Infinity);
+        grid.Measure(Size<double>.Infinity);
         grid.Arrange(new Rect(0, 0, 40, 10));
 
         Assert.Multiple(() =>
@@ -80,7 +80,7 @@ public class GridAutoTrackTests
         grid.Children.Add(icon);
         grid.Children.Add(label);
 
-        grid.Measure(Size.Infinity);
+        grid.Measure(Size<double>.Infinity);
         grid.Arrange(new Rect(0, 0, grid.DesiredSize.Width, 10));
 
         Assert.Multiple(() =>
@@ -105,7 +105,7 @@ public class GridAutoTrackTests
         Grid.SetColumn(filler, 1);
         grid.Children.Add(filler);
 
-        grid.Measure(Size.Infinity);
+        grid.Measure(Size<double>.Infinity);
         grid.Arrange(new Rect(0, 0, 200, 10));
 
         Assert.Multiple(() =>
@@ -122,7 +122,7 @@ public class GridAutoTrackTests
     public void AutoTracks_KeepTheirSize_WhenTheGridIsTooNarrow()
     {
         var grid = TwoAutoColumns(16, 24);
-        grid.Measure(Size.Infinity);
+        grid.Measure(Size<double>.Infinity);
         grid.Arrange(new Rect(0, 0, 30, 10));
 
         Assert.Multiple(() =>
@@ -141,10 +141,10 @@ public class GridAutoTrackTests
         private const double Ink = 1200;
         private const double RowHeight = 20;
 
-        protected override Size MeasureOverride(Size availableSize)
+        protected override Size<double> MeasureOverride(Size<double> availableSize)
         {
             var width = double.IsInfinity(availableSize.Width) || availableSize.Width <= 0 ? 1 : availableSize.Width;
-            return new Size(Math.Min(Ink, width), Math.Ceiling(Ink / width) * RowHeight);
+            return new Size<double>(Math.Min(Ink, width), Math.Ceiling(Ink / width) * RowHeight);
         }
     }
 
@@ -170,7 +170,7 @@ public class GridAutoTrackTests
         grid.Children.Add(paragraph);
         grid.Children.Add(body);
 
-        grid.Measure(new Size(600, 400));
+        grid.Measure(new Size<double>(600, 400));
         grid.Arrange(new Rect(0, 0, 600, 400));
 
         Assert.Multiple(() =>
@@ -195,7 +195,7 @@ public class GridAutoTrackTests
         grid.Children.Add(top);
         grid.Children.Add(bottom);
 
-        grid.Measure(Size.Infinity);
+        grid.Measure(Size<double>.Infinity);
         grid.Arrange(new Rect(0, 0, 10, 120));
 
         Assert.Multiple(() =>

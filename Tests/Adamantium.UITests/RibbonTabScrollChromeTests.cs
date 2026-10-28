@@ -30,7 +30,7 @@ public class RibbonTabScrollChromeTests
             return result;
         });
 
-        ((IMeasurableComponent)tab).Measure(new Size(width, 100));
+        ((IMeasurableComponent)tab).Measure(new Size<double>(width, 100));
         ((IMeasurableComponent)tab).Arrange(new Rect(0, 0, width, 100));
         return tab;
     }

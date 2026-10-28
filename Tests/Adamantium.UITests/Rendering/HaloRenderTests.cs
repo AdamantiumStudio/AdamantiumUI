@@ -51,7 +51,7 @@ public class HaloRenderTests
             Shadow = shadow
         };
         control.Bounds = new Rect(0, 0, Size, Size);
-        control.RenderSize = new Size(Size, Size);
+        control.RenderSize = new Size<double>(Size, Size);
         control.RenderTransform = new Transform { TranslateX = At, TranslateY = At };
 
         var root = new VisualRoot(control, Dim, Dim);
@@ -139,7 +139,7 @@ public class HaloRenderTests
             RenderAction = s => s.DrawRectangle(new SolidColorBrush(new Color(16, 20, 24, 255)), new Rect(0, 0, Dim, Dim))
         };
         parent.Bounds = new Rect(0, 0, Dim, Dim);
-        parent.RenderSize = new Size(Dim, Dim);
+        parent.RenderSize = new Size<double>(Dim, Dim);
 
         var child = new TestControl
         {
@@ -147,7 +147,7 @@ public class HaloRenderTests
             Aura = new Aura { Radius = 24, Color = Colors.Red, Opacity = 1.0 }
         };
         child.Bounds = new Rect(0, 0, Size, Size);
-        child.RenderSize = new Size(Size, Size);
+        child.RenderSize = new Size<double>(Size, Size);
         child.RenderTransform = new Transform { TranslateX = At, TranslateY = At };
         parent.Add(child);
 
@@ -207,7 +207,7 @@ public class HaloRenderTests
     // ARBITRARY geometry has no closed-form distance, so the band reads one baked per shape. Widening the AA ring
     // instead cannot work: offsetting a contour that far is a Minkowski sum, and its result changes topology - a star's
     // notches close up - which a vertex-expanded ring cannot represent.
-    private static byte[] DrawGeometry(Aura aura, Vector2[] points)
+    private static byte[] DrawGeometry(Aura aura, Vector2<double>[] points)
     {
         var geometry = new StreamGeometry();
         geometry.Open().BeginFigure(points[0], true, true).PolylineLineTo(points[1..], true);
@@ -218,7 +218,7 @@ public class HaloRenderTests
             Aura = aura
         };
         control.Bounds = new Rect(0, 0, Size, Size);
-        control.RenderSize = new Size(Size, Size);
+        control.RenderSize = new Size<double>(Size, Size);
         control.RenderTransform = new Transform { TranslateX = At, TranslateY = At };
 
         var root = new VisualRoot(control, Dim, Dim);
@@ -234,7 +234,7 @@ public class HaloRenderTests
     public void AnAuraFollowsATriangle()
     {
         var pixels = DrawGeometry(new Aura { Radius = 22, Color = Colors.Red, Opacity = 1.0 },
-            [new Vector2(Size / 2.0, 0), new Vector2(Size, Size), new Vector2(0, Size)]);
+            [new Vector2<double>(Size / 2.0, 0), new Vector2<double>(Size, Size), new Vector2<double>(0, Size)]);
 
         // Just BELOW the triangle's base, where its outline runs - the band has to be there...
         var underBase = At_(pixels, At + Size / 2, At + Size + 5);
@@ -252,12 +252,12 @@ public class HaloRenderTests
     {
         const double innerRatio = 0.382;
         var c = Size / 2.0;
-        var star = new Vector2[10];
+        var star = new Vector2<double>[10];
         for (var i = 0; i < 10; i++)
         {
             var angle = -Math.PI / 2 + i * Math.PI / 5;
             var radius = i % 2 == 0 ? 1.0 : innerRatio;
-            star[i] = new Vector2(c + Math.Cos(angle) * c * radius, c + Math.Sin(angle) * c * radius);
+            star[i] = new Vector2<double>(c + Math.Cos(angle) * c * radius, c + Math.Sin(angle) * c * radius);
         }
 
         var pixels = DrawGeometry(new Aura { Radius = 14, Color = Colors.Red, Opacity = 1.0 }, star);
@@ -282,7 +282,7 @@ public class HaloRenderTests
     public void AFieldBandHasNoPlateauPastItsRange()
     {
         var pixels = DrawGeometry(new Aura { Radius = 30, Spread = 24, Color = Colors.Red, Opacity = 1.0 },
-            [new Vector2(Size / 2.0, 0), new Vector2(Size, Size), new Vector2(0, Size)]);
+            [new Vector2<double>(Size / 2.0, 0), new Vector2<double>(Size, Size), new Vector2<double>(0, Size)]);
 
         // Beyond the band's own reach (24 + 30 px from the outline) but still INSIDE the baked field's box - which is
         // exactly where a clamp-read-as-a-distance lights up, and where the hard square edge came from.
@@ -417,12 +417,12 @@ public class HaloRenderTests
     // zero would prove nothing.
     private static byte[] DrawNested(bool node)
     {
-        var stage = new TestControl { Bounds = new Rect(0, 0, Dim, Dim), RenderSize = new Size(Dim, Dim) };
+        var stage = new TestControl { Bounds = new Rect(0, 0, Dim, Dim), RenderSize = new Size<double>(Dim, Dim) };
 
         var host = stage;
         if (node)
         {
-            var panel = new TestControl { Bounds = new Rect(0, 0, Dim, Dim), RenderSize = new Size(Dim, Dim), IsRenderMotionNode = true };
+            var panel = new TestControl { Bounds = new Rect(0, 0, Dim, Dim), RenderSize = new Size<double>(Dim, Dim), IsRenderMotionNode = true };
             stage.Add(panel);
             host = panel;
         }
@@ -430,7 +430,7 @@ public class HaloRenderTests
         var shape = new TestControl
         {
             Bounds = new Rect(At, At, Size, Size),
-            RenderSize = new Size(Size, Size),
+            RenderSize = new Size<double>(Size, Size),
             RenderAction = s => s.DrawRectangle(new SolidColorBrush(Colors.White), new Rect(0, 0, Size, Size)),
             Aura = new Aura { Radius = 24, Color = Colors.Red, Opacity = 1.0 }
         };
@@ -451,12 +451,12 @@ public class HaloRenderTests
         var control = new TestControl
         {
             Bounds = new Rect(At, At, Size, Size),
-            RenderSize = new Size(Size, Size),
+            RenderSize = new Size<double>(Size, Size),
             RenderAction = s => s.DrawRectangle(new SolidColorBrush(Colors.White), new Rect(0, 0, Size, Size)),
             Aura = new Aura { Radius = 24, Color = Colors.Red, Opacity = 1.0 }
         };
 
-        var stage = new TestControl { Bounds = new Rect(0, 0, Dim, Dim), RenderSize = new Size(Dim, Dim) };
+        var stage = new TestControl { Bounds = new Rect(0, 0, Dim, Dim), RenderSize = new Size<double>(Dim, Dim) };
         stage.Add(control);
         var root = new VisualRoot(stage, Dim, Dim);
 

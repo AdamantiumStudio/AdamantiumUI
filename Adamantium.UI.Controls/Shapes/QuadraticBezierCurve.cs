@@ -14,21 +14,21 @@ public class QuadraticBezierCurve : BezierCurveBase
     }
 
     public static readonly AdamantiumProperty ControlPointProperty =
-        AdamantiumProperty.Register(nameof(ControlPoint), typeof(Vector2), typeof(QuadraticBezierCurve),
-            new PropertyMetadata(Vector2.Zero, PropertyMetadataOptions.AffectsMeasure));
+        AdamantiumProperty.Register(nameof(ControlPoint), typeof(Vector2<double>), typeof(QuadraticBezierCurve),
+            new PropertyMetadata(Vector2<double>.Zero, PropertyMetadataOptions.AffectsMeasure));
     
-    public Vector2 ControlPoint
+    public Vector2<double> ControlPoint
     {
-        get => GetValue<Vector2>(ControlPointProperty); 
+        get => GetValue<Vector2<double>>(ControlPointProperty); 
         set => SetValue(ControlPointProperty, value);
     }
     
     protected override void OnRender(IDrawingContext context)
     {
         // Samples fully controls curvature (count 2 -> straight chord). FRESH geometry (see CubicBezierCurve).
-        var count = (int)System.Math.Max(Samples, 2u);
-        var pts = MathHelper.ResampleByArcLength(
-            MathHelper.GetQuadraticBezier(StartPoint, ControlPoint, EndPoint, 256), count);
+        var dense = new List<Vector2<double>>();
+        MathHelper.Curves.AppendQuadraticBezier(StartPoint, ControlPoint, EndPoint, 256, dense);
+        var pts = ResampledEvenly(dense, Samples);
         var geometry = new StreamGeometry();
         geometry.Open().BeginFigure(pts[0], false, false).PolylineLineTo(pts.Skip(1), true);
 

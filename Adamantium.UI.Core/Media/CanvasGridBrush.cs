@@ -20,8 +20,8 @@ public sealed class CanvasGridBrush : Brush
 
     /// <summary>Where the world's origin sits on screen, in logical pixels.</summary>
     public static readonly AdamantiumProperty OffsetProperty = AdamantiumProperty.Register(nameof(Offset),
-        typeof(Vector2), typeof(CanvasGridBrush),
-        new PropertyMetadata(Vector2.Zero, PropertyMetadataOptions.AffectsPaint));
+        typeof(Vector2<double>), typeof(CanvasGridBrush),
+        new PropertyMetadata(Vector2<double>.Zero, PropertyMetadataOptions.AffectsPaint));
 
     /// <summary>Screen pixels per world unit.</summary>
     public static readonly AdamantiumProperty ScaleProperty = AdamantiumProperty.Register(nameof(Scale),
@@ -70,9 +70,9 @@ public sealed class CanvasGridBrush : Brush
         set => SetValue(MarksProperty, value);
     }
 
-    public Vector2 Offset
+    public Vector2<double> Offset
     {
-        get => GetValue<Vector2>(OffsetProperty);
+        get => GetValue<Vector2<double>>(OffsetProperty);
         set => SetValue(OffsetProperty, value);
     }
 

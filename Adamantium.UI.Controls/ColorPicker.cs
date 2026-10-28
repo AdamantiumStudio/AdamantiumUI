@@ -37,7 +37,7 @@ public class ColorPicker : Control
     // Alpha bar overlay: the current color opaque (top) -> transparent (bottom), over the theme's checkerboard.
     private readonly LinearGradientBrush _alphaBrush = new(new GradientStopCollection(
         [new GradientStop(Colors.Red, 0), new GradientStop(Colors.Transparent, 1)]))
-    { StartPoint = new Vector2(0, 0), EndPoint = new Vector2(0, 1) };
+    { StartPoint = new Vector2<double>(0, 0), EndPoint = new Vector2<double>(0, 1) };
 
     private enum DragTarget
     {

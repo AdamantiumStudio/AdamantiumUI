@@ -21,8 +21,8 @@ public class CanvasPaintOrderTests
 {
     private sealed class Root : Grid, IRootVisualComponent
     {
-        public Vector2 PointToClient(PixelPoint point) => new((float)point.X, (float)point.Y);
-        public PixelPoint PointToScreen(Vector2 point) => new(point.X, point.Y);
+        public Vector2<double> PointToClient(PixelPoint point) => new((float)point.X, (float)point.Y);
+        public PixelPoint PointToScreen(Vector2<double> point) => new(point.X, point.Y);
         public PixelPoint Position { get; set; }
         public void AttachContextAndInitialize(IUIContext context) { }
         public double Left { get; set; }
@@ -58,9 +58,9 @@ public class CanvasPaintOrderTests
         public Rect Bounds { get; init; }
         public int Order { get; set; }
         public CanvasMode Mode => CanvasMode.Nodes;
-        public bool HitTest(Vector2 world, double tolerance) => Bounds.Contains(world);
+        public bool HitTest(Vector2<double> world, double tolerance) => Bounds.Contains(world);
         public void Render(IDrawingSession session, InfiniteCanvas canvas) { }
-        public void Move(Vector2 worldDelta) { }
+        public void Move(Vector2<double> worldDelta) { }
         public void Resize(Rect world) { }
     }
 
@@ -92,7 +92,7 @@ public class CanvasPaintOrderTests
         for (var pass = 0; pass < 3; pass++)
         {
             canvas.InvalidateArrange();
-            root.Measure(new Size(800, 600), force: true);
+            root.Measure(new Size<double>(800, 600), force: true);
             root.Arrange(new Rect(0, 0, 800, 600));
         }
 

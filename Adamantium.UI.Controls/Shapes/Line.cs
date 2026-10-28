@@ -47,27 +47,27 @@ public class Line : Shape
       set => SetValue(Y2Property, value);
    }
 
-   protected override Size MeasureOverride(Size availableSize)
+   protected override Size<double> MeasureOverride(Size<double> availableSize)
    {
-      var point1 = new Vector2(X1, Y1);
-      var point2 = new Vector2(X2, Y2);
-      var bounds = new Rect(Vector2.Min(point1, point2), Vector2.Max(point1, point2));
+      var point1 = new Vector2<double>(X1, Y1);
+      var point2 = new Vector2<double>(X2, Y2);
+      var bounds = new Rect(Vector2<double>.Min(point1, point2), Vector2<double>.Max(point1, point2));
       return MeasureStrokedGeometry(bounds, [([point1, point2], false)]);
    }
 
    protected override void OnRender(IDrawingContext context)
    {
-      var start = new Vector2(X1, Y1);
-      var end = new Vector2(X2, Y2);
+      var start = new Vector2<double>(X1, Y1);
+      var end = new Vector2<double>(X2, Y2);
 
       context.ForControl(this).DrawLine(start, end, GetPen());
    }
 
    // Tight hit test: on the actual segment within half the stroke width (+1px so a hair-thin line stays clickable),
    // not the (often huge) diagonal bounding box.
-   public override bool HitTestCore(Vector2 localPoint)
+   public override bool HitTestCore(Vector2<double> localPoint)
    {
       var half = Math.Max(StrokeThickness, 1.0) / 2.0 + 1.0;
-      return DistanceToSegment(localPoint, new Vector2(X1, Y1), new Vector2(X2, Y2)) <= half;
+      return DistanceToSegment(localPoint, new Vector2<double>(X1, Y1), new Vector2<double>(X2, Y2)) <= half;
    }
 }

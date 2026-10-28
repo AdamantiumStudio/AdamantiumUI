@@ -26,7 +26,7 @@ public class TransformSlotGrowthTests
         var c = new TestControl
         {
             Bounds = bounds,
-            RenderSize = new Size(bounds.Width, bounds.Height),
+            RenderSize = new Size<double>(bounds.Width, bounds.Height),
             RenderTransform = new Transform { RotationAngle = 5 }
         };
         c.RenderAction = s => s.DrawRectangle(Brushes.Red, new Rect(0, 0, bounds.Width, bounds.Height));

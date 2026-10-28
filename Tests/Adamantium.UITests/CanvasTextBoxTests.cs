@@ -13,7 +13,7 @@ namespace Adamantium.UITests;
 public class CanvasTextBoxTests
 {
     private static TextItem Said(double fontSize) =>
-        new(new Vector2(0, 0), "Hello", Brushes.Black, fontSize);
+        new(new Vector2<double>(0, 0), "Hello", Brushes.Black, fontSize);
 
     // ...AND THE FRAME CAN MAKE IT SMALLER. Text typed at 1000x is a hundredth of a world unit tall, and a floor
     // stated in world units stopped it a third of the way down - at that zoom the floor IS the text.

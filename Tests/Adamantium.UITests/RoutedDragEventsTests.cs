@@ -22,7 +22,7 @@ public class RoutedDragEventsTests
         var inner = new Border { Width = 100, Height = 50 };
         var outer = new Grid();
         outer.Children.Add(inner);
-        outer.Measure(new Size(100, 50));
+        outer.Measure(new Size<double>(100, 50));
         outer.Arrange(new Rect(0, 0, 100, 50));
         return (inner, outer);
     }

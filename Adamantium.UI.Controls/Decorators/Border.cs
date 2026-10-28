@@ -61,7 +61,7 @@ public class Border : Decorator
    {
    }
 
-   protected override Size MeasureOverride(Size availableSize)
+   protected override Size<double> MeasureOverride(Size<double> availableSize)
    {
       var child = Child;
       var padding = Padding + BorderThickness;
@@ -73,10 +73,10 @@ public class Border : Decorator
          return child.DesiredSize.Inflate(padding);
       }
 
-      return new Size(padding.Left + padding.Right, padding.Bottom + padding.Top);
+      return new Size<double>(padding.Left + padding.Right, padding.Bottom + padding.Top);
    }
 
-   protected override Size ArrangeOverride(Size finalSize)
+   protected override Size<double> ArrangeOverride(Size<double> finalSize)
    {
       // Fill the arranged slot and lay the child out inside it (minus border+padding); the child positions itself within
       // via its own alignment. Returning the CHILD's size instead collapsed a stretched border to a non-stretch child -
@@ -99,7 +99,7 @@ public class Border : Decorator
 
       // One SDF draw for fill and ring whatever the sides and corners, snapped to whole pixels together so they never
       // disagree along the edge.
-      var box = new Rect(new Size(ActualWidth, ActualHeight));
+      var box = new Rect(new Size<double>(ActualWidth, ActualHeight));
       this.Snap(ref box);
 
       if (hasThickness && BorderBrush.IsVisible())
@@ -110,7 +110,7 @@ public class Border : Decorator
             // A uniform border rounds its ONE thickness the same way the box was rounded, so the ring lands on whole
             // pixels too. Unequal sides have no single number to snap and keep what they were given.
             var one = t.Left;
-            var ring = new Rect(new Size(ActualWidth, ActualHeight));
+            var ring = new Rect(new Size<double>(ActualWidth, ActualHeight));
             this.Snap(ref ring, ref one);
             t = new Thickness(one);
          }

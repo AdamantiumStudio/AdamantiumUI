@@ -93,7 +93,7 @@ public class CanvasScene : ICanvasScene
 
     /// <summary>The topmost item under a world point, or nothing. Paint order is the list's order, so the LAST one that
     /// answers is the one on top.</summary>
-    public ICanvasItem HitTest(Vector2 world, double tolerance)
+    public ICanvasItem HitTest(Vector2<double> world, double tolerance)
     {
         for (var i = _items.Count - 1; i >= 0; i--)
         {

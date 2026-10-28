@@ -59,9 +59,9 @@ public class AttributedTextColorRenderTests
             _layout = new TextLayout(font.Typeface, font.Fonts[0]);
         }
 
-        protected override Size MeasureOverride(Size availableSize)
+        protected override Size<double> MeasureOverride(Size<double> availableSize)
         {
-            return _layout.ProcessText(_text, 30, new Size(double.NaN, double.NaN), TextWrapping.NoWrap,
+            return _layout.ProcessText(_text, 30, new Size<double>(double.NaN, double.NaN), TextWrapping.NoWrap,
                 TextTrimming.None, HorizontalTextAlignment.Left, VerticalTextAlignment.Top);
         }
 
@@ -74,7 +74,7 @@ public class AttributedTextColorRenderTests
                 TextWrapping = TextWrapping.NoWrap,
                 TextTrimming = TextTrimming.None,
                 Color = Colors.White,
-                TextArea = new Rectangle(new Vector2F(), DesiredSize)
+                TextArea = new Rectangle<int>(new Vector2F().As<int>(), DesiredSize.As<int>())
             };
             context.ForControl(this).DrawText(parameters, DesiredSize, _layout, Brushes.White, Brushes.Transparent,
                 Brushes.Transparent);
@@ -102,7 +102,7 @@ public class AttributedTextColorRenderTests
         FontAtlasStore.SynchronousFill = true;
         try
         {
-            ((IMeasurableComponent)root).Measure(new Size(Width, Height));
+            ((IMeasurableComponent)root).Measure(new Size<double>(Width, Height));
             ((IMeasurableComponent)root).Arrange(new Rect(0, 0, Width, Height));
             Assert.That(renderer.RenderFrame(root), Is.True, "off-screen frame must render");
             RenderDirty.Clear();

@@ -461,19 +461,19 @@ public sealed class LayoutManager
     {
         if (!Double.IsNaN(width) && !Double.IsNaN(height))
         {
-            control.Measure(new Size(width, height));
+            control.Measure(new Size<double>(width, height));
         }
         else if (Double.IsNaN(width) && !Double.IsNaN(height))
         {
-            control.Measure(new Size(Double.PositiveInfinity, height));
+            control.Measure(new Size<double>(Double.PositiveInfinity, height));
         }
         else if (!Double.IsNaN(width) && Double.IsNaN(height))
         {
-            control.Measure(new Size(width, Double.PositiveInfinity));
+            control.Measure(new Size<double>(width, Double.PositiveInfinity));
         }
         else
         {
-            control.Measure(Size.Infinity);
+            control.Measure(Size<double>.Infinity);
         }
     }
 

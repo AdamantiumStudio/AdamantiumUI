@@ -107,7 +107,7 @@ public class PathItemRenderTests
 
         for (var pass = 0; pass < 2; pass++)
         {
-            canvas.Measure(new Size(Dim, Dim));
+            canvas.Measure(new Size<double>(Dim, Dim));
             canvas.Arrange(new Rect(0, 0, Dim, Dim));
         }
 
@@ -122,7 +122,7 @@ public class PathItemRenderTests
 
         // The cell at (20.1, 13.06) in the drawing's own units, carried into the box the item was put in.
         var source = new Rect(7, 6, 23.8623, 16);
-        var cell = new Vector2(-12 + (20.1 - source.X), -8 + (13.06 - source.Y));
+        var cell = new Vector2<double>(-12 + (20.1 - source.X), -8 + (13.06 - source.Y));
 
         var at = canvas.WorldToScreen(cell);
         var i = ((int)at.Y * Dim + (int)at.X) * 4;
@@ -150,7 +150,7 @@ public class PathItemRenderTests
 
         for (var pass = 0; pass < 2; pass++)
         {
-            canvas.Measure(new Size(Dim, Dim));
+            canvas.Measure(new Size<double>(Dim, Dim));
             canvas.Arrange(new Rect(0, 0, Dim, Dim));
         }
 

@@ -68,19 +68,19 @@ public class Canvas : Panel
 
    }
 
-   protected override Size MeasureOverride(Size availableSize)
+   protected override Size<double> MeasureOverride(Size<double> availableSize)
    {
-      availableSize = new Size(double.PositiveInfinity, double.PositiveInfinity);
+      availableSize = new Size<double>(double.PositiveInfinity, double.PositiveInfinity);
 
       foreach (var child in Children)
       {
          child.Measure(availableSize);
       }
 
-      return new Size();
+      return new Size<double>();
    }
 
-   protected override Size ArrangeOverride(Size finalSize)
+   protected override Size<double> ArrangeOverride(Size<double> finalSize)
    {
       foreach (var child in Children)
       {
@@ -92,7 +92,7 @@ public class Canvas : Panel
 
    /// <summary>Where one child goes, given the panel's final size. Left/Top win; Right/Bottom measure back from the far
    /// edge, which is the only reason the panel's size takes part at all.</summary>
-   private static void PlaceChild(IMeasurableComponent child, Size finalSize)
+   private static void PlaceChild(IMeasurableComponent child, Size<double> finalSize)
    {
       double x = 0.0;
       double y = 0.0;
@@ -126,7 +126,7 @@ public class Canvas : Panel
          }
       }
 
-      child.Arrange(new Rect(new Vector2(x, y), child.DesiredSize));
+      child.Arrange(new Rect(new Vector2<double>(x, y), child.DesiredSize));
    }
 
    // A moved child is placed alone: a canvas does not size from its contents, so the rest need no arrange.
@@ -135,6 +135,6 @@ public class Canvas : Panel
       if (d is not IMeasurableComponent { VisualParent: Canvas canvas } child) return;
       if (canvas.ActualWidth <= 0 && canvas.ActualHeight <= 0) return;   // not arranged yet: the first pass will place it
 
-      PlaceChild(child, new Size(canvas.ActualWidth, canvas.ActualHeight));
+      PlaceChild(child, new Size<double>(canvas.ActualWidth, canvas.ActualHeight));
    }
 }

@@ -58,10 +58,10 @@ public class TouchScrollTests
     [Test]
     public void AFingerDraggedFromAButton_ScrollsAndDoesNotClick()
     {
-        Send(RawPointerEventType.Down, new Vector2(50, 80));
-        Send(RawPointerEventType.Move, new Vector2(50, 60));
-        Send(RawPointerEventType.Move, new Vector2(50, 20));
-        Send(RawPointerEventType.Up, new Vector2(50, 20));
+        Send(RawPointerEventType.Down, new Vector2<double>(50, 80));
+        Send(RawPointerEventType.Move, new Vector2<double>(50, 60));
+        Send(RawPointerEventType.Move, new Vector2<double>(50, 20));
+        Send(RawPointerEventType.Up, new Vector2<double>(50, 20));
 
         Assert.Multiple(() =>
         {
@@ -74,8 +74,8 @@ public class TouchScrollTests
     [Test]
     public void ATap_ClicksAndDoesNotScroll()
     {
-        Send(RawPointerEventType.Down, new Vector2(50, 50));
-        Send(RawPointerEventType.Up, new Vector2(50, 50));
+        Send(RawPointerEventType.Down, new Vector2<double>(50, 50));
+        Send(RawPointerEventType.Up, new Vector2<double>(50, 50));
 
         Assert.Multiple(() =>
         {
@@ -88,11 +88,11 @@ public class TouchScrollTests
     [Test]
     public void ADragAcrossAnAxisWithNowhereToGo_ScrollsNothing()
     {
-        Send(RawPointerEventType.Down, new Vector2(20, 50));
-        Send(RawPointerEventType.Move, new Vector2(90, 50));
-        Send(RawPointerEventType.Up, new Vector2(90, 50));
+        Send(RawPointerEventType.Down, new Vector2<double>(20, 50));
+        Send(RawPointerEventType.Move, new Vector2<double>(90, 50));
+        Send(RawPointerEventType.Up, new Vector2<double>(90, 50));
 
-        Assert.That(_scroller.Offset, Is.EqualTo(Vector2.Zero));
+        Assert.That(_scroller.Offset, Is.EqualTo(Vector2<double>.Zero));
     }
 
     [Test]
@@ -100,9 +100,9 @@ public class TouchScrollTests
     {
         _scroller.IsTouchScrollEnabled = false;
 
-        Send(RawPointerEventType.Down, new Vector2(50, 80));
-        Send(RawPointerEventType.Move, new Vector2(50, 20));
-        Send(RawPointerEventType.Up, new Vector2(50, 20));
+        Send(RawPointerEventType.Down, new Vector2<double>(50, 80));
+        Send(RawPointerEventType.Move, new Vector2<double>(50, 20));
+        Send(RawPointerEventType.Up, new Vector2<double>(50, 20));
 
         Assert.That(_scroller.Offset.Y, Is.Zero);
     }
@@ -115,9 +115,9 @@ public class TouchScrollTests
         DragDrop.SetAllowDrag(_first, true);
         DragDrop.SetDragStartedCommand(_first, new TestCommand(_ => started++));
 
-        Send(RawPointerEventType.Down, new Vector2(50, 80));
-        Send(RawPointerEventType.Move, new Vector2(50, 20));
-        Send(RawPointerEventType.Up, new Vector2(50, 20));
+        Send(RawPointerEventType.Down, new Vector2<double>(50, 80));
+        Send(RawPointerEventType.Move, new Vector2<double>(50, 20));
+        Send(RawPointerEventType.Up, new Vector2<double>(50, 20));
 
         Assert.Multiple(() =>
         {
@@ -137,9 +137,9 @@ public class TouchScrollTests
         Gestures.HoldingTime = TimeSpan.FromHours(1);
         try
         {
-            Send(RawPointerEventType.Down, new Vector2(50, 80));
+            Send(RawPointerEventType.Down, new Vector2<double>(50, 80));
             PointerDevice.Current.Holding.Elapsed(FingerId, 600);
-            Send(RawPointerEventType.Move, new Vector2(50, 20));
+            Send(RawPointerEventType.Move, new Vector2<double>(50, 20));
 
             Assert.Multiple(() =>
             {
@@ -147,7 +147,7 @@ public class TouchScrollTests
                 Assert.That(_scroller.Offset.Y, Is.Zero, "the list did not scroll under it");
             });
 
-            Send(RawPointerEventType.Up, new Vector2(50, 20));
+            Send(RawPointerEventType.Up, new Vector2<double>(50, 20));
         }
         finally
         {
@@ -163,7 +163,7 @@ public class TouchScrollTests
         public void RaiseCanExecuteChanged() => CanExecuteChanged?.Invoke(this, EventArgs.Empty);
     }
 
-    private void Send(RawPointerEventType type, Vector2 at) =>
+    private void Send(RawPointerEventType type, Vector2<double> at) =>
         PointerDevice.Current.ProcessEvent(new RawPointerEventArgs(type, _window, at, InputModifiers.None, 0)
         {
             PointerId = FingerId,

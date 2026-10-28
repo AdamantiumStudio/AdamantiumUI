@@ -16,9 +16,9 @@ public class DragThresholdTests
     {
         public uint DoubleClickTime => 500;
 
-        public Size DoubleClickSize => new(4, 4);
+        public Size<double> DoubleClickSize => new(4, 4);
 
-        public Size DragThreshold => new(4, 4);
+        public Size<double> DragThreshold => new(4, 4);
 
         public uint HoverTime => 400;
     }
@@ -36,7 +36,7 @@ public class DragThresholdTests
     public void TearDown() => PlatformSettings.Platform = _previous;
 
     private static bool Exceeds(double delta, double scale)
-        => PlatformSettings.ExceedsDragThreshold(new Vector2((float)delta, 0), new Vector2((float)scale, (float)scale));
+        => PlatformSettings.ExceedsDragThreshold(new Vector2<double>((float)delta, 0), new Vector2<double>((float)scale, (float)scale));
 
     [Test]
     public void AtOneToOneItIsTheOsSettingExactly()
@@ -81,8 +81,8 @@ public class DragThresholdTests
     {
         Assert.Multiple(() =>
         {
-            Assert.That(PlatformSettings.ExceedsDragThreshold(new Vector2(0, 5), Vector2.One), Is.True);
-            Assert.That(PlatformSettings.ExceedsDragThreshold(new Vector2(3, 3), Vector2.One), Is.False,
+            Assert.That(PlatformSettings.ExceedsDragThreshold(new Vector2<double>(0, 5), Vector2<double>.One), Is.True);
+            Assert.That(PlatformSettings.ExceedsDragThreshold(new Vector2<double>(3, 3), Vector2<double>.One), Is.False,
                 "3,3 is 4.2 away radially and still not a drag");
         });
     }
@@ -103,6 +103,6 @@ public class DragThresholdTests
     [Test]
     public void AnElementWithNoWindowCountsOneToOne()
     {
-        Assert.That(PlatformSettings.PhysicalPerUnit(null), Is.EqualTo(Vector2.One));
+        Assert.That(PlatformSettings.PhysicalPerUnit(null), Is.EqualTo(Vector2<double>.One));
     }
 }

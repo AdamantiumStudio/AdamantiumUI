@@ -17,13 +17,13 @@ public class RevealDecoratorTests
         var down = Revealing(ExpandDirection.Down, 0.5);
         var right = Revealing(ExpandDirection.Right, 0.25);
 
-        down.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-        right.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        down.Measure(new Size<double>(double.PositiveInfinity, double.PositiveInfinity));
+        right.Measure(new Size<double>(double.PositiveInfinity, double.PositiveInfinity));
 
         Assert.Multiple(() =>
         {
-            Assert.That(down.DesiredSize, Is.EqualTo(new Size(80, 50)));
-            Assert.That(right.DesiredSize, Is.EqualTo(new Size(20, 100)));
+            Assert.That(down.DesiredSize, Is.EqualTo(new Size<double>(80, 50)));
+            Assert.That(right.DesiredSize, Is.EqualTo(new Size<double>(20, 100)));
         });
     }
 
@@ -32,12 +32,12 @@ public class RevealDecoratorTests
     {
         var reveal = Revealing(ExpandDirection.Down, 0);
 
-        reveal.Measure(new Size(400, 400));
+        reveal.Measure(new Size<double>(400, 400));
 
         Assert.Multiple(() =>
         {
-            Assert.That(reveal.DesiredSize, Is.EqualTo(default(Size)));
-            Assert.That(reveal.Child.DesiredSize, Is.EqualTo(default(Size)), "the child is not measured");
+            Assert.That(reveal.DesiredSize, Is.EqualTo(default(Size<double>)));
+            Assert.That(reveal.Child.DesiredSize, Is.EqualTo(default(Size<double>)), "the child is not measured");
         });
     }
 
@@ -47,9 +47,9 @@ public class RevealDecoratorTests
         var up = Revealing(ExpandDirection.Up, 0.5);
         var left = Revealing(ExpandDirection.Left, 0.5);
 
-        up.Measure(new Size(400, 400));
+        up.Measure(new Size<double>(400, 400));
         up.Arrange(new Rect(0, 0, 80, 50));
-        left.Measure(new Size(400, 400));
+        left.Measure(new Size<double>(400, 400));
         left.Arrange(new Rect(0, 0, 40, 100));
 
         Assert.Multiple(() =>
@@ -64,12 +64,12 @@ public class RevealDecoratorTests
     {
         var reveal = new RevealDecorator { Progress = 0.5, Child = new Border { Width = 80, MinHeight = 100 } };
 
-        reveal.Measure(new Size(400, 400));
+        reveal.Measure(new Size<double>(400, 400));
         reveal.Arrange(new Rect(0, 0, 80, 300));
 
         Assert.Multiple(() =>
         {
-            Assert.That(reveal.RenderSize, Is.EqualTo(new Size(80, 150)), "half of the room, not half of the child");
+            Assert.That(reveal.RenderSize, Is.EqualTo(new Size<double>(80, 150)), "half of the room, not half of the child");
             Assert.That(reveal.Child.Bounds, Is.EqualTo(new Rect(0, 0, 80, 300)), "the child as it will be at the end");
         });
     }

@@ -12,8 +12,8 @@ public class ArcSegment : PathSegment
     }
 
     public ArcSegment(
-        Vector2 point, 
-        Size size, 
+        Vector2<double> point, 
+        Size<double> size, 
         double rotationAngle, 
         bool isLargeArc, 
         SweepDirection sweepDirection,
@@ -28,8 +28,8 @@ public class ArcSegment : PathSegment
     }
     
     public static readonly AdamantiumProperty PointProperty =
-        AdamantiumProperty.Register(nameof(Point), typeof(Vector2), typeof(ArcSegment),
-            new PropertyMetadata(Vector2.Zero, PropertyMetadataOptions.AffectsMeasure));
+        AdamantiumProperty.Register(nameof(Point), typeof(Vector2<double>), typeof(ArcSegment),
+            new PropertyMetadata(Vector2<double>.Zero, PropertyMetadataOptions.AffectsMeasure));
 
     public static readonly AdamantiumProperty IsLargeArcProperty =
         AdamantiumProperty.Register(nameof(IsLargeArc), typeof(bool), typeof(ArcSegment),
@@ -44,12 +44,12 @@ public class ArcSegment : PathSegment
             new PropertyMetadata(SweepDirection.Clockwise, PropertyMetadataOptions.AffectsMeasure));
     
     public static readonly AdamantiumProperty SizeProperty =
-        AdamantiumProperty.Register(nameof(Size), typeof(Size), typeof(ArcSegment),
-            new PropertyMetadata(new Size(0, 0), PropertyMetadataOptions.AffectsMeasure));
+        AdamantiumProperty.Register(nameof(Size), typeof(Size<double>), typeof(ArcSegment),
+            new PropertyMetadata(new Size<double>(0, 0), PropertyMetadataOptions.AffectsMeasure));
 
-    public Vector2 Point
+    public Vector2<double> Point
     {
-        get => GetValue<Vector2>(PointProperty);
+        get => GetValue<Vector2<double>>(PointProperty);
         set => SetValue(PointProperty, value);
     }
 
@@ -71,13 +71,13 @@ public class ArcSegment : PathSegment
         set => SetValue(SweepDirectionProperty, value);
     }
 
-    public Size Size
+    public Size<double> Size
     {
-        get => GetValue<Size>(SizeProperty);
+        get => GetValue<Size<double>>(SizeProperty);
         set => SetValue(SizeProperty, value);
     }
 
-    internal override Vector2[] ProcessSegment(Vector2 currentPoint)
+    internal override Vector2<double>[] ProcessSegment(Vector2<double> currentPoint)
     {
         return GetArcPoints(
             currentPoint, 
@@ -90,22 +90,22 @@ public class ArcSegment : PathSegment
             tessellationFactor);
     }
 
-    private Vector2[] GetArcPoints(Vector2 pt1, Vector2 pt2,
+    private Vector2<double>[] GetArcPoints(Vector2<double> pt1, Vector2<double> pt2,
         double radiusX, double radiusY, double rotationAngle,
         bool isLargeArc, bool isCounterclockwise,
         int tolerance)
     {
-        var points = new List<Vector2>();
+        var points = new List<Vector2<double>>();
 
         // Adjust for different radii and rotation angle
-        var rotation = Matrix3x2.Rotation(-MathHelper.DegreesToRadians(rotationAngle));
-        var scale = Matrix3x2.Scaling(radiusY / radiusX, 1);
+        var rotation = Matrix3x2.CreateRotation<double>(-double.DegreesToRadians(rotationAngle));
+        var scale = Matrix3x2.CreateScale<double>(radiusY / radiusX, 1);
         var transform = rotation * scale;
-        pt1 = Matrix3x2.TransformPoint(transform, pt1);
-        pt2 = Matrix3x2.TransformPoint(transform, pt2);
+        pt1 = Vector2<double>.Transform(pt1, transform);
+        pt2 = Vector2<double>.Transform(pt2, transform);
 
         // Get info about chord that connects both points
-        var midPoint = new Vector2((pt1.X + pt2.X) / 2.0, (pt1.Y + pt2.Y) / 2.0);
+        var midPoint = new Vector2<double>((pt1.X + pt2.X) / 2.0, (pt1.Y + pt2.Y) / 2.0);
         var chord = pt2 - pt1;
         var halfChord = chord.Length() / 2.0;
 
@@ -117,7 +117,7 @@ public class ArcSegment : PathSegment
         }
 
         // Get vector from chord to center
-        var chordNormal = isLargeArc == isCounterclockwise ? new Vector2(-chord.Y, chord.X) : new Vector2(chord.Y, -chord.X);
+        var chordNormal = isLargeArc == isCounterclockwise ? new Vector2<double>(-chord.Y, chord.X) : new Vector2<double>(chord.Y, -chord.X);
 
         chordNormal.Normalize();
 
@@ -143,8 +143,8 @@ public class ArcSegment : PathSegment
         // Invert matrix for final point calculation
         transform.Invert();
 
-        var startAngle = MathHelper.RadiansToDegrees(angle1);
-        var stopAngle = MathHelper.RadiansToDegrees(angle2);
+        var startAngle = double.RadiansToDegrees(angle1);
+        var stopAngle = double.RadiansToDegrees(angle2);
         var range = Math.Abs(startAngle - stopAngle);
         if (!isLargeArc && range > 180)
         {
@@ -157,7 +157,7 @@ public class ArcSegment : PathSegment
             sign = -1;
         }
         
-        var segmentsCount = (int)((4 * (radiusX + radiusY) * MathHelper.DegreesToRadians(range) / (2 * Math.PI)));
+        var segmentsCount = (int)((4 * (radiusX + radiusY) * double.DegreesToRadians(range) / (2 * Math.PI)));
         if (segmentsCount > tolerance) segmentsCount = tolerance;
         
         var angle = (range / segmentsCount) * sign;
@@ -165,11 +165,11 @@ public class ArcSegment : PathSegment
         
         for (var i = 0; i <= segmentsCount; i++)
         {
-            var angleItem = MathHelper.DegreesToRadians(currentAngle);
+            var angleItem = double.DegreesToRadians(currentAngle);
             var x = center.X + (radiusY * Math.Cos(angleItem));
             var y = center.Y + (radiusY * Math.Sin(angleItem));
-            
-            var pt = Matrix3x2.TransformPoint(transform, new Vector2(x, y));
+
+            var pt = Vector2<double>.Transform(new Vector2<double>(x, y), transform);
             
             points.Add(Vector2.Round(pt, 4));
 

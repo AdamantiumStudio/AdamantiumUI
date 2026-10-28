@@ -58,7 +58,7 @@ public class TextPatchRenderTests
 
         public void Draw()
         {
-            ((IMeasurableComponent)Root).Measure(new Size(Dim, Dim));
+            ((IMeasurableComponent)Root).Measure(new Size<double>(Dim, Dim));
             ((IMeasurableComponent)Root).Arrange(new Rect(0, 0, Dim, Dim));
             Assert.That(Renderer.RenderFrame(Root), Is.True, "off-screen frame must render");
             RenderDirty.Clear();   // no UIApplication here: the harness clears what the app normally clears per frame

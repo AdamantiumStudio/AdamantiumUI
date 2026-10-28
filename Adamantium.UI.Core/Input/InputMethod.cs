@@ -14,7 +14,7 @@ public static class InputMethod
             return;
         }
 
-        window.InputMethodCaret = new Rect(element.TranslatePoint(new Vector2(bounds.X, bounds.Y), window),
-            element.TranslatePoint(new Vector2(bounds.Right, bounds.Bottom), window));
+        window.InputMethodCaret = new Rect(element.TranslatePoint(new Vector2<double>(bounds.X, bounds.Y), window),
+            element.TranslatePoint(new Vector2<double>(bounds.Right, bounds.Bottom), window));
     }
 }

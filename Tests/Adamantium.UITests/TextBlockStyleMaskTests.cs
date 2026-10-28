@@ -52,7 +52,7 @@ public class TextBlockStyleMaskTests
     public void GeneratedTextContent_IsImmuneToATextBlockStyle()
     {
         var presenter = new ContentPresenter { Content = "row", Foreground = Brushes.Red };
-        presenter.Measure(new Size(120, 30));
+        presenter.Measure(new Size<double>(120, 30));
         var generated = presenter.VisualChildren.OfType<TextBlock>().FirstOrDefault();
         Assert.That(generated, Is.Not.Null, "string content is hosted in an auto-generated TextBlock");
 
@@ -72,7 +72,7 @@ public class TextBlockStyleMaskTests
     {
         var authored = new TextBlock { Text = "row" };
         var presenter = new ContentPresenter { Content = authored, Foreground = Brushes.Red };
-        presenter.Measure(new Size(120, 30));
+        presenter.Measure(new Size<double>(120, 30));
         Adamantium.UI.Extensions.WindowExtension.UpdateTree(presenter);
 
         TestContext.WriteLine($"authored TextBlock before any style={authored.Foreground}");

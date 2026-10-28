@@ -34,7 +34,7 @@ public class CanvasZoomBackTests
     {
         for (var pass = 0; pass < 2; pass++)
         {
-            canvas.Measure(new Size(800, 600), force: true);
+            canvas.Measure(new Size<double>(800, 600), force: true);
             canvas.Arrange(new Rect(0, 0, 800, 600));
             Adamantium.UI.Extensions.WindowExtension.UpdateTree(canvas);
         }
@@ -72,7 +72,7 @@ public class CanvasZoomBackTests
             new SolidColorBrush(Colors.White), 2));
 
         Lay(canvas);
-        canvas.Offset = new Vector2(400, 300);
+        canvas.Offset = new Vector2<double>(400, 300);
         Lay(canvas);
 
         Assert.That(Drawn(canvas), Is.EqualTo(2), "nothing was being drawn to begin with");
@@ -80,13 +80,13 @@ public class CanvasZoomBackTests
         // ALL THE WAY IN, which is where it was reported from: the viewport then holds a patch of plane a hundredth of
         // a unit across.
         canvas.Scale = canvas.MaxScale;
-        canvas.CenterOn(new Vector2(600, 600));
+        canvas.CenterOn(new Vector2<double>(600, 600));
         Lay(canvas);
 
         Assert.That(Drawn(canvas), Is.Zero, "the deep zoom was still showing something");
 
         canvas.Scale = 0.8;
-        canvas.CenterOn(Vector2.Zero);
+        canvas.CenterOn(Vector2<double>.Zero);
         Lay(canvas);
 
         Assert.That(Drawn(canvas), Is.EqualTo(2), "the drawing did not come back with the camera");

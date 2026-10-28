@@ -13,7 +13,7 @@ public class SvgPathParsingTests
 {
     private static StreamGeometry Read(string data) => new SVGParser().Parse(data);
 
-    private static Vector2 Last(PathFigure figure)
+    private static Vector2<double> Last(PathFigure figure)
     {
         var segment = figure.Segments[^1];
 
@@ -34,7 +34,7 @@ public class SvgPathParsingTests
     {
         var figure = Read("M 10 10 l 5 0 l 0 5").Figures.Single();
 
-        Assert.That(Last(figure), Is.EqualTo(new Vector2(15, 15)));
+        Assert.That(Last(figure), Is.EqualTo(new Vector2<double>(15, 15)));
     }
 
     // AN ARC'S FLAGS ARE ONE DIGIT EACH, so a minifier writes them without a separator.
@@ -47,7 +47,7 @@ public class SvgPathParsingTests
         {
             Assert.That(arc.IsLargeArc, Is.True);
             Assert.That(arc.SweepDirection, Is.EqualTo(SweepDirection.Clockwise));
-            Assert.That(arc.Point, Is.EqualTo(new Vector2(10, 0)));
+            Assert.That(arc.Point, Is.EqualTo(new Vector2<double>(10, 0)));
         });
     }
 
@@ -60,7 +60,7 @@ public class SvgPathParsingTests
         Assert.Multiple(() =>
         {
             Assert.That(figure.Segments, Has.Count.EqualTo(3), "only the first pair was read");
-            Assert.That(Last(figure), Is.EqualTo(new Vector2(30, 0)));
+            Assert.That(Last(figure), Is.EqualTo(new Vector2<double>(30, 0)));
         });
     }
 
@@ -88,7 +88,7 @@ public class SvgPathParsingTests
         {
             Assert.That(figures, Has.Count.EqualTo(2));
             Assert.That(figures[0].IsClosed, Is.True);
-            Assert.That(figures[1].StartPoint, Is.EqualTo(new Vector2(50, 50)));
+            Assert.That(figures[1].StartPoint, Is.EqualTo(new Vector2<double>(50, 50)));
         });
     }
 
@@ -98,7 +98,7 @@ public class SvgPathParsingTests
     {
         var figure = Read("M 10 10 L 20 10 L 20 20 Z l 5 0").Figures[^1];
 
-        Assert.That(Last(figure), Is.EqualTo(new Vector2(15, 10)), "the relative move after Z did not start at the start");
+        Assert.That(Last(figure), Is.EqualTo(new Vector2<double>(15, 10)), "the relative move after Z did not start at the start");
     }
 
     // A STEP AFTER Z BEGINS A NEW FIGURE at the closed one's start; the closed figure stays as it was.
@@ -109,7 +109,7 @@ public class SvgPathParsingTests
 
         Assert.That(figures, Has.Count.EqualTo(2));
         Assert.That(figures[0].IsClosed && figures[0].Segments.Count == 2, "the step was added to the closed figure");
-        Assert.That(figures[1].StartPoint, Is.EqualTo(new Vector2(10, 10)));
+        Assert.That(figures[1].StartPoint, Is.EqualTo(new Vector2<double>(10, 10)));
     }
 
     // NUMBERS RUN TOGETHER, which every minifier does.
@@ -118,7 +118,7 @@ public class SvgPathParsingTests
     {
         var figure = Read("M0 0L1.5.5").Figures.Single();
 
-        Assert.That(Last(figure), Is.EqualTo(new Vector2(1.5, 0.5)));
+        Assert.That(Last(figure), Is.EqualTo(new Vector2<double>(1.5, 0.5)));
     }
 
     // ...AND AN EXPONENT'S SIGN BELONGS TO THE EXPONENT. Split on every minus, "1e-5" became two numbers and the whole
@@ -128,7 +128,7 @@ public class SvgPathParsingTests
     {
         var figure = Read("M 0 0 L 1e2 -1.5e1").Figures.Single();
 
-        Assert.That(Last(figure), Is.EqualTo(new Vector2(100, -15)));
+        Assert.That(Last(figure), Is.EqualTo(new Vector2<double>(100, -15)));
     }
 
     // A SUB-PATH IS CLOSED FOR THE PURPOSE OF FILLING, whether or not it says Z. Exporters leave Z out freely - the
@@ -145,8 +145,8 @@ public class SvgPathParsingTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(Covered(ring, new Vector2(10, 50)), Is.True, "the ring itself is not filled");
-            Assert.That(Covered(ring, new Vector2(50, 50)), Is.False, "the hole was filled in");
+            Assert.That(Covered(ring, new Vector2<double>(10, 50)), Is.True, "the ring itself is not filled");
+            Assert.That(Covered(ring, new Vector2<double>(50, 50)), Is.False, "the hole was filled in");
         });
     }
 
@@ -200,8 +200,8 @@ public class SvgPathParsingTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(Covered(body, new Vector2(20, 12)), Is.True, "the plate itself");
-            Assert.That(Covered(body, new Vector2(16, 17)), Is.False, "the room between the arrows is not the shape");
+            Assert.That(Covered(body, new Vector2<double>(20, 12)), Is.True, "the plate itself");
+            Assert.That(Covered(body, new Vector2<double>(16, 17)), Is.False, "the room between the arrows is not the shape");
         });
     }
 
@@ -215,21 +215,21 @@ public class SvgPathParsingTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(Covered(grid, new Vector2(20.1, 13.06)), Is.False, "a cell was filled in");
-            Assert.That(Covered(grid, new Vector2(17.0, 13.06)), Is.False, "a cell was filled in");
-            Assert.That(Covered(grid, new Vector2(20, 12)), Is.True, "the plate between the cells is not filled");
+            Assert.That(Covered(grid, new Vector2<double>(20.1, 13.06)), Is.False, "a cell was filled in");
+            Assert.That(Covered(grid, new Vector2<double>(17.0, 13.06)), Is.False, "a cell was filled in");
+            Assert.That(Covered(grid, new Vector2<double>(20, 12)), Is.True, "the plate between the cells is not filled");
         });
     }
 
-    private static bool Covered(StreamGeometry geometry, Vector2 point)
+    private static bool Covered(StreamGeometry geometry, Vector2<double> point)
     {
         var points = geometry.Mesh.Points;
 
         for (var i = 0; i + 2 < points.Length; i += 3)
         {
-            var a = new Vector2(points[i].X, points[i].Y);
-            var b = new Vector2(points[i + 1].X, points[i + 1].Y);
-            var c = new Vector2(points[i + 2].X, points[i + 2].Y);
+            var a = new Vector2<double>(points[i].X, points[i].Y);
+            var b = new Vector2<double>(points[i + 1].X, points[i + 1].Y);
+            var c = new Vector2<double>(points[i + 2].X, points[i + 2].Y);
 
             var d1 = Side(point, a, b);
             var d2 = Side(point, b, c);
@@ -244,7 +244,7 @@ public class SvgPathParsingTests
         return false;
     }
 
-    private static double Side(Vector2 p, Vector2 a, Vector2 b) =>
+    private static double Side(Vector2<double> p, Vector2<double> a, Vector2<double> b) =>
         (p.X - b.X) * (a.Y - b.Y) - (a.X - b.X) * (p.Y - b.Y);
 
     // A SMOOTH CURVE is smooth because its first control point is the REFLECTION of the previous one about the current
@@ -255,6 +255,6 @@ public class SvgPathParsingTests
         var figure = Read("M 0 0 C 10 10 20 10 30 0 S 50 -10 60 0").Figures.Single();
         var smooth = (CubicBezierSegment)figure.Segments[^1];
 
-        Assert.That(smooth.ControlPoint1, Is.EqualTo(new Vector2(40, -10)));
+        Assert.That(smooth.ControlPoint1, Is.EqualTo(new Vector2<double>(40, -10)));
     }
 }

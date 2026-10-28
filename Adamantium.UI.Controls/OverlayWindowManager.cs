@@ -43,13 +43,13 @@ public sealed class OverlayWindowManager
         // (a drag or a bound view model) re-places the card via OverlayWindow.OnPositionChanged.
         var manual = window.StartupLocation == OverlayStartupLocation.Manual;
         var placement = manual ? PlacementMode.Relative : PlacementMode.Center;
-        var offset = manual ? new Vector2((float)window.Left, (float)window.Top) : CascadeOffset(_windows.Count);
+        var offset = manual ? new Vector2<double>((float)window.Left, (float)window.Top) : CascadeOffset(_windows.Count);
 
         // A modal window gets a full-window dim scrim BENEATH it (which absorbs + dims the content behind); a normal window
         // gets none, so the window behind stays usable.
         if (window.IsModal)
         {
-            var scrimBrush = window.OverlayBrush ?? new SolidColorBrush(Color.FromArgb(0x99000000));
+            var scrimBrush = window.OverlayBrush ?? new SolidColorBrush(Color.FromBgra(0x99000000));
             var scrimSurface = new Border { Background = scrimBrush };
             scrimSurface.PointerPressed += (_, e) =>
             {
@@ -191,11 +191,11 @@ public sealed class OverlayWindowManager
 
     // Each new window steps down-right from the last so it doesn't open exactly on top; wrapped so a long run stays on
     // screen (ComputePosition clamps every window inside the parent anyway).
-    private static Vector2 CascadeOffset(int index)
+    private static Vector2<double> CascadeOffset(int index)
     {
         const float step = 32f;
         var i = index % 6;
-        return new Vector2(i * step, i * step);
+        return new Vector2<double>(i * step, i * step);
     }
 
     private void EnsureHostHooks()

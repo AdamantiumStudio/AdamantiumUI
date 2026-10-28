@@ -59,8 +59,8 @@ public class SegmentBindingPatchRenderTests
         var renderer = new OffscreenTestRenderer(device,
             new RenderUnitFactory(device, new DeviceResourceFactory(device)), Dim, Dim) { ClearColor = Colors.Black };
 
-        var stage = new TestControl { Bounds = new Rect(0, 0, Dim, Dim), RenderSize = new Size(Dim, Dim) };
-        var card = new TestControl { Bounds = new Rect(0, 0, Dim, Dim), RenderSize = new Size(Dim, Dim), RenderAction = draw };
+        var stage = new TestControl { Bounds = new Rect(0, 0, Dim, Dim), RenderSize = new Size<double>(Dim, Dim) };
+        var card = new TestControl { Bounds = new Rect(0, 0, Dim, Dim), RenderSize = new Size<double>(Dim, Dim), RenderAction = draw };
         stage.Add(card);
         var root = new VisualRoot(stage, Dim, Dim);
 

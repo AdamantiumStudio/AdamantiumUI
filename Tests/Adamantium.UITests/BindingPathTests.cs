@@ -38,14 +38,14 @@ public class BindingPathTests
 
         double Value { get; set; }
 
-        Vector2 Offset { get; set; }
+        Vector2<double> Offset { get; set; }
     }
 
     private sealed class NotifyingNode : INode, INotifyPropertyChanged
     {
         private object _inner;
         private double _value;
-        private Vector2 _offset;
+        private Vector2<double> _offset;
 
         public event PropertyChangedEventHandler PropertyChanged;
 
@@ -69,7 +69,7 @@ public class BindingPathTests
             }
         }
 
-        public Vector2 Offset
+        public Vector2<double> Offset
         {
             get => _offset;
             set
@@ -89,7 +89,7 @@ public class BindingPathTests
             typeof(double), typeof(ComponentNode), new PropertyMetadata(0d));
 
         public static readonly AdamantiumProperty OffsetProperty = AdamantiumProperty.Register(nameof(Offset),
-            typeof(Vector2), typeof(ComponentNode), new PropertyMetadata(Vector2.Zero));
+            typeof(Vector2<double>), typeof(ComponentNode), new PropertyMetadata(Vector2<double>.Zero));
 
         public object Inner
         {
@@ -103,9 +103,9 @@ public class BindingPathTests
             set => SetValue(ValueProperty, value);
         }
 
-        public Vector2 Offset
+        public Vector2<double> Offset
         {
-            get => GetValue<Vector2>(OffsetProperty);
+            get => GetValue<Vector2<double>>(OffsetProperty);
             set => SetValue(OffsetProperty, value);
         }
     }
@@ -353,17 +353,17 @@ public class BindingPathTests
     public void AStructInThePath_IsReadAndWrittenThrough([Values] Kind kind, [Values] Link link)
     {
         var first = Node(link);
-        first.Offset = new Vector2(5, 0);
+        first.Offset = new Vector2<double>(5, 0);
         var holder = new Holder { Item = first };
         var target = Bound(kind, holder, "Item.Offset.X", BindingMode.TwoWay);
         Assert.That(target.Width, Is.EqualTo(5));
 
-        first.Offset = new Vector2(6, 0);
+        first.Offset = new Vector2<double>(6, 0);
         BindingUpdateQueue.Flush();
         Assert.That(target.Width, Is.EqualTo(6), "a new struct on the same link was not noticed");
 
         var next = Node(link);
-        next.Offset = new Vector2(7, 0);
+        next.Offset = new Vector2<double>(7, 0);
         holder.Item = next;
         BindingUpdateQueue.Flush();
         Assert.That(target.Width, Is.EqualTo(7), "the replaced link before the struct was not noticed");

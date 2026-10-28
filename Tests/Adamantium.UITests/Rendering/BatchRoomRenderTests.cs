@@ -41,8 +41,8 @@ public class BatchRoomRenderTests
 
     private static Brush Gradient() => new LinearGradientBrush
     {
-        StartPoint = new Vector2(0, 0),
-        EndPoint = new Vector2(1, 1),
+        StartPoint = new Vector2<double>(0, 0),
+        EndPoint = new Vector2<double>(1, 1),
         GradientStops =
         {
             new GradientStop(new Color((byte)250, (byte)60, (byte)60, (byte)255), 0),
@@ -52,7 +52,7 @@ public class BatchRoomRenderTests
 
     private static TestControl Square(int x, int y)
     {
-        var square = new TestControl { Bounds = new Rect(x, y, Cell, Cell), RenderSize = new Size(Cell, Cell) };
+        var square = new TestControl { Bounds = new Rect(x, y, Cell, Cell), RenderSize = new Size<double>(Cell, Cell) };
         square.RenderAction = s => s.DrawRectangle(Gradient(), new Rect(0, 0, Cell, Cell));
         return square;
     }
@@ -64,9 +64,9 @@ public class BatchRoomRenderTests
         var device = GpuTestDevice.Device;
         var renderer = new OffscreenTestRenderer(device, new RenderUnitFactory(device, new DeviceResourceFactory(device)),
             Dim, Dim) { ClearColor = Colors.Black };
-        var stage = new TestControl { Bounds = new Rect(0, 0, Dim, Dim), RenderSize = new Size(Dim, Dim) };
-        var newcomers = new TestControl { Bounds = new Rect(0, 0, Dim, Dim), RenderSize = new Size(Dim, Dim) };
-        var shown = new TestControl { Bounds = new Rect(0, 0, Dim, Dim), RenderSize = new Size(Dim, Dim) };
+        var stage = new TestControl { Bounds = new Rect(0, 0, Dim, Dim), RenderSize = new Size<double>(Dim, Dim) };
+        var newcomers = new TestControl { Bounds = new Rect(0, 0, Dim, Dim), RenderSize = new Size<double>(Dim, Dim) };
+        var shown = new TestControl { Bounds = new Rect(0, 0, Dim, Dim), RenderSize = new Size<double>(Dim, Dim) };
         stage.Add(newcomers);
         stage.Add(shown);
         for (var i = 0; i < Old; i++)

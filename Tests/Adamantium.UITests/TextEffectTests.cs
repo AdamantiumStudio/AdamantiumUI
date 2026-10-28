@@ -67,7 +67,7 @@ public class TextEffectTests
         {
             Assert.That((effect.Start, effect.Length), Is.EqualTo((6, 5)));
             Assert.That(effect.AroundGlyph, Is.True, "about each character by default");
-            Assert.That(effect.Transform, Is.EqualTo(GlyphEffect.Flat(Matrix3x2F.Translation(0, -5))));
+            Assert.That(effect.Transform, Is.EqualTo(GlyphEffect.Flat(Matrix3x2.CreateTranslation<float>(0, -5))));
         });
     }
 
@@ -175,7 +175,7 @@ public class TextEffectTests
             Assert.That(text.IsMeasureValid, Is.True, "nothing to lay out");
             Assert.That(text.Layout.Revision, Is.EqualTo(layout));
             Assert.That(text.IsGeometryValid, Is.True, "nothing to draw again");
-            Assert.That(Resolved(text).Single().Transform, Is.EqualTo(GlyphEffect.Flat(Matrix3x2F.Translation(0, -9))));
+            Assert.That(Resolved(text).Single().Transform, Is.EqualTo(GlyphEffect.Flat(Matrix3x2.CreateTranslation<float>(0, -9))));
         });
     }
 
@@ -433,7 +433,7 @@ public class TextEffectTests
         {
             Assert.That(RenderDirty.IsTransform || RenderDirty.MovedNodes.Contains(moved), Is.True, "the element moves");
             Assert.That(shared.InheritanceParent, Is.SameAs(moved), "its bindings still find the element's data");
-            Assert.That(Drawn(text).Single().Transform, Is.EqualTo(GlyphEffect.Flat(Matrix3x2F.Translation(20, 0))),
+            Assert.That(Drawn(text).Single().Transform, Is.EqualTo(GlyphEffect.Flat(Matrix3x2.CreateTranslation<float>(20, 0))),
                 "and the effect follows");
         });
     }
@@ -457,7 +457,7 @@ public class TextEffectTests
         Assert.Multiple(() =>
         {
             Assert.That(RenderDirty.IsTransformUnknown, Is.False, "no re-capture of the whole scene");
-            Assert.That(Drawn(second).Single().Transform, Is.EqualTo(GlyphEffect.Flat(Matrix3x2F.Translation(0, -3))));
+            Assert.That(Drawn(second).Single().Transform, Is.EqualTo(GlyphEffect.Flat(Matrix3x2.CreateTranslation<float>(0, -3))));
         });
     }
 
@@ -497,7 +497,7 @@ public class TextEffectTests
         {
             Assert.That(marks, Is.EqualTo(new[] { text }));
             Assert.That(text.IsGeometryValid, Is.True);
-            Assert.That(Resolved(text).Single().Transform, Is.EqualTo(GlyphEffect.Flat(Matrix3x2F.Translation(0, -7))));
+            Assert.That(Resolved(text).Single().Transform, Is.EqualTo(GlyphEffect.Flat(Matrix3x2.CreateTranslation<float>(0, -7))));
         });
     }
 

@@ -46,7 +46,7 @@ public class RibbonTabPanel : Panel
         return next >= 0 && next < _order.Count ? _order[next] : null;
     }
 
-    protected override Size MeasureOverride(Size availableSize)
+    protected override Size<double> MeasureOverride(Size<double> availableSize)
     {
         Order();
         Repartition();
@@ -55,7 +55,7 @@ public class RibbonTabPanel : Panel
         var ledgeRow = LedgeRow;
 
         // Unbounded along the row so each header takes exactly its own width; the ledge row is not theirs to fill.
-        var forHeaders = new Size(double.PositiveInfinity, Math.Max(0, availableSize.Height - ledgeRow));
+        var forHeaders = new Size<double>(double.PositiveInfinity, Math.Max(0, availableSize.Height - ledgeRow));
 
         double width = 0, height = 0;
         foreach (var header in _order)
@@ -67,11 +67,11 @@ public class RibbonTabPanel : Panel
 
         foreach (var ledge in _ledges)
         {
-            ledge.Measure(new Size(double.PositiveInfinity, height + ledgeRow));
+            ledge.Measure(new Size<double>(double.PositiveInfinity, height + ledgeRow));
         }
 
         width += Widen();
-        return new Size(width, height + ledgeRow);
+        return new Size<double>(width, height + ledgeRow);
     }
 
     // Extra width handed to each header, so its run is at least as wide as its ledge's title.
@@ -112,7 +112,7 @@ public class RibbonTabPanel : Panel
     private double WidthOf(IMeasurableComponent header) =>
         header.DesiredSize.Width + (_extra.TryGetValue(header, out var extra) ? extra : 0);
 
-    protected override Size ArrangeOverride(Size finalSize)
+    protected override Size<double> ArrangeOverride(Size<double> finalSize)
     {
         // Read from the headers HERE rather than from a number the last measure left behind: an arrange can follow a
         // measure that ran under a different shape (the ledge switched off between them). Clamped to the slot, never
@@ -161,7 +161,7 @@ public class RibbonTabPanel : Panel
             ledge.Arrange(slot);
         }
 
-        return new Size(x, row + ledgeRow);
+        return new Size<double>(x, row + ledgeRow);
     }
 
     // The title band costs height only if some context actually asks for a title; a strip of plates alone is exactly as

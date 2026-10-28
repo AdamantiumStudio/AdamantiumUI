@@ -241,7 +241,7 @@ public sealed class TextEffect : FundamentalUIComponent, ITransformHolder
         _transform?.AddHolder(this);
     }
 
-    internal bool TryResolve(int offset, int limit, Vector2F area, Size elementSize, out GlyphEffect effect)
+    internal bool TryResolve(int offset, int limit, Vector2F area, Size<double> elementSize, out GlyphEffect effect)
     {
         effect = default;
         var end = Math.Min((long)PositionStart + Math.Max(PositionCount, 0), limit);
@@ -292,7 +292,7 @@ public sealed class TextEffect : FundamentalUIComponent, ITransformHolder
             return null;
         }
 
-        var toClip = Matrix3x2F.Translation(area.X, area.Y);
+        var toClip = Matrix3x2.CreateTranslation<float>(area.X, area.Y);
         if (clip.Transform?.Matrix is { } m)
         {
             var placed = new Matrix3x2F((float)m.M11, (float)m.M12, (float)m.M21, (float)m.M22, (float)m.M41, (float)m.M42);

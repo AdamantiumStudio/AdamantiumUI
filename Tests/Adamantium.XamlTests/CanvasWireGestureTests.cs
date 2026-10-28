@@ -63,11 +63,11 @@ public class CanvasWireGestureTests
         return null;
     }
 
-    private static Vector2 At(ElementItem item, CanvasNodePin pin)
+    private static Vector2<double> At(ElementItem item, CanvasNodePin pin)
     {
-        var local = ((CanvasNode)item.Element).Where(pin) ?? Vector2.Zero;
+        var local = ((CanvasNode)item.Element).Where(pin) ?? Vector2<double>.Zero;
 
-        return new Vector2(item.World.X + local.X, item.World.Y + local.Y);
+        return new Vector2<double>(item.World.X + local.X, item.World.Y + local.Y);
     }
 
     private static ElementItem ItemOf(InfiniteCanvas canvas, ICanvasNode node)
@@ -136,7 +136,7 @@ public class CanvasWireGestureTests
         // asks the plane what is under the pointer.
         for (var step = 1; step <= 8; step++)
         {
-            var at = new Vector2(start.X + (end.X - start.X) * step / 8.0, start.Y + (end.Y - start.Y) * step / 8.0);
+            var at = new Vector2<double>(start.X + (end.X - start.X) * step / 8.0, start.Y + (end.Y - start.Y) * step / 8.0);
 
             tool.Wires.Move(canvas, at);
             Settle(window);

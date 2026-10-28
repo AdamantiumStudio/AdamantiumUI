@@ -11,14 +11,14 @@ internal static class FillBoundary
 {
     // Positions are quantized (to 1e-3) before comparison so the tessellator's duplicated-but-coincident vertices merge -
     // otherwise a shared edge would look like two single-use edges and every interior edge would be mis-flagged boundary.
-    private static (long, long) Q(Vector3 p) => ((long)Math.Round(p.X * 1000.0), (long)Math.Round(p.Y * 1000.0));
+    private static (long, long) Q(Vector3<double> p) => ((long)Math.Round(p.X * 1000.0), (long)Math.Round(p.Y * 1000.0));
 
     private static (long, long, long, long) EdgeKey((long, long) a, (long, long) b)
         => Comparer<(long, long)>.Default.Compare(a, b) <= 0 ? (a.Item1, a.Item2, b.Item1, b.Item2) : (b.Item1, b.Item2, a.Item1, a.Item2);
 
     /// <summary>The fill's boundary loops, or null if the mesh has no drawable triangles (caller falls back to the raw
     /// path contours). Each loop is a closed point list (point[n-1] -> point[0] implied), in mesh-LOCAL coordinates.</summary>
-    public static List<(Vector2[] Points, bool IsClosed)> ExtractLoops(Mesh mesh)
+    public static List<(Vector2<double>[] Points, bool IsClosed)> ExtractLoops(Mesh mesh)
     {
         var pts = mesh?.Points;
         if (pts == null || pts.Length < 3) return null;
@@ -28,15 +28,15 @@ internal static class FillBoundary
 
         // Count each undirected edge; keep a representative real position per quantized vertex.
         var edgeCount = new Dictionary<(long, long, long, long), int>();
-        var rep = new Dictionary<(long, long), Vector2>();
+        var rep = new Dictionary<(long, long), Vector2<double>>();
 
-        void AddEdge(Vector3 a, Vector3 b)
+        void AddEdge(Vector3<double> a, Vector3<double> b)
         {
             var qa = Q(a);
             var qb = Q(b);
             if (qa == qb) return;
-            rep[qa] = new Vector2((float)a.X, (float)a.Y);
-            rep[qb] = new Vector2((float)b.X, (float)b.Y);
+            rep[qa] = new Vector2<double>((float)a.X, (float)a.Y);
+            rep[qb] = new Vector2<double>((float)b.X, (float)b.Y);
             var key = EdgeKey(qa, qb);
             edgeCount.TryGetValue(key, out var c);
             edgeCount[key] = c + 1;
@@ -44,7 +44,7 @@ internal static class FillBoundary
 
         for (var t = 0; t < triCount; t++)
         {
-            Vector3 a, b, c;
+            Vector3<double> a, b, c;
             if (idx != null) { a = pts[idx[t * 3]]; b = pts[idx[t * 3 + 1]]; c = pts[idx[t * 3 + 2]]; }
             else { a = pts[t * 3]; b = pts[t * 3 + 1]; c = pts[t * 3 + 2]; }
             AddEdge(a, b); AddEdge(b, c); AddEdge(c, a);
@@ -64,7 +64,7 @@ internal static class FillBoundary
 
         // Walk closed loops, greedily consuming boundary edges (a >2-degree vertex at a self-intersection just picks any
         // unused edge - fine for feathering). Each loop = outer outline or one hole.
-        var loops = new List<(Vector2[], bool)>();
+        var loops = new List<(Vector2<double>[], bool)>();
         var visited = new HashSet<(long, long, long, long)>();
         foreach (var startNode in adj.Keys)
         {
@@ -72,7 +72,7 @@ internal static class FillBoundary
             {
                 if (visited.Contains(EdgeKey(startNode, first))) continue;
 
-                var loop = new List<Vector2> { rep[startNode] };
+                var loop = new List<Vector2<double>> { rep[startNode] };
                 var cur = startNode;
                 var next = first;
                 while (true)

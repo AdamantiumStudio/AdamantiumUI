@@ -45,7 +45,7 @@ public class ScrollViewerAutomationPeer : UIComponentAutomationPeer, IScrollProv
         var viewport = _viewer.ViewportSize;
         var x = horizontal == IScrollProvider.NoScroll ? offset.X : horizontal / 100 * (extent.Width - viewport.Width);
         var y = vertical == IScrollProvider.NoScroll ? offset.Y : vertical / 100 * (extent.Height - viewport.Height);
-        _viewer.SetScrollOffset(new Vector2(x, y));
+        _viewer.SetScrollOffset(new Vector2<double>(x, y));
     }
 
     private void Check(double percent, bool scrollable, string axis)

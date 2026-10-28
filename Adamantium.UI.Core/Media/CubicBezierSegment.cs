@@ -9,7 +9,7 @@ public class CubicBezierSegment : BezierSegmentBase
         
     }
 
-    public CubicBezierSegment(Vector2 controlPoint1, Vector2 controlPoint2, Vector2 point, bool isStroked)
+    public CubicBezierSegment(Vector2<double> controlPoint1, Vector2<double> controlPoint2, Vector2<double> point, bool isStroked)
     {
         ControlPoint1 = controlPoint1;
         ControlPoint2 = controlPoint2;
@@ -18,31 +18,29 @@ public class CubicBezierSegment : BezierSegmentBase
     }
     
     public static readonly AdamantiumProperty ControlPoint1Property =
-        AdamantiumProperty.Register(nameof(ControlPoint1), typeof(Vector2), typeof(CubicBezierSegment),
-            new PropertyMetadata(Vector2.Zero, PropertyMetadataOptions.AffectsMeasure));
+        AdamantiumProperty.Register(nameof(ControlPoint1), typeof(Vector2<double>), typeof(CubicBezierSegment),
+            new PropertyMetadata(Vector2<double>.Zero, PropertyMetadataOptions.AffectsMeasure));
     
     public static readonly AdamantiumProperty ControlPoint2Property =
-        AdamantiumProperty.Register(nameof(ControlPoint2), typeof(Vector2), typeof(CubicBezierSegment),
-            new PropertyMetadata(Vector2.Zero, PropertyMetadataOptions.AffectsMeasure));
+        AdamantiumProperty.Register(nameof(ControlPoint2), typeof(Vector2<double>), typeof(CubicBezierSegment),
+            new PropertyMetadata(Vector2<double>.Zero, PropertyMetadataOptions.AffectsMeasure));
 
-    public Vector2 ControlPoint1
+    public Vector2<double> ControlPoint1
     {
-        get => GetValue<Vector2>(ControlPoint1Property); 
+        get => GetValue<Vector2<double>>(ControlPoint1Property); 
         set => SetValue(ControlPoint1Property, value);
     }
     
-    public Vector2 ControlPoint2
+    public Vector2<double> ControlPoint2
     {
-        get => GetValue<Vector2>(ControlPoint2Property); 
+        get => GetValue<Vector2<double>>(ControlPoint2Property); 
         set => SetValue(ControlPoint2Property, value);
     }
     
-    internal override Vector2[] ProcessSegment(Vector2 currentPoint)
+    internal override Vector2<double>[] ProcessSegment(Vector2<double> currentPoint)
     {
-        // Dense uniform-t base for accuracy, then EVEN arc-length resample (~3px spacing): smooth stroke with no
-        // sub-pixel bunching (which tore the stroke) and no under-sampled flats.
-        var fine = MathHelper.GetCubicBezier(currentPoint, ControlPoint1, ControlPoint2, Point, 256);
-        var count = System.Math.Clamp((int)(MathHelper.PolylineLength(fine) / 3.0), 8, 256);
-        return MathHelper.ResampleByArcLength(fine, count);
+        var dense = new List<Vector2<double>>();
+        MathHelper.Curves.AppendCubicBezier(currentPoint, ControlPoint1, ControlPoint2, Point, 256, dense);
+        return ResampledEvenly(dense);
     }
 }

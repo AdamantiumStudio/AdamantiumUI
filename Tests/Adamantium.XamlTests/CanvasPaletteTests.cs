@@ -81,7 +81,7 @@ public class CanvasPaletteTests
         var window = new Window { Width = 900, Height = 600, Content = canvas };
         Settle(window);
 
-        Assert.That(canvas.AskForNode(new Vector2(120, 80)), Is.True, "the palette would not open at all");
+        Assert.That(canvas.AskForNode(new Vector2<double>(120, 80)), Is.True, "the palette would not open at all");
 
         Settle(window);
 
@@ -126,7 +126,7 @@ public class CanvasPaletteTests
         var window = new Window { Width = 900, Height = 600, Content = canvas };
         Settle(window);
 
-        canvas.AskForNode(new Vector2(120, 80));
+        canvas.AskForNode(new Vector2<double>(120, 80));
         Settle(window);
 
         canvas.PickedKind = Catalog[0];
@@ -162,7 +162,7 @@ public class CanvasPaletteTests
         var window = new Window { Width = 900, Height = 600, Content = canvas };
         Settle(window);
 
-        Assert.That(canvas.AskForNode(new Vector2(120, 80)), Is.True, "the palette would not open at all");
+        Assert.That(canvas.AskForNode(new Vector2<double>(120, 80)), Is.True, "the palette would not open at all");
         Settle(window);
 
         var palette = Found<CanvasNodePalette>(canvas);

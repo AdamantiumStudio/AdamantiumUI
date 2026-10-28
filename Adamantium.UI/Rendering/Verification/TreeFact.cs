@@ -9,7 +9,7 @@ namespace Adamantium.UI.Rendering.Verification;
 /// it is not <see cref="Hidden"/>.</summary>
 internal readonly record struct TreeFact(
     Matrix4x4F Local,
-    Size Size,
+    Size<double> Size,
     bool Clips,
     IUIComponent Parent,
     float Opacity,

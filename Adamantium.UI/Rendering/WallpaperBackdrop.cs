@@ -21,7 +21,7 @@ internal sealed class WallpaperBackdrop : IDisposable
     private WallpaperInfo _prepared = WallpaperInfo.None;
     private byte[] _pixels;
     private uint _width, _height;
-    private Size _picture;
+    private Size<double> _picture;
     private ITexture _texture;
     private IGraphicsDevice _device;   // remembered only to retire the old texture when the wallpaper changes
     private bool _loading;
@@ -198,7 +198,7 @@ internal sealed class WallpaperBackdrop : IDisposable
     /// <summary>Decode the wallpaper, shrink it to a thumbnail (which IS the blur) and hand it over as a bitmap the
     /// renderer can turn into a texture. Returns null when the file cannot be read - a wallpaper the shell names but
     /// we cannot open is the same case as no wallpaper at all.</summary>
-    private static byte[] Prepare(string path, out Size picture, out uint width, out uint height)
+    private static byte[] Prepare(string path, out Size<double> picture, out uint width, out uint height)
     {
         picture = default;
         width = height = 0;
@@ -257,7 +257,7 @@ internal sealed class WallpaperBackdrop : IDisposable
     }
 
     // Layout: thumbnail width, height, then the ORIGINAL picture's size (which decides placement), then RGBA bytes.
-    private static bool TryLoadCached(string file, out byte[] pixels, out Size picture, out uint width, out uint height)
+    private static bool TryLoadCached(string file, out byte[] pixels, out Size<double> picture, out uint width, out uint height)
     {
         pixels = null;
         picture = default;
@@ -270,7 +270,7 @@ internal sealed class WallpaperBackdrop : IDisposable
             using var reader = new System.IO.BinaryReader(System.IO.File.OpenRead(file));
             width = reader.ReadUInt32();
             height = reader.ReadUInt32();
-            picture = new Size(reader.ReadUInt32(), reader.ReadUInt32());
+            picture = new Size<double>(reader.ReadUInt32(), reader.ReadUInt32());
             var expected = (int)(width * height * 4);
             if (width == 0 || height == 0 || expected <= 0) return false;
 
@@ -285,7 +285,7 @@ internal sealed class WallpaperBackdrop : IDisposable
         }
     }
 
-    private static void SaveCached(string file, byte[] pixels, Size picture, uint width, uint height)
+    private static void SaveCached(string file, byte[] pixels, Size<double> picture, uint width, uint height)
     {
         try
         {
@@ -305,7 +305,7 @@ internal sealed class WallpaperBackdrop : IDisposable
 
     // Decodes JPEG at 1/8 scale (DC coefficients only); other formats fully. The picture's own size comes out as well:
     // an eighth rounds up, so it is not eight times the preview's.
-    private static IRawBitmap LoadSmallestUsable(string path, out Size picture)
+    private static IRawBitmap LoadSmallestUsable(string path, out Size<double> picture)
     {
         picture = default;
         var extension = System.IO.Path.GetExtension(path);
@@ -321,7 +321,7 @@ internal sealed class WallpaperBackdrop : IDisposable
                 var size = decoder.Size;
                 if (size.Height > 0)
                 {
-                    picture = new Size(size.Width, size.Height);
+                    picture = new Size<double>(size.Width, size.Height);
                     return decoder.DecodePreview();
                 }
             }
@@ -335,7 +335,7 @@ internal sealed class WallpaperBackdrop : IDisposable
         var bitmap = BitmapLoader.Load(full);
         if (bitmap != null)
         {
-            picture = new Size(bitmap.Width, bitmap.Height);
+            picture = new Size<double>(bitmap.Width, bitmap.Height);
         }
 
         return bitmap;

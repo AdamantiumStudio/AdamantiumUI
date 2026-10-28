@@ -29,7 +29,7 @@ public class DockingUnsavedTests
         foreach (var pane in documents) group.Items.Add(pane);
         area.Children.Add(group);
 
-        area.Measure(new Size(1000, 800));
+        area.Measure(new Size<double>(1000, 800));
         area.Arrange(new Rect(0, 0, 1000, 800));
         return area;
     }

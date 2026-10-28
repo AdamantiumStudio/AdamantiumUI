@@ -71,7 +71,7 @@ public class TextBoxValidationThemeTests
         box.ApplyCurrentTheme();
         Adamantium.UI.Extensions.WindowExtension.UpdateTree(box);
         BindingUpdateQueue.Flush();
-        box.Measure(new Size(200, 40));
+        box.Measure(new Size<double>(200, 40));
         box.Arrange(new Rect(0, 0, 200, 40));
     }
 

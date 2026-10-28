@@ -60,14 +60,14 @@ public class ProgressBar : RangeBase
 
     protected override void OnValueChanged(double oldValue, double newValue) => UpdateIndicator();
 
-    protected override Size ArrangeOverride(Size finalSize)
+    protected override Size<double> ArrangeOverride(Size<double> finalSize)
     {
         // The bar stretches only along its Orientation: clamp the CROSS axis to the content thickness (DesiredSize) BEFORE
         // arranging, so the template settles onto the real bar and ActualWidth/Height report the visible bar, not the whole
         // slot (a default-Stretch bar otherwise fills the slot's height with a 6px line centered inside it).
         finalSize = Orientation == Orientation.Horizontal
-            ? new Size(finalSize.Width, Math.Min(finalSize.Height, DesiredSize.Height))
-            : new Size(Math.Min(finalSize.Width, DesiredSize.Width), finalSize.Height);
+            ? new Size<double>(finalSize.Width, Math.Min(finalSize.Height, DesiredSize.Height))
+            : new Size<double>(Math.Min(finalSize.Width, DesiredSize.Width), finalSize.Height);
 
         var size = base.ArrangeOverride(finalSize);
         UpdateIndicator();   // PART_Track is laid out now, so the fill's pixel width is finally known

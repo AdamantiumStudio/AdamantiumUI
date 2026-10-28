@@ -16,7 +16,7 @@ public class CanvasItemPaintTests
     private static (InfiniteCanvas Canvas, CanvasScene Scene) Stage(Brush ink)
     {
         var canvas = new InfiniteCanvas { Ink = ink, InkThickness = 2 };
-        canvas.Measure(new Size(800, 600), force: true);
+        canvas.Measure(new Size<double>(800, 600), force: true);
         canvas.Arrange(new Rect(0, 0, 800, 600));
 
         var scene = new CanvasScene();
@@ -28,14 +28,14 @@ public class CanvasItemPaintTests
     private static CanvasPointerEventArgs At(double x, double y) =>
         new()
         {
-            World = new Vector2(x, y),
-            Pointer = new Vector2(x, y),
-            Screen = new Vector2(x, y),
+            World = new Vector2<double>(x, y),
+            Pointer = new Vector2<double>(x, y),
+            Screen = new Vector2<double>(x, y),
             Button = MouseButtons.Left,
             ClickCount = 1
         };
 
-    private static void Draw(InfiniteCanvas canvas, ICanvasTool tool, Vector2 from, Vector2 to)
+    private static void Draw(InfiniteCanvas canvas, ICanvasTool tool, Vector2<double> from, Vector2<double> to)
     {
         tool.OnPressed(canvas, At(from.X, from.Y));
         tool.OnMoved(canvas, At(to.X, to.Y));
@@ -52,8 +52,8 @@ public class CanvasItemPaintTests
         var ink = new SolidColorBrush(Colors.Red);
         var (canvas, scene) = Stage(ink);
 
-        Draw(canvas, new PenTool(), new Vector2(0, 0), new Vector2(40, 40));
-        Draw(canvas, new ShapeTool(CanvasShape.Rectangle), new Vector2(100, 100), new Vector2(200, 160));
+        Draw(canvas, new PenTool(), new Vector2<double>(0, 0), new Vector2<double>(40, 40));
+        Draw(canvas, new ShapeTool(CanvasShape.Rectangle), new Vector2<double>(100, 100), new Vector2<double>(200, 160));
 
         var stroke = (StrokeItem)scene.Items[0];
         var shape = (ShapeItem)scene.Items[1];
@@ -84,7 +84,7 @@ public class CanvasItemPaintTests
     {
         var (canvas, scene) = Stage(new SolidColorBrush(Colors.Red));
 
-        Draw(canvas, new ShapeTool(CanvasShape.Rectangle), new Vector2(0, 0), new Vector2(80, 50));
+        Draw(canvas, new ShapeTool(CanvasShape.Rectangle), new Vector2<double>(0, 0), new Vector2<double>(80, 50));
 
         var first = (ShapeItem)scene.Items[0];
 
@@ -111,8 +111,8 @@ public class CanvasItemPaintTests
 
         canvas.ShapeFill = fill;
 
-        Draw(canvas, new ShapeTool(CanvasShape.Rectangle), new Vector2(0, 0), new Vector2(80, 50));
-        Draw(canvas, new ShapeTool(CanvasShape.Rectangle), new Vector2(200, 0), new Vector2(280, 50));
+        Draw(canvas, new ShapeTool(CanvasShape.Rectangle), new Vector2<double>(0, 0), new Vector2<double>(80, 50));
+        Draw(canvas, new ShapeTool(CanvasShape.Rectangle), new Vector2<double>(200, 0), new Vector2<double>(280, 50));
 
         var first = (ShapeItem)scene.Items[0];
         var second = (ShapeItem)scene.Items[1];

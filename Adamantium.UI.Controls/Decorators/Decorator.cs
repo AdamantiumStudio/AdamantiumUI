@@ -56,7 +56,7 @@ public abstract class Decorator : InputUIComponent, IContainer
       set => SetValue(ChildProperty, value);
    }
 
-   protected override Size MeasureOverride(Size availableSize)
+   protected override Size<double> MeasureOverride(Size<double> availableSize)
    {
       var content = Child;
       var padding = Padding;
@@ -67,10 +67,10 @@ public abstract class Decorator : InputUIComponent, IContainer
          return content.DesiredSize.Inflate(padding);
       }
 
-      return new Size(padding.Left + padding.Right, padding.Bottom + padding.Top);
+      return new Size<double>(padding.Left + padding.Right, padding.Bottom + padding.Top);
    }
 
-   protected override Size ArrangeOverride(Size finalSize)
+   protected override Size<double> ArrangeOverride(Size<double> finalSize)
    {
       // Fill the arranged slot and lay the child out inside it (minus padding); the child positions itself within via its
       // own alignment. Returning the CHILD's size instead collapsed a stretched decorator down to a non-stretch child -

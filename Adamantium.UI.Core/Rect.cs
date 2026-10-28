@@ -35,7 +35,7 @@ public struct Rect : IEquatable<Rect>
    /// Initializes a new instance of the <see cref="Rect"/> structure.
    /// </summary>
    /// <param name="size">The size of the rectangle.</param>
-   public Rect(Size size)
+   public Rect(Size<double> size)
    {
       X = 0;
       Y = 0;
@@ -48,7 +48,7 @@ public struct Rect : IEquatable<Rect>
    /// </summary>
    /// <param name="position">The position of the rectangle.</param>
    /// <param name="size">The size of the rectangle.</param>
-   public Rect(Vector2 position, Size size)
+   public Rect(Vector2<double> position, Size<double> size)
    {
       X = position.X;
       Y = position.Y;
@@ -61,7 +61,7 @@ public struct Rect : IEquatable<Rect>
    /// </summary>
    /// <param name="topLeft">The top left position of the rectangle.</param>
    /// <param name="bottomRight">The bottom right position of the rectangle.</param>
-   public Rect(Vector2 topLeft, Vector2 bottomRight)
+   public Rect(Vector2<double> topLeft, Vector2<double> bottomRight)
    {
       X = topLeft.X;
       Y = topLeft.Y;
@@ -92,12 +92,12 @@ public struct Rect : IEquatable<Rect>
    /// <summary>
    /// Gets the position of the rectangle.
    /// </summary>
-   public Vector2 Location => new Vector2(X, Y);
+   public Vector2<double> Location => new Vector2<double>(X, Y);
 
    /// <summary>
    /// Gets the size of the rectangle.
    /// </summary>
-   public Size Size => new Size(Width, Height);
+   public Size<double> Size => new Size<double>(Width, Height);
 
    /// <summary>
    /// Gets the right position of the rectangle.
@@ -112,27 +112,27 @@ public struct Rect : IEquatable<Rect>
    /// <summary>
    /// Gets the top left Vector2D of the rectangle.
    /// </summary>
-   public Vector2 TopLeft => new Vector2(X, Y);
+   public Vector2<double> TopLeft => new Vector2<double>(X, Y);
 
    /// <summary>
    /// Gets the top right Vector2D of the rectangle.
    /// </summary>
-   public Vector2 TopRight => new Vector2(Right, Y);
+   public Vector2<double> TopRight => new Vector2<double>(Right, Y);
 
    /// <summary>
    /// Gets the bottom left Vector2D of the rectangle.
    /// </summary>
-   public Vector2 BottomLeft => new Vector2(X, Bottom);
+   public Vector2<double> BottomLeft => new Vector2<double>(X, Bottom);
 
    /// <summary>
    /// Gets the bottom right Vector2D of the rectangle.
    /// </summary>
-   public Vector2 BottomRight => new Vector2(Right, Bottom);
+   public Vector2<double> BottomRight => new Vector2<double>(Right, Bottom);
 
    /// <summary>
    /// Gets the center Vector2D of the rectangle.
    /// </summary>
-   public Vector2 Center => new Vector2(X + (Width / 2), Y + (Height / 2));
+   public Vector2<double> Center => new Vector2<double>(X + (Width / 2), Y + (Height / 2));
 
    /// <summary>
    /// Gets a value that indicates whether the rectangle is empty.
@@ -167,7 +167,7 @@ public struct Rect : IEquatable<Rect>
    /// <param name="rect">The rectangle.</param>
    /// <param name="scale">The vector scale.</param>
    /// <returns>The scaled rectangle.</returns>
-   public static Rect operator *(Rect rect, Vector2 scale)
+   public static Rect operator *(Rect rect, Vector2<double> scale)
    {
       return new Rect(
          rect.X * scale.X,
@@ -197,7 +197,7 @@ public struct Rect : IEquatable<Rect>
    /// <param name="rect">The rectangle.</param>
    /// <param name="scale">The vector scale.</param>
    /// <returns>The scaled rectangle.</returns>
-   public static Rect operator /(Rect rect, Vector2 scale)
+   public static Rect operator /(Rect rect, Vector2<double> scale)
    {
       return new Rect(
          rect.X / scale.X,
@@ -211,7 +211,7 @@ public struct Rect : IEquatable<Rect>
    /// </summary>
    /// <param name="p">The Vector2D.</param>
    /// <returns>true if the Vector2D is in the bounds of the rectangle; otherwise false.</returns>
-   public bool Contains(Vector2 p)
+   public bool Contains(Vector2<double> p)
    {
       return p.X >= X && p.X < X + Width &&
              p.Y >= Y && p.Y < Y + Height;
@@ -238,7 +238,7 @@ public struct Rect : IEquatable<Rect>
    /// <returns>The inflated rectangle.</returns>
    public Rect Inflate(double thickness)
    {
-      return new Rect(new Vector2(X - thickness, Y - thickness), Size.Inflate(new Thickness(thickness)));
+      return new Rect(new Vector2<double>(X - thickness, Y - thickness), Size.Inflate(new Thickness(thickness)));
    }
 
    /// <summary>
@@ -249,7 +249,7 @@ public struct Rect : IEquatable<Rect>
    public Rect Inflate(Thickness thickness)
    {
       return new Rect(
-         new Vector2(X - thickness.Left, Y - thickness.Top),
+         new Vector2<double>(X - thickness.Left, Y - thickness.Top),
          Size.Inflate(thickness));
    }
 
@@ -273,7 +273,7 @@ public struct Rect : IEquatable<Rect>
    public Rect Deflate(Thickness thickness)
    {
       return new Rect(
-         new Vector2(X + thickness.Left, Y + thickness.Top),
+         new Vector2<double>(X + thickness.Left, Y + thickness.Top),
          Size.Deflate(thickness));
    }
 
@@ -361,9 +361,9 @@ public struct Rect : IEquatable<Rect>
       return FromPoints(points);
    }
 
-   public List<Vector2> GetPoints()
+   public List<Vector2<double>> GetPoints()
    {
-      return new List<Vector2> { Location, BottomRight };
+      return new List<Vector2<double>> { Location, BottomRight };
    }
 
    /// <summary>
@@ -371,7 +371,7 @@ public struct Rect : IEquatable<Rect>
    /// </summary>
    /// <param name="matrix">The transform.</param>
    /// <returns>The bounding box</returns>
-   public Rect TransformToAABB(Matrix4x4 matrix)
+   public Rect TransformToAABB(Matrix4x4<double> matrix)
    {
       var points = new[]
       {
@@ -394,7 +394,7 @@ public struct Rect : IEquatable<Rect>
          if (p.Y > bottom) bottom = p.Y;
       }
 
-      return new Rect(new Vector2(left, top), new Vector2(right, bottom));
+      return new Rect(new Vector2<double>(left, top), new Vector2<double>(right, bottom));
    }
 
    /// <summary>
@@ -405,14 +405,14 @@ public struct Rect : IEquatable<Rect>
    /// </summary>
    /// <param name="matrix">The transform.</param>
    /// <returns>The bounding box.</returns>
-   public Rect TransformToAABB(Matrix4x4F matrix) => TransformToAABB((Matrix4x4)matrix);
+   public Rect TransformToAABB(Matrix4x4F matrix) => TransformToAABB(matrix.As<double>());
 
    /// <summary>
    /// Translates the rectangle by an offset.
    /// </summary>
    /// <param name="offset">The offset.</param>
    /// <returns>The translated rectangle.</returns>
-   public Rect Translate(Vector2 offset)
+   public Rect Translate(Vector2<double> offset)
    {
       return new Rect(Location + offset, Size);
    }
@@ -432,42 +432,42 @@ public struct Rect : IEquatable<Rect>
          Height);
    }
       
-   public static Rect FromPoints(IEnumerable<Vector2> inPoints)
+   public static Rect FromPoints(IEnumerable<Vector2<double>> inPoints)
    {
       ArgumentNullException.ThrowIfNull(inPoints);
 
-      var points = inPoints as Vector2[] ?? inPoints.ToArray();
+      var points = inPoints as Vector2<double>[] ?? inPoints.ToArray();
       
       if (points.Length == 0)
       {
          return Rect.Empty;
       }
 
-      var minimum = new Vector2(float.MaxValue);
-      var maximum = new Vector2(float.MinValue);
+      var minimum = new Vector2<double>(float.MaxValue);
+      var maximum = new Vector2<double>(float.MinValue);
 
       for (int i = 0; i < points.Length; ++i)
       {
-         Vector2.Min(ref minimum, ref points[i], out minimum);
-         Vector2.Max(ref maximum, ref points[i], out maximum);
+         minimum = Vector2<double>.Min(minimum, points[i]);
+         maximum = Vector2<double>.Max(maximum, points[i]);
       }
 
       var rect = maximum - minimum;
       return new Rect(minimum.X, minimum.Y, rect.X, rect.Y);
    }
       
-   public static Rect FromPoints(IEnumerable<Vector3> inPoints)
+   public static Rect FromPoints(IEnumerable<Vector3<double>> inPoints)
    {
       ArgumentNullException.ThrowIfNull(inPoints);
 
-      var points = inPoints as Vector3[] ?? inPoints.ToArray();
-      var minimum = new Vector3(double.MaxValue);
-      var maximum = new Vector3(double.MinValue);
+      var points = inPoints as Vector3<double>[] ?? inPoints.ToArray();
+      var minimum = new Vector3<double>(double.MaxValue);
+      var maximum = new Vector3<double>(double.MinValue);
 
       for (int i = 0; i < points.Length; ++i)
       {
-         Vector3.Min(ref minimum, ref points[i], out minimum);
-         Vector3.Max(ref maximum, ref points[i], out maximum);
+         minimum = Vector3<double>.Min(minimum, points[i]);
+         maximum = Vector3<double>.Max(maximum, points[i]);
       }
 
       var rect = maximum - minimum;

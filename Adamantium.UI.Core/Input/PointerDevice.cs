@@ -142,7 +142,7 @@ public sealed class PointerDevice
     /// <summary>What a pointer is over at <paramref name="p"/> (client units) of <paramref name="rootComponent"/>: open
     /// popups first, newest on top, then the window content - the element a press there reaches. With
     /// <paramref name="hover"/>, the element hovered instead, as <see cref="InputExtensions.HitTest"/> takes it.</summary>
-    public static IInputComponent HitTestTopmost(IInputComponent rootComponent, Vector2 p, bool boundsForContent = false,
+    public static IInputComponent HitTestTopmost(IInputComponent rootComponent, Vector2<double> p, bool boundsForContent = false,
         bool hover = false)
     {
         if (rootComponent is IWindow window)
@@ -294,14 +294,14 @@ public sealed class PointerDevice
         newOver?.RaiseEvent(new PointerEventArgs(pointer, modifiers, timestamp) { RoutedEvent = PointerEvents.DirectlyOverEnteredEvent });
     }
 
-    private IInputComponent SetPointerOver(Pointer pointer, IInputComponent root, Vector2 p, InputModifiers modifiers, uint timestamp)
+    private IInputComponent SetPointerOver(Pointer pointer, IInputComponent root, Vector2<double> p, InputModifiers modifiers, uint timestamp)
     {
         var element = HitTestTopmost(root, p, boundsForContent: true, hover: true) ?? root;
         ChangePointerOver(pointer, element, modifiers, timestamp);
         return pointer.DirectlyOver;
     }
 
-    private void Move(Pointer pointer, IInputComponent root, Vector2 p, InputModifiers modifiers, uint timestamp)
+    private void Move(Pointer pointer, IInputComponent root, Vector2<double> p, InputModifiers modifiers, uint timestamp)
     {
         Holding.StartDue(timestamp);
         if (pointer.IsManipulating)
@@ -330,7 +330,7 @@ public sealed class PointerDevice
         Manipulations.Move(pointer, modifiers, timestamp);
     }
 
-    private void Down(Pointer pointer, IInputComponent root, Vector2 p, MouseButtons button, InputModifiers modifiers, uint timestamp)
+    private void Down(Pointer pointer, IInputComponent root, Vector2<double> p, MouseButtons button, InputModifiers modifiers, uint timestamp)
     {
         Holding.StartDue(timestamp);
         var hit = pointer.Captured ?? HitTestTopmost(root, p);
@@ -374,7 +374,7 @@ public sealed class PointerDevice
         Manipulations.Down(pointer, hit, timestamp);
     }
 
-    private void Up(Pointer pointer, IInputComponent root, Vector2 p, MouseButtons button, InputModifiers modifiers, uint timestamp)
+    private void Up(Pointer pointer, IInputComponent root, Vector2<double> p, MouseButtons button, InputModifiers modifiers, uint timestamp)
     {
         Holding.StartDue(timestamp);
         if (pointer.IsManipulating)
@@ -437,7 +437,7 @@ public sealed class PointerDevice
         }
     }
 
-    private void Wheel(Pointer pointer, IInputComponent root, Vector2 p, InputModifiers modifiers, uint timestamp, int delta,
+    private void Wheel(Pointer pointer, IInputComponent root, Vector2<double> p, InputModifiers modifiers, uint timestamp, int delta,
         bool isHorizontal)
     {
         var hit = HitTestTopmost(root, p);

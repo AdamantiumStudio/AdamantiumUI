@@ -54,7 +54,7 @@ public class CanvasChromeThemeTests
         canvas.ApplyCurrentTheme();
         Adamantium.UI.Extensions.WindowExtension.UpdateTree(canvas);
         Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
-        canvas.Measure(new Size(900, 600));
+        canvas.Measure(new Size<double>(900, 600));
         canvas.Arrange(new Rect(0, 0, 900, 600));
 
         return canvas;
@@ -794,10 +794,10 @@ public class CanvasChromeThemeTests
         canvas.Mode = CanvasMode.Drawing;
 
         var window = new Window { Width = 1000, Height = 700, Content = canvas };
-        var ink = new StrokeItem(new Vector2(0, 0), Adamantium.UI.Core.Media.Brushes.White, 2);
+        var ink = new StrokeItem(new Vector2<double>(0, 0), Adamantium.UI.Core.Media.Brushes.White, 2);
 
-        ink.Add(new Vector2(0, 0));
-        ink.Add(new Vector2(40, 40));
+        ink.Add(new Vector2<double>(0, 0));
+        ink.Add(new Vector2<double>(40, 40));
 
         scene.Add(new ElementItem(new Adamantium.UI.Controls.Buttons.Button(), new Rect(0, 0, 60, 30)));
         scene.Add(ink);
@@ -892,9 +892,9 @@ public class CanvasChromeThemeTests
     {
         var canvas = Built(theme);
         var picture = new ElementItem(new Image { Width = 40, Height = 40 }, new Rect(0, 0, 40, 40));
-        var ink = new StrokeItem(new Vector2(0, 0), Adamantium.UI.Core.Media.Brushes.White, 2);
+        var ink = new StrokeItem(new Vector2<double>(0, 0), Adamantium.UI.Core.Media.Brushes.White, 2);
 
-        ink.Add(new Vector2(10, 10));
+        ink.Add(new Vector2<double>(10, 10));
 
         canvas.Scene = new CanvasScene();
         canvas.Scene.Add(picture);
@@ -942,7 +942,7 @@ public class CanvasChromeThemeTests
         canvas.Scene = new CanvasScene();
         canvas.Scene.Add(item);
         canvas.Scale = 8;
-        canvas.Offset = new Vector2(450, 300);
+        canvas.Offset = new Vector2<double>(450, 300);
         Settle(canvas);
 
         Assert.Multiple(() =>
@@ -970,7 +970,7 @@ public class CanvasChromeThemeTests
         canvas.Scene = new CanvasScene();
         canvas.Scene.Add(item);
         canvas.Scale = 0.2;
-        canvas.Offset = new Vector2(450, 300);
+        canvas.Offset = new Vector2<double>(450, 300);
         Settle(canvas);
 
         Assert.Multiple(() =>
@@ -1214,7 +1214,7 @@ public class CanvasChromeThemeTests
         var canvas = Built(theme);
         var inspector = Piece<CanvasInspector>(canvas);
 
-        canvas.Offset = new Vector2(310, 95);
+        canvas.Offset = new Vector2<double>(310, 95);
         inspector.ShowsProperties = true;
         Settle(canvas);
 
@@ -1244,7 +1244,7 @@ public class CanvasChromeThemeTests
             Assert.That(page.ValueOf(canvas, rows["Y"]), Is.EqualTo(95.0), $"{theme}: the row is not reading the camera");
         });
 
-        canvas.Offset = new Vector2(-40, 95);
+        canvas.Offset = new Vector2<double>(-40, 95);
         Settle(canvas);
 
         Assert.That(page.ValueOf(canvas, rows["X"]), Is.EqualTo(-40.0),
@@ -1273,7 +1273,7 @@ public class CanvasChromeThemeTests
         var inspector = Piece<CanvasInspector>(canvas);
 
         canvas.Scale = 3;
-        canvas.CenterOn(new Vector2(640, -220));
+        canvas.CenterOn(new Vector2<double>(640, -220));
         Settle(canvas);
         canvas.RememberView();
 
@@ -1326,7 +1326,7 @@ public class CanvasChromeThemeTests
         Assert.That(canvas.KeepsHomeFace, Is.EqualTo(Visibility.Collapsed), "it offers to give up what nobody kept");
 
         canvas.Scale = 2;
-        canvas.CenterOn(new Vector2(-900, 120));
+        canvas.CenterOn(new Vector2<double>(-900, 120));
         Settle(canvas);
         canvas.RememberView();
 
@@ -1336,7 +1336,7 @@ public class CanvasChromeThemeTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(canvas.HomeAt, Is.EqualTo(Vector2.Zero));
+            Assert.That(canvas.HomeAt, Is.EqualTo(Vector2<double>.Zero));
             Assert.That(canvas.HomeScale, Is.EqualTo(1).Within(0.001));
             Assert.That(canvas.KeepsHomeFace, Is.EqualTo(Visibility.Collapsed), "it still offers to give up nothing");
         });
@@ -1417,7 +1417,7 @@ public class CanvasChromeThemeTests
         var window = new Window { Width = 1000, Height = 700, Content = canvas };
         var box = new ShapeItem(CanvasShape.Rectangle, new Rect(0, 0, 60, 40), new SolidColorBrush(Colors.White), 2);
         var arrow = new ShapeItem(CanvasShape.Arrow, new Rect(100, 0, 120, 20), new SolidColorBrush(Colors.White), 2);
-        var stroke = new StrokeItem(new Vector2(0, 200), new SolidColorBrush(Colors.White), 2);
+        var stroke = new StrokeItem(new Vector2<double>(0, 200), new SolidColorBrush(Colors.White), 2);
 
         scene.Add(box);
         scene.Add(arrow);
@@ -1430,7 +1430,7 @@ public class CanvasChromeThemeTests
 
             for (var pass = 0; pass < 2; pass++)
             {
-                canvas.Measure(new Size(1000, 700), force: true);
+                canvas.Measure(new Size<double>(1000, 700), force: true);
                 canvas.Arrange(new Rect(0, 0, 1000, 700));
             }
 
@@ -1442,11 +1442,11 @@ public class CanvasChromeThemeTests
             {
                 if (section.Visibility == Visibility.Collapsed) continue;
 
-                var at = new Vector2(section.Bounds.X, section.Bounds.Y);
+                var at = new Vector2<double>(section.Bounds.X, section.Bounds.Y);
 
                 for (var up = ((IUIComponent)section).VisualParent; up != null && up != window; up = up.VisualParent)
                 {
-                    at = new Vector2(at.X + up.Bounds.X, at.Y + up.Bounds.Y);
+                    at = new Vector2<double>(at.X + up.Bounds.X, at.Y + up.Bounds.Y);
                 }
 
                 Assert.That(at.X, Is.GreaterThanOrEqualTo(pane.Bounds.X - 1),
@@ -1499,7 +1499,7 @@ public class CanvasChromeThemeTests
         inspector.ShowsStructure = true;
         canvas.Scene.Add(new ShapeItem(CanvasShape.Rectangle, new Rect(0, 0, 40, 40),
             Adamantium.UI.Core.Media.Brushes.White, 2));
-        canvas.Scene.Add(new TextItem(new Vector2(60, 0), "Hello", Adamantium.UI.Core.Media.Brushes.White, 12));
+        canvas.Scene.Add(new TextItem(new Vector2<double>(60, 0), "Hello", Adamantium.UI.Core.Media.Brushes.White, 12));
         Settle(canvas);
 
         var said = new List<string>();
@@ -1532,7 +1532,7 @@ public class CanvasChromeThemeTests
         question.ApplyCurrentTheme();
         Adamantium.UI.Extensions.WindowExtension.UpdateTree(question);
         Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
-        question.Measure(new Size(400, 300));
+        question.Measure(new Size<double>(400, 300));
         question.Arrange(new Rect(0, 0, 400, 300));
         return question;
     }
@@ -1587,7 +1587,7 @@ public class CanvasChromeThemeTests
     {
         Adamantium.UI.Extensions.WindowExtension.UpdateTree(canvas);
         Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
-        canvas.Measure(new Size(900, 600), force: true);
+        canvas.Measure(new Size<double>(900, 600), force: true);
         canvas.Arrange(new Rect(0, 0, 900, 600));
     }
 

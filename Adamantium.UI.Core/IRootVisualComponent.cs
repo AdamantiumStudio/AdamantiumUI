@@ -11,10 +11,10 @@ public interface IRootVisualComponent : IUIComponent
 
    /// <summary>A desktop point (physical pixels) in this surface's own LOGICAL coordinates. The one place the two
    /// units meet, and it needs this surface's scale to do it - see <see cref="PixelPoint"/>.</summary>
-   Vector2 PointToClient(PixelPoint point);
+   Vector2<double> PointToClient(PixelPoint point);
 
    /// <summary>A point of this surface's own LOGICAL coordinates as a desktop point (physical pixels).</summary>
-   PixelPoint PointToScreen(Vector2 point);
+   PixelPoint PointToScreen(Vector2<double> point);
 
    void AttachContextAndInitialize(IUIContext context);
 

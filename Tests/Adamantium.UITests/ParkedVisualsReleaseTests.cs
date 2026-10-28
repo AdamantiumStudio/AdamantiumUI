@@ -83,21 +83,21 @@ public class ParkedVisualsReleaseTests
         var template = new DataTemplate(() => new TemplateResult { RootComponent = new ParkedView() });
         var page = new object();
         var first = new ContentPresenter { ContentTemplate = template, Content = page, TemplatedParent = owner };
-        first.Measure(new Size(100, 100));
+        first.Measure(new Size<double>(100, 100));
         var view = (ParkedView)first.VisualChildren.Single();
         Assume.That(view.TemplatedParent, Is.SameAs(first));
 
         // Another page, through another template, as a gallery's pages are: one template would just re-point the view.
         first.ContentTemplate = new DataTemplate(() => new TemplateResult { RootComponent = new Border() });
         first.Content = new object();
-        first.Measure(new Size(100, 100), force: true);
+        first.Measure(new Size<double>(100, 100), force: true);
         Assume.That(view.IsAwaitingReturn, "the page left is parked");
 
         DiscardedVisuals.Publish(first);
         while (DiscardedVisuals.Drain(64) > 0) { }
 
         var second = new ContentPresenter { ContentTemplate = template, Content = page, TemplatedParent = owner };
-        second.Measure(new Size(100, 100));
+        second.Measure(new Size<double>(100, 100));
 
         Assert.Multiple(() =>
         {

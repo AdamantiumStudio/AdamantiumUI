@@ -29,7 +29,7 @@ public class ShapeMeasureTests
             EndLineCap = PenLineCap.ConvexRound
         };
 
-        line.Measure(new Size(1280, 720));
+        line.Measure(new Size<double>(1280, 720));
 
         // Painted rect = endpoints +/- half (6) for the round caps: (94,194)..(506,626).
         Assert.Multiple(() =>
@@ -51,13 +51,13 @@ public class ShapeMeasureTests
     {
         var poly = new Polygon
         {
-            Points = new PointsCollection([new Vector2(10, 10), new Vector2(110, 10), new Vector2(60, 110)]),
+            Points = new PointsCollection([new Vector2<double>(10, 10), new Vector2<double>(110, 10), new Vector2<double>(60, 110)]),
             StrokeThickness = 10,
             Stroke = Brushes.Red,
             StrokeLineJoin = PenLineJoin.Miter
         };
 
-        poly.Measure(new Size(1280, 720));
+        poly.Measure(new Size<double>(1280, 720));
 
         // bbox bottom = 110; a flat +half would give 115. The sharp tip's miter spike pushes to ~121.
         var bottom = poly.RenderBounds.Y + poly.RenderBounds.Height;
@@ -74,14 +74,14 @@ public class ShapeMeasureTests
             Data = new CombinedGeometry
             {
                 GeometryCombineMode = GeometryCombineMode.Xor,
-                Geometry1 = new EllipseGeometry(new Vector2(75, 75), 40, 40),
-                Geometry2 = new EllipseGeometry(new Vector2(125, 75), 40, 40)
+                Geometry1 = new EllipseGeometry(new Vector2<double>(75, 75), 40, 40),
+                Geometry2 = new EllipseGeometry(new Vector2<double>(125, 75), 40, 40)
             },
             StrokeThickness = 5,
             Stroke = Brushes.Red
         };
 
-        path.Measure(new Size(1280, 720));
+        path.Measure(new Size<double>(1280, 720));
 
         Assert.Multiple(() =>
         {

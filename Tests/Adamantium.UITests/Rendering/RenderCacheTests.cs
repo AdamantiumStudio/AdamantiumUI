@@ -256,7 +256,7 @@ public class RenderCacheTests
         var cp = new ContentPresenter { Content = new object(), ContentTemplate = template };
         _root.Add(cp);
         // Measure/arrange runs the ContentPresenter's BuildCurrent -> builds + attaches the template content.
-        cp.Measure(new Size(400, 400));
+        cp.Measure(new Size<double>(400, 400));
         cp.Arrange(new Rect(0, 0, 400, 400));
 
         Assert.That(border, Is.Not.Null, "the template built its Border");
@@ -264,7 +264,7 @@ public class RenderCacheTests
         // A unit is created even for a ZERO-size rect, so the real question is whether the dynamically-built content got
         // ARRANGED (RenderSize is set by Arrange). If arrange doesn't reach content built during the measure pass, the
         // Border stays 0x0 and draws nothing - while TextBlocks still show via their own raster path.
-        Assert.That(border.RenderSize, Is.EqualTo(new Size(56, 34)), "the Border was ARRANGED to its own size (not left 0x0)");
+        Assert.That(border.RenderSize, Is.EqualTo(new Size<double>(56, 34)), "the Border was ARRANGED to its own size (not left 0x0)");
 
         RenderFrame();
         Assert.That(_factory.Created.Select(u => u.Component), Does.Contain(border),
@@ -286,7 +286,7 @@ public class RenderCacheTests
         };
         _root.Add(b);
 
-        b.Measure(new Size(100, 100));
+        b.Measure(new Size<double>(100, 100));
         b.Arrange(new Rect(0, 0, 20, 20));
         RenderFrame();
         var unit = _factory.Created.Single();          // the Border's fill unit
@@ -537,19 +537,19 @@ public class RenderCacheTests
     public void ResizedButNotReRecorded_Component_IsDrawnAtItsNewSize()
     {
         var c = AddControl(); DrawsRectangle(c);
-        c.RenderSize = new Size(50, 50);
+        c.RenderSize = new Size<double>(50, 50);
         RenderFrame();
-        Assert.That(_cache.AppliedSnapshot[c].RenderSize, Is.EqualTo(new Size(50, 50)));
+        Assert.That(_cache.AppliedSnapshot[c].RenderSize, Is.EqualTo(new Size<double>(50, 50)));
 
         // The cell grew: the tile is arranged bigger, but its CONTENT is unchanged - so it is never re-rendered.
         var rendersBefore = c.OnRenderCount;
-        c.RenderSize = new Size(90, 90);
+        c.RenderSize = new Size<double>(90, 90);
         RenderFrame();
 
         Assert.Multiple(() =>
         {
             Assert.That(c.OnRenderCount, Is.EqualTo(rendersBefore), "a pure resize does not re-record the content");
-            Assert.That(_cache.AppliedSnapshot[c].RenderSize, Is.EqualTo(new Size(90, 90)),
+            Assert.That(_cache.AppliedSnapshot[c].RenderSize, Is.EqualTo(new Size<double>(90, 90)),
                 "...but the draw side MUST see the new size - otherwise it paints the tile at its old one");
         });
     }
@@ -723,7 +723,7 @@ public class RenderCacheTests
         var host = AddControl();
         var card = new TestControl(); DrawsRectangle(card, Brushes.Blue);
         host.Add(card);
-        host.RenderClones = new[] { Matrix4x4F.Identity, Matrix4x4F.Translation(20, 0, 0) };
+        host.RenderClones = new[] { Matrix4x4F.Identity, Matrix4x4.CreateTranslation<float>(20, 0, 0) };
         var z = AddControl(); DrawsRectangle(z);
         RenderFrame();
 
@@ -842,7 +842,7 @@ public class RenderCacheTests
         var host = AddControl();
         var card = new TestControl(); DrawsRectangle(card, Brushes.Blue);
         host.Add(card);
-        host.RenderClones = new[] { Matrix4x4F.Identity, Matrix4x4F.Translation(20, 0, 0) };
+        host.RenderClones = new[] { Matrix4x4F.Identity, Matrix4x4.CreateTranslation<float>(20, 0, 0) };
         var z = AddControl(); DrawsRectangle(z);
         RenderFrame();
 

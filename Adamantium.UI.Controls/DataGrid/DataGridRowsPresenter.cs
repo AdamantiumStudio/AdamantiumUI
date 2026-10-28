@@ -15,7 +15,7 @@ public class DataGridRowsPresenter : StackPanel
     protected override IReadOnlyList<(int Index, double Extra)> ItemExtentExceptions =>
         Grid()?.RowExtentExceptions;
 
-    protected override Size MeasureVirtualized(Size availableSize, Vector2 offset)
+    protected override Size<double> MeasureVirtualized(Size<double> availableSize, Vector2<double> offset)
     {
         var extent = base.MeasureVirtualized(availableSize, offset);
         var width = Grid()?.ColumnsWidth ?? 0;
@@ -24,13 +24,13 @@ public class DataGridRowsPresenter : StackPanel
         // Wider than the view means a horizontal scrollbar, and the bar is drawn OVER the content: without a tail of
         // blank the last row is permanently half-covered by it - and with a placeholder at the bottom, that is the row
         // the table most needs reachable.
-        return new Size(width, extent.Height + Math.Max(0, Grid()?.EndPadding ?? 0));
+        return new Size<double>(width, extent.Height + Math.Max(0, Grid()?.EndPadding ?? 0));
     }
 
-    protected override void ArrangeVirtualized(Size finalSize, Vector2 offset)
+    protected override void ArrangeVirtualized(Size<double> finalSize, Vector2<double> offset)
     {
         var width = Grid()?.ColumnsWidth ?? 0;
-        base.ArrangeVirtualized(width > finalSize.Width ? new Size(width, finalSize.Height) : finalSize, offset);
+        base.ArrangeVirtualized(width > finalSize.Width ? new Size<double>(width, finalSize.Height) : finalSize, offset);
     }
 
     private TreeDataGrid Grid() => Owner as TreeDataGrid;

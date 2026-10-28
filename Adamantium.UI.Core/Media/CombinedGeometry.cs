@@ -291,7 +291,7 @@ public class CombinedGeometry : Geometry
 
             if (Mesh.Contours.Count == 0)
             {
-                Mesh.SetPoints(new List<Vector3>());
+                Mesh.SetPoints(new List<Vector3<double>>());
                 return;
             }
 
@@ -348,7 +348,7 @@ public class CombinedGeometry : Geometry
             var currentPoint = startSegment.SegmentEnds[0];
             var currentSegment = startSegment;
 
-            var intersectionsList = new Dictionary<Vector2, GeometryIntersection>();
+            var intersectionsList = new Dictionary<Vector2<double>, GeometryIntersection>();
 
             do
             {
@@ -402,7 +402,7 @@ public class CombinedGeometry : Geometry
     // boolean pipeline) for open operands, missing meshes, or any actual crossing/touch between rings.
     private bool TryFastCombine(GeometryType geometryType)
     {
-        var rings = new List<(Vector2[] pts, int src)>();
+        var rings = new List<(Vector2<double>[] pts, int src)>();
         if (!CollectRings(Geometry1, 1, rings)) return false;
         if (!CollectRings(Geometry2, 2, rings)) return false;
         if (rings.Count == 0) return false;
@@ -412,7 +412,7 @@ public class CombinedGeometry : Geometry
         // Keep a ring iff mode-membership differs just inside it vs just outside it (it bounds the result). Containment
         // parity per geometry comes from how many of the OTHER rings contain a vertex of this ring (non-crossing makes
         // that unambiguous); "just inside" additionally counts the ring itself.
-        var kept = new List<Vector2[]>();
+        var kept = new List<Vector2<double>[]>();
         for (var i = 0; i < rings.Count; i++)
         {
             int out1 = 0, out2 = 0;
@@ -434,7 +434,7 @@ public class CombinedGeometry : Geometry
 
         if (kept.Count == 0)
         {
-            Mesh.SetPoints(new List<Vector3>());
+            Mesh.SetPoints(new List<Vector3<double>>());
             return true;
         }
 
@@ -455,7 +455,7 @@ public class CombinedGeometry : Geometry
 
     // Closed, simple rings (>= 3 points) of an operand. False for a null/open operand or a degenerate contour, so the
     // caller drops to the full pipeline. A null operand contributes nothing (returns true with no rings added).
-    private static bool CollectRings(Geometry g, int src, List<(Vector2[] pts, int src)> rings)
+    private static bool CollectRings(Geometry g, int src, List<(Vector2<double>[] pts, int src)> rings)
     {
         if (g == null) return true;
         if (g is not { IsClosed: true } || g.Mesh == null) return false;
@@ -469,15 +469,15 @@ public class CombinedGeometry : Geometry
 
     // True if any two non-adjacent edges (within or across rings) cross or touch. X-sweep broad-phase (~O(n log n) for
     // clean input). A shared vertex between adjacent edges of the same ring is fine; any other contact -> not clean.
-    private static bool AnyRingsCross(List<(Vector2[] pts, int src)> rings)
+    private static bool AnyRingsCross(List<(Vector2<double>[] pts, int src)> rings)
     {
-        var edges = new List<(Vector2 a, Vector2 b)>();
+        var edges = new List<(Vector2<double> a, Vector2<double> b)>();
         foreach (var (pts, _) in rings)
             for (var i = 0; i < pts.Length; i++)
                 edges.Add((pts[i], pts[(i + 1) % pts.Length]));
         edges.Sort((e, f) => Math.Min(e.a.X, e.b.X).CompareTo(Math.Min(f.a.X, f.b.X)));
 
-        var active = new List<(Vector2 a, Vector2 b)>();
+        var active = new List<(Vector2<double> a, Vector2<double> b)>();
         foreach (var e in edges)
         {
             var minX = Math.Min(e.a.X, e.b.X);
@@ -494,7 +494,7 @@ public class CombinedGeometry : Geometry
         return false;
     }
 
-    private static bool SegmentsIntersect(Vector2 p1, Vector2 p2, Vector2 p3, Vector2 p4)
+    private static bool SegmentsIntersect(Vector2<double> p1, Vector2<double> p2, Vector2<double> p3, Vector2<double> p4)
     {
         int o1 = Orient(p1, p2, p3), o2 = Orient(p1, p2, p4), o3 = Orient(p3, p4, p1), o4 = Orient(p3, p4, p2);
         if (o1 != o2 && o3 != o4) return true;
@@ -505,17 +505,17 @@ public class CombinedGeometry : Geometry
         return false;
     }
 
-    private static int Orient(Vector2 a, Vector2 b, Vector2 c)
+    private static int Orient(Vector2<double> a, Vector2<double> b, Vector2<double> c)
     {
         var v = (b.X - a.X) * (c.Y - a.Y) - (b.Y - a.Y) * (c.X - a.X);
         return v > 1e-9 ? 1 : (v < -1e-9 ? -1 : 0);
     }
 
-    private static bool OnSegment(Vector2 a, Vector2 b, Vector2 p) =>
+    private static bool OnSegment(Vector2<double> a, Vector2<double> b, Vector2<double> p) =>
         Math.Min(a.X, b.X) - 1e-9 <= p.X && p.X <= Math.Max(a.X, b.X) + 1e-9 &&
         Math.Min(a.Y, b.Y) - 1e-9 <= p.Y && p.Y <= Math.Max(a.Y, b.Y) + 1e-9;
 
-    private static bool PointInPolygon(Vector2 p, Vector2[] poly)
+    private static bool PointInPolygon(Vector2<double> p, Vector2<double>[] poly)
     {
         var inside = false;
         for (int i = 0, j = poly.Length - 1; i < poly.Length; j = i++)

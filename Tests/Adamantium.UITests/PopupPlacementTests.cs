@@ -36,7 +36,7 @@ public class PopupPlacementTests
         }
 
         popup.IsOpen = true;
-        window.PopupLayer.UpdateLayout(new Size(windowWidth, 600));
+        window.PopupLayer.UpdateLayout(new Size<double>(windowWidth, 600));
         return card;
     }
 
@@ -136,7 +136,7 @@ public class PopupPlacementTests
         }
 
         popup.IsOpen = true;
-        window.PopupLayer.UpdateLayout(new Size(800, 600));
+        window.PopupLayer.UpdateLayout(new Size<double>(800, 600));
         return card;
     }
 
@@ -179,7 +179,7 @@ public class PopupPlacementTests
         innerPopup.IsOpen = true;
         for (var i = 0; i < 3; i++)
         {
-            window.PopupLayer.UpdateLayout(new Size(400, 600));
+            window.PopupLayer.UpdateLayout(new Size<double>(400, 600));
         }
 
         Assert.Multiple(() =>
@@ -202,7 +202,7 @@ public class PopupPlacementTests
         }
 
         popup.IsOpen = true;
-        window.PopupLayer.UpdateLayout(new Size(windowWidth, 600));
+        window.PopupLayer.UpdateLayout(new Size<double>(windowWidth, 600));
         return window;
     }
 
@@ -240,7 +240,7 @@ public class PopupPlacementTests
         }
 
         popup.IsOpen = true;
-        window.PopupLayer.UpdateLayout(new Size(800, windowHeight));
+        window.PopupLayer.UpdateLayout(new Size<double>(800, windowHeight));
         return (card, window);
     }
 
@@ -271,7 +271,7 @@ public class PopupPlacementTests
     {
         var (card, window) = OpenedTall(new Popup { StaysBesideTarget = true }, 600);
 
-        window.PopupLayer.UpdateLayout(new Size(800, 400));
+        window.PopupLayer.UpdateLayout(new Size<double>(800, 400));
 
         Assert.Multiple(() =>
         {

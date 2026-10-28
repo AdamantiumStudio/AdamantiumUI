@@ -10,7 +10,7 @@ namespace Adamantium.UI.Controls;
 internal sealed class TouchTap
 {
     private Pointer _pointer;
-    private Vector2 _from;
+    private Vector2<double> _from;
     private IInputComponent _measuredIn;
 
     /// <summary>Starts waiting when the press is a finger's; false for the mouse and the pen, which act on the press.</summary>

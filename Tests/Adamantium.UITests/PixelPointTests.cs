@@ -15,7 +15,7 @@ public class PixelPointTests
     [Test]
     public void ACrossingUsesTheSCALE_PerAxis()
     {
-        var scale = new Vector2(1.5f, 2f);   // anisotropic on purpose: one number would hide an axis swap
+        var scale = new Vector2<double>(1.5f, 2f);   // anisotropic on purpose: one number would hide an axis swap
 
         var logical = new PixelPoint(300, 400).ToLogical(scale);
 
@@ -32,7 +32,7 @@ public class PixelPointTests
     [Test]
     public void ThereAndBack_IsTheSamePoint()
     {
-        var scale = new Vector2(1.25f, 1.75f);
+        var scale = new Vector2<double>(1.25f, 1.75f);
         var start = new PixelPoint(640, 480);
 
         var back = PixelPoint.FromLogical(start.ToLogical(scale), scale);
@@ -65,8 +65,8 @@ public class PixelPointTests
     public void HoldingAWindowByItsCaption_LandsUnderTheCursorAtAnyScale()
     {
         var cursor = new PixelPoint(1000, 700);
-        var scale = new Vector2(1.5f, 1.5f);
-        var grab = PixelPoint.FromLogical(new Vector2(320, 16), scale);   // half of a 640-wide window, half its caption
+        var scale = new Vector2<double>(1.5f, 1.5f);
+        var grab = PixelPoint.FromLogical(new Vector2<double>(320, 16), scale);   // half of a 640-wide window, half its caption
 
         var position = cursor - grab;
 

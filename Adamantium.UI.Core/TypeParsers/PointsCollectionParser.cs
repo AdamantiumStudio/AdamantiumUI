@@ -26,7 +26,7 @@ public class PointsCollectionParser : ITypeParser<PointsCollection>
             .ToArray();
 
         for (var i = 0; i + 1 < numbers.Length; i += 2)
-            points.Add(new Vector2(numbers[i], numbers[i + 1]));
+            points.Add(new Vector2<double>(numbers[i], numbers[i + 1]));
 
         return points;
     }

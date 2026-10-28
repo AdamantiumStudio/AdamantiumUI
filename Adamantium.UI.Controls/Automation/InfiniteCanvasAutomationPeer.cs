@@ -41,12 +41,12 @@ public class InfiniteCanvasAutomationPeer : PaneAutomationPeer, ITransformProvid
 
     public void Resize(double width, double height) => throw new InvalidOperationException("A canvas is not resized.");
 
-    public void Pan(double dx, double dy) => _canvas.PanBy(new Vector2(dx, dy));
+    public void Pan(double dx, double dy) => _canvas.PanBy(new Vector2<double>(dx, dy));
 
     public void Zoom(double percent)
     {
         var room = _canvas.UsableBounds;
-        _canvas.SetScaleAt(new Vector2(room.X + room.Width / 2, room.Y + room.Height / 2), percent / 100);
+        _canvas.SetScaleAt(new Vector2<double>(room.X + room.Width / 2, room.Y + room.Height / 2), percent / 100);
     }
 
     /// <summary>The selected controls; ink and shapes, which are not elements, have no peer to stand in it.</summary>

@@ -8,14 +8,14 @@ namespace Adamantium.UI.Controls;
 /// tapping. The theme draws it; it stands centered on the contact, as big as its template comes out.</summary>
 public class HoldIndicator : Adorner
 {
-    public HoldIndicator(IUIComponent root, Vector2 center) : base(root)
+    public HoldIndicator(IUIComponent root, Vector2<double> center) : base(root)
     {
         Center = center;
     }
 
     /// <summary>Where the contact is, in the adorned root's own space.</summary>
-    public Vector2 Center { get; }
+    public Vector2<double> Center { get; }
 
-    public override Rect PlaceIn(Size desired) =>
+    public override Rect PlaceIn(Size<double> desired) =>
         new(Center.X - desired.Width / 2, Center.Y - desired.Height / 2, desired.Width, desired.Height);
 }

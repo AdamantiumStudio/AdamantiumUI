@@ -11,22 +11,22 @@ public abstract class BezierCurveBase : CurveBase
     }
 
     public static readonly AdamantiumProperty StartPointProperty =
-        AdamantiumProperty.Register(nameof(StartPoint), typeof(Vector2), typeof(BezierCurveBase),
-            new PropertyMetadata(Vector2.Zero, PropertyMetadataOptions.AffectsMeasure));
+        AdamantiumProperty.Register(nameof(StartPoint), typeof(Vector2<double>), typeof(BezierCurveBase),
+            new PropertyMetadata(Vector2<double>.Zero, PropertyMetadataOptions.AffectsMeasure));
     
     public static readonly AdamantiumProperty EndPointProperty =
-        AdamantiumProperty.Register(nameof(EndPoint), typeof(Vector2), typeof(BezierCurveBase),
-            new PropertyMetadata(Vector2.Zero, PropertyMetadataOptions.AffectsMeasure));
+        AdamantiumProperty.Register(nameof(EndPoint), typeof(Vector2<double>), typeof(BezierCurveBase),
+            new PropertyMetadata(Vector2<double>.Zero, PropertyMetadataOptions.AffectsMeasure));
     
-    public Vector2 StartPoint
+    public Vector2<double> StartPoint
     {
-        get => GetValue<Vector2>(StartPointProperty); 
+        get => GetValue<Vector2<double>>(StartPointProperty); 
         set => SetValue(StartPointProperty, value);
     }
     
-    public Vector2 EndPoint
+    public Vector2<double> EndPoint
     {
-        get => GetValue<Vector2>(EndPointProperty); 
+        get => GetValue<Vector2<double>>(EndPointProperty); 
         set => SetValue(EndPointProperty, value);
     }
 }

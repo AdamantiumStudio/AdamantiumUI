@@ -58,7 +58,7 @@ public class PanelRenderTests
             // so a panel child has NO VisualParent -> reports detached -> its render units get freed each frame -> blank.
             Assert.That(grid.VisualParent, Is.SameAs(stack), "grid's VisualParent is the StackPanel");
             Assert.That(innerBorder.VisualParent, Is.SameAs(grid), "innerBorder's VisualParent is the Grid");
-            Assert.That(innerBorder.RenderSize, Is.EqualTo(new Size(56, 34)), "innerBorder arranged to its own size");
+            Assert.That(innerBorder.RenderSize, Is.EqualTo(new Size<double>(56, 34)), "innerBorder arranged to its own size");
         });
     }
 
@@ -84,7 +84,7 @@ public class PanelRenderTests
         {
             Assert.That(innerBorder, Is.Not.Null, "the panel's Border exists in the hosted tree");
             Assert.That(innerBorder?.Visibility, Is.EqualTo(Visibility.Visible), "border visible");
-            Assert.That(innerBorder?.RenderSize, Is.EqualTo(new Size(56, 34)), "border arranged to its own size");
+            Assert.That(innerBorder?.RenderSize, Is.EqualTo(new Size<double>(56, 34)), "border arranged to its own size");
         });
     }
 }

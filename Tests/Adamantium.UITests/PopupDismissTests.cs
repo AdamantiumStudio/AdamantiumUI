@@ -97,7 +97,7 @@ public class PopupDismissTests
         var window = new Window { Width = 400, Height = 300, Content = host };
         Settle(window);
         menu.IsOpen = true;
-        window.PopupLayer.UpdateLayout(new Size(400, 300));
+        window.PopupLayer.UpdateLayout(new Size<double>(400, 300));
         Settle(window);
         return (menu, first, second, row, window);
     }

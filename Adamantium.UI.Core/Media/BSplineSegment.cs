@@ -10,20 +10,18 @@ public class BSplineSegment : PolylineSegment
         
     }
 
-    public BSplineSegment(IEnumerable<Vector2> points, bool isStroked)
+    public BSplineSegment(IEnumerable<Vector2<double>> points, bool isStroked)
     {
         Points = new PointsCollection(points);
         IsStroked = isStroked;
     }
     
-    internal override Vector2[] ProcessSegment(Vector2 currentPoint)
+    internal override Vector2<double>[] ProcessSegment(Vector2<double> currentPoint)
     {
-        var points = new PointsCollection { currentPoint };
-        points.AddRange(Points);
-        // Dense base, then EVEN arc-length resample (~3px) - smooth stroke, no sub-pixel bunching.
-        var fine = MathHelper.GetBSpline2(points, 256);
-        var count = System.Math.Clamp((int)(MathHelper.PolylineLength(fine) / 3.0), 8, 256);
-        return MathHelper.ResampleByArcLength(fine, count);
+        Vector2<double>[] controls = [currentPoint, .. Points];
+        var dense = new List<Vector2<double>>();
+        MathHelper.Curves.AppendQuadraticBSpline<double>(controls, 256, dense);
+        return ResampledEvenly(dense);
     }
     
     protected double CalculatePointsLength(PointsCollection points)

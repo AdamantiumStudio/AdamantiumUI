@@ -14,7 +14,7 @@ public class CanvasTransformTests
     private static InfiniteCanvas Sized(double width = 400, double height = 300)
     {
         var canvas = new InfiniteCanvas();
-        canvas.Measure(new Size(width, height), force: true);
+        canvas.Measure(new Size<double>(width, height), force: true);
         canvas.Arrange(new Rect(0, 0, width, height));
 
         return canvas;
@@ -29,12 +29,12 @@ public class CanvasTransformTests
     public void ATransformThatSaysNothingChangesNothing()
     {
         var none = CanvasTransform.None;
-        var point = new Vector2(7, -3);
+        var point = new Vector2<double>(7, -3);
 
         Assert.Multiple(() =>
         {
             Assert.That(none.IsSomething, Is.False);
-            Assert.That(none.Apply(point, Vector2.Zero), Is.EqualTo(point));
+            Assert.That(none.Apply(point, Vector2<double>.Zero), Is.EqualTo(point));
         });
     }
 
@@ -42,7 +42,7 @@ public class CanvasTransformTests
     [Test]
     public void AQuarterTurnGoesClockwise()
     {
-        var turned = new CanvasTransform(90).Apply(new Vector2(1, 0), Vector2.Zero);
+        var turned = new CanvasTransform(90).Apply(new Vector2<double>(1, 0), Vector2<double>.Zero);
 
         Assert.Multiple(() =>
         {
@@ -55,7 +55,7 @@ public class CanvasTransformTests
     [Test]
     public void TheMiddleOfATurnStaysStill()
     {
-        var about = new Vector2(120, -80);
+        var about = new Vector2<double>(120, -80);
 
         Assert.That(new CanvasTransform(37, 12, -4).Apply(about, about), Is.EqualTo(about));
     }
@@ -69,8 +69,8 @@ public class CanvasTransformTests
     public void UndoTakesAPointBackExactly(double angle, double skewX, double skewY)
     {
         var transform = new CanvasTransform(angle, skewX, skewY);
-        var about = new Vector2(5, -9);
-        var point = new Vector2(41, 17);
+        var about = new Vector2<double>(5, -9);
+        var point = new Vector2<double>(41, 17);
 
         var there = transform.Apply(point, about);
         var back = transform.Undo(there, about);
@@ -103,14 +103,14 @@ public class CanvasTransformTests
         var shape = new ShapeItem(CanvasShape.Rectangle, new Rect(-50, -10, 100, 20), Brushes.White, 1,
             new SolidColorBrush(Colors.White));
 
-        Assert.That(shape.HitTest(new Vector2(40, 0), 0.5), Is.True, "along the long side, before the turn");
+        Assert.That(shape.HitTest(new Vector2<double>(40, 0), 0.5), Is.True, "along the long side, before the turn");
 
         shape.Angle = 90;
 
         Assert.Multiple(() =>
         {
-            Assert.That(shape.HitTest(new Vector2(40, 0), 0.5), Is.False, "the shape has turned away from it");
-            Assert.That(shape.HitTest(new Vector2(0, 40), 0.5), Is.True, "and towards this");
+            Assert.That(shape.HitTest(new Vector2<double>(40, 0), 0.5), Is.False, "the shape has turned away from it");
+            Assert.That(shape.HitTest(new Vector2<double>(0, 40), 0.5), Is.True, "and towards this");
         });
     }
 
@@ -144,7 +144,7 @@ public class CanvasTransformTests
 
         // The top-left corner of the unturned box, turned a quarter clockwise about the middle, lands where the
         // top-right was.
-        var corner = canvas.WorldToScreen(new Vector2(25, -50));
+        var corner = canvas.WorldToScreen(new Vector2<double>(25, -50));
 
         Assert.That(canvas.HandleAt(corner), Is.EqualTo(CanvasHandle.TopLeft));
     }
@@ -191,17 +191,17 @@ public class CanvasTransformTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(canvas.HandleAt(new Vector2(frame.X, frame.Y)), Is.EqualTo(CanvasHandle.TopLeft));
-            Assert.That(canvas.HandleAt(new Vector2(frame.X + frame.Width, frame.Y + frame.Height)),
+            Assert.That(canvas.HandleAt(new Vector2<double>(frame.X, frame.Y)), Is.EqualTo(CanvasHandle.TopLeft));
+            Assert.That(canvas.HandleAt(new Vector2<double>(frame.X + frame.Width, frame.Y + frame.Height)),
                 Is.EqualTo(CanvasHandle.BottomRight));
         });
     }
 
-    private static Vector2 Through(Matrix4x4F matrix, Vector2 point)
+    private static Vector2<double> Through(Matrix4x4F matrix, Vector2<double> point)
     {
         var moved = Vector3F.TransformCoordinate(new Vector3F((float)point.X, (float)point.Y, 0), matrix);
 
-        return new Vector2(moved.X, moved.Y);
+        return new Vector2<double>(moved.X, moved.Y);
     }
 
     // THE MATRIX THE PIXELS GO THROUGH IS THIS SAME TRANSFORM. A shape is drawn by a matrix and reasoned about point by
@@ -215,13 +215,13 @@ public class CanvasTransformTests
     [TestCase(-45d, 10d, 7d)]
     public void TheMatrixAgreesWithThePointByPoint(double angle, double skewX, double skewY)
     {
-        var about = new Vector2(100, 60);
+        var about = new Vector2<double>(100, 60);
         var turn = new CanvasTransform(angle, skewX, skewY);
         var matrix = turn.Matrix(about);
 
         foreach (var corner in new[]
                  {
-                     new Vector2(40, 20), new Vector2(160, 20), new Vector2(160, 100), new Vector2(40, 100)
+                     new Vector2<double>(40, 20), new Vector2<double>(160, 20), new Vector2<double>(160, 100), new Vector2<double>(40, 100)
                  })
         {
             var expected = turn.Apply(corner, about);
@@ -243,12 +243,12 @@ public class CanvasTransformTests
     public void TheEngineSTransformLeansTheSameWay()
     {
         var turn = new CanvasTransform(0, 19.1665, 40.8334);
-        var ours = turn.Matrix(Vector2.Zero);
+        var ours = turn.Matrix(Vector2<double>.Zero);
 
         var theirs = new Transform { SkewX = turn.SkewX, SkewY = turn.SkewY };
 
-        var point = new Vector2(150, 30);
-        var expected = Through((Matrix4x4F)theirs.Matrix, point);
+        var point = new Vector2<double>(150, 30);
+        var expected = Through(theirs.Matrix.As<float>(), point);
         var actual = Through(ours, point);
 
         Assert.Multiple(() =>

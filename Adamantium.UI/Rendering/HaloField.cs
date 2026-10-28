@@ -20,7 +20,7 @@ internal static class HaloField
 
     /// <summary>Bake the field as one byte per texel: 0.5 is exactly on the outline, below it inside, above it outside.
     /// <paramref name="pad"/> comes back in LOCAL units - the shader needs it to turn a sample back into a distance.</summary>
-    public static byte[] Bake(List<(Vector2[] Points, bool IsClosed)> loops, Rect bounds, out double pad)
+    public static byte[] Bake(List<(Vector2<double>[] Points, bool IsClosed)> loops, Rect bounds, out double pad)
     {
         pad = Math.Max(bounds.Width, bounds.Height) * PadFraction;
         if (pad <= 0) pad = 1;
@@ -55,7 +55,7 @@ internal static class HaloField
 
     // Distance to the nearest boundary segment, signed by whether the point is inside. Brute force over every segment:
     // this runs ONCE per distinct shape, and a shape with enough segments for it to matter is rare in a UI.
-    private static double SignedDistance(List<(Vector2[] Points, bool IsClosed)> loops, double px, double py)
+    private static double SignedDistance(List<(Vector2<double>[] Points, bool IsClosed)> loops, double px, double py)
     {
         var best = double.MaxValue;
         var inside = false;

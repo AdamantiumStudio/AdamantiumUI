@@ -36,9 +36,9 @@ internal sealed class WaylandTablet
         private ZwpTabletToolV2.Type type;
         private WaylandWindowWorker worker;
         private uint pointerId;
-        private Vector2 position;
+        private Vector2<double> position;
         private float pressure = PointerPointProperties.DefaultPressure;
-        private Vector2 tilt;
+        private Vector2<double> tilt;
         private float twist;
         private bool inContact;
         private bool barrel;
@@ -68,11 +68,11 @@ internal sealed class WaylandTablet
             };
             proxy.Motion += (x, y) =>
             {
-                position = new Vector2(x, y);
+                position = new Vector2<double>(x, y);
                 moved = true;
             };
             proxy.Pressure += value => pressure = value / FullPressure;
-            proxy.Tilt += (x, y) => tilt = new Vector2(x, y);
+            proxy.Tilt += (x, y) => tilt = new Vector2<double>(x, y);
             proxy.Rotation += degrees => twist = (float)degrees;
             proxy.Button += OnButton;
             proxy.Frame += OnFrame;

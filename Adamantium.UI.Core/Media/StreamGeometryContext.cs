@@ -10,7 +10,7 @@ public class StreamGeometryContext : IFigureSegments
     private List<MeshContour> contours = new List<MeshContour>();
     private bool isProcessed;
 
-    public IFigureSegments BeginFigure(Vector2 startPoint, bool isFilled, bool isClosed)
+    public IFigureSegments BeginFigure(Vector2<double> startPoint, bool isFilled, bool isClosed)
     {
         figure = new PathFigure();
         figure.StartPoint = startPoint;
@@ -27,7 +27,7 @@ public class StreamGeometryContext : IFigureSegments
         return this;
     }
 
-    IFigureSegments IFigureSegments.LineTo(Vector2 point, bool isStroked)
+    IFigureSegments IFigureSegments.LineTo(Vector2<double> point, bool isStroked)
     {
         figure.Segments.Add(new LineSegment(point, isStroked));
         return this;
@@ -35,54 +35,54 @@ public class StreamGeometryContext : IFigureSegments
 
     IFigureSegments IFigureSegments.LineTo(double x, double y, bool isStroked)
     {
-        figure.Segments.Add(new LineSegment(new Vector2(x, y), isStroked));
+        figure.Segments.Add(new LineSegment(new Vector2<double>(x, y), isStroked));
         return this;
     }
 
-    IFigureSegments IFigureSegments.PolylineLineTo(IEnumerable<Vector2> points, bool isStroked)
+    IFigureSegments IFigureSegments.PolylineLineTo(IEnumerable<Vector2<double>> points, bool isStroked)
     {
         figure.Segments.Add(new PolylineSegment(points, isStroked));
         return this;
     }
 
-    IFigureSegments IFigureSegments.ArcTo(Vector2 point, Size size, double rotationAngle, bool isLargeArc, SweepDirection sweepDirection,
+    IFigureSegments IFigureSegments.ArcTo(Vector2<double> point, Size<double> size, double rotationAngle, bool isLargeArc, SweepDirection sweepDirection,
         bool isStroked)
     {
         figure.Segments.Add(new ArcSegment(point, size, rotationAngle, isLargeArc, sweepDirection, isStroked));
         return this;
     }
 
-    IFigureSegments IFigureSegments.QuadraticBezierTo(Vector2 controlPoint, Vector2 point, bool isStroked)
+    IFigureSegments IFigureSegments.QuadraticBezierTo(Vector2<double> controlPoint, Vector2<double> point, bool isStroked)
     {
         figure.Segments.Add(new QuadraticBezierSegment(controlPoint, point, isStroked));
         return this;
     }
 
-    IFigureSegments IFigureSegments.CubicBezierTo(Vector2 controlPoint1, Vector2 controlPoint2, Vector2 point, bool isStroked)
+    IFigureSegments IFigureSegments.CubicBezierTo(Vector2<double> controlPoint1, Vector2<double> controlPoint2, Vector2<double> point, bool isStroked)
     {
         figure.Segments.Add(new CubicBezierSegment(controlPoint1, controlPoint2, point, isStroked));
         return this;
     }
 
-    IFigureSegments IFigureSegments.PolyQuadraticBezierTo(IEnumerable<Vector2> points, bool isStroked)
+    IFigureSegments IFigureSegments.PolyQuadraticBezierTo(IEnumerable<Vector2<double>> points, bool isStroked)
     {
         figure.Segments.Add(new PolyQuadraticBezierSegment(points, isStroked));
         return this;
     }
 
-    IFigureSegments IFigureSegments.PolyCubicBezierTo(IEnumerable<Vector2> points, bool isStroked)
+    IFigureSegments IFigureSegments.PolyCubicBezierTo(IEnumerable<Vector2<double>> points, bool isStroked)
     {
         figure.Segments.Add(new PolyCubicBezierSegment(points, isStroked));
         return this;
     }
 
-    IFigureSegments IFigureSegments.BSplineTo(IEnumerable<Vector2> points, bool isStroked)
+    IFigureSegments IFigureSegments.BSplineTo(IEnumerable<Vector2<double>> points, bool isStroked)
     {
         figure.Segments.Add(new BSplineSegment(points, isStroked));
         return this;
     }
 
-    IFigureSegments IFigureSegments.NurbsTo(IEnumerable<Vector2> points, bool isUniform, bool useCustomDegree, int degree, bool isStroked)
+    IFigureSegments IFigureSegments.NurbsTo(IEnumerable<Vector2<double>> points, bool isUniform, bool useCustomDegree, int degree, bool isStroked)
     {
         figure.Segments.Add(new NurbsSegment(points, isUniform, useCustomDegree, degree, isStroked));
         return this;

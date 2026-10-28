@@ -14,7 +14,7 @@ public class CheckBox : ToggleButton
 {
     // A check box can't stretch: its box + glyph + label are a fixed visual. It reports the size it actually draws (not
     // the slot it was handed) so ActualWidth/RenderSize/ClipRectangle stop lying - see ContentControl.ArrangeContentSize.
-    protected override Size ArrangeOverride(Size finalSize) => ArrangeContentSize(finalSize);
+    protected override Size<double> ArrangeOverride(Size<double> finalSize) => ArrangeContentSize(finalSize);
 
     protected override AutomationPeer OnCreateAutomationPeer() => new CheckBoxAutomationPeer(this);
 }

@@ -162,7 +162,7 @@ public static class ToolTipService
         _toolTip.Content = null;
 
         // MEASURED to hand the tip back: a presenter lets its content go as it is measured, and a closed card never is.
-        _toolTip.Measure(new Adamantium.Mathematics.Size(0, 0), force: true);
+        _toolTip.Measure(new Adamantium.Mathematics.Size<double>(0, 0), force: true);
     }
 
     // An element thrown away while its tip is up takes the tip down: nothing else would, and the card would go on

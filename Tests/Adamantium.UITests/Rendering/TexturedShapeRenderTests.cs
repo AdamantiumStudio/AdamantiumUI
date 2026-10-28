@@ -97,7 +97,7 @@ public class TexturedShapeRenderTests
                 : s.DrawRectangle(brush, new Rect(0, 0, Size, Size))
         };
         control.Bounds = new Rect(0, 0, Size, Size);
-        control.RenderSize = new Size(Size, Size);
+        control.RenderSize = new Size<double>(Size, Size);
         control.RenderTransform = new Transform { TranslateX = At, TranslateY = At };
 
         var root = new VisualRoot(control, Dim, Dim);
@@ -149,15 +149,15 @@ public class TexturedShapeRenderTests
         var brush = new ImageBrush { Source = _source };
         var geometry = new StreamGeometry();
         geometry.Open()
-            .BeginFigure(new Vector2(Size / 2.0, 0), true, true)
-            .PolylineLineTo([new Vector2(Size, Size), new Vector2(0, Size)], true);
+            .BeginFigure(new Vector2<double>(Size / 2.0, 0), true, true)
+            .PolylineLineTo([new Vector2<double>(Size, Size), new Vector2<double>(0, Size)], true);
 
         var control = new TestControl
         {
             RenderAction = s => s.DrawGeometry(brush, geometry)
         };
         control.Bounds = new Rect(0, 0, Size, Size);
-        control.RenderSize = new Size(Size, Size);
+        control.RenderSize = new Size<double>(Size, Size);
         control.RenderTransform = new Transform { TranslateX = At, TranslateY = At };
 
         var root = new VisualRoot(control, Dim, Dim);
@@ -184,12 +184,12 @@ public class TexturedShapeRenderTests
     {
         const double inner = 0.382;
         var c = Size / 2.0;
-        var star = new Vector2[10];
+        var star = new Vector2<double>[10];
         for (var i = 0; i < 10; i++)
         {
             var angle = -Math.PI / 2 + i * Math.PI / 5;
             var radius = i % 2 == 0 ? 1.0 : inner;
-            star[i] = new Vector2(c + Math.Cos(angle) * c * radius, c + Math.Sin(angle) * c * radius);
+            star[i] = new Vector2<double>(c + Math.Cos(angle) * c * radius, c + Math.Sin(angle) * c * radius);
         }
 
         var geometry = new StreamGeometry();
@@ -197,7 +197,7 @@ public class TexturedShapeRenderTests
 
         var control = new TestControl { RenderAction = s => s.DrawGeometry(new ImageBrush { Source = _source }, geometry) };
         control.Bounds = new Rect(0, 0, Size, Size);
-        control.RenderSize = new Size(Size, Size);
+        control.RenderSize = new Size<double>(Size, Size);
         control.RenderTransform = new Transform { TranslateX = At, TranslateY = At };
 
         var root = new VisualRoot(control, Dim, Dim);

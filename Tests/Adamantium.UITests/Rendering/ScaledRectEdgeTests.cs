@@ -40,7 +40,7 @@ public class ScaledRectEdgeTests
             RenderTransform = new Transform { ScaleX = ScaleX, TranslateX = 20, TranslateY = 20 }
         };
         bar.Bounds = new Rect(0, 0, 1, BarHeight);
-        bar.RenderSize = new Size(1, BarHeight);
+        bar.RenderSize = new Size<double>(1, BarHeight);
         bar.IsRenderMotionNode = motionNode;
 
         var root = new VisualRoot(bar, Dim, Dim);
@@ -79,8 +79,8 @@ public class ScaledRectEdgeTests
 
         var brush = new LinearGradientBrush
         {
-            StartPoint = new Vector2(0, 0),
-            EndPoint = new Vector2(1, 0),
+            StartPoint = new Vector2<double>(0, 0),
+            EndPoint = new Vector2<double>(1, 0),
             GradientStops = { new GradientStop(Colors.Red, 0), new GradientStop(Colors.Blue, 1) }
         };
         var bar = new TestControl
@@ -89,7 +89,7 @@ public class ScaledRectEdgeTests
             RenderTransform = new Transform { ScaleX = ScaleX, TranslateX = 20, TranslateY = 20 }
         };
         bar.Bounds = new Rect(0, 0, 1, BarHeight);
-        bar.RenderSize = new Size(1, BarHeight);
+        bar.RenderSize = new Size<double>(1, BarHeight);
         bar.IsRenderMotionNode = true;
 
         var root = new VisualRoot(bar, Dim, Dim);
@@ -147,7 +147,7 @@ public class ScaledRectEdgeTests
                 RenderTransform = new Transform { ScaleX = motionNode ? 100 : 1, TranslateX = 20, TranslateY = 20 }
             };
             box.Bounds = new Rect(0, 0, motionNode ? 1 : 100, 40);
-            box.RenderSize = new Size(motionNode ? 1 : 100, 40);
+            box.RenderSize = new Size<double>(motionNode ? 1 : 100, 40);
             box.IsRenderMotionNode = motionNode;
 
             var root = new VisualRoot(box, Dim, Dim);

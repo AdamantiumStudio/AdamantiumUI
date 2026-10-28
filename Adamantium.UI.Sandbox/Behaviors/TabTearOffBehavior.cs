@@ -63,7 +63,7 @@ public class TabTearOffBehavior : Behavior<TabControl>
             // Put the caption under the live cursor position (the gesture's has moved on by now), converting the grab
             // offset with the new window's own scale, which may be another monitor's.
             var grab = PixelPoint.FromLogical(
-                new Mathematics.Vector2((float)(window.ClientWidth / 2), (float)(window.TitleBarHeight / 2)),
+                new Mathematics.Vector2<double>((float)(window.ClientWidth / 2), (float)(window.TitleBarHeight / 2)),
                 window.DpiScale);
             window.Position = Adamantium.UI.Core.Input.Mouse.ScreenCoordinates - grab;
 

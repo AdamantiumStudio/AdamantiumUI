@@ -38,9 +38,9 @@ internal sealed class RecordingDrawingSession : IDrawingSession
     public IDrawingSession DrawImageFrame(ImageSource image, Brush filter, Rect destinationRect, CornerRadius corners, int frameLayer) =>
         DrawImage(image, filter, destinationRect, corners);
 
-    public List<(Vector2 Start, Vector2 End, Pen Pen)> Lines { get; } = [];
+    public List<(Vector2<double> Start, Vector2<double> End, Pen Pen)> Lines { get; } = [];
 
-    public IDrawingSession DrawLine(Vector2 start, Vector2 end, Pen pen)
+    public IDrawingSession DrawLine(Vector2<double> start, Vector2<double> end, Pen pen)
     {
         Lines.Add((start, end, pen));
         return this;
@@ -73,19 +73,19 @@ internal sealed class RecordingDrawingSession : IDrawingSession
 
     public List<(TextLayout Layout, Matrix4x4F Transform, double Width)> Texts { get; } = [];
 
-    public IDrawingSession DrawText(TextRenderingParameters renderingParameters, Size desiredSize, TextLayout textLayout,
+    public IDrawingSession DrawText(TextRenderingParameters renderingParameters, Size<double> desiredSize, TextLayout textLayout,
         Brush foreground, Brush background, Brush stroke, Matrix4x4F transform)
     {
         Texts.Add((textLayout, transform, desiredSize.Width));
         return this;
     }
 
-    public IDrawingSession DrawText(TextRenderingParameters renderingParameters, Size desiredSize, TextLayout textLayout,
+    public IDrawingSession DrawText(TextRenderingParameters renderingParameters, Size<double> desiredSize, TextLayout textLayout,
         Brush foreground, Brush background, Brush stroke) => this;
 
     public List<IReadOnlyList<GlyphEffect>> Effects { get; } = [];
 
-    public IDrawingSession DrawText(TextRenderingParameters renderingParameters, Size desiredSize, TextLayout textLayout,
+    public IDrawingSession DrawText(TextRenderingParameters renderingParameters, Size<double> desiredSize, TextLayout textLayout,
         Brush foreground, Brush background, Brush stroke, IReadOnlyList<GlyphEffect> effects)
     {
         Effects.Add(effects);
@@ -94,7 +94,7 @@ internal sealed class RecordingDrawingSession : IDrawingSession
 
     public List<(TextLayout Layout, RectangleF Window)> Windows { get; } = [];
 
-    public IDrawingSession DrawText(TextRenderingParameters renderingParameters, Size desiredSize, TextLayout textLayout,
+    public IDrawingSession DrawText(TextRenderingParameters renderingParameters, Size<double> desiredSize, TextLayout textLayout,
         Brush foreground, Brush background, Brush stroke, IReadOnlyList<GlyphEffect> effects, RectangleF window)
     {
         Windows.Add((textLayout, window));

@@ -155,7 +155,7 @@ public class PaneGroup : TabControl, Panels.IPaneMinimum
     // A TAB drag moves one pane, a CAPTION drag moves the panel with every pane in it - told apart by where the press
     // landed, not by how many tabs happen to be open.
 
-    private Vector2 _captionPress;
+    private Vector2<double> _captionPress;
     private bool _captionPressed;
 
     protected override void OnPointerPressed(PointerPressedEventArgs e)

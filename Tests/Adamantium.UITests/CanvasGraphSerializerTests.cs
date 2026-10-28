@@ -16,7 +16,7 @@ public class CanvasGraphSerializerTests
     private static (InfiniteCanvas canvas, CanvasScene scene) Stage()
     {
         var canvas = new InfiniteCanvas { Mode = CanvasMode.Nodes };
-        canvas.Measure(new Size(800, 600), force: true);
+        canvas.Measure(new Size<double>(800, 600), force: true);
         canvas.Arrange(new Rect(0, 0, 800, 600));
 
         var scene = new CanvasScene();
@@ -124,7 +124,7 @@ public class CanvasGraphSerializerTests
         scene.Add(new ElementItem(Made("Multiply"), new Rect(0, 0, 160, 90)));
 
         canvas.Scale = 2.5;
-        canvas.Offset = new Vector2(-640, 480);
+        canvas.Offset = new Vector2<double>(-640, 480);
 
         var text = CanvasGraphSerializer.Save(canvas);
 

@@ -279,8 +279,8 @@ public class ImageTilingTests
 
         // The matrix maps a fragment (0..1 of the shape) back into the grid. Applied to a step of one PIXEL along x,
         // it must give a step of one pixel along y - a pure turn changes direction, never length.
-        var stepX = new Vector2(1.0 / shape.Width, 0);
-        var mapped = new Vector2(
+        var stepX = new Vector2<double>(1.0 / shape.Width, 0);
+        var mapped = new Vector2<double>(
             stepX.X * layout.Rotation.X + stepX.Y * layout.Rotation.Y,
             stepX.X * layout.Rotation.Z + stepX.Y * layout.Rotation.W);
 
@@ -301,7 +301,7 @@ public class ImageTilingTests
 
         var middle = Layout(brush, new Rect(0, 0, 200, 200));
 
-        brush.RotationCenter = new Vector2(0, 0);
+        brush.RotationCenter = new Vector2<double>(0, 0);
         var corner = Layout(brush, new Rect(0, 0, 200, 200));
 
         Assert.That(corner.Rotation, Is.EqualTo(middle.Rotation), "the same turn, so the same matrix");

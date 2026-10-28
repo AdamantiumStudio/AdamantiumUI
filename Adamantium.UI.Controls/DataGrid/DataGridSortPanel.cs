@@ -198,10 +198,10 @@ public class DataGridSortPanel : Control
 
     // The chips sit inside PART_Chips, which sits inside whatever the theme wrapped it in, so a point taken against
     // THIS strip has to be carried into their space rather than compared to their bounds as it is.
-    private Vector2 ChipPoint(Vector2 point) =>
+    private Vector2<double> ChipPoint(Vector2<double> point) =>
         _chips == null ? point : this.TranslatePoint(point, _chips);
 
-    private int ChipAt(Vector2 point)
+    private int ChipAt(Vector2<double> point)
     {
         var at = ChipPoint(point);
         for (var i = 0; i < _live.Count; i++)

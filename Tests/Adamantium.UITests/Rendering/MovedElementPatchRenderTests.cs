@@ -40,7 +40,7 @@ public class MovedElementPatchRenderTests
     }
 
     private static TestControl Placed(Rect bounds) =>
-        new() { Bounds = bounds, RenderSize = new Size(bounds.Width, bounds.Height) };
+        new() { Bounds = bounds, RenderSize = new Size<double>(bounds.Width, bounds.Height) };
 
     // A still background plus a two-level mover. The background is what makes the assertion about the SCENE rather than
     // about the mover: a walk would redraw it too, so "patched and identical" is the whole claim.
@@ -314,7 +314,7 @@ public class MovedElementPatchRenderTests
         using var scene = NewScene();
 
         scene.Mover.Bounds = new Rect(8, 8, 56, 24);
-        scene.Mover.RenderSize = new Size(56, 24);
+        scene.Mover.RenderSize = new Size<double>(56, 24);
         scene.Mover.RenderAction = s => s.DrawRectangle(Brushes.Blue, new Rect(0, 0, 56, 24));
         scene.Mover.Invalidate();
         scene.Draw();
@@ -388,7 +388,7 @@ public class MovedElementPatchRenderTests
                 new GradientStop(Colors.Black, 0),
                 new GradientStop(Colors.Black, 0.7),
                 new GradientStop(Colors.Transparent, 1)
-            ]) { StartPoint = new Vector2(0, 0.5), EndPoint = new Vector2(1, 0.5) };
+            ]) { StartPoint = new Vector2<double>(0, 0.5), EndPoint = new Vector2<double>(1, 0.5) };
         }
 
         stage.Add(strip);

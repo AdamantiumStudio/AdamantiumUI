@@ -48,7 +48,7 @@ public class TextBoxClearButtonThemeTests
     {
         Adamantium.UI.Extensions.WindowExtension.UpdateTree(box);
         Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
-        box.Measure(new Size(240, 40));
+        box.Measure(new Size<double>(240, 40));
         box.Arrange(new Rect(0, 0, 240, 40));
     }
 

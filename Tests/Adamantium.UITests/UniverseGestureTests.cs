@@ -56,17 +56,17 @@ public class UniverseGestureTests
     [Test]
     public void FingersSpreading_ReachTheUniverse_AsAPinch()
     {
-        Send(RawPointerEventType.Down, 0, new Vector2(400, 300));
-        Send(RawPointerEventType.Down, 1, new Vector2(600, 300));
+        Send(RawPointerEventType.Down, 0, new Vector2<double>(400, 300));
+        Send(RawPointerEventType.Down, 1, new Vector2<double>(600, 300));
         for (var step = 1; step <= 5; step++)
         {
-            Send(RawPointerEventType.Move, 0, new Vector2(400 - 20 * step, 300));
-            Send(RawPointerEventType.Move, 1, new Vector2(600 + 20 * step, 300));
+            Send(RawPointerEventType.Move, 0, new Vector2<double>(400 - 20 * step, 300));
+            Send(RawPointerEventType.Move, 1, new Vector2<double>(600 + 20 * step, 300));
         }
 
         _output.Input.Update(default);
-        Send(RawPointerEventType.Up, 0, new Vector2(300, 300));
-        Send(RawPointerEventType.Up, 1, new Vector2(700, 300));
+        Send(RawPointerEventType.Up, 0, new Vector2<double>(300, 300));
+        Send(RawPointerEventType.Up, 1, new Vector2<double>(700, 300));
 
         Assert.Multiple(() =>
         {
@@ -80,19 +80,19 @@ public class UniverseGestureTests
     [Test]
     public void FingersMovingTogether_ReachTheUniverse_AsAPan()
     {
-        Send(RawPointerEventType.Down, 0, new Vector2(400, 300));
-        Send(RawPointerEventType.Down, 1, new Vector2(600, 300));
+        Send(RawPointerEventType.Down, 0, new Vector2<double>(400, 300));
+        Send(RawPointerEventType.Down, 1, new Vector2<double>(600, 300));
         for (var step = 1; step <= 4; step++)
         {
-            Send(RawPointerEventType.Move, 0, new Vector2(400 + 10 * step, 300));
-            Send(RawPointerEventType.Move, 1, new Vector2(600 + 10 * step, 300));
+            Send(RawPointerEventType.Move, 0, new Vector2<double>(400 + 10 * step, 300));
+            Send(RawPointerEventType.Move, 1, new Vector2<double>(600 + 10 * step, 300));
         }
 
         _output.Input.Update(default);
         var pan = _output.Input.GesturePan;
         var over = _output.IsPointerOver;
-        Send(RawPointerEventType.Up, 0, new Vector2(440, 300));
-        Send(RawPointerEventType.Up, 1, new Vector2(640, 300));
+        Send(RawPointerEventType.Up, 0, new Vector2<double>(440, 300));
+        Send(RawPointerEventType.Up, 1, new Vector2<double>(640, 300));
         _output.Input.Update(default);
 
         Assert.Multiple(() =>
@@ -104,7 +104,7 @@ public class UniverseGestureTests
         });
     }
 
-    private void Send(RawPointerEventType type, int finger, Vector2 at) =>
+    private void Send(RawPointerEventType type, int finger, Vector2<double> at) =>
         PointerDevice.Current.ProcessEvent(new RawPointerEventArgs(type, _window, at, InputModifiers.None, 0)
         {
             PointerId = FirstId + (uint)finger,

@@ -55,7 +55,7 @@ public class HyperlinkAutomationPeer : AutomationPeer, IInvokeProvider, IElement
     public UIComponent Element => _block;
 
     /// <summary>The middle of the link's first piece: a link broken across lines is clicked on its first line.</summary>
-    public Vector2? Middle => _block.LinkRects(Link) is { Count: > 0 } rects
-        ? new Vector2(rects[0].X + rects[0].Width / 2, rects[0].Y + rects[0].Height / 2)
+    public Vector2<double>? Middle => _block.LinkRects(Link) is { Count: > 0 } rects
+        ? new Vector2<double>(rects[0].X + rects[0].Width / 2, rects[0].Y + rects[0].Height / 2)
         : null;
 }

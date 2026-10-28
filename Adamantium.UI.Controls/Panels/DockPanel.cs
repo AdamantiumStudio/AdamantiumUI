@@ -35,7 +35,7 @@ public class DockPanel:Panel
       element.SetValue(DockProperty, position);
    }
 
-   protected override Size MeasureOverride(Size availableSize)
+   protected override Size<double> MeasureOverride(Size<double> availableSize)
    {
       double usedWidth = 0.0;
       double usedHeight = 0.0;
@@ -45,11 +45,11 @@ public class DockPanel:Panel
       foreach (var child in Children)
       {
          //Get the child desired size
-         Size remainingSize = new Size(
+         Size<double> remainingSize = new Size<double>(
             Math.Max(0.0, availableSize.Width - usedWidth),
             Math.Max(0.0, availableSize.Height - usedHeight));
          child.Measure(remainingSize);
-         Size desiredSize = child.DesiredSize;
+         Size<double> desiredSize = child.DesiredSize;
 
          //Decrease the remaining space for the rest of the children
          switch (GetDock(child))
@@ -69,10 +69,10 @@ public class DockPanel:Panel
 
       maxWidth = Math.Max(maxWidth, usedWidth);
       maxHeight = Math.Max(maxHeight, usedHeight);
-      return new Size(maxWidth, maxHeight);
+      return new Size<double>(maxWidth, maxHeight);
    }
 
-   protected override Size ArrangeOverride(Size finalSize)
+   protected override Size<double> ArrangeOverride(Size<double> finalSize)
    {
       double left = 0.0;
       double top = 0.0;
@@ -93,7 +93,7 @@ public class DockPanel:Panel
          //(unless the element should fill the remaining space because of LastChildFill)
          if (index < dockedCount)
          {
-            Size desiredSize = child.DesiredSize;
+            Size<double> desiredSize = child.DesiredSize;
             switch (GetDock(child))
             {
                case Dock.Left:

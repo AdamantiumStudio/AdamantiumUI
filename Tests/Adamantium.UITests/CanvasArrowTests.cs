@@ -16,7 +16,7 @@ public class CanvasArrowTests
     private static InfiniteCanvas Sized(double width = 400, double height = 300)
     {
         var canvas = new InfiniteCanvas();
-        canvas.Measure(new Size(width, height), force: true);
+        canvas.Measure(new Size<double>(width, height), force: true);
         canvas.Arrange(new Rect(0, 0, width, height));
 
         return canvas;
@@ -112,7 +112,7 @@ public class CanvasArrowTests
         arrow.Render(session, canvas);
         var was = Painted(session).Revision;
 
-        arrow.Move(new Vector2(60, 0));
+        arrow.Move(new Vector2<double>(60, 0));
         arrow.Render(session, canvas);
 
         Assert.That(Painted(session).Revision, Is.GreaterThan(was));
@@ -126,9 +126,9 @@ public class CanvasArrowTests
         var thin = new ShapeItem(CanvasShape.Arrow, new Rect(0, 0, 100, 0), Brushes.White, 2);
         var thick = new ShapeItem(CanvasShape.Arrow, new Rect(0, 0, 100, 0), Brushes.White, 8);
 
-        ArrowHead.Points(Vector2.Zero, new Vector2(100, 0), 2, thin.HeadLength, thin.HeadWidth,
+        ArrowHead.Points(Vector2<double>.Zero, new Vector2<double>(100, 0), 2, thin.HeadLength, thin.HeadWidth,
             out var thinLeft, out _);
-        ArrowHead.Points(Vector2.Zero, new Vector2(100, 0), 8, thick.HeadLength, thick.HeadWidth,
+        ArrowHead.Points(Vector2<double>.Zero, new Vector2<double>(100, 0), 8, thick.HeadLength, thick.HeadWidth,
             out var thickLeft, out _);
 
         Assert.That(100 - thickLeft.X, Is.GreaterThan(100 - thinLeft.X));
@@ -139,7 +139,7 @@ public class CanvasArrowTests
     [Test]
     public void AHeadIsNeverLongerThanItsLine()
     {
-        ArrowHead.Points(Vector2.Zero, new Vector2(3, 0), 10, 4, 3, out var left, out var right);
+        ArrowHead.Points(Vector2<double>.Zero, new Vector2<double>(3, 0), 10, 4, 3, out var left, out var right);
 
         Assert.Multiple(() =>
         {
@@ -152,7 +152,7 @@ public class CanvasArrowTests
     [Test]
     public void AHeadWithNoDirectionIsRefused()
     {
-        Assert.That(ArrowHead.Points(Vector2.Zero, Vector2.Zero, 4, 3, 2, out _, out _), Is.False);
+        Assert.That(ArrowHead.Points(Vector2<double>.Zero, Vector2<double>.Zero, 4, 3, 2, out _, out _), Is.False);
     }
 
     // WHERE the arrow is, which none of the original tests ever asked: that it is one figure drawn with the right brush
@@ -167,8 +167,8 @@ public class CanvasArrowTests
 
         arrow.Render(session, canvas);
 
-        var from = canvas.WorldToScreen(Vector2.Zero);
-        var to = canvas.WorldToScreen(new Vector2(100, 0));
+        var from = canvas.WorldToScreen(Vector2<double>.Zero);
+        var to = canvas.WorldToScreen(new Vector2<double>(100, 0));
         var painted = Painted(session);
 
         Assert.Multiple(() =>
@@ -233,7 +233,7 @@ public class CanvasArrowTests
         var arrow = Arrow(CanvasArrowHead.None, CanvasArrowHead.Triangle);
         var pinned = arrow.Points[0];
 
-        arrow.MovePoint(1, new Vector2(40, 70));
+        arrow.MovePoint(1, new Vector2<double>(40, 70));
 
         Assert.Multiple(() =>
         {
@@ -254,7 +254,7 @@ public class CanvasArrowTests
     {
         var arrow = Arrow(CanvasArrowHead.None, CanvasArrowHead.Triangle);
 
-        arrow.MovePoint(1, new Vector2(x, y));
+        arrow.MovePoint(1, new Vector2<double>(x, y));
 
         Assert.Multiple(() =>
         {
@@ -274,10 +274,10 @@ public class CanvasArrowTests
         var session = new RecordingDrawingSession();
         var arrow = Arrow(CanvasArrowHead.None, CanvasArrowHead.Triangle);
 
-        arrow.MovePoint(1, new Vector2(-60, 0));
+        arrow.MovePoint(1, new Vector2<double>(-60, 0));
         arrow.Render(session, canvas);
 
-        var tip = canvas.WorldToScreen(new Vector2(-60, 0));
+        var tip = canvas.WorldToScreen(new Vector2<double>(-60, 0));
         var painted = Painted(session);
 
         Assert.Multiple(() =>
@@ -304,8 +304,8 @@ public class CanvasArrowTests
         canvas.Scene = scene;
 
         var tool = new ShapeTool(CanvasShape.Arrow);
-        var from = new Vector2(100, 100);
-        var to = new Vector2(100 + dx, 100 + dy);
+        var from = new Vector2<double>(100, 100);
+        var to = new Vector2<double>(100 + dx, 100 + dy);
 
         tool.OnPressed(canvas, Press(from));
         tool.OnMoved(canvas, Press(to));
@@ -322,7 +322,7 @@ public class CanvasArrowTests
         });
     }
 
-    private static CanvasPointerEventArgs Press(Vector2 world) =>
+    private static CanvasPointerEventArgs Press(Vector2<double> world) =>
         new() { World = world, Pointer = world, Button = MouseButtons.Left };
 
     // A selected line gets end handles, not a bounding box; asked of the canvas, which reads Handles through ICanvasItem.

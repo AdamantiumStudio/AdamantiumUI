@@ -24,7 +24,7 @@ public class RibbonBandScrollTests
         var row = new RibbonGroupsPanel();
         foreach (var width in widths) row.Children.Add(Group(width));
 
-        ((IMeasurableComponent)row).Measure(new Size(double.PositiveInfinity, 100));
+        ((IMeasurableComponent)row).Measure(new Size<double>(double.PositiveInfinity, 100));
         ((IMeasurableComponent)row).Arrange(new Rect(0, 0, viewport, 100));
         return row;
     }

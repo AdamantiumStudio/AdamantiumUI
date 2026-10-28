@@ -45,7 +45,7 @@ public class TextBlockFillsItsSlotTests
     public void ButItStillMeasuresAsItsInk()
     {
         var text = new TextBlock { Text = "Saturn" };
-        text.Measure(new Size(500, 500));
+        text.Measure(new Size<double>(500, 500));
 
         Assert.Multiple(() =>
         {
@@ -60,7 +60,7 @@ public class TextBlockFillsItsSlotTests
     public void ATightSlotIsLeftAlone()
     {
         var text = new TextBlock { Text = "Saturn" };
-        text.Measure(new Size(500, 500));
+        text.Measure(new Size<double>(500, 500));
         var ink = text.DesiredSize;
 
         var (hosted, _) = Hosted(ink.Width, ink.Height);

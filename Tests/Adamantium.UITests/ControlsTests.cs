@@ -223,7 +223,7 @@ public class ControlsTests
             VerticalAlignment = VerticalAlignment.Center
         };
 
-        cp.Measure(new Size(300, 100), force: true);
+        cp.Measure(new Size<double>(300, 100), force: true);
         cp.Arrange(new Rect(0, 0, 300, 100));
 
         Assert.Multiple(() =>
@@ -245,7 +245,7 @@ public class ControlsTests
             VerticalAlignment = VerticalAlignment.Center
         };
 
-        cp.Measure(new Size(300, 100), force: true);
+        cp.Measure(new Size<double>(300, 100), force: true);
         cp.Arrange(new Rect(0, 0, 300, 100));
 
         Assert.That(cp.ActualWidth, Is.GreaterThan(0),
@@ -282,7 +282,7 @@ public class ControlsTests
             Template = template
         };
 
-        button.Measure(new Size(300, 100), force: true);
+        button.Measure(new Size<double>(300, 100), force: true);
         button.Arrange(new Rect(0, 0, 300, 100));
 
         Assert.Multiple(() =>
@@ -301,7 +301,7 @@ public class ControlsTests
     public void RingProgressBar_OnlyWidthSet_MeasuresSquare()
     {
         var ring = new RingProgressBar { Width = 200 };   // Height left unset
-        ring.Measure(new Size(500, 400), force: true);
+        ring.Measure(new Size<double>(500, 400), force: true);
         Assert.That(ring.DesiredSize.Height, Is.EqualTo(200).Within(1), "the height follows the set width");
     }
 
@@ -309,7 +309,7 @@ public class ControlsTests
     public void RingProgressBar_OnlyHeightSet_MeasuresSquare()
     {
         var ring = new RingProgressBar { Height = 150 };   // Width left unset
-        ring.Measure(new Size(500, 400), force: true);
+        ring.Measure(new Size<double>(500, 400), force: true);
         Assert.That(ring.DesiredSize.Width, Is.EqualTo(150).Within(1), "the width follows the set height");
     }
 
@@ -317,7 +317,7 @@ public class ControlsTests
     public void ProgressBar_Linear_OnlyWidthSet_IsNotSquared()
     {
         var bar = new ProgressBar { Width = 200 };   // a linear bar is never squared
-        bar.Measure(new Size(500, 400), force: true);
+        bar.Measure(new Size<double>(500, 400), force: true);
         Assert.That(bar.DesiredSize.Height, Is.LessThan(200), "a linear ProgressBar must not be forced square");
     }
 
@@ -331,7 +331,7 @@ public class ControlsTests
             VerticalAlignment = VerticalAlignment.Center
         };
 
-        ring.Measure(new Size(500, 400), force: true);
+        ring.Measure(new Size<double>(500, 400), force: true);
         ring.Arrange(new Rect(0, 0, 500, 400));   // a slot far bigger than the ring - the open (height) axis must NOT stretch
 
         Assert.Multiple(() =>
@@ -358,7 +358,7 @@ public class ControlsTests
 
         var ring = new RingProgressBar { Template = template, Width = 200 };   // Height unset
 
-        ring.Measure(new Size(2000, 2000), force: true);   // a HUGE available - the part must follow the 200 square, not this
+        ring.Measure(new Size<double>(2000, 2000), force: true);   // a HUGE available - the part must follow the 200 square, not this
         ring.Arrange(new Rect(0, 0, 2000, 2000));
 
         Assert.That(part.ActualWidth, Is.LessThan(300),

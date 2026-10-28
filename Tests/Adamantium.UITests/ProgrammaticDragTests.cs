@@ -34,7 +34,7 @@ public class ProgrammaticDragTests
         _source = new Border { Width = 100, Height = 40 };
         var root = new Grid();
         root.Children.Add(_source);
-        root.Measure(new Size(100, 40));
+        root.Measure(new Size<double>(100, 40));
         root.Arrange(new Rect(0, 0, 100, 40));
     }
 

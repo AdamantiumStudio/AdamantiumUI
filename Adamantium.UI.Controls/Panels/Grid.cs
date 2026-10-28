@@ -286,14 +286,14 @@ public class Grid: Panel
    private GridSegment[] colSegments;
    private GridCell[] gridCells;
 
-   private Size childSize;
+   private Size<double> childSize;
    Stopwatch measureTimer;
 
    // Cells measure in three groups: those without stars first, then Auto/Star mixes (twice, ignoring stars the first
    // time), then star-only cells once the remaining space is known.
 
 
-   private void PrepareInnerData(Size availableSize)
+   private void PrepareInnerData(Size<double> availableSize)
    {
       replaceRowStarsWithAuto = double.IsPositiveInfinity(availableSize.Height);
       replaceColStarsWithAuto = double.IsPositiveInfinity(availableSize.Width);
@@ -525,7 +525,7 @@ public class Grid: Panel
    /// </summary>
    /// <param name="availableSize">The size available to the control.</param>
    /// <returns>The desired size for the control.</returns>
-   protected override Size MeasureOverride(Size availableSize)
+   protected override Size<double> MeasureOverride(Size<double> availableSize)
    {
       measureTimer = Stopwatch.StartNew();
       PrepareInnerData(availableSize);
@@ -538,7 +538,7 @@ public class Grid: Panel
    /// </summary>
    /// <param name="finalSize">The size available to the control.</param>
    /// <returns>The actual size used.</returns>
-   protected override Size ArrangeOverride(Size finalSize)
+   protected override Size<double> ArrangeOverride(Size<double> finalSize)
    {
       Stopwatch arrangeTimer = Stopwatch.StartNew();
 
@@ -589,7 +589,7 @@ public class Grid: Panel
    {
       if (Background != Brushes.Transparent)
       {
-         context.ForControl(this).DrawRectangle(Background, new Rect(new Size(ActualWidth, ActualHeight)));
+         context.ForControl(this).DrawRectangle(Background, new Rect(new Size<double>(ActualWidth, ActualHeight)));
       }
 
       if (ShowGridLines && rowSegments != null)
@@ -615,10 +615,10 @@ public class Grid: Panel
             {
                context.ForControl(this)
                   .DrawRectangle(lineBrush,
-                  new Rect(new Vector2(0, rowSegments[i].Offset), new Size(ActualWidth, 1)))
+                  new Rect(new Vector2<double>(0, rowSegments[i].Offset), new Size<double>(ActualWidth, 1)))
                   .DrawRectangle(lineBrush,
-                  new Rect(new Vector2(0, rowSegments[i].Offset + rowSegments[i].FullSize),
-                     new Size(ActualWidth, 1)));
+                  new Rect(new Vector2<double>(0, rowSegments[i].Offset + rowSegments[i].FullSize),
+                     new Size<double>(ActualWidth, 1)));
             }
          }
          if (colSegments.Length > 0)
@@ -627,9 +627,9 @@ public class Grid: Panel
             {
                context.ForControl(this)
                   .DrawRectangle(lineBrush,
-                  new Rect(new Vector2(colSegments[i].Offset, 0), new Size(1, ActualHeight)))
+                  new Rect(new Vector2<double>(colSegments[i].Offset, 0), new Size<double>(1, ActualHeight)))
                   .DrawRectangle(lineBrush,
-                  new Rect(new Vector2(colSegments[i].Offset + colSegments[i].FullSize, 0), new Size(1, ActualHeight)));
+                  new Rect(new Vector2<double>(colSegments[i].Offset + colSegments[i].FullSize, 0), new Size<double>(1, ActualHeight)));
             }
          }
       }
@@ -728,7 +728,7 @@ public class Grid: Panel
       }
    }
 
-   private Size MeasureGrid(Size availableSize)
+   private Size<double> MeasureGrid(Size<double> availableSize)
    {
       MeasureCells(0, availableSize);
       MeasureCells(1, availableSize, true);
@@ -759,10 +759,10 @@ public class Grid: Panel
       //    desiredY = Math.Max(availableSize.Height, desiredY);
       // }
 
-      return new Size(desiredX, desiredY);
+      return new Size<double>(desiredX, desiredY);
    }
 
-   private void MeasureCells(int groupIndex, Size availableSize, bool ignoreStarSize = false)
+   private void MeasureCells(int groupIndex, Size<double> availableSize, bool ignoreStarSize = false)
    {
       if (groupIndex > MaxGroupIndex)
          return;

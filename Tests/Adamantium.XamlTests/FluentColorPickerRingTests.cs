@@ -87,12 +87,12 @@ public class FluentColorPickerRingTests
         Assert.That(picker.SelectedColor, Is.Not.EqualTo(gray), "the press on the ring did not start a drag");
     }
 
-    private static Vector2 Origin(IUIComponent element, IUIComponent within)
+    private static Vector2<double> Origin(IUIComponent element, IUIComponent within)
     {
-        var origin = Vector2.Zero;
+        var origin = Vector2<double>.Zero;
         for (var node = element; node != null && node != within; node = node.VisualParent)
         {
-            origin += new Vector2(node.Bounds.X, node.Bounds.Y);
+            origin += new Vector2<double>(node.Bounds.X, node.Bounds.Y);
         }
 
         return origin;

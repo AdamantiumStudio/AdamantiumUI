@@ -22,7 +22,7 @@ public class LentContentTests
     private static ContentPresenter Showing(object content)
     {
         var presenter = new ContentPresenter { Content = content };
-        presenter.Measure(new Size(100, 100));
+        presenter.Measure(new Size<double>(100, 100));
         return presenter;
     }
 
@@ -35,7 +35,7 @@ public class LentContentTests
         var holder = new Holder();
         var handed = new ContentPresenter();
         handed.SetBinding(ContentPresenter.ContentProperty, new Binding(nameof(Holder.Page)) { Source = holder });
-        handed.Measure(new Size(100, 100));
+        handed.Measure(new Size<double>(100, 100));
         var own = new Border();
         var written = Showing(own);
         var card = new StackPanel();

@@ -23,9 +23,9 @@ internal static class LayoutMotion
         RenderDirty.MarkSubtreeGeometry(element);
     }
 
-    internal static void Slide(UIComponent element, Vector2 offset) => Morph(element, offset, 1, 1);
+    internal static void Slide(UIComponent element, Vector2<double> offset) => Morph(element, offset, 1, 1);
 
-    internal static void Morph(UIComponent element, Vector2 offset, double scaleX, double scaleY, Action landed = null)
+    internal static void Morph(UIComponent element, Vector2<double> offset, double scaleX, double scaleY, Action landed = null)
     {
         if (element.RenderTransform is not { } transform)
         {

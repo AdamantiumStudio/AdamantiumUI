@@ -68,10 +68,10 @@ public class PayloadPolicyTests
         // LinePayload's rebuild check is hash-based and Pen hashes by reference, so "unchanged" means the
         // same pen instance (which is what a control passes when its Pen property hasn't changed).
         var pen = new Pen(Brushes.Red, 1);
-        var a = new LinePayload(new Vector2(0, 0), new Vector2(10, 10), pen);
-        var same = new LinePayload(new Vector2(0, 0), new Vector2(10, 10), pen);
-        var moved = new LinePayload(new Vector2(0, 0), new Vector2(20, 20), pen);
-        var penChanged = new LinePayload(new Vector2(0, 0), new Vector2(10, 10), new Pen(Brushes.Blue, 1));
+        var a = new LinePayload(new Vector2<double>(0, 0), new Vector2<double>(10, 10), pen);
+        var same = new LinePayload(new Vector2<double>(0, 0), new Vector2<double>(10, 10), pen);
+        var moved = new LinePayload(new Vector2<double>(0, 0), new Vector2<double>(20, 20), pen);
+        var penChanged = new LinePayload(new Vector2<double>(0, 0), new Vector2<double>(10, 10), new Pen(Brushes.Blue, 1));
 
         Assert.That(a.RequiresBufferRebuild(same), Is.False);
         Assert.That(a.RequiresBufferRebuild(moved), Is.True);
@@ -94,11 +94,11 @@ public class PayloadPolicyTests
     public void Text_ColorChange_IsCheapUpdate_SizeChange_Rebuilds()
     {
         var prms = new TextRenderingParameters();
-        var size = new Size(100, 20);
+        var size = new Size<double>(100, 20);
 
         var a = new TextPayload(prms, size, null, Brushes.Red, Brushes.Transparent, Brushes.Black);
         var colorOnly = new TextPayload(prms, size, null, Brushes.Blue, Brushes.Yellow, Brushes.White);
-        var sizeChanged = new TextPayload(prms, new Size(200, 20), null, Brushes.Red, Brushes.Transparent, Brushes.Black);
+        var sizeChanged = new TextPayload(prms, new Size<double>(200, 20), null, Brushes.Red, Brushes.Transparent, Brushes.Black);
 
         Assert.That(a.RequiresBufferRebuild(colorOnly), Is.False, "color-only change must use the cheap re-raster path");
         Assert.That(a.RequiresBufferRebuild(sizeChanged), Is.True);

@@ -19,9 +19,9 @@ public class PointsCollectionParserTests
         Assert.Multiple(() =>
         {
             Assert.That(points, Has.Count.EqualTo(3));
-            Assert.That(points[0], Is.EqualTo(new Vector2(60, 0)));
-            Assert.That(points[1], Is.EqualTo(new Vector2(120, 96)));
-            Assert.That(points[2], Is.EqualTo(new Vector2(0, 96)));
+            Assert.That(points[0], Is.EqualTo(new Vector2<double>(60, 0)));
+            Assert.That(points[1], Is.EqualTo(new Vector2<double>(120, 96)));
+            Assert.That(points[2], Is.EqualTo(new Vector2<double>(0, 96)));
         });
     }
 
@@ -32,8 +32,8 @@ public class PointsCollectionParserTests
         Assert.Multiple(() =>
         {
             Assert.That(points, Has.Count.EqualTo(2));
-            Assert.That(points[0], Is.EqualTo(new Vector2(10, 20)));
-            Assert.That(points[1], Is.EqualTo(new Vector2(30, 40)));
+            Assert.That(points[0], Is.EqualTo(new Vector2<double>(10, 20)));
+            Assert.That(points[1], Is.EqualTo(new Vector2<double>(30, 40)));
         });
     }
 }

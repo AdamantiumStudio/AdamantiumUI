@@ -30,7 +30,7 @@ public readonly struct CanvasTransform : IEquatable<CanvasTransform>
     public bool IsSomething => Angle != 0 || SkewX != 0 || SkewY != 0;
 
     /// <summary>Where a point of the item ends up, turned about <paramref name="about"/>.</summary>
-    public Vector2 Apply(Vector2 point, Vector2 about)
+    public Vector2<double> Apply(Vector2<double> point, Vector2<double> about)
     {
         if (!IsSomething) return point;
 
@@ -54,13 +54,13 @@ public readonly struct CanvasTransform : IEquatable<CanvasTransform>
             (x, y) = (x * cos - y * sin, x * sin + y * cos);
         }
 
-        return new Vector2(about.X + x, about.Y + y);
+        return new Vector2<double>(about.X + x, about.Y + y);
     }
 
     /// <summary>Where a point on the SCREEN came from - the inverse. What hit-testing needs: a turned shape is asked
     /// about a point in the world, and the only way it can answer is to un-turn the point and ask its plain self.
     /// </summary>
-    public Vector2 Undo(Vector2 point, Vector2 about)
+    public Vector2<double> Undo(Vector2<double> point, Vector2<double> about)
     {
         if (!IsSomething) return point;
 
@@ -94,12 +94,12 @@ public readonly struct CanvasTransform : IEquatable<CanvasTransform>
             }
         }
 
-        return new Vector2(about.X + x, about.Y + y);
+        return new Vector2<double>(about.X + x, about.Y + y);
     }
 
     /// <summary>The transform as a row-vector matrix (v * M) about a point, the convention <c>TransformValues</c> uses, so
     /// pixels, frame and hit test share one arithmetic.</summary>
-    public Matrix4x4F Matrix(Vector2 about)
+    public Matrix4x4F Matrix(Vector2<double> about)
     {
         var lean = Matrix4x4F.Identity;
 
@@ -109,10 +109,10 @@ public readonly struct CanvasTransform : IEquatable<CanvasTransform>
             lean.M12 = (float)Math.Tan(SkewY * Math.PI / 180);
         }
 
-        return Matrix4x4F.Translation((float)-about.X, (float)-about.Y, 0)
+        return Matrix4x4.CreateTranslation<float>((float)-about.X, (float)-about.Y, 0)
                * lean
-               * Matrix4x4F.RotationZ((float)(Angle * Math.PI / 180))
-               * Matrix4x4F.Translation((float)about.X, (float)about.Y, 0);
+               * Matrix4x4.CreateRotationZ<float>((float)(Angle * Math.PI / 180))
+               * Matrix4x4.CreateTranslation<float>((float)about.X, (float)about.Y, 0);
     }
 
     public bool Equals(CanvasTransform other) =>

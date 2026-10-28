@@ -12,7 +12,7 @@ namespace Adamantium.UI.Controls.DrawingBoard;
 public class ShapeTool : ICanvasTool
 {
     private ShapeItem _making;
-    private Vector2 _from;
+    private Vector2<double> _from;
 
     public ShapeTool(CanvasShape shape)
     {
@@ -124,7 +124,7 @@ public class ShapeTool : ICanvasTool
         canvas.Repaint();
     }
 
-    private void Stretch(Vector2 to, ShapeItem shape = null)
+    private void Stretch(Vector2<double> to, ShapeItem shape = null)
     {
         shape ??= _making;
         if (shape == null) return;

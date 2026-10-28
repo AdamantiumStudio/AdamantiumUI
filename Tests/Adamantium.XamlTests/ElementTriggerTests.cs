@@ -38,8 +38,8 @@ public class ElementTriggerTests
     /// asserts something the engine is right not to do.</summary>
     private sealed class TestVisualRoot : Adamantium.UI.Controls.Panels.Grid, IRootVisualComponent
     {
-        public Vector2 PointToClient(PixelPoint point) => new((float)point.X, (float)point.Y);
-        public PixelPoint PointToScreen(Vector2 point) => new(point.X, point.Y);
+        public Vector2<double> PointToClient(PixelPoint point) => new((float)point.X, (float)point.Y);
+        public PixelPoint PointToScreen(Vector2<double> point) => new(point.X, point.Y);
         public PixelPoint Position { get; set; }
         public void AttachContextAndInitialize(IUIContext context) { }
         public double Left { get; set; }

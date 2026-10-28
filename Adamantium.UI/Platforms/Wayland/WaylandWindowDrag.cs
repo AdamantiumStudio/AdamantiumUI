@@ -30,7 +30,7 @@ internal sealed class WaylandWindowDrag
     /// <summary>Starts carrying <paramref name="worker"/>'s window, held at <paramref name="grab"/>; false where the
     /// compositor cannot, or no press is there to start it from. The window is attached once the drag runs: Mutter
     /// moves a window already on screen only when it is attached during a drag.</summary>
-    public bool Start(WaylandWindowWorker worker, Vector2 grab)
+    public bool Start(WaylandWindowWorker worker, Vector2<double> grab)
     {
         var origin = platform.Seat.PointerWindow;
         if (platform.ToplevelDrags == null || source != null || origin is not { IsLive: true } || !platform.Seat.IsPressed ||
@@ -55,7 +55,7 @@ internal sealed class WaylandWindowDrag
     }
 
     /// <summary>The pointer is over one of our windows at a logical point of it.</summary>
-    public void Over(WaylandWindowWorker worker, Vector2 position)
+    public void Over(WaylandWindowWorker worker, Vector2<double> position)
     {
         var window = worker.Window;
         WaylandPlatform.DispatchInput(() =>

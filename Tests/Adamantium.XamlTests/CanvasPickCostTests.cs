@@ -44,7 +44,7 @@ public class CanvasPickCostTests
     private static (InfiniteCanvas Canvas, CanvasScene Scene, CanvasElementLayer Layer, Window Window) Plane(int nodes)
     {
         var canvas = new InfiniteCanvas();
-        canvas.Measure(new Size(1200, 800), force: true);
+        canvas.Measure(new Size<double>(1200, 800), force: true);
         canvas.Arrange(new Rect(0, 0, 1200, 800));
 
         var scene = new CanvasScene();
@@ -123,7 +123,7 @@ public class CanvasPickCostTests
         var said = new System.Text.StringBuilder();
         var counts = new[] { 1, 10 };
         var planes = Array.ConvertAll(counts, Plane);
-        var at = new Vector2(2000, 2000);   // empty plane: nothing is hit, so what is timed is the SEARCH
+        var at = new Vector2<double>(2000, 2000);   // empty plane: nothing is hit, so what is timed is the SEARCH
 
         var presses = Fastest(30, 20, Array.ConvertAll(planes, plane => (Action)(() =>
         {

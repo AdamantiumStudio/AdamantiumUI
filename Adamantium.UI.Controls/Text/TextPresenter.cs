@@ -12,7 +12,7 @@ public sealed class TextPresenter : InputUIComponent
     internal TextBoxBase Owner { get; set; }
 
     private bool _selecting;
-    private Size _lastArrangeSize;
+    private Size<double> _lastArrangeSize;
 
     public TextPresenter()
     {
@@ -25,13 +25,13 @@ public sealed class TextPresenter : InputUIComponent
     // ScrollContentPresenter knows the extent and provides the viewport/scrollbars. It measures us unbounded on the axes
     // it lets scroll (so we report our natural extent) and constrained on a disabled axis (so wrapping fits the viewport);
     // MeasureSurface already interprets an infinite length along the lines as "no wrap" and a finite one as the wrap length.
-    protected override Size MeasureOverride(Size availableSize)
-        => Owner == null ? new Size() : Owner.MeasureSurface(availableSize);
+    protected override Size<double> MeasureOverride(Size<double> availableSize)
+        => Owner == null ? new Size<double>() : Owner.MeasureSurface(availableSize);
 
     // The owner's lines stand on a baseline grid from where this surface is: moved, it lays them out again.
     protected internal override bool MeasuresByPlace => BaselineGridStep > 0 && !double.IsInfinity(BaselineGridStep);
 
-    protected override Size ArrangeOverride(Size finalSize)
+    protected override Size<double> ArrangeOverride(Size<double> finalSize)
     {
         // Re-render only when the SLOT SIZE changes (content/box resized, e.g. the floating-strip toggle), not on a mere
         // reposition (scrolling moves us via the arrange rect's ORIGIN - the same rendered units just shift, no redraw).
@@ -47,7 +47,7 @@ public sealed class TextPresenter : InputUIComponent
     }
 
     // Non-input geometry still needs to be hit for the click-to-place-caret / drag-select gestures.
-    public override bool HitTestCore(Vector2 localPoint) => true;
+    public override bool HitTestCore(Vector2<double> localPoint) => true;
 
     protected override void OnPointerPressed(PointerPressedEventArgs e)
     {

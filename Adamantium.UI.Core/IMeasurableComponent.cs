@@ -24,7 +24,7 @@ public interface IMeasurableComponent : IObservableComponent
     bool IsMeasureValid { get; }
     bool IsArrangeValid { get; }
 
-    Size DesiredSize { get; }
+    Size<double> DesiredSize { get; }
 
     /// <summary>The rect this element was last arranged with (its last correct slot), or null if never arranged. The
     /// layout manager re-arranges an arrange-dirty element into this slot rather than guessing one - the element's own
@@ -34,7 +34,7 @@ public interface IMeasurableComponent : IObservableComponent
     /// <summary>The available size this element was last measured with (its cached constraint), or null if never
     /// measured. The layout manager re-measures a measure-dirty element with this rather than guessing one; only if the
     /// re-measure changes <see cref="DesiredSize"/> does it then invalidate the parent (whose measure depends on it).</summary>
-    Size? PreviousMeasureConstraint { get; }
+    Size<double>? PreviousMeasureConstraint { get; }
     
     /// <summary>Whether this element's <see cref="DesiredSize"/> is independent of its children, so their size changes do
     /// not invalidate its measure. True for a fixed Width and Height, and for virtualizing hosts.</summary>
@@ -51,7 +51,7 @@ public interface IMeasurableComponent : IObservableComponent
     /// If true, the control will be measured even if <paramref name="availableSize"/> has not
     /// changed from the last measure.
     /// </param>
-    void Measure(Size availableSize, bool force = false);
+    void Measure(Size<double> availableSize, bool force = false);
 
     /// <summary>
     /// Arranges the control and its children.

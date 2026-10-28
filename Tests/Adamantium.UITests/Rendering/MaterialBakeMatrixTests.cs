@@ -33,7 +33,7 @@ public class MaterialBakeMatrixTests
     [Test]
     public void ANodeRelativeBakeReachesTheRecord()
     {
-        var rel = Matrix4x4F.Translation(new Vector3F(90, 124, 0));
+        var rel = Matrix4x4.CreateTranslation<float>(new Vector3F(90, 124, 0));
 
         Assert.That(MaterialRectCollector.BakeItem(Pane(new Rect(10, 20, 300, 200)), rel,
             1.0, transformSlot: 7, fadeSlot: -1, source: null, clipSlot: -1, out var item), Is.True);
@@ -48,7 +48,7 @@ public class MaterialBakeMatrixTests
     [Test]
     public void AScaledBakeReachesTheRecordToo()
     {
-        var scaled = Matrix4x4F.Scaling(2, 3, 1);
+        var scaled = Matrix4x4.CreateScale<float>(2, 3, 1);
 
         Assert.That(MaterialRectCollector.BakeItem(Pane(new Rect(10, 20, 300, 200)), scaled,
             1.0, transformSlot: 7, fadeSlot: -1, source: null, clipSlot: -1, out var item), Is.True);

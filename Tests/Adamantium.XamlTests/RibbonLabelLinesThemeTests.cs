@@ -65,7 +65,7 @@ public class RibbonLabelLinesThemeTests
     {
         Adamantium.UI.Extensions.WindowExtension.UpdateTree(group);
         Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
-        group.Measure(new Size(1000, _band));
+        group.Measure(new Size<double>(1000, _band));
         group.Arrange(new Rect(0, 0, 1000, _band));
     }
 

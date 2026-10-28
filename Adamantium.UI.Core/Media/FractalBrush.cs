@@ -18,10 +18,10 @@ public sealed class FractalBrush : Brush
         typeof(FractalType), typeof(FractalBrush), new PropertyMetadata(FractalType.Julia, PropertyMetadataOptions.AffectsPaint));
 
     public static readonly AdamantiumProperty CenterProperty = AdamantiumProperty.Register(nameof(Center),
-        typeof(Vector2), typeof(FractalBrush), new PropertyMetadata(new Vector2(0, 0), PropertyMetadataOptions.AffectsPaint));
+        typeof(Vector2<double>), typeof(FractalBrush), new PropertyMetadata(new Vector2<double>(0, 0), PropertyMetadataOptions.AffectsPaint));
 
     public static readonly AdamantiumProperty CenterFineProperty = AdamantiumProperty.Register(nameof(CenterFine),
-        typeof(Vector2), typeof(FractalBrush), new PropertyMetadata(new Vector2(0, 0), PropertyMetadataOptions.AffectsPaint));
+        typeof(Vector2<double>), typeof(FractalBrush), new PropertyMetadata(new Vector2<double>(0, 0), PropertyMetadataOptions.AffectsPaint));
 
     public static readonly AdamantiumProperty ZoomProperty = AdamantiumProperty.Register(nameof(Zoom),
         typeof(double), typeof(FractalBrush), new PropertyMetadata(1.0, PropertyMetadataOptions.AffectsPaint));
@@ -30,7 +30,7 @@ public sealed class FractalBrush : Brush
         typeof(int), typeof(FractalBrush), new PropertyMetadata(120, PropertyMetadataOptions.AffectsPaint));
 
     public static readonly AdamantiumProperty CProperty = AdamantiumProperty.Register(nameof(C),
-        typeof(Vector2), typeof(FractalBrush), new PropertyMetadata(new Vector2(-0.8f, 0.156f), PropertyMetadataOptions.AffectsPaint));
+        typeof(Vector2<double>), typeof(FractalBrush), new PropertyMetadata(new Vector2<double>(-0.8f, 0.156f), PropertyMetadataOptions.AffectsPaint));
 
     public static readonly AdamantiumProperty Color1Property = AdamantiumProperty.Register(nameof(Color1),
         typeof(Color), typeof(FractalBrush), new PropertyMetadata(new Color(11, 18, 43, 255), PropertyMetadataOptions.AffectsPaint));
@@ -88,9 +88,9 @@ public sealed class FractalBrush : Brush
     }
 
     /// <summary>Complex-plane point at the center of the fill (pan). Default origin.</summary>
-    public Vector2 Center
+    public Vector2<double> Center
     {
-        get => GetValue<Vector2>(CenterProperty);
+        get => GetValue<Vector2<double>>(CenterProperty);
         set
         {
             if (IsFrozen) return;
@@ -100,9 +100,9 @@ public sealed class FractalBrush : Brush
 
     /// <summary>The fine part of the center (shown = <see cref="Center"/> + this), keeping pan precision past double
     /// resolution at deep zoom. Zero by default.</summary>
-    public Vector2 CenterFine
+    public Vector2<double> CenterFine
     {
-        get => GetValue<Vector2>(CenterFineProperty);
+        get => GetValue<Vector2<double>>(CenterFineProperty);
         set
         {
             if (IsFrozen) return;
@@ -133,9 +133,9 @@ public sealed class FractalBrush : Brush
     }
 
     /// <summary>The Julia constant C (ignored for Mandelbrot). Small changes reshape the whole set - what auto-morph drifts.</summary>
-    public Vector2 C
+    public Vector2<double> C
     {
-        get => GetValue<Vector2>(CProperty);
+        get => GetValue<Vector2<double>>(CProperty);
         set
         {
             if (IsFrozen) return;

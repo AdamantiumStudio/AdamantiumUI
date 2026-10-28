@@ -60,15 +60,15 @@ public class TextCompositionTests
     public void ABoxsSettings_ReachItsLayout_AndAChangeLaysItOutAgain()
     {
         var box = new TextBox { Text = "one two three", Kashidas = false };
-        box.MeasureSurface(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        box.MeasureSurface(new Size<double>(double.PositiveInfinity, double.PositiveInfinity));
         Assert.That(box.Layout.Composition, Is.EqualTo(new TextComposition { Kashidas = false }));
         var revision = box.Layout.Revision;
 
-        box.MeasureSurface(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        box.MeasureSurface(new Size<double>(double.PositiveInfinity, double.PositiveInfinity));
         Assert.That(box.Layout.Revision, Is.EqualTo(revision), "nothing changed, nothing laid out");
 
         box.OpticalMarginAlignment = true;
-        box.MeasureSurface(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        box.MeasureSurface(new Size<double>(double.PositiveInfinity, double.PositiveInfinity));
         Assert.That(box.Layout.Composition, Is.EqualTo(new TextComposition
         {
             Kashidas = false, OpticalMarginAlignment = true,

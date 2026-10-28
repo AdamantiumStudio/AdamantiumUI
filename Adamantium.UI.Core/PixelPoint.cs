@@ -20,10 +20,10 @@ public readonly struct PixelPoint : IEquatable<PixelPoint>
 
     /// <summary>This desktop point in the logical units of a surface whose scale is <paramref name="dpiScale"/>. Per
     /// AXIS, not one number: the scale is a <see cref="Vector2"/> because a display can be anisotropic.</summary>
-    public Vector2 ToLogical(Vector2 dpiScale) => new((float)(X / dpiScale.X), (float)(Y / dpiScale.Y));
+    public Vector2<double> ToLogical(Vector2<double> dpiScale) => new((float)(X / dpiScale.X), (float)(Y / dpiScale.Y));
 
     /// <summary>A logical offset (a size, a distance - not a point) as physical pixels at <paramref name="dpiScale"/>.</summary>
-    public static PixelPoint FromLogical(Vector2 logical, Vector2 dpiScale) =>
+    public static PixelPoint FromLogical(Vector2<double> logical, Vector2<double> dpiScale) =>
         new(logical.X * dpiScale.X, logical.Y * dpiScale.Y);
 
     /// <summary>The vector from <paramref name="other"/> to this point, still in physical pixels. Subtracting two

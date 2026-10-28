@@ -28,11 +28,11 @@ public class CanvasSvgTests
 
     private static StrokeItem Ink()
     {
-        var ink = new StrokeItem(new Vector2(10, 20), new SolidColorBrush(Colors.Tomato), 3);
+        var ink = new StrokeItem(new Vector2<double>(10, 20), new SolidColorBrush(Colors.Tomato), 3);
 
-        ink.Add(new Vector2(10, 20));
-        ink.Add(new Vector2(40, 60));
-        ink.Add(new Vector2(70, 25));
+        ink.Add(new Vector2<double>(10, 20));
+        ink.Add(new Vector2<double>(40, 60));
+        ink.Add(new Vector2<double>(70, 25));
 
         return ink;
     }
@@ -52,8 +52,8 @@ public class CanvasSvgTests
             new ShapeItem(CanvasShape.Ellipse, new Rect(50, 0, 40, 30), Brushes.Black, 2),
             new ShapeItem(CanvasShape.Line, new Rect(0, 50, 40, 30), Brushes.Black, 2),
             new ShapeItem(CanvasShape.Polygon, new Rect(50, 50, 40, 40), Brushes.Black, 2) { Sides = 6 },
-            new TextItem(new Vector2(5, 120), "Hello", Brushes.Black, 14),
-            new CurveItem(CanvasCurve.Bezier, new[] { new Vector2(0, 0), new Vector2(20, 40), new Vector2(60, 0) },
+            new TextItem(new Vector2<double>(5, 120), "Hello", Brushes.Black, 14),
+            new CurveItem(CanvasCurve.Bezier, new[] { new Vector2<double>(0, 0), new Vector2<double>(20, 40), new Vector2<double>(60, 0) },
                 Brushes.Black, 2)
         });
 
@@ -393,7 +393,7 @@ public class CanvasSvgTests
     [Test]
     public void ACurveComesBackAsACurveAndNotAsItsFlattening()
     {
-        var control = new[] { new Vector2(0, 0), new Vector2(30, 80), new Vector2(90, 10), new Vector2(120, 60) };
+        var control = new[] { new Vector2<double>(0, 0), new Vector2<double>(30, 80), new Vector2<double>(90, 10), new Vector2<double>(120, 60) };
         var made = new CurveItem(CanvasCurve.BSpline, control, Brushes.Black, 2);
         var svg = CanvasSvg.Save(new ICanvasItem[] { made });
 
@@ -414,7 +414,7 @@ public class CanvasSvgTests
     [Test]
     public void TextComesBackWithItsWordsAndItsSize()
     {
-        var back = Round(new TextItem(new Vector2(40, 90), "Where the plane has no edges", Brushes.Black, 18))
+        var back = Round(new TextItem(new Vector2<double>(40, 90), "Where the plane has no edges", Brushes.Black, 18))
             .OfType<TextItem>().Single();
 
         Assert.Multiple(() =>

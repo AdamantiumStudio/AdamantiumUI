@@ -30,10 +30,10 @@ internal sealed class FrozenMesh
     /// <summary>The mesh's closed boundary loops in LOCAL space - the same ones the ring is built from, kept because a
     /// halo needs a distance field baked from them and re-deriving loops on the render thread would mean reading the
     /// live mesh again.</summary>
-    public List<(Vector2[] Points, bool IsClosed)> Loops { get; }
+    public List<(Vector2<double>[] Points, bool IsClosed)> Loops { get; }
 
     private FrozenMesh(UIVertex[] vertices, int[] indices, PrimitiveType topology, Rect bounds, GeometryKey key,
-        FringeVertex[] ring, List<(Vector2[] Points, bool IsClosed)> loops)
+        FringeVertex[] ring, List<(Vector2<double>[] Points, bool IsClosed)> loops)
     {
         Loops = loops;
         Vertices = vertices;

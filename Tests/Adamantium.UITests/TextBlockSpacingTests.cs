@@ -87,7 +87,7 @@ public class TextBlockSpacingTests
             Text = "吾輩は猫である。", FontSize = 20, TextSpacingTrim = TextSpacingTrim.SpaceAll,
             HangingPunctuation = HangingPunctuation.ForceEnd,
         };
-        box.MeasureSurface(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        box.MeasureSurface(new Size<double>(double.PositiveInfinity, double.PositiveInfinity));
 
         Assert.That(box.Layout.SpacingTrim, Is.EqualTo(TextSpacingTrim.SpaceAll));
         Assert.That(box.Layout.HangingPunctuation, Is.EqualTo(HangingPunctuation.ForceEnd));

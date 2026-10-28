@@ -60,7 +60,7 @@ public class CanvasZoomBackRenderTests
     {
         for (var pass = 0; pass < 2; pass++)
         {
-            canvas.Measure(new Size(Dim, Dim));
+            canvas.Measure(new Size<double>(Dim, Dim));
             canvas.Arrange(new Rect(0, 0, Dim, Dim));
         }
 
@@ -96,7 +96,7 @@ public class CanvasZoomBackRenderTests
 
         var root = new VisualRoot(canvas, Dim, Dim);
 
-        canvas.Offset = new Vector2(Dim / 2.0, Dim / 2.0);
+        canvas.Offset = new Vector2<double>(Dim / 2.0, Dim / 2.0);
 
         var first = Middle(canvas, root);
 
@@ -104,14 +104,14 @@ public class CanvasZoomBackRenderTests
 
         // All the way in, onto a patch of plane with nothing on it.
         canvas.Scale = canvas.MaxScale;
-        canvas.CenterOn(new Vector2(600, 600));
+        canvas.CenterOn(new Vector2<double>(600, 600));
 
         var away = Middle(canvas, root);
 
         Assert.That(away.G, Is.LessThan(60), $"the deep zoom still showed the shape: {away}");
 
         canvas.Scale = 1;
-        canvas.CenterOn(Vector2.Zero);
+        canvas.CenterOn(Vector2<double>.Zero);
 
         var back = Middle(canvas, root);
 

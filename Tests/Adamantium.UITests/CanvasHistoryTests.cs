@@ -15,7 +15,7 @@ public class CanvasHistoryTests
     private static InfiniteCanvas Sized(CanvasScene scene, double width = 400, double height = 300)
     {
         var canvas = new InfiniteCanvas { Scene = scene, History = new CanvasHistory() };
-        canvas.Measure(new Size(width, height), force: true);
+        canvas.Measure(new Size<double>(width, height), force: true);
         canvas.Arrange(new Rect(0, 0, width, height));
 
         return canvas;
@@ -86,7 +86,7 @@ public class CanvasHistoryTests
 
         var canvas = Sized(scene);
         canvas.BeginEdit("Move");
-        item.Move(new Vector2(37.5, -12.25));
+        item.Move(new Vector2<double>(37.5, -12.25));
         canvas.EndEdit();
 
         Assert.That(canvas.Undo(), Is.True);
@@ -142,8 +142,8 @@ public class CanvasHistoryTests
 
         var canvas = Sized(scene);
         canvas.BeginEdit("Drag");
-        first.Move(new Vector2(10, 10));
-        second.Move(new Vector2(10, 10));
+        first.Move(new Vector2<double>(10, 10));
+        second.Move(new Vector2<double>(10, 10));
         canvas.EndEdit();
 
         canvas.Undo();
@@ -167,9 +167,9 @@ public class CanvasHistoryTests
         var canvas = Sized(scene);
         canvas.BeginEdit("Outer");
         canvas.BeginEdit("Inner");
-        item.Move(new Vector2(10, 0));
+        item.Move(new Vector2<double>(10, 0));
         canvas.EndEdit();
-        item.Move(new Vector2(10, 0));
+        item.Move(new Vector2<double>(10, 0));
         canvas.EndEdit();
 
         canvas.Undo();
@@ -210,14 +210,14 @@ public class CanvasHistoryTests
 
         var canvas = Sized(scene);
         canvas.BeginEdit("First");
-        item.Move(new Vector2(10, 0));
+        item.Move(new Vector2<double>(10, 0));
         canvas.EndEdit();
         canvas.Undo();
 
         Assert.That(canvas.History.CanRedo, Is.True);
 
         canvas.BeginEdit("Second");
-        item.Move(new Vector2(0, 10));
+        item.Move(new Vector2<double>(0, 10));
         canvas.EndEdit();
 
         Assert.That(canvas.History.CanRedo, Is.False);
@@ -234,13 +234,13 @@ public class CanvasHistoryTests
         scene.Add(item);
 
         var canvas = new InfiniteCanvas { Scene = scene };
-        canvas.Measure(new Size(400, 300), force: true);
+        canvas.Measure(new Size<double>(400, 300), force: true);
         canvas.Arrange(new Rect(0, 0, 400, 300));
 
         Assert.That(canvas.History, Is.Not.Null, "a canvas with no memory of its own remembers nothing at all");
 
         canvas.BeginEdit("Move");
-        item.Move(new Vector2(10, 0));
+        item.Move(new Vector2<double>(10, 0));
         canvas.EndEdit();
 
         Assert.Multiple(() =>
@@ -253,7 +253,7 @@ public class CanvasHistoryTests
         canvas.History = null;
 
         canvas.BeginEdit("Move");
-        item.Move(new Vector2(10, 0));
+        item.Move(new Vector2<double>(10, 0));
         canvas.EndEdit();
 
         Assert.Multiple(() =>
@@ -352,7 +352,7 @@ public class CanvasHistoryTests
         section.Properties.Add(thickness);
         grid.Sections.Add(section);
 
-        grid.Measure(new Size(400, 400), force: true);
+        grid.Measure(new Size<double>(400, 400), force: true);
         grid.Arrange(new Rect(0, 0, 400, 400));
 
         return grid;

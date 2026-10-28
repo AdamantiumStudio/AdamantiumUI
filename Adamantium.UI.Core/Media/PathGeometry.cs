@@ -10,13 +10,13 @@ namespace Adamantium.UI.Core.Media;
 public class PathGeometry : Geometry
 {
     private readonly Dictionary<PathFigure, MeshContour> figureToPolygon;
-    private Dictionary<PathFigure, Vector2[]> outlines;
+    private Dictionary<PathFigure, Vector2<double>[]> outlines;
     private Rect bounds;
     
     public PathGeometry()
     {
         figureToPolygon = new Dictionary<PathFigure, MeshContour>();
-        outlines = new Dictionary<PathFigure, Vector2[]>();
+        outlines = new Dictionary<PathFigure, Vector2<double>[]>();
         Figures = new PathFigureCollection();
     }
 
@@ -67,7 +67,7 @@ public class PathGeometry : Geometry
     {
         if (Figures == null) return;
         
-        var points = new List<Vector2>();
+        var points = new List<Vector2<double>>();
         foreach (var figure in Figures)
         {
             figure.ProcessSegments();
@@ -80,7 +80,7 @@ public class PathGeometry : Geometry
         var maxY = points.Select(y=>y.Y).Max();
         var minX = points.Select(x => x.X).Min();
         var minY = points.Select(y => y.Y).Min();
-        bounds = new Rect(new Vector2(minX, minY), new Vector2(maxX, maxY));
+        bounds = new Rect(new Vector2<double>(minX, minY), new Vector2<double>(maxX, maxY));
     }
 
     protected internal override void ProcessGeometryCore(GeometryType geometryType)

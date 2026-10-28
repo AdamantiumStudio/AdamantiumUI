@@ -575,7 +575,7 @@ public class DataGridRow : Panel
         if (_number.Number != Number || returning)
         {
             _number.Number = Number;
-            _number.Measure(Size.Infinity);
+            _number.Measure(Size<double>.Infinity);
             Owner.ReportRowNumberWidth(_number.DesiredSize.Width);
         }
 
@@ -779,10 +779,10 @@ public class DataGridRow : Panel
         return -1;
     }
 
-    protected override Size MeasureOverride(Size availableSize)
+    protected override Size<double> MeasureOverride(Size<double> availableSize)
     {
         var columns = Owner?.Columns;
-        if (columns == null || columns.Count == 0) return new Size();
+        if (columns == null || columns.Count == 0) return new Size<double>();
 
         // The window of columns can move on any pass - a sideways scroll is exactly that - so the strip is brought in
         // line HERE rather than only when the row is bound. Cheap when nothing moved: a dictionary lookup per column.
@@ -790,7 +790,7 @@ public class DataGridRow : Panel
 
         if (_detailsToggle is { Visibility: Visibility.Visible })
         {
-            _detailsToggle.Measure(new Size(Owner.RowDetailsToggleWidth, availableSize.Height));
+            _detailsToggle.Measure(new Size<double>(Owner.RowDetailsToggleWidth, availableSize.Height));
         }
 
         // The panel takes what is left of the VIEW after the strips - it belongs to no column, so the columns' total
@@ -805,13 +805,13 @@ public class DataGridRow : Panel
             var of = (Row.Node as DataGridRowDetails)?.Item;
             if (_details != null)
             {
-                _details.Measure(new Size(room, double.PositiveInfinity));
+                _details.Measure(new Size<double>(room, double.PositiveInfinity));
                 Owner.ReportRowDetailsHeight(of, _details.DesiredSize.Height);
             }
 
             // What the CONTENT came to, not what the table guessed: this row carries no fixed height, so its own desired
             // size is the one honest answer and the stack is told the same number through the report above.
-            return new Size(Owner.ColumnsWidth, _details?.DesiredSize.Height ?? 0);
+            return new Size<double>(Owner.ColumnsWidth, _details?.DesiredSize.Height ?? 0);
         }
 
         // A group row spans the table rather than dividing into columns, so its caption takes the run the totals leave
@@ -821,21 +821,21 @@ public class DataGridRow : Panel
         if (Group != null)
         {
             var run = CaptionRun(columns, Owner.HorizontalOffset, Owner.RightPinShift);
-            _groupHeader.Measure(new Size(run.Width, availableSize.Height));
+            _groupHeader.Measure(new Size<double>(run.Width, availableSize.Height));
 
             foreach (var pair in _groupTotals)
             {
                 if (pair.Key >= columns.Count) continue;
 
-                pair.Value.Measure(new Size(columns[pair.Key].ActualWidth, availableSize.Height));
+                pair.Value.Measure(new Size<double>(columns[pair.Key].ActualWidth, availableSize.Height));
             }
 
             if (_number is { Visibility: Visibility.Visible })
             {
-                _number.Measure(new Size(Owner.RowNumberWidth, availableSize.Height));
+                _number.Measure(new Size<double>(Owner.RowNumberWidth, availableSize.Height));
             }
 
-            return new Size(Owner.ColumnsWidth, _groupHeader.DesiredSize.Height);
+            return new Size<double>(Owner.ColumnsWidth, _groupHeader.DesiredSize.Height);
         }
 
         // Each cell is measured AT its column's width - that is what gives a text cell an edge to trim against instead
@@ -847,15 +847,15 @@ public class DataGridRow : Panel
             if (i >= columns.Count) continue;
             var column = columns[i];
             var cell = pair.Value;
-            cell.Measure(new Size(column.ActualWidth, availableSize.Height));
+            cell.Measure(new Size<double>(column.ActualWidth, availableSize.Height));
             height = Math.Max(height, cell.DesiredSize.Height);
 
             if (column.Width.IsAuto)
             {
                 // Auto asks the cell what it would take unbounded; that answer is what the width pass settles on.
-                cell.Measure(new Size(double.PositiveInfinity, availableSize.Height));
+                cell.Measure(new Size<double>(double.PositiveInfinity, availableSize.Height));
                 Owner?.ReportAutoWidth(column, cell.DesiredSize.Width);
-                cell.Measure(new Size(column.ActualWidth, availableSize.Height));
+                cell.Measure(new Size<double>(column.ActualWidth, availableSize.Height));
             }
         }
 
@@ -863,14 +863,14 @@ public class DataGridRow : Panel
         // cache hold, so a table standing still measures nothing at all.
         if (_number is { Visibility: Visibility.Visible })
         {
-            _number.Measure(new Size(Owner.RowNumberWidth, availableSize.Height));
+            _number.Measure(new Size<double>(Owner.RowNumberWidth, availableSize.Height));
         }
 
         var width = columns[^1].Offset + columns[^1].ActualWidth;
-        return new Size(width, height);
+        return new Size<double>(width, height);
     }
 
-    protected override Size ArrangeOverride(Size finalSize)
+    protected override Size<double> ArrangeOverride(Size<double> finalSize)
     {
         var columns = Owner?.Columns;
         if (columns == null) return finalSize;
@@ -933,14 +933,14 @@ public class DataGridRow : Panel
         // whatever is passing beneath.
         if (_frozenBackdrop is { Visibility: Visibility.Visible })
         {
-            _frozenBackdrop.Measure(new Size(Owner.FrozenWidth, finalSize.Height));
+            _frozenBackdrop.Measure(new Size<double>(Owner.FrozenWidth, finalSize.Height));
             _frozenBackdrop.Arrange(new Rect(offset, 0, Owner.FrozenWidth, finalSize.Height));
         }
 
         if (_rightBackdrop is { Visibility: Visibility.Visible })
         {
             var zone = Owner.ColumnsWidth - Owner.RightFrozenWidth + right;
-            _rightBackdrop.Measure(new Size(Owner.RightFrozenWidth, finalSize.Height));
+            _rightBackdrop.Measure(new Size<double>(Owner.RightFrozenWidth, finalSize.Height));
             _rightBackdrop.Arrange(new Rect(zone, 0, Owner.RightFrozenWidth, finalSize.Height));
         }
 

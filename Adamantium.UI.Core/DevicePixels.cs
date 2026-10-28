@@ -43,10 +43,10 @@ public static class DevicePixels
 
     /// <summary>Where <paramref name="element"/> sits in its window (DIPs) and what a DIP is worth in pixels there.
     /// False when the element is not in a window, or is under anything but a plain offset.</summary>
-    private static bool Origin(IUIComponent element, out Vector2 at, out Vector2 scale)
+    private static bool Origin(IUIComponent element, out Vector2<double> at, out Vector2<double> scale)
     {
         at = default;
-        scale = Vector2.One;
+        scale = Vector2<double>.One;
 
         if (element?.RootVisual is not IWindow window) return false;
 
@@ -60,13 +60,13 @@ public static class DevicePixels
             return false;
         }
 
-        at = new Vector2(world.M41, world.M42);
+        at = new Vector2<double>(world.M41, world.M42);
         return true;
     }
 
     // Both edges of each axis, so a rectangle keeps its corners on the grid rather than its position plus a rounded size
     // - rounding the size instead leaves the far edge off by whatever the near one was moved.
-    private static Rect Snapped(Rect rect, Vector2 at, Vector2 scale)
+    private static Rect Snapped(Rect rect, Vector2<double> at, Vector2<double> scale)
     {
         var left = Edge(rect.X, at.X, scale.X);
         var top = Edge(rect.Y, at.Y, scale.Y);

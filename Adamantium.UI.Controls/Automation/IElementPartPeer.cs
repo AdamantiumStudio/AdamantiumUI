@@ -11,5 +11,5 @@ public interface IElementPartPeer
     UIComponent Element { get; }
 
     /// <summary>The middle of the part, in the element's own units; null while the part is not laid out on screen.</summary>
-    Vector2? Middle { get; }
+    Vector2<double>? Middle { get; }
 }

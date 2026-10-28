@@ -5,16 +5,16 @@ namespace Adamantium.UI.Core.Media;
 public abstract class BezierSegmentBase : PathSegment
 {
     public static readonly AdamantiumProperty PointProperty =
-        AdamantiumProperty.Register(nameof(Point), typeof(Vector2), typeof(BezierSegmentBase),
-            new PropertyMetadata(Vector2.Zero, PropertyMetadataOptions.AffectsMeasure));
+        AdamantiumProperty.Register(nameof(Point), typeof(Vector2<double>), typeof(BezierSegmentBase),
+            new PropertyMetadata(Vector2<double>.Zero, PropertyMetadataOptions.AffectsMeasure));
 
-    public Vector2 Point
+    public Vector2<double> Point
     {
-        get => GetValue<Vector2>(PointProperty);
+        get => GetValue<Vector2<double>>(PointProperty);
         set => SetValue(PointProperty, value);
     }
     
-    protected double CalculatePointsLength(Vector2[] points)
+    protected double CalculatePointsLength(Vector2<double>[] points)
     {
         double cumulativeLength = 0;
         for (int i = 0; i < points.Length - 1; i++)

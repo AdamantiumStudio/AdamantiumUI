@@ -148,8 +148,8 @@ public class TabDragGestureTests
     /// focus needs a root to walk up to.</summary>
     private sealed class TestWindowRoot : Grid, IRootVisualComponent
     {
-        public Vector2 PointToClient(PixelPoint point) => new((float)point.X, (float)point.Y);
-        public PixelPoint PointToScreen(Vector2 point) => new(point.X, point.Y);
+        public Vector2<double> PointToClient(PixelPoint point) => new((float)point.X, (float)point.Y);
+        public PixelPoint PointToScreen(Vector2<double> point) => new(point.X, point.Y);
         public PixelPoint Position { get; set; }
         public void AttachContextAndInitialize(IUIContext context) { }
         public double Left { get; set; }
@@ -185,7 +185,7 @@ public class TabDragGestureTests
 
         var root = new TestWindowRoot { Width = 1000, Height = 1000, ClientWidth = 1000, ClientHeight = 1000 };
         root.Children.Add(tc);
-        root.Measure(new Size(1000, 1000));
+        root.Measure(new Size<double>(1000, 1000));
         root.Arrange(new Rect(0, 0, 1000, 1000));
         return (tc, tabs);
     }

@@ -63,7 +63,7 @@ internal sealed class CanvasStep : ICanvasStep
         // point - so anything that only traveled is put back by traveling.
         if (Math.Abs(now.Width - box.Width) < 1e-9 && Math.Abs(now.Height - box.Height) < 1e-9)
         {
-            item.Move(new Vector2(box.X - now.X, box.Y - now.Y));
+            item.Move(new Vector2<double>(box.X - now.X, box.Y - now.Y));
             return;
         }
 

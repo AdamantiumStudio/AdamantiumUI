@@ -250,14 +250,14 @@ public class OverlayWindow : ContentControl
     private InputUIComponent _dragArea;   // the transparent title-bar strip that starts the drag
     private InputUIComponent _resizeGrip;
     private bool _dragging;
-    private Vector2 _dragStart;           // pointer at press, in the PARENT WINDOW's space (which does not move)
+    private Vector2<double> _dragStart;           // pointer at press, in the PARENT WINDOW's space (which does not move)
     private double _dragBaseLeft, _dragBaseTop;   // the card's top-left at press (the anchor the delta is added to)
     private double _dragParentW, _dragParentH;    // parent window size at press (to clamp the card inside)
     private double _dragCardW, _dragCardH;        // card size at press
     private const double MinCardWidth = 300;    // matches PART_Window MinWidth in the theme
     private const double MinCardHeight = 120;
     private bool _resizing;
-    private Vector2 _resizeStart;
+    private Vector2<double> _resizeStart;
     private double _resizeBaseW, _resizeBaseH;
     private double _resizeParentW, _resizeParentH;   // parent window size at resize start
     private double _resizeLeft, _resizeTop;          // the card's top-left in window space at resize start (kept fixed)
@@ -397,7 +397,7 @@ public class OverlayWindow : ContentControl
         {
             var pop = RenderTransform ?? new Transform();
             RenderTransform = pop;
-            RenderTransformOrigin = new Vector2(0.5f, 0.5f);   // scale about the center
+            RenderTransformOrigin = new Vector2<double>(0.5f, 0.5f);   // scale about the center
             var duration = TimeSpan.FromSeconds(OpenDuration);
             pop.BeginAnimation(Transform.ScaleXProperty, new DoubleAnimation { From = 0.85, To = 1, Duration = duration, FillBehavior = FillBehavior.Stop });
             pop.BeginAnimation(Transform.ScaleYProperty, new DoubleAnimation { From = 0.85, To = 1, Duration = duration, FillBehavior = FillBehavior.Stop });
@@ -413,7 +413,7 @@ public class OverlayWindow : ContentControl
     private const int FocusAttempts = 8;
     private int _focusTries;
 
-    protected override Size ArrangeOverride(Size finalSize)
+    protected override Size<double> ArrangeOverride(Size<double> finalSize)
     {
         var size = base.ArrangeOverride(finalSize);
         TakeKeyboard();
@@ -557,7 +557,7 @@ public class OverlayWindow : ContentControl
 
     /// <summary>Moves the card by an offset of the window it is shown over, kept inside it - what a drag by its title bar
     /// does.</summary>
-    internal void MoveCard(Vector2 offset)
+    internal void MoveCard(Vector2<double> offset)
     {
         if (HostPopup?.PlacementTarget is not IInputComponent frame) return;
 

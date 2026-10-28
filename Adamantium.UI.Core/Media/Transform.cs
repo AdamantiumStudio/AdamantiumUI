@@ -157,11 +157,11 @@ public class Transform : AnimatableUIComponent
         set => SetValue(RotationCenterYProperty, value);
     }
         
-    public Matrix4x4 Matrix { get; private set; } = Matrix4x4.Identity;
+    public Matrix4x4<double> Matrix { get; private set; } = Matrix4x4<double>.Identity;
 
     /// <summary><see cref="ShiftX"/> and <see cref="ShiftY"/> as of the last change, for composing without the property
     /// system.</summary>
-    public Vector2 Shift { get; private set; }
+    public Vector2<double> Shift { get; private set; }
 
     /// <summary>The element this transform is assigned to as RenderTransform (set by the owner). Lets a transform tick
     /// mark ONLY its owner when the owner is a render MOTION NODE (its slot matrix rewrites - the O(1) tilt/flip path)
@@ -461,7 +461,7 @@ public class Transform : AnimatableUIComponent
     private void UpdateTransform()
     {
         Matrix = CalculateFinalTransform();
-        Shift = new Vector2(ShiftX, ShiftY);
+        Shift = new Vector2<double>(ShiftX, ShiftY);
 
         // A LayoutTransform reshapes the owner's FOOTPRINT, so a value change (AUML setting ScaleX after the property, an
         // animated zoom, ...) must re-run LAYOUT: measure re-cascades into arrange and the render. A RenderTransform only
@@ -509,5 +509,5 @@ public class Transform : AnimatableUIComponent
 
     // The matrix arithmetic itself lives in TransformValues, so the compositor composes the SAME matrix from the SAME code -
     // two implementations of this would be two chances to disagree about where an element is.
-    private Matrix4x4 CalculateFinalTransform() => Values.ToMatrix();
+    private Matrix4x4<double> CalculateFinalTransform() => Values.ToMatrix();
 }

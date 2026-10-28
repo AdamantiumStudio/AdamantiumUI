@@ -27,7 +27,7 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
     private bool _fitting;
     private bool _centering;
     private bool _sizeFromPlatform;
-    private readonly Size[] _asked = [new(double.NaN, double.NaN), new(double.NaN, double.NaN), new(double.NaN, double.NaN), new(double.NaN, double.NaN)];
+    private readonly Size<double>[] _asked = [new(double.NaN, double.NaN), new(double.NaN, double.NaN), new(double.NaN, double.NaN), new(double.NaN, double.NaN)];
     private int _lastAsked;
     private ScreenInfo _centeredOn;
     private IWindow _owner;
@@ -81,7 +81,7 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
 
     public IReadOnlyList<IUIComponent> PopupRoots => PopupLayer.Roots;
 
-    public void LayoutPopups() => PopupLayer.UpdateLayout(new Size(ClientWidth, ClientHeight));
+    public void LayoutPopups() => PopupLayer.UpdateLayout(new Size<double>(ClientWidth, ClientHeight));
 
     private bool _hoverHooked;
 
@@ -684,7 +684,7 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
     private static void ClientWidthChangedCallBack(AdamantiumComponent adamantiumAdamantiumComponent, AdamantiumPropertyChangedEventArgs e)
     {
         if (!(adamantiumAdamantiumComponent is WindowBase component)) return;
-        Size old = default;
+        Size<double> old = default;
         // Only concrete numbers are a size to push to the OS window or to report; the default is NaN (auto).
         if (e.OldValue is not double oldWidth || double.IsNaN(oldWidth) || e.NewValue is not double newWidth)
             return;
@@ -700,7 +700,7 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
         old.Width = oldWidth;
         old.Height = component.Height;
 
-        var newSize = new Size(newWidth, component.Height);
+        var newSize = new Size<double>(newWidth, component.Height);
         var args = new SizeChangedEventArgs(old, newSize, true, false);
         args.RoutedEvent = ClientSizeChangedEvent;
         component.RaiseEvent(args);
@@ -717,8 +717,8 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
 
         component.SizeGivenFromOutside();
 
-        var old = new Size(component.Width, oldHeight);
-        var newSize = new Size(component.Width, newHeight);
+        var old = new Size<double>(component.Width, oldHeight);
+        var newSize = new Size<double>(component.Width, newHeight);
         var args = new SizeChangedEventArgs(old, newSize, false, true);
         args.RoutedEvent = ClientSizeChangedEvent;
         component?.RaiseEvent(args);
@@ -783,7 +783,7 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
     /// <summary>Not while sized to its content: a child that changes size has to reach the window.</summary>
     public override bool IsMeasureBoundary => SizeToContent == SizeToContent.Manual && base.IsMeasureBoundary;
 
-    protected override Size MeasureOverride(Size availableSize)
+    protected override Size<double> MeasureOverride(Size<double> availableSize)
     {
         var sizing = SizeToContent;
         if (sizing == SizeToContent.Manual)
@@ -793,7 +793,7 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
 
         var byWidth = sizing is SizeToContent.Width or SizeToContent.WidthAndHeight;
         var byHeight = sizing is SizeToContent.Height or SizeToContent.WidthAndHeight;
-        var content = base.MeasureOverride(new Size(
+        var content = base.MeasureOverride(new Size<double>(
             byWidth ? double.PositiveInfinity : availableSize.Width,
             byHeight ? double.PositiveInfinity : availableSize.Height));
         if (State == WindowState.Normal)
@@ -817,7 +817,7 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
             return;
         }
 
-        var before = new Size(ClientWidth, ClientHeight);
+        var before = new Size<double>(ClientWidth, ClientHeight);
         _fitting = true;
         try
         {
@@ -884,7 +884,7 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
     private void AskForSize()
     {
         _lastAsked = (_lastAsked + 1) % _asked.Length;
-        _asked[_lastAsked] = new Size(ClientWidth, ClientHeight);
+        _asked[_lastAsked] = new Size<double>(ClientWidth, ClientHeight);
         WindowWorkerService?.SetSize(ClientWidth, ClientHeight);
     }
 
@@ -963,7 +963,7 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
     public void DragMove() => WindowWorkerService?.BeginMoveDrag();
 
     /// <summary>Begins an OS-driven move of the window held at <paramref name="grab"/>, a logical point of it.</summary>
-    public void DragMove(Vector2 grab) => WindowWorkerService?.BeginMoveDrag(grab);
+    public void DragMove(Vector2<double> grab) => WindowWorkerService?.BeginMoveDrag(grab);
 
     /// <summary>Minimizes the window (title bar minimize button).</summary>
     public void Minimize() => State = WindowState.Minimized;
@@ -1022,8 +1022,8 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
     /// no OS window of its own is up for as long as it is open.</summary>
     public virtual bool IsDisplayed => !IsClosed;
 
-    public abstract Vector2 PointToClient(PixelPoint point);
-    public abstract PixelPoint PointToScreen(Vector2 point);
+    public abstract Vector2<double> PointToClient(PixelPoint point);
+    public abstract PixelPoint PointToScreen(Vector2<double> point);
 
     /// <summary>Where this window sits on the desktop, as ONE typed value. <see cref="Left"/>/<see cref="Top"/> hold the
     /// same thing as bindable numbers (a position is authored and serialized as two numbers); everything that COMPUTES a
@@ -1141,7 +1141,7 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
 
     private protected virtual WindowPlacement CenteredOver => null;
 
-    private Size SizeOn(ScreenInfo screen) =>
+    private Size<double> SizeOn(ScreenInfo screen) =>
         new(ExtentOn(screen, ClientWidth, Width, 800), ExtentOn(screen, ClientHeight, Height, 600));
 
     private static double ExtentOn(ScreenInfo screen, double client, double outer, double fallback)
@@ -1185,8 +1185,8 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
         };
     }
 
-    private Size FrameSize() =>
-        UseCustomChrome ? default : new Size(Math.Max(0, Width - ClientWidth * DpiScale.X), Math.Max(0, Height - ClientHeight * DpiScale.Y));
+    private Size<double> FrameSize() =>
+        UseCustomChrome ? default : new Size<double>(Math.Max(0, Width - ClientWidth * DpiScale.X), Math.Max(0, Height - ClientHeight * DpiScale.Y));
 
     /// <summary>The name the window's place is remembered under: <see cref="PlacementKey"/>, or its type.</summary>
     public string PlacementName() => PlacementKey ?? GetType().FullName;
@@ -1211,7 +1211,7 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
         
     }
 
-    public Vector2 ScreenToClient(PixelPoint p)
+    public Vector2<double> ScreenToClient(PixelPoint p)
     {
         // The platform answers in PHYSICAL client px; the framework works in logical DIP -> divide by THIS window's
         // scale. A window with no platform behind it keeps the point as it is.
@@ -1222,7 +1222,7 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
     /// <summary>A point of this window's client area (LOGICAL) to a desktop point (PHYSICAL). The asymmetry is the
     /// desktop's: monitors can differ in scale, so a screen point has no one scale to be logical in. Convert with the
     /// scale of the window the point concerns - see <see cref="Left"/>.</summary>
-    public PixelPoint ClientToScreen(Vector2 p)
+    public PixelPoint ClientToScreen(Vector2<double> p)
     {
         // p is logical DIP -> back to physical client px before handing to the platform; the screen coords stay physical.
         var physical = PixelPoint.FromLogical(p, DpiScale);
@@ -1600,8 +1600,8 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
 
     public event EventHandler<EventArgs> SourceInitialized;
 
-    private Vector2 _dpiScale = new Vector2(1, 1);
-    public Vector2 DpiScale
+    private Vector2<double> _dpiScale = new Vector2<double>(1, 1);
+    public Vector2<double> DpiScale
     {
         get => _dpiScale;
         set

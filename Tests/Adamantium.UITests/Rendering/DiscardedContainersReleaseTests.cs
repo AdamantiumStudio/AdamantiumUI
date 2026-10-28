@@ -28,8 +28,8 @@ public class DiscardedContainersReleaseTests
 
     private sealed class Root : Grid, IRootVisualComponent
     {
-        public Vector2 PointToClient(PixelPoint point) => new((float)point.X, (float)point.Y);
-        public PixelPoint PointToScreen(Vector2 point) => new(point.X, point.Y);
+        public Vector2<double> PointToClient(PixelPoint point) => new((float)point.X, (float)point.Y);
+        public PixelPoint PointToScreen(Vector2<double> point) => new(point.X, point.Y);
         public PixelPoint Position { get; set; }
         public void AttachContextAndInitialize(IUIContext context) { }
         public double Left { get; set; }
@@ -60,7 +60,7 @@ public class DiscardedContainersReleaseTests
 
         public void Frame()
         {
-            Root.Measure(new Size(Width, Height), force: true);
+            Root.Measure(new Size<double>(Width, Height), force: true);
             Root.Arrange(new Rect(0, 0, Width, Height));
             WindowExtension.UpdateTree(Root);
             Assert.That(_renderer.RenderFrame(Root), Is.True, "the frame must be drawn");

@@ -21,13 +21,13 @@ public class StrokeGeometry : Geometry
       public LineSegment2D TopSegment;
       public LineSegment2D GeometrySegment;
       public LineSegment2D BottomSegment;
-      public Vector2? ZeroLengthDirection;
+      public Vector2<double>? ZeroLengthDirection;
    }
 
    private struct DashData
    {
-      public List<Vector2> Points;
-      public Vector2 Direction;
+      public List<Vector2<double>> Points;
+      public Vector2<double> Direction;
    }
       
    public StrokeGeometry()
@@ -42,7 +42,7 @@ public class StrokeGeometry : Geometry
       
    protected internal override void ProcessGeometryCore(GeometryType geometryType)
    {
-      var strokes = new List<Vector3>();
+      var strokes = new List<Vector3<double>>();
       for (var i = 0; i < geometry.Mesh.Contours.Count; i++)
       {
          var layer = geometry.Mesh.GetContour(i);
@@ -57,13 +57,13 @@ public class StrokeGeometry : Geometry
       bounds = geometry.Bounds.Inflate(pen.Thickness);
    }
 
-   private List<Vector3> GenerateStroke(Vector2[] points, bool isGeometryClosed)
+   private List<Vector3<double>> GenerateStroke(Vector2<double>[] points, bool isGeometryClosed)
    {
-      if (points == null || points.Length == 0) return new List<Vector3>();
+      if (points == null || points.Length == 0) return new List<Vector3<double>>();
          
       //@TODO check concave zero length triangulation
 
-      var zeroLineDir = new LineSegment2D(new Vector2(0, 0), new Vector2(1, 0)).DirectionNormalized;
+      var zeroLineDir = new LineSegment2D(new Vector2<double>(0, 0), new Vector2<double>(1, 0)).DirectionNormalized;
 
       // sanitize geometry - remove equal points (but not in case when there is a single line with zero length)
       if (points.Length > 2)
@@ -99,7 +99,7 @@ public class StrokeGeometry : Geometry
          meshContours = GenerateDashes(points, pen, isGeometryClosed);
       }
 
-      var vertices = new List<Vector3>();
+      var vertices = new List<Vector3<double>>();
 
       foreach (var polygonItem in meshContours)
       {
@@ -112,7 +112,7 @@ public class StrokeGeometry : Geometry
       return vertices;
    }
 
-   private List<MeshContour> GenerateDashes(Vector2[] points, Pen pen, bool isGeometryClosed)
+   private List<MeshContour> GenerateDashes(Vector2<double>[] points, Pen pen, bool isGeometryClosed)
    {
       var meshContours = new List<MeshContour>();
       var dashesData = SplitGeometryToDashes(points, pen, isGeometryClosed);
@@ -125,7 +125,7 @@ public class StrokeGeometry : Geometry
       return meshContours;
    }
       
-   private double GetGeometryLength(Vector2[] points, bool isGeometryClosed)
+   private double GetGeometryLength(Vector2<double>[] points, bool isGeometryClosed)
    {
       var length = 0.0;
 
@@ -149,15 +149,15 @@ public class StrokeGeometry : Geometry
       return length;
    }
       
-   private List<DashData> SplitGeometryToDashes(Vector2[] points, Pen pen, bool isGeometryClosed)
+   private List<DashData> SplitGeometryToDashes(Vector2<double>[] points, Pen pen, bool isGeometryClosed)
    {
       return isGeometryClosed ? SplitClosedGeometryToDashes(points, pen) : SplitOpenedGeometryToDashes(points, pen);
    }
 
-   private List<DashData> SplitOpenedGeometryToDashes(Vector2[] points, Pen pen)
+   private List<DashData> SplitOpenedGeometryToDashes(Vector2<double>[] points, Pen pen)
    {
       var dashesData = new List<DashData>();
-      var dashGeometry = new List<Vector2>();
+      var dashGeometry = new List<Vector2<double>>();
 
       var geometryLength = GetGeometryLength(points, false);
 
@@ -237,7 +237,7 @@ public class StrokeGeometry : Geometry
                };
 
                dashesData.Add(dashData);
-               dashGeometry = new List<Vector2>();
+               dashGeometry = new List<Vector2<double>>();
             }
                
             isBackwardsDash = !isBackwardsDash;
@@ -274,7 +274,7 @@ public class StrokeGeometry : Geometry
                };
 
                dashesData.Add(dashData);
-               dashGeometry = new List<Vector2>();
+               dashGeometry = new List<Vector2<double>>();
             }
 
             isForwardDash = !isForwardDash;
@@ -303,7 +303,7 @@ public class StrokeGeometry : Geometry
       return array;
    }
 
-   private List<DashData> SplitClosedGeometryToDashes(Vector2[] points, Pen pen)
+   private List<DashData> SplitClosedGeometryToDashes(Vector2<double>[] points, Pen pen)
    {
       var dashesData = new List<DashData>();
 
@@ -327,7 +327,7 @@ public class StrokeGeometry : Geometry
 
       var dashArrayIndex = 0;
       var isDash = true;
-      var dashGeometry = new List<Vector2>();
+      var dashGeometry = new List<Vector2<double>>();
       var goOn = true;
 
       var currentPoint = GetPointAlongGeometry(
@@ -392,7 +392,7 @@ public class StrokeGeometry : Geometry
             };
 
             dashesData.Add(dashData);
-            dashGeometry = new List<Vector2>();
+            dashGeometry = new List<Vector2<double>>();
          }
 
          if (!goOn) break;
@@ -421,16 +421,16 @@ public class StrokeGeometry : Geometry
       return dashesData;
    }
       
-   private Vector2 GetPointAlongGeometry(
-      Vector2[] points, 
+   private Vector2<double> GetPointAlongGeometry(
+      Vector2<double>[] points, 
       int startSegmentIndex, 
-      Vector2 startPoint, 
+      Vector2<double> startPoint, 
       double offsetFromStartPoint, 
       bool isGeometryClosed, 
       out int segmentIndex, 
       out List<int> intermediatePointIndices, 
       out double pathLength, 
-      out Vector2 direction)
+      out Vector2<double> direction)
    {
       segmentIndex = startSegmentIndex;
       intermediatePointIndices = new List<int>();
@@ -442,8 +442,8 @@ public class StrokeGeometry : Geometry
 
       // index of start point of segment on which lies the point with desired offset
       var index = startSegmentIndex;
-      Vector2 segmentStart;
-      Vector2 segmentEnd;
+      Vector2<double> segmentStart;
+      Vector2<double> segmentEnd;
 
       bool useStartPoint = true;
          
@@ -531,7 +531,7 @@ public class StrokeGeometry : Geometry
       return GetPointAlongSegment(segmentStart, segmentEnd, offsetFromStartPoint);
    }
 
-   private Vector2 GetPointAlongSegment(Vector2 start, Vector2 end, double offsetFromStartOfSegment)
+   private Vector2<double> GetPointAlongSegment(Vector2<double> start, Vector2<double> end, double offsetFromStartOfSegment)
    {
       var segment = new LineSegment2D(start, end);
 
@@ -540,7 +540,7 @@ public class StrokeGeometry : Geometry
       return start + offsetFromStartOfSegment * direction;
    }
 
-   private List<MeshContour> GenerateStroke(Vector2[] points, Pen pen, bool isGeometryClosed, Vector2? zeroLengthLineDirection = null)
+   private List<MeshContour> GenerateStroke(Vector2<double>[] points, Pen pen, bool isGeometryClosed, Vector2<double>? zeroLengthLineDirection = null)
    {
       // check if geometry is valid
       if (points.Length < 2) return new List<MeshContour>();
@@ -552,12 +552,12 @@ public class StrokeGeometry : Geometry
       if (points.Length == 2 && points[0] == points[1])
       {
          // if there is no direction for zero length line - set it to default value of (1,0)
-         if (zeroLengthLineDirection == null) zeroLengthLineDirection = new Vector2(1, 0);
+         if (zeroLengthLineDirection == null) zeroLengthLineDirection = new Vector2<double>(1, 0);
          var zeroLengthLineDirectionNormalized = zeroLengthLineDirection.Value;
          if (!zeroLengthLineDirectionNormalized.IsNormalized) zeroLengthLineDirectionNormalized.Normalize();
 
          // compute normal to zero length line based on zero length line direction
-         var zeroLengthLineNormal = new Vector2(-zeroLengthLineDirection.Value.Y, zeroLengthLineDirection.Value.X);
+         var zeroLengthLineNormal = new Vector2<double>(-zeroLengthLineDirection.Value.Y, zeroLengthLineDirection.Value.X);
             
          // generate top and bottom segments
          var startTopBottomPoints = GenerateTopBottomPoints(points[0], pen.Thickness, zeroLengthLineNormal);
@@ -607,9 +607,9 @@ public class StrokeGeometry : Geometry
       return meshContours;
    }
 
-   private List<Vector2> GenerateCapOutline(PenLineCap capType, Vector2 geometryBasePoint, Vector2 capBasePoint1, Vector2 capBasePoint2, Vector2 capDirection, double thickness)
+   private List<Vector2<double>> GenerateCapOutline(PenLineCap capType, Vector2<double> geometryBasePoint, Vector2<double> capBasePoint1, Vector2<double> capBasePoint2, Vector2<double> capDirection, double thickness)
    {
-      var polygonPoints = new List<Vector2>();
+      var polygonPoints = new List<Vector2<double>>();
 
       switch (capType)
       {
@@ -644,7 +644,8 @@ public class StrokeGeometry : Geometry
          }
          case PenLineCap.ConvexRound:
          {
-            var roundPoints = MathHelper.GetArcPoints(capBasePoint1, capBasePoint2, thickness / 2.0, true, ArcSampleRate);
+            var roundPoints = new List<Vector2<double>>();
+            MathHelper.Curves.AppendArc(capBasePoint1, capBasePoint2, thickness / 2.0, true, ArcSampleRate, roundPoints);
 
             // remove first and last points, they're equal to base points
             roundPoints.RemoveAt(0);
@@ -659,9 +660,7 @@ public class StrokeGeometry : Geometry
             var capPoint1 = capBasePoint1 + thickness / 2.0 * capDirection;
             var capPoint2 = capBasePoint2 + thickness / 2.0 * capDirection;
 
-            var roundPoints = MathHelper.GetArcPoints(capPoint1, capPoint2, thickness / 2.0, false, ArcSampleRate);
-
-            polygonPoints.AddRange(roundPoints);
+            MathHelper.Curves.AppendArc(capPoint1, capPoint2, thickness / 2.0, false, ArcSampleRate, polygonPoints);
 
             break;
          }
@@ -679,7 +678,7 @@ public class StrokeGeometry : Geometry
    /// <param name="endPoint">End point of geomentry segment</param>
    /// <param name="thickness">Thickness of the stroke</param>
    /// <returns>Array of two stroke outline segments</returns>
-   private LineSegment2D[] GenerateTopBottomSegments(Vector2 startPoint, Vector2 endPoint, double thickness)
+   private LineSegment2D[] GenerateTopBottomSegments(Vector2<double> startPoint, Vector2<double> endPoint, double thickness)
    {
       var normal = GenerateNormalToSegment(startPoint, endPoint);
 
@@ -699,7 +698,7 @@ public class StrokeGeometry : Geometry
    /// <param name="thickness">Thickness of the stroke</param>
    /// <param name="normal">Normal to geometry point</param>
    /// <returns>Array of two stroke outline points</returns>
-   private Vector2[] GenerateTopBottomPoints(Vector2 point, double thickness, Vector2 normal)
+   private Vector2<double>[] GenerateTopBottomPoints(Vector2<double> point, double thickness, Vector2<double> normal)
    {
       return new[]
       {
@@ -714,10 +713,10 @@ public class StrokeGeometry : Geometry
    /// <param name="startPoint">Start point of segment</param>
    /// <param name="endPoint">End point of segment</param>
    /// <returns>Normal to segment</returns>
-   private Vector2 GenerateNormalToSegment(Vector2 startPoint, Vector2 endPoint)
+   private Vector2<double> GenerateNormalToSegment(Vector2<double> startPoint, Vector2<double> endPoint)
    {
       var dir = endPoint - startPoint;
-      var normal = new Vector2(-dir.Y, dir.X);
+      var normal = new Vector2<double>(-dir.Y, dir.X);
       normal.Normalize();
 
       return Vector2.Round(normal, doublePrecision);
@@ -738,9 +737,9 @@ public class StrokeGeometry : Geometry
 
       for (var i = 0; i < strokeSegments.Count; i++)
       {
-         var contourPoints = new List<Vector2>();
-         var startCapPoints = new List<Vector2>();
-         var endCapPoints = new List<Vector2>();
+         var contourPoints = new List<Vector2<double>>();
+         var startCapPoints = new List<Vector2<double>>();
+         var endCapPoints = new List<Vector2<double>>();
 
          if (!isGeometryClosed)
          {
@@ -792,21 +791,22 @@ public class StrokeGeometry : Geometry
             nextIndex = 0;
          }
 
-         var angle = MathHelper.AngleBetween(strokeSegments[i].GeometrySegment, strokeSegments[nextIndex].GeometrySegment);
+         var turn = MathHelper.Angle.Turn(strokeSegments[i].GeometrySegment.DirectionNormalized,
+            strokeSegments[nextIndex].GeometrySegment.DirectionNormalized);
 
-         if (angle is 180 or 0) continue;
+         if (turn is 0 or Math.PI) continue;
 
          var left = new LineSegment2D();
          var right = new LineSegment2D();
          var center = strokeSegments[i].GeometrySegment.End;
-         var joinPoints = new List<Vector2>();
-            
-         if (angle < 180)
+         var joinPoints = new List<Vector2<double>>();
+
+         if (turn < Math.PI)
          {
             left = strokeSegments[i].TopSegment;
             right = strokeSegments[nextIndex].TopSegment;
          }
-         else if (angle > 180)
+         else if (turn > Math.PI)
          {
             left = strokeSegments[i].BottomSegment;
             right = strokeSegments[nextIndex].BottomSegment;
@@ -835,9 +835,15 @@ public class StrokeGeometry : Geometry
             {
                if (Collision2D.LineLineIntersection(left.Start, left.End, right.Start, right.End, out var intersection))
                {
-                  var roundPoints = MathHelper.GetQuadraticBezier(left.End, intersection, right.Start, BezierSampleRate);
                   joinPoints.Add(center);
-                  joinPoints.AddRange(roundPoints);
+                  if (BezierSampleRate < 2)
+                  {
+                     joinPoints.AddRange([left.End, intersection, right.Start]);
+                  }
+                  else
+                  {
+                     MathHelper.Curves.AppendQuadraticBezier(left.End, intersection, right.Start, (int)BezierSampleRate, joinPoints);
+                  }
                }
 
                break;

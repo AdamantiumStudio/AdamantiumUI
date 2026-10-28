@@ -163,7 +163,7 @@ public partial class RenderCache
 
     /// <summary>The clip rectangle a clip owner of <paramref name="size"/> at <paramref name="world"/> makes, by the same
     /// conversion the draw uses - for the verifier to feed it the tree's place.</summary>
-    internal Vector4F ClipBoxOf(IUIComponent owner, Size size, Matrix4x4F world) =>
+    internal Vector4F ClipBoxOf(IUIComponent owner, Size<double> size, Matrix4x4F world) =>
         ClipBox(owner, new Rect(0, 0, size.Width, size.Height).TransformToAABB(world), _frameScissor);
 
     /// <summary>The matrix the shaders read from <paramref name="slot"/>.</summary>

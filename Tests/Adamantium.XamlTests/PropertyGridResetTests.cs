@@ -187,7 +187,7 @@ public class PropertyGridResetTests
 
         button.ApplyCurrentTheme();
         Settle(window);
-        grid.Measure(new Size(360, 300));
+        grid.Measure(new Size<double>(360, 300));
         grid.Arrange(new Rect(0, 0, 360, 300));
 
         var row = Rows(grid).FirstOrDefault(r => r.Definition?.Header is "Opacity");
@@ -207,7 +207,7 @@ public class PropertyGridResetTests
         grid.Write(row, 0.5);
 
         Settle(window);
-        grid.Measure(new Size(360, 300));
+        grid.Measure(new Size<double>(360, 300));
         grid.Arrange(new Rect(0, 0, 360, 300));
 
         Assert.That(row.IsModified, Is.True, "the line was edited and does not say so");

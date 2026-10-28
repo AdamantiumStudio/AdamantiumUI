@@ -2191,7 +2191,7 @@ public partial class TreeDataGrid : Selector
         {
             if (ItemContainerGenerator.ContainerFromIndex(realized) is not DataGridRow row) continue;
             if (row.CellAt(index) is not { } cell) continue;
-            cell.Measure(new Size(double.PositiveInfinity, Double.IsNaN(RowHeight) ? double.PositiveInfinity : RowHeight));
+            cell.Measure(new Size<double>(double.PositiveInfinity, Double.IsNaN(RowHeight) ? double.PositiveInfinity : RowHeight));
             widest = Math.Max(widest, cell.DesiredSize.Width);
         }
 
@@ -2274,7 +2274,7 @@ public partial class TreeDataGrid : Selector
 
     /// <summary>Whether <paramref name="point"/>, given in <paramref name="from"/>'s space, is over the grouping strip -
     /// what the header band asks before it decides whether a dropped column is being MOVED or being grouped by.</summary>
-    internal bool IsOverGroupPanel(IUIComponent from, Vector2 point)
+    internal bool IsOverGroupPanel(IUIComponent from, Vector2<double> point)
     {
         if (_groupPanel == null || !ShowGroupPanel || from == null) return false;
 
@@ -2289,7 +2289,7 @@ public partial class TreeDataGrid : Selector
         if (_groupPanel != null) _groupPanel.IsDropTarget = over;
     }
 
-    internal bool IsOverSortPanel(IUIComponent from, Vector2 point)
+    internal bool IsOverSortPanel(IUIComponent from, Vector2<double> point)
     {
         if (_sortPanel == null || !ShowSortPanel || from == null) return false;
 
@@ -2300,7 +2300,7 @@ public partial class TreeDataGrid : Selector
 
     /// <summary>Which strip a carried header is over, so the band that answers the drop and the band that lights up
     /// are decided in ONE place. Asked on every move of a carry, which is why it is an index and not a search.</summary>
-    internal DataGridDropStrip StripUnder(IUIComponent from, Vector2 point)
+    internal DataGridDropStrip StripUnder(IUIComponent from, Vector2<double> point)
     {
         if (IsOverGroupPanel(from, point)) return DataGridDropStrip.Grouping;
         if (IsOverSortPanel(from, point)) return DataGridDropStrip.Sorting;
@@ -3611,7 +3611,7 @@ public partial class TreeDataGrid : Selector
         if (_firstColumn != wasFirst || _lastColumn != wasLast) InvalidateRealizedRows();
     }
 
-    protected override Size MeasureOverride(Size availableSize)
+    protected override Size<double> MeasureOverride(Size<double> availableSize)
     {
         if (_totalsDirty)
         {

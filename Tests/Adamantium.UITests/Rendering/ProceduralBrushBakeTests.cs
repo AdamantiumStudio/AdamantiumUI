@@ -21,7 +21,7 @@ public class ProceduralBrushBakeTests
     [Test]
     public void ConicGradient_PacksAsGradientTypeThree()
     {
-        var conic = new ConicGradientBrush { Center = new Vector2(0.3f, 0.7f), StartAngle = 90 };
+        var conic = new ConicGradientBrush { Center = new Vector2<double>(0.3f, 0.7f), StartAngle = 90 };
         var type = GradientBake.PackGeometry(conic, out var geom0, out _);
         Assert.Multiple(() =>
         {

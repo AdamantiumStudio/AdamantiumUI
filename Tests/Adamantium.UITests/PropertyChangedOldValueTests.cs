@@ -99,7 +99,7 @@ public class PropertyChangedOldValueTests
     public void SizeChanged_IgnoresTheAutoLength_AndFiresBetweenConcreteOnes()
     {
         var border = new Border();
-        var sizes = new List<Size>();
+        var sizes = new List<Size<double>>();
         border.SizeChanged += (_, e) => sizes.Add(e.NewSize);
 
         border.Width = 100;   // auto -> explicit: no concrete "before", so nothing is reported

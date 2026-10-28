@@ -43,7 +43,7 @@ public class FrameVerifierTests
     }
 
     private static TestControl Placed(Rect bounds) =>
-        new() { Bounds = bounds, RenderSize = new Size(bounds.Width, bounds.Height) };
+        new() { Bounds = bounds, RenderSize = new Size<double>(bounds.Width, bounds.Height) };
 
     private static (OffscreenTestRenderer Renderer, VisualRoot Root, TestControl Mover) Scene()
     {

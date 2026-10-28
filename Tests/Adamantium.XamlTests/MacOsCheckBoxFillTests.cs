@@ -60,13 +60,13 @@ public class MacOsCheckBoxFillTests
         box.ApplyCurrentTheme();
         Adamantium.UI.Extensions.WindowExtension.UpdateTree(box);
         Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
-        box.Measure(new Size(120, 24));
+        box.Measure(new Size<double>(120, 24));
 
         var before = (box.Background as SolidColorBrush)?.Color;
 
         theme.ApplyVariant(ThemeVariant.Light);
         Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
-        box.Measure(new Size(120, 24));
+        box.Measure(new Size<double>(120, 24));
 
         var after = (box.Background as SolidColorBrush)?.Color;
 
@@ -82,7 +82,7 @@ public class MacOsCheckBoxFillTests
         box.ApplyCurrentTheme();
         Adamantium.UI.Extensions.WindowExtension.UpdateTree(box);
         Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
-        box.Measure(new Size(120, 24));
+        box.Measure(new Size<double>(120, 24));
 
         var brush = box.Background as SolidColorBrush;
         Assert.That(brush, Is.Not.Null, $"the box has a solid fill under {variant}");

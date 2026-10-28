@@ -247,8 +247,8 @@ public class Popup : MeasurableUIComponent, IContainer
     internal UIComponent EffectiveTarget => PlacementTarget ?? VisualParent as UIComponent;
 
     // A popup occupies NO space in its own parent - its child lives in the window's popup layer.
-    protected override Size MeasureOverride(Size availableSize) => Size.Zero;
-    protected override Size ArrangeOverride(Size finalSize) => Size.Zero;
+    protected override Size<double> MeasureOverride(Size<double> availableSize) => Size<double>.Zero;
+    protected override Size<double> ArrangeOverride(Size<double> finalSize) => Size<double>.Zero;
 
     private static void OnIsOpenChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
     {

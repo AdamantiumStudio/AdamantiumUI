@@ -6,7 +6,7 @@ namespace Adamantium.UI.Controls.Base;
 
 public class MeasurableUIComponent : ObservableUIComponent, IName, IMeasurableComponent
 {
-    private Size? _previousMeasure;
+    private Size<double>? _previousMeasure;
     private Rect? _previousArrange;
     
 
@@ -108,7 +108,7 @@ public class MeasurableUIComponent : ObservableUIComponent, IName, IMeasurableCo
     private static void WidthChangedCallBack(AdamantiumComponent adamantiumComponent, AdamantiumPropertyChangedEventArgs e)
     {
         if (adamantiumComponent is not MeasurableUIComponent o) return;
-        Size old = default;
+        Size<double> old = default;
         // Only a transition between two CONCRETE widths is a size change; layout re-measures on its own anyway.
         if (!IsConcrete(e.OldValue, out var oldWidth) || !IsConcrete(e.NewValue, out var newWidth))
             return;
@@ -116,7 +116,7 @@ public class MeasurableUIComponent : ObservableUIComponent, IName, IMeasurableCo
         old.Width = oldWidth;
         old.Height = o.Height;
 
-        var newSize = new Size(newWidth, o.Height);
+        var newSize = new Size<double>(newWidth, o.Height);
         var args = new SizeChangedEventArgs(old, newSize, true, false);
         args.RoutedEvent = SizeChangedEvent;
         o.OnSizeChanged(args);
@@ -130,8 +130,8 @@ public class MeasurableUIComponent : ObservableUIComponent, IName, IMeasurableCo
         if (!IsConcrete(e.OldValue, out var oldHeight) || !IsConcrete(e.NewValue, out var newHeight))
             return;
 
-        var old = new Size(o.Width, oldHeight);
-        var newSize = new Size(o.Width, newHeight);
+        var old = new Size<double>(o.Width, oldHeight);
+        var newSize = new Size<double>(o.Width, newHeight);
         var args = new SizeChangedEventArgs(old, newSize, false, true);
         args.RoutedEvent = SizeChangedEvent;
         o.OnSizeChanged(args);
@@ -304,13 +304,13 @@ public class MeasurableUIComponent : ObservableUIComponent, IName, IMeasurableCo
     /// <see cref="UIComponent.RenderSize"/> already reports. Keeping the last measured size instead let a hidden element
     /// go on occupying its parent's layout, and let a SKIPPED measure hand out a size from a constraint that no longer
     /// applies (a hidden tab's stale width raised a scrollbar on the visible one).</summary>
-    public Size DesiredSize
+    public Size<double> DesiredSize
     {
-        get => Visibility == Visibility.Collapsed ? Size.Zero : _desiredSize;
+        get => Visibility == Visibility.Collapsed ? Size<double>.Zero : _desiredSize;
         private set => _desiredSize = value;
     }
 
-    private Size _desiredSize;
+    private Size<double> _desiredSize;
 
     /// <summary>The rect this element was last arranged with (its last correct slot), preserved across invalidation so
     /// the layout manager can re-arrange the element into it. Null until the first arrange.</summary>
@@ -318,7 +318,7 @@ public class MeasurableUIComponent : ObservableUIComponent, IName, IMeasurableCo
 
     /// <summary>The available size this element was last measured with (its cached constraint), preserved across
     /// invalidation so the layout manager can re-measure the element with it. Null until the first measure.</summary>
-    public Size? PreviousMeasureConstraint => _previousMeasure;
+    public Size<double>? PreviousMeasureConstraint => _previousMeasure;
 
     // The slot the parent will arrange this element into, told while measuring it; NaN when it has not said since this
     // element came to it.
@@ -521,7 +521,7 @@ public class MeasurableUIComponent : ObservableUIComponent, IName, IMeasurableCo
     /// </summary>
     /// <param name="availableSize">The size available to the control.</param>
     /// <returns>The desired size for the control.</returns>
-    protected virtual Size MeasureOverride(Size availableSize)
+    protected virtual Size<double> MeasureOverride(Size<double> availableSize)
     {
         double width = 0;
         double height = 0;
@@ -543,7 +543,7 @@ public class MeasurableUIComponent : ObservableUIComponent, IName, IMeasurableCo
             height = Math.Ceiling(height);
         }
 
-        return new Size(width, height);
+        return new Size<double>(width, height);
     }
 
     /// <summary>
@@ -554,7 +554,7 @@ public class MeasurableUIComponent : ObservableUIComponent, IName, IMeasurableCo
     /// If true, the control will be measured even if <paramref name="availableSize"/> has not
     /// changed from the last measure.
     /// </param>
-    public void Measure(Size availableSize, bool force = false)
+    public void Measure(Size<double> availableSize, bool force = false)
     {
         TotalMeasureCalls++;
         if (Core.Diagnostics.LayoutTrace.Counting) Core.Diagnostics.LayoutTrace.Count(GetType(), "*measure-call*");
@@ -611,7 +611,7 @@ public class MeasurableUIComponent : ObservableUIComponent, IName, IMeasurableCo
     /// </summary>
     /// <param name="finalSize">The size available to the control.</param>
     /// <returns>The actual size used.</returns>
-    protected virtual Size ArrangeOverride(Size finalSize)
+    protected virtual Size<double> ArrangeOverride(Size<double> finalSize)
     {
         foreach (var visual in VisualChildren)
         {
@@ -690,14 +690,14 @@ public class MeasurableUIComponent : ObservableUIComponent, IName, IMeasurableCo
     /// This method calls <see cref="MeasureOverride(Size)"/> which is probably the method you
     /// want to override in order to modify a control's arrangement.
     /// </remarks>
-    protected Size MeasureCore(Size availableSize)
+    protected Size<double> MeasureCore(Size<double> availableSize)
     {
         if (Visibility is Visibility.Visible or Visibility.Hidden)
         {
             var margin = EffectiveMargin;
 
-            Size constrained;
-            Matrix4x4 lt = default;
+            Size<double> constrained;
+            Matrix4x4<double> lt = default;
             var hasLayout = false;
 
             // IWindow is top level control. Constraints should be ignored by top level controls
@@ -738,13 +738,13 @@ public class MeasurableUIComponent : ObservableUIComponent, IName, IMeasurableCo
             height = Math.Max(height, MinHeight);
 
             // Report the transform's BOUNDING BOX to the parent (the footprint the scaled/rotated content occupies).
-            var desired = new Size(width, height);
+            var desired = new Size<double>(width, height);
             if (hasLayout) desired = TransformSize(lt, desired);
             return NonNegative(desired.Inflate(margin));
         }
         else
         {
-            return new Size();
+            return new Size<double>();
         }
     }
 
@@ -773,7 +773,7 @@ public class MeasurableUIComponent : ObservableUIComponent, IName, IMeasurableCo
             double originX = finalRect.X + margin.Left;
             double originY = finalRect.Y + margin.Top;
 
-            var sizeMinusMargins = new Size(
+            var sizeMinusMargins = new Size<double>(
                 Math.Max(0, finalRect.Width - margin.Left - margin.Right),
                 Math.Max(0, finalRect.Height - margin.Top - margin.Bottom));
             var size = sizeMinusMargins;
@@ -808,10 +808,10 @@ public class MeasurableUIComponent : ObservableUIComponent, IName, IMeasurableCo
 
             if (UseLayoutRounding)
             {
-                size = new Size(
+                size = new Size<double>(
                     Math.Ceiling(size.Width),
                     Math.Ceiling(size.Height));
-                sizeMinusMargins = new Size(
+                sizeMinusMargins = new Size<double>(
                     Math.Ceiling(sizeMinusMargins.Width),
                     Math.Ceiling(sizeMinusMargins.Height));
             }
@@ -824,8 +824,8 @@ public class MeasurableUIComponent : ObservableUIComponent, IName, IMeasurableCo
             var outerUsed = hasLayout ? TransformSize(lt, innerUsed) : innerUsed;
 
             // A size change re-runs OnRender, or a control first rendered at a stale size (e.g. 0x0) keeps that geometry.
-            var renderSizeChanged = !MathHelper.NearEqual(RenderSize.Width, innerUsed.Width)
-                                    || !MathHelper.NearEqual(RenderSize.Height, innerUsed.Height);
+            var renderSizeChanged = !MathHelper.Scalar.NearEqual(RenderSize.Width, innerUsed.Width)
+                                    || !MathHelper.Scalar.NearEqual(RenderSize.Height, innerUsed.Height);
 
             ActualWidth = innerUsed.Width;     // the element's OWN size (= RenderSize): controls draw their geometry at this,
             ActualHeight = innerUsed.Height;   // and LocalTransform then scales it up to the outer footprint (no double-scale)
@@ -893,11 +893,11 @@ public class MeasurableUIComponent : ObservableUIComponent, IName, IMeasurableCo
             {
                 bool widthChanged = false;
                 bool heightChanged = false;
-                if (!MathHelper.NearEqual(RenderSize.Width, previousRenderSize.Width))
+                if (!MathHelper.Scalar.NearEqual(RenderSize.Width, previousRenderSize.Width))
                 {
                     widthChanged = true;
                 }
-                if (!MathHelper.NearEqual(RenderSize.Height, previousRenderSize.Height))
+                if (!MathHelper.Scalar.NearEqual(RenderSize.Height, previousRenderSize.Height))
                 {
                     heightChanged = true;
                 }
@@ -932,7 +932,7 @@ public class MeasurableUIComponent : ObservableUIComponent, IName, IMeasurableCo
 
     /// <summary>The LayoutTransform's matrix, when set and its 2D linear part is not identity (a pure translate or no
     /// transform is treated as none - it changes no size).</summary>
-    private bool TryGetLayoutMatrix(out Matrix4x4 m)
+    private bool TryGetLayoutMatrix(out Matrix4x4<double> m)
     {
         var lt = LayoutTransform;
         if (lt == null) { m = default; return false; }
@@ -948,13 +948,13 @@ public class MeasurableUIComponent : ObservableUIComponent, IName, IMeasurableCo
 
     // Bounding-box size of the rect (0,0,size) under a matrix's 2D linear part (translation cannot change a size). Correct
     // for scale AND rotation: a rect's image is a parallelogram whose extents are the summed absolute axis contributions.
-    private static Size TransformSize(Matrix4x4 m, Size s)
+    private static Size<double> TransformSize(Matrix4x4<double> m, Size<double> s)
         => new(AxisContribution(s.Width, m.M11) + AxisContribution(s.Height, m.M21),
                AxisContribution(s.Width, m.M12) + AxisContribution(s.Height, m.M22));
 
     // The inverse map's bounding box - the local (untransformed) size whose transform fits the given outer size. Used to
     // turn an available/arrange size in the parent's space into the space the content is measured/arranged in.
-    private static Size InverseTransformSize(Matrix4x4 m, Size s)
+    private static Size<double> InverseTransformSize(Matrix4x4<double> m, Size<double> s)
     {
         var det = m.M11 * m.M22 - m.M12 * m.M21;
         if (Math.Abs(det) < 1e-9) return s;   // singular (e.g. a zero scale) - nothing sensible to invert

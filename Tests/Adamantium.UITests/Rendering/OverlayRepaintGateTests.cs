@@ -57,8 +57,8 @@ public class OverlayRepaintGateTests
 
         var flat = new List<IUIComponent> { root };
         MakeGeometryValid(root);
-        var small = Adamantium.Mathematics.Matrix4x4F.OrthoOffCenterLH(0, 580, 400, 0, 0, 1);
-        var grown = Adamantium.Mathematics.Matrix4x4F.OrthoOffCenterLH(0, 580, 420, 0, 0, 1);
+        var small = Adamantium.Mathematics.Matrix4x4.CreateOrthoOffCenterLH<float>(0, 580, 400, 0, 0, 1);
+        var grown = Adamantium.Mathematics.Matrix4x4.CreateOrthoOffCenterLH<float>(0, 580, 420, 0, 0, 1);
 
         var gate = new OverlayRebuildGate();
         gate.HasChanged(flat, scope, 1, small);

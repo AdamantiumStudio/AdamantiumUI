@@ -25,9 +25,9 @@ public class TextBlockOverflow : InputUIComponent, IInkOverhang
         nameof(HasOverflowContent), typeof(bool), typeof(TextBlockOverflow), new PropertyMetadata(false));
 
     private readonly BaselineGridFollower _grid;
-    private Size _room = new(double.NaN, double.NaN);
-    private Size _measured = new(double.PositiveInfinity, double.PositiveInfinity);
-    private Size _content;
+    private Size<double> _room = new(double.NaN, double.NaN);
+    private Size<double> _measured = new(double.PositiveInfinity, double.PositiveInfinity);
+    private Size<double> _content;
     private int _revision = -1;
 
     // A block whose chain stopped here while another block's text was shown: it takes this one when that block lets go.
@@ -56,7 +56,7 @@ public class TextBlockOverflow : InputUIComponent, IInkOverhang
     public TextBlock ContentSource { get; private set; }
 
     // The room this gives the text, in the block's units: what it was measured with.
-    internal Size Room => _room;
+    internal Size<double> Room => _room;
 
     // The baseline grid this stands on, its rows measured from its top; null for none.
     internal BaselineGrid Grid => _grid.Grid();
@@ -108,7 +108,7 @@ public class TextBlockOverflow : InputUIComponent, IInkOverhang
     }
 
     // The part of the layout it shows, as tall as its lines; what changed is measured and drawn again.
-    internal void Show(RectangleF? frame, Size content, bool more, int revision)
+    internal void Show(RectangleF? frame, Size<double> content, bool more, int revision)
     {
         HasOverflowContent = more;
         if (frame != Frame || content != _content)
@@ -128,14 +128,14 @@ public class TextBlockOverflow : InputUIComponent, IInkOverhang
 
     // A panel measures a child more than once a pass, with sizes it then settles (a grid's star columns first unbounded):
     // the room is taken when the child is arranged, once, so the block lays out against the room it ends up with.
-    protected override Size MeasureOverride(Size availableSize)
+    protected override Size<double> MeasureOverride(Size<double> availableSize)
     {
         _grid.Measure();
         _measured = availableSize;
-        return Frame == null ? new Size(0, 0) : _content;
+        return Frame == null ? new Size<double>(0, 0) : _content;
     }
 
-    protected override Size ArrangeOverride(Size finalSize)
+    protected override Size<double> ArrangeOverride(Size<double> finalSize)
     {
         // Its own size, else its slot where it stretches into it, else what it was measured with; unbounded down where
         // it was measured so, as it is in a row as tall as it asks.
@@ -146,7 +146,7 @@ public class TextBlockOverflow : InputUIComponent, IInkOverhang
             : double.IsInfinity(_measured.Height) ? double.PositiveInfinity
             : VerticalAlignment == VerticalAlignment.Stretch ? finalSize.Height
             : _measured.Height;
-        var room = new Size(width, height);
+        var room = new Size<double>(width, height);
         if (!room.Equals(_room))
         {
             _room = room;
@@ -169,7 +169,7 @@ public class TextBlockOverflow : InputUIComponent, IInkOverhang
     }
 
     // A control among the block's inlines shown here is the block's child: a press on it is the control's.
-    public override bool HitTestCore(Vector2 localPoint) =>
+    public override bool HitTestCore(Vector2<double> localPoint) =>
         ContentSource is not { } source || Frame is not { } frame || !source.ShowsObjectAt(frame, localPoint);
 
     protected override void OnPropertyChanged(AdamantiumPropertyChangedEventArgs e)

@@ -267,7 +267,7 @@ public class ShapeItem : AdamantiumViewModel, ICanvasItem, ICanvasTransformed, I
 
         return new Rect(minX - half, minY - half, maxX - minX + 2 * half, maxY - minY + 2 * half);
 
-        void Take(CanvasArrowHead kind, Vector2 tip, Vector2 tail)
+        void Take(CanvasArrowHead kind, Vector2<double> tip, Vector2<double> tail)
         {
             if (Shape != CanvasShape.Arrow || kind == CanvasArrowHead.None) return;
             if (!ArrowHead.Points(tail, tip, Thickness, HeadLength, HeadWidth, out var left, out var right)) return;
@@ -281,11 +281,11 @@ public class ShapeItem : AdamantiumViewModel, ICanvasItem, ICanvasTransformed, I
 
     /// <summary>The two ENDS of a line or an arrow, which are the only thing about it worth grabbing. Every other shape
     /// is a box and answers with nothing.</summary>
-    public IReadOnlyList<Vector2> Points
+    public IReadOnlyList<Vector2<double>> Points
     {
         get
         {
-            if (!IsRun) return Array.Empty<Vector2>();
+            if (!IsRun) return Array.Empty<Vector2<double>>();
 
             Ends(out var from, out var to);
             return new[] { from, to };
@@ -300,7 +300,7 @@ public class ShapeItem : AdamantiumViewModel, ICanvasItem, ICanvasTransformed, I
     /// <summary>Moves ONE end and leaves the other where it is. The whole point: an arrow is put in place by pinning one
     /// end to what it comes from and pulling the other to what it points at, and a box round it can only ever scale
     /// both at once.</summary>
-    public void MovePoint(int index, Vector2 world)
+    public void MovePoint(int index, Vector2<double> world)
     {
         if (!IsRun) return;
 
@@ -317,9 +317,9 @@ public class ShapeItem : AdamantiumViewModel, ICanvasItem, ICanvasTransformed, I
     private bool IsRun => Shape is CanvasShape.Line or CanvasShape.Arrow;
 
     /// <summary>The middle of its own box - what a turn turns about.</summary>
-    private Vector2 Middle => new(World.X + World.Width / 2, World.Y + World.Height / 2);
+    private Vector2<double> Middle => new(World.X + World.Width / 2, World.Y + World.Height / 2);
 
-    public void Move(Vector2 worldDelta)
+    public void Move(Vector2<double> worldDelta)
     {
         var box = World;
 
@@ -360,7 +360,7 @@ public class ShapeItem : AdamantiumViewModel, ICanvasItem, ICanvasTransformed, I
         World = box;
     }
 
-    public bool HitTest(Vector2 world, double tolerance)
+    public bool HitTest(Vector2<double> world, double tolerance)
     {
         // A TURNED shape answers by un-turning the question. Everything below is written against a box that stands
         // square, and there is no reason to write it twice: the point is brought back into the shape's own frame and
@@ -476,10 +476,10 @@ public class ShapeItem : AdamantiumViewModel, ICanvasItem, ICanvasTransformed, I
 
                 var cx = World.X + rx;
                 var cy = World.Y + ry;
-                var unit = new Vector2[quad.Length];
-                for (var i = 0; i < quad.Length; i++) unit[i] = new Vector2((quad[i].X - cx) / rx, (quad[i].Y - cy) / ry);
+                var unit = new Vector2<double>[quad.Length];
+                for (var i = 0; i < quad.Length; i++) unit[i] = new Vector2<double>((quad[i].X - cx) / rx, (quad[i].Y - cy) / ry);
 
-                if (!CanvasTouch.CircleOverlap(unit, Vector2.Zero, 1)) return false;
+                if (!CanvasTouch.CircleOverlap(unit, Vector2<double>.Zero, 1)) return false;
                 if (Fill != null || rx <= thickness || ry <= thickness) return true;
 
                 foreach (var corner in quad)
@@ -523,7 +523,7 @@ public class ShapeItem : AdamantiumViewModel, ICanvasItem, ICanvasTransformed, I
         }
     }
 
-    private bool HeadTouches(Vector2[] quad, Vector2 tip, Vector2 from, CanvasArrowHead kind)
+    private bool HeadTouches(Vector2<double>[] quad, Vector2<double> tip, Vector2<double> from, CanvasArrowHead kind)
     {
         if (kind == CanvasArrowHead.None) return false;
         if (!ArrowHead.Points(from, tip, Math.Max(Thickness, 1e-6), HeadLength, HeadWidth, out var left, out var right)) return false;
@@ -535,8 +535,8 @@ public class ShapeItem : AdamantiumViewModel, ICanvasItem, ICanvasTransformed, I
     {
         if (canvas == null) return;
 
-        var topLeft = canvas.WorldToScreen(new Vector2(World.X, World.Y));
-        var bottomRight = canvas.WorldToScreen(new Vector2(World.X + World.Width, World.Y + World.Height));
+        var topLeft = canvas.WorldToScreen(new Vector2<double>(World.X, World.Y));
+        var bottomRight = canvas.WorldToScreen(new Vector2<double>(World.X + World.Width, World.Y + World.Height));
         var box = new Rect(topLeft.X, topLeft.Y, bottomRight.X - topLeft.X, bottomRight.Y - topLeft.Y);
 
         // Never thinner than a pixel: an outline zoomed out should thin to a hair, not vanish. NO outline at all is a
@@ -661,23 +661,23 @@ public class ShapeItem : AdamantiumViewModel, ICanvasItem, ICanvasTransformed, I
     }
 
     // Which corners of the box the line actually runs between, in WORLD units.
-    private void Ends(out Vector2 from, out Vector2 to) => Ends(World, out from, out to);
+    private void Ends(out Vector2<double> from, out Vector2<double> to) => Ends(World, out from, out to);
 
     // The same question of ANY box the line has been mapped into - the screen one, while it is being drawn. One place
     // decides which corners the line runs between, so what is drawn and what the ends report can never disagree.
-    private void Ends(Rect box, out Vector2 from, out Vector2 to)
+    private void Ends(Rect box, out Vector2<double> from, out Vector2<double> to)
     {
-        var start = Flipped ? new Vector2(box.X + box.Width, box.Y) : new Vector2(box.X, box.Y);
+        var start = Flipped ? new Vector2<double>(box.X + box.Width, box.Y) : new Vector2<double>(box.X, box.Y);
         var finish = Flipped
-            ? new Vector2(box.X, box.Y + box.Height)
-            : new Vector2(box.X + box.Width, box.Y + box.Height);
+            ? new Vector2<double>(box.X, box.Y + box.Height)
+            : new Vector2<double>(box.X + box.Width, box.Y + box.Height);
 
         from = Reversed ? finish : start;
         to = Reversed ? start : finish;
     }
 
     // Sets the normalized box plus the lean and direction bits for a line between two points; the drag tool uses it too.
-    internal void SetEnds(Vector2 from, Vector2 to)
+    internal void SetEnds(Vector2<double> from, Vector2<double> to)
     {
         Flipped = (to.X - from.X) * (to.Y - from.Y) < 0;
 
@@ -697,7 +697,7 @@ public class ShapeItem : AdamantiumViewModel, ICanvasItem, ICanvasTransformed, I
     /// <summary>Whether lines and arrows draw through the one-quad arrow pass rather than a stroked line plus a mesh per head.</summary>
     public static bool PaintsRuns = true;
 
-    private bool PaintRun(IDrawingSession session, Vector2 from, Vector2 to, double width)
+    private bool PaintRun(IDrawingSession session, Vector2<double> from, Vector2<double> to, double width)
     {
         if (!PaintsRuns) return false;
         if (Transform.IsSomething || Stroke is not SolidColorBrush solid || width <= 0) return false;
@@ -730,7 +730,7 @@ public class ShapeItem : AdamantiumViewModel, ICanvasItem, ICanvasTransformed, I
 
     // Where the shaft stops at a headed end: at a triangle's base, or half a thickness short of a barbed head's tip so the
     // round cap lands on it.
-    private Vector2 Base(Vector2 tip, Vector2 tail, CanvasArrowHead kind, double width)
+    private Vector2<double> Base(Vector2<double> tip, Vector2<double> tail, CanvasArrowHead kind, double width)
     {
         if (kind == CanvasArrowHead.None) return tip;
 
@@ -749,11 +749,11 @@ public class ShapeItem : AdamantiumViewModel, ICanvasItem, ICanvasTransformed, I
 
         var back = Math.Min(wanted, span);
 
-        return new Vector2(tip.X - along.X / span * back, tip.Y - along.Y / span * back);
+        return new Vector2<double>(tip.X - along.X / span * back, tip.Y - along.Y / span * back);
     }
 
     // One head, in SCREEN units, pointing from `from` at `tip`.
-    private void Head(IDrawingSession session, Vector2 tip, Vector2 from, CanvasArrowHead kind, double width, Pen pen)
+    private void Head(IDrawingSession session, Vector2<double> tip, Vector2<double> from, CanvasArrowHead kind, double width, Pen pen)
     {
         if (kind == CanvasArrowHead.None) return;
         if (!ArrowHead.Points(from, tip, width, HeadLength, HeadWidth, out var left, out var right)) return;
@@ -817,15 +817,15 @@ public class ShapeItem : AdamantiumViewModel, ICanvasItem, ICanvasTransformed, I
 
     /// <summary>A polygon's corners in world units, as fitted into its box; empty for other shapes. The one statement of the
     /// fitting rule, used for export too.</summary>
-    public IReadOnlyList<Vector2> Outline
+    public IReadOnlyList<Vector2<double>> Outline
     {
         get
         {
-            if (Shape != CanvasShape.Polygon) return Array.Empty<Vector2>();
+            if (Shape != CanvasShape.Polygon) return Array.Empty<Vector2<double>>();
 
             var sides = Sides;
             var fitted = Fit(World, sides);
-            var corners = new Vector2[sides];
+            var corners = new Vector2<double>[sides];
 
             for (var i = 0; i < sides; i++) corners[i] = Vertex(fitted, sides, i);
 
@@ -833,13 +833,13 @@ public class ShapeItem : AdamantiumViewModel, ICanvasItem, ICanvasTransformed, I
         }
     }
 
-    private static Vector2 Vertex(Rect fitted, int sides, int index)
+    private static Vector2<double> Vertex(Rect fitted, int sides, int index)
     {
         var rx = fitted.Width / 2;
         var ry = fitted.Height / 2;
         var angle = (StartAngle + index * 360.0 / sides) * Math.PI / 180;
 
-        return new Vector2(fitted.X + rx + rx * Math.Cos(angle), fitted.Y + ry + ry * Math.Sin(angle));
+        return new Vector2<double>(fitted.X + rx + rx * Math.Cos(angle), fitted.Y + ry + ry * Math.Sin(angle));
     }
 
     // A box dragged up and to the left has a negative width, and everything that reads a box - hit tests, grips, the
@@ -848,11 +848,11 @@ public class ShapeItem : AdamantiumViewModel, ICanvasItem, ICanvasTransformed, I
         new(Math.Min(rect.X, rect.X + rect.Width), Math.Min(rect.Y, rect.Y + rect.Height),
             Math.Abs(rect.Width), Math.Abs(rect.Height));
 
-    private static bool Contains(Rect rect, Vector2 point) =>
+    private static bool Contains(Rect rect, Vector2<double> point) =>
         point.X >= rect.X && point.X <= rect.X + rect.Width &&
         point.Y >= rect.Y && point.Y <= rect.Y + rect.Height;
 
-    private static double Distance(Vector2 point, Vector2 from, Vector2 to)
+    private static double Distance(Vector2<double> point, Vector2<double> from, Vector2<double> to)
     {
         var dx = to.X - from.X;
         var dy = to.Y - from.Y;

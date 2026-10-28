@@ -35,7 +35,7 @@ public sealed class GpuFillRenderComponent : UIRenderComponent
     public Brush Brush { get; set; }
 
     public GpuFillRenderComponent(IGraphicsDevice device, UIBasicEffect uiBasicEffect, FillFringeEffect effect,
-        IReadOnlyList<(Vector2[] Points, bool IsClosed)> contours, Brush brush, GpuBufferManager bufferManager) : base(device, uiBasicEffect, null, bufferManager)
+        IReadOnlyList<(Vector2<double>[] Points, bool IsClosed)> contours, Brush brush, GpuBufferManager bufferManager) : base(device, uiBasicEffect, null, bufferManager)
     {
         _device = (GraphicsDevice)device;
         _effect = effect;
@@ -53,7 +53,7 @@ public sealed class GpuFillRenderComponent : UIRenderComponent
 
     // Bounding box of all contour points (local geometry space) as (minX, minY, sizeX, sizeY) - the gradient uv basis, so
     // the fringe evaluates the SAME gradient as the fill (which uses the geometry's local bounds).
-    private static Vector4F ComputeLocalBounds(IReadOnlyList<(Vector2[] Points, bool IsClosed)> contours)
+    private static Vector4F ComputeLocalBounds(IReadOnlyList<(Vector2<double>[] Points, bool IsClosed)> contours)
     {
         float minX = float.MaxValue, minY = float.MaxValue, maxX = float.MinValue, maxY = float.MinValue;
         foreach (var (points, _) in contours)
@@ -71,7 +71,7 @@ public sealed class GpuFillRenderComponent : UIRenderComponent
     // Same-topology update (a resize): a re-tessellation that yields a ring of the SAME size rewrites it into the
     // existing slot - no new component, no allocation. Returns false when the size differs (a contour added/removed, or
     // a CornerRadius change altered an arc's segment count), so the caller rebuilds the component.
-    public bool TryUpdateContours(IReadOnlyList<(Vector2[] Points, bool IsClosed)> contours, Brush brush)
+    public bool TryUpdateContours(IReadOnlyList<(Vector2<double>[] Points, bool IsClosed)> contours, Brush brush)
     {
         var ring = FringeGeometry.BuildRing(FringeGeometry.Build(contours));
         if (ring.Length != _ring.Length) return false;

@@ -58,7 +58,7 @@ public class MacOsTabCapsuleCenteringTests
         var chevron = (UIComponent)control.GetTemplateChild("PART_TabOverflow");
         chevron.Visibility = Visibility.Visible;
 
-        control.Measure(new Size(600, 400));
+        control.Measure(new Size<double>(600, 400));
         control.Arrange(new Rect(0, 0, 600, 400));
 
         var track = (UIComponent)control.GetTemplateChild("StripTrack");
@@ -118,7 +118,7 @@ public class MacOsTabCapsuleCenteringTests
 
         var chevron = (Adamantium.UI.Controls.Primitives.ToggleButton)control.GetTemplateChild("PART_TabOverflow");
         chevron.Visibility = Visibility.Visible;
-        control.Measure(new Size(600, 400));
+        control.Measure(new Size<double>(600, 400));
         control.Arrange(new Rect(0, 0, 600, 400));
 
         var plate = (Adamantium.UI.Controls.Decorators.Border)chevron.GetTemplateChild("ChevronBg");

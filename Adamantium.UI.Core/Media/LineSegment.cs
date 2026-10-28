@@ -9,23 +9,23 @@ public class LineSegment : PathSegment
         
     }
 
-    public LineSegment(Vector2 point, bool isStroked)
+    public LineSegment(Vector2<double> point, bool isStroked)
     {
         Point = point;
         IsStroked = isStroked;
     }
     
     public static readonly AdamantiumProperty PointProperty =
-        AdamantiumProperty.Register(nameof(Point), typeof(Vector2), typeof(LineSegment),
-            new PropertyMetadata(Vector2.Zero, PropertyMetadataOptions.AffectsMeasure));
+        AdamantiumProperty.Register(nameof(Point), typeof(Vector2<double>), typeof(LineSegment),
+            new PropertyMetadata(Vector2<double>.Zero, PropertyMetadataOptions.AffectsMeasure));
     
-    public Vector2 Point
+    public Vector2<double> Point
     {
-        get => GetValue<Vector2>(PointProperty);
+        get => GetValue<Vector2<double>>(PointProperty);
         set => SetValue(PointProperty, value);
     }
     
-    internal override Vector2[] ProcessSegment(Vector2 currentPoint)
+    internal override Vector2<double>[] ProcessSegment(Vector2<double> currentPoint)
     {
         return new[] { Point };
     }

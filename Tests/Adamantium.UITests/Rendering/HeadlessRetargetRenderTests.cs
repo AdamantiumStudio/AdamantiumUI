@@ -35,7 +35,7 @@ public class HeadlessRetargetRenderTests
     private static FilledWindow Window(Color fill)
     {
         var window = new FilledWindow { Fill = fill, ClientWidth = Dim, ClientHeight = Dim };
-        window.Measure(new Size(Dim, Dim));
+        window.Measure(new Size<double>(Dim, Dim));
         window.Arrange(new Rect(0, 0, Dim, Dim));
         return window;
     }
@@ -44,7 +44,7 @@ public class HeadlessRetargetRenderTests
     {
         var content = new TestControl { RenderAction = s => s.DrawRectangle(new SolidColorBrush(fill), new Rect(0, 0, Dim, Dim)) };
         content.Bounds = new Rect(0, 0, Dim, Dim);
-        content.RenderSize = new Size(Dim, Dim);
+        content.RenderSize = new Size<double>(Dim, Dim);
         return new VisualRoot(content, Dim, Dim);
     }
 
@@ -144,9 +144,9 @@ public class HeadlessRetargetRenderTests
             {
                 RenderAction = s => s.DrawRectangle(new SolidColorBrush(Colors.Lime), new Rect(0, 0, Dim, Dim)),
                 Bounds = new Rect(0, 0, Dim, Dim),
-                RenderSize = new Size(Dim, Dim)
+                RenderSize = new Size<double>(Dim, Dim)
             };
-            var clip = new TestControl { ClipToBounds = true, Bounds = new Rect(0, 0, Dim, Dim), RenderSize = new Size(Dim, Dim) };
+            var clip = new TestControl { ClipToBounds = true, Bounds = new Rect(0, 0, Dim, Dim), RenderSize = new Size<double>(Dim, Dim) };
             clip.Add(fill);
             var window = Window(Colors.Transparent);
             window.Host(clip);
@@ -210,7 +210,7 @@ public class HeadlessRetargetRenderTests
                     ? s => s.DrawRectangle(new SolidColorBrush(Colors.Lime), new Rect(Dim / 4, Dim / 4, Dim / 2, Dim / 2))
                     : s => s.DrawRectangle(new SolidColorBrush(Colors.Red), new Rect(0, 0, 1, 1)),
                 Bounds = new Rect(0, 0, Dim, Dim),
-                RenderSize = new Size(Dim, Dim)
+                RenderSize = new Size<double>(Dim, Dim)
             };
             window.Host(dot);
         }

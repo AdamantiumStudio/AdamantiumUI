@@ -22,7 +22,7 @@ public class LayoutManagerTests
     {
         private bool _done;
 
-        protected override Size ArrangeOverride(Size finalSize)
+        protected override Size<double> ArrangeOverride(Size<double> finalSize)
         {
             var size = base.ArrangeOverride(finalSize);
             if (!_done)
@@ -40,7 +40,7 @@ public class LayoutManagerTests
     {
         public int MeasureOverrideCount;
 
-        protected override Size MeasureOverride(Size availableSize)
+        protected override Size<double> MeasureOverride(Size<double> availableSize)
         {
             MeasureOverrideCount++;
             return base.MeasureOverride(availableSize);
@@ -50,8 +50,8 @@ public class LayoutManagerTests
     // A visual root with a client viewport (for the visible-first test), mirroring a window's role.
     private sealed class TestWindowRoot : Grid, Adamantium.UI.Core.IRootVisualComponent
     {
-        public Vector2 PointToClient(PixelPoint point) => new((float)point.X, (float)point.Y);
-        public PixelPoint PointToScreen(Vector2 point) => new(point.X, point.Y);
+        public Vector2<double> PointToClient(PixelPoint point) => new((float)point.X, (float)point.Y);
+        public PixelPoint PointToScreen(Vector2<double> point) => new(point.X, point.Y);
         public PixelPoint Position { get; set; }
         public void AttachContextAndInitialize(Adamantium.UI.Core.IUIContext context) { }
         public double Left { get; set; }
@@ -168,13 +168,13 @@ public class LayoutManagerTests
         var child = new Border();                       // Stretch, no intrinsic size -> fills its slot
         var parent = new Border { Child = child };
 
-        parent.Measure(new Size(100, 100));
+        parent.Measure(new Size<double>(100, 100));
         parent.Arrange(new Rect(0, 0, 100, 100));
         Assert.That(child.RenderSize.Width, Is.EqualTo(100).Within(0.5), "baseline: child fills the 100 slot");
 
         // Grow the parent, but invalidate the child's measure AFTER the parent's measure (so the arrange cascade reaches
         // a measure-invalid child) - the exact ordering a recycled container's content rebind produces mid-pass.
-        parent.Measure(new Size(200, 200));
+        parent.Measure(new Size<double>(200, 200));
         child.InvalidateMeasure();
         parent.Arrange(new Rect(0, 0, 200, 200));
 

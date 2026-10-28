@@ -69,7 +69,7 @@ public class PopupContentDiscardTests
         var content = new Grid();
         content.Children.Add(presenter);
         presenter.Connect(menu);
-        content.Measure(new Size(200, 200));
+        content.Measure(new Size<double>(200, 200));
         content.Arrange(new Rect(0, 0, 200, 200));
         Assume.That(item.VisualParent, Is.Not.Null, "the item is shown in the popup");
         var popup = new Popup { Child = content };

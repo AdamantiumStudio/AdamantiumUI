@@ -49,7 +49,7 @@ public sealed class NineSliceSkin
         {
             group.Children.Add(new GeometryDrawing
             {
-                Geometry = new EllipseGeometry { Center = new Vector2(x, y), RadiusX = 6, RadiusY = 6 },
+                Geometry = new EllipseGeometry { Center = new Vector2<double>(x, y), RadiusX = 6, RadiusY = 6 },
                 Brush = ornament
             });
         }

@@ -39,7 +39,7 @@ public class RenderCloneSlotTests
         public void Dispose() => Renderer.Dispose();
     }
 
-    private static Scene NewScene(bool prototypeDraws) => NewScene(prototypeDraws, i => Matrix4x4F.Translation(i * Step, 0, 0));
+    private static Scene NewScene(bool prototypeDraws) => NewScene(prototypeDraws, i => Matrix4x4.CreateTranslation<float>(i * Step, 0, 0));
 
     private static Scene NewScene(bool prototypeDraws, Func<int, Matrix4x4F> place, bool checkFirst = true)
     {
@@ -47,9 +47,9 @@ public class RenderCloneSlotTests
         var renderer = new OffscreenTestRenderer(device, new RenderUnitFactory(device, new DeviceResourceFactory(device)),
             Dim, Dim) { ClearColor = Colors.Black };
         var fill = new SolidColorBrush(new Color((byte)250, (byte)40, (byte)40, (byte)255));
-        var stage = new TestControl { Bounds = new Rect(0, 0, Dim, Dim), RenderSize = new Size(Dim, Dim), ClipToBounds = true };
-        var prototype = new TestControl { Bounds = new Rect(0, 0, 40, 40), RenderSize = new Size(40, 40) };
-        var square = new TestControl { Bounds = new Rect(10, 10, 20, 20), RenderSize = new Size(20, 20) };
+        var stage = new TestControl { Bounds = new Rect(0, 0, Dim, Dim), RenderSize = new Size<double>(Dim, Dim), ClipToBounds = true };
+        var prototype = new TestControl { Bounds = new Rect(0, 0, 40, 40), RenderSize = new Size<double>(40, 40) };
+        var square = new TestControl { Bounds = new Rect(10, 10, 20, 20), RenderSize = new Size<double>(20, 20) };
         square.RenderAction = s => s.DrawRectangle(fill, new Rect(0, 0, 20, 20));
         if (prototypeDraws)
         {
@@ -126,7 +126,7 @@ public class RenderCloneSlotTests
     [Test]
     public void ARecolorInPlace_ReachesTheCopiesInView_WhenTheFirstIsOutOfIt()
     {
-        using var scene = NewScene(false, i => Matrix4x4F.Translation(i == 0 ? -1000 : i * Step, 0, 0), checkFirst: false);
+        using var scene = NewScene(false, i => Matrix4x4.CreateTranslation<float>(i == 0 ? -1000 : i * Step, 0, 0), checkFirst: false);
 
         scene.Fill.Color = new Color((byte)40, (byte)220, (byte)40, (byte)255);
         var px = scene.Draw();
@@ -145,8 +145,8 @@ public class RenderCloneSlotTests
     {
         Matrix4x4F Place(int i)
         {
-            var move = Matrix4x4F.Translation(i * Step, 0, 0);
-            return i != 1 ? move : Matrix4x4F.Translation(-20, -20, 0) * Matrix4x4F.RotationZ(0.3f) * Matrix4x4F.Translation(20, 20, 0) * move;
+            var move = Matrix4x4.CreateTranslation<float>(i * Step, 0, 0);
+            return i != 1 ? move : Matrix4x4.CreateTranslation<float>(-20, -20, 0) * Matrix4x4.CreateRotationZ<float>(0.3f) * Matrix4x4.CreateTranslation<float>(20, 20, 0) * move;
         }
 
         using var scene = NewScene(false, Place);

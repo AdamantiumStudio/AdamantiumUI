@@ -108,7 +108,7 @@ public partial class InfiniteCanvas
             return;
         }
 
-        var by = new Vector2((x ?? from.X) - from.X, (y ?? from.Y) - from.Y);
+        var by = new Vector2<double>((x ?? from.X) - from.X, (y ?? from.Y) - from.Y);
         if (by.X == 0 && by.Y == 0)
         {
             return;
@@ -657,7 +657,7 @@ public partial class InfiniteCanvas
         BeginEdit("Paste");
         try
         {
-            var step = new Vector2(CopyOffset, CopyOffset);
+            var step = new Vector2<double>(CopyOffset, CopyOffset);
             var made = new List<ICanvasItem>(copies.Count);
 
             foreach (var item in copies)
@@ -801,13 +801,13 @@ public partial class InfiniteCanvas
                 var box = item.Bounds;
                 var to = edge switch
                 {
-                    CanvasAlignment.Left => new Vector2(frame.X - box.X, 0),
-                    CanvasAlignment.Right => new Vector2(frame.X + frame.Width - (box.X + box.Width), 0),
+                    CanvasAlignment.Left => new Vector2<double>(frame.X - box.X, 0),
+                    CanvasAlignment.Right => new Vector2<double>(frame.X + frame.Width - (box.X + box.Width), 0),
                     CanvasAlignment.HorizontalCenter =>
-                        new Vector2(frame.X + frame.Width / 2 - (box.X + box.Width / 2), 0),
-                    CanvasAlignment.Top => new Vector2(0, frame.Y - box.Y),
-                    CanvasAlignment.Bottom => new Vector2(0, frame.Y + frame.Height - (box.Y + box.Height)),
-                    _ => new Vector2(0, frame.Y + frame.Height / 2 - (box.Y + box.Height / 2))
+                        new Vector2<double>(frame.X + frame.Width / 2 - (box.X + box.Width / 2), 0),
+                    CanvasAlignment.Top => new Vector2<double>(0, frame.Y - box.Y),
+                    CanvasAlignment.Bottom => new Vector2<double>(0, frame.Y + frame.Height - (box.Y + box.Height)),
+                    _ => new Vector2<double>(0, frame.Y + frame.Height / 2 - (box.Y + box.Height / 2))
                 };
 
                 if (to.X != 0 || to.Y != 0) item.Move(to);
@@ -876,7 +876,7 @@ public partial class InfiniteCanvas
 
             if (from < free)
             {
-                item.Move(column ? new Vector2(0, free - from) : new Vector2(free - from, 0));
+                item.Move(column ? new Vector2<double>(0, free - from) : new Vector2<double>(free - from, 0));
                 from = free;
             }
 
@@ -921,8 +921,8 @@ public partial class InfiniteCanvas
             {
                 var box = order[i].Bounds;
                 var step = way == CanvasSpread.Horizontal
-                    ? new Vector2(at - box.X, 0)
-                    : new Vector2(0, at - box.Y);
+                    ? new Vector2<double>(at - box.X, 0)
+                    : new Vector2<double>(0, at - box.Y);
 
                 if (step.X != 0 || step.Y != 0) order[i].Move(step);
 
@@ -1014,23 +1014,23 @@ public partial class InfiniteCanvas
             : null;
 
     // The middle of what is selected, in WORLD units - what a turn turns about.
-    private Vector2 SelectionMiddle
+    private Vector2<double> SelectionMiddle
     {
         get
         {
             var box = SelectionBounds ?? default;
-            return new Vector2(box.X + box.Width / 2, box.Y + box.Height / 2);
+            return new Vector2<double>(box.X + box.Width / 2, box.Y + box.Height / 2);
         }
     }
 
     // A pointer position in the SHAPE's OWN frame: a grip drag is arithmetic on a box that stands square, so a turned
     // shape is resized by un-turning the pointer rather than by teaching the gesture about angles.
-    private Vector2 InShapeSpace(Vector2 world) =>
+    private Vector2<double> InShapeSpace(Vector2<double> world) =>
         SelectionTurn is { } turn ? turn.Undo(world, SelectionMiddle) : world;
 
     /// <summary>Which of a single selected item's POINTS a screen position is on, or -1. Only one item at a time offers
     /// them: the points of two things at once are not one shape.</summary>
-    public int PointHandleAt(Vector2 screen)
+    public int PointHandleAt(Vector2<double> screen)
     {
         if (_selection.Count != 1 || _selection[0] is not ICanvasPoints shaped) return -1;
 
@@ -1074,7 +1074,7 @@ public partial class InfiniteCanvas
     /// <summary>Which grip of the manipulation frame a SCREEN point is on, or <see cref="CanvasHandle.None"/>. Asked in
     /// screen pixels: a grip is something the hand aims at, so how close counts as on it is a distance on the glass at
     /// any zoom.</summary>
-    public CanvasHandle HandleAt(Vector2 screen)
+    public CanvasHandle HandleAt(Vector2<double> screen)
     {
         if (SelectionBounds is not { } bounds) return CanvasHandle.None;
 
@@ -1087,8 +1087,8 @@ public partial class InfiniteCanvas
 
         // THE SAME frame the grips are drawn on, held off the selection by the same half grip.
         var frame = FrameOf(bounds);
-        var topLeft = new Vector2(frame.X, frame.Y);
-        var bottomRight = new Vector2(frame.X + frame.Width, frame.Y + frame.Height);
+        var topLeft = new Vector2<double>(frame.X, frame.Y);
+        var bottomRight = new Vector2<double>(frame.X + frame.Width, frame.Y + frame.Height);
         var reach = Math.Max(4, HandleSize) / 2 + 2;
 
         var left = Math.Abs(screen.X - topLeft.X) <= reach;
@@ -1382,7 +1382,7 @@ public partial class InfiniteCanvas
 
         // Where the pointer would be PULLED to, worked out whatever the tool is doing - the mark has to appear before
         // the press, or nobody can aim at it.
-        var pulled = TrySnap(ScreenToWorld(pointer), out var target) ? target : (Vector2?)null;
+        var pulled = TrySnap(ScreenToWorld(pointer), out var target) ? target : (Vector2<double>?)null;
         if (pulled != _snap)
         {
             _snap = pulled;
@@ -1425,7 +1425,7 @@ public partial class InfiniteCanvas
 
     // What the pointer is ABOUT to do. A grip looks the same whichever corner it is, so the cursor is the only thing
     // that says which way it will pull; anywhere else the pointer wears the TOOL.
-    private void ShowPointer(Vector2 screen)
+    private void ShowPointer(Vector2<double> screen)
     {
         var overGrip = _selection.Count > 0 ? CanvasFrameGesture.CursorFor(HandleAt(screen)) : null;
 
@@ -1434,11 +1434,11 @@ public partial class InfiniteCanvas
 
     /// <summary>Works out what the pointer should look like at a place on screen, and wears it. Public so that what the
     /// pointer PROMISES can be asked without a mouse: it is a promise about what the next press will do.</summary>
-    public void ShowPointerAt(Vector2 screen) => ShowPointer(screen);
+    public void ShowPointerAt(Vector2<double> screen) => ShowPointer(screen);
 
     // What is under the pointer WITHIN the selection: one of its points, or the thing itself. The only thing that says
     // so on a LINE, which has no box to say it by being drawn.
-    private Cursor OverSelection(Vector2 screen)
+    private Cursor OverSelection(Vector2<double> screen)
     {
         // A SOCKET first, selected or not: a wire is pulled out of one with the select tool in hand.
         if (Tool is SelectTool select && select.Wires.Under(this, ScreenToWorld(screen)) != null) return Cursors.Crosshair;
@@ -1603,7 +1603,7 @@ public partial class InfiniteCanvas
         if (e.State != ManipulationState.Delta) return;
 
         if (e.Scale != 1) SetScaleAt(e.Origin - e.Translation, Scale * e.Scale);
-        if (e.Translation != Vector2.Zero) SetCurrentValue(OffsetProperty, Offset + e.Translation);
+        if (e.Translation != Vector2<double>.Zero) SetCurrentValue(OffsetProperty, Offset + e.Translation);
         e.Handled = true;
     }
 
@@ -1631,7 +1631,7 @@ public partial class InfiniteCanvas
 
     // The pointer as a TOOL sees it: in the world, already pulled to the grid when the grid pulls. Decided here and
     // once, so no tool has to know the setting exists and every tool obeys it the same way.
-    private CanvasPointerEventArgs Describe(Vector2 screen, MouseButtons button, int clicks, PointerEventArgs e)
+    private CanvasPointerEventArgs Describe(Vector2<double> screen, MouseButtons button, int clicks, PointerEventArgs e)
     {
         var world = ScreenToWorld(screen);
         var snapped = TrySnap(world, out var pulled);

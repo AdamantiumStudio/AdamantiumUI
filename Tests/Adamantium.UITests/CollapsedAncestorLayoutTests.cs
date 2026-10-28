@@ -29,7 +29,7 @@ public class CollapsedAncestorLayoutTests
         hidden.Visibility = Visibility.Visible;
         WindowExtension.UpdateTree(window);
 
-        Assert.That((probe.Laid, probe.RenderSize), Is.EqualTo((1, new Size(30, 20))));
+        Assert.That((probe.Laid, probe.RenderSize), Is.EqualTo((1, new Size<double>(30, 20))));
     }
 
     [Test]
@@ -50,7 +50,7 @@ public class CollapsedAncestorLayoutTests
         hidden.Visibility = Visibility.Visible;
         WindowExtension.UpdateTree(window);
 
-        Assert.That((probe.Laid, probe.RenderSize), Is.EqualTo((1, new Size(30, 20))));
+        Assert.That((probe.Laid, probe.RenderSize), Is.EqualTo((1, new Size<double>(30, 20))));
     }
 
     [Test]
@@ -74,7 +74,7 @@ public class CollapsedAncestorLayoutTests
         hidden.Visibility = Visibility.Visible;
         WindowExtension.UpdateTree(window);
 
-        Assert.That((probe.Laid, probe.RenderSize), Is.EqualTo((1, new Size(30, 20))));
+        Assert.That((probe.Laid, probe.RenderSize), Is.EqualTo((1, new Size<double>(30, 20))));
     }
 
     [Test]
@@ -95,7 +95,7 @@ public class CollapsedAncestorLayoutTests
         hidden.Visibility = Visibility.Visible;
         WindowExtension.UpdateTree(window);
 
-        Assert.That((probe.Laid, probe.RenderSize), Is.EqualTo((1, new Size(30, 20))));
+        Assert.That((probe.Laid, probe.RenderSize), Is.EqualTo((1, new Size<double>(30, 20))));
     }
 
     [Test]
@@ -132,7 +132,7 @@ public class CollapsedAncestorLayoutTests
     {
         public int Laid;
 
-        protected override Size ArrangeOverride(Size finalSize)
+        protected override Size<double> ArrangeOverride(Size<double> finalSize)
         {
             Laid++;
             return base.ArrangeOverride(finalSize);

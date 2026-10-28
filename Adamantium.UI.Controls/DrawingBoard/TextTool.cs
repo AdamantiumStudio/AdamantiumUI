@@ -162,7 +162,7 @@ public class TextTool : ICanvasTool
         // short line that is a good deal taller than the letters - a caret drawn to it stood far above and below them
         // and read as a frame rather than as a place to type.
         var box = _editing.Bounds;
-        var at = canvas.WorldToScreen(new Vector2(box.X + box.Width, box.Y));
+        var at = canvas.WorldToScreen(new Vector2<double>(box.X + box.Width, box.Y));
         var height = Math.Max(2, _editing.LineHeight * canvas.Scale);
 
         session.DrawRectangle(canvas.SelectionBrush, new Rect(at.X, at.Y, 1.5, height));
@@ -192,7 +192,7 @@ public class TextTool : ICanvasTool
         canvas.Repaint();
     }
 
-    private static TextItem Existing(InfiniteCanvas canvas, Vector2 world)
+    private static TextItem Existing(InfiniteCanvas canvas, Vector2<double> world)
     {
         if (canvas.Scene == null) return null;
 

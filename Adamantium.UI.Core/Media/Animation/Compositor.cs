@@ -18,7 +18,7 @@ public static class Compositor
     /// While the loop thread is stalled this cannot go stale, because nothing can change it: no loop, no layout.</summary>
     public sealed class Basis
     {
-        public Basis(TransformValues values, Vector2 boundsLocation, Vector2 origin, Size renderSize)
+        public Basis(TransformValues values, Vector2<double> boundsLocation, Vector2<double> origin, Size<double> renderSize)
         {
             Values = values;
             BoundsLocation = boundsLocation;
@@ -27,9 +27,9 @@ public static class Compositor
         }
 
         public TransformValues Values { get; }
-        public Vector2 BoundsLocation { get; }
-        public Vector2 Origin { get; }
-        public Size RenderSize { get; }
+        public Vector2<double> BoundsLocation { get; }
+        public Vector2<double> Origin { get; }
+        public Size<double> RenderSize { get; }
     }
 
     /// <summary>One animation the render thread plays - a Transform (one element, one matrix) or a Paint brush (one shared
@@ -226,23 +226,23 @@ public static class Compositor
 
         private static Matrix4x4F ToLocal(Basis basis, TransformValues values)
         {
-            var matrix = (Matrix4x4F)values.ToMatrix();
+            var matrix = values.ToMatrix().As<float>();
 
             var origin = basis.Origin;
             if (origin.X != 0 || origin.Y != 0)
             {
                 var ox = (float)(origin.X * basis.RenderSize.Width);
                 var oy = (float)(origin.Y * basis.RenderSize.Height);
-                matrix = Matrix4x4F.Translation(-ox, -oy, 0) * matrix * Matrix4x4F.Translation(ox, oy, 0);
+                matrix = Matrix4x4.CreateTranslation<float>(-ox, -oy, 0) * matrix * Matrix4x4.CreateTranslation<float>(ox, oy, 0);
             }
 
             if (values.ShiftX != 0 || values.ShiftY != 0)
             {
-                matrix *= Matrix4x4F.Translation((float)(values.ShiftX * basis.RenderSize.Width),
+                matrix *= Matrix4x4.CreateTranslation<float>((float)(values.ShiftX * basis.RenderSize.Width),
                     (float)(values.ShiftY * basis.RenderSize.Height), 0);
             }
 
-            return matrix * Matrix4x4F.Translation((float)basis.BoundsLocation.X, (float)basis.BoundsLocation.Y, 0);
+            return matrix * Matrix4x4.CreateTranslation<float>((float)basis.BoundsLocation.X, (float)basis.BoundsLocation.Y, 0);
         }
     }
 

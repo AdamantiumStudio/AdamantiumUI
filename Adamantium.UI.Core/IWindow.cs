@@ -159,7 +159,7 @@ public interface IWindow : IRootVisualComponent, IContentControl
 
     /// <summary>Per-window DPI scale (device pixels per DIP), separate X/Y (usually equal on desktop). 1,1 = 96 DPI /
     /// 100%. Set by the platform on create and on WM_DPICHANGED; drives the render scale and the DIP&lt;-&gt;physical map.</summary>
-    Vector2 DpiScale { get; set; }
+    Vector2<double> DpiScale { get; set; }
 
     IWindowRenderer DefaultRenderer { get; set; }
 
@@ -182,10 +182,10 @@ public interface IWindow : IRootVisualComponent, IContentControl
     IDrawingContext GetDrawingContext();
 
     /// <summary>A desktop point (physical) in this window's client coordinates (logical DIP).</summary>
-    Vector2 ScreenToClient(PixelPoint p);
+    Vector2<double> ScreenToClient(PixelPoint p);
 
     /// <summary>A client point (logical DIP) as a desktop point (physical).</summary>
-    PixelPoint ClientToScreen(Vector2 p);
+    PixelPoint ClientToScreen(Vector2<double> p);
     
     event SizeChangedEventHandler ClientSizeChanged;
     event EventHandler<WindowClosingEventArgs> Closing;

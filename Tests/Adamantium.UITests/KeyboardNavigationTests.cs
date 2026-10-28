@@ -944,7 +944,7 @@ public class KeyboardNavigationTests
     {
         for (var i = 0; i < 4; i++)
         {
-            window.PopupLayer.UpdateLayout(new Adamantium.Mathematics.Size(400, 300));
+            window.PopupLayer.UpdateLayout(new Adamantium.Mathematics.Size<double>(400, 300));
             WindowExtension.UpdateTree(window);
         }
     }

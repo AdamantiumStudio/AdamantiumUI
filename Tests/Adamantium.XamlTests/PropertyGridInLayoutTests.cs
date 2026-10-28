@@ -64,7 +64,7 @@ public class PropertyGridInLayoutTests
         return grid;
     }
 
-    private static void Lay(IUIComponent root, Size size)
+    private static void Lay(IUIComponent root, Size<double> size)
     {
         ((Adamantium.UI.Core.FundamentalUIComponent)root).ApplyCurrentTheme();
         Adamantium.UI.Extensions.WindowExtension.UpdateTree(root);
@@ -107,7 +107,7 @@ public class PropertyGridInLayoutTests
         foreach (var child in new IMeasurableComponent[] { title, description, leftCaption, rightCaption, body, footer })
             page.Children.Add(child);
 
-        Lay(page, new Size(600, 400));
+        Lay(page, new Size<double>(600, 400));
 
         TestContext.WriteLine($"rows={page.RowDefinitions.Count} title={title.Bounds} desc={description.Bounds} " +
                               $"left={leftCaption.Bounds} right={rightCaption.Bounds} body={body.Bounds} footer={footer.Bounds}");
@@ -136,7 +136,7 @@ public class PropertyGridInLayoutTests
         page.Children.Add(caption);
         page.Children.Add(inspector);
 
-        Lay(page, new Size(600, 400));
+        Lay(page, new Size<double>(600, 400));
 
         TestContext.WriteLine($"caption={caption.RenderSize} inspector={inspector.RenderSize}");
         Assert.That(inspector.RenderSize.Height, Is.GreaterThan(50), "the inspector filled the star row");
@@ -161,7 +161,7 @@ public class PropertyGridInLayoutTests
         Grid.SetRow(column, 1);
         page.Children.Add(column);
 
-        Lay(page, new Size(600, 400));
+        Lay(page, new Size<double>(600, 400));
 
         TestContext.WriteLine($"stack={column.RenderSize} inspector={inspector.RenderSize} " +
                               $"desired={inspector.DesiredSize}");

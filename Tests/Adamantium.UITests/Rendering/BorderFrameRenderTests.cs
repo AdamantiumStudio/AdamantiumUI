@@ -37,7 +37,7 @@ public class BorderFrameRenderTests
             var factory = new RenderUnitFactory(device, new StubResourceFactory());
             using var renderer = new OffscreenTestRenderer(device, factory, Dim, Dim) { ClearColor = Colors.Black };
 
-            var stage = new TestControl { Bounds = new Rect(0, 0, Dim, Dim), RenderSize = new Size(Dim, Dim) };
+            var stage = new TestControl { Bounds = new Rect(0, 0, Dim, Dim), RenderSize = new Size<double>(Dim, Dim) };
             stage.RenderAction = s => s.DrawBorder(fill, new Rect(0, 0, Dim, Dim), corners, border, thickness);
 
             var root = new VisualRoot(stage, Dim, Dim);

@@ -52,7 +52,7 @@ public class RibbonBandCollapseTests
         style.Attach(host);
 
         host.Template = BandTemplate();
-        host.Measure(new Size(800, 600));
+        host.Measure(new Size<double>(800, 600));
         host.Arrange(new Rect(0, 0, 800, 600));
         return _band;
     }
@@ -77,7 +77,7 @@ public class RibbonBandCollapseTests
         Assert.That(((Grid)band.VisualParent).IsMeasureValid, Is.False,
             "the row that held the band has to be re-measured - nothing else will notice the band stopped asking for height");
 
-        host.Measure(new Size(800, 600));
+        host.Measure(new Size<double>(800, 600));
         Assert.That(host.DesiredSize.Height, Is.EqualTo(StripHeight).Within(0.01),
             "a collapsed band takes no room, whatever Height it states - the row must go, not just empty out");
     }
@@ -87,12 +87,12 @@ public class RibbonBandCollapseTests
     {
         var band = Band(out var host);
         host.IsMinimized = true;
-        host.Measure(new Size(800, 600));
+        host.Measure(new Size<double>(800, 600));
 
         host.IsMinimized = false;
 
         Assert.That(band.Visibility, Is.EqualTo(Visibility.Visible), "the trigger must undo itself");
-        host.Measure(new Size(800, 600));
+        host.Measure(new Size<double>(800, 600));
         Assert.That(host.DesiredSize.Height, Is.EqualTo(StripHeight + BandHeight).Within(0.01));
     }
 }

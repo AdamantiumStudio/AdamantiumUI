@@ -41,7 +41,7 @@ public class ReissuedLayerNeighborRenderTests
     }
 
     private static TestControl Placed(Rect bounds) =>
-        new() { Bounds = bounds, RenderSize = new Size(bounds.Width, bounds.Height) };
+        new() { Bounds = bounds, RenderSize = new Size<double>(bounds.Width, bounds.Height) };
 
     private static Brush Gradient(Color from) => new LinearGradientBrush
     {

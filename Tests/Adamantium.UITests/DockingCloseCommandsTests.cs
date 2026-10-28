@@ -19,7 +19,7 @@ public class DockingCloseCommandsTests
 
         var area = new DockingArea { DividerThickness = 0 };
         area.Children.Add(group);
-        area.Measure(new Size(1000, 800));
+        area.Measure(new Size<double>(1000, 800));
         area.Arrange(new Rect(0, 0, 1000, 800));
         return area;
     }

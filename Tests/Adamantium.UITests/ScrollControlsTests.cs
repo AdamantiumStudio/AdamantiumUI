@@ -77,7 +77,7 @@ public class ScrollControlsTests
         {
             Orientation = o, Minimum = min, Maximum = max, ViewportSize = viewport, Value = value, Thumb = new Thumb()
         };
-        track.Measure(new Size(width, height));
+        track.Measure(new Size<double>(width, height));
         track.Arrange(new Rect(0, 0, width, height));
         return track;
     }
@@ -142,10 +142,10 @@ public class ScrollControlsTests
         var track = ArrangedTrack(Orientation.Horizontal, 0, 100, 0, 0, 200, 12);
         Assert.Multiple(() =>
         {
-            Assert.That(track.ValueFromPoint(new Vector2(100, 6)), Is.EqualTo(50).Within(0.5));
-            Assert.That(track.ValueFromPoint(new Vector2(6, 6)), Is.EqualTo(0).Within(0.5), "click at the start -> Minimum");
-            Assert.That(track.ValueFromPoint(new Vector2(194, 6)), Is.EqualTo(100).Within(0.5), "click at the end -> Maximum");
-            Assert.That(track.ValueFromPoint(new Vector2(-50, 6)), Is.EqualTo(0).Within(0.5), "clamped below the track");
+            Assert.That(track.ValueFromPoint(new Vector2<double>(100, 6)), Is.EqualTo(50).Within(0.5));
+            Assert.That(track.ValueFromPoint(new Vector2<double>(6, 6)), Is.EqualTo(0).Within(0.5), "click at the start -> Minimum");
+            Assert.That(track.ValueFromPoint(new Vector2<double>(194, 6)), Is.EqualTo(100).Within(0.5), "click at the end -> Maximum");
+            Assert.That(track.ValueFromPoint(new Vector2<double>(-50, 6)), Is.EqualTo(0).Within(0.5), "clamped below the track");
         });
     }
 
@@ -160,9 +160,9 @@ public class ScrollControlsTests
         var track = ArrangedTrack(Orientation.Horizontal, 0, 100, 0, 0, 200, 12);
         Assert.Multiple(() =>
         {
-            Assert.That(track.PageLimitFromPoint(new Vector2(100, 6), increasing: true), Is.EqualTo(46.81).Within(0.05),
+            Assert.That(track.PageLimitFromPoint(new Vector2<double>(100, 6), increasing: true), Is.EqualTo(46.81).Within(0.05),
                 "paging right stops when the thumb's RIGHT edge reaches the cursor");
-            Assert.That(track.PageLimitFromPoint(new Vector2(100, 6), increasing: false), Is.EqualTo(53.19).Within(0.05),
+            Assert.That(track.PageLimitFromPoint(new Vector2<double>(100, 6), increasing: false), Is.EqualTo(53.19).Within(0.05),
                 "paging left stops when its LEFT edge does");
         });
     }
@@ -176,11 +176,11 @@ public class ScrollControlsTests
         var track = ArrangedTrack(Orientation.Horizontal, 0, 100, 0, 0, 200, 12);
         Assert.Multiple(() =>
         {
-            Assert.That(track.PageLimitFromPoint(new Vector2(200, 6), increasing: true), Is.EqualTo(100).Within(0.05),
+            Assert.That(track.PageLimitFromPoint(new Vector2<double>(200, 6), increasing: true), Is.EqualTo(100).Within(0.05),
                 "a click at the far end still pages all the way to Maximum");
-            Assert.That(track.PageLimitFromPoint(new Vector2(0, 6), increasing: false), Is.EqualTo(0).Within(0.05),
+            Assert.That(track.PageLimitFromPoint(new Vector2<double>(0, 6), increasing: false), Is.EqualTo(0).Within(0.05),
                 "and at the near end, all the way to Minimum");
-            Assert.That(track.PageLimitFromPoint(new Vector2(400, 6), increasing: true), Is.EqualTo(100).Within(0.05),
+            Assert.That(track.PageLimitFromPoint(new Vector2<double>(400, 6), increasing: true), Is.EqualTo(100).Within(0.05),
                 "past the end clamps rather than overruns");
         });
     }
@@ -194,13 +194,13 @@ public class ScrollControlsTests
             Orientation = Orientation.Vertical, Minimum = 0, Maximum = 100, ViewportSize = 0,
             IsDirectionReversed = true, Thumb = new Thumb()
         };
-        track.Measure(new Size(12, 200));
+        track.Measure(new Size<double>(12, 200));
         track.Arrange(new Rect(0, 0, 12, 200));
         Assert.Multiple(() =>
         {
-            Assert.That(track.ValueFromPoint(new Vector2(6, 6)), Is.EqualTo(100).Within(0.5), "top -> Maximum");
-            Assert.That(track.ValueFromPoint(new Vector2(6, 194)), Is.EqualTo(0).Within(0.5), "bottom -> Minimum");
-            Assert.That(track.ValueFromPoint(new Vector2(6, 100)), Is.EqualTo(50).Within(0.5), "middle -> midpoint");
+            Assert.That(track.ValueFromPoint(new Vector2<double>(6, 6)), Is.EqualTo(100).Within(0.5), "top -> Maximum");
+            Assert.That(track.ValueFromPoint(new Vector2<double>(6, 194)), Is.EqualTo(0).Within(0.5), "bottom -> Minimum");
+            Assert.That(track.ValueFromPoint(new Vector2<double>(6, 100)), Is.EqualTo(50).Within(0.5), "middle -> midpoint");
         });
     }
 
@@ -255,12 +255,12 @@ public class ScrollControlsTests
     // Content with a fixed natural size, so the presenter measures a definite extent regardless of layout details.
     private sealed class FixedContent : MeasurableUIComponent
     {
-        private readonly Size _size;
-        public FixedContent(Size size) => _size = size;
-        protected override Size MeasureOverride(Size availableSize) => _size;
+        private readonly Size<double> _size;
+        public FixedContent(Size<double> size) => _size = size;
+        protected override Size<double> MeasureOverride(Size<double> availableSize) => _size;
     }
 
-    private static ScrollContentPresenter ArrangedPresenter(Size content, Size viewport)
+    private static ScrollContentPresenter ArrangedPresenter(Size<double> content, Size<double> viewport)
     {
         var p = new ScrollContentPresenter { Content = new FixedContent(content) };
         p.Measure(viewport);
@@ -271,20 +271,20 @@ public class ScrollControlsTests
     [Test]
     public void ScrollContentPresenter_ReportsContentExtentAndViewport()
     {
-        var p = ArrangedPresenter(new Size(800, 1200), new Size(300, 400));
+        var p = ArrangedPresenter(new Size<double>(800, 1200), new Size<double>(300, 400));
         Assert.Multiple(() =>
         {
-            Assert.That(p.Extent, Is.EqualTo(new Size(800, 1200)), "extent = content's natural size (measured unbounded)");
-            Assert.That(p.Viewport, Is.EqualTo(new Size(300, 400)), "viewport = the presenter's arranged size");
+            Assert.That(p.Extent, Is.EqualTo(new Size<double>(800, 1200)), "extent = content's natural size (measured unbounded)");
+            Assert.That(p.Viewport, Is.EqualTo(new Size<double>(300, 400)), "viewport = the presenter's arranged size");
         });
     }
 
     [Test]
     public void ScrollContentPresenter_SetOffset_TranslatesChild()
     {
-        var p = ArrangedPresenter(new Size(800, 1200), new Size(300, 400));
-        p.SetOffset(new Vector2(100, 250));
-        p.Arrange(new Rect(new Size(300, 400)));   // SetOffset invalidated the arrange; re-run it
+        var p = ArrangedPresenter(new Size<double>(800, 1200), new Size<double>(300, 400));
+        p.SetOffset(new Vector2<double>(100, 250));
+        p.Arrange(new Rect(new Size<double>(300, 400)));   // SetOffset invalidated the arrange; re-run it
 
         var child = p.VisualChildren.First();
         Assert.Multiple(() =>
@@ -299,8 +299,8 @@ public class ScrollControlsTests
     [Test]
     public void ScrollContentPresenter_ClampsOffsetToExtentMinusViewport()
     {
-        var p = ArrangedPresenter(new Size(800, 1200), new Size(300, 400));
-        p.SetOffset(new Vector2(9999, 9999));   // way past the end
+        var p = ArrangedPresenter(new Size<double>(800, 1200), new Size<double>(300, 400));
+        p.SetOffset(new Vector2<double>(9999, 9999));   // way past the end
         Assert.Multiple(() =>
         {
             Assert.That(p.Offset.X, Is.EqualTo(500), "max X offset = extent.W - viewport.W = 800-300");

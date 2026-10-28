@@ -124,7 +124,7 @@ public class ScrollViewer : ContentControl
         var offset = ScrollOffset;
         if (back ? offset.Y <= 0.5 : offset.Y >= max - 0.5) return false;
 
-        _presenter.AnimateScrollBy(new Vector2(0, back ? -Math.Max(viewport.Height - PageOverlap, LineStep)
+        _presenter.AnimateScrollBy(new Vector2<double>(0, back ? -Math.Max(viewport.Height - PageOverlap, LineStep)
                                                       : Math.Max(viewport.Height - PageOverlap, LineStep)));
         return true;
     }
@@ -144,7 +144,7 @@ public class ScrollViewer : ContentControl
         var offset = ScrollOffset;
         if (toStart ? offset.Y <= 0.5 : offset.Y >= max - 0.5) return false;
 
-        _presenter.AnimateScrollBy(new Vector2(0, (toStart ? 0 : max) - offset.Y));
+        _presenter.AnimateScrollBy(new Vector2<double>(0, (toStart ? 0 : max) - offset.Y));
         return true;
     }
 
@@ -287,9 +287,9 @@ public class ScrollViewer : ContentControl
 
     // Content metrics changed (resize, scroll): push them onto the bars (Maximum/ViewportSize/Value) and re-evaluate
     // Auto visibility. Guarded so setting Value here doesn't bounce back through OnBarValueChanged into the presenter.
-    private Size _lastPushedExtent = new(-1, -1);
-    private Size _lastPushedViewport;
-    private Vector2 _lastPushedOffset;
+    private Size<double> _lastPushedExtent = new(-1, -1);
+    private Size<double> _lastPushedViewport;
+    private Vector2<double> _lastPushedOffset;
 
     private void OnScrollMetricsChanged(object sender, EventArgs e)
     {
@@ -303,8 +303,8 @@ public class ScrollViewer : ContentControl
         {
             // "Visible" is 0.5 DEVICE pixels: the thumb travel is in logical px, so the imperceptibility floor scales
             // with the display's DPI (0.5 logical px is a coarser skip on a hi-DPI panel where it maps to more device px).
-            var dpi = (RootVisual as WindowBase)?.DpiScale ?? new Vector2(1, 1);
-            var span = new Vector2((float)Math.Max(1, extent.Width - viewport.Width), (float)Math.Max(1, extent.Height - viewport.Height));
+            var dpi = (RootVisual as WindowBase)?.DpiScale ?? new Vector2<double>(1, 1);
+            var span = new Vector2<double>((float)Math.Max(1, extent.Width - viewport.Width), (float)Math.Max(1, extent.Height - viewport.Height));
             var thumbMoveX = Math.Abs(offset.X - _lastPushedOffset.X) * viewport.Width / span.X * dpi.X;
             var thumbMoveY = Math.Abs(offset.Y - _lastPushedOffset.Y) * viewport.Height / span.Y * dpi.Y;
             if (thumbMoveX < 0.5 && thumbMoveY < 0.5) return;
@@ -343,21 +343,21 @@ public class ScrollViewer : ContentControl
         if (_syncingBars || _presenter == null) return;
         var x = _horizontalBar?.Value ?? _presenter.Offset.X;
         var y = _verticalBar?.Value ?? _presenter.Offset.Y;
-        _presenter.SetOffset(new Vector2(x, y));
+        _presenter.SetOffset(new Vector2<double>(x, y));
     }
 
     /// <summary>Current scroll offset of the content (top-left of the viewport within the extent). Zero before templating.</summary>
-    public Vector2 ScrollOffset => _presenter?.Offset ?? default;
+    public Vector2<double> ScrollOffset => _presenter?.Offset ?? default;
 
     /// <summary>Size of the visible window onto the content. Zero before templating.</summary>
-    public Size ViewportSize => _presenter?.Viewport ?? default;
+    public Size<double> ViewportSize => _presenter?.Viewport ?? default;
 
     /// <summary>Total size of the (possibly scaled) content. Zero before templating.</summary>
-    public Size ExtentSize => _presenter?.Extent ?? default;
+    public Size<double> ExtentSize => _presenter?.Extent ?? default;
 
     /// <summary>Sets the absolute scroll offset (content-space top-left of the viewport), clamped to the current extent.
     /// No-op before templating.</summary>
-    public void SetScrollOffset(Vector2 offset) => _presenter?.SetOffset(offset);
+    public void SetScrollOffset(Vector2<double> offset) => _presenter?.SetOffset(offset);
 
     /// <summary>Raised after the scroll metrics (offset / extent / viewport) actually changed - lets a host react once the
     /// extent reflects a new layout (e.g. a ZoomBox applying a zoom-to-cursor offset after a scale change grew it).</summary>
@@ -375,7 +375,7 @@ public class ScrollViewer : ContentControl
         else if (rect.Right > x + vp.Width) x = rect.Right - vp.Width;
         if (rect.Y < y) y = rect.Y;
         else if (rect.Bottom > y + vp.Height) y = rect.Bottom - vp.Height;
-        if (x != off.X || y != off.Y) _presenter.SetOffset(new Vector2(x, y));
+        if (x != off.X || y != off.Y) _presenter.SetOffset(new Vector2<double>(x, y));
     }
 
     /// <summary>Scroll so a descendant element becomes visible. Its bounds are projected from its own local space into the
@@ -409,23 +409,23 @@ public class ScrollViewer : ContentControl
 
         // A HORIZONTAL (tilt) wheel scrolls X; a vertical wheel scrolls Y, or X when there's no vertical range (a
         // horizontally-scrolling list). `delta` is the signed move on the active axis, with current/max for edge testing.
-        Vector2 by;
+        Vector2<double> by;
         double delta, current, max;
         if (e.IsHorizontal)
         {
             if (!canH) return;                         // horizontal wheel, nothing to scroll -> bubble
             delta = step;                              // tilt right (delta>0) -> scroll right (offset +)
-            by = new Vector2(delta, 0); current = offset.X; max = extent.Width - viewport.Width;
+            by = new Vector2<double>(delta, 0); current = offset.X; max = extent.Width - viewport.Width;
         }
         else if (canV)
         {
             delta = -step;                             // wheel up (delta>0) -> scroll toward the top (offset -)
-            by = new Vector2(0, delta); current = offset.Y; max = extent.Height - viewport.Height;
+            by = new Vector2<double>(0, delta); current = offset.Y; max = extent.Height - viewport.Height;
         }
         else if (canH)
         {
             delta = -step;                             // vertical wheel over a horizontally-scrolling list
-            by = new Vector2(delta, 0); current = offset.X; max = extent.Width - viewport.Width;
+            by = new Vector2<double>(delta, 0); current = offset.X; max = extent.Width - viewport.Width;
         }
         else return;   // nothing scrollable here -> leave the wheel unhandled so a parent ScrollViewer takes it
 

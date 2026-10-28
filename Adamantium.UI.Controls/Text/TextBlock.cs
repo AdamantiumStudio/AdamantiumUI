@@ -204,14 +204,14 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
     // size animates (e.g. a Button growing, whose templated ContentPresenter re-measures this TextBlock each frame)
     // re-shaped the same unchanged text twice per frame. Cache the result and only re-shape when an input that actually
     // affects the layout changes.
-    private Size _cachedSize;
+    private Size<double> _cachedSize;
     private bool _hasLayout;
     private IFont _layoutFont;   // the face _textLayout was built for (the font is fixed per TextLayout)
     private string _lastText;
     private double _lastFontSize, _lastWidth, _lastHeight;
     // The width/height the last measure was given (a wrapping block reflows to this when it has no explicit Width, so
     // the wrap boundary comes from the container - like WPF - instead of a hardcoded Width). Infinity = unconstrained.
-    private Size _lastConstraint = new Size(double.PositiveInfinity, double.PositiveInfinity);
+    private Size<double> _lastConstraint = new Size<double>(double.PositiveInfinity, double.PositiveInfinity);
     private TextWrapping _lastWrapping;
     private TextTrimming _lastTrimming;
     private HorizontalTextAlignment _lastHAlign;
@@ -241,7 +241,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
     private bool _hasOther;
     private double _otherWidth;
     private double _otherHeight;
-    private Size _otherSize;
+    private Size<double> _otherSize;
 
     // The overflows the text runs on into, in order, and how many of the layout's frames are the block's own: none
     // while it runs into no overflow.
@@ -259,7 +259,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
     private readonly List<(int Index, IMeasurableComponent Child)> _objects = [];
     private readonly List<IMeasurableComponent> _hosted = [];
     private LayoutManager _watchedLayout;
-    private readonly List<Size> _hostedSizes = [];
+    private readonly List<Size<double>> _hostedSizes = [];
     private readonly Dictionary<IMeasurableComponent, double> _hostedRaises = [];
     private readonly HashSet<IMeasurableComponent> _placedHosted = [];
     private Hyperlink _pressedLink;
@@ -277,7 +277,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
     private object _selectionContext;
     private bool _selecting;
     private bool _pressPending;
-    private Vector2 _pressAt;
+    private Vector2<double> _pressAt;
     private int _pressClicks;
     private bool _pressExtends;
     private IInputComponent _listenedWindow;
@@ -318,7 +318,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
     // Shapes the text only when an input that affects the layout changed since the last call; otherwise returns the
     // cached size (and leaves _textLayout as-is). Cheap to call every measure/arrange/render. Width/Height use
     // double.Equals so NaN==NaN counts as "unchanged" (an auto-sized label stays a cache hit while its parent resizes).
-    private Size EnsureLayout(bool measuring = false)
+    private Size<double> EnsureLayout(bool measuring = false)
     {
         // Resolve the inherited font (falling back to the single shared default), and (re)build the layout when it
         // changes - the typeface is fixed per TextLayout, so a font change means a new TextLayout for that face.
@@ -453,7 +453,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         // The layout's size takes in the overflows' frames: the block is as large as its own room.
         if (_ownFrames > 0)
         {
-            _cachedSize = new Size(width, height);
+            _cachedSize = new Size<double>(width, height);
         }
 
         if (!fontReady || _runFontsPending || _textLayout.HasPendingFonts)
@@ -469,14 +469,14 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
             && double.IsNaN(Width) && !double.IsNaN(width) && !vertical)
         {
             var ink = System.Math.Ceiling(_textLayout.RealTextDimensions.Width);
-            if (ink > 0) _cachedSize = new Size(Math.Min(_cachedSize.Width, ink), _cachedSize.Height);
+            if (ink > 0) _cachedSize = new Size<double>(Math.Min(_cachedSize.Width, ink), _cachedSize.Height);
         }
 
         if (TextTrimming != TextTrimming.None && TextWrapping == TextWrapping.NoWrap
             && double.IsNaN(Height) && !double.IsNaN(height) && vertical)
         {
             var ink = System.Math.Ceiling(_textLayout.RealTextDimensions.Height);
-            if (ink > 0) _cachedSize = new Size(_cachedSize.Width, Math.Min(_cachedSize.Height, ink));
+            if (ink > 0) _cachedSize = new Size<double>(_cachedSize.Width, Math.Min(_cachedSize.Height, ink));
         }
 
         _hasLayout = true;
@@ -514,14 +514,14 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         _lastLineBounds = TextLineBounds;
         return _cachedSize;
 
-        Size Lay() => attributed == null
-            ? _textLayout.ProcessText(text, FontSize, new Size(width, height), TextWrapping, TextTrimming,
+        Size<double> Lay() => attributed == null
+            ? _textLayout.ProcessText(text, FontSize, new Size<double>(width, height), TextWrapping, TextTrimming,
                 HorizontalTextAlignment, vertical ? AcrossLines() : VerticalTextAlignment, JustifyLastLine)
-            : _textLayout.ProcessText(attributed, FontSize, new Size(width, height), TextWrapping, TextTrimming,
+            : _textLayout.ProcessText(attributed, FontSize, new Size<double>(width, height), TextWrapping, TextTrimming,
                 HorizontalTextAlignment, vertical ? AcrossLines() : VerticalTextAlignment, JustifyLastLine);
     }
 
-    private RectangleF[] FramesOf(double length, double across, bool vertical, Func<Size> lay, out float growth)
+    private RectangleF[] FramesOf(double length, double across, bool vertical, Func<Size<double>> lay, out float growth)
     {
         growth = 0;
         var columns = Math.Max(1, Columns);
@@ -695,14 +695,14 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
 
             var frame = frames[index];
             var content = vertical || frame.Height < Unbounded
-                ? new Size(frame.Width, frame.Height)
-                : new Size(frame.Width, Math.Ceiling(extents[index]));
+                ? new Size<double>(frame.Width, frame.Height)
+                : new Size<double>(frame.Width, Math.Ceiling(extents[index]));
             _overflows[k].Show(frame, content, lastFrame > index || over, _textLayout.Revision);
         }
     }
 
     // Whether a control among the inlines stands at a point of an overflow showing the frame.
-    internal bool ShowsObjectAt(RectangleF frame, Vector2 local)
+    internal bool ShowsObjectAt(RectangleF frame, Vector2<double> local)
     {
         if (_hosted.Count == 0)
         {
@@ -731,7 +731,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
             if (overflow.Frame is { } frame && rect.Bottom >= frame.Top && rect.Top <= frame.Bottom
                 && rect.Right >= frame.Left && rect.Left <= frame.Right)
             {
-                var at = overflow.TranslatePoint(new Vector2(rect.X - frame.X, rect.Y - frame.Y), this);
+                var at = overflow.TranslatePoint(new Vector2<double>(rect.X - frame.X, rect.Y - frame.Y), this);
                 return new Rect(at.X, at.Y, rect.Width, rect.Height);
             }
         }
@@ -1089,7 +1089,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         _inkOverhang = new Thickness(reach[0], reach[1], reach[2], reach[3]);
     }
 
-    internal Thickness OverhangOf(Size frame) =>
+    internal Thickness OverhangOf(Size<double> frame) =>
         _reflectionDistance < 0
             ? _inkOverhang
             : new Thickness(_inkOverhang.Left, _inkOverhang.Top, _inkOverhang.Right,
@@ -1705,7 +1705,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
 
     // The chain runs from the outermost span down to the inline itself: each sets what it sets, the nearer one wins,
     // and the lines add up.
-    private TextAttributes InlineAttributes(List<Inline> chain, Size? objectSize = null, double objectRaise = 0)
+    private TextAttributes InlineAttributes(List<Inline> chain, Size<double>? objectSize = null, double objectRaise = 0)
     {
         var fontSize = double.NaN;
         FontFamily family = null;
@@ -1925,8 +1925,8 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         var pen = new Pen(brush, thickness, dashStrokeArray: dashes, dashStartCap: PenLineCap.Flat,
             dashEndCap: PenLineCap.Flat);
         var middle = (down ? band.X : band.Y) + thickness / 2;
-        session.DrawLine(down ? new Vector2(middle, band.Y) : new Vector2(band.X, middle),
-            down ? new Vector2(middle, band.Y + band.Height) : new Vector2(band.X + band.Width, middle), pen);
+        session.DrawLine(down ? new Vector2<double>(middle, band.Y) : new Vector2<double>(band.X, middle),
+            down ? new Vector2<double>(middle, band.Y + band.Height) : new Vector2<double>(band.X + band.Width, middle), pen);
     }
 
     private Rect OnPixels(Rect line)
@@ -1951,7 +1951,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         base.OnFontsArrived();
     }
 
-    protected override Size MeasureOverride(Size availableSize)
+    protected override Size<double> MeasureOverride(Size<double> availableSize)
     {
         _lastConstraint = availableSize;   // a wrapping block reflows to this (its container's width) when it has no explicit Width
         MeasureHosted();
@@ -1970,7 +1970,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
     }
 
     /// <summary>Lays the text out and takes the whole slot, so text alignment works within it.</summary>
-    protected override Size ArrangeOverride(Size finalSize)
+    protected override Size<double> ArrangeOverride(Size<double> finalSize)
     {
         // A trimmed block trims to the slot it actually GOT, which is not always the one it was measured against: a tab
         // header is measured unbounded and then capped by the tab's MaxWidth, so the boundary only exists here. Re-stated
@@ -2028,11 +2028,11 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
             return;
         }
 
-        var sizes = new List<Size>(_hosted.Count);
+        var sizes = new List<Size<double>>(_hosted.Count);
         var raised = false;
         foreach (var child in _hosted)
         {
-            child.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+            child.Measure(new Size<double>(double.PositiveInfinity, double.PositiveInfinity));
             sizes.Add(child.DesiredSize);
             var raise = HostedRaise(child);
             if (!_hostedRaises.TryGetValue(child, out var old) || !old.Equals(raise))
@@ -2124,7 +2124,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         }
     }
 
-    private bool UseSlot(Size slot)
+    private bool UseSlot(Size<double> slot)
     {
         if (TextTrimming == TextTrimming.None)
         {
@@ -2138,7 +2138,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
                 return false;
             }
 
-            _lastConstraint = new Size(_lastConstraint.Width, slot.Height);
+            _lastConstraint = new Size<double>(_lastConstraint.Width, slot.Height);
             return true;
         }
 
@@ -2147,7 +2147,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
             return false;
         }
 
-        _lastConstraint = new Size(slot.Width, _lastConstraint.Height);
+        _lastConstraint = new Size<double>(slot.Width, _lastConstraint.Height);
         return true;
     }
 
@@ -2172,7 +2172,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         ? VerticalTextAlignment.Top
         : VerticalTextAlignment;
 
-    TextRenderingParameters GetTextRenderingParameters(Vector2F textPos, Size size)
+    TextRenderingParameters GetTextRenderingParameters(Vector2F textPos, Size<double> size)
     {
         return new TextRenderingParameters()
         {
@@ -2182,7 +2182,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
             TextTrimming = TextTrimming,
             TextWrapping = TextWrapping,
             Color = ((SolidColorBrush)Foreground).Color,
-            TextArea = new Rectangle(textPos, size)
+            TextArea = new Rectangle<int>(textPos.As<int>(), size.As<int>())
         };
     }
 
@@ -2215,7 +2215,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
 
     // An overflow's part of the text: the glyphs, lines, backgrounds and selection of its frame, moved to its top left.
     // The block's own background and text effects stay in the block.
-    internal void RenderFrame(IDrawingSession session, RectangleF frame, Size size)
+    internal void RenderFrame(IDrawingSession session, RectangleF frame, Size<double> size)
     {
         EnsureLayout();
         ApplyGlyphLooks();
@@ -2895,7 +2895,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         ReferenceEquals(element, this) || (element is TextBlockOverflow overflow && _overflows.Contains(overflow));
 
     // The pointer in the block's space: over an overflow, where the block would show that part of its text.
-    private Vector2 PointerAt(PointerEventArgs e)
+    private Vector2<double> PointerAt(PointerEventArgs e)
     {
         foreach (var overflow in _overflows)
         {
@@ -2907,7 +2907,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
             var point = e.GetPosition(overflow);
             if (point.X >= 0 && point.Y >= 0 && point.X < overflow.RenderSize.Width && point.Y < overflow.RenderSize.Height)
             {
-                return new Vector2(point.X + frame.X + LinesShift(), point.Y + frame.Y);
+                return new Vector2<double>(point.X + frame.X + LinesShift(), point.Y + frame.Y);
             }
         }
 

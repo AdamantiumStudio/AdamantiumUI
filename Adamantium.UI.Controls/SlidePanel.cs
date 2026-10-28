@@ -132,7 +132,7 @@ public class SlidePanel : ContentControl
     // Renders nothing where declared - its whole UI lives in the overlay via the Popup. Its template root (a zero-size
     // Popup) is arranged to fill the layout slot, and a UIComponent hit-tests its box by default (=> true), so without
     // this the invisible panel would SWALLOW every click over that slot (the content behind it stopped responding).
-    public override bool HitTestCore(Vector2 localPoint) => false;
+    public override bool HitTestCore(Vector2<double> localPoint) => false;
 
     private static void OnIsOpenChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
     {

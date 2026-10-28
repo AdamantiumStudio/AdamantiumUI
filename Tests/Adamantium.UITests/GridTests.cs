@@ -18,19 +18,19 @@ namespace Adamantium.UITests
    {
       private class LayoutPoker : Panel
       {
-         public Size MeasureResult = Size.Zero;
-         public Size MeasureArg = Size.Zero;
-         public Size ArrangeResult = Size.Zero;
-         public Size ArrangeArg = Size.Zero;
+         public Size<double> MeasureResult = Size<double>.Zero;
+         public Size<double> MeasureArg = Size<double>.Zero;
+         public Size<double> ArrangeResult = Size<double>.Zero;
+         public Size<double> ArrangeArg = Size<double>.Zero;
 
-         protected override Size MeasureOverride(Size availableSize)
+         protected override Size<double> MeasureOverride(Size<double> availableSize)
          {
             MeasureArg = availableSize;
             Debug.WriteLine($"Panel available size is {availableSize}");
             return MeasureResult;
          }
          
-         protected override Size ArrangeOverride(Size finalSize)
+         protected override Size<double> ArrangeOverride(Size<double> finalSize)
          {
             ArrangeArg = finalSize;
             Debug.WriteLine($"Panel final size is {finalSize}");
@@ -53,16 +53,16 @@ namespace Adamantium.UITests
 
          var vertical = new StackPanel();   // no Orientation set -> the default
          foreach (var r in Kids()) vertical.Children.Add(r);
-         vertical.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+         vertical.Measure(new Size<double>(double.PositiveInfinity, double.PositiveInfinity));
 
          var horizontal = new StackPanel { Orientation = Orientation.Horizontal };
          foreach (var r in Kids()) horizontal.Children.Add(r);
-         horizontal.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+         horizontal.Measure(new Size<double>(double.PositiveInfinity, double.PositiveInfinity));
 
          Assert.Multiple(() =>
          {
-            Assert.AreEqual(new Size(200, 150), vertical.DesiredSize, "default (Vertical): max width, sum of heights");
-            Assert.AreEqual(new Size(450, 70), horizontal.DesiredSize, "Horizontal: sum of widths, max height");
+            Assert.AreEqual(new Size<double>(200, 150), vertical.DesiredSize, "default (Vertical): max width, sum of heights");
+            Assert.AreEqual(new Size<double>(450, 70), horizontal.DesiredSize, "Horizontal: sum of widths, max height");
          });
       }
 
@@ -254,9 +254,9 @@ namespace Adamantium.UITests
          Grid.SetRow(stackpanel3, 3);
          Grid.SetColumnSpan(stackpanel3, 4);
 
-         grid.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+         grid.Measure(new Size<double>(double.PositiveInfinity, double.PositiveInfinity));
          
-         Assert.AreEqual(new Size(2124, 604), grid.DesiredSize);
+         Assert.AreEqual(new Size<double>(2124, 604), grid.DesiredSize);
 
          /*WPF code for check
           * 
@@ -468,11 +468,11 @@ namespace Adamantium.UITests
          grid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
          grid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
 
-         var spanned = new LayoutPoker { MeasureResult = new Size(10, 10) };
+         var spanned = new LayoutPoker { MeasureResult = new Size<double>(10, 10) };
          Grid.SetColumnSpan(spanned, 3);
          grid.Children.Add(spanned);
 
-         grid.Measure(new Size(300, 100));
+         grid.Measure(new Size<double>(300, 100));
          grid.Arrange(new Rect(0, 0, 300, 100));
 
          Assert.AreEqual(300, spanned.MeasureArg.Width,
@@ -496,15 +496,15 @@ namespace Adamantium.UITests
          grid.Children.Add(new Border() {Width = 50, Height = 25, [Grid.ColumnProperty] = 2, [Grid.RowProperty] = 1});
 
 
-         grid.Measure(Size.Infinity);
+         grid.Measure(Size<double>.Infinity);
 
          grid.InvalidateMeasure();
 
-         grid.Measure(Size.Infinity);
+         grid.Measure(Size<double>.Infinity);
 
          grid.Arrange(new Rect(grid.DesiredSize));
 
-         Assert.AreEqual(new Size(204, 50), grid.Bounds.Size);
+         Assert.AreEqual(new Size<double>(204, 50), grid.Bounds.Size);
          Assert.AreEqual(150, grid.ColumnDefinitions[0].ActualWidth);
          Assert.AreEqual(4, grid.ColumnDefinitions[1].ActualWidth);
          Assert.AreEqual(50, grid.ColumnDefinitions[2].ActualWidth);
@@ -530,7 +530,7 @@ namespace Adamantium.UITests
          grid.Children.Add(star);
          grid.Children.Add(auto);
 
-         grid.Measure(new Size(300, 30));
+         grid.Measure(new Size<double>(300, 30));
          grid.Arrange(new Rect(0, 0, 300, 30));
 
          Assert.Multiple(() =>
@@ -548,20 +548,20 @@ namespace Adamantium.UITests
       {
          var c = new Grid();
 
-         Assert.AreEqual(new Size(0, 0), c.DesiredSize);
-         Assert.AreEqual(new Size(0, 0), new Size(c.ActualWidth, c.ActualHeight));
+         Assert.AreEqual(new Size<double>(0, 0), c.DesiredSize);
+         Assert.AreEqual(new Size<double>(0, 0), new Size<double>(c.ActualWidth, c.ActualHeight));
 
          c.MaxWidth = 25;
          c.Width = 50;
          c.MinHeight = 33;
 
-         Assert.AreEqual(new Size(0, 0), c.DesiredSize);
-         Assert.AreEqual(new Size(0, 0), new Size(c.ActualWidth, c.ActualHeight));
+         Assert.AreEqual(new Size<double>(0, 0), c.DesiredSize);
+         Assert.AreEqual(new Size<double>(0, 0), new Size<double>(c.ActualWidth, c.ActualHeight));
 
-         c.Measure(new Size(100, 100));
+         c.Measure(new Size<double>(100, 100));
 
-         Assert.AreEqual(new Size(25, 33), c.DesiredSize);
-         Assert.AreEqual(new Size(0, 0), new Size(c.ActualWidth, c.ActualHeight));
+         Assert.AreEqual(new Size<double>(25, 33), c.DesiredSize);
+         Assert.AreEqual(new Size<double>(0, 0), new Size<double>(c.ActualWidth, c.ActualHeight));
       }
 
       [Test]
@@ -569,9 +569,9 @@ namespace Adamantium.UITests
       {
          Grid g = new Grid();
 
-         g.Measure(new Size(200, 200));
+         g.Measure(new Size<double>(200, 200));
 
-         Assert.AreEqual(new Size(0, 0), g.DesiredSize);
+         Assert.AreEqual(new Size<double>(0, 0), g.DesiredSize);
       }
 
       [Test]
@@ -582,9 +582,9 @@ namespace Adamantium.UITests
          g.Width = 300;
          g.Height = 300;
 
-         g.Measure(new Size(200, 200));
+         g.Measure(new Size<double>(200, 200));
 
-         Assert.AreEqual(new Size(200, 200), g.DesiredSize);
+         Assert.AreEqual(new Size<double>(200, 200), g.DesiredSize);
       }
 
       [Test]
@@ -594,9 +594,9 @@ namespace Adamantium.UITests
 
          g.Margin = new Thickness(5);
 
-         g.Measure(new Size(200, 200));
+         g.Measure(new Size<double>(200, 200));
 
-         Assert.AreEqual(new Size(10, 10), g.DesiredSize);
+         Assert.AreEqual(new Size<double>(10, 10), g.DesiredSize);
       }
 
       [Test]
@@ -610,13 +610,13 @@ namespace Adamantium.UITests
          def.Width = new GridLength(200);
          g.ColumnDefinitions.Add(def);
 
-         g.Measure(new Size(Double.PositiveInfinity, Double.PositiveInfinity));
+         g.Measure(new Size<double>(Double.PositiveInfinity, Double.PositiveInfinity));
 
-         Assert.AreEqual(new Size(200, 0), g.DesiredSize);
+         Assert.AreEqual(new Size<double>(200, 0), g.DesiredSize);
 
-         g.Measure(new Size(100, 100));
+         g.Measure(new Size<double>(100, 100));
 
-         Assert.AreEqual(new Size(100, 0), g.DesiredSize);
+         Assert.AreEqual(new Size<double>(100, 0), g.DesiredSize);
       }
 
       [Test]
@@ -632,13 +632,13 @@ namespace Adamantium.UITests
 
          g.Margin = new Thickness(5);
 
-         g.Measure(new Size(Double.PositiveInfinity, Double.PositiveInfinity));
+         g.Measure(new Size<double>(Double.PositiveInfinity, Double.PositiveInfinity));
 
-         Assert.AreEqual(new Size(210, 10), g.DesiredSize);
+         Assert.AreEqual(new Size<double>(210, 10), g.DesiredSize);
 
-         g.Measure(new Size(100, 100));
+         g.Measure(new Size<double>(100, 100));
 
-         Assert.AreEqual(new Size(100, 10), g.DesiredSize);
+         Assert.AreEqual(new Size<double>(100, 10), g.DesiredSize);
       }
 
       [Test]
@@ -658,13 +658,13 @@ namespace Adamantium.UITests
 
          g.Margin = new Thickness(5);
 
-         g.Measure(new Size(Double.PositiveInfinity, Double.PositiveInfinity));
+         g.Measure(new Size<double>(Double.PositiveInfinity, Double.PositiveInfinity));
 
-         Assert.AreEqual(new Size(410, 10), g.DesiredSize);
+         Assert.AreEqual(new Size<double>(410, 10), g.DesiredSize);
 
-         g.Measure(new Size(100, 100));
+         g.Measure(new Size<double>(100, 100));
 
-         Assert.AreEqual(new Size(100, 10), g.DesiredSize);
+         Assert.AreEqual(new Size<double>(100, 10), g.DesiredSize);
       }
 
       [Test]
@@ -680,13 +680,13 @@ namespace Adamantium.UITests
 
          g.Margin = new Thickness(5);
 
-         g.Measure(new Size(Double.PositiveInfinity, Double.PositiveInfinity));
+         g.Measure(new Size<double>(Double.PositiveInfinity, Double.PositiveInfinity));
 
-         Assert.AreEqual(new Size(10, 10), g.DesiredSize);
+         Assert.AreEqual(new Size<double>(10, 10), g.DesiredSize);
 
-         g.Measure(new Size(100, 100));
+         g.Measure(new Size<double>(100, 100));
 
-         Assert.AreEqual(new Size(10, 10), g.DesiredSize);
+         Assert.AreEqual(new Size<double>(10, 10), g.DesiredSize);
       }
 
       [Test]
@@ -706,13 +706,13 @@ namespace Adamantium.UITests
 
          g.Margin = new Thickness(5);
 
-         g.Measure(new Size(Double.PositiveInfinity, Double.PositiveInfinity));
+         g.Measure(new Size<double>(Double.PositiveInfinity, Double.PositiveInfinity));
 
-         Assert.AreEqual(new Size(210, 10), g.DesiredSize);
+         Assert.AreEqual(new Size<double>(210, 10), g.DesiredSize);
 
-         g.Measure(new Size(100, 100));
+         g.Measure(new Size<double>(100, 100));
 
-         Assert.AreEqual(new Size(100, 10), g.DesiredSize);
+         Assert.AreEqual(new Size<double>(100, 10), g.DesiredSize);
       }
 
 
@@ -729,13 +729,13 @@ namespace Adamantium.UITests
 
          g.Margin = new Thickness(5);
 
-         g.Measure(new Size(Double.PositiveInfinity, Double.PositiveInfinity));
+         g.Measure(new Size<double>(Double.PositiveInfinity, Double.PositiveInfinity));
 
-         Assert.AreEqual(new Size(10, 10), g.DesiredSize);
+         Assert.AreEqual(new Size<double>(10, 10), g.DesiredSize);
 
-         g.Measure(new Size(100, 100));
+         g.Measure(new Size<double>(100, 100));
 
-         Assert.AreEqual(new Size(10, 10), g.DesiredSize);
+         Assert.AreEqual(new Size<double>(10, 10), g.DesiredSize);
       }
 
       [Test]
@@ -755,13 +755,13 @@ namespace Adamantium.UITests
 
          g.Margin = new Thickness(5);
 
-         g.Measure(new Size(Double.PositiveInfinity, Double.PositiveInfinity));
+         g.Measure(new Size<double>(Double.PositiveInfinity, Double.PositiveInfinity));
 
-         Assert.AreEqual(new Size(210, 10), g.DesiredSize);
+         Assert.AreEqual(new Size<double>(210, 10), g.DesiredSize);
 
-         g.Measure(new Size(100, 100));
+         g.Measure(new Size<double>(100, 100));
 
-         Assert.AreEqual(new Size(100, 10), g.DesiredSize);
+         Assert.AreEqual(new Size<double>(100, 10), g.DesiredSize);
       }
 
       [Test]
@@ -777,13 +777,13 @@ namespace Adamantium.UITests
 
          g.Margin = new Thickness(5);
 
-         g.Measure(new Size(Double.PositiveInfinity, Double.PositiveInfinity));
+         g.Measure(new Size<double>(Double.PositiveInfinity, Double.PositiveInfinity));
 
-         Assert.AreEqual(new Size(10, 210), g.DesiredSize);
+         Assert.AreEqual(new Size<double>(10, 210), g.DesiredSize);
 
-         g.Measure(new Size(100, 100));
+         g.Measure(new Size<double>(100, 100));
 
-         Assert.AreEqual(new Size(10, 100), g.DesiredSize);
+         Assert.AreEqual(new Size<double>(10, 100), g.DesiredSize);
       }
 
       [Test]
@@ -793,9 +793,9 @@ namespace Adamantium.UITests
          g.RowDefinitions.Add(new RowDefinition());
          g.RowDefinitions.Add(new RowDefinition());
 
-         g.Measure(new Size(3000, 2000));
+         g.Measure(new Size<double>(3000, 2000));
          g.Arrange(new Rect(g.DesiredSize));
-         Assert.AreEqual(Size.Zero, g.Bounds.Size);
+         Assert.AreEqual(Size<double>.Zero, g.Bounds.Size);
       }
 
       [Test]
@@ -815,13 +815,13 @@ namespace Adamantium.UITests
 
          g.Margin = new Thickness(5);
 
-         g.Measure(new Size(Double.PositiveInfinity, Double.PositiveInfinity));
+         g.Measure(new Size<double>(Double.PositiveInfinity, Double.PositiveInfinity));
 
-         Assert.AreEqual(new Size(10, 410), g.DesiredSize);
+         Assert.AreEqual(new Size<double>(10, 410), g.DesiredSize);
 
-         g.Measure(new Size(100, 100));
+         g.Measure(new Size<double>(100, 100));
 
-         Assert.AreEqual(new Size(10, 100), g.DesiredSize);
+         Assert.AreEqual(new Size<double>(10, 100), g.DesiredSize);
       }
 
       [Test]
@@ -837,13 +837,13 @@ namespace Adamantium.UITests
 
          g.Margin = new Thickness(5);
 
-         g.Measure(new Size(Double.PositiveInfinity, Double.PositiveInfinity));
+         g.Measure(new Size<double>(Double.PositiveInfinity, Double.PositiveInfinity));
 
-         Assert.AreEqual(new Size(10, 10), g.DesiredSize);
+         Assert.AreEqual(new Size<double>(10, 10), g.DesiredSize);
 
-         g.Measure(new Size(100, 100));
+         g.Measure(new Size<double>(100, 100));
 
-         Assert.AreEqual(new Size(10, 10), g.DesiredSize);
+         Assert.AreEqual(new Size<double>(10, 10), g.DesiredSize);
       }
 
       [Test]
@@ -863,13 +863,13 @@ namespace Adamantium.UITests
 
          g.Margin = new Thickness(5);
 
-         g.Measure(new Size(Double.PositiveInfinity, Double.PositiveInfinity));
+         g.Measure(new Size<double>(Double.PositiveInfinity, Double.PositiveInfinity));
 
-         Assert.AreEqual(new Size(10, 210), g.DesiredSize);
+         Assert.AreEqual(new Size<double>(10, 210), g.DesiredSize);
 
-         g.Measure(new Size(100, 100));
+         g.Measure(new Size<double>(100, 100));
 
-         Assert.AreEqual(new Size(10, 100), g.DesiredSize);
+         Assert.AreEqual(new Size<double>(10, 100), g.DesiredSize);
       }
 
       [Test]
@@ -891,9 +891,9 @@ namespace Adamantium.UITests
          grid.Children.Add(rect);
          Grid.SetColumn(rect, 2);
 
-         grid.Measure(new Size(210, 100));
+         grid.Measure(new Size<double>(210, 100));
 
-         Assert.AreEqual(new Size(210, 0), grid.DesiredSize);
+         Assert.AreEqual(new Size<double>(210, 0), grid.DesiredSize);
       }
 
       [Test]
@@ -915,9 +915,9 @@ namespace Adamantium.UITests
          grid.Children.Add(rect);
          Grid.SetRow(rect, 2);
 
-         grid.Measure(new Size(100, 210));
+         grid.Measure(new Size<double>(100, 210));
 
-         Assert.AreEqual(new Size(10, 210), grid.DesiredSize);
+         Assert.AreEqual(new Size<double>(10, 210), grid.DesiredSize);
       }
 
       [Test]
@@ -939,8 +939,8 @@ namespace Adamantium.UITests
          grid.Children.Add(rect);
          Grid.SetRow(rect, 2);
 
-         grid.Measure(new Size(Double.PositiveInfinity, Double.PositiveInfinity));
-         Assert.AreEqual(new Size(10, 110), grid.DesiredSize);
+         grid.Measure(new Size<double>(Double.PositiveInfinity, Double.PositiveInfinity));
+         Assert.AreEqual(new Size<double>(10, 110), grid.DesiredSize);
       }
 
       [Test]
@@ -964,8 +964,8 @@ namespace Adamantium.UITests
          grid.Children.Add(rect);
          Grid.SetRow(rect, 2);
 
-         grid.Measure(new Size(Double.PositiveInfinity, Double.PositiveInfinity));
-         Assert.AreEqual(new Size(100, 160), grid.DesiredSize);
+         grid.Measure(new Size<double>(Double.PositiveInfinity, Double.PositiveInfinity));
+         Assert.AreEqual(new Size<double>(100, 160), grid.DesiredSize);
       }
 
       [Test]
@@ -989,8 +989,8 @@ namespace Adamantium.UITests
          grid.Children.Add(rect);
          Grid.SetRow(rect, 2);
 
-         grid.Measure(new Size(50, 20));
-         Assert.AreEqual(new Size(50, 20), grid.DesiredSize);
+         grid.Measure(new Size<double>(50, 20));
+         Assert.AreEqual(new Size<double>(50, 20), grid.DesiredSize);
       }
 
       [Test]
@@ -1012,9 +1012,9 @@ namespace Adamantium.UITests
          grid.Children.Add(rect);
          Grid.SetColumn(rect, 2);
 
-         grid.Measure(Size.Infinity);
+         grid.Measure(Size<double>.Infinity);
 
-         Assert.AreEqual(new Size(210, 0), grid.DesiredSize);
+         Assert.AreEqual(new Size<double>(210, 0), grid.DesiredSize);
       }
 
       [Test]
@@ -1036,10 +1036,10 @@ namespace Adamantium.UITests
          grid.Children.Add(rect);
          Grid.SetColumn(rect, 2);
 
-         grid.Measure(new Size(0, 210));
+         grid.Measure(new Size<double>(0, 210));
          grid.Arrange(new Rect(grid.DesiredSize));
 
-         Assert.AreEqual(new Size(0, 210), grid.DesiredSize);
+         Assert.AreEqual(new Size<double>(0, 210), grid.DesiredSize);
       }
 
       [Test]
@@ -1055,13 +1055,13 @@ namespace Adamantium.UITests
 
          g.Margin = new Thickness(5);
 
-         g.Measure(new Size(Double.PositiveInfinity, Double.PositiveInfinity));
+         g.Measure(new Size<double>(Double.PositiveInfinity, Double.PositiveInfinity));
 
-         Assert.AreEqual(new Size(10, 10), g.DesiredSize);
+         Assert.AreEqual(new Size<double>(10, 10), g.DesiredSize);
 
-         g.Measure(new Size(100, 100));
+         g.Measure(new Size<double>(100, 100));
 
-         Assert.AreEqual(new Size(10, 10), g.DesiredSize);
+         Assert.AreEqual(new Size<double>(10, 10), g.DesiredSize);
       }
 
       [Test]
@@ -1081,13 +1081,13 @@ namespace Adamantium.UITests
 
          g.Margin = new Thickness(5);
 
-         g.Measure(new Size(Double.PositiveInfinity, Double.PositiveInfinity));
+         g.Measure(new Size<double>(Double.PositiveInfinity, Double.PositiveInfinity));
 
-         Assert.AreEqual(new Size(10, 210), g.DesiredSize);
+         Assert.AreEqual(new Size<double>(10, 210), g.DesiredSize);
 
-         g.Measure(new Size(100, 100));
+         g.Measure(new Size<double>(100, 100));
 
-         Assert.AreEqual(new Size(10, 100), g.DesiredSize);
+         Assert.AreEqual(new Size<double>(10, 100), g.DesiredSize);
       }
 
 
@@ -1164,10 +1164,10 @@ namespace Adamantium.UITests
          Grid.SetColumn(mc, 0);
          g.Children.Add(mc);
 
-         g.Measure(new Size(Double.PositiveInfinity, Double.PositiveInfinity));
+         g.Measure(new Size<double>(Double.PositiveInfinity, Double.PositiveInfinity));
          //g.CheckMeasureArgs("#MeasureOverrideArg", new Size(inf, 200), new Size(inf, 200), new Size(inf, 200));
          //g.Reset();
-         Assert.AreEqual(new Size(200, 400), g.DesiredSize);
+         Assert.AreEqual(new Size<double>(200, 400), g.DesiredSize);
       }
 
       [Test]
@@ -1195,35 +1195,35 @@ namespace Adamantium.UITests
 
          g.Children.Add(c);
 
-         c.Measure(new Size(Double.PositiveInfinity, Double.PositiveInfinity));
+         c.Measure(new Size<double>(Double.PositiveInfinity, Double.PositiveInfinity));
 
          // first test with the child sized larger than the row/column definitions
          c.Width = 400;
          c.Height = 400;
 
-         g.Measure(new Size(Double.PositiveInfinity, Double.PositiveInfinity));
+         g.Measure(new Size<double>(Double.PositiveInfinity, Double.PositiveInfinity));
 
          Assert.AreEqual(400, c.Width);
          Assert.AreEqual(400, c.Height);
 
-         Assert.AreEqual(new Size(200, 200), c.DesiredSize);
-         Assert.AreEqual(new Size(400, 400), c.MeasureArg);
-         Assert.AreEqual(new Size(210, 210), g.DesiredSize);
+         Assert.AreEqual(new Size<double>(200, 200), c.DesiredSize);
+         Assert.AreEqual(new Size<double>(400, 400), c.MeasureArg);
+         Assert.AreEqual(new Size<double>(210, 210), g.DesiredSize);
 
-         g.Measure(new Size(100, 100));
+         g.Measure(new Size<double>(100, 100));
 
-         Assert.AreEqual(new Size(100, 100), g.DesiredSize);
-         Assert.AreEqual(new Size(400, 400), c.MeasureArg);
-         Assert.AreEqual(new Size(200, 200), c.DesiredSize);
+         Assert.AreEqual(new Size<double>(100, 100), g.DesiredSize);
+         Assert.AreEqual(new Size<double>(400, 400), c.MeasureArg);
+         Assert.AreEqual(new Size<double>(200, 200), c.DesiredSize);
 
          // now test with the child sized smaller than the row/column definitions
          c.Width = 100;
          c.Height = 100;
 
-         g.Measure(new Size(Double.PositiveInfinity, Double.PositiveInfinity));
+         g.Measure(new Size<double>(Double.PositiveInfinity, Double.PositiveInfinity));
 
-         Assert.AreEqual(new Size(100, 100), c.MeasureArg);
-         Assert.AreEqual(new Size(210, 210), g.DesiredSize);
+         Assert.AreEqual(new Size<double>(100, 100), c.MeasureArg);
+         Assert.AreEqual(new Size<double>(210, 210), g.DesiredSize);
       }
 
 
@@ -1252,20 +1252,20 @@ namespace Adamantium.UITests
 
          g.Children.Add(mc);
 
-         g.Measure(new Size(Double.PositiveInfinity, Double.PositiveInfinity));
+         g.Measure(new Size<double>(Double.PositiveInfinity, Double.PositiveInfinity));
          //g.CheckMeasureArgs("#MeasureOverrideArg", new Size(100, 50));
          //g.Reset();
-         Assert.AreEqual(new Size(0, 0), new Size(r.ActualWidth, r.ActualHeight));
-         Assert.AreEqual(new Size(0, 0), new Size(g.ActualWidth, g.ActualHeight));
+         Assert.AreEqual(new Size<double>(0, 0), new Size<double>(r.ActualWidth, r.ActualHeight));
+         Assert.AreEqual(new Size<double>(0, 0), new Size<double>(g.ActualWidth, g.ActualHeight));
 
          g.Arrange(new Rect(0, 0, g.DesiredSize.Width, g.DesiredSize.Height));
          //g.CheckRowHeights("#RowHeights", 50);
-         Assert.AreEqual(new Size(0, 0), r.DesiredSize);
-         Assert.AreEqual(new Size(110, 60), g.DesiredSize);
+         Assert.AreEqual(new Size<double>(0, 0), r.DesiredSize);
+         Assert.AreEqual(new Size<double>(110, 60), g.DesiredSize);
 
          //Assert.AreEqual(new Rect(0, 0, 100, 50).ToString(), LayoutInformation.GetLayoutSlot(r).ToString(), "slot");
-         Assert.AreEqual(new Size(100, 50), new Size(r.ActualWidth, r.ActualHeight));
-         Assert.AreEqual(new Size(100, 50), new Size(g.ActualWidth, g.ActualHeight));
+         Assert.AreEqual(new Size<double>(100, 50), new Size<double>(r.ActualWidth, r.ActualHeight));
+         Assert.AreEqual(new Size<double>(100, 50), new Size<double>(g.ActualWidth, g.ActualHeight));
       }
 
       [Test]
@@ -1302,21 +1302,21 @@ namespace Adamantium.UITests
          g.Children.Add(ra);
          g.Children.Add(rb);
 
-         g.Measure(new Size(Double.PositiveInfinity, Double.PositiveInfinity));
+         g.Measure(new Size<double>(Double.PositiveInfinity, Double.PositiveInfinity));
 
-         Assert.AreEqual(new Size(0, 0), ra.DesiredSize);
-         Assert.AreEqual(new Size(0, 0), rb.DesiredSize);
-         Assert.AreEqual(new Size(130, 60), g.DesiredSize);
+         Assert.AreEqual(new Size<double>(0, 0), ra.DesiredSize);
+         Assert.AreEqual(new Size<double>(0, 0), rb.DesiredSize);
+         Assert.AreEqual(new Size<double>(130, 60), g.DesiredSize);
 
          g.Arrange(new Rect(0, 0, g.DesiredSize.Width, g.DesiredSize.Height));
 
-         Assert.AreEqual(new Size(0, 0), ra.DesiredSize);
-         Assert.AreEqual(new Size(130, 60), g.DesiredSize);
+         Assert.AreEqual(new Size<double>(0, 0), ra.DesiredSize);
+         Assert.AreEqual(new Size<double>(130, 60), g.DesiredSize);
 
          //Assert.AreEqual(new Rect(0, 0, 100, 50).ToString(), LayoutInformation.GetLayoutSlot(ra).ToString(), "slot");
-         Assert.AreEqual(new Size(100, 50), new Size(ra.ActualWidth, ra.ActualHeight));
-         Assert.AreEqual(new Size(20, 50), new Size(rb.ActualWidth, rb.ActualHeight));
-         Assert.AreEqual(new Size(120, 50), new Size(g.ActualWidth, g.ActualHeight));
+         Assert.AreEqual(new Size<double>(100, 50), new Size<double>(ra.ActualWidth, ra.ActualHeight));
+         Assert.AreEqual(new Size<double>(20, 50), new Size<double>(rb.ActualWidth, rb.ActualHeight));
+         Assert.AreEqual(new Size<double>(120, 50), new Size<double>(g.ActualWidth, g.ActualHeight));
       }
 
       [Test]
@@ -1338,21 +1338,21 @@ namespace Adamantium.UITests
          //grid.CheckMeasureArgs("#MeasureOverrideArg", new Size(inf, inf), new Size(inf, inf));
          //grid.Reset();
 
-         grid.Measure(new Size(400, 300));
+         grid.Measure(new Size<double>(400, 300));
          //grid.CheckMeasureArgs("#MeasureOverrideArg 2", new Size(400, 300), new Size(400, 300));
          //grid.Reset();
 
          grid.Width = 100;
          grid.Height = 100;
 
-         grid.Measure(new Size(400, 300));
+         grid.Measure(new Size<double>(400, 300));
          //grid.CheckMeasureArgs("#MeasureOverrideArg 3", new Size(100, 100), new Size(100, 100));
          //grid.Reset();
          grid.Arrange(new Rect(0, 0, grid.DesiredSize.Width, grid.DesiredSize.Height));
 
-         Assert.AreEqual(new Size(100, 100), grid.RenderSize);
-         Assert.AreEqual(new Size(100, 100), b.RenderSize);
-         Assert.AreEqual(new Size(50, 50), b2.RenderSize);
+         Assert.AreEqual(new Size<double>(100, 100), grid.RenderSize);
+         Assert.AreEqual(new Size<double>(100, 100), b.RenderSize);
+         Assert.AreEqual(new Size<double>(50, 50), b2.RenderSize);
       }
 
       [Test]
@@ -1367,7 +1367,7 @@ namespace Adamantium.UITests
          Assert.AreEqual(0, grid.ColumnDefinitions.Count);
          Assert.AreEqual(0, grid.RowDefinitions.Count);
 
-         grid.Measure(new Size(Double.PositiveInfinity, Double.PositiveInfinity));
+         grid.Measure(new Size<double>(Double.PositiveInfinity, Double.PositiveInfinity));
 
          Assert.IsTrue(grid.ColumnDefinitions != null);
          Assert.IsTrue(grid.RowDefinitions != null);
@@ -1454,8 +1454,8 @@ namespace Adamantium.UITests
          Grid.SetColumn(child3, 1);
          g.Children.Add(child3);
 
-         g.Measure(new Size(Double.PositiveInfinity, Double.PositiveInfinity));
-         Assert.AreEqual(new Size(360, 400), g.DesiredSize);
+         g.Measure(new Size<double>(Double.PositiveInfinity, Double.PositiveInfinity));
+         Assert.AreEqual(new Size<double>(360, 400), g.DesiredSize);
       }
 
       [Test]
@@ -1527,8 +1527,8 @@ namespace Adamantium.UITests
          Grid.SetColumn(child4, 0);
          g.Children.Add(child4);
 
-         g.Measure(new Size(Double.PositiveInfinity, Double.PositiveInfinity));
-         Assert.AreEqual(new Size(410, 775), g.DesiredSize);
+         g.Measure(new Size<double>(Double.PositiveInfinity, Double.PositiveInfinity));
+         Assert.AreEqual(new Size<double>(410, 775), g.DesiredSize);
       }
 
       [Test]
@@ -1599,8 +1599,8 @@ namespace Adamantium.UITests
          Grid.SetColumn(child4, 0);
          g.Children.Add(child4);
 
-         g.Measure(new Size(Double.PositiveInfinity, Double.PositiveInfinity));
-         Assert.AreEqual(new Size(410, 700), g.DesiredSize);
+         g.Measure(new Size<double>(Double.PositiveInfinity, Double.PositiveInfinity));
+         Assert.AreEqual(new Size<double>(410, 700), g.DesiredSize);
       }
 
       [Test]
@@ -1655,8 +1655,8 @@ namespace Adamantium.UITests
          Grid.SetColumn(child3, 1);
          g.Children.Add(child3);
 
-         g.Measure(new Size(Double.PositiveInfinity, Double.PositiveInfinity));
-         Assert.AreEqual(new Size(420, 400), g.DesiredSize);
+         g.Measure(new Size<double>(Double.PositiveInfinity, Double.PositiveInfinity));
+         Assert.AreEqual(new Size<double>(420, 400), g.DesiredSize);
       }
 
       [Test]
@@ -1717,9 +1717,9 @@ namespace Adamantium.UITests
          Grid.SetColumn(child3, 1);
          g.Children.Add(child3);
 
-         g.Measure(new Size(Double.PositiveInfinity, Double.PositiveInfinity));
+         g.Measure(new Size<double>(Double.PositiveInfinity, Double.PositiveInfinity));
          
-         Assert.AreEqual(new Size(390, 430), g.DesiredSize);
+         Assert.AreEqual(new Size<double>(390, 430), g.DesiredSize);
 
          g.Arrange(new Rect(0, 0, g.DesiredSize.Width, g.DesiredSize.Height));
 
@@ -1787,9 +1787,9 @@ namespace Adamantium.UITests
          Grid.SetColumn(child3, 1);
          g.Children.Add(child3);
 
-         g.Measure(new Size(Double.PositiveInfinity, Double.PositiveInfinity));
+         g.Measure(new Size<double>(Double.PositiveInfinity, Double.PositiveInfinity));
 
-         Assert.AreEqual(new Size(410, 430), g.DesiredSize);
+         Assert.AreEqual(new Size<double>(410, 430), g.DesiredSize);
 
          g.Arrange(new Rect(0, 0, g.DesiredSize.Width, g.DesiredSize.Height));
 
@@ -1854,8 +1854,8 @@ namespace Adamantium.UITests
          Grid.SetColumn(child3, 1);
          g.Children.Add(child3);
 
-         g.Measure(new Size(Double.PositiveInfinity, Double.PositiveInfinity));
-         Assert.AreEqual(new Size(400, 400), g.DesiredSize);
+         g.Measure(new Size<double>(Double.PositiveInfinity, Double.PositiveInfinity));
+         Assert.AreEqual(new Size<double>(400, 400), g.DesiredSize);
       }
 
       [Test]
@@ -1912,8 +1912,8 @@ namespace Adamantium.UITests
          Grid.SetColumn(child3, 1);
          g.Children.Add(child3);
 
-         g.Measure(new Size(Double.PositiveInfinity, Double.PositiveInfinity));
-         Assert.AreEqual(new Size(350, 440), g.DesiredSize);
+         g.Measure(new Size<double>(Double.PositiveInfinity, Double.PositiveInfinity));
+         Assert.AreEqual(new Size<double>(350, 440), g.DesiredSize);
       }
 
       // Moving a child to another CELL must move it on screen. The cell index is read by the grid during its own measure,
@@ -2018,14 +2018,14 @@ namespace Adamantium.UITests
 
          // The pass that poisoned it: a real width but ZERO height, which is what a window's strip gets while the client
          // height is still unknown (measured off the app as Width 866 / Height 0).
-         grid.Measure(new Size(866, 0));
+         grid.Measure(new Size<double>(866, 0));
          Assert.DoesNotThrow(() => grid.Arrange(new Rect(0, 0, 866, 0)), "a zero-height slot must not throw");
          Assert.That(double.IsFinite(grid.RowDefinitions[0].ActualHeight), Is.True,
             "the zero-height pass must not leave a NaN in the track");
 
          // ...and the grid must still lay out normally afterwards, i.e. the zero pass left no NaN behind.
          grid.InvalidateMeasure();
-         grid.Measure(new Size(200, 200));
+         grid.Measure(new Size<double>(200, 200));
          Assert.DoesNotThrow(() => grid.Arrange(new Rect(0, 0, 200, 200)), "and must not poison the next real pass");
 
          Assert.Multiple(() =>

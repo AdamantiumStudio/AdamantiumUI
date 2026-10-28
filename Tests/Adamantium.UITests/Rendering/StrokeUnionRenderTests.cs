@@ -27,8 +27,8 @@ public class StrokeUnionRenderTests
     {
         var g = new StreamGeometry();
         g.Open()
-            .BeginFigure(new Vector2(40, 40), false, false)
-            .PolylineLineTo([new Vector2(200, 200), new Vector2(40, 200), new Vector2(200, 40)], true);
+            .BeginFigure(new Vector2<double>(40, 40), false, false)
+            .PolylineLineTo([new Vector2<double>(200, 200), new Vector2<double>(40, 200), new Vector2<double>(200, 40)], true);
         return g;
     }
 
@@ -40,7 +40,7 @@ public class StrokeUnionRenderTests
 
         var content = new TestControl { RenderAction = draw };
         content.Bounds = new Rect(0, 0, Dim, Dim);
-        content.RenderSize = new Size(Dim, Dim);
+        content.RenderSize = new Size<double>(Dim, Dim);
 
         var root = new VisualRoot(content, Dim, Dim);
         Assert.That(renderer.RenderFrame(root), Is.True, "off-screen frame must render");
@@ -118,8 +118,8 @@ public class StrokeUnionRenderTests
         var pen = new Pen(new SolidColorBrush(Translucent), 12);
         var pixels = Render(s =>
         {
-            s.DrawGeometry(null, new LineGeometry(new Vector2(40, 40), new Vector2(200, 200)), pen);
-            s.DrawGeometry(null, new LineGeometry(new Vector2(40, 200), new Vector2(200, 40)), pen);
+            s.DrawGeometry(null, new LineGeometry(new Vector2<double>(40, 40), new Vector2<double>(200, 200)), pen);
+            s.DrawGeometry(null, new LineGeometry(new Vector2<double>(40, 200), new Vector2<double>(200, 40)), pen);
         });
 
         Assert.That(Alpha(pixels, 70, 70), Is.EqualTo(SingleBlend).Within(3), "a plain stretch of one line is one blend");

@@ -7,7 +7,7 @@ namespace Adamantium.UI.Rendering;
 // while layout mutates the tree. Recorded on the update thread and sent as a delta (RenderPacket.SnapDelta).
 internal readonly struct LayoutSnapshot(
     Matrix4x4F localTransform,
-    Size renderSize,
+    Size<double> renderSize,
     bool clipToBounds,
     bool isMotionNode,
     IUIComponent renderParent,
@@ -18,7 +18,7 @@ internal readonly struct LayoutSnapshot(
     // A FIELD, not a get-only property: 64 bytes that Equals wants to compare by reference, and a property cannot be
     // passed as `in` (it is not addressable, so the compiler copies it first - the very copy this avoids).
     public readonly Matrix4x4F LocalTransform = localTransform;
-    public Size RenderSize { get; } = renderSize;
+    public Size<double> RenderSize { get; } = renderSize;
     public bool ClipToBounds { get; } = clipToBounds;
     public bool IsMotionNode { get; } = isMotionNode;
 

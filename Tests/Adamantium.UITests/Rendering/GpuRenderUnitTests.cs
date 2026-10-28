@@ -182,7 +182,7 @@ public class GpuRenderUnitTests
     {
         var strokeEffect = new StrokeEffect(_device);
         IDrawCommand LineCmd(double dashOffset, double endX) =>
-            Command(new LinePayload(new Vector2(0, 0), new Vector2((float)endX, 50),
+            Command(new LinePayload(new Vector2<double>(0, 0), new Vector2<double>((float)endX, 50),
                 new Pen(Brushes.Black, 3, dashOffset, new double[] { 6, 4 })));
 
         var unit = new LineRenderUnit(LineCmd(0, 100), Ctx((UIBasicEffect)_effect.Clone(), strokeEffect));
@@ -291,13 +291,13 @@ public class GpuRenderUnitTests
         {
             RenderAction = s => s.DrawRectangle(Brushes.Red, new Rect(0, 0, 64, 64)),
             Bounds = new Rect(0, 0, 64, 64),
-            RenderSize = new Size(64, 64)
+            RenderSize = new Size<double>(64, 64)
         };
         var clip = new TestControl
         {
             ClipToBounds = true,
             Bounds = new Rect(20, 20, 24, 24),
-            RenderSize = new Size(24, 24)
+            RenderSize = new Size<double>(24, 24)
         };
         clip.Add(child);
 
@@ -339,7 +339,7 @@ public class GpuRenderUnitTests
         using var renderer = new OffscreenTestRenderer(_device, factory, 64, 64) { ClearColor = Colors.Black };
 
         var box = new Adamantium.UI.Controls.Shapes.Rectangle { Width = 40, Height = 40, Fill = Brushes.Red };
-        box.Measure(new Size(64, 64));
+        box.Measure(new Size<double>(64, 64));
         box.Arrange(new Rect(10, 10, 40, 40));
 
         var root = new TestRoot(64, 64);
@@ -380,7 +380,7 @@ public class GpuRenderUnitTests
         using var renderer = new OffscreenTestRenderer(_device, factory, 64, 64) { ClearColor = Colors.Black };
 
         var box = new Adamantium.UI.Controls.Shapes.Rectangle { Width = 40, Height = 40, Fill = Brushes.Red };
-        box.Measure(new Size(64, 64));
+        box.Measure(new Size<double>(64, 64));
         box.Arrange(new Rect(10, 10, 40, 40));
 
         var root = new TestRoot(64, 64);
@@ -454,7 +454,7 @@ public class GpuRenderUnitTests
             RenderTransform = new Transform { ScaleX = 2, ScaleY = 2 }
         };
         var viewport = new AdornerViewport { ClipToBounds = true, Child = box };
-        viewport.Measure(new Size(32, 32));
+        viewport.Measure(new Size<double>(32, 32));
         viewport.Arrange(new Rect(16, 16, 32, 32));
 
         var root = new TestRoot(64, 64);
@@ -525,7 +525,7 @@ public class GpuRenderUnitTests
         using var renderer = new OffscreenTestRenderer(_device, factory, 64, 64) { ClearColor = Colors.Black };
 
         var box = new Adamantium.UI.Controls.Shapes.Rectangle { Width = 64, Height = 64, Fill = Brushes.Red };
-        box.Measure(new Size(64, 64));
+        box.Measure(new Size<double>(64, 64));
         box.Arrange(new Rect(0, 0, 64, 64));   // fills the surface -> touches every edge
 
         var root = new TestRoot(64, 64);
@@ -575,7 +575,7 @@ public class GpuRenderUnitTests
             Ctx(effect));
         right.GeometryRenderer.ColorBlendEquation = ColorBlendEquations.Premultiplied;
 
-        var proj = Matrix4x4F.OrthoOffCenter(0, 64, 0, 64, 0, 100000);
+        var proj = Matrix4x4.CreateOrthoOffCenter<float>(0, 64, 0, 64, 0, 100000);
         left.Update(Matrix4x4F.Identity, proj, 1.0);
         right.Update(Matrix4x4F.Identity, proj, 1.0);
 
@@ -672,7 +672,7 @@ public class GpuRenderUnitTests
     // per-unit buffer allocation).
     private void DrawOnce(GraphicsPresenter presenter, IRenderUnit unit)
     {
-        var proj = Matrix4x4F.OrthoOffCenter(0, 64, 0, 64, 0, 100000);
+        var proj = Matrix4x4.CreateOrthoOffCenter<float>(0, 64, 0, 64, 0, 100000);
         unit.Update(Matrix4x4F.Identity, proj, 1.0);
 
         _device.ClearColor = Colors.Black;

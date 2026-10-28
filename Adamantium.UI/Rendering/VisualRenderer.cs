@@ -61,7 +61,7 @@ public sealed class VisualRenderer : IVisualRenderer
     /// Renders <paramref name="visual"/> at <paramref name="size"/> (logical) x <paramref name="scale"/> (device px) into a
     /// fresh off-screen target. The visual is HOSTED (reparented) under an off-screen root, so pass a fresh / detached tree.
     /// </summary>
-    public ImageSource Render(IUIComponent visual, Size size, double scale = 1.0, Color? clearColor = null)
+    public ImageSource Render(IUIComponent visual, Size<double> size, double scale = 1.0, Color? clearColor = null)
     {
         lock (_cacheLock)
         {
@@ -81,7 +81,7 @@ public sealed class VisualRenderer : IVisualRenderer
 
     // The DEVICE-FREE half of a detached render: host the visual, lay it out and record it into a parallel cache. Split
     // out so the queued path (RequestRender) can run it on the loop thread and leave only the GPU half to the render one.
-    private (RenderCache Cache, uint Width, uint Height) BuildDetachedCache(IUIComponent visual, Size size, double scale)
+    private (RenderCache Cache, uint Width, uint Height) BuildDetachedCache(IUIComponent visual, Size<double> size, double scale)
     {
         EnsureDevice();
         // A bake has ONE frame - whatever its text has not rasterized yet would simply be missing from the picture - so
@@ -91,7 +91,7 @@ public sealed class VisualRenderer : IVisualRenderer
         try
         {
             var root = new VisualRoot(visual, size.Width, size.Height);
-            var layoutSize = new Size(size.Width, size.Height);
+            var layoutSize = new Size<double>(size.Width, size.Height);
             ((IMeasurableComponent)root).Measure(layoutSize);
             ((IMeasurableComponent)root).Arrange(new Rect(layoutSize));
 
@@ -107,7 +107,7 @@ public sealed class VisualRenderer : IVisualRenderer
     }
 
     /// <summary>Parses AUML markup into a fresh visual and renders it (UWP <c>XamlReader.Load</c> + RenderTargetBitmap).</summary>
-    public ImageSource Render(string aumlText, Size size, double scale = 1.0, Color? clearColor = null)
+    public ImageSource Render(string aumlText, Size<double> size, double scale = 1.0, Color? clearColor = null)
     {
         return AumlLoader.Load(aumlText).Root is IUIComponent visual ? Render(visual, size, scale, clearColor) : null;
     }
@@ -116,9 +116,9 @@ public sealed class VisualRenderer : IVisualRenderer
     /// RenderTargetBitmap default when no size is given, so the whole element is captured, never clipped.</summary>
     public ImageSource Render(IUIComponent visual, double scale = 1.0, Color? clearColor = null)
     {
-        ((IMeasurableComponent)visual).Measure(new Size(4096, 4096));
+        ((IMeasurableComponent)visual).Measure(new Size<double>(4096, 4096));
         var d = ((IMeasurableComponent)visual).DesiredSize;
-        return Render(visual, new Size(Math.Max(1, d.Width), Math.Max(1, d.Height)), scale, clearColor);
+        return Render(visual, new Size<double>(Math.Max(1, d.Width), Math.Max(1, d.Height)), scale, clearColor);
     }
 
     /// <summary>Parses AUML and renders it at the tree's own desired size (auto-fit, never clipped).</summary>
@@ -132,7 +132,7 @@ public sealed class VisualRenderer : IVisualRenderer
     // (device-free), DrawPendingSnapshots draws and reads back on the render thread, which owns the shared VkDevice.
     // ------------------------------------------------------------------------------------------------------------------
     private readonly ConcurrentQueue<(IUIComponent visual, Action<ImageSource> onReady)> _recordQueue = new();
-    private readonly ConcurrentQueue<(IUIComponent visual, Size size, double scale, Color clear, Action<ImageSource> onReady)> _detachedQueue = new();
+    private readonly ConcurrentQueue<(IUIComponent visual, Size<double> size, double scale, Color clear, Action<ImageSource> onReady)> _detachedQueue = new();
     private readonly ConcurrentQueue<(RenderCache cache, uint width, uint height, Color clear, double scale, Action<ImageSource> onReady)> _drawQueue = new();
 
     /// <summary>UI-thread API: request a snapshot of a LIVE on-screen element. It is recorded on the loop thread and drawn on
@@ -150,7 +150,7 @@ public sealed class VisualRenderer : IVisualRenderer
     /// <summary>Queue a DETACHED visual, split the same way <see cref="RequestSnapshot"/> is. Rendering it synchronously
     /// instead submits and waits on the SHARED VkDevice from whatever thread asked, racing the window's own frame - and
     /// the picture that came back was intermittently wrong.</summary>
-    public void RequestRender(IUIComponent visual, Size size, double scale, Color? clearColor, Action<ImageSource> onReady)
+    public void RequestRender(IUIComponent visual, Size<double> size, double scale, Color? clearColor, Action<ImageSource> onReady)
     {
         if (visual == null || onReady == null)
         {
@@ -293,7 +293,7 @@ public sealed class VisualRenderer : IVisualRenderer
         // Project the ELEMENT-LOCAL space (0,0..size) and rebase the subtree so the element sits at the origin
         // (RebaseToOrigin below). Geometry AND the per-unit clip scissors then live in this one 0-based space; offsetting
         // only the projection would leave the scissors in absolute window coords, clamping the whole subtree to the edge.
-        var projection = Matrix4x4F.OrthoOffCenter(0, (float)size.Width, 0, (float)size.Height, -100000f, 100000f);
+        var projection = Matrix4x4.CreateOrthoOffCenter<float>(0, (float)size.Width, 0, (float)size.Height, -100000f, 100000f);
 
         // readOnly: emit each live component's commands via RenderReadOnly (no IsGeometryValid / RenderDirty touch), so the
         // window's loop is never woken into a concurrent render. The subtree is already valid, so ordinary Render() would

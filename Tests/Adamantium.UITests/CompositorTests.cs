@@ -26,11 +26,11 @@ public class CompositorTests
 
     private static (Border Element, Transform Transform) Spinner()
     {
-        var element = new Border { Width = 40, Height = 40, RenderTransformOrigin = new Vector2(0.5, 0.5) };
+        var element = new Border { Width = 40, Height = 40, RenderTransformOrigin = new Vector2<double>(0.5, 0.5) };
         var transform = new Transform();
         element.RenderTransform = transform;
 
-        element.Measure(new Size(100, 100));
+        element.Measure(new Size<double>(100, 100));
         element.Arrange(new Rect(0, 0, 40, 40));
         return (element, transform);
     }
@@ -343,7 +343,7 @@ public class CompositorTests
     {
         var border = new Border { Width = 20, Height = 20 };
         var host = new Window { Width = 100, Height = 100, Content = border };
-        ((IMeasurableComponent)host).Measure(new Size(100, 100));
+        ((IMeasurableComponent)host).Measure(new Size<double>(100, 100));
         return border;
     }
 

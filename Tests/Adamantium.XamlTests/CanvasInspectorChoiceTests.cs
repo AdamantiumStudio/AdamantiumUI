@@ -52,7 +52,7 @@ public class CanvasInspectorChoiceTests
         {
             Adamantium.UI.Extensions.WindowExtension.UpdateTree(canvas);
             Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
-            canvas.Measure(new Size(900, 700), force: true);
+            canvas.Measure(new Size<double>(900, 700), force: true);
             canvas.Arrange(new Rect(0, 0, 900, 700));
         }
     }

@@ -28,10 +28,10 @@ public class DrawingImageTests
             Brush = new SolidColorBrush(color)
         };
 
-    private static Vector2 Place(Matrix4x4F transform, double x, double y)
+    private static Vector2<double> Place(Matrix4x4F transform, double x, double y)
     {
         var p = Vector3F.TransformCoordinate(new Vector3F((float)x, (float)y, 0), transform);
-        return new Vector2(p.X, p.Y);
+        return new Vector2<double>(p.X, p.Y);
     }
 
     [Test]
@@ -57,8 +57,8 @@ public class DrawingImageTests
 
         Assert.That(session.Geometries, Has.Count.EqualTo(1));
         var transform = session.Geometries[0].Transform;
-        Assert.That(Place(transform, 0, 0), Is.EqualTo(new Vector2(50, 50)));
-        Assert.That(Place(transform, 10, 10), Is.EqualTo(new Vector2(150, 150)));
+        Assert.That(Place(transform, 0, 0), Is.EqualTo(new Vector2<double>(50, 50)));
+        Assert.That(Place(transform, 10, 10), Is.EqualTo(new Vector2<double>(150, 150)));
     }
 
     [Test]
@@ -72,8 +72,8 @@ public class DrawingImageTests
         image.Render(session, new Rect(0, 0, 40, 40), null);
 
         var transform = session.Geometries[0].Transform;
-        Assert.That(Place(transform, 8, 8), Is.EqualTo(new Vector2(0, 0)));
-        Assert.That(Place(transform, 12, 12), Is.EqualTo(new Vector2(40, 40)));
+        Assert.That(Place(transform, 8, 8), Is.EqualTo(new Vector2<double>(0, 0)));
+        Assert.That(Place(transform, 12, 12), Is.EqualTo(new Vector2<double>(40, 40)));
     }
 
     [Test]
@@ -269,7 +269,7 @@ public class DrawingImageTests
     {
         var font = Adamantium.UI.Controls.Base.UIComponent.DefaultFontFamily;
         var layout = new TextLayout(font.Typeface, font.Fonts[0]);
-        var area = new Size(400, 100);
+        var area = new Size<double>(400, 100);
 
         layout.ProcessText("Assembly 14", 12, area, TextWrapping.NoWrap, TextTrimming.None,
             HorizontalTextAlignment.Left, VerticalTextAlignment.Top);

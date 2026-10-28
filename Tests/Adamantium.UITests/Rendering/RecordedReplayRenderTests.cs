@@ -43,7 +43,7 @@ public class RecordedReplayRenderTests
     }
 
     private static TestControl Placed(Rect bounds) =>
-        new() { Bounds = bounds, RenderSize = new Size(bounds.Width, bounds.Height) };
+        new() { Bounds = bounds, RenderSize = new Size<double>(bounds.Width, bounds.Height) };
 
     // Batched fills, a noise fill that reads the clock, and a line drawn by itself.
     private static Scene NewScene()
@@ -62,7 +62,7 @@ public class RecordedReplayRenderTests
         fills.RenderAction = s => s
             .DrawRectangle(fill, new Rect(4, 4, 24, 24))
             .DrawRectangle(new NoiseBrush(), new Rect(36, 4, 24, 24))
-            .DrawLine(new Vector2(4, 48), new Vector2(60, 56), new Pen(ink, 3));
+            .DrawLine(new Vector2<double>(4, 48), new Vector2<double>(60, 56), new Pen(ink, 3));
         stage.Add(fills);
 
         var scene = new Scene { Renderer = renderer, Root = new VisualRoot(stage, Dim, Dim), Stage = stage, Fills = fills, Fill = fill, Ink = ink };

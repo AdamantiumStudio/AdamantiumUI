@@ -50,7 +50,7 @@ public class CanvasLayoutTests
         {
             Adamantium.UI.Extensions.WindowExtension.UpdateTree(canvas);
             Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
-            canvas.Measure(new Size(900, 600), force: true);
+            canvas.Measure(new Size<double>(900, 600), force: true);
             canvas.Arrange(new Rect(0, 0, 900, 600));
         }
     }
@@ -83,7 +83,7 @@ public class CanvasLayoutTests
         var inspector = Named(canvas, "PART_Inspector");
 
         inspector.Placement = CanvasPanePlacement.Free;
-        inspector.Anchor = new Vector2(0.25, 0.6);
+        inspector.Anchor = new Vector2<double>(0.25, 0.6);
         inspector.Width = 360;
         inspector.IsOpen = false;
         Settle(canvas);
@@ -131,7 +131,7 @@ public class CanvasLayoutTests
         var canvas = Built();
 
         canvas.Scale = 4;
-        canvas.CenterOn(new Vector2(1200, -800));
+        canvas.CenterOn(new Vector2<double>(1200, -800));
         Settle(canvas);
 
         var said = CanvasLayoutSerializer.Save(canvas);
@@ -157,7 +157,7 @@ public class CanvasLayoutTests
         var canvas = Built();
 
         canvas.Scale = 2;
-        canvas.CenterOn(new Vector2(500, 500));
+        canvas.CenterOn(new Vector2<double>(500, 500));
         Settle(canvas);
 
         var said = CanvasLayoutSerializer.Save(canvas);
@@ -165,11 +165,11 @@ public class CanvasLayoutTests
 
         other.Width = 1400;
         other.Height = 900;
-        other.Measure(new Size(1400, 900), force: true);
+        other.Measure(new Size<double>(1400, 900), force: true);
         other.Arrange(new Rect(0, 0, 1400, 900));
 
         CanvasLayoutSerializer.Load(other, said);
-        other.Measure(new Size(1400, 900), force: true);
+        other.Measure(new Size<double>(1400, 900), force: true);
         other.Arrange(new Rect(0, 0, 1400, 900));
 
         Assert.Multiple(() =>
@@ -188,7 +188,7 @@ public class CanvasLayoutTests
 
         canvas.RemembersZoom = false;
         canvas.Scale = 6;
-        canvas.CenterOn(new Vector2(300, 300));
+        canvas.CenterOn(new Vector2<double>(300, 300));
         Settle(canvas);
 
         var said = CanvasLayoutSerializer.Save(canvas);
@@ -240,7 +240,7 @@ public class CanvasLayoutTests
         Assert.That(canvas.Layout, Is.Null.Or.Empty, "it wrote itself down before anything happened");
 
         inspector.Placement = CanvasPanePlacement.Free;
-        inspector.Anchor = new Vector2(0.4, 0.4);
+        inspector.Anchor = new Vector2<double>(0.4, 0.4);
         canvas.RememberLayout();
 
         Assert.That(canvas.Layout, Does.Contain("PART_Inspector"), "the canvas never said how it is set up");
@@ -274,13 +274,13 @@ public class CanvasLayoutTests
         var canvas = Built();
 
         canvas.Scale = 3;
-        canvas.CenterOn(new Vector2(700, 200));
+        canvas.CenterOn(new Vector2<double>(700, 200));
         Settle(canvas);
 
         canvas.RememberView();
 
         canvas.Scale = 0.5;
-        canvas.CenterOn(new Vector2(-4000, 9000));
+        canvas.CenterOn(new Vector2<double>(-4000, 9000));
         Settle(canvas);
 
         canvas.ResetCamera();
@@ -300,7 +300,7 @@ public class CanvasLayoutTests
         var canvas = Built();
 
         canvas.Scale = 2.5;
-        canvas.CenterOn(new Vector2(-300, 40));
+        canvas.CenterOn(new Vector2<double>(-300, 40));
         Settle(canvas);
         canvas.RememberView();
 

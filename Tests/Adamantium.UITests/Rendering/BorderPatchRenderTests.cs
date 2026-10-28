@@ -42,7 +42,7 @@ public class BorderPatchRenderTests
     }
 
     private static TestControl Placed(Rect bounds) =>
-        new() { Bounds = bounds, RenderSize = new Size(bounds.Width, bounds.Height) };
+        new() { Bounds = bounds, RenderSize = new Size<double>(bounds.Width, bounds.Height) };
 
     // Rows of bordered cards, each with an empty sibling in front of it. Unequal sides and unequal corners on purpose:
     // that is the case that used to leave the batch entirely, so it is the one whose retained slot is newest.

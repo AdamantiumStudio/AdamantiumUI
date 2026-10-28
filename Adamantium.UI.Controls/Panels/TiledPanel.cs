@@ -52,8 +52,8 @@ public class TiledPanel : Panel, IDropGapPanel
     private readonly List<(TileSplit Split, TrackingCollection<double> Shares)> _sharesBefore = new();
     private Tile _splitFrom;
     private Rect _splitRoom;
-    private Vector2 _splitCorner;
-    private Vector2 _splitStart;
+    private Vector2<double> _splitCorner;
+    private Vector2<double> _splitStart;
     private TileSplit _splitPreview;
     private Tile _newTile;
     private int _newTileInsertAt = -1;
@@ -155,7 +155,7 @@ public class TiledPanel : Panel, IDropGapPanel
     /// <summary>The index in the owner's items a drop at <paramref name="point"/> lands before, so that the gap takes the
     /// tile under it: that tile, or past the gap the one after it, with the <paramref name="lifted"/> items left out;
     /// the count for the end.</summary>
-    public bool TryGetDropSlot(Vector2 point, IList lifted, out int index)
+    public bool TryGetDropSlot(Vector2<double> point, IList lifted, out int index)
     {
         index = -1;
         var items = Owner?.Items;
@@ -224,7 +224,7 @@ public class TiledPanel : Panel, IDropGapPanel
         UnhookEscape();
     }
 
-    protected override Size MeasureOverride(Size availableSize)
+    protected override Size<double> MeasureOverride(Size<double> availableSize)
     {
         var finite = !double.IsInfinity(availableSize.Width) && !double.IsInfinity(availableSize.Height);
         Lay(finite ? availableSize : default);
@@ -238,7 +238,7 @@ public class TiledPanel : Panel, IDropGapPanel
             }
         }
 
-        var desired = default(Size);
+        var desired = default(Size<double>);
         foreach (var child in Children)
         {
             var shown = _placed.TryGetValue(child, out var tile);
@@ -249,14 +249,14 @@ public class TiledPanel : Panel, IDropGapPanel
             }
 
             child.Measure(finite ? tile.Size : availableSize);
-            desired = new Size(Math.Max(desired.Width, child.DesiredSize.Width),
+            desired = new Size<double>(Math.Max(desired.Width, child.DesiredSize.Width),
                 Math.Max(desired.Height, child.DesiredSize.Height));
         }
 
         return finite ? availableSize : desired;
     }
 
-    protected override Size ArrangeOverride(Size finalSize)
+    protected override Size<double> ArrangeOverride(Size<double> finalSize)
     {
         Lay(finalSize);
         if (_gapIndex < 0 && !_animateMoves && _moving.Count > 0)
@@ -447,7 +447,7 @@ public class TiledPanel : Panel, IDropGapPanel
         InvalidateArrange();
     }
 
-    private Tile SplittableAt(Vector2 point)
+    private Tile SplittableAt(Vector2<double> point)
     {
         if (SplitGripSize <= 0 || SplitTileCommand == null || Maximized() != null || _gapIndex >= 0)
         {
@@ -466,7 +466,7 @@ public class TiledPanel : Panel, IDropGapPanel
         return null;
     }
 
-    private static TileCorner CornerOf(Rect room, Vector2 corner) =>
+    private static TileCorner CornerOf(Rect room, Vector2<double> corner) =>
         corner.Y == room.Y
             ? corner.X == room.X ? TileCorner.TopLeft : TileCorner.TopRight
             : corner.X == room.X ? TileCorner.BottomLeft : TileCorner.BottomRight;
@@ -499,7 +499,7 @@ public class TiledPanel : Panel, IDropGapPanel
             var rect = shown
                 ? new Rect(right ? room.Right - size : room.X, bottom ? room.Bottom - size : room.Y, size, size)
                 : default;
-            ((IMeasurableComponent)grip).Measure(new Size(rect.Width, rect.Height));
+            ((IMeasurableComponent)grip).Measure(new Size<double>(rect.Width, rect.Height));
             ((IMeasurableComponent)grip).Arrange(rect);
         }
     }
@@ -556,7 +556,7 @@ public class TiledPanel : Panel, IDropGapPanel
         _gesturePointer?.Capture(null);
     }
 
-    private bool CornerAt(Vector2 point, out Tile tile, out Rect room, out Vector2 corner)
+    private bool CornerAt(Vector2<double> point, out Tile tile, out Rect room, out Vector2<double> corner)
     {
         tile = null;
         room = default;
@@ -584,7 +584,7 @@ public class TiledPanel : Panel, IDropGapPanel
             {
                 tile = candidate;
                 room = rect;
-                corner = new Vector2(left ? rect.X : rect.Right, top ? rect.Y : rect.Bottom);
+                corner = new Vector2<double>(left ? rect.X : rect.Right, top ? rect.Y : rect.Bottom);
                 return true;
             }
         }
@@ -592,7 +592,7 @@ public class TiledPanel : Panel, IDropGapPanel
         return false;
     }
 
-    private void DragSplit(Vector2 position)
+    private void DragSplit(Vector2<double> position)
     {
         if (_splitPreview == null && !BeginSplit(position - _splitStart))
         {
@@ -615,7 +615,7 @@ public class TiledPanel : Panel, IDropGapPanel
             new TrackingCollection<double> { first / length * 100, (length - first) / length * 100 });
     }
 
-    private bool BeginSplit(Vector2 moved)
+    private bool BeginSplit(Vector2<double> moved)
     {
         var inX = _splitCorner.X == _splitRoom.X ? moved.X : -moved.X;
         var inY = _splitCorner.Y == _splitRoom.Y ? moved.Y : -moved.Y;
@@ -880,7 +880,7 @@ public class TiledPanel : Panel, IDropGapPanel
         return null;
     }
 
-    private static bool Near(Rect rect, double reach, Vector2 point) =>
+    private static bool Near(Rect rect, double reach, Vector2<double> point) =>
         point.X >= rect.X - reach && point.X <= rect.Right + reach && point.Y >= rect.Y - reach
         && point.Y <= rect.Bottom + reach;
 
@@ -952,7 +952,7 @@ public class TiledPanel : Panel, IDropGapPanel
         }
     }
 
-    private void Lay(Size size)
+    private void Lay(Size<double> size)
     {
         _placed.Clear();
         _grips.Clear();
@@ -1253,7 +1253,7 @@ public class TiledPanel : Panel, IDropGapPanel
         MergeTileCommand is { } command && split.Children[part] is Tile tile
         && _tileChildren.TryGetValue(tile, out var child) && child != null && command.CanExecute(ItemOf(child));
 
-    private (bool Vertical, bool Horizontal) GripKindsAt(Vector2 point)
+    private (bool Vertical, bool Horizontal) GripKindsAt(Vector2<double> point)
     {
         var vertical = false;
         var horizontal = false;
@@ -1269,14 +1269,14 @@ public class TiledPanel : Panel, IDropGapPanel
         return (vertical, horizontal);
     }
 
-    private void GripsAt(Vector2 point, List<Grip> grips)
+    private void GripsAt(Vector2<double> point, List<Grip> grips)
     {
         grips.Clear();
         AddInLine(point, true, grips);
         AddInLine(point, false, grips);
     }
 
-    private void AddInLine(Vector2 point, bool vertical, List<Grip> grips)
+    private void AddInLine(Vector2<double> point, bool vertical, List<Grip> grips)
     {
         var from = grips.Count;
         foreach (var grip in _grips)
@@ -1328,7 +1328,7 @@ public class TiledPanel : Panel, IDropGapPanel
             : a.Bar.X <= b.Bar.Right + reach && b.Bar.X <= a.Bar.Right + reach;
     }
 
-    private static bool Near(Grip grip, Vector2 point)
+    private static bool Near(Grip grip, Vector2<double> point)
     {
         var bar = grip.Bar;
         return point.X >= bar.X - GripSlack && point.X <= bar.Right + GripSlack

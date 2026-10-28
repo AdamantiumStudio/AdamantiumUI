@@ -98,7 +98,7 @@ internal sealed class WaylandDragDrop : INativeDragDrop
 
             offer.Proxy.Accept(serial, WaylandWindowDrag.WindowType);
             offer.Proxy.SetActions(WlDataDeviceManager.DndAction.Move, WlDataDeviceManager.DndAction.Move);
-            windowDrag.Over(windowDragOver, new Vector2(x, y));
+            windowDrag.Over(windowDragOver, new Vector2<double>(x, y));
             return;
         }
 
@@ -139,7 +139,7 @@ internal sealed class WaylandDragDrop : INativeDragDrop
     {
         if (windowDragOver != null)
         {
-            platform.WindowDrag.Over(windowDragOver, new Vector2(x, y));
+            platform.WindowDrag.Over(windowDragOver, new Vector2<double>(x, y));
             return;
         }
 

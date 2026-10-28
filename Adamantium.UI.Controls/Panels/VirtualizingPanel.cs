@@ -18,21 +18,21 @@ namespace Adamantium.UI.Controls.Panels;
 /// Set <see cref="IsVirtualizing"/> to false for small mixed-height hosts, which then realize and stack every item.</summary>
 public abstract class VirtualizingPanel : Panel, IScrollableContent, IDropGapPanel
 {
-    private Size _extent;
-    private Size _viewport;
-    private Vector2 _offset;
+    private Size<double> _extent;
+    private Size<double> _viewport;
+    private Vector2<double> _offset;
     // The offset the current measure realized its window against. Arrange positions items with THIS, not a fresh read of
     // _offset: a fast scroll can change _offset between the window's measure phase and its arrange phase, and two
     // different offsets would position an item where the measure didn't realize it. One snapshot per pass keeps the
     // realized window and the arranged positions consistent.
-    private Vector2 _passOffset;
+    private Vector2<double> _passOffset;
 
     // The panel's size does not depend on its children, so child invalidations raised while it rebinds its own window
     // are muted; otherwise every pass would measure the window twice.
     private bool _inLayout;
 
-    private Size _assumedWindow;
-    private Size _arrangedUnbounded;
+    private Size<double> _assumedWindow;
+    private Size<double> _arrangedUnbounded;
 
     // As a virtualizing items host the desired size is the virtual extent, independent of tiles, so a tile re-measure
     // must not re-dirty this panel.
@@ -139,7 +139,7 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent, IDropGapPan
 
     /// <summary>The slot a drop at <paramref name="point"/> would land in, or false. Must come from the grid, not from
     /// container positions, which the gap itself moves.</summary>
-    public virtual bool TryGetDropSlot(Vector2 point, out int index)
+    public virtual bool TryGetDropSlot(Vector2<double> point, out int index)
     {
         index = -1;
         return false;
@@ -147,7 +147,7 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent, IDropGapPan
 
     void IDropGapPanel.ShowDropGap(int index, IList lifted) => DropGapIndex = index;
 
-    bool IDropGapPanel.TryGetDropSlot(Vector2 point, IList lifted, out int index) => TryGetDropSlot(point, out index);
+    bool IDropGapPanel.TryGetDropSlot(Vector2<double> point, IList lifted, out int index) => TryGetDropSlot(point, out index);
 
     /// <summary>Whether this panel actually opens <see cref="DropGapIndex"/> in its layout. False (the default) means the
     /// drag shows its insertion caret instead - the two are alternatives, never both, since they mark the same place.</summary>
@@ -176,13 +176,13 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent, IDropGapPan
 
     protected bool IsItemsHost => Owner != null;
 
-    public Size Extent => _extent;
-    public Size Viewport => _viewport;
-    public Vector2 Offset => _offset;
+    public Size<double> Extent => _extent;
+    public Size<double> Viewport => _viewport;
+    public Vector2<double> Offset => _offset;
 
     // The offset the last measure realized/arranged the window for (see IScrollableContent.RealizedOffset). A host that
     // translates this panel must use this, not Offset, or the translation and the realized window disagree for a frame.
-    public Vector2 RealizedOffset => _passOffset;
+    public Vector2<double> RealizedOffset => _passOffset;
     public bool CanScrollHorizontally { get; set; } = true;
     public bool CanScrollVertically { get; set; } = true;
     public event EventHandler ScrollMetricsChanged;
@@ -259,7 +259,7 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent, IDropGapPan
         }
     }
 
-    public void SetOffset(Vector2 offset)
+    public void SetOffset(Vector2<double> offset)
     {
         var clamped = ClampOffset(offset, _extent, _viewport);
         if (clamped == _offset) return;
@@ -274,11 +274,11 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent, IDropGapPan
     /// <summary>Does moving the scroll offset from <paramref name="from"/> to <paramref name="to"/> change which items
     /// fall in the realized window (cross a cell/row boundary)? Base returns true (always re-realize - the safe default);
     /// a uniform-cell panel overrides it so a sub-pixel move that stays within the current row skips the re-window.</summary>
-    protected virtual bool RealizedWindowMovesFor(Vector2 from, Vector2 to) => true;
+    protected virtual bool RealizedWindowMovesFor(Vector2<double> from, Vector2<double> to) => true;
 
     /// <summary>The window a host shows of this panel when it arranges the panel at its whole length and pans it by
     /// translating (a tab strip): neither the measured nor the arranged size is the viewport then. Null takes them.</summary>
-    internal Size? HostViewport
+    internal Size<double>? HostViewport
     {
         get => _hostViewport;
         set
@@ -288,13 +288,13 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent, IDropGapPan
         }
     }
 
-    private Size? _hostViewport;
+    private Size<double>? _hostViewport;
 
-    protected override Size MeasureOverride(Size availableSize)
+    protected override Size<double> MeasureOverride(Size<double> availableSize)
     {
         if (!IsItemsHost) return MeasurePlain(availableSize);
 
-        Size desired;
+        Size<double> desired;
         _inLayout = true;
         _assumedWindow = default;
         try
@@ -305,7 +305,7 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent, IDropGapPan
             _extent = extent;
             // An unbounded axis is a size probe, not a viewport: keep the known viewport there, falling back to the
             // extent only if the axis was never measured.
-            _viewport = HostViewport ?? new Size(
+            _viewport = HostViewport ?? new Size<double>(
                 double.IsInfinity(availableSize.Width) ? (_viewport.Width > 0 ? _viewport.Width : extent.Width) : availableSize.Width,
                 double.IsInfinity(availableSize.Height) ? (_viewport.Height > 0 ? _viewport.Height : extent.Height) : availableSize.Height);
             // The DESIRED size still answers that question honestly: the extent on an unbounded axis, the slot on a
@@ -313,7 +313,7 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent, IDropGapPan
             // realizes every item is a plain stack with no viewport: it asks for what its items take.
             desired = !IsVirtualizing
                 ? extent
-                : new Size(
+                : new Size<double>(
                     double.IsInfinity(availableSize.Width) ? extent.Width : availableSize.Width,
                     double.IsInfinity(availableSize.Height) ? extent.Height : availableSize.Height);
             // The NEW extent can be SMALLER than the one _offset was clamped to above (e.g. the cells just shrank): an
@@ -335,7 +335,7 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent, IDropGapPan
         return desired;
     }
 
-    protected override Size ArrangeOverride(Size finalSize)
+    protected override Size<double> ArrangeOverride(Size<double> finalSize)
     {
         if (!IsItemsHost) return ArrangePlain(finalSize);
 
@@ -350,7 +350,7 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent, IDropGapPan
             HideUnmappedContainers();
             var grew = Arranged(_assumedWindow.Width, finalSize.Width, out var width)
                        | Arranged(_assumedWindow.Height, finalSize.Height, out var height);
-            _arrangedUnbounded = new Size(width ?? _arrangedUnbounded.Width, height ?? _arrangedUnbounded.Height);
+            _arrangedUnbounded = new Size<double>(width ?? _arrangedUnbounded.Width, height ?? _arrangedUnbounded.Height);
             if (grew)
             {
                 LayoutManager.For(this).InvalidateMeasureNextPass(this);
@@ -373,7 +373,7 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent, IDropGapPan
 
         var arranged = vertical ? _arrangedUnbounded.Height : _arrangedUnbounded.Width;
         var window = arranged > 0 ? arranged : fallback;
-        _assumedWindow = vertical ? new Size(_assumedWindow.Width, window) : new Size(window, _assumedWindow.Height);
+        _assumedWindow = vertical ? new Size<double>(_assumedWindow.Width, window) : new Size<double>(window, _assumedWindow.Height);
         return window;
     }
 
@@ -384,12 +384,12 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent, IDropGapPan
     }
 
     // Plain (non items-host) layout — the panel used as an ordinary container. Subclass = its existing measure/arrange.
-    protected abstract Size MeasurePlain(Size availableSize);
-    protected abstract Size ArrangePlain(Size finalSize);
+    protected abstract Size<double> MeasurePlain(Size<double> availableSize);
+    protected abstract Size<double> ArrangePlain(Size<double> finalSize);
 
     // Virtualized layout — realize/measure/arrange only the visible window (subclass owns the geometry).
-    protected abstract Size MeasureVirtualized(Size availableSize, Vector2 offset);
-    protected abstract void ArrangeVirtualized(Size finalSize, Vector2 offset);
+    protected abstract Size<double> MeasureVirtualized(Size<double> availableSize, Vector2<double> offset);
+    protected abstract void ArrangeVirtualized(Size<double> finalSize, Vector2<double> offset);
 
     /// <summary>Attaches (if new) and shows the container for <paramref name="index"/>, which the generator's SetWindow
     /// has already realized/rebound. Falls back to a direct realize for the pre-SetWindow probe. The container keeps its
@@ -479,7 +479,7 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent, IDropGapPan
     // ---- Loading skeletons for budget-deferred slots ----
     // One ItemSkeletonTemplate card, drawn at every pending slot through RenderClones; clones have no layout or state.
     private UIComponent _skeletonPrototype;
-    private Size _prototypeSize;
+    private Size<double> _prototypeSize;
     private List<Matrix4x4F> _skeletonClones;   // fresh list per change - the draw walk may read it off the render thread
 
     /// <summary>How many skeleton cards are on screen right now - clones of the one prototype.</summary>
@@ -509,7 +509,7 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent, IDropGapPan
         // exactly where its item's visual would - same footprint, same inter-tile gaps.
         var inset = ItemMargin();
         var firstRect = slotRect(pending[0]);
-        var size = new Size(
+        var size = new Size<double>(
             Math.Max(0, firstRect.Width - inset.Left - inset.Right),
             Math.Max(0, firstRect.Height - inset.Top - inset.Bottom));
 
@@ -577,7 +577,7 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent, IDropGapPan
     }
 
     private static void AddClone(List<Matrix4x4F> clones, Rect slot, Thickness inset) =>
-        clones.Add(Matrix4x4F.Translation((float)(slot.X + inset.Left), (float)(slot.Y + inset.Top), 0f));
+        clones.Add(Matrix4x4.CreateTranslation<float>((float)(slot.X + inset.Left), (float)(slot.Y + inset.Top), 0f));
 
     // The one card every slot is a clone of. Built from the theme's template; the panel owns no skeleton visual or
     // animation of its own - the whole look and breathe live in the template.
@@ -619,12 +619,12 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent, IDropGapPan
     private static void ArrangeSkeletonUnused((UIComponent card, Rect rect) slot)
     {
         var m = (IMeasurableComponent)slot.card;
-        m.Measure(new Size(slot.rect.Width, slot.rect.Height));
+        m.Measure(new Size<double>(slot.rect.Width, slot.rect.Height));
         m.Arrange(slot.rect);
     }
 
     // Where each item last sat, keyed by the data item: containers are recycled onto other items.
-    private readonly Dictionary<object, Vector2> _lastItemPos = new();
+    private readonly Dictionary<object, Vector2<double>> _lastItemPos = new();
     private int _animatedGap = -1;   // the gap the last animated pass ran for
 
     // Rows promoted for the duration of an open gap. A promotion costs a transform slot, so it is not left behind: the
@@ -709,7 +709,7 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent, IDropGapPan
         _gapCard.Visibility = Visibility.Visible;
         var rect = slotRect(gap).Deflate(ItemMargin());
         var measurable = (IMeasurableComponent)_gapCard;
-        measurable.Measure(new Size(rect.Width, rect.Height));
+        measurable.Measure(new Size<double>(rect.Width, rect.Height));
         measurable.Arrange(rect);
     }
 
@@ -790,10 +790,10 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent, IDropGapPan
 
     private void RaiseMetrics() => ScrollMetricsChanged?.Invoke(this, EventArgs.Empty);
 
-    private static Vector2 ClampOffset(Vector2 offset, Size extent, Size viewport)
+    private static Vector2<double> ClampOffset(Vector2<double> offset, Size<double> extent, Size<double> viewport)
     {
         var maxX = Math.Max(0, extent.Width - viewport.Width);
         var maxY = Math.Max(0, extent.Height - viewport.Height);
-        return new Vector2(Math.Clamp(offset.X, 0, maxX), Math.Clamp(offset.Y, 0, maxY));
+        return new Vector2<double>(Math.Clamp(offset.X, 0, maxX), Math.Clamp(offset.Y, 0, maxY));
     }
 }

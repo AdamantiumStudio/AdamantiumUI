@@ -40,7 +40,7 @@ public class CanvasGridFarRenderTests
         _renderer = null;
     }
 
-    private static byte[] Drawn(Vector2 offset, string save = null)
+    private static byte[] Drawn(Vector2<double> offset, string save = null)
     {
         var brush = new CanvasGridBrush
         {
@@ -62,7 +62,7 @@ public class CanvasGridFarRenderTests
         };
 
         control.Bounds = new Rect(0, 0, Dim, Dim);
-        control.RenderSize = new Size(Dim, Dim);
+        control.RenderSize = new Size<double>(Dim, Dim);
 
         var root = new VisualRoot(control, Dim, Dim);
 
@@ -100,8 +100,8 @@ public class CanvasGridFarRenderTests
     [TestCase(2_000_000.0)]
     public void AWholeNumberOfCellsAwayDrawsTheSameGrid(double cells)
     {
-        var home = Drawn(new Vector2(13.5, 7.25));
-        var far = Drawn(new Vector2(13.5 + Period * cells, 7.25 + Period * cells));
+        var home = Drawn(new Vector2<double>(13.5, 7.25));
+        var far = Drawn(new Vector2<double>(13.5 + Period * cells, 7.25 + Period * cells));
 
         var different = 0;
         for (var i = 0; i < home.Length; i += 4)
@@ -119,8 +119,8 @@ public class CanvasGridFarRenderTests
     public void TheMarksDoNotSmearIntoLines()
     {
         var folder = Environment.GetEnvironmentVariable("ADAM_GRID_DUMP");
-        var home = Drawn(new Vector2(13.5, 7.25), folder == null ? null : $"{folder}/grid-home.png");
-        var far = Drawn(new Vector2(13.5 + Period * 2_000_000, 7.25 + Period * 2_000_000),
+        var home = Drawn(new Vector2<double>(13.5, 7.25), folder == null ? null : $"{folder}/grid-home.png");
+        var far = Drawn(new Vector2<double>(13.5 + Period * 2_000_000, 7.25 + Period * 2_000_000),
             folder == null ? null : $"{folder}/grid-far.png");
 
         var atHome = Marks(home);

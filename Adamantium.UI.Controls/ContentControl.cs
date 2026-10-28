@@ -254,14 +254,14 @@ public class ContentControl : Control, IContentControl
       }
    }
 
-   protected override Size MeasureOverride(Size availableSize)
+   protected override Size<double> MeasureOverride(Size<double> availableSize)
    {
       UpdateVisualsForContent(Content);
       
       return base.MeasureOverride(availableSize);
    }
 
-   protected override Size ArrangeOverride(Size finalSize)
+   protected override Size<double> ArrangeOverride(Size<double> finalSize)
    {
       foreach (var visual in VisualChildren)
       {
@@ -291,17 +291,17 @@ public class ContentControl : Control, IContentControl
 
    /// <summary>Arranges the content at its desired size instead of filling the slot, for controls whose visual cannot grow
    /// (CheckBox, RadioButton), so what is drawn and RenderSize agree.</summary>
-   protected Size ArrangeContentSize(Size finalSize)
+   protected Size<double> ArrangeContentSize(Size<double> finalSize)
    {
       foreach (var visual in VisualChildren)
       {
          if (visual is not IMeasurableComponent child) continue;
-         var size = new Size(Math.Min(child.DesiredSize.Width, finalSize.Width),
+         var size = new Size<double>(Math.Min(child.DesiredSize.Width, finalSize.Width),
                              Math.Min(child.DesiredSize.Height, finalSize.Height));
 
          // Width/Height/Min/Max still apply, as measure applied them, but never past the slot.
          size = this.ApplyLayoutConstraints(size);
-         size = new Size(Math.Min(size.Width, finalSize.Width), Math.Min(size.Height, finalSize.Height));
+         size = new Size<double>(Math.Min(size.Width, finalSize.Width), Math.Min(size.Height, finalSize.Height));
 
          child.Arrange(new Rect(size));
          return size;
@@ -310,8 +310,8 @@ public class ContentControl : Control, IContentControl
    }
 
    protected static Rect CalculateChildArrangeRect(
-      Size parentFinalSize,
-      Size childDesiredSize,
+      Size<double> parentFinalSize,
+      Size<double> childDesiredSize,
       HorizontalAlignment horizontalAlignment,
       VerticalAlignment verticalAlignment)
    {
@@ -373,7 +373,7 @@ public class ContentControl : Control, IContentControl
       // template Border. Only the untemplated convenience path paints the background directly.
       if (Template != null) return;
 
-      var size = new Size(ActualWidth, ActualHeight);
+      var size = new Size<double>(ActualWidth, ActualHeight);
 
       context.ForControl(this)
          .DrawRectangle(Background, new Rect(size));

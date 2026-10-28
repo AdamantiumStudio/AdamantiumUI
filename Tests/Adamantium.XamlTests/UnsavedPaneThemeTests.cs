@@ -43,7 +43,7 @@ public class UnsavedPaneThemeTests
     {
         Adamantium.UI.Extensions.WindowExtension.UpdateTree(control);
         Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
-        ((IMeasurableComponent)control).Measure(new Size(600, 400));
+        ((IMeasurableComponent)control).Measure(new Size<double>(600, 400));
         ((IMeasurableComponent)control).Arrange(new Rect(0, 0, 600, 400));
     }
 

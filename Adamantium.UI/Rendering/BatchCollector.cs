@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Adamantium.Graphics;
 using Adamantium.Graphics.Core;
@@ -14,9 +15,8 @@ namespace Adamantium.UI.Rendering;
 // (runs sharing one scissor). Derived types bake items (TryAdd + MarkPending) and draw segments; RenderCache groups them.
 internal abstract class BatchCollector<TItem> : BatchArena where TItem : struct
 {
-    // Size of ONE instance. Static readonly, so it is computed once per closed type - a Marshal.SizeOf per DRAW showed up
-    // as microseconds a call in the replay breakdown, and a replayed frame issues dozens of them.
-    protected static readonly int Stride = Marshal.SizeOf<TItem>();
+    // Size of ONE instance as SetData copies it - byte for byte. Static readonly, so it is computed once per closed type.
+    protected static readonly int Stride = Unsafe.SizeOf<TItem>();
 
     protected TItem[] Items;
     protected int Count;               // items written this frame (across all segments, monotonic within a frame)
