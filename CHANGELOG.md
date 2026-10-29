@@ -7,6 +7,12 @@ All packages share one version.
 
 ### Added
 
+- `Trash.MoveToTrash`: a file or folder goes to the desktop's trash, where the user can take it back from - on Linux
+  the freedesktop.org trash, the home one or the one of the file system it lies on; on Windows the Recycle Bin; on
+  macOS the Trash, through the Finder. `Trash.IsAvailable` says whether there is one. What cannot go to the trash is
+  left where it is, never deleted for good without asking: a network folder, a folder that is a volume of its own; on
+  Windows the shell asks first about what the Recycle Bin cannot take. A volume's trash folder is taken only as the
+  user's own folder, never through a link.
 - `UIComponent.SoftEdge`: the element and its subtree fade in over this many pixels from the outline of what they
   draw, whatever its shape - an ellipse, a star, a glyph, a picture's own transparency - a picture whose edges melt into
   the page. Its own glow and shadow stay whole and go on under the faded edge, so it melts into them.

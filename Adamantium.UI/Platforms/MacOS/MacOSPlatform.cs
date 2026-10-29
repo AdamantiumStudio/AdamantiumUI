@@ -50,5 +50,6 @@ public class MacOSPlatform : IApplicationPlatform
     {
         resolver.RegisterSingleton<IApplicationPlatform, MacOSPlatform>();
         FileManager.Platform = new FinderFileManager();
+        Trash.Platform = new FinderTrash();
     }
 }
