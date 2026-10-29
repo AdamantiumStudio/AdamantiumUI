@@ -53,6 +53,7 @@
                                     VerticalAlignment="Center"
                                     Visibility="Collapsed"
                                     Margin="0 0 6 0"
+                                    Foreground="{TemplateBinding Foreground}"
                                     Content="{TemplateBinding Icon}"
                                     ContentTemplate="{TemplateBinding IconTemplate}"/>
                             <ContentPresenter
@@ -138,6 +139,7 @@
         <PropertyTrigger Property="IsSelected" Value="true">
             <Setter TargetName="TabBorder" Property="Background" Value="{TemplateBinding BackgroundSelected}"/>
             <Setter TargetName="PART_ContentPresenter" Property="Foreground" Value="{TemplateBinding ForegroundSelected}"/>
+            <Setter TargetName="PART_Icon" Property="Foreground" Value="{TemplateBinding ForegroundSelected}"/>
         </PropertyTrigger>
         <!-- Close button reveals on hover (and stays on the selected tab, like a browser/WinUI tab), but only when the
              owner enabled it and this tab is closable (TabItem folds both into ShowCloseButton). Off = Collapsed (no

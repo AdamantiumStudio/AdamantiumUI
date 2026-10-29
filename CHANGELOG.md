@@ -12,6 +12,12 @@ All packages share one version.
   through the Settings portal), else the first of the usual distributions' ones installed. `ADAM_CODE_FONT` names
   another, as `ADAM_UI_FONT` does for the interface. Every theme gives it as `CodeFontFamily`, for styles to take with
   `{ThemeResource CodeFontFamily}`.
+- A tab's icon shows without a template of the application's own: every theme's `TabControl` draws `TabItem.Icon` -
+  path data or a picture - 16 by 16 in front of the name, a picture's `CurrentColor` in the tab's text color, the
+  selected tab's when it is selected; a tab's own `IconTemplate` stays above the strip's, attached as well.
+  `TabControl.IconMemberPath` takes a bound item's icon from the item, for its tab and for the overflow list's row of a
+  tab not made yet. `IDockablePane.PaneIcon` names a pane's icon by its key among the resources, as a command names its
+  own. The sandbox's gallery tabs have monochrome icons, and are wider for them.
 - `Trash.MoveToTrash`: a file or folder goes to the desktop's trash, where the user can take it back from - on Linux
   the freedesktop.org trash, the home one or the one of the file system it lies on; on Windows the Recycle Bin; on
   macOS the Trash, through the Finder. `Trash.IsAvailable` says whether there is one. What cannot go to the trash is
@@ -1773,6 +1779,8 @@ All packages share one version.
 
 ### Changed
 
+- The macOS theme's menus, drop-downs and tooltips are clearer glass with a narrower lens at the rim: they read as a
+  thick pale frame round every card.
 - The noise and the grain of the brushes and materials come from a noise and a hash of the UI's own: simplex noise with
   eight gradient directions, scaled to reach -1 and 1, a little livelier than before; every pattern built on noise
   draws a different picture of the same kind.
@@ -2289,6 +2297,9 @@ All packages share one version.
   keyboard goes back into it.
 - The default and cancel buttons of a window, an overlay window and a popup answer the same keys: Enter or Escape
   pressed alone and not held down - a window's cancel button took a chorded Escape and every repeat of one.
+- A window on Wayland comes back at the size it was closed at, maximized if it was; it always came back at its first
+  size. A Wayland client is never told where its window is, so the place stays the compositor's to keep; a window
+  snapped to an edge comes back at the size it had before.
 - On Wayland, a window minimized by its caption button stayed on screen until the pointer moved: the request waited in
   the connection's buffer for the next frame, and a minimized window draws none. Minimizing, maximizing and restoring
   are sent to the compositor at once.

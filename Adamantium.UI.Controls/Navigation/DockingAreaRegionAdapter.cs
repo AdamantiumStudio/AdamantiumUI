@@ -4,6 +4,7 @@ using Adamantium.UI.Controls.Docking;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Data;
 using Adamantium.UI.Core.Localization;
+using Adamantium.UI.Core.Resources;
 
 namespace Adamantium.UI.Controls.Navigation;
 
@@ -278,6 +279,11 @@ public sealed class DockingAreaRegionAdapter : IRegionAdapter
             Content = viewModel,
             ContentTemplateSelector = new ViewLocatorTemplateSelector(_viewLocator)
         };
+
+        if (placement?.PaneIcon is { Length: > 0 } icon)
+        {
+            new ObservableResource(icon).Apply(pane, nameof(TabItem.Icon), ValuePriority.Local);
+        }
 
         if (placement == null)
         {

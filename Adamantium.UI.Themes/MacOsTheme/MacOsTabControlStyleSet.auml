@@ -6,6 +6,19 @@
          stays (the control drives it) but is silenced by thickness and brush; every other strip part is kept. -->
 
     <Style Selector="TabControl" BasedOn="ItemsControl">
+        <!-- A tab's icon is data - path data or a picture - drawn 16 by 16 in front of its name; a picture's CurrentColor
+             is the tab's text color, so a monochrome one follows the tab's states. -->
+        <Setter Property="IconTemplate">
+            <Setter.Value>
+                <DataTemplate>
+                    <Grid Width="16" Height="16">
+                        <IconPresenter Icon="{Binding}"
+                                       StrokeThickness="1"
+                                       Stroke="{Ancestor ContentPresenter, Foreground}"/>
+                    </Grid>
+                </DataTemplate>
+            </Setter.Value>
+        </Setter>
         <!-- The content is PAPER on the window's surface, which is this palette's whole premise - white in light
              appearance, sunk in dark - so the box under the strip takes the well color and not the window's. -->
         <Setter Property="Background" Value="{ResourceReference SolidBackgroundFillColorSecondary}"/>

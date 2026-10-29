@@ -9,4 +9,7 @@ public abstract class TabPageViewModel
 
     /// <summary>Which page this is, for the tab strip: the key of its title among the gallery's phrases.</summary>
     public string Header { get; }
+
+    /// <summary>The key of the page's tab icon among the application's resources: its title's key and "TabIcon".</summary>
+    public string Icon => Header + "TabIcon";
 }

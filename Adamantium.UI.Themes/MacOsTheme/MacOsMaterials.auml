@@ -4,14 +4,14 @@
     <!-- The macOS transient surfaces answer the shared role keys with liquid glass, which refracts toward the rim.
          BlurAmount is a logical-pixel radius blurring the flat middle; the pass halves tint alpha, so 1.0 is the max. -->
 
-    <!-- The flyout surface. The tint is {ObservableResource} so it follows variant switches; refraction keeps the
-         material default (lower values leave too thin a lens band to read as glass). -->
+    <!-- The flyout surface. The tint is {ObservableResource} so it follows variant switches. A light tint and a narrow
+         lens: the full tint and the material's default refraction read as a thick pale frame round every menu. -->
     <MaterialBrush x:Key="FlyoutSurfaceFill"
                    Material="LiquidGlass"
                    TintColor="{ObservableResource AcrylicFillColorDefault}"
-                   TintOpacity="1.0"
+                   TintOpacity="0.7"
                    BlurAmount="5"
-                   Refraction="12"
+                   Refraction="5"
                    NoiseAmount="0.02"/>
 
     <!-- A tooltip is small, and the lens is measured in device pixels from the edge - at the flyout's strength the
@@ -19,9 +19,9 @@
     <MaterialBrush x:Key="TooltipSurfaceFill"
                    Material="LiquidGlass"
                    TintColor="{ObservableResource AcrylicFillColorDefault}"
-                   TintOpacity="1.0"
+                   TintOpacity="0.7"
                    BlurAmount="4"
-                   Refraction="7"
+                   Refraction="4"
                    NoiseAmount="0.02"/>
 
 </ResourceDictionary>

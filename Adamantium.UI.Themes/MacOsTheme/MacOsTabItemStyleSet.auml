@@ -50,6 +50,7 @@
                                     VerticalAlignment="Center"
                                     Visibility="Collapsed"
                                     Margin="0 0 6 0"
+                                    Foreground="{TemplateBinding Foreground}"
                                     Content="{TemplateBinding Icon}"
                                     ContentTemplate="{TemplateBinding IconTemplate}"/>
                             <ContentPresenter
@@ -116,6 +117,7 @@
         <PropertyTrigger Property="IsSelected" Value="true">
             <Setter TargetName="TabBorder" Property="Background" Value="{TemplateBinding BackgroundSelected}"/>
             <Setter TargetName="PART_ContentPresenter" Property="Foreground" Value="{TemplateBinding ForegroundSelected}"/>
+            <Setter TargetName="PART_Icon" Property="Foreground" Value="{TemplateBinding ForegroundSelected}"/>
         </PropertyTrigger>
         <!-- Side strips left-align labels. A trigger, not a TabItem[IsSideTab=true] style, which would re-run the whole set
              (Template included) on every tab when the placement changes. -->

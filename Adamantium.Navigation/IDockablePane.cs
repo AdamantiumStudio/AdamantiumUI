@@ -29,4 +29,8 @@ public interface IDockablePane
 
     /// <summary>Smallest useful size along the docked axis.</summary>
     double PaneMinSize => 0;
+
+    /// <summary>The key of the tab's icon among the resources - a picture, or path data drawn in the tab's text color -
+    /// shown in front of the title; none by default. The resource follows a theme swap.</summary>
+    string PaneIcon => null;
 }

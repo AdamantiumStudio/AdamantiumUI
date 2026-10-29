@@ -10,6 +10,19 @@
     <!-- Shared chrome + the default (horizontal) header panel. The drag-reorder motion feel is declared here (the easing
          defaults to a decelerate cubic in code). -->
     <Style Selector="TabControl" BasedOn="ItemsControl">
+        <!-- A tab's icon is data - path data or a picture - drawn 16 by 16 in front of its name; a picture's CurrentColor
+             is the tab's text color, so a monochrome one follows the tab's states. -->
+        <Setter Property="IconTemplate">
+            <Setter.Value>
+                <DataTemplate>
+                    <Grid Width="16" Height="16">
+                        <IconPresenter Icon="{Binding}"
+                                       StrokeThickness="1"
+                                       Stroke="{Ancestor ContentPresenter, Foreground}"/>
+                    </Grid>
+                </DataTemplate>
+            </Setter.Value>
+        </Setter>
         <Setter Property="Background" Value="{ResourceReference CardBackgroundFillColorDefault}"/>
         <Setter Property="BorderBrush" Value="{ResourceReference ControlStrokeColorDefault}"/>
         <Setter Property="BorderThickness" Value="{ResourceReference StrokeThin}"/>
