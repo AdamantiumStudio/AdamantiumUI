@@ -12,6 +12,7 @@ namespace Adamantium.UI;
 internal sealed class InstanceSlot : IDisposable
 {
     private readonly ManualResetEventSlim _released = new();
+    private Thread _holder;
     private bool _disposed;
 
     private InstanceSlot()
@@ -44,9 +45,11 @@ internal sealed class InstanceSlot : IDisposable
         };
         holder.Start();
         settled.Wait();
+        slot._holder = holder;
         return taken ? slot : null;
     }
 
+    /// <summary>Gives the place up, done by the time it returns: the next copy finds it free.</summary>
     public void Dispose()
     {
         if (_disposed)
@@ -56,6 +59,7 @@ internal sealed class InstanceSlot : IDisposable
 
         _disposed = true;
         _released.Set();
+        _holder.Join();
     }
 
     /// <summary>The name of the mutex of the place <paramref name="index"/> of the application whose data is in

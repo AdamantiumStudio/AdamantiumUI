@@ -57,7 +57,6 @@ internal sealed partial class AtSpiBridge
                 return;
             }
 
-            _listenersApplied = refresh;
             _listeners.Clear();
             while (events.Position < end)
             {
@@ -67,6 +66,7 @@ internal sealed partial class AtSpiBridge
             }
 
             UpdateRelaying();
+            Volatile.Write(ref _listenersApplied, refresh);
         }
     }
 
