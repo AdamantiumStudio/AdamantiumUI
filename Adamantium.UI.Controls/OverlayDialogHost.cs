@@ -49,6 +49,10 @@ public sealed class OverlayDialogHost : IDialogHost
             Content = _viewLocator.ResolveView(dialogViewModel)
         };
 
+        // The size it asks for, as a dialog in a window of its own gets it; none, and the card fits its content.
+        if (dialogViewModel is IWindowAware { Width: > 0 } wide) window.Width = wide.Width;
+        if (dialogViewModel is IWindowAware { Height: > 0 } tall) window.Height = tall.Height;
+
         // Live title: the dialog may change its Title while open; reflect it on the bar.
         if (aware is INotifyPropertyChanged inpc)
         {

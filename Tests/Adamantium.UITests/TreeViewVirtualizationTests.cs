@@ -112,6 +112,43 @@ public class TreeViewVirtualizationTests
     }
 
     [Test]
+    public void AChildAddedOpen_ComesWithItsOpenSubtree_AndItsChildrenAreFollowed()
+    {
+        var a = new Node("a", new Node("c")) { Expanded = true };
+        var f = new TreeFlattener(o => (o as Node)?.Children, o => (o as Node)?.Expanded ?? false);
+        f.SetRoots(new ObservableCollection<Node>([a]));
+        var x = new Node("x", new Node("x1")) { Expanded = true };
+
+        a.Children.Add(x);   // a branch read again: its new row comes already open
+        Assert.Multiple(() =>
+        {
+            Assert.That(Names(f), Is.EqualTo(new[] { "a", "c", "x", "x1" }));
+            Assert.That(Depths(f), Is.EqualTo(new[] { 0, 1, 1, 2 }));
+            Assert.That(Row(f, "x").IsExpanded, Is.True);
+        });
+
+        x.Children.RemoveAt(0);
+        x.Children.Add(new Node("x2"));
+        Assert.That(Names(f), Is.EqualTo(new[] { "a", "c", "x", "x2" }), "the open row's children are followed");
+    }
+
+    [Test]
+    public void ARecordAdded_ComesWithItsDetailsPanel()
+    {
+        var a = new Node("a") { Expanded = true };
+        var f = new TreeFlattener(o => (o as Node)?.Children, detailsOf: o => o is Node { Name: "x" } ? new Node("x details") : null);
+        var roots = new ObservableCollection<Node>([a]);
+        f.SetRoots(roots);
+
+        roots.Add(new Node("x"));
+        Assert.Multiple(() =>
+        {
+            Assert.That(Names(f), Is.EqualTo(new[] { "a", "x", "x details" }));
+            Assert.That(f.Rows[2].IsDetails, Is.True);
+        });
+    }
+
+    [Test]
     public void RemovingChildDropsItsRowAndSubtree()
     {
         var c = new Node("c", new Node("e"));
@@ -444,6 +481,31 @@ public class TreeViewVirtualizationTests
         Assert.That(tree.SelectedItem, Is.SameAs(roots[0]), "writing a node did not select it");
 
         Assert.That(picked, Is.EqualTo(new[] { "a", "a" }), "the same node picked twice was heard once");
+    }
+
+    // A menu is about what is chosen, so a row right-clicked outside the choice becomes the choice - or the menu would
+    // act on rows the pointer was never on. A row inside a choice of several keeps it, so the menu acts on them all.
+    [Test]
+    public void ARowAskedForItsMenu_IsChosen_UnlessItIsAmongTheChosenAlready()
+    {
+        var tree = KeyboardTree(out _);
+        tree.SelectionMode = TreeViewSelectionMode.Extended;
+        tree.SelectedItems = new ObservableCollection<object>();
+        var a = new TreeViewItem();
+        var b = new TreeViewItem();
+        Bind(tree, a, 0);
+        Bind(tree, b, 1);
+
+        tree.ChooseForMenu(b);
+        Assert.That(Selected(tree), Is.EqualTo("b"), "a row outside the choice becomes it");
+
+        tree.OnItemClicked(a, InputModifiers.LeftControl);
+        tree.ChooseForMenu(b);
+        Assert.That(tree.SelectedItems.Cast<Node>().Select(node => node.Name), Is.EquivalentTo(new[] { "a", "b" }),
+            "a row among the chosen keeps the choice");
+
+        tree.ChooseForMenu(a);
+        Assert.That(tree.SelectedItems.Count, Is.EqualTo(2));
     }
 
     [Test]

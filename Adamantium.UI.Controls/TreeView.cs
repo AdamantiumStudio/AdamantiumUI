@@ -831,6 +831,14 @@ public class TreeView : ItemsControl
 
     // A node was clicked: apply the selection policy over the flat ROWS (Single/Multiple/Extended), then mirror the new
     // selection onto the realized containers.
+    // A row asked for its menu: it alone becomes the choice, unless it is among the rows chosen already.
+    internal void ChooseForMenu(TreeViewItem container)
+    {        if (container.Row is { IsSelected: false })
+        {
+            OnItemClicked(container, InputModifiers.None);
+        }
+    }
+
     internal void OnItemClicked(TreeViewItem container, InputModifiers modifiers)
     {
         if (container.Row is not { } row)

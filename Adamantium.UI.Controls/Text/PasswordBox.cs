@@ -185,7 +185,7 @@ public class PasswordBox : TextBoxBase
     protected override void OnGotFocus(RoutedEventArgs e)
     {
         base.OnGotFocus(e);
-        if (ReferenceEquals(e.OriginalSource, this) && _inputMethodOffIn == null && RootVisual is IWindow window)
+        if (ReferenceEquals(e.OriginalSource, this) && _inputMethodOffIn == null && RootVisual?.Window is { } window)
         {
             _inputMethodOffIn = window;
             window.SetInputMethodEnabled(false);

@@ -6,6 +6,7 @@ using Adamantium.UI.Controls.Decorators;
 using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Controls.Primitives;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Data;
 using Adamantium.UI.Core.RoutedEvents;
 using Adamantium.UI.Core.Templates;
 using Adamantium.UI.Extensions;
@@ -116,6 +117,73 @@ public class ContextMenuDeferredCardTests
         Assert.That(presenter, Is.Not.Null, "the deferred card has to carry the items host");
         Assert.That(presenter.VisualChildren.FirstOrDefault(), Is.InstanceOf<Panel>(),
             "an items host only builds its panel once it has an owner - no panel means it was never connected");
+    }
+
+    // A menu that has nothing to offer for where it was asked - its view model gave it no rows - shows no empty card.
+    [Test]
+    public void AMenuWithNoRows_StaysShut()
+    {
+        var menu = new ContextMenu { Template = DeferredCardTemplate(), ItemsSource = System.Array.Empty<MenuItem>() };
+        var window = new Window { Width = 400, Height = 300, Content = menu };
+        for (var i = 0; i < 5; i++) WindowExtension.UpdateTree(window);
+
+        OpenAndPass(menu, window);
+        Assert.That(menu.IsOpen, Is.False, "nothing to offer, nothing shown");
+
+        menu.ItemsSource = new[] { new MenuItem { Header = "Open" } };
+        OpenAndPass(menu, window);
+        Assert.That(menu.IsOpen, Is.True, "and with a row it opens");
+    }
+
+    // A frame: the window's pass, where the bindings are applied, then the popup layer's, where the menu is laid out.
+    private static void OpenAndPass(ContextMenu menu, Window window)
+    {
+        menu.Open(menu, new Vector2<double>(10, 10));
+        WindowExtension.UpdateTree(window);
+        window.PopupLayer.UpdateLayout(new Size<double>(400, 300));
+    }
+
+    private sealed class Rows : System.ComponentModel.INotifyPropertyChanged
+    {
+        private object[] _items = [];
+
+        public object[] Items
+        {
+            get => _items;
+            set
+            {
+                _items = value;
+                PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(Items)));
+            }
+        }
+
+        public event System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
+    }
+
+    // The right button picks the row on its press and the menu opens on its release - often in one frame, before the
+    // frame's bindings have carried the rows of the new choice to the menu. Whether there is anything to offer is
+    // judged once they have: rows that arrive in that frame open the menu, rows that went in it shut it.
+    [Test]
+    public void AMenuOpenedInTheFrameItsRowsChanged_GoesByTheRowsTheFrameBrings()
+    {
+        var rows = new Rows();
+        var menu = new ContextMenu { Template = DeferredCardTemplate(), DataContext = rows };
+        menu.SetBinding(nameof(ContextMenu.ItemsSource), new Binding(nameof(Rows.Items)));
+        var window = new Window { Width = 400, Height = 300, Content = menu };
+        for (var i = 0; i < 5; i++) WindowExtension.UpdateTree(window);
+
+        rows.Items = [new MenuItem { Header = "Rename" }, new MenuItem { Header = "Delete" }];
+        OpenAndPass(menu, window);
+        Assert.Multiple(() =>
+        {
+            Assert.That(menu.IsOpen, Is.True, "the rows the choice has now are there to offer");
+            Assert.That(menu.Items.Count, Is.EqualTo(2));
+        });
+
+        menu.IsOpen = false;
+        rows.Items = [];
+        OpenAndPass(menu, window);
+        Assert.That(menu.IsOpen, Is.False, "and none now means none, though the menu still had two when asked to open");
     }
 
     // A row's Click bubbles to the items presenter, and THAT is where the menu listens in order to close itself. The

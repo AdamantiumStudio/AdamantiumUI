@@ -242,7 +242,7 @@ public class DateTimeField : Control, ISegmentHost
             return;
         }
 
-        if (_inputMethodOffIn == null && RootVisual is IWindow window)
+        if (_inputMethodOffIn == null && RootVisual?.Window is { } window)
         {
             _inputMethodOffIn = window;
             window.SetInputMethodEnabled(false);

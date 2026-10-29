@@ -60,7 +60,8 @@
                     DeferContent="True"
                     ShowCloseButton="True"
                     IsVirtualizing="True"
-                    TabWidth="120">
+                    TabWidth="152"
+                    IconMemberPath="Icon">
             <!-- A tab body is thousands of elements; it is built off the loop thread, so the tab itself opens at once
                  and shows this until its content is ready. -->
             <TabControl.LoadingTemplate>
@@ -82,6 +83,15 @@
                     <Setter Property="ToolTip" Value="{Localize GalleryStrings, Key={Binding Header}}"/>
                 </Style>
             </TabControl.ItemContainerStyle>
+            <!-- A page names its icon by key (IconMemberPath), so the overflow list shows it for tabs not made yet too;
+                 the icon is the resource the key names, in the tab's text color. -->
+            <TabControl.IconTemplate>
+                <DataTemplate>
+                    <Grid Width="16" Height="16">
+                        <IconPresenter Icon="{ObservableResource Key={Binding}}"/>
+                    </Grid>
+                </DataTemplate>
+            </TabControl.IconTemplate>
             <!-- A tab names its page by the key of its title among the gallery's phrases. -->
             <TabControl.ItemTemplate>
                 <DataTemplate>

@@ -303,7 +303,7 @@ public class ScrollViewer : ContentControl
         {
             // "Visible" is 0.5 DEVICE pixels: the thumb travel is in logical px, so the imperceptibility floor scales
             // with the display's DPI (0.5 logical px is a coarser skip on a hi-DPI panel where it maps to more device px).
-            var dpi = (RootVisual as WindowBase)?.DpiScale ?? new Vector2<double>(1, 1);
+            var dpi = RootVisual?.Window?.DpiScale ?? new Vector2<double>(1, 1);
             var span = new Vector2<double>((float)Math.Max(1, extent.Width - viewport.Width), (float)Math.Max(1, extent.Height - viewport.Height));
             var thumbMoveX = Math.Abs(offset.X - _lastPushedOffset.X) * viewport.Width / span.X * dpi.X;
             var thumbMoveY = Math.Abs(offset.Y - _lastPushedOffset.Y) * viewport.Height / span.Y * dpi.Y;

@@ -6,6 +6,19 @@
          frameless page. Structure and part names follow Fluent's to keep its behavior. -->
 
     <Style Selector="TabControl" BasedOn="ItemsControl">
+        <!-- A tab's icon is data - path data or a picture - drawn 16 by 16 in front of its name; a picture's CurrentColor
+             is the tab's text color, so a monochrome one follows the tab's states. -->
+        <Setter Property="IconTemplate">
+            <Setter.Value>
+                <DataTemplate>
+                    <Grid Width="16" Height="16">
+                        <IconPresenter Icon="{Binding}"
+                                       StrokeThickness="1"
+                                       Stroke="{Ancestor ContentPresenter, Foreground}"/>
+                    </Grid>
+                </DataTemplate>
+            </Setter.Value>
+        </Setter>
         <!-- The page paints NOTHING: whatever hosts the tab control - a docked pane, a window - already owns that
              ground, and a second opaque layer over it is one more surface to keep in step through every variant and
              accent swap. The STRIP does paint, opaquely and in the base ground. -->

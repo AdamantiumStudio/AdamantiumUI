@@ -2126,7 +2126,7 @@ public class DockingArea : Panel
         return (Mouse.ScreenCoordinates - this.PointToScreen(Vector2<double>.Zero)).ToLogical(DpiScale);
     }
 
-    private Vector2<double> DpiScale => RootVisual is IWindow window ? window.DpiScale : Vector2<double>.One;
+    private Vector2<double> DpiScale => RootVisual?.Window is { } window ? window.DpiScale : Vector2<double>.One;
 
     // Which area of the family the pointer is over, and what a drop there would do. EVERY area is asked: that is what
     // lets a panel be dropped into a floating window as well as into the main one.

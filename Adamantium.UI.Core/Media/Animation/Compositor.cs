@@ -260,8 +260,8 @@ public static class Compositor
     // A record this many loop frames older than the newest is never drawn again, so what it alone still played can go.
     private const long StaleRecordFrames = 600;
 
-    /// <summary>Whether the render thread plays an animation in <paramref name="root"/>'s tree, or of a brush, which any
-    /// tree may paint with.</summary>
+    /// <summary>Whether the render thread plays an animation in <paramref name="root"/>'s tree - or in a root shown in it,
+    /// an overlay window - or of a brush, which any tree may paint with.</summary>
     public static bool IsPlayingIn(IRootVisualComponent root)
     {
         lock (Gate)
@@ -274,7 +274,8 @@ public static class Compositor
     {
         foreach (var entry in entries)
         {
-            if (entry.Owner == null || ReferenceEquals(entry.Owner.RootVisual, root))
+            if (entry.Owner == null ||
+                entry.Owner.RootVisual is { } owner && (ReferenceEquals(owner, root) || ReferenceEquals(owner.Window, root)))
             {
                 return true;
             }

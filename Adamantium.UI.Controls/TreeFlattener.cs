@@ -158,11 +158,7 @@ internal sealed class TreeFlattener
             {
                 var pos = FlatIndexForChild(parent, e.NewStartingIndex);
                 var rows = new List<TreeRow>(e.NewItems.Count);
-                foreach (var item in e.NewItems)
-                {
-                    rows.Add(new TreeRow(item, baseDepth, HasChildren(item)) { IsSelected = _isSelected(item) });
-                }
-
+                AppendRows(rows, e.NewItems, baseDepth);
                 Rows.InsertMany(pos, rows);
                 break;
             }

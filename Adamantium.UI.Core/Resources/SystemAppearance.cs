@@ -10,6 +10,7 @@ public static class SystemAppearance
 {
     private static bool _prefersDark;
     private static string _fontFamily;
+    private static string _monospaceFontFamily;
     private static Task _reading;
 
     /// <summary>Whether the OS currently asks for a dark appearance. Written by the platform layer.</summary>
@@ -44,18 +45,34 @@ public static class SystemAppearance
         }
     }
 
+    /// <summary>The family of the desktop's monospace font, for code and terminals, where the platform says; null
+    /// elsewhere.</summary>
+    public static string MonospaceFontFamily
+    {
+        get
+        {
+            AwaitReading();
+            return _monospaceFontFamily;
+        }
+        set
+        {
+            AwaitReading();
+            _monospaceFontFamily = value;
+        }
+    }
+
     /// <summary>Raised when the OS appearance actually changes - day turning to night, or the user flipping the
     /// setting. Handlers must not throw.</summary>
     public static event EventHandler Changed;
 
     /// <summary>Takes the desktop's settings from <paramref name="read"/>, run on the thread pool alongside the rest of
-    /// startup: <see cref="PrefersDark"/> and <see cref="FontFamily"/> wait for it when first asked. What it reads is
-    /// where they start from, so it raises no <see cref="Changed"/>.</summary>
-    internal static void ReadInBackground(Func<(bool? PrefersDark, string FontFamily)> read)
+    /// startup: <see cref="PrefersDark"/>, <see cref="FontFamily"/> and <see cref="MonospaceFontFamily"/> wait for it
+    /// when first asked. What it reads is where they start from, so it raises no <see cref="Changed"/>.</summary>
+    internal static void ReadInBackground(Func<(bool? PrefersDark, string FontFamily, string MonospaceFontFamily)> read)
     {
         Volatile.Write(ref _reading, Task.Run(() =>
         {
-            (bool? PrefersDark, string FontFamily) settings;
+            (bool? PrefersDark, string FontFamily, string MonospaceFontFamily) settings;
             try
             {
                 settings = read();
@@ -66,7 +83,7 @@ public static class SystemAppearance
                 return;
             }
 
-            var (prefersDark, fontFamily) = settings;
+            var (prefersDark, fontFamily, monospaceFontFamily) = settings;
             if (prefersDark is { } dark)
             {
                 _prefersDark = dark;
@@ -75,6 +92,11 @@ public static class SystemAppearance
             if (fontFamily != null)
             {
                 _fontFamily = fontFamily;
+            }
+
+            if (monospaceFontFamily != null)
+            {
+                _monospaceFontFamily = monospaceFontFamily;
             }
         }));
     }

@@ -2474,7 +2474,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
 
     private void ListenToTheWindow()
     {
-        if (_listenedWindow != null || RootVisual is not IInputComponent window)
+        if (_listenedWindow != null || (RootVisual?.Window ?? RootVisual) is not IInputComponent window)
         {
             return;
         }

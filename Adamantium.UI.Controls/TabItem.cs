@@ -86,7 +86,16 @@ public class TabItem : ContentControl, ISelectable, ISpringLoadable
     /// <see cref="TabControl.IconTemplate"/>, so one template serves every tab in a strip; set it here to override it
     /// for a single tab.</summary>
     public static readonly AdamantiumProperty IconTemplateProperty = AdamantiumProperty.Register(nameof(IconTemplate),
-        typeof(DataTemplate), typeof(TabItem), new PropertyMetadata(null));
+        typeof(DataTemplate), typeof(TabItem), new PropertyMetadata(null, OnIconTemplateChanged));
+
+    // Set by anyone but the strip - locally, by a style - the template is the tab's own, and the strip leaves it be.
+    private static void OnIconTemplateChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (a is TabItem { _syncingIconTemplate: false } tab)
+        {
+            tab._iconTemplateFromStrip = false;
+        }
+    }
 
     // Close button (see TabControl.ShowCloseButton). IsClosable is the per-tab opt-out (author it False to keep a pinned
     // tab open). ShowCloseButton + CloseButtonTemplate are EFFECTIVE values pulled from the owning TabControl on attach
@@ -432,8 +441,19 @@ public class TabItem : ContentControl, ISelectable, ISpringLoadable
     private void SyncIconTemplate()
     {
         var owner = _closeOwner ?? Owner;
-        if (owner?.IconTemplate != null) IconTemplate = owner.IconTemplate;
+        if (owner?.IconTemplate == null || (IconTemplate != null && !_iconTemplateFromStrip))
+        {
+            return;
+        }
+
+        _syncingIconTemplate = true;
+        IconTemplate = owner.IconTemplate;
+        _syncingIconTemplate = false;
+        _iconTemplateFromStrip = true;
     }
+
+    private bool _iconTemplateFromStrip;
+    private bool _syncingIconTemplate;
 
     private void OnCloseButtonClick(object sender, RoutedEventArgs e)
     {

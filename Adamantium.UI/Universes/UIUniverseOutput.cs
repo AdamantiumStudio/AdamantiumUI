@@ -60,7 +60,7 @@ namespace Adamantium.UI.Universes
         // (the worker posts itself a message), which is what makes it safe to ask for from the universe loop.
         public override void HoldPointer(bool hold, Vector2F origin)
         {
-            if (InputComponent?.RootVisual is not WindowBase root) return;
+            if (InputComponent?.RootVisual?.Window is not WindowBase root) return;
 
             if (hold) heldFrom = new PixelPoint((int)origin.X, (int)origin.Y);
 
@@ -454,7 +454,7 @@ namespace Adamantium.UI.Universes
             InputComponent.IsPointerDirectlyOver ||
             PointerDevice.Current.Pointers.Any(pointer => ReferenceEquals(pointer.Captured, InputComponent));
 
-        protected IWindow HostWindow => InputComponent as IWindow ?? InputComponent.RootVisual as IWindow;
+        protected IWindow HostWindow => InputComponent as IWindow ?? InputComponent.RootVisual?.Window;
 
         private void HostDpiChanged(object sender, EventArgs e)
         {

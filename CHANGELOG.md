@@ -7,6 +7,17 @@ All packages share one version.
 
 ### Added
 
+- `Theme.SystemMonospaceFontFamily`, the system's font for code: on Windows Cascadia Mono, else Consolas; on Apple's
+  systems SF Mono, else Menlo; on Linux the desktop's own monospace font (`SystemAppearance.MonospaceFontFamily`, read
+  through the Settings portal), else the first of the usual distributions' ones installed. `ADAM_CODE_FONT` names
+  another, as `ADAM_UI_FONT` does for the interface. Every theme gives it as `CodeFontFamily`, for styles to take with
+  `{ThemeResource CodeFontFamily}`.
+- A tab's icon shows without a template of the application's own: every theme's `TabControl` draws `TabItem.Icon` -
+  path data or a picture - 16 by 16 in front of the name, a picture's `CurrentColor` in the tab's text color, the
+  selected tab's when it is selected; a tab's own `IconTemplate` stays above the strip's, attached as well.
+  `TabControl.IconMemberPath` takes a bound item's icon from the item, for its tab and for the overflow list's row of a
+  tab not made yet. `IDockablePane.PaneIcon` names a pane's icon by its key among the resources, as a command names its
+  own. The sandbox's gallery tabs have monochrome icons, and are wider for them.
 - `Trash.MoveToTrash`: a file or folder goes to the desktop's trash, where the user can take it back from - on Linux
   the freedesktop.org trash, the home one or the one of the file system it lies on; on Windows the Recycle Bin; on
   macOS the Trash, through the Finder. `Trash.IsAvailable` says whether there is one. What cannot go to the trash is
@@ -1768,6 +1779,8 @@ All packages share one version.
 
 ### Changed
 
+- The macOS theme's menus, drop-downs and tooltips are clearer glass with a narrower lens at the rim: they read as a
+  thick pale frame round every card.
 - The noise and the grain of the brushes and materials come from a noise and a hash of the UI's own: simplex noise with
   eight gradient directions, scaled to reach -1 and 1, a little livelier than before; every pattern built on noise
   draws a different picture of the same kind.
@@ -2268,6 +2281,35 @@ All packages share one version.
 
 ### Fixed
 
+- `TreeView`: the right button picks the row it presses before its menu opens, so the menu is about that row - it was
+  about the rows chosen before, or none. A row among several chosen keeps them all, as a finger's hold already did.
+- `ContextMenu`: a menu with no rows stays shut instead of showing an empty card. Whether it has any is judged in its
+  first pass, once the frame's bindings have brought the rows of what it was opened on.
+- `TreeView`: a node added to a branch already open, itself open in its view model, came closed - its arrow open and
+  nothing under it until it was folded and opened again. An added node comes as a rebuilt one does: its open branches
+  with their rows, followed, and its details row.
+- `TreeDataGrid`: a record added or removed in the source above an open details panel left the panel's height at its
+  old place, so the rows past it were drawn where they no longer stood.
+- `OverlayWindow` is a window to the framework: the root of its own visual tree (`IRootVisualComponent`), shown in the
+  window that holds it. The keys left over in it end at it as a window's do - Enter and Escape press its default and
+  cancel buttons (`IsDefault`, `IsCancel`), Escape with none closes it, both only while it may close by Escape
+  (`CloseByEscape`, `CanClose`) - and a key binding anywhere in it runs, not only one on the way up from the focus. A
+  dialog shown over the window was answered only by its buttons. What needs the operating system's window - its scale,
+  the input method, automation - finds it through `IRootVisualComponent.Window`, the window a root is shown in: a window
+  is its own. `Position`, `Left` and `Top` of a root are where it sits in what holds it - the desktop for a window, the
+  window for an overlay window.
+- A modal overlay window holds the keyboard of the window it is shown over: a key pressed with the focus left in the
+  content under it is its own, and the focus put there - by a menu closing after the window opened, by code - goes back
+  into it. That content ran the key's bindings and buttons, and a dialog opened from a menu could open with the focus
+  left behind it.
+- An overlay window brought to the front - by a press in it - keeps its tree and the focus in it: the popup layer
+  reorders it (`PopupLayer.BringToFront`) instead of taking it off and putting it back, and the overlay stage redraws
+  for a change of order alone. Every press in a dialog took the focus out of its field for good.
+- The default and cancel buttons of a window, an overlay window and a popup answer the same keys: Enter or Escape
+  pressed alone and not held down - a window's cancel button took a chorded Escape and every repeat of one.
+- A window on Wayland comes back at the size it was closed at, maximized if it was; it always came back at its first
+  size. A Wayland client is never told where its window is, so the place stays the compositor's to keep; a window
+  snapped to an edge comes back at the size it had before.
 - On Wayland, a window minimized by its caption button stayed on screen until the pointer moved: the request waited in
   the connection's buffer for the next frame, and a minimized window draws none. Minimizing, maximizing and restoring
   are sent to the compositor at once.

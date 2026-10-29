@@ -1,8 +1,8 @@
 namespace Adamantium.Navigation;
 
 /// <summary>How a docking region shows this view model's pane. Only <see cref="PaneTitle"/> has to be given; the rest
-/// has a default. The title and the place follow the view model, the rest is read once, when the pane is made. Without
-/// this interface, the type name is the pane's identity, so two view models of one type share a pane.</summary>
+/// has a default. The title, the icon and the place follow the view model, the rest is read once, when the pane is made.
+/// Without this interface, the type name is the pane's identity, so two view models of one type share a pane.</summary>
 public interface IDockablePane
 {
     /// <summary>Identity in the layout, the type's name by default. Two view models standing for different things must
@@ -29,4 +29,9 @@ public interface IDockablePane
 
     /// <summary>Smallest useful size along the docked axis.</summary>
     double PaneMinSize => 0;
+
+    /// <summary>The key of the tab's icon among the resources - a picture, or path data drawn in the tab's text color -
+    /// shown in front of the title; none by default. Followed as the title is, and the resource follows a theme swap.
+    /// </summary>
+    string PaneIcon => null;
 }

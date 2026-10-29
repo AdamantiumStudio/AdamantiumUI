@@ -75,6 +75,17 @@ public class PopupLayer
         (popup.ChildValue as IInputComponent)?.AddHandler(PointerEvents.PreviewPointerPressedEvent, _overlayPress, handledEventsToo: true);
     }
 
+    /// <summary>Draws <paramref name="popup"/> over the others. A reorder, not a close and an open again: its content
+    /// stays attached, and the focus in it stays where it is.</summary>
+    public void BringToFront(Popup popup)
+    {
+        lock (_sync)
+        {
+            if (!_popups.Remove(popup)) return;
+            _popups.Add(popup);
+        }
+    }
+
     public void Remove(Popup popup)
     {
         lock (_sync)
@@ -100,12 +111,13 @@ public class PopupLayer
 
     // The root the content joins is the owning WINDOW's - the same one that already measures, arranges and draws it on
     // this layer. Nothing becomes anyone's visual child: only the answer to "which root do I live in" changes, so a walk
-    // from the root still does not reach overlay content.
+    // from the root still does not reach overlay content. Content that is a root itself - an overlay window - stays the
+    // root of its own tree.
     private void AttachToOwner(UIComponent content)
     {
         if (content == null) return;
 
-        var root = (Owner as IUIComponent)?.RootVisual ?? Owner as IRootVisualComponent;
+        var root = content as IRootVisualComponent ?? (Owner as IUIComponent)?.RootVisual ?? Owner as IRootVisualComponent;
         content.AttachToRoot(root, ownsLayout: true);
     }
 

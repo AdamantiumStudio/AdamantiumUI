@@ -8,7 +8,12 @@ namespace Adamantium.UI.Core.Resources;
 public class Theme : AdamantiumComponent, ITheme
 {
     private static readonly string[] LinuxFamilies = ["Noto Sans", "DejaVu Sans", "Liberation Sans", "Cantarell", "Ubuntu"];
+    private static readonly string[] WindowsMonospaceFamilies = ["Cascadia Mono", "Consolas", "Courier New"];
+    private static readonly string[] MacMonospaceFamilies = ["SF Mono", "Menlo", "Monaco"];
+    private static readonly string[] LinuxMonospaceFamilies =
+        ["Adwaita Mono", "DejaVu Sans Mono", "Noto Sans Mono", "Liberation Mono", "Ubuntu Mono", "Cascadia Mono"];
     private static readonly Lazy<FontFamily> SystemDefault = new(PickSystemDefaultFontFamily);
+    private static readonly Lazy<FontFamily> SystemMonospace = new(PickSystemMonospaceFontFamily);
 
     public Theme()
     {
@@ -28,6 +33,7 @@ public class Theme : AdamantiumComponent, ITheme
         // Seed the theme's font so it's a real (non-null) property value from the start: a {ThemeResource FontFamily}
         // binding reads the raw GetValue, and a theme can override it (live) to restyle all text.
         FontFamily = SystemDefaultFontFamily;
+        CodeFontFamily = SystemMonospaceFontFamily;
     }
 
     public Theme(string name) : this()
@@ -163,15 +169,34 @@ public class Theme : AdamantiumComponent, ITheme
     /// wait for it.</summary>
     public static FontFamily SystemDefaultFontFamily => SystemDefault.Value;
 
-    private static FontFamily PickSystemDefaultFontFamily() => Named(Environment.GetEnvironmentVariable(UIFontVariable)) ??
+    private static FontFamily PickSystemDefaultFontFamily() => Named(UIFontVariable) ??
         (OperatingSystem.IsWindows() ? new FontFamily("Segoe UI")
         : OperatingSystem.IsMacOS() ? new FontFamily("Helvetica")
-        : new[] { SystemAppearance.FontFamily }.Concat(LinuxFamilies).Where(name => name != null)
-              .Select(name => new FontFamily(name)).FirstOrDefault(family => family.IsInstalled)
-          ?? new FontFamily(LinuxFamilies[0]));
+        : FirstInstalled([SystemAppearance.FontFamily, .. LinuxFamilies]) ?? new FontFamily(LinuxFamilies[0]));
 
-    private static FontFamily Named(string font)
+    /// <summary>The variable naming the code font every theme starts from instead of the system's monospace one - a
+    /// family or a font file, as <see cref="UIFontVariable"/>.</summary>
+    public const string CodeFontVariable = "ADAM_CODE_FONT";
+
+    /// <summary>The per-platform monospace font, for code: on Windows Cascadia Mono, else Consolas; on Apple's systems
+    /// SF Mono, else Menlo; on Linux the desktop's own monospace font, else the first of the usual distributions' ones
+    /// installed. <see cref="CodeFontVariable"/> names another. Picked once, from whichever thread asks first.</summary>
+    public static FontFamily SystemMonospaceFontFamily => SystemMonospace.Value;
+
+    private static FontFamily PickSystemMonospaceFontFamily()
     {
+        var families = OperatingSystem.IsWindows() ? WindowsMonospaceFamilies
+            : OperatingSystem.IsMacOS() ? MacMonospaceFamilies
+            : [SystemAppearance.MonospaceFontFamily, .. LinuxMonospaceFamilies];
+        return Named(CodeFontVariable) ?? FirstInstalled(families) ?? new FontFamily(families.First(name => name != null));
+    }
+
+    private static FontFamily FirstInstalled(IEnumerable<string> names) =>
+        names.Where(name => name != null).Select(name => new FontFamily(name)).FirstOrDefault(family => family.IsInstalled);
+
+    private static FontFamily Named(string variable)
+    {
+        var font = Environment.GetEnvironmentVariable(variable);
         if (string.IsNullOrWhiteSpace(font))
         {
             return null;
@@ -190,7 +215,7 @@ public class Theme : AdamantiumComponent, ITheme
             }
             catch (Exception e)
             {
-                Console.Error.WriteLine($"{UIFontVariable}: '{file}' cannot be read as a font ({e.Message}); the system's UI font is used.");
+                Console.Error.WriteLine($"{variable}: '{file}' cannot be read as a font ({e.Message}); the system's font is used.");
                 return null;
             }
         }
@@ -201,7 +226,7 @@ public class Theme : AdamantiumComponent, ITheme
             return family;
         }
 
-        Console.Error.WriteLine($"{UIFontVariable}: '{font}' is neither a font file nor an installed family; the system's UI font is used.");
+        Console.Error.WriteLine($"{variable}: '{font}' is neither a font file nor an installed family; the system's font is used.");
         return null;
     }
 
@@ -218,6 +243,18 @@ public class Theme : AdamantiumComponent, ITheme
     {
         get => GetValue<FontFamily>(FontFamilyProperty) ?? SystemDefaultFontFamily;
         set => SetValue(FontFamilyProperty, value);
+    }
+
+    public static readonly AdamantiumProperty CodeFontFamilyProperty = AdamantiumProperty.Register(
+        nameof(CodeFontFamily), typeof(FontFamily), typeof(Theme), new PropertyMetadata(null));
+
+    /// <summary>The theme's font for code, every character as wide as the next - consumed in styles via
+    /// <c>{ThemeResource CodeFontFamily}</c>. Unset falls back to <see cref="SystemMonospaceFontFamily"/>; a change
+    /// refreshes every consumer live, as <see cref="FontFamily"/>'s does.</summary>
+    public FontFamily CodeFontFamily
+    {
+        get => GetValue<FontFamily>(CodeFontFamilyProperty) ?? SystemMonospaceFontFamily;
+        set => SetValue(CodeFontFamilyProperty, value);
     }
 
     // Accent/focus brushes are the theme's runtime-mutable identity: change one (theme.AccentFillColorDefault = ...)

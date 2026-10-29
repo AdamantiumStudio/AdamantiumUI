@@ -283,14 +283,11 @@ public partial class TreeDataGrid : Selector
         return null;
     }
 
-    // A branch opening or shutting MOVES every row below it, and the details panels' exceptions are indexes into that
-    // list - so they are found again here, where the list changed, and nowhere else.
     internal void ToggleRow(TreeRow row)
     {
         if (row is not { HasChildren: true }) return;
         _flattener.Toggle(row);
         RememberGroup(row);
-        RebuildRowExceptions();
         RefreshRealizedRows();
     }
 
@@ -299,7 +296,6 @@ public partial class TreeDataGrid : Selector
         if (row is not { HasChildren: true } || row.IsExpanded) return;
         _flattener.Expand(row);
         RememberGroup(row);
-        RebuildRowExceptions();
         RefreshRealizedRows();
     }
 
@@ -308,9 +304,12 @@ public partial class TreeDataGrid : Selector
         if (row is not { IsExpanded: true }) return;
         _flattener.Collapse(row);
         RememberGroup(row);
-        RebuildRowExceptions();
         RefreshRealizedRows();
     }
+
+    // Any change of the flat list - a branch opened or shut, a record added or removed in the source - MOVES the rows
+    // below it, and the details panels' exceptions are indexes into that list, so they are found again here.
+    private void OnFlatRowsChanged(object sender, NotifyCollectionChangedEventArgs e) => RebuildRowExceptions();
 
     // Rows keep their own copy of depth, band and expander state, so a splice above them changes what they should show.
     internal void RefreshRealizedRows()
@@ -443,7 +442,13 @@ public partial class TreeDataGrid : Selector
             SourceGate.Return(copy);
         }
 
-        Follow(nameof(_flattener), _flattener.Clear);
+        var flattener = _flattener;
+        flattener.Rows.CollectionChanged += OnFlatRowsChanged;
+        Follow(nameof(_flattener), () =>
+        {
+            flattener.Rows.CollectionChanged -= OnFlatRowsChanged;
+            flattener.Clear();
+        });
         RebuildRowExceptions();
         Items.SetSource(_flattener.Rows);
         if (!sameRows) RefreshTotals();
@@ -1058,7 +1063,7 @@ public partial class TreeDataGrid : Selector
     private bool _detailsHeightChanged;
 
     // WHERE the panels are. A walk over every row, so it runs only when the flat list itself changed - a rebuild, a
-    // branch opened or shut - because that is the only thing that can move an index. Ten thousand rows walked on every
+    // branch opened or shut, a record added or removed - because that is the only thing that can move an index. Ten thousand rows walked on every
     // measure is what a panel reporting its height used to cost: eight open panels, twice a frame, and the scroll
     // stuttered.
     private void RebuildRowExceptions()

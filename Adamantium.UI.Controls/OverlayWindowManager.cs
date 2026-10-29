@@ -88,17 +88,11 @@ public sealed class OverlayWindowManager
         KeepPinnedOnTop(window);
         SetActive(window);
         EnsureHostHooks();
-        // Escape has to be heard on the WINDOW ITSELF as well as on the host. A key routes UP from the focused element,
-        // and this window's content is hosted on the overlay - detached - so once the keyboard is inside it the route
-        // never passes through the host at all, and the host's handler heard nothing. Same reason Popup hooks Escape in
-        // two places. (Both may fire for one press; Close is guarded by CanClose and the second call finds it closed.)
-        window.KeyDown += OnHostKeyDown;
 
         var tcs = new TaskCompletionSource<object>();
         void OnClosed(object sender, EventArgs e)
         {
             window.Closed -= OnClosed;
-            window.KeyDown -= OnHostKeyDown;
             _host.PopupLayer.Remove(window.HostPopup);
             (_host as IFundamentalUIComponent)?.RemoveLogicalChild(window.HostPopup);
             if (window.ScrimPopup != null) _host.PopupLayer.Remove(window.ScrimPopup);
@@ -127,7 +121,7 @@ public sealed class OverlayWindowManager
         }
         window.Closed += OnClosed;
 
-        window.NotifyShown(this);
+        window.NotifyShown(this, _host);
         return tcs.Task;
     }
 
@@ -137,14 +131,21 @@ public sealed class OverlayWindowManager
     /// <summary>Raises a window above the others, keeping pinned windows on top.</summary>
     internal void BringToFront(OverlayWindow window)
     {
-        if (!_windows.Contains(window)) 
-            return;   // already the front-most
-        
-        _windows.Remove(window);
-        _windows.Add(window);
-        Normalize();
-        RaiseInLayer(window);
-        KeepPinnedOnTop(window);
+        if (!_windows.Contains(window))
+        {
+            return;
+        }
+
+        // The front-most one only becomes the active one: a press in it reorders nothing.
+        if (!ReferenceEquals(_windows[^1], window))
+        {
+            _windows.Remove(window);
+            _windows.Add(window);
+            Normalize();
+            RaiseInLayer(window);
+            KeepPinnedOnTop(window);
+        }
+
         SetActive(window);
     }
 
@@ -172,11 +173,9 @@ public sealed class OverlayWindowManager
         if (window.HostPopup == null) return;
         if (window.ScrimPopup != null)
         {
-            _host.PopupLayer.Remove(window.ScrimPopup);
-            _host.PopupLayer.Add(window.ScrimPopup);
+            _host.PopupLayer.BringToFront(window.ScrimPopup);
         }
-        _host.PopupLayer.Remove(window.HostPopup);
-        _host.PopupLayer.Add(window.HostPopup);
+        _host.PopupLayer.BringToFront(window.HostPopup);
     }
 
     // Stable partition: unpinned windows first, pinned last (pinned always on top), each group keeping its relative order.
@@ -227,6 +226,11 @@ public sealed class OverlayWindowManager
             active.Close();
         }
     }
+
+    /// <summary>The front-most modal window shown over <paramref name="host"/>, which holds its keyboard; null for none.
+    /// </summary>
+    internal static OverlayWindow FrontModalOver(IPopupHost host) =>
+        host != null && Managers.TryGetValue(host, out var manager) ? manager._windows.LastOrDefault(w => w.IsModal) : null;
 
     // A press inside any overlay (its card - or its modal scrim, which must not deactivate the modal) keeps it active; the
     // overlay's own handler raises it. A press anywhere else is on the window content behind, so deactivate them all.

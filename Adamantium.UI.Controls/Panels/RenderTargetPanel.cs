@@ -200,14 +200,14 @@ public class RenderTargetPanel : Grid
       _engagePoint = this.PointToClient(Mouse.Pointer.GetScreenPosition());
       Focus();
       Mouse.Pointer.Capture(this);
-      (RootVisual as WindowBase)?.SetRelativeMouseMode(true, default);
+      (RootVisual?.Window as WindowBase)?.SetRelativeMouseMode(true, default);
    }
 
    private void Disengage()
    {
       if (!_looking) return;
       _looking = false;
-      (RootVisual as WindowBase)?.SetRelativeMouseMode(false, this.PointToScreen(_engagePoint));
+      (RootVisual?.Window as WindowBase)?.SetRelativeMouseMode(false, this.PointToScreen(_engagePoint));
       LetGoOfPointer();
    }
 

@@ -219,6 +219,27 @@ public class PopupClosesOnClickTests
         });
     }
 
+    // A card switched off as a whole - busy with what it was asked - takes no Enter, though its button is on itself.
+    [Test]
+    public void ACardSwitchedOff_PressesNoDefaultButton()
+    {
+        var go = new Counted();
+        var (popup, _, _, field, window) = Card(go);
+        var rows = (StackPanel)field.VisualParent;
+        rows.IsEnabled = false;
+        Settle(window);
+        var enter = Press(Key.Enter, rows);
+
+        rows.RaiseEvent(enter);
+        Settle(window);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(go.Runs, Is.Zero);
+            Assert.That(popup.IsOpen, Is.True);
+        });
+    }
+
     private static ControlTemplate NumberTemplate() => new(() =>
     {
         var text = new TextBox();

@@ -20,7 +20,7 @@ public sealed class TabOverflowItem
         _item = item;
         Header = header;
         HeaderTemplate = headerTemplate;
-        Icon = tab?.Icon;
+        Icon = tab?.Icon ?? owner?.IconOf(item);
         IconTemplate = tab?.IconTemplate ?? owner?.IconTemplate;
         // Falls back to the CONTROL when there is no container: most rows here stand for tabs that are off screen, and
         // asking the missing container left every one of them without a close button.

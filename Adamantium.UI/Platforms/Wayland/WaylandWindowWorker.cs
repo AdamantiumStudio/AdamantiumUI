@@ -45,6 +45,7 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
     private int pendingWidth;
     private int pendingHeight;
     private bool pendingMaximized;
+    private bool pendingTiled;
     private bool pendingActivated;
     private bool activated;
 
@@ -264,7 +265,25 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
         viewport?.SetDestination(w, h);
     }
 
-    public Rect RestoreBounds => default;
+    /// <summary>The window's size as it is when not maximized, at the corner of the screen it shows on: a Wayland client
+    /// is told how large it is, never where, so the place is the compositor's to keep and the size is remembered.
+    /// </summary>
+    public Rect RestoreBounds
+    {
+        get
+        {
+            ScreenInfo screen;
+            lock (shownOnLock)
+            {
+                screen = platform.Outputs.ScreenOf(shownOn);
+            }
+
+            screen ??= platform.Outputs.Screens.FirstOrDefault(s => s.IsPrimary) ?? platform.Outputs.Screens.FirstOrDefault();
+            return screen == null || normalWidth <= 0 || normalHeight <= 0
+                ? default
+                : new Rect(screen.WorkArea.X, screen.WorkArea.Y, normalWidth * Scale, normalHeight * Scale);
+        }
+    }
 
     public void SetOwner(IWindow owner)
     {
@@ -761,6 +780,7 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
         pendingWidth = configuredWidth;
         pendingHeight = configuredHeight;
         pendingMaximized = false;
+        pendingTiled = false;
         pendingActivated = false;
 
         for (var i = 0; i + 4 <= states.Length; i += 4)
@@ -770,6 +790,12 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
                 case XdgToplevel.State.Maximized:
                 case XdgToplevel.State.Fullscreen:
                     pendingMaximized = true;
+                    break;
+                case XdgToplevel.State.TiledLeft:
+                case XdgToplevel.State.TiledRight:
+                case XdgToplevel.State.TiledTop:
+                case XdgToplevel.State.TiledBottom:
+                    pendingTiled = true;
                     break;
                 case XdgToplevel.State.Activated:
                     pendingActivated = true;
@@ -809,7 +835,8 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
             w = normalWidth;
             h = normalHeight;
         }
-        else if (!pendingMaximized)
+        // Snapped to an edge, the window is the compositor's size, not its own: the size it comes back at is not that.
+        else if (!pendingMaximized && !pendingTiled)
         {
             normalWidth = w;
             normalHeight = h;

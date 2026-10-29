@@ -110,6 +110,26 @@ internal sealed class WaylandOutputs : IDisplayPlatform
         return false;
     }
 
+    /// <summary>The screen of the first of <paramref name="shownOn"/> that is connected now; null for none.</summary>
+    public ScreenInfo ScreenOf(IEnumerable<WlOutput> shownOn)
+    {
+        lock (sync)
+        {
+            foreach (var proxy in shownOn)
+            {
+                foreach (var output in outputs.Values)
+                {
+                    if (output.Proxy.Handle == proxy.Handle && screens.FirstOrDefault(s => s.Id == output.ScreenId) is { } screen)
+                    {
+                        return screen;
+                    }
+                }
+            }
+        }
+
+        return null;
+    }
+
     /// <summary>The fastest refresh rate among <paramref name="shownOn"/>, in hertz; 0 when none says.</summary>
     public double RefreshRateOf(IEnumerable<WlOutput> shownOn)
     {
@@ -216,8 +236,10 @@ internal sealed class WaylandOutputs : IDisplayPlatform
             var width = logicalWidth > 0 ? Math.Round(logicalWidth * scale) : Width;
             var height = logicalHeight > 0 ? Math.Round(logicalHeight * scale) : Height;
             var bounds = new Rect(LogicalX * placeScale, LogicalY * placeScale, width, height);
-            return new ScreenInfo(Name ?? $"{LogicalX},{LogicalY}", bounds, bounds, scale, isPrimary, RefreshRate);
+            return new ScreenInfo(ScreenId, bounds, bounds, scale, isPrimary, RefreshRate);
         }
+
+        public string ScreenId => Name ?? $"{LogicalX},{LogicalY}";
 
         public void Release()
         {

@@ -4,6 +4,7 @@ using Adamantium.UI.Controls.Docking;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Data;
 using Adamantium.UI.Core.Localization;
+using Adamantium.UI.Core.Resources;
 
 namespace Adamantium.UI.Controls.Navigation;
 
@@ -293,6 +294,12 @@ public sealed class DockingAreaRegionAdapter : IRegionAdapter
             Mode = BindingMode.OneWay,
             TargetNullValue = viewModel
         });
+
+        // The icon as the title: from the view model, followed - its key names the resource, found as the theme has it.
+        new ObservableResource
+        {
+            KeySource = new Binding(nameof(IDockablePane.PaneIcon)) { Source = viewModel, Mode = BindingMode.OneWay }
+        }.Apply(pane, nameof(TabItem.Icon), ValuePriority.Binding);
 
         if (DeclaresZone(viewModel))
         {

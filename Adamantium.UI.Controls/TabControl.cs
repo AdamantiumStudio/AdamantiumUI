@@ -1190,6 +1190,11 @@ public class TabControl : Selector
             // ItemTemplate is the header template (WPF semantics); the body uses ContentTemplate.
             tab.HeaderTemplate = ItemTemplate;
             tab.HeaderTemplateSelector = ItemTemplateSelector;
+            if (IconOf(item) is { } icon)
+            {
+                tab.Icon = icon;
+            }
+
             ApplyContainerSelection(tab, item);
         }
     }
@@ -1271,6 +1276,38 @@ public class TabControl : Selector
     {
         get => GetValue<DataTemplate>(IconTemplateProperty);
         set => SetValue(IconTemplateProperty, value);
+    }
+
+    public static readonly AdamantiumProperty IconMemberPathProperty = AdamantiumProperty.Register(
+        nameof(IconMemberPath), typeof(string), typeof(TabControl), new PropertyMetadata(null));
+
+    /// <summary>The path to a bound item's icon: the tab made for the item shows it, and so does the overflow list's row
+    /// for a tab not made yet, which a binding on the tab cannot reach. Null - the default - leaves the icon to the tab.
+    /// </summary>
+    public string IconMemberPath
+    {
+        get => GetValue<string>(IconMemberPathProperty);
+        set => SetValue(IconMemberPathProperty, value);
+    }
+
+    private string _iconReaderPath;
+    private Func<object, object> _iconReader;
+
+    /// <summary>The icon of a bound <paramref name="item"/> by <see cref="IconMemberPath"/>; null without a path.</summary>
+    internal object IconOf(object item)
+    {
+        if (IconMemberPath is not { Length: > 0 } path || item == null)
+        {
+            return null;
+        }
+
+        if (!string.Equals(_iconReaderPath, path, StringComparison.Ordinal))
+        {
+            _iconReaderPath = path;
+            _iconReader = TreeChildResolver.ForValuePath(path);
+        }
+
+        return _iconReader(item);
     }
 
     public static readonly AdamantiumProperty ShowTabOverflowMenuProperty = AdamantiumProperty.Register(

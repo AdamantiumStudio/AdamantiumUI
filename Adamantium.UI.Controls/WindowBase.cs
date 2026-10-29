@@ -97,26 +97,47 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
         LayoutManager.GetOrCreate(this).LayoutUpdated += (_, _) => PointerDevice.Current.RefreshPointerOver(this);
     }
 
+    // A modal overlay window shown over this window holds its keyboard, as its scrim holds the pointer. Its own keys run in
+    // its own tree, so a key heard here was pressed with the focus left in this window's content: it is the modal's, and
+    // the keyboard goes back into it.
+    protected override void OnPreviewKeyDown(KeyEventArgs e)
+    {
+        base.OnPreviewKeyDown(e);
+        if (e.Handled || OverlayWindowManager.FrontModalOver(this) is not { } modal)
+        {
+            return;
+        }
+
+        modal.TakeKeyboardBack();
+        modal.RaiseEvent(new KeyEventArgs(e.Device, e.Key, e.Modifiers, e.Timestamp, e.PhysicalKey) { RoutedEvent = Keyboard.KeyDownEvent });
+        e.Handled = true;
+    }
+
+    // ...and the focus put in this window's content - by a menu that closes after the modal opened and hands the focus
+    // back to where it was opened from, by code - goes back into the modal once that change is done.
+    protected override void OnGotFocus(RoutedEventArgs e)
+    {
+        base.OnGotFocus(e);
+        if (OverlayWindowManager.FrontModalOver(this) is { } modal)
+        {
+            LoopSignal.Post(() =>
+            {
+                if (modal.IsOpen)
+                {
+                    modal.TakeKeyboardBack();
+                }
+            });
+        }
+    }
+
     // Default/cancel routing: the window is the root, so unhandled Enter/Esc reach it last, after everything on the way
     // up has had its say. Enter activates the IsDefault button, Escape the IsCancel one - unless the focused element
     // already claimed the key. WPF Window default/cancel behavior.
     protected override void OnKeyDown(KeyEventArgs e)
     {
         base.OnKeyDown(e);
-        if (e.Handled) return;
-        const InputModifiers chords = InputModifiers.LeftControl | InputModifiers.RightControl | InputModifiers.LeftShift |
-                                      InputModifiers.RightShift | InputModifiers.LeftAlt | InputModifiers.RightAlt;
-        var plain = !e.IsRepeated && (e.Modifiers & chords) == 0;
-        var target = e.Key switch
+        if (e.Handled || Button.PressDefaultOrCancel(this, e))
         {
-            Key.Enter when plain => FindButton(this, b => b.IsDefault),
-            Key.Escape => FindButton(this, b => b.IsCancel),
-            _ => null
-        };
-        if (target != null)
-        {
-            target.PerformClick();
-            e.Handled = true;
             return;
         }
 
@@ -161,18 +182,6 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
             if (ScrollFirstScrollable(child, scroll)) return true;
         }
         return false;
-    }
-
-    private static Button FindButton(IUIComponent root, Func<Button, bool> match)
-    {
-        foreach (var child in root.VisualChildren)
-        {
-            if (child.Visibility != Visibility.Visible || !child.IsEnabled) continue;
-            if (child is Button button && match(button)) return button;
-            var found = FindButton(child, match);
-            if (found != null) return found;
-        }
-        return null;
     }
 
     public static readonly RoutedEvent ClientSizeChangedEvent = EventManager.RegisterRoutedEvent("ClientSizeChanged",

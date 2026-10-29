@@ -47,6 +47,7 @@
                                         VerticalAlignment="Center"
                                         Visibility="Collapsed"
                                         Margin="0 0 4 0"
+                                        Foreground="{TemplateBinding Foreground}"
                                         Content="{TemplateBinding Icon}"
                                         ContentTemplate="{TemplateBinding IconTemplate}"/>
                                 <ContentPresenter
@@ -104,6 +105,7 @@
         <PropertyTrigger Property="IsSelected" Value="true">
             <Setter TargetName="TabBorder" Property="Background" Value="{TemplateBinding BackgroundSelected}"/>
             <Setter TargetName="PART_ContentPresenter" Property="Foreground" Value="{TemplateBinding ForegroundSelected}"/>
+            <Setter TargetName="PART_Icon" Property="Foreground" Value="{TemplateBinding ForegroundSelected}"/>
         </PropertyTrigger>
         <!-- Close button: Collapsed when off, Hidden (space reserved) when idle, Visible on hover or selection; later
              triggers override the Hidden. -->

@@ -14,7 +14,7 @@ namespace Adamantium.UI.Controls;
 
 /// <summary>A titled card window inside its parent window, shown through an <see cref="OverlayWindowManager"/>.
 /// <see cref="Close(object)"/> sets <see cref="Result"/>, which the awaited Show call returns.</summary>
-public class OverlayWindow : ContentControl
+public class OverlayWindow : ContentControl, IRootVisualComponent
 {
     // The manager owns the show/close lifecycle, so IsOpen is read-only state a consumer can bind to.
     public static readonly AdamantiumProperty IsOpenProperty = AdamantiumProperty.RegisterReadOnly(nameof(IsOpen),
@@ -282,6 +282,59 @@ public class OverlayWindow : ContentControl
         HostPopup.VerticalOffset = Top;
     }
 
+    // --- the root of its own tree, shown in the window that holds it: the layer lays it out there (Bounds), and what
+    //     needs the real window - its scale, its input method - is sent on to it ---
+
+    private IWindow _window;
+    private IUIContext _context;
+
+    IWindow IRootVisualComponent.Window => _window;
+
+    string IRootVisualComponent.Title
+    {
+        get => Title?.ToString();
+        set => Title = value;
+    }
+
+    double IRootVisualComponent.ClientWidth
+    {
+        get => Bounds.Width;
+        set => Width = value;
+    }
+
+    double IRootVisualComponent.ClientHeight
+    {
+        get => Bounds.Height;
+        set => Height = value;
+    }
+
+    IUIContext IRootVisualComponent.UIContext => _context ?? _window?.UIContext;
+
+    void IRootVisualComponent.AttachContextAndInitialize(IUIContext context) => _context = context;
+
+    PixelPoint IRootVisualComponent.Position
+    {
+        get
+        {
+            var scale = WindowScale();
+            return new PixelPoint(Bounds.X * scale.X, Bounds.Y * scale.Y);
+        }
+        set
+        {
+            var scale = WindowScale();
+            Left = value.X / scale.X;
+            Top = value.Y / scale.Y;
+        }
+    }
+
+    // Its content is laid out in the window's own coordinates, where the layer places the card - so its points are the
+    // window's.
+    Vector2<double> IRootVisualComponent.PointToClient(PixelPoint point) => _window?.PointToClient(point) ?? default;
+
+    PixelPoint IRootVisualComponent.PointToScreen(Vector2<double> point) => _window?.PointToScreen(point) ?? default;
+
+    private Vector2<double> WindowScale() => _window?.DpiScale ?? new Vector2<double>(1, 1);
+
     // The overlay layer hosts each window as its OWN card-sized popup (like a menu/tooltip), so a click outside the card
     // falls through to the content behind - a full-window host popup would absorb every click (see OverlayWindowManager).
     // The card is positioned by this popup's offsets (cascade + drag); the manager owns the popup lifecycle.
@@ -385,9 +438,10 @@ public class OverlayWindow : ContentControl
 
     // --- called by the manager ---
 
-    internal void NotifyShown(OverlayWindowManager manager)
+    internal void NotifyShown(OverlayWindowManager manager, IPopupHost host)
     {
         _manager = manager;
+        _window = host as IWindow;
         IsOpen = true;
 
         // A subtle scale-in "pop". The transform promotes the card to a compositor motion node while it plays; the compositor
@@ -588,6 +642,23 @@ public class OverlayWindow : ContentControl
         if (ReferenceEquals(e.Pointer.Captured, _resizeGrip))
         {
             e.Pointer.Capture(null);
+        }
+    }
+
+    // The root of its tree, so the keys left over in it end here, as a window's do: Enter presses its default button,
+    // Escape its cancel one - or, with none, closes it. Escape does neither while it may not close by it.
+    protected override void OnKeyDown(KeyEventArgs e)
+    {
+        base.OnKeyDown(e);
+        if (e.Handled || (e.Key == Key.Escape && !(CloseByEscape && CanClose)) || Button.PressDefaultOrCancel(this, e))
+        {
+            return;
+        }
+
+        if (e.Key == Key.Escape)
+        {
+            e.Handled = true;
+            Close();
         }
     }
 

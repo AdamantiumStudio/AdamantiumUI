@@ -1,6 +1,7 @@
 using System.Linq;
 using Adamantium.UI.Controls;
 using Adamantium.UI.Controls.Decorators;
+using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Core.Templates;
 using NUnit.Framework;
 
@@ -92,6 +93,44 @@ public class TabOverflowListTests
         tc.Items.Add(new TabItem { Header = "Scene", Icon = "x", IconTemplate = ownTemplate });
 
         Assert.That(RowsOf(tc)[0].IconTemplate, Is.SameAs(ownTemplate));
+    }
+
+    /// <summary>The same in a window, where the strip hands every tab its template: a tab's own stays.</summary>
+    [Test]
+    public void ATabsOwnIconTemplate_WinsOverTheStrips_InAWindow()
+    {
+        var stripTemplate = new DataTemplate(() => new TemplateResult { RootComponent = new Border() });
+        var ownTemplate = new DataTemplate(() => new TemplateResult { RootComponent = new Border() });
+        var own = new TabItem { Header = "Scene", Icon = "x", IconTemplate = ownTemplate };
+        var plain = new TabItem { Header = "Game", Icon = "y" };
+        var tc = new TabControl { IconTemplate = stripTemplate };
+        tc.Items.Add(own);
+        tc.Items.Add(plain);
+        tc.ItemsPanel = new ItemsPanelTemplate(() => new TemplateResult { RootComponent = new TabPanel() });
+        tc.Template = new ControlTemplate(() =>
+        {
+            var presenter = new ItemsPresenter();
+            var result = new TemplateResult { RootComponent = presenter };
+            result.RegisterName("PART_ItemsPresenter", presenter);
+            return result;
+        });
+        var window = new Window { Width = 400, Height = 300, Content = tc };
+        for (var i = 0; i < 3; i++) Adamantium.UI.Extensions.WindowExtension.UpdateTree(window);
+
+        Assert.That((own.IconTemplate, plain.IconTemplate), Is.EqualTo((ownTemplate, stripTemplate)));
+    }
+
+    private sealed record Page(string Name, string Icon);
+
+    /// <summary>A bound item's icon by IconMemberPath: on the row of a tab not made yet as well, which no binding on a
+    /// tab can reach.</summary>
+    [Test]
+    public void ARowForATabNotMadeYet_HasTheIconItsItemNames()
+    {
+        var tc = new TabControl { IconMemberPath = nameof(Page.Icon) };
+        tc.ItemsSource = new[] { new Page("Scene", "SceneIcon"), new Page("Game", "GameIcon") };
+
+        Assert.That(RowsOf(tc).Select(row => row.Icon).ToArray(), Is.EqualTo(new object[] { "SceneIcon", "GameIcon" }));
     }
 
     /// <summary>The row's close button goes through the tab's own close path, so everything that governs closing a tab -
