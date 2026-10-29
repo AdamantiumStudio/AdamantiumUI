@@ -9,7 +9,7 @@ using Adamantium.UI.Core.Resources;
 namespace Adamantium.UI.Platforms.Linux;
 
 /// <summary>The desktop's own settings through the Settings portal: its light or dark appearance, followed as it
-/// changes, and its interface font.</summary>
+/// changes, and its interface and monospace fonts.</summary>
 internal sealed class DesktopPortalSettings : IDisposable
 {
     private const string Portal = "org.freedesktop.portal.Desktop";
@@ -19,6 +19,7 @@ internal sealed class DesktopPortalSettings : IDisposable
     private const string ColorScheme = "color-scheme";
     private const string GnomeInterface = "org.gnome.desktop.interface";
     private const string FontName = "font-name";
+    private const string MonospaceFontName = "monospace-font-name";
 
     private static readonly string[] StyleWords =
     [
@@ -31,11 +32,12 @@ internal sealed class DesktopPortalSettings : IDisposable
     private readonly DBusConnection bus;
     private readonly IDisposable changes;
 
-    private DesktopPortalSettings(DBusConnection bus, bool? prefersDark, string fontFamily)
+    private DesktopPortalSettings(DBusConnection bus, bool? prefersDark, string fontFamily, string monospaceFontFamily)
     {
         this.bus = bus;
         PrefersDark = prefersDark;
         FontFamily = fontFamily;
+        MonospaceFontFamily = monospaceFontFamily;
         changes = bus.Subscribe(Portal, PortalPath, Settings, "SettingChanged", OnSettingChanged);
     }
 
@@ -44,6 +46,9 @@ internal sealed class DesktopPortalSettings : IDisposable
 
     /// <summary>The family of the desktop's interface font when opened; null where it does not say.</summary>
     public string FontFamily { get; }
+
+    /// <summary>The family of the desktop's monospace font when opened; null where it does not say.</summary>
+    public string MonospaceFontFamily { get; }
 
     /// <summary>Connects to the portal, reads its settings and follows them as they change; null where there is no
     /// session bus or no portal.</summary>
@@ -55,7 +60,10 @@ internal sealed class DesktopPortalSettings : IDisposable
             bus = DBusConnection.ConnectSession();
             var prefersDark = Read(bus, Appearance, ColorScheme) is uint scheme ? scheme == 1 : (bool?)null;
             var fontFamily = Read(bus, GnomeInterface, FontName) is string font ? FamilyOf(font) : null;
-            return new DesktopPortalSettings(bus, prefersDark, fontFamily);
+            var monospaceFontFamily = Read(bus, GnomeInterface, MonospaceFontName) is string monospace
+                ? FamilyOf(monospace)
+                : null;
+            return new DesktopPortalSettings(bus, prefersDark, fontFamily, monospaceFontFamily);
         }
         catch (Exception e) when (e is DBusException or SocketException or IOException or InvalidCastException
                                       or OperationCanceledException)

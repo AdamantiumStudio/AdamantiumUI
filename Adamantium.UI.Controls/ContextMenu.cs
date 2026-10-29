@@ -110,7 +110,8 @@ public class ContextMenu : ItemsControl
     /// its rows fit the moment - which apply, and what they offer for the point it opens at.</summary>
     public event EventHandler<ContextMenuOpeningEventArgs> Opening;
 
-    /// <summary>Opens the menu positioned against <paramref name="target"/>.</summary>
+    /// <summary>Opens the menu positioned against <paramref name="target"/>. A menu that turns out to have no rows shuts
+    /// again before it is drawn: an empty card offers nothing.</summary>
     public void Open(UIComponent target)
     {
         Opening?.Invoke(this, new ContextMenuOpeningEventArgs(target, null));
@@ -254,12 +255,24 @@ public class ContextMenu : ItemsControl
             // be templated yet, so the value read once in OnApplyTemplate would be the stale default.
             menu._popup.IgnoreTargetPress = menu.IgnoreTargetPress;
             menu._popup.IsOpen = (bool)e.NewValue;
+            menu._popup.LayerPass -= menu.OnOpenedPass;
+            if ((bool)e.NewValue) menu._popup.LayerPass += menu.OnOpenedPass;
         }
         if ((bool)e.NewValue)
         {
             if (menu._scroll != null) menu._scroll.MaxHeight = Popup.WindowHeightCap(Popup.FindPopupHost(menu));
         }
         else menu.CloseAllSubmenus();
+    }
+
+    // Whether there is anything to offer is asked in the first pass after opening, not when asked to open: the frame's
+    // bindings are applied before the pass, and the choice the menu is about - a row picked by the right button's press
+    // - is often made in the same frame as the release that opens it. Asked earlier, the menu would go by what the
+    // previous choice offered. Shut here, the empty card is never drawn.
+    private void OnOpenedPass(object sender, EventArgs e)
+    {
+        ((Popup)sender).LayerPass -= OnOpenedPass;
+        if (Items.Count == 0) IsOpen = false;
     }
 
     // Closing the menu must close every open submenu flyout too (they are independent overlay popups). Close each top-level

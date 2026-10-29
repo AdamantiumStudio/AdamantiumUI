@@ -42,7 +42,7 @@ public static class LinuxPlatform
             SystemAppearance.ReadInBackground(() =>
             {
                 _desktopSettings = DesktopPortalSettings.Open();
-                return (_desktopSettings?.PrefersDark, _desktopSettings?.FontFamily);
+                return (_desktopSettings?.PrefersDark, _desktopSettings?.FontFamily, _desktopSettings?.MonospaceFontFamily);
             });
         }
         FileDialog.Platform = new PortalFileDialog(owner =>

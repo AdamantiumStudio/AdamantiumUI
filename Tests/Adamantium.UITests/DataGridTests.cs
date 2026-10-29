@@ -276,6 +276,40 @@ public class DataGridTests
         Assert.That(bands, Is.All.EqualTo(0), "zero turns striping off rather than leaving the last pattern");
     }
 
+    // A record added or removed in the source moves every row below it, and the containers already on screen move with
+    // them without being bound again: each must take the stripe and number of the place it moved to.
+    [Test]
+    public void ARecordAddedOrRemovedInTheSource_RestripesAndRenumbersTheRowsBelowIt()
+    {
+        var grid = Grid(new DataGridTextColumn { Binding = new Binding("Name"), Width = new GridLength(100) });
+        grid.AlternationCount = 2;
+        var records = new ObservableCollection<Row>(Flat(4));
+        grid.ItemsSource = records;
+        Relayout(grid);
+
+        records.Insert(0, new Row { Name = "Item 0" });
+        Relayout(grid);
+        Assert.Multiple(() =>
+        {
+            Assert.That(Enumerable.Range(0, 5).Select(i => Container(grid, i)?.AlternationIndex),
+                Is.EqualTo(new int?[] { 0, 1, 0, 1, 0 }));
+            Assert.That(Enumerable.Range(0, 5).Select(i => Container(grid, i)?.Number), Is.EqualTo(new int?[] { 1, 2, 3, 4, 5 }));
+        });
+
+        records.RemoveAt(0);
+        records.RemoveAt(0);
+        Relayout(grid);
+        Assert.Multiple(() =>
+        {
+            Assert.That(Enumerable.Range(0, 3).Select(i => Container(grid, i)?.AlternationIndex),
+                Is.EqualTo(new int?[] { 0, 1, 0 }));
+            Assert.That(Enumerable.Range(0, 3).Select(i => Container(grid, i)?.Number), Is.EqualTo(new int?[] { 1, 2, 3 }));
+        });
+    }
+
+    private static DataGridRow Container(TreeDataGrid grid, int index) =>
+        grid.ItemContainerGenerator.ContainerFromIndex(index) as DataGridRow;
+
     // ---- The expander, and the fact that it can live in ANY column ----------------------------------------------
 
     private static (TreeDataGrid grid, Row root) Tree(params DataGridColumn[] columns)
@@ -4032,6 +4066,28 @@ public class DataGridTests
             Assert.That(grid.RowExtentExceptions[0].Index, Is.EqualTo(2), "at the panel's place in the flat list");
             Assert.That(grid.RowExtentExceptions[0].Extra, Is.EqualTo(96), "and by what it stands taller than a row");
         });
+    }
+
+    // A record added or removed in the source moves the rows below it, the panel's among them: the stack is told the
+    // panel's new place, or the rows past it are drawn at the pitch of the place it left.
+    [Test]
+    public void APanel_MovedByARecordAddedOrRemovedAboveIt_IsNamedAtItsNewPlace()
+    {
+        var grid = Grid(
+            new DataGridTextColumn { Binding = new Binding("Name"), Width = new GridLength(100) },
+            new DataGridTextColumn { Binding = new Binding("Note"), Width = new GridLength(100) });
+        var records = new ObservableCollection<Row>(Flat(4));
+        grid.ItemsSource = records;
+        grid.RowDetailsTemplate = ADetailsPanel();
+        grid.ToggleRowDetails(records[1]);
+        Assert.That(grid.RowExtentExceptions[0].Index, Is.EqualTo(2));
+
+        records.Insert(0, new Row { Name = "Item 0" });
+        Assert.That(grid.RowExtentExceptions.Single().Index, Is.EqualTo(3), "one record more above it");
+
+        records.RemoveAt(0);
+        records.RemoveAt(0);
+        Assert.That(grid.RowExtentExceptions.Single().Index, Is.EqualTo(1), "one record fewer above it than at first");
     }
 
     // The group whose caption says this - what a test that is about a group's CONTENT should ask for. Its place among

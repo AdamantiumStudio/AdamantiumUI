@@ -791,6 +791,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
 
         cancellationTokenSource = new CancellationTokenSource();
         _ = Task.Run(() => Theme.SystemDefaultFontFamily);
+        _ = Task.Run(() => Theme.SystemMonospaceFontFamily);
         _ = Task.Run(Core.TypeParsers.SelectorParser.IndexLoadedAssemblies);
         _ = Task.Run(() => System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(FX.UIBasicEffect).TypeHandle));
         Threading.Dispatcher.Initialize(UIContext);

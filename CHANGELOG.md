@@ -7,6 +7,11 @@ All packages share one version.
 
 ### Added
 
+- `Theme.SystemMonospaceFontFamily`, the system's font for code: on Windows Cascadia Mono, else Consolas; on Apple's
+  systems SF Mono, else Menlo; on Linux the desktop's own monospace font (`SystemAppearance.MonospaceFontFamily`, read
+  through the Settings portal), else the first of the usual distributions' ones installed. `ADAM_CODE_FONT` names
+  another, as `ADAM_UI_FONT` does for the interface. Every theme gives it as `CodeFontFamily`, for styles to take with
+  `{ThemeResource CodeFontFamily}`.
 - `Trash.MoveToTrash`: a file or folder goes to the desktop's trash, where the user can take it back from - on Linux
   the freedesktop.org trash, the home one or the one of the file system it lies on; on Windows the Recycle Bin; on
   macOS the Trash, through the Finder. `Trash.IsAvailable` says whether there is one. What cannot go to the trash is
@@ -2268,6 +2273,15 @@ All packages share one version.
 
 ### Fixed
 
+- `TreeView`: the right button picks the row it presses before its menu opens, so the menu is about that row - it was
+  about the rows chosen before, or none. A row among several chosen keeps them all, as a finger's hold already did.
+- `ContextMenu`: a menu with no rows stays shut instead of showing an empty card. Whether it has any is judged in its
+  first pass, once the frame's bindings have brought the rows of what it was opened on.
+- `TreeView`: a node added to a branch already open, itself open in its view model, came closed - its arrow open and
+  nothing under it until it was folded and opened again. An added node comes as a rebuilt one does: its open branches
+  with their rows, followed, and its details row.
+- `TreeDataGrid`: a record added or removed in the source above an open details panel left the panel's height at its
+  old place, so the rows past it were drawn where they no longer stood.
 - On Wayland, a window minimized by its caption button stayed on screen until the pointer moved: the request waited in
   the connection's buffer for the next frame, and a minimized window draws none. Minimizing, maximizing and restoring
   are sent to the compositor at once.

@@ -226,6 +226,15 @@ public class TreeViewItem : ItemsControl, IHeaderedItemsControl, ISpringLoadable
     protected override void OnPointerPressed(PointerPressedEventArgs e)
     {
         base.OnPointerPressed(e);
+
+        // The right button picks the node before its release opens the menu, so the menu is about the node pressed -
+        // as a finger's hold does. A node already among those chosen keeps the choice, so a menu can act on them all.
+        if (e.ChangedButton == MouseButtons.Right && IsPointerOverHeader)
+        {
+            FindOwnerTreeView()?.ChooseForMenu(this);
+            return;
+        }
+
         if (e.ChangedButton != MouseButtons.Left || !IsPointerOverHeader)
         {
             return;
