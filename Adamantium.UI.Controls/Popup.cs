@@ -595,7 +595,7 @@ public class Popup : MeasurableUIComponent, IContainer
 
         // A form in it with a Cancel button: Escape is that button, as in a window - a ribbon's backstage steps back from
         // its form to its page instead of closing with what was typed. The next Escape closes it.
-        if (_contentRoot != null && ButtonIn(_contentRoot, b => b.IsCancel) is { } cancel)
+        if (_contentRoot != null && Button.AnsweringKey(_contentRoot, e.Key, e.Modifiers, e.IsRepeated) is { } cancel)
         {
             cancel.PerformClick();
             e.Handled = true;
@@ -665,49 +665,13 @@ public class Popup : MeasurableUIComponent, IContainer
     // closes on it is taken on the window's preview stream first (OnGlobalPreviewKey), which asks the same.
     private void OnContentKey(object sender, KeyEventArgs e)
     {
-        const InputModifiers chords = InputModifiers.LeftControl | InputModifiers.RightControl | InputModifiers.LeftShift |
-                                      InputModifiers.RightShift | InputModifiers.LeftAlt | InputModifiers.RightAlt;
-        if (e.Handled || e.IsRepeated || (e.Modifiers & chords) != 0 || _contentRoot == null)
-        {
-            return;
-        }
-
-        var button = e.Key switch
-        {
-            Key.Enter => ButtonIn(_contentRoot, b => b.IsDefault),
-            Key.Escape => ButtonIn(_contentRoot, b => b.IsCancel),
-            _ => null
-        };
-        if (button == null)
+        if (e.Handled || _contentRoot == null || Button.AnsweringKey(_contentRoot, e.Key, e.Modifiers, e.IsRepeated) is not { } button)
         {
             return;
         }
 
         button.PerformClick();
         e.Handled = true;
-    }
-
-    private static Button ButtonIn(IUIComponent root, Func<Button, bool> match)
-    {
-        if (root.Visibility != Visibility.Visible || !root.IsEnabled)
-        {
-            return null;
-        }
-
-        if (root is Button button && match(button))
-        {
-            return button;
-        }
-
-        foreach (var child in root.VisualChildren)
-        {
-            if (ButtonIn(child, match) is { } found)
-            {
-                return found;
-            }
-        }
-
-        return null;
     }
 
     private static bool IsWithin(IUIComponent node, IUIComponent ancestor)

@@ -26,6 +26,7 @@ public sealed class OverlayWindowManager
     private OverlayWindow _active;   // the front-most / last-interacted window (drives IsActive + the Escape target)
     private bool _hostHooked;
     private PointerPressedEventHandler _previewDown;
+    private KeyEventHandler _previewKey;
 
     private OverlayWindowManager(IPopupHost host) => _host = host;
 
@@ -202,6 +203,8 @@ public sealed class OverlayWindowManager
     {
         if (_hostHooked || _host is not InputUIComponent input) return;
         input.KeyDown += OnHostKeyDown;
+        _previewKey ??= OnHostPreviewKey;
+        input.AddHandler(Keyboard.PreviewKeyDownEvent, _previewKey);
         // Preview tunnels from the window root, so this catches EVERY press - even one a content control handles - letting a
         // click on the window behind deactivate the overlays (like clicking away from an OS window). See OnHostPreviewDown.
         _previewDown ??= OnHostPreviewDown;
@@ -213,6 +216,7 @@ public sealed class OverlayWindowManager
     {
         if (!_hostHooked || _host is not InputUIComponent input) return;
         input.KeyDown -= OnHostKeyDown;
+        if (_previewKey != null) input.RemoveHandler(Keyboard.PreviewKeyDownEvent, _previewKey);
         if (_previewDown != null) input.RemoveHandler(PointerEvents.PreviewPointerPressedEvent, _previewDown);
         _hostHooked = false;
     }
@@ -226,6 +230,28 @@ public sealed class OverlayWindowManager
             e.Handled = true;
             active.Close();
         }
+    }
+
+    // The window's own key route holds only its content - an overlay's card is a tree of its own - so a key heard here
+    // while a modal window is up was pressed with the keyboard left behind it: nothing in the card took it, or code put
+    // it there. The content behind is as shut to keys as the scrim shuts it to the pointer: the keyboard goes back to
+    // the front window, which answers the key.
+    private void OnHostPreviewKey(object sender, KeyEventArgs e)
+    {
+        if (!_windows.Exists(w => w.IsModal))
+        {
+            return;
+        }
+
+        var front = _windows[^1];
+        front.TakeKeyboardBack();
+        front.AnswerKey(e);
+        if (!e.Handled)
+        {
+            OnHostKeyDown(sender, e);
+        }
+
+        e.Handled = true;
     }
 
     // A press inside any overlay (its card - or its modal scrim, which must not deactivate the modal) keeps it active; the

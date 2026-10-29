@@ -104,15 +104,7 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
     {
         base.OnKeyDown(e);
         if (e.Handled) return;
-        const InputModifiers chords = InputModifiers.LeftControl | InputModifiers.RightControl | InputModifiers.LeftShift |
-                                      InputModifiers.RightShift | InputModifiers.LeftAlt | InputModifiers.RightAlt;
-        var plain = !e.IsRepeated && (e.Modifiers & chords) == 0;
-        var target = e.Key switch
-        {
-            Key.Enter when plain => FindButton(this, b => b.IsDefault),
-            Key.Escape => FindButton(this, b => b.IsCancel),
-            _ => null
-        };
+        var target = Button.AnsweringKey(this, e.Key, e.Modifiers, e.IsRepeated);
         if (target != null)
         {
             target.PerformClick();
@@ -161,18 +153,6 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
             if (ScrollFirstScrollable(child, scroll)) return true;
         }
         return false;
-    }
-
-    private static Button FindButton(IUIComponent root, Func<Button, bool> match)
-    {
-        foreach (var child in root.VisualChildren)
-        {
-            if (child.Visibility != Visibility.Visible || !child.IsEnabled) continue;
-            if (child is Button button && match(button)) return button;
-            var found = FindButton(child, match);
-            if (found != null) return found;
-        }
-        return null;
     }
 
     public static readonly RoutedEvent ClientSizeChangedEvent = EventManager.RegisterRoutedEvent("ClientSizeChanged",

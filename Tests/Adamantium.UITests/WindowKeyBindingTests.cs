@@ -1,3 +1,5 @@
+using System;
+using Adamantium.Mathematics;
 using Adamantium.MVVM;
 using Adamantium.UI.Controls;
 using Adamantium.UI.Controls.Buttons;
@@ -239,6 +241,95 @@ public class WindowKeyBindingTests
         public int Cancelled { get; private set; }
 
         public AdamantiumCommand Cancel => new(() => Cancelled++);
+    }
+
+    // An overlay window answers Enter with its default button, as a window does - its card is a tree of its own, which
+    // the window's handling of the key never sees. The content behind it hears nothing of the key.
+    [Test]
+    public void EnterInAModalOverlayWindow_PressesItsDefaultButton()
+    {
+        var (window, _, side) = Layout();
+        var behind = 0;
+        side.InputBindings.Add(new KeyBinding(new AdamantiumCommand(() => behind++), KeyGesture.Parse("Enter")));
+        var (dialog, field) = Dialog(window, out var made, out _);
+
+        FromTheKeyboard(field, Key.Enter);
+
+        Assert.That((made(), behind, dialog.IsOpen), Is.EqualTo((1, 0, true)));
+    }
+
+    // The keyboard left in the content under a modal window - nothing in the card took it, or code put it there - is
+    // still shut out of that content, as the scrim shuts the pointer out: the key is the modal's, and the keyboard goes
+    // back into it.
+    [Test]
+    public void AKeyPressedWithTheFocusBehindAModalWindow_IsTheModals()
+    {
+        var (window, behindField, side) = Layout();
+        var behind = 0;
+        side.InputBindings.Add(new KeyBinding(new AdamantiumCommand(() => behind++), KeyGesture.Parse("Enter")));
+        side.InputBindings.Add(new KeyBinding(new AdamantiumCommand(() => behind++), KeyGesture.Parse("F6")));
+        var (_, field) = Dialog(window, out var made, out _);
+        FocusManager.Focus(behindField);
+
+        FromTheKeyboard(behindField, Key.F6);
+        var focus = FocusManager.Focused;
+        FromTheKeyboard(behindField, Key.Enter);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(behind, Is.Zero, "the content under the modal runs none of its bindings");
+            Assert.That(focus, Is.SameAs(field), "the keyboard is back in the modal");
+            Assert.That(made(), Is.EqualTo(1), "Enter is the modal's default button's");
+        });
+    }
+
+    // A window that may not close by Escape does not close by its Cancel button pressed by Escape either.
+    [Test]
+    public void EscapeInAnOverlayWindowThatKeepsOpenOnIt_PressesNoCancelButton()
+    {
+        var (window, _, _) = Layout();
+        var (dialog, field) = Dialog(window, out _, out var cancelled);
+        dialog.CloseByEscape = false;
+
+        FromTheKeyboard(field, Key.Escape);
+
+        Assert.That((cancelled(), dialog.IsOpen), Is.EqualTo((0, true)));
+    }
+
+    private static (OverlayWindow Dialog, TextBox Field) Dialog(Window window, out Func<int> made, out Func<int> cancelled)
+    {
+        var field = new TextBox();
+        var makes = 0;
+        var cancels = 0;
+        var dialog = new OverlayWindow
+        {
+            IsModal = true,
+            Content = new StackPanel
+            {
+                Children =
+                {
+                    field,
+                    new Button { IsDefault = true, Command = new AdamantiumCommand(() => makes++) },
+                    new Button { IsCancel = true, Command = new AdamantiumCommand(() => cancels++) }
+                }
+            }
+        };
+        window.ShowOverlayWindow(dialog);
+        Settle(window);
+        window.PopupLayer.UpdateLayout(new Size<double>(400, 300));
+        Settle(window);
+        made = () => makes;
+        cancelled = () => cancels;
+        return (dialog, field);
+    }
+
+    // As the keyboard raises a key: the preview down from the window, then the key up from where it was pressed.
+    private static void FromTheKeyboard(IInputComponent at, Key key)
+    {
+        var args = new KeyEventArgs(KeyboardDevice.CurrentDevice, key, InputModifiers.None, 0) { RoutedEvent = Keyboard.PreviewKeyDownEvent };
+        at.RaiseEvent(args);
+        args.RoutedEvent = Keyboard.KeyDownEvent;
+        at.RaiseEvent(args);
     }
 
     private static (Window Window, Button Field, StackPanel Side) Layout()

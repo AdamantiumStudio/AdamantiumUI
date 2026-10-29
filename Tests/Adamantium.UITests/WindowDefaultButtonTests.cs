@@ -75,4 +75,23 @@ public class WindowDefaultButtonTests
 
         Assert.That(clicks, Is.Zero);
     }
+
+    // Escape is the cancel button's as Enter is the default one's: pressed alone, not with a chord.
+    [Test]
+    public void AChordedEscape_PressesNoCancelButton()
+    {
+        var (box, _, _, _, window) = Form();
+        var cancel = new Button { Content = "Cancel", IsCancel = true };
+        ((StackPanel)window.Content).Children.Add(cancel);
+        WindowExtension.UpdateTree(window);
+        var clicks = 0;
+        cancel.Click += (_, _) => clicks++;
+
+        box.RaiseEvent(Press(Key.Escape, box, InputModifiers.LeftShift));
+        box.RaiseEvent(Press(Key.Escape, box, InputModifiers.LeftControl));
+        var chorded = clicks;
+        box.RaiseEvent(Press(Key.Escape, box));
+
+        Assert.That((chorded, clicks), Is.EqualTo((0, 1)));
+    }
 }

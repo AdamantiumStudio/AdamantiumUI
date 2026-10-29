@@ -591,5 +591,32 @@ public class OverlayWindow : ContentControl
         }
     }
 
+    /// <remarks>Its host popup sits in the popup layer by itself, without the hook a popup's content gets, so the
+    /// window answers Enter and Escape itself.</remarks>
+    protected override void OnKeyDown(KeyEventArgs e)
+    {
+        base.OnKeyDown(e);
+        if (!e.Handled)
+        {
+            AnswerKey(e);
+        }
+    }
+
+    /// <summary>Enter and Escape press its default and cancel buttons, as in a top-level window; Escape only while it
+    /// may close by it (<see cref="CloseByEscape"/>, <see cref="CanClose"/>).</summary>
+    internal void AnswerKey(KeyEventArgs e)
+    {
+        if (e.Key == Key.Escape && !(CloseByEscape && CanClose))
+        {
+            return;
+        }
+
+        if (Button.AnsweringKey(this, e.Key, e.Modifiers, e.IsRepeated) is { } button)
+        {
+            button.PerformClick();
+            e.Handled = true;
+        }
+    }
+
     protected override AutomationPeer OnCreateAutomationPeer() => new OverlayWindowAutomationPeer(this);
 }

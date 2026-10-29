@@ -2282,6 +2282,13 @@ All packages share one version.
   with their rows, followed, and its details row.
 - `TreeDataGrid`: a record added or removed in the source above an open details panel left the panel's height at its
   old place, so the rows past it were drawn where they no longer stood.
+- `OverlayWindow`: Enter and Escape press its default and cancel buttons (`IsDefault`, `IsCancel`), as in a `Window` -
+  a dialog shown over the window was answered only by its buttons; Escape does so only while the window may close by
+  it (`CloseByEscape`, `CanClose`). A key pressed with the keyboard left in the content under a modal one - nothing in
+  the card took it, or code put it there - ran that content's bindings and buttons; it is the modal's now, and the
+  keyboard goes back into it.
+- The default and cancel buttons of a window, an overlay window and a popup answer the same keys: Enter or Escape
+  pressed alone and not held down - a window's cancel button took a chorded Escape and every repeat of one.
 - On Wayland, a window minimized by its caption button stayed on screen until the pointer moved: the request waited in
   the connection's buffer for the next frame, and a minimized window draws none. Minimizing, maximizing and restoring
   are sent to the compositor at once.
