@@ -1768,6 +1768,9 @@ All packages share one version.
 
 ### Changed
 
+- The noise and the grain of the brushes and materials come from a noise and a hash of the UI's own: simplex noise with
+  eight gradient directions, scaled to reach -1 and 1, a little livelier than before; every pattern built on noise
+  draws a different picture of the same kind.
 - The UI works on the engine's generic mathematics: a point or a size in the API is `Vector2<double>` or
   `Size<double>`, a matrix `Matrix4x4<float>`..., and each project of the UI declares the float names (`Vector2F`,
   `Matrix4x4F`, `RectangleF`...) as aliases of its own. Curves are sampled at their parameter's exact steps, not rounded
