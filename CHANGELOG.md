@@ -2361,7 +2361,7 @@ All packages share one version.
 - A grid of labelled boxes in a ribbon's group showed to automation as a stand-in button that could do nothing, the
   boxes in it out of reach. They are the group's children now (`ItemsControlAutomationPeer.ShowsWhatPanelsHold`).
 - A picture larger than the device's textures - past its maxImageDimension2D - went to the GPU as it was. It goes up
-  shrunk to fit (`ImageShrink`), each texel the average of the pixels it covers, once for every device of that
+  shrunk to fit (`ImageDownscaler`), each texel the average of the pixels it covers, once for every device of that
   limit; the picture keeps its own pixels and size, so it is laid out, sliced, tiled, copied and saved as before. An
   animation's frames larger or more than the device's texture arrays hold play from single textures, shrunk the same
   way. An animation whose texture array fails to be made no longer keeps its palette texture. A picture the device
