@@ -1,15 +1,15 @@
 using System;
-using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 
 namespace Adamantium.UI;
 
-/// <summary>One of the places a limited number of copies of an application run in: a named mutex of the user's, held by
-/// a thread of its own for as long as the copy runs. A copy that ends - closed or crashed - leaves its mutex abandoned,
-/// and the next copy takes it, so no place is lost.</summary>
-internal sealed class InstanceSlot : IDisposable
+/// <summary>One of a few places the user's processes take by name - a copy of an application among those allowed to
+/// run (<see cref="UIApplication.MaxInstances"/>), the editor holding a solution: a named mutex of the user's, in every
+/// session of theirs, held by a thread of its own until it is given up. A process that ends - closed or crashed - leaves
+/// its mutex abandoned, and the next one takes it, so no place is lost.</summary>
+public sealed class InstanceSlot : IDisposable
 {
     private readonly ManualResetEventSlim _released = new();
     private Thread _holder;
@@ -19,16 +19,18 @@ internal sealed class InstanceSlot : IDisposable
     {
     }
 
-    /// <summary>Takes a free place of <paramref name="count"/> for the application whose data is in
-    /// <paramref name="dataFolder"/>; null when every one is taken.</summary>
-    public static InstanceSlot TryTake(string dataFolder, int count)
+    /// <summary>Takes a free place of the <paramref name="count"/> named <paramref name="name"/>; null when every one
+    /// is taken - by another process, or by this one.</summary>
+    public static InstanceSlot TryTake(string name, int count = 1)
     {
+        ArgumentNullException.ThrowIfNull(name);
+        ArgumentOutOfRangeException.ThrowIfLessThan(count, 1);
         var slot = new InstanceSlot();
         using var settled = new ManualResetEventSlim();
         var taken = false;
         var holder = new Thread(() =>
         {
-            using var mutex = TakeFree(dataFolder, count);
+            using var mutex = TakeFree(name, count);
             taken = mutex != null;
             settled.Set();
             if (mutex == null)
@@ -49,7 +51,15 @@ internal sealed class InstanceSlot : IDisposable
         return taken ? slot : null;
     }
 
-    /// <summary>Gives the place up, done by the time it returns: the next copy finds it free.</summary>
+    /// <summary>Whether the one place named <paramref name="name"/> is taken - by another process, or by this one.
+    /// </summary>
+    public static bool IsTaken(string name)
+    {
+        using var slot = TryTake(name);
+        return slot == null;
+    }
+
+    /// <summary>Gives the place up, done by the time it returns: the next process finds it free.</summary>
     public void Dispose()
     {
         if (_disposed)
@@ -62,18 +72,18 @@ internal sealed class InstanceSlot : IDisposable
         _holder.Join();
     }
 
-    /// <summary>The name of the mutex of the place <paramref name="index"/> of the application whose data is in
-    /// <paramref name="dataFolder"/>.</summary>
-    internal static string CreateName(string dataFolder, int index) => $"adamantium-{CreateKey(dataFolder)}-{index}";
+    /// <summary>The name of the mutex of place <paramref name="index"/> of those named <paramref name="name"/>.</summary>
+    internal static string CreateName(string name, int index) =>
+        $"adamantium-{Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(name)), 0, 12).ToLowerInvariant()}-{index}";
 
     /// <summary>The mutexes are the user's, in every session of theirs.</summary>
     internal static NamedWaitHandleOptions Options => new() { CurrentUserOnly = true, CurrentSessionOnly = false };
 
-    private static Mutex TakeFree(string dataFolder, int count)
+    private static Mutex TakeFree(string name, int count)
     {
         for (var index = 0; index < count; index++)
         {
-            var mutex = new Mutex(false, CreateName(dataFolder, index), Options, out _);
+            var mutex = new Mutex(false, CreateName(name, index), Options, out _);
             try
             {
                 if (mutex.WaitOne(0))
@@ -90,16 +100,5 @@ internal sealed class InstanceSlot : IDisposable
         }
 
         return null;
-    }
-
-    private static string CreateKey(string dataFolder)
-    {
-        var folder = Path.GetFullPath(dataFolder);
-        if (!OperatingSystem.IsLinux())
-        {
-            folder = folder.ToUpperInvariant();
-        }
-
-        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(folder)), 0, 12).ToLowerInvariant();
     }
 }
