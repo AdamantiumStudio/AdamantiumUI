@@ -43,6 +43,12 @@ public interface IWindowWorkerService
     /// window and to focus an already-open single-instance window on a repeat request.</summary>
     public void Activate();
 
+    /// <summary>A right to bring a window to the foreground that this process hands to another, vouched for by the
+    /// user's last input here (<see cref="IUIApplication.CreateActivationTokenAsync"/>); null when the platform has none
+    /// to give.</summary>
+    public System.Threading.Tasks.Task<string> CreateActivationTokenAsync() =>
+        System.Threading.Tasks.Task.FromResult<string>(null);
+
     /// <summary>Raises the window without activating it, so a drag's mouse capture survives.</summary>
     public void RaiseWithoutActivation();
 

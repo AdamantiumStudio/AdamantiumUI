@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Threading.Tasks;
 using Adamantium.Mathematics;
 using Adamantium.UI.Controls.Internals;
 using Adamantium.UI.Core;
@@ -616,15 +617,43 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
             return;
         }
 
-        var launchToken = Environment.GetEnvironmentVariable("XDG_ACTIVATION_TOKEN");
-        if (!string.IsNullOrEmpty(launchToken))
+        var given = UIContext.UIApplication.TakeActivationToken();
+        if (!string.IsNullOrEmpty(given))
         {
-            Environment.SetEnvironmentVariable("XDG_ACTIVATION_TOKEN", null);
-            platform.Activation.Activate(launchToken, surface);
+            platform.Activation.Activate(given, surface);
             platform.Display.Flush();
             return;
         }
 
+        RequestToken(value =>
+        {
+            if (!closed)
+            {
+                platform.Activation.Activate(value, surface);
+            }
+
+            platform.Display.Flush();
+        });
+    }
+
+    public Task<string> CreateActivationTokenAsync()
+    {
+        var created = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+        platform.Invoke(() =>
+        {
+            if (platform.Activation == null || !platform.IsApplication)
+            {
+                created.TrySetResult(null);
+                return;
+            }
+
+            RequestToken(value => created.TrySetResult(value));
+        });
+        return created.Task;
+    }
+
+    private void RequestToken(Action<string> done)
+    {
         var seat = platform.Seat;
         var token = platform.Activation.GetActivationToken();
         if (seat != null && seat.LastInputSerial != 0)
@@ -644,12 +673,7 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
         token.Done += value =>
         {
             token.Destroy();
-            if (!closed)
-            {
-                platform.Activation.Activate(value, surface);
-            }
-
-            platform.Display.Flush();
+            done(value);
         };
         token.Commit();
         platform.Display.Flush();

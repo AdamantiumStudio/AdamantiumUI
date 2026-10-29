@@ -1433,6 +1433,12 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
     /// <summary>Bring this window to the foreground (restoring it if minimized). Platform-specific via the window worker.</summary>
     public void Activate() => WindowWorkerService?.Activate();
 
+    /// <summary>A right to bring a window to the foreground that this process hands to another, vouched for by the user's
+    /// last input in this window's application (<see cref="IUIApplication.CreateActivationTokenAsync"/>); null when the
+    /// platform has none to give.</summary>
+    public System.Threading.Tasks.Task<string> CreateActivationTokenAsync() =>
+        WindowWorkerService?.CreateActivationTokenAsync() ?? System.Threading.Tasks.Task.FromResult<string>(null);
+
     /// <summary>Raise this window above the others WITHOUT taking focus - the mid-drag-safe counterpart of
     /// <see cref="Activate"/>, which would cost the drag its mouse capture.</summary>
     public void BringToFront() => WindowWorkerService?.RaiseWithoutActivation();
