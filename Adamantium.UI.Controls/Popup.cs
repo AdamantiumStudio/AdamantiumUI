@@ -595,10 +595,8 @@ public class Popup : MeasurableUIComponent, IContainer
 
         // A form in it with a Cancel button: Escape is that button, as in a window - a ribbon's backstage steps back from
         // its form to its page instead of closing with what was typed. The next Escape closes it.
-        if (_contentRoot != null && Button.AnsweringKey(_contentRoot, e.Key, e.Modifiers, e.IsRepeated) is { } cancel)
+        if (_contentRoot != null && Button.PressDefaultOrCancel(_contentRoot, e))
         {
-            cancel.PerformClick();
-            e.Handled = true;
             return;
         }
 
@@ -665,13 +663,10 @@ public class Popup : MeasurableUIComponent, IContainer
     // closes on it is taken on the window's preview stream first (OnGlobalPreviewKey), which asks the same.
     private void OnContentKey(object sender, KeyEventArgs e)
     {
-        if (e.Handled || _contentRoot == null || Button.AnsweringKey(_contentRoot, e.Key, e.Modifiers, e.IsRepeated) is not { } button)
+        if (_contentRoot != null)
         {
-            return;
+            Button.PressDefaultOrCancel(_contentRoot, e);
         }
-
-        button.PerformClick();
-        e.Handled = true;
     }
 
     private static bool IsWithin(IUIComponent node, IUIComponent ancestor)

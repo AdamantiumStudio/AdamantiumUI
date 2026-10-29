@@ -27,11 +27,11 @@ public class Button : ButtonBase
         set => SetValue(IsCancelProperty, value);
     }
 
-    /// <summary>The button a key nobody took answers in <paramref name="root"/>'s subtree, shown and enabled, the root
-    /// included: Enter its <see cref="IsDefault"/> one, Escape its <see cref="IsCancel"/> one, each pressed alone and not
-    /// repeated; null for any other key - what a window, an overlay window and a popup's content all do with them.
+    /// <summary>The button <paramref name="key"/> presses in <paramref name="root"/>'s subtree, shown and enabled, the
+    /// root included: Enter the <see cref="IsDefault"/> one, Escape the <see cref="IsCancel"/> one, each pressed alone and
+    /// not repeated; null for any other key - what a window, an overlay window and a popup's content all do with them.
     /// </summary>
-    internal static Button AnsweringKey(IUIComponent root, Key key, InputModifiers modifiers, bool isRepeated)
+    internal static Button FindDefaultOrCancel(IUIComponent root, Key key, InputModifiers modifiers, bool isRepeated)
     {
         const InputModifiers chords = InputModifiers.LeftControl | InputModifiers.RightControl | InputModifiers.LeftShift |
                                       InputModifiers.RightShift | InputModifiers.LeftAlt | InputModifiers.RightAlt;
@@ -46,6 +46,20 @@ public class Button : ButtonBase
             Key.Escape => FindIn(root, button => button.IsCancel),
             _ => null
         };
+    }
+
+    /// <summary>Presses the button <paramref name="e"/>'s key presses in <paramref name="root"/> (see
+    /// <see cref="FindDefaultOrCancel"/>) and marks the key handled; false when it presses none.</summary>
+    internal static bool PressDefaultOrCancel(IUIComponent root, KeyEventArgs e)
+    {
+        if (e.Handled || FindDefaultOrCancel(root, e.Key, e.Modifiers, e.IsRepeated) is not { } button)
+        {
+            return false;
+        }
+
+        button.PerformClick();
+        e.Handled = true;
+        return true;
     }
 
     private static Button FindIn(IUIComponent node, Func<Button, bool> match)

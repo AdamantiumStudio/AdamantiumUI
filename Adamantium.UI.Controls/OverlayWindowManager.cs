@@ -26,7 +26,6 @@ public sealed class OverlayWindowManager
     private OverlayWindow _active;   // the front-most / last-interacted window (drives IsActive + the Escape target)
     private bool _hostHooked;
     private PointerPressedEventHandler _previewDown;
-    private KeyEventHandler _previewKey;
 
     private OverlayWindowManager(IPopupHost host) => _host = host;
 
@@ -89,17 +88,11 @@ public sealed class OverlayWindowManager
         KeepPinnedOnTop(window);
         SetActive(window);
         EnsureHostHooks();
-        // Escape has to be heard on the WINDOW ITSELF as well as on the host. A key routes UP from the focused element,
-        // and this window's content is hosted on the overlay - detached - so once the keyboard is inside it the route
-        // never passes through the host at all, and the host's handler heard nothing. Same reason Popup hooks Escape in
-        // two places. (Both may fire for one press; Close is guarded by CanClose and the second call finds it closed.)
-        window.KeyDown += OnHostKeyDown;
 
         var tcs = new TaskCompletionSource<object>();
         void OnClosed(object sender, EventArgs e)
         {
             window.Closed -= OnClosed;
-            window.KeyDown -= OnHostKeyDown;
             _host.PopupLayer.Remove(window.HostPopup);
             (_host as IFundamentalUIComponent)?.RemoveLogicalChild(window.HostPopup);
             if (window.ScrimPopup != null) _host.PopupLayer.Remove(window.ScrimPopup);
@@ -128,7 +121,7 @@ public sealed class OverlayWindowManager
         }
         window.Closed += OnClosed;
 
-        window.NotifyShown(this);
+        window.NotifyShown(this, _host);
         return tcs.Task;
     }
 
@@ -203,8 +196,6 @@ public sealed class OverlayWindowManager
     {
         if (_hostHooked || _host is not InputUIComponent input) return;
         input.KeyDown += OnHostKeyDown;
-        _previewKey ??= OnHostPreviewKey;
-        input.AddHandler(Keyboard.PreviewKeyDownEvent, _previewKey);
         // Preview tunnels from the window root, so this catches EVERY press - even one a content control handles - letting a
         // click on the window behind deactivate the overlays (like clicking away from an OS window). See OnHostPreviewDown.
         _previewDown ??= OnHostPreviewDown;
@@ -216,7 +207,6 @@ public sealed class OverlayWindowManager
     {
         if (!_hostHooked || _host is not InputUIComponent input) return;
         input.KeyDown -= OnHostKeyDown;
-        if (_previewKey != null) input.RemoveHandler(Keyboard.PreviewKeyDownEvent, _previewKey);
         if (_previewDown != null) input.RemoveHandler(PointerEvents.PreviewPointerPressedEvent, _previewDown);
         _hostHooked = false;
     }
@@ -232,27 +222,10 @@ public sealed class OverlayWindowManager
         }
     }
 
-    // The window's own key route holds only its content - an overlay's card is a tree of its own - so a key heard here
-    // while a modal window is up was pressed with the keyboard left behind it: nothing in the card took it, or code put
-    // it there. The content behind is as shut to keys as the scrim shuts it to the pointer: the keyboard goes back to
-    // the front window, which answers the key.
-    private void OnHostPreviewKey(object sender, KeyEventArgs e)
-    {
-        if (!_windows.Exists(w => w.IsModal))
-        {
-            return;
-        }
-
-        var front = _windows[^1];
-        front.TakeKeyboardBack();
-        front.AnswerKey(e);
-        if (!e.Handled)
-        {
-            OnHostKeyDown(sender, e);
-        }
-
-        e.Handled = true;
-    }
+    /// <summary>The front-most modal window shown over <paramref name="host"/>, which holds its keyboard; null for none.
+    /// </summary>
+    internal static OverlayWindow FrontModalOver(IPopupHost host) =>
+        host != null && Managers.TryGetValue(host, out var manager) ? manager._windows.LastOrDefault(w => w.IsModal) : null;
 
     // A press inside any overlay (its card - or its modal scrim, which must not deactivate the modal) keeps it active; the
     // overlay's own handler raises it. A press anywhere else is on the window content behind, so deactivate them all.

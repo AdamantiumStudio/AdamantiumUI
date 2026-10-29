@@ -181,7 +181,7 @@ internal static class InputSimulator
     // Where a contact lands, refused if something else is there: a finger has no hover to find out with first.
     private static (IWindow Window, Vector2<double> Point) ContactAt(UIComponent element, string label, Vector2<double> local)
     {
-        if (element.RootVisual is not IWindow window)
+        if (element.RootVisual?.Window is not { } window)
         {
             throw new AutomationException($"{label} is not in a window.");
         }
@@ -223,7 +223,7 @@ internal static class InputSimulator
     public static void DragOnto(UIComponent source, string sourceLabel, Vector2<double> from, UIComponent target, string targetLabel,
         Vector2<double> at, UIComponent within)
     {
-        if (source.RootVisual is not IUIComponent root || target.RootVisual is not IWindow targetWindow)
+        if (source.RootVisual?.Window is not IUIComponent root || target.RootVisual?.Window is not { } targetWindow)
         {
             throw new AutomationException($"{sourceLabel} or {targetLabel} is not in a window.");
         }
@@ -309,7 +309,7 @@ internal static class InputSimulator
     /// included.</summary>
     public static bool Reaches(UIComponent element, Vector2<double> local, UIComponent within)
     {
-        if (element.RootVisual is not IWindow window || window is not IUIComponent root)
+        if (element.RootVisual?.Window is not { } window || window is not IUIComponent root)
         {
             return false;
         }
@@ -332,7 +332,7 @@ internal static class InputSimulator
 
     private static (IWindow Window, Vector2<double> Point) HoverAt(UIComponent element, string label, Vector2<double> local)
     {
-        if (element.RootVisual is not IWindow window)
+        if (element.RootVisual?.Window is not { } window)
         {
             throw new AutomationException($"{label} is not in a window.");
         }

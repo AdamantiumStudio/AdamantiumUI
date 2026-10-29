@@ -9,7 +9,7 @@ public static class InputMethod
     /// own coordinates. A text control calls it while it has the keyboard focus, whenever its caret moves.</summary>
     public static void SetCaretBounds(IUIComponent element, Rect bounds)
     {
-        if (element?.RootVisual is not IWindow window)
+        if (element?.RootVisual?.Window is not { } window)
         {
             return;
         }

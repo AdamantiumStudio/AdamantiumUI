@@ -18,12 +18,17 @@ public interface IRootVisualComponent : IUIComponent
 
    void AttachContextAndInitialize(IUIContext context);
 
-   /// <summary>Where this surface sits on the DESKTOP, in physical pixels. <see cref="Left"/>/<see cref="Top"/> are the
-   /// same value as bindable numbers - a window's position is authored and serialized as two numbers - so anything that
-   /// COMPUTES a position works with this, and only the property boundary is loose.</summary>
+   /// <summary>The window of the operating system this root is shown in: a window is its own; an overlay window is shown
+   /// in the window that holds it. What needs the real window - its scale, its input method - asks here.</summary>
+   IWindow Window => this as IWindow;
+
+   /// <summary>Where this root sits in what holds it: a window on the DESKTOP, in physical pixels; an overlay window in
+   /// the window it is shown in. <see cref="Left"/>/<see cref="Top"/> are the same place as bindable numbers - a
+   /// position is authored and serialized as two numbers - so anything that COMPUTES a position works with this, and
+   /// only the property boundary is loose. A point on the desktop goes through <see cref="PointToClient"/>.</summary>
    PixelPoint Position { get; set; }
 
-   /// <summary>The surface position as the OS last reported it, readable from any thread without the lag of
+   /// <summary>The position as the OS last reported it, readable from any thread without the lag of
    /// <see cref="Position"/>; used for drawing, e.g. Mica.</summary>
    PixelPoint LivePosition => Position;
 

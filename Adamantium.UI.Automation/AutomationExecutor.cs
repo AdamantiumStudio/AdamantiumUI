@@ -651,14 +651,14 @@ public sealed class AutomationExecutor
     }
 
     private IInputComponent KeyboardWindow() =>
-        (FocusManager.Focused as IUIComponent)?.RootVisual as IInputComponent
+        (FocusManager.Focused as IUIComponent)?.RootVisual?.Window as IInputComponent
         ?? _host.Windows.OfType<IInputComponent>().FirstOrDefault()
         ?? throw new AutomationException("No window is open.");
 
     private static IInputComponent Focus(AutomationPeer peer)
     {
         var element = OwnerOf(peer);
-        if (element.RootVisual is not IInputComponent window)
+        if (element.RootVisual?.Window is not IInputComponent window)
         {
             throw new AutomationException($"{Label(peer)} is not in a window.");
         }
@@ -669,9 +669,9 @@ public sealed class AutomationExecutor
             return window;
         }
 
-        if (FocusManager.Focused is IUIComponent focused && !ReferenceEquals(focused.RootVisual, window))
+        if (FocusManager.Focused is IUIComponent focused && !ReferenceEquals(focused.RootVisual?.Window, window))
         {
-            FocusManager.LeaveWindow(focused.RootVisual);
+            FocusManager.LeaveWindow(focused.RootVisual?.Window);
         }
 
         if (FocusManager.Focused == null && !FocusManager.TryRestoreFocus(window))

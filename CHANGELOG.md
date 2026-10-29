@@ -2290,11 +2290,18 @@ All packages share one version.
   with their rows, followed, and its details row.
 - `TreeDataGrid`: a record added or removed in the source above an open details panel left the panel's height at its
   old place, so the rows past it were drawn where they no longer stood.
-- `OverlayWindow`: Enter and Escape press its default and cancel buttons (`IsDefault`, `IsCancel`), as in a `Window` -
-  a dialog shown over the window was answered only by its buttons; Escape does so only while the window may close by
-  it (`CloseByEscape`, `CanClose`). A key pressed with the keyboard left in the content under a modal one - nothing in
-  the card took it, or code put it there - ran that content's bindings and buttons; it is the modal's now, and the
-  keyboard goes back into it.
+- `OverlayWindow` is a window to the framework: the root of its own visual tree (`IRootVisualComponent`), shown in the
+  window that holds it. The keys left over in it end at it as a window's do - Enter and Escape press its default and
+  cancel buttons (`IsDefault`, `IsCancel`), Escape with none closes it, both only while it may close by Escape
+  (`CloseByEscape`, `CanClose`) - and a key binding anywhere in it runs, not only one on the way up from the focus. A
+  dialog shown over the window was answered only by its buttons. What needs the operating system's window - its scale,
+  the input method, automation - finds it through `IRootVisualComponent.Window`, the window a root is shown in: a window
+  is its own. `Position`, `Left` and `Top` of a root are where it sits in what holds it - the desktop for a window, the
+  window for an overlay window.
+- A modal overlay window holds the keyboard of the window it is shown over: a key pressed with the focus left in the
+  content under it is its own, and the focus put there - by a menu closing after the window opened, by code - goes back
+  into it. That content ran the key's bindings and buttons, and a dialog opened from a menu could open with the focus
+  left behind it.
 - The default and cancel buttons of a window, an overlay window and a popup answer the same keys: Enter or Escape
   pressed alone and not held down - a window's cancel button took a chorded Escape and every repeat of one.
 - A window on Wayland comes back at the size it was closed at, maximized if it was; it always came back at its first

@@ -57,7 +57,7 @@ public class ResizeGripper : Control
         {
             for (IUIComponent node = this; node != null; node = node.VisualParent)
                 if (node is WindowBase window) return window;
-            return RootVisual as WindowBase;
+            return RootVisual?.Window as WindowBase;
         }
     }
 }

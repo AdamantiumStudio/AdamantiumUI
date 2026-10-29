@@ -114,7 +114,7 @@ internal sealed partial class AtSpiBridge
     }
 
     private static Vector2<double> ScaleOf(AutomationPeer peer) =>
-        (peer as UIComponentAutomationPeer)?.Owner?.RootVisual is IWindow { DpiScale: { X: > 0, Y: > 0 } scale } ? scale : Vector2<double>.One;
+        (peer as UIComponentAutomationPeer)?.Owner?.RootVisual?.Window is { DpiScale: { X: > 0, Y: > 0 } scale } ? scale : Vector2<double>.One;
 
     private static AutomationPeer ChildAt(AutomationPeer peer, PixelPoint screen)
     {

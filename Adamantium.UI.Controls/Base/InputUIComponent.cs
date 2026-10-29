@@ -108,7 +108,7 @@ public class InputUIComponent : MeasurableUIComponent, IInputComponent
             return;
         }
 
-        if (HoldCues.TryGetValue(e.Pointer, out _) || (sender as IUIComponent)?.RootVisual is not IInputComponent root ||
+        if (HoldCues.TryGetValue(e.Pointer, out _) || (sender as IUIComponent)?.RootVisual?.Window is not IInputComponent root ||
             root is not IAdornerHost host)
         {
             return;

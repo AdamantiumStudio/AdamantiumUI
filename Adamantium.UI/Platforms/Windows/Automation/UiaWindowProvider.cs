@@ -27,7 +27,7 @@ internal sealed partial class UiaWindowProvider : UiaProvider, IRawElementProvid
     public IRawElementProviderFragment GetFocus() => Bridge.Run(() =>
     {
         var focused = FocusManager.Focused as IUIComponent;
-        if (focused == null || !ReferenceEquals(focused.RootVisual, Bridge.Window))
+        if (focused == null || !ReferenceEquals(focused.RootVisual?.Window, Bridge.Window))
         {
             return null;
         }

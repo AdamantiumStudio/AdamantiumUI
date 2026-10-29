@@ -110,7 +110,7 @@ public class RenderTargetUniverseOutput : UIUniverseOutput
 
         _unannounced = default;
         descriptor.NoteSubmitted(frame);
-        if (nativeWindow.RootVisual is IWindow window)
+        if (nativeWindow.RootVisual?.Window is { } window)
         {
             (window.Renderer ?? window.DefaultRenderer)?.RequestFrame();
         }

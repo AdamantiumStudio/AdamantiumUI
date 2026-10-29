@@ -283,6 +283,20 @@ public class WindowKeyBindingTests
         });
     }
 
+    // The focus put in the content under a modal window - a menu closing after the window opened hands it back to where
+    // the menu was opened from - goes back into the modal once that change is done.
+    [Test]
+    public void TheFocusPutUnderAModalWindow_GoesBackIntoIt()
+    {
+        var (window, behindField, _) = Layout();
+        var (_, field) = Dialog(window, out _, out _);
+
+        FocusManager.Focus(behindField);
+        LoopSignal.Drain();
+
+        Assert.That(FocusManager.Focused, Is.SameAs(field));
+    }
+
     // A window that may not close by Escape does not close by its Cancel button pressed by Escape either.
     [Test]
     public void EscapeInAnOverlayWindowThatKeepsOpenOnIt_PressesNoCancelButton()

@@ -87,7 +87,7 @@ public class UniverseHost : Behavior<RenderTargetPanel>
             Withdraw();
         }
 
-        if (universe == null || _panel?.RootVisual is not IWindow window
+        if (universe == null || _panel?.RootVisual?.Window is not { } window
             || UniverseService() is not { } universes)
         {
             return;

@@ -1020,7 +1020,7 @@ public class Ribbon : Selector
             return;
         }
 
-        _keyTips = new KeyTipSession(TopLevelRoots(), (RootVisual as Adorners.IAdornerHost)?.AdornerLayer);
+        _keyTips = new KeyTipSession(TopLevelRoots(), (RootVisual?.Window as Adorners.IAdornerHost)?.AdornerLayer);
         _keyTips.Begin();
     }
 

@@ -51,7 +51,7 @@ public static class PlatformSettings
    /// DPI; (1, 1) outside a window.</summary>
    public static Vector2<double> PhysicalPerUnit(IUIComponent element)
    {
-      if (element?.RootVisual is not IWindow window) return Vector2<double>.One;
+      if (element?.RootVisual?.Window is not { } window) return Vector2<double>.One;
 
       var dpi = window.DpiScale;
       if (dpi.X <= 0 || dpi.Y <= 0) dpi = Vector2<double>.One;

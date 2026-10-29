@@ -280,11 +280,6 @@ public sealed class DockingAreaRegionAdapter : IRegionAdapter
             ContentTemplateSelector = new ViewLocatorTemplateSelector(_viewLocator)
         };
 
-        if (placement?.PaneIcon is { Length: > 0 } icon)
-        {
-            new ObservableResource(icon).Apply(pane, nameof(TabItem.Icon), ValuePriority.Local);
-        }
-
         if (placement == null)
         {
             pane.Header = viewModel;
@@ -299,6 +294,12 @@ public sealed class DockingAreaRegionAdapter : IRegionAdapter
             Mode = BindingMode.OneWay,
             TargetNullValue = viewModel
         });
+
+        // The icon as the title: from the view model, followed - its key names the resource, found as the theme has it.
+        new ObservableResource
+        {
+            KeySource = new Binding(nameof(IDockablePane.PaneIcon)) { Source = viewModel, Mode = BindingMode.OneWay }
+        }.Apply(pane, nameof(TabItem.Icon), ValuePriority.Binding);
 
         if (DeclaresZone(viewModel))
         {

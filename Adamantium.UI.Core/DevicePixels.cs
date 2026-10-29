@@ -48,7 +48,7 @@ public static class DevicePixels
         at = default;
         scale = Vector2<double>.One;
 
-        if (element?.RootVisual is not IWindow window) return false;
+        if (element?.RootVisual?.Window is not { } window) return false;
 
         scale = window.DpiScale;
         if (scale.X <= 0 || scale.Y <= 0) return false;
