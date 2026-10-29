@@ -109,7 +109,7 @@ internal sealed class DesktopPortalSettings : IDisposable
                 writer.WriteString(key);
             }), patience.Token).GetAwaiter().GetResult().Reader().ReadVariant().Value;
         }
-        catch (DBusException)
+        catch (Exception exception) when (exception is DBusException or OperationCanceledException)
         {
             return null;
         }
