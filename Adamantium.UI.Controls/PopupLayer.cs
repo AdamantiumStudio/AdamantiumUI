@@ -75,6 +75,17 @@ public class PopupLayer
         (popup.ChildValue as IInputComponent)?.AddHandler(PointerEvents.PreviewPointerPressedEvent, _overlayPress, handledEventsToo: true);
     }
 
+    /// <summary>Draws <paramref name="popup"/> over the others. A reorder, not a close and an open again: its content
+    /// stays attached, and the focus in it stays where it is.</summary>
+    public void BringToFront(Popup popup)
+    {
+        lock (_sync)
+        {
+            if (!_popups.Remove(popup)) return;
+            _popups.Add(popup);
+        }
+    }
+
     public void Remove(Popup popup)
     {
         lock (_sync)

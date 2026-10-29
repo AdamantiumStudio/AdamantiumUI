@@ -36,4 +36,31 @@ public class OverlayAttachTests
             Assert.That(row.RootVisual, Is.SameAs(card.RootVisual));
         });
     }
+
+    // Brought to the front - a press in it - an overlay window is drawn over the others, its tree as it was: the focus in
+    // it stays. It was taken off the layer and put back, out of the tree and in again, and lost the focus at every press.
+    [Test]
+    public void AnOverlayWindowBroughtToTheFront_KeepsItsTreeAndTheFocusInIt()
+    {
+        var window = new Window { Width = 400, Height = 300, Content = new StackPanel() };
+        WindowExtension.UpdateTree(window);
+        var field = new Adamantium.UI.Controls.Text.TextBox();
+        var back = new OverlayWindow { Content = new StackPanel { Children = { field } } };
+        var front = new OverlayWindow { Content = new StackPanel() };
+        window.ShowOverlayWindow(back);
+        window.ShowOverlayWindow(front);
+        window.PopupLayer.UpdateLayout(new Size<double>(400, 300));
+        Adamantium.UI.Core.Input.FocusManager.Focus(field);
+        var detached = 0;
+        field.DetachedFromVisualTreeEvent += (_, _) => detached++;
+
+        OverlayWindowManager.GetFor(window).BringToFront(back);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(window.PopupLayer.Roots[^1], Is.SameAs(back), "drawn over the other");
+            Assert.That(detached, Is.Zero, "its tree stays as it was");
+            Assert.That(Adamantium.UI.Core.Input.FocusManager.Focused, Is.SameAs(field));
+        });
+    }
 }

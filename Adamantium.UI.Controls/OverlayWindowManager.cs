@@ -131,14 +131,21 @@ public sealed class OverlayWindowManager
     /// <summary>Raises a window above the others, keeping pinned windows on top.</summary>
     internal void BringToFront(OverlayWindow window)
     {
-        if (!_windows.Contains(window)) 
-            return;   // already the front-most
-        
-        _windows.Remove(window);
-        _windows.Add(window);
-        Normalize();
-        RaiseInLayer(window);
-        KeepPinnedOnTop(window);
+        if (!_windows.Contains(window))
+        {
+            return;
+        }
+
+        // The front-most one only becomes the active one: a press in it reorders nothing.
+        if (!ReferenceEquals(_windows[^1], window))
+        {
+            _windows.Remove(window);
+            _windows.Add(window);
+            Normalize();
+            RaiseInLayer(window);
+            KeepPinnedOnTop(window);
+        }
+
         SetActive(window);
     }
 
@@ -166,11 +173,9 @@ public sealed class OverlayWindowManager
         if (window.HostPopup == null) return;
         if (window.ScrimPopup != null)
         {
-            _host.PopupLayer.Remove(window.ScrimPopup);
-            _host.PopupLayer.Add(window.ScrimPopup);
+            _host.PopupLayer.BringToFront(window.ScrimPopup);
         }
-        _host.PopupLayer.Remove(window.HostPopup);
-        _host.PopupLayer.Add(window.HostPopup);
+        _host.PopupLayer.BringToFront(window.HostPopup);
     }
 
     // Stable partition: unpinned windows first, pinned last (pinned always on top), each group keeping its relative order.

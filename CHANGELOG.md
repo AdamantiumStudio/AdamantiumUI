@@ -2302,6 +2302,9 @@ All packages share one version.
   content under it is its own, and the focus put there - by a menu closing after the window opened, by code - goes back
   into it. That content ran the key's bindings and buttons, and a dialog opened from a menu could open with the focus
   left behind it.
+- An overlay window brought to the front - by a press in it - keeps its tree and the focus in it: the popup layer
+  reorders it (`PopupLayer.BringToFront`) instead of taking it off and putting it back, and the overlay stage redraws
+  for a change of order alone. Every press in a dialog took the focus out of its field for good.
 - The default and cancel buttons of a window, an overlay window and a popup answer the same keys: Enter or Escape
   pressed alone and not held down - a window's cancel button took a chorded Escape and every repeat of one.
 - A window on Wayland comes back at the size it was closed at, maximized if it was; it always came back at its first

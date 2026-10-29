@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Adamantium.Mathematics;
 using Adamantium.UI.Core;
 
@@ -8,8 +9,11 @@ namespace Adamantium.UI.EntityServices;
 // Decides whether an overlay stage (popups, adorners) could differ from last frame, so an idle stage skips its rebuild.
 internal sealed class OverlayRebuildGate
 {
-    private HashSet<Guid> _prevIds = new();
-    private HashSet<Guid> _ids = new();   // swapped with _prevIds, so asking costs no allocation
+    private readonly HashSet<Guid> _ids = new();
+
+    // What is drawn, in the order it is drawn: one brought to the front changes what is on top, and nothing else.
+    private List<Guid> _prevOrder = new();
+    private List<Guid> _order = new();   // swapped with _prevOrder, so asking costs no allocation
     private readonly Dictionary<Guid, Vector3F> _prevPos = new();
 
     /// <summary>The glyph-arrival version this stage has already redrawn for. Per GATE: each overlay stage decides its
@@ -83,9 +87,11 @@ internal sealed class OverlayRebuildGate
         }
 
         _ids.Clear();
+        _order.Clear();
         foreach (var component in flat)
         {
             _ids.Add(component.RenderId);
+            _order.Add(component.RenderId);
             if (!component.IsGeometryValid) changed = true;
 
             var position = component.WorldTransform.TranslationVector;
@@ -95,7 +101,7 @@ internal sealed class OverlayRebuildGate
             _prevPos[component.RenderId] = position;
         }
 
-        if (!changed && !_ids.SetEquals(_prevIds)) changed = true;
+        if (!changed && !_order.SequenceEqual(_prevOrder)) changed = true;
 
         if (changed)
         {
@@ -109,7 +115,7 @@ internal sealed class OverlayRebuildGate
                 foreach (var id in _gone) _prevPos.Remove(id);
             }
 
-            (_prevIds, _ids) = (_ids, _prevIds);
+            (_prevOrder, _order) = (_order, _prevOrder);
         }
 
         return changed;
