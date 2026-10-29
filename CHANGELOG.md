@@ -7,6 +7,17 @@ All packages share one version.
 
 ### Added
 
+- `UIApplication.MaxInstances`: how many copies of an application the user may have running at once; a copy started
+  past it ends in `Run` before it shows anything. A copy holds its place - a named mutex of the user's - for as long as
+  it runs and gives it up however it ends, a crash included; copies are counted by the application's data folder.
+- A right to bring a window to the foreground, handed from one process to another: a process cannot take the
+  foreground by itself, the system keeps it for the one the user works in. `IUIApplication.CreateActivationTokenAsync`
+  gives the right this process was handed and has not used, or else one vouched for by the user's last input in its
+  active window (`WindowBase.CreateActivationTokenAsync`) - on Wayland an xdg-activation token, on Windows
+  `AllowSetForegroundWindow`; the other process gives it to `AcceptActivationToken`, and its next window brought to the
+  foreground takes it. A process started with one in `XDG_ACTIVATION_TOKEN` (`IUIApplication.ActivationTokenVariable`)
+  is given it as it starts. A window asked to the front by another process got no right of its own: GNOME said it was
+  ready instead of showing it.
 - `Theme.SystemMonospaceFontFamily`, the system's font for code: on Windows Cascadia Mono, else Consolas; on Apple's
   systems SF Mono, else Menlo; on Linux the desktop's own monospace font (`SystemAppearance.MonospaceFontFamily`, read
   through the Settings portal), else the first of the usual distributions' ones installed. `ADAM_CODE_FONT` names

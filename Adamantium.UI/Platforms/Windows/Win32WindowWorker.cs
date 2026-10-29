@@ -644,6 +644,9 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
         Win32Interop.SetForegroundWindow(hwnd);
     }
 
+    public System.Threading.Tasks.Task<string> CreateActivationTokenAsync() =>
+        System.Threading.Tasks.Task.FromResult(Win32Interop.AllowSetForegroundWindow(Win32Interop.AsfwAny) ? string.Empty : null);
+
     // Z-order only, NO activation: SWP_NOACTIVATE is precisely what keeps the mouse capture alive, so a drag can raise
     // the window it is heading for instead of being canceled by the OS revoking capture on a foreground change.
     public void RaiseWithoutActivation()

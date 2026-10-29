@@ -118,6 +118,8 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
     private volatile bool _showingStartupWindow;
     private int _splashHolds;
     private bool _loopStarted;
+    private InstanceSlot _instanceSlot;
+    private string _activationToken = TakeLaunchToken();
 
     protected UIApplication()
     {
@@ -551,6 +553,9 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
     public static readonly AdamantiumProperty StartupLanguageProperty = AdamantiumProperty.Register(nameof(StartupLanguage),
         typeof(string), typeof(UIApplication), new PropertyMetadata(null));
 
+    public static readonly AdamantiumProperty MaxInstancesProperty = AdamantiumProperty.Register(nameof(MaxInstances),
+        typeof(int), typeof(UIApplication), new PropertyMetadata(0));
+
     /// <summary>When the application ends: with its main window (the default), with its last window, or only when told.</summary>
     public ShutDownMode ShutDownMode
     {
@@ -616,6 +621,16 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
     {
         get => GetValue<string>(StartupLanguageProperty);
         set => SetValue(StartupLanguageProperty, value);
+    }
+
+    /// <summary>How many copies of the application the user may have running at once; 0 (the default) has no limit. A
+    /// copy started past the limit ends in <see cref="Run()"/> before it shows anything. Copies are counted by the
+    /// application's data folder (<see cref="ApplicationData.Folder"/>): a copy that ends, even by a crash, gives its
+    /// place up.</summary>
+    public int MaxInstances
+    {
+        get => GetValue<int>(MaxInstancesProperty);
+        set => SetValue(MaxInstancesProperty, value);
     }
 
     /// <summary>The language the application shows. Setting it switches every string while the application runs.</summary>
@@ -1094,6 +1109,11 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
     {
         if (IsRunning) return;
 
+        if (!TakeInstanceSlot())
+        {
+            return;
+        }
+
         try
         {
             Initialize();
@@ -1127,6 +1147,39 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
 
         StartLoop();
         Dispatcher.Run(cancellationTokenSource.Token);
+    }
+
+    public void AcceptActivationToken(string token) => Interlocked.Exchange(ref _activationToken, token);
+
+    public string TakeActivationToken() => Interlocked.Exchange(ref _activationToken, null);
+
+    public Task<string> CreateActivationTokenAsync() =>
+        TakeActivationToken() is { } given
+            ? Task.FromResult(given)
+            : (ActiveWindow as WindowBase)?.CreateActivationTokenAsync() ?? Task.FromResult<string>(null);
+
+    private static string TakeLaunchToken()
+    {
+        var token = Environment.GetEnvironmentVariable(IUIApplication.ActivationTokenVariable);
+        Environment.SetEnvironmentVariable(IUIApplication.ActivationTokenVariable, null);
+        return string.IsNullOrEmpty(token) ? null : token;
+    }
+
+    private bool TakeInstanceSlot()
+    {
+        if (MaxInstances <= 0 || _instanceSlot != null)
+        {
+            return true;
+        }
+
+        _instanceSlot = InstanceSlot.TryTake(ApplicationData.Folder, MaxInstances);
+        if (_instanceSlot != null)
+        {
+            return true;
+        }
+
+        Log.Logger.Information("{Count} copies of the application already run; this one ends", MaxInstances);
+        return false;
     }
 
     private void StartLoop()
@@ -2077,6 +2130,8 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
 
         _splash?.Abandon();
         Stopped?.Invoke(this, EventArgs.Empty);
+        _instanceSlot?.Dispose();
+        _instanceSlot = null;
     }
 
     private void DetachDebugTools()
