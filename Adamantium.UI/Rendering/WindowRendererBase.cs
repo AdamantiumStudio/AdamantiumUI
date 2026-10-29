@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Threading;
 using Adamantium.Core;
 using Adamantium.Graphics.Core;
@@ -9,6 +8,7 @@ using Adamantium.UI.Core;
 using Adamantium.UI.Core.Graphics;
 using Adamantium.UI.FX;
 using Adamantium.Vulkan.Core;
+using Adamantium.Win32;
 
 namespace Adamantium.UI.Rendering;
 
@@ -166,7 +166,7 @@ public abstract class WindowRendererBase : IWindowRenderer
             Window.MSAALevel
         )
         {
-            HInstanceHandle = Process.GetCurrentProcess().Handle,
+            HInstanceHandle = OperatingSystem.IsWindows() ? Win32Interop.GetModuleHandle(null) : IntPtr.Zero,
             DisplayHandle = Window.SurfaceDisplayHandle,
             // A see-through window is a property of the WINDOW, so it travels from there to the surface that composes it.
             TransparentComposition = Window.UseTransparentComposition,

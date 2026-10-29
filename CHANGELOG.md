@@ -2293,6 +2293,8 @@ All packages share one version.
 
 ### Fixed
 
+- Windows: a window's Vulkan surface is created with the application's module as its `hinstance`, as Vulkan requires;
+  it was given the process handle.
 - `TreeView`: the right button picks the row it presses before its menu opens, so the menu is about that row - it was
   about the rows chosen before, or none. A row among several chosen keeps them all, as a finger's hold already did.
 - `ContextMenu`: a menu with no rows stays shut instead of showing an empty card. Whether it has any is judged in its
