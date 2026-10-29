@@ -1,4 +1,5 @@
-﻿using Adamantium.ProceduralGeometry;
+﻿using Adamantium.Imaging;
+using Adamantium.ProceduralGeometry;
 using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Core;
@@ -21,6 +22,9 @@ public class Image : InputUIComponent, IDesignTimeAnimatedMedia
    private ImageBrush _tiling;
    private BitmapFrame _oldFrame;
    private UInt64 _currentReplayIteration;
+   private BitmapSource _shrunk;
+   private WeakReference<byte[]> _shrunkFrom;
+   private uint _shrunkLimit;
    
    public static readonly AdamantiumProperty StretchProperty = AdamantiumProperty.Register(nameof(Stretch),
       typeof(Stretch), typeof(Image), new PropertyMetadata(Stretch.Uniform, PropertyMetadataOptions.AffectsMeasure));
@@ -112,6 +116,10 @@ public class Image : InputUIComponent, IDesignTimeAnimatedMedia
    public static readonly AdamantiumProperty MipLevelProperty = AdamantiumProperty.Register(nameof(MipLevel),
       typeof(UInt32), typeof(Image),
       new PropertyMetadata(0U, OnMipLevelChangedCallback));
+
+   public static readonly AdamantiumProperty ContentPixelLimitProperty = AdamantiumProperty.Register(
+      nameof(ContentPixelLimit), typeof(uint), typeof(Image),
+      new PropertyMetadata(0U, PropertyMetadataOptions.AffectsRender));
 
    public static readonly AdamantiumProperty IsPlayingProperty = AdamantiumProperty.Register(nameof(IsPlaying),
       typeof(bool), typeof(Image), new PropertyMetadata(true, OnIsPlayingChanged));
@@ -237,6 +245,16 @@ public class Image : InputUIComponent, IDesignTimeAnimatedMedia
    {
       get => GetValue<UInt32>(MipLevelProperty);
       set => SetValue(MipLevelProperty, value);
+   }
+
+   /// <summary>The longest side, in pixels, of the picture this image draws; 0 for no limit. A larger still bitmap,
+   /// stretched to fit, is drawn from a copy shrunk to fit, made once and let go with the source or off the tree - its
+   /// size in the layout and its own pixels stay as they are. A picture drawn at its own size
+   /// (<see cref="Stretch.None"/>, absolute <see cref="ViewportUnits"/>) or an animation is drawn as it is.</summary>
+   public uint ContentPixelLimit
+   {
+      get => GetValue<uint>(ContentPixelLimitProperty);
+      set => SetValue(ContentPixelLimitProperty, value);
    }
 
    /// <summary>Whether an animated source is running. Setting it false STOPS on the current frame and setting it true
@@ -458,6 +476,7 @@ public class Image : InputUIComponent, IDesignTimeAnimatedMedia
    {
       base.OnDetachedFromVisualTree(e);
       WatchDrawing(null);
+      ReleaseShrunk();
    }
 
    // Playback rides the loop heartbeat (AnimationManager), so frames advance on the thread that renders them. The ticker
@@ -643,6 +662,41 @@ public class Image : InputUIComponent, IDesignTimeAnimatedMedia
       return new Vector4F((float)r.TopLeft, (float)r.TopRight, (float)r.BottomRight, (float)r.BottomLeft);
    }
 
+   private ImageSource FitWithinContentLimit(ImageSource image)
+   {
+      var limit = ContentPixelLimit;
+      if (limit == 0 || Stretch == Stretch.None || ViewportUnits == BrushMappingMode.Absolute
+          || _bitmap is { FrameCount: > 1 }
+          || image is not BitmapSource { PixelBytes: { } pixels } bitmap
+          || (bitmap.PixelWidth <= limit && bitmap.PixelHeight <= limit)
+          || !ImageDownscaler.Supports(bitmap.SurfaceLayout))
+      {
+         ReleaseShrunk();
+         return image;
+      }
+
+      if (_shrunk == null || _shrunkLimit != limit || _shrunkFrom == null
+          || !_shrunkFrom.TryGetTarget(out var from) || !ReferenceEquals(from, pixels))
+      {
+         var shrunk = ImageDownscaler.FitWithin(pixels, bitmap.PixelWidth, bitmap.PixelHeight, bitmap.SurfaceLayout,
+            limit, limit, out var width, out var height);
+         ReleaseShrunk();
+         _shrunk = new BitmapSource(width, height, bitmap.Width / width, bitmap.Height / height, bitmap.SurfaceLayout,
+            shrunk);
+         _shrunkFrom = new WeakReference<byte[]>(pixels);
+         _shrunkLimit = limit;
+      }
+
+      return _shrunk;
+   }
+
+   private void ReleaseShrunk()
+   {
+      _shrunk?.Dispose();
+      _shrunk = null;
+      _shrunkFrom = null;
+   }
+
    protected override void OnRender(IDrawingContext context)
    {
       base.OnRender(context);
@@ -668,6 +722,8 @@ public class Image : InputUIComponent, IDesignTimeAnimatedMedia
       // rendering it would build a texture from null and crash. Skip until it is ready - ProcessImageSource sets _frame
       // and re-invalidates once loaded. A decoded _frame (BitmapFrame) or a non-BitmapImage source is always ready.
       if (image is BitmapImage { IsLoaded: false }) return;
+
+      image = FitWithinContentLimit(image);
 
       // An ordinary picture is a rounded rect painted with an image brush, so corners stay smooth at any zoom. The mesh
       // path below is only for drawings, animations and live surfaces, which a brush cannot carry.

@@ -7,6 +7,12 @@ All packages share one version.
 
 ### Added
 
+- `Image.ContentPixelLimit`: the longest side, in pixels, of the picture an image draws. A larger still bitmap,
+  stretched to fit, is drawn from a copy shrunk to fit, made once and let go with the source or off the tree; its size in
+  the layout and its own pixels stay as they are. A picture drawn at its own size, or an animation, is drawn as it is.
+- `IDockablePane.PaneLength` (`Pane.DockLength`): how deep the band a pane opens in reaches from the edge it docks to,
+  so a panel at the bottom can open lower than one at a side; zero keeps the area's `EdgeDockSize`.
+
 - `UIApplication.MaxInstances`: how many copies of an application the user may have running at once; a copy started
   past it ends in `Run` before it shows anything. A copy holds its place - a named mutex of the user's - for as long as
   it runs and gives it up however it ends, a crash included; copies are counted by the application's data folder. The

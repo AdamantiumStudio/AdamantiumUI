@@ -30,6 +30,10 @@ public interface IDockablePane
     /// <summary>Smallest useful size along the docked axis.</summary>
     double PaneMinSize => 0;
 
+    /// <summary>How deep the band the pane opens in reaches from the edge it docks to; zero, by default, for the area's
+    /// own edge size.</summary>
+    double PaneLength => 0;
+
     /// <summary>The key of the tab's icon among the resources - a picture, or path data drawn in the tab's text color -
     /// shown in front of the title; none by default. Followed as the title is, and the resource follows a theme swap.
     /// </summary>

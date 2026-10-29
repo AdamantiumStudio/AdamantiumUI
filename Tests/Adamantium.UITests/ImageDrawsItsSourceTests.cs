@@ -51,6 +51,15 @@ public class ImageDrawsItsSourceTests
         return recorder.Session.Rectangles.Select(r => r.Brush).OfType<ImageBrush>().Single().Source;
     }
 
+    private static ImageSource DrawnAgain(Image image)
+    {
+        var recorder = new Recorder();
+        image.InvalidateRender(false);
+        image.Render(recorder);
+
+        return recorder.Session.Rectangles.Select(r => r.Brush).OfType<ImageBrush>().Single().Source;
+    }
+
     [Test]
     public void TwoImagesOfOneStillPictureDrawThePictureItself()
     {
@@ -63,6 +72,48 @@ public class ImageDrawsItsSourceTests
             Assert.That(DrawnPicture(new Image { Width = 64, Height = 64, Source = picture }), Is.SameAs(picture),
                 "a second image of the same picture drew a second copy");
         });
+    }
+
+    [Test]
+    public void APictureLargerThanTheContentLimit_IsDrawnShrunk_AndKeepsItsOwnPixels()
+    {
+        var pixels = new byte[1024 * 512 * 4];
+        var picture = new BitmapImage(new FrameBitmap(1024, 512, SurfaceFormat.R8G8B8A8.UNorm, [pixels]));
+        var image = new Image { Width = 64, Height = 64, Source = picture, ContentPixelLimit = 256 };
+
+        var drawn = (BitmapSource)DrawnPicture(image);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That((drawn.PixelWidth, drawn.PixelHeight), Is.EqualTo((256u, 128u)));
+            Assert.That((drawn.Width, drawn.Height), Is.EqualTo((picture.Width, picture.Height)), "its size in the layout");
+            Assert.That(picture.PixelBytes, Is.SameAs(pixels), "the source kept its own pixels");
+            Assert.That(DrawnAgain(image), Is.SameAs(drawn), "the copy is made once");
+        });
+    }
+
+    [Test]
+    public void APictureDrawnAtItsOwnSize_IsNotShrunk()
+    {
+        var picture = new BitmapImage(new FrameBitmap(1024, 512, SurfaceFormat.R8G8B8A8.UNorm, [new byte[1024 * 512 * 4]]));
+
+        Assert.That(DrawnPicture(new Image
+        {
+            Width = 64,
+            Height = 64,
+            Source = picture,
+            ContentPixelLimit = 256,
+            Stretch = Stretch.None
+        }), Is.SameAs(picture));
+    }
+
+    [Test]
+    public void APictureWithinTheContentLimit_IsDrawnItself()
+    {
+        var picture = new BitmapImage(new FrameBitmap(64, 32, SurfaceFormat.R8G8B8A8.UNorm, [new byte[64 * 32 * 4]]));
+
+        Assert.That(DrawnPicture(new Image { Width = 64, Height = 64, Source = picture, ContentPixelLimit = 256 }),
+            Is.SameAs(picture));
     }
 
     [Test]
