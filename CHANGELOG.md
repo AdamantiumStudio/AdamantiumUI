@@ -2293,6 +2293,8 @@ All packages share one version.
 
 ### Fixed
 
+- Windows: an activated window takes the keyboard focus. A dialog shown over its owner was active with no focus
+  anywhere - its text box showed the caret, but no key reached it until the dialog was clicked.
 - Windows: a window's Vulkan surface is created with the application's module as its `hinstance`, as Vulkan requires;
   it was given the process handle.
 - `TreeView`: the right button picks the row it presses before its menu opens, so the menu is about that row - it was
