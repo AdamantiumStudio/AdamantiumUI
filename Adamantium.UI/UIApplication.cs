@@ -1172,7 +1172,9 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
             return true;
         }
 
-        _instanceSlot = InstanceSlot.TryTake(ApplicationData.Folder, MaxInstances);
+        var folder = Path.GetFullPath(ApplicationData.Folder);
+        _instanceSlot = InstanceSlot.TryTake("copies of " + (OperatingSystem.IsLinux() ? folder : folder.ToUpperInvariant()),
+            MaxInstances);
         if (_instanceSlot != null)
         {
             return true;

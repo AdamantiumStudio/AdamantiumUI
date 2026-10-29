@@ -6,9 +6,9 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests;
 
-/// <summary>The places <see cref="UIApplication.MaxInstances"/> counts copies of an application by. A place is held by a
-/// thread of its own, so a copy here is a slot taken on the test's thread; a copy that crashed is a thread that ended
-/// holding its mutex.</summary>
+/// <summary>The named places processes take - copies of an application (<see cref="UIApplication.MaxInstances"/>), the
+/// editor's solutions. A place is held by a thread of its own, so a process here is a slot taken on the test's thread;
+/// a process that crashed is a thread that ended holding its mutex.</summary>
 [TestFixture]
 public class InstanceSlotTests
 {
@@ -30,6 +30,17 @@ public class InstanceSlotTests
             Assert.That(second, Is.Not.Null);
             Assert.That(third, Is.Null);
         });
+    }
+
+    [Test]
+    public void APlaceTaken_IsSeenTaken_UntilGivenUp()
+    {
+        var slot = InstanceSlot.TryTake(_folder);
+        Assert.That(InstanceSlot.IsTaken(_folder), Is.True);
+
+        slot.Dispose();
+
+        Assert.That(InstanceSlot.IsTaken(_folder), Is.False);
     }
 
     [Test]

@@ -9,7 +9,8 @@ All packages share one version.
 
 - `UIApplication.MaxInstances`: how many copies of an application the user may have running at once; a copy started
   past it ends in `Run` before it shows anything. A copy holds its place - a named mutex of the user's - for as long as
-  it runs and gives it up however it ends, a crash included; copies are counted by the application's data folder.
+  it runs and gives it up however it ends, a crash included; copies are counted by the application's data folder. The
+  places are `InstanceSlot`s, which a process takes by any name of its own (`TryTake`, `IsTaken`).
 - A right to bring a window to the foreground, handed from one process to another: a process cannot take the
   foreground by itself, the system keeps it for the one the user works in. `IUIApplication.CreateActivationTokenAsync`
   gives the right this process was handed and has not used, or else one vouched for by the user's last input in its
