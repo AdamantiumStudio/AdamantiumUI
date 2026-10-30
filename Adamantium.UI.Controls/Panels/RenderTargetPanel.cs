@@ -79,7 +79,7 @@ public class RenderTargetPanel : Grid
 
    /// <summary>How the frames rendered for the panel are handed to it: <see cref="Panels.FrameSharing.Auto"/>, within the
    /// logical device when the renderer is on the UI's own; <see cref="Panels.FrameSharing.ThroughHandles"/> to try the
-   /// path through OS handles anyway. Taken as the renderer makes surfaces for a size.</summary>
+   /// path through OS handles anyway. Changed while frames come, it takes with the renderer's next frame.</summary>
    public FrameSharing FrameSharing
    {
       get => GetValue<FrameSharing>(FrameSharingProperty);

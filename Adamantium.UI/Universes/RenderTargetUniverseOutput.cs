@@ -173,9 +173,13 @@ public class RenderTargetUniverseOutput : UIUniverseOutput
         var width = Width;
         var height = Height;
         if (width == 0 || height == 0) return false;
-        if (_sharedSurface != null && _sharedSurface.Width == width && _sharedSurface.Height == height) return false;
 
-        _pendingSurface = SharesDeviceWithPanel(device)
+        // Made again for a new size, and for the panel's FrameSharing changed since - its next frame takes the new way.
+        var inDevice = SharesDeviceWithPanel(device);
+        if (_sharedSurface != null && _sharedSurface.Width == width && _sharedSurface.Height == height
+            && (_sharedSurface.Descriptor.DeviceSurface != null) == inDevice) return false;
+
+        _pendingSurface = inDevice
             ? SharedSurface.CreateInDevice(device, width, height, _format, bufferCount: SurfaceBuffers)
             : SharedSurface.CreateExportable(device, width, height, _format, bufferCount: SurfaceBuffers);
         device.RecordSharedSurfaceCopy(frame, _pendingSurface);
@@ -208,7 +212,8 @@ public class RenderTargetUniverseOutput : UIUniverseOutput
     }
 
     // Retired, not destroyed: submits of every device of this one may still reference its semaphores, and destroying
-    // them mid-frame lost the device. The panel's import is its own.
+    // them mid-frame lost the device. The panel's import of an exported surface is its own; what it took of a surface of
+    // its own device is the surface's, which lasts until the panel lets go of it.
     private static void RetireSurface(SharedSurface surface)
     {
         surface?.GraphicsDevice.AddToDeferDisposeQueue(surface);
@@ -228,7 +233,8 @@ public class RenderTargetUniverseOutput : UIUniverseOutput
         base.ReleaseDeviceResources();
     }
 
-    // The panel lets go of the surface first: its handles close with it, and a panel back in the tree would import them.
+    // The panel lets go of the surface first: what it shares goes with it - handles closed, or the surface itself - and a
+    // panel back in the tree would take it again.
     // Only of this output's surface - another output may have bound the panel since.
     private void ReleaseSurface(bool retire)
     {
