@@ -792,6 +792,7 @@
         <Setter Property="BackgroundPointerOver" Value="{ResourceReference SubtleFillColorSecondary}"/>
         <Setter Property="BackgroundPressed" Value="{ResourceReference SubtleFillColorTertiary}"/>
         <Setter Property="ForegroundDisabled" Value="{ResourceReference TextFillColorDisabled}"/>
+        <Setter Property="BackgroundDisabled" Value="Transparent"/>
         <Setter Property="Padding" Value="{ResourceReference RibbonButtonPadding}"/>
         <Setter Property="Margin" Value="1"/>
         <Setter Property="MinWidth" Value="{ResourceReference RibbonButtonMinWidth}"/>
@@ -860,15 +861,21 @@
     </Style>
 
     <Style Selector="RibbonButton">
-        <PropertyTrigger Property="IsPointerOver" Value="true">
+        <!-- A command that is off does not answer the pointer. -->
+        <MultiTrigger>
+            <MultiTrigger.Conditions>
+                <Condition Property="IsPointerOver" Value="true"/>
+                <Condition Property="IsEnabled" Value="true"/>
+            </MultiTrigger.Conditions>
             <Setter TargetName="Chrome" Property="Background" Value="{TemplateBinding BackgroundPointerOver}"/>
-        </PropertyTrigger>
+        </MultiTrigger>
         <PropertyTrigger Property="IsPressed" Value="true">
             <Setter TargetName="Chrome" Property="Background" Value="{TemplateBinding BackgroundPressed}"/>
         </PropertyTrigger>
         <!-- The ICON fades with the label - it is the part a person aims at. Faded, not recolored: a picture keeps its
              own colors. -->
         <PropertyTrigger Property="IsEnabled" Value="false">
+            <Setter TargetName="Chrome" Property="Background" Value="{TemplateBinding BackgroundDisabled}"/>
             <Setter TargetName="PART_ContentPresenter" Property="Foreground" Value="{TemplateBinding ForegroundDisabled}"/>
             <Setter TargetName="PART_Icon" Property="Opacity" Value="0.4"/>
         </PropertyTrigger>
@@ -961,6 +968,23 @@
             <Setter TargetName="PART_ContentPresenter" Property="Foreground" Value="{ThemeResource AccentFillColorDefault}"/>
             <Setter TargetName="PART_Icon" Property="Foreground" Value="{ThemeResource AccentFillColorDefault}"/>
         </PropertyTrigger>
+        <!-- On under the pointer: the plate stays, not the dimmer hover wash. -->
+        <MultiTrigger>
+            <MultiTrigger.Conditions>
+                <Condition Property="IsChecked" Value="true"/>
+                <Condition Property="IsPointerOver" Value="true"/>
+            </MultiTrigger.Conditions>
+            <Setter TargetName="Chrome" Property="Background" Value="{ResourceReference ControlFillColorSecondary}"/>
+        </MultiTrigger>
+        <!-- On but off: the plate stays, the accent goes out; declared after IsChecked so it wins. -->
+        <MultiTrigger>
+            <MultiTrigger.Conditions>
+                <Condition Property="IsChecked" Value="true"/>
+                <Condition Property="IsEnabled" Value="false"/>
+            </MultiTrigger.Conditions>
+            <Setter TargetName="PART_ContentPresenter" Property="Foreground" Value="{TemplateBinding ForegroundDisabled}"/>
+            <Setter TargetName="PART_Icon" Property="Foreground" Value="{TemplateBinding ForegroundDisabled}"/>
+        </MultiTrigger>
     </Style>
 
     <!-- ================= THE FILE TAB AND THE BACKSTAGE ================= -->

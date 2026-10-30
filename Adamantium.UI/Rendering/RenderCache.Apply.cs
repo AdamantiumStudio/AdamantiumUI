@@ -14,6 +14,10 @@ public partial class RenderCache
     private readonly HashSet<ControlGroup> _pendingSet = new();
     private readonly List<ControlGroup> _mergedGroups = new();
 
+    /// <summary>Whether a recording of the window has been applied, so a draw shows its content; false until the first
+    /// one.</summary>
+    internal bool HasAppliedRecording { get; private set; }
+
     /// <summary>APPLY half of the frame build (GPU / render thread): consumes the recorder's packets - Clean re-draws the
     /// retained units, Partial updates dirty groups in place, Structural splices count changes, Full rebuilds the
     /// paint-order groups. Freezes the layout snapshot the draw pass replays. (RenderDirty is cleared ONCE per frame after
@@ -29,6 +33,7 @@ public partial class RenderCache
             Observer?.Applied(packet);
             Taken(packet);
             ApplyPacket(packet);
+            HasAppliedRecording = true;
             packet.Reset(RenderBuildKind.Clean);
             _spare.Add(packet);   // back to the pool for the recorder
         }

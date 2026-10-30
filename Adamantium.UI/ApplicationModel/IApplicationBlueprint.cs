@@ -23,6 +23,9 @@ public interface IApplicationBlueprint
     /// <summary>When the application ends.</summary>
     ShutDownMode? ShutDownMode { get; }
 
+    /// <summary>The monitor a window with no place of its own opens on, by the end of its id.</summary>
+    string DefaultScreen { get; }
+
     /// <summary>Resources every part of the application finds by key, and the dictionaries they link.</summary>
     ResourceDictionary Resources { get; }
 

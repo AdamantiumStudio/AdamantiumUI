@@ -39,6 +39,9 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
     private TaskCompletionSource _dialogClosed;
     protected IWindowWorkerService WindowWorkerService { get; private set; }
 
+    /// <summary>What the window's frames go to when the desktop composes it from its pixels; null where it does not.</summary>
+    internal IFrameSink FrameSink => WindowWorkerService as IFrameSink;
+
     public IWindowRenderer DefaultRenderer { get; set; }
 
     public IWindowRenderer Renderer
@@ -392,7 +395,9 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
         // wait plus every render target, so a write that said nothing must not buy one.
         if (Equals(e.OldValue, e.NewValue)) return;
 
-        (component as WindowBase)?.Renderer?.InvalidatePresenter();
+        var window = component as WindowBase;
+        window?.WindowWorkerService?.UpdateOverlayTraits();
+        window?.Renderer?.InvalidatePresenter();
     }
 
     /// <summary>How frames reach the screen: paced and tear-free or as fast as possible; Inherit uses the application's.
@@ -1106,7 +1111,8 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
     private void PlaceOnScreen(IUIContext context)
     {
         var screens = Displays.Screens;
-        if (!ActivateOnShow || Design.IsDesignMode || screens.Count == 0)
+        var placesItself = !ActivateOnShow && GetValueSource(ActivateOnShowProperty) < ValuePriority.TypeDefault;
+        if (placesItself || Design.IsDesignMode || screens.Count == 0)
         {
             return;
         }
@@ -1142,7 +1148,8 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
         }
         else if (StartupLocation != WindowStartupLocation.Manual)
         {
-            var screen = WindowPlacer.ScreenAt(Mouse.ScreenCoordinates, screens);
+            var screen = WindowPlacer.FindScreen(context.UIApplication?.DefaultScreen, screens)
+                         ?? WindowPlacer.ScreenAt(Mouse.ScreenCoordinates, screens);
             Position = WindowPlacer.Center(screen.WorkArea, SizeOn(screen));
             _centeredOn = screen;
         }
@@ -1253,6 +1260,7 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
         var dialogClosed = EndDialog();
         HideCore();
         dialogClosed?.TrySetResult();
+        Hidden?.Invoke(this, EventArgs.Empty);
     }
 
     /// <summary>Takes the window off the screen, the way this kind of window does.</summary>
@@ -1611,7 +1619,12 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
 
     public event EventHandler<WindowClosingEventArgs> Closing;
     public event EventHandler<EventArgs> Closed;
+    public event EventHandler<EventArgs> Displayed;
+    public event EventHandler<EventArgs> Hidden;
     public event EventHandler<WindowRendererChangedEventArgs> RendererChanged;
+
+    /// <summary>Tells <see cref="Displayed"/> that the window first showed on screen.</summary>
+    protected void RaiseDisplayed() => Displayed?.Invoke(this, EventArgs.Empty);
 
     public event EventHandler<EventArgs> SourceInitialized;
 

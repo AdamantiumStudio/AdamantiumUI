@@ -69,6 +69,57 @@ public class BindingBatchingTests
         });
     }
 
+    // The source moved on and the target has not been told yet: what the target changes meanwhile - a list dropping a
+    // choice it no longer holds, say - was decided against the old value, and is not written over the new one.
+    [Test]
+    public void ATargetChangeWhileTheSourceIsAhead_IsNotWrittenOverIt()
+    {
+        var vm = new Vm { Name = "A" };
+        var target = new TextBlock { DataContext = vm };
+        target.SetBinding("Text", new Binding("Name") { Mode = BindingMode.TwoWay });
+
+        vm.Name = "B";
+        target.SetCurrentValue(TextBlock.TextProperty, "stale");
+        var kept = vm.Name;
+        BindingUpdateQueue.Flush();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(kept, Is.EqualTo("B"));
+            Assert.That(target.Text, Is.EqualTo("B"));
+        });
+    }
+
+    // A source that only says it changed - raising its property again with the same value, or every property - is not
+    // ahead: what the target changes meanwhile is written back as ever.
+    [Test]
+    public void ATargetChangeWhileTheSourceRepeatsItself_IsWrittenBack()
+    {
+        var vm = new Vm { Name = "A" };
+        var target = new TextBlock { DataContext = vm };
+        target.SetBinding("Text", new Binding("Name") { Mode = BindingMode.TwoWay });
+
+        vm.Name = "A";
+        target.SetCurrentValue(TextBlock.TextProperty, "C");
+
+        Assert.That(vm.Name, Is.EqualTo("C"));
+    }
+
+    // Once the target has the source's value, what it changes is written back as ever.
+    [Test]
+    public void ATargetChangeAfterTheFlush_IsWrittenBack()
+    {
+        var vm = new Vm { Name = "A" };
+        var target = new TextBlock { DataContext = vm };
+        target.SetBinding("Text", new Binding("Name") { Mode = BindingMode.TwoWay });
+
+        vm.Name = "B";
+        BindingUpdateQueue.Flush();
+        target.SetCurrentValue(TextBlock.TextProperty, "C");
+
+        Assert.That(vm.Name, Is.EqualTo("C"));
+    }
+
     [Test]
     public void ImmediateBinding_AppliesSynchronously()
     {

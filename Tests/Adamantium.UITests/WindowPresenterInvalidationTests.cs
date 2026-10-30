@@ -52,6 +52,7 @@ public class WindowPresenterInvalidationTests
         public bool IsRendererUpToDate => true;
         public bool FirstFrameProcessed => true;
         public long PresentedFrames => 0;
+        public bool HasPresentedContent => true;
         public int RecordedFrames => 0;
         public int ChangedFrames => 0;
         public long FrameRequests => 0;

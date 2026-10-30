@@ -210,9 +210,10 @@ public class DockingArea : Panel
 
             // The flyout takes the shape of the ZONE THE PANEL WOULD COME BACK TO - not of this strip (as long as its
             // few captions) and not of the whole edge (which runs under the side panels and off the window).
-            var zone = ZoneBounds(edge);
+            var node = NodeOf(group);
+            var zone = ZoneBounds(edge, node);
             var thickness = vertical ? bounds.Width : bounds.Height;
-            var extent = FlyoutExtent(NodeOf(group));
+            var extent = FlyoutExtent(node);
 
             group.RevealLength = vertical ? zone.Height : zone.Width;
 
@@ -242,14 +243,18 @@ public class DockingArea : Panel
 
     // Where a put-away panel would come back to, in this area's coordinates: the center column for a band, the whole
     // tree for a side - the same targets ExpandGroup pins against, so the flyout shows the shape it will take.
-    private Rect ZoneBounds(DockZone edge)
+    private Rect ZoneBounds(DockZone edge, PaneGroupNode group)
     {
         var root = _root ?? Layout.Main;
-        if (root == null) return default;
+        if (root == null || group == null)
+        {
+            return default;
+        }
 
-        var node = edge is DockZone.Top or DockZone.Bottom ? Layout.BandTarget(root) : root.Content;
-
-        if (VisualOf(node) is not IUIComponent visual || visual.RenderSize.Width <= 0) return default;
+        if (VisualOf(Layout.GetReturnTarget(root, group, edge)) is not IUIComponent visual || visual.RenderSize.Width <= 0)
+        {
+            return default;
+        }
 
         var at = (visual.PointToScreen(Vector2<double>.Zero) - this.PointToScreen(Vector2<double>.Zero)).ToLogical(DpiScale);
         return new Rect(at.X, at.Y, visual.RenderSize.Width, visual.RenderSize.Height);
@@ -1750,13 +1755,7 @@ public class DockingArea : Panel
         var edge = DockCompass.EdgeZoneAt(area, point, _compass.IndicatorSize, _compass.EdgeIndicatorInset);
         if (edge != DockZone.None && (allowed & edge) != 0 && (RoomFor() & edge) != 0)
         {
-            // A SIDE anchor splits the whole root; a TOP/BOTTOM band splits the center column only, so it does not run
-            // under the sides.
-            var anchor = edge is DockZone.Top or DockZone.Bottom
-                ? Layout.BandTarget(_root ?? Layout.Main)
-                : RootContent;
-
-            return new DockTarget(anchor, bounds, edge,
+            return new DockTarget(RootContent, bounds, edge,
                 DockCompass.PreviewOf(area, edge, EdgeDockSize), isEdge: true);
         }
 

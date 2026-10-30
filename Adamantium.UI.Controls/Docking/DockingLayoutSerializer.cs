@@ -442,6 +442,10 @@ public static class DockingLayoutSerializer
         writer.WriteNumber("active", ActiveAmongKept(group, keep));
         writer.WriteString("length", group.Length.ToString());
         writer.WriteString("restore", group.RestoreLength.ToString());
+        if (group.RestoresAcross)
+        {
+            writer.WriteBoolean("across", true);
+        }
 
         if (group.State != PaneGroupState.Docked) writer.WriteString("state", group.State.ToString());
 
@@ -535,7 +539,8 @@ public static class DockingLayoutSerializer
         var group = new PaneGroupNode
         {
             Length = ReadLength(element, "length"),
-            RestoreLength = ReadLength(element, "restore")
+            RestoreLength = ReadLength(element, "restore"),
+            RestoresAcross = element.TryGetProperty("across", out var across) && across.ValueKind == JsonValueKind.True
         };
 
         var dropped = 0;

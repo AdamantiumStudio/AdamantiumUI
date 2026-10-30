@@ -169,6 +169,8 @@ public class ForwardWindowRenderer : WindowRendererBase
 
     public override int RecordedFrames => _renderCache.PublishedCount;
 
+    protected override bool DrawsRecordedContent => _renderCache.HasAppliedRecording;
+
     public override int ChangedFrames => _renderCache.ChangesPublished;
 
     // DEVICE-FREE record half: walk the tree + component.Render into the packet. No GPU, so it is safe to run

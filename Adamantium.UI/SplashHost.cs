@@ -1,5 +1,6 @@
 using System;
 using System.Threading;
+using System.Threading.Tasks;
 using Adamantium.UI.Controls;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Resources;
@@ -26,6 +27,7 @@ internal sealed class SplashHost
     private int _closed;
     private int _closable;
     private volatile bool _running;
+    private readonly TaskCompletionSource _shown = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     /// <param name="startupPlacement">Where the startup window was remembered: the splash window appears over it.</param>
     public SplashHost(UIApplication application, Type windowType, WindowPlacement startupPlacement)
@@ -41,6 +43,12 @@ internal sealed class SplashHost
 
     /// <summary>The splash window, once it is made.</summary>
     public SplashWindow Window => Volatile.Read(ref _window);
+
+    /// <summary>What the window says the application is doing; set before <see cref="Start"/>.</summary>
+    public string Message { get; set; }
+
+    /// <summary>Completes once the window is on screen, or it failed or has closed.</summary>
+    public Task Shown => _shown.Task;
 
     /// <summary>From <see cref="Start"/> until the window has closed and its connection is gone, or it failed.</summary>
     public bool IsRunning => _running;
@@ -117,6 +125,7 @@ internal sealed class SplashHost
         }
         finally
         {
+            _shown.TrySetResult();
             _dispatcher?.Detach();
             (_platform as WaylandPlatform)?.Disconnect();
             (_platform as WindowsPlatform)?.Disconnect();
@@ -141,9 +150,14 @@ internal sealed class SplashHost
         }
 
         window.StartupPlacement = _startupPlacement;
+        if (Message != null)
+        {
+            window.Message = Message;
+        }
         Volatile.Write(ref _window, window);
         window.AttachContextAndInitialize(new SplashUIContext(_application.UIContext, _platform, _dispatcher));
         window.Closed += OnClosed;
+        window.Displayed += OnDisplayed;
         Interlocked.Exchange(ref _closable, 1);
         window.Show();
         StayAbove(window);
@@ -183,6 +197,12 @@ internal sealed class SplashHost
                 }
             });
         }
+    }
+
+    private void OnDisplayed(object sender, EventArgs e)
+    {
+        ((SplashWindow)sender).Displayed -= OnDisplayed;
+        _shown.TrySetResult();
     }
 
     private void OnClosed(object sender, EventArgs e)

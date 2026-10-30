@@ -5,7 +5,7 @@
     <Phrase Key="OverrideCursor" Text="Свой курсор над «Животными»"/>
     <Phrase Key="Fruits" Text="Фрукты"/>
     <Phrase Key="HandleOnly" Text="Тянуть только за ручку"/>
-    <Phrase Key="Spread" Text="Раздвигать"/>
+    <Phrase Key="InsertionCue" Text="Место вставки:"/>
     <Phrase Key="Animals" Text="Животные"/>
     <Phrase Key="AcceptDrop" Text="Принимать бросок"/>
     <Phrase Key="ColorsWrapPanel" Text="Цвета (WrapPanel)"/>

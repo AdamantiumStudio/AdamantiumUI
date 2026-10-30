@@ -52,13 +52,23 @@
                                 Orientation="Vertical" 
                                 MarginBottom="8">
                         <CheckBox Content="{Localize DragDropStrings.HandleOnly}" IsChecked="{Binding HandleOnlyDrag, Mode=TwoWay}"/>
-                        <!-- Off = the plain insertion caret; on (the default) = a real hole with a placeholder card. -->
-                        <CheckBox x:Name="LeftGapToggle" Content="{Localize DragDropStrings.Spread}" IsChecked="True"/>
+                        <!-- Gap (the default) = a real hole with a placeholder card; Caret = the plain insertion caret;
+                             None = no cue, the drop lands in the list as a whole. -->
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock x:Name="LeftCueLabel"
+                                       Text="{Localize DragDropStrings.InsertionCue}"
+                                       VerticalAlignment="Center"
+                                       MarginRight="8"/>
+                            <DropDown AutomationProperties.LabeledBy="{Binding ElementName=LeftCueLabel}"
+                                      ItemsSource="{Binding InsertionCues}"
+                                      SelectedItem="{Binding LeftInsertionCue, Mode=TwoWay}"
+                                      Width="110"/>
+                        </StackPanel>
                     </StackPanel>
                     <ListBox Grid.Row="2" AutomationProperties.LabeledBy="{Binding ElementName=FruitsHeading}"
                              ItemsSource="{Binding Left}"
                              SelectedItems="{Binding LeftSelection}"
-                             DragDrop.UseDropGap="{Binding IsChecked, ElementName=LeftGapToggle}"
+                             DragDrop.InsertionCue="{Binding LeftInsertionCue}"
                              SelectionMode="Extended"
                              Background="Transparent">
                         <!-- The gap between rows belongs to the CONTAINER, not to the tile inside it: on the tile it is
@@ -168,12 +178,18 @@
                         <TextBlock x:Name="FlowLabel" Text="{Localize DragDropStrings.Flow}" VerticalAlignment="Center" MarginRight="8"/>
                         <DropDown AutomationProperties.LabeledBy="{Binding ElementName=FlowLabel}" ItemsSource="{Binding Orientations}"
                                   SelectedItem="{Binding WrapOrientation, Mode=TwoWay}" Width="130"/>
-                        <!-- Off = the plain insertion caret; on (the default) = a real hole with a placeholder card. -->
-                        <CheckBox x:Name="WrapGapToggle" Content="{Localize DragDropStrings.Spread}" IsChecked="True"
-                                  VerticalAlignment="Center" MarginLeft="12"/>
+                        <TextBlock x:Name="WrapCueLabel"
+                                   Text="{Localize DragDropStrings.InsertionCue}"
+                                   VerticalAlignment="Center"
+                                   MarginLeft="12"
+                                   MarginRight="8"/>
+                        <DropDown AutomationProperties.LabeledBy="{Binding ElementName=WrapCueLabel}"
+                                  ItemsSource="{Binding InsertionCues}"
+                                  SelectedItem="{Binding WrapInsertionCue, Mode=TwoWay}"
+                                  Width="110"/>
                     </StackPanel>
                     <ListBox Grid.Row="2" AutomationProperties.LabeledBy="{Binding ElementName=ColorsHeading}" ItemsSource="{Binding Wrap}" SelectedItems="{Binding WrapSelection}"
-                             DragDrop.UseDropGap="{Binding IsChecked, ElementName=WrapGapToggle}"
+                             DragDrop.InsertionCue="{Binding WrapInsertionCue}"
                              SelectionMode="Extended" Background="Transparent"
                              ScrollViewer.HorizontalScrollBarVisibility="{Binding WrapHScroll}"
                              ScrollViewer.VerticalScrollBarVisibility="{Binding WrapVScroll}">

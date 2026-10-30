@@ -26,6 +26,11 @@ public static class AutomationAgentExtensions
             application.FrameVerification.IsEnabled = true;
         }
 
+        if (Environment.GetEnvironmentVariable(AutomationProtocol.ScreenVariable) is { Length: > 0 } screen)
+        {
+            application.DefaultScreen = screen;
+        }
+
         var agent = new AutomationAgent(application, pipe);
         application.Started += (_, _) => agent.Start();
         application.ShuttingDown += (_, _) => agent.Dispose();

@@ -35,7 +35,7 @@ public sealed class WindowDialogHost : IDialogHost
     {
         WindowBase shell = null;
         var closed = false;
-        var asker = _application.ActiveWindow ?? _application.MainWindow;
+        var asker = _application.FrontWindow;
         var session = await DialogSession.BeginAsync(dialogViewModel, parameters, () =>
         {
             if (shell == null || closed)

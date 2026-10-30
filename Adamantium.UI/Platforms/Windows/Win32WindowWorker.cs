@@ -13,7 +13,7 @@ using Adamantium.Win32;
 
 namespace Adamantium.UI.Platforms.Windows;
 
-internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
+internal partial class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
 {
     //private WindowBase window;
 
@@ -186,7 +186,11 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
             WindowStyle.Clipsiblings | WindowStyle.Clipchildren | WindowStyle.Sizeframe;
 
         // Overlay traits, read here with the rest: native styles are fixed at creation.
-        if (window.WindowOpacity < 1.0) wndStyleEx |= WindowStyleEx.Layered;
+        if (window.WindowOpacity < 1.0)
+        {
+            wndStyleEx |= WindowStyleEx.Layered;
+        }
+
         if (window.Topmost) wndStyleEx |= WindowStyleEx.Topmost;
         if (window.TransparentToInput) wndStyleEx |= WindowStyleEx.Transparent;
         if (!window.ActivateOnShow)
@@ -429,7 +433,12 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
 
         style = Set(style, WindowStyleEx.Topmost, window.Topmost);
         style = Set(style, WindowStyleEx.Transparent, window.TransparentToInput);
-        style = Set(style, WindowStyleEx.Layered, window.WindowOpacity < 1.0);
+        if (!window.UseTransparentComposition)
+        {
+            _framesComposed = false;
+        }
+
+        style = Set(style, WindowStyleEx.Layered, window.WindowOpacity < 1.0 || _framesComposed);
         style = Set(style, WindowStyleEx.Noactivate | WindowStyleEx.Toolwindow, !window.ActivateOnShow);
         style = Set(style, WindowStyleEx.Appwindow, window.ActivateOnShow && window.Owner == null);
 
@@ -512,9 +521,13 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
     {
         if (source == null || source.Handle == IntPtr.Zero) return;
 
-        if (window.WindowOpacity >= 1.0) return;
+        _frameOpacity = (byte)Math.Clamp(window.WindowOpacity * 255, 0, 255);
+        if (window.WindowOpacity >= 1.0 || _framesComposed)
+        {
+            return;
+        }
 
-        var alpha = (byte)Math.Clamp(window.WindowOpacity * 255, 0, 255);
+        var alpha = (byte)Math.Clamp(window.WindowOpacity *255, 0, 255);
         Win32Interop.SetLayeredWindowAttributes(source.Handle, 0, alpha, Win32Interop.LWA_ALPHA);
     }
 
@@ -687,6 +700,7 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
     private void OnWindowClosed(object sender, EventArgs e)
     {
         StopWatchingAccent();
+        ReleaseFrame();
         source.RemoveHook(CustomWndProc);
         UIContext.UIApplication.RemoveWindow(window);
         // Actually destroy the OS window. The custom-caption close raises Closed on the LOOP thread, but DestroyWindow must

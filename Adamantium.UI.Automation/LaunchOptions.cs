@@ -39,4 +39,9 @@ public sealed class LaunchOptions
     /// <summary>Whether the application is shown on a virtual monitor of its own rather than on the desktop, so it takes
     /// no focus from whoever works there. Linux only, with Mutter; elsewhere it shows on the desktop.</summary>
     public bool VirtualDisplay { get; set; }
+
+    /// <summary>The monitor its windows open on, named by the end of its id (<c>DISPLAY2</c> on Windows), so it keeps off
+    /// the one someone works on; by default this process's <see cref="AutomationProtocol.ScreenVariable"/>, else the
+    /// monitor under the pointer.</summary>
+    public string Screen { get; set; }
 }
