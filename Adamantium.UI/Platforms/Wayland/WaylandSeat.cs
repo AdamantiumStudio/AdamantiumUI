@@ -279,12 +279,14 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
             perPixel = 1.0 / bufferScale;
         }
 
+        // The cursor role first, then the picture: WSLg takes a surface committed with a picture and no role yet for a
+        // window of its own, and never shows it as the cursor.
+        pointer.SetCursor(pointerEnterSerial, cursorSurface, (int)Math.Round(image.HotX * perPixel),
+            (int)Math.Round(image.HotY * perPixel));
         cursorSurface.Attach(buffer, 0, 0);
         cursorSurface.DamageBuffer(0, 0, image.Width, image.Height);
         cursorSurface.Commit();
         buffer.Destroy();
-        pointer.SetCursor(pointerEnterSerial, cursorSurface, (int)Math.Round(image.HotX * perPixel),
-            (int)Math.Round(image.HotY * perPixel));
         appliedShape = 0;
         appliedImage = path;
         cursorHidden = false;
