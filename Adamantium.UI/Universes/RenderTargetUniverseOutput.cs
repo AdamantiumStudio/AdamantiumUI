@@ -16,11 +16,14 @@ using Adamantium.Vulkan.Core;
 namespace Adamantium.UI.Universes;
 
 /// <summary>
-/// An output that presents into a <see cref="RenderTargetPanel"/>: the frame is copied into an exportable
-/// <see cref="SharedSurface"/>, which the panel imports. Re-created when the panel resizes.
+/// An output that presents into a <see cref="RenderTargetPanel"/>: the frame is copied into a <see cref="SharedSurface"/>,
+/// which the panel takes - one of the logical device the panel draws with, when the universe renders on it and the panel
+/// leaves it to choose (<see cref="RenderTargetPanel.FrameSharing"/>), else an exported one, imported through OS
+/// handles. Re-created when the panel resizes.
 /// </summary>
 public class RenderTargetUniverseOutput : UIUniverseOutput
 {
+    private readonly IGraphicsDeviceService _uiDevices;
     private RenderTargetPanel nativeWindow;
     private SharedSurface _sharedSurface;
     // Made for a new size, given to the panel once it holds a frame.
@@ -35,18 +38,23 @@ public class RenderTargetUniverseOutput : UIUniverseOutput
     // not to the one the copy of this ask is still reading behind the window's queued frames.
     private const uint SurfaceBuffers = 3;
 
-    internal RenderTargetUniverseOutput(IEventAggregator eventAggregator, OutputContext context) : base(eventAggregator)
+    // Without the UI's devices the frames always go through handles.
+    internal RenderTargetUniverseOutput(IEventAggregator eventAggregator, OutputContext context,
+        IGraphicsDeviceService uiDevices = null) : base(eventAggregator)
     {
+        _uiDevices = uiDevices;
         Initialize(context);
     }
 
     internal RenderTargetUniverseOutput(
         IEventAggregator eventAggregator,
         OutputContext context,
+        IGraphicsDeviceService uiDevices,
         SurfaceFormat pixelFormat,
         DepthFormat depthFormat,
         MSAALevel msaaLevel) : base(eventAggregator)
     {
+        _uiDevices = uiDevices;
         _format = pixelFormat;
         Initialize(context, pixelFormat, depthFormat, msaaLevel);
     }
@@ -167,12 +175,21 @@ public class RenderTargetUniverseOutput : UIUniverseOutput
         if (width == 0 || height == 0) return false;
         if (_sharedSurface != null && _sharedSurface.Width == width && _sharedSurface.Height == height) return false;
 
-        _pendingSurface = SharedSurface.CreateExportable(device, width, height, _format, bufferCount: SurfaceBuffers);
+        _pendingSurface = SharesDeviceWithPanel(device)
+            ? SharedSurface.CreateInDevice(device, width, height, _format, bufferCount: SurfaceBuffers)
+            : SharedSurface.CreateExportable(device, width, height, _format, bufferCount: SurfaceBuffers);
         device.RecordSharedSurfaceCopy(frame, _pendingSurface);
         device.AddSignalSemaphore(_pendingSurface.ProduceSemaphore, 1);
         _unannounced = (_pendingSurface.Descriptor, 1);
         return true;
     }
+
+    // The panel takes the frames within the device when it leaves it to choose and draws with the device's own logical
+    // device - one main device, one VkDevice.
+    private bool SharesDeviceWithPanel(IGraphicsDevice device) =>
+        nativeWindow.FrameSharing == FrameSharing.Auto
+        && _uiDevices?.MainGraphicsDevice is { } uiDevice
+        && ReferenceEquals(uiDevice, device.MainDevice);
 
     private void HandOverPendingSurface()
     {

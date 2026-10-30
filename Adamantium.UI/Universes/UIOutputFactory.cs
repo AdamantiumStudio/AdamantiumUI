@@ -12,6 +12,15 @@ namespace Adamantium.UI.Universes;
 /// </summary>
 public class UIOutputFactory : IOutputFactory
 {
+    private readonly IGraphicsDeviceService _uiDevices;
+
+    /// <summary>Outputs whose panels draw with <paramref name="uiDevices"/>: a universe on its device hands them frames
+    /// within it.</summary>
+    public UIOutputFactory(IGraphicsDeviceService uiDevices)
+    {
+        _uiDevices = uiDevices;
+    }
+
     public UniverseOutput Create(OutputContext context, IUniverseEventAggregator events)
     {
         if (context.Context is IWindow)
@@ -21,7 +30,7 @@ public class UIOutputFactory : IOutputFactory
 
         if (context.Context is RenderTargetPanel)
         {
-            return new RenderTargetUniverseOutput(events, context);
+            return new RenderTargetUniverseOutput(events, context, _uiDevices);
         }
 
         throw new NotSupportedException($"context of type {context.Context?.GetType()} is not supported");
@@ -31,7 +40,7 @@ public class UIOutputFactory : IOutputFactory
     {
         if (context.Context is RenderTargetPanel)
         {
-            return new RenderTargetUniverseOutput(events, context, pixelFormat, depthFormat, msaaLevel);
+            return new RenderTargetUniverseOutput(events, context, _uiDevices, pixelFormat, depthFormat, msaaLevel);
         }
 
         throw new NotSupportedException($"context of type {context.Context?.GetType()} is not supported");
