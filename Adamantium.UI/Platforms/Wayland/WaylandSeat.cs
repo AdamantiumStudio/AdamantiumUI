@@ -286,7 +286,7 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
         cursorSurface.Attach(buffer, 0, 0);
         cursorSurface.DamageBuffer(0, 0, image.Width, image.Height);
         cursorSurface.Commit();
-        buffer.Destroy();
+        WaylandShm.DestroyWhenReleased(buffer);
         appliedShape = 0;
         appliedImage = path;
         cursorHidden = false;

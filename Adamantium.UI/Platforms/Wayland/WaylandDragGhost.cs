@@ -66,7 +66,7 @@ internal sealed class WaylandDragGhost : IDragGhost
         surface.Attach(buffer, 0, 0);
         surface.DamageBuffer(0, 0, width, height);
         surface.Commit();
-        buffer.Destroy();
+        WaylandShm.DestroyWhenReleased(buffer);
 
         MoveOnEventThread(screenX, screenY);
     }
