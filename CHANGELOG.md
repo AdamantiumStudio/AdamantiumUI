@@ -7,6 +7,9 @@ All packages share one version.
 
 ### Added
 
+- A `ListBox` row is opened with Enter as with a double click: `ItemActivated` and `ItemActivatedCommand` get the
+  selected item. A list that opens nothing leaves Enter to what is around it.
+
 - `Image.ContentPixelLimit`: the longest side, in pixels, of the picture an image draws. A larger still bitmap,
   stretched to fit, is drawn from a copy shrunk to fit, made once and let go with the source or off the tree; its size in
   the layout and its own pixels stay as they are. A picture drawn at its own size, or an animation, is drawn as it is.
