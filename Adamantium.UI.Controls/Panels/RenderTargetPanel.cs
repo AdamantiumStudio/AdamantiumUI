@@ -74,6 +74,18 @@ public class RenderTargetPanel : Grid
       set => SetValue(AcceptsTabProperty, value);
    }
 
+   public static readonly AdamantiumProperty FrameSharingProperty = AdamantiumProperty.Register(nameof(FrameSharing),
+      typeof(FrameSharing), typeof(RenderTargetPanel), new PropertyMetadata(FrameSharing.Auto));
+
+   /// <summary>How the frames rendered for the panel are handed to it: <see cref="Panels.FrameSharing.Auto"/>, within the
+   /// logical device when the renderer is on the UI's own; <see cref="Panels.FrameSharing.SharedSurface"/> to try the
+   /// path through OS handles anyway. Changed while frames come, it takes with the renderer's next frame.</summary>
+   public FrameSharing FrameSharing
+   {
+      get => GetValue<FrameSharing>(FrameSharingProperty);
+      set => SetValue(FrameSharingProperty, value);
+   }
+
    private bool _looking;    // relative mode currently engaged by THIS panel
    private bool _leftDown;   // Drag mode: left button held on the panel
    private bool _rightDown;  // Drag mode: right button held on the panel

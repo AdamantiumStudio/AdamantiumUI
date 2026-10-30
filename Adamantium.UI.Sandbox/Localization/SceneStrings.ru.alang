@@ -3,6 +3,7 @@
     <Phrase Key="CameraSpeed" Text="Скорость камеры"/>
     <Phrase Key="ResetCamera" Text="Сбросить камеру"/>
     <Phrase Key="FramesOnDemand" Text="Кадры по требованию"/>
+    <Phrase Key="FramesInSharedSurface" Text="Кадры через общую поверхность"/>
     <Phrase Key="Tool" Text="Инструмент"/>
     <Phrase Key="Select" Text="Выбор"/>
     <Phrase Key="Move" Text="Перемещение"/>

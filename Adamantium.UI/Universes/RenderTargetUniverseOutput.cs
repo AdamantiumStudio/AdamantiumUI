@@ -16,11 +16,14 @@ using Adamantium.Vulkan.Core;
 namespace Adamantium.UI.Universes;
 
 /// <summary>
-/// An output that presents into a <see cref="RenderTargetPanel"/>: the frame is copied into an exportable
-/// <see cref="SharedSurface"/>, which the panel imports. Re-created when the panel resizes.
+/// An output that presents into a <see cref="RenderTargetPanel"/>: the frame is copied into a <see cref="SharedSurface"/>,
+/// which the panel takes - one of the logical device the panel draws with, when the universe renders on it and the panel
+/// leaves it to choose (<see cref="RenderTargetPanel.FrameSharing"/>), else an exported one, imported through OS
+/// handles. Re-created when the panel resizes.
 /// </summary>
 public class RenderTargetUniverseOutput : UIUniverseOutput
 {
+    private readonly IGraphicsDeviceService _uiDevices;
     private RenderTargetPanel nativeWindow;
     private SharedSurface _sharedSurface;
     // Made for a new size, given to the panel once it holds a frame.
@@ -35,18 +38,23 @@ public class RenderTargetUniverseOutput : UIUniverseOutput
     // not to the one the copy of this ask is still reading behind the window's queued frames.
     private const uint SurfaceBuffers = 3;
 
-    internal RenderTargetUniverseOutput(IEventAggregator eventAggregator, OutputContext context) : base(eventAggregator)
+    // Without the UI's devices the frames always go through handles.
+    internal RenderTargetUniverseOutput(IEventAggregator eventAggregator, OutputContext context,
+        IGraphicsDeviceService uiDevices = null) : base(eventAggregator)
     {
+        _uiDevices = uiDevices;
         Initialize(context);
     }
 
     internal RenderTargetUniverseOutput(
         IEventAggregator eventAggregator,
         OutputContext context,
+        IGraphicsDeviceService uiDevices,
         SurfaceFormat pixelFormat,
         DepthFormat depthFormat,
         MSAALevel msaaLevel) : base(eventAggregator)
     {
+        _uiDevices = uiDevices;
         _format = pixelFormat;
         Initialize(context, pixelFormat, depthFormat, msaaLevel);
     }
@@ -165,14 +173,27 @@ public class RenderTargetUniverseOutput : UIUniverseOutput
         var width = Width;
         var height = Height;
         if (width == 0 || height == 0) return false;
-        if (_sharedSurface != null && _sharedSurface.Width == width && _sharedSurface.Height == height) return false;
 
-        _pendingSurface = SharedSurface.CreateExportable(device, width, height, _format, bufferCount: SurfaceBuffers);
+        // Made again for a new size, and for the panel's FrameSharing changed since - its next frame takes the new way.
+        var inDevice = SharesDeviceWithPanel(device);
+        if (_sharedSurface != null && _sharedSurface.Width == width && _sharedSurface.Height == height
+            && (_sharedSurface.Descriptor.DeviceSurface != null) == inDevice) return false;
+
+        _pendingSurface = inDevice
+            ? SharedSurface.CreateInDevice(device, width, height, _format, bufferCount: SurfaceBuffers)
+            : SharedSurface.CreateExportable(device, width, height, _format, bufferCount: SurfaceBuffers);
         device.RecordSharedSurfaceCopy(frame, _pendingSurface);
         device.AddSignalSemaphore(_pendingSurface.ProduceSemaphore, 1);
         _unannounced = (_pendingSurface.Descriptor, 1);
         return true;
     }
+
+    // The panel takes the frames within the device when it leaves it to choose and draws with the device's own logical
+    // device - one main device, one VkDevice.
+    private bool SharesDeviceWithPanel(IGraphicsDevice device) =>
+        nativeWindow.FrameSharing == FrameSharing.Auto
+        && _uiDevices?.MainGraphicsDevice is { } uiDevice
+        && ReferenceEquals(uiDevice, device.MainDevice);
 
     private void HandOverPendingSurface()
     {
@@ -191,7 +212,8 @@ public class RenderTargetUniverseOutput : UIUniverseOutput
     }
 
     // Retired, not destroyed: submits of every device of this one may still reference its semaphores, and destroying
-    // them mid-frame lost the device. The panel's import is its own.
+    // them mid-frame lost the device. The panel's import of an exported surface is its own; what it took of a surface of
+    // its own device is the surface's, which lasts until the panel lets go of it.
     private static void RetireSurface(SharedSurface surface)
     {
         surface?.GraphicsDevice.AddToDeferDisposeQueue(surface);
@@ -211,7 +233,8 @@ public class RenderTargetUniverseOutput : UIUniverseOutput
         base.ReleaseDeviceResources();
     }
 
-    // The panel lets go of the surface first: its handles close with it, and a panel back in the tree would import them.
+    // The panel lets go of the surface first: what it shares goes with it - handles closed, or the surface itself - and a
+    // panel back in the tree would take it again.
     // Only of this output's surface - another output may have bound the panel since.
     private void ReleaseSurface(bool retire)
     {

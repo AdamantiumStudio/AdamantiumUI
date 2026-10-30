@@ -7,6 +7,7 @@ using Adamantium.Graphics.Core.Models;
 using Adamantium.Mathematics;
 using Adamantium.MVVM;
 using Adamantium.Multiverse;
+using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Dispatcher;
 using Adamantium.UI.Sandbox.Content;
@@ -43,6 +44,14 @@ public partial class SceneViewModel : TabPageViewModel
     /// <summary>Whether the scene draws only when something changes in it, not every frame the window shows.</summary>
     [Bindable]
     private bool _framesOnDemand = true;
+
+    /// <summary>Whether the scene's frames reach the panel through a shared surface, as from another device, rather
+    /// than within the UI's own - to try that path.</summary>
+    [Bindable, Affects(nameof(FrameSharing))]
+    private bool _framesInSharedSurface;
+
+    /// <summary>How the panel is handed the scene's frames.</summary>
+    public FrameSharing FrameSharing => FramesInSharedSurface ? FrameSharing.SharedSurface : FrameSharing.Auto;
 
     partial void OnFramesOnDemandChanged(bool value)
     {

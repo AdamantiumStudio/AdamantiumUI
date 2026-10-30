@@ -9,7 +9,8 @@
     <RenderTargetPanel AutomationProperties.AutomationId="Viewport"
                        Background="#0B0E14"
                        MouseLookMode="Drag"
-                       IsMouseLookEnabled="{Binding MouseLookEnabled}">
+                       IsMouseLookEnabled="{Binding MouseLookEnabled}"
+                       FrameSharing="{Binding FrameSharing}">
         <RenderTargetPanel.Behaviors>
             <universes:UniverseHost Universe="{Binding Universe}"/>
         </RenderTargetPanel.Behaviors>
@@ -182,6 +183,12 @@
             <ToggleSwitch AutomationProperties.AutomationId="FramesOnDemand"
                           Content="{Localize SceneStrings.FramesOnDemand}"
                           IsChecked="{Binding FramesOnDemand, Mode=TwoWay}"
+                          HorizontalAlignment="Right"
+                          MarginBottom="8"/>
+            <!-- The frames through OS handles, as from another device, where they would go within the UI's own. -->
+            <ToggleSwitch AutomationProperties.AutomationId="FramesInSharedSurface"
+                          Content="{Localize SceneStrings.FramesInSharedSurface}"
+                          IsChecked="{Binding FramesInSharedSurface, Mode=TwoWay}"
                           HorizontalAlignment="Right"
                           MarginBottom="8"/>
             <TextBlock Text="{Binding Fps, StringFormat='FPS: {0:F0}'}"
