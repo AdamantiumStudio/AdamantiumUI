@@ -186,7 +186,8 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
     #region INativeCursors
 
     /// <summary>Shows the cursor through wp_cursor_shape: the compositor draws it from the user's theme. Without the
-    /// protocol the compositor's own arrow stays.</summary>
+    /// protocol the theme's picture of the shape is shown, read here: a compositor shows no cursor over a window that
+    /// sets none.</summary>
     public void Apply(Cursor cursor)
     {
         appliedCursor = cursor;
@@ -198,7 +199,7 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
 
         if (cursor.Type == CursorType.Custom && cursor.FilePath is { Length: > 0 } path)
         {
-            SetImage(path);
+            SetImage(path, WaylandCursorImage.LogicalSize);
             return;
         }
 
@@ -208,7 +209,17 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
     internal void SetShape(WpCursorShapeDeviceV1.Shape shape)
     {
         var device = cursorShape;
-        if (device == null || pointerWindow == null || (!cursorHidden && appliedShape == shape))
+        if (device == null)
+        {
+            if (WaylandCursorTheme.Find(shape) is { } themed)
+            {
+                SetImage(themed, WaylandCursorTheme.Size);
+            }
+
+            return;
+        }
+
+        if (pointerWindow == null || (!cursorHidden && appliedShape == shape))
         {
             return;
         }
@@ -219,7 +230,8 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
         cursorHidden = false;
     }
 
-    private void SetImage(string path)
+    // Shows the picture in the file at logicalSize, its nominal size as the file has it, sharp at the window's scale.
+    private void SetImage(string path, int logicalSize)
     {
         var worker = pointerWindow;
         if (pointer == null || worker == null || (!cursorHidden && appliedImage == path))
@@ -227,7 +239,7 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
             return;
         }
 
-        var wanted = (int)Math.Round(WaylandCursorImage.LogicalSize * worker.Scale);
+        var wanted = (int)Math.Round(logicalSize * worker.Scale);
         if (!cursorImages.TryGetValue((path, wanted), out var image))
         {
             image = WaylandCursorImage.Load(path, wanted);
@@ -237,7 +249,12 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
         var buffer = image == null ? null : WaylandShm.CreateBuffer(platform, image.Pixels, image.Width, image.Height);
         if (buffer == null)
         {
-            SetShape(WpCursorShapeDeviceV1.Shape.Default);
+            // The compositor's own default when it draws by shape; without that there is no other picture to fall to.
+            if (cursorShape != null)
+            {
+                SetShape(WpCursorShapeDeviceV1.Shape.Default);
+            }
+
             return;
         }
 
@@ -246,12 +263,13 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
         if (platform.Viewporter != null)
         {
             cursorViewport ??= platform.Viewporter.GetViewport(cursorSurface);
-            perPixel = (double)WaylandCursorImage.LogicalSize / image.Width;
-            cursorViewport.SetDestination(WaylandCursorImage.LogicalSize, Math.Max(1, (int)Math.Round(image.Height * perPixel)));
+            perPixel = (double)logicalSize / image.NominalSize;
+            cursorViewport.SetDestination(Math.Max(1, (int)Math.Round(image.Width * perPixel)),
+                Math.Max(1, (int)Math.Round(image.Height * perPixel)));
         }
         else
         {
-            var bufferScale = Math.Max(1, (int)Math.Round((double)image.Width / WaylandCursorImage.LogicalSize));
+            var bufferScale = Math.Max(1, (int)Math.Round((double)image.NominalSize / logicalSize));
             if (image.Width % bufferScale != 0 || image.Height % bufferScale != 0)
             {
                 bufferScale = 1;

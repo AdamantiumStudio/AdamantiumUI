@@ -7,6 +7,9 @@ All packages share one version.
 
 ### Added
 
+- Wayland: on a compositor that does not draw cursors by shape (no `wp_cursor_shape_v1`, as WSLg's Weston), the window
+  shows the user's cursor theme itself - `XCURSOR_THEME`, `XCURSOR_PATH` and `XCURSOR_SIZE` as Xcursor reads them, the
+  themes a theme inherits included; there was no cursor over the window at all.
 - A `ListBox` row is opened with Enter as with a double click: `ItemActivated` and `ItemActivatedCommand` get the
   selected item. A list that opens nothing leaves Enter to what is around it.
 
