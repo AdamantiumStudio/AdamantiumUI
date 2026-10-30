@@ -272,6 +272,7 @@ public sealed class DockingAreaRegionAdapter : IRegionAdapter
             Allowed = placement?.PaneAllowed ?? DockZone.All,
             Kind = placement?.PaneKind ?? PaneKind.Document,
             MinSize = placement?.PaneMinSize ?? 0,
+            DockLength = placement?.PaneLength ?? 0,
 
             // What it takes to make this one again if a saved layout is loaded when it does not exist: its TYPE. The
             // instance restores the rest of itself from its own id.

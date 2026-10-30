@@ -6,8 +6,13 @@ namespace Adamantium.UI.Platforms.Wayland;
 /// <summary>Pictures drawn by the CPU, in memory shared with the compositor.</summary>
 internal static unsafe class WaylandShm
 {
+    /// <summary>Destroys <paramref name="buffer"/>, committed, once the compositor lets it go (wl_buffer.release). Not at
+    /// once: an older compositor takes the picture off its surface the moment its buffer is destroyed - WSLg showed a
+    /// cursor for an instant and then none.</summary>
+    public static void DestroyWhenReleased(WlBuffer buffer) => buffer.Release += buffer.Destroy;
+
     /// <summary>An ARGB8888 buffer of premultiplied BGRA pixels; null where none could be made. The memory is never
-    /// written again, so the buffer may be destroyed once committed.</summary>
+    /// written again; once committed, the buffer is let go through <see cref="DestroyWhenReleased"/>.</summary>
     public static WlBuffer CreateBuffer(WaylandPlatform platform, byte[] bgra, int width, int height)
     {
         var size = width * height * 4;

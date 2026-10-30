@@ -33,7 +33,7 @@ public class ListBox : Selector
         // focus wandering off to a neighboring control instead of down the rows.
     }
 
-    /// <summary>Runs on a double click on a row, with the item as the parameter.</summary>
+    /// <summary>Runs on a double click on a row, or Enter on the row selected, with the item as the parameter.</summary>
     public static readonly AdamantiumProperty ItemActivatedCommandProperty = AdamantiumProperty.Register(
         nameof(ItemActivatedCommand), typeof(ICommand), typeof(ListBox), new PropertyMetadata(null));
 
@@ -59,11 +59,15 @@ public class ListBox : Selector
         // a single click follows.
         if (SelectedItem is not { } item) return;
 
+        Activate(item);
+        e.Handled = true;
+    }
+
+    private void Activate(object item)
+    {
         ItemActivated?.Invoke(this, new ItemActivatedEventArgs(item));
 
         if (ItemActivatedCommand is { } command && command.CanExecute(item)) command.Execute(item);
-
-        e.Handled = true;
     }
 
     // A list inside a row of this one answers a double click on its own rows; this one does not answer it too.
@@ -83,6 +87,14 @@ public class ListBox : Selector
     protected override void OnKeyDown(KeyEventArgs e)
     {
         base.OnKeyDown(e);
+        if (!e.Handled && e.Key == Key.Enter && SelectedItem is { } item
+            && (ItemActivatedCommand != null || ItemActivated != null))
+        {
+            Activate(item);
+            e.Handled = true;
+            return;
+        }
+
         OnNavigationKey(e);
     }
 

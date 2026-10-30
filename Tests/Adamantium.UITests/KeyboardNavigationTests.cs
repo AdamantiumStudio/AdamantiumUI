@@ -634,6 +634,36 @@ public class KeyboardNavigationTests
         Assert.That(list.SelectedIndex, Is.EqualTo(0));
     }
 
+    /// <summary>Enter opens the row selected, as a double click does.</summary>
+    [Test]
+    public void EnterActivatesTheSelectedRow()
+    {
+        var list = NewList("one", "two");
+        object activated = null;
+        list.ItemActivated += (_, e) => activated = e.Item;
+        list.SelectedIndex = 1;
+
+        Press(list, Key.Enter);
+
+        Assert.That(activated, Is.EqualTo("two"));
+    }
+
+    /// <summary>A list nobody activates rows of leaves Enter to whoever is around it - a dialog's default button.</summary>
+    [Test]
+    public void EnterGoesPastAListThatActivatesNothing()
+    {
+        var list = NewList("one", "two");
+        list.SelectedIndex = 0;
+        var e = new KeyEventArgs(KeyboardDevice.CurrentDevice, Key.Enter, InputModifiers.None, 0)
+        {
+            RoutedEvent = Keyboard.KeyDownEvent
+        };
+
+        list.RaiseEvent(e);
+
+        Assert.That(e.Handled, Is.False);
+    }
+
     [Test]
     public void TheFirstArrowSelectsFromNothing()
     {

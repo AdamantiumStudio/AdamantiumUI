@@ -838,7 +838,9 @@ public class DockingArea : Panel
                 // Aimed at the ROOT, so whichever side was docked LAST is the outer one - the layout's own history,
                 // and what Telerik does. A band, not half the area.
                 Layout.DockBeside(target, zone is DockZone.Center or DockZone.None ? DockZone.Right : zone, group,
-                    PaneLength.Pixels(EdgeDockSize));
+                    PaneLength.Pixels(pane.DockLength > 0 && zone is not (DockZone.Center or DockZone.None)
+                        ? pane.DockLength
+                        : EdgeDockSize));
             }
 
             Layout.Normalize();

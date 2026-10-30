@@ -12,7 +12,7 @@ using Adamantium.ECS;
 using Adamantium.Multiverse;
 using Adamantium.Multiverse.Events;
 using Adamantium.Graphics.Core;
-using Adamantium.Graphics.Core.Content;
+using Adamantium.Graphics.Core.Assets;
 using Adamantium.Graphics.Core.Models;
 using Adamantium.Mathematics;
 using Adamantium.UI.Sandbox.Content;
@@ -172,13 +172,13 @@ namespace Adamantium.UI.Sandbox
         public Task<Entity> ImportModel(SceneData scene)
         {
             return Task.Run(() =>
-                EntityWorld.CreateEntityFromTemplate(new EntityImportTemplate(scene, Content, new Vector3<double>(0, 0, 6))));
+                EntityWorld.CreateEntityFromTemplate(new EntityImportTemplate(scene, Assets, new Vector3<double>(0, 0, 6))));
         }
 
-        public async Task<Entity> ImportModel(String pathToFile, ContentLoadOptions options = null)
+        public async Task<Entity> ImportModel(String pathToFile, AssetLoadOptions options = null)
         {
             // Reader produces SceneData (parse now, deserialize a baked binary later); entity assembly stays here.
-            var scene = await Content.LoadAsync<SceneData>(pathToFile, options);
+            var scene = await Assets.LoadAsync<SceneData>(pathToFile, options);
             return await ImportModel(scene);
         }
 

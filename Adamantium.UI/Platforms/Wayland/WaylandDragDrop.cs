@@ -340,7 +340,7 @@ internal sealed class WaylandDragDrop : INativeDragDrop
 
         dragIcon.DamageBuffer(0, 0, ghost.Width, ghost.Height);
         dragIcon.Commit();
-        buffer.Destroy();
+        WaylandShm.DestroyWhenReleased(buffer);
     }
 
     private void OnPointerReleased()

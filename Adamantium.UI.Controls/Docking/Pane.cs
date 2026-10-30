@@ -37,6 +37,11 @@ public class Pane : TabItem, IView
     public static readonly AdamantiumProperty MinSizeProperty = AdamantiumProperty.Register(nameof(MinSize),
         typeof(double), typeof(Pane), new PropertyMetadata(0.0));
 
+    /// <summary>How deep the band the pane opens in reaches from the edge it docks to; zero, by default, for the area's
+    /// <see cref="DockingArea.EdgeDockSize"/>.</summary>
+    public static readonly AdamantiumProperty DockLengthProperty = AdamantiumProperty.Register(nameof(DockLength),
+        typeof(double), typeof(Pane), new PropertyMetadata(0.0));
+
     /// <summary>Document (default) or tool, <see cref="PaneKind"/>: what closing means and whether a saved layout restores it.
     /// The look comes from where the group stands.</summary>
     public static readonly AdamantiumProperty KindProperty = AdamantiumProperty.Register(nameof(Kind),
@@ -94,6 +99,12 @@ public class Pane : TabItem, IView
     {
         get => GetValue<double>(MinSizeProperty);
         set => SetValue(MinSizeProperty, value);
+    }
+
+    public double DockLength
+    {
+        get => GetValue<double>(DockLengthProperty);
+        set => SetValue(DockLengthProperty, value);
     }
 
     public bool Restore

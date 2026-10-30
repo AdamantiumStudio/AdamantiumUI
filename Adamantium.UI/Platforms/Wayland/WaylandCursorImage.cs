@@ -5,23 +5,30 @@ using Adamantium.Imaging;
 
 namespace Adamantium.UI.Platforms.Wayland;
 
-/// <summary>A cursor picture from a file: a Windows .cur (or .ico) or a PNG held at its top-left corner, as premultiplied
-/// BGRA with its hot spot.</summary>
+/// <summary>A cursor picture from a file: a Windows .cur (or .ico), an Xcursor file of a cursor theme or a PNG held at
+/// its top-left corner, as premultiplied BGRA with its hot spot.</summary>
 internal sealed class WaylandCursorImage
 {
+    private const uint XcursorImageChunk = 0xFFFD0002;
+
     /// <summary>The logical size a cursor is shown at, as Windows does with every cursor file.</summary>
     public const int LogicalSize = 32;
 
-    private WaylandCursorImage(byte[] pixels, int width, int height, int hotX, int hotY)
+    private WaylandCursorImage(byte[] pixels, int width, int height, int hotX, int hotY, int nominalSize = 0)
     {
         Pixels = pixels;
         Width = width;
         Height = height;
         HotX = hotX;
         HotY = hotY;
+        NominalSize = nominalSize > 0 ? nominalSize : width;
     }
 
     public byte[] Pixels { get; }
+
+    /// <summary>The size the picture stands for: an Xcursor picture may be larger than its nominal size, which is
+    /// what is scaled to the size shown; any other picture's is its width.</summary>
+    public int NominalSize { get; }
 
     public int Width { get; }
 
@@ -37,7 +44,12 @@ internal sealed class WaylandCursorImage
         try
         {
             var bytes = File.ReadAllBytes(path);
-            return bytes is [0x89, (byte)'P', (byte)'N', (byte)'G', ..] ? FromPng(bytes, 0, 0) : FromCur(bytes, wantedSize);
+            return bytes switch
+            {
+                [0x89, (byte)'P', (byte)'N', (byte)'G', ..] => FromPng(bytes, 0, 0),
+                [(byte)'X', (byte)'c', (byte)'u', (byte)'r', ..] => FromXcursor(bytes, wantedSize),
+                _ => FromCur(bytes, wantedSize)
+            };
         }
         catch (Exception)
         {
@@ -83,6 +95,61 @@ internal sealed class WaylandCursorImage
         return image is [0x89, (byte)'P', (byte)'N', (byte)'G', ..]
             ? FromPng(image.ToArray(), hotX, hotY)
             : FromDib(image, hotX, hotY);
+    }
+
+    // An Xcursor file: a header ("Xcur", its size, a version, the entry count), a table of entries (type, nominal size,
+    // position), and at each image entry its own header (size, type, nominal size, version, width, height, hot spot,
+    // delay) and the pixels as premultiplied ARGB words, little-endian. The first image of the nominal size nearest the
+    // wanted one is taken: an animated cursor shows its first frame.
+    private static WaylandCursorImage FromXcursor(byte[] file, int wantedSize)
+    {
+        var data = file.AsSpan();
+        if (data.Length < 16)
+        {
+            return null;
+        }
+
+        var headerSize = (int)BinaryPrimitives.ReadUInt32LittleEndian(data[4..]);
+        var count = (int)BinaryPrimitives.ReadUInt32LittleEndian(data[12..]);
+        var best = -1;
+        var bestSize = 0;
+        for (var i = 0; i < count && headerSize + (i + 1) * 12 <= data.Length; i++)
+        {
+            var entry = data.Slice(headerSize + i * 12, 12);
+            if (BinaryPrimitives.ReadUInt32LittleEndian(entry) != XcursorImageChunk)
+            {
+                continue;
+            }
+
+            var size = (int)BinaryPrimitives.ReadUInt32LittleEndian(entry[4..]);
+            var better = best < 0
+                         || (size >= wantedSize ? bestSize < wantedSize || size < bestSize : bestSize < wantedSize && size > bestSize);
+            if (better)
+            {
+                best = (int)BinaryPrimitives.ReadUInt32LittleEndian(entry[8..]);
+                bestSize = size;
+            }
+        }
+
+        if (best < 0 || best + 36 > data.Length)
+        {
+            return null;
+        }
+
+        var chunk = data[best..];
+        var width = (int)BinaryPrimitives.ReadUInt32LittleEndian(chunk[16..]);
+        var height = (int)BinaryPrimitives.ReadUInt32LittleEndian(chunk[20..]);
+        var hotX = (int)BinaryPrimitives.ReadUInt32LittleEndian(chunk[24..]);
+        var hotY = (int)BinaryPrimitives.ReadUInt32LittleEndian(chunk[28..]);
+        var chunkHeader = (int)BinaryPrimitives.ReadUInt32LittleEndian(chunk);
+        if (width is <= 0 or > 1024 || height is <= 0 or > 1024 || chunkHeader + width * height * 4 > chunk.Length)
+        {
+            return null;
+        }
+
+        // Little-endian ARGB words are B, G, R, A bytes, already premultiplied: as they are.
+        var pixels = chunk.Slice(chunkHeader, width * height * 4).ToArray();
+        return new WaylandCursorImage(pixels, width, height, hotX, hotY, bestSize);
     }
 
     private static WaylandCursorImage FromPng(byte[] png, int hotX, int hotY)

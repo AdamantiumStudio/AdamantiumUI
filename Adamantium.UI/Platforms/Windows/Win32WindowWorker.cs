@@ -844,7 +844,7 @@ internal class Win32WindowWorker : AdamantiumComponent, IWindowWorkerService
                 break;
         }
 
-        handled = true;
+        handled = false;
         return IntPtr.Zero;
     }
 

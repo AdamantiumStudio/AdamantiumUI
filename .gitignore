@@ -350,3 +350,6 @@ logs/
 # CMake build tree and fetched SDK packages of the native shims (the built .dll is staged next to the project and
 # committed separately).
 **/native/build/
+
+# Asset files the content build imports beside their sources (Ship.dae -> Ship.dae.aemf), made again from them.
+*.aemf

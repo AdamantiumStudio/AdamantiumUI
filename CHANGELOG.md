@@ -7,6 +7,20 @@ All packages share one version.
 
 ### Added
 
+- Wayland: on a compositor that does not draw cursors by shape (no `wp_cursor_shape_v1`, as WSLg's Weston), the window
+  shows the user's cursor theme itself - `XCURSOR_THEME`, `XCURSOR_PATH` and `XCURSOR_SIZE` as Xcursor reads them, the
+  themes a theme inherits included; there was no cursor over the window at all. The picture of a cursor, of a drag
+  and of its ghost is let go when the compositor releases it rather than right after it was committed: an older
+  compositor, as WSLg's, took the picture off with it and the cursor vanished the moment it showed.
+- A `ListBox` row is opened with Enter as with a double click: `ItemActivated` and `ItemActivatedCommand` get the
+  selected item. A list that opens nothing leaves Enter to what is around it.
+
+- `Image.ContentPixelLimit`: the longest side, in pixels, of the picture an image draws. A larger still bitmap,
+  stretched to fit, is drawn from a copy shrunk to fit, made once and let go with the source or off the tree; its size in
+  the layout and its own pixels stay as they are. A picture drawn at its own size, or an animation, is drawn as it is.
+- `IDockablePane.PaneLength` (`Pane.DockLength`): how deep the band a pane opens in reaches from the edge it docks to,
+  so a panel at the bottom can open lower than one at a side; zero keeps the area's `EdgeDockSize`.
+
 - `UIApplication.MaxInstances`: how many copies of an application the user may have running at once; a copy started
   past it ends in `Run` before it shows anything. A copy holds its place - a named mutex of the user's - for as long as
   it runs and gives it up however it ends, a crash included; copies are counted by the application's data folder. The
@@ -2293,6 +2307,10 @@ All packages share one version.
 
 ### Fixed
 
+- Windows: an activated window takes the keyboard focus. A dialog shown over its owner was active with no focus
+  anywhere - its text box showed the caret, but no key reached it until the dialog was clicked.
+- Windows: a window's Vulkan surface is created with the application's module as its `hinstance`, as Vulkan requires;
+  it was given the process handle.
 - `TreeView`: the right button picks the row it presses before its menu opens, so the menu is about that row - it was
   about the rows chosen before, or none. A row among several chosen keeps them all, as a finger's hold already did.
 - `ContextMenu`: a menu with no rows stays shut instead of showing an empty card. Whether it has any is judged in its
@@ -2357,7 +2375,7 @@ All packages share one version.
 - A grid of labelled boxes in a ribbon's group showed to automation as a stand-in button that could do nothing, the
   boxes in it out of reach. They are the group's children now (`ItemsControlAutomationPeer.ShowsWhatPanelsHold`).
 - A picture larger than the device's textures - past its maxImageDimension2D - went to the GPU as it was. It goes up
-  shrunk to fit (`ImageShrink`), each texel the average of the pixels it covers, once for every device of that
+  shrunk to fit (`ImageDownscaler`), each texel the average of the pixels it covers, once for every device of that
   limit; the picture keeps its own pixels and size, so it is laid out, sliced, tiled, copied and saved as before. An
   animation's frames larger or more than the device's texture arrays hold play from single textures, shrunk the same
   way. An animation whose texture array fails to be made no longer keeps its palette texture. A picture the device

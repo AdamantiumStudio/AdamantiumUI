@@ -150,7 +150,7 @@ public unsafe class BitmapSource : ImageSource
       var (pixels, width, height) = (source, PixelWidth, PixelHeight);
       if (width > limit || height > limit)
       {
-         if (!ImageShrink.Supports(SurfaceLayout))
+         if (!ImageDownscaler.Supports(SurfaceLayout))
          {
             _refused = new Refusal(source, limit);
             return null;
@@ -159,7 +159,7 @@ public unsafe class BitmapSource : ImageSource
          var fitted = _fitted;
          if (fitted == null || fitted.Source != source || fitted.Limit != limit)
          {
-            var shrunk = ImageShrink.FitWithin(source, PixelWidth, PixelHeight, SurfaceLayout, limit, limit,
+            var shrunk = ImageDownscaler.FitWithin(source, PixelWidth, PixelHeight, SurfaceLayout, limit, limit,
                out var fittedWidth, out var fittedHeight);
             _fitted = fitted = new Fitted(source, limit, shrunk, fittedWidth, fittedHeight);
          }

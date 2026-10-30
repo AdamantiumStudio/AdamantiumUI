@@ -52,6 +52,67 @@ public class WaylandCursorImageTests
         }
     }
 
+    /// <summary>An Xcursor file of a cursor theme: the picture of the nominal size nearest the one wanted, its hot spot,
+    /// its nominal size and its pixels as they are - premultiplied already.</summary>
+    [Test]
+    public void AnXcursorFile_GivesThePictureOfTheNearestNominalSize()
+    {
+        var path = Path.GetTempFileName();
+        try
+        {
+            File.WriteAllBytes(path, Xcursor((24, 32, 3, 4, 0x80402010u), (48, 64, 6, 8, 0xFF000000u)));
+
+            var small = WaylandCursorImage.Load(path, 24);
+            var large = WaylandCursorImage.Load(path, 40);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That((small.Width, small.NominalSize, small.HotX, small.HotY), Is.EqualTo((32, 24, 3, 4)));
+                Assert.That(Pixel(small, 0, 0), Is.EqualTo(new byte[] { 0x10, 0x20, 0x40, 0x80 }));
+                Assert.That((large.Width, large.NominalSize, large.HotX, large.HotY), Is.EqualTo((64, 48, 6, 8)));
+            });
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    // A file of square images, each (nominal size, width, hot spot, the one ARGB word all its pixels are).
+    private static byte[] Xcursor(params (int Nominal, int Width, int HotX, int HotY, uint Argb)[] images)
+    {
+        using var stream = new MemoryStream();
+        using var writer = new BinaryWriter(stream);
+        writer.Write("Xcur"u8);
+        writer.Write(16u);
+        writer.Write(0x10000u);
+        writer.Write((uint)images.Length);
+        var position = 16 + images.Length * 12;
+        foreach (var image in images)
+        {
+            writer.Write(0xFFFD0002u);
+            writer.Write((uint)image.Nominal);
+            writer.Write((uint)position);
+            position += 36 + image.Width * image.Width * 4;
+        }
+
+        foreach (var image in images)
+        {
+            foreach (var word in (uint[])[36, 0xFFFD0002, (uint)image.Nominal, 1, (uint)image.Width, (uint)image.Width,
+                         (uint)image.HotX, (uint)image.HotY, 0])
+            {
+                writer.Write(word);
+            }
+
+            for (var i = 0; i < image.Width * image.Width; i++)
+            {
+                writer.Write(image.Argb);
+            }
+        }
+
+        return stream.ToArray();
+    }
+
     private static byte[] Pixel(WaylandCursorImage image, int x, int y) => image.Pixels.AsSpan((y * image.Width + x) * 4, 4).ToArray();
 
     private static byte[] OneBitCursor(int hotX, int hotY)
