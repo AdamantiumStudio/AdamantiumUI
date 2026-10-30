@@ -45,13 +45,13 @@ public partial class SceneViewModel : TabPageViewModel
     [Bindable]
     private bool _framesOnDemand = true;
 
-    /// <summary>Whether the scene's frames reach the panel through OS handles, as from another device, rather than
-    /// within the UI's own - to try that path.</summary>
+    /// <summary>Whether the scene's frames reach the panel through a shared surface, as from another device, rather
+    /// than within the UI's own - to try that path.</summary>
     [Bindable, Affects(nameof(FrameSharing))]
-    private bool _framesThroughHandles;
+    private bool _framesInSharedSurface;
 
     /// <summary>How the panel is handed the scene's frames.</summary>
-    public FrameSharing FrameSharing => FramesThroughHandles ? FrameSharing.ThroughHandles : FrameSharing.Auto;
+    public FrameSharing FrameSharing => FramesInSharedSurface ? FrameSharing.SharedSurface : FrameSharing.Auto;
 
     partial void OnFramesOnDemandChanged(bool value)
     {

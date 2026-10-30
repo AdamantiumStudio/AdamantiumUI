@@ -7,7 +7,7 @@ public enum FrameSharing
     /// nothing through the system; through OS handles when it is on another.</summary>
     Auto,
 
-    /// <summary>Always through OS handles, as across processes and devices - to try that path where the other is taken.
-    /// </summary>
-    ThroughHandles
+    /// <summary>Always through a shared surface exported as OS handles, as across processes and devices - to try that
+    /// path where the other is taken.</summary>
+    SharedSurface
 }

@@ -8,8 +8,8 @@ All packages share one version.
 ### Added
 
 - `RenderTargetPanel.FrameSharing`: a universe rendering on the UI's own logical device hands the panel its frames
-  within it (`Auto`, the default) - no export, no OS handles; one on another device, or with `ThroughHandles` asked for to
-  try that path, through shared OS handles as before. The scene of a universe on the UI's device now shows on a device
+  within it (`Auto`, the default) - no export, no OS handles; one on another device, or with `SharedSurface` asked for to
+  try that path, through a shared surface exported as OS handles, as before. The scene of a universe on the UI's device now shows on a device
   that exports no timeline semaphores, as llvmpipe.
 
 - Wayland: on a compositor that does not draw cursors by shape (no `wp_cursor_shape_v1`, as WSLg's Weston), the window
