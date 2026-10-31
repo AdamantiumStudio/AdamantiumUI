@@ -170,7 +170,7 @@ public class ContentPresenter : InputUIComponent
 
         // The same for plain string content in the generated TextBlock.
         if (newContent != null && newContent is not IUIComponent && _currentTemplate == null
-            && _currentRoot is TextBlock reusableText
+            && _currentRoot is TextBlock reusableText && ReferenceEquals(reusableText, _label)
             && ContentTemplate == null && ContentTemplateSelector == null)
         {
             reusableText.LetSelectionGo();
@@ -248,8 +248,7 @@ public class ContentPresenter : InputUIComponent
                 PassLinesTo(parkedLabel);
             }
 
-            AddVisualChild(_currentRoot);
-            AddLogicalChild(_currentRoot);
+            Host(_currentRoot);
             // Re-measured only in a host of another size: the layout it kept is still right otherwise.
             ParkedSubtree.Unpark(_currentRoot, remeasure: parkedHostSize != _lastArrangeSize);
 
@@ -317,8 +316,7 @@ public class ContentPresenter : InputUIComponent
 
         if (_currentRoot != null)
         {
-            AddVisualChild(_currentRoot);
-            AddLogicalChild(_currentRoot);
+            Host(_currentRoot);
             SetContentContext(newContent);
         }
     }
@@ -332,8 +330,7 @@ public class ContentPresenter : InputUIComponent
         if (_currentRoot == null) return;
 
         SetContentContext(content);
-        AddVisualChild(_currentRoot);
-        AddLogicalChild(_currentRoot);
+        Host(_currentRoot);
         InvalidateMeasure();
     }
 
@@ -347,8 +344,7 @@ public class ContentPresenter : InputUIComponent
         _currentTemplateResult = loading;
         _currentRoot = loading.RootComponent;
         SetContentContext(content);
-        AddVisualChild(_currentRoot);
-        AddLogicalChild(_currentRoot);
+        Host(_currentRoot);
         InvalidateMeasure();
     }
 
@@ -458,8 +454,7 @@ public class ContentPresenter : InputUIComponent
         _currentTemplateResult = built;
         _currentRoot = built.RootComponent;
         SetContentContext(content);
-        AddVisualChild(_currentRoot);
-        AddLogicalChild(_currentRoot);
+        Host(_currentRoot);
         InvalidateMeasure();
     }
 
@@ -489,7 +484,7 @@ public class ContentPresenter : InputUIComponent
     {
         ParkedVisuals.Keep(ParkOwner, key, root, built, template, _lastArrangeSize);
         RemoveVisualChild(root);
-        RemoveLogicalChild(root);
+        Unhost(root);
     }
 
     internal bool ShowsHandedContent =>
@@ -531,11 +526,26 @@ public class ContentPresenter : InputUIComponent
         built?.Destroy();
     }
 
-    // A control's content let go here goes back to the control while it cannot be shown - see ContentControl.HoldIfHidden.
+    private void Host(IUIComponent root)
+    {
+        AddVisualChild(root);
+        (TemplatedParent as ItemsControl)?.HoldShownItem(root);
+        if (root is FundamentalUIComponent { LogicalParent: { } holder } given && !ReferenceEquals(holder, this))
+        {
+            given.ShowIn(this);
+        }
+        else
+        {
+            AddLogicalChild(root);
+        }
+    }
+
     private void Unhost(IUIComponent root)
     {
-        RemoveLogicalChild(root);
-        if (ContentControl.IsLentContent(root)) ((UIComponent)root).ContentOwner.HoldIfHidden();
+        if (ReferenceEquals(root.LogicalParent, this))
+        {
+            RemoveLogicalChild(root);
+        }
     }
 
     /// <summary>Destroyed: lets the content go, since a root held only by these fields cannot be reached otherwise.</summary>
@@ -614,9 +624,12 @@ public class ContentPresenter : InputUIComponent
     }
 
     /// <summary>Also forgets a root another parent has taken, so the fields do not go on naming a control that has moved
-    /// on - and keep it alive after its new home lets it go.</summary>
+    /// on - and keep it alive after its new home lets it go. Held here only for want of a holder, it is let go too.
+    /// </summary>
     protected internal override void DisownVisualChild(IUIComponent child)
     {
+        if (ReferenceEquals(child.LogicalParent, this)) RemoveLogicalChild(child);
+
         if (ReferenceEquals(child, _currentRoot))
         {
             _currentRoot = null;

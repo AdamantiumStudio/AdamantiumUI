@@ -24,8 +24,30 @@ public class TabItem : ContentControl, ISelectable, ISpringLoadable
     // it in the strip.
     protected override bool HostsContentWithoutTemplate => false;
 
+    private TabControl _pageShownBy;
+
+    internal override bool HoldsContent => _pageShownBy != null;
+
+    /// <summary><paramref name="tabs"/> shows this tab's page, or no longer: the tab holds its page while a TabControl
+    /// shows it. Only the one showing it can say it no longer does - a tab moved between two says so to both.</summary>
+    internal void ShowPage(TabControl tabs, bool shown)
+    {
+        if (shown)
+        {
+            var was = HoldsContent;
+            _pageShownBy = tabs;
+            if (!was) ChangeContent(null, Content);
+        }
+        else if (ReferenceEquals(_pageShownBy, tabs))
+        {
+            _pageShownBy = null;
+            ChangeContent(Content, null);
+        }
+    }
+
     public static readonly AdamantiumProperty HeaderProperty = AdamantiumProperty.Register(nameof(Header),
-        typeof(object), typeof(TabItem), new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure));
+        typeof(object), typeof(TabItem), new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure,
+            (a, e) => ((TabItem)a).ChangeLogicalChild(HeaderProperty, e.OldValue, e.NewValue)));
 
     // How a data Header is projected into the strip. The template's header presenter binds these; the owning TabControl
     // flows its ItemTemplate/ItemTemplateSelector here for generated (data-bound) tabs, so a header VM renders as a

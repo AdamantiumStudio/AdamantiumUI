@@ -172,7 +172,7 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent, IDropGapPan
     }
 
     /// <summary>The items control this panel hosts (set by the <see cref="ItemsPresenter"/>); null = plain container.</summary>
-    internal ItemsControl Owner { get; private set; }
+    internal ItemsControl Owner => ItemsOwner;
 
     protected bool IsItemsHost => Owner != null;
 
@@ -191,7 +191,7 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent, IDropGapPan
     internal void AttachOwner(ItemsControl owner)
     {
         Children.Clear();   // drop any plain children; the window is managed via the generator from here
-        Owner = owner;
+        ItemsOwner = owner;
         // No self-clip: the presenter slides this panel, so its own clip would move with it. The presenter's clip bounds
         // the list.
         InvalidateMeasure();
@@ -204,11 +204,11 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent, IDropGapPan
         foreach (var child in VisualChildren.ToList())
         {
             RemoveVisualChild(child);
-            RemoveLogicalChild(child);
+            StopShowingChild(child);
         }
 
         ResetSkeletons();
-        Owner = null;
+        ItemsOwner = null;
     }
 
     /// <summary>Drops the realized window AND the pooled containers (e.g. the collection reset) so the next measure
@@ -218,7 +218,7 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent, IDropGapPan
         foreach (var child in VisualChildren.ToList())
         {
             RemoveVisualChild(child);
-            RemoveLogicalChild(child);
+            StopShowingChild(child);
         }
         Owner?.ItemContainerGenerator.Clear();
         // The loop above also detached the skeleton cards - drop their now-dangling pool/active/set so the next fill
@@ -401,7 +401,7 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent, IDropGapPan
         if (container.VisualParent != this)   // a reused container is already a child; only a brand-new one needs attaching
         {
             AddVisualChild(container);
-            AddLogicalChild(container);
+            ShowChild(container);
         }
         container.Visibility = Visibility.Visible;
         return container;
@@ -465,7 +465,7 @@ public abstract class VirtualizingPanel : Panel, IScrollableContent, IDropGapPan
                 if (ReferenceEquals(child.VisualParent, this))
                 {
                     RemoveVisualChild(child);
-                    RemoveLogicalChild(child);
+                    StopShowingChild(child);
                 }
 
                 continue;

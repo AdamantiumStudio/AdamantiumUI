@@ -112,8 +112,74 @@ public abstract class Panel: InputUIComponent, IContainer, INavigablePanel
       Children.CollectionChanged += ChildrenChanged;
    }
 
+   /// <summary>The list whose items this panel lays out, or null. The list holds them, its containers and its elements;
+   /// the panel only shows them.</summary>
+   internal ItemsControl ItemsOwner { get; set; }
+
+   private bool ShowsItems => ItemsOwner != null;
+
+   /// <summary>Shows <paramref name="child"/>, added as a visual child already: an element of the list's own the list
+   /// takes as it is first shown; what another holds is only shown here; what nothing holds the panel takes.</summary>
+   internal void ShowChild(IUIComponent child)
+   {
+      ItemsOwner?.HoldShownItem(child);
+      if (child is FundamentalUIComponent { LogicalParent: { } holder } shown && !ReferenceEquals(holder, this))
+         shown.ShowIn(this);
+      else if (child.LogicalParent == null)
+         AddLogicalChild(child);
+   }
+
+   /// <summary>Stops showing <paramref name="child"/>: held here, it is let go. Shown for another, it goes back to it as
+   /// it leaves the visual tree.</summary>
+   internal void StopShowingChild(IUIComponent child)
+   {
+      if (ReferenceEquals(child.LogicalParent, this))
+         RemoveLogicalChild(child);
+   }
+
+   private void ItemsChanged(NotifyCollectionChangedEventArgs e)
+   {
+      switch (e.Action)
+      {
+         case NotifyCollectionChangedAction.Add:
+            VisualChildrenCollection.InsertRange(e.NewStartingIndex, e.NewItems.OfType<IUIComponent>());
+            foreach (var child in e.NewItems.OfType<IUIComponent>()) ShowChild(child);
+            break;
+         case NotifyCollectionChangedAction.Remove:
+            foreach (var child in e.OldItems.OfType<IUIComponent>()) StopShowingChild(child);
+            VisualChildrenCollection.Remove(e.OldItems.OfType<IUIComponent>());
+            break;
+         case NotifyCollectionChangedAction.Replace:
+            for (var i = 0; i < e.OldItems.Count; ++i)
+            {
+               var old = (IUIComponent)e.OldItems[i];
+               var child = (IUIComponent)e.NewItems[i];
+               StopShowingChild(old);
+               VisualChildrenCollection[VisualChildrenCollection.IndexOf(old)] = child;
+               ShowChild(child);
+            }
+            break;
+         case NotifyCollectionChangedAction.Move:
+            VisualChildrenCollection.Move(e.OldStartingIndex, e.NewStartingIndex);
+            break;
+         case NotifyCollectionChangedAction.Reset:
+            foreach (var child in VisualChildrenCollection) StopShowingChild(child);
+            LogicalChildrenCollection.Clear();
+            VisualChildrenCollection.Clear();
+            break;
+      }
+
+      InvalidateMeasure();
+   }
+
    private void ChildrenChanged(object sender, NotifyCollectionChangedEventArgs e)
    {
+      if (ShowsItems)
+      {
+         ItemsChanged(e);
+         return;
+      }
+
       switch (e.Action)
       {
          case NotifyCollectionChangedAction.Add:

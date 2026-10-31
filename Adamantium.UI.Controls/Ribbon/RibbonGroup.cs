@@ -33,7 +33,10 @@ public class RibbonGroup : ItemsControl, IHeaderedItemsControl
 
     private static void OnHeaderChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
     {
-        if (a is RibbonGroup group) group.CollapsedHeader = group.CollapsedHeaderOf(e.NewValue);
+        if (a is not RibbonGroup group) return;
+
+        group.ChangeLogicalChild(HeaderProperty, e.OldValue, e.NewValue);
+        group.CollapsedHeader = group.CollapsedHeaderOf(e.NewValue);
     }
 
     // A template is handed the header as written: it may key or convert on it.

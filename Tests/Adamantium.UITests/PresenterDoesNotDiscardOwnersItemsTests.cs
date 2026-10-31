@@ -70,7 +70,7 @@ public class PresenterDoesNotDiscardOwnersItemsTests
     [Test]
     public void AnItemShownAgainIsAliveAndParented()
     {
-        var (_, host, first, second) = Hosted();
+        var (shelf, host, first, second) = Hosted();
 
         host.Content = second;
         Pump();
@@ -80,7 +80,8 @@ public class PresenterDoesNotDiscardOwnersItemsTests
         Assert.Multiple(() =>
         {
             Assert.That(first.IsDiscarded, Is.False);
-            Assert.That(first.LogicalParent, Is.SameAs(host));
+            Assert.That(first.LogicalParent, Is.SameAs(shelf), "the owner holds its item");
+            Assert.That(first.ShownIn, Is.SameAs(host), "the host shows it");
         });
     }
 

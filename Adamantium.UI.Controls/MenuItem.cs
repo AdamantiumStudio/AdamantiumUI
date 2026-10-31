@@ -17,7 +17,8 @@ namespace Adamantium.UI.Controls.Primitives;
 public class MenuItem : ItemsControl, IHeaderedItemsControl
 {
     public static readonly AdamantiumProperty HeaderProperty = AdamantiumProperty.Register(nameof(Header),
-        typeof(object), typeof(MenuItem), new PropertyMetadata(null));
+        typeof(object), typeof(MenuItem), new PropertyMetadata(null,
+            (a, e) => ((MenuItem)a).ChangeLogicalChild(HeaderProperty, e.OldValue, e.NewValue)));
 
     public static readonly AdamantiumProperty HeaderTemplateProperty = AdamantiumProperty.Register(nameof(HeaderTemplate),
         typeof(DataTemplate), typeof(MenuItem), new PropertyMetadata(null));

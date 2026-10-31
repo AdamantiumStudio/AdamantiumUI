@@ -1861,6 +1861,16 @@ All packages share one version.
 
 ### Changed
 
+- The logical parent of an element is what holds it: a control its `Content` and its `Header`, a popup its `Child`, a
+  list its elements and the containers it makes, a tab its page while the page is shown. A presenter or a list's panel
+  only shows them, and what they show inherits from where it is shown. Content handed down by a template binding or a
+  binding stays with what holds it already. A list takes the elements of its items as it first shows them - a menu never
+  opened takes and styles none of its rows - and a list in a control's template handed its items by a template binding
+  leaves them to that control. A control template's root joins the logical tree through its control when the template
+  is applied.
+- `{Ancestor}` in a tree with no window finds its ancestor once the chain it stands on is joined to it, from wherever
+  the chain is joined last.
+
 - The macOS theme's menus, drop-downs and tooltips are clearer glass with a narrower lens at the rim: they read as a
   thick pale frame round every card.
 - The noise and the grain of the brushes and materials come from a noise and a hash of the UI's own: simplex noise with
@@ -2365,6 +2375,10 @@ All packages share one version.
   The diagnostics overlay and what it reads stay.
 
 ### Fixed
+
+- A `ContentPresenter` given a string after a `TextBlock` of the page wrote the string into that `TextBlock`, taking it
+  for the label it makes itself - an `Expander` whose header turned from an element into text renamed the element.
+- A `ContentControl` whose template is taken away shows its content itself again; it showed nothing.
 
 - The textured batch - shapes filled with an `ImageBrush` or `NineSliceBrush` - grows when a frame has more of them
   than it holds, as the other batches do. It never grew: past its first 256 records every textured fill was drawn on

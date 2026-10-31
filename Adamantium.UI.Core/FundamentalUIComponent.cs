@@ -654,6 +654,42 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
         set => SetValue(NameProperty, value);
     }
 
+    /// <summary>Where this element is shown while another holds it: a presenter showing a control's content, a list's
+    /// panel showing its containers. It inherits values from there; null while shown by what holds it.</summary>
+    internal AdamantiumComponent ShownIn { get; private set; }
+
+    /// <summary>Shows this element in <paramref name="host"/> without taking it from what holds it, or - null - takes
+    /// that back, and it inherits from its holder again.</summary>
+    internal void ShowIn(AdamantiumComponent host)
+    {
+        ShownIn = host;
+        InheritanceParent = host ?? LogicalParent as AdamantiumComponent;
+    }
+
+    /// <summary>Called when <paramref name="property"/>, which holds an element, changes: lets <paramref name="oldValue"/>
+    /// go and takes <paramref name="newValue"/> as a logical child. A value handed down by a template binding or a binding
+    /// that something else holds already stays where it is: a part of a template does not take a page's content from its
+    /// control.</summary>
+    protected void ChangeLogicalChild(AdamantiumProperty property, object oldValue, object newValue)
+    {
+        if (oldValue is FundamentalUIComponent old && ReferenceEquals(old.LogicalParent, this))
+        {
+            RemoveLogicalChild(old);
+        }
+
+        if (newValue is not FundamentalUIComponent element || IsDiscarded || ReferenceEquals(element.LogicalParent, this))
+        {
+            return;
+        }
+
+        if (GetValueSource(property) is ValuePriority.Template or ValuePriority.Binding && element.LogicalParent != null)
+        {
+            return;
+        }
+
+        AddLogicalChild(element);
+    }
+
     public void AddLogicalChild(IFundamentalUIComponent child)
     {
         LogicalChildrenCollection.Add(child);
@@ -723,10 +759,12 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
                 old = null;
             }
 
+            if (ReferenceEquals(logicalParent, ShownIn)) ShownIn = null;
+
             parent = logicalParent;
             // Wire value inheritance (DataContext and any other Inherits property) to the new logical parent; null on
             // detach. This is what carries a window's DataContext down to its children so their {Binding}s resolve.
-            InheritanceParent = logicalParent as AdamantiumComponent;
+            InheritanceParent = ShownIn ?? logicalParent as AdamantiumComponent;
 
             //var root = FindStyleRoot(old);
 
@@ -861,6 +899,18 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
         {
             (child as FundamentalUIComponent)?.RaiseDetachedFromLogicalTree(e);
         }
+    }
+
+    /// <summary>Tells <paramref name="root"/>, the root of a control template this element just took or let go, that it
+    /// joined or left the logical chain through this element: it has no logical parent, and joins through its templated
+    /// parent - what its parts hold, taken while the template was built, finds its ancestors only then.</summary>
+    internal void TemplateRootChanged(IFundamentalUIComponent root, bool joined)
+    {
+        if (root is not FundamentalUIComponent part) return;
+
+        var args = new LogicalTreeAttachmentEventArgs(this);
+        if (joined) part.RaiseAttachedToLogicalTree(args);
+        else part.RaiseDetachedFromLogicalTree(args);
     }
 
     protected virtual void OnAttachedToLogicalTree(LogicalTreeAttachmentEventArgs e)
