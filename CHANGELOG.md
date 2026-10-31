@@ -2347,6 +2347,8 @@ All packages share one version.
 
 ### Fixed
 
+- The log file is named with the invariant culture: naming it with the current one loaded the system's calendar data
+  first thing in the application, before its splash, and that once took 45 seconds.
 - The Rider plugin (1.11.6) shows its icon in a dark IDE: it carried no dark icon, and the Marketplace gave none.
 - A window comes on screen once its content is drawn: it showed as soon as its presenter drew its first frame, empty,
   and stayed empty until its content was built and laid out - seconds for a large window. `IWindowRenderer`

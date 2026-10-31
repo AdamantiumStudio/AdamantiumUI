@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -178,7 +179,8 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         Directory.CreateDirectory(directory);
         SweepOldLogs(directory);
 
-        var path = Path.Combine(directory, $"adamantium_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.txt");
+        var path = Path.Combine(directory,
+            string.Create(CultureInfo.InvariantCulture, $"adamantium_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.txt"));
 
         Log.Logger = new LoggerConfiguration()
             .MinimumLevel.Debug()
