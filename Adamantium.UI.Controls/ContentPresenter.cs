@@ -492,20 +492,6 @@ public class ContentPresenter : InputUIComponent
         RemoveLogicalChild(root);
     }
 
-    internal override IFundamentalUIComponent ContentGiver
-    {
-        get
-        {
-            if (GiverOf(ContentProperty) is { } giver)
-            {
-                return giver;
-            }
-
-            var owner = (Content as UIComponent)?.ContentOwner;
-            return owner is { IsControlTemplatePart: true } ? owner.ContentGiver : owner;
-        }
-    }
-
     internal bool ShowsHandedContent =>
         _currentRoot != null && ReferenceEquals(_currentRoot, _builtFor) &&
         GetValueSource(ContentProperty) is ValuePriority.Binding or ValuePriority.Template;

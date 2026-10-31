@@ -19,28 +19,14 @@ public static class ResourceContext
     
     public static void SetSource(AdamantiumComponent element, ResourceLink value)
     {
-        var old = GetSource(element);
         element.SetValue(SourceProperty, value);
 
         // A THEME only records its palette link here; the ThemeManager activates it (AddSource) while the theme is
         // current and removes it when it stops being current. That keeps exactly one palette - the current theme's -
         // live, so declaring 20 themes doesn't register 20 palettes. Every non-theme element registers eagerly, below.
-        if (element is ITheme || ReferenceEquals(old, value)
-            || old != null && value != null && old.Source == value.Source && old.Scope == value.Scope) return;
+        if (element is ITheme) return;
 
-        var manager = UIAppContext.Current.ResourceManager;
-        var styled = manager.HasScopedStyles;
-        if (old?.Source != null)
-        {
-            manager.RemoveSource(element, old.Source, old.Scope);
-        }
-
-        if (value?.Source != null)
-        {
-            manager.AddSource(element, value.Source, value.Scope);
-        }
-
-        RestyleIfStyled(element, styled || manager.HasScopedStyles);
+        UIAppContext.Current.ResourceManager.AddSource(element, value.Source, value.Scope );
     }
 
     // The scope the inline Resources below are published into. LOCAL by default - a private, tree-scoped dictionary that
@@ -72,35 +58,14 @@ public static class ResourceContext
 
     public static void SetResources(AdamantiumComponent element, ResourceDictionary value)
     {
-        var old = GetResources(element);
         element.SetValue(ResourcesProperty, value);
+        if (value == null) return;
 
         // A THEME publishes nothing until it is the current one - the same rule its palette link follows, so declaring
         // 20 themes doesn't put 20 icon sets into the Theme scope at once. The ThemeManager activates it.
-        if (element is ITheme || ReferenceEquals(old, value)) return;
+        if (element is ITheme) return;
 
-        var manager = UIAppContext.Current.ResourceManager;
-        var styled = manager.HasScopedStyles;
-        var scope = GetScope(element);
-        if (old != null)
-        {
-            manager.RemoveSource(element, old, scope);
-        }
-
-        if (value != null)
-        {
-            manager.AddSource(element, value, scope);
-        }
-
-        RestyleIfStyled(element, styled || manager.HasScopedStyles);
-    }
-
-    private static void RestyleIfStyled(AdamantiumComponent element, bool styled)
-    {
-        if (styled)
-        {
-            (element as FundamentalUIComponent)?.RestyleForScopes();
-        }
+        RegisterResources(element, value);
     }
 
     private static void ReleaseDiscarded(ReadOnlySpan<IFundamentalUIComponent> gone)
@@ -124,8 +89,21 @@ public static class ResourceContext
             }
 
             manager.ForgetGlobalSourceOwner(element);
-            manager.RemoveSources(element);
+            if (HoldsScopedResources(element))
+            {
+                manager.RemoveSources(element);
+            }
         }
+    }
+
+    private static bool HoldsScopedResources(AdamantiumComponent element)
+    {
+        if (GetSource(element) is { Scope: not ResourceScope.Global })
+        {
+            return true;
+        }
+
+        return GetResources(element) != null && GetScope(element) != ResourceScope.Global;
     }
 
     internal static void RegisterResources(AdamantiumComponent element, ResourceDictionary resources) =>

@@ -12,7 +12,6 @@ public class Style : AdamantiumComponent
     private Dictionary<AdamantiumProperty, ISetter> settersDict;
     private int _selectorBand = -1;
     private bool _themeOwned;
-    private bool _scoped;
 
     private readonly ConditionalWeakTable<IFundamentalUIComponent, List<ITriggerActivator>> _activatorsByComponent = new();
 
@@ -198,14 +197,6 @@ public class Style : AdamantiumComponent
 
     internal void MarkThemeOwned() => _themeOwned = true;
 
-    /// <summary>Marks the style as one of a subtree's (<see cref="ResourceDictionary.Styles"/>): it outranks the theme's
-    /// and yields to an element's own.</summary>
-    internal void MarkScoped() => _scoped = true;
-
-    /// <summary>Whether the style reaches a subtree from its resources rather than coming from the theme or the
-    /// element.</summary>
-    internal bool IsScoped => _scoped;
-
     internal bool IsTypeDefault => GetSelectorBand() < ClassWeight;
 
     private int GetSelectorBand()
@@ -214,7 +205,7 @@ public class Style : AdamantiumComponent
         return _selectorBand;
     }
 
-    internal int Band => (_themeOwned ? 0 : _scoped ? AuthoredWeight : 2 * AuthoredWeight) + GetSelectorBand();
+    internal int Band => (_themeOwned ? 0 : AuthoredWeight) + GetSelectorBand();
 
     // Add an activator to both the component's shared list (so a template-change reevaluation sees it) and this style's
     // own per-component record (so Detach/re-Attach can remove exactly the ones it added).

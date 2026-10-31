@@ -7,15 +7,6 @@ All packages share one version.
 
 ### Added
 
-- Styles of a subtree: a `<Style>` without `x:Key` in `ResourceContext.Resources` - or a `StyleSet` linked there with
-  `ResourceContext.Source` - reaches every element of the owner's subtree its selector matches, without a key and
-  without being registered for the whole application. Such styles come after the theme's and before an element's own,
-  every scope from the outermost to the nearest; one by type alone yields to an inherited value as any other does,
-  one with a class wins over it. They do not reach into a control's
-  template, which stays the theme's, nor what its parts' code makes; they do reach what the page gives a control - its
-  content, also when a part of the template shows it, what a data template makes of it, and the items of a list. An
-  element that joins or leaves a scope, or resources or a link given, replaced or taken away later, restyle the
-  elements under it. `<X.Styles>` stays X's own style only.
 - `EasedValue` and `PanInertia`: the smooth zoom toward a point and the drag that coasts on after a flick, as one
   mechanism for every view with a camera. `EasedValue` eases one number of a camera by the frame's time - a zoom level
   in logarithmic units, a turn in degrees - and lets the owner keep
@@ -2344,9 +2335,6 @@ All packages share one version.
 - The textured batch - shapes filled with an `ImageBrush` or `NineSliceBrush` - grows when a frame has more of them
   than it holds, as the other batches do. It never grew: past its first 256 records every textured fill was drawn on
   its own, frame after frame.
-- A control template given up (`TemplateResult.Destroy`) no longer takes the templated parent from the parts of
-  another control's template shown in it - a button in the content kept its look, but its parts no longer knew whose
-  they were.
 - Windows: an activated window takes the keyboard focus. A dialog shown over its owner was active with no focus
   anywhere - its text box showed the caret, but no key reached it until the dialog was clicked.
 - Windows: a window's Vulkan surface is created with the application's module as its `hinstance`, as Vulkan requires;

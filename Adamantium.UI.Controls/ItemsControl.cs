@@ -26,8 +26,6 @@ public class ItemsControl : Control, IContainer, IKeyboardEntry
     private ItemsPresenter _presenter;
     private bool _ringWasVisible;
 
-    internal override IFundamentalUIComponent ContentGiver => GiverOf(ItemsSourceProperty);
-
     public static readonly AdamantiumProperty ItemsSourceProperty = AdamantiumProperty.Register(nameof(ItemsSource),
         typeof(IEnumerable), typeof(ItemsControl), new PropertyMetadata(null, OnItemsSourceChanged));
 

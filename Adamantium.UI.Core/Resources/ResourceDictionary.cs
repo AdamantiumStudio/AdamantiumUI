@@ -12,12 +12,6 @@ public class ResourceDictionary : IResourceDictionary, Markup.IMarkupContent
     /// dictionary's own entries, so one block links a palette, an icon set and whatever else belongs together.</summary>
     public List<ResourceLink> Includes { get; } = [];
 
-    /// <summary>Styles without a key: the unkeyed <c>&lt;Style&gt;</c> children of ResourceContext.Resources, or a
-    /// <see cref="StyleSet"/> linked there. They reach every element in the owner's subtree their selector matches -
-    /// after the theme's styles and before the element's own - and stop at a control template's edge. Read when the
-    /// dictionary is given to an element: to change them, give it a new dictionary.</summary>
-    public List<Style> Styles { get; } = [];
-
     private bool _isInitialized;
     private bool _isInitializing;
 
