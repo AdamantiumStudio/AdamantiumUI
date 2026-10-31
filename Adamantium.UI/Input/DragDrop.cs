@@ -211,6 +211,7 @@ public static partial class DragDrop
     private static DragDropEffects _allowedEffects = DragDropEffects.Copy | DragDropEffects.Move;
     private static int _dragCount = 1;   // how many items are being dragged - drives the multi-drag count badge on the ghost
     private static (byte[] bgra, int w, int h) _badgePart;   // the rendered count-badge snapshot (empty for a single-item drag)
+    private static Badge _badge;   // the count badge until its snapshot is in - themed through the source, so let go after
 
     private static IVisualRenderer _renderer;
     private static IDragGhost _ghost;
@@ -1158,9 +1159,10 @@ public static partial class DragDrop
         ComposeGhost();
     }
 
-    // The multi-drag count badge arrived (a snapshot of a real, themed Border+TextBlock control).
+    // The multi-drag count badge arrived (a snapshot of the theme's Badge).
     private static void OnBadgeReady(ImageSource img)
     {
+        ReleaseBadge();
         if (!_dragging) return;
         if (img is BitmapSource bs)
             _badgePart = (DragGhostPixels.ToPremultipliedBgra(bs), (int)bs.PixelWidth, (int)bs.PixelHeight);
@@ -1193,27 +1195,16 @@ public static partial class DragDrop
         ShowOrMoveGhost();
     }
 
-    // A real badge control (themed accent pill + the count) - snapshotted like any other ghost part, so the text is crisp.
+    // The theme's Badge with the count - snapshotted like any other ghost part, so the text is crisp. Themed through the
+    // source, so a drag out of a differently themed region carries that region's badge.
     private static IUIComponent BuildCountBadge(int count)
     {
         try
         {
-            var theme = UIApplication.Current?.ThemeManager?.CurrentTheme;
-            var text = new TextBlock
-            {
-                Text = count > 99 ? "99+" : count.ToString(),
-                Foreground = theme?.AccentForegroundColor ?? new SolidColorBrush(Colors.White),
-                FontSize = 11,
-            };
-            var badge = new Border
-            {
-                Background = theme?.AccentFillColorDefault ?? new SolidColorBrush(Color.FromRgba(0x00, 0x91, 0xF7)),
-                BorderBrush = new SolidColorBrush(Colors.White),
-                BorderThickness = new Thickness(1.5),
-                CornerRadius = new CornerRadius(11),
-                Padding = new Thickness(7, 2, 7, 2),
-                Child = text,
-            };
+            var badge = new Badge { Count = count };
+            badge.InheritanceParent = _source as AdamantiumComponent;
+            badge.ApplyCurrentTheme();
+            _badge = badge;
             var m = (IMeasurableComponent)badge;
             m.Measure(new Size<double>(4096, 4096));
             m.Arrange(new Rect(m.DesiredSize));
@@ -1474,6 +1465,20 @@ public static partial class DragDrop
         _ghostParts = null;
         _ghostPending = 0;
         _badgePart = default;
+        ReleaseBadge();
+    }
+
+    // The badge borrowed the source as its inheritance parent only to be themed by it; the source keeps its inheritance
+    // children, so the badge must be taken off it once its picture is taken, or every multi-item drag leaves one behind.
+    private static void ReleaseBadge()
+    {
+        if (_badge == null)
+        {
+            return;
+        }
+
+        _badge.InheritanceParent = null;
+        _badge = null;
     }
 
     private static IDataPackage ResolveData(AdamantiumComponent source) => AsPackage(GetDragData(source));

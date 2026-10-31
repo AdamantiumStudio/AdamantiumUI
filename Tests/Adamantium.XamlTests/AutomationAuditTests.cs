@@ -36,6 +36,7 @@ public class AutomationAuditTests
 
     private static readonly Dictionary<Type, (T? Type, string Reason)> Decided = new()
     {
+        [typeof(Badge)] = (T.Text, null),
         [typeof(BusyIndicator)] = (T.ProgressBar, null),
         [typeof(Button)] = (T.Button, null),
         [typeof(CheckBox)] = (T.CheckBox, null),

@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<StyleSet xmlns="http://adamantium/ui"
+          xmlns:x="http://adamantium/ui/xaml/extensions">
+
+    <!-- Badge: an accent pill with the count, ringed in the color of its text so it stays readable over anything. One
+         set for every theme; the theme's metrics give its size and corners. -->
+    <Style Selector="Badge">
+        <Setter Property="Background" Value="{ThemeResource AccentFillColorDefault}"/>
+        <Setter Property="Foreground" Value="{ThemeResource AccentForegroundColor}"/>
+        <Setter Property="BorderBrush" Value="{ThemeResource AccentForegroundColor}"/>
+        <Setter Property="BorderThickness" Value="{ResourceReference BadgeRing}"/>
+        <Setter Property="CornerRadius" Value="{ResourceReference BadgeRadius}"/>
+        <Setter Property="Padding" Value="{ResourceReference BadgePadding}"/>
+        <Setter Property="FontSize" Value="{ResourceReference FontSizeMicro}"/>
+        <Setter Property="MinWidth" Value="{ResourceReference BadgeHeight}"/>
+        <Setter Property="Height" Value="{ResourceReference BadgeHeight}"/>
+    </Style>
+
+    <Style Selector="Badge">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Badge">
+                    <Border Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="{TemplateBinding CornerRadius}"
+                            Padding="{TemplateBinding Padding}">
+                        <TextBlock x:Name="PART_Text"
+                                   Text="{TemplateBinding Text}"
+                                   Foreground="{TemplateBinding Foreground}"
+                                   FontSize="{TemplateBinding FontSize}"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"/>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- A dot: no number, no padding, a small circle. -->
+    <Style Selector="Badge">
+        <PropertyTrigger Property="IsDot" Value="true">
+            <Setter Property="Width" Value="{ResourceReference BadgeDotSize}"/>
+            <Setter Property="Height" Value="{ResourceReference BadgeDotSize}"/>
+            <Setter Property="MinWidth" Value="0"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="CornerRadius" Value="{ResourceReference BadgeDotRadius}"/>
+            <Setter TargetName="PART_Text" Property="Visibility" Value="Collapsed"/>
+        </PropertyTrigger>
+    </Style>
+
+</StyleSet>
