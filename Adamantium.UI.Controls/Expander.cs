@@ -35,7 +35,8 @@ public enum ExpandDirection
 public class Expander : ContentControl
 {
     public static readonly AdamantiumProperty HeaderProperty = AdamantiumProperty.Register(nameof(Header),
-        typeof(object), typeof(Expander), new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure));
+        typeof(object), typeof(Expander), new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure,
+            (a, e) => ((Expander)a).ChangeLogicalChild(HeaderProperty, e.OldValue, e.NewValue)));
 
     public static readonly AdamantiumProperty HeaderTemplateProperty = AdamantiumProperty.Register(
         nameof(HeaderTemplate), typeof(DataTemplate), typeof(Expander),

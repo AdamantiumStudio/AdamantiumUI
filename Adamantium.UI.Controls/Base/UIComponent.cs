@@ -1703,6 +1703,7 @@ public class UIComponent : FundamentalUIComponent, IUIComponent
         if (old != null && parent != null) (old as UIComponent)?.DisownVisualChild(this);
 
         VisualParent = parent;
+        if (ShownIn != null && !ReferenceEquals(ShownIn, parent)) ShowIn(null);
         OnVisualParentReplaced();
 
         if (IsAttachedToVisualTree)

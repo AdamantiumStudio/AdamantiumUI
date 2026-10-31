@@ -23,6 +23,8 @@ public class ItemsControl : Control, IContainer, IKeyboardEntry
     private static readonly ConditionalWeakTable<IUIComponent, object> Refused = new();
 
     private readonly ConditionalWeakTable<IUIComponent, object> _taken = new();
+    private readonly Dictionary<IUIComponent, FundamentalUIComponent> _heldItems = [];
+    private FundamentalUIComponent _containersHeldBy;
     private ItemsPresenter _presenter;
     private bool _ringWasVisible;
 
@@ -172,7 +174,18 @@ public class ItemsControl : Control, IContainer, IKeyboardEntry
         base.OnDiscarded();
         ItemContainerGenerator.Clear();
         DiscardOwnItems();
+        LetGoOfHeldItems();
         Items?.LetGoOfSource();
+    }
+
+    private void LetGoOfHeldItems()
+    {
+        foreach (var (held, holder) in _heldItems)
+        {
+            LetGo(held, holder);
+        }
+
+        _heldItems.Clear();
     }
 
     private void DiscardOwnItems()
@@ -256,8 +269,92 @@ public class ItemsControl : Control, IContainer, IKeyboardEntry
 
         MoveKeyboardWith(e);
         _presenter?.OnItemsChanged(e);
+        LetGoOfRemovedItems(e);
         OnItemsChanged(e);
     }
+
+    private void LetGoOfRemovedItems(NotifyCollectionChangedEventArgs e)
+    {
+        if (_heldItems.Count == 0 || e.Action == NotifyCollectionChangedAction.Move) return;
+
+        if (e.Action == NotifyCollectionChangedAction.Reset)
+        {
+            var still = new HashSet<IUIComponent>(Items.OfType<IUIComponent>());
+            List<IUIComponent> gone = null;
+            foreach (var held in _heldItems.Keys)
+            {
+                if (!still.Contains(held)) (gone ??= []).Add(held);
+            }
+
+            foreach (var held in gone ?? [])
+            {
+                LetGoOfItem(held);
+            }
+
+            return;
+        }
+
+        foreach (var old in e.OldItems?.OfType<IUIComponent>() ?? [])
+        {
+            if (e.NewItems?.Contains(old) != true) LetGoOfItem(old);
+        }
+    }
+
+    /// <summary>What holds the elements among this list's items: the list itself, or - for a list in a control's template
+    /// handed its items by a template binding - that control, as a part of a template does not take what a page gave.
+    /// </summary>
+    internal FundamentalUIComponent Holder =>
+        GetValueSource(ItemsSourceProperty) == ValuePriority.Template && TemplatedParent is FundamentalUIComponent outer
+            ? (outer as ItemsControl)?.Holder ?? outer
+            : this;
+
+    /// <summary>What holds the containers this list's generator makes: the list, but for one whose containers another
+    /// control makes for it (a tab strip's tabs, made by its TabControl).</summary>
+    internal virtual FundamentalUIComponent ContainerHolder => this;
+
+    /// <summary>Takes an element among the items as a logical child once its panel first shows it, and holds it from then
+    /// on, shown or not, until it leaves the items. Not before: a menu never opened does not take - and style - its rows.
+    /// Taken from the items source, the element is held only if nothing holds it.</summary>
+    internal void HoldShownItem(IUIComponent item)
+    {
+        if (item == null || item.LogicalParent != null || !IsOwnItem(item)) return;
+
+        var holder = Holder;
+        holder.AddLogicalChild(item);
+        _heldItems[item] = holder;
+    }
+
+    private bool IsOwnItem(IUIComponent item) =>
+        AuthoredIn.TryGetValue(item, out var owner) && ReferenceEquals(owner, this) || _taken.TryGetValue(item, out _);
+
+    private void LetGoOfItem(IUIComponent item)
+    {
+        if (_heldItems.Remove(item, out var holder)) LetGo(item, holder);
+    }
+
+    private static void LetGo(IUIComponent held, FundamentalUIComponent holder)
+    {
+        if (ReferenceEquals(held.LogicalParent, holder)) holder.RemoveLogicalChild(held);
+    }
+
+    /// <summary>Takes a container the generator made as a logical child: the list holds its containers, from when they are
+    /// shown - pooled ones too - until the generator lets them go; its panel only shows them.</summary>
+    internal void HoldContainer(IUIComponent container)
+    {
+        _containersHeldBy ??= ContainerHolder;
+        if (container != null && !ReferenceEquals(container.LogicalParent, _containersHeldBy))
+        {
+            _containersHeldBy.AddLogicalChild(container);
+        }
+    }
+
+    internal void LetGoOfContainer(IUIComponent container)
+    {
+        if (container != null && _containersHeldBy != null) LetGo(container, _containersHeldBy);
+    }
+
+    /// <summary>The generator let go of every container: the next ones are held by whatever holds them then.</summary>
+    internal void ContainersLetGo() => _containersHeldBy = null;
 
     // An element written into Items belongs to this control, shown or not yet - a tab never opened still owns its buttons.
     private void NoteAuthored(NotifyCollectionChangedEventArgs e)

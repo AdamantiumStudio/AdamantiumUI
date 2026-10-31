@@ -136,6 +136,7 @@ public class TemplatedUIComponent : InputUIComponent, ITemplatedUIComponent, ITe
             // }
             
             AddTemplateChild(templateResult.RootComponent);
+            TemplateRootChanged(templateResult.RootComponent, joined: true);
             OnApplyTemplate();
         }
     }
@@ -146,6 +147,7 @@ public class TemplatedUIComponent : InputUIComponent, ITemplatedUIComponent, ITe
         // nothing to tear down then.
         if (templateResult == null) return;
 
+        TemplateRootChanged(templateResult.RootComponent, joined: false);
         TraverseVisualTreeAndUnload(templateResult.RootComponent);
         // Undo the inheritance link set in AddTemplateChild so the detached old template root stops tracking this
         // control's inherited values (a stale parent would keep pushing DataContext/FontFamily changes into orphaned UI).

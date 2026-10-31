@@ -15,7 +15,8 @@ namespace Adamantium.UI.Controls.DataGrid;
 public abstract class DataGridColumn : FundamentalUIComponent
 {
     public static readonly AdamantiumProperty HeaderProperty = AdamantiumProperty.Register(nameof(Header),
-        typeof(object), typeof(DataGridColumn), new PropertyMetadata(null));
+        typeof(object), typeof(DataGridColumn), new PropertyMetadata(null,
+            (a, e) => ((DataGridColumn)a).ChangeLogicalChild(HeaderProperty, e.OldValue, e.NewValue)));
 
     /// <summary>What this column's cells show and write - <c>{Binding Name}</c>, with everything a binding can carry.
     /// A template column leaves it empty: its cell holds the ROW, and the template binds whatever it likes.</summary>

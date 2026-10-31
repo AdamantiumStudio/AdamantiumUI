@@ -322,6 +322,7 @@ public class ItemContainerGenerator
                 _generated.Add(container);
                 rebinds++;
                 _owner.PrepareContainer(container, item);
+                _owner.HoldContainer(container);
             }
 
             _byIndex[i] = container;
@@ -380,6 +381,7 @@ public class ItemContainerGenerator
         var container = fit >= 0 ? PoolTake(fit) : _owner.GetContainerForItem(item);
         _generated.Add(container);
         _owner.PrepareContainer(container, item);
+        _owner.HoldContainer(container);
         return container;
     }
 
@@ -455,6 +457,12 @@ public class ItemContainerGenerator
             }
         }
 
+        foreach (var container in _generated)
+        {
+            _owner.LetGoOfContainer(container);
+        }
+
+        _owner.ContainersLetGo();
         _byIndex.Clear();
         _indexByContainer.Clear();
         PoolClear();

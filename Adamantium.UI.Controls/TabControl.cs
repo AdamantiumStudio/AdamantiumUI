@@ -493,11 +493,17 @@ public class TabControl : Selector
         }
     }
 
+    private TabItem _pageShownBy;
+
     private void UpdateSelectedContent()
     {
         var item = SelectedItem;
         var tab = item as TabItem;
+        var previous = _pageShownBy;
+        _pageShownBy = tab;
+        tab?.ShowPage(this, true);
         SelectedContent = tab != null ? tab.Content : item;
+        if (!ReferenceEquals(previous, tab)) previous?.ShowPage(this, false);
 
         SelectedContentTemplate = tab?.ContentTemplate ?? ContentTemplate;
         SelectedContentTemplateSelector = tab?.ContentTemplateSelector ?? ContentTemplateSelector;

@@ -24,6 +24,10 @@ namespace Adamantium.UITests;
 [TestFixture]
 public class ItemsControlTests
 {
+    // A drop gap slides the rows after it: the slides it started are not left running for the fixtures after it.
+    [TearDown]
+    public void TearDown() => Adamantium.UI.Core.Media.Animation.AnimationManager.Reset();
+
     private sealed class Person
     {
         public string Name { get; init; }

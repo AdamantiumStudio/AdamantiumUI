@@ -29,8 +29,14 @@ public class CompositorRenderTests
 {
     private IGraphicsDevice _device;
 
+    // Clean before as well as after: these count what the compositor runs, and a fixture before them may have left a
+    // slide of its own running.
     [SetUp]
-    public void SetUp() => _device = GpuTestDevice.Device;
+    public void SetUp()
+    {
+        AnimationManager.Reset();
+        _device = GpuTestDevice.Device;
+    }
 
     [TearDown]
     public void TearDown() => AnimationManager.Reset();

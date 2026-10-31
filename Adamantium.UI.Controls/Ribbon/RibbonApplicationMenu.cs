@@ -21,7 +21,8 @@ public class RibbonApplicationMenu : Selector
 
     /// <summary>What the button says - "File".</summary>
     public static readonly AdamantiumProperty HeaderProperty = AdamantiumProperty.Register(nameof(Header),
-        typeof(object), typeof(RibbonApplicationMenu), new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure));
+        typeof(object), typeof(RibbonApplicationMenu), new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure,
+            (a, e) => ((RibbonApplicationMenu)a).ChangeLogicalChild(HeaderProperty, e.OldValue, e.NewValue)));
 
     public static readonly AdamantiumProperty HeaderTemplateProperty = AdamantiumProperty.Register(nameof(HeaderTemplate),
         typeof(DataTemplate), typeof(RibbonApplicationMenu), new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure));
