@@ -196,6 +196,7 @@ public static partial class DragDrop
     private static bool _indicatorFrame;   // frame (drop-into) vs caret - part of the "nothing moved" cache key
     private static int _insertIndex = -1;
     private static object _insertBefore;   // the item at the insertion point - insert BEFORE it (robust to same-list shifts)
+    private static bool _intoItsOwnOrder;  // over the list it came from, which keeps an order of its own: nothing to do
 
     // Hybrid tree-drop: the hovered node + where the drop lands relative to it (before/after sibling, or into as a child).
     private static object _dropTarget;
@@ -403,6 +404,13 @@ public static partial class DragDrop
             effects = args.Effects;
             cursor = args.DragCursor;   // a target that wants to say something the effect cannot
         }
+
+        if (_intoItsOwnOrder)
+        {
+            effects = DragDropEffects.None;
+            cursor = null;
+        }
+
         _dragEffects = effects;
         // The OS owns the cursor for the whole of an OS-driven gesture (it draws the standard drag cursors from the
         // effect we report back), so our override - DragCursor included - would only fight it.
@@ -500,6 +508,9 @@ public static partial class DragDrop
                 break;
             }
         }
+
+        // A list that keeps an order of its own puts an item where that order says: dropped back into it, nothing moves.
+        _intoItsOwnOrder = list != null && GetInsertionCue(list) == DropInsertionCue.None && IsWithin(_source, list);
 
         if (list == null || window is not IAdornerHost host || GetInsertionCue(list) == DropInsertionCue.None)
         {
@@ -772,6 +783,19 @@ public static partial class DragDrop
         if (!ReferenceEquals(_gapPanel, panel) && _gapPanel != null) _gapPanel.ShowDropGap(-1, null);
         _gapPanel = panel;
         panel?.ShowDropGap(index, index >= 0 && list != null ? LiftedFrom(list) : null);
+    }
+
+    private static bool IsWithin(IInputComponent source, IUIComponent list)
+    {
+        for (var c = source as IUIComponent; c != null; c = c.VisualParent)
+        {
+            if (ReferenceEquals(c, list))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static System.Collections.IList LiftedFrom(ItemsControl list)
@@ -1443,6 +1467,7 @@ public static partial class DragDrop
         _grabPoint = null;
         _liftedList = null;
         _lifted = null;
+        _intoItsOwnOrder = false;
         _ghostBgra = null;
         _ghostShown = false;
         _presentedScale = _ghostBakeScale;   // next drag re-bakes _ghostBakeScale; keep them in step so first show doesn't resample

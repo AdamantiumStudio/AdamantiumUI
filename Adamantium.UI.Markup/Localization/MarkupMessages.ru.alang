@@ -64,6 +64,7 @@
     <Phrase Key="InlineResourceNeedsKey" Text="Встроенному ресурсу в {property} нужен x:Key."/>
     <Phrase Key="ResourceWithoutKey" Text="{{{extension}}} у {property} не называет ключа (строка {line}, позиция {position})."/>
     <Phrase Key="LiveResourceOnPlainProperty" Text="{{{extension} {key}}} не может следить за {type}.{property}: это обычное свойство, обновлять в нём нечего. {{ResourceReference {key}}} задаёт его один раз."/>
+    <Phrase Key="LocalizeIntoBindingProperty" Text="{type}.{property} хранит {propertyType}, а {{Localize}} им не является: здесь нужен {{Binding}}, а {{Localize}} - в свойстве, которое принимает текст или любую привязку."/>
     <Phrase Key="TemplateBindingOutsideTemplate" Text="TemplateBinding можно использовать только внутри ControlTemplate."/>
     <Phrase Key="AncestorTypeNotResolved" Text="Ancestor: тип '{type}' не найден."/>
     <Phrase Key="AncestorStopTypeNotResolved" Text="Ancestor: тип Stop '{type}' не найден."/>

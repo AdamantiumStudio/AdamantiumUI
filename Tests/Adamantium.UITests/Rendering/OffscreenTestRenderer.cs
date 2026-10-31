@@ -80,7 +80,12 @@ internal sealed class OffscreenTestRenderer : IDisposable
     public bool RenderAgain(IRootVisualComponent root)
     {
         var projection = root.GetProjectionMatrix();
-        _renderCache.ProcessCommands(projection, 1.0);
+        _renderCache.ApplyFrame();   // nothing recorded: a clean frame, as an idle window applies it
+        if (_renderCache.NeedsTransformRebake)
+        {
+            _renderCache.ProcessCommands(projection, 1.0);
+        }
+
         return Present();
     }
 
@@ -90,7 +95,10 @@ internal sealed class OffscreenTestRenderer : IDisposable
     {
         var projection = root.GetProjectionMatrix();
         _renderCache.BuildFromVisualTree(root);
-        _renderCache.ProcessCommands(projection, 1.0);   // offscreen test renderer is 1:1 (no designer zoom)
+        if (_renderCache.NeedsTransformRebake)   // as the window renderer decides it
+        {
+            _renderCache.ProcessCommands(projection, 1.0);   // offscreen test renderer is 1:1 (no designer zoom)
+        }
 
         // Tooling overlays (selection frames) are a SECOND stage built from a flat list, rendered after the content
         // in the same frame so they sit on top. They share the projection and target; only the draw order differs.

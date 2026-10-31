@@ -9,6 +9,8 @@ using Adamantium.ProceduralGeometry;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Graphics;
 using Adamantium.UI.Core.Media;
+using Adamantium.UI.Core.Media.Animation;
+using Adamantium.UI.Core.TypeParsers;
 using Adamantium.UI.Rendering;
 using Adamantium.Vulkan.Core;
 using NUnit.Framework;
@@ -21,6 +23,9 @@ namespace Adamantium.UITests.Rendering;
 public class MovedElementPatchRenderTests
 {
     private const int Dim = 96;
+
+    [TearDown]
+    public void TearDown() => AnimationManager.Reset();
 
     private sealed class Scene : IDisposable
     {
@@ -70,6 +75,9 @@ public class MovedElementPatchRenderTests
         scene.Draw();
         return scene;
     }
+
+    // A tab's close glyph: two strokes of one path, as its template draws it.
+    private static Geometry Cross() => new GeometryParser().Parse("M0,0 L8,8 M8,0 L0,8");
 
     private static byte[] Pixels(OffscreenTestRenderer renderer)
     {
@@ -144,6 +152,157 @@ public class MovedElementPatchRenderTests
         }
 
         AssertMatchesAFullWalk(scene, Pixels(scene.Renderer), "six patched steps must end where one walk would put it");
+    }
+
+    // A dragged tab: its RenderTransform moves it every frame, and its close button is a stroke - a per-unit draw beside
+    // its batched fill. Every frame must have both where a walk puts them, not the stroke a few frames behind.
+    [TestCase(false)]
+    [TestCase(true)]
+    public void DraggingByRenderTransform_TakesItsStrokesAlong_EveryFrame(bool motionNode)
+    {
+        var device = GpuTestDevice.Device;
+        var factory = new RenderUnitFactory(device, new StubResourceFactory());
+        using var renderer = new OffscreenTestRenderer(device, factory, Dim, Dim) { ClearColor = Colors.Black };
+
+        var stage = Placed(new Rect(0, 0, Dim, Dim));
+        var tab = Placed(new Rect(4, 8, 32, 24));
+        tab.IsRenderMotionNode = motionNode;
+        var transform = new Transform();
+        tab.RenderTransform = transform;
+        tab.RenderAction = s => s.DrawRectangle(Brushes.Blue, new Rect(0, 0, 32, 24));
+        stage.Add(tab);
+
+        var pen = new Pen(Brushes.Red, 2);
+        var cross = Cross();
+        var glyph = Placed(new Rect(20, 6, 10, 10));
+        glyph.RenderAction = s =>
+            s.DrawGeometry(null, cross, pen);
+        tab.Add(glyph);
+
+        var scene = new Scene { Renderer = renderer, Root = new VisualRoot(stage, Dim, Dim), Mover = tab, Rider = glyph };
+        scene.Draw();
+
+        for (var step = 1; step <= 6; step++)
+        {
+            transform.TranslateX = step * 9;
+            scene.Draw();
+            AssertMatchesAFullWalk(scene, Pixels(renderer), $"drag step {step}: the stroke must be where the fill is");
+        }
+    }
+
+    // A dragged tab whose button lights up under the pointer: frames that only move, only light up, or both, some of them
+    // two recordings drawn at once. The hover is what a patch is for, and the move must not be lost to it.
+    [TestCase(false)]
+    [TestCase(true)]
+    public void DraggingByRenderTransform_WhileItsButtonLightsUp_TakesTheButtonAlong(bool backgroundAppears)
+    {
+        var device = GpuTestDevice.Device;
+        var factory = new RenderUnitFactory(device, new StubResourceFactory());
+        using var renderer = new OffscreenTestRenderer(device, factory, Dim, Dim) { ClearColor = Colors.Black };
+
+        var stage = Placed(new Rect(0, 0, Dim, Dim));
+        var tab = Placed(new Rect(4, 8, 32, 24));
+        var transform = new Transform();
+        tab.RenderTransform = transform;
+        tab.RenderAction = s => s.DrawRectangle(Brushes.Blue, new Rect(0, 0, 32, 24));
+        stage.Add(tab);
+
+        var stroke = new SolidColorBrush(Colors.Red);
+        var pen = new Pen(stroke, 2);
+        var cross = Cross();
+        var lit = false;
+        var grid = Placed(new Rect(0, 0, 32, 24));
+        tab.Add(grid);
+        var button = Placed(new Rect(18, 4, 14, 14));
+        button.RenderAction = s =>
+        {
+            if (backgroundAppears && lit)
+            {
+                s.DrawRectangle(Brushes.Yellow, new Rect(0, 0, 14, 14));
+            }
+        };
+        grid.Add(button);
+        var glyph = Placed(new Rect(2, 2, 10, 10));
+        glyph.RenderAction = s =>
+            s.DrawGeometry(null, cross, pen);
+        button.Add(glyph);
+
+        var scene = new Scene { Renderer = renderer, Root = new VisualRoot(stage, Dim, Dim), Mover = tab, Rider = button };
+        scene.Draw();
+
+        for (var step = 1; step <= 12; step++)
+        {
+            var moves = step % 3 != 2;
+            var lights = step % 3 != 1;
+            if (moves)
+            {
+                transform.TranslateX = step * 4;
+            }
+
+            if (lights)
+            {
+                lit = !lit;
+                if (backgroundAppears)
+                {
+                    button.InvalidateRender(false);
+                }
+                else
+                {
+                    stroke.Color = lit ? Colors.White : Colors.Red;
+                }
+            }
+
+            if (step % 2 == 0)
+            {
+                // The loop recorded a frame the render thread had not drawn yet: two packets are applied for one draw.
+                renderer.Cache.RecordFrame(scene.Root);
+                RenderDirty.Clear();
+                transform.TranslateX += 2;
+            }
+
+            scene.Draw();
+            AssertMatchesAFullWalk(scene, Pixels(renderer), $"drag step {step}: the button must be where the tab is");
+        }
+    }
+
+    // The same tab after a slide of its own - a reorder settling it - which the compositor ran and the drag cancelled.
+    [Test]
+    public void DraggingByRenderTransform_AfterACompositedSlide_TakesItsStrokesAlong()
+    {
+        var device = GpuTestDevice.Device;
+        var factory = new RenderUnitFactory(device, new StubResourceFactory());
+        using var renderer = new OffscreenTestRenderer(device, factory, Dim, Dim) { ClearColor = Colors.Black };
+
+        var stage = Placed(new Rect(0, 0, Dim, Dim));
+        var tab = Placed(new Rect(4, 8, 32, 24));
+        var transform = new Transform();
+        tab.RenderTransform = transform;
+        tab.RenderAction = s => s.DrawRectangle(Brushes.Blue, new Rect(0, 0, 32, 24));
+        stage.Add(tab);
+
+        var pen = new Pen(Brushes.Red, 2);
+        var cross = Cross();
+        var glyph = Placed(new Rect(20, 6, 10, 10));
+        glyph.RenderAction = s =>
+            s.DrawGeometry(null, cross, pen);
+        tab.Add(glyph);
+
+        var scene = new Scene { Renderer = renderer, Root = new VisualRoot(stage, Dim, Dim), Mover = tab, Rider = glyph };
+        scene.Draw();
+
+        transform.BeginAnimation(Transform.TranslateXProperty,
+            new DoubleAnimation { From = 0, To = 9, Duration = TimeSpan.FromSeconds(1) });
+        Compositor.StartPending();
+        Assert.That(Compositor.EntryFor(transform), Is.Not.Null, "the slide must be composited");
+        scene.Draw();
+
+        transform.CancelAnimation(Transform.TranslateXProperty);
+        for (var step = 1; step <= 6; step++)
+        {
+            transform.TranslateX = step * 9;
+            scene.Draw();
+            AssertMatchesAFullWalk(scene, Pixels(renderer), $"drag step {step}: the stroke must be where the fill is");
+        }
     }
 
     // THE DROP GAP. A tile inside a scrolling panel is batched NODE-RELATIVE: its place is in the instance, not in a

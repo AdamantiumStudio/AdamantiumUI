@@ -57,6 +57,7 @@ public class Localize : BindingBase
             TargetNullValue = TargetNullValue,
             IsAsync = IsAsync,
             IsImmediate = IsImmediate,
+            StringFormat = StringFormat,
         };
         foreach (var (name, value) in Arguments)
         {

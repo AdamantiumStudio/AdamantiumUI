@@ -6,3 +6,4 @@ using Adamantium.UI.Core.Markup;
 [assembly: XmlnsDefinition("http://adamantium/ui", "clr-namespace:Adamantium.UI.Input;assembly=Adamantium.UI")]
 [assembly: XmlnsDefinition("http://adamantium/ui", "clr-namespace:Adamantium.UI.ApplicationModel;assembly=Adamantium.UI")]
 [assembly: XmlnsDefinition("http://adamantium/ui", "clr-namespace:Adamantium.UI.Text;assembly=Adamantium.UI")]
+[assembly: XmlnsDefinition("http://adamantium/ui", "clr-namespace:Adamantium.UI.Tabs;assembly=Adamantium.UI")]

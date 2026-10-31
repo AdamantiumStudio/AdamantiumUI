@@ -457,7 +457,10 @@ public partial class RenderCache
     private readonly List<Compositor.Entry> _compositedBuf = new();   // this thread's view of the composited set (reused)
     private readonly Dictionary<IUIComponent, (LayoutSnapshot Snap, Matrix4x4F ParentWorld)> _compositedFallback = new();   // keep animating across a settling swap's snapshot re-capture
     private readonly HashSet<IUIComponent> _compositedOwners = new();   // motion nodes the compositor moved THIS present (ExecuteOps re-Updates their per-unit draws)
+    private readonly HashSet<IUIComponent> _carriedNodes = new();      // motion nodes inside those, written because their ancestor moved
+    private readonly List<IUIComponent> _compositedRoots = new();
     private readonly List<IUIComponent> _fallbackGone = new();
+    private Comparison<Compositor.Entry> _byDepth;
 
     private const int MaxRetainedOps = 256;   // op stream past this -> a splice yields to a full walk that recompacts
     private readonly List<GroupPatch> _patchBuf = new();   // TrySplicedPatch: staged per-group patches (validated before mutation)
@@ -629,6 +632,8 @@ public partial class RenderCache
             // bake) has no next one soon: kept, these held what moved in its last frame, and the page that was on.
             _compositedBuf.Clear();
             _compositedOwners.Clear();
+            _carriedNodes.Clear();
+            _compositedRoots.Clear();
             _movedOwners.Clear();
             _movedNodeOwners.Clear();
 
@@ -2087,11 +2092,16 @@ public partial class RenderCache
         if (!Compositor.Tick(_compositedBuf, _appliedCompositorFrame))   // recomposes matrices AND republishes paint snapshots
         {
             if (_compositedOwners.Count > 0) _compositedOwners.Clear();
+            _carriedNodes.Clear();
             _compositedFallback.Clear();
             return;
         }
 
         _traceComposited = _compositedBuf.Count;
+
+        // Ancestors first: an element sliding inside another that slides composes its world from the outer one's NEW one.
+        _byDepth ??= (a, b) => DepthOf(a.Owner).CompareTo(DepthOf(b.Owner));
+        _compositedBuf.Sort(_byDepth);
 
         _compositedOwners.Clear();
         foreach (var entry in _compositedBuf)
@@ -2104,6 +2114,8 @@ public partial class RenderCache
             else if (entry.Channel == CompositorChannel.Opacity) ApplyCompositedOpacity(device, entry);
             else ApplyCompositedPaint(device, entry);
         }
+
+        CarryNodesInsideComposited(device);
 
         if (_compositedFallback.Count <= _compositedOwners.Count)
         {
@@ -2125,6 +2137,46 @@ public partial class RenderCache
         }
 
         _fallbackGone.Clear();
+    }
+
+    // A motion node's slot holds its OWN world, so one inside an element the compositor moved has to be written too - as
+    // RefreshMovedNodes does for a loop-driven move - or its whole subtree stays behind.
+    private void CarryNodesInsideComposited(IGraphicsDevice device)
+    {
+        _carriedNodes.Clear();
+        if (_compositedOwners.Count == 0)
+        {
+            return;
+        }
+
+        _compositedRoots.Clear();
+        _compositedRoots.AddRange(_compositedOwners);
+        foreach (var node in _nodeRefreshed.Keys)
+        {
+            if (!_compositedOwners.Contains(node) && IsUnder(node, _compositedRoots))
+            {
+                _carriedNodes.Add(node);
+            }
+        }
+
+        foreach (var node in _carriedNodes)
+        {
+            if (_transformTable.TryGetSlot(node.RenderId, out var slot))
+            {
+                _transformTable.SetMatrix(device, slot, World(node));
+            }
+        }
+    }
+
+    private int DepthOf(IUIComponent c)
+    {
+        var depth = 0;
+        for (var at = c; at != null; at = ApplySnap(at).RenderParent)
+        {
+            depth++;
+        }
+
+        return depth;
     }
 
     // OPACITY: the twin of the transform write below, four bytes instead of sixty-four. The element's alpha goes into its

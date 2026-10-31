@@ -487,6 +487,50 @@ public class TabStripScrollerTests
         });
     }
 
+    // The settle carries the tab to its new SLOT - the panel's, as wide as TabWidth makes it - not by the widths of the
+    // tabs it passed, which a virtualized strip does not even have, and not by its own narrower width.
+    [Test]
+    public void Drag_SettlesIntoItsNewSlot_OnAVirtualizedStrip()
+    {
+        var (tc, tabs) = WidthStrip(tabWidth: 100, count: 40);
+        tc.Measure(new Size<double>(300, 100));
+        tc.Arrange(new Rect(0, 0, 300, 100));
+
+        tc.BeginDrag(tabs[0], 5.0);
+        tc.UpdateDrag(tabs[0], 265.0);    // dragged center = 280 -> past slot 2's center (250), short of slot 3's (350)
+        tc.EndDrag(tabs[0]);
+        AnimationTime.Pass(0.5);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(tc.Items.IndexOf(tabs[0]), Is.EqualTo(2), "landed in slot 2");
+            Assert.That(((Adamantium.UI.Core.Media.Transform)tabs[0].RenderTransform).TranslateX, Is.EqualTo(200).Within(0.5),
+                "the settle ends where slot 2 starts, so the move that follows changes nothing on screen");
+        });
+    }
+
+    // A tab carried past the visible part of a strip keeps its container: the window the strip realizes moves on, and
+    // without the hold the tab under the pointer was parked - its title gone, the gap left open.
+    [Test]
+    public void AHeldContainer_StaysRealized_OutsideTheWindow()
+    {
+        var ic = StripControl(10);
+        ic.Measure(new Size<double>(1000, 100));
+        ic.Arrange(new Rect(0, 0, 1000, 100));
+        var generator = ic.ItemContainerGenerator;
+        var held = generator.ContainerFromIndex(3);
+        var other = generator.ContainerFromIndex(4);
+
+        generator.Hold(held);
+        generator.SetWindow(6, 9);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(generator.ContainerFromIndex(3), Is.SameAs(held), "the held one keeps its index");
+            Assert.That(generator.ContainerFromIndex(4), Is.Not.SameAs(other), "one not held leaves the window as before");
+        });
+    }
+
     [Test]
     public void TabWidth_IsTheThicknessOfASideStrip()
     {

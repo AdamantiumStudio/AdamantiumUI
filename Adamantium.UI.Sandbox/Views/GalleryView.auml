@@ -3,7 +3,6 @@
       xmlns:vm="clr-namespace:Adamantium.UI.Sandbox.ViewModels"
       xmlns:nav="clr-namespace:Adamantium.UI.Controls.Navigation;assembly=Adamantium.UI.Controls"
       xmlns:controls="clr-namespace:Adamantium.UI.Controls;assembly=Adamantium.UI.Controls"
-      xmlns:behaviors="clr-namespace:Adamantium.UI.Sandbox.Behaviors"
       x:ViewModel="{x:Type vm:GalleryViewModel}"
       x:CreateInDesignTime="True">
 
@@ -74,7 +73,7 @@
             </TabControl.LoadingTemplate>
             <!-- Drag a tab AWAY from the strip (across it, not along it) and let go: it gets its own window. -->
             <TabControl.Behaviors>
-                <behaviors:TabTearOffBehavior/>
+                <TabTearOffBehavior WindowTitle="{Localize GalleryStrings, Key={Binding Header}}"/>
             </TabControl.Behaviors>
             <!-- The same key is the tab's id for automation: English, and not translated. -->
             <TabControl.ItemContainerStyle>

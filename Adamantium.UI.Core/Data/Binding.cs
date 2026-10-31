@@ -46,6 +46,7 @@ public class Binding : BindingBase
          Culture = Culture,
          TargetNullValue = TargetNullValue,
          ElementName = ElementName,
+         IsImmediate = IsImmediate,
       };
    }
 

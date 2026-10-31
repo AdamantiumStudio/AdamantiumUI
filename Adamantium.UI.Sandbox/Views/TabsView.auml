@@ -22,6 +22,11 @@
                     IsVirtualizing="{Binding IsVirtualizing}"
                     TabWidth="220"
                     ShowCloseButton="True">
+            <!-- Dragged away across the strip, a document gets a window of its own named as its tab; dragged back over a
+                 strip, it goes in again. -->
+            <TabControl.Behaviors>
+                <TabTearOffBehavior WindowTitle="{Binding Name}"/>
+            </TabControl.Behaviors>
             <TabControl.ItemTemplate>
                 <DataTemplate>
                     <!-- A template that brings its OWN TextBlock owns its trimming too: the presenter only stamps

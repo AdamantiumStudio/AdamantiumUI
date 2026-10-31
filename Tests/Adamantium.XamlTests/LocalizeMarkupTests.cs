@@ -84,6 +84,45 @@ public class LocalizeMarkupTests
         });
     }
 
+    // A property that holds a binding takes the Localize itself, as it takes a {Binding}: bound instead, it held only the
+    // text, and a torn-off tab's window - which binds that Localize to its own item - came out with no title.
+    [Test]
+    public void APropertyHoldingABinding_TakesTheLocalizeItself()
+    {
+        var project = Project("""
+            <PropertyGrid>
+                <PropertySection>
+                    <StringProperty Binding="{Localize Strings.Close}"/>
+                </PropertySection>
+            </PropertyGrid>
+            """);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(project.Errors, Is.Empty, AumlCodegenHarness.Errors(project.Errors));
+            Assert.That(project.Source, Does.Match(@"\.Binding = \w+;"), "assigned, not bound");
+            Assert.That(project.Source, Does.Not.Contain("SetBinding(\"Binding\""), "no binding on the property itself");
+        });
+    }
+
+    // A property typed Binding holds that one kind only: a Localize there is a markup error at the property, not a C# one
+    // in the generated code.
+    [Test]
+    public void APropertyHoldingOnlyABinding_RefusesALocalize()
+    {
+        var project = Project("""
+            <Border>
+                <Border.Triggers>
+                    <DataTrigger Binding="{Localize Strings.Close}" Value="true">
+                        <Setter Property="Opacity" Value="0.5"/>
+                    </DataTrigger>
+                </Border.Triggers>
+            </Border>
+            """);
+
+        Assert.That(project.Errors.Select(e => e.GetMessage()), Has.Some.Contains("DataTrigger.Binding holds a Binding"));
+    }
+
     // Where a theme writes its strings: a setter's value and an element of a control template.
     [Test]
     public void AStyleSet_TakesItInASetterAndInATemplate()

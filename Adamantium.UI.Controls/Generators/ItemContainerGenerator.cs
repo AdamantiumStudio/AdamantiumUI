@@ -35,11 +35,17 @@ public class ItemContainerGenerator
     private List<int> _waveBuf = new();                          // current expansion layer (swapped with next - not readonly)
     private List<int> _nextWaveBuf = new();
     private bool[] _reachedBuf = [];                             // per-window-slot visited marks for the expansion
+    private IUIComponent _held;
 
     public ItemContainerGenerator(ItemsControl owner)
     {
         _owner = owner;
     }
+
+    /// <summary>Keeps <paramref name="container"/> realized, with its index, while that index is outside the window - the
+    /// tab a drag carries past the visible part of its strip, which would otherwise be parked from under the pointer.
+    /// Null lets it go; the next window then treats it as any other.</summary>
+    public void Hold(IUIComponent container) => _held = container;
 
     private void PoolPush(IUIComponent container)
     {
@@ -226,8 +232,8 @@ public class ItemContainerGenerator
         var donors = _donorBuf;
         donors.Clear();
         _outKeysBuf.Clear();
-        foreach (var idx in _byIndex.Keys)
-            if (idx < first || idx > last) _outKeysBuf.Add(idx);   // snapshot: can't remove from _byIndex mid-enumeration
+        foreach (var (idx, realized) in _byIndex)
+            if ((idx < first || idx > last) && !ReferenceEquals(realized, _held)) _outKeysBuf.Add(idx);   // snapshot: can't remove from _byIndex mid-enumeration
         foreach (var idx in _outKeysBuf)
         {
             Core.Diagnostics.LayoutTrace.Count(typeof(ItemContainerGenerator), "*unmapped*");
@@ -397,6 +403,11 @@ public class ItemContainerGenerator
     public void Recycle(int index)
     {
         if (!_byIndex.Remove(index, out var container)) return;
+        if (ReferenceEquals(container, _held))
+        {
+            _held = null;   // its item left: held on, it would be rebound to another and kept out of the window
+        }
+
         _indexByContainer.Remove(container);
         NoteUnmapped(container);
         if (_generated.Contains(container))
@@ -412,6 +423,8 @@ public class ItemContainerGenerator
     /// </summary>
     public void Clear()
     {
+        _held = null;
+
         // Every generated container is CLEARED first, exactly as recycling one clears it: a container may hold a
         // subscription to the item it was showing, and the ITEM is the long-lived end - dropping the container without
         // clearing leaves the item holding it, and a closed page never goes away.
@@ -504,6 +517,14 @@ public class ItemContainerGenerator
             var newIndex = map(pair.Key);
             _byIndex[newIndex] = pair.Value;
             _indexByContainer[pair.Value] = newIndex;
+
+            // A new index is a new slot: a panel that arranges only what was mapped since its last pass has to place this
+            // one again, or a move - a removal and an insertion, the count unchanged - left the shifted tiles where they
+            // were, holes and overlaps among them.
+            if (newIndex != pair.Key)
+            {
+                NoteMapped(pair.Value);
+            }
         }
     }
 }
