@@ -28,6 +28,22 @@ public interface IResourceManager
     // Register an inline (per-element) dictionary INSTANCE - ResourceContext.Resources authored on an element.
     void AddSource(IAdamantiumComponent component, ResourceDictionary instance, ResourceScope scope = ResourceScope.Local);
 
+    /// <summary>Lets <paramref name="component"/> stop holding the dictionary of <paramref name="source"/> it linked.</summary>
+    void RemoveSource(IAdamantiumComponent component, Type source, ResourceScope scope = ResourceScope.Local);
+
+    /// <summary>Takes back the inline dictionary <paramref name="instance"/> given to <paramref name="component"/>, and
+    /// what it links.</summary>
+    void RemoveSource(IAdamantiumComponent component, ResourceDictionary instance, ResourceScope scope = ResourceScope.Local);
+
+    /// <summary>A dictionary <paramref name="owner"/> holds as its own carries styles: it is a scope of styles for its
+    /// logical subtree.</summary>
+    bool HoldsStylesOf(IAdamantiumComponent owner);
+
+    /// <summary>The styles of the scopes over <paramref name="element"/> that match it, each with the band its scope
+    /// ranks it at: the application's outermost, then those of its logical ancestors, the nearest highest. Null when none
+    /// matches; <paramref name="underScope"/> tells whether an ancestor is a scope at all.</summary>
+    Dictionary<Style, int> ScopedStylesOver(IFundamentalUIComponent element, out bool underScope);
+
     // A resource VALUE changed in place (an inline dictionary was mutated): re-resolve live {ObservableResource}s.
     void NotifyResourcesChanged();
 

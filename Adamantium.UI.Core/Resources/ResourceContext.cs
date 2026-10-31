@@ -19,14 +19,19 @@ public static class ResourceContext
     
     public static void SetSource(AdamantiumComponent element, ResourceLink value)
     {
+        var old = GetSource(element);
         element.SetValue(SourceProperty, value);
 
         // A THEME only records its palette link here; the ThemeManager activates it (AddSource) while the theme is
         // current and removes it when it stops being current. That keeps exactly one palette - the current theme's -
         // live, so declaring 20 themes doesn't register 20 palettes. Every non-theme element registers eagerly, below.
-        if (element is ITheme) return;
+        if (element is ITheme || ReferenceEquals(old, value)) return;
 
-        UIAppContext.Current.ResourceManager.AddSource(element, value.Source, value.Scope );
+        var manager = UIAppContext.Current.ResourceManager;
+        var wasScope = manager.HoldsStylesOf(element);
+        if (old?.Source != null) manager.RemoveSource(element, old.Source, old.Scope);
+        if (value?.Source != null) manager.AddSource(element, value.Source, value.Scope);
+        RestyleScope(element, wasScope || manager.HoldsStylesOf(element));
     }
 
     // The scope the inline Resources below are published into. LOCAL by default - a private, tree-scoped dictionary that
@@ -58,14 +63,23 @@ public static class ResourceContext
 
     public static void SetResources(AdamantiumComponent element, ResourceDictionary value)
     {
+        var old = GetResources(element);
         element.SetValue(ResourcesProperty, value);
-        if (value == null) return;
 
         // A THEME publishes nothing until it is the current one - the same rule its palette link follows, so declaring
         // 20 themes doesn't put 20 icon sets into the Theme scope at once. The ThemeManager activates it.
-        if (element is ITheme) return;
+        if (element is ITheme || ReferenceEquals(old, value)) return;
 
-        RegisterResources(element, value);
+        var manager = UIAppContext.Current.ResourceManager;
+        var wasScope = manager.HoldsStylesOf(element);
+        if (old != null) manager.RemoveSource(element, old, GetScope(element));
+        if (value != null) RegisterResources(element, value);
+        RestyleScope(element, wasScope || manager.HoldsStylesOf(element));
+    }
+
+    private static void RestyleScope(AdamantiumComponent element, bool isOrWasScope)
+    {
+        if (isOrWasScope && element is FundamentalUIComponent owner) owner.RestyleScopedSubtree();
     }
 
     private static void ReleaseDiscarded(ReadOnlySpan<IFundamentalUIComponent> gone)

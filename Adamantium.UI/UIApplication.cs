@@ -961,6 +961,10 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
             if (blueprint.Resources != null)
             {
                 ResourceManager.AddSource(this, blueprint.Resources, ResourceScope.Global);
+
+                // Its styles - its own and those of the files it links - are the outermost scope of every window, those
+                // already open among them.
+                foreach (var window in Windows) window.InvalidateStyles();
             }
 
             foreach (var include in blueprint.StyleIncludes ?? [])

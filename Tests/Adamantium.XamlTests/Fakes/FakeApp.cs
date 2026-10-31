@@ -11,8 +11,9 @@ using Adamantium.UI.Core.Resources;
 namespace Adamantium.XamlTests;
 
 // Shared no-op IUIApplication for tests that only need a live UIAppContext (a resolver + a no-op theme).
-// ResourceManager is settable so a test can inject a real dictionary; every other member is inert.
-internal sealed class FakeApp(IDependencyResolver resolver) : IUIApplication
+// ResourceManager is settable so a test can inject a real dictionary; every other member is inert. A component, as the
+// application is, so it can own the application's dictionaries.
+internal sealed class FakeApp(IDependencyResolver resolver) : AdamantiumComponent, IUIApplication
 {
     public IUIContext UIContext { get; } = new FakeContext(resolver);
     public IWindow MainWindow { get; set; }

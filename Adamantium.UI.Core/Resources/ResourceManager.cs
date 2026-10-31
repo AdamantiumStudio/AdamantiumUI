@@ -158,7 +158,7 @@ public class ResourceManager : IResourceManager
 
     public void AddSource(IAdamantiumComponent owner, Type source, ResourceScope scope = ResourceScope.Local)
     {
-        ProviderOf(scope).AddSource(owner, source, dictionary => AddIncludes(owner, dictionary, scope));
+        ProviderOf(scope).AddSource(owner, source, linked => AddIncludes(owner, linked, scope));
         _resourcesDirty = true;
     }
 
@@ -166,9 +166,120 @@ public class ResourceManager : IResourceManager
     // rather than a shared dictionary type. Same scoping/lifecycle as a linked type.
     public void AddSource(IAdamantiumComponent owner, ResourceDictionary instance, ResourceScope scope = ResourceScope.Local)
     {
+        RefuseWideStylesOf(owner, instance, scope);
         AddIncludes(owner, instance, scope);
         ProviderOf(scope).AddSource(owner, instance);
         _resourcesDirty = true;
+    }
+
+    public void RemoveSource(IAdamantiumComponent owner, Type source, ResourceScope scope = ResourceScope.Local)
+    {
+        // A global dictionary type outlives what linked it, as it does when that is destroyed.
+        if (scope == ResourceScope.Global || ProviderOf(scope).RemoveSource(owner, source) is not { } dictionary)
+        {
+            return;
+        }
+
+        foreach (var include in dictionary.Includes)
+        {
+            if (include?.Source != null)
+            {
+                RemoveSource(owner, include.Source, include.Scope == ResourceScope.Local ? scope : include.Scope);
+            }
+        }
+
+        _resourcesDirty = true;
+    }
+
+    public void RemoveSource(IAdamantiumComponent owner, ResourceDictionary instance, ResourceScope scope = ResourceScope.Local)
+    {
+        ProviderOf(scope).RemoveSource(owner, instance);
+        foreach (var include in instance.Includes)
+        {
+            if (include?.Source != null)
+            {
+                RemoveSource(owner, include.Source, include.Scope == ResourceScope.Local ? scope : include.Scope);
+            }
+        }
+
+        _resourcesDirty = true;
+    }
+
+    private static void RefuseWideStylesOf(IAdamantiumComponent owner, ResourceDictionary dictionary, ResourceScope scope)
+    {
+        if (scope == ResourceScope.Local || dictionary is not { Styles.Count: > 0 } || owner is ITheme or IUIApplication)
+        {
+            return;
+        }
+
+        throw new InvalidOperationException(
+            $"Styles without a key in {scope} resources of {owner?.GetType().FullName}: styles for every element belong in the application's or the theme's resources - given by a view, they would be added again each time it opens and never taken away. Styles in an element's own resources style its subtree.");
+    }
+
+    public bool HoldsStylesOf(IAdamantiumComponent owner) => _localResources.HoldsStylesOf(owner);
+
+    // Locals only: a template built off the loop thread themes its parts there.
+    public Dictionary<Style, int> ScopedStylesOver(IFundamentalUIComponent element, out bool underScope)
+    {
+        underScope = false;
+        var local = _localResources.HoldsStyles;
+        var global = _globalResources.HoldsStyles;
+        if (!local && !global)
+        {
+            return null;
+        }
+
+        var scopes = 0;
+        if (local)
+        {
+            for (var owner = element.LogicalParent; owner != null; owner = owner.LogicalParent)
+            {
+                if (_localResources.HoldsStylesOf(owner)) scopes++;
+            }
+        }
+
+        underScope = scopes > 0;
+        Dictionary<Style, int> bands = null;
+        List<Style> styles = null;
+        var outermost = global ? 1 : 0;
+        if (global)
+        {
+            styles = [];
+            _globalResources.CollectStyles(styles);
+            Rank(element, styles, 0, ref bands);
+        }
+
+        if (scopes == 0)
+        {
+            return bands;
+        }
+
+        // Nearest first here, so the walk counts down from the nearest rank: a style met again further out keeps it.
+        var rank = outermost + scopes - 1;
+        for (var owner = element.LogicalParent; owner != null; owner = owner.LogicalParent)
+        {
+            if (!_localResources.HoldsStylesOf(owner)) continue;
+
+            (styles ??= []).Clear();
+            _localResources.CollectStyles(owner, styles);
+            Rank(element, styles, rank--, ref bands);
+        }
+
+        return bands;
+    }
+
+    private static void Rank(IFundamentalUIComponent element, List<Style> styles, int rank, ref Dictionary<Style, int> bands)
+    {
+        foreach (var style in styles)
+        {
+            if (!style.Selector.Match(element)) continue;
+
+            bands ??= new Dictionary<Style, int>();
+            if (!bands.TryGetValue(style, out var band) || band < style.ScopedBand(rank))
+            {
+                bands[style] = style.ScopedBand(rank);
+            }
+        }
     }
 
     private void AddIncludes(IAdamantiumComponent owner, ResourceDictionary dictionary, ResourceScope scope)

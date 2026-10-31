@@ -687,7 +687,9 @@ public class Theme : AdamantiumComponent, ITheme
             StyleSets.Add(styleSet);
         }
 
-        var styles = StyleSets.SelectMany(x => x.Styles).ToList();
+        TakeResourceStyles();
+
+        var styles = StyleSets.SelectMany(x => x.Styles).Concat(_resourceStyles).ToList();
         Merge(styles);
         StyleSets.CollectionChanged += OnStyleSetRepositoriesChanged;
         Initialized = true;
@@ -712,9 +714,21 @@ public class Theme : AdamantiumComponent, ITheme
         }
     }
 
+    private readonly List<Style> _resourceStyles = [];
+
+    private void TakeResourceStyles()
+    {
+        _resourceStyles.Clear();
+        if (ResourceContext.GetResources(this) is not { } resources) return;
+
+        _resourceStyles.AddRange(resources.Styles);
+        foreach (var style in resources.Styles) style.Theme = this;
+    }
+
     private void RemergeStyles()
     {
-        var styles = StyleSets.SelectMany(set => set.Styles).ToList();
+        if (_variantRoot == null) TakeResourceStyles();
+        var styles = StyleSets.SelectMany(set => set.Styles).Concat(VariantRoot._resourceStyles).ToList();
         foreach (var style in styles)
         {
             style.Theme ??= VariantRoot;

@@ -24,6 +24,9 @@ public class Setter : ISetter, IEquatable<Setter>
 
     public int StyleBand { get; set; }
 
+    /// <summary>The style whose trigger this setter belongs to, so an element ranks it by the band it gives that style.</summary>
+    internal Style OwnerStyle { get; set; }
+
     /// <summary>Gives <paramref name="component"/> this setter's value as <paramref name="style"/>'s contribution. A
     /// component without the property is passed over: a style matched by class reaches elements of any type.</summary>
     public void Apply(IFundamentalUIComponent component, Style style, ITheme theme)

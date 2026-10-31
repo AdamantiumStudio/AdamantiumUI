@@ -53,6 +53,8 @@ public class ThemeResourceExpression : BindingExpressionBase
         // same property); a base/template one writes its priority slot directly.
         if (_priority == ValuePriority.Trigger && _token != null)
             Target.SetTriggerValue(TargetProperty, value, _token);
+        else if (Resources.Style.Contributing(_priority, _token) is { } style)
+            Target.SetStyleValue(TargetProperty, value, style);
         else
             Target.SetValue(TargetProperty, value, _priority);
     }

@@ -79,6 +79,13 @@ public class ObservableResource : MarkupExtension
             return;
         }
 
+        // A style's contribution goes as any of its values does: the next one of the element's styles takes over.
+        if (Style.Contributing(priority, token) is { } style)
+        {
+            target.RemoveStyleValue(propertyName, style);
+            return;
+        }
+
         // Keyed by owner token: during a swap the outgoing style must not close the connection the incoming one just
         // made.
         var slot = propertyName + "@" + priority;

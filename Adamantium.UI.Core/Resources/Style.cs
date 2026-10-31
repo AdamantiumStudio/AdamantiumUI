@@ -8,6 +8,19 @@ public class Style : AdamantiumComponent
     internal const int ClassWeight = 1_000;
     private const int IdWeight = 1_000_000;
     private const int AuthoredWeight = 1_000_000_000;
+    private const int ScopedWeight = 100_000_000;
+    private const int ScopeStep = 10_000_000;
+    private const int MaxScopeRank = (AuthoredWeight - ScopedWeight) / ScopeStep - 1;
+
+    /// <summary>The band of this style given by a scope <paramref name="rank"/> steps in from the outermost one on an
+    /// element's chain: above the theme's, below the element's own, and a nearer scope above any further out, however
+    /// specific their selectors - specificity decides only within one scope.</summary>
+    internal int ScopedBand(int rank) => ScopedWeight + Math.Min(rank, MaxScopeRank) * ScopeStep + GetSelectorBand();
+
+    /// <summary>The style a live resource written at <paramref name="priority"/> for <paramref name="token"/> is a
+    /// contribution of - ranked among the element's styles like any other value of theirs; null for any other.</summary>
+    internal static Style Contributing(ValuePriority priority, object token) =>
+        priority is ValuePriority.Style or ValuePriority.TypeDefault ? token as Style : null;
 
     private Dictionary<AdamantiumProperty, ISetter> settersDict;
     private int _selectorBand = -1;
@@ -188,10 +201,24 @@ public class Style : AdamantiumComponent
 
     private void StampBand()
     {
+        // A selector with conditions applies the style's own setters through a trigger, so they rank as trigger setters.
+        if (Selector.HasConditions)
+        {
+            Stamp(Setters);
+        }
+
         foreach (var trigger in Triggers)
         {
-            if (trigger?.Setters is not { } setters) continue;
-            foreach (var setter in setters) setter.StyleBand = Band;
+            if (trigger?.Setters is { } setters) Stamp(setters);
+        }
+    }
+
+    private void Stamp(IEnumerable<ISetter> setters)
+    {
+        foreach (var setter in setters)
+        {
+            setter.StyleBand = Band;
+            if (setter is Setter owned) owned.OwnerStyle = this;
         }
     }
 

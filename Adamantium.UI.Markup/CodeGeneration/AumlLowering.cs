@@ -328,6 +328,13 @@ public class AumlLowering
                         }
 
                         var entryKey = KeyOf(entry);
+                        if (IsScopeStyle(entry))
+                        {
+                            var styleName = ProcessControlElements(entry, diagnostics, isResource: false);
+                            _writer.Add(Invoke(new MemberValue(Variable(rdVar), "Styles"), "Add", styleName));
+                            continue;
+                        }
+
                         // x:Shared="False" works here exactly as it does in a resource FILE: store a factory so every ask
                         // builds its own object. An inline dictionary is where an icon (one visual, many templates) lives,
                         // and a visual has ONE parent - without this the second user of the key would steal it.
@@ -874,7 +881,12 @@ public class AumlLowering
 
                 var childName = ProcessControlElements(child, diagnostics, isResource);
 
-                if (element.TypeReference.Name == "Style")
+                if (isRoot && Metadata.RootEntityType == EntityType.ResourceDictionary && IsScopeStyle(child))
+                {
+                    childStep.Placement = ChildPlacement.Resources;
+                    _writer.Add(Invoke(new MemberValue(Variable("this"), "Styles"), "Add", childName));
+                }
+                else if (element.TypeReference.Name == "Style")
                 {
                     childStep.Placement = ChildPlacement.Owner;
                     _writer.Add(Invoke(Variable(ParentName), "Add", childName));
@@ -1422,6 +1434,11 @@ public class AumlLowering
     private const string NameScopeFqn = "global::Adamantium.UI.Core.Templates.NameScope";
     private const string ValuePriorityFqn = "global::Adamantium.UI.Core.ValuePriority";
     private const string DesignFqn = "global::Adamantium.UI.Core.Design";
+
+    private bool IsScopeStyle(AumlAstObjectNode node) =>
+        KeyOf(node) == null && Metadata.DefaultTypeContainer.Style is { } style
+        && Metadata.TypeResolver.GetResolvedAssembly(node.TypeReference.Assembly)?.GetTypeByShortName(node.TypeReference.Name) is { } type
+        && (type.FullName == style.FullName || type.InheritsFrom(style.FullName));
 
     // The x:Key directive of an inline object node (an inline resource entry), or null if it has none.
     // x:Key as written: text, or {x:Static Type.Member} - a constant shared with code, so a key is never typed twice.
