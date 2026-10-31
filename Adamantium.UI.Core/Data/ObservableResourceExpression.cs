@@ -71,7 +71,7 @@ public class ObservableResourceExpression : BindingExpressionBase
         _shownKey = key;
         if (_priority == ValuePriority.Trigger && _token != null)
             Target.SetTriggerValue(TargetProperty, value, _token);
-        else if (Style.Contributing(_priority, _token) is { } style)
+        else if (Style.GetContributingStyle(_priority, _token) is { } style)
             Target.SetStyleValue(TargetProperty, value, style);
         else
             Target.SetValue(TargetProperty, value, _priority);
@@ -108,7 +108,7 @@ public class ObservableResourceExpression : BindingExpressionBase
         _shownKey = null;
         if (_priority == ValuePriority.Trigger && _token != null)
             Target.ClearTriggerValue(TargetProperty, _token);
-        else if (Style.Contributing(_priority, _token) is { } style)
+        else if (Style.GetContributingStyle(_priority, _token) is { } style)
             Target.RemoveStyleValue(TargetProperty.Name, style);
         else
             Target.ClearValue(TargetProperty, _priority);

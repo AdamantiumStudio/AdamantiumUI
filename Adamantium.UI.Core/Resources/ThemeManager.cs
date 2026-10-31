@@ -227,6 +227,8 @@ public class ThemeManager : IThemeManager
         var resources = ResourceContext.GetResources(component);
         if (resources != null)
             ResourceContext.RegisterResources(component, resources);
+
+        (theme as Theme)?.TakeRegisteredStyles();
     }
 
     internal void RefreshFromMarkup()

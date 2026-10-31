@@ -11,9 +11,9 @@ internal class TriggerValueContainer
     /// <summary>Records a trigger setter's contribution. Re-applying an existing token updates its value IN PLACE, so an
     /// idempotent re-apply or a {ThemeResource} refresh changes nothing about who wins.</summary>
     public void Set(object token, object value) =>
-        Set(token, value, token is ISetter s ? OrderOf(s.StyleBand, s) : 0L);
+        Set(token, value, token is ISetter s ? GetOrder(s.StyleBand, s) : 0L);
 
-    /// <summary>Records a contribution at <paramref name="order"/> - see <see cref="OrderOf"/>.</summary>
+    /// <summary>Records a contribution at <paramref name="order"/> - see <see cref="GetOrder"/>.</summary>
     public void Set(object token, object value, long order)
     {
         for (var i = 0; i < _values.Count; i++)
@@ -29,7 +29,7 @@ internal class TriggerValueContainer
     }
 
     /// <summary>Where a setter of a style at <paramref name="band"/> stands: the band first, its markup order within it.</summary>
-    public static long OrderOf(int band, ISetter setter) => (long)band * 1_000_000 + setter.DeclarationOrder;
+    public static long GetOrder(int band, ISetter setter) => (long)band * 1_000_000 + setter.DeclarationOrder;
 
     public void Remove(object token)
     {

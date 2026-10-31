@@ -12,21 +12,23 @@ public class Style : AdamantiumComponent
     private const int ScopeStep = 10_000_000;
     private const int MaxScopeRank = (AuthoredWeight - ScopedWeight) / ScopeStep - 1;
 
-    /// <summary>The band of this style given by a scope <paramref name="rank"/> steps in from the outermost one on an
-    /// element's chain: above the theme's, below the element's own, and a nearer scope above any further out, however
-    /// specific their selectors - specificity decides only within one scope.</summary>
-    internal int ScopedBand(int rank) => ScopedWeight + Math.Min(rank, MaxScopeRank) * ScopeStep + GetSelectorBand();
-
-    /// <summary>The style a live resource written at <paramref name="priority"/> for <paramref name="token"/> is a
-    /// contribution of - ranked among the element's styles like any other value of theirs; null for any other.</summary>
-    internal static Style Contributing(ValuePriority priority, object token) =>
-        priority is ValuePriority.Style or ValuePriority.TypeDefault ? token as Style : null;
-
     private Dictionary<AdamantiumProperty, ISetter> settersDict;
     private int _selectorBand = -1;
     private bool _themeOwned;
+    private List<Style> _resolvedBases;
 
     private readonly ConditionalWeakTable<IFundamentalUIComponent, List<ITriggerActivator>> _activatorsByComponent = new();
+    private readonly ConditionalWeakTable<IFundamentalUIComponent, AppliedBases> _basesByComponent = new();
+
+    /// <summary>The band of this style given by a scope <paramref name="rank"/> steps in from the outermost one on an
+    /// element's chain: above the theme's, below the element's own, and a nearer scope above any further out, however
+    /// specific their selectors - specificity decides only within one scope.</summary>
+    internal int GetScopedBand(int rank) => ScopedWeight + Math.Min(rank, MaxScopeRank) * ScopeStep + GetSelectorBand();
+
+    /// <summary>The style a live resource written at <paramref name="priority"/> for <paramref name="token"/> is a
+    /// contribution of - ranked among the element's styles like any other value of theirs; null for any other.</summary>
+    internal static Style GetContributingStyle(ValuePriority priority, object token) =>
+        priority is ValuePriority.Style or ValuePriority.TypeDefault ? token as Style : null;
 
     public Style()
     {
@@ -96,14 +98,14 @@ public class Style : AdamantiumComponent
         // Idempotent: undo a prior attach of THIS style to THIS component first (a theme swap re-applies without a
         // preceding detach), so activators + their subscriptions never accumulate across re-applies.
         ReleaseActivators(component);
-        if (!KeepsBasesOn(component))
+        if (!HasBasesFor(component))
         {
-            RemoveBaseContributions(component, BasesTakenBy(component));
+            RemoveBaseContributions(component, TakeBackBases(component));
         }
 
         // BasedOn bases FIRST (base-first, mixin order), so this style's own setters/triggers - applied after - override
         // them. A base's contributions are tracked under THIS style, so Detach undoes them together.
-        foreach (var baseStyle in BasesOn(component))
+        foreach (var baseStyle in GetBasesFor(component))
         {
             baseStyle.ApplyContributions(component, this);
         }
@@ -146,7 +148,7 @@ public class Style : AdamantiumComponent
         // Undo own then base setters (bases were tracked under THIS style); ReleaseActivators tears down every activator
         // this style recorded (its own triggers AND any base triggers).
         RemoveContributions(component, this);
-        RemoveBaseContributions(component, BasesTakenBy(component));
+        RemoveBaseContributions(component, TakeBackBases(component));
         ReleaseActivators(component);
     }
 
@@ -169,8 +171,6 @@ public class Style : AdamantiumComponent
         }
     }
 
-    private List<Style> _resolvedBases;
-
     // The bases this style is BasedOn, base-first, deduped and recursive; empty when there is no BasedOn, the common
     // case. Memoized because a style's bases are constant for its lifetime - a theme swap builds fresh Style objects -
     // so thousands of identical containers do not each re-scan the theme.
@@ -184,46 +184,48 @@ public class Style : AdamantiumComponent
             var seen = new HashSet<Style> { this };   // guard against a self/cyclic BasedOn
             theme.CollectBasedOn(BasedOn, result, seen);
         }
-        // Push each style's band down onto its trigger setters - the band itself is decided by the selector, not here.
-        foreach (var baseStyle in result) baseStyle.StampBand();
-        StampBand();
 
+        foreach (var baseStyle in result)
+        {
+            baseStyle.StampBand();
+        }
+
+        StampBand();
         return result;
     }
 
-    private readonly ConditionalWeakTable<IFundamentalUIComponent, BasesTaken> _basesByComponent = new();
-
-    private sealed class BasesTaken(Theme theme, IReadOnlyList<Style> bases)
+    private IReadOnlyList<Style> GetBasesFor(IFundamentalUIComponent component)
     {
-        public Theme Theme { get; } = theme;
+        if (Theme != null || BasedOn is not { Types.Count: > 0 })
+        {
+            return ResolveBases();
+        }
 
-        public IReadOnlyList<Style> Bases { get; } = bases;
-    }
-
-    private IReadOnlyList<Style> BasesOn(IFundamentalUIComponent component)
-    {
-        if (Theme != null || BasedOn is not { Types.Count: > 0 }) return ResolveBases();
-
-        var theme = ThemeAt(component);
+        var theme = GetThemeAt(component);
         var bases = CollectBases(theme);
-        _basesByComponent.AddOrUpdate(component, new BasesTaken(theme, bases));
+        _basesByComponent.AddOrUpdate(component, new AppliedBases(theme, bases));
         return bases;
     }
 
-    private IReadOnlyList<Style> BasesTakenBy(IFundamentalUIComponent component)
+    private IReadOnlyList<Style> TakeBackBases(IFundamentalUIComponent component)
     {
-        if (!_basesByComponent.TryGetValue(component, out var taken)) return ResolveBases();
+        if (!_basesByComponent.TryGetValue(component, out var applied))
+        {
+            return ResolveBases();
+        }
 
         _basesByComponent.Remove(component);
-        return taken.Bases;
+        return applied.Bases;
     }
 
-    private static Theme ThemeAt(IFundamentalUIComponent component) => (ThemeContext.For(component) as Theme)?.VariantRoot;
+    private static Theme GetThemeAt(IFundamentalUIComponent component) =>
+        (ThemeContext.For(component) as Theme)?.VariantRoot;
 
     /// <summary>The bases this style gave <paramref name="component"/> are still those of the theme in force there; when
     /// another theme came in, a style of no theme is to be attached anew.</summary>
-    internal bool KeepsBasesOn(IFundamentalUIComponent component) =>
-        !_basesByComponent.TryGetValue(component, out var taken) || ReferenceEquals(taken.Theme, ThemeAt(component));
+    internal bool HasBasesFor(IFundamentalUIComponent component) =>
+        !_basesByComponent.TryGetValue(component, out var applied)
+        || ReferenceEquals(applied.Theme, GetThemeAt(component));
 
     private int StyleBandOfSelector()
     {
@@ -244,7 +246,6 @@ public class Style : AdamantiumComponent
 
     private void StampBand()
     {
-        // A selector with conditions applies the style's own setters through a trigger, so they rank as trigger setters.
         if (Selector.HasConditions)
         {
             Stamp(Setters);
@@ -252,7 +253,10 @@ public class Style : AdamantiumComponent
 
         foreach (var trigger in Triggers)
         {
-            if (trigger?.Setters is { } setters) Stamp(setters);
+            if (trigger?.Setters is { } setters)
+            {
+                Stamp(setters);
+            }
         }
     }
 
@@ -261,7 +265,10 @@ public class Style : AdamantiumComponent
         foreach (var setter in setters)
         {
             setter.StyleBand = Band;
-            if (setter is Setter owned) owned.OwnerStyle = this;
+            if (setter is Setter owned)
+            {
+                owned.OwnerStyle = this;
+            }
         }
     }
 

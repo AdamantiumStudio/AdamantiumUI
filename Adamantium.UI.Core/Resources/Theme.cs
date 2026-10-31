@@ -15,6 +15,8 @@ public class Theme : AdamantiumComponent, ITheme
     private static readonly Lazy<FontFamily> SystemDefault = new(PickSystemDefaultFontFamily);
     private static readonly Lazy<FontFamily> SystemMonospace = new(PickSystemMonospaceFontFamily);
 
+    private readonly List<Style> _resourceStyles = [];
+
     public Theme()
     {
         StyleSets = new StyleSetCollection();
@@ -714,20 +716,49 @@ public class Theme : AdamantiumComponent, ITheme
         }
     }
 
-    private readonly List<Style> _resourceStyles = [];
+    /// <summary>The theme's resources were registered, being the current theme's now: the styles of the dictionary files
+    /// they link are the theme's too, as those written into them are.</summary>
+    internal void TakeRegisteredStyles()
+    {
+        var before = _resourceStyles.ToList();
+        TakeResourceStyles();
+        if (before.SequenceEqual(_resourceStyles))
+        {
+            return;
+        }
+
+        RemergeStyles();
+        lock (_siblings)
+        {
+            foreach (var sibling in _siblings.Values)
+            {
+                sibling.RemergeStyles();
+            }
+        }
+    }
 
     private void TakeResourceStyles()
     {
         _resourceStyles.Clear();
-        if (ResourceContext.GetResources(this) is not { } resources) return;
+        ResourceManager?.CollectStyles(this, _resourceStyles);
+        if (_resourceStyles.Count == 0 && ResourceContext.GetResources(this) is { } resources)
+        {
+            _resourceStyles.AddRange(resources.Styles);
+        }
 
-        _resourceStyles.AddRange(resources.Styles);
-        foreach (var style in resources.Styles) style.Theme = this;
+        foreach (var style in _resourceStyles)
+        {
+            style.Theme = this;
+        }
     }
 
     private void RemergeStyles()
     {
-        if (_variantRoot == null) TakeResourceStyles();
+        if (_variantRoot == null)
+        {
+            TakeResourceStyles();
+        }
+
         var styles = StyleSets.SelectMany(set => set.Styles).Concat(VariantRoot._resourceStyles).ToList();
         foreach (var style in styles)
         {

@@ -45,6 +45,7 @@ public class ContentPresenter : InputUIComponent
 
     private Size<double> _lastMeasuredInner;   // without this element's margin/transform
     private Size<double> _lastContentDesired;
+    private readonly Dictionary<FundamentalUIComponent, FundamentalUIComponent> _handedViews = new();
 
     public static readonly AdamantiumProperty ContentProperty = AdamantiumProperty.Register(nameof(Content),
         typeof(object), typeof(ContentPresenter), new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure, OnContentPropertyChanged));
@@ -549,8 +550,6 @@ public class ContentPresenter : InputUIComponent
     private FundamentalUIComponent ViewHolder =>
         GetValueSource(ContentProperty) == ValuePriority.Template ? TemplatedParent as FundamentalUIComponent : null;
 
-    private readonly Dictionary<FundamentalUIComponent, FundamentalUIComponent> _handedViews = [];
-
     private void Unhost(IUIComponent root)
     {
         if (ReferenceEquals(root.LogicalParent, this))
@@ -559,11 +558,11 @@ public class ContentPresenter : InputUIComponent
         }
         else
         {
-            TakeBackHanded(root);
+            TakeBackHandedView(root);
         }
     }
 
-    private void TakeBackHanded(IUIComponent root)
+    private void TakeBackHandedView(IUIComponent root)
     {
         if (root is FundamentalUIComponent built && _handedViews.Remove(built, out var owner)
             && ReferenceEquals(built.LogicalParent, owner))
@@ -652,8 +651,7 @@ public class ContentPresenter : InputUIComponent
     /// and handed to its control, it is let go too.</summary>
     protected internal override void DisownVisualChild(IUIComponent child)
     {
-        if (ReferenceEquals(child.LogicalParent, this)) RemoveLogicalChild(child);
-        else TakeBackHanded(child);
+        Unhost(child);
 
         if (ReferenceEquals(child, _currentRoot))
         {

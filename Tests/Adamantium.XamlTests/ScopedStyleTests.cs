@@ -20,8 +20,8 @@ namespace Adamantium.XamlTests;
 
 /// <summary>A STYLE WITHOUT A KEY AMONG AN ELEMENT'S RESOURCES styles the elements of its logical subtree its selector
 /// matches. The nearest scope wins whole - specificity decides only within one scope; the theme's styles stand below
-/// every scope, an element's own above them all. The application's resources are the outermost scope, a theme's are the
-/// theme's; from a view's resources, a style for every element is refused.</summary>
+/// every scope, an element's own above them all. The application's resources are the outermost scope, but for the parts
+/// of templates; a theme's are the theme's; resources for every element written into a view are refused.</summary>
 [TestFixture]
 public class ScopedStyleTests
 {
@@ -43,15 +43,39 @@ public class ScopedStyleTests
         _app.ResourceManager = new ResourceManager();
         _app.Windows = [];
         typeof(UIAppContext).GetProperty(nameof(UIAppContext.Current)).SetValue(null, _app);
+        UseTheme(new Adamantium.UI.Themes.FluentTheme.Fluent());
+    }
+
+    private void UseTheme(Theme theme)
+    {
         var themes = new ThemeManager(new AdamantiumDependencyContainer());
         _app.ThemeManager = themes;
         ((FakeContext)_app.UIContext).ThemeEngine = themes;
-        var theme = new Adamantium.UI.Themes.FluentTheme.Fluent();
         themes.AddTheme(theme.Name, theme);
         themes.SetTheme(theme);
     }
 
-    private static Window Shown(IUIComponent content)
+    private static ResourceDictionary GetOrCreateResources(Theme theme)
+    {
+        if (ResourceContext.GetResources(theme) is { } resources)
+        {
+            return resources;
+        }
+
+        resources = new ResourceDictionary();
+        ResourceContext.SetResources(theme, resources);
+        return resources;
+    }
+
+    private Style CreateStyleBasedOnAThemeLook()
+    {
+        ((Theme)_app.ThemeManager.CurrentTheme).MergedStyles.Add(TestStyles.Create(typeof(PlateLook), "Height", 17.0));
+        var style = TestStyles.Create(typeof(Border), "Width", 42.0, className: "Plate");
+        style.BasedOn = new StyleSelector { Types = { typeof(PlateLook) } };
+        return style;
+    }
+
+    private static Window Show(IUIComponent content)
     {
         var window = new Window { Width = 400, Height = 300, Content = content };
         window.ApplyCurrentTheme();
@@ -68,29 +92,19 @@ public class ScopedStyleTests
         }
     }
 
-    private static Style StyleOf(Type type, string property, object value, string className = null)
-    {
-        var style = new Style();
-        style.Selector.Types.Add(type);
-        if (className != null) style.Selector.Classes.Add(className);
-        style.Setters.Add(new Setter(property, value));
-        return style;
-    }
-
-    private static ResourceDictionary Styles(params Style[] styles)
+    private static ResourceDictionary CreateDictionary(params Style[] styles)
     {
         var resources = new ResourceDictionary();
         resources.Styles.AddRange(styles);
         return resources;
     }
 
-    private static StackPanel Scope(params Style[] styles)
+    private static StackPanel CreateScope(params Style[] styles)
     {
         var panel = new StackPanel();
-        ResourceContext.SetResources(panel, Styles(styles));
+        ResourceContext.SetResources(panel, CreateDictionary(styles));
         return panel;
     }
-
 
     [Test]
     public void AStyleWithoutAKey_InAViewsResources_IsTakenAsAScopeStyle()
@@ -130,11 +144,11 @@ public class ScopedStyleTests
     {
         var inside = new TextBlock { Text = "in" };
         var deeper = new TextBlock { Text = "deeper" };
-        var scope = Scope(StyleOf(typeof(TextBlock), "Width", 42.0));
+        var scope = CreateScope(TestStyles.Create(typeof(TextBlock), "Width", 42.0));
         scope.Children.Add(inside);
         scope.Children.Add(new Border { Child = deeper });
         var outside = new TextBlock { Text = "out" };
-        Shown(new StackPanel { Children = { scope, outside } });
+        Show(new StackPanel { Children = { scope, outside } });
 
         Assert.Multiple(() =>
         {
@@ -148,9 +162,9 @@ public class ScopedStyleTests
     public void TheScopeItself_IsNotStyledByItsOwnStyles()
     {
         var inner = new StackPanel();
-        var scope = Scope(StyleOf(typeof(StackPanel), "Width", 42.0));
+        var scope = CreateScope(TestStyles.Create(typeof(StackPanel), "Width", 42.0));
         scope.Children.Add(inner);
-        Shown(scope);
+        Show(scope);
 
         Assert.Multiple(() =>
         {
@@ -164,16 +178,17 @@ public class ScopedStyleTests
     {
         var button = new Button { Content = "Save" };
         var logical = new Border();
-        var scope = Scope(StyleOf(typeof(Border), "Width", 42.0));
+        var scope = CreateScope(TestStyles.Create(typeof(Border), "Width", 42.0));
         scope.Children.Add(button);
         scope.Children.Add(logical);
-        Shown(scope);
+        Show(scope);
 
         var parts = button.GetVisualDescendants().OfType<Border>().ToList();
         Assert.Multiple(() =>
         {
             Assert.That(parts, Is.Not.Empty, "the theme's button is drawn by a border");
-            Assert.That(parts.Select(p => p.Width), Has.None.EqualTo(42), "a template's parts are its control's, not the view's");
+            Assert.That(parts.Select(p => p.Width), Has.None.EqualTo(42),
+                "a template's parts are its control's, not the view's");
             Assert.That(logical.Width, Is.EqualTo(42));
         });
     }
@@ -182,11 +197,12 @@ public class ScopedStyleTests
     public void AControlsLabel_AndAListsRows_AreStyledByTheScopeOverThem()
     {
         var button = new Button { Content = "Save" };
-        var list = new ListBox { ItemsSource = new[] { "One", "Two" } };
-        var scope = Scope(StyleOf(typeof(TextBlock), "Tag", "scoped"));
+        string[] items = ["One", "Two"];
+        var list = new ListBox { ItemsSource = items };
+        var scope = CreateScope(TestStyles.Create(typeof(TextBlock), "Tag", "scoped"));
         scope.Children.Add(button);
         scope.Children.Add(list);
-        Shown(scope);
+        Show(scope);
 
         var label = button.GetVisualDescendants().OfType<TextBlock>().FirstOrDefault(t => t.Text == "Save");
         var rows = list.GetVisualDescendants().OfType<TextBlock>().Where(t => t.Text is "One" or "Two").ToList();
@@ -203,11 +219,11 @@ public class ScopedStyleTests
     public void TheNearestScope_Wins_HoweverSpecificTheOuterSelectorIs()
     {
         var text = new TextBlock { Text = "x", Classes = Classes.Parse("Accent") };
-        var inner = Scope(StyleOf(typeof(TextBlock), "Width", 20.0));
+        var inner = CreateScope(TestStyles.Create(typeof(TextBlock), "Width", 20.0));
         inner.Children.Add(text);
-        var outer = Scope(StyleOf(typeof(TextBlock), "Width", 10.0, className: "Accent"));
+        var outer = CreateScope(TestStyles.Create(typeof(TextBlock), "Width", 10.0, className: "Accent"));
         outer.Children.Add(inner);
-        Shown(outer);
+        Show(outer);
 
         Assert.That(text.Width, Is.EqualTo(20));
     }
@@ -216,11 +232,11 @@ public class ScopedStyleTests
     public void WithinOneScope_TheMoreSpecificSelectorWins_WhicheverIsWrittenFirst()
     {
         var text = new TextBlock { Text = "x", Classes = Classes.Parse("Accent") };
-        var scope = Scope(
-            StyleOf(typeof(TextBlock), "Width", 20.0, className: "Accent"),
-            StyleOf(typeof(TextBlock), "Width", 10.0));
+        var scope = CreateScope(
+            TestStyles.Create(typeof(TextBlock), "Width", 20.0, className: "Accent"),
+            TestStyles.Create(typeof(TextBlock), "Width", 10.0));
         scope.Children.Add(text);
-        Shown(scope);
+        Show(scope);
 
         Assert.That(text.Width, Is.EqualTo(20));
     }
@@ -229,11 +245,11 @@ public class ScopedStyleTests
     public void AnElementsOwnStyle_WinsOverTheScopes()
     {
         var text = new TextBlock { Text = "x" };
-        text.Styles.Add(StyleOf(typeof(TextBlock), "Width", 30.0));
-        var scope = Scope(StyleOf(typeof(TextBlock), "Width", 20.0, className: "Accent"));
+        text.Styles.Add(TestStyles.Create(typeof(TextBlock), "Width", 30.0));
+        var scope = CreateScope(TestStyles.Create(typeof(TextBlock), "Width", 20.0, className: "Accent"));
         text.Classes = Classes.Parse("Accent");
         scope.Children.Add(text);
-        Shown(scope);
+        Show(scope);
 
         Assert.That(text.Width, Is.EqualTo(30));
     }
@@ -242,9 +258,9 @@ public class ScopedStyleTests
     public void AScopeStyle_WinsOverTheThemes()
     {
         var button = new Button { Content = "Save" };
-        var scope = Scope(StyleOf(typeof(Button), "Padding", new Thickness(7)));
+        var scope = CreateScope(TestStyles.Create(typeof(Button), "Padding", new Thickness(7)));
         scope.Children.Add(button);
-        Shown(scope);
+        Show(scope);
 
         Assert.That(button.Padding, Is.EqualTo(new Thickness(7)));
     }
@@ -258,11 +274,12 @@ public class ScopedStyleTests
         keyed.Add("ScopeTestBrush", gray);
         _app.ResourceManager.AddSource(_app, keyed, ResourceScope.Global);
         var button = new Button { Content = "x", Classes = Classes.Parse("Accent") };
-        var inner = Scope(StyleOf(typeof(Button), "Foreground", red, className: "Accent"));
+        var inner = CreateScope(TestStyles.Create(typeof(Button), "Foreground", red, className: "Accent"));
         inner.Children.Add(button);
-        var outer = Scope(StyleOf(typeof(Button), "Foreground", new ObservableResource("ScopeTestBrush"), className: "Accent"));
+        var live = new ObservableResource("ScopeTestBrush");
+        var outer = CreateScope(TestStyles.Create(typeof(Button), "Foreground", live, className: "Accent"));
         outer.Children.Add(inner);
-        var window = Shown(outer);
+        var window = Show(outer);
 
         _app.ResourceManager.NotifyResourcesChanged();
         _app.ResourceManager.FlushResourceChanges();
@@ -275,23 +292,27 @@ public class ScopedStyleTests
     [Test]
     public void ATriggerOfTheNearestScope_WinsOverOneFurtherOut()
     {
-        Style Disabled(double width, string className = null)
+        Style CreateDisabledStyle(string width, string className = null)
         {
             var style = new Style();
             style.Selector.Types.Add(typeof(Button));
-            if (className != null) style.Selector.Classes.Add(className);
+            if (className != null)
+            {
+                style.Selector.Classes.Add(className);
+            }
+
             var trigger = new PropertyTrigger { Property = "IsEnabled", Value = false };
-            trigger.Add(new Setter { Property = "Width", Value = width.ToString(System.Globalization.CultureInfo.InvariantCulture) });
+            trigger.Add(new Setter { Property = "Width", Value = width });
             style.Triggers.Add(trigger);
             return style;
         }
 
         var button = new Button { Content = "x", Classes = Classes.Parse("Accent") };
-        var inner = Scope(Disabled(20));
+        var inner = CreateScope(CreateDisabledStyle("20"));
         inner.Children.Add(button);
-        var outer = Scope(Disabled(10, className: "Accent"));
+        var outer = CreateScope(CreateDisabledStyle("10", className: "Accent"));
         outer.Children.Add(inner);
-        var window = Shown(outer);
+        var window = Show(outer);
 
         button.IsEnabled = false;
         Settle(window);
@@ -303,9 +324,9 @@ public class ScopedStyleTests
     public void AClassGiven_TakesTheScopeStyleForIt_AndTakenAway_LetsItGo()
     {
         var text = new TextBlock { Text = "x" };
-        var scope = Scope(StyleOf(typeof(TextBlock), "Width", 20.0, className: "Accent"));
+        var scope = CreateScope(TestStyles.Create(typeof(TextBlock), "Width", 20.0, className: "Accent"));
         scope.Children.Add(text);
-        Shown(scope);
+        Show(scope);
 
         text.Classes = Classes.Parse("Accent");
         var given = text.Width;
@@ -322,11 +343,11 @@ public class ScopedStyleTests
     public void MovedOutOfTheScope_AnElementLetsItsStylesGo_AndMovedIntoAnother_TakesTheirs()
     {
         var text = new TextBlock { Text = "x" };
-        var first = Scope(StyleOf(typeof(TextBlock), "Width", 20.0));
-        var second = Scope(StyleOf(typeof(TextBlock), "Height", 30.0));
+        var first = CreateScope(TestStyles.Create(typeof(TextBlock), "Width", 20.0));
+        var second = CreateScope(TestStyles.Create(typeof(TextBlock), "Height", 30.0));
         var plain = new StackPanel();
         first.Children.Add(new Border { Child = text });
-        var window = Shown(new StackPanel { Children = { first, second, plain } });
+        var window = Show(new StackPanel { Children = { first, second, plain } });
         var holder = (Border)text.LogicalParent;
 
         first.Children.Remove(holder);
@@ -352,11 +373,11 @@ public class ScopedStyleTests
     {
         var text = new TextBlock { Text = "x" };
         var scope = new StackPanel { Children = { text } };
-        Shown(scope);
+        Show(scope);
 
-        ResourceContext.SetResources(scope, Styles(StyleOf(typeof(TextBlock), "Width", 20.0)));
+        ResourceContext.SetResources(scope, CreateDictionary(TestStyles.Create(typeof(TextBlock), "Width", 20.0)));
         var first = text.Width;
-        ResourceContext.SetResources(scope, Styles(StyleOf(typeof(TextBlock), "Height", 30.0)));
+        ResourceContext.SetResources(scope, CreateDictionary(TestStyles.Create(typeof(TextBlock), "Height", 30.0)));
         var second = (text.Width, text.Height);
         ResourceContext.SetResources(scope, null);
 
@@ -377,7 +398,7 @@ public class ScopedStyleTests
         var resources = new ResourceDictionary();
         resources.Includes.Add(new ResourceLink { Source = typeof(WideTexts) });
         ResourceContext.SetResources(scope, resources);
-        Shown(scope);
+        Show(scope);
 
         Assert.That(text.Width, Is.EqualTo(42));
     }
@@ -385,14 +406,14 @@ public class ScopedStyleTests
     [Test]
     public void TheApplicationsStyles_AreTheOutermostScope()
     {
-        _app.ResourceManager.AddSource(_app, Styles(
-            StyleOf(typeof(TextBlock), "Width", 10.0, className: "Accent"),
-            StyleOf(typeof(TextBlock), "Height", 10.0)), ResourceScope.Global);
+        _app.ResourceManager.AddSource(_app, CreateDictionary(
+            TestStyles.Create(typeof(TextBlock), "Width", 10.0, className: "Accent"),
+            TestStyles.Create(typeof(TextBlock), "Height", 10.0)), ResourceScope.Global);
         var anywhere = new TextBlock { Text = "x" };
         var scoped = new TextBlock { Text = "y", Classes = Classes.Parse("Accent") };
-        var scope = Scope(StyleOf(typeof(TextBlock), "Width", 20.0));
+        var scope = CreateScope(TestStyles.Create(typeof(TextBlock), "Width", 20.0));
         scope.Children.Add(scoped);
-        Shown(new StackPanel { Children = { anywhere, scope } });
+        Show(new StackPanel { Children = { anywhere, scope } });
 
         Assert.Multiple(() =>
         {
@@ -402,24 +423,45 @@ public class ScopedStyleTests
     }
 
     [Test]
+    public void TheApplicationsStyles_DoNotReachIntoATemplate()
+    {
+        var wide = CreateDictionary(TestStyles.Create(typeof(Border), "Width", 42.0));
+        _app.ResourceManager.AddSource(_app, wide, ResourceScope.Global);
+        var button = new Button { Content = "Save" };
+        var logical = new Border();
+        Show(new StackPanel { Children = { button, logical } });
+
+        var parts = button.GetVisualDescendants().OfType<Border>().ToList();
+        Assert.Multiple(() =>
+        {
+            Assert.That(logical.Width, Is.EqualTo(42));
+            Assert.That(parts, Is.Not.Empty);
+            Assert.That(parts.Select(p => p.Width), Has.None.EqualTo(42), "a control's look is its theme's");
+        });
+    }
+
+    [Test]
+    public void AThemesStyles_InADictionaryFileItsResourcesLink_AreTheThemes()
+    {
+        var theme = new Adamantium.UI.Themes.FluentTheme.Fluent();
+        GetOrCreateResources(theme).Includes.Add(new ResourceLink { Source = typeof(ThemedTexts) });
+        UseTheme(theme);
+        var themed = new TextBlock { Text = "x" };
+        Show(themed);
+
+        Assert.That(themed.Tag, Is.EqualTo("linked"));
+    }
+
+    [Test]
     public void AThemesStyles_AmongItsResources_AreTheThemes()
     {
         var theme = new Adamantium.UI.Themes.FluentTheme.Fluent();
-        var resources = ResourceContext.GetResources(theme);
-        if (resources == null)
-        {
-            resources = new ResourceDictionary();
-            ResourceContext.SetResources(theme, resources);
-        }
-
-        resources.Styles.Add(StyleOf(typeof(TextBlock), "Tag", "themed"));
-        var themes = (ThemeManager)_app.ThemeManager;
-        themes.AddTheme("WithStyles", theme);
-        themes.SetTheme(theme);
+        GetOrCreateResources(theme).Styles.Add(TestStyles.Create(typeof(TextBlock), "Tag", "themed"));
+        UseTheme(theme);
         var themed = new TextBlock { Text = "x" };
         var own = new TextBlock { Text = "y" };
-        own.Styles.Add(StyleOf(typeof(TextBlock), "Tag", "own"));
-        Shown(new StackPanel { Children = { themed, own } });
+        own.Styles.Add(TestStyles.Create(typeof(TextBlock), "Tag", "own"));
+        Show(new StackPanel { Children = { themed, own } });
 
         Assert.Multiple(() =>
         {
@@ -436,30 +478,22 @@ public class ScopedStyleTests
     {
         var view = new StackPanel();
         ResourceContext.SetScope(view, scope);
-        var resources = withStyles ? Styles(StyleOf(typeof(TextBlock), "Width", 20.0)) : new ResourceDictionary();
+        var resources = withStyles
+            ? CreateDictionary(TestStyles.Create(typeof(TextBlock), "Width", 20.0))
+            : new ResourceDictionary();
         resources.Add("Accent", new Adamantium.UI.Core.Media.SolidColorBrush(Colors.Red));
 
         Assert.Throws<InvalidOperationException>(() => ResourceContext.SetResources(view, resources),
             "opened again and again, a view would add them again each time and nothing would take them away");
     }
 
-    private sealed class PlateLook : Border;
-
-    private Style BasedOnAThemeLook()
-    {
-        ((Theme)_app.ThemeManager.CurrentTheme).MergedStyles.Add(StyleOf(typeof(PlateLook), "Height", 17.0));
-        var style = StyleOf(typeof(Border), "Width", 42.0, className: "Plate");
-        style.BasedOn = new StyleSelector { Types = { typeof(PlateLook) } };
-        return style;
-    }
-
     [Test]
     public void AScopeStyleBasedOnAType_TakesTheThemesStyleForIt()
     {
         var plate = new Border { Classes = Classes.Parse("Plate") };
-        var scope = Scope(BasedOnAThemeLook());
+        var scope = CreateScope(CreateStyleBasedOnAThemeLook());
         scope.Children.Add(plate);
-        Shown(scope);
+        Show(scope);
 
         Assert.Multiple(() =>
         {
@@ -472,14 +506,9 @@ public class ScopedStyleTests
     public void AnOwnStyleBasedOnAType_TakesTheThemesStyleForIt()
     {
         var plate = new Border { Classes = Classes.Parse("Plate") };
-        plate.Styles.Add(BasedOnAThemeLook());
-        Shown(plate);
+        plate.Styles.Add(CreateStyleBasedOnAThemeLook());
+        Show(plate);
 
         Assert.That(plate.Height, Is.EqualTo(17));
-    }
-
-    private sealed class WideTexts : ResourceDictionary
-    {
-        public WideTexts() => Styles.Add(StyleOf(typeof(TextBlock), "Width", 42.0));
     }
 }

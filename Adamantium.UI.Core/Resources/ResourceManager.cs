@@ -173,7 +173,6 @@ public class ResourceManager : IResourceManager
 
     public void RemoveSource(IAdamantiumComponent owner, Type source, ResourceScope scope = ResourceScope.Local)
     {
-        // A global dictionary type outlives what linked it, as it does when that is destroyed.
         if (scope == ResourceScope.Global || ProviderOf(scope).RemoveSource(owner, source) is not { } dictionary)
         {
             return;
@@ -204,37 +203,34 @@ public class ResourceManager : IResourceManager
         _resourcesDirty = true;
     }
 
-    public bool HoldsStylesOf(IAdamantiumComponent owner) => _localResources.HoldsStylesOf(owner);
+    public bool HasStylesOf(IAdamantiumComponent owner) => _localResources.HasStylesOf(owner);
 
-    // Locals only: a template built off the loop thread themes its parts there.
-    public Dictionary<Style, int> ScopedStylesOver(IFundamentalUIComponent element, out bool underScope)
+    public void CollectStyles(IAdamantiumComponent owner, List<Style> into)
+    {
+        _themeResources.CollectStyles(owner, into);
+        _localResources.CollectStyles(owner, into);
+        _globalResources.CollectStyles(owner, into);
+    }
+
+    public Dictionary<Style, int> GetScopedStyles(IFundamentalUIComponent element, out bool underScope)
     {
         underScope = false;
-        var local = _localResources.HoldsStyles;
-        var global = _globalResources.HoldsStyles;
+        var local = _localResources.HasStyles;
+        var global = _globalResources.HasStyles && element.TemplatedParent == null;
         if (!local && !global)
         {
             return null;
         }
 
-        var scopes = 0;
-        if (local)
-        {
-            for (var owner = element.LogicalParent; owner != null; owner = owner.LogicalParent)
-            {
-                if (_localResources.HoldsStylesOf(owner)) scopes++;
-            }
-        }
-
+        var scopes = local ? CountScopesOver(element) : 0;
         underScope = scopes > 0;
         Dictionary<Style, int> bands = null;
         List<Style> styles = null;
-        var outermost = global ? 1 : 0;
         if (global)
         {
             styles = [];
             _globalResources.CollectStyles(styles);
-            Rank(element, styles, 0, ref bands);
+            RankStyles(element, styles, 0, ref bands);
         }
 
         if (scopes == 0)
@@ -242,30 +238,52 @@ public class ResourceManager : IResourceManager
             return bands;
         }
 
-        // Nearest first here, so the walk counts down from the nearest rank: a style met again further out keeps it.
-        var rank = outermost + scopes - 1;
+        var rank = (global ? 1 : 0) + scopes - 1;
         for (var owner = element.LogicalParent; owner != null; owner = owner.LogicalParent)
         {
-            if (!_localResources.HoldsStylesOf(owner)) continue;
+            if (!_localResources.HasStylesOf(owner))
+            {
+                continue;
+            }
 
-            (styles ??= []).Clear();
+            styles ??= [];
+            styles.Clear();
             _localResources.CollectStyles(owner, styles);
-            Rank(element, styles, rank--, ref bands);
+            RankStyles(element, styles, rank--, ref bands);
         }
 
         return bands;
     }
 
-    private static void Rank(IFundamentalUIComponent element, List<Style> styles, int rank, ref Dictionary<Style, int> bands)
+    private int CountScopesOver(IFundamentalUIComponent element)
+    {
+        var scopes = 0;
+        for (var owner = element.LogicalParent; owner != null; owner = owner.LogicalParent)
+        {
+            if (_localResources.HasStylesOf(owner))
+            {
+                scopes++;
+            }
+        }
+
+        return scopes;
+    }
+
+    private static void RankStyles(IFundamentalUIComponent element, List<Style> styles, int rank,
+        ref Dictionary<Style, int> bands)
     {
         foreach (var style in styles)
         {
-            if (!style.Selector.Match(element)) continue;
+            if (!style.Selector.Match(element))
+            {
+                continue;
+            }
 
             bands ??= new Dictionary<Style, int>();
-            if (!bands.TryGetValue(style, out var band) || band < style.ScopedBand(rank))
+            var band = style.GetScopedBand(rank);
+            if (!bands.TryGetValue(style, out var nearer) || nearer < band)
             {
-                bands[style] = style.ScopedBand(rank);
+                bands[style] = band;
             }
         }
     }

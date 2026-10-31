@@ -813,7 +813,7 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
         triggerValues ??= new Dictionary<string, TriggerValueContainer>();
         if (!triggerValues.TryGetValue(property.Name, out var container))
             triggerValues[property.Name] = container = new TriggerValueContainer();
-        container.Set(token, value, TriggerOrderOf(token));
+        container.Set(token, value, GetTriggerOrder(token));
 
         SetValue(property, container.EffectiveValue, ValuePriority.Trigger);
     }
@@ -891,12 +891,12 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
 
     /// <summary>Where <paramref name="style"/> stands among this element's styles: its own band, unless the element was
     /// given another for it - a style of a scope, ranked by how near the scope is.</summary>
-    internal virtual int BandOf(Style style) => style?.Band ?? 0;
+    internal virtual int GetBand(Style style) => style?.Band ?? 0;
 
-    private long TriggerOrderOf(object token) => token switch
+    private long GetTriggerOrder(object token) => token switch
     {
-        Setter { OwnerStyle: { } style } setter => TriggerValueContainer.OrderOf(BandOf(style), setter),
-        ISetter setter => TriggerValueContainer.OrderOf(setter.StyleBand, setter),
+        Setter { OwnerStyle: { } style } setter => TriggerValueContainer.GetOrder(GetBand(style), setter),
+        ISetter setter => TriggerValueContainer.GetOrder(setter.StyleBand, setter),
         _ => 0L,
     };
 
@@ -907,7 +907,7 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
         {
             styleValues[propertyName] = entry = new StyleValueContainer();
         }
-        entry.AddValue(style, value, BandOf(style));
+        entry.AddValue(style, value, GetBand(style));
     }
 
     /// <summary>

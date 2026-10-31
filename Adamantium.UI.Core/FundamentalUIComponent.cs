@@ -16,7 +16,9 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
     private IFundamentalUIComponent parent;
     private TrackingCollection<IFundamentalUIComponent> logicalChildren;
     private Dictionary<object, Action> _follows;
-    
+    private Dictionary<Style, int> _scopedBands;
+    private bool _underScope;
+
     public static readonly AdamantiumProperty NameProperty = AdamantiumProperty.Register(nameof(Name),
         typeof(String), typeof(FundamentalUIComponent), new PropertyMetadata(String.Empty));
         
@@ -209,13 +211,13 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
         var theme = IsStyleApplied ? ThemeContext.For(this) : null;
         var incoming = theme?.FindStylesForComponent(this) ?? [];
         var own = StylesOrNull;
-        var scoped = IsStyleApplied ? ScopedStylesOver() : null;
+        var scoped = IsStyleApplied ? GetScopedStyles() : null;
 
         for (var i = (_attachedStyles?.Count ?? 0) - 1; i >= 0; i--)
         {
             var style = _attachedStyles[i];
             var stays = IsScoped(style)
-                ? KeepsScoped(style, scoped)
+                ? IsScopedStyleKept(style, scoped)
                 : style.Selector.Match(this) && (style.Theme == null || Array.IndexOf(incoming, style) >= 0);
             if (!stays)
             {
@@ -244,34 +246,41 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
             }
         }
 
-        AttachScoped();
+        AttachScopedStyles();
     }
-
-    private Dictionary<Style, int> _scopedBands;
-    private bool _underScope;
 
     /// <summary>A style of a scope over this element stands at the rank the scope gives it; one over the control whose
     /// template this element is part of - a trigger of it setting this part - at the rank it has there.</summary>
-    internal override int BandOf(Style style)
+    internal override int GetBand(Style style)
     {
-        if (style == null) return 0;
-        if (_scopedBands != null && _scopedBands.TryGetValue(style, out var band)) return band;
+        if (style == null)
+        {
+            return 0;
+        }
 
-        return TemplatedParent is FundamentalUIComponent host ? host.BandOf(style) : base.BandOf(style);
+        if (_scopedBands != null && _scopedBands.TryGetValue(style, out var band))
+        {
+            return band;
+        }
+
+        return TemplatedParent is FundamentalUIComponent host ? host.GetBand(style) : base.GetBand(style);
     }
 
-    private Dictionary<Style, int> ScopedStylesOver() =>
-        UIAppContext.Current?.ResourceManager is { } manager ? manager.ScopedStylesOver(this, out _underScope) : null;
+    private Dictionary<Style, int> GetScopedStyles() =>
+        UIAppContext.Current?.ResourceManager is { } manager ? manager.GetScopedStyles(this, out _underScope) : null;
 
     private bool IsScoped(Style style) => _scopedBands != null && _scopedBands.ContainsKey(style);
 
-    private bool KeepsScoped(Style style, Dictionary<Style, int> scoped) =>
+    private bool IsScopedStyleKept(Style style, Dictionary<Style, int> scoped) =>
         _scopedBands != null && _scopedBands.TryGetValue(style, out var was)
-        && scoped != null && scoped.TryGetValue(style, out var now) && was == now && style.KeepsBasesOn(this);
+        && scoped != null && scoped.TryGetValue(style, out var now) && was == now && style.HasBasesFor(this);
 
-    private void AttachScoped()
+    private void AttachScopedStyles()
     {
-        if (_scopedBands == null) return;
+        if (_scopedBands == null)
+        {
+            return;
+        }
 
         foreach (var style in _scopedBands.Keys)
         {
@@ -282,35 +291,48 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
         }
     }
 
-    private void Rescope()
+    private void RetakeScopedStyles()
     {
-        var scoped = ScopedStylesOver();
-        if (_scopedBands == null && scoped == null) return;
+        var scoped = GetScopedStyles();
+        if (_scopedBands == null && scoped == null)
+        {
+            return;
+        }
 
         for (var i = (_attachedStyles?.Count ?? 0) - 1; i >= 0; i--)
         {
             var style = _attachedStyles[i];
-            if (IsScoped(style) && !KeepsScoped(style, scoped))
+            if (IsScoped(style) && !IsScopedStyleKept(style, scoped))
             {
                 DetachStyles(style);
             }
         }
 
         _scopedBands = scoped;
-        AttachScoped();
+        AttachScopedStyles();
     }
 
     /// <summary>The scopes over this element's logical subtree changed - it became or stopped being one, or moved under
     /// others: every themed element of the subtree retakes their styles.</summary>
     internal void RestyleScopedSubtree()
     {
-        if (logicalChildren == null) return;
+        if (logicalChildren == null)
+        {
+            return;
+        }
 
         for (var i = 0; i < logicalChildren.Count; i++)
         {
-            if (logicalChildren[i] is not FundamentalUIComponent child) continue;
+            if (logicalChildren[i] is not FundamentalUIComponent child)
+            {
+                continue;
+            }
 
-            if (child.IsStyleApplied) child.Rescope();
+            if (child.IsStyleApplied)
+            {
+                child.RetakeScopedStyles();
+            }
+
             child.RestyleScopedSubtree();
         }
     }
@@ -677,6 +699,11 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
             if (ReferenceEquals(_templatedParent, value)) return;
 
             _templatedParent = value;
+            if (IsStyleApplied)
+            {
+                RetakeScopedStyles();
+            }
+
             TemplatedParentChanged?.Invoke(this, EventArgs.Empty);
         }
     }
@@ -889,7 +916,7 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
         // since marker setters are undone by property alone.
         var incoming = ThemeContext.For(this)?.FindStylesForComponent(this);
         var own = StylesOrNull;   // not Styles: a component with no local styles must not grow one to be re-themed
-        var scoped = ScopedStylesOver();
+        var scoped = GetScopedStyles();
 
         // BACKWARDS by index rather than over a ToArray() copy: DetachStyles removes from this very collection, so a
         // forward walk would skip entries - which is what the copy was there to avoid, at the price of an array per
@@ -902,14 +929,14 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
                 continue;
             }
 
-            if (own != null && own.Contains(style) && style.Selector.Match(this) && style.KeepsBasesOn(this))
+            if (own != null && own.Contains(style) && style.Selector.Match(this) && style.HasBasesFor(this))
             {
                 continue;   // an author's own style that still matches stays; re-applied below
             }
 
-            if (KeepsScoped(style, scoped))
+            if (IsScopedStyleKept(style, scoped))
             {
-                continue;   // a scope's style that still matches at the same rank stays
+                continue;
             }
 
             DetachStyles(style);
@@ -919,7 +946,7 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
 
         UIAppContext.Current.UIContext.ThemeEngine.ApplyCurrentTheme(this);
         UIAppContext.Current.UIContext.ThemeEngine.ApplyExternalStyles(this, own == null ? default : own.AsSpan());
-        AttachScoped();
+        AttachScopedStyles();
 
         IsStyleApplied = true;
     }

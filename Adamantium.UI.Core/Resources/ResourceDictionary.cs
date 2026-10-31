@@ -14,9 +14,9 @@ public class ResourceDictionary : IResourceDictionary, Markup.IMarkupContent
 
     /// <summary>Styles without a key. Among an element's resources they style every element of its logical subtree
     /// their selectors match - the nearest scope's winning over those further out, all of them over the theme's, an
-    /// element's own styles over them all. Among the application's resources they style every element, as the outermost
-    /// scope; among a theme's, they are the theme's. Read when the dictionary is given: to change them, give a new
-    /// dictionary.</summary>
+    /// element's own styles over them all. Among the application's resources they style every element but the parts of
+    /// templates, as the outermost scope; among a theme's, they are the theme's. Read when the dictionary is given: to
+    /// change them, give a new dictionary.</summary>
     public List<Style> Styles { get; } = [];
 
     private bool _isInitialized;

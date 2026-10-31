@@ -16,8 +16,8 @@ All packages share one version.
   for a bare type still gives way to an inherited value. Moved to another place, an element and what it holds take
   the styles of the scopes they now stand under; a new dictionary given to an element restyles its subtree and lets
   the old one go, with what it linked, and `ResourceDictionary.Styles` holds them. Styles without a key in the
-  application's resources style every element, as the outermost scope; in a theme's own resources, they are the
-  theme's. `ResourceContext.Resources` written into any other element with `ResourceContext.Scope` `Global` or
+  application's resources style every element but the parts of templates, as the outermost scope; in a theme's
+  resources, or a dictionary file they link, they are the theme's. `ResourceContext.Resources` written into any other element with `ResourceContext.Scope` `Global` or
   `Theme` are refused with an `InvalidOperationException`, keyed entries and styles alike: a view opened again would
   add them again, and nothing would take them away. A dictionary file linked with that scope stays the way to give
   every element resources from a view. A dictionary file used to drop a style without a key.

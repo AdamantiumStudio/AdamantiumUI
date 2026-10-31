@@ -1442,10 +1442,13 @@ public class AumlLowering
     private const string ValuePriorityFqn = "global::Adamantium.UI.Core.ValuePriority";
     private const string DesignFqn = "global::Adamantium.UI.Core.Design";
 
-    private bool IsScopeStyle(AumlAstObjectNode node) =>
-        KeyOf(node) == null && Metadata.DefaultTypeContainer.Style is { } style
-        && Metadata.TypeResolver.GetResolvedAssembly(node.TypeReference.Assembly)?.GetTypeByShortName(node.TypeReference.Name) is { } type
-        && (type.FullName == style.FullName || type.InheritsFrom(style.FullName));
+    private bool IsScopeStyle(AumlAstObjectNode node)
+    {
+        var assembly = Metadata.TypeResolver.GetResolvedAssembly(node.TypeReference.Assembly);
+        return KeyOf(node) == null && Metadata.DefaultTypeContainer.Style is { } style
+            && assembly?.GetTypeByShortName(node.TypeReference.Name) is { } type
+            && (type.FullName == style.FullName || type.InheritsFrom(style.FullName));
+    }
 
     // The x:Key directive of an inline object node (an inline resource entry), or null if it has none.
     // x:Key as written: text, or {x:Static Type.Member} - a constant shared with code, so a key is never typed twice.

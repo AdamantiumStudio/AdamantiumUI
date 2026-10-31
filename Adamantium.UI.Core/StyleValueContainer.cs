@@ -31,7 +31,10 @@ internal class StyleValueContainer
             return;
 
         var at = _values.Count;
-        while (at > 0 && _values[at - 1].Band > band) at--;
+        while (at > 0 && _values[at - 1].Band > band)
+        {
+            at--;
+        }
 
         _values.Insert(at, new StyleValuePair(style, value, band));
         _styleHash.Add(style);
