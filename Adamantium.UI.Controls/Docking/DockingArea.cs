@@ -2086,6 +2086,11 @@ public class DockingArea : Panel
         // Read once per drag, and kept on the OWNER: the drag is aimed at every area of the family.
         Owner._dragAllowed = AllowedFor(root.Content);
 
+        // A gesture made inside the application - automation - holds no button the platform's move loop could take: the
+        // window stays where it ended, and the person's real mouse is left alone.
+        var made = Mouse.Platform?.Window != null;
+        var gesturePointer = Mouse.ScreenCoordinates;
+
         // Showing a window is UI-thread work while the gesture runs on the loop thread. InvokeAsync, not Invoke:
         // blocking into the pump would stall the very frame the drag is in.
         UIAppContext.Current.Dispatcher.InvokeAsync(() =>
@@ -2102,14 +2107,17 @@ public class DockingArea : Panel
 
             // The cursor is read HERE, live - it has moved on since the threshold was crossed. Both sides PHYSICAL (see
             // WindowBase.Left); the caption height is logical, so only it is converted.
-            var cursor = Mouse.ScreenCoordinates;
+            var cursor = made ? gesturePointer : Mouse.ScreenCoordinates;
             window.Left = cursor.X - grabX;
             window.Top = cursor.Y - window.TitleBarHeight * DpiScale.Y / 2;
 
             FollowWindowMoves(area, window, root);
 
             // The platform's own move loop: the window rides under the cursor with Aero Snap intact.
-            window.DragMove(new Vector2<double>(grabX / DpiScale.X, window.TitleBarHeight / 2));
+            if (!made)
+            {
+                window.DragMove(new Vector2<double>(grabX / DpiScale.X, window.TitleBarHeight / 2));
+            }
         });
     }
 

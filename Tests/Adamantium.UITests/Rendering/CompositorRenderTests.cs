@@ -29,8 +29,14 @@ public class CompositorRenderTests
 {
     private IGraphicsDevice _device;
 
+    // Clean before as well as after: these count what the compositor runs, and a fixture before them may have left a
+    // slide of its own running.
     [SetUp]
-    public void SetUp() => _device = GpuTestDevice.Device;
+    public void SetUp()
+    {
+        AnimationManager.Reset();
+        _device = GpuTestDevice.Device;
+    }
 
     [TearDown]
     public void TearDown() => AnimationManager.Reset();
@@ -134,6 +140,140 @@ public class CompositorRenderTests
         // a loop tick, and there was none). So nothing but the compositor can have moved those pixels - which is the claim.
         Assert.That(transform.TranslateX, Is.LessThan(1.0),
             "the property must NOT have advanced: only the render thread moved the square");
+    }
+
+    // A sliding tab carries its close glyph: a stroke, drawn per unit by a CHILD of the element the compositor moves. The
+    // render thread must take it along with the fill, not leave it where the loop last recorded it.
+    [Test]
+    public void TheRenderThreadMovesAChildsStrokeWithItsSlidingParent()
+    {
+        var factory = new RenderUnitFactory(_device, new StubResourceFactory());
+        using var renderer = new OffscreenTestRenderer(_device, factory, 64, 64) { ClearColor = Colors.Black };
+
+        var root = new TestRoot(64, 64);
+        var tab = new TestControl { RenderAction = s => s.DrawRectangle(Brushes.Blue, new Rect(0, 0, 24, 16)) };
+        tab.Bounds = new Rect(0, 24, 24, 16);
+        tab.RenderSize = new Size<double>(24, 16);
+        var transform = new Transform();
+        tab.RenderTransform = transform;
+        root.Add(tab);
+
+        var bar = new StreamGeometry();
+        bar.Open().BeginFigure(new Vector2<double>(6, 0), false, false).LineTo(new Vector2<double>(6, 16), true);
+        var pen = new Pen(Brushes.Red, 4);
+        var glyph = new TestControl { RenderAction = s => s.DrawGeometry(null, bar, pen) };
+        glyph.Bounds = new Rect(12, 0, 12, 16);
+        glyph.RenderSize = new Size<double>(12, 16);
+        tab.Add(glyph);
+
+        new Animation
+        {
+            Duration = TimeSpan.FromSeconds(1),
+            KeyFrames =
+            {
+                new KeyFrame { Cue = new Cue(0), Setters = { new Setter("TranslateX", 0.0) } },
+                new KeyFrame { Cue = new Cue(1), Setters = { new Setter("TranslateX", 32.0) } }
+            }
+        }.Apply(transform);
+        Compositor.StartPending();
+
+        Assert.That(renderer.RenderFrame(root), Is.True);
+        var before = Row(renderer, 32);
+        Thread.Sleep(400);
+        Assert.That(renderer.RenderFrame(root), Is.True);
+        var after = Row(renderer, 32);
+
+        // Where the FILL starts - blue, which the red stroke never is - then the stroke's middle, 18 px into the tab.
+        var fillBefore = Array.FindIndex(before, p => Blue(p) > 128);
+        var fillAfter = Array.FindIndex(after, p => Blue(p) > 128);
+        Assert.That(fillAfter - fillBefore, Is.GreaterThan(4), "the render thread must have slid the tab");
+        Assert.That(Red(before[fillBefore + 18]), Is.GreaterThan(Blue(before[fillBefore + 18])), "the stroke starts in the tab");
+        Assert.That(Red(after[fillAfter + 18]), Is.GreaterThan(Blue(after[fillAfter + 18])),
+            "the glyph's stroke must have slid as far as the tab's fill, not left the fill showing where it went");
+    }
+
+    // A list inside a sliding view: a motion node of its own the compositor does not animate, holding a fill and a
+    // stroke. Its slot holds its own world, so the slide has to be carried into it, or its whole content stays behind.
+    [Test]
+    public void TheRenderThreadCarriesANodeInsideTheSlidingOne()
+    {
+        var factory = new RenderUnitFactory(_device, new StubResourceFactory());
+        using var renderer = new OffscreenTestRenderer(_device, factory, 64, 64) { ClearColor = Colors.Black };
+
+        var root = new TestRoot(64, 64);
+        var view = new TestControl();
+        view.Bounds = new Rect(0, 24, 24, 16);
+        view.RenderSize = new Size<double>(24, 16);
+        var transform = new Transform();
+        view.RenderTransform = transform;
+        root.Add(view);
+
+        var list = new TestControl { IsRenderMotionNode = true };
+        list.Bounds = new Rect(0, 0, 24, 16);
+        list.RenderSize = new Size<double>(24, 16);
+        view.Add(list);
+
+        var row = new TestControl { RenderAction = s => s.DrawRectangle(Brushes.Blue, new Rect(0, 0, 24, 16)) };
+        row.Bounds = new Rect(0, 0, 24, 16);
+        row.RenderSize = new Size<double>(24, 16);
+        list.Add(row);
+
+        var bar = new StreamGeometry();
+        bar.Open().BeginFigure(new Vector2<double>(6, 0), false, false).LineTo(new Vector2<double>(6, 16), true);
+        var pen = new Pen(Brushes.Red, 4);
+        var glyph = new TestControl { RenderAction = s => s.DrawGeometry(null, bar, pen) };
+        glyph.Bounds = new Rect(12, 0, 12, 16);
+        glyph.RenderSize = new Size<double>(12, 16);
+        list.Add(glyph);
+
+        new Animation
+        {
+            Duration = TimeSpan.FromSeconds(1),
+            KeyFrames =
+            {
+                new KeyFrame { Cue = new Cue(0), Setters = { new Setter("TranslateX", 0.0) } },
+                new KeyFrame { Cue = new Cue(1), Setters = { new Setter("TranslateX", 32.0) } }
+            }
+        }.Apply(transform);
+        Compositor.StartPending();
+
+        Assert.That(renderer.RenderFrame(root), Is.True);
+        var before = Row(renderer, 32);
+        Thread.Sleep(400);
+        Assert.That(renderer.RenderFrame(root), Is.True);
+        var after = Row(renderer, 32);
+
+        var fillBefore = Array.FindIndex(before, p => Blue(p) > 128);
+        var fillAfter = Array.FindIndex(after, p => Blue(p) > 128);
+        Assert.That(fillAfter - fillBefore, Is.GreaterThan(4), "the list's row must have slid with the view");
+        Assert.That(Red(after[fillAfter + 18]), Is.GreaterThan(Blue(after[fillAfter + 18])),
+            "the list's stroke must have slid as far as its row");
+    }
+
+    // The read-back pixel's channels, red in the low byte.
+    private static int Red(uint pixel) => (int)(pixel & 0xFF);
+
+    private static int Blue(uint pixel) => (int)((pixel >> 16) & 0xFF);
+
+    private static uint[] Row(OffscreenTestRenderer renderer, int y)
+    {
+        var path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"comp_{Guid.NewGuid():N}.png");
+        renderer.Save(path, ImageFileType.Png);
+        try
+        {
+            var px = Image.Load(path).GetPixelBuffer(0, 0);
+            var row = new uint[64];
+            for (var x = 0; x < 64; x++)
+            {
+                row[x] = px.GetPixel<uint>(x, y);
+            }
+
+            return row;
+        }
+        finally
+        {
+            System.IO.File.Delete(path);
+        }
     }
 
     [Test]

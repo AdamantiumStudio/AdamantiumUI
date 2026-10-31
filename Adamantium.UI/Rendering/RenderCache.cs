@@ -333,6 +333,11 @@ public partial class RenderCache
     /// nothing, so the per-unit transform re-bake (proc) is redundant and skipped.</summary>
     public bool LastBuildTransformDirty { get; private set; }
 
+    /// <summary>Whether the frame just applied needs the per-unit transform re-bake (<see cref="ProcessCommands"/>):
+    /// anything but a clean frame or a partial that moved nothing.</summary>
+    public bool NeedsTransformRebake => LastBuildKind != RenderBuildKind.Clean
+                                        && (LastBuildKind != RenderBuildKind.Partial || LastBuildTransformDirty);
+
     /// <summary>Told what each frame recorded and how it was drawn; null unless a tool such as the frame verifier watches.</summary>
     internal IRenderCacheObserver Observer { get; set; }
 

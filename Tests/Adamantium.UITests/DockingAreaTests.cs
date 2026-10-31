@@ -27,6 +27,14 @@ public class DockingAreaTests
         return group;
     }
 
+    // Every floating window is a DockingWindow: one remembered place would open a panel torn off now at the size the
+    // last floating window was closed at, its grip left outside it.
+    [Test]
+    public void AFloatingWindow_RemembersNoPlaceOfItsOwn()
+    {
+        Assert.That(new DockingWindow().RemembersPlacement, Is.False);
+    }
+
     private static int WindowListenersTo(Window window, DockingArea area)
     {
         var count = 0;
