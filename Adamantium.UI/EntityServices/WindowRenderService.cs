@@ -349,11 +349,11 @@ public class WindowRenderService : UiRenderService
         RuntimeStats.LastWindowGpuMs = GraphicsDevice.LastGpuFrameMs;
         GraphicsDevice.EndDraw();
         // A failed acquire leaves nothing to copy into and nothing to present.
-        if (GraphicsDevice.HasSwapchainImage)
+        var drawn = GraphicsDevice.CurrentRenderTarget.ResolveTexture;
+        var shown = windowRenderer.Presenter.GetCurrentImage();
+        if (GraphicsDevice.HasSwapchainImage && !ReferenceEquals(drawn, shown))
         {
-            GraphicsDevice.BlitImage(GraphicsDevice.CurrentCommandBuffer,
-                GraphicsDevice.CurrentRenderTarget.ResolveTexture,
-                windowRenderer.Presenter.GetCurrentImage());
+            GraphicsDevice.BlitImage(GraphicsDevice.CurrentCommandBuffer, drawn, shown);
         }
 
         RuntimeStats.LastEndDrawMs = Stopwatch.GetElapsedTime(t0).TotalMilliseconds;

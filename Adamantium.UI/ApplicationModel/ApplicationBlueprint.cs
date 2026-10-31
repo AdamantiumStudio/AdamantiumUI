@@ -31,6 +31,9 @@ public class ApplicationBlueprint : AdamantiumComponent, IApplicationBlueprint
     public static readonly AdamantiumProperty ShutDownModeProperty = AdamantiumProperty.Register(nameof(ShutDownMode),
         typeof(ShutDownMode), typeof(ApplicationBlueprint), new PropertyMetadata(ShutDownMode.OnMainWindowClosed));
 
+    public static readonly AdamantiumProperty DefaultScreenProperty = AdamantiumProperty.Register(nameof(DefaultScreen),
+        typeof(string), typeof(ApplicationBlueprint), new PropertyMetadata(null));
+
     /// <summary>The window the application opens first.</summary>
     [TypeOf(typeof(Window))]
     public Type StartupWindow
@@ -82,6 +85,15 @@ public class ApplicationBlueprint : AdamantiumComponent, IApplicationBlueprint
     }
 
     ShutDownMode? IApplicationBlueprint.ShutDownMode => IsSet(ShutDownModeProperty) ? ShutDownMode : null;
+
+    /// <summary>The monitor a window with no place of its own opens on, instead of the one under the pointer: the one
+    /// whose id ends with this, in any case - <c>DISPLAY2</c> on Windows, say; unset, or a monitor not connected, opens
+    /// it on the pointer's.</summary>
+    public string DefaultScreen
+    {
+        get => GetValue<string>(DefaultScreenProperty);
+        set => SetValue(DefaultScreenProperty, value);
+    }
 
     /// <summary>Resources every part of the application finds by key, and the dictionaries they link.</summary>
     public ResourceDictionary Resources { get; set; }

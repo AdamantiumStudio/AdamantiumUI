@@ -45,7 +45,10 @@
                             Padding="{TemplateBinding Padding}">
                         <!-- A starred header track, so a stretched tab (StretchSingleTab) keeps its close button at the
                              right edge. -->
-                        <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" VerticalAlignment="Center">
+                        <!-- The second row is for a turned label, the icon standing upright above it (DockingStyleSet). -->
+                        <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto"
+                              RowDefinitions="Auto,Auto"
+                              VerticalAlignment="Center">
                             <!-- What marks the tab, drawn from DATA by IconTemplate. Collapsed by default and revealed by
                                  the HasIcon trigger below: an empty presenter measures to nothing, but its MARGIN is
                                  reserved regardless, and that gap is what pushed a turned label off-center. -->

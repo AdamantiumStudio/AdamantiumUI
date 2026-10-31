@@ -26,9 +26,13 @@ public sealed class WindowNavigationBackend : IWindowNavigationBackend
         _shells = shells;
     }
 
+    /// <summary>Opens the window and returns once it is on screen with its content drawn, or hidden or minimized before it
+    /// was, so the window it replaces can go then, not leave nothing in its place meanwhile. A window closed before it
+    /// came on screen fails the opening.</summary>
     public async Task<object> OpenWindowAsync(object contentViewModel, NavigationParameters parameters, string windowShell, CancellationToken cancellationToken)
     {
         IWindow created = null;
+        WindowArrival arrival = null;
         // Window + render-service creation must run on the UI thread.
         await _application.ExecuteOnUIThreadAsync(() =>
         {
@@ -56,17 +60,30 @@ public sealed class WindowNavigationBackend : IWindowNavigationBackend
                 shell.Content = _viewLocator.ResolveView(contentViewModel);   // load the chosen content into the live shell
             }
             _windows[contentViewModel] = window;
-            // Untrack on close (including the OS title-bar X, which never routes through CloseWindow) - otherwise a stale
-            // entry makes a single-instance re-open just "activate" a dead window instead of opening a fresh one.
-            window.Closed += (_, _) =>
-            {
-                _windows.Remove(contentViewModel);
-                // It heard it was navigated to when the window opened; it hears that it was left when the window goes.
-                Observe(_application.Navigation?.LeaveWindowAsync(contentViewModel));
-            };
+            window.Closed += OnWindowClosed;
             created = window;
+            if (!window.IsDisplayed && window.State != WindowState.Minimized && !_application.DisableRendering)
+            {
+                arrival = new WindowArrival(window);
+            }
         });
-        return created;
+        if (arrival == null)
+        {
+            return created;
+        }
+
+        try
+        {
+            await arrival.Settled.WaitAsync(cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            return created;
+        }
+
+        return arrival.ClosedFirst
+            ? throw new InvalidOperationException("The window closed before it came on screen.")
+            : created;
     }
 
     public object TryActivateExisting(System.Type contentViewModelType)
@@ -102,7 +119,21 @@ public sealed class WindowNavigationBackend : IWindowNavigationBackend
     public void CloseWindow(object contentViewModel)
     {
         if (contentViewModel == null || !_windows.TryGetValue(contentViewModel, out var window)) return;
-        _windows.Remove(contentViewModel);
         _application.ExecuteOnUIThread(window.Close);
+    }
+
+    private void OnWindowClosed(object sender, EventArgs e)
+    {
+        var window = (IWindow)sender;
+        window.Closed -= OnWindowClosed;
+        foreach (var pair in _windows)
+        {
+            if (ReferenceEquals(pair.Value, window))
+            {
+                _windows.Remove(pair.Key);
+                Observe(_application.Navigation?.LeaveWindowAsync(pair.Key));
+                return;
+            }
+        }
     }
 }

@@ -57,7 +57,7 @@ public class HaloRenderTests
         var root = new VisualRoot(control, Dim, Dim);
         Assert.That(_renderer.RenderFrame(root), Is.True);
 
-        using var img = _renderer.RenderTarget.ResolveTexture.ReadbackToImage();
+        using var img = _renderer.RenderTarget.ResolveTexture.ToImage();
         var pixels = new byte[(int)img.TotalSizeInBytes];
         Marshal.Copy(img.DataPointer, pixels, 0, pixels.Length);
         return pixels;
@@ -154,7 +154,7 @@ public class HaloRenderTests
         var root = new VisualRoot(parent, Dim, Dim);
         Assert.That(_renderer.RenderFrame(root), Is.True);
 
-        using var img = _renderer.RenderTarget.ResolveTexture.ReadbackToImage();
+        using var img = _renderer.RenderTarget.ResolveTexture.ToImage();
         var pixels = new byte[(int)img.TotalSizeInBytes];
         Marshal.Copy(img.DataPointer, pixels, 0, pixels.Length);
 
@@ -224,7 +224,7 @@ public class HaloRenderTests
         var root = new VisualRoot(control, Dim, Dim);
         Assert.That(_renderer.RenderFrame(root), Is.True);
 
-        using var img = _renderer.RenderTarget.ResolveTexture.ReadbackToImage();
+        using var img = _renderer.RenderTarget.ResolveTexture.ToImage();
         var pixels = new byte[(int)img.TotalSizeInBytes];
         Marshal.Copy(img.DataPointer, pixels, 0, pixels.Length);
         return pixels;
@@ -438,7 +438,7 @@ public class HaloRenderTests
 
         Assert.That(_renderer.RenderFrame(new VisualRoot(stage, Dim, Dim)), Is.True);
 
-        using var img = _renderer.RenderTarget.ResolveTexture.ReadbackToImage();
+        using var img = _renderer.RenderTarget.ResolveTexture.ToImage();
         var pixels = new byte[(int)img.TotalSizeInBytes];
         Marshal.Copy(img.DataPointer, pixels, 0, pixels.Length);
         return pixels;
@@ -482,7 +482,7 @@ public class HaloRenderTests
 
     private static byte[] Snapshot()
     {
-        using var img = _renderer.RenderTarget.ResolveTexture.ReadbackToImage();
+        using var img = _renderer.RenderTarget.ResolveTexture.ToImage();
         var pixels = new byte[(int)img.TotalSizeInBytes];
         Marshal.Copy(img.DataPointer, pixels, 0, pixels.Length);
         return pixels;

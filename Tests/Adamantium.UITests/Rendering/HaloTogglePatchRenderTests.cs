@@ -49,7 +49,7 @@ public class HaloTogglePatchRenderTests
             Assert.That(_renderer.RenderFrame(Root), Is.True, "off-screen frame must render");
             RenderDirty.Clear();   // no UIApplication here: the harness clears what the app clears per frame
 
-            using var img = _renderer.RenderTarget.ResolveTexture.ReadbackToImage();
+            using var img = _renderer.RenderTarget.ResolveTexture.ToImage();
             var pixels = new byte[(int)img.TotalSizeInBytes];
             Marshal.Copy(img.DataPointer, pixels, 0, pixels.Length);
             return pixels;
@@ -140,7 +140,7 @@ public class HaloTogglePatchRenderTests
         Assert.That(_renderer.RenderFrame(root), Is.True);
         RenderDirty.Clear();
 
-        using var img = _renderer.RenderTarget.ResolveTexture.ReadbackToImage();
+        using var img = _renderer.RenderTarget.ResolveTexture.ToImage();
         var pixels = new byte[(int)img.TotalSizeInBytes];
         Marshal.Copy(img.DataPointer, pixels, 0, pixels.Length);
 

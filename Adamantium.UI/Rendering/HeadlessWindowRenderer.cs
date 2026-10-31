@@ -28,7 +28,7 @@ public class HeadlessWindowRenderer : ForwardWindowRenderer
             .Any(e => e.ExtensionName == Constants.VK_EXT_HEADLESS_SURFACE_EXTENSION_NAME);
 
     /// <summary>Saves the last rendered frame to disk. Reads the resolve texture (MSAA-safe; equals the render target
-    /// when MSAA is off), matching the on-screen read-back path.</summary>
+    /// when MSAA is off), matching what an on-screen window copies out.</summary>
     public void SaveFrame(string path, ImageFileType fileType) =>
         Presenter.RenderTarget.ResolveTexture.Save(path, fileType);
 }

@@ -199,10 +199,11 @@ public abstract class Selector : ItemsControl
         SelectSingle(index);
     }
 
-    /// <summary>A selection named before the items existed. Bindings are established before an ItemsSource has produced
-    /// anything, so a view-model that names its own selected item states it while the collection is still empty - and
-    /// discarding it there does not merely lose it: the discard is written BACK through a TwoWay binding, so the source
-    /// loses its own choice and whatever ends up first wins instead.</summary>
+    /// <summary>A selection named before its item is among the items. Bindings are established before an ItemsSource has
+    /// produced anything, and a view-model that replaces its items names the new choice as it does - either way the
+    /// choice is stated while the items it is among have not arrived - and discarding it there does not merely lose it:
+    /// the discard is written BACK through a TwoWay binding, so the source loses its own choice and whatever ends up
+    /// first wins instead.</summary>
     private object _pendingSelection;
 
     /// <summary>SelectedItem was set from OUTSIDE (binding / code). Default = single-select that item.</summary>
@@ -221,6 +222,17 @@ public abstract class Selector : ItemsControl
         SelectSingle(index);
     }
 
+    /// <summary>Keeps <paramref name="item"/>, not among the items yet, as the choice to make once it arrives - for a
+    /// selector that takes the waiting choice when its items change (<see cref="TakePendingSelectionIndex"/>) and shows
+    /// nothing chosen meanwhile.</summary>
+    protected void AwaitSelection(object item) => _pendingSelection = item;
+
+    /// <summary>Whether a chosen item waits to be among the items; any other choice made meanwhile drops it.</summary>
+    protected bool AwaitsSelection => _pendingSelection != null;
+
+    /// <summary>Another choice was made while one waited for its item: the waiting one is given up.</summary>
+    protected void ForgetAwaitedSelection() => _pendingSelection = null;
+
     /// <summary>The index of a selection named before the items existed, now that they have arrived - or -1 if there was
     /// none, or the named item is still not among them. Consumed on success, so it answers once.</summary>
     protected int TakePendingSelectionIndex()
@@ -236,6 +248,7 @@ public abstract class Selector : ItemsControl
     /// selection properties (guarded), reflects onto the containers, and raises <see cref="SelectionChanged"/> on change.</summary>
     protected void SelectSingle(int index)
     {
+        _pendingSelection = null;
         if (index < 0 || index >= Items.Count) index = -1;
         var item = index >= 0 ? Items[index] : null;
         // Compare against our own tracked selection, NOT SelectedIndex/SelectedItem: when this runs from a property

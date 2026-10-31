@@ -224,13 +224,14 @@ public class ListBox : Selector
 
     protected override void OnSelectedItemSet(object item)
     {
-        if (item != null && Items.Count == 0)
+        var index = IndexOfItem(item);
+        if (item != null && index < 0)
         {
-            base.OnSelectedItemSet(item);
+            AwaitSelection(item);
+            ShowAwaited();
             return;
         }
 
-        var index = IndexOfItem(item);
         if (index >= 0) SelectOnly(index); else ClearSelection();
     }
 
@@ -245,7 +246,10 @@ public class ListBox : Selector
             return;
         }
 
-        if (_selectedSet.Count == 0) return;
+        if (AwaitsSelection || _selectedSet.Count == 0)
+        {
+            return;
+        }
 
         var kept = (SelectedItems?.Cast<object>() ?? _selectedSet).Where(item => IndexOfItem(item) >= 0).ToList();
         var primary = IndexOfItem(SelectedItem);
@@ -281,6 +285,7 @@ public class ListBox : Selector
         // SelectedItems slot exists) would pin SelectedItems at Local priority and mask a later two-way {Binding}
         // (Binding < Local), silently isolating the view-model's collection.
         if (writeBoundList && items.Count > 0) EnsureSelectedItems();
+        ForgetAwaitedSelection();
         var newSet = new HashSet<object>(items);
         var changed = !newSet.SetEquals(_selectedSet);
         _selectedSet = newSet;
@@ -326,6 +331,22 @@ public class ListBox : Selector
         SyncingSelection = true;
         SelectedItems = new ObservableCollection<object>();
         SyncingSelection = false;
+    }
+
+    private void ShowAwaited()
+    {
+        _anchorIndex = -1;
+        var changed = _selectedSet.Count > 0;
+        _selectedSet = [];
+        SyncingSelection = true;
+        SetCurrentValue(SelectedIndexProperty, -1);
+        SyncBoundList([]);
+        SyncingSelection = false;
+        UpdateContainersSelection();
+        if (changed)
+        {
+            RaiseSelectionChanged();
+        }
     }
 
     private void SelectOnly(int index)

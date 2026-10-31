@@ -97,7 +97,7 @@ public class TextRoundedClipRenderTests
         Assert.That(_renderer.RenderFrame(root), Is.True, "off-screen frame must render");
         RenderDirty.Clear();
 
-        using var img = _renderer.RenderTarget.ResolveTexture.ReadbackToImage();
+        using var img = _renderer.RenderTarget.ResolveTexture.ToImage();
         var pixels = new byte[(int)img.TotalSizeInBytes];
         Marshal.Copy(img.DataPointer, pixels, 0, pixels.Length);
         return pixels;

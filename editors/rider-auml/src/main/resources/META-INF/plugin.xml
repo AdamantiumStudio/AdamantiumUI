@@ -30,6 +30,7 @@
     ]]></description>
 
     <change-notes><![CDATA[
+        <p>The plugin shows its icon in a dark IDE too: the Marketplace had no dark icon for it to give.</p>
         <p>Ctrl+click goes where a value points: from {Localize Table.Key} to the phrase in the table's base language
         file, from the table to that file, and from the member of {x:Static Type.Member} to its declaration.</p>
         <p>xml:space="preserve" is taken, as in WPF, and a property element in the middle of an element's text is

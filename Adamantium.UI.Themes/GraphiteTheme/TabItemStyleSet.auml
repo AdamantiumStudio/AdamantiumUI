@@ -42,7 +42,10 @@
                                 Padding="{TemplateBinding Padding}">
                             <!-- Same shape as Fluent's inner grid, and for the same reason: the starred middle track
                                  keeps the close button against the right edge when a lone tab is stretched. -->
-                            <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" VerticalAlignment="Center">
+                            <!-- The second row is for a turned label, the icon standing upright above it (DockingStyleSet). -->
+                            <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto"
+                                  RowDefinitions="Auto,Auto"
+                                  VerticalAlignment="Center">
                                 <ContentPresenter x:Name="PART_Icon" Grid.Column="0"
                                         VerticalAlignment="Center"
                                         Visibility="Collapsed"

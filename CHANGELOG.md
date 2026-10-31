@@ -26,6 +26,36 @@ All packages share one version.
   empty and `Generation` grows, so whoever wrote layers writes them anew. A frame with more layer fills than the
   textured batch holds is held back, and the next one, its batch grown, draws them all.
   `IResourceFactory.CreateGrowingTextureArray` makes the array.
+- Windows: a see-through window (`UseTransparentComposition`) whose surface offers no swapchain that keeps its alpha - an
+  AMD card's, for one - is a layered window the desktop composes from its pixels, as WPF's are: its frames are copied
+  (the engine's `PresenterType.Compositor`) and handed to `UpdateLayeredWindow` with the window's opacity. Where the
+  surface keeps the alpha, the swapchain composes the window as before; the surface is asked before the window's
+  presenter is made. `IWindowWorkerService.ComposesFromPixels` says whether a window can be shown from frames given as
+  pixels, and `IWindowWorkerService.Compose` shows one. The docking compass drew a black window over
+  the whole area there. Only a frame drawn into the window is copied. A drag ghost was premultiplied twice and its
+  soft edges came out dark: the UI's frames are premultiplied already.
+- The splash of the start appears where the first window of the application appeared the last time it started, when
+  the blueprint names no startup window to go by - an application that opens its first window itself, through window
+  navigation, had its splash on the monitor under the pointer.
+- `UIApplication.DefaultScreen`, and `DefaultScreen` in the blueprint: the monitor a window with no place of its own
+  opens on, named by the end of its id (`DISPLAY2` on Windows), rather than the one under the pointer. Automation sets
+  it for a driven application - `LaunchOptions.Screen`, `adam-auto start --screen`, or `ADAM_AUTOMATION_SCREEN` for a
+  whole test run - so it keeps to a monitor of its own. A window of a driven application is placed again: inactive by
+  default, it was taken for an overlay that places itself and opened at the screen's corner. `adam-auto start --args`
+  passes the application its own command line.
+- `IUIApplication.ShowSplash(string message)`: the splash window shown while the application runs, saying what it
+  does - opening a document, say - until the `ISplashScreen` returned is disposed; `ISplashScreen.Shown` completes once
+  it is on screen, so a window it stands in for can go then. `SplashWindow.Message` is what it says, and
+  `UIApplication.StartupSplashMessage` what the splash of the start says.
+- `DragDrop.DragLeaveCommand` (and `DropTargetBehavior.DragLeaveCommand`): run on the target a drag was over once it
+  is over it no more - moved off, dropped or ended - so a view-model that showed what a drop would do there takes it
+  back; the cursor cannot say it on every desktop.
+- `DragDrop.InsertionCue` (`DropInsertionCue`): how a list under a drag shows where the drop lands - `Gap`, a real gap
+  where its panel can open one and a caret elsewhere (the default); `Caret`, the caret only; `None`, nothing, for a
+  list that keeps an order of its own - one sorted by name, say - where what is dropped lands in the list as a whole.
+- A drag over a list or a tree tells its `DragOver` what the drop will tell: the insertion point (`InsertIndex`,
+  `InsertBefore`) and, in a tree, the row and where against it (`DropTarget`, `Placement`); `DragOver` had none of them,
+  so a target could not say whether what is carried can go where the pointer is.
 
 - `RenderTargetPanel.FrameSharing`: a universe rendering on the UI's own logical device hands the panel its frames
   within it (`Auto`, the default) - no export, no OS handles; one on another device, or with `SharedSurface` asked for to
@@ -212,7 +242,7 @@ All packages share one version.
   its own (a Wayland connection on Linux, a message loop on Windows), while the blueprint, the themes, the services
   and the startup window are made on the application's thread; what of that changes the live UI - the blueprint's
   resources and style sets, the first theme, the language - is applied on the loop. It closes once a window of the
-  application's own has drawn, or once the start is over without showing one (a minimized or hidden window, none). It
+  application's own has drawn, or once its window is not to be shown (minimized, or hidden before its first frame). It
   appears where the startup window will: in the middle of the place that window was remembered at, on its screen (the
   blueprint generator puts the startup window into `ApplicationBlueprintAttribute.StartupWindow` so it is known that
   early), or in the middle of the screen under the pointer when it has no remembered place; `WindowPlacer.Bounds`
@@ -386,7 +416,8 @@ All packages share one version.
   a drag of a border or a corner gives the layout back as it was and asks the view model nothing.
 - `DragDrop.GhostAnchor`: where a source's ghost stands against the cursor - beside it (`Cursor`, the default) or held by
   the point it was grabbed at (`Grab`), as a large tile is carried.
-- `IDropGapPanel`: an items host that opens a real gap where a dragged item would drop instead of the insertion caret;
+- `IDropGapPanel`: an items host that opens a real gap where a dragged item would drop instead of the insertion caret
+  (`DragDrop.InsertionCue` = `Gap`);
   `VirtualizingPanel` and `TiledPanel` both are one, and the drag works with any - in a `ListBox`, or in any
   `ItemsControl` that allows the drop itself.
 - `Expander.ExpandDuration`: the content unfolds in the layout and folds away over it - what lies past the expander
@@ -2291,6 +2322,9 @@ All packages share one version.
 
 ### Removed
 
+- `DockingLayout.BandTarget`: a band dropped on the top or bottom edge anchor runs across the whole area, as the
+  anchor's preview shows, rather than under the center column only; `FindCenterColumn` is what a band put away from
+  under the center comes back into.
 - The macOS theme's `SegmentedTrackFadeColor` and `SegmentedTrackFadeColorTransparent`: tab strips fade by a mask now,
   into whatever lies beneath them, and need no color to fade to.
 - `DateTimeFieldSegmentAutomationPeer`: `FieldSegmentAutomationPeer` is the peer of every part of a field, a date's
@@ -2335,6 +2369,43 @@ All packages share one version.
 - The textured batch - shapes filled with an `ImageBrush` or `NineSliceBrush` - grows when a frame has more of them
   than it holds, as the other batches do. It never grew: past its first 256 records every textured fill was drawn on
   its own, frame after frame.
+- The log file is named with the invariant culture: naming it with the current one loaded the system's calendar data
+  first thing in the application, before its splash, and that once took 45 seconds.
+- The Rider plugin (1.11.6) shows its icon in a dark IDE: it carried no dark icon, and the Marketplace gave none.
+- A window comes on screen once its content is drawn: it showed as soon as its presenter drew its first frame, empty,
+  and stayed empty until its content was built and laid out - seconds for a large window. `IWindowRenderer`
+  `.HasPresentedContent` says whether a frame of the window's own content was presented. The splash of the start
+  stays until the first window of the application is on screen with its content, however the start opens it - by
+  the blueprint's startup window or by work of its own; it went as soon as no window seemed on its way, so an
+  application opening its first window from its own start had to hold it by hand. `IWindow.Displayed` is raised when
+  the window comes on screen and `IWindow.Hidden` when it is hidden, and a window opened by window navigation is
+  returned once it has come on screen or been hidden - so the window it replaces goes then, rather than leaving nothing
+  in its place meanwhile; one closed before it came on screen fails the opening, and a cancelled wait leaves the window
+  open. A splash left up does not keep an application that ends with its last window running.
+- Docking: a tab folded against a side has its icon above its turned label, upright, in Fluent, Graphite and MacOs;
+  the icon stood beside the label in the row, as on a tab lying flat.
+- Docking: a panel put away from the top or the bottom where it ran across the whole area shows, revealed, and comes
+  back, pinned, across it again; it showed and came back under the center column only. `PaneGroupNode.RestoresAcross`
+  says which, kept in a saved layout; one put away from under the center comes back under it, however many bands
+  across the whole area were docked since (`DockingLayout.FindCenterColumn`).
+- A dialog or an overlay asked for while the application is not in front shows over its last window shown: it showed
+  nowhere, and the dialog answered at once, when no window of the application was active and the main one was not
+  set - a window opened by window navigation is not the main one. `IUIApplication.FrontWindow` is the window they go
+  over.
+- Ribbon: a command that is off no longer answers the pointer, and a `RibbonToggleButton` that is on but off shows its
+  accent dimmed, as a plain toggle does; it kept its full accent and lit up under the pointer. One that is on keeps its
+  accent under the pointer - a notch dimmer in Fluent - instead of the neutral hover fill under the accent's white text.
+- A drop tells where it landed in the target's own coordinates, as its `DragOver` does (`DragDropEventArgs.Position`);
+  it told where in the window, so a target away from the window's corner put what was dropped in the wrong place - a
+  text editor's drop caret among them.
+- A two-way binding whose source has a value its target has not been given yet does not write the target's change over
+  it: a change the target made meanwhile was decided against the old value. A list given new items and a new choice
+  among them in one breath dropped the choice it no longer held and wrote "nothing" over the new one.
+- A `ListBox`'s, or other selector's, chosen item that is not among its items yet waits for them as it does before its
+  first items arrive - nothing shown chosen meanwhile, and another choice made meanwhile gives it up; with other items
+  there it was dropped and "nothing" written back in its place.
+- `{Ancestor}` and `{Self}` as a setter's value in a style written in a view, not a dictionary - an `ItemContainerStyle`,
+  say - are kept for the setter to bind on each element it styles, as `{Binding}` is; the view did not compile.
 - Windows: an activated window takes the keyboard focus. A dialog shown over its owner was active with no focus
   anywhere - its text box showed the caret, but no key reached it until the dialog was clicked.
 - Windows: a window's Vulkan surface is created with the application's module as its `hinstance`, as Vulkan requires;

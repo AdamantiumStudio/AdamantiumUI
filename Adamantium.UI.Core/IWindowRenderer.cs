@@ -14,6 +14,10 @@ public interface IWindowRenderer : IDisposable
     /// <summary>How many frames were handed to the presenter so far: one more each time the window got a new picture.</summary>
     public long PresentedFrames { get; }
 
+    /// <summary>Whether a frame drawn from what the window recorded has been presented: its content, not the empty
+    /// frame drawn while its presenter was made. A window asked to show waits for it.</summary>
+    public bool HasPresentedContent { get; }
+
     /// <summary>How many frames recorded on the loop wait to be drawn.</summary>
     public int RecordedFrames { get; }
 

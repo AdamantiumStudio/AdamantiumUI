@@ -38,7 +38,7 @@ public unsafe class BitmapSource : ImageSource
    private volatile Fitted _fitted;
    private volatile Refusal _refused;
 
-   /// <summary>The CPU pixel buffer (may be null once uploaded to a GPU texture). For readback consumers - e.g. the
+   /// <summary>The CPU pixel buffer (may be null once uploaded to a GPU texture). For whoever needs the pixels on the CPU - e.g. the
    /// drag ghost, which needs the raw bytes to hand the OS compositor.</summary>
    public byte[] PixelBytes => _pixels;
 

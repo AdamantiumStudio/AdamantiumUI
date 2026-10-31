@@ -2,8 +2,10 @@
 using System.Threading;
 using Adamantium.Core;
 using Adamantium.Graphics.Core;
+using Adamantium.Graphics.Core.Extensions;
 using Adamantium.Graphics.Core.Presentation;
 using Adamantium.Mathematics;
+using Adamantium.UI.Controls;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Graphics;
 using Adamantium.UI.FX;
@@ -15,6 +17,10 @@ namespace Adamantium.UI.Rendering;
 public abstract class WindowRendererBase : IWindowRenderer
 {
     private long _presentedFrames;
+    private bool _presentedContent;
+    private SurfaceKHR _surface;
+    private IntPtr _surfaceHandle;
+    private bool _surfaceComposesWithAlpha;
     private long _frameRequests;
     private volatile bool _isRendererUpToDate;
     private double _renderScale = 1.0;
@@ -80,6 +86,12 @@ public abstract class WindowRendererBase : IWindowRenderer
     public bool FirstFrameProcessed { get; private set; }
 
     public long PresentedFrames => Interlocked.Read(ref _presentedFrames);
+
+    public bool HasPresentedContent => Volatile.Read(ref _presentedContent);
+
+    /// <summary>Whether the frame being drawn shows what the window recorded; a renderer that draws only what it is
+    /// recorded says so until it has applied a recording.</summary>
+    protected virtual bool DrawsRecordedContent => true;
 
     public virtual int RecordedFrames => 0;
 
@@ -151,15 +163,26 @@ public abstract class WindowRendererBase : IWindowRenderer
     }
 
     /// <summary>
-    /// The presenter kind this renderer builds. Defaults to the on-screen swapchain; a headless renderer
-    /// overrides it to <see cref="PresenterType.Headless"/>, in which case the surface is window-less.
+    /// The presenter kind this renderer builds. Defaults to the on-screen swapchain; only a see-through window whose
+    /// surface cannot be composed with its alpha, and that can take frames as pixels, is presented through the system's
+    /// compositor (<see cref="PresenterType.Compositor"/>) instead. A headless renderer overrides it to
+    /// <see cref="PresenterType.Headless"/>, in which case the surface is window-less.
     /// </summary>
-    protected virtual PresenterType PresenterKind => PresenterType.Swapchain;
+    protected virtual PresenterType PresenterKind =>
+        Window is WindowBase { UseTransparentComposition: true, ComposesFromPixels: true } && !SurfaceComposesWithAlpha()
+            ? PresenterType.Compositor
+            : PresenterType.Swapchain;
 
     private void FillParameters()
     {
-        Parameters = new PresentationParameters(
-            PresenterKind,
+        Parameters = NewParameters(PresenterKind);
+        Presenter = GraphicsPresenter.Create(GraphicsDevice, Parameters, "Window_presenter");
+    }
+
+    private PresentationParameters NewParameters(PresenterType kind)
+    {
+        return new PresentationParameters(
+            kind,
             (uint)Math.Round(Window.ClientWidth * RenderScale),
             (uint)Math.Round(Window.ClientHeight * RenderScale),
             Window.SurfaceHandle,
@@ -172,8 +195,30 @@ public abstract class WindowRendererBase : IWindowRenderer
             TransparentComposition = Window.UseTransparentComposition,
             PresentPolicy = ResolvePresentPolicy()
         };
+    }
 
-        Presenter = GraphicsPresenter.Create(GraphicsDevice, Parameters, "Window_presenter");
+    private bool SurfaceComposesWithAlpha()
+    {
+        if (_surface == null || _surfaceHandle != Window.SurfaceHandle)
+        {
+            ReleaseSurface();
+            _surface = GraphicsDevice.GetOrCreateSurface(NewParameters(PresenterType.Swapchain));
+            _surfaceHandle = Window.SurfaceHandle;
+            _surfaceComposesWithAlpha = _surface.ComposesWithAlpha(GraphicsDevice.MainDevice);
+        }
+
+        return _surfaceComposesWithAlpha;
+    }
+
+    private void ReleaseSurface()
+    {
+        if (_surface == null)
+        {
+            return;
+        }
+
+        GraphicsDevice.ReleaseSurface(_surfaceHandle);
+        _surface = null;
     }
 
     /// <summary>The window's own choice, or the application's when it made none. Resolved HERE, in the one place that
@@ -222,6 +267,14 @@ public abstract class WindowRendererBase : IWindowRenderer
 
     private void Resize(uint width, uint height)
     {
+        if (Window != null && Presenter != null && Parameters.PresenterType != PresenterKind)
+        {
+            GraphicsDevice.DeviceWaitIdle();
+            Presenter.Dispose();
+            FillParameters();
+            return;
+        }
+
         // Re-read transparency and present policy on every rebuild, the only moment a swapchain can pick them up.
         if (Window != null && Presenter != null)
         {
@@ -258,10 +311,19 @@ public abstract class WindowRendererBase : IWindowRenderer
         if (GraphicsDevice.CanPresent && Presenter is { CanPresent: true })
         {
             Presenter.Present();
+            if (Presenter is CompositorPresenter { Frame: { } frame } && Window is WindowBase window)
+            {
+                window.Compose(frame);
+            }
+
             Interlocked.Increment(ref _presentedFrames);
+            if (DrawsRecordedContent)
+            {
+                Volatile.Write(ref _presentedContent, true);
+            }
         }
 
-        if (Window.ShouldDisplayWindow)
+        if (Window.ShouldDisplayWindow && HasPresentedContent)
         {
             Window.UIContext.Dispatcher.Invoke(() => Window.Show());
         }
@@ -272,6 +334,7 @@ public abstract class WindowRendererBase : IWindowRenderer
         UnsubscribeFromEvents();
         Presenter?.Dispose();
         Presenter = null;
+        ReleaseSurface();
         // Last: the units built from it are gone by now.
         (RenderUnitFactory as IDisposable)?.Dispose();
     }

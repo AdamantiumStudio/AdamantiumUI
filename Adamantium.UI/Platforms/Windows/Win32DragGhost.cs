@@ -38,7 +38,7 @@ public sealed class Win32DragGhost : IDragGhost
         var screenDc = Win32Interop.GetDC(IntPtr.Zero);
         var memDc = Win32Interop.CreateCompatibleDC(screenDc);
 
-        // Top-down 32-bit DIB (negative height) so row 0 is the top - matches the readback buffer's layout.
+        // Top-down 32-bit DIB (negative height) so row 0 is the top - matches the layout of the image copied from the GPU.
         var header = new BITMAPINFOHEADER
         {
             biSize = (uint)Marshal.SizeOf<BITMAPINFOHEADER>(),

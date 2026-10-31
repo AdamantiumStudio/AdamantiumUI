@@ -320,6 +320,11 @@ public sealed class AutomationSession : IAsyncDisposable
             variables[ApplicationData.FolderVariable] = data;
         }
 
+        if ((options.Screen ?? Environment.GetEnvironmentVariable(AutomationProtocol.ScreenVariable)) is { Length: > 0 } screen)
+        {
+            variables[AutomationProtocol.ScreenVariable] = screen;
+        }
+
         if (options.VirtualDisplay && VirtualDisplay.Wrap(path, options.Arguments) is { } virtualStart)
         {
             virtualStart.WorkingDirectory = options.WorkingDirectory ?? Path.GetDirectoryName(path);

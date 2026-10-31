@@ -29,7 +29,7 @@ public sealed class OverlayService : IOverlayService
     public async Task<object> ShowOverlayAsync(Type overlayViewModelType, NavigationParameters parameters = null, CancellationToken cancellationToken = default)
     {
         // The overlay lives on a window's popup layer; without a window there is nowhere to show it.
-        if ((_application.ActiveWindow ?? _application.MainWindow) is not IPopupHost host)
+        if (_application.FrontWindow is not IPopupHost host)
         {
             return null;
         }

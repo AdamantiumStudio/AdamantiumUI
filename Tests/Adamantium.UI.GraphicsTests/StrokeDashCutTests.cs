@@ -12,7 +12,7 @@ namespace Adamantium.UI.GraphicsTests;
 
 // Regression tests for the two dash/trim stroke-expander bugs, dispatching the REAL production kernel
 // (StrokeEffect.fx -> StrokeDashCutCS + EmitJoin), linked into EffectsData so there is no prototype drift.
-// Single-thread, sequential emission -> a CPU readback of the vertex buffer + VkDrawIndirectCommand is deterministic.
+// Single-thread, sequential emission -> a copy to the CPU of the vertex buffer + VkDrawIndirectCommand is deterministic.
 [TestFixture]
 public class StrokeDashCutTests
 {

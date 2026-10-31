@@ -29,6 +29,10 @@ public class PaneGroupNode : PaneNode
     /// <summary>What it was worth before collapsing, so expanding it again is not a fresh guess at a size.</summary>
     public Panels.PaneLength RestoreLength { get; set; } = Panels.PaneLength.Star;
 
+    /// <summary>Whether, put away from the top or the bottom, it ran across the whole area rather than under the center
+    /// column only - so it shows and comes back as wide as it was.</summary>
+    public bool RestoresAcross { get; set; }
+
     public void Add(string paneId)
     {
         PaneIds.Add(paneId);

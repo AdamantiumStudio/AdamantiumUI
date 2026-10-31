@@ -150,7 +150,7 @@ public sealed class WindowsDragDrop : INativeDragDrop
         }
     }
 
-    // A 32-bit top-down DIB the shell can composite with per-pixel alpha, filled from the premultiplied BGRA readback.
+    // A 32-bit top-down DIB the shell can composite with per-pixel alpha, filled from the premultiplied BGRA copied from the GPU.
     private static IntPtr CreateDragBitmap(DragGhostImage ghost)
     {
         var screenDc = Win32Interop.GetDC(IntPtr.Zero);

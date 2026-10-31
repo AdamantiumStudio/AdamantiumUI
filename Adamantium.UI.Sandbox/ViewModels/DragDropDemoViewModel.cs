@@ -39,6 +39,10 @@ public partial class DragDropDemoViewModel : TabPageViewModel
     public Orientation[] Orientations { get; } = [Orientation.Horizontal, Orientation.Vertical];
     [Bindable] private Orientation _wrapOrientation = Orientation.Horizontal;
 
+    public DropInsertionCue[] InsertionCues { get; } = Enum.GetValues<DropInsertionCue>();
+    [Bindable] private DropInsertionCue _leftInsertionCue = DropInsertionCue.Gap;
+    [Bindable] private DropInsertionCue _wrapInsertionCue = DropInsertionCue.Gap;
+
     [Bindable] private ScrollBarVisibility _wrapHScroll = ScrollBarVisibility.Disabled;
     [Bindable] private ScrollBarVisibility _wrapVScroll = ScrollBarVisibility.Auto;
 

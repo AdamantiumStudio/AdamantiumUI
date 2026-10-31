@@ -76,7 +76,7 @@ public class VisualRootRenderTests
         Assert.That(renderer.RenderFrame(root), Is.True);
 
         // Transparent clear, so opaque pixels come ONLY from the rendered element (not the clear color).
-        using var img = renderer.RenderTarget.ResolveTexture.ReadbackToImage();
+        using var img = renderer.RenderTarget.ResolveTexture.ToImage();
         var bytes = new byte[(int)img.TotalSizeInBytes];
         System.Runtime.InteropServices.Marshal.Copy(img.DataPointer, bytes, 0, bytes.Length);
         long opaque = 0;

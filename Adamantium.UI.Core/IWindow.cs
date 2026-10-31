@@ -201,6 +201,12 @@ public interface IWindow : IRootVisualComponent, IContentControl
 
     event EventHandler<EventArgs> Closed;
 
+    /// <summary>Raised when the window comes on screen - the first time once its content is drawn, not before.</summary>
+    event EventHandler<EventArgs> Displayed;
+
+    /// <summary>Raised when the window is hidden, before its first frame too: then it is not coming on screen.</summary>
+    event EventHandler<EventArgs> Hidden;
+
     event EventHandler<WindowRendererChangedEventArgs> RendererChanged;
     
     event EventHandler<EventArgs> SourceInitialized;

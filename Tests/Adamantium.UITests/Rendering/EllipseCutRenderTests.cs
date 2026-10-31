@@ -45,7 +45,7 @@ public class EllipseCutRenderTests
             Assert.That(renderer.RenderFrame(root), Is.True, "off-screen frame must render");
             RenderDirty.Clear();
 
-            using var img = renderer.RenderTarget.ResolveTexture.ReadbackToImage();
+            using var img = renderer.RenderTarget.ResolveTexture.ToImage();
             var bytes = new byte[(int)img.TotalSizeInBytes];
             Marshal.Copy(img.DataPointer, bytes, 0, bytes.Length);
             return bytes;
@@ -345,7 +345,7 @@ public class EllipseCutRenderTests
             Assert.That(renderer.RenderFrame(root), Is.True, "off-screen frame must render");
             RenderDirty.Clear();
 
-            using var img = renderer.RenderTarget.ResolveTexture.ReadbackToImage();
+            using var img = renderer.RenderTarget.ResolveTexture.ToImage();
             var bytes = new byte[(int)img.TotalSizeInBytes];
             Marshal.Copy(img.DataPointer, bytes, 0, bytes.Length);
             return Quadrants(bytes);
@@ -383,7 +383,7 @@ public class EllipseCutRenderTests
     private static void AssertTone(byte[] px, int x, int y, int[] expected, string what)
     {
         var i = (y * Dim + x) * 4;
-        int[] actual = [px[i + 2], px[i + 1], px[i]];   // the readback is BGRA
+        int[] actual = [px[i + 2], px[i + 1], px[i]];   // the copied image is BGRA
         Assert.That(actual, Is.EqualTo(expected).Within(5),
             $"{what} at ({x},{y}): expected ({string.Join(",", expected)}), was ({string.Join(",", actual)})");
     }

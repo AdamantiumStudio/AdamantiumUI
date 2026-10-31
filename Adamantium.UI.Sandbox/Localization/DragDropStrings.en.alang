@@ -5,7 +5,7 @@
     <Phrase Key="OverrideCursor" Text="Override cursor over Animals"/>
     <Phrase Key="Fruits" Text="Fruits"/>
     <Phrase Key="HandleOnly" Text="Drag by handle only"/>
-    <Phrase Key="Spread" Text="Spread"/>
+    <Phrase Key="InsertionCue" Text="Drop cue:"/>
     <Phrase Key="Animals" Text="Animals"/>
     <Phrase Key="AcceptDrop" Text="Accept drop"/>
     <Phrase Key="ColorsWrapPanel" Text="Colors (WrapPanel)"/>

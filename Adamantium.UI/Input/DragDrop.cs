@@ -42,11 +42,10 @@ public static partial class DragDrop
     public static readonly AdamantiumProperty DropCommandProperty = AdamantiumProperty.RegisterAttached(
         "DropCommand", typeof(ICommand), typeof(AdamantiumComponent), new PropertyMetadata(null));
 
-    /// <summary>Whether a list opens a real hole at the insertion point (default) or marks it with the caret. On by
-    /// default because it is the better cue where a panel can do it; false forces the caret everywhere - for a list
-    /// whose items are expensive to re-arrange, or simply where the quieter cue is wanted.</summary>
-    public static readonly AdamantiumProperty UseDropGapProperty = AdamantiumProperty.RegisterAttached(
-        "UseDropGap", typeof(bool), typeof(AdamantiumComponent), new PropertyMetadata(true));
+    /// <summary>How a list under a drag shows where the drop lands (<see cref="DropInsertionCue"/>): a real gap by
+    /// default, the better cue where a panel can open one; a caret; or nothing, for a list that keeps an order of its own.</summary>
+    public static readonly AdamantiumProperty InsertionCueProperty = AdamantiumProperty.RegisterAttached(
+        "InsertionCue", typeof(DropInsertionCue), typeof(AdamantiumComponent), new PropertyMetadata(DropInsertionCue.Gap));
 
     /// <summary>Where a source's ghost stands against the cursor: beside it (default) or held where it was grabbed. A
     /// custom drag template is always beside it - it has no point that was grabbed.</summary>
@@ -61,6 +60,11 @@ public static partial class DragDrop
 
     public static readonly AdamantiumProperty DragOverCommandProperty = AdamantiumProperty.RegisterAttached(
         "DragOverCommand", typeof(ICommand), typeof(AdamantiumComponent), new PropertyMetadata(null));
+
+    /// <summary>Fires on the target a drag was over once it is over it no more: the drag moved off, was dropped or ended.
+    /// A view-model that showed what a drop would do there takes it back.</summary>
+    public static readonly AdamantiumProperty DragLeaveCommandProperty = AdamantiumProperty.RegisterAttached(
+        "DragLeaveCommand", typeof(ICommand), typeof(AdamantiumComponent), new PropertyMetadata(null));
 
     // Source-side lifecycle. The target ADDS the item to its collection; the SOURCE removes it - on a Move only - from the
     // collection it came from. That split is the only thing that works cross-window / cross-view-model (the target can't
@@ -106,8 +110,8 @@ public static partial class DragDrop
 
     public static DragGhostAnchor GetGhostAnchor(AdamantiumComponent e) => e.GetValue<DragGhostAnchor>(GhostAnchorProperty);
     public static void SetGhostAnchor(AdamantiumComponent e, DragGhostAnchor value) => e.SetValue(GhostAnchorProperty, value);
-    public static bool GetUseDropGap(AdamantiumComponent e) => e.GetValue<bool>(UseDropGapProperty);
-    public static void SetUseDropGap(AdamantiumComponent e, bool value) => e.SetValue(UseDropGapProperty, value);
+    public static DropInsertionCue GetInsertionCue(AdamantiumComponent e) => e.GetValue<DropInsertionCue>(InsertionCueProperty);
+    public static void SetInsertionCue(AdamantiumComponent e, DropInsertionCue value) => e.SetValue(InsertionCueProperty, value);
 
     public static ICommand GetDropCommand(AdamantiumComponent e) => e.GetValue(DropCommandProperty) as ICommand;
     public static void SetDropCommand(AdamantiumComponent e, ICommand value) => e.SetValue(DropCommandProperty, value);
@@ -117,6 +121,9 @@ public static partial class DragDrop
 
     public static ICommand GetDragOverCommand(AdamantiumComponent e) => e.GetValue(DragOverCommandProperty) as ICommand;
     public static void SetDragOverCommand(AdamantiumComponent e, ICommand value) => e.SetValue(DragOverCommandProperty, value);
+
+    public static ICommand GetDragLeaveCommand(AdamantiumComponent e) => e.GetValue(DragLeaveCommandProperty) as ICommand;
+    public static void SetDragLeaveCommand(AdamantiumComponent e, ICommand value) => e.SetValue(DragLeaveCommandProperty, value);
 
     public static ICommand GetDragStartedCommand(AdamantiumComponent e) => e.GetValue(DragStartedCommandProperty) as ICommand;
     public static void SetDragStartedCommand(AdamantiumComponent e, ICommand value) => e.SetValue(DragStartedCommandProperty, value);
@@ -370,8 +377,7 @@ public static partial class DragDrop
         {
             if (_currentTarget != null)
             {
-                SetIsDragOver((AdamantiumComponent)_currentTarget, false);
-                RaiseDragEvent(_currentTarget, DragDropEvents.PreviewDragLeaveEvent, DragDropEvents.DragLeaveEvent);
+                Leave(_currentTarget);
             }
             _currentTarget = target;
             if (_currentTarget != null)
@@ -413,7 +419,22 @@ public static partial class DragDrop
             Effects = DefaultEffects(),
             RoutedEvent = routedEvent,
             OriginalSource = _hit,
+            InsertIndex = _insertIndex,
+            InsertBefore = _insertBefore,
+            DropTarget = _dropTarget,
+            Placement = _placement,
         };
+
+    private static void Leave(IUIComponent target)
+    {
+        SetIsDragOver((AdamantiumComponent)target, false);
+        var args = RaiseDragPair(target, DragArgs(target, DragDropEvents.PreviewDragLeaveEvent),
+            DragDropEvents.PreviewDragLeaveEvent, DragDropEvents.DragLeaveEvent);
+        if (GetDragLeaveCommand((AdamantiumComponent)target) is { } leave && leave.CanExecute(args))
+        {
+            leave.Execute(args);
+        }
+    }
 
     // Enter/leave are notifications that the target changed - what they set in Effects is not read, because the DragOver
     // that follows on the very same pass decides it.
@@ -480,7 +501,7 @@ public static partial class DragDrop
             }
         }
 
-        if (list == null || window is not IAdornerHost host)
+        if (list == null || window is not IAdornerHost host || GetInsertionCue(list) == DropInsertionCue.None)
         {
             ClearIndicator();
             return;
@@ -514,7 +535,7 @@ public static partial class DragDrop
             return;
         }
 
-        var hostPanel = GetUseDropGap(list) ? HostPanel(list) : null;
+        var hostPanel = GetInsertionCue(list) == DropInsertionCue.Gap ? HostPanel(list) : null;
         // The gap's index comes from the PANEL's own grid, not from ComputeInsertion: that one measures against the
         // containers, and the gap moves them, so feeding it back would make the gap chase itself between two slots.
         if (hostPanel is { SupportsDropGap: true } &&
@@ -1337,7 +1358,11 @@ public static partial class DragDrop
         var pointInRoot = window.PointToClient(screen);   // physical screen -> logical client coords (DPI-scaled)
         _hit = root.HitTest(pointInRoot) as IUIComponent;   // the routed Drop reports it as OriginalSource
         var target = FindAllowDropAncestor(_hit);
-        positionInTarget = pointInRoot;   // in the target window's client space (element-relative is a later nicety)
+        if (target != null)
+        {
+            positionInTarget = DragPointer.GetPosition((IInputComponent)target);
+        }
+
         return target;
     }
 
