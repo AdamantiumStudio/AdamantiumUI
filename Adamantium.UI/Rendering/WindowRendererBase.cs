@@ -17,7 +17,8 @@ public abstract class WindowRendererBase : IWindowRenderer
 {
     private long _presentedFrames;
     private bool _presentedContent;
-    private bool _swapchainKeepsNoAlpha;
+    private IntPtr? _alphaAskedOf;
+    private bool _surfaceComposesWithAlpha;
     private long _frameRequests;
     private volatile bool _isRendererUpToDate;
     private double _renderScale = 1.0;
@@ -160,19 +161,26 @@ public abstract class WindowRendererBase : IWindowRenderer
     }
 
     /// <summary>
-    /// The presenter kind this renderer builds. Defaults to the on-screen swapchain; a see-through window whose swapchain
-    /// the surface composes without its alpha - on Windows, a device that offers no premultiplied alpha there - is
-    /// presented through the system's compositor (<see cref="PresenterType.Compositor"/>): the layered window the desktop
-    /// composes from its pixels. A headless renderer overrides it to <see cref="PresenterType.Headless"/>, in which case
-    /// the surface is window-less.
+    /// The presenter kind this renderer builds. Defaults to the on-screen swapchain; only a see-through window whose
+    /// surface cannot be composed with its alpha, and that can take frames as pixels, is presented through the system's
+    /// compositor (<see cref="PresenterType.Compositor"/>) instead. A headless renderer overrides it to
+    /// <see cref="PresenterType.Headless"/>, in which case the surface is window-less.
     /// </summary>
     protected virtual PresenterType PresenterKind =>
-        _swapchainKeepsNoAlpha && CanComposeFromPixels() ? PresenterType.Compositor : PresenterType.Swapchain;
+        Window is WindowBase { UseTransparentComposition: true, ComposesFromPixels: true } && !SurfaceComposesWithAlpha()
+            ? PresenterType.Compositor
+            : PresenterType.Swapchain;
 
     private void FillParameters()
     {
-        Parameters = new PresentationParameters(
-            PresenterKind,
+        Parameters = NewParameters(PresenterKind);
+        Presenter = GraphicsPresenter.Create(GraphicsDevice, Parameters, "Window_presenter");
+    }
+
+    private PresentationParameters NewParameters(PresenterType kind)
+    {
+        return new PresentationParameters(
+            kind,
             (uint)Math.Round(Window.ClientWidth * RenderScale),
             (uint)Math.Round(Window.ClientHeight * RenderScale),
             Window.SurfaceHandle,
@@ -183,22 +191,20 @@ public abstract class WindowRendererBase : IWindowRenderer
             DisplayHandle = Window.SurfaceDisplayHandle,
             // A see-through window is a property of the WINDOW, so it travels from there to the surface that composes it.
             TransparentComposition = Window.UseTransparentComposition,
-            PresentPolicy = ResolvePresentPolicy(),
-            FrameSink = (Window as WindowBase)?.FrameSink
+            PresentPolicy = ResolvePresentPolicy()
         };
-
-        Presenter = GraphicsPresenter.Create(GraphicsDevice, Parameters, "Window_presenter");
-        if (Presenter is SwapChainGraphicsPresenter { ComposesWithAlpha: false } && Parameters.TransparentComposition
-            && CanComposeFromPixels())
-        {
-            _swapchainKeepsNoAlpha = true;
-            Presenter.Dispose();
-            FillParameters();
-        }
     }
 
-    private bool CanComposeFromPixels() =>
-        OperatingSystem.IsWindows() && Window is WindowBase { UseTransparentComposition: true, FrameSink: not null };
+    private bool SurfaceComposesWithAlpha()
+    {
+        if (_alphaAskedOf != Window.SurfaceHandle)
+        {
+            _surfaceComposesWithAlpha = GraphicsDevice.SurfaceComposesWithAlpha(NewParameters(PresenterType.Swapchain));
+            _alphaAskedOf = Window.SurfaceHandle;
+        }
+
+        return _surfaceComposesWithAlpha;
+    }
 
     /// <summary>The window's own choice, or the application's when it made none. Resolved HERE, in the one place that
     /// builds the parameters, so Inherit never reaches a presenter and no other code has to know the rule.</summary>
@@ -290,6 +296,11 @@ public abstract class WindowRendererBase : IWindowRenderer
         if (GraphicsDevice.CanPresent && Presenter is { CanPresent: true })
         {
             Presenter.Present();
+            if (Presenter is CompositorPresenter { Frame: { } frame } && Window is WindowBase window)
+            {
+                window.Compose(frame);
+            }
+
             Interlocked.Increment(ref _presentedFrames);
             if (DrawsRecordedContent)
             {

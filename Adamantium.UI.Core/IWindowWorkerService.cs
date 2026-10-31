@@ -26,6 +26,14 @@ public interface IWindowWorkerService
     /// changing a number nobody reads again.</summary>
     public void UpdateOverlayTraits();
 
+    /// <summary>Whether the window can be shown from frames given as pixels (<see cref="Compose"/>): how a see-through
+    /// window whose surface cannot keep its alpha is shown.</summary>
+    public bool ComposesFromPixels => false;
+
+    /// <summary>Shows a frame given as pixels - B8G8R8A8 as drawn, top row first - with the alpha of each pixel and the
+    /// window's opacity; called on the render thread. The frame is read before this returns.</summary>
+    public void Compose(Adamantium.Imaging.Image frame) { }
+
     /// <summary>Keeps the window above <paramref name="owner"/> and minimized with it; null frees it.</summary>
     public void SetOwner(IWindow owner) { }
 

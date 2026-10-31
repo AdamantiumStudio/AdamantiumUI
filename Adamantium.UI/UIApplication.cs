@@ -113,7 +113,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
     private readonly object _debugToolsLock = new();
     private readonly Dictionary<Diagnostics.IDebugTool, bool> _debugTools = new();
     private readonly HashSet<Diagnostics.IDebugTool> _debugToolsToDetach = [];
-    private SplashHost _splash;
+    private SplashScreen _splash;
     private readonly CancellationTokenSource _startupCancellation = new();
     private volatile bool _startupDone;
     private int _splashHolds;
@@ -1269,9 +1269,9 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
 
     public void ShowSplash() => StartSplash(null);
 
-    public ISplashScreen ShowSplash(string message) => StartSplash(message) is { } splash ? new SplashScreen(splash) : null;
+    public ISplashScreen ShowSplash(string message) => StartSplash(message);
 
-    private SplashHost StartSplash(string message)
+    private SplashScreen StartSplash(string message)
     {
         if (SplashWindowType() is not { } type)
         {
@@ -1289,7 +1289,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         return splash;
     }
 
-    private SplashHost CreateSplash(Type type) => new(this, type, StartupPlacement());
+    private SplashScreen CreateSplash(Type type) => new(this, type, StartupPlacement());
 
     private WindowPlacement StartupPlacement()
     {

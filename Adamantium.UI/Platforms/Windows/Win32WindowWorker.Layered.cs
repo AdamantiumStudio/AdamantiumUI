@@ -1,12 +1,12 @@
 using System;
 using System.Runtime.InteropServices;
-using Adamantium.Graphics.Core.Presentation;
+using Adamantium.Imaging;
 using Adamantium.Mathematics;
 using Adamantium.Win32;
 
 namespace Adamantium.UI.Platforms.Windows;
 
-internal partial class Win32WindowWorker : IFrameSink
+internal partial class Win32WindowWorker
 {
     private readonly object _frameLock = new();
     private volatile byte _frameOpacity = 255;
@@ -19,23 +19,28 @@ internal partial class Win32WindowWorker : IFrameSink
     private uint _frameWidth;
     private uint _frameHeight;
 
-    /// <summary>Puts a frame copied from a see-through window onto the window, which becomes a layered one with its
-    /// first frame, with the alpha of each pixel and the window's opacity; called on the render thread.</summary>
-    public unsafe void Show(IntPtr pixels, uint width, uint height, uint stride)
+    public bool ComposesFromPixels => true;
+
+    /// <summary>Puts the frame onto the window, which becomes a layered one with its first frame, with the alpha of each
+    /// pixel and the window's opacity; called on the render thread.</summary>
+    public unsafe void Compose(Image frame)
     {
+        var buffer = frame.PixelBuffer[0];
+        var pixels = buffer.DataPointer;
+        var width = buffer.Width;
+        var height = buffer.Height;
+        var stride = (uint)buffer.RowStride;
+        if (!_framesComposed)
+        {
+            UIContext.Dispatcher.Invoke(BeginComposing);
+        }
+
         lock (_frameLock)
         {
             var handle = source?.Handle ?? IntPtr.Zero;
-            if (_frameReleased || handle == IntPtr.Zero || width == 0 || height == 0)
+            if (!_framesComposed || _frameReleased || handle == IntPtr.Zero || width == 0 || height == 0)
             {
                 return;
-            }
-
-            if (!_framesComposed)
-            {
-                _framesComposed = true;
-                var style = (WindowStyleEx)Win32Interop.GetWindowLong(handle, WindowLongType.Exstyle).ToInt64();
-                Win32Interop.SetWindowLong(handle, WindowLongType.Exstyle, new IntPtr((long)(style | WindowStyleEx.Layered)));
             }
 
             EnsureFrame(width, height);
@@ -58,6 +63,24 @@ internal partial class Win32WindowWorker : IFrameSink
             Win32Interop.UpdateLayeredWindow(handle, IntPtr.Zero, IntPtr.Zero, ref size, _frameDc, ref origin, 0,
                 ref blend, Win32Interop.ULW_ALPHA);
         }
+    }
+
+    private void BeginComposing()
+    {
+        var handle = source?.Handle ?? IntPtr.Zero;
+        if (_framesComposed || handle == IntPtr.Zero || !window.UseTransparentComposition)
+        {
+            return;
+        }
+
+        var style = (WindowStyleEx)Win32Interop.GetWindowLong(handle, WindowLongType.Exstyle).ToInt64();
+        if (style.HasFlag(WindowStyleEx.Layered))
+        {
+            Win32Interop.SetWindowLong(handle, WindowLongType.Exstyle, new IntPtr((long)(style & ~WindowStyleEx.Layered)));
+        }
+
+        Win32Interop.SetWindowLong(handle, WindowLongType.Exstyle, new IntPtr((long)(style | WindowStyleEx.Layered)));
+        _framesComposed = true;
     }
 
     private void EnsureFrame(uint width, uint height)
