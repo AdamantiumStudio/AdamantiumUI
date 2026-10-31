@@ -161,12 +161,13 @@ public abstract class WindowRendererBase : IWindowRenderer
 
     /// <summary>
     /// The presenter kind this renderer builds. Defaults to the on-screen swapchain; a see-through window whose swapchain
-    /// the surface composes without its alpha - on Windows, a device that offers no premultiplied alpha there - is read
-    /// back (<see cref="PresenterType.Readback"/>) into the layered window the desktop composes from its pixels. A
-    /// headless renderer overrides it to <see cref="PresenterType.Headless"/>, in which case the surface is window-less.
+    /// the surface composes without its alpha - on Windows, a device that offers no premultiplied alpha there - is
+    /// presented through the system's compositor (<see cref="PresenterType.Compositor"/>): the layered window the desktop
+    /// composes from its pixels. A headless renderer overrides it to <see cref="PresenterType.Headless"/>, in which case
+    /// the surface is window-less.
     /// </summary>
     protected virtual PresenterType PresenterKind =>
-        _swapchainKeepsNoAlpha && CanComposeFromPixels() ? PresenterType.Readback : PresenterType.Swapchain;
+        _swapchainKeepsNoAlpha && CanComposeFromPixels() ? PresenterType.Compositor : PresenterType.Swapchain;
 
     private void FillParameters()
     {
