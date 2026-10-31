@@ -42,6 +42,28 @@ public class BadgeTests
         Assert.That(badge.Text, Is.EqualTo("9"));
     }
 
+    // Zero says nothing: the badge is empty unless it is a dot or asked to show the zero.
+    [Test]
+    public void AZeroCountIsEmpty()
+    {
+        Assert.Multiple(() =>
+        {
+            Assert.That(new Badge().IsEmpty, Is.True, "a new badge counts zero");
+            Assert.That(new Badge { Count = 1 }.IsEmpty, Is.False);
+            Assert.That(new Badge { IsDot = true }.IsEmpty, Is.False, "a dot is shown whatever the count");
+            Assert.That(new Badge { ShowZero = true }.IsEmpty, Is.False, "asked to show the zero");
+        });
+    }
+
+    [Test]
+    public void ACountBackToZeroEmptiesIt()
+    {
+        var badge = new Badge { Count = 4 };
+        badge.Count = 0;
+
+        Assert.That(badge.IsEmpty, Is.True);
+    }
+
     [Test]
     public void AutomationHearsTheNumberAsText()
     {

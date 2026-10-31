@@ -37,6 +37,13 @@
         </Setter>
     </Style>
 
+    <!-- Nothing to say (a zero count, unless ShowZero): not shown, and no room taken. -->
+    <Style Selector="Badge">
+        <PropertyTrigger Property="IsEmpty" Value="true">
+            <Setter Property="Visibility" Value="Collapsed"/>
+        </PropertyTrigger>
+    </Style>
+
     <!-- A dot: no number, no padding, a small circle. -->
     <Style Selector="Badge">
         <PropertyTrigger Property="IsDot" Value="true">

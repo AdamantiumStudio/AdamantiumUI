@@ -8,7 +8,8 @@ All packages share one version.
 ### Added
 
 - `Badge`: a small mark with a count, or a dot (`IsDot`), placed over the corner of an icon or a button. A count past
-  `MaxCount` (99 by default) reads "99+". Every theme styles it from its own metrics (`BadgeHeight`, `BadgeDotSize`,
+  `MaxCount` (99 by default) reads "99+". A count of zero is not shown and takes no room (`IsEmpty`), unless
+  `ShowZero` asks for it. Every theme styles it from its own metrics (`BadgeHeight`, `BadgeDotSize`,
   `BadgePadding`, `BadgeRing`, `BadgeRadius`, `BadgeDotRadius`), and automation hears it as text with its number. The
   count on the ghost of a multi-item drag is this badge, themed by the drag's source.
 - A tab torn off into a window can be carried back: `TabControl.CarryIndexAtPointer` says where in the strip a tab
