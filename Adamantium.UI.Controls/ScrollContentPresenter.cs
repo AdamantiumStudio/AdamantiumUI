@@ -30,35 +30,35 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
     private Size<double> _extent;
     private Size<double> _viewport;
     private Vector2<double> _offset;
-
-    // --- Inertia (kinetic) scrolling: smooth wheel + flick momentum, driven by the AnimationManager heartbeat. The feel
-    // is per-instance (tunable per control via the ScrollViewer that owns this presenter), not hardcoded. ---
+    private readonly PanInertia _inertia;
 
     /// <summary>Flick velocity decay per second - higher stops a fling sooner (coasts less), lower glides further.</summary>
-    public double InertiaFriction { get; set; } = 6.0;
+    public double InertiaFriction
+    {
+        get => _inertia.Friction;
+        set => _inertia.Friction = value;
+    }
 
     /// <summary>Wheel ease-to-target rate per second - higher is snappier, lower glides longer to the target.</summary>
-    public double InertiaSmoothRate { get; set; } = 14.0;
+    public double InertiaSmoothRate
+    {
+        get => _inertia.SmoothRate;
+        set => _inertia.SmoothRate = value;
+    }
 
     /// <summary>Speed (px/s) below which a flick is treated as stopped.</summary>
-    public double MinFlickSpeed { get; set; } = 12.0;
+    public double MinFlickSpeed
+    {
+        get => _inertia.MinFlickSpeed;
+        set => _inertia.MinFlickSpeed = value;
+    }
 
     /// <summary>Release speed (px/s) needed to start a flick.</summary>
-    public double FlickStartSpeed { get; set; } = 80.0;
-
-    private bool _inertiaActive;        // logically scrolling under inertia
-    private bool _inertiaRegistered;    // a ticker is registered with the AnimationManager
-    private Vector2<double>? _inertiaTarget;    // set => smooth-to-target (wheel); null => flick (velocity) mode
-    private Vector2<double> _inertiaVelocity;   // px/s, flick mode
-
-    // Pan velocity tracking, to fling on release.
-    private uint _lastMoveTimestamp;
-    private bool _hasLastMove;
-
-    // How long a hand may rest before it lifts and still flick: longer than a frame or two, shorter than a pause.
-    private const uint FlickRestMs = 100;
-    private Vector2<double> _lastMoveOffset;
-    private Vector2<double> _panVelocity;
+    public double FlickStartSpeed
+    {
+        get => _inertia.FlickStartSpeed;
+        set => _inertia.FlickStartSpeed = value;
+    }
 
     /// <summary>Enables inertial scrolling (smooth wheel + flick momentum). On by default; a ScrollViewer/theme can
     /// turn it off to get instant scrolling back.</summary>
@@ -80,6 +80,8 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
 
     public ScrollContentPresenter()
     {
+        _inertia = new PanInertia(() => Offset, SetOffsetCore);
+
         // The whole point of the presenter: the overflowing content is scissored to this viewport (see the renderer's
         // per-unit clip, which intersects every ClipToBounds ancestor).
         ClipToBounds = true;
@@ -122,7 +124,7 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
 
     public void SetOffset(Vector2<double> offset)
     {
-        StopInertia();   // a direct (scrollbar / programmatic) offset set cancels any in-flight inertia
+        _inertia.Stop();
         SetOffsetCore(offset);
     }
 
@@ -151,64 +153,7 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
             SetOffset(Offset + delta);
             return;
         }
-        // Accumulate into the smooth target so several quick notches build one longer glide.
-        var basis = _inertiaActive && _inertiaTarget.HasValue ? _inertiaTarget.Value : Offset;
-        _inertiaTarget = ClampOffset(basis + delta, Extent, Viewport);
-        _inertiaVelocity = default;
-        _inertiaActive = true;
-        EnsureInertiaTicker();
-    }
-
-    private void StartFlick(Vector2<double> velocity)
-    {
-        _inertiaVelocity = velocity;
-        _inertiaTarget = null;
-        _inertiaActive = true;
-        EnsureInertiaTicker();
-    }
-
-    private void StopInertia()
-    {
-        _inertiaActive = false;   // the registered ticker self-removes on its next advance
-        _inertiaTarget = null;
-        _inertiaVelocity = default;
-    }
-
-    private void EnsureInertiaTicker()
-    {
-        if (_inertiaRegistered) return;
-        _inertiaRegistered = true;
-        AnimationManager.AddTicker(AdvanceInertia);
-    }
-
-    // One inertia step. Smooth (wheel): exponential ease to the target. Flick: integrate velocity with friction decay.
-    // Either way it stops at the bounds (the offset stops changing) or once it has effectively settled.
-    private bool AdvanceInertia(double dt)
-    {
-        if (!_inertiaActive) { _inertiaRegistered = false; return true; }
-
-        var before = Offset;
-        Vector2<double> next;
-        if (_inertiaTarget.HasValue)
-        {
-            var t = 1.0 - Math.Exp(-InertiaSmoothRate * dt);
-            next = before + (_inertiaTarget.Value - before) * t;
-            if ((_inertiaTarget.Value - next).Length() < 0.5) next = _inertiaTarget.Value;
-        }
-        else
-        {
-            next = before + _inertiaVelocity * dt;
-            _inertiaVelocity *= Math.Exp(-InertiaFriction * dt);
-        }
-
-        SetOffsetCore(next);
-        var moved = (Offset - before).Length();   // 0 => clamped at a bound (or settled)
-
-        var done = _inertiaTarget.HasValue
-            ? (_inertiaTarget.Value - Offset).Length() < 0.5 || moved < 0.01
-            : _inertiaVelocity.Length() < MinFlickSpeed || moved < 0.01;
-        if (done) { _inertiaActive = false; _inertiaRegistered = false; }
-        return done;
+        _inertia.GlideTo(ClampOffset(_inertia.Target + delta, Extent, Viewport));
     }
 
     // --- Pan: drag the content itself to scroll (the no-scrollbars / touch path) ---
@@ -223,12 +168,11 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
             return;
         }
 
-        StopInertia();
+        _inertia.Stop();
+        _inertia.ResetTracking();
         _isPanning = false;
         _panStartPoint = e.GetPosition(this);
         _panStartOffset = Offset;
-        _hasLastMove = false;
-        _panVelocity = default;
         e.Pointer.Capture(this);
     }
 
@@ -257,26 +201,8 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
             _ => raw
         };
         SetOffsetCore(_panStartOffset - delta);   // pan drives the offset directly (Down already stopped inertia)
-        TrackPanVelocity(e.Timestamp);
+        _inertia.Track(e.Timestamp);
         e.Handled = true;
-    }
-
-    // Track the offset's velocity so a flick can continue it on release; blend a little so one jittery sample doesn't
-    // dominate the release velocity. Timed by the moves themselves - when the hand made them, in ms - not by when the
-    // loop got round to them: a frame's worth of moves handled at once would otherwise read as a hand moving at a speed
-    // no hand has, and fling the content off.
-    private void TrackPanVelocity(uint timestamp)
-    {
-        var current = Offset;
-        if (_hasLastMove && timestamp != _lastMoveTimestamp)
-        {
-            var moveDt = unchecked(timestamp - _lastMoveTimestamp) / 1000.0;
-            _panVelocity = _panVelocity * 0.4 + (current - _lastMoveOffset) * (1.0 / moveDt) * 0.6;
-        }
-
-        _hasLastMove = true;
-        _lastMoveTimestamp = timestamp;
-        _lastMoveOffset = current;
     }
 
     // --- A finger: scrolls along the axes that have somewhere to go, taking the finger from what it began on ---
@@ -291,13 +217,12 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
             return;
         }
 
-        StopInertia();
+        _inertia.Stop();
+        _inertia.ResetTracking();
         _finger = e.Pointer;
         _fingerStart = e.GetPosition(this);
         _fingerStartOffset = Offset;
         _fingerScrolling = false;
-        _hasLastMove = false;
-        _panVelocity = default;
     }
 
     private void OnFingerMoved(object sender, PointerEventArgs e)
@@ -311,7 +236,7 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
         {
             _fingerStart = e.GetPosition(this);
             _fingerStartOffset = Offset;
-            _hasLastMove = false;
+            _inertia.ResetTracking();
             return;
         }
 
@@ -337,7 +262,7 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
         }
 
         SetOffsetCore(_fingerStartOffset - Scrollable(e.GetPosition(this) - _fingerStart));
-        TrackPanVelocity(e.Timestamp);
+        _inertia.Track(e.Timestamp);
         e.Handled = true;
     }
 
@@ -358,13 +283,11 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
 
         e.Handled = true;   // a scroll, not a tap
         if (ReferenceEquals(e.Pointer.Captured, this)) e.Pointer.Capture(null);
-        if (IsInertiaEnabled && IsFlick(e.Timestamp)) StartFlick(_panVelocity);
+        if (IsInertiaEnabled)
+        {
+            _inertia.Release(e.Timestamp);
+        }
     }
-
-    // A lift that comes while the content is still moving flicks it on. One after the hand had stopped does not: the
-    // last speed it was moving at is old news by then.
-    private bool IsFlick(uint liftTimestamp) =>
-        _panVelocity.Length() > FlickStartSpeed && unchecked(liftTimestamp - _lastMoveTimestamp) <= FlickRestMs;
 
     private void OnFingerGone(object sender, PointerEventArgs e)
     {
@@ -421,8 +344,10 @@ public class ScrollContentPresenter : ContentPresenter, IScrollableContent
         if (_isPanning)
         {
             e.Handled = true;   // it was a pan, not a click
-            if (IsInertiaEnabled && IsFlick(e.Timestamp))
-                StartFlick(_panVelocity);   // fling: keep scrolling with decaying velocity
+            if (IsInertiaEnabled)
+            {
+                _inertia.Release(e.Timestamp);
+            }
         }
         _isPanning = false;
     }

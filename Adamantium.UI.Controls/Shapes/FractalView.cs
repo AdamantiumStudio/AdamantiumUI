@@ -21,11 +21,7 @@ public class FractalView : Rectangle
     private double _lastX;
     private double _lastY;
 
-    // Smooth wheel zoom: the wheel accumulates a TARGET exponent and a heartbeat ticker eases the live ZoomExp toward it
-    // (like ZoomBox), re-anchoring the center each step so the complex point under the cursor stays put.
-    private double _targetExp;
-    private bool _zoomActive;
-    private bool _zoomTicker;
+    private readonly EasedValue _zoom;
     private double _anchorCx;
     private double _anchorCy;
     private double _anchorFineX;
@@ -40,6 +36,7 @@ public class FractalView : Rectangle
 
     public FractalView()
     {
+        _zoom = new EasedValue(() => ZoomExp, ApplyZoomLevel) { Rate = SmoothRate, Tolerance = 1e-4 };
         PointerWheelChanged += OnWheel;
         AddHandler(Gestures.ManipulationEvent, new ManipulationEventHandler(OnManipulation));
     }
@@ -202,15 +199,7 @@ public class FractalView : Rectangle
         _anchorFineX = CenterXFine + _anchorOffX * k;       // ...its small part
         _anchorFineY = CenterYFine + _anchorOffY * k;
 
-        var basis = _zoomActive ? _targetExp : ZoomExp;     // accumulate into the target so quick spins add up
-        _targetExp = Math.Clamp(basis + (e.Delta / 120.0) * ZoomStep, MinExp, MaxExp);
-
-        _zoomActive = true;
-        if (!_zoomTicker)
-        {
-            _zoomTicker = true;
-            AnimationManager.AddTicker(AdvanceZoom);   // heartbeat: no dirty target, so it keeps the loop presenting while it eases
-        }
+        _zoom.EaseBy(e.Delta / 120.0 * ZoomStep, MinExp, MaxExp);
     }
 
     private void OnManipulation(object sender, ManipulationEventArgs e)
@@ -229,7 +218,7 @@ public class FractalView : Rectangle
         var before = UnitsPerPixel();
         if (before <= 0.0) return;
 
-        _zoomActive = false;
+        _zoom.Stop();
         SetCurrentValue(ZoomExpProperty, Math.Clamp(ZoomExp + Math.Log10(factor), MinExp, MaxExp));
         var shift = before - UnitsPerPixel();
         var hiX = CenterX; var loX = CenterXFine + (x - ActualWidth * 0.5) * shift;
@@ -249,44 +238,32 @@ public class FractalView : Rectangle
     /// the view - where the center already is - and at once, ending any easing the wheel started.</summary>
     internal void ZoomTo(double exp)
     {
-        _zoomActive = false;
+        _zoom.Stop();
         SetCurrentValue(ZoomExpProperty, Math.Clamp(exp, MinExp, MaxExp));
     }
 
     protected override AutomationPeer OnCreateAutomationPeer() => new FractalViewAutomationPeer(this);
 
-    // One eased zoom step: glide ZoomExp a fraction toward the target and re-anchor the center so the point under the cursor
-    // stays put. Returns true (dropping the ticker) once the target is reached. AddTicker's delegate: true = done/removed.
-    private bool AdvanceZoom(double dt)
+    private void ApplyZoomLevel(double level)
     {
         var minHalf = Math.Min(ActualWidth, ActualHeight) * 0.5;
-        if (!_zoomActive || minHalf < 1.0)
+        if (minHalf < 1.0)
         {
-            _zoomTicker = false;
-            return true;
+            _zoom.Stop();
+            return;
         }
 
-        var cur = ZoomExp;
-        var next = cur + (_targetExp - cur) * (1.0 - Math.Exp(-SmoothRate * dt));
-        if (Math.Abs(_targetExp - next) < 1e-4) next = _targetExp;
-
-        var k = (Span / Math.Pow(10, next)) / minHalf;
-        // The cursor offset goes into the SMALL part, where it keeps its digits, and the pair is re-split afterwards so
-        // the coarse part keeps carrying the bulk.
-        var hiX = _anchorCx; var loX = _anchorFineX - _anchorOffX * k;
-        var hiY = _anchorCy; var loY = _anchorFineY - _anchorOffY * k;
+        var k = (Span / Math.Pow(10, level)) / minHalf;
+        var hiX = _anchorCx;
+        var loX = _anchorFineX - _anchorOffX * k;
+        var hiY = _anchorCy;
+        var loY = _anchorFineY - _anchorOffY * k;
         Renormalize(ref hiX, ref loX);
         Renormalize(ref hiY, ref loY);
-        CenterX = hiX; CenterXFine = loX;
-        CenterY = hiY; CenterYFine = loY;
-        ZoomExp = next;
-
-        var done = next == _targetExp;
-        if (done)
-        {
-            _zoomActive = false;
-            _zoomTicker = false;
-        }
-        return done;
+        CenterX = hiX;
+        CenterXFine = loX;
+        CenterY = hiY;
+        CenterYFine = loY;
+        ZoomExp = level;
     }
 }

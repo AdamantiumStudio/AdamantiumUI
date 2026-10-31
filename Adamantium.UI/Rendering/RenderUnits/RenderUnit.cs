@@ -592,7 +592,7 @@ public class RectangleRenderUnit : RenderUnit<RectanglePayload>
     /// <para>Lives here because the resource factory does: the textured batch needs the texture but has no business
     /// holding a factory.</para></summary>
     internal ITexture BrushTexture() => TextureBatchCollector.BrushTexture(Payload.Brush, ResourceFactory,
-        Payload.DestinationRect.Size, DrawCommand.Component);
+        Payload.DestinationRect.Size, DrawCommand.Component, layers: true);
 
     // Whether a batch will draw this rect - ASKED OF THE BATCH, never re-stated here. "The batch draws it" means this
     // unit builds ZERO machinery: no tessellation, no geometry/fringe/stroke, no GPU buffers, which is what makes a big
@@ -809,7 +809,7 @@ public class EllipseRenderUnit : RenderUnit<EllipsePayload>
 
     /// <summary>The GPU texture this ellipse's brush samples, or null - see the rect's twin; both defer to the batch.</summary>
     internal ITexture BrushTexture() => TextureBatchCollector.BrushTexture(Payload.Brush, ResourceFactory,
-        Payload.DestinationRect.Size, DrawCommand.Component);
+        Payload.DestinationRect.Size, DrawCommand.Component, layers: true);
 
     // An ellipse the SDF batch will draw (solid fill, no pen, FULL ellipse): the batch shader reconstructs it from an
     // implicit field and self-anti-aliases, so this unit needs NO tessellated body and NO AA fringe. Building them per
@@ -1268,7 +1268,7 @@ public class RegularPolygonRenderUnit : RenderUnit<RegularPolygonPayload>
         MaterialRectCollector.WantsBatchPolygon(p);
 
     internal ITexture BrushTexture() => TextureBatchCollector.BrushTexture(Payload.Brush, ResourceFactory,
-        Payload.DestinationRect.Size, DrawCommand.Component);
+        Payload.DestinationRect.Size, DrawCommand.Component, layers: true);
 
     /// <summary>The shared distance field an aura or shadow on this polygon reads, tessellated on demand; null when there
     /// is no boundary.</summary>

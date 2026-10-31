@@ -1248,6 +1248,11 @@ float4 PatternMeshShade(PatFillPSInput input, int kind)
 
 // ---- TEXTURED rounded rect: a fill whose color is SAMPLED rather than computed - SDF, one uv wrap, one sample, one
 // multiply. No stroke: a textured fill with a pen falls back to the per-unit path.
+
+// The source when it is one layer of an array - an atlas of map tiles: pass SdfArray samples this instead of
+// SourceTexture, at the record's Clip.z.
+Texture2DArray SourceTextureArray;
+
 struct TexRectData
 {
     float4 Bounds;     // NODE-local x, y, w, h - the SHAPE, which never shrinks with the picture
@@ -1258,7 +1263,7 @@ struct TexRectData
     float4 Drawn;      // the content's rect inside ONE tile: offsetXY, scaleXY, both in 0..1 of the tile
     float4 UvRect;     // sub-rectangle of the source: x, y, w, h (normalized)
     uint8_t4 Tint;     // multiplied into the sample, straight RGBA in four bytes
-    float4 Clip;       // .x = the ROUNDED CLIP's slot, or -1; .yzw spare
+    float4 Clip;       // .x = the ROUNDED CLIP's slot, or -1; .y the fade slot; .z the layer of an array source; .w spare
     float4 Adjust;     // before the tint, zero for none: .x brightness, .y contrast - 1, .z saturation - 1
 };
 
@@ -1302,8 +1307,9 @@ TexPSInput TexRectInstancedVS(uint vertexId : SV_VertexID, uint instanceId : SV_
     return o;
 }
 
-[shader("fragment")]
-float4 TexRectPS(TexPSInput input) : SV_Target
+// The source is a plain picture (0) or one layer of an array, Clip.z (1): a compile-time literal from the entry point, so
+// each pass binds and samples only its own kind of texture.
+float4 TexRectShade(TexPSInput input, int source)
 {
     TexRectData* items = TextureRects;
     TexRectData it = items[input.InstId];
@@ -1341,7 +1347,15 @@ float4 TexRectPS(TexPSInput input) : SV_Target
     // SampleLevel, not Sample: frac() above makes uv DISCONTINUOUS at every tile seam, so the hardware's derivative -
     // which is what Sample picks a mip level by - spikes there and that one column of pixels is drawn from the smallest
     // mip. That is the thin line down each seam. The level is explicit here because the footprint is ours to state.
-    float4 fill = SourceTexture.SampleLevel(SourceSampler, uv, 0.0);
+    float4 fill;
+    if (source == 1)
+    {
+        fill = SourceTextureArray.SampleLevel(SourceSampler, float3(uv, it.Clip.z), 0.0);
+    }
+    else
+    {
+        fill = SourceTexture.SampleLevel(SourceSampler, uv, 0.0);
+    }
     fill.rgb = AdjustColor(fill.rgb, it.Adjust);
     fill *= float4(it.Tint) * (1.0 / 255.0);
 
@@ -1362,6 +1376,9 @@ float4 TexRectPS(TexPSInput input) : SV_Target
     fill.a *= inside * input.Fade * ClipCoverage(input.Position.xy, input.ClipBox, input.ClipRadii);
     return fill;
 }
+
+[shader("fragment")] float4 TexRectPS(TexPSInput input) : SV_Target { return TexRectShade(input, 0); }
+[shader("fragment")] float4 TexRectArrayPS(TexPSInput input) : SV_Target { return TexRectShade(input, 1); }
 
 
 // ---- TexFill: a shared mesh drawn N times with a texture fill, mapped over the shape's local bounds with the SDF batch's
@@ -2058,6 +2075,12 @@ technique Texture
     {
         VertexShader = TexRectInstancedVS;
         PixelShader = TexRectPS;
+    }
+
+    pass SdfArray
+    {
+        VertexShader = TexRectInstancedVS;
+        PixelShader = TexRectArrayPS;
     }
 
     pass Mesh

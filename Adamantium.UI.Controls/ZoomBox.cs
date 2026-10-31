@@ -20,11 +20,7 @@ public class ZoomBox : ContentControl
     private bool _syncingOffset;                 // guards the ScrollViewer <-> OffsetX/Y two-way sync from bouncing
     private Vector2<double>? _pendingOffset;             // zoom-to-cursor target, applied once the extent reflects the new scale
 
-    // Smooth zoom: the wheel accumulates a TARGET scale, and a heartbeat ticker eases the live scale toward it (instead of
-    // jumping per event), keeping the anchor content-point under the cursor the whole way.
-    private double _targetScale = 1;
-    private bool _zoomActive;
-    private bool _zoomTickerRegistered;
+    private readonly EasedValue _zoom;
     private Vector2<double> _zoomAnchorViewport;
     private Vector2<double> _zoomAnchorContent;
 
@@ -98,6 +94,11 @@ public class ZoomBox : ContentControl
         Gestures.IsManipulationEnabledProperty.OverrideMetadata(typeof(ZoomBox), new PropertyMetadata(true));
     }
 
+    public ZoomBox()
+    {
+        _zoom = new EasedValue(() => Math.Log(Math.Clamp(ScaleX, MinScale, MaxScale)), ApplyZoomLevel);
+    }
+
     public override void OnApplyTemplate()
     {
         base.OnApplyTemplate();
@@ -129,7 +130,7 @@ public class ZoomBox : ContentControl
         if (!ReferenceEquals(e.Source, this) || _scroll == null || _surface == null || e.State != ManipulationState.Delta) return;
         e.Handled = true;
 
-        _zoomActive = false;
+        _zoom.Stop();
         var anchor = this.TranslatePoint(e.Origin - e.Translation, _scroll);
         var next = Math.Clamp(ScaleX * e.Scale, MinScale, MaxScale);
         var target = ((_pendingOffset ?? _scroll.ScrollOffset) + anchor) * (float)(next / ScaleX) - anchor - e.Translation;
@@ -178,44 +179,25 @@ public class ZoomBox : ContentControl
         if (!ZoomWithWheel || _scroll == null || _surface == null) return;
         e.Handled = true; // consumed as zoom, not scroll
 
-        // ZoomStep is the factor for ONE standard notch (120); raise it to Delta/120 so the zoom is proportional to how far
-        // the wheel actually turned (a hi-res / inertial wheel firing many fractional-delta events then zooms the same total
-        // as a standard wheel). Accumulate into the TARGET so quick spins add up; the ticker eases the live scale to it.
-        var factor = Math.Pow(ZoomStep, e.Delta / 120.0);
-        var basis = _zoomActive ? _targetScale : ScaleX;
-        _targetScale = Math.Clamp(basis * factor, MinScale, MaxScale);
-
-        // Anchor the content point currently under the cursor (and its viewport position) so the ease keeps it fixed.
         _zoomAnchorViewport = e.GetPosition(_scroll);
         _zoomAnchorContent = (_scroll.ScrollOffset + _zoomAnchorViewport) * (float)(1.0 / ScaleX);
 
-        _zoomActive = true;
-        if (!_zoomTickerRegistered)
-        {
-            _zoomTickerRegistered = true;
-            AnimationManager.AddTicker(AdvanceZoom);
-        }
+        _zoom.Rate = ZoomSmoothRate;
+        _zoom.EaseBy(Math.Log(ZoomStep) * e.Delta / 120.0, Math.Log(MinScale), Math.Log(MaxScale));
     }
 
-    // One eased zoom step: move the live scale a fraction toward the target, re-anchoring the offset so the content point
-    // under the cursor stays put. Returns true (dropping the ticker) once the target is reached.
-    private bool AdvanceZoom(double dt)
+    private void ApplyZoomLevel(double level)
     {
-        if (!_zoomActive || _scroll == null || _surface == null) { _zoomTickerRegistered = false; return true; }
+        if (_scroll == null || _surface == null)
+        {
+            _zoom.Stop();
+            return;
+        }
 
-        var cur = ScaleX;
-        var next = cur + (_targetScale - cur) * (1.0 - Math.Exp(-ZoomSmoothRate * dt));
-        if (Math.Abs(_targetScale - next) < _targetScale * 1e-3) next = _targetScale;
-
-        // Offset that keeps the anchor content-point at the cursor for THIS scale; applied once the extent reflects it
-        // (see OnScrollChanged), so it clamps against the grown extent, not the old one.
+        var next = Math.Clamp(Math.Exp(level), MinScale, MaxScale);
         _pendingOffset = _zoomAnchorContent * (float)next - _zoomAnchorViewport;
         SetCurrentValue(ScaleXProperty, next);
         SetCurrentValue(ScaleYProperty, next);
-
-        var done = next == _targetScale;
-        if (done) { _zoomActive = false; _zoomTickerRegistered = false; }
-        return done;
     }
 
     private void OnScrollChanged(object sender, EventArgs e)
@@ -241,7 +223,7 @@ public class ZoomBox : ContentControl
     public void ZoomTo(double scale)
     {
         var next = Math.Clamp(scale, MinScale, MaxScale);
-        _zoomActive = false;
+        _zoom.Stop();
         if (next == ScaleX && next == ScaleY)
         {
             return;

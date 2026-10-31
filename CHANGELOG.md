@@ -7,6 +7,25 @@ All packages share one version.
 
 ### Added
 
+- `EasedValue` and `PanInertia`: the smooth zoom toward a point and the drag that coasts on after a flick, as one
+  mechanism for every view with a camera. `EasedValue` eases one number of a camera by the frame's time - a zoom level
+  in logarithmic units, a turn in degrees - and lets the owner keep
+  the point under the cursor still however it stores its camera; `PanInertia` tracks a drag by the times of its moves,
+  coasts on with friction after a fast lift (not after one that came when the hand had already stopped), glides to an
+  accumulating target for the wheel and stops at the edge the owner keeps. `ZoomBox`, `InfiniteCanvas`, `FractalView`
+  and `ScrollContentPresenter` now use them instead of a copy each; `ZoomBox` and `InfiniteCanvas` ease the zoom in
+  logarithmic steps, so zooming in and out by the same number of notches takes the same time.
+- `IResourceFactory.UpdateTextureRegions`: writes new pixels into parts of a texture - atlas cells, map tiles - on the
+  device that owns it.
+- `TextureArrayImage` and `ImageLayer`: a picture of many layers of one size, each written on its own, kept in one
+  texture array that starts at 16 layers and grows as layers are taken - an atlas of map tiles or thumbnails. A
+  rectangle, ellipse or regular polygon filled with an `ImageBrush` whose source is an `ImageLayer` draws that layer,
+  turned or not, and shapes filled from layers of one image batch into one draw; other shapes, and the image drawn
+  as a whole, draw nothing with it. A layer given back with `ReleaseLayer` is taken again, once; no more layers are
+  taken than the device holds once the image has been drawn. When the texture is lost with its device the image starts
+  empty and `Generation` grows, so whoever wrote layers writes them anew. A frame with more layer fills than the
+  textured batch holds is held back, and the next one, its batch grown, draws them all.
+  `IResourceFactory.CreateGrowingTextureArray` makes the array.
 - Windows: a see-through window (`UseTransparentComposition`) whose surface offers no swapchain that keeps its alpha - an
   AMD card's, for one - is a layered window the desktop composes from its pixels, as WPF's are: its frames are copied
   (the engine's `PresenterType.Compositor`) and handed to `UpdateLayeredWindow` with the window's opacity. Where the
@@ -2347,6 +2366,9 @@ All packages share one version.
 
 ### Fixed
 
+- The textured batch - shapes filled with an `ImageBrush` or `NineSliceBrush` - grows when a frame has more of them
+  than it holds, as the other batches do. It never grew: past its first 256 records every textured fill was drawn on
+  its own, frame after frame.
 - The log file is named with the invariant culture: naming it with the current one loaded the system's calendar data
   first thing in the application, before its splash, and that once took 45 seconds.
 - The Rider plugin (1.11.6) shows its icon in a dark IDE: it carried no dark icon, and the Marketplace gave none.

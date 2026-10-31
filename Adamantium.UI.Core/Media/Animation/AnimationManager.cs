@@ -24,9 +24,14 @@ public static class AnimationManager
     // Reused tick snapshot (Active.ToArray() allocated a fresh array every frame; see the iteration note in Tick).
     private static readonly List<IRunningAnimation> TickBuffer = new();
     private static long _ticks;
+    private static long _resets;
 
     /// <summary>How many times <see cref="Tick"/> has run.</summary>
     public static long Ticks => _ticks;
+
+    /// <summary>How many times <see cref="Reset"/> has dropped every ticker - a ticker registered before the last one is
+    /// gone.</summary>
+    internal static long Resets => _resets;
 
     private static readonly HashSet<object> Released = new(ReferenceEqualityComparer.Instance);
     private static readonly List<AdamantiumComponent> UnheldTargets = new();
@@ -100,6 +105,7 @@ public static class AnimationManager
     /// static manager and get advanced against dead controls on the next tick.</summary>
     public static void Reset()
     {
+        _resets++;
         Active.Clear();
         ActiveSet.Clear();
         Holders.Clear();

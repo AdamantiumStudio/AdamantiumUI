@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Adamantium.Graphics;
 using Adamantium.Graphics.Core;
 using Adamantium.Graphics.Fonts;
 using Adamantium.Imaging;
@@ -32,6 +33,11 @@ public class ResourceFactory : IResourceFactory
     public ITexture CreateTextureArray(TextureDescription description, IReadOnlyList<byte[]> layers)
     {
         return _graphicsDeviceService.ResourceLoaderDevice.CreateTextureArray(description, layers);
+    }
+
+    public GrowingTextureArray CreateGrowingTextureArray(TextureDescription description, uint maxLayers)
+    {
+        return new GrowingTextureArray(_graphicsDeviceService.ResourceLoaderDevice, description, maxLayers);
     }
 
     public ITexture ImportSharedSurface(SharedSurfaceDescriptor descriptor)

@@ -1358,6 +1358,7 @@ public partial class RenderCache
                 }
                 var texPolyBake = ResolveBake(device, unit.Component, wt, out var slot4TexPoly);
                 FadeBySlot(unit);   // this pass reads the chain from the slot now - keep it out of the tint
+                if (TextureBatchCollector.IsLayerFill(tpru.PolygonPayload.Brush) && !Admitted(_texRectBatch)) continue;
                 if (_texRectBatch.TryAddPolygon(tpru.PolygonPayload, texPolyBake, tpru.FillOpacity, scissor, texPolyBounds, texPolyTexture, slot4TexPoly, tpru.FadeSlot,
                         RoundedClipSlot(unit.Component, fullScissor)))
                 {
@@ -1611,6 +1612,7 @@ public partial class RenderCache
                 }
                 var texBakeWorld = ResolveBake(device, unit.Component, wt, out var slot4Tex);
                 FadeBySlot(unit);   // this pass reads the chain from the slot now - keep it out of the tint
+                if (TextureBatchCollector.IsLayerFill(xru.RectPayload.Brush) && !Admitted(_texRectBatch)) continue;
                 if (_texRectBatch.TryAdd(xru.RectPayload, texBakeWorld, xru.FillOpacity, scissor, texBounds, texture, slot4Tex, xru.FadeSlot,
                         RoundedClipSlot(unit.Component, fullScissor)))
                 {
@@ -1654,6 +1656,7 @@ public partial class RenderCache
                 }
                 var texEllBakeWorld = ResolveBake(device, unit.Component, wt, out var slot4TexEll);
                 FadeBySlot(unit);   // this pass reads the chain from the slot now - keep it out of the tint
+                if (TextureBatchCollector.IsLayerFill(xeru.EllipsePayload.Brush) && !Admitted(_texRectBatch)) continue;
                 if (_texRectBatch.TryAddEllipse(xeru.EllipsePayload, texEllBakeWorld, xeru.FillOpacity, scissor, texEllBounds, texEllTexture, slot4TexEll, xeru.FadeSlot,
                         RoundedClipSlot(unit.Component, fullScissor)))
                 {

@@ -7,7 +7,6 @@ using Adamantium.UI.Core;
 using Adamantium.UI.Core.Graphics;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Media;
-using Adamantium.UI.Core.Media.Animation;
 using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls.DrawingBoard;
@@ -272,18 +271,11 @@ public partial class InfiniteCanvas
     /// <summary>Zooms about a point ON SCREEN, keeping the world under it still - what the wheel does.</summary>
     public void ZoomAt(Vector2<double> screen, Double factor)
     {
-        var basis = _zoomActive ? _targetScale : Scale;
-        var wanted = Math.Clamp(basis * factor, MinScale, MaxScale);
-
         _zoomAnchorScreen = screen;
         _zoomAnchorWorld = ScreenToWorld(screen);
-        _targetScale = wanted;
 
-        _zoomActive = true;
-        if (_zoomTickerRegistered) return;
-
-        _zoomTickerRegistered = true;
-        AnimationManager.AddTicker(AdvanceZoom);
+        _zoom.Rate = ZoomSmoothRate;
+        _zoom.EaseBy(Math.Log(factor), Math.Log(MinScale), Math.Log(MaxScale));
     }
 
     /// <summary>Sets the scale straight, with no easing, keeping a screen point still.</summary>
@@ -312,7 +304,10 @@ public partial class InfiniteCanvas
 
     private void KeepTheMiddle(Double was)
     {
-        if (_holdingPoint || _zoomActive || was <= 0 || !_cameraPlaced) return;
+        if (_holdingPoint || _zoom.IsActive || was <= 0 || !_cameraPlaced)
+        {
+            return;
+        }
 
         var room = UsableBounds;
         var middle = new Vector2<double>(room.X + room.Width / 2, room.Y + room.Height / 2);
@@ -324,24 +319,13 @@ public partial class InfiniteCanvas
         RememberLayout();
     }
 
-    // One eased step toward the wheel's target, re-anchoring the offset so the world under the cursor stays put.
-    private bool AdvanceZoom(double dt)
+    private void ApplyZoomLevel(Double level)
     {
-        if (!_zoomActive)
-        {
-            _zoomTickerRegistered = false;
-            return true;
-        }
-
-        var current = Scale;
-        var next = current + (_targetScale - current) * (1.0 - Math.Exp(-ZoomSmoothRate * dt));
-        if (Math.Abs(_targetScale - next) < _targetScale * 1e-3) next = _targetScale;
-
         _holdingPoint = true;
 
         try
         {
-            SetCurrentValue(ScaleProperty, next);
+            SetCurrentValue(ScaleProperty, Math.Clamp(Math.Exp(level), MinScale, MaxScale));
         }
         finally
         {
@@ -349,22 +333,11 @@ public partial class InfiniteCanvas
         }
 
         SetCurrentValue(OffsetProperty, _zoomAnchorScreen - _zoomAnchorWorld * Scale);
-
-        var done = Scale == _targetScale;
-        if (done)
-        {
-            _zoomActive = false;
-            _zoomTickerRegistered = false;
-            RememberLayout();
-        }
-
-        return done;
     }
 
     private void StopZoom()
     {
-        _zoomActive = false;
-        _targetScale = Scale;
+        _zoom.Stop();
     }
 
     // The step the camera makes readable: GridSpacing multiplied or divided by whole powers of GridCoarsening until two

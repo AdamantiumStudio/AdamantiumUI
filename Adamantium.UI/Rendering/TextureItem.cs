@@ -45,8 +45,9 @@ public struct TextureItem
     public Color Tint;
 
     /// <summary>.x = the ROUNDED CLIP's slot this instance is cut by, .y = the OPACITY slot its alpha is read from
-    /// (-1 for either = none); .zw spare. A field of its own because every component of every other field is spoken
-    /// for - the picture, its tiling and its pen use them all.</summary>
+    /// (-1 for either = none); .z = the layer of an array source (<see cref="Core.Media.Imaging.ImageLayer"/>); .w spare.
+    /// A field of its own because every component of every other field is spoken for - the picture, its tiling and its
+    /// pen use them all.</summary>
     public Vector4F Clip;
 
     /// <summary>What the sampled color is changed by before the tint, zero for none: .x brightness added, .y contrast

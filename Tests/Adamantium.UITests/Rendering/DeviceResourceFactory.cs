@@ -28,6 +28,9 @@ internal sealed class DeviceResourceFactory : IResourceFactory
 
     public ITexture ImportSharedSurface(SharedSurfaceDescriptor descriptor) => _device.ImportSharedSurface(descriptor);
 
+    public Adamantium.Graphics.GrowingTextureArray CreateGrowingTextureArray(TextureDescription description,
+        uint maxLayers) => new(_device, description, maxLayers);
+
     public IRenderTarget CreateRenderTarget(uint width, uint height, MSAALevel msaa, SurfaceFormat format, ImageLayout desiredLayout)
         => throw new NotSupportedException();
 
