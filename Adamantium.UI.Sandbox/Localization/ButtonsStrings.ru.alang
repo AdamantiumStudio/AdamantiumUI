@@ -5,6 +5,12 @@
     <Phrase Key="Reset" Text="Сбросить"/>
     <Phrase Key="Clicks" Text="Нажатий:"/>
 
+    <Phrase Key="Badges" Text="Бейджи"/>
+    <Phrase Key="Inbox" Text="Входящие"/>
+    <Phrase Key="Capped" Text="До 9"/>
+    <Phrase Key="Updates" Text="Обновления"/>
+    <Phrase Key="BadgesNote" Text="Числа — нажатия выше; точка видна, пока включены уведомления."/>
+
     <Phrase Key="Toggles" Text="Переключатели"/>
     <Phrase Key="EnableActions" Text="Разрешить действия"/>
     <Phrase Key="Actions" Select="enabled" True="Действия разрешены" False="Действия запрещены"/>

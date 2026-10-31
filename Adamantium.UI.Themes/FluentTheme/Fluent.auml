@@ -36,6 +36,7 @@
   <Theme.StyleIncludes>
         <StyleInclude Source="{x:Type fluent:TextBlockStyleSet}"/>
         <StyleInclude Source="{x:Type fluent:BorderStyleSet}"/>
+        <StyleInclude Source="{x:Type shared:BadgeStyleSet}"/>
         <StyleInclude Source="{x:Type fluent:ButtonStyleSet}"/>
         <StyleInclude Source="{x:Type fluent:ContentControlStyleSet}"/>
         <StyleInclude Source="{x:Type fluent:RepeatButtonStyleSet}"/>

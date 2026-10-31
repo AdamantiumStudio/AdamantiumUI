@@ -5,6 +5,12 @@
     <Phrase Key="Reset" Text="Reset"/>
     <Phrase Key="Clicks" Text="Clicks:"/>
 
+    <Phrase Key="Badges" Text="Badges"/>
+    <Phrase Key="Inbox" Text="Inbox"/>
+    <Phrase Key="Capped" Text="Up to 9"/>
+    <Phrase Key="Updates" Text="Updates"/>
+    <Phrase Key="BadgesNote" Text="The counts are the clicks above; the dot shows while notifications are on."/>
+
     <Phrase Key="Toggles" Text="Toggles"/>
     <Phrase Key="EnableActions" Text="Enable actions"/>
     <Phrase Key="Actions" Select="enabled" True="Actions enabled" False="Actions disabled"/>

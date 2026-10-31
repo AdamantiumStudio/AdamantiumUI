@@ -73,6 +73,13 @@
          it spent on standing out. -->
     <Thickness x:Key="RibbonRule">0 0 0 1</Thickness>
     <Thickness x:Key="RibbonTabPadding">10 4</Thickness>
+    <!-- The badge: square like every other plate here, and a notch smaller to match the denser type. -->
+    <sys:Double x:Key="BadgeHeight">16</sys:Double>
+    <sys:Double x:Key="BadgeDotSize">7</sys:Double>
+    <Thickness x:Key="BadgePadding">4 0</Thickness>
+    <Thickness x:Key="BadgeRing">1</Thickness>
+    <CornerRadius x:Key="BadgeRadius">0</CornerRadius>
+    <CornerRadius x:Key="BadgeDotRadius">0</CornerRadius>
     <Thickness x:Key="RibbonContextualLabelPadding">4 0</Thickness>
     <Thickness x:Key="RibbonContextualLabelChipPadding">5 1</Thickness>
     <CornerRadius x:Key="RibbonContextualLabelChipRadius">0</CornerRadius>

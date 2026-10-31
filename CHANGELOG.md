@@ -17,10 +17,16 @@ All packages share one version.
   the styles of the scopes they now stand under; a new dictionary given to an element restyles its subtree and lets
   the old one go, with what it linked, and `ResourceDictionary.Styles` holds them. Styles without a key in the
   application's resources style every element but the parts of templates, as the outermost scope; in a theme's
-  resources, or a dictionary file they link, they are the theme's. `ResourceContext.Resources` written into any other element with `ResourceContext.Scope` `Global` or
-  `Theme` are refused with an `InvalidOperationException`, keyed entries and styles alike: a view opened again would
-  add them again, and nothing would take them away. A dictionary file linked with that scope stays the way to give
-  every element resources from a view. A dictionary file used to drop a style without a key.
+  resources, or a dictionary file they link, they are the theme's. `ResourceContext.Resources` written into any other
+  element with `ResourceContext.Scope` `Global` or `Theme` are refused with an `InvalidOperationException`, keyed
+  entries and styles alike: a view opened again would add them again, and nothing would take them away. A dictionary
+  file linked with that scope stays the way to give every element resources from a view. A dictionary file used to
+  drop a style without a key.
+- `Badge`: a small mark with a count, or a dot (`IsDot`), placed over the corner of an icon or a button. A count past
+  `MaxCount` (99 by default) reads "99+". A count of zero is not shown and takes no room (`IsEmpty`), unless
+  `ShowZero` asks for it. Every theme styles it from its own metrics (`BadgeHeight`, `BadgeDotSize`,
+  `BadgePadding`, `BadgeRing`, `BadgeRadius`, `BadgeDotRadius`), and automation hears it as text with its number. The
+  count on the ghost of a multi-item drag is this badge, themed by the drag's source.
 - A tab torn off into a window can be carried back: `TabControl.CarryIndexAtPointer` says where in the strip a tab
   carried over it would go, `CarryIn` takes it up there under the pointer - selected, its content showing, the other tabs
   opening a gap for it, the strip panning near an edge - and `EndCarryIn` keeps it or lets it go. The control reads the
