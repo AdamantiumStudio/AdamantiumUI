@@ -2,6 +2,7 @@
 using System.Threading;
 using Adamantium.Core;
 using Adamantium.Graphics.Core;
+using Adamantium.Graphics.Core.Extensions;
 using Adamantium.Graphics.Core.Presentation;
 using Adamantium.Mathematics;
 using Adamantium.UI.Controls;
@@ -17,7 +18,8 @@ public abstract class WindowRendererBase : IWindowRenderer
 {
     private long _presentedFrames;
     private bool _presentedContent;
-    private IntPtr? _alphaAskedOf;
+    private SurfaceKHR _surface;
+    private IntPtr _surfaceHandle;
     private bool _surfaceComposesWithAlpha;
     private long _frameRequests;
     private volatile bool _isRendererUpToDate;
@@ -197,13 +199,26 @@ public abstract class WindowRendererBase : IWindowRenderer
 
     private bool SurfaceComposesWithAlpha()
     {
-        if (_alphaAskedOf != Window.SurfaceHandle)
+        if (_surface == null || _surfaceHandle != Window.SurfaceHandle)
         {
-            _surfaceComposesWithAlpha = GraphicsDevice.SurfaceComposesWithAlpha(NewParameters(PresenterType.Swapchain));
-            _alphaAskedOf = Window.SurfaceHandle;
+            ReleaseSurface();
+            _surface = GraphicsDevice.GetOrCreateSurface(NewParameters(PresenterType.Swapchain));
+            _surfaceHandle = Window.SurfaceHandle;
+            _surfaceComposesWithAlpha = _surface.ComposesWithAlpha(GraphicsDevice.MainDevice);
         }
 
         return _surfaceComposesWithAlpha;
+    }
+
+    private void ReleaseSurface()
+    {
+        if (_surface == null)
+        {
+            return;
+        }
+
+        GraphicsDevice.ReleaseSurface(_surfaceHandle);
+        _surface = null;
     }
 
     /// <summary>The window's own choice, or the application's when it made none. Resolved HERE, in the one place that
@@ -319,6 +334,7 @@ public abstract class WindowRendererBase : IWindowRenderer
         UnsubscribeFromEvents();
         Presenter?.Dispose();
         Presenter = null;
+        ReleaseSurface();
         // Last: the units built from it are gone by now.
         (RenderUnitFactory as IDisposable)?.Dispose();
     }
