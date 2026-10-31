@@ -9,9 +9,9 @@ using NUnit.Framework;
 
 namespace Adamantium.XamlTests;
 
-/// <summary>THE CONTENT OF A COLLAPSED CONTROL waits under the control: it builds no presenter until it is shown, and
-/// its content still inherits from it - its data context, its view model. Shown, the presenter takes the content, and
-/// with it the colors and the font the control's state gives it.</summary>
+/// <summary>THE CONTENT OF A CONTROL is the control's, shown or collapsed: a collapsed one builds no presenter, and its
+/// content inherits from it - its data context, its view model. Shown, the presenter shows the content without taking
+/// it, and gives it the colors and the font the control's state gives it.</summary>
 [TestFixture]
 public class CollapsedContentTests
 {
@@ -69,7 +69,7 @@ public class CollapsedContentTests
     }
 
     [Test]
-    public void Shown_ThePresenterTakesTheContent_AndGivesItTheControlsColors()
+    public void Shown_ThePresenterShowsTheContent_AndGivesItTheControlsColors()
     {
         var text = new TextBlock { Text = "Delete" };
         var button = new Button { Visibility = Visibility.Collapsed, IsEnabled = false, Content = text };
@@ -79,8 +79,12 @@ public class CollapsedContentTests
         Settle(window);
 
         var presenter = (ContentPresenter)button.GetTemplateChild("PART_ContentPresenter");
-        Assert.That(text.LogicalParent, Is.SameAs(presenter));
-        Assert.That(text.Foreground, Is.EqualTo(presenter.Foreground), "a disabled button's text takes the disabled color");
+        Assert.Multiple(() =>
+        {
+            Assert.That(text.LogicalParent, Is.SameAs(button), "the button holds its content");
+            Assert.That(text.ShownIn, Is.SameAs(presenter), "the presenter shows it");
+            Assert.That(text.Foreground, Is.EqualTo(presenter.Foreground), "a disabled button's text takes the disabled color");
+        });
     }
 
     // Content handed over while the control is collapsed, its template already built: the presenter takes nothing until

@@ -44,53 +44,29 @@ public class ContentControl : Control, IContentControl
       if (a is ContentControl o)
       {
          if (e.OldValue is UIComponent { ContentOwner: var owner } old && ReferenceEquals(owner, o)) old.ContentOwner = null;
-         if (e.NewValue is UIComponent content) content.ContentOwner = o;
-         o.ReleaseHeldContent(e.OldValue as UIComponent);
-         o.HoldIfHidden();
+         if (e.NewValue is UIComponent content && o.GetValueSource(ContentProperty) != ValuePriority.Template)
+            content.ContentOwner = o;
+         o.ChangeContent(e.OldValue, o.HoldsContent ? e.NewValue : null);
          o.OnContentChangedInternal(e.OldValue, e.NewValue);
       }
    }
 
-   /// <summary>A collapsed control is not laid out, so nothing takes its content to show it: content left with no
-   /// logical parent waits here, inheriting its data context and getting its view model as if shown. Whatever shows it
-   /// takes it from here. Not for a control whose content is shown elsewhere (a tab's page).</summary>
-   internal void HoldIfHidden()
+   /// <summary>Lets <paramref name="oldContent"/> go and takes <paramref name="newContent"/>. What it lets go another
+   /// control still has as its Content - handed it by a binding while this one held it - that control takes.</summary>
+   internal void ChangeContent(object oldContent, object newContent)
    {
-      if (Visibility == Visibility.Collapsed && HostsContentWithoutTemplate && !IsDiscarded && Content is UIComponent content
-          && (content.LogicalParent == null || content.LogicalParent is ContentControl other && other.OnlyHolds(content)))
+      ChangeLogicalChild(ContentProperty, oldContent, newContent);
+
+      if (oldContent is UIComponent { LogicalParent: null, ContentOwner: { IsDiscarded: false, HoldsContent: true } next } left
+          && !ReferenceEquals(next, this) && ReferenceEquals(next.Content, left))
       {
-         AddLogicalChild(content);
+         next.ChangeContent(null, left);
       }
    }
 
-   // Holding it for a presenter, not showing it: content handed to another control meanwhile is that control's to hold.
-   private bool OnlyHolds(UIComponent content) =>
-      !ReferenceEquals(content.ContentOwner, this) && ReferenceEquals(content.LogicalParent, this)
-      && !ReferenceEquals(content, _currentVisualChild) && !ReferenceEquals(content, _outgoingVisualChild);
-
-   protected override void OnTemplateHeldBack()
-   {
-      base.OnTemplateHeldBack();
-      HoldIfHidden();
-   }
-
-   internal override void OnCollapsed()
-   {
-      base.OnCollapsed();
-      HoldIfHidden();
-   }
-
-   // Only what was held for a presenter; content shown directly comes and goes with the visual child. Content another
-   // control now owns goes to it.
-   private void ReleaseHeldContent(UIComponent content)
-   {
-      if (content != null && ReferenceEquals(content.LogicalParent, this)
-          && !ReferenceEquals(content, _currentVisualChild) && !ReferenceEquals(content, _outgoingVisualChild))
-      {
-         RemoveLogicalChild(content);
-         if (IsLentContent(content)) content.ContentOwner.HoldIfHidden();
-      }
-   }
+   /// <summary>Whether this control holds its content now - always, but for one whose content is shown elsewhere
+   /// (a tab's page), which holds it while it is shown, so the page's view model is made when it is first opened.</summary>
+   internal virtual bool HoldsContent => true;
 
    // Lent, not owned: the Content of a control still alive, which takes it along wherever it goes - a host showing it
    // (a tab strip's page, a template's presenter) lets it go without discarding it.
@@ -165,6 +141,15 @@ public class ContentControl : Control, IContentControl
       _contentChanged = true;
    }
 
+   /// <summary>The template gone, the control shows its content itself on the next measure.</summary>
+   public override void OnRemoveTemplate()
+   {
+      base.OnRemoveTemplate();
+      _contentPresenter = null;
+      _contentChanged = true;
+      InvalidateMeasure();
+   }
+
    private void OnContentChangedInternal(object oldContent, object newContent)
    {
       _contentChanged = true;
@@ -198,8 +183,7 @@ public class ContentControl : Control, IContentControl
       {
          if (_currentVisualChild != null)
          {
-            RemoveVisualChild(_currentVisualChild);
-            RemoveLogicalChild(_currentVisualChild);
+            StopShowing(_currentVisualChild);
             _currentVisualChild = null;
          }
          return;
@@ -216,8 +200,7 @@ public class ContentControl : Control, IContentControl
       }
       else if (_currentVisualChild != null)
       {
-         RemoveVisualChild(_currentVisualChild);
-         RemoveLogicalChild(_currentVisualChild);
+         StopShowing(_currentVisualChild);
       }
       _currentVisualChild = null;
 
@@ -225,7 +208,9 @@ public class ContentControl : Control, IContentControl
       {
          _currentVisualChild = content as IUIComponent ?? new TextBlock { FontSize = 28, Text = content.ToString() };
          AddVisualChild(_currentVisualChild);
-         if (!ReferenceEquals(_currentVisualChild.LogicalParent, this)) AddLogicalChild(_currentVisualChild);
+         if (_currentVisualChild.LogicalParent == null) AddLogicalChild(_currentVisualChild);
+         else if (!ReferenceEquals(_currentVisualChild.LogicalParent, this))
+            ((FundamentalUIComponent)_currentVisualChild).ShowIn(this);
       }
 
       _transitionPending = animate && _currentVisualChild != null;
@@ -235,9 +220,14 @@ public class ContentControl : Control, IContentControl
    {
       if (_outgoingVisualChild == null)
          return;
-      RemoveVisualChild(_outgoingVisualChild);
-      RemoveLogicalChild(_outgoingVisualChild);
+      StopShowing(_outgoingVisualChild);
       _outgoingVisualChild = null;
+   }
+
+   private void StopShowing(IUIComponent child)
+   {
+      RemoveVisualChild(child);
+      if (!ReferenceEquals(child, Content) && ReferenceEquals(child.LogicalParent, this)) RemoveLogicalChild(child);
    }
 
    protected override void OnDiscarded()
@@ -246,7 +236,7 @@ public class ContentControl : Control, IContentControl
 
       // A view the view model still holds must not hold this control in turn.
       if (Content is UIComponent { ContentOwner: var owner } held && ReferenceEquals(owner, this)) held.ContentOwner = null;
-      ReleaseHeldContent(Content as UIComponent);
+      ChangeContent(Content, null);
 
       if (Content is UIComponent { RootVisual: null, IsDiscarded: false, IsAwaitingReturn: false } content)
       {

@@ -327,8 +327,13 @@ public class CanvasPane : ContentControl
         if (_headerPart.Visibility != wanted) _headerPart.Visibility = wanted;
     }
 
-    private static void OnHeaderChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e) =>
-        (component as CanvasPane)?.SyncHeader();
+    private static void OnHeaderChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (component is not CanvasPane pane) return;
+
+        pane.ChangeLogicalChild(HeaderProperty, e.OldValue, e.NewValue);
+        pane.SyncHeader();
+    }
 
     // An edge on either side, each pulling its own way. A pane pinned against an edge of the canvas gets only the
     // inner one: its outer edge has nowhere to travel.

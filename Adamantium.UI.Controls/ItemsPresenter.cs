@@ -49,6 +49,7 @@ public class ItemsPresenter : InputUIComponent
                 _panel.Children.Clear();
             }
 
+            _panel.ItemsOwner = null;
             _owner?.ItemContainerGenerator.Clear();
             RemoveVisualChild(_panel);
             RemoveLogicalChild(_panel);
@@ -59,6 +60,7 @@ public class ItemsPresenter : InputUIComponent
 
         var template = _owner.ItemsPanel ?? ItemsPanelTemplate.Default;
         _panel = template.Build(_owner).RootComponent as Panel ?? new StackPanel { Orientation = Orientation.Vertical };
+        _panel.ItemsOwner = _owner;
         AddVisualChild(_panel);
         AddLogicalChild(_panel);
 

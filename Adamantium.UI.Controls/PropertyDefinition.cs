@@ -22,7 +22,15 @@ namespace Adamantium.UI.Controls;
 public abstract class PropertyDefinition : FundamentalUIComponent
 {
     public static readonly AdamantiumProperty HeaderProperty = AdamantiumProperty.Register(nameof(Header),
-        typeof(object), typeof(PropertyDefinition), new PropertyMetadata(null, OnWordsChanged));
+        typeof(object), typeof(PropertyDefinition), new PropertyMetadata(null, OnHeaderChanged));
+
+    private static void OnHeaderChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (component is not PropertyDefinition definition) return;
+
+        definition.ChangeLogicalChild(HeaderProperty, e.OldValue, e.NewValue);
+        OnWordsChanged(component, e);
+    }
 
     /// <summary>What this line reads and writes - a REAL binding against the object being inspected, with converters,
     /// formats, modes and <c>MultiBinding</c>. Not a member name, which can carry none of them.</summary>

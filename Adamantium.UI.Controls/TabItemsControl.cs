@@ -27,4 +27,6 @@ public class TabItemsControl : ItemsControl
         if (Owner is { } owner) owner.ClearContainer(container);
         else base.ClearContainer(container);
     }
+
+    internal override FundamentalUIComponent ContainerHolder => (FundamentalUIComponent)Owner ?? this;
 }

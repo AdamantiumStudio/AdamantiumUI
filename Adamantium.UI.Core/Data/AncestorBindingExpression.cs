@@ -7,6 +7,9 @@ namespace Adamantium.UI.Core.Data;
 /// default, logical when <see cref="Ancestor.Logical"/>), reads its source property and pushes it to the target. It
 /// RE-RESOLVES whenever the target (re)attaches to the tree, so a template rebuild / re-parent / virtualization recycle
 /// refreshes the binding instead of leaving it pointed at a stale (or never-found) ancestor - the WPF failure mode.
+/// A tree with no window raises no visual attach: there the binding walks again when the element it starts from, or the
+/// top of its visual chain, is given a parent. A chain broken and joined again above that element, while it already
+/// found its ancestor, is not seen without a window.
 /// </summary>
 public class AncestorBindingExpression : BindingExpressionBase
 {
@@ -58,6 +61,7 @@ public class AncestorBindingExpression : BindingExpressionBase
         {
             visual.AttachedToVisualTreeEvent += OnVisualAttached;
             visual.DetachedFromVisualTreeEvent += OnVisualDetached;
+            visual.VisualParentChanged += OnStartReparented;
         }
         else
         {
@@ -85,7 +89,7 @@ public class AncestorBindingExpression : BindingExpressionBase
 
         _host.AttachedToVisualTreeEvent += OnVisualAttached;
         _host.DetachedFromVisualTreeEvent += OnVisualDetached;
-        _host.VisualParentChanged += OnHostReparented;
+        _host.VisualParentChanged += OnStartReparented;
     }
 
     private void UnhookHost()
@@ -94,19 +98,47 @@ public class AncestorBindingExpression : BindingExpressionBase
 
         _host.AttachedToVisualTreeEvent -= OnVisualAttached;
         _host.DetachedFromVisualTreeEvent -= OnVisualDetached;
-        _host.VisualParentChanged -= OnHostReparented;
+        _host.VisualParentChanged -= OnStartReparented;
         _host = null;
     }
 
-    // A tree with no window yet raises no attach, but its ancestors are already there to be found. In a window the attach
-    // came first and has resolved it.
-    private void OnHostReparented(object sender, VisualParentChangedEventArgs e)
+    private void OnStartReparented(object sender, VisualParentChangedEventArgs e)
     {
-        if (e.NewParent != null && _host is { IsAttachedToVisualTree: false }) ResolveAndReport();
+        if (sender is IUIComponent { IsAttachedToVisualTree: true }) return;
+
+        if (e.NewParent == null) StopWaiting();
+        else ResolveAndReport();
+    }
+
+    private IUIComponent _chainTop;
+
+    private void WaitAtChainTop()
+    {
+        var top = DataContextSource is IUIComponent visual ? visual : NearestElement(DataContextSource);
+        while (top?.VisualParent != null) top = top.VisualParent;
+        if (ReferenceEquals(top, _chainTop)) return;
+
+        StopWaiting();
+        _chainTop = top;
+        if (_chainTop != null) _chainTop.VisualParentChanged += OnChainTopReparented;
+    }
+
+    private void StopWaiting()
+    {
+        if (_chainTop == null) return;
+
+        _chainTop.VisualParentChanged -= OnChainTopReparented;
+        _chainTop = null;
+    }
+
+    private void OnChainTopReparented(object sender, VisualParentChangedEventArgs e)
+    {
+        if (e.NewParent != null) ResolveAndReport();
     }
 
     private void UnhookTree()
     {
+        StopWaiting();
         if (!_hooked || _anchor == null) return;
         if (_def.Logical)
         {
@@ -117,6 +149,7 @@ public class AncestorBindingExpression : BindingExpressionBase
         {
             visual.AttachedToVisualTreeEvent -= OnVisualAttached;
             visual.DetachedFromVisualTreeEvent -= OnVisualDetached;
+            visual.VisualParentChanged -= OnStartReparented;
         }
         else
         {
@@ -147,15 +180,22 @@ public class AncestorBindingExpression : BindingExpressionBase
     private void ResolveAndReport()
     {
         Resolve();
-        if (_source != null) return;
+        if (_source != null)
+        {
+            StopWaiting();
+            return;
+        }
+
         ApplyFallback();   // no source resolved -> push FallbackValue if one was set (else leave the target at its default)
         if (IsTargetAttached())
         {
+            StopWaiting();
             Fail($"{{Ancestor}} on {Target?.GetType().Name}.{TargetProperty?.Name}: no {_def.AncestorType?.Name} ancestor found in the {(_def.Logical ? "logical" : "visual")} tree.");
         }
         else
         {
             Status = BindingStatus.NotAttached;
+            if (!_def.Logical) WaitAtChainTop();
         }
     }
 

@@ -262,8 +262,7 @@ public class Popup : MeasurableUIComponent, IContainer
         popup.ChildValue = e.NewValue as IMeasurableComponent;   // keep the lock-free mirror in step (Child is only ever set at Local priority)
         // Logical child only (for DataContext inheritance) - NOT a visual child, so the main layout/render never draws
         // it in place; the popup layer measures/arranges/renders it in the overlay.
-        if (e.OldValue is IMeasurableComponent oldChild) popup.LogicalChildrenCollection.Remove(oldChild);
-        if (e.NewValue is IMeasurableComponent newChild) popup.LogicalChildrenCollection.Add(newChild);
+        popup.ChangeLogicalChild(ChildProperty, e.OldValue, e.NewValue);
         if (popup._isShowing)
         {
             // The new content belongs to the window the old one did: what walks out of an overlay - the focus ring, the

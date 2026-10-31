@@ -12,7 +12,8 @@ namespace Adamantium.UI.Controls;
 public class RibbonTab : ItemsControl, IHeaderedItemsControl
 {
     public static readonly AdamantiumProperty HeaderProperty = AdamantiumProperty.Register(nameof(Header),
-        typeof(object), typeof(RibbonTab), new PropertyMetadata(null));
+        typeof(object), typeof(RibbonTab), new PropertyMetadata(null,
+            (a, e) => ((RibbonTab)a).ChangeLogicalChild(HeaderProperty, e.OldValue, e.NewValue)));
 
     public static readonly AdamantiumProperty HeaderTemplateProperty = AdamantiumProperty.Register(nameof(HeaderTemplate),
         typeof(DataTemplate), typeof(RibbonTab), new PropertyMetadata(null));
