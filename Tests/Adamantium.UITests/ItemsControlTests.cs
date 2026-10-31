@@ -594,6 +594,50 @@ public class ItemsControlTests
         }
     }
 
+    // A move made of a removal and an insertion leaves the count as it was, so the panel arranges only what changed - and
+    // every tile the move shifted to another index has changed. Left out, they stayed at their old cells: holes, and two
+    // tiles on one cell, after a drag reordered the list.
+    [Test]
+    public void AMoveByRemoveAndInsert_PutsEveryShiftedTileInItsNewCell()
+    {
+        var items = new System.Collections.ObjectModel.ObservableCollection<object>(Enumerable.Range(0, 60).Cast<object>());
+        var ic = new ListBox
+        {
+            ItemsSource = items,
+            ItemsPanel = new ItemsPanelTemplate(() => new TemplateResult
+            {
+                RootComponent = new WrapPanel { Orientation = Orientation.Horizontal, ItemWidth = 50, ItemHeight = 50 }
+            })
+        };
+        ic.Template = ItemsPresenterTemplate();
+        ic.Measure(new Size<double>(150, 150));   // 3 columns, a few rows realized of twenty
+        ic.Arrange(new Rect(0, 0, 150, 150));
+
+        // Carried to the end, past the realized rows: nothing realized is bound anew, yet every tile after it moved up.
+        var moved = items[3];
+        items.RemoveAt(3);
+        items.Add(moved);
+
+        // An ordinary pass, as the layout runs one: no forced full arrange.
+        for (IUIComponent n = ic.ItemsHostPanel; n != null; n = n.VisualParent)
+        {
+            (n as IMeasurableComponent)?.InvalidateMeasure();
+        }
+
+        ic.Measure(new Size<double>(150, 150));
+        ic.Arrange(new Rect(0, 0, 150, 150));
+
+        Assert.Multiple(() =>
+        {
+            foreach (var i in ic.ItemContainerGenerator.RealizedIndices)
+            {
+                var tile = ic.ItemContainerGenerator.ContainerFromIndex(i);
+                Assert.That(tile.Bounds.X, Is.EqualTo(i % 3 * 50).Within(0.5), $"item {items[i]} at index {i}: column");
+                Assert.That(tile.Bounds.Y, Is.EqualTo(i / 3 * 50).Within(0.5), $"item {items[i]} at index {i}: row");
+            }
+        });
+    }
+
     [Test]
     public void VirtualizingWrapPanelRealizesOnlyVisibleGrid()
     {

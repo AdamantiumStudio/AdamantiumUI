@@ -509,6 +509,14 @@ public class ItemContainerGenerator
             var newIndex = map(pair.Key);
             _byIndex[newIndex] = pair.Value;
             _indexByContainer[pair.Value] = newIndex;
+
+            // A new index is a new slot: a panel that arranges only what was mapped since its last pass has to place this
+            // one again, or a move - a removal and an insertion, the count unchanged - left the shifted tiles where they
+            // were, holes and overlaps among them.
+            if (newIndex != pair.Key)
+            {
+                NoteMapped(pair.Value);
+            }
         }
     }
 }

@@ -2375,6 +2375,13 @@ All packages share one version.
 
 ### Fixed
 
+- A list reordered by a drag with a caret or no cue keeps every item in its own cell: the move - a removal and an
+  insertion, the count unchanged - left the items it shifted where they were, holes and two items on one cell among
+  them, until something laid the whole list out again; the drop gap did, which is why that cue hid it. The container
+  generator now reports a container whose index changed as newly placed.
+- An item dragged within a list whose `DragDrop.InsertionCue` is `None` - one that keeps an order of its own - stays
+  where it is: with no insertion point the drop took it out and appended it at the end. The drag over its own list
+  shows that nothing would happen; dropped into it from another list, it lands as before.
 - A tab put into a `TabControl` before the selected one leaves the selection on that tab; the control kept the index,
   which selected its neighbour.
 - A tab dragged along a strip that pans keeps its title and its bar: past the visible part, its container was parked
