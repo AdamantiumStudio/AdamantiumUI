@@ -66,7 +66,7 @@ public class TextureArrayImageRenderTests
         var root = new VisualRoot(control, Dim, Dim);
         Assert.That(_renderer.RenderFrame(root), Is.True);
 
-        using var image = _renderer.RenderTarget.ResolveTexture.ReadbackToImage();
+        using var image = _renderer.RenderTarget.ResolveTexture.ToImage();
         var pixels = new byte[(int)image.TotalSizeInBytes];
         Marshal.Copy(image.DataPointer, pixels, 0, pixels.Length);
         return pixels;
