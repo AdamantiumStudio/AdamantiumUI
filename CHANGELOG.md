@@ -17,9 +17,10 @@ All packages share one version.
   the styles of the scopes they now stand under; a new dictionary given to an element restyles its subtree and lets
   the old one go, with what it linked, and `ResourceDictionary.Styles` holds them. Styles without a key in the
   application's resources style every element, as the outermost scope; in a theme's own resources, they are the
-  theme's. Written into the `Global` or `Theme` resources of any other element, they are refused with an
-  `InvalidOperationException`: a view opened again would add them again, and nothing would take them away. A
-  dictionary file used to drop a style without a key.
+  theme's. `ResourceContext.Resources` written into any other element with `ResourceContext.Scope` `Global` or
+  `Theme` are refused with an `InvalidOperationException`, keyed entries and styles alike: a view opened again would
+  add them again, and nothing would take them away. A dictionary file linked with that scope stays the way to give
+  every element resources from a view. A dictionary file used to drop a style without a key.
 
 - `EasedValue` and `PanInertia`: the smooth zoom toward a point and the drag that coasts on after a flick, as one
   mechanism for every view with a camera. `EasedValue` eases one number of a camera by the frame's time - a zoom level
@@ -2390,6 +2391,8 @@ All packages share one version.
 
 ### Fixed
 
+- `BasedOn` did nothing in a style that belongs to no theme - an element's own `Styles`, and now a scope's: it takes
+  the theme's style for the type from the theme in force at the element, and that theme's again once another comes in.
 - A style setter whose value is an `{ObservableResource}` or a `{ThemeResource}` wrote its slot past the other styles of
   the element, so whichever wrote last won: each time the resources changed - a view with resources opened, a theme
   came in - a theme's brush took over again from an element's own style for the same property. It is now one of the

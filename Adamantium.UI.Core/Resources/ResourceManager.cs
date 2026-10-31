@@ -166,7 +166,6 @@ public class ResourceManager : IResourceManager
     // rather than a shared dictionary type. Same scoping/lifecycle as a linked type.
     public void AddSource(IAdamantiumComponent owner, ResourceDictionary instance, ResourceScope scope = ResourceScope.Local)
     {
-        RefuseWideStylesOf(owner, instance, scope);
         AddIncludes(owner, instance, scope);
         ProviderOf(scope).AddSource(owner, instance);
         _resourcesDirty = true;
@@ -203,17 +202,6 @@ public class ResourceManager : IResourceManager
         }
 
         _resourcesDirty = true;
-    }
-
-    private static void RefuseWideStylesOf(IAdamantiumComponent owner, ResourceDictionary dictionary, ResourceScope scope)
-    {
-        if (scope == ResourceScope.Local || dictionary is not { Styles.Count: > 0 } || owner is ITheme or IUIApplication)
-        {
-            return;
-        }
-
-        throw new InvalidOperationException(
-            $"Styles without a key in {scope} resources of {owner?.GetType().FullName}: styles for every element belong in the application's or the theme's resources - given by a view, they would be added again each time it opens and never taken away. Styles in an element's own resources style its subtree.");
     }
 
     public bool HoldsStylesOf(IAdamantiumComponent owner) => _localResources.HoldsStylesOf(owner);

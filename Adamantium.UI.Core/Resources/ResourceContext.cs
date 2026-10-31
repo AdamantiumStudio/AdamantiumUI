@@ -63,6 +63,12 @@ public static class ResourceContext
 
     public static void SetResources(AdamantiumComponent element, ResourceDictionary value)
     {
+        if (value != null && GetScope(element) != ResourceScope.Local && element is not (ITheme or IUIApplication))
+        {
+            throw new InvalidOperationException(
+                $"{GetScope(element)} resources written into {element.GetType().FullName}: resources for every element belong in the application's or the theme's resources, or in a dictionary file linked with that scope - written into a view, they would be added again each time it opens and never taken away. An element's own resources serve its subtree.");
+        }
+
         var old = GetResources(element);
         element.SetValue(ResourcesProperty, value);
 

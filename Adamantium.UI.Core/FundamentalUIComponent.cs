@@ -267,7 +267,7 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
 
     private bool KeepsScoped(Style style, Dictionary<Style, int> scoped) =>
         _scopedBands != null && _scopedBands.TryGetValue(style, out var was)
-        && scoped != null && scoped.TryGetValue(style, out var now) && was == now;
+        && scoped != null && scoped.TryGetValue(style, out var now) && was == now && style.KeepsBasesOn(this);
 
     private void AttachScoped()
     {
@@ -902,7 +902,7 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
                 continue;
             }
 
-            if (own != null && own.Contains(style) && style.Selector.Match(this))
+            if (own != null && own.Contains(style) && style.Selector.Match(this) && style.KeepsBasesOn(this))
             {
                 continue;   // an author's own style that still matches stays; re-applied below
             }

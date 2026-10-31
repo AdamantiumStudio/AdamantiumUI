@@ -428,16 +428,54 @@ public class ScopedStyleTests
         });
     }
 
-    [TestCase(ResourceScope.Global)]
-    [TestCase(ResourceScope.Theme)]
-    public void StylesForEveryElement_FromAViewsResources_AreRefused(ResourceScope scope)
+    [TestCase(ResourceScope.Global, true)]
+    [TestCase(ResourceScope.Theme, true)]
+    [TestCase(ResourceScope.Global, false)]
+    [TestCase(ResourceScope.Theme, false)]
+    public void ResourcesForEveryElement_WrittenIntoAView_AreRefused(ResourceScope scope, bool withStyles)
     {
         var view = new StackPanel();
         ResourceContext.SetScope(view, scope);
+        var resources = withStyles ? Styles(StyleOf(typeof(TextBlock), "Width", 20.0)) : new ResourceDictionary();
+        resources.Add("Accent", new Adamantium.UI.Core.Media.SolidColorBrush(Colors.Red));
 
-        Assert.Throws<InvalidOperationException>(
-            () => ResourceContext.SetResources(view, Styles(StyleOf(typeof(TextBlock), "Width", 20.0))),
+        Assert.Throws<InvalidOperationException>(() => ResourceContext.SetResources(view, resources),
             "opened again and again, a view would add them again each time and nothing would take them away");
+    }
+
+    private sealed class PlateLook : Border;
+
+    private Style BasedOnAThemeLook()
+    {
+        ((Theme)_app.ThemeManager.CurrentTheme).MergedStyles.Add(StyleOf(typeof(PlateLook), "Height", 17.0));
+        var style = StyleOf(typeof(Border), "Width", 42.0, className: "Plate");
+        style.BasedOn = new StyleSelector { Types = { typeof(PlateLook) } };
+        return style;
+    }
+
+    [Test]
+    public void AScopeStyleBasedOnAType_TakesTheThemesStyleForIt()
+    {
+        var plate = new Border { Classes = Classes.Parse("Plate") };
+        var scope = Scope(BasedOnAThemeLook());
+        scope.Children.Add(plate);
+        Shown(scope);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(plate.Height, Is.EqualTo(17), "the theme's style for the type it is based on");
+            Assert.That(plate.Width, Is.EqualTo(42), "and its own setters over it");
+        });
+    }
+
+    [Test]
+    public void AnOwnStyleBasedOnAType_TakesTheThemesStyleForIt()
+    {
+        var plate = new Border { Classes = Classes.Parse("Plate") };
+        plate.Styles.Add(BasedOnAThemeLook());
+        Shown(plate);
+
+        Assert.That(plate.Height, Is.EqualTo(17));
     }
 
     private sealed class WideTexts : ResourceDictionary

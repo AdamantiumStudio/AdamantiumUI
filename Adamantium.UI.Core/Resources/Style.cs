@@ -96,10 +96,14 @@ public class Style : AdamantiumComponent
         // Idempotent: undo a prior attach of THIS style to THIS component first (a theme swap re-applies without a
         // preceding detach), so activators + their subscriptions never accumulate across re-applies.
         ReleaseActivators(component);
+        if (!KeepsBasesOn(component))
+        {
+            RemoveBaseContributions(component, BasesTakenBy(component));
+        }
 
         // BasedOn bases FIRST (base-first, mixin order), so this style's own setters/triggers - applied after - override
         // them. A base's contributions are tracked under THIS style, so Detach undoes them together.
-        foreach (var baseStyle in ResolveBases())
+        foreach (var baseStyle in BasesOn(component))
         {
             baseStyle.ApplyContributions(component, this);
         }
@@ -142,12 +146,16 @@ public class Style : AdamantiumComponent
         // Undo own then base setters (bases were tracked under THIS style); ReleaseActivators tears down every activator
         // this style recorded (its own triggers AND any base triggers).
         RemoveContributions(component, this);
-        foreach (var baseStyle in ResolveBases())
+        RemoveBaseContributions(component, BasesTakenBy(component));
+        ReleaseActivators(component);
+    }
+
+    private void RemoveBaseContributions(IFundamentalUIComponent component, IReadOnlyList<Style> bases)
+    {
+        foreach (var baseStyle in bases)
         {
             baseStyle.RemoveContributions(component, this);
         }
-
-        ReleaseActivators(component);
     }
 
     // Undo THIS style's own SETTERS from `component` (tracked under `owner`). Conditioned styles applied their setters
@@ -166,11 +174,12 @@ public class Style : AdamantiumComponent
     // The bases this style is BasedOn, base-first, deduped and recursive; empty when there is no BasedOn, the common
     // case. Memoized because a style's bases are constant for its lifetime - a theme swap builds fresh Style objects -
     // so thousands of identical containers do not each re-scan the theme.
-    private IReadOnlyList<Style> ResolveBases()
+    private IReadOnlyList<Style> ResolveBases() => _resolvedBases ??= CollectBases(Theme as Theme);
+
+    private List<Style> CollectBases(Theme theme)
     {
-        if (_resolvedBases != null) return _resolvedBases;
         var result = new List<Style>();
-        if (BasedOn is { Types.Count: > 0 } && Theme is Theme theme)
+        if (BasedOn is { Types.Count: > 0 } && theme != null)
         {
             var seen = new HashSet<Style> { this };   // guard against a self/cyclic BasedOn
             theme.CollectBasedOn(BasedOn, result, seen);
@@ -179,8 +188,42 @@ public class Style : AdamantiumComponent
         foreach (var baseStyle in result) baseStyle.StampBand();
         StampBand();
 
-        return _resolvedBases = result;
+        return result;
     }
+
+    private readonly ConditionalWeakTable<IFundamentalUIComponent, BasesTaken> _basesByComponent = new();
+
+    private sealed class BasesTaken(Theme theme, IReadOnlyList<Style> bases)
+    {
+        public Theme Theme { get; } = theme;
+
+        public IReadOnlyList<Style> Bases { get; } = bases;
+    }
+
+    private IReadOnlyList<Style> BasesOn(IFundamentalUIComponent component)
+    {
+        if (Theme != null || BasedOn is not { Types.Count: > 0 }) return ResolveBases();
+
+        var theme = ThemeAt(component);
+        var bases = CollectBases(theme);
+        _basesByComponent.AddOrUpdate(component, new BasesTaken(theme, bases));
+        return bases;
+    }
+
+    private IReadOnlyList<Style> BasesTakenBy(IFundamentalUIComponent component)
+    {
+        if (!_basesByComponent.TryGetValue(component, out var taken)) return ResolveBases();
+
+        _basesByComponent.Remove(component);
+        return taken.Bases;
+    }
+
+    private static Theme ThemeAt(IFundamentalUIComponent component) => (ThemeContext.For(component) as Theme)?.VariantRoot;
+
+    /// <summary>The bases this style gave <paramref name="component"/> are still those of the theme in force there; when
+    /// another theme came in, a style of no theme is to be attached anew.</summary>
+    internal bool KeepsBasesOn(IFundamentalUIComponent component) =>
+        !_basesByComponent.TryGetValue(component, out var taken) || ReferenceEquals(taken.Theme, ThemeAt(component));
 
     private int StyleBandOfSelector()
     {
