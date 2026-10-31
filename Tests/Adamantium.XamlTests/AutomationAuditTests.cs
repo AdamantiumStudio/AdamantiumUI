@@ -78,7 +78,7 @@ public class AutomationAuditTests
         [typeof(RibbonApplicationMenu)] = (T.Button, null),
         [typeof(RibbonApplicationMenuItem)] = (T.Button, null),
         [typeof(RibbonButton)] = (T.Button, null),
-        [typeof(RibbonContextualLedge)] = (null, "a plate under contextual tabs; the tabs carry their context"),
+        [typeof(RibbonContextualLabel)] = (null, "a context's name before its tabs; the tabs carry their context"),
         [typeof(RibbonDropDownButton)] = (T.Button, null),
         [typeof(RibbonGallery)] = (T.List, null),
         [typeof(RibbonControlGroup)] = (T.Group, null),

@@ -399,8 +399,8 @@ public class Ribbon : Selector
         set => SetValue(IsDrawerOpenProperty, value);
     }
 
-    /// <summary>What the document is made of - its modules - each bringing a <see cref="RibbonTabSet"/>: its tabs under a
-    /// ledge of its own, after the ribbon's own tabs. A module that leaves the source takes its tabs with it.</summary>
+    /// <summary>What the document is made of - its modules - each bringing a <see cref="RibbonTabSet"/>: its tabs after a
+    /// label of its own, after the ribbon's own tabs. A module that leaves the source takes its tabs with it.</summary>
     public static readonly AdamantiumProperty TabSetsSourceProperty = AdamantiumProperty.Register(nameof(TabSetsSource),
         typeof(IEnumerable), typeof(Ribbon), new PropertyMetadata(null, OnTabSetsSourceChanged));
 
@@ -1134,7 +1134,7 @@ public class Ribbon : Selector
                 KeyTipService.SetKeyTip(header, stated);
         }
 
-        // The STRIP needs to know the context: the panel cuts its ledges from neighboring headers and the theme paints
+        // The STRIP needs to know the context: the panel cuts its runs from neighboring headers and the theme paints
         // the header in the group's color. The strip holds headers, so the tab's group is copied onto its header.
         header.ContextualGroup = GroupOf(item as RibbonTab);
         Watch(header.ContextualGroup);
@@ -1286,10 +1286,10 @@ public class Ribbon : Selector
     {
         if (sender is not RibbonContextualGroup group) return;
 
-        // What the STRIP draws from the group - its title, its color, whether it has a ledge at all - is read during
+        // What the STRIP draws from the group - its title, its color, whether it has a label at all - is read during
         // the panel's own measure, so a change to any of it has to ask for one. Nothing else would: the group is not in
         // the tree, and a property on it invalidates nothing by itself.
-        if (e.Property == RibbonContextualGroup.ShowHeaderProperty ||
+        if (e.Property == RibbonContextualGroup.ShowContextualHeaderProperty ||
             e.Property == RibbonContextualGroup.HeaderProperty ||
             e.Property == RibbonContextualGroup.AccentProperty)
         {
@@ -1321,8 +1321,8 @@ public class Ribbon : Selector
         }
 
         // VisibilityProperty carries AffectsMeasure but NOT AffectsParentMeasure, so hiding a tab invalidates only its
-        // OWN measure - and the strip's whole shape (which tabs are in it, where the runs fall, how tall the ledge row
-        // is) is decided in the PANEL's. Ask for it, or the strip keeps the arrangement it had before the context came.
+        // OWN measure - and the strip's whole shape (which tabs are in it, where the runs fall, where their labels
+        // stand) is decided in the PANEL's. Ask for it, or the strip keeps the arrangement it had before the context came.
         (ItemsHostPanel as IMeasurableComponent)?.InvalidateMeasure();
 
         // Appearing is an OFFER, not an order: a group switching on must not pull the open tab out from under someone

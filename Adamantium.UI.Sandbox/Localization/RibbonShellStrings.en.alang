@@ -94,9 +94,9 @@
     <Phrase Key="Context" Text="Context"/>
     <Phrase Key="Mesh" Text="Mesh"/>
     <Phrase Key="MeshTip" Text="Pretend a mesh is selected - its tabs appear"/>
-    <Phrase Key="LightTip" Text="...and a second context, to see two ledges at once"/>
-    <Phrase Key="Ledge" Text="Ledge"/>
-    <Phrase Key="LedgeTip" Text="The ledge over a context's tabs - off, their color carries it and the strip stops paying its height"/>
+    <Phrase Key="LightTip" Text="...and a second context, to see two at once"/>
+    <Phrase Key="Ledge" Text="Label"/>
+    <Phrase Key="LedgeTip" Text="A context's name before its tabs - off, their color alone carries it"/>
     <Phrase Key="Tools" Text="Tools"/>
     <Phrase Key="Measure" Text="Measure"/>
     <Phrase Key="Annotate" Text="Annotate"/>

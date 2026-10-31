@@ -56,7 +56,7 @@
         </DrawingGroup>
     </DrawingImage>
 
-    <!-- What the Roads module brings to the ribbon: its tabs under a ledge of its own, bound against the module - the
+    <!-- What the Roads module brings to the ribbon: its tabs after a label of its own, bound against the module - the
          buttons run the module's own commands. Found by the shell under the module's key, its name and "Ribbon". The
          shell's quick-access bar holds the shell's own commands, so these are not offered to it. -->
     <DataTemplate x:Key="RoadsRibbon">

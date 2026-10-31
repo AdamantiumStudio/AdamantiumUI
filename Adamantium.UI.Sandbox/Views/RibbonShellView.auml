@@ -114,7 +114,7 @@
             </ContentControl>
         </DataTemplate>
 
-        <!-- What each module brings to the ribbon: its tabs under a ledge of its own, bound against the module - its
+        <!-- What each module brings to the ribbon: its tabs after a label of its own, bound against the module - its
              commands are the module's (class ModuleTool, in RibbonShellStyleSet). A module with no piece of its own
              takes ModuleRibbon. -->
         <DataTemplate x:Key="SurfaceModuleRibbon">
@@ -2075,16 +2075,16 @@
                 <RibbonContextualGroup Key="MeshTools"
                                        Header="{Localize RibbonShellStrings.MeshTools}"
                                        Accent="#B85C2E"
-                                       ShowHeader="{Binding ShowContextHeader}"
+                                       ShowContextualHeader="{Binding ShowContextHeader}"
                                        IsActive="{Binding HasMeshSelection}"/>
                 <RibbonContextualGroup Key="LightTools"
                                        Header="{Localize RibbonShellStrings.LightTools}"
                                        Accent="#3F7CBF"
-                                       ShowHeader="{Binding ShowContextHeader}"
+                                       ShowContextualHeader="{Binding ShowContextHeader}"
                                        IsActive="{Binding HasLightSelection}"/>
             </Ribbon.ContextualGroups>
 
-            <!-- TWO tabs in one context: they stand together under ONE ledge spanning both. -->
+            <!-- TWO tabs in one context: they stand together after ONE label. -->
             <RibbonTab Header="{Localize RibbonShellStrings.Geometry}" ContextualGroupKey="MeshTools" KeyTipService.KeyTip="G">
                 <RibbonGroup Header="{Localize RibbonShellStrings.Edit}" Icon="{ObservableResource SplitIcon}">
                     <RibbonButton Content="{Localize RibbonShellStrings.Extrude}"
