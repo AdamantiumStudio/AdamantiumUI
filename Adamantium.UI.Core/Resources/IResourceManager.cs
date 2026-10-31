@@ -28,6 +28,24 @@ public interface IResourceManager
     // Register an inline (per-element) dictionary INSTANCE - ResourceContext.Resources authored on an element.
     void AddSource(IAdamantiumComponent component, ResourceDictionary instance, ResourceScope scope = ResourceScope.Local);
 
+    /// <summary>The unkeyed styles of the dictionaries <paramref name="component"/> and its ancestors own whose selector
+    /// matches it - the outermost owner's first, the nearest's last - up to the edge of the control template it is part
+    /// of; null when none match. <paramref name="inStyledScope"/> tells whether any of those owners has styles at all.
+    /// </summary>
+    List<Style> CollectScopedStyles(IFundamentalUIComponent component, out bool inStyledScope);
+
+    /// <summary>Whether any element owns a dictionary with unkeyed styles.</summary>
+    bool HasScopedStyles { get; }
+
+    /// <summary>Takes back a dictionary type <paramref name="component"/> linked, with what it includes - its link
+    /// replaced.</summary>
+    void RemoveSource(IAdamantiumComponent component, Type source, ResourceScope scope = ResourceScope.Local);
+
+    /// <summary>Takes back an inline dictionary <paramref name="component"/> registered, with what it includes - its
+    /// resources replaced or cleared.</summary>
+    void RemoveSource(IAdamantiumComponent component, ResourceDictionary instance,
+        ResourceScope scope = ResourceScope.Local);
+
     // A resource VALUE changed in place (an inline dictionary was mutated): re-resolve live {ObservableResource}s.
     void NotifyResourcesChanged();
 

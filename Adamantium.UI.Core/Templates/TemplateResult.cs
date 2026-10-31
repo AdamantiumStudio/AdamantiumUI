@@ -78,10 +78,19 @@ public class TemplateResult
 
     public void Destroy()
     {
+        if (RootComponent is FundamentalUIComponent root && root.IsPartToMark(Id, false))
+        {
+            root.MarkControlTemplatePart(Id, false);
+        }
+
         RootComponent.TraverseVisualTree(component =>
         {
             var fundamental = (FundamentalUIComponent)component;
-            fundamental.TemplatedParent = null;
+            if (!fundamental.IsControlTemplatePart || fundamental.ControlTemplatePartOf == Id)
+            {
+                fundamental.TemplatedParent = null;
+                fundamental.ControlTemplatePartOf = Guid.Empty;
+            }
 
             // ...and let go of the values that DRAW it. Leaving the tree gives those up (UIComponent's detach), but a
             // template part that was never IN the tree never gets that call - popup content is built eagerly and lives

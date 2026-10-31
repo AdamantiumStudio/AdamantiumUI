@@ -20,6 +20,7 @@ public class DefaultTypeContainer
         TemplateResult = typeResolver.ResolveByShortName("TemplateResult");
         PerTargetValue = typeResolver.ResolveByShortName("PerTargetValue");
         ResourceLink = typeResolver.ResolveByShortName("ResourceLink");
+        Style = typeResolver.Resolve("Adamantium.UI.Core.Resources.Style");
     }
     
     public IResolvedType TypeParser { get; }
@@ -48,6 +49,9 @@ public class DefaultTypeContainer
     public IResolvedType PerTargetValue { get; }
 
     public IResolvedType ResourceLink { get; }
+
+    /// <summary>The style type: an unkeyed one among resources reaches the subtree that owns them.</summary>
+    public IResolvedType Style { get; }
 
     public static DefaultTypeContainer ResolveFrom(ITypeResolver typeResolver)
     {

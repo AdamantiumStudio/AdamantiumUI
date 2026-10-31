@@ -30,6 +30,9 @@ public class DataGridNewRowPresenter : Panel
         }
     }
 
+    internal override IFundamentalUIComponent ContentGiver =>
+        _owner is { IsControlTemplatePart: true } ? _owner.ContentGiver : _owner;
+
     private readonly Dictionary<int, DataGridCell> _cells = new();
     private readonly List<int> _leaving = new();
 

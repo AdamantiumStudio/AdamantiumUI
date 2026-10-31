@@ -328,6 +328,15 @@ public class AumlLowering
                         }
 
                         var entryKey = KeyOf(entry);
+                        var styleType = Metadata.DefaultTypeContainer.Style;
+                        if (entryKey == null && styleType != null && entryType != null
+                            && (entryType.FullName == styleType.FullName || entryType.InheritsFrom(styleType.FullName)))
+                        {
+                            var styleName = ProcessControlElements(entry, diagnostics, isResource: false);
+                            _writer.Add(Invoke(new MemberValue(Variable(rdVar), "Styles"), "Add", styleName));
+                            continue;
+                        }
+
                         // x:Shared="False" works here exactly as it does in a resource FILE: store a factory so every ask
                         // builds its own object. An inline dictionary is where an icon (one visual, many templates) lives,
                         // and a visual has ONE parent - without this the second user of the key would steal it.

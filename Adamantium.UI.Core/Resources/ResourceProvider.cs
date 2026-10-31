@@ -10,27 +10,28 @@ public class ResourceProvider
     // handful of dictionaries instead of scanning every dictionary in the scope (the tree-walk lookup asks this per
     // ancestor, so a global scan was O(ancestors x all-dictionaries) per resolve).
     private readonly Dictionary<IAdamantiumComponent, List<ResourceInfo>> _byOwner = new();
+    private int _styledDictionaries;
+
+    /// <summary>Whether a dictionary some element owns here carries unkeyed styles - none usually, and then no element
+    /// looks for them.</summary>
+    public bool HasStyles => _styledDictionaries > 0;
 
     /// <summary>Registers the dictionary of <paramref name="sourceType"/> under <paramref name="owner"/>, creating it the
-    /// first time. <paramref name="linkIncludes"/> registers what it links before it, so its own keys win over theirs.</summary>
-    public void AddSource(IAdamantiumComponent owner, Type sourceType, Action<ResourceDictionary> linkIncludes = null)
+    /// first time - by <paramref name="create"/> when given. <paramref name="linkIncludes"/> registers what it links
+    /// before it, so its own keys win over theirs.</summary>
+    public void AddSource(IAdamantiumComponent owner, Type sourceType, Action<ResourceDictionary> linkIncludes = null,
+        Func<Type, ResourceDictionary> create = null)
     {
         var isNew = !_loadedDictionaries.TryGetValue(sourceType, out var info);
         if (isNew)
         {
-            info = new ResourceInfo(sourceType);
+            info = new ResourceInfo(sourceType, create?.Invoke(sourceType));
             _loadedDictionaries[sourceType] = info;
         }
 
-        if (info.Owners.Add(owner))
+        if (Link(info, owner))
         {
             linkIncludes?.Invoke(info.Resource);
-            if (!_byOwner.TryGetValue(owner, out var owned))
-            {
-                owned = new List<ResourceInfo>();
-                _byOwner[owner] = owned;
-            }
-            owned.Add(info);
         }
 
         if (isNew)
@@ -40,6 +41,25 @@ public class ResourceProvider
         }
     }
 
+    /// <summary>Takes back one link of <paramref name="owner"/> to the dictionary of <paramref name="sourceType"/>; the
+    /// dictionary goes once nothing links it. Returns it when that was the owner's last link to it, else null.</summary>
+    public ResourceDictionary RemoveSource(IAdamantiumComponent owner, Type sourceType)
+    {
+        if (!_loadedDictionaries.TryGetValue(sourceType, out var info) || !Unlink(info, owner, all: false))
+        {
+            return null;
+        }
+
+        if (info.Links.Count == 0)
+        {
+            _loadedDictionaries.Remove(sourceType);
+            _orderedDictionaries.Remove(info);
+            InvalidateCache();
+        }
+
+        return info.Resource;
+    }
+
     // An INLINE (per-element) dictionary: a unique instance authored right on the element (ResourceContext.Resources),
     // not a shared dictionary TYPE. No type-dedup (each instance is its own) - just register it under this owner, so it
     // is tree-scoped and freed with the owner exactly like a linked type is.
@@ -47,13 +67,7 @@ public class ResourceProvider
     {
         var info = new ResourceInfo(instance);
         _orderedDictionaries.Add(info);
-        info.Owners.Add(owner);
-        if (!_byOwner.TryGetValue(owner, out var owned))
-        {
-            owned = new List<ResourceInfo>();
-            _byOwner[owner] = owned;
-        }
-        owned.Add(info);
+        Link(info, owner);
         InvalidateCache();
     }
 
@@ -68,19 +82,18 @@ public class ResourceProvider
 
         foreach (var info in owned)
         {
-            info.Owners.Remove(owner);
+            Unlink(info, owner, all: true);
         }
     }
 
     public void RemoveOwner(IAdamantiumComponent owner)
     {
-        if (!_byOwner.TryGetValue(owner, out var owned)) return;
-        _byOwner.Remove(owner);
+        if (!_byOwner.Remove(owner, out var owned)) return;
 
         List<ResourceInfo> abandonedInfos = null;
         foreach (var info in owned)
         {
-            if (info.Owners.Remove(owner) && info.Owners.Count == 0)
+            if (Unlink(info, owner, all: true) && info.Links.Count == 0)
             {
                 (abandonedInfos ??= new List<ResourceInfo>()).Add(info);
             }
@@ -153,6 +166,129 @@ public class ResourceProvider
         return null;
     }
 
+    /// <summary>Adds to <paramref name="into"/> - made on the first match - the unkeyed styles of the dictionaries
+    /// <paramref name="owner"/> owns that match <paramref name="component"/>, in the order they were added; a style
+    /// already there moves to the end. <paramref name="ownsStyles"/> turns true when any of them carries styles.</summary>
+    public void CollectStylesForOwner(IAdamantiumComponent owner, IFundamentalUIComponent component,
+        ref List<Style> into, ref bool ownsStyles)
+    {
+        if (_styledDictionaries == 0 || !_byOwner.TryGetValue(owner, out var owned))
+        {
+            return;
+        }
+
+        foreach (var info in owned)
+        {
+            if (!info.CountsStyles)
+            {
+                continue;
+            }
+
+            ownsStyles = true;
+            var styles = info.Resource.Styles;
+            for (var i = 0; i < styles.Count; i++)
+            {
+                var style = styles[i];
+                if (!style.Selector.Match(component))
+                {
+                    continue;
+                }
+
+                style.MarkScoped();
+                into ??= [];
+                into.Remove(style);
+                into.Add(style);
+            }
+        }
+    }
+
+    /// <summary>Takes back <paramref name="instance"/> from <paramref name="owner"/>; dropped once no owner has it.
+    /// Returns whether the owner had it here.</summary>
+    public bool RemoveInstance(IAdamantiumComponent owner, ResourceDictionary instance)
+    {
+        if (!_byOwner.TryGetValue(owner, out var owned))
+        {
+            return false;
+        }
+
+        ResourceInfo removed = null;
+        foreach (var info in owned)
+        {
+            if (ReferenceEquals(info.Resource, instance))
+            {
+                removed = info;
+                break;
+            }
+        }
+
+        if (removed == null)
+        {
+            return false;
+        }
+
+        Unlink(removed, owner, all: true);
+        if (removed.Links.Count == 0)
+        {
+            _orderedDictionaries.Remove(removed);
+            InvalidateCache();
+        }
+
+        return true;
+    }
+
+    private bool Link(ResourceInfo info, IAdamantiumComponent owner)
+    {
+        info.Links.TryGetValue(owner, out var links);
+        info.Links[owner] = links + 1;
+        if (links > 0)
+        {
+            return false;
+        }
+
+        if (!_byOwner.TryGetValue(owner, out var owned))
+        {
+            owned = new List<ResourceInfo>();
+            _byOwner[owner] = owned;
+        }
+
+        owned.Add(info);
+        if (!info.CountsStyles && info.Resource.Styles.Count > 0)
+        {
+            info.CountsStyles = true;
+            _styledDictionaries++;
+        }
+
+        return true;
+    }
+
+    private bool Unlink(ResourceInfo info, IAdamantiumComponent owner, bool all)
+    {
+        if (!info.Links.TryGetValue(owner, out var links))
+        {
+            return false;
+        }
+
+        if (!all && links > 1)
+        {
+            info.Links[owner] = links - 1;
+            return false;
+        }
+
+        info.Links.Remove(owner);
+        if (_byOwner.TryGetValue(owner, out var owned) && owned.Remove(info) && owned.Count == 0)
+        {
+            _byOwner.Remove(owner);
+        }
+
+        if (info.Links.Count == 0 && info.CountsStyles)
+        {
+            info.CountsStyles = false;
+            _styledDictionaries--;
+        }
+
+        return true;
+    }
+
     private void AddCacheFor(Type type, string key)
     {
         if (!_cacheByDictionary.TryGetValue(type, out var keys))
@@ -167,7 +303,7 @@ public class ResourceProvider
     {
         if (!_cacheByDictionary.TryGetValue(type, out var keys))
             return;
-        
+
         foreach (var key in keys)
         {
             _cache.Remove(key);
@@ -178,7 +314,7 @@ public class ResourceProvider
     {
         _cache.Clear();
     }
-    
+
     private class ResourceInfo
     {
         public ResourceDictionary Resource { get; }
@@ -187,12 +323,14 @@ public class ResourceProvider
         // unique and not tracked in _loadedDictionaries).
         public Type SourceType { get; }
 
-        public HashSet<IAdamantiumComponent> Owners { get; } = new();
+        public Dictionary<IAdamantiumComponent, int> Links { get; } = new();
 
-        public ResourceInfo(Type dictionaryType)
+        public bool CountsStyles { get; set; }
+
+        public ResourceInfo(Type dictionaryType, ResourceDictionary made)
         {
             SourceType = dictionaryType;
-            Resource = (ResourceDictionary)Activator.CreateInstance(dictionaryType);
+            Resource = made ?? (ResourceDictionary)Activator.CreateInstance(dictionaryType);
             Resource?.Initialize();
         }
 

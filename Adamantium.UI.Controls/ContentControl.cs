@@ -18,6 +18,18 @@ public class ContentControl : Control, IContentControl
    private ContentPresenter _contentPresenter;
    private bool _contentChanged;
 
+   internal override IFundamentalUIComponent ContentGiver => GiverOf(ContentProperty);
+
+   internal override void MarkControlTemplatePart(Guid template, bool isPart)
+   {
+      base.MarkControlTemplatePart(template, isPart);
+      if (Content is FundamentalUIComponent content && !ReferenceEquals(content.LogicalParent, this)
+          && content.IsPartToMark(template, isPart))
+      {
+         content.MarkControlTemplatePart(template, isPart);
+      }
+   }
+
    public static readonly AdamantiumProperty ContentProperty = AdamantiumProperty.Register(nameof(Content),
       typeof(object), typeof(ContentControl), new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure, ContentChangedCallback));
    

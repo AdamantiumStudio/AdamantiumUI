@@ -4,7 +4,7 @@ namespace Adamantium.UI.Core.Data;
 
 public class TemplateBindingExpression : BindingExpressionBase
 {
-    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<IAdamantiumComponent, List<AdamantiumProperty>> Fed = new();
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<IAdamantiumComponent, List<TemplateBindingExpression>> Fed = new();
 
     public IFundamentalUIComponent Source { get; set; }
    
@@ -102,7 +102,7 @@ public class TemplateBindingExpression : BindingExpressionBase
         var fed = Fed.GetValue(Target, static _ => []);
         lock (fed)
         {
-            fed.Add(TargetProperty);
+            fed.Add(this);
         }
     }
 
@@ -122,23 +122,36 @@ public class TemplateBindingExpression : BindingExpressionBase
         {
             lock (fed)
             {
-                fed.Remove(TargetProperty);
+                fed.Remove(this);
             }
         }
     }
 
     /// <summary>Whether a live <c>{TemplateBinding}</c> feeds <paramref name="property"/> of <paramref name="target"/> - the
     /// template slot it writes is then where the value comes from.</summary>
-    public static bool Feeds(IAdamantiumComponent target, AdamantiumProperty property)
+    public static bool Feeds(IAdamantiumComponent target, AdamantiumProperty property) =>
+        Feeding(target, property) != null;
+
+    /// <summary>The live <c>{TemplateBinding}</c> that feeds <paramref name="property"/> of <paramref name="target"/> - the
+    /// latest connected when several do - or null when none does.</summary>
+    public static TemplateBindingExpression Feeding(IAdamantiumComponent target, AdamantiumProperty property)
     {
         if (!Fed.TryGetValue(target, out var fed))
         {
-            return false;
+            return null;
         }
 
         lock (fed)
         {
-            return fed.Contains(property);
+            for (var i = fed.Count - 1; i >= 0; i--)
+            {
+                if (fed[i].TargetProperty == property)
+                {
+                    return fed[i];
+                }
+            }
+
+            return null;
         }
     }
    

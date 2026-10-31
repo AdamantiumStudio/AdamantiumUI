@@ -7,6 +7,35 @@ All packages share one version.
 
 ### Added
 
+- Styles of a subtree: a `<Style>` without `x:Key` in `ResourceContext.Resources` - or a `StyleSet` linked there with
+  `ResourceContext.Source` - reaches every element of the owner's subtree its selector matches, without a key and
+  without being registered for the whole application. Such styles come after the theme's and before an element's own,
+  every scope from the outermost to the nearest; one by type alone yields to an inherited value as any other does,
+  one with a class wins over it. They do not reach into a control's
+  template, which stays the theme's, nor what its parts' code makes; they do reach what the page gives a control - its
+  content, also when a part of the template shows it, what a data template makes of it, and the items of a list. An
+  element that joins or leaves a scope, or resources or a link given, replaced or taken away later, restyle the
+  elements under it. `<X.Styles>` stays X's own style only.
+- `EasedValue` and `PanInertia`: the smooth zoom toward a point and the drag that coasts on after a flick, as one
+  mechanism for every view with a camera. `EasedValue` eases one number of a camera by the frame's time - a zoom level
+  in logarithmic units, a turn in degrees - and lets the owner keep
+  the point under the cursor still however it stores its camera; `PanInertia` tracks a drag by the times of its moves,
+  coasts on with friction after a fast lift (not after one that came when the hand had already stopped), glides to an
+  accumulating target for the wheel and stops at the edge the owner keeps. `ZoomBox`, `InfiniteCanvas`, `FractalView`
+  and `ScrollContentPresenter` now use them instead of a copy each; `ZoomBox` and `InfiniteCanvas` ease the zoom in
+  logarithmic steps, so zooming in and out by the same number of notches takes the same time.
+- `IResourceFactory.UpdateTextureRegions`: writes new pixels into parts of a texture - atlas cells, map tiles - on the
+  device that owns it.
+- `TextureArrayImage` and `ImageLayer`: a picture of many layers of one size, each written on its own, kept in one
+  texture array that starts at 16 layers and grows as layers are taken - an atlas of map tiles or thumbnails. A
+  rectangle, ellipse or regular polygon filled with an `ImageBrush` whose source is an `ImageLayer` draws that layer,
+  turned or not, and shapes filled from layers of one image batch into one draw; other shapes, and the image drawn
+  as a whole, draw nothing with it. A layer given back with `ReleaseLayer` is taken again, once; no more layers are
+  taken than the device holds once the image has been drawn. When the texture is lost with its device the image starts
+  empty and `Generation` grows, so whoever wrote layers writes them anew. A frame with more layer fills than the
+  textured batch holds is held back, and the next one, its batch grown, draws them all.
+  `IResourceFactory.CreateGrowingTextureArray` makes the array.
+
 - `RenderTargetPanel.FrameSharing`: a universe rendering on the UI's own logical device hands the panel its frames
   within it (`Auto`, the default) - no export, no OS handles; one on another device, or with `SharedSurface` asked for to
   try that path, through a shared surface exported as OS handles, as before. The scene of a universe on the UI's device now shows on a device
@@ -2312,6 +2341,12 @@ All packages share one version.
 
 ### Fixed
 
+- The textured batch - shapes filled with an `ImageBrush` or `NineSliceBrush` - grows when a frame has more of them
+  than it holds, as the other batches do. It never grew: past its first 256 records every textured fill was drawn on
+  its own, frame after frame.
+- A control template given up (`TemplateResult.Destroy`) no longer takes the templated parent from the parts of
+  another control's template shown in it - a button in the content kept its look, but its parts no longer knew whose
+  they were.
 - Windows: an activated window takes the keyboard focus. A dialog shown over its owner was active with no focus
   anywhere - its text box showed the caret, but no key reached it until the dialog was clicked.
 - Windows: a window's Vulkan surface is created with the application's module as its `hinstance`, as Vulkan requires;

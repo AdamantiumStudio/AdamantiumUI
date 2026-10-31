@@ -10,6 +10,7 @@ using Adamantium.UI.Core;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Localization;
 using Adamantium.UI.Core.Media;
+using Adamantium.UI.Core.Media.Animation;
 using Adamantium.UI.Core.RoutedEvents;
 using Adamantium.UI.Core.Templates;
 
@@ -19,9 +20,7 @@ namespace Adamantium.UI.Controls.DrawingBoard;
 /// world coordinates (screen = world * Scale + Offset), and only visible grid lines are drawn.</summary>
 public partial class InfiniteCanvas : Control, ISceneFollower
 {
-    private bool _zoomActive;
-    private bool _zoomTickerRegistered;
-    private double _targetScale = 1;
+    private readonly EasedValue _zoom;
     private Vector2<double> _zoomAnchorScreen;
     private Vector2<double> _zoomAnchorWorld;
     private bool _panning;
@@ -870,6 +869,7 @@ public partial class InfiniteCanvas : Control, ISceneFollower
 
     public InfiniteCanvas()
     {
+        _zoom = new EasedValue(() => Math.Log(Math.Clamp(Scale, MinScale, MaxScale)), ApplyZoomLevel, RememberLayout);
         Focusable = true;
         ClipToBounds = true;
 

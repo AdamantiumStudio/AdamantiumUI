@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Runtime.InteropServices;
 using Adamantium.Core.Collections;
 using Adamantium.UI.Core.Collections;
 using Adamantium.UI.Core.Data;
@@ -213,7 +214,8 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
         for (var i = (_attachedStyles?.Count ?? 0) - 1; i >= 0; i--)
         {
             var style = _attachedStyles[i];
-            var stays = style.Selector.Match(this) && (style.Theme == null || Array.IndexOf(incoming, style) >= 0);
+            var stays = style.IsScoped ||
+                        style.Selector.Match(this) && (style.Theme == null || Array.IndexOf(incoming, style) >= 0);
             if (!stays)
             {
                 DetachStyles(style);
@@ -227,6 +229,8 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
                 AttachStyles(style);
             }
         }
+
+        TakeScopedStyles(ScopedStyles());
 
         if (own == null)
         {
@@ -413,6 +417,13 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
     /// ItemsPanelTemplate stamps the same templated parent on the items panel it makes, so a control's teardown would
     /// take the presenter's live panel for one of its own parts - and did, marking a live panel discarded.</summary>
     public Guid OwningTemplateId { get; internal set; }
+
+    /// <summary>The control template this element is a part of, by its result's id - a part of a control's look, which
+    /// belongs to the theme, as against content or a data template's view; empty when it is none's.</summary>
+    internal Guid ControlTemplatePartOf { get; set; }
+
+    /// <summary>Whether a control template built this element.</summary>
+    internal bool IsControlTemplatePart => ControlTemplatePartOf != Guid.Empty;
 
     public void MarkDiscarded()
     {
@@ -715,6 +726,11 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
 
         if (logicalParent != old)
         {
+            if (old != null)
+            {
+                _scopedStylesStale |= _inStyledScope;
+            }
+
             if (old != null && logicalParent != null)
             {
                 // A moved element (a re-theme re-homing content): detach from the old parent instead of throwing, and null
@@ -738,9 +754,141 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
             if (parent != null)
             {
                 ApplyCurrentTheme();
+                if (_scopedStylesStale || _inStyledScope)
+                {
+                    _scopedStylesStale = false;
+                    RestyleChildrenForScopes();
+                }
 
                 RaiseAttachedToLogicalTree(new LogicalTreeAttachmentEventArgs(parent));
             }
+        }
+    }
+
+    private bool _inStyledScope;
+    private bool _scopedStylesStale;
+
+    /// <summary>The element whose content this one shows - handed over by a template binding, or the items of the control
+    /// it presents - or null when what stands under it is its own. Only through it does a control template's part pass
+    /// the page's styles on.</summary>
+    internal virtual IFundamentalUIComponent ContentGiver => null;
+
+    /// <summary>Whose scope this element stands in while it has no parent at all - a popup, the element it shows for.
+    /// </summary>
+    internal virtual IFundamentalUIComponent DetachedScopeParent => null;
+
+    /// <summary>Who gave <paramref name="property"/> its value through template bindings, followed out of every control
+    /// template it came through: the first giver that is no template's part, or null when a template wrote the value.
+    /// </summary>
+    internal IFundamentalUIComponent GiverOf(AdamantiumProperty property)
+    {
+        if (GetValueSource(property) != ValuePriority.Template ||
+            Data.TemplateBindingExpression.Feeding(this, property) is not
+                { Source: FundamentalUIComponent giver, SourceProperty: { } source })
+        {
+            return null;
+        }
+
+        return giver.IsControlTemplatePart ? giver.GiverOf(source) : giver;
+    }
+
+    /// <summary>Marks this element and what it holds in the logical tree as parts of control template
+    /// <paramref name="template"/>, or - <paramref name="isPart"/> false - no longer, leaving other templates' parts be.
+    /// </summary>
+    internal virtual void MarkControlTemplatePart(Guid template, bool isPart)
+    {
+        ControlTemplatePartOf = isPart ? template : Guid.Empty;
+        if (logicalChildren == null)
+        {
+            return;
+        }
+
+        for (var i = 0; i < logicalChildren.Count; i++)
+        {
+            if (logicalChildren[i] is FundamentalUIComponent child && child.IsPartToMark(template, isPart))
+            {
+                child.MarkControlTemplatePart(template, isPart);
+            }
+        }
+    }
+
+    /// <summary>Whether <see cref="MarkControlTemplatePart"/> for <paramref name="template"/> reaches this element.
+    /// </summary>
+    internal bool IsPartToMark(Guid template, bool isPart) =>
+        ControlTemplatePartOf == template || isPart && !IsControlTemplatePart;
+
+    /// <summary>Takes again the styles the subtrees this element stands in give it, and its descendants do the same -
+    /// after it joined a scope, or a scope above it got its styles. Styles of scopes it has left go.</summary>
+    internal void RestyleForScopes()
+    {
+        if (IsStyleApplied)
+        {
+            TakeScopedStyles(ScopedStyles());
+        }
+
+        RestyleChildrenForScopes();
+    }
+
+    private void RestyleChildrenForScopes()
+    {
+        if (this is IUIComponent visual)
+        {
+            foreach (var child in visual.VisualChildren)
+            {
+                (child as FundamentalUIComponent)?.RestyleForScopes();
+            }
+        }
+
+        if (logicalChildren == null)
+        {
+            return;
+        }
+
+        for (var i = 0; i < logicalChildren.Count; i++)
+        {
+            if (logicalChildren[i] is FundamentalUIComponent child and not IUIComponent { VisualParent: not null })
+            {
+                child.RestyleForScopes();
+            }
+        }
+    }
+
+    private void TakeScopedStyles(List<Style> scoped)
+    {
+        var wanted = scoped?.Count ?? 0;
+        var attached = _attachedStyles;
+        var kept = 0;
+        var present = 0;
+        if (attached != null)
+        {
+            for (var i = 0; i < attached.Count; i++)
+            {
+                if (!attached[i].IsScoped)
+                {
+                    continue;
+                }
+
+                if (present == kept && kept < wanted && ReferenceEquals(attached[i], scoped[kept]))
+                {
+                    kept++;
+                }
+
+                present++;
+            }
+
+            for (var i = attached.Count - 1; i >= 0 && present > kept; i--)
+            {
+                if (attached[i].IsScoped)
+                {
+                    present--;
+                    DetachStyles(attached[i]);
+                }
+            }
+        }
+
+        if (kept < wanted)
+        {
+            AttachStyles(CollectionsMarshal.AsSpan(scoped)[kept..]);
         }
     }
 
@@ -772,6 +920,7 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
         // Detach only styles that are leaving, so staying setters never flicker to default and back; leavers go first,
         // since marker setters are undone by property alone.
         var incoming = ThemeContext.For(this)?.FindStylesForComponent(this);
+        var scoped = ScopedStyles();
         var own = StylesOrNull;   // not Styles: a component with no local styles must not grow one to be re-themed
 
         // BACKWARDS by index rather than over a ToArray() copy: DetachStyles removes from this very collection, so a
@@ -785,6 +934,11 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
                 continue;
             }
 
+            if (scoped != null && scoped.Contains(style))
+            {
+                continue;
+            }
+
             if (own != null && own.Contains(style) && style.Selector.Match(this))
             {
                 continue;   // an author's own style that still matches stays; re-applied below
@@ -794,9 +948,22 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
         }
 
         UIAppContext.Current.UIContext.ThemeEngine.ApplyCurrentTheme(this);
+        TakeScopedStyles(scoped);
         UIAppContext.Current.UIContext.ThemeEngine.ApplyExternalStyles(this, own == null ? default : own.AsSpan());
 
         IsStyleApplied = true;
+    }
+
+    private List<Style> ScopedStyles()
+    {
+        var resources = UIAppContext.Current?.ResourceManager;
+        if (resources == null)
+        {
+            _inStyledScope = false;
+            return null;
+        }
+
+        return resources.CollectScopedStyles(this, out _inStyledScope);
     }
     
     public void InvalidateStyles()

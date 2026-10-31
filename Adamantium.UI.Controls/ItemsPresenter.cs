@@ -17,6 +17,9 @@ public class ItemsPresenter : InputUIComponent
     private ItemsControl _owner;
     private Panel _panel;
 
+    internal override IFundamentalUIComponent ContentGiver =>
+        _owner is { IsControlTemplatePart: true } ? _owner.ContentGiver : _owner;
+
     /// <summary>The items host panel (for the owning control / tests).</summary>
     internal Panel Panel => _panel;
 

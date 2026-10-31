@@ -37,7 +37,12 @@ public class ControlTemplate : UiTemplate
                 // Stamped HERE, while the template holds nothing but the parts it just made - content is presented into
                 // it later and must never be mistaken for one of them. See FundamentalUIComponent.OwningTemplateId.
                 fundamental.OwningTemplateId = result.Id;
+                fundamental.ControlTemplatePartOf = result.Id;
             });
+            if (result.RootComponent is FundamentalUIComponent root && root.IsPartToMark(result.Id, true))
+            {
+                root.MarkControlTemplatePart(result.Id, true);
+            }
 
             foreach (var binding in result.TemplateBindings)
             {

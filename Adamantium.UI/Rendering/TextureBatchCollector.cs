@@ -24,7 +24,7 @@ internal sealed class TextureBatchCollector : BrushSdfCollector<TextureItem>
 
     public TextureBatchCollector() : base(256) { }
 
-    protected override IEffectPass DrawPass => Effect.TextureSdfPass;
+    protected override IEffectPass DrawPass => IsArray(_texture) ? Effect.TextureSdfArrayPass : Effect.TextureSdfPass;
 
     protected override EffectParameter GetInstances(BrushEffect effect) => effect.TextureRects;
 
@@ -66,16 +66,38 @@ internal sealed class TextureBatchCollector : BrushSdfCollector<TextureItem>
         if (!EnsureEffectForDraw(device)) 
             return;
         
-        Effect.SourceTexture.SetResource(_texture);
+        if (IsArray(_texture))
+        {
+            Effect.SourceTextureArray.SetResource(_texture);
+        }
+        else
+        {
+            Effect.SourceTexture.SetResource(_texture);
+        }
+
         Effect.SourceSampler.SetResource(SamplerStates.LinearClampToEdge);
         base.DrawSegment(device, buffer, count, firstInstance, projection);
     }
 
+    private static bool IsArray(ITexture texture) => texture?.Info.ViewType == ImageViewType._2dArray;
+
+    /// <summary>Whether <paramref name="brush"/> fills from a layer of a <see cref="TextureArrayImage"/> - a fill only
+    /// this batch draws, which has no per-unit form to fall back to when the batch is out of room.</summary>
+    internal static bool IsLayerFill(Brush brush) => brush is TileBrush { ContentSource: ImageLayer };
+
     /// <summary>The GPU texture a brush samples, or null - either it is not a textured brush, or its source is still
     /// decoding (in which case the next re-render picks it up, the way ImageRenderUnit does). ONE statement of "which
-    /// brushes carry a texture", asked by every render unit that can route here rather than restated per shape.</summary>
-    internal static ITexture BrushTexture(Brush brush, IResourceFactory factory, Size<double> size = default, IUIComponent owner = null)
+    /// brushes carry a texture", asked by every render unit that can route here rather than restated per shape. A layer
+    /// of a <see cref="TextureArrayImage"/> only for <paramref name="layers"/> - the textured batch, the one draw that
+    /// samples an array; everywhere else it has no texture and draws nothing.</summary>
+    internal static ITexture BrushTexture(Brush brush, IResourceFactory factory, Size<double> size = default,
+        IUIComponent owner = null, bool layers = false)
     {
+        if (brush is TileBrush { ContentSource: ImageLayer layer })
+        {
+            return layers ? layer.Image.GetOrCreateTexture(factory) : null;
+        }
+
         var source = brush switch
         {
             TileBrush tile => tile.ContentSource,
@@ -144,7 +166,7 @@ internal sealed class TextureBatchCollector : BrushSdfCollector<TextureItem>
     {
         var slices = NineSlice.Count(p.Brush);
         EnsureCpuCapacity(Count + slices);
-        if (Count + slices > GpuCapacity)
+        if (!Admit(slices))
         {
             return false;
         }
@@ -226,7 +248,7 @@ internal sealed class TextureBatchCollector : BrushSdfCollector<TextureItem>
         ITexture texture, int transformSlot = 0, int fadeSlot = -1, int clipSlot = -1)
     {
         EnsureCpuCapacity(Count + 1);
-        if (Count + 1 > GpuCapacity)
+        if (!Admit(1))
         {
             return false;
         }
@@ -265,7 +287,10 @@ internal sealed class TextureBatchCollector : BrushSdfCollector<TextureItem>
         ITexture texture, int transformSlot = 0, int fadeSlot = -1, int clipSlot = -1)
     {
         EnsureCpuCapacity(Count + 1);
-        if (Count + 1 > GpuCapacity) return false;
+        if (!Admit(1))
+        {
+            return false;
+        }
         if (!Bake(p.Brush, p.DestinationRect, ProceduralGeometry.CornerRadius.Empty, BrushShape.Polygon(p, (float)world.M11),
                 world, opacity, transformSlot, fadeSlot, clipSlot, out var baked))
         {
@@ -316,7 +341,8 @@ internal sealed class TextureBatchCollector : BrushSdfCollector<TextureItem>
         if (items == null) return false;
 
         // Clip and fade slots are stamped on every record here, once for all producers; -1 = none.
-        for (var i = 0; i < items.Length; i++) items[i].Clip = new Vector4F(clipSlot, fadeSlot, 0, 0);
+        var layer = brush is TileBrush { ContentSource: ImageLayer arrayLayer } ? arrayLayer.Index : 0;
+        for (var i = 0; i < items.Length; i++) items[i].Clip = new Vector4F(clipSlot, fadeSlot, layer, 0);
         return true;
     }
 

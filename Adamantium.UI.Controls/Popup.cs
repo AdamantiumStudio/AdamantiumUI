@@ -36,7 +36,18 @@ public class Popup : MeasurableUIComponent, IContainer
         typeof(ControlTemplate), typeof(Popup), new PropertyMetadata(null));
 
     public static readonly AdamantiumProperty PlacementTargetProperty = AdamantiumProperty.Register(nameof(PlacementTarget),
-        typeof(UIComponent), typeof(Popup), new PropertyMetadata(null));
+        typeof(UIComponent), typeof(Popup), new PropertyMetadata(null, OnPlacementTargetChanged));
+
+    // A popup out of the tree stands in the scope of what it shows for: its styles follow the target.
+    private static void OnPlacementTargetChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (a is Popup { LogicalParent: null } popup)
+        {
+            popup.RestyleForScopes();
+        }
+    }
+
+    internal override IFundamentalUIComponent DetachedScopeParent => IsControlTemplatePart ? null : PlacementTarget;
 
     public static readonly AdamantiumProperty PlacementProperty = AdamantiumProperty.Register(nameof(Placement),
         typeof(PlacementMode), typeof(Popup), new PropertyMetadata(PlacementMode.Bottom));

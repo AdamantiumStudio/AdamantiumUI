@@ -158,7 +158,8 @@ public class ResourceManager : IResourceManager
 
     public void AddSource(IAdamantiumComponent owner, Type source, ResourceScope scope = ResourceScope.Local)
     {
-        ProviderOf(scope).AddSource(owner, source, dictionary => AddIncludes(owner, dictionary, scope));
+        var create = typeof(StyleSet).IsAssignableFrom(source) ? StylesOf : (Func<Type, ResourceDictionary>)null;
+        ProviderOf(scope).AddSource(owner, source, dictionary => AddIncludes(owner, dictionary, scope), create);
         _resourcesDirty = true;
     }
 
@@ -171,6 +172,90 @@ public class ResourceManager : IResourceManager
         _resourcesDirty = true;
     }
 
+    public void RemoveSource(IAdamantiumComponent owner, Type source, ResourceScope scope = ResourceScope.Local)
+    {
+        if (ProviderOf(scope).RemoveSource(owner, source) is { } removed)
+        {
+            RemoveIncludes(owner, removed, scope);
+        }
+
+        _resourcesDirty = true;
+    }
+
+    public void RemoveSource(IAdamantiumComponent owner, ResourceDictionary instance,
+        ResourceScope scope = ResourceScope.Local)
+    {
+        var heldIn = _localResources.RemoveInstance(owner, instance) ? ResourceScope.Local
+            : _globalResources.RemoveInstance(owner, instance) ? ResourceScope.Global
+            : _themeResources.RemoveInstance(owner, instance) ? ResourceScope.Theme
+            : scope;
+        RemoveIncludes(owner, instance, heldIn);
+        _resourcesDirty = true;
+    }
+
+    public bool HasScopedStyles => _localResources.HasStyles || _globalResources.HasStyles || _themeResources.HasStyles;
+
+    public List<Style> CollectScopedStyles(IFundamentalUIComponent component, out bool inStyledScope)
+    {
+        inStyledScope = false;
+        if (component == null || !HasScopedStyles)
+        {
+            return null;
+        }
+
+        List<Style> into = null;
+        CollectScopedStyles(component, component, ref into, ref inStyledScope);
+        return into;
+    }
+
+    private void CollectScopedStyles(IFundamentalUIComponent owner, IFundamentalUIComponent component,
+        ref List<Style> into, ref bool inStyledScope)
+    {
+        if (owner == null)
+        {
+            return;
+        }
+
+        CollectScopedStyles(ScopeParent(owner), component, ref into, ref inStyledScope);
+        _themeResources.CollectStylesForOwner(owner, component, ref into, ref inStyledScope);
+        _globalResources.CollectStylesForOwner(owner, component, ref into, ref inStyledScope);
+        _localResources.CollectStylesForOwner(owner, component, ref into, ref inStyledScope);
+    }
+
+    private static IFundamentalUIComponent ScopeParent(IFundamentalUIComponent node)
+    {
+        if (node is FundamentalUIComponent { IsControlTemplatePart: true } part)
+        {
+            return part.LogicalParent is FundamentalUIComponent inside &&
+                   inside.ControlTemplatePartOf == part.ControlTemplatePartOf
+                ? inside
+                : null;
+        }
+
+        var parent = node.LogicalParent ?? node.TemplatedParent as IFundamentalUIComponent ??
+            (node as IUIComponent)?.VisualParent ?? (node as FundamentalUIComponent)?.DetachedScopeParent;
+        if (parent is not FundamentalUIComponent { IsControlTemplatePart: true } holder)
+        {
+            return parent;
+        }
+
+        return holder.ContentGiver;
+    }
+
+    private static ResourceDictionary StylesOf(Type styleSetType)
+    {
+        var styleSet = (StyleSet)Activator.CreateInstance(styleSetType);
+        styleSet.Initialize(UIAppContext.Current?.ThemeManager?.CurrentTheme);
+        var dictionary = new ResourceDictionary();
+        foreach (var style in styleSet.Styles)
+        {
+            style.Theme = null;
+            dictionary.Styles.Add(style);
+        }
+
+        return dictionary;
+    }
+
     private void AddIncludes(IAdamantiumComponent owner, ResourceDictionary dictionary, ResourceScope scope)
     {
         foreach (var include in dictionary.Includes)
@@ -178,6 +263,17 @@ public class ResourceManager : IResourceManager
             if (include?.Source != null)
             {
                 AddSource(owner, include.Source, include.Scope == ResourceScope.Local ? scope : include.Scope);
+            }
+        }
+    }
+
+    private void RemoveIncludes(IAdamantiumComponent owner, ResourceDictionary dictionary, ResourceScope scope)
+    {
+        foreach (var include in dictionary.Includes)
+        {
+            if (include?.Source != null)
+            {
+                RemoveSource(owner, include.Source, include.Scope == ResourceScope.Local ? scope : include.Scope);
             }
         }
     }
