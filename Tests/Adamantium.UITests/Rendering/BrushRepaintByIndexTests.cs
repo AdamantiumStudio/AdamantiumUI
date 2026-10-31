@@ -20,10 +20,10 @@ public class BrushRepaintByIndexTests
 {
     private const int Dim = 120;
 
-    // B8G8R8A8 read-back, as every other pixel test in this folder reads it.
+    // B8G8R8A8 copied out, as every other pixel test in this folder reads it.
     private static (byte R, byte G) Pixel(OffscreenTestRenderer renderer, int x, int y)
     {
-        using var img = renderer.RenderTarget.ResolveTexture.ReadbackToImage();
+        using var img = renderer.RenderTarget.ResolveTexture.ToImage();
         var bytes = new byte[(int)img.TotalSizeInBytes];
         Marshal.Copy(img.DataPointer, bytes, 0, bytes.Length);
         var i = (y * Dim + x) * 4;

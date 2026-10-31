@@ -54,7 +54,7 @@ public class WholeLayerReflectionRenderTests
 
     private static byte[] Pixels(OffscreenTestRenderer renderer)
     {
-        using var image = renderer.RenderTarget.ResolveTexture.ReadbackToImage();
+        using var image = renderer.RenderTarget.ResolveTexture.ToImage();
         var bytes = new byte[(int)image.TotalSizeInBytes];
         Marshal.Copy(image.DataPointer, bytes, 0, bytes.Length);
         return bytes;

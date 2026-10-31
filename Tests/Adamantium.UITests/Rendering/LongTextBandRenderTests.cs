@@ -86,7 +86,7 @@ public class LongTextBandRenderTests
 
     private byte[] Pixels()
     {
-        using var img = _renderer.RenderTarget.ResolveTexture.ReadbackToImage();
+        using var img = _renderer.RenderTarget.ResolveTexture.ToImage();
         var bytes = new byte[(int)img.TotalSizeInBytes];
         Marshal.Copy(img.DataPointer, bytes, 0, bytes.Length);
         return bytes;

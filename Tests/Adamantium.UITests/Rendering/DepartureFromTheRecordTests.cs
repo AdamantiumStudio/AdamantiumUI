@@ -28,7 +28,7 @@ public class DepartureFromTheRecordTests
 
     private static (byte R, byte G, byte B) Pixel(OffscreenTestRenderer renderer, int x, int y)
     {
-        using var img = renderer.RenderTarget.ResolveTexture.ReadbackToImage();
+        using var img = renderer.RenderTarget.ResolveTexture.ToImage();
         var bytes = new byte[(int)img.TotalSizeInBytes];
         Marshal.Copy(img.DataPointer, bytes, 0, bytes.Length);
         var at = (y * Dim + x) * 4;

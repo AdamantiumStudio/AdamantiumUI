@@ -30,7 +30,7 @@ public class RenderCloneSlotTests
         {
             Assert.That(Renderer.RenderFrame(Root), Is.True, "off-screen frame must render");
             RenderDirty.Clear();
-            using var img = Renderer.RenderTarget.ResolveTexture.ReadbackToImage();
+            using var img = Renderer.RenderTarget.ResolveTexture.ToImage();
             var bytes = new byte[(int)img.TotalSizeInBytes];
             Marshal.Copy(img.DataPointer, bytes, 0, bytes.Length);
             return bytes;

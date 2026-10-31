@@ -107,7 +107,7 @@ public class AttributedTextColorRenderTests
             Assert.That(renderer.RenderFrame(root), Is.True, "off-screen frame must render");
             RenderDirty.Clear();
 
-            using var image = renderer.RenderTarget.ResolveTexture.ReadbackToImage();
+            using var image = renderer.RenderTarget.ResolveTexture.ToImage();
             var pixels = new byte[(int)image.TotalSizeInBytes];
             Marshal.Copy(image.DataPointer, pixels, 0, pixels.Length);
             var (red, green, white) = CountColors(pixels);

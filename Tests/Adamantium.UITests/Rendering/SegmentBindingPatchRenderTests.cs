@@ -34,7 +34,7 @@ public class SegmentBindingPatchRenderTests
 
     private static byte[] Pixels(OffscreenTestRenderer renderer)
     {
-        using var img = renderer.RenderTarget.ResolveTexture.ReadbackToImage();
+        using var img = renderer.RenderTarget.ResolveTexture.ToImage();
         var pixels = new byte[(int)img.TotalSizeInBytes];
         System.Runtime.InteropServices.Marshal.Copy(img.DataPointer, pixels, 0, pixels.Length);
         return pixels;

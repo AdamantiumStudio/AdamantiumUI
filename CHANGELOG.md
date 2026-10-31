@@ -8,10 +8,10 @@ All packages share one version.
 ### Added
 
 - Windows: a see-through window (`UseTransparentComposition`) whose surface offers no swapchain that keeps its alpha - an
-  AMD card's, for one - is a layered window the desktop composes from its pixels, as WPF's are: its frames are read back
+  AMD card's, for one - is a layered window the desktop composes from its pixels, as WPF's are: its frames are copied
   (the engine's `PresenterType.Compositor`) and handed to `UpdateLayeredWindow` with the window's opacity. Where the
   surface keeps the alpha, the swapchain composes the window as before. The docking compass drew a black window over
-  the whole area there. Only a frame drawn into the window is read back. A drag ghost was premultiplied twice and its
+  the whole area there. Only a frame drawn into the window is copied. A drag ghost was premultiplied twice and its
   soft edges came out dark: the UI's frames are premultiplied already.
 - The splash of the start appears where the first window of the application appeared the last time it started, when
   the blueprint names no startup window to go by - an application that opens its first window itself, through window

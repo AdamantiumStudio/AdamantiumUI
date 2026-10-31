@@ -19,7 +19,7 @@ internal partial class Win32WindowWorker : IFrameSink
     private uint _frameWidth;
     private uint _frameHeight;
 
-    /// <summary>Puts a frame read back from a see-through window onto the window, which becomes a layered one with its
+    /// <summary>Puts a frame copied from a see-through window onto the window, which becomes a layered one with its
     /// first frame, with the alpha of each pixel and the window's opacity; called on the render thread.</summary>
     public unsafe void Show(IntPtr pixels, uint width, uint height, uint stride)
     {

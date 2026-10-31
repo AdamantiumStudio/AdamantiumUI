@@ -4,7 +4,7 @@ using Adamantium.UI.Core.Media.Imaging;
 
 namespace Adamantium.UI.Core.Input;
 
-/// <summary>Turns a readback snapshot bitmap into the premultiplied BGRA buffer the drag ghost hands the OS compositor.</summary>
+/// <summary>Turns a snapshot bitmap copied from the GPU into the premultiplied BGRA buffer the drag ghost hands the OS compositor.</summary>
 public static class DragGhostPixels
 {
     /// <summary>The snapshot's BGRA in a buffer of its own, premultiplied as <c>UpdateLayeredWindow</c> (and a

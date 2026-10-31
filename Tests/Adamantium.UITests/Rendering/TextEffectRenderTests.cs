@@ -96,7 +96,7 @@ public class TextEffectRenderTests
 
     private Lit Shown()
     {
-        using var img = _renderer.RenderTarget.ResolveTexture.ReadbackToImage();
+        using var img = _renderer.RenderTarget.ResolveTexture.ToImage();
         var pixels = new byte[(int)img.TotalSizeInBytes];
         Marshal.Copy(img.DataPointer, pixels, 0, pixels.Length);
         int count = 0, red = 0, left = int.MaxValue, top = int.MaxValue, right = -1, bottom = -1;
