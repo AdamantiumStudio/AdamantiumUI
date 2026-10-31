@@ -98,6 +98,9 @@ public static class MarkupMessages
     public static string ResourceWithoutKey(string extension, string property, int line, int position) =>
         Say(nameof(ResourceWithoutKey), ("extension", extension), ("property", property), ("line", line), ("position", position));
 
+    public static string LocalizeIntoBindingProperty(string type, string property, string propertyType) =>
+        Say(nameof(LocalizeIntoBindingProperty), ("type", type), ("property", property), ("propertyType", propertyType));
+
     public static string LiveResourceOnPlainProperty(string extension, string key, string type, string property) =>
         Say(nameof(LiveResourceOnPlainProperty), ("extension", extension), ("key", key), ("type", type), ("property", property));
 

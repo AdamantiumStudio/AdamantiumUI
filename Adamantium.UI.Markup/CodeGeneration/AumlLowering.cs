@@ -289,8 +289,15 @@ public class AumlLowering
 
                 if (value is AumlAstLocalizedStringNode localized)
                 {
+                    if (IsBindingTypedProperty(resolvedType) && !HoldsAnyBinding(resolvedType))
+                    {
+                        diagnostics.ReportError(Metadata.ClassName,
+                            MarkupMessages.LocalizeIntoBindingProperty(element.TypeReference.Name, propRef.Name, resolvedType.Name), propRef);
+                        continue;
+                    }
+
                     var localizedVar = EmitLocalizedBinding(localized, diagnostics, isResource);
-                    if (element.TypeReference.Namespace == "Adamantium.UI.Core.Resources")
+                    if (element.TypeReference.Namespace == "Adamantium.UI.Core.Resources" || HoldsAnyBinding(resolvedType))
                     {
                         _writer.Add(new AssignStep(symbolTarget, propRef.Name, localizedVar));
                     }
@@ -1462,6 +1469,9 @@ public class AumlLowering
         type?.FullName is "Adamantium.UI.Core.Data.Binding"
                        or "Adamantium.UI.Core.Data.MultiBinding"
                        or "Adamantium.UI.Core.Data.BindingBase";
+
+    // A property typed BindingBase holds any binding - a {Localize} too; one typed Binding or MultiBinding holds only that.
+    private static bool HoldsAnyBinding(IResolvedType type) => type?.FullName == "Adamantium.UI.Core.Data.BindingBase";
 
     private static string PropertyPath(AumlAstPropertyReference propRef) =>
         propRef.IsAttachedProperty ? $"{propRef.OwnerType.Name}.{propRef.Name}" : propRef.Name;

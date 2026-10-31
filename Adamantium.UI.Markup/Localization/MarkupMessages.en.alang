@@ -64,6 +64,7 @@
     <Phrase Key="InlineResourceNeedsKey" Text="An inline resource in {property} needs an x:Key."/>
     <Phrase Key="ResourceWithoutKey" Text="{{{extension}}} on {property} names no key (line {line}, position {position})."/>
     <Phrase Key="LiveResourceOnPlainProperty" Text="{{{extension} {key}}} cannot follow {type}.{property}: it is a plain property with nothing to keep live. {{ResourceReference {key}}} sets it once."/>
+    <Phrase Key="LocalizeIntoBindingProperty" Text="{type}.{property} holds a {propertyType}, and a {{Localize}} is not one: write a {{Binding}} there, or a {{Localize}} in a property that takes text or any binding."/>
     <Phrase Key="TemplateBindingOutsideTemplate" Text="TemplateBinding can only be used inside ControlTemplate."/>
     <Phrase Key="AncestorTypeNotResolved" Text="Ancestor: type '{type}' could not be resolved."/>
     <Phrase Key="AncestorStopTypeNotResolved" Text="Ancestor: Stop type '{type}' could not be resolved."/>

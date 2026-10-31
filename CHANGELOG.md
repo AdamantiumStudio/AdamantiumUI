@@ -10,10 +10,22 @@ All packages share one version.
 - A tab torn off into a window can be carried back: `TabControl.CarryIndexAtPointer` says where in the strip a tab
   carried over it would go, `CarryIn` takes it up there under the pointer - selected, its content showing, the other tabs
   opening a gap for it, the strip panning near an edge - and `EndCarryIn` keeps it or lets it go. The control reads the
-  pointer as the docking does during a window's move; the application puts the item in and takes the window away. The
-  sandbox's `TornTab` does that for every torn-off window, into any tab control of the application whose items can take
-  it: over a strip the window goes clear and the tab stands there instead; let go, it stays and the window closes.
-  `TabTearOffEventArgs.ContentSize` is the size the tab's content had, so its window opens at that size.
+  pointer as the docking does during a window's move; the application puts the item in and takes the window away.
+  `TabTearOffEventArgs.ContentSize` is the size the tab's content had.
+- `TabTearOffBehavior` (`Adamantium.UI.Tabs`, in the default markup namespace): a tab dragged off its strip gets a
+  window of its own - its item the window's content and data context, at the size its content had, its place not
+  remembered - and the window carried over the strip of any tab control of the application whose items can take it goes
+  clear while the tab stands there; let go, it stays and the window closes. `WindowTitle` is a binding against the item
+  (`{Binding Name}`, or a `{Localize}` it names), `WindowClasses` the classes a style finds the window by, `CarriesBack`
+  turns the carrying back off, and `WindowCreated` hands over each window before it is shown. It was the sandbox's.
+- A property that holds a binding takes a `{Localize}` as the object itself, as it takes a `{Binding}`; it was bound
+  instead and held only the text. One typed `Binding` or `MultiBinding`, which a `{Localize}` is not, fails the build
+  with a markup error at the property, not a C# error in the generated code.
+- A tab or a panel torn off by a gesture made inside the application - automation - opens its window where the gesture
+  ended and starts no move of the platform's: the window went to the real cursor, and the move loop took the real
+  mouse of whoever was at the computer.
+- A cloned binding keeps every setting: `Binding` and `MultiBinding` lost `IsImmediate`, `Localize` its
+  `StringFormat`.
 - `ItemContainerGenerator.Hold`: keeps one container realized while its index is outside the window - the tab a drag
   carries past the visible part of its strip.
 - `EasedValue` and `PanInertia`: the smooth zoom toward a point and the drag that coasts on after a flick, as one

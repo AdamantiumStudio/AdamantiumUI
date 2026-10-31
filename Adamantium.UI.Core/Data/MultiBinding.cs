@@ -27,6 +27,7 @@ public class MultiBinding : BindingBase
          TargetNullValue = TargetNullValue,
          IsAsync = IsAsync,
          Delay = Delay,
+         IsImmediate = IsImmediate,
       };
       foreach (var binding in Bindings)
          clone.Bindings.Add((BindingBase)binding.Clone());
