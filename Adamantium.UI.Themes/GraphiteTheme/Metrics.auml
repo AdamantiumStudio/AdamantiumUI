@@ -73,7 +73,9 @@
          it spent on standing out. -->
     <Thickness x:Key="RibbonRule">0 0 0 1</Thickness>
     <Thickness x:Key="RibbonTabPadding">10 4</Thickness>
-    <Thickness x:Key="RibbonLedgePadding">6 0</Thickness>
+    <Thickness x:Key="RibbonContextualLabelPadding">4 0</Thickness>
+    <Thickness x:Key="RibbonContextualLabelChipPadding">5 1</Thickness>
+    <CornerRadius x:Key="RibbonContextualLabelChipRadius">0</CornerRadius>
     <Thickness x:Key="RibbonGroupPadding">4 4 4 2</Thickness>
     <sys:Double x:Key="RibbonChipWidth">22</sys:Double>
     <sys:Double x:Key="RibbonChipHeight">20</sys:Double>
@@ -104,7 +106,6 @@
          derived from the command rows alone (88) and a gallery cell is about twice a command row, so the caption ended
          up underneath the overflow. -->
     <sys:Double x:Key="RibbonBandHeight">100</sys:Double>
-    <sys:Double x:Key="RibbonLedgeHeight">14</sys:Double>
     <sys:Double x:Key="RibbonIconBoxLarge">24</sys:Double>
     <sys:Double x:Key="RibbonScrollPlateWidth">16</sys:Double>
     <sys:Double x:Key="RibbonScrollFadeWidth">24</sys:Double>

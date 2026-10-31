@@ -6,7 +6,7 @@ using Adamantium.UI.Core.Media;
 namespace Adamantium.UI.Controls;
 
 /// <summary>
-/// What a module of a document brings to a <see cref="Ribbon"/>: its tabs, under a ledge of its own. A piece of the
+/// What a module of a document brings to a <see cref="Ribbon"/>: its tabs, after a label of its own. A piece of the
 /// module's view, built from <see cref="Ribbon.TabSetTemplate"/> for each item of <see cref="Ribbon.TabSetsSource"/>, so
 /// the set and its tabs bind against that item - the module's own view model. Never drawn itself: the ribbon puts its
 /// tabs in the strip.
@@ -24,14 +24,14 @@ public class RibbonTabSet : UIComponent, IContainer
     public static readonly AdamantiumProperty IsActiveProperty = AdamantiumProperty.Register(nameof(IsActive),
         typeof(bool), typeof(RibbonTabSet), new PropertyMetadata(true));
 
-    /// <summary>The title of the ledge over the tabs.</summary>
+    /// <summary>The name shown before the tabs.</summary>
     public object Header
     {
         get => GetValue(HeaderProperty);
         set => SetValue(HeaderProperty, value);
     }
 
-    /// <summary>The color of the ledge and of the tabs under it.</summary>
+    /// <summary>The color of the label and of the tabs it names.</summary>
     public Brush Accent
     {
         get => GetValue<Brush>(AccentProperty);

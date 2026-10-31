@@ -94,9 +94,9 @@
     <Phrase Key="Context" Text="Контекст"/>
     <Phrase Key="Mesh" Text="Меш"/>
     <Phrase Key="MeshTip" Text="Будто выделен меш — появятся его вкладки"/>
-    <Phrase Key="LightTip" Text="…и второй контекст, чтобы увидеть две плашки сразу"/>
-    <Phrase Key="Ledge" Text="Плашка"/>
-    <Phrase Key="LedgeTip" Text="Плашка над вкладками контекста: без неё их связывает только цвет, и полоса не тратит места на её высоту"/>
+    <Phrase Key="LightTip" Text="…и второй контекст, чтобы увидеть два сразу"/>
+    <Phrase Key="Ledge" Text="Надпись"/>
+    <Phrase Key="LedgeTip" Text="Имя контекста перед его вкладками: без него их связывает только цвет"/>
     <Phrase Key="Tools" Text="Инструменты"/>
     <Phrase Key="Measure" Text="Измерить"/>
     <Phrase Key="Annotate" Text="Пометка"/>

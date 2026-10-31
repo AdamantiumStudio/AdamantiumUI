@@ -49,6 +49,7 @@
     <PaletteColor Key="OnAccentOverlayPressed" Color="#5CFFFFFF"/>
     <PaletteColor Key="OnAccentShadePointerOver" Color="#33000000"/>
     <PaletteColor Key="OnAccentShadePressed" Color="#59000000"/>
+    <PaletteColor Key="ContextualLabelFill" Color="#4D000000"/>
 
     <PaletteColor Key="DockFoldedStripFill" Color="#12FFFFFF"/>
     <PaletteColor Key="DockCompassFillColor" Color="#E61E242B"/>

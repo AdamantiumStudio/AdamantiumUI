@@ -114,7 +114,9 @@
          in the same file, several of them more than once. -->
     <Thickness x:Key="RibbonRule">0 0 0 1</Thickness>
     <Thickness x:Key="RibbonTabPadding">16 7</Thickness>
-    <Thickness x:Key="RibbonLedgePadding">8 0</Thickness>
+    <Thickness x:Key="RibbonContextualLabelPadding">6 0</Thickness>
+    <Thickness x:Key="RibbonContextualLabelChipPadding">6 2</Thickness>
+    <CornerRadius x:Key="RibbonContextualLabelChipRadius">3</CornerRadius>
     <Thickness x:Key="RibbonGroupPadding">6 6 6 3</Thickness>
     <!-- The small square button that collapses the ribbon, and the gallery's scroll buttons: the same chip. -->
     <sys:Double x:Key="RibbonChipWidth">28</sys:Double>

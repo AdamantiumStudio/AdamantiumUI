@@ -30,41 +30,44 @@
         </Setter>
     </Style>
 
-    <!-- The strip's OWN panel, not a TabPanel: the ledge has to travel and be clipped with the tabs under it. -->
+    <!-- The strip's OWN panel, not a TabPanel: a context's label has to travel and be clipped with its tabs. -->
     <Style Selector="Ribbon">
         <Setter Property="ItemsPanel">
             <Setter.Value>
                 <ItemsPanelTemplate>
-                    <RibbonTabPanel LedgeHeight="18"/>
+                    <RibbonTabPanel/>
                 </ItemsPanelTemplate>
             </Setter.Value>
         </Setter>
     </Style>
 
-    <!-- The ledge over a contextual run. Its color is the GROUP's, and that stays: it is data - which run a tab
+    <!-- A context's name before its tabs. Its color is the GROUP's, and that stays: it is data - which run a tab
          belongs to - and not the theme's accent. -->
-    <Style Selector="RibbonContextualLedge">
+    <Style Selector="RibbonContextualLabel">
         <Setter Property="Foreground" Value="{ObservableResource TextFillColorPrimary}"/>
         <Setter Property="FontSize" Value="{ResourceReference FontSizeMicro}"/>
-        <Setter Property="Padding" Value="{ResourceReference RibbonLedgePadding}"/>
+        <Setter Property="Padding" Value="{ResourceReference RibbonContextualLabelPadding}"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
         <Setter Property="Template">
             <Setter.Value>
-                <ControlTemplate TargetType="RibbonContextualLedge">
-                    <!-- Never clipped and never wider than its run: the PANEL widens the tabs until the title fits.
-                         Flush and square, like the tabs under it. -->
+                <ControlTemplate TargetType="RibbonContextualLabel">
+                    <!-- The plate is flush and square, like the tabs beside it; the name sits on a chip of its own,
+                         so it reads as a label and not as one more tab. -->
                     <Border Background="{TemplateBinding Accent}"
                             UseAnalyticAA="False">
-                        <ContentPresenter x:Name="PART_ContentPresenter"
-                                Height="{TemplateBinding TitleHeight}"
-                                VerticalAlignment="Top"
-                                HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                        <Border Background="{ObservableResource ContextualLabelFill}"
+                                CornerRadius="{ResourceReference RibbonContextualLabelChipRadius}"
+                                Padding="{ResourceReference RibbonContextualLabelChipPadding}"
                                 Margin="{TemplateBinding Padding}"
-                                Foreground="{TemplateBinding Foreground}"
-                                FontSize="{TemplateBinding FontSize}"
-                                Content="{TemplateBinding Content}"
-                                ContentTemplate="{TemplateBinding ContentTemplate}"/>
+                                VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}">
+                            <ContentPresenter x:Name="PART_ContentPresenter"
+                                    Foreground="{TemplateBinding Foreground}"
+                                    FontSize="{TemplateBinding FontSize}"
+                                    Content="{TemplateBinding Content}"
+                                    ContentTemplate="{TemplateBinding ContentTemplate}"/>
+                        </Border>
                     </Border>
                 </ControlTemplate>
             </Setter.Value>
@@ -274,9 +277,9 @@
         </PropertyTrigger>
     </Style>
 
-    <!-- A CONTEXTUAL tab wears its run's color, ledge AND tabs. The color is the only thing tying a tab to the set
-         that appeared with it, and a run whose ledge alone is colored leaves its tabs indistinguishable from the
-         permanent ones the moment the eye drops a row.
+    <!-- A CONTEXTUAL tab wears its run's color, label AND tabs. The color is the only thing tying a tab to the set
+         that appeared with it, and a run whose label alone is colored leaves its tabs indistinguishable from the
+         permanent ones.
          AFTER the state triggers above, so the open contextual tab keeps its context. -->
     <Style Selector="RibbonTabHeader">
         <PropertyTrigger Property="IsContextual" Value="true">
@@ -286,7 +289,7 @@
     </Style>
 
     <!-- Open AND contextual: the band's own surface, like any open tab. What still says which run it belongs to is the
-         ledge directly above it and its colored neighbors on either side - so no accent rule is added underneath,
+         label before its run and its colored neighbors on either side - so no accent rule is added underneath,
          which is the one Windows mark this theme does without. -->
     <Style Selector="RibbonTabHeader">
         <MultiTrigger>

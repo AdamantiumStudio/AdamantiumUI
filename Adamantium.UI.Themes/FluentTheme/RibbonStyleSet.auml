@@ -31,40 +31,43 @@
         </Setter>
     </Style>
 
-    <!-- The strip's OWN panel, not a TabPanel: the ledge has to travel and be clipped with the tabs under it. -->
+    <!-- The strip's OWN panel, not a TabPanel: a context's label has to travel and be clipped with its tabs. -->
     <Style Selector="Ribbon">
         <Setter Property="ItemsPanel">
             <Setter.Value>
                 <ItemsPanelTemplate>
-                    <RibbonTabPanel LedgeHeight="18"/>
+                    <RibbonTabPanel/>
                 </ItemsPanelTemplate>
             </Setter.Value>
         </Setter>
     </Style>
 
-    <!-- The ledge over a contextual run: the group's color carrying its title. -->
-    <Style Selector="RibbonContextualLedge">
+    <!-- A context's name before its tabs: the group's color carrying its title. -->
+    <Style Selector="RibbonContextualLabel">
         <Setter Property="Foreground" Value="{ObservableResource TextFillColorPrimary}"/>
         <Setter Property="FontSize" Value="{ResourceReference FontSizeMicro}"/>
-        <Setter Property="Padding" Value="{ResourceReference RibbonLedgePadding}"/>
+        <Setter Property="Padding" Value="{ResourceReference RibbonContextualLabelPadding}"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
         <Setter Property="Template">
             <Setter.Value>
-                <ControlTemplate TargetType="RibbonContextualLedge">
-                    <!-- Never clipped and never wider than its run: the PANEL widens the tabs until the title fits
-                         (RibbonTabPanel.Widen). Flush and square, like the tabs under it. -->
+                <ControlTemplate TargetType="RibbonContextualLabel">
+                    <!-- The plate is flush and square, like the tabs beside it; the name sits on a chip of its own,
+                         so it reads as a label and not as one more tab. -->
                     <Border Background="{TemplateBinding Accent}"
                             UseAnalyticAA="False">
-                        <ContentPresenter x:Name="PART_ContentPresenter"
-                                Height="{TemplateBinding TitleHeight}"
-                                VerticalAlignment="Top"
-                                HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                        <Border Background="{ObservableResource ContextualLabelFill}"
+                                CornerRadius="{ResourceReference RibbonContextualLabelChipRadius}"
+                                Padding="{ResourceReference RibbonContextualLabelChipPadding}"
                                 Margin="{TemplateBinding Padding}"
-                                Foreground="{TemplateBinding Foreground}"
-                                FontSize="{TemplateBinding FontSize}"
-                                Content="{TemplateBinding Content}"
-                                ContentTemplate="{TemplateBinding ContentTemplate}"/>
+                                VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}">
+                            <ContentPresenter x:Name="PART_ContentPresenter"
+                                    Foreground="{TemplateBinding Foreground}"
+                                    FontSize="{TemplateBinding FontSize}"
+                                    Content="{TemplateBinding Content}"
+                                    ContentTemplate="{TemplateBinding ContentTemplate}"/>
+                        </Border>
                     </Border>
                 </ControlTemplate>
             </Setter.Value>

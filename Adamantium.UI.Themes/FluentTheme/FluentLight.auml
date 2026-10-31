@@ -31,6 +31,7 @@
     <PaletteColor Key="SubtleFillColorTertiary" Color="#06000000"/>
     <PaletteColor Key="OnAccentShadePointerOver" Color="#33000000"/>
     <PaletteColor Key="OnAccentShadePressed" Color="#59000000"/>
+    <PaletteColor Key="ContextualLabelFill" Color="#4D000000"/>
     <PaletteColor Key="OnAccentOverlayPointerOver" Color="#40FFFFFF"/>
     <PaletteColor Key="OnAccentOverlayPressed" Color="#73FFFFFF"/>
     <PaletteColor Key="DockFoldedStripFill" Color="#14000000"/>
