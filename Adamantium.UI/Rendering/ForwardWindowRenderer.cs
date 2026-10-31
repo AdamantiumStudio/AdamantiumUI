@@ -196,9 +196,7 @@ public class ForwardWindowRenderer : WindowRendererBase
         RuntimeStats.LastApplyMs = Stopwatch.GetElapsedTime(t0).TotalMilliseconds;
         RuntimeStats.LastRenderBuildMs = _lastRecordMs + RuntimeStats.LastApplyMs;
 
-        // Skip the O(N) transform re-bake when nothing moved (a clean frame or a geometry-only partial).
-        if (_renderCache.LastBuildKind == RenderBuildKind.Clean
-            || (_renderCache.LastBuildKind == RenderBuildKind.Partial && !_renderCache.LastBuildTransformDirty))
+        if (!_renderCache.NeedsTransformRebake)
         {
             RuntimeStats.LastRenderProcMs = 0;
             return;

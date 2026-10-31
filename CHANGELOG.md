@@ -2366,6 +2366,15 @@ All packages share one version.
 
 ### Fixed
 
+- A stroke inside an element the compositor slides - the close and pin glyphs of a tab settling into place - moves with
+  it on the frames the render thread draws alone; it stayed where the last recorded frame put it, a few frames behind
+  the tab. A motion node inside it - a list in a sliding view - is carried as well, its whole content had stayed
+  behind; and an element sliding inside another that slides composes from the outer one's new place, not its last.
+  `RenderCache.NeedsTransformRebake` is the one rule for when a frame re-bakes its per-unit transforms, the
+  window's renderer and the tests' alike.
+- A panel torn off the docking opens at the size it was docked at, held where it was taken: every floating window
+  remembered the place and size the last one was closed at, so a wide panel taken by its far end came out narrower
+  and was carried from outside it. `DockingWindow` remembers no placement; the layout keeps its windows' places.
 - The textured batch - shapes filled with an `ImageBrush` or `NineSliceBrush` - grows when a frame has more of them
   than it holds, as the other batches do. It never grew: past its first 256 records every textured fill was drawn on
   its own, frame after frame.

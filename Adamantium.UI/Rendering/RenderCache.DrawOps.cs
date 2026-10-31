@@ -148,11 +148,14 @@ public partial class RenderCache
     {
         if (_compositedOwners.Count == 0 && _movedNodeOwners.Count == 0 && _movedOwners.Count == 0) return;
         if (unit.Component is not { } c) return;
-        if (!_compositedOwners.Contains(c) && !_movedOwners.Contains(c)
-            && !(_movedNodeOwners.Count > 0 && _movedNodeOwners.Contains(NodeOf(c)))) return;
+        if (!_compositedOwners.Contains(c) && !_movedOwners.Contains(c) && !NodeMoved(NodeOf(c))) return;
 
         unit.Update(World(c), _projectionMatrix, _renderScale);
     }
+
+    // The compositor moves a node, not each element under it: a draw inside a sliding tab moved with it.
+    private bool NodeMoved(IUIComponent node) =>
+        node != null && (_movedNodeOwners.Contains(node) || _compositedOwners.Contains(node) || _carriedNodes.Contains(node));
 
     // WHERE a band gets its distance from - asked once and answered here, so the still band and the living one can never
     // disagree about what shape they are wrapping. A unit with no answer simply wears no band rather than a wrong one.
