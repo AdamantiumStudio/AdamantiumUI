@@ -23,8 +23,11 @@ public class KeyTipBadgeThemeTests
         UIAppContext.Initialize(_app, null);
     }
 
+    // The resource manager FIRST: a theme resolves its resource references while it is built, against the manager in
+    // force then - built before the swap, it reads the previous test's resources, and the first theme reads none.
     private void Use(string name)
     {
+        _app.ResourceManager = new ResourceManager();
         Theme theme = name switch
         {
             "MacOs" => new Adamantium.UI.Themes.MacOsTheme.MacOs(),
@@ -32,7 +35,6 @@ public class KeyTipBadgeThemeTests
             _ => new Adamantium.UI.Themes.FluentTheme.Fluent()
         };
 
-        _app.ResourceManager = new ResourceManager();
         typeof(UIAppContext).GetProperty(nameof(UIAppContext.Current)).SetValue(null, _app);
         var themes = new ThemeManager(new AdamantiumDependencyContainer());
         _app.ThemeManager = themes;

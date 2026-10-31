@@ -108,6 +108,16 @@
          How much air a surface gives its content. Three, because they are three different distances from the user: a
          floating dialog is furthest and gets the most, a panel attached to an edge less, and the tab body least - it
          is the page itself, and padding there is margin the content did not ask for. -->
+    <!-- ── Badge ──────────────────────────────────────────────────────────────────────────────────────────────────
+         A pill as tall as a line of micro text, and the dot it shrinks to when it carries no number. The ring keeps it
+         readable over whatever it overlaps. -->
+    <sys:Double x:Key="BadgeHeight">18</sys:Double>
+    <sys:Double x:Key="BadgeDotSize">8</sys:Double>
+    <Thickness x:Key="BadgePadding">6 0</Thickness>
+    <Thickness x:Key="BadgeRing">1.5</Thickness>
+    <CornerRadius x:Key="BadgeRadius">9</CornerRadius>
+    <CornerRadius x:Key="BadgeDotRadius">4</CornerRadius>
+
     <!-- ── Ribbon ─────────────────────────────────────────────────────────────────────────────────────────────────
          The ribbon's own layout. It is a whole miniature interface - tabs, groups, three button sizes, a gallery, a
          backstage - so it brings the largest vocabulary of any control here, and every one of these was written inline

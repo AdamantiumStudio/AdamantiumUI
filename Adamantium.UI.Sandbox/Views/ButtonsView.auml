@@ -23,6 +23,45 @@
                 <TextBlock AutomationProperties.AutomationId="ClickCount" Text="{Binding ClickCount}" VerticalAlignment="Center" FontSize="16"/>
             </StackPanel>
 
+            <!-- Badge: a mark over a button's corner. The counts follow the clicks above (the second capped at 9, so it
+                 reads "9+" past it); the dot shows while notifications are on. -->
+            <TextBlock Text="{Localize ButtonsStrings.Badges}" FontSize="18" Margin="0,24,0,10"/>
+            <StackPanel Orientation="Horizontal">
+                <Grid Margin="0,8,24,0">
+                    <Button Content="{Localize ButtonsStrings.Inbox}"
+                            MinWidth="110"
+                            Height="34"/>
+                    <Badge AutomationProperties.AutomationId="InboxBadge"
+                           Count="{Binding ClickCount}"
+                           HorizontalAlignment="Right"
+                           VerticalAlignment="Top"
+                           Margin="0,-9,-9,0"/>
+                </Grid>
+                <Grid Margin="0,8,24,0">
+                    <Button Content="{Localize ButtonsStrings.Capped}"
+                            MinWidth="110"
+                            Height="34"/>
+                    <Badge AutomationProperties.AutomationId="CappedBadge"
+                           Count="{Binding ClickCount}"
+                           MaxCount="9"
+                           HorizontalAlignment="Right"
+                           VerticalAlignment="Top"
+                           Margin="0,-9,-9,0"/>
+                </Grid>
+                <Grid Margin="0,8,24,0">
+                    <Button Content="{Localize ButtonsStrings.Updates}"
+                            MinWidth="110"
+                            Height="34"/>
+                    <Badge AutomationProperties.AutomationId="UpdatesBadge"
+                           IsDot="True"
+                           Visibility="{Binding Notify, Converter={conv:BoolToVisibilityConverter}}"
+                           HorizontalAlignment="Right"
+                           VerticalAlignment="Top"
+                           Margin="0,-4,-4,0"/>
+                </Grid>
+                <TextBlock Text="{Localize ButtonsStrings.BadgesNote}" VerticalAlignment="Center" Margin="0,8,0,0"/>
+            </StackPanel>
+
             <!-- Toggle family: each control is two-way bound to a VM flag, and the line beside it says what the flag is -
                  one phrase per flag, its case picked by the flag's value. -->
             <TextBlock Text="{Localize ButtonsStrings.Toggles}" FontSize="18" Margin="0,24,0,10"/>
