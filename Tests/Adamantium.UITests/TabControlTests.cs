@@ -94,6 +94,24 @@ public class TabControlTests
         });
     }
 
+    // A tab put in before the selected one - a torn-off tab carried back - moves the selected one's index, not the
+    // selection: keeping the index selected its neighbour.
+    [Test]
+    public void ATabInsertedBeforeTheSelectedOne_LeavesTheSelectionOnIt()
+    {
+        var items = new System.Collections.ObjectModel.ObservableCollection<string> { "a", "b", "c", "d" };
+        var tc = new TabControl { ItemsSource = items };
+        tc.SelectedItem = "c";
+
+        items.Insert(1, "x");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(tc.SelectedItem, Is.EqualTo("c"));
+            Assert.That(tc.SelectedIndex, Is.EqualTo(3));
+        });
+    }
+
     [Test]
     public void SelectedIndex_SurfacesThatTabsBody_AsSelectedContent()
     {

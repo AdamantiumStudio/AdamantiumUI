@@ -24,6 +24,9 @@ public class TabTearOffEventArgs : EventArgs
     /// <summary>Where the pointer let go, in SCREEN coordinates - where the new window should appear.</summary>
     public PixelPoint ScreenPosition { get; }
 
+    /// <summary>The size, logical, the tab's content had in the control - what a window of its own shows it at.</summary>
+    public Size<double> ContentSize { get; init; }
+
     /// <summary>Set by a handler that took the item; false leaves the tab in place.</summary>
     public bool Handled { get; set; }
 

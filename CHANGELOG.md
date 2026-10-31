@@ -7,6 +7,15 @@ All packages share one version.
 
 ### Added
 
+- A tab torn off into a window can be carried back: `TabControl.CarryIndexAtPointer` says where in the strip a tab
+  carried over it would go, `CarryIn` takes it up there under the pointer - selected, its content showing, the other tabs
+  opening a gap for it, the strip panning near an edge - and `EndCarryIn` keeps it or lets it go. The control reads the
+  pointer as the docking does during a window's move; the application puts the item in and takes the window away. The
+  sandbox's `TornTab` does that for every torn-off window, into any tab control of the application whose items can take
+  it: over a strip the window goes clear and the tab stands there instead; let go, it stays and the window closes.
+  `TabTearOffEventArgs.ContentSize` is the size the tab's content had, so its window opens at that size.
+- `ItemContainerGenerator.Hold`: keeps one container realized while its index is outside the window - the tab a drag
+  carries past the visible part of its strip.
 - `EasedValue` and `PanInertia`: the smooth zoom toward a point and the drag that coasts on after a flick, as one
   mechanism for every view with a camera. `EasedValue` eases one number of a camera by the frame's time - a zoom level
   in logarithmic units, a turn in degrees - and lets the owner keep
@@ -2366,6 +2375,13 @@ All packages share one version.
 
 ### Fixed
 
+- A tab put into a `TabControl` before the selected one leaves the selection on that tab; the control kept the index,
+  which selected its neighbour.
+- A tab dragged along a strip that pans keeps its title and its bar: past the visible part, its container was parked
+  from under the pointer, leaving the gap empty and the bar where it had been. Let go far from where it started, it
+  settles straight into its new place: the settle was summed from the widths of the tabs it passed, and those the strip
+  had virtualized away counted as nothing, so it slid back and then jumped forward. The settle ends on the panel's slot,
+  and the offsets are cleared once the layout has put the tabs in their new order, not a frame before it.
 - A stroke inside an element the compositor slides - the close and pin glyphs of a tab settling into place - moves with
   it on the frames the render thread draws alone; it stayed where the last recorded frame put it, a few frames behind
   the tab. A motion node inside it - a list in a sliding view - is carried as well, its whole content had stayed

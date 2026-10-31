@@ -28,7 +28,7 @@
             <!-- Height, not MinHeight: the list below sits in a star row, and a star row inside an UNBOUNDED height
                  (a vertical StackPanel in a ScrollViewer) hands the list everything it asks for - all 24 items - instead
                  of the card's leftover. Bound the card and the star row means what it looks like it means. -->
-            <Border CornerRadius="8" Padding="12" Width="220" Height="300" MarginRight="16" BorderThickness="2">
+            <Border CornerRadius="8" Padding="12" Width="220" Height="340" MarginRight="16" BorderThickness="2">
                 <!-- Behaviors form: one DropTargetBehavior instead of the DragDrop.* attached properties. Its
                      {Binding} resolves because the behavior joins this Border's logical tree (shares its DataContext). -->
                 <Border.Behaviors>
@@ -54,16 +54,14 @@
                         <CheckBox Content="{Localize DragDropStrings.HandleOnly}" IsChecked="{Binding HandleOnlyDrag, Mode=TwoWay}"/>
                         <!-- Gap (the default) = a real hole with a placeholder card; Caret = the plain insertion caret;
                              None = no cue, the drop lands in the list as a whole. -->
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock x:Name="LeftCueLabel"
-                                       Text="{Localize DragDropStrings.InsertionCue}"
-                                       VerticalAlignment="Center"
-                                       MarginRight="8"/>
-                            <DropDown AutomationProperties.LabeledBy="{Binding ElementName=LeftCueLabel}"
-                                      ItemsSource="{Binding InsertionCues}"
-                                      SelectedItem="{Binding LeftInsertionCue, Mode=TwoWay}"
-                                      Width="110"/>
-                        </StackPanel>
+                        <!-- The label above: beside it, a drop-down at the theme's minimum width leaves the narrow card. -->
+                        <TextBlock x:Name="LeftCueLabel"
+                                   Text="{Localize DragDropStrings.InsertionCue}"
+                                   MarginTop="6"
+                                   MarginBottom="4"/>
+                        <DropDown AutomationProperties.LabeledBy="{Binding ElementName=LeftCueLabel}"
+                                  ItemsSource="{Binding InsertionCues}"
+                                  SelectedItem="{Binding LeftInsertionCue, Mode=TwoWay}"/>
                     </StackPanel>
                     <ListBox Grid.Row="2" AutomationProperties.LabeledBy="{Binding ElementName=FruitsHeading}"
                              ItemsSource="{Binding Left}"
@@ -117,7 +115,7 @@
                 </Grid>
             </Border>
 
-            <Border CornerRadius="8" Padding="12" Width="220" Height="300" BorderThickness="2"
+            <Border CornerRadius="8" Padding="12" Width="220" Height="340" BorderThickness="2"
                     DragDrop.AllowDrop="{Binding AnimalsAcceptDrop}" DragDrop.DropCommand="{Binding DropRightCommand}"
                     DragDrop.DragOverCommand="{Binding DragOverRightCommand}">
                 <Border.Styles>
@@ -158,7 +156,7 @@
                 </Grid>
             </Border>
 
-            <Border CornerRadius="8" Padding="12" Width="340" Height="300" MarginLeft="16" BorderThickness="2"
+            <Border CornerRadius="8" Padding="12" Width="340" Height="340" MarginLeft="16" BorderThickness="2"
                     DragDrop.AllowDrop="True" DragDrop.DropCommand="{Binding DropWrapCommand}">
                 <Border.Styles>
                     <Style Selector="Border">
@@ -172,22 +170,29 @@
                 </Border.Styles>
                 <Grid AutomationProperties.LabeledBy="{Binding ElementName=ColorsHeading}" RowDefinitions="Auto,Auto,*">
                     <TextBlock x:Name="ColorsHeading" Text="{Localize DragDropStrings.ColorsWrapPanel}" Foreground="{ThemeResource AccentFillColorDefault}" MarginBottom="6"/>
-                    <StackPanel Grid.Row="1"
-                                Orientation="Horizontal"
-                                MarginBottom="10">
+                    <!-- Two rows: a drop-down is never narrower than the theme's ControlMinWidth, and two of them with
+                         their labels do not fit the card's width side by side. -->
+                    <Grid Grid.Row="1"
+                          ColumnDefinitions="Auto,*"
+                          RowDefinitions="Auto,Auto"
+                          MarginBottom="10">
                         <TextBlock x:Name="FlowLabel" Text="{Localize DragDropStrings.Flow}" VerticalAlignment="Center" MarginRight="8"/>
-                        <DropDown AutomationProperties.LabeledBy="{Binding ElementName=FlowLabel}" ItemsSource="{Binding Orientations}"
-                                  SelectedItem="{Binding WrapOrientation, Mode=TwoWay}" Width="130"/>
+                        <DropDown Grid.Column="1"
+                                  AutomationProperties.LabeledBy="{Binding ElementName=FlowLabel}"
+                                  ItemsSource="{Binding Orientations}"
+                                  SelectedItem="{Binding WrapOrientation, Mode=TwoWay}"
+                                  MarginBottom="6"/>
                         <TextBlock x:Name="WrapCueLabel"
+                                   Grid.Row="1"
                                    Text="{Localize DragDropStrings.InsertionCue}"
                                    VerticalAlignment="Center"
-                                   MarginLeft="12"
                                    MarginRight="8"/>
-                        <DropDown AutomationProperties.LabeledBy="{Binding ElementName=WrapCueLabel}"
+                        <DropDown Grid.Row="1"
+                                  Grid.Column="1"
+                                  AutomationProperties.LabeledBy="{Binding ElementName=WrapCueLabel}"
                                   ItemsSource="{Binding InsertionCues}"
-                                  SelectedItem="{Binding WrapInsertionCue, Mode=TwoWay}"
-                                  Width="110"/>
-                    </StackPanel>
+                                  SelectedItem="{Binding WrapInsertionCue, Mode=TwoWay}"/>
+                    </Grid>
                     <ListBox Grid.Row="2" AutomationProperties.LabeledBy="{Binding ElementName=ColorsHeading}" ItemsSource="{Binding Wrap}" SelectedItems="{Binding WrapSelection}"
                              DragDrop.InsertionCue="{Binding WrapInsertionCue}"
                              SelectionMode="Extended" Background="Transparent"

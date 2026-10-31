@@ -37,10 +37,13 @@ public class TabTearOffBehavior : Behavior<TabControl>
 
         items.Remove(e.Item);
 
+        // The tab's content at the size it had in the strip's control; the window's own place is not remembered - every
+        // torn-off tab is a window of this one type, and one remembered size would give them all the last one's.
+        var content = e.ContentSize.Width > 0 && e.ContentSize.Height > 0 ? e.ContentSize : new Mathematics.Size<double>(640, 480);
         var window = new Window
         {
-            ClientWidth = 640,
-            ClientHeight = 480,
+            RemembersPlacement = false,
+            ClientWidth = content.Width,
             // A desktop point offset by a desktop distance - both physical, and the types say so. See PixelPoint.
             Position = e.ScreenPosition - new PixelPoint(60, 20)
         };
@@ -51,6 +54,9 @@ public class TabTearOffBehavior : Behavior<TabControl>
             KeySource = new Binding(nameof(ViewModels.TabPageViewModel.Header)) { Source = e.Item }
         });
 
+        // Followed before it is first moved, so the drag that tore it off can already carry it back.
+        _ = new TornTab(window, e.Item);
+
         // Windows are shown on the UI thread, so hop there without blocking the frame. Show before setting content (the
         // item plus the strip's selector) so it joins a live, themed window.
         UIAppContext.Current.Dispatcher.InvokeAsync(() =>
@@ -59,6 +65,9 @@ public class TabTearOffBehavior : Behavior<TabControl>
             window.ContentTemplateSelector = _tabs.ContentTemplateSelector;
             window.Content = e.Item;
             window.Show();
+
+            // Its caption is as tall as the theme makes it, known once it is styled.
+            window.ClientHeight = content.Height + window.TitleBarHeight;
 
             // Put the caption under the live cursor position (the gesture's has moved on by now), converting the grab
             // offset with the new window's own scale, which may be another monitor's.

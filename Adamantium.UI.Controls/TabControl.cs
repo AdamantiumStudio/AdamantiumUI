@@ -447,8 +447,13 @@ public class TabControl : Selector
         // item. A tab named before the strip had any wins over the first one.
         var pending = TakePendingSelectionIndex();
 
+        // The selected tab still there keeps the selection wherever it now stands: one inserted before it moved its
+        // index, and keeping the index selected its neighbour.
+        var kept = SelectedItem != null ? IndexOfItem(SelectedItem) : -1;
+
         var index = Items.Count == 0 ? -1
             : pending >= 0 ? pending
+            : kept >= 0 ? kept
             : SelectedIndex < 0 ? (RequiresSelection ? 0 : -1)
             : SelectedIndex >= Items.Count ? Items.Count - 1
             : SelectedIndex;
@@ -611,6 +616,9 @@ public class TabControl : Selector
     private double _draggedExtent;
     private int _dragStartIndex;
     private int _targetIndex;
+    private object _carried;
+    private object _selectedBeforeCarry;
+    private TabItem _settling;
 
     private static readonly IEasingFunction DefaultReorderEasing = new CubicEasing { Mode = EasingMode.Out };
 
@@ -634,6 +642,8 @@ public class TabControl : Selector
 
     internal void BeginDrag(TabItem tab, double along)
     {
+        // A settle the layout has not finished yet ends now, or it would clear this drag's offsets and hold.
+        FinishPendingSettle();
         _dragVertical = StripIsVertical;
         IsTearingOff = false;   // per gesture: left set, it disables every later tear-off
         _dragged = tab;
@@ -643,6 +653,19 @@ public class TabControl : Selector
         _draggedExtent = Extent(tab);
         tab.ZIndex = 1;
         SetOffset(tab, 0);
+
+        // The strip may pan its slot out of view while the tab rides under the pointer: it stays realized meanwhile.
+        HoldInStrip(tab);
+    }
+
+    // The generator of whichever row realized the tab - this control's own, or a pinned or ordinary row's.
+    private void HoldInStrip(TabItem tab)
+    {
+        foreach (var host in (ItemsControl[])[this, _tabsHost, _pinnedHost])
+        {
+            var generator = host?.ItemContainerGenerator;
+            generator?.Hold(tab != null && generator.IndexFromContainer(tab) >= 0 ? tab : null);
+        }
     }
 
     internal void UpdateDrag(TabItem tab, PointerEventArgs e)
@@ -718,7 +741,10 @@ public class TabControl : Selector
         if (IsTearingOff || outside <= threshold) return;
 
         IsTearingOff = true;
-        var args = new TabTearOffEventArgs(tab.DataContext, tab, Mouse.ScreenCoordinates);
+        var args = new TabTearOffEventArgs(tab.DataContext, tab, Mouse.ScreenCoordinates)
+        {
+            ContentSize = _contentHost?.RenderSize ?? default
+        };
         TabTornOff?.Invoke(this, args);
         if (!args.Handled)
         {
@@ -734,6 +760,7 @@ public class TabControl : Selector
     private void CancelDrag(TabItem tab)
     {
         _dragged = null;
+        HoldInStrip(null);
         for (var i = 0; i < Items.Count; i++)
         {
             if (ContainerOfTab(i) is TabItem other) SetOffset(other, 0);
@@ -747,6 +774,133 @@ public class TabControl : Selector
 
         // Or PlaceIndicator short-circuits and the bar stays on the tab that left.
         _lastAlong = _lastExtent = double.NaN;
+    }
+
+    /// <summary>Where a tab carried in from outside - a torn-off one brought back in its window - would go in the strip
+    /// under the pointer: an index among the items, in the ordinary row; -1 when the pointer is not over the strip's
+    /// visible part.</summary>
+    public int CarryIndexAtPointer()
+    {
+        if (!AllowTabDrag || _tabStrip is not { } strip || ItemsHostPanel is not { } panel
+            || !PointerIn(strip, out var inStrip) || !PointerIn(panel, out var point))
+        {
+            return -1;
+        }
+
+        var size = strip.RenderSize;
+        if (inStrip.X < 0 || inStrip.Y < 0 || inStrip.X > size.Width || inStrip.Y > size.Height)
+        {
+            return -1;
+        }
+
+        // Before the first ordinary tab whose middle is past the pointer - asked of the row's own slots, which the panel
+        // knows for the tabs it has virtualized away too.
+        var vertical = StripIsVertical;
+        var along = vertical ? point.Y : point.X;
+        var row = _tabsHost != null ? _tabsHost.Items : Items;
+        for (var local = 0; local < row.Count; local++)
+        {
+            if (panel is Panels.VirtualizingPanel slots && slots.TryGetItemRect(local, out var rect)
+                && along < (vertical ? rect.Y + rect.Height / 2 : rect.X + rect.Width / 2))
+            {
+                return Items.IndexOf(row[local]);
+            }
+        }
+
+        return Items.Count;
+    }
+
+    /// <summary>Carries <paramref name="item"/> - put among the items by the caller, at <see cref="CarryIndexAtPointer"/> -
+    /// under the pointer as a dragged tab is carried: selected, so its content shows, with the others opening a gap for it.
+    /// Called again as the pointer moves; <see cref="EndCarryIn"/> ends it.</summary>
+    public void CarryIn(object item)
+    {
+        var index = Items.IndexOf(item);
+        if (index < 0 || ItemsHostPanel is not { } panel || !PointerIn(panel, out var point))
+        {
+            return;
+        }
+
+        if (!ReferenceEquals(_carried, item))
+        {
+            _carried = item;
+            _selectedBeforeCarry = SelectedItem;
+            SetCurrentValue(SelectedItemProperty, item);
+        }
+
+        _dragVertical = StripIsVertical;
+        var along = _dragVertical ? point.Y : point.X;
+        if (_dragged == null)
+        {
+            // Laid out by the next pass: until then there is nothing to carry yet.
+            if (ContainerOfTab(index) is not TabItem tab || Extent(tab) <= 0)
+            {
+                return;
+            }
+
+            BeginDrag(tab, along);
+            _grabOffset = _draggedExtent / 2;
+        }
+
+        UpdateDrag(_dragged, along);
+
+        // Near an edge the strip pans, as it does for a tab dragged inside it.
+        if (_tabStrip is { } strip && PointerIn(strip, out var inStrip))
+        {
+            strip.PanNear(_dragVertical ? inStrip.Y : inStrip.X, strip.AutoScrollMargin, strip.AutoScrollRate);
+        }
+    }
+
+    /// <summary>Ends a <see cref="CarryIn"/>: kept, the tab settles into the gap it opened; not kept, the strip closes the
+    /// gap and selects what it had before - the caller then takes the item out again. Nothing when no carry runs.</summary>
+    public void EndCarryIn(bool keep)
+    {
+        if (_carried == null)
+        {
+            return;
+        }
+
+        var tab = _dragged;
+        var before = _selectedBeforeCarry;
+        _carried = null;
+        _selectedBeforeCarry = null;
+        if (keep)
+        {
+            if (tab != null)
+            {
+                EndDrag(tab);
+            }
+
+            return;
+        }
+
+        if (tab != null)
+        {
+            CancelDrag(tab);
+        }
+
+        SetCurrentValue(SelectedItemProperty, before);
+    }
+
+    // The pointer in this element's logical coordinates, read from the mouse during a window's move - the platform's
+    // move loop holds the button, so no pointer event says where it is. False for an element not on screen.
+    private bool PointerIn(UIComponent element, out Vector2<double> point)
+    {
+        point = default;
+        if (RootVisual == null || element.RootVisual == null)
+        {
+            return false;
+        }
+
+        var scale = RootVisual.Window is { } window ? window.DpiScale : Vector2<double>.One;
+        if (WindowDragPointer.IsActive)
+        {
+            point = WindowDragPointer.Position - element.PointToScreen(Vector2<double>.Zero).ToLogical(scale);
+            return ReferenceEquals(RootVisual, WindowDragPointer.Window);
+        }
+
+        point = (Mouse.ScreenCoordinates - element.PointToScreen(Vector2<double>.Zero)).ToLogical(scale);
+        return true;
     }
 
     internal void UpdateDrag(TabItem tab, double along)
@@ -786,10 +940,18 @@ public class TabControl : Selector
         AnimateOffsetTo(tab, GapShift(start, target), () =>
         {
             MoveItem(start, target);
-            ClearDragOffsets();
-            tab.ZIndex = 0;
-            // Or the bar stays at the drop point.
-            _lastAlong = _lastExtent = double.NaN;
+
+            // The offsets hold the tabs where the move puts them until a layout pass does: cleared before it, the tab
+            // showed at its old slot for a frame or two and then jumped to the new one.
+            FinishPendingSettle();
+            if (start == target)
+            {
+                FinishSettle(tab);
+            }
+            else
+            {
+                _settling = tab;
+            }
         });
 
         // Drives the bar while the tab settles; the ticker expires with the settle.
@@ -801,6 +963,25 @@ public class TabControl : Selector
             settleElapsed += dt;
             return settleElapsed >= settleDuration;
         });
+    }
+
+    private void FinishPendingSettle()
+    {
+        if (_settling is { } settled)
+        {
+            _settling = null;
+            FinishSettle(settled);
+        }
+    }
+
+    private void FinishSettle(TabItem tab)
+    {
+        HoldInStrip(null);
+        ClearDragOffsets();
+        SetOffset(tab, 0);   // the move may have handed the dragged container to another item, which the sweep misses
+        tab.ZIndex = 0;
+        // Or the bar stays at the drop point.
+        _lastAlong = _lastExtent = double.NaN;
     }
 
     private void ApplyGapOffsets()
@@ -818,6 +999,19 @@ public class TabControl : Selector
 
     private double GapShift(int start, int target)
     {
+        if (target == start)
+        {
+            return 0;
+        }
+
+        // From the panel's slots, which it knows for every tab: summed from the containers, a tab the strip had
+        // virtualized away counted as nothing, and a tab carried far along a panned strip settled short of its place.
+        if (SlotOfIndex(start, ContainerOfTab(start) as TabItem, out var from, out var fromExtent)
+            && SlotOfIndex(target, ContainerOfTab(target) as TabItem, out var to, out var toExtent))
+        {
+            return target > start ? to + toExtent - fromExtent - from : to - from;
+        }
+
         double shift = 0;
         if (target > start)
             for (var i = start + 1; i <= target; i++)
@@ -840,13 +1034,24 @@ public class TabControl : Selector
     }
 
     // Asked of the panel first: an authored tab reports Bounds of zero until arranged, which flung a drag to the end.
+    // Asked of the tab's own row - the pinned one or the ordinary one, each indexed by its own items.
     private bool SlotOfIndex(int index, TabItem container, out double start, out double extent)
     {
-        if (ItemsHostPanel is Panels.VirtualizingPanel panel && panel.TryGetItemRect(index, out var rect))
+        var item = index >= 0 && index < Items.Count ? Items[index] : null;
+        var row = item != null && PinnedItems.Contains(item) ? _pinnedHost : _tabsHost;
+        var panel = row != null ? row.ItemsHostPanel : ItemsHostPanel;
+        var local = row != null ? row.Items.IndexOf(item) : index;
+        if (panel is Panels.VirtualizingPanel slots && local >= 0 && slots.TryGetItemRect(local, out var rect))
         {
             start = _dragVertical ? rect.Y : rect.X;
             extent = _dragVertical ? rect.Height : rect.Width;
             return extent > 0;
+        }
+
+        if (container == null)
+        {
+            start = extent = 0;
+            return false;
         }
 
         start = SlotStart(container);
@@ -1013,6 +1218,9 @@ public class TabControl : Selector
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnDetachedFromVisualTree(e);
+
+        // No layout pass will come to finish it here.
+        FinishPendingSettle();
         if (_hookedManager != null)
         {
             _hookedManager.LayoutUpdated -= OnLayoutSettled;
@@ -1022,6 +1230,7 @@ public class TabControl : Selector
 
     private void OnLayoutSettled(object sender, EventArgs e)
     {
+        FinishPendingSettle();
         PlaceIndicator();
         ScrollSelectedIntoView();
         EnterSelectedContent();
