@@ -20,25 +20,25 @@ public class RibbonContextualGroup : AdamantiumComponent
         set => SetValue(KeyProperty, value);
     }
 
-    /// <summary>What the ledge over the group's tabs says.</summary>
+    /// <summary>The group's name, shown before its tabs (<see cref="ShowContextualHeader"/>).</summary>
     public static readonly AdamantiumProperty HeaderProperty = AdamantiumProperty.Register(nameof(Header),
         typeof(object), typeof(RibbonContextualGroup), new PropertyMetadata(null));
 
-    /// <summary>The color that marks everything belonging to this context: the ledge, its tabs' headers, and the top
-    /// edge of the groups area - so an open page still says which context it belongs to once the ledge is out of view.</summary>
+    /// <summary>The color that marks everything belonging to this context: the label, its tabs' headers, and the top
+    /// edge of the groups area - so an open page still says which context it belongs to once the label is out of view.</summary>
     public static readonly AdamantiumProperty AccentProperty = AdamantiumProperty.Register(nameof(Accent),
         typeof(Brush), typeof(RibbonContextualGroup), new PropertyMetadata(default(Brush)));
 
-    /// <summary>Whether the ledge over the group's tabs is drawn at all. Off, the context is carried by the COLOR of
-    /// its tabs alone - which is what actually says which tabs belong together - and the strip costs no extra height.
-    /// Microsoft dropped the ledge in current M365 for the same reason.</summary>
-    public static readonly AdamantiumProperty ShowHeaderProperty = AdamantiumProperty.Register(nameof(ShowHeader),
-        typeof(bool), typeof(RibbonContextualGroup), new PropertyMetadata(true));
+    /// <summary>Whether the group's header stands in the tab row before its tabs. Off, the context is carried by the
+    /// COLOR of its tabs alone - which is what actually says which tabs belong together - and costs no width. Neither
+    /// way changes the strip's height.</summary>
+    public static readonly AdamantiumProperty ShowContextualHeaderProperty = AdamantiumProperty.Register(
+        nameof(ShowContextualHeader), typeof(bool), typeof(RibbonContextualGroup), new PropertyMetadata(true));
 
-    public bool ShowHeader
+    public bool ShowContextualHeader
     {
-        get => GetValue<bool>(ShowHeaderProperty);
-        set => SetValue(ShowHeaderProperty, value);
+        get => GetValue<bool>(ShowContextualHeaderProperty);
+        set => SetValue(ShowContextualHeaderProperty, value);
     }
 
     /// <summary>Whether the group's tabs are in the strip at all. Bound to whatever the application means by "this

@@ -1896,6 +1896,12 @@ All packages share one version.
 
 ### Changed
 
+- A ribbon's contextual group names its tabs from the tab row, just before them, and no longer from a band over them:
+  a context appearing or going no longer changes the ribbon's height. The name stands on a chip of its own
+  (`ContextualLabelFill` in each palette), so it does not read as one more tab. `RibbonContextualGroup.ShowHeader` is
+  `ShowContextualHeader` - off, the tabs' color alone carries the context - `RibbonContextualLedge` is
+  `RibbonContextualLabel`, without `TitleHeight`, and `RibbonTabPanel.LedgeHeight` is gone, as a title no longer widens
+  its tabs.
 - The logical parent of an element is what holds it: a control its `Content` and its `Header`, a popup its `Child`, a
   list its elements and the containers it makes, a tab its page while the page is shown. A presenter or a list's panel
   only shows them, and what they show inherits from where it is shown. Content handed down by a template binding or a

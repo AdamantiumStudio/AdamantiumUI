@@ -9,7 +9,7 @@ using NUnit.Framework;
 namespace Adamantium.UITests;
 
 /// <summary>The modules of a document bring their own tabs: a piece of each module's view, bound against the module,
-/// under a ledge of its own - there while the module is in the document, gone with it.</summary>
+/// after a label of its own - there while the module is in the document, gone with it.</summary>
 [TestFixture]
 public class RibbonTabSetsTests
 {
@@ -59,7 +59,7 @@ public class RibbonTabSetsTests
         {
             Assert.That(TabOf(ribbon, surface)?.Header, Is.EqualTo("Surface"), "the tab reads its own module");
             Assert.That(TabOf(ribbon, space)?.Header, Is.EqualTo("Space"));
-            Assert.That(ribbon.ContextualGroups.Count, Is.EqualTo(2), "a ledge per module");
+            Assert.That(ribbon.ContextualGroups.Count, Is.EqualTo(2), "a context per module");
         });
     }
 
@@ -122,7 +122,7 @@ public class RibbonTabSetsTests
     }
 
     // The modules belong to the document, which outlives the ribbon's page. A discarded ribbon stops listening to them -
-    // its ledges included, which it watches one by one - and leaves them as they were.
+    // its contexts included, which it watches one by one - and leaves them as they were.
     [Test]
     public void ADiscardedRibbon_LetsGoOfTheModules_AndLeavesThemAlone()
     {

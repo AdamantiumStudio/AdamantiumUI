@@ -6,34 +6,27 @@ using Adamantium.UI.Core.Input;
 
 namespace Adamantium.UI.Controls.Panels;
 
-/// <summary>The ribbon strip's items host: tab headers in a row, with a contextual group's ledge over its tabs. Ledges live
-/// in the panel so they move and clip with those tabs.</summary>
+/// <summary>The ribbon strip's items host: tab headers in a row, a contextual group's label standing just before its
+/// run of tabs. The labels live in the panel so they move and clip with those tabs, and IN the row so a context
+/// appearing never changes the strip's height.</summary>
 public class RibbonTabPanel : Panel
 {
-    /// <summary>Height of the ledge row. ZERO while no group is active: an ordinary ribbon must not stand taller
-    /// because of a possibility nobody is using.</summary>
-    public static readonly AdamantiumProperty LedgeHeightProperty = AdamantiumProperty.Register(nameof(LedgeHeight),
-        typeof(double), typeof(RibbonTabPanel),
-        new PropertyMetadata(18.0, PropertyMetadataOptions.AffectsMeasure | PropertyMetadataOptions.AffectsArrange));
-
-    public double LedgeHeight
-    {
-        get => GetValue<double>(LedgeHeightProperty);
-        set => SetValue(LedgeHeightProperty, value);
-    }
-
-    // The ledges are OURS, not items: they are added straight to the visual tree, so the items presenter's own
+    // The labels are OURS, not items: they are added straight to the visual tree, so the items presenter's own
     // Children.Clear() never touches them and the container generator never sees them.
-    private readonly List<RibbonContextualLedge> _ledges = [];
+    private readonly List<RibbonContextualLabel> _labels = [];
 
     // The headers in the order they are LAID OUT, which is not the order they were authored in - see Order().
     private readonly List<IMeasurableComponent> _order = [];
 
-    // (first header index, last header index, group) for each run of neighboring tabs sharing a group.
-    private readonly List<(int First, int Last, RibbonContextualGroup Group)> _runs = [];
+    // (first header index, group) for each run of neighboring tabs sharing a group that shows its header; one label
+    // per run, standing before the run's first tab.
+    private readonly List<(int First, RibbonContextualGroup Group)> _runs = [];
 
-    /// <summary>Left/Right walk the headers as they STAND, ledges skipped - the ledge is a label, and the laid-out
-    /// order is not the authored one once contextual tabs are in the strip.</summary>
+    // Where each label was last put, so a move can be told to re-record it (see ArrangeOverride).
+    private readonly Dictionary<RibbonContextualLabel, Rect> _placed = [];
+
+    /// <summary>Left/Right walk the headers as they STAND, labels skipped - a label names tabs and is not one, and the
+    /// laid-out order is not the authored one once contextual tabs are in the strip.</summary>
     public override IUIComponent Navigate(IUIComponent from, FocusNavigationDirection direction)
     {
         if (!IsArrow(direction)) return base.Navigate(from, direction);
@@ -50,12 +43,10 @@ public class RibbonTabPanel : Panel
     {
         Order();
         Repartition();
-        SyncLedges();
+        SyncLabels();
 
-        var ledgeRow = LedgeRow;
-
-        // Unbounded along the row so each header takes exactly its own width; the ledge row is not theirs to fill.
-        var forHeaders = new Size<double>(double.PositiveInfinity, Math.Max(0, availableSize.Height - ledgeRow));
+        // Unbounded along the row so each header takes exactly its own width.
+        var forHeaders = new Size<double>(double.PositiveInfinity, availableSize.Height);
 
         double width = 0, height = 0;
         foreach (var header in _order)
@@ -65,118 +56,54 @@ public class RibbonTabPanel : Panel
             height = Math.Max(height, header.DesiredSize.Height);
         }
 
-        foreach (var ledge in _ledges)
+        // The tabs set the row's height; a label stands at that height and adds only its width.
+        foreach (var label in _labels)
         {
-            ledge.Measure(new Size<double>(double.PositiveInfinity, height + ledgeRow));
+            label.Measure(new Size<double>(double.PositiveInfinity, height));
+            width += label.DesiredSize.Width;
         }
 
-        width += Widen();
-        return new Size<double>(width, height + ledgeRow);
+        return new Size<double>(width, height);
     }
-
-    // Extra width handed to each header, so its run is at least as wide as its ledge's title.
-    private readonly Dictionary<IMeasurableComponent, double> _extra = [];
-
-    // Where each plate was last put, so a shape change can be told to re-record itself (see ArrangeOverride).
-    private readonly Dictionary<RibbonContextualLedge, Rect> _placed = [];
-
-    /// <summary>A ledge is exactly as wide as the run it names, and a run can be one narrow tab - "LIGHT TOOLS" over
-    /// "Light". Neither answer at the edges is acceptable: a ledge widened past its tabs lies about which tabs it
-    /// covers, and a clipped title is a title nobody can read. Office solves it the third way - it WIDENS THE TABS
-    /// until the title fits - so the ledge still spans exactly its run, and nothing is cut. Returns the width added.</summary>
-    private double Widen()
-    {
-        _extra.Clear();
-        double added = 0;
-
-        for (var i = 0; i < _runs.Count && i < _ledges.Count; i++)
-        {
-            var (first, last, _) = _runs[i];
-
-            double run = 0;
-            for (var at = first; at <= last; at++) run += _order[at].DesiredSize.Width;
-
-            var shortfall = _ledges[i].DesiredSize.Width - run;
-            if (shortfall <= 0) continue;
-
-            // Spread evenly, so a run of equal tabs stays equal rather than growing one of them into a slab.
-            var each = shortfall / (last - first + 1);
-            for (var at = first; at <= last; at++) _extra[_order[at]] = each;
-
-            added += shortfall;
-        }
-
-        return added;
-    }
-
-    private double WidthOf(IMeasurableComponent header) =>
-        header.DesiredSize.Width + (_extra.TryGetValue(header, out var extra) ? extra : 0);
 
     protected override Size<double> ArrangeOverride(Size<double> finalSize)
     {
-        // Read from the headers HERE rather than from a number the last measure left behind: an arrange can follow a
-        // measure that ran under a different shape (the ledge switched off between them). Clamped to the slot, never
-        // stretched to it: a strip occupies only what it stacks.
+        // Read from the headers HERE rather than from a number the last measure left behind. Clamped to the slot,
+        // never stretched to it: a strip occupies only what it stacks.
         double tallest = 0;
         foreach (var header in _order) tallest = Math.Max(tallest, header.DesiredSize.Height);
 
         var row = Math.Min(finalSize.Height, tallest);
 
-        // The TABS come first and the band takes what is left. The strip grows by the band's height when a context
-        // appears, but the slot only catches up on the NEXT pass - and taking the band out of the tabs' height in the
-        // meantime squashed them to a third of their size for that frame.
-        var ledgeRow = Math.Max(0, Math.Min(LedgeRow, finalSize.Height - row));
-
-        // Where each header starts and ends, so a ledge can be laid over the run it describes.
-        var edges = new double[_order.Count + 1];
         double x = 0;
+        var run = 0;
         for (var i = 0; i < _order.Count; i++)
         {
+            if (run < _runs.Count && run < _labels.Count && _runs[run].First == i)
+            {
+                var label = _labels[run++];
+                var slot = new Rect(x, 0, label.DesiredSize.Width, row);
+
+                // A label is a raw visual child, outside Children and outside the items presenter, so nothing marks
+                // it for re-recording when it merely MOVES. Told here, and only when it actually moved, so a still
+                // strip records nothing.
+                if (!_placed.TryGetValue(label, out var before) || before != slot)
+                {
+                    _placed[label] = slot;
+                    label.InvalidateRender(true);
+                }
+
+                label.Arrange(slot);
+                x += slot.Width;
+            }
+
             var header = _order[i];
-            var width = WidthOf(header);
-            edges[i] = x;
-            header.Arrange(new Rect(x, ledgeRow, width, row));
+            var width = header.DesiredSize.Width;
+            header.Arrange(new Rect(x, 0, width, row));
             x += width;
         }
 
-        edges[_order.Count] = x;
-
-        // The plate is the TITLE BAND over its run; the tabs below carry their own color, and stand as tabs rather
-        // than as holes cut in a slab.
-        for (var i = 0; i < _runs.Count && i < _ledges.Count; i++)
-        {
-            var (first, last, _) = _runs[i];
-            var slot = new Rect(edges[first], 0, edges[last + 1] - edges[first], ledgeRow);
-            var ledge = _ledges[i];
-
-            // A plate is a raw visual child, outside Children and outside the items presenter, so nothing marks it for
-            // re-recording when it merely CHANGES SHAPE - and a plate given zero height went on being drawn at the
-            // height it had. Told here, and only when the shape actually moved, so a still strip records nothing.
-            if (!_placed.TryGetValue(ledge, out var before) || before != slot)
-            {
-                _placed[ledge] = slot;
-                ledge.InvalidateRender(true);
-            }
-
-            ledge.Arrange(slot);
-        }
-
-        return new Size<double>(x, row + ledgeRow);
-    }
-
-    // The title band costs height only if some context actually asks for a title; a strip of plates alone is exactly as
-    // tall as it always was.
-    private double LedgeRow
-    {
-        get
-        {
-            foreach (var run in _runs)
-            {
-                if (run.Group.ShowHeader) return LedgeHeight;
-            }
-
-            return 0;
-        }
+        return new Size<double>(x, row);
     }
 
     // Ordinary tabs first, in the order their author wrote them; then the contextual ones, group by group, oldest
@@ -211,8 +138,9 @@ public class RibbonTabPanel : Panel
     }
 
     // A run is a MAXIMAL stretch of neighboring headers with the SAME group. Neighboring, not merely belonging: an
-    // ordinary tab placed between two tabs of one group yields TWO ledges with the same title, and that is the honest
+    // ordinary tab placed between two tabs of one group yields TWO labels with the same title, and that is the honest
     // answer - the strip shows what is in it. Office forbids the arrangement instead; we make it predictable.
+    // Only a group that shows its header gets a label; the others are carried by their tabs' color alone.
     private void Repartition()
     {
         _runs.Clear();
@@ -230,58 +158,56 @@ public class RibbonTabPanel : Panel
             var last = i;
             while (last + 1 < _order.Count && ReferenceEquals(GroupOf(_order[last + 1]), group)) last++;
 
-            // EVERY run gets a plate - that is what colors its tabs. Only a run whose group asks for a title costs the
-            // strip the title band's height.
-            _runs.Add((i, last, group));
+            if (group.ShowContextualHeader && group.Header != null) _runs.Add((i, group));
             i = last + 1;
         }
     }
 
-    // One ledge per run. Kept as a pool rather than rebuilt: the runs change on every activation, and a fresh visual
+    // One label per run. Kept as a pool rather than rebuilt: the runs change on every activation, and a fresh visual
     // each time would throw away its themed template for nothing.
-    private void SyncLedges()
+    private void SyncLabels()
     {
-        while (_ledges.Count < _runs.Count)
+        while (_labels.Count < _runs.Count)
         {
-            var ledge = new RibbonContextualLedge();
-            _ledges.Add(ledge);
-            AddVisualChild(ledge);
-            Theme(ledge);
+            var label = new RibbonContextualLabel();
+            _labels.Add(label);
+            AddVisualChild(label);
+            Theme(label);
         }
 
-        while (_ledges.Count > _runs.Count)
+        while (_labels.Count > _runs.Count)
         {
-            var last = _ledges[^1];
-            _ledges.RemoveAt(_ledges.Count - 1);
+            var last = _labels[^1];
+            _labels.RemoveAt(_labels.Count - 1);
+            _placed.Remove(last);
             RemoveVisualChild(last);
         }
 
         for (var i = 0; i < _runs.Count; i++)
         {
             var group = _runs[i].Group;
-            _ledges[i].Content = group.ShowHeader ? group.Header : null;
-            _ledges[i].Accent = group.Accent;
-            _ledges[i].TitleHeight = group.ShowHeader ? LedgeHeight : 0;
+            _labels[i].Content = group.Header;
+            _labels[i].Accent = group.Accent;
         }
     }
 
-    /// <summary>A ledge is framework CHROME, not an item: it is joined to the visual tree only, so nothing gives it a
+    /// <summary>A label is framework CHROME, not an item: it is joined to the visual tree only, so nothing gives it a
     /// logical parent - and it is the logical parent's setter that applies the theme. Left alone it would have no
-    /// template at all and would take up its row while drawing nothing. So it is themed OUT OF BAND, exactly as an
+    /// template at all and would take up its place while drawing nothing. So it is themed OUT OF BAND, exactly as an
     /// adorner and a template root are: the inheritance parent for its DataContext, the theme applied by hand.</summary>
-    private void Theme(RibbonContextualLedge ledge)
+    private void Theme(RibbonContextualLabel label)
     {
-        ledge.InheritanceParent = this;
-        ledge.ApplyCurrentTheme();
+        label.InheritanceParent = this;
+        label.ApplyCurrentTheme();
     }
 
-    /// <summary>Out-of-band theming means out-of-band RE-theming too: a theme swap reaches this panel, and the ledges
+    /// <summary>Out-of-band theming means out-of-band RE-theming too: a theme swap reaches this panel, and the labels
     /// hang off it rather than under it.</summary>
     protected override void ApplyCurrentThemeCore()
     {
         base.ApplyCurrentThemeCore();
 
-        foreach (var ledge in _ledges) Theme(ledge);
+        foreach (var label in _labels) Theme(label);
     }
 
     private static bool Shown(IMeasurableComponent child) => child.Visibility == Visibility.Visible;

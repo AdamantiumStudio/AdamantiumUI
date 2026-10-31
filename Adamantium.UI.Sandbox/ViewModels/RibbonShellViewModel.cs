@@ -196,11 +196,11 @@ public partial class RibbonShellViewModel : IWindowAware
     /// The ribbon only reads it - appearing is an offer, so the open tab is not pulled out from under anyone.</summary>
     [Bindable] private bool _hasMeshSelection;
 
-    /// <summary>A second context, so the strip has to order two of them and draw two ledges.</summary>
+    /// <summary>A second context, so the strip has to order two of them and draw two labels.</summary>
     [Bindable] private bool _hasLightSelection;
 
-    /// <summary>Whether the contexts draw their ledge. Off, the color of the tabs is the only thing saying which
-    /// belong together - and the strip stops paying the ledge row's height.</summary>
+    /// <summary>Whether the contexts show their name before their tabs. Off, the color of the tabs is the only thing
+    /// saying which belong together.</summary>
     [Bindable] private bool _showContextHeader = true;
 
     /// <summary>The module catalog is out - the drawer the ribbon opens in place of its band.</summary>

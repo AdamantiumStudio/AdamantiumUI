@@ -7,15 +7,13 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests;
 
-/// <summary>The strip's own panel: headers in a row, and over any run of NEIGHBORING tabs
-/// sharing a contextual group, that group's ledge. It replaces the TabPanel the strip borrowed until the ledges
-/// existed, so it also has to keep what that one did - above all sizing headers to their content rather than to the
+/// <summary>The strip's own panel: headers in a row, and before any run of NEIGHBORING tabs sharing a contextual group,
+/// that group's label - in the row, so a context never changes the strip's height. It replaces the TabPanel the strip
+/// borrowed, so it also has to keep what that one did - above all sizing headers to their content rather than to the
 /// slot.</summary>
 [TestFixture]
 public class RibbonTabPanelTests
 {
-    private const double LedgeHeight = 18;
-
     private static RibbonTabHeader Header(double width, RibbonContextualGroup group = null)
     {
         var header = new RibbonTabHeader { Width = width, Height = 24, ContextualGroup = group };
@@ -24,7 +22,7 @@ public class RibbonTabPanelTests
 
     private static RibbonTabPanel Strip(params RibbonTabHeader[] headers)
     {
-        var panel = new RibbonTabPanel { LedgeHeight = LedgeHeight };
+        var panel = new RibbonTabPanel();
         foreach (var header in headers) panel.Children.Add(header);
         return panel;
     }
@@ -35,13 +33,11 @@ public class RibbonTabPanelTests
         ((IMeasurableComponent)panel).Arrange(new Rect(0, 0, width, height));
     }
 
-    // Titleless by default: a ledge WIDENS its run until its title fits (see the widening tests), so a test about
-    // anything else states no title and the runs keep the widths it set.
-    private static RibbonContextualGroup Group(string header = "") =>
+    // Untitled by default: a titled group puts a label before its run, so a test about anything else states no title
+    // and the tabs stand where their widths put them.
+    private static RibbonContextualGroup Group(string header = null) =>
         new() { Header = header, IsActive = true };
 
-    // The ledge row costs nothing until a context exists: an ordinary ribbon must not stand taller for a possibility
-    // nobody uses.
     [Test]
     public void WithNoContextTheStripIsJustItsHeaders()
     {
@@ -55,17 +51,20 @@ public class RibbonTabPanelTests
         });
     }
 
+    // The whole point of the label standing IN the row: switching to a page where a context appears must not make the
+    // strip jump.
     [Test]
-    public void AContextRaisesTheStripByOneLedge()
+    public void AContextNeverChangesTheStripsHeight()
     {
-        var mesh = Group();
+        var mesh = Group("MESH TOOLS");
         var panel = Strip(Header(80), Header(90, mesh));
         LayoutAt(panel, 400);
 
         Assert.Multiple(() =>
         {
-            Assert.That(panel.DesiredSize.Height, Is.EqualTo(24 + LedgeHeight));
-            Assert.That(panel.Children[0].Bounds.Y, Is.EqualTo(LedgeHeight), "the headers sit under the ledge row");
+            Assert.That(panel.DesiredSize.Height, Is.EqualTo(24));
+            Assert.That(panel.Children[1].Bounds.Y, Is.Zero, "the contextual tab stands in the same row");
+            Assert.That(Labels(panel)[0].Bounds.Height, Is.EqualTo(24), "and so does its label, at the tabs' height");
         });
     }
 
@@ -80,32 +79,88 @@ public class RibbonTabPanelTests
         Assert.That(panel.Bounds.Height, Is.EqualTo(24), "not the 200 it was offered");
     }
 
-    // Contextual tabs stand AFTER the ordinary ones whatever order they were authored in, and the ledge is laid over
-    // the run rather than over one tab.
+    // Contextual tabs stand AFTER the ordinary ones whatever order they were authored in, with ONE label before the
+    // run rather than one per tab.
     [Test]
-    public void ContextualTabsGoToTheEndAndShareOneLedge()
+    public void ContextualTabsGoToTheEndAfterOneLabel()
     {
-        var mesh = Group();
+        var mesh = Group("MESH TOOLS");
         var a = Header(50, mesh);
         var ordinary = Header(70);
         var b = Header(60, mesh);
         var panel = Strip(a, ordinary, b);
 
+        LayoutAt(panel, 600);
+
+        var label = Labels(panel)[0];
+        var title = label.DesiredSize.Width;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(Labels(panel), Has.Count.EqualTo(1), "one run, one label");
+            Assert.That(title, Is.GreaterThan(0), "a title takes room");
+            Assert.That(ordinary.Bounds.X, Is.Zero, "the ordinary tab comes first");
+            Assert.That(label.Bounds, Is.EqualTo(new Rect(70, 0, title, 24)), "then the label");
+            Assert.That(a.Bounds.X, Is.EqualTo(70 + title), "then the group's tabs, brought together");
+            Assert.That(b.Bounds.X, Is.EqualTo(120 + title));
+            Assert.That(panel.DesiredSize.Width, Is.EqualTo(180 + title), "the label costs its width, nothing more");
+        });
+    }
+
+    // Off, the context is carried by its tabs' color alone: no label, and the row is exactly its tabs.
+    [Test]
+    public void AGroupThatHidesItsHeaderHasNoLabel()
+    {
+        var mesh = Group("MESH TOOLS");
+        mesh.ShowContextualHeader = false;
+
+        var panel = Strip(Header(80), Header(90, mesh));
         LayoutAt(panel, 400);
 
         Assert.Multiple(() =>
         {
-            Assert.That(ordinary.Bounds.X, Is.Zero, "the ordinary tab comes first");
-            Assert.That(a.Bounds.X, Is.EqualTo(70));
-            Assert.That(b.Bounds.X, Is.EqualTo(120), "and the group's tabs are brought together");
-            Assert.That(Ledges(panel), Has.Count.EqualTo(1), "one run, one ledge");
-            // The ledge is the TITLE BAND over its run; the tabs below carry their own color and stand as tabs.
-            Assert.That(Ledges(panel)[0].Bounds, Is.EqualTo(new Rect(70, 0, 110, LedgeHeight)));
+            Assert.That(Labels(panel), Is.Empty);
+            Assert.That(panel.DesiredSize, Is.EqualTo(new Size<double>(170, 24)));
+            Assert.That(panel.Children[1].Bounds.X, Is.EqualTo(80));
         });
     }
 
-    // Two groups, two ledges, oldest activation first - tabs that appeared LAST stand furthest right and do not shift
-    // what someone was already aiming at.
+    // Switching the header off and on again moves the tabs sideways and never up or down.
+    [Test]
+    public void TurningTheHeaderOffAndOnMovesTheTabsOnlySideways()
+    {
+        var mesh = Group("MESH TOOLS");
+        var contextual = Header(90, mesh);
+        var panel = Strip(Header(80), contextual);
+        LayoutAt(panel, 400);
+
+        mesh.ShowContextualHeader = false;
+        ((IMeasurableComponent)panel).InvalidateMeasure();
+        LayoutAt(panel, 400);
+
+        var offLabels = Labels(panel).Count;
+        var offX = contextual.Bounds.X;
+        var offHeight = panel.DesiredSize.Height;
+
+        mesh.ShowContextualHeader = true;
+        ((IMeasurableComponent)panel).InvalidateMeasure();
+        LayoutAt(panel, 400);
+
+        var label = Labels(panel)[0];
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(offLabels, Is.Zero, "off: no label");
+            Assert.That(offX, Is.EqualTo(80));
+            Assert.That(offHeight, Is.EqualTo(24));
+            Assert.That(label.Bounds, Is.EqualTo(new Rect(80, 0, label.DesiredSize.Width, 24)), "on: the label is back");
+            Assert.That(contextual.Bounds.X, Is.EqualTo(80 + label.DesiredSize.Width));
+            Assert.That(panel.DesiredSize.Height, Is.EqualTo(24));
+        });
+    }
+
+    // Two groups, oldest activation first - tabs that appeared LAST stand furthest right and do not shift what someone
+    // was already aiming at.
     [Test]
     public void GroupsStandInTheOrderTheyBecameActive()
     {
@@ -124,15 +179,14 @@ public class RibbonTabPanelTests
         {
             Assert.That(early.Bounds.X, Is.Zero);
             Assert.That(late.Bounds.X, Is.EqualTo(50));
-            Assert.That(Ledges(panel), Has.Count.EqualTo(2));
         });
     }
 
-    // A hidden tab (its group is off) is not in the strip at all - and takes its ledge with it.
+    // A hidden tab (its group is off) is not in the strip at all - and takes its label with it.
     [Test]
     public void AnInactiveGroupsTabsAreNotInTheRow()
     {
-        var mesh = Group();
+        var mesh = Group("MESH TOOLS");
         var hidden = Header(50, mesh);
         hidden.Visibility = Visibility.Collapsed;
         var panel = Strip(Header(80), hidden);
@@ -142,17 +196,16 @@ public class RibbonTabPanelTests
         Assert.Multiple(() =>
         {
             Assert.That(panel.DesiredSize.Width, Is.EqualTo(80));
-            Assert.That(panel.DesiredSize.Height, Is.EqualTo(24), "and the ledge row is gone with it");
-            Assert.That(Ledges(panel), Is.Empty);
+            Assert.That(Labels(panel), Is.Empty);
         });
     }
 
-    // The arrows walk the strip AS LAID OUT, which is not the authored order once a context is in it; the ledge is a
-    // label and is never a destination.
+    // The arrows walk the strip AS LAID OUT, which is not the authored order once a context is in it; the label names
+    // tabs and is never a destination.
     [Test]
     public void TheArrowsWalkTheRowAsItStands()
     {
-        var mesh = Group();
+        var mesh = Group("MESH TOOLS");
         var contextual = Header(50, mesh);
         var ordinary = Header(70);
         var panel = Strip(contextual, ordinary);
@@ -160,30 +213,37 @@ public class RibbonTabPanelTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(panel.Navigate(ordinary, FocusNavigationDirection.Right), Is.SameAs(contextual));
+            Assert.That(panel.Navigate(ordinary, FocusNavigationDirection.Right), Is.SameAs(contextual),
+                "over the label");
             Assert.That(panel.Navigate(contextual, FocusNavigationDirection.Left), Is.SameAs(ordinary));
             Assert.That(panel.Navigate(contextual, FocusNavigationDirection.Right), Is.Null, "the end of the row");
             Assert.That(panel.Navigate(ordinary, FocusNavigationDirection.Down), Is.Null, "a ROW answers nothing across");
         });
     }
 
-    // Two contexts are two ledges, never one plate spanning both.
+    // Two contexts are two labels, each before its own run.
     [Test]
-    public void TwoContextsAreTwoLedges()
+    public void TwoContextsAreTwoLabels()
     {
-        var mesh = Group();
-        var light = Group();
+        var mesh = Group("MESH");
+        var light = Group("LIGHT");
         mesh.ActivatedAt = 1;
         light.ActivatedAt = 2;
 
-        var panel = Strip(Header(50, mesh), Header(60, light));
-        LayoutAt(panel, 400);
+        var meshTab = Header(50, mesh);
+        var lightTab = Header(60, light);
+        var panel = Strip(meshTab, lightTab);
+        LayoutAt(panel, 600);
+
+        var labels = Labels(panel);
 
         Assert.Multiple(() =>
         {
-            Assert.That(Ledges(panel), Has.Count.EqualTo(2));
-            Assert.That(Ledges(panel)[0].Bounds.Width, Is.EqualTo(50));
-            Assert.That(Ledges(panel)[1].Bounds.Width, Is.EqualTo(60));
+            Assert.That(labels, Has.Count.EqualTo(2));
+            Assert.That(labels[0].Bounds.X, Is.Zero);
+            Assert.That(meshTab.Bounds.X, Is.EqualTo(labels[0].Bounds.Right));
+            Assert.That(labels[1].Bounds.X, Is.EqualTo(meshTab.Bounds.Right));
+            Assert.That(lightTab.Bounds.X, Is.EqualTo(labels[1].Bounds.Right));
         });
     }
 
@@ -207,56 +267,27 @@ public class RibbonTabPanelTests
             Assert.That(geometry.Bounds.X, Is.Zero);
             Assert.That(uv.Bounds.X, Is.EqualTo(50));
             Assert.That(materials.Bounds.X, Is.EqualTo(110));
-            Assert.That(Ledges(panel), Has.Count.EqualTo(1), "one context, one ledge over all three");
         });
     }
 
-    // Neither edge answer is acceptable - a ledge wider than its tabs lies about which it covers, a clipped title is
-    // unreadable - so the run is WIDENED until the title fits, as Office does.
+    // A tab keeps its own width next to a label: nothing is widened to fit a title any more.
     [Test]
-    public void ARunIsWidenedUntilItsTitleFits()
+    public void ANarrowTabKeepsItsWidthBesideALongTitle()
     {
         var group = Group("A VERY LONG CONTEXT TITLE");
-        group.ActivatedAt = 1;
-
         var only = Header(40, group);
-        var panel = Strip(Header(80), only);
+        var panel = Strip(only);
         LayoutAt(panel, 600);
 
-        var ledge = Ledges(panel)[0];
-
-        Assert.Multiple(() =>
-        {
-            // The SLOT is what grew; a header with a stated Width reports that width whatever slot it was handed
-            // (honest bounds), so the run is measured by where it starts and where the strip ends.
-            Assert.That(panel.Bounds.Width - only.Bounds.X, Is.GreaterThan(40), "the run grew to hold its title");
-            Assert.That(ledge.Bounds.Width, Is.EqualTo(panel.Bounds.Width - only.Bounds.X).Within(0.5),
-                "and the ledge still spans exactly its run");
-            Assert.That(ledge.Bounds.Width, Is.GreaterThanOrEqualTo(ledge.DesiredSize.Width),
-                "which is what stops the title being clipped");
-        });
+        Assert.That(panel.DesiredSize.Width, Is.EqualTo(Labels(panel)[0].DesiredSize.Width + 40));
     }
 
-    // A run already wide enough is left alone - nothing is stretched for the sake of it.
-    [Test]
-    public void ARunWideEnoughIsLeftAsItIs()
+    private static System.Collections.Generic.List<RibbonContextualLabel> Labels(RibbonTabPanel panel)
     {
-        var group = Group();
-        group.ActivatedAt = 1;
-
-        var wide = Header(300, group);
-        var panel = Strip(wide);
-        LayoutAt(panel, 600);
-
-        Assert.That(wide.Bounds.Width, Is.EqualTo(300));
-    }
-
-    private static System.Collections.Generic.List<RibbonContextualLedge> Ledges(RibbonTabPanel panel)
-    {
-        var found = new System.Collections.Generic.List<RibbonContextualLedge>();
+        var found = new System.Collections.Generic.List<RibbonContextualLabel>();
         foreach (var child in panel.VisualChildren)
         {
-            if (child is RibbonContextualLedge ledge) found.Add(ledge);
+            if (child is RibbonContextualLabel label) found.Add(label);
         }
 
         return found;

@@ -33,7 +33,7 @@ public class RibbonTab : ItemsControl, IHeaderedItemsControl
     }
 
     /// <summary>The context this tab belongs to, or null for an ordinary tab. While the group is inactive the tab is
-    /// not in the strip at all; while it is active the tab stands with the group's other tabs, under their ledge.
+    /// not in the strip at all; while it is active the tab stands with the group's other tabs, after their label.
     /// <para>Settable directly (from code, or bound to a view model that owns the contexts). In markup a tab names its
     /// group by <see cref="ContextualGroupKey"/> instead, and the ribbon fills this in.</para></summary>
     public static readonly AdamantiumProperty ContextualGroupProperty = AdamantiumProperty.Register(
