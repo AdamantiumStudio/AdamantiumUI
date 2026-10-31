@@ -961,6 +961,10 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
             if (blueprint.Resources != null)
             {
                 ResourceManager.AddSource(this, blueprint.Resources, ResourceScope.Global);
+                foreach (var window in Windows)
+                {
+                    window.InvalidateStyles();
+                }
             }
 
             foreach (var include in blueprint.StyleIncludes ?? [])

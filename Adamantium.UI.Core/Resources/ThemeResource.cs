@@ -72,6 +72,12 @@ public class ThemeResource : MarkupExtension
             return;
         }
 
+        if (Style.GetContributingStyle(priority, token) is { } style)
+        {
+            target.RemoveStyleValue(propertyName, style);
+            return;
+        }
+
         // The token-LESS form clears the whole priority slot, and that one must stand aside: while a theme swap has
         // both styles attached, two of them own this property at this priority, and the one that leaves would take the
         // other's value with it.

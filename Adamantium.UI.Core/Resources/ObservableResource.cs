@@ -79,6 +79,12 @@ public class ObservableResource : MarkupExtension
             return;
         }
 
+        if (Style.GetContributingStyle(priority, token) is { } style)
+        {
+            target.RemoveStyleValue(propertyName, style);
+            return;
+        }
+
         // Keyed by owner token: during a swap the outgoing style must not close the connection the incoming one just
         // made.
         var slot = propertyName + "@" + priority;

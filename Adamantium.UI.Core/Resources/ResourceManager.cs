@@ -158,7 +158,7 @@ public class ResourceManager : IResourceManager
 
     public void AddSource(IAdamantiumComponent owner, Type source, ResourceScope scope = ResourceScope.Local)
     {
-        ProviderOf(scope).AddSource(owner, source, dictionary => AddIncludes(owner, dictionary, scope));
+        ProviderOf(scope).AddSource(owner, source, linked => AddIncludes(owner, linked, scope));
         _resourcesDirty = true;
     }
 
@@ -169,6 +169,123 @@ public class ResourceManager : IResourceManager
         AddIncludes(owner, instance, scope);
         ProviderOf(scope).AddSource(owner, instance);
         _resourcesDirty = true;
+    }
+
+    public void RemoveSource(IAdamantiumComponent owner, Type source, ResourceScope scope = ResourceScope.Local)
+    {
+        if (scope == ResourceScope.Global || ProviderOf(scope).RemoveSource(owner, source) is not { } dictionary)
+        {
+            return;
+        }
+
+        foreach (var include in dictionary.Includes)
+        {
+            if (include?.Source != null)
+            {
+                RemoveSource(owner, include.Source, include.Scope == ResourceScope.Local ? scope : include.Scope);
+            }
+        }
+
+        _resourcesDirty = true;
+    }
+
+    public void RemoveSource(IAdamantiumComponent owner, ResourceDictionary instance, ResourceScope scope = ResourceScope.Local)
+    {
+        ProviderOf(scope).RemoveSource(owner, instance);
+        foreach (var include in instance.Includes)
+        {
+            if (include?.Source != null)
+            {
+                RemoveSource(owner, include.Source, include.Scope == ResourceScope.Local ? scope : include.Scope);
+            }
+        }
+
+        _resourcesDirty = true;
+    }
+
+    public bool HasStylesOf(IAdamantiumComponent owner) => _localResources.HasStylesOf(owner);
+
+    public void CollectStyles(IAdamantiumComponent owner, List<Style> into)
+    {
+        _themeResources.CollectStyles(owner, into);
+        _localResources.CollectStyles(owner, into);
+        _globalResources.CollectStyles(owner, into);
+    }
+
+    public Dictionary<Style, int> GetScopedStyles(IFundamentalUIComponent element, out bool underScope)
+    {
+        underScope = false;
+        var local = _localResources.HasStyles;
+        var global = _globalResources.HasStyles && element.TemplatedParent == null;
+        if (!local && !global)
+        {
+            return null;
+        }
+
+        var scopes = local ? CountScopesOver(element) : 0;
+        underScope = scopes > 0;
+        Dictionary<Style, int> bands = null;
+        List<Style> styles = null;
+        if (global)
+        {
+            styles = [];
+            _globalResources.CollectStyles(styles);
+            RankStyles(element, styles, 0, ref bands);
+        }
+
+        if (scopes == 0)
+        {
+            return bands;
+        }
+
+        var rank = (global ? 1 : 0) + scopes - 1;
+        for (var owner = element.LogicalParent; owner != null; owner = owner.LogicalParent)
+        {
+            if (!_localResources.HasStylesOf(owner))
+            {
+                continue;
+            }
+
+            styles ??= [];
+            styles.Clear();
+            _localResources.CollectStyles(owner, styles);
+            RankStyles(element, styles, rank--, ref bands);
+        }
+
+        return bands;
+    }
+
+    private int CountScopesOver(IFundamentalUIComponent element)
+    {
+        var scopes = 0;
+        for (var owner = element.LogicalParent; owner != null; owner = owner.LogicalParent)
+        {
+            if (_localResources.HasStylesOf(owner))
+            {
+                scopes++;
+            }
+        }
+
+        return scopes;
+    }
+
+    private static void RankStyles(IFundamentalUIComponent element, List<Style> styles, int rank,
+        ref Dictionary<Style, int> bands)
+    {
+        foreach (var style in styles)
+        {
+            if (!style.Selector.Match(element))
+            {
+                continue;
+            }
+
+            bands ??= new Dictionary<Style, int>();
+            var band = style.GetScopedBand(rank);
+            if (!bands.TryGetValue(style, out var nearer) || nearer < band)
+            {
+                bands[style] = band;
+            }
+        }
     }
 
     private void AddIncludes(IAdamantiumComponent owner, ResourceDictionary dictionary, ResourceScope scope)

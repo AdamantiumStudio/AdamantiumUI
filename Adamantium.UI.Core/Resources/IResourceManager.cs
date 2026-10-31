@@ -28,6 +28,28 @@ public interface IResourceManager
     // Register an inline (per-element) dictionary INSTANCE - ResourceContext.Resources authored on an element.
     void AddSource(IAdamantiumComponent component, ResourceDictionary instance, ResourceScope scope = ResourceScope.Local);
 
+    /// <summary>Lets <paramref name="component"/> stop holding the dictionary of <paramref name="source"/> it linked, and
+    /// what that links. A global one stays: global dictionaries outlive what linked them.</summary>
+    void RemoveSource(IAdamantiumComponent component, Type source, ResourceScope scope = ResourceScope.Local);
+
+    /// <summary>Takes back the inline dictionary <paramref name="instance"/> given to <paramref name="component"/>, and
+    /// what it links.</summary>
+    void RemoveSource(IAdamantiumComponent component, ResourceDictionary instance, ResourceScope scope = ResourceScope.Local);
+
+    /// <summary>Adds to <paramref name="into"/> the styles of every dictionary <paramref name="owner"/> holds, in any
+    /// scope - those of the files it links among them.</summary>
+    void CollectStyles(IAdamantiumComponent owner, List<Style> into);
+
+    /// <summary>A dictionary <paramref name="owner"/> holds as its own carries styles: it is a scope of styles for its
+    /// logical subtree.</summary>
+    bool HasStylesOf(IAdamantiumComponent owner);
+
+    /// <summary>The styles of the scopes over <paramref name="element"/> that match it, each with the band its scope
+    /// ranks it at: the application's outermost - for an element not part of a template - then those of its logical
+    /// ancestors, the nearest highest. Null when none matches; <paramref name="underScope"/> tells whether an ancestor
+    /// is a scope at all.</summary>
+    Dictionary<Style, int> GetScopedStyles(IFundamentalUIComponent element, out bool underScope);
+
     // A resource VALUE changed in place (an inline dictionary was mutated): re-resolve live {ObservableResource}s.
     void NotifyResourcesChanged();
 

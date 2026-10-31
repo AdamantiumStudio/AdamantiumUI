@@ -45,6 +45,7 @@ public class ContentPresenter : InputUIComponent
 
     private Size<double> _lastMeasuredInner;   // without this element's margin/transform
     private Size<double> _lastContentDesired;
+    private readonly Dictionary<FundamentalUIComponent, FundamentalUIComponent> _handedViews = new();
 
     public static readonly AdamantiumProperty ContentProperty = AdamantiumProperty.Register(nameof(Content),
         typeof(object), typeof(ContentPresenter), new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure, OnContentPropertyChanged));
@@ -534,17 +535,39 @@ public class ContentPresenter : InputUIComponent
         {
             given.ShowIn(this);
         }
+        else if (!ReferenceEquals(root, _builtFor) && ViewHolder is { } owner && root is FundamentalUIComponent built)
+        {
+            owner.AddLogicalChild(built);
+            built.ShowIn(this);
+            _handedViews[built] = owner;
+        }
         else
         {
             AddLogicalChild(root);
         }
     }
 
+    private FundamentalUIComponent ViewHolder =>
+        GetValueSource(ContentProperty) == ValuePriority.Template ? TemplatedParent as FundamentalUIComponent : null;
+
     private void Unhost(IUIComponent root)
     {
         if (ReferenceEquals(root.LogicalParent, this))
         {
             RemoveLogicalChild(root);
+        }
+        else
+        {
+            TakeBackHandedView(root);
+        }
+    }
+
+    private void TakeBackHandedView(IUIComponent root)
+    {
+        if (root is FundamentalUIComponent built && _handedViews.Remove(built, out var owner)
+            && ReferenceEquals(built.LogicalParent, owner))
+        {
+            owner.RemoveLogicalChild(built);
         }
     }
 
@@ -624,11 +647,11 @@ public class ContentPresenter : InputUIComponent
     }
 
     /// <summary>Also forgets a root another parent has taken, so the fields do not go on naming a control that has moved
-    /// on - and keep it alive after its new home lets it go. Held here only for want of a holder, it is let go too.
-    /// </summary>
+    /// on - and keep it alive after its new home lets it go. Held here only for want of a holder, or a view built here
+    /// and handed to its control, it is let go too.</summary>
     protected internal override void DisownVisualChild(IUIComponent child)
     {
-        if (ReferenceEquals(child.LogicalParent, this)) RemoveLogicalChild(child);
+        Unhost(child);
 
         if (ReferenceEquals(child, _currentRoot))
         {

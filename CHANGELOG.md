@@ -7,6 +7,21 @@ All packages share one version.
 
 ### Added
 
+- Styles of a scope: a `<Style>` without a key among an element's `ResourceContext.Resources`, or in a dictionary file
+  they link, styles every element of its logical subtree the selector matches - not the element itself, and not the
+  parts of a template, which are their control's. A label made from a control's content and a row made from a list's
+  item are in the subtree. The nearest scope wins over every scope further out, whatever their selectors; within one
+  scope the more specific selector wins; a scope's styles win over the theme's, and an element's own `Styles` over
+  them all - triggers included, those setting a part of a template and those of a selector with conditions. A style
+  for a bare type still gives way to an inherited value. Moved to another place, an element and what it holds take
+  the styles of the scopes they now stand under; a new dictionary given to an element restyles its subtree and lets
+  the old one go, with what it linked, and `ResourceDictionary.Styles` holds them. Styles without a key in the
+  application's resources style every element but the parts of templates, as the outermost scope; in a theme's
+  resources, or a dictionary file they link, they are the theme's. `ResourceContext.Resources` written into any other
+  element with `ResourceContext.Scope` `Global` or `Theme` are refused with an `InvalidOperationException`, keyed
+  entries and styles alike: a view opened again would add them again, and nothing would take them away. A dictionary
+  file linked with that scope stays the way to give every element resources from a view. A dictionary file used to
+  drop a style without a key.
 - `Badge`: a small mark with a count, or a dot (`IsDot`), placed over the corner of an icon or a button. A count past
   `MaxCount` (99 by default) reads "99+". A count of zero is not shown and takes no room (`IsEmpty`), unless
   `ShowZero` asks for it. Every theme styles it from its own metrics (`BadgeHeight`, `BadgeDotSize`,
@@ -2408,6 +2423,12 @@ All packages share one version.
 
 ### Fixed
 
+- `BasedOn` did nothing in a style that belongs to no theme - an element's own `Styles`, and now a scope's: it takes
+  the theme's style for the type from the theme in force at the element, and that theme's again once another comes in.
+- A style setter whose value is an `{ObservableResource}` or a `{ThemeResource}` wrote its slot past the other styles of
+  the element, so whichever wrote last won: each time the resources changed - a view with resources opened, a theme
+  came in - a theme's brush took over again from an element's own style for the same property. It is now one of the
+  element's style values, ranked with the others, and taken away as they are.
 - A list reordered by a drag with a caret or no cue keeps every item in its own cell: the move - a removal and an
   insertion, the count unchanged - left the items it shifted where they were, holes and two items on one cell among
   them, until something laid the whole list out again; the drop gap did, which is why that cue hid it. The container

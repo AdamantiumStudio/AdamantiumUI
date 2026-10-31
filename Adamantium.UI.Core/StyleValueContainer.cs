@@ -17,7 +17,7 @@ internal class StyleValueContainer
     /// is the one in force. Ordering rather than appending is what stops the order styles are DECLARED in from deciding
     /// the outcome: a plain setter writes at one priority, so before this the last style applied simply won. Equal
     /// specificity keeps insertion order, as the web does.</summary>
-    public void AddValue(Style style, object value)
+    public void AddValue(Style style, object value, int band)
     {
         // With BasedOn a style writes a property twice (base first); the later write replaces the recorded value.
         foreach (var recorded in _values)
@@ -30,11 +30,13 @@ internal class StyleValueContainer
         if (_styleHash.Contains(style))
             return;
 
-        var band = style?.Band ?? 0;
         var at = _values.Count;
-        while (at > 0 && (_values[at - 1].Style?.Band ?? 0) > band) at--;
+        while (at > 0 && _values[at - 1].Band > band)
+        {
+            at--;
+        }
 
-        _values.Insert(at, new StyleValuePair(style, value));
+        _values.Insert(at, new StyleValuePair(style, value, band));
         _styleHash.Add(style);
     }
 
