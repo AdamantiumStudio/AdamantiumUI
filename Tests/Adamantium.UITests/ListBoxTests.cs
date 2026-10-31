@@ -237,6 +237,56 @@ public class ListBoxTests
         });
     }
 
+    // Items replaced and the new choice named with them, the choice before the items: it waits for them, as it does
+    // before the first items, and is not written over with "nothing" in between.
+    [Test]
+    public void AChoiceNamedBeforeTheItemsReplacingTheOld_IsTheOneSelected()
+    {
+        var lb = new ListBox { ItemsSource = new ObservableCollection<string> { "a", "b" } };
+
+        lb.SelectedItem = "c";
+        var waiting = lb.SelectedItem;
+        lb.ItemsSource = new ObservableCollection<string> { "c", "d" };
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(waiting, Is.EqualTo("c"));
+            Assert.That(lb.SelectedItem, Is.EqualTo("c"));
+            Assert.That(lb.SelectedIndex, Is.EqualTo(0));
+        });
+    }
+
+    // While a choice waits for its item, nothing else shows chosen: no index, no row marked.
+    [Test]
+    public void WhileAChoiceWaits_NothingElseShowsChosen()
+    {
+        var lb = MakeListBox("a", "b");
+        var row = (ListBoxItem)lb.ItemContainerGenerator.Realize(1);
+        lb.SelectedItem = "b";
+
+        lb.SelectedItem = "c";
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(lb.SelectedIndex, Is.EqualTo(-1));
+            Assert.That(row.IsSelected, Is.False);
+        });
+    }
+
+    // Another choice made while one waits gives the waiting one up: its item arriving later does not take over.
+    [Test]
+    public void AChoiceMadeWhileAnotherWaits_GivesTheWaitingOneUp()
+    {
+        var items = new ObservableCollection<string> { "a", "b" };
+        var lb = new ListBox { ItemsSource = items };
+        lb.SelectedItem = "c";
+
+        lb.SelectedIndex = 1;
+        items.Add("c");
+
+        Assert.That(lb.SelectedItem, Is.EqualTo("b"));
+    }
+
     // The selection is an ITEM: when items come and go above it, the index follows the item rather than staying on a
     // position that now holds something else.
     [Test]

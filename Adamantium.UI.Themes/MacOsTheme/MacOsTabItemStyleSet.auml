@@ -43,7 +43,10 @@
                         <!-- A GRID, not a stack: the middle track is starred, so a tab given MORE room than its content
                              needs - a lone document filling its strip - hands the extra to the header and keeps the
                              close button against the right edge. -->
-                        <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" VerticalAlignment="Center">
+                        <!-- The second row is for a turned label, the icon standing upright above it (DockingStyleSet). -->
+                        <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto"
+                              RowDefinitions="Auto,Auto"
+                              VerticalAlignment="Center">
                             <!-- Collapsed by default and revealed by HasIcon: an empty presenter measures to nothing,
                                  but its MARGIN is reserved regardless, and that gap pushes a centered label off-center. -->
                             <ContentPresenter x:Name="PART_Icon" Grid.Column="0"

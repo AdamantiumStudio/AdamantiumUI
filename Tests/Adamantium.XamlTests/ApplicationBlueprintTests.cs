@@ -26,7 +26,7 @@ public class ApplicationBlueprintTests
     private const string Blueprint =
         "<ApplicationBlueprint " + Namespaces +
         " StartupWindow=\"MainWindow\" StartupTheme=\"Graphite\" StartupThemeVariant=\"Light\" StartupLanguage=\"en\"" +
-        " ShutDownMode=\"OnLastWindowClosed\">" +
+        " ShutDownMode=\"OnLastWindowClosed\" DefaultScreen=\"DISPLAY2\">" +
         "<ApplicationBlueprint.Resources><ResourceLink Source=\"Icons\"/></ApplicationBlueprint.Resources>" +
         "<ApplicationBlueprint.StyleIncludes><StyleInclude Source=\"Buttons\"/></ApplicationBlueprint.StyleIncludes>" +
         "</ApplicationBlueprint>";
@@ -106,6 +106,7 @@ public class ApplicationBlueprintTests
             Assert.That(blueprint.StartupThemeVariant, Is.EqualTo(ThemeVariant.Light));
             Assert.That(blueprint.StartupLanguage, Is.EqualTo("en"));
             Assert.That(blueprint.ShutDownMode, Is.EqualTo(ShutDownMode.OnLastWindowClosed));
+            Assert.That(blueprint.DefaultScreen, Is.EqualTo("DISPLAY2"));
             Assert.That(blueprint.Resources.Includes.Single().Source, Is.EqualTo(assembly.GetType("Test.App.Icons")));
             Assert.That(blueprint.StyleIncludes.Single().Source, Is.EqualTo(assembly.GetType("Test.App.Buttons")));
         });
@@ -126,6 +127,7 @@ public class ApplicationBlueprintTests
             Assert.That(blueprint.StartupTheme, Is.Null);
             Assert.That(blueprint.StartupThemeVariant, Is.Null);
             Assert.That(blueprint.StartupLanguage, Is.Null);
+            Assert.That(blueprint.DefaultScreen, Is.Null);
         });
     }
 

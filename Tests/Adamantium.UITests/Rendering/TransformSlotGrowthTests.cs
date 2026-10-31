@@ -42,20 +42,20 @@ public class TransformSlotGrowthTests
         var stage = new TestRoot(Dim, Dim);
         for (var i = 0; i < count; i++)
         {
-            // All but the LAST are parked off-screen, so the readback speaks about ONE tile: the one holding the highest
+            // All but the LAST are parked off-screen, so the copied image speaks about ONE tile: the one holding the highest
             // slot - exactly the one the growth bug emptied.
             var onScreen = i + 1 == count;
             stage.Add(Rotated(onScreen ? new Rect(60, 60, 40, 40) : new Rect(-500, -500, 40, 40)));
         }
 
         // THREE frames, not one. A slot allocated past the GPU buffer's current size is uploaded by the next frame's
-        // catch-up, so a single-frame readback would fail for that reason alone and say nothing about the slot's ALPHA -
+        // catch-up, so a single frame copied out would fail for that reason alone and say nothing about the slot's ALPHA -
         // which is the thing under test, and which no number of frames repairs.
         var root = new VisualRoot(stage, Dim, Dim);
         for (var frame = 0; frame < 3; frame++)
             Assert.That(renderer.RenderFrame(root), Is.True, "off-screen frame must render");
 
-        using var img = renderer.RenderTarget.ResolveTexture.ReadbackToImage();
+        using var img = renderer.RenderTarget.ResolveTexture.ToImage();
         var bytes = new byte[(int)img.TotalSizeInBytes];
         Marshal.Copy(img.DataPointer, bytes, 0, bytes.Length);
         return bytes;

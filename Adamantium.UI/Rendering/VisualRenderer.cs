@@ -359,7 +359,7 @@ public sealed class VisualRenderer : IVisualRenderer
         }
 
         var format = presenter.SurfaceFormat;
-        using var hostImage = presenter.RenderTarget.ResolveTexture.ReadbackToImage();
+        using var hostImage = presenter.RenderTarget.ResolveTexture.ToImage();
         var pixels = new byte[(int)hostImage.TotalSizeInBytes];
         System.Runtime.InteropServices.Marshal.Copy(hostImage.DataPointer, pixels, 0, pixels.Length);
 

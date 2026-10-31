@@ -76,7 +76,7 @@ public class ImageCornerRenderTests
 
         Assert.That(_renderer.RenderFrame(root), Is.True);
 
-        using var img = _renderer.RenderTarget.ResolveTexture.ReadbackToImage();
+        using var img = _renderer.RenderTarget.ResolveTexture.ToImage();
         var pixels = new byte[(int)img.TotalSizeInBytes];
 
         Marshal.Copy(img.DataPointer, pixels, 0, pixels.Length);
@@ -132,7 +132,7 @@ public class ImageCornerRenderTests
 
         Assert.That(_renderer.RenderFrame(root), Is.True);
 
-        using var img = _renderer.RenderTarget.ResolveTexture.ReadbackToImage();
+        using var img = _renderer.RenderTarget.ResolveTexture.ToImage();
         var pixels = new byte[(int)img.TotalSizeInBytes];
 
         Marshal.Copy(img.DataPointer, pixels, 0, pixels.Length);
@@ -166,7 +166,7 @@ public class ImageCornerRenderTests
         image.RenderTransform = new Transform { TranslateX = At, TranslateY = At };
 
         Assert.That(_renderer.RenderFrame(new VisualRoot(image, Dim, Dim)), Is.True);
-        using var img = _renderer.RenderTarget.ResolveTexture.ReadbackToImage();
+        using var img = _renderer.RenderTarget.ResolveTexture.ToImage();
         var pixels = new byte[(int)img.TotalSizeInBytes];
         Marshal.Copy(img.DataPointer, pixels, 0, pixels.Length);
         return At_(pixels, at.X, at.Y);

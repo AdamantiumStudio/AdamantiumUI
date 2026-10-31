@@ -54,7 +54,7 @@ public class HaloDumpTests
         var root = new VisualRoot(control, dim, dim);
         Assert.That(renderer.RenderFrame(root), Is.True);
 
-        using var img = renderer.RenderTarget.ResolveTexture.ReadbackToImage();
+        using var img = renderer.RenderTarget.ResolveTexture.ToImage();
         var pixels = new byte[(int)img.TotalSizeInBytes];
         Marshal.Copy(img.DataPointer, pixels, 0, pixels.Length);
 

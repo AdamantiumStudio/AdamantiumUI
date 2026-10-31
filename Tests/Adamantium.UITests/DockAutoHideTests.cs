@@ -29,6 +29,61 @@ public class DockAutoHideTests
         return (layout, documents, inspector);
     }
 
+    /// <summary>Documents with an inspector right; a console at the bottom across the whole area, and an output at the
+    /// bottom of the center column only.</summary>
+    private static (DockingLayout Layout, PaneGroupNode Documents, PaneGroupNode Console, PaneGroupNode Output) Bands()
+    {
+        var documents = Group("scene");
+        var inspector = Group("inspector");
+        var console = Group("console");
+        var output = Group("output");
+        var layout = new DockingLayout();
+        layout.Roots.Add(new DockingRoot(documents, isMain: true) { DocumentWell = documents });
+        layout.Split(documents, DockZone.Right, inspector, 0.25);
+        layout.Split(layout.Main.Content, DockZone.Bottom, console, 0.25);
+        layout.Split(documents, DockZone.Bottom, output, 0.25);
+        return (layout, documents, console, output);
+    }
+
+    [Test]
+    public void ABandAcrossTheArea_ComesBackAcrossIt_AndOneUnderTheCenter_UnderTheCenter()
+    {
+        var (layout, documents, console, output) = Bands();
+
+        layout.CollapseGroup(console);
+        layout.CollapseGroup(output);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(console.RestoresAcross, Is.True);
+            Assert.That(output.RestoresAcross, Is.False);
+            Assert.That(layout.GetReturnTarget(layout.Main, console, DockZone.Bottom), Is.SameAs(layout.Main.Content),
+                "it shows across the whole area");
+        });
+
+        layout.ExpandGroup(console);
+        layout.ExpandGroup(output);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(console.Parent, Is.SameAs(layout.Main.Content), "a band of the whole area again");
+            Assert.That(output.Parent, Is.SameAs(documents.Parent), "under the documents again");
+            Assert.That(output.Parent, Is.Not.SameAs(layout.Main.Content));
+        });
+    }
+
+    [Test]
+    public void ABandAcrossTheArea_IsRememberedInTheSavedLayout()
+    {
+        var (layout, _, console, _) = Bands();
+        layout.CollapseGroup(console);
+
+        var loaded = DockingLayoutSerializer.Load(DockingLayoutSerializer.Save(layout));
+        var bar = loaded.Main.Bars[DockZone.Bottom];
+
+        Assert.That(bar.Single(group => group.PaneIds.Contains("console")).RestoresAcross, Is.True);
+    }
+
     [Test]
     public void CollapsingAGroup_MovesItOutOfTheTreeAndOntoItsEdge()
     {
@@ -519,25 +574,21 @@ public class DockAutoHideTests
         });
     }
 
-    /// <summary>A band dropped on the BOTTOM edge anchor splits the center column, not the whole window - so the side
-    /// panels keep their full height and a put-away strip stays on the edge it is folded against.
-    /// <para>Measured before the rule: the band was aimed at the root, which cut the right-hand strip off at the band's
-    /// top edge - and a strip pushed off its edge is no longer a strip on an edge.</para></summary>
+    /// <summary>A band dropped on the BOTTOM edge anchor runs across the whole area, as the anchor's preview shows; a
+    /// put-away strip stays on the edge it is folded against.</summary>
     [Test]
-    public void ABandDroppedOnTheBottomAnchor_DoesNotRunUnderTheSides()
+    public void ABandDroppedOnTheBottomAnchor_RunsAcrossTheArea()
     {
-        var (layout, documents, inspector) = Authored();
+        var (layout, _, inspector) = Authored();
         layout.CollapseGroup(inspector);
 
         var console = Group("console");
-        var target = layout.BandTarget(layout.Main);
-
-        Assert.That(target, Is.SameAs(documents), "the center column is what a band splits");
-
-        layout.Split(target, DockZone.Bottom, console);
+        var whole = layout.Main.Content;
+        layout.Split(whole, DockZone.Bottom, console);
 
         Assert.Multiple(() =>
         {
+            Assert.That(console.Parent, Is.SameAs(layout.Main.Content), "a band of the whole area");
             Assert.That(layout.Main.EdgeOfBarred(inspector), Is.EqualTo(DockZone.Right), "the side is still on its edge");
             Assert.That(inspector.State, Is.EqualTo(PaneGroupState.Collapsed), "and still put away");
             Assert.That(DockingLayout.EdgeOf(console), Is.EqualTo(DockZone.Bottom));

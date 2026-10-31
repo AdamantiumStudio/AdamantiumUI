@@ -277,7 +277,7 @@ public class GpuRenderUnitTests
     // Renderer clipping: a child whose draw OVERFLOWS its ClipToBounds parent must be scissored to the parent's
     // bounds. This is the foundation the ScrollViewer (and ContentControl/Presenter transitions) need - without the
     // per-unit scissor the overflow bleeds across the whole window. Sample points are chosen to read the same way
-    // under a vertical read-back flip (center row/column, and Y points that are background in either orientation).
+    // under a vertical flip of the copied image (center row/column, and Y points that are background in either orientation).
     [Test]
     public void ClipToBounds_Parent_ScissorsOverflowingChild()
     {
@@ -331,7 +331,7 @@ public class GpuRenderUnitTests
 
     // The framework adorner stage: a SelectionAdorner drawn as a SECOND pass on top of the content. Proves the
     // overlay renders over the content (white corner handle sits outside the red box, on a cleared background) -
-    // i.e. RenderBounds-driven tooling frames from the framework, not the host. Raw BGRA read-back avoids Image.Load.
+    // i.e. RenderBounds-driven tooling frames from the framework, not the host. Raw BGRA copied out avoids Image.Load.
     [Test]
     public void Adorner_DrawsSelectionFrame_OnTopOfContent()
     {

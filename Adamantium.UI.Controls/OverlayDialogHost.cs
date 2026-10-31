@@ -27,7 +27,7 @@ public sealed class OverlayDialogHost : IDialogHost
     public async Task<IDialogResult> ShowAsync(object dialogViewModel, NavigationParameters parameters, CancellationToken cancellationToken = default)
     {
         // The overlay lives on a window's popup layer; without a window there is nowhere to show it.
-        if ((_application.ActiveWindow ?? _application.MainWindow) is not IPopupHost host)
+        if (_application.FrontWindow is not IPopupHost host)
         {
             return new DialogResult(DialogButtonResult.None);
         }

@@ -74,7 +74,7 @@ public class BorderPatchRenderTests
 
     private static byte[] Pixels(OffscreenTestRenderer renderer)
     {
-        using var img = renderer.RenderTarget.ResolveTexture.ReadbackToImage();
+        using var img = renderer.RenderTarget.ResolveTexture.ToImage();
         var bytes = new byte[(int)img.TotalSizeInBytes];
         Marshal.Copy(img.DataPointer, bytes, 0, bytes.Length);
         return bytes;

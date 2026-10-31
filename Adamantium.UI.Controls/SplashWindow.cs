@@ -20,6 +20,9 @@ public class SplashWindow : Window
     public static readonly AdamantiumProperty ElapsedProperty = AdamantiumProperty.Register(nameof(Elapsed),
         typeof(TimeSpan), typeof(SplashWindow), new PropertyMetadata(TimeSpan.Zero));
 
+    public static readonly AdamantiumProperty MessageProperty = AdamantiumProperty.Register(nameof(Message),
+        typeof(string), typeof(SplashWindow), new PropertyMetadata(null));
+
     private static readonly TimeSpan ElapsedStep = TimeSpan.FromMilliseconds(100);
 
     private readonly long _shownAt = Stopwatch.GetTimestamp();
@@ -39,6 +42,14 @@ public class SplashWindow : Window
     {
         get => GetValue<bool>(ShowCloseButtonProperty);
         set => SetValue(ShowCloseButtonProperty, value);
+    }
+
+    /// <summary>What the application says it is doing while the window is up - what it opens, say; null when it says
+    /// nothing. Given by <see cref="IUIApplication.ShowSplash(string)"/>.</summary>
+    public string Message
+    {
+        get => GetValue<string>(MessageProperty);
+        set => SetValue(MessageProperty, value);
     }
 
     /// <summary>How long the window has been up, in tenths of a second: what a ticking timer binds to.</summary>

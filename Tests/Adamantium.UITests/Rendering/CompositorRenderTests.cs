@@ -198,7 +198,7 @@ public class CompositorRenderTests
         var factory = new RenderUnitFactory(_device, new StubResourceFactory());
         using var renderer = new OffscreenTestRenderer(_device, factory, 64, 64) { ClearColor = Colors.CornflowerBlue };
 
-        // A wide opacity swing so the blended pixel shifts visibly; a 4-second period so a frame's render+readback (~200 ms)
+        // A wide opacity swing so the blended pixel shifts visibly; a 4-second period so a frame's render and copy (~200 ms)
         // is a small fraction of it and the two samples land at clearly different opacities.
         var brush = new SolidColorBrush(Colors.Red) { Opacity = 0.1 };
         var root = new TestRoot(64, 64);

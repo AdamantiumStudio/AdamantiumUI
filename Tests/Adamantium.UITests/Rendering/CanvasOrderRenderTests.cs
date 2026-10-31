@@ -89,7 +89,7 @@ public class CanvasOrderRenderTests
 
         Assert.That(_renderer.RenderFrame(root), Is.True);
 
-        using var img = _renderer.RenderTarget.ResolveTexture.ReadbackToImage();
+        using var img = _renderer.RenderTarget.ResolveTexture.ToImage();
         var pixels = new byte[(int)img.TotalSizeInBytes];
 
         Marshal.Copy(img.DataPointer, pixels, 0, pixels.Length);
@@ -404,7 +404,7 @@ public class CanvasOrderRenderTests
         // look like a frame that had been asked for again.
         RenderDirty.Clear();
 
-        using var img = _renderer.RenderTarget.ResolveTexture.ReadbackToImage();
+        using var img = _renderer.RenderTarget.ResolveTexture.ToImage();
         var pixels = new byte[(int)img.TotalSizeInBytes];
 
         Marshal.Copy(img.DataPointer, pixels, 0, pixels.Length);

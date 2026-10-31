@@ -31,7 +31,7 @@ public class Window : WindowBase
             return;
 
         VerifyAccess();
-        if (Renderer is not { FirstFrameProcessed: true })
+        if (Renderer is not { HasPresentedContent: true })
         {
             WindowWorkerService.SetTitle(Title);
             ShouldDisplayWindow = true;
@@ -43,7 +43,12 @@ public class Window : WindowBase
             var state = _opensMaximized ? WindowState.Maximized : State;
             _opensMaximized = false;
             WindowWorkerService.ShowWindow(state);
+            var wasDisplayed = _displayed;
             _displayed = true;
+            if (!wasDisplayed)
+            {
+                RaiseDisplayed();
+            }
             // Pull the window to the foreground when it first appears (ShowWindow alone doesn't steal focus from the
             // launching foreground window). Applies to the main window (OnStartup) and any window opened from a VM.
             if (firstDisplay && ActivateOnShow) Activate();

@@ -72,7 +72,7 @@ public class HeadlessRetargetRenderTests
 
     private static (byte R, byte G, byte B) Pixel(IRenderTarget target, int width, int x, int y)
     {
-        using var img = target.ResolveTexture.ReadbackToImage();
+        using var img = target.ResolveTexture.ToImage();
         var bytes = new byte[(int)img.TotalSizeInBytes];
         Marshal.Copy(img.DataPointer, bytes, 0, bytes.Length);
         var i = (y * width + x) * 4;

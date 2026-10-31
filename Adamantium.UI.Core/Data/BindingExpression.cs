@@ -81,6 +81,9 @@ public class BindingExpression : BindingExpressionBase
    private bool _targetMoved;
    private IUIComponent _awaitingAttach;
    private IFundamentalUIComponent _contextOwner;
+   private bool _sourceAhead;
+   private object _syncedSource;
+   private object _lastRead;
 
    // A PATH THAT ENDS INSIDE A STRUCT (`Offset.X`, `Bounds.X`): the walk reaches a box - a copy made on the way - so a
    // read is frozen at the moment the path resolved and a write lands in the copy and is dropped, both silently. Such
@@ -642,8 +645,21 @@ public class BindingExpression : BindingExpressionBase
       }
 
       // F2: a runtime source change is batched + coalesced (applied once per frame), not pushed synchronously.
-      if (ours) ScheduleUpdate();
+      if (ours)
+      {
+         MarkSourceAhead();
+      }
    }
+
+   private void MarkSourceAhead()
+   {
+      _sourceAhead = true;
+      ScheduleUpdate();
+   }
+
+   private bool IsSourceAheadOfTarget() =>
+      _sourceAhead && Mode == BindingMode.TwoWay && !_bindToSource && (_leaf != null || _source != null)
+      && !Equals(ReadSource(), _syncedSource);
 
    // Element source ({ElementName}) property changed via the AdamantiumProperty system - push to the target if it's the
    // property we bind.
@@ -657,7 +673,10 @@ public class BindingExpression : BindingExpressionBase
          return;
       }
 
-      if (ours) ScheduleUpdate();
+      if (ours)
+      {
+         MarkSourceAhead();
+      }
    }
 
    // F2: the coalesced apply reads the current source value (producer mode publishes ProducedValue, top-level pushes
@@ -688,6 +707,10 @@ public class BindingExpression : BindingExpressionBase
       }
 
       if (Mode is not (BindingMode.TwoWay or BindingMode.OneWayToSource) || e.Property != TargetProperty) return;
+      if (IsSourceAheadOfTarget())
+      {
+         return;
+      }
 
       switch (Trigger)
       {
@@ -809,6 +832,7 @@ public class BindingExpression : BindingExpressionBase
          if (!Walk()) return BindingBase.FallbackValue ?? AdamantiumProperty.UnsetValue;
 
          var read = Read(_leaf, _boxes[^1]);
+         _lastRead = read;
          if (Binding.Converter != null) read = ConvertCached(read, targetType);
          return read ?? BindingBase.TargetNullValue ?? BindingBase.FallbackValue;
       }
@@ -818,6 +842,7 @@ public class BindingExpression : BindingExpressionBase
       }
 
       var value = Read(_source, ResolvedSource);
+      _lastRead = value;
       if (Binding.Converter != null)
          value = ConvertCached(value, targetType);
       if (value == null)
@@ -853,8 +878,11 @@ public class BindingExpression : BindingExpressionBase
 
    public override void UpdateTarget()
    {
+      _sourceAhead = false;
       if (TargetProperty == null) return;
+      _lastRead = null;
       var value = ComputeValue(TargetProperty.PropertyType);
+      _syncedSource = _lastRead;
       // Nothing to say - no source, no path, no fallback: leave the target where it is. A resolved null is NOT that; it
       // is the source asking for the property's default back, and refusing to carry it meant no page could ever hand
       // one of the "null = let the theme decide" properties back to the theme from markup.
@@ -1018,6 +1046,7 @@ public class BindingExpression : BindingExpressionBase
       try
       {
          WriteSource(written);
+         _syncedSource = written;
       }
       catch (Exception e)
       {

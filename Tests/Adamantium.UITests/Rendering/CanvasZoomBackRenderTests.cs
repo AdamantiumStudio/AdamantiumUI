@@ -66,7 +66,7 @@ public class CanvasZoomBackRenderTests
 
         Assert.That(_renderer.RenderFrame(root), Is.True);
 
-        using var img = _renderer.RenderTarget.ResolveTexture.ReadbackToImage();
+        using var img = _renderer.RenderTarget.ResolveTexture.ToImage();
         var pixels = new byte[(int)img.TotalSizeInBytes];
 
         Marshal.Copy(img.DataPointer, pixels, 0, pixels.Length);

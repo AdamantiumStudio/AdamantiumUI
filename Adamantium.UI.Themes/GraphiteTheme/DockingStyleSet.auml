@@ -49,6 +49,19 @@
         <PropertyTrigger Property="IsDirty" Value="true">
             <Setter TargetName="DirtyMark" Property="Visibility" Value="Visible"/>
         </PropertyTrigger>
+        <!-- A label turned to read down a side has its icon above it, upright, not beside it in the row. -->
+        <PropertyTrigger Property="LabelRotation" Value="Left">
+            <Setter TargetName="PART_Icon" Property="Grid.Column" Value="1"/>
+            <Setter TargetName="PART_Icon" Property="Margin" Value="0 0 0 4"/>
+            <Setter TargetName="PART_Icon" Property="HorizontalAlignment" Value="Center"/>
+            <Setter TargetName="PART_ContentPresenter" Property="Grid.Row" Value="1"/>
+        </PropertyTrigger>
+        <PropertyTrigger Property="LabelRotation" Value="Right">
+            <Setter TargetName="PART_Icon" Property="Grid.Column" Value="1"/>
+            <Setter TargetName="PART_Icon" Property="Margin" Value="0 0 0 4"/>
+            <Setter TargetName="PART_Icon" Property="HorizontalAlignment" Value="Center"/>
+            <Setter TargetName="PART_ContentPresenter" Property="Grid.Row" Value="1"/>
+        </PropertyTrigger>
     </Style>
 
     <!-- The one question before panes with unsaved work close (DockingArea.AsksBeforeClosingUnsaved). -->

@@ -368,6 +368,7 @@ public class DockingLayout
         // OUT of the tree, INTO the edge's bar: a panel that is not part of the layout is not
         // part of its structure either, so no split, divider or normalize can reach it.
         group.RestoreLength = group.Length;
+        group.RestoresAcross = edge is DockZone.Top or DockZone.Bottom && ReferenceEquals(group.Parent, root.Content);
         group.Length = PaneLength.Auto;
         group.State = PaneGroupState.Collapsed;
 
@@ -443,13 +444,17 @@ public class DockingLayout
         }
         else
         {
-            var target = edge is DockZone.Top or DockZone.Bottom ? BandTarget(root) : root.Content;
-            SplitWithLength(target, edge, group, group.RestoreLength);
+            SplitWithLength(GetReturnTarget(root, group, edge), edge, group, group.RestoreLength);
         }
 
         Normalize();
         return true;
     }
+
+    /// <summary>What a group put away against <paramref name="edge"/> comes back into, and so how wide it shows: the whole
+    /// root for a side, and for the top or the bottom the center column - or the whole root, if it ran across it.</summary>
+    public PaneNode GetReturnTarget(DockingRoot root, PaneGroupNode group, DockZone edge) =>
+        edge is DockZone.Top or DockZone.Bottom && !group.RestoresAcross ? FindCenterColumn(root) : root.Content;
 
     /// <summary>Removes a pane wherever it is. Empty groups and the levels they leave behind go with it.</summary>
     public bool RemovePane(string paneId)
@@ -648,20 +653,28 @@ public class DockingLayout
         return false;
     }
 
-    /// <summary>What a top or bottom band splits: the center column, never the root, so side panels keep the full height (as
-    /// <see cref="FromZones"/> builds it).</summary>
-    public PaneNode BandTarget(DockingRoot root)
+    /// <summary>The center column under any bands across the whole area: what a band put away from under the center
+    /// comes back into, however many bands across were docked since.</summary>
+    public PaneNode FindCenterColumn(DockingRoot root)
     {
-        if (root?.Content is not PaneSplitNode split || split.Orientation != Orientation.Horizontal) return root?.Content;
-
-        // The branch holding the documents IS the center column - the sides are its siblings. THIS window's documents:
-        // a floating one has an area of its own, and asking the main window about it aimed every band at the whole root.
-        foreach (var child in split.Children)
+        var node = root?.Content;
+        while (node is PaneSplitNode split)
         {
-            if (Holds(child, root.DocumentWell)) return child;
+            var inner = split.Children.FirstOrDefault(child => Holds(child, root.DocumentWell));
+            if (inner == null)
+            {
+                break;
+            }
+
+            if (split.Orientation == Orientation.Horizontal)
+            {
+                return inner;
+            }
+
+            node = inner;
         }
 
-        return split;
+        return root?.Content;
     }
 
     private static bool Holds(PaneNode node, PaneNode wanted)

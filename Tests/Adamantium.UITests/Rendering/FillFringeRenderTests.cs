@@ -45,13 +45,13 @@ public class FillFringeRenderTests
         var root = new VisualRoot(content, Dim, Dim);
         Assert.That(renderer.RenderFrame(root), Is.True, "off-screen frame must render");
 
-        using var img = renderer.RenderTarget.ResolveTexture.ReadbackToImage();
+        using var img = renderer.RenderTarget.ResolveTexture.ToImage();
         var bytes = new byte[(int)img.TotalSizeInBytes];
         Marshal.Copy(img.DataPointer, bytes, 0, bytes.Length);
         return bytes;
     }
 
-    // B8G8R8A8 read-back onto a TRANSPARENT clear, so alpha alone is the coverage at that pixel whatever the fill is.
+    // B8G8R8A8 copied out of a TRANSPARENT clear, so alpha alone is the coverage at that pixel whatever the fill is.
     private static int Alpha(byte[] pixels, int x, int y) => pixels[(y * Dim + x) * 4 + 3];
 
     private static void AssertOnePixelEdge(byte[] pixels, int edge)
@@ -126,7 +126,7 @@ public class FillFringeRenderTests
         var root = new VisualRoot(content, Dim, Dim);
         Assert.That(renderer.RenderFrame(root), Is.True);
 
-        using var img = renderer.RenderTarget.ResolveTexture.ReadbackToImage();
+        using var img = renderer.RenderTarget.ResolveTexture.ToImage();
         var pixels = new byte[(int)img.TotalSizeInBytes];
         Marshal.Copy(img.DataPointer, pixels, 0, pixels.Length);
         int A(int x, int y) => pixels[(y * Dim + x) * 4 + 3];
@@ -167,7 +167,7 @@ public class FillFringeRenderTests
         var root = new VisualRoot(content, Dim, Dim);
         Assert.That(renderer.RenderFrame(root), Is.True);
 
-        using var img = renderer.RenderTarget.ResolveTexture.ReadbackToImage();
+        using var img = renderer.RenderTarget.ResolveTexture.ToImage();
         var pixels = new byte[(int)img.TotalSizeInBytes];
         Marshal.Copy(img.DataPointer, pixels, 0, pixels.Length);
         int A(int x, int y) => pixels[(y * Dim + x) * 4 + 3];

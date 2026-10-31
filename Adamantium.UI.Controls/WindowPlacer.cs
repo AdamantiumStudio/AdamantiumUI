@@ -70,6 +70,22 @@ public static class WindowPlacer
         screens.FirstOrDefault(s => point.X >= s.Bounds.X && point.X < s.Bounds.Right && point.Y >= s.Bounds.Y && point.Y < s.Bounds.Bottom)
         ?? Primary(screens);
 
+    /// <summary>The screen whose id ends with <paramref name="name"/>, in any case, a number in it whole - <c>1</c> names
+    /// DISPLAY1, not DISPLAY11; null when none does or no name is given.</summary>
+    public static ScreenInfo FindScreen(string name, IReadOnlyList<ScreenInfo> screens) =>
+        string.IsNullOrEmpty(name) ? null : screens.FirstOrDefault(s => IsNamedBy(s.Id, name));
+
+    private static bool IsNamedBy(string id, string name)
+    {
+        if (id == null || !id.EndsWith(name, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var before = id.Length - name.Length - 1;
+        return before < 0 || !char.IsDigit(name[0]) || !char.IsDigit(id[before]);
+    }
+
     private static ScreenInfo Primary(IReadOnlyList<ScreenInfo> screens) => screens.FirstOrDefault(s => s.IsPrimary) ?? screens.FirstOrDefault();
 
     private static double Overlap(Rect a, Rect b)

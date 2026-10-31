@@ -13,6 +13,10 @@ public static class AutomationProtocol
     /// start - see <see cref="LaunchOptions.VerifyFrames"/>.</summary>
     public const string VerifyFramesVariable = "ADAM_VERIFY_FRAMES";
 
+    /// <summary>The environment variable that names the monitor a driven application opens its windows on - see
+    /// <see cref="LaunchOptions.Screen"/>. Set for a test run, every application it starts keeps to that monitor.</summary>
+    public const string ScreenVariable = "ADAM_AUTOMATION_SCREEN";
+
     private static readonly JsonSerializerOptions Options = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,

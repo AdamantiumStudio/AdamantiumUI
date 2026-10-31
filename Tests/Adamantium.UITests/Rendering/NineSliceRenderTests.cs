@@ -157,7 +157,7 @@ public class NineSliceRenderTests
         var root = new VisualRoot(control, Dim + 80, Dim);
         Assert.That(_renderer2 != null ? _renderer2.RenderFrame(root) : false, Is.True);
 
-        using var img = _renderer2.RenderTarget.ResolveTexture.ReadbackToImage();
+        using var img = _renderer2.RenderTarget.ResolveTexture.ToImage();
         var stride = Dim + 80;
         var pixels = new byte[(int)img.TotalSizeInBytes];
         Marshal.Copy(img.DataPointer, pixels, 0, pixels.Length);
@@ -233,7 +233,7 @@ public class NineSliceRenderTests
         var root = new VisualRoot(control, Dim, Dim);
         Assert.That(_renderer.RenderFrame(root), Is.True);
 
-        using var img = _renderer.RenderTarget.ResolveTexture.ReadbackToImage();
+        using var img = _renderer.RenderTarget.ResolveTexture.ToImage();
         var pixels = new byte[(int)img.TotalSizeInBytes];
         Marshal.Copy(img.DataPointer, pixels, 0, pixels.Length);
 
@@ -287,7 +287,7 @@ public class NineSliceRenderTests
             var drawn = frame == 1 ? _renderer.RenderFrame(root) : _renderer.RenderAgain(root);
             Assert.That(drawn, Is.True, $"frame {frame} rendered");
 
-            using var img = _renderer.RenderTarget.ResolveTexture.ReadbackToImage();
+            using var img = _renderer.RenderTarget.ResolveTexture.ToImage();
             var pixels = new byte[(int)img.TotalSizeInBytes];
             Marshal.Copy(img.DataPointer, pixels, 0, pixels.Length);
 
@@ -312,7 +312,7 @@ public class NineSliceRenderTests
         var root = new VisualRoot(control, Dim, Dim);
         Assert.That(_renderer.RenderFrame(root), Is.True);
 
-        using var img = _renderer.RenderTarget.ResolveTexture.ReadbackToImage();
+        using var img = _renderer.RenderTarget.ResolveTexture.ToImage();
         var pixels = new byte[(int)img.TotalSizeInBytes];
         Marshal.Copy(img.DataPointer, pixels, 0, pixels.Length);
 

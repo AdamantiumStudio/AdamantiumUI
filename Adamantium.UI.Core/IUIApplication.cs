@@ -13,6 +13,16 @@ public interface IUIApplication
 
     IReadOnlyList<IWindow> Windows { get; }
 
+    /// <summary>The window a dialog or an overlay asked for without one goes over: the active window, else the main one
+    /// while it stands shown, else the last opened that does, so it is shown while the application is not in front
+    /// too.</summary>
+    IWindow FrontWindow => ActiveWindow ?? MainWindow;
+
+    /// <summary>The monitor a window with no place of its own opens on, instead of the one under the pointer: the one
+    /// whose <see cref="ScreenInfo.Id"/> ends with this, in any case - <c>DISPLAY2</c> on Windows, say; null, or a
+    /// monitor not connected, for the pointer's.</summary>
+    string DefaultScreen => null;
+
     /// <summary>The application-wide navigation service (region/view + window navigation). A permanent member; view models
     /// inject <see cref="INavigationService"/>, controls/adapters reach it here.</summary>
     INavigationService Navigation { get; }
@@ -66,6 +76,12 @@ public interface IUIApplication
     void ShowSplash()
     {
     }
+
+    /// <summary>Shows the splash window as <see cref="ShowSplash()"/> does, saying <paramref name="message"/> - what the
+    /// application is doing, as opening a document - until what is returned is disposed: then it goes, as it goes when the
+    /// start hands over. Null when there is no splash window to show, so the caller keeps its own window up instead.
+    /// </summary>
+    ISplashScreen ShowSplash(string message) => null;
 
     /// <summary>How often the loop updates at most, in hertz; an application with no loop of its own keeps 120.</summary>
     uint UpdateRate

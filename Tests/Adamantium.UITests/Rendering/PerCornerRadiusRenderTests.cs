@@ -44,7 +44,7 @@ public class PerCornerRadiusRenderTests
             Assert.That(renderer.RenderFrame(root), Is.True, "off-screen frame must render");
             RenderDirty.Clear();
 
-            using var img = renderer.RenderTarget.ResolveTexture.ReadbackToImage();
+            using var img = renderer.RenderTarget.ResolveTexture.ToImage();
             var bytes = new byte[(int)img.TotalSizeInBytes];
             Marshal.Copy(img.DataPointer, bytes, 0, bytes.Length);
             return bytes;

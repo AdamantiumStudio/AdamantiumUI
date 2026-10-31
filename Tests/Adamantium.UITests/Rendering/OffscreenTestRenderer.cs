@@ -12,7 +12,7 @@ using Adamantium.Vulkan.Core;
 
 namespace Adamantium.UITests.Rendering;
 
-// Drives the production RenderCache into a read-back texture for pixel tests, via a headless swapchain where available,
+// Drives the production RenderCache into a texture copied out for pixel tests, via a headless swapchain where available,
 // else an offscreen render target.
 internal sealed class OffscreenTestRenderer : IDisposable
 {
@@ -137,7 +137,7 @@ internal sealed class OffscreenTestRenderer : IDisposable
         _presenter.Present();      // no-op for both off-screen presenters
         _device.FrameEnded();
 
-        _device.DeviceWaitIdle();  // ensure the frame is finished before any read-back
+        _device.DeviceWaitIdle();  // ensure the frame is finished before it is copied out
         return true;
     }
 

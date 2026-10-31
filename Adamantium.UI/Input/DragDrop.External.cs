@@ -180,7 +180,8 @@ public static partial class DragDrop
 
         var effects = _dragEffects;
         var target = _currentTarget;
-        var args = new DragDropEventArgs(_data, _source, _externalWindow?.PointToClient(ExternalPoint) ?? default)
+        var at = target != null ? DragPointer.GetPosition((IInputComponent)target) : default;
+        var args = new DragDropEventArgs(_data, _source, at)
         {
             Effects = effects,
             InsertIndex = _insertIndex,
@@ -225,9 +226,8 @@ public static partial class DragDrop
         _dragEffects = DragDropEffects.None;
         if (_currentTarget != null)
         {
-            SetIsDragOver((AdamantiumComponent)_currentTarget, false);
             // The drag ended or left - the target hears about it, so a control that lit up on DragEnter can put itself out.
-            RaiseDragEvent(_currentTarget, DragDropEvents.PreviewDragLeaveEvent, DragDropEvents.DragLeaveEvent);
+            Leave(_currentTarget);
         }
         _currentTarget = null;
         _hit = null;

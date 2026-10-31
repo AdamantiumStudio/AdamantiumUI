@@ -46,7 +46,7 @@ public class ScaledRectEdgeTests
         var root = new VisualRoot(bar, Dim, Dim);
         Assert.That(renderer.RenderFrame(root), Is.True);
 
-        using var img = renderer.RenderTarget.ResolveTexture.ReadbackToImage();
+        using var img = renderer.RenderTarget.ResolveTexture.ToImage();
         var pixels = new byte[(int)img.TotalSizeInBytes];
         Marshal.Copy(img.DataPointer, pixels, 0, pixels.Length);
         int Alpha(int x, int y) => pixels[(y * Dim + x) * 4 + 3];
@@ -95,7 +95,7 @@ public class ScaledRectEdgeTests
         var root = new VisualRoot(bar, Dim, Dim);
         Assert.That(renderer.RenderFrame(root), Is.True);
 
-        using var img = renderer.RenderTarget.ResolveTexture.ReadbackToImage();
+        using var img = renderer.RenderTarget.ResolveTexture.ToImage();
         var pixels = new byte[(int)img.TotalSizeInBytes];
         Marshal.Copy(img.DataPointer, pixels, 0, pixels.Length);
         int Alpha(int x, int y) => pixels[(y * Dim + x) * 4 + 3];
@@ -153,7 +153,7 @@ public class ScaledRectEdgeTests
             var root = new VisualRoot(box, Dim, Dim);
             Assert.That(renderer.RenderFrame(root), Is.True);
 
-            using var img = renderer.RenderTarget.ResolveTexture.ReadbackToImage();
+            using var img = renderer.RenderTarget.ResolveTexture.ToImage();
             var bytes = new byte[(int)img.TotalSizeInBytes];
             Marshal.Copy(img.DataPointer, bytes, 0, bytes.Length);
             return bytes;

@@ -196,7 +196,7 @@ public class LayerOpacityRenderTests
         Assert.That(renderer.RenderFrame(root), Is.True);
         RenderDirty.Clear();
 
-        using var img = renderer.RenderTarget.ResolveTexture.ReadbackToImage();
+        using var img = renderer.RenderTarget.ResolveTexture.ToImage();
         var pixels = new byte[(int)img.TotalSizeInBytes];
         System.Runtime.InteropServices.Marshal.Copy(img.DataPointer, pixels, 0, pixels.Length);
         var lit = 0;

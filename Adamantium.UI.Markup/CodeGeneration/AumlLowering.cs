@@ -649,7 +649,7 @@ public class AumlLowering
                                 }
                             }
 
-                            if (isResource && element.TypeReference.Namespace == "Adamantium.UI.Core.Resources")
+                            if (element.TypeReference.Namespace == "Adamantium.UI.Core.Resources")
                             {
                                 // {Ancestor ...} as a Setter/trigger value: store the marker; Setter.Apply (or the trigger
                                 // activator) calls .Apply against each matched element when the setter fires.
@@ -712,7 +712,7 @@ public class AumlLowering
                                         break;
                                 }
                             }
-                            if (isResource && element.TypeReference.Namespace == "Adamantium.UI.Core.Resources")
+                            if (element.TypeReference.Namespace == "Adamantium.UI.Core.Resources")
                             {
                                 _writer.Add(new AssignStep(symbolTarget, propRef.Name, self));
                             }

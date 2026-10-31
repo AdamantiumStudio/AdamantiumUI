@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -67,6 +68,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
     private AdamantiumCollection<IWindow> windowsCollection;
     private List<IWindow> addedWindows;
     private bool firstWindowAdded;
+    private readonly HashSet<IWindow> _hiddenByApplication = [];
     private Thread applicationLoopThread;
     private CancellationTokenSource cancellationTokenSource;
 
@@ -112,10 +114,9 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
     private readonly object _debugToolsLock = new();
     private readonly Dictionary<Diagnostics.IDebugTool, bool> _debugTools = new();
     private readonly HashSet<Diagnostics.IDebugTool> _debugToolsToDetach = [];
-    private SplashHost _splash;
+    private SplashScreen _splash;
     private readonly CancellationTokenSource _startupCancellation = new();
     private volatile bool _startupDone;
-    private volatile bool _showingStartupWindow;
     private int _splashHolds;
     private bool _loopStarted;
     private InstanceSlot _instanceSlot;
@@ -178,7 +179,8 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         Directory.CreateDirectory(directory);
         SweepOldLogs(directory);
 
-        var path = Path.Combine(directory, $"adamantium_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.txt");
+        var path = Path.Combine(directory,
+            string.Create(CultureInfo.InvariantCulture, $"adamantium_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.txt"));
 
         Log.Logger = new LoggerConfiguration()
             .MinimumLevel.Debug()
@@ -231,6 +233,18 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
     /// Set it at startup: swapchains that already exist are not rebuilt.</summary>
     public Graphics.Core.Presentation.PresentPolicy PresentPolicy { get; set; } =
         Graphics.Core.Presentation.PresentPolicy.Adaptive;
+
+    public static readonly AdamantiumProperty DefaultScreenProperty = AdamantiumProperty.Register(nameof(DefaultScreen),
+        typeof(string), typeof(UIApplication), new PropertyMetadata(null));
+
+    /// <summary>The monitor a window with no place of its own opens on, instead of the one under the pointer: the one
+    /// whose id ends with this, in any case - <c>DISPLAY2</c> on Windows, say; null, or a monitor not connected, opens
+    /// it on the pointer's. The blueprint's <c>DefaultScreen</c> sets it; what the application's code sets wins.</summary>
+    public string DefaultScreen
+    {
+        get => GetValue<string>(DefaultScreenProperty);
+        set => SetValue(DefaultScreenProperty, value);
+    }
 
     public static readonly AdamantiumProperty UpdateRateProperty = AdamantiumProperty.Register(nameof(UpdateRate),
         typeof(uint), typeof(UIApplication), new PropertyMetadata(IUIApplication.DefaultUpdateRate, RefreshRatesChanged));
@@ -417,6 +431,27 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
     
     public IWindow ActiveWindow { get; private set; }
 
+    public IWindow FrontWindow
+    {
+        get
+        {
+            if (ActiveWindow != null)
+            {
+                return ActiveWindow;
+            }
+
+            if (MainWindow is { } main && IsShownOnScreen(main))
+            {
+                return main;
+            }
+
+            lock (_renderGate)
+            {
+                return windowsCollection.LastOrDefault(IsShownOnScreen) ?? MainWindow;
+            }
+        }
+    }
+
     public IResourceManager ResourceManager { get; }
     public IThemeManager ThemeManager { get; private set; }
     public IDispatcher Dispatcher { get; private set; }
@@ -433,6 +468,11 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
             addedWindows.Add(window);
         }
 
+        if (window is not SplashWindow)
+        {
+            window.Hidden += OnWindowHidden;
+        }
+
         LoopSignal.Request();   // registered on the next frame; do not wait for the idle timeout
     }
 
@@ -440,6 +480,17 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
     /// surface that is already gone. A window closed before its first frame is never registered.</summary>
     public void RemoveWindow(IWindow window)
     {
+        window.Hidden -= OnWindowHidden;
+        lock (_hiddenByApplication)
+        {
+            _hiddenByApplication.Remove(window);
+        }
+
+        if (window is not SplashWindow)
+        {
+            firstWindowAdded = true;
+        }
+
         lock (_hiddenWindows)
         {
             _hiddenWindows.Remove(window);
@@ -903,6 +954,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         TakeFromBlueprint(StartupThemeVariantProperty, blueprint.StartupThemeVariant);
         TakeFromBlueprint(StartupLanguageProperty, blueprint.StartupLanguage);
         TakeFromBlueprint(ShutDownModeProperty, blueprint.ShutDownMode);
+        TakeFromBlueprint(DefaultScreenProperty, blueprint.DefaultScreen);
 
         OnLoop(() =>
         {
@@ -1207,26 +1259,39 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         }
 
         _splash = CreateSplash(type);
+        _splash.Message = StartupSplashMessage;
         _splash.Canceled += CancelStartup;
         _splash.Start();
         return true;
     }
 
-    public void ShowSplash()
-    {
-        if (SplashWindowType() is { } type)
-        {
-            var splash = CreateSplash(type);
-            if (MainWindow != null)
-            {
-                splash.KeepAbove(MainWindow);
-            }
+    /// <summary>What the splash window says while the application starts - the document it opens, say; null for
+    /// nothing. Read once, as the start shows the window, before the services are made.</summary>
+    protected virtual string StartupSplashMessage => null;
 
-            splash.Start();
+    public void ShowSplash() => StartSplash(null);
+
+    public ISplashScreen ShowSplash(string message) => StartSplash(message);
+
+    private SplashScreen StartSplash(string message)
+    {
+        if (SplashWindowType() is not { } type)
+        {
+            return null;
         }
+
+        var splash = CreateSplash(type);
+        splash.Message = message;
+        if (MainWindow != null)
+        {
+            splash.KeepAbove(MainWindow);
+        }
+
+        splash.Start();
+        return splash;
     }
 
-    private SplashHost CreateSplash(Type type) => new(this, type, StartupPlacement());
+    private SplashScreen CreateSplash(Type type) => new(this, type, StartupPlacement());
 
     private WindowPlacement StartupPlacement()
     {
@@ -1237,15 +1302,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
 
         var startup = StartupType ?? GetType().Assembly.GetCustomAttribute<ApplicationBlueprintAttribute>()?.StartupWindow;
         var placementName = MainWindow is WindowBase main ? main.PlacementName() : startup?.FullName;
-        if (placementName == null)
-        {
-            return null;
-        }
-
-        var placements = Container.IsRegistered<IWindowPlacementStore>()
-            ? Container.Resolve<IWindowPlacementStore>()
-            : new FileWindowPlacementStore();
-        return placements.Load(placementName);
+        return GetPlacementStore().Load(placementName ?? GetFirstWindowPlacementKey());
     }
 
     private Type SplashWindowType()
@@ -1263,8 +1320,9 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         }
     }
 
-    /// <summary>Keeps the splash window up - past the first frame of the startup window, or while the start opens its
-    /// first window later, from work of its own - until what is returned is disposed.</summary>
+    /// <summary>Keeps the splash window up past the first window drawn - while the start goes on with work of its own
+    /// after it - until what is returned is disposed. Without a hold the splash window goes once the first window of
+    /// the application is on screen with its content, however the start opened it.</summary>
     public IDisposable HoldSplash()
     {
         Interlocked.Increment(ref _splashHolds);
@@ -1289,7 +1347,8 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
     {
         if (_splash is not { IsHandedOver: false } || Volatile.Read(ref _splashHolds) > 0) return;
 
-        var awaited = !_startupDone || _showingStartupWindow || WindowsArriving();
+        var any = false;
+        var allHidden = true;
         foreach (var window in Windows)
         {
             if (window == _splash.Window)
@@ -1297,35 +1356,27 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
                 continue;
             }
 
-            if (window.IsDisplayed && window.Renderer is { PresentedFrames: > 0 })
+            if (window.IsDisplayed && window.Renderer is { HasPresentedContent: true })
+            {
+                RememberFirstWindow(window);
+                _splash.HandOver();
+                return;
+            }
+
+            if (window.State == WindowState.Minimized)
             {
                 _splash.HandOver();
                 return;
             }
 
-            awaited |= window.ShouldDisplayWindow && window.State != WindowState.Minimized;
+            any = true;
+            allHidden &= IsHiddenByApplication(window);
         }
 
-        if (!awaited)
+        if (any && allHidden)
         {
             _splash.HandOver();
         }
-    }
-
-    private bool WindowsArriving()
-    {
-        lock (applicationLocker)
-        {
-            foreach (var window in addedWindows)
-            {
-                if (window != _splash.Window)
-                {
-                    return true;
-                }
-            }
-        }
-
-        return false;
     }
 
     public void Run(IWindow window)
@@ -1376,16 +1427,8 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
 
     private async void ShowMainWindow(IWindow window)
     {
-        _showingStartupWindow = true;
-        try
-        {
-            await Navigation.ArriveInWindowAsync(window.DataContext);
-            window.Show();
-        }
-        finally
-        {
-            _showingStartupWindow = false;
-        }
+        await Navigation.ArriveInWindowAsync(window.DataContext);
+        window.Show();
     }
 
     private void ApplicationLoopThread()
@@ -2057,7 +2100,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         switch (ShutDownMode)
         {
             case ShutDownMode.OnMainWindowClosed when MainWindow == null:
-            case ShutDownMode.OnLastWindowClosed when Windows.Count == 0:
+            case ShutDownMode.OnLastWindowClosed when AreOnlySplashesLeft():
                 ShutDown();
                 break;
         }
@@ -2219,5 +2262,71 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
     {
         add { }
         remove { }
+    }
+
+    private string GetFirstWindowPlacementKey() => GetType().FullName + ".FirstWindow";
+
+    private IWindowPlacementStore GetPlacementStore() =>
+        Container.IsRegistered<IWindowPlacementStore>()
+            ? Container.Resolve<IWindowPlacementStore>()
+            : new FileWindowPlacementStore();
+
+    private void RememberFirstWindow(IWindow window)
+    {
+        if (window is WindowBase { RemembersPlacement: true } shown)
+        {
+            GetPlacementStore().Save(GetFirstWindowPlacementKey(), shown.LivePlacement());
+        }
+    }
+
+    private static bool IsShownOnScreen(IWindow window) =>
+        window is not SplashWindow && window.IsDisplayed && window.State != WindowState.Minimized;
+
+    private void OnWindowHidden(object sender, EventArgs e)
+    {
+        lock (_hiddenByApplication)
+        {
+            _hiddenByApplication.Add((IWindow)sender);
+        }
+    }
+
+    private bool IsHiddenByApplication(IWindow window)
+    {
+        lock (_hiddenByApplication)
+        {
+            return _hiddenByApplication.Contains(window) && !window.ShouldDisplayWindow && !window.IsDisplayed;
+        }
+    }
+
+    private bool AreOnlySplashesLeft()
+    {
+        if (windowsCollection.Count > 2)
+        {
+            return false;
+        }
+
+        lock (applicationLocker)
+        {
+            foreach (var window in addedWindows)
+            {
+                if (window is not SplashWindow)
+                {
+                    return false;
+                }
+            }
+        }
+
+        lock (_renderGate)
+        {
+            foreach (var window in windowsCollection)
+            {
+                if (window is not SplashWindow)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
     }
 }
