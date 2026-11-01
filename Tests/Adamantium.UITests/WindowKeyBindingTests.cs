@@ -199,6 +199,94 @@ public class WindowKeyBindingTests
         });
     }
 
+    // A field placed inside something with keys of its own - a minus that zooms a map out - keeps the keys that type:
+    // the holder's binding does not run on them; Ctrl with a letter and the field's own binding still do.
+    [Test]
+    public void WhileTyping_TheHolderOfTheField_DoesNotTakeTheKeysThatType()
+    {
+        var field = new TextBox();
+        var holder = new StackPanel { Children = { field } };
+        var window = new Window { Width = 400, Height = 300, Content = holder };
+        var ran = new System.Collections.Generic.List<string>();
+        foreach (var gesture in new[] { "OemMinus", "NumPadAdd", "Ctrl+W" })
+        {
+            holder.InputBindings.Add(new KeyBinding(new AdamantiumCommand(() => ran.Add(gesture)),
+                KeyGesture.Parse(gesture)));
+        }
+
+        field.InputBindings.Add(new KeyBinding(new AdamantiumCommand(() => ran.Add("own Space")), KeyGesture.Parse("Space")));
+        Settle(window);
+        FocusManager.Focus(field);
+
+        var minus = Press(field, Key.OemMinus);
+        Press(field, Key.NumPadAdd);
+        Press(field, Key.W, InputModifiers.LeftControl);
+        Press(field, Key.Space);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(ran, Is.EqualTo(new[] { "Ctrl+W", "own Space" }));
+            Assert.That(minus.Handled, Is.False, "the minus goes on to be typed");
+        });
+    }
+
+    // The same through a class's own command gesture, as a map zooms out on a minus; Shift and AltGr type too.
+    [Test]
+    public void WhileTyping_AHoldersClassGesture_DoesNotTakeTheKeysThatType()
+    {
+        var field = new TextBox();
+        var holder = new ZoomingPanel { Children = { field } };
+        var window = new Window { Width = 400, Height = 300, Content = holder };
+        Settle(window);
+        FocusManager.Focus(field);
+
+        var minus = Press(field, Key.OemMinus);
+        Press(field, Key.OemMinus, InputModifiers.LeftShift);
+        Press(field, Key.OemMinus, InputModifiers.LeftControl | InputModifiers.RightAlt);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(holder.Zoomed, Is.Zero);
+            Assert.That(minus.Handled, Is.False);
+        });
+    }
+
+    // Away from a field that types - focus on a button, a read-only field, the key raised on the holder itself - the
+    // holder's gesture runs as before.
+    [Test]
+    public void AwayFromTyping_TheHoldersGestureRuns()
+    {
+        var field = new TextBox();
+        var readOnly = new TextBox { IsReadOnly = true };
+        var button = new Button();
+        var holder = new ZoomingPanel { Children = { field, readOnly, button } };
+        var window = new Window { Width = 400, Height = 300, Content = holder };
+        Settle(window);
+
+        FocusManager.Focus(button);
+        Press(button, Key.OemMinus);
+        FocusManager.Focus(readOnly);
+        Press(readOnly, Key.OemMinus);
+        FocusManager.Focus(field);
+        Press(holder, Key.OemMinus);
+
+        Assert.That(holder.Zoomed, Is.EqualTo(3));
+    }
+
+    private sealed class ZoomingPanel : StackPanel
+    {
+        private static readonly RoutedCommand ZoomOut = new(nameof(ZoomOut), typeof(ZoomingPanel),
+            new KeyGesture(Key.OemMinus, ModifierKeys.None));
+
+        static ZoomingPanel()
+        {
+            CommandManager.RegisterClassCommandBinding(typeof(ZoomingPanel), new CommandBinding(ZoomOut,
+                static (sender, _) => ((ZoomingPanel)sender).Zoomed++, static (_, e) => e.CanExecute = true));
+        }
+
+        public int Zoomed { get; private set; }
+    }
+
     // The way up goes first all the way to the window: its cancel button and the keyboard's Tab navigation keep their
     // keys; a binding elsewhere gets only what is left.
     [Test]
