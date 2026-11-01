@@ -445,6 +445,11 @@ public static class CommandManager
 
     private static void OnKeyDown(object sender, KeyEventArgs e)
     {
+        if (TypesIntoEntryInside(sender as IUIComponent, e))
+        {
+            return;
+        }
+
         var target = e.OriginalSource as IInputComponent ?? sender as IInputComponent;
         var type = sender.GetType();
         if (RunKey((sender as IAdamantiumComponent)?.GetValue(InputBindingsProperty) as KeyBindingCollection, e, target) ||
@@ -547,28 +552,58 @@ public static class CommandManager
         }
     }
 
-    private static bool TypesInto(IInputComponent focused, KeyEventArgs e)
+    private static bool TypesInto(IInputComponent focused, KeyEventArgs e) =>
+        e.Key is not (>= Key.F1 and <= Key.F24) && EntryAround(focused) != null && HeldForTyping(e.Modifiers);
+
+    // Shift, or AltGr for a layout's third level: Ctrl+Alt as Windows sends it, the right Alt alone elsewhere.
+    private static bool HeldForTyping(InputModifiers modifiers)
     {
-        if (e.Key is >= Key.F1 and <= Key.F24 || !InTextEntry(focused))
+        var held = KeyGesture.Of(modifiers) & ~ModifierKeys.Shift;
+        if (held is ModifierKeys.None or (ModifierKeys.Control | ModifierKeys.Alt))
+        {
+            return true;
+        }
+
+        return !OperatingSystem.IsWindows() && held == ModifierKeys.Alt && (modifiers & InputModifiers.LeftAlt) == 0;
+    }
+
+    // A key that types a character into a text entry is the entry's: what holds the entry does not take it for a gesture
+    // of its own - a minus typed into a field on a map does not zoom the map out.
+    private static bool TypesIntoEntryInside(IUIComponent holder, KeyEventArgs e)
+    {
+        if (holder == null || !TypesCharacter(e.Key) || !HeldForTyping(e.Modifiers) ||
+            EntryAround(e.OriginalSource as IUIComponent) is not IUIComponent entry)
         {
             return false;
         }
 
-        var held = KeyGesture.Of(e.Modifiers) & ~ModifierKeys.Shift;
-        return held is ModifierKeys.None or (ModifierKeys.Control | ModifierKeys.Alt);
-    }
-
-    private static bool InTextEntry(IInputComponent focused)
-    {
-        for (IUIComponent node = focused; node != null; node = node.VisualParent)
+        for (var node = entry.VisualParent; node != null; node = node.VisualParent)
         {
-            if (node is ITextEntry)
+            if (ReferenceEquals(node, holder))
             {
                 return true;
             }
         }
 
         return false;
+    }
+
+    private static bool TypesCharacter(Key key) =>
+        key is Key.Space or >= Key.D0 and <= Key.D9 or >= Key.A and <= Key.Z or >= Key.NumPad0 and <= Key.NumPadDivide or
+            >= Key.OemSemicolon and <= Key.OemTilde or >= Key.OemOpenBrackets and <= Key.Oem8 or Key.OemBackSlash;
+
+    // The nearest text entry around the element that takes typing now; null for none, or a read-only one.
+    private static ITextEntry EntryAround(IUIComponent element)
+    {
+        for (var node = element; node != null; node = node.VisualParent)
+        {
+            if (node is ITextEntry entry)
+            {
+                return entry.TakesTyping ? entry : null;
+            }
+        }
+
+        return null;
     }
 
     private static bool IsLive(IUIComponent host, IRootVisualComponent root)
