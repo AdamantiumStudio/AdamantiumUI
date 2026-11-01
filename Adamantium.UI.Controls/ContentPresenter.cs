@@ -233,7 +233,6 @@ public class ContentPresenter : InputUIComponent
             // Another window or theme: the attach below must revalidate every node the ordinary way.
             if (!ParkedVisuals.IsUnchanged) ParkedSubtree.Revalidate(parkedRoot);
 
-            var reTheme = ParkedVisuals.ThemeChanged;
             if (parkedBuilt?.HostComponent is { } builtBy && !ReferenceEquals(builtBy, this))
             {
                 parkedBuilt.Rehost(this);
@@ -255,7 +254,7 @@ public class ContentPresenter : InputUIComponent
 
             // The re-theming walk missed it while parked. After the attach: a node out of the tree has no queue to
             // register the restyle with.
-            if (reTheme) (_currentRoot as FundamentalUIComponent)?.InvalidateStyles();
+            (_currentRoot as FundamentalUIComponent)?.RestyleIfItMissedASwap();
 
             SetContentContext(newContent);
             return;

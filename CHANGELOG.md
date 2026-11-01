@@ -2385,6 +2385,8 @@ All packages share one version.
 
 ### Removed
 
+- `ParkedVisuals.ThemeChanged`: a view coming back from the cache after a theme swap is restyled by the same check as
+  any element that sat a swap out of the tree, the theme it was styled in.
 - `DockingLayout.BandTarget`: a band dropped on the top or bottom edge anchor runs across the whole area, as the
   anchor's preview shows, rather than under the center column only; `FindCenterColumn` is what a band put away from
   under the center comes back into.
@@ -2429,6 +2431,26 @@ All packages share one version.
 
 ### Fixed
 
+- After a theme swap a window's content no longer followed its view-model: a panel bound to it did not open again.
+  Whatever a template only shows - a control's content, a tab's page, content inside a part of a part - lost its data
+  context while the old template went, and the element it came back through still read the old one, so nothing under
+  it heard the context return. What a template shows now goes back to what holds it before the template goes, keeping
+  its context through the swap, and an inherited value no ancestor states any more is let go instead of read on.
+- An inherited change could miss an element and everything under it, or reach it with the wrong old value: what an
+  element passed down was read from a slot that an element nothing watches had never filled, or had filled before the
+  last change. A value stated on such an element that happened to equal what the element below would read by default
+  never reached it - a text block stayed painted in the old color; a value cleared there reached it as the default
+  instead of what an ancestor further up states; a data context replaced there told the element below it had had none.
+  A handler reading an element before the change reached it, or a moved element's handler reading another value
+  first, turned the change into no change at all. A subtree moved under a parent stating the value its root already
+  read left the elements under the root, which read their own defaults, untold. What an element passes down is now
+  taken from its ancestors when it changes, and each element told compares what it read with what it reads. An
+  element cut off from the ancestor whose brush it drew with lets go of that brush, and a brush is taken and let go by
+  what an element's value actually was and becomes, so no path leaves one held twice or held by an element it left.
+- The page of a tab not selected during a theme swap kept the old theme when its tab was selected afterwards, and its
+  colors no longer followed dark and light: only the page itself took the new theme, not what is on it.
+- After a second theme swap a tab no longer belonged to its TabControl: the strip of the old template let go of a tab
+  the strip of the new one already showed.
 - `BasedOn` did nothing in a style that belongs to no theme - an element's own `Styles`, and now a scope's: it takes
   the theme's style for the type from the theme in force at the element, and that theme's again once another comes in.
 - A style setter whose value is an `{ObservableResource}` or a `{ThemeResource}` wrote its slot past the other styles of

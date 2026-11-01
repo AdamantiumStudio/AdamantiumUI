@@ -182,10 +182,22 @@ public class ItemsControl : Control, IContainer, IKeyboardEntry
     {
         foreach (var (held, holder) in _heldItems)
         {
-            LetGo(held, holder);
+            if (!IsShownElsewhere(held)) LetGo(held, holder);
         }
 
         _heldItems.Clear();
+    }
+
+    private bool IsShownElsewhere(IUIComponent item)
+    {
+        if (item.VisualParent == null) return false;
+
+        for (var node = item.VisualParent; node != null; node = node.VisualParent ?? node.LogicalParent as IUIComponent)
+        {
+            if (ReferenceEquals(node, this)) return false;
+        }
+
+        return true;
     }
 
     private void DiscardOwnItems()
@@ -317,10 +329,18 @@ public class ItemsControl : Control, IContainer, IKeyboardEntry
     /// Taken from the items source, the element is held only if nothing holds it.</summary>
     internal void HoldShownItem(IUIComponent item)
     {
-        if (item == null || item.LogicalParent != null || !IsOwnItem(item)) return;
+        if (item == null || !IsOwnItem(item)) return;
 
         var holder = Holder;
-        holder.AddLogicalChild(item);
+        if (item.LogicalParent == null)
+        {
+            holder.AddLogicalChild(item);
+        }
+        else if (!ReferenceEquals(item.LogicalParent, holder))
+        {
+            return;
+        }
+
         _heldItems[item] = holder;
     }
 

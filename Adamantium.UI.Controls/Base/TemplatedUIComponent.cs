@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Controls;
@@ -147,6 +148,7 @@ public class TemplatedUIComponent : InputUIComponent, ITemplatedUIComponent, ITe
         // nothing to tear down then.
         if (templateResult == null) return;
 
+        GiveBackShownElements(templateResult.RootComponent);
         TemplateRootChanged(templateResult.RootComponent, joined: false);
         TraverseVisualTreeAndUnload(templateResult.RootComponent);
         // Undo the inheritance link set in AddTemplateChild so the detached old template root stops tracking this
@@ -181,6 +183,34 @@ public class TemplatedUIComponent : InputUIComponent, ITemplatedUIComponent, ITe
         
     }
     
+    private static void GiveBackShownElements(IUIComponent oldRoot)
+    {
+        if (oldRoot is not AdamantiumComponent root) return;
+
+        List<AdamantiumComponent> shown = null;
+        root.CollectInheritors(root, static (element, dying) =>
+                element is FundamentalUIComponent { ShownIn: not null, LogicalParent: FundamentalUIComponent holder } &&
+                Outlives(holder, dying),
+            ref shown);
+        if (shown == null) return;
+
+        foreach (FundamentalUIComponent element in shown)
+        {
+            element.ShowIn(null);
+        }
+    }
+
+    private static bool Outlives(FundamentalUIComponent holder, AdamantiumComponent dyingRoot)
+    {
+        for (var node = holder; node != null; node = node.LogicalParent as FundamentalUIComponent)
+        {
+            if (!node.InheritsThrough(dyingRoot)) return true;
+            if (node.ShownIn == null) return false;
+        }
+
+        return false;
+    }
+
     private void TraverseVisualTreeAndUnload(IUIComponent component)
     {
         foreach (var child in component.VisualChildren)

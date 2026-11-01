@@ -18,6 +18,7 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
     private Dictionary<object, Action> _follows;
     private Dictionary<Style, int> _scopedBands;
     private bool _underScope;
+    private int _styledInThemeVersion = ThemeManager.Version;
 
     public static readonly AdamantiumProperty NameProperty = AdamantiumProperty.Register(nameof(Name),
         typeof(String), typeof(FundamentalUIComponent), new PropertyMetadata(String.Empty));
@@ -876,7 +877,13 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
             if (parent != null)
             {
                 var wasUnderScope = _underScope;
+                var missedASwap = _styledInThemeVersion != ThemeManager.Version;
                 ApplyCurrentTheme();
+                if (missedASwap)
+                {
+                    InvalidateChildrenStyles([this]);
+                }
+
                 if (wasUnderScope || _underScope)
                 {
                     RestyleScopedSubtree();
@@ -887,10 +894,21 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
         }
     }
 
+    /// <summary>Restyles this element and everything under it when it was built or styled before the theme in force came
+    /// in: out of every tree then, it missed the re-theming walk - a page of a tab not selected, a parked view.</summary>
+    internal void RestyleIfItMissedASwap()
+    {
+        if (_styledInThemeVersion == ThemeManager.Version) return;
+
+        _styledInThemeVersion = ThemeManager.Version;
+        InvalidateStyles();
+    }
+
     /// <summary>Themes this control via <see cref="ApplyCurrentThemeCore"/>. A failure is logged at Error and leaves this
     /// control as is, so one bad template cannot abort the rest of the theme walk.</summary>
     public void ApplyCurrentTheme()
     {
+        _styledInThemeVersion = ThemeManager.Version;
         try
         {
             ApplyCurrentThemeCore();
@@ -980,6 +998,11 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
             ApplyCurrentTheme();
         }
 
+        InvalidateChildrenStyles(visited);
+    }
+
+    private void InvalidateChildrenStyles(HashSet<IFundamentalUIComponent> visited)
+    {
         foreach (var child in LogicalChildrenCollection)
         {
             (child as FundamentalUIComponent)?.InvalidateStylesCore(visited);
