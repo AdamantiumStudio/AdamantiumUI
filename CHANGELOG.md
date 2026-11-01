@@ -2439,6 +2439,9 @@ All packages share one version.
 
 ### Fixed
 
+- A card opened from a menu's item left the focus nowhere when it closed: the item it had the focus from was gone with
+  its menu. `FocusReturn.Restore` takes the element the overlay stands on and, the opener gone, gives the focus to what
+  had it last in that element's focus scope - the field the menu was opened from; a popup passes its place in the tree.
 - A key that types into a focused text field ran the gestures of what holds the field: a minus typed into a field
   placed on a map zoomed the map out. The elements around a text entry no longer take its typing keys for their key
   bindings or command gestures; the field's own bindings, and Ctrl or function keys, reach them as before.
