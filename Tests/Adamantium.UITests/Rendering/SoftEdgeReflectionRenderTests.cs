@@ -376,9 +376,8 @@ public class SoftEdgeReflectionRenderTests
             e.Reflection = new Reflection { Size = 1, Opacity = 1 };
         });
 
-        // The glow gone by row 54, the floor there: six rows below it, the mirror image of the glow three rows under the
-        // element's edge, before the mirrored element begins at 64.
-        var mirroredGlow = (24, 60);
+        // The floor at the element's edge, row 44: the glow over the top edge, row 1, mirrored at row 86.
+        var mirroredGlow = (24, 86);
         var p = Red(Render(plain, mirroredGlow)[0]);
         Assert.Multiple(() =>
         {
@@ -444,38 +443,36 @@ public class SoftEdgeReflectionRenderTests
         });
     }
 
-    // The floor lies under all the element draws, its glow too: the reflection turns the whole of it over, its glow
-    // first, and leaves the element's own glow whole above.
+    // The floor is the element's own edge, however far its glow reaches below it: with no distance the mirrored element
+    // begins right at its edge, and the glow over its top edge is turned over under the mirrored element.
     [Test]
-    public void AReflection_TurnsOverTheGlowUnderIt()
+    public void AReflection_BeginsAtTheElementsEdge_ThoughItsGlowReachesLower()
     {
         var glow = new Aura { Radius = 10, Color = Colors.White, Opacity = 1 };
         var (plain, _) = Element(e => e.Aura = glow);
         var (mirrored, _) = Element(e =>
         {
             e.Aura = glow;
-            e.Reflection = new Reflection { Size = 1, Opacity = 1, OffsetY = 8 };
+            e.Reflection = new Reflection { Size = 1, Opacity = 1, Fade = 0 };
         });
 
-        // Edge at row 44, the glow gone by 54, floor at 58, the mirrored glow from 62, the mirrored element from 72.
-        (int, int)[] rows = [(24, 47), (24, 58), (24, 66), (24, 76)];
+        // Edge at row 44, the floor there: the lime half mirrored to rows 44-64, the red half to 64-84, the glow over
+        // the top edge (rows 1-3) to 84-86.
+        (int, int)[] rows = [(24, 74), (24, 86)];
         var m = Render(mirrored, rows);
         var p = Render(plain, rows);
 
         Assert.Multiple(() =>
         {
-            Assert.That(Red(m[0]), Is.EqualTo(Red(p[0])).Within(3), "above the floor, only the element itself");
-            Assert.That(Red(p[0]), Is.GreaterThan(40), "its glow there");
-            Assert.That(Red(m[1]), Is.EqualTo(Red(p[1])).Within(3), "between the glow and its mirror image, nothing");
-            Assert.That(Red(m[2]), Is.GreaterThan(Red(p[2]) + 20), "the glow's mirror image");
-            Assert.That(Green(m[3]), Is.GreaterThan(150), "then the element's lime half");
+            Assert.That(Red(m[0]), Is.GreaterThan(200), "the red half, twenty rows under the edge");
+            Assert.That(Green(m[0]), Is.LessThan(100), "not pushed down by the glow below the edge");
+            Assert.That(Red(m[1]), Is.GreaterThan(Red(p[1]) + 20), "the glow over the top edge, turned over");
         });
     }
 
-    // A shadow thrown down reaches past the glow: the floor goes under it, so the mirrored shadow keeps its round
-    // corners instead of starting at the floor as a straight cut.
+    // A shadow thrown down does not push the reflection down either: the mirrored element begins at the element's edge.
     [Test]
-    public void AReflection_TurnsOverTheShadowWhole()
+    public void AReflection_BeginsAtTheElementsEdge_ThoughItsShadowReachesLower()
     {
         var (root, _) = Element(e =>
         {
@@ -483,16 +480,13 @@ public class SoftEdgeReflectionRenderTests
             e.Reflection = new Reflection { Size = 1, Opacity = 1, Fade = 0 };
         });
 
-        // The shadow's bottom edge at row 54 and its blur gone by 60: the floor there, and its mirror image fading in
-        // from there down as it fades out above.
-        var px = Render(root, (24, 56), (24, 63), (24, 58), (24, 61), (24, 70));
+        // Edge at row 44, the floor there: the red half mirrored to rows 64-84.
+        var px = Render(root, (24, 74));
 
         Assert.Multiple(() =>
         {
-            Assert.That(Red(px[0]), Is.InRange(40, 200), "the shadow's blur, half way out");
-            Assert.That(Red(px[1]), Is.EqualTo(Red(px[0])).Within(8), "the mirror image, as strong as what it mirrors");
-            Assert.That(Red(px[3]), Is.EqualTo(Red(px[2])).Within(8));
-            Assert.That(Red(px[4]), Is.GreaterThan(240), "then the mirrored shadow itself");
+            Assert.That(Red(px[0]), Is.GreaterThan(200), "the red half, twenty rows under the edge");
+            Assert.That(Green(px[0]), Is.LessThan(100), "not the shadow, nor the lime half pushed down");
         });
     }
 
@@ -687,8 +681,8 @@ public class SoftEdgeReflectionRenderTests
             e.Reflection = new Reflection { Size = 1, Opacity = 1, Fade = 0 };
         });
 
-        // The glow gone by row 54, the floor there: row 1, over the top edge, mirrored at row 106.
-        var px = Render(root, (24, 1), (24, 106));
+        // The floor at the element's edge, row 44: row 1, over the top edge, mirrored at row 86.
+        var px = Render(root, (24, 1), (24, 86));
 
         Assert.Multiple(() =>
         {
@@ -793,24 +787,24 @@ public class SoftEdgeReflectionRenderTests
         Assert.That(Green(px[0]), Is.GreaterThan(200), "the reflection right under the element's edge");
     }
 
-    // Squeezed across, the shadow is drawn at the lesser scale: the floor lies where it ends, not further down.
+    // Squeezed across, with a shadow under it, the element is still mirrored about its own edge.
     [Test]
-    public void AReflection_UnderASqueezedElement_MeetsItsShadow()
+    public void AReflection_UnderASqueezedElement_BeginsAtItsEdge()
     {
         var (root, _) = Element(e =>
         {
             e.RenderTransform = new Transform { ScaleX = 0.5, ScaleY = 1 };
             e.Shadow = new Shadow { OffsetY = 10, BlurRadius = 2, Color = Colors.White, Opacity = 1 };
-            e.Reflection = new Reflection { Size = 1, Opacity = 1 };
+            e.Reflection = new Reflection { Size = 1, Opacity = 1, Fade = 0 };
         });
 
-        // The shadow, five pixels down at half scale, ends by row 50: the floor there, row 47 mirrored at row 52.
-        var px = Render(root, (10, 47), (10, 52));
+        // Edge at row 44, the floor there: the red half mirrored to rows 64-84.
+        var px = Render(root, (10, 74));
 
         Assert.Multiple(() =>
         {
-            Assert.That(Red(px[0]), Is.GreaterThan(200), "the shadow under the element");
-            Assert.That(Red(px[1]), Is.GreaterThan(200), "its mirror image, right under the floor");
+            Assert.That(Red(px[0]), Is.GreaterThan(200), "the red half, twenty rows under the edge");
+            Assert.That(Green(px[0]), Is.LessThan(100), "not pushed down by the shadow");
         });
     }
 
