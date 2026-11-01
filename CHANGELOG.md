@@ -1907,8 +1907,9 @@ All packages share one version.
 
 ### Changed
 
-- `CursorType.SizeEWE` and `Cursors.SizeEWE` are `SizeWE`, the west-east resize arrow, as `SizeNS` is the
-  north-south one; markup writes `Cursor="SizeWE"`.
+- `CursorType.SizeEWE` and `Cursors.SizeEWE` are renamed `SizeWE`, the west-east resize arrow, as `SizeNS` is the
+  north-south one; markup writes `Cursor="SizeWE"`. `Cursor="SizeEWE"` is no shape any more, so markup takes it as
+  the path of a cursor file, which is not found.
 - No state is kept per thread. A transform tells its holders from a list of its own; a text style passes the styles
   its news has gone through on with it, so a chain set in a loop still hears once; a binding tried once more knows it
   is being retried; a routed command handed on from one focus scope to the next counts the hand-ons in its arguments;
