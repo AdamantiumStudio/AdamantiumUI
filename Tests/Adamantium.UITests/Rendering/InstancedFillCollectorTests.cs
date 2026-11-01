@@ -54,9 +54,85 @@ public class InstancedFillCollectorTests
     [OneTimeTearDown]
     public void FreeEffect() => _effect?.Dispose();
 
-    private GeometryRenderUnit Unit(Brush brush, double size)
+    private GeometryRenderUnit Unit(Brush brush, double size) =>
+        UnitOf(brush, new RectangleGeometry(new Rect(0, 0, size, size), new CornerRadius(0)));
+
+    private GeometryRenderUnit MeshUnit(Brush brush, double size) =>
+        UnitOf(brush, new MeshGeometry([new(0, 0), new(size, 0), new(size, size), new(0, size)], [0, 1, 2, 2, 3, 0]));
+
+    // Triangles cut elsewhere - a map's tiles cut on a worker - join the instanced fills like any tessellated path:
+    // identical meshes share one segment whatever their color, different ones do not.
+    [Test]
+    public void MeshGeometry_JoinsTheInstancedFills()
     {
-        var geometry = new RectangleGeometry(new Rect(0, 0, size, size), new CornerRadius(0));
+        using var collector = NewCollector();
+        var first = MeshUnit(Brushes.Red, 10);
+        var same = MeshUnit(Brushes.Blue, 10);
+        var other = MeshUnit(Brushes.Red, 20);
+
+        foreach (var unit in new[] { first, same, other })
+            Assert.That(collector.TryAdd(unit, Matrix4x4F.Identity, NoScissor, new Rect(0, 0, 20, 20), transformSlot: 0), Is.True);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(KeyOf(same), Is.EqualTo(KeyOf(first)));
+            Assert.That(KeyOf(other), Is.Not.EqualTo(KeyOf(first)));
+            Assert.That(collector.SegmentCount, Is.EqualTo(2));
+            Assert.That(collector.InstanceCountOf(KeyOf(first)), Is.EqualTo(2));
+        });
+
+        first.Dispose();
+        same.Dispose();
+        other.Dispose();
+    }
+
+    // The same triangles with another given edge feather differently, so they are another mesh - sharing a segment
+    // would draw the second with the first one's edge.
+    [Test]
+    public void TheSameTriangles_WithAnotherEdge_AreAnotherMesh()
+    {
+        Vector2<double>[] square = [new(0, 0), new(10, 0), new(10, 10), new(0, 10)];
+        Vector2<double>[] smaller = [new(1, 1), new(9, 1), new(9, 9), new(1, 9)];
+        var given = UnitOf(Brushes.Red, new MeshGeometry(square, [0, 1, 2, 2, 3, 0], [square]));
+        var other = UnitOf(Brushes.Red, new MeshGeometry(square, [0, 1, 2, 2, 3, 0], [smaller]));
+        var none = UnitOf(Brushes.Red, new MeshGeometry(square, [0, 1, 2, 2, 3, 0]));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(KeyOf(other), Is.Not.EqualTo(KeyOf(given)));
+            Assert.That(KeyOf(none), Is.Not.EqualTo(KeyOf(given)));
+        });
+
+        given.Dispose();
+        other.Dispose();
+        none.Dispose();
+    }
+
+    // Whoever cut the triangles knows the edge: given, it is the fringe's ring as it is, not worked out of the triangles.
+    [Test]
+    public void AGivenBoundary_IsTheEdgeTheFringeFeathers()
+    {
+        Vector2<double>[] outer = [new(0, 0), new(30, 0), new(30, 30), new(0, 30)];
+        Vector2<double>[] inner = [new(10, 10), new(20, 10), new(20, 20), new(10, 20)];
+        Vector2<double>[] hole = [new(10, 20), new(20, 20), new(20, 10), new(10, 10)];
+        var geometry = new MeshGeometry(
+            [.. outer, .. inner],
+            [0, 1, 5, 0, 5, 4, 1, 2, 6, 1, 6, 5, 2, 3, 7, 2, 7, 6, 3, 0, 4, 3, 4, 7],
+            [outer, hole]);
+        geometry.ProcessGeometry(GeometryType.Both);
+
+        var loops = FillBoundary.LoopsOf(geometry);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(loops, Has.Count.EqualTo(2));
+            Assert.That(loops[0].Points, Is.EqualTo(outer));
+            Assert.That(loops[1].Points, Is.EqualTo(hole));
+        });
+    }
+
+    private GeometryRenderUnit UnitOf(Brush brush, Geometry geometry)
+    {
         var component = new TestControl();
         var command = new DrawCommand(component, component.RenderId, new GeometryPayload(brush, geometry),
             new RenderData(1f, Matrix4x4F.Identity, false, default));

@@ -210,7 +210,7 @@ public abstract class RenderUnit<TPayload> : DeferredDisposableObject, IRenderUn
 
         // Feather the RESOLVED fill boundary (outer outline + holes, extracted from the fill mesh) so self-intersecting /
         // holed shapes get their inner edges AA'd too; fall back to the raw path contours if extraction finds nothing.
-        var contours = FillBoundary.ExtractLoops(geometry?.Mesh) ?? BuildFillContours(geometry);
+        var contours = FillBoundary.LoopsOf(geometry) ?? BuildFillContours(geometry);
         if (contours == null) return;
 
         FillFringeRenderer = new GpuFillRenderComponent(GraphicsDevice, UIBasicEffect, FillFringeEffect, contours, brush, BufferManager);
@@ -248,7 +248,7 @@ public abstract class RenderUnit<TPayload> : DeferredDisposableObject, IRenderUn
             // (contour count or a contour's point count changed) rebuild it.
             if (brush is SolidColorBrush solid && FillFringeRenderer is GpuFillRenderComponent existingFringe)
             {
-                var contours = FillBoundary.ExtractLoops(geometry?.Mesh) ?? BuildFillContours(geometry);
+                var contours = FillBoundary.LoopsOf(geometry) ?? BuildFillContours(geometry);
                 if (contours != null && existingFringe.TryUpdateContours(contours, solid))
                 {
                     FillFringeRenderer.RenderData = DrawCommand.RenderData;
@@ -363,7 +363,7 @@ public class GeometryRenderUnit : RenderUnit<GeometryPayload>
     {
         // No ProcessGeometry here: the payload tessellated on the RECORD thread (see GeometryPayload). The applier only
         // freezes a copy of the result.
-        _frozenMesh = FrozenMesh.From(Payload.Geometry.Mesh, Payload.Geometry.Bounds);   // freeze the tessellated mesh for the instanced path
+        _frozenMesh = FrozenMesh.From(Payload.Geometry);   // freeze the tessellated mesh for the instanced path
         GeometryRenderer = new GeometryRenderComponent(GraphicsDevice, UIBasicEffect, Payload.Geometry.Mesh, Payload.LiveBrush, BufferManager, ResourceFactory);
         GeometryRenderer.RenderData = DrawCommand.RenderData;
         GeometryRenderer.Owner = DrawCommand.Component;
@@ -512,7 +512,7 @@ public class GeometryRenderUnit : RenderUnit<GeometryPayload>
         if (rebuild)
         {
             // Tessellated already, on the record thread that built inputPayload - the applier must not rebuild it here.
-            _frozenMesh = FrozenMesh.From(inputPayload.Geometry.Mesh, inputPayload.Geometry.Bounds);   // re-freeze the re-tessellated mesh
+            _frozenMesh = FrozenMesh.From(inputPayload.Geometry);   // re-freeze the re-tessellated mesh
             ((GeometryRenderComponent)GeometryRenderer).UpdateGeometry(inputPayload.Geometry.Mesh);
         }
         ((GeometryRenderComponent)GeometryRenderer).Background = inputPayload.LiveBrush;
@@ -1281,7 +1281,7 @@ public class RegularPolygonRenderUnit : RenderUnit<RegularPolygonPayload>
         {
             var g = PolygonShape(Payload);
             g.ProcessGeometry(GeometryType.Both);
-            _haloMesh = FrozenMesh.From(g.Mesh, g.Bounds);
+            _haloMesh = FrozenMesh.From(g);
         }
 
         if (_haloMesh is not { HasPoints: true }) return null;
