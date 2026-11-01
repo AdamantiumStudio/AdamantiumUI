@@ -1916,6 +1916,12 @@ All packages share one version.
 
 ### Changed
 
+- A continuous GPU stroke of many contours - a map's roads, a chart's series - is expanded by one compute dispatch and
+  drawn by one draw instead of one of each per contour: its contours' points lie one after another with a table of
+  where each starts, and every thread works inside its own point's contour, so joins, caps and antialiasing are what
+  they were. A batch holds at most 32 768 points and 32 MB of ribbon; past that the contours go in several. Pieces are
+  numbered across the whole batch, so translucent contours of one stroke crossing each other blend once. A dashed or
+  trimmed stroke still walks each contour on its own.
 - `CursorType.SizeEWE` and `Cursors.SizeEWE` are renamed `SizeWE`, the west-east resize arrow, as `SizeNS` is the
   north-south one; markup writes `Cursor="SizeWE"`. `Cursor="SizeEWE"` is no shape any more, so markup takes it as
   the path of a cursor file, which is not found.
@@ -2448,6 +2454,11 @@ All packages share one version.
 
 ### Fixed
 
+- A `StreamGeometry` cut its unfilled figures into triangles as one area along with the filled ones: 3 000 open lines
+  of 20 points took 26 s to process and filled nothing. Only filled figures are cut now, as in `PathGeometry`; the
+  others are stroked as given (about 50 ms for the same lines), an open figure staying open.
+- A closed contour of two points stroked with miter joins drew from NaN vertices; it is drawn open now.
+- The depth a translucent stroke clears for its union fell short of a mitred corner's tip when zoomed out.
 - A key that types into a focused text field ran the gestures of what holds the field: a minus typed into a field
   placed on a map zoomed the map out. The elements around a text entry no longer take its typing keys for their key
   bindings or command gestures; the field's own bindings, and Ctrl or function keys, reach them as before.

@@ -4,10 +4,21 @@
 // straight end frames of its piece (a dash, trim run or open contour).
 
 // --- StrokeExpand (compute) globals ---
-float2* Points;           // polyline points (PointCount of them)
+float2* Points;           // polyline points (PointCount of them) - every contour's, one after another, when batched
 float* Output;            // output vertices, 8 floats each (see WriteVert)
-uint PointCount;          // continuous mode: polyline points. dash mode: piece-points (2 per dash piece).
+uint PointCount;          // continuous mode: polyline points (all contours' when batched). dash mode: piece-points.
 uint IsClosed;            // 0 = open polyline (flat ends), 1 = closed loop (wrap-around miters + closing pair)
+
+// --- batched continuous mode: many contours in one dispatch ---
+uint Batched;             // 0 = Points is one contour; 1 = Points holds many, Contours says which is where
+uint* Contours;           // per contour: first point, point count, closed (0/1) - three uints each
+uint* PointContours;      // per point of Points: the contour it belongs to
+
+// The contour the running thread works on, set once at the top of each kernel: the whole of Points, or one contour of a
+// batch. Thread-private, so every helper below reads the right one.
+static float2* ContourPoints;
+static uint ContourPointCount;
+static uint ContourIsClosed;
 uint StartCap;            // start cap: 0 = flat, 1 = square, 2 = convex round, 3 = convex tri, 4 = concave tri, 5 = concave round
 uint EndCap;              // end cap (same codes)
 uint DashStartCap;        // cap on the STARTING end of each dash/dot piece (cut path); the contour's real ends use Start/EndCap
@@ -91,9 +102,9 @@ float CapExtend(uint cap)
 // How far point i's cross-section is pushed OUT past the geometry point by its cap (open contour ends only).
 float EndExtend(uint i)
 {
-    if (IsClosed != 0u) return 0.0;
+    if (ContourIsClosed != 0u) return 0.0;
     if (i == 0u) return CapExtend(StartCap) + Fringe * 0.5;
-    if (i + 1u == PointCount) return CapExtend(EndCap) + Fringe * 0.5;
+    if (i + 1u == ContourPointCount) return CapExtend(EndCap) + Fringe * 0.5;
     return 0.0;
 }
 
@@ -103,21 +114,21 @@ float EndExtend(uint i)
 // miter, length clamped so a sharp corner can't shoot the tip to infinity.
 void OffsetPair(uint i, out float2 plus, out float2 minus)
 {
-    float2* points = Points;
+    float2* points = ContourPoints;
     float2 p = points[i];
 
     float hw = HalfThickness + Fringe * 0.5;   // widen the ribbon by the AA feather; v carries +/-hw (see EmitQuad)
     float2 miter;
     float miterLen;
 
-    if (IsClosed == 0 && i == 0)
+    if (ContourIsClosed == 0 && i == 0)
     {
         float2 dir = normalize(points[1] - points[0]);   // inward; outward is -dir
         p -= dir * EndExtend(i);                          // room for the cap mask to shape (convex caps only)
         miter = float2(-dir.y, dir.x);
         miterLen = hw;
     }
-    else if (IsClosed == 0 && i + 1 == PointCount)
+    else if (ContourIsClosed == 0 && i + 1 == ContourPointCount)
     {
         float2 dir = normalize(points[i] - points[i - 1]);   // outward
         p += dir * EndExtend(i);
@@ -126,8 +137,8 @@ void OffsetPair(uint i, out float2 plus, out float2 minus)
     }
     else
     {
-        uint prev = (i + PointCount - 1) % PointCount;
-        uint next = (i + 1) % PointCount;
+        uint prev = (i + ContourPointCount - 1) % ContourPointCount;
+        uint next = (i + 1) % ContourPointCount;
         float2 n0 = SegmentNormal(points[prev], p);
         float2 n1 = SegmentNormal(p, points[next]);
         miter = normalize(n0 + n1);
@@ -144,8 +155,8 @@ void OffsetPair(uint i, out float2 plus, out float2 minus)
 // length long before the walk gets there.
 void PointAtArc(float target, out float2 pos, out float2 dir)
 {
-    float2* points = Points;
-    uint segCount = IsClosed != 0u ? PointCount : PointCount - 1u;
+    float2* points = ContourPoints;
+    uint segCount = ContourIsClosed != 0u ? ContourPointCount : ContourPointCount - 1u;
     pos = points[0];
     dir = normalize(points[1] - points[0]);
     float acc = 0.0;
@@ -153,7 +164,7 @@ void PointAtArc(float target, out float2 pos, out float2 dir)
     for (uint s = 0u; s < segCount; ++s)
     {
         float2 a = points[s];
-        float2 b = points[(s + 1u) % PointCount];
+        float2 b = points[(s + 1u) % ContourPointCount];
         float len = length(b - a);
         if (len > 1e-6)
         {
@@ -237,21 +248,36 @@ uint EmitDisc(float* outVerts, uint base, uint maxTris, float2 V, float arcA, fl
 [numthreads(64, 1, 1)]
 void StrokeExpandCS(uint3 tid : SV_DispatchThreadID)
 {
-    float2* points = Points;
-    float* outVerts = Output;
-
-    // Continuous polyline, one thread per point. Fixed per-point slot: a segment quad then a join fan.
+    // Continuous polyline, one thread per point. Fixed per-point slot: a segment quad then a join fan. Batched, the slots
+    // of all contours lie one after another as their points do, and a thread works inside its own point's contour.
     if (tid.x >= PointCount)
         return;
 
     uint i = tid.x;
+    ContourPoints = Points;
+    ContourPointCount = PointCount;
+    ContourIsClosed = IsClosed;
+    if (Batched != 0u)
+    {
+        uint* contours = Contours;
+        uint* pointContours = PointContours;
+        uint c = pointContours[tid.x] * 3u;
+        uint first = contours[c];
+        ContourPoints = Points + first;
+        ContourPointCount = contours[c + 1u];
+        ContourIsClosed = contours[c + 2u];
+        i = tid.x - first;
+    }
+
+    float2* points = ContourPoints;
+    float* outVerts = Output;
     uint vpp = 6u + RoundSegments * 3u;
-    uint baseV = i * vpp;
+    uint baseV = tid.x * vpp;
     float2 p = points[i];
 
-    bool isStart = (IsClosed == 0) && (i == 0u);
-    bool isEnd   = (IsClosed == 0) && (i + 1u == PointCount);
-    bool hasSegment = (IsClosed != 0) || (i + 1u < PointCount);
+    bool isStart = (ContourIsClosed == 0) && (i == 0u);
+    bool isEnd   = (ContourIsClosed == 0) && (i + 1u == ContourPointCount);
+    bool hasSegment = (ContourIsClosed != 0) || (i + 1u < ContourPointCount);
 
     PieceFrame frame = NoCaps();
     // Arc distance from this point to the contour's two ends - how far a cap can still reach it. Only the first half
@@ -261,9 +287,9 @@ void StrokeExpandCS(uint3 tid : SV_DispatchThreadID)
     float capRange = HalfThickness + Fringe + 1.0;
     float back = 1e6;
     float fwd = 1e6;
-    if (IsClosed == 0u)
+    if (ContourIsClosed == 0u)
     {
-        uint last = PointCount - 1u;
+        uint last = ContourPointCount - 1u;
         frame.A = points[0];
         frame.dA = normalize(points[1] - points[0]);
         frame.B = points[last];
@@ -273,7 +299,7 @@ void StrokeExpandCS(uint3 tid : SV_DispatchThreadID)
         back = 0.0;
         for (uint k = i; k > 0u && back < capRange; --k) back += length(points[k] - points[k - 1u]);
         fwd = 0.0;
-        for (uint k2 = i; k2 + 1u < PointCount && fwd < capRange; ++k2) fwd += length(points[k2 + 1u] - points[k2]);
+        for (uint k2 = i; k2 + 1u < ContourPointCount && fwd < capRange; ++k2) fwd += length(points[k2 + 1u] - points[k2]);
         if (back >= capRange) back = 1e6;
         if (fwd >= capRange) fwd = 1e6;
     }
@@ -281,7 +307,7 @@ void StrokeExpandCS(uint3 tid : SV_DispatchThreadID)
     // 1) Outgoing segment quad i -> i+1 (degenerate for the open contour's last point, which has no segment).
     if (hasSegment)
     {
-        uint ni = (i + 1u) % PointCount;
+        uint ni = (i + 1u) % ContourPointCount;
         float segLen = length(points[ni] - p);
         float nBack = back + segLen;
         float nFwd = fwd - segLen;
@@ -292,7 +318,7 @@ void StrokeExpandCS(uint3 tid : SV_DispatchThreadID)
             OffsetPair(i, aP, aM);
             OffsetPair(ni, bP, bM);
             EmitQuad(outVerts, baseV, aP, aM, bP, bM, HalfThickness + Fringe * 0.5,
-                     back, fwd, nBack, nFwd, frame, float(i * 2u));
+                     back, fwd, nBack, nFwd, frame, float(tid.x * 2u));
         }
         else
         {
@@ -304,13 +330,13 @@ void StrokeExpandCS(uint3 tid : SV_DispatchThreadID)
             float2 dir = normalize(b - a);
             float hw = HalfThickness + Fringe * 0.5;
             float2 nrm = float2(-dir.y, dir.x) * hw;
-            if (IsClosed == 0u)
+            if (ContourIsClosed == 0u)
             {
                 if (i == 0u) a -= dir * EndExtend(i);              // room for the start cap's mask
-                if (ni + 1u == PointCount) b += dir * EndExtend(ni);
+                if (ni + 1u == ContourPointCount) b += dir * EndExtend(ni);
             }
             EmitQuad(outVerts, baseV, a + nrm, a - nrm, b + nrm, b - nrm, hw, back, fwd, nBack, nFwd, frame,
-                     float(i * 2u));
+                     float(tid.x * 2u));
         }
     }
     else
@@ -326,13 +352,15 @@ void StrokeExpandCS(uint3 tid : SV_DispatchThreadID)
 
     uint discBase = baseV + 6u;
     uint nTris = 0u;
-    uint prev = (i + PointCount - 1u) % PointCount;
-    uint next = (i + 1u) % PointCount;
+    uint prev = (i + ContourPointCount - 1u) % ContourPointCount;
+    uint next = (i + 1u) % ContourPointCount;
 
     float2 dIn = normalize(p - points[prev]);
     float2 dOut = normalize(points[next] - p);
     // The fan is a SEPARATE piece from the segment quad above (it lies on top of it), so it takes its own serial.
-    float fanId = float(i * 2u + 1u);
+    // Pieces are numbered by the point's place in the WHOLE dispatch, not in its contour: two contours of one batch
+    // crossing must not tie, or a translucent union lets both through.
+    float fanId = float(tid.x * 2u + 1u);
     if (JoinType == 2u && !isStart && !isEnd && JoinIsVisible(dIn, dOut))
     {
         nTris = EmitDisc(outVerts, discBase, RoundSegments, p, back, fwd, dIn, dOut, frame, fanId);
@@ -414,15 +442,18 @@ void StrokeDashCutCS(uint3 tid : SV_DispatchThreadID)
     if (tid.x != 0u)
         return;
 
-    float2* points = Points;
+    ContourPoints = Points;
+    ContourPointCount = PointCount;
+    ContourIsClosed = IsClosed;
+    float2* points = ContourPoints;
     float* outVerts = Output;
     float* pattern = Pattern;
     uint* indirect = Indirect;
-    uint segCount = IsClosed != 0u ? PointCount : PointCount - 1u;
+    uint segCount = ContourIsClosed != 0u ? ContourPointCount : ContourPointCount - 1u;
 
     float total = 0.0;
     for (uint s = 0u; s < segCount; ++s)
-        total += length(points[(s + 1u) % PointCount] - points[s]);
+        total += length(points[(s + 1u) % ContourPointCount] - points[s]);
     float tStart = TrimStart * total;
     float tEnd = TrimEnd * total;
 
@@ -452,7 +483,7 @@ void StrokeDashCutCS(uint3 tid : SV_DispatchThreadID)
     if (PatternCount > 0u && on) { pieceStart = -(pattern[pi] - rem); pieceEnd = rem; }
     // An untrimmed closed contour has no ends: a run crossing the seam keeps its true arc bounds, so no caps appear at the
     // seam.
-    bool wraps = (IsClosed != 0u) && (TrimStart <= 0.0) && (TrimEnd >= 1.0);
+    bool wraps = (ContourIsClosed != 0u) && (TrimStart <= 0.0) && (TrimEnd >= 1.0);
     pieceStart = wraps ? pieceStart : max(pieceStart, tStart);
     pieceEnd = wraps ? pieceEnd : min(pieceEnd, tEnd);
     PieceFrame frame;
@@ -463,11 +494,11 @@ void StrokeDashCutCS(uint3 tid : SV_DispatchThreadID)
     uint vCount = 0u;
     uint pieceSerial = 0u;   // every quad and every join the walk emits is its own piece (see StrokeVertex.PieceId)
     float arc = 0.0;
-    bool contInto = (IsClosed != 0u) && on;   // does a live dash cross the vertex ENTERING the current segment (miter start)
+    bool contInto = (ContourIsClosed != 0u) && on;   // does a live dash cross the vertex ENTERING the current segment (miter start)
     for (uint s = 0u; s < segCount; ++s)
     {
         float2 a = points[s];
-        float2 b = points[(s + 1u) % PointCount];
+        float2 b = points[(s + 1u) % ContourPointCount];
         float2 d = b - a;
         float segLen = length(d);
         if (segLen < 1e-6) continue;
@@ -481,7 +512,7 @@ void StrokeDashCutCS(uint3 tid : SV_DispatchThreadID)
         // segment's two vertices; used only for the ends that land on a crossed vertex (bevel/round keep perpendicular).
         float2 mSp, mSm, mEp, mEm;
         OffsetPair(s, mSp, mSm);
-        OffsetPair((s + 1u) % PointCount, mEp, mEm);
+        OffsetPair((s + 1u) % ContourPointCount, mEp, mEm);
 
         float pos = 0.0;
         bool lastSpanOn = on;   // on-state of the span ending at this segment's corner (captured BEFORE any end-toggle)
@@ -515,7 +546,7 @@ void StrokeDashCutCS(uint3 tid : SV_DispatchThreadID)
                 // every other end stays perpendicular. startCont = first piece of a segment a live dash entered; endCont =
                 // last piece, dash continues into the next segment (reaches the seg end, doesn't end the dash here).
                 bool endsDash = PatternCount > 0u && (rem - take) <= 1e-6;
-                bool hasNextSeg = (IsClosed != 0u) || (s + 1u < segCount);
+                bool hasNextSeg = (ContourIsClosed != 0u) || (s + 1u < segCount);
                 float arcE = arc + segLen;
                 bool startCont = (JoinType == 0u) && (pos == 0.0) && contInto;
                 bool endCont = (JoinType == 0u) && !endsDash && (pos + take >= segLen - 1e-6) && hasNextSeg
@@ -558,12 +589,12 @@ void StrokeDashCutCS(uint3 tid : SV_DispatchThreadID)
         // `lastSpanOn && on` requires BOTH sides to be on: if the pattern toggles EXACTLY at the corner, one side is empty
         // and a lone join would jut out as a triangular tab. MITER needs no join here (the mitered quad ends already meet);
         // BEVEL/ROUND add the fan. Either way the flag propagates so the NEXT segment mitres its start off this vertex.
-        bool hasNext = (IsClosed != 0u) || (s + 1u < segCount);
+        bool hasNext = (ContourIsClosed != 0u) || (s + 1u < segCount);
         bool joinHere = hasNext && lastSpanOn && on && arc > tStart + 1e-4 && arc < tEnd - 1e-4;
         if (joinHere && JoinType != 0u)
         {
-            uint cv = (s + 1u) % PointCount;
-            float2 dOut = normalize(points[(s + 2u) % PointCount] - points[cv]);
+            uint cv = (s + 1u) % ContourPointCount;
+            float2 dOut = normalize(points[(s + 2u) % ContourPointCount] - points[cv]);
             if (JoinIsVisible(dir, dOut))
             {
                 vCount = EmitJoin(outVerts, vCount, MaxVertices, points[cv], dir, dOut,
