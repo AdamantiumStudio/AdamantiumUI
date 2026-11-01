@@ -248,6 +248,8 @@ public abstract class TextBoxBase : Control, ITextStyleUser, Adamantium.UI.Core.
         set => SetValue(IsReadOnlyProperty, value);
     }
 
+    bool Adamantium.UI.Core.Input.ITextEntry.TakesTyping => !IsReadOnly;
+
     /// <summary>Maximum number of characters; 0 (default) = unlimited.</summary>
     public int MaxLength
     {

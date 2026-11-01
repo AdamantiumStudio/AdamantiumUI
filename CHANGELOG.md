@@ -2439,6 +2439,9 @@ All packages share one version.
 
 ### Fixed
 
+- A key that types into a focused text field ran the gestures of what holds the field: a minus typed into a field
+  placed on a map zoomed the map out. The elements around a text entry no longer take its typing keys for their key
+  bindings or command gestures; the field's own bindings, and Ctrl or function keys, reach them as before.
 - A discarded menu item stayed alive for as long as the view-model whose elements its submenu showed: the panel of the
   submenu kept them as its children, and each kept the panel - and through it the discarded menu - as its parent. A
   panel gone for good now lets go of what it only showed for another.
