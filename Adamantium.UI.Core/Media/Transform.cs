@@ -8,8 +8,8 @@ namespace Adamantium.UI.Core.Media;
 public class Transform : AnimatableUIComponent
 {
     private static readonly object HoldersGate = new();
-    [ThreadStatic] private static List<ITransformHolder> _liveHolders;
     private List<WeakReference<ITransformHolder>> _holders;
+    private List<ITransformHolder> _liveHolders;
 
     public static readonly AdamantiumProperty ScaleXProperty = AdamantiumProperty.Register(nameof(ScaleX),
         typeof (Double), typeof (Transform), new PropertyMetadata(1.0, TransformPropertyChangedCallback));
@@ -423,8 +423,7 @@ public class Transform : AnimatableUIComponent
             return false;
         }
 
-        var live = _liveHolders ?? [];
-        _liveHolders = null;
+        var live = Interlocked.Exchange(ref _liveHolders, null) ?? [];
         try
         {
             lock (HoldersGate)
@@ -454,7 +453,7 @@ public class Transform : AnimatableUIComponent
         finally
         {
             live.Clear();
-            _liveHolders = live;
+            Volatile.Write(ref _liveHolders, live);
         }
     }
 

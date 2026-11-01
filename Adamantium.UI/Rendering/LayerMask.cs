@@ -16,7 +16,7 @@ internal readonly record struct LayerMask(
     Vector4F Params);
 
 /// <summary>A reflection in window device pixels: mirrored about the floor halfway down <see cref="OffsetY"/> under
-/// <see cref="Drawn"/> - the lowest row of what the element draws, its glow and shadow too - moved <see cref="OffsetX"/>
+/// <see cref="Drawn"/> - the element's own bottom edge, not its glow or shadow below it - moved <see cref="OffsetX"/>
 /// sideways, showing <see cref="Length"/> rows of it, of which the last <see cref="FadeLength"/> fade away.</summary>
 internal readonly record struct LayerMirror(bool Shows, float Drawn, float OffsetX, float OffsetY, float Length,
     float FadeLength, float Opacity)

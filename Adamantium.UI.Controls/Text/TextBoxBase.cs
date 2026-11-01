@@ -186,7 +186,7 @@ public abstract class TextBoxBase : Control, ITextStyleUser, Adamantium.UI.Core.
         box.OnFontChanged();
     }
 
-    void ITextStyleUser.TextStyleChanged(bool rebased) => OnFontChanged();
+    void ITextStyleUser.TextStyleChanged(bool rebased, HashSet<TextFormat> telling) => OnFontChanged();
 
     // The box's styles answer their resources from where it stands: a theme scope switched round it changes them.
     void Adamantium.UI.Core.Resources.IResolvesOwnResources.ResolveResources()

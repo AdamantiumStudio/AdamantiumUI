@@ -7,6 +7,11 @@ All packages share one version.
 
 ### Added
 
+- `TextBaseline.Of`: how far below a control's top the baseline of the first line of text it shows lies - a button's
+  label - or null for one showing none: what a control set into text stands on the line's baseline by, the same for a
+  `TextBlock`'s `InlineUIContainer` and any other text that hosts controls.
+- `IDrawingSession.DrawImageFrame` with a source rectangle: one frame of an animation drawn in part, as `DrawImage`
+  draws part of a still picture.
 - Styles of a scope: a `<Style>` without a key among an element's `ResourceContext.Resources`, or in a dictionary file
   they link, styles every element of its logical subtree the selector matches - not the element itself, and not the
   parts of a template, which are their control's. A label made from a control's content and a row made from a list's
@@ -1902,6 +1907,12 @@ All packages share one version.
 
 ### Changed
 
+- No state is kept per thread. A transform tells its holders from a list of its own; a text style passes the styles
+  its news has gone through on with it, so a chain set in a loop still hears once; a binding tried once more knows it
+  is being retried; a routed command handed on from one focus scope to the next counts the hand-ons in its arguments;
+  the compositor folds the animations of one transform without a table kept between frames. A region's navigation no
+  longer waits for the one it overtook: that one is canceled and applies nothing - it checks after every hook, the
+  page it was leaving included - so a navigation started from a hook of the region needs telling apart from no other.
 - A ribbon's contextual group names its tabs from the tab row, just before them, and no longer from a band over them:
   a context appearing or going no longer changes the ribbon's height. The name stands on a chip of its own
   (`ContextualLabelFill` in each palette), so it does not read as one more tab. `RibbonContextualGroup.ShowHeader` is
@@ -2379,6 +2390,8 @@ All packages share one version.
 
 ### Removed
 
+- `ParkedVisuals.ThemeChanged`: a view coming back from the cache after a theme swap is restyled by the same check as
+  any element that sat a swap out of the tree, the theme it was styled in.
 - `DockingLayout.BandTarget`: a band dropped on the top or bottom edge anchor runs across the whole area, as the
   anchor's preview shows, rather than under the center column only; `FindCenterColumn` is what a band put away from
   under the center comes back into.
@@ -2423,6 +2436,34 @@ All packages share one version.
 
 ### Fixed
 
+- A discarded menu item stayed alive for as long as the view-model whose elements its submenu showed: the panel of the
+  submenu kept them as its children, and each kept the panel - and through it the discarded menu - as its parent. A
+  panel gone for good now lets go of what it only showed for another.
+- An animated `Image` ignored its `Viewport`: the frame was drawn whole into the fitted frame, so a cropped animated GIF
+  showed the whole picture, and `UniformToFill` squeezed it instead of cutting it. An animation is now laid into its
+  viewport as a still picture is, and only the part its element shows is drawn.
+- After a theme swap a window's content no longer followed its view-model: a panel bound to it did not open again.
+  Whatever a template only shows - a control's content, a tab's page, content inside a part of a part - lost its data
+  context while the old template went, and the element it came back through still read the old one, so nothing under
+  it heard the context return. What a template shows now goes back to what holds it before the template goes, keeping
+  its context through the swap, and an inherited value no ancestor states any more is let go instead of read on.
+- An inherited change could miss an element and everything under it, or reach it with the wrong old value: what an
+  element passed down was read from a slot that an element nothing watches had never filled, or had filled before the
+  last change. A value stated on such an element that happened to equal what the element below would read by default
+  never reached it - a text block stayed painted in the old color; a value cleared there reached it as the default
+  instead of what an ancestor further up states; a data context replaced there told the element below it had had none.
+  A handler reading an element before the change reached it - the changed element's own callback among them - or a
+  moved element's handler reading another value first, turned the change into no change at all. An element whose own
+  value was cleared reported and drew with its default instead of the value it inherits, and missed the next change
+  of that value when it came to equal the default. A subtree moved under a parent stating the value its root already
+  read left the elements under the root, which read their own defaults, untold. What an element passes down is now
+  taken from its ancestors when it changes, and each element told compares what it read with what it reads. An
+  element cut off from the ancestor whose brush it drew with lets go of that brush, and a brush is taken and let go by
+  what an element's value actually was and becomes, so no path leaves one held twice or held by an element it left.
+- The page of a tab not selected during a theme swap kept the old theme when its tab was selected afterwards, and its
+  colors no longer followed dark and light: only the page itself took the new theme, not what is on it.
+- After a second theme swap a tab no longer belonged to its TabControl: the strip of the old template let go of a tab
+  the strip of the new one already showed.
 - `BasedOn` did nothing in a style that belongs to no theme - an element's own `Styles`, and now a scope's: it takes
   the theme's style for the type from the theme in force at the element, and that theme's again once another comes in.
 - A style setter whose value is an `{ObservableResource}` or a `{ThemeResource}` wrote its slot past the other styles of

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Scenario xmlns="http://adamantium/automation/scenario" Description="A theme swap leaves the window working: the settings panel, bound to the view-model, still opens and shuts from the caption's button afterwards, in each theme swapped to.">
+  <Invoke Target="id=ToggleDiagnostics" />
+  <Expect Target="class=SlidePanel,name=Diagnostics" Expanded="Expanded" />
+  <Select Target="id=ThemeChooser/name=Graphite" />
+  <Invoke Target="id=SwitchTheme" />
+  <WaitIdle />
+  <Invoke Target="id=ToggleDiagnostics" />
+  <Expect Target="class=SlidePanel,name=Diagnostics" Expanded="Collapsed" />
+  <Invoke Target="id=ToggleDiagnostics" />
+  <Expect Target="class=SlidePanel,name=Diagnostics" Expanded="Expanded" />
+  <Select Target="id=ThemeChooser/name=Fluent" />
+  <Invoke Target="id=SwitchTheme" />
+  <WaitIdle />
+  <Invoke Target="id=ToggleDiagnostics" />
+  <Expect Target="class=SlidePanel,name=Diagnostics" Expanded="Collapsed" />
+  <Invoke Target="id=ToggleDiagnostics" />
+  <Expect Target="class=SlidePanel,name=Diagnostics" Expanded="Expanded" />
+</Scenario>

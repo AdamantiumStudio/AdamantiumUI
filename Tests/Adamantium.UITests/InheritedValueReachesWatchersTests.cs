@@ -56,6 +56,157 @@ public class InheritedValueReachesWatchersTests
         Assert.That(tab.FontSize, Is.EqualTo(13));
     }
 
+    /// <summary>A value an element inherited goes when the tree above it is cut off from the ancestor that stated it, even
+    /// with nothing at the element watching; back under that ancestor, the watcher below hears it return.</summary>
+    [Test]
+    public void AnElementPassedOver_LetsGoOfTheValue_WhenTheTreeAboveIsCutOffFromIt()
+    {
+        var model = new object();
+        var holder = new Border { DataContext = model };
+        var shownIn = new Border { InheritanceParent = holder };   // a template's presenter
+        var content = new Border();                                 // nothing watches its DataContext
+        var watcher = new Border();
+        content.Child = watcher;
+        content.InheritanceParent = shownIn;
+
+        Assert.That(watcher.DataContext, Is.SameAs(model));   // read, as a binding reads it
+        var heard = new List<object>();
+        watcher.DataContextChanged += (_, e) => heard.Add(e.NewValue);
+
+        shownIn.InheritanceParent = null;   // the old template is cut off
+        content.InheritanceParent = holder; // and the content goes back to what holds it
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(content.DataContext, Is.SameAs(model));
+            Assert.That(heard, Is.EqualTo(new object[] { null, model }), "the watcher below heard it go and come back");
+        });
+    }
+
+    /// <summary>A watcher that reads another element while a change goes down the tree - a binding reading a sibling -
+    /// takes nothing from that element and from those under it: each still hears the change when it reaches them.</summary>
+    [TestCase(true, TestName = "AReadDuringThePush_KeepsTheChangeForThoseBelow_WhenTheValueIsCleared")]
+    [TestCase(false, TestName = "AReadDuringThePush_KeepsTheChangeForThoseBelow_WhenTheValueIsReplaced")]
+    public void AReadDuringThePush_KeepsTheChangeForThoseBelow(bool cleared)
+    {
+        var model = new object();
+        var replacement = new object();
+        var holder = new Border { DataContext = model };
+        var reader = new Border { InheritanceParent = holder };
+        var sibling = new Border { InheritanceParent = holder };
+        var below = new Border { InheritanceParent = sibling };
+        Assert.That(below.DataContext, Is.SameAs(model));
+        Assert.That(sibling.DataContext, Is.SameAs(model));
+        Assert.That(reader.DataContext, Is.SameAs(model));
+
+        var heardBySibling = new List<object>();
+        var heardBelow = new List<object>();
+        reader.DataContextChanged += (_, _) => _ = sibling.DataContext;
+        sibling.DataContextChanged += (_, e) => heardBySibling.Add(e.NewValue);
+        below.DataContextChanged += (_, e) => heardBelow.Add(e.NewValue);
+
+        if (cleared) holder.ClearValue(Adamantium.UI.Core.FundamentalUIComponent.DataContextProperty);
+        else holder.DataContext = replacement;
+
+        var expected = new[] { cleared ? null : replacement };
+        Assert.Multiple(() =>
+        {
+            Assert.That(heardBySibling, Is.EqualTo(expected), "the sibling heard it");
+            Assert.That(heardBelow, Is.EqualTo(expected), "the element under the sibling heard it");
+        });
+    }
+
+    /// <summary>An element showing its own theme value, under ancestors that state none, reads that value until one is
+    /// stated: the change it hears starts there, and an ancestor stating the same value is no change to it.</summary>
+    [TestCase(13.0, new string[0], TestName = "AnElementsOwnThemeValue_IsNoChange_WhenAnAncestorStatesTheSame")]
+    [TestCase(20.0, new[] { "13->20" }, TestName = "AnElementsOwnThemeValue_IsWhatItsChangeStartsFrom")]
+    public void AnElementsOwnThemeValue_IsWhatItReadBeforeAnAncestorStatesOne(double stated, string[] expected)
+    {
+        var parent = new Border();
+        var child = new Border();
+        child.SetValue(UIComponent.FontSizeProperty, 13.0, Adamantium.UI.Core.ValuePriority.TypeDefault);
+        parent.Child = child;
+        Assert.That(child.FontSize, Is.EqualTo(13.0));
+        var heard = new List<string>();
+        child.PropertyChanged += (_, e) =>
+        {
+            if (e.Property == UIComponent.FontSizeProperty) heard.Add($"{e.OldValue}->{e.NewValue}");
+        };
+
+        parent.FontSize = stated;
+
+        Assert.That(heard, Is.EqualTo(expected));
+    }
+
+    [Test]
+    public void UnderAnElementsOwnThemeValue_TheChangeStartsFromWhatWasReadThere()
+    {
+        var parent = new Border();
+        var child = new Border();
+        var below = new Border();
+        child.SetValue(UIComponent.FontSizeProperty, 13.0, Adamantium.UI.Core.ValuePriority.TypeDefault);
+        child.Child = below;
+        parent.Child = child;
+        var before = below.FontSize;
+        var heard = new List<string>();
+        below.PropertyChanged += (_, e) =>
+        {
+            if (e.Property == UIComponent.FontSizeProperty) heard.Add($"{e.OldValue}->{e.NewValue}");
+        };
+
+        parent.FontSize = 20.0;
+
+        Assert.That(heard, Is.EqualTo(new[] { $"{before}->20" }));
+    }
+
+    /// <summary>An element with nothing under it, moved under a parent stating two values, hears both even when its
+    /// watcher, told of one, reads the other first.</summary>
+    [Test]
+    public void AnElementMoved_HearsEveryValueItInherits_WhenItsWatcherReadsAnotherOnTheWay()
+    {
+        var model = new object();
+        var parent = new Border { DataContext = model, FontSize = 20 };
+        var leaf = new Border();
+        Assert.That(leaf.FontSize, Is.Not.EqualTo(20.0));
+        var heard = new List<string>();
+        leaf.PropertyChanged += (_, e) =>
+        {
+            if (e.Property != Adamantium.UI.Core.FundamentalUIComponent.DataContextProperty &&
+                e.Property != UIComponent.FontSizeProperty) return;
+
+            heard.Add(e.Property.Name);
+            _ = leaf.FontSize;
+            _ = leaf.DataContext;
+        };
+
+        parent.Child = leaf;
+
+        Assert.That(heard, Is.EquivalentTo(new[] { "DataContext", "FontSize" }));
+    }
+
+    [Test]
+    public void AReadDuringThePush_KeepsTheChangeForThoseBelow_WhenTheTreeAboveIsCut()
+    {
+        var model = new object();
+        var holder = new Border { DataContext = model };
+        var middle = new Border { InheritanceParent = holder };
+        var reader = new Border { InheritanceParent = middle };
+        var sibling = new Border { InheritanceParent = middle };
+        var below = new Border { InheritanceParent = sibling };
+        Assert.That(below.DataContext, Is.SameAs(model));
+        Assert.That(sibling.DataContext, Is.SameAs(model));
+        Assert.That(reader.DataContext, Is.SameAs(model));
+
+        var heardBelow = new List<object>();
+        reader.DataContextChanged += (_, _) => _ = sibling.DataContext;
+        sibling.DataContextChanged += (_, _) => { };
+        below.DataContextChanged += (_, e) => heardBelow.Add(e.NewValue);
+
+        middle.InheritanceParent = null;
+
+        Assert.That(heardBelow, Is.EqualTo(new object[] { null }));
+    }
+
     [Test]
     public void ABindingToAnInheritedValue_FollowsItAcrossMoves()
     {

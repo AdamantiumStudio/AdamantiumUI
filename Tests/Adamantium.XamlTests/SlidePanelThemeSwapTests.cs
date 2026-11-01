@@ -93,6 +93,93 @@ public class SlidePanelThemeSwapTests
         Assert.That(Regex.Matches(await session.StateAsync(), "popup: Border #PART_Drawer").Count, Is.EqualTo(1));
     }
 
+    // Through a theme swap the window's content stays alive: a panel bound to the view-model still follows it.
+    [TestCase(true)]
+    [TestCase(false)]
+    public async Task APanelBoundToTheViewModel_FollowsItAfterAThemeSwap(bool openDuringSwap)
+    {
+        var model = new OpenModel { IsOpen = openDuringSwap };
+        var panel = new SlidePanel { Placement = Dock.Right, Width = 200, Content = new StackPanel() };
+        panel.SetBinding(SlidePanel.IsOpenProperty, new Adamantium.UI.Core.Data.Binding(nameof(OpenModel.IsOpen))
+        {
+            Mode = Adamantium.UI.Core.Data.BindingMode.TwoWay,
+        });
+        var root = new Grid();
+        root.Children.Add(panel);
+        var window = new Window
+        {
+            Width = 800, Height = 600, ClientWidth = 800, ClientHeight = 600, DataContext = model, Content = root
+        };
+        _app.Windows = [window];
+        var session = AutomationSession.InProcess(window);
+        await session.WaitForIdleAsync();
+        var lostTheContext = false;
+        panel.DataContextChanged += (_, e) => lostTheContext |= e.NewValue == null;
+
+        _themes.SetTheme(_themes["Graphite"]);
+        for (var frame = 0; frame < 100 && _themes.IsThemeChanging; frame++)
+        {
+            Adamantium.UI.Core.Media.Animation.AnimationManager.Tick(0.05);
+            await session.WaitForIdleAsync();
+        }
+
+        model.IsOpen = !openDuringSwap;
+        await session.WaitForIdleAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(root.IsDiscarded, Is.False, "the window's content");
+            Assert.That(panel.IsDiscarded, Is.False, "the panel");
+            Assert.That(lostTheContext, Is.False, "the panel kept the view-model through the swap");
+            Assert.That(panel.IsOpen, Is.EqualTo(!openDuringSwap), "the panel follows the view-model");
+        });
+    }
+
+    [TestCase(true, TestName = "APageShownBefore_TakesTheNewThemesTemplates_WhenItsTabIsSelectedAfterASwap")]
+    [TestCase(false, TestName = "APageNeverShown_TakesTheNewThemesTemplates_WhenItsTabIsSelectedAfterASwap")]
+    public async Task APageOfATabNotSelected_TakesTheNewThemesTemplates_WhenSelectedAfterASwap(bool shownBefore)
+    {
+        var onPage = new Button();
+        var inWindow = new Button();
+        var page = new StackPanel();
+        page.Children.Add(onPage);
+        var tabs = new TabControl();
+        tabs.Items.Add(new TabItem { Header = "First", Content = new Border() });
+        tabs.Items.Add(new TabItem { Header = "Second", Content = page });
+        var root = new Grid();
+        root.Children.Add(inWindow);
+        root.Children.Add(tabs);
+        var window = new Window { Width = 800, Height = 600, ClientWidth = 800, ClientHeight = 600, Content = root };
+        _app.Windows = [window];
+        var session = AutomationSession.InProcess(window);
+        if (shownBefore)
+        {
+            tabs.SelectedIndex = 1;
+            await session.WaitForIdleAsync();
+        }
+
+        tabs.SelectedIndex = 0;
+        await session.WaitForIdleAsync();
+        var fluentTemplate = inWindow.Template;
+        Assert.That(onPage.Template, Is.SameAs(fluentTemplate));
+
+        _themes.SetTheme(_themes["macOS"]);
+        for (var frame = 0; frame < 100 && _themes.IsThemeChanging; frame++)
+        {
+            Adamantium.UI.Core.Media.Animation.AnimationManager.Tick(0.05);
+            await session.WaitForIdleAsync();
+        }
+
+        tabs.SelectedIndex = 1;
+        await session.WaitForIdleAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(inWindow.Template, Is.Not.SameAs(fluentTemplate), "the window's button took the new theme's template");
+            Assert.That(onPage.Template, Is.SameAs(inWindow.Template), "the page's button did too");
+        });
+    }
+
     [TestCase(true, TestName = "AnOpenPanelsContent_TakesTheNewThemesTemplates_InASwap")]
     [TestCase(false, TestName = "AClosedPanelsContent_TakesTheNewThemesTemplates_WhenItOpensAfterASwap")]
     public async Task APanelsContent_WearsTheThemeTheWindowWears(bool openDuringSwap)

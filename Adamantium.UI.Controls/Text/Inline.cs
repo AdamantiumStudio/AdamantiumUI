@@ -263,7 +263,7 @@ public abstract class Inline : FundamentalUIComponent, ITextStyleUser, Adamantiu
         set => SetValue(CharacterStyleProperty, value);
     }
 
-    void ITextStyleUser.TextStyleChanged(bool rebased)
+    void ITextStyleUser.TextStyleChanged(bool rebased, HashSet<TextFormat> telling)
     {
         Rebake();
         RaiseChanged(StyleOnly);

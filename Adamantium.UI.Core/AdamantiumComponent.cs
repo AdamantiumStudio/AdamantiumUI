@@ -41,6 +41,9 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
     // cost an object per element for a lock that is never contended.
     private static readonly object AttachedToGate = new();
 
+    // Marks an inheriting property the move of an element does not have to walk for.
+    private static readonly object NotWalked = new();
+
     /// <summary>Called by <paramref name="value"/> when this element becomes one of its owners.</summary>
     internal void NoteAttachedTo(IRenderAttachable value)
     {
@@ -293,19 +296,19 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
         t.GetMethod(nameof(OnPropertyChanged), System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
             ?.DeclaringType != typeof(AdamantiumComponent));
 
-    protected void RaisePropertyChanged(AdamantiumProperty property, object oldValue, object newValue)
+    private void RaisePropertyChanged(AdamantiumProperty property, object oldValue, object newValue)
     {
         if (property == null)
         {
             throw new ArgumentNullException(nameof(property));
         }
 
-        // Nobody to tell: no instance subscriber, no global hook on the property, nothing inherits it, and this type does
-        // not override OnPropertyChanged. Everything below would then build a report and hand it to four things that
-        // ignore it. On a 4K tile grid that report was allocated ~150 000 times per drag step for no reader at all.
+        // Nobody to tell: no instance subscriber, no global hook on the property, and this type does not override
+        // OnPropertyChanged. Everything below would then build a report and hand it to three things that ignore it. On a
+        // 4K tile grid that report was allocated ~150 000 times per drag step for no reader at all. The elements that
+        // inherit the property are told apart, by the write (see TellInheritors).
         if (PropertyChanged == null
             && !property.HasChangedSubscribers
-            && !property.CanInherit
             && !OverridesOnPropertyChanged(GetType()))
         {
             return;
@@ -319,12 +322,6 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
             property.RaiseChanged(this, e);   // global per-property hook: sender = THIS component (identity), not the property
 
             PropertyChanged?.Invoke(this, e);
-
-            // Told DIRECTLY, not through PropertyChanged above: riding that woke every child on every write of every
-            // property (85k writes, 1.4 s in the notification alone). The value pushed is what the read-path WALK would
-            // resolve, not what this element reads - see InheritedPushValue.
-            if (property.CanInherit)
-                NotifyInheritanceChildren(e, InheritedPushValue(property, newValue));
 
             RaiseComponentUpdated();
         }
@@ -346,6 +343,37 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
 
     private void RemoveInheritanceChild(AdamantiumComponent child) => inheritanceChildren?.Remove(child);
 
+    /// <summary>Adds to <paramref name="found"/> each element that inherits through this one and that
+    /// <paramref name="pick"/> picks, without looking under a picked one.</summary>
+    internal void CollectInheritors<TState>(TState state, Func<AdamantiumComponent, TState, bool> pick,
+        ref List<AdamantiumComponent> found)
+    {
+        if (inheritanceChildren == null) return;
+
+        foreach (var child in inheritanceChildren)
+        {
+            if (pick(child, state))
+            {
+                (found ??= []).Add(child);
+            }
+            else
+            {
+                child.CollectInheritors(state, pick, ref found);
+            }
+        }
+    }
+
+    /// <summary>Whether this element inherits through <paramref name="ancestor"/>, or is it.</summary>
+    internal bool InheritsThrough(AdamantiumComponent ancestor)
+    {
+        for (var node = this; node != null; node = node.inheritanceParent)
+        {
+            if (ReferenceEquals(node, ancestor)) return true;
+        }
+
+        return false;
+    }
+
     /// <summary>A snapshot of the inheritance children to walk. A snapshot because a child may re-parent from inside its
     /// own notification (a DataContext change rebuilds bindings), which would otherwise mutate the set mid-walk. The
     /// single-child case - overwhelmingly the common one - takes the one element out without allocating anything.</summary>
@@ -366,28 +394,41 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
         return true;
     }
 
-    // What the read-path walk would resolve, asked by the SLOT rather than by walking the ancestors (that would make a
-    // DataContext push O(depth) per node). Animation..Style or Inherited - somebody states the value, push it.
-    // TypeDefault/Default - nobody does, so CLEAR the slot: writing this element's default instead pins it into the
-    // whole subtree above their own TypeDefault, where a re-resolve leaves it standing.
-    private object InheritedPushValue(AdamantiumProperty property, object newValue)
-    {
-        if (HasExplicitValue(property)) return newValue;
+    // What the elements inheriting through this one inherit: its explicit value, or the nearest ancestor's - walked, never
+    // read from a slot, since an element the inheritance walk stepped over holds a stale value or none.
+    private object PassedDown(AdamantiumProperty property) =>
+        HasExplicitValue(property) ? GetValue(property) : InheritedFromAncestors(property);
 
-        return GetBaseValuePriority(property) == ValuePriority.Inherited ? newValue : AdamantiumProperty.UnsetValue;
-    }
-
-    // A child may re-parent from inside its own push (a DataContext change rebuilds bindings), so walk a snapshot: the
-    // list can be modified while this runs.
-    private void NotifyInheritanceChildren(AdamantiumPropertyChangedEventArgs e, object pushValue)
+    // Tells the elements inheriting through this one that what they inherit went from before to after, each an
+    // ancestor's explicit value or UnsetValue for none, in a change that began in epoch. A child may re-parent from
+    // inside its own push (a DataContext change rebuilds bindings), so walk a snapshot: the list can be modified while
+    // this runs.
+    private void NotifyInheritanceChildren(AdamantiumProperty property, object before, object after, long epoch)
     {
         if (!TrySnapshotInheritanceChildren(out var single, out var children)) return;
 
-        if (single != null) { single.InheritedValueChanged(e, pushValue); return; }
+        if (single != null) { single.InheritedValueChanged(property, before, after, epoch); return; }
         foreach (var child in children)
         {
-            child.InheritedValueChanged(e, pushValue);
+            child.InheritedValueChanged(property, before, after, epoch);
         }
+    }
+
+    // What this element read when it inherited passedBefore: that, or - inheriting nothing - its own value.
+    private object ReadBeforeInheritedChange(AdamantiumProperty property, PropertyMetadata metadata, object passedBefore)
+    {
+        if (passedBefore != AdamantiumProperty.UnsetValue) return Coerce(property, metadata, passedBefore);
+
+        if (Slots(property) is { } slots)
+        {
+            for (var priority = ValuePriority.TypeDefault; priority <= ValuePriority.Default; priority++)
+            {
+                var own = slots.GetValue(priority);
+                if (own != AdamantiumProperty.UnsetValue) return Coerce(property, metadata, own);
+            }
+        }
+
+        return metadata.DefaultValue;
     }
 
     /// <summary>Must an inherited change REACH this element, or may the walk step over it and carry on to its children?
@@ -395,40 +436,42 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
     /// the next read resolves it from the ancestors; this is only about who has to be told.</summary>
     protected virtual bool NeedsInheritedCallback(AdamantiumProperty property) => true;
 
-    private void InheritedValueChanged(AdamantiumPropertyChangedEventArgs e, object pushValue)
+    private void InheritedValueChanged(AdamantiumProperty property, object before, object after, long epoch)
     {
-        var metadata = e.Property.GetDefaultMetadata(GetType());
+        var metadata = property.GetDefaultMetadata(GetType());
         // Not this type's property (an inline between a text block and the control set into its line): pass it on.
         if (metadata == null)
         {
-            NotifyInheritanceChildren(e, pushValue);
+            NotifyInheritanceChildren(property, before, after, epoch);
             return;
         }
 
         // An explicit value of its own outranks the inherited one - this element and everything under it keep theirs.
-        if (!metadata.Inherits || HasExplicitValue(e.Property)) return;
+        if (!metadata.Inherits || HasExplicitValue(property)) return;
 
         // A callback on the PROPERTY is not the question "does this ELEMENT need telling" - DataContext carries one for
         // everybody, and three quarters of them have no binding to re-resolve. An element whose LOOK depends on the
         // value must be told too: the write is what invalidates, and skipping it froze a tab's label at the resting
         // color while every probe reported the selected one.
-        if ((metadata.PropertyChangedCallback != null && NeedsInheritedCallback(e.Property)) || PropertyChanged != null
+        if ((metadata.PropertyChangedCallback != null && NeedsInheritedCallback(property)) || PropertyChanged != null
             || metadata.AffectsRender || metadata.AffectsPaint || metadata.AffectsMeasure || metadata.AffectsArrange
             || metadata.AffectsParentMeasure || metadata.AffectsParentArrange)
         {
             // The old push, for the few that need telling: it writes, notifies, and cascades to ITS children itself.
-            SetValue(e.Property, pushValue, ValuePriority.Inherited);
+            RunInheritedChange(property, metadata, before, after, epoch);
             return;
         }
 
-        if (!TrySnapshotInheritanceChildren(out var single, out var children)) return;
-
-        if (single != null) { single.InheritedValueChanged(e, pushValue); return; }
-        foreach (var child in children)
-        {
-            child.InheritedValueChanged(e, pushValue);
-        }
+        NotifyInheritanceChildren(property, before, after, epoch);
     }
+
+    private bool IsToldOfMove(AdamantiumProperty property, Type type) =>
+        PropertyChanged != null || property.GetDefaultMetadata(type).PropertyChangedCallback != null;
+
+    private void RunInheritedChange(AdamantiumProperty property, PropertyMetadata metadata, object before, object after,
+        long epoch) =>
+        RunSetValueSequence(property, after, ValuePriority.Inherited, true,
+            new InheritedChange(ReadBeforeInheritedChange(property, metadata, before), before, after, epoch));
 
     /// <summary>
     /// Gets or sets the parent object that <see cref="AdamantiumProperty"/> values are inherited from.
@@ -446,62 +489,67 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
             var type = GetType();
             var inheriting = AdamantiumPropertyMap.GetInheriting(type);
 
-            // What the subtree below inherits through this element, read BEFORE the move: an element there may watch a
-            // value (a tab's label bound to its presenter's FontSize) even when nothing here does.
-            var before = inheritanceChildren is { Count: > 0 } ? new object[inheriting.Length] : null;
-            if (before != null)
+            // What this element inherited, walked BEFORE the move - an element below may watch a value (a tab's label
+            // bound to its presenter's FontSize) even when nothing here does - and only where somebody will be told: an
+            // element with nothing under it and nobody watching it has nobody to tell, and one that had no parent
+            // inherited nothing.
+            var count = inheriting.Length;
+            var hasChildren = inheritanceChildren is { Count: > 0 };
+            var before = ArrayPool<object>.Shared.Rent(count);
+            try
             {
-                for (var i = 0; i < inheriting.Length; i++) before[i] = GetValue(inheriting[i]);
-            }
-
-            var oldParent = inheritanceParent;
-            oldParent?.RemoveInheritanceChild(this);
-
-            inheritanceParent = value;
-
-            inheritanceParent?.AddInheritanceChild(this);
-
-            // A different parent brings a different set of inherited values to this whole subtree - the caches below are
-            // stale by construction, and one bump says so to all of them.
-            AdamantiumProperty.BumpInheritanceEpoch();
-
-            // A new parent brings different inherited values: raising the change here is what makes inheritance
-            // order-independent. Only the INHERITING properties, resolved once per type - a virtualized grid paid the
-            // full seventy-property scan per realized tile.
-            for (var i = 0; i < inheriting.Length; i++)
-            {
-                var property = inheriting[i];
-                if (HasExplicitValue(property))
-                    continue;
-
-                var metadata = property.GetDefaultMetadata(type);
-
-                // A plain inherited VALUE needs nothing here: the epoch bumped above, and the first read of it resolves
-                // from the new parent. Only a callback (DataContext -> refresh this element's bindings) or an observer
-                // has to be told, and only that is written - but the subtree is told either way, or a watcher below
-                // keeps the value of the moment this element was out of the tree.
-                if (metadata.PropertyChangedCallback == null && PropertyChanged == null)
+                for (var i = 0; i < count; i++)
                 {
-                    if (before != null && GetValue(property) is var now && !Equals(before[i], now))
+                    var property = inheriting[i];
+                    before[i] = NotWalked;
+                    if (HasExplicitValue(property) || !hasChildren && !IsToldOfMove(property, type)) continue;
+
+                    before[i] = inheritanceParent == null ? AdamantiumProperty.UnsetValue : InheritedFromAncestors(property);
+                }
+
+                inheritanceParent?.RemoveInheritanceChild(this);
+
+                inheritanceParent = value;
+
+                inheritanceParent?.AddInheritanceChild(this);
+
+                // A different parent brings a different set of inherited values to this whole subtree - the caches below
+                // are stale by construction, and one bump says so to all of them.
+                AdamantiumProperty.BumpInheritanceEpoch();
+                var epoch = AdamantiumProperty.InheritanceEpoch;
+
+                // A new parent brings different inherited values: raising the change here is what makes inheritance
+                // order-independent. Only the INHERITING properties, resolved once per type - a virtualized grid paid the
+                // full seventy-property scan per realized tile.
+                for (var i = 0; i < count; i++)
+                {
+                    var property = inheriting[i];
+                    if (before[i] == NotWalked || HasExplicitValue(property)) continue;
+
+                    // What the read path inherits (see ResolveInherited): an ancestor's EXPLICIT value, or nothing -
+                    // never an ancestor's mere default, which written into this slot stands above this element's own
+                    // theme value. A docking tab moved into a new strip took the strip's transparent foreground.
+                    var after = InheritedFromAncestors(property);
+                    if (Equals(before[i], after)) continue;
+
+                    // A plain inherited VALUE needs nothing here: the epoch bumped above, and the first read of it
+                    // resolves from the new parent. Only a callback (DataContext -> refresh this element's bindings) or an
+                    // observer has to be told, and only that is written - but the subtree is told either way, or a
+                    // watcher below keeps the value of the moment this element was out of the tree.
+                    if (IsToldOfMove(property, type))
                     {
-                        NotifyInheritanceChildren(new AdamantiumPropertyChangedEventArgs(property, before[i], now),
-                            InheritedPushValue(property, now));
+                        RunInheritedChange(property, property.GetDefaultMetadata(type), before[i], after, epoch);
                     }
-
-                    continue;
+                    else
+                    {
+                        NotifyInheritanceChildren(property, before[i], after, epoch);
+                    }
                 }
-
-                var oldValue = before != null ? before[i]
-                    : oldParent?.PassedDown(property, metadata.DefaultValue) ?? metadata.DefaultValue;
-
-                // What the read path inherits (see ResolveInherited): an ancestor's EXPLICIT value, or nothing - never an
-                // ancestor's mere default, which written into this slot stands above this element's own theme value. A
-                // docking tab moved into a new strip took the strip's transparent foreground.
-                var newValue = InheritedFromAncestors(property);
-                if (!Equals(oldValue, newValue))
-                {
-                    SetValue(property, newValue, ValuePriority.Inherited);
-                }
+            }
+            finally
+            {
+                Array.Clear(before, 0, count);
+                ArrayPool<object>.Shared.Return(before);
             }
         }
     }
@@ -626,11 +674,20 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
         // brush's owner link: 724 of 1028 elements painting with a palette brush were not owners, and a recolor had
         // nobody to tell. Taken HERE and not on the inheritance walk, whose cheap path must keep stepping over.
         var attachable = property.CanAttachToOwner;
-        var before = attachable ? container.Effective : null;
-
-        container.SetInheritedCache(raw,
-            raw == AdamantiumProperty.UnsetValue ? container.Effective : Coerce(property, metadata, raw),
-            AdamantiumProperty.InheritanceEpoch);
+        object before;
+        if (!System.Threading.Monitor.TryEnter(container)) return;
+        try
+        {
+            before = attachable ? container.Effective : null;
+            var coerced = raw != AdamantiumProperty.UnsetValue ? Coerce(property, metadata, raw)
+                : container.GetValue(ValuePriority.Inherited) == AdamantiumProperty.UnsetValue ? container.Effective
+                : ForgetInherited(property, metadata, container);
+            container.SetInheritedCache(raw, coerced, AdamantiumProperty.InheritanceEpoch);
+        }
+        finally
+        {
+            System.Threading.Monitor.Exit(container);
+        }
 
         // Not while this element is OUT of the tree: leaving gave every link up, so there is none to move, and coming back
         // takes whatever the value is by then.
@@ -643,16 +700,17 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
         (after as IRenderAttachable)?.AttachTo(this);
     }
 
-    // The nearest ancestor's EXPLICIT value, or UnsetValue when no ancestor states one.
-    private object PassedDown(AdamantiumProperty property, object defaultValue)
+    private object ForgetInherited(AdamantiumProperty property, PropertyMetadata metadata, ValueContainer container)
     {
-        if (property.GetDefaultMetadata(GetType()) != null)
+        var inheritedWon = container.IsDefaultOnly;
+        var uncovered = container.SetValue(AdamantiumProperty.UnsetValue, ValuePriority.Inherited);
+        if (inheritedWon)
         {
-            return GetValue(property);
+            container.SetEffective(uncovered == AdamantiumProperty.UnsetValue ? uncovered
+                : Coerce(property, metadata, uncovered));
         }
 
-        var inherited = InheritedFromAncestors(property);
-        return inherited == AdamantiumProperty.UnsetValue ? defaultValue : inherited;
+        return container.Effective;
     }
 
     private object InheritedFromAncestors(AdamantiumProperty property)
@@ -1034,13 +1092,20 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
         return coerced;
     }
 
-    private void RunSetValueSequence(AdamantiumProperty property, object value, ValuePriority priority, bool raiseValueChangedEvent)
+    private void RunSetValueSequence(AdamantiumProperty property, object value, ValuePriority priority,
+        bool raiseValueChangedEvent, InheritedChange? inherited = null)
     {
         var metadata = property.GetDefaultMetadata(GetType());
         if (value != AdamantiumProperty.UnsetValue && property.ValidateValueCallBack?.Invoke(value) == false)
         {
             throw new ArgumentException($"Value {value} is incorrect!");
         }
+
+        // What the elements inheriting through this one inherit can change only with a value of its own: one below Style
+        // never outranks what they inherit, and one coming down is passed on as it came.
+        var tellsInheritors = inherited == null && property.CanInherit && priority <= ValuePriority.Style
+                              && inheritanceChildren is { Count: > 0 };
+        var passedBefore = tellsInheritors ? PassedDown(property) : AdamantiumProperty.UnsetValue;
 
         // The ONLY part that needs the lock: read the old effective value, write the slot, coerce, publish. Everything
         // after this block is notification, and notification must not hold a lock (see SetValue).
@@ -1051,12 +1116,17 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
         if (slots == null) return;
 
         // The lock is on the CONTAINER, not on the whole value store: two properties of one component never contend,
-        // and READERS take no lock at all. It covers only the read-modify-write of these slots - no invalidation and
+        // and READERS never wait for it. It covers only the read-modify-write of these slots - no invalidation and
         // nothing that could go looking for another lock. The coercion inside it only READS (of this or another
-        // property, and reads are lock-free), which is what makes it safe to run here.
+        // property, and reads never wait), which is what makes it safe to run here.
+        bool heldBeforeTheChange;
         lock (slots)
         {
             oldEffectiveValue = slots.Effective;
+            heldBeforeTheChange = inherited is { } coming && oldEffectiveValue != AdamantiumProperty.UnsetValue
+                                  && slots.InheritedStamp < coming.Epoch
+                                  && (slots.InheritedStamp >= 0 ||
+                                      slots.GetValue(ValuePriority.Inherited) != AdamantiumProperty.UnsetValue);
             slotBefore = slots.GetValue(priority);
             // The slot keeps the REQUEST; coercion maps it to what the property actually reads as. Storing the coerced
             // value instead would throw the request away, and with it any chance of mapping it again later when whatever
@@ -1066,11 +1136,40 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
             slots.SetEffective(effectiveAfterWrite);
         }
 
+        // A brush the property drew with is let go, and the new one taken, by what the slot actually held - never by the
+        // values reported: those may name a value this element never held.
+        if (property.CanAttachToOwner && !ReferenceEquals(oldEffectiveValue, effectiveAfterWrite))
+        {
+            (oldEffectiveValue as IRenderAttachable)?.DetachFrom(this);
+            if (!_renderAttachmentsReleased) (effectiveAfterWrite as IRenderAttachable)?.AttachTo(this);
+        }
+
+        // What every descendant reading this property has cached is now stale: bump the epoch, and their next read
+        // re-resolves. O(1) instead of writing the value into each of them. Bumped before any callback runs, so a read
+        // from one is known to have taken the new value.
+        if (property.CanInherit && priority < ValuePriority.Inherited)
+        {
+            AdamantiumProperty.BumpInheritanceEpoch();
+
+            // Its own value gone, the element reads what it inherits - not its default, which an inherited value the
+            // read path never filled while the explicit one stood would leave reported and held.
+            if (!HasExplicitValue(property))
+            {
+                slots.InheritedStamp = -1;
+                ResolveInherited(property);
+                effectiveAfterWrite = slots.Effective;
+            }
+        }
+
+        var epoch = AdamantiumProperty.InheritanceEpoch;
+
         // What the property READ as before the write - both ends of the report are that, never a raw slot. A container
         // never written has no effective value (the lazy slots of an attached property); there it is the default,
-        // resolved through the same path GetValue uses so an inheriting property reports its parent's value.
-        var oldReadValue = oldEffectiveValue == AdamantiumProperty.UnsetValue
-            ? GetDefaultValue(property)
+        // resolved through the same path GetValue uses so an inheriting property reports its parent's value. An inherited
+        // change reports what the element held, unless a read took the new value while the change was on its way, or
+        // nothing was ever read: then what it read before the change.
+        var oldReadValue = inherited is { } change && !heldBeforeTheChange ? change.ReadBefore
+            : oldEffectiveValue == AdamantiumProperty.UnsetValue ? GetDefaultValue(property)
             : oldEffectiveValue;
         // A write that leaves the READ value where it was is not a change and must not run the callback: that is how
         // two properties assigning each other closed a cycle with no exit (stack overflow). The args are built inside
@@ -1096,12 +1195,9 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
         // Neither ran => what we wrote still stands, and the lookup is skipped rather than repeated.
         var newEffectiveValue = slotsMayHaveMoved ? GetOrCalculateEffectiveValue(property) : effectiveAfterWrite;
 
-        // What every descendant reading this property has cached is now stale: bump the epoch, and their next read
-        // re-resolves. O(1) instead of writing the value into each of them.
-        if (property.CanInherit && priority < ValuePriority.Inherited) AdamantiumProperty.BumpInheritanceEpoch();
-
         if (Equals(oldReadValue, newEffectiveValue))
         {
+            TellInheritors(property, inherited, tellsInheritors, passedBefore, epoch);
             return;
         }
 
@@ -1176,6 +1272,38 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
         if (raiseValueChangedEvent)
         {
             RaisePropertyChanged(property, oldReadValue, newEffectiveValue);
+        }
+
+        TellInheritors(property, inherited, tellsInheritors, passedBefore, epoch);
+    }
+
+    // Told DIRECTLY, not through PropertyChanged: riding that woke every child on every write of every property (85k
+    // writes, 1.4 s in the notification alone). Told whether or not this element reads differently: what it passes down
+    // can change while what it reads does not.
+    // An element below throwing from its own notification does not undo this write: it is logged, as one of this
+    // element's own listeners throwing is.
+    private void TellInheritors(AdamantiumProperty property, InheritedChange? inherited, bool tellsInheritors,
+        object passedBefore, long epoch)
+    {
+        try
+        {
+            if (inherited is { } change)
+            {
+                NotifyInheritanceChildren(property, change.Before, change.After, change.Epoch);
+                return;
+            }
+
+            if (!tellsInheritors) return;
+
+            var passedAfter = PassedDown(property);
+            if (!Equals(passedBefore, passedAfter))
+            {
+                NotifyInheritanceChildren(property, passedBefore, passedAfter, epoch);
+            }
+        }
+        catch (Exception exception)
+        {
+            Console.WriteLine(exception);
         }
     }
 

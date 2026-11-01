@@ -46,6 +46,11 @@ public interface IDrawingSession
     /// <summary>Draws one FRAME of an animated image: its frames are the layers of a single texture, and the frame is
     /// chosen in the shader. Advancing an animation therefore uploads nothing and allocates nothing.</summary>
     IDrawingSession DrawImageFrame(ImageSource image, Brush filter, Rect destinationRect, CornerRadius corners, int frameLayer);
+
+    /// <summary>Draws a normalized (0..1) SUB-RECT of one frame of an animated image into
+    /// <paramref name="destinationRect"/> - the part of a cropped or fitted animation its element shows.</summary>
+    IDrawingSession DrawImageFrame(ImageSource image, Brush filter, Rect destinationRect, CornerRadius corners, int frameLayer,
+        Rect sourceUv);
     IDrawingSession DrawText(TextRenderingParameters renderingParameters, 
         Size<double> desiredSize, 
         TextLayout textLayout,

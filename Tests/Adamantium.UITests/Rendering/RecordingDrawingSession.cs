@@ -36,7 +36,16 @@ internal sealed class RecordingDrawingSession : IDrawingSession
         DrawImage(image, filter, destinationRect, corners);
 
     public IDrawingSession DrawImageFrame(ImageSource image, Brush filter, Rect destinationRect, CornerRadius corners, int frameLayer) =>
-        DrawImage(image, filter, destinationRect, corners);
+        DrawImageFrame(image, filter, destinationRect, corners, frameLayer, new Rect(0, 0, 1, 1));
+
+    public List<(ImageSource Image, Rect Destination, int Layer, Rect SourceUv)> Frames { get; } = [];
+
+    public IDrawingSession DrawImageFrame(ImageSource image, Brush filter, Rect destinationRect, CornerRadius corners,
+        int frameLayer, Rect sourceUv)
+    {
+        Frames.Add((image, destinationRect, frameLayer, sourceUv));
+        return DrawImage(image, filter, destinationRect, corners);
+    }
 
     public List<(Vector2<double> Start, Vector2<double> End, Pen Pen)> Lines { get; } = [];
 

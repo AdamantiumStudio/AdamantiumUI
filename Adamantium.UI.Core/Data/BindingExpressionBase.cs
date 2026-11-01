@@ -26,6 +26,10 @@ public abstract class BindingExpressionBase
    /// works.</summary>
    public string Failure { get; private set; }
 
+   /// <summary>Whether <see cref="Diagnostics.BindingTrace"/> is trying the binding once more: a failure then is the
+   /// answer it waits for, not a new suspect.</summary>
+   internal bool IsRetrying { get; set; }
+
    internal void Fail(string message)
    {
       Status = BindingStatus.PathError;

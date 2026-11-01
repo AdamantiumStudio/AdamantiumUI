@@ -16,4 +16,7 @@ public class ExecutedRoutedEventArgs : RoutedEventArgs
     public object Parameter { get; }
 
     internal bool Ran { get; set; }
+
+    /// <summary>How many times the command was handed on from a focus scope to the one above it on its way here.</summary>
+    internal int Transfers { get; init; }
 }

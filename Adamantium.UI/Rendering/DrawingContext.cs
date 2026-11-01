@@ -195,6 +195,14 @@ public class DrawingContext : IDrawingContext, IDrawingContextInternal, IDrawing
       return this;
    }
 
+   IDrawingSession IDrawingSession.DrawImageFrame(ImageSource image, Brush filter, Rect destinationRect, CornerRadius corners,
+      int frameLayer, Rect sourceUv)
+   {
+      var payload = new ImagePayload(filter, image, destinationRect, corners, sourceUv, frameLayer);
+      CreateCommand(payload);
+      return this;
+   }
+
    public IDrawingSession PushImage(ImageSource image)
    {
       throw new NotImplementedException();

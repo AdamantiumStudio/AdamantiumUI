@@ -89,19 +89,12 @@ public static class ParkedVisuals
         var now = new World(host?.RootVisual, Core.Resources.ThemeManager.Version,
             Core.Resources.ThemeManager.PaletteVersion);
         IsUnchanged = entry.World == now;
-
-        // Asked separately: a theme swap needs a restyle, which another window does not.
-        ThemeChanged = entry.World.ThemeVersion != now.ThemeVersion;
         return true;
     }
 
     /// <summary>Whether the visual the last <see cref="TryTake"/> handed back comes home to the same window and theme it
     /// left. Read straight after taking it, before it is attached.</summary>
     public static bool IsUnchanged { get; private set; }
-
-    /// <summary>Whether the theme changed while the visual the last <see cref="TryTake"/> handed back was parked, so it
-    /// has to be restyled. Read straight after taking it.</summary>
-    public static bool ThemeChanged { get; private set; }
 
     /// <summary>Discards for good, whatever their mode, the visuals <paramref name="owner"/> kept for content it no
     /// longer <paramref name="holds"/> - a closed tab: nothing will come back for them.</summary>

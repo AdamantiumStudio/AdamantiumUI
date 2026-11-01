@@ -257,12 +257,13 @@ public partial class RenderCache
             return default;
         }
 
-        // What it mirrors is all it draws, its glow and shadow above it too: Size is a share of that.
+        // What it mirrors is all it draws, its glow and shadow above it too: Size is a share of that. It is mirrored
+        // about its own bottom edge, though - a glow or shadow reaching lower leaves no gap above the reflection.
         var (drawnTop, drawnBottom) = DrawnRows(layer);
         drawnTop = MathF.Min(top, drawnTop);
         drawnBottom = MathF.Max(bottom, drawnBottom);
         var length = (float)Math.Min(reflection.Size, 1) * (drawnBottom - drawnTop);
-        return new LayerMirror(true, drawnBottom, (float)reflection.OffsetX * scale, (float)reflection.OffsetY * scale,
+        return new LayerMirror(true, bottom, (float)reflection.OffsetX * scale, (float)reflection.OffsetY * scale,
             length, (float)Math.Clamp(reflection.Fade, 0, 1) * length, (float)Math.Clamp(reflection.Opacity, 0, 1));
     }
 

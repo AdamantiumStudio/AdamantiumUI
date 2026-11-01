@@ -49,31 +49,6 @@ public sealed class AdamantiumProperty:IEquatable<AdamantiumProperty>
 
    internal static void BumpInheritanceEpoch() => System.Threading.Interlocked.Increment(ref InheritanceEpoch);
 
-   // Wiring, done once per property that can carry an attachable value. It rides the per-property Changed hook the
-   // property system raises anyway, which is why setting a value costs nothing for this: no branch, no type test, no
-   // mention of brushes - or of anything else that may later want an owner - anywhere in AdamantiumComponent.
-   private void WireOwnerAttachment()
-   {
-      if (!CanAttachToOwner)
-      {
-         return;
-      }
-
-      Changed += static (sender, e) =>
-      {
-         if (sender is not AdamantiumComponent owner)
-         {
-            return;
-         }
-
-         (e.OldValue as IRenderAttachable)?.DetachFrom(owner);
-         // Not while the owner is OUT of the tree: leaving gave every link up, and taking one here would leave the
-         // value holding an element that the next leave can no longer release. Coming back re-takes whatever the
-         // properties hold by then (AdamantiumComponent.TakeRenderAttachments).
-         if (!owner.RenderAttachmentsReleased) (e.NewValue as IRenderAttachable)?.AttachTo(owner);
-      };
-   }
-
    public Type OwnerType { get; private set; }
 
    public ValidateValueCallBack ValidateValueCallBack { get; }
@@ -225,7 +200,6 @@ public sealed class AdamantiumProperty:IEquatable<AdamantiumProperty>
       Name = name;
       PropertyType = valueType;
       CanAttachToOwner = typeof(IRenderAttachable).IsAssignableFrom(valueType);
-      WireOwnerAttachment();
       OwnerType = ownerType;
       var metadata = new PropertyMetadata();
       if (PropertyType.IsValueType)
@@ -249,7 +223,6 @@ public sealed class AdamantiumProperty:IEquatable<AdamantiumProperty>
       Name = name;
       PropertyType = valueType;
       CanAttachToOwner = typeof(IRenderAttachable).IsAssignableFrom(valueType);
-      WireOwnerAttachment();
       OwnerType = ownerType;
 
       CheckType(valueType, metadata, name);
@@ -272,7 +245,6 @@ public sealed class AdamantiumProperty:IEquatable<AdamantiumProperty>
       Name = name;
       PropertyType = valueType;
       CanAttachToOwner = typeof(IRenderAttachable).IsAssignableFrom(valueType);
-      WireOwnerAttachment();
       OwnerType = ownerType;
       ValidateValueCallBack = validateValueCallBack;
 

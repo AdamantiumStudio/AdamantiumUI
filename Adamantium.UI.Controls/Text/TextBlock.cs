@@ -2000,7 +2000,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         }
     }
 
-    void ITextStyleUser.TextStyleChanged(bool rebased) => RestyleText();
+    void ITextStyleUser.TextStyleChanged(bool rebased, HashSet<TextFormat> telling) => RestyleText();
 
     // The block's styles answer their resources from where it stands: a theme scope switched round it changes them.
     void Adamantium.UI.Core.Resources.IResolvesOwnResources.ResolveResources()
@@ -2064,31 +2064,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
     }
 
     private static double RaiseIn(IMeasurableComponent child, Rect slot) =>
-        ContentBaseline(child) is { } baseline ? baseline - slot.Y - slot.Height : 0;
-
-    private static double? ContentBaseline(IUIComponent element)
-    {
-        if (element.Visibility != Visibility.Visible)
-        {
-            return null;
-        }
-
-        if (element is TextBlock { Layout: { LineCount: > 0 } layout, WritingMode: WritingMode.Horizontal } text
-            && !string.IsNullOrEmpty(text.ShownText))
-        {
-            return element.Bounds.Y + layout.GetLine(0).Baseline;
-        }
-
-        foreach (var child in element.VisualChildren)
-        {
-            if (ContentBaseline(child) is { } baseline)
-            {
-                return element.Bounds.Y + baseline;
-            }
-        }
-
-        return null;
-    }
+        TextBaseline.Of(child) is { } baseline ? child.Bounds.Y + baseline - slot.Y - slot.Height : 0;
 
     private void ArrangeHosted()
     {
