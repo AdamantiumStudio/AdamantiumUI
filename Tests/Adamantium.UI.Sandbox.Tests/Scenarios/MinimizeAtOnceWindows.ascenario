@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Scenario xmlns="http://adamantium/automation/scenario" Platforms="Windows" Description="The only window, minimized by its caption button, is minimized at once, with no input after the click - MinimizeAtOnce on Windows. Here the window's own state says so, whether or not it was ever made active: Windows does not hand the foreground to a window started from the background while someone works in another, so the window's activity cannot be the sign.">
+  <Wait Target="id=MainWindow" Window="Normal" />
+  <WaitIdle />
+  <Invoke Target="id=MainWindow/id=Minimize" />
+  <Wait Target="id=MainWindow" Window="Minimized" Timeout="2s" />
+</Scenario>
