@@ -7,6 +7,8 @@ All packages share one version.
 
 ### Added
 
+- `IDrawingSession.DrawImageFrame` with a source rectangle: one frame of an animation drawn in part, as `DrawImage`
+  draws part of a still picture.
 - Styles of a scope: a `<Style>` without a key among an element's `ResourceContext.Resources`, or in a dictionary file
   they link, styles every element of its logical subtree the selector matches - not the element itself, and not the
   parts of a template, which are their control's. A label made from a control's content and a row made from a list's
@@ -2431,6 +2433,9 @@ All packages share one version.
 
 ### Fixed
 
+- An animated `Image` ignored its `Viewport`: the frame was drawn whole into the fitted frame, so a cropped animated GIF
+  showed the whole picture, and `UniformToFill` squeezed it instead of cutting it. An animation is now laid into its
+  viewport as a still picture is, and only the part its element shows is drawn.
 - After a theme swap a window's content no longer followed its view-model: a panel bound to it did not open again.
   Whatever a template only shows - a control's content, a tab's page, content inside a part of a part - lost its data
   context while the old template went, and the element it came back through still read the old one, so nothing under

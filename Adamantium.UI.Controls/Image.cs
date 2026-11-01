@@ -764,7 +764,11 @@ public class Image : InputUIComponent, IDesignTimeAnimatedMedia
          // Which frame: once the array exists, the layer the cursor last landed on (no BitmapFrame is decoded at all).
          // Until then the fallback path is decoding frames, so follow ITS frame; before the first tick, the range start.
          var layer = animated.FrameArrayTexture != null ? _layerIndex : _frame?.Index ?? animated.StartFrame;
-         session.DrawImageFrame(animated, FilterBrush, destination, CornerRadius, (int)layer);
+         if (ShownPart(new Size<double>(Source.Width, Source.Height)) is var (shown, uv))
+         {
+            session.DrawImageFrame(animated, FilterBrush, shown, CornerRadius, (int)layer, uv);
+         }
+
          return;
       }
 
@@ -776,6 +780,26 @@ public class Image : InputUIComponent, IDesignTimeAnimatedMedia
 
       session.DrawImage(image, FilterBrush, destination, CornerRadius,
          new Rect((1 - visibleU) / 2, (1 - visibleV) / 2, visibleU, visibleV));
+   }
+
+   private (Rect Shown, Rect SourceUv)? ShownPart(Size<double> picture)
+   {
+      var bounds = new Rect(0, 0, Bounds.Width, Bounds.Height);
+      var viewport = Viewport;
+      var tile = ViewportUnits == BrushMappingMode.Absolute
+         ? viewport
+         : new Rect(viewport.X * bounds.Width, viewport.Y * bounds.Height, viewport.Width * bounds.Width,
+            viewport.Height * bounds.Height);
+      var fitted = CalculateScaling(Stretch, new Size<double>(tile.Width, tile.Height), picture);
+      if (fitted.Width <= 0 || fitted.Height <= 0) return null;
+
+      var placed = new Rect(tile.X + (tile.Width - fitted.Width) / 2, tile.Y + (tile.Height - fitted.Height) / 2,
+         fitted.Width, fitted.Height);
+      var shown = placed.Intersect(tile).Intersect(bounds);
+      if (shown.Width <= 0 || shown.Height <= 0) return null;
+
+      return (shown, new Rect((shown.X - placed.X) / placed.Width, (shown.Y - placed.Y) / placed.Height,
+         shown.Width / placed.Width, shown.Height / placed.Height));
    }
 
    // Whether this picture can be painted AS A BRUSH - which is how it gets an analytic edge. A plain bitmap can; the
