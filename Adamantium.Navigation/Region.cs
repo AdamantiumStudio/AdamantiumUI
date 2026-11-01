@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.ComponentModel;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -19,14 +18,11 @@ public sealed class Region : IRegion
     /// changes.</summary>
     public event PropertyChangedEventHandler PropertyChanged;
 
-    private static readonly AsyncLocal<ImmutableStack<(Region Region, Task Settled)>> Within = new();
-
     private readonly IDependencyResolver _resolver;
     private readonly List<object> _activeViewModels = [];
     private object _currentViewModel;
     private string _currentViewKey;
     private CancellationTokenSource _pending;
-    private Task _settled = Task.CompletedTask;
 
     public Region(string name, IDependencyResolver resolver, INavigationService navigationService)
     {
@@ -136,22 +132,11 @@ public sealed class Region : IRegion
 
     private async Task<NavigationResult> RunAsync(CancellationToken cancellationToken, Func<CancellationToken, Task<NavigationResult>> navigate)
     {
-        var within = Within.Value ?? ImmutableStack<(Region Region, Task Settled)>.Empty;
-        var fromOwnHook = within.Any(w => ReferenceEquals(w.Region, this) && !w.Settled.IsCompleted);
-
         _pending?.Cancel();
         using var pending = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         _pending = pending;
-        var previous = _settled;
-        var settled = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        _settled = settled.Task;
-        Within.Value = within.Push((this, settled.Task));
         try
         {
-            if (!fromOwnHook)
-            {
-                await previous;
-            }
             pending.Token.ThrowIfCancellationRequested();
             return await navigate(pending.Token);
         }
@@ -169,7 +154,6 @@ public sealed class Region : IRegion
             {
                 _pending = null;
             }
-            settled.SetResult();
         }
     }
 
@@ -185,6 +169,7 @@ public sealed class Region : IRegion
         if (!ReferenceEquals(context.SourceViewModel, target) && context.SourceViewModel is INavigationAware leaving)
         {
             await leaving.OnNavigatedFromAsync(context, context.CancellationToken);
+            context.CancellationToken.ThrowIfCancellationRequested();
         }
     }
 

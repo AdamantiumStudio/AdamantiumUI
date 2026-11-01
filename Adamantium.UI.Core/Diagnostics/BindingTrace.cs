@@ -15,9 +15,6 @@ public static class BindingTrace
     private static readonly HashSet<string> Reported = [];
     private static readonly List<(BindingExpressionBase Expression, string Message)> Suspects = [];
 
-    [ThreadStatic]
-    private static bool _retrying;
-
     public static Action<string> Sink;
 
     public static void Log(string message)
@@ -41,7 +38,7 @@ public static class BindingTrace
 
     internal static void Suspect(BindingExpressionBase expression, string message)
     {
-        if (_retrying)
+        if (expression.IsRetrying)
         {
             return;
         }
@@ -78,14 +75,14 @@ public static class BindingTrace
                 continue;
             }
 
-            _retrying = true;
+            expression.IsRetrying = true;
             try
             {
                 expression.Retry();
             }
             finally
             {
-                _retrying = false;
+                expression.IsRetrying = false;
             }
 
             if (expression.Status == BindingStatus.PathError)

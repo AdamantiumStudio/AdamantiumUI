@@ -1902,6 +1902,12 @@ All packages share one version.
 
 ### Changed
 
+- No state is kept per thread. A transform tells its holders from a list of its own; a text style passes the styles
+  its news has gone through on with it, so a chain set in a loop still hears once; a binding tried once more knows it
+  is being retried; a routed command handed on from one focus scope to the next counts the hand-ons in its arguments;
+  the compositor folds the animations of one transform without a table kept between frames. A region's navigation no
+  longer waits for the one it overtook: that one is canceled and applies nothing - it checks after every hook, the
+  page it was leaving included - so a navigation started from a hook of the region needs telling apart from no other.
 - A ribbon's contextual group names its tabs from the tab row, just before them, and no longer from a band over them:
   a context appearing or going no longer changes the ribbon's height. The name stands on a chip of its own
   (`ContextualLabelFill` in each palette), so it does not read as one more tab. `RibbonContextualGroup.ShowHeader` is

@@ -2000,7 +2000,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         }
     }
 
-    void ITextStyleUser.TextStyleChanged(bool rebased) => RestyleText();
+    void ITextStyleUser.TextStyleChanged(bool rebased, HashSet<TextFormat> telling) => RestyleText();
 
     // The block's styles answer their resources from where it stands: a theme scope switched round it changes them.
     void Adamantium.UI.Core.Resources.IResolvesOwnResources.ResolveResources()

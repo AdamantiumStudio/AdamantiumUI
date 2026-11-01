@@ -54,6 +54,7 @@ public abstract class TextFormat : AdamantiumComponent
     // keeps none of them alive; written from any thread.
     private readonly ConditionalWeakTable<ITextStyleUser, object> _users = new();
     private readonly object _usersLock = new();
+    private List<ITextStyleUser> _told;
 
     /// <summary>The style's name, as the resource key it is kept under usually says.</summary>
     public string Name { get; set; }
@@ -228,33 +229,36 @@ public abstract class TextFormat : AdamantiumComponent
         }
     }
 
-    // What lays out by this style lays out again, told outside the lock, every one of them even if one throws; on a
-    // thread already telling it, once, when a chain set in a loop brings the news back round.
-    private protected void NotifyUsers(bool rebased)
+    // What lays out by this style lays out again, told outside the lock, every one of them even if one throws; once,
+    // when a chain set in a loop brings the news back round - telling holds the styles the news has passed.
+    private protected void NotifyUsers(bool rebased, HashSet<TextFormat> telling)
     {
-        var telling = _telling ??= [];
-        if (!telling.Add(this))
+        var told = Interlocked.Exchange(ref _told, null) ?? [];
+        lock (_usersLock)
         {
+            foreach (var (user, _) in _users)
+            {
+                told.Add(user);
+            }
+        }
+
+        if (told.Count == 0 || telling?.Contains(this) == true)
+        {
+            told.Clear();
+            Volatile.Write(ref _told, told);
             return;
         }
 
-        var told = (_buffers ??= []).Count > 0 ? _buffers.Pop() : [];
+        telling ??= new HashSet<TextFormat>(ReferenceEqualityComparer.Instance);
+        telling.Add(this);
         Exception failed = null;
         try
         {
-            lock (_usersLock)
-            {
-                foreach (var (user, _) in _users)
-                {
-                    told.Add(user);
-                }
-            }
-
             foreach (var user in told)
             {
                 try
                 {
-                    user.TextStyleChanged(rebased);
+                    user.TextStyleChanged(rebased, telling);
                 }
                 catch (Exception e)
                 {
@@ -265,7 +269,7 @@ public abstract class TextFormat : AdamantiumComponent
         finally
         {
             told.Clear();
-            _buffers.Push(told);
+            Volatile.Write(ref _told, told);
             telling.Remove(this);
         }
 
@@ -274,9 +278,6 @@ public abstract class TextFormat : AdamantiumComponent
             System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw(failed);
         }
     }
-
-    [ThreadStatic] private static HashSet<TextFormat> _telling;
-    [ThreadStatic] private static Stack<List<ITextStyleUser>> _buffers;
 
     // Whether basing a style on this one would bring the chain round to the style itself: followed to its end, or to a
     // loop that does not hold the style.
@@ -305,14 +306,16 @@ public abstract class TextFormat : AdamantiumComponent
     protected override void OnPropertyChanged(AdamantiumPropertyChangedEventArgs e)
     {
         base.OnPropertyChanged(e);
-        NotifyUsers(e.Property == CharacterStyle.BasedOnProperty || e.Property == ParagraphStyle.BasedOnProperty);
+        NotifyUsers(e.Property == CharacterStyle.BasedOnProperty || e.Property == ParagraphStyle.BasedOnProperty, null);
     }
 }
 
 // What lays out by a text style, and hears when it changes; rebased when a style in its chain took another base.
 internal interface ITextStyleUser
 {
-    void TextStyleChanged(bool rebased);
+    /// <summary>The style this lays out by changed; <paramref name="telling"/> holds the styles the news has passed, for a
+    /// style to pass it on.</summary>
+    void TextStyleChanged(bool rebased, HashSet<TextFormat> telling);
 }
 
 /// <summary>A named character style, as InDesign's: formatting a range of inlines takes over its paragraph's style
@@ -339,7 +342,7 @@ public class CharacterStyle : TextFormat, ITextStyleUser
 
     private protected override TextFormat BaseFormat => BasedOn;
 
-    void ITextStyleUser.TextStyleChanged(bool rebased) => NotifyUsers(rebased);
+    void ITextStyleUser.TextStyleChanged(bool rebased, HashSet<TextFormat> telling) => NotifyUsers(rebased, telling);
 
     protected override void OnPropertyChanged(AdamantiumPropertyChangedEventArgs e)
     {
@@ -447,7 +450,7 @@ public class ParagraphStyle : TextFormat, ITextStyleUser
         return attributes;
     }
 
-    void ITextStyleUser.TextStyleChanged(bool rebased) => NotifyUsers(rebased);
+    void ITextStyleUser.TextStyleChanged(bool rebased, HashSet<TextFormat> telling) => NotifyUsers(rebased, telling);
 
     protected override void OnPropertyChanged(AdamantiumPropertyChangedEventArgs e)
     {

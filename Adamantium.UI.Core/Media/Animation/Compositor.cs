@@ -634,39 +634,55 @@ public static class Compositor
 
     private static void Recompose(List<Entry> into)
     {
-        var folded = _folded ??= new Dictionary<AdamantiumComponent, (Basis Basis, TransformValues Values)>();
-        foreach (var entry in into)
+        for (var i = 0; i < into.Count; i++)
         {
+            var entry = into[i];
             if (entry.Channel != CompositorChannel.Transform)
             {
                 entry.Recompose();
                 continue;
             }
 
-            if (!folded.TryGetValue(entry.Target, out var sofar))
+            if (IsFoldedBefore(into, i))
             {
-                var basis = entry.CurrentBasis;
-                sofar = (basis, basis.Values);
+                continue;
             }
 
-            entry.Fold(ref sofar.Values);
-            folded[entry.Target] = sofar;
-        }
-
-        foreach (var entry in into)
-        {
-            if (entry.Channel == CompositorChannel.Transform)
+            var basis = entry.CurrentBasis;
+            var values = basis.Values;
+            for (var j = i; j < into.Count; j++)
             {
-                var (basis, values) = folded[entry.Target];
-                entry.Place(basis, values);
+                if (IsSameTransform(into[j], entry))
+                {
+                    into[j].Fold(ref values);
+                }
+            }
+
+            for (var j = i; j < into.Count; j++)
+            {
+                if (IsSameTransform(into[j], entry))
+                {
+                    into[j].Place(basis, values);
+                }
             }
         }
-
-        folded.Clear();
     }
 
-    [ThreadStatic]
-    private static Dictionary<AdamantiumComponent, (Basis Basis, TransformValues Values)> _folded;
+    private static bool IsFoldedBefore(List<Entry> into, int index)
+    {
+        for (var i = 0; i < index; i++)
+        {
+            if (IsSameTransform(into[i], into[index]))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool IsSameTransform(Entry entry, Entry other) =>
+        entry.Channel == CompositorChannel.Transform && ReferenceEquals(entry.Target, other.Target);
 
     /// <summary>Whether the render thread is playing this target; if so, the loop thread's mirror writes must not
     /// invalidate its render.</summary>

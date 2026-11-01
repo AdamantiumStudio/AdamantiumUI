@@ -55,9 +55,6 @@ public static class CommandManager
     private static bool requeryPending;
     private static long requeryAskedOnTick;
 
-    [ThreadStatic]
-    private static int transfers;
-
     private static bool registered;
     private static bool windowKeysRegistered;
     private static readonly object HostsLock = new();
@@ -309,11 +306,15 @@ public static class CommandManager
     internal static bool Execute(RoutedCommand command, object parameter, IInputComponent target) =>
         Run(command, parameter, target)?.Ran == true;
 
-    private static CanExecuteRoutedEventArgs Ask(RoutedCommand command, object parameter, IObservableComponent target)
+    private static CanExecuteRoutedEventArgs Ask(RoutedCommand command, object parameter, IObservableComponent target,
+        int transfers = 0)
     {
         for (var hop = 0; target != null && hop < MostHops; hop++, target = Beyond(target))
         {
-            var args = new CanExecuteRoutedEventArgs(command, parameter) { RoutedEvent = PreviewCanExecuteEvent };
+            var args = new CanExecuteRoutedEventArgs(command, parameter)
+            {
+                RoutedEvent = PreviewCanExecuteEvent, Transfers = transfers,
+            };
             target.RaiseEvent(args);
             if (!args.Handled)
             {
@@ -330,11 +331,15 @@ public static class CommandManager
         return null;
     }
 
-    private static ExecutedRoutedEventArgs Run(RoutedCommand command, object parameter, IObservableComponent target)
+    private static ExecutedRoutedEventArgs Run(RoutedCommand command, object parameter, IObservableComponent target,
+        int transfers = 0)
     {
         for (var hop = 0; target != null && hop < MostHops; hop++, target = Beyond(target))
         {
-            var args = new ExecutedRoutedEventArgs(command, parameter) { RoutedEvent = PreviewExecutedEvent };
+            var args = new ExecutedRoutedEventArgs(command, parameter)
+            {
+                RoutedEvent = PreviewExecutedEvent, Transfers = transfers,
+            };
             target.RaiseEvent(args);
             if (!args.Handled)
             {
@@ -362,7 +367,7 @@ public static class CommandManager
         return (top as IFundamentalUIComponent)?.LogicalParent as IObservableComponent;
     }
 
-    private static IInputComponent HandedOnFrom(object sender)
+    private static IInputComponent HandedOnFrom(object sender, int transfers)
     {
         if (transfers >= MostHops || sender is not IUIComponent scope || !FocusManager.GetIsFocusScope(scope) ||
             FocusManager.ParentOf(scope) is not { } above)
@@ -393,25 +398,17 @@ public static class CommandManager
             }
         }
 
-        if (HandedOnFrom(sender) is not { } focused)
+        if (HandedOnFrom(sender, e.Transfers) is not { } focused)
         {
             return;
         }
 
-        transfers++;
-        try
+        if (Ask(e.Command, e.Parameter, focused, e.Transfers + 1) is { } answer)
         {
-            if (Ask(e.Command, e.Parameter, focused) is { } answer)
-            {
-                e.CanExecute = answer.CanExecute;
-                e.IsChecked = answer.IsChecked;
-                e.Value = answer.Value;
-                e.Handled = true;
-            }
-        }
-        finally
-        {
-            transfers--;
+            e.CanExecute = answer.CanExecute;
+            e.IsChecked = answer.IsChecked;
+            e.Value = answer.Value;
+            e.Handled = true;
         }
     }
 
@@ -434,23 +431,15 @@ public static class CommandManager
             }
         }
 
-        if (HandedOnFrom(sender) is not { } focused)
+        if (HandedOnFrom(sender, e.Transfers) is not { } focused)
         {
             return;
         }
 
-        transfers++;
-        try
+        if (Run(e.Command, e.Parameter, focused, e.Transfers + 1) is { } ran)
         {
-            if (Run(e.Command, e.Parameter, focused) is { } ran)
-            {
-                e.Ran = ran.Ran;
-                e.Handled = true;
-            }
-        }
-        finally
-        {
-            transfers--;
+            e.Ran = ran.Ran;
+            e.Handled = true;
         }
     }
 

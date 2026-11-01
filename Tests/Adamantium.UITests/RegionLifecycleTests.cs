@@ -14,6 +14,7 @@ public class RegionLifecycleTests
     private class Page : INavigationAware
     {
         public Func<CancellationToken, Task> Arrive { get; set; } = _ => Task.CompletedTask;
+        public Func<CancellationToken, Task> Depart { get; set; } = _ => Task.CompletedTask;
         public bool Reusable { get; set; }
         public int Arrivals { get; private set; }
         public int Departures { get; private set; }
@@ -27,7 +28,7 @@ public class RegionLifecycleTests
         public Task OnNavigatedFromAsync(NavigationContext context, CancellationToken cancellationToken = default)
         {
             Departures++;
-            return Task.CompletedTask;
+            return Depart(cancellationToken);
         }
 
         public bool IsNavigationTarget(NavigationContext context) => Reusable;
@@ -118,6 +119,32 @@ public class RegionLifecycleTests
         Assert.That(region.ActiveViewModels, Does.Not.Contain(second));
         Assert.That(region.Journal.BackStack, Has.Count.EqualTo(1));
         Assert.That(first.Departures, Is.EqualTo(1), "only the navigation that went through leaves the first page");
+    }
+
+    // Overtaken while the page it leaves is still leaving, a navigation applies nothing once it is let go: the newer one
+    // stays.
+    [Test]
+    public async Task ANavigationOvertakenWhileThePageIsLeaving_AppliesNothingAfterTheNewerOne()
+    {
+        var first = new FirstPage();
+        var second = new SecondPage();
+        var third = new ThirdPage();
+        var region = CreateRegion(first, second, third);
+        await region.NavigateToAsync<FirstPage>();
+        var leaving = new TaskCompletionSource();
+        var departures = 0;
+        first.Depart = _ => ++departures == 1 ? leaving.Task : Task.CompletedTask;
+
+        var stale = region.NavigateToAsync<SecondPage>();
+        var fresh = await region.NavigateToAsync<ThirdPage>();
+        leaving.SetResult();
+        var staleResult = await stale;
+
+        Assert.That(fresh.Success, Is.True);
+        Assert.That(staleResult.Canceled, Is.True);
+        Assert.That(region.CurrentViewModel, Is.SameAs(third));
+        Assert.That(region.ActiveViewModels, Does.Not.Contain(second));
+        Assert.That(region.Journal.BackStack, Has.Count.EqualTo(1));
     }
 
     [Test]
