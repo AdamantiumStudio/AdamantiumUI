@@ -1144,6 +1144,25 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
             if (!_renderAttachmentsReleased) (effectiveAfterWrite as IRenderAttachable)?.AttachTo(this);
         }
 
+        // What every descendant reading this property has cached is now stale: bump the epoch, and their next read
+        // re-resolves. O(1) instead of writing the value into each of them. Bumped before any callback runs, so a read
+        // from one is known to have taken the new value.
+        if (property.CanInherit && priority < ValuePriority.Inherited)
+        {
+            AdamantiumProperty.BumpInheritanceEpoch();
+
+            // Its own value gone, the element reads what it inherits - not its default, which an inherited value the
+            // read path never filled while the explicit one stood would leave reported and held.
+            if (!HasExplicitValue(property))
+            {
+                slots.InheritedStamp = -1;
+                ResolveInherited(property);
+                effectiveAfterWrite = slots.Effective;
+            }
+        }
+
+        var epoch = AdamantiumProperty.InheritanceEpoch;
+
         // What the property READ as before the write - both ends of the report are that, never a raw slot. A container
         // never written has no effective value (the lazy slots of an attached property); there it is the default,
         // resolved through the same path GetValue uses so an inheriting property reports its parent's value. An inherited
@@ -1175,11 +1194,6 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
         // something between then and now could have written ANOTHER slot - the changed-callback, or a started transition.
         // Neither ran => what we wrote still stands, and the lookup is skipped rather than repeated.
         var newEffectiveValue = slotsMayHaveMoved ? GetOrCalculateEffectiveValue(property) : effectiveAfterWrite;
-
-        // What every descendant reading this property has cached is now stale: bump the epoch, and their next read
-        // re-resolves. O(1) instead of writing the value into each of them.
-        if (property.CanInherit && priority < ValuePriority.Inherited) AdamantiumProperty.BumpInheritanceEpoch();
-        var epoch = AdamantiumProperty.InheritanceEpoch;
 
         if (Equals(oldReadValue, newEffectiveValue))
         {

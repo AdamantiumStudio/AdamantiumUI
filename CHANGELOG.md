@@ -2441,8 +2441,10 @@ All packages share one version.
   last change. A value stated on such an element that happened to equal what the element below would read by default
   never reached it - a text block stayed painted in the old color; a value cleared there reached it as the default
   instead of what an ancestor further up states; a data context replaced there told the element below it had had none.
-  A handler reading an element before the change reached it, or a moved element's handler reading another value
-  first, turned the change into no change at all. A subtree moved under a parent stating the value its root already
+  A handler reading an element before the change reached it - the changed element's own callback among them - or a
+  moved element's handler reading another value first, turned the change into no change at all. An element whose own
+  value was cleared reported and drew with its default instead of the value it inherits, and missed the next change
+  of that value when it came to equal the default. A subtree moved under a parent stating the value its root already
   read left the elements under the root, which read their own defaults, untold. What an element passes down is now
   taken from its ancestors when it changes, and each element told compares what it read with what it reads. An
   element cut off from the ancestor whose brush it drew with lets go of that brush, and a brush is taken and let go by

@@ -125,6 +125,61 @@ public class InheritedChangeReportsWhatWasReadTests
         Assert.That(heard, Is.EqualTo(new[] { "20->12" }));
     }
 
+    [Test]
+    public void AReadInTheChangedElementsOwnCallback_StillLetsTheChangeReachTheElementBelow()
+    {
+        var below = new InheritingProbe();
+        var changed = new InheritingProbe { Child = below };
+        changed.Level = 1;
+        Assert.That(below.Level, Is.EqualTo(1));
+        new Border().FontSize = 30;
+        var heard = new List<string>();
+        changed.LevelChanged += (_, _) => _ = below.Level;
+        below.LevelChanged += (_, e) => heard.Add($"{e.OldValue}->{e.NewValue}");
+
+        changed.Level = 2;
+
+        Assert.That(heard, Is.EqualTo(new[] { "1->2" }));
+    }
+
+    [Test]
+    public void AnElementsOwnValueCleared_GivesWayToWhatItInherits_AndItHearsTheChangesOfThatAfterwards()
+    {
+        var below = new InheritingProbe { Level = 5 };
+        var above = new InheritingProbe { Child = below, Level = 1 };
+        Assert.That(below.Level, Is.EqualTo(5));
+        var heard = new List<string>();
+        below.LevelChanged += (_, e) => heard.Add($"{e.OldValue}->{e.NewValue}");
+
+        below.ClearValue(InheritingProbe.LevelProperty);
+        above.Level = 0;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(below.Level, Is.EqualTo(0));
+            Assert.That(heard, Is.EqualTo(new[] { "5->1", "1->0" }));
+        });
+    }
+
+    [Test]
+    public void AnElementWatchedOnlyAfterAChangeReachedIt_HearsTheNextFromThatChange()
+    {
+        var leaf = new Border();
+        var root = new Border { Child = leaf };
+        root.FontSize = 11;
+        Assert.That(leaf.FontSize, Is.EqualTo(11));
+        root.FontSize = 12;
+        var heard = new List<string>();
+        leaf.PropertyChanged += (_, e) =>
+        {
+            if (e.Property == UIComponent.FontSizeProperty) heard.Add($"{e.OldValue}->{e.NewValue}");
+        };
+
+        root.FontSize = 13;
+
+        Assert.That(heard, Is.EqualTo(new[] { "12->13" }));
+    }
+
     /// <summary>A subtree moved under a parent stating what its root already read: the root's child, which read its own
     /// default, now inherits the stated value and hears so.</summary>
     [TestCase(false, TestName = "AnElementUnderAMovedRoot_HearsTheValueItStartsToInherit")]
