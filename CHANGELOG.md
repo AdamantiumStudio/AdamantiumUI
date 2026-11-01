@@ -5,6 +5,20 @@ All packages share one version.
 
 ## Unreleased
 
+### Changed
+
+- A continuous GPU stroke of many contours - a map's roads, a chart's series - is expanded by one compute dispatch and
+  drawn by one draw instead of one of each per contour: its contours' points lie one after another with a table of
+  where each starts, and every thread works inside its own point's contour, so joins, caps and antialiasing are what
+  they were. A batch holds at most 32 768 points and 32 MB of ribbon; past that the contours go in several. Pieces are
+  numbered across the whole batch, so translucent contours of one stroke crossing each other blend once. A dashed or
+  trimmed stroke still walks each contour on its own.
+
+### Fixed
+
+- A closed contour of two points stroked with miter joins drew from NaN vertices; it is drawn open now.
+- The depth a translucent stroke clears for its union fell short of a mitred corner's tip when zoomed out.
+
 ### Added
 
 - `TextBaseline.Of`: how far below a control's top the baseline of the first line of text it shows lies - a button's
