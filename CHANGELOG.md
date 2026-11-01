@@ -2436,6 +2436,9 @@ All packages share one version.
 
 ### Fixed
 
+- A discarded menu item stayed alive for as long as the view-model whose elements its submenu showed: the panel of the
+  submenu kept them as its children, and each kept the panel - and through it the discarded menu - as its parent. A
+  panel gone for good now lets go of what it only showed for another.
 - An animated `Image` ignored its `Viewport`: the frame was drawn whole into the fitted frame, so a cropped animated GIF
   showed the whole picture, and `UniformToFill` squeezed it instead of cutting it. An animation is now laid into its
   viewport as a still picture is, and only the part its element shows is drawn.

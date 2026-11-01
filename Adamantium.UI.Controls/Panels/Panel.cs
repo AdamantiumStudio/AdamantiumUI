@@ -137,6 +137,22 @@ public abstract class Panel: InputUIComponent, IContainer, INavigablePanel
          RemoveLogicalChild(child);
    }
 
+   /// <summary>Gone for good, it stops showing what it showed for another - a view-model's element kept by the view-model
+   /// would otherwise keep this panel, and all above it, alive.</summary>
+   protected override void OnDiscarded()
+   {
+      base.OnDiscarded();
+      for (var i = VisualChildrenCollection.Count - 1; i >= 0; i--)
+      {
+         if (i < VisualChildrenCollection.Count &&
+             VisualChildrenCollection[i] is { } child && child is FundamentalUIComponent { ShownIn: var host }
+             && ReferenceEquals(host, this))
+         {
+            RemoveVisualChild(child);
+         }
+      }
+   }
+
    private void ItemsChanged(NotifyCollectionChangedEventArgs e)
    {
       switch (e.Action)
