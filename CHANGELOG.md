@@ -7,6 +7,9 @@ All packages share one version.
 
 ### Added
 
+- `TextBaseline.Of`: how far below a control's top the baseline of the first line of text it shows lies - a button's
+  label - or null for one showing none: what a control set into text stands on the line's baseline by, the same for a
+  `TextBlock`'s `InlineUIContainer` and any other text that hosts controls.
 - `IDrawingSession.DrawImageFrame` with a source rectangle: one frame of an animation drawn in part, as `DrawImage`
   draws part of a still picture.
 - Styles of a scope: a `<Style>` without a key among an element's `ResourceContext.Resources`, or in a dictionary file
