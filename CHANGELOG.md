@@ -21,6 +21,15 @@ All packages share one version.
 
 ### Added
 
+- `MeshGeometry`: an area given as triangles already cut - `Positions` and, three to a triangle, `TriangleIndices` -
+  drawn as it is and never tessellated again, so shapes cut on a worker thread (a map's tiles, a file, a generator)
+  cost the drawing thread nothing to tessellate; it joins the instanced fills like any path. Its optional `Boundary`
+  (the rings it was cut from) is taken as the edge to antialias instead of working the edge out of the triangles - on
+  26 000 vertices the first draw goes from about 80 ms to under 3 ms - and is what a pen draws. Creatable from markup:
+  `<MeshGeometry Positions="0,0 10,0 10,10" TriangleIndices="0 1 2" Boundary="0,0 10,0 10,10"/>`, with
+  `IndexCollection` parsing `"0 1 2"` and `ContourCollection` rings apart by semicolons; the Shapes tab of the sandbox
+  shows one. A mesh may be made on any thread; once shown, it is changed on the UI thread.
+- `Path` hit-tests a geometry that has triangles but no outline against its triangles, not its bounding box.
 - `TextBaseline.Of`: how far below a control's top the baseline of the first line of text it shows lies - a button's
   label - or null for one showing none: what a control set into text stands on the line's baseline by, the same for a
   `TextBlock`'s `InlineUIContainer` and any other text that hosts controls.

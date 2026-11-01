@@ -108,6 +108,10 @@ public abstract class Geometry : AdamantiumComponent
    
    protected internal abstract void ProcessGeometryCore(GeometryType geometryType);
 
+   /// <summary>Whether the mesh's contours are exactly the edge of its fill - outer rings and holes - so the renderer
+   /// takes them as they are rather than working the edge out of the triangles.</summary>
+   protected internal virtual bool ContoursAreFillBoundary => false;
+
    protected override void OnComponentUpdated()
    {
       base.OnComponentUpdated();

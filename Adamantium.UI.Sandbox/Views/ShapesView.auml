@@ -45,6 +45,24 @@
                   StrokeDashStartCap="{Binding Stroke.DashStartCap}" StrokeDashEndCap="{Binding Stroke.DashEndCap}" StartLineCap="{Binding Stroke.StartCap}" EndLineCap="{Binding Stroke.EndCap}"
                   StrokeLineJoin="{Binding Stroke.Join}"
                   StrokeTrimStart="{Binding Stroke.TrimStart}" StrokeTrimEnd="{Binding Stroke.TrimEnd}"/>
+          <!-- A mesh of triangles cut beforehand - a frame: a square with a square hole - drawn as given. -->
+          <StackPanel Orientation="Vertical" Margin="10">
+            <TextBlock Text="{Localize ShapesStrings.Mesh}" HorizontalAlignment="Center" MarginBottom="4"
+                       Foreground="{ResourceReference TextFillColorSecondary}"/>
+            <Path x:Name="MeshFrame" Fill="#8B5CF6" Width="120" Height="120"
+                  Stroke="{Binding Stroke.StrokeBrush}" StrokeThickness="{Binding Stroke.StrokeWidth}"
+                  StrokeDashSymbols="{Binding Stroke.DashSymbols}" StrokeDashGlyphs="{Binding Stroke.DashGlyphs}"
+                  StrokeDashOffset="{Binding Stroke.DashOffset}" StrokeDashFit="{Binding Stroke.DashFit}"
+                  StrokeDashStartCap="{Binding Stroke.DashStartCap}" StrokeDashEndCap="{Binding Stroke.DashEndCap}" StartLineCap="{Binding Stroke.StartCap}" EndLineCap="{Binding Stroke.EndCap}"
+                  StrokeLineJoin="{Binding Stroke.Join}"
+                  StrokeTrimStart="{Binding Stroke.TrimStart}" StrokeTrimEnd="{Binding Stroke.TrimEnd}">
+                <Path.Data>
+                    <MeshGeometry Positions="0,0 120,0 120,120 0,120 40,40 80,40 80,80 40,80"
+                                  TriangleIndices="0 1 5 0 5 4 1 2 6 1 6 5 2 3 7 2 7 6 3 0 4 3 4 7"
+                                  Boundary="0,0 120,0 120,120 0,120; 40,40 40,80 80,80 80,40"/>
+                </Path.Data>
+            </Path>
+          </StackPanel>
           <StackPanel Orientation="Vertical" Margin="10">
             <TextBlock Text="{Localize ShapesStrings.CubicBezier}" HorizontalAlignment="Center" MarginBottom="4"
                        Foreground="{ResourceReference TextFillColorSecondary}"/>

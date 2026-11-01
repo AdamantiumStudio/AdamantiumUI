@@ -46,29 +46,44 @@ internal sealed class FrozenMesh
 
     /// <summary>Snapshot a live tessellated mesh (call AFTER ProcessGeometry). Null if it has no drawable vertices.
     /// ToUIVertices() already returns a fresh array (we own it); Indices is the mesh's internal array, so it is copied.</summary>
-    public static FrozenMesh From(Mesh mesh, Rect bounds)
+    public static FrozenMesh From(Core.Media.Geometry geometry)
     {
+        var mesh = geometry.Mesh;
+        var bounds = geometry.Bounds;
         if (mesh is not { HasPoints: true }) return null;
         var vertices = mesh.ToUIVertices();
         if (vertices.Length == 0) return null;
         var indices = mesh.Indices is { Length: > 0 } ix ? (int[])ix.Clone() : [];
         // The fringe ring is frozen with the mesh for the same reason the vertices are: it is built from the RESOLVED
         // fill boundary of THIS tessellation, and a later re-tessellation overwrites the live mesh in place.
-        var loops = FillBoundary.ExtractLoops(mesh);
+        var loops = FillBoundary.LoopsOf(geometry);
         var ring = loops != null ? FringeGeometry.BuildRing(FringeGeometry.Build(loops)) : [];
+        // A given edge is not a function of the triangles, so it is part of what the mesh IS: the same triangles with
+        // another edge feather differently and must not share a segment's ring.
+        var givenEdge = geometry.ContoursAreFillBoundary ? loops : null;
         return new FrozenMesh(vertices, indices, mesh.MeshTopology, bounds,
-            GeometryKey.ArbitraryMesh(Fingerprint(vertices, indices)), ring, loops);
+            GeometryKey.ArbitraryMesh(Fingerprint(vertices, indices, givenEdge)), ring, loops);
     }
 
-    // Stable content hash of the LOCAL mesh (vertex bytes + indices): identical tessellations share a key/segment, and ANY
-    // difference - including size - yields a different key, so same-topology-different-size shapes never merge.
-    private static long Fingerprint(UIVertex[] vertices, int[] indices)
+    // Stable content hash of the LOCAL mesh (vertex bytes + indices, and the edge when it was given): identical
+    // tessellations share a key/segment, and ANY difference - including size - yields a different key, so
+    // same-topology-different-size shapes never merge.
+    private static long Fingerprint(UIVertex[] vertices, int[] indices, List<(Vector2<double>[] Points, bool IsClosed)> edge)
     {
         unchecked
         {
             ulong h = 14695981039346656037UL;   // FNV-1a
             foreach (var b in MemoryMarshal.AsBytes(vertices.AsSpan())) { h ^= b; h *= 1099511628211UL; }
             foreach (var i in indices) { h ^= (uint)i; h *= 1099511628211UL; }
+            if (edge != null)
+            {
+                foreach (var (points, _) in edge)
+                {
+                    h ^= 0xFF; h *= 1099511628211UL;   // a ring's end, so splitting the same points differently differs
+                    foreach (var b in MemoryMarshal.AsBytes(points.AsSpan())) { h ^= b; h *= 1099511628211UL; }
+                }
+            }
+
             return (long)h;
         }
     }
