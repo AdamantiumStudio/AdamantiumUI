@@ -944,7 +944,7 @@ public class TiledPanel : Panel, IDropGapPanel
         }
         else if (vertical || horizontal)
         {
-            Cursor = vertical && horizontal ? Cursors.SizeAll : vertical ? Cursors.SizeEWE : Cursors.SizeNS;
+            Cursor = vertical && horizontal ? Cursors.SizeAll : vertical ? Cursors.SizeWE : Cursors.SizeNS;
         }
         else if (Cursor != null)
         {

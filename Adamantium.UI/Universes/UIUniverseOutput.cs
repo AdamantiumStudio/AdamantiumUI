@@ -406,8 +406,8 @@ namespace Adamantium.UI.Universes
                     case OutputCursor.SizeNWSE:
                         InputComponent.Cursor = Cursors.SizeNWSE;
                         break;
-                    case OutputCursor.SizeEWE:
-                        InputComponent.Cursor = Cursors.SizeEWE;
+                    case OutputCursor.SizeWE:
+                        InputComponent.Cursor = Cursors.SizeWE;
                         break;
                     case OutputCursor.SizeNESW:
                         InputComponent.Cursor = Cursors.SizeNESW;

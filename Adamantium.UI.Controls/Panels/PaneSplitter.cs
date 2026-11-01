@@ -34,7 +34,7 @@ public class PaneSplitter : Thumb, ISplitter
     }
 
     private void ApplyCursor()
-        => Cursor = Orientation == Orientation.Horizontal ? CursorType.SizeEWE : CursorType.SizeNS;
+        => Cursor = Orientation == Orientation.Horizontal ? CursorType.SizeWE : CursorType.SizeNS;
 
     public Orientation Orientation
     {

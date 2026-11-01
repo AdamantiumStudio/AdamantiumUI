@@ -84,7 +84,7 @@ internal sealed class WindowsCursors : INativeCursors
         CursorType.SizeNESW => NativeCursors.SizeNESW,
         CursorType.SizeNS => NativeCursors.SizeNS,
         CursorType.SizeNWSE => NativeCursors.SizeNWSE,
-        CursorType.SizeEWE => NativeCursors.SizeEWE,
+        CursorType.SizeWE => NativeCursors.SizeWE,
         CursorType.UpArrow => NativeCursors.UpArrow,
         CursorType.Wait => NativeCursors.Wait,
         _ => NativeCursors.Arrow,

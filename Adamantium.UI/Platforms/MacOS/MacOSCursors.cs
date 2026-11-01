@@ -26,7 +26,7 @@ internal sealed class MacOSCursors : INativeCursors
         CursorType.No => MacOSCursorType.OperationNotAllowedCursor,
         CursorType.SizeAll => MacOSCursorType.ClosedHandCursor,          // AppKit's "grabbing and moving" shape
         CursorType.SizeNS => MacOSCursorType.ResizeUpDownCursor,
-        CursorType.SizeEWE => MacOSCursorType.ResizeLeftRightCursor,
+        CursorType.SizeWE => MacOSCursorType.ResizeLeftRightCursor,
         CursorType.SizeNESW => MacOSCursorType.ResizeLeftRightCursor,    // no diagonal shape in AppKit
         CursorType.SizeNWSE => MacOSCursorType.ResizeLeftRightCursor,
         CursorType.UpArrow => MacOSCursorType.ResizeUpCursor,

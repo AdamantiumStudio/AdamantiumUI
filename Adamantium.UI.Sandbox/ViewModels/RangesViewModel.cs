@@ -42,13 +42,13 @@ public partial class RangesViewModel : TabPageViewModel
 
     /// <summary>The pointer the value-drag shows, one per direction, picked live. The control takes a Cursor and the
     /// dropdown offers the enum; <see cref="Cursors.Of"/> is the bridge between the two - which is what it is for.</summary>
-    [Bindable] private CursorType _scrubLeftCursorType = CursorType.SizeEWE;
+    [Bindable] private CursorType _scrubLeftCursorType = CursorType.SizeWE;
 
-    [Bindable] private CursorType _scrubRightCursorType = CursorType.SizeEWE;
+    [Bindable] private CursorType _scrubRightCursorType = CursorType.SizeWE;
 
-    public Cursor ScrubLeftCursor => Cursors.Of(ScrubLeftCursorType) ?? Cursors.SizeEWE;
+    public Cursor ScrubLeftCursor => Cursors.Of(ScrubLeftCursorType) ?? Cursors.SizeWE;
 
-    public Cursor ScrubRightCursor => Cursors.Of(ScrubRightCursorType) ?? Cursors.SizeEWE;
+    public Cursor ScrubRightCursor => Cursors.Of(ScrubRightCursorType) ?? Cursors.SizeWE;
 
     partial void OnScrubLeftCursorTypeChanged(CursorType value) => RaisePropertyChanged(nameof(ScrubLeftCursor));
 

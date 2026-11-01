@@ -174,10 +174,10 @@
 
                             <!-- Three dots mark each strip - see Fluent's set. -->
                             <Border x:Name="PART_SizerLeft" HorizontalAlignment="Left" Width="8" Visibility="Collapsed"
-                                    Background="Transparent" Cursor="SizeEWE"
+                                    Background="Transparent" Cursor="SizeWE"
                                     ToolTip="{Localize CanvasStrings.ResizePanel}">
                                 <StackPanel Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center"
-                                            Cursor="SizeEWE">
+                                            Cursor="SizeWE">
                                     <Ellipse Width="3" Height="3" Fill="{ObservableResource TextFillColorSecondary}"/>
                                     <Ellipse Width="3" Height="3" MarginTop="3" Fill="{ObservableResource TextFillColorSecondary}"/>
                                     <Ellipse Width="3" Height="3" MarginTop="3" Fill="{ObservableResource TextFillColorSecondary}"/>
@@ -185,10 +185,10 @@
                             </Border>
 
                             <Border x:Name="PART_SizerRight" HorizontalAlignment="Right" Width="8" Visibility="Collapsed"
-                                    Background="Transparent" Cursor="SizeEWE"
+                                    Background="Transparent" Cursor="SizeWE"
                                     ToolTip="{Localize CanvasStrings.ResizePanel}">
                                 <StackPanel Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center"
-                                            Cursor="SizeEWE">
+                                            Cursor="SizeWE">
                                     <Ellipse Width="3" Height="3" Fill="{ObservableResource TextFillColorSecondary}"/>
                                     <Ellipse Width="3" Height="3" MarginTop="3" Fill="{ObservableResource TextFillColorSecondary}"/>
                                     <Ellipse Width="3" Height="3" MarginTop="3" Fill="{ObservableResource TextFillColorSecondary}"/>

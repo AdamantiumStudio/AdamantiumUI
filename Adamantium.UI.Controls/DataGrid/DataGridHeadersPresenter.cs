@@ -283,7 +283,7 @@ public class DataGridHeadersPresenter : Panel
 
             // The separator advertises itself before the press, the way the splitter and the window's resize grip do.
             var over = SeparatorAt(x);
-            Cursor = over >= 0 && Owner.Columns[over].CanUserResize ? Cursors.SizeEWE : Cursors.Arrow;
+            Cursor = over >= 0 && Owner.Columns[over].CanUserResize ? Cursors.SizeWE : Cursors.Arrow;
             return;
         }
 

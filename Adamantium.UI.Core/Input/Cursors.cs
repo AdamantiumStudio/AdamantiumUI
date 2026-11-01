@@ -26,7 +26,7 @@ public static class Cursors
 
     public static Cursor SizeNWSE { get; } = new(CursorType.SizeNWSE);
 
-    public static Cursor SizeEWE { get; } = new(CursorType.SizeEWE);
+    public static Cursor SizeWE { get; } = new(CursorType.SizeWE);
 
     public static Cursor UpArrow { get; } = new(CursorType.UpArrow);
 
@@ -60,7 +60,7 @@ public static class Cursors
         CursorType.SizeNESW => SizeNESW,
         CursorType.SizeNS => SizeNS,
         CursorType.SizeNWSE => SizeNWSE,
-        CursorType.SizeEWE => SizeEWE,
+        CursorType.SizeWE => SizeWE,
         CursorType.UpArrow => UpArrow,
         CursorType.Wait => Wait,
         CursorType.DragCopy => DragCopy,
