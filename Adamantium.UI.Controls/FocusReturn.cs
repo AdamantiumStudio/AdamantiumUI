@@ -20,18 +20,19 @@ public sealed class FocusReturn
     }
 
     /// <summary>Called as the overlay closes. <paramref name="content"/> is the overlay's own content - what "inside"
-    /// means for this decision. An element gone from its window since - its page torn down, the row a command deleted -
-    /// is not given the focus back.</summary>
-    public void Restore(IUIComponent content)
+    /// means for this decision. An element gone from its window since - its page torn down, the row a command deleted,
+    /// the item of a menu closed since that opened the overlay - is not given the focus back; given
+    /// <paramref name="around"/>, the element the overlay stands on, what had the focus last in its focus scope gets it
+    /// instead - the field a menu was opened from.</summary>
+    public void Restore(IUIComponent content, IUIComponent around = null)
     {
         var element = _element;
         _element = null;
-        if (element == null || !FocusManager.CanFocus(element))
-            return;
-
-        if (element is IUIComponent { RootVisual: null } or FundamentalUIComponent { IsDiscarded: true })
+        if (!CanTakeBack(element))
         {
-            return;
+            element = around != null ? FocusManager.GetFocusedElement(FocusManager.GetFocusScope(around)) : null;
+            if (!CanTakeBack(element) || element is IUIComponent inside && IsInside(inside, content))
+                return;
         }
 
         var focused = FocusManager.Focused;
@@ -40,6 +41,10 @@ public sealed class FocusReturn
 
         FocusManager.Focus(element, _wasVisible ? NavigationMethod.Tab : NavigationMethod.Mouse);
     }
+
+    private static bool CanTakeBack(IInputComponent element) =>
+        element != null && FocusManager.CanFocus(element) &&
+        element is not (IUIComponent { RootVisual: null } or FundamentalUIComponent { IsDiscarded: true });
 
     private static bool IsInside(IUIComponent element, IUIComponent content)
     {

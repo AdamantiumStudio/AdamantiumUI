@@ -2439,6 +2439,9 @@ All packages share one version.
 
 ### Fixed
 
+- A card opened from a menu's item left the focus nowhere when it closed: the item it had the focus from was gone with
+  its menu. `FocusReturn.Restore` takes the element the overlay stands on and, the opener gone, gives the focus to what
+  had it last in that element's focus scope - the field the menu was opened from; a popup passes its place in the tree.
 - A discarded menu item stayed alive for as long as the view-model whose elements its submenu showed: the panel of the
   submenu kept them as its children, and each kept the panel - and through it the discarded menu - as its parent. A
   panel gone for good now lets go of what it only showed for another.

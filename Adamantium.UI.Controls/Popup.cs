@@ -484,7 +484,7 @@ public class Popup : MeasurableUIComponent, IContainer
         host?.PopupLayer.Remove(this);   // the layer un-records the overlay root - see PopupLayer.Remove
         // The focus goes back to whatever opened this - but only if it is still in here, where it is about to be
         // stranded. See FocusReturn.
-        if (wasOpen) _focusReturn.Restore(Child);
+        if (wasOpen) _focusReturn.Restore(Child, VisualParent as IUIComponent ?? PlacementTarget);
         if (wasOpen) Closed?.Invoke(this, EventArgs.Empty);
         if (wasOpen) AnnounceShown(AutomationEvent.MenuClosed);
     }
