@@ -1,5 +1,6 @@
 <Language>
     <Phrase Key="Gallery" Text="Shape gallery — every shape's stroke is driven by the pen panel below:"/>
+    <Phrase Key="Mesh" Text="Mesh of ready triangles"/>
     <Phrase Key="CubicBezier" Text="Cubic Bézier"/>
     <Phrase Key="QuadraticBezier" Text="Quadratic Bézier"/>
     <Phrase Key="Nurbs" Text="NURBS"/>

@@ -16,6 +16,28 @@ internal static class FillBoundary
     private static (long, long, long, long) EdgeKey((long, long) a, (long, long) b)
         => Comparer<(long, long)>.Default.Compare(a, b) <= 0 ? (a.Item1, a.Item2, b.Item1, b.Item2) : (b.Item1, b.Item2, a.Item1, a.Item2);
 
+    /// <summary>The edge of <paramref name="geometry"/>'s fill: copies of its contours when the geometry says they are
+    /// exactly that edge, else - or when none of them is a ring after all - worked out of its triangles by
+    /// <see cref="ExtractLoops"/>.</summary>
+    public static List<(Vector2<double>[] Points, bool IsClosed)> LoopsOf(Core.Media.Geometry geometry)
+    {
+        if (geometry is not { ContoursAreFillBoundary: true })
+        {
+            return ExtractLoops(geometry?.Mesh);
+        }
+
+        var loops = new List<(Vector2<double>[] Points, bool IsClosed)>();
+        foreach (var contour in geometry.Mesh.Contours)
+        {
+            if (contour.IsGeometryClosed && contour.Points is { Length: >= 3 } points)
+            {
+                loops.Add(((Vector2<double>[])points.Clone(), true));
+            }
+        }
+
+        return loops.Count > 0 ? loops : ExtractLoops(geometry.Mesh);
+    }
+
     /// <summary>The fill's boundary loops, or null if the mesh has no drawable triangles (caller falls back to the raw
     /// path contours). Each loop is a closed point list (point[n-1] -> point[0] implied), in mesh-LOCAL coordinates.</summary>
     public static List<(Vector2<double>[] Points, bool IsClosed)> ExtractLoops(Mesh mesh)
