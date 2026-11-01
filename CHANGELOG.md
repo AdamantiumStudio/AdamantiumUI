@@ -2454,6 +2454,9 @@ All packages share one version.
 
 ### Fixed
 
+- A `StreamGeometry` cut its unfilled figures into triangles as one area along with the filled ones: 3 000 open lines
+  of 20 points took 26 s to process and filled nothing. Only filled figures are cut now, as in `PathGeometry`; the
+  others are stroked as given (about 50 ms for the same lines), an open figure staying open.
 - A closed contour of two points stroked with miter joins drew from NaN vertices; it is drawn open now.
 - The depth a translucent stroke clears for its union fell short of a mitred corner's tip when zoomed out.
 - A key that types into a focused text field ran the gestures of what holds the field: a minus typed into a field

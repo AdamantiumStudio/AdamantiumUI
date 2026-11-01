@@ -111,6 +111,14 @@ public class StreamGeometryContext : IFigureSegments
         return figure.Segments[^1];
     }
 
+    /// <summary>Whether each figure, in the order of <see cref="GetContours"/>, is filled.</summary>
+    internal bool[] GetFilled()
+    {
+        var filled = new bool[figures.Count];
+        for (var i = 0; i < figures.Count; i++) filled[i] = figures[i]?.IsFilled ?? false;
+        return filled;
+    }
+
     internal MeshContour[] GetContours()
     {
         contours.Clear();
