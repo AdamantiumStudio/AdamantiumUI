@@ -110,13 +110,13 @@ public class NumericUpDown : RangeLimitsBase
     public static readonly AdamantiumProperty ScrubPixelsPerStepProperty = AdamantiumProperty.Register(
         nameof(ScrubPixelsPerStep), typeof(double), typeof(NumericUpDown), new PropertyMetadata(4.0));
 
-    /// <summary>The pointers shown while a scrub drag runs left and right; both default to <see cref="Cursors.SizeEWE"/>
+    /// <summary>The pointers shown while a scrub drag runs left and right; both default to <see cref="Cursors.SizeWE"/>
     /// until set to one-way shapes.</summary>
     public static readonly AdamantiumProperty ScrubLeftCursorProperty = AdamantiumProperty.Register(
-        nameof(ScrubLeftCursor), typeof(Cursor), typeof(NumericUpDown), new PropertyMetadata(Cursors.SizeEWE));
+        nameof(ScrubLeftCursor), typeof(Cursor), typeof(NumericUpDown), new PropertyMetadata(Cursors.SizeWE));
 
     public static readonly AdamantiumProperty ScrubRightCursorProperty = AdamantiumProperty.Register(
-        nameof(ScrubRightCursor), typeof(Cursor), typeof(NumericUpDown), new PropertyMetadata(Cursors.SizeEWE));
+        nameof(ScrubRightCursor), typeof(Cursor), typeof(NumericUpDown), new PropertyMetadata(Cursors.SizeWE));
 
     /// <summary>Round the value to a whole number of <see cref="RangeLimitsBase.SmallChange"/> steps.</summary>
     public static readonly AdamantiumProperty SnapsToSmallChangeProperty = AdamantiumProperty.Register(
@@ -794,7 +794,7 @@ public class NumericUpDown : RangeLimitsBase
         if (direction == 0 || direction == _scrubDirection) return;
 
         _scrubDirection = direction;
-        Mouse.OverrideCursor = (direction < 0 ? ScrubLeftCursor : ScrubRightCursor) ?? Cursors.SizeEWE;
+        Mouse.OverrideCursor = (direction < 0 ? ScrubLeftCursor : ScrubRightCursor) ?? Cursors.SizeWE;
     }
 
     /// <summary>What one step of the drag is worth. The modifiers are the ones every 3D tool uses: Shift for a tenth of

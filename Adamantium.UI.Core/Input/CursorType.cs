@@ -21,7 +21,7 @@ public enum CursorType
     SizeNESW,
     SizeNS,
     SizeNWSE,
-    SizeEWE,
+    SizeWE,
     UpArrow,
     Wait,
     /// <summary>Drag feedback: this drop will COPY (arrow + plus).</summary>

@@ -135,7 +135,7 @@ public sealed class CanvasFrameGesture
         CanvasHandle.TopLeft or CanvasHandle.BottomRight => Cursors.SizeNWSE,
         CanvasHandle.TopRight or CanvasHandle.BottomLeft => Cursors.SizeNESW,
         CanvasHandle.Top or CanvasHandle.Bottom => Cursors.SizeNS,
-        CanvasHandle.Left or CanvasHandle.Right => Cursors.SizeEWE,
+        CanvasHandle.Left or CanvasHandle.Right => Cursors.SizeWE,
         _ => null
     };
 }

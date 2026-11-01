@@ -282,7 +282,7 @@ public class CanvasPaneSizerTests
         Use(ThemeNamed("Fluent"));
         var pane = Built(new CanvasPane { Kind = CanvasPaneKind.Sheet, CanResize = true });
 
-        Assert.That((Shown(pane) as Border)?.Cursor?.Type, Is.EqualTo(CursorType.SizeEWE),
+        Assert.That((Shown(pane) as Border)?.Cursor?.Type, Is.EqualTo(CursorType.SizeWE),
             "a strip of nothing has to declare itself, or it is a strip of nothing");
     }
 

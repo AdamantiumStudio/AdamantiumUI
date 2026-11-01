@@ -289,7 +289,7 @@ public class GridSplitter:Thumb, ISplitter
       isResizeBehaviorValid = true;
       var behavior = ResizeBehavior;
       grid = this.GetVisualParent<Grid>();
-      Cursor = ResizeDirection == ResizeDirection.Columns ? Cursors.SizeEWE : Cursors.SizeNS;
+      Cursor = ResizeDirection == ResizeDirection.Columns ? Cursors.SizeWE : Cursors.SizeNS;
       if (grid == null)
       {
          isResizeBehaviorValid = false;

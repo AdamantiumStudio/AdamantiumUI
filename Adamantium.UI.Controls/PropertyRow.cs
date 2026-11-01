@@ -294,7 +294,7 @@ public class PropertyRow : Control
         if (_grip != null)
         {
             _grip.PointerPressed += OnGripPressed;
-            if (_grip is UIComponent grip) grip.Cursor = Cursors.SizeEWE;
+            if (_grip is UIComponent grip) grip.Cursor = Cursors.SizeWE;
         }
 
         _action = GetTemplateChild("PART_Action") as ButtonBase;

@@ -386,7 +386,7 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
         CursorType.SizeNESW => WpCursorShapeDeviceV1.Shape.NeswResize,
         CursorType.SizeNS => WpCursorShapeDeviceV1.Shape.NsResize,
         CursorType.SizeNWSE => WpCursorShapeDeviceV1.Shape.NwseResize,
-        CursorType.SizeEWE => WpCursorShapeDeviceV1.Shape.EwResize,
+        CursorType.SizeWE => WpCursorShapeDeviceV1.Shape.EwResize,
         CursorType.Wait => WpCursorShapeDeviceV1.Shape.Wait,
         CursorType.DragCopy => WpCursorShapeDeviceV1.Shape.Copy,
         CursorType.DragLink => WpCursorShapeDeviceV1.Shape.Alias,

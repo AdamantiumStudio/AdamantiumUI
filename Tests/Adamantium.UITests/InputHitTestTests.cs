@@ -275,8 +275,8 @@ public class InputHitTestTests
         var border = new Border { Width = 100, Height = 50 };
         PointAt(border);
 
-        border.Cursor = Cursors.SizeEWE;
-        Assert.That(Mouse.Cursor, Is.EqualTo(Cursors.SizeEWE), "the element under the pointer says what the pointer is");
+        border.Cursor = Cursors.SizeWE;
+        Assert.That(Mouse.Cursor, Is.EqualTo(Cursors.SizeWE), "the element under the pointer says what the pointer is");
 
         border.Cursor = Cursors.Arrow;
         Assert.That(Mouse.Cursor, Is.EqualTo(Cursors.Arrow), "and it goes back without waiting for the next enter");
@@ -289,14 +289,14 @@ public class InputHitTestTests
     public void LeavingAGrip_PutsBackTheCursorOfWhatHeldIt()
     {
         var panel = new Border { Width = 200, Height = 100, Cursor = Cursors.Arrow };
-        var grip = new Border { Width = 7, Height = 100, Cursor = Cursors.SizeEWE };
+        var grip = new Border { Width = 7, Height = 100, Cursor = Cursors.SizeWE };
         panel.Child = grip;
 
         panel.Measure(new Size<double>(200, 100), force: true);
         panel.Arrange(new Rect(0, 0, 200, 100));
 
         PointAt(grip);
-        Assert.That(Mouse.Cursor, Is.EqualTo(Cursors.SizeEWE), "the grip never said what it was");
+        Assert.That(Mouse.Cursor, Is.EqualTo(Cursors.SizeWE), "the grip never said what it was");
 
         PointerInput.Exit(grip);
 
