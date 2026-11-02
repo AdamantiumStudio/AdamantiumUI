@@ -16,6 +16,58 @@ public class MeshGeometryTests
 {
     private static readonly Vector2<double>[] Square = [new(0, 0), new(10, 0), new(10, 10), new(0, 10)];
 
+    // A mesh with its edge given is processed on the thread that cut it, so its fill is made ready there.
+    [Test]
+    public void AGivenEdge_IsMadeReadyForDrawing_WhenProcessed()
+    {
+        var mesh = new MeshGeometry(Square, [0, 1, 2, 2, 3, 0], [Square]);
+
+        mesh.ProcessGeometry(GeometryType.Both);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(mesh.FillForDrawing, Is.SameAs(mesh.FillForDrawing));
+            Assert.That(mesh.FillForDrawing.Ring, Has.Length.EqualTo(4));
+        });
+    }
+
+    [Test]
+    public void AChangedMesh_IsNotDrawnFromTheFillMadeBefore()
+    {
+        var mesh = new MeshGeometry(Square, [0, 1, 2, 2, 3, 0], [Square]);
+        mesh.ProcessGeometry(GeometryType.Both);
+        var before = mesh.FillForDrawing;
+
+        mesh.Positions = new PointsCollection([new(0, 0), new(20, 0), new(20, 20), new(0, 20)]);
+        mesh.ProcessGeometry(GeometryType.Both);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(mesh.FillForDrawing, Is.Not.SameAs(before));
+            Assert.That(mesh.FillForDrawing.Version, Is.EqualTo(mesh.Version));
+            Assert.That(mesh.FillForDrawing.Bounds.Width, Is.EqualTo(20));
+        });
+    }
+
+    // A piece cut from a larger area - a map tile - is not antialiased where it was cut, so pieces side by side meet
+    // without a seam.
+    [Test]
+    public void TheEdgeAlongTheCutBox_IsNotAntialiased()
+    {
+        var mesh = new MeshGeometry(Square, [0, 1, 2, 2, 3, 0], [Square]) { CutBox = new Rect(0, 0, 10, 20) };
+
+        mesh.ProcessGeometry(GeometryType.Both);
+
+        // Of the square's four sides, the top (y = 0), left and right lie on the box; only the bottom is the area's own.
+        var ring = mesh.FillForDrawing.Ring;
+        Assert.Multiple(() =>
+        {
+            Assert.That(ring, Has.Length.EqualTo(1));
+            Assert.That(ring[0].A.Y, Is.EqualTo(10));
+            Assert.That(ring[0].B.Y, Is.EqualTo(10));
+        });
+    }
+
     [Test]
     public void TheTrianglesGiven_AreTheMesh()
     {

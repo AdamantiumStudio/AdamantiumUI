@@ -10,6 +10,7 @@ using Adamantium.ProceduralGeometry.Shapes;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Graphics;
 using Adamantium.UI.Core.Media;
+using Adamantium.UI.Core.Media.Fill;
 using Adamantium.UI.Core.Media.Imaging;
 using Adamantium.UI.FX;
 using Adamantium.UI.Rendering.Payloads;
@@ -213,7 +214,8 @@ public abstract class RenderUnit<TPayload> : DeferredDisposableObject, IRenderUn
         var contours = FillBoundary.LoopsOf(geometry) ?? BuildFillContours(geometry);
         if (contours == null) return;
 
-        FillFringeRenderer = new GpuFillRenderComponent(GraphicsDevice, UIBasicEffect, FillFringeEffect, contours, brush, BufferManager);
+        FillFringeRenderer = new GpuFillRenderComponent(GraphicsDevice, UIBasicEffect, FillFringeEffect, contours, brush,
+            BufferManager, PreparedFill.CutBoxOf(geometry));
         FillFringeRenderer.RenderData = DrawCommand.RenderData;
     }
 
@@ -250,7 +252,7 @@ public abstract class RenderUnit<TPayload> : DeferredDisposableObject, IRenderUn
             if (brush is SolidColorBrush solid && FillFringeRenderer is GpuFillRenderComponent existingFringe)
             {
                 var contours = FillBoundary.LoopsOf(geometry) ?? BuildFillContours(geometry);
-                if (contours != null && existingFringe.TryUpdateContours(contours, solid))
+                if (contours != null && existingFringe.TryUpdateContours(contours, solid, PreparedFill.CutBoxOf(geometry)))
                 {
                     FillFringeRenderer.RenderData = DrawCommand.RenderData;
                     return;
@@ -346,6 +348,8 @@ public abstract class RenderUnit<TPayload> : DeferredDisposableObject, IRenderUn
     {
         return DrawCommand.Payload.GetType() == drawCommand.Payload.GetType();
     }
+
+    public object Content => (DrawCommand?.Payload as IRenderCachePolicy)?.Content;
 
     protected override void Dispose(bool disposeManagedResources)
     {

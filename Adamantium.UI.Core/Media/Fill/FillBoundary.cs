@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using Adamantium.Graphics.Core.Models;
 using Adamantium.Mathematics;
 
-namespace Adamantium.UI.Rendering;
+namespace Adamantium.UI.Core.Media.Fill;
 
 // Extracts the painted outline of a tessellated fill as closed loops (edges owned by a single triangle), so the AA
 // fringe also feathers holes and self-intersections.
@@ -19,7 +19,7 @@ internal static class FillBoundary
     /// <summary>The edge of <paramref name="geometry"/>'s fill: copies of its contours when the geometry says they are
     /// exactly that edge, else - or when none of them is a ring after all - worked out of its triangles by
     /// <see cref="ExtractLoops"/>.</summary>
-    public static List<(Vector2<double>[] Points, bool IsClosed)> LoopsOf(Core.Media.Geometry geometry)
+    public static List<(Vector2<double>[] Points, bool IsClosed)> LoopsOf(Geometry geometry)
     {
         if (geometry is not { ContoursAreFillBoundary: true })
         {

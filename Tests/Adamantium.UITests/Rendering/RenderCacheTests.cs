@@ -317,6 +317,95 @@ public class RenderCacheTests
         Assert.That(unit.DeferDisposeCount, Is.EqualTo(0));
     }
 
+    // A map draws its tiles' geometries one after another; a tile coming in before the others must not hand every
+    // following geometry to its neighbour's unit, which would rebuild them all.
+    [Test]
+    public void AGeometryDrawnInAnotherPlace_KeepsItsUnit()
+    {
+        var first = new RectangleGeometry(new Rect(0, 0, 10, 10));
+        var second = new RectangleGeometry(new Rect(20, 0, 10, 10));
+        var c = AddControl();
+        c.RenderAction = s => s.DrawGeometry(Brushes.Red, first).DrawGeometry(Brushes.Red, second);
+        RenderFrame();
+        var unitOfFirst = _factory.Created.Single(u => UnitDraws(u, first));
+        var unitOfSecond = _factory.Created.Single(u => UnitDraws(u, second));
+
+        var arrived = new RectangleGeometry(new Rect(40, 0, 10, 10));
+        c.RenderAction = s => s.DrawGeometry(Brushes.Red, arrived).DrawGeometry(Brushes.Red, first)
+            .DrawGeometry(Brushes.Red, second);
+        c.Invalidate();
+        RenderFrame();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(_factory.Created, Has.Count.EqualTo(3));
+            Assert.That(UnitDraws(unitOfFirst, first), Is.True);
+            Assert.That(UnitDraws(unitOfSecond, second), Is.True);
+            Assert.That(unitOfFirst.DeferDisposeCount + unitOfSecond.DeferDisposeCount, Is.Zero);
+        });
+    }
+
+    [Test]
+    public void SwappedGeometries_StayWithTheirUnits()
+    {
+        var first = new RectangleGeometry(new Rect(0, 0, 10, 10));
+        var second = new RectangleGeometry(new Rect(20, 0, 10, 10));
+        var c = AddControl();
+        c.RenderAction = s => s.DrawGeometry(Brushes.Red, first).DrawGeometry(Brushes.Red, second);
+        RenderFrame();
+        var unitOfFirst = _factory.Created.Single(u => UnitDraws(u, first));
+
+        c.RenderAction = s => s.DrawGeometry(Brushes.Red, second).DrawGeometry(Brushes.Red, first);
+        c.Invalidate();
+        RenderFrame();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(_factory.Created, Has.Count.EqualTo(2));
+            Assert.That(UnitDraws(unitOfFirst, first), Is.True);
+            Assert.That(_factory.Created.Sum(u => u.DeferDisposeCount), Is.Zero);
+        });
+    }
+
+    // A fill and its outline draw one geometry twice: both units stay when a draw comes in before them.
+    [Test]
+    public void AGeometryDrawnTwice_KeepsBothUnits()
+    {
+        var shape = new RectangleGeometry(new Rect(0, 0, 10, 10));
+        var pen = new Pen(Brushes.Black, 1);
+        var c = AddControl();
+        c.RenderAction = s => s.DrawGeometry(Brushes.Red, shape).DrawGeometry(null, shape, pen);
+        RenderFrame();
+
+        c.RenderAction = s => s.DrawRectangle(Brushes.Blue, Box).DrawGeometry(Brushes.Red, shape)
+            .DrawGeometry(null, shape, pen);
+        c.Invalidate();
+        RenderFrame();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(_factory.Created, Has.Count.EqualTo(3));
+            Assert.That(_factory.Created.Sum(u => u.DeferDisposeCount), Is.Zero);
+        });
+    }
+
+    // A control making a new geometry on every render has nothing to keep: its unit stays at its place.
+    [Test]
+    public void ANewGeometryEachRender_ReusesTheUnitInPlace()
+    {
+        var c = AddControl();
+        c.RenderAction = s => s.DrawGeometry(Brushes.Red, new RectangleGeometry(Box));
+        RenderFrame();
+
+        c.Invalidate();
+        RenderFrame();
+
+        Assert.That(_factory.Created, Has.Count.EqualTo(1));
+    }
+
+    private static bool UnitDraws(FakeRenderUnit unit, Geometry geometry) =>
+        ReferenceEquals(unit.Content, geometry);
+
     // -------- dirty-driven build: clean skip / partial in-place re-render / full walk on structural change ------------------
 
     [Test]

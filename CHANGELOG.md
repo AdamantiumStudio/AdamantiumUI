@@ -10,6 +10,8 @@ All packages share one version.
 - `PolylineGeometry`: open lines (`Lines`) and closed rings (`Rings`) given as points and stroked as they are - nothing
   is cut into triangles, and a geometry of thousands of lines holds just their points. For what a worker thread already
   has as lines: a map's roads and borders, a chart's series. Creatable from markup.
+- `MeshGeometry.CutBox`: the box a mesh was cut to when it is a piece of a larger area - a map tile's square. Its edge
+  along the box's sides is not antialiased, so pieces cut side by side meet without a seam.
 - `MeshGeometry`: an area given as triangles already cut - `Positions` and, three to a triangle, `TriangleIndices` -
   drawn as it is and never tessellated again, so shapes cut on a worker thread (a map's tiles, a file, a generator)
   cost the drawing thread nothing to tessellate; it joins the instanced fills like any path. Its optional `Boundary`
@@ -2461,6 +2463,13 @@ All packages share one version.
 
 ### Fixed
 
+- An element drawing many geometries - a map's tiles - that gained or lost one before the others handed every
+  geometry after it to its neighbour's unit, and each was frozen, edged and stroked anew: dragging a vector map
+  stalled the drawing thread for seconds. A geometry now goes back to the unit that already drew it, wherever it
+  stands; the edge's hole test also skips contours whose box cannot hold the probe. A `MeshGeometry` with its
+  `Boundary` gets its fill ready for drawing - vertices, edge, antialiasing ring - where it is processed, on the worker
+  that cut it, instead of on the drawing thread when it first shows. Measured on the Pro sandbox's vector world map over
+  Moscow, a pair of automated drags: about 7.3 s before, 0.5 s after (a raster map: 0.33 s).
 - Giving a geometry a new `Transform` left its bounds and shape where the old one had put them until something else
   changed it; changing the transform's own values already worked.
 - The instanced fills' per-instance buffers were never freed when their renderer went away, and a shared mesh dropped

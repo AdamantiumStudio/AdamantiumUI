@@ -29,6 +29,10 @@ public class MeshGeometry : Geometry
         typeof(ContourCollection), typeof(MeshGeometry),
         new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure, CollectionChangedCallback));
 
+    public static readonly AdamantiumProperty CutBoxProperty = AdamantiumProperty.Register(nameof(CutBox),
+        typeof(Rect), typeof(MeshGeometry),
+        new PropertyMetadata(Rect.Empty, PropertyMetadataOptions.AffectsRender, CutBoxChangedCallback));
+
     private Rect _bounds;
     private bool _boundsStale = true;
     private bool _hasBoundary;
@@ -75,6 +79,17 @@ public class MeshGeometry : Geometry
         set => SetValue(BoundaryProperty, value);
     }
 
+    /// <summary>The box the area was cut to when it is a piece of a larger one - a map tile's square: the
+    /// <see cref="Boundary"/> runs along its sides where the area was cut, and that edge is not antialiased, so pieces
+    /// cut side by side meet without a seam. Empty when the whole boundary is the area's own edge.</summary>
+    public Rect CutBox
+    {
+        get => GetValue<Rect>(CutBoxProperty);
+        set => SetValue(CutBoxProperty, value);
+    }
+
+    protected internal override Rect? FillCutBox => CutBox.IsEmpty ? null : CutBox;
+
     /// <summary>The box round the positions and the boundary, transformed by <see cref="Geometry.Transform"/>.</summary>
     public override Rect Bounds
     {
@@ -90,7 +105,7 @@ public class MeshGeometry : Geometry
     }
 
     public override Geometry Clone() =>
-        new MeshGeometry(Positions ?? [], TriangleIndices ?? [], Boundary) { Transform = Transform };
+        new MeshGeometry(Positions ?? [], TriangleIndices ?? [], Boundary) { Transform = Transform, CutBox = CutBox };
 
     /// <summary>True when the last processing put at least one ring of the <see cref="Boundary"/> - three distinct
     /// points or more - into the mesh; else the edge is worked out of the triangles.</summary>
@@ -190,6 +205,14 @@ public class MeshGeometry : Geometry
         }
 
         mesh.RaiseComponentUpdated();
+    }
+
+    private static void CutBoxChangedCallback(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (a is MeshGeometry mesh)
+        {
+            mesh.RaiseComponentUpdated();
+        }
     }
 
     private void OnCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)

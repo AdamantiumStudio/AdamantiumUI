@@ -1,7 +1,7 @@
 using System.Runtime.InteropServices;
 using Adamantium.Mathematics;
 
-namespace Adamantium.UI.Rendering.RenderUnits;
+namespace Adamantium.UI.Core.Media.Fill;
 
 // One edge of an analytic-AA ring (40 bytes): its two ends and the directions of the edge before it, itself and the one
 // after it, Winding folded into their signs. The vertex stage makes the edge's six corners from it (Ring.fxh).
