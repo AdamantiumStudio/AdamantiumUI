@@ -208,6 +208,74 @@ public class ControlsTests
         });
     }
 
+    // A class added in code to a component that never had its Classes set is its own: it reaches ClassNames, and no
+    // other component gets it - the collection was once one shared default.
+    [Test]
+    public void Classes_AddedWithoutSettingThem_AreTheComponentsOwn()
+    {
+        var first = new ProgressBar();
+        var second = new ProgressBar();
+
+        first.Classes.Add("Ring");
+        var markup = new ProgressBar { Classes = Classes.Parse("Accent") };
+        markup.ClearValue(FundamentalUIComponent.ClassesProperty);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(first.ClassNames, Does.Contain("Ring"));
+            Assert.That(second.Classes, Is.Empty);
+            Assert.That(second.HasClassNames, Is.False);
+            Assert.That(markup.Classes, Is.Empty, "set and cleared, it has none of another's");
+        });
+    }
+
+    // Asking for a component's classes changes nothing: no property change, no value set, ClassNames as it was.
+    [Test]
+    public void Classes_Read_ChangeNothing()
+    {
+        var bar = new ProgressBar();
+        bar.ClassNames.Add("Special");
+        var changes = 0;
+        bar.PropertyChanged += (_, e) => changes += e.Property == FundamentalUIComponent.ClassesProperty ? 1 : 0;
+
+        var first = bar.Classes;
+        var again = bar.Classes;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(again, Is.SameAs(first));
+            Assert.That(changes, Is.Zero);
+            Assert.That(bar.IsSet(FundamentalUIComponent.ClassesProperty), Is.False);
+            Assert.That(bar.ClassNames, Does.Contain("Special"));
+        });
+    }
+
+    // Set to nothing - an empty markup value parses to none - its classes are its own again, a class added restyling it;
+    // a style setting classes and taken away leaves its own as they were.
+    [Test]
+    public void Classes_SetToNothing_OrByAStyle_LeaveTheOwnOnes()
+    {
+        var bar = new ProgressBar { Classes = Classes.Parse("") };
+        bar.Classes.Add("Ring");
+        var same = ReferenceEquals(bar.Classes, bar.Classes);
+        var styled = new ProgressBar();
+        styled.Classes.Add("Own");
+        var style = new Style();
+        style.Selector.Types.Add(typeof(ProgressBar));
+        style.Setters.Add(new Setter("Classes", Classes.Parse("Accent")));
+        styled.AttachStyles(style);
+        var withStyle = styled.ClassNames.ToArray();
+        styled.DetachStyles(style);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(same, Is.True);
+            Assert.That(bar.ClassNames, Does.Contain("Ring"));
+            Assert.That(withStyle, Is.EqualTo(new[] { "Accent" }));
+            Assert.That(styled.ClassNames, Is.EqualTo(new[] { "Own" }), "its own back once the style goes");
+        });
+    }
+
     // ---- A non-Stretch ContentPresenter (e.g. a Button whose ContentPresenter binds HorizontalAlignment to the
     // control's HorizontalContentAlignment=Center) must shrink to its content and stay put - not collapse to zero and
     // spill the content outside. Repro for the button-chrome regression.

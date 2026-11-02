@@ -65,7 +65,7 @@ public sealed class WindowDialogHost : IDialogHost
             {
                 shell.Owner = asker;
             }
-            shell.Classes = new Classes([.. shell.Classes ?? [], "Dialog"]);
+            shell.Classes = new Classes([.. shell.Classes, "Dialog"]);
 
             shell.Title = !string.IsNullOrEmpty(aware?.Title) ? aware.Title : dialog?.Title ?? string.Empty;
             if (string.IsNullOrEmpty(aware?.Title) && dialog is INotifyPropertyChanged observed)
