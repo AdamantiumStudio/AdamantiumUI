@@ -126,6 +126,8 @@ internal sealed class FakeRenderUnit : IRenderUnit
     // Mirror the production Match: same payload type -> reuse + update, otherwise replace.
     public bool Match(IDrawCommand drawCommand) => _command.Payload.GetType() == drawCommand.Payload.GetType();
 
+    public object Content => (_command.Payload as IRenderCachePolicy)?.Content;
+
     public void Dispose() => DisposeCount++;
     public void DeferDispose() => DeferDisposeCount++;
 }

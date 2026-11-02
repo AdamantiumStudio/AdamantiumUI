@@ -33,4 +33,7 @@ public interface IRenderUnit : IDisposable
     void Render();
     void UpdateWithDrawCommand(IDrawCommand command);
     bool Match(IDrawCommand drawCommand);
+
+    /// <summary>The <see cref="IRenderCachePolicy.Content"/> of the draw this unit holds, or null.</summary>
+    object Content => null;
 }

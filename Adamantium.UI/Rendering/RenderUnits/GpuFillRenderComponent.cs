@@ -4,7 +4,9 @@ using System.Runtime.InteropServices;
 using Adamantium.Graphics;
 using Adamantium.Graphics.Core;
 using Adamantium.Mathematics;
+using Adamantium.UI.Core;
 using Adamantium.UI.Core.Media;
+using Adamantium.UI.Core.Media.Fill;
 using Adamantium.UI.FX;
 using Adamantium.Vulkan.Core;
 using Buffer = Adamantium.Graphics.Buffer;
@@ -35,13 +37,14 @@ public sealed class GpuFillRenderComponent : UIRenderComponent
     public Brush Brush { get; set; }
 
     public GpuFillRenderComponent(IGraphicsDevice device, UIBasicEffect uiBasicEffect, FillFringeEffect effect,
-        IReadOnlyList<(Vector2<double>[] Points, bool IsClosed)> contours, Brush brush, GpuBufferManager bufferManager) : base(device, uiBasicEffect, null, bufferManager)
+        IReadOnlyList<(Vector2<double>[] Points, bool IsClosed)> contours, Brush brush, GpuBufferManager bufferManager,
+        Rect? cut = null) : base(device, uiBasicEffect, null, bufferManager)
     {
         _device = (GraphicsDevice)device;
         _effect = effect;
         Brush = brush;
 
-        _ring = FringeGeometry.BuildRing(FringeGeometry.Build(contours));
+        _ring = FringeGeometry.BuildRing(FringeGeometry.Build(contours), cut);
         _localBounds = ComputeLocalBounds(contours);
 
         // Rented from the buffer manager (ReusableBuffer), not allocated per frame: a same-size geometry change (a
@@ -72,9 +75,10 @@ public sealed class GpuFillRenderComponent : UIRenderComponent
     // Same-topology update (a resize): a re-tessellation that yields a ring of the SAME size rewrites it into the
     // existing slot - no new component, no allocation. Returns false when the size differs (a contour added/removed, or
     // a CornerRadius change altered an arc's segment count), so the caller rebuilds the component.
-    public bool TryUpdateContours(IReadOnlyList<(Vector2<double>[] Points, bool IsClosed)> contours, Brush brush)
+    public bool TryUpdateContours(IReadOnlyList<(Vector2<double>[] Points, bool IsClosed)> contours, Brush brush,
+        Rect? cut = null)
     {
-        var ring = FringeGeometry.BuildRing(FringeGeometry.Build(contours));
+        var ring = FringeGeometry.BuildRing(FringeGeometry.Build(contours), cut);
         if (ring.Length != _ring.Length) return false;
 
         _ring = ring;
