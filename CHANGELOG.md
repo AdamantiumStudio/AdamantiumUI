@@ -2493,7 +2493,13 @@ All packages share one version.
   round.
 - A dash animated by its phase jumped once a loop where an entry was shorter than a pixel.
 - A stroke of one contour past 32 768 points blended twice at the joins of its later pieces.
-
+- A `DropDown` whose list was replaced under its choice kept showing a row the list no longer had - "Column 1" over
+  a list of "Name" and "Sum". As a `ListBox` and a `SegmentedControl` do, the choice now follows its item to where it
+  stands, or its value to the new row that holds it - a `SelectedValue` named before its row too - and is cleared when
+  neither is there - an emptied list too, as WPF's. A row added never takes the choice away, so items added one by
+  one from markup reach a `SelectedIndex` named before them without clearing it on the way, and a `SelectedItem` named
+  before its list comes is chosen when its row does. Nobody picked anything, so its `Command` does not run; a command's value the new list lacks is shown
+  as the command reports it.
 - A stroke drawn on the CPU threw a mitred corner out without end where the line turned nearly back on itself -
   common in map data: a corner of a 10-pixel pen reached a thousand pixels past it. Its tip now reaches no farther than
   four half-thicknesses, as the GPU stroke already clamped it.
