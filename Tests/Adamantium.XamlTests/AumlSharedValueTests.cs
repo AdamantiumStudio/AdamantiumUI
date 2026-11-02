@@ -63,6 +63,25 @@ public class AumlSharedValueTests
         Assert.That(code, Does.Not.Contain("PerTargetValue"), "one dictionary entry, one object - that stays the default");
     }
 
+    // Classes belong to one component: a keyed set of them, and one a setter gives, is built per target unasked.
+    [Test]
+    public void ClassesAreBuiltPerTarget_InADictionaryAndASetter()
+    {
+        var entry = AumlCodegenHarness.Generate(
+            DictionaryHeader + "<Classes x:Key=\"Marks\"/></ResourceDictionary>", out var entryErrors);
+        var setter = AumlCodegenHarness.Generate(
+            StyleSetHeader + "<Style Selector=\"Button\"><Setter Property=\"Classes\"><Setter.Value><Classes/>" +
+            "</Setter.Value></Setter></Style></StyleSet>", out var setterErrors);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(entryErrors, Is.Empty, AumlCodegenHarness.Errors(entryErrors));
+            Assert.That(setterErrors, Is.Empty, AumlCodegenHarness.Errors(setterErrors));
+            Assert.That(entry, Does.Contain("PerTargetValue"));
+            Assert.That(setter, Does.Contain("PerTargetValue"));
+        });
+    }
+
     [Test]
     public void ASharedFalseEntryIsStoredAsAFactory()
     {

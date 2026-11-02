@@ -276,14 +276,14 @@ public class ControlsTests
         });
     }
 
-    // A style gives each component a copy of its classes: a class one component adds is that component's alone, going
-    // with the style's copy; the style does not hold the components it reached.
+    // A style's classes, per target as Classes is: a class one component adds is that component's alone, going with
+    // its set of the style's; the style does not hold the components it reached.
     [Test]
     public void Classes_OfAStyle_AreNotChangedThroughAComponent_NorHoldIt()
     {
         var style = new Style();
         style.Selector.Types.Add(typeof(ProgressBar));
-        style.Setters.Add(new Setter("Classes", Classes.Parse("Accent")));
+        style.Setters.Add(new Setter("Classes", new PerTargetValue(() => Classes.Parse("Accent"))));
         var a = new ProgressBar();
         var b = new ProgressBar();
         a.AttachStyles(style);
@@ -301,9 +301,8 @@ public class ControlsTests
         {
             Assert.That(withStyle.Item1, Is.EqualTo(new[] { "Accent", "Mine" }));
             Assert.That(withStyle.Item2, Is.EqualTo(new[] { "Accent" }), "the style's classes not changed through a");
-            Assert.That(a.ClassNames, Is.Empty, "the style's copy gone with it");
+            Assert.That(a.ClassNames, Is.Empty, "its set of the style's gone with it");
             Assert.That(held.IsAlive, Is.False, "the style holds no component it reached");
-            Assert.That(((Setter)style.Setters[0]).Value, Is.EqualTo(Classes.Parse("Accent")), "the style's own as it was");
         });
     }
 

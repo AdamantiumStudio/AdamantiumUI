@@ -2498,6 +2498,9 @@ All packages share one version.
 
 ### Fixed
 
+- `Classes` is `[PerTarget]`: a set of classes markup gives a setter, or keeps under a key, is built for each component
+  it reaches, not one collection every component changed and watched - which held each component for the style's
+  life. A component's own collection is watched before another thread can see it.
 - Text drawn with no solid-color foreground - none set, or a gradient where the text is drawn on its own - failed the
   whole frame; it now draws nothing.
 - `Classes` of a component that never had them set was one collection shared by every component: a class added to it
