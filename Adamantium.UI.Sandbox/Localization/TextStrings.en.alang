@@ -196,4 +196,27 @@
     <Phrase Key="ColorImagesIn" Text=" images in "/>
     <Phrase Key="ColorAllLabel" Text="All 600 at once, as the atlas kept them before it let images go: "/>
     <Phrase Key="ColorAtlasNote" Text="Layers once taken stay taken: the video card does not take a layer of a texture back. Lowering the budget stops the atlas growing - it does not give memory back until the application is started again."/>
+    <Phrase Key="TopicPath" Text="Text on a path"/>
+    <Phrase Key="PathTitle" Text="TextOnPath lays a line of text along a path - each letter stands on it, turned the way it runs. One text and one look on all the paths below; the street is drawn right to left and still reads left to right. Round the circle the text goes on across the seam. Text longer than its path is clipped to the letters on it, ended with an ellipsis, shrunk, or left out whole, as chosen below."/>
+    <Phrase Key="PathOverflowLabel" Text="Longer than the path:"/>
+    <Phrase Key="PathClip" Text="Clip"/>
+    <Phrase Key="PathExtend" Text="Go on past the end"/>
+    <Phrase Key="PathEllipsis" Text="Ellipsis"/>
+    <Phrase Key="PathShrink" Text="Shrink"/>
+    <Phrase Key="PathHide" Text="Whole or nothing"/>
+    <Phrase Key="PathTextLabel" Text="Text:"/>
+    <Phrase Key="PathSizeLabel" Text="Size:"/>
+    <Phrase Key="PathStartLabel" Text="Along:"/>
+    <Phrase Key="PathAcrossLabel" Text="Across:"/>
+    <Phrase Key="PathTurnLabel" Text="Most turn between letters:"/>
+    <Phrase Key="PathAlignStart" Text="From the start"/>
+    <Phrase Key="PathAlignCenter" Text="In the middle"/>
+    <Phrase Key="PathAlignEnd" Text="To the end"/>
+    <Phrase Key="PathKeepUpright" Text="Keep upright"/>
+    <Phrase Key="PathShowLine" Text="Show the path"/>
+    <Phrase Key="PathCircle" Text="Circle"/>
+    <Phrase Key="PathWave" Text="Wave"/>
+    <Phrase Key="PathSpiral" Text="Spiral"/>
+    <Phrase Key="PathCurve" Text="Curve"/>
+    <Phrase Key="PathStreet" Text="Street, drawn right to left"/>
 </Language>

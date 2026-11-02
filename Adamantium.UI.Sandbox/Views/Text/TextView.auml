@@ -53,6 +53,12 @@
                              MarginRight="6"
                              MarginBottom="6"
                              IsChecked="{Binding Stand, Converter={conv:EnumToBoolConverter}, ConverterParameter=Typesetting, Mode=TwoWay}"/>
+                <RadioButton AutomationProperties.AutomationId="PathTopic"
+                             Classes="Toggle"
+                             Content="{Localize TextStrings.TopicPath}"
+                             MarginRight="6"
+                             MarginBottom="6"
+                             IsChecked="{Binding Stand, Converter={conv:EnumToBoolConverter}, ConverterParameter=Path, Mode=TwoWay}"/>
             </WrapPanel>
 
             <!-- The topic itself, navigated in by key: leaving a topic drops its markup, and what the topics share (the

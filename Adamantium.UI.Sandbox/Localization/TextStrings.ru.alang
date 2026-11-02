@@ -196,4 +196,27 @@
     <Phrase Key="ColorImagesIn" Text=" картинок в "/>
     <Phrase Key="ColorAllLabel" Text="Все 600 сразу — столько атлас держал, пока не умел выбрасывать: "/>
     <Phrase Key="ColorAtlasNote" Text="Занятые слои остаются занятыми: видеокарта не забирает слой текстуры обратно. Снижение бюджета останавливает рост атласа, но не возвращает память до перезапуска приложения."/>
+    <Phrase Key="TopicPath" Text="Текст по кривой"/>
+    <Phrase Key="PathTitle" Text="TextOnPath кладёт строку текста вдоль пути: каждая буква стоит на нём и повёрнута по его ходу. Один текст и одно оформление на всех путях ниже; улица нарисована справа налево и всё равно читается слева направо. По окружности текст идёт дальше через шов. Текст длиннее пути обрезается до букв на нём, заканчивается многоточием, уменьшается или не рисуется целиком — как выбрано ниже."/>
+    <Phrase Key="PathOverflowLabel" Text="Длиннее пути:"/>
+    <Phrase Key="PathClip" Text="Обрезать"/>
+    <Phrase Key="PathExtend" Text="Продолжить за конец"/>
+    <Phrase Key="PathEllipsis" Text="Многоточие"/>
+    <Phrase Key="PathShrink" Text="Уменьшить"/>
+    <Phrase Key="PathHide" Text="Всё или ничего"/>
+    <Phrase Key="PathTextLabel" Text="Текст:"/>
+    <Phrase Key="PathSizeLabel" Text="Размер:"/>
+    <Phrase Key="PathStartLabel" Text="Вдоль:"/>
+    <Phrase Key="PathAcrossLabel" Text="Поперёк:"/>
+    <Phrase Key="PathTurnLabel" Text="Наибольший поворот между буквами:"/>
+    <Phrase Key="PathAlignStart" Text="От начала"/>
+    <Phrase Key="PathAlignCenter" Text="Посередине"/>
+    <Phrase Key="PathAlignEnd" Text="К концу"/>
+    <Phrase Key="PathKeepUpright" Text="Держать прямо"/>
+    <Phrase Key="PathShowLine" Text="Показывать путь"/>
+    <Phrase Key="PathCircle" Text="Окружность"/>
+    <Phrase Key="PathWave" Text="Волна"/>
+    <Phrase Key="PathSpiral" Text="Спираль"/>
+    <Phrase Key="PathCurve" Text="Кривая"/>
+    <Phrase Key="PathStreet" Text="Улица, нарисованная справа налево"/>
 </Language>

@@ -12,6 +12,12 @@
         <Setter Property="VerticalTextAlignment" Value="Center"/>
     </Style>
 
+    <!-- Text along a path, in the color and size of plain text. -->
+    <Style Selector="TextOnPath">
+        <Setter Property="Foreground" Value="{ObservableResource TextFillColorPrimary}"/>
+        <Setter Property="FontSize" Value="{ResourceReference FontSizeBody}"/>
+    </Style>
+
     <!-- A link stands out in the accent color, on top of its underline. -->
     <Style Selector="Hyperlink">
         <Setter Property="Foreground" Value="{ThemeResource AccentFillColorDefault}"/>
