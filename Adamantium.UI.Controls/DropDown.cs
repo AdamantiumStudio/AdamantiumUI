@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
@@ -344,7 +345,7 @@ public class DropDown : Selector
 
     private void RunCommand()
     {
-        if (!_showingAnswer && SelectedItem != null && Command is { } command)
+        if (!_followingItems && !_showingAnswer && SelectedItem != null && Command is { } command)
         {
             _answer = null;
             CommandManager.ExecuteFrom(command, SelectedValue, this, null);
@@ -614,6 +615,73 @@ public class DropDown : Selector
         base.OnPropertyChanged(e);
         if (e.Property == ItemTemplateProperty || e.Property == ItemTemplateSelectorProperty)
             UpdateDisplayContent();
+    }
+
+    private bool _followingItems;
+
+    // Items changed under the choice: it follows its item - or its value - to where it now stands, and is cleared when
+    // gone, never left showing a row the list no longer has; an added row never takes it away. A choice named before
+    // the list came waits for it. Nobody picked anything, so no command runs.
+    protected override void OnItemsChanged(NotifyCollectionChangedEventArgs e)
+    {
+        bool followed;
+        _followingItems = true;
+        try
+        {
+            base.OnItemsChanged(e);
+            followed = FollowSelection(e.Action is NotifyCollectionChangedAction.Add or NotifyCollectionChangedAction.Move);
+        }
+        finally
+        {
+            _followingItems = false;
+        }
+
+        // A list that lost the command's value shows the value again, as the command reports it.
+        if (followed && Command is RoutedCommand)
+        {
+            UpdateCommandState();
+        }
+        else
+        {
+            UpdateDisplayContent();
+        }
+    }
+
+    // Moves the choice to where its item or value now stands; true where it moved or was cleared.
+    private bool FollowSelection(bool nothingRemoved)
+    {
+        var selected = SelectedItem;
+        if (Items.Count == 0)
+        {
+            if (selected == null || AwaitsSelection) return false;
+
+            SelectSingle(-1);
+            return true;
+        }
+
+        var pending = TakePendingSelectionIndex();
+        if (pending >= 0)
+        {
+            SelectSingle(pending);
+            return true;
+        }
+
+        var index = SelectedIndex;
+        if (selected != null && index >= 0 && index < Items.Count && Equals(Items[index], selected)) return false;
+
+        var found = selected != null ? IndexOfItem(selected) : -1;
+        if (found < 0 && SelectedValue != null) found = IndexOfValue(SelectedValue);
+
+        if (found >= 0)
+        {
+            SelectSingle(found);
+            return true;
+        }
+
+        if (selected == null || nothingRemoved) return false;
+
+        SelectSingle(-1);
+        return true;
     }
 
     private DropDownItem _shown;
