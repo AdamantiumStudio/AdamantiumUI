@@ -118,7 +118,7 @@
              switches the theme's look on and off, a class the control had itself stays, and a class two triggers give
              stays while either gives it. Under each control - the classes it carries now. -->
         <TextBlock Text="{Localize ResourcesStrings.ClassesTitle}" FontSize="18" Margin="0,28,0,4"/>
-        <TextBlock Text="{Localize ResourcesStrings.ClassesHint}" Margin="0,0,0,10"/>
+        <TextBlock Text="{Localize ResourcesStrings.ClassesHint}" TextWrapping="WrapByWords" Margin="0,0,0,10"/>
         <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
             <CheckBox Content="{Localize ResourcesStrings.ClassesAccent}" IsChecked="{Binding StyleGivesAccent, Mode=TwoWay}"
                       Margin="0,0,24,0"/>

@@ -1944,6 +1944,9 @@ All packages share one version.
 
 ### Changed
 
+- Setters of `Classes` with a set of names - of several styles, of a style and one based on it, of triggers - join their
+  classes on a component instead of the strongest replacing the rest: `Classes="x"` under `Classes="y"` gives `x y`. A
+  `{Binding}` or a resource for `Classes` still sets the collection, and setters' classes go into the one it sets.
 - A stroke of solid lines, and of dashes with flat ends, keeps only its points: its vertex shader works out each
   vertex of the ribbon where it is drawn, at whatever width and scale, so nothing is expanded or kept per vertex - about
   16 bytes a point instead of the ribbon's 264 (miter) to 2 376 (round join) - and a width or zoom that changes every

@@ -269,6 +269,29 @@ public class StyleTriggerTests
         });
     }
 
+    // A style whose trigger gives a class as the style attaches restyles inside its own attaching: it is attached once,
+    // with one activator for its trigger.
+    [Test]
+    public void AStyle_GivingAClassAsItAttaches_IsAttachedOnce()
+    {
+        var vm = new ActiveVm { IsActive = true };
+        var button = new Button { DataContext = vm };
+        var trigger = new DataTrigger { Binding = new Binding("IsActive"), Value = "true" };
+        trigger.Add(new Setter("Classes", "Accent"));
+        var giving = new Style();
+        giving.Selector.Types.Add(typeof(Button));
+        giving.Triggers.Add(trigger);
+        button.Styles.Add(giving);
+
+        button.AttachStyles(giving);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(button.ClassNames, Is.EqualTo(new[] { "Accent" }));
+            Assert.That(button.StyleActivators, Has.Count.EqualTo(1));
+        });
+    }
+
     private sealed class ActiveVm : System.ComponentModel.INotifyPropertyChanged
     {
         private bool _isActive;

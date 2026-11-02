@@ -16,6 +16,8 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
     private Classes _ownClasses;
     private Dictionary<object, Classes> _givers;
     private HashSet<string> _givenClasses;
+    private bool _restyleWhenStyled;
+    private List<Style> _attaching;
     private IFundamentalUIComponent parent;
     private TrackingCollection<IFundamentalUIComponent> logicalChildren;
     private Dictionary<object, Action> _follows;
@@ -61,18 +63,20 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
         var o = adamantiumAdamantiumComponent as FundamentalUIComponent;
         if (o == null) return;
 
-        if (e.OldValue is Classes oldClasses)
+        // The component's own collection stays watched for good: set as the value, it is neither watched twice nor let go.
+        if (e.OldValue is Classes oldClasses && !ReferenceEquals(oldClasses, o._ownClasses))
         {
             oldClasses.CollectionChanged -= o.ClassesCollectionChanged;
         }
 
         var from = e.OldValue as Classes ?? o._ownClasses;
-        if (e.NewValue is Classes newClasses)
+        var to = e.NewValue as Classes;
+        if (to != null && !ReferenceEquals(to, o._ownClasses))
         {
-            o.CarryGivenClasses(from, newClasses);
-            newClasses.CollectionChanged += o.ClassesCollectionChanged;
+            if (!ReferenceEquals(from, to)) o.CarryGivenClasses(from, to);
+            to.CollectionChanged += o.ClassesCollectionChanged;
         }
-        else if (o._givenClasses is { Count: > 0 })
+        else if (o._givenClasses is { Count: > 0 } && !ReferenceEquals(from, to ?? o._ownClasses))
         {
             var own = o.OwnClasses();
             own.CollectionChanged -= o.ClassesCollectionChanged;
@@ -220,6 +224,7 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
 
         if (IsStyleApplied || _attachedStyles is { Count: > 0 } || StylesOrNull is { Count: > 0 })
         {
+            _restyleWhenStyled |= !IsStyleApplied;
             RestyleForClasses();
         }
     }
@@ -765,7 +770,24 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
     {
         foreach (var style in styles)
         {
-            if (!style.TryAttach(this))
+            // A style giving classes restyles while it attaches; the restyle must not attach it a second time.
+            if (_attaching != null && _attaching.Contains(style))
+            {
+                continue;
+            }
+
+            (_attaching ??= new List<Style>()).Add(style);
+            bool attached;
+            try
+            {
+                attached = style.TryAttach(this);
+            }
+            finally
+            {
+                _attaching.Remove(style);
+            }
+
+            if (!attached)
             {
                 continue;
             }
@@ -1082,6 +1104,13 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
         AttachScopedStyles();
 
         IsStyleApplied = true;
+
+        // Classes given while being styled match the theme's and the scopes' styles only now they are known.
+        if (_restyleWhenStyled)
+        {
+            _restyleWhenStyled = false;
+            RestyleForClasses();
+        }
     }
     
     public void InvalidateStyles()

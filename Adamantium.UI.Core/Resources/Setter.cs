@@ -91,7 +91,7 @@ public class Setter : ISetter, IEquatable<Setter>
                value is string or Classes or PerTargetValue;
     }
 
-    /// <summary>The classes a setter value giving them names.</summary>
+    /// <summary>The classes a setter value that gives classes names.</summary>
     internal static Classes ClassesOf(object value)
     {
         var given = value is PerTargetValue perTarget ? perTarget.Create() : value;
