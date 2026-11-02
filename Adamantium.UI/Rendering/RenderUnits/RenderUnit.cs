@@ -217,11 +217,12 @@ public abstract class RenderUnit<TPayload> : DeferredDisposableObject, IRenderUn
         FillFringeRenderer.RenderData = DrawCommand.RenderData;
     }
 
-    // The closed contours (>= 3 points) of a solid fill that get an analytic-AA fringe. Null when there are none.
+    // The closed contours (>= 3 points) of a solid fill that get an analytic-AA fringe. Null when there are none, or when
+    // there is no body for them to edge (a geometry of lines only).
     private static List<(Adamantium.Mathematics.Vector2<double>[] Points, bool IsClosed)> BuildFillContours(Geometry geometry)
     {
         var mesh = geometry?.Mesh;
-        if (mesh == null || mesh.Contours.Count == 0) return null;
+        if (mesh is not { HasPoints: true } || mesh.Contours.Count == 0) return null;
 
         List<(Adamantium.Mathematics.Vector2<double>[] Points, bool IsClosed)> contours = [];
         foreach (var contour in mesh.Contours)
@@ -364,7 +365,7 @@ public class GeometryRenderUnit : RenderUnit<GeometryPayload>
         // No ProcessGeometry here: the payload tessellated on the RECORD thread (see GeometryPayload). The applier only
         // freezes a copy of the result.
         _frozenMesh = FrozenMesh.From(Payload.Geometry);   // freeze the tessellated mesh for the instanced path
-        GeometryRenderer = new GeometryRenderComponent(GraphicsDevice, UIBasicEffect, Payload.Geometry.Mesh, Payload.LiveBrush, BufferManager, ResourceFactory);
+        GeometryRenderer = new GeometryRenderComponent(GraphicsDevice, UIBasicEffect, Payload.Geometry.Mesh, _frozenMesh, Payload.LiveBrush, BufferManager, ResourceFactory);
         GeometryRenderer.RenderData = DrawCommand.RenderData;
         GeometryRenderer.Owner = DrawCommand.Component;
         ProcessFillFringe(Payload.Geometry, Payload.Brush);
@@ -513,7 +514,7 @@ public class GeometryRenderUnit : RenderUnit<GeometryPayload>
         {
             // Tessellated already, on the record thread that built inputPayload - the applier must not rebuild it here.
             _frozenMesh = FrozenMesh.From(inputPayload.Geometry);   // re-freeze the re-tessellated mesh
-            ((GeometryRenderComponent)GeometryRenderer).UpdateGeometry(inputPayload.Geometry.Mesh);
+            ((GeometryRenderComponent)GeometryRenderer).UpdateGeometry(inputPayload.Geometry.Mesh, _frozenMesh);
         }
         ((GeometryRenderComponent)GeometryRenderer).Background = inputPayload.LiveBrush;
 

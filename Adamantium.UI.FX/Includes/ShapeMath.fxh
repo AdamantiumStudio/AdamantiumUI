@@ -156,31 +156,4 @@ float EllipseCurvRadius(float2 p, float2 h)
     return (e * e * e) / max(h.x * h.y, 1e-6);
 }
 
-// The ring's vertex, expanded. Shared by every fringe pass (solid / pattern / gradient): they differ only in WHICH
-// record supplies the matrix and the color, and the expansion itself must stay one definition - it is the thing that
-// makes the ring exactly one device pixel wide. `coverage` comes out 1 on the contour and 0 on the outer edge.
-float4 ExpandFringe(FringeVertex v, float4x4 m, out float coverage)
-{
-    float4 clip = mul(float4(v.Position, 0.0, 1.0), m);
-    float outer = dot(v.Dir0, v.Dir0) + dot(v.Dir1, v.Dir1);
-    if (outer > 0.0)
-    {
-        // Edge directions -> PIXEL space (w = 0 drops the translation), so the miter is perpendicular to the edge as the
-        // rasterizer sees it - correct under anisotropic scale, skew and rotation alike.
-        float2 halfVp = max(ViewportSize, float2(1.0, 1.0)) * 0.5;
-        float w = max(clip.w, 1e-6);
-        float2 e0 = mul(float4(v.Dir0, 0.0, 0.0), m).xy / w * halfVp;
-        float2 e1 = mul(float4(v.Dir1, 0.0, 0.0), m).xy / w * halfVp;
-        e0 = length(e0) > 1e-9 ? normalize(e0) : float2(0.0, 0.0);
-        e1 = length(e1) > 1e-9 ? normalize(e1) : float2(0.0, 0.0);
-        float2 n0 = float2(-e0.y, e0.x);
-        float2 n1 = float2(-e1.y, e1.x);
-        float2 sum = n0 + n1;
-        float2 miter = length(sum) > 1e-4 ? normalize(sum) : n0;   // a 180-degree reversal has no bisector: use one normal
-        float denom = max(dot(miter, n0), 0.25);                   // clamp the corner spike to <= 4x
-        clip.xy += miter * (FringePixels / denom) / halfVp * w;
-    }
-    coverage = outer > 0.0 ? 0.0 : 1.0;
-    return clip;
-}
 

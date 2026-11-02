@@ -23,11 +23,11 @@ public sealed class GpuFillRenderComponent : UIRenderComponent
 
     private readonly GraphicsDevice _device;
     private readonly FillFringeEffect _effect;
-    private readonly ReusableBuffer _vertexBuffer;
-    private FringeVertex[] _ring;
+    private readonly ReusableBuffer _ringBuffer;
+    private RingEdge[] _ring;
     private Vector4F _localBounds;   // shape local bounds (minX, minY, sizeX, sizeY): the fragment->gradient uv basis
 
-    private ulong RingBytes => (ulong)(_ring.Length * Marshal.SizeOf<FringeVertex>());
+    private ulong RingBytes => (ulong)(_ring.Length * Marshal.SizeOf<RingEdge>());
 
     // The fill brush, read LIVE at Render (like the body's GeometryRenderComponent.Background) so an in-place color
     // change or a cheap brush repoint shows without rebuilding the contour. A non-solid brush => the fringe doesn't draw
@@ -46,9 +46,10 @@ public sealed class GpuFillRenderComponent : UIRenderComponent
 
         // Rented from the buffer manager (ReusableBuffer), not allocated per frame: a same-size geometry change (a
         // resize) rewrites the ring into the existing slot with no Vulkan allocation.
-        _vertexBuffer = ToDispose(BufferManager.CreateBuffer(BufferUsageFlags.VertexBuffer, FillMemory));
-        _vertexBuffer.Reserve(RingBytes);
-        _vertexBuffer.Invalidate();
+        _ringBuffer = ToDispose(BufferManager.CreateBuffer(
+            BufferUsageFlags.StorageBuffer | BufferUsageFlags.ShaderDeviceAddress, FillMemory));
+        _ringBuffer.Reserve(RingBytes);
+        _ringBuffer.Invalidate();
     }
 
     // Bounding box of all contour points (local geometry space) as (minX, minY, sizeX, sizeY) - the gradient uv basis, so
@@ -77,7 +78,7 @@ public sealed class GpuFillRenderComponent : UIRenderComponent
         if (ring.Length != _ring.Length) return false;
 
         _ring = ring;
-        _vertexBuffer.Invalidate();   // re-upload the ring to the current slot
+        _ringBuffer.Invalidate();   // re-upload the ring to the current slot
         Brush = brush;
         _localBounds = ComputeLocalBounds(contours);
         return true;
@@ -91,7 +92,7 @@ public sealed class GpuFillRenderComponent : UIRenderComponent
         if (!AnalyticAa.Enabled || _ring.Length == 0) return;
         if (Brush is not (SolidColorBrush or GradientBrush or PatternBrush or NoiseBrush)) return;
 
-        var vertices = _vertexBuffer.Acquire(RingBytes, out var write);
+        var vertices = _ringBuffer.Acquire(RingBytes, out var write);
         if (write) vertices.SetData(_ring, 0, (uint)_ring.Length);
     }
 
@@ -123,17 +124,19 @@ public sealed class GpuFillRenderComponent : UIRenderComponent
             _effect.IsGradient.SetValue(0);
         }
 
-        _device.VertexType = typeof(FringeVertex);
+        _device.VertexType = null;   // the ring is read by address, six corners per edge
         _device.PolygonMode = PolygonMode.Fill;
         _device.PrimitiveTopology = PrimitiveTopology.TriangleList;
         _device.ColorBlendEquation = ColorBlendEquations.AlphaBlend;
         _device.DepthCompareFunction = CompareOp.Always;
         _device.DepthTestEnabled = true;
         _device.DepthWriteEnable = true;
+        var ring = _ringBuffer.Acquire(RingBytes, out var write);
+        if (write) ring.SetData(_ring, 0, (uint)_ring.Length);
+        _effect.RingEdges.SetValue(ring.GetDeviceAddress());
         _effect.FillFringeDrawPass.Apply();
 
-        _device.SetVertexBuffer(_vertexBuffer.Acquire(RingBytes, out _));   // the slot PreRender uploaded this frame
-        _device.Draw((uint)_ring.Length, 1);
+        _device.Draw((uint)_ring.Length * 6, 1);
     }
 
     // Push the fill gradient into the fringe Draw uniforms (packed by the shared GradientBake, same as the fill batch), so

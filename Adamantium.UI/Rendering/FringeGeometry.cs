@@ -24,51 +24,34 @@ internal static class FringeGeometry
         return built;
     }
 
-    /// <summary>The ring's triangles for one mesh's contours, laid out as ONE vertex list (6 verts per contour segment,
-    /// contours back to back) so a shared ring is a single draw.</summary>
-    public static FringeVertex[] BuildRing(List<(Vector2<double>[] Points, float Winding)> contours)
+    /// <summary>The ring for one mesh's contours as ONE list of edges (contours back to back), so a shared ring is a single
+    /// draw of six corners per edge.</summary>
+    public static RingEdge[] BuildRing(List<(Vector2<double>[] Points, float Winding)> contours)
     {
         var total = 0;
-        foreach (var (points, _) in contours) total += points.Length * 6;
-        var verts = new FringeVertex[total];
+        foreach (var (points, _) in contours) total += points.Length;
+        var edges = new RingEdge[total];
 
-        var v = 0;
+        var e = 0;
         foreach (var (points, winding) in contours)
         {
             var n = points.Length;
             for (var i = 0; i < n; i++)
             {
                 var ni = (i + 1) % n;
-                var a = new Vector2F((float)points[i].X, (float)points[i].Y);
-                var b = new Vector2F((float)points[ni].X, (float)points[ni].Y);
-                EdgeDirs(points, i, winding, out var a0, out var a1);
-                EdgeDirs(points, ni, winding, out var b0, out var b1);
-
-                // Two triangles between the contour edge (inner, no directions -> never offset) and the outer edge.
-                verts[v++] = Inner(a);
-                verts[v++] = Outer(a, a0, a1);
-                verts[v++] = Inner(b);
-                verts[v++] = Outer(a, a0, a1);
-                verts[v++] = Outer(b, b0, b1);
-                verts[v++] = Inner(b);
+                // Winding folded into the directions' sign: reversing a direction reverses its 90-degree normal, which is
+                // how a hole feathers inward.
+                edges[e++] = new RingEdge
+                {
+                    A = new Vector2F((float)points[i].X, (float)points[i].Y),
+                    B = new Vector2F((float)points[ni].X, (float)points[ni].Y),
+                    InDir = SafeDir(points[i] - points[(i + n - 1) % n]) * winding,
+                    EdgeDir = SafeDir(points[ni] - points[i]) * winding,
+                    OutDir = SafeDir(points[(ni + 1) % n] - points[ni]) * winding
+                };
             }
         }
-        return verts;
-    }
-
-    private static FringeVertex Inner(Vector2F pos) => new() { Position = pos };
-
-    private static FringeVertex Outer(Vector2F pos, Vector2F d0, Vector2F d1) => new() { Position = pos, Dir0 = d0, Dir1 = d1 };
-
-    // The two adjacent edge directions at contour point i, with Winding folded into their sign (reversing a direction
-    // reverses its 90-degree normal, which is how a hole feathers inward). Closed loop => i always has both neighbors.
-    private static void EdgeDirs(Vector2<double>[] points, int i, float winding, out Vector2F d0, out Vector2F d1)
-    {
-        var n = points.Length;
-        var prev = (i + n - 1) % n;
-        var next = (i + 1) % n;
-        d0 = SafeDir(points[i] - points[prev]) * winding;
-        d1 = SafeDir(points[next] - points[i]) * winding;
+        return edges;
     }
 
     private static Vector2F SafeDir(Vector2<double> v)

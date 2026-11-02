@@ -79,12 +79,7 @@ struct PatternGeomData
 // ---- InstancedFringe pass: the analytic-AA fringe of the SAME instances, as one instanced draw --------------------
 // Every instance shares one scale-free ring (FringeGeometry.cs) and reads the body's GeometryInstance buffer; width is
 // applied here in device pixels.
-struct FringeVertex
-{
-    float2 Position : POSITION;
-    float2 Dir0     : TEXCOORD0;   // incoming edge direction, Winding folded into its sign; zero on the contour itself
-    float2 Dir1     : TEXCOORD1;   // outgoing edge direction
-};
+// The ring's corner (FringeVertex) and its edge records live in Ring.fxh.
 
 struct FringePSInput
 {

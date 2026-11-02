@@ -149,7 +149,7 @@ public class InstancedFillCollectorTests
 
     private InstancedFillCollector NewCollector()
     {
-        var collector = new InstancedFillCollector(_device, new GpuBufferManager(_device));
+        var collector = new InstancedFillCollector(_device);
         collector.BeginFrame();
         return collector;
     }

@@ -25,7 +25,7 @@ internal sealed class FrozenMesh
     /// <summary>The analytic-AA ring for this mesh: the same triangles every instance of it needs, so the collector
     /// uploads ONE of them per key and draws it instanced instead of one fringe draw per element. Empty when the mesh
     /// has no closed boundary to feather.</summary>
-    public FringeVertex[] Ring { get; }
+    public RingEdge[] Ring { get; }
 
     /// <summary>The mesh's closed boundary loops in LOCAL space - the same ones the ring is built from, kept because a
     /// halo needs a distance field baked from them and re-deriving loops on the render thread would mean reading the
@@ -33,7 +33,7 @@ internal sealed class FrozenMesh
     public List<(Vector2<double>[] Points, bool IsClosed)> Loops { get; }
 
     private FrozenMesh(UIVertex[] vertices, int[] indices, PrimitiveType topology, Rect bounds, GeometryKey key,
-        FringeVertex[] ring, List<(Vector2<double>[] Points, bool IsClosed)> loops)
+        RingEdge[] ring, List<(Vector2<double>[] Points, bool IsClosed)> loops)
     {
         Loops = loops;
         Vertices = vertices;
