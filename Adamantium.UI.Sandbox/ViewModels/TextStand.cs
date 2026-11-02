@@ -63,4 +63,10 @@ public enum TextStand
     /// </summary>
     [Display(Name = "Text on a path")]
     Path,
+
+    /// <summary>Text set inside a shape (<see cref="Adamantium.UI.Controls.Text.TextBlock.Shape"/>) - a circle, a heart,
+    /// a star, a ring - and flowing round one (<see cref="Adamantium.UI.Controls.Text.TextBlock.ExclusionShape"/>).
+    /// </summary>
+    [Display(Name = "Text in a shape")]
+    Shape,
 }
