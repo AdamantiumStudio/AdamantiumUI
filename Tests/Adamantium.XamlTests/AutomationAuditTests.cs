@@ -169,6 +169,7 @@ public class AutomationAuditTests
         [typeof(FractalView)] = (T.Pane, null),
         [typeof(TextBlock)] = (T.Text, null),
         [typeof(TextBlockOverflow)] = (null, "shows part of a block's text; the block answers for all of it"),
+        [typeof(TextOnPath)] = (T.Text, null),
         [typeof(Calendar)] = (T.Calendar, null),
         [typeof(CalendarDayButton)] = (T.DataItem, null),
         [typeof(CalendarButton)] = (T.Button, null),

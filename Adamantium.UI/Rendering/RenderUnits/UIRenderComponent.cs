@@ -533,12 +533,12 @@ public class TextRenderComponent : UIRenderComponent
     // Draws one block's glyphs straight into the main pass: local + TextArea, then world and projection (row vectors).
     public override void Render()
     {
-        if (GlyphRun == null) return;
+        if (GlyphRun == null || Foreground is not SolidColorBrush solid) return;
         var textArea = RenderingParameters.TextArea;
         var mvp = Matrix4x4.CreateTranslation<float>(textArea.X, textArea.Y, 5)
                   * RenderData.TransformMatrix
                   * RenderData.ProjectionMatrix;
-        var foreground = ((SolidColorBrush)Foreground).Color;
+        var foreground = solid.Color;
         var (table, head) = Effects();
         FontRenderer.DrawLayoutDirect(
             SamplerStates.LinearFont,

@@ -57,4 +57,10 @@ public enum TextStand
     /// sheets and clipped in their box, and the color atlas letting go of images no longer shown.</summary>
     [Display(Name = "New in typesetting")]
     Typesetting,
+
+    /// <summary>Text along a path (<see cref="Adamantium.UI.Controls.Text.TextOnPath"/>): round a circle, along a wave, a
+    /// spiral, a curve and a street drawn right to left, one text and look on all of them, moved along and across live.
+    /// </summary>
+    [Display(Name = "Text on a path")]
+    Path,
 }

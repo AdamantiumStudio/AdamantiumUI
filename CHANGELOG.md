@@ -7,6 +7,19 @@ All packages share one version.
 
 ### Added
 
+- `TextOnPath`: a line of text along a path, as SVG's `textPath` - each letter stood on the first figure of `Data`
+  (lines, arcs, curves) at its baseline and turned the way it runs there, laid by the engine's `TextPath`.
+  `Alignment` (start, middle, end) and `StartOffset` place it along the path, `AcrossOffset` above or below it;
+  `KeepUpright` reads an open figure that runs left from its end; round a closed one - or one ending where it starts -
+  the text reads the way it goes, across its seam. Text longer than the path is clipped to the letters on it;
+  `Overflow` lets it go on past the path's ends, straight the way they run, cuts it with an ellipsis where it leaves
+  the path at either end, shrinks it, or leaves it out whole, then also where the path turns between two letters by
+  more than `MaxTurn` (`IsTextPlaced`). The text is shaped as any of the element's - font, size, spacing,
+  language, features - in the themes' plain text color; `Stroke` draws the path under it; a click lands on a letter's
+  box. It reads as text to automation. `Geometry.GetFigures` gives a geometry's figures as given, flattened, in order.
+  The sandbox's Text tab has it as a topic of its own: a circle, a wave, a spiral, a curve and a street drawn right to
+  left, one text and look on all of them, moved along and across, clipped, cut, shrunk or left out, live.
+
 - `PolylineGeometry`: open lines (`Lines`) and closed rings (`Rings`) given as points and stroked as they are - nothing
   is cut into triangles, and a geometry of thousands of lines holds just their points. For what a worker thread already
   has as lines: a map's roads and borders, a chart's series. Creatable from markup.
@@ -2485,6 +2498,8 @@ All packages share one version.
 
 ### Fixed
 
+- Text drawn with no solid-color foreground - none set, or a gradient where the text is drawn on its own - failed the
+  whole frame; it now draws nothing.
 - A bevel join kept room for a round one's disc - 48 vertices a point where it writes 6.
 - A batch of dashed contours let each reserve the batch's whole output; each now reserves no more than a contour alone
   may write.

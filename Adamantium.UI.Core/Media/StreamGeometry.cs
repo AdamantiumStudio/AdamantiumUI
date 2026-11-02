@@ -19,6 +19,21 @@ public sealed class StreamGeometry : Geometry
     /// <summary>The figures it holds. What a reader needs to state the geometry again instead of drawing it.</summary>
     public IReadOnlyList<PathFigure> Figures => context.Figures;
 
+    protected internal override List<(Vector2<double>[] Points, bool IsClosed)> FiguresCore()
+    {
+        context.ProcessFigures();
+        var figures = new List<(Vector2<double>[] Points, bool IsClosed)>();
+        foreach (var figure in context.Figures)
+        {
+            if (figure is { Points.Count: > 0 })
+            {
+                figures.Add((figure.Points.ToArray(), figure.IsClosed));
+            }
+        }
+
+        return figures;
+    }
+
     public StreamGeometryContext Open()
     {
         context = new StreamGeometryContext();

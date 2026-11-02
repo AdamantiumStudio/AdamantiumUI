@@ -1,0 +1,134 @@
+<View xmlns="http://adamantium/ui"
+      xmlns:x="http://adamantium/ui/xaml/extensions"
+      xmlns:conv="clr-namespace:Adamantium.UI.Sandbox.Converters">
+    <!-- Navigated into the text tab's region under the key "Path"; the DataContext is the tab's own view-model. One text
+         and one look, from the controls on top, on every path below. -->
+    <ResourceContext.Resources>
+        <Style Selector="TextOnPath">
+            <Setter Property="Text" Value="{Binding PathText}"/>
+            <Setter Property="FontSize" Value="{Binding PathFontSize}"/>
+            <Setter Property="Alignment" Value="{Binding PathAlignment}"/>
+            <Setter Property="StartOffset" Value="{Binding PathStartOffset}"/>
+            <Setter Property="AcrossOffset" Value="{Binding PathAcross}"/>
+            <Setter Property="MaxTurn" Value="{Binding PathMaxTurn}"/>
+            <Setter Property="Overflow" Value="{Binding PathOverflow}"/>
+            <Setter Property="KeepUpright" Value="{Binding PathKeepUpright}"/>
+            <Setter Property="StrokeThickness" Value="{Binding PathLineThickness}"/>
+            <Setter Property="Stroke" Value="#808080"/>
+            <Setter Property="Width" Value="300"/>
+            <Setter Property="Height" Value="260"/>
+        </Style>
+    </ResourceContext.Resources>
+
+    <StackPanel Orientation="Vertical">
+        <TextBlock Text="{Localize TextStrings.PathTitle}" TextWrapping="WrapByWords" MaxWidth="900"
+                   HorizontalAlignment="Left" MarginBottom="12"/>
+
+        <StackPanel Orientation="Horizontal" MarginBottom="8">
+            <TextBlock x:Name="PathTextLabel" Text="{Localize TextStrings.PathTextLabel}" VerticalAlignment="Center"/>
+            <TextBox AutomationProperties.AutomationId="PathTextBox"
+                     AutomationProperties.LabeledBy="{Binding ElementName=PathTextLabel}"
+                     Width="420"
+                     Margin="8,0,24,0"
+                     Text="{Binding PathText, Mode=TwoWay}"/>
+            <TextBlock x:Name="PathSizeLabel" Text="{Localize TextStrings.PathSizeLabel}" VerticalAlignment="Center"/>
+            <Slider AutomationProperties.AutomationId="PathSizeSlider"
+                    AutomationProperties.LabeledBy="{Binding ElementName=PathSizeLabel}"
+                    Width="160" Minimum="8" Maximum="48" TickFrequency="1" IsSnapToTickEnabled="True"
+                    IsValueToolTipEnabled="True" Margin="8,0,0,0"
+                    Value="{Binding PathFontSize, Mode=TwoWay}"/>
+        </StackPanel>
+
+        <StackPanel Orientation="Horizontal" MarginBottom="8">
+            <TextBlock x:Name="PathStartLabel" Text="{Localize TextStrings.PathStartLabel}" VerticalAlignment="Center"/>
+            <Slider AutomationProperties.AutomationId="PathStartSlider"
+                    AutomationProperties.LabeledBy="{Binding ElementName=PathStartLabel}"
+                    Width="200" Minimum="-300" Maximum="300" TickFrequency="1" IsSnapToTickEnabled="True"
+                    IsValueToolTipEnabled="True" Margin="8,0,24,0"
+                    Value="{Binding PathStartOffset, Mode=TwoWay}"/>
+            <TextBlock x:Name="PathAcrossLabel" Text="{Localize TextStrings.PathAcrossLabel}" VerticalAlignment="Center"/>
+            <Slider AutomationProperties.AutomationId="PathAcrossSlider"
+                    AutomationProperties.LabeledBy="{Binding ElementName=PathAcrossLabel}"
+                    Width="160" Minimum="-30" Maximum="30" TickFrequency="1" IsSnapToTickEnabled="True"
+                    IsValueToolTipEnabled="True" Margin="8,0,24,0"
+                    Value="{Binding PathAcross, Mode=TwoWay}"/>
+        </StackPanel>
+
+        <!-- What is done with text longer than its path; only "whole or nothing" leaves it out, and only it reads the
+             most the path may turn between two letters. -->
+        <WrapPanel Orientation="Horizontal" MarginBottom="8">
+            <TextBlock Text="{Localize TextStrings.PathOverflowLabel}" VerticalAlignment="Center" MarginRight="8"
+                       MarginBottom="6"/>
+            <RadioButton AutomationProperties.AutomationId="PathClipRadio" Classes="Toggle" GroupName="PathOverflow"
+                         Content="{Localize TextStrings.PathClip}" MarginRight="6" MarginBottom="6"
+                         IsChecked="{Binding PathOverflow, Converter={conv:EnumToBoolConverter}, ConverterParameter=Clip, Mode=TwoWay}"/>
+            <RadioButton AutomationProperties.AutomationId="PathExtendRadio" Classes="Toggle" GroupName="PathOverflow"
+                         Content="{Localize TextStrings.PathExtend}" MarginRight="6" MarginBottom="6"
+                         IsChecked="{Binding PathOverflow, Converter={conv:EnumToBoolConverter}, ConverterParameter=Extend, Mode=TwoWay}"/>
+            <RadioButton AutomationProperties.AutomationId="PathEllipsisRadio" Classes="Toggle" GroupName="PathOverflow"
+                         Content="{Localize TextStrings.PathEllipsis}" MarginRight="6" MarginBottom="6"
+                         IsChecked="{Binding PathOverflow, Converter={conv:EnumToBoolConverter}, ConverterParameter=Ellipsis, Mode=TwoWay}"/>
+            <RadioButton AutomationProperties.AutomationId="PathShrinkRadio" Classes="Toggle" GroupName="PathOverflow"
+                         Content="{Localize TextStrings.PathShrink}" MarginRight="6" MarginBottom="6"
+                         IsChecked="{Binding PathOverflow, Converter={conv:EnumToBoolConverter}, ConverterParameter=Shrink, Mode=TwoWay}"/>
+            <RadioButton AutomationProperties.AutomationId="PathHideRadio" Classes="Toggle" GroupName="PathOverflow"
+                         Content="{Localize TextStrings.PathHide}" MarginRight="24" MarginBottom="6"
+                         IsChecked="{Binding PathOverflow, Converter={conv:EnumToBoolConverter}, ConverterParameter=Hide, Mode=TwoWay}"/>
+            <StackPanel Orientation="Horizontal" MarginBottom="6"
+                        Visibility="{Binding PathOverflow, Converter={conv:EnumVisibilityConverter}, ConverterParameter=Hide}">
+                <TextBlock x:Name="PathTurnLabel" Text="{Localize TextStrings.PathTurnLabel}" VerticalAlignment="Center"/>
+                <Slider AutomationProperties.AutomationId="PathTurnSlider"
+                        AutomationProperties.LabeledBy="{Binding ElementName=PathTurnLabel}"
+                        Width="160" Minimum="0" Maximum="180" TickFrequency="5" IsSnapToTickEnabled="True"
+                        IsValueToolTipEnabled="True" Margin="8,0,0,0"
+                        Value="{Binding PathMaxTurn, Mode=TwoWay}"/>
+            </StackPanel>
+        </WrapPanel>
+
+        <WrapPanel Orientation="Horizontal" MarginBottom="12">
+            <RadioButton AutomationProperties.AutomationId="PathAlignStartRadio" Classes="Toggle" GroupName="PathAlignment"
+                         Content="{Localize TextStrings.PathAlignStart}" MarginRight="6" MarginBottom="6"
+                         IsChecked="{Binding PathAlignment, Converter={conv:EnumToBoolConverter}, ConverterParameter=Start, Mode=TwoWay}"/>
+            <RadioButton AutomationProperties.AutomationId="PathAlignCenterRadio" Classes="Toggle" GroupName="PathAlignment"
+                         Content="{Localize TextStrings.PathAlignCenter}" MarginRight="6" MarginBottom="6"
+                         IsChecked="{Binding PathAlignment, Converter={conv:EnumToBoolConverter}, ConverterParameter=Center, Mode=TwoWay}"/>
+            <RadioButton AutomationProperties.AutomationId="PathAlignEndRadio" Classes="Toggle" GroupName="PathAlignment"
+                         Content="{Localize TextStrings.PathAlignEnd}" MarginRight="24" MarginBottom="6"
+                         IsChecked="{Binding PathAlignment, Converter={conv:EnumToBoolConverter}, ConverterParameter=End, Mode=TwoWay}"/>
+            <CheckBox AutomationProperties.AutomationId="PathKeepUprightCheck"
+                      Content="{Localize TextStrings.PathKeepUpright}" MarginRight="16" MarginBottom="6"
+                      IsChecked="{Binding PathKeepUpright, Mode=TwoWay}"/>
+            <CheckBox AutomationProperties.AutomationId="PathShowLineCheck"
+                      Content="{Localize TextStrings.PathShowLine}" MarginBottom="6"
+                      IsChecked="{Binding PathShowLine, Mode=TwoWay}"/>
+        </WrapPanel>
+
+        <WrapPanel Orientation="Horizontal">
+            <StackPanel Orientation="Vertical" Margin="0,0,16,16">
+                <TextBlock Text="{Localize TextStrings.PathCircle}" MarginBottom="4"/>
+                <TextOnPath AutomationProperties.AutomationId="PathOnCircle"
+                            Data="M 150,230 A 100,100 0 1 1 150.01,230 Z"/>
+            </StackPanel>
+            <StackPanel Orientation="Vertical" Margin="0,0,16,16">
+                <TextBlock Text="{Localize TextStrings.PathWave}" MarginBottom="4"/>
+                <TextOnPath AutomationProperties.AutomationId="PathOnWave"
+                            Data="M 10,130 C 60,30 110,30 150,130 S 240,230 290,130"/>
+            </StackPanel>
+            <StackPanel Orientation="Vertical" Margin="0,0,16,16">
+                <TextBlock Text="{Localize TextStrings.PathSpiral}" MarginBottom="4"/>
+                <TextOnPath AutomationProperties.AutomationId="PathOnSpiral"
+                            Data="M 150,130 A 10,10 0 0 1 170,130 A 15,15 0 0 1 140,130 A 20,20 0 0 1 180,130 A 25,25 0 0 1 130,130 A 30,30 0 0 1 190,130 A 35,35 0 0 1 120,130 A 40,40 0 0 1 200,130 A 45,45 0 0 1 110,130 A 50,50 0 0 1 210,130 A 55,55 0 0 1 100,130 A 60,60 0 0 1 220,130 A 65,65 0 0 1 90,130 A 70,70 0 0 1 230,130"/>
+            </StackPanel>
+            <StackPanel Orientation="Vertical" Margin="0,0,16,16">
+                <TextBlock Text="{Localize TextStrings.PathCurve}" MarginBottom="4"/>
+                <TextOnPath AutomationProperties.AutomationId="PathOnCurve"
+                            Data="M 20,220 C 80,0 220,0 280,220"/>
+            </StackPanel>
+            <StackPanel Orientation="Vertical" Margin="0,0,16,16">
+                <TextBlock Text="{Localize TextStrings.PathStreet}" MarginBottom="4"/>
+                <TextOnPath AutomationProperties.AutomationId="PathOnStreet"
+                            Data="M 295,30 L 215,75 L 160,50 L 110,140 L 60,120 L 5,210"/>
+            </StackPanel>
+        </WrapPanel>
+    </StackPanel>
+</View>
