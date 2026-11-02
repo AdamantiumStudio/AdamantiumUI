@@ -179,6 +179,15 @@ public abstract class TriggerActivatorBase : ITriggerActivator
         var prop = component.GetProperty(setter.Property);
         if (prop == null) return;
 
+        // The component's classes are its own collection: the trigger adds its classes to it, and takes them back.
+        if (Setter.GivesClasses(prop, setter.Value, component, out var owner))
+        {
+            var giver = (setter, this);
+            _applied[setter] = (component, () => owner.TakeBackClasses(giver));
+            owner.GiveClasses(giver, Setter.ClassesOf(setter.Value));
+            return;
+        }
+
         // The setter is the stack TOKEN: each contribution is tracked independently, so two triggers on the same part
         // property stack (last applied wins) and removing one restores the other instead of clearing the slot.
         switch (setter.Value)

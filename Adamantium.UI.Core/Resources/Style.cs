@@ -313,8 +313,12 @@ public class Style : AdamantiumComponent
         var activators = GetActiveActivators(component);
         if (activators == null) return;
 
-        foreach (var activator in activators)
+        // By index: re-activating may give classes, whose restyle attaches and detaches styles - and their activators.
+        for (var i = activators.Count - 1; i >= 0; i--)
         {
+            if (i >= activators.Count) continue;
+            var activator = activators[i];
+
             // Skip template-independent activators (no setter targets a named part): re-pointing them is needless, and
             // for a setter on Template itself it would re-swap the template from inside this very pass and recurse.
             if (activator is not { TargetsTemplateParts: true }) continue;

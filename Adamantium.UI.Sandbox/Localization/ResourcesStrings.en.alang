@@ -25,4 +25,14 @@
     <Phrase Key="VariantSystem" Text="Variant: System"/>
     <Phrase Key="VariantOwn" Text="Variant: its own"/>
     <Phrase Key="Dark" Text="Dark"/>
+
+    <Phrase Key="ClassesTitle" Text="Classes from a style — added to the element's own, taken back on leaving"/>
+    <Phrase Key="ClassesHint" Text="Triggers of a style here give the theme's classes. A class the control had itself stays; one two triggers give stays while either gives it; the style of Accent gives Marked. Under each control, the classes it carries now."/>
+    <Phrase Key="ClassesAccent" Text="A trigger gives the buttons Accent"/>
+    <Phrase Key="ClassesAccentToo" Text="Another trigger gives Accent too"/>
+    <Phrase Key="ClassesDots" Text="A trigger gives the indicators Dots"/>
+    <Phrase Key="ClassesNone" Text="No classes of its own"/>
+    <Phrase Key="ClassesOwnAccent" Text="Its own: Accent"/>
+    <Phrase Key="ClassesOwnToolbar" Text="Its own: Toolbar"/>
+    <Phrase Key="ClassesOwnDots" Text="Its own: Dots"/>
 </Language>

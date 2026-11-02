@@ -1944,6 +1944,9 @@ All packages share one version.
 
 ### Changed
 
+- Setters of `Classes` with a set of names - of several styles, of a style and one based on it, of triggers - join their
+  classes on a component instead of the strongest replacing the rest: `Classes="x"` under `Classes="y"` gives `x y`. A
+  `{Binding}` or a resource for `Classes` still sets the collection, and setters' classes go into the one it sets.
 - A stroke of solid lines, and of dashes with flat ends, keeps only its points: its vertex shader works out each
   vertex of the ribbon where it is drawn, at whatever width and scale, so nothing is expanded or kept per vertex - about
   16 bytes a point instead of the ribbon's 264 (miter) to 2 376 (round join) - and a width or zoom that changes every
@@ -2508,11 +2511,19 @@ All packages share one version.
 
 ### Fixed
 
+- A style or a trigger that sets `Classes` to a set of names adds them to the component's classes and, on leaving, takes
+  back what it gave: a class goes with the last style or trigger giving it, and one the component had itself stays. It
+  no longer put one collection of its own in place of every component's - which hid the component's own classes, and
+  the styles matched by them, and held each component for the style's life. A style applied again - as a theme swap
+  does - gives nothing more; classes set over given ones carry them. A component's own collection is watched before
+  another thread can see it. The sandbox's Resources page shows it on theme buttons and busy indicators.
+- A component whose classes change no longer stops restyling when a style it takes off takes classes of its own with
+  it, nor takes off its theme's styles while it is not styled yet.
 - Text drawn with no solid-color foreground - none set, or a gradient where the text is drawn on its own - failed the
   whole frame; it now draws nothing.
 - `Classes` of a component that never had them set was one collection shared by every component: a class added to it
   in code reached all of them and restyled none. Each component now has its own, made when first asked for and kept
-  beneath a value markup, a style or code sets; a class added to it restyles the component.
+  beneath a value markup or code sets; a class added to it restyles the component.
 - A bevel join kept room for a round one's disc - 48 vertices a point where it writes 6.
 - A batch of dashed contours let each reserve the batch's whole output; each now reserves no more than a contour alone
   may write.

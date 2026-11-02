@@ -81,7 +81,8 @@
                 </StackPanel>
             </StackPanel>
 
-            <Button Content="{Localize ResourcesStrings.CycleLocal}" MinWidth="180" Height="36" Margin="0,12,0,0">
+            <Button Content="{Localize ResourcesStrings.CycleLocal}" MinWidth="180" Height="36" Margin="0,12,0,0"
+                    HorizontalAlignment="Left">
                 <Button.Behaviors>
                     <behaviors:CycleResourceBehavior Key="PanelAccent"/>
                 </Button.Behaviors>
@@ -109,6 +110,90 @@
                         <behaviors:CycleScopedResourceBehavior Key="GlobalAccent" Scope="Global"/>
                     </Button.Behaviors>
                 </Button>
+            </StackPanel>
+        </StackPanel>
+
+        <!-- ═══ Classes from a STYLE ═══════════════════════════════════════════════════════════════════════════════
+             Theme controls, some with classes of their own, and styles here that ADD classes to them: a trigger's class
+             switches the theme's look on and off, a class the control had itself stays, and a class two triggers give
+             stays while either gives it. Under each control - the classes it carries now. -->
+        <TextBlock Text="{Localize ResourcesStrings.ClassesTitle}" FontSize="18" Margin="0,28,0,4"/>
+        <TextBlock Text="{Localize ResourcesStrings.ClassesHint}" TextWrapping="WrapByWords" Margin="0,0,0,10"/>
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+            <CheckBox Content="{Localize ResourcesStrings.ClassesAccent}" IsChecked="{Binding StyleGivesAccent, Mode=TwoWay}"
+                      Margin="0,0,24,0"/>
+            <CheckBox Content="{Localize ResourcesStrings.ClassesAccentToo}"
+                      IsChecked="{Binding StyleGivesAccentToo, Mode=TwoWay}" Margin="0,0,24,0"/>
+            <CheckBox Content="{Localize ResourcesStrings.ClassesDots}" IsChecked="{Binding StyleGivesDots, Mode=TwoWay}"/>
+        </StackPanel>
+
+        <StackPanel Orientation="Horizontal">
+            <ResourceContext.Resources>
+                <Style Selector="Button">
+                    <DataTrigger Binding="{Binding StyleGivesAccent}" Value="true">
+                        <Setter Property="Classes" Value="Accent"/>
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding StyleGivesAccentToo}" Value="true">
+                        <Setter Property="Classes" Value="Accent"/>
+                    </DataTrigger>
+                </Style>
+                <!-- Matched by a class and giving one more: whatever brings Accent brings Marked, and takes it away. -->
+                <Style Selector="Button.Accent">
+                    <Setter Property="Classes" Value="Marked"/>
+                </Style>
+                <Style Selector="BusyIndicator">
+                    <DataTrigger Binding="{Binding StyleGivesDots}" Value="true">
+                        <Setter Property="Classes" Value="Dots"/>
+                    </DataTrigger>
+                </Style>
+            </ResourceContext.Resources>
+
+            <StackPanel Orientation="Vertical" Margin="0,0,24,0">
+                <TextBlock Text="{Localize ResourcesStrings.ClassesNone}" Margin="0,0,0,6"/>
+                <Button x:Name="ClassesPlainButton" Content="Button" MinWidth="120" HorizontalAlignment="Left"/>
+                <TextBlock Margin="0,6,0,0" Foreground="{ObservableResource TextFillColorSecondary}">
+                    <TextBlock.Behaviors>
+                        <behaviors:ShowClassesBehavior Of="{Binding ElementName=ClassesPlainButton}"/>
+                    </TextBlock.Behaviors>
+                </TextBlock>
+            </StackPanel>
+            <StackPanel Orientation="Vertical" Margin="0,0,24,0">
+                <TextBlock Text="{Localize ResourcesStrings.ClassesOwnAccent}" Margin="0,0,0,6"/>
+                <Button x:Name="ClassesAccentButton" Classes="Accent" Content="Button" MinWidth="120"
+                        HorizontalAlignment="Left"/>
+                <TextBlock Margin="0,6,0,0" Foreground="{ObservableResource TextFillColorSecondary}">
+                    <TextBlock.Behaviors>
+                        <behaviors:ShowClassesBehavior Of="{Binding ElementName=ClassesAccentButton}"/>
+                    </TextBlock.Behaviors>
+                </TextBlock>
+            </StackPanel>
+            <StackPanel Orientation="Vertical" Margin="0,0,24,0">
+                <TextBlock Text="{Localize ResourcesStrings.ClassesOwnToolbar}" Margin="0,0,0,6"/>
+                <Button x:Name="ClassesToolbarButton" Classes="Toolbar" Content="Button" MinWidth="120"
+                        HorizontalAlignment="Left"/>
+                <TextBlock Margin="0,6,0,0" Foreground="{ObservableResource TextFillColorSecondary}">
+                    <TextBlock.Behaviors>
+                        <behaviors:ShowClassesBehavior Of="{Binding ElementName=ClassesToolbarButton}"/>
+                    </TextBlock.Behaviors>
+                </TextBlock>
+            </StackPanel>
+            <StackPanel Orientation="Vertical" Margin="0,0,24,0">
+                <TextBlock Text="{Localize ResourcesStrings.ClassesNone}" Margin="0,0,0,6"/>
+                <BusyIndicator x:Name="ClassesPlainIndicator" IsActive="True" HorizontalAlignment="Left"/>
+                <TextBlock Margin="0,6,0,0" Foreground="{ObservableResource TextFillColorSecondary}">
+                    <TextBlock.Behaviors>
+                        <behaviors:ShowClassesBehavior Of="{Binding ElementName=ClassesPlainIndicator}"/>
+                    </TextBlock.Behaviors>
+                </TextBlock>
+            </StackPanel>
+            <StackPanel Orientation="Vertical">
+                <TextBlock Text="{Localize ResourcesStrings.ClassesOwnDots}" Margin="0,0,0,6"/>
+                <BusyIndicator x:Name="ClassesDotsIndicator" Classes="Dots" IsActive="True" HorizontalAlignment="Left"/>
+                <TextBlock Margin="0,6,0,0" Foreground="{ObservableResource TextFillColorSecondary}">
+                    <TextBlock.Behaviors>
+                        <behaviors:ShowClassesBehavior Of="{Binding ElementName=ClassesDotsIndicator}"/>
+                    </TextBlock.Behaviors>
+                </TextBlock>
             </StackPanel>
         </StackPanel>
 
