@@ -134,12 +134,72 @@ public class BatchedStrokeRenderTests
         });
     }
 
+    // Dashed contours - a map's paths and rail ticks - are one batch too, each still cut by its own length.
     [Test]
-    public void DashedContours_KeepADrawEach()
+    public void DashedContours_AreOneDraw()
     {
-        using var stroke = Stroke(Lines(5, 20), new Pen(Brushes.Black, 2, dashStrokeArray: [4, 2]));
+        using var stroke = Stroke(Lines(500, 20), new Pen(Brushes.Black, 2, dashStrokeArray: [4, 2]));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(stroke.DrawCount, Is.EqualTo(1));
+            Assert.That(stroke.IsBatch(0), Is.True);
+        });
+    }
+
+    // Dashes fitted to a closed contour stretch to that contour's length, so each keeps a draw of its own.
+    [Test]
+    public void FittedDashes_KeepADrawEach()
+    {
+        var squares = new (Vector2<double>[] Points, bool IsClosed)[5];
+        for (var k = 0; k < squares.Length; k++)
+            squares[k] = ([new(0, k * 20), new(10, k * 20), new(10, k * 20 + 10), new(0, k * 20 + 10)], true);
+
+        using var stroke = Stroke(squares,
+            new Pen(Brushes.Black, 2, dashStrokeArray: [4, 2], fitDashesToContour: true));
 
         Assert.That(stroke.DrawCount, Is.EqualTo(5));
+    }
+
+    // Translucent dashes of two contours of a batch blend once where they cross, as one stroke's do.
+    [Test]
+    public void CrossingDashedContoursOfOneStroke_BlendOnce()
+    {
+        var g = new StreamGeometry();
+        var context = g.Open();
+        context.BeginFigure(new Vector2<double>(40, 120), false, false)
+            .PolylineLineTo([new Vector2<double>(200, 120)], true);
+        context.BeginFigure(new Vector2<double>(120, 40), false, false)
+            .PolylineLineTo([new Vector2<double>(120, 200)], true);
+        var pen = new Pen(new SolidColorBrush(Color.FromRgba(34, 211, 238, 128)), 12, dashStrokeArray: [200, 10]);
+
+        var pixels = Render(s => s.DrawGeometry(null, g, pen));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(Alpha(pixels, 70, 120), Is.EqualTo(128).Within(3), "one dash alone");
+            Assert.That(Alpha(pixels, 120, 120), Is.EqualTo(128).Within(3), "the crossing, once");
+        });
+    }
+
+    // In a batch every contour starts its dashes at its own start, and nothing of one reaches the next.
+    [Test]
+    public void DashedContoursOfABatch_AreEachCutFromTheirOwnStart()
+    {
+        var pen = new Pen(new SolidColorBrush(Colors.Black), 8, dashStrokeArray: [20, 20],
+            dashStartCap: PenLineCap.Flat, dashEndCap: PenLineCap.Flat);
+        var pixels = Render(s => s.DrawGeometry(null, ManyContours(), pen));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(Alpha(pixels, 30, 40), Is.EqualTo(255), "the first line's first dash");
+            Assert.That(Alpha(pixels, 50, 40), Is.Zero, "the first line's first gap");
+            Assert.That(Alpha(pixels, 70, 40), Is.EqualTo(255), "the first line's second dash");
+            Assert.That(Alpha(pixels, 30, 110), Is.EqualTo(255), "the second line's first dash");
+            Assert.That(Alpha(pixels, 50, 110), Is.Zero, "the second line's first gap");
+            Assert.That(Alpha(pixels, 70, 85), Is.Zero, "nothing between the first line and the second");
+            Assert.That(Alpha(pixels, 140, 120), Is.Zero, "nothing between the lines and the square");
+        });
     }
 
     // 4 x 10 000 points: three fit one batch of at most 32 768, the fourth starts the next - alone, so not a batch.
