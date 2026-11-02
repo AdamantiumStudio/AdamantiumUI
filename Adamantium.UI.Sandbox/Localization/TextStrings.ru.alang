@@ -219,4 +219,23 @@
     <Phrase Key="PathSpiral" Text="Спираль"/>
     <Phrase Key="PathCurve" Text="Кривая"/>
     <Phrase Key="PathStreet" Text="Улица, нарисованная справа налево"/>
+    <Phrase Key="TopicShape" Text="Текст в фигуре"/>
+    <Phrase Key="ShapeTitle" Text="TextBlock.Shape вписывает текст в любую замкнутую фигуру: каждая строка занимает отрезки, лежащие внутри неё по всей высоте строки, — короткие строки наверху и внизу круга, длинные посередине, по обе стороны от дыры в кольце. ExclusionShape даёт абзацу обтекать фигуру. ShapePadding отодвигает текст от края; что не поместилось, не выводится."/>
+    <Phrase Key="ShapeTextLabel" Text="Текст"/>
+    <Phrase Key="ShapeSizeLabel" Text="Размер:"/>
+    <Phrase Key="ShapePaddingLabel" Text="Отступ:"/>
+    <Phrase Key="ShapeAlignLeft" Text="Влево"/>
+    <Phrase Key="ShapeAlignCenter" Text="По центру"/>
+    <Phrase Key="ShapeAlignJustify" Text="По ширине"/>
+    <Phrase Key="ShapeCircle" Text="Круг"/>
+    <Phrase Key="ShapeHeart" Text="Сердце"/>
+    <Phrase Key="ShapeStar" Text="Звезда"/>
+    <Phrase Key="ShapeRing" Text="Кольцо"/>
+    <Phrase Key="ShapeAround" Text="Обтекание круга"/>
+    <Phrase Key="ShapePolygon" Text="Многоугольник"/>
+    <Phrase Key="ShapeScaleLabel" Text="Размер фигур:"/>
+    <Phrase Key="PolygonCornersLabel" Text="Углов у многоугольника:"/>
+    <Phrase Key="ShapeAroundStar" Text="Обтекание звезды"/>
+    <Phrase Key="ShapeAroundBand" Text="Обтекание тонкой наклонной ленты"/>
+    <Phrase Key="ShapeOverset" Text="Фигура меньше текста"/>
 </Language>

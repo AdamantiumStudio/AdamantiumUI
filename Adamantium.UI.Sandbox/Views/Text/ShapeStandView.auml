@@ -1,0 +1,175 @@
+<View xmlns="http://adamantium/ui"
+      xmlns:x="http://adamantium/ui/xaml/extensions"
+      xmlns:conv="clr-namespace:Adamantium.UI.Sandbox.Converters">
+    <!-- Navigated into the text tab's region under the key "Shape"; the DataContext is the tab's own view-model. One text
+         and one look, from the controls on top, set inside every shape below; each shape's outline drawn under it. -->
+    <ResourceContext.Resources>
+        <Style Selector="TextBlock.InShape">
+            <Setter Property="Text" Value="{Binding ShapeText}"/>
+            <Setter Property="FontSize" Value="{Binding ShapeFontSize}"/>
+            <Setter Property="ShapePadding" Value="{Binding ShapePadding}"/>
+            <Setter Property="HorizontalTextAlignment" Value="{Binding ShapeAlignment}"/>
+            <Setter Property="TextWrapping" Value="WrapByWords"/>
+            <Setter Property="VerticalTextAlignment" Value="Top"/>
+            <Setter Property="Width" Value="280"/>
+            <Setter Property="Height" Value="280"/>
+        </Style>
+        <Style Selector="Path.Outline">
+            <Setter Property="Stroke" Value="#808080"/>
+            <Setter Property="StrokeThickness" Value="1.5"/>
+        </Style>
+    </ResourceContext.Resources>
+
+    <StackPanel Orientation="Vertical">
+        <TextBlock Text="{Localize TextStrings.ShapeTitle}" TextWrapping="WrapByWords" MaxWidth="900"
+                   HorizontalAlignment="Left" MarginBottom="12"/>
+
+        <StackPanel Orientation="Horizontal" MarginBottom="8">
+            <TextBlock x:Name="ShapeSizeLabel" Text="{Localize TextStrings.ShapeSizeLabel}" VerticalAlignment="Center"/>
+            <Slider AutomationProperties.AutomationId="ShapeSizeSlider"
+                    AutomationProperties.LabeledBy="{Binding ElementName=ShapeSizeLabel}"
+                    Width="160" Minimum="8" Maximum="28" TickFrequency="1" IsSnapToTickEnabled="True"
+                    IsValueToolTipEnabled="True" Margin="8,0,24,0"
+                    Value="{Binding ShapeFontSize, Mode=TwoWay}"/>
+            <TextBlock x:Name="ShapePaddingLabel" Text="{Localize TextStrings.ShapePaddingLabel}"
+                       VerticalAlignment="Center"/>
+            <Slider AutomationProperties.AutomationId="ShapePaddingSlider"
+                    AutomationProperties.LabeledBy="{Binding ElementName=ShapePaddingLabel}"
+                    Width="160" Minimum="0" Maximum="30" TickFrequency="1" IsSnapToTickEnabled="True"
+                    IsValueToolTipEnabled="True" Margin="8,0,24,0"
+                    Value="{Binding ShapePadding, Mode=TwoWay}"/>
+            <RadioButton AutomationProperties.AutomationId="ShapeAlignLeftRadio" Classes="Toggle" GroupName="ShapeAlignment"
+                         Content="{Localize TextStrings.ShapeAlignLeft}" MarginRight="6"
+                         IsChecked="{Binding ShapeAlignment, Converter={conv:EnumToBoolConverter}, ConverterParameter=Left, Mode=TwoWay}"/>
+            <RadioButton AutomationProperties.AutomationId="ShapeAlignCenterRadio" Classes="Toggle" GroupName="ShapeAlignment"
+                         Content="{Localize TextStrings.ShapeAlignCenter}" MarginRight="6"
+                         IsChecked="{Binding ShapeAlignment, Converter={conv:EnumToBoolConverter}, ConverterParameter=Center, Mode=TwoWay}"/>
+            <RadioButton AutomationProperties.AutomationId="ShapeAlignJustifyRadio" Classes="Toggle" GroupName="ShapeAlignment"
+                         Content="{Localize TextStrings.ShapeAlignJustify}"
+                         IsChecked="{Binding ShapeAlignment, Converter={conv:EnumToBoolConverter}, ConverterParameter=Justify, Mode=TwoWay}"/>
+        </StackPanel>
+
+        <TextBox AutomationProperties.AutomationId="ShapeTextBox"
+                 AutomationProperties.Name="{Localize TextStrings.ShapeTextLabel}"
+                 Width="900" Height="80" HorizontalAlignment="Left" MarginBottom="16"
+                 TextWrapping="WrapByWords" AcceptsReturn="True"
+                 Text="{Binding ShapeText, Mode=TwoWay}"/>
+
+        <!-- How large the shapes below are, and how many corners the polygon has - live. -->
+        <StackPanel Orientation="Horizontal" MarginBottom="16">
+            <TextBlock x:Name="ShapeScaleLabel" Text="{Localize TextStrings.ShapeScaleLabel}" VerticalAlignment="Center"/>
+            <Slider AutomationProperties.AutomationId="ShapeScaleSlider"
+                    AutomationProperties.LabeledBy="{Binding ElementName=ShapeScaleLabel}"
+                    Width="200" Minimum="0.4" Maximum="1" TickFrequency="0.05" IsSnapToTickEnabled="True"
+                    IsValueToolTipEnabled="True" Margin="8,0,24,0"
+                    Value="{Binding ShapeScale, Mode=TwoWay}"/>
+            <TextBlock x:Name="PolygonCornersLabel" Text="{Localize TextStrings.PolygonCornersLabel}"
+                       VerticalAlignment="Center"/>
+            <Slider AutomationProperties.AutomationId="PolygonCornersSlider"
+                    AutomationProperties.LabeledBy="{Binding ElementName=PolygonCornersLabel}"
+                    Width="200" Minimum="3" Maximum="12" TickFrequency="1" IsSnapToTickEnabled="True"
+                    IsValueToolTipEnabled="True" Margin="8,0,0,0"
+                    Value="{Binding PolygonCorners, Mode=TwoWay}"/>
+        </StackPanel>
+
+        <WrapPanel Orientation="Horizontal">
+            <StackPanel Orientation="Vertical" Margin="0,0,24,24">
+                <TextBlock Text="{Localize TextStrings.ShapeCircle}" MarginBottom="4"/>
+                <Grid Width="280" Height="280">
+                    <Path Classes="Outline" Data="{Binding ShapeCircle}"/>
+                    <TextBlock AutomationProperties.AutomationId="TextInCircle" Classes="InShape"
+                               Shape="{Binding ShapeCircle}"/>
+                </Grid>
+            </StackPanel>
+            <StackPanel Orientation="Vertical" Margin="0,0,24,24">
+                <TextBlock Text="{Localize TextStrings.ShapeHeart}" MarginBottom="4"/>
+                <Grid Width="280" Height="280">
+                    <Path Classes="Outline" Data="{Binding ShapeHeart}"/>
+                    <TextBlock AutomationProperties.AutomationId="TextInHeart" Classes="InShape"
+                               Shape="{Binding ShapeHeart}"/>
+                </Grid>
+            </StackPanel>
+            <StackPanel Orientation="Vertical" Margin="0,0,24,24">
+                <TextBlock Text="{Localize TextStrings.ShapeStar}" MarginBottom="4"/>
+                <Grid Width="280" Height="280">
+                    <Path Classes="Outline" Data="{Binding ShapeStar}"/>
+                    <TextBlock AutomationProperties.AutomationId="TextInStar" Classes="InShape"
+                               Shape="{Binding ShapeStar}"/>
+                </Grid>
+            </StackPanel>
+            <StackPanel Orientation="Vertical" Margin="0,0,24,24">
+                <TextBlock Text="{Localize TextStrings.ShapePolygon}" MarginBottom="4"/>
+                <Grid Width="280" Height="280">
+                    <Path Classes="Outline" Data="{Binding ShapePolygon}"/>
+                    <TextBlock AutomationProperties.AutomationId="TextInPolygon" Classes="InShape"
+                               Shape="{Binding ShapePolygon}"/>
+                </Grid>
+            </StackPanel>
+            <StackPanel Orientation="Vertical" Margin="0,0,24,24">
+                <TextBlock Text="{Localize TextStrings.ShapeRing}" MarginBottom="4"/>
+                <Grid Width="280" Height="280">
+                    <Path Classes="Outline" Data="{Binding ShapeRing}"/>
+                    <TextBlock AutomationProperties.AutomationId="TextInRing" Classes="InShape"
+                               Shape="{Binding ShapeRing}"/>
+                </Grid>
+            </StackPanel>
+        </WrapPanel>
+
+        <!-- The same text flowing round a circle in a paragraph, as round a picture of that shape. -->
+        <TextBlock Text="{Localize TextStrings.ShapeAround}" MarginBottom="4"/>
+        <Grid Width="640" Height="240" HorizontalAlignment="Left">
+            <Path Classes="Outline" Data="M 320,30 A 90,90 0 1 1 319.99,30 Z"/>
+            <TextBlock AutomationProperties.AutomationId="TextRoundCircle"
+                       Text="{Binding ShapeText}" FontSize="{Binding ShapeFontSize}"
+                       ShapePadding="{Binding ShapePadding}" TextWrapping="WrapByWords"
+                       HorizontalTextAlignment="{Binding ShapeAlignment}" VerticalTextAlignment="Top"
+                       Width="640" Height="240"
+                       ExclusionShape="M 320,30 A 90,90 0 1 1 319.99,30 Z"/>
+        </Grid>
+
+        <!-- Round a star - its thin rays - and round a thin slanted band: text never runs through either. -->
+        <WrapPanel Orientation="Horizontal" Margin="0,24,0,0">
+            <StackPanel Orientation="Vertical" Margin="0,0,24,24">
+                <TextBlock Text="{Localize TextStrings.ShapeAroundStar}" MarginBottom="4"/>
+                <Grid Width="420" Height="260">
+                    <Path Classes="Outline"
+                          Data="M 210,10 L 236,90 320,92 252,140 278,222 210,172 142,222 168,140 100,92 184,90 Z"/>
+                    <TextBlock AutomationProperties.AutomationId="TextRoundStar"
+                               Text="{Binding ShapeText}" FontSize="{Binding ShapeFontSize}"
+                               ShapePadding="{Binding ShapePadding}" TextWrapping="WrapByWords"
+                               HorizontalTextAlignment="{Binding ShapeAlignment}" VerticalTextAlignment="Top"
+                               Width="420" Height="260"
+                               ExclusionShape="M 210,10 L 236,90 320,92 252,140 278,222 210,172 142,222 168,140 100,92 184,90 Z"/>
+                </Grid>
+            </StackPanel>
+            <StackPanel Orientation="Vertical" Margin="0,0,24,24">
+                <TextBlock Text="{Localize TextStrings.ShapeAroundBand}" MarginBottom="4"/>
+                <Grid Width="420" Height="260">
+                    <Path Classes="Outline" Data="M 60,0 L 76,0 376,260 360,260 Z"/>
+                    <TextBlock AutomationProperties.AutomationId="TextRoundBand"
+                               Text="{Binding ShapeText}" FontSize="{Binding ShapeFontSize}"
+                               ShapePadding="{Binding ShapePadding}" TextWrapping="WrapByWords"
+                               HorizontalTextAlignment="{Binding ShapeAlignment}" VerticalTextAlignment="Top"
+                               Width="420" Height="260"
+                               ExclusionShape="M 60,0 L 76,0 376,260 360,260 Z"/>
+                </Grid>
+            </StackPanel>
+
+            <!-- A shape too small for the text: what does not fit is left out, and IsOverset says so. -->
+            <StackPanel Orientation="Vertical" Margin="0,0,24,24">
+                <TextBlock Text="{Localize TextStrings.ShapeOverset}" MarginBottom="4"/>
+                <Grid Width="160" Height="160">
+                    <Path Classes="Outline" Data="M 80,10 A 70,70 0 1 1 79.99,10 Z"/>
+                    <TextBlock x:Name="SmallShapeText" AutomationProperties.AutomationId="TextInSmallCircle"
+                               Classes="InShape" Width="160" Height="160"
+                               Shape="M 80,10 A 70,70 0 1 1 79.99,10 Z"/>
+                </Grid>
+                <StackPanel Orientation="Horizontal" MarginTop="4">
+                    <TextBlock Text="IsOverset: "/>
+                    <TextBlock AutomationProperties.AutomationId="SmallShapeOverset"
+                               Text="{Binding ElementName=SmallShapeText, Path=IsOverset}"/>
+                </StackPanel>
+            </StackPanel>
+        </WrapPanel>
+    </StackPanel>
+</View>

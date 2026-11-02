@@ -219,4 +219,23 @@
     <Phrase Key="PathSpiral" Text="Spiral"/>
     <Phrase Key="PathCurve" Text="Curve"/>
     <Phrase Key="PathStreet" Text="Street, drawn right to left"/>
+    <Phrase Key="TopicShape" Text="Text in a shape"/>
+    <Phrase Key="ShapeTitle" Text="TextBlock.Shape sets text inside any closed shape: each row takes the stretches inside it all the way down the row - short lines at a circle's top and bottom, long across its middle, on both sides of a ring's hole. ExclusionShape lets a paragraph flow round a shape. ShapePadding keeps the text off the edge; what does not fit is left out."/>
+    <Phrase Key="ShapeTextLabel" Text="Text"/>
+    <Phrase Key="ShapeSizeLabel" Text="Size:"/>
+    <Phrase Key="ShapePaddingLabel" Text="Padding:"/>
+    <Phrase Key="ShapeAlignLeft" Text="Left"/>
+    <Phrase Key="ShapeAlignCenter" Text="Center"/>
+    <Phrase Key="ShapeAlignJustify" Text="Justify"/>
+    <Phrase Key="ShapeCircle" Text="Circle"/>
+    <Phrase Key="ShapeHeart" Text="Heart"/>
+    <Phrase Key="ShapeStar" Text="Star"/>
+    <Phrase Key="ShapeRing" Text="Ring"/>
+    <Phrase Key="ShapeAround" Text="Flowing round a circle"/>
+    <Phrase Key="ShapePolygon" Text="Polygon"/>
+    <Phrase Key="ShapeScaleLabel" Text="Shape size:"/>
+    <Phrase Key="PolygonCornersLabel" Text="Polygon corners:"/>
+    <Phrase Key="ShapeAroundStar" Text="Round a star"/>
+    <Phrase Key="ShapeAroundBand" Text="Round a thin slanted band"/>
+    <Phrase Key="ShapeOverset" Text="Too small for the text"/>
 </Language>

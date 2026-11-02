@@ -59,6 +59,17 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         typeof(ExclusionList), typeof(TextBlock),
         new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure, TextParametersChangedCallback));
 
+    public static readonly AdamantiumProperty ShapeProperty = AdamantiumProperty.Register(nameof(Shape),
+        typeof(Geometry), typeof(TextBlock),
+        new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure, ShapeChangedCallback));
+
+    public static readonly AdamantiumProperty ShapePaddingProperty = AdamantiumProperty.Register(nameof(ShapePadding),
+        typeof(double), typeof(TextBlock), new PropertyMetadata(0.0, PropertyMetadataOptions.AffectsMeasure));
+
+    public static readonly AdamantiumProperty ExclusionShapeProperty = AdamantiumProperty.Register(
+        nameof(ExclusionShape), typeof(Geometry), typeof(TextBlock),
+        new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure, ShapeChangedCallback));
+
     public static readonly AdamantiumProperty DropCapLinesProperty = AdamantiumProperty.Register(nameof(DropCapLines),
         typeof(int), typeof(TextBlock),
         new PropertyMetadata(0, PropertyMetadataOptions.AffectsMeasure, TextParametersChangedCallback),
@@ -187,8 +198,28 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
 
     private static void TextParametersChangedCallback(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
     {
-        
+
     }
+
+    private static void ShapeChangedCallback(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (a is not TextBlock block)
+        {
+            return;
+        }
+
+        if (e.NewValue is Geometry geometry)
+        {
+            geometry.ComponentUpdated += block.OnShapeUpdated;
+            block.Follow(e.Property, () => geometry.ComponentUpdated -= block.OnShapeUpdated);
+        }
+        else
+        {
+            block.Follow(e.Property, null);
+        }
+    }
+
+    private void OnShapeUpdated(object sender, ComponentUpdatedEventArgs e) => InvalidateMeasure();
 
     private static void TextChangedCallback(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
     {
@@ -224,6 +255,10 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
     private int _lastColumns = 1;
     private double _lastColumnGap;
     private ExclusionList _lastExclusions;
+    private readonly GeometryTextShape _inside = new();
+    private readonly GeometryTextShape _around = new();
+    private TextShape _lastShape;
+    private TextShape _lastAround;
     private WritingMode _lastWritingMode;
     private double _lastTracking;
     private TextKerning _lastKerning;
@@ -367,7 +402,9 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         }
         var text = _shown.Of(HasInlines ? InlineText() : Text, TextTransform, Language);
         var shaping = TextShaping(font);
-        var threads = TakeChain(vertical ? height : width, vertical ? width : height);
+        var shape = _inside.Of(Shape, ShapePadding);
+        var around = _around.Of(ExclusionShape, ShapePadding);
+        var threads = TakeChain(vertical ? height : width, vertical ? width : height) && shape == null;
 
         var sameInputs = _hasLayout && !_inlinesDirty && SameRooms(threads)
             && _lastText == text && _lastFontSize.Equals(FontSize)
@@ -382,7 +419,8 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
             && _lastLineHeight.Equals(LineHeight)
             && _lastLineStacking == LineStackingStrategy && _lastLineSpacing.Equals(LineSpacing)
             && _lastMaxLines == MaxLines && _lastBalanceLines == BalanceLines && _lastLineBounds == TextLineBounds
-            && ShapesLike(_lastShaping, shaping);
+            && ShapesLike(_lastShaping, shaping)
+            && ReferenceEquals(_lastShape, shape) && ReferenceEquals(_lastAround, around);
         if (sameInputs && _lastWidth.Equals(width) && _lastHeight.Equals(height))
         {
             return _cachedSize;
@@ -430,6 +468,8 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
             _focusedLink = _links.Count - 1;
         }
         _textLayout.Exclusions = Exclusions;
+        _textLayout.Shape = shape;
+        _textLayout.ExclusionShapes = around == null ? null : [around];
         _textLayout.Frames = FramesOf(vertical ? height : width, vertical ? width : height, vertical, Lay, out var growth);
         _ownFrames = 0;
         if (threads)
@@ -480,7 +520,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         }
 
         _hasLayout = true;
-        IsOverset = (_textLayout.Frames != null || _textLayout.MaxLines > 0)
+        IsOverset = (_textLayout.Frames != null || _textLayout.Shape != null || _textLayout.MaxLines > 0)
                     && _textLayout.OversetIndex < (text?.Length ?? 0);
         Distribute(text?.Length ?? 0, vertical);
         _lastRooms.Clear();
@@ -502,6 +542,8 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         _lastColumns = Columns;
         _lastColumnGap = ColumnGap;
         _lastExclusions = Exclusions;
+        _lastShape = shape;
+        _lastAround = around;
         _lastWritingMode = WritingMode;
         _lastTracking = Tracking;
         _lastKerning = Kerning;
@@ -526,7 +568,7 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         growth = 0;
         var columns = Math.Max(1, Columns);
         if (TextWrapping != TextWrapping.WrapByWords || double.IsNaN(length) || double.IsInfinity(length)
-            || (columns == 1 && (Exclusions == null || Exclusions.Count == 0)))
+            || (columns == 1 && (Exclusions == null || Exclusions.Count == 0) && ExclusionShape == null))
         {
             return null;
         }
@@ -608,6 +650,11 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
         foreach (var exclusion in Exclusions ?? (IReadOnlyList<RectangleF>)[])
         {
             bottom = Math.Max(bottom, exclusion.Bottom);
+        }
+
+        if (_textLayout.ExclusionShapes is [var around, ..] && around.TryGetBounds(out _, out var aroundMax))
+        {
+            bottom = Math.Max(bottom, (float)aroundMax.Y);
         }
 
         var gap = (float)(4 * FontSize);
@@ -868,6 +915,33 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
     {
         get => GetValue<ExclusionList>(ExclusionsProperty);
         set => SetValue(ExclusionsProperty, value);
+    }
+
+    /// <summary>A shape, in the block's own coordinates, the text is set inside: each row of it takes the stretches
+    /// inside every closed figure all the way down the row - a circle fills with short lines at its top and bottom and
+    /// long ones across its middle, a ring on both sides of its hole - <see cref="ShapePadding"/> in from its edge. Text
+    /// wrapped by words, in horizontal lines; what does not fit is overset (<see cref="IsOverset"/>) and is not carried
+    /// on into <see cref="OverflowContentTarget"/>. Null, the default, for none.</summary>
+    public Geometry Shape
+    {
+        get => GetValue<Geometry>(ShapeProperty);
+        set => SetValue(ShapeProperty, value);
+    }
+
+    /// <summary>How far the text keeps from the edge of <see cref="Shape"/> and of <see cref="ExclusionShape"/>.</summary>
+    public double ShapePadding
+    {
+        get => GetValue<double>(ShapePaddingProperty);
+        set => SetValue(ShapePaddingProperty, value);
+    }
+
+    /// <summary>A shape, in the block's own coordinates, text wrapped by words flows round as it does round
+    /// <see cref="Exclusions"/> - a circle, a star, a picture's outline: a row keeps out of every stretch it reaches down
+    /// the row, <see cref="ShapePadding"/> off. Horizontal lines only. Null, the default, for none.</summary>
+    public Geometry ExclusionShape
+    {
+        get => GetValue<Geometry>(ExclusionShapeProperty);
+        set => SetValue(ExclusionShapeProperty, value);
     }
 
     /// <summary>The most lines shown, as Avalonia's; 0 (the default) for any number. The rest is not shown, or, with
