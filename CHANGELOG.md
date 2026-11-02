@@ -7,6 +7,16 @@ All packages share one version.
 
 ### Added
 
+- Text set inside any shape: `TextBlock.Shape` (a geometry in the block's own coordinates) fills its closed figures
+  row by row - each row takes the stretches inside them all the way down it, short lines at a circle's top and bottom,
+  long ones across its middle, on both sides of a ring's hole - with the block's alignment; what does not fit is
+  overset (`IsOverset`) and not carried on into an overflow. `TextBlock.ExclusionShape` lets text wrapped by words
+  flow round a shape as it does round `Exclusions`, an overflow below starting past it; horizontal lines;
+  `ShapePadding` keeps the text off either shape's edge. Laid out by the engine's `TextShape`. The sandbox's Text tab
+  has it as a topic: a circle, a heart, a star, a polygon of 3 to 12 corners and a ring, the shapes sized live; a
+  paragraph round a circle, a star and a thin slanted band; a shape too small for its text, with `IsOverset` shown -
+  the text sized, padded and aligned live.
+
 - `TextOnPath`: a line of text along a path, as SVG's `textPath` - each letter stood on the first figure of `Data`
   (lines, arcs, curves) at its baseline and turned the way it runs there, laid by the engine's `TextPath`.
   `Alignment` (start, middle, end) and `StartOffset` place it along the path, `AcrossOffset` above or below it;
