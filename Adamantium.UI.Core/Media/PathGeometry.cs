@@ -57,7 +57,22 @@ public class PathGeometry : Geometry
     }
 
     public override Rect Bounds => bounds;
-    
+
+    protected internal override List<(Vector2<double>[] Points, bool IsClosed)> FiguresCore()
+    {
+        var figures = new List<(Vector2<double>[] Points, bool IsClosed)>();
+        foreach (var figure in Figures ?? [])
+        {
+            figure.ProcessSegments();
+            if (figure.Points.Count > 0)
+            {
+                figures.Add((figure.Points.ToArray(), figure.IsClosed));
+            }
+        }
+
+        return figures;
+    }
+
     public override Geometry Clone()
     {
         throw new System.NotImplementedException();

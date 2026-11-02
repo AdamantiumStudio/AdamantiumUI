@@ -1,5 +1,6 @@
 ﻿using Adamantium.Core.TypeParsing;
 using Adamantium.Graphics.Core.Models;
+using Adamantium.Mathematics;
 using Adamantium.ProceduralGeometry;
 using Adamantium.UI.Core.Media.Fill;
 using Adamantium.UI.Core.RoutedEvents;
@@ -105,6 +106,51 @@ public abstract class Geometry : AdamantiumComponent
 
    private PreparedFill _readyFill;
    private PreparedStroke _readyStroke;
+
+   /// <summary>The figures of the geometry in the order they were given, each the points of its outline - curves
+   /// flattened - and whether it closes, with the geometry's <see cref="Transform"/>, running as drawn even under a
+   /// mirroring one: what text along the geometry follows. New arrays each call.</summary>
+   public List<(Vector2<double>[] Points, bool IsClosed)> GetFigures()
+   {
+      var given = FiguresCore();
+      if (given == null)
+      {
+         ProcessGeometry(GeometryType.Both);
+         var fromMesh = new List<(Vector2<double>[] Points, bool IsClosed)>();
+         var mirrored = Transform is { } mirror &&
+                        mirror.Matrix.M11 * mirror.Matrix.M22 - mirror.Matrix.M12 * mirror.Matrix.M21 < 0;
+         foreach (var contour in Mesh.Contours)
+         {
+            if (contour.Points is { Length: > 0 } points)
+            {
+               var copy = (Vector2<double>[])points.Clone();
+               if (mirrored)
+               {
+                  Array.Reverse(copy);
+               }
+
+               fromMesh.Add((copy, contour.IsGeometryClosed));
+            }
+         }
+
+         return fromMesh;
+      }
+
+      if (Transform is { } transform)
+      {
+         var matrix = transform.Matrix;
+         foreach (var (points, _) in given)
+         {
+            Vector2<double>.TransformCoordinate(points, matrix, points);
+         }
+      }
+
+      return given;
+   }
+
+   /// <summary>The figures as given, before any transform, in new arrays; null for a geometry that keeps none apart
+   /// from its mesh.</summary>
+   protected internal virtual List<(Vector2<double>[] Points, bool IsClosed)> FiguresCore() => null;
 
    /// <summary>The contours a stroke runs along, as the renderer strokes them: the ones <see cref="ProcessGeometry"/>
    /// made, while the geometry is as it was then; otherwise made now, from the mesh as it is, and not kept.</summary>
