@@ -233,7 +233,7 @@ public abstract class TriggerActivatorBase : ITriggerActivator
                 break;
 
             default:
-                component.SetTriggerValue(prop, Setter.ValueFor(setter.Value, prop.PropertyType), setter);
+                component.SetTriggerValue(prop, TypeCastFactory.CastFromString(setter.Value, prop.PropertyType), setter);
                 _applied[setter] = (component, () => component.ClearTriggerValue(prop, setter));
                 break;
         }

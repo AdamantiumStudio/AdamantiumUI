@@ -2498,9 +2498,6 @@ All packages share one version.
 
 ### Fixed
 
-- A style's or trigger's setter of `Classes` gave every component it reached its one collection: a class one
-  component added reached them all, and each component watching it was held for the style's life. Each component now
-  gets a copy; a component's own collection is watched before another thread can see it.
 - Text drawn with no solid-color foreground - none set, or a gradient where the text is drawn on its own - failed the
   whole frame; it now draws nothing.
 - `Classes` of a component that never had them set was one collection shared by every component: a class added to it
