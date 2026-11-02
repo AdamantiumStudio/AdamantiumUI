@@ -91,8 +91,6 @@ public partial class RenderCache
         => _batchOpen && (!ScissorEquals(_batchScissor, scissor) || !ReferenceEquals(_batchClip, ClipOwnerOf(c)));
 
     // General instanced fills (arbitrary tessellated geometry sharing a mesh), flushed in PAINT ORDER via FlushBatches.
-    // Own buffer manager, distinct from the per-unit geometry buffers.
-    private GpuBufferManager _instanceBuffers;
     private InstancedFillCollector _instancedFill;
 
     internal InstancedFillCollector InstancedFill => _instancedFill;
@@ -925,8 +923,7 @@ public partial class RenderCache
             // skips the redundant upload (zero bytes move on an idle frame).
             if (InstancedFillCollector.Enabled)
             {
-                _instanceBuffers ??= new GpuBufferManager(device);
-                _instancedFill ??= new InstancedFillCollector(device, _instanceBuffers) { PrepareOverlay = PrepareOverlayForDraw };
+                _instancedFill ??= new InstancedFillCollector(device) { PrepareOverlay = PrepareOverlayForDraw };
                 _instancedFill.TransformsAddress = _transformTable.DeviceAddress;   // instance VS fetches its slot matrix
                 _instancedFill.Backdrop = _materialBatch;   // may be null: the material batch is made on first sight of one
                 _instancedFill.BeginFrame();

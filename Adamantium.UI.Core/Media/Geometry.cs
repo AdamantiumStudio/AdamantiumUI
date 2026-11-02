@@ -41,6 +41,9 @@ public abstract class Geometry : AdamantiumComponent
          {
             drawing.ReplaceOwned(e.OldValue as Transform, e.NewValue as Transform);
          }
+
+         geometry.InvalidateGeometry();
+         geometry.RaiseComponentUpdated();
       }
    }
 

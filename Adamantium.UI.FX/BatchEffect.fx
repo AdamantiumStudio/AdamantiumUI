@@ -6,6 +6,7 @@
 #include "Includes/CommonData.fxh"
 #include "Includes/ClipMath.fxh"
 #include "Includes/ShapeMath.fxh"
+#include "Includes/Ring.fxh"
 #include "Includes/StrokeMath.fxh"
 #include "Includes/NoiseMath.fxh"
 
@@ -137,8 +138,9 @@ float4 InstancedFillPS(FillPSInput input) : SV_Target
 
 
 [shader("vertex")]
-FringePSInput InstancedFringeVS(FringeVertex v, uint instanceId : SV_InstanceID)
+FringePSInput InstancedFringeVS(uint vertexId : SV_VertexID, uint instanceId : SV_InstanceID)
 {
+    FringeVertex v = RingCorner(vertexId);
     GeometryInstance* instances = Geometries;
     GeometryInstance inst = instances[instanceId];
     NodeSlot* nodes = Transforms;
@@ -173,8 +175,9 @@ float4 InstancedFringePS(FringePSInput input) : SV_Target
 // The AA fringe of pattern/noise instances, one draw for all; the one-pixel ring uses the brush's Color1 instead of
 // evaluating the pattern. Their body lives in BrushEffect.
 [shader("vertex")]
-FringePSInput InstancedPatternFringeVS(FringeVertex v, uint instanceId : SV_InstanceID)
+FringePSInput InstancedPatternFringeVS(uint vertexId : SV_VertexID, uint instanceId : SV_InstanceID)
 {
+    FringeVertex v = RingCorner(vertexId);
     PatternGeomData* items = PatternGeometries;
     PatternGeomData it = items[instanceId];
     NodeSlot* nodes = Transforms;

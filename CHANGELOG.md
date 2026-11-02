@@ -7,6 +7,9 @@ All packages share one version.
 
 ### Added
 
+- `PolylineGeometry`: open lines (`Lines`) and closed rings (`Rings`) given as points and stroked as they are - nothing
+  is cut into triangles, and a geometry of thousands of lines holds just their points. For what a worker thread already
+  has as lines: a map's roads and borders, a chart's series. Creatable from markup.
 - `MeshGeometry`: an area given as triangles already cut - `Positions` and, three to a triangle, `TriangleIndices` -
   drawn as it is and never tessellated again, so shapes cut on a worker thread (a map's tiles, a file, a generator)
   cost the drawing thread nothing to tessellate; it joins the instanced fills like any path. Its optional `Boundary`
@@ -1916,6 +1919,10 @@ All packages share one version.
 
 ### Changed
 
+- A fill's antialiased edge is kept as one 40-byte record per edge instead of six 24-byte corners; the vertex stage makes
+  the corners. With the body of an instanced fill now sharing the mesh copy its instances are drawn from, and the
+  shared meshes kept at their exact size rather than rounded up to a power of two, a map tile of 2 300 areas holds
+  about 5 MB for drawing instead of 13.
 - A continuous GPU stroke of many contours - a map's roads, a chart's series - is expanded by one compute dispatch and
   drawn by one draw instead of one of each per contour: its contours' points lie one after another with a table of
   where each starts, and every thread works inside its own point's contour, so joins, caps and antialiasing are what
@@ -2454,6 +2461,11 @@ All packages share one version.
 
 ### Fixed
 
+- Giving a geometry a new `Transform` left its bounds and shape where the old one had put them until something else
+  changed it; changing the transform's own values already worked.
+- The instanced fills' per-instance buffers were never freed when their renderer went away, and a shared mesh dropped
+  from the cache was freed at once though a frame in flight could still be drawing it; both now leave through the
+  deferred queue.
 - A `StreamGeometry` cut its unfilled figures into triangles as one area along with the filled ones: 3 000 open lines
   of 20 points took 26 s to process and filled nothing. Only filled figures are cut now, as in `PathGeometry`; the
   others are stroked as given (about 50 ms for the same lines), an open figure staying open.
