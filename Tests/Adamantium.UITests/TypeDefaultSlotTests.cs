@@ -61,10 +61,8 @@ public class TypeDefaultSlotTests
     [Test]
     public void AClassStyle_StillOutranksInheritance()
     {
-        // Classes must be ASSIGNED, not added to a freshly read collection: the assignment is what syncs ClassNames,
-        // which is the collection the selector actually reads. Added to the empty one, the class never existed and the
-        // style silently did not match - which made an earlier version of this test pass its assertion for the wrong
-        // reason entirely.
+        // The class is set before the style is attached: ClassNames - the collection the selector reads - holds it
+        // from the start.
         var text = new TextBlock { Text = "caption", Classes = Classes.Parse("Caption") };
         var presenter = new Border { Width = 200, Height = 40, Foreground = Brushes.Red, Child = text };
         ClassStyle<TextBlock>("Caption", "Foreground", Brushes.Blue).Attach(text);

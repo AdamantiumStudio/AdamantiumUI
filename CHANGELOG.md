@@ -2485,6 +2485,9 @@ All packages share one version.
 
 ### Fixed
 
+- `Classes` of a component that never had them set was one collection shared by every component: a class added to it
+  in code reached all of them and restyled none. Each component now has its own, made when first asked for and kept
+  beneath a value markup, a style or code sets; a class added to it restyles the component.
 - A bevel join kept room for a round one's disc - 48 vertices a point where it writes 6.
 - A batch of dashed contours let each reserve the batch's whole output; each now reserves no more than a contour alone
   may write.
