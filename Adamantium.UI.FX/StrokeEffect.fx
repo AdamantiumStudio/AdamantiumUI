@@ -19,6 +19,10 @@ uint* PointContours;      // per point of Points: the contour it belongs to
 static float2* ContourPoints;
 static uint ContourPointCount;
 static uint ContourIsClosed;
+// The caps the cut puts on the contour's real ends: Start/EndCap, or - closed and untrimmed, with no real end - the dash
+// caps, which is what its seam wears.
+static uint ContourStartCap;
+static uint ContourEndCap;
 uint StartCap;            // start cap: 0 = flat, 1 = square, 2 = convex round, 3 = convex tri, 4 = concave tri, 5 = concave round
 uint EndCap;              // end cap (same codes)
 uint DashStartCap;        // cap on the STARTING end of each dash/dot piece (cut path); the contour's real ends use Start/EndCap
@@ -428,27 +432,20 @@ uint EmitJoin(float* outVerts, uint vCount, uint maxV, float2 V, float2 dIn, flo
 // same end of the first and last dash.
 float PieceCaps(float pieceStart, float pieceEnd, float tStart, float tEnd)
 {
-    uint capS = (pieceStart <= tStart + 1e-4) ? StartCap : DashStartCap;
-    uint capE = (pieceEnd >= tEnd - 1e-4) ? EndCap : DashEndCap;
+    uint capS = (pieceStart <= tStart + 1e-4) ? ContourStartCap : DashStartCap;
+    uint capE = (pieceEnd >= tEnd - 1e-4) ? ContourEndCap : DashEndCap;
     return float(capS + 8u * capE);
 }
 
-// StrokeDashCutCS, dash/trim mode: one thread walks the contour by arc length, emits visible pieces and their joins, and
-// writes the vertex count for DrawIndirect.
-[shader("compute")]
-[numthreads(1, 1, 1)]
-void StrokeDashCutCS(uint3 tid : SV_DispatchThreadID)
+// Dash/trim mode: the running thread walks its contour by arc length and writes the visible pieces and their joins to
+// outVerts, at most maxV vertices, numbering the pieces from serialBase; returns how many vertices it wrote.
+uint CutContour(float* outVerts, uint maxV, uint serialBase)
 {
-    if (tid.x != 0u)
-        return;
-
-    ContourPoints = Points;
-    ContourPointCount = PointCount;
-    ContourIsClosed = IsClosed;
+    bool hasRealEnds = (ContourIsClosed == 0u) || (TrimStart > 0.0) || (TrimEnd < 1.0);
+    ContourStartCap = hasRealEnds ? StartCap : DashStartCap;
+    ContourEndCap = hasRealEnds ? EndCap : DashEndCap;
     float2* points = ContourPoints;
-    float* outVerts = Output;
     float* pattern = Pattern;
-    uint* indirect = Indirect;
     uint segCount = ContourIsClosed != 0u ? ContourPointCount : ContourPointCount - 1u;
 
     float total = 0.0;
@@ -492,7 +489,7 @@ void StrokeDashCutCS(uint3 tid : SV_DispatchThreadID)
     frame.caps = PieceCaps(pieceStart, pieceEnd, tStart, tEnd);
 
     uint vCount = 0u;
-    uint pieceSerial = 0u;   // every quad and every join the walk emits is its own piece (see StrokeVertex.PieceId)
+    uint pieceSerial = serialBase;   // every quad and every join the walk emits is its own piece (see StrokeVertex.PieceId)
     float arc = 0.0;
     bool contInto = (ContourIsClosed != 0u) && on;   // does a live dash cross the vertex ENTERING the current segment (miter start)
     for (uint s = 0u; s < segCount; ++s)
@@ -555,7 +552,7 @@ void StrokeDashCutCS(uint3 tid : SV_DispatchThreadID)
                 float2 sBot = startCont ? mSm : e0 - nrm;
                 float2 eTop = endCont ? mEp : e1 + nrm;
                 float2 eBot = endCont ? mEm : e1 - nrm;
-                if (vCount + 6u <= MaxVertices)
+                if (vCount + 6u <= maxV)
                 {
                     EmitQuad(outVerts, vCount, sTop, sBot, eTop, eBot, hw, aArcA, aArcB, bArcA, bArcB, frame,
                              float(pieceSerial++));
@@ -597,17 +594,66 @@ void StrokeDashCutCS(uint3 tid : SV_DispatchThreadID)
             float2 dOut = normalize(points[(s + 2u) % ContourPointCount] - points[cv]);
             if (JoinIsVisible(dir, dOut))
             {
-                vCount = EmitJoin(outVerts, vCount, MaxVertices, points[cv], dir, dOut,
+                vCount = EmitJoin(outVerts, vCount, maxV, points[cv], dir, dOut,
                                   arc - pieceStart, pieceEnd - arc, frame, float(pieceSerial++));
             }
         }
         contInto = joinHere;
     }
 
+    return vCount;
+}
+
+// StrokeDashCutCS: one contour, one thread; writes the vertex count for DrawIndirect.
+[shader("compute")]
+[numthreads(1, 1, 1)]
+void StrokeDashCutCS(uint3 tid : SV_DispatchThreadID)
+{
+    if (tid.x != 0u)
+        return;
+
+    ContourPoints = Points;
+    ContourPointCount = PointCount;
+    ContourIsClosed = IsClosed;
+    uint vCount = CutContour(Output, MaxVertices, 0u);
+
+    uint* indirect = Indirect;
     indirect[0] = vCount;
     indirect[1] = 1u;
     indirect[2] = 0u;
     indirect[3] = 0u;
+}
+
+// --- batched cut: many dashed or trimmed contours in one dispatch and one draw ---
+uint ContourCount;        // contours in the batch (Contours holds them)
+uint* Slots;              // per contour: its first output vertex and how many it may write - two uints each
+
+// StrokeDashCutBatchCS: one thread per contour, each cutting its own into its own range of the output; what a contour
+// leaves of its range is filled with nothing to draw, so the batch is one plain draw of every range.
+[shader("compute")]
+[numthreads(64, 1, 1)]
+void StrokeDashCutBatchCS(uint3 tid : SV_DispatchThreadID)
+{
+    if (tid.x >= ContourCount)
+        return;
+
+    uint* contours = Contours;
+    uint* slots = Slots;
+    uint c = tid.x * 3u;
+    ContourPoints = Points + contours[c];
+    ContourPointCount = contours[c + 1u];
+    ContourIsClosed = contours[c + 2u];
+
+    // A piece is six vertices at least, so a contour's first vertex over six numbers its pieces apart from every other
+    // contour's - in the 16 bits the union depth holds, wrapping past them.
+    uint first = slots[tid.x * 2u];
+    float* outVerts = Output + first * 11u;
+    uint capacity = slots[tid.x * 2u + 1u];
+    uint vCount = CutContour(outVerts, capacity, (first / 6u) % 65536u);
+
+    PieceFrame none = NoCaps();
+    for (uint k = vCount; k < capacity; ++k)
+        WriteVert(outVerts, k, float2(0.0, 0.0), 0.0, 1e6, 1e6, none, 0.0);
 }
 
 struct VSInput
@@ -725,6 +771,12 @@ technique Stroke
     pass DashCut
     {
         ComputeShader = StrokeDashCutCS;
+    }
+
+    // DashCutBatch (compute): many contours' cut, a thread each, into fixed ranges of one output. Plain Draw.
+    pass DashCutBatch
+    {
+        ComputeShader = StrokeDashCutBatchCS;
     }
 
     // Draw (graphics): rasterize the compute-produced ribbon with a solid color.

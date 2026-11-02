@@ -1921,6 +1921,11 @@ All packages share one version.
 
 ### Changed
 
+- A dashed or trimmed GPU stroke of many contours - a map's paths, rail ticks, borders - is one batch as well: one
+  dispatch, a thread per contour cutting its own by its own length into a range of one output, and one draw, instead
+  of a dispatch and a draw per contour. Dashes fitted to a closed contour keep a draw per contour, as they are
+  stretched to it. The output a dashed contour reserves is bounded by the periods of its pattern rather than by its
+  shortest dash, so a pattern of short marks far apart no longer reserves a hundred times what it draws.
 - A fill's antialiased edge is kept as one 40-byte record per edge instead of six 24-byte corners; the vertex stage makes
   the corners. With the body of an instanced fill now sharing the mesh copy its instances are drawn from, and the
   shared meshes kept at their exact size rather than rounded up to a power of two, a map tile of 2 300 areas holds

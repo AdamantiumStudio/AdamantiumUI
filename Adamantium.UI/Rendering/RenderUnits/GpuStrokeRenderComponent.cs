@@ -69,6 +69,10 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
         public ReusableBuffer ContoursBuffer;
         public ReusableBuffer PointContoursBuffer;
 
+        // A batch of CUT contours: per contour, the first vertex of its output range and how long the range is.
+        public uint[] SlotsData;
+        public ReusableBuffer SlotsBuffer;
+
         public ulong PointsBytes => (ulong)(PointsData.Length * sizeof(float));
         public ulong VertexBytes => (ulong)(VertexCount * 11 * sizeof(float));   // see StrokeVertex (pos, a float4 per piece end, the piece serial)
     }
@@ -83,19 +87,23 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
         _useCut = _hasDashes || pen.TrimStart > 0.0 || pen.TrimEnd < 1.0;
         _joinType = MapJoin(pen.PenLineJoin);
 
-        // Continuous strokes of many contours - a map's roads, a chart's series - go as ONE batch: a dispatch and a draw
-        // per contour is what thousands of them cannot afford. Dash and trim walk each contour by its own arc length,
-        // and a lone contour gains nothing, so those keep a contour each.
+        // Strokes of many contours - a map's roads, a chart's series, a map's dashed paths - go as ONE batch: a dispatch
+        // and a draw per contour is what thousands of them cannot afford. Dashed or trimmed, each contour of a batch is
+        // still walked by its own arc length, by a thread of its own; one whose dashes are fitted to it keeps a draw of
+        // its own, as its pattern is its own.
         var valid = Valid(contours);
-        if (!_useCut && valid.Count > 1)
+        var alone = _useCut && _pen.FitDashesToContour ? valid.FindAll(contour => contour.IsClosed) : [];
+        var together = alone.Count > 0 ? valid.FindAll(contour => !contour.IsClosed) : valid;
+        if (together.Count > 1)
         {
-            foreach (var part in Batches(valid))
+            foreach (var part in _useCut ? CutBatches(together) : Batches(together))
             {
-                var contour = part.Count > 1 ? BuildBatch(part) : BuildContour(part[0].Points, part[0].IsClosed);
+                var contour = part.Count == 1 ? BuildContour(part[0].Points, part[0].IsClosed)
+                    : _useCut ? BuildCutBatch(part) : BuildBatch(part);
                 if (contour != null) _contours.Add(contour);
             }
 
-            return;
+            valid = alone;
         }
 
         foreach (var (points, isClosed) in valid)
@@ -147,6 +155,79 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
 
         if (current.Count > 0) batches.Add(current);
         return batches;
+    }
+
+    // Dashed or trimmed contours grouped likewise: at most MostBatchPoints points, and output ranges summing to no more
+    // than MostBatchVertexBytes.
+    private List<List<(Vector2<double>[] Points, bool IsClosed)>> CutBatches(
+        List<(Vector2<double>[] Points, bool IsClosed)> contours)
+    {
+        var mostVertices = MostBatchVertexBytes / (11 * sizeof(float));
+        var batches = new List<List<(Vector2<double>[] Points, bool IsClosed)>>();
+        var current = new List<(Vector2<double>[] Points, bool IsClosed)>();
+        var points = 0UL;
+        var vertices = 0UL;
+        foreach (var contour in contours)
+        {
+            var capacity = DashOutputCapacity(contour.Points, contour.IsClosed, _pen, CutRoundSegments, mostVertices);
+            if (current.Count > 0 &&
+                (points + (ulong)contour.Points.Length > MostBatchPoints || vertices + capacity > mostVertices))
+            {
+                batches.Add(current);
+                current = [];
+                points = 0;
+                vertices = 0;
+            }
+
+            current.Add(contour);
+            points += (ulong)contour.Points.Length;
+            vertices += capacity;
+        }
+
+        if (current.Count > 0) batches.Add(current);
+        return batches;
+    }
+
+    private uint CutRoundSegments => _joinType == 2u ? RoundSegmentsCount : 0u;
+
+    // A batch of dashed or trimmed contours: their points and table as a continuous batch has them, and for each contour
+    // the range of the output its cut writes - as long as the most its cut can write.
+    private Contour BuildCutBatch(List<(Vector2<double>[] Points, bool IsClosed)> contours)
+    {
+        var total = 0;
+        foreach (var (points, _) in contours) total += points.Length;
+
+        var c = new Contour
+        {
+            Batched = true,
+            PointCount = (uint)total,
+            PointsData = new float[total * 2],
+            ContoursData = new uint[contours.Count * 3],
+            PointContoursData = new uint[total],
+            SlotsData = new uint[contours.Count * 2],
+            RoundSegments = CutRoundSegments,
+            ThreadCount = (uint)contours.Count,
+        };
+        FillBatch(c, contours);
+
+        var at = 0u;
+        for (var k = 0; k < contours.Count; k++)
+        {
+            var capacity = DashOutputCapacity(contours[k].Points, contours[k].IsClosed, _pen, c.RoundSegments,
+                MostBatchVertexBytes / (11 * sizeof(float)));
+            c.SlotsData[k * 2] = at;
+            c.SlotsData[k * 2 + 1] = capacity;
+            at += capacity;
+        }
+
+        c.VertexCount = at;
+        c.PointsBuffer = NewStorage(c.PointsBytes);
+        c.ContoursBuffer = NewStorage((ulong)(c.ContoursData.Length * sizeof(uint)));
+        c.PointContoursBuffer = NewStorage((ulong)(c.PointContoursData.Length * sizeof(uint)));
+        c.SlotsBuffer = NewStorage((ulong)(c.SlotsData.Length * sizeof(uint)));
+        c.PatternBuffer = NewPattern(1f);
+        c.VertexBuffer = NewVertices(c.VertexBytes);
+        return c;
     }
 
     // One contour standing for all of them: their points one after another, a table of where each starts, and for every
@@ -245,6 +326,7 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
         var newUseCut = newHasDashes || newPen.TrimStart > 0.0 || newPen.TrimEnd < 1.0;
         if (newUseCut != _useCut) return false;                       // continuous <-> cut changes the buffer set
         if (MapJoin(newPen.PenLineJoin) != _joinType) return false;  // join changes the corner fan size
+        if (newPen.FitDashesToContour != _pen.FitDashesToContour) return false;   // fitting decides what is batched
 
         // Dash pattern (buffer size + content): each GetPen() makes a NEW collection, so compare by value, not ref.
         var oldDash = _pen.DashStrokeArray; var newDash = newPen.DashStrokeArray;
@@ -371,24 +453,13 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
             c.ThreadCount = 1;   // a single thread walks the whole contour and cuts the dash/trim pieces
             c.VertexCount = DashOutputCapacity(points, isClosed, _pen, c.RoundSegments);   // worst-case piece bound
 
-            // Pattern buffer: the real dash array, or a 1-element dummy for trim-only (PatternCount=0 -> not read).
-            var patternArr = _hasDashes ? new float[_pen.DashStrokeArray.Count] : new float[1];
             // A CLOSED contour's length almost never divides by the dash pattern, and the remainder lands where the
             // contour closes - one long dash at the seam, moving as the shape resizes. Fitting stretches the pattern by
             // at most half a period so a whole number goes round; the offset is scaled to match when it is uploaded.
             c.DashScale = _hasDashes && isClosed && _pen.FitDashesToContour
                 ? FitScale(points, _pen)
                 : 1f;
-            // Clamp each dash segment to >=1px. This CUT path turns every dash into REAL geometry, and a sub-pixel piece
-            // becomes a degenerate quad that never rasterizes - the line breaks up at DashOn<1. The SDF batch is analytic
-            // (per-fragment coverage) so a sub-pixel dash just fades there; only this compute path needs the floor.
-            for (var i = 0; i < _pen.DashStrokeArray.Count; i++)
-                patternArr[i] = Math.Max((float)_pen.DashStrokeArray[i] * c.DashScale, 1.0f);
-            c.PatternBuffer = ToDispose(Buffer.New(_device, (ulong)(patternArr.Length * sizeof(float)),
-                BufferUsageFlags.StorageBuffer | BufferUsageFlags.ShaderDeviceAddress, StrokeMemory));
-            var pp = c.PatternBuffer.MapMemory();
-            System.Runtime.InteropServices.Marshal.Copy(patternArr, 0, (IntPtr)(nint)pp, patternArr.Length);
-            c.PatternBuffer.UnmapMemory();
+            c.PatternBuffer = NewPattern(c.DashScale);
 
             c.IndirectBuffer = ToDispose(Buffer.New(_device, (ulong)(4 * sizeof(uint)),
                 BufferUsageFlags.IndirectBuffer | BufferUsageFlags.StorageBuffer | BufferUsageFlags.ShaderDeviceAddress, StrokeMemory));
@@ -409,11 +480,33 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
         return c;
     }
 
-    // Worst-case vertex count for the dash output buffer: total arc length / shortest "on" dash, plus a per-segment
-    // allowance for corner splits. A piece is exactly its 6 quad verts (caps are a mask, they emit nothing), plus one
-    // corner join per segment (a round disc, or up to 3 bevel/miter triangles). Capped. This is the only CPU work
-    // dashing does - an O(points) length sum, no per-piece tessellation - so animated dashes cost the CPU nothing.
-    private static uint DashOutputCapacity(Vector2<double>[] pts, bool closed, Pen pen, uint roundSegments)
+    // The dash pattern as the cut reads it, stretched by scale: the real dash array, or a 1-element dummy for trim-only
+    // (PatternCount=0 -> not read).
+    private Buffer NewPattern(float scale)
+    {
+        var pattern = _hasDashes ? new float[_pen.DashStrokeArray.Count] : new float[1];
+        for (var i = 0; i < _pen.DashStrokeArray.Count; i++)
+            pattern[i] = DashLength(_pen.DashStrokeArray[i] * scale);
+        var buffer = ToDispose(Buffer.New(_device, (ulong)(pattern.Length * sizeof(float)),
+            BufferUsageFlags.StorageBuffer | BufferUsageFlags.ShaderDeviceAddress, StrokeMemory));
+        var mapped = buffer.MapMemory();
+        System.Runtime.InteropServices.Marshal.Copy(pattern, 0, (IntPtr)(nint)mapped, pattern.Length);
+        buffer.UnmapMemory();
+        return buffer;
+    }
+
+    // Each dash segment is at least 1px. The CUT path turns every dash into REAL geometry, and a sub-pixel piece becomes a
+    // degenerate quad that never rasterizes - the line breaks up at DashOn<1. The SDF batch is analytic (per-fragment
+    // coverage) so a sub-pixel dash just fades there; only this compute path needs the floor.
+    private static float DashLength(double length) => Math.Max((float)length, 1.0f);
+
+    // Worst-case vertex count for the dash output buffer: a piece per "on" run of every period the arc length holds,
+    // plus a per-segment allowance for corner splits. A piece is exactly its 6 quad verts (caps are a mask, they emit
+    // nothing), plus one corner join per segment (a round disc, or up to 3 bevel/miter triangles). Capped at most - a
+    // contour alone, or a batch's whole budget. This is the only CPU work dashing does - an O(points) length sum, no
+    // per-piece tessellation - so animated dashes cost the CPU nothing.
+    private static uint DashOutputCapacity(Vector2<double>[] pts, bool closed, Pen pen, uint roundSegments,
+        ulong most = MaxDashVertices)
     {
         int n = pts.Length;
         int segs = closed ? n : n - 1;
@@ -422,18 +515,19 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
 
         // Trim-only (no dashes): trim clips to at most one run, so segs + 2 boundary splits is the bound.
         if (pen.DashStrokeArray is not { Count: > 0 })
-            return (uint)Math.Clamp((segs + 2) * perPiece + joinVerts, 6, MaxDashVertices);
+            return (uint)Math.Clamp((segs + 2) * perPiece + joinVerts, 6, (long)most);
 
         double total = 0;
         for (var s = 0; s < segs; s++) total += (pts[(s + 1) % n] - pts[s]).Length();
 
-        double minOn = double.MaxValue;
-        for (var k = 0; k < pen.DashStrokeArray.Count; k += 2)
-            if (pen.DashStrokeArray[k] > 0) minOn = Math.Min(minOn, pen.DashStrokeArray[k]);
-        if (minOn is double.MaxValue or <= 0) minOn = 1;
-
-        long pieces = (long)(total / minOn) + segs + 4;
-        long verts = Math.Clamp(pieces * perPiece + joinVerts, 6, MaxDashVertices);
+        // The period as the cut walks it, each entry floored to 1px. Fitted to a closed contour, a whole number of periods
+        // goes round - round(L/P), at most 2L/P + 1 - so twice the periods it holds and one more bounds them. An odd
+        // pattern turns its runs on and off in turn, so each entry may be a run.
+        double period = 0;
+        foreach (var entry in pen.DashStrokeArray) period += DashLength(entry);
+        long periods = (long)Math.Ceiling(total / (period * 0.5)) + 1;
+        long pieces = periods * pen.DashStrokeArray.Count + segs + 4;
+        long verts = Math.Clamp(pieces * perPiece + joinVerts, 6, (long)most);
         return (uint)verts;
     }
 
@@ -493,6 +587,7 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
             if (writePoints) points.SetData(c.PointsData, 0, (uint)c.PointsData.Length);
             Buffer contoursTable = null;
             Buffer pointContours = null;
+            Buffer slots = null;
             if (c.Batched)
             {
                 contoursTable = c.ContoursBuffer.Acquire((ulong)(c.ContoursData.Length * sizeof(uint)), out var writeTable);
@@ -500,6 +595,11 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
                 pointContours = c.PointContoursBuffer.Acquire((ulong)(c.PointContoursData.Length * sizeof(uint)),
                     out var writeOwners);
                 if (writeOwners) pointContours.SetData(c.PointContoursData, 0, (uint)c.PointContoursData.Length);
+                if (c.SlotsData != null)
+                {
+                    slots = c.SlotsBuffer.Acquire((ulong)(c.SlotsData.Length * sizeof(uint)), out var writeSlots);
+                    if (writeSlots) slots.SetData(c.SlotsData, 0, (uint)c.SlotsData.Length);
+                }
             }
 
             if (_useCut ? cutChanged || fringeChanged : fringeChanged) c.VertexBuffer.Invalidate();
@@ -535,7 +635,7 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
 
             if (_useCut)
             {
-                _effect.Indirect.SetValue(c.IndirectBuffer.GetDeviceAddress());
+                if (!c.Batched) _effect.Indirect.SetValue(c.IndirectBuffer.GetDeviceAddress());
                 _effect.Pattern.SetValue(c.PatternBuffer.GetDeviceAddress());
                 _effect.PatternCount.SetValue(_hasDashes ? (uint)_pen.DashStrokeArray.Count : 0u);
                 _effect.MaxVertices.SetValue(c.VertexCount);
@@ -554,7 +654,16 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
                 _effect.DashOffset.SetValue(effectiveOffset);
                 _effect.TrimStart.SetValue((float)Math.Clamp(_pen.TrimStart, 0.0, 1.0));
                 _effect.TrimEnd.SetValue((float)Math.Clamp(_pen.TrimEnd, 0.0, 1.0));
-                _effect.StrokeDashCutPass.Apply();   // separate compute kernel for the dash/trim cut
+                if (c.Batched)
+                {
+                    _effect.ContourCount.SetValue(c.ThreadCount);
+                    _effect.Slots.SetValue(slots.GetDeviceAddress());
+                    _effect.StrokeDashCutBatchPass.Apply();   // a thread per contour, each into its own output range
+                }
+                else
+                {
+                    _effect.StrokeDashCutPass.Apply();   // separate compute kernel for the dash/trim cut
+                }
             }
             else
             {
@@ -568,7 +677,7 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
             _device.BufferBarrier(vertices,
                 PipelineStageFlagBits2.ComputeShaderBit, AccessFlagBits2.ShaderWriteBit,
                 PipelineStageFlagBits2.VertexAttributeInputBit, AccessFlagBits2.VertexAttributeReadBit);
-            if (_useCut)
+            if (_useCut && !c.Batched)
             {
                 _device.BufferBarrier(c.IndirectBuffer,
                     PipelineStageFlagBits2.ComputeShaderBit, AccessFlagBits2.ShaderWriteBit,
@@ -698,10 +807,10 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
         {
             var vertices = c.VertexBuffer.Acquire(c.VertexBytes, out _);   // the slot PreRender expanded this frame
             _device.SetVertexBuffer(vertices);
-            if (_useCut)
+            if (_useCut && !c.Batched)
                 _device.DrawIndirect(vertices, c.IndirectBuffer);   // GPU-decided vertex count (dash/trim)
             else
-                _device.Draw(c.VertexCount, 1);
+                _device.Draw(c.VertexCount, 1);   // a cut batch draws every range whole: what is unused draws nothing
         }
     }
 }
