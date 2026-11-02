@@ -2485,6 +2485,10 @@ All packages share one version.
 
 ### Fixed
 
+- Classes a style, a trigger or an animation sets were one collection handed out through every component's `Classes`:
+  a class one component added reached all of them, and each was held for the style's life. They now stand beside the
+  component's own collection in `ClassNames` and are neither handed out nor watched; classes set in code, markup, a
+  template or a binding are the component's as before.
 - `Classes` of a component that never had them set was one collection shared by every component: a class added to it
   in code reached all of them and restyled none. Each component now has its own, made when first asked for and kept
   beneath a value markup, a style or code sets; a class added to it restyles the component.

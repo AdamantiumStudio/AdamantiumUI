@@ -271,8 +271,81 @@ public class ControlsTests
         {
             Assert.That(same, Is.True);
             Assert.That(bar.ClassNames, Does.Contain("Ring"));
-            Assert.That(withStyle, Is.EqualTo(new[] { "Accent" }));
+            Assert.That(withStyle, Is.EqualTo(new[] { "Accent", "Own" }), "the style's beside its own");
             Assert.That(styled.ClassNames, Is.EqualTo(new[] { "Own" }), "its own back once the style goes");
+        });
+    }
+
+    // A style's classes stand beside each component's own and are never handed out: a class one component adds is its
+    // own alone, kept when the style goes; the style does not hold the components it reached.
+    [Test]
+    public void Classes_OfAStyle_AreNotChangedThroughAComponent_NorHoldIt()
+    {
+        var style = new Style();
+        style.Selector.Types.Add(typeof(ProgressBar));
+        style.Setters.Add(new Setter("Classes", Classes.Parse("Accent")));
+        var a = new ProgressBar();
+        var b = new ProgressBar();
+        a.AttachStyles(style);
+        b.AttachStyles(style);
+
+        a.Classes.Add("Mine");
+        var withStyle = (a.ClassNames.ToArray(), b.ClassNames.ToArray());
+        a.DetachStyles(style);
+        var held = Held(style);
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        GC.Collect();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(withStyle.Item1, Is.EqualTo(new[] { "Accent", "Mine" }));
+            Assert.That(withStyle.Item2, Is.EqualTo(new[] { "Accent" }), "the style's classes not changed through a");
+            Assert.That(a.ClassNames, Is.EqualTo(new[] { "Mine" }), "its own kept once the style goes");
+            Assert.That(held.IsAlive, Is.False, "the style holds no component it reached");
+        });
+    }
+
+    // A component reached by the style, then dropped: a weak reference to it.
+    private static WeakReference Held(Style style)
+    {
+        var dropped = new ProgressBar();
+        dropped.AttachStyles(style);
+        return new WeakReference(dropped);
+    }
+
+    // A style matching a class of the component's own and setting others keeps matching: its classes stand beside them.
+    [Test]
+    public void Classes_OfAStyleMatchingAnOwnClass_LeaveItInForce()
+    {
+        var style = new Style();
+        style.Selector.Types.Add(typeof(ProgressBar));
+        style.Selector.Classes.Add("Primary");
+        style.Setters.Add(new Setter("Classes", Classes.Parse("Accent")));
+        var bar = new ProgressBar();
+        bar.Styles.Add(style);
+
+        bar.Classes.Add("Primary");
+
+        Assert.That(bar.ClassNames, Is.EquivalentTo(new[] { "Accent", "Primary" }));
+    }
+
+    // Classes a template's markup or a binding gives are the component's own: handed out, and watched.
+    [TestCase(ValuePriority.Template)]
+    [TestCase(ValuePriority.Binding)]
+    public void Classes_OfATemplateOrABinding_AreHandedOutAndWatched(ValuePriority priority)
+    {
+        var bar = new ProgressBar();
+        var given = Classes.Parse("Given");
+        bar.SetValue(FundamentalUIComponent.ClassesProperty, given, priority);
+
+        var handed = bar.Classes;
+        given.Add("More");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(handed, Is.SameAs(given));
+            Assert.That(bar.ClassNames, Is.EqualTo(new[] { "Given", "More" }));
         });
     }
 
