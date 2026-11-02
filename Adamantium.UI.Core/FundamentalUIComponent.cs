@@ -13,6 +13,7 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
 {
     private StylesCollection _attachedStyles;
     private Classes _classNames;
+    private Classes _ownClasses;
     private IFundamentalUIComponent parent;
     private TrackingCollection<IFundamentalUIComponent> logicalChildren;
     private Dictionary<object, Action> _follows;
@@ -172,9 +173,13 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
         }
     }
 
+    // Only the collection in force restyles: the component's own, under classes set, waits.
     private void ClassesCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
     {
-        SyncClassNames();
+        if (ReferenceEquals(sender, ClassesInForce))
+        {
+            SyncClassNames();
+        }
     }
 
     // The settable Classes property (markup/binding) carries the author's intent; ClassNames is the collection selectors
@@ -185,7 +190,7 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
         // Nothing to mirror INTO and nothing to mirror FROM: don't build the collection just to discover that. The guard
         // used to be `ClassNames == null` (the default-value callback can fire from the base ctor); a materializing
         // getter would have made that dead code AND allocated on every component that never names a class.
-        var classes = GetValue<Classes>(ClassesProperty);
+        var classes = ClassesInForce;
         if (_classNames == null && classes is not { Count: > 0 })
         {
             return;
@@ -345,23 +350,36 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
         set => SetValue(AllowDropProperty, value);
     }
 
-    /// <summary>The component's classes, which style selectors match: a collection of its own, made when first asked for
-    /// and kept beneath a value markup, a style or code sets - a class added to it restyles the component.</summary>
+    /// <summary>The component's classes, which style selectors match: the collection markup, a style or code set, or
+    /// else one of the component's own, made when first asked for - a class added to either restyles the component.
+    /// </summary>
     public Classes Classes
     {
-        get
-        {
-            if (GetValue<Classes>(ClassesProperty) is { } classes)
-            {
-                return classes;
-            }
-
-            var own = new Classes();
-            SetValue(ClassesProperty, own, ValuePriority.TypeDefault);
-            return own;
-        }
+        get => GetValue<Classes>(ClassesProperty) ?? OwnClasses();
         set => SetValue(ClassesProperty, value);
     }
+
+    // The component's own classes, where none are set: held apart from the property's values - asking for them sets
+    // nothing and reports no change, and no value set over them takes them away - made once, whichever thread asks.
+    private Classes OwnClasses()
+    {
+        if (_ownClasses is { } own)
+        {
+            return own;
+        }
+
+        var made = new Classes();
+        if (Interlocked.CompareExchange(ref _ownClasses, made, null) != null)
+        {
+            return _ownClasses;
+        }
+
+        made.CollectionChanged += ClassesCollectionChanged;
+        return made;
+    }
+
+    // The classes in force: those set, else the component's own.
+    private Classes ClassesInForce => GetValue<Classes>(ClassesProperty) ?? _ownClasses;
 
     public object DataContext
     {
