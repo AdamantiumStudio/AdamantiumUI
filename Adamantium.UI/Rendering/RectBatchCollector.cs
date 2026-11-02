@@ -58,7 +58,7 @@ internal sealed class RectBatchCollector : ShapeSdfCollector<RectItem>
     {
         if (pen == null) return true;
         if (pen.Brush is not SolidColorBrush) return false;
-        var dash = pen.DashStrokeArray;
+        var dash = pen.Dashes;
         if (dash is not { Count: > 0 }) return true;
         if (!IsDashPatternBatchable(dash)) return false;
 
@@ -103,7 +103,7 @@ internal sealed class RectBatchCollector : ShapeSdfCollector<RectItem>
         var period = 0.0;
         var fit = 1.0;
         var runs = 0;
-        if (pen.DashStrokeArray is { Count: >= 2 } d && IsDashPatternBatchable(d))
+        if (pen.Dashes is { Count: >= 2 } d && IsDashPatternBatchable(d))
         {
             runs = d.Count;
             for (var i = 0; i < runs; i++) period += d[i];

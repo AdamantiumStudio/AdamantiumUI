@@ -1,11 +1,11 @@
-// GPU stroke: StrokeExpand (compute) writes a polyline's triangle-list ribbon, one quad per segment (open: N-1, closed:
-// N), and StrokeDraw rasterizes it.
-// Caps are a per-fragment mask, not geometry, since concave caps must subtract: each vertex carries its position in the
-// straight end frames of its piece (a dash, trim run or open contour).
+// GPU stroke. A continuous polyline is drawn straight from its points (StrokePullVS), one quad per segment and a join fan
+// per point; one cut into dashes with shaped ends or trimmed is cut by StrokeDashCut (compute) into a ribbon StrokeVS
+// draws. Caps are a per-fragment mask, not geometry, since concave caps must subtract: each vertex carries its position
+// in the straight end frames of its piece (a dash, trim run or open contour).
 
-// --- StrokeExpand (compute) globals ---
+// --- stroke globals ---
 float2* Points;           // polyline points (PointCount of them) - every contour's, one after another, when batched
-float* Output;            // output vertices, 8 floats each (see WriteVert)
+float* Output;            // output vertices, VertexFloats each (see WriteVert)
 uint PointCount;          // continuous mode: polyline points (all contours' when batched). dash mode: piece-points.
 uint IsClosed;            // 0 = open polyline (flat ends), 1 = closed loop (wrap-around miters + closing pair)
 
@@ -28,12 +28,11 @@ uint EndCap;              // end cap (same codes)
 uint DashStartCap;        // cap on the STARTING end of each dash/dot piece (cut path); the contour's real ends use Start/EndCap
 uint DashEndCap;          // cap on the ENDING end of each dash/dot piece - separate, so a dash can be an arrow
 uint JoinType;            // 0 = miter (bisector ribbon, clamped), 1 = bevel (per-segment rectangles + corner wedge), 2 = round (rectangles + disc fan)
-uint RoundSegments;       // disc-fan subdivision for round joins; 0 = no round geometry (no disc slots)
-uint DashMode;            // 0 = continuous polyline (per-point), 1 = one-pass GPU cut (dash/trim, single-thread + DrawIndirect)
+uint RoundSegments;       // triangles a point keeps for its join; 0 = none
 float HalfThickness;
 float Fringe;             // AA feather width in geometry-LOCAL units (~1 device px / scale); ribbon/discs widen by Fringe/2
 
-// --- one-pass GPU cut (DashMode == 1): the GPU walks the contour by arc length and emits dash/trim pieces ---
+// --- one-pass GPU cut: the GPU walks the contour by arc length and emits dash/trim pieces ---
 uint* Indirect;           // VkDrawIndirectCommand the cut writes (vertexCount = GPU-decided draw size)
 float* Pattern;           // dash pattern (on,off,...); PatternCount entries, 0 = solid (one piece over trim)
 uint PatternCount;
@@ -113,7 +112,7 @@ float EndExtend(uint i)
 }
 
 // The two offset vertices (centerline +/- miter) at polyline point i, for the MITER join path only (bevel/round build
-// full-width per-segment rectangles instead - see StrokeExpandCS). Open endpoints use the single adjacent segment
+// full-width per-segment rectangles instead - see StrokePullVS). Open endpoints use the single adjacent segment
 // normal (flat) or push out by the cap's reach; interior points and every point of a closed loop use the bisector
 // miter, length clamped so a sharp corner can't shoot the tip to infinity.
 void OffsetPair(uint i, out float2 plus, out float2 minus)
@@ -145,7 +144,9 @@ void OffsetPair(uint i, out float2 plus, out float2 minus)
         uint next = (i + 1) % ContourPointCount;
         float2 n0 = SegmentNormal(points[prev], p);
         float2 n1 = SegmentNormal(p, points[next]);
-        miter = normalize(n0 + n1);
+        float2 sum = n0 + n1;
+        // A line turning straight back has no miter: its ends meet flat.
+        miter = dot(sum, sum) > 1e-8 ? normalize(sum) : n0;
         float denom = max(dot(miter, n0), 0.25);       // clamp -> miter length capped at 4*half on sharp corners
         miterLen = hw / denom;
     }
@@ -184,45 +185,67 @@ void PointAtArc(float target, out float2 pos, out float2 dir)
     }
 }
 
-// Vertex: (x, y | perp, uA, vA, arcA | caps, uB, vB, arcB); perp drives AA, u/v place it in each end's frame, arc is the
+// Floats a vertex takes (see StrokeVertex).
+static const uint VertexFloats = 20u;
+
+// A vertex as two parts: what it is at its point on the contour's axis, `anchor` - which the width does not move - and
+// how far the width it was written at, HalfThickness + Fringe / 2, moved it from there. Every part of it is the anchor's
+// value plus that move, and the move grows with the width, so StrokeVS draws it at another width by scaling the move:
+// a stroke whose width or feather changes - a zooming map's lines - is not written again.
+// Layout: (x, y | perp, uA, vA, arcA | caps, uB, vB, arcB | piece | anchor x, y | uA, vA, arcA, arcB at the anchor |
+// uB, vB at the anchor, the width written at). perp drives AA, u/v place the point in each end's frame, arc is the
 // distance along the contour, caps = capStart + 8 * capEnd (6 = none). All affine along a segment.
-void WriteVert(float* o, uint vi, float2 p, float perp, float arcA, float arcB, PieceFrame f, float pieceId)
+void WriteVert(float* o, uint vi, float2 anchor, float2 p, float perp, float anchorArcA, float anchorArcB, float arcA,
+    float arcB, PieceFrame f, float pieceId)
 {
-    float2 rA = p - f.A;
-    float2 rB = p - f.B;
-    uint b = vi * 11u;
-    o[b + 0u] = p.x;
-    o[b + 1u] = p.y;
+    float2 nA = float2(-f.dA.y, f.dA.x);
+    float2 nB = float2(-f.dB.y, f.dB.x);
+    float2 rA = anchor - f.A;
+    float2 rB = anchor - f.B;
+    float2 d = p - anchor;
+    uint b = vi * VertexFloats;
+    o[b + 0u] = d.x;
+    o[b + 1u] = d.y;
     o[b + 2u] = perp;
-    o[b + 3u] = dot(rA, f.dA);
-    o[b + 4u] = dot(rA, float2(-f.dA.y, f.dA.x));
-    o[b + 5u] = arcA;
+    o[b + 3u] = dot(d, f.dA);
+    o[b + 4u] = dot(d, nA);
+    o[b + 5u] = arcA - anchorArcA;
     o[b + 6u] = f.caps;
-    o[b + 7u] = -dot(rB, f.dB);
-    o[b + 8u] = dot(rB, float2(-f.dB.y, f.dB.x));
-    o[b + 9u] = arcB;
+    o[b + 7u] = -dot(d, f.dB);
+    o[b + 8u] = dot(d, nB);
+    o[b + 9u] = arcB - anchorArcB;
     o[b + 10u] = pieceId;   // ties between overlapping pieces, see StrokeVertex.PieceId
+    o[b + 11u] = anchor.x;
+    o[b + 12u] = anchor.y;
+    o[b + 13u] = dot(rA, f.dA);
+    o[b + 14u] = dot(rA, nA);
+    o[b + 15u] = anchorArcA;
+    o[b + 16u] = anchorArcB;
+    o[b + 17u] = -dot(rB, f.dB);
+    o[b + 18u] = dot(rB, nB);
+    o[b + 19u] = HalfThickness + Fringe * 0.5;
+}
+
+// A vertex the width does not move.
+void WritePoint(float* o, uint vi, float2 p, float arcA, float arcB, PieceFrame f, float pieceId)
+{
+    WriteVert(o, vi, p, p, 0.0, arcA, arcB, arcA, arcB, f, pieceId);
 }
 
 // Writes a quad (two triangles, 6 verts) from four corners into outVerts at vertex offset o.
 // hw = widened half-extent (HalfThickness + Fringe/2): the P corners sit at +hw perpendicular, the M corners at -hw, and
 // the signed distance v=+/-hw is interpolated across the quad so StrokePS feathers both long edges.
-void EmitQuad(float* outVerts, uint o, float2 aP, float2 aM, float2 bP, float2 bM, float hw,
+// a and b are the quad's two ends on the axis, the anchors its corners are moved from, with their arc distances.
+void EmitQuad(float* outVerts, uint o, float2 a, float2 b, float2 aP, float2 aM, float2 bP, float2 bM, float hw,
+              float aArcA0, float aArcB0, float bArcA0, float bArcB0,
               float aArcA, float aArcB, float bArcA, float bArcB, PieceFrame f, float pieceId)
 {
-    WriteVert(outVerts, o + 0u, aP,  hw, aArcA, aArcB, f, pieceId);
-    WriteVert(outVerts, o + 1u, aM, -hw, aArcA, aArcB, f, pieceId);
-    WriteVert(outVerts, o + 2u, bP,  hw, bArcA, bArcB, f, pieceId);
-    WriteVert(outVerts, o + 3u, bP,  hw, bArcA, bArcB, f, pieceId);
-    WriteVert(outVerts, o + 4u, aM, -hw, aArcA, aArcB, f, pieceId);
-    WriteVert(outVerts, o + 5u, bM, -hw, bArcA, bArcB, f, pieceId);
-}
-
-// Writes a degenerate (zero-area) quad at o - used for slots a thread doesn't fill, so the fixed layout stays uniform.
-void EmitDegenerateQuad(float* outVerts, uint o, float2 p)
-{
-    PieceFrame none = NoCaps();
-    for (uint q = 0u; q < 6u; ++q) WriteVert(outVerts, o + q, p, 0.0, 1e6, 1e6, none, 0.0);
+    WriteVert(outVerts, o + 0u, a, aP,  hw, aArcA0, aArcB0, aArcA, aArcB, f, pieceId);
+    WriteVert(outVerts, o + 1u, a, aM, -hw, aArcA0, aArcB0, aArcA, aArcB, f, pieceId);
+    WriteVert(outVerts, o + 2u, b, bP,  hw, bArcA0, bArcB0, bArcA, bArcB, f, pieceId);
+    WriteVert(outVerts, o + 3u, b, bP,  hw, bArcA0, bArcB0, bArcA, bArcB, f, pieceId);
+    WriteVert(outVerts, o + 4u, a, aM, -hw, aArcA0, aArcB0, aArcA, aArcB, f, pieceId);
+    WriteVert(outVerts, o + 5u, b, bM, -hw, bArcA0, bArcB0, bArcA, bArcB, f, pieceId);
 }
 
 // Round-join disc at V (radius half), at most `maxTris` triangles at `base`; returns the count. Arc distances advance
@@ -238,163 +261,16 @@ uint EmitDisc(float* outVerts, uint base, uint maxTris, float2 V, float arcA, fl
         float a1 = 6.28318530717958647692 * float(k + 1u) / float(RoundSegments);
         float2 r0 = hw * float2(cos(a0), sin(a0));
         float2 r1 = hw * float2(cos(a1), sin(a1));
-        WriteVert(outVerts, base + n * 3u + 0u, V, 0.0, arcA, arcB, f, pieceId);
-        WriteVert(outVerts, base + n * 3u + 1u, V + r0, hw, arcA + dot(r0, dIn), arcB - dot(r0, dOut), f, pieceId);
-        WriteVert(outVerts, base + n * 3u + 2u, V + r1, hw, arcA + dot(r1, dIn), arcB - dot(r1, dOut), f, pieceId);
+        WritePoint(outVerts, base + n * 3u + 0u, V, arcA, arcB, f, pieceId);
+        WriteVert(outVerts, base + n * 3u + 1u, V, V + r0, hw, arcA, arcB, arcA + dot(r0, dIn), arcB - dot(r0, dOut), f,
+            pieceId);
+        WriteVert(outVerts, base + n * 3u + 2u, V, V + r1, hw, arcA, arcB, arcA + dot(r1, dIn), arcB - dot(r1, dOut), f,
+            pieceId);
         ++n;
     }
     return n;
 }
 
-// StrokeExpandCS, continuous mode (dash/trim is StrokeDashCutCS): one thread per point writes its segment quad and join
-// fan into a fixed slot. Miter joins use a bisector ribbon; bevel/round use per-segment rectangles plus a wedge or disc.
-[shader("compute")]
-[numthreads(64, 1, 1)]
-void StrokeExpandCS(uint3 tid : SV_DispatchThreadID)
-{
-    // Continuous polyline, one thread per point. Fixed per-point slot: a segment quad then a join fan. Batched, the slots
-    // of all contours lie one after another as their points do, and a thread works inside its own point's contour.
-    if (tid.x >= PointCount)
-        return;
-
-    uint i = tid.x;
-    ContourPoints = Points;
-    ContourPointCount = PointCount;
-    ContourIsClosed = IsClosed;
-    if (Batched != 0u)
-    {
-        uint* contours = Contours;
-        uint* pointContours = PointContours;
-        uint c = pointContours[tid.x] * 3u;
-        uint first = contours[c];
-        ContourPoints = Points + first;
-        ContourPointCount = contours[c + 1u];
-        ContourIsClosed = contours[c + 2u];
-        i = tid.x - first;
-    }
-
-    float2* points = ContourPoints;
-    float* outVerts = Output;
-    uint vpp = 6u + RoundSegments * 3u;
-    uint baseV = tid.x * vpp;
-    float2 p = points[i];
-
-    bool isStart = (ContourIsClosed == 0) && (i == 0u);
-    bool isEnd   = (ContourIsClosed == 0) && (i + 1u == ContourPointCount);
-    bool hasSegment = (ContourIsClosed != 0) || (i + 1u < ContourPointCount);
-
-    PieceFrame frame = NoCaps();
-    // Arc distance from this point to the contour's two ends - how far a cap can still reach it. Only the first half
-    // thickness matters, so the walk stops there and anything past it is simply "far": on a densely tessellated contour
-    // one segment is often shorter than the bite, and a walk that stopped on the limit must not be treated as exact or
-    // the NEXT point's distance (derived by subtracting a segment) comes out short and its cap bites where no end is.
-    float capRange = HalfThickness + Fringe + 1.0;
-    float back = 1e6;
-    float fwd = 1e6;
-    if (ContourIsClosed == 0u)
-    {
-        uint last = ContourPointCount - 1u;
-        frame.A = points[0];
-        frame.dA = normalize(points[1] - points[0]);
-        frame.B = points[last];
-        frame.dB = normalize(points[last] - points[last - 1u]);
-        frame.caps = float(StartCap + 8u * EndCap);
-
-        back = 0.0;
-        for (uint k = i; k > 0u && back < capRange; --k) back += length(points[k] - points[k - 1u]);
-        fwd = 0.0;
-        for (uint k2 = i; k2 + 1u < ContourPointCount && fwd < capRange; ++k2) fwd += length(points[k2 + 1u] - points[k2]);
-        if (back >= capRange) back = 1e6;
-        if (fwd >= capRange) fwd = 1e6;
-    }
-
-    // 1) Outgoing segment quad i -> i+1 (degenerate for the open contour's last point, which has no segment).
-    if (hasSegment)
-    {
-        uint ni = (i + 1u) % ContourPointCount;
-        float segLen = length(points[ni] - p);
-        float nBack = back + segLen;
-        float nFwd = fwd - segLen;
-        if (JoinType == 0u)
-        {
-            // MITER: shared bisector offsets keep the width constant into the corner (spike clamped in OffsetPair).
-            float2 aP, aM, bP, bM;
-            OffsetPair(i, aP, aM);
-            OffsetPair(ni, bP, bM);
-            EmitQuad(outVerts, baseV, aP, aM, bP, bM, HalfThickness + Fringe * 0.5,
-                     back, fwd, nBack, nFwd, frame, float(tid.x * 2u));
-        }
-        else
-        {
-            // BEVEL/ROUND: a full-width rectangle offset by THIS segment's own perpendicular normal. A shared bisector
-            // pulled back to half would pinch the stroke thinner at every corner (worst on sharp star tips / gear
-            // teeth); a per-segment normal keeps the width exact and the fan below fills the corner.
-            float2 a = p;
-            float2 b = points[ni];
-            float2 dir = normalize(b - a);
-            float hw = HalfThickness + Fringe * 0.5;
-            float2 nrm = float2(-dir.y, dir.x) * hw;
-            if (ContourIsClosed == 0u)
-            {
-                if (i == 0u) a -= dir * EndExtend(i);              // room for the start cap's mask
-                if (ni + 1u == ContourPointCount) b += dir * EndExtend(ni);
-            }
-            EmitQuad(outVerts, baseV, a + nrm, a - nrm, b + nrm, b - nrm, hw, back, fwd, nBack, nFwd, frame,
-                     float(tid.x * 2u));
-        }
-    }
-    else
-    {
-        EmitDegenerateQuad(outVerts, baseV, p);
-    }
-
-    // 2) Per-point fan slot: the JOIN at an interior (or closed-loop) point - a round disc or a bevel wedge. The two
-    //    open ends need nothing here any more: their caps are masks on the quad above. Skipped when RoundSegments==0
-    //    (miter joins need no fan geometry at all).
-    if (RoundSegments == 0u)
-        return;
-
-    uint discBase = baseV + 6u;
-    uint nTris = 0u;
-    uint prev = (i + ContourPointCount - 1u) % ContourPointCount;
-    uint next = (i + 1u) % ContourPointCount;
-
-    float2 dIn = normalize(p - points[prev]);
-    float2 dOut = normalize(points[next] - p);
-    // The fan is a SEPARATE piece from the segment quad above (it lies on top of it), so it takes its own serial.
-    // Pieces are numbered by the point's place in the WHOLE dispatch, not in its contour: two contours of one batch
-    // crossing must not tie, or a translucent union lets both through.
-    float fanId = float(tid.x * 2u + 1u);
-    if (JoinType == 2u && !isStart && !isEnd && JoinIsVisible(dIn, dOut))
-    {
-        nTris = EmitDisc(outVerts, discBase, RoundSegments, p, back, fwd, dIn, dOut, frame, fanId);
-    }
-    else if (JoinType == 1u && hasSegment && !isStart)
-    {
-        // Bevel join: fill the wedge between the incoming and outgoing rectangles. Two triangles cover both sides; the
-        // inner one lands inside the overlap, harmless for an opaque stroke.
-        float hw = HalfThickness + Fringe * 0.5;
-        float2 nIn = SegmentNormal(points[prev], p) * hw;
-        float2 nOut = SegmentNormal(p, points[next]) * hw;
-        WriteVert(outVerts, discBase + 0u, p + nIn, hw, back, fwd, frame, fanId);
-        WriteVert(outVerts, discBase + 1u, p + nOut, hw, back, fwd, frame, fanId);
-        WriteVert(outVerts, discBase + 2u, p, 0.0, back, fwd, frame, fanId);
-        WriteVert(outVerts, discBase + 3u, p - nIn, -hw, back, fwd, frame, fanId);
-        WriteVert(outVerts, discBase + 4u, p - nOut, -hw, back, fwd, frame, fanId);
-        WriteVert(outVerts, discBase + 5u, p, 0.0, back, fwd, frame, fanId);
-        nTris = 2u;
-    }
-
-    // Degenerate-fill the unused triangles so the fixed per-point slot stays uniform.
-    PieceFrame none = NoCaps();
-    for (uint k = nTris; k < RoundSegments; ++k)
-    {
-        uint o = discBase + k * 3u;
-        WriteVert(outVerts, o + 0u, p, 0.0, 1e6, 1e6, none, 0.0);
-        WriteVert(outVerts, o + 1u, p, 0.0, 1e6, 1e6, none, 0.0);
-        WriteVert(outVerts, o + 2u, p, 0.0, 1e6, 1e6, none, 0.0);
-    }
-}
 
 // The bevel/round join where a dash crosses corner V (miter needs none), carrying the piece's frame so caps carve it
 // like the ribbon.
@@ -410,17 +286,17 @@ uint EmitJoin(float* outVerts, uint vCount, uint maxV, float2 V, float2 dIn, flo
         return vCount + tris * 3u;
     }
 
-    // BEVEL wedge, filled on BOTH sides (mirrors StrokeExpandCS's bevel): the outer triangle closes the gap the turn
+    // BEVEL wedge, filled on BOTH sides (mirrors StrokePullVS's bevel): the outer triangle closes the gap the turn
     // opens, the inner one lands inside the two quads' overlap (harmless for an opaque stroke). Doing both sides avoids
     // ever having to pick - and mis-pick - the outer side. MITER is not routed here (its quad ends already meet).
     if (vCount + 6u <= maxV)
     {
-        WriteVert(outVerts, vCount + 0u, V + nInU * h, h, arcA, arcB, f, pieceId);
-        WriteVert(outVerts, vCount + 1u, V + nOutU * h, h, arcA, arcB, f, pieceId);
-        WriteVert(outVerts, vCount + 2u, V, 0.0, arcA, arcB, f, pieceId);
-        WriteVert(outVerts, vCount + 3u, V - nInU * h, -h, arcA, arcB, f, pieceId);
-        WriteVert(outVerts, vCount + 4u, V - nOutU * h, -h, arcA, arcB, f, pieceId);
-        WriteVert(outVerts, vCount + 5u, V, 0.0, arcA, arcB, f, pieceId);
+        WriteVert(outVerts, vCount + 0u, V, V + nInU * h, h, arcA, arcB, arcA, arcB, f, pieceId);
+        WriteVert(outVerts, vCount + 1u, V, V + nOutU * h, h, arcA, arcB, arcA, arcB, f, pieceId);
+        WritePoint(outVerts, vCount + 2u, V, arcA, arcB, f, pieceId);
+        WriteVert(outVerts, vCount + 3u, V, V - nInU * h, -h, arcA, arcB, arcA, arcB, f, pieceId);
+        WriteVert(outVerts, vCount + 4u, V, V - nOutU * h, -h, arcA, arcB, arcA, arcB, f, pieceId);
+        WritePoint(outVerts, vCount + 5u, V, arcA, arcB, f, pieceId);
         vCount += 6u;
     }
     return vCount;
@@ -462,14 +338,15 @@ uint CutContour(float* outVerts, uint maxV, uint serialBase)
     bool on = true;
     if (PatternCount > 0u && patTotal > 0.0)
     {
-        float off = DashOffset - floor(DashOffset / patTotal) * patTotal;
+        // An odd pattern repeats on and off swapped, so it comes back to itself after two of it.
+        float period = PatternCount % 2u == 1u ? patTotal * 2.0 : patTotal;
+        float off = DashOffset - floor(DashOffset / period) * period;
         while (off > 1e-6)
         {
             float take = min(off, rem);
             off -= take; rem -= take;
-            if (rem <= 1e-6) { pi = (pi + 1u) % PatternCount; rem = pattern[pi]; }
+            if (rem <= 1e-6) { pi = (pi + 1u) % PatternCount; rem = pattern[pi]; on = !on; }
         }
-        on = (pi % 2u) == 0u;
     }
 
     // The ON run currently being drawn, as a PIECE: its two arc-length ends, the frames there and the caps they wear.
@@ -554,8 +431,9 @@ uint CutContour(float* outVerts, uint maxV, uint serialBase)
                 float2 eBot = endCont ? mEm : e1 - nrm;
                 if (vCount + 6u <= maxV)
                 {
-                    EmitQuad(outVerts, vCount, sTop, sBot, eTop, eBot, hw, aArcA, aArcB, bArcA, bArcB, frame,
-                             float(pieceSerial++));
+                    EmitQuad(outVerts, vCount, p0, p1, sTop, sBot, eTop, eBot, hw,
+                             drawA - pieceStart, pieceEnd - drawA, drawB - pieceStart, pieceEnd - drawB,
+                             aArcA, aArcB, bArcA, bArcB, frame, float(pieceSerial++));
                     vCount += 6u;
                 }
             }
@@ -647,21 +525,25 @@ void StrokeDashCutBatchCS(uint3 tid : SV_DispatchThreadID)
     // A piece is six vertices at least, so a contour's first vertex over six numbers its pieces apart from every other
     // contour's - in the 16 bits the union depth holds, wrapping past them.
     uint first = slots[tid.x * 2u];
-    float* outVerts = Output + first * 11u;
+    float* outVerts = Output + first * VertexFloats;
     uint capacity = slots[tid.x * 2u + 1u];
     uint vCount = CutContour(outVerts, capacity, (first / 6u) % 65536u);
 
     PieceFrame none = NoCaps();
     for (uint k = vCount; k < capacity; ++k)
-        WriteVert(outVerts, k, float2(0.0, 0.0), 0.0, 1e6, 1e6, none, 0.0);
+        WritePoint(outVerts, k, float2(0.0, 0.0), 1e6, 1e6, none, 0.0);
 }
 
+// What the width moved the vertex by - its position and frame values - and the rest at its anchor (see WriteVert).
 struct VSInput
 {
-    float2 Position : POSITION;
-    float4 Cap0 : TEXCOORD0;   // perp, uA, vA, arcA
-    float4 Cap1 : TEXCOORD1;   // caps, uB, vB, arcB
+    float2 Offset : POSITION;
+    float4 Cap0 : TEXCOORD0;   // perp, uA, vA, arcA - moves
+    float4 Cap1 : TEXCOORD1;   // caps, uB, vB, arcB - moves but caps
     float PieceId : TEXCOORD2;
+    float2 Anchor : TEXCOORD3;
+    float4 AnchorA : TEXCOORD4;   // uA, vA, arcA, arcB at the anchor
+    float3 AnchorB : TEXCOORD5;   // uB, vB at the anchor, the width the moves were written at
 };
 
 struct PSInput
@@ -670,17 +552,229 @@ struct PSInput
     float4 Cap0 : TEXCOORD0;
     float4 Cap1 : TEXCOORD1;
     float PieceId : TEXCOORD2;
+    float Arc : TEXCOORD3;     // how far along its contour the point is; read only by a dash mask
 };
+
+// A continuous stroke's dashes as a mask (DashMask != 0): the pattern - Pattern, PatternCount, DashOffset - laid along
+// the contour's length, its runs' ends square and feathered like the stroke's edge. What the cut's real pieces are for
+// is ends of other shapes; flat-ended dashes are this. An odd pattern is taken twice, its runs on and off in turn.
+uint DashMask;
+
+float DashCoverage(float arc)
+{
+    float* pattern = Pattern;
+    uint runs = PatternCount % 2u == 1u ? PatternCount * 2u : PatternCount;
+    float total = 0.0;
+    for (uint k = 0u; k < runs; ++k) total += pattern[k % PatternCount];
+    if (total <= 0.0) return 1.0;
+
+    float at = arc + DashOffset;
+    at -= floor(at / total) * total;
+
+    // The signed distance to the nearest end of an "on" run: positive inside one.
+    float start = 0.0;
+    float sd = -1e9;
+    for (uint k = 0u; k < runs; ++k)
+    {
+        float end = start + pattern[k % PatternCount];
+        if ((k % 2u) == 0u)
+        {
+            // This run and its repeats a period either side, so a run across the pattern's seam is whole.
+            sd = max(sd, min(at - start, end - at));
+            sd = max(sd, min(at - start + total, end - total - at));
+            sd = max(sd, min(at - start - total, end + total - at));
+        }
+
+        start = end;
+    }
+
+    return Fringe > 0.0 ? saturate(sd / Fringe + 0.5) : (sd >= 0.0 ? 1.0 : 0.0);
+}
+
+// Whether a dash covers `arc` and a feather's width either side of it in full.
+bool DashRunsThrough(float arc)
+{
+    float reach = max(Fringe, 1e-3);
+    return DashCoverage(arc - reach) >= 1.0 && DashCoverage(arc) >= 1.0 && DashCoverage(arc + reach) >= 1.0;
+}
 
 [shader("vertex")]
 PSInput StrokeVS(VSInput input)
 {
+    // The moves scaled to the width drawn now.
+    float scale = (HalfThickness + Fringe * 0.5) / max(input.AnchorB.z, 1e-20);
+    float2 position = input.Anchor + input.Offset * scale;
+
     PSInput o;
-    o.Position = mul(float4(input.Position, 0.0, 1.0), Projection);   // row-vector convention (matches engine effects)
-    o.Cap0 = input.Cap0;
-    o.Cap1 = input.Cap1;
+    o.Position = mul(float4(position, 0.0, 1.0), Projection);   // row-vector convention (matches engine effects)
+    o.Cap0 = float4(input.Cap0.x * scale, input.AnchorA.x + input.Cap0.y * scale, input.AnchorA.y + input.Cap0.z * scale,
+        input.AnchorA.z + input.Cap0.w * scale);
+    o.Cap1 = float4(input.Cap1.x, input.AnchorB.x + input.Cap1.y * scale, input.AnchorB.y + input.Cap1.z * scale,
+        input.AnchorA.w + input.Cap1.w * scale);
     o.PieceId = input.PieceId;
+    o.Arc = 0.0;
     return o;
+}
+
+// --- pulled continuous draw: no ribbon is kept - each vertex of it is worked out where it is drawn, from the points ---
+float* Arcs;              // per point of Points: how far along its contour it is from the contour's first point
+
+// A corner of the ribbon at the width drawn now; `along` is how far along its contour it is, for a dash mask.
+PSInput Corner(float2 p, float perp, float arcA, float arcB, PieceFrame f, float pieceId, float along)
+{
+    float2 rA = p - f.A;
+    float2 rB = p - f.B;
+    PSInput o;
+    o.Position = mul(float4(p, 0.0, 1.0), Projection);
+    o.Cap0 = float4(perp, dot(rA, f.dA), dot(rA, float2(-f.dA.y, f.dA.x)), arcA);
+    o.Cap1 = float4(f.caps, -dot(rB, f.dB), dot(rB, float2(-f.dB.y, f.dB.x)), arcB);
+    o.PieceId = pieceId;
+    o.Arc = along;
+    return o;
+}
+
+// A vertex of a triangle that draws nothing: all three of it fall on one point.
+PSInput NoCorner(float2 p)
+{
+    return Corner(p, 0.0, 1e6, 1e6, NoCaps(), 0.0, 0.0);
+}
+
+// StrokePullVS: the continuous stroke drawn straight from its points, as many vertices a point as StrokeExpandCS writes
+// for it - the segment quad to the next point, then its join fan - each worked out here, so a stroke keeps only its
+// points and draws at whatever width and scale it is drawn at.
+[shader("vertex")]
+PSInput StrokePullVS(uint vertexId : SV_VertexID)
+{
+    uint vpp = 6u + RoundSegments * 3u;
+    uint t = vertexId / vpp;
+    uint corner = vertexId % vpp;
+
+    uint i = t;
+    uint first = 0u;
+    ContourPoints = Points;
+    ContourPointCount = PointCount;
+    ContourIsClosed = IsClosed;
+    if (Batched != 0u)
+    {
+        uint* contours = Contours;
+        uint* pointContours = PointContours;
+        uint c = pointContours[t] * 3u;
+        first = contours[c];
+        ContourPoints = Points + first;
+        ContourPointCount = contours[c + 1u];
+        ContourIsClosed = contours[c + 2u];
+        i = t - first;
+    }
+
+    float2* points = ContourPoints;
+    float* arcs = Arcs;
+    float2 p = points[i];
+    float along = arcs[first + i];
+    bool isStart = (ContourIsClosed == 0u) && (i == 0u);
+    bool isEnd = (ContourIsClosed == 0u) && (i + 1u == ContourPointCount);
+    bool hasSegment = (ContourIsClosed != 0u) || (i + 1u < ContourPointCount);
+
+    PieceFrame frame = NoCaps();
+    float back = 1e6;
+    float fwd = 1e6;
+    if (ContourIsClosed == 0u)
+    {
+        uint last = ContourPointCount - 1u;
+        frame.A = points[0];
+        frame.dA = normalize(points[1] - points[0]);
+        frame.B = points[last];
+        frame.dB = normalize(points[last] - points[last - 1u]);
+        frame.caps = float(StartCap + 8u * EndCap);
+        back = arcs[first + i];
+        fwd = arcs[first + last] - back;
+    }
+
+    float hw = HalfThickness + Fringe * 0.5;
+    if (corner < 6u)
+    {
+        if (!hasSegment)
+        {
+            return NoCorner(p);
+        }
+
+        // The segment quad to the next point, its corners in EmitQuad's order: aP, aM, bP, bP, aM, bM.
+        uint ni = (i + 1u) % ContourPointCount;
+        float segLen = length(points[ni] - p);
+        float2 aP, aM, bP, bM;
+        if (JoinType == 0u)
+        {
+            OffsetPair(i, aP, aM);
+            OffsetPair(ni, bP, bM);
+        }
+        else
+        {
+            float2 a = p;
+            float2 b = points[ni];
+            float2 dir = normalize(b - a);
+            float2 nrm = float2(-dir.y, dir.x) * hw;
+            if (ContourIsClosed == 0u)
+            {
+                if (i == 0u) a -= dir * EndExtend(i);
+                if (ni + 1u == ContourPointCount) b += dir * EndExtend(ni);
+            }
+
+            aP = a + nrm;
+            aM = a - nrm;
+            bP = b + nrm;
+            bM = b - nrm;
+        }
+
+        // The length along the contour at a corner is its point's projection on the segment - exact over the whole quad,
+        // past a cap's pushed out end and a miter's corner too.
+        bool atB = corner == 2u || corner == 3u || corner == 5u;
+        bool plus = corner == 0u || corner == 2u || corner == 3u;
+        float2 q = atB ? (plus ? bP : bM) : (plus ? aP : aM);
+        float2 segDir = normalize(points[ni] - p);
+        return Corner(q, plus ? hw : -hw, atB ? back + segLen : back, atB ? fwd - segLen : fwd, frame,
+            float((t * 2u) % 65536u), along + dot(q - p, segDir));
+    }
+
+    // A dashed stroke joins two segments only where a dash runs on through the corner; elsewhere a join would jut out
+    // of a dash's end, or into a gap.
+    if (DashMask != 0u && !DashRunsThrough(along))
+    {
+        return NoCorner(p);
+    }
+
+    // The join fan: triangle `tri` of it, vertex `v` of that.
+    uint k = corner - 6u;
+    uint tri = k / 3u;
+    uint v = k % 3u;
+    uint prev = (i + ContourPointCount - 1u) % ContourPointCount;
+    uint next = (i + 1u) % ContourPointCount;
+    float2 dIn = normalize(p - points[prev]);
+    float2 dOut = normalize(points[next] - p);
+    float fanId = float((t * 2u + 1u) % 65536u);
+    if (JoinType == 2u && !isStart && !isEnd && JoinIsVisible(dIn, dOut))
+    {
+        if (v == 0u)
+        {
+            return Corner(p, 0.0, back, fwd, frame, fanId, along);
+        }
+
+        float angle = 6.28318530717958647692 * float(v == 1u ? tri : tri + 1u) / float(RoundSegments);
+        float2 r = hw * float2(cos(angle), sin(angle));
+        return Corner(p + r, hw, back + dot(r, dIn), fwd - dot(r, dOut), frame, fanId, along);
+    }
+
+    if (JoinType == 1u && hasSegment && !isStart && tri < 2u)
+    {
+        if (v == 2u)
+        {
+            return Corner(p, 0.0, back, fwd, frame, fanId, along);
+        }
+
+        float side = tri == 0u ? 1.0 : -1.0;
+        float2 n = v == 0u ? SegmentNormal(points[prev], p) : SegmentNormal(p, points[next]);
+        return Corner(p + n * hw * side, hw * side, back, fwd, frame, fanId, along);
+    }
+
+    return NoCorner(p);
 }
 
 // Signed distance to a cap boundary (positive = painted) from u (along the end's axis), v (across) and arc (along the
@@ -707,7 +801,8 @@ float StrokeCoverage(PSInput input)
     sd = min(sd, CapSd(caps % 8u, input.Cap0.y, input.Cap0.z, input.Cap0.w, HalfThickness, hBite));
     sd = min(sd, CapSd(caps / 8u, input.Cap1.y, input.Cap1.z, input.Cap1.w, HalfThickness, hBite));
 
-    return Fringe > 0.0 ? saturate(sd / Fringe + 0.5) : (sd >= 0.0 ? 1.0 : 0.0);
+    float coverage = Fringe > 0.0 ? saturate(sd / Fringe + 0.5) : (sd >= 0.0 ? 1.0 : 0.0);
+    return DashMask != 0u ? coverage * DashCoverage(input.Arc) : coverage;
 }
 
 // Depth = coverage in the high 8 bits and piece id in the low 16, exact in float32, so max coverage wins and ties never
@@ -761,12 +856,6 @@ UnionOutput StrokeUnionDrawPS(PSInput input)
 
 technique Stroke
 {
-    // Expand (compute): continuous polyline -> miter ribbon + round-join disc fans, written via BDA. Plain Draw.
-    pass Expand
-    {
-        ComputeShader = StrokeExpandCS;
-    }
-
     // DashCut (compute): one-pass dash/trim cut, single thread, writes the VkDrawIndirectCommand. DrawIndirect.
     pass DashCut
     {
@@ -796,6 +885,25 @@ technique Stroke
     pass UnionDraw
     {
         VertexShader = StrokeVS;
+        PixelShader = StrokeUnionDrawPS;
+    }
+
+    // The same three, for a continuous stroke drawn straight from its points (StrokePullVS): no vertex buffer.
+    pass PullDraw
+    {
+        VertexShader = StrokePullVS;
+        PixelShader = StrokePS;
+    }
+
+    pass PullUnionDepth
+    {
+        VertexShader = StrokePullVS;
+        PixelShader = StrokeUnionDepthPS;
+    }
+
+    pass PullUnionDraw
+    {
+        VertexShader = StrokePullVS;
         PixelShader = StrokeUnionDrawPS;
     }
 }

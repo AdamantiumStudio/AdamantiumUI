@@ -95,6 +95,8 @@ public class PolylineGeometry : Geometry
         }
     }
 
+    protected internal override bool ContoursAreStrokePaths => true;
+
     // One snapshot of each collection: what is checked is what is stroked, even if a collection changes meanwhile.
     protected internal override void ProcessGeometryCore(GeometryType geometryType)
     {

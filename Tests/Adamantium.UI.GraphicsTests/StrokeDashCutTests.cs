@@ -22,8 +22,21 @@ public class StrokeDashCutTests
     [TearDown]
     public void ReleaseDevices() => GpuFixture.ReleaseRenderDevices();
 
-    // Floats per vertex as WriteVert lays them out: (x, y | perp, uA, vA, arcA | caps, uB, vB, arcB | pieceId).
-    private const int VertexFloats = 11;
+    // Floats per vertex as WriteVert lays them out: the moves (x, y | perp, uA, vA, arcA | caps, uB, vB, arcB), the piece
+    // id, then the anchor (x, y | uA, vA, arcA, arcB | uB, vB, the width written at).
+    private const int VertexFloats = 20;
+
+    // Vertex `vertex` as StrokeVS draws it at the width it was written at: (x, y | perp, uA, vA, arcA | caps, uB, vB, arcB).
+    private static float[] Drawn(float[] verts, int vertex)
+    {
+        var o = vertex * VertexFloats;
+        return
+        [
+            verts[o + 11] + verts[o + 0], verts[o + 12] + verts[o + 1],
+            verts[o + 2], verts[o + 13] + verts[o + 3], verts[o + 14] + verts[o + 4], verts[o + 15] + verts[o + 5],
+            verts[o + 6], verts[o + 17] + verts[o + 7], verts[o + 18] + verts[o + 8], verts[o + 16] + verts[o + 9],
+        ];
+    }
 
     // A dash across a sharp corner fills the join wedge on both sides. Open L, one dash over the whole contour, bevel
     // join: quad + wedge + quad = 18 verts, no cap geometry (caps are a fragment mask).
@@ -39,7 +52,7 @@ public class StrokeDashCutTests
         var gd = (GraphicsDevice)device;
 
         var effect = Effect.CompileFromFile(Path.Combine("EffectsData", "StrokeEffect.fx"), device);
-        var pass = effect.Techniques[0].Passes[1];   // Stroke technique: 0 Expand, 1 DashCut, 2 Draw
+        var pass = effect.Techniques[0].Passes["DashCut"];
 
         var pointsBuf = MakeBuffer(gd, pts);
         var patternBuf = MakeBuffer(gd, pattern);
@@ -68,8 +81,7 @@ public class StrokeDashCutTests
         Assert.That(cmd4[0], Is.EqualTo(18), "vertexCount: quad(6) + both-sided bevel wedge(6) + quad(6), no cap geometry");
 
 
-        // The join is the 6 verts right after seg0's quad, VertexFloats each:
-        // (x, y | perp, uA, vA, arcA | caps, uB, vB, arcB | pieceId).
+        // The join is the 6 verts right after seg0's quad, as drawn: (x, y | perp, uA, vA, arcA | caps, uB, vB, arcB).
         // Corner (100,0), h = 5: plus side (100,5) & (95,0), center (100,0), then the mirrored minus side.
         float[] expectedWedge =
         {
@@ -78,21 +90,25 @@ public class StrokeDashCutTests
         };
         for (int v = 0; v < 6; v++)
         {
-            int o = (6 + v) * VertexFloats;   // the wedge follows seg0's quad (6 verts)
-            float x = verts[o + 0], y = verts[o + 1];
+            var d = Drawn(verts, 6 + v);   // the wedge follows seg0's quad (6 verts)
+            float x = d[0], y = d[1];
             Assert.That(x, Is.EqualTo(expectedWedge[v * 3 + 0]).Within(0.01f), $"wedge vert {v} x");
             Assert.That(y, Is.EqualTo(expectedWedge[v * 3 + 1]).Within(0.01f), $"wedge vert {v} y");
-            Assert.That(verts[o + 2], Is.EqualTo(expectedWedge[v * 3 + 2]).Within(0.01f), $"wedge vert {v} perp");
+            Assert.That(d[2], Is.EqualTo(expectedWedge[v * 3 + 2]).Within(0.01f), $"wedge vert {v} perp");
 
             // The wedge carries its piece's end frames and arc distances: uA = x, vA = y, uB = 100 - y, vB = 100 - x,
             // arcs 100.
-            Assert.That(verts[o + 3], Is.EqualTo(x).Within(0.01f), $"wedge vert {v} uA");
-            Assert.That(verts[o + 4], Is.EqualTo(y).Within(0.01f), $"wedge vert {v} vA");
-            Assert.That(verts[o + 5], Is.EqualTo(100f).Within(0.01f), $"wedge vert {v} arcA");
-            Assert.That(verts[o + 6], Is.EqualTo(0f).Within(0.01f), $"wedge vert {v} caps (flat/flat)");
-            Assert.That(verts[o + 7], Is.EqualTo(100f - y).Within(0.01f), $"wedge vert {v} uB");
-            Assert.That(verts[o + 8], Is.EqualTo(100f - x).Within(0.01f), $"wedge vert {v} vB");
-            Assert.That(verts[o + 9], Is.EqualTo(100f).Within(0.01f), $"wedge vert {v} arcB");
+            Assert.That(d[3], Is.EqualTo(x).Within(0.01f), $"wedge vert {v} uA");
+            Assert.That(d[4], Is.EqualTo(y).Within(0.01f), $"wedge vert {v} vA");
+            Assert.That(d[5], Is.EqualTo(100f).Within(0.01f), $"wedge vert {v} arcA");
+            Assert.That(d[6], Is.EqualTo(0f).Within(0.01f), $"wedge vert {v} caps (flat/flat)");
+            Assert.That(d[7], Is.EqualTo(100f - y).Within(0.01f), $"wedge vert {v} uB");
+            Assert.That(d[8], Is.EqualTo(100f - x).Within(0.01f), $"wedge vert {v} vB");
+            Assert.That(d[9], Is.EqualTo(100f).Within(0.01f), $"wedge vert {v} arcB");
+
+            // The wedge's anchor is the corner, and the width it was written at is the half thickness.
+            Assert.That(verts[(6 + v) * VertexFloats + 11], Is.EqualTo(100f).Within(0.01f), $"wedge vert {v} anchor x");
+            Assert.That(verts[(6 + v) * VertexFloats + 19], Is.EqualTo(half).Within(0.01f), $"wedge vert {v} width");
         }
 
     }
@@ -110,7 +126,7 @@ public class StrokeDashCutTests
         var gd = (GraphicsDevice)device;
 
         var effect = Effect.CompileFromFile(Path.Combine("EffectsData", "StrokeEffect.fx"), device);
-        var pass = effect.Techniques[0].Passes[1];
+        var pass = effect.Techniques[0].Passes["DashCut"];
 
         var pointsBuf = MakeBuffer(gd, pts);
         var patternBuf = MakeBuffer(gd, pattern);
@@ -154,7 +170,7 @@ public class StrokeDashCutTests
         var gd = (GraphicsDevice)device;
 
         var effect = Effect.CompileFromFile(Path.Combine("EffectsData", "StrokeEffect.fx"), device);
-        var pass = effect.Techniques[0].Passes[1];
+        var pass = effect.Techniques[0].Passes["DashCut"];
 
         var pointsBuf = MakeBuffer(gd, pts);
         var patternBuf = MakeBuffer(gd, dummyPattern);
@@ -222,7 +238,7 @@ public class StrokeDashCutTests
         var gd = (GraphicsDevice)device;
 
         var effect = Effect.CompileFromFile(Path.Combine("EffectsData", "StrokeEffect.fx"), device);
-        var pass = effect.Techniques[0].Passes[1];
+        var pass = effect.Techniques[0].Passes["DashCut"];
 
         var pointsBuf = MakeBuffer(gd, pts);
         var patternBuf = MakeBuffer(gd, new float[] { 1f });
@@ -257,7 +273,6 @@ public class StrokeDashCutTests
         effect.Parameters["Output"].SetValue(output.GetDeviceAddress());
         effect.Parameters["Pattern"].SetValue(pattern.GetDeviceAddress());
         effect.Parameters["Indirect"].SetValue(indirect.GetDeviceAddress());
-        effect.Parameters["DashMode"].SetValue(1u);
     }
 
     // Dispatches the single-thread cut, reads back the indirect command (4 uints) and the first `outFloats` output

@@ -15,8 +15,20 @@ public class Pen : IEquatable<Pen>
    public Double Thickness { get; }
 
    public Double DashOffset { get; }
-      
-   public AdamantiumCollection<Double> DashStrokeArray { get; }
+
+   private AdamantiumCollection<Double> _dashStrokeArray;
+   private readonly double[] _dashes;
+   private readonly bool _isRenderCopy;
+
+   /// <summary>The lengths of the dashes and gaps, in the geometry's units, as a list the loop thread may edit. A copy
+   /// for rendering (<see cref="CloneForRendering"/>) draws the dashes it was made with: editing its list changes
+   /// nothing drawn.</summary>
+   public AdamantiumCollection<Double> DashStrokeArray =>
+      _dashStrokeArray ??= new AdamantiumCollection<double>((IEnumerable<double>)_dashes);
+
+   /// <summary>The dashes of a pen of the render path - <see cref="CloneForRendering"/> - which nothing edits: what the
+   /// renderer reads, without the list's lock on every value. For any other pen, the list's values now.</summary>
+   internal IReadOnlyList<double> Dashes => _isRenderCopy ? _dashes : DashStrokeArray;
 
    public PenLineCap StartLineCap { get; }
 
@@ -66,7 +78,8 @@ public class Pen : IEquatable<Pen>
       FitDashesToContour = fitDashesToContour;
       DashPhase = dashPhase;
       _brush = brush?.ForRendering();
-      DashStrokeArray = new AdamantiumCollection<double>(dashStrokeArray);
+      _dashes = dashStrokeArray?.ToArray() ?? [];
+      _dashStrokeArray = new AdamantiumCollection<double>((IEnumerable<double>)_dashes);
       DashOffset = dashOffset;
       Thickness = thickness;
       StartLineCap = startLineCap;
@@ -82,7 +95,7 @@ public class Pen : IEquatable<Pen>
    /// general, MUTABLE list used across the engine, so giving it value equality would turn O(1) reference compares into
    /// O(n) ones for every other user, and a value hash on a mutable object silently loses it as a dictionary key. A dash
    /// pattern is 0-4 numbers, so comparing it costs nothing - and the count check exits first in the common empty case.</summary>
-   private static bool SameDashes(AdamantiumCollection<Double> a, AdamantiumCollection<Double> b)
+   private static bool SameDashes(IReadOnlyList<double> a, IReadOnlyList<double> b)
    {
       if (ReferenceEquals(a, b)) return true;
       if (a == null || b == null || a.Count != b.Count) return false;
@@ -95,23 +108,46 @@ public class Pen : IEquatable<Pen>
    /// <summary>A copy for the RENDER path: same values, same LIVE brush (so an animated stroke brush keeps animating
    /// through its snapshot), but a dash array nobody else holds. A payload storing this instead of the caller's pen no
    /// longer exposes the render thread to a pen the loop thread can still edit. Safe only because the comparison above is
-   /// by value - a clone with a fresh collection would otherwise read as "changed" on every single frame.</summary>
-   public Pen CloneForRendering() => new(
-      _brush, 
-      Thickness, 
-      DashOffset, 
-      DashStrokeArray, 
-      StartLineCap, 
-      EndLineCap, 
-      PenLineJoin,
-      TrimStart, 
-      TrimEnd, 
-      DashStartCap, 
-      DashEndCap, 
-      FitDashesToContour, 
-      DashPhase);
+   /// by value - a clone with a fresh collection would otherwise read as "changed" on every single frame. Made once and
+   /// handed out again while the dashes stay; two threads asking at once may each make one, which is harmless.</summary>
+   public Pen CloneForRendering()
+   {
+      if (_isRenderCopy)
+      {
+         return this;
+      }
 
-   internal Pen WithBrush(Brush brush) => new(
+      if (_forRendering is { } made && SameDashes(made._dashes, DashStrokeArray))
+      {
+         return made;
+      }
+
+      made = new Pen(this, DashStrokeArray.ToArray(), _brush);
+      _forRendering = made;
+      return made;
+   }
+
+   private Pen _forRendering;
+
+   private Pen(Pen of, double[] dashes, Brush brush)
+   {
+      _brush = brush;
+      Thickness = of.Thickness;
+      DashOffset = of.DashOffset;
+      _dashes = dashes;
+      _isRenderCopy = true;
+      StartLineCap = of.StartLineCap;
+      EndLineCap = of.EndLineCap;
+      PenLineJoin = of.PenLineJoin;
+      TrimStart = of.TrimStart;
+      TrimEnd = of.TrimEnd;
+      DashStartCap = of.DashStartCap;
+      DashEndCap = of.DashEndCap;
+      FitDashesToContour = of.FitDashesToContour;
+      DashPhase = of.DashPhase;
+   }
+
+   internal Pen WithBrush(Brush brush) => _isRenderCopy ? new Pen(this, _dashes, brush?.ForRendering()) : new(
       brush,
       Thickness,
       DashOffset,
@@ -131,7 +167,7 @@ public class Pen : IEquatable<Pen>
       if (ReferenceEquals(null, other)) return false;
       if (ReferenceEquals(this, other)) return true;
       return Equals(Brush, other.Brush) && Thickness.Equals(other.Thickness) && DashOffset.Equals(other.DashOffset) &&
-             SameDashes(DashStrokeArray, other.DashStrokeArray) && StartLineCap == other.StartLineCap &&
+             SameDashes(Dashes, other.Dashes) && StartLineCap == other.StartLineCap &&
              EndLineCap == other.EndLineCap && DashStartCap == other.DashStartCap &&
              DashEndCap == other.DashEndCap && PenLineJoin == other.PenLineJoin &&
              TrimStart.Equals(other.TrimStart) && TrimEnd.Equals(other.TrimEnd) &&
@@ -154,7 +190,7 @@ public class Pen : IEquatable<Pen>
       return HashCode.Combine(
          // The dash array hashes by its COUNT, not its identity: Equals now compares the pattern by value, so two equal
          // pens with different collection instances must not land in different buckets.
-         HashCode.Combine(Brush, Thickness, DashOffset, DashStrokeArray?.Count ?? 0, (int)StartLineCap, (int)EndLineCap, (int)PenLineJoin),
+         HashCode.Combine(Brush, Thickness, DashOffset, Dashes.Count, (int)StartLineCap, (int)EndLineCap, (int)PenLineJoin),
          HashCode.Combine(TrimStart, TrimEnd, (int)DashStartCap, (int)DashEndCap, DashPhase, FitDashesToContour));
    }
 }

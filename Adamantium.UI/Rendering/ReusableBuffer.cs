@@ -12,8 +12,9 @@ namespace Adamantium.UI.Rendering;
 /// </summary>
 public sealed class ReusableBuffer : IDisposable
 {
-    // Round capacity up to a power-of-two bucket (min 256 B). Small geometry wobble (a few vertices, a CornerRadius
-    // arc-segment change) then reuses the same allocation instead of regrowing, and grows stay rare.
+    // Round capacity up to a power-of-two bucket (min 256 B) - past 1 MB, to a sixteenth of the next power of two, so
+    // a big buffer wastes little and still grows rarely. Small geometry wobble (a few vertices, a CornerRadius
+    // arc-segment change) then reuses the same allocation instead of regrowing.
     private const ulong MinCapacityBytes = 256;
 
     private readonly GpuBufferManager _manager;
@@ -133,8 +134,17 @@ public sealed class ReusableBuffer : IDisposable
         Array.Fill(_slotVersion, -1);
     }
 
+    private const ulong LargeBytes = 1UL << 20;
+    private const ulong LargeStep = 64UL << 10;
+
     private static ulong RoundUpToBucket(ulong bytes)
     {
+        if (bytes > LargeBytes)
+        {
+            var step = Math.Max(LargeStep, System.Numerics.BitOperations.RoundUpToPowerOf2(bytes) / 16);
+            return (bytes + step - 1) / step * step;
+        }
+
         var bucket = MinCapacityBytes;
         while (bucket < bytes) bucket <<= 1;
         return bucket;

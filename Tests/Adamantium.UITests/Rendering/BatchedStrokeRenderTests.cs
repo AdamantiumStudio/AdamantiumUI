@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using Adamantium.Mathematics;
@@ -8,7 +9,7 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests.Rendering;
 
-// A stroke of many contours - a map's roads - is expanded and drawn as one batch: every contour is drawn, each as it
+// A stroke of many contours - a map's roads - is drawn as one batch: every contour is drawn, each as it
 // would be alone, and no contour reaches into the next - the end of one is not joined to the start of another.
 [TestFixture]
 [Category("Gpu")]
@@ -200,6 +201,67 @@ public class BatchedStrokeRenderTests
             Assert.That(Alpha(pixels, 70, 85), Is.Zero, "nothing between the first line and the second");
             Assert.That(Alpha(pixels, 140, 120), Is.Zero, "nothing between the lines and the square");
         });
+    }
+
+    // Flat-ended dashes are a mask along the line; an odd pattern is taken twice, its runs on and off in turn - 20 on,
+    // 10 off, 10 on, then 20 off, 10 on, 10 off.
+    [Test]
+    public void AnOddPatternOfFlatDashes_IsTakenTwice()
+    {
+        var g = new StreamGeometry();
+        g.Open().BeginFigure(new Vector2<double>(20, 120), false, false)
+            .PolylineLineTo([new Vector2<double>(220, 120)], true);
+        var pen = new Pen(new SolidColorBrush(Colors.Black), 8, dashStrokeArray: [20, 10, 10],
+            dashStartCap: PenLineCap.Flat, dashEndCap: PenLineCap.Flat);
+
+        var pixels = Render(s => s.DrawGeometry(null, g, pen));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(Alpha(pixels, 25, 120), Is.EqualTo(255), "the first dash");
+            Assert.That(Alpha(pixels, 45, 120), Is.Zero, "the first gap");
+            Assert.That(Alpha(pixels, 55, 120), Is.EqualTo(255), "the second dash");
+            Assert.That(Alpha(pixels, 70, 120), Is.Zero, "the second pass's 20, off");
+            Assert.That(Alpha(pixels, 85, 120), Is.EqualTo(255), "its first 10, on");
+            Assert.That(Alpha(pixels, 95, 120), Is.Zero, "its last 10, off");
+            Assert.That(Alpha(pixels, 105, 120), Is.EqualTo(255), "the pattern again");
+        });
+    }
+
+    // A right turn at (120, 120), 10 wide, round joined: the join's outer side round (123, 117) is in neither segment.
+    private static (StreamGeometry Geometry, Func<double[], Pen> Pen) Corner()
+    {
+        var g = new StreamGeometry();
+        g.Open().BeginFigure(new Vector2<double>(20, 120), false, false)
+            .PolylineLineTo([new Vector2<double>(120, 120), new Vector2<double>(120, 220)], true);
+        return (g, dashes => new Pen(new SolidColorBrush(Colors.Black), 10, dashStrokeArray: dashes,
+            penLineJoin: PenLineJoin.Round, dashStartCap: PenLineCap.Flat, dashEndCap: PenLineCap.Flat));
+    }
+
+    // The corner falls in a gap, the next dash starting a unit past it: no join, so nothing in the gap.
+    [Test]
+    public void FlatDashes_AreNotJoinedAtACornerInAGap()
+    {
+        var (g, pen) = Corner();
+
+        var pixels = Render(s => s.DrawGeometry(null, g, pen([90, 11])));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(Alpha(pixels, 123, 117), Is.Zero, "the join's outer side");
+            Assert.That(Alpha(pixels, 112, 120), Is.Zero, "the gap before the corner");
+            Assert.That(Alpha(pixels, 120, 130), Is.EqualTo(255), "the next dash");
+        });
+    }
+
+    [Test]
+    public void FlatDashes_AreJoinedAtACornerADashRunsThrough()
+    {
+        var (g, pen) = Corner();
+
+        var pixels = Render(s => s.DrawGeometry(null, g, pen([150, 10])));
+
+        Assert.That(Alpha(pixels, 123, 117), Is.EqualTo(255));
     }
 
     // 4 x 10 000 points: three fit one batch of at most 32 768, the fourth starts the next - alone, so not a batch.
