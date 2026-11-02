@@ -208,6 +208,27 @@ public class ControlsTests
         });
     }
 
+    // A class added in code to a component that never had its Classes set is its own: it reaches ClassNames, and no
+    // other component gets it - the collection was once one shared default.
+    [Test]
+    public void Classes_AddedWithoutSettingThem_AreTheComponentsOwn()
+    {
+        var first = new ProgressBar();
+        var second = new ProgressBar();
+
+        first.Classes.Add("Ring");
+        var markup = new ProgressBar { Classes = Classes.Parse("Accent") };
+        markup.ClearValue(FundamentalUIComponent.ClassesProperty);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(first.ClassNames, Does.Contain("Ring"));
+            Assert.That(second.Classes, Is.Empty);
+            Assert.That(second.HasClassNames, Is.False);
+            Assert.That(markup.Classes, Is.Empty, "set and cleared, it has none of another's");
+        });
+    }
+
     // ---- A non-Stretch ContentPresenter (e.g. a Button whose ContentPresenter binds HorizontalAlignment to the
     // control's HorizontalContentAlignment=Center) must shrink to its content and stay put - not collapse to zero and
     // spill the content outside. Repro for the button-chrome regression.
