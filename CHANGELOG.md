@@ -2466,6 +2466,9 @@ All packages share one version.
 - A stroke drawn on the CPU threw a mitred corner out without end where the line turned nearly back on itself -
   common in map data: a corner of a 10-pixel pen reached a thousand pixels past it. Its tip now reaches no farther than
   four half-thicknesses, as the GPU stroke already clamped it.
+- A card opened from a menu's item left the focus nowhere when it closed: the item it had the focus from was gone with
+  its menu. `FocusReturn.Restore` takes the element the overlay stands on and, the opener gone, gives the focus to what
+  had it last in that element's focus scope - the field the menu was opened from; a popup passes its place in the tree.
 - An element drawing many geometries - a map's tiles - that gained or lost one before the others handed every
   geometry after it to its neighbour's unit, and each was frozen, edged and stroked anew: dragging a vector map
   stalled the drawing thread for seconds. A geometry now goes back to the unit that already drew it, wherever it

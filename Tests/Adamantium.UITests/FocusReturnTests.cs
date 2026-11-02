@@ -36,6 +36,35 @@ public class FocusReturnTests
         Assert.That(FocusManager.Focused, Is.Not.SameAs(opener));
     }
 
+    // A card opened from a menu's item: the item is gone with its menu by the time the card closes, and the focus goes
+    // to the field the menu was opened from - it had the focus last in the scope the card stands in.
+    [Test]
+    public void AnOpenerGone_GivesTheFocusToWhatHadItLastAroundTheOverlay()
+    {
+        var field = new Button();
+        var item = new Button();
+        var menu = new StackPanel();
+        FocusManager.SetIsFocusScope(menu, true);
+        menu.Children.Add(item);
+        var panel = new StackPanel();
+        panel.Children.Add(field);
+        panel.Children.Add(menu);
+        var window = new Window { Width = 200, Height = 100, Content = panel };
+        Adamantium.UI.Extensions.WindowExtension.UpdateTree(window);
+        FocusManager.Focus(field);
+        FocusManager.Focus(item);
+        Assume.That(FocusManager.Focused, Is.SameAs(item));
+        var focusReturn = new FocusReturn();
+        focusReturn.Capture();
+        var overlay = new Border();
+
+        panel.Children.Remove(menu);
+        FocusManager.ResetFocus();
+        focusReturn.Restore(overlay, panel);
+
+        Assert.That(FocusManager.Focused, Is.SameAs(field));
+    }
+
     [Test]
     public void AnElementStillInItsWindow_IsGivenTheFocusBack()
     {
