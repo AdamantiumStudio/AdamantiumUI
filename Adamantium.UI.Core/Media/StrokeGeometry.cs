@@ -825,7 +825,7 @@ public class StrokeGeometry : Geometry
                {
                   joinPoints.Add(center);
                   joinPoints.Add(left.End);
-                  joinPoints.Add(Vector2.Round(intersection, doublePrecision));
+                  joinPoints.Add(Vector2.Round(MiterTip(center, intersection, pen.Thickness), doublePrecision));
                   joinPoints.Add(right.Start);
                }
 
@@ -857,6 +857,19 @@ public class StrokeGeometry : Geometry
       return meshContours;
    }
       
+   /// <summary>The tip of a mitred corner, no farther from the corner than <see cref="MiterReach"/> half-thicknesses -
+   /// the reach the GPU stroke clamps to - so a line turning nearly back on itself has no spike without end.</summary>
+   internal static Vector2<double> MiterTip(Vector2<double> corner, Vector2<double> tip, double thickness)
+   {
+      var reach = MiterReach * thickness / 2;
+      var offset = tip - corner;
+      var length = Math.Sqrt(offset.X * offset.X + offset.Y * offset.Y);
+      return length > reach ? corner + offset * (reach / length) : tip;
+   }
+
+   /// <summary>How far a mitred corner reaches, in half-thicknesses of the pen.</summary>
+   internal const double MiterReach = 4;
+
    public override Geometry Clone()
    {
       throw new NotImplementedException();
