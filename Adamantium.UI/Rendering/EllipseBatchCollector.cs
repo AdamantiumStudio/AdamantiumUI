@@ -56,7 +56,7 @@ internal sealed class EllipseBatchCollector : ShapeSdfCollector<EllipseItem>
 
         var pen = p.Pen;
         if (pen == null) return true;
-        var dashed = pen.DashStrokeArray is { Count: > 0 };
+        var dashed = pen.Dashes is { Count: > 0 };
         return !dashed && pen.TrimStart <= 0.0 && pen.TrimEnd >= 1.0;
     }
 

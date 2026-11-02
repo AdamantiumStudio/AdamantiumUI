@@ -145,39 +145,11 @@ public abstract class RenderUnit<TPayload> : DeferredDisposableObject, IRenderUn
         var mesh = geometry?.Mesh;
         if (mesh == null || mesh.Contours.Count == 0) return false;
 
-        List<(Adamantium.Mathematics.Vector2<double>[], bool)> list = [];
-        foreach (var contour in mesh.Contours)
-        {
-            if (contour.Points is not { Length: >= 2 }) continue;
-            var pts = DedupPoints(contour.Points, contour.IsGeometryClosed);
-            if (pts.Length >= 2)
-                list.Add((pts, contour.IsGeometryClosed));
-        }
-
-        if (list.Count == 0) return false;
-        contours = list;
+        // Made where the geometry was processed - a map tile's lines on a worker - or here, for one that was not.
+        var prepared = geometry.StrokeForDrawing.Contours;
+        if (prepared.Count == 0) return false;
+        contours = prepared;
         return true;
-    }
-
-    // Drop consecutive coincident points (within ~1e-3 px). A zero-length segment makes the GPU stroke expander take a
-    // normalize(0) -> a garbage segment normal -> a random miter direction, i.e. a spike. The mesh/flattener can emit these
-    // (a closing point repeating the start, a curve sampled down to a near-cusp). A closed loop also drops a trailing point
-    // coincident with the first (the wrap is implicit).
-    private static Adamantium.Mathematics.Vector2<double>[] DedupPoints(Adamantium.Mathematics.Vector2<double>[] pts, bool closed)
-    {
-        const double epsSq = 1e-6;
-        List<Adamantium.Mathematics.Vector2<double>> outv = [pts[0]];
-        for (var i = 1; i < pts.Length; i++)
-        {
-            var d = pts[i] - outv[^1];
-            if (d.X * d.X + d.Y * d.Y > epsSq) outv.Add(pts[i]);
-        }
-        if (closed && outv.Count > 2)
-        {
-            var d = outv[^1] - outv[0];
-            if (d.X * d.X + d.Y * d.Y <= epsSq) outv.RemoveAt(outv.Count - 1);
-        }
-        return [.. outv];
     }
 
     // On a geometry change, try to rewrite the existing GPU stroke's points in place (same topology + size-compatible

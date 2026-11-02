@@ -38,6 +38,10 @@ public class TextPayload(
     /// <summary>The ranges drawn apart from the rest, as they were when the text was recorded; empty for none.</summary>
     public IReadOnlyList<GlyphEffect> Effects { get; } = effects ?? [];
 
+    /// <summary>The layout: a run of it goes back to the unit holding its glyphs wherever it now stands among the
+    /// element's draws - a map's labels come and go every frame.</summary>
+    public object Content => TextLayout;
+
     // The LIVE brushes, read through their immutable snapshots - see RectanglePayload.
     private readonly Brush _foreground = foreground?.ForRendering();
     private readonly Brush _background = background?.ForRendering();

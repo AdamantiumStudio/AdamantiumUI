@@ -35,6 +35,43 @@ public class PolylineGeometryTests
         });
     }
 
+    // The contours a stroke runs along are made when the geometry is processed - on a worker, for a map's tiles - and
+    // handed to the drawing thread as they are.
+    [Test]
+    public void TheStrokesContours_AreMadeWhenProcessed_AndKept()
+    {
+        var geometry = new PolylineGeometry([Line], [Ring]);
+        geometry.ProcessGeometry(GeometryType.Both);
+
+        var first = geometry.StrokeForDrawing;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(geometry.StrokeForDrawing, Is.SameAs(first));
+            Assert.That(first.Contours, Has.Count.EqualTo(2));
+            Assert.That(first.Contours[0].Points, Is.EqualTo(Line));
+            Assert.That(first.Contours[1].IsClosed, Is.True);
+        });
+    }
+
+    // A point on the one before it would give a segment no direction; a ring's last point on its first closes it twice.
+    [Test]
+    public void TheStrokesContours_DropPointsThatRepeat()
+    {
+        Vector2<double>[] line = [new(0, 0), new(0, 0), new(10, 0), new(10, 0.0001), new(20, 0)];
+        Vector2<double>[] ring = [new(30, 0), new(40, 0), new(40, 10), new(30, 0)];
+        var geometry = new PolylineGeometry([line], [ring]);
+        geometry.ProcessGeometry(GeometryType.Both);
+
+        var contours = geometry.StrokeForDrawing.Contours;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(contours[0].Points, Is.EqualTo(new Vector2<double>[] { new(0, 0), new(10, 0), new(20, 0) }));
+            Assert.That(contours[1].Points, Is.EqualTo(new Vector2<double>[] { new(30, 0), new(40, 0), new(40, 10) }));
+        });
+    }
+
     [Test]
     public void TooShortContours_AreLeftOut()
     {

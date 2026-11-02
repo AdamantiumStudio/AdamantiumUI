@@ -46,7 +46,7 @@ internal sealed class RegularPolygonCollector : ShapeSdfCollector<PolygonItem>
     /// <summary>A DASHED or TRIMMED pen needs an arc length along the contour, and this shape bakes none. Asked by the
     /// sibling brush batches too, so all four refuse the same pen.</summary>
     internal static bool NeedsArcLength(Pen pen) =>
-        pen is { } p && (p.DashStrokeArray is { Count: > 0 } || p.TrimStart > 0.0 || p.TrimEnd < 1.0);
+        pen is { } p && (p.Dashes is { Count: > 0 } || p.TrimStart > 0.0 || p.TrimEnd < 1.0);
 
     /// <summary>The three numbers that describe a polygon to a shader, in the slot a shape without corner radii leaves
     /// free: corners, start angle in RADIANS, ring thickness in device px. One statement, read by this batch and by the

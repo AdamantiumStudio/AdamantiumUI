@@ -322,7 +322,7 @@ internal sealed class MaterialRectCollector : SdfBatchCollector<MaterialRectItem
         // SDF batches, but dashes and trims need the arc-length machinery those passes carry and this one does not - so
         // they go to the per-unit path rather than being drawn as a solid ring nobody asked for.
         if (!RectBatchCollector.IsPenBatchable(pen)) return false;
-        if (pen.DashStrokeArray is { Count: > 0 }) return false;
+        if (pen.Dashes is { Count: > 0 }) return false;
         return pen.TrimStart <= 0 && pen.TrimEnd >= 1;
     }
 

@@ -754,6 +754,19 @@ public partial class RenderCache
         _nextWithSameContent.Clear();
         _heldByContent.Clear();
         _wantedContent.Clear();
+
+        // Each draw where it was, with what it drew: every place pairs with itself.
+        if (units.Count == commands.Count && SameContentInPlace(units, commands))
+        {
+            for (var i = 0; i < units.Count; i++)
+            {
+                _pairing.Add(i);
+                _paired.Add(true);
+            }
+
+            return;
+        }
+
         for (var i = 0; i < units.Count; i++)
         {
             _paired.Add(false);
@@ -796,6 +809,16 @@ public partial class RenderCache
 
         _heldByContent.Clear();
         _wantedContent.Clear();
+    }
+
+    private static bool SameContentInPlace(List<IRenderUnit> units, IReadOnlyList<IDrawCommand> commands)
+    {
+        for (var i = 0; i < units.Count; i++)
+        {
+            if (!ReferenceEquals(units[i].Content, ContentOf(commands[i]))) return false;
+        }
+
+        return true;
     }
 
     private bool StaysInPlace(List<IRenderUnit> units, int i, IDrawCommand command, ref bool heldKnown)

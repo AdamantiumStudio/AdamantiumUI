@@ -1921,6 +1921,23 @@ All packages share one version.
 
 ### Changed
 
+- A stroke of solid lines, and of dashes with flat ends, keeps only its points: its vertex shader works out each
+  vertex of the ribbon where it is drawn, at whatever width and scale, so nothing is expanded or kept per vertex - about
+  16 bytes a point instead of the ribbon's 264 (miter) to 2 376 (round join) - and a width or zoom that changes every
+  frame costs nothing. Flat-ended dashes are a mask along the line's length, feathered like its edge, joined at a
+  corner only where a dash runs on through it, an odd pattern taken twice; dashes with shaped ends, fitted dashes and
+  trims are still cut into pieces, whose
+  output keeps its room when only the dash lengths change and is rewritten in place. A map zoomed through its levels
+  went from gigabytes of stroke memory, and a lost device, to none.
+- A geometry of lines made to be stroked (`PolylineGeometry`) has the contours its stroke runs along made when it is
+  processed - a map's tiles on a worker - so the drawing thread takes them as they are.
+- A pen's copy for the render path is made once and handed out again while its dashes stay, and keeps them as an array
+  the renderer reads without a lock: a pen drawn every frame made a copy, and a list, on every draw.
+- Text draws go back to the unit holding their glyphs by their layout, wherever they now stand among an element's
+  draws, and a layout's glyphs are asked of the atlas once per revision rather than on every re-record.
+- A re-recorded element whose draws are the same things in the same places pairs them without looking anything up.
+- Buffers past a megabyte grow in steps of a sixteenth to an eighth of their size (64 KB at least), not by doubling.
+
 - A dashed or trimmed GPU stroke of many contours - a map's paths, rail ticks, borders - is one batch as well: one
   dispatch, a thread per contour cutting its own by its own length into a range of one output, and one draw, instead
   of a dispatch and a draw per contour. Dashes fitted to a closed contour keep a draw per contour, as they are
@@ -2468,6 +2485,14 @@ All packages share one version.
 
 ### Fixed
 
+- A bevel join kept room for a round one's disc - 48 vertices a point where it writes 6.
+- A batch of dashed contours let each reserve the batch's whole output; each now reserves no more than a contour alone
+  may write.
+- A mitred GPU stroke lost both segments at a point where the line turned exactly back on itself; they now meet flat.
+- A cut dash pattern of an odd count, offset by more than its length, started with its runs on and off the wrong way
+  round.
+- A dash animated by its phase jumped once a loop where an entry was shorter than a pixel.
+- A stroke of one contour past 32 768 points blended twice at the joins of its later pieces.
 - A `DropDown` whose list was replaced under its choice kept showing a row the list no longer had - "Column 1" over
   a list of "Name" and "Sum". As a `ListBox` and a `SegmentedControl` do, the choice now follows its item to where it
   stands, or its value to the new row that holds it - a `SelectedValue` named before its row too - and is cleared when
