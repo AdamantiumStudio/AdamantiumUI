@@ -68,9 +68,18 @@ public class Setter : ISetter, IEquatable<Setter>
                 component.SetStyleValue(property, perTarget.Create(), style);
                 break;
             default:
-                component.SetStyleValue(property, TypeCastFactory.CastFromString(Value, property.PropertyType), style);
+                component.SetStyleValue(property, ValueFor(Value, property.PropertyType), style);
                 break;
         }
+    }
+
+    /// <summary>The value a setter gives one target: its own, cast to the property's type - a collection of classes
+    /// copied, as the target changes it as its own and watches it, so one style's never reaches another target nor holds
+    /// it.</summary>
+    internal static object ValueFor(object value, Type type)
+    {
+        var cast = TypeCastFactory.CastFromString(value, type);
+        return cast is Classes classes ? new Classes(classes) : cast;
     }
 
     private static void Connect(BindingExpressionBase expression, Style style)

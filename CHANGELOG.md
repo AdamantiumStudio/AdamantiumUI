@@ -7,6 +7,19 @@ All packages share one version.
 
 ### Added
 
+- `TextOnPath`: a line of text along a path, as SVG's `textPath` - each letter stood on the first figure of `Data`
+  (lines, arcs, curves) at its baseline and turned the way it runs there, laid by the engine's `TextPath`.
+  `Alignment` (start, middle, end) and `StartOffset` place it along the path, `AcrossOffset` above or below it;
+  `KeepUpright` reads an open figure that runs left from its end; round a closed one - or one ending where it starts -
+  the text reads the way it goes, across its seam. Text longer than the path is clipped to the letters on it;
+  `Overflow` lets it go on past the path's ends, straight the way they run, cuts it with an ellipsis where it leaves
+  the path at either end, shrinks it, or leaves it out whole, then also where the path turns between two letters by
+  more than `MaxTurn` (`IsTextPlaced`). The text is shaped as any of the element's - font, size, spacing,
+  language, features - in the themes' plain text color; `Stroke` draws the path under it; a click lands on a letter's
+  box. It reads as text to automation. `Geometry.GetFigures` gives a geometry's figures as given, flattened, in order.
+  The sandbox's Text tab has it as a topic of its own: a circle, a wave, a spiral, a curve and a street drawn right to
+  left, one text and look on all of them, moved along and across, clipped, cut, shrunk or left out, live.
+
 - `PolylineGeometry`: open lines (`Lines`) and closed rings (`Rings`) given as points and stroked as they are - nothing
   is cut into triangles, and a geometry of thousands of lines holds just their points. For what a worker thread already
   has as lines: a map's roads and borders, a chart's series. Creatable from markup.
@@ -2485,10 +2498,11 @@ All packages share one version.
 
 ### Fixed
 
-- Classes a style, a trigger or an animation sets were one collection handed out through every component's `Classes`:
-  a class one component added reached all of them, and each was held for the style's life. They now stand beside the
-  component's own collection in `ClassNames` and are neither handed out nor watched; classes set in code, markup, a
-  template or a binding are the component's as before.
+- A style's or trigger's setter of `Classes` gave every component it reached its one collection: a class one
+  component added reached them all, and each component watching it was held for the style's life. Each component now
+  gets a copy; a component's own collection is watched before another thread can see it.
+- Text drawn with no solid-color foreground - none set, or a gradient where the text is drawn on its own - failed the
+  whole frame; it now draws nothing.
 - `Classes` of a component that never had them set was one collection shared by every component: a class added to it
   in code reached all of them and restyled none. Each component now has its own, made when first asked for and kept
   beneath a value markup, a style or code sets; a class added to it restyles the component.

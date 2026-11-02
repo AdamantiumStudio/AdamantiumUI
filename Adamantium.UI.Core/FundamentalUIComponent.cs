@@ -14,7 +14,6 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
     private StylesCollection _attachedStyles;
     private Classes _classNames;
     private Classes _ownClasses;
-    private Classes _watchedClasses;
     private IFundamentalUIComponent parent;
     private TrackingCollection<IFundamentalUIComponent> logicalChildren;
     private Dictionary<object, Action> _follows;
@@ -60,21 +59,14 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
         var o = adamantiumAdamantiumComponent as FundamentalUIComponent;
         if (o == null) return;
 
-        // Only the component's own sets of classes are watched: a style's, a trigger's or an animation's is one
-        // collection for every component it reaches, and watching it would hold each of them for its life.
-        var watched = o.SetClasses(out var shared) is { } classes && !shared ? classes : null;
-        if (!ReferenceEquals(watched, o._watchedClasses))
+        if (e.OldValue is Classes oldClasses)
         {
-            if (o._watchedClasses != null && !ReferenceEquals(o._watchedClasses, o._ownClasses))
-            {
-                o._watchedClasses.CollectionChanged -= o.ClassesCollectionChanged;
-            }
+            oldClasses.CollectionChanged -= o.ClassesCollectionChanged;
+        }
 
-            o._watchedClasses = watched;
-            if (watched != null && !ReferenceEquals(watched, o._ownClasses))
-            {
-                watched.CollectionChanged += o.ClassesCollectionChanged;
-            }
+        if (e.NewValue is Classes newClasses)
+        {
+            newClasses.CollectionChanged += o.ClassesCollectionChanged;
         }
 
         o.SyncClassNames();
@@ -184,7 +176,10 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
     // Only the collection in force restyles: the component's own, under classes set, waits.
     private void ClassesCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
     {
-        SyncClassNames();
+        if (ReferenceEquals(sender, ClassesInForce))
+        {
+            SyncClassNames();
+        }
     }
 
     // The settable Classes property (markup/binding) carries the author's intent; ClassNames is the collection selectors
@@ -195,61 +190,27 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
         // Nothing to mirror INTO and nothing to mirror FROM: don't build the collection just to discover that. The guard
         // used to be `ClassNames == null` (the default-value callback can fire from the base ctor); a materializing
         // getter would have made that dead code AND allocated on every component that never names a class.
-        // The classes in force: those of the component's own set, else a style's, trigger's or animation's beside its own
-        // collection - or that alone.
-        var set = SetClasses(out var shared);
-        var own = set == null || shared ? _ownClasses : null;
-        if (_classNames == null && set is not { Count: > 0 } && own is not { Count: > 0 })
+        var classes = ClassesInForce;
+        if (_classNames == null && classes is not { Count: > 0 })
         {
             return;
         }
 
-        if (InForce(set, own))
+        if (classes == null ? ClassNames.Count == 0 : ClassNames.SequenceEqual(classes))
         {
             return;
         }
 
         ClassNames.Clear();
-        foreach (var name in set ?? [])
+        foreach (var name in classes ?? [])
         {
             ClassNames.Add(name);
-        }
-
-        foreach (var name in own ?? [])
-        {
-            if (set?.Contains(name) != true)
-            {
-                ClassNames.Add(name);
-            }
         }
 
         if (IsStyleApplied || _attachedStyles is { Count: > 0 } || StylesOrNull is { Count: > 0 })
         {
             RestyleForClasses();
         }
-    }
-
-    // Whether ClassNames holds set's classes, then own's not among them, in order.
-    private bool InForce(Classes set, Classes own)
-    {
-        var at = 0;
-        foreach (var name in set ?? [])
-        {
-            if (at >= ClassNames.Count || ClassNames[at++] != name)
-            {
-                return false;
-            }
-        }
-
-        foreach (var name in own ?? [])
-        {
-            if (set?.Contains(name) != true && (at >= ClassNames.Count || ClassNames[at++] != name))
-            {
-                return false;
-            }
-        }
-
-        return at == ClassNames.Count;
     }
 
     private void RestyleForClasses()
@@ -394,24 +355,12 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
     /// </summary>
     public Classes Classes
     {
-        get => SetClasses(out var shared) is { } classes && !shared ? classes : OwnClasses();
+        get => GetValue<Classes>(ClassesProperty) ?? OwnClasses();
         set => SetValue(ClassesProperty, value);
     }
 
-    // The classes set on the component, and whether they are shared - a style's, a trigger's or an animation's, one
-    // collection for every component they reach - rather than its own: set in code or markup, by its template or a
-    // binding.
-    private Classes SetClasses(out bool shared)
-    {
-        var classes = GetValue<Classes>(ClassesProperty);
-        shared = classes != null && GetValueSource(ClassesProperty) is ValuePriority.Style or ValuePriority.Trigger
-            or ValuePriority.Animation or ValuePriority.TypeDefault;
-        return classes;
-    }
-
-    // The component's own classes, where none of its own are set: held apart from the property's values - asking for
-    // them sets nothing and reports no change, and no value set over them takes them away - made once, whichever thread
-    // asks, watched before any thread can change them.
+    // The component's own classes, where none are set: held apart from the property's values - asking for them sets
+    // nothing and reports no change, and no value set over them takes them away - made once, whichever thread asks.
     private Classes OwnClasses()
     {
         if (_ownClasses is { } own)
@@ -419,6 +368,7 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
             return own;
         }
 
+        // Watched before another thread can see it and add a class.
         var made = new Classes();
         made.CollectionChanged += ClassesCollectionChanged;
         if (Interlocked.CompareExchange(ref _ownClasses, made, null) is { } first)
@@ -429,6 +379,9 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
 
         return made;
     }
+
+    // The classes in force: those set, else the component's own.
+    private Classes ClassesInForce => GetValue<Classes>(ClassesProperty) ?? _ownClasses;
 
     public object DataContext
     {
