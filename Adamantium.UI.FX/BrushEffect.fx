@@ -7,6 +7,7 @@
 #include "Includes/CommonData.fxh"
 #include "Includes/ClipMath.fxh"
 #include "Includes/ShapeMath.fxh"
+#include "Includes/Ring.fxh"
 #include "Includes/StrokeMath.fxh"
 #include "Includes/NoiseMath.fxh"
 #include "Includes/BrushData.fxh"
@@ -355,8 +356,9 @@ struct GradFringePSInput
 };
 
 [shader("vertex")]
-GradFringePSInput InstancedGradientFringeVS(FringeVertex v, uint instanceId : SV_InstanceID)
+GradFringePSInput InstancedGradientFringeVS(uint vertexId : SV_VertexID, uint instanceId : SV_InstanceID)
 {
+    FringeVertex v = RingCorner(vertexId);
     GradGeomData* items = GradientGeometries;
     // Field by field, as GradientFillVS - the stops have no business in a vertex stage.
     float4x4 local = items[instanceId].Local;
@@ -1470,8 +1472,9 @@ struct TexFringePSInput
 // no single edge color, so the ring SAMPLES it, which is what makes the edge of a textured shape read as that shape's
 // own edge rather than a colored halo.
 [shader("vertex")]
-TexFringePSInput InstancedTexFringeVS(FringeVertex v, uint instanceId : SV_InstanceID)
+TexFringePSInput InstancedTexFringeVS(uint vertexId : SV_VertexID, uint instanceId : SV_InstanceID)
 {
+    FringeVertex v = RingCorner(vertexId);
     TextureGeomData* items = TextureGeometries;
     TextureGeomData it = items[instanceId];
     NodeSlot* nodes = Transforms;

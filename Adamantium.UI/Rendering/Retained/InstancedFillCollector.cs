@@ -28,18 +28,15 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
     public static bool Enabled = true;
 
     private const MemoryPropertyFlags Mem = MemoryPropertyFlags.HostVisible | MemoryPropertyFlags.DeviceLocal;
-    private static readonly int VertexStride = Marshal.SizeOf<UIVertex>();
-    private static readonly int RingStride = Marshal.SizeOf<FringeVertex>();
     private static readonly int InstanceStride = Marshal.SizeOf<GeometryInstance>();
     private static readonly int GradInstanceStride = Marshal.SizeOf<GradientGeometryInstance>();
     private static readonly int PatInstanceStride = Marshal.SizeOf<PatternGeometryInstance>();
     private static readonly int TexInstanceStride = Marshal.SizeOf<TextureGeometryInstance>();
 
-    // Per-key GPU + per-frame accumulation state. The mesh buffers are immutable once uploaded; the instance buffer is
-    // rewritten each frame (grown only at BeginFrame).
+    // Per-key GPU + per-frame accumulation state. The mesh buffers are exact-size and written once (another mesh is
+    // another key); the instance buffer is rewritten each frame (grown only at BeginFrame).
     private sealed class KeySegment
     {
-        public ReusableBuffer Vtx, Idx;
         public Buffer VtxBuffer, IdxBuffer;
         public uint VertexCount, IndexCount;
         public bool Indexed;
@@ -48,7 +45,6 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
 
         // The shared analytic-AA ring for this key's mesh (built once with the mesh - see FrozenMesh.Ring). Every
         // instance draws it with the SAME instance buffer as the body, so N elements cost one fringe draw instead of N.
-        public ReusableBuffer Ring;
         public Buffer RingBuffer;
         public uint RingVertexCount;
 
@@ -117,7 +113,6 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
     }
 
     private readonly GraphicsDevice _device;
-    private readonly GpuBufferManager _bufferManager;
     // BOTH effects, because this collector draws both families: a solid instanced fill and its fringe come from
     // BatchEffect, while the gradient/pattern/texture fills of the SAME shared mesh come from BrushEffect. The shared
     // per-frame parameters (projection, transforms, viewport, fringe width) are therefore written into BOTH - the price
@@ -177,10 +172,9 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
     /// per-key instance upload is skipped (the retained buffer already holds these exact bytes).</summary>
     public bool SceneClean { get; set; }
 
-    public InstancedFillCollector(IGraphicsDevice device, GpuBufferManager bufferManager) : base(device)
+    public InstancedFillCollector(IGraphicsDevice device) : base(device)
     {
         _device = (GraphicsDevice)device;
-        _bufferManager = bufferManager;
         _effect = ToDispose(new BatchEffect(device));
     }
 
@@ -475,9 +469,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
         _cold.Clear();
     }
 
-    // Everything a key owns. The instance rings go through the DEFERRED queue because frames in flight may still be
-    // reading them; the mesh buffers are reusable ones this collector registered for disposal, so they leave the same
-    // way they arrived.
+    // Everything a key owns, through the DEFERRED queue: frames in flight may still be reading any of it.
     private void Release(KeySegment seg)
     {
         if (seg.GpuRing != null) DeferRing(seg.GpuRing);
@@ -490,14 +482,25 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
         seg.Gpu = seg.GradGpu = seg.PatGpu = seg.TexGpu = seg.MatGpu = null;
         seg.GpuCapacity = seg.GradGpuCapacity = seg.PatGpuCapacity = seg.TexGpuCapacity = seg.MatGpuCapacity = 0;
 
-        if (seg.Vtx != null) RemoveAndDispose(ref seg.Vtx);
-        if (seg.Idx != null) RemoveAndDispose(ref seg.Idx);
-        if (seg.Ring != null) RemoveAndDispose(ref seg.Ring);
+        if (seg.VtxBuffer != null) _device.AddToDeferDisposeQueue(seg.VtxBuffer);
+        if (seg.IdxBuffer != null) _device.AddToDeferDisposeQueue(seg.IdxBuffer);
+        if (seg.RingBuffer != null) _device.AddToDeferDisposeQueue(seg.RingBuffer);
 
         seg.VtxBuffer = null;
         seg.IdxBuffer = null;
         seg.RingBuffer = null;
         seg.MeshUploaded = false;
+    }
+
+    protected override void Dispose(bool disposeManagedResources)
+    {
+        if (disposeManagedResources)
+        {
+            foreach (var seg in _keys.Values) Release(seg);
+            _keys.Clear();
+        }
+
+        base.Dispose(disposeManagedResources);
     }
 
     // An outgoing ring may still be read by frames in flight - hand it to the device's deferred queue, never Dispose here.
@@ -1180,7 +1183,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
                 // it, which is what keeps [all fills][all fringes] indistinguishable from true paint order.
                 _device.StencilReference = rec.MarkFor(i);
                 _effect.Geometries.SetValue(seg.Gpu.GetDeviceAddress() + (ulong)(first * InstanceStride));
-                _device.SetVertexBuffer(seg.RingBuffer);
+                _effect.RingEdges.SetValue(seg.RingBuffer.GetDeviceAddress());
                 _effect.BatchFringePass.Apply();
                 _device.Draw(seg.RingVertexCount, count);
             }
@@ -1307,7 +1310,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
             {
                 if (seg.RingBuffer == null) continue;
                 brush.GradientGeometries.SetValue(seg.GradGpu.GetDeviceAddress() + (ulong)(first * GradInstanceStride));
-                _device.SetVertexBuffer(seg.RingBuffer);
+                brush.RingEdges.SetValue(seg.RingBuffer.GetDeviceAddress());
                 brush.GradientFringePass.Apply();
                 _device.Draw(seg.RingVertexCount, count);
             }
@@ -1325,7 +1328,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
             {
                 if (seg.RingBuffer == null) continue;
                 _effect.PatternGeometries.SetValue(seg.PatGpu.GetDeviceAddress() + (ulong)(first * PatInstanceStride));
-                _device.SetVertexBuffer(seg.RingBuffer);
+                _effect.RingEdges.SetValue(seg.RingBuffer.GetDeviceAddress());
                 _effect.BatchPatternFringePass.Apply();
                 _device.Draw(seg.RingVertexCount, count);
             }
@@ -1345,7 +1348,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
                 brush.TextureGeometries.SetValue(seg.TexGpu.GetDeviceAddress() + (ulong)(first * TexInstanceStride));
                 brush.SourceTexture.SetResource(texture);
                 brush.SourceSampler.SetResource(SamplerStates.LinearClampToEdge);
-                _device.SetVertexBuffer(seg.RingBuffer);
+                brush.RingEdges.SetValue(seg.RingBuffer.GetDeviceAddress());
                 brush.TextureFringePass.Apply();
                 _device.Draw(seg.RingVertexCount, count);
             }
@@ -1424,11 +1427,12 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
         _ => brush.PatternCheckerboardMeshPass
     };
 
-    // Fringe device state: as the fill, but the ring's own vertex layout and the pixel basis its VS offsets in.
+    // Fringe device state: as the fill, but no vertex buffer (the ring is read by address) and the pixel basis its VS
+    // offsets in.
     private void SetupFringeState(Matrix4x4F projection)
     {
         SetupInstancedState(projection);
-        _device.VertexType = typeof(FringeVertex);
+        _device.VertexType = null;
         _device.PrimitiveTopology = PrimitiveTopology.TriangleList;
         var vp = _device.CurrentViewports;
         if (vp is { Length: > 0 })
@@ -1458,27 +1462,21 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
         var indexed = indices is { Length: > 0 };
 
         seg ??= new KeySegment();
-        seg.Vtx ??= ToDispose(_bufferManager.CreateBuffer(BufferUsageFlags.VertexBuffer, Mem));
-        seg.VtxBuffer = seg.Vtx.Acquire((ulong)(vertices.Length * VertexStride), out var writeV);
-        if (writeV) seg.VtxBuffer.SetData(vertices, 0, (uint)vertices.Length);
+        seg.VtxBuffer = Upload(vertices, BufferUsageFlags.VertexBuffer);
         seg.VertexCount = (uint)vertices.Length;
 
         seg.Indexed = indexed;
         if (indexed)
         {
-            seg.Idx ??= ToDispose(_bufferManager.CreateBuffer(BufferUsageFlags.IndexBuffer, Mem));
-            seg.IdxBuffer = seg.Idx.Acquire((ulong)(indices.Length * sizeof(int)), out var writeI);
-            if (writeI) seg.IdxBuffer.SetData(indices, 0, (uint)indices.Length);
+            seg.IdxBuffer = Upload(indices, BufferUsageFlags.IndexBuffer);
             seg.IndexCount = (uint)indices.Length;
         }
 
         // The fringe ring: immutable like the mesh (both are keyed on the same tessellation).
         if (mesh.Ring is { Length: > 0 } ring)
         {
-            seg.Ring ??= ToDispose(_bufferManager.CreateBuffer(BufferUsageFlags.VertexBuffer, Mem));
-            seg.RingBuffer = seg.Ring.Acquire((ulong)(ring.Length * RingStride), out var writeRing);
-            if (writeRing) seg.RingBuffer.SetData(ring, 0, (uint)ring.Length);
-            seg.RingVertexCount = (uint)ring.Length;
+            seg.RingBuffer = Upload(ring, BufferUsageFlags.StorageBuffer | BufferUsageFlags.ShaderDeviceAddress);
+            seg.RingVertexCount = (uint)ring.Length * 6;
         }
 
         seg.Topology = mesh.Topology;
@@ -1486,6 +1484,13 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
         seg.LastUsed = _frame;
         _keys[key] = seg;
         return seg;
+    }
+
+    private Buffer Upload<T>(T[] data, BufferUsageFlags usage) where T : unmanaged
+    {
+        var buffer = Buffer.New<T>(_device, (uint)data.Length, usage, Mem);
+        buffer.SetData(data, 0, (uint)data.Length);
+        return buffer;
     }
 
     // ---- Retained ARENA surface (see InstancedKeyArena) -------------------------------------------------------------

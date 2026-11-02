@@ -35,43 +35,19 @@ float4 FringeGradColor(float t)
     return cols[n - 1];
 }
 
-float2 SafeDir(float2 v)
-{
-    float len = length(v);
-    return len > 1e-9 ? v / len : float2(0.0, 0.0);   // a degenerate edge would otherwise produce a NaN direction
-}
+#include "Includes/Ring.fxh"
 
-// An INNER vertex (on the contour, coverage 1) carries zero directions and is never offset; an OUTER vertex carries the
-// two adjacent edge directions, from which the VS builds the screen-space miter. Winding is folded into their SIGN by
-// the builder (reversing an edge direction reverses its 90-degree normal), so a hole's inward fringe is just a sign in
-// these vectors. Matches RenderUnits/FringeVertex.cs.
-struct VSInput { float2 Position : POSITION; float2 Dir0 : TEXCOORD0; float2 Dir1 : TEXCOORD1; };
 struct PSInput { float4 Position : SV_Position; float Coverage : TEXCOORD0; float2 Local : TEXCOORD1; };
 
 [shader("vertex")]
-PSInput FillFringeVS(VSInput input)
+PSInput FillFringeVS(uint vertexId : SV_VertexID)
 {
+    FringeVertex v = RingCorner(vertexId);
     PSInput o;
-    float4 clip = mul(float4(input.Position, 0.0, 1.0), Projection);   // row-vector convention (matches engine effects)
-    float outer = dot(input.Dir0, input.Dir0) + dot(input.Dir1, input.Dir1);
-    if (outer > 0.0)
-    {
-        // Edge directions -> PIXEL space (w = 0 drops the projection's translation), then the miter is built THERE, so
-        // it is perpendicular to the edge as the rasterizer sees it and the width is exactly FringePixels pixels.
-        float2 halfVp = max(ViewportSize, float2(1.0, 1.0)) * 0.5;
-        float w = max(clip.w, 1e-6);
-        float2 e0 = SafeDir(mul(float4(input.Dir0, 0.0, 0.0), Projection).xy / w * halfVp);
-        float2 e1 = SafeDir(mul(float4(input.Dir1, 0.0, 0.0), Projection).xy / w * halfVp);
-        float2 n0 = float2(-e0.y, e0.x);
-        float2 n1 = float2(-e1.y, e1.x);
-        float2 sum = n0 + n1;
-        float2 miter = length(sum) > 1e-4 ? normalize(sum) : n0;   // a 180-degree reversal has no bisector: use one normal
-        float denom = max(dot(miter, n0), 0.25);                   // clamp the corner spike to <= 4x
-        clip.xy += miter * (FringePixels / denom) / halfVp * w;
-    }
-    o.Position = clip;
-    o.Coverage = outer > 0.0 ? 0.0 : 1.0;   // outer edge fades to 0; the contour vertex meets the solid body at 1
-    o.Local = input.Position;   // LOCAL geometry position -> the PS maps it to the gradient uv
+    float coverage;
+    o.Position = ExpandFringe(v, Projection, coverage);
+    o.Coverage = coverage;
+    o.Local = v.Position;   // LOCAL geometry position -> the PS maps it to the gradient uv
     return o;
 }
 

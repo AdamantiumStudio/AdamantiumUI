@@ -1,5 +1,6 @@
 <Language>
     <Phrase Key="Gallery" Text="Галерея фигур — обводку каждой фигуры задаёт панель пера ниже:"/>
+    <Phrase Key="Mesh" Text="Сетка готовых треугольников"/>
     <Phrase Key="CubicBezier" Text="Кубическая кривая Безье"/>
     <Phrase Key="QuadraticBezier" Text="Квадратичная кривая Безье"/>
     <Phrase Key="Nurbs" Text="NURBS"/>

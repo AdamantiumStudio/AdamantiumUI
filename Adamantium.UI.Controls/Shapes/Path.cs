@@ -109,7 +109,13 @@ public class Path : Shape
     public override bool HitTestCore(Vector2<double> localPoint)
     {
         var mesh = Data?.Mesh;
-        if (mesh?.Contours == null || mesh.Contours.Count == 0) return base.HitTestCore(localPoint);
+        if (mesh?.Contours == null || mesh.Contours.Count == 0)
+        {
+            // Triangles with no outline - a mesh geometry given without its edge: in any one of them is in the fill.
+            return mesh is { HasPoints: true }
+                ? IsVisibleBrush(Fill) && InAnyTriangle(mesh, localPoint)
+                : base.HitTestCore(localPoint);
+        }
 
         var inside = false;
         var minDist = double.MaxValue;
@@ -131,5 +137,27 @@ public class Path : Shape
 
         if (IsVisibleBrush(Fill) && inside) return true;
         return IsVisibleBrush(Stroke) && minDist <= StrokeThickness / 2.0 + 1.0;
+    }
+
+    private static bool InAnyTriangle(Adamantium.Graphics.Core.Models.Mesh mesh, Vector2<double> p)
+    {
+        var points = mesh.Points;
+        var indices = mesh.HasIndices ? mesh.Indices : null;
+        var corners = indices?.Length ?? points.Length;
+        for (var t = 0; t + 2 < corners; t += 3)
+        {
+            var a = points[indices?[t] ?? t];
+            var b = points[indices?[t + 1] ?? t + 1];
+            var c = points[indices?[t + 2] ?? t + 2];
+            var ab = (b.X - a.X) * (p.Y - a.Y) - (b.Y - a.Y) * (p.X - a.X);
+            var bc = (c.X - b.X) * (p.Y - b.Y) - (c.Y - b.Y) * (p.X - b.X);
+            var ca = (a.X - c.X) * (p.Y - c.Y) - (a.Y - c.Y) * (p.X - c.X);
+            if ((ab >= 0 && bc >= 0 && ca >= 0) || (ab <= 0 && bc <= 0 && ca <= 0))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

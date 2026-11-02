@@ -19,6 +19,8 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
     // Disc-fan subdivision for round joins (a smooth-enough circle); 0 when the contour has no round geometry.
     private const uint RoundSegmentsCount = 16;
     private const int MaxDashVertices = 8192 * 6;   // safety cap on the dash output buffer (per contour)
+    private const ulong MostBatchPoints = 32768;     // pieces are numbered 2 per point, and the union depth holds 16 bits
+    private const ulong MostBatchVertexBytes = 32UL << 20;
 
     private const ColorComponentFlagBits AllColorComponents = ColorComponentFlagBits.RBit |
                                                               ColorComponentFlagBits.GBit |
@@ -57,6 +59,16 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
         public Buffer PatternBuffer;     // dash only
         public Buffer IndirectBuffer;    // dash only (VkDrawIndirectCommand)
         public float DashScale = 1f;     // what FitDashesToContour stretched the pattern by (1 = untouched)
+
+        // A BATCH: many continuous contours, their points one after another, expanded by one dispatch and drawn by one
+        // draw. ContoursData is (first point, point count, closed) per contour; PointContoursData the contour of each
+        // point - what lets a thread find the contour it works inside.
+        public bool Batched;
+        public uint[] ContoursData;
+        public uint[] PointContoursData;
+        public ReusableBuffer ContoursBuffer;
+        public ReusableBuffer PointContoursBuffer;
+
         public ulong PointsBytes => (ulong)(PointsData.Length * sizeof(float));
         public ulong VertexBytes => (ulong)(VertexCount * 11 * sizeof(float));   // see StrokeVertex (pos, a float4 per piece end, the piece serial)
     }
@@ -71,11 +83,155 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
         _useCut = _hasDashes || pen.TrimStart > 0.0 || pen.TrimEnd < 1.0;
         _joinType = MapJoin(pen.PenLineJoin);
 
-        foreach (var (points, isClosed) in contours)
+        // Continuous strokes of many contours - a map's roads, a chart's series - go as ONE batch: a dispatch and a draw
+        // per contour is what thousands of them cannot afford. Dash and trim walk each contour by its own arc length,
+        // and a lone contour gains nothing, so those keep a contour each.
+        var valid = Valid(contours);
+        if (!_useCut && valid.Count > 1)
+        {
+            foreach (var part in Batches(valid))
+            {
+                var contour = part.Count > 1 ? BuildBatch(part) : BuildContour(part[0].Points, part[0].IsClosed);
+                if (contour != null) _contours.Add(contour);
+            }
+
+            return;
+        }
+
+        foreach (var (points, isClosed) in valid)
         {
             var contour = BuildContour(points, isClosed);
             if (contour != null) _contours.Add(contour);
         }
+    }
+
+    /// <summary>How many draws the stroke makes: one per batch, one per contour that stands alone.</summary>
+    internal int DrawCount => _contours.Count;
+
+    /// <summary>Whether draw <paramref name="draw"/> is a batch of contours.</summary>
+    internal bool IsBatch(int draw) => _contours[draw].Batched;
+
+    // Contours of two points or more; a closed one of two points has no inside to turn round, so it is drawn open.
+    private static List<(Vector2<double>[] Points, bool IsClosed)> Valid(
+        IReadOnlyList<(Vector2<double>[] Points, bool IsClosed)> contours)
+    {
+        var valid = new List<(Vector2<double>[] Points, bool IsClosed)>(contours.Count);
+        foreach (var (points, isClosed) in contours)
+            if (points is { Length: >= 2 }) valid.Add((points, isClosed && points.Length >= 3));
+        return valid;
+    }
+
+    // Contours grouped into batches each within what one dispatch, one buffer and a 16-bit piece number hold: at most
+    // MostBatchPoints points, and at most MostBatchVertexBytes of expanded ribbon. A contour is never split; one bigger
+    // than a batch is a batch of its own.
+    private List<List<(Vector2<double>[] Points, bool IsClosed)>> Batches(
+        List<(Vector2<double>[] Points, bool IsClosed)> contours)
+    {
+        var verticesPerPoint = 6UL + (_joinType != 0u ? RoundSegmentsCount * 3UL : 0UL);
+        var most = (int)Math.Max(1UL, Math.Min(MostBatchPoints, MostBatchVertexBytes / (verticesPerPoint * 11 * sizeof(float))));
+        var batches = new List<List<(Vector2<double>[] Points, bool IsClosed)>>();
+        var current = new List<(Vector2<double>[] Points, bool IsClosed)>();
+        var points = 0;
+        foreach (var contour in contours)
+        {
+            if (current.Count > 0 && points + contour.Points.Length > most)
+            {
+                batches.Add(current);
+                current = [];
+                points = 0;
+            }
+
+            current.Add(contour);
+            points += contour.Points.Length;
+        }
+
+        if (current.Count > 0) batches.Add(current);
+        return batches;
+    }
+
+    // One contour standing for all of them: their points one after another, a table of where each starts, and for every
+    // point the contour it is in. Slots in the output follow the points, so contours never write over each other.
+    private Contour BuildBatch(List<(Vector2<double>[] Points, bool IsClosed)> contours)
+    {
+        var total = 0;
+        foreach (var (points, _) in contours) total += points.Length;
+
+        var c = new Contour
+        {
+            Batched = true,
+            PointCount = (uint)total,
+            PointsData = new float[total * 2],
+            ContoursData = new uint[contours.Count * 3],
+            PointContoursData = new uint[total],
+        };
+        FillBatch(c, contours);
+
+        c.RoundSegments = _joinType != 0u ? RoundSegmentsCount : 0u;
+        c.ThreadCount = c.PointCount;
+        c.VertexCount = c.PointCount * (6u + c.RoundSegments * 3u);
+        c.PointsBuffer = NewStorage(c.PointsBytes);
+        c.ContoursBuffer = NewStorage((ulong)(c.ContoursData.Length * sizeof(uint)));
+        c.PointContoursBuffer = NewStorage((ulong)(c.PointContoursData.Length * sizeof(uint)));
+        c.VertexBuffer = NewVertices(c.VertexBytes);
+        return c;
+    }
+
+    // Whether contour or batch c holds exactly these contours - counts and closedness, in order.
+    private static bool Matches(Contour c, List<(Vector2<double>[] Points, bool IsClosed)> part)
+    {
+        if (!c.Batched)
+            return part.Count == 1 && part[0].Points.Length == c.PointCount && part[0].IsClosed == c.IsClosed;
+
+        if (part.Count * 3 != c.ContoursData.Length) return false;
+        var at = 0u;
+        for (var k = 0; k < part.Count; k++)
+        {
+            if (c.ContoursData[k * 3] != at || c.ContoursData[k * 3 + 1] != (uint)part[k].Points.Length ||
+                c.ContoursData[k * 3 + 2] != (part[k].IsClosed ? 1u : 0u))
+                return false;
+            at += (uint)part[k].Points.Length;
+        }
+
+        return true;
+    }
+
+    private static void FillBatch(Contour c, List<(Vector2<double>[] Points, bool IsClosed)> contours)
+    {
+        var at = 0;
+        for (var k = 0; k < contours.Count; k++)
+        {
+            var (points, isClosed) = contours[k];
+            c.ContoursData[k * 3] = (uint)at;
+            c.ContoursData[k * 3 + 1] = (uint)points.Length;
+            c.ContoursData[k * 3 + 2] = isClosed ? 1u : 0u;
+            foreach (var point in points)
+            {
+                c.PointsData[at * 2] = (float)point.X;
+                c.PointsData[at * 2 + 1] = (float)point.Y;
+                c.PointContoursData[at] = (uint)k;
+                at++;
+            }
+        }
+    }
+
+    private ReusableBuffer NewStorage(ulong bytes)
+    {
+        var buffer = ToDispose(BufferManager.CreateBuffer(
+            BufferUsageFlags.StorageBuffer | BufferUsageFlags.ShaderDeviceAddress, StrokeMemory));
+        buffer.Reserve(bytes);
+        buffer.Invalidate();
+        return buffer;
+    }
+
+    // 11 floats a vertex (see StrokeVertex): position, then one float4 per end of the piece, then the piece serial.
+    private ReusableBuffer NewVertices(ulong bytes)
+    {
+        var buffer = ToDispose(BufferManager.CreateBuffer(
+            BufferUsageFlags.VertexBuffer | BufferUsageFlags.StorageBuffer | BufferUsageFlags.ShaderDeviceAddress,
+            StrokeMemory));
+        buffer.Reserve(bytes);
+        buffer.Invalidate();
+        return buffer;
     }
 
     // True when newPen keeps every SIZE-affecting parameter (cut mode, join, dash pattern -> same buffer sizes + fan
@@ -119,9 +275,28 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
         if (_useCut) return false;
         if (!IsPenSizeCompatible(pen)) return false;
 
-        var valid = new List<(Vector2<double>[] Points, bool IsClosed)>();
-        foreach (var (points, isClosed) in contours)
-            if (points is { Length: >= 2 }) valid.Add((points, isClosed));
+        var valid = Valid(contours);
+        if (_contours.Exists(c => c.Batched))
+        {
+            // The same contours, point for point and open or closed alike, fall into the same batches: their tables
+            // stand, only points move. Checked whole before anything is written.
+            var parts = Batches(valid);
+            if (parts.Count != _contours.Count) return false;
+            for (var i = 0; i < parts.Count; i++)
+                if (!Matches(_contours[i], parts[i])) return false;
+
+            for (var i = 0; i < parts.Count; i++)
+            {
+                var c = _contours[i];
+                if (c.Batched) FillBatch(c, parts[i]);
+                else c.PointsData = ToFloats(parts[i][0].Points);
+                c.PointsBuffer.Invalidate();
+                c.VertexBuffer.Invalidate();
+            }
+
+            _pen = pen;
+            return true;
+        }
 
         if (valid.Count != _contours.Count) return false;
         for (var i = 0; i < valid.Count; i++)
@@ -316,6 +491,16 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
         {
             var points = c.PointsBuffer.Acquire(c.PointsBytes, out var writePoints);
             if (writePoints) points.SetData(c.PointsData, 0, (uint)c.PointsData.Length);
+            Buffer contoursTable = null;
+            Buffer pointContours = null;
+            if (c.Batched)
+            {
+                contoursTable = c.ContoursBuffer.Acquire((ulong)(c.ContoursData.Length * sizeof(uint)), out var writeTable);
+                if (writeTable) contoursTable.SetData(c.ContoursData, 0, (uint)c.ContoursData.Length);
+                pointContours = c.PointContoursBuffer.Acquire((ulong)(c.PointContoursData.Length * sizeof(uint)),
+                    out var writeOwners);
+                if (writeOwners) pointContours.SetData(c.PointContoursData, 0, (uint)c.PointContoursData.Length);
+            }
 
             if (_useCut ? cutChanged || fringeChanged : fringeChanged) c.VertexBuffer.Invalidate();
 
@@ -325,6 +510,13 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
             _effect.Points.SetValue(points.GetDeviceAddress());
             _effect.Output.SetValue(vertices.GetDeviceAddress());
             _effect.PointCount.SetValue(c.PointCount);
+            // The effect is shared by every stroke: a batch says so, and every other contour says it is none.
+            _effect.Batched.SetValue(c.Batched ? 1u : 0u);
+            if (c.Batched)
+            {
+                _effect.Contours.SetValue(contoursTable.GetDeviceAddress());
+                _effect.PointContours.SetValue(pointContours.GetDeviceAddress());
+            }
             _effect.IsClosed.SetValue(c.IsClosed ? 1u : 0u);
             _effect.DashMode.SetValue(_useCut ? 1u : 0u);
             _effect.JoinType.SetValue(_joinType);
@@ -449,7 +641,8 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
         var viewports = _device.CurrentViewports;
         if (viewports is not { Length: > 0 }) return false;
 
-        var pad = (float)(_pen.Thickness * 2.0) + ComputeFringe() + 1.0f;
+        // The miter clamp lets a corner reach 4x the WIDENED half-extent (half + Fringe/2): 2 thicknesses + 2 fringes.
+        var pad = (float)(_pen.Thickness * 2.0) + 2.0f * ComputeFringe() + 1.0f;
         float minX = float.MaxValue, minY = float.MaxValue, maxX = float.MinValue, maxY = float.MinValue;
         foreach (var c in _contours)
         {

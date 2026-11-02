@@ -465,11 +465,18 @@ public partial class RenderCache
         {
             var units = group.Units;
             var allMatch = true;
+            var heldKnown = false;
             for (var i = 0; i < drawCommands.Count; i++)
             {
                 drawCommands[i].RenderData.ProjectionMatrix = _projectionMatrix;
-                if (!units[i].Match(drawCommands[i])) { allMatch = false; break; }   // payload type changed
+                // Payload type changed, or the draw's content is held by another unit of the group.
+                if (!units[i].Match(drawCommands[i]) || !StaysInPlace(units, i, drawCommands[i], ref heldKnown))
+                {
+                    allMatch = false;
+                    break;
+                }
             }
+            _heldByContent.Clear();
             if (allMatch)
             {
                 for (var i = 0; i < drawCommands.Count; i++)

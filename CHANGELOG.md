@@ -7,6 +7,20 @@ All packages share one version.
 
 ### Added
 
+- `PolylineGeometry`: open lines (`Lines`) and closed rings (`Rings`) given as points and stroked as they are - nothing
+  is cut into triangles, and a geometry of thousands of lines holds just their points. For what a worker thread already
+  has as lines: a map's roads and borders, a chart's series. Creatable from markup.
+- `MeshGeometry.CutBox`: the box a mesh was cut to when it is a piece of a larger area - a map tile's square. Its edge
+  along the box's sides is not antialiased, so pieces cut side by side meet without a seam.
+- `MeshGeometry`: an area given as triangles already cut - `Positions` and, three to a triangle, `TriangleIndices` -
+  drawn as it is and never tessellated again, so shapes cut on a worker thread (a map's tiles, a file, a generator)
+  cost the drawing thread nothing to tessellate; it joins the instanced fills like any path. Its optional `Boundary`
+  (the rings it was cut from) is taken as the edge to antialias instead of working the edge out of the triangles - on
+  26 000 vertices the first draw goes from about 80 ms to under 3 ms - and is what a pen draws. Creatable from markup:
+  `<MeshGeometry Positions="0,0 10,0 10,10" TriangleIndices="0 1 2" Boundary="0,0 10,0 10,10"/>`, with
+  `IndexCollection` parsing `"0 1 2"` and `ContourCollection` rings apart by semicolons; the Shapes tab of the sandbox
+  shows one. A mesh may be made on any thread; once shown, it is changed on the UI thread.
+- `Path` hit-tests a geometry that has triangles but no outline against its triangles, not its bounding box.
 - `TextBaseline.Of`: how far below a control's top the baseline of the first line of text it shows lies - a button's
   label - or null for one showing none: what a control set into text stands on the line's baseline by, the same for a
   `TextBlock`'s `InlineUIContainer` and any other text that hosts controls.
@@ -1907,6 +1921,16 @@ All packages share one version.
 
 ### Changed
 
+- A fill's antialiased edge is kept as one 40-byte record per edge instead of six 24-byte corners; the vertex stage makes
+  the corners. With the body of an instanced fill now sharing the mesh copy its instances are drawn from, and the
+  shared meshes kept at their exact size rather than rounded up to a power of two, a map tile of 2 300 areas holds
+  about 5 MB for drawing instead of 13.
+- A continuous GPU stroke of many contours - a map's roads, a chart's series - is expanded by one compute dispatch and
+  drawn by one draw instead of one of each per contour: its contours' points lie one after another with a table of
+  where each starts, and every thread works inside its own point's contour, so joins, caps and antialiasing are what
+  they were. A batch holds at most 32 768 points and 32 MB of ribbon; past that the contours go in several. Pieces are
+  numbered across the whole batch, so translucent contours of one stroke crossing each other blend once. A dashed or
+  trimmed stroke still walks each contour on its own.
 - `CursorType.SizeEWE` and `Cursors.SizeEWE` are renamed `SizeWE`, the west-east resize arrow, as `SizeNS` is the
   north-south one; markup writes `Cursor="SizeWE"`. `Cursor="SizeEWE"` is no shape any more, so markup takes it as
   the path of a cursor file, which is not found.
@@ -2442,6 +2466,23 @@ All packages share one version.
 - A card opened from a menu's item left the focus nowhere when it closed: the item it had the focus from was gone with
   its menu. `FocusReturn.Restore` takes the element the overlay stands on and, the opener gone, gives the focus to what
   had it last in that element's focus scope - the field the menu was opened from; a popup passes its place in the tree.
+- An element drawing many geometries - a map's tiles - that gained or lost one before the others handed every
+  geometry after it to its neighbour's unit, and each was frozen, edged and stroked anew: dragging a vector map
+  stalled the drawing thread for seconds. A geometry now goes back to the unit that already drew it, wherever it
+  stands; the edge's hole test also skips contours whose box cannot hold the probe. A `MeshGeometry` with its
+  `Boundary` gets its fill ready for drawing - vertices, edge, antialiasing ring - where it is processed, on the worker
+  that cut it, instead of on the drawing thread when it first shows. Measured on the Pro sandbox's vector world map over
+  Moscow, a pair of automated drags: about 7.3 s before, 0.5 s after (a raster map: 0.33 s).
+- Giving a geometry a new `Transform` left its bounds and shape where the old one had put them until something else
+  changed it; changing the transform's own values already worked.
+- The instanced fills' per-instance buffers were never freed when their renderer went away, and a shared mesh dropped
+  from the cache was freed at once though a frame in flight could still be drawing it; both now leave through the
+  deferred queue.
+- A `StreamGeometry` cut its unfilled figures into triangles as one area along with the filled ones: 3 000 open lines
+  of 20 points took 26 s to process and filled nothing. Only filled figures are cut now, as in `PathGeometry`; the
+  others are stroked as given (about 50 ms for the same lines), an open figure staying open.
+- A closed contour of two points stroked with miter joins drew from NaN vertices; it is drawn open now.
+- The depth a translucent stroke clears for its union fell short of a mitred corner's tip when zoomed out.
 - A key that types into a focused text field ran the gestures of what holds the field: a minus typed into a field
   placed on a map zoomed the map out. The elements around a text entry no longer take its typing keys for their key
   bindings or command gestures; the field's own bindings, and Ctrl or function keys, reach them as before.

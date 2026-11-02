@@ -12,6 +12,7 @@ using Adamantium.UI.Core;
 using Adamantium.UI.Core.Graphics;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.FX;
+using Adamantium.UI.Rendering.Retained;
 using Adamantium.Vulkan.Core;
 using Buffer = Adamantium.Graphics.Buffer;
 
@@ -62,17 +63,37 @@ public abstract class UIRenderComponent : DeferredDisposableObject
     // animation fast path - the unit calls it instead of building a fresh component (and a fresh allocation) per frame.
     public void UpdateGeometry(Mesh mesh) => SetMesh(mesh);
 
+    /// <summary>Re-points at a mesh whose snapshot is already taken: the snapshot's arrays are used as they are, so the
+    /// unit holds the mesh once rather than twice. A null snapshot takes one here, as <see cref="UpdateGeometry(Mesh)"/>.</summary>
+    internal void UpdateGeometry(Mesh mesh, FrozenMesh snapshot)
+    {
+        if (snapshot == null)
+        {
+            SetMesh(mesh);
+            return;
+        }
+
+        SetSnapshot(mesh, snapshot.Vertices, snapshot.Indices is { Length: > 0 } indices ? indices : null);
+    }
+
     private void SetMesh(Mesh mesh)
+    {
+        var vertices = mesh?.ToUIVertices();   // already a fresh array - we own it
+        // COPY the indices. Taking mesh.Indices by reference aliased the live mesh's own array, so a later
+        // re-tessellation (which rewrites the mesh IN PLACE) silently changed the index data of an already-built unit -
+        // this component must hold a snapshot, exactly as it does for the vertices.
+        var indices = mesh is { HasIndices: true } && vertices is { Length: > 0 } ? (int[])mesh.Indices.Clone() : null;
+        SetSnapshot(mesh, vertices, indices);
+    }
+
+    private void SetSnapshot(Mesh mesh, UIVertex[] vertices, int[] indices)
     {
         Mesh = mesh;
         if (mesh != null) PrimitiveType = mesh.MeshTopology;
 
-        _vertices = mesh?.ToUIVertices();   // already a fresh array - we own it
+        _vertices = vertices;
         _vertexCount = _vertices is { Length: > 0 } ? (uint)_vertices.Length : 0u;
-        // COPY the indices. Taking mesh.Indices by reference aliased the live mesh's own array, so a later
-        // re-tessellation (which rewrites the mesh IN PLACE) silently changed the index data of an already-built unit -
-        // this component must hold a snapshot, exactly as it does for the vertices.
-        _indices = mesh is { HasIndices: true } && _vertexCount > 0 ? (int[])mesh.Indices.Clone() : null;
+        _indices = _vertexCount > 0 ? indices : null;
         _indexCount = _indices != null ? (uint)_indices.Length : 0u;
 
         // Buffers are allocated lazily on the first individual Render, since batched units never draw themselves.
@@ -170,6 +191,14 @@ public class GeometryRenderComponent : UIRenderComponent
 
     public GeometryRenderComponent(IGraphicsDevice graphicsDevice, UIBasicEffect uiBasicEffect, Mesh mesh, Brush background, GpuBufferManager bufferManager, IResourceFactory resourceFactory = null) : base(graphicsDevice, uiBasicEffect, mesh, bufferManager)
     {
+        Background = background;
+        _resourceFactory = resourceFactory;
+    }
+
+    /// <summary>A body drawing from a snapshot already taken of its mesh (see <see cref="UIRenderComponent.UpdateGeometry(Mesh, FrozenMesh)"/>).</summary>
+    internal GeometryRenderComponent(IGraphicsDevice graphicsDevice, UIBasicEffect uiBasicEffect, Mesh mesh, FrozenMesh snapshot, Brush background, GpuBufferManager bufferManager, IResourceFactory resourceFactory) : base(graphicsDevice, uiBasicEffect, null, bufferManager)
+    {
+        UpdateGeometry(mesh, snapshot);
         Background = background;
         _resourceFactory = resourceFactory;
     }

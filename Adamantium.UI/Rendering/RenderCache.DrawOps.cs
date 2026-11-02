@@ -687,39 +687,44 @@ public partial class RenderCache
         }
 
         var units = group.Units;
+        PairUnits(units, drawCommands);
+        _rebuilt.Clear();
         for (int i = 0; i < drawCommands.Count; i++)
         {
             var command = drawCommands[i];
             command.RenderData.ProjectionMatrix = projectionMatrix;
             Core.Diagnostics.RuntimeStats.CommandsApplied++;
-            if (i >= units.Count)
+            var held = _pairing[i];
+            if (held < 0)
             {
                 Core.Diagnostics.RuntimeStats.UnitsCreated++;
-                units.Add(_renderUnitFactory.CreateRenderUnitFromCommand(command));
+                _rebuilt.Add(_renderUnitFactory.CreateRenderUnitFromCommand(command));
+                continue;
+            }
+
+            var unit = units[held];
+            if (unit.Match(command))
+            {
+                Core.Diagnostics.RuntimeStats.UnitsUpdated++;
+                unit.UpdateWithDrawCommand(command);
+                _rebuilt.Add(unit);
             }
             else
             {
-                var unit = units[i];
-                if (unit.Match(command))
-                {
-                    Core.Diagnostics.RuntimeStats.UnitsUpdated++;
-                    unit.UpdateWithDrawCommand(command);
-                }
-                else
-                {
-                    Core.Diagnostics.RuntimeStats.UnitsCreated++;
-                    Retire(unit);
-                    units[i] = _renderUnitFactory.CreateRenderUnitFromCommand(command);
-                }
+                Core.Diagnostics.RuntimeStats.UnitsCreated++;
+                Retire(unit);
+                _rebuilt.Add(_renderUnitFactory.CreateRenderUnitFromCommand(command));
             }
         }
 
-        if (units.Count > drawCommands.Count)
+        for (var i = 0; i < units.Count; i++)
         {
-            for (int i = drawCommands.Count; i < units.Count; i++)
-                Retire(units[i]);
-            units.RemoveRange(drawCommands.Count, units.Count - drawCommands.Count);
+            if (!_paired[i]) Retire(units[i]);
         }
+
+        units.Clear();
+        units.AddRange(_rebuilt);
+        _rebuilt.Clear();
 
         foreach (var unit in units)
         {
@@ -731,6 +736,82 @@ public partial class RenderCache
         // from them (the pre-render sweep) has to know, and this is the one place that mutates them.
         ControlGroup.BumpMembership();
         return group;
+    }
+
+    private readonly List<int> _pairing = new();
+    private readonly List<bool> _paired = new();
+    private readonly List<int> _nextWithSameContent = new();
+    private readonly List<IRenderUnit> _rebuilt = new();
+    private readonly Dictionary<object, int> _heldByContent = new(ReferenceEqualityComparer.Instance);
+    private readonly HashSet<object> _wantedContent = new(ReferenceEqualityComparer.Instance);
+
+    private static object ContentOf(IDrawCommand command) => (command.Payload as IRenderCachePolicy)?.Content;
+
+    private void PairUnits(List<IRenderUnit> units, IReadOnlyList<IDrawCommand> commands)
+    {
+        _pairing.Clear();
+        _paired.Clear();
+        _nextWithSameContent.Clear();
+        _heldByContent.Clear();
+        _wantedContent.Clear();
+        for (var i = 0; i < units.Count; i++)
+        {
+            _paired.Add(false);
+            _nextWithSameContent.Add(-1);
+        }
+
+        for (var i = units.Count - 1; i >= 0; i--)
+        {
+            if (units[i].Content is not { } content) continue;
+            if (_heldByContent.TryGetValue(content, out var later)) _nextWithSameContent[i] = later;
+            _heldByContent[content] = i;
+        }
+
+        for (var i = 0; i < commands.Count; i++)
+        {
+            var held = -1;
+            if (_heldByContent.Count > 0 && ContentOf(commands[i]) is { } content)
+            {
+                _wantedContent.Add(content);
+                if (_heldByContent.TryGetValue(content, out var index))
+                {
+                    held = index;
+                    var next = _nextWithSameContent[index];
+                    if (next >= 0) _heldByContent[content] = next;
+                    else _heldByContent.Remove(content);
+                }
+            }
+
+            _pairing.Add(held);
+            if (held >= 0) _paired[held] = true;
+        }
+
+        for (var i = 0; i < commands.Count && i < units.Count; i++)
+        {
+            if (_pairing[i] >= 0 || _paired[i]) continue;
+            if (units[i].Content is { } content && _wantedContent.Contains(content)) continue;
+            _pairing[i] = i;
+            _paired[i] = true;
+        }
+
+        _heldByContent.Clear();
+        _wantedContent.Clear();
+    }
+
+    private bool StaysInPlace(List<IRenderUnit> units, int i, IDrawCommand command, ref bool heldKnown)
+    {
+        if (ContentOf(command) is not { } content || ReferenceEquals(units[i].Content, content)) return true;
+        if (!heldKnown)
+        {
+            heldKnown = true;
+            _heldByContent.Clear();
+            foreach (var unit in units)
+            {
+                if (unit.Content is { } held) _heldByContent.TryAdd(held, 0);
+            }
+        }
+
+        return !_heldByContent.ContainsKey(content);
     }
 
     private void Retire(IRenderUnit unit)

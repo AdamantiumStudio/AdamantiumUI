@@ -27,7 +27,10 @@ public class FillFringeRenderTests
 
     // A square drawn as a GEOMETRY (not a RectanglePayload): the SDF rect batch is self-anti-aliasing and would never
     // build a fringe, so the fringe path needs an arbitrary-geometry fill.
-    private static byte[] RenderSquare(double scale, Brush fill = null)
+    private static byte[] RenderSquare(double scale, Brush fill = null) =>
+        RenderFilled(new RectangleGeometry(new Rect(10, 10, 40, 40)), scale, fill);
+
+    private static byte[] RenderFilled(Geometry geometry, double scale = 1.0, Brush fill = null)
     {
         var device = GpuTestDevice.Device;
         var factory = new RenderUnitFactory(device, new StubResourceFactory());
@@ -36,7 +39,7 @@ public class FillFringeRenderTests
         var brush = fill ?? Brushes.Red;
         var content = new TestControl
         {
-            RenderAction = s => s.DrawGeometry(brush, new RectangleGeometry(new Rect(10, 10, 40, 40)))
+            RenderAction = s => s.DrawGeometry(brush, geometry)
         };
         content.Bounds = new Rect(0, 0, Dim, Dim);
         content.RenderSize = new Size<double>(Dim, Dim);
@@ -70,6 +73,19 @@ public class FillFringeRenderTests
     [TestCase(1.0, 50, TestName = "Fringe_IsOutside_AndOnePixelWide_AtScale1")]
     [TestCase(4.0, 200, TestName = "Fringe_IsOutside_AndOnePixelWide_AtScale4")]
     public void Fringe_IsOutside_AndOnePixelWide(double scale, int edge) => AssertOnePixelEdge(RenderSquare(scale), edge);
+
+    // A geometry of lines has no area: filling it draws nothing, not an edge round an empty body.
+    [Test]
+    public void FilledLines_DrawNoEdge()
+    {
+        var rings = new PolylineGeometry([], [[new Vector2<double>(10, 10), new(50, 10), new(50, 50)]]);
+
+        var pixels = RenderFilled(rings);
+
+        var drawn = 0;
+        for (var i = 3; i < pixels.Length; i += 4) if (pixels[i] != 0) drawn++;
+        Assert.That(drawn, Is.Zero);
+    }
 
     // A PATTERN/NOISE fill is feathered by the INSTANCED ring too - the unit builds no per-unit fringe for it any more,
     // so losing that pass would show up here as a hard edge rather than as a crash.

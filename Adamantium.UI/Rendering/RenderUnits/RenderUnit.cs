@@ -10,6 +10,7 @@ using Adamantium.ProceduralGeometry.Shapes;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Graphics;
 using Adamantium.UI.Core.Media;
+using Adamantium.UI.Core.Media.Fill;
 using Adamantium.UI.Core.Media.Imaging;
 using Adamantium.UI.FX;
 using Adamantium.UI.Rendering.Payloads;
@@ -210,18 +211,20 @@ public abstract class RenderUnit<TPayload> : DeferredDisposableObject, IRenderUn
 
         // Feather the RESOLVED fill boundary (outer outline + holes, extracted from the fill mesh) so self-intersecting /
         // holed shapes get their inner edges AA'd too; fall back to the raw path contours if extraction finds nothing.
-        var contours = FillBoundary.ExtractLoops(geometry?.Mesh) ?? BuildFillContours(geometry);
+        var contours = FillBoundary.LoopsOf(geometry) ?? BuildFillContours(geometry);
         if (contours == null) return;
 
-        FillFringeRenderer = new GpuFillRenderComponent(GraphicsDevice, UIBasicEffect, FillFringeEffect, contours, brush, BufferManager);
+        FillFringeRenderer = new GpuFillRenderComponent(GraphicsDevice, UIBasicEffect, FillFringeEffect, contours, brush,
+            BufferManager, PreparedFill.CutBoxOf(geometry));
         FillFringeRenderer.RenderData = DrawCommand.RenderData;
     }
 
-    // The closed contours (>= 3 points) of a solid fill that get an analytic-AA fringe. Null when there are none.
+    // The closed contours (>= 3 points) of a solid fill that get an analytic-AA fringe. Null when there are none, or when
+    // there is no body for them to edge (a geometry of lines only).
     private static List<(Adamantium.Mathematics.Vector2<double>[] Points, bool IsClosed)> BuildFillContours(Geometry geometry)
     {
         var mesh = geometry?.Mesh;
-        if (mesh == null || mesh.Contours.Count == 0) return null;
+        if (mesh is not { HasPoints: true } || mesh.Contours.Count == 0) return null;
 
         List<(Adamantium.Mathematics.Vector2<double>[] Points, bool IsClosed)> contours = [];
         foreach (var contour in mesh.Contours)
@@ -248,8 +251,8 @@ public abstract class RenderUnit<TPayload> : DeferredDisposableObject, IRenderUn
             // (contour count or a contour's point count changed) rebuild it.
             if (brush is SolidColorBrush solid && FillFringeRenderer is GpuFillRenderComponent existingFringe)
             {
-                var contours = FillBoundary.ExtractLoops(geometry?.Mesh) ?? BuildFillContours(geometry);
-                if (contours != null && existingFringe.TryUpdateContours(contours, solid))
+                var contours = FillBoundary.LoopsOf(geometry) ?? BuildFillContours(geometry);
+                if (contours != null && existingFringe.TryUpdateContours(contours, solid, PreparedFill.CutBoxOf(geometry)))
                 {
                     FillFringeRenderer.RenderData = DrawCommand.RenderData;
                     return;
@@ -346,6 +349,8 @@ public abstract class RenderUnit<TPayload> : DeferredDisposableObject, IRenderUn
         return DrawCommand.Payload.GetType() == drawCommand.Payload.GetType();
     }
 
+    public object Content => (DrawCommand?.Payload as IRenderCachePolicy)?.Content;
+
     protected override void Dispose(bool disposeManagedResources)
     {
         // The unit owns its renderers (their vertex/index buffers and text render targets), so dispose them too.
@@ -363,8 +368,8 @@ public class GeometryRenderUnit : RenderUnit<GeometryPayload>
     {
         // No ProcessGeometry here: the payload tessellated on the RECORD thread (see GeometryPayload). The applier only
         // freezes a copy of the result.
-        _frozenMesh = FrozenMesh.From(Payload.Geometry.Mesh, Payload.Geometry.Bounds);   // freeze the tessellated mesh for the instanced path
-        GeometryRenderer = new GeometryRenderComponent(GraphicsDevice, UIBasicEffect, Payload.Geometry.Mesh, Payload.LiveBrush, BufferManager, ResourceFactory);
+        _frozenMesh = FrozenMesh.From(Payload.Geometry);   // freeze the tessellated mesh for the instanced path
+        GeometryRenderer = new GeometryRenderComponent(GraphicsDevice, UIBasicEffect, Payload.Geometry.Mesh, _frozenMesh, Payload.LiveBrush, BufferManager, ResourceFactory);
         GeometryRenderer.RenderData = DrawCommand.RenderData;
         GeometryRenderer.Owner = DrawCommand.Component;
         ProcessFillFringe(Payload.Geometry, Payload.Brush);
@@ -512,8 +517,8 @@ public class GeometryRenderUnit : RenderUnit<GeometryPayload>
         if (rebuild)
         {
             // Tessellated already, on the record thread that built inputPayload - the applier must not rebuild it here.
-            _frozenMesh = FrozenMesh.From(inputPayload.Geometry.Mesh, inputPayload.Geometry.Bounds);   // re-freeze the re-tessellated mesh
-            ((GeometryRenderComponent)GeometryRenderer).UpdateGeometry(inputPayload.Geometry.Mesh);
+            _frozenMesh = FrozenMesh.From(inputPayload.Geometry);   // re-freeze the re-tessellated mesh
+            ((GeometryRenderComponent)GeometryRenderer).UpdateGeometry(inputPayload.Geometry.Mesh, _frozenMesh);
         }
         ((GeometryRenderComponent)GeometryRenderer).Background = inputPayload.LiveBrush;
 
@@ -1281,7 +1286,7 @@ public class RegularPolygonRenderUnit : RenderUnit<RegularPolygonPayload>
         {
             var g = PolygonShape(Payload);
             g.ProcessGeometry(GeometryType.Both);
-            _haloMesh = FrozenMesh.From(g.Mesh, g.Bounds);
+            _haloMesh = FrozenMesh.From(g);
         }
 
         if (_haloMesh is not { HasPoints: true }) return null;

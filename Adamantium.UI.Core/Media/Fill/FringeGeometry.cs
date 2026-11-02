@@ -1,9 +1,8 @@
 using System;
 using System.Collections.Generic;
 using Adamantium.Mathematics;
-using Adamantium.UI.Rendering.RenderUnits;
 
-namespace Adamantium.UI.Rendering;
+namespace Adamantium.UI.Core.Media.Fill;
 
 // The AA fringe geometry shared by the per-unit and instanced paths: each contour's feather winding and its triangle
 // ring. The ring stores edge directions, not width; the vertex shader builds a 1px miter, so rings are scale-free.
@@ -24,51 +23,44 @@ internal static class FringeGeometry
         return built;
     }
 
-    /// <summary>The ring's triangles for one mesh's contours, laid out as ONE vertex list (6 verts per contour segment,
-    /// contours back to back) so a shared ring is a single draw.</summary>
-    public static FringeVertex[] BuildRing(List<(Vector2<double>[] Points, float Winding)> contours)
+    /// <summary>The ring for one mesh's contours as ONE list of edges (contours back to back), so a shared ring is a single
+    /// draw of six corners per edge. An edge lying along a side of <paramref name="cut"/> is where the fill was cut, not
+    /// where it ends, and gets no ring.</summary>
+    public static RingEdge[] BuildRing(List<(Vector2<double>[] Points, float Winding)> contours, Rect? cut = null)
     {
-        var total = 0;
-        foreach (var (points, _) in contours) total += points.Length * 6;
-        var verts = new FringeVertex[total];
-
-        var v = 0;
+        var edges = new List<RingEdge>();
         foreach (var (points, winding) in contours)
         {
             var n = points.Length;
             for (var i = 0; i < n; i++)
             {
                 var ni = (i + 1) % n;
-                var a = new Vector2F((float)points[i].X, (float)points[i].Y);
-                var b = new Vector2F((float)points[ni].X, (float)points[ni].Y);
-                EdgeDirs(points, i, winding, out var a0, out var a1);
-                EdgeDirs(points, ni, winding, out var b0, out var b1);
+                if (cut is { } box && AlongASide(points[i], points[ni], box))
+                {
+                    continue;
+                }
 
-                // Two triangles between the contour edge (inner, no directions -> never offset) and the outer edge.
-                verts[v++] = Inner(a);
-                verts[v++] = Outer(a, a0, a1);
-                verts[v++] = Inner(b);
-                verts[v++] = Outer(a, a0, a1);
-                verts[v++] = Outer(b, b0, b1);
-                verts[v++] = Inner(b);
+                // Winding folded into the directions' sign: reversing a direction reverses its 90-degree normal, which is
+                // how a hole feathers inward.
+                edges.Add(new RingEdge
+                {
+                    A = new Vector2F((float)points[i].X, (float)points[i].Y),
+                    B = new Vector2F((float)points[ni].X, (float)points[ni].Y),
+                    InDir = SafeDir(points[i] - points[(i + n - 1) % n]) * winding,
+                    EdgeDir = SafeDir(points[ni] - points[i]) * winding,
+                    OutDir = SafeDir(points[(ni + 1) % n] - points[ni]) * winding
+                });
             }
         }
-        return verts;
+        return edges.ToArray();
     }
 
-    private static FringeVertex Inner(Vector2F pos) => new() { Position = pos };
-
-    private static FringeVertex Outer(Vector2F pos, Vector2F d0, Vector2F d1) => new() { Position = pos, Dir0 = d0, Dir1 = d1 };
-
-    // The two adjacent edge directions at contour point i, with Winding folded into their sign (reversing a direction
-    // reverses its 90-degree normal, which is how a hole feathers inward). Closed loop => i always has both neighbors.
-    private static void EdgeDirs(Vector2<double>[] points, int i, float winding, out Vector2F d0, out Vector2F d1)
+    private static bool AlongASide(Vector2<double> a, Vector2<double> b, Rect box)
     {
-        var n = points.Length;
-        var prev = (i + n - 1) % n;
-        var next = (i + 1) % n;
-        d0 = SafeDir(points[i] - points[prev]) * winding;
-        d1 = SafeDir(points[next] - points[i]) * winding;
+        var tolerance = 1e-6 * Math.Max(1, Math.Max(box.Width, box.Height));
+        bool On(double value, double side) => Math.Abs(value - side) <= tolerance;
+        return On(a.X, box.X) && On(b.X, box.X) || On(a.X, box.Right) && On(b.X, box.Right)
+            || On(a.Y, box.Y) && On(b.Y, box.Y) || On(a.Y, box.Bottom) && On(b.Y, box.Bottom);
     }
 
     private static Vector2F SafeDir(Vector2<double> v)
@@ -84,14 +76,34 @@ internal static class FringeGeometry
     // centroid - a frame-shaped outer's centroid can fall inside its own hole and misclassify it.
     private static void ApplyNesting(List<(Vector2<double>[] Points, float Winding)> built)
     {
+        var boxes = new (double MinX, double MinY, double MaxX, double MaxY)[built.Count];
+        for (var j = 0; j < built.Count; j++) boxes[j] = BoxOf(built[j].Points);
+
         for (var i = 0; i < built.Count; i++)
         {
+            var probe = built[i].Points[0];
             var nesting = 0;
             for (var j = 0; j < built.Count; j++)
-                if (j != i && PointInPolygon(built[i].Points[0], built[j].Points))
-                    nesting++;
+            {
+                var box = boxes[j];
+                if (j == i || probe.X < box.MinX || probe.X > box.MaxX || probe.Y < box.MinY || probe.Y > box.MaxY) continue;
+                if (PointInPolygon(probe, built[j].Points)) nesting++;
+            }
             if ((nesting & 1) == 1) built[i] = (built[i].Points, -built[i].Winding);
         }
+    }
+
+    private static (double MinX, double MinY, double MaxX, double MaxY) BoxOf(Vector2<double>[] points)
+    {
+        double minX = double.MaxValue, minY = double.MaxValue, maxX = double.MinValue, maxY = double.MinValue;
+        foreach (var p in points)
+        {
+            if (p.X < minX) minX = p.X;
+            if (p.Y < minY) minY = p.Y;
+            if (p.X > maxX) maxX = p.X;
+            if (p.Y > maxY) maxY = p.Y;
+        }
+        return (minX, minY, maxX, maxY);
     }
 
     // Ray-cast point-in-polygon (used to find a contour's even-odd nesting depth -> hole vs outer).

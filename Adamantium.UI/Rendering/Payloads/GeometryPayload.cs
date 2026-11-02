@@ -62,6 +62,9 @@ public class GeometryPayload(Brush brush, Geometry geometry, Pen pen = null, Mat
         return HashCode.Combine(Brush, Geometry, GeometryVersion, Pen, LocalTransform);
     }
 
+    /// <summary>The geometry object: its frozen mesh, edge and stroke stay with the unit that drew it.</summary>
+    public object Content => Geometry;
+
     public bool RequiresBufferRebuild(IRenderCachePolicy newState)
     {
         if (newState is not GeometryPayload geometryPayload) return true;

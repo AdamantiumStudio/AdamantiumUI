@@ -69,13 +69,29 @@ public sealed class StreamGeometry : Geometry
             return;
         }
 
-        var polygon = new Polygon();
-        polygon.FillRule = FillRule;
-        polygon.AddContours(contours);
+        // Only the filled figures are cut into triangles, as PathGeometry does; the others are outlines and are stroked
+        // as they were given. Cutting a page of open lines as one area took seconds and drew nothing.
+        var filled = context.GetFilled();
+        var toFill = new List<MeshContour>();
+        for (var i = 0; i < contours.Length; i++)
+        {
+            if (filled[i]) toFill.Add(contours[i]);
+        }
 
-        var points = polygon.FillIndirect();
-        Mesh.AddContours(polygon.ProcessedContours);
+        if (toFill.Count > 0)
+        {
+            var polygon = new Polygon();
+            polygon.FillRule = FillRule;
+            polygon.AddContours(toFill.ToArray());
 
-        Mesh.SetPoints(points);
+            var points = polygon.FillIndirect();
+            Mesh.AddContours(polygon.ProcessedContours);
+            Mesh.SetPoints(points);
+        }
+
+        for (var i = 0; i < contours.Length; i++)
+        {
+            if (!filled[i]) Mesh.AddContour(contours[i]);
+        }
     }
 }
