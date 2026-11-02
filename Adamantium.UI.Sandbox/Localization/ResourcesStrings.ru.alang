@@ -25,4 +25,14 @@
     <Phrase Key="VariantSystem" Text="Вариант: как в системе"/>
     <Phrase Key="VariantOwn" Text="Вариант: свой"/>
     <Phrase Key="Dark" Text="Тёмный"/>
+
+    <Phrase Key="ClassesTitle" Text="Классы от стиля — добавляются к своим, при снятии забираются"/>
+    <Phrase Key="ClassesHint" Text="Триггеры стиля дают классы темы. Свой класс контрола остаётся; класс от двух триггеров держится, пока его даёт хоть один; стиль для Accent даёт Marked. Под каждым контролом — классы, которые на нём сейчас."/>
+    <Phrase Key="ClassesAccent" Text="Триггер даёт кнопкам Accent"/>
+    <Phrase Key="ClassesAccentToo" Text="Второй триггер тоже даёт Accent"/>
+    <Phrase Key="ClassesDots" Text="Триггер даёт индикаторам Dots"/>
+    <Phrase Key="ClassesNone" Text="Своих классов нет"/>
+    <Phrase Key="ClassesOwnAccent" Text="Свой: Accent"/>
+    <Phrase Key="ClassesOwnToolbar" Text="Свой: Toolbar"/>
+    <Phrase Key="ClassesOwnDots" Text="Свой: Dots"/>
 </Language>

@@ -271,19 +271,19 @@ public class ControlsTests
         {
             Assert.That(same, Is.True);
             Assert.That(bar.ClassNames, Does.Contain("Ring"));
-            Assert.That(withStyle, Is.EqualTo(new[] { "Accent" }));
-            Assert.That(styled.ClassNames, Is.EqualTo(new[] { "Own" }), "its own back once the style goes");
+            Assert.That(withStyle, Is.EqualTo(new[] { "Own", "Accent" }), "the style's added to its own");
+            Assert.That(styled.ClassNames, Is.EqualTo(new[] { "Own" }), "and taken back once the style goes");
         });
     }
 
-    // A style's classes, per target as Classes is: a class one component adds is that component's alone, going with
-    // its set of the style's; the style does not hold the components it reached.
+    // A style adds its classes to each component's own collection and takes back those it added: a class one component
+    // adds is its own alone, kept when the style goes; the style's collection is never handed out, nor holds a component.
     [Test]
-    public void Classes_OfAStyle_AreNotChangedThroughAComponent_NorHoldIt()
+    public void Classes_OfAStyle_AreAddedToEachComponentsOwn_AndTakenBack()
     {
         var style = new Style();
         style.Selector.Types.Add(typeof(ProgressBar));
-        style.Setters.Add(new Setter("Classes", new PerTargetValue(() => Classes.Parse("Accent"))));
+        style.Setters.Add(new Setter("Classes", Classes.Parse("Accent")));
         var a = new ProgressBar();
         var b = new ProgressBar();
         a.AttachStyles(style);
@@ -301,8 +301,100 @@ public class ControlsTests
         {
             Assert.That(withStyle.Item1, Is.EqualTo(new[] { "Accent", "Mine" }));
             Assert.That(withStyle.Item2, Is.EqualTo(new[] { "Accent" }), "the style's classes not changed through a");
-            Assert.That(a.ClassNames, Is.Empty, "its set of the style's gone with it");
+            Assert.That(a.ClassNames, Is.EqualTo(new[] { "Mine" }), "the style's taken back, its own kept");
             Assert.That(held.IsAlive, Is.False, "the style holds no component it reached");
+            Assert.That(((Setter)style.Setters[0]).Value, Is.EqualTo(Classes.Parse("Accent")), "the style's as it was");
+        });
+    }
+
+    // Two styles giving the same class: it stays while either gives it, and a class the component had itself stays when
+    // both go.
+    [Test]
+    public void Classes_GivenByTwoStyles_StayWhileEitherGivesThem()
+    {
+        Style Giving(string classes)
+        {
+            var style = new Style();
+            style.Selector.Types.Add(typeof(ProgressBar));
+            style.Setters.Add(new Setter("Classes", Classes.Parse(classes)));
+            return style;
+        }
+
+        var first = Giving("Accent");
+        var second = Giving("Accent Own");
+        var bar = new ProgressBar();
+        bar.Classes.Add("Own");
+        bar.AttachStyles(first);
+        bar.AttachStyles(second);
+
+        bar.DetachStyles(first);
+        var afterFirst = bar.ClassNames.ToArray();
+        bar.DetachStyles(second);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(afterFirst, Is.EqualTo(new[] { "Own", "Accent" }), "the second still gives Accent");
+            Assert.That(bar.ClassNames, Is.EqualTo(new[] { "Own" }), "Accent gone with the last giver, Own kept");
+        });
+    }
+
+    // A style applied again without leaving - as a theme swap does - gives nothing more: one leaving takes its classes.
+    [Test]
+    public void Classes_OfAStyleAppliedAgain_GoWhenItLeaves()
+    {
+        var style = new Style();
+        style.Selector.Types.Add(typeof(ProgressBar));
+        var setter = new Setter("Classes", "Accent");
+        style.Setters.Add(setter);
+        var bar = new ProgressBar();
+
+        setter.Apply(bar, style, null);
+        setter.Apply(bar, style, null);
+        setter.Remove(bar, style, null);
+
+        Assert.That(bar.ClassNames, Is.Empty);
+    }
+
+    // One setter under two styles - a base style and one based on it - gives for each: the class stays until both go.
+    [Test]
+    public void Classes_OfOneSetterUnderTwoStyles_StayUntilBothGo()
+    {
+        var setter = new Setter("Classes", "Accent");
+        var based = new Style();
+        var derived = new Style();
+        var bar = new ProgressBar();
+
+        setter.Apply(bar, based, null);
+        setter.Apply(bar, derived, null);
+        setter.Remove(bar, derived, null);
+        var afterDerived = bar.ClassNames.ToArray();
+        setter.Remove(bar, based, null);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(afterDerived, Is.EqualTo(new[] { "Accent" }));
+            Assert.That(bar.ClassNames, Is.Empty);
+        });
+    }
+
+    // Classes set in place of the collection a style gave into carry what it gave, and keep what they name themselves.
+    [Test]
+    public void Classes_SetOverGivenOnes_CarryThem_AndKeepTheirOwn()
+    {
+        var style = new Style();
+        var giving = new Setter("Classes", "Accent Framed");
+        var bar = new ProgressBar();
+        giving.Apply(bar, style, null);
+
+        var set = Classes.Parse("Framed Big");
+        bar.Classes = set;
+        var carried = bar.ClassNames.ToArray();
+        giving.Remove(bar, style, null);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(carried, Is.EquivalentTo(new[] { "Framed", "Big", "Accent" }));
+            Assert.That(set, Is.EqualTo(new[] { "Framed", "Big" }), "Framed was named by the set ones: theirs now");
         });
     }
 

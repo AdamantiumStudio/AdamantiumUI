@@ -29,6 +29,15 @@ public partial class ResourcesViewModel : TabPageViewModel
 
     partial void OnStandIsDarkChanged(bool value) => RaisePropertyChanged(nameof(StandVariant));
 
+    /// <summary>The classes stand's first trigger: gives every button there Accent.</summary>
+    [Bindable] private bool _styleGivesAccent;
+
+    /// <summary>The classes stand's second trigger: gives the same Accent, which stays while either gives it.</summary>
+    [Bindable] private bool _styleGivesAccentToo;
+
+    /// <summary>The classes stand's indicator trigger: gives every busy indicator there Dots.</summary>
+    [Bindable] private bool _styleGivesDots;
+
     /// <summary>Caption buttons on the LEFT - the macOS and Ubuntu convention. A platform theme normally states this
     /// once with a setter; the checkbox is here so the switch can be seen live, on a real window, without a rebuild.
     /// <para>Written to every OPEN window rather than to a theme resource: the side is a property of a window's chrome,

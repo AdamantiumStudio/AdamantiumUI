@@ -4,11 +4,7 @@ using Adamantium.UI.Core.TypeParsers;
 
 namespace Adamantium.UI.Core.Resources;
 
-/// <summary>A component's classes, which style selectors match. One belongs to one component - it changes and watches
-/// it as its own - so markup builds one per target for a setter's value or a keyed resource; code gives a setter a
-/// <see cref="PerTargetValue"/>.</summary>
 [TypeParser(typeof(ClassesParser))]
-[PerTarget]
 public class  Classes : TrackingCollection<string>
 {
     public Classes()

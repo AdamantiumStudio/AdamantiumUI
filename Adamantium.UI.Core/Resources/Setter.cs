@@ -37,6 +37,13 @@ public class Setter : ISetter, IEquatable<Setter>
             return;
         }
 
+        // The component's classes are its own collection: a setter adds its classes to it, and takes them back.
+        if (GivesClasses(property, component, out var owner))
+        {
+            owner.GiveClasses((this, style), ClassesOf(Value));
+            return;
+        }
+
         switch (Value)
         {
             case BindingBase binding:
@@ -72,6 +79,27 @@ public class Setter : ISetter, IEquatable<Setter>
                 break;
         }
     }
+
+    /// <summary>Whether a setter of <paramref name="property"/> with <paramref name="value"/> gives classes - adds them to
+    /// the component's own - rather than sets a value: a set of classes written as it is, not a binding or a resource.
+    /// </summary>
+    internal static bool GivesClasses(AdamantiumProperty property, object value, IAdamantiumComponent component,
+        out FundamentalUIComponent owner)
+    {
+        owner = component as FundamentalUIComponent;
+        return owner != null && property == FundamentalUIComponent.ClassesProperty &&
+               value is string or Classes or PerTargetValue;
+    }
+
+    /// <summary>The classes a setter value giving them names.</summary>
+    internal static Classes ClassesOf(object value)
+    {
+        var given = value is PerTargetValue perTarget ? perTarget.Create() : value;
+        return TypeCastFactory.CastFromString(given, typeof(Classes)) as Classes;
+    }
+
+    private bool GivesClasses(AdamantiumProperty property, IAdamantiumComponent component,
+        out FundamentalUIComponent owner) => GivesClasses(property, Value, component, out owner);
 
     private static void Connect(BindingExpressionBase expression, Style style)
     {
@@ -125,6 +153,12 @@ public class Setter : ISetter, IEquatable<Setter>
         var property = AdamantiumPropertyMap.ResolveProperty(component.GetType(), Property);
         if (property == null)
         {
+            return;
+        }
+
+        if (GivesClasses(property, component, out var owner))
+        {
+            owner.TakeBackClasses((this, style));
             return;
         }
 

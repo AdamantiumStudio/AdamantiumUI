@@ -195,6 +195,80 @@ public class StyleTriggerTests
         Assert.That(host.Width, Is.Not.EqualTo(50.0), "fully detached - the activator is gone, not left subscribed");
     }
 
+    // Two triggers give the same class, and a style matched by it gives one more: each stays while anything gives it,
+    // and all go when the triggers do - in either order.
+    [TestCase(true)]
+    [TestCase(false)]
+    public void Triggers_GivingTheSameClass_TakeItBackWithTheLast(bool firstLeavesFirst)
+    {
+        var vm = new ActiveVm();
+        var button = new Button { DataContext = vm };
+        var marked = new Style();
+        marked.Selector.Types.Add(typeof(Button));
+        marked.Selector.Classes.Add("Accent");
+        marked.Setters.Add(new Setter("Classes", "Marked"));
+        button.Styles.Add(marked);
+
+        var byData = new DataTrigger { Binding = new Binding("IsActive"), Value = "true" };
+        byData.Add(new Setter("Classes", "Accent"));
+        var byState = new PropertyTrigger { Property = "IsEnabled", Value = false };
+        byState.Add(new Setter("Classes", "Accent"));
+        var style = new Style();
+        style.Selector.Types.Add(typeof(Button));
+        style.Triggers.Add(byData);
+        style.Triggers.Add(byState);
+        button.AttachStyles(style);
+
+        vm.IsActive = true;
+        button.IsEnabled = false;
+        var both = button.ClassNames.ToArray();
+        if (firstLeavesFirst) vm.IsActive = false; else button.IsEnabled = true;
+        var one = button.ClassNames.ToArray();
+        if (firstLeavesFirst) button.IsEnabled = true; else vm.IsActive = false;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(both, Is.EquivalentTo(new[] { "Accent", "Marked" }));
+            Assert.That(one, Is.EquivalentTo(new[] { "Accent", "Marked" }), "the other trigger still gives Accent");
+            Assert.That(button.ClassNames, Is.Empty, "the last giver gone, its class and what it brought gone");
+        });
+    }
+
+    // A trigger taking back a theme class takes off the theme's styles of it, and a style that class brought, whose
+    // classes going restyle the button again under the first restyle.
+    [Test]
+    public void Triggers_TakingBackAThemeClass_TakeOffWhatItBrought()
+    {
+        var vm = new ActiveVm();
+        var button = new Button { DataContext = vm };
+        var set = new Adamantium.UI.Themes.FluentTheme.ButtonStyleSet();
+        set.Initialize(null);
+        foreach (var themed in set.Styles) button.Styles.Add(themed);
+        var marked = new Style();
+        marked.Selector.Types.Add(typeof(Button));
+        marked.Selector.Classes.Add("Accent");
+        marked.Setters.Add(new Setter("Classes", "Marked"));
+        button.Styles.Add(marked);
+        var trigger = new DataTrigger { Binding = new Binding("IsActive"), Value = "true" };
+        trigger.Add(new Setter("Classes", "Accent"));
+        var giving = new Style();
+        giving.Selector.Types.Add(typeof(Button));
+        giving.Triggers.Add(trigger);
+        button.Styles.Add(giving);
+        var root = new Border { Width = 400, Height = 100, Child = button };
+        Adamantium.UI.Extensions.WindowExtension.UpdateTree(root);
+
+        vm.IsActive = true;
+        var on = button.ClassNames.ToArray();
+
+        Assert.DoesNotThrow(() => vm.IsActive = false);
+        Assert.Multiple(() =>
+        {
+            Assert.That(on, Is.EquivalentTo(new[] { "Accent", "Marked" }));
+            Assert.That(button.ClassNames, Is.Empty);
+        });
+    }
+
     private sealed class ActiveVm : System.ComponentModel.INotifyPropertyChanged
     {
         private bool _isActive;

@@ -14,6 +14,8 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
     private StylesCollection _attachedStyles;
     private Classes _classNames;
     private Classes _ownClasses;
+    private Dictionary<object, Classes> _givers;
+    private HashSet<string> _givenClasses;
     private IFundamentalUIComponent parent;
     private TrackingCollection<IFundamentalUIComponent> logicalChildren;
     private Dictionary<object, Action> _follows;
@@ -64,9 +66,18 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
             oldClasses.CollectionChanged -= o.ClassesCollectionChanged;
         }
 
+        var from = e.OldValue as Classes ?? o._ownClasses;
         if (e.NewValue is Classes newClasses)
         {
+            o.CarryGivenClasses(from, newClasses);
             newClasses.CollectionChanged += o.ClassesCollectionChanged;
+        }
+        else if (o._givenClasses is { Count: > 0 })
+        {
+            var own = o.OwnClasses();
+            own.CollectionChanged -= o.ClassesCollectionChanged;
+            o.CarryGivenClasses(from, own);
+            own.CollectionChanged += o.ClassesCollectionChanged;
         }
 
         o.SyncClassNames();
@@ -215,24 +226,32 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
 
     private void RestyleForClasses()
     {
-        var theme = IsStyleApplied ? ThemeContext.For(this) : null;
+        // Not styled yet: the theme's and the scopes' styles are not known, so those attached stay for the styling to sort.
+        var applied = IsStyleApplied;
+        var theme = applied ? ThemeContext.For(this) : null;
         var incoming = theme?.FindStylesForComponent(this) ?? [];
         var own = StylesOrNull;
-        var scoped = IsStyleApplied ? GetScopedStyles() : null;
+        var scoped = applied ? GetScopedStyles() : null;
 
         for (var i = (_attachedStyles?.Count ?? 0) - 1; i >= 0; i--)
         {
-            var style = _attachedStyles[i];
+            // A style taken off takes its classes, which restyles again and may take off more under this loop.
+            if (_attachedStyles == null || i >= _attachedStyles.Count || _attachedStyles[i] is not { } style) continue;
+
             var stays = IsScoped(style)
-                ? IsScopedStyleKept(style, scoped)
-                : style.Selector.Match(this) && (style.Theme == null || Array.IndexOf(incoming, style) >= 0);
+                ? !applied || IsScopedStyleKept(style, scoped)
+                : style.Selector.Match(this) &&
+                  (style.Theme == null || !applied || Array.IndexOf(incoming, style) >= 0);
             if (!stays)
             {
                 DetachStyles(style);
             }
         }
 
-        _scopedBands = scoped;
+        if (applied)
+        {
+            _scopedBands = scoped;
+        }
 
         foreach (var style in incoming)
         {
@@ -359,6 +378,70 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
         set => SetValue(ClassesProperty, value);
     }
 
+    /// <summary>Adds to the component's classes those <paramref name="giver"/> - a style's or a trigger's setter - gives
+    /// and the component does not have. A giver gives once: giving again changes nothing until
+    /// <see cref="TakeBackClasses"/>.</summary>
+    internal void GiveClasses(object giver, Classes given)
+    {
+        if (given == null) return;
+
+        _givers ??= new Dictionary<object, Classes>();
+        if (!_givers.TryAdd(giver, given)) return;
+
+        foreach (var name in given)
+        {
+            // Adding a class restyles, and the restyle may take this giver back.
+            if (!_givers.ContainsKey(giver)) return;
+
+            var classes = Classes;
+            if (classes.Contains(name)) continue;
+
+            (_givenClasses ??= new HashSet<string>()).Add(name);
+            classes.Add(name);
+        }
+    }
+
+    /// <summary>Takes back what <paramref name="giver"/> gave: a class goes with the last giver of it, and a class the
+    /// component had itself stays.</summary>
+    internal void TakeBackClasses(object giver)
+    {
+        if (_givers == null || !_givers.Remove(giver, out var given)) return;
+
+        foreach (var name in given)
+        {
+            if (_givenClasses == null || !_givenClasses.Contains(name) || IsGiven(name)) continue;
+
+            _givenClasses.Remove(name);
+            Classes.Remove(name);
+        }
+    }
+
+    private bool IsGiven(string name)
+    {
+        foreach (var given in _givers.Values)
+        {
+            if (given.Contains(name)) return true;
+        }
+
+        return false;
+    }
+
+    private void CarryGivenClasses(Classes from, Classes to)
+    {
+        if (_givenClasses is not { Count: > 0 }) return;
+
+        _givenClasses.RemoveWhere(to.Contains);
+        foreach (var name in _givenClasses)
+        {
+            from?.Remove(name);
+        }
+
+        foreach (var name in _givenClasses)
+        {
+            to.Add(name);
+        }
+    }
+
     // The component's own classes, where none are set: held apart from the property's values - asking for them sets
     // nothing and reports no change, and no value set over them takes them away - made once, whichever thread asks.
     private Classes OwnClasses()
@@ -368,7 +451,6 @@ public abstract class FundamentalUIComponent : AnimatableUIComponent, IFundament
             return own;
         }
 
-        // Watched before another thread can see it and add a class.
         var made = new Classes();
         made.CollectionChanged += ClassesCollectionChanged;
         if (Interlocked.CompareExchange(ref _ownClasses, made, null) is { } first)
