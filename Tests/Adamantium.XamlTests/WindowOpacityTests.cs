@@ -46,7 +46,7 @@ public class WindowOpacityTests
         window.WindowOpacity = 0.5;
 
         Assert.That(window.DrawnOpacity, Is.EqualTo(0.5f));
-        Assert.That(window.Worker.TraitUpdates, Is.EqualTo(1));
+        Assert.That(window.Worker.TraitUpdates, Is.Zero, "nothing changes on the native window, so nothing is committed");
         Assert.That(renderer.Invalidations, Is.EqualTo(1), "the swapchain must be rebuilt to compose with alpha");
         Assert.That(renderer.FrameRequests, Is.EqualTo(1));
     }
@@ -78,7 +78,7 @@ public class WindowOpacityTests
     }
 
     [Test]
-    public void BackToOne_RebuildsTheSwapchainOpaque()
+    public void BackToOne_AsksForARebuild()
     {
         var (window, renderer) = Open(appliesOpacity: false);
         window.WindowOpacity = 0;
@@ -87,6 +87,32 @@ public class WindowOpacityTests
 
         Assert.That(window.DrawnOpacity, Is.EqualTo(1f));
         Assert.That(renderer.Invalidations, Is.EqualTo(2));
+    }
+
+    [Test]
+    public void AWindowComposedWithAlphaAlready_IsNotRebuilt()
+    {
+        var (window, renderer) = Open(appliesOpacity: false);
+        window.UseTransparentComposition = true;
+        var before = renderer.Invalidations;
+
+        window.WindowOpacity = 0.5;
+        window.WindowOpacity = 1;
+
+        Assert.That(renderer.Invalidations, Is.EqualTo(before));
+        Assert.That(renderer.FrameRequests, Is.EqualTo(2));
+    }
+
+    [Test]
+    public void NaN_IsDrawnOpaque()
+    {
+        var (window, renderer) = Open(appliesOpacity: false);
+
+        window.WindowOpacity = double.NaN;
+        window.WindowOpacity = double.NaN;
+
+        Assert.That(window.DrawnOpacity, Is.EqualTo(1f));
+        Assert.That(renderer.FrameRequests, Is.Zero);
     }
 
     [Test]

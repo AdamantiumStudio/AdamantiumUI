@@ -468,7 +468,8 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
 
     private void ApplyOpacity(double opacity)
     {
-        alphaModifier?.SetMultiplier((uint)Math.Round(Math.Clamp(opacity, 0, 1) * uint.MaxValue));
+        var factor = double.IsNaN(opacity) ? 1 : Math.Clamp(opacity, 0, 1);
+        alphaModifier?.SetMultiplier((uint)Math.Round(factor * uint.MaxValue));
     }
 
     public void ShowWindow(WindowState windowState)

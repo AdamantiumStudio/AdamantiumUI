@@ -495,8 +495,9 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
         }
     }
 
-    /// <summary>Uniform translucency of the whole window, 0..1. Composed by the desktop, so the content underneath
-    /// shows through live - which is what a docking preview rectangle is.</summary>
+    /// <summary>Uniform translucency of the whole window, 0..1, so the content underneath shows through live - which is
+    /// what a docking preview rectangle is. The desktop applies it where it can (Win32, Wayland's alpha modifier);
+    /// elsewhere each frame is drawn with it, on a surface composed with alpha.</summary>
     public static readonly AdamantiumProperty WindowOpacityProperty = AdamantiumProperty.Register(nameof(WindowOpacity),
         typeof(double), typeof(WindowBase), new PropertyMetadata(1.0, WindowOpacityChanged));
 
@@ -507,13 +508,20 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
             return;
         }
 
-        window.WindowWorkerService?.UpdateOverlayTraits();
+        if (window.WindowWorkerService is { AppliesWindowOpacity: true } worker)
+        {
+            worker.UpdateOverlayTraits();
+        }
+
         window.UpdateDrawnOpacity();
     }
 
     private void UpdateDrawnOpacity()
     {
-        var drawn = WindowWorkerService is { AppliesWindowOpacity: false } ? (float)Math.Clamp(WindowOpacity, 0, 1) : 1f;
+        var opacity = WindowOpacity;
+        var drawn = WindowWorkerService is { AppliesWindowOpacity: false } && !double.IsNaN(opacity)
+            ? (float)Math.Clamp(opacity, 0, 1)
+            : 1f;
         var was = _drawnOpacity;
         if (drawn == was)
         {
@@ -521,7 +529,7 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
         }
 
         _drawnOpacity = drawn;
-        if ((drawn < 1f) != (was < 1f))
+        if ((drawn < 1f) != (was < 1f) && !UseTransparentComposition)
         {
             Renderer?.InvalidatePresenter();
         }
