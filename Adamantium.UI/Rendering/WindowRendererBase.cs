@@ -209,7 +209,7 @@ public abstract class WindowRendererBase : IWindowRenderer
     {
         var opacity = Window?.DrawnOpacity ?? 1f;
         if (opacity >= 1f || Presenter is not SwapChainGraphicsPresenter { ComposesWithAlpha: true } ||
-            GraphicsDevice is not Adamantium.Graphics.GraphicsDevice gd || gd.CurrentViewports.Length == 0)
+            GraphicsDevice is not { } gd || gd.CurrentViewports.Length == 0)
         {
             return;
         }

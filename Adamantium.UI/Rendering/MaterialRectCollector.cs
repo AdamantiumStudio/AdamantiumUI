@@ -487,7 +487,7 @@ internal sealed class MaterialRectCollector : SdfBatchCollector<MaterialRectItem
     /// answers it from the fragment's place in the geometry and ignores what this returns.</summary>
     private Vector4F OwnSourceRect(IGraphicsDevice device, MaterialAnchor anchor)
     {
-        var viewports = ((GraphicsDevice)device).CurrentViewports;
+        var viewports = device.CurrentViewports;
         var frame = viewports is { Length: > 0 }
             ? new Vector4F(0f, 0f, viewports[0].Width, viewports[0].Height)
             : new Vector4F(0f, 0f, 1f, 1f);

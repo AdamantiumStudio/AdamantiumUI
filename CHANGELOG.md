@@ -1944,6 +1944,8 @@ All packages share one version.
 
 ### Changed
 
+- Rendering works with the device through `IGraphicsDevice` only - layers, backdrops, GPU fills and strokes, batches,
+  the window's opacity and the shader precompile - instead of casting it to `GraphicsDevice`.
 - Setters of `Classes` with a set of names - of several styles, of a style and one based on it, of triggers - join their
   classes on a component instead of the strongest replacing the rest: `Classes="x"` under `Classes="y"` gives `x y`. A
   `{Binding}` or a resource for `Classes` still sets the collection, and setters' classes go into the one it sets.

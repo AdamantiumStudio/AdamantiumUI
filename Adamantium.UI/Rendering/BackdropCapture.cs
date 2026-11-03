@@ -39,9 +39,9 @@ internal sealed class BackdropCapture : IDisposable
     /// <summary>Copy the frame region behind an element into this capture, breaking the render pass open around the
     /// transfer and re-opening it afterwards. Returns false when there is nothing to copy (no target, empty region) -
     /// the caller then draws the element without a backdrop rather than with a stale one.</summary>
-    public bool Capture(IGraphicsDevice device, Rect2D region, int downscale = Downscale)
+    public bool Capture(IGraphicsDevice gd, Rect2D region, int downscale = Downscale)
     {
-        if (device is not GraphicsDevice gd) return false;
+        if (gd == null) return false;
 
         downscale = Math.Max(1, downscale);
 
@@ -170,7 +170,7 @@ internal sealed class BackdropCapture : IDisposable
 
     // Each level is drawn from the one above with a 13-tap filter (CaptureBlurEffect), since a linear blit aliases into
     // moire. Barriers are per level: each written level becomes the next source.
-    private void BuildPyramid(GraphicsDevice gd, CommandBuffer commandBuffer, Texture texture, int width, int height)
+    private void BuildPyramid(IGraphicsDevice gd, CommandBuffer commandBuffer, Texture texture, int width, int height)
     {
         var levels = CountLevels((uint)width, (uint)height);
         if (levels < 2) return;
@@ -251,7 +251,7 @@ internal sealed class BackdropCapture : IDisposable
 
 
     // Re-made only on size change; old images go to the deferred queue, since in-flight frames may still sample them.
-    private void EnsureTexture(GraphicsDevice device, uint width, uint height)
+    private void EnsureTexture(IGraphicsDevice device, uint width, uint height)
     {
         _ring ??= new Texture[Math.Max(1, (int)device.MaxFramesInFlight)];
         if (_ring[0] != null && _width == width && _height == height) return;

@@ -867,7 +867,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         {
             GraphicsDeviceService.CreateMainDevice("Adamantium Main");
             // Before any window, so a crash while creating shaders costs a child process, not the application.
-            ShaderPrecompiler.EnsureCompiled(GraphicsDeviceService.ResourceLoaderDevice as GraphicsDevice);
+            ShaderPrecompiler.EnsureCompiled(GraphicsDeviceService.ResourceLoaderDevice);
         });
 
         if (StartWithSplash())

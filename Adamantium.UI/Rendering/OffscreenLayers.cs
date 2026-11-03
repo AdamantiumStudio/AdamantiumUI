@@ -59,12 +59,12 @@ internal sealed class OffscreenLayers : IDisposable
     }
 
     /// <summary>Starts a frame: counts from zero and gives up the textures of layers not drawn for a while.</summary>
-    public void BeginFrame(IGraphicsDevice device)
+    public void BeginFrame(IGraphicsDevice gd)
     {
         _frame++;
         Redrawn = 0;
         Reused = 0;
-        if (device is not GraphicsDevice gd)
+        if (gd == null)
         {
             return;
         }
@@ -114,7 +114,7 @@ internal sealed class OffscreenLayers : IDisposable
     // Into the space drawing lands in from here: the one it was in - the given projection and bounds - or, drawn whole,
     // the region's own: its viewport and a projection onto it, so a window pixel lands on the same surface pixel and what
     // lies past the window is drawn too.
-    private DrawSpace EnterSpace(GraphicsDevice gd, Rect2D region, Matrix4x4F projection, Rect2D bounds, bool whole)
+    private DrawSpace EnterSpace(IGraphicsDevice gd, Rect2D region, Matrix4x4F projection, Rect2D bounds, bool whole)
     {
         var outer = new DrawSpace(projection, bounds, _spaces.Count > 0 && Space.Own);
         var viewport = gd is { CurrentViewports.Length: > 0 } ? gd.CurrentViewports[0] : default;
@@ -146,7 +146,7 @@ internal sealed class OffscreenLayers : IDisposable
         return Space = new DrawSpace(outer.Projection * onto, region, true);
     }
 
-    private void LeaveSpace(GraphicsDevice gd)
+    private void LeaveSpace(IGraphicsDevice gd)
     {
         var (outer, viewport, whole) = _spaces.Pop();
         if (whole && gd != null && viewport.Width > 0)
@@ -163,14 +163,13 @@ internal sealed class OffscreenLayers : IDisposable
     /// edge fades. Drawn <paramref name="whole"/>, in the region's own space; otherwise in the one opened over, its
     /// <paramref name="projection"/> and <paramref name="bounds"/>. <see cref="EndBands"/> goes back to the target and the
     /// space it was opened over.</summary>
-    public DrawSpace BeginBands(IGraphicsDevice device, object owner, Rect2D region, Matrix4x4F projection, Rect2D bounds,
+    public DrawSpace BeginBands(IGraphicsDevice gd, object owner, Rect2D region, Matrix4x4F projection, Rect2D bounds,
         bool whole)
     {
-        if (device is not GraphicsDevice gd || gd.CurrentRenderTarget == null
-            || region.Extent.Width == 0 || region.Extent.Height == 0)
+        if (gd?.CurrentRenderTarget == null || region.Extent.Width == 0 || region.Extent.Height == 0)
         {
             _bands.Push(default);
-            return EnterSpace(device as GraphicsDevice, region, projection, bounds, whole);
+            return EnterSpace(gd, region, projection, bounds, whole);
         }
 
         if (!_cached.TryGetValue(owner, out var entry))
@@ -203,9 +202,8 @@ internal sealed class OffscreenLayers : IDisposable
 
     /// <summary>Closes the bands <see cref="BeginBands"/> opened, keeping them for the layer laid down this frame, and
     /// gives back the space they were opened in.</summary>
-    public DrawSpace EndBands(IGraphicsDevice device)
+    public DrawSpace EndBands(IGraphicsDevice gd)
     {
-        var gd = device as GraphicsDevice;
         var open = _bands.Pop();
         LeaveSpace(gd);
         if (gd == null || open.Texture == null)
@@ -235,7 +233,7 @@ internal sealed class OffscreenLayers : IDisposable
 
     private readonly Stack<OpenBands> _bands = new();
 
-    private static void EnsureBands(GraphicsDevice gd, CachedLayer entry)
+    private static void EnsureBands(IGraphicsDevice gd, CachedLayer entry)
     {
         if (entry.BandsRing != null && entry.BandsRing.Length == entry.Ring.Length
             && entry.BandsWidth == entry.TextureWidth && entry.BandsHeight == entry.TextureHeight)
@@ -267,15 +265,14 @@ internal sealed class OffscreenLayers : IDisposable
     /// <paramref name="projection"/> and <paramref name="bounds"/>. <paramref name="reused"/> means its
     /// texture already holds a drawing with this <paramref name="print"/>: draw nothing until <see cref="End"/>, which
     /// lays it down. Otherwise drawing lands in a fresh texture, kept for reuse when <paramref name="reusable"/>.</summary>
-    public DrawSpace Begin(IGraphicsDevice device, object owner, Rect2D region, ulong print, bool reusable,
+    public DrawSpace Begin(IGraphicsDevice gd, object owner, Rect2D region, ulong print, bool reusable,
         bool allowReuse, Matrix4x4F projection, Rect2D bounds, bool whole, out bool reused)
     {
         reused = false;
-        if (device is not GraphicsDevice gd || gd.CurrentRenderTarget == null
-            || region.Extent.Width == 0 || region.Extent.Height == 0)
+        if (gd?.CurrentRenderTarget == null || region.Extent.Width == 0 || region.Extent.Height == 0)
         {
             _open.Push(default);
-            return EnterSpace(device as GraphicsDevice, region, projection, bounds, whole);
+            return EnterSpace(gd, region, projection, bounds, whole);
         }
 
         if (!_cached.TryGetValue(owner, out var entry))
@@ -335,10 +332,9 @@ internal sealed class OffscreenLayers : IDisposable
     /// <paramref name="mirrorScissor"/>, where <paramref name="mirror"/> shows. <paramref name="softCut"/> marks the sides
     /// (left, top, right, bottom) where its ancestors cut what it drew short: the drawing goes on past them, so nothing
     /// fades there. Drawing goes back to the space the layer was opened in (<see cref="Closing"/>).</summary>
-    public void End(IGraphicsDevice device, float alpha, Rect2D scissor, in LayerMask mask, float soft, Vector4F softCut,
+    public void End(IGraphicsDevice gd, float alpha, Rect2D scissor, in LayerMask mask, float soft, Vector4F softCut,
         in LayerMirror mirror, Rect2D mirrorScissor, Vector4F clipBox, Vector4F clipRadii)
     {
-        var gd = device as GraphicsDevice;
         var open = _open.Pop();
         if (gd == null || open.Color == null)
         {
@@ -423,7 +419,7 @@ internal sealed class OffscreenLayers : IDisposable
 
     // How deep inside what the layer drew each texel lies: its coverage blurred across, then down, into the slot's own
     // texture beside the color, so a reused layer keeps it.
-    private void BlurCoverage(GraphicsDevice gd, OpenOffscreenLayer open, float soft, Vector4F cut)
+    private void BlurCoverage(IGraphicsDevice gd, OpenOffscreenLayer open, float soft, Vector4F cut)
     {
         var entry = open.Entry;
         EnsureSoft(gd, entry);
@@ -450,7 +446,7 @@ internal sealed class OffscreenLayers : IDisposable
         gd.ColorBlendEnabled = blend;
     }
 
-    private void BlurPass(GraphicsDevice gd, IRenderTarget source, IRenderTarget target, Rect2D area, Vector4F axis,
+    private void BlurPass(IGraphicsDevice gd, IRenderTarget source, IRenderTarget target, Rect2D area, Vector4F axis,
         Vector4F limit, Vector4F cut)
     {
         var commandBuffer = gd.CurrentCommandBuffer;
@@ -487,7 +483,7 @@ internal sealed class OffscreenLayers : IDisposable
             PipelineStageFlagBits2.ColorAttachmentOutputBit, PipelineStageFlagBits2.FragmentShaderBit);
     }
 
-    private static void EnsureSoft(GraphicsDevice gd, CachedLayer entry)
+    private static void EnsureSoft(IGraphicsDevice gd, CachedLayer entry)
     {
         if (entry.SoftRing != null && entry.SoftRing.Length == entry.Ring.Length && entry.SoftWidth == entry.TextureWidth
             && entry.SoftHeight == entry.TextureHeight)
@@ -513,7 +509,7 @@ internal sealed class OffscreenLayers : IDisposable
         entry.Soft = 0f;
     }
 
-    private static void ReleaseSoft(GraphicsDevice gd, CachedLayer entry)
+    private static void ReleaseSoft(IGraphicsDevice gd, CachedLayer entry)
     {
         Release(gd, entry.SoftRing);
         Release(gd, new[] { entry.SoftScratch });
@@ -522,12 +518,12 @@ internal sealed class OffscreenLayers : IDisposable
         entry.Soft = 0f;
     }
 
-    private static IRenderTarget SoftTarget(GraphicsDevice gd, CachedLayer entry, Adamantium.Imaging.SurfaceFormat format,
+    private static IRenderTarget SoftTarget(IGraphicsDevice gd, CachedLayer entry, Adamantium.Imaging.SurfaceFormat format,
         string name) =>
         gd.CreateRenderTarget(entry.TextureWidth, entry.TextureHeight, MSAALevel.None, format,
             ImageUsageFlagBits.SampledBit, ImageLayout.ShaderReadOnlyOptimal, name);
 
-    private void Composite(GraphicsDevice gd, OpenOffscreenLayer open, float alpha, Rect2D scissor, in LayerMask mask,
+    private void Composite(IGraphicsDevice gd, OpenOffscreenLayer open, float alpha, Rect2D scissor, in LayerMask mask,
         IRenderTarget soft, IRenderTarget bands, in LayerMirror mirror, float role, Vector4F clipBox, Vector4F clipRadii)
     {
         if (gd.CurrentViewports.Length == 0)
@@ -593,7 +589,7 @@ internal sealed class OffscreenLayers : IDisposable
         gd.SetScissors(restore);
     }
 
-    private static void EnsureRing(GraphicsDevice gd, CachedLayer entry, uint width, uint height)
+    private static void EnsureRing(IGraphicsDevice gd, CachedLayer entry, uint width, uint height)
     {
         var count = Math.Max(1, (int)gd.MaxFramesInFlight) + 1;
         if (entry.Ring.Length == count && entry.TextureWidth >= width && entry.TextureHeight >= height)
@@ -616,7 +612,7 @@ internal sealed class OffscreenLayers : IDisposable
         }
     }
 
-    private OffscreenLayerLevel LevelAt(GraphicsDevice gd, int depth, uint width, uint height)
+    private OffscreenLayerLevel LevelAt(IGraphicsDevice gd, int depth, uint width, uint height)
     {
         while (_levels.Count <= depth)
         {
@@ -647,7 +643,7 @@ internal sealed class OffscreenLayers : IDisposable
         return level;
     }
 
-    private static void Release<T>(GraphicsDevice gd, T[] resources)
+    private static void Release<T>(IGraphicsDevice gd, T[] resources)
     {
         foreach (var resource in resources)
         {
