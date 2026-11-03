@@ -2109,13 +2109,13 @@ All packages share one version.
   brush, a clock, a fade - changes the fingerprint, and the frame is recorded again; a stream that keeps changing is
   issued as before for a while, up to 32 frames, between tries. A frame with an off-screen layer or a backdrop material
   - on a rectangle or on any shape - is issued as before, and so is every frame on a device without `VK_KHR_maintenance7`;
-  `ADAM_NO_RECORDED_REPLAY=1` turns recording off. The editor's window, 4K: a clean frame's op stream 1.2-1.5 ms, now
+  `ADAM_NO_RECORDED_REPLAY=1` turns recording off. A large window, 4K: a clean frame's op stream 1.2-1.5 ms, now
   0.4-0.65 ms, 98% of clean frames executed from a recording.
 - A universe shown in the UI runs on a thread of its own, no longer in the window's frames: `IUniverseService.Show`
   starts its loop, `RetireRemoved` takes the place of `RunUniverses`, and `SuspendLoops`/`ResumeLoops` hold the loops
   while the devices are made again (`UIApplication.OnDevicesRecreating`/`OnDevicesRecreated`). A `RenderTargetPanel`
   asks for a frame each time it takes one, and the universe draws one per ask into the free one of three surfaces; it
-  reads the pointer moving over the panel as a reason for frames under `FrameMode.OnDemand`. The editor, 4K, two
+  reads the pointer moving over the panel as a reason for frames under `FrameMode.OnDemand`. A 4K window with two
   animated models: the window ran at 100 frames a second with the scene in its frames, now 260-370, the scene 210-290.
 - Under `FrameMode.OnDemand` a universe's output in the UI asks frames of itself alone (`UniverseOutput.Invalidate`):
   for the pointer moving over the panel, for the panel shown again - its window restored, the panel back in the tree or
@@ -2515,6 +2515,12 @@ All packages share one version.
 
 ### Fixed
 
+- An application that references `Adamantium.UI.LanguageServer` builds, with the server in `AumlServer` beside it: the
+  package's files were compiled as C# sources, because the rules that mark them as content to copy named their paths
+  with a doubled slash and matched none.
+- Packing `Adamantium.UI.LanguageServer` no longer builds the server and all it references a second time, beside the
+  solution's build and into the same folders; the server is a build dependency of the package, and packing only
+  publishes it.
 - `WindowOpacity` works on Wayland: where the compositor offers `wp_alpha_modifier_v1` it lays the window down with
   it; elsewhere (Mutter) each frame is drawn with it, through a swapchain the compositor blends with alpha while the
   window is not opaque - where the surface offers no such swapchain the window stays opaque. A tab torn off and carried back over a tab strip no longer covers the place it goes in.
