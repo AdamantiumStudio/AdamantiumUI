@@ -33,14 +33,9 @@
     </ItemGroup>
 
     <!-- Graphics is needed by the [Category("Gpu")] integration tests to spin up a headless render device. -->
-    <ItemGroup Condition="'$(UseEngineSource)' == 'true'">
-      <ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Mathematics\Adamantium.Mathematics.csproj" />
-      <ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Graphics\Adamantium.Graphics.csproj" />
-    </ItemGroup>
-
-    <ItemGroup Condition="'$(UseEngineSource)' != 'true'">
-      <PackageReference Include="Adamantium.Mathematics" Version="$(AdamantiumEngineVersion)" />
-      <PackageReference Include="Adamantium.Graphics" Version="$(AdamantiumEngineVersion)" />
+    <ItemGroup>
+      <AdamantiumEngineReference Include="Adamantium.Mathematics" />
+      <AdamantiumEngineReference Include="Adamantium.Graphics" />
     </ItemGroup>
 
 </Project>

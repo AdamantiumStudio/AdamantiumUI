@@ -13,12 +13,8 @@
     </PropertyGroup>
 
     <!-- UI-free: the whole navigation engine + contracts a ViewModel sees. Only PropertyChangedBase + the DI resolver. -->
-    <ItemGroup Condition="'$(UseEngineSource)' == 'true'">
-        <ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Core\Adamantium.Core.csproj" />
-    </ItemGroup>
-
-    <ItemGroup Condition="'$(UseEngineSource)' != 'true'">
-        <PackageReference Include="Adamantium.Core" Version="$(AdamantiumEngineVersion)" />
+    <ItemGroup>
+        <AdamantiumEngineReference Include="Adamantium.Core" />
     </ItemGroup>
 
 </Project>

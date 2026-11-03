@@ -22,15 +22,13 @@
         <ProjectReference Include="..\Adamantium.UI.Core\Adamantium.UI.Core.csproj" OutputItemType="Analyzer" />
     </ItemGroup>
 
-    <ItemGroup Condition="'$(UseEngineSource)' == 'true'">
-        <ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Core\Adamantium.Core.csproj" />
-        <ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Mathematics\Adamantium.Mathematics.csproj" />
-        <ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Core\Adamantium.Core.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" SetTargetFramework="TargetFramework=netstandard2.0" />
+    <ItemGroup>
+        <AdamantiumEngineReference Include="Adamantium.Core" GeneratePathProperty="true" />
+        <AdamantiumEngineReference Include="Adamantium.Mathematics" />
+        <AdamantiumEngineReference Include="Adamantium.Core" Role="NetStandardAnalyzer" />
     </ItemGroup>
 
     <ItemGroup Condition="'$(UseEngineSource)' != 'true'">
-        <PackageReference Include="Adamantium.Core" Version="$(AdamantiumEngineVersion)" GeneratePathProperty="true" />
-        <PackageReference Include="Adamantium.Mathematics" Version="$(AdamantiumEngineVersion)" />
         <Analyzer Include="$(PkgAdamantium_Core)\lib\netstandard2.0\Adamantium.Core.dll" Condition="'$(PkgAdamantium_Core)' != ''" />
     </ItemGroup>
 

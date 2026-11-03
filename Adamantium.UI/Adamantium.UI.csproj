@@ -77,53 +77,30 @@
 		</ItemGroup>
 	</Target>
 
-	<ItemGroup Condition="'$(UseEngineSource)' == 'true'">
-		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.MVVM\Adamantium.MVVM.csproj" />
-		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.MVVM.Generators\Adamantium.MVVM.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="none" />
+	<ItemGroup>
+		<AdamantiumEngineReference Include="Adamantium.MVVM" />
+		<AdamantiumEngineReference Include="Adamantium.MVVM.Generators" Role="Generator" PrivateAssets="none" />
 	</ItemGroup>
 
-	<ItemGroup Condition="'$(UseEngineSource)' != 'true'">
-		<PackageReference Include="Adamantium.MVVM" Version="$(AdamantiumEngineVersion)" />
-		<PackageReference Include="Adamantium.MVVM.Generators" Version="$(AdamantiumEngineVersion)" PrivateAssets="none" />
-	</ItemGroup>
-
-	<ItemGroup Condition="'$(UseEngineSource)' == 'true'">
-		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.ECS\Adamantium.ECS.csproj" />
-		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Multiverse\Adamantium.Multiverse.csproj" />
-		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.ProceduralGeometry\Adamantium.ProceduralGeometry.csproj" />
-		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.MacOS\Adamantium.MacOS.csproj" />
-		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Win32\Adamantium.Win32.csproj" />
-		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Wayland\Adamantium.Wayland.csproj" />
-		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.DBus\Adamantium.DBus.csproj" />
-		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.XInput\Adamantium.XInput.csproj" />
-		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.GameInput\Adamantium.GameInput.csproj" />
-		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Core\Adamantium.Core.csproj"/>
-		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Graphics.Core\Adamantium.Graphics.Core.csproj"/>
-		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Mathematics\Adamantium.Mathematics.csproj"/>
-		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.EffectsCompiler\Adamantium.EffectsCompiler.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="true"/>
-		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Engine.Generators\Adamantium.Engine.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false"/>
+	<ItemGroup>
+		<AdamantiumEngineReference Include="Adamantium.ECS" />
+		<AdamantiumEngineReference Include="Adamantium.Multiverse" />
+		<AdamantiumEngineReference Include="Adamantium.ProceduralGeometry" />
+		<AdamantiumEngineReference Include="Adamantium.MacOS" />
+		<AdamantiumEngineReference Include="Adamantium.Win32" />
+		<AdamantiumEngineReference Include="Adamantium.Wayland" />
+		<AdamantiumEngineReference Include="Adamantium.DBus" />
+		<AdamantiumEngineReference Include="Adamantium.XInput" />
+		<AdamantiumEngineReference Include="Adamantium.GameInput" />
+		<AdamantiumEngineReference Include="Adamantium.Core" />
+		<AdamantiumEngineReference Include="Adamantium.Graphics.Core" />
+		<AdamantiumEngineReference Include="Adamantium.Mathematics" />
+		<AdamantiumEngineReference Include="Adamantium.EffectsCompiler" Role="EffectsCompiler" />
+		<AdamantiumEngineReference Include="Adamantium.Engine.Generators" Role="Generator" />
 		<!-- netstandard2.0 analyzer dep for the source generators above (Roslyn analyzers must be netstandard2.0).
 		     Analyzer-ONLY so the netstandard2.0 build isn't copied into this net10.0 output - runtime/compile
-		     Core comes from the normal net10.0 ref above. -->
-		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Core\Adamantium.Core.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" SetTargetFramework="TargetFramework=netstandard2.0"/>
-	</ItemGroup>
-
-	<!-- The generator package carries the assemblies it loads, Core among them. -->
-	<ItemGroup Condition="'$(UseEngineSource)' != 'true'">
-		<PackageReference Include="Adamantium.ECS" Version="$(AdamantiumEngineVersion)" />
-		<PackageReference Include="Adamantium.Multiverse" Version="$(AdamantiumEngineVersion)" />
-		<PackageReference Include="Adamantium.ProceduralGeometry" Version="$(AdamantiumEngineVersion)" />
-		<PackageReference Include="Adamantium.MacOS" Version="$(AdamantiumEngineVersion)" />
-		<PackageReference Include="Adamantium.Win32" Version="$(AdamantiumEngineVersion)" />
-		<PackageReference Include="Adamantium.Wayland" Version="$(AdamantiumEngineVersion)" />
-		<PackageReference Include="Adamantium.DBus" Version="$(AdamantiumEngineVersion)" />
-		<PackageReference Include="Adamantium.XInput" Version="$(AdamantiumEngineVersion)" />
-		<PackageReference Include="Adamantium.GameInput" Version="$(AdamantiumEngineVersion)" />
-		<PackageReference Include="Adamantium.Core" Version="$(AdamantiumEngineVersion)" />
-		<PackageReference Include="Adamantium.Graphics.Core" Version="$(AdamantiumEngineVersion)" />
-		<PackageReference Include="Adamantium.Mathematics" Version="$(AdamantiumEngineVersion)" />
-		<PackageReference Include="Adamantium.EffectsCompiler" Version="$(AdamantiumEngineVersion)" />
-		<PackageReference Include="Adamantium.Engine.Generators" Version="$(AdamantiumEngineVersion)" PrivateAssets="all" />
+		     Core comes from the normal net10.0 ref above. The generator package carries it, so packages need none. -->
+		<AdamantiumEngineReference Include="Adamantium.Core" Role="NetStandardAnalyzer" />
 	</ItemGroup>
 
 	<ItemGroup>

@@ -21,19 +21,17 @@
         <ProjectReference Include="..\Adamantium.UI.Core\Adamantium.UI.Core.csproj" OutputItemType="Analyzer" />
     </ItemGroup>
 
-    <ItemGroup Condition="'$(UseEngineSource)' == 'true'">
-        <ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Core\Adamantium.Core.csproj" />
-        <ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Mathematics\Adamantium.Mathematics.csproj" />
+    <ItemGroup>
+        <AdamantiumEngineReference Include="Adamantium.Core" GeneratePathProperty="true" />
+        <AdamantiumEngineReference Include="Adamantium.Mathematics" />
         <!-- netstandard2.0 analyzer dep for the source generator above (Roslyn analyzers must be netstandard2.0).
              Analyzer-ONLY so the netstandard2.0 build isn't copied into this net10.0 output - runtime/compile
              Core comes from the normal net10.0 ref above. -->
-        <ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Core\Adamantium.Core.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" SetTargetFramework="TargetFramework=netstandard2.0" />
+        <AdamantiumEngineReference Include="Adamantium.Core" Role="NetStandardAnalyzer" />
     </ItemGroup>
 
     <!-- The same netstandard2.0 analyzer dep, taken from the package's own netstandard2.0 build. -->
     <ItemGroup Condition="'$(UseEngineSource)' != 'true'">
-        <PackageReference Include="Adamantium.Core" Version="$(AdamantiumEngineVersion)" GeneratePathProperty="true" />
-        <PackageReference Include="Adamantium.Mathematics" Version="$(AdamantiumEngineVersion)" />
         <Analyzer Include="$(PkgAdamantium_Core)\lib\netstandard2.0\Adamantium.Core.dll" Condition="'$(PkgAdamantium_Core)' != ''" />
     </ItemGroup>
 
