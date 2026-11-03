@@ -120,6 +120,15 @@ public interface IWindow : IRootVisualComponent, IContentControl
     /// the surface cannot do it.</summary>
     bool UseTransparentComposition { get; set; }
 
+    /// <summary>Whether the window can be shown from frames given as pixels (<see cref="Compose"/>): how a see-through
+    /// window whose surface cannot keep its alpha is shown.</summary>
+    bool ComposesFromPixels { get; }
+
+    /// <summary>Shows a frame given as pixels - B8G8R8A8 as drawn, top row first - with the alpha of each pixel and the
+    /// window's opacity; called on the render thread. Does nothing where <see cref="ComposesFromPixels"/> is false.
+    /// </summary>
+    void Compose(Adamantium.Imaging.Image frame);
+
     /// <summary>How this window's frames reach the screen, or Inherit to follow the application's setting. Each window
     /// owns its own swapchain and they can sit on different displays, so the choice belongs here - with an
     /// application-wide default for the usual case where it is set once.</summary>

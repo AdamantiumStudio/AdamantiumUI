@@ -170,7 +170,7 @@ public abstract class WindowRendererBase : IWindowRenderer
     /// <see cref="PresenterType.Headless"/>, in which case the surface is window-less.
     /// </summary>
     protected virtual PresenterType PresenterKind =>
-        Window is WindowBase { UseTransparentComposition: true, ComposesFromPixels: true } && !SurfaceComposesWithAlpha()
+        Window is { UseTransparentComposition: true, ComposesFromPixels: true } && !SurfaceComposesWithAlpha()
             ? PresenterType.Compositor
             : PresenterType.Swapchain;
 
@@ -367,9 +367,9 @@ public abstract class WindowRendererBase : IWindowRenderer
         if (GraphicsDevice.CanPresent && Presenter is { CanPresent: true })
         {
             Presenter.Present();
-            if (Presenter is CompositorPresenter { Frame: { } frame } && Window is WindowBase window)
+            if (Presenter is CompositorPresenter { Frame: { } frame })
             {
-                window.Compose(frame);
+                Window.Compose(frame);
             }
 
             Interlocked.Increment(ref _presentedFrames);

@@ -39,15 +39,13 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
     private TaskCompletionSource _dialogClosed;
     protected IWindowWorkerService WindowWorkerService { get; private set; }
 
-    /// <summary>Whether the window can be shown from frames given as pixels.</summary>
-    internal bool ComposesFromPixels => WindowWorkerService?.ComposesFromPixels == true;
+    public bool ComposesFromPixels => WindowWorkerService?.ComposesFromPixels == true;
 
     public float DrawnOpacity => _drawnOpacity;
 
     private volatile float _drawnOpacity = 1f;
 
-    /// <summary>Shows a frame given as pixels.</summary>
-    internal void Compose(Adamantium.Imaging.Image frame) => WindowWorkerService?.Compose(frame);
+    public void Compose(Adamantium.Imaging.Image frame) => WindowWorkerService?.Compose(frame);
 
     public IWindowRenderer DefaultRenderer { get; set; }
 
