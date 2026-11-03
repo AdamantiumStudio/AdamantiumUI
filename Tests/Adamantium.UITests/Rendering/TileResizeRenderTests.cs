@@ -179,6 +179,42 @@ public class TileResizeRenderTests
             $"a resize re-recorded the WHOLE tree on {fullWalks} of 20 frames - the splice was refused exactly where it matters most");
     }
 
+    // A slow machine binds only part of the window per frame, so tiles are still arriving while the edge is dragged. The
+    // containers draw nothing of their own; a partial re-render once gave each an empty group in the paint order. The
+    // number bound per frame varies as it does on a loaded machine - fixed by the seed, which picks a failing sequence.
+    [TestCase(38), TestCase(146)]
+    public void ViewportResize_WhileTilesStillBind_KeepsPaintOrder(int seed)
+    {
+        var random = new System.Random(seed);
+        var (root, ic, panel) = BuildTiles(6000, 24);
+        panel.FillBindBudget = 0.0001;   // the floor below decides how many bind
+        panel.ScrollBindBudget = 0.0001;
+        var cache = new RenderCache(new DrawingContext(), new FakeRenderUnitFactory());
+
+        var fillFrames = random.Next(1, 40);
+        for (var i = 0; i < fillFrames; i++)
+        {
+            panel.MinBindsPerPass = random.Next(1, 400);
+            RenderDirty.Clear();
+            WindowExtension.UpdateTree(root);
+            cache.BuildFromVisualTree(root);
+        }
+
+        double w = ViewportW;
+        for (var step = 0; step < 20; step++)
+        {
+            RenderDirty.Clear();
+            w += step % 2 == 0 ? 140 : -60;
+            root.ClientWidth = w;
+            root.Width = w;
+            panel.MinBindsPerPass = random.Next(1, 400);
+
+            WindowExtension.UpdateTree(root);
+            cache.BuildFromVisualTree(root);
+            AssertOrderMatchesTree(cache, root, $"after {fillFrames} fill frames, step {step} (width={w}, {cache.LastBuildKind})");
+        }
+    }
+
     // The spliced paint order, held against the one a full walk of the SAME tree derives.
     private static void AssertOrderMatchesTree(RenderCache cache, TestWindowRoot root, string when)
     {
@@ -193,7 +229,9 @@ public class TileResizeRenderTests
         var inTree = reference.DrawnComponents.Select(c => c.RenderId).ToHashSet();
         var gone = cache.DrawnComponents.Where(c => !inTree.Contains(c.RenderId)).ToList();
         var missing = expected.Except(actual).Count();
-        var at = Enumerable.Range(0, System.Math.Min(actual.Count, expected.Count)).First(i => actual[i] != expected[i]);
+        // Where they part; when one is the other plus a tail, the end of the shorter.
+        var common = System.Math.Min(actual.Count, expected.Count);
+        var at = Enumerable.Range(0, common).Where(i => actual[i] != expected[i]).DefaultIfEmpty(common).First();
 
         // WHY is each one gone? That is the whole question - the splice frees a component only when a mark NAMED it.
         var why = gone.Take(6).Select(c =>
@@ -204,10 +242,33 @@ public class TileResizeRenderTests
             return $"    {c.GetType().Name}: visibility={c.Visibility} attached={c.IsAttachedToVisualTree}{hidden}";
         });
 
+        // The two counts above see only groups that hold units. An extra entry can also be a group listed twice, or an
+        // empty group the full walk does not list - so name both, by type.
+        var byId = new Dictionary<System.Guid, IUIComponent>();
+        var walk = new Stack<IUIComponent>();
+        walk.Push(root);
+        while (walk.Count > 0)
+        {
+            var c = walk.Pop();
+            byId[c.RenderId] = c;
+            foreach (var child in c.VisualChildren) walk.Push(child);
+        }
+
+        string TypeOf(System.Guid id) => byId.TryGetValue(id, out var c) ? c.GetType().Name : "(not in the tree)";
+        string Tally(IEnumerable<System.Guid> ids) =>
+            string.Join(", ", ids.GroupBy(TypeOf).Select(g => $"{g.Key} x{g.Count()}"));
+
+        var listedTwice = actual.GroupBy(id => id).Where(g => g.Count() > 1).Select(g => g.Key).ToList();
+        var expectedSet = expected.ToHashSet();
+        var extra = actual.Distinct().Where(id => !expectedSet.Contains(id)).ToList();
+
         Assert.Fail($"{when}: the spliced paint order drifted from the tree's.\n" +
                     $"  counts: spliced={actual.Count} tree={expected.Count}\n" +
                     $"  drawn-but-gone={gone.Count}, in-tree-but-never-drawn={missing}\n" +
-                    $"  first divergence at rank {at}\n" +
+                    $"  listed more than once: {listedTwice.Count} ({Tally(listedTwice)})\n" +
+                    $"  listed but not in the tree's order: {extra.Count} ({Tally(extra)})\n" +
+                    $"  first divergence at rank {at}: spliced {(at < actual.Count ? TypeOf(actual[at]) : "(end)")}, " +
+                    $"tree {(at < expected.Count ? TypeOf(expected[at]) : "(end)")}\n" +
                     $"  why they are gone:\n" + string.Join("\n", why));
     }
 }

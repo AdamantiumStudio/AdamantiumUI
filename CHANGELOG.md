@@ -5,6 +5,12 @@ All packages share one version.
 
 ## Unreleased
 
+### Fixed
+
+- A container that draws nothing of its own no longer takes a place in the paint order when it is re-recorded on its
+  own. On a machine that binds only part of a tile panel per frame, resizing the window put an empty group into the
+  order for nearly every container while tiles were still arriving.
+
 ## 0.1.0-alpha.2 - 2026-11-03
 
 ### Added
