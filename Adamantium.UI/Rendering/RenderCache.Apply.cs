@@ -499,6 +499,19 @@ public partial class RenderCache
             }
         }
 
+        // Draws nothing and holds no place in the order: nothing to build or insert - only a clone host or a layer needs a
+        // group of its own. A group left out of the order loses its stale units, as on the splice.
+        if (drawCommands.Count == 0 && clones is not { Count: > 0 } && !WantsLayer(component) && group is not { InOrder: true })
+        {
+            if (group != null)
+            {
+                foreach (var unit in group.Units) Retire(unit);
+                group.ClearUnits();
+            }
+
+            return;
+        }
+
         // Count/type changed. The change stays LOCAL to this control's group (BuildUnitsFor refreshes its Units in place,
         // no other group moves). The recorded op stream + rect-slot map still reference the old unit set, so the draw
         // phase re-walks this frame.
