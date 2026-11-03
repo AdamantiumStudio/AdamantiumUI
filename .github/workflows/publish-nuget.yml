@@ -43,8 +43,15 @@ jobs:
       # The solution, not a list: only the projects that set IsPackable are packed, and every one of them shares the
       # version in Directory.Build.props - the only place a version is set. A version already on nuget.org is skipped
       # by the push below, so a release that forgot to raise it publishes nothing.
+      #
+      # Built first, packed after: Adamantium.UI's pack puts the designer host in, and the host references
+      # Adamantium.UI, so in one parallel build-and-pack each could wait for the other (MSB4006, a circular dependency
+      # through ResolveProjectReferences). Packed with --no-build, the pack only asks where the built host is.
+      - name: Build
+        run: dotnet build AdamantiumUI.sln -c Release
+
       - name: Pack
-        run: dotnet pack AdamantiumUI.sln -c Release -o artifacts/nupkg
+        run: dotnet pack AdamantiumUI.sln -c Release --no-build -o artifacts/nupkg
 
       # Printed, because the things worth checking before an irreversible push are all in here: the version, the
       # licence, the dependencies, and that analyzers, build files and content landed where a consumer looks for them.
