@@ -20,16 +20,24 @@
         <ServerPublishDir>$([System.IO.Path]::Combine($(MSBuildProjectDirectory), $(BaseIntermediateOutputPath), 'server'))\</ServerPublishDir>
     </PropertyGroup>
 
+    <!-- The server is built before this project, as the solution builds it, so packing only publishes what is built: a
+         publish that built it again, with its own PublishDir, built it and everything it references a second time, beside
+         the solution's build and into the same folders. -->
+    <ItemGroup>
+        <ProjectReference Include="$(ServerProject)" ReferenceOutputAssembly="false" SkipGetTargetFrameworkProperties="true"
+                          PrivateAssets="all" />
+    </ItemGroup>
+
     <Target Name="PublishServerIntoPackage" BeforeTargets="_GetPackageFiles">
         <RemoveDir Directories="$(ServerPublishDir)" />
         <MSBuild Projects="$(ServerProject)"
                  Targets="Publish"
-                 Properties="Configuration=$(Configuration);PublishDir=$(ServerPublishDir);SelfContained=false;UseAppHost=true" />
+                 Properties="Configuration=$(Configuration);PublishDir=$(ServerPublishDir);SelfContained=false;UseAppHost=true;NoBuild=true" />
         <ItemGroup>
             <ServerFile Include="$(ServerPublishDir)**\*" Exclude="$(ServerPublishDir)**\*.pdb" />
             <Content Include="@(ServerFile)"
                      Pack="true"
-                     PackagePath="contentFiles\any\any\AumlServer\%(RecursiveDir)"
+                     PackagePath="contentFiles\any\any\AumlServer\%(RecursiveDir)%(Filename)%(Extension)"
                      PackageCopyToOutput="true"
                      BuildAction="None" />
         </ItemGroup>

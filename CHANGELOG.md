@@ -2515,6 +2515,12 @@ All packages share one version.
 
 ### Fixed
 
+- An application that references `Adamantium.UI.LanguageServer` builds, with the server in `AumlServer` beside it: the
+  package's files were compiled as C# sources, because the rules that mark them as content to copy named their paths
+  with a doubled slash and matched none.
+- Packing `Adamantium.UI.LanguageServer` no longer builds the server and all it references a second time, beside the
+  solution's build and into the same folders; the server is a build dependency of the package, and packing only
+  publishes it.
 - `WindowOpacity` works on Wayland: where the compositor offers `wp_alpha_modifier_v1` it lays the window down with
   it; elsewhere (Mutter) each frame is drawn with it, through a swapchain the compositor blends with alpha while the
   window is not opaque - where the surface offers no such swapchain the window stays opaque. A tab torn off and carried back over a tab strip no longer covers the place it goes in.
