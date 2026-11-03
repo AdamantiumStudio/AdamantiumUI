@@ -30,6 +30,10 @@
     ]]></description>
 
     <change-notes><![CDATA[
+        <p>The language server knows the markup of Adamantium UI 0.1.0-alpha.2: a style without a key among an element's
+        resources styles its subtree, {Localize} goes into a property that holds a binding, and TabTearOffBehavior is in
+        the default namespace. The plugin's and the .auml files' icons are redrawn, the plate's edge fading from light at
+        the top to dark at the bottom.</p>
         <p>The plugin shows its icon in a dark IDE too: the Marketplace had no dark icon for it to give.</p>
         <p>Ctrl+click goes where a value points: from {Localize Table.Key} to the phrase in the table's base language
         file, from the table to that file, and from the member of {x:Static Type.Member} to its declaration.</p>
