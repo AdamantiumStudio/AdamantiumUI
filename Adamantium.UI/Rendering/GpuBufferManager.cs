@@ -10,17 +10,17 @@ namespace Adamantium.UI.Rendering;
 /// </summary>
 public sealed class GpuBufferManager
 {
-    private readonly GraphicsDevice _device;
+    private readonly IGraphicsDevice _device;
     private readonly uint _ringSize;
 
     public GpuBufferManager(IGraphicsDevice device)
     {
-        _device = (GraphicsDevice)device;
+        _device = device;
         // One buffer per in-flight frame so the slot written this frame is never the one a previous frame still reads.
         _ringSize = Math.Max(1u, _device.MaxFramesInFlight);
     }
 
-    internal GraphicsDevice Device => _device;
+    internal IGraphicsDevice Device => _device;
     internal uint RingSize => _ringSize;
     internal uint CurrentFrame => _device.CurrentFrame;
 

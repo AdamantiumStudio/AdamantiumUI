@@ -21,6 +21,8 @@ internal partial class Win32WindowWorker
 
     public bool ComposesFromPixels => true;
 
+    public bool AppliesWindowOpacity => true;
+
     /// <summary>Puts the frame onto the window, which becomes a layered one with its first frame, with the alpha of each
     /// pixel and the window's opacity; called on the render thread.</summary>
     public unsafe void Compose(Image frame)

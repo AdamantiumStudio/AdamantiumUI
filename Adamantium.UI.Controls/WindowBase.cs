@@ -39,11 +39,13 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
     private TaskCompletionSource _dialogClosed;
     protected IWindowWorkerService WindowWorkerService { get; private set; }
 
-    /// <summary>Whether the window can be shown from frames given as pixels.</summary>
-    internal bool ComposesFromPixels => WindowWorkerService?.ComposesFromPixels == true;
+    public bool ComposesFromPixels => WindowWorkerService?.ComposesFromPixels == true;
 
-    /// <summary>Shows a frame given as pixels.</summary>
-    internal void Compose(Adamantium.Imaging.Image frame) => WindowWorkerService?.Compose(frame);
+    public float DrawnOpacity => _drawnOpacity;
+
+    private volatile float _drawnOpacity = 1f;
+
+    public void Compose(Adamantium.Imaging.Image frame) => WindowWorkerService?.Compose(frame);
 
     public IWindowRenderer DefaultRenderer { get; set; }
 
@@ -489,10 +491,47 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
         }
     }
 
-    /// <summary>Uniform translucency of the whole window, 0..1. Composed by the desktop, so the content underneath
-    /// shows through live - which is what a docking preview rectangle is.</summary>
+    /// <summary>Uniform translucency of the whole window, 0..1, so the content underneath shows through live - which is
+    /// what a docking preview rectangle is. The desktop applies it where it can (Win32, Wayland's alpha modifier);
+    /// elsewhere each frame is drawn with it, on a surface composed with alpha.</summary>
     public static readonly AdamantiumProperty WindowOpacityProperty = AdamantiumProperty.Register(nameof(WindowOpacity),
-        typeof(double), typeof(WindowBase), new PropertyMetadata(1.0, OverlayTraitChanged));
+        typeof(double), typeof(WindowBase), new PropertyMetadata(1.0, WindowOpacityChanged));
+
+    private static void WindowOpacityChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (component is not WindowBase window)
+        {
+            return;
+        }
+
+        if (window.WindowWorkerService is { AppliesWindowOpacity: true } worker)
+        {
+            worker.UpdateOverlayTraits();
+        }
+
+        window.UpdateDrawnOpacity();
+    }
+
+    private void UpdateDrawnOpacity()
+    {
+        var opacity = WindowOpacity;
+        var drawn = WindowWorkerService is { AppliesWindowOpacity: false } && !double.IsNaN(opacity)
+            ? (float)Math.Clamp(opacity, 0, 1)
+            : 1f;
+        var was = _drawnOpacity;
+        if (drawn == was)
+        {
+            return;
+        }
+
+        _drawnOpacity = drawn;
+        if ((drawn < 1f) != (was < 1f) && !UseTransparentComposition)
+        {
+            Renderer?.InvalidatePresenter();
+        }
+
+        Renderer?.RequestFrame();
+    }
 
     public bool Topmost
     {
@@ -1062,6 +1101,7 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
         // x:ViewModel here, once its tree is built and the context is set. Nested views self-resolve on attach.
         ApplyViewModel();
         WindowWorkerService = CreateWindowWorker(context);
+        UpdateDrawnOpacity();
         if (WindowWorkerService != null)
         {
             PlaceOnScreen(context);

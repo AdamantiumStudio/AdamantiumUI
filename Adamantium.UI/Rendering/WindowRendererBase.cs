@@ -24,6 +24,7 @@ public abstract class WindowRendererBase : IWindowRenderer
     private long _frameRequests;
     private volatile bool _isRendererUpToDate;
     private double _renderScale = 1.0;
+    private WindowOpacityEffect _opacityEffect;
 
     protected Viewport Viewport { get; set; }
     protected Rect2D Scissor { get; set; }
@@ -169,7 +170,7 @@ public abstract class WindowRendererBase : IWindowRenderer
     /// <see cref="PresenterType.Headless"/>, in which case the surface is window-less.
     /// </summary>
     protected virtual PresenterType PresenterKind =>
-        Window is WindowBase { UseTransparentComposition: true, ComposesFromPixels: true } && !SurfaceComposesWithAlpha()
+        Window is { UseTransparentComposition: true, ComposesFromPixels: true } && !SurfaceComposesWithAlpha()
             ? PresenterType.Compositor
             : PresenterType.Swapchain;
 
@@ -179,7 +180,9 @@ public abstract class WindowRendererBase : IWindowRenderer
         Presenter = GraphicsPresenter.Create(GraphicsDevice, Parameters, "Window_presenter");
     }
 
-    private PresentationParameters NewParameters(PresenterType kind)
+    private PresentationParameters NewParameters(PresenterType kind) => NewParameters(kind, WantsAlpha(kind));
+
+    private PresentationParameters NewParameters(PresenterType kind, bool alpha)
     {
         return new PresentationParameters(
             kind,
@@ -192,9 +195,61 @@ public abstract class WindowRendererBase : IWindowRenderer
             HInstanceHandle = OperatingSystem.IsWindows() ? Win32Interop.GetModuleHandle(null) : IntPtr.Zero,
             DisplayHandle = Window.SurfaceDisplayHandle,
             // A see-through window is a property of the WINDOW, so it travels from there to the surface that composes it.
-            TransparentComposition = Window.UseTransparentComposition,
+            TransparentComposition = alpha,
             PresentPolicy = ResolvePresentPolicy()
         };
+    }
+
+    private bool WantsAlpha(PresenterType kind) => Window.UseTransparentComposition ||
+                                                   kind == PresenterType.Swapchain &&
+                                                   Window.DrawnOpacity < 1f &&
+                                                   SurfaceComposesWithAlpha();
+
+    public void DrawWindowOpacity()
+    {
+        var opacity = Window?.DrawnOpacity ?? 1f;
+        if (opacity >= 1f || Presenter is not SwapChainGraphicsPresenter { ComposesWithAlpha: true } ||
+            GraphicsDevice is not { } gd || gd.CurrentViewports.Length == 0)
+        {
+            return;
+        }
+
+        _opacityEffect ??= new WindowOpacityEffect(gd);
+        var viewport = gd.CurrentViewports[0];
+        var scissor = gd.CurrentScissors.Length > 0 ? gd.CurrentScissors[0] : default;
+        var blend = gd.ColorBlendEnabled;
+        var equation = gd.ColorBlendEquation;
+        var depthTest = gd.DepthTestEnabled;
+        var depthWrite = gd.DepthWriteEnable;
+
+        gd.SetScissors(new Rect2D
+        {
+            Offset = new Offset2D { X = (int)viewport.X, Y = (int)viewport.Y },
+            Extent = new Extent2D { Width = (uint)viewport.Width, Height = (uint)viewport.Height }
+        });
+        gd.ColorComponentFlags = ColorComponentFlagBits.RBit | ColorComponentFlagBits.GBit |
+                                 ColorComponentFlagBits.BBit | ColorComponentFlagBits.ABit;
+        gd.ColorBlendEnabled = true;
+        gd.ColorBlendEquation = ColorBlendEquations.TimesSourceAlpha;
+        gd.DepthTestEnabled = false;
+        gd.DepthWriteEnable = false;
+        gd.StencilTestEnabled = false;
+        gd.CullMode = CullModeFlagBits.None;
+        gd.PolygonMode = PolygonMode.Fill;
+        gd.AlphaToCoverageEnable = false;
+        gd.RasterizerDiscardEnabled = false;
+        gd.LogicOperationsEnabled = false;
+        gd.PrimitiveTopology = PrimitiveTopology.TriangleList;
+        gd.VertexType = null;
+        _opacityEffect.WindowAlpha.SetValue(opacity);
+        _opacityEffect.WindowOpacityDrawPass.Apply();
+        gd.Draw(3, 1);
+
+        gd.SetScissors(scissor);
+        gd.ColorBlendEnabled = blend;
+        gd.ColorBlendEquation = equation;
+        gd.DepthTestEnabled = depthTest;
+        gd.DepthWriteEnable = depthWrite;
     }
 
     private bool SurfaceComposesWithAlpha()
@@ -202,7 +257,7 @@ public abstract class WindowRendererBase : IWindowRenderer
         if (_surface == null || _surfaceHandle != Window.SurfaceHandle)
         {
             ReleaseSurface();
-            _surface = GraphicsDevice.GetOrCreateSurface(NewParameters(PresenterType.Swapchain));
+            _surface = GraphicsDevice.GetOrCreateSurface(NewParameters(PresenterType.Swapchain, false));
             _surfaceHandle = Window.SurfaceHandle;
             _surfaceComposesWithAlpha = _surface.ComposesWithAlpha(GraphicsDevice.MainDevice);
         }
@@ -278,8 +333,9 @@ public abstract class WindowRendererBase : IWindowRenderer
         // Re-read transparency and present policy on every rebuild, the only moment a swapchain can pick them up.
         if (Window != null && Presenter != null)
         {
-            Presenter.Description.TransparentComposition = Window.UseTransparentComposition;
-            Parameters.TransparentComposition = Window.UseTransparentComposition;
+            var alpha = WantsAlpha(Parameters.PresenterType);
+            Presenter.Description.TransparentComposition = alpha;
+            Parameters.TransparentComposition = alpha;
 
             var policy = ResolvePresentPolicy();
             Presenter.Description.PresentPolicy = policy;
@@ -311,9 +367,9 @@ public abstract class WindowRendererBase : IWindowRenderer
         if (GraphicsDevice.CanPresent && Presenter is { CanPresent: true })
         {
             Presenter.Present();
-            if (Presenter is CompositorPresenter { Frame: { } frame } && Window is WindowBase window)
+            if (Presenter is CompositorPresenter { Frame: { } frame })
             {
-                window.Compose(frame);
+                Window.Compose(frame);
             }
 
             Interlocked.Increment(ref _presentedFrames);
@@ -334,6 +390,8 @@ public abstract class WindowRendererBase : IWindowRenderer
         UnsubscribeFromEvents();
         Presenter?.Dispose();
         Presenter = null;
+        _opacityEffect?.Dispose();
+        _opacityEffect = null;
         ReleaseSurface();
         // Last: the units built from it are gone by now.
         (RenderUnitFactory as IDisposable)?.Dispose();

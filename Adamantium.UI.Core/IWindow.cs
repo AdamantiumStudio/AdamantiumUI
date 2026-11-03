@@ -107,6 +107,10 @@ public interface IWindow : IRootVisualComponent, IContentControl
     /// <summary>Uniform translucency of the whole window, 0..1.</summary>
     double WindowOpacity { get; set; }
 
+    /// <summary>The opacity each frame is drawn with: <see cref="WindowOpacity"/> where the desktop does not lay the
+    /// window down with it, else 1. Readable from any thread.</summary>
+    float DrawnOpacity { get; }
+
     /// <summary>Whether the window has the OS frame around it - the ambient drop shadow and the 1px accent outline the
     /// desktop draws. Its OWN property because it is its own decision: a window can be see-through and still framed, or
     /// opaque and frameless. Tying it to how the window is composed makes one of those impossible to ask for.</summary>
@@ -115,6 +119,15 @@ public interface IWindow : IRootVisualComponent, IContentControl
     /// <summary>Per-pixel transparency via premultiplied desktop composition, read when the surface is created; opaque if
     /// the surface cannot do it.</summary>
     bool UseTransparentComposition { get; set; }
+
+    /// <summary>Whether the window can be shown from frames given as pixels (<see cref="Compose"/>): how a see-through
+    /// window whose surface cannot keep its alpha is shown.</summary>
+    bool ComposesFromPixels { get; }
+
+    /// <summary>Shows a frame given as pixels - B8G8R8A8 as drawn, top row first - with the alpha of each pixel and the
+    /// window's opacity; called on the render thread. Does nothing where <see cref="ComposesFromPixels"/> is false.
+    /// </summary>
+    void Compose(Adamantium.Imaging.Image frame);
 
     /// <summary>How this window's frames reach the screen, or Inherit to follow the application's setting. Each window
     /// owns its own swapchain and they can sit on different displays, so the choice belongs here - with an

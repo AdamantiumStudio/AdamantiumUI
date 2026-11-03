@@ -26,6 +26,10 @@ public interface IWindowWorkerService
     /// changing a number nobody reads again.</summary>
     public void UpdateOverlayTraits();
 
+    /// <summary>Whether the desktop lays the window down with <see cref="IWindow.WindowOpacity"/> itself; where it does
+    /// not, each frame is drawn with it.</summary>
+    public bool AppliesWindowOpacity => false;
+
     /// <summary>Whether the window can be shown from frames given as pixels (<see cref="Compose"/>): how a see-through
     /// window whose surface cannot keep its alpha is shown.</summary>
     public bool ComposesFromPixels => false;

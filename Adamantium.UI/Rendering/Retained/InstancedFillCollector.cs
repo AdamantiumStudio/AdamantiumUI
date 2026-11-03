@@ -112,7 +112,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
         public MaterialAnchor MatAnchor;    // and what it is pinned to, which decides the mapping
     }
 
-    private readonly GraphicsDevice _device;
+    private readonly IGraphicsDevice _device;
     // BOTH effects, because this collector draws both families: a solid instanced fill and its fringe come from
     // BatchEffect, while the gradient/pattern/texture fills of the SAME shared mesh come from BrushEffect. The shared
     // per-frame parameters (projection, transforms, viewport, fringe width) are therefore written into BOTH - the price
@@ -174,7 +174,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
 
     public InstancedFillCollector(IGraphicsDevice device) : base(device)
     {
-        _device = (GraphicsDevice)device;
+        _device = device;
         _effect = ToDispose(new BatchEffect(device));
     }
 

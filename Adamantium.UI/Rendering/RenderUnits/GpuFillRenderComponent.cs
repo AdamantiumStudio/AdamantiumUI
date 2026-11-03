@@ -23,7 +23,7 @@ public sealed class GpuFillRenderComponent : UIRenderComponent
     private const float DeviceFringePx = 1.0f;
     private const MemoryPropertyFlags FillMemory = MemoryPropertyFlags.HostVisible | MemoryPropertyFlags.DeviceLocal;
 
-    private readonly GraphicsDevice _device;
+    private readonly IGraphicsDevice _device;
     private readonly FillFringeEffect _effect;
     private readonly ReusableBuffer _ringBuffer;
     private RingEdge[] _ring;
@@ -40,7 +40,7 @@ public sealed class GpuFillRenderComponent : UIRenderComponent
         IReadOnlyList<(Vector2<double>[] Points, bool IsClosed)> contours, Brush brush, GpuBufferManager bufferManager,
         Rect? cut = null) : base(device, uiBasicEffect, null, bufferManager)
     {
-        _device = (GraphicsDevice)device;
+        _device = device;
         _effect = effect;
         Brush = brush;
 

@@ -84,13 +84,12 @@ internal abstract class SdfBatchCollector<TItem> : BatchCollector<TItem> where T
     // base (whether it includes firstInstance is translation-defined).
     protected override void DrawSegment(IGraphicsDevice device, Buffer<TItem> buffer, uint count, uint firstInstance, Matrix4x4F projection)
     {
-        var dev = (GraphicsDevice)device;
         if (!EnsureEffectForDraw(device)) return;
 
         // Set what this draw DEPENDS on, don't inherit it. The color mask is device state like any other, and a pass
         // that borrows it (the strokes' union coverage masks color off for its depth pass) would otherwise leave these
         // instances writing nothing at all.
-        dev.ColorComponentFlags = ColorComponentFlagBits.RBit | ColorComponentFlagBits.GBit |
+        device.ColorComponentFlags =ColorComponentFlagBits.RBit | ColorComponentFlagBits.GBit |
                                   ColorComponentFlagBits.BBit | ColorComponentFlagBits.ABit;
         device.ColorBlendEnabled = true;
         device.ColorBlendEquation = ColorBlendEquations.AlphaBlend;
@@ -104,7 +103,7 @@ internal abstract class SdfBatchCollector<TItem> : BatchCollector<TItem> where T
         // The SDF shapes measure themselves in DEVICE pixels (SlotPixelScale), which needs the render target's pixel
         // size; without it the shader falls back to the raw slot space, where an anisotropically scaled slot smears the
         // shape's edge along its long axis.
-        var vp = ((GraphicsDevice)device).CurrentViewports;
+        var vp = device.CurrentViewports;
         if (vp is { Length: > 0 }) ViewportSizeParam.SetValue(new Vector2F(vp[0].Width, vp[0].Height));
         TargetOriginParam.SetValue(new Vector2F(device.TargetOrigin.X, device.TargetOrigin.Y));
         ViewportOriginParam?.SetValue(vp is { Length: > 0 } ? new Vector2F(vp[0].X, vp[0].Y) : default);

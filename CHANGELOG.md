@@ -1944,6 +1944,8 @@ All packages share one version.
 
 ### Changed
 
+- Rendering works with the device through `IGraphicsDevice` only - layers, backdrops, GPU fills and strokes, batches,
+  the window's opacity and the shader precompile - instead of casting it to `GraphicsDevice`.
 - Setters of `Classes` with a set of names - of several styles, of a style and one based on it, of triggers - join their
   classes on a component instead of the strongest replacing the rest: `Classes="x"` under `Classes="y"` gives `x y`. A
   `{Binding}` or a resource for `Classes` still sets the collection, and setters' classes go into the one it sets.
@@ -2511,6 +2513,12 @@ All packages share one version.
 
 ### Fixed
 
+- `WindowOpacity` works on Wayland: where the compositor offers `wp_alpha_modifier_v1` it lays the window down with
+  it; elsewhere (Mutter) each frame is drawn with it, through a swapchain the compositor blends with alpha while the
+  window is not opaque - where the surface offers no such swapchain the window stays opaque. A tab torn off and carried back over a tab strip no longer covers the place it goes in.
+  `IWindowWorkerService.AppliesWindowOpacity` says which way a platform does it, and `IWindow.DrawnOpacity` the
+  opacity each frame is drawn with. `IWindow.ComposesFromPixels` and `IWindow.Compose` are public: the renderer takes
+  all it needs of a window through `IWindow`.
 - A style or a trigger that sets `Classes` to a set of names adds them to the component's classes and, on leaving, takes
   back what it gave: a class goes with the last style or trigger giving it, and one the component had itself stays. It
   no longer put one collection of its own in place of every component's - which hid the component's own classes, and

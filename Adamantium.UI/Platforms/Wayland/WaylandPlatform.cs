@@ -104,6 +104,9 @@ public sealed unsafe class WaylandPlatform : IApplicationPlatform, Linux.IPortal
                 case XdgToplevelIconManagerV1.InterfaceName:
                     ToplevelIcons = registry.Bind<XdgToplevelIconManagerV1>(name, 1);
                     break;
+                case WpAlphaModifierV1.InterfaceName:
+                    AlphaModifiers = registry.Bind<WpAlphaModifierV1>(name, 1);
+                    break;
                 case WlDataDeviceManager.InterfaceName:
                     dataDevices = registry.Bind<WlDataDeviceManager>(name, Math.Min(version, 3));
                     break;
@@ -197,6 +200,10 @@ public sealed unsafe class WaylandPlatform : IApplicationPlatform, Linux.IPortal
     /// <summary>Gives toplevels their icon; null where the compositor offers none (GNOME takes it from the desktop entry).
     /// </summary>
     public XdgToplevelIconManagerV1 ToplevelIcons { get; private set; }
+
+    /// <summary>Lays a surface down with its alpha times a factor; null where the compositor offers none (Mutter 51).
+    /// </summary>
+    public WpAlphaModifierV1 AlphaModifiers { get; private set; }
 
     /// <summary>The application's icon, read the first time it is asked for; null where it carries none.</summary>
     internal Linux.ApplicationIcon Icon

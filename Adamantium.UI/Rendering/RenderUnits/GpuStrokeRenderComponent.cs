@@ -35,7 +35,7 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
     private const MemoryPropertyFlags StrokeMemory = MemoryPropertyFlags.HostVisible | MemoryPropertyFlags.DeviceLocal;
     private const MemoryPropertyFlags VertexMemory = MemoryPropertyFlags.DeviceLocal;
 
-    private readonly GraphicsDevice _device;
+    private readonly IGraphicsDevice _device;
     private readonly StrokeEffect _effect;
     private Pen _pen;                        // mutable: TryRepoint swaps it for a uniform-only pen change (animation)
     private readonly bool _useCut;          // dash and/or trim -> the single-thread DashCut kernel + DrawIndirect
@@ -92,7 +92,7 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
     public GpuStrokeRenderComponent(IGraphicsDevice device, UIBasicEffect uiBasicEffect, StrokeEffect effect,
         IReadOnlyList<(Vector2<double>[] Points, bool IsClosed)> contours, Pen pen, GpuBufferManager bufferManager) : base(device, uiBasicEffect, null, bufferManager)
     {
-        _device = (GraphicsDevice)device;   // Dispatch/BufferBarrier/DrawIndirect live on the concrete device
+        _device = device;
         _effect = effect;
         _pen = pen;
         _hasDashes = pen.Dashes is { Count: > 0 };

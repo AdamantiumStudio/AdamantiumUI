@@ -324,6 +324,7 @@ public class WindowRenderService : UiRenderService
         var t0 = Stopwatch.GetTimestamp();
         DrawProcessors(appTime);
         RuntimeStats.LastProcessorsMs = Stopwatch.GetElapsedTime(t0).TotalMilliseconds;
+        windowRenderer?.DrawWindowOpacity();
         if (StageMoves())
         {
             windowRenderer?.RequestFrame();

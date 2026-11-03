@@ -521,13 +521,14 @@ internal partial class Win32WindowWorker : AdamantiumComponent, IWindowWorkerSer
     {
         if (source == null || source.Handle == IntPtr.Zero) return;
 
-        _frameOpacity = (byte)Math.Clamp(window.WindowOpacity * 255, 0, 255);
-        if (window.WindowOpacity >= 1.0 || _framesComposed)
+        var opacity = double.IsNaN(window.WindowOpacity) ? 1.0 : window.WindowOpacity;
+        _frameOpacity = (byte)Math.Clamp(opacity * 255, 0, 255);
+        if (opacity >= 1.0 || _framesComposed)
         {
             return;
         }
 
-        var alpha = (byte)Math.Clamp(window.WindowOpacity *255, 0, 255);
+        var alpha = (byte)Math.Clamp(opacity * 255, 0, 255);
         Win32Interop.SetLayeredWindowAttributes(source.Handle, 0, alpha, Win32Interop.LWA_ALPHA);
     }
 
