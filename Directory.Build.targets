@@ -27,6 +27,36 @@
     <CompilerVisibleProperty Include="AdamantiumAumlHotReload" />
   </ItemGroup>
 
+  <!-- A project names each engine assembly it needs once, as an AdamantiumEngineReference, and here it becomes a
+       reference to the engine's project when the engine's source is beside this repository, or to its package of
+       AdamantiumEngineVersion when it is not - one list, so the two can no longer differ. Its Role says what kind of
+       reference it is:
+         (none)              an assembly the code uses;
+         Generator           a source generator - from source an analyzer whose assembly the project does not take;
+         EffectsCompiler     the effect compiler - from source an analyzer whose assembly the project takes too;
+         NetStandardAnalyzer the netstandard2.0 build a generator from source loads, as an analyzer only; a generator's
+                             package carries it, so packages need none.
+       PrivateAssets and GeneratePathProperty go with the item; a generator's package keeps its assets private unless the
+       item says otherwise. -->
+  <ItemGroup Condition="'$(UseEngineSource)' == 'true'">
+    <ProjectReference Include="@(AdamantiumEngineReference->WithMetadataValue('Role', '')->'$(AdamantiumEngineDir)%(Identity)\%(Identity).csproj')" />
+    <ProjectReference Include="@(AdamantiumEngineReference->WithMetadataValue('Role', 'Generator')->'$(AdamantiumEngineDir)%(Identity)\%(Identity).csproj')"
+                      OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="@(AdamantiumEngineReference->WithMetadataValue('Role', 'EffectsCompiler')->'$(AdamantiumEngineDir)%(Identity)\%(Identity).csproj')"
+                      OutputItemType="Analyzer" ReferenceOutputAssembly="true" />
+    <ProjectReference Include="@(AdamantiumEngineReference->WithMetadataValue('Role', 'NetStandardAnalyzer')->'$(AdamantiumEngineDir)%(Identity)\%(Identity).csproj')"
+                      OutputItemType="Analyzer" ReferenceOutputAssembly="false" SetTargetFramework="TargetFramework=netstandard2.0" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(UseEngineSource)' != 'true'">
+    <PackageReference Include="@(AdamantiumEngineReference->WithMetadataValue('Role', '')->'%(Identity)')" Version="$(AdamantiumEngineVersion)" />
+    <PackageReference Include="@(AdamantiumEngineReference->WithMetadataValue('Role', 'Generator')->WithMetadataValue('PrivateAssets', '')->'%(Identity)')"
+                      Version="$(AdamantiumEngineVersion)" PrivateAssets="all" />
+    <PackageReference Include="@(AdamantiumEngineReference->WithMetadataValue('Role', 'Generator')->HasMetadata('PrivateAssets')->'%(Identity)')"
+                      Version="$(AdamantiumEngineVersion)" />
+    <PackageReference Include="@(AdamantiumEngineReference->WithMetadataValue('Role', 'EffectsCompiler')->'%(Identity)')" Version="$(AdamantiumEngineVersion)" />
+  </ItemGroup>
+
   <!-- The repository's applications carry their icon as the package's do; a project that imports the package's targets
        itself has it from them. -->
   <Import Project="$(MSBuildThisFileDirectory)Adamantium.UI\buildTransitive\Adamantium.UI.ApplicationIcon.targets"

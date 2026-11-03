@@ -24,12 +24,8 @@
         <ProjectReference Include="..\Adamantium.UI.Themes\Adamantium.UI.Themes.csproj" />
     </ItemGroup>
 
-    <ItemGroup Condition="'$(UseEngineSource)' == 'true'">
-        <ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Multiverse\Adamantium.Multiverse.csproj" />
-    </ItemGroup>
-
-    <ItemGroup Condition="'$(UseEngineSource)' != 'true'">
-        <PackageReference Include="Adamantium.Multiverse" Version="$(AdamantiumEngineVersion)" />
+    <ItemGroup>
+        <AdamantiumEngineReference Include="Adamantium.Multiverse" />
     </ItemGroup>
 
 </Project>

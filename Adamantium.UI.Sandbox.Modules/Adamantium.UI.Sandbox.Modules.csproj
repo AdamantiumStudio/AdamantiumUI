@@ -15,14 +15,9 @@
         <ProjectReference Include="..\Adamantium.UI.Core\Adamantium.UI.Core.csproj" />
     </ItemGroup>
 
-    <ItemGroup Condition="'$(UseEngineSource)' == 'true'">
-        <ProjectReference Include="$(AdamantiumEngineDir)Adamantium.MVVM\Adamantium.MVVM.csproj" />
-        <ProjectReference Include="$(AdamantiumEngineDir)Adamantium.MVVM.Generators\Adamantium.MVVM.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
-    </ItemGroup>
-
-    <ItemGroup Condition="'$(UseEngineSource)' != 'true'">
-        <PackageReference Include="Adamantium.MVVM" Version="$(AdamantiumEngineVersion)" />
-        <PackageReference Include="Adamantium.MVVM.Generators" Version="$(AdamantiumEngineVersion)" PrivateAssets="all" />
+    <ItemGroup>
+        <AdamantiumEngineReference Include="Adamantium.MVVM" />
+        <AdamantiumEngineReference Include="Adamantium.MVVM.Generators" Role="Generator" />
     </ItemGroup>
 
 </Project>

@@ -17,12 +17,8 @@
 	</ItemGroup>
 
 	<!-- Colors as the framework reads them. -->
-	<ItemGroup Condition="'$(UseEngineSource)' == 'true'">
-		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Mathematics\Adamantium.Mathematics.csproj" />
-	</ItemGroup>
-
-	<ItemGroup Condition="'$(UseEngineSource)' != 'true'">
-		<PackageReference Include="Adamantium.Mathematics" Version="$(AdamantiumEngineVersion)" />
+	<ItemGroup>
+		<AdamantiumEngineReference Include="Adamantium.Mathematics" />
 	</ItemGroup>
 
 	<ItemGroup>

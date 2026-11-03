@@ -16,12 +16,8 @@
       <EmbeddedResource Include="Localization\*.alang" LogicalName="Localization/%(Filename)%(Extension)" WithCulture="false" />
     </ItemGroup>
 
-    <ItemGroup Condition="'$(UseEngineSource)' == 'true'">
-      <ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Core\Adamantium.Core.csproj" />
-    </ItemGroup>
-
-    <ItemGroup Condition="'$(UseEngineSource)' != 'true'">
-      <PackageReference Include="Adamantium.Core" Version="$(AdamantiumEngineVersion)" />
+    <ItemGroup>
+      <AdamantiumEngineReference Include="Adamantium.Core" />
     </ItemGroup>
 
 </Project>

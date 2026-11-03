@@ -59,30 +59,19 @@
 		<ProjectReference Include="..\Adamantium.UI.Generators\Adamantium.UI.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
 	</ItemGroup>
 
-	<ItemGroup Condition="'$(UseEngineSource)' == 'true'">
-		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Engine\Adamantium.Engine.csproj" />
-		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Multiverse\Adamantium.Multiverse.csproj" />
-		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.MVVM\Adamantium.MVVM.csproj" />
-		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Core\Adamantium.Core.csproj" />
-		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.MVVM.Generators\Adamantium.MVVM.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
-		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.EffectsCompiler\Adamantium.EffectsCompiler.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="true" />
-		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Mathematics\Adamantium.Mathematics.csproj" />
-		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Fonts\Adamantium.Fonts.csproj" />
+	<ItemGroup>
+		<AdamantiumEngineReference Include="Adamantium.Engine" />
+		<AdamantiumEngineReference Include="Adamantium.Multiverse" />
+		<AdamantiumEngineReference Include="Adamantium.MVVM" />
+		<AdamantiumEngineReference Include="Adamantium.Core" />
+		<AdamantiumEngineReference Include="Adamantium.MVVM.Generators" Role="Generator" />
+		<AdamantiumEngineReference Include="Adamantium.EffectsCompiler" Role="EffectsCompiler" />
+		<AdamantiumEngineReference Include="Adamantium.Mathematics" />
+		<AdamantiumEngineReference Include="Adamantium.Fonts" />
 		<!-- netstandard2.0 analyzer dep for the source generators above (Roslyn analyzers must be netstandard2.0).
 		     Analyzer-ONLY so the netstandard2.0 build isn't copied into this net10.0 output - runtime/compile
 		     Core comes from the normal net10.0 ref above. -->
-		<ProjectReference Include="$(AdamantiumEngineDir)Adamantium.Core\Adamantium.Core.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" SetTargetFramework="TargetFramework=netstandard2.0" />
-	</ItemGroup>
-
-	<ItemGroup Condition="'$(UseEngineSource)' != 'true'">
-		<PackageReference Include="Adamantium.Engine" Version="$(AdamantiumEngineVersion)" />
-		<PackageReference Include="Adamantium.Multiverse" Version="$(AdamantiumEngineVersion)" />
-		<PackageReference Include="Adamantium.MVVM" Version="$(AdamantiumEngineVersion)" />
-		<PackageReference Include="Adamantium.Core" Version="$(AdamantiumEngineVersion)" />
-		<PackageReference Include="Adamantium.EffectsCompiler" Version="$(AdamantiumEngineVersion)" />
-		<PackageReference Include="Adamantium.Mathematics" Version="$(AdamantiumEngineVersion)" />
-		<PackageReference Include="Adamantium.Fonts" Version="$(AdamantiumEngineVersion)" />
-		<PackageReference Include="Adamantium.MVVM.Generators" Version="$(AdamantiumEngineVersion)" PrivateAssets="all" />
+		<AdamantiumEngineReference Include="Adamantium.Core" Role="NetStandardAnalyzer" />
 	</ItemGroup>
 
 	<ItemGroup>

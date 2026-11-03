@@ -26,12 +26,8 @@
       <ProjectReference Include="..\Adamantium.UI.EventGenerators\Adamantium.UI.EventGenerators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
     </ItemGroup>
 
-    <ItemGroup Condition="'$(UseEngineSource)' == 'true'">
-      <ProjectReference Include="$(AdamantiumEngineDir)Adamantium.MVVM.Generators\Adamantium.MVVM.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
-    </ItemGroup>
-
-    <ItemGroup Condition="'$(UseEngineSource)' != 'true'">
-      <PackageReference Include="Adamantium.MVVM.Generators" Version="$(AdamantiumEngineVersion)" PrivateAssets="all" />
+    <ItemGroup>
+      <AdamantiumEngineReference Include="Adamantium.MVVM.Generators" Role="Generator" />
     </ItemGroup>
 
     <ItemGroup>
