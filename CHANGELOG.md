@@ -2511,6 +2511,10 @@ All packages share one version.
 
 ### Fixed
 
+- `WindowOpacity` works on Wayland: where the compositor offers `wp_alpha_modifier_v1` it lays the window down with
+  it; elsewhere (Mutter) each frame is drawn with it, through a swapchain the compositor blends with alpha while the
+  window is not opaque. A tab torn off and carried back over a tab strip no longer covers the place it goes in.
+  `IWindowWorkerService.AppliesWindowOpacity` says which way a platform does it.
 - A style or a trigger that sets `Classes` to a set of names adds them to the component's classes and, on leaving, takes
   back what it gave: a class goes with the last style or trigger giving it, and one the component had itself stays. It
   no longer put one collection of its own in place of every component's - which hid the component's own classes, and

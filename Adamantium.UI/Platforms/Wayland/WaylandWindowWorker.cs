@@ -28,6 +28,7 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
     private XdgToplevel toplevel;
     private WpViewport viewport;
     private WpFractionalScaleV1 fractionalScale;
+    private WpAlphaModifierSurfaceV1 alphaModifier;
 
     private readonly List<WlOutput> shownOn = [];
     private readonly object shownOnLock = new();
@@ -142,6 +143,12 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
         {
             viewport = platform.Viewporter.GetViewport(surface);
             viewport.SetDestination(width, height);
+        }
+
+        if (platform.AlphaModifiers != null)
+        {
+            alphaModifier = platform.AlphaModifiers.GetSurface(surface);
+            ApplyOpacity(window.WindowOpacity);
         }
 
         xdgSurface = platform.WmBase.GetXdgSurface(surface);
@@ -422,9 +429,12 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
         modal?.Activate();
     }
 
+    public bool AppliesWindowOpacity => platform.AlphaModifiers != null;
+
     public void UpdateOverlayTraits()
     {
         var transparent = window.TransparentToInput;
+        var opacity = window.WindowOpacity;
         platform.Invoke(() =>
         {
             if (closed)
@@ -433,6 +443,7 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
             }
 
             ApplyInputRegion(transparent);
+            ApplyOpacity(opacity);
             if (!hidden)
             {
                 surface.Commit();
@@ -453,6 +464,11 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
         var region = platform.Compositor.CreateRegion();
         surface.SetInputRegion(region);
         region.Destroy();
+    }
+
+    private void ApplyOpacity(double opacity)
+    {
+        alphaModifier?.SetMultiplier((uint)Math.Round(Math.Clamp(opacity, 0, 1) * uint.MaxValue));
     }
 
     public void ShowWindow(WindowState windowState)
@@ -1068,6 +1084,7 @@ internal sealed class WaylandWindowWorker : IWindowWorkerService
             decoration?.Destroy();
             viewport?.Destroy();
             fractionalScale?.Destroy();
+            alphaModifier?.Destroy();
             toplevel.Destroy();
             xdgSurface.Destroy();
             surface.Destroy();

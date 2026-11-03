@@ -24,6 +24,17 @@ public abstract class WindowRendererBase : IWindowRenderer
     private long _frameRequests;
     private volatile bool _isRendererUpToDate;
     private double _renderScale = 1.0;
+    private WindowOpacityEffect _opacityEffect;
+
+    private static readonly ColorBlendEquationEXT TimesSourceAlpha = new()
+    {
+        SrcColorBlendFactor = BlendFactor.Zero,
+        DstColorBlendFactor = BlendFactor.SrcAlpha,
+        ColorBlendOp = BlendOp.Add,
+        SrcAlphaBlendFactor = BlendFactor.Zero,
+        DstAlphaBlendFactor = BlendFactor.SrcAlpha,
+        AlphaBlendOp = BlendOp.Add
+    };
 
     protected Viewport Viewport { get; set; }
     protected Rect2D Scissor { get; set; }
@@ -192,9 +203,36 @@ public abstract class WindowRendererBase : IWindowRenderer
             HInstanceHandle = OperatingSystem.IsWindows() ? Win32Interop.GetModuleHandle(null) : IntPtr.Zero,
             DisplayHandle = Window.SurfaceDisplayHandle,
             // A see-through window is a property of the WINDOW, so it travels from there to the surface that composes it.
-            TransparentComposition = Window.UseTransparentComposition,
+            TransparentComposition = ComposesWithAlpha,
             PresentPolicy = ResolvePresentPolicy()
         };
+    }
+
+    private bool ComposesWithAlpha => Window.UseTransparentComposition || Window is WindowBase { DrawnOpacity: < 1f };
+
+    public void DrawWindowOpacity()
+    {
+        if (Window is not WindowBase { DrawnOpacity: var opacity and < 1f } ||
+            Presenter is not SwapChainGraphicsPresenter { ComposesWithAlpha: true } ||
+            GraphicsDevice is not Adamantium.Graphics.GraphicsDevice gd)
+        {
+            return;
+        }
+
+        _opacityEffect ??= new WindowOpacityEffect(gd);
+        gd.SetViewports(Viewport);
+        gd.SetScissors(Scissor);
+        gd.ColorComponentFlags = ColorComponentFlagBits.RBit | ColorComponentFlagBits.GBit |
+                                 ColorComponentFlagBits.BBit | ColorComponentFlagBits.ABit;
+        gd.ColorBlendEnabled = true;
+        gd.ColorBlendEquation = TimesSourceAlpha;
+        gd.DepthTestEnabled = false;
+        gd.DepthWriteEnable = false;
+        gd.PrimitiveTopology = PrimitiveTopology.TriangleList;
+        gd.VertexType = null;
+        _opacityEffect.WindowAlpha.SetValue(opacity);
+        _opacityEffect.WindowOpacityDrawPass.Apply();
+        gd.Draw(3, 1);
     }
 
     private bool SurfaceComposesWithAlpha()
@@ -278,8 +316,8 @@ public abstract class WindowRendererBase : IWindowRenderer
         // Re-read transparency and present policy on every rebuild, the only moment a swapchain can pick them up.
         if (Window != null && Presenter != null)
         {
-            Presenter.Description.TransparentComposition = Window.UseTransparentComposition;
-            Parameters.TransparentComposition = Window.UseTransparentComposition;
+            Presenter.Description.TransparentComposition = ComposesWithAlpha;
+            Parameters.TransparentComposition = ComposesWithAlpha;
 
             var policy = ResolvePresentPolicy();
             Presenter.Description.PresentPolicy = policy;
@@ -334,6 +372,8 @@ public abstract class WindowRendererBase : IWindowRenderer
         UnsubscribeFromEvents();
         Presenter?.Dispose();
         Presenter = null;
+        _opacityEffect?.Dispose();
+        _opacityEffect = null;
         ReleaseSurface();
         // Last: the units built from it are gone by now.
         (RenderUnitFactory as IDisposable)?.Dispose();

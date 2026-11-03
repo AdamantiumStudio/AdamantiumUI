@@ -65,6 +65,12 @@ public interface IWindowRenderer : IDisposable
 
     public void OnFrameEnded();
 
+    /// <summary>Draws the window's opacity over the frame drawn so far, where the desktop does not apply it: called last,
+    /// after everything in the window is drawn.</summary>
+    public void DrawWindowOpacity()
+    {
+    }
+
     public void Present();
 
     public void ResizePresenter(PresentationParameters parameters);
