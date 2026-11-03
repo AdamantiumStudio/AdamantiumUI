@@ -9,7 +9,8 @@ ribbon, a tree data grid, a property grid and an infinite canvas with a node gra
 live themes; MVVM and navigation built in - and a 3D scene that is an ordinary element of the markup, drawn by the same
 renderer as the interface around it.
 
-> **Alpha.** Windows only for now; macOS and Linux are planned. The API will change between releases.
+> **Alpha.** Windows and Linux (Wayland); macOS is planned. The API will change between releases. What changed since
+> the first alpha: [CHANGELOG](https://github.com/AdamantiumStudio/AdamantiumUI/blob/main/CHANGELOG.md).
 
 ![An engine scene in a RenderTargetPanel: the tool panel on the left, the move gizmo on a selected light, and the light's properties on the right](.github/images/hero.png)
 
@@ -28,8 +29,8 @@ renderer as the interface around it.
 - **[Data binding and MVVM](#data-binding-and-mvvm)** - bindings of every kind; view-models with generated properties
   and commands.
 - **[Navigation](#navigation)** - regions, a navigation journal, dialogs and windows driven from view-models.
-- **[Input and drag and drop](#input-focus-and-drag-and-drop)** - keyboard focus, drag and drop inside the application
-  and with other applications.
+- **[Input and drag and drop](#input-focus-and-drag-and-drop)** - keyboard focus, touch and pen, input methods, drag
+  and drop inside the application and with other applications; accessibility for screen readers.
 - **[A 3D scene in the markup](#a-3d-scene-in-the-markup)** - an engine scene as an element of the tree, with no
   airspace and no copy of the frame.
 - **[Tooling](#tooling)** - `dotnet new` templates and a Rider plugin with a live preview.
@@ -38,14 +39,15 @@ renderer as the interface around it.
 
 | | |
 |---|---|
-| **Buttons and toggles** | `Button`, `RepeatButton`, `ToggleButton`, `CheckBox`, `RadioButton`, `ToggleSwitch` |
-| **Text** | `TextBlock`, `TextBox` - see [Text](#text) |
+| **Buttons and toggles** | `Button`, `RepeatButton`, `ToggleButton`, `CheckBox`, `RadioButton`, `ToggleSwitch`; `DropDownButton` whose items are actions, `SplitButton` and `ToggleSplitButton`; `SegmentedControl` - a few choices, all in sight |
+| **Text** | `TextBlock`, `TextBox`, `PasswordBox` - see [Text](#text) |
 | **Numbers and ranges** | `NumericUpDown` for integers or decimals, `Slider`, `RangeSlider` with two thumbs, `ScrollBar` |
-| **Progress** | `ProgressBar`, `RingProgressBar`, `BusyIndicator` |
+| **Date and time** | `Calendar` with month, year and decade views; `DatePicker`, `TimePicker`, `DateTimePicker`; `DateTimeField` and `DurationField` typed part by part; `Clock` with hands or in figures, `CountdownTimer`, `StopwatchTimer` with laps |
+| **Progress and status** | `ProgressBar`, `RingProgressBar`, `BusyIndicator`; `Badge` with a count or a dot; `StatusBar` |
 | **Lists and trees** | `ListBox` and a virtualized `TreeView`, each with single, multiple or extended selection; `DropDown`; `DataPager` with arrows, page numbers, a page-size picker and a page box |
 | **Menus and pop-ups** | `MenuItem` with nested menus, `ContextMenu`, `ToolTip`, `Popup`, `Expander` |
-| **Color** | `ColorPicker` with RGB, alpha and hex, `ColorPickerButton`, `ColorWheel` |
-| **Images** | `Image`, nine-slice images |
+| **Color** | `ColorPicker` with RGB, alpha and hex, `ColorPickerButton`, `ColorWheel`, `ColorPalette` as in a font color menu |
+| **Images** | `Image`, nine-slice images; `IconPresenter` for an icon of path data, a glyph or an image |
 | **Tiles** | `TilesHost` and `FlipTile`: a board of 3D tiles that tilt toward the pointer and flip on click |
 
 ### Tabs
@@ -120,13 +122,16 @@ An Office-style ribbon:
 - `Window` with its own title bar, caption buttons on the right or on the left, and commands in the title bar.
 - `OverlayWindow`: windows inside a window, for dialogs and tool windows.
 - `SlidePanel`: a panel that slides in over the content from any edge of the window, animated, taking no layout space.
-- Per-monitor DPI.
+- `SplashWindow`: shown at once while the application starts, on a thread of its own, and while it opens a document.
+- Modal dialogs, a limit on how many copies of the application run, per-monitor DPI and each monitor's refresh rate.
 
 ### Layout
 
 - Panels: `Grid` with `GridSplitter`, `StackPanel`, `WrapPanel`, `DockPanel`, `UniformGrid`, `Canvas`, and virtualizing
   panels for long lists.
-- `ScrollViewer`, `Viewbox`, `Border`.
+- `TiledPanel`: tiles in a tree of regions, a new one dragged out of a tile's corner, with the usual layouts
+  ready-made.
+- `ScrollViewer`, `Viewbox`, `Border`, and `RevealDecorator`, which shows a growing part of its child.
 - `ZoomBox`: a zoom and pan viewport - the wheel zooms toward the cursor, dragging pans, and the scale and offset are
   bindable.
 - `RenderTargetPanel` for a [3D scene](#a-3d-scene-in-the-markup).
@@ -135,9 +140,12 @@ An Office-style ribbon:
 
 - Its own font stack: TrueType, OpenType with CFF and CFF2, font collections, WOFF and WOFF2. Glyphs are drawn from
   MSDF atlases, sharp at any scale, with OpenType kerning.
-- `TextBlock`: wrapping, trimming, horizontal and vertical alignment, justification, inline runs, and outlined text.
+- `TextBlock`: wrapping, trimming, horizontal and vertical alignment, justification, and outlined text; rich text of
+  `Bold`, `Italic`, `Underline`, `Span`, `Hyperlink`, `Ruby`, paragraphs and elements inline; text set inside any
+  shape (`Shape`) or flowing round one, and on into another block (`TextBlockOverflow`); `TextOnPath` along a curve.
+- Right-to-left and mixed text, and vertical text.
 - `TextBox`: selection, the clipboard, undo, a placeholder or a floating one, multi-line input, a length limit and a
-  read-only mode.
+  read-only mode; input methods for Chinese, Japanese and Korean.
 
 ## Shapes and vector graphics
 
@@ -202,8 +210,10 @@ The `Adamantium.Navigation` package:
 
 - Keyboard focus with a focus ring and keyboard navigation; key tips in the ribbon.
 - Routed events and behaviors.
-- Drag and drop inside the application and with other applications through Windows drag and drop, with a drag image
-  and an insertion indicator for reordering. Sources and targets are attached in markup.
+- Touch and pen: taps, long presses, pinches, pressure, the pen's eraser and barrel button.
+- Drag and drop inside the application and with other applications, on Windows and on Wayland, with a drag image and
+  an insertion indicator for reordering. Sources and targets are attached in markup.
+- Accessibility: screen readers see the controls through UI Automation on Windows and AT-SPI on Linux.
 
 ## A 3D scene in the markup
 
@@ -229,7 +239,7 @@ scene comes from the engine the interface is drawn with, and its panel is an ele
 | A 3D scene in the window | an engine scene in a `RenderTargetPanel` | your own renderer, through `D3DImage` or `HwndHost` | your own renderer, through GPU interop or `NativeControlHost` |
 | Renderer | its own, on Vulkan | Direct3D 9 | Skia |
 | Docking, ribbon, tab tear-off | included | third-party suites | third-party libraries |
-| Platforms | Windows; macOS and Linux planned | Windows | Windows, macOS, Linux, iOS, Android, browser |
+| Platforms | Windows, Linux (Wayland); macOS planned | Windows | Windows, macOS, Linux, iOS, Android, browser |
 
 ## Tooling
 
@@ -360,10 +370,9 @@ are a complete pair.
 
 Alpha: what is listed above works, and the API will change. Not there yet:
 
-- macOS and Linux - planned. The macOS code exists but has not been built and run recently;
-- accessibility (UI Automation);
-- localization with right-to-left layout;
-- touch and pen input;
+- macOS - planned. Its code exists but has not been built and run recently;
+- X11 - Linux runs on Wayland only;
+- right-to-left layout - mirrored panels; right-to-left text is there;
 - mobile and the browser.
 
 ## Packages
