@@ -29,6 +29,8 @@ renderer as the interface around it.
 - **[Data binding and MVVM](#data-binding-and-mvvm)** - bindings of every kind; view-models with generated properties
   and commands.
 - **[Navigation](#navigation)** - regions, a navigation journal, dialogs and windows driven from view-models.
+- **[Localization](#localization)** - strings in language files with plurals and selections, `{Localize}` in markup,
+  and the language switched while the application runs.
 - **[Input and drag and drop](#input-focus-and-drag-and-drop)** - keyboard focus, touch and pen, input methods, drag
   and drop inside the application and with other applications; accessibility for screen readers.
 - **[A 3D scene in the markup](#a-3d-scene-in-the-markup)** - an engine scene as an element of the tree, with no
@@ -205,6 +207,36 @@ The `Adamantium.Navigation` package:
   navigated to and from, and can refuse to leave.
 - **Dialogs** from view-models, in a window or as an overlay, with results.
 - **Windows and overlays** opened from view-models.
+
+## Localization
+
+- **Language files:** an application's strings live in `.alang` files, one per table and language - `Strings.en.alang`,
+  `Strings.ru.alang`. The build turns each table into a class with a property per phrase and a method per phrase with
+  placeholders, and checks every translation against the base language.
+- **In markup:** `{Localize Strings.Close}`, or `{Localize Strings.PageOf, page={Binding Page}, count=3}` with
+  placeholders filled by bindings. A key or a placeholder the table lacks fails the build.
+- **Plurals and selections:** a phrase that changes with a number, by each language's own plural rules, or with a
+  value - true or false, a member of an enum.
+- **Live switching:** `Languages.Current` changes the language while the application runs; every `{Localize}`, and
+  every binding that writes numbers or dates, follows it. A language file also says how its language writes dates,
+  times and numbers.
+- **Libraries and themes:** an application translates or overrides a library's table with a file of the same name.
+  The themes' own strings come in English and Russian.
+- **Tooling:** the language server completes and checks `.alang` files and `{Localize}`, and adds the strings a
+  translation lacks.
+
+```xml
+<!-- Strings.en.alang -->
+<Language>
+    <Phrase Key="Close" Text="Close"/>
+    <Phrase Key="Files" Count="count" One="{count} file" Other="{count} files"/>
+</Language>
+```
+
+```xml
+<Button Content="{Localize Strings.Close}"/>
+<TextBlock Text="{Localize Strings.Files, count={Binding FileCount}}"/>
+```
 
 ## Input, focus and drag and drop
 
