@@ -378,6 +378,7 @@ Alpha: what is listed above works, and the API will change. Not there yet:
 | `Adamantium.UI.Markup` | The AUML parser and document model |
 | `Adamantium.Navigation` | Navigation, regions and dialogs driven from view-models |
 | `Adamantium.UI.LanguageServer` | The AUML language server, copied to `AumlServer` beside an application that edits AUML |
+| `Adamantium.UI.Automation` | Drives an application in tests: its windows headless in the test's process, or the application itself through its automation agent |
 | `Adamantium.UI.Templates` | The `dotnet new` templates |
 
 All packages share one version and are released together.
