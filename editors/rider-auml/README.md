@@ -6,10 +6,10 @@ server. Built on **LSP4IJ** (installed automatically as a dependency).
 
 ## Prerequisites
 
-- **JDK 21** (already installed).
-- **IntelliJ IDEA Community Edition** — recommended for building (it provides Gradle and the
-  wrapper, and lets you run the `buildPlugin` task). You can also build from the CLI if you have
-  Gradle.
+- **A JDK** to start Gradle, of any recent version. The build compiles with JDK 21 and downloads it
+  when the machine has none (Gradle's toolchain resolver).
+- **IntelliJ IDEA Community Edition** — one way to build (it lets you run the `buildPlugin` task);
+  `./gradlew buildPlugin` from the CLI works as well - the wrapper brings Gradle itself.
 - **LSP4IJ** plugin installed in Rider (already done) — needed at runtime; the build also
   references it.
 - **.NET 10 SDK** on PATH — `buildPlugin` publishes the language server automatically
