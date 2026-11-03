@@ -202,13 +202,13 @@ public abstract class WindowRendererBase : IWindowRenderer
 
     private bool WantsAlpha(PresenterType kind) => Window.UseTransparentComposition ||
                                                    kind == PresenterType.Swapchain &&
-                                                   Window is WindowBase { DrawnOpacity: < 1f } &&
+                                                   Window.DrawnOpacity < 1f &&
                                                    SurfaceComposesWithAlpha();
 
     public void DrawWindowOpacity()
     {
-        if (Window is not WindowBase { DrawnOpacity: var opacity and < 1f } ||
-            Presenter is not SwapChainGraphicsPresenter { ComposesWithAlpha: true } ||
+        var opacity = Window?.DrawnOpacity ?? 1f;
+        if (opacity >= 1f || Presenter is not SwapChainGraphicsPresenter { ComposesWithAlpha: true } ||
             GraphicsDevice is not Adamantium.Graphics.GraphicsDevice gd || gd.CurrentViewports.Length == 0)
         {
             return;

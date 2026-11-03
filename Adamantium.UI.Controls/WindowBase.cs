@@ -42,9 +42,7 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
     /// <summary>Whether the window can be shown from frames given as pixels.</summary>
     internal bool ComposesFromPixels => WindowWorkerService?.ComposesFromPixels == true;
 
-    /// <summary>The opacity each frame is drawn with: <see cref="WindowOpacity"/> where the desktop does not lay the
-    /// window down with it, else 1. Read on the render thread.</summary>
-    internal float DrawnOpacity => _drawnOpacity;
+    public float DrawnOpacity => _drawnOpacity;
 
     private volatile float _drawnOpacity = 1f;
 

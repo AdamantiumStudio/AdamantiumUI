@@ -107,6 +107,10 @@ public interface IWindow : IRootVisualComponent, IContentControl
     /// <summary>Uniform translucency of the whole window, 0..1.</summary>
     double WindowOpacity { get; set; }
 
+    /// <summary>The opacity each frame is drawn with: <see cref="WindowOpacity"/> where the desktop does not lay the
+    /// window down with it, else 1. Readable from any thread.</summary>
+    float DrawnOpacity { get; }
+
     /// <summary>Whether the window has the OS frame around it - the ambient drop shadow and the 1px accent outline the
     /// desktop draws. Its OWN property because it is its own decision: a window can be see-through and still framed, or
     /// opaque and frameless. Tying it to how the window is composed makes one of those impossible to ask for.</summary>
