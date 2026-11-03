@@ -9,7 +9,8 @@
         <Nullable>disable</Nullable>
         <AssemblyName>adam-auto</AssemblyName>
         <RootNamespace>Adamantium.UI.Automation.Cli</RootNamespace>
-        <IsPackable>true</IsPackable>
+        <!-- Not published yet: adam-auto's commands are still ours to change. -->
+        <IsPackable>false</IsPackable>
         <PackAsTool>true</PackAsTool>
         <ToolCommandName>adam-auto</ToolCommandName>
         <PackageId>Adamantium.UI.Automation.Cli</PackageId>

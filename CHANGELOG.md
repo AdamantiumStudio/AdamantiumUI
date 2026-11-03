@@ -5,6 +5,8 @@ All packages share one version.
 
 ## Unreleased
 
+## 0.1.0-alpha.2 - 2026-11-03
+
 ### Added
 
 - Text set inside any shape: `TextBlock.Shape` (a geometry in the block's own coordinates) fills its closed figures
@@ -1856,8 +1858,8 @@ All packages share one version.
   (from 0, `[-1]` the last), and `parent`, `next` and `previous` step from the element before -
   `id=Orders>type=DataItem[2]/name=Delete`, `id=Cut/next`. In code: `By.At`, `By.Parent` / `Next` / `Previous`,
   `AutomationElement.Child`, `At`, `Parent()`, `Next()`, `Previous()`.
-- `adam-auto` is a package of its own, `Adamantium.UI.Automation.Cli`, installed as a .NET tool
-  (`dotnet tool install -g Adamantium.UI.Automation.Cli`); `adam-auto start --exe <path>` starts an application of yours.
+- `adam-auto` is a .NET tool of its own, `Adamantium.UI.Automation.Cli`; `adam-auto start --exe <path>` starts an
+  application of yours. Not published in this version - built from the repository.
 - `<AdamantiumRequireAutomationId>true</AdamantiumRequireAutomationId>` in a project makes a build warning (AUI011) of
   every button, field, list, slider... in its markup that has neither `AutomationProperties.AutomationId` nor `x:Name`
   to be found by. Controls in templates are left out. Off unless set.

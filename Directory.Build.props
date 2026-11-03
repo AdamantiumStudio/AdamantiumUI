@@ -25,7 +25,7 @@
        says. An empty suffix is a stable release. -->
   <PropertyGroup>
     <VersionPrefix>0.1.0</VersionPrefix>
-    <VersionSuffix>alpha</VersionSuffix>
+    <VersionSuffix>alpha.2</VersionSuffix>
   </PropertyGroup>
 
   <!-- Off by default, on per project: tests, the sandbox and the editor tools are not products, and a published version
@@ -63,7 +63,7 @@
        this version. -p:UseEngineSource=false builds against the packages even with the engine beside. -->
   <PropertyGroup>
     <UseEngineSource Condition="'$(UseEngineSource)' == ''">$([System.IO.Directory]::Exists('$(AdamantiumEngineDir)'))</UseEngineSource>
-    <AdamantiumEngineVersion>0.1.0-alpha.4</AdamantiumEngineVersion>
+    <AdamantiumEngineVersion>0.1.0-alpha.5</AdamantiumEngineVersion>
   </PropertyGroup>
 
 </Project>
