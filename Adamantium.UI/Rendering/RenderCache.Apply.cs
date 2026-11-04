@@ -10,10 +10,6 @@ public partial class RenderCache
     // WarmTextAtlases: one batched glyph rasterization per atlas.
     private readonly Dictionary<Adamantium.Graphics.Fonts.FontAtlas, List<(Adamantium.Fonts.IFont Font, Adamantium.Fonts.Glyph Glyph)>> _warmGlyphs = new();
 
-    private readonly System.Runtime.CompilerServices.ConditionalWeakTable<Adamantium.Graphics.Fonts.TextLayout, WarmedText> _warmed = new();
-
-    private sealed record WarmedText(Adamantium.Graphics.Fonts.FontAtlas Atlas, int Revision);
-
     private readonly List<ControlGroup> _pendingInserts = new();   // ApplyStructural: groups to place, merged into the order once
     private readonly HashSet<ControlGroup> _pendingSet = new();
     private readonly List<ControlGroup> _mergedGroups = new();
@@ -77,9 +73,9 @@ public partial class RenderCache
             var atlas = layout.EnsureAtlas(device);
 
             // Asked for already, as it is now.
-            if (_warmed.TryGetValue(layout, out var warmed) && warmed.Atlas == atlas && warmed.Revision == layout.Revision)
+            if (ReferenceEquals(layout.GlyphsAsked.Atlas, atlas) && layout.GlyphsAsked.Revision == layout.Revision)
                 continue;
-            _warmed.AddOrUpdate(layout, new WarmedText(atlas, layout.Revision));
+            layout.GlyphsAsked = (atlas, layout.Revision);
 
             if (!_warmGlyphs.TryGetValue(atlas, out var glyphs))
             {

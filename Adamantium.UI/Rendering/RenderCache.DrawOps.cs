@@ -741,6 +741,9 @@ public partial class RenderCache
     private readonly List<int> _pairing = new();
     private readonly List<bool> _paired = new();
     private readonly List<int> _nextWithSameContent = new();
+    private readonly List<int> _free = new();
+    private readonly Dictionary<Type, Queue<int>> _freeOfKind = new();
+    private readonly HashSet<Type> _kindsGathered = new();
     private readonly List<IRenderUnit> _rebuilt = new();
     private readonly Dictionary<object, int> _heldByContent = new(ReferenceEqualityComparer.Instance);
     private readonly HashSet<object> _wantedContent = new(ReferenceEqualityComparer.Instance);
@@ -799,14 +802,61 @@ public partial class RenderCache
             if (held >= 0) _paired[held] = true;
         }
 
+        // By place - a shape whose geometry changes from frame to frame keeps its unit and rewrites its buffers - while the
+        // list keeps its length; once draws come and go, the same place holds another draw.
+        var samePlaces = units.Count == commands.Count;
         for (var i = 0; i < commands.Count && i < units.Count; i++)
         {
-            if (_pairing[i] >= 0 || _paired[i]) continue;
+            if (_pairing[i] >= 0 || _paired[i] || !units[i].Match(commands[i])) continue;
+            if (!samePlaces && ContentOf(commands[i]) != null) continue;
             if (units[i].Content is { } content && _wantedContent.Contains(content)) continue;
             _pairing[i] = i;
             _paired[i] = true;
         }
 
+        // The rest that draw no content of their own take a free unit of their kind, in order: one draw more or fewer
+        // early in the list - a label appearing - shifts every draw after it, and pairing by place alone then met a text
+        // where a rectangle had been and built every one of them again. A draw of content of its own gets a unit of its
+        // own instead: rebuilding another's buffers for it costs more than making new ones.
+        _free.Clear();
+        for (var i = 0; i < units.Count; i++)
+        {
+            if (_paired[i] || units[i].Content is { } content && _wantedContent.Contains(content)) continue;
+            _free.Add(i);
+        }
+
+        // The free units of a kind are gathered the first time a draw of that kind asks - one pass over them per kind,
+        // not one per draw.
+        for (var i = 0; i < commands.Count && _free.Count > 0; i++)
+        {
+            if (_pairing[i] >= 0 || ContentOf(commands[i]) != null) continue;
+            var kind = commands[i].Payload.GetType();
+            if (!_freeOfKind.TryGetValue(kind, out var ofKind))
+            {
+                ofKind = new Queue<int>();
+                _freeOfKind[kind] = ofKind;
+            }
+
+            if (_kindsGathered.Add(kind))
+            {
+                ofKind.Clear();
+                foreach (var f in _free)
+                {
+                    if (units[f].Match(commands[i])) ofKind.Enqueue(f);
+                }
+            }
+
+            while (ofKind.TryDequeue(out var unit))
+            {
+                if (_paired[unit]) continue;
+                _pairing[i] = unit;
+                _paired[unit] = true;
+                break;
+            }
+        }
+
+        _free.Clear();
+        _kindsGathered.Clear();
         _heldByContent.Clear();
         _wantedContent.Clear();
     }

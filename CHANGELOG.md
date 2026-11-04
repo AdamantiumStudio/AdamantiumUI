@@ -11,6 +11,24 @@ All packages share one version.
 
 ### Fixed
 
+- A component drawing thousands of shapes - a map zoomed - is applied in about half the time:
+  - a rectangle filled with an image or a nine-slice brush, drawn by the texture batch, no longer also builds
+    machinery of its own that is never drawn;
+  - when draws come and go early in a component's list, the rest keep units of their kind rather than meeting another
+    kind at their old place and building again; a draw of a geometry of its own gets a new unit instead of rewriting
+    another's buffers, which cost more than making new ones;
+  - a stroke's contours laid out into batches on the worker that tessellated it are uploaded as they are, not laid
+    out again on the render thread;
+  - a text whose glyphs were asked of its atlas is not asked again while its atlas and revision stay the same, and
+    finding that out costs a comparison per text, not a lookup in a table.
+
+- A rectangle, an ellipse or a regular polygon filled with an image and given an outline - a pen, or a rectangle's
+  border - draws the outline: the textured batch drew the fill alone and dropped it. Such shapes draw themselves now.
+
+- A rectangle that leaves a batch after the batch once turned it away - a rotated parent - builds its stroke and edge
+  smoothing again, not only its body; and a rectangle with a border drawn outside the batch frame after frame no
+  longer leaks a ring of GPU buffers each time.
+
 - A `MeshGeometry` and a `PolylineGeometry` work out their bounds without copying their points into a list - twice, at
   making and at processing - and a mesh processed copies its positions once; `Rect.Merge` and `Rect.FromPoints` of an
   array, a list or a collection allocate nothing. A map tile's areas allocated hundreds of megabytes the more for it.

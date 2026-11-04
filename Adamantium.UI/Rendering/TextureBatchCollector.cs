@@ -154,7 +154,11 @@ internal sealed class TextureBatchCollector : BrushSdfCollector<TextureItem>
 
     /// <summary>Whether this fill belongs to the textured batch at all. STATIC because it is asked before the collector
     /// exists: one is built on the first textured fill a cache meets, and most caches never meet one.</summary>
-    public static bool WantsBatch(RectanglePayload p) => Enabled && p.Brush is TileBrush or NineSliceBrush;
+    public static bool WantsBatch(RectanglePayload p) =>
+        Enabled && p.Brush is TileBrush or NineSliceBrush && !p.HasFrame && DrawsNoOutline(p.Pen);
+
+    // The batch samples the fill and nothing else: a shape with an outline draws itself, outline and all.
+    private static bool DrawsNoOutline(Pen pen) => pen == null || pen.Brush == null || pen.Thickness <= 0;
 
     public bool CanBatch(RectanglePayload p) => WantsBatch(p);
 
@@ -238,7 +242,7 @@ internal sealed class TextureBatchCollector : BrushSdfCollector<TextureItem>
     {
         if (!Enabled) return false;
         if (p.Brush is not TileBrush) return false;
-        if (!RectBatchCollector.IsPenBatchable(p.Pen)) return false;
+        if (!DrawsNoOutline(p.Pen)) return false;
         return p.StartAngle <= 0.0 && p.SweepAngle >= 360.0;
     }
 
@@ -277,8 +281,7 @@ internal sealed class TextureBatchCollector : BrushSdfCollector<TextureItem>
     {
         if (!Enabled) return false;
         if (p.Brush is not TileBrush || p.Brush is NineSliceBrush) return false;
-        if (!RectBatchCollector.IsPenBatchable(p.Pen)) return false;
-        return !RegularPolygonCollector.NeedsArcLength(p.Pen);
+        return DrawsNoOutline(p.Pen);
     }
 
     public bool CanBatchPolygon(RegularPolygonPayload p) => WantsBatchPolygon(p);

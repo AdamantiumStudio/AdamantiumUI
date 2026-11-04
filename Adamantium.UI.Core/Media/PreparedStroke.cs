@@ -11,10 +11,11 @@ namespace Adamantium.UI.Core.Media;
 /// </summary>
 internal sealed class PreparedStroke
 {
-    private PreparedStroke(int version, List<(Vector2<double>[] Points, bool IsClosed)> contours)
+    private PreparedStroke(int version, List<(Vector2<double>[] Points, bool IsClosed)> contours, bool layOut)
     {
         Version = version;
         Contours = contours;
+        Batches = layOut ? PreparedStrokeBatch.Of(contours) : null;
     }
 
     public int Version { get; }
@@ -22,7 +23,12 @@ internal sealed class PreparedStroke
     /// <summary>Two points or more each; empty for a geometry with nothing to stroke.</summary>
     public List<(Vector2<double>[] Points, bool IsClosed)> Contours { get; }
 
-    public static PreparedStroke Of(Geometry geometry, int version)
+    /// <summary>The contours laid out for a continuous stroke, run by run; null when not laid out ahead.</summary>
+    public PreparedStrokeBatch[] Batches { get; }
+
+    /// <summary>The stroke of <paramref name="geometry"/>; <paramref name="layOut"/> lays its batches out too - for a
+    /// geometry processed on a worker and kept to be drawn.</summary>
+    public static PreparedStroke Of(Geometry geometry, int version, bool layOut)
     {
         var contours = new List<(Vector2<double>[] Points, bool IsClosed)>();
         if (geometry.Mesh is { } mesh)
@@ -42,7 +48,7 @@ internal sealed class PreparedStroke
             }
         }
 
-        return new PreparedStroke(version, contours);
+        return new PreparedStroke(version, contours, layOut);
     }
 
     private static Vector2<double>[] WithoutRepeats(Vector2<double>[] points, bool closed)

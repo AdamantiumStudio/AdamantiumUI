@@ -123,9 +123,10 @@ public abstract class RenderUnit<TPayload> : DeferredDisposableObject, IRenderUn
         // The GPU path handles any solid-color stroke: one OR many contours (combined/group geometry, shapes with
         // holes), open or closed, with dashes/trim and every cap/join - all as real geometry. Only a non-solid brush
         // (e.g. a gradient stroke) still falls back to the CPU StrokeGeometry path.
-        if (UseGpuStroke && StrokeEffect != null && TryGetSolidContours(pen, geometry, out var contours))
+        if (UseGpuStroke && StrokeEffect != null && TryGetSolidContours(pen, geometry, out var prepared))
         {
-            StrokeRenderer = new GpuStrokeRenderComponent(GraphicsDevice, UIBasicEffect, StrokeEffect, contours, pen, BufferManager);
+            StrokeRenderer = new GpuStrokeRenderComponent(GraphicsDevice, UIBasicEffect, StrokeEffect, prepared.Contours,
+                prepared.Batches, pen, BufferManager);
         }
         else
         {
@@ -137,7 +138,7 @@ public abstract class RenderUnit<TPayload> : DeferredDisposableObject, IRenderUn
 
     // Every outline contour of a solid-color stroke (combined/group geometry yields several), each as its raw points
     // plus whether it is a closed loop. False (CPU fallback) only for a non-solid brush or a geometry with no contour.
-    private static bool TryGetSolidContours(Pen pen, Geometry geometry, out List<(Adamantium.Mathematics.Vector2<double>[] Points, bool IsClosed)> contours)
+    private static bool TryGetSolidContours(Pen pen, Geometry geometry, out PreparedStroke contours)
     {
         contours = null;
         if (pen.Brush is not SolidColorBrush) return false;
@@ -146,8 +147,8 @@ public abstract class RenderUnit<TPayload> : DeferredDisposableObject, IRenderUn
         if (mesh == null || mesh.Contours.Count == 0) return false;
 
         // Made where the geometry was processed - a map tile's lines on a worker - or here, for one that was not.
-        var prepared = geometry.StrokeForDrawing.Contours;
-        if (prepared.Count == 0) return false;
+        var prepared = geometry.StrokeForDrawing;
+        if (prepared.Contours.Count == 0) return false;
         contours = prepared;
         return true;
     }
@@ -159,7 +160,7 @@ public abstract class RenderUnit<TPayload> : DeferredDisposableObject, IRenderUn
     {
         if (pen == null || StrokeRenderer is not GpuStrokeRenderComponent gpuStroke) return false;
         if (!TryGetSolidContours(pen, geometry, out var contours)) return false;
-        if (!gpuStroke.TryUpdateGeometry(contours, pen)) return false;
+        if (!gpuStroke.TryUpdateGeometry(contours.Contours, pen)) return false;
 
         gpuStroke.RenderData = DrawCommand.RenderData;
         return true;
@@ -584,10 +585,12 @@ public class RectangleRenderUnit : RenderUnit<RectanglePayload>
     // gradient + self-AAs. Mirrors GradientRectCollector.CanBatch.
     private static bool IsGradientBatchable(RectanglePayload p) => GradientRectCollector.WantsBatch(p);
 
+    private static bool IsTexBatchable(RectanglePayload p) => TextureBatchCollector.WantsBatch(p);
+
     public RectangleRenderUnit(IDrawCommand command, RenderUnitContext context) : base(command, context)
     {
-        // Batchable rects (solid or gradient) get no per-unit machinery; a rejected one builds it lazily (EnsureMachinery).
-        if (IsSdfBatchable(Payload) || IsGradientBatchable(Payload)) return;
+        // Batchable rects (solid, gradient or textured) get no per-unit machinery; a rejected one builds it lazily (EnsureMachinery).
+        if (IsSdfBatchable(Payload) || IsGradientBatchable(Payload) || IsTexBatchable(Payload)) return;
         BuildMachinery(Payload);
     }
 
@@ -646,6 +649,8 @@ public class RectangleRenderUnit : RenderUnit<RectanglePayload>
     // The ring itself: the outline minus what the fill occupies. Only for the fallback - the batch needs no geometry.
     private void BuildFrame(RectanglePayload payload)
     {
+        FrameRenderer?.DeferDispose();
+        FrameRenderer = null;
         if (!payload.HasFrame || payload.BorderBrush is null) return;
 
         var ring = new CombinedGeometry
@@ -700,7 +705,11 @@ public class RectangleRenderUnit : RenderUnit<RectanglePayload>
         GeometryRenderer.Owner = DrawCommand.Component;
         BuildFrame(Payload);
         _machineryStale = false;
+        _bodyOnly = true;
     }
+
+    // The body EnsureMachinery built - no fringe, no stroke: a rect that stops being batchable builds all of it.
+    private bool _bodyOnly;
 
     public override void UpdateWithDrawCommand(IDrawCommand drawCommand)
     {
@@ -708,7 +717,7 @@ public class RectangleRenderUnit : RenderUnit<RectanglePayload>
 
         // Batchable rect: just repoint, even if a body exists (a full buffer once forced one); the body is kept but marked
         // stale for EnsureMachinery.
-        if (IsSdfBatchable(inputPayload) || IsGradientBatchable(inputPayload))
+        if (IsSdfBatchable(inputPayload) || IsGradientBatchable(inputPayload) || IsTexBatchable(inputPayload))
         {
             DrawCommand = drawCommand;
             Payload = inputPayload;
@@ -720,11 +729,14 @@ public class RectangleRenderUnit : RenderUnit<RectanglePayload>
             return;
         }
 
-        // Not batchable and no body yet: build one.
-        if (GeometryRenderer == null)
+        // Not batchable and no body yet, or only the body a rejected frame built: build all of it.
+        if (GeometryRenderer == null || _bodyOnly)
         {
             DrawCommand = drawCommand;
             Payload = inputPayload;
+            GeometryRenderer?.DeferDispose();
+            _bodyOnly = false;
+            _machineryStale = false;
             BuildMachinery(inputPayload);
             return;
         }
@@ -750,7 +762,7 @@ public class RectangleRenderUnit : RenderUnit<RectanglePayload>
 
         // Fringe: skip for a batchable rect (the batch self-AAs, and a per-tile fringe rebuilt on resize is the OOM);
         // drop a stale one. Otherwise follow the fill.
-        if (IsSdfBatchable(inputPayload) || IsGradientBatchable(inputPayload))
+        if (IsSdfBatchable(inputPayload) || IsGradientBatchable(inputPayload) || IsTexBatchable(inputPayload))
         {
             FillFringeRenderer?.DeferDispose();
             FillFringeRenderer = null;
