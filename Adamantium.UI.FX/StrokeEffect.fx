@@ -560,7 +560,8 @@ struct PSInput
 // is ends of other shapes; flat-ended dashes are this. An odd pattern is taken twice, its runs on and off in turn.
 uint DashMask;
 
-float DashCoverage(float arc)
+// `feather` is a pixel's length along the contour, in local units; 0 gives hard ends.
+float DashCoverage(float arc, float feather)
 {
     float* pattern = Pattern;
     uint runs = PatternCount % 2u == 1u ? PatternCount * 2u : PatternCount;
@@ -588,14 +589,15 @@ float DashCoverage(float arc)
         start = end;
     }
 
-    return Fringe > 0.0 ? saturate(sd / Fringe + 0.5) : (sd >= 0.0 ? 1.0 : 0.0);
+    return feather > 0.0 ? saturate(sd / feather + 0.5) : (sd >= 0.0 ? 1.0 : 0.0);
 }
 
 // Whether a dash covers `arc` and a feather's width either side of it in full.
 bool DashRunsThrough(float arc)
 {
     float reach = max(Fringe, 1e-3);
-    return DashCoverage(arc - reach) >= 1.0 && DashCoverage(arc) >= 1.0 && DashCoverage(arc + reach) >= 1.0;
+    return DashCoverage(arc - reach, Fringe) >= 1.0 && DashCoverage(arc, Fringe) >= 1.0 &&
+        DashCoverage(arc + reach, Fringe) >= 1.0;
 }
 
 [shader("vertex")]
@@ -791,8 +793,8 @@ float CapSd(uint cap, float u, float v, float arc, float h, float hBite)
     return u;                                                     // flat
 }
 
-// Analytic AA coverage from the nearest boundary (edges and caps); Fringe == 0 gives hard edges. Shared by all three
-// passes so their depths match bit for bit.
+// Analytic AA coverage from the nearest boundary (edges and caps), feathered over one pixel as wide as it is here;
+// Fringe == 0 gives hard edges. Shared by all three passes so their depths match bit for bit.
 float StrokeCoverage(PSInput input)
 {
     uint caps = uint(round(input.Cap1.x));
@@ -801,8 +803,12 @@ float StrokeCoverage(PSInput input)
     sd = min(sd, CapSd(caps % 8u, input.Cap0.y, input.Cap0.z, input.Cap0.w, HalfThickness, hBite));
     sd = min(sd, CapSd(caps / 8u, input.Cap1.y, input.Cap1.z, input.Cap1.w, HalfThickness, hBite));
 
-    float coverage = Fringe > 0.0 ? saturate(sd / Fringe + 0.5) : (sd >= 0.0 ? 1.0 : 0.0);
-    return DashMask != 0u ? coverage * DashCoverage(input.Arc) : coverage;
+    // A pixel's width across the stroke and along it, in local units, where this pixel is - read from the screen, not
+    // given: under a perspective it is not the same from one end of the stroke to the other.
+    float across = length(float2(ddx(input.Cap0.x), ddy(input.Cap0.x)));
+    float along = length(float2(ddx(input.Arc), ddy(input.Arc)));
+    float coverage = Fringe > 0.0 ? saturate(sd / max(across, 1e-6) + 0.5) : (sd >= 0.0 ? 1.0 : 0.0);
+    return DashMask != 0u ? coverage * DashCoverage(input.Arc, Fringe > 0.0 ? along : 0.0) : coverage;
 }
 
 // Depth = coverage in the high 8 bits and piece id in the low 16, exact in float32, so max coverage wins and ties never
