@@ -690,16 +690,63 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
         _ => 0u
     };
 
-    // AA feather width in geometry-LOCAL units (~1 device px). The ribbon is widened/feathered in local space and only
-    // the viewport applies the designer zoom, so divide 1 device px by the local->device scale (transform area scale *
-    // RenderScale) - keeps the AA ~1 device px at any zoom. Mirrors GpuFillRenderComponent.ComputeFringeWidth.
+    // How far the ribbon is widened for the AA feather, in geometry-LOCAL units: about one device pixel. The pixel shader
+    // feathers by the true width of a pixel where it draws (screen derivatives); this only leaves it room. Under a flat
+    // transform a pixel is as wide everywhere: one over the area scale. Under a perspective one it is widest where the
+    // stroke lies farthest, so the room is taken there, from the projection's own derivatives at the corners of what the
+    // stroke covers - the top-left 2x2 of a projective matrix is no scale at all, and passing through zero at some lean
+    // it widened the feather across the whole stroke.
     private float ComputeFringe()
     {
         if (!AnalyticAa.Enabled) return 0f;   // AA off: no feather - the ribbon stays a hard +/-HalfThickness band
         var t = RenderData.TransformMatrix;
-        var worldScale = (float)System.Math.Sqrt(System.Math.Abs(t.M11 * t.M22 - t.M12 * t.M21));
+        var worldScale = t.M14 == 0f && t.M24 == 0f
+            ? MathF.Sqrt(MathF.Abs(t.M11 * t.M22 - t.M12 * t.M21))
+            : LeastProjectedScale(t);
         var deviceScale = worldScale * (float)RenderData.RenderScale;
         return deviceScale > 1e-4f ? 1.0f / deviceScale : 1.0f;
+    }
+
+    // The least local->window scale over the corners of the contours' extent, w-divided as the rasterizer divides.
+    private float LeastProjectedScale(Matrix4x4F t)
+    {
+        float minX = float.MaxValue, minY = float.MaxValue, maxX = float.MinValue, maxY = float.MinValue;
+        foreach (var c in _contours)
+        {
+            for (var i = 0; i + 1 < c.PointsData.Length; i += 2)
+            {
+                minX = MathF.Min(minX, c.PointsData[i]);
+                maxX = MathF.Max(maxX, c.PointsData[i]);
+                minY = MathF.Min(minY, c.PointsData[i + 1]);
+                maxY = MathF.Max(maxY, c.PointsData[i + 1]);
+            }
+        }
+
+        if (minX > maxX) return ProjectedScaleAt(t, 0f, 0f);
+
+        var least = float.MaxValue;
+        foreach (var (x, y) in (ReadOnlySpan<(float, float)>)[(minX, minY), (maxX, minY), (minX, maxY), (maxX, maxY)])
+        {
+            var scale = ProjectedScaleAt(t, x, y);
+            if (scale > 0f) least = MathF.Min(least, scale);
+        }
+
+        return least == float.MaxValue ? 0f : least;
+    }
+
+    // The area scale of the projective map at (x, y): the determinant of its derivatives after the divide by w; 0 behind
+    // the eye.
+    internal static float ProjectedScaleAt(Matrix4x4F t, float x, float y)
+    {
+        var w = x * t.M14 + y * t.M24 + t.M44;
+        if (!(w > 1e-6f)) return 0f;
+        var sx = (x * t.M11 + y * t.M21 + t.M41) / w;
+        var sy = (x * t.M12 + y * t.M22 + t.M42) / w;
+        var dxdx = (t.M11 - sx * t.M14) / w;
+        var dxdy = (t.M21 - sx * t.M24) / w;
+        var dydx = (t.M12 - sy * t.M14) / w;
+        var dydy = (t.M22 - sy * t.M24) / w;
+        return MathF.Sqrt(MathF.Abs(dxdx * dydy - dxdy * dydx));
     }
 
     // Whether the cut drawn scaled to this width keeps a flat end's feather within a quarter of a pixel.
@@ -929,8 +976,11 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
         float clipMinX = float.MaxValue, clipMinY = float.MaxValue, clipMaxX = float.MinValue, clipMaxY = float.MinValue;
         foreach (var (x, y) in new[] { (minX, minY), (maxX, minY), (minX, maxY), (maxX, maxY) })
         {
-            var cx = x * m.M11 + y * m.M21 + m.M41;
-            var cy = x * m.M12 + y * m.M22 + m.M42;
+            // A perspective puts depth in w; a corner behind the eye leaves no bounds to trust.
+            var w = x * m.M14 + y * m.M24 + m.M44;
+            if (!(w > 1e-6f)) return false;
+            var cx = (x * m.M11 + y * m.M21 + m.M41) / w;
+            var cy = (x * m.M12 + y * m.M22 + m.M42) / w;
             if (cx < clipMinX) clipMinX = cx;
             if (cx > clipMaxX) clipMaxX = cx;
             if (cy < clipMinY) clipMinY = cy;

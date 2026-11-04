@@ -7,6 +7,12 @@ All packages share one version.
 
 ### Fixed
 
+- A stroke under a perspective - a leaned map's roads - is no longer blurred at some lean: its AA feather was taken
+  from the top-left 2x2 of the projective matrix, which is no scale and passed through zero around 47 degrees, so the
+  feather spread across the whole stroke. The stroke's pixel shader now feathers by the width of a pixel where it
+  draws, read from the screen; the room the ribbon is widened by is taken from the projection's own derivatives. The
+  bounds of a translucent stroke under a perspective are divided by w as well.
+
 - A frame in which more new elements appear than the transform table's buffer was sized for at the frame's start - the
   first view of a map full of labels - no longer draws them with matrices read past that buffer: the buffer grows
   within the frame. That frame showed blank text, missing fills and triangles stretched across the window.
