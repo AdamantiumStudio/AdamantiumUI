@@ -114,10 +114,11 @@ public class MeshGeometry : Geometry
     public override void RecalculateBounds()
     {
         _boundsStale = false;
-        var points = new List<Vector2<double>>();
+        var bounds = Rect.Empty;
+        var any = false;
         if (Positions != null)
         {
-            points.AddRange(Positions);
+            Rect.Include(ref bounds, ref any, Positions);
         }
 
         if (Boundary != null)
@@ -126,22 +127,18 @@ public class MeshGeometry : Geometry
             {
                 if (ring != null)
                 {
-                    points.AddRange(ring);
+                    Rect.Include(ref bounds, ref any, ring);
                 }
             }
         }
 
-        _bounds = points.Count > 0 ? Rect.FromPoints(points) : Rect.Empty;
-        if (Transform != null && points.Count > 0)
-        {
-            _bounds = _bounds.TransformToAABB(Transform.Matrix);
-        }
+        _bounds = any && Transform != null ? bounds.TransformToAABB(Transform.Matrix) : bounds;
     }
 
     // One snapshot of each collection: what is checked is what is drawn, even if a collection changes meanwhile.
     protected internal override void ProcessGeometryCore(GeometryType geometryType)
     {
-        var positions = Positions?.ToArray();
+        var positions = Corners(Positions);
         var indices = TriangleIndices?.ToArray();
         var rings = Boundary?.Select(ring => ring?.ToArray()).ToArray();
         _hasBoundary = false;
@@ -169,7 +166,27 @@ public class MeshGeometry : Geometry
         }
     }
 
-    private static bool IsDrawable(Vector2<double>[] positions, int[] indices)
+    private static Vector3<double>[] Corners(PointsCollection positions)
+    {
+        if (positions == null)
+        {
+            return null;
+        }
+
+        lock (positions.SyncRoot)
+        {
+            var points = positions.AsSpan();
+            var corners = new Vector3<double>[points.Length];
+            for (var i = 0; i < points.Length; i++)
+            {
+                corners[i] = (Vector3<double>)points[i];
+            }
+
+            return corners;
+        }
+    }
+
+    private static bool IsDrawable(Vector3<double>[] positions, int[] indices)
     {
         if (positions is not { Length: >= 3 } || indices is not { Length: >= 3 } || indices.Length % 3 != 0)
         {

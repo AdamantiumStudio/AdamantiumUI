@@ -1,4 +1,6 @@
 ﻿using System.Globalization;
+using System.Runtime.InteropServices;
+using Adamantium.Core.Collections;
 using Adamantium.Core.TypeParsing;
 using Adamantium.Mathematics;
 using Adamantium.UI.Core.TypeParsers;
@@ -356,9 +358,8 @@ public struct Rect : IEquatable<Rect>
 
    public Rect Merge(Rect rect)
    {
-      var points = GetPoints();
-      points.AddRange(rect.GetPoints());
-      return FromPoints(points);
+      ReadOnlySpan<Vector2<double>> corners = [Location, BottomRight, rect.Location, rect.BottomRight];
+      return FromPoints(corners);
    }
 
    public List<Vector2<double>> GetPoints()
@@ -436,42 +437,85 @@ public struct Rect : IEquatable<Rect>
    {
       ArgumentNullException.ThrowIfNull(inPoints);
 
-      var points = inPoints as Vector2<double>[] ?? inPoints.ToArray();
-      
-      if (points.Length == 0)
+      switch (inPoints)
       {
-         return Rect.Empty;
+         case Vector2<double>[] array:
+            return FromPoints(array.AsSpan());
+         case AdamantiumCollection<Vector2<double>> collection:
+            lock (collection.SyncRoot)
+            {
+               return FromPoints(collection.AsSpan());
+            }
+         case List<Vector2<double>> list:
+            return FromPoints(CollectionsMarshal.AsSpan(list));
       }
 
-      var minimum = new Vector2<double>(float.MaxValue);
-      var maximum = new Vector2<double>(float.MinValue);
+      var any = false;
+      var minimum = new Vector2<double>(double.MaxValue);
+      var maximum = new Vector2<double>(double.MinValue);
+      foreach (var point in inPoints)
+      {
+         minimum = Vector2<double>.Min(minimum, point);
+         maximum = Vector2<double>.Max(maximum, point);
+         any = true;
+      }
 
-      for (int i = 0; i < points.Length; ++i)
+      return any ? new Rect(minimum.X, minimum.Y, maximum.X - minimum.X, maximum.Y - minimum.Y) : Empty;
+   }
+
+   /// <summary>Grows <paramref name="bounds"/> to hold <paramref name="points"/>; <paramref name="any"/> tells whether
+   /// it holds any point yet, and becomes true once it does.</summary>
+   internal static void Include(ref Rect bounds, ref bool any, AdamantiumCollection<Vector2<double>> points)
+   {
+      Rect box;
+      lock (points.SyncRoot)
+      {
+         if (points.Count == 0)
+         {
+            return;
+         }
+
+         box = FromPoints(points.AsSpan());
+      }
+
+      bounds = any ? bounds.Merge(box) : box;
+      any = true;
+   }
+
+   /// <summary>The smallest rectangle holding <paramref name="points"/>; empty for none.</summary>
+   public static Rect FromPoints(ReadOnlySpan<Vector2<double>> points)
+   {
+      if (points.Length == 0)
+      {
+         return Empty;
+      }
+
+      var minimum = points[0];
+      var maximum = points[0];
+      for (var i = 1; i < points.Length; i++)
       {
          minimum = Vector2<double>.Min(minimum, points[i]);
          maximum = Vector2<double>.Max(maximum, points[i]);
       }
 
-      var rect = maximum - minimum;
-      return new Rect(minimum.X, minimum.Y, rect.X, rect.Y);
+      return new Rect(minimum.X, minimum.Y, maximum.X - minimum.X, maximum.Y - minimum.Y);
    }
       
    public static Rect FromPoints(IEnumerable<Vector3<double>> inPoints)
    {
       ArgumentNullException.ThrowIfNull(inPoints);
 
-      var points = inPoints as Vector3<double>[] ?? inPoints.ToArray();
+      var any = false;
       var minimum = new Vector3<double>(double.MaxValue);
       var maximum = new Vector3<double>(double.MinValue);
-
-      for (int i = 0; i < points.Length; ++i)
+      foreach (var point in inPoints)
       {
-         minimum = Vector3<double>.Min(minimum, points[i]);
-         maximum = Vector3<double>.Max(maximum, points[i]);
+         minimum = Vector3<double>.Min(minimum, point);
+         maximum = Vector3<double>.Max(maximum, point);
+         any = true;
       }
 
-      var rect = maximum - minimum;
-      return new Rect(minimum.X, minimum.Y, rect.X, rect.Y);
+      return any ? new Rect(minimum.X, minimum.Y, maximum.X - minimum.X, maximum.Y - minimum.Y) : Empty;
    }
 
    public static Rect Parse(string values)
