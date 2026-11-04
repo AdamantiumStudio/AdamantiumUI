@@ -1,7 +1,9 @@
 using Adamantium.Graphics.Core.EffectsFramework;
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Threading;
 using Adamantium.Core;
 using Adamantium.Graphics;
 using Adamantium.Graphics.Core;
@@ -48,9 +50,12 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
         public Buffer RingBuffer;
         public uint RingVertexCount;
 
-        // The frame this key last had an instance appended to it. A key is kept by being USED and by nothing else - see
+        // When (Stopwatch ticks) this key was last asked for. A key is kept by being USED and by nothing else - see
         // Sweep for why the cache has to forget.
         public long LastUsed;
+
+        // The device memory its vertex, index and fringe buffers hold - what the budget counts.
+        public long MeshBytes;
 
         public GeometryInstance[] Items = new GeometryInstance[64];
         public int Count;        // instances appended this frame (across all this key's flushes)
@@ -172,10 +177,33 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
     /// per-key instance upload is skipped (the retained buffer already holds these exact bytes).</summary>
     public bool SceneClean { get; set; }
 
-    public InstancedFillCollector(IGraphicsDevice device) : base(device)
+    /// <summary>A collector drawing on <paramref name="device"/>; <paramref name="askForFrame"/> gets a frame drawn when
+    /// meshes left behind may have gone cold while nothing changed, so they can be let go.</summary>
+    public InstancedFillCollector(IGraphicsDevice device, Action askForFrame = null) : base(device)
     {
         _device = device;
         _effect = ToDispose(new BatchEffect(device));
+        _meshBudget = MeshBudgetOf(device);
+        var ask = askForFrame ?? Core.LoopSignal.Request;
+        _wake = new Timer(_ => ask());
+    }
+
+    // What the shared meshes may hold before the ones drawn longest ago give way: a share of the largest device-local
+    // heap, small on purpose - the rest of the application and other applications draw from the same heap.
+    private static long MeshBudgetOf(IGraphicsDevice device)
+    {
+        var memory = device.Adapter.Adapter.GetPhysicalDeviceMemoryProperties();
+        ulong largest = 0;
+        for (var heap = 0; heap < memory.MemoryHeapCount; heap++)
+        {
+            var properties = memory.MemoryHeaps.Span[heap];
+            if (((MemoryHeapFlagBits)properties.Flags).HasFlag(MemoryHeapFlagBits.DeviceLocalBit))
+            {
+                largest = Math.Max(largest, (ulong)properties.Size);
+            }
+        }
+
+        return (long)(largest / MeshBudgetShare);
     }
 
     // The brush effect is built on FIRST BRUSH DRAW, not in the constructor: a tree of solid fills never needs it, and an
@@ -234,6 +262,16 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
     /// the frame fence, so last frame's GPU reads are done); a new key allocates lazily on its first add.</summary>
     public void BeginFrame()
     {
+        // FIRST, while the flush records still hold what the last frame drew - those keys are on screen and stay - and
+        // before a key about to go gets an instance ring made for it below.
+        // Past the budget only once more has come since the last look: when what is on screen alone is past it, nothing
+        // can go, and looking again every frame would only cost.
+        var now = Clock();
+        if (now >= _sweepAt || _meshBytes > _meshBudget && _meshBytes > _bytesAtSweep)
+        {
+            Sweep(now);
+        }
+
         // Same rule as BatchCollector: advance per WRITE, not per frame index. These buffers are read by every replay
         // frame that follows the walk that filled them, so returning to a copy by frame index overwrites one that
         // in-flight replays are still drawing from.
@@ -375,13 +413,16 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
 
         _flushCount = 0;   // pooled flush records reused from index 0 this frame
         _groupRef = 0;     // the stencil is cleared with the frame, so coverage marks start over with it
+    }
 
-        // LAST, so the pending lists are already empty and only the flush records can still be holding a key.
-        _frame++;
-        if (_frame >= _sweepAt)
+    /// <summary>Lets go of the meshes nobody has drawn for a while between walks too: a scene that stopped changing stops
+    /// walking, and what it left behind was otherwise held until something moved. Render thread, any frame.</summary>
+    public void Trim()
+    {
+        var now = Clock();
+        if (!_disposed && now >= _sweepAt)
         {
-            _sweepAt = _frame + SweepEvery;
-            Sweep();
+            Sweep(now);
         }
     }
 
@@ -424,24 +465,47 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
 
     internal int CurrentCopy => _copy;
 
-    // How long a key nobody draws is kept, and how often the cache is looked over. Both in FRAMES, and both generous:
-    // forgetting a mesh costs re-tessellating it once, so the only thing a short memory would buy is a stutter when
-    // something scrolls back into view.
-    private const long ColdFrames = 600;
-    private const long SweepEvery = 120;
+    // How long a key nobody draws is kept, and how often the cache is looked over - in TIME, since frames are drawn only
+    // when something changes and a still scene draws none. Generous: forgetting a mesh costs re-tessellating it once, so
+    // a short memory buys nothing but a stutter when something comes back into view. The budget, not the age, is what
+    // holds a map zoomed across levels - thousands of meshes a minute - in check.
+    private static readonly long ColdTicks = Stopwatch.Frequency * 10;
+    private static readonly long SweepTicks = Stopwatch.Frequency * 2;
+    private const ulong MeshBudgetShare = 16;
 
-    private long _frame;
-    private long _sweepAt = SweepEvery;
+    private long _meshBudget;
+    private readonly Timer _wake;
+    private long _meshBytes;
+    private long _bytesAtSweep;
+    private bool _disposed;
+    private long _sweepAt;
     private readonly HashSet<KeySegment> _live = new();
     private readonly List<GeometryKey> _cold = new();
+    private readonly List<KeyValuePair<GeometryKey, KeySegment>> _byAge = new();
 
     /// <summary>How many shared meshes the cache is holding - what <see cref="Sweep"/> keeps from growing without end.
     /// </summary>
     internal int CachedKeys => _keys.Count;
 
-    // Drops long-unused keys (changing meshes leave a new key each time), never one a live flush record still replays.
-    private void Sweep()
+    /// <summary>The bytes the shared meshes hold now.</summary>
+    internal long MeshBytes => _meshBytes;
+
+    /// <summary>The bytes past which the meshes drawn longest ago give way; a share of the device's memory unless set.</summary>
+    internal long MeshBudget
     {
+        get => _meshBudget;
+        set => _meshBudget = value;
+    }
+
+    /// <summary>Where the time a key was last asked for is read from, in <see cref="Stopwatch"/> ticks.</summary>
+    internal Func<long> Clock { get; set; } = Stopwatch.GetTimestamp;
+
+    // Drops keys nobody has asked for in a while (changing meshes leave a new key each time), then, past the budget, the
+    // ones asked for longest ago - never one a flush record still replays. Keys left that may go cold later wake the
+    // loop for a frame then, so a still scene lets go of them too.
+    private void Sweep(long now)
+    {
+        _sweepAt = now + SweepTicks;
         _live.Clear();
         foreach (var record in _flushRecords)
         {
@@ -453,20 +517,42 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
         }
 
         _cold.Clear();
+        _byAge.Clear();
         foreach (var pair in _keys)
         {
-            if (_frame - pair.Value.LastUsed >= ColdFrames && !_live.Contains(pair.Value)) _cold.Add(pair.Key);
+            if (_live.Contains(pair.Value)) continue;
+
+            if (now - pair.Value.LastUsed >= ColdTicks) _cold.Add(pair.Key);
+            else _byAge.Add(pair);
         }
 
-        foreach (var key in _cold)
-        {
-            if (!_keys.Remove(key, out var seg)) continue;
+        foreach (var key in _cold) Forget(key);
 
-            Release(seg);
+        if (_meshBytes > _meshBudget)
+        {
+            _byAge.Sort(static (a, b) => a.Value.LastUsed.CompareTo(b.Value.LastUsed));
+            var kept = 0;
+            for (; kept < _byAge.Count && _meshBytes > _meshBudget; kept++) Forget(_byAge[kept].Key);
+            _byAge.RemoveRange(0, kept);
+        }
+
+        _bytesAtSweep = _meshBytes;
+        if (_byAge.Count > 0 && !_disposed)
+        {
+            _wake.Change(TimeSpan.FromTicks(ColdTicks * TimeSpan.TicksPerSecond / Stopwatch.Frequency), Timeout.InfiniteTimeSpan);
         }
 
         _live.Clear();
         _cold.Clear();
+        _byAge.Clear();
+    }
+
+    private void Forget(GeometryKey key)
+    {
+        if (!_keys.Remove(key, out var seg)) return;
+
+        _arenas.Remove(key);   // its arena speaks for this segment; the key coming back makes both anew
+        Release(seg);
     }
 
     // Everything a key owns, through the DEFERRED queue: frames in flight may still be reading any of it.
@@ -490,14 +576,19 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
         seg.IdxBuffer = null;
         seg.RingBuffer = null;
         seg.MeshUploaded = false;
+        _meshBytes -= seg.MeshBytes;
+        seg.MeshBytes = 0;
     }
 
     protected override void Dispose(bool disposeManagedResources)
     {
         if (disposeManagedResources)
         {
+            _disposed = true;
+            _wake.Dispose();
             foreach (var seg in _keys.Values) Release(seg);
             _keys.Clear();
+            _arenas.Clear();
         }
 
         base.Dispose(disposeManagedResources);
@@ -1450,9 +1541,11 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
     // Build (once) the immutable vtx/idx buffers for a key's shared local mesh. Returns null until it has a drawable mesh.
     private KeySegment GetOrCreate(GeometryKey key, FrozenMesh mesh)
     {
+        // The clock, not the walk's start: a patch frame asks for keys between walks too.
+        var now = Clock();
         if (_keys.TryGetValue(key, out var seg) && seg.MeshUploaded)
         {
-            seg.LastUsed = _frame;
+            seg.LastUsed = now;
             return seg;
         }
 
@@ -1462,33 +1555,38 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
         var indexed = indices is { Length: > 0 };
 
         seg ??= new KeySegment();
-        seg.VtxBuffer = Upload(vertices, BufferUsageFlags.VertexBuffer);
+        seg.VtxBuffer = Upload(vertices, BufferUsageFlags.VertexBuffer, "shared mesh vertices");
         seg.VertexCount = (uint)vertices.Length;
 
         seg.Indexed = indexed;
         if (indexed)
         {
-            seg.IdxBuffer = Upload(indices, BufferUsageFlags.IndexBuffer);
+            seg.IdxBuffer = Upload(indices, BufferUsageFlags.IndexBuffer, "shared mesh indices");
             seg.IndexCount = (uint)indices.Length;
         }
 
         // The fringe ring: immutable like the mesh (both are keyed on the same tessellation).
         if (mesh.Ring is { Length: > 0 } ring)
         {
-            seg.RingBuffer = Upload(ring, BufferUsageFlags.StorageBuffer | BufferUsageFlags.ShaderDeviceAddress);
+            seg.RingBuffer = Upload(ring, BufferUsageFlags.StorageBuffer | BufferUsageFlags.ShaderDeviceAddress,
+                "shared mesh fringe");
             seg.RingVertexCount = (uint)ring.Length * 6;
         }
 
         seg.Topology = mesh.Topology;
         seg.MeshUploaded = true;
-        seg.LastUsed = _frame;
+        seg.LastUsed = now;
+        seg.MeshBytes = (long)((seg.VtxBuffer?.DeviceMemoryBytes ?? 0) + (seg.IdxBuffer?.DeviceMemoryBytes ?? 0) +
+                               (seg.RingBuffer?.DeviceMemoryBytes ?? 0));
+        _meshBytes += seg.MeshBytes;
         _keys[key] = seg;
         return seg;
     }
 
-    private Buffer Upload<T>(T[] data, BufferUsageFlags usage) where T : unmanaged
+    private Buffer Upload<T>(T[] data, BufferUsageFlags usage, string name) where T : unmanaged
     {
         var buffer = Buffer.New<T>(_device, (uint)data.Length, usage, Mem);
+        buffer.Name = name;
         buffer.SetData(data, 0, (uint)data.Length);
         return buffer;
     }
@@ -1522,6 +1620,9 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
     }
 
     internal int KeyCount(object key) => key is KeySegment seg ? seg.Count : 0;
+
+    /// <summary>The segment cached for <paramref name="key"/>, as the arena surface names it; null when none is.</summary>
+    internal object SegmentOf(GeometryKey key) => _keys.GetValueOrDefault(key);
 
     internal int KeyCapacityLeft(object key) => key is KeySegment seg ? seg.GpuCapacity - seg.Count : 0;
 

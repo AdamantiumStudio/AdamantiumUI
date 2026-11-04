@@ -247,6 +247,9 @@ public sealed class AutomationSession : IAsyncDisposable
     /// <summary>Collects all garbage in the application, then its managed heap and private memory, as text.</summary>
     public async Task<string> MemoryAsync() => (await RunAsync(new AutomationRequest { Command = AutomationCommand.Memory })).Text;
 
+    /// <summary>What device memory the application's graphics resources hold; see <see cref="AutomationCommand.DeviceMemory"/>.</summary>
+    public async Task<string> DeviceMemoryAsync() => (await RunAsync(new AutomationRequest { Command = AutomationCommand.DeviceMemory })).Text;
+
     /// <summary>Moves the application onto <paramref name="theme"/> and <paramref name="variant"/>, either null to keep it,
     /// once the swap has settled. Returns the theme and variant in use on the first line, then a line per theme with its
     /// variants.</summary>

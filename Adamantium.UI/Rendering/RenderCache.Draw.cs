@@ -951,7 +951,7 @@ public partial class RenderCache
             // skips the redundant upload (zero bytes move on an idle frame).
             if (InstancedFillCollector.Enabled)
             {
-                _instancedFill ??= new InstancedFillCollector(device) { PrepareOverlay = PrepareOverlayForDraw };
+                _instancedFill ??= new InstancedFillCollector(device, AskForFrame) { PrepareOverlay = PrepareOverlayForDraw };
                 _instancedFill.TransformsAddress = _transformTable.DeviceAddress;   // instance VS fetches its slot matrix
                 _instancedFill.Backdrop = _materialBatch;   // may be null: the material batch is made on first sight of one
                 _instancedFill.BeginFrame();

@@ -50,7 +50,7 @@ public sealed class GpuFillRenderComponent : UIRenderComponent
         // Rented from the buffer manager (ReusableBuffer), not allocated per frame: a same-size geometry change (a
         // resize) rewrites the ring into the existing slot with no Vulkan allocation.
         _ringBuffer = ToDispose(BufferManager.CreateBuffer(
-            BufferUsageFlags.StorageBuffer | BufferUsageFlags.ShaderDeviceAddress, FillMemory));
+            BufferUsageFlags.StorageBuffer | BufferUsageFlags.ShaderDeviceAddress, FillMemory, "fill outline"));
         _ringBuffer.Reserve(RingBytes);
         _ringBuffer.Invalidate();
     }

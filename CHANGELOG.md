@@ -9,7 +9,16 @@ All packages share one version.
 
 - `Rect.FromPoints` of a span of points.
 
+- `adam-auto device-memory`: what device memory the application's graphics resources hold, by kind and the largest
+  groups - buffers named by what they hold - written to `logs/device-memory.txt` as well.
+
 ### Fixed
+
+- The shared meshes of instanced fills are held within a budget - a sixteenth of the device's memory - the ones drawn
+  longest ago giving way past it, and let go ten seconds after nobody draws them, a still scene included: they were
+  kept until 600 frames had passed without them, and a scene that stops changing draws no frames. A vector map zoomed
+  across levels held a gigabyte of meshes and kept it; a map left on screen kept what it no longer showed. What was
+  retired before the scene went still is freed then, not when it moves again.
 
 - A `MeshGeometry` and a `PolylineGeometry` work out their bounds without copying their points into a list - twice, at
   making and at processing - and a mesh processed copies its positions once; `Rect.Merge` and `Rect.FromPoints` of an

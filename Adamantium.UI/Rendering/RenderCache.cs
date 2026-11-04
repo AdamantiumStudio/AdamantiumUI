@@ -176,6 +176,11 @@ public partial class RenderCache
         }
     }
 
+    /// <summary>Asks for a frame of what this cache draws without recording anything - the window's own request. The
+    /// instanced meshes left behind go cold while a still scene draws nothing; this gets the frame they go in. Null for
+    /// a cache drawn only as part of another.</summary>
+    internal Action AskForFrame { get; set; }
+
     /// <summary>The dirty marks THIS cache builds from. A cache draws one surface - a window's content, a popup layer, an
     /// adorner layer - and each of those has its own marks (see RenderDirtyRouter), so "is there work?" is a question
     /// about this one, never about the application.

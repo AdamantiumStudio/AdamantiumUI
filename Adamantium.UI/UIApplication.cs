@@ -1924,6 +1924,9 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
                         DrawClaimedFrames(published, claims);
                         continue;
                     }
+
+                    // Nothing to draw: what was retired before the scene went still is freed now, not when it moves again.
+                    GraphicsDeviceService?.MainGraphicsDevice?.ReleaseRetired();
                 }
                 catch (Exception ex)
                 {

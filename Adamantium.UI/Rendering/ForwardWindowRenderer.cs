@@ -19,7 +19,7 @@ public class ForwardWindowRenderer : WindowRendererBase
 
     public ForwardWindowRenderer(IGraphicsDevice device, IRenderUnitFactory renderUnitFactory) : base(device, renderUnitFactory)
     {
-        _renderCache = new RenderCache(DrawingContext, renderUnitFactory);
+        _renderCache = new RenderCache(DrawingContext, renderUnitFactory) { AskForFrame = RequestFrame };
     }
         
     private void OnClientSizeChanged(object sender, SizeChangedEventArgs e)

@@ -124,7 +124,7 @@ public abstract class UIRenderComponent : DeferredDisposableObject
         // First INDIVIDUAL draw: lazily create the per-unit buffer (batched units never get here, so never allocate).
         // Rent this frame's ring slot; upload the geometry only if the slot is stale (a static body settles to zero
         // work after the first N frames, an animated one writes only the current slot - never a new allocation).
-        _vertexBuffer ??= ToDispose(BufferManager.CreateBuffer(BufferUsageFlags.VertexBuffer, UiMemory));
+        _vertexBuffer ??= ToDispose(BufferManager.CreateBuffer(BufferUsageFlags.VertexBuffer, UiMemory, "mesh vertices"));
         var vertexBuffer = _vertexBuffer.Acquire((ulong)(_vertexCount * (uint)VertexStride), out var writeVertices);
         if (writeVertices) vertexBuffer.SetData(_vertices, 0, _vertexCount);
 
@@ -138,7 +138,7 @@ public abstract class UIRenderComponent : DeferredDisposableObject
 
         if (_indexCount > 0)
         {
-            _indexBuffer ??= ToDispose(BufferManager.CreateBuffer(BufferUsageFlags.IndexBuffer, UiMemory));
+            _indexBuffer ??= ToDispose(BufferManager.CreateBuffer(BufferUsageFlags.IndexBuffer, UiMemory, "mesh indices"));
             var indexBuffer = _indexBuffer.Acquire((ulong)(_indexCount * sizeof(int)), out var writeIndices);
             if (writeIndices) indexBuffer.SetData(_indices, 0, _indexCount);
             // DrawIndexed binds both the vertex and index buffers itself - don't bind them again. The over-allocated

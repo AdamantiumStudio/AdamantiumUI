@@ -183,5 +183,9 @@ public enum AutomationCommand
 
     /// <summary>Waits until the application has started: its splash window, if it shows one, has handed over to a window
     /// of its own and closed.</summary>
-    WaitStarted
+    WaitStarted,
+
+    /// <summary>Counts the device memory the application's graphics resources hold - by kind and the largest groups -
+    /// and writes it to <c>logs/device-memory.txt</c> beside the application as well.</summary>
+    DeviceMemory
 }

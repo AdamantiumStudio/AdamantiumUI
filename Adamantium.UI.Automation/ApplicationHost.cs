@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Adamantium.Graphics;
+using Adamantium.Graphics.Core;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Rendering;
 
@@ -22,6 +24,11 @@ public sealed class ApplicationHost : IAutomationHost
     public bool IsStarting => _application.IsStarting;
 
     public IVisualRenderer Renderer => _application.Container.Resolve<IVisualRenderer>();
+
+    public string DescribeDeviceMemory() =>
+        _application.Container.Resolve<IGraphicsDeviceService>()?.MainGraphicsDevice is { } main
+            ? DeviceMemoryCensus.Take(main).Report()
+            : null;
 
     public async Task<T> RunOnLoopAsync<T>(Func<T> work, TimeSpan timeout)
     {
