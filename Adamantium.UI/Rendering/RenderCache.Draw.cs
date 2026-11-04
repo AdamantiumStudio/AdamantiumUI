@@ -492,11 +492,11 @@ public partial class RenderCache
         }
 
         EnsureTransformTable();
+        _frameDevice = device;
 
-        // Every clone takes a slot of its own, and a clone run asks for its whole set in ONE frame. The buffer is sized
-        // here and nowhere else, so the count has to be known BEFORE it is made - discovering it while baking leaves the
-        // overflow unuploaded and the shader reading past the buffer (tiles vanishing and jumping, differently each
-        // frame). Cheap: this scans groups, and only a clone host contributes.
+        // Every clone takes a slot of its own, and a clone run asks for its whole set in ONE frame: reserved here, so the
+        // buffer is made big enough at once instead of growing step by step while baking (KeepSlotLive). Cheap: this
+        // scans groups, and only a clone host contributes.
         var reserve = 0;
         foreach (var group in _groups)
         {
@@ -509,7 +509,44 @@ public partial class RenderCache
         _cloneReserve = reserve;   // ...and the trace reads it from here instead of counting the scene again
         _transformTable.Reserve(reserve);
         _transformTable.EnsureResources(device);
+        PushTransformAddress();
 
+        if (_materialBatch != null)
+        {
+            _materialBatch.WindowBoundsProvider = WindowOnDesktop;
+
+            // The window origin, latched once per frame (replays included) so mica follows drags and all panes share one
+            // instant.
+            _materialBatch.LatchWindow();
+        }
+    }
+
+    // The device this frame draws with, for the slot growth of paths that are not handed it.
+    private IGraphicsDevice _frameDevice;
+
+    private int AcquireLiveSlot(IGraphicsDevice device, Guid nodeId)
+    {
+        var slot = _transformTable.AcquireSlot(nodeId);
+        KeepSlotLive(device, slot);
+        return slot;
+    }
+
+    // A slot handed out past the buffer sized at the frame's start grows it now: draws recorded before only index older
+    // slots, which the replaced buffer still holds until it is released a pipeline lap later.
+    private void KeepSlotLive(IGraphicsDevice device, int slot)
+    {
+        if (device == null || slot < 0 || _transformTable.IsSlotLive(slot))
+        {
+            return;
+        }
+
+        _transformTable.EnsureResources(device);
+        PushTransformAddress();
+    }
+
+    // This frame's copy of the table to every collector: its address moves with the frame, and with a growth.
+    private void PushTransformAddress()
+    {
         var address = _transformTable.DeviceAddress;
         if (_rectBatch != null) _rectBatch.TransformsAddress = address;
         if (_ellipseBatch != null) _ellipseBatch.TransformsAddress = address;
@@ -522,16 +559,7 @@ public partial class RenderCache
         if (_inkBatch != null) _inkBatch.TransformsAddress = address;
         if (_arrowBatch != null) _arrowBatch.TransformsAddress = address;
         if (_texRectBatch != null) _texRectBatch.TransformsAddress = address;
-        if (_materialBatch != null)
-        {
-            _materialBatch.TransformsAddress = address;
-
-            _materialBatch.WindowBoundsProvider = WindowOnDesktop;
-
-            // The window origin, latched once per frame (replays included) so mica follows drags and all panes share one
-            // instant.
-            _materialBatch.LatchWindow();
-        }
+        if (_materialBatch != null) _materialBatch.TransformsAddress = address;
         if (_haloUnder != null) _haloUnder.TransformsAddress = address;
         if (_haloOver != null) _haloOver.TransformsAddress = address;
         if (_haloLivingUnder != null) _haloLivingUnder.TransformsAddress = address;
@@ -2239,7 +2267,7 @@ public partial class RenderCache
         var world = snap.RenderParent != null ? entry.Local * parentWorld : entry.Local;
         _applySnap[owner] = new LayoutSnapshot(entry.Local, snap.RenderSize, snap.ClipToBounds, snap.IsMotionNode, snap.RenderParent, snap.Opacity, snap.SelfOpacity);
         _worldCache[owner] = world;   // set directly: the _applySnap chain may be mid-recapture, so don't recompose off it
-        _transformTable.SetMatrix(device, _transformTable.AcquireSlot(owner.RenderId), world);
+        _transformTable.SetMatrix(device, AcquireLiveSlot(device, owner.RenderId), world);
         entry.MarkApplied();   // tell the loop thread the render thread is drawing this - so its mirror stops re-baking it
     }
 

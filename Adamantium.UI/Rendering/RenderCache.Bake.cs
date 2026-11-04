@@ -742,9 +742,9 @@ public partial class RenderCache
             SettleCopyFades(device, c, alpha);
             _transformTable.SetOpacityParent(device, slot, parent);
 
-            // Just allocated, and the buffer this frame draws from was sized BEFORE that: an instance carrying this
-            // index would have the shader read past the allocation. Draw at the parent's alpha for one frame; the next
-            // walk finds the slot live.
+            // Just allocated past the buffer this frame draws from: grown now. Without a device to grow it, the instance
+            // would have the shader read past the allocation - it draws at the parent's alpha for one frame instead.
+            KeepSlotLive(device, slot);
             if (!_transformTable.IsSlotLive(slot)) slot = parent;
         }
 
@@ -811,7 +811,7 @@ public partial class RenderCache
         if (node == null)
         {
             // The world always goes to the table, never into the instance, so there is one place a position lives.
-            slot = _transformTable.AcquireSlot(component.RenderId);
+            slot = AcquireLiveSlot(device, component.RenderId);
             _transformTable.SetMatrix(device, slot, world);
             return Matrix4x4F.Identity;
         }
@@ -822,13 +822,13 @@ public partial class RenderCache
         // writing its own slot (this unit must be re-baked when the node moves, exactly as the per-unit path it replaces).
         if (!IsAxisAligned(rel))
         {
-            slot = _transformTable.AcquireSlot(component.RenderId);
+            slot = AcquireLiveSlot(device, component.RenderId);
             _transformTable.SetMatrix(device, slot, World(component));
             MarkNodeNotAware(component);
             return Matrix4x4F.Identity;
         }
 
-        slot = _transformTable.AcquireSlot(node.RenderId);
+        slot = AcquireLiveSlot(device, node.RenderId);
         if (!_nodeRefreshed.TryGetValue(node, out var v) || v != _walkVersion)
         {
             _nodeRefreshed[node] = _walkVersion;
@@ -1149,8 +1149,9 @@ public partial class RenderCache
             break;
         }
 
-        // A slot the shader cannot reach yet (the table grew past this frame's buffer) would be indexed out of the
-        // allocation, and this device answers that with a lost device rather than a wrong pixel.
+        // Grown into this frame's buffer; without a device to grow it, a slot the shader cannot reach would be indexed out
+        // of the allocation, which this device answers with a lost device rather than a wrong pixel.
+        KeepSlotLive(_frameDevice, slot);
         if (slot >= 0 && !_transformTable.IsSlotLive(slot)) slot = -1;
 
         _clipSlotCache[c] = slot;

@@ -158,6 +158,10 @@ public partial class RenderCache
     internal Dictionary<int, (TransformTable.SlotUse Use, System.Guid Owner)> DescribeSlots() =>
         _transformTable?.DescribeSlots() ?? new();
 
+    /// <summary>Whether every slot handed out so far lies in the buffer this frame draws from.</summary>
+    internal bool DrawsFromEverySlot =>
+        _transformTable == null || _transformTable.SlotCount == 0 || _transformTable.IsSlotLive(_transformTable.SlotCount - 1);
+
     /// <summary>The clip rectangle (device px) the shaders read from <paramref name="slot"/>.</summary>
     internal Vector4F SlotClipBox(int slot) => _transformTable?.ClipBoxAt(slot) ?? default;
 
