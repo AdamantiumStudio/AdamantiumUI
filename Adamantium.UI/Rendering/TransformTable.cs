@@ -93,7 +93,8 @@ internal sealed class TransformTable
     }
 
     /// <summary>Picks this frame's copy, (re)creates the buffer when capacity outgrew it and catches that copy up with
-    /// the changes it missed. Call at a fence-safe point (BeginFrame), before any slot is written or drawn.</summary>
+    /// the changes it missed. Called as a frame begins, and again within it when slots were handed out past the buffer:
+    /// the replaced buffers are released only once no frame reads them, so draws recorded before stay valid.</summary>
     public void EnsureResources(IGraphicsDevice device)
     {
         var copies = (int)Math.Max(1, device.MaxFramesInFlight);
@@ -261,9 +262,9 @@ internal sealed class TransformTable
     public float AlphaAt(int slot) => slot >= 0 && slot < _count ? _cpu[slot].Params.X : 1f;
 
     /// <summary>Is this slot inside THIS FRAME's GPU buffer? A slot allocated after <see cref="EnsureResources"/> sized
-    /// the buffer is not uploaded until the next frame, and a shader that indexes by it reads past the allocation -
-    /// which this device answers with DEVICE LOST, not with a wrong pixel. Callers that hand a slot INDEX to a shader
-    /// have to ask; the ones that only write a value do not.</summary>
+    /// the buffer is not there until it runs again, and a shader that indexes by it reads past the allocation - which
+    /// this device answers with DEVICE LOST, not with a wrong pixel. Callers that hand a slot INDEX to a shader have to
+    /// ask, and grow the buffer when the answer is no; the ones that only write a value do not.</summary>
     public bool IsSlotLive(int slot) => _gpu != null && slot >= 0 && slot < _gpuCapacity;
 
     /// <summary>Releases an element's opacity slot (it stopped being a fade root, or left the tree).</summary>
@@ -425,7 +426,7 @@ internal sealed class TransformTable
     private void Grow()
     {
         var was = _cpu.Length;
-        Array.Resize(ref _cpu, was * 2);   // the GPU side follows at the next EnsureResources
+        Array.Resize(ref _cpu, was * 2);   // the GPU side follows at the next EnsureResources - within this frame when asked
         Array.Resize(ref _version, _cpu.Length);
         InitSlots(_cpu, was, _cpu.Length);
         GrowOwnAlpha(_cpu.Length);
@@ -523,7 +524,7 @@ internal sealed class TransformTable
             if (!CompositedWrite) LayoutMatrixVersion++;
         }
 
-        if (_gpu == null || slot >= _gpuCapacity) return;   // no GPU room yet: EnsureResources sends it on the next frame
+        if (_gpu == null || slot >= _gpuCapacity) return;   // no GPU room yet: the next EnsureResources sends it
         if (_uploaded[_current][slot] != _version[slot]) Upload(slot);
     }
 

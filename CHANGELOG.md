@@ -7,6 +7,10 @@ All packages share one version.
 
 ### Fixed
 
+- A frame in which more new elements appear than the transform table's buffer was sized for at the frame's start - the
+  first view of a map full of labels - no longer draws them with matrices read past that buffer: the buffer grows
+  within the frame. That frame showed blank text, missing fills and triangles stretched across the window.
+
 - A container that draws nothing of its own no longer takes a place in the paint order when it is re-recorded on its
   own. On a machine that binds only part of a tile panel per frame, resizing the window put an empty group into the
   order for nearly every container while tiles were still arriving.

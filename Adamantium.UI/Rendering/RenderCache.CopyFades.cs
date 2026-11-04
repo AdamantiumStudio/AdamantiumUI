@@ -104,6 +104,7 @@ public partial class RenderCache
         }
 
         shared.Walk = _copyFadeWalk;
+        KeepSlotLive(device, shared.Slot);
         if (!_transformTable.IsSlotLive(shared.Slot))
         {
             _copyFadeNotLive = true;
