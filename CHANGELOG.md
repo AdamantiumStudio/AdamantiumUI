@@ -5,7 +5,16 @@ All packages share one version.
 
 ## Unreleased
 
+### Added
+
+- `Rect.FromPoints` of a span of points.
+
 ### Fixed
+
+- A `MeshGeometry` and a `PolylineGeometry` work out their bounds without copying their points into a list - twice, at
+  making and at processing - and a mesh processed copies its positions once; `Rect.Merge` and `Rect.FromPoints` of an
+  array, a list or a collection allocate nothing. A map tile's areas allocated hundreds of megabytes the more for it.
+  `Rect.FromPoints` of no `Vector3` points is empty, as of no `Vector2` ones.
 
 - A stroke under a perspective - a leaned map's roads - is no longer blurred at some lean: its AA feather was taken
   from the top-left 2x2 of the projective matrix, which is no scale and passed through zero around 47 degrees, so the

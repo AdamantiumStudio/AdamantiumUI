@@ -82,16 +82,34 @@ public class PolylineGeometry : Geometry
     public override void RecalculateBounds()
     {
         _boundsStale = false;
-        var points = new List<Vector2<double>>();
-        foreach (var line in Stroked(Lines, 2).Concat(Stroked(Rings, 3)))
+        var bounds = Rect.Empty;
+        var any = false;
+        Include(Lines, 2, ref bounds, ref any);
+        Include(Rings, 3, ref bounds, ref any);
+        _bounds = any && Transform != null ? bounds.TransformToAABB(Transform.Matrix) : bounds;
+    }
+
+    private static void Include(ContourCollection contours, int least, ref Rect bounds, ref bool any)
+    {
+        if (contours == null)
         {
-            points.AddRange(line);
+            return;
         }
 
-        _bounds = points.Count > 0 ? Rect.FromPoints(points) : Rect.Empty;
-        if (Transform != null && points.Count > 0)
+        foreach (var contour in contours)
         {
-            _bounds = _bounds.TransformToAABB(Transform.Matrix);
+            if (contour == null)
+            {
+                continue;
+            }
+
+            lock (contour.SyncRoot)
+            {
+                if (contour.Count >= least)
+                {
+                    Rect.Include(ref bounds, ref any, contour);
+                }
+            }
         }
     }
 

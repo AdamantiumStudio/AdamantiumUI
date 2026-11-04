@@ -190,6 +190,39 @@ public class MeshGeometryTests
     }
 
     [Test]
+    public void TheBounds_HoldTheBoundaryToo()
+    {
+        Vector2<double>[] wider = [new(-5, 2), new(20, 2), new(20, 30)];
+        var mesh = new MeshGeometry(Square, [0, 1, 2, 2, 3, 0], [Square, wider]);
+
+        Assert.That(mesh.Bounds, Is.EqualTo(new Rect(-5, 0, 25, 30)));
+    }
+
+    [Test]
+    public void TheBoundsOfAPolyline_HoldItsLinesAndRings()
+    {
+        Vector2<double>[] line = [new(1, 1), new(4, -3)];
+        Vector2<double>[] ring = [new(-2, 0), new(0, 8), new(3, 2)];
+        var lines = new PolylineGeometry([line], [ring]);
+
+        Assert.That(lines.Bounds, Is.EqualTo(new Rect(-2, -3, 6, 11)));
+    }
+
+    [Test]
+    public void TwoRectangles_MergeIntoTheOneHoldingBoth()
+    {
+        Assert.Multiple(() =>
+        {
+            Assert.That(new Rect(0, 0, 2, 2).Merge(new Rect(5, -1, 1, 1)), Is.EqualTo(new Rect(0, -1, 6, 3)));
+            Assert.That(Rect.FromPoints([new Vector2<double>(3, 4), new(-1, 6), new(2, -2)]),
+                Is.EqualTo(new Rect(-1, -2, 4, 8)));
+            Assert.That(Rect.FromPoints(System.Linq.Enumerable.Repeat(new Vector2<double>(7, 7), 3)),
+                Is.EqualTo(new Rect(7, 7, 0, 0)));
+            Assert.That(Rect.FromPoints(System.Array.Empty<Vector2<double>>()), Is.EqualTo(Rect.Empty));
+        });
+    }
+
+    [Test]
     public void FromMarkup_TheBoundaryParses_RingsApartBySemicolons()
     {
         var boundary = TypeParser.Parse<ContourCollection>("0,0 10,0 10,10 0,10; 2,2 2,8 8,8 8,2");
