@@ -1,19 +1,22 @@
 // The contract shared by BatchEffect.fx and BrushEffect.fx: vertex layouts, globals both need, and common maths. A global
 // only one effect reads belongs in that effect.
+// A point of flat geometry (UIVertex): a brush maps itself from the shape's box, never from the vertex.
 struct UI_VERTEX
 {
-    float4 position : POSITION;
-    float3 normal: NORMAL;
-    float2 uv0: TEXCOORD0;
-    float2 uv1: TEXCOORD1;
+    float2 position : POSITION;
+};
+
+// A point of a picture (UITexturedVertex): it names the part of its source it shows.
+struct UI_TEXTURED_VERTEX
+{
+    float2 position : POSITION;
+    float2 uv0 : TEXCOORD0;
 };
 
 struct VERTEX_OUTPUT
 {
     float4 position : SV_POSITION;
-    float3 normal: NORMAL;
     float2 uv0: TEXCOORD0;
-    float2 uv1: TEXCOORD1;
 };
 
 // ---- Globals both effects declare ------------------------------------------------------------------------------

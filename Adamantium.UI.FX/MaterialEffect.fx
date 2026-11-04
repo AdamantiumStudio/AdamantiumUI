@@ -733,11 +733,11 @@ MaterialMeshPSInput MaterialFillVS(UI_VERTEX v, uint instanceId : SV_InstanceID)
 
     // local -> slot space -> world, as PatternFillVS and the other instanced fills do it.
     NodeSlot* nodes = Transforms;
-    float4 world = mul(mul(float4(v.position.xyz, 1.0), it.Local), nodes[(uint)it.Params.w].World);
+    float4 world = mul(mul(float4(v.position, 0.0, 1.0), it.Local), nodes[(uint)it.Params.w].World);
 
     MaterialMeshPSInput o;
     o.Position = mul(world, Projection);
-    o.Local = v.position.xy;
+    o.Local = v.position;
     o.InstId = instanceId;
     int fadeSlot = int(it.Params.x);
     o.Fade = lerp(1.0, nodes[max(fadeSlot, 0)].Params.x, step(0.0, float(fadeSlot)));

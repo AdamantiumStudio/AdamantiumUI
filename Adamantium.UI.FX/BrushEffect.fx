@@ -290,11 +290,11 @@ GradFillPSInput GradientFillVS(UI_VERTEX v, uint instanceId : SV_InstanceID)
     // local -> slot space -> world, as InstancedFillVS: the slot matrix lives in the transform table, so a node move
     // rewrites 64 bytes there and every instance under it follows without this buffer being touched.
     NodeSlot* nodes = Transforms;
-    float4 world = mul(mul(float4(v.position.xyz, 1.0), local), nodes[(uint)geom1.w].World);
+    float4 world = mul(mul(float4(v.position, 0.0, 1.0), local), nodes[(uint)geom1.w].World);
 
     GradFillPSInput o;
     o.Position = mul(world, Projection);
-    o.Local = v.position.xy;
+    o.Local = v.position;
     o.InstId = instanceId;
     int gradFadeSlot = int(gparams.w * 0.5) - 1;
     o.Fade = lerp(1.0, nodes[max(gradFadeSlot, 0)].Params.x, step(0.0, float(gradFadeSlot)));
@@ -1170,11 +1170,11 @@ PatFillPSInput PatternFillVS(UI_VERTEX v, uint instanceId : SV_InstanceID)
     PatternGeomData it = items[instanceId];
     // local -> slot space -> world, as InstancedFillVS / GradientFillVS.
     NodeSlot* nodes = Transforms;
-    float4 world = mul(mul(float4(v.position.xyz, 1.0), it.Local), nodes[(uint)it.Params.w].World);
+    float4 world = mul(mul(float4(v.position, 0.0, 1.0), it.Local), nodes[(uint)it.Params.w].World);
 
     PatFillPSInput o;
     o.Position = mul(world, Projection);
-    o.Local = v.position.xy;
+    o.Local = v.position;
     o.InstId = instanceId;
     int patFadeSlot = int(it.Params.x);
     o.Fade = lerp(1.0, nodes[max(patFadeSlot, 0)].Params.x, step(0.0, float(patFadeSlot)));
@@ -1414,11 +1414,11 @@ TexFillPSInput TexFillVS(UI_VERTEX v, uint instanceId : SV_InstanceID)
     TextureGeomData* items = TextureGeometries;
     TextureGeomData it = items[instanceId];
     NodeSlot* nodes = Transforms;
-    float4 world = mul(mul(float4(v.position.xyz, 1.0), it.Local), nodes[(uint)it.Params.w].World);
+    float4 world = mul(mul(float4(v.position, 0.0, 1.0), it.Local), nodes[(uint)it.Params.w].World);
 
     TexFillPSInput o;
     o.Position = mul(world, Projection);
-    o.Local = v.position.xy;
+    o.Local = v.position;
     o.InstId = instanceId;
     int texFadeSlot = int(it.Params.z);
     o.Fade = lerp(1.0, nodes[max(texFadeSlot, 0)].Params.x, step(0.0, float(texFadeSlot)));

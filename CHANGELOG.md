@@ -20,6 +20,10 @@ All packages share one version.
   across levels held a gigabyte of meshes and kept it; a map left on screen kept what it no longer showed. What was
   retired before the scene went still is freed then, not when it moves again.
 
+- A fill's vertices take a fifth of the memory: a point on the plane, 8 bytes - every fill maps its brush from the
+  shape's box, and nothing read the normal or the texture coordinates they carried. A picture keeps the coordinates of
+  the part of its source it shows. A vector map of Paris on a 5K screen held 150 MB of fill vertices and holds 31.
+
 - A `MeshGeometry` and a `PolylineGeometry` work out their bounds without copying their points into a list - twice, at
   making and at processing - and a mesh processed copies its positions once; `Rect.Merge` and `Rect.FromPoints` of an
   array, a list or a collection allocate nothing. A map tile's areas allocated hundreds of megabytes the more for it.
