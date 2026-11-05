@@ -81,11 +81,25 @@ public class MenuItemGutterThemeTests
         var rows = new StackPanel { Width = 300, Children = { withIcon, withoutIcon, off } };
         rows.ApplyCurrentTheme();
         Adamantium.UI.Extensions.WindowExtension.UpdateTree(rows);
+        rows.Measure(new Size<double>(300, 200));
+        rows.Arrange(new Rect(0, 0, 300, 200));
 
         static Visibility Of(MenuItem row, string part) => ((UIComponent)row.GetTemplateChild(part)).Visibility;
+        var frame = ((IUIComponent)withIcon.GetTemplateChild("CheckFrame")).Bounds;
+        static Rect IconOf(MenuItem row)
+        {
+            var presenter = ((IUIComponent)row.GetTemplateChild("IconPresenter")).Bounds;
+            var own = ((IUIComponent)row.Icon).Bounds;
+            return new Rect(presenter.X + own.X, presenter.Y + own.Y, own.Width, own.Height);
+        }
+
+        var icon = IconOf(withIcon);
 
         Assert.Multiple(() =>
         {
+            Assert.That(icon.X + icon.Width / 2, Is.EqualTo(frame.X + frame.Width / 2).Within(0.01), "the icon in the frame's middle");
+            Assert.That(icon.Y + icon.Height / 2, Is.EqualTo(frame.Y + frame.Height / 2).Within(0.01));
+            Assert.That(IconOf(off).X, Is.EqualTo(icon.X).Within(0.01), "where an unchecked row's icon stands");
             Assert.That(Of(withIcon, "IconPresenter"), Is.EqualTo(Visibility.Visible), "its icon kept");
             Assert.That(Of(withIcon, "CheckFrame"), Is.EqualTo(Visibility.Visible), "in a lit frame");
             Assert.That(Of(withIcon, "CheckGlyph"), Is.Not.EqualTo(Visibility.Visible), "no check over it");

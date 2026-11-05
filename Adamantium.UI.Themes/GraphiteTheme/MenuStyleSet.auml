@@ -33,7 +33,8 @@
                                 MinHeight="{ResourceReference RowHeight}">
                             <Grid ColumnDefinitions="Auto,*,Auto,Auto">
                                 <!-- The gutter is always reserved, with or without an icon, so every label in the menu
-                                     starts on the same vertical line. -->
+                                     starts on the same vertical line; the icon stands in its middle, not at its left. -->
+                                <Border x:Name="Gutter" Grid.Column="0" Width="{ResourceReference MenuIconGutter}"/>
                                 <!-- A checked row's mark, as Word's: a lit frame round its icon - or round the check of a row
                                      with none. -->
                                 <Border x:Name="CheckFrame" Grid.Column="0" Width="{ResourceReference MenuIconGutter}"
@@ -43,7 +44,6 @@
                                         HorizontalAlignment="Center" VerticalAlignment="Center"
                                         Visibility="Collapsed"/>
                                 <ContentPresenter x:Name="IconPresenter" Grid.Column="0" Content="{TemplateBinding Icon}"
-                                        Width="{ResourceReference MenuIconGutter}"
                                         HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 <Path x:Name="CheckGlyph" Grid.Column="0"
                                         Data="M0,5 L4,9 L12,1"
