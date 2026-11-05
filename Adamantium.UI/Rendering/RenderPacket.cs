@@ -105,7 +105,10 @@ internal sealed class RenderPacket
         Kind != RenderBuildKind.Clean || Draws.Count > 0 || MovedNodes.Count > 0 || PartialDirty.Count > 0
         || Effects.Count > 0 || SnapDelta.Count > 0 || SnapReset || IsTransformDirty || Moved.Count > 0 || TransformUnknown
         || ClearMemos || Removed.Count > 0 || Undrawn.Count > 0 || Reranks.Count > 0 || Renumbered || Reconcile
-        || Departed.Count > 0;
+        || Departed.Count > 0 || Placements.Count > 0;
+
+    /// <summary>The placements moved since the last record, with their matrices as they were then.</summary>
+    public readonly List<(Placement Placement, Matrix4x4F Matrix, long Version)> Placements = new();
 
     /// <summary>Reset for reuse (the packet is pooled per cache; a Clean frame produces an empty one).</summary>
     public void Reset(RenderBuildKind kind)
@@ -129,6 +132,7 @@ internal sealed class RenderPacket
         TransformUnknown = false;
         Moved.Clear();
         ClearMemos = false;
+        Placements.Clear();
     }
 }
 

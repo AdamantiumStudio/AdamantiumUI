@@ -155,9 +155,11 @@ public partial class RenderCache
                     component.Render(_drawingContext);
                 if (!LeftTheTree(component))
                 {
-                    ProcessRenderCommands(component, _drawingContextInternal.GetDrawCommands(), projectionMatrix,
-                        !readOnly && wasGeometryValid, order, component.RenderClones, component.RenderCloneSteps,
-                        component.RenderCloneStagger);
+                    var drawn = _drawingContextInternal.GetDrawCommands();
+                    var reused = !readOnly && wasGeometryValid;
+                    ProcessRenderCommands(component, drawn, projectionMatrix, reused, order, component.RenderClones,
+                        component.RenderCloneSteps, component.RenderCloneStagger);
+                    if (drawn.Count > 0 || !reused) ReconcilePlacements(component, drawn);
                 }
 
                 order += OrderGap;   // the flat list IS the paint order
@@ -184,6 +186,8 @@ public partial class RenderCache
         _appliedCompositorFrame = _packet.CompositorFrame;
         CaptureEffects();
         ApplyEffects(_packet);
+        CapturePlacements();
+        ApplyPlacements(_packet);
         _packet.Reset(RenderBuildKind.Clean);
         _spare.Add(_packet);
         _packet = null;
@@ -430,6 +434,7 @@ public partial class RenderCache
         _copyFadeSlots.Clear();
         _compositedFallback.Clear();   // the old tree's, like the rest - and a snapshot cache may not draw again for long
         _transformTable?.ReleaseAll();
+        ReleaseAllPlacements();
     }
 
     /// <summary>The last packet's projection, captured by the RECORDER from the root visual. The applier uses this, not
@@ -905,7 +910,7 @@ public partial class RenderCache
             foreach (var u in g.Units)
             {
                 if (!Drawing(u)) continue;
-                var bakeWorld = ResolveBake(device, u.Component, World(u.Component), out var slot);
+                var bakeWorld = ResolveBake(device, u, World(u.Component), out var slot);
                 if (HoldsInstances(u) && !PatchSlot(device, u, bakeWorld, slot)) return false;
             }
         }
@@ -959,6 +964,9 @@ public partial class RenderCache
                 _transformTable.SetMatrix(device, slot, World(node));
             _movedNodeOwners.Add(node);
         }
+
+        // Placed drawings ride slots of their own, each holding its full world: carried here, one write apiece.
+        CarryPlacementsUnder(device, _movedNodesBuf);
 
         // ...and last, whatever could not ride those slots - AFTER the memo flush above, so every straggler is re-baked
         // from the world the node has NOW and not the one it was memoized at.
@@ -1025,7 +1033,7 @@ public partial class RenderCache
             foreach (var u in g.Units)
             {
                 if (!HoldsInstances(u)) continue;   // a per-unit draw - the replay re-points it (RepointIfItMoved)
-                var bakeWorld = ResolveBake(device, u.Component, World(u.Component), out var slot);
+                var bakeWorld = ResolveBake(device, u, World(u.Component), out var slot);
                 if (!PatchSlot(device, u, bakeWorld, slot)) return false;
             }
         }

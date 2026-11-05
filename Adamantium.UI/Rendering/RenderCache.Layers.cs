@@ -525,6 +525,7 @@ public partial class RenderCache
 
                 reusable = MixContent(ref print, unit, ref hasText);
                 MixMatrix(ref print, world);
+                if (unit.Placement is { } placement) MixMatrix(ref print, Newest(placement));
                 Mix(ref print, FadeWithin(unit.Component, layer));
                 var scissor = ResolveScissor(unit.Component, world, fullScissor, out _, out var cull);
                 Mix(ref print, cull ? 1 : 0);
@@ -733,7 +734,7 @@ public partial class RenderCache
         return -1;
     }
 
-    private static Rect LocalInk(IRenderUnit unit, Size<double> size, bool bands = true)
+    private Rect LocalInk(IRenderUnit unit, Size<double> size, bool bands = true)
     {
         var ink = new Rect(0, 0, size.Width, size.Height);
         var pen = 0.0;
@@ -755,8 +756,11 @@ public partial class RenderCache
                 ink = Union(ink, image.DestinationRect);
                 break;
             case GeometryRenderUnit { Payload.Geometry: { } geometry } shape:
-                var stroke = MiterReach * (shape.Payload.Pen?.Thickness ?? 0);
-                ink = Union(ink, geometry.Bounds.Inflate(stroke).TransformToAABB(shape.Payload.LocalTransform));
+                var place = shape.Payload.Placement is { } placed
+                    ? shape.Payload.LocalTransform * Newest(placed)
+                    : shape.Payload.LocalTransform;
+                var stroke = MiterReach * LocalWidth(shape.Payload.Pen, place * World(shape.Component));
+                ink = Union(ink, geometry.Bounds.Inflate(stroke).TransformToAABB(place));
                 break;
             case LineRenderUnit { Payload: { } line }:
                 ink = Union(ink, new Rect(
@@ -769,7 +773,9 @@ public partial class RenderCache
             case TextRenderUnit { Payload: { } text }:
                 var overhang = text.DesiredSize.Height * TextOverhang;
                 ink = Union(ink, new Rect(0, 0, text.DesiredSize.Width, text.DesiredSize.Height).Inflate(overhang)
-                    .TransformToAABB(text.LocalTransform));
+                    .TransformToAABB(text.Placement is { } textPlaced
+                        ? text.LocalTransform * Newest(textPlaced)
+                        : text.LocalTransform));
                 break;
         }
 
@@ -778,6 +784,26 @@ public partial class RenderCache
             : System.Math.Max(HaloRectCollector.MaxReach(unit.RenderData.Halo),
                 HaloLivingCollector.MaxReach(unit.RenderData.LivingHalo));
         return ink.Inflate(pen + reach);
+    }
+
+    // A pen's width in the units of the space toWindow maps to the window: device-pixel widths and minimums undone by its
+    // scale, as the stroke shader does.
+    private double LocalWidth(Pen pen, in Matrix4x4F toWindow)
+    {
+        if (pen == null)
+        {
+            return 0;
+        }
+
+        var thickness = pen.Thickness;
+        var scale = System.Math.Sqrt(System.Math.Abs(toWindow.M11 * toWindow.M22 - toWindow.M12 * toWindow.M21));
+        if (scale > 1e-4)
+        {
+            if (pen.ThicknessUnit == PenThicknessUnit.Pixels) thickness /= scale;
+            thickness = System.Math.Max(thickness, pen.MinimumDeviceThickness / (scale * _renderScale));
+        }
+
+        return thickness;
     }
 
     private static Rect2D Grow(Rect2D rect, int by) => new()

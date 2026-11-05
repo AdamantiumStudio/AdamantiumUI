@@ -68,6 +68,7 @@ public partial class RenderCache
                         // in a layer's own space: what it was last baked with may be the window's projection.
                         if (InOwnSpace && op.Unit.Component is { } owner)
                         {
+                            CatchUp(op.Unit);
                             op.Unit.Update(World(owner), _projectionMatrix, _renderScale);
                         }
                         else
@@ -143,13 +144,16 @@ public partial class RenderCache
     }
 
     // Re-points a record-time-baked draw only for movers whose batched half moved this frame too: the compositor,
-    // RefreshMovedNodes or RefreshMovedComponents. Anything else would tear the frame.
+    // RefreshMovedNodes, RefreshMovedComponents or RefreshMovedPlacements. Anything else would tear the frame.
     private void RepointIfItMoved(IRenderUnit unit)
     {
-        if (_compositedOwners.Count == 0 && _movedNodeOwners.Count == 0 && _movedOwners.Count == 0) return;
+        if (_compositedOwners.Count == 0 && _movedNodeOwners.Count == 0 && _movedOwners.Count == 0
+            && _repointPlacements.Count == 0) return;
         if (unit.Component is not { } c) return;
-        if (!_compositedOwners.Contains(c) && !_movedOwners.Contains(c) && !NodeMoved(NodeOf(c))) return;
+        if (!_compositedOwners.Contains(c) && !_movedOwners.Contains(c) && !NodeMoved(NodeOf(c))
+            && !(unit.Placement is { } placement && _repointPlacements.Contains(placement))) return;
 
+        CatchUp(unit);
         unit.Update(World(c), _projectionMatrix, _renderScale);
     }
 
@@ -214,7 +218,7 @@ public partial class RenderCache
         if (!batch.SameField(field)) return false;
 
         var bounds = LogicalBounds(unit.Component, wt);
-        var bakeWorld = ResolveBake(device, unit.Component, wt, out var slot);
+        var bakeWorld = ResolveBake(device, unit, wt, out var slot);
         // The band reads the ancestor chain from the OPACITY SLOT now, so what goes into its color is the element's
         // OWN alpha only - the same split every batched fill makes.
         FadeBySlot(unit);
@@ -263,7 +267,7 @@ public partial class RenderCache
         }
 
         var haloBounds = LogicalBounds(unit.Component, wt);
-        var bakeWorld = ResolveBake(device, unit.Component, wt, out var slot);
+        var bakeWorld = ResolveBake(device, unit, wt, out var slot);
         FadeBySlot(unit);   // the chain comes from the slot now - the color carries the element's own alpha only
         if (!batch.TryAdd(bands, inner, shape, corners, kind, bakeWorld,
                 unit.RenderData.Opacity, scissor, haloBounds, slot, field, fieldRange,
@@ -1112,7 +1116,10 @@ public partial class RenderCache
         if (group.Tag != 0 && !_leftTheOrder.Contains(group)) _leftTheOrder.Add(group);
 
         foreach (var unit in group.Units)
+        {
+            if (unit.Component != null) ReleasePlacements(unit.Component);
             Retire(unit);
+        }
         RemoveFromOrder(group, "disposed");
         group.ClearUnits();
 

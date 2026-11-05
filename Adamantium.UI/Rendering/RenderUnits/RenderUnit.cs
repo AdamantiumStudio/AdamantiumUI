@@ -29,7 +29,8 @@ public static class RenderUnitMachinery
     internal static void Bump() => System.Threading.Interlocked.Increment(ref _version);
 }
 
-public abstract class RenderUnit<TPayload> : DeferredDisposableObject, IRenderUnit, IInstanceableFill where TPayload : class
+public abstract class RenderUnit<TPayload> : DeferredDisposableObject, IRenderUnit, IInstanceableFill, IPlacedRenderUnit
+    where TPayload : class
 {
     protected RenderUnit(IDrawCommand command, RenderUnitContext context) : base(context.GraphicsDevice)
     {
@@ -289,9 +290,38 @@ public abstract class RenderUnit<TPayload> : DeferredDisposableObject, IRenderUn
         StrokeRenderer?.Update(placed, projection);
     }
 
-    /// <summary>Where this unit's draw sits ON TOP of the element's world transform. Identity for every ordinary unit;
-    /// a geometry drawn by a <see cref="Adamantium.UI.Core.Media.Drawings.Drawing"/> carries its own placement.</summary>
-    public virtual Matrix4x4F Place(Matrix4x4F world) => world;
+    /// <summary>Where this unit's draw sits ON TOP of the element's world transform: its payload's
+    /// <see cref="IPlacedPayload.LocalTransform"/> - as its placement shows it now, when it has one - identity for a draw
+    /// that carries none.</summary>
+    public Matrix4x4F Place(Matrix4x4F world) => Payload switch
+    {
+        IPlacedPayload { Placement: not null } => PlacedMatrix * world,
+        IPlacedPayload placed => placed.LocalTransform * world,
+        _ => world
+    };
+
+    /// <summary>What an instance bakes: <see cref="Place"/>, except that a placement's matrix rides the instance's
+    /// transform slot instead.</summary>
+    public Matrix4x4F PlaceBaked(Matrix4x4F world) => Payload switch
+    {
+        IPlacedPayload { Placement: not null } => world,
+        IPlacedPayload placed => placed.LocalTransform * world,
+        _ => world
+    };
+
+    /// <summary>The placement the draw moves with, or null.</summary>
+    public Placement Placement => (Payload as IPlacedPayload)?.Placement;
+
+    /// <summary>The <see cref="Placement"/>'s matrix as this unit's renderer shows it now; written by the render cache.</summary>
+    internal Matrix4x4F PlacedMatrix = Matrix4x4F.Identity;
+
+    IPlacedPayload IPlacedRenderUnit.Placed => Payload as IPlacedPayload;
+
+    Matrix4x4F IPlacedRenderUnit.PlacedMatrix
+    {
+        get => PlacedMatrix;
+        set => PlacedMatrix = value;
+    }
 
     /// <summary>Has this unit anything to do out of the render pass at all? The sweep below runs on EVERY frame over
     /// every unit of every group, and for a batched rect - which is most of a scene - all three of these are null, so it
@@ -348,8 +378,6 @@ public class GeometryRenderUnit : RenderUnit<GeometryPayload>
         ProcessFillFringe(Payload.Geometry, Payload.Brush);
         ProcessStrokeData(Payload.Pen, Payload.Geometry);
     }
-
-    public override Matrix4x4F Place(Matrix4x4F world) => Payload.LocalTransform * world;
 
     // Solid arbitrary geometry is instanceable: N identical Paths share one mesh + one instanced draw. A gradient/image
     // fill (or a mesh with no vertices) falls back to the per-unit body. The instanced applier reads the FROZEN mesh
@@ -1084,8 +1112,6 @@ public class TextRenderUnit : RenderUnit<TextPayload>
     // The text batch aggregator (RenderCache) reaches the block's TextLayout / params / foreground / FontRenderer
     // through this. Null only transiently before the component is built.
     public TextRenderComponent TextComponent => GeometryRenderer as TextRenderComponent;
-
-    public override Matrix4x4F Place(Matrix4x4F world) => Payload.LocalTransform * world;
 
     internal bool HasBand => _band != null;
 

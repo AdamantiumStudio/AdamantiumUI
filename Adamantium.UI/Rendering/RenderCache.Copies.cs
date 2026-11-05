@@ -176,7 +176,7 @@ public partial class RenderCache
     {
         if (!_copiesByUnit.TryGetValue(u, out var ledger))
         {
-            var bakeWorld = ResolveBake(device, u.Component, World(u.Component), out var slot);
+            var bakeWorld = ResolveBake(device, u, World(u.Component), out var slot);
             return PatchSlot(device, u, bakeWorld, slot);
         }
 
@@ -194,7 +194,7 @@ public partial class RenderCache
                 InstallSlots(u, ledger.Copies[k]);
                 u.SetFadeSlot(IsCopyFade(ledger.Copies[k].Fade) ? ledger.Copies[k].Fade : fade);
                 _cloneMatrix = ledger.Clones[k];
-                var bakeWorld = ResolveBake(device, u.Component, World(u.Component), out var slot);
+                var bakeWorld = ResolveBake(device, u, World(u.Component), out var slot);
                 if (!PatchSlot(device, u, bakeWorld, slot))
                 {
                     return false;

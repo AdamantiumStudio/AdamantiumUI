@@ -6,13 +6,25 @@ using Adamantium.UI.Core.Media;
 
 namespace Adamantium.UI.Rendering.Payloads;
 
-public class GeometryPayload(Brush brush, Geometry geometry, Pen pen = null, Matrix4x4F? localTransform = null) : IEquatable<GeometryPayload>, IRenderCachePolicy
+public class GeometryPayload(Brush brush, Geometry geometry, Pen pen = null, Matrix4x4F? localTransform = null) : IEquatable<GeometryPayload>, IRenderCachePolicy, IPlacedPayload
 {
     /// <summary>Where this draw places the geometry, ON TOP of the element's own world transform - how a
     /// <see cref="Adamantium.UI.Core.Media.Drawings.Drawing"/> puts many shapes at their own positions and scales while
     /// they all belong to one element. Identity for every ordinary draw. It rides the INSTANCE, never the mesh, so a
     /// shape drawn at five sizes is still one mesh and five instances.</summary>
     public Matrix4x4F LocalTransform { get; } = localTransform ?? Matrix4x4F.Identity;
+
+    /// <summary>The placement <see cref="LocalTransform"/> moves with, or null: then it rides a transform slot of its
+    /// own instead of the instance.</summary>
+    public Placement Placement { get; private set; }
+
+    public long PlacedVersion { get; private set; }
+
+    void IPlacedPayload.PlaceBy(Placement placement)
+    {
+        Placement = placement;
+        PlacedVersion = placement.Version;
+    }
 
     // The LIVE brush, read through its immutable snapshot - see RectanglePayload.
     private readonly Brush _brush = brush?.ForRendering();
@@ -46,7 +58,8 @@ public class GeometryPayload(Brush brush, Geometry geometry, Pen pen = null, Mat
         if (ReferenceEquals(this, other)) return true;
         return Equals(Brush, other.Brush) && Geometry.Equals(other.Geometry)
                && GeometryVersion == other.GeometryVersion && Equals(Pen, other.Pen)
-               && LocalTransform == other.LocalTransform;
+               && ReferenceEquals(Placement, other.Placement)
+               && (Placement != null || LocalTransform == other.LocalTransform);   // a placement's matrix rides its slot
     }
 
     public override bool Equals(object obj)
@@ -59,7 +72,8 @@ public class GeometryPayload(Brush brush, Geometry geometry, Pen pen = null, Mat
 
     public override int GetHashCode()
     {
-        return HashCode.Combine(Brush, Geometry, GeometryVersion, Pen, LocalTransform);
+        return HashCode.Combine(Brush, Geometry, GeometryVersion, Pen,
+            Placement != null ? Placement.GetHashCode() : LocalTransform.GetHashCode());
     }
 
     /// <summary>The geometry object: its frozen mesh, edge and stroke stay with the unit that drew it.</summary>

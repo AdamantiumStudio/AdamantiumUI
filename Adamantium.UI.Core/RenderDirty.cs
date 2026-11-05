@@ -7,6 +7,15 @@ namespace Adamantium.UI.Core;
 /// <remarks>Conservative: over-marking only costs time, and every mutation path marks at least one kind.</remarks>
 public sealed class RenderDirtyScope
 {
+    // One lock per set, each a field of its own: a set handed out or locked by anyone else cannot block these.
+    private readonly object _geometryLock = new();
+    private readonly object _paintLock = new();
+    private readonly object _effectLock = new();
+    private readonly object _movedLock = new();
+    private readonly object _nodeLock = new();
+    private readonly object _placementLock = new();
+    private readonly object _structuralLock = new();
+
     private readonly HashSet<IUIComponent> GeometrySet = new();
     private bool _transform;
     private bool _structural;
@@ -31,7 +40,7 @@ public sealed class RenderDirtyScope
             return;
         }
 
-        lock (GeometrySet) GeometrySet.Add(component);
+        lock (_geometryLock) GeometrySet.Add(component);
         LoopSignal.Request();   // the scene changed - the loop owes a frame
     }
 
@@ -55,11 +64,11 @@ public sealed class RenderDirtyScope
     public void SnapshotGeometryInto(List<IUIComponent> buffer)
     {
         buffer.Clear();
-        lock (GeometrySet) buffer.AddRange(GeometrySet);
+        lock (_geometryLock) buffer.AddRange(GeometrySet);
     }
 
     /// <summary>The geometry-dirty count, read under the write lock (safe against a concurrent mark).</summary>
-    public int GeometryCount { get { lock (GeometrySet) return GeometrySet.Count; } }
+    public int GeometryCount { get { lock (_geometryLock) return GeometrySet.Count; } }
 
     // Paint-dirty: same commands, new colors; the applier re-bakes existing units without re-rendering. Keeps an animated
     // shared brush cheap.
@@ -76,7 +85,7 @@ public sealed class RenderDirtyScope
             return;
         }
 
-        lock (PaintSet)
+        lock (_paintLock)
         {
             _paintMarks++;
             PaintSet[component] = _paintMarks;
@@ -88,13 +97,13 @@ public sealed class RenderDirtyScope
     /// clears of this loop frame (<see cref="Media.Animation.Compositor.Frame"/>) - the next record takes it.</summary>
     public void BeginRecord()
     {
-        lock (PaintSet)
+        lock (_paintLock)
         {
             _recordStartMark = _paintMarks;
             _recordFrame = Media.Animation.Compositor.Frame;
         }
 
-        lock (EffectSet) _effectRecordStartMark = _effectMarks;
+        lock (_effectLock) _effectRecordStartMark = _effectMarks;
     }
 
     private long _paintMarks;
@@ -102,16 +111,16 @@ public sealed class RenderDirtyScope
     /// <summary>How many paint marks this scope has EVER taken. Monotonic and untouched by <see cref="Clear"/>, so a
     /// stage that runs on the render thread can still tell whether a recolor happened since it last redrew: the set
     /// itself is wiped once per frame by the loop thread, long before an overlay stage gets to look at it.</summary>
-    public long TotalPaintMarks { get { lock (PaintSet) return _paintMarks; } }
+    public long TotalPaintMarks { get { lock (_paintLock) return _paintMarks; } }
 
     /// <summary>Atomically snapshot the paint-dirty set (same locking discipline as <see cref="SnapshotGeometryInto"/>).</summary>
     public void SnapshotPaintInto(List<IUIComponent> buffer)
     {
         buffer.Clear();
-        lock (PaintSet) buffer.AddRange(PaintSet.Keys);
+        lock (_paintLock) buffer.AddRange(PaintSet.Keys);
     }
 
-    public int PaintCount { get { lock (PaintSet) return PaintSet.Count; } }
+    public int PaintCount { get { lock (_paintLock) return PaintSet.Count; } }
 
     private readonly Dictionary<IUIComponent, long> EffectSet = new();
     private readonly List<IUIComponent> _effectsCleared = new();
@@ -128,7 +137,7 @@ public sealed class RenderDirtyScope
             return;
         }
 
-        lock (EffectSet)
+        lock (_effectLock)
         {
             _effectMarks++;
             EffectSet[component] = _effectMarks;
@@ -138,13 +147,13 @@ public sealed class RenderDirtyScope
     }
 
     /// <summary>How many effect marks this scope has ever taken; monotonic, as <see cref="TotalPaintMarks"/>.</summary>
-    public long TotalEffectMarks { get { lock (EffectSet) return _effectMarks; } }
+    public long TotalEffectMarks { get { lock (_effectLock) return _effectMarks; } }
 
     /// <summary>Atomically snapshot the effect-dirty set (same locking discipline as <see cref="SnapshotGeometryInto"/>).</summary>
     public void SnapshotEffectsInto(List<IUIComponent> buffer)
     {
         buffer.Clear();
-        lock (EffectSet) buffer.AddRange(EffectSet.Keys);
+        lock (_effectLock) buffer.AddRange(EffectSet.Keys);
     }
 
     // Assigning a different brush still re-records the element: a one-element case, not worth coupling to the renderer.
@@ -171,7 +180,7 @@ public sealed class RenderDirtyScope
         _transform = true;
         LoopSignal.Request();
         if (component == null) { _transformUnknown = true; return; }
-        lock (MovedSet) MovedSet.Add(component);   // locked: movers arrive from the parallel arrange too (see MarkGeometry)
+        lock (_movedLock) MovedSet.Add(component);   // locked: movers arrive from the parallel arrange too (see MarkGeometry)
     }
 
     /// <summary>Atomically snapshot the moved components into <paramref name="buffer"/> (same lock/race as
@@ -179,7 +188,7 @@ public sealed class RenderDirtyScope
     public void SnapshotMovedInto(List<IUIComponent> buffer)
     {
         buffer.Clear();
-        lock (MovedSet) buffer.AddRange(MovedSet);
+        lock (_movedLock) buffer.AddRange(MovedSet);
     }
 
     /// <summary>True when something moved that <see cref="MarkTransform"/> could not name - the frozen layout snapshot
@@ -202,18 +211,44 @@ public sealed class RenderDirtyScope
 
         LoopSignal.Request();
         if (node == null) return;
-        lock (NodeSet) NodeSet.Add(node);
+        lock (_nodeLock) NodeSet.Add(node);
     }
 
-    /// <summary>The moved motion nodes (valid until <see cref="Clear"/>).</summary>
-    public IReadOnlyCollection<IUIComponent> MovedNodes => NodeSet;
+    /// <summary>Whether <paramref name="node"/> moved as a motion node since the last <see cref="Clear"/>; read under
+    /// the lock the marks take.</summary>
+    public bool IsNodeMoved(IUIComponent node)
+    {
+        lock (_nodeLock) return NodeSet.Contains(node);
+    }
 
     /// <summary>Atomically snapshot the moved-node set into <paramref name="buffer"/> under the same lock
     /// <see cref="MarkNodeTransform"/> writes with (same race as <see cref="SnapshotGeometryInto"/>).</summary>
     public void SnapshotNodesInto(List<IUIComponent> buffer)
     {
         buffer.Clear();
-        lock (NodeSet) buffer.AddRange(NodeSet);
+        lock (_nodeLock) buffer.AddRange(NodeSet);
+    }
+
+    // Placements moved this frame: as a node move, a matrix write - nothing is recorded again.
+    private readonly HashSet<Graphics.Placement> PlacementSet = new();
+
+    /// <summary>Records that <paramref name="placement"/> moved.</summary>
+    public void MarkPlacement(Graphics.Placement placement)
+    {
+        if (_forgotten || placement == null)
+        {
+            return;
+        }
+
+        lock (_placementLock) PlacementSet.Add(placement);
+        LoopSignal.Request();
+    }
+
+    /// <summary>Atomically snapshot the moved placements (same locking discipline as <see cref="SnapshotGeometryInto"/>).</summary>
+    public void SnapshotPlacementsInto(List<Graphics.Placement> buffer)
+    {
+        buffer.Clear();
+        lock (_placementLock) buffer.AddRange(PlacementSet);
     }
 
     // WHICH components entered or left the drawn set this frame (a visual child added/removed, a Visibility toggle). Recorded
@@ -255,18 +290,18 @@ public sealed class RenderDirtyScope
         LoopSignal.Request();
         TotalStructuralMarks++;
         if (component == null) { _structuralUnknown = true; return; }
-        lock (StructuralSet) StructuralSet.Add(component);   // locked: marks arrive from the parallel arrange too
+        lock (_structuralLock) StructuralSet.Add(component);   // locked: marks arrive from the parallel arrange too
     }
 
     /// <summary>Atomically snapshot the structurally-changed components (same lock/race as <see cref="SnapshotGeometryInto"/>).</summary>
     public void SnapshotStructuralInto(List<IUIComponent> buffer)
     {
         buffer.Clear();
-        lock (StructuralSet) buffer.AddRange(StructuralSet);
+        lock (_structuralLock) buffer.AddRange(StructuralSet);
     }
 
     /// <summary>How many components are structurally marked, read under the write lock.</summary>
-    public int StructuralCount { get { lock (StructuralSet) return StructuralSet.Count; } }
+    public int StructuralCount { get { lock (_structuralLock) return StructuralSet.Count; } }
 
     /// <summary>Whether the recorder must re-walk the whole tree: an unnamed structural change, or a swap settling (see
     /// <see cref="ForceStructuralUntilSettled"/>).</summary>
@@ -296,8 +331,13 @@ public sealed class RenderDirtyScope
     }
 
     /// <summary>Any dirty state at all (else the frame is fully clean).</summary>
-    public bool HasWork => _structural || _transform || GeometrySet.Count > 0 || PaintSet.Count > 0
-                                  || NodeSet.Count > 0 || EffectSet.Count > 0 || _forceUntilSettled || _finalForcedBuild;
+    public bool HasWork => _structural || _transform || GeometryCount > 0 || PaintCount > 0 || NodeCount > 0
+                           || EffectCount > 0 || PlacementCount > 0 || _forceUntilSettled || _finalForcedBuild;
+
+    // Read under the locks their writers take, as GeometryCount is.
+    private int NodeCount { get { lock (_nodeLock) return NodeSet.Count; } }
+    private int EffectCount { get { lock (_effectLock) return EffectSet.Count; } }
+    private int PlacementCount { get { lock (_placementLock) return PlacementSet.Count; } }
 
     public bool IsStructural => _structural || _forceUntilSettled || _finalForcedBuild;
     public bool IsTransform => _transform;
@@ -308,8 +348,12 @@ public sealed class RenderDirtyScope
     /// projection finalization and desync (chrome left at the old size while dirty content re-records at the new one).</summary>
     public bool IsSettlingStructural => _forceUntilSettled || _finalForcedBuild;
 
-    /// <summary>The geometry-dirty components to re-render this build (only valid until <see cref="Clear"/>).</summary>
-    public IReadOnlyCollection<IUIComponent> Geometry => GeometrySet;
+    /// <summary>Whether <paramref name="component"/> is marked to re-render since the last <see cref="Clear"/>; read
+    /// under the lock the marks take.</summary>
+    public bool IsGeometryDirty(IUIComponent component)
+    {
+        lock (_geometryLock) return GeometrySet.Contains(component);
+    }
 
     internal void Forget()
     {
@@ -323,8 +367,8 @@ public sealed class RenderDirtyScope
     {
         // Clear the HashSets under the SAME locks their writers (MarkGeometry/MarkNodeTransform/MarkTransform) take - a
         // lock-free Clear racing a concurrent Add (parallel arrange / Dispatcher-thread invalidation) corrupted the set.
-        lock (GeometrySet) GeometrySet.Clear();
-        lock (PaintSet)
+        lock (_geometryLock) GeometrySet.Clear();
+        lock (_paintLock)
         {
             _paintCleared.Clear();
             var keepAfter = _recordFrame == Media.Animation.Compositor.Frame ? _recordStartMark : long.MaxValue;
@@ -336,8 +380,9 @@ public sealed class RenderDirtyScope
             foreach (var component in _paintCleared) PaintSet.Remove(component);
             _paintCleared.Clear();
         }
-        lock (NodeSet) NodeSet.Clear();
-        lock (EffectSet)
+        lock (_nodeLock) NodeSet.Clear();
+        lock (_placementLock) PlacementSet.Clear();
+        lock (_effectLock)
         {
             var keepAfter = _recordFrame == Media.Animation.Compositor.Frame ? _effectRecordStartMark : long.MaxValue;
             foreach (var (component, mark) in EffectSet)
@@ -348,8 +393,8 @@ public sealed class RenderDirtyScope
             foreach (var component in _effectsCleared) EffectSet.Remove(component);
             _effectsCleared.Clear();
         }
-        lock (MovedSet) MovedSet.Clear();
-        lock (StructuralSet) StructuralSet.Clear();
+        lock (_movedLock) MovedSet.Clear();
+        lock (_structuralLock) StructuralSet.Clear();
         _transform = false;
         _transformUnknown = false;
         _structural = false;

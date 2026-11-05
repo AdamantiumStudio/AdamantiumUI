@@ -92,6 +92,13 @@ internal sealed class RecordingDrawingSession : IDrawingSession
     public IDrawingSession DrawText(TextRenderingParameters renderingParameters, Size<double> desiredSize, TextLayout textLayout,
         Brush foreground, Brush background, Brush stroke) => this;
 
+    public IDrawingSession DrawText(TextRenderingParameters renderingParameters, Size<double> desiredSize, TextLayout textLayout,
+        Brush foreground, Brush background, Brush stroke, Placement placement) =>
+        DrawText(renderingParameters, desiredSize, textLayout, foreground, background, stroke, placement?.Matrix ?? Matrix4x4F.Identity);
+
+    public IDrawingSession DrawGeometry(Brush brush, Geometry geometry, Pen pen, Placement placement) =>
+        DrawGeometry(brush, geometry, pen, placement?.Matrix ?? Matrix4x4F.Identity);
+
     public List<IReadOnlyList<GlyphEffect>> Effects { get; } = [];
 
     public IDrawingSession DrawText(TextRenderingParameters renderingParameters, Size<double> desiredSize, TextLayout textLayout,

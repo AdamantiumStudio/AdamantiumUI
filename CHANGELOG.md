@@ -7,12 +7,30 @@ All packages share one version.
 
 ### Added
 
+- `Placement`: where an element puts a drawing, which it can move later without drawing again. `DrawGeometry` and
+  `DrawText` take one in new overloads; writing `Placement.Matrix` moves what was drawn with it by rewriting one matrix
+  on the GPU - the element is not recorded again. A camera over many objects gives each object its own placement.
+
+- `Pen.ThicknessUnit`: a solid stroke of geometry can be as wide in the window's pixels under any scale and on any
+  monitor - a road on a zoomed map - and `Pen.MinimumDeviceThickness` keeps a line scaled far down at least that many pixels wide. Dash lengths stay
+  in local units; strokes in a gradient, and the batched outlines of rounded rectangles, ellipses and regular polygons,
+  take the thickness in local units.
+
 - `Rect.FromPoints` of a span of points.
 
 - `adam-auto device-memory`: what device memory the application's graphics resources hold, by kind and the largest
   groups - buffers named by what they hold - written to `logs/device-memory.txt` as well.
 
+### Changed
+
+- `RenderDirty.IsNodeMoved` and `RenderDirty.IsGeometryDirty` replace `MovedNodes` and `Geometry`, which handed out the
+  live sets while other threads marked them. Every set of the dirty marks is locked by a lock of its own, not by the
+  set itself.
+
 ### Fixed
+
+- A text run drawn at a spot of its own inside an element (`DrawText` with a matrix - a `Drawing`'s runs) takes its
+  background along: the background stood at the element's origin while the text was elsewhere.
 
 - A component drawing thousands of shapes - a map zoomed - is applied in about half the time:
   - a rectangle filled with an image or a nine-slice brush, drawn by the texture batch, no longer also builds

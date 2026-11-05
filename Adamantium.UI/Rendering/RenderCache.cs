@@ -366,6 +366,7 @@ public partial class RenderCache
         _packet = RentPacket();
         Dirty.BeginRecord();
         RecordFrameCore(visualRoot);
+        CapturePlacements();
         // Freeze the snapshot at the END of the device-free record so the applier reads only the frozen packet, never a
         // live component.
         var snapBytes0 = System.GC.GetAllocatedBytesForCurrentThread();
