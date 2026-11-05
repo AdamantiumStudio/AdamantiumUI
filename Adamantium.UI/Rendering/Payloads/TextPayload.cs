@@ -26,6 +26,14 @@ public class TextPayload(
     /// a drawing putting several runs at their own spots inside one element has nowhere else to say where they go.</summary>
     public Matrix4x4F LocalTransform { get; } = localTransform ?? Matrix4x4F.Identity;
 
+    /// <summary>The placement the run moves with, or null - see <see cref="GeometryPayload.Placement"/>.</summary>
+    public Placement Placement { get; init; }
+
+    /// <summary>The placement's matrix and version as they were when this was recorded.</summary>
+    public Matrix4x4F PlacedAt { get; init; } = Matrix4x4F.Identity;
+
+    public long PlacedVersion { get; init; }
+
     public TextRenderingParameters TextRenderingParameters { get; } = renderingParameters;
     public Size<double> DesiredSize { get; } = desiredSize;
     public TextLayout TextLayout { get; } = textLayout;
@@ -94,7 +102,7 @@ public class TextPayload(
                DesiredSize.Equals(other.DesiredSize) && Equals(TextLayout, other.TextLayout) && Revision == other.Revision &&
                Equals(Foreground, other.Foreground) && Equals(Background, other.Background) &&
                Equals(Stroke, other.Stroke) && LocalTransform == other.LocalTransform && SameEffects(other) &&
-               Window == other.Window;
+               Window == other.Window && ReferenceEquals(Placement, other.Placement);
     }
 
     public override bool Equals(object obj)

@@ -36,4 +36,7 @@ public interface IRenderUnit : IDisposable
 
     /// <summary>The <see cref="IRenderCachePolicy.Content"/> of the draw this unit holds, or null.</summary>
     object Content => null;
+
+    /// <summary>The placement the unit's draw moves with, or null.</summary>
+    Placement Placement => null;
 }

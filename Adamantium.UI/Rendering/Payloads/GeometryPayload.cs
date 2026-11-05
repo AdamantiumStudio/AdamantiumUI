@@ -14,6 +14,15 @@ public class GeometryPayload(Brush brush, Geometry geometry, Pen pen = null, Mat
     /// shape drawn at five sizes is still one mesh and five instances.</summary>
     public Matrix4x4F LocalTransform { get; } = localTransform ?? Matrix4x4F.Identity;
 
+    /// <summary>The placement the draw moves with, or null. Its matrix rides a transform slot of its own, never the
+    /// instance.</summary>
+    public Placement Placement { get; init; }
+
+    /// <summary>The placement's matrix and version as they were when this was recorded.</summary>
+    public Matrix4x4F PlacedAt { get; init; } = Matrix4x4F.Identity;
+
+    public long PlacedVersion { get; init; }
+
     // The LIVE brush, read through its immutable snapshot - see RectanglePayload.
     private readonly Brush _brush = brush?.ForRendering();
 
@@ -46,7 +55,7 @@ public class GeometryPayload(Brush brush, Geometry geometry, Pen pen = null, Mat
         if (ReferenceEquals(this, other)) return true;
         return Equals(Brush, other.Brush) && Geometry.Equals(other.Geometry)
                && GeometryVersion == other.GeometryVersion && Equals(Pen, other.Pen)
-               && LocalTransform == other.LocalTransform;
+               && LocalTransform == other.LocalTransform && ReferenceEquals(Placement, other.Placement);
     }
 
     public override bool Equals(object obj)

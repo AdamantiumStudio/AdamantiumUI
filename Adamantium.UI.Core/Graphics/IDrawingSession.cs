@@ -37,6 +37,10 @@ public interface IDrawingSession
     /// one frame, and each placement must stay a separate instance of ONE shared mesh. Baking the placement into the
     /// geometry instead would give every size its own tessellation and defeat the instancing outright.</summary>
     IDrawingSession DrawGeometry(Brush brush, Geometry geometry, Pen pen, Matrix4x4F transform);
+
+    /// <summary>Draws the geometry where <paramref name="placement"/> puts it. Rewriting the placement's matrix later
+    /// moves the drawing without recording it again - a camera over many objects, each with its own placement.</summary>
+    IDrawingSession DrawGeometry(Brush brush, Geometry geometry, Pen pen, Placement placement);
     IDrawingSession DrawImage(ImageSource image, Brush filter, Rect destinationRect, CornerRadius corners);
 
     /// <summary>Draws a normalized (0..1) SUB-RECT of the image into <paramref name="destinationRect"/> - a mosaic tile
@@ -67,6 +71,15 @@ public interface IDrawingSession
         Brush background,
         Brush stroke,
         Matrix4x4F transform);
+    /// <summary>Draws the text run where <paramref name="placement"/> puts it; moving the placement moves the run
+    /// without recording it again.</summary>
+    IDrawingSession DrawText(TextRenderingParameters renderingParameters,
+        Size<double> desiredSize,
+        TextLayout textLayout,
+        Brush foreground,
+        Brush background,
+        Brush stroke,
+        Placement placement);
     /// <summary>Draws the text with <paramref name="effects"/>: ranges of it moved and recolored, the layout as it
     /// is.</summary>
     IDrawingSession DrawText(TextRenderingParameters renderingParameters,

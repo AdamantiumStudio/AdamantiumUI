@@ -32,6 +32,10 @@ public static class RenderDirty
 
     public static void MarkNodeTransform(IUIComponent node) => RenderDirtyRouter.Of(node).MarkNodeTransform(node);
 
+    /// <summary>A <see cref="Graphics.Placement"/> of <paramref name="owner"/> was moved.</summary>
+    public static void MarkPlacement(IUIComponent owner, Graphics.Placement placement) =>
+        RenderDirtyRouter.Of(owner).MarkPlacement(placement);
+
     /// <summary>A structural change. WITHOUT a component it is an unnameable one - something changed about the drawn set
     /// and nobody can say what - so it reaches EVERY scope: no owner can be ruled out.</summary>
     public static void MarkStructural(IUIComponent component = null)

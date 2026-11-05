@@ -293,6 +293,13 @@ public abstract class RenderUnit<TPayload> : DeferredDisposableObject, IRenderUn
     /// a geometry drawn by a <see cref="Adamantium.UI.Core.Media.Drawings.Drawing"/> carries its own placement.</summary>
     public virtual Matrix4x4F Place(Matrix4x4F world) => world;
 
+    /// <summary><see cref="Place"/> without the <see cref="Placement"/>: what an instance bakes when the placement
+    /// rides the instance's transform slot.</summary>
+    public virtual Matrix4x4F PlaceBaked(Matrix4x4F world) => world;
+
+    /// <summary>The placement the draw moves with, or null.</summary>
+    public virtual Placement Placement => null;
+
     /// <summary>Has this unit anything to do out of the render pass at all? The sweep below runs on EVERY frame over
     /// every unit of every group, and for a batched rect - which is most of a scene - all three of these are null, so it
     /// was three virtual calls to do nothing. Asked as a field read instead.</summary>
@@ -349,7 +356,12 @@ public class GeometryRenderUnit : RenderUnit<GeometryPayload>
         ProcessStrokeData(Payload.Pen, Payload.Geometry);
     }
 
-    public override Matrix4x4F Place(Matrix4x4F world) => Payload.LocalTransform * world;
+    public override Matrix4x4F Place(Matrix4x4F world) =>
+        Payload.Placement is { } placement ? Payload.LocalTransform * placement.Applied * world : Payload.LocalTransform * world;
+
+    public override Matrix4x4F PlaceBaked(Matrix4x4F world) => Payload.LocalTransform * world;
+
+    public override Placement Placement => Payload.Placement;
 
     // Solid arbitrary geometry is instanceable: N identical Paths share one mesh + one instanced draw. A gradient/image
     // fill (or a mesh with no vertices) falls back to the per-unit body. The instanced applier reads the FROZEN mesh
@@ -1085,7 +1097,12 @@ public class TextRenderUnit : RenderUnit<TextPayload>
     // through this. Null only transiently before the component is built.
     public TextRenderComponent TextComponent => GeometryRenderer as TextRenderComponent;
 
-    public override Matrix4x4F Place(Matrix4x4F world) => Payload.LocalTransform * world;
+    public override Matrix4x4F Place(Matrix4x4F world) =>
+        Payload.Placement is { } placement ? Payload.LocalTransform * placement.Applied * world : Payload.LocalTransform * world;
+
+    public override Matrix4x4F PlaceBaked(Matrix4x4F world) => Payload.LocalTransform * world;
+
+    public override Placement Placement => Payload.Placement;
 
     internal bool HasBand => _band != null;
 

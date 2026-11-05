@@ -616,7 +616,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
         // The unit's OWN placement on top of the caller's bake (a Drawing's shape sitting at its own spot and scale
         // inside one element). Folded HERE rather than at the four call sites so this path and the per-unit one compose
         // it exactly once and the same way.
-        local = unit.Place(local);
+        local = unit.PlaceBaked(local);
         if (meshObj is not FrozenMesh mesh) return false;
         var seg = GetOrCreate(key, mesh);
         if (seg == null) return false;
@@ -668,7 +668,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
     public bool TryAddGradient(GeometryRenderUnit unit, Matrix4x4F local, Rect2D scissor, Rect logicalBounds, int transformSlot, int clipSlot = -1)
     {
         if (!unit.TryGetInstancedGradientFill(out var key, out var meshObj, out var brush, out var localBounds, out var opacity)) return false;
-        local = unit.Place(local);
+        local = unit.PlaceBaked(local);
         if (meshObj is not FrozenMesh mesh) return false;
         var seg = GetOrCreate(key, mesh);
         if (seg == null) return false;
@@ -741,7 +741,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
     public bool TryAddTextured(GeometryRenderUnit unit, Matrix4x4F local, Rect2D scissor, Rect logicalBounds, int transformSlot, int clipSlot = -1)
     {
         if (!unit.TryGetInstancedTexturedFill(out var key, out var meshObj, out var brush, out var localBounds, out var opacity, out var texture)) return false;
-        local = unit.Place(local);
+        local = unit.PlaceBaked(local);
         if (meshObj is not FrozenMesh mesh) return false;
         var seg = GetOrCreate(key, mesh);
         if (seg == null) return false;
@@ -816,7 +816,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
     public bool TryAddPattern(GeometryRenderUnit unit, Matrix4x4F local, Rect2D scissor, Rect logicalBounds, int transformSlot, int clipSlot = -1)
     {
         if (!unit.TryGetInstancedPatternFill(out var key, out var meshObj, out var brush, out var localBounds, out var opacity)) return false;
-        local = unit.Place(local);
+        local = unit.PlaceBaked(local);
         if (meshObj is not FrozenMesh mesh) return false;
         var seg = GetOrCreate(key, mesh);
         if (seg == null) return false;
@@ -891,7 +891,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
         int transformSlot, Rect2D captureRegion, int clipSlot = -1)
     {
         if (!unit.TryGetInstancedMaterialFill(out var key, out var meshObj, out var brush, out var localBounds, out var opacity)) return false;
-        local = unit.Place(local);
+        local = unit.PlaceBaked(local);
         if (meshObj is not FrozenMesh mesh) return false;
         var seg = GetOrCreate(key, mesh);
         if (seg == null) return false;
@@ -1698,7 +1698,7 @@ internal sealed class InstancedFillCollector : DeferredDisposableObject
         if (!gru.TryGetInstancedFill(out var unitKey, out var meshObj, out var color)) return false;
         if (meshObj is not FrozenMesh mesh || !ReferenceEquals(GetOrCreate(unitKey, mesh), seg)) return false;
 
-        stage.Add(GeometryInstance.FromLocal(gru.Place(world), color, transformSlot, FadeSlotFor(gru), clipSlot));
+        stage.Add(GeometryInstance.FromLocal(gru.PlaceBaked(world), color, transformSlot, FadeSlotFor(gru), clipSlot));
         return true;
     }
 

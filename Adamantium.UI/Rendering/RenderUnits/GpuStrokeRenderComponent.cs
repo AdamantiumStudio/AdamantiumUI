@@ -709,12 +709,35 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
     private float ComputeFringe()
     {
         if (!AnalyticAa.Enabled) return 0f;   // AA off: no feather - the ribbon stays a hard +/-HalfThickness band
+        var deviceScale = DeviceScale();
+        return deviceScale > 1e-4f ? 1.0f / deviceScale : 1.0f;
+    }
+
+    // Device pixels per geometry-local unit, the least over the stroke under a perspective.
+    private float DeviceScale()
+    {
         var t = RenderData.TransformMatrix;
         var worldScale = t.M14 == 0f && t.M24 == 0f
             ? MathF.Sqrt(MathF.Abs(t.M11 * t.M22 - t.M12 * t.M21))
             : LeastProjectedScale(t);
-        var deviceScale = worldScale * (float)RenderData.RenderScale;
-        return deviceScale > 1e-4f ? 1.0f / deviceScale : 1.0f;
+        return worldScale * (float)RenderData.RenderScale;
+    }
+
+    // Half the line's width in geometry-local units: the pen's thickness in its unit, no narrower than its minimum.
+    private float HalfThickness()
+    {
+        var thickness = _pen.Thickness;
+        if (_pen.ThicknessUnit == PenThicknessUnit.DevicePixels || _pen.MinimumDeviceThickness > 0)
+        {
+            var deviceScale = DeviceScale();
+            if (deviceScale > 1e-4f)
+            {
+                if (_pen.ThicknessUnit == PenThicknessUnit.DevicePixels) thickness /= deviceScale;
+                thickness = Math.Max(thickness, _pen.MinimumDeviceThickness / deviceScale);
+            }
+        }
+
+        return (float)(thickness / 2.0);
     }
 
     // The least local->window scale over the corners of the contours' extent, w-divided as the rasterizer divides.
@@ -775,7 +798,7 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
     public override void PreRender()
     {
         var fringe = ComputeFringe();
-        var half = (float)(_pen.Thickness / 2.0);
+        var half = HalfThickness();
         var stale = !DrawsAt(half, fringe);
         if (stale)
         {
@@ -853,7 +876,7 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
             // The two ends of a dash are separate properties: one dash can be a concave bite and a convex tip - an arrow.
             _effect.DashStartCap.SetValue(MapCap(_pen.DashStartCap));
             _effect.DashEndCap.SetValue(MapCap(_pen.DashEndCap));
-            _effect.HalfThickness.SetValue((float)(_pen.Thickness / 2.0));
+            _effect.HalfThickness.SetValue(half);
             _effect.Fringe.SetValue(fringe);   // AA feather: the expander widens the ribbon/discs by Fringe/2
 
             if (!c.Batched) _effect.Indirect.SetValue(c.IndirectBuffer.GetDeviceAddress());
@@ -913,7 +936,7 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
         color.W *= (float)(_pen.Brush?.Opacity ?? 1.0) * RenderData.Opacity;   // color alpha x pen-brush Opacity x element Opacity
         _effect.StrokeColor.SetValue(color);
         // StrokePS reads these for the analytic-AA coverage (distance vs HalfThickness +/- Fringe/2).
-        _effect.HalfThickness.SetValue((float)(_pen.Thickness / 2.0));
+        _effect.HalfThickness.SetValue(HalfThickness());
         _effect.Fringe.SetValue(ComputeFringe());
 
         _device.VertexType = _useCut ? typeof(StrokeVertex) : null;   // a continuous stroke is read by address
@@ -964,7 +987,7 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
         if (viewports is not { Length: > 0 }) return false;
 
         // The miter clamp lets a corner reach 4x the WIDENED half-extent (half + Fringe/2): 2 thicknesses + 2 fringes.
-        var pad = (float)(_pen.Thickness * 2.0) + 2.0f * ComputeFringe() + 1.0f;
+        var pad = 4.0f * HalfThickness() + 2.0f * ComputeFringe() + 1.0f;
         float minX = float.MaxValue, minY = float.MaxValue, maxX = float.MinValue, maxY = float.MinValue;
         foreach (var c in _contours)
         {

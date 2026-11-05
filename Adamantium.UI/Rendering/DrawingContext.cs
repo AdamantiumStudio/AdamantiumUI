@@ -174,6 +174,20 @@ public class DrawingContext : IDrawingContext, IDrawingContextInternal, IDrawing
       return this;
    }
 
+   IDrawingSession IDrawingSession.DrawGeometry(Brush brush, Geometry geometry, Pen pen, Placement placement)
+   {
+      if (placement == null) return ((IDrawingSession)this).DrawGeometry(brush, geometry, pen);
+      if (!brush.IsVisible() && pen == null) return this;
+      placement.DrawnBy(_currentComponent);
+      CreateCommand(new GeometryPayload(brush, geometry, pen)
+      {
+         Placement = placement,
+         PlacedAt = placement.Matrix,
+         PlacedVersion = placement.Version
+      });
+      return this;
+   }
+
    IDrawingSession IDrawingSession.DrawImage(ImageSource image, Brush filter, Rect destinationRect, CornerRadius corners)
    {
       var payload = new ImagePayload(filter, image, destinationRect, corners);
@@ -226,6 +240,27 @@ public class DrawingContext : IDrawingContext, IDrawingContextInternal, IDrawing
          CreateCommand(new RectanglePayload(background, new Rect(desiredSize), CornerRadius.Empty, null));
       
       CreateCommand(new TextPayload(renderingParameters, desiredSize, textLayout, foreground, background, stroke, transform));
+      return this;
+   }
+
+   IDrawingSession IDrawingSession.DrawText(TextRenderingParameters renderingParameters, Size<double> desiredSize, TextLayout textLayout, Brush foreground, Brush background, Brush stroke, Placement placement)
+   {
+      if (placement == null)
+      {
+         return ((IDrawingSession)this).DrawText(renderingParameters, desiredSize, textLayout, foreground, background, stroke);
+      }
+
+      // The background moves with the run, so it is a placed shape rather than a rectangle of the element.
+      if (background.IsVisible())
+         ((IDrawingSession)this).DrawGeometry(background, new RectangleGeometry(new Rect(desiredSize)), null, placement);
+
+      placement.DrawnBy(_currentComponent);
+      CreateCommand(new TextPayload(renderingParameters, desiredSize, textLayout, foreground, background, stroke)
+      {
+         Placement = placement,
+         PlacedAt = placement.Matrix,
+         PlacedVersion = placement.Version
+      });
       return this;
    }
 

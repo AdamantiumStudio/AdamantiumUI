@@ -344,6 +344,13 @@ public partial class RenderCache
         }
 
         ApplyEffects(packet);   // after the units are built, whatever the kind: slot writes the stream survives
+
+        foreach (var draw in packet.Draws)
+        {
+            if (draw.Commands.Count > 0 || !draw.WasGeometryValid) ReconcilePlacements(draw.Component, draw.Commands);
+        }
+
+        ApplyPlacements(packet);
     }
 
     // The record+apply decision for one dirty component: Skip = reuse its cached units as-is (nothing recorded);

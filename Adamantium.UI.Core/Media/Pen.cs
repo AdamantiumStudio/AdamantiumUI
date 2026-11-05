@@ -14,6 +14,13 @@ public class Pen : IEquatable<Pen>
 
    public Double Thickness { get; }
 
+   /// <summary>What <see cref="Thickness"/> is measured in. Honored by strokes of geometry.</summary>
+   public PenThicknessUnit ThicknessUnit { get; init; }
+
+   /// <summary>The narrowest the line is drawn, in device pixels, however far it is scaled down; 0 for no limit.
+   /// Honored by strokes of geometry.</summary>
+   public Double MinimumDeviceThickness { get; init; }
+
    public Double DashOffset { get; }
 
    private AdamantiumCollection<Double> _dashStrokeArray;
@@ -133,6 +140,8 @@ public class Pen : IEquatable<Pen>
    {
       _brush = brush;
       Thickness = of.Thickness;
+      ThicknessUnit = of.ThicknessUnit;
+      MinimumDeviceThickness = of.MinimumDeviceThickness;
       DashOffset = of.DashOffset;
       _dashes = dashes;
       _isRenderCopy = true;
@@ -160,7 +169,7 @@ public class Pen : IEquatable<Pen>
       DashStartCap,
       DashEndCap,
       FitDashesToContour,
-      DashPhase);
+      DashPhase) { ThicknessUnit = ThicknessUnit, MinimumDeviceThickness = MinimumDeviceThickness };
 
    public bool Equals(Pen other)
    {
@@ -174,7 +183,8 @@ public class Pen : IEquatable<Pen>
              // Load-bearing: a pen that compares EQUAL is treated as unchanged and the stroke is never re-pointed, so a
              // property missing from here is a property that silently cannot be animated (the marching ants stopped
              // moving the moment DashPhase was added and left out).
-             DashPhase.Equals(other.DashPhase) && FitDashesToContour == other.FitDashesToContour;
+             DashPhase.Equals(other.DashPhase) && FitDashesToContour == other.FitDashesToContour &&
+             ThicknessUnit == other.ThicknessUnit && MinimumDeviceThickness.Equals(other.MinimumDeviceThickness);
    }
 
    public override bool Equals(object obj)
@@ -191,6 +201,7 @@ public class Pen : IEquatable<Pen>
          // The dash array hashes by its COUNT, not its identity: Equals now compares the pattern by value, so two equal
          // pens with different collection instances must not land in different buckets.
          HashCode.Combine(Brush, Thickness, DashOffset, Dashes.Count, (int)StartLineCap, (int)EndLineCap, (int)PenLineJoin),
-         HashCode.Combine(TrimStart, TrimEnd, (int)DashStartCap, (int)DashEndCap, DashPhase, FitDashesToContour));
+         HashCode.Combine(TrimStart, TrimEnd, (int)DashStartCap, (int)DashEndCap, DashPhase, FitDashesToContour),
+         (int)ThicknessUnit, MinimumDeviceThickness);
    }
 }

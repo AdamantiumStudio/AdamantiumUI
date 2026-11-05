@@ -216,6 +216,28 @@ public sealed class RenderDirtyScope
         lock (NodeSet) buffer.AddRange(NodeSet);
     }
 
+    // Placements moved this frame: as a node move, a matrix write - nothing is recorded again.
+    private readonly HashSet<Graphics.Placement> PlacementSet = new();
+
+    /// <summary>Records that <paramref name="placement"/> moved.</summary>
+    public void MarkPlacement(Graphics.Placement placement)
+    {
+        if (_forgotten || placement == null)
+        {
+            return;
+        }
+
+        lock (PlacementSet) PlacementSet.Add(placement);
+        LoopSignal.Request();
+    }
+
+    /// <summary>Atomically snapshot the moved placements (same locking discipline as <see cref="SnapshotGeometryInto"/>).</summary>
+    public void SnapshotPlacementsInto(List<Graphics.Placement> buffer)
+    {
+        buffer.Clear();
+        lock (PlacementSet) buffer.AddRange(PlacementSet);
+    }
+
     // WHICH components entered or left the drawn set this frame (a visual child added/removed, a Visibility toggle). Recorded
     // like MarkTransform's movers, and for the same reason: knowing the identities is what will let the recorder splice just
     // those components instead of re-recording the whole tree. Today NOTHING reads this - the recorder still does the full walk
@@ -297,7 +319,10 @@ public sealed class RenderDirtyScope
 
     /// <summary>Any dirty state at all (else the frame is fully clean).</summary>
     public bool HasWork => _structural || _transform || GeometrySet.Count > 0 || PaintSet.Count > 0
-                                  || NodeSet.Count > 0 || EffectSet.Count > 0 || _forceUntilSettled || _finalForcedBuild;
+                                  || NodeSet.Count > 0 || EffectSet.Count > 0 || PlacementCount > 0 || _forceUntilSettled
+                                  || _finalForcedBuild;
+
+    private int PlacementCount { get { lock (PlacementSet) return PlacementSet.Count; } }
 
     public bool IsStructural => _structural || _forceUntilSettled || _finalForcedBuild;
     public bool IsTransform => _transform;
@@ -337,6 +362,7 @@ public sealed class RenderDirtyScope
             _paintCleared.Clear();
         }
         lock (NodeSet) NodeSet.Clear();
+        lock (PlacementSet) PlacementSet.Clear();
         lock (EffectSet)
         {
             var keepAfter = _recordFrame == Media.Animation.Compositor.Frame ? _effectRecordStartMark : long.MaxValue;

@@ -51,7 +51,7 @@ internal sealed class TextBatchCollector : BatchCollector<GlyphItem>
 
         // The unit's OWN placement on top of the bake - a Drawing's text run sits at its own spot inside the element.
         // The walk folds it in the same way; without it the glyphs land at the element's origin instead of the run's.
-        var placed = tru.Place(world);
+        var placed = tru.PlaceBaked(world);
 
         var first = Stage.Count;
         for (var i = 0; i < tc.GlyphRun.Count; i++) Stage.Add(default);

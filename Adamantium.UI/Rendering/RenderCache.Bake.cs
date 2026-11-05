@@ -184,6 +184,8 @@ public partial class RenderCache
         _appliedCompositorFrame = _packet.CompositorFrame;
         CaptureEffects();
         ApplyEffects(_packet);
+        CapturePlacements();
+        ApplyPlacements(_packet);
         _packet.Reset(RenderBuildKind.Clean);
         _spare.Add(_packet);
         _packet = null;
@@ -430,6 +432,7 @@ public partial class RenderCache
         _copyFadeSlots.Clear();
         _compositedFallback.Clear();   // the old tree's, like the rest - and a snapshot cache may not draw again for long
         _transformTable?.ReleaseAll();
+        ReleaseAllPlacements();
     }
 
     /// <summary>The last packet's projection, captured by the RECORDER from the root visual. The applier uses this, not
@@ -905,7 +908,7 @@ public partial class RenderCache
             foreach (var u in g.Units)
             {
                 if (!Drawing(u)) continue;
-                var bakeWorld = ResolveBake(device, u.Component, World(u.Component), out var slot);
+                var bakeWorld = ResolveBake(device, u, World(u.Component), out var slot);
                 if (HoldsInstances(u) && !PatchSlot(device, u, bakeWorld, slot)) return false;
             }
         }
@@ -1025,7 +1028,7 @@ public partial class RenderCache
             foreach (var u in g.Units)
             {
                 if (!HoldsInstances(u)) continue;   // a per-unit draw - the replay re-points it (RepointIfItMoved)
-                var bakeWorld = ResolveBake(device, u.Component, World(u.Component), out var slot);
+                var bakeWorld = ResolveBake(device, u, World(u.Component), out var slot);
                 if (!PatchSlot(device, u, bakeWorld, slot)) return false;
             }
         }
