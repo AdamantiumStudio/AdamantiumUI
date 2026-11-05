@@ -35,7 +35,7 @@ float texMirror;      // mirror flags: 1 = X, 2 = Y, 3 = both
 VERTEX_OUTPUT UIVertexShader(UI_VERTEX input)
 {
     VERTEX_OUTPUT output;
-    output.position = mul(float4(input.position, 0, 1), wvp);
+    output.position = mul(float4(input.position, 1), wvp);
     output.uv0 = float2(0, 0);
     return output;
 }
@@ -45,7 +45,7 @@ VERTEX_OUTPUT UIVertexShader(UI_VERTEX input)
 VERTEX_OUTPUT PictureVS(UI_TEXTURED_VERTEX input)
 {
     VERTEX_OUTPUT output;
-    output.position = mul(float4(input.position, 0, 1), wvp);
+    output.position = mul(float4(input.position, 1), wvp);
     output.uv0 = input.uv0;
     return output;
 }
@@ -75,8 +75,8 @@ float4 Textured_PS(VERTEX_OUTPUT input) : SV_TARGET
 VERTEX_OUTPUT TexturedFillVS(UI_VERTEX input)
 {
     VERTEX_OUTPUT output;
-    output.position = mul(float4(input.position, 0, 1), wvp);
-    output.uv0 = (input.position - fillBounds.xy) / max(fillBounds.zw, float2(1e-4, 1e-4));
+    output.position = mul(float4(input.position, 1), wvp);
+    output.uv0 = (input.position.xy - fillBounds.xy) / max(fillBounds.zw, float2(1e-4, 1e-4));
     return output;
 }
 
