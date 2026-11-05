@@ -253,9 +253,9 @@ public class PlacementRenderTests
     }
 
     [Test]
-    public void APenInDevicePixels_StaysAsWideUnderAZoom()
+    public void APenInPixels_StaysAsWideUnderAZoom()
     {
-        var pen = new Pen(Brushes.White, 2) { ThicknessUnit = PenThicknessUnit.DevicePixels };
+        var pen = new Pen(Brushes.White, 2) { ThicknessUnit = PenThicknessUnit.Pixels };
         var near = OutlineAt(1, pen);
         var far = OutlineAt(4, pen);
 
@@ -423,11 +423,11 @@ public class PlacementRenderTests
     }
 
     [Test]
-    public void ADashedPenInDevicePixels_KeepsItsWidth_WhenOnlyThePlacementMoves()
+    public void ADashedPenInPixels_KeepsItsWidth_WhenOnlyThePlacementMoves()
     {
         _shapes.Fill = null;
         _shapes.Pen = new Pen(Brushes.White, 2, dashStrokeArray: [6, 2], startLineCap: PenLineCap.ConvexRound)
-            { ThicknessUnit = PenThicknessUnit.DevicePixels };
+            { ThicknessUnit = PenThicknessUnit.Pixels };
         var placement = new Placement { Matrix = At(8, 8) };
         _shapes.Placements.Add(placement);
         var near = Draw().Count;

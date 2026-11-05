@@ -796,15 +796,11 @@ public partial class RenderCache
         }
 
         var thickness = pen.Thickness;
-        if (pen.ThicknessUnit == PenThicknessUnit.DevicePixels || pen.MinimumDeviceThickness > 0)
+        var scale = System.Math.Sqrt(System.Math.Abs(toWindow.M11 * toWindow.M22 - toWindow.M12 * toWindow.M21));
+        if (scale > 1e-4)
         {
-            var scale = System.Math.Sqrt(System.Math.Abs(toWindow.M11 * toWindow.M22 - toWindow.M12 * toWindow.M21))
-                        * _renderScale;
-            if (scale > 1e-4)
-            {
-                if (pen.ThicknessUnit == PenThicknessUnit.DevicePixels) thickness /= scale;
-                thickness = System.Math.Max(thickness, pen.MinimumDeviceThickness / scale);
-            }
+            if (pen.ThicknessUnit == PenThicknessUnit.Pixels) thickness /= scale;
+            thickness = System.Math.Max(thickness, pen.MinimumDeviceThickness / (scale * _renderScale));
         }
 
         return thickness;

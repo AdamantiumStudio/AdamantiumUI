@@ -44,13 +44,13 @@ public partial class RenderCache
     {
         foreach (var (placement, matrix, version) in packet.Placements)
         {
-            // Only what this cache draws: a placement drawn for the first time brings its matrix in its record.
-            if (placement.Owner is not { } owner || !_placementsByOwner.TryGetValue(owner, out var held)
-                || !held.Contains(placement))
+            // Only what this cache draws: the owner has drawn here, even if no unit of it has been baked yet.
+            if (placement.Owner is not { } owner || !_groupById.ContainsKey(owner.RenderId))
             {
                 continue;
             }
 
+            Hold(owner, placement);
             if (Hear(placement, matrix, version))
             {
                 _movedPlacements.Add(placement);
@@ -77,9 +77,14 @@ public partial class RenderCache
             return shown;
         }
 
-        shown = _placementLatest.TryGetValue(placement, out var latest) ? latest.Matrix : placement.Matrix;
-        _placementShown[placement] = shown;
-        return shown;
+        // Never read the live matrix here: it is written on another thread. Nothing heard yet shows nothing moved.
+        if (!_placementLatest.TryGetValue(placement, out var latest))
+        {
+            return Matrix4x4F.Identity;
+        }
+
+        _placementShown[placement] = latest.Matrix;
+        return latest.Matrix;
     }
 
     // The newest matrix this cache knows for the placement - what a drawing made now must show.
@@ -236,7 +241,7 @@ public partial class RenderCache
         foreach (var placement in _placementsGone)
         {
             held.Remove(placement);
-            Forget(placement);
+            Forget(placement, component);
         }
 
         if (held.Count == 0)
@@ -257,12 +262,18 @@ public partial class RenderCache
 
         foreach (var placement in held)
         {
-            Forget(placement);
+            Forget(placement, component);
         }
     }
 
-    private void Forget(Placement placement)
+    private void Forget(Placement placement, IUIComponent by)
     {
+        // An element that left gives back only what is still its own: another may have taken the placement since.
+        if (placement.Owner != null && !ReferenceEquals(placement.Owner, by))
+        {
+            return;
+        }
+
         _transformTable?.ReleaseSlot(placement.Id);
         _placementLatest.Remove(placement);
         _placementShown.Remove(placement);

@@ -714,27 +714,31 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
     }
 
     // Device pixels per geometry-local unit, the least over the stroke under a perspective.
-    private float DeviceScale()
+    private float DeviceScale() => WindowScale() * (float)RenderData.RenderScale;
+
+    // Window (layout) pixels per geometry-local unit.
+    private float WindowScale()
     {
         var t = RenderData.TransformMatrix;
-        var worldScale = t.M14 == 0f && t.M24 == 0f
+        return t.M14 == 0f && t.M24 == 0f
             ? MathF.Sqrt(MathF.Abs(t.M11 * t.M22 - t.M12 * t.M21))
             : LeastProjectedScale(t);
-        return worldScale * (float)RenderData.RenderScale;
     }
 
     // Half the line's width in geometry-local units: the pen's thickness in its unit, no narrower than its minimum.
     private float HalfThickness()
     {
         var thickness = _pen.Thickness;
-        if (_pen.ThicknessUnit == PenThicknessUnit.DevicePixels || _pen.MinimumDeviceThickness > 0)
+        if (_pen.ThicknessUnit == PenThicknessUnit.Pixels)
+        {
+            var windowScale = WindowScale();
+            if (windowScale > 1e-4f) thickness /= windowScale;
+        }
+
+        if (_pen.MinimumDeviceThickness > 0)
         {
             var deviceScale = DeviceScale();
-            if (deviceScale > 1e-4f)
-            {
-                if (_pen.ThicknessUnit == PenThicknessUnit.DevicePixels) thickness /= deviceScale;
-                thickness = Math.Max(thickness, _pen.MinimumDeviceThickness / deviceScale);
-            }
+            if (deviceScale > 1e-4f) thickness = Math.Max(thickness, _pen.MinimumDeviceThickness / deviceScale);
         }
 
         return (float)(thickness / 2.0);

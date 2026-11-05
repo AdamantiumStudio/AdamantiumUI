@@ -6,6 +6,7 @@ public enum PenThicknessUnit
     /// <summary>The units of the space the stroke is drawn in: a zoom makes the line wider.</summary>
     Local,
 
-    /// <summary>Device pixels: the line stays as wide on screen under any scale - a road on a map.</summary>
-    DevicePixels
+    /// <summary>The window's pixels, as layout counts them: the line stays as wide on screen under any scale, on any
+    /// monitor - a road on a map.</summary>
+    Pixels
 }
