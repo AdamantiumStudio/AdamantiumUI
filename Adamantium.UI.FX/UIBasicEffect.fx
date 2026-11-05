@@ -40,9 +40,9 @@ VERTEX_OUTPUT UIVertexShader(UI_VERTEX input)
     return output;
 }
 
-// A picture: the vertex says where in its source it samples.
+// A textured draw: the vertex says where in its texture it samples.
 [shader("vertex")]
-VERTEX_OUTPUT PictureVS(UI_TEXTURED_VERTEX input)
+VERTEX_OUTPUT TexturedVS(UI_TEXTURED_VERTEX input)
 {
     VERTEX_OUTPUT output;
     output.position = mul(float4(input.position, 1), wvp);
@@ -161,7 +161,7 @@ technique Basic
 
 	pass Textured
 	{
-		VertexShader = PictureVS;
+		VertexShader = TexturedVS;
 		PixelShader = Textured_PS;
 	}
 
@@ -173,13 +173,13 @@ technique Basic
 
 	pass TexturedArray
 	{
-		VertexShader = PictureVS;
+		VertexShader = TexturedVS;
 		PixelShader = TexturedArray_PS;
 	}
 
 	pass PalettedArray
 	{
-		VertexShader = PictureVS;
+		VertexShader = TexturedVS;
 		PixelShader = PalettedArray_PS;
 	}
 }
