@@ -14,7 +14,12 @@ public partial class RenderCache
 {
     private readonly List<Placement> _placementDirtyBuffer = new();
 
-    // Placements whose matrix changed since the draw last wrote their slots.
+    // The newest matrix this cache has heard of for each placement, and what its slots and units show: the second takes
+    // the first only where a frame may write a slot - the replay and patch chains, or a walk.
+    private readonly Dictionary<Placement, (Matrix4x4F Matrix, long Version)> _placementLatest = new();
+    private readonly Dictionary<Placement, Matrix4x4F> _placementShown = new();
+
+    // Placements whose newest matrix is not shown yet.
     private readonly HashSet<Placement> _movedPlacements = new();
 
     // Placements moved this frame: per-unit draws riding them are re-pointed at replay.
@@ -24,6 +29,7 @@ public partial class RenderCache
     private readonly Dictionary<IUIComponent, HashSet<Placement>> _placementsByOwner = new();
     private readonly HashSet<Placement> _placementsKept = new();
     private readonly List<Placement> _placementsGone = new();
+    private readonly List<IUIComponent> _placementOwnersMoved = new();
 
     private void CapturePlacements()
     {
@@ -38,25 +44,80 @@ public partial class RenderCache
     {
         foreach (var (placement, matrix, version) in packet.Placements)
         {
-            if (placement.Apply(matrix, version))
+            // Only what this cache draws: a placement drawn for the first time brings its matrix in its record.
+            if (placement.Owner is not { } owner || !_placementsByOwner.TryGetValue(owner, out var held)
+                || !held.Contains(placement))
+            {
+                continue;
+            }
+
+            if (Hear(placement, matrix, version))
             {
                 _movedPlacements.Add(placement);
             }
         }
     }
 
-    // A unit built from a newer record than the last move knows the newer matrix.
-    private static void CatchUp(IRenderUnit unit)
+    private bool Hear(Placement placement, in Matrix4x4F matrix, long version)
+    {
+        if (_placementLatest.TryGetValue(placement, out var known) && known.Version >= version)
+        {
+            return false;
+        }
+
+        _placementLatest[placement] = (matrix, version);
+        return true;
+    }
+
+    // What the placement's slots and units show; a placement never shown yet shows its newest matrix.
+    private Matrix4x4F Shown(Placement placement)
+    {
+        if (_placementShown.TryGetValue(placement, out var shown))
+        {
+            return shown;
+        }
+
+        shown = _placementLatest.TryGetValue(placement, out var latest) ? latest.Matrix : placement.Matrix;
+        _placementShown[placement] = shown;
+        return shown;
+    }
+
+    // The newest matrix this cache knows for the placement - what a drawing made now must show.
+    private Matrix4x4F Newest(Placement placement) =>
+        _placementLatest.TryGetValue(placement, out var latest) ? latest.Matrix : Shown(placement);
+
+    // A unit built from a newer record than the last move knows the newer matrix; the unit then takes what is shown, and
+    // its element is known to draw with the placement.
+    private void CatchUp(IRenderUnit unit)
     {
         switch (unit)
         {
-            case GeometryRenderUnit { Payload: { Placement: { } placement } payload }:
-                placement.Apply(payload.PlacedAt, payload.PlacedVersion);
+            case GeometryRenderUnit { Payload: { Placement: { } placement } payload } geometry:
+                Hear(placement, payload.PlacedAt, payload.PlacedVersion);
+                geometry.PlacedMatrix = Shown(placement);
+                Hold(unit.Component, placement);
                 break;
-            case TextRenderUnit { Payload: { Placement: { } placement } payload }:
-                placement.Apply(payload.PlacedAt, payload.PlacedVersion);
+            case TextRenderUnit { Payload: { Placement: { } placement } payload } text:
+                Hear(placement, payload.PlacedAt, payload.PlacedVersion);
+                text.PlacedMatrix = Shown(placement);
+                Hold(unit.Component, placement);
                 break;
         }
+    }
+
+    private void Hold(IUIComponent component, Placement placement)
+    {
+        if (component == null)
+        {
+            return;
+        }
+
+        if (!_placementsByOwner.TryGetValue(component, out var held))
+        {
+            _placementsByOwner[component] = held = new HashSet<Placement>();
+        }
+
+        held.Add(placement);
     }
 
     private Matrix4x4F ResolveBake(IGraphicsDevice device, IRenderUnit unit, Matrix4x4F world, out int slot)
@@ -67,39 +128,27 @@ public partial class RenderCache
         }
 
         CatchUp(unit);
-        var component = unit.Component;
         slot = AcquireLiveSlot(device, placement.Id);
-        _transformTable.SetMatrix(device, slot, placement.Applied * World(component));
-        if (!_placementsByOwner.TryGetValue(component, out var held))
-        {
-            _placementsByOwner[component] = held = new HashSet<Placement>();
-        }
-
-        held.Add(placement);
-
-        // A node's move rewrites the node's slot, not this one: the unit is carried as a straggler instead.
-        if (NodeOf(component) != null)
-        {
-            MarkNodeNotAware(component);
-        }
-
+        _transformTable.SetMatrix(device, slot, Shown(placement) * World(unit.Component));
         return _cloneMatrix ?? Matrix4x4F.Identity;
     }
 
-    // Writes the slots of the placements that moved; per-unit draws riding them are re-pointed at replay.
+    // Shows the newest matrices of the placements that moved: their slots are written, and the per-unit draws riding
+    // them are re-pointed at replay.
     private bool RefreshMovedPlacements(IGraphicsDevice device)
     {
-        if (_movedPlacements.Count == 0 || _transformTable == null)
+        if (_movedPlacements.Count == 0)
         {
-            _movedPlacements.Clear();
             return true;
         }
 
         foreach (var placement in _movedPlacements)
         {
-            if (placement.Owner is { } owner && _transformTable.TryGetSlot(placement.Id, out var slot))
+            _placementShown[placement] = _placementLatest[placement].Matrix;
+            if (_transformTable != null && placement.Owner is { } owner
+                && _transformTable.TryGetSlot(placement.Id, out var slot))
             {
-                _transformTable.SetMatrix(device, slot, placement.Applied * World(owner));
+                _transformTable.SetMatrix(device, slot, _placementShown[placement] * World(owner));
             }
 
             _repointPlacements.Add(placement);
@@ -109,8 +158,49 @@ public partial class RenderCache
         return true;
     }
 
-    // A walk bakes every placed unit from the placement's newest matrix itself.
-    private void ForgetMovedPlacements() => _movedPlacements.Clear();
+    // A walk bakes every placed unit itself, from the newest matrices.
+    private void ShowNewestPlacements()
+    {
+        foreach (var placement in _movedPlacements)
+        {
+            _placementShown[placement] = _placementLatest[placement].Matrix;
+        }
+
+        _movedPlacements.Clear();
+    }
+
+    // Elements moved by a node or the compositor carry their placed drawings' slots along: each slot holds its own
+    // world, which the move just changed.
+    private void CarryPlacementsUnder(IGraphicsDevice device, List<IUIComponent> roots)
+    {
+        if (_placementsByOwner.Count == 0 || roots.Count == 0 || _transformTable == null)
+        {
+            return;
+        }
+
+        _placementOwnersMoved.Clear();
+        foreach (var owner in _placementsByOwner.Keys)
+        {
+            if (IsUnder(owner, roots))
+            {
+                _placementOwnersMoved.Add(owner);
+            }
+        }
+
+        foreach (var owner in _placementOwnersMoved)
+        {
+            var world = World(owner);
+            foreach (var placement in _placementsByOwner[owner])
+            {
+                if (_transformTable.TryGetSlot(placement.Id, out var slot))
+                {
+                    _transformTable.SetMatrix(device, slot, Shown(placement) * world);
+                }
+            }
+        }
+
+        _placementOwnersMoved.Clear();
+    }
 
     // An element drew again: the slots of placements it no longer draws with go back to the table.
     private void ReconcilePlacements(IUIComponent component, IReadOnlyList<IDrawCommand> commands)
@@ -146,7 +236,7 @@ public partial class RenderCache
         foreach (var placement in _placementsGone)
         {
             held.Remove(placement);
-            _transformTable?.ReleaseSlot(placement.Id);
+            Forget(placement);
         }
 
         if (held.Count == 0)
@@ -167,9 +257,44 @@ public partial class RenderCache
 
         foreach (var placement in held)
         {
-            _transformTable?.ReleaseSlot(placement.Id);
+            Forget(placement);
         }
     }
 
-    private void ReleaseAllPlacements() => _placementsByOwner.Clear();
+    private void Forget(Placement placement)
+    {
+        _transformTable?.ReleaseSlot(placement.Id);
+        _placementLatest.Remove(placement);
+        _placementShown.Remove(placement);
+        _movedPlacements.Remove(placement);
+    }
+
+    private void ReleaseAllPlacements()
+    {
+        _placementsByOwner.Clear();
+        _placementLatest.Clear();
+        _placementShown.Clear();
+        _movedPlacements.Clear();
+        _repointPlacements.Clear();
+    }
+
+    /// <summary>Whether <paramref name="slotOwner"/> names a placement <paramref name="component"/> draws with - the
+    /// owner of a placed drawing's transform slot.</summary>
+    internal bool IsPlacementOf(IUIComponent component, System.Guid slotOwner)
+    {
+        if (component == null || !_placementsByOwner.TryGetValue(component, out var held))
+        {
+            return false;
+        }
+
+        foreach (var placement in held)
+        {
+            if (placement.Id == slotOwner)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 }

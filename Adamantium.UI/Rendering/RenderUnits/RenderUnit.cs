@@ -300,6 +300,9 @@ public abstract class RenderUnit<TPayload> : DeferredDisposableObject, IRenderUn
     /// <summary>The placement the draw moves with, or null.</summary>
     public virtual Placement Placement => null;
 
+    /// <summary>The <see cref="Placement"/>'s matrix as this unit's renderer shows it now; written by the render cache.</summary>
+    internal Matrix4x4F PlacedMatrix = Matrix4x4F.Identity;
+
     /// <summary>Has this unit anything to do out of the render pass at all? The sweep below runs on EVERY frame over
     /// every unit of every group, and for a batched rect - which is most of a scene - all three of these are null, so it
     /// was three virtual calls to do nothing. Asked as a field read instead.</summary>
@@ -357,7 +360,7 @@ public class GeometryRenderUnit : RenderUnit<GeometryPayload>
     }
 
     public override Matrix4x4F Place(Matrix4x4F world) =>
-        Payload.Placement is { } placement ? Payload.LocalTransform * placement.Applied * world : Payload.LocalTransform * world;
+        Payload.Placement != null ? Payload.LocalTransform * PlacedMatrix * world : Payload.LocalTransform * world;
 
     public override Matrix4x4F PlaceBaked(Matrix4x4F world) => Payload.LocalTransform * world;
 
@@ -1098,7 +1101,7 @@ public class TextRenderUnit : RenderUnit<TextPayload>
     public TextRenderComponent TextComponent => GeometryRenderer as TextRenderComponent;
 
     public override Matrix4x4F Place(Matrix4x4F world) =>
-        Payload.Placement is { } placement ? Payload.LocalTransform * placement.Applied * world : Payload.LocalTransform * world;
+        Payload.Placement != null ? Payload.LocalTransform * PlacedMatrix * world : Payload.LocalTransform * world;
 
     public override Matrix4x4F PlaceBaked(Matrix4x4F world) => Payload.LocalTransform * world;
 

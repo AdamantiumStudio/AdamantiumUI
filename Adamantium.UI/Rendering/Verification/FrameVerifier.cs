@@ -183,8 +183,12 @@ internal sealed class FrameVerifier : IRenderCacheObserver
         }
     }
 
+    // The cache being checked: a placed drawing's slot is held by its placement, which only the cache knows.
+    private RenderCache _checking;
+
     private void Check(RenderCache live)
     {
+        _checking = live;
         _alarms.Clear();
         _alarmCount = 0;
         _checked.Clear();
@@ -591,7 +595,8 @@ internal sealed class FrameVerifier : IRenderCacheObserver
             return;
         }
 
-        if (held.Owner != Guid.Empty && !IsSelfOrAncestor(component, held.Owner))
+        if (held.Owner != Guid.Empty && !IsSelfOrAncestor(component, held.Owner)
+            && _checking?.IsPlacementOf(component, held.Owner) != true)
         {
             Alarm($"{ComponentText.Of(component)}: {verb} slot {slot}, the {expected} of {OwnerText(held.Owner)} - " +
                   "neither it nor an ancestor");

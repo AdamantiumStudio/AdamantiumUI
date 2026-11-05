@@ -6,7 +6,9 @@ namespace Adamantium.UI.Core.Graphics;
 /// <summary>Where an element puts the drawings it gives this placement, on top of its own world transform. Writing
 /// <see cref="Matrix"/> moves them without drawing anything again: only the matrix reaches the GPU. A camera works this
 /// way - each object keeps its geometry and the control rewrites the object's placement as the view moves.</summary>
-/// <remarks>A placement belongs to the one element that draws with it.</remarks>
+/// <remarks>A placement belongs to the one element that draws with it, and is written on the thread that renders that
+/// element. The element's box still decides where its drawings are culled and ordered, so placed drawings belong inside
+/// it.</remarks>
 public sealed class Placement
 {
     private Matrix4x4F _matrix = Matrix4x4F.Identity;
@@ -33,26 +35,17 @@ public sealed class Placement
 
     internal IUIComponent Owner => _owner;
 
-    /// <summary>Counts the writes of <see cref="Matrix"/>, so the renderer keeps whichever value is newest.</summary>
+    /// <summary>Counts the writes of <see cref="Matrix"/>, so a renderer keeps whichever value is newest.</summary>
     internal long Version => _version;
 
-    /// <summary>The matrix the renderer draws with and its version - written on the render thread only.</summary>
-    internal Matrix4x4F Applied = Matrix4x4F.Identity;
-
-    internal long AppliedVersion = -1;
-
-    internal void DrawnBy(IUIComponent owner) => _owner = owner;
-
-    /// <summary>Takes <paramref name="matrix"/> as what is drawn, if it is newer than what is.</summary>
-    internal bool Apply(in Matrix4x4F matrix, long version)
+    /// <summary>Binds the placement to the element drawing with it; a second element still in the tree may not.</summary>
+    internal void DrawnBy(IUIComponent owner)
     {
-        if (version <= AppliedVersion)
+        if (_owner != null && !ReferenceEquals(_owner, owner) && _owner.IsAttachedToVisualTree)
         {
-            return false;
+            throw new InvalidOperationException("A placement belongs to the one element that draws with it.");
         }
 
-        Applied = matrix;
-        AppliedVersion = version;
-        return true;
+        _owner = owner;
     }
 }

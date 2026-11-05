@@ -155,9 +155,11 @@ public partial class RenderCache
                     component.Render(_drawingContext);
                 if (!LeftTheTree(component))
                 {
-                    ProcessRenderCommands(component, _drawingContextInternal.GetDrawCommands(), projectionMatrix,
-                        !readOnly && wasGeometryValid, order, component.RenderClones, component.RenderCloneSteps,
-                        component.RenderCloneStagger);
+                    var drawn = _drawingContextInternal.GetDrawCommands();
+                    var reused = !readOnly && wasGeometryValid;
+                    ProcessRenderCommands(component, drawn, projectionMatrix, reused, order, component.RenderClones,
+                        component.RenderCloneSteps, component.RenderCloneStagger);
+                    if (drawn.Count > 0 || !reused) ReconcilePlacements(component, drawn);
                 }
 
                 order += OrderGap;   // the flat list IS the paint order
@@ -962,6 +964,9 @@ public partial class RenderCache
                 _transformTable.SetMatrix(device, slot, World(node));
             _movedNodeOwners.Add(node);
         }
+
+        // Placed drawings ride slots of their own, each holding its full world: carried here, one write apiece.
+        CarryPlacementsUnder(device, _movedNodesBuf);
 
         // ...and last, whatever could not ride those slots - AFTER the memo flush above, so every straggler is re-baked
         // from the world the node has NOW and not the one it was memoized at.

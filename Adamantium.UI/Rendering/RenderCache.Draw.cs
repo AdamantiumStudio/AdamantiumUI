@@ -793,6 +793,7 @@ public partial class RenderCache
         // changes what the retained op stream draws (a matrix, a re-baked color slot), so an otherwise CLEAN frame is
         // exactly when it must still apply - the loop can be stalled in a theme cascade and the spinner keeps turning.
         _repointPlacements.Clear();
+        if (device == null) ShowNewestPlacements();   // nothing replays without a device: every frame walks
         if (_transformTable != null) _transformTable.CompositedWrite = true;
         ApplyCompositedAnimations(device);
         if (_transformTable != null) _transformTable.CompositedWrite = false;
@@ -865,6 +866,7 @@ public partial class RenderCache
         // is expensive can say which of the two it was - the replay phases above stay at their last values on a walking
         // frame, and reading them as though they described it is how a walk reads as a cheap replay.
         var walk0 = System.Diagnostics.Stopwatch.GetTimestamp();
+        ShowNewestPlacements();   // a walk bakes every placed unit from its placement's newest matrix
         try
         {
 
@@ -897,7 +899,6 @@ public partial class RenderCache
             ForgetCopies();
             _nodeStragglers.Clear();   // recorded per walk, exactly like the answers above it
             _movedNodesBuf.Clear();   // a full walk re-bakes fresh node matrices - pending node moves are subsumed
-            ForgetMovedPlacements();  // ...and every placed unit from its placement's newest matrix
             _movedOwnersBuf.Clear();  // ...and every mover's subtree along with them
             _movedOwners.Clear();
             // A bailed fast path skipped its memo flush, so clear the world memos (not the clip memo) before walking.
@@ -2145,6 +2146,7 @@ public partial class RenderCache
         }
 
         CarryNodesInsideComposited(device);
+        if (_compositedOwners.Count > 0) CarryPlacementsUnder(device, _compositedRoots);
 
         if (_compositedFallback.Count <= _compositedOwners.Count)
         {

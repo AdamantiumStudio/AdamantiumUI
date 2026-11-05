@@ -68,6 +68,7 @@ public partial class RenderCache
                         // in a layer's own space: what it was last baked with may be the window's projection.
                         if (InOwnSpace && op.Unit.Component is { } owner)
                         {
+                            CatchUp(op.Unit);
                             op.Unit.Update(World(owner), _projectionMatrix, _renderScale);
                         }
                         else
@@ -152,6 +153,7 @@ public partial class RenderCache
         if (!_compositedOwners.Contains(c) && !_movedOwners.Contains(c) && !NodeMoved(NodeOf(c))
             && !(unit.Placement is { } placement && _repointPlacements.Contains(placement))) return;
 
+        CatchUp(unit);
         unit.Update(World(c), _projectionMatrix, _renderScale);
     }
 

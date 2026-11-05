@@ -9,12 +9,12 @@ All packages share one version.
 
 - `Placement`: where an element puts a drawing, which it can move later without drawing again. `DrawGeometry` and
   `DrawText` take one in new overloads; writing `Placement.Matrix` moves what was drawn with it by rewriting one matrix
-  on the GPU - the element is not recorded again and nothing is re-baked. A camera over many objects gives each object
-  its own placement.
+  on the GPU - the element is not recorded again. A camera over many objects gives each object its own placement.
 
-- `Pen.ThicknessUnit`: a stroke of geometry can be as wide in device pixels under any scale - a road on a zoomed map -
-  and `Pen.MinimumDeviceThickness` keeps a line scaled far down at least that many pixels wide. Strokes of rectangles,
-  ellipses and regular polygons still take the thickness in local units.
+- `Pen.ThicknessUnit`: a solid stroke of geometry can be as wide in device pixels under any scale - a road on a zoomed
+  map - and `Pen.MinimumDeviceThickness` keeps a line scaled far down at least that many pixels wide. Dash lengths stay
+  in local units; strokes in a gradient, and the batched outlines of rounded rectangles, ellipses and regular polygons,
+  take the thickness in local units.
 
 - `Rect.FromPoints` of a span of points.
 
