@@ -1178,10 +1178,9 @@ public class TextRenderUnit : RenderUnit<TextPayload>
         // The unit's own run: blocks drawing frames of one layout build it at their own times.
         if (Payload?.TextLayout is not { } layout || TextComponent?.GlyphRun is not { IsStale: true }) return false;
 
+        // The batch reads this run when it bakes the unit: the cache patches the unit with it, nothing is recorded again.
         var run = layout.BuildGlyphRun(GraphicsDevice, Within(Payload, _band));
         if (TextComponent != null) TextComponent.GlyphRun = run;
-        // The frozen run is what the batch reads, so the element has to be re-recorded for the new one to be drawn.
-        DrawCommand?.Component?.InvalidateRender(false);
         return true;
     }
 
