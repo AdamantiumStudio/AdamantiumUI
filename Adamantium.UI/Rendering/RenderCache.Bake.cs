@@ -986,6 +986,9 @@ public partial class RenderCache
 
     // Carries ordinary (non-node) movers by re-baking their subtree's drawn units via ResolveBake + PatchSlot, which also
     // works under motion nodes; O(subtree), not O(scene). False hands the frame to the walk.
+    // Why the last move could not be carried, for the frame trace.
+    private string _moverRefusal;
+
     private bool RefreshMovedComponents(IGraphicsDevice device, Adamantium.Vulkan.Core.Rect2D fullScissor)
     {
         _cullScissor = fullScissor;
@@ -1000,6 +1003,7 @@ public partial class RenderCache
         // nothing but the walk it was going to take anyway.
         _movedOwners.Clear();
         _movedSubtree.Clear();
+        _moverRefusal = null;
         foreach (var mover in _movedOwnersBuf)
         {
             if (CollectMovedSubtree(mover)) continue;
@@ -1034,7 +1038,11 @@ public partial class RenderCache
             {
                 if (!HoldsInstances(u)) continue;   // a per-unit draw - the replay re-points it (RepointIfItMoved)
                 var bakeWorld = ResolveBake(device, u, World(u.Component), out var slot);
-                if (!PatchSlot(device, u, bakeWorld, slot)) return false;
+                if (!PatchSlot(device, u, bakeWorld, slot))
+                {
+                    _moverRefusal = $"<{c.GetType().Name}>{u.GetType().Name} patch";
+                    return false;
+                }
             }
         }
 
@@ -1058,12 +1066,29 @@ public partial class RenderCache
             {
                 if (!Drawing(u)) continue;
 
-                // A unit culled now or when the stream was built needs the walk: a patch can neither remove its old draw
-                // nor add one that was never recorded.
+                // A unit that comes into view or goes out of it needs the walk: a patch can neither remove its old draw
+                // nor add one that was never recorded. One out of view before and after draws nothing either way - a
+                // map's markers off the screen move with every pan.
                 ResolveScissor(u.Component, World(u.Component), _cullScissor, out _, out var culled);
-                if (culled || _culledWhenRecorded.Contains(u)) return false;
+                var wasCulled = _culledWhenRecorded.Contains(u);
+                // Only a unit holding no instances: one culled at the walk may hold some since - a copy that drew, a
+                // splice that staged it later - and those must move or refuse below.
+                if (culled && wasCulled && !HoldsInstances(u))
+                {
+                    continue;
+                }
 
-                if (HoldsInstances(u) && (Cloned(u) || !IsSlotPatchable(u))) return false;
+                if (culled || wasCulled)
+                {
+                    _moverRefusal = culled ? $"<{c.GetType().Name}>leftView" : $"<{c.GetType().Name}>cameIntoView";
+                    return false;
+                }
+
+                if (HoldsInstances(u) && (Cloned(u) || !IsSlotPatchable(u)))
+                {
+                    _moverRefusal = $"<{c.GetType().Name}>{u.GetType().Name}{(Cloned(u) ? " cloned" : " notPatchable")}";
+                    return false;
+                }
             }
         }
 

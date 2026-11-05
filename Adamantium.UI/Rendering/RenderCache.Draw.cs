@@ -460,7 +460,8 @@ public partial class RenderCache
     private readonly List<IUIComponent> _fallbackGone = new();
     private Comparison<Compositor.Entry> _byDepth;
 
-    private const int MaxRetainedOps = 256;   // op stream past this -> a splice yields to a full walk that recompacts
+    private const int MaxSplicedOps = 256;   // ops splices may add past the last walk's (or half of it) before a walk recompacts
+    private int _opsAfterWalk;               // how many ops the last walk recorded
     private readonly List<GroupPatch> _patchBuf = new();   // TrySplicedPatch: staged per-group patches (validated before mutation)
     private readonly HashSet<int> _patchLayers = new();  // the LAYERS those patches land in - each re-issued once, whole
     private int _cloneReserve;   // clone slots this frame reserved - counted once, read by the trace
@@ -1966,6 +1967,7 @@ public partial class RenderCache
         if (_recording)
         {
             _opsRecorded = true; _recording = false;
+            _opsAfterWalk = _ops.Count;
             // The transform + layout state this op stream was recorded AGAINST. A replay is faithful only while it holds.
             _opsMatrixVersion = _transformTable?.MatrixVersion ?? 0;
             _opsLayoutVersion = _transformTable?.LayoutMatrixVersion ?? 0;
@@ -2463,7 +2465,7 @@ public partial class RenderCache
         // subtrees at their new position. A moved node with non-node-aware retained content bails to the full walk.
         if (!RefreshMovedNodes(device)) return SpliceRefused("movedNode");
         // ...then the ordinary movers, so the re-bakes below compose from the new worlds.
-        if (!RefreshMovedComponents(device, fullScissor)) return SpliceRefused("movedComponent");
+        if (!RefreshMovedComponents(device, fullScissor)) return SpliceRefused("movedComponent" + _moverRefusal);
         RefreshMovedPlacements(device);
         RefreshMovedScissors(fullScissor);
 
@@ -3025,12 +3027,13 @@ public partial class RenderCache
     {
         // Moved motion nodes first (same as TryPartialReplay): rewrite their matrices, bail on non-aware content.
         if (!RefreshMovedNodes(device)) return SpliceRefused("movedNode");
-        if (!RefreshMovedComponents(device, fullScissor)) return SpliceRefused("movedComponent");
+        if (!RefreshMovedComponents(device, fullScissor)) return SpliceRefused("movedComponent" + _moverRefusal);
         RefreshMovedPlacements(device);
         RefreshMovedScissors(fullScissor);
 
-        // Op stream grown too long from accumulated splices -> recompact with a full walk before it mis-replays.
-        if (_ops.Count > MaxRetainedOps) return SpliceRefused("opsTooLong");
+        // Op stream grown too long from accumulated splices -> recompact with a full walk before it mis-replays. Grown
+        // past what the last walk recorded, not past a fixed count: a scene of a thousand ops refused every splice.
+        if (_ops.Count > _opsAfterWalk + Math.Max(MaxSplicedOps, _opsAfterWalk / 2)) return SpliceRefused("opsTooLong");
 
         _opacityChain.Clear();   // recompose from the (possibly re-frozen) snapshot, as in TryPartialReplay
         _opacitySlotCache.Clear();

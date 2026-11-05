@@ -26,7 +26,7 @@ public partial class RenderCache
     {
         BeginApplyFrame();
 
-        AdoptReadyGlyphs();   // glyphs that finished rasterizing since the last frame land here
+        AdoptReadyGlyphs(patch: true);   // glyphs that finished rasterizing since the last frame land here
 
         while (_published.TryDequeue(out var packet))
         {
@@ -37,6 +37,8 @@ public partial class RenderCache
             packet.Reset(RenderBuildKind.Clean);
             _spare.Add(packet);   // back to the pool for the recorder
         }
+
+        PatchOrWalkForGlyphs();
 
         _instancedFill?.Trim();   // shared meshes nobody draws any more go even while nothing is walked
 
@@ -97,8 +99,16 @@ public partial class RenderCache
     // The glyph-arrival version this cache has adopted; per cache, since arrival is global and adoption is not.
     private int _seenGlyphVersion;
 
-    // Adopts glyphs the workers finished and rebuilds text built before its letters arrived.
-    private void AdoptReadyGlyphs()
+    // Texts whose letters landed this frame; patched or walked once the frame's packets are applied.
+    private readonly List<IUIComponent> _glyphArrivals = new();
+    private readonly HashSet<IUIComponent> _glyphArrivalSet = new();
+
+    // Past this many texts at once a splice costs more than the walk it saves.
+    private const int MostGlyphPatches = 64;
+
+    // Adopts glyphs the workers finished and rebuilds text built before its letters arrived. With patch, the texts are
+    // noted for PatchOrWalkForGlyphs; an overlay rebuilds on the landed version by itself.
+    private void AdoptReadyGlyphs(bool patch = false)
     {
         if (_renderUnitFactory.GraphicsDevice == null) return;
 
@@ -113,14 +123,37 @@ public partial class RenderCache
         foreach (var group in _groups)
         foreach (var unit in group.Units)
         {
-            if (unit is RenderUnits.TextRenderUnit text) arrived |= text.RefreshGlyphsIfArrived();
+            if (unit is not RenderUnits.TextRenderUnit text || !text.RefreshGlyphsIfArrived()) continue;
+
+            arrived = true;
+            if (patch && unit.Component is { } component && _glyphArrivalSet.Add(component)) _glyphArrivals.Add(component);
         }
 
-        // Nobody marks arrived glyphs dirty (marks belong to the loop thread), so stale the stream here and request a frame.
-        if (!arrived) return;
+        if (arrived) Core.LoopSignal.Request();
+    }
 
-        StreamStaleBecause("glyphsArrived");
-        Core.LoopSignal.Request();
+    // The texts that got their letters are patched this frame - re-baked from their new runs, spliced where the count of
+    // glyphs changed - when that is all the frame changes; otherwise, or for too many of them, the frame walks. Staling
+    // the stream every time walked the whole scene for each batch of glyphs, for seconds after a map placed its labels.
+    private void PatchOrWalkForGlyphs()
+    {
+        if (_glyphArrivals.Count == 0) return;
+
+        var repaintWaits = Core.Media.Brush.PaintEpoch != _brushEpochSeen && _brushPaintBaked.Count > 0;
+        if (LastBuildKind != RenderBuildKind.Clean || _partialDirty.Count > 0 || repaintWaits
+            || _glyphArrivals.Count > MostGlyphPatches)
+        {
+            StreamStaleBecause("glyphsArrived");
+        }
+        else
+        {
+            _partialDirty.AddRange(_glyphArrivals);
+            Escalate(RenderBuildKind.Partial);
+            _partialSpliced = true;
+        }
+
+        _glyphArrivals.Clear();
+        _glyphArrivalSet.Clear();
     }
 
     // What the recorded op stream actually baked out of a snapshot: where the element is, how big it is, what clips it.
