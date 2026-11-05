@@ -290,7 +290,7 @@ GradFillPSInput GradientFillVS(UI_VERTEX v, uint instanceId : SV_InstanceID)
     // local -> slot space -> world, as InstancedFillVS: the slot matrix lives in the transform table, so a node move
     // rewrites 64 bytes there and every instance under it follows without this buffer being touched.
     NodeSlot* nodes = Transforms;
-    float4 world = mul(mul(float4(v.position.xyz, 1.0), local), nodes[(uint)geom1.w].World);
+    float4 world = mul(mul(float4(v.position, 1.0), local), nodes[(uint)geom1.w].World);
 
     GradFillPSInput o;
     o.Position = mul(world, Projection);
@@ -1170,7 +1170,7 @@ PatFillPSInput PatternFillVS(UI_VERTEX v, uint instanceId : SV_InstanceID)
     PatternGeomData it = items[instanceId];
     // local -> slot space -> world, as InstancedFillVS / GradientFillVS.
     NodeSlot* nodes = Transforms;
-    float4 world = mul(mul(float4(v.position.xyz, 1.0), it.Local), nodes[(uint)it.Params.w].World);
+    float4 world = mul(mul(float4(v.position, 1.0), it.Local), nodes[(uint)it.Params.w].World);
 
     PatFillPSInput o;
     o.Position = mul(world, Projection);
@@ -1414,7 +1414,7 @@ TexFillPSInput TexFillVS(UI_VERTEX v, uint instanceId : SV_InstanceID)
     TextureGeomData* items = TextureGeometries;
     TextureGeomData it = items[instanceId];
     NodeSlot* nodes = Transforms;
-    float4 world = mul(mul(float4(v.position.xyz, 1.0), it.Local), nodes[(uint)it.Params.w].World);
+    float4 world = mul(mul(float4(v.position, 1.0), it.Local), nodes[(uint)it.Params.w].World);
 
     TexFillPSInput o;
     o.Position = mul(world, Projection);

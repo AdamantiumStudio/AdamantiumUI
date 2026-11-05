@@ -733,7 +733,7 @@ MaterialMeshPSInput MaterialFillVS(UI_VERTEX v, uint instanceId : SV_InstanceID)
 
     // local -> slot space -> world, as PatternFillVS and the other instanced fills do it.
     NodeSlot* nodes = Transforms;
-    float4 world = mul(mul(float4(v.position.xyz, 1.0), it.Local), nodes[(uint)it.Params.w].World);
+    float4 world = mul(mul(float4(v.position, 1.0), it.Local), nodes[(uint)it.Params.w].World);
 
     MaterialMeshPSInput o;
     o.Position = mul(world, Projection);
