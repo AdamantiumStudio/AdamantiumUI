@@ -371,7 +371,7 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
     private ReusableBuffer NewStorage(ulong bytes)
     {
         var buffer = ToDispose(BufferManager.CreateBuffer(
-            BufferUsageFlags.StorageBuffer | BufferUsageFlags.ShaderDeviceAddress, StrokeMemory));
+            BufferUsageFlags.StorageBuffer | BufferUsageFlags.ShaderDeviceAddress, StrokeMemory, "stroke data"));
         buffer.Reserve(bytes);
         buffer.Invalidate();
         return buffer;
@@ -382,7 +382,7 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
     {
         var buffer = ToDispose(BufferManager.CreateBuffer(
             BufferUsageFlags.VertexBuffer | BufferUsageFlags.StorageBuffer | BufferUsageFlags.ShaderDeviceAddress,
-            VertexMemory));
+            VertexMemory, "stroke vertices"));
         buffer.Reserve(bytes);
         buffer.Invalidate();
         return buffer;
@@ -571,7 +571,7 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
 
         // Raw contour -> BDA storage buffer (the GPU reads it; dashing/trim happen on the GPU, not here).
         c.PointsBuffer = ToDispose(BufferManager.CreateBuffer(
-            BufferUsageFlags.StorageBuffer | BufferUsageFlags.ShaderDeviceAddress, StrokeMemory));
+            BufferUsageFlags.StorageBuffer | BufferUsageFlags.ShaderDeviceAddress, StrokeMemory, "stroke points"));
         c.PointsBuffer.Reserve(c.PointsBytes);
         c.PointsBuffer.Invalidate();
 
@@ -609,7 +609,8 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
 
         // StrokeVertex's layout.
         c.VertexBuffer = ToDispose(BufferManager.CreateBuffer(
-            BufferUsageFlags.VertexBuffer | BufferUsageFlags.StorageBuffer | BufferUsageFlags.ShaderDeviceAddress, VertexMemory));
+            BufferUsageFlags.VertexBuffer | BufferUsageFlags.StorageBuffer | BufferUsageFlags.ShaderDeviceAddress, VertexMemory,
+            "stroke vertices"));
         c.VertexBuffer.Reserve(c.VertexBytes);
         c.VertexBuffer.Invalidate();
         return c;

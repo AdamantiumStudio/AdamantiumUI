@@ -38,6 +38,8 @@ public partial class RenderCache
             _spare.Add(packet);   // back to the pool for the recorder
         }
 
+        _instancedFill?.Trim();   // shared meshes nobody draws any more go even while nothing is walked
+
         // RenderDirty (a GLOBAL set shared by every window) is NOT cleared per-window here: with two windows the first to
         // apply would wipe the set before the second records, so the second never re-records its content. Both the
         // single-threaded and the decoupled path now clear ONCE after ALL windows have recorded (single-threaded in

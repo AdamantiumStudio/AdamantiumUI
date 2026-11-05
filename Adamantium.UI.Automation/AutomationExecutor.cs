@@ -78,6 +78,8 @@ public sealed class AutomationExecutor
                     return await ShotAsync(request, timeout);
                 case AutomationCommand.Memory:
                     return await _host.RunOnLoopAsync(Memory, timeout);
+                case AutomationCommand.DeviceMemory:
+                    return await _host.RunOnLoopAsync(DeviceMemory, timeout);
                 case AutomationCommand.Theme:
                     return await ThemeAsync(request, timeout);
                 case AutomationCommand.Touch or AutomationCommand.Pen or AutomationCommand.Touches or AutomationCommand.Pinch
@@ -124,6 +126,16 @@ public sealed class AutomationExecutor
         var info = GC.GetGCMemoryInfo();
         var text = FormattableString.Invariant(
             $"managed {GC.GetTotalMemory(false) / 1048576.0:0.0} MB, committed {info.TotalCommittedBytes / 1048576.0:0.0} MB, private {process.PrivateMemorySize64 / 1048576.0:0.0} MB, handles {process.HandleCount}");
+        return new AutomationReply { Ok = true, Text = text };
+    }
+
+    // The census also goes to logs/device-memory.txt beside the application, so a reading outlives the session.
+    private AutomationReply DeviceMemory()
+    {
+        var text = _host.DescribeDeviceMemory() ?? "Nothing is drawn: there is no device memory to count.";
+        var logs = Path.Combine(AppContext.BaseDirectory, "logs");
+        Directory.CreateDirectory(logs);
+        File.WriteAllText(Path.Combine(logs, "device-memory.txt"), $"{DateTime.Now:yyyy-MM-dd HH:mm:ss}{Environment.NewLine}{text}");
         return new AutomationReply { Ok = true, Text = text };
     }
 

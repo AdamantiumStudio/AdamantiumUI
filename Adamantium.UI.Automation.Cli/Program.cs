@@ -81,6 +81,8 @@ public static class Program
           shot [<selector>] [--out shot.png]                  a picture of it, or of the first window, to look at
           memory                                              collect all garbage, then the managed heap and private
                                                               memory left - one reading of a leak hunt
+          device-memory                                       the GPU memory the graphics resources hold, by kind
+                                                              and the largest; also into logs/device-memory.txt
           theme [<name>] [--variant <name>]                   move onto a theme and variant once the swap settles;
                                                               alone, which one is in use and which there are;
                                                               --variant System follows the desktop's

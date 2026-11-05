@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using Adamantium.Graphics;
 using Adamantium.Graphics.Core;
 using Adamantium.Graphics.Fonts;
@@ -326,9 +327,91 @@ public class InstancedFillCollectorTests
         Assert.That(collector.CachedKeys, Is.EqualTo(50), "fifty shapes, fifty meshes");
 
         // Nothing is drawn again, and nothing was ever flushed - so no record is holding any of them.
+        var now = Stopwatch.GetTimestamp();
+        collector.Clock = () => now;
         for (var frame = 0; frame < 800; frame++) collector.BeginFrame();
+        Assert.That(collector.CachedKeys, Is.EqualTo(50), "hundreds of frames in a moment are no reason to forget");
 
-        Assert.That(collector.CachedKeys, Is.Zero, "the cache kept every mesh nobody had drawn for hundreds of frames");
+        collector.Clock = () => now + Stopwatch.Frequency * 11;
+        collector.BeginFrame();
+
+        Assert.That(collector.CachedKeys, Is.Zero, "the cache kept every mesh nobody had drawn for seconds");
+        Assert.That(collector.MeshBytes, Is.Zero, "and still counted what they held");
+
+        foreach (var unit in units) unit.Dispose();
+    }
+
+    // A still scene walks nothing, so BeginFrame never comes: what it left behind has to go between walks too.
+    [Test]
+    public void AKeyLeftBehindGoesBetweenWalksToo()
+    {
+        using var collector = NewCollector();
+        var unit = Unit(Brushes.Red, 10);
+        collector.TryAdd(unit, Matrix4x4F.Identity, NoScissor, new Rect(0, 0, 10, 10), transformSlot: 0);
+        Assert.That(collector.CachedKeys, Is.EqualTo(1));
+
+        var now = Stopwatch.GetTimestamp();
+        collector.Clock = () => now + Stopwatch.Frequency * 11;
+        collector.Trim();
+
+        Assert.That(collector.CachedKeys, Is.Zero, "a frame that walked nothing let go of nothing");
+        unit.Dispose();
+    }
+
+    // What a recorded flush still draws is on screen - replayed every frame until the next walk - however old, and
+    // whatever the budget says. Letting it go would free buffers a replay reads.
+    [Test]
+    public void AKeyARecordStillDraws_SurvivesAgeAndBudget()
+    {
+        using var collector = NewCollector();
+        var now = Stopwatch.GetTimestamp();
+        collector.Clock = () => now;
+        var unit = Unit(Brushes.Red, 10);
+        collector.TryAdd(unit, Matrix4x4F.Identity, NoScissor, new Rect(0, 0, 10, 10), transformSlot: 0);
+        var segment = collector.SegmentOf(KeyOf(unit));
+        Assert.That(collector.AllocateFlushForKey(segment, NoScissor, [default], 0, 1), Is.GreaterThanOrEqualTo(0),
+            "the key is in a flush record");
+
+        now += Stopwatch.Frequency * 60;
+        collector.MeshBudget = 0;
+        collector.Trim();
+        Assert.That(collector.CachedKeys, Is.EqualTo(1), "a frame between walks let go of a key a record replays");
+        collector.BeginFrame();
+        Assert.That(collector.CachedKeys, Is.EqualTo(1), "the walk let go of a key the last frame drew");
+
+        unit.Dispose();
+    }
+
+    // Age alone let a map zoomed across levels hold a gigabyte: meshes came faster than they went cold. Past the budget
+    // the ones asked for longest ago give way at once.
+    [Test]
+    public void PastTheBudget_TheMeshesAskedForLongestAgoGiveWay()
+    {
+        using var collector = NewCollector();
+        var now = Stopwatch.GetTimestamp();
+        collector.Clock = () => now;
+        collector.BeginFrame();
+        var units = new List<GeometryRenderUnit>();
+        for (var i = 0; i < 10; i++)
+        {
+            now += Stopwatch.Frequency / 100;
+            collector.BeginFrame();
+            var unit = Unit(Brushes.Red, 10 + i);
+            units.Add(unit);
+            collector.TryAdd(unit, Matrix4x4F.Identity, NoScissor, new Rect(0, 0, 10 + i, 10 + i), transformSlot: 0);
+        }
+
+        var all = collector.MeshBytes;
+        collector.MeshBudget = all / 2;
+        collector.BeginFrame();
+
+        Assert.That(collector.MeshBytes, Is.LessThanOrEqualTo(all / 2), "the budget held");
+        Assert.That(collector.CachedKeys, Is.InRange(1, 9), "only as many went as the budget asked");
+        var left = collector.CachedKeys;
+        collector.TryAdd(units[9], Matrix4x4F.Identity, NoScissor, new Rect(0, 0, 19, 19), transformSlot: 0);
+        Assert.That(collector.CachedKeys, Is.EqualTo(left), "the newest was kept: asking for it again made no new mesh");
+        collector.TryAdd(units[0], Matrix4x4F.Identity, NoScissor, new Rect(0, 0, 10, 10), transformSlot: 0);
+        Assert.That(collector.CachedKeys, Is.EqualTo(left + 1), "the oldest went: asking for it again made it anew");
 
         foreach (var unit in units) unit.Dispose();
     }

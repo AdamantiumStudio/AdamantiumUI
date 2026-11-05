@@ -24,6 +24,8 @@ public sealed class GpuBufferManager
     internal uint RingSize => _ringSize;
     internal uint CurrentFrame => _device.CurrentFrame;
 
-    public ReusableBuffer CreateBuffer(BufferUsageFlags usage, MemoryPropertyFlags memory)
-        => new(this, usage, memory);
+    /// <summary>A buffer for <paramref name="usage"/>; <paramref name="name"/> is what a count of device memory calls
+    /// its buffers.</summary>
+    public ReusableBuffer CreateBuffer(BufferUsageFlags usage, MemoryPropertyFlags memory, string name = null)
+        => new(this, usage, memory, name);
 }

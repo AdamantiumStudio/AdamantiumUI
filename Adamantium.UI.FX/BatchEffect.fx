@@ -115,7 +115,7 @@ FillPSInput InstancedFillVS(UI_VERTEX v, uint instanceId : SV_InstanceID)
     // local -> slot space -> world. The slot matrix lives in the transform table, so a node move rewrites 64 bytes there
     // and every instance under it follows without this buffer being touched (same scheme as the SDF batches).
     NodeSlot* nodes = Transforms;
-    float4 world = mul(mul(float4(v.position.xyz, 1.0), inst.Local), nodes[(uint)inst.Params.x].World);
+    float4 world = mul(mul(float4(v.position, 1.0), inst.Local), nodes[(uint)inst.Params.x].World);
     FillPSInput o;
     o.Position = mul(world, Projection);
     int fillFadeSlot = int(inst.Params.y);

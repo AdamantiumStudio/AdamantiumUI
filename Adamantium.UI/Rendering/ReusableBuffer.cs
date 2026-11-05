@@ -33,11 +33,18 @@ public sealed class ReusableBuffer : IDisposable
     private int _version;                  // current data version; bumped by Invalidate
     private long _requestedBytes;          // largest size asked for by Reserve (high-water)
 
-    public ReusableBuffer(GpuBufferManager manager, BufferUsageFlags usage, MemoryPropertyFlags memory)
+    private readonly string _name;
+    private readonly string _ringName;
+
+    /// <summary>A buffer for <paramref name="usage"/> in <paramref name="memory"/>; its buffers are called
+    /// <paramref name="name"/>, and those of its ring the same, marked as such.</summary>
+    public ReusableBuffer(GpuBufferManager manager, BufferUsageFlags usage, MemoryPropertyFlags memory, string name = null)
     {
         _manager = manager;
         _usage = usage;
         _memory = memory;
+        _name = name;
+        _ringName = name == null ? null : name + " (ring)";
         _ring = new Buffer[manager.RingSize];
         _slotVersion = new int[manager.RingSize];
         Array.Fill(_slotVersion, -1);
@@ -114,6 +121,7 @@ public sealed class ReusableBuffer : IDisposable
             }
 
             _ring[i] = Buffer.New(_manager.Device, size, _usage, _memory);
+            _ring[i].Name = _promoted ? _ringName : _name;
             _slotVersion[i] = -1;
         }
 

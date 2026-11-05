@@ -25,11 +25,13 @@ public abstract class UIRenderComponent : DeferredDisposableObject
     // Vulkan buffer.
     private const MemoryPropertyFlags UiMemory = MemoryPropertyFlags.HostVisible | MemoryPropertyFlags.DeviceLocal;
     private static readonly int VertexStride = System.Runtime.InteropServices.Marshal.SizeOf<UIVertex>();
+    private static readonly int TexturedVertexStride = System.Runtime.InteropServices.Marshal.SizeOf<UITexturedVertex>();
 
     protected GpuBufferManager BufferManager { get; }
     private ReusableBuffer _vertexBuffer;
     private ReusableBuffer _indexBuffer;
     private UIVertex[] _vertices;
+    private UITexturedVertex[] _texturedVertices;
     private int[] _indices;
     private uint _vertexCount;
     private uint _indexCount;
@@ -76,13 +78,21 @@ public abstract class UIRenderComponent : DeferredDisposableObject
         SetSnapshot(mesh, snapshot.Vertices, snapshot.Indices is { Length: > 0 } indices ? indices : null);
     }
 
+    /// <summary>Whether the vertices carry where the texture is sampled (<see cref="UITexturedVertex"/>) - a picture's -
+    /// rather than the point alone. Asked from the constructor, so it must not read the subclass's own state.</summary>
+    protected virtual bool SamplesTextureCoordinates => false;
+
     private void SetMesh(Mesh mesh)
     {
-        var vertices = mesh?.ToUIVertices();   // already a fresh array - we own it
+        // Already fresh arrays - we own them.
+        var textured = SamplesTextureCoordinates ? mesh?.ToUITexturedVertices() : null;
+        var vertices = textured == null ? mesh?.ToUIVertices() : null;
+        var count = textured?.Length ?? vertices?.Length ?? 0;
         // COPY the indices. Taking mesh.Indices by reference aliased the live mesh's own array, so a later
         // re-tessellation (which rewrites the mesh IN PLACE) silently changed the index data of an already-built unit -
         // this component must hold a snapshot, exactly as it does for the vertices.
-        var indices = mesh is { HasIndices: true } && vertices is { Length: > 0 } ? (int[])mesh.Indices.Clone() : null;
+        var indices = mesh is { HasIndices: true } && count > 0 ? (int[])mesh.Indices.Clone() : null;
+        _texturedVertices = textured;
         SetSnapshot(mesh, vertices, indices);
     }
 
@@ -92,7 +102,9 @@ public abstract class UIRenderComponent : DeferredDisposableObject
         if (mesh != null) PrimitiveType = mesh.MeshTopology;
 
         _vertices = vertices;
-        _vertexCount = _vertices is { Length: > 0 } ? (uint)_vertices.Length : 0u;
+        if (vertices != null) _texturedVertices = null;
+        var count = _texturedVertices?.Length ?? _vertices?.Length ?? 0;
+        _vertexCount = (uint)count;
         _indices = _vertexCount > 0 ? indices : null;
         _indexCount = _indices != null ? (uint)_indices.Length : 0u;
 
@@ -124,11 +136,16 @@ public abstract class UIRenderComponent : DeferredDisposableObject
         // First INDIVIDUAL draw: lazily create the per-unit buffer (batched units never get here, so never allocate).
         // Rent this frame's ring slot; upload the geometry only if the slot is stale (a static body settles to zero
         // work after the first N frames, an animated one writes only the current slot - never a new allocation).
-        _vertexBuffer ??= ToDispose(BufferManager.CreateBuffer(BufferUsageFlags.VertexBuffer, UiMemory));
-        var vertexBuffer = _vertexBuffer.Acquire((ulong)(_vertexCount * (uint)VertexStride), out var writeVertices);
-        if (writeVertices) vertexBuffer.SetData(_vertices, 0, _vertexCount);
+        _vertexBuffer ??= ToDispose(BufferManager.CreateBuffer(BufferUsageFlags.VertexBuffer, UiMemory, "mesh vertices"));
+        var stride = _texturedVertices != null ? TexturedVertexStride : VertexStride;
+        var vertexBuffer = _vertexBuffer.Acquire((ulong)(_vertexCount * (uint)stride), out var writeVertices);
+        if (writeVertices)
+        {
+            if (_texturedVertices != null) vertexBuffer.SetData(_texturedVertices, 0, _vertexCount);
+            else vertexBuffer.SetData(_vertices, 0, _vertexCount);
+        }
 
-        GraphicsDevice.VertexType = VertexType;
+        GraphicsDevice.VertexType = _texturedVertices != null ? typeof(UITexturedVertex) : VertexType;
         GraphicsDevice.PolygonMode = PolygonMode.Fill;
         GraphicsDevice.PrimitiveTopology = Mesh.MeshTopology;
         GraphicsDevice.ColorBlendEquation = ColorBlendEquation;
@@ -138,7 +155,7 @@ public abstract class UIRenderComponent : DeferredDisposableObject
 
         if (_indexCount > 0)
         {
-            _indexBuffer ??= ToDispose(BufferManager.CreateBuffer(BufferUsageFlags.IndexBuffer, UiMemory));
+            _indexBuffer ??= ToDispose(BufferManager.CreateBuffer(BufferUsageFlags.IndexBuffer, UiMemory, "mesh indices"));
             var indexBuffer = _indexBuffer.Acquire((ulong)(_indexCount * sizeof(int)), out var writeIndices);
             if (writeIndices) indexBuffer.SetData(_indices, 0, _indexCount);
             // DrawIndexed binds both the vertex and index buffers itself - don't bind them again. The over-allocated
@@ -280,7 +297,6 @@ public class GeometryRenderComponent : UIRenderComponent
         tint.W *= (float)image.Opacity;
 
         UIBasicEffect.Wvp.SetValue(world * RenderData.ProjectionMatrix);
-        UIBasicEffect.World.SetValue(world);
         UIBasicEffect.Opacity.SetValue(RenderData.Opacity);
         UIBasicEffect.FillBounds.SetValue(new Vector4F((float)box.X, (float)box.Y, (float)box.Width, (float)box.Height));
         UIBasicEffect.TexTile.SetValue(layout.Tile);
@@ -337,6 +353,8 @@ public class ImageRenderComponent : UIRenderComponent
     public Brush Background { get; set; }
 
     public ITexture Texture { get; set; }
+
+    protected override bool SamplesTextureCoordinates => true;
 
     /// <summary>Set when <see cref="Texture"/> is an animation's frame ARRAY: which layer to sample. Advancing the
     /// animation writes this number and nothing else - no upload, no rebuild.</summary>
