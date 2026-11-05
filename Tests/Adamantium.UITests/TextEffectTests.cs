@@ -431,7 +431,7 @@ public class TextEffectTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(RenderDirty.IsTransform || RenderDirty.MovedNodes.Contains(moved), Is.True, "the element moves");
+            Assert.That(RenderDirty.IsTransform || RenderDirty.IsNodeMoved(moved), Is.True, "the element moves");
             Assert.That(shared.InheritanceParent, Is.SameAs(moved), "its bindings still find the element's data");
             Assert.That(Drawn(text).Single().Transform, Is.EqualTo(GlyphEffect.Flat(Matrix3x2.CreateTranslation<float>(20, 0))),
                 "and the effect follows");

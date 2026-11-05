@@ -73,9 +73,9 @@ public static class RenderDirty
 
     public static long TotalStructuralMarks => RenderDirtyRouter.Default.TotalStructuralMarks;
 
-    public static IReadOnlyCollection<IUIComponent> MovedNodes => RenderDirtyRouter.Default.MovedNodes;
+    public static bool IsNodeMoved(IUIComponent node) => RenderDirtyRouter.Of(node).IsNodeMoved(node);
 
-    public static IReadOnlyCollection<IUIComponent> Geometry => RenderDirtyRouter.Default.Geometry;
+    public static bool IsGeometryDirty(IUIComponent component) => RenderDirtyRouter.Of(component).IsGeometryDirty(component);
 
     public static bool HasWork => RenderDirtyRouter.Default.HasWork;
 

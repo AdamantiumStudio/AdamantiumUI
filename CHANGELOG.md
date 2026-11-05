@@ -21,6 +21,12 @@ All packages share one version.
 - `adam-auto device-memory`: what device memory the application's graphics resources hold, by kind and the largest
   groups - buffers named by what they hold - written to `logs/device-memory.txt` as well.
 
+### Changed
+
+- `RenderDirty.IsNodeMoved` and `RenderDirty.IsGeometryDirty` replace `MovedNodes` and `Geometry`, which handed out the
+  live sets while other threads marked them. Every set of the dirty marks is locked by a lock of its own, not by the
+  set itself.
+
 ### Fixed
 
 - A text run drawn at a spot of its own inside an element (`DrawText` with a matrix - a `Drawing`'s runs) takes its
