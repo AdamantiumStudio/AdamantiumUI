@@ -13,6 +13,7 @@ using Adamantium.UI.Core;
 using Adamantium.UI.Core.Graphics;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Rendering;
+using Adamantium.UI.Rendering.Verification;
 using Adamantium.Vulkan.Core;
 using NUnit.Framework;
 
@@ -107,6 +108,86 @@ public class AsyncGlyphFillTests
         finally
         {
             FontAtlasStore.SynchronousFill = wasSynchronous;
+        }
+    }
+
+    private sealed class CountingTextBlock : TextBlock
+    {
+        public int Renders;
+
+        protected override void OnRender(IDrawingContext context)
+        {
+            Renders++;
+            base.OnRender(context);
+        }
+    }
+
+    // Letters landing patch their text in the frame they land in: the element is not recorded again, the scene is walked
+    // at most once, and every frame drawn shows every glyph the text has (the verifier counts them).
+    [Test]
+    public void LettersLanding_PatchTheirText_WithoutRecordingItAgain()
+    {
+        var device = GpuTestDevice.Device;
+        var factory = new RenderUnitFactory(device, new FontResourceFactory());
+        using var renderer = new OffscreenTestRenderer(device, factory, Dim, Dim) { ClearColor = Colors.Black };
+        var folder = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "verify-tests", Guid.NewGuid().ToString("N"));
+        var settings = new FrameVerification { Folder = folder, IsEnabled = true };
+
+        var block = new CountingTextBlock { Text = "Zk7", Foreground = Brushes.White, FontSize = 30 };
+        var stack = new StackPanel { Orientation = Orientation.Vertical };
+        stack.Children.Add(block);
+        var root = new VisualRoot(stack, Dim, Dim);
+        var verifier = new FrameVerifier(settings, root);
+        renderer.Cache.Observer = verifier;
+
+        var wasSynchronous = FontAtlasStore.SynchronousFill;
+        FontAtlasStore.SynchronousFill = false;
+        try
+        {
+            ((IMeasurableComponent)root).Measure(new Size<double>(Dim, Dim));
+            ((IMeasurableComponent)root).Arrange(new Rect(0, 0, Dim, Dim));
+            Assert.That(renderer.RenderFrame(root), Is.True, "off-screen frame must render");
+            RenderDirty.Clear();
+            var renders = block.Renders;
+            var walks = 0;
+            var why = new List<string>();
+            var traced = Adamantium.UI.Core.Diagnostics.FrameTrace.Enabled;
+            Adamantium.UI.Core.Diagnostics.FrameTrace.Enabled = true;
+
+            var sw = Stopwatch.StartNew();
+            do
+            {
+                Adamantium.UI.Core.Diagnostics.FrameTrace.Refuser = null;
+                Adamantium.UI.Core.Diagnostics.FrameTrace.LayoutChangedBy = null;
+                Assert.That(renderer.RenderFrame(root), Is.True);
+                RenderDirty.Clear();
+                verifier.FrameDrawn(renderer.Cache);
+                if (!renderer.Cache.LastFrameReplayed)
+                {
+                    walks++;
+                    why.Add($"{renderer.Cache.LastBuildKind} {Adamantium.UI.Core.Diagnostics.FrameTrace.Refuser} " +
+                            $"{Adamantium.UI.Core.Diagnostics.FrameTrace.LayoutChangedBy}");
+                }
+            }
+            while (FontAtlasStore.HasPendingGlyphs && sw.Elapsed.TotalSeconds < 5);
+
+            Adamantium.UI.Core.Diagnostics.FrameTrace.Enabled = traced;
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(Ink(Pixels(renderer)), Is.GreaterThan(0), "the letters arrive");
+                Assert.That(block.Renders, Is.EqualTo(renders), "landing letters do not record the text again");
+                // Once at most: a text with no letters yet draws on its own, and moving it into the batch when they come
+                // is a walk - every later batch of letters is a patch.
+                Assert.That(walks, Is.LessThanOrEqualTo(1), "nor walk the scene: " + string.Join("; ", why));
+                Assert.That(settings.MismatchedFrames, Is.Zero, "and every frame drawn has every glyph the text has");
+            });
+        }
+        finally
+        {
+            FontAtlasStore.SynchronousFill = wasSynchronous;
+            settings.IsEnabled = false;
+            if (System.IO.Directory.Exists(folder)) System.IO.Directory.Delete(folder, true);
         }
     }
 

@@ -29,6 +29,14 @@ All packages share one version.
 
 ### Fixed
 
+- Fewer frames walk the whole scene:
+  - glyphs landing in the atlas patch the texts that waited for them in that frame, rather than marking everything
+    stale and recording each such element again - a map re-placed its every label for each batch of letters;
+  - an element out of view that moves and stays out of view - a map's markers off the screen during a pan - no longer
+    refuses the patch;
+  - a long recorded stream still takes splices: the limit is counted from what the last walk recorded, where a fixed
+    256 operations refused every splice in a scene of a thousand.
+
 - A text run drawn at a spot of its own inside an element (`DrawText` with a matrix - a `Drawing`'s runs) takes its
   background along: the background stood at the element's origin while the text was elsewhere.
 
