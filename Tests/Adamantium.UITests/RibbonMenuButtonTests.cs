@@ -40,6 +40,26 @@ public class RibbonMenuButtonTests
         Assert.That(button.DropDownMenu.IsOpen, Is.False);
     }
 
+    private sealed class AnsweredSplitButton : RibbonSplitButton
+    {
+        public void Answer(CommandState state) => OnCommandState(state);
+    }
+
+    // A split button's body asked of its command - "is the bottom border on?" - must not drop the menu: checked is open.
+    [Test]
+    public void ACommandSayingItsChoiceIsOn_DoesNotDropTheMenu()
+    {
+        var button = new AnsweredSplitButton { DropDownMenu = MenuWith("Bottom Border") };
+
+        button.Answer(new CommandState(true, IsChecked: true));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(button.DropDownMenu.IsOpen, Is.False);
+            Assert.That(button.IsChecked, Is.Not.True);
+        });
+    }
+
     // The menu closes itself on an outside press, on Escape, and on a row being picked. Nothing else is listening, so a
     // command that did not hear it would stay lit over a flyout that is gone.
     [Test]

@@ -84,6 +84,12 @@ public class RibbonDropDownButton : RibbonToggleButton, IKeyTipTarget
         base.OnKeyDown(e);
     }
 
+    /// <summary>Its <see cref="Primitives.ToggleButton.IsChecked"/> is whether its menu is open: a command saying its
+    /// choice is on - a split button's body - does not open it.</summary>
+    protected override void OnCommandState(CommandState state)
+    {
+    }
+
     protected override void OnToggleStateChanged(bool? value)
     {
         base.OnToggleStateChanged(value);

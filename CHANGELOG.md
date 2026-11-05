@@ -7,6 +7,12 @@ All packages share one version.
 
 ### Added
 
+- `DashedLine`: a dotted or dashed line of laid-out text, as `TextBlock` draws it and an editor can - a paragraph's
+  dotted or dashed border at its side runs down its band, as a line under vertical text does (it ran across it).
+
+- `ColorPalette.ShowsCommandColor`: the palette shows the color its routed command answers - what a pick changes, as a
+  card's palette - instead of the one picked last.
+
 - `Placement`: where an element puts a drawing, which it can move later without drawing again. `DrawGeometry` and
   `DrawText` take one in new overloads; writing `Placement.Matrix` moves what was drawn with it by rewriting one matrix
   on the GPU - the element is not recorded again. A camera over many objects gives each object its own placement.
@@ -28,6 +34,10 @@ All packages share one version.
   set itself.
 
 ### Fixed
+
+- A `RibbonSplitButton` whose body's command says its choice is on - a border the paragraphs show - no longer drops its
+  menu by itself, nor leaves it open after a row is picked: a drop-down's checked state is its menu being open, and the
+  command's answer no longer sets it.
 
 - A text run drawn at a spot of its own inside an element (`DrawText` with a matrix - a `Drawing`'s runs) takes its
   background along: the background stood at the element's origin while the text was elsewhere.
