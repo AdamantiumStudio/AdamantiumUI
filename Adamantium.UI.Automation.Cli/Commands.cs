@@ -16,13 +16,13 @@ internal static class Commands
         "windows", "tree", "visual", "state", "find", "unnamed", "get", "invoke", "toggle", "select", "unselect", "click",
         "rclick", "hover", "wheel", "drag", "touch", "touches", "pinch", "pen", "expand", "collapse", "scroll", "move",
         "resize", "zoom", "pan", "context-menu", "drop", "connect", "disconnect", "dock", "window", "set", "caret", "type",
-        "key", "wait", "wait-idle", "mark", "errors", "expect", "absent", "shot", "memory", "theme"
+        "key", "wait", "wait-idle", "mark", "errors", "expect", "absent", "shot", "memory", "device-memory", "theme"
     ];
 
     public static async Task RunAsync(AutomationSession session, ScriptArguments arguments, TextWriter output)
     {
         var sessionWide = arguments.Command is "windows" or "state" or "wait-idle" or "mark" or "errors" or "type" or "key" or "touches"
-            or "memory" or "theme";
+            or "memory" or "device-memory" or "theme";
         if (!sessionWide && arguments.At(0) == null && arguments.Command is not ("tree" or "unnamed" or "shot"))
         {
             throw new AutomationException($"{arguments.Command} needs a selector.");
@@ -62,6 +62,9 @@ internal static class Commands
                 return;
             case "memory":
                 output.WriteLine(await session.MemoryAsync());
+                return;
+            case "device-memory":
+                output.Write(await session.DeviceMemoryAsync());
                 return;
             case "theme":
                 output.WriteLine(await session.ThemeAsync(arguments.At(0), arguments.Option("variant")));

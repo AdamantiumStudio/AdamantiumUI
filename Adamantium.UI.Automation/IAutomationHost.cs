@@ -26,6 +26,9 @@ public interface IAutomationHost
     /// <summary>Whether the application is still starting under its splash window; a host with no splash never is.</summary>
     bool IsStarting => false;
 
+    /// <summary>What device memory the application's graphics resources hold, as text; null where nothing is drawn.</summary>
+    string DescribeDeviceMemory() => null;
+
     /// <summary>Closes the application.</summary>
     Task ShutdownAsync();
 }

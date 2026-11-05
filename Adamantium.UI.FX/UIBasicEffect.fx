@@ -2,7 +2,6 @@
 #include "Includes/ColorMath.fxh"
 
 float4x4 wvp;
-float4x4 world;
 
 float4 fillColor;
 SamplerState sampleType;
@@ -16,8 +15,6 @@ float textureLayer;
 Texture2DArray paletteIndices;
 Texture2D palette;
 
-float zNear;
-float zFar;
 float opacity = 1;
 
 // A TEXTURED fill on ARBITRARY tessellated geometry (Polygon/Path). The rounded rect and the ellipse sample a texture in
@@ -38,13 +35,19 @@ float texMirror;      // mirror flags: 1 = X, 2 = Y, 3 = both
 VERTEX_OUTPUT UIVertexShader(UI_VERTEX input)
 {
     VERTEX_OUTPUT output;
-    output.position = float4(input.position.xyz, 1);
-    output.position = mul(output.position, wvp);
-	output.normal = normalize(mul(float4(input.normal, 0.0), world).xyz);
-	output.uv0 = input.uv0;
-	output.uv1 = input.uv1;
+    output.position = mul(float4(input.position, 1), wvp);
+    output.uv0 = float2(0, 0);
+    return output;
+}
 
-	return output;
+// A textured draw: the vertex says where in its texture it samples.
+[shader("vertex")]
+VERTEX_OUTPUT TexturedVS(UI_TEXTURED_VERTEX input)
+{
+    VERTEX_OUTPUT output;
+    output.position = mul(float4(input.position, 1), wvp);
+    output.uv0 = input.uv0;
+    return output;
 }
 
 [shader("fragment")]
@@ -72,11 +75,8 @@ float4 Textured_PS(VERTEX_OUTPUT input) : SV_TARGET
 VERTEX_OUTPUT TexturedFillVS(UI_VERTEX input)
 {
     VERTEX_OUTPUT output;
-    output.position = mul(float4(input.position.xyz, 1), wvp);
-    output.normal = normalize(mul(float4(input.normal, 0.0), world).xyz);
+    output.position = mul(float4(input.position, 1), wvp);
     output.uv0 = (input.position.xy - fillBounds.xy) / max(fillBounds.zw, float2(1e-4, 1e-4));
-    output.uv1 = input.uv1;
-
     return output;
 }
 
@@ -161,7 +161,7 @@ technique Basic
 
 	pass Textured
 	{
-		VertexShader = UIVertexShader;
+		VertexShader = TexturedVS;
 		PixelShader = Textured_PS;
 	}
 
@@ -173,13 +173,13 @@ technique Basic
 
 	pass TexturedArray
 	{
-		VertexShader = UIVertexShader;
+		VertexShader = TexturedVS;
 		PixelShader = TexturedArray_PS;
 	}
 
 	pass PalettedArray
 	{
-		VertexShader = UIVertexShader;
+		VertexShader = TexturedVS;
 		PixelShader = PalettedArray_PS;
 	}
 }
