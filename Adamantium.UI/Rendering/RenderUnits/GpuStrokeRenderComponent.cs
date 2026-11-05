@@ -22,7 +22,7 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
     // Disc-fan subdivision for round joins (a smooth-enough circle); 0 when the contour has no round geometry.
     private const uint RoundSegmentsCount = 16;
     private const int MaxDashVertices = 8192 * 6;   // safety cap on the dash output buffer (per contour)
-    private const ulong MostBatchPoints = 32768;     // pieces are numbered 2 per point, and the union depth holds 16 bits
+    private const ulong MostBatchPoints = PreparedStrokeBatch.MostPoints;
     private const ulong MostBatchVertexBytes = 32UL << 20;
     private static readonly ulong VertexSize = (ulong)System.Runtime.CompilerServices.Unsafe.SizeOf<StrokeVertex>();
 
@@ -72,6 +72,7 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
         // A BATCH: many contours, their points one after another, drawn by one draw. ContoursData is (first point, point
         // count, closed) per contour; PointContoursData the contour of each point.
         public bool Batched;
+        public bool LaidOutElsewhere;   // its arrays are a PreparedStrokeBatch's: shared, so copied before written
         public uint[] ContoursData;
         public uint[] PointContoursData;
         public ReusableBuffer ContoursBuffer;
@@ -90,7 +91,17 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
     }
 
     public GpuStrokeRenderComponent(IGraphicsDevice device, UIBasicEffect uiBasicEffect, StrokeEffect effect,
-        IReadOnlyList<(Vector2<double>[] Points, bool IsClosed)> contours, Pen pen, GpuBufferManager bufferManager) : base(device, uiBasicEffect, null, bufferManager)
+        IReadOnlyList<(Vector2<double>[] Points, bool IsClosed)> contours, Pen pen, GpuBufferManager bufferManager)
+        : this(device, uiBasicEffect, effect, contours, null, pen, bufferManager)
+    {
+    }
+
+    /// <summary>A stroke along <paramref name="contours"/>, its continuous batches taken from
+    /// <paramref name="laidOut"/> - what <see cref="PreparedStrokeBatch.Of"/> made of these same contours - rather than
+    /// laid out here.</summary>
+    internal GpuStrokeRenderComponent(IGraphicsDevice device, UIBasicEffect uiBasicEffect, StrokeEffect effect,
+        IReadOnlyList<(Vector2<double>[] Points, bool IsClosed)> contours, PreparedStrokeBatch[] laidOut, Pen pen,
+        GpuBufferManager bufferManager) : base(device, uiBasicEffect, null, bufferManager)
     {
         _device = device;
         _effect = effect;
@@ -117,10 +128,15 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
 
         if (together.Count > 1)
         {
-            foreach (var (start, count) in _useCut ? CutBatches(together) : Batches(together))
+            var runs = _useCut ? CutBatches(together) : Batches(together);
+            var reuse = !_useCut && laidOut != null && laidOut.Length == runs.Count;
+            for (var r = 0; r < runs.Count; r++)
             {
+                var (start, count) = runs[r];
                 var contour = count == 1 ? BuildContour(together[start].Points, together[start].IsClosed)
-                    : _useCut ? BuildCutBatch(together, start, count) : BuildBatch(together, start, count);
+                    : _useCut ? BuildCutBatch(together, start, count)
+                    : reuse && laidOut[r] is { } batch && batch.Start == start && batch.Count == count ? BuildBatch(batch)
+                    : BuildBatch(together, start, count);
                 if (contour != null) _contours.Add(contour);
             }
 
@@ -140,51 +156,11 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
     /// <summary>Whether draw <paramref name="draw"/> is a batch of contours.</summary>
     internal bool IsBatch(int draw) => _contours[draw].Batched;
 
-    // Contours of two points or more, a closed one of two drawn open; the list itself when every contour already is.
     private static IReadOnlyList<(Vector2<double>[] Points, bool IsClosed)> Valid(
-        IReadOnlyList<(Vector2<double>[] Points, bool IsClosed)> contours)
-    {
-        var asIs = true;
-        foreach (var (points, isClosed) in contours)
-        {
-            if (points is not { Length: >= 2 } || isClosed && points.Length < 3)
-            {
-                asIs = false;
-                break;
-            }
-        }
+        IReadOnlyList<(Vector2<double>[] Points, bool IsClosed)> contours) => PreparedStrokeBatch.Valid(contours);
 
-        if (asIs) return contours;
-
-        var valid = new List<(Vector2<double>[] Points, bool IsClosed)>(contours.Count);
-        foreach (var (points, isClosed) in contours)
-            if (points is { Length: >= 2 }) valid.Add((points, isClosed && points.Length >= 3));
-        return valid;
-    }
-
-    // Contours grouped into batches - runs of the list - of at most MostBatchPoints points, what a 16-bit piece number
-    // holds. A contour is never split; one bigger than a batch is a batch of its own.
-    private static List<(int Start, int Count)> Batches(IReadOnlyList<(Vector2<double>[] Points, bool IsClosed)> contours)
-    {
-        const int most = (int)MostBatchPoints;
-        var batches = new List<(int Start, int Count)>();
-        var start = 0;
-        var points = 0;
-        for (var i = 0; i < contours.Count; i++)
-        {
-            if (i > start && points + contours[i].Points.Length > most)
-            {
-                batches.Add((start, i - start));
-                start = i;
-                points = 0;
-            }
-
-            points += contours[i].Points.Length;
-        }
-
-        if (contours.Count > start) batches.Add((start, contours.Count - start));
-        return batches;
-    }
+    private static List<(int Start, int Count)> Batches(IReadOnlyList<(Vector2<double>[] Points, bool IsClosed)> contours) =>
+        PreparedStrokeBatch.Batches(contours);
 
     // Cut contours grouped likewise, their output ranges summing to no more than MostBatchVertexBytes.
     private List<(int Start, int Count)> CutBatches(IReadOnlyList<(Vector2<double>[] Points, bool IsClosed)> contours)
@@ -270,6 +246,30 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
 
     // One contour standing for all of them: their points one after another, a table of where each starts, and for every
     // point the contour it is in. Slots in the output follow the points, so contours never write over each other.
+    private Contour BuildBatch(PreparedStrokeBatch batch)
+    {
+        var c = new Contour
+        {
+            Batched = true,
+            LaidOutElsewhere = true,
+            PointCount = (uint)batch.PointContours.Length,
+            PointsData = batch.Points,
+            ContoursData = batch.Contours,
+            PointContoursData = batch.PointContours,
+            ArcsData = batch.Arcs,
+        };
+
+        c.RoundSegments = ExpandJoinTriangles;
+        c.ThreadCount = c.PointCount;
+        c.VertexCount = c.PointCount * (6u + c.RoundSegments * 3u);
+        c.PointsBuffer = NewStorage(c.PointsBytes);
+        c.ContoursBuffer = NewStorage((ulong)(c.ContoursData.Length * sizeof(uint)));
+        c.PointContoursBuffer = NewStorage((ulong)(c.PointContoursData.Length * sizeof(uint)));
+        c.ArcsBuffer = NewStorage((ulong)(c.ArcsData.Length * sizeof(float)));
+        if (_hasDashes) SetPattern(c, _pen);
+        return c;
+    }
+
     private Contour BuildBatch(IReadOnlyList<(Vector2<double>[] Points, bool IsClosed)> contours, int start, int count)
     {
         var total = 0;
@@ -486,6 +486,15 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
             for (var i = 0; i < parts.Count; i++)
             {
                 var c = _contours[i];
+                if (c.LaidOutElsewhere)
+                {
+                    c.PointsData = new float[c.PointsData.Length];
+                    c.ContoursData = new uint[c.ContoursData.Length];
+                    c.PointContoursData = new uint[c.PointContoursData.Length];
+                    c.ArcsData = new float[c.ArcsData.Length];
+                    c.LaidOutElsewhere = false;
+                }
+
                 if (c.Batched) FillBatch(c, valid, parts[i].Start, parts[i].Count);
                 else c.PointsData = ToFloats(valid[parts[i].Start].Points);
                 FillArcs(c);

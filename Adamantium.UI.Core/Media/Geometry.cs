@@ -99,7 +99,7 @@ public abstract class Geometry : AdamantiumComponent
          }
          RecalculateBounds();
          _readyFill = ContoursAreFillBoundary ? PreparedFill.Of(this, Version) : null;
-         _readyStroke = ContoursAreStrokePaths ? PreparedStroke.Of(this, Version) : null;
+         _readyStroke = ContoursAreStrokePaths ? PreparedStroke.Of(this, Version, layOut: true) : null;
          IsProcessed = true;
       }
    }
@@ -155,7 +155,7 @@ public abstract class Geometry : AdamantiumComponent
    /// <summary>The contours a stroke runs along, as the renderer strokes them: the ones <see cref="ProcessGeometry"/>
    /// made, while the geometry is as it was then; otherwise made now, from the mesh as it is, and not kept.</summary>
    internal PreparedStroke StrokeForDrawing =>
-      _readyStroke is { } ready && ready.Version == Version ? ready : PreparedStroke.Of(this, Version);
+      _readyStroke is { } ready && ready.Version == Version ? ready : PreparedStroke.Of(this, Version, layOut: false);
 
    /// <summary>Whether the mesh's contours are lines made to be stroked - a map's roads - so the contours a stroke runs
    /// along are made when the geometry is processed, on whatever thread processes it.</summary>
