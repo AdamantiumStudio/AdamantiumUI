@@ -57,6 +57,7 @@ public class PlacementRenderTests
     {
         public readonly Placement Placement = new();
         public int Renders;
+        public Brush Background = Brushes.Transparent;
         private readonly TextLayout _layout;
 
         public PlacedText()
@@ -85,7 +86,7 @@ public class PlacementRenderTests
                 Color = Colors.White,
                 TextArea = new Rectangle<int>(new Vector2F().As<int>(), size.As<int>())
             };
-            context.ForControl(this).DrawText(parameters, size, _layout, Brushes.White, Brushes.Transparent,
+            context.ForControl(this).DrawText(parameters, size, _layout, Brushes.White, Background,
                 Brushes.Transparent, Placement);
         }
     }
@@ -319,6 +320,37 @@ public class PlacementRenderTests
         finally
         {
             FontRenderer.UseTextBatch = wasBatched;
+            FontAtlasStore.SynchronousFill = wasSynchronous;
+        }
+    }
+
+    [Test]
+    public void PlacedText_TakesItsBackgroundAlong()
+    {
+        var wasSynchronous = FontAtlasStore.SynchronousFill;
+        FontAtlasStore.SynchronousFill = true;
+        try
+        {
+            _holder.Children.Remove(_shapes);
+            var text = new PlacedText { Width = Width, Height = Height, Background = Brushes.Gray };
+            text.Placement.Matrix = At(10, 10);
+            _holder.Children.Add(text);
+            Draw();
+            var before = Draw();
+
+            text.Placement.Matrix = At(70, 40);
+            var after = Draw();
+
+            // The background is the 60 x 30 box of the run: where it lies is where the lit box lies.
+            Assert.Multiple(() =>
+            {
+                Assert.That(before.Left, Is.EqualTo(10).Within(1), "the background stands at the run, not the element");
+                Assert.That(before.Right - before.Left + 1, Is.EqualTo(60).Within(2));
+                Assert.That(after.Left - before.Left, Is.EqualTo(60).Within(1), "and moves with it");
+            });
+        }
+        finally
+        {
             FontAtlasStore.SynchronousFill = wasSynchronous;
         }
     }

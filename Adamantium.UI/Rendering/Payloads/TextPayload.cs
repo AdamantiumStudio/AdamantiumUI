@@ -16,7 +16,7 @@ public class TextPayload(
     Brush stroke,
     Matrix4x4F? localTransform = null,
     IReadOnlyList<GlyphEffect> effects = null,
-    RectangleF? window = null) : IEquatable<TextPayload>, IRenderCachePolicy
+    RectangleF? window = null) : IEquatable<TextPayload>, IRenderCachePolicy, IPlacedPayload
 {
     /// <summary>The part of the layout drawn, in its units: the glyphs touching it; null for all of them.</summary>
     public RectangleF? Window { get; } = window;
@@ -26,13 +26,17 @@ public class TextPayload(
     /// a drawing putting several runs at their own spots inside one element has nowhere else to say where they go.</summary>
     public Matrix4x4F LocalTransform { get; } = localTransform ?? Matrix4x4F.Identity;
 
-    /// <summary>The placement the run moves with, or null - see <see cref="GeometryPayload.Placement"/>.</summary>
-    public Placement Placement { get; init; }
+    /// <summary>The placement <see cref="LocalTransform"/> moves with, or null - see
+    /// <see cref="GeometryPayload.Placement"/>.</summary>
+    public Placement Placement { get; private set; }
 
-    /// <summary>The placement's matrix and version as they were when this was recorded.</summary>
-    public Matrix4x4F PlacedAt { get; init; } = Matrix4x4F.Identity;
+    public long PlacedVersion { get; private set; }
 
-    public long PlacedVersion { get; init; }
+    void IPlacedPayload.PlaceBy(Placement placement)
+    {
+        Placement = placement;
+        PlacedVersion = placement.Version;
+    }
 
     public TextRenderingParameters TextRenderingParameters { get; } = renderingParameters;
     public Size<double> DesiredSize { get; } = desiredSize;
@@ -62,7 +66,8 @@ public class TextPayload(
     public override int GetHashCode()
     {
         return HashCode.Combine(TextRenderingParameters, DesiredSize, TextLayout, Revision, Foreground, Background, Stroke,
-            HashCode.Combine(LocalTransform, Effects.Count, Window));
+            HashCode.Combine(Placement != null ? Placement.GetHashCode() : LocalTransform.GetHashCode(), Effects.Count,
+                Window));
     }
 
     public bool RequiresBufferRebuild(IRenderCachePolicy newState)
@@ -101,8 +106,9 @@ public class TextPayload(
         return Equals(TextRenderingParameters, other.TextRenderingParameters) &&
                DesiredSize.Equals(other.DesiredSize) && Equals(TextLayout, other.TextLayout) && Revision == other.Revision &&
                Equals(Foreground, other.Foreground) && Equals(Background, other.Background) &&
-               Equals(Stroke, other.Stroke) && LocalTransform == other.LocalTransform && SameEffects(other) &&
-               Window == other.Window && ReferenceEquals(Placement, other.Placement);
+               Equals(Stroke, other.Stroke) && SameEffects(other) && Window == other.Window &&
+               ReferenceEquals(Placement, other.Placement) &&
+               (Placement != null || LocalTransform == other.LocalTransform);   // a placement's matrix rides its slot
     }
 
     public override bool Equals(object obj)

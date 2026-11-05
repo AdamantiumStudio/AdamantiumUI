@@ -22,8 +22,17 @@ public class DrawingContext : IDrawingContext, IDrawingContextInternal, IDrawing
    {
    }
 
+   // The placement the draw being recorded moves with: a placed overload records through the matrix overload and marks
+   // what it records, so the two never part ways.
+   private Placement _placing;
+
    protected void CreateCommand(object payload)
    {
+      if (_placing != null && payload is IPlacedPayload placed)
+      {
+         placed.PlaceBy(_placing);
+      }
+
       var command = new DrawCommand(
          _currentComponent,
          _currentComponent.RenderId,
@@ -177,15 +186,22 @@ public class DrawingContext : IDrawingContext, IDrawingContextInternal, IDrawing
    IDrawingSession IDrawingSession.DrawGeometry(Brush brush, Geometry geometry, Pen pen, Placement placement)
    {
       if (placement == null) return ((IDrawingSession)this).DrawGeometry(brush, geometry, pen);
-      if (!brush.IsVisible() && pen == null) return this;
-      placement.DrawnBy(_currentComponent);
-      CreateCommand(new GeometryPayload(brush, geometry, pen)
+
+      BeginPlaced(placement);
+      try
       {
-         Placement = placement,
-         PlacedAt = placement.Matrix,
-         PlacedVersion = placement.Version
-      });
-      return this;
+         return ((IDrawingSession)this).DrawGeometry(brush, geometry, pen, placement.Matrix);
+      }
+      finally
+      {
+         _placing = null;
+      }
+   }
+
+   private void BeginPlaced(Placement placement)
+   {
+      placement.DrawnBy(_currentComponent);
+      _placing = placement;
    }
 
    IDrawingSession IDrawingSession.DrawImage(ImageSource image, Brush filter, Rect destinationRect, CornerRadius corners)
@@ -236,9 +252,11 @@ public class DrawingContext : IDrawingContext, IDrawingContextInternal, IDrawing
 
    IDrawingSession IDrawingSession.DrawText(TextRenderingParameters renderingParameters, Size<double> desiredSize, TextLayout textLayout, Brush foreground, Brush background, Brush stroke, Matrix4x4F transform)
    {
+      // The background sits where the run does, so it takes the same matrix - a rectangle of the element would stay
+      // behind at its origin.
       if (background.IsVisible())
-         CreateCommand(new RectanglePayload(background, new Rect(desiredSize), CornerRadius.Empty, null));
-      
+         ((IDrawingSession)this).DrawGeometry(background, new RectangleGeometry(new Rect(desiredSize)), null, transform);
+
       CreateCommand(new TextPayload(renderingParameters, desiredSize, textLayout, foreground, background, stroke, transform));
       return this;
    }
@@ -250,18 +268,16 @@ public class DrawingContext : IDrawingContext, IDrawingContextInternal, IDrawing
          return ((IDrawingSession)this).DrawText(renderingParameters, desiredSize, textLayout, foreground, background, stroke);
       }
 
-      // The background moves with the run, so it is a placed shape rather than a rectangle of the element.
-      if (background.IsVisible())
-         ((IDrawingSession)this).DrawGeometry(background, new RectangleGeometry(new Rect(desiredSize)), null, placement);
-
-      placement.DrawnBy(_currentComponent);
-      CreateCommand(new TextPayload(renderingParameters, desiredSize, textLayout, foreground, background, stroke)
+      BeginPlaced(placement);
+      try
       {
-         Placement = placement,
-         PlacedAt = placement.Matrix,
-         PlacedVersion = placement.Version
-      });
-      return this;
+         return ((IDrawingSession)this).DrawText(renderingParameters, desiredSize, textLayout, foreground, background,
+            stroke, placement.Matrix);
+      }
+      finally
+      {
+         _placing = null;
+      }
    }
 
    IDrawingSession IDrawingSession.DrawText(TextRenderingParameters renderingParameters, Size<double> desiredSize, TextLayout textLayout, Brush foreground, Brush background, Brush stroke, IReadOnlyList<GlyphEffect> effects)

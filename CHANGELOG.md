@@ -23,6 +23,9 @@ All packages share one version.
 
 ### Fixed
 
+- A text run drawn at a spot of its own inside an element (`DrawText` with a matrix - a `Drawing`'s runs) takes its
+  background along: the background stood at the element's origin while the text was elsewhere.
+
 - A component drawing thousands of shapes - a map zoomed - is applied in about half the time:
   - a rectangle filled with an image or a nine-slice brush, drawn by the texture batch, no longer also builds
     machinery of its own that is never drawn;

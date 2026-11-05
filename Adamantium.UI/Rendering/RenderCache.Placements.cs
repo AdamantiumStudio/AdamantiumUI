@@ -95,19 +95,14 @@ public partial class RenderCache
     // its element is known to draw with the placement.
     private void CatchUp(IRenderUnit unit)
     {
-        switch (unit)
+        if (unit is not IPlacedRenderUnit { Placed: { Placement: { } placement } placed } placedUnit)
         {
-            case GeometryRenderUnit { Payload: { Placement: { } placement } payload } geometry:
-                Hear(placement, payload.PlacedAt, payload.PlacedVersion);
-                geometry.PlacedMatrix = Shown(placement);
-                Hold(unit.Component, placement);
-                break;
-            case TextRenderUnit { Payload: { Placement: { } placement } payload } text:
-                Hear(placement, payload.PlacedAt, payload.PlacedVersion);
-                text.PlacedMatrix = Shown(placement);
-                Hold(unit.Component, placement);
-                break;
+            return;
         }
+
+        Hear(placement, placed.LocalTransform, placed.PlacedVersion);
+        placedUnit.PlacedMatrix = Shown(placement);
+        Hold(unit.Component, placement);
     }
 
     private void Hold(IUIComponent component, Placement placement)
@@ -218,14 +213,9 @@ public partial class RenderCache
         _placementsKept.Clear();
         foreach (var command in commands)
         {
-            switch (command.Payload)
+            if (command.Payload is IPlacedPayload { Placement: { } placement })
             {
-                case GeometryPayload { Placement: { } geometryPlacement }:
-                    _placementsKept.Add(geometryPlacement);
-                    break;
-                case TextPayload { Placement: { } textPlacement }:
-                    _placementsKept.Add(textPlacement);
-                    break;
+                _placementsKept.Add(placement);
             }
         }
 
