@@ -32,6 +32,13 @@
                             <!-- Fixed icon gutter (column 0): always reserved so every row's label aligns whether or not it
                                  has an icon, and a checkmark/glyph has a consistent home - like a real menu. -->
                             <Grid ColumnDefinitions="28,*,Auto,Auto">
+                                <!-- A checked row's mark, as Word's: a lit frame round its icon - or round the check of a row
+                                     with none. -->
+                                <Border x:Name="CheckFrame" Grid.Column="0" Width="24" Height="24" CornerRadius="4"
+                                        Background="{ResourceReference SubtleFillColorSecondary}"
+                                        BorderBrush="{ThemeResource AccentFillColorDefault}" BorderThickness="1"
+                                        HorizontalAlignment="Center" VerticalAlignment="Center"
+                                        Visibility="Collapsed"/>
                                 <ContentPresenter x:Name="IconPresenter" Grid.Column="0" Content="{TemplateBinding Icon}"
                                         HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 <Path x:Name="CheckGlyph" Grid.Column="0"
@@ -94,12 +101,18 @@
             <Setter TargetName="PART_ContentPresenter" Property="Foreground" Value="{ResourceReference TextFillColorDisabled}"/>
             <Setter TargetName="CheckGlyph" Property="Stroke" Value="{ResourceReference TextFillColorDisabled}"/>
         </PropertyTrigger>
-        <!-- A checked row shows the check mark in the icon gutter, in place of its icon - hidden, not collapsed: the
-             icon's presenter is what holds the gutter's width, so the label stays on the line of the others. -->
+        <!-- A checked row keeps its icon in a lit frame, as Word's - a border on, and which one; a row with no icon shows
+             the check mark there instead. -->
         <PropertyTrigger Property="IsChecked" Value="true">
-            <Setter TargetName="CheckGlyph" Property="Visibility" Value="Visible"/>
-            <Setter TargetName="IconPresenter" Property="Visibility" Value="Hidden"/>
+            <Setter TargetName="CheckFrame" Property="Visibility" Value="Visible"/>
         </PropertyTrigger>
+        <MultiTrigger>
+            <MultiTrigger.Conditions>
+                <Condition Property="IsChecked" Value="true"/>
+                <Condition Property="Icon" Value="{x:Null}"/>
+            </MultiTrigger.Conditions>
+            <Setter TargetName="CheckGlyph" Property="Visibility" Value="Visible"/>
+        </MultiTrigger>
         <!-- Parent rows show the submenu chevron (leaf rows keep it hidden and show the gesture hint instead). -->
         <PropertyTrigger Property="HasItems" Value="true">
             <Setter TargetName="Chevron" Property="Visibility" Value="Visible"/>

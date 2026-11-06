@@ -23,6 +23,9 @@ All packages share one version.
 
 ### Changed
 
+- A checked menu row keeps its icon, in a lit frame, as Word's - which border is on stays to be seen; a row with no icon
+  shows the check mark in that frame. The check took the icon's place. In every theme.
+
 - `RenderDirty.IsNodeMoved` and `RenderDirty.IsGeometryDirty` replace `MovedNodes` and `Geometry`, which handed out the
   live sets while other threads marked them. Every set of the dirty marks is locked by a lock of its own, not by the
   set itself.
