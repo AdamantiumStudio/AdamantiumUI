@@ -1112,6 +1112,10 @@ public partial class InfiniteCanvas
     {
         if (e.Handled) return;
 
+        // A press catches a moving camera where it is, as a hand on a sliding sheet does - a coast, or a wheel's zoom
+        // still easing, which would otherwise be counted into a drag as if the hand had moved it.
+        CatchCamera();
+
         if (e.Pointer.Type == PointerType.Touch && (_panning || Tool is { IsInk: true } && !FingersInk() && PenTouches()))
         {
             return;
@@ -1183,6 +1187,7 @@ public partial class InfiniteCanvas
             _panPointer = e.Pointer;
             _panFrom = e.GetPosition(this);
             _panOffsetFrom = Offset;
+            _coast.ResetTracking();
 
             e.Pointer.Capture(this);
             e.Handled = true;
@@ -1243,6 +1248,7 @@ public partial class InfiniteCanvas
             _panPointer = e.Pointer;
             _panFrom = at;
             _panOffsetFrom = Offset;
+            _coast.ResetTracking();
 
             e.Pointer.Capture(this);
             e.Handled = true;
@@ -1293,7 +1299,8 @@ public partial class InfiniteCanvas
         {
             // From where the drag STARTED, not from the last move: accumulating deltas drifts, and the camera has
             // nothing to clamp against that would hide it.
-            SetCurrentValue(OffsetProperty, _panOffsetFrom + (e.GetPosition(this) - _panFrom));
+            Travel(_travel + (_panOffsetFrom + (e.GetPosition(this) - _panFrom) - Offset));
+            _coast.Track(e.Timestamp);
             e.Handled = true;
             return;
         }
@@ -1443,8 +1450,9 @@ public partial class InfiniteCanvas
                 _panPointer = null;
                 e.Pointer.Capture(null);
 
-                // When the gesture ends, not while it runs: a pan raises the camera on every mouse move.
-                RememberLayout();
+                // When the gesture ends, not while it runs: a pan raises the camera on every mouse move. A plane let go
+                // while still moving coasts on, and is remembered where it comes to rest.
+                if (!(IsInertiaEnabled && _coast.Release(e.Timestamp))) RememberLayout();
                 e.Handled = true;
                 return;
             }
@@ -1488,6 +1496,15 @@ public partial class InfiniteCanvas
             _penEraser.Cancel(this);
         }
 
+        // A finger panning under an ink tool is taken over by a pinch: the pan ends here, whatever the tool takes,
+        // or it would stand open and every later touch would be read as more of it.
+        if (_panning && ReferenceEquals(e.Pointer, _panPointer))
+        {
+            _panning = false;
+            _panPointer = null;
+            RememberLayout();
+        }
+
         if (TakesManyPointers)
         {
             Tool.CancelPointer(this, id);
@@ -1520,6 +1537,10 @@ public partial class InfiniteCanvas
 
         if (e.State == ManipulationState.Started)
         {
+            CatchCamera();
+            _coast.ResetTracking();
+            _zoomCoast.ResetTracking();
+
             if (TakesManyPointers) return;
 
             LetGo();
@@ -1533,14 +1554,31 @@ public partial class InfiniteCanvas
 
         if (e.State == ManipulationState.Completed)
         {
-            RememberLayout();
+            // Both throws at once: a pinch let go while spreading coasts the zoom about where it was, and drifts.
+            var coasts = IsInertiaEnabled && (_coast.Release(e.Timestamp) | _zoomCoast.Release(e.Timestamp));
+            if (!coasts) RememberLayout();
             return;
         }
 
         if (e.State != ManipulationState.Delta) return;
 
         if (e.Scale != 1) SetScaleAt(e.Origin - e.Translation, Scale * e.Scale);
-        if (e.Translation != Vector2<double>.Zero) SetCurrentValue(OffsetProperty, Offset + e.Translation);
+        if (e.Translation != Vector2<double>.Zero) Travel(_travel + e.Translation);
+
+        _coast.Track(e.Timestamp);
+
+        // Only a PINCH throws the zoom: one finger left after the other lifted is a drag, and its middle is not the
+        // pinch's.
+        if (e.Contacts >= 2)
+        {
+            _zoomCoastAt = e.Origin;
+            _zoomCoast.Track(e.Timestamp);
+        }
+        else
+        {
+            _zoomCoast.ResetTracking();
+        }
+
         e.Handled = true;
     }
 

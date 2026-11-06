@@ -44,7 +44,11 @@ public partial class InfiniteCanvas
     public Double ScreenToWorldLength(Double screenPixels) => screenPixels / Scale;
 
     /// <summary>Moves the camera by a distance measured on screen.</summary>
-    public void PanBy(Vector2<double> screenDelta) => SetCurrentValue(OffsetProperty, Offset + screenDelta);
+    public void PanBy(Vector2<double> screenDelta)
+    {
+        StopCoasting();
+        SetCurrentValue(OffsetProperty, Offset + screenDelta);
+    }
 
     /// <summary>The part of the viewport a person can actually see the plane through: everything a DOCKED pane has
     /// taken is gone from it. The honest answer to "where is the middle", which a minimap or a ruler wants and
@@ -156,7 +160,11 @@ public partial class InfiniteCanvas
 
     /// <summary>Puts a world point in the middle of the USABLE viewport - the middle of what is not behind a docked
     /// panel.</summary>
-    public void CenterOn(Vector2<double> world) => CenterOn(world, RenderSize);
+    public void CenterOn(Vector2<double> world)
+    {
+        StopCoasting();
+        CenterOn(world, RenderSize);
+    }
 
     // ...against a viewport SAID rather than read. Inside an arrange pass RenderSize is still what the canvas used to
     // be - this pass is what sets it - and centering then lands against a size of nothing.
@@ -271,6 +279,7 @@ public partial class InfiniteCanvas
     /// <summary>Zooms about a point ON SCREEN, keeping the world under it still - what the wheel does.</summary>
     public void ZoomAt(Vector2<double> screen, Double factor)
     {
+        StopCoasting();
         _zoomAnchorScreen = screen;
         _zoomAnchorWorld = ScreenToWorld(screen);
 
@@ -281,21 +290,8 @@ public partial class InfiniteCanvas
     /// <summary>Sets the scale straight, with no easing, keeping a screen point still.</summary>
     public void SetScaleAt(Vector2<double> screen, Double scale)
     {
-        var world = ScreenToWorld(screen);
-
         StopZoom();
-        _holdingPoint = true;
-
-        try
-        {
-            SetCurrentValue(ScaleProperty, Math.Clamp(scale, MinScale, MaxScale));
-        }
-        finally
-        {
-            _holdingPoint = false;
-        }
-
-        SetCurrentValue(OffsetProperty, screen - world * Scale);
+        ScaleHolding(screen, scale);
     }
 
     // Whoever HOLDS a point while the scale is written says so - the wheel, the buttons, SetScaleAt. Nobody holding one
@@ -338,6 +334,56 @@ public partial class InfiniteCanvas
     private void StopZoom()
     {
         _zoom.Stop();
+        StopCoasting();
+    }
+
+    private void StopCoasting()
+    {
+        _coast.Stop();
+        _zoomCoast.Stop();
+    }
+
+    private static void OnInertiaSwitched(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (component is not InfiniteCanvas canvas || e.NewValue is true) return;
+
+        var moving = canvas._coast.IsActive || canvas._zoomCoast.IsActive;
+        canvas.StopCoasting();
+        if (moving) canvas.RememberLayout();
+    }
+
+    private void CatchCamera()
+    {
+        var moving = _zoom.IsActive || _coast.IsActive || _zoomCoast.IsActive;
+
+        StopZoom();
+        if (moving) RememberLayout();
+    }
+
+    private void Travel(Vector2<double> to)
+    {
+        var by = to - _travel;
+        _travel = to;
+        SetCurrentValue(OffsetProperty, Offset + by);
+    }
+
+    private void ApplyCoastedZoom(Double level) => ScaleHolding(_zoomCoastAt, Math.Exp(level));
+
+    private void ScaleHolding(Vector2<double> screen, Double scale)
+    {
+        var world = ScreenToWorld(screen);
+        _holdingPoint = true;
+
+        try
+        {
+            SetCurrentValue(ScaleProperty, Math.Clamp(scale, MinScale, MaxScale));
+        }
+        finally
+        {
+            _holdingPoint = false;
+        }
+
+        SetCurrentValue(OffsetProperty, screen - world * Scale);
     }
 
     // The step the camera makes readable: GridSpacing multiplied or divided by whole powers of GridCoarsening until two

@@ -7,6 +7,12 @@ All packages share one version.
 
 ### Added
 
+- An `InfiniteCanvas` - the drawing board and the node graph - coasts on after a drag or a pinch let go while still
+  moving, slowing to a stop; a pinch carries its zoom on about the fingers. A press catches the plane where it is, and
+  the wheel or a camera placed by code stops it. `IsInertiaEnabled` turns it off. The camera is remembered where it
+  comes to rest.
+- `FlingValue`: one number thrown by a gesture, coasting with friction after the hand lifts - the scalar counterpart of
+  `PanInertia`'s flick. `PanInertia` takes an optional callback for when a flick or a glide comes to rest by itself.
 - `DashedLine`: a dotted or dashed line of laid-out text, as `TextBlock` draws it and an editor can - a paragraph's
   dotted or dashed border at its side runs down its band, as a line under vertical text does (it ran across it).
 

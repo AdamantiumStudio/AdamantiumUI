@@ -10,12 +10,12 @@ namespace Adamantium.UI.Core.Media.Animation;
 /// </summary>
 public sealed class PanInertia
 {
-    private const uint FlickRestMilliseconds = 100;
     private const double SettledDistance = 0.5;
     private const double StuckDistance = 0.01;
 
     private readonly Func<Vector2<double>> _read;
     private readonly Action<Vector2<double>> _apply;
+    private readonly Action _settled;
     private Vector2<double>? _target;
     private Vector2<double> _velocity;
     private Vector2<double> _trackedVelocity;
@@ -27,11 +27,13 @@ public sealed class PanInertia
     private long _registeredAt;
 
     /// <summary>Makes inertia that reads the panned position with <paramref name="read"/> and moves it with
-    /// <paramref name="apply"/>.</summary>
-    public PanInertia(Func<Vector2<double>> read, Action<Vector2<double>> apply)
+    /// <paramref name="apply"/>; <paramref name="settled"/>, when given, is told each time a flick or a glide comes to
+    /// rest by itself - not when it is stopped.</summary>
+    public PanInertia(Func<Vector2<double>> read, Action<Vector2<double>> apply, Action settled = null)
     {
         _read = read;
         _apply = apply;
+        _settled = settled;
     }
 
     /// <summary>How fast a flick slows, per second: higher stops it sooner, lower coasts further.</summary>
@@ -75,7 +77,8 @@ public sealed class PanInertia
         if (_hasLastMove && timestamp != _lastTimestamp)
         {
             var seconds = unchecked(timestamp - _lastTimestamp) / 1000.0;
-            _trackedVelocity = _trackedVelocity * 0.4 + (current - _lastPosition) * (1.0 / seconds) * 0.6;
+            _trackedVelocity = _trackedVelocity * Flick.KeptOfLast +
+                               (current - _lastPosition) * (1.0 / seconds) * (1 - Flick.KeptOfLast);
         }
 
         _hasLastMove = true;
@@ -88,7 +91,7 @@ public sealed class PanInertia
     public bool Release(uint timestamp)
     {
         if (!_hasLastMove || _trackedVelocity.Length() <= FlickStartSpeed ||
-            unchecked(timestamp - _lastTimestamp) > FlickRestMilliseconds)
+            unchecked(timestamp - _lastTimestamp) > Flick.RestMilliseconds)
         {
             return false;
         }
@@ -158,6 +161,7 @@ public sealed class PanInertia
 
         _active = false;
         _registered = false;
+        _settled?.Invoke();
         return true;
     }
 }
