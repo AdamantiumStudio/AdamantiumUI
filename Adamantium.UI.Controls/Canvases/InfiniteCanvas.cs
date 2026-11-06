@@ -21,6 +21,10 @@ namespace Adamantium.UI.Controls.Canvases;
 public partial class InfiniteCanvas : Control, ISceneFollower
 {
     private readonly EasedValue _zoom;
+    private readonly PanInertia _coast;
+    private Vector2<double> _travel;
+    private readonly FlingValue _zoomCoast;
+    private Vector2<double> _zoomCoastAt;
     private Vector2<double> _zoomAnchorScreen;
     private Vector2<double> _zoomAnchorWorld;
     private bool _panning;
@@ -295,6 +299,13 @@ public partial class InfiniteCanvas : Control, ISceneFollower
 
     public static readonly AdamantiumProperty ZoomWithWheelProperty = AdamantiumProperty.Register(nameof(ZoomWithWheel),
         typeof(Boolean), typeof(InfiniteCanvas), new PropertyMetadata(true));
+
+    /// <summary>Whether the plane coasts on after a drag or a pinch that lets go while still moving, slowing to a stop -
+    /// and a pinched zoom with it.</summary>
+    public static readonly AdamantiumProperty IsInertiaEnabledProperty = AdamantiumProperty.Register(
+        nameof(IsInertiaEnabled), typeof(Boolean), typeof(InfiniteCanvas), new PropertyMetadata(true, OnInertiaSwitched));
+
+    private const double ZoomCoastFriction = 10;
 
     /// <summary>The factor one notch of the wheel zooms by. Bigger than a map viewer's, because a canvas is worked at
     /// both ends of its range - a whole board and then one corner of one object - and crawling there a fifth at a time
@@ -664,6 +675,9 @@ public partial class InfiniteCanvas : Control, ISceneFollower
     public InfiniteCanvas()
     {
         _zoom = new EasedValue(() => Math.Log(Math.Clamp(Scale, MinScale, MaxScale)), ApplyZoomLevel, RememberLayout);
+        _coast = new PanInertia(() => _travel, Travel, RememberLayout);
+        _zoomCoast = new FlingValue(() => Math.Log(Math.Clamp(Scale, MinScale, MaxScale)), ApplyCoastedZoom,
+            RememberLayout) { Friction = ZoomCoastFriction };
         Focusable = true;
         ClipToBounds = true;
 
@@ -729,6 +743,12 @@ public partial class InfiniteCanvas : Control, ISceneFollower
     {
         get => GetValue<Boolean>(ZoomWithWheelProperty);
         set => SetValue(ZoomWithWheelProperty, value);
+    }
+
+    public Boolean IsInertiaEnabled
+    {
+        get => GetValue<Boolean>(IsInertiaEnabledProperty);
+        set => SetValue(IsInertiaEnabledProperty, value);
     }
 
     public Double ZoomStep
