@@ -31,9 +31,8 @@
                                 <!-- The check column, then the icon column: each there in a menu with a row that needs it,
                                      on every row, so the labels start on one line. -->
                                 <Border x:Name="CheckColumn" Grid.Column="0" Width="18" Visibility="Collapsed">
-                                    <Path x:Name="CheckGlyph"
-                                            Data="M0,5 L4,9 L12,1"
-                                            Stroke="{TemplateBinding Foreground}" StrokeThickness="1.5"
+                                    <Image x:Name="CheckGlyph" Source="{ResourceReference MenuCheckIcon}" Foreground="{TemplateBinding Foreground}"
+                                            Width="14" Height="12"
                                             HorizontalAlignment="Center" VerticalAlignment="Center"
                                             Visibility="Hidden"/>
                                 </Border>
@@ -90,11 +89,11 @@
             <Setter TargetName="Root" Property="Background" Value="{ThemeResource AccentFillColorDefault}"/>
             <Setter TargetName="PART_ContentPresenter" Property="Foreground" Value="{ThemeResource AccentForegroundColor}"/>
             <Setter TargetName="Gesture" Property="Foreground" Value="{ThemeResource AccentForegroundColor}"/>
-            <Setter TargetName="CheckGlyph" Property="Stroke" Value="{ThemeResource AccentForegroundColor}"/>
+            <Setter TargetName="CheckGlyph" Property="Foreground" Value="{ThemeResource AccentForegroundColor}"/>
         </PropertyTrigger>
         <PropertyTrigger Property="IsEnabled" Value="false">
             <Setter TargetName="PART_ContentPresenter" Property="Foreground" Value="{ResourceReference TextFillColorDisabled}"/>
-            <Setter TargetName="CheckGlyph" Property="Stroke" Value="{ResourceReference TextFillColorDisabled}"/>
+            <Setter TargetName="CheckGlyph" Property="Foreground" Value="{ResourceReference TextFillColorDisabled}"/>
         </PropertyTrigger>
         <PropertyTrigger Property="ShowsCheckColumn" Value="true">
             <Setter TargetName="CheckColumn" Property="Visibility" Value="Visible"/>

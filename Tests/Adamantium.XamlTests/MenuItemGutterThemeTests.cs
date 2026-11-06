@@ -246,6 +246,43 @@ public class MenuItemGutterThemeTests
         });
     }
 
+    // The check is the theme's one icon, drawn in the row's color: a row that cannot be used grays it as it grays the label.
+    [TestCase("Fluent")]
+    [TestCase("Graphite")]
+    [TestCase("MacOs")]
+    public void TheCheck_IsTheThemesIcon_InTheRowsColor(string theme)
+    {
+        Use(theme);
+        var ruler = new MenuItem { Header = "Ruler", IsCheckable = true, IsChecked = true };
+        var grid = new MenuItem { Header = "Grid", IsCheckable = true, IsChecked = true, IsEnabled = false };
+        Opened(ruler, grid);
+        static Image CheckOf(MenuItem row) => (Image)row.GetTemplateChild("CheckGlyph");
+        static string ColorOf(Adamantium.UI.Core.Media.Brush brush) => brush?.ToString();
+        var label = (ContentPresenter)grid.GetTemplateChild("PART_ContentPresenter");
+        var icon = (Adamantium.UI.Core.Media.Imaging.DrawingImage)CheckOf(ruler).Source;
+        var strokes = new List<Adamantium.UI.Core.Media.Brush>();
+        if (icon.Drawing is Adamantium.UI.Core.Media.Drawings.DrawingGroup group)
+        {
+            foreach (var part in group.Children)
+            {
+                if (part is Adamantium.UI.Core.Media.Drawings.GeometryDrawing { Stroke: { } stroke }) strokes.Add(stroke);
+            }
+        }
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(strokes, Has.Count.EqualTo(1).And.All.InstanceOf<Adamantium.UI.Core.Media.CurrentColorBrush>(),
+                "drawn in the color of the image showing it");
+            Assert.That((icon.Drawing.Bounds.Width, icon.Drawing.Bounds.Height),
+                Is.EqualTo((CheckOf(ruler).Width, CheckOf(ruler).Height)), "shown at its own size, not scaled");
+            Assert.That(CheckOf(grid).Source, Is.SameAs(icon), "one icon");
+            Assert.That(ColorOf(ruler.Foreground), Is.Not.Null);
+            Assert.That(ColorOf(CheckOf(ruler).Foreground), Is.EqualTo(ColorOf(ruler.Foreground)), "the row's color");
+            Assert.That(ColorOf(CheckOf(grid).Foreground), Is.EqualTo(ColorOf(label.Foreground)), "grayed as the label");
+            Assert.That(ColorOf(CheckOf(grid).Foreground), Is.Not.EqualTo(ColorOf(CheckOf(ruler).Foreground)));
+        });
+    }
+
     [Test]
     public void TheOnlyRowThatCanBeChecked_TakesTheColumnAwayWhenItGoes()
     {

@@ -35,9 +35,8 @@
                                 <!-- The check mark's own column, there in a menu with a row that can be checked; the icon
                                      keeps its column beside it. -->
                                 <Border x:Name="CheckColumn" Grid.Column="0" Width="24" Visibility="Collapsed">
-                                    <Path x:Name="CheckGlyph"
-                                            Data="M0,5 L4,9 L12,1"
-                                            Stroke="{TemplateBinding Foreground}" StrokeThickness="1.5"
+                                    <Image x:Name="CheckGlyph" Source="{ResourceReference MenuCheckIcon}" Foreground="{TemplateBinding Foreground}"
+                                            Width="14" Height="12"
                                             HorizontalAlignment="Center" VerticalAlignment="Center"
                                             Visibility="Hidden"/>
                                 </Border>
@@ -97,7 +96,7 @@
         </PropertyTrigger>
         <PropertyTrigger Property="IsEnabled" Value="false">
             <Setter TargetName="PART_ContentPresenter" Property="Foreground" Value="{ResourceReference TextFillColorDisabled}"/>
-            <Setter TargetName="CheckGlyph" Property="Stroke" Value="{ResourceReference TextFillColorDisabled}"/>
+            <Setter TargetName="CheckGlyph" Property="Foreground" Value="{ResourceReference TextFillColorDisabled}"/>
         </PropertyTrigger>
         <PropertyTrigger Property="ShowsCheckColumn" Value="true">
             <Setter TargetName="CheckColumn" Property="Visibility" Value="Visible"/>

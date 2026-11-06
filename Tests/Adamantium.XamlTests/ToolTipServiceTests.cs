@@ -207,6 +207,9 @@ public class ToolTipServiceTests
     public void NoTipIsShown_BeneathAnOpenMenu()
     {
         var (one, _, two, _, window) = Owners();
+        Show(one, window);
+        var shownWithNoMenu = Shared<Popup>("_popup").IsOpen;
+        Call("Hide");
         var menu = new ContextMenu { Items = { new MenuItem { Header = "Row" } } };
         two.ContextMenu = menu;
         Settle(window);
@@ -218,7 +221,11 @@ public class ToolTipServiceTests
 
         var shown = Shared<Popup>("_popup").IsOpen;
         menu.IsOpen = false;
-        Assert.That(shown, Is.False);
+        Assert.Multiple(() =>
+        {
+            Assert.That(shownWithNoMenu, Is.True, "the tip is shown while no menu is open");
+            Assert.That(shown, Is.False);
+        });
     }
 
     [Test]

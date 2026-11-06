@@ -8,6 +8,21 @@
                          StrokeThickness="1"/>
     </DrawingImage>
 
+    <!-- A menu row's check mark, in the row's own color: dark on the card, the on-accent color on a lit row. Drawn in a
+         14 by 12 box, stated by the empty frame first, so the stroke and its mitred corner fit it at their own size. -->
+    <DrawingImage x:Key="MenuCheckIcon">
+        <DrawingGroup>
+            <GeometryDrawing>
+                <GeometryDrawing.Geometry>
+                    <RectangleGeometry Rect="0,0,14,12"/>
+                </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+            <GeometryDrawing Geometry="M1,5.5 L5,9.5 L13,1.5"
+                             Stroke="CurrentColor"
+                             StrokeThickness="1.5"/>
+        </DrawingGroup>
+    </DrawingImage>
+
     <!-- Reveal: an eye - show what a password box hides. -->
     <DrawingImage x:Key="RevealIcon">
         <GeometryDrawing Geometry="M0.5,5 C2,1.5 8,1.5 9.5,5 C8,8.5 2,8.5 0.5,5 Z M6.5,5 A1.5,1.5 0 1 1 3.5,5 A1.5,1.5 0 1 1 6.5,5 Z"
