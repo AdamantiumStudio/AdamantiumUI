@@ -82,6 +82,7 @@ public partial class RenderCache
 
                         RefreshOverlayFade(op.Unit);
                         op.Unit.Render();
+                        _unitDrewMoving |= op.Unit.DrawsMoving;
                         break;
                     case RenderOpKind.Segment:
                         if (InOwnSpace)
@@ -107,6 +108,7 @@ public partial class RenderCache
                             case 14: _canvasGridBatch.DrawRecordedSegment(device, op.SegId, fullScissor, _projectionMatrix); break;
                             case 15: _inkBatch.DrawRecordedSegment(device, op.SegId, fullScissor, _projectionMatrix); break;
                             case 16: _arrowBatch.DrawRecordedSegment(device, op.SegId, fullScissor, _projectionMatrix); break;
+                            case 18: _strokeBatch.DrawRecordedSegment(device, op.SegId, fullScissor, _projectionMatrix); break;
                             default: _textBatch.DrawRecordedSegment(device, op.SegId, fullScissor, _projectionMatrix); break;
                         }
                         break;
@@ -341,6 +343,8 @@ public partial class RenderCache
         if (_inkBatch != null) RecordSegment(15, _inkBatch.Flush(device, fullScissor, _projectionMatrix));
         // ARROWS and plain lines beside the ink, on the same layer and settled the same way.
         if (_arrowBatch != null) RecordSegment(16, _arrowBatch.Flush(device, fullScissor, _projectionMatrix));
+        // STROKES over the lines and arrows beside them; what they cover is settled by OverlapsHigherLayer as theirs is.
+        if (_strokeBatch != null) RecordSegment(18, _strokeBatch.Flush(device, fullScissor, _projectionMatrix));
         // The general instanced-fill flush is retained too: Flush records the group and returns its index, replayed via
         // ReplayFlush - so a vector icon no longer disables replay for the whole window.
         if (_instancedFill != null)

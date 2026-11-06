@@ -1,6 +1,8 @@
 ﻿<View xmlns="http://adamantium/ui"
       xmlns:x="http://adamantium/ui/xaml/extensions"
-      xmlns:m="clr-namespace:Adamantium.UI.Core.Media;assembly=Adamantium.UI.Core">
+      xmlns:m="clr-namespace:Adamantium.UI.Core.Media;assembly=Adamantium.UI.Core"
+      xmlns:vm="clr-namespace:Adamantium.UI.Sandbox.ViewModels"
+      xmlns:conv="clr-namespace:Adamantium.UI.Sandbox.Converters">
     <!-- DataContext is the ShapesViewModel. ONE Stroke settings object drives the stroke of EVERY shape in the gallery
          and the big preview - the pen panel (thickness/dashes/trim/corner/cap/join/color) retraces them all at once.
          Wrapped in a ScrollViewer (horizontal Disabled so the WrapPanels wrap to the viewport). -->
@@ -8,6 +10,10 @@
     <ResourceContext.Resources>
         <DataTemplate x:Key="ShapesWord">
             <TextBlock Text="{Localize ShapesStrings, Key={Binding}}"/>
+        </DataTemplate>
+        <!-- A pattern's or a noise's kind, in the words the Brushes tab already has for them. -->
+        <DataTemplate x:Key="BrushesWord">
+            <TextBlock Text="{Localize BrushesStrings, Key={Binding}}"/>
         </DataTemplate>
     </ResourceContext.Resources>
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
@@ -22,21 +28,21 @@
                      StrokeDashSymbols="{Binding Stroke.DashSymbols}" StrokeDashGlyphs="{Binding Stroke.DashGlyphs}"
                      StrokeDashOffset="{Binding Stroke.DashOffset}" StrokeDashFit="{Binding Stroke.DashFit}"
                      StrokeDashStartCap="{Binding Stroke.DashStartCap}" StrokeDashEndCap="{Binding Stroke.DashEndCap}" StartLineCap="{Binding Stroke.StartCap}" EndLineCap="{Binding Stroke.EndCap}"
-                     StrokeTrimStart="{Binding Stroke.TrimStart}" StrokeTrimEnd="{Binding Stroke.TrimEnd}"/>
+                     StrokeTrimStart="{Binding Stroke.TrimStart}" StrokeTrimEnd="{Binding Stroke.TrimEnd}" StrokeBrushMapping="{Binding Stroke.BrushMapping}" StrokeOverlap="{Binding Stroke.Overlap}"/>
             <Rectangle Width="120" Height="90" Fill="#22C55E" Margin="10" CornerRadius="{Binding Stroke.CornerRadius}"
                      Stroke="{Binding Stroke.StrokeBrush}" StrokeThickness="{Binding Stroke.StrokeWidth}"
                      StrokeDashSymbols="{Binding Stroke.DashSymbols}" StrokeDashGlyphs="{Binding Stroke.DashGlyphs}"
                      StrokeDashOffset="{Binding Stroke.DashOffset}" StrokeDashFit="{Binding Stroke.DashFit}"
                      StrokeDashStartCap="{Binding Stroke.DashStartCap}" StrokeDashEndCap="{Binding Stroke.DashEndCap}" StartLineCap="{Binding Stroke.StartCap}" EndLineCap="{Binding Stroke.EndCap}"
                      StrokeLineJoin="{Binding Stroke.Join}"
-                     StrokeTrimStart="{Binding Stroke.TrimStart}" StrokeTrimEnd="{Binding Stroke.TrimEnd}"/>
+                     StrokeTrimStart="{Binding Stroke.TrimStart}" StrokeTrimEnd="{Binding Stroke.TrimEnd}" StrokeBrushMapping="{Binding Stroke.BrushMapping}" StrokeOverlap="{Binding Stroke.Overlap}"/>
             <Polygon Points="60,0 120,96 0,96" Fill="#F59E0B" Margin="10"
                      Stroke="{Binding Stroke.StrokeBrush}" StrokeThickness="{Binding Stroke.StrokeWidth}"
                      StrokeDashSymbols="{Binding Stroke.DashSymbols}" StrokeDashGlyphs="{Binding Stroke.DashGlyphs}"
                      StrokeDashOffset="{Binding Stroke.DashOffset}" StrokeDashFit="{Binding Stroke.DashFit}"
                      StrokeDashStartCap="{Binding Stroke.DashStartCap}" StrokeDashEndCap="{Binding Stroke.DashEndCap}" StartLineCap="{Binding Stroke.StartCap}" EndLineCap="{Binding Stroke.EndCap}"
                      StrokeLineJoin="{Binding Stroke.Join}"
-                     StrokeTrimStart="{Binding Stroke.TrimStart}" StrokeTrimEnd="{Binding Stroke.TrimEnd}"/>
+                     StrokeTrimStart="{Binding Stroke.TrimStart}" StrokeTrimEnd="{Binding Stroke.TrimEnd}" StrokeBrushMapping="{Binding Stroke.BrushMapping}" StrokeOverlap="{Binding Stroke.Overlap}"/>
             <Path Fill="Magenta" Width="200" Height="200" Margin="10"
                   Data="F0 M110,10 L168.78,190.9 L14.89,79.1 L205.11,79.1 L51.22,190.9 Z"
                   Stroke="{Binding Stroke.StrokeBrush}" StrokeThickness="{Binding Stroke.StrokeWidth}"
@@ -44,7 +50,7 @@
                   StrokeDashOffset="{Binding Stroke.DashOffset}" StrokeDashFit="{Binding Stroke.DashFit}"
                   StrokeDashStartCap="{Binding Stroke.DashStartCap}" StrokeDashEndCap="{Binding Stroke.DashEndCap}" StartLineCap="{Binding Stroke.StartCap}" EndLineCap="{Binding Stroke.EndCap}"
                   StrokeLineJoin="{Binding Stroke.Join}"
-                  StrokeTrimStart="{Binding Stroke.TrimStart}" StrokeTrimEnd="{Binding Stroke.TrimEnd}"/>
+                  StrokeTrimStart="{Binding Stroke.TrimStart}" StrokeTrimEnd="{Binding Stroke.TrimEnd}" StrokeBrushMapping="{Binding Stroke.BrushMapping}" StrokeOverlap="{Binding Stroke.Overlap}"/>
           <!-- A mesh of triangles cut beforehand - a frame: a square with a square hole - drawn as given. -->
           <StackPanel Orientation="Vertical" Margin="10">
             <TextBlock Text="{Localize ShapesStrings.Mesh}" HorizontalAlignment="Center" MarginBottom="4"
@@ -55,7 +61,7 @@
                   StrokeDashOffset="{Binding Stroke.DashOffset}" StrokeDashFit="{Binding Stroke.DashFit}"
                   StrokeDashStartCap="{Binding Stroke.DashStartCap}" StrokeDashEndCap="{Binding Stroke.DashEndCap}" StartLineCap="{Binding Stroke.StartCap}" EndLineCap="{Binding Stroke.EndCap}"
                   StrokeLineJoin="{Binding Stroke.Join}"
-                  StrokeTrimStart="{Binding Stroke.TrimStart}" StrokeTrimEnd="{Binding Stroke.TrimEnd}">
+                  StrokeTrimStart="{Binding Stroke.TrimStart}" StrokeTrimEnd="{Binding Stroke.TrimEnd}" StrokeBrushMapping="{Binding Stroke.BrushMapping}" StrokeOverlap="{Binding Stroke.Overlap}">
                 <Path.Data>
                     <MeshGeometry Positions="0,0 120,0 120,120 0,120 40,40 80,40 80,80 40,80"
                                   TriangleIndices="0 1 5 0 5 4 1 2 6 1 6 5 2 3 7 2 7 6 3 0 4 3 4 7"
@@ -73,7 +79,7 @@
                      StrokeDashOffset="{Binding Stroke.DashOffset}" StrokeDashFit="{Binding Stroke.DashFit}"
                      StrokeDashStartCap="{Binding Stroke.DashStartCap}" StrokeDashEndCap="{Binding Stroke.DashEndCap}" StartLineCap="{Binding Stroke.StartCap}" EndLineCap="{Binding Stroke.EndCap}"
                      StrokeLineJoin="{Binding Stroke.Join}"
-                     StrokeTrimStart="{Binding Stroke.TrimStart}" StrokeTrimEnd="{Binding Stroke.TrimEnd}"/>
+                     StrokeTrimStart="{Binding Stroke.TrimStart}" StrokeTrimEnd="{Binding Stroke.TrimEnd}" StrokeBrushMapping="{Binding Stroke.BrushMapping}" StrokeOverlap="{Binding Stroke.Overlap}"/>
           </StackPanel>
             <!-- Quadratic Bézier curve (open, stroke-only). -->
           <StackPanel Orientation="Vertical" Margin="10">
@@ -94,7 +100,7 @@
                                   EndLineCap="{Binding Stroke.EndCap}"
                      StrokeLineJoin="{Binding Stroke.Join}"
                      StrokeTrimStart="{Binding Stroke.TrimStart}"
-                                  StrokeTrimEnd="{Binding Stroke.TrimEnd}"/>
+                                  StrokeTrimEnd="{Binding Stroke.TrimEnd}" StrokeBrushMapping="{Binding Stroke.BrushMapping}" StrokeOverlap="{Binding Stroke.Overlap}"/>
           </StackPanel>
             <!-- NURBS curve (open, stroke-only). -->
           <StackPanel Orientation="Vertical" Margin="10">
@@ -109,7 +115,7 @@
                      StrokeDashOffset="{Binding Stroke.DashOffset}" StrokeDashFit="{Binding Stroke.DashFit}"
                      StrokeDashStartCap="{Binding Stroke.DashStartCap}" StrokeDashEndCap="{Binding Stroke.DashEndCap}" StartLineCap="{Binding Stroke.StartCap}" EndLineCap="{Binding Stroke.EndCap}"
                      StrokeLineJoin="{Binding Stroke.Join}"
-                     StrokeTrimStart="{Binding Stroke.TrimStart}" StrokeTrimEnd="{Binding Stroke.TrimEnd}"/>
+                     StrokeTrimStart="{Binding Stroke.TrimStart}" StrokeTrimEnd="{Binding Stroke.TrimEnd}" StrokeBrushMapping="{Binding Stroke.BrushMapping}" StrokeOverlap="{Binding Stroke.Overlap}"/>
           </StackPanel>
             <!-- B-spline curve (open, stroke-only). -->
           <StackPanel Orientation="Vertical" Margin="10">
@@ -129,7 +135,7 @@
                      EndLineCap="{Binding Stroke.EndCap}"
                      StrokeLineJoin="{Binding Stroke.Join}"
                      StrokeTrimStart="{Binding Stroke.TrimStart}"
-                     StrokeTrimEnd="{Binding Stroke.TrimEnd}"/>
+                     StrokeTrimEnd="{Binding Stroke.TrimEnd}" StrokeBrushMapping="{Binding Stroke.BrushMapping}" StrokeOverlap="{Binding Stroke.Overlap}"/>
           </StackPanel>
         </WrapPanel>
 
@@ -247,6 +253,34 @@
                         <TextBlock x:Name="StrokeColorLabel" Text="{Localize ShapesStrings.Color}" MinWidth="80" VerticalAlignment="Center"/>
                         <ColorPickerButton AutomationProperties.LabeledBy="{Binding ElementName=StrokeColorLabel}" Width="176" Height="28" SelectedColor="{Binding Stroke.SelectedColor, Mode=TwoWay}"/>
                     </StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
+                        <TextBlock x:Name="StrokeBrushLabel" Text="{Localize ShapesStrings.Brush}" MinWidth="80" VerticalAlignment="Center"/>
+                        <DropDown AutomationProperties.LabeledBy="{Binding ElementName=StrokeBrushLabel}" Width="176" EnumType="{x:Type vm:StrokeBrushKind}" SelectedItem="{Binding Stroke.BrushKind, Mode=TwoWay}"
+                                  ItemTemplate="{ResourceReference ShapesWord}"/>
+                    </StackPanel>
+                    <!-- The pattern's or the noise's own kinds, shown only while the strokes wear it. -->
+                    <StackPanel Orientation="Horizontal" Margin="0,3,0,0"
+                                Visibility="{Binding Stroke.BrushKind, Converter={conv:EnumVisibilityConverter}, ConverterParameter=Pattern}">
+                        <TextBlock x:Name="PatternKindLabel" Text="{Localize ShapesStrings.Variant}" MinWidth="80" VerticalAlignment="Center"/>
+                        <DropDown AutomationProperties.LabeledBy="{Binding ElementName=PatternKindLabel}" Width="176" ItemsSource="{Binding Stroke.PatternKinds}" SelectedItem="{Binding Stroke.PatternKind, Mode=TwoWay}"
+                                  ItemTemplate="{ResourceReference BrushesWord}"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,3,0,0"
+                                Visibility="{Binding Stroke.BrushKind, Converter={conv:EnumVisibilityConverter}, ConverterParameter=Noise}">
+                        <TextBlock x:Name="NoiseKindLabel" Text="{Localize ShapesStrings.Variant}" MinWidth="80" VerticalAlignment="Center"/>
+                        <DropDown AutomationProperties.LabeledBy="{Binding ElementName=NoiseKindLabel}" Width="176" ItemsSource="{Binding Stroke.NoiseKinds}" SelectedItem="{Binding Stroke.NoiseKind, Mode=TwoWay}"
+                                  ItemTemplate="{ResourceReference BrushesWord}"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
+                        <TextBlock x:Name="BrushMappingLabel" Text="{Localize ShapesStrings.BrushMapping}" MinWidth="80" VerticalAlignment="Center"/>
+                        <DropDown AutomationProperties.LabeledBy="{Binding ElementName=BrushMappingLabel}" Width="176" EnumType="{x:Type m:PenBrushMapping}" SelectedItem="{Binding Stroke.BrushMapping, Mode=TwoWay}"
+                                  ItemTemplate="{ResourceReference ShapesWord}"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
+                        <TextBlock x:Name="PassesLabel" Text="{Localize ShapesStrings.Passes}" MinWidth="80" VerticalAlignment="Center"/>
+                        <DropDown AutomationProperties.LabeledBy="{Binding ElementName=PassesLabel}" Width="176" EnumType="{x:Type m:PenOverlap}" SelectedItem="{Binding Stroke.Overlap, Mode=TwoWay}"
+                                  ItemTemplate="{ResourceReference ShapesWord}"/>
+                    </StackPanel>
                 </StackPanel>
             </Grid>
 
@@ -261,14 +295,14 @@
                            StrokeDashOffset="{Binding Stroke.DashOffset}" StrokeDashFit="{Binding Stroke.DashFit}"
                            StrokeDashStartCap="{Binding Stroke.DashStartCap}" StrokeDashEndCap="{Binding Stroke.DashEndCap}" StartLineCap="{Binding Stroke.StartCap}" EndLineCap="{Binding Stroke.EndCap}"
                            StrokeLineJoin="{Binding Stroke.Join}"
-                           StrokeTrimStart="{Binding Stroke.TrimStart}" StrokeTrimEnd="{Binding Stroke.TrimEnd}"
+                           StrokeTrimStart="{Binding Stroke.TrimStart}" StrokeTrimEnd="{Binding Stroke.TrimEnd}" StrokeBrushMapping="{Binding Stroke.BrushMapping}" StrokeOverlap="{Binding Stroke.Overlap}"
                            HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,24,0"/>
                 <Ellipse Width="160" Height="120" Fill="#1E293B" Stroke="{Binding Stroke.StrokeBrush}"
                          StrokeThickness="{Binding Stroke.StrokeWidth}"
                          StrokeDashSymbols="{Binding Stroke.DashSymbols}" StrokeDashGlyphs="{Binding Stroke.DashGlyphs}"
                          StrokeDashOffset="{Binding Stroke.DashOffset}" StrokeDashFit="{Binding Stroke.DashFit}"
                          StrokeDashStartCap="{Binding Stroke.DashStartCap}" StrokeDashEndCap="{Binding Stroke.DashEndCap}" StartLineCap="{Binding Stroke.StartCap}" EndLineCap="{Binding Stroke.EndCap}"
-                         StrokeTrimStart="{Binding Stroke.TrimStart}" StrokeTrimEnd="{Binding Stroke.TrimEnd}"
+                         StrokeTrimStart="{Binding Stroke.TrimStart}" StrokeTrimEnd="{Binding Stroke.TrimEnd}" StrokeBrushMapping="{Binding Stroke.BrushMapping}" StrokeOverlap="{Binding Stroke.Overlap}"
                          HorizontalAlignment="Center" VerticalAlignment="Center"/>
             </StackPanel>
         </Grid>
@@ -627,6 +661,9 @@
                            SnapsToSmallChange="true" StringFormat="N2"
                            IsDragScrubEnabled="true" TracksMouseWheelWhenOver="true"
                            Value="{Binding Stroke.OverlapAlpha, Mode=TwoWay}" VerticalAlignment="Center" Margin="6,0,0,0"/>
+            <TextBlock x:Name="OverlapPassesLabel" Text="{Localize ShapesStrings.Passes}" MinWidth="80" VerticalAlignment="Center" Margin="24,0,0,0"/>
+            <DropDown AutomationProperties.LabeledBy="{Binding ElementName=OverlapPassesLabel}" Width="176" EnumType="{x:Type m:PenOverlap}" SelectedItem="{Binding Stroke.Overlap, Mode=TwoWay}"
+                      ItemTemplate="{ResourceReference ShapesWord}"/>
         </StackPanel>
         <WrapPanel Orientation="Horizontal">
             <!-- Reference: one flat piece of the same color, drawn once. -->
@@ -638,7 +675,7 @@
             <!-- One stroke that crosses ITSELF: the crossing is one object's own coverage, so it must stay flat. -->
             <StackPanel Orientation="Vertical" Margin="10">
                 <Polyline Width="180" Height="120" Points="10,10 170,110 10,110 170,10"
-                          Stroke="#22D3EE" StrokeThickness="18" StrokeLineJoin="Round"
+                          Stroke="#22D3EE" StrokeThickness="18" StrokeLineJoin="Round" StrokeOverlap="{Binding Stroke.Overlap}"
                           Opacity="{Binding Stroke.OverlapAlpha}"/>
                 <TextBlock Text="{Localize ShapesStrings.SelfCrossingStroke}" Margin="0,4,0,0"/>
             </StackPanel>
@@ -646,7 +683,7 @@
             <!-- A closed self-intersecting outline: joins AND crossings in one shape. -->
             <StackPanel Orientation="Vertical" Margin="10">
                 <Path Width="180" Height="150" Data="F0 M90,10 L145,140 L10,58 L170,58 L35,140 Z"
-                      Stroke="#22D3EE" StrokeThickness="14" StrokeLineJoin="Round"
+                      Stroke="#22D3EE" StrokeThickness="14" StrokeLineJoin="Round" StrokeOverlap="{Binding Stroke.Overlap}"
                       Opacity="{Binding Stroke.OverlapAlpha}"/>
                 <TextBlock Text="{Localize ShapesStrings.SelfIntersectingOutline}" Margin="0,4,0,0"/>
             </StackPanel>
@@ -654,7 +691,7 @@
             <!-- Its own translucent fill under its own translucent stroke. -->
             <StackPanel Orientation="Vertical" Margin="10">
                 <Path Width="180" Height="150" Data="F0 M90,10 L145,140 L10,58 L170,58 L35,140 Z"
-                      Fill="#22D3EE" Stroke="#22D3EE" StrokeThickness="14" StrokeLineJoin="Round"
+                      Fill="#22D3EE" Stroke="#22D3EE" StrokeThickness="14" StrokeLineJoin="Round" StrokeOverlap="{Binding Stroke.Overlap}"
                       Opacity="{Binding Stroke.OverlapAlpha}"/>
                 <TextBlock Text="{Localize ShapesStrings.FillAndStroke}" Margin="0,4,0,0"/>
             </StackPanel>
@@ -675,7 +712,7 @@
             <!-- Dashes at the same alpha: every dash boundary is a cap, i.e. more edges to double-blend. -->
             <StackPanel Orientation="Vertical" Margin="10">
                 <Polyline Width="180" Height="120" Points="10,10 170,110 10,110 170,10"
-                          Stroke="#22D3EE" StrokeThickness="18" StrokeDashArray="30 18"
+                          Stroke="#22D3EE" StrokeThickness="18" StrokeDashArray="30 18" StrokeOverlap="{Binding Stroke.Overlap}"
                           StrokeDashStartCap="ConvexRound" StrokeDashEndCap="ConvexRound" StrokeLineJoin="Round"
                           Opacity="{Binding Stroke.OverlapAlpha}"/>
                 <TextBlock Text="{Localize ShapesStrings.DashedSelfCrossing}" Margin="0,4,0,0"/>

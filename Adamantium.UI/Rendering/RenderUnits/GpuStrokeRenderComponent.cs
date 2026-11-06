@@ -4,27 +4,24 @@ using Adamantium.Graphics;
 using Adamantium.Graphics.Core;
 using Adamantium.Graphics.Core.EffectsFramework;
 using Adamantium.Mathematics;
+using Adamantium.UI.Core;
+using Adamantium.UI.Core.Graphics;
 using Adamantium.UI.Core.Media;
+using Adamantium.UI.Core.Media.Imaging;
 using Adamantium.UI.FX;
 using Adamantium.Vulkan.Core;
-using Buffer = Adamantium.Graphics.Buffer;
 
 namespace Adamantium.UI.Rendering.RenderUnits;
 
 /// <summary>
-/// GPU strokes. A continuous stroke - and one dashed with flat ends, as a mask along its length - keeps only its points:
-/// the vertex shader works out its ribbon where it is drawn, at any width. Dashes with shaped ends and trims are cut
-/// into pieces by a compute pass, drawn with an indirect count. Buffers are rented, so same-topology changes rewrite in
-/// place.
+/// GPU strokes. A stroke keeps only its points: the vertex shader works out its ribbon where it is drawn, at any width,
+/// and the pixel shader shapes its caps, trim window and dash runs along it - nothing is cut. Buffers are rented, so
+/// same-topology changes rewrite in place.
 /// </summary>
 public sealed class GpuStrokeRenderComponent : UIRenderComponent
 {
     // Disc-fan subdivision for round joins (a smooth-enough circle); 0 when the contour has no round geometry.
     private const uint RoundSegmentsCount = 16;
-    private const int MaxDashVertices = 8192 * 6;   // safety cap on the dash output buffer (per contour)
-    private const ulong MostBatchPoints = PreparedStrokeBatch.MostPoints;
-    private const ulong MostBatchVertexBytes = 32UL << 20;
-    private static readonly ulong VertexSize = (ulong)System.Runtime.CompilerServices.Unsafe.SizeOf<StrokeVertex>();
 
     private const ColorComponentFlagBits AllColorComponents = ColorComponentFlagBits.RBit |
                                                               ColorComponentFlagBits.GBit |
@@ -33,40 +30,29 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
 
 
     private const MemoryPropertyFlags StrokeMemory = MemoryPropertyFlags.HostVisible | MemoryPropertyFlags.DeviceLocal;
-    private const MemoryPropertyFlags VertexMemory = MemoryPropertyFlags.DeviceLocal;
 
     private readonly IGraphicsDevice _device;
     private readonly StrokeEffect _effect;
-    private Pen _pen;                        // mutable: TryRepoint swaps it for a uniform-only pen change (animation)
-    private readonly bool _useCut;          // dash and/or trim -> the single-thread DashCut kernel + DrawIndirect
+    private readonly GradientUniforms _gradient;
+    private Vector4F _localBounds;          // the shape's bounds, which a gradient brush spans
+    private Pen _pen;                       // mutable: TryRepoint swaps it for a uniform-only pen change (animation)
     private readonly bool _hasDashes;
     private readonly uint _joinType;        // 0 miter, 1 bevel, 2 round
     private readonly List<Contour> _contours = [];
 
-    // A cut is kept until what it was cut from changes.
-    private float _expandedHalf = float.NaN;
-    private float _expandedFringe = float.NaN;
-    private (double Offset, double Phase, double TrimStart, double TrimEnd, PenLineCap Start, PenLineCap End,
-        PenLineCap DashStart, PenLineCap DashEnd) _expandedCut;
-    private bool _cutDirty = true;
-
-    // Per-contour GPU state. The expander runs once per contour (its own points + output buffers), so combined/group
-    // geometry strokes every contour instead of falling back to the CPU path.
+    // Per-contour GPU state: a contour standing alone, or a batch of them drawn by one draw.
     private sealed class Contour
     {
         public bool IsClosed;
         public uint RoundSegments;   // the triangles a point keeps for its join - depends on the join only (caps are analytic)
         public uint PointCount;
-        public uint ThreadCount;     // cut threads: contours of a batch, or 1
-        public uint VertexCount;     // continuous: exact draw count; cut: output capacity (actual count is on GPU)
+        public uint VertexCount;     // the draw's vertex count
         public float[] PointsData;   // x,y interleaved - re-uploaded to the current ring slot when stale
         public ReusableBuffer PointsBuffer;
-        public ReusableBuffer VertexBuffer;   // the cut's output; none for a continuous stroke
-        public float[] ArcsData;              // continuous: each point's distance along its contour
+        public float[] ArcsData;              // each point's distance along its contour
         public ReusableBuffer ArcsBuffer;
         public float[] PatternData;           // dashes as read, stretched by DashScale
         public ReusableBuffer PatternBuffer;
-        public Buffer IndirectBuffer;    // dash only (VkDrawIndirectCommand)
         public float DashScale = 1f;     // what FitDashesToContour stretched the pattern by (1 = untouched)
 
         // A BATCH: many contours, their points one after another, drawn by one draw. ContoursData is (first point, point
@@ -78,16 +64,7 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
         public ReusableBuffer ContoursBuffer;
         public ReusableBuffer PointContoursBuffer;
 
-        // A batch of CUT contours: per contour, the first vertex of its output range and how long the range is.
-        public uint[] SlotsData;
-        public ReusableBuffer SlotsBuffer;
-
-        // Cut only: each contour's arc length and segments, and the output room it was given.
-        public (double Length, int Segments)[] Arcs;
-        public uint[] Room;
-
         public ulong PointsBytes => (ulong)(PointsData.Length * sizeof(float));
-        public ulong VertexBytes => (ulong)VertexCount * VertexSize;
     }
 
     public GpuStrokeRenderComponent(IGraphicsDevice device, UIBasicEffect uiBasicEffect, StrokeEffect effect,
@@ -107,17 +84,17 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
         _effect = effect;
         _pen = pen;
         _hasDashes = pen.Dashes is { Count: > 0 };
-        _useCut = UsesCut(pen);
         _joinType = MapJoin(pen.PenLineJoin);
 
-        // Strokes of many contours - a map's roads, a chart's series, a map's dashed paths - go as ONE batch: a dispatch
-        // and a draw per contour is what thousands of them cannot afford. Dashed or trimmed, each contour of a batch is
-        // still walked by its own arc length, by a thread of its own; one whose dashes are fitted to it keeps a draw of
-        // its own, as its pattern is its own.
+        // Strokes of many contours - a map's roads, a chart's series, a map's dashed paths - go as ONE batch: a draw per
+        // contour is what thousands of them cannot afford. Dashed or trimmed, each contour of a batch still lays its runs
+        // by its own arc length; one whose dashes are fitted to it keeps a draw of its own, as its pattern is its own.
         var valid = Valid(contours);
+        _gradient = new GradientUniforms(effect);
+        _localBounds = GradientUniforms.BoundsOf(valid);
         IReadOnlyList<(Vector2<double>[] Points, bool IsClosed)> alone = [];
         var together = valid;
-        if (_useCut && _pen.FitDashesToContour)
+        if (_hasDashes && _pen.FitDashesToContour)
         {
             var fitted = new List<(Vector2<double>[] Points, bool IsClosed)>();
             var open = new List<(Vector2<double>[] Points, bool IsClosed)>();
@@ -128,13 +105,13 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
 
         if (together.Count > 1)
         {
-            var runs = _useCut ? CutBatches(together) : Batches(together);
-            var reuse = !_useCut && laidOut != null && laidOut.Length == runs.Count;
+            var runs = Batches(together);
+            // The laid-out batches are of ALL the contours; with fitted ones set apart these are another list.
+            var reuse = alone.Count == 0 && laidOut != null && laidOut.Length == runs.Count;
             for (var r = 0; r < runs.Count; r++)
             {
                 var (start, count) = runs[r];
                 var contour = count == 1 ? BuildContour(together[start].Points, together[start].IsClosed)
-                    : _useCut ? BuildCutBatch(together, start, count)
                     : reuse && laidOut[r] is { } batch && batch.Start == start && batch.Count == count ? BuildBatch(batch)
                     : BuildBatch(together, start, count);
                 if (contour != null) _contours.Add(contour);
@@ -156,96 +133,25 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
     /// <summary>Whether draw <paramref name="draw"/> is a batch of contours.</summary>
     internal bool IsBatch(int draw) => _contours[draw].Batched;
 
+    /// <summary>What draw <paramref name="draw"/>'s dash pattern is stretched by to fit its contour (1 = not at all).</summary>
+    internal float DashScaleOf(int draw) => _contours[draw].DashScale;
+
     private static IReadOnlyList<(Vector2<double>[] Points, bool IsClosed)> Valid(
         IReadOnlyList<(Vector2<double>[] Points, bool IsClosed)> contours) => PreparedStrokeBatch.Valid(contours);
 
     private static List<(int Start, int Count)> Batches(IReadOnlyList<(Vector2<double>[] Points, bool IsClosed)> contours) =>
         PreparedStrokeBatch.Batches(contours);
 
-    // Cut contours grouped likewise, their output ranges summing to no more than MostBatchVertexBytes.
-    private List<(int Start, int Count)> CutBatches(IReadOnlyList<(Vector2<double>[] Points, bool IsClosed)> contours)
-    {
-        var mostVertices = MostBatchVertexBytes / VertexSize;
-        var batches = new List<(int Start, int Count)>();
-        var start = 0;
-        var points = 0UL;
-        var vertices = 0UL;
-        for (var i = 0; i < contours.Count; i++)
-        {
-            var capacity = CutCapacity(ArcOf(contours[i].Points, contours[i].IsClosed), _pen, CutRoundSegments, DashRoom);
-            if (i > start &&
-                (points + (ulong)contours[i].Points.Length > MostBatchPoints || vertices + capacity > mostVertices))
-            {
-                batches.Add((start, i - start));
-                start = i;
-                points = 0;
-                vertices = 0;
-            }
-
-            points += (ulong)contours[i].Points.Length;
-            vertices += capacity;
-        }
-
-        if (contours.Count > start) batches.Add((start, contours.Count - start));
-        return batches;
-    }
-
-    private uint CutRoundSegments => _joinType == 2u ? RoundSegmentsCount : 0u;
-
-    // The triangles a point of a continuous stroke draws for its join.
-    private uint ExpandJoinTriangles => _joinType switch
+    // The triangles a point draws for its join.
+    private uint JoinTriangles => _joinType switch
     {
         2u => RoundSegmentsCount,
         1u => 2u,
         _ => 0u,
     };
 
-    // A batch of dashed or trimmed contours: their points and table as a continuous batch has them, and for each contour
-    // the range of the output its cut writes - as long as the most its cut can write.
-    private Contour BuildCutBatch(IReadOnlyList<(Vector2<double>[] Points, bool IsClosed)> contours, int start, int count)
-    {
-        var total = 0;
-        for (var k = start; k < start + count; k++) total += contours[k].Points.Length;
-
-        var c = new Contour
-        {
-            Batched = true,
-            PointCount = (uint)total,
-            PointsData = new float[total * 2],
-            ContoursData = new uint[count * 3],
-            PointContoursData = new uint[total],
-            SlotsData = new uint[count * 2],
-            RoundSegments = CutRoundSegments,
-            ThreadCount = (uint)count,
-        };
-        FillBatch(c, contours, start, count);
-
-        var at = 0u;
-        c.Arcs = new (double, int)[count];
-        c.Room = new uint[count];
-        for (var k = 0; k < count; k++)
-        {
-            c.Arcs[k] = ArcOf(contours[start + k].Points, contours[start + k].IsClosed);
-            var capacity = CutCapacity(c.Arcs[k], _pen, c.RoundSegments, DashRoom);
-            c.SlotsData[k * 2] = at;
-            c.SlotsData[k * 2 + 1] = capacity;
-            c.Room[k] = capacity;
-            at += capacity;
-        }
-
-        c.VertexCount = at;
-
-        c.PointsBuffer = NewStorage(c.PointsBytes);
-        c.ContoursBuffer = NewStorage((ulong)(c.ContoursData.Length * sizeof(uint)));
-        c.PointContoursBuffer = NewStorage((ulong)(c.PointContoursData.Length * sizeof(uint)));
-        c.SlotsBuffer = NewStorage((ulong)(c.SlotsData.Length * sizeof(uint)));
-        SetPattern(c, _pen);
-        c.VertexBuffer = NewVertices(c.VertexBytes);
-        return c;
-    }
-
     // One contour standing for all of them: their points one after another, a table of where each starts, and for every
-    // point the contour it is in. Slots in the output follow the points, so contours never write over each other.
+    // point the contour it is in.
     private Contour BuildBatch(PreparedStrokeBatch batch)
     {
         var c = new Contour
@@ -259,8 +165,7 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
             ArcsData = batch.Arcs,
         };
 
-        c.RoundSegments = ExpandJoinTriangles;
-        c.ThreadCount = c.PointCount;
+        c.RoundSegments = JoinTriangles;
         c.VertexCount = c.PointCount * (6u + c.RoundSegments * 3u);
         c.PointsBuffer = NewStorage(c.PointsBytes);
         c.ContoursBuffer = NewStorage((ulong)(c.ContoursData.Length * sizeof(uint)));
@@ -285,8 +190,7 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
         };
         FillBatch(c, contours, start, count);
 
-        c.RoundSegments = ExpandJoinTriangles;
-        c.ThreadCount = c.PointCount;
+        c.RoundSegments = JoinTriangles;
         c.VertexCount = c.PointCount * (6u + c.RoundSegments * 3u);
         c.PointsBuffer = NewStorage(c.PointsBytes);
         c.ContoursBuffer = NewStorage((ulong)(c.ContoursData.Length * sizeof(uint)));
@@ -377,57 +281,25 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
         return buffer;
     }
 
-    // A vertex as StrokeVertex lays it out.
-    private ReusableBuffer NewVertices(ulong bytes)
-    {
-        var buffer = ToDispose(BufferManager.CreateBuffer(
-            BufferUsageFlags.VertexBuffer | BufferUsageFlags.StorageBuffer | BufferUsageFlags.ShaderDeviceAddress,
-            VertexMemory, "stroke vertices"));
-        buffer.Reserve(bytes);
-        buffer.Invalidate();
-        return buffer;
-    }
-
-    // True when newPen keeps every SIZE-affecting parameter (cut mode, join, dash pattern -> same buffer sizes + fan
-    // counts). The rest (thickness, dash offset, trim values, color, and now every CAP - they are analytic, so they
-    // emit no geometry at all) are GPU uniforms, so a compatible pen can be swapped without reallocating - TryRepoint /
-    // TryUpdateGeometry just re-dispatch with the new uniforms.
+    // True when newPen keeps every SIZE-affecting parameter (join, dash count, fitting -> same buffer sizes, fan counts
+    // and batches). The rest (thickness, dash lengths, offset, trim, color, every cap - they are analytic, so they emit
+    // no geometry at all) are uniforms or the pattern buffer, so a compatible pen is swapped without reallocating.
     private bool IsPenSizeCompatible(Pen newPen)
     {
-        if (newPen?.Brush is not SolidColorBrush) return false;   // null pen (no stroke, e.g. thickness 0) or non-solid -> not repointable
+        if (!Paints(newPen)) return false;   // null pen (no stroke, e.g. thickness 0) or a brush this cannot paint
         if ((newPen.Dashes is { Count: > 0 }) != _hasDashes) return false;   // a dash mask has a pattern to read
-        var newUseCut = UsesCut(newPen);
-        if (newUseCut != _useCut) return false;                       // continuous <-> cut changes the buffer set
         if (MapJoin(newPen.PenLineJoin) != _joinType) return false;  // join changes the corner fan size
         if (newPen.FitDashesToContour != _pen.FitDashesToContour) return false;   // fitting decides what is batched
 
         // Dash pattern (buffer size + content): each GetPen() makes a NEW collection, so compare by value, not ref.
         var oldDash = _pen.Dashes; var newDash = newPen.Dashes;
         var oldN = oldDash?.Count ?? 0; var newN = newDash?.Count ?? 0;
-        if (oldN != newN) return false;
-        if (!PatternChanged(newPen)) return true;
-
-        // Another pattern of as many entries: a mask reads it; a cut one has to fit the room it was given.
-        if (!_useCut) return true;
-        if (_pen.FitDashesToContour) return false;
-        foreach (var c in _contours)
-        {
-            for (var k = 0; k < c.Arcs.Length; k++)
-            {
-                if (CutCapacity(c.Arcs[k], newPen, c.RoundSegments, 1) > c.Room[k]) return false;
-            }
-        }
-
-        return true;
+        return oldN == newN;   // another pattern of as many entries is written over the old
     }
 
-    // A trim, or dashes with shaped ends or fitted to the contour, are cut; flat-ended dashes are a mask.
-    private static bool UsesCut(Pen pen)
-    {
-        if (pen.TrimStart > 0.0 || pen.TrimEnd < 1.0) return true;
-        if (pen.Dashes is not { Count: > 0 }) return false;
-        return pen.FitDashesToContour || pen.DashStartCap != PenLineCap.Flat || pen.DashEndCap != PenLineCap.Flat;
-    }
+    /// <summary>Whether this draws <paramref name="pen"/>'s brush: any brush but the CurrentColor marker, which paints
+    /// only inside a drawing, as the color of whoever shows it.</summary>
+    internal static bool Paints(Pen pen) => pen?.Brush is { } brush and not CurrentColorBrush;
 
     private bool PatternChanged(Pen newPen)
     {
@@ -450,7 +322,7 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
         return true;
     }
 
-    // Takes a size-compatible pen: dashes of other lengths are written over the old, and cut again.
+    // Takes a size-compatible pen: dashes of other lengths are written over the old.
     private void Adopt(Pen pen)
     {
         var patternChanged = _hasDashes && PatternChanged(pen);
@@ -459,21 +331,20 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
 
         foreach (var c in _contours)
         {
+            Refit(c);
             SetPattern(c, pen);
-            c.VertexBuffer?.Invalidate();
         }
     }
 
     // Same-topology geometry update (a resize): if the new contours match the current ones (count + per-contour point
-    // count + closedness) and the pen stays size-compatible, rewrite the points - and the dashes, for a mask - in place:
-    // no new component, no allocation. Returns false (caller rebuilds) for the cut (its output size depends on arc
-    // length) or any topology/pen-size change.
+    // count + closedness) and the pen stays size-compatible, rewrite the points in place: no new component, no
+    // allocation. Returns false (caller rebuilds) on any topology/pen-size change.
     public bool TryUpdateGeometry(IReadOnlyList<(Vector2<double>[] Points, bool IsClosed)> contours, Pen pen)
     {
-        if (_useCut) return false;
         if (!IsPenSizeCompatible(pen)) return false;
 
         var valid = Valid(contours);
+        var bounds = GradientUniforms.BoundsOf(valid);
         if (_contours.Exists(c => c.Batched))
         {
             // The same contours, point for point and open or closed alike, fall into the same batches: their tables
@@ -500,8 +371,13 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
                 FillArcs(c);
                 c.PointsBuffer.Invalidate();
                 c.ArcsBuffer.Invalidate();
+                if (c.Batched || !c.IsClosed || !_pen.FitDashesToContour) continue;
+
+                Refit(c);
+                SetPattern(c, _pen);
             }
 
+            _localBounds = bounds;
             Adopt(pen);
             return true;
         }
@@ -518,8 +394,14 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
             FillArcs(c);
             c.PointsBuffer.Invalidate();
             c.ArcsBuffer.Invalidate();
+            if (!c.IsClosed || !_pen.FitDashesToContour) continue;
+
+            // Fitted to its length, which the new points changed.
+            Refit(c);
+            SetPattern(c, _pen);
         }
 
+        _localBounds = bounds;
         Adopt(pen);
         return true;
     }
@@ -537,146 +419,77 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
 
     // How much the dash pattern must stretch for a WHOLE number of periods to go round this closed contour. Never more
     // than half a period either way, so the dashes keep the length they were authored with to within a few percent.
-    private static float FitScale(Vector2<double>[] points, Pen pen)
+    private static float FitScale(double length, Pen pen)
     {
         var period = 0.0;
         foreach (var entry in pen.Dashes) period += entry;
-        if (period <= 0) return 1f;
-
-        var length = 0.0;
-        for (var i = 0; i < points.Length; i++)
-        {
-            var next = i + 1 == points.Length ? 0 : i + 1;   // closed: the last segment runs back to the start
-            length += (points[next] - points[i]).Length();
-        }
-
-        if (length <= 0) return 1f;
+        if (period <= 0 || length <= 0) return 1f;
 
         var periods = Math.Max(1.0, Math.Round(length / period));
         return (float)(length / (periods * period));
     }
 
-    // Builds the GPU buffers for one contour. Returns null for a degenerate contour (no thread/vertex work).
+    // A lone contour's pattern stretch for the pen it is drawn with: fitted only when it is closed and the pen says so.
+    // Worked out again whenever its points or its dashes change, or the seam's long dash comes back.
+    private void Refit(Contour c)
+    {
+        if (c.Batched || !c.IsClosed || !_hasDashes || !_pen.FitDashesToContour)
+        {
+            c.DashScale = 1f;
+            return;
+        }
+
+        // Its length: the last point's distance along it, and the closing segment back to the first.
+        var last = (int)c.PointCount - 1;
+        var dx = (double)c.PointsData[0] - c.PointsData[last * 2];
+        var dy = (double)c.PointsData[1] - c.PointsData[last * 2 + 1];
+        c.DashScale = FitScale(c.ArcsData[last] + Math.Sqrt(dx * dx + dy * dy), _pen);
+    }
+
+    // Builds the GPU buffers for one contour. Returns null for a degenerate contour.
     private Contour BuildContour(Vector2<double>[] points, bool isClosed)
     {
         if (points.Length < 2) return null;
 
         var c = new Contour { IsClosed = isClosed, PointCount = (uint)points.Length, PointsData = ToFloats(points) };
 
-        // Disc segments are needed by the JOIN only: round (a disc) or bevel (a wedge) on the continuous path, round on
-        // the cut path (a disc at every corner a dash crosses; a bevel wedge is written inline there). Caps need none -
-        // they are a per-fragment mask now, which is also why a round cap no longer drags a 16-triangle fan onto every
-        // dash of every dashed stroke.
-        c.RoundSegments = _useCut ? CutRoundSegments : ExpandJoinTriangles;
+        // Disc segments are needed by the JOIN only: round (a disc) or bevel (a wedge). Caps need none - they are a
+        // per-fragment mask.
+        c.RoundSegments = JoinTriangles;
+        c.PointsBuffer = NewStorage(c.PointsBytes);
 
-        // Raw contour -> BDA storage buffer (the GPU reads it; dashing/trim happen on the GPU, not here).
-        c.PointsBuffer = ToDispose(BufferManager.CreateBuffer(
-            BufferUsageFlags.StorageBuffer | BufferUsageFlags.ShaderDeviceAddress, StrokeMemory, "stroke points"));
-        c.PointsBuffer.Reserve(c.PointsBytes);
-        c.PointsBuffer.Invalidate();
+        // Drawn straight from its points (StrokePullVS).
+        c.VertexCount = c.PointCount * (6u + c.RoundSegments * 3u);
+        c.ArcsData = new float[points.Length];
+        FillArcs(c);
+        c.ArcsBuffer = NewStorage((ulong)(points.Length * sizeof(float)));
 
-        if (_useCut)
-        {
-            c.ThreadCount = 1;   // a single thread walks the whole contour and cuts the dash/trim pieces
-            c.Arcs = [ArcOf(points, isClosed)];
-            c.VertexCount = CutCapacity(c.Arcs[0], _pen, c.RoundSegments, DashRoom);   // worst-case piece bound
-            c.Room = [c.VertexCount];
-
-            // A CLOSED contour's length almost never divides by the dash pattern, and the remainder lands where the
-            // contour closes - one long dash at the seam, moving as the shape resizes. Fitting stretches the pattern by
-            // at most half a period so a whole number goes round; the offset is scaled to match when it is uploaded.
-            c.DashScale = _hasDashes && isClosed && _pen.FitDashesToContour
-                ? FitScale(points, _pen)
-                : 1f;
-            SetPattern(c, _pen);
-
-            c.IndirectBuffer = ToDispose(Buffer.New(_device, (ulong)(4 * sizeof(uint)),
-                BufferUsageFlags.IndirectBuffer | BufferUsageFlags.StorageBuffer | BufferUsageFlags.ShaderDeviceAddress, StrokeMemory));
-        }
-        else
-        {
-            // Drawn straight from its points (StrokePullVS): as many vertices a point as the expander would write.
-            c.ThreadCount = c.PointCount;
-            c.VertexCount = c.PointCount * (6u + c.RoundSegments * 3u);
-            c.ArcsData = new float[points.Length];
-            FillArcs(c);
-            c.ArcsBuffer = NewStorage((ulong)(points.Length * sizeof(float)));
-            if (_hasDashes) SetPattern(c, _pen);
-            return c;
-        }
-
-        if (c.ThreadCount == 0 || c.VertexCount == 0) return null;
-
-        // StrokeVertex's layout.
-        c.VertexBuffer = ToDispose(BufferManager.CreateBuffer(
-            BufferUsageFlags.VertexBuffer | BufferUsageFlags.StorageBuffer | BufferUsageFlags.ShaderDeviceAddress, VertexMemory,
-            "stroke vertices"));
-        c.VertexBuffer.Reserve(c.VertexBytes);
-        c.VertexBuffer.Invalidate();
+        // A CLOSED contour's length almost never divides by the dash pattern, and the remainder lands where the contour
+        // closes - one long dash at the seam, moving as the shape resizes. Fitting stretches the pattern by at most half
+        // a period so a whole number goes round; the offset is scaled to match when it is drawn.
+        Refit(c);
+        if (_hasDashes) SetPattern(c, _pen);
         return c;
     }
 
-    // The dash pattern as the shader reads it, stretched by scale: the real dash array, or a 1-element dummy for trim-only
-    // (PatternCount=0 -> not read).
+    // The dash pattern as the shader reads it, stretched by the contour's fit.
     private void SetPattern(Contour c, Pen pen)
     {
         var dashes = pen.Dashes;
         var count = dashes?.Count ?? 0;
         var pattern = c.PatternData is { } held && held.Length == Math.Max(1, count) ? held : new float[Math.Max(1, count)];
-        for (var i = 0; i < count; i++)
-            pattern[i] = _useCut ? DashLength(dashes[i] * c.DashScale) : (float)(dashes[i] * c.DashScale);
+        for (var i = 0; i < count; i++) pattern[i] = (float)(dashes[i] * c.DashScale);
         c.PatternData = pattern;
         c.PatternBuffer ??= NewStorage((ulong)(pattern.Length * sizeof(float)));
         c.PatternBuffer.Invalidate();
     }
 
-    // Each dash segment is at least 1px. The CUT path turns every dash into REAL geometry, and a sub-pixel piece becomes a
-    // degenerate quad that never rasterizes - the line breaks up at DashOn<1. The SDF batch is analytic (per-fragment
-    // coverage) so a sub-pixel dash just fades there; only this compute path needs the floor.
-    private static float DashLength(double length) => Math.Max((float)length, 1.0f);
-
-    // The pattern's length as the shader reads it at `scale`, which DashPhase counts in.
-    private static double DashPeriod(Pen pen, double scale, bool floored)
+    // The pattern's length at `scale`, which DashPhase counts in.
+    private static double DashPeriod(Pen pen, double scale)
     {
         var period = 0.0;
-        foreach (var entry in pen.Dashes) period += floored ? DashLength(entry * scale) : entry * scale;
+        foreach (var entry in pen.Dashes) period += entry * scale;
         return period;
-    }
-
-    private static (double Length, int Segments) ArcOf(Vector2<double>[] pts, bool closed)
-    {
-        int n = pts.Length;
-        int segs = closed ? n : n - 1;
-        double total = 0;
-        for (var s = 0; s < segs; s++) total += (pts[(s + 1) % n] - pts[s]).Length();
-        return (total, segs);
-    }
-
-    // Room for twice the dashes the pattern needs, so shorter ones still fit.
-    private const double DashRoom = 2;
-
-    // Worst-case vertex count for the dash output buffer: a piece per "on" run of every period the arc length holds,
-    // plus a per-segment allowance for corner splits. A piece is exactly its 6 quad verts (caps are a mask, they emit
-    // nothing), plus one corner join per segment (a round disc, or up to 3 bevel/miter triangles). Capped at what one
-    // contour may write. This is the only CPU work dashing does - an O(points) length sum, no per-piece tessellation.
-    private static uint CutCapacity((double Length, int Segments) arc, Pen pen, uint roundSegments, double room)
-    {
-        const long perPiece = 6;
-        var segs = arc.Segments;
-        long joinVerts = (long)segs * (roundSegments > 0 ? roundSegments * 3 : 9);   // one join per corner
-
-        // Trim-only (no dashes): trim clips to at most one run, so segs + 2 boundary splits is the bound.
-        if (pen.Dashes is not { Count: > 0 })
-            return (uint)Math.Clamp((segs + 2) * perPiece + joinVerts, 6, MaxDashVertices);
-
-        // The period as the cut walks it, each entry floored to 1px. Fitted to a closed contour, a whole number of periods
-        // goes round - round(L/P), at most 2L/P + 1 - so twice the periods it holds and one more bounds them. An odd
-        // pattern turns its runs on and off in turn, so each entry may be a run.
-        double period = 0;
-        foreach (var entry in pen.Dashes) period += DashLength(entry);
-        long periods = (long)Math.Ceiling(arc.Length * room / (period * 0.5)) + 1;
-        long pieces = periods * pen.Dashes.Count + segs + 4;
-        return (uint)Math.Clamp(pieces * perPiece + joinVerts, 6, MaxDashVertices);
     }
 
     // Cap mapping for the expander shaders. Every cap renders as its true shape: 0 = flat, 1 = square, 2 = convex round,
@@ -786,145 +599,29 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
         return MathF.Sqrt(MathF.Abs(dxdx * dydy - dxdy * dydx));
     }
 
-    // Whether the cut drawn scaled to this width keeps a flat end's feather within a quarter of a pixel.
-    private bool DrawsAt(float half, float fringe)
-    {
-        if (float.IsNaN(_expandedHalf)) return false;
-        var written = _expandedHalf + _expandedFringe * 0.5f;
-        if (written <= 0f) return half == _expandedHalf && fringe == _expandedFringe;
-        var scale = (half + fringe * 0.5f) / written;
-        return Math.Abs(fringe - scale * _expandedFringe) * 0.5f <= 0.25f * fringe;
-    }
-
-    // Compute runs OUT of the render pass: PreRender is recorded from BeginDraw's beforeRenderPass hook
-    // (WindowRenderService.BeginDraw -> ForwardWindowRenderer.PreRender -> RenderUnit.PreRender -> here). Each contour
-    // uploads its points to this frame's slot; a cut one is cut again into this frame's vertex slot when stale.
+    // Uploads run OUT of the render pass: PreRender is recorded from BeginDraw's beforeRenderPass hook. Each contour puts
+    // what changed into this frame's slot.
     public override void PreRender()
     {
-        var fringe = ComputeFringe();
-        var half = HalfThickness();
-        var stale = !DrawsAt(half, fringe);
-        if (stale)
-        {
-            _expandedHalf = half;
-            _expandedFringe = fringe;
-        }
-
-        // What the CUT is made of. Re-cutting unconditionally cost a dashed stroke a compute dispatch every frame even
-        // when it stood still - the difference between 600 and 200 fps on a page of dashed shapes. The width is not in
-        // it: the shader draws the ribbon at any width.
-        var cut = (_pen.DashOffset, _pen.DashPhase, _pen.TrimStart, _pen.TrimEnd, _pen.StartLineCap, _pen.EndLineCap,
-            _pen.DashStartCap, _pen.DashEndCap);
-        var cutChanged = _cutDirty || cut != _expandedCut;
-        _expandedCut = cut;
-        _cutDirty = false;
-
         foreach (var c in _contours)
         {
             var points = c.PointsBuffer.Acquire(c.PointsBytes, out var writePoints);
             if (writePoints) points.SetData(c.PointsData, 0, (uint)c.PointsData.Length);
-            Buffer contoursTable = null;
-            Buffer pointContours = null;
-            Buffer slots = null;
             if (c.Batched)
             {
-                contoursTable = c.ContoursBuffer.Acquire((ulong)(c.ContoursData.Length * sizeof(uint)), out var writeTable);
-                if (writeTable) contoursTable.SetData(c.ContoursData, 0, (uint)c.ContoursData.Length);
-                pointContours = c.PointContoursBuffer.Acquire((ulong)(c.PointContoursData.Length * sizeof(uint)),
+                var table = c.ContoursBuffer.Acquire((ulong)(c.ContoursData.Length * sizeof(uint)), out var writeTable);
+                if (writeTable) table.SetData(c.ContoursData, 0, (uint)c.ContoursData.Length);
+                var owners = c.PointContoursBuffer.Acquire((ulong)(c.PointContoursData.Length * sizeof(uint)),
                     out var writeOwners);
-                if (writeOwners) pointContours.SetData(c.PointContoursData, 0, (uint)c.PointContoursData.Length);
-                if (c.SlotsData != null)
-                {
-                    slots = c.SlotsBuffer.Acquire((ulong)(c.SlotsData.Length * sizeof(uint)), out var writeSlots);
-                    if (writeSlots) slots.SetData(c.SlotsData, 0, (uint)c.SlotsData.Length);
-                }
+                if (writeOwners) owners.SetData(c.PointContoursData, 0, (uint)c.PointContoursData.Length);
             }
 
-            if (!_useCut)
+            var arcs = c.ArcsBuffer.Acquire((ulong)(c.ArcsData.Length * sizeof(float)), out var writeArcs);
+            if (writeArcs) arcs.SetData(c.ArcsData, 0, (uint)c.ArcsData.Length);
+            if (c.PatternBuffer != null)
             {
-                var arcs = c.ArcsBuffer.Acquire((ulong)(c.ArcsData.Length * sizeof(float)), out var writeArcs);
-                if (writeArcs) arcs.SetData(c.ArcsData, 0, (uint)c.ArcsData.Length);
-                if (c.PatternBuffer != null)
-                {
-                    var dashes = c.PatternBuffer.Acquire((ulong)(c.PatternData.Length * sizeof(float)), out var writeDashes);
-                    if (writeDashes) dashes.SetData(c.PatternData, 0, (uint)c.PatternData.Length);
-                }
-
-                continue;
-            }
-
-            if (stale || cutChanged) c.VertexBuffer.Invalidate();
-
-            var vertices = c.VertexBuffer.Acquire(c.VertexBytes, out var writeVertices);
-            if (!writeVertices) continue;   // this slot already holds the cut
-
-            _effect.Points.SetValue(points.GetDeviceAddress());
-            _effect.Output.SetValue(vertices.GetDeviceAddress());
-            _effect.PointCount.SetValue(c.PointCount);
-            // The effect is shared by every stroke: a batch says so, and every other contour says it is none.
-            _effect.Batched.SetValue(c.Batched ? 1u : 0u);
-            if (c.Batched)
-            {
-                _effect.Contours.SetValue(contoursTable.GetDeviceAddress());
-                _effect.PointContours.SetValue(pointContours.GetDeviceAddress());
-            }
-            _effect.IsClosed.SetValue(c.IsClosed ? 1u : 0u);
-            _effect.JoinType.SetValue(_joinType);
-            _effect.RoundSegments.SetValue(c.RoundSegments);
-            // Start/EndLineCap belong to the stroke's REAL ends, and a closed contour only has them where a trim window
-            // cuts one (that is what puts a round end on a progress ring). Untrimmed and closed, there is no real end
-            // at all, so the seam wears the dash caps like every other dash boundary instead of a stray line cap.
-            var hasRealEnds = !c.IsClosed || _pen.TrimStart > 0.0 || _pen.TrimEnd < 1.0;
-            _effect.StartCap.SetValue(MapCap(hasRealEnds ? _pen.StartLineCap : _pen.DashStartCap));
-            _effect.EndCap.SetValue(MapCap(hasRealEnds ? _pen.EndLineCap : _pen.DashEndCap));
-            // The two ends of a dash are separate properties: one dash can be a concave bite and a convex tip - an arrow.
-            _effect.DashStartCap.SetValue(MapCap(_pen.DashStartCap));
-            _effect.DashEndCap.SetValue(MapCap(_pen.DashEndCap));
-            _effect.HalfThickness.SetValue(half);
-            _effect.Fringe.SetValue(fringe);   // AA feather: the expander widens the ribbon/discs by Fringe/2
-
-            if (!c.Batched) _effect.Indirect.SetValue(c.IndirectBuffer.GetDeviceAddress());
-            var pattern = c.PatternBuffer.Acquire((ulong)(c.PatternData.Length * sizeof(float)), out var writePattern);
-            if (writePattern) pattern.SetData(c.PatternData, 0, (uint)c.PatternData.Length);
-            _effect.Pattern.SetValue(pattern.GetDeviceAddress());
-            _effect.PatternCount.SetValue(_hasDashes ? (uint)_pen.Dashes.Count : 0u);
-            _effect.MaxVertices.SetValue(c.VertexCount);
-            // The phase is in PERIODS, so it becomes pixels here - which is exactly the arithmetic the author would
-            // otherwise be doing by hand. Both parts then scale with the contour fit, or the ring, seamless in
-            // shape, would still drift in phase as it marches.
-            var period = _hasDashes ? DashPeriod(_pen, c.DashScale, floored: true) : 0.0;
-            var effectiveOffset = (float)(_pen.DashOffset * c.DashScale + _pen.DashPhase * period);
-            if (Environment.GetEnvironmentVariable("ADAM_DASH_LOG") == "1")
-            {
-                Console.Error.WriteLine(
-                    $"[DASH] phase={_pen.DashPhase:F3} pxOffset={_pen.DashOffset:F2} period={period:F1} " +
-                    $"scale={c.DashScale:F3} -> {effectiveOffset:F2}");
-            }
-            _effect.DashOffset.SetValue(effectiveOffset);
-            _effect.TrimStart.SetValue((float)Math.Clamp(_pen.TrimStart, 0.0, 1.0));
-            _effect.TrimEnd.SetValue((float)Math.Clamp(_pen.TrimEnd, 0.0, 1.0));
-            if (c.Batched)
-            {
-                _effect.ContourCount.SetValue(c.ThreadCount);
-                _effect.Slots.SetValue(slots.GetDeviceAddress());
-                _effect.StrokeDashCutBatchPass.Apply();   // a thread per contour, each into its own output range
-            }
-            else
-            {
-                _effect.StrokeDashCutPass.Apply();   // separate compute kernel for the dash/trim cut
-            }
-
-            _device.Dispatch((c.ThreadCount + 63) / 64);
-
-            // Make the cut visible to the draw: the vertex read and, for a lone contour, the indirect-command read.
-            _device.BufferBarrier(vertices,
-                PipelineStageFlagBits2.ComputeShaderBit, AccessFlagBits2.ShaderWriteBit,
-                PipelineStageFlagBits2.VertexAttributeInputBit, AccessFlagBits2.VertexAttributeReadBit);
-            if (!c.Batched)
-            {
-                _device.BufferBarrier(c.IndirectBuffer,
-                    PipelineStageFlagBits2.ComputeShaderBit, AccessFlagBits2.ShaderWriteBit,
-                    PipelineStageFlagBits2.DrawIndirectBit, AccessFlagBits2.IndirectCommandReadBit);
+                var dashes = c.PatternBuffer.Acquire((ulong)(c.PatternData.Length * sizeof(float)), out var writeDashes);
+                if (writeDashes) dashes.SetData(c.PatternData, 0, (uint)c.PatternData.Length);
             }
         }
     }
@@ -936,14 +633,13 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
         // Points are in geometry-local space: WVP = transform(local->world) * projection(world->clip). The pen color
         // and transform are shared by every contour, so set them once, then draw each contour's expanded ribbon.
         _effect.Projection.SetValue(RenderData.TransformMatrix * RenderData.ProjectionMatrix);
-        var color = (_pen.Brush as SolidColorBrush)?.Color.ToVector4() ?? new Vector4F(0, 0, 0, 1);
-        color.W *= (float)(_pen.Brush?.Opacity ?? 1.0) * RenderData.Opacity;   // color alpha x pen-brush Opacity x element Opacity
-        _effect.StrokeColor.SetValue(color);
         // StrokePS reads these for the analytic-AA coverage (distance vs HalfThickness +/- Fringe/2).
-        _effect.HalfThickness.SetValue(HalfThickness());
-        _effect.Fringe.SetValue(ComputeFringe());
+        var half = HalfThickness();
+        _effect.UHalfThickness.SetValue(half);
+        _effect.UFringe.SetValue(ComputeFringe());
+        if (!SetBrush(half, out var draw, out var unionDraw, out var opaque, out var invisible)) return;
 
-        _device.VertexType = _useCut ? typeof(StrokeVertex) : null;   // a continuous stroke is read by address
+        _device.VertexType = null;   // the stroke is read by address
         _device.PolygonMode = PolygonMode.Fill;
         _device.PrimitiveTopology = PrimitiveTopology.TriangleList;
         _device.ColorBlendEquation = ColorBlendEquations.AlphaBlend;
@@ -951,12 +647,18 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
 
         // An OPAQUE stroke cannot see its own overlaps, and a fully transparent one has nothing to show; both keep the
         // single cheap pass. A translucent one blends every self-crossing twice and comes out veined, so it goes
-        // through the union path below instead.
-        if (color.W >= 1.0f || color.W <= 0.0f || !_device.HasDepthAttachment || !TryDeviceBounds(out var bounds))
+        // through the union path below instead. The pen can name either outright.
+        var onePass = _pen.Overlap switch
+        {
+            PenOverlap.Blend => true,
+            PenOverlap.Union => false,
+            _ => opaque,
+        };
+        if (onePass || invisible || !_device.HasDepthAttachment || !TryDeviceBounds(out var bounds))
         {
             _device.DepthCompareFunction = CompareOp.Always;
             _device.DepthWriteEnable = true;
-            DrawContours(_effect.StrokeDrawPass, _effect.StrokePullDrawPass);
+            DrawContours(draw);
             return;
         }
 
@@ -970,15 +672,215 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
         _device.ColorComponentFlags = 0;
         _device.DepthCompareFunction = CompareOp.Less;
         _device.DepthWriteEnable = true;
-        DrawContours(_effect.StrokeUnionDepthPass, _effect.StrokePullUnionDepthPass);
+        DrawContours(_effect.StrokeUnionDepthPass);
 
         _device.ColorComponentFlags = AllColorComponents;
         _device.DepthCompareFunction = CompareOp.Equal;
         _device.DepthWriteEnable = false;
-        DrawContours(_effect.StrokeUnionDrawPass, _effect.StrokePullUnionDrawPass);
+        DrawContours(unionDraw);
 
         _device.DepthCompareFunction = CompareOp.Always;
         _device.DepthWriteEnable = true;
+    }
+
+    /// <summary>Whether a <see cref="StrokeBatchCollector"/> can draw this stroke: a brush of one color - a gradient, a
+    /// pattern or a picture is shaded per stroke - under a transform with no perspective.</summary>
+    internal bool CanBatch
+    {
+        get
+        {
+            if (IsDisposed || _contours.Count == 0 || !TryFlatColor(_pen.Brush, out _)) return false;
+            var t = RenderData?.TransformMatrix ?? Matrix4x4F.Identity;
+            return t.M14 == 0f && t.M24 == 0f;
+        }
+    }
+
+    /// <summary>How far past its points the ribbon can reach, in its local units: a miter clamped at four half-widths and
+    /// the feather on top.</summary>
+    internal float LocalReach => 4f * HalfThickness() + 2f * ComputeFringe();
+
+    /// <summary>How many records it takes: one a draw - a batch of contours, or a contour standing alone.</summary>
+    internal int RecordCount => _contours.Count;
+
+    /// <summary>Writes into <paramref name="record"/> what draw <paramref name="draw"/> of this stroke is - its buffers as
+    /// this frame reads them, its pen and its color at the element's own <paramref name="opacity"/> - leaving where it
+    /// stands to the caller. <paramref name="union"/> says whether it blends its overlaps once (two passes): a stroke that
+    /// shows through, or one <paramref name="faded"/> by an opacity slot, which can show through without a walk. False when
+    /// it draws nothing now: gone, transparent, or no longer of one color.</summary>
+    internal bool Describe(int draw, float opacity, bool faded, ref StrokeRecord record, out bool union)
+    {
+        union = false;
+        if (IsDisposed || draw >= _contours.Count || !TryFlatColor(_pen.Brush, out var flat)) return false;
+
+        var color = flat.ToVector4();
+        color.W *= (float)_pen.Brush.Opacity * opacity;
+        if (color.W <= 0f) return false;
+
+        union = _pen.Overlap switch
+        {
+            PenOverlap.Blend => false,
+            PenOverlap.Union => true,
+            _ => color.W < 1f || faded,
+        };
+
+        var c = _contours[draw];
+        record.Points = c.PointsBuffer.Acquire(c.PointsBytes, out _).GetDeviceAddress();
+        record.Arcs = ArcsAddress(c);
+        record.Contours = c.Batched ? ContoursAddress(c) : 0;
+        record.PointContours = c.Batched ? PointContoursAddress(c) : 0;
+        record.Pattern = PatternAddress(c);
+        record.PointCount = c.PointCount;
+        record.PatternCount = PatternCountValue;
+        record.Flags = (c.IsClosed ? StrokeRecord.Closed : 0u) | (c.Batched ? StrokeRecord.BatchedContours : 0u) |
+                       (HasRuns ? StrokeRecord.HasRuns : 0u) |
+                       (_pen.ThicknessUnit == PenThicknessUnit.Pixels ? StrokeRecord.PixelThickness : 0u);
+        record.Caps = MapCap(_pen.StartLineCap) | MapCap(_pen.EndLineCap) << 4 | MapCap(_pen.DashStartCap) << 8 |
+                      MapCap(_pen.DashEndCap) << 12;
+        record.RoundSegments = c.RoundSegments;
+        record.JoinType = _joinType;
+        record.Pen = new Vector4F((float)_pen.Thickness, (float)Math.Max(_pen.MinimumDeviceThickness, 0.0),
+            DashOffsetOf(c), record.Pen.W);
+        record.Window = new Vector4F(TrimStartValue, TrimEndValue, record.Window.Z, record.Window.W);
+        record.Color = color;
+        return true;
+    }
+
+    /// <summary>Whether its brush flows with the shared noise clock.</summary>
+    internal bool DrawsMoving => _pen.Brush is NoiseBrush { Animate: true };
+
+    /// <summary>Where a picture brush finds its texture; none, and a picture stroke draws nothing.</summary>
+    internal IResourceFactory ResourceFactory { get; set; }
+
+    // Puts the pen's brush into the effect and picks the passes that paint it. False when there is nothing to draw this
+    // frame - a picture still decoding, or a brush that paints nothing here.
+    private bool SetBrush(float half, out IEffectPass draw, out IEffectPass unionDraw, out bool opaque, out bool invisible)
+    {
+        var brush = _pen.Brush;
+        draw = _effect.StrokeDrawPass;
+        unionDraw = _effect.StrokeUnionDrawPass;
+        opaque = false;
+        invisible = false;
+        _effect.BrushAlong.SetValue(_pen.BrushMapping == PenBrushMapping.Along ? 1u : 0u);
+        _effect.BrushBounds.SetValue(_localBounds);
+        _gradient.Clear();
+
+        // Color alpha x pen-brush Opacity x element Opacity; a gradient's stops and a pattern's colors carry the same
+        // product.
+        var alpha = (float)(brush?.Opacity ?? 1.0) * RenderData.Opacity;
+        invisible = alpha <= 0f;
+        switch (brush)
+        {
+            case GradientBrush gradient:
+                _gradient.Set(gradient, alpha, _localBounds);
+                opaque = !GradientUniforms.IsTranslucent(gradient, alpha);
+                return true;
+
+            case PatternBrush or NoiseBrush when PatternBrushRecord.TryDescribe(brush, out var record):
+                SetPattern(record, alpha, out opaque);
+                draw = _effect.StrokePatternDrawPass;
+                unionDraw = _effect.StrokePatternUnionDrawPass;
+                return true;
+
+            case TileBrush picture:
+                if (!SetPicture(picture, alpha, half, out var layer)) return false;
+                draw = layer ? _effect.StrokeLayerDrawPass : _effect.StrokeTextureDrawPass;
+                unionDraw = layer ? _effect.StrokeLayerUnionDrawPass : _effect.StrokeTextureUnionDrawPass;
+                return true;   // what the picture holds is not known here: never taken for opaque
+        }
+
+        if (!TryFlatColor(brush, out var flat)) return false;
+        var color = flat.ToVector4();
+        color.W *= alpha;
+        _effect.UStrokeColor.SetValue(color);
+        opaque = color.W >= 1f;
+        invisible = color.W <= 0f;
+        return true;
+    }
+
+    // A pattern or noise, as the fill batches pack it; the cell stays in local units, as the ribbon is drawn in them.
+    private void SetPattern(PatternBrushRecord record, float elementAlpha, out bool opaque)
+    {
+        var alpha = (float)record.Opacity * RenderData.Opacity;
+        var c1 = record.Color1.ToVector4(); c1.W *= alpha;
+        var c2 = record.Color2.ToVector4(); c2.W *= alpha;
+        var c3 = record.MidColor.ToVector4(); c3.W *= alpha;
+        _effect.PParams.SetValue(new Vector4F(0, record.Type, (float)record.Cell, 0));
+        _effect.PColor1.SetValue(c1);
+        _effect.PColor2.SetValue(c2);
+        _effect.PColor3.SetValue(c3);
+        _effect.PNoise.SetValue(record.Noise);
+        _effect.PAnim.SetValue(new Vector4F((float)record.PhaseOffset, (float)record.FrozenPhase, 0, 0));
+        _effect.Time.SetValue((float)NoiseClock.Time);   // an animated noise reads the shared flow clock
+        opaque = elementAlpha > 0f && c1.W >= 1f && c2.W >= 1f && (c3.W <= 0f || c3.W >= 1f);
+    }
+
+    // A picture laid out by ImageTiling over the brush's box: the whole stroke's bounds - the shape's, grown by the half
+    // width the ribbon reaches past them, or a single copy would leave the stroke's outer half bare - or, along the line,
+    // one copy at the stroke's width and the picture's own proportions, repeated end to end.
+    private bool SetPicture(TileBrush picture, float alpha, float half, out bool layer)
+    {
+        layer = picture.ContentSource is ImageLayer;
+        var along = _pen.BrushMapping == PenBrushMapping.Along;
+        var width = Math.Max(2.0 * half, 1e-4);
+        var content = picture.ContentSize;
+        if (content.Width <= 0 || content.Height <= 0) return false;
+
+        var length = along ? width * content.Width / content.Height : 0.0;
+        var reach = half + ComputeFringe();
+        var box = along
+            ? new Rect(0, 0, length, width)
+            : new Rect(_localBounds.X - reach, _localBounds.Y - reach, _localBounds.Z + 2 * reach, _localBounds.W + 2 * reach);
+        var texture = TextureBatchCollector.BrushTexture(picture, ResourceFactory, box.Size, Owner, layers: layer);
+        if (texture == null) return false;
+
+        _effect.BrushBounds.SetValue(new Vector4F((float)box.X, (float)box.Y, (float)box.Width, (float)box.Height));
+        var world = RenderData.TransformMatrix;
+        var layout = ImageTiling.Layout(picture, box, world.M11, world.M22, TextureBatchCollector.SourceIsSlice(picture));
+        var tint = picture.Tint.ToVector4();
+        tint.W *= alpha;
+
+        _effect.TTile.SetValue(layout.Tile);
+        _effect.TRotation.SetValue(layout.Rotation);
+        _effect.TDrawn.SetValue(layout.Drawn);
+        _effect.TUvRect.SetValue(layout.UvRect);
+        _effect.TTint.SetValue(tint);
+        _effect.TAdjust.SetValue(picture.ColorAdjustment);
+        // Along the line the copies always follow each other; across it, and over the bounds, the brush's own tiling says.
+        var repeats = layout.Repeats ? 1f : 0f;
+        _effect.TRepeat.SetValue(new Vector2F(along ? 1f : repeats, repeats));
+        _effect.TMirror.SetValue(layout.Mirror);
+        _effect.TAlongLength.SetValue((float)length);
+        if (picture.ContentSource is ImageLayer arrayLayer)
+        {
+            _effect.SourceTextureArray.SetResource(texture);
+            _effect.TLayer.SetValue((float)arrayLayer.Index);
+        }
+        else
+        {
+            _effect.SourceTexture.SetResource(texture);
+        }
+        _effect.SourceSampler.SetResource(SamplerStates.LinearClampToEdge);
+        return true;
+    }
+
+    // The one color a brush with no form along a line is drawn in: its main color, or a fractal's two blended. False for
+    // a brush that paints nothing here (CurrentColor outside a drawing).
+    private static bool TryFlatColor(Brush brush, out Color color)
+    {
+        switch (brush)
+        {
+            case SolidColorBrush solid: color = solid.Color; return true;
+            case FractalBrush fractal: color = Halfway(fractal.Color1, fractal.Color2); return true;
+            case MaterialBrush material: color = material.TintColor; return true;
+            case NineSliceBrush nineSlice: color = nineSlice.Tint; return true;
+            case InkBrush ink: color = ink.Color; return true;
+            case CanvasGridBrush grid: color = grid.Color; return true;
+            case CanvasArrowBrush arrow: color = arrow.Color; return true;
+            default: color = default; return false;
+        }
+
+        static Color Halfway(Color a, Color b) => new((byte)((a.R + b.R) / 2), (byte)((a.G + b.G) / 2),
+            (byte)((a.B + b.B) / 2), (byte)((a.A + b.A) / 2));
     }
 
     // This stroke's footprint in DEVICE pixels - the rectangle whose depth it may use as scratch. Built from the raw
@@ -1044,61 +946,65 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
         return true;
     }
 
-    // A pulled contour's buffers are read by address, set before its pass is applied.
-    private void DrawContours(IEffectPass cut, IEffectPass pulled)
+    // A contour's buffers are read by address, set before its pass is applied.
+    private void DrawContours(IEffectPass pass)
     {
-        if (_useCut)
-        {
-            _effect.DashMask.SetValue(0u);
-            cut.Apply();
-            foreach (var c in _contours)
-            {
-                var vertices = c.VertexBuffer.Acquire(c.VertexBytes, out _);   // the slot PreRender cut this frame
-                _device.SetVertexBuffer(vertices);
-                if (!c.Batched)
-                    _device.DrawIndirect(vertices, c.IndirectBuffer);   // GPU-decided vertex count (dash/trim)
-                else
-                    _device.Draw(c.VertexCount, 1);   // a cut batch draws every range whole: what is unused draws nothing
-            }
-
-            return;
-        }
-
-        _effect.JoinType.SetValue(_joinType);
-        _effect.StartCap.SetValue(MapCap(_pen.StartLineCap));
-        _effect.EndCap.SetValue(MapCap(_pen.EndLineCap));
-        _effect.DashMask.SetValue(_hasDashes ? 1u : 0u);
-        if (_hasDashes)
-        {
-            _effect.PatternCount.SetValue((uint)_pen.Dashes.Count);
-            _effect.DashOffset.SetValue((float)(_pen.DashOffset + _pen.DashPhase * DashPeriod(_pen, 1, floored: false)));
-        }
+        _effect.UJoinType.SetValue(_joinType);
+        _effect.UStartCap.SetValue(MapCap(_pen.StartLineCap));
+        _effect.UEndCap.SetValue(MapCap(_pen.EndLineCap));
+        // The two ends of a dash are separate properties: one dash can be a concave bite and a convex tip - an arrow.
+        _effect.UDashStartCap.SetValue(MapCap(_pen.DashStartCap));
+        _effect.UDashEndCap.SetValue(MapCap(_pen.DashEndCap));
+        _effect.UTrimStart.SetValue(TrimStartValue);
+        _effect.UTrimEnd.SetValue(TrimEndValue);
+        _effect.URuns.SetValue(HasRuns ? 1u : 0u);
+        _effect.UPatternCount.SetValue(PatternCountValue);
 
         foreach (var c in _contours)
         {
-            if (c.PatternBuffer != null)
-            {
-                _effect.Pattern.SetValue(c.PatternBuffer.Acquire((ulong)(c.PatternData.Length * sizeof(float)), out _)
-                    .GetDeviceAddress());
-            }
+            if (c.PatternBuffer != null) _effect.UPattern.SetValue(PatternAddress(c));
+            if (_hasDashes) _effect.UDashOffset.SetValue(DashOffsetOf(c));
 
-            _effect.Points.SetValue(c.PointsBuffer.Acquire(c.PointsBytes, out _).GetDeviceAddress());
-            _effect.Arcs.SetValue(c.ArcsBuffer.Acquire((ulong)(c.ArcsData.Length * sizeof(float)), out _)
-                .GetDeviceAddress());
-            _effect.PointCount.SetValue(c.PointCount);
-            _effect.IsClosed.SetValue(c.IsClosed ? 1u : 0u);
-            _effect.RoundSegments.SetValue(c.RoundSegments);
-            _effect.Batched.SetValue(c.Batched ? 1u : 0u);
+            _effect.UPoints.SetValue(c.PointsBuffer.Acquire(c.PointsBytes, out _).GetDeviceAddress());
+            _effect.UArcs.SetValue(ArcsAddress(c));
+            _effect.UPointCount.SetValue(c.PointCount);
+            _effect.UIsClosed.SetValue(c.IsClosed ? 1u : 0u);
+            _effect.URoundSegments.SetValue(c.RoundSegments);
+            _effect.UBatched.SetValue(c.Batched ? 1u : 0u);
             if (c.Batched)
             {
-                _effect.Contours.SetValue(c.ContoursBuffer
-                    .Acquire((ulong)(c.ContoursData.Length * sizeof(uint)), out _).GetDeviceAddress());
-                _effect.PointContours.SetValue(c.PointContoursBuffer
-                    .Acquire((ulong)(c.PointContoursData.Length * sizeof(uint)), out _).GetDeviceAddress());
+                _effect.UContours.SetValue(ContoursAddress(c));
+                _effect.UPointContours.SetValue(PointContoursAddress(c));
             }
 
-            pulled.Apply();
+            pass.Apply();
             _device.Draw(c.VertexCount, 1);
         }
     }
+
+    private float TrimStartValue => (float)Math.Clamp(_pen.TrimStart, 0.0, 1.0);
+
+    private float TrimEndValue => (float)Math.Clamp(_pen.TrimEnd, 0.0, 1.0);
+
+    // The ends are the runs' whenever there is more to them than the contour's own: a pattern or a trim window.
+    private bool HasRuns => _hasDashes || _pen.TrimStart > 0.0 || _pen.TrimEnd < 1.0;
+
+    private uint PatternCountValue => _hasDashes ? (uint)_pen.Dashes.Count : 0u;
+
+    // The phase is in periods. A fitted contour's pattern is stretched by its own scale, and the offset and phase go with
+    // it, or the ring, seamless in shape, would still drift in phase as it marches.
+    private float DashOffsetOf(Contour c) =>
+        _hasDashes ? (float)(_pen.DashOffset * c.DashScale + _pen.DashPhase * DashPeriod(_pen, c.DashScale)) : 0f;
+
+    private static ulong PatternAddress(Contour c) =>
+        c.PatternBuffer?.Acquire((ulong)(c.PatternData.Length * sizeof(float)), out _).GetDeviceAddress() ?? 0;
+
+    private static ulong ArcsAddress(Contour c) =>
+        c.ArcsBuffer.Acquire((ulong)(c.ArcsData.Length * sizeof(float)), out _).GetDeviceAddress();
+
+    private static ulong ContoursAddress(Contour c) =>
+        c.ContoursBuffer.Acquire((ulong)(c.ContoursData.Length * sizeof(uint)), out _).GetDeviceAddress();
+
+    private static ulong PointContoursAddress(Contour c) =>
+        c.PointContoursBuffer.Acquire((ulong)(c.PointContoursData.Length * sizeof(uint)), out _).GetDeviceAddress();
 }

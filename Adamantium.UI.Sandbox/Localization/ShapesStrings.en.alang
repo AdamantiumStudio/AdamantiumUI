@@ -22,6 +22,8 @@
     <Phrase Key="Join" Text="Join"/>
     <Phrase Key="DashFit" Text="Dash fit"/>
     <Phrase Key="Color" Text="Color"/>
+    <Phrase Key="Brush" Text="Brush"/>
+    <Phrase Key="BrushMapping" Text="Brush laid"/>
 
     <Phrase Key="NurbsParameters" Text="NURBS parameters (a B-spline has none of these):"/>
     <Phrase Key="Weight" Text="Weight"/>
@@ -77,4 +79,18 @@
     <Phrase Key="Bevel" Text="Bevel"/>
     <Phrase Key="Miter" Text="Miter"/>
     <Phrase Key="Round" Text="Round"/>
+    <Phrase Key="Solid" Text="Solid"/>
+    <Phrase Key="LinearGradient" Text="Linear gradient"/>
+    <Phrase Key="RadialGradient" Text="Radial gradient"/>
+    <Phrase Key="Pattern" Text="Pattern"/>
+    <Phrase Key="Noise" Text="Noise"/>
+    <Phrase Key="Image" Text="Image"/>
+    <Phrase Key="Bounds" Text="Over the bounds"/>
+    <Phrase Key="Along" Text="Along the line"/>
+    <Phrase Key="Variant" Text="Variant"/>
+    <Phrase Key="AtlasLayer" Text="Atlas layer"/>
+    <Phrase Key="Passes" Text="Overlaps"/>
+    <Phrase Key="Auto" Text="By the brush"/>
+    <Phrase Key="Blend" Text="One pass"/>
+    <Phrase Key="Union" Text="Two passes"/>
 </Language>

@@ -244,6 +244,11 @@ public partial class RenderCache
     // ...and for geometry units on the instanced collector: which key-arena and slot, so paint patches can reach them.
     private readonly Dictionary<IRenderUnit, (BatchArena Arena, int Slot)> _fillSlotByUnit = new();
 
+    // ...and for units whose stroke rides the stroke batch: the run of records it took and the stroke they describe, so a
+    // move can re-place them while that stroke is still the unit's.
+    private readonly Dictionary<IRenderUnit, (int First, int Count, RenderUnits.GpuStrokeRenderComponent Stroke)>
+        _strokeRunByUnit = new();
+
     // Which halo records a unit occupies. A shape's soft bands used to be written by the WALK alone: a color change
     // patched the shape's own slot at once and left its aura on the old color until some unrelated frame happened to
     // walk - "the aura catches up eventually" was the bug, and this ledger is what a patch needs to answer it.

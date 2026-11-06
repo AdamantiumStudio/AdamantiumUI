@@ -67,6 +67,7 @@ public partial class RenderCache
     private CanvasGridCollector _canvasGridBatch;   // the canvas GROUND: one quad, the fragment deciding if it is on a mark
     private InkCollector _inkBatch;   // INK: a capsule per segment of a stroke, all of them one instanced draw
     private CanvasArrowCollector _arrowBatch;   // ARROWS and plain lines: one quad each, shaft and heads decided per pixel
+    private StrokeBatchCollector _strokeBatch;   // STROKES of one color that are all their unit draws: a record each, one pipeline
     private TextureBatchCollector _texRectBatch;   // SDF family: rounded rects whose fill is SAMPLED from a texture (ImageBrush / NineSliceBrush)
     // The soft band (aura / shadow) in its TWO paint positions. An OUTER band goes under every fill; an INNER one over
     // them - drawn under, it would simply be covered by the shape's own fill. Both lazy: most windows have neither.
@@ -559,6 +560,7 @@ public partial class RenderCache
         if (_canvasGridBatch != null) _canvasGridBatch.TransformsAddress = address;
         if (_inkBatch != null) _inkBatch.TransformsAddress = address;
         if (_arrowBatch != null) _arrowBatch.TransformsAddress = address;
+        if (_strokeBatch != null) _strokeBatch.TransformsAddress = address;
         if (_texRectBatch != null) _texRectBatch.TransformsAddress = address;
         if (_materialBatch != null) _materialBatch.TransformsAddress = address;
         if (_haloUnder != null) _haloUnder.TransformsAddress = address;
@@ -610,12 +612,17 @@ public partial class RenderCache
         if (_patternBatch != null) _patternBatch.DrewMoving = false;
         if (_fractalBatch != null) _fractalBatch.DrewMoving = false;
         if (_instancedFill != null) _instancedFill.DrewMoving = false;
+        _unitDrewMoving = false;
     }
+
+    // A unit drawn on its own this frame drew something that flows with the noise clock (see IRenderUnit.DrawsMoving).
+    private bool _unitDrewMoving;
 
     // Only while its clock moves: a stopped one draws the same picture again.
     private bool DrewMoving() =>
         (Core.Media.NoiseClock.Advancing && (_haloLivingUnder?.DrewMoving == true || _haloLivingOver?.DrewMoving == true
-                                  || _patternBatch?.DrewMoving == true || _instancedFill?.DrewMoving == true))
+                                  || _patternBatch?.DrewMoving == true || _instancedFill?.DrewMoving == true
+                                  || _unitDrewMoving))
         || (Core.Media.FractalClock.Advancing && _fractalBatch?.DrewMoving == true);
 
     /// <summary>Renders every cached unit with no scissor management. Used by GPU-free tests (no device).</summary>
@@ -888,6 +895,7 @@ public partial class RenderCache
             _boundByUnit.Clear();
             _fractalKindByUnit.Clear();
             _fillSlotByUnit.Clear();
+            _strokeRunByUnit.Clear();
             _haloRunsByUnit.Clear();
             _matSegNode.Clear();
             _unitsByBrush.Clear();
@@ -927,6 +935,8 @@ public partial class RenderCache
             _canvasGridBatch ??= new CanvasGridCollector { BatchId = 14 };
             _inkBatch ??= new InkCollector { BatchId = 15 };
             _arrowBatch ??= new CanvasArrowCollector { BatchId = 16 };
+            _strokeBatch ??= new StrokeBatchCollector { BatchId = 18, OnStale = StrokesStale };   // 17 is the instanced fill's
+            _strokeBatch.RenderScale = (float)_renderScale;
             // Lazy, like the textured batch: a material owns a capture texture, and a tree without one should not pay
             // for it.
             if (_materialBatch != null) _materialBatch.BeginFrame(device);
@@ -941,6 +951,7 @@ public partial class RenderCache
             _canvasGridBatch.BeginFrame(device);
             _inkBatch.BeginFrame(device);
             _arrowBatch.BeginFrame(device);
+            _strokeBatch.BeginFrame(device);
             // Created lazily (below, on the first textured fill) - but once it exists it needs its frame reset like any
             // other collector. Leaving it out is what made a nine-slice draw for exactly ONE frame and then vanish.
             _texRectBatch?.BeginFrame(device);
@@ -1872,13 +1883,62 @@ public partial class RenderCache
                 }
                 tgru.FillInstanced = false;
             }
-            else if (device != null && (_rectBatch.Active || _ellipseBatch.Active || _gradientRectBatch.Active || _gradientEllipseBatch.Active || _patternBatch.Active || _fractalBatch.Active || _textBatch.Active || (_instancedFill?.Active ?? false) || (_materialBatch?.Active ?? false) || (_canvasGridBatch?.Active ?? false)))
+            else if (device != null && !_cloneMatrix.HasValue && StrokeBatchCollector.StrokeOf(unit) is { } batchStroke
+                     && unit is IStrokeOnlyUnit strokeUnit)
+            {
+                // A unit that draws nothing but a stroke of one color - a map's road, a chart's line: a record in the
+                // stroke batch, which draws a run of them under one pipeline. The ribbon reaches past the element's box
+                // by up to a miter's length, and the overlap tests have to see that far. Copies of a clone run draw
+                // their own, as each must blend over the copy before it.
+                var strokeBounds = LogicalBounds(unit.Component, wt).Inflate(batchStroke.LocalReach * WorldScale(wt));
+                if (ClipGroupChanged(scissor, unit.Component) || OverlapsHigherLayer(10, strokeBounds, unit.Component)
+                    || OverlapsFlushedAfterStrokes(strokeBounds, unit.Component))
+                {
+                    FlushBatches(device, fullScissor, ref scissorNarrowed);
+                }
+
+                var strokeBake = strokeUnit.PlaceBaked(ResolveBake(device, unit, wt, out var slot4Stroke));
+                FadeBySlot(unit);
+                var strokeClip = RoundedClipSlot(unit.Component, fullScissor);
+                var strokeAdd = _strokeBatch.TryAdd(strokeUnit, batchStroke, strokeBake, slot4Stroke, unit.FadeSlot,
+                    strokeClip, unit.RenderData.Opacity, scissor, strokeBounds);
+                if (strokeAdd == StrokeBatchCollector.Added.Breaks)
+                {
+                    // Another style or element than the pending segment's: a translucent segment blends as one, so it
+                    // ends here.
+                    FlushBatches(device, fullScissor, ref scissorNarrowed);
+                    strokeAdd = _strokeBatch.TryAdd(strokeUnit, batchStroke, strokeBake, slot4Stroke, unit.FadeSlot,
+                        strokeClip, unit.RenderData.Opacity, scissor, strokeBounds);
+                }
+
+                if (strokeAdd == StrokeBatchCollector.Added.Yes)
+                {
+                    // A stroke is many records, which the slot patch cannot re-bake: a change to it is drawn by a walk. A
+                    // move only re-places them, which it can - see PatchSlot.
+                    if (_recording)
+                    {
+                        group.NotBatchable("strokeBatch");
+                        _strokeRunByUnit[unit] = (_strokeBatch.LastFirst, batchStroke.RecordCount, batchStroke);
+                    }
+
+                    _batchScissor = scissor;
+                    _batchClip = ClipOwnerOf(unit.Component);
+                    _batchOpen = true;
+                    continue;
+                }
+
+                // Drawn by itself below, so whatever is pending under it goes first. Out of room, it is drawn whole by
+                // the next walk, its buffer grown, and this frame is held back - as a fill out of room is.
+                if (strokeAdd == StrokeBatchCollector.Added.NoRoom && _recording) _deferredForRoom = true;
+                FlushBatches(device, fullScissor, ref scissorNarrowed);
+            }
+            else if (device != null && (_rectBatch.Active || _ellipseBatch.Active || _gradientRectBatch.Active || _gradientEllipseBatch.Active || _patternBatch.Active || _fractalBatch.Active || _textBatch.Active || (_instancedFill?.Active ?? false) || (_materialBatch?.Active ?? false) || (_canvasGridBatch?.Active ?? false) || (_strokeBatch?.Active ?? false)))
             {
                 // A non-batchable unit that overlaps any pending batch: flush them first so this unit paints OVER them, as
                 // its later source order requires. Spatially disjoint units (a list's items) don't flush.
                 var lb = LogicalBounds(unit.Component, wt);
                 if (_rectBatch.OverlapsPending(lb) || _ellipseBatch.OverlapsPending(lb) || _gradientRectBatch.OverlapsPending(lb) || _gradientEllipseBatch.OverlapsPending(lb) || _patternBatch.OverlapsPending(lb) || _fractalBatch.OverlapsPending(lb) || _textBatch.OverlapsPending(lb) || (_instancedFill?.OverlapsPending(lb) ?? false)
-                    || (_materialBatch?.OverlapsPending(lb) ?? false) || (_canvasGridBatch?.OverlapsPending(lb) ?? false))
+                    || (_materialBatch?.OverlapsPending(lb) ?? false) || (_canvasGridBatch?.OverlapsPending(lb) ?? false) || (_strokeBatch?.OverlapsPending(lb) ?? false))
                     FlushBatches(device, fullScissor, ref scissorNarrowed);
             }
             else if (device == null && unit is RectangleRenderUnit rruNoDev)
@@ -1918,6 +1978,7 @@ public partial class RenderCache
             if (_recording) group.NotBatchable($"perUnitDraw<{unit.GetType().Name}>");
             RefreshOverlayFade(unit);   // the chain from the table, as the replay does it - see RefreshOverlayFade
             unit.Render();
+            _unitDrewMoving |= unit.DrawsMoving;
             if (_recording) RecordOp(new RenderOp { Kind = RenderOpKind.Unit, Unit = unit, Fade = unit.FadeSlot, Order = _recordOrder });
             }
 
@@ -2017,6 +2078,26 @@ public partial class RenderCache
         return false;
     }
 
+    // The batches FlushBatches draws after the strokes: anything pending in them was painted earlier, so a stroke over it
+    // has to flush them first - but not its own element's inner band, which belongs over it.
+    private bool OverlapsFlushedAfterStrokes(Rect lb, IUIComponent owner) =>
+        (_instancedFill?.OverlapsPending(lb) ?? false) || (_materialBatch?.OverlapsPending(lb) ?? false) ||
+        (!ReferenceEquals(owner, _haloOverOwner) &&
+         ((_haloOver?.OverlapsPending(lb) ?? false) || (_haloLivingOver?.OverlapsPending(lb) ?? false))) ||
+        _textBatch.OverlapsPending(lb);
+
+    // A batched stroke whose records no longer say what it is - replaced, or now needing the union - is drawn right by the
+    // next walk, asked for here.
+    private void StrokesStale(string reason)
+    {
+        StreamStaleBecause(reason);
+        Core.LoopSignal.Request();
+    }
+
+    // How many window units one local unit of `world` spans, on average over its two axes.
+    private static double WorldScale(Matrix4x4F world) =>
+        Math.Sqrt(Math.Abs((double)world.M11 * world.M22 - (double)world.M12 * world.M21));
+
     // Batches flush bottom-up by layer, so a unit overlapping a pending higher-layer batch must flush it first to keep
     // paint order.
     private bool OverlapsHigherLayer(int layer, Rect lb, IUIComponent owner = null)
@@ -2097,6 +2178,12 @@ public partial class RenderCache
 
         // ARROWS and plain lines, on the same layer and for the same reason as the ink beside them.
         if (layer < 9 && (_arrowBatch?.OverlapsPending(lb) ?? false))
+        {
+            return true;
+        }
+
+        // STROKES flush right after the arrows, so everything flushed before them that comes later has to flush them first.
+        if (layer < 10 && (_strokeBatch?.OverlapsPending(lb) ?? false))
         {
             return true;
         }
@@ -2548,7 +2635,7 @@ public partial class RenderCache
     // Does this unit still occupy records in some arena? The slot maps are exactly that ledger.
     private bool HoldsInstances(IRenderUnit u) =>
         _rectSlotByUnit.ContainsKey(u) || _sdfSlotByUnit.ContainsKey(u)
-        || _textRunByUnit.ContainsKey(u) || _fillSlotByUnit.ContainsKey(u);
+        || _textRunByUnit.ContainsKey(u) || _fillSlotByUnit.ContainsKey(u) || _strokeRunByUnit.ContainsKey(u);
 
     /// <summary>How many records the last walk gave this textured unit - 1 for a picture, 9 for a nine-slice. Units
     /// that predate the run map (or never took one) answer 1, which is what a single-slot entry means.</summary>
@@ -2645,6 +2732,11 @@ public partial class RenderCache
                 && atlas == run.Atlas
                 && tc.GlyphRun.Count == run.Count;
 
+        // A stroke in the stroke batch is re-placed in its records - while it is still the stroke they describe and still
+        // batched. A unit that built a new stroke (another join, a contour more) takes the walk.
+        if (_strokeRunByUnit.TryGetValue(u, out var strokeRun))
+            return StrokeBatchCollector.StrokeOf(u) is { } stroke && ReferenceEquals(stroke, strokeRun.Stroke);
+
         // A geometry unit whose FILL rides the instanced collector owns one record there, and that arena can re-bake a
         // record in place. Only while the fill is still instanced: a unit that fell back to a per-unit draw this frame
         // (rotated, or the buffer overflowed) has no record to patch, and its slot number belongs to whoever took it.
@@ -2701,6 +2793,13 @@ public partial class RenderCache
         // The soft bands first: they are a SEPARATE record from the fill, so a repaint that touches only the fill left
         // a shape recolored and its aura on the old color until an unrelated frame walked the scene.
         PatchHalo(device, u, bakeWorld, transformSlot);
+
+        if (_strokeRunByUnit.TryGetValue(u, out var strokeRun) && u is IStrokeOnlyUnit strokeUnit)
+        {
+            FadeBySlot(u);
+            return _strokeBatch.Place(device, strokeRun.First, strokeRun.Count, strokeUnit.PlaceBaked(bakeWorld),
+                transformSlot, u.FadeSlot, RoundedClipSlot(u.Component, _frameScissor), u.RenderData.Opacity);
+        }
 
         if (u is RectangleRenderUnit rru)
         {
@@ -3397,6 +3496,7 @@ public partial class RenderCache
         14 => _canvasGridBatch,
         15 => _inkBatch,
         16 => _arrowBatch,
+        18 => _strokeBatch,
         _ => _textBatch
     };
 
