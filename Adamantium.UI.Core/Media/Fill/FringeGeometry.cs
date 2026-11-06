@@ -8,6 +8,10 @@ namespace Adamantium.UI.Core.Media.Fill;
 // ring. The ring stores edge directions, not width; the vertex shader builds a 1px miter, so rings are scale-free.
 internal static class FringeGeometry
 {
+    private const int MaxNestingGridSide = 256;
+    private const int LargeBoxShare = 4;
+    private const int MostCellsPerContour = 16;
+
     /// <summary>Each drawable contour (>= 3 points) with the sign that makes its fringe feather AWAY from the fill.</summary>
     public static List<(Vector2<double>[] Points, float Winding)> Build(IReadOnlyList<(Vector2<double>[] Points, bool IsClosed)> contours)
     {
@@ -74,21 +78,114 @@ internal static class FringeGeometry
     // must feather INWARD (toward the hole), opposite an outer contour. Winding alone can't tell them apart (the
     // tessellator emits holes with the same winding as outers), so flip holes here. A probe VERTEX is used, not the
     // centroid - a frame-shaped outer's centroid can fall inside its own hole and misclassify it.
+    //
+    // A fill may have thousands of contours - a map tile's buildings - so each contour's box goes into the cells of a grid
+    // it covers, and a probe asks only the contours of its own cell and the few large ones.
     private static void ApplyNesting(List<(Vector2<double>[] Points, float Winding)> built)
     {
-        var boxes = new (double MinX, double MinY, double MaxX, double MaxY)[built.Count];
-        for (var j = 0; j < built.Count; j++) boxes[j] = BoxOf(built[j].Points);
+        var count = built.Count;
+        if (count < 2) return;
 
-        for (var i = 0; i < built.Count; i++)
+        var boxes = new (double MinX, double MinY, double MaxX, double MaxY)[count];
+        double minX = double.MaxValue, minY = double.MaxValue, maxX = double.MinValue, maxY = double.MinValue;
+        for (var j = 0; j < count; j++)
+        {
+            var box = boxes[j] = BoxOf(built[j].Points);
+            minX = Math.Min(minX, box.MinX);
+            minY = Math.Min(minY, box.MinY);
+            maxX = Math.Max(maxX, box.MaxX);
+            maxY = Math.Max(maxY, box.MaxY);
+        }
+
+        bool Holds(int j, int i, Vector2<double> probe)
+        {
+            var box = boxes[j];
+            return j != i && probe.X >= box.MinX && probe.X <= box.MaxX && probe.Y >= box.MinY && probe.Y <= box.MaxY &&
+                   PointInPolygon(probe, built[j].Points);
+        }
+
+        // Along an axis with no extent - every contour on one line - or none that can be divided, that axis is one cell.
+        var side = Math.Clamp((int)Math.Sqrt(count), 1, MaxNestingGridSide);
+        var columns = maxX - minX is var width && width > 0 && double.IsFinite(width) ? side : 1;
+        var rows = maxY - minY is var height && height > 0 && double.IsFinite(height) ? side : 1;
+        var cellWidth = columns > 1 ? width / columns : 1;
+        var cellHeight = rows > 1 ? height / rows : 1;
+        int Column(double x) => columns == 1 ? 0 : Math.Clamp((int)((x - minX) / cellWidth), 0, columns - 1);
+        int Row(double y) => rows == 1 ? 0 : Math.Clamp((int)((y - minY) / cellHeight), 0, rows - 1);
+
+        // Each box's cells, worked out once. One over a quarter of the cells or more - a tile's ground, a frame round
+        // everything - is asked by every probe rather than written into all those cells.
+        var cells = columns * rows;
+        var spans = new (int Column0, int Column1, int Row0, int Row1)[count];
+        var large = new List<int>();
+        var starts = new int[cells + 1];
+        for (var j = 0; j < count; j++)
+        {
+            var box = boxes[j];
+            var span = spans[j] = (Column(box.MinX), Column(box.MaxX), Row(box.MinY), Row(box.MaxY));
+            var covered = Math.Max(0, span.Column1 - span.Column0 + 1) * Math.Max(0, span.Row1 - span.Row0 + 1);
+            if (covered * LargeBoxShare >= cells)
+            {
+                large.Add(j);
+                spans[j] = (0, -1, 0, -1);
+                continue;
+            }
+
+            for (var row = span.Row0; row <= span.Row1; row++)
+            for (var column = span.Column0; column <= span.Column1; column++)
+                starts[row * columns + column + 1]++;
+        }
+
+        for (var cell = 0; cell < cells; cell++) starts[cell + 1] += starts[cell];
+
+        // Many middling boxes - strips each over a fifth of the tile - would fill the grid as full as asking every box;
+        // then it is not built at all.
+        if (starts[cells] > MostCellsPerContour * count)
+        {
+            for (var i = 0; i < count; i++)
+            {
+                var probe = built[i].Points[0];
+                var nesting = 0;
+                for (var j = 0; j < count; j++)
+                {
+                    if (Holds(j, i, probe)) nesting++;
+                }
+
+                if ((nesting & 1) == 1) built[i] = (built[i].Points, -built[i].Winding);
+            }
+
+            return;
+        }
+
+        // The cells' contours back to back, laid out by the running totals above.
+        var members = new int[starts[cells]];
+        var filled = new int[cells];
+        for (var j = 0; j < count; j++)
+        {
+            var span = spans[j];
+            for (var row = span.Row0; row <= span.Row1; row++)
+            for (var column = span.Column0; column <= span.Column1; column++)
+            {
+                var cell = row * columns + column;
+                members[starts[cell] + filled[cell]++] = j;
+            }
+        }
+
+        for (var i = 0; i < count; i++)
         {
             var probe = built[i].Points[0];
+            var cell = Row(probe.Y) * columns + Column(probe.X);
             var nesting = 0;
-            for (var j = 0; j < built.Count; j++)
+            for (var k = starts[cell]; k < starts[cell + 1]; k++)
             {
-                var box = boxes[j];
-                if (j == i || probe.X < box.MinX || probe.X > box.MaxX || probe.Y < box.MinY || probe.Y > box.MaxY) continue;
-                if (PointInPolygon(probe, built[j].Points)) nesting++;
+                if (Holds(members[k], i, probe)) nesting++;
             }
+
+            foreach (var j in large)
+            {
+                if (Holds(j, i, probe)) nesting++;
+            }
+
             if ((nesting & 1) == 1) built[i] = (built[i].Points, -built[i].Winding);
         }
     }

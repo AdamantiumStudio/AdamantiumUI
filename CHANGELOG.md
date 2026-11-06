@@ -59,6 +59,9 @@ All packages share one version.
 
 ### Changed
 
+- A fill of thousands of contours - a map tile's buildings - finds its holes in a fraction of the time: each contour
+  is asked only of those whose box shares its cell of a grid, not of every other. A vector map's tile at zoom 14 is
+  made ready in about a third of the time it took (IGN's Plan, Paris: 316 ms a tile to 69).
 - **Breaking:** `ICanvasScene` hands over all it holds as `Items`, in paint order; a scene of an application's own
   implements it. The canvas asks it for everything rather than for a region the size of the plane.
 - **Breaking:** the camera of an `InfiniteCanvas` is matrices. Every item draws in WORLD units from an origin of its
