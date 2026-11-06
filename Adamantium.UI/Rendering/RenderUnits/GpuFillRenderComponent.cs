@@ -25,6 +25,7 @@ public sealed class GpuFillRenderComponent : UIRenderComponent
 
     private readonly IGraphicsDevice _device;
     private readonly FillFringeEffect _effect;
+    private readonly GradientUniforms _gradient;
     private readonly ReusableBuffer _ringBuffer;
     private RingEdge[] _ring;
     private Vector4F _localBounds;   // shape local bounds (minX, minY, sizeX, sizeY): the fragment->gradient uv basis
@@ -42,10 +43,11 @@ public sealed class GpuFillRenderComponent : UIRenderComponent
     {
         _device = device;
         _effect = effect;
+        _gradient = new GradientUniforms(effect);
         Brush = brush;
 
         _ring = FringeGeometry.BuildRing(FringeGeometry.Build(contours), cut);
-        _localBounds = ComputeLocalBounds(contours);
+        _localBounds = GradientUniforms.BoundsOf(contours);
 
         // Rented from the buffer manager (ReusableBuffer), not allocated per frame: a same-size geometry change (a
         // resize) rewrites the ring into the existing slot with no Vulkan allocation.
@@ -53,23 +55,6 @@ public sealed class GpuFillRenderComponent : UIRenderComponent
             BufferUsageFlags.StorageBuffer | BufferUsageFlags.ShaderDeviceAddress, FillMemory, "fill outline"));
         _ringBuffer.Reserve(RingBytes);
         _ringBuffer.Invalidate();
-    }
-
-    // Bounding box of all contour points (local geometry space) as (minX, minY, sizeX, sizeY) - the gradient uv basis, so
-    // the fringe evaluates the SAME gradient as the fill (which uses the geometry's local bounds).
-    private static Vector4F ComputeLocalBounds(IReadOnlyList<(Vector2<double>[] Points, bool IsClosed)> contours)
-    {
-        float minX = float.MaxValue, minY = float.MaxValue, maxX = float.MinValue, maxY = float.MinValue;
-        foreach (var (points, _) in contours)
-            foreach (var p in points)
-            {
-                if (p.X < minX) minX = (float)p.X;
-                if (p.Y < minY) minY = (float)p.Y;
-                if (p.X > maxX) maxX = (float)p.X;
-                if (p.Y > maxY) maxY = (float)p.Y;
-            }
-        if (minX > maxX) return new Vector4F(0, 0, 1, 1);
-        return new Vector4F(minX, minY, Math.Max(maxX - minX, 1e-4f), Math.Max(maxY - minY, 1e-4f));
     }
 
     // Same-topology update (a resize): a re-tessellation that yields a ring of the SAME size rewrites it into the
@@ -84,7 +69,7 @@ public sealed class GpuFillRenderComponent : UIRenderComponent
         _ring = ring;
         _ringBuffer.Invalidate();   // re-upload the ring to the current slot
         Brush = brush;
-        _localBounds = ComputeLocalBounds(contours);
+        _localBounds = GradientUniforms.BoundsOf(contours);
         return true;
     }
 
@@ -112,20 +97,21 @@ public sealed class GpuFillRenderComponent : UIRenderComponent
         _effect.FringePixels.SetValue(DeviceFringePx);
         if (Brush is GradientBrush g)
         {
-            SetGradientUniforms(g);
-            _effect.IsGradient.SetValue(1);
+            // The same gradient as the fill (packed by the shared GradientBake, same as the fill batch), so the AA edge
+            // matches the fill instead of one flat color.
+            _gradient.Set(g, (float)(g.Opacity * RenderData.Opacity), _localBounds);
         }
         else if (Brush is SolidColorBrush solid)
         {
             var color = solid.Color.ToVector4();
             color.W *= (float)solid.Opacity * RenderData.Opacity;   // color alpha x brush Opacity x element Opacity
             _effect.FillColor.SetValue(color);
-            _effect.IsGradient.SetValue(0);
+            _gradient.Clear();
         }
         else   // PatternBrush / NoiseBrush: a flat representative edge color (the 1px ring doesn't evaluate the pattern)
         {
             _effect.FillColor.SetValue(PatternFringeColor(Brush));
-            _effect.IsGradient.SetValue(0);
+            _gradient.Clear();
         }
 
         _device.VertexType = null;   // the ring is read by address, six corners per edge
@@ -143,25 +129,6 @@ public sealed class GpuFillRenderComponent : UIRenderComponent
         _device.Draw((uint)_ring.Length * 6, 1);
     }
 
-    // Push the fill gradient into the fringe Draw uniforms (packed by the shared GradientBake, same as the fill batch), so
-    // the ring is colored by the gradient at each fragment - the AA edge matches the fill instead of one flat color.
-    private void SetGradientUniforms(GradientBrush g)
-    {
-        var alpha = (float)(g.Opacity * RenderData.Opacity);
-        Span<Vector4F> cols = stackalloc Vector4F[GradientBake.MaxStops];
-        Span<float> offs = stackalloc float[GradientBake.MaxStops];
-        var count = GradientBake.PackStops(g, alpha, cols, offs);
-        var type = GradientBake.PackGeometry(g, out var geom0, out var geom1);
-
-        _effect.GParams.SetValue(new Vector4F(0, type, count, (float)g.SpreadMethod));
-        _effect.GGeom0.SetValue(geom0);
-        _effect.GGeom1.SetValue(geom1);
-        _effect.GLocalBounds.SetValue(_localBounds);
-        _effect.GS0.SetValue(cols[0]); _effect.GS1.SetValue(cols[1]); _effect.GS2.SetValue(cols[2]); _effect.GS3.SetValue(cols[3]);
-        _effect.GS4.SetValue(cols[4]); _effect.GS5.SetValue(cols[5]); _effect.GS6.SetValue(cols[6]); _effect.GS7.SetValue(cols[7]);
-        _effect.GOff0.SetValue(new Vector4F(offs[0], offs[1], offs[2], offs[3]));
-        _effect.GOff1.SetValue(new Vector4F(offs[4], offs[5], offs[6], offs[7]));
-    }
 
     // Analytic-AA fringe color for a procedural pattern/noise fill: the ring is 1px, so rather than evaluate the whole
     // pattern there (a heavy fringe shader), color it with the brush's LOW color (Color1). A procedural field is mostly its

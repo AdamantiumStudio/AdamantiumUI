@@ -28,6 +28,10 @@ public interface IRenderUnit : IDisposable
     /// <summary>After <see cref="PreRender"/>: its picture waits for a frame submitted elsewhere.</summary>
     bool AwaitsFrame { get; }
 
+    /// <summary>What it draws changes with the shared noise clock alone - a stroke in an animated noise - so the surface
+    /// wants the next frame while that clock moves.</summary>
+    bool DrawsMoving => false;
+
     /// <summary>Out-of-render-pass work recorded before BeginRendering (e.g. shared-surface latch copies).</summary>
     void PreRender();
     void Render();

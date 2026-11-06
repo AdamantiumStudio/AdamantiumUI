@@ -21,6 +21,12 @@ public class Pen : IEquatable<Pen>
    /// Honored by strokes of geometry.</summary>
    public Double MinimumDeviceThickness { get; init; }
 
+   /// <summary>How <see cref="Brush"/> is laid onto the stroke: over the shape's bounds, or along the line.</summary>
+   public PenBrushMapping BrushMapping { get; init; }
+
+   /// <summary>How the stroke paints where it crosses itself: in one pass, or in two that paint each pixel once.</summary>
+   public PenOverlap Overlap { get; init; }
+
    public Double DashOffset { get; }
 
    private AdamantiumCollection<Double> _dashStrokeArray;
@@ -142,6 +148,8 @@ public class Pen : IEquatable<Pen>
       Thickness = of.Thickness;
       ThicknessUnit = of.ThicknessUnit;
       MinimumDeviceThickness = of.MinimumDeviceThickness;
+      BrushMapping = of.BrushMapping;
+      Overlap = of.Overlap;
       DashOffset = of.DashOffset;
       _dashes = dashes;
       _isRenderCopy = true;
@@ -169,7 +177,13 @@ public class Pen : IEquatable<Pen>
       DashStartCap,
       DashEndCap,
       FitDashesToContour,
-      DashPhase) { ThicknessUnit = ThicknessUnit, MinimumDeviceThickness = MinimumDeviceThickness };
+      DashPhase)
+   {
+      ThicknessUnit = ThicknessUnit,
+      MinimumDeviceThickness = MinimumDeviceThickness,
+      BrushMapping = BrushMapping,
+      Overlap = Overlap,
+   };
 
    public bool Equals(Pen other)
    {
@@ -184,7 +198,8 @@ public class Pen : IEquatable<Pen>
              // property missing from here is a property that silently cannot be animated (the marching ants stopped
              // moving the moment DashPhase was added and left out).
              DashPhase.Equals(other.DashPhase) && FitDashesToContour == other.FitDashesToContour &&
-             ThicknessUnit == other.ThicknessUnit && MinimumDeviceThickness.Equals(other.MinimumDeviceThickness);
+             ThicknessUnit == other.ThicknessUnit && MinimumDeviceThickness.Equals(other.MinimumDeviceThickness) &&
+             BrushMapping == other.BrushMapping && Overlap == other.Overlap;
    }
 
    public override bool Equals(object obj)
@@ -202,6 +217,6 @@ public class Pen : IEquatable<Pen>
          // pens with different collection instances must not land in different buckets.
          HashCode.Combine(Brush, Thickness, DashOffset, Dashes.Count, (int)StartLineCap, (int)EndLineCap, (int)PenLineJoin),
          HashCode.Combine(TrimStart, TrimEnd, (int)DashStartCap, (int)DashEndCap, DashPhase, FitDashesToContour),
-         (int)ThicknessUnit, MinimumDeviceThickness);
+         (int)ThicknessUnit, MinimumDeviceThickness, (int)BrushMapping, (int)Overlap);
    }
 }

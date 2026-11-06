@@ -11,10 +11,21 @@ All packages share one version.
   `DrawText` take one in new overloads; writing `Placement.Matrix` moves what was drawn with it by rewriting one matrix
   on the GPU - the element is not recorded again. A camera over many objects gives each object its own placement.
 
-- `Pen.ThicknessUnit`: a solid stroke of geometry can be as wide in the window's pixels under any scale and on any
-  monitor - a road on a zoomed map - and `Pen.MinimumDeviceThickness` keeps a line scaled far down at least that many pixels wide. Dash lengths stay
-  in local units; strokes in a gradient, and the batched outlines of rounded rectangles, ellipses and regular polygons,
-  take the thickness in local units.
+- `Pen.ThicknessUnit`: a stroke of geometry can be as wide in the window's pixels under any scale and on any monitor -
+  a road on a zoomed map - and `Pen.MinimumDeviceThickness` keeps a line scaled far down at least that many pixels
+  wide. Dash lengths stay in local units; the batched outlines of rounded rectangles, ellipses and regular polygons take
+  the thickness in local units.
+
+- A stroke can be painted with any brush: gradients (conic and mesh too), `PatternBrush`, `NoiseBrush` (animated as
+  well) and pictures - `ImageBrush` (a layer of a `TextureArrayImage` too), `DrawingBrush`, `VisualBrush`. A brush with no form along a line - fractal,
+  material, nine-slice, ink, the canvas brushes - strokes in its main color. Until now a stroke in anything but a solid
+  color drew nothing.
+
+- `Pen.BrushMapping` and `Shape.StrokeBrushMapping`: the stroke's brush laid over the shape's bounds, as a fill brush is,
+  or along the line - a gradient from one end to the other, a pattern or a picture following every bend.
+
+- `Pen.Overlap` and `Shape.StrokeOverlap`: where a stroke crosses itself, one pass (a translucent brush laid on twice)
+  or two (every pixel painted once). By default the brush decides; a picture, never known to be opaque, takes two.
 
 - `Rect.FromPoints` of a span of points.
 
@@ -30,7 +41,23 @@ All packages share one version.
   live sets while other threads marked them. Every set of the dirty marks is locked by a lock of its own, not by the
   set itself.
 
+- Dashes, trim and the shaped ends of dashes are drawn per pixel along the stroke: a dashed or trimmed stroke is no
+  longer cut into pieces by a compute pass first, so one whose ends move or whose dashes change is updated in place.
+
+- Strokes of one color that are all their element draws - a map's roads, a chart's lines, `Line` and unfilled `Path`
+  shapes - are drawn as one batch: a record each under one pipeline, where each was a draw of its own with its own
+  state. They follow their transform slot, so a camera or a drag moves them without recording them again. One
+  element's translucent strokes of one color blend once where they cross, as a single stroke does; separate elements
+  still darken where they overlap.
+
+### Removed
+
+- `StrokeGeometry`, which tessellated strokes on the CPU, and `RenderUnit.UseGpuStroke`: every stroke is drawn on the GPU.
+
 ### Fixed
+
+- The anti-aliased edge of a shape filled with a mesh gradient takes the gradient's corner colors rather than one of
+  them.
 
 - Fewer frames walk the whole scene:
   - glyphs landing in the atlas patch the texts that waited for them in that frame, rather than marking everything

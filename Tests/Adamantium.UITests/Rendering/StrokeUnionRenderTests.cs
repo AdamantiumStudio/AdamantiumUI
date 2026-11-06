@@ -7,7 +7,8 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests.Rendering;
 
-// A translucent self-crossing stroke blends once at the crossing; two separate strokes crossing still darken.
+// A translucent self-crossing stroke blends once at the crossing, as do one element's strokes of one style; two separate
+// elements' strokes crossing still darken.
 [TestFixture]
 [Category("Gpu")]
 public class StrokeUnionRenderTests
@@ -32,7 +33,8 @@ public class StrokeUnionRenderTests
         return g;
     }
 
-    private static byte[] Render(System.Action<Adamantium.UI.Core.Graphics.IDrawingSession> draw)
+    private static byte[] Render(System.Action<Adamantium.UI.Core.Graphics.IDrawingSession> draw,
+        System.Action<Adamantium.UI.Core.Graphics.IDrawingSession> second = null)
     {
         var device = GpuTestDevice.Device;
         var factory = new RenderUnitFactory(device, new StubResourceFactory());
@@ -41,6 +43,13 @@ public class StrokeUnionRenderTests
         var content = new TestControl { RenderAction = draw };
         content.Bounds = new Rect(0, 0, Dim, Dim);
         content.RenderSize = new Size<double>(Dim, Dim);
+        if (second != null)
+        {
+            var other = new TestControl { RenderAction = second };
+            other.Bounds = new Rect(0, 0, Dim, Dim);
+            other.RenderSize = new Size<double>(Dim, Dim);
+            content.Add(other);
+        }
 
         var root = new VisualRoot(content, Dim, Dim);
         Assert.That(renderer.RenderFrame(root), Is.True, "off-screen frame must render");
@@ -116,15 +125,35 @@ public class StrokeUnionRenderTests
     public void TwoSeparateStrokesStillDarkenWhereTheyCross()
     {
         var pen = new Pen(new SolidColorBrush(Translucent), 12);
-        var pixels = Render(s =>
-        {
-            s.DrawGeometry(null, new LineGeometry(new Vector2<double>(40, 40), new Vector2<double>(200, 200)), pen);
-            s.DrawGeometry(null, new LineGeometry(new Vector2<double>(40, 200), new Vector2<double>(200, 40)), pen);
-        });
+        var pixels = Render(
+            s => s.DrawGeometry(null, new LineGeometry(new Vector2<double>(40, 40), new Vector2<double>(200, 200)), pen),
+            s => s.DrawGeometry(null, new LineGeometry(new Vector2<double>(40, 200), new Vector2<double>(200, 40)), pen));
 
         Assert.That(Alpha(pixels, 70, 70), Is.EqualTo(SingleBlend).Within(3), "a plain stretch of one line is one blend");
         Assert.That(Alpha(pixels, 120, 120), Is.EqualTo(DoubleBlend).Within(3),
             "two separate elements must still blend twice where they overlap");
+    }
+
+    // One element's strokes of one style - a map's roads of one layer - are batched together and blend once, as one
+    // stroke does; another color is another layer and blends over it.
+    [Test]
+    public void OneElementsStrokesOfOneStyleBlendOnce_AnotherColorBlendsOverThem()
+    {
+        var pen = new Pen(new SolidColorBrush(Translucent), 12);
+        var other = new Pen(new SolidColorBrush(Color.FromRgba(238, 34, 34, 128)), 12);
+        var pixels = Render(s =>
+        {
+            s.DrawGeometry(null, new LineGeometry(new Vector2<double>(40, 40), new Vector2<double>(200, 200)), pen);
+            s.DrawGeometry(null, new LineGeometry(new Vector2<double>(40, 200), new Vector2<double>(200, 40)), pen);
+            s.DrawGeometry(null, new LineGeometry(new Vector2<double>(160, 20), new Vector2<double>(160, 220)), other);
+        });
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(Alpha(pixels, 70, 70), Is.EqualTo(SingleBlend).Within(3), "a plain stretch of one line");
+            Assert.That(Alpha(pixels, 120, 120), Is.EqualTo(SingleBlend).Within(3), "where the two of one style cross");
+            Assert.That(Alpha(pixels, 160, 160), Is.EqualTo(DoubleBlend).Within(3), "the other color over them");
+        });
     }
 
     // The unit factory needs one, but nothing here draws a texture or text.

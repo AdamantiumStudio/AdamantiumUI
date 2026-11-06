@@ -1,57 +1,225 @@
-// GPU stroke. A continuous polyline is drawn straight from its points (StrokePullVS), one quad per segment and a join fan
-// per point; one cut into dashes with shaped ends or trimmed is cut by StrokeDashCut (compute) into a ribbon StrokeVS
-// draws. Caps are a per-fragment mask, not geometry, since concave caps must subtract: each vertex carries its position
-// in the straight end frames of its piece (a dash, trim run or open contour).
+// GPU stroke, drawn straight from its points (StrokePullVS): one quad per segment and a join fan per point. Nothing is
+// cut: caps, the trim window and dash runs are per-fragment masks along the ribbon, since concave caps must subtract.
 
-// --- stroke globals ---
-float2* Points;           // polyline points (PointCount of them) - every contour's, one after another, when batched
-float* Output;            // output vertices, VertexFloats each (see WriteVert)
-uint PointCount;          // continuous mode: polyline points (all contours' when batched). dash mode: piece-points.
-uint IsClosed;            // 0 = open polyline (flat ends), 1 = closed loop (wrap-around miters + closing pair)
+#include "Includes/CommonData.fxh"
+#include "Includes/ClipMath.fxh"
 
-// --- batched continuous mode: many contours in one dispatch ---
-uint Batched;             // 0 = Points is one contour; 1 = Points holds many, Contours says which is where
-uint* Contours;           // per contour: first point, point count, closed (0/1) - three uints each
-uint* PointContours;      // per point of Points: the contour it belongs to
+// --- the stroke being drawn ---
+// Read by every helper below. Invocation-private: a lone stroke's draw fills them from its uniforms (the U-named globals
+// further down), a batch of strokes from the record its instance names - see LoadUniforms and LoadRecord.
+static float2* Points;           // polyline points (PointCount of them) - every contour's, one after another, when batched
+static uint PointCount;          // polyline points (all contours' when batched)
+static uint IsClosed;            // 0 = open polyline (flat ends), 1 = closed loop (wrap-around miters + closing pair)
 
-// The contour the running thread works on, set once at the top of each kernel: the whole of Points, or one contour of a
-// batch. Thread-private, so every helper below reads the right one.
+// Batched contours: many contours in one draw.
+static uint Batched;             // 0 = Points is one contour; 1 = Points holds many, Contours says which is where
+static uint* Contours;           // per contour: first point, point count, closed (0/1) - three uints each
+static uint* PointContours;      // per point of Points: the contour it belongs to
+
+static uint StartCap;            // start cap: 0 = flat, 1 = square, 2 = convex round, 3 = convex tri, 4 = concave tri, 5 = concave round
+static uint EndCap;              // end cap (same codes)
+static uint DashStartCap;        // cap on the STARTING end of each dash; the stroke's real ends use Start/EndCap
+static uint DashEndCap;          // cap on the ENDING end of each dash - separate, so a dash can be an arrow
+static uint JoinType;            // 0 = miter (bisector ribbon, clamped), 1 = bevel (per-segment rectangles + corner wedge), 2 = round (rectangles + disc fan)
+static uint RoundSegments;       // triangles a point keeps for its join; 0 = none
+static float HalfThickness;
+static float Fringe;             // AA feather width in geometry-LOCAL units (~1 device px / scale); ribbon/discs widen by Fringe/2
+
+// The runs: the trim window and the dash pattern, laid along the contour's length.
+static float* Pattern;           // dash pattern (on,off,...); PatternCount entries, 0 = solid
+static uint PatternCount;
+static float DashOffset;
+static float TrimStart;          // 0..1 fraction of total arc length
+static float TrimEnd;            // 0..1
+static uint Runs;                // the ends are the runs' - see StrokeCoverage
+static float* Arcs;              // per point of Points: how far along its contour it is from the contour's first point
+
+static float4x4 Wvp;             // the stroke's local units to clip space
+static float4 StrokeColor;
+static float PieceSalt;          // added to every piece id, so two strokes of one batch do not share them
+
+// The contour the running vertex belongs to: the whole of Points, or one contour of a batch.
 static float2* ContourPoints;
 static uint ContourPointCount;
 static uint ContourIsClosed;
-// The caps the cut puts on the contour's real ends: Start/EndCap, or - closed and untrimmed, with no real end - the dash
-// caps, which is what its seam wears.
-static uint ContourStartCap;
-static uint ContourEndCap;
-uint StartCap;            // start cap: 0 = flat, 1 = square, 2 = convex round, 3 = convex tri, 4 = concave tri, 5 = concave round
-uint EndCap;              // end cap (same codes)
-uint DashStartCap;        // cap on the STARTING end of each dash/dot piece (cut path); the contour's real ends use Start/EndCap
-uint DashEndCap;          // cap on the ENDING end of each dash/dot piece - separate, so a dash can be an arrow
-uint JoinType;            // 0 = miter (bisector ribbon, clamped), 1 = bevel (per-segment rectangles + corner wedge), 2 = round (rectangles + disc fan)
-uint RoundSegments;       // triangles a point keeps for its join; 0 = none
-float HalfThickness;
-float Fringe;             // AA feather width in geometry-LOCAL units (~1 device px / scale); ribbon/discs widen by Fringe/2
 
-// --- one-pass GPU cut: the GPU walks the contour by arc length and emits dash/trim pieces ---
-uint* Indirect;           // VkDrawIndirectCommand the cut writes (vertexCount = GPU-decided draw size)
-float* Pattern;           // dash pattern (on,off,...); PatternCount entries, 0 = solid (one piece over trim)
-uint PatternCount;
-uint MaxVertices;         // output capacity guard for the cut (CPU sizes it from a worst-case piece bound)
-float DashOffset;
-float TrimStart;          // 0..1 fraction of total arc length
-float TrimEnd;            // 0..1
+// --- a lone stroke's uniforms (Projection, from CommonData, is its local units to clip space) ---
+float2* UPoints;
+uint UPointCount;
+uint UIsClosed;
+uint UBatched;
+uint* UContours;
+uint* UPointContours;
+uint UStartCap;
+uint UEndCap;
+uint UDashStartCap;
+uint UDashEndCap;
+uint UJoinType;
+uint URoundSegments;
+float UHalfThickness;
+float UFringe;
+float* UPattern;
+uint UPatternCount;
+float UDashOffset;
+float UTrimStart;
+float UTrimEnd;
+uint URuns;
+float* UArcs;
+float4 UStrokeColor;
 
-// --- StrokeDraw (graphics) globals ---
-float4x4 Projection;
-float4 StrokeColor;
+void LoadUniforms()
+{
+    Points = UPoints;
+    PointCount = UPointCount;
+    IsClosed = UIsClosed;
+    Batched = UBatched;
+    Contours = UContours;
+    PointContours = UPointContours;
+    StartCap = UStartCap;
+    EndCap = UEndCap;
+    DashStartCap = UDashStartCap;
+    DashEndCap = UDashEndCap;
+    JoinType = UJoinType;
+    RoundSegments = URoundSegments;
+    HalfThickness = UHalfThickness;
+    Fringe = UFringe;
+    Pattern = UPattern;
+    PatternCount = UPatternCount;
+    DashOffset = UDashOffset;
+    TrimStart = UTrimStart;
+    TrimEnd = UTrimEnd;
+    Runs = URuns;
+    Arcs = UArcs;
+    Wvp = Projection;
+    StrokeColor = UStrokeColor;
+    PieceSalt = 0.0;
+}
+
+// --- a batch of strokes: one record each, drawn by an instance of its own (StrokeBatchCollector) ---
+// Projection is the window to clip space here; each record carries its stroke's local matrix and transform slot.
+struct StrokeRecord
+{
+    float4x4 Local;          // the stroke's local units to its slot's space
+    float2* Points;
+    float* Arcs;
+    uint* Contours;
+    uint* PointContours;
+    float* Pattern;
+    uint PointCount;
+    uint PatternCount;
+    uint Flags;              // 1 closed, 2 batched contours, 4 runs, 8 thickness in window pixels
+    uint Caps;               // start | end << 4 | dash start << 8 | dash end << 12
+    uint RoundSegments;
+    uint JoinType;
+    float4 Pen;              // .x thickness, .y least device thickness (0 none), .z dash offset, .w piece salt
+    float4 Window;           // .x trim start, .y trim end, .z transform slot, .w opacity slot (-1 none)
+    float4 Color;            // straight RGBA, the element's own alpha folded in
+    float4 Extra;            // .x rounded clip slot (-1 none)
+};
+
+StrokeRecord* Records;
+float RenderScale;           // device pixels per window pixel
+uint AntiAlias;              // 0 = hard edges
+
+// Device pixels per local unit of a stroke drawn by `m`, at its point `p`: the area scale of its map to the viewport's
+// pixels after the divide by w - the same everywhere under a flat transform, largest near the eye under a perspective.
+float DevicePixelScale(float4x4 m, float2 p)
+{
+    float4 c = mul(float4(p, 0.0, 1.0), m);
+    if (!(c.w > 1e-6)) return 0.0;
+    float2 halfVp = ViewportSize * 0.5;
+    float2 at = c.xy / c.w;
+    float4 cx = mul(float4(1.0, 0.0, 0.0, 0.0), m);
+    float4 cy = mul(float4(0.0, 1.0, 0.0, 0.0), m);
+    float2 ax = (cx.xy - at * cx.w) / c.w * halfVp;
+    float2 ay = (cy.xy - at * cy.w) / c.w * halfVp;
+    return sqrt(abs(ax.x * ay.y - ax.y * ay.x));
+}
+
+StrokeRecord LoadRecord(uint index)
+{
+    StrokeRecord* records = Records;
+    StrokeRecord r = records[index];
+    NodeSlot* nodes = Transforms;
+    Wvp = mul(mul(r.Local, nodes[(uint)r.Window.z].World), Projection);
+
+    Points = r.Points;
+    PointCount = r.PointCount;
+    IsClosed = r.Flags & 1u;
+    Batched = (r.Flags >> 1u) & 1u;
+    Contours = r.Contours;
+    PointContours = r.PointContours;
+    StartCap = r.Caps & 15u;
+    EndCap = (r.Caps >> 4u) & 15u;
+    DashStartCap = (r.Caps >> 8u) & 15u;
+    DashEndCap = (r.Caps >> 12u) & 15u;
+    JoinType = r.JoinType;
+    RoundSegments = r.RoundSegments;
+    Pattern = r.Pattern;
+    PatternCount = r.PatternCount;
+    DashOffset = r.Pen.z;
+    TrimStart = r.Window.x;
+    TrimEnd = r.Window.y;
+    Runs = (r.Flags >> 2u) & 1u;
+    Arcs = r.Arcs;
+    StrokeColor = r.Color;
+    PieceSalt = r.Pen.w;
+
+    // The width in local units, worked out from the matrix as it is now: a camera that moved the slot moved the record
+    // with it, and a line measured in pixels or held to a least width keeps it.
+    float2* points = r.Points;
+    float device = max(DevicePixelScale(Wvp, r.PointCount > 0u ? points[0] : float2(0.0, 0.0)), 1e-6);
+    float thickness = r.Pen.x;
+    if ((r.Flags & 8u) != 0u) thickness *= RenderScale / device;
+    if (r.Pen.y > 0.0) thickness = max(thickness, r.Pen.y / device);
+    HalfThickness = thickness * 0.5;
+    Fringe = AntiAlias != 0u ? 1.0 / device : 0.0;
+    return r;
+}
+
+// --- the brush: a solid color, a gradient (IsGradient != 0), a pattern or noise, or a picture - each evaluated at a point
+// of a box. Over the shape's bounds the point is where the pixel is and the box the shape's (the same box its fill
+// spans); along the line the box is the stroke unrolled - its length by its thickness - and the point how far along the
+// line the pixel is and how far across it. ---
+uint BrushAlong;          // 0 = over BrushBounds, 1 = along the line
+float4 BrushBounds;       // the shape's local bounds: minXY, sizeXY
+
+#include "Includes/GradientMath.fxh"
+#include "Includes/GradientUniforms.fxh"
+#include "Includes/NoiseMath.fxh"
+#include "Includes/PatternMath.fxh"
+#include "Includes/TileMath.fxh"
+#include "Includes/ColorMath.fxh"
+
+// A PatternBrush / NoiseBrush, as PatternBrushRecord packs it (see PatternFill).
+float4 PParams;           // .y the kind, .z the cell in local units
+float4 PColor1;
+float4 PColor2;
+float4 PColor3;
+float4 PNoise;
+float4 PAnim;
+
+// A picture, laid out by ImageTiling over the box (see TileSourceUv) - SourceTexture and SourceSampler, or a layer of a
+// texture array.
+Texture2DArray SourceTextureArray;
+float TLayer;
+float4 TTile;
+float4 TRotation;
+float4 TDrawn;
+float4 TUvRect;
+float4 TTint;
+float4 TAdjust;           // the picture's colors, before the tint - see AdjustColor
+float2 TRepeat;           // per axis: 1 = the tile repeats
+float TMirror;            // mirror flags: 1 = X, 2 = Y, 3 = both
+float TAlongLength;       // along the line: the length one copy takes, at the stroke's width
 
 // --- union coverage (translucent strokes only) ---
 // Blend once with the max coverage over overlapping pieces: draw writing depth 1 - coverage (Less), then again with
 // Equal; the caller clears depth over the stroke first.
 
-// The two ends of the piece being emitted: where each one is, which way the contour runs there (dA points INTO the
-// piece, dB OUT of it) and which cap each wears - capStart + 8*capEnd, with 6 meaning "this end is not an end"
-// (an interior join, a closed loop), which leaves that cap's mask inert.
+// The contour's two real ends: where each one is, which way the contour runs there (dA points INTO the stroke, dB OUT
+// of it) and which cap each wears - capStart + 8*capEnd, with 6 meaning "this end is not an end" (a closed loop), which
+// leaves that cap's mask inert.
 struct PieceFrame
 {
     float2 A;
@@ -59,10 +227,6 @@ struct PieceFrame
     float2 B;
     float2 dB;
     float caps;
-    // How much SHALLOWER than a half-thickness that end's bite has to be, as a scale on its coordinates: a concave cap
-    // subtracts, and its formulas are homogeneous, so carving to depth c instead of h is exactly feeding them u, v and
-    // arc multiplied by h/c. 1 = full depth. Keeping it here rather than as another vertex float costs nothing and
-    // leaves the pixel shader unchanged. See BiteDepth for what limits c.
 };
 
 // A frame for geometry that has no ends at all.
@@ -85,12 +249,12 @@ float2 SegmentNormal(float2 a, float2 b)
 }
 
 // Whether a join is needed: a missing join leaves a slit of width hw * t at the edge (first order in the turn angle t).
-// Skipped only below a quarter pixel, since a join disc's rim shows through a dash.
+// Skipped only below a fiftieth of a pixel: antialiased, even a quarter-pixel slit shows as a dark nick in the edge.
 bool JoinIsVisible(float2 dIn, float2 dOut)
 {
     float hw = HalfThickness + Fringe * 0.5;
     float px = Fringe > 0.0 ? Fringe : 0.05;   // Fringe is ~1 device px in these local units; AA off -> a fixed floor
-    return hw * length(dOut - dIn) > 0.25 * px;   // |dOut - dIn| = the turn angle, to first order
+    return hw * length(dOut - dIn) > 0.02 * px;   // |dOut - dIn| = the turn angle, to first order
 }
 
 // How far past the geometry point a cap's quad has to REACH so the mask has material to shape: the convex caps and the
@@ -120,7 +284,7 @@ void OffsetPair(uint i, out float2 plus, out float2 minus)
     float2* points = ContourPoints;
     float2 p = points[i];
 
-    float hw = HalfThickness + Fringe * 0.5;   // widen the ribbon by the AA feather; v carries +/-hw (see EmitQuad)
+    float hw = HalfThickness + Fringe * 0.5;   // widen the ribbon by the AA feather; v carries +/-hw
     float2 miter;
     float miterLen;
 
@@ -155,483 +319,201 @@ void OffsetPair(uint i, out float2 plus, out float2 minus)
     minus = p - miter * miterLen;
 }
 
-// Position + unit tangent at arc length `target` along the contour. The cut needs the piece's END before it writes the
-// piece's FIRST vertex - a cap that carves inward reaches back over everything in between - and the end is known in arc
-// length long before the walk gets there.
-void PointAtArc(float target, out float2 pos, out float2 dir)
-{
-    float2* points = ContourPoints;
-    uint segCount = ContourIsClosed != 0u ? ContourPointCount : ContourPointCount - 1u;
-    pos = points[0];
-    dir = normalize(points[1] - points[0]);
-    float acc = 0.0;
-    bool found = false;
-    for (uint s = 0u; s < segCount; ++s)
-    {
-        float2 a = points[s];
-        float2 b = points[(s + 1u) % ContourPointCount];
-        float len = length(b - a);
-        if (len > 1e-6)
-        {
-            float2 d = (b - a) / len;
-            if (!found && (acc + len >= target || s + 1u == segCount))
-            {
-                pos = a + d * clamp(target - acc, 0.0, len);
-                dir = d;
-                found = true;
-            }
-            acc += len;
-        }
-    }
-}
-
-// Floats a vertex takes (see StrokeVertex).
-static const uint VertexFloats = 20u;
-
-// A vertex as two parts: what it is at its point on the contour's axis, `anchor` - which the width does not move - and
-// how far the width it was written at, HalfThickness + Fringe / 2, moved it from there. Every part of it is the anchor's
-// value plus that move, and the move grows with the width, so StrokeVS draws it at another width by scaling the move:
-// a stroke whose width or feather changes - a zooming map's lines - is not written again.
-// Layout: (x, y | perp, uA, vA, arcA | caps, uB, vB, arcB | piece | anchor x, y | uA, vA, arcA, arcB at the anchor |
-// uB, vB at the anchor, the width written at). perp drives AA, u/v place the point in each end's frame, arc is the
-// distance along the contour, caps = capStart + 8 * capEnd (6 = none). All affine along a segment.
-void WriteVert(float* o, uint vi, float2 anchor, float2 p, float perp, float anchorArcA, float anchorArcB, float arcA,
-    float arcB, PieceFrame f, float pieceId)
-{
-    float2 nA = float2(-f.dA.y, f.dA.x);
-    float2 nB = float2(-f.dB.y, f.dB.x);
-    float2 rA = anchor - f.A;
-    float2 rB = anchor - f.B;
-    float2 d = p - anchor;
-    uint b = vi * VertexFloats;
-    o[b + 0u] = d.x;
-    o[b + 1u] = d.y;
-    o[b + 2u] = perp;
-    o[b + 3u] = dot(d, f.dA);
-    o[b + 4u] = dot(d, nA);
-    o[b + 5u] = arcA - anchorArcA;
-    o[b + 6u] = f.caps;
-    o[b + 7u] = -dot(d, f.dB);
-    o[b + 8u] = dot(d, nB);
-    o[b + 9u] = arcB - anchorArcB;
-    o[b + 10u] = pieceId;   // ties between overlapping pieces, see StrokeVertex.PieceId
-    o[b + 11u] = anchor.x;
-    o[b + 12u] = anchor.y;
-    o[b + 13u] = dot(rA, f.dA);
-    o[b + 14u] = dot(rA, nA);
-    o[b + 15u] = anchorArcA;
-    o[b + 16u] = anchorArcB;
-    o[b + 17u] = -dot(rB, f.dB);
-    o[b + 18u] = dot(rB, nB);
-    o[b + 19u] = HalfThickness + Fringe * 0.5;
-}
-
-// A vertex the width does not move.
-void WritePoint(float* o, uint vi, float2 p, float arcA, float arcB, PieceFrame f, float pieceId)
-{
-    WriteVert(o, vi, p, p, 0.0, arcA, arcB, arcA, arcB, f, pieceId);
-}
-
-// Writes a quad (two triangles, 6 verts) from four corners into outVerts at vertex offset o.
-// hw = widened half-extent (HalfThickness + Fringe/2): the P corners sit at +hw perpendicular, the M corners at -hw, and
-// the signed distance v=+/-hw is interpolated across the quad so StrokePS feathers both long edges.
-// a and b are the quad's two ends on the axis, the anchors its corners are moved from, with their arc distances.
-void EmitQuad(float* outVerts, uint o, float2 a, float2 b, float2 aP, float2 aM, float2 bP, float2 bM, float hw,
-              float aArcA0, float aArcB0, float bArcA0, float bArcB0,
-              float aArcA, float aArcB, float bArcA, float bArcB, PieceFrame f, float pieceId)
-{
-    WriteVert(outVerts, o + 0u, a, aP,  hw, aArcA0, aArcB0, aArcA, aArcB, f, pieceId);
-    WriteVert(outVerts, o + 1u, a, aM, -hw, aArcA0, aArcB0, aArcA, aArcB, f, pieceId);
-    WriteVert(outVerts, o + 2u, b, bP,  hw, bArcA0, bArcB0, bArcA, bArcB, f, pieceId);
-    WriteVert(outVerts, o + 3u, b, bP,  hw, bArcA0, bArcB0, bArcA, bArcB, f, pieceId);
-    WriteVert(outVerts, o + 4u, a, aM, -hw, aArcA0, aArcB0, aArcA, aArcB, f, pieceId);
-    WriteVert(outVerts, o + 5u, b, bM, -hw, bArcA0, bArcB0, bArcA, bArcB, f, pieceId);
-}
-
-// Round-join disc at V (radius half), at most `maxTris` triangles at `base`; returns the count. Arc distances advance
-// across the disc like the ribbon's, so caps carve it correctly.
-uint EmitDisc(float* outVerts, uint base, uint maxTris, float2 V, float arcA, float arcB,
-              float2 dIn, float2 dOut, PieceFrame f, float pieceId)
-{
-    float hw = HalfThickness + Fringe * 0.5;   // widened radius; perp = radial distance so the rim feathers
-    uint n = 0u;
-    for (uint k = 0u; k < RoundSegments && n < maxTris; ++k)
-    {
-        float a0 = 6.28318530717958647692 * float(k) / float(RoundSegments);
-        float a1 = 6.28318530717958647692 * float(k + 1u) / float(RoundSegments);
-        float2 r0 = hw * float2(cos(a0), sin(a0));
-        float2 r1 = hw * float2(cos(a1), sin(a1));
-        WritePoint(outVerts, base + n * 3u + 0u, V, arcA, arcB, f, pieceId);
-        WriteVert(outVerts, base + n * 3u + 1u, V, V + r0, hw, arcA, arcB, arcA + dot(r0, dIn), arcB - dot(r0, dOut), f,
-            pieceId);
-        WriteVert(outVerts, base + n * 3u + 2u, V, V + r1, hw, arcA, arcB, arcA + dot(r1, dIn), arcB - dot(r1, dOut), f,
-            pieceId);
-        ++n;
-    }
-    return n;
-}
-
-
-// The bevel/round join where a dash crosses corner V (miter needs none), carrying the piece's frame so caps carve it
-// like the ribbon.
-uint EmitJoin(float* outVerts, uint vCount, uint maxV, float2 V, float2 dIn, float2 dOut,
-              float arcA, float arcB, PieceFrame f, float pieceId)
-{
-    float h = HalfThickness + Fringe * 0.5;   // widened; the outer corner verts carry perp=+/-h, the center V carries 0
-    float2 nInU = float2(-dIn.y, dIn.x);
-    float2 nOutU = float2(-dOut.y, dOut.x);
-    if (JoinType == 2u)   // round join: a disc of radius half
-    {
-        uint tris = EmitDisc(outVerts, vCount, (maxV - vCount) / 3u, V, arcA, arcB, dIn, dOut, f, pieceId);
-        return vCount + tris * 3u;
-    }
-
-    // BEVEL wedge, filled on BOTH sides (mirrors StrokePullVS's bevel): the outer triangle closes the gap the turn
-    // opens, the inner one lands inside the two quads' overlap (harmless for an opaque stroke). Doing both sides avoids
-    // ever having to pick - and mis-pick - the outer side. MITER is not routed here (its quad ends already meet).
-    if (vCount + 6u <= maxV)
-    {
-        WriteVert(outVerts, vCount + 0u, V, V + nInU * h, h, arcA, arcB, arcA, arcB, f, pieceId);
-        WriteVert(outVerts, vCount + 1u, V, V + nOutU * h, h, arcA, arcB, arcA, arcB, f, pieceId);
-        WritePoint(outVerts, vCount + 2u, V, arcA, arcB, f, pieceId);
-        WriteVert(outVerts, vCount + 3u, V, V - nInU * h, -h, arcA, arcB, arcA, arcB, f, pieceId);
-        WriteVert(outVerts, vCount + 4u, V, V - nOutU * h, -h, arcA, arcB, arcA, arcB, f, pieceId);
-        WritePoint(outVerts, vCount + 5u, V, arcA, arcB, f, pieceId);
-        vCount += 6u;
-    }
-    return vCount;
-}
-
-// Which cap each end of a piece [pieceStart, pieceEnd] wears, packed as capStart + 8*capEnd. A piece end that IS the
-// contour's real end (the trim window's edge) wears Start/EndCap; every other one wears the dash caps. ONE cap per end,
-// decided once for the whole piece - deciding it per emitted quad is what used to put a line cap AND a dash cap on the
-// same end of the first and last dash.
-float PieceCaps(float pieceStart, float pieceEnd, float tStart, float tEnd)
-{
-    uint capS = (pieceStart <= tStart + 1e-4) ? ContourStartCap : DashStartCap;
-    uint capE = (pieceEnd >= tEnd - 1e-4) ? ContourEndCap : DashEndCap;
-    return float(capS + 8u * capE);
-}
-
-// Dash/trim mode: the running thread walks its contour by arc length and writes the visible pieces and their joins to
-// outVerts, at most maxV vertices, numbering the pieces from serialBase; returns how many vertices it wrote.
-uint CutContour(float* outVerts, uint maxV, uint serialBase)
-{
-    bool hasRealEnds = (ContourIsClosed == 0u) || (TrimStart > 0.0) || (TrimEnd < 1.0);
-    ContourStartCap = hasRealEnds ? StartCap : DashStartCap;
-    ContourEndCap = hasRealEnds ? EndCap : DashEndCap;
-    float2* points = ContourPoints;
-    float* pattern = Pattern;
-    uint segCount = ContourIsClosed != 0u ? ContourPointCount : ContourPointCount - 1u;
-
-    float total = 0.0;
-    for (uint s = 0u; s < segCount; ++s)
-        total += length(points[(s + 1u) % ContourPointCount] - points[s]);
-    float tStart = TrimStart * total;
-    float tEnd = TrimEnd * total;
-
-    float patTotal = 0.0;
-    for (uint k = 0u; k < PatternCount; ++k) patTotal += pattern[k];
-
-    uint pi = 0u;
-    float rem = PatternCount > 0u ? pattern[0] : 1e30;
-    bool on = true;
-    if (PatternCount > 0u && patTotal > 0.0)
-    {
-        // An odd pattern repeats on and off swapped, so it comes back to itself after two of it.
-        float period = PatternCount % 2u == 1u ? patTotal * 2.0 : patTotal;
-        float off = DashOffset - floor(DashOffset / period) * period;
-        while (off > 1e-6)
-        {
-            float take = min(off, rem);
-            off -= take; rem -= take;
-            if (rem <= 1e-6) { pi = (pi + 1u) % PatternCount; rem = pattern[pi]; on = !on; }
-        }
-    }
-
-    // The ON run currently being drawn, as a PIECE: its two arc-length ends, the frames there and the caps they wear.
-    // Everything the piece emits carries this, so the caps mask the piece as ONE shape. The run the walk starts inside
-    // began before arc 0 (the offset ate into it), hence the pattern[pi] - rem.
-    float pieceStart = -1e30;
-    float pieceEnd = 1e30;
-    if (PatternCount > 0u && on) { pieceStart = -(pattern[pi] - rem); pieceEnd = rem; }
-    // An untrimmed closed contour has no ends: a run crossing the seam keeps its true arc bounds, so no caps appear at the
-    // seam.
-    bool wraps = (ContourIsClosed != 0u) && (TrimStart <= 0.0) && (TrimEnd >= 1.0);
-    pieceStart = wraps ? pieceStart : max(pieceStart, tStart);
-    pieceEnd = wraps ? pieceEnd : min(pieceEnd, tEnd);
-    PieceFrame frame;
-    PointAtArc(pieceStart < 0.0 ? pieceStart + total : pieceStart, frame.A, frame.dA);
-    PointAtArc(pieceEnd > total ? pieceEnd - total : pieceEnd, frame.B, frame.dB);
-    frame.caps = PieceCaps(pieceStart, pieceEnd, tStart, tEnd);
-
-    uint vCount = 0u;
-    uint pieceSerial = serialBase;   // every quad and every join the walk emits is its own piece (see StrokeVertex.PieceId)
-    float arc = 0.0;
-    bool contInto = (ContourIsClosed != 0u) && on;   // does a live dash cross the vertex ENTERING the current segment (miter start)
-    for (uint s = 0u; s < segCount; ++s)
-    {
-        float2 a = points[s];
-        float2 b = points[(s + 1u) % ContourPointCount];
-        float2 d = b - a;
-        float segLen = length(d);
-        if (segLen < 1e-6) continue;
-        float2 dir = d / segLen;
-        float hw = HalfThickness + Fringe * 0.5;
-        float2 nrm = float2(-dir.y, dir.x) * hw;
-
-        // MITER shares the continuous path's trick: where a dash crosses a polyline vertex the two quads meet on the
-        // bisector miter offset (constant width, no gap), NOT perpendicular ends bridged by a wedge - the latter piles
-        // stray triangles all over a densely-tessellated curve at large thickness. Precompute the miter offsets at THIS
-        // segment's two vertices; used only for the ends that land on a crossed vertex (bevel/round keep perpendicular).
-        float2 mSp, mSm, mEp, mEm;
-        OffsetPair(s, mSp, mSm);
-        OffsetPair((s + 1u) % ContourPointCount, mEp, mEm);
-
-        float pos = 0.0;
-        bool lastSpanOn = on;   // on-state of the span ending at this segment's corner (captured BEFORE any end-toggle)
-        while (pos < segLen - 1e-6)
-        {
-            lastSpanOn = on;
-            float take = PatternCount > 0u ? min(rem, segLen - pos) : (segLen - pos);
-            float drawA = max(arc + pos, tStart);
-            float drawB = min(arc + pos + take, tEnd);
-            if (on && drawB > drawA + 1e-6)
-            {
-                float2 p0 = a + (drawA - arc) * dir;
-                float2 p1 = a + (drawB - arc) * dir;
-
-                // Only the quad that actually STARTS (ENDS) the piece is stretched, and only for a cap that paints past
-                // the end - the mask then carves the bulge/tip out of it. A quad in the middle of a piece (a dash
-                // spanning several segments of a curve) is stretched nowhere; its corner is closed by the join below.
-                float extA = (drawA <= pieceStart + 1e-4) ? CapExtend(uint(frame.caps) % 8u) + Fringe * 0.5 : 0.0;
-                float extB = (drawB >= pieceEnd - 1e-4) ? CapExtend(uint(frame.caps) / 8u) + Fringe * 0.5 : 0.0;
-                float2 e0 = p0 - dir * extA;
-                float2 e1 = p1 + dir * extB;
-
-                // Arc distance from this quad's two ends to the piece's two ends - the REACH gate the straight cap axis
-                // cannot provide. Stretching an end moves it past the piece end, so its own distances move with it.
-                float aArcA = (drawA - extA) - pieceStart;
-                float aArcB = pieceEnd - (drawA - extA);
-                float bArcA = (drawB + extB) - pieceStart;
-                float bArcB = pieceEnd - (drawB + extB);
-
-                // For MITER, a quad end that lands on a CROSSED vertex uses the shared bisector offset (no wedge);
-                // every other end stays perpendicular. startCont = first piece of a segment a live dash entered; endCont =
-                // last piece, dash continues into the next segment (reaches the seg end, doesn't end the dash here).
-                bool endsDash = PatternCount > 0u && (rem - take) <= 1e-6;
-                bool hasNextSeg = (ContourIsClosed != 0u) || (s + 1u < segCount);
-                float arcE = arc + segLen;
-                bool startCont = (JoinType == 0u) && (pos == 0.0) && contInto;
-                bool endCont = (JoinType == 0u) && !endsDash && (pos + take >= segLen - 1e-6) && hasNextSeg
-                               && (arcE > tStart + 1e-4) && (arcE < tEnd - 1e-4);
-                float2 sTop = startCont ? mSp : e0 + nrm;
-                float2 sBot = startCont ? mSm : e0 - nrm;
-                float2 eTop = endCont ? mEp : e1 + nrm;
-                float2 eBot = endCont ? mEm : e1 - nrm;
-                if (vCount + 6u <= maxV)
-                {
-                    EmitQuad(outVerts, vCount, p0, p1, sTop, sBot, eTop, eBot, hw,
-                             drawA - pieceStart, pieceEnd - drawA, drawB - pieceStart, pieceEnd - drawB,
-                             aArcA, aArcB, bArcA, bArcB, frame, float(pieceSerial++));
-                    vCount += 6u;
-                }
-            }
-            pos += take;
-            if (PatternCount > 0u)
-            {
-                rem -= take;
-                if (rem <= 1e-6)
-                {
-                    pi = (pi + 1u) % PatternCount; rem = pattern[pi]; on = !on;
-                    if (on)
-                    {
-                        // A new dash begins here and its length is already known (rem), so the whole piece - both ends,
-                        // both frames - is settled before a single vertex of it is written. That is what lets the far
-                        // end's cap mask reach back over everything in between.
-                        pieceStart = wraps ? (arc + pos) : max(arc + pos, tStart);
-                        pieceEnd = wraps ? (arc + pos + rem) : min(arc + pos + rem, tEnd);
-                        PointAtArc(pieceStart, frame.A, frame.dA);
-                        PointAtArc(pieceEnd > total ? pieceEnd - total : pieceEnd, frame.B, frame.dB);
-                        frame.caps = PieceCaps(pieceStart, pieceEnd, tStart, tEnd);
-                    }
-                }
-            }
-        }
-        arc += segLen;
-
-        // A dash crosses this segment's END vertex when it is ON on both sides (lastSpanOn && on) and inside the trim.
-        // `lastSpanOn && on` requires BOTH sides to be on: if the pattern toggles EXACTLY at the corner, one side is empty
-        // and a lone join would jut out as a triangular tab. MITER needs no join here (the mitered quad ends already meet);
-        // BEVEL/ROUND add the fan. Either way the flag propagates so the NEXT segment mitres its start off this vertex.
-        bool hasNext = (ContourIsClosed != 0u) || (s + 1u < segCount);
-        bool joinHere = hasNext && lastSpanOn && on && arc > tStart + 1e-4 && arc < tEnd - 1e-4;
-        if (joinHere && JoinType != 0u)
-        {
-            uint cv = (s + 1u) % ContourPointCount;
-            float2 dOut = normalize(points[(s + 2u) % ContourPointCount] - points[cv]);
-            if (JoinIsVisible(dir, dOut))
-            {
-                vCount = EmitJoin(outVerts, vCount, maxV, points[cv], dir, dOut,
-                                  arc - pieceStart, pieceEnd - arc, frame, float(pieceSerial++));
-            }
-        }
-        contInto = joinHere;
-    }
-
-    return vCount;
-}
-
-// StrokeDashCutCS: one contour, one thread; writes the vertex count for DrawIndirect.
-[shader("compute")]
-[numthreads(1, 1, 1)]
-void StrokeDashCutCS(uint3 tid : SV_DispatchThreadID)
-{
-    if (tid.x != 0u)
-        return;
-
-    ContourPoints = Points;
-    ContourPointCount = PointCount;
-    ContourIsClosed = IsClosed;
-    uint vCount = CutContour(Output, MaxVertices, 0u);
-
-    uint* indirect = Indirect;
-    indirect[0] = vCount;
-    indirect[1] = 1u;
-    indirect[2] = 0u;
-    indirect[3] = 0u;
-}
-
-// --- batched cut: many dashed or trimmed contours in one dispatch and one draw ---
-uint ContourCount;        // contours in the batch (Contours holds them)
-uint* Slots;              // per contour: its first output vertex and how many it may write - two uints each
-
-// StrokeDashCutBatchCS: one thread per contour, each cutting its own into its own range of the output; what a contour
-// leaves of its range is filled with nothing to draw, so the batch is one plain draw of every range.
-[shader("compute")]
-[numthreads(64, 1, 1)]
-void StrokeDashCutBatchCS(uint3 tid : SV_DispatchThreadID)
-{
-    if (tid.x >= ContourCount)
-        return;
-
-    uint* contours = Contours;
-    uint* slots = Slots;
-    uint c = tid.x * 3u;
-    ContourPoints = Points + contours[c];
-    ContourPointCount = contours[c + 1u];
-    ContourIsClosed = contours[c + 2u];
-
-    // A piece is six vertices at least, so a contour's first vertex over six numbers its pieces apart from every other
-    // contour's - in the 16 bits the union depth holds, wrapping past them.
-    uint first = slots[tid.x * 2u];
-    float* outVerts = Output + first * VertexFloats;
-    uint capacity = slots[tid.x * 2u + 1u];
-    uint vCount = CutContour(outVerts, capacity, (first / 6u) % 65536u);
-
-    PieceFrame none = NoCaps();
-    for (uint k = vCount; k < capacity; ++k)
-        WritePoint(outVerts, k, float2(0.0, 0.0), 1e6, 1e6, none, 0.0);
-}
-
-// What the width moved the vertex by - its position and frame values - and the rest at its anchor (see WriteVert).
-struct VSInput
-{
-    float2 Offset : POSITION;
-    float4 Cap0 : TEXCOORD0;   // perp, uA, vA, arcA - moves
-    float4 Cap1 : TEXCOORD1;   // caps, uB, vB, arcB - moves but caps
-    float PieceId : TEXCOORD2;
-    float2 Anchor : TEXCOORD3;
-    float4 AnchorA : TEXCOORD4;   // uA, vA, arcA, arcB at the anchor
-    float3 AnchorB : TEXCOORD5;   // uB, vB at the anchor, the width the moves were written at
-};
-
 struct PSInput
 {
     float4 Position : SV_Position;
-    float4 Cap0 : TEXCOORD0;
-    float4 Cap1 : TEXCOORD1;
+    float4 Cap0 : TEXCOORD0;   // perp, uA, vA, arcA
+    float4 Cap1 : TEXCOORD1;   // caps, uB, vB, arcB
     float PieceId : TEXCOORD2;
-    float Arc : TEXCOORD3;     // how far along its contour the point is; read only by a dash mask
+    float Arc : TEXCOORD3;     // how far along its contour the point is; read by the runs
+    nointerpolation float2 Contour : TEXCOORD4;   // the contour's length, and 1 when it is closed
+    float2 Local : TEXCOORD5;                     // where the point is, in the contour's units
+    nointerpolation uint3 Segment : TEXCOORD6;    // the contour's first point in Points, its point count, this segment
+    nointerpolation float2 Span : TEXCOORD7;      // how far along the contour this piece of ribbon may say it is
+    nointerpolation uint Record : TEXCOORD8;      // a batched stroke's record
 };
 
-// A continuous stroke's dashes as a mask (DashMask != 0): the pattern - Pattern, PatternCount, DashOffset - laid along
-// the contour's length, its runs' ends square and feathered like the stroke's edge. What the cut's real pieces are for
-// is ends of other shapes; flat-ended dashes are this. An odd pattern is taken twice, its runs on and off in turn.
-uint DashMask;
+// Runs != 0: the stroke's ends are worked out here - its trim window and its dash runs, each end shaped by its cap -
+// rather than taken from the contour's ends the vertices carry. Nothing is cut: the ribbon runs the whole contour, and a
+// convex end paints over the gap past it.
 
-// `feather` is a pixel's length along the contour, in local units; 0 gives hard ends.
-float DashCoverage(float arc, float feather)
+// The running vertex's contour length - the closing segment included when it is closed - its contour's first point in
+// Points and its own segment (its point), for the runs.
+static float ContourLength;
+static uint ContourFirst;
+static uint SegmentIndex;
+
+// How far along the contour the corners being emitted may say they are: a segment's own span, so the ribbon past a
+// corner - a miter's point, a join - reads as the corner's point rather than as more of the segment; unbounded at an
+// open contour's real ends, where the cap needs the room.
+static float2 CornerSpan;
+
+// Signed distance to a cap boundary (positive = painted) from u (along the end's axis), v (across) and arc (along the
+// contour, which gates caps where the path folds back). hBite caps concave bites at mid-piece.
+float CapSd(uint cap, float u, float v, float arc, float h, float hBite)
 {
+    if (cap == 6u) return 1e9;                                    // this end is not an end (closed loop)
+    if (arc > h + Fringe) return 1e9;                             // farther along the contour than this cap can reach
+    if (cap == 1u) return u + h;                                  // square: half a thickness of flat nub
+    if (cap == 2u) return (u >= 0.0) ? 1e9 : h - length(float2(u, v));        // convex round: half-disc out
+    if (cap == 3u) return (u >= 0.0) ? 1e9 : (u + h - abs(v)) * 0.70710678;   // convex triangle: tip out at the center
+    if (cap == 4u) return (u - hBite + abs(v)) * 0.70710678;      // concave triangle: V notch cut in
+    if (cap == 5u) return length(float2(max(u, 0.0), v)) - hBite; // concave round: half-disc bitten out
+    return u;                                                     // flat
+}
+
+// What the runs below know of the point they are asked about: an end near the point is shaped in its own straight
+// frame - where the end lies on the axis and which way the contour runs there - found in the point's contour in Points.
+static float2 RunLocal;
+static uint RunFirst;
+static uint RunCount;
+static bool RunClosed;
+static float RunLength;
+
+// Where the contour is at `arc` along it, and which way it runs there. The segment is found by halving over the
+// points' distances along the contour - however finely a curve was cut, an end within reach is found. Round a closed
+// contour, an end past its seam is the same place a length earlier.
+void EndFrame(float arc, out float2 at, out float2 dir)
+{
+    float* arcs = Arcs;
+    float2* points = Points + RunFirst;
+    uint segments = RunClosed ? RunCount : RunCount - 1u;
+    if (RunClosed && RunLength > 0.0)
+    {
+        arc -= floor(arc / RunLength) * RunLength;
+    }
+
+    uint lo = 0u;
+    uint hi = segments - 1u;
+    while (lo < hi)
+    {
+        uint mid = (lo + hi + 1u) / 2u;
+        if (arcs[RunFirst + mid] <= arc)
+        {
+            lo = mid;
+        }
+        else
+        {
+            hi = mid - 1u;
+        }
+    }
+
+    uint k = (lo + 1u) % RunCount;
+    dir = normalize(points[k] - points[lo]);
+    at = points[lo] + dir * (arc - arcs[RunFirst + lo]);
+}
+
+// One run of the stroke, from s to e along the contour, its ends wearing capS and capE: the signed distance to its
+// boundary at `arc`, `v` across - its sides included: along the run they are the ribbon's, past an end they are that
+// end's own, in its frame, so a cap reaching over the next segment is not cut by that segment's sides.
+float RunSd(float arc, float v, float s, float e, uint capS, uint capE)
+{
+    float uS = arc - s;
+    float vS = v;
+    float uE = e - arc;
+    float vE = v;
+    float reach = HalfThickness + Fringe;
+    // Which side of an end a point is on is the contour's to say; the end's frame only shapes it. Past a sharp corner the
+    // frame of an end on the next segment would claim points of the segment before it.
+    if (abs(arc - s) <= reach)
+    {
+        float2 at;
+        float2 dir;
+        EndFrame(s, at, dir);
+        float2 r = RunLocal - at;
+        float u = dot(r, dir);
+        if ((u >= 0.0) == (arc >= s))
+        {
+            uS = u;
+            vS = dot(r, float2(-dir.y, dir.x));
+        }
+    }
+
+    if (abs(arc - e) <= reach)
+    {
+        float2 at;
+        float2 dir;
+        EndFrame(e, at, dir);
+        float2 r = RunLocal - at;
+        float u = -dot(r, dir);
+        if ((u >= 0.0) == (arc <= e))
+        {
+            uE = u;
+            vE = dot(r, float2(-dir.y, dir.x));
+        }
+    }
+
+    float hBite = min(HalfThickness, 0.5 * (e - s));
+    float sdS = CapSd(capS, uS, vS, 0.0, HalfThickness, hBite);
+    float sdE = CapSd(capE, uE, vE, 0.0, HalfThickness, hBite);
+    float side = uS < 0.0 ? HalfThickness - abs(vS) : uE < 0.0 ? HalfThickness - abs(vE) : HalfThickness - abs(v);
+    return min(min(sdS, sdE), side);
+}
+
+// The signed distance to the nearest painted run at `arc`: the trim window - an open contour's whole length untrimmed,
+// its ends the stroke's start and end caps - and, with a pattern, every dash run inside it, its ends the dash caps but
+// where the window cuts it. A closed contour untrimmed has no window and no real end.
+float RunsSd(float arc, float v, float contourLength, bool closed)
+{
+    bool windowed = !closed || TrimStart > 0.0 || TrimEnd < 1.0;
+    float ws = windowed ? TrimStart * contourLength : -1e30;
+    float we = windowed ? TrimEnd * contourLength : 1e30;
+    if (TrimEnd <= TrimStart)
+    {
+        return -1e9;   // an empty window - a progress ring at nought - paints nothing, not two caps on one point
+    }
+
     float* pattern = Pattern;
     uint runs = PatternCount % 2u == 1u ? PatternCount * 2u : PatternCount;
     float total = 0.0;
     for (uint k = 0u; k < runs; ++k) total += pattern[k % PatternCount];
-    if (total <= 0.0) return 1.0;
-
-    float at = arc + DashOffset;
-    at -= floor(at / total) * total;
-
-    // The signed distance to the nearest end of an "on" run: positive inside one.
-    float start = 0.0;
-    float sd = -1e9;
-    for (uint k = 0u; k < runs; ++k)
+    if (PatternCount == 0u || total <= 0.0)
     {
-        float end = start + pattern[k % PatternCount];
-        if ((k % 2u) == 0u)
-        {
-            // This run and its repeats a period either side, so a run across the pattern's seam is whole.
-            sd = max(sd, min(at - start, end - at));
-            sd = max(sd, min(at - start + total, end - total - at));
-            sd = max(sd, min(at - start - total, end + total - at));
-        }
-
-        start = end;
+        return windowed ? RunSd(arc, v, ws, we, StartCap, EndCap) : 1e9;
     }
 
-    return feather > 0.0 ? saturate(sd / feather + 0.5) : (sd >= 0.0 ? 1.0 : 0.0);
+    // Where the period holding `arc` starts along the contour; its runs and those of as many periods either side as an
+    // end's reach spans are near enough - more than one for tight dots on a thick line.
+    float at = arc + DashOffset;
+    float periodStart = arc - (at - floor(at / total) * total);
+    int reach = min(int(ceil((HalfThickness + Fringe) / total)) + 1, 8);
+    float sd = -1e9;
+    for (int n = -reach; n <= reach; ++n)
+    {
+        float start = periodStart + float(n) * total;
+        for (uint k = 0u; k < runs; ++k)
+        {
+            float end = start + pattern[k % PatternCount];
+            if ((k % 2u) == 0u && end > ws && start < we)
+            {
+                uint capS = start <= ws ? StartCap : DashStartCap;
+                uint capE = end >= we ? EndCap : DashEndCap;
+                sd = max(sd, RunSd(arc, v, max(start, ws), min(end, we), capS, capE));
+            }
+
+            start = end;
+        }
+    }
+
+    return sd;
 }
 
-// Whether a dash covers `arc` and a feather's width either side of it in full.
-bool DashRunsThrough(float arc)
-{
-    float reach = max(Fringe, 1e-3);
-    return DashCoverage(arc - reach, Fringe) >= 1.0 && DashCoverage(arc, Fringe) >= 1.0 &&
-        DashCoverage(arc + reach, Fringe) >= 1.0;
-}
-
-[shader("vertex")]
-PSInput StrokeVS(VSInput input)
-{
-    // The moves scaled to the width drawn now.
-    float scale = (HalfThickness + Fringe * 0.5) / max(input.AnchorB.z, 1e-20);
-    float2 position = input.Anchor + input.Offset * scale;
-
-    PSInput o;
-    o.Position = mul(float4(position, 0.0, 1.0), Projection);   // row-vector convention (matches engine effects)
-    o.Cap0 = float4(input.Cap0.x * scale, input.AnchorA.x + input.Cap0.y * scale, input.AnchorA.y + input.Cap0.z * scale,
-        input.AnchorA.z + input.Cap0.w * scale);
-    o.Cap1 = float4(input.Cap1.x, input.AnchorB.x + input.Cap1.y * scale, input.AnchorB.y + input.Cap1.z * scale,
-        input.AnchorA.w + input.Cap1.w * scale);
-    o.PieceId = input.PieceId;
-    o.Arc = 0.0;
-    return o;
-}
-
-// --- pulled continuous draw: no ribbon is kept - each vertex of it is worked out where it is drawn, from the points ---
-float* Arcs;              // per point of Points: how far along its contour it is from the contour's first point
-
-// A corner of the ribbon at the width drawn now; `along` is how far along its contour it is, for a dash mask.
+// A corner of the ribbon at the width drawn now; `along` is how far along its contour it is, for the runs.
 PSInput Corner(float2 p, float perp, float arcA, float arcB, PieceFrame f, float pieceId, float along)
 {
     float2 rA = p - f.A;
     float2 rB = p - f.B;
     PSInput o;
-    o.Position = mul(float4(p, 0.0, 1.0), Projection);
+    o.Position = mul(float4(p, 0.0, 1.0), Wvp);   // row-vector convention (matches engine effects)
     o.Cap0 = float4(perp, dot(rA, f.dA), dot(rA, float2(-f.dA.y, f.dA.x)), arcA);
     o.Cap1 = float4(f.caps, -dot(rB, f.dB), dot(rB, float2(-f.dB.y, f.dB.x)), arcB);
-    o.PieceId = pieceId;
+    o.PieceId = fmod(pieceId + PieceSalt, 65536.0);
     o.Arc = along;
+    o.Record = 0u;
+    o.Contour = float2(ContourLength, float(ContourIsClosed));
+    o.Local = p;
+    o.Segment = uint3(ContourFirst, ContourPointCount, SegmentIndex);
+    o.Span = CornerSpan;
     return o;
 }
 
@@ -641,11 +523,30 @@ PSInput NoCorner(float2 p)
     return Corner(p, 0.0, 1e6, 1e6, NoCaps(), 0.0, 0.0);
 }
 
-// StrokePullVS: the continuous stroke drawn straight from its points, as many vertices a point as StrokeExpandCS writes
-// for it - the segment quad to the next point, then its join fan - each worked out here, so a stroke keeps only its
-// points and draws at whatever width and scale it is drawn at.
+// StrokePullVS: the stroke drawn straight from its points, 6 + 3 * RoundSegments vertices a point - the segment quad to
+// the next point, then its join fan - each worked out here, so a stroke keeps only its points and draws at whatever width
+// and scale it is drawn at.
 [shader("vertex")]
 PSInput StrokePullVS(uint vertexId : SV_VertexID)
+{
+    LoadUniforms();
+    return PullCorner(vertexId);
+}
+
+// A batch of strokes: each draw is one record's, named by the draw's first instance. One instance a draw, so whether
+// SV_InstanceID counts from the first instance or from zero, the larger of the two is the record.
+[shader("vertex")]
+PSInput StrokeBatchVS(uint vertexId : SV_VertexID, uint instanceId : SV_InstanceID,
+    uint firstInstance : SV_StartInstanceLocation)
+{
+    uint record = max(instanceId, firstInstance);
+    LoadRecord(record);
+    PSInput o = PullCorner(vertexId);
+    o.Record = record;
+    return o;
+}
+
+PSInput PullCorner(uint vertexId)
 {
     uint vpp = 6u + RoundSegments * 3u;
     uint t = vertexId / vpp;
@@ -672,6 +573,12 @@ PSInput StrokePullVS(uint vertexId : SV_VertexID)
     float* arcs = Arcs;
     float2 p = points[i];
     float along = arcs[first + i];
+    uint lastPoint = ContourPointCount - 1u;
+    ContourLength = arcs[first + lastPoint] +
+        (ContourIsClosed != 0u ? length(points[0] - points[lastPoint]) : 0.0);
+    ContourFirst = first;
+    SegmentIndex = i;
+    CornerSpan = float2(-1e30, 1e30);
     bool isStart = (ContourIsClosed == 0u) && (i == 0u);
     bool isEnd = (ContourIsClosed == 0u) && (i + 1u == ContourPointCount);
     bool hasSegment = (ContourIsClosed != 0u) || (i + 1u < ContourPointCount);
@@ -699,7 +606,7 @@ PSInput StrokePullVS(uint vertexId : SV_VertexID)
             return NoCorner(p);
         }
 
-        // The segment quad to the next point, its corners in EmitQuad's order: aP, aM, bP, bP, aM, bM.
+        // The segment quad to the next point, its corners in order: aP, aM, bP, bP, aM, bM.
         uint ni = (i + 1u) % ContourPointCount;
         float segLen = length(points[ni] - p);
         float2 aP, aM, bP, bM;
@@ -732,15 +639,11 @@ PSInput StrokePullVS(uint vertexId : SV_VertexID)
         bool plus = corner == 0u || corner == 2u || corner == 3u;
         float2 q = atB ? (plus ? bP : bM) : (plus ? aP : aM);
         float2 segDir = normalize(points[ni] - p);
+        bool realStart = ContourIsClosed == 0u && i == 0u;
+        bool realEnd = ContourIsClosed == 0u && ni + 1u == ContourPointCount;
+        CornerSpan = float2(realStart ? -1e30 : along, realEnd ? 1e30 : along + segLen);
         return Corner(q, plus ? hw : -hw, atB ? back + segLen : back, atB ? fwd - segLen : fwd, frame,
             float((t * 2u) % 65536u), along + dot(q - p, segDir));
-    }
-
-    // A dashed stroke joins two segments only where a dash runs on through the corner; elsewhere a join would jut out
-    // of a dash's end, or into a gap.
-    if (DashMask != 0u && !DashRunsThrough(along))
-    {
-        return NoCorner(p);
     }
 
     // The join fan: triangle `tri` of it, vertex `v` of that.
@@ -752,6 +655,10 @@ PSInput StrokePullVS(uint vertexId : SV_VertexID)
     float2 dIn = normalize(p - points[prev]);
     float2 dOut = normalize(points[next] - p);
     float fanId = float((t * 2u + 1u) % 65536u);
+    // A join is its corner's: it reads as the corner's point, whole where a run carries the corner, and its edges are
+    // shaped by the ends near it in their own frames.
+    float2 bisector = normalize(dIn + dOut + float2(1e-12, 0.0));
+    CornerSpan = float2(along, along);
     if (JoinType == 2u && !isStart && !isEnd && JoinIsVisible(dIn, dOut))
     {
         if (v == 0u)
@@ -761,7 +668,7 @@ PSInput StrokePullVS(uint vertexId : SV_VertexID)
 
         float angle = 6.28318530717958647692 * float(v == 1u ? tri : tri + 1u) / float(RoundSegments);
         float2 r = hw * float2(cos(angle), sin(angle));
-        return Corner(p + r, hw, back + dot(r, dIn), fwd - dot(r, dOut), frame, fanId, along);
+        return Corner(p + r, hw, back + dot(r, dIn), fwd - dot(r, dOut), frame, fanId, along + dot(r, bisector));
     }
 
     if (JoinType == 1u && hasSegment && !isStart && tri < 2u)
@@ -773,42 +680,43 @@ PSInput StrokePullVS(uint vertexId : SV_VertexID)
 
         float side = tri == 0u ? 1.0 : -1.0;
         float2 n = v == 0u ? SegmentNormal(points[prev], p) : SegmentNormal(p, points[next]);
-        return Corner(p + n * hw * side, hw * side, back, fwd, frame, fanId, along);
+        float2 r = n * hw * side;
+        return Corner(p + r, hw * side, back, fwd, frame, fanId, along + dot(r, bisector));
     }
 
     return NoCorner(p);
-}
-
-// Signed distance to a cap boundary (positive = painted) from u (along the end's axis), v (across) and arc (along the
-// contour, which gates caps where the path folds back). hBite caps concave bites at mid-piece.
-float CapSd(uint cap, float u, float v, float arc, float h, float hBite)
-{
-    if (cap == 6u) return 1e9;                                    // this end is not an end (interior join, closed loop)
-    if (arc > h + Fringe) return 1e9;                             // farther along the contour than this cap can reach
-    if (cap == 1u) return u + h;                                  // square: half a thickness of flat nub
-    if (cap == 2u) return (u >= 0.0) ? 1e9 : h - length(float2(u, v));        // convex round: half-disc out
-    if (cap == 3u) return (u >= 0.0) ? 1e9 : (u + h - abs(v)) * 0.70710678;   // convex triangle: tip out at the center
-    if (cap == 4u) return (u - hBite + abs(v)) * 0.70710678;      // concave triangle: V notch cut in
-    if (cap == 5u) return length(float2(max(u, 0.0), v)) - hBite; // concave round: half-disc bitten out
-    return u;                                                     // flat
 }
 
 // Analytic AA coverage from the nearest boundary (edges and caps), feathered over one pixel as wide as it is here;
 // Fringe == 0 gives hard edges. Shared by all three passes so their depths match bit for bit.
 float StrokeCoverage(PSInput input)
 {
-    uint caps = uint(round(input.Cap1.x));
-    float hBite = min(HalfThickness, 0.5 * (input.Cap0.w + input.Cap1.w));
-    float sd = HalfThickness - abs(input.Cap0.x);
-    sd = min(sd, CapSd(caps % 8u, input.Cap0.y, input.Cap0.z, input.Cap0.w, HalfThickness, hBite));
-    sd = min(sd, CapSd(caps / 8u, input.Cap1.y, input.Cap1.z, input.Cap1.w, HalfThickness, hBite));
-
-    // A pixel's width across the stroke and along it, in local units, where this pixel is - read from the screen, not
-    // given: under a perspective it is not the same from one end of the stroke to the other.
+    // A pixel's width across the stroke, in local units, where this pixel is - read from the screen, not given: under a
+    // perspective it is not the same from one end of the stroke to the other.
     float across = length(float2(ddx(input.Cap0.x), ddy(input.Cap0.x)));
-    float along = length(float2(ddx(input.Arc), ddy(input.Arc)));
-    float coverage = Fringe > 0.0 ? saturate(sd / max(across, 1e-6) + 0.5) : (sd >= 0.0 ? 1.0 : 0.0);
-    return DashMask != 0u ? coverage * DashCoverage(input.Arc, Fringe > 0.0 ? along : 0.0) : coverage;
+    float sd;
+    if (Runs != 0u)
+    {
+        RunLocal = input.Local;
+        RunFirst = input.Segment.x;
+        RunCount = input.Segment.y;
+        RunClosed = input.Contour.y > 0.5;
+        RunLength = input.Contour.x;
+        // The runs carry their own sides; a closed contour with no pattern and no trim has none, only the ribbon's.
+        float arc = clamp(input.Arc, input.Span.x, input.Span.y);
+        sd = RunsSd(arc, input.Cap0.x, input.Contour.x, input.Contour.y > 0.5);
+        if (sd > 1e8) sd = HalfThickness - abs(input.Cap0.x);
+    }
+    else
+    {
+        uint caps = uint(round(input.Cap1.x));
+        float hBite = min(HalfThickness, 0.5 * (input.Cap0.w + input.Cap1.w));
+        sd = HalfThickness - abs(input.Cap0.x);
+        sd = min(sd, CapSd(caps % 8u, input.Cap0.y, input.Cap0.z, input.Cap0.w, HalfThickness, hBite));
+        sd = min(sd, CapSd(caps / 8u, input.Cap1.y, input.Cap1.z, input.Cap1.w, HalfThickness, hBite));
+    }
+
+    return Fringe > 0.0 ? saturate(sd / max(across, 1e-6) + 0.5) : (sd >= 0.0 ? 1.0 : 0.0);
 }
 
 // Depth = coverage in the high 8 bits and piece id in the low 16, exact in float32, so max coverage wins and ties never
@@ -820,11 +728,125 @@ float CoverageDepth(float coverage, float pieceId)
     return (covered * 65536.0 + serial) / 16777216.0;
 }
 
-[shader("fragment")]
-float4 StrokePS(PSInput input) : SV_Target
+// Where this pixel is in the brush's box, and the box.
+void BrushPoint(PSInput input, out float2 p, out float4 box)
 {
-    float4 c = StrokeColor;
+    if (BrushAlong != 0u)
+    {
+        float arc = clamp(input.Arc, input.Span.x, input.Span.y);
+        float across = input.Cap0.x;
+        if (input.Span.x == input.Span.y)
+        {
+            // A join: its disc reaches over both segments' ribbon, so a point on it reads as the segment it lies along -
+            // as far along and across as that segment says - and as the corner itself only in the wedge between them.
+            float2* points = Points + input.Segment.x;
+            uint count = input.Segment.y;
+            uint i = input.Segment.z;
+            float2 corner = points[i];
+            float2 dIn = normalize(corner - points[(i + count - 1u) % count]);
+            float2 dOut = normalize(points[(i + 1u) % count] - corner);
+            float2 r = input.Local - corner;
+            float ahead = dot(r, dOut);
+            float behind = dot(r, dIn);
+            if (ahead > 0.0)
+            {
+                arc += ahead;
+                across = dot(r, float2(-dOut.y, dOut.x));
+            }
+            else if (behind < 0.0)
+            {
+                arc += behind;
+                across = dot(r, float2(-dIn.y, dIn.x));
+            }
+            else
+            {
+                float2 outward = float2(-dIn.y, dIn.x) + float2(-dOut.y, dOut.x);
+                across = dot(r, outward) >= 0.0 ? length(r) : -length(r);
+            }
+        }
+
+        p = float2(arc, across + HalfThickness);
+        box = float4(0.0, 0.0, max(input.Contour.x, 1e-4), max(2.0 * HalfThickness, 1e-4));
+    }
+    else
+    {
+        p = input.Local;
+        box = BrushBounds;
+    }
+}
+
+// The stroke's color at this pixel. `family` is a literal from the entry point - 0 a solid color or a gradient, 1 a
+// pattern or noise, 2 a picture, 3 a picture in a layer of a texture array - so each pass keeps only its own brush.
+float4 StrokeColorAt(PSInput input, int family)
+{
+    if (family == 0 && IsGradient == 0)
+    {
+        return StrokeColor;
+    }
+
+    float2 p;
+    float4 box;
+    BrushPoint(input, p, box);
+    if (family == 1)
+    {
+        PatternFill it;
+        it.Params = PParams;
+        it.Color1 = PColor1;
+        it.Color2 = PColor2;
+        it.Color3 = PColor3;
+        it.Noise = PNoise;
+        it.Anim = PAnim;
+        return PatternFillColor(it, int(PParams.y), p - box.xy, p - (box.xy + box.zw * 0.5), max(box.w * 0.5, 1e-4));
+    }
+
+    if (family >= 2)
+    {
+        float inside;
+        // Along the line one copy takes TAlongLength of it, at the stroke's width - the feather past either side reads the
+        // picture's edge rather than nothing; over the bounds, the box is the picture's.
+        float2 t = BrushAlong != 0u ? float2(p.x / max(TAlongLength, 1e-4), saturate(p.y / box.w))
+                                    : (p - box.xy) / box.zw;
+        float2 uv = TileSourceUv(t, TRotation, TTile, TDrawn, TUvRect, TRepeat, TMirror, inside);
+        // SampleLevel, not Sample: frac() makes uv discontinuous at every tile seam, which would pick the smallest mip.
+        float4 color = family == 3 ? SourceTextureArray.SampleLevel(SourceSampler, float3(uv, TLayer), 0.0)
+                                   : SourceTexture.SampleLevel(SourceSampler, uv, 0.0);
+        color.rgb = AdjustColor(color.rgb, TAdjust);
+        color *= TTint;
+        color.a *= inside;
+        return color;
+    }
+
+    return GradientColorIn(p, box);
+}
+
+float4 StrokeShade(PSInput input, int family)
+{
+    float4 c = StrokeColorAt(input, family);
     c.a *= StrokeCoverage(input);
+    return c;
+}
+
+[shader("fragment")] float4 StrokePS(PSInput input) : SV_Target { LoadUniforms(); return StrokeShade(input, 0); }
+[shader("fragment")] float4 StrokePatternPS(PSInput input) : SV_Target { LoadUniforms(); return StrokeShade(input, 1); }
+[shader("fragment")] float4 StrokeTexturePS(PSInput input) : SV_Target { LoadUniforms(); return StrokeShade(input, 2); }
+[shader("fragment")] float4 StrokeLayerPS(PSInput input) : SV_Target { LoadUniforms(); return StrokeShade(input, 3); }
+
+// A batched stroke's record, loaded for its fragment, and what its element's fade and rounded clip leave of it.
+float LoadBatched(PSInput input)
+{
+    StrokeRecord r = LoadRecord(input.Record);
+    NodeSlot* nodes = Transforms;
+    int fadeSlot = int(r.Window.w);
+    float fade = fadeSlot >= 0 ? nodes[fadeSlot].Params.x : 1.0;
+    return fade * ClipCoverageBySlot(input.Position.xy, r.Extra.x);
+}
+
+[shader("fragment")]
+float4 StrokeBatchPS(PSInput input) : SV_Target
+{
+    float kept = LoadBatched(input);
+    float4 c = StrokeShade(input, 0);
+    c.a *= kept;
     return c;
 }
 
@@ -833,6 +855,14 @@ float4 StrokePS(PSInput input) : SV_Target
 [shader("fragment")]
 float StrokeUnionDepthPS(PSInput input) : SV_Depth
 {
+    LoadUniforms();
+    return CoverageDepth(StrokeCoverage(input), input.PieceId);
+}
+
+[shader("fragment")]
+float StrokeBatchUnionDepthPS(PSInput input) : SV_Depth
+{
+    LoadBatched(input);
     return CoverageDepth(StrokeCoverage(input), input.PieceId);
 }
 
@@ -846,70 +876,108 @@ struct UnionOutput
 // which is the whole point. Drawing it under Less in a single pass instead looks nearly right and is not: the order two
 // pieces reach a pixel is fixed along their whole shared edge, so wherever the weaker one lands first it paints a
 // second time down the entire length, and that reads as a hard line through the stroke.
-[shader("fragment")]
-UnionOutput StrokeUnionDrawPS(PSInput input)
+UnionOutput StrokeUnionShade(PSInput input, int family)
 {
     // No discard for zero coverage: it would pull in DemoteToHelperInvocation, and it buys nothing - such a fragment
     // paints an alpha of zero anyway.
     float coverage = StrokeCoverage(input);
 
     UnionOutput o;
-    o.Color = StrokeColor;
+    o.Color = StrokeColorAt(input, family);
     o.Color.a *= coverage;
     o.Depth = CoverageDepth(coverage, input.PieceId);
     return o;
 }
 
+[shader("fragment")] UnionOutput StrokeUnionDrawPS(PSInput input) { LoadUniforms(); return StrokeUnionShade(input, 0); }
+[shader("fragment")] UnionOutput StrokePatternUnionDrawPS(PSInput input) { LoadUniforms(); return StrokeUnionShade(input, 1); }
+[shader("fragment")] UnionOutput StrokeTextureUnionDrawPS(PSInput input) { LoadUniforms(); return StrokeUnionShade(input, 2); }
+[shader("fragment")] UnionOutput StrokeLayerUnionDrawPS(PSInput input) { LoadUniforms(); return StrokeUnionShade(input, 3); }
+
+[shader("fragment")]
+UnionOutput StrokeBatchUnionDrawPS(PSInput input)
+{
+    float kept = LoadBatched(input);
+    UnionOutput o = StrokeUnionShade(input, 0);
+    o.Color.a *= kept;
+    return o;
+}
+
 technique Stroke
 {
-    // DashCut (compute): one-pass dash/trim cut, single thread, writes the VkDrawIndirectCommand. DrawIndirect.
-    pass DashCut
-    {
-        ComputeShader = StrokeDashCutCS;
-    }
-
-    // DashCutBatch (compute): many contours' cut, a thread each, into fixed ranges of one output. Plain Draw.
-    pass DashCutBatch
-    {
-        ComputeShader = StrokeDashCutBatchCS;
-    }
-
-    // Draw (graphics): rasterize the compute-produced ribbon with a solid color.
+    // Draw: an opaque stroke, one pass.
     pass Draw
     {
-        VertexShader = StrokeVS;
+        VertexShader = StrokePullVS;
         PixelShader = StrokePS;
     }
 
-    // UnionDepth / UnionDraw (graphics): the two passes a TRANSLUCENT stroke takes so its self-overlaps blend once.
+    // UnionDepth / UnionDraw: the two passes a TRANSLUCENT stroke takes so its self-overlaps blend once.
     pass UnionDepth
     {
-        VertexShader = StrokeVS;
+        VertexShader = StrokePullVS;
         PixelShader = StrokeUnionDepthPS;
     }
 
     pass UnionDraw
     {
-        VertexShader = StrokeVS;
-        PixelShader = StrokeUnionDrawPS;
-    }
-
-    // The same three, for a continuous stroke drawn straight from its points (StrokePullVS): no vertex buffer.
-    pass PullDraw
-    {
-        VertexShader = StrokePullVS;
-        PixelShader = StrokePS;
-    }
-
-    pass PullUnionDepth
-    {
-        VertexShader = StrokePullVS;
-        PixelShader = StrokeUnionDepthPS;
-    }
-
-    pass PullUnionDraw
-    {
         VertexShader = StrokePullVS;
         PixelShader = StrokeUnionDrawPS;
+    }
+
+    // The same for a pattern or noise brush, and for a picture; UnionDepth is shared, as it reads no color.
+    pass PatternDraw
+    {
+        VertexShader = StrokePullVS;
+        PixelShader = StrokePatternPS;
+    }
+
+    pass PatternUnionDraw
+    {
+        VertexShader = StrokePullVS;
+        PixelShader = StrokePatternUnionDrawPS;
+    }
+
+    pass TextureDraw
+    {
+        VertexShader = StrokePullVS;
+        PixelShader = StrokeTexturePS;
+    }
+
+    pass TextureUnionDraw
+    {
+        VertexShader = StrokePullVS;
+        PixelShader = StrokeTextureUnionDrawPS;
+    }
+
+    pass LayerDraw
+    {
+        VertexShader = StrokePullVS;
+        PixelShader = StrokeLayerPS;
+    }
+
+    pass LayerUnionDraw
+    {
+        VertexShader = StrokePullVS;
+        PixelShader = StrokeLayerUnionDrawPS;
+    }
+
+    // A batch of solid strokes, one draw a record: one pass when they are opaque, the union's two when they show through.
+    pass BatchDraw
+    {
+        VertexShader = StrokeBatchVS;
+        PixelShader = StrokeBatchPS;
+    }
+
+    pass BatchUnionDepth
+    {
+        VertexShader = StrokeBatchVS;
+        PixelShader = StrokeBatchUnionDepthPS;
+    }
+
+    pass BatchUnionDraw
+    {
+        VertexShader = StrokeBatchVS;
+        PixelShader = StrokeBatchUnionDrawPS;
     }
 }

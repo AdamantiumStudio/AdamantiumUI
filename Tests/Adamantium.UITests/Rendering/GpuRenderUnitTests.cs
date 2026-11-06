@@ -87,19 +87,73 @@ public class GpuRenderUnitTests
         return context;
     }
 
-    // StrokeEffect is null on purpose: these tests exercise the CPU stroke path (StrokeRenderComponent). With a null
-    // GPU stroke effect ProcessStrokeData falls back to CPU, so the unit's update/dispose behavior is what's asserted.
+    // A unit with no stroke effect: its fill alone is what these tests are about.
     private RectangleRenderUnit NewRectUnit(RectanglePayload payload) =>
         new RectangleRenderUnit(Command(payload), Ctx((UIBasicEffect)_effect.Clone()));
 
     [Test]
     public void Pen_Added_BuildsStroke()
     {
-        var unit = NewRectUnit(Unbatched(Brushes.Red, BoxA, pen: null));
+        var unit = new RectangleRenderUnit(Command(Unbatched(Brushes.Red, BoxA, pen: null)),
+            Ctx((UIBasicEffect)_effect.Clone(), new StrokeEffect(_device)));
         Assert.That(unit.StrokeRenderer, Is.Null, "no pen -> no stroke");
 
         unit.UpdateWithDrawCommand(Command(Unbatched(Brushes.Red, BoxA, new Pen(Brushes.Black, 2))));
         Assert.That(unit.StrokeRenderer, Is.Not.Null, "pen added must build a stroke (the #7 fix)");
+    }
+
+    [Test]
+    public void Stroke_AnyBrush_DrawsOnGpu_NoCpuStroke()
+    {
+        // Every brush is painted along the GPU ribbon - patterns, noise, pictures, and a flat color for the rest - so a
+        // stroke is never tessellated on the CPU.
+        var strokeEffect = new StrokeEffect(_device);
+        Brush[] brushes =
+        [
+            new PatternBrush(), new NoiseBrush(), new FractalBrush(), new InkBrush(), new CanvasGridBrush(),
+            new MaterialBrush(),
+        ];
+        foreach (var brush in brushes)
+        {
+            var unit = new RectangleRenderUnit(Command(Unbatched(Brushes.Red, BoxB, new Pen(brush, 2))),
+                Ctx((UIBasicEffect)_effect.Clone(), strokeEffect));
+            Assert.That(unit.StrokeRenderer, Is.InstanceOf<GpuStrokeRenderComponent>(), brush.GetType().Name);
+        }
+    }
+
+    [Test]
+    public void FittedDashes_FitAgain_WhenTheContourResizes_OrThePatternChanges()
+    {
+        // A closed square with its dashes fitted: a whole number of periods goes round at every size and every pattern,
+        // the stroke updated in place - not left stretched for the old length.
+        var strokeEffect = new StrokeEffect(_device);
+        Pen Fitted(double on, double off) => new(Brushes.Black, 2, dashStrokeArray: [on, off], fitDashesToContour: true);
+        var unit = new RectangleRenderUnit(Command(Unbatched(Brushes.Red, BoxA, Fitted(7, 5))),
+            Ctx((UIBasicEffect)_effect.Clone(), strokeEffect));
+        var stroke = (GpuStrokeRenderComponent)unit.StrokeRenderer;
+        Assert.That(stroke.DashScaleOf(0), Is.EqualTo(40.0 / 36.0).Within(1e-4), "a 40 round, three periods of 12");
+
+        unit.UpdateWithDrawCommand(Command(Unbatched(Brushes.Red, BoxB, Fitted(7, 5))));
+        Assert.That(unit.StrokeRenderer, Is.SameAs(stroke), "a resize updates in place");
+        Assert.That(stroke.DashScaleOf(0), Is.EqualTo(160.0 / 156.0).Within(1e-4), "a 160 round, thirteen periods of 12");
+
+        unit.UpdateWithDrawCommand(Command(Unbatched(Brushes.Red, BoxB, Fitted(10, 10))));
+        Assert.That(unit.StrokeRenderer, Is.SameAs(stroke), "another pattern of as many entries repoints");
+        Assert.That(stroke.DashScaleOf(0), Is.EqualTo(1.0).Within(1e-4), "a 160 round, eight periods of 20");
+    }
+
+    [Test]
+    public void Stroke_BrushMappingChange_Repoints_NoRebuild()
+    {
+        var strokeEffect = new StrokeEffect(_device);
+        var unit = new RectangleRenderUnit(Command(Unbatched(Brushes.Red, BoxB, new Pen(new PatternBrush(), 4))),
+            Ctx((UIBasicEffect)_effect.Clone(), strokeEffect));
+        var stroke = unit.StrokeRenderer;
+
+        // How the brush is laid on is read where it is drawn: the same ribbon, laid along the line now.
+        unit.UpdateWithDrawCommand(Command(Unbatched(Brushes.Red, BoxB,
+            new Pen(new PatternBrush(), 4) { BrushMapping = PenBrushMapping.Along })));
+        Assert.That(unit.StrokeRenderer, Is.SameAs(stroke), "a brush mapping change must repoint, not rebuild");
     }
 
     [Test]
@@ -128,20 +182,6 @@ public class GpuRenderUnitTests
     }
 
     [Test]
-    public void Resize_WithPen_RebuildsStroke_ToFollowGeometry()
-    {
-        var pen = new Pen(Brushes.Black, 2);
-        var unit = NewRectUnit(Unbatched(Brushes.Red, BoxA, pen));
-        var strokeBefore = unit.StrokeRenderer;
-        Assert.That(strokeBefore, Is.Not.Null);
-
-        // Resize (geometry rebuild) with the same pen: the stroke wraps the geometry, so it must be rebuilt.
-        unit.UpdateWithDrawCommand(Command(Unbatched(Brushes.Red, BoxB, pen)));
-        Assert.That(unit.StrokeRenderer, Is.Not.Null);
-        Assert.That(unit.StrokeRenderer, Is.Not.SameAs(strokeBefore), "stroke must follow the new geometry");
-    }
-
-    [Test]
     public void Stroke_UniformOnlyPenChange_Repoints_NoRebuild()
     {
         // Real StrokeEffect -> the GPU stroke path (GpuStrokeRenderComponent), where TryRepoint lives.
@@ -159,6 +199,24 @@ public class GpuRenderUnitTests
         // A join change resizes the corner fans -> the buffer sizes differ, so it must rebuild (new component).
         unit.UpdateWithDrawCommand(Command(Unbatched(Brushes.Red, BoxB, new Pen(Brushes.Black, 7, penLineJoin: PenLineJoin.Round))));
         Assert.That(unit.StrokeRenderer, Is.Not.SameAs(stroke), "join change resizes buffers -> must rebuild");
+    }
+
+    [Test]
+    public void Stroke_GradientPen_DrawsOnGpu_AndRepointsToSolid()
+    {
+        // A gradient stroke is colored in the pixel shader along the same ribbon - not tessellated on the CPU into a
+        // mesh nothing could paint.
+        var strokeEffect = new StrokeEffect(_device);
+        var gradient = new LinearGradientBrush(new GradientStopCollection(
+            [new GradientStop(new Color(255, 0, 0), 0), new GradientStop(new Color(0, 0, 255), 1)]));
+        var unit = new RectangleRenderUnit(Command(Unbatched(Brushes.Red, BoxB, new Pen(gradient, 2))),
+            Ctx((UIBasicEffect)_effect.Clone(), strokeEffect));
+        var stroke = unit.StrokeRenderer;
+        Assert.That(stroke, Is.InstanceOf<GpuStrokeRenderComponent>(), "gradient pen + StrokeEffect -> GPU stroke");
+
+        // The brush is read where it is drawn, so turning the gradient solid keeps the same component.
+        unit.UpdateWithDrawCommand(Command(Unbatched(Brushes.Red, BoxB, new Pen(Brushes.Black, 2))));
+        Assert.That(unit.StrokeRenderer, Is.SameAs(stroke), "gradient -> solid pen must repoint, not rebuild");
     }
 
     [Test]
@@ -193,9 +251,9 @@ public class GpuRenderUnitTests
         unit.UpdateWithDrawCommand(LineCmd(20, 100));
         Assert.That(unit.StrokeRenderer, Is.SameAs(stroke), "dash-offset-only change on a line must repoint, not rebuild");
 
-        // Endpoint move changes the ribbon -> must rebuild.
+        // An endpoint move keeps the topology: the dashes are a mask over the ribbon, so the points are rewritten in place.
         unit.UpdateWithDrawCommand(LineCmd(20, 130));
-        Assert.That(unit.StrokeRenderer, Is.Not.SameAs(stroke), "endpoint move must rebuild");
+        Assert.That(unit.StrokeRenderer, Is.SameAs(stroke), "a dashed line moved end updates in place, nothing is cut");
     }
 
     [Test]

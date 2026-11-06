@@ -9,8 +9,9 @@ namespace Adamantium.UI.Core.Media.Imaging;
 /// <summary>
 /// A picture made of layers of one size, each written on its own, all of them in ONE texture array that starts small and
 /// grows as layers are taken - an atlas of map tiles or thumbnails. Shapes filled from its layers with an
-/// <see cref="ImageBrush"/> whose source is an <see cref="ImageLayer"/> batch into one draw. Only a rectangle, an ellipse
-/// and a regular polygon without a pen draw a layer; other shapes, and the image drawn as a whole, draw nothing.
+/// <see cref="ImageBrush"/> whose source is an <see cref="ImageLayer"/> batch into one draw. A rectangle, an ellipse and a
+/// regular polygon fill from a layer, and any stroke is painted from one; other fills, and the image drawn as a whole,
+/// draw nothing.
 /// </summary>
 public sealed class TextureArrayImage : ImageSource
 {
@@ -182,6 +183,16 @@ public sealed class TextureArrayImage : ImageSource
             }
 
             return _layers.Texture;
+        }
+    }
+
+    /// <summary>Whether <paramref name="layer"/> is a layer the array holds now: of this image and generation, not given
+    /// back, and inside the array as last grown. Anything else would sample a layer it does not own.</summary>
+    internal bool Holds(ImageLayer layer)
+    {
+        lock (_gate)
+        {
+            return Owns(layer) && !layer.IsFree && _layers != null && layer.Index < _layers.Count;
         }
     }
 

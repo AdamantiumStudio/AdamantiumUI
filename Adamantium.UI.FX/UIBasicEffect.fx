@@ -1,5 +1,6 @@
 #include "Includes/CommonData.fxh"
 #include "Includes/ColorMath.fxh"
+#include "Includes/TileMath.fxh"
 
 float4x4 wvp;
 
@@ -83,28 +84,15 @@ VERTEX_OUTPUT TexturedFillVS(UI_VERTEX input)
 [shader("fragment")]
 float4 TexturedFill_PS(VERTEX_OUTPUT input) : SV_TARGET
 {
-    // 0..1 across the shape's box -> TILE space -> the content's rect inside one tile -> the source's sub-rectangle.
-    // Back into the UNTURNED grid: one 2x2, with the inverse, the aspect and the turn center already folded in.
-    float2 g = float2(input.uv0.x * texRotation.x + input.uv0.y * texRotation.y,
-                      input.uv0.x * texRotation.z + input.uv0.y * texRotation.w);
-    float2 nn = g * texTile.xy - texTile.zw;
-    // A SINGLE copy never wraps: frac() would send its far edge back to the opposite one.
-    float2 tileLocal = lerp(nn, frac(nn), texRepeat);
-    // MIRRORED repeat: every other copy runs backwards, so a picture never drawn to tile still meets its own reflection.
-    float2 mirrored = abs(frac(nn * 0.5) * 2.0 - 1.0);
-    float2 pick = float2(step(0.5, fmod(texMirror, 2.0)), step(0.5, floor(texMirror * 0.5)));
-    float2 inTile = lerp(tileLocal, mirrored, pick);
-    float2 n = (inTile - texDrawn.xy) / max(texDrawn.zw, float2(1e-4, 1e-4));
-    float2 uv = texUvRect.xy + saturate(n) * texUvRect.zw;
+    float inside;
+    float2 uv = TileSourceUv(input.uv0, texRotation, texTile, texDrawn, texUvRect, float2(texRepeat, texRepeat),
+        texMirror, inside);
 
     // SampleLevel, not Sample: frac() makes uv discontinuous at every tile seam, and the derivative Sample picks its mip
     // by spikes there - one column of pixels drawn from the smallest mip, i.e. a thin line down each seam.
     float4 color = shaderTexture.SampleLevel(sampleType, uv, 0.0);
     color.rgb = AdjustColor(color.rgb, texAdjust);
     color *= texTint;
-
-    // Outside the content's rect inside its tile there is nothing to paint - the gap a Uniform fit leaves.
-    float inside = step(0.0, n.x) * step(n.x, 1.0) * step(0.0, n.y) * step(n.y, 1.0);
     color.a *= inside;
     color.a *= opacity;
 

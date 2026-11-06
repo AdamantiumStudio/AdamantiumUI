@@ -22,6 +22,8 @@
     <Phrase Key="Join" Text="Стык"/>
     <Phrase Key="DashFit" Text="Подгонка штриха"/>
     <Phrase Key="Color" Text="Цвет"/>
+    <Phrase Key="Brush" Text="Кисть"/>
+    <Phrase Key="BrushMapping" Text="Укладка кисти"/>
 
     <Phrase Key="NurbsParameters" Text="Параметры NURBS (у B-сплайна их нет):"/>
     <Phrase Key="Weight" Text="Вес"/>
@@ -77,4 +79,18 @@
     <Phrase Key="Bevel" Text="Срез"/>
     <Phrase Key="Miter" Text="Острый"/>
     <Phrase Key="Round" Text="Круглый"/>
+    <Phrase Key="Solid" Text="Сплошная"/>
+    <Phrase Key="LinearGradient" Text="Линейный градиент"/>
+    <Phrase Key="RadialGradient" Text="Радиальный градиент"/>
+    <Phrase Key="Pattern" Text="Узор"/>
+    <Phrase Key="Noise" Text="Шум"/>
+    <Phrase Key="Image" Text="Картинка"/>
+    <Phrase Key="Bounds" Text="По рамке фигуры"/>
+    <Phrase Key="Along" Text="Вдоль линии"/>
+    <Phrase Key="Variant" Text="Вариант"/>
+    <Phrase Key="AtlasLayer" Text="Слой атласа"/>
+    <Phrase Key="Passes" Text="Перекрытия"/>
+    <Phrase Key="Auto" Text="По кисти"/>
+    <Phrase Key="Blend" Text="Один проход"/>
+    <Phrase Key="Union" Text="Два прохода"/>
 </Language>
