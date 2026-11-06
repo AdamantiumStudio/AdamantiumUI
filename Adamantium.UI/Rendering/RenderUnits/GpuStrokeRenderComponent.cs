@@ -529,6 +529,19 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
     // Device pixels per geometry-local unit, the least over the stroke under a perspective.
     private float DeviceScale() => WindowScale() * (float)RenderData.RenderScale;
 
+    // Window pixels per geometry-local unit a width in pixels is measured in: under a perspective, the plane's own at the
+    // depth of the screen (w = 1), the same for every unit drawn on that plane - so a leaned map's line is one width on
+    // the ground that the perspective narrows into the distance, rather than each tile measuring by its own far corner
+    // and the line stepping at every tile's edge.
+    private float PixelWidthScale()
+    {
+        var t = RenderData.TransformMatrix;
+        if (t.M14 == 0f && t.M24 == 0f) return WindowScale();
+
+        var plane = PlaneScale(t);
+        return plane > 1e-4f ? plane : WindowScale();
+    }
+
     // Window (layout) pixels per geometry-local unit.
     private float WindowScale()
     {
@@ -544,8 +557,8 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
         var thickness = _pen.Thickness;
         if (_pen.ThicknessUnit == PenThicknessUnit.Pixels)
         {
-            var windowScale = WindowScale();
-            if (windowScale > 1e-4f) thickness /= windowScale;
+            var pixelScale = PixelWidthScale();
+            if (pixelScale > 1e-4f) thickness /= pixelScale;
         }
 
         if (_pen.MinimumDeviceThickness > 0)
@@ -597,6 +610,17 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
         var dydx = (t.M12 - sy * t.M14) / w;
         var dydy = (t.M22 - sy * t.M24) / w;
         return MathF.Sqrt(MathF.Abs(dxdx * dydy - dxdy * dydx));
+    }
+
+    /// <summary>The linear scale of a plane under the projective map <paramref name="t"/> where its w is 1 - the depth of
+    /// the screen: the square root of the determinant of its x, y, w part, the area scale at any point being that over
+    /// w cubed. A move of the plane within itself leaves it as it is.</summary>
+    internal static float PlaneScale(Matrix4x4F t)
+    {
+        var determinant = t.M11 * (t.M22 * t.M44 - t.M42 * t.M24)
+                          - t.M21 * (t.M12 * t.M44 - t.M42 * t.M14)
+                          + t.M41 * (t.M12 * t.M24 - t.M22 * t.M14);
+        return MathF.Sqrt(MathF.Abs(determinant));
     }
 
     // Uploads run OUT of the render pass: PreRender is recorded from BeginDraw's beforeRenderPass hook. Each contour puts

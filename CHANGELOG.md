@@ -119,6 +119,9 @@ All packages share one version.
 
 ### Fixed
 
+- A pen whose width is in pixels, drawn on a plane under a perspective - a leaned map's roads - is one width on the
+  plane, measured at the depth of the screen, which the perspective narrows into the distance. Each draw measured by
+  its own farthest corner, so a road was wide in the tile nearest the eye and stepped thinner at every tile's edge.
 - The wheel over a node, or over any control standing on a canvas that does not use it, zooms the canvas; it did
   nothing there. A scroller on the plane with somewhere to scroll keeps the wheel even at its end, and the panels over
   the canvas keep it as before.
