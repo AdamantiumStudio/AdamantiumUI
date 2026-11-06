@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using Adamantium.Mathematics;
-using Adamantium.UI.Controls.DrawingBoard;
+using Adamantium.UI.Controls.Canvases;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Media;
 using NUnit.Framework;
@@ -30,11 +30,14 @@ public class CanvasOrderTests
             return result;
         });
 
-    private static InfiniteCanvas Canvas()
+    // The INK too: a pen with no brush does not start a stroke at all, and a test that drew nothing would pass half its
+    // assertions without ever having drawn.
+    private static DrawingBoard Canvas() => Canvas(new DrawingBoard { Ink = Brushes.Black });
+
+    private static T Canvas<T>(T canvas) where T : InfiniteCanvas
     {
-        // The INK too: a pen with no brush does not start a stroke at all, and a test that drew nothing would pass
-        // half its assertions without ever having drawn.
-        var canvas = new InfiniteCanvas { Scene = new CanvasScene(), Ink = Brushes.Black, Template = Template() };
+        canvas.Scene = new CanvasScene();
+        canvas.Template = Template();
 
         canvas.Measure(new Size<double>(800, 600));
         canvas.Arrange(new Rect(0, 0, 800, 600));
@@ -357,29 +360,6 @@ public class CanvasOrderTests
             "it offered to get over something that is not in front of it");
     }
 
-    // A STEP IS PAST WHAT IS SEEN. A scene may hold a drawing and a graph at once; a step that moved a shape past a
-    // node nobody is looking at is a press that appears to do nothing.
-    [Test]
-    public void AStepPassesWhatIsOnScreenAndNotWhatIsHidden()
-    {
-        var canvas = Canvas();
-        var under = Rect(0);
-        var over = Rect(10);
-
-        canvas.Mode = CanvasMode.Drawing;
-        canvas.Place(under);
-
-        // A NODE between them, which a drawing does not show.
-        canvas.Scene.Add(new ElementItem(new CanvasNode { Title = "Add" }, new Rect(0, 0, 80, 40)));
-        canvas.Place(over);
-
-        canvas.Select(over, false);
-        canvas.SendBackwardCommand.Execute(null);
-
-        Assert.That(Order(canvas), Is.EqualTo(new ICanvasItem[] { over, under }),
-            "the step was spent on something the drawing does not show");
-    }
-
     private static ShapeItem Rect(double at) =>
         new(CanvasShape.Rectangle, new Rect(at, at, 40, 40), Brushes.Black, 1);
 
@@ -388,9 +368,8 @@ public class CanvasOrderTests
     [Test]
     public void ACommentFrameIsMadeAtTheBottom()
     {
-        var canvas = Canvas();
+        var canvas = Canvas(new NodeGraph());
 
-        canvas.Mode = CanvasMode.Nodes;
         canvas.Scene.Add(new ElementItem(new CanvasNode { Title = "Add" }, new Rect(0, 0, 120, 60)));
         canvas.SelectMany(Order(canvas), false);
 
@@ -710,54 +689,6 @@ public class CanvasOrderTests
         Assert.That(scene.Reposition(one, 500), Is.True);
         Assert.That(one.Order, Is.EqualTo(1));
         Assert.That(scene.Items[1], Is.SameAs(one));
-    }
-
-    // COUNTED AMONG WHAT CAN BE SEEN. A plane may hold a drawing and a graph at once and shows one of them; numbered
-    // through both, a drawing of three things gave its topmost the number eight, because five nodes nobody can see
-    // were standing between them. A number a person cannot arrive at by looking is not a number they can type.
-    [Test]
-    public void TheNumberDoesNotCountWhatTheModeDoesNotShow()
-    {
-        var scene = new CanvasScene();
-        var first = Ink();
-        var second = Ink();
-
-        scene.Add(first);
-        scene.Add(new ElementItem(new CanvasNode { Title = "Add" }, new Rect(0, 0, 120, 60)));
-        scene.Add(new ElementItem(new CanvasNode { Title = "Mul" }, new Rect(0, 0, 120, 60)));
-        scene.Add(second);
-
-        Assert.That(new[] { first.Order, second.Order }, Is.EqualTo(new[] { 0, 1 }),
-            "the drawing was numbered through nodes that are not on show with it");
-    }
-
-    // ...AND PUT THERE THE SAME WAY. Asked for the top of a drawing, an item has to land over the last drawn thing -
-    // not at that index of the list, which in a plane holding both kinds is somebody else's place entirely.
-    [Test]
-    public void WritingTheNumberCountsAmongWhatCanBeSeen()
-    {
-        var scene = new CanvasScene();
-        var first = Ink();
-        var second = Ink();
-        var node = new ElementItem(new CanvasNode { Title = "Add" }, new Rect(0, 0, 120, 60));
-
-        scene.Add(first);
-        scene.Add(node);
-        scene.Add(second);
-
-        Assert.That(scene.Reposition(first, 1), Is.True);
-        Assert.That(new[] { first.Order, second.Order }, Is.EqualTo(new[] { 1, 0 }));
-        // The drawing's OWN order is what was asked about; where the node ended up among them means nothing, because
-        // the two are never on show together.
-        var drawn = new List<ICanvasItem>();
-
-        foreach (var item in scene.Items)
-        {
-            if (item.Mode == CanvasMode.Drawing) drawn.Add(item);
-        }
-
-        Assert.That(drawn, Is.EqualTo(new ICanvasItem[] { second, first }),
-            "the ink asked for the top of the drawing did not end up over the other ink");
     }
 
     // THE PANEL IS THE WAY IN. Writing the number on the item and telling the canvas an edit happened has to be enough

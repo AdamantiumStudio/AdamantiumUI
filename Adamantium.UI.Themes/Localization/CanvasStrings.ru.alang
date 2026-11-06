@@ -6,8 +6,6 @@
     <Phrase Key="ResizePanel" Text="Перетащите, чтобы задать ширину панели"/>
     <Phrase Key="StickToEdge" Text="Прилипать к краю, если бросить панель рядом с ним"/>
     <Phrase Key="ToolsLayout" Text="Расположить инструменты в строку или в столбец"/>
-    <Phrase Key="DrawingMode" Text="Рисунок — перо, фигуры и текст"/>
-    <Phrase Key="GraphMode" Text="Граф — узлы и связи между ними"/>
     <Phrase Key="Properties" Text="Свойства выделенного"/>
     <Phrase Key="Layers" Text="Всё, что есть на плоскости, сверху вниз"/>
     <Phrase Key="CommentFrame" Text="Обвести выделенное рамкой комментария"/>

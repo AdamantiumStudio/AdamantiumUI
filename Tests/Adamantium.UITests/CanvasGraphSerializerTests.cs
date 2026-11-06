@@ -1,7 +1,7 @@
 using System.Linq;
 using Adamantium.Mathematics;
 using Adamantium.UI.Controls;
-using Adamantium.UI.Controls.DrawingBoard;
+using Adamantium.UI.Controls.Canvases;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Media;
 using NUnit.Framework;
@@ -13,9 +13,9 @@ namespace Adamantium.UITests;
 /// the application's, carried through the file untouched.</summary>
 public class CanvasGraphSerializerTests
 {
-    private static (InfiniteCanvas canvas, CanvasScene scene) Stage()
+    private static (NodeGraph canvas, CanvasScene scene) Stage()
     {
-        var canvas = new InfiniteCanvas { Mode = CanvasMode.Nodes };
+        var canvas = new NodeGraph();
         canvas.Measure(new Size<double>(800, 600), force: true);
         canvas.Arrange(new Rect(0, 0, 800, 600));
 
@@ -62,6 +62,103 @@ public class CanvasGraphSerializerTests
             Assert.That(back.Title, Is.EqualTo("Times two"),
                 "the title is a label of its own and must not be replaced by the kind");
         });
+    }
+
+    // A COMMENT FRAME is part of the graph's reading: written out, it comes back where it was, saying what it said, in
+    // its own color and behind the nodes. Loading used to clear the frames and never write them.
+    [Test]
+    public void ACommentFrameSurvivesTheRoundTrip()
+    {
+        var (canvas, scene) = Stage();
+
+        var frame = new CanvasFrameItem(new Rect(-20, -40, 300, 200), "Lighting", new SolidColorBrush(Colors.Red),
+            new SolidColorBrush(new Color(0, 0, 255, 40))) { Thickness = 3, TitleHeight = 30 };
+        scene.Add(frame);
+        scene.Add(new ElementItem(Made("Multiply", "In 1"), new Rect(0, 0, 160, 90)));
+
+        var text = CanvasGraphSerializer.Save(canvas);
+
+        var (other, target) = Stage();
+        Assert.That(CanvasGraphSerializer.Load(other, text), Is.True);
+
+        var back = target.Items.OfType<CanvasFrameItem>().SingleOrDefault();
+
+        Assert.That(back, Is.Not.Null, "the frame was lost on the way");
+        Assert.Multiple(() =>
+        {
+            Assert.That(back.Title, Is.EqualTo("Lighting"));
+            Assert.That(back.World, Is.EqualTo(frame.World));
+            Assert.That(((SolidColorBrush)back.Stroke).Color, Is.EqualTo(Colors.Red));
+            Assert.That(((SolidColorBrush)back.Fill).Color, Is.EqualTo(new Color(0, 0, 255, 40)));
+            Assert.That(back.Thickness, Is.EqualTo(3));
+            Assert.That(back.TitleHeight, Is.EqualTo(30));
+            Assert.That(target.Items[0], Is.SameAs(back), "the frame came back over the nodes it is drawn round");
+        });
+    }
+
+    // A frame with NO outline is said so, and does not come back wearing the accent.
+    [Test]
+    public void AFrameWithNoOutlineComesBackWithNone()
+    {
+        var (canvas, scene) = Stage();
+        scene.Add(new CanvasFrameItem(new Rect(0, 0, 200, 100), "Bare", null, new SolidColorBrush(Colors.Red)));
+
+        var (other, target) = Stage();
+        CanvasGraphSerializer.Load(other, CanvasGraphSerializer.Save(canvas));
+
+        Assert.That(target.Items.OfType<CanvasFrameItem>().Single().Stroke, Is.Null);
+    }
+
+    // A VERSION that is not a whole number is a file this cannot read - refused, not thrown.
+    [Test]
+    [TestCase("\"1\"")]
+    [TestCase("1.5")]
+    public void AVersionThatIsNoNumberIsRefused(string version)
+    {
+        var (canvas, scene) = Stage();
+        var kept = new ElementItem(Made("Kept"), new Rect(0, 0, 160, 90));
+        scene.Add(kept);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(CanvasGraphSerializer.Load(canvas, $"{{\"version\": {version}, \"nodes\": []}}"), Is.False);
+            Assert.That(scene.Items, Does.Contain(kept), "a refused file changed the canvas");
+        });
+    }
+
+    // What the file does not hold is not the file's to take: a control put on the plane stays where it is.
+    [Test]
+    public void LoadingAGraphLeavesWhatIsNoPartOfIt()
+    {
+        var (canvas, scene) = Stage();
+        scene.Add(new ElementItem(Made("Multiply"), new Rect(0, 0, 160, 90)));
+        var text = CanvasGraphSerializer.Save(canvas);
+
+        var (other, target) = Stage();
+        var button = new ElementItem(new Adamantium.UI.Controls.Buttons.Button(), new Rect(400, 0, 100, 30));
+        target.Add(button);
+
+        CanvasGraphSerializer.Load(other, text);
+
+        Assert.That(target.Items, Does.Contain(button), "loading a graph took a control that is no part of it");
+    }
+
+    // ONE STEP of the history: an undo after opening a file brings back the graph that was there before.
+    [Test]
+    public void OpeningAGraphIsUndoneInOneStep()
+    {
+        var (canvas, scene) = Stage();
+        scene.Add(new ElementItem(Made("From the file"), new Rect(0, 0, 160, 90)));
+        var text = CanvasGraphSerializer.Save(canvas);
+
+        var (other, target) = Stage();
+        var before = new ElementItem(Made("Before"), new Rect(0, 0, 160, 90));
+        target.Add(before);
+
+        CanvasGraphSerializer.Load(other, text);
+        other.Undo();
+
+        Assert.That(target.Items, Is.EqualTo(new ICanvasItem[] { before }), "the undo did not bring back the old graph");
     }
 
     // ...and a COPY is a node of the same sort. Copied without it, a pasted node looks right and does nothing.
@@ -206,22 +303,6 @@ public class CanvasGraphSerializerTests
         Assert.That(other.ItemsHere().OfType<ElementItem>().Count(), Is.EqualTo(2), "the nodes went with it");
     }
 
-    // A drawing in the same scene is not the graph's to touch: a graph is loaded INTO a canvas, not over it.
-    [Test]
-    public void LoadingAGraphLeavesTheDrawingAlone()
-    {
-        var (canvas, scene) = Stage();
-        scene.Add(new ElementItem(Made("Multiply"), new Rect(0, 0, 160, 90)));
-        var text = CanvasGraphSerializer.Save(canvas);
-
-        var (other, target) = Stage();
-        var ink = new ShapeItem(CanvasShape.Rectangle, new Rect(0, 0, 50, 50), Brushes.White, 2);
-        target.Add(ink);
-
-        CanvasGraphSerializer.Load(other, text);
-
-        Assert.That(target.Items, Does.Contain(ink), "loading a graph took the drawing with it");
-    }
 
     // A file this version cannot read changes nothing, and says so rather than half-loading.
     [TestCase("")]

@@ -109,12 +109,12 @@ An Office-style ribbon:
 
 ### Infinite canvas and node graph
 
-`InfiniteCanvas` is a drawing board and a node editor in one:
+`InfiniteCanvas` is the plane under two controls, `DrawingBoard` and `NodeGraph`:
 
 - an unbounded plane with pan and zoom, a minimap and a view bar;
-- drawing tools: pen, shapes, curves, paths, text, images and an eraser, with selection handles, transforms and
+- `DrawingBoard`: pen, shapes, curves, paths, text, images and an eraser, with selection handles, transforms and
   alignment;
-- a node graph: nodes with typed sockets, wires, groups and a node palette. The graph is kept evaluated while it is
+- `NodeGraph`: nodes with typed sockets, wires, groups and a node palette. The graph is kept evaluated while it is
   edited: only changed nodes are recomputed, in dependency order;
 - an inspector and an undo history;
 - SVG import and export; scenes and graphs saved and loaded.

@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Adamantium.UI.Controls.Base;
-using Adamantium.UI.Controls.DrawingBoard;
+using Adamantium.UI.Controls.Canvases;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Automation;
 
@@ -52,9 +52,14 @@ public class CanvasSocketAutomationPeer : UIComponentAutomationPeer, IConnection
             throw new InvalidOperationException("Both ends must be sockets of nodes on a canvas.");
         }
 
-        canvas.BeginEdit("Connect");
-        var wire = canvas.Join(item, pin, otherItem, otherPin);
-        canvas.EndEdit();
+        if (canvas is not NodeGraph graph)
+        {
+            throw new InvalidOperationException("Sockets are joined on a node graph.");
+        }
+
+        graph.BeginEdit("Connect");
+        var wire = graph.Join(item, pin, otherItem, otherPin);
+        graph.EndEdit();
         if (wire == null)
         {
             throw new InvalidOperationException(

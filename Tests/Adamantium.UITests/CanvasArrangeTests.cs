@@ -1,6 +1,6 @@
 using Adamantium.Mathematics;
 using Adamantium.UI.Controls;
-using Adamantium.UI.Controls.DrawingBoard;
+using Adamantium.UI.Controls.Canvases;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Media;
 using NUnit.Framework;
@@ -78,19 +78,6 @@ public class CanvasArrangeTests
         Assert.That(canvas.VisibleWorld.Contains(new Vector2<double>(500, 400)), Is.True);
     }
 
-    // FIT ALL is about what is on the plane OF THE CURRENT MODE: what the other mode holds is not being looked at.
-    [Test]
-    public void FittingEverythingIsAboutTheModeInHand()
-    {
-        var (canvas, scene) = Stage();
-        scene.Add(Box(0, 0));
-        scene.Add(new ElementItem(new CanvasNode(), new Rect(40000, 40000, 190, 110)));
-
-        Assert.That(canvas.FitAll(), Is.True);
-
-        Assert.That(canvas.VisibleWorld.Contains(new Vector2<double>(40000, 40000)), Is.False,
-            "the camera flew off to a node the drawing mode does not even show");
-    }
 
     [Test]
     public void FittingNothingIsNotAnAnswer()

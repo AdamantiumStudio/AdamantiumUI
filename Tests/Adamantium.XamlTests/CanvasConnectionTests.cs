@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using Adamantium.Core.DependencyInjection;
 using Adamantium.Mathematics;
 using Adamantium.UI.Controls;
-using Adamantium.UI.Controls.DrawingBoard;
+using Adamantium.UI.Controls.Canvases;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.Resources;
@@ -345,7 +345,7 @@ public class CanvasConnectionTests
     {
         Use(ThemeNamed("Fluent"));
 
-        var canvas = new InfiniteCanvas { Mode = CanvasMode.Nodes };
+        var canvas = new NodeGraph();
         var scene = new CanvasScene();
         canvas.Scene = scene;
         canvas.Tool = new SelectTool();
@@ -410,7 +410,7 @@ public class CanvasConnectionTests
     {
         Use(ThemeNamed("Fluent"));
 
-        var canvas = new InfiniteCanvas { Mode = CanvasMode.Nodes, Scene = new CanvasScene() };
+        var canvas = new NodeGraph {Scene = new CanvasScene() };
         canvas.ApplyCurrentTheme();
         Adamantium.UI.Extensions.WindowExtension.UpdateTree(canvas);
 
@@ -546,7 +546,7 @@ public class CanvasConnectionTests
     {
         Use(ThemeNamed("Fluent"));
 
-        var canvas = new InfiniteCanvas { Mode = CanvasMode.Nodes, Scene = new CanvasScene() };
+        var canvas = new NodeGraph {Scene = new CanvasScene() };
         canvas.ApplyCurrentTheme();
         Adamantium.UI.Extensions.WindowExtension.UpdateTree(canvas);
 
@@ -751,11 +751,11 @@ public class CanvasConnectionTests
         });
     }
 
-    private static InfiniteCanvas Canvas(ElementItem left, ElementItem right)
+    private static NodeGraph Canvas(ElementItem left, ElementItem right)
     {
-        // A GRAPH, which is the only place a wire exists at all: a canvas being used as a drawing does not offer nodes,
-        // and a gesture that joins two of them has nothing to take hold of.
-        var canvas = new InfiniteCanvas { Mode = CanvasMode.Nodes };
+        // A GRAPH, which is the only place a wire exists at all: a drawing board does not offer nodes, and a gesture
+        // that joins two of them has nothing to take hold of.
+        var canvas = new NodeGraph();
         canvas.Measure(new Size<double>(800, 600), force: true);
         canvas.Arrange(new Rect(0, 0, 800, 600));
 

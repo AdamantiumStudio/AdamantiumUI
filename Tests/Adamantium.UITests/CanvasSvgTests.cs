@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Adamantium.Mathematics;
 using Adamantium.ProceduralGeometry;
-using Adamantium.UI.Controls.DrawingBoard;
+using Adamantium.UI.Controls.Canvases;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Media;
 using NUnit.Framework;

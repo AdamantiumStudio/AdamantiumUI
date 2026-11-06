@@ -1,7 +1,7 @@
 using System.Runtime.InteropServices;
 using Adamantium.Imaging;
 using Adamantium.Mathematics;
-using Adamantium.UI.Controls.DrawingBoard;
+using Adamantium.UI.Controls.Canvases;
 using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Media;
@@ -81,7 +81,7 @@ public class CanvasZoomBackRenderTests
     [Test]
     public void TheDrawingComesBackWhenTheCameraDoes()
     {
-        var canvas = new InfiniteCanvas
+        var canvas = new DrawingBoard
         {
             Template = Template(),
             Scene = new CanvasScene(),

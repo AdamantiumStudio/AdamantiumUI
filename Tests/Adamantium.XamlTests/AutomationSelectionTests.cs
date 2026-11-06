@@ -7,7 +7,7 @@ using Adamantium.UI.Automation;
 using Adamantium.UI.Controls;
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Controls.DataGrid;
-using Adamantium.UI.Controls.DrawingBoard;
+using Adamantium.UI.Controls.Canvases;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Data;
@@ -175,7 +175,7 @@ public class AutomationSelectionTests
     {
         var blur = new CanvasNode { Title = "Blur" };
         var sharpen = new CanvasNode { Title = "Sharpen" };
-        var canvas = new InfiniteCanvas { Mode = CanvasMode.Nodes, Scene = new CanvasScene() };
+        var canvas = new NodeGraph {Scene = new CanvasScene() };
         var blurItem = new ElementItem(blur, new Rect(-350, -150, 190, 110));
         var sharpenItem = new ElementItem(sharpen, new Rect(-50, -150, 190, 110));
         canvas.Scene.Add(blurItem);

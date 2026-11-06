@@ -1,7 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Linq;
 using Adamantium.Core.DependencyInjection;
-using Adamantium.UI.Sandbox.DrawingBoard.ViewModels;
+using Adamantium.UI.Sandbox.Canvases.ViewModels;
 using Adamantium.MVVM;
 using Adamantium.UI.Controls;
 
@@ -42,7 +42,8 @@ public partial class GalleryViewModel
         new OpacityViewModel(),
         new ViewboxViewModel(),
         new ZoomBoxViewModel(),
-        new InfiniteCanvasViewModel(),
+        new DrawingBoardViewModel(),
+        new NodeGraphViewModel(),
         new TilesViewModel(),
         new InstancingViewModel(),
         new TransformsViewModel(),

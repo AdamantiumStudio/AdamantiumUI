@@ -230,10 +230,19 @@
         </DrawingGroup>
     </DrawingImage>
 
-    <DrawingImage x:Key="InfiniteCanvasTabIcon">
+    <DrawingImage x:Key="DrawingBoardTabIcon">
         <DrawingGroup>
             <GeometryDrawing><GeometryDrawing.Geometry><RectangleGeometry Rect="0,0,16,16"/></GeometryDrawing.Geometry></GeometryDrawing>
             <GeometryDrawing Geometry="M8,8 C6,4 2,4 2,8 C2,12 6,12 8,8 C10,4 14,4 14,8 C14,12 10,12 8,8 Z"
+                             Stroke="CurrentColor" StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <!-- Two nodes and the wire between them. -->
+    <DrawingImage x:Key="NodeGraphTabIcon">
+        <DrawingGroup>
+            <GeometryDrawing><GeometryDrawing.Geometry><RectangleGeometry Rect="0,0,16,16"/></GeometryDrawing.Geometry></GeometryDrawing>
+            <GeometryDrawing Geometry="M1.5,2.5 L6.5,2.5 L6.5,7.5 L1.5,7.5 Z M9.5,8.5 L14.5,8.5 L14.5,13.5 L9.5,13.5 Z M6.5,5 C9,5 7,11 9.5,11"
                              Stroke="CurrentColor" StrokeThickness="1"/>
         </DrawingGroup>
     </DrawingImage>

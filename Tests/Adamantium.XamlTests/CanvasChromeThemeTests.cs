@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using Adamantium.Core.DependencyInjection;
 using Adamantium.Mathematics;
 using Adamantium.UI.Controls;
-using Adamantium.UI.Controls.DrawingBoard;
+using Adamantium.UI.Controls.Canvases;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.Resources;
@@ -45,11 +45,13 @@ public class CanvasChromeThemeTests
         _ => new Adamantium.UI.Themes.FluentTheme.Fluent()
     };
 
-    private InfiniteCanvas Built(string theme)
+    private DrawingBoard Built(string theme) => Built<DrawingBoard>(theme);
+
+    private T Built<T>(string theme) where T : InfiniteCanvas, new()
     {
         Use(ThemeNamed(theme));
 
-        var canvas = new InfiniteCanvas { Width = 900, Height = 600 };
+        var canvas = new T { Width = 900, Height = 600 };
 
         canvas.ApplyCurrentTheme();
         Adamantium.UI.Extensions.WindowExtension.UpdateTree(canvas);
@@ -80,14 +82,23 @@ public class CanvasChromeThemeTests
     [TestCase("MacOs")]
     public void ACanvasArrivesWearingItsOwnPanels(string theme)
     {
-        var canvas = Built(theme);
+        // The graph's node palette is the one pane a board does not bring.
+        Assert.Multiple(() =>
+        {
+            PanesAre(Built(theme), 5, theme);
+            PanesAre(Built<NodeGraph>(theme), 6, theme);
+        });
+    }
+
+    private static void PanesAre(InfiniteCanvas canvas, int count, string theme)
+    {
         var panes = Panes(canvas);
         var what = new List<string>();
 
         foreach (var pane in panes) what.Add($"{pane.Placement}/{pane.Kind}/{pane.Content?.GetType().Name ?? "-"}");
 
-        Assert.That(panes, Has.Count.EqualTo(6),
-            $"{theme} did not bring the canvas's own panes - it brought: {string.Join(", ", what)}");
+        Assert.That(panes, Has.Count.EqualTo(count),
+            $"{theme} did not bring the {canvas.GetType().Name}'s own panes - it brought: {string.Join(", ", what)}");
     }
 
     [Test]
@@ -96,7 +107,7 @@ public class CanvasChromeThemeTests
     [TestCase("MacOs")]
     public void EachPanelHoldsTheControlItIsFor(string theme)
     {
-        var canvas = Built(theme);
+        var canvas = Built<NodeGraph>(theme);
         var inside = new List<object>();
 
         foreach (var pane in Panes(canvas))
@@ -180,7 +191,7 @@ public class CanvasChromeThemeTests
     [TestCase("MacOs")]
     public void TheInspectorCarriesTheSameActions(string theme)
     {
-        var canvas = Built(theme);
+        var canvas = Built<NodeGraph>(theme);
         var inspector = Piece<CanvasInspector>(canvas);
 
         Assert.That(inspector, Is.Not.Null, "no inspector at all");
@@ -211,16 +222,14 @@ public class CanvasChromeThemeTests
     [Test]
     public void TheGraphSButtonsAreNotOfferedToADrawing()
     {
-        var canvas = Built("Fluent");
-        var panel = Piece<CanvasInspector>(canvas);
+        var board = Piece<CanvasInspector>(Built("Fluent"));
+        var graph = Piece<CanvasInspector>(Built<NodeGraph>("Fluent"));
 
-        Assert.That(panel.GraphActions, Is.EqualTo(Visibility.Collapsed),
-            "a drawing was offered the graph's buttons");
-
-        canvas.Mode = CanvasMode.Nodes;
-        Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
-
-        Assert.That(panel.GraphActions, Is.EqualTo(Visibility.Visible), "a graph was not offered them");
+        Assert.Multiple(() =>
+        {
+            Assert.That(board.GraphActions, Is.EqualTo(Visibility.Collapsed), "a drawing was offered the graph's buttons");
+            Assert.That(graph.GraphActions, Is.EqualTo(Visibility.Visible), "a graph was not offered them");
+        });
     }
 
     // ...AND THE BUTTONS THEMSELVES COME ALIVE. Every step has to hold for a person to see anything: the command says
@@ -229,10 +238,9 @@ public class CanvasChromeThemeTests
     [Test]
     public void TheButtonsLightUpWhenThereIsSomethingToActOn()
     {
-        var canvas = Built("Fluent");
+        var canvas = Built<NodeGraph>("Fluent");
         var scene = new CanvasScene();
         canvas.Scene = scene;
-        canvas.Mode = CanvasMode.Nodes;
 
         var window = new Window { Width = 1000, Height = 700, Content = canvas };
 
@@ -740,7 +748,6 @@ public class CanvasChromeThemeTests
         var canvas = Built(theme);
 
         canvas.Scene = new CanvasScene();
-        canvas.Mode = CanvasMode.Drawing;
 
         var window = new Window { Width = 1000, Height = 700, Content = canvas };
 
@@ -771,11 +778,8 @@ public class CanvasChromeThemeTests
 
         Assert.That(canvas.ExportSvgCommand.CanExecute(null), Is.True, "a drawing could not be exported");
 
-        canvas.Mode = CanvasMode.Nodes;
-        Adamantium.UI.Core.Data.BindingUpdateQueue.Flush();
-
-        Assert.That(inspector.DrawingActions, Is.EqualTo(Visibility.Collapsed),
-            "a graph kept the drawing's buttons");
+        Assert.That(Piece<CanvasInspector>(Built<NodeGraph>(theme)).DrawingActions, Is.EqualTo(Visibility.Collapsed),
+            "a graph was offered the drawing's buttons");
     }
 
     // A LAYER PER RUN, cut by the canvas from the scene's own order - so a theme's template says WHERE the stack goes
@@ -791,7 +795,6 @@ public class CanvasChromeThemeTests
         var scene = new CanvasScene();
 
         canvas.Scene = scene;
-        canvas.Mode = CanvasMode.Drawing;
 
         var window = new Window { Width = 1000, Height = 700, Content = canvas };
         var ink = new StrokeItem(new Vector2<double>(0, 0), Adamantium.UI.Core.Media.Brushes.White, 2);

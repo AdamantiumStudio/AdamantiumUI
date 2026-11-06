@@ -1,6 +1,6 @@
 using Adamantium.Mathematics;
 using Adamantium.UI.Controls;
-using Adamantium.UI.Controls.DrawingBoard;
+using Adamantium.UI.Controls.Canvases;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Media;
@@ -8,14 +8,14 @@ using NUnit.Framework;
 
 namespace Adamantium.UITests;
 
-/// <summary>WHAT AN ITEM IS PAINTED WITH IS ITS OWN. The canvas's <see cref="InfiniteCanvas.Ink"/> is the SETTING a
+/// <summary>WHAT AN ITEM IS PAINTED WITH IS ITS OWN. The canvas's <see cref="DrawingBoard.Ink"/> is the SETTING a
 /// tool draws with - the color in hand - and a thing left on the plane keeps the color it was made with, whatever
 /// happens to the setting or to its neighbors afterwards.</summary>
 public class CanvasItemPaintTests
 {
-    private static (InfiniteCanvas Canvas, CanvasScene Scene) Stage(Brush ink)
+    private static (DrawingBoard Canvas, CanvasScene Scene) Stage(Brush ink)
     {
-        var canvas = new InfiniteCanvas { Ink = ink, InkThickness = 2 };
+        var canvas = new DrawingBoard { Ink = ink, InkThickness = 2 };
         canvas.Measure(new Size<double>(800, 600), force: true);
         canvas.Arrange(new Rect(0, 0, 800, 600));
 

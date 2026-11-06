@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Scenario xmlns="http://adamantium/automation/scenario" Description="The DrawingBoard page: a tool chosen, the plane cleared after its question is answered, a rectangle dragged out on it, listed in the layers, and both taken back by undo; then ink from a pen and from fingers, and a pinch over the drawing.">
+  <Select Target="id=GalleryTabs/id=DrawingBoard" />
+  <Wait Target="id=Canvas" />
+  <Toggle Target="id=PART_ToolRail/id=Rectangle" />
+  <Expect Target="id=PART_ToolRail/id=Rectangle" Toggle="On" />
+  <Select Target='id=PART_Inspector/name="Everything on the plane, topmost first"' />
+  <Invoke Target="id=PART_Inspector/name=Clear the canvas" />
+  <Invoke Target="id=PART_Yes" />
+  <Expect Target="id=ItemCountLabel" Name="0 items" />
+  <Drag Target="id=Canvas" From="500,150" To="650,260" />
+  <Expect Target="id=ItemCountLabel" Name="1 item" />
+  <Expect Target="id=PART_Inspector/type=TreeItem" Name="Rectangle" />
+  <Invoke Target="id=PART_ViewBar/name=Undo (Ctrl+Z)" />
+  <Expect Target="id=ItemCountLabel" Name="0 items" />
+  <!-- Back as the page opens: the clear taken back too. -->
+  <Invoke Target="id=PART_ViewBar/name=Undo (Ctrl+Z)" />
+  <Absent Target="id=ItemCountLabel,name=0 items" />
+  <Wait Target="id=PART_Inspector/type=TreeItem" />
+  <Toggle Target="id=PART_ToolRail/id=Select" />
+  <Expect Target="id=PART_ToolRail/id=Rectangle" Toggle="Off" />
+  <!-- Ink from a pen and from fingers: a pen pressing harder as it goes draws one stroke, two fingers down together draw
+       one each, and a pinch over the drawing zooms rather than draws. -->
+  <Toggle Target="id=PART_ToolRail/id=Pen" />
+  <Select Target='id=PART_Inspector/name="Everything on the plane, topmost first"' />
+  <Invoke Target="id=PART_Inspector/name=Clear the canvas" />
+  <Invoke Target="id=PART_Yes" />
+  <Expect Target="id=ItemCountLabel" Name="0 items" />
+  <Pen Target="id=Canvas" Gesture="Drag" From="400,150" To="700,150" Pressure="0.2..1" />
+  <Expect Target="id=ItemCountLabel" Name="1 item" />
+  <Touches Gesture="Drag" By="0,80">
+    <Finger Target="id=Canvas" />
+    <Finger Target="id=Canvas" />
+  </Touches>
+  <Expect Target="id=ItemCountLabel" Name="3 items" />
+  <Zoom Target="id=Canvas" Percent="100" />
+  <Pinch Target="id=Canvas" Scale="2" />
+  <Expect Target="id=Canvas" Zoom="180..195" />
+  <Expect Target="id=ItemCountLabel" Name="3 items" />
+  <!-- Back as the page opens: the camera at 1:1, the strokes and the clear taken back, the select tool in hand. The two
+       fingers down together were one gesture, so their strokes go back in one step. -->
+  <Zoom Target="id=Canvas" Percent="100" />
+  <Invoke Target="id=PART_ViewBar/name=Undo (Ctrl+Z)" />
+  <Expect Target="id=ItemCountLabel" Name="1 item" />
+  <Invoke Target="id=PART_ViewBar/name=Undo (Ctrl+Z)" />
+  <Expect Target="id=ItemCountLabel" Name="0 items" />
+  <Invoke Target="id=PART_ViewBar/name=Undo (Ctrl+Z)" />
+  <Absent Target="id=ItemCountLabel,name=0 items" />
+  <Toggle Target="id=PART_ToolRail/id=Select" />
+  <Expect Target="id=PART_ToolRail/id=Pen" Toggle="Off" />
+</Scenario>

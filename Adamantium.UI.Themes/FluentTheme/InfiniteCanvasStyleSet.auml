@@ -10,10 +10,6 @@
          pressable for panning. -->
     <Style Selector="InfiniteCanvas">
         <Setter Property="Background" Value="{ObservableResource SolidBackgroundFillColorBase}"/>
-        <Setter Property="ExportTitle" Value="{Localize CanvasStrings.ExportTitle}"/>
-        <Setter Property="OpenTitle" Value="{Localize CanvasStrings.OpenTitle}"/>
-        <Setter Property="DrawingsName" Value="{Localize CanvasStrings.Drawings}"/>
-        <Setter Property="AllFilesName" Value="{Localize CanvasStrings.AllFiles}"/>
         <Setter Property="DeleteTitle" Value="{Localize CanvasStrings.DeleteTitle}"/>
         <Setter Property="ClearTitle" Value="{Localize CanvasStrings.ClearCanvas}"/>
         <!-- The words the canvas names its tools and new things with. -->
@@ -88,16 +84,6 @@
                                 <CanvasInspector/>
                             </CanvasPane>
 
-                            <!-- The NODE PALETTE, at the point where the wire was let go. A FREE pane rather than a
-                                 popup: a pane already knows how to sit on the glass at a given offset and to stay
-                                 inside the viewport, and a second machinery for the same job would be a second
-                                 machinery. -->
-                            <CanvasPane x:Name="PART_NodePalette" Placement="Free" Kind="Sheet" Header="{Localize CanvasStrings.AddNode}"
-                                        CanDrag="True" Width="200"
-                                        IsNeeded="{TemplateBinding IsPaletteOpen}">
-                                <CanvasNodePalette/>
-                            </CanvasPane>
-
                             <!-- The VIEW BAR, docked so the plane's usable middle stops above it: "fit" and "home"
                                  center on what can actually be seen, and a bar lying over the bottom of the drawing
                                  would make them center on something else. -->
@@ -113,6 +99,91 @@
                              wants it and, for one that follows the selection, whether there is one to follow - and
                              written to the same property the later answer simply erases the earlier. See
                              CanvasPane.Settle. -->
+                        <PropertyTrigger Property="ShowsToolRail" Value="false">
+                            <Setter TargetName="PART_ToolRail" Property="IsWanted" Value="false"/>
+                        </PropertyTrigger>
+                        <PropertyTrigger Property="ShowsMiniMap" Value="false">
+                            <Setter TargetName="PART_MiniMap" Property="IsWanted" Value="false"/>
+                        </PropertyTrigger>
+                        <PropertyTrigger Property="ShowsInspector" Value="false">
+                            <Setter TargetName="PART_Inspector" Property="IsWanted" Value="false"/>
+                        </PropertyTrigger>
+                        <PropertyTrigger Property="ShowsSelectionBar" Value="false">
+                            <Setter TargetName="PART_SelectionBar" Property="IsWanted" Value="false"/>
+                        </PropertyTrigger>
+                        <PropertyTrigger Property="ShowsViewBar" Value="false">
+                            <Setter TargetName="PART_ViewBar" Property="IsWanted" Value="false"/>
+                        </PropertyTrigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- A DRAWING: the plane, and the words the dialogs that write and read its SVG use. -->
+    <Style Selector="DrawingBoard" BasedOn="InfiniteCanvas">
+        <Setter Property="ExportTitle" Value="{Localize CanvasStrings.ExportTitle}"/>
+        <Setter Property="OpenTitle" Value="{Localize CanvasStrings.OpenTitle}"/>
+        <Setter Property="DrawingsName" Value="{Localize CanvasStrings.Drawings}"/>
+        <Setter Property="AllFilesName" Value="{Localize CanvasStrings.AllFiles}"/>
+    </Style>
+
+    <!-- A GRAPH: the plane's template with the node palette among its panes. -->
+    <Style Selector="NodeGraph" BasedOn="InfiniteCanvas">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="NodeGraph">
+                    <Grid>
+                        <Grid x:Name="PART_Layers"/>
+
+                        <CanvasFrontLayer x:Name="PART_Front"/>
+
+                        <StackPanel x:Name="PART_OverlayRoot" Orientation="Vertical" Margin="12">
+                            <Button x:Name="PART_OverlayGrip" Width="30" Height="24"
+                                    MinWidth="0" MinHeight="0" Padding="0"
+                                    HorizontalAlignment="Left" MarginBottom="6"
+                                    ToolTip="{Localize CanvasStrings.MovePanel}">
+                                <Image Source="{ObservableResource CanvasGripIcon}" Width="12" Height="12"/>
+                            </Button>
+                            <ContentPresenter x:Name="PART_Overlay"/>
+                        </StackPanel>
+
+                        <CanvasChromeLayer x:Name="PART_Chrome" PaneInset="12" PaneGap="8">
+                            <CanvasPane x:Name="PART_SelectionBar" Placement="Selection" Kind="Bar">
+                                <CanvasSelectionBar/>
+                            </CanvasPane>
+
+                            <CanvasPane x:Name="PART_ToolRail" Placement="TopLeft" Kind="Rail" CanDrag="True"/>
+
+                            <CanvasPane x:Name="PART_MiniMap" Placement="BottomLeft" Kind="Sheet" Header="{Localize CanvasStrings.Map}"
+                                        CanDrag="True">
+                                <CanvasMiniMap Width="190" Height="120" MinWidth="0" MinHeight="0"
+                                               AutomationProperties.Name="{Localize CanvasStrings.WholePlane}"/>
+                            </CanvasPane>
+
+                            <CanvasPane x:Name="PART_Inspector" Placement="TopRight" Kind="Sheet"
+                                        CanResize="True" Width="340" MinResizeWidth="200">
+                                <CanvasInspector/>
+                            </CanvasPane>
+
+                            <!-- The NODE PALETTE, at the point where the wire was let go. A FREE pane rather than a
+                                 popup: a pane already knows how to sit on the glass at a given offset and to stay
+                                 inside the viewport, and a second machinery for the same job would be a second
+                                 machinery. -->
+                            <CanvasPane x:Name="PART_NodePalette" Placement="Free" Kind="Sheet" Header="{Localize CanvasStrings.AddNode}"
+                                        CanDrag="True" Width="200"
+                                        IsNeeded="{TemplateBinding IsPaletteOpen}">
+                                <CanvasNodePalette/>
+                            </CanvasPane>
+
+                            <CanvasPane x:Name="PART_ViewBar" Placement="BottomCenter" Kind="Bar"
+                                        IsDocked="True" MinWidth="248">
+                                <CanvasViewBar/>
+                            </CanvasPane>
+                        </CanvasChromeLayer>
+                    </Grid>
+
+                    <ControlTemplate.Triggers>
                         <PropertyTrigger Property="ShowsToolRail" Value="false">
                             <Setter TargetName="PART_ToolRail" Property="IsWanted" Value="false"/>
                         </PropertyTrigger>
@@ -314,23 +385,8 @@
                                    FontSize="12" MarginBottom="6"
                                    Foreground="{ObservableResource TextFillColorSecondary}"/>
 
-                        <!-- One row of pictogram radios: the canvas mode, then (after a rule) the inspector face. -->
+                        <!-- One row of pictogram radios: the inspector face. -->
                         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" MarginBottom="8">
-                            <RadioButton Classes="Toggle" GroupName="CanvasMode"
-                                         Width="28" Height="24" MinWidth="0" MinHeight="0" Padding="0"
-                                         ToolTip="{Localize CanvasStrings.DrawingMode}"
-                                         IsChecked="{TemplateBinding IsDrawing, Mode=TwoWay}">
-                                <Image Source="{ObservableResource CanvasToolPenIcon}" Width="13" Height="13"/>
-                            </RadioButton>
-                            <RadioButton Classes="Toggle" GroupName="CanvasMode" MarginLeft="4"
-                                         Width="28" Height="24" MinWidth="0" MinHeight="0" Padding="0"
-                                         ToolTip="{Localize CanvasStrings.GraphMode}"
-                                         IsChecked="{TemplateBinding IsGraph, Mode=TwoWay}">
-                                <Image Source="{ObservableResource CanvasToolNodeIcon}" Width="13" Height="13"/>
-                            </RadioButton>
-
-                            <Separator Orientation="Vertical" MarginLeft="6" MarginRight="6"/>
-
                             <RadioButton Classes="Toggle" GroupName="CanvasInspectorFace"
                                          Width="28" Height="24" MinWidth="0" MinHeight="0" Padding="0"
                                          ToolTip="{Localize CanvasStrings.Properties}"
@@ -351,7 +407,7 @@
                             <Button Width="24" Height="24" MinWidth="0" MinHeight="0" Padding="0" MarginRight="6"
                                     Visibility="{TemplateBinding GraphActions}"
                                     ToolTip="{Localize CanvasStrings.CommentFrame}"
-                                    Command="{Ancestor CanvasInspector, Canvas.FrameCommand}">
+                                    Command="{Ancestor CanvasInspector, FrameCommand}">
                                 <Image Source="{ObservableResource CanvasFrameIcon}" Width="13" Height="13"/>
                             </Button>
 
@@ -409,13 +465,13 @@
                             <Button Width="24" Height="24" MinWidth="0" MinHeight="0" Padding="0" MarginRight="2"
                                     Visibility="{TemplateBinding DrawingActions}"
                                     ToolTip="{Localize CanvasStrings.ExportSvg}"
-                                    Command="{Ancestor CanvasInspector, Canvas.ExportSvgCommand}">
+                                    Command="{Ancestor CanvasInspector, ExportSvgCommand}">
                                 <Image Source="{ObservableResource CanvasSaveIcon}" Width="13" Height="13"/>
                             </Button>
                             <Button Width="24" Height="24" MinWidth="0" MinHeight="0" Padding="0" MarginRight="6"
                                     Visibility="{TemplateBinding DrawingActions}"
                                     ToolTip="{Localize CanvasStrings.OpenSvg}"
-                                    Command="{Ancestor CanvasInspector, Canvas.ImportSvgCommand}">
+                                    Command="{Ancestor CanvasInspector, ImportSvgCommand}">
                                 <Image Source="{ObservableResource CanvasOpenIcon}" Width="13" Height="13"/>
                             </Button>
 

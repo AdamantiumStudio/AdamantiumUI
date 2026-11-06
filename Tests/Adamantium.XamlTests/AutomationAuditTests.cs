@@ -9,7 +9,7 @@ using Adamantium.UI.Controls.Buttons;
 using Adamantium.UI.Controls.DataGrid;
 using Adamantium.UI.Controls.Decorators;
 using Adamantium.UI.Controls.Docking;
-using Adamantium.UI.Controls.DrawingBoard;
+using Adamantium.UI.Controls.Canvases;
 using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Controls.Primitives;
 using Adamantium.UI.Controls.Shapes;
@@ -157,6 +157,8 @@ public class AutomationAuditTests
         [typeof(CanvasSelectionBar)] = (T.ToolBar, null),
         [typeof(CanvasViewBar)] = (T.ToolBar, null),
         [typeof(InfiniteCanvas)] = (T.Pane, null),
+        [typeof(DrawingBoard)] = (T.Pane, null),
+        [typeof(NodeGraph)] = (T.Pane, null),
         [typeof(GridSplitter)] = (T.Thumb, null),
         [typeof(PaneSplitter)] = (T.Thumb, null),
         [typeof(RenderTargetPanel)] = (null, "a surface the engine draws its scene into; the scene is not UI"),

@@ -1,6 +1,6 @@
 using Adamantium.Mathematics;
 using Adamantium.UI.Controls;
-using Adamantium.UI.Controls.DrawingBoard;
+using Adamantium.UI.Controls.Canvases;
 using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Graphics;
@@ -57,22 +57,19 @@ public class CanvasPaintOrderTests
     {
         public Rect Bounds { get; init; }
         public int Order { get; set; }
-        public CanvasMode Mode => CanvasMode.Nodes;
         public bool HitTest(Vector2<double> world, double tolerance) => Bounds.Contains(world);
         public void Render(IDrawingSession session, InfiniteCanvas canvas) { }
         public void Move(Vector2<double> worldDelta) { }
         public void Resize(Rect world) { }
     }
 
-    private static (Root root, InfiniteCanvas canvas, CanvasScene scene, RenderCache cache) Stage()
+    private static (Root root, InfiniteCanvas canvas, CanvasScene scene, RenderCache cache) Stage(
+        InfiniteCanvas canvas = null)
     {
-        var canvas = new InfiniteCanvas
-        {
-            Template = Template(),
-            Width = 800,
-            Height = 600,
-            Mode = CanvasMode.Nodes
-        };
+        canvas ??= new NodeGraph();
+        canvas.Template = Template();
+        canvas.Width = 800;
+        canvas.Height = 600;
         var scene = new CanvasScene();
         canvas.Scene = scene;
 
@@ -224,9 +221,7 @@ public class CanvasPaintOrderTests
     [Test]
     public void AControlRaisedOverAFilledShapeIsDrawnOverIt()
     {
-        var (root, canvas, scene, cache) = Stage();
-
-        canvas.Mode = CanvasMode.Drawing;
+        var (root, canvas, scene, cache) = Stage(new DrawingBoard());
 
         var shape = new ShapeItem(CanvasShape.Rectangle, new Rect(40, 40, 200, 140), null, 0, Brushes.DeepPink);
         var picture = new Image { Background = Brushes.White, Width = 160, Height = 90 };
@@ -279,8 +274,7 @@ public class CanvasPaintOrderTests
     [Test]
     public void AnOrdinaryControlIsDeafWhileThePlaneIsArranged()
     {
-        var (root, canvas, scene, cache) = Stage();
-        canvas.Mode = CanvasMode.Drawing;
+        var (root, canvas, scene, cache) = Stage(new DrawingBoard());
         canvas.IsDesignMode = true;
 
         var button = new Adamantium.UI.Controls.Buttons.Button();

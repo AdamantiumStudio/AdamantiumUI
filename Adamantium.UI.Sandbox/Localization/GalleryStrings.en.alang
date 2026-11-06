@@ -47,7 +47,8 @@
     <Phrase Key="Opacity" Text="Opacity"/>
     <Phrase Key="Viewbox" Text="Viewbox"/>
     <Phrase Key="ZoomBox" Text="ZoomBox"/>
-    <Phrase Key="InfiniteCanvas" Text="Infinite canvas"/>
+    <Phrase Key="DrawingBoard" Text="Drawing board"/>
+    <Phrase Key="NodeGraph" Text="Node graph"/>
     <Phrase Key="Tiles3D" Text="Tiles 3D"/>
     <Phrase Key="Instancing" Text="Instancing"/>
     <Phrase Key="Transforms" Text="Transforms"/>

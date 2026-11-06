@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Adamantium.Mathematics;
 using Adamantium.UI.Controls.Base;
-using Adamantium.UI.Controls.DrawingBoard;
+using Adamantium.UI.Controls.Canvases;
 using Adamantium.UI.Core.Automation;
 
 namespace Adamantium.UI.Controls.Automation;

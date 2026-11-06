@@ -2,7 +2,7 @@
 using Adamantium.Core.Collections;
 using Adamantium.Mathematics;
 using Adamantium.UI.Controls;
-using Adamantium.UI.Controls.DrawingBoard;
+using Adamantium.UI.Controls.Canvases;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Media;
 using Adamantium.UITests.Graph;
@@ -14,12 +14,9 @@ namespace Adamantium.UITests;
 /// bookkeeping there is at once: the scene, the graph, the objects, the wires and the history.</summary>
 public class CanvasClearTests
 {
-    private static (InfiniteCanvas Canvas, CanvasScene Scene, TrackingCollection<ICanvasNode> Nodes) Stage()
+    private static (NodeGraph Canvas, CanvasScene Scene, TrackingCollection<ICanvasNode> Nodes) Stage()
     {
-        var canvas = new InfiniteCanvas();
-        canvas.Measure(new Size<double>(800, 600), force: true);
-        canvas.Arrange(new Rect(0, 0, 800, 600));
-
+        var canvas = Sized(new NodeGraph());
         var scene = new CanvasScene();
         var nodes = new TrackingCollection<ICanvasNode>();
 
@@ -27,6 +24,26 @@ public class CanvasClearTests
         canvas.Nodes = nodes;
 
         return (canvas, scene, nodes);
+    }
+
+    private static (DrawingBoard Canvas, CanvasScene Scene, TrackingCollection<ICanvasObject> Objects) Board()
+    {
+        var canvas = Sized(new DrawingBoard());
+        var scene = new CanvasScene();
+        var objects = new TrackingCollection<ICanvasObject>();
+
+        canvas.Scene = scene;
+        canvas.Objects = objects;
+
+        return (canvas, scene, objects);
+    }
+
+    private static T Sized<T>(T canvas) where T : InfiniteCanvas
+    {
+        canvas.Measure(new Size<double>(800, 600), force: true);
+        canvas.Arrange(new Rect(0, 0, 800, 600));
+
+        return canvas;
     }
 
     private static GraphNode Node(TrackingCollection<ICanvasNode> nodes, double left)
@@ -79,17 +96,13 @@ public class CanvasClearTests
         Assert.That(scene.Items.Count, Is.EqualTo(0));
     }
 
-    /// <summary>WITH THE DRAWING SIDE ON THE PLANE TOO - objects the application holds as data, which is the state the
-    /// page is actually in. Their containers go with the same sweep while the application still holds the objects.
-    /// </summary>
+    /// <summary>A BOARD HOLDING OBJECTS the application holds as data, which is the state the page is actually in. Their
+    /// containers go with the same sweep while the application still holds the objects.</summary>
     [Test]
     [Timeout(15000)]
     public void ClearingAPlaneHoldingObjectsEndsInsteadOfHanging()
     {
-        var (canvas, scene, nodes) = Stage();
-
-        var objects = new TrackingCollection<ICanvasObject>();
-        canvas.Objects = objects;
+        var (canvas, scene, objects) = Board();
 
         objects.Add(new PlacedObject
         {
@@ -98,8 +111,6 @@ public class CanvasClearTests
         });
 
         objects.Add(new PlacedObject { Left = 200, Top = 20, Width = 100, Height = 60, Content = "plain" });
-
-        Node(nodes, 0);
 
         canvas.History.Record(scene, "Clear", scene.Clear);
 
@@ -114,15 +125,6 @@ public class CanvasClearTests
     public void ClearingWithASelectionEndsInsteadOfHanging()
     {
         var (canvas, scene, nodes) = Stage();
-
-        var objects = new TrackingCollection<ICanvasObject>();
-        canvas.Objects = objects;
-
-        objects.Add(new PlacedObject
-        {
-            Left = 10, Top = 20, Width = 100, Height = 60,
-            Content = new PlacedShape(CanvasShape.Rectangle)
-        });
 
         var first = Node(nodes, 0);
         var second = Node(nodes, 300);
@@ -149,18 +151,13 @@ public class CanvasClearTests
     [Timeout(15000)]
     public void AnEditDoesNotDropTheSelection()
     {
-        var (canvas, scene, nodes) = Stage();
-
-        var objects = new TrackingCollection<ICanvasObject>();
-        canvas.Objects = objects;
+        var (canvas, scene, objects) = Board();
 
         objects.Add(new PlacedObject
         {
             Left = 10, Top = 20, Width = 100, Height = 60,
             Content = new PlacedShape(CanvasShape.Rectangle)
         });
-
-        var node = Node(nodes, 0);
 
         canvas.SelectMany(new System.Collections.Generic.List<ICanvasItem>(scene.Items), false);
 
@@ -180,7 +177,7 @@ public class CanvasClearTests
     [Timeout(15000)]
     public void ASelectedChildOfAGroupIsNotForgotten()
     {
-        var (canvas, scene, nodes) = Stage();
+        var (canvas, scene, _) = Board();
 
         var first = new ShapeItem(CanvasShape.Rectangle, new Rect(0, 0, 60, 40), Brushes.White, 2);
         var second = new ShapeItem(CanvasShape.Rectangle, new Rect(100, 0, 60, 40), Brushes.White, 2);

@@ -1,7 +1,7 @@
 using System.Linq;
 using Adamantium.Mathematics;
 using Adamantium.UI.Controls;
-using Adamantium.UI.Controls.DrawingBoard;
+using Adamantium.UI.Controls.Canvases;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Media;
 using NUnit.Framework;
@@ -17,9 +17,11 @@ public class CanvasCommandTests
     // IN A WINDOW, because the canvas asks its questions in the engine's own overlay dialog - and an overlay is shown
     // on a window. A canvas measured on its own has nowhere to put a question, which is a different state and not the
     // one a person is ever in.
-    private static (InfiniteCanvas Canvas, CanvasScene Scene) Stage()
+    private static (InfiniteCanvas Canvas, CanvasScene Scene) Stage() => Stage<DrawingBoard>();
+
+    private static (T Canvas, CanvasScene Scene) Stage<T>() where T : InfiniteCanvas, new()
     {
-        var canvas = new InfiniteCanvas();
+        var canvas = new T();
         var window = new Window { Width = 800, Height = 600, Content = canvas };
 
         Adamantium.UI.Extensions.WindowExtension.UpdateTree(window);
@@ -42,7 +44,7 @@ public class CanvasCommandTests
     [Test]
     public void AShapeMadeFromDataMovesWithIt()
     {
-        var canvas = new InfiniteCanvas { Scene = new CanvasScene() };
+        var canvas = new DrawingBoard { Scene = new CanvasScene() };
         canvas.Measure(new Size<double>(800, 600), force: true);
         canvas.Arrange(new Rect(0, 0, 800, 600));
 
@@ -306,7 +308,7 @@ public class CanvasCommandTests
     [Test]
     public void EveryCommandSaysItCanBePressedAgainWhenTheSelectionChanges()
     {
-        var (canvas, scene) = Stage();
+        var (canvas, scene) = Stage<NodeGraph>();
 
         var told = new System.Collections.Generic.List<string>();
 
@@ -387,7 +389,7 @@ public class CanvasCommandTests
     [Test]
     public void FramingDrawsOneRoundTheSelection()
     {
-        var (canvas, scene) = Stage();
+        var (canvas, scene) = Stage<NodeGraph>();
         var item = Box(0, 0);
 
         scene.Add(item);
@@ -436,20 +438,18 @@ public class CanvasCommandTests
         });
     }
 
-    // ...AND IN A DRAWING TOO. The bin is about the canvas rather than about the mode it is being used in, so what it
-    // can do is answered from the SCENE and not from what the mode is showing.
+    // ...AND IN A GRAPH TOO. The bin is the plane's, so a graph empties what its scene holds the same way a board does.
     [Test]
-    public void TheBinIsOfferedInEitherMode()
+    public void TheBinIsOfferedInAGraph()
     {
-        var (canvas, scene) = Stage();
+        var (canvas, scene) = Stage<NodeGraph>();
 
-        canvas.Mode = CanvasMode.Nodes;
         scene.Add(Box(0, 0));
 
-        Assert.That(canvas.ClearCommand.CanExecute(), Is.True, "a plane with a drawing on it read as empty");
+        Assert.That(canvas.ClearCommand.CanExecute(), Is.True, "a graph with something on it read as empty");
 
         canvas.ClearCommand.Execute();
 
-        Assert.That(scene.Items, Is.Empty, "the drawing was left behind by a graph's bin");
+        Assert.That(scene.Items, Is.Empty, "the graph's bin left something behind");
     }
 }

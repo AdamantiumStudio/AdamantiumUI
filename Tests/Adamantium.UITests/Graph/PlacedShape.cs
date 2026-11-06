@@ -1,5 +1,5 @@
 using Adamantium.ProceduralGeometry;
-using Adamantium.UI.Controls.DrawingBoard;
+using Adamantium.UI.Controls.Canvases;
 using Adamantium.UI.Core.Media;
 
 namespace Adamantium.UITests.Graph;

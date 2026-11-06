@@ -2,7 +2,7 @@ using System.Linq;
 using Adamantium.Core.Collections;
 using Adamantium.Mathematics;
 using Adamantium.UI.Controls;
-using Adamantium.UI.Controls.DrawingBoard;
+using Adamantium.UI.Controls.Canvases;
 using Adamantium.UI.Core;
 using Adamantium.UITests.Graph;
 using NUnit.Framework;
@@ -15,16 +15,30 @@ namespace Adamantium.UITests;
 [TestFixture]
 public class CanvasRevisitHistoryTests
 {
-    private static InfiniteCanvas Show(CanvasScene scene, CanvasHistory history,
-        TrackingCollection<ICanvasNode> nodes, TrackingCollection<ICanvasObject> objects)
+    private static NodeGraph Show(CanvasScene scene, CanvasHistory history, TrackingCollection<ICanvasNode> nodes)
     {
-        var canvas = new InfiniteCanvas { Mode = CanvasMode.Nodes, History = history };
-        canvas.Measure(new Size<double>(800, 600), force: true);
-        canvas.Arrange(new Rect(0, 0, 800, 600));
+        var canvas = Sized(new NodeGraph { History = history });
 
         canvas.Scene = scene;
         canvas.Nodes = nodes;
+
+        return canvas;
+    }
+
+    private static DrawingBoard Show(CanvasScene scene, CanvasHistory history, TrackingCollection<ICanvasObject> objects)
+    {
+        var canvas = Sized(new DrawingBoard { History = history });
+
+        canvas.Scene = scene;
         canvas.Objects = objects;
+
+        return canvas;
+    }
+
+    private static T Sized<T>(T canvas) where T : InfiniteCanvas
+    {
+        canvas.Measure(new Size<double>(800, 600), force: true);
+        canvas.Arrange(new Rect(0, 0, 800, 600));
 
         return canvas;
     }
@@ -53,18 +67,17 @@ public class CanvasRevisitHistoryTests
         var scene = new CanvasScene();
         var history = new CanvasHistory();
         var nodes = new TrackingCollection<ICanvasNode>();
-        var objects = new TrackingCollection<ICanvasObject>();
         var left = Made("a", 0);
         var right = Made("b", 300);
         nodes.Add(left);
         nodes.Add(right);
         _ = new CanvasConnection(left.Outputs[0], right.Inputs[0]);
 
-        var first = Show(scene, history, nodes, objects);
+        var first = Show(scene, history, nodes);
         history.Record(scene, "Clear", scene.Clear);
         Leave(first);
 
-        Show(scene, history, nodes, objects);
+        Show(scene, history, nodes);
         history.Undo(scene);
 
         var shown = scene.Items.OfType<ElementItem>().ToList();
@@ -83,18 +96,17 @@ public class CanvasRevisitHistoryTests
         var scene = new CanvasScene();
         var history = new CanvasHistory();
         var nodes = new TrackingCollection<ICanvasNode>();
-        var objects = new TrackingCollection<ICanvasObject>();
         var left = Made("a", 0);
         var right = Made("b", 300);
         nodes.Add(left);
         nodes.Add(right);
         _ = new CanvasConnection(left.Outputs[0], right.Inputs[0]);
 
-        var first = Show(scene, history, nodes, objects);
+        var first = Show(scene, history, nodes);
         history.Record(scene, "Clear", scene.Clear);
         Leave(first);
 
-        var second = Show(scene, history, nodes, objects);
+        var second = Show(scene, history, nodes);
         history.Undo(scene);
 
         var wire = scene.Items.OfType<ConnectionItem>().Single();
@@ -113,15 +125,14 @@ public class CanvasRevisitHistoryTests
         var scene = new CanvasScene();
         var history = new CanvasHistory();
         var nodes = new TrackingCollection<ICanvasNode>();
-        var objects = new TrackingCollection<ICanvasObject>();
         var left = Made("a", 0);
         var right = Made("b", 300);
         nodes.Add(left);
         nodes.Add(right);
         _ = new CanvasConnection(left.Outputs[0], right.Inputs[0]);
 
-        var first = Show(scene, history, nodes, objects);
-        var second = Show(scene, history, nodes, objects);
+        var first = Show(scene, history, nodes);
+        var second = Show(scene, history, nodes);
         Leave(first);
 
         var shown = scene.Items.OfType<ElementItem>().ToList();
@@ -169,8 +180,8 @@ public class CanvasRevisitHistoryTests
         var node = Made("a", 0);
         nodes.Add(node);
 
-        var first = Show(scene, history, nodes, new TrackingCollection<ICanvasObject>());
-        var second = Show(scene, history, nodes, new TrackingCollection<ICanvasObject>());
+        var first = Show(scene, history, nodes);
+        var second = Show(scene, history, nodes);
         first.Nodes = new TrackingCollection<ICanvasNode> { node };
 
         Assert.Multiple(() =>
@@ -196,10 +207,10 @@ public class CanvasRevisitHistoryTests
         var kept = Made("b", 0);
         mine.Add(kept);
 
-        var moved = Show(first, history, nodes, new TrackingCollection<ICanvasObject>());
+        var moved = Show(first, history, nodes);
         moved.Scene = other;
         moved.Nodes = mine;
-        var next = Show(first, history, nodes, new TrackingCollection<ICanvasObject>());
+        var next = Show(first, history, nodes);
 
         Assert.Multiple(() =>
         {
@@ -220,10 +231,10 @@ public class CanvasRevisitHistoryTests
         var node = Made("a", 0);
         nodes.Add(node);
 
-        var first = Show(scene, history, nodes, new TrackingCollection<ICanvasObject>());
+        var first = Show(scene, history, nodes);
         var window = new Window { Width = 800, Height = 600, Content = first };
         Adamantium.UI.Extensions.WindowExtension.UpdateTree(window);
-        var second = Show(scene, history, nodes, new TrackingCollection<ICanvasObject>());
+        var second = Show(scene, history, nodes);
 
         window.Content = new Adamantium.UI.Controls.Decorators.Border();
         Adamantium.UI.Extensions.WindowExtension.UpdateTree(window);
@@ -264,11 +275,10 @@ public class CanvasRevisitHistoryTests
         });
     }
 
-    private static InfiniteCanvas Templated(CanvasScene scene, CanvasHistory history, TrackingCollection<ICanvasNode> nodes)
+    private static NodeGraph Templated(CanvasScene scene, CanvasHistory history, TrackingCollection<ICanvasNode> nodes)
     {
-        var canvas = new InfiniteCanvas
+        var canvas = new NodeGraph
         {
-            Mode = CanvasMode.Nodes,
             Template = new Adamantium.UI.Core.Templates.ControlTemplate(() =>
             {
                 var layers = new Adamantium.UI.Controls.Panels.Grid();
@@ -312,7 +322,7 @@ public class CanvasRevisitHistoryTests
         var node = Made("a", 0);
         nodes.Add(node);
 
-        var canvas = Show(scene, new CanvasHistory(), nodes, new TrackingCollection<ICanvasObject>());
+        var canvas = Show(scene, new CanvasHistory(), nodes);
         var item = ItemOf(scene, node);
         Leave(canvas);
 
@@ -324,16 +334,15 @@ public class CanvasRevisitHistoryTests
     {
         var scene = new CanvasScene();
         var history = new CanvasHistory();
-        var nodes = new TrackingCollection<ICanvasNode>();
         var objects = new TrackingCollection<ICanvasObject>();
         var model = new PlacedObject { Left = 10, Top = 20, Width = 100, Height = 60, Content = "plain" };
         objects.Add(model);
 
-        var first = Show(scene, history, nodes, objects);
+        var first = Show(scene, history, objects);
         history.Record(scene, "Clear", scene.Clear);
         Leave(first);
 
-        Show(scene, history, nodes, objects);
+        Show(scene, history, objects);
         history.Undo(scene);
 
         var shown = scene.Items.OfType<ElementItem>().ToList();
