@@ -143,6 +143,28 @@ public class GpuRenderUnitTests
     }
 
     [Test]
+    public void FittedDashesInWindowUnits_FitInThem_AndAgainUnderAZoom()
+    {
+        // A pen in the window's units fits its pattern to the contour's length in those units: at 1.3x the 160 round is
+        // 208 long in the window, seventeen periods of 12 - and back at 1x, thirteen again.
+        var strokeEffect = new StrokeEffect(_device);
+        var pen = new Pen(Brushes.Black, 2, dashStrokeArray: [7, 5], fitDashesToContour: true)
+            { ThicknessUnit = PenThicknessUnit.Window };
+        var unit = new RectangleRenderUnit(Command(Unbatched(Brushes.Red, BoxB, pen)),
+            Ctx((UIBasicEffect)_effect.Clone(), strokeEffect));
+        var stroke = (GpuStrokeRenderComponent)unit.StrokeRenderer;
+
+        stroke.RenderData ??= new RenderData(1f, Matrix4x4F.Identity, false, default);
+        stroke.RenderData.TransformMatrix = Matrix4x4.CreateScale<float>(1.3f, 1.3f, 1f);
+        stroke.PreRender();
+        Assert.That(stroke.DashScaleOf(0), Is.EqualTo(208.0 / 204.0).Within(1e-3), "fitted in the window's units");
+
+        stroke.RenderData.TransformMatrix = Matrix4x4F.Identity;
+        stroke.PreRender();
+        Assert.That(stroke.DashScaleOf(0), Is.EqualTo(160.0 / 156.0).Within(1e-3), "fitted again as the zoom went back");
+    }
+
+    [Test]
     public void Stroke_BrushMappingChange_Repoints_NoRebuild()
     {
         var strokeEffect = new StrokeEffect(_device);

@@ -74,7 +74,7 @@ public class StrokeFringeUnderPerspectiveTests
         });
     }
 
-    // A WIDTH IN PIXELS on a leaned plane is measured at the depth of the screen, where the plane's lean turns about:
+    // A WIDTH IN WINDOW UNITS on a leaned plane is measured at the depth of the screen, where the plane's lean turns about:
     // one number for the whole plane, so the tiles of a leaned map draw a line one width on the ground.
     [TestCase(0)]
     [TestCase(30)]

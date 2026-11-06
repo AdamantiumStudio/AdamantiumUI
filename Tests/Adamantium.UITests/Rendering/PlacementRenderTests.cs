@@ -351,7 +351,7 @@ public class PlacementRenderTests
     }
 
     [Test]
-    public void APenInPixels_StaysAsWideUnderAZoom()
+    public void APenInWindowUnits_StaysAsWideUnderAZoom()
     {
         var pen = new Pen(Brushes.White, 2) { ThicknessUnit = PenThicknessUnit.Window };
         var near = OutlineAt(1, pen);
@@ -552,7 +552,7 @@ public class PlacementRenderTests
     }
 
     [Test]
-    public void ADashedPenInPixels_KeepsItsWidth_WhenOnlyThePlacementMoves()
+    public void ADashedPenInWindowUnits_KeepsItsWidth_WhenOnlyThePlacementMoves()
     {
         _shapes.Fill = null;
         _shapes.Pen = new Pen(Brushes.White, 2, dashStrokeArray: [6, 2], startLineCap: PenLineCap.ConvexRound)

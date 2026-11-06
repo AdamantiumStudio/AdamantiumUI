@@ -790,8 +790,8 @@ public partial class RenderCache
         return ink.Inflate(pen + reach);
     }
 
-    // A pen's width in the units of the space toWindow maps to the window: device-pixel widths and minimums undone by its
-    // scale, as the stroke shader does.
+    // A pen's width in the units of the space toWindow maps to the window: window-unit widths and device minimums undone
+    // by its scale, as the stroke does.
     private double LocalWidth(Pen pen, in Matrix4x4F toWindow)
     {
         if (pen == null)
@@ -799,8 +799,12 @@ public partial class RenderCache
             return 0;
         }
 
+        // Under a perspective the top-left 2x2 is no scale at all - it passes through zero at some lean - so the width is
+        // undone by the plane's own scale at the depth of the screen, as the stroke measures a width in window units.
         var thickness = pen.Thickness;
-        var scale = System.Math.Sqrt(System.Math.Abs(toWindow.M11 * toWindow.M22 - toWindow.M12 * toWindow.M21));
+        double scale = toWindow.M14 == 0f && toWindow.M24 == 0f
+            ? System.Math.Sqrt(System.Math.Abs(toWindow.M11 * toWindow.M22 - toWindow.M12 * toWindow.M21))
+            : GpuStrokeRenderComponent.PlaneScale(toWindow);
         if (scale > 1e-4)
         {
             if (pen.ThicknessUnit == PenThicknessUnit.Window) thickness /= scale;

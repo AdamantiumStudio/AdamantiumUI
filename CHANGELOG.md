@@ -27,8 +27,9 @@ All packages share one version.
   counts them, the same on any monitor) under any zoom - a road on a zoomed map - and `Pen.MinimumDeviceThickness` keeps
   a line scaled far down at least that many of the monitor's own pixels wide. The dashes and their offset are in the
   same unit as the width: a pen in the window's units dashes in them too, and on a leaned plane its dashes lie on the
-  ground, one length across it, narrowed into the distance by the perspective and still as the plane moves. The
-  batched outlines of rounded rectangles, ellipses and regular polygons take the thickness in local units.
+  ground, one length across it, narrowed into the distance by the perspective and still as the plane moves; fitted to
+  a closed contour (`FitDashesToContour`), they are fitted in that unit and again as a zoom changes it. The batched
+  outlines of rounded rectangles, ellipses and regular polygons take the thickness in local units.
 
 - A stroke can be painted with any brush: gradients (conic and mesh too), `PatternBrush`, `NoiseBrush` (animated as
   well) and pictures - `ImageBrush` (a layer of a `TextureArrayImage` too), `DrawingBrush`, `VisualBrush`. A brush with no form along a line - fractal,
@@ -121,8 +122,7 @@ All packages share one version.
 
 ### Fixed
 
-- A pen whose width is in the window's units (`PenThicknessUnit.Window`, named `Pixels` before - it never was the
-  monitor's pixels), drawn on a plane under a perspective - a leaned map's roads - is one width on the
+- A pen whose width is in the window's units (`PenThicknessUnit.Window`), drawn on a plane under a perspective - a leaned map's roads - is one width on the
   plane, measured at the depth of the screen, which the perspective narrows into the distance. Each draw measured by
   its own farthest corner, so a road was wide in the tile nearest the eye and stepped thinner at every tile's edge.
 

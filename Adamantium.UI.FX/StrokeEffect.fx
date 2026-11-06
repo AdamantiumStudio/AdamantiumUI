@@ -110,7 +110,7 @@ struct StrokeRecord
     float* Pattern;
     uint PointCount;
     uint PatternCount;
-    uint Flags;              // 1 closed, 2 batched contours, 4 runs, 8 thickness in window pixels
+    uint Flags;              // 1 closed, 2 batched contours, 4 runs, 8 thickness and dashes in window units
     uint Caps;               // start | end << 4 | dash start << 8 | dash end << 12
     uint RoundSegments;
     uint JoinType;
@@ -121,7 +121,7 @@ struct StrokeRecord
 };
 
 StrokeRecord* Records;
-float RenderScale;           // device pixels per window pixel
+float RenderScale;           // device pixels per window unit
 uint AntiAlias;              // 0 = hard edges
 
 // Device pixels per local unit of a stroke drawn by `m`, at its point `p`: the area scale of its map to the viewport's
@@ -137,18 +137,6 @@ float DevicePixelScale(float4x4 m, float2 p)
     float2 ax = (cx.xy - at * cx.w) / c.w * halfVp;
     float2 ay = (cy.xy - at * cy.w) / c.w * halfVp;
     return sqrt(abs(ax.x * ay.y - ax.y * ay.x));
-}
-
-// Device pixels per local unit of the plane where its w is 1 - the depth of the screen: one number for every point and
-// every record on the plane, which a width or a dash in the window's units is measured in, so a leaned plane's line is
-// one width on the ground and the perspective narrows it into the distance. Without a perspective, DevicePixelScale.
-float PlaneDevicePixelScale(float4x4 m)
-{
-    float3 x = float3(m[0].x, m[0].y, m[0].w);
-    float3 y = float3(m[1].x, m[1].y, m[1].w);
-    float3 o = float3(m[3].x, m[3].y, m[3].w);
-    float2 halfVp = ViewportSize * 0.5;
-    return sqrt(abs(dot(x, cross(y, o))) * halfVp.x * halfVp.y);
 }
 
 StrokeRecord LoadRecord(uint index)
@@ -181,17 +169,13 @@ StrokeRecord LoadRecord(uint index)
     PieceSalt = r.Pen.w;
 
     // The width in local units, worked out from the matrix as it is now: a camera that moved the slot moved the record
-    // with it, and a line measured in pixels or held to a least width keeps it.
+    // with it, and a line measured in the window's units or held to a least width keeps it - its dashes too. A record is
+    // flat (a stroke under a perspective is drawn on its own), so its scale is the same at every point.
     float2* points = r.Points;
     float device = max(DevicePixelScale(Wvp, r.PointCount > 0u ? points[0] : float2(0.0, 0.0)), 1e-6);
     float thickness = r.Pen.x;
-    DashScale = 1.0;
-    if ((r.Flags & 8u) != 0u)
-    {
-        float plane = PlaneDevicePixelScale(Wvp);
-        DashScale = RenderScale / (plane > 1e-6 ? plane : device);
-        thickness *= DashScale;
-    }
+    DashScale = (r.Flags & 8u) != 0u ? RenderScale / device : 1.0;
+    thickness *= DashScale;
 
     if (r.Pen.y > 0.0) thickness = max(thickness, r.Pen.y / device);
     HalfThickness = thickness * 0.5;
