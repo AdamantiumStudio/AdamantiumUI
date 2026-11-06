@@ -75,7 +75,7 @@ internal sealed class StrokeBatchCollector : BatchCollector<StrokeRecord>
     /// <summary>Device address of the owning cache's transform table, which each record's slot indexes.</summary>
     public ulong TransformsAddress { get; set; }
 
-    /// <summary>Device pixels per window pixel, for strokes measured in pixels or held to a least width.</summary>
+    /// <summary>Device pixels per window unit, for strokes measured in window units or held to a least width.</summary>
     public float RenderScale { get; set; } = 1f;
 
     /// <summary>The stroke a unit draws, when that is all it draws and this batch can draw it.</summary>

@@ -73,4 +73,38 @@ public class StrokeFringeUnderPerspectiveTests
                 "the projection itself still draws the middle of the surface at a fair scale");
         });
     }
+
+    // A WIDTH IN WINDOW UNITS on a leaned plane is measured at the depth of the screen, where the plane's lean turns about:
+    // one number for the whole plane, so the tiles of a leaned map draw a line one width on the ground.
+    [TestCase(0)]
+    [TestCase(30)]
+    [TestCase(47)]
+    [TestCase(60)]
+    public void ThePlaneScale_IsTheProjectionsOwn_AtTheDepthOfTheScreen(double pitch)
+    {
+        var t = Leaned(pitch);
+
+        Assert.That(GpuStrokeRenderComponent.PlaneScale(t),
+            Is.EqualTo(Measured(t, Height / 2, Height / 2)).Within(1e-3));
+    }
+
+    [TestCase(30)]
+    [TestCase(60)]
+    public void ThePlaneScale_IsTheSameForEveryTileOfThePlane(double pitch)
+    {
+        var leaned = Leaned(pitch);
+        var near = Matrix4x4.CreateTranslation(100f, 900f, 0f) * leaned;
+        var far = Matrix4x4.CreateTranslation(700f, 50f, 0f) * leaned;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(GpuStrokeRenderComponent.PlaneScale(near),
+                Is.EqualTo(GpuStrokeRenderComponent.PlaneScale(leaned)).Within(1e-4));
+            Assert.That(GpuStrokeRenderComponent.PlaneScale(far),
+                Is.EqualTo(GpuStrokeRenderComponent.PlaneScale(leaned)).Within(1e-4));
+            Assert.That(GpuStrokeRenderComponent.ProjectedScaleAt(near, 0, 0),
+                Is.Not.EqualTo(GpuStrokeRenderComponent.ProjectedScaleAt(far, 0, 0)).Within(0.05),
+                "each tile's own corner is drawn at a scale of its own");
+        });
+    }
 }

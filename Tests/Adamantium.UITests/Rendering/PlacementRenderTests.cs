@@ -351,9 +351,9 @@ public class PlacementRenderTests
     }
 
     [Test]
-    public void APenInPixels_StaysAsWideUnderAZoom()
+    public void APenInWindowUnits_StaysAsWideUnderAZoom()
     {
-        var pen = new Pen(Brushes.White, 2) { ThicknessUnit = PenThicknessUnit.Pixels };
+        var pen = new Pen(Brushes.White, 2) { ThicknessUnit = PenThicknessUnit.Window };
         var near = OutlineAt(1, pen);
         var far = OutlineAt(4, pen);
 
@@ -552,11 +552,11 @@ public class PlacementRenderTests
     }
 
     [Test]
-    public void ADashedPenInPixels_KeepsItsWidth_WhenOnlyThePlacementMoves()
+    public void ADashedPenInWindowUnits_KeepsItsWidth_WhenOnlyThePlacementMoves()
     {
         _shapes.Fill = null;
         _shapes.Pen = new Pen(Brushes.White, 2, dashStrokeArray: [6, 2], startLineCap: PenLineCap.ConvexRound)
-            { ThicknessUnit = PenThicknessUnit.Pixels };
+            { ThicknessUnit = PenThicknessUnit.Window };
         var placement = new Placement { Matrix = At(8, 8) };
         _shapes.Placements.Add(placement);
         var near = Draw().Count;
@@ -571,6 +571,19 @@ public class PlacementRenderTests
             Assert.That(_shapes.Renders, Is.EqualTo(renders), "a move is not a record");
             Assert.That((double)far / near, Is.InRange(2.5, 5.5), "4x the outline at the same width");
         });
+    }
+
+    // DASHES IN THE PEN'S UNIT: a pen in the window's units dots in them too, so an outline 4x as long carries 4x the
+    // dots of the same size. Dots in local units would grow into dashes a quarter as many - about 1.7x the pixels.
+    [Test]
+    public void APenInWindowUnits_DashesInThemToo_UnderAZoom()
+    {
+        var pen = new Pen(Brushes.White, 2, dashStrokeArray: [0.5, 9.5], dashStartCap: PenLineCap.ConvexRound,
+            dashEndCap: PenLineCap.ConvexRound) { ThicknessUnit = PenThicknessUnit.Window };
+        var near = OutlineAt(1, pen);
+        var far = OutlineAt(4, pen);
+
+        Assert.That((double)far / near, Is.InRange(3.0, 5.0));
     }
 
     [Test]

@@ -23,6 +23,8 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
     // Disc-fan subdivision for round joins (a smooth-enough circle); 0 when the contour has no round geometry.
     private const uint RoundSegmentsCount = 16;
 
+    private const float RefitTolerance = 1e-4f;
+
     private const ColorComponentFlagBits AllColorComponents = ColorComponentFlagBits.RBit |
                                                               ColorComponentFlagBits.GBit |
                                                               ColorComponentFlagBits.BBit |
@@ -37,6 +39,7 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
     private Vector4F _localBounds;          // the shape's bounds, which a gradient brush spans
     private Pen _pen;                       // mutable: TryRepoint swaps it for a uniform-only pen change (animation)
     private readonly bool _hasDashes;
+    private float _fittedAtScale = float.NaN;
     private readonly uint _joinType;        // 0 miter, 1 bevel, 2 round
     private readonly List<Contour> _contours = [];
 
@@ -439,11 +442,34 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
             return;
         }
 
-        // Its length: the last point's distance along it, and the closing segment back to the first.
+        // Its length: the last point's distance along it, and the closing segment back to the first - in the pen's unit,
+        // which its pattern is in.
         var last = (int)c.PointCount - 1;
         var dx = (double)c.PointsData[0] - c.PointsData[last * 2];
         var dy = (double)c.PointsData[1] - c.PointsData[last * 2 + 1];
-        c.DashScale = FitScale(c.ArcsData[last] + Math.Sqrt(dx * dx + dy * dy), _pen);
+        var length = c.ArcsData[last] + Math.Sqrt(dx * dx + dy * dy);
+        c.DashScale = FitScale(length / DashUnitScale(), _pen);
+    }
+
+    private void RefitToWindow()
+    {
+        if (!_hasDashes || !_pen.FitDashesToContour || _pen.ThicknessUnit != PenThicknessUnit.Window ||
+            RenderData == null)
+        {
+            return;
+        }
+
+        var scale = WindowWidthScale();
+        if (Math.Abs(scale - _fittedAtScale) <= RefitTolerance * scale) return;
+
+        _fittedAtScale = scale;
+        foreach (var c in _contours)
+        {
+            if (c.Batched || !c.IsClosed) continue;
+
+            Refit(c);
+            SetPattern(c, _pen);
+        }
     }
 
     // Builds the GPU buffers for one contour. Returns null for a degenerate contour.
@@ -529,7 +555,24 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
     // Device pixels per geometry-local unit, the least over the stroke under a perspective.
     private float DeviceScale() => WindowScale() * (float)RenderData.RenderScale;
 
-    // Window (layout) pixels per geometry-local unit.
+    private float WindowWidthScale()
+    {
+        var t = RenderData.TransformMatrix;
+        if (t.M14 == 0f && t.M24 == 0f) return WindowScale();
+
+        var plane = PlaneScale(t);
+        return plane > 1e-4f ? plane : WindowScale();
+    }
+
+    private float DashUnitScale()
+    {
+        if (_pen.ThicknessUnit != PenThicknessUnit.Window || RenderData == null) return 1f;
+
+        var scale = WindowWidthScale();
+        return scale > 1e-4f ? 1f / scale : 1f;
+    }
+
+    // Window (layout) units per geometry-local unit.
     private float WindowScale()
     {
         var t = RenderData.TransformMatrix;
@@ -542,9 +585,9 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
     private float HalfThickness()
     {
         var thickness = _pen.Thickness;
-        if (_pen.ThicknessUnit == PenThicknessUnit.Pixels)
+        if (_pen.ThicknessUnit == PenThicknessUnit.Window)
         {
-            var windowScale = WindowScale();
+            var windowScale = WindowWidthScale();
             if (windowScale > 1e-4f) thickness /= windowScale;
         }
 
@@ -599,10 +642,22 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
         return MathF.Sqrt(MathF.Abs(dxdx * dydy - dxdy * dydx));
     }
 
+    /// <summary>The linear scale of a plane under the projective map <paramref name="t"/> where its w is 1 - the depth of
+    /// the screen: the square root of the determinant of its x, y, w part, the area scale at any point being that over
+    /// w cubed. A move of the plane within itself leaves it as it is.</summary>
+    internal static float PlaneScale(Matrix4x4F t)
+    {
+        var determinant = t.M11 * (t.M22 * t.M44 - t.M42 * t.M24)
+                          - t.M21 * (t.M12 * t.M44 - t.M42 * t.M14)
+                          + t.M41 * (t.M12 * t.M24 - t.M22 * t.M14);
+        return MathF.Sqrt(MathF.Abs(determinant));
+    }
+
     // Uploads run OUT of the render pass: PreRender is recorded from BeginDraw's beforeRenderPass hook. Each contour puts
     // what changed into this frame's slot.
     public override void PreRender()
     {
+        RefitToWindow();
         foreach (var c in _contours)
         {
             var points = c.PointsBuffer.Acquire(c.PointsBytes, out var writePoints);
@@ -637,6 +692,7 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
         var half = HalfThickness();
         _effect.UHalfThickness.SetValue(half);
         _effect.UFringe.SetValue(ComputeFringe());
+        _effect.UDashScale.SetValue(DashUnitScale());
         if (!SetBrush(half, out var draw, out var unionDraw, out var opaque, out var invisible)) return;
 
         _device.VertexType = null;   // the stroke is read by address
@@ -733,7 +789,7 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
         record.PatternCount = PatternCountValue;
         record.Flags = (c.IsClosed ? StrokeRecord.Closed : 0u) | (c.Batched ? StrokeRecord.BatchedContours : 0u) |
                        (HasRuns ? StrokeRecord.HasRuns : 0u) |
-                       (_pen.ThicknessUnit == PenThicknessUnit.Pixels ? StrokeRecord.PixelThickness : 0u);
+                       (_pen.ThicknessUnit == PenThicknessUnit.Window ? StrokeRecord.WindowThickness : 0u);
         record.Caps = MapCap(_pen.StartLineCap) | MapCap(_pen.EndLineCap) << 4 | MapCap(_pen.DashStartCap) << 8 |
                       MapCap(_pen.DashEndCap) << 12;
         record.RoundSegments = c.RoundSegments;

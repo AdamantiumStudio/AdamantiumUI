@@ -14,7 +14,7 @@ internal struct StrokeRecord
     public const uint Closed = 1;
     public const uint BatchedContours = 2;
     public const uint HasRuns = 4;
-    public const uint PixelThickness = 8;
+    public const uint WindowThickness = 8;
 
     public Matrix4x4F Local;
     public ulong Points;
