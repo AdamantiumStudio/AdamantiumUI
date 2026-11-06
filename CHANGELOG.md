@@ -50,6 +50,8 @@ All packages share one version.
 
 ### Changed
 
+- **Breaking:** `ICanvasScene` hands over all it holds as `Items`, in paint order; a scene of an application's own
+  implements it. The canvas asks it for everything rather than for a region the size of the plane.
 - **Breaking:** the camera of an `InfiniteCanvas` is matrices. Every item draws in WORLD units from an origin of its
   own, through a `CanvasDrawing` its layer hands it, and its layer keeps a placement per item on the camera; a control
   on the plane is laid out once at its own size and moved by its render transform. A pan or a zoom rewrites those and
@@ -114,6 +116,12 @@ All packages share one version.
 - A turned control on a canvas turns about its own middle at any zoom; away from a zoom of one it turned about a point
   off it and stood beside its frame.
 
+- Sandbox: a graph saved on the Node graph tab keeps its comment frames - the title, the box, the outline and the wash -
+  and loading it puts them back behind the nodes and starts a fresh history; a file saved before still opens, with
+  none. A broken file is refused before anything is changed.
+- A canvas counts everything on the plane, however far out: an item beyond about a quarter of the largest double was
+  left out of undo steps, wire lookups and the "anything here" checks.
+- After an undo or redo, a selected child of a group stays selected.
 - A `ColorPalette` tells automation which color is selected: a swatch is a selection item
   (`ColorPaletteSwatchAutomationPeer`) that says whether it holds the selected color, is selected by being pressed and
   announces becoming so - a screen reader could not tell which color was picked, nor a scenario check it.

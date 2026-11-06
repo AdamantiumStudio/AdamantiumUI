@@ -387,7 +387,7 @@ public partial class InfiniteCanvas
 
     /// <summary>Everything on the plane, wherever it is - what a whole graph is, as against what can be seen of one.
     /// Saving a document is the case: a node left three screens away is still in it.</summary>
-    public IEnumerable<ICanvasItem> ItemsHere() => ItemsHere(Everything);
+    public IEnumerable<ICanvasItem> ItemsHere() => Scene?.Items ?? (IEnumerable<ICanvasItem>)Array.Empty<ICanvasItem>();
 
     /// <summary>What is on the plane inside a world rectangle.</summary>
     public IEnumerable<ICanvasItem> ItemsHere(Rect world) =>

@@ -29,15 +29,11 @@ internal sealed class CanvasStep : ICanvasStep
     /// so the canvas's gesture steps and an application's one-shot steps cannot disagree about what a step is.</summary>
     internal static void Snapshot(ICanvasScene scene, out List<ICanvasItem> items, out Dictionary<ICanvasItem, Rect> at)
     {
-        items = new List<ICanvasItem>(scene.ItemsIn(Everything));
+        items = new List<ICanvasItem>(scene.Items);
         at = new Dictionary<ICanvasItem, Rect>(items.Count);
 
         foreach (var item in items) at[item] = item.Bounds;
     }
-
-    // Everything there is: a step is about the whole drawing, not about the part of it that can be seen.
-    private static Rect Everything =>
-        new(double.MinValue / 4, double.MinValue / 4, double.MaxValue / 2, double.MaxValue / 2);
 
     /// <summary>Whether anything actually happened. A gesture that changed nothing - a click that selected and let go -
     /// must not fill the history with steps that undo to the same drawing.</summary>

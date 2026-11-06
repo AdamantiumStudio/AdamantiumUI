@@ -9,6 +9,9 @@ namespace Adamantium.UI.Controls.Canvases;
 /// what is visible and an index can go behind it.</summary>
 public interface ICanvasScene
 {
+    /// <summary>Every item, wherever it is. Order is paint order.</summary>
+    IReadOnlyList<ICanvasItem> Items { get; }
+
     /// <summary>The items whose bounds meet this piece of world. Order is paint order.</summary>
     IEnumerable<ICanvasItem> ItemsIn(Rect world);
 
