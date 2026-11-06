@@ -114,6 +114,27 @@ public class StrokeBatchRenderTests
     }
 
     [Test]
+    public void OneIndirectCommandASegment_DrawsWhatADrawARecordDraws()
+    {
+        // The device here takes many draws at once; a device that does not draws a record at a time, and both must agree.
+        Assume.That(GpuTestDevice.Device.MainDevice.IsMultiDrawIndirectEnabled, "the device takes one draw at a time");
+        var multi = DrawOnce(Fan, batched: true);
+        var was = StrokeBatchCollector.MultiDraw;
+        StrokeBatchCollector.MultiDraw = false;
+        byte[] single;
+        try
+        {
+            single = DrawOnce(Fan, batched: true);
+        }
+        finally
+        {
+            StrokeBatchCollector.MultiDraw = was;
+        }
+
+        Assert.That(Differing(multi, single), Is.Zero);
+    }
+
+    [Test]
     public void ManyStrokesOfOneElement_AreRecordsOfOneBatch_NotAnOpEach()
     {
         using var scene = NewScene(s =>
