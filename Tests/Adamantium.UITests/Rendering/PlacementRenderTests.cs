@@ -573,6 +573,19 @@ public class PlacementRenderTests
         });
     }
 
+    // DASHES IN THE PEN'S UNIT: a pen in the window's units dots in them too, so an outline 4x as long carries 4x the
+    // dots of the same size. Dots in local units would grow into dashes a quarter as many - about 1.7x the pixels.
+    [Test]
+    public void APenInWindowUnits_DashesInThemToo_UnderAZoom()
+    {
+        var pen = new Pen(Brushes.White, 2, dashStrokeArray: [0.5, 9.5], dashStartCap: PenLineCap.ConvexRound,
+            dashEndCap: PenLineCap.ConvexRound) { ThicknessUnit = PenThicknessUnit.Window };
+        var near = OutlineAt(1, pen);
+        var far = OutlineAt(4, pen);
+
+        Assert.That((double)far / near, Is.InRange(3.0, 5.0));
+    }
+
     [Test]
     public void APlacementMovedBeforeTheFirstFrame_IsDrawnWhereItIsNow()
     {

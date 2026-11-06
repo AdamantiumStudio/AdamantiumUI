@@ -25,8 +25,10 @@ All packages share one version.
 
 - `Pen.ThicknessUnit`: a stroke of geometry can be as wide in the window's units (`PenThicknessUnit.Window`, as layout
   counts them, the same on any monitor) under any zoom - a road on a zoomed map - and `Pen.MinimumDeviceThickness` keeps
-  a line scaled far down at least that many of the monitor's own pixels wide. Dash lengths stay in local units; the batched outlines of rounded rectangles, ellipses and regular polygons take
-  the thickness in local units.
+  a line scaled far down at least that many of the monitor's own pixels wide. The dashes and their offset are in the
+  same unit as the width: a pen in the window's units dashes in them too, and on a leaned plane its dashes lie on the
+  ground, one length across it, narrowed into the distance by the perspective and still as the plane moves. The
+  batched outlines of rounded rectangles, ellipses and regular polygons take the thickness in local units.
 
 - A stroke can be painted with any brush: gradients (conic and mesh too), `PatternBrush`, `NoiseBrush` (animated as
   well) and pictures - `ImageBrush` (a layer of a `TextureArrayImage` too), `DrawingBrush`, `VisualBrush`. A brush with no form along a line - fractal,

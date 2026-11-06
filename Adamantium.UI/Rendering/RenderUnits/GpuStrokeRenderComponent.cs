@@ -538,6 +538,14 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
         return plane > 1e-4f ? plane : WindowScale();
     }
 
+    private float DashUnitScale()
+    {
+        if (_pen.ThicknessUnit != PenThicknessUnit.Window) return 1f;
+
+        var scale = PixelWidthScale();
+        return scale > 1e-4f ? 1f / scale : 1f;
+    }
+
     // Window (layout) units per geometry-local unit.
     private float WindowScale()
     {
@@ -657,6 +665,7 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
         var half = HalfThickness();
         _effect.UHalfThickness.SetValue(half);
         _effect.UFringe.SetValue(ComputeFringe());
+        _effect.UDashScale.SetValue(DashUnitScale());
         if (!SetBrush(half, out var draw, out var unionDraw, out var opaque, out var invisible)) return;
 
         _device.VertexType = null;   // the stroke is read by address

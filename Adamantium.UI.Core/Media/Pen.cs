@@ -33,7 +33,8 @@ public class Pen : IEquatable<Pen>
    private readonly double[] _dashes;
    private readonly bool _isRenderCopy;
 
-   /// <summary>The lengths of the dashes and gaps, in the geometry's units, as a list the loop thread may edit. A copy
+   /// <summary>The lengths of the dashes and gaps, in the units <see cref="ThicknessUnit"/> names - the geometry's, or
+   /// the window's, as the width is - as a list the loop thread may edit. A copy
    /// for rendering (<see cref="CloneForRendering"/>) draws the dashes it was made with: editing its list changes
    /// nothing drawn.</summary>
    public AdamantiumCollection<Double> DashStrokeArray =>
