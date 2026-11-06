@@ -48,7 +48,8 @@ All packages share one version.
   shapes - are drawn as one batch: a record each under one pipeline, where each was a draw of its own with its own
   state. They follow their transform slot, so a camera or a drag moves them without recording them again. One
   element's translucent strokes of one color blend once where they cross, as a single stroke does; separate elements
-  still darken where they overlap.
+  still darken where they overlap. Where the device takes many draws from one indirect command, a run of them is one
+  `vkCmdDrawIndirect`; elsewhere, a draw each.
 
 ### Removed
 
