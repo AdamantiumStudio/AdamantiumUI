@@ -119,6 +119,10 @@ All packages share one version.
 
 ### Fixed
 
+- An animation or a ticker (`AnimationManager.AddTicker`) that throws is stopped and its error logged; the others go on.
+  It stayed on and threw again on every tick, and each time the frame stopped there - no layout, no frame drawn, the
+  application never idle - with the error only on the console. An error the application loop catches is logged too.
+
 - The wheel over a node, or over any control standing on a canvas that does not use it, zooms the canvas; it did
   nothing there. A scroller on the plane with somewhere to scroll keeps the wheel even at its end, and the panels over
   the canvas keep it as before.
