@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Scenario xmlns="http://adamantium/automation/scenario" Description="The NodeGraph page: the camera pinched in and out, a node off screen brought into view, a wire parted and put back by undo, a wire laid without the mouse and taken back, a node folded and unfolded.">
+  <Select Target="id=GalleryTabs/id=NodeGraph" />
+  <Wait Target="id=Canvas" />
+  <Zoom Target="id=Canvas" Percent="100" />
+  <!-- Two fingers drawn apart pinch the camera in about their middle; drawn together, out again. The zoom starts past the
+       system's drag threshold, so it is a range. -->
+  <Pinch Target="id=Canvas" Scale="2" />
+  <Expect Target="id=Canvas" Zoom="180..195" />
+  <Pinch Target="id=Canvas" Scale="0.5" />
+  <Expect Target="id=Canvas" Zoom="95..100" />
+  <Zoom Target="id=Canvas" Percent="100" />
+  <Expect Target="id=PART_MiniMap/type=Image" Name="The whole plane, the part in view framed" />
+  <Scroll Target="id=Canvas>name=Mix" />
+  <Expect Target="id=Canvas>name=Mix" Offscreen="False" />
+  <!-- Dragged away the node leaves the view, and dragged back it is there again. -->
+  <Pan Target="id=Canvas" By="4000,0" />
+  <Expect Target="id=Canvas>name=Mix" Offscreen="True" />
+  <Pan Target="id=Canvas" By="-4000,0" />
+  <Expect Target="id=Canvas>name=Mix" Offscreen="False" />
+  <Expect Target="id=Canvas>name=Mix/type=Thumb,name=Amount" Value="Number: Out" />
+  <Disconnect Target="id=Canvas>name=Mix/type=Thumb,name=Amount" />
+  <Expect Target="id=Canvas>name=Mix/type=Thumb,name=Amount" Value="" />
+  <Invoke Target="id=PART_ViewBar/name=Undo (Ctrl+Z)" />
+  <Expect Target="id=Canvas>name=Mix/type=Thumb,name=Amount" Value="Number: Out" />
+  <!-- The page keeps the camera the last run left, and a node far out of view is not built: the whole graph into view -
+       with nothing selected, or F frames only what is. -->
+  <Key Keys="Escape" Into="id=Canvas" />
+  <Key Keys="F" Into="id=Canvas" />
+  <Expect Target="id=Canvas>name=Output/type=Thumb,name=Color" Value="Scale: Out" />
+  <Connect Target="id=Canvas>name=Mix/type=Thumb,name=Out" To="id=Canvas>name=Output/type=Thumb,name=Color" />
+  <Expect Target="id=Canvas>name=Output/type=Thumb,name=Color" Value="Mix: Out" />
+  <Invoke Target="id=PART_ViewBar/name=Undo (Ctrl+Z)" />
+  <Expect Target="id=Canvas>name=Output/type=Thumb,name=Color" Value="Scale: Out" />
+  <Collapse Target="id=Canvas>name=Mix" />
+  <Expect Target="id=Canvas>name=Mix" Expanded="Collapsed" />
+  <Expand Target="id=Canvas>name=Mix" />
+  <Expect Target="id=Canvas>name=Mix" Expanded="Expanded" />
+  <Invoke Target="id=PART_ViewBar/name=Back to the kept view" />
+</Scenario>

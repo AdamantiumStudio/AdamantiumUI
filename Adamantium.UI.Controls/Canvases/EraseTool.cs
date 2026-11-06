@@ -1,0 +1,154 @@
+﻿using System;
+using System.Collections.Generic;
+using Adamantium.Mathematics;
+using Adamantium.ProceduralGeometry.Shapes;
+using Adamantium.UI.Core;
+using Adamantium.UI.Core.Graphics;
+using Adamantium.UI.Core.Input;
+using Adamantium.UI.Core.Media;
+
+namespace Adamantium.UI.Controls.Canvases;
+
+/// <summary>The eraser, shown as a ring: it rubs holes in ink (or takes whole strokes), while shapes, text and controls always
+/// go whole.</summary>
+public class EraseTool : ICanvasTool
+{
+    private readonly List<StrokeItem> _pieces = new();
+
+    private bool _erasing;
+    private Vector2<double> _at;
+    private bool _over;
+    private Vector2<double> _last;
+
+    public EraseTool(CanvasEraseMode mode = CanvasEraseMode.Point)
+    {
+        Mode = mode;
+
+        var whole = mode == CanvasEraseMode.Stroke;
+        Name = whole ? "EraseStroke" : "Erase";
+        Icon = whole ? "CanvasToolEraseStrokeIcon" : "CanvasToolEraseIcon";
+        Shortcut = whole ? Key.D : Key.E;
+        Description = whole ? "EraseStrokeDescription" : "EraseDescription";
+    }
+
+    /// <summary>How a rail shows this tool. Taken from the MODE by default - one class serves both erasers - and
+    /// settable, like every other tool's.</summary>
+    public string Name { get; set; }
+
+    public string Icon { get; set; }
+
+    public Key Shortcut { get; set; }
+
+    public string Description { get; set; }
+
+    /// <summary>NONE - the eraser draws its own ring, and a pointer on top of it would only hide the very thing that
+    /// shows how wide the rubber is.</summary>
+    public Cursor Cursor { get; set; } = Cursors.None;
+
+    private static double SizeOn(InfiniteCanvas canvas) => (canvas as DrawingBoard)?.EraserSize ?? 0;
+
+    /// <summary>What this eraser takes. Set once, when the eraser is made: the two are separate TOOLS rather than one
+    /// tool with a switch, so picking which one you want is the same act as picking any other tool.</summary>
+    public CanvasEraseMode Mode { get; }
+
+    public bool IsBusy => false;
+
+    public void OnPressed(InfiniteCanvas canvas, CanvasPointerEventArgs e)
+    {
+        if (e.Button != MouseButtons.Left || canvas.Scene == null || canvas is not DrawingBoard) return;
+
+        _erasing = true;
+        _last = e.Pointer;
+
+        Rub(canvas, e.Pointer);
+
+        canvas.CapturePointer();
+        e.Handled = true;
+    }
+
+    public void OnMoved(InfiniteCanvas canvas, CanvasPointerEventArgs e)
+    {
+        // The ring follows the pointer whether or not the button is down: how big the eraser is has to be visible
+        // BEFORE it is used, or it can only be found out by rubbing something out.
+        _at = e.Screen;
+        _over = true;
+        canvas.Repaint();
+
+        if (!_erasing) return;
+
+        // Along the WHOLE way, not only where the pointer was reported. A pointer arrives a handful of times a frame,
+        // and a quick sweep would otherwise erase a row of dots with untouched drawing between them.
+        var step = canvas.ScreenToWorldLength(Math.Max(2, SizeOn(canvas) / 3));
+        var travel = (e.Pointer - _last).Length();
+        var stops = Math.Max(1, (int)Math.Ceiling(travel / Math.Max(step, 1e-9)));
+
+        for (var i = 1; i <= stops; i++) Rub(canvas, _last + (e.Pointer - _last) * ((double)i / stops));
+
+        _last = e.Pointer;
+        e.Handled = true;
+    }
+
+    public void OnReleased(InfiniteCanvas canvas, CanvasPointerEventArgs e)
+    {
+        if (!_erasing) return;
+
+        _erasing = false;
+        canvas.ReleasePointer();
+        e.Handled = true;
+    }
+
+    public void Render(IDrawingSession session, InfiniteCanvas canvas)
+    {
+        var size = SizeOn(canvas);
+        if (!_over || canvas.SelectionBrush == null || size <= 0) return;
+
+        session.DrawEllipse(new Rect(_at.X - size / 2, _at.Y - size / 2, size, size),
+            null, 0, 360, EllipseType.Sector, new Pen(canvas.SelectionBrush));
+    }
+
+    public void Cancel(InfiniteCanvas canvas)
+    {
+        if (_erasing) canvas.ReleasePointer();
+
+        _erasing = false;
+        _over = false;
+    }
+
+    private void Rub(InfiniteCanvas canvas, Vector2<double> world)
+    {
+        if (canvas.Scene is not { } scene || canvas is not DrawingBoard) return;
+
+        var radius = canvas.ScreenToWorldLength(SizeOn(canvas)) / 2;
+        var reach = new Rect(world.X - radius, world.Y - radius, radius * 2, radius * 2);
+
+        // What the eraser touches, taken out of the scene FIRST: editing a scene while walking it is how a walk ends up
+        // skipping half of what it was asked about.
+        var touched = new List<ICanvasItem>();
+        foreach (var item in canvas.ItemsHere(reach))
+        {
+            if (item.HitTest(world, radius)) touched.Add(item);
+        }
+
+        if (touched.Count == 0) return;
+
+        foreach (var item in touched)
+        {
+            if (Mode == CanvasEraseMode.Point && item is StrokeItem stroke)
+            {
+                _pieces.Clear();
+                if (!stroke.Erase(world, radius, _pieces)) continue;
+
+                // IN PLACE, not "remove then add": the pieces take the stroke's own place in paint order. Added at the
+                // end instead, a stroke rubbed through rose above everything put on the canvas after it was drawn.
+                scene.Replace(stroke, _pieces);
+
+                continue;
+            }
+
+            scene.Remove(item);
+        }
+
+        canvas.ClearSelection();
+        canvas.Repaint();
+    }
+}

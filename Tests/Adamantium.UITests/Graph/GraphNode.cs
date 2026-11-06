@@ -4,7 +4,7 @@ using System.Runtime.CompilerServices;
 using Adamantium.Core.Collections;
 using Adamantium.Mathematics;
 using Adamantium.UI.Controls;
-using Adamantium.UI.Controls.DrawingBoard;
+using Adamantium.UI.Controls.Canvases;
 
 namespace Adamantium.UITests.Graph;
 

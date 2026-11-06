@@ -6,10 +6,6 @@
          template - the control draws its own ground, grid and axes; see Fluent's set. -->
     <Style Selector="InfiniteCanvas">
         <Setter Property="Background" Value="{ObservableResource SolidBackgroundFillColorBase}"/>
-        <Setter Property="ExportTitle" Value="{Localize CanvasStrings.ExportTitle}"/>
-        <Setter Property="OpenTitle" Value="{Localize CanvasStrings.OpenTitle}"/>
-        <Setter Property="DrawingsName" Value="{Localize CanvasStrings.Drawings}"/>
-        <Setter Property="AllFilesName" Value="{Localize CanvasStrings.AllFiles}"/>
         <Setter Property="DeleteTitle" Value="{Localize CanvasStrings.DeleteTitle}"/>
         <Setter Property="ClearTitle" Value="{Localize CanvasStrings.ClearCanvas}"/>
         <Setter Property="Phrases" Value="{x:Static CanvasStrings.Current}"/>
@@ -68,6 +64,81 @@
                                 <CanvasInspector/>
                             </CanvasPane>
 
+                            <CanvasPane x:Name="PART_ViewBar" Placement="BottomCenter" Kind="Bar"
+                                        IsDocked="True" MinWidth="264">
+                                <CanvasViewBar/>
+                            </CanvasPane>
+                        </CanvasChromeLayer>
+                    </Grid>
+
+                    <!-- IsWanted and not Visibility - see Fluent's set. -->
+                    <ControlTemplate.Triggers>
+                        <PropertyTrigger Property="ShowsToolRail" Value="false">
+                            <Setter TargetName="PART_ToolRail" Property="IsWanted" Value="false"/>
+                        </PropertyTrigger>
+                        <PropertyTrigger Property="ShowsMiniMap" Value="false">
+                            <Setter TargetName="PART_MiniMap" Property="IsWanted" Value="false"/>
+                        </PropertyTrigger>
+                        <PropertyTrigger Property="ShowsInspector" Value="false">
+                            <Setter TargetName="PART_Inspector" Property="IsWanted" Value="false"/>
+                        </PropertyTrigger>
+                        <PropertyTrigger Property="ShowsSelectionBar" Value="false">
+                            <Setter TargetName="PART_SelectionBar" Property="IsWanted" Value="false"/>
+                        </PropertyTrigger>
+                        <PropertyTrigger Property="ShowsViewBar" Value="false">
+                            <Setter TargetName="PART_ViewBar" Property="IsWanted" Value="false"/>
+                        </PropertyTrigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- A drawing and a graph - see Fluent's set. -->
+    <Style Selector="DrawingBoard" BasedOn="InfiniteCanvas">
+        <Setter Property="ExportTitle" Value="{Localize CanvasStrings.ExportTitle}"/>
+        <Setter Property="OpenTitle" Value="{Localize CanvasStrings.OpenTitle}"/>
+        <Setter Property="DrawingsName" Value="{Localize CanvasStrings.Drawings}"/>
+        <Setter Property="AllFilesName" Value="{Localize CanvasStrings.AllFiles}"/>
+    </Style>
+
+    <Style Selector="NodeGraph" BasedOn="InfiniteCanvas">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="NodeGraph">
+                    <Grid>
+                        <Grid x:Name="PART_Layers"/>
+
+                        <CanvasFrontLayer x:Name="PART_Front"/>
+
+                        <StackPanel x:Name="PART_OverlayRoot" Orientation="Vertical" Margin="14">
+                            <Button x:Name="PART_OverlayGrip" Width="32" Height="24"
+                                    MinWidth="0" MinHeight="0" Padding="0"
+                                    HorizontalAlignment="Left" MarginBottom="6"
+                                    ToolTip="{Localize CanvasStrings.MovePanel}">
+                                <Image Source="{ObservableResource CanvasGripIcon}" Width="12" Height="12"/>
+                            </Button>
+                            <ContentPresenter x:Name="PART_Overlay"/>
+                        </StackPanel>
+
+                        <CanvasChromeLayer x:Name="PART_Chrome" PaneInset="14" PaneGap="10">
+                            <CanvasPane x:Name="PART_SelectionBar" Placement="Selection" Kind="Bar">
+                                <CanvasSelectionBar/>
+                            </CanvasPane>
+
+                            <CanvasPane x:Name="PART_ToolRail" Placement="TopLeft" Kind="Rail" CanDrag="True"/>
+
+                            <CanvasPane x:Name="PART_MiniMap" Placement="BottomLeft" Kind="Sheet" Header="{Localize CanvasStrings.Map}"
+                                        CanDrag="True">
+                                <CanvasMiniMap Width="200" Height="126" MinWidth="0" MinHeight="0"
+                                               AutomationProperties.Name="{Localize CanvasStrings.WholePlane}"/>
+                            </CanvasPane>
+
+                            <CanvasPane x:Name="PART_Inspector" Placement="TopRight" Kind="Sheet"
+                                        CanResize="True" Width="360" MinResizeWidth="210">
+                                <CanvasInspector/>
+                            </CanvasPane>
+
                             <CanvasPane x:Name="PART_NodePalette" Placement="Free" Kind="Sheet" Header="{Localize CanvasStrings.AddNode}"
                                         CanDrag="True" Width="210"
                                         IsNeeded="{TemplateBinding IsPaletteOpen}">
@@ -81,7 +152,6 @@
                         </CanvasChromeLayer>
                     </Grid>
 
-                    <!-- IsWanted and not Visibility - see Fluent's set. -->
                     <ControlTemplate.Triggers>
                         <PropertyTrigger Property="ShowsToolRail" Value="false">
                             <Setter TargetName="PART_ToolRail" Property="IsWanted" Value="false"/>
@@ -254,23 +324,9 @@
                                    FontSize="12" MarginBottom="6"
                                    Foreground="{ObservableResource TextFillColorSecondary}"/>
 
-                        <!-- Two radio groups in one row, split by a rule: the canvas mode and the visible face; pictograms
-                             keep it to one row. -->
-                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" MarginBottom="8">
-                            <RadioButton Classes="Toggle" GroupName="CanvasMode"
-                                         Width="28" Height="24" MinWidth="0" MinHeight="0" Padding="0"
-                                         ToolTip="{Localize CanvasStrings.DrawingMode}"
-                                         IsChecked="{TemplateBinding IsDrawing, Mode=TwoWay}">
-                                <Image Source="{ObservableResource CanvasToolPenIcon}" Width="13" Height="13"/>
-                            </RadioButton>
-                            <RadioButton Classes="Toggle" GroupName="CanvasMode" MarginLeft="4"
-                                         Width="28" Height="24" MinWidth="0" MinHeight="0" Padding="0"
-                                         ToolTip="{Localize CanvasStrings.GraphMode}"
-                                         IsChecked="{TemplateBinding IsGraph, Mode=TwoWay}">
-                                <Image Source="{ObservableResource CanvasToolNodeIcon}" Width="13" Height="13"/>
-                            </RadioButton>
+                        <!-- One row of pictogram radios: the visible face. -->
 
-                            <Separator Orientation="Vertical" MarginLeft="6" MarginRight="6"/>
+                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" MarginBottom="8">
 
                             <RadioButton Classes="Toggle" GroupName="CanvasInspectorFace"
                                          Width="28" Height="24" MinWidth="0" MinHeight="0" Padding="0"
@@ -292,7 +348,7 @@
                             <Button Width="26" Height="26" MinWidth="0" MinHeight="0" Padding="0" MarginRight="8"
                                     Visibility="{TemplateBinding GraphActions}"
                                     ToolTip="{Localize CanvasStrings.CommentFrame}"
-                                    Command="{Ancestor CanvasInspector, Canvas.FrameCommand}">
+                                    Command="{Ancestor CanvasInspector, FrameCommand}">
                                 <Image Source="{ObservableResource CanvasFrameIcon}" Width="14" Height="14"/>
                             </Button>
 
@@ -349,13 +405,13 @@
                             <Button Width="26" Height="26" MinWidth="0" MinHeight="0" Padding="0" MarginRight="2"
                                     Visibility="{TemplateBinding DrawingActions}"
                                     ToolTip="{Localize CanvasStrings.ExportSvg}"
-                                    Command="{Ancestor CanvasInspector, Canvas.ExportSvgCommand}">
+                                    Command="{Ancestor CanvasInspector, ExportSvgCommand}">
                                 <Image Source="{ObservableResource CanvasSaveIcon}" Width="13" Height="13"/>
                             </Button>
                             <Button Width="26" Height="26" MinWidth="0" MinHeight="0" Padding="0" MarginRight="6"
                                     Visibility="{TemplateBinding DrawingActions}"
                                     ToolTip="{Localize CanvasStrings.OpenSvg}"
-                                    Command="{Ancestor CanvasInspector, Canvas.ImportSvgCommand}">
+                                    Command="{Ancestor CanvasInspector, ImportSvgCommand}">
                                 <Image Source="{ObservableResource CanvasOpenIcon}" Width="13" Height="13"/>
                             </Button>
 

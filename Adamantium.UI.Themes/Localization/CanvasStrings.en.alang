@@ -6,8 +6,6 @@
     <Phrase Key="ResizePanel" Text="Drag to set how wide the panel is"/>
     <Phrase Key="StickToEdge" Text="Stick to an edge when dropped near one"/>
     <Phrase Key="ToolsLayout" Text="Lay the tools out in a row or in a column"/>
-    <Phrase Key="DrawingMode" Text="Drawing - ink, shapes and text"/>
-    <Phrase Key="GraphMode" Text="Graph - nodes and the wires between them"/>
     <Phrase Key="Properties" Text="Properties of what is selected"/>
     <Phrase Key="Layers" Text="Everything on the plane, topmost first"/>
     <Phrase Key="CommentFrame" Text="Draw a comment frame round what is selected"/>

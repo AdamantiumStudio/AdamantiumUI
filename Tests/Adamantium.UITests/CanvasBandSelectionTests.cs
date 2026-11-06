@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Adamantium.Mathematics;
-using Adamantium.UI.Controls.DrawingBoard;
+using Adamantium.UI.Controls.Canvases;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Media;
@@ -13,9 +13,9 @@ namespace Adamantium.UITests;
 /// hollow outline takes what it is drawn round and leaves the outline alone.</summary>
 public class CanvasBandSelectionTests
 {
-    private static (InfiniteCanvas canvas, CanvasScene scene) Stage(CanvasMode mode = CanvasMode.Drawing)
+    private static (InfiniteCanvas canvas, CanvasScene scene) Stage(InfiniteCanvas canvas = null)
     {
-        var canvas = new InfiniteCanvas { Mode = mode };
+        canvas ??= new DrawingBoard();
         canvas.Measure(new Size<double>(800, 600), force: true);
         canvas.Arrange(new Rect(0, 0, 800, 600));
 
@@ -197,7 +197,7 @@ public class CanvasBandSelectionTests
     [Test]
     public void ABandRoundANodeOnACommentFrame_TakesTheNode_NotTheFrame()
     {
-        var (canvas, scene) = Stage(CanvasMode.Nodes);
+        var (canvas, scene) = Stage(new NodeGraph());
         var frame = new CanvasFrameItem(new Rect(0, 0, 500, 400), "Notes", Brushes.White, Brushes.Gray);
         var node = new ElementItem(new CanvasNode { Title = "Multiply" }, new Rect(150, 150, 160, 90));
         scene.Add(frame);

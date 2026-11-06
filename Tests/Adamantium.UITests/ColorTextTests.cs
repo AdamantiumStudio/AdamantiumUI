@@ -1,6 +1,6 @@
 using Adamantium.Mathematics;
 using Adamantium.UI.Controls;
-using Adamantium.UI.Controls.DrawingBoard;
+using Adamantium.UI.Controls.Canvases;
 using NUnit.Framework;
 
 namespace Adamantium.UITests;

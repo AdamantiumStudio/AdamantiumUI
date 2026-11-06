@@ -9,7 +9,7 @@ using Adamantium.UI.Controls;
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Controls.Buttons;
 using Adamantium.UI.Controls.Decorators;
-using Adamantium.UI.Controls.DrawingBoard;
+using Adamantium.UI.Controls.Canvases;
 using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Controls.Primitives;
 using Adamantium.UI.Controls.Shapes;
@@ -204,7 +204,7 @@ public class AutomationCoverageTests
     {
         var node = new CanvasNode { Title = "Blur" };
         var item = new ElementItem(node, new Rect(100, 100, 190, 110));
-        var canvas = new InfiniteCanvas { Mode = CanvasMode.Nodes, Scene = new CanvasScene(), History = new CanvasHistory() };
+        var canvas = new NodeGraph {Scene = new CanvasScene(), History = new CanvasHistory() };
         AutomationProperties.SetAutomationId(canvas, "Canvas");
         canvas.Scene.Add(item);
         var session = await Driving(canvas);
@@ -236,7 +236,7 @@ public class AutomationCoverageTests
         var sharpen = new CanvasNode { Title = "Sharpen" };
         var blurItem = new ElementItem(blur, new Rect(100, 100, 190, 110));
         var sharpenItem = new ElementItem(sharpen, new Rect(100, 260, 190, 110));
-        var canvas = new InfiniteCanvas { Mode = CanvasMode.Nodes, Scene = new CanvasScene() };
+        var canvas = new NodeGraph {Scene = new CanvasScene() };
         AutomationProperties.SetAutomationId(canvas, "Canvas");
         canvas.Scene.Add(blurItem);
         canvas.Scene.Add(sharpenItem);
@@ -278,7 +278,7 @@ public class AutomationCoverageTests
         var far = new CanvasNode { Title = "Far" };
         AutomationProperties.SetAutomationId(far, "FarNode");
         var item = new ElementItem(far, new Rect(40000, 30000, 190, 110));
-        var canvas = new InfiniteCanvas { Mode = CanvasMode.Nodes, Scene = new CanvasScene() };
+        var canvas = new NodeGraph {Scene = new CanvasScene() };
         canvas.Scene.Add(item);
         canvas.Scene.Add(new ElementItem(new CanvasNode { Title = "Near" }, new Rect(100, 100, 190, 110)));
         var session = await Driving(canvas);
@@ -332,7 +332,7 @@ public class AutomationCoverageTests
     public async Task ANodeTheCameraLeaves_LeavesItsLayer_AndIsFoundByAStandIn()
     {
         var node = new CanvasNode { Title = "Left behind" };
-        var canvas = new InfiniteCanvas { Mode = CanvasMode.Nodes, Scene = new CanvasScene() };
+        var canvas = new NodeGraph {Scene = new CanvasScene() };
         canvas.Scene.Add(new ElementItem(node, new Rect(-50, -50, 190, 110)));
         var session = await Driving(canvas);
         await using var _ = session;
@@ -354,9 +354,8 @@ public class AutomationCoverageTests
     [Test]
     public async Task AnApplicationsNodeNeverShown_IsFoundByItsModelsTitle()
     {
-        var canvas = new InfiniteCanvas
+        var canvas = new NodeGraph
         {
-            Mode = CanvasMode.Nodes,
             Scene = new CanvasScene(),
             Nodes = new List<ICanvasNode>
             {
@@ -387,7 +386,7 @@ public class AutomationCoverageTests
     {
         var source = new CanvasNode { Title = "Source", Inputs = 0, Outputs = 1 };
         var sink = new CanvasNode { Title = "Sink", Inputs = 1, Outputs = 1 };
-        var canvas = new InfiniteCanvas { Mode = CanvasMode.Nodes, Scene = new CanvasScene(), History = new CanvasHistory() };
+        var canvas = new NodeGraph {Scene = new CanvasScene(), History = new CanvasHistory() };
         canvas.Scene.Add(new ElementItem(source, new Rect(-350, -150, 190, 110)));
         canvas.Scene.Add(new ElementItem(sink, new Rect(-50, -150, 190, 110)));
         var session = await Driving(canvas);
@@ -424,7 +423,7 @@ public class AutomationCoverageTests
     public async Task ACanvasNode_FoldsAndUnfolds()
     {
         var node = new CanvasNode { Title = "Blur" };
-        var canvas = new InfiniteCanvas { Mode = CanvasMode.Nodes, Scene = new CanvasScene() };
+        var canvas = new NodeGraph {Scene = new CanvasScene() };
         canvas.Scene.Add(new ElementItem(node, new Rect(100, 100, 190, 110)));
         var session = await Driving(canvas);
         await using var _ = session;
@@ -624,7 +623,7 @@ public class AutomationCoverageTests
     [Test]
     public async Task ACanvasMap_IsAPictureOfThePlane_NamedByTheTheme()
     {
-        var canvas = new InfiniteCanvas { Mode = CanvasMode.Nodes, Scene = new CanvasScene() };
+        var canvas = new NodeGraph {Scene = new CanvasScene() };
         var session = await Driving(canvas);
         await using var _ = session;
 
@@ -640,7 +639,7 @@ public class AutomationCoverageTests
     [Test]
     public async Task ACanvas_IsPannedAsADragPansIt()
     {
-        var canvas = new InfiniteCanvas { Mode = CanvasMode.Nodes, Scene = new CanvasScene() };
+        var canvas = new NodeGraph {Scene = new CanvasScene() };
         AutomationProperties.SetAutomationId(canvas, "Canvas");
         var session = await Driving(canvas);
         await using var _ = session;

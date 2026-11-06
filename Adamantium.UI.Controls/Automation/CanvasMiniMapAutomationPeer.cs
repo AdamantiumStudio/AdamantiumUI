@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using Adamantium.UI.Controls.DrawingBoard;
+using Adamantium.UI.Controls.Canvases;
 using Adamantium.UI.Core.Automation;
 
 namespace Adamantium.UI.Controls.Automation;

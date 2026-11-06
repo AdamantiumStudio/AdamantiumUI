@@ -2,7 +2,7 @@ using System.Linq;
 using Adamantium.Mathematics;
 using Adamantium.UI.Controls;
 using Adamantium.UI.Controls.Buttons;
-using Adamantium.UI.Controls.DrawingBoard;
+using Adamantium.UI.Controls.Canvases;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Media;
 using NUnit.Framework;
@@ -15,15 +15,6 @@ public class CanvasFrameTests
 {
     private static CanvasFrameItem Frame(Rect world = default) =>
         new(world.Width > 0 ? world : new Rect(0, 0, 400, 300), "Lighting", Brushes.White);
-
-    // UNDER the nodes. Over them it would be a sheet of color across the thing it is about.
-    [Test]
-    public void AFrameIsDrawnBehindTheNodes()
-    {
-        ICanvasItem frame = Frame();
-
-        Assert.That(frame.Mode, Is.EqualTo(CanvasMode.Nodes), "a frame is a way of reading a GRAPH");
-    }
 
     // ONLY THE TITLE STRIP and the outline answer the pointer. A frame is mostly empty by design, and one that could be
     // picked up by its middle would be a sheet nobody could click through to what is inside it.

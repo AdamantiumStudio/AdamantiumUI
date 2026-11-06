@@ -2,7 +2,7 @@ using System.Linq;
 using Adamantium.Core.Collections;
 using Adamantium.Mathematics;
 using Adamantium.UI.Controls;
-using Adamantium.UI.Controls.DrawingBoard;
+using Adamantium.UI.Controls.Canvases;
 using Adamantium.UI.Core;
 using Adamantium.UITests.Graph;
 using NUnit.Framework;
@@ -16,9 +16,9 @@ namespace Adamantium.UITests;
 [TestFixture]
 public class CanvasObjectReleaseTests
 {
-    private static (InfiniteCanvas Canvas, CanvasScene Scene, TrackingCollection<ICanvasObject> Objects) Stage()
+    private static (DrawingBoard Canvas, CanvasScene Scene, TrackingCollection<ICanvasObject> Objects) Stage()
     {
-        var canvas = new InfiniteCanvas();
+        var canvas = new DrawingBoard();
         canvas.Measure(new Size<double>(800, 600), force: true);
         canvas.Arrange(new Rect(0, 0, 800, 600));
 

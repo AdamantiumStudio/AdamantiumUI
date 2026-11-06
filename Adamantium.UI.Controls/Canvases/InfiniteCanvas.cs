@@ -1,0 +1,1680 @@
+﻿using System.Collections;
+using System.Collections.Specialized;
+using Adamantium.Graphics.Fonts;
+using Adamantium.UI.Controls.Automation;
+using Adamantium.UI.Controls.Base;
+using Adamantium.UI.Core.Automation;
+using Adamantium.UI.Controls.Panels;
+using Adamantium.UI.Controls.Primitives;
+using Adamantium.UI.Core;
+using Adamantium.UI.Core.Input;
+using Adamantium.UI.Core.Localization;
+using Adamantium.UI.Core.Media;
+using Adamantium.UI.Core.Media.Animation;
+using Adamantium.UI.Core.RoutedEvents;
+using Adamantium.UI.Core.Templates;
+
+namespace Adamantium.UI.Controls.Canvases;
+
+/// <summary>An unbounded plane to draw and design on: panning moves the camera (<see cref="Offset"/>), the scene is in double
+/// world coordinates (screen = world * Scale + Offset), and only visible grid lines are drawn.</summary>
+public partial class InfiniteCanvas : Control, ISceneFollower
+{
+    private readonly EasedValue _zoom;
+    private Vector2<double> _zoomAnchorScreen;
+    private Vector2<double> _zoomAnchorWorld;
+    private bool _panning;
+    private Pointer _panPointer;
+    private Vector2<double> _panFrom;
+    private Vector2<double> _panOffsetFrom;
+    private bool _spaceHeld;
+    private bool _cameraPlaced;
+
+    private readonly List<ICanvasItem> _selection = new();
+    private CanvasSelectionFrame _selectionFrame;
+    private readonly List<IUIComponent> _announcedSelected = [];
+    private Pen _selectionPen;
+    private Brush _selectionPenBrush;
+
+    private int _draggingPoint = -1;
+    private int _editDepth;
+    private string _editReason;
+    private List<ICanvasItem> _editBefore;
+    private Dictionary<ICanvasItem, Rect> _editWasAt;
+
+    private Panel _layers;
+    private CanvasFrontLayer _front;
+    private readonly List<(bool Hosted, List<ICanvasItem> Items)> _runs = new();
+
+    // Where the frame round what is held goes - see MarkChrome. One of the three at a time.
+    private ICanvasItem _chromeAfter;
+    private ICanvasItem _chromeBefore;
+    private bool _chromeOnGlass;
+    private readonly List<ElementItem> _hosted = new();
+    private bool _sceneTaken;
+
+    private CanvasChromeLayer _chromeLayer;
+    private CanvasTools _tools;
+    private readonly CanvasFrameGesture _frame = new();
+    private bool _publishing;
+
+    private TextLayout _readout;
+    private FontFamily _readoutFont;
+    private string _readoutText;
+    private Size<double> _readoutSize;
+    private Vector2<double> _pointer;
+    private bool _pointerInside;
+
+    private ContentPresenter _overlay;
+    private readonly object _sceneFollowed = new();
+    private InputUIComponent _overlayRoot;
+    private ButtonBase _overlayGrip;
+    private Thickness _inset;
+    private bool _draggingOverlay;
+    private bool _overlayCaptured;
+    private Pointer _activePointer;
+    private readonly HashSet<uint> _pressed = new();
+    private readonly EraseTool _penEraser = new();
+    private uint? _erasing;
+    private bool _overlayMoved;
+    private Vector2<double> _overlayFrom;
+    private Vector2<double> _overlayAt;
+
+    // Where the pointer is being PULLED, or nothing. Kept rather than recomputed while drawing, because the mark has to
+    // be on screen before the press - nobody can aim at a point that only appears once it has been hit.
+    private Vector2<double>? _snap;
+
+    // ONE brush, kept and re-pointed rather than made each frame: it is the parameter block the grid shader reads, and
+    // a new one every frame would be a new paint identity every frame.
+    private readonly CanvasGridBrush _ground = new();
+
+    /// <summary>Screen pixels per world unit.</summary>
+    public static readonly AdamantiumProperty ScaleProperty = AdamantiumProperty.Register(nameof(Scale),
+        typeof(Double), typeof(InfiniteCanvas),
+        new PropertyMetadata(1.0, PropertyMetadataOptions.AffectsRender | PropertyMetadataOptions.BindsTwoWayByDefault,
+            OnCameraChanged, CoerceScale));
+
+    /// <summary>Where the world's origin sits on screen, in pixels.</summary>
+    public static readonly AdamantiumProperty OffsetProperty = AdamantiumProperty.Register(nameof(Offset),
+        typeof(Vector2<double>), typeof(InfiniteCanvas),
+        new PropertyMetadata(Vector2<double>.Zero,
+            PropertyMetadataOptions.AffectsRender | PropertyMetadataOptions.BindsTwoWayByDefault, OnCameraChanged));
+
+    /// <summary>How far the camera may zoom out and in: a practical default, not a precision limit, since drawing receives
+    /// screen coordinates.</summary>
+    public static readonly AdamantiumProperty MinScaleProperty = AdamantiumProperty.Register(nameof(MinScale),
+        typeof(Double), typeof(InfiniteCanvas), new PropertyMetadata(0.01));
+
+    public static readonly AdamantiumProperty MaxScaleProperty = AdamantiumProperty.Register(nameof(MaxScale),
+        typeof(Double), typeof(InfiniteCanvas), new PropertyMetadata(65536.0));
+
+    /// <summary>How the canvas was left, as text - panels, camera, tool. Two-way: bind it to wherever the application
+    /// keeps such things; where that is, is the application's business. See <see cref="CanvasLayoutSerializer"/>.
+    /// </summary>
+    public static readonly AdamantiumProperty LayoutProperty = AdamantiumProperty.Register(nameof(Layout),
+        typeof(String), typeof(InfiniteCanvas),
+        new PropertyMetadata(null, PropertyMetadataOptions.BindsTwoWayByDefault, OnLayoutChanged));
+
+    /// <summary>Whether where the PANELS were left is remembered: their place, their width, what was folded and what
+    /// was switched off.</summary>
+    public static readonly AdamantiumProperty RemembersPanesProperty = AdamantiumProperty.Register(
+        nameof(RemembersPanes), typeof(Boolean), typeof(InfiniteCanvas),
+        new PropertyMetadata(true, PropertyMetadataOptions.BindsTwoWayByDefault, OnRememberingChanged));
+
+    /// <summary>Whether WHERE THE CAMERA WAS LOOKING is remembered.</summary>
+    public static readonly AdamantiumProperty RemembersCameraProperty = AdamantiumProperty.Register(
+        nameof(RemembersCamera), typeof(Boolean), typeof(InfiniteCanvas),
+        new PropertyMetadata(true, PropertyMetadataOptions.BindsTwoWayByDefault, OnRememberingChanged));
+
+    /// <summary>Whether the ZOOM is remembered - its own switch, because the two are wanted apart.</summary>
+    public static readonly AdamantiumProperty RemembersZoomProperty = AdamantiumProperty.Register(
+        nameof(RemembersZoom), typeof(Boolean), typeof(InfiniteCanvas),
+        new PropertyMetadata(true, PropertyMetadataOptions.BindsTwoWayByDefault, OnRememberingChanged));
+
+    /// <summary>Whether the TOOL in hand is remembered.</summary>
+    public static readonly AdamantiumProperty RemembersToolProperty = AdamantiumProperty.Register(
+        nameof(RemembersTool), typeof(Boolean), typeof(InfiniteCanvas),
+        new PropertyMetadata(true, PropertyMetadataOptions.BindsTwoWayByDefault, OnRememberingChanged));
+
+    /// <summary>The world point <c>Home</c> goes to, and the zoom it goes there at. The world's origin at one to one
+    /// until something says otherwise - <see cref="RememberViewCommand"/> is what says otherwise.</summary>
+    public static readonly AdamantiumProperty HomeAtProperty = AdamantiumProperty.Register(nameof(HomeAt),
+        typeof(Vector2<double>), typeof(InfiniteCanvas),
+        new PropertyMetadata(Vector2<double>.Zero, PropertyMetadataOptions.BindsTwoWayByDefault, OnHomeChanged));
+
+    public static readonly AdamantiumProperty HomeScaleProperty = AdamantiumProperty.Register(nameof(HomeScale),
+        typeof(Double), typeof(InfiniteCanvas),
+        new PropertyMetadata(1.0, PropertyMetadataOptions.BindsTwoWayByDefault, OnHomeChanged));
+
+    /// <summary>What one nudge of a thickness is worth, in WORLD units - a tenth of a screen pixel, whatever the
+    /// camera is at. A step stated in world units is a step that means something different at every zoom: a tenth is
+    /// a hair at 1:1 and a hundred and seventy pixels at seventeen thousand, where every line is one white blob.
+    /// <para>Never coarser than a tenth, so zooming OUT does not turn the nudge into a jump.</para></summary>
+    public static readonly AdamantiumProperty ThicknessStepProperty = AdamantiumProperty.RegisterReadOnly(
+        nameof(ThicknessStep), typeof(Double), typeof(InfiniteCanvas), new PropertyMetadata(0.1));
+
+    /// <summary>...and the thinnest a line may be set to: a hundredth of a screen pixel.</summary>
+    public static readonly AdamantiumProperty ThicknessLeastProperty = AdamantiumProperty.RegisterReadOnly(
+        nameof(ThicknessLeast), typeof(Double), typeof(InfiniteCanvas), new PropertyMetadata(0.01));
+
+    public Double ThicknessStep => GetValue<Double>(ThicknessStepProperty);
+
+    public Double ThicknessLeast => GetValue<Double>(ThicknessLeastProperty);
+
+    private void SyncThicknessSteps()
+    {
+        var scale = Scale > 0 ? Scale : 1;
+
+        SetValue(ThicknessStepProperty, Math.Min(0.1, 0.1 / scale));
+        SetValue(ThicknessLeastProperty, Math.Min(0.01, 0.01 / scale));
+    }
+
+    /// <summary>Whether a view has been kept, so that giving it up can be offered only where there is something to
+    /// give up.</summary>
+    public static readonly AdamantiumProperty KeepsHomeFaceProperty = AdamantiumProperty.RegisterReadOnly(
+        nameof(KeepsHomeFace), typeof(Visibility), typeof(InfiniteCanvas),
+        new PropertyMetadata(Visibility.Collapsed));
+
+    public Visibility KeepsHomeFace => GetValue<Visibility>(KeepsHomeFaceProperty);
+
+    private static void OnHomeChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (component is not InfiniteCanvas canvas) return;
+
+        var kept = canvas.HomeAt != Vector2<double>.Zero || Math.Abs(canvas.HomeScale - 1) > 1e-6;
+
+        canvas.SetValue(KeepsHomeFaceProperty, kept ? Visibility.Visible : Visibility.Collapsed);
+    }
+
+    /// <summary>Puts <c>Home</c> back to the world's origin at one to one - what takes back a view that was kept.
+    /// </summary>
+    public CanvasCommand ForgetViewCommand => _forgetView ??= new CanvasCommand(_ => ForgetView());
+
+    private CanvasCommand _forgetView;
+
+    public void ForgetView()
+    {
+        HomeAt = Vector2<double>.Zero;
+        HomeScale = 1;
+        RememberLayout();
+    }
+
+    public String Layout
+    {
+        get => GetValue<String>(LayoutProperty);
+        set => SetValue(LayoutProperty, value);
+    }
+
+    public Boolean RemembersPanes
+    {
+        get => GetValue<Boolean>(RemembersPanesProperty);
+        set => SetValue(RemembersPanesProperty, value);
+    }
+
+    public Boolean RemembersCamera
+    {
+        get => GetValue<Boolean>(RemembersCameraProperty);
+        set => SetValue(RemembersCameraProperty, value);
+    }
+
+    public Boolean RemembersZoom
+    {
+        get => GetValue<Boolean>(RemembersZoomProperty);
+        set => SetValue(RemembersZoomProperty, value);
+    }
+
+    public Boolean RemembersTool
+    {
+        get => GetValue<Boolean>(RemembersToolProperty);
+        set => SetValue(RemembersToolProperty, value);
+    }
+
+    public Vector2<double> HomeAt
+    {
+        get => GetValue<Vector2<double>>(HomeAtProperty);
+        set => SetValue(HomeAtProperty, value);
+    }
+
+    public Double HomeScale
+    {
+        get => GetValue<Double>(HomeScaleProperty);
+        set => SetValue(HomeScaleProperty, value);
+    }
+
+    /// <summary>The panels this canvas is wearing. Empty until it has a template.</summary>
+    public IReadOnlyList<CanvasPane> Panes => _chromeLayer?.Panes ?? Array.Empty<CanvasPane>();
+
+    // The text the canvas itself wrote: coming back as a change like any other it would be applied over the top of
+    // what it already describes.
+    private string _wrote;
+    private bool _dressing;
+
+    private static void OnLayoutChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (component is not InfiniteCanvas canvas || canvas._dressing) return;
+        if (e.NewValue as string == canvas._wrote) return;
+
+        canvas._dressing = true;
+        try
+        {
+            CanvasLayoutSerializer.Load(canvas, e.NewValue as string);
+        }
+        finally
+        {
+            canvas._dressing = false;
+        }
+    }
+
+    private static void OnRememberingChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e) =>
+        (component as InfiniteCanvas)?.RememberLayout();
+
+    /// <summary>Writes how the canvas is set up now into <see cref="Layout"/>. Called whenever something settles;
+    /// offered because an application closing down may want to ask rather than wait.</summary>
+    public void RememberLayout()
+    {
+        if (_dressing || _chromeLayer == null) return;
+
+        var said = CanvasLayoutSerializer.Save(this);
+        if (said == null || said == _wrote) return;
+
+        _wrote = said;
+        SetCurrentValue(LayoutProperty, said);
+    }
+
+    /// <summary>Takes THIS view as the one <c>Home</c> goes back to.</summary>
+    public CanvasCommand RememberViewCommand => _rememberView ??= new CanvasCommand(_ => RememberView());
+
+    private CanvasCommand _rememberView;
+
+    public void RememberView()
+    {
+        HomeAt = Looking;
+        HomeScale = Scale;
+        RememberLayout();
+    }
+
+    public static readonly AdamantiumProperty ZoomWithWheelProperty = AdamantiumProperty.Register(nameof(ZoomWithWheel),
+        typeof(Boolean), typeof(InfiniteCanvas), new PropertyMetadata(true));
+
+    /// <summary>The factor one notch of the wheel zooms by. Bigger than a map viewer's, because a canvas is worked at
+    /// both ends of its range - a whole board and then one corner of one object - and crawling there a fifth at a time
+    /// is a dozen notches each way.</summary>
+    public static readonly AdamantiumProperty ZoomStepProperty = AdamantiumProperty.Register(nameof(ZoomStep),
+        typeof(Double), typeof(InfiniteCanvas), new PropertyMetadata(1.4));
+
+    /// <summary>How fast the eased zoom catches its target. Higher is snappier; the wheel sets a target and a ticker
+    /// walks the live scale to it, so a quick spin adds up instead of stepping.</summary>
+    public static readonly AdamantiumProperty ZoomSmoothRateProperty = AdamantiumProperty.Register(
+        nameof(ZoomSmoothRate), typeof(Double), typeof(InfiniteCanvas), new PropertyMetadata(10.0));
+
+    /// <summary>Content laid over the plane that does not move or scale with the camera (a floating panel, a legend); the
+    /// canvas owns the place, the application the content.</summary>
+    public static readonly AdamantiumProperty OverlayProperty = AdamantiumProperty.Register(nameof(Overlay),
+        typeof(object), typeof(InfiniteCanvas),
+        new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure, OnOverlayChanged));
+
+    /// <summary>The tools this canvas offers, in rail order, each pickable by button and shortcut; <see cref="Tool"/> is the
+    /// one in hand.</summary>
+    public static readonly AdamantiumProperty ToolsProperty = AdamantiumProperty.Register(nameof(Tools),
+        typeof(CanvasTools), typeof(InfiniteCanvas), new PropertyMetadata(null, OnToolsChanged));
+
+    /// <summary>Whether a tool's own <see cref="ICanvasTool.Shortcut"/> picks it. On by default; an application that
+    /// spends those keys on something else turns it off, and one that only disagrees about WHICH key sets a different
+    /// shortcut on the tool instead.</summary>
+    public static readonly AdamantiumProperty AreToolShortcutsEnabledProperty = AdamantiumProperty.Register(
+        nameof(AreToolShortcutsEnabled), typeof(Boolean), typeof(InfiniteCanvas), new PropertyMetadata(true));
+
+    /// <summary>Whether the canvas shows its OWN view bar - undo and redo, the zoom, and the way back to the origin.
+    /// <para>On by default, and a switch rather than something to assemble: steering the camera and taking back the
+    /// last thing done are what a canvas IS, so it arrives wearing them. Turning one of these off takes that panel
+    /// away and leaves the rest standing.</para></summary>
+    public static readonly AdamantiumProperty ShowsViewBarProperty = AdamantiumProperty.Register(nameof(ShowsViewBar),
+        typeof(Boolean), typeof(InfiniteCanvas), new PropertyMetadata(true));
+
+    /// <summary>Whether the canvas shows its own tool rail - one button per entry of <see cref="Tools"/>.</summary>
+    public static readonly AdamantiumProperty ShowsToolRailProperty = AdamantiumProperty.Register(nameof(ShowsToolRail),
+        typeof(Boolean), typeof(InfiniteCanvas), new PropertyMetadata(true));
+
+    /// <summary>Whether the canvas shows its own map - the whole of what is on the plane, drawn small, with a box round
+    /// the part being looked at.</summary>
+    public static readonly AdamantiumProperty ShowsMiniMapProperty = AdamantiumProperty.Register(nameof(ShowsMiniMap),
+        typeof(Boolean), typeof(InfiniteCanvas), new PropertyMetadata(true));
+
+    /// <summary>Whether the canvas shows its own selection bar - what can be done to what is selected, over the
+    /// selection itself.</summary>
+    public static readonly AdamantiumProperty ShowsSelectionBarProperty = AdamantiumProperty.Register(
+        nameof(ShowsSelectionBar), typeof(Boolean), typeof(InfiniteCanvas), new PropertyMetadata(true));
+
+    /// <summary>Whether the canvas shows its own inspector - the tool in hand and its settings with nothing selected,
+    /// the properties of what is selected otherwise, and a list of everything on the plane.</summary>
+    public static readonly AdamantiumProperty ShowsInspectorProperty = AdamantiumProperty.Register(
+        nameof(ShowsInspector), typeof(Boolean), typeof(InfiniteCanvas), new PropertyMetadata(true));
+
+    /// <summary>Whether the inspector's number rows carry up/down buttons (on by default); a switch, since the buttons cost
+    /// width.</summary>
+    public static readonly AdamantiumProperty ShowsNumberButtonsProperty = AdamantiumProperty.Register(
+        nameof(ShowsNumberButtons), typeof(Boolean), typeof(InfiniteCanvas), new PropertyMetadata(true));
+
+    /// <summary>Which side of the number those buttons sit on; left by default, since the line's reset button comes and goes
+    /// on the right.</summary>
+    public static readonly AdamantiumProperty NumberButtonsPlacementProperty = AdamantiumProperty.Register(
+        nameof(NumberButtonsPlacement), typeof(NumericButtonsPlacement), typeof(InfiniteCanvas),
+        new PropertyMetadata(NumericButtonsPlacement.Left));
+
+    /// <summary>When the panel's lines offer the button that puts a value back. ALWAYS by default, dim until there is
+    /// something to put back: a button that comes and goes takes its room with it, and a line that changes shape as it
+    /// is used moves out from under the hand. An application short of width can have them only where they do something
+    /// - or not at all.</summary>
+    public static readonly AdamantiumProperty ResetButtonProperty = AdamantiumProperty.Register(nameof(ResetButton),
+        typeof(ResetButtonState), typeof(InfiniteCanvas), new PropertyMetadata(ResetButtonState.Always));
+
+    /// <summary>Where the overlay sits in the viewport. Its own property rather than the content's alignment, because a
+    /// floating panel is placed against the CANVAS and not against whatever it happens to contain.</summary>
+    public static readonly AdamantiumProperty OverlayPlacementProperty = AdamantiumProperty.Register(
+        nameof(OverlayPlacement), typeof(CanvasOverlayPlacement), typeof(InfiniteCanvas),
+        new PropertyMetadata(CanvasOverlayPlacement.TopLeft, PropertyMetadataOptions.AffectsArrange, OnOverlayChanged));
+
+    /// <summary>Where the overlay sits when <see cref="OverlayPlacement"/> is
+    /// <see cref="CanvasOverlayPlacement.Free"/>: screen pixels from the canvas's top-left. Dragging the panel writes
+    /// it.</summary>
+    public static readonly AdamantiumProperty OverlayOffsetProperty = AdamantiumProperty.Register(nameof(OverlayOffset),
+        typeof(Vector2<double>), typeof(InfiniteCanvas),
+        new PropertyMetadata(Vector2<double>.Zero, PropertyMetadataOptions.AffectsArrange | PropertyMetadataOptions.BindsTwoWayByDefault,
+            OnOverlayChanged));
+
+    /// <summary>Whether the overlay can be dragged around the canvas by its own background.</summary>
+    public static readonly AdamantiumProperty IsOverlayDraggableProperty = AdamantiumProperty.Register(
+        nameof(IsOverlayDraggable), typeof(Boolean), typeof(InfiniteCanvas), new PropertyMetadata(true));
+
+    /// <summary>What is ON the canvas. Held by the APPLICATION - the same arrangement the table has with its rows, so
+    /// undo, saving and everything else a drawing is for stay where the drawing does. One canvas shows a scene at a
+    /// time: a canvas handed a scene takes it from the one showing it until then.</summary>
+    public static readonly AdamantiumProperty SceneProperty = AdamantiumProperty.Register(nameof(Scene),
+        typeof(ICanvasScene), typeof(InfiniteCanvas),
+        new PropertyMetadata(null, PropertyMetadataOptions.AffectsRender, OnSceneChanged));
+
+    /// <summary>The application's inspector sections, laid over the theme's: a known kind is replaced, a new kind added. See
+    /// <see cref="ToolSections"/> for tools.</summary>
+    public static readonly AdamantiumProperty InspectorSectionsProperty = AdamantiumProperty.Register(
+        nameof(InspectorSections), typeof(CanvasInspectorSections), typeof(InfiniteCanvas),
+        new PropertyMetadata(null));
+
+    public CanvasInspectorSections InspectorSections
+    {
+        get => GetValue<CanvasInspectorSections>(InspectorSectionsProperty);
+        set => SetValue(InspectorSectionsProperty, value);
+    }
+
+    /// <summary>The same for the page shown while nothing is selected: what a TOOL is set by. Matched against the
+    /// tool's <see cref="ICanvasTool.Name"/>.</summary>
+    public static readonly AdamantiumProperty ToolSectionsProperty = AdamantiumProperty.Register(
+        nameof(ToolSections), typeof(CanvasInspectorSections), typeof(InfiniteCanvas),
+        new PropertyMetadata(null));
+
+    public CanvasInspectorSections ToolSections
+    {
+        get => GetValue<CanvasInspectorSections>(ToolSectionsProperty);
+        set => SetValue(ToolSectionsProperty, value);
+    }
+
+    // WHAT CAN BE CHOSEN, for the lines that offer a choice. On the CANVAS rather than on whatever panel is showing
+    // them: these are the kinds of thing this plane deals in, they are the same however the panel is dressed, and a
+    // set of lines held as a resource can reach them through the canvas it is pointed at. A panel that kept its own
+    // copy would be a second list to keep in step with this one.
+    private static readonly IReadOnlyList<CanvasGridStyle> Grids =
+        [CanvasGridStyle.Dots, CanvasGridStyle.Lines, CanvasGridStyle.None, CanvasGridStyle.Transparent];
+
+    /// <summary>The grids a plane can wear, for the line that chooses one.</summary>
+    public static readonly AdamantiumProperty GridStylesProperty = AdamantiumProperty.Register(nameof(GridStyles),
+        typeof(IEnumerable), typeof(InfiniteCanvas), new PropertyMetadata(Grids));
+
+    public IEnumerable GridStyles => GetValue<IEnumerable>(GridStylesProperty);
+
+    /// <summary>Whether the plane is a <see cref="DrawingBoard"/>, as a switch a binding can ask. A line offered only on
+    /// a drawing - snapping, which a graph does none of - says so itself: <c>IsVisible="{Binding IsDrawing}"</c>, with no
+    /// help from whatever panel it is written in.</summary>
+    public Boolean IsDrawing => this is DrawingBoard;
+
+    /// <summary>An inspector over this plane: the canvas listens to its <see cref="PropertyGrid.ValueChanging"/> and
+    /// <see cref="PropertyGrid.ValueChanged"/> to repaint and record an undo step, since plane items raise no events.</summary>
+    public static readonly AdamantiumProperty InspectorProperty = AdamantiumProperty.Register(nameof(Inspector),
+        typeof(PropertyGrid), typeof(InfiniteCanvas), new PropertyMetadata(null, OnInspectorChanged));
+
+    public PropertyGrid Inspector
+    {
+        get => GetValue<PropertyGrid>(InspectorProperty);
+        set => SetValue(InspectorProperty, value);
+    }
+
+    private static void OnInspectorChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (component is not InfiniteCanvas canvas) return;
+
+        if (e.NewValue is not PropertyGrid now)
+        {
+            canvas.Follow(InspectorProperty, null);
+            return;
+        }
+
+        now.ValueChanging += canvas.OnInspectorWriting;
+        now.ValueChanged += canvas.OnInspectorWritten;
+        canvas.Follow(InspectorProperty, () =>
+        {
+            now.ValueChanging -= canvas.OnInspectorWriting;
+            now.ValueChanged -= canvas.OnInspectorWritten;
+        });
+    }
+
+    // What the objects held before the write happening right now. Filled as it starts and turned into a step as it
+    // finishes - the previous value exists only in between.
+    private readonly List<(object Target, object Was, object Is)> _edited = new();
+
+    private void OnInspectorWriting(object sender, PropertyValuesChangedEventArgs about)
+    {
+        _edited.Clear();
+
+        if (sender is not PropertyGrid grid || about?.Property == null) return;
+
+        foreach (var target in about.Targets)
+        {
+            if (target is CanvasSelectionFrame)
+            {
+                continue;
+            }
+
+            _edited.Add((target, grid.ValueOf(target, about.Property), null));
+        }
+    }
+
+    private void OnInspectorWritten(object sender, PropertyValuesChangedEventArgs about)
+    {
+        // Repaint for any edit, even of a socket that is not an item, and grant a layer number written in the panel.
+        SettleOrder();
+
+        Scene?.Touch();
+        Repaint();
+
+        if (History == null || sender is not PropertyGrid grid || about?.Property == null || _edited.Count == 0) return;
+
+        for (var i = 0; i < _edited.Count; i++)
+        {
+            var (target, was, _) = _edited[i];
+            _edited[i] = (target, was, grid.ValueOf(target, about.Property));
+        }
+
+        // A COPY: the list is reused by the next write, and a step holding the live one would be rewritten by it.
+        History.Push(new CanvasPropertyStep(grid, about.Property, new List<(object, object, object)>(_edited)));
+
+        _edited.Clear();
+    }
+
+    /// <summary>Where what was done is remembered. The canvas makes its OWN and undo works out of the box; bind another
+    /// to share one memory across a whole editor, or set null for a canvas that is to remember nothing at all.
+    /// <para>Not something an application must bring. It used to be, and that made a canvas that could not take back so
+    /// much as a stroke until somebody wired one up - a feature the control had and refused to use.</para></summary>
+    public static readonly AdamantiumProperty HistoryProperty = AdamantiumProperty.Register(nameof(History),
+        typeof(CanvasHistory), typeof(InfiniteCanvas), new PropertyMetadata(null, OnHistoryChanged));
+
+    // WHAT THERE IS TO UNDO decides whether the undo button is pressable, so the canvas listens to the memory it was
+    // given and tells its commands. Swapping one history for another moves that ear with it.
+    private static void OnHistoryChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (component is not InfiniteCanvas canvas) return;
+
+        if (e.NewValue is CanvasHistory now)
+        {
+            now.Changed += canvas.OnHistoryMoved;
+            canvas.Follow(HistoryProperty, () => now.Changed -= canvas.OnHistoryMoved);
+        }
+        else
+        {
+            canvas.Follow(HistoryProperty, null);
+        }
+
+        canvas.Refresh();
+    }
+
+    // ...and the plane is DRAWN AGAIN. Something was done, undone or put back, and the only thing every one of those
+    // has in common is that the memory moved: an inspector writing a color leaves no trace in where anything is, so
+    // this is what makes the wire hanging off a recolored socket follow it without anybody wiring the two together.
+    private void OnHistoryMoved(object sender, EventArgs e)
+    {
+        Refresh();
+        Scene?.Touch();
+        Repaint();
+    }
+
+    /// <summary>Whether the pointer snaps to grid crossings. Snapped, the pen places straight-line vertices until a double
+    /// click; free, it draws a smoothed freehand stroke.</summary>
+    public static readonly AdamantiumProperty SnapToGridProperty = AdamantiumProperty.Register(nameof(SnapToGrid),
+        typeof(Boolean), typeof(InfiniteCanvas),
+        new PropertyMetadata(false, PropertyMetadataOptions.AffectsRender, OnSnapToGridChanged));
+
+    /// <summary>How close a crossing must be to pull, in SCREEN pixels. A screen distance for the same reason every
+    /// other tolerance here is one: a snap stated in world units would reach halfway across the viewport when zoomed
+    /// out and be impossible to trigger when zoomed in.</summary>
+    public static readonly AdamantiumProperty SnapDistanceProperty = AdamantiumProperty.Register(nameof(SnapDistance),
+        typeof(Double), typeof(InfiniteCanvas), new PropertyMetadata(12.0));
+
+    /// <summary>What the snap point is marked with. Null draws no mark - the snap still pulls.</summary>
+    public static readonly AdamantiumProperty SnapMarkBrushProperty = AdamantiumProperty.Register(nameof(SnapMarkBrush),
+        typeof(Brush), typeof(InfiniteCanvas), new PropertyMetadata(null, PropertyMetadataOptions.AffectsRender));
+
+    /// <summary>How wide the mark is, in SCREEN pixels - it is a mark on the glass, not a thing on the plane, so it
+    /// keeps its size at every zoom.</summary>
+    public static readonly AdamantiumProperty SnapMarkSizeProperty = AdamantiumProperty.Register(nameof(SnapMarkSize),
+        typeof(Double), typeof(InfiniteCanvas), new PropertyMetadata(9.0, PropertyMetadataOptions.AffectsRender));
+
+    /// <summary>Whether a finger lays ink with a tool that inks - see <see cref="CanvasFingerInk"/>. Fingers ink by
+    /// default.</summary>
+    public static readonly AdamantiumProperty FingerInkProperty = AdamantiumProperty.Register(nameof(FingerInk),
+        typeof(CanvasFingerInk), typeof(InfiniteCanvas), new PropertyMetadata(CanvasFingerInk.Draw));
+
+    /// <summary>The tool a right click returns to; none by default, which leaves the right button alone.</summary>
+    public static readonly AdamantiumProperty DefaultToolProperty = AdamantiumProperty.Register(nameof(DefaultTool),
+        typeof(ICanvasTool), typeof(InfiniteCanvas), new PropertyMetadata(null));
+
+    /// <summary>What the plain left button DOES - the pen, the selection frame, a shape. A swappable object, so that
+    /// one more gesture is one more class rather than one more branch in here.
+    /// <para>Nothing by default: a canvas with no tool is a canvas you can look around but not change, which is what an
+    /// application that only displays a drawing wants.</para></summary>
+    public static readonly AdamantiumProperty ToolProperty = AdamantiumProperty.Register(nameof(Tool),
+        typeof(ICanvasTool), typeof(InfiniteCanvas),
+        // Two-way by default, because the CANVAS changes it too: the right button puts the resting tool back, and a
+        // panel bound one way would go on showing whatever it last chose.
+        new PropertyMetadata(null, PropertyMetadataOptions.BindsTwoWayByDefault, OnToolChanged));
+
+    /// <summary>The frame drawn round what is selected, and the outline of its grips.</summary>
+    public static readonly AdamantiumProperty SelectionBrushProperty = AdamantiumProperty.Register(
+        nameof(SelectionBrush), typeof(Brush), typeof(InfiniteCanvas),
+        new PropertyMetadata(null, PropertyMetadataOptions.AffectsRender));
+
+    /// <summary>What the grips are filled with.</summary>
+    public static readonly AdamantiumProperty HandleBrushProperty = AdamantiumProperty.Register(nameof(HandleBrush),
+        typeof(Brush), typeof(InfiniteCanvas), new PropertyMetadata(null, PropertyMetadataOptions.AffectsRender));
+
+    /// <summary>What the band dragged round several things is filled with. Translucent, or it would hide what it is
+    /// being dragged round.</summary>
+    public static readonly AdamantiumProperty RubberBandBrushProperty = AdamantiumProperty.Register(
+        nameof(RubberBandBrush), typeof(Brush), typeof(InfiniteCanvas),
+        new PropertyMetadata(null, PropertyMetadataOptions.AffectsRender));
+
+    /// <summary>The side of a grip, in SCREEN pixels. A grip is something the hand aims at, so it stays the same size
+    /// however far the camera is zoomed - the whole reason the manipulation frame is drawn on the glass and not on the
+    /// plane.</summary>
+    public static readonly AdamantiumProperty HandleSizeProperty = AdamantiumProperty.Register(nameof(HandleSize),
+        typeof(Double), typeof(InfiniteCanvas), new PropertyMetadata(9.0, PropertyMetadataOptions.AffectsRender));
+
+    /// <summary>Whether plane controls are edited (a press selects and drags) rather than used (the press goes to the
+    /// control); editing by default.</summary>
+    public static readonly AdamantiumProperty IsDesignModeProperty = AdamantiumProperty.Register(nameof(IsDesignMode),
+        typeof(Boolean), typeof(InfiniteCanvas),
+        new PropertyMetadata(true, PropertyMetadataOptions.BindsTwoWayByDefault, OnDesignModeChanged));
+
+    /// <summary>Whether the overlay exists at all, grip included; off when the canvas is driven from outside. Unlike
+    /// <see cref="IsOverlayOpen"/>, folding keeps the grip.</summary>
+    public static readonly AdamantiumProperty IsOverlayVisibleProperty = AdamantiumProperty.Register(
+        nameof(IsOverlayVisible), typeof(Boolean), typeof(InfiniteCanvas),
+        new PropertyMetadata(true, PropertyMetadataOptions.BindsTwoWayByDefault, OnOverlayChanged));
+
+    /// <summary>Whether the overlay's content is showing. Closed, only its grip is left - a tool panel that cannot be
+    /// got out of the way is a tool panel sitting on the part of the drawing you need.</summary>
+    public static readonly AdamantiumProperty IsOverlayOpenProperty = AdamantiumProperty.Register(nameof(IsOverlayOpen),
+        typeof(Boolean), typeof(InfiniteCanvas),
+        new PropertyMetadata(true, PropertyMetadataOptions.BindsTwoWayByDefault, OnOverlayChanged));
+
+    public static readonly AdamantiumProperty GridStyleProperty = AdamantiumProperty.Register(nameof(GridStyle),
+        typeof(CanvasGridStyle), typeof(InfiniteCanvas),
+        new PropertyMetadata(CanvasGridStyle.Dots, PropertyMetadataOptions.AffectsRender));
+
+    /// <summary>The grid's step in WORLD units. What is drawn is this step multiplied by a power of
+    /// <see cref="GridCoarsening"/>, chosen so the lines stay readable however far out the camera is.</summary>
+    public static readonly AdamantiumProperty GridSpacingProperty = AdamantiumProperty.Register(nameof(GridSpacing),
+        typeof(Double), typeof(InfiniteCanvas), new PropertyMetadata(20.0, PropertyMetadataOptions.AffectsRender));
+
+    /// <summary>What the step is multiplied (or divided) by when the drawn grid would be too dense or too sparse.
+    /// Ten by default, so the steps a user reads off it stay round.</summary>
+    public static readonly AdamantiumProperty GridCoarseningProperty = AdamantiumProperty.Register(
+        nameof(GridCoarsening), typeof(Double), typeof(InfiniteCanvas),
+        new PropertyMetadata(10.0, PropertyMetadataOptions.AffectsRender));
+
+    /// <summary>How close two grid marks may come on SCREEN before the step is coarsened. Screen pixels, not world
+    /// units: how dense a grid reads has nothing to do with how far out the camera is.</summary>
+    public static readonly AdamantiumProperty MinGridPitchProperty = AdamantiumProperty.Register(nameof(MinGridPitch),
+        typeof(Double), typeof(InfiniteCanvas), new PropertyMetadata(12.0, PropertyMetadataOptions.AffectsRender));
+
+    public static readonly AdamantiumProperty GridBrushProperty = AdamantiumProperty.Register(nameof(GridBrush),
+        typeof(Brush), typeof(InfiniteCanvas),
+        new PropertyMetadata(null, PropertyMetadataOptions.AffectsRender, OnGroundBrushSet));
+
+    /// <summary>The mark on the world's own axes, drawn where they cross the viewport. Without it there is nothing on
+    /// an unbounded plane to say where the origin went.</summary>
+    public static readonly AdamantiumProperty AxisBrushProperty = AdamantiumProperty.Register(nameof(AxisBrush),
+        typeof(Brush), typeof(InfiniteCanvas),
+        new PropertyMetadata(null, PropertyMetadataOptions.AffectsRender, OnGroundBrushSet));
+
+    public static readonly AdamantiumProperty GridThicknessProperty = AdamantiumProperty.Register(nameof(GridThickness),
+        typeof(Double), typeof(InfiniteCanvas), new PropertyMetadata(1.0, PropertyMetadataOptions.AffectsRender));
+
+    /// <summary>The side of a dot, in SCREEN pixels - the grid is a ruler, not part of the drawing, so it keeps its
+    /// size however far the camera is zoomed.</summary>
+    public static readonly AdamantiumProperty GridDotSizeProperty = AdamantiumProperty.Register(nameof(GridDotSize),
+        typeof(Double), typeof(InfiniteCanvas), new PropertyMetadata(2.0, PropertyMetadataOptions.AffectsRender));
+
+    public InfiniteCanvas()
+    {
+        _zoom = new EasedValue(() => Math.Log(Math.Clamp(Scale, MinScale, MaxScale)), ApplyZoomLevel, RememberLayout);
+        Focusable = true;
+        ClipToBounds = true;
+
+        Follow(_sceneFollowed, () =>
+        {
+            if (Scene is { } scene)
+            {
+                scene.Changed -= OnSceneEdited;
+            }
+
+            OnSceneLeft();
+        });
+
+        // Empty collections at Default priority, so a {Binding} can still replace them; a Local write would mask it.
+        SetValue(ToolsProperty, new CanvasTools(), ValuePriority.Default);
+
+        // ITS OWN MEMORY, and not something an application has to bring. A canvas is an editor: taking the last thing
+        // back is part of what it IS, and a control that could only do it once somebody handed it a history was a
+        // control that did nothing out of the box. Written at DEFAULT priority for the same reason as the collections
+        // above - so an application that wants ONE history for a whole editor binds its own here and this one gives way.
+        SetValue(HistoryProperty, new CanvasHistory(), ValuePriority.Default);
+
+        // Its OWN events, so nothing is unsubscribed: the canvas outlives none of these, and there is no template here
+        // whose parts could come and go.
+        AttachedToVisualTreeEvent += OnShownAgain;
+        PointerWheelChanged += OnWheel;
+        PointerPressed += OnPointerDown;
+        PointerMoved += OnPointerMove;
+        PointerReleased += OnPointerUp;
+        PointerExited += OnPointerLeft;
+        PointerCanceled += OnPointerCanceled;
+        AddHandler(Gestures.ManipulationEvent, new ManipulationEventHandler(OnManipulation));
+        KeyDown += OnKeyPressed;
+        KeyUp += OnKeyReleased;
+        TextInput += OnTextTyped;
+    }
+
+    public Double Scale
+    {
+        get => GetValue<Double>(ScaleProperty);
+        set => SetValue(ScaleProperty, value);
+    }
+
+    public Vector2<double> Offset
+    {
+        get => GetValue<Vector2<double>>(OffsetProperty);
+        set => SetValue(OffsetProperty, value);
+    }
+
+    public Double MinScale
+    {
+        get => GetValue<Double>(MinScaleProperty);
+        set => SetValue(MinScaleProperty, value);
+    }
+
+    public Double MaxScale
+    {
+        get => GetValue<Double>(MaxScaleProperty);
+        set => SetValue(MaxScaleProperty, value);
+    }
+
+    public Boolean ZoomWithWheel
+    {
+        get => GetValue<Boolean>(ZoomWithWheelProperty);
+        set => SetValue(ZoomWithWheelProperty, value);
+    }
+
+    public Double ZoomStep
+    {
+        get => GetValue<Double>(ZoomStepProperty);
+        set => SetValue(ZoomStepProperty, value);
+    }
+
+    public Double ZoomSmoothRate
+    {
+        get => GetValue<Double>(ZoomSmoothRateProperty);
+        set => SetValue(ZoomSmoothRateProperty, value);
+    }
+
+    public object Overlay
+    {
+        get => GetValue(OverlayProperty);
+        set => SetValue(OverlayProperty, value);
+    }
+
+    public Boolean ShowsViewBar
+    {
+        get => GetValue<Boolean>(ShowsViewBarProperty);
+        set => SetValue(ShowsViewBarProperty, value);
+    }
+
+    public Boolean ShowsToolRail
+    {
+        get => GetValue<Boolean>(ShowsToolRailProperty);
+        set => SetValue(ShowsToolRailProperty, value);
+    }
+
+    public Boolean ShowsMiniMap
+    {
+        get => GetValue<Boolean>(ShowsMiniMapProperty);
+        set => SetValue(ShowsMiniMapProperty, value);
+    }
+
+    public Boolean ShowsSelectionBar
+    {
+        get => GetValue<Boolean>(ShowsSelectionBarProperty);
+        set => SetValue(ShowsSelectionBarProperty, value);
+    }
+
+    public Boolean ShowsNumberButtons
+    {
+        get => GetValue<Boolean>(ShowsNumberButtonsProperty);
+        set => SetValue(ShowsNumberButtonsProperty, value);
+    }
+
+    public NumericButtonsPlacement NumberButtonsPlacement
+    {
+        get => GetValue<NumericButtonsPlacement>(NumberButtonsPlacementProperty);
+        set => SetValue(NumberButtonsPlacementProperty, value);
+    }
+
+    public ResetButtonState ResetButton
+    {
+        get => GetValue<ResetButtonState>(ResetButtonProperty);
+        set => SetValue(ResetButtonProperty, value);
+    }
+
+    public Boolean ShowsInspector
+    {
+        get => GetValue<Boolean>(ShowsInspectorProperty);
+        set => SetValue(ShowsInspectorProperty, value);
+    }
+
+    public CanvasTools Tools
+    {
+        get => _tools;
+        set => SetValue(ToolsProperty, value);
+    }
+
+    public Boolean AreToolShortcutsEnabled
+    {
+        get => GetValue<Boolean>(AreToolShortcutsEnabledProperty);
+        set => SetValue(AreToolShortcutsEnabledProperty, value);
+    }
+
+    public CanvasOverlayPlacement OverlayPlacement
+    {
+        get => GetValue<CanvasOverlayPlacement>(OverlayPlacementProperty);
+        set => SetValue(OverlayPlacementProperty, value);
+    }
+
+    public Vector2<double> OverlayOffset
+    {
+        get => GetValue<Vector2<double>>(OverlayOffsetProperty);
+        set => SetValue(OverlayOffsetProperty, value);
+    }
+
+    public Boolean IsOverlayDraggable
+    {
+        get => GetValue<Boolean>(IsOverlayDraggableProperty);
+        set => SetValue(IsOverlayDraggableProperty, value);
+    }
+
+    public ICanvasScene Scene
+    {
+        get => GetValue<ICanvasScene>(SceneProperty);
+        set => SetValue(SceneProperty, value);
+    }
+
+    /// <summary>Where what was done is remembered. Null means nothing is.</summary>
+    public CanvasHistory History
+    {
+        get => GetValue<CanvasHistory>(HistoryProperty);
+        set => SetValue(HistoryProperty, value);
+    }
+
+    public Boolean SnapToGrid
+    {
+        get => GetValue<Boolean>(SnapToGridProperty);
+        set => SetValue(SnapToGridProperty, value);
+    }
+
+    public Double SnapDistance
+    {
+        get => GetValue<Double>(SnapDistanceProperty);
+        set => SetValue(SnapDistanceProperty, value);
+    }
+
+    public Brush SnapMarkBrush
+    {
+        get => GetValue<Brush>(SnapMarkBrushProperty);
+        set => SetValue(SnapMarkBrushProperty, value);
+    }
+
+    public Double SnapMarkSize
+    {
+        get => GetValue<Double>(SnapMarkSizeProperty);
+        set => SetValue(SnapMarkSizeProperty, value);
+    }
+
+    /// <summary>Where a world point would be pulled to, and whether anything pulled it. The crossings of the grid AS
+    /// DRAWN - the coarsened step, not the declared one - so what snaps is what can be seen to snap.</summary>
+    public bool TrySnap(Vector2<double> world, out Vector2<double> snapped)
+    {
+        snapped = world;
+        if (!Snaps) return false;
+
+        var step = EffectiveGridSpacing;
+        if (!SnapToGrid || step <= 0 || GridStyle == CanvasGridStyle.None) return false;
+
+        var nearest = new Vector2<double>(Math.Round(world.X / step) * step, Math.Round(world.Y / step) * step);
+        if ((nearest - world).Length() > ScreenToWorldLength(SnapDistance)) return false;
+
+        snapped = nearest;
+        return true;
+    }
+
+    public CanvasFingerInk FingerInk
+    {
+        get => GetValue<CanvasFingerInk>(FingerInkProperty);
+        set => SetValue(FingerInkProperty, value);
+    }
+
+    public ICanvasTool Tool
+    {
+        get => GetValue<ICanvasTool>(ToolProperty);
+        set => SetValue(ToolProperty, value);
+    }
+
+    public ICanvasTool DefaultTool
+    {
+        get => GetValue<ICanvasTool>(DefaultToolProperty);
+        set => SetValue(DefaultToolProperty, value);
+    }
+
+    public Brush SelectionBrush
+    {
+        get => GetValue<Brush>(SelectionBrushProperty);
+        set => SetValue(SelectionBrushProperty, value);
+    }
+
+    public Brush HandleBrush
+    {
+        get => GetValue<Brush>(HandleBrushProperty);
+        set => SetValue(HandleBrushProperty, value);
+    }
+
+    public Brush RubberBandBrush
+    {
+        get => GetValue<Brush>(RubberBandBrushProperty);
+        set => SetValue(RubberBandBrushProperty, value);
+    }
+
+    public Double HandleSize
+    {
+        get => GetValue<Double>(HandleSizeProperty);
+        set => SetValue(HandleSizeProperty, value);
+    }
+
+    public Boolean IsOverlayVisible
+    {
+        get => GetValue<Boolean>(IsOverlayVisibleProperty);
+        set => SetValue(IsOverlayVisibleProperty, value);
+    }
+
+    public Boolean IsOverlayOpen
+    {
+        get => GetValue<Boolean>(IsOverlayOpenProperty);
+        set => SetValue(IsOverlayOpenProperty, value);
+    }
+
+    public Boolean IsDesignMode
+    {
+        get => GetValue<Boolean>(IsDesignModeProperty);
+        set => SetValue(IsDesignModeProperty, value);
+    }
+
+    // ------------------------------------------------------------------ what it can do, as commands
+    // Buttons bind straight to these; each reports when it can run.
+    private CanvasCommand _undo;
+    private CanvasCommand _redo;
+    private CanvasCommand _zoomIn;
+    private CanvasCommand _zoomOut;
+    private CanvasCommand _home;
+    private CanvasCommand _fitAll;
+    private CanvasCommand _fitSelection;
+    private CanvasCommand _zoomTo;
+    private CanvasCommand _delete;
+    private CanvasCommand _group;
+    private CanvasCommand _ungroup;
+    private CanvasCommand _toFront;
+    private CanvasCommand _toBack;
+    private CanvasCommand _forward;
+    private CanvasCommand _backward;
+    private CanvasCommand _align;
+    private CanvasCommand _spread;
+    private CanvasCommand _fitView;
+    private CanvasCommand _clear;
+
+    /// <summary>Takes the last step back. Off when there is nothing behind it.</summary>
+    public CanvasCommand UndoCommand => _undo ??= new CanvasCommand(_ => Undo(), _ => History is { CanUndo: true });
+
+    /// <summary>...and forward again. Off when nothing has been taken back.</summary>
+    public CanvasCommand RedoCommand => _redo ??= new CanvasCommand(_ => Redo(), _ => History is { CanRedo: true });
+
+    /// <summary>Closer in. The parameter is the factor, and one step of <see cref="ZoomStep"/> when nothing is
+    /// given.</summary>
+    public CanvasCommand ZoomInCommand => _zoomIn ??= new CanvasCommand(by => ZoomBy(Factor(by, ZoomStep)));
+
+    /// <summary>...and further out.</summary>
+    public CanvasCommand ZoomOutCommand => _zoomOut ??= new CanvasCommand(by => ZoomBy(1 / Factor(by, ZoomStep)));
+
+    /// <summary>Back to the origin at one to one - the one place a plane with no edges can always be found.</summary>
+    public CanvasCommand HomeCommand => _home ??= new CanvasCommand(_ => ResetCamera());
+
+    /// <summary>Puts everything on the plane in view.</summary>
+    public CanvasCommand FitAllCommand => _fitAll ??= new CanvasCommand(_ => FitAll());
+
+    /// <summary>...and this puts what is selected in view. Off with nothing selected.</summary>
+    public CanvasCommand FitSelectionCommand =>
+        _fitSelection ??= new CanvasCommand(_ => FitSelection(), _ => _selection.Count > 0);
+
+    /// <summary>Puts ONE thing in view - the parameter, which is the item to show. What a list of everything on the
+    /// plane answers a double click with.</summary>
+    public CanvasCommand ZoomToCommand => _zoomTo ??= new CanvasCommand(
+        item => ZoomTo(item as ICanvasItem),
+        item => item is ICanvasItem);
+
+    /// <summary>Takes the selection out - asking first when the canvas was told to ask. Off with nothing
+    /// selected.</summary>
+    public CanvasCommand DeleteCommand =>
+        _delete ??= new CanvasCommand(_ => RequestDeleteSelection(), _ => _selection.Count > 0);
+
+    /// <summary>Makes one thing of what is selected, and breaks one open again.</summary>
+    public CanvasCommand GroupCommand =>
+        _group ??= new CanvasCommand(_ => GroupSelection(), _ => _selection.Count > 1);
+
+    public CanvasCommand UngroupCommand =>
+        _ungroup ??= new CanvasCommand(_ => UngroupSelection(), _ => _selection.Count > 0);
+
+    /// <summary>Raises what is selected to the front of paint order, and lowers it to the back. Off with nothing
+    /// selected.</summary>
+    public CanvasCommand BringToFrontCommand =>
+        _toFront ??= new CanvasCommand(_ => Reorder(true), _ => _selection.Count > 0 && Scene != null);
+
+    public CanvasCommand SendToBackCommand =>
+        _toBack ??= new CanvasCommand(_ => Reorder(false), _ => _selection.Count > 0 && Scene != null);
+
+    /// <summary>Moves the selection forward past the next item in paint order whose box overlaps it; disabled when nothing in
+    /// front overlaps.</summary>
+    public CanvasCommand BringForwardCommand =>
+        _forward ??= new CanvasCommand(_ => Step(true), _ => Steppable(true));
+
+    public CanvasCommand SendBackwardCommand =>
+        _backward ??= new CanvasCommand(_ => Step(false), _ => Steppable(false));
+
+    // FROM THE END IT IS HEADING FOR, so a selection of several keeps its own order: moving the front one first would
+    // walk it into the one behind it and the two would swap places instead of both moving.
+    private void Step(bool forward)
+    {
+        if (Scene is not { } scene || _selection.Count == 0) return;
+
+        var shown = Shown();
+
+        for (var i = 0; i < _selection.Count; i++)
+        {
+            var item = forward ? _selection[_selection.Count - 1 - i] : _selection[i];
+
+            if (Neighbor(shown, item, forward) is { } neighbor) scene.MoveNextTo(item, neighbor, forward);
+        }
+    }
+
+    // Whether there is still room to go that way. ANY of the selected, because a selection where one has reached the
+    // end and the rest have not is still a selection that can move.
+    private bool Steppable(bool forward)
+    {
+        if (Scene == null || _selection.Count == 0) return false;
+
+        var shown = Shown();
+
+        foreach (var item in _selection)
+        {
+            if (Neighbor(shown, item, forward) != null) return true;
+        }
+
+        return false;
+    }
+
+    // The nearest item on that side of the paint order whose box overlaps this one - not simply the next in the list.
+    private static ICanvasItem Neighbor(List<ICanvasItem> shown, ICanvasItem item, bool forward)
+    {
+        var at = shown.IndexOf(item);
+
+        if (at < 0) return null;
+
+        var box = item.Bounds;
+
+        for (var i = at + (forward ? 1 : -1); i >= 0 && i < shown.Count; i += forward ? 1 : -1)
+        {
+            if (Meets(shown[i].Bounds, box)) return shown[i];
+        }
+
+        return null;
+    }
+
+    // Touching counts: two things that share an edge are one in front of the other, and a drawing where the top one
+    // cannot be raised because it only just touches would be a drawing nobody can arrange.
+    private static bool Meets(Rect one, Rect other) =>
+        one.X <= other.X + other.Width && other.X <= one.X + one.Width &&
+        one.Y <= other.Y + other.Height && other.Y <= one.Y + one.Height;
+
+    /// <summary>Moves the selected items to where their written <see cref="ICanvasItem.Order"/> says; called after inspector
+    /// writes, public for applications that set numbers.</summary>
+    public void SettleOrder()
+    {
+        if (Scene is not { } scene || _selection.Count == 0) return;
+
+        // EVERY NUMBER READ BEFORE ANY OF THEM IS ACTED ON. The scene restamps the whole list on every move, so the
+        // first item moved rewrites the very numbers the rest of this pass was about to read - and a selection of three
+        // would end up obeying two numbers it was never given.
+        var asked = new List<(ICanvasItem Item, int Wanted)>(_selection.Count);
+
+        foreach (var item in _selection) asked.Add((item, item.Order));
+
+        foreach (var (item, wanted) in asked)
+        {
+            if (Placed(item) != wanted) scene.Reposition(item, wanted);
+        }
+    }
+
+    // Where the item actually stands AMONG WHAT CAN BE SEEN - what the stamp would say if nobody had written over it.
+    // Counted the same way the scene writes the number, or every write would look like a request to move.
+    private int Placed(ICanvasItem item)
+    {
+        var at = 0;
+
+        foreach (var other in ItemsHere())
+        {
+            if (ReferenceEquals(other, item)) return at;
+
+            at++;
+        }
+
+        return -1;
+    }
+
+    // Everything of this mode, in the order the scene holds it.
+    private List<ICanvasItem> Shown()
+    {
+        var shown = new List<ICanvasItem>();
+
+        foreach (var item in ItemsHere()) shown.Add(item);
+
+        return shown;
+    }
+
+    /// <summary>Lines the selection up on one edge - the parameter is which, a <see cref="CanvasAlignment"/> or its
+    /// word. ONE command taking a word rather than four: a button says which edge it means, and four properties saying
+    /// the same thing four times is a surface nobody can keep in step.</summary>
+    public CanvasCommand AlignCommand => _align ??= new CanvasCommand(
+        edge => { if (Edge(edge) is { } wanted) Align(wanted); },
+        edge => Edge(edge) != null && _selection.Count > 1);
+
+    /// <summary>...and this opens equal gaps between them, down a column or across a row - the parameter is a
+    /// <see cref="CanvasSpread"/> or its word.</summary>
+    public CanvasCommand SpreadCommand => _spread ??= new CanvasCommand(
+        way => { if (Way(way) is { } wanted) Spread(wanted); },
+        way => Way(way) != null && _selection.Count > 2);
+
+    /// <summary>Brings the WORK into view: what is selected, and the whole plane when nothing is. One button rather
+    /// than two, because that is the one question a person asks of a plane with no edges.</summary>
+    public CanvasCommand FitViewCommand => _fitView ??= new CanvasCommand(_ =>
+    {
+        if (!FitSelection()) FitAll();
+    });
+
+    /// <summary>Empties the plane - asking first when the canvas was told to ask, exactly as deleting a selection
+    /// does. Off when there is nothing on it.</summary>
+    public CanvasCommand ClearCommand =>
+        _clear ??= new CanvasCommand(_ => RequestClear(), _ => Anything());
+
+    /// <summary>Puts a new item on top of the one paint order, controls included; tools call it when a gesture finishes.</summary>
+    public void Place(ICanvasItem item)
+    {
+        if (item == null || Scene == null) return;
+
+        Scene.Add(item);
+    }
+
+    /// <summary>The words the canvas names things with, from the theme: a tool's name and description, a new socket,
+    /// a new comment frame. A tool's name is a key of this table where the table has it, and is said as it is where it
+    /// does not - which is how an application's own tool keeps the name it was given.</summary>
+    public static readonly AdamantiumProperty PhrasesProperty = AdamantiumProperty.Register(nameof(Phrases),
+        typeof(LocalizedStrings), typeof(InfiniteCanvas), new PropertyMetadata(null, OnPhrasesChanged));
+
+    public LocalizedStrings Phrases
+    {
+        get => GetValue<LocalizedStrings>(PhrasesProperty);
+        set => SetValue(PhrasesProperty, value);
+    }
+
+    /// <summary>Raised when <see cref="Phrases"/> is replaced, so what the canvas named with it can be named again.</summary>
+    public event EventHandler PhrasesChanged;
+
+    private static void OnPhrasesChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e) =>
+        (component as InfiniteCanvas)?.PhrasesChanged?.Invoke(component, EventArgs.Empty);
+
+    /// <summary>The phrase <paramref name="key"/> of <see cref="Phrases"/> in the application's language, its
+    /// placeholders filled by name - for a thing named once, as it is made. The key itself where there is no such
+    /// phrase.</summary>
+    public string Say(string key, params (string Name, object Value)[] arguments) =>
+        Languages.Say(Phrases, key, arguments);
+
+    private static CanvasAlignment? Edge(object said) => said switch
+    {
+        CanvasAlignment edge => edge,
+        String word when Enum.TryParse<CanvasAlignment>(word, true, out var edge) => edge,
+        _ => null
+    };
+
+    private static CanvasSpread? Way(object said) => said switch
+    {
+        CanvasSpread way => way,
+        String word when Enum.TryParse<CanvasSpread>(word, true, out var way) => way,
+        _ => null
+    };
+
+    // Anything AT ALL on the plane, of either mode: emptying it is not about the mode in hand, and a bin that switched
+    // itself off over a plane full of the other mode's work would be saying the plane is empty when it is not.
+    private bool Anything()
+    {
+        if (Scene is not { } scene) return false;
+
+        foreach (var _ in scene.ItemsIn(Everything)) return true;
+
+        return false;
+    }
+
+    // BACK TO FRONT when raising and front to back when lowering, so a selection of several keeps its own order instead
+    // of being reversed by each item leapfrogging the last.
+    private void Reorder(bool front)
+    {
+        if (Scene is not { } scene || _selection.Count == 0) return;
+
+        for (var i = 0; i < _selection.Count; i++)
+        {
+            var item = front ? _selection[i] : _selection[_selection.Count - 1 - i];
+
+            if (front) scene.BringToFront(item);
+            else scene.SendToBack(item);
+        }
+    }
+
+    private static Double Factor(object given, Double fallback) =>
+        given switch
+        {
+            Double number when number > 0 => number,
+            String text when Double.TryParse(text, System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out var parsed) && parsed > 0 => parsed,
+            _ => fallback
+        };
+
+    // What a command's answer depends on has just moved, so every bound button asks again. EVERY command that answers
+    // from the selection or from the plane belongs in this list: one left out is a button that was asked once, while
+    // nothing was selected, and stays gray for the rest of the session however much is picked afterwards.
+    private void Refresh()
+    {
+        _undo?.RaiseCanExecuteChanged();
+        _redo?.RaiseCanExecuteChanged();
+        _fitSelection?.RaiseCanExecuteChanged();
+        _delete?.RaiseCanExecuteChanged();
+        _group?.RaiseCanExecuteChanged();
+        _ungroup?.RaiseCanExecuteChanged();
+        _toFront?.RaiseCanExecuteChanged();
+        _toBack?.RaiseCanExecuteChanged();
+        _forward?.RaiseCanExecuteChanged();
+        _backward?.RaiseCanExecuteChanged();
+        _align?.RaiseCanExecuteChanged();
+        _spread?.RaiseCanExecuteChanged();
+        _clear?.RaiseCanExecuteChanged();
+        OnCommandsAsk();
+    }
+
+    /// <summary>What the commands answer from has just moved - the selection, or the plane. A derived canvas raises the
+    /// availability of its own commands here, or a button bound to one stays as it was first asked.</summary>
+    protected virtual void OnCommandsAsk() { }
+
+    /// <summary>Whether points are pulled to the grid while placing - see <see cref="TrySnap"/>.</summary>
+    protected virtual bool Snaps => true;
+
+    /// <summary>Whether the eraser end of a pen rubs out, whatever tool is in hand.</summary>
+    protected virtual bool PenErases => false;
+
+    /// <summary>A double click on empty plane at that point in the world; true when it was answered.</summary>
+    protected virtual bool OnEmptyPlaneDoubleClick(Vector2<double> world) => false;
+
+    /// <summary>The scene the canvas shows arrived - given, or taken back from another canvas. A derived canvas that
+    /// keeps the application's objects in step with the scene starts following it here.</summary>
+    protected virtual void OnSceneShown(ICanvasScene scene) { }
+
+    /// <summary>...and the canvas let go of it: replaced, taken by another canvas, or the canvas discarded.</summary>
+    protected virtual void OnSceneLeft() { }
+
+    private void Selected()
+    {
+        // A fresh snapshot, not the live list: a binding is told a property CHANGED, and the same list object handed
+        // over twice is not a change however different its contents.
+        _publishing = true;
+        SetCurrentValue(SelectionProperty, _selection.ToArray());
+        _publishing = false;
+
+        HasSelection = _selection.Count > 0;
+        FollowSelectionFrame();
+
+        // The frame stands where the held thing stands, so a new selection is a new place for it - and the runs have
+        // not changed, so nothing else would work it out.
+        MarkChrome();
+
+        // A pane that FOLLOWS the selection is shown by there being one, so the moment the selection changes is the
+        // moment to say so - and not the arrange pass, where writing a layout input would invalidate the pass running.
+        _chromeLayer?.SyncSelection();
+        _chromeLayer?.InvalidateArrange();
+
+        AnnounceSelection();
+        SelectionChanged?.Invoke(this, EventArgs.Empty);
+        Refresh();
+        Repaint();
+    }
+
+    // Tells automation which controls on the plane were selected and which were let go since it was last told.
+    private void AnnounceSelection()
+    {
+        if (!AutomationEvents.IsListening)
+        {
+            _announcedSelected.Clear();
+            return;
+        }
+
+        var now = _selection.OfType<ElementItem>().Select(item => item.Painted).ToList();
+        foreach (var element in _announcedSelected)
+        {
+            if (!now.Contains(element))
+            {
+                AutomationEvents.RaiseSelected(element, false);
+            }
+        }
+
+        foreach (var element in now)
+        {
+            if (!_announcedSelected.Contains(element))
+            {
+                AutomationEvents.RaiseSelected(element, true);
+            }
+        }
+
+        _announcedSelected.Clear();
+        _announcedSelected.AddRange(now);
+    }
+
+    public CanvasGridStyle GridStyle
+    {
+        get => GetValue<CanvasGridStyle>(GridStyleProperty);
+        set => SetValue(GridStyleProperty, value);
+    }
+
+    public Double GridSpacing
+    {
+        get => GetValue<Double>(GridSpacingProperty);
+        set => SetValue(GridSpacingProperty, value);
+    }
+
+    public Double GridCoarsening
+    {
+        get => GetValue<Double>(GridCoarseningProperty);
+        set => SetValue(GridCoarseningProperty, value);
+    }
+
+    public Double MinGridPitch
+    {
+        get => GetValue<Double>(MinGridPitchProperty);
+        set => SetValue(MinGridPitchProperty, value);
+    }
+
+    public Brush GridBrush
+    {
+        get => GetValue<Brush>(GridBrushProperty);
+        set => SetValue(GridBrushProperty, value);
+    }
+
+    public Brush AxisBrush
+    {
+        get => GetValue<Brush>(AxisBrushProperty);
+        set => SetValue(AxisBrushProperty, value);
+    }
+
+    public Double GridThickness
+    {
+        get => GetValue<Double>(GridThicknessProperty);
+        set => SetValue(GridThicknessProperty, value);
+    }
+
+    public Double GridDotSize
+    {
+        get => GetValue<Double>(GridDotSizeProperty);
+        set => SetValue(GridDotSizeProperty, value);
+    }
+
+    private static Object CoerceScale(AdamantiumComponent component, Object value)
+    {
+        if (component is not InfiniteCanvas canvas || value is not Double scale) return value;
+
+        return Math.Clamp(scale, canvas.MinScale, canvas.MaxScale);
+    }
+
+    // Turning the snap off in the middle of a line ends it where it had got to. The alternative is a half-drawn line
+    // that can no longer be finished, because the gesture that would have finished it is gone with the mode.
+    private static void OnSnapToGridChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (component is InfiniteCanvas canvas && e.NewValue is false && canvas.Tool is { IsBusy: true } tool)
+        {
+            tool.Cancel(canvas);
+        }
+    }
+
+    // A tool being put down finishes what it had started: a half-drawn line belongs to the pen, and the tool taking over
+    // has no way to end it.
+    private static void OnToolChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (component is not InfiniteCanvas canvas) return;
+
+        (e.OldValue as ICanvasTool)?.Cancel(canvas);
+
+        var inks = e.NewValue is ICanvasTool { IsInk: true };
+        canvas.SetCurrentValue(Gestures.ManipulationModesProperty, inks
+            ? ManipulationKinds.Pinch
+            : ManipulationKinds.Pan | ManipulationKinds.Pinch | ManipulationKinds.Rotate);
+        canvas.SetCurrentValue(Gestures.StartsFromStillFingersProperty, inks);
+
+        // The pointer wears the tool, so it changes WITH the tool and not at the next twitch of the mouse. Put down by
+        // the right button, the old tool would otherwise go on pointing at the drawing until something moved - which is
+        // exactly the moment a person needs telling that it is gone.
+        if (canvas._pointerInside) canvas.ShowPointer(canvas._pointer);
+
+        canvas.ToolChanged?.Invoke(canvas, EventArgs.Empty);
+        canvas.Repaint();
+        canvas.RememberLayout();
+    }
+
+    /// <summary>The tool in hand changed - a rail marks a different button on it.</summary>
+    public event EventHandler ToolChanged;
+
+    private static void OnOverlayChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e) =>
+        (component as InfiniteCanvas)?.PlaceOverlay();
+
+    private static void OnToolsChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (component is not InfiniteCanvas canvas) return;
+
+        canvas._tools = e.NewValue as CanvasTools;
+        canvas.Follow(ToolsProperty, canvas._tools, canvas.OnToolsEdited);
+
+        canvas.ToolsChanged?.Invoke(canvas, EventArgs.Empty);
+    }
+
+    private void OnToolsEdited(object sender, NotifyCollectionChangedEventArgs e) =>
+        ToolsChanged?.Invoke(this, EventArgs.Empty);
+
+    /// <summary>The set of tools changed - a rail rebuilds its buttons on it.</summary>
+    public event EventHandler ToolsChanged;
+
+    private static void OnSceneChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (component is not InfiniteCanvas canvas) return;
+
+        canvas._sceneTaken = false;
+
+        // The scene left behind keeps its items, without this canvas's controls on them.
+        if (e.OldValue is ICanvasScene)
+        {
+            canvas.OnSceneLeft();
+        }
+
+        if (e.NewValue is ICanvasScene current)
+        {
+            SceneItems.Follow(current, canvas);
+            current.Changed += canvas.OnSceneEdited;
+            canvas.Follow(SceneProperty, () => current.Changed -= canvas.OnSceneEdited);
+        }
+        else
+        {
+            canvas.Follow(SceneProperty, null);
+        }
+
+        canvas.OnSceneShown(e.NewValue as ICanvasScene);
+
+        // A whole scene arriving is as much a change as an item being put in one, and the controls in it have to reach
+        // the layer the same way.
+        canvas.SyncElements();
+        canvas.Hosts(host =>
+        {
+            host.InvalidateMeasure();
+            host.InvalidateArrange();
+        });
+
+        canvas.Repaint();
+    }
+
+    // TAKEN by another canvas: the items are shared, so this one lets go of the scene and of every control it showed - if
+    // that is still the scene it shows.
+    void ISceneFollower.StopFollowing(ICanvasScene scene)
+    {
+        if (!ReferenceEquals(Scene, scene))
+        {
+            return;
+        }
+
+        scene.Changed -= OnSceneEdited;
+
+        _sceneTaken = true;
+        OnSceneLeft();
+        Hosts(host => host.Sync([]));
+        Drawn(layer => layer.Sync([]));
+        Repaint();
+    }
+
+    // SHOWN AGAIN after another canvas took its scene - a view put back on screen - it takes the scene back: the one on
+    // screen is the one showing it.
+    private void OnShownAgain(object sender, VisualTreeAttachmentEventArgs e)
+    {
+        if (!_sceneTaken || IsDiscarded || Scene is not { } scene)
+        {
+            return;
+        }
+
+        _sceneTaken = false;
+        SceneItems.Follow(scene, this);
+        scene.Changed += OnSceneEdited;
+
+        OnSceneShown(scene);
+
+        SyncElements();
+        Hosts(host =>
+        {
+            host.InvalidateMeasure();
+            host.InvalidateArrange();
+        });
+
+        Repaint();
+    }
+
+    private void OnSceneEdited(object sender, EventArgs e)
+    {
+        Forget();
+        SyncElements();
+
+        // ...and place them again even when the SET has not changed. An edit here is just as often one item's rectangle
+        // moving - which is exactly what dragging a control does - and a layer that only answered to items appearing and
+        // disappearing left the control behind while its frame walked off.
+        Hosts(host =>
+        {
+            host.InvalidateMeasure();
+            host.InvalidateArrange();
+        });
+
+        // The same for a pane that follows the selection: an item moving moves the frame, and the bar sits on the
+        // frame. This is the one place every edit passes through - a drag, a resize, an inspector writing a number -
+        // so it is the one place that has to say so.
+        _chromeLayer?.InvalidateArrange();
+        FollowSelectionFrame();
+
+        PlaneChanged?.Invoke(this, EventArgs.Empty);
+
+        // ...and the buttons that answer from the PLANE rather than from the selection - the bin is the one - ask
+        // again. Emptying a plane that has just been filled must not be refused because it was empty when the button
+        // was first bound.
+        Refresh();
+
+        Repaint();
+    }
+
+    // Drops selected items that have left the plane by any route, so the frame and Delete never act on them.
+    private void Forget()
+    {
+        if (_selection.Count == 0 || Scene is not { } scene) return;
+
+        var there = new HashSet<ICanvasItem>();
+
+        foreach (var item in scene.ItemsIn(Everything)) Gather(item, there);
+
+        var gone = false;
+
+        for (var i = _selection.Count - 1; i >= 0; i--)
+        {
+            if (there.Contains(_selection[i])) continue;
+
+            _selection.RemoveAt(i);
+            gone = true;
+        }
+
+        if (gone) Selected();
+    }
+
+    // Collects items including group children, which are on the plane though the scene does not list them.
+    private static void Gather(ICanvasItem item, HashSet<ICanvasItem> into)
+    {
+        if (!into.Add(item) || item is not GroupItem group) return;
+
+        foreach (var child in group.Children) Gather(child, into);
+    }
+
+    /// <summary>WHAT IS UNDER A POINT, topmost first - or null where the plane is empty.
+    /// <para>The one question every tool asks before deciding what a press means, so it is asked in one place: a tool
+    /// that answered it for itself would pick with a different reach than the selection does, and the two would
+    /// disagree about what was clicked.</para></summary>
+    public ICanvasItem ItemAt(Vector2<double> world)
+    {
+        if (Scene == null) return null;
+
+        var reach = ScreenToWorldLength(4);
+        var probe = new Rect(world.X - reach, world.Y - reach, reach * 2, reach * 2);
+
+        ICanvasItem found = null;
+        foreach (var item in ItemsHere(probe))
+        {
+            if (item.HitTest(world, reach)) found = item;
+        }
+
+        return found;
+    }
+
+    /// <summary>Raised after something on the plane changes - put there, taken away, moved, reshaped. For anything that
+    /// draws a picture OF the plane rather than on it: a map repaints itself for the camera, and a node added while the
+    /// camera stood still is exactly the change it would otherwise never hear about.</summary>
+    public event EventHandler PlaneChanged;
+
+    /// <summary>Raised after the camera moves or zooms - for anything that draws a picture of WHERE the camera is, such
+    /// as a map of the plane. The canvas repaints itself for this; something standing beside it has to be told.</summary>
+    public event EventHandler CameraChanged;
+
+    private static void OnCameraChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (component is not InfiniteCanvas canvas) return;
+
+        canvas.CameraChanged?.Invoke(canvas, EventArgs.Empty);
+
+        // Whoever moved the camera - a binding, the wheel, the application - has placed it, and the canvas must not
+        // then move it somewhere of its own on the first layout.
+        if (e.Property == OffsetProperty)
+            canvas._cameraPlaced = true;
+
+        // A SCALE WRITTEN STRAIGHT ZOOMS WHERE YOU ARE LOOKING. Scale alone leaves the world's ORIGIN where it is on
+        // screen, so everything else swings round it - type 8000 into the panel and the drawing flies off sideways
+        // while the empty middle of the plane fills the window. The wheel and the buttons never showed this because
+        // they go through ZoomAt, which holds a point still; a number typed in had nothing holding it.
+        if (e.Property == ScaleProperty)
+        {
+            canvas.SyncThicknessSteps();
+            canvas.KeepTheMiddle(e.OldValue as Double? ?? 0);
+        }
+
+        // The controls on the plane MOVE with the camera, and moving them is an arrange: what is inside one was measured
+        // for its own rectangle, which the camera does not change. A zoom changes that rectangle, so it measures again.
+        canvas.SyncElements();
+        canvas.Hosts(host =>
+        {
+            host.InvalidateArrange();
+            if (e.Property == ScaleProperty) host.InvalidateMeasure();
+        });
+
+        // A pane that FOLLOWS THE SELECTION is placed from where the frame is on screen, and the camera is half of that
+        // sum - so moving the camera has to re-place it just as it re-places the controls. Without this the bar kept
+        // the pixels it had when the selection was made and slid off the frame at the first turn of the wheel: the
+        // frame is drawn every render, the panes only when something arranges them.
+        canvas._chromeLayer?.InvalidateArrange();
+
+        canvas.Repaint();
+    }
+
+    private static void OnDesignModeChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)
+    {
+        if (component is InfiniteCanvas canvas) canvas.ApplyDesignMode();
+    }
+
+    // While editing, plane controls ignore the pointer so the select tool gets the press; nodes stay live and drag by their
+    // title strip.
+    private void ApplyDesignMode()
+    {
+        Hosts(host => host.ApplyDesignMode());
+
+        Repaint();
+    }
+
+    /// <summary>A press that began on a hosted control but MEANS the plane - a node taken by its title strip. The layer
+    /// hands it here, and from here on it is an ordinary press: the tool picks, the gesture begins, one undo step opens.
+    /// </summary>
+    internal void PressFromElement(PointerPressedEventArgs e)
+    {
+        _pressIsPlane = true;
+        try
+        {
+            OnPointerDown(this, e);
+        }
+        finally
+        {
+            _pressIsPlane = false;
+        }
+    }
+
+    // Whether the press being read right now was handed over by the element layer as one that MEANS the plane. See the
+    // guard in PointerDown.
+    private bool _pressIsPlane;
+
+    protected override AutomationPeer OnCreateAutomationPeer() => new InfiniteCanvasAutomationPeer(this);
+}

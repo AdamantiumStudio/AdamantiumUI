@@ -3,7 +3,7 @@ using System.Linq;
 using Adamantium.Core.DependencyInjection;
 using Adamantium.Mathematics;
 using Adamantium.UI.Controls;
-using Adamantium.UI.Controls.DrawingBoard;
+using Adamantium.UI.Controls.Canvases;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Core.Resources;
@@ -41,9 +41,9 @@ public class CanvasCopyTests
         themes.SetTheme(theme);
     }
 
-    private static (InfiniteCanvas Canvas, CanvasScene Scene) Stage()
+    private static (InfiniteCanvas Canvas, CanvasScene Scene) Stage(InfiniteCanvas canvas = null)
     {
-        var canvas = new InfiniteCanvas { Mode = CanvasMode.Nodes };
+        canvas ??= new NodeGraph();
         canvas.Measure(new Size<double>(800, 600), force: true);
         canvas.Arrange(new Rect(0, 0, 800, 600));
 
@@ -214,8 +214,7 @@ public class CanvasCopyTests
     [Test]
     public void AControlTheEngineDidNotMakeIsNotCopied()
     {
-        var (canvas, scene) = Stage();
-        canvas.Mode = CanvasMode.Drawing;
+        var (canvas, scene) = Stage(new DrawingBoard());
 
         var button = new ElementItem(new Adamantium.UI.Controls.Buttons.Button(), new Rect(0, 0, 120, 40));
         var shape = new ShapeItem(CanvasShape.Rectangle, new Rect(0, 0, 60, 60), Brushes.White, 2);

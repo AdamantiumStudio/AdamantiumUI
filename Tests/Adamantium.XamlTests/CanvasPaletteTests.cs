@@ -3,7 +3,7 @@ using Adamantium.Core.Collections;
 using Adamantium.Core.DependencyInjection;
 using Adamantium.Mathematics;
 using Adamantium.UI.Controls;
-using Adamantium.UI.Controls.DrawingBoard;
+using Adamantium.UI.Controls.Canvases;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Resources;
 using Adamantium.UITests.Graph;
@@ -68,9 +68,8 @@ public class CanvasPaletteTests
     {
         Use(new Adamantium.UI.Themes.FluentTheme.Fluent());
 
-        var canvas = new InfiniteCanvas
+        var canvas = new NodeGraph
         {
-            Mode = CanvasMode.Nodes,
             Scene = new CanvasScene(),
             NodeKinds = Catalog
         };
@@ -113,9 +112,8 @@ public class CanvasPaletteTests
     {
         Use(new Adamantium.UI.Themes.FluentTheme.Fluent());
 
-        var canvas = new InfiniteCanvas
+        var canvas = new NodeGraph
         {
-            Mode = CanvasMode.Nodes,
             Scene = new CanvasScene(),
             NodeKinds = Catalog
         };
@@ -151,9 +149,8 @@ public class CanvasPaletteTests
     {
         Use(theme);
 
-        var canvas = new InfiniteCanvas
+        var canvas = new NodeGraph
         {
-            Mode = CanvasMode.Nodes,
             Scene = new CanvasScene(),
             NodeKinds = Catalog,
             Nodes = new TrackingCollection<ICanvasNode>()

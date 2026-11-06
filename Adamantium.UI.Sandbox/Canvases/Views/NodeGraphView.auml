@@ -1,0 +1,84 @@
+<View xmlns="http://adamantium/ui"
+      xmlns:x="http://adamantium/ui/xaml/extensions"
+      xmlns:models="clr-namespace:Adamantium.UI.Sandbox.Canvases.Models">
+
+    <!-- WHAT IS INSIDE A NODE, written HERE because it is a picture. The page's table of kinds hands each node a plain
+         state object and nothing else; which of these draws it is decided by the type of that object. A view-model that
+         built these controls itself would be a view-model drawing, and the value a person set would then have to be dug
+         back out of the visual tree to save it. -->
+    <ResourceContext.Resources>
+        <models:NodeBodySelector x:Key="NodeBodies">
+            <models:NodeBodySelector.Number>
+                <DataTemplate>
+                    <!-- THOUSANDTHS, and no more. A number here is something a hand dragged to, and the hand cannot
+                         mean the seventeen digits that come out of adding a twentieth to itself - "1,0125000000000002"
+                         is the arithmetic showing through. -->
+                    <NumericUpDown Value="{Binding Value, Mode=TwoWay}"
+                                   AutomationProperties.Name="{Localize CanvasPageStrings.NodeNumber}"
+                                   Minimum="0" Maximum="4" SmallChange="0.05" StringFormat="0.###"
+                                   AreButtonsVisible="False" IsDragScrubEnabled="True"/>
+                </DataTemplate>
+            </models:NodeBodySelector.Number>
+
+            <models:NodeBodySelector.Color>
+                <DataTemplate>
+                    <ColorPickerButton SelectedColor="{Binding Color, Mode=TwoWay}"
+                                       AutomationProperties.Name="{Localize CanvasPageStrings.NodeColor}"
+                                       Height="26" MinWidth="0" Padding="2"/>
+                </DataTemplate>
+            </models:NodeBodySelector.Color>
+
+            <!-- WHAT CAME OUT, live: the color the whole graph works out, drawn as itself. This is the node that makes
+                 the difference between a graph and a picture of one - change a number anywhere upstream and this
+                 swatch follows. -->
+            <models:NodeBodySelector.Result>
+                <DataTemplate>
+                    <Border Height="40" CornerRadius="3"
+                            BorderThickness="1"
+                            BorderBrush="{ObservableResource ControlStrokeColorDefault}"
+                            Background="{Binding Result, Converter={ColorToBrushConverter}}"/>
+                </DataTemplate>
+            </models:NodeBodySelector.Result>
+
+            <!-- A node that is ALL SOCKETS shows nothing between them. -->
+            <models:NodeBodySelector.None>
+                <DataTemplate>
+                    <Grid/>
+                </DataTemplate>
+            </models:NodeBodySelector.None>
+        </models:NodeBodySelector>
+    </ResourceContext.Resources>
+
+    <Grid RowDefinitions="Auto,Auto,Auto,*" Margin="16">
+        <TextBlock Grid.Row="0" Text="NodeGraph" FontSize="18"/>
+        <TextBlock Grid.Row="1" Margin="0,4,0,12" TextWrapping="WrapByWords"
+                   Text="{Localize CanvasPageStrings.GraphIntro}"/>
+
+        <!-- Everything that steers the graph lives in the graph's own panel. -->
+
+        <Border Grid.Row="3" BorderThickness="1" CornerRadius="0"
+                BorderBrush="{ObservableResource ControlStrokeColorDefault}">
+            <!-- The scene comes from the page, which owns undo and saving; pin colors come from the SocketKinds table. -->
+            <NodeGraph x:Name="Canvas"
+                       GridStyle="{Binding GridStyle}"
+                       Scene="{Binding Scene}"
+                       History="{Binding History}"
+                       Tools="{Binding Tools}"
+                       Selection="{Binding Selection, Mode=TwoWay}"
+                       Tool="{Binding Tool, Mode=TwoWay}"
+                       DefaultTool="{Binding SelectTool}"
+                       Layout="{Binding Layout, Mode=TwoWay}"
+                       IsDesignMode="{Binding DesignMode}"
+                       MaxScale="{Binding MaxZoom}"
+                       OverlayPlacement="TopLeft"
+                       Scale="{Binding Scale, Mode=TwoWay}"
+                       Offset="{Binding Offset, Mode=TwoWay}"
+                       Nodes="{Binding Nodes}"
+                       NodeKinds="{Binding NodeKinds}"
+                       SocketKinds="{Binding SocketKinds}"
+                       NodeContentSelector="{ResourceReference NodeBodies}"
+                       ConfirmsDelete="{Binding AsksBeforeDelete}"/>
+        </Border>
+
+    </Grid>
+</View>

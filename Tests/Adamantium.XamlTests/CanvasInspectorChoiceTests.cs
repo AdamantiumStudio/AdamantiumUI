@@ -3,7 +3,7 @@ using Adamantium.Core.Collections;
 using Adamantium.Core.DependencyInjection;
 using Adamantium.Mathematics;
 using Adamantium.UI.Controls;
-using Adamantium.UI.Controls.DrawingBoard;
+using Adamantium.UI.Controls.Canvases;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Resources;
 using Adamantium.UITests.Graph;
@@ -59,9 +59,9 @@ public class CanvasInspectorChoiceTests
 
     // A CANVAS WEARING ITS OWN CHROME, with one node on it and that node selected - which is when the inspector shows
     // a node's lines at all. The catalogs come LAST, the way a page's bindings hand them over.
-    private static InfiniteCanvas WithNodeSelected()
+    private static NodeGraph WithNodeSelected()
     {
-        var canvas = new InfiniteCanvas { Mode = CanvasMode.Nodes, Scene = new CanvasScene() };
+        var canvas = new NodeGraph { Scene = new CanvasScene() };
 
         var nodes = new TrackingCollection<ICanvasNode>();
         canvas.Nodes = nodes;

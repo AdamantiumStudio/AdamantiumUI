@@ -2,7 +2,7 @@ using System;
 using System.Linq;
 using Adamantium.Mathematics;
 using Adamantium.UI.Controls;
-using Adamantium.UI.Controls.DrawingBoard;
+using Adamantium.UI.Controls.Canvases;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Input.Raw;
 using Adamantium.UI.Core.Media;
@@ -34,11 +34,10 @@ public class CanvasPenAndFingersTests
         Gestures.HoldingTime = TimeSpan.FromHours(1);
 
         _scene = new CanvasScene();
-        _canvas = new InfiniteCanvas
+        _canvas = new DrawingBoard
         {
             Ink = new SolidColorBrush(Colors.Red),
             InkThickness = 4,
-            Mode = CanvasMode.Drawing,
             Tool = new PenTool(),
             Background = Brushes.White,
             Scene = _scene

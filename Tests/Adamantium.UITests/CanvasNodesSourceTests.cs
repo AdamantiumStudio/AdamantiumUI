@@ -2,7 +2,7 @@ using System.Linq;
 using Adamantium.Core.Collections;
 using Adamantium.Mathematics;
 using Adamantium.UI.Controls;
-using Adamantium.UI.Controls.DrawingBoard;
+using Adamantium.UI.Controls.Canvases;
 using Adamantium.UI.Core;
 using Adamantium.UITests.Graph;
 using NUnit.Framework;
@@ -13,9 +13,9 @@ namespace Adamantium.UITests;
 /// what appears in the collection appears on the plane, what moves on the plane is written back.</summary>
 public class CanvasNodesSourceTests
 {
-    private static (InfiniteCanvas canvas, CanvasScene scene, TrackingCollection<ICanvasNode> nodes) Stage()
+    private static (NodeGraph canvas, CanvasScene scene, TrackingCollection<ICanvasNode> nodes) Stage()
     {
-        var canvas = new InfiniteCanvas { Mode = CanvasMode.Nodes };
+        var canvas = new NodeGraph();
         canvas.Measure(new Size<double>(800, 600), force: true);
         canvas.Arrange(new Rect(0, 0, 800, 600));
 
@@ -953,7 +953,7 @@ public class CanvasNodesSourceTests
 
         var list = new TreeView { ItemsSource = canvas.NodeKinds };
         list.SetBinding(TreeView.SelectedItemProperty,
-            new Adamantium.UI.Core.Data.Binding(nameof(InfiniteCanvas.PickedKind))
+            new Adamantium.UI.Core.Data.Binding(nameof(NodeGraph.PickedKind))
             {
                 Source = canvas,
                 Mode = Adamantium.UI.Core.Data.BindingMode.TwoWay

@@ -1,6 +1,6 @@
 using Adamantium.Mathematics;
 using Adamantium.UI.Controls;
-using Adamantium.UI.Controls.DrawingBoard;
+using Adamantium.UI.Controls.Canvases;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Media;
@@ -13,9 +13,9 @@ namespace Adamantium.UITests;
 /// because a head is geometry and nothing else about it can be read back.</summary>
 public class CanvasArrowTests
 {
-    private static InfiniteCanvas Sized(double width = 400, double height = 300)
+    private static DrawingBoard Sized(double width = 400, double height = 300)
     {
-        var canvas = new InfiniteCanvas();
+        var canvas = new DrawingBoard();
         canvas.Measure(new Size<double>(width, height), force: true);
         canvas.Arrange(new Rect(0, 0, width, height));
 

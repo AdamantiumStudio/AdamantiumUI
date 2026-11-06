@@ -71,11 +71,30 @@ All packages share one version.
   still darken where they overlap. Where the device takes many draws from one indirect command, a run of them is one
   `vkCmdDrawIndirect`; elsewhere, a draw each.
 
+- **Breaking:** the drawing board and the node graph are two controls on one plane. `InfiniteCanvas` is the plane: pan
+  and zoom, selection, history, the inspector and the grid. `DrawingBoard : InfiniteCanvas` draws, with the ink, the
+  shapes, the objects and SVG. `NodeGraph : InfiniteCanvas` joins nodes, with the node kinds, the palette, the wires
+  and comment frames. Each theme styles both on top of the plane's style; the node palette is the graph's own.
+  Code that set `Mode="Nodes"` makes a `NodeGraph`; code that used the canvas as a drawing makes a `DrawingBoard`. A tool
+  of one does nothing on the other, and a scene holds the content of the control showing it.
+  The canvas types live in `Adamantium.UI.Controls.Canvases`, which was `Adamantium.UI.Controls.DrawingBoard` - a
+  namespace of the same name as the `DrawingBoard` type in it.
+
 ### Removed
 
 - `StrokeGeometry`, which tessellated strokes on the CPU, and `RenderUnit.UseGpuStroke`: every stroke is drawn on the GPU.
 
+- `CanvasMode`, `InfiniteCanvas.Mode`, `ICanvasItem.Mode`, `ICanvasTool.WorksIn` and `ElementTool.Mode`: what a canvas
+  shows is which control it is.
+
 ### Fixed
+
+- `CanvasGraphSerializer` writes a graph's comment frames and reads them back - their title, place, colors, outline and
+  title strip - behind the nodes. Loading a graph took the frames off the plane, and saving never wrote them. The file
+  is version 2; a reader of 1 refuses it rather than drop its frames.
+- Opening a graph file is one step of the history, so an undo brings back the graph that was there before; it replaces
+  the nodes, wires and frames and leaves other controls on the plane. A file whose version or ids are not whole numbers
+  is refused instead of throwing.
 
 - A `RibbonSplitButton` whose body's command says its choice is on - a border the paragraphs show - no longer drops its
   menu by itself, nor leaves it open after a row is picked. After its arrow was clicked, invoking its body runs the

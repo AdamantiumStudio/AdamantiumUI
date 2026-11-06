@@ -1,0 +1,120 @@
+﻿using Adamantium.Mathematics;
+using Adamantium.UI.Core;
+using Adamantium.UI.Core.Graphics;
+using Adamantium.UI.Core.Input;
+
+namespace Adamantium.UI.Controls.Canvases;
+
+/// <summary>Places a curve point by point: a click adds one, moving previews, a double click ends. One tool for all curve
+/// kinds, which is a setting.</summary>
+public class CurveTool : ICanvasTool
+{
+    private CurveItem _making;
+    private Vector2<double> _pointer;
+
+    public CurveTool(CanvasCurve kind = CanvasCurve.Bezier)
+    {
+        Kind = kind;
+        Name = kind.ToString();
+    }
+
+    /// <summary>Which curve the next one is. Changing it changes nothing already drawn - that is the panel's to do.</summary>
+    public CanvasCurve Kind { get; set; }
+
+    /// <summary>A curve is placed over several clicks, so it outlives the button and the canvas has to be told.</summary>
+    public bool IsBusy => _making != null;
+
+    public string Name { get; set; }
+
+    public string Icon { get; set; } = "CanvasToolCurveIcon";
+
+    public Key Shortcut { get; set; } = Key.B;
+
+    public string Description { get; set; } = "CurveDescription";
+
+    public Cursor Cursor { get; set; } = Cursors.Crosshair;
+
+    public void OnPressed(InfiniteCanvas canvas, CanvasPointerEventArgs e)
+    {
+        if (e.Button != MouseButtons.Left || canvas.Scene == null) return;
+
+        // The second click ENDS it, and is taken here so that it does not also place a point - a curve that gained a
+        // duplicate of its last point every time it was finished would bend oddly at the end for no visible reason.
+        if (e.ClickCount >= 2 && _making != null)
+        {
+            Finish(canvas);
+            e.Handled = true;
+            return;
+        }
+
+        if (_making == null)
+        {
+            if (canvas is not DrawingBoard board) return;   // a curve is part of a drawing
+
+            _making = new CurveItem(Kind, null, board.Ink?.Copy(), canvas.ScreenToWorldLength(board.InkThickness));
+        }
+
+        _making.Add(e.World);
+        _pointer = e.World;
+
+        canvas.Repaint();
+        e.Handled = true;
+    }
+
+    public void OnMoved(InfiniteCanvas canvas, CanvasPointerEventArgs e)
+    {
+        if (_making == null) return;
+
+        _pointer = e.World;
+        canvas.Repaint();
+        e.Handled = true;
+    }
+
+    /// <summary>Nothing: the button going up is not what places a point here, the button going DOWN is.</summary>
+    public void OnReleased(InfiniteCanvas canvas, CanvasPointerEventArgs e)
+    {
+    }
+
+    public void OnKey(InfiniteCanvas canvas, KeyEventArgs e)
+    {
+        if (_making == null) return;
+
+        // Enter finishes it too. A double click is the gesture, and a key is what the hand already on the keyboard
+        // reaches for - Escape is the canvas's "give up", which Cancel below is.
+        if (e.Key != Key.Enter) return;
+
+        Finish(canvas);
+        e.Handled = true;
+    }
+
+    public void Render(IDrawingSession session, InfiniteCanvas canvas)
+    {
+        // The curve so far PLUS where the pointer is: without that last point the line stops at the last click and the
+        // hand is drawing blind. HANDED to the item rather than added to it - drawing runs on its own thread, and a
+        // tool that added a point, drew and took it off again raced every click.
+        _making?.Render(session, canvas, _pointer);
+    }
+
+    public void Cancel(InfiniteCanvas canvas)
+    {
+        if (_making == null) return;
+
+        _making = null;
+        canvas.Repaint();
+    }
+
+    private void Finish(InfiniteCanvas canvas)
+    {
+        var made = _making;
+        _making = null;
+
+        // Two points at the least: one is a dot nobody asked for, and a curve through one point draws nothing at all.
+        if (made != null && made.Count >= 2)
+        {
+            canvas.Place(made);
+            canvas.Select(made, false);
+        }
+
+        canvas.Repaint();
+    }
+}

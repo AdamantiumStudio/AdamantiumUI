@@ -1,0 +1,133 @@
+﻿using System;
+using Adamantium.Mathematics;
+using Adamantium.UI.Core;
+using Adamantium.UI.Core.Graphics;
+using Adamantium.UI.Core.Input;
+
+namespace Adamantium.UI.Controls.Canvases;
+
+/// <summary>Drags out a rectangle, an ellipse or a line. One tool for all three: what changes between them is a single
+/// field on the item it makes, and three classes that differ by a constructor argument would be three places to fix the
+/// next thing that goes wrong with dragging out a box.</summary>
+public class ShapeTool : ICanvasTool
+{
+    private ShapeItem _making;
+    private Vector2<double> _from;
+
+    public ShapeTool(CanvasShape shape)
+    {
+        Shape = shape;
+        Name = shape.ToString();
+        Icon = "CanvasTool" + shape + "Icon";
+        Shortcut = shape switch
+        {
+            CanvasShape.Rectangle => Key.R,
+            CanvasShape.Ellipse => Key.O,
+            CanvasShape.Polygon => Key.G,
+            CanvasShape.Arrow => Key.A,
+            _ => Key.L
+        };
+    }
+
+    public CanvasShape Shape { get; }
+
+    /// <summary>A shape is one drag from press to release, so nothing here ever outlives the button.</summary>
+    public bool IsBusy => false;
+
+    /// <summary>How a rail shows this tool. Taken from the SHAPE by default - one class serves three tools, and each
+    /// of the three is called and drawn after the shape it makes - and settable, like every other tool's.</summary>
+    public string Name { get; set; }
+
+    public string Icon { get; set; }
+
+    public Key Shortcut { get; set; }
+
+    public string Description { get; set; } = string.Empty;
+
+    /// <summary>A crosshair - a shape is dragged out from an exact corner.</summary>
+    public Cursor Cursor { get; set; } = Cursors.Crosshair;
+
+    /// <summary>How many sides the next POLYGON gets. On the tool rather than on the canvas, because it is a fact about
+    /// what this tool makes - the same place the shape itself is stated.</summary>
+    public int Sides { get; set; } = 5;
+
+    /// <summary>What the next ARROW wears on each end. On the tool for the same reason <see cref="Sides"/> is: an
+    /// application offering a plain arrow and a double-headed one builds two of this class.</summary>
+    public CanvasArrowHead StartHead { get; set; } = CanvasArrowHead.None;
+
+    public CanvasArrowHead EndHead { get; set; } = CanvasArrowHead.Triangle;
+
+    public void OnPressed(InfiniteCanvas canvas, CanvasPointerEventArgs e)
+    {
+        if (e.Button != MouseButtons.Left || canvas.Scene == null || canvas is not DrawingBoard board) return;
+
+        _from = e.World;
+        // A PAINT OF ITS OWN, copied off the setting: the color in hand is what the next thing is drawn WITH, not a
+        // color every thing drawn with it goes on sharing - see Brush.Copy.
+        _making = new ShapeItem(Shape, new Rect(_from.X, _from.Y, 0, 0), board.Ink?.Copy(),
+            canvas.ScreenToWorldLength(board.InkThickness),
+            Shape is CanvasShape.Line or CanvasShape.Arrow ? null : board.ShapeFill?.Copy())
+        {
+            Sides = Sides,
+            StartHead = StartHead,
+            EndHead = EndHead
+        };
+
+        canvas.CapturePointer();
+        canvas.Repaint();
+        e.Handled = true;
+    }
+
+    public void OnMoved(InfiniteCanvas canvas, CanvasPointerEventArgs e)
+    {
+        if (_making == null) return;
+
+        Stretch(e.World);
+        canvas.Repaint();
+        e.Handled = true;
+    }
+
+    public void OnReleased(InfiniteCanvas canvas, CanvasPointerEventArgs e)
+    {
+        if (_making == null) return;
+
+        var made = _making;
+        _making = null;
+        canvas.ReleasePointer();
+
+        Stretch(e.World, made);
+
+        // A press that never moved is a click, not a shape. Measured in SCREEN pixels, because what counts as "did not
+        // move" is about the hand and not about how far out the camera is.
+        var least = canvas.ScreenToWorldLength(3);
+        if (made.World.Width >= least || made.World.Height >= least)
+        {
+            canvas.Place(made);
+            canvas.Select(made, false);
+        }
+
+        canvas.Repaint();
+        e.Handled = true;
+    }
+
+    public void Render(IDrawingSession session, InfiniteCanvas canvas) => _making?.Render(session, canvas);
+
+    public void Cancel(InfiniteCanvas canvas)
+    {
+        if (_making == null) return;
+
+        _making = null;
+        canvas.ReleasePointer();
+        canvas.Repaint();
+    }
+
+    private void Stretch(Vector2<double> to, ShapeItem shape = null)
+    {
+        shape ??= _making;
+        if (shape == null) return;
+
+        // Both drag points go to the shape, which derives the box, lean and direction; not Resize, which would shrink it by
+        // the outline on every move.
+        shape.SetEnds(_from, to);
+    }
+}

@@ -47,7 +47,8 @@
     <Phrase Key="Opacity" Text="Прозрачность"/>
     <Phrase Key="Viewbox" Text="Viewbox"/>
     <Phrase Key="ZoomBox" Text="ZoomBox"/>
-    <Phrase Key="InfiniteCanvas" Text="Бесконечный холст"/>
+    <Phrase Key="DrawingBoard" Text="Доска для рисования"/>
+    <Phrase Key="NodeGraph" Text="Граф нод"/>
     <Phrase Key="Tiles3D" Text="Плитки 3D"/>
     <Phrase Key="Instancing" Text="Инстансинг"/>
     <Phrase Key="Transforms" Text="Трансформации"/>

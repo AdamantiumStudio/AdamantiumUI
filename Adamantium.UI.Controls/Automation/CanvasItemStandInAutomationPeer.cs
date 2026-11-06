@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using Adamantium.UI.Controls.Base;
-using Adamantium.UI.Controls.DrawingBoard;
+using Adamantium.UI.Controls.Canvases;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Automation;
 
