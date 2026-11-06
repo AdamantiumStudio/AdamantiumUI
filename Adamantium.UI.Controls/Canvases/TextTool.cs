@@ -150,7 +150,7 @@ public class TextTool : ICanvasTool
 
         // A caret, and the piece itself while it is still too new to be in the scene. Drawn at the END of the text, in
         // SCREEN pixels: it is a mark about where typing goes, not part of the drawing.
-        if (_fresh) _editing.Render(session, canvas);
+        if (_fresh) canvas.DrawLoose(session, _editing);
 
         if (!_caretVisible || canvas.SelectionBrush == null) return;
 

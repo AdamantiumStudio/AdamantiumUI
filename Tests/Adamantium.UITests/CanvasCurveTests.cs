@@ -200,18 +200,20 @@ public class CanvasCurveTests
 
         var curve = new CurveItem(CanvasCurve.Bezier, points, Brushes.White, 2);
         var canvas = Sized(800, 600);
+        var drawing = curve.Drawing(session, canvas);
 
-        curve.Render(session, canvas);
+        curve.Render(drawing);
         var ink = session.Rectangles[0].Brush as InkBrush;
 
+        // The ink's points are in the drawing's own units, so the points it is asked about are too.
         Assert.Multiple(() =>
         {
-            Assert.That(Touches(ink, canvas.WorldToScreen(points[0])), Is.True, "the curve does not start at its first point");
-            Assert.That(Touches(ink, canvas.WorldToScreen(points[^1])), Is.True, "and does not end at its last");
+            Assert.That(Touches(ink, drawing.Local(points[0])), Is.True, "the curve does not start at its first point");
+            Assert.That(Touches(ink, drawing.Local(points[^1])), Is.True, "and does not end at its last");
 
             for (var i = 1; i < count - 1; i++)
             {
-                Assert.That(Touches(ink, canvas.WorldToScreen(points[i])), Is.False,
+                Assert.That(Touches(ink, drawing.Local(points[i])), Is.False,
                     $"point {i} is sitting on the line - a Bezier has no anchors along its length");
             }
         });

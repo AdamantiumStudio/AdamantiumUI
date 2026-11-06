@@ -188,7 +188,7 @@ public class ConnectGesture
 
         // The SAME curve the finished wire is drawn with, through the same painter: one that looked one way while it
         // was being pulled out and another once it was let go would be two answers to one question.
-        _painter.Draw(session, canvas, from, _at, stroke, Thickness);
+        _painter.Draw(canvas.DrawingOnGlass(session, this, from), from, _at, stroke, Thickness);
     }
 
     public void Cancel(InfiniteCanvas canvas)

@@ -47,7 +47,7 @@ struct GradientRectData
     uint8_t4 Stop4; uint8_t4 Stop5; uint8_t4 Stop6; uint8_t4 Stop7;
     float4 Offsets0;     // stop offsets 0..3
     float4 Offsets1;     // stop offsets 4..7
-    float4 Clip;         // .x = the ROUNDED CLIP's slot, or -1; .yzw spare
+    float4 Clip;         // .x = the ROUNDED CLIP's slot, or -1; .y = the pen's floor in device px (0 none); .zw spare
 };
 
 
@@ -169,7 +169,7 @@ GradPSInput GradientRectInstancedVS(uint vertexId : SV_VertexID, uint instanceId
     float2 px = SlotPixelScale(nodeWorld);
     float iso = min(px.x, px.y);
 
-    float widthPx = it.Stroke0.x * iso;
+    float widthPx = FloorWidthPx(it.Stroke0.x * iso, it.Clip.y);
     float outsetPx = max(widthPx * (0.5 * (1.0 + it.Stroke0.y) + 0.5), 0.0) + 1.0;
     float2 localPos = it.Bounds.xy + corner * it.Bounds.zw + (corner * 2.0 - 1.0) * (outsetPx / px);
     float4 worldPos = mul(float4(localPos, 0.0, 1.0), nodeWorld);
@@ -413,6 +413,7 @@ struct PatternRectData
     float4 Anim;         // .x = offset subtracted from the clock while animating, .y = the phase held while paused,
                          // .z = an opacity slot the CPU stamps that NO pass reads (this carrier folds the chain into
                          // Color1/Color2), .w = the ROUNDED CLIP's slot, -1 = none
+    float4 Floor;        // .x the pen's floor in device pixels (0 none), .yzw spare
 };
 
 struct PatternPSInput
@@ -448,7 +449,7 @@ PatternPSInput PatternRectInstancedVS(uint vertexId : SV_VertexID, uint instance
     float2 px = SlotPixelScale(nodeWorld);
     float iso = min(px.x, px.y);
 
-    float widthPx = it.Stroke0.x * iso;
+    float widthPx = FloorWidthPx(it.Stroke0.x * iso, it.Floor.x);
     float outsetPx = max(widthPx * (0.5 * (1.0 + it.Stroke0.y) + 0.5), 0.0) + 1.0;
     float2 localPos = it.Bounds.xy + corner * it.Bounds.zw + (corner * 2.0 - 1.0) * (outsetPx / px);
     float4 worldPos = mul(float4(localPos, 0.0, 1.0), nodeWorld);
@@ -873,7 +874,8 @@ struct FractalRectData
     float4 Stroke1;      // dashOffset, trimStart, trimEnd, flags
     float4 Dash;         // dash runs 2..5 (device px); runs 0 and 1 ride in Stroke0.zw, the count in Stroke1.w
     float4 Ref;          // perturbation: .x orbit start index (into Orbits), .y orbit length, .zw the delta offset
-    float4 Clip;         // .x = the ROUNDED CLIP's slot, or -1; .yzw spare
+    float4 Clip;         // .x = the ROUNDED CLIP's slot, or -1; .y the opacity slot; .z = the pen's floor in device
+                         // px (0 none); .w spare
 };
 
 struct FractalPSInput
@@ -904,7 +906,7 @@ FractalPSInput FractalRectInstancedVS(uint vertexId : SV_VertexID, uint instance
     float2 px = SlotPixelScale(nodeWorld);
     float iso = min(px.x, px.y);
 
-    float widthPx = it.Stroke0.x * iso;
+    float widthPx = FloorWidthPx(it.Stroke0.x * iso, it.Clip.z);
     float outsetPx = max(widthPx * (0.5 * (1.0 + it.Stroke0.y) + 0.5), 0.0) + 1.0;
     float2 localPos = it.Bounds.xy + corner * it.Bounds.zw + (corner * 2.0 - 1.0) * (outsetPx / px);
     float4 worldPos = mul(float4(localPos, 0.0, 1.0), nodeWorld);

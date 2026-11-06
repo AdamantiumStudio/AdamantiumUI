@@ -50,4 +50,7 @@ public struct PatternRectItem
     /// the phase HELD while paused, so stopping keeps the frame it stopped at instead of snapping back to phase 0. Both only
     /// change when animation is toggled, which is what keeps an animated instance replayable without a re-bake. .zw spare.</summary>
     public Vector4F Anim;
+
+    /// <summary>.x = the pen's floor, in device pixels (0 none); .yzw spare.</summary>
+    public Vector4F Floor;
 }

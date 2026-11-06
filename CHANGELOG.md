@@ -38,7 +38,29 @@ All packages share one version.
 - `adam-auto device-memory`: what device memory the application's graphics resources hold, by kind and the largest
   groups - buffers named by what they hold - written to `logs/device-memory.txt` as well.
 
+- `IDrawingSession.DrawRectangle`, `DrawEllipse` and `DrawRegularPolygon` take a `Placement`: a box, oval or polygon
+  moves and scales with its placement's matrix without being recorded again, fill and outline in one instance of the
+  same batches as one drawn without. The outline scales with the placement and is never thinner on screen than its
+  `Pen.MinimumDeviceThickness`, which every shape batch now holds - solid, gradient, pattern, material and fractal fills
+  alike.
+
+- `InkBrush.MinimumDeviceThickness` and `CanvasArrowBrush.MinimumDeviceThickness`: ink and an arrow never drawn thinner
+  than this many device pixels however small their drawing is scaled - held by the pass, so a placement scaled down
+  later keeps the floor without the ink being recorded again. An arrow's heads grow with its shaft.
+
 ### Changed
+
+- **Breaking:** the camera of an `InfiniteCanvas` is matrices. Every item draws in WORLD units from an origin of its
+  own, through a `CanvasDrawing` its layer hands it, and its layer keeps a placement per item on the camera; a control
+  on the plane is laid out once at its own size and moved by its render transform. A pan or a zoom rewrites those and
+  records nothing - what reaches the GPU is the camera worked out against each thing's origin in double. The frame
+  round a selection rides placements of its own, its grips in screen pixels at any zoom. Outlines, ink, curves, wires
+  and arrows are never thinner than a pixel. A layer is drawn again when the zoom has moved twice as far either way as
+  it was drawn at, which is where a curve is walked and text shaped again for the screen, and the layers hold what is
+  in view and a margin round it, so a step of the wheel does not change what is on them.
+  `ICanvasItem.Render(CanvasDrawing)` replaces `Render(IDrawingSession, InfiniteCanvas)`, and
+  `ICanvasTransformed.Pivot` says what an item is turned about. A tool draws what it is making with
+  `InfiniteCanvas.DrawLoose`, or `DrawingOnGlass` for something that is not an item.
 
 - **Breaking:** a ribbon drop-down's menu being open is `RibbonDropDownButton.IsDropDownOpen`, a property of its own
   that binds two-way and stays false with no menu or while the command cannot be used. `IsChecked` no longer says the
@@ -88,6 +110,9 @@ All packages share one version.
   shows is which control it is.
 
 ### Fixed
+
+- A turned control on a canvas turns about its own middle at any zoom; away from a zoom of one it turned about a point
+  off it and stood beside its frame.
 
 - A `ColorPalette` tells automation which color is selected: a swatch is a selection item
   (`ColorPaletteSwatchAutomationPeer`) that says whether it holds the selected color, is selected by being pressed and

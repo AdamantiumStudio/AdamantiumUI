@@ -8,8 +8,23 @@ using Adamantium.UI.Core.Media;
 namespace Adamantium.UI.Rendering.Payloads;
 
 public class RectanglePayload(Brush brush, Rect destinationRect, CornerRadius cornerRadius, Pen pen)
-    : IEquatable<RectanglePayload>, IRenderCachePolicy
+    : IEquatable<RectanglePayload>, IRenderCachePolicy, IPlacedPayload
 {
+    /// <summary>Where a placed fill sits on top of the element's world; identity for every other draw.</summary>
+    public Matrix4x4F LocalTransform { get; private set; } = Matrix4x4F.Identity;
+
+    /// <summary>The placement the fill moves with, or null.</summary>
+    public Placement Placement { get; private set; }
+
+    public long PlacedVersion { get; private set; }
+
+    void IPlacedPayload.PlaceBy(Placement placement)
+    {
+        Placement = placement;
+        LocalTransform = placement.Matrix;
+        PlacedVersion = placement.Version;
+    }
+
     // The LIVE brush, dereferenced to its immutable snapshot on every read (see Brush.Snapshot). Holding the snapshot
     // itself would pin the appearance the brush had at RECORD time, so an animated brush - which is repainted by re-baking
     // this very payload, not by re-recording the element - would never change on screen.
@@ -86,7 +101,8 @@ public class RectanglePayload(Brush brush, Rect destinationRect, CornerRadius co
         if (ReferenceEquals(this, other)) return true;
         return Equals(Brush, other.Brush) && DestinationRect.Equals(other.DestinationRect) &&
                CornerRadius.Equals(other.CornerRadius) && Equals(Pen, other.Pen) && AntiAlias == other.AntiAlias &&
-               Equals(BorderBrush, other.BorderBrush) && BorderThickness.Equals(other.BorderThickness);
+               Equals(BorderBrush, other.BorderBrush) && BorderThickness.Equals(other.BorderThickness) &&
+               ReferenceEquals(Placement, other.Placement);
     }
 
     public override bool Equals(object obj)
@@ -99,6 +115,7 @@ public class RectanglePayload(Brush brush, Rect destinationRect, CornerRadius co
 
     public override int GetHashCode()
     {
-        return HashCode.Combine(Brush, DestinationRect, CornerRadius, Pen, AntiAlias, BorderBrush, BorderThickness);
+        return HashCode.Combine(Brush, DestinationRect, CornerRadius, Pen, AntiAlias, BorderBrush, BorderThickness,
+            Placement);
     }
 }

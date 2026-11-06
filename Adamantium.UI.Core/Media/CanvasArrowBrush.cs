@@ -38,6 +38,12 @@ public sealed class CanvasArrowBrush : Brush
     public static readonly AdamantiumProperty HeadWidthProperty = AdamantiumProperty.Register(nameof(HeadWidth),
         typeof(double), typeof(CanvasArrowBrush), new PropertyMetadata(0.0, PropertyMetadataOptions.AffectsPaint));
 
+    /// <summary>The least the shaft is drawn thick, in device pixels, however small the drawing is scaled - the heads
+    /// grow with it; 0 for no floor.</summary>
+    public static readonly AdamantiumProperty MinimumDeviceThicknessProperty = AdamantiumProperty.Register(
+        nameof(MinimumDeviceThickness), typeof(double), typeof(CanvasArrowBrush),
+        new PropertyMetadata(0.0, PropertyMetadataOptions.AffectsPaint));
+
     public static readonly AdamantiumProperty ColorProperty = AdamantiumProperty.Register(nameof(Color),
         typeof(Color), typeof(CanvasArrowBrush), new PropertyMetadata(Colors.White, PropertyMetadataOptions.AffectsPaint));
 
@@ -90,6 +96,12 @@ public sealed class CanvasArrowBrush : Brush
         set => SetValue(HeadWidthProperty, value);
     }
 
+    public double MinimumDeviceThickness
+    {
+        get => GetValue<double>(MinimumDeviceThicknessProperty);
+        set => SetValue(MinimumDeviceThicknessProperty, value);
+    }
+
     public Color Color
     {
         get => GetValue<Color>(ColorProperty);
@@ -111,6 +123,7 @@ public sealed class CanvasArrowBrush : Brush
         EndHead = EndHead,
         HeadLength = HeadLength,
         HeadWidth = HeadWidth,
+        MinimumDeviceThickness = MinimumDeviceThickness,
         Color = Color,
         Revision = Revision,
         Opacity = Opacity

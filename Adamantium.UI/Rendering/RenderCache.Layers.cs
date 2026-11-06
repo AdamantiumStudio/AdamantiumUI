@@ -6,6 +6,7 @@ using Adamantium.Mathematics;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Graphics;
 using Adamantium.UI.Core.Media;
+using Adamantium.UI.Rendering.Payloads;
 using Adamantium.UI.Rendering.RenderUnits;
 using Adamantium.Vulkan.Core;
 
@@ -734,6 +735,9 @@ public partial class RenderCache
         return -1;
     }
 
+    private Rect Placed(IPlacedPayload payload, Rect box) =>
+        payload.Placement is { } placement ? box.TransformToAABB(payload.LocalTransform * Newest(placement)) : box;
+
     private Rect LocalInk(IRenderUnit unit, Size<double> size, bool bands = true)
     {
         var ink = new Rect(0, 0, size.Width, size.Height);
@@ -741,15 +745,15 @@ public partial class RenderCache
         switch (unit)
         {
             case RectangleRenderUnit { Payload: { } rectangle }:
-                ink = Union(ink, rectangle.DestinationRect);
+                ink = Union(ink, Placed(rectangle, rectangle.DestinationRect));
                 pen = rectangle.Pen?.Thickness ?? 0;
                 break;
             case EllipseRenderUnit { Payload: { } ellipse }:
-                ink = Union(ink, ellipse.DestinationRect);
+                ink = Union(ink, Placed(ellipse, ellipse.DestinationRect));
                 pen = (ellipse.Pen?.Thickness ?? 0) / 2;
                 break;
             case RegularPolygonRenderUnit { Payload: { } polygon }:
-                ink = Union(ink, polygon.DestinationRect);
+                ink = Union(ink, Placed(polygon, polygon.DestinationRect));
                 pen = MiterReach * (polygon.Pen?.Thickness ?? 0);
                 break;
             case ImageRenderUnit { Payload: { } image }:

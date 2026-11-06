@@ -5,6 +5,7 @@ using Adamantium.Graphics.Core;
 using Adamantium.Graphics.Fonts;
 using Adamantium.Imaging;
 using Adamantium.Mathematics;
+using Adamantium.ProceduralGeometry;
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Core.Media.Animation;
 using Adamantium.Vulkan.Core;
@@ -32,6 +33,8 @@ public class PlacementRenderTests
         public Pen Pen;
         public Brush Fill = Brushes.White;
         public bool Placed = true;
+        public Shaped Shape = Shaped.Geometry;
+        public double Side = 16;
 
         protected override void OnRender(IDrawingContext context)
         {
@@ -40,17 +43,38 @@ public class PlacementRenderTests
             var session = context.ForControl(this);
             foreach (var placement in Placements)
             {
-                var square = new RectangleGeometry(new Rect(0, 0, 16, 16));
-                if (Placed)
+                var box = new Rect(0, 0, Side, Side);
+                if (!Placed)
                 {
-                    session.DrawGeometry(Fill, square, Pen, placement);
+                    session.DrawGeometry(Fill, new RectangleGeometry(box), Pen);
+                    continue;
                 }
-                else
+
+                switch (Shape)
                 {
-                    session.DrawGeometry(Fill, square, Pen);
+                    case Shaped.Rectangle:
+                        session.DrawRectangle(Fill, box, CornerRadius.Empty, Pen, placement);
+                        break;
+                    case Shaped.Ellipse:
+                        session.DrawEllipse(box, Fill, Pen, placement);
+                        break;
+                    case Shaped.Polygon:
+                        session.DrawRegularPolygon(Fill, box, 4, 45, Pen, placement);
+                        break;
+                    default:
+                        session.DrawGeometry(Fill, new RectangleGeometry(box), Pen, placement);
+                        break;
                 }
             }
         }
+    }
+
+    public enum Shaped
+    {
+        Geometry,
+        Rectangle,
+        Ellipse,
+        Polygon
     }
 
     private sealed class PlacedText : MeasurableUIComponent
@@ -186,6 +210,79 @@ public class PlacementRenderTests
             Assert.That(after.Count, Is.EqualTo(before.Count).Within(4), "the same square, only moved");
             Assert.That(_shapes.Renders, Is.EqualTo(renders), "a move is not a record");
             Assert.That(_renderer.Cache.LastFrameReplayed, Is.True, "a move is a replay, not a walk");
+        });
+    }
+
+    // A FILLED SHAPE of the batches - box, oval, polygon - moves and scales by its placement just as a geometry does.
+    [TestCase(Shaped.Rectangle)]
+    [TestCase(Shaped.Ellipse)]
+    [TestCase(Shaped.Polygon)]
+    public void APlacedFill_MovesAndScales_WithoutDrawingTheElementAgain(Shaped shape)
+    {
+        _shapes.Shape = shape;
+        var placement = new Placement { Matrix = At(10, 10) };
+        _shapes.Placements.Add(placement);
+        var before = Draw();
+        var renders = _shapes.Renders;
+
+        placement.Matrix = At(70, 40);
+        var moved = Draw();
+        var replayed = _renderer.Cache.LastFrameReplayed;
+
+        placement.Matrix = Matrix4x4.CreateScale<float>(2, 2, 1) * At(70, 40);
+        var scaled = Draw();
+        var rendersAfter = _shapes.Renders;
+
+        // The same shape DRAWN at twice the size, unscaled: what the scaled placement must look like.
+        _shapes.Side = 32;
+        placement.Matrix = At(70, 40);
+        _shapes.InvalidateRender(false);
+        var drawnLarge = Draw();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(before.Count, Is.GreaterThan(0), "the fill is drawn");
+            Assert.That(moved.Left - before.Left, Is.EqualTo(60).Within(1), "the fill follows the placement");
+            Assert.That(moved.Top - before.Top, Is.EqualTo(30).Within(1));
+            Assert.That(moved.Count, Is.EqualTo(before.Count).Within(4), "the same shape, only moved");
+            Assert.That(replayed, Is.True, "a move is a replay, not a walk");
+            Assert.That(scaled, Is.EqualTo(drawnLarge), "scaled by its placement it is the shape drawn that size");
+            Assert.That(rendersAfter, Is.EqualTo(renders), "neither move is a record");
+        });
+    }
+
+    // ...WITH ITS OUTLINE: the pen is in the drawing's units, so it widens with the placement - and its floor holds it at
+    // a pixel when the placement shrinks it below one, without the shape being drawn again.
+    [TestCase(Shaped.Rectangle)]
+    [TestCase(Shaped.Ellipse)]
+    [TestCase(Shaped.Polygon)]
+    public void APlacedOutline_ScalesWithItsPlacement_AndKeepsItsFloor(Shaped shape)
+    {
+        _shapes.Shape = shape;
+        _shapes.Fill = null;
+        _shapes.Side = 32;
+        var placement = new Placement { Matrix = At(8, 8) };
+        _shapes.Placements.Add(placement);
+
+        _shapes.Pen = new Pen(Brushes.White, 2);
+        var near = Draw().Count;
+        placement.Matrix = Matrix4x4.CreateScale<float>(2, 2, 1) * At(8, 8);
+        var far = Draw().Count;
+
+        _shapes.Pen = new Pen(Brushes.White, 0.05) { MinimumDeviceThickness = 1 };
+        _shapes.InvalidateRender(false);
+        placement.Matrix = At(8, 8);
+        Draw();
+        var renders = _shapes.Renders;
+        placement.Matrix = Matrix4x4.CreateScale<float>(0.5f, 0.5f, 1) * At(8, 8);
+        var floored = Draw().Count;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(near, Is.GreaterThan(0), "the outline is drawn");
+            Assert.That((double)far / near, Is.InRange(3.0, 5.0), "twice as long and twice as wide");
+            Assert.That(floored, Is.GreaterThan(4 * 16 / 2), "a fortieth of a pixel was held at one");
+            Assert.That(_shapes.Renders, Is.EqualTo(renders), "a move is not a record");
         });
     }
 

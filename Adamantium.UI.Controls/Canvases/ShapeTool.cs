@@ -110,7 +110,7 @@ public class ShapeTool : ICanvasTool
         e.Handled = true;
     }
 
-    public void Render(IDrawingSession session, InfiniteCanvas canvas) => _making?.Render(session, canvas);
+    public void Render(IDrawingSession session, InfiniteCanvas canvas) => canvas.DrawLoose(session, _making);
 
     public void Cancel(InfiniteCanvas canvas)
     {

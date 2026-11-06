@@ -365,9 +365,11 @@ public class ElementItem : AdamantiumViewModel, ICanvasItem, ICanvasTransformed
 
     /// <summary>Nothing: a control draws ITSELF, from its own template, as a child of the canvas. Everything else on the
     /// plane is data and has to be painted here; this one is the case that is not.</summary>
-    public void Render(IDrawingSession session, InfiniteCanvas canvas)
+    public void Render(CanvasDrawing drawing)
     {
     }
+
+    public Vector2<double> Pivot => Middle;
 
     /// <summary>One tile's rectangle as a fraction of what it paints, exposed per side since a Rect cannot be bound a side
     /// at a time; zero without a picture.</summary>

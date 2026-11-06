@@ -43,7 +43,7 @@ internal sealed class GradientEllipseCollector : BrushSdfCollector<GradientRectI
         EnsureCpuCapacity(Count + 1);
         if (Count + 1 > GpuCapacity) return false;
         if (!BakeItem(p, world, opacity, transformSlot, fadeSlot, out var item)) return false;
-        item.Clip = new Vector4F(clipSlot, 0, 0, 0);
+        item.Clip.X = clipSlot;
         Items[Count++] = item;
         MarkPending(scissor, logicalBounds);
         return true;
@@ -65,7 +65,7 @@ internal sealed class GradientEllipseCollector : BrushSdfCollector<GradientRectI
         if (unit is not RenderUnits.EllipseRenderUnit u || !CanBatch(u.EllipsePayload)) return false;
         if (!BakeItem(u.EllipsePayload, world, u.FillOpacity, transformSlot, unit.FadeSlot, out var item)) return false;
 
-        item.Clip = new Vector4F(clipSlot, 0, 0, 0);   // the same stamp TryAdd makes - see BatchArena.TryStage
+        item.Clip.X = clipSlot;   // the same stamp TryAdd makes - see BatchArena.TryStage
         Stage.Add(item);
         return true;
     }

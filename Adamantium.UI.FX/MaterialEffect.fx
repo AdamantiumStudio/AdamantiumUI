@@ -27,7 +27,7 @@ struct MaterialRectData
     float4 StrokeColor;  // the pen, in the slots CompositeFillStroke expects
     float4 Stroke0;      // .x width (LOGICAL units - scaled by Scale below), .y alignment
     float4 Stroke1;      // dash offset / trim / flags: this batch bakes only whole solid pens, so they stay at default
-    float4 Clip;         // .x = the ROUNDED CLIP's slot, or -1; .yzw spare
+    float4 Clip;         // .x = the ROUNDED CLIP's slot, or -1; .y = the pen's floor in device px (0 none); .zw spare
     float4 Surface;      // SURFACES: .rgb what it is made of (cloth color / metal F0), .a grain scale in device px
     float4 Response;     // SURFACES: .rgb what it answers light with (sheen color / environment), .a roughness
     float4 Light;        // SURFACES: .x grain direction (rad), .y light angle (rad), .z elevation, .w the WOOD's figure
@@ -477,7 +477,7 @@ MaterialPSInput MaterialRectInstancedVS(uint vertexId : SV_VertexID, uint instan
     // The quad has to hold the PEN as well as the fill: a stroke aligned outward leaves the bounds by half its width,
     // and a quad grown by one pixel simply cuts it off - most visibly at the corners, where the stroke stands furthest
     // from the rectangular border. Same expansion the gradient and pattern passes use.
-    float widthPx = it.Stroke0.x * iso;
+    float widthPx = FloorWidthPx(it.Stroke0.x * iso, it.Clip.y);
     float outsetPx = max(widthPx * (0.5 * (1.0 + it.Stroke0.y) + 0.5), 0.0) + 1.0;
     float2 localPos = it.Bounds.xy + corner * it.Bounds.zw + (corner * 2.0 - 1.0) * (outsetPx / px);
     float4 worldPos = mul(float4(localPos, 0.0, 1.0), nodeWorld);

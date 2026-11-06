@@ -198,6 +198,73 @@ public class DrawingContext : IDrawingContext, IDrawingContextInternal, IDrawing
       }
    }
 
+   IDrawingSession IDrawingSession.DrawRectangle(Brush brush, Rect destinationRect, CornerRadius corners, Pen pen,
+      Placement placement)
+   {
+      if (placement == null) return ((IDrawingSession)this).DrawRectangle(brush, destinationRect, corners, pen);
+      if (!brush.IsVisible() && pen == null) return this;
+
+      BeginPlaced(placement);
+      try
+      {
+         CreateCommand(new RectanglePayload(brush, destinationRect, corners, pen)
+         {
+            AntiAlias = _currentComponent?.UseAnalyticAA ?? true
+         });
+      }
+      finally
+      {
+         _placing = null;
+      }
+
+      return this;
+   }
+
+   IDrawingSession IDrawingSession.DrawEllipse(Rect destinationRect, Brush brush, Pen pen, Placement placement)
+   {
+      if (placement == null)
+      {
+         return ((IDrawingSession)this).DrawEllipse(destinationRect, brush, 0, 360, EllipseType.Sector, pen);
+      }
+
+      if (!brush.IsVisible() && pen == null) return this;
+
+      BeginPlaced(placement);
+      try
+      {
+         CreateCommand(new EllipsePayload(brush, destinationRect, 0, 360, EllipseType.Sector, pen));
+      }
+      finally
+      {
+         _placing = null;
+      }
+
+      return this;
+   }
+
+   IDrawingSession IDrawingSession.DrawRegularPolygon(Brush brush, Rect destinationRect, int corners, double startAngle,
+      Pen pen, Placement placement)
+   {
+      if (placement == null)
+      {
+         return ((IDrawingSession)this).DrawRegularPolygon(brush, destinationRect, corners, pen, 0, startAngle);
+      }
+
+      if (!brush.IsVisible() && pen == null) return this;
+
+      BeginPlaced(placement);
+      try
+      {
+         CreateCommand(new RegularPolygonPayload(brush, destinationRect, corners, pen) { StartAngle = startAngle });
+      }
+      finally
+      {
+         _placing = null;
+      }
+
+      return this;
+   }
+
    private void BeginPlaced(Placement placement)
    {
       placement.DrawnBy(_currentComponent);

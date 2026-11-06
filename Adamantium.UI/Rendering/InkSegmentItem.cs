@@ -4,26 +4,28 @@ using Adamantium.Mathematics;
 namespace Adamantium.UI.Rendering;
 
 /// <summary>
-/// One record of ink (see InkEffect.fx, pass Segments). Two kinds share the shape: a HEADER, one per stroke, which is
-/// the only one that draws - its fragments decide how far they are from the whole polyline at once - and a POINT, one
-/// per point of that stroke, written straight after its header and read by the header's fragment shader.
+/// One record of ink (see InkEffect.fx): one per point of a stroke, each drawing its own segment's box. A fragment keeps
+/// a pixel only when its segment is the nearest of the whole polyline, so overlaps blend once.
 /// </summary>
 [StructLayout(LayoutKind.Sequential)]
 public struct InkSegmentItem
 {
-    /// <summary>HEADER: .xy the stroke's low corner, .zw its high corner. POINT: .xy the point - all node-local.</summary>
+    /// <summary>.xy the point, .zw the next one - node-local.</summary>
     public Vector4F Segment;
 
-    /// <summary>.x the wider half width of the record's two ends, in node-local units - what its quad has to reach; .y
-    /// transform slot; .z opacity slot, or -1; .w 1 on a header, 0 on a
-    /// point - which is how the vertex shader knows which records draw.</summary>
+    /// <summary>.x the wider half width of the segment's two ends, in node-local units - what its quad has to reach; .y
+    /// transform slot; .z opacity slot, or -1; .w which segment this is, counted from one, or 0 for a record that draws
+    /// nothing.</summary>
     public Vector4F Params;
 
-    /// <summary>HEADER: .x the ancestor's rounded-clip slot, or -1; .y how many points; .z how far past this record the
-    /// first of them is - RELATIVE, because the draw bases the buffer at the run it flushes. Every record: .w the half
-    /// width at its own point, in node-local units.</summary>
+    /// <summary>.x the ancestor's rounded-clip slot, or -1; .y how many points; .z how far back the first of them is -
+    /// RELATIVE, because the draw bases the buffer at the run it flushes; .w the half width at this point, in node-local
+    /// units.</summary>
     public Vector4F Clip;
 
     /// <summary>Straight RGBA, opacity folded into the alpha.</summary>
     public Vector4F Color;
+
+    /// <summary>.x the least half width, in device pixels, whatever the node's scale; 0 for none.</summary>
+    public Vector4F Floor;
 }

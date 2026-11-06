@@ -60,7 +60,8 @@ internal sealed class RegularPolygonCollector : ShapeSdfCollector<PolygonItem>
         EnsureCpuCapacity(Count + 1);
         if (Count + 1 > GpuCapacity) return false;
         if (!BakeItem(p, world, opacity, transformSlot, out var item)) return false;   // rotation/shear -> per-unit
-        item.Clip = new Vector4F(clipSlot, fadeSlot, 0, 0);
+        item.Clip.X = clipSlot;
+        item.Clip.Y = fadeSlot;
         Items[Count++] = item;
         MarkPending(scissor, logicalBounds);
         return true;
@@ -90,8 +91,8 @@ internal sealed class RegularPolygonCollector : ShapeSdfCollector<PolygonItem>
             Dash = dash,
             // -1, never 0, for BOTH slots (.x clip, .y opacity): zero is a valid slot belonging to somebody else, so a
             // record that forgot to stamp its own would be cut by a stranger's shape or faded by a stranger's alpha.
-            // The stampers are TryAdd, TryStage and the patch.
-            Clip = new Vector4F(-1, -1, 0, 0)
+            // The stampers are TryAdd, TryStage and the patch. .z the pen's floor, in device pixels.
+            Clip = new Vector4F(-1, -1, RectBatchCollector.FloorOf(p.Pen), 0)
         };
         return true;
     }

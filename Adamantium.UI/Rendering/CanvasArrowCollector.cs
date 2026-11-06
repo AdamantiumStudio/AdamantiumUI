@@ -58,7 +58,7 @@ internal sealed class CanvasArrowCollector : SdfBatchCollector<CanvasArrowItem>
         if (Count + 1 > GpuCapacity) return false;
         if (!BakeItem(p, world, opacity, transformSlot, fadeSlot, out var item)) return false;
 
-        item.Clip = new Vector4F(clipSlot, 0, 0, 0);
+        item.Clip.X = clipSlot;
         Items[Count++] = item;
         MarkPending(scissor, logicalBounds);
         return true;
@@ -96,8 +96,9 @@ internal sealed class CanvasArrowCollector : SdfBatchCollector<CanvasArrowItem>
 
         item.Color = Straight(arrow.Color, (float)(opacity * arrow.Opacity));
 
-        // -1, never 0: zero is a valid clip slot belonging to somebody else. Stamped by TryAdd/TryStage.
-        item.Clip = new Vector4F(-1, 0, 0, 0);
+        // -1, never 0: zero is a valid clip slot belonging to somebody else. Stamped by TryAdd/TryStage. .y the floor,
+        // in device pixels: the shader turns it into local units, since only it knows the scale a placement shows.
+        item.Clip = new Vector4F(-1, (float)(Math.Max(arrow.MinimumDeviceThickness, 0) * 0.5), 0, 0);
         return true;
     }
 
@@ -107,7 +108,7 @@ internal sealed class CanvasArrowCollector : SdfBatchCollector<CanvasArrowItem>
         if (unit is not RenderUnits.RectangleRenderUnit u || !CanBatch(u.RectPayload)) return false;
         if (!BakeItem(u.RectPayload, world, u.FillOpacity, transformSlot, unit.FadeSlot, out var item)) return false;
 
-        item.Clip = new Vector4F(clipSlot, 0, 0, 0);
+        item.Clip.X = clipSlot;
         Stage.Add(item);
         return true;
     }

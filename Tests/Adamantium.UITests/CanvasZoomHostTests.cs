@@ -72,10 +72,11 @@ public class CanvasZoomHostTests
         Lay(canvas);
 
         var corner = canvas.WorldToScreen(new Vector2<double>(item.World.X, item.World.Y));
+        var placed = ((IUIComponent)control).RenderTransform;
         Assert.Multiple(() =>
         {
-            Assert.That(control.Bounds.X, Is.EqualTo(corner.X).Within(0.5));
-            Assert.That(control.Bounds.Y, Is.EqualTo(corner.Y).Within(0.5));
+            Assert.That(placed?.TranslateX ?? 0, Is.EqualTo(corner.X).Within(0.5));
+            Assert.That(placed?.TranslateY ?? 0, Is.EqualTo(corner.Y).Within(0.5));
         });
     }
 
@@ -95,10 +96,12 @@ public class CanvasZoomHostTests
         var corner = canvas.WorldToScreen(new Vector2<double>(item.World.X, item.World.Y));
         var turn = ((IUIComponent)control).RenderTransform;
 
+        // WHERE it stands is its transform's, like how big it is: it is laid out once, at its own size, and the camera
+        // moves the finished control.
         Assert.Multiple(() =>
         {
-            Assert.That(control.Bounds.X, Is.EqualTo(corner.X).Within(0.5), "it is not where its frame is drawn");
-            Assert.That(control.Bounds.Y, Is.EqualTo(corner.Y).Within(0.5), "it is not where its frame is drawn");
+            Assert.That(turn?.TranslateX ?? 0, Is.EqualTo(corner.X).Within(0.5), "it is not where its frame is drawn");
+            Assert.That(turn?.TranslateY ?? 0, Is.EqualTo(corner.Y).Within(0.5), "it is not where its frame is drawn");
 
             // Measured in WORLD units and scaled by the camera: what is seen is the two multiplied, and that is what
             // has to match the frame.
@@ -106,6 +109,41 @@ public class CanvasZoomHostTests
             Assert.That(control.RenderSize.Height, Is.EqualTo(item.World.Height).Within(0.5), "it was laid out at the wrong size");
             Assert.That(turn?.ScaleX ?? 1, Is.EqualTo(scale).Within(0.001), "the camera's scale did not reach it");
             Assert.That(turn?.ScaleY ?? 1, Is.EqualTo(scale).Within(0.001), "the camera's scale did not reach it");
+        });
+    }
+
+    // A TURNED CONTROL TURNS ABOUT ITS OWN MIDDLE at any zoom: its middle is where its frame's middle is drawn, and its
+    // corner is the frame's corner turned about it.
+    [TestCase(1.0)]
+    [TestCase(2.0)]
+    [TestCase(0.5)]
+    public void ATurnedControlTurnsAboutItsMiddleAtAnyZoom(double scale)
+    {
+        var (canvas, item, control) = Stage();
+        item.Transform = new CanvasTransform(90);
+        ((CanvasScene)canvas.Scene).Touch();
+
+        canvas.Scale = scale;
+        canvas.Offset = new Vector2<double>(400, 300);
+        Lay(canvas);
+
+        var matrix = ((IUIComponent)control).RenderTransform.Matrix;
+        Vector2<double> Through(double x, double y) =>
+            new(x * matrix.M11 + y * matrix.M21 + matrix.M41, x * matrix.M12 + y * matrix.M22 + matrix.M42);
+
+        var world = item.World;
+        var middle = canvas.WorldToScreen(new Vector2<double>(world.X + world.Width / 2, world.Y + world.Height / 2));
+        var corner = item.Transform.Apply(canvas.WorldToScreen(new Vector2<double>(world.X, world.Y)), middle);
+
+        var shownMiddle = Through(world.Width / 2, world.Height / 2);
+        var shownCorner = Through(0, 0);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(shownMiddle.X, Is.EqualTo(middle.X).Within(0.5), "it turned about somewhere else");
+            Assert.That(shownMiddle.Y, Is.EqualTo(middle.Y).Within(0.5), "it turned about somewhere else");
+            Assert.That(shownCorner.X, Is.EqualTo(corner.X).Within(0.5), "its corner is not the frame's");
+            Assert.That(shownCorner.Y, Is.EqualTo(corner.Y).Within(0.5), "its corner is not the frame's");
         });
     }
 

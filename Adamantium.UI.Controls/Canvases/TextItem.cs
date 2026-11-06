@@ -149,21 +149,30 @@ public partial class TextItem : AdamantiumViewModel, ICanvasItem
                world.Y >= box.Y - tolerance && world.Y <= box.Y + box.Height + tolerance;
     }
 
-    public void Render(IDrawingSession session, InfiniteCanvas canvas)
+    public void Render(CanvasDrawing drawing)
     {
-        if (canvas == null || string.IsNullOrEmpty(Text) || Brush is not SolidColorBrush solid) return;
+        if (string.IsNullOrEmpty(Text) || Brush is not SolidColorBrush solid) return;
 
-        // Shaped at the size it will be DRAWN at - see the note at the top. Below a pixel there is nothing to read, and
-        // shaping it would be work thrown away.
-        var onScreen = FontSize * canvas.Scale;
+        // Shaped at the size it is on screen as it is DRAWN - see the note at the top - and scaled back to its size on
+        // the plane by its placement, so it is pixel for pixel now and rides the camera after. Below a pixel there is
+        // nothing to read, and shaping it would be work thrown away.
+        var scale = drawing.Canvas.Scale;
+        var onScreen = FontSize * scale;
         if (onScreen < 1) return;
 
         var size = ShapeForDrawing(onScreen);
         if (size.Width <= 0 || size.Height <= 0) return;
 
-        var at = canvas.WorldToScreen(Origin);
+        // On a WHOLE pixel as it is drawn, which is where shaped text reads sharp: the camera moves it by whole pixels
+        // after, the way a hand drags it, and keeps it there.
+        var screen = drawing.Canvas.WorldToScreen(Origin);
+        var snap = new Vector2<double>(Math.Round(screen.X) - screen.X, Math.Round(screen.Y) - screen.Y);
+        var at = drawing.Local(Origin) + snap * (1 / scale);
+        var back = (float)(1 / scale);
+        var placement = drawing.PartWith(Matrix4x4.CreateScale<float>(back, back, 1)
+                                         * Matrix4x4.CreateTranslation<float>((float)at.X, (float)at.Y, 0));
 
-        session.DrawText(
+        drawing.Session.DrawText(
             new TextRenderingParameters
             {
                 HorizontalTextAlignment = HorizontalTextAlignment.Left,
@@ -171,9 +180,9 @@ public partial class TextItem : AdamantiumViewModel, ICanvasItem
                 TextTrimming = TextTrimming.None,
                 TextWrapping = TextWrapping.NoWrap,
                 Color = solid.Color,
-                TextArea = new Rectangle<int>(new Vector2F((float)at.X, (float)at.Y).As<int>(), size.As<int>())
+                TextArea = new Rectangle<int>(new Vector2F().As<int>(), size.As<int>())
             },
-            size, _draw, Brush, Brushes.Transparent, Brushes.Transparent);
+            size, _draw, Brush, Brushes.Transparent, Brushes.Transparent, placement);
     }
 
     // Shaped once at a size the text stack can answer for, then scaled: a layout answers in whole pixels and never in

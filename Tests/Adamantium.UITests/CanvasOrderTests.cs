@@ -566,7 +566,7 @@ public class CanvasOrderTests
 
         var glass = new Rendering.RecordingDrawingSession();
 
-        canvas.DrawChrome(glass);
+        canvas.DrawChrome(glass, new CanvasPlacements());
 
         Assert.That(glass.Rectangles, Is.Not.Empty, "the band round several things drew no box");
     }

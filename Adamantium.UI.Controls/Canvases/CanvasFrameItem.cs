@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Adamantium.Core;
 using Adamantium.MVVM;
 using Adamantium.Mathematics;
+using Adamantium.ProceduralGeometry;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Graphics;
 using Adamantium.UI.Core.Media;
@@ -129,16 +130,14 @@ public partial class CanvasFrameItem : AdamantiumViewModel, ICanvasItem
         World = world;
     }
 
-    public void Render(IDrawingSession session, InfiniteCanvas canvas)
+    public void Render(CanvasDrawing drawing)
     {
-        if (canvas == null || World.Width <= 0 || World.Height <= 0) return;
+        if (World.Width <= 0 || World.Height <= 0) return;
 
-        var topLeft = canvas.WorldToScreen(new Vector2<double>(World.X, World.Y));
-        var bottomRight = canvas.WorldToScreen(new Vector2<double>(World.X + World.Width, World.Y + World.Height));
-        var box = new Rect(topLeft.X, topLeft.Y, bottomRight.X - topLeft.X, bottomRight.Y - topLeft.Y);
+        var session = drawing.Session;
+        var box = drawing.Local(World);
 
-        var width = Thickness > 0 ? Math.Max(Thickness * canvas.Scale, 1.0) : 0;
-        session.DrawRectangle(Fill, box, width > 0 ? PenFor(width) : null);
+        session.DrawRectangle(Fill, box, CornerRadius.Empty, Thickness > 0 ? PenFor(Thickness) : null, drawing.Placement);
 
         if (string.IsNullOrEmpty(Title)) return;
 
@@ -153,7 +152,7 @@ public partial class CanvasFrameItem : AdamantiumViewModel, ICanvasItem
         // Inset from the corner, so it never sits on the outline.
         var inset = Thickness + 2;
         _label.Origin = new Vector2<double>(World.X + inset, World.Y + inset);
-        _label.Render(session, canvas);
+        _label.Render(drawing);
     }
 
     private TextItem _label;
@@ -165,7 +164,7 @@ public partial class CanvasFrameItem : AdamantiumViewModel, ICanvasItem
 
         _penBrush = Stroke;
         _penWidth = width;
-        _pen = new Pen(Stroke, width);
+        _pen = new Pen(Stroke, width) { MinimumDeviceThickness = CanvasDrawing.Hairline };
 
         return _pen;
     }

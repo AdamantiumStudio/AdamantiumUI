@@ -131,10 +131,10 @@ public class PenTool : ICanvasTool
 
     public void Render(IDrawingSession session, InfiniteCanvas canvas)
     {
-        _drawing?.Render(session, canvas);
+        canvas.DrawLoose(session, _drawing);
         foreach (var drawing in _freehand.Values)
         {
-            drawing.Stroke.Render(session, canvas);
+            canvas.DrawLoose(session, drawing.Stroke);
         }
     }
 

@@ -1,5 +1,5 @@
 // INK - each stroke's coverage is decided against its whole polyline, so translucent ink blends once without darkened
-// joints. One buffer: a header record per stroke followed by its point records.
+// joints. One buffer: a record per point of each stroke, each drawing its own segment's box.
 
 #include "Includes/CommonData.fxh"
 #include "Includes/ClipMath.fxh"
@@ -19,6 +19,8 @@ struct InkRecord
     // Every record: .w the half width at its point (node-local).
     float4 Clip;
     float4 Color;     // straight RGBA, opacity folded into the alpha
+    // .x the least half width in DEVICE pixels, whatever the node's scale; 0 for none.
+    float4 Floor;
 };
 
 struct InkPSInput
@@ -58,8 +60,10 @@ InkPSInput InkSegmentVS(uint vertexId : SV_VertexID, uint instanceId : SV_Instan
     float2 px = SlotPixelScale(nodeWorld);
     float iso = min(px.x, px.y);
 
-    // This record's segment box, grown by the radius plus one device pixel so the antialiased edge is not clipped.
-    float grow = it.Params.x + 1.0 / max(iso, 1e-6);
+    // This record's segment box, grown by the radius plus one device pixel so the antialiased edge is not clipped. The
+    // radius is never less than the floor, which is in device pixels and so in local units only once the scale is known.
+    float reach = max(it.Params.x, it.Floor.x / max(iso, 1e-6));
+    float grow = reach + 1.0 / max(iso, 1e-6);
     float2 low = min(it.Segment.xy, it.Segment.zw) - grow;
     float2 high = max(it.Segment.xy, it.Segment.zw) + grow;
 
@@ -69,7 +73,7 @@ InkPSInput InkSegmentVS(uint vertexId : SV_VertexID, uint instanceId : SV_Instan
     o.Position = mul(mul(float4(localPos, 0.0, 1.0), nodeWorld), Projection);
 
     o.Local   = localPos;
-    o.Shape   = float2(it.Params.x, iso);
+    o.Shape   = float2(reach, iso);
     o.InstId  = instanceId;
 
     int fadeSlot = int(it.Params.z);
@@ -134,7 +138,8 @@ float4 InkSegmentPS(InkPSInput i) : SV_Target
     NodeSlot* nodes = Transforms;
     float2 at = PixelToLocal(i.Position.xy, i.Local, nodes[(uint)it.Params.y].World);
     float2 previous = items[first].Segment.xy;
-    float previousHalf = items[first].Clip.w;
+    float floorHalf = items[first].Floor.x / max(i.Shape.y, 1e-6);
+    float previousHalf = max(items[first].Clip.w, floorHalf);
 
     // A stroke of one point is a dot: the loop below does not execute and the distance is to that point alone.
     if (count == 1u) nearest = length(at - previous) - previousHalf;
@@ -142,7 +147,7 @@ float4 InkSegmentPS(InkPSInput i) : SV_Target
     for (uint s = 1u; s < count; s++)
     {
         float2 current = items[first + s].Segment.xy;
-        float currentHalf = items[first + s].Clip.w;
+        float currentHalf = max(items[first + s].Clip.w, floorHalf);
         float away = DistanceToSegment(at, previous, current, previousHalf, currentHalf);
 
         // STRICTLY nearer, so a tie goes to the earlier segment. Every segment's fragment measures from the same

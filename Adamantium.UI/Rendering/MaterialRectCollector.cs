@@ -437,7 +437,8 @@ internal sealed class MaterialRectCollector : SdfBatchCollector<MaterialRectItem
             StrokeColor = strokeColor,
             Stroke0 = stroke0,
             Stroke1 = stroke1,
-            Clip = new Vector4F(clipSlot, 0, 0, 0),   // the rounded ancestor clip, -1 = none
+            // .x the rounded ancestor clip, -1 = none; .y the pen's floor, in device pixels.
+            Clip = new Vector4F(clipSlot, RectBatchCollector.FloorOf(pen), 0, 0),
             Surface = SurfaceOf(material),
             Response = ResponseOf(material),
             Light = LightOf(material)

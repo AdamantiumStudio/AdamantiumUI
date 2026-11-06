@@ -97,7 +97,7 @@ public class CanvasArrangeTests
         public bool IsPlaced => false;
         public CanvasHandles Handles => CanvasHandles.None;
         public bool HitTest(Vector2<double> world, double tolerance) => false;
-        public void Render(Adamantium.UI.Core.Graphics.IDrawingSession session, InfiniteCanvas canvas) { }
+        public void Render(CanvasDrawing drawing) { }
 
         public int Moves { get; private set; }
 

@@ -92,7 +92,7 @@ public class CurveTool : ICanvasTool
         // The curve so far PLUS where the pointer is: without that last point the line stops at the last click and the
         // hand is drawing blind. HANDED to the item rather than added to it - drawing runs on its own thread, and a
         // tool that added a point, drew and took it off again raced every click.
-        _making?.Render(session, canvas, _pointer);
+        if (_making != null && canvas.DrawingOnGlass(session, _making) is { } drawing) _making.Render(drawing, _pointer);
     }
 
     public void Cancel(InfiniteCanvas canvas)
