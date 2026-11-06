@@ -89,6 +89,10 @@ All packages share one version.
 
 ### Fixed
 
+- A `ColorPalette` tells automation which color is selected: a swatch is a selection item
+  (`ColorPaletteSwatchAutomationPeer`) that says whether it holds the selected color, is selected by being pressed and
+  announces becoming so - a screen reader could not tell which color was picked, nor a scenario check it.
+
 - `CanvasGraphSerializer` writes a graph's comment frames and reads them back - their title, place, colors, outline and
   title strip - behind the nodes. Loading a graph took the frames off the plane, and saving never wrote them. The file
   is version 2; a reader of 1 refuses it rather than drop its frames.
