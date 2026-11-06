@@ -173,8 +173,24 @@ public static class AnimationManager
             {
                 RenderDirty.MarkGeometry(dirtyTarget);
             }
-            if (animation.Advance(deltaSeconds))
+            if (Advance(animation, deltaSeconds))
                 Remove(animation);
+        }
+    }
+
+    // One that throws is stopped, with what it composites, and its error logged; the others go on. Kept on, it would throw
+    // again on every tick and stop each frame there.
+    private static bool Advance(IRunningAnimation animation, double deltaSeconds)
+    {
+        try
+        {
+            return animation.Advance(deltaSeconds);
+        }
+        catch (Exception fault)
+        {
+            (animation as RunningKeyFrameAnimation)?.ReleaseComposited();
+            Serilog.Log.Logger.Error(fault, "An animation or ticker threw and was stopped: {Animation}", animation);
+            return true;
         }
     }
 
@@ -372,5 +388,7 @@ public static class AnimationManager
         public bool AnimatesTarget(AdamantiumComponent target) => false;
         public IUIComponent DirtyTarget => null;
         public bool IsEndless { get; }
+
+        public override string ToString() => $"ticker {_advance.Method.DeclaringType?.FullName}.{_advance.Method.Name}";
     }
 }
