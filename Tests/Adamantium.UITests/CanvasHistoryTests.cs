@@ -60,6 +60,24 @@ public class CanvasHistoryTests
             "back where it was, not on top");
     }
 
+    // A step is about the whole drawing, so a thing however far out on the plane is in it.
+    [Test]
+    public void AThingAtTheFarEdgeOfThePlaneIsInAStep()
+    {
+        var scene = new CanvasScene();
+        var far = Box(double.MaxValue / 2, 0);
+        var near = Box(0, 0);
+        scene.Add(far);
+        scene.Add(near);
+
+        var canvas = Sized(scene);
+        canvas.Select(near, false);
+        canvas.DeleteSelection();
+        canvas.Undo();
+
+        Assert.That(scene.Items, Is.EqualTo(new ICanvasItem[] { far, near }));
+    }
+
     [Test]
     public void RedoPutsItBackAgain()
     {

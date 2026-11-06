@@ -187,7 +187,7 @@ public class ConnectionItem : AdamantiumViewModel, ICanvasItem
     {
         if (scene == null || pin == null) return null;
 
-        foreach (var item in scene.ItemsIn(Everywhere))
+        foreach (var item in scene.Items)
         {
             if (item is ConnectionItem wire && wire.Holds(pin)) return wire;
         }
@@ -201,7 +201,7 @@ public class ConnectionItem : AdamantiumViewModel, ICanvasItem
         if (scene == null || pin == null) return 0;
 
         var count = 0;
-        foreach (var item in scene.ItemsIn(Everywhere))
+        foreach (var item in scene.Items)
         {
             if (item is ConnectionItem wire && wire.Holds(pin)) count++;
         }
@@ -238,11 +238,6 @@ public class ConnectionItem : AdamantiumViewModel, ICanvasItem
 
         pin.IsConnected = scene != null && Into(scene, pin) != null;
     }
-
-    // The whole plane. The scene answers by region and a wire may be anywhere - including off screen, which is exactly
-    // where the far end of the one being cut usually is.
-    private static Rect Everywhere =>
-        new(Double.MinValue / 4, Double.MinValue / 4, Double.MaxValue / 2, Double.MaxValue / 2);
 
     internal static void Bend(Vector2<double> from, Vector2<double> to, out Vector2<double> first, out Vector2<double> second)
     {

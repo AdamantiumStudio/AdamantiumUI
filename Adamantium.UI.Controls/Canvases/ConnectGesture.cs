@@ -247,7 +247,7 @@ public class ConnectGesture
             var at = queue.Dequeue();
             if (ReferenceEquals(at, to)) return true;
 
-            foreach (var item in scene.ItemsIn(Everywhere))
+            foreach (var item in scene.Items)
             {
                 if (item is not ConnectionItem wire || !ReferenceEquals(wire.FromItem, at)) continue;
                 if (wire.ToItem != null && seen.Add(wire.ToItem)) queue.Enqueue(wire.ToItem);
@@ -256,9 +256,6 @@ public class ConnectGesture
 
         return false;
     }
-
-    private static Rect Everywhere =>
-        new(Double.MinValue / 4, Double.MinValue / 4, Double.MaxValue / 2, Double.MaxValue / 2);
 
     // WHICH socket a world point is on, and the node carrying it. The item's box is where the node was arranged, so a
     // world point becomes a node point once the box's corner is taken off it.

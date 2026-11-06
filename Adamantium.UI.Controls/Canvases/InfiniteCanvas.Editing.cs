@@ -277,7 +277,7 @@ public partial class InfiniteCanvas
     {
         if (Scene is not { } scene) return;
 
-        foreach (var item in scene.ItemsIn(Everything))
+        foreach (var item in scene.Items)
         {
             if (item is not ElementItem { Element: CanvasNode node }) continue;
 
@@ -290,16 +290,7 @@ public partial class InfiniteCanvas
     // not point at what is gone.
     private void Reselect()
     {
-        var alive = new HashSet<ICanvasItem>(Scene.ItemsIn(Everything));
-        var kept = new List<ICanvasItem>();
-
-        foreach (var item in _selection)
-        {
-            if (alive.Contains(item)) kept.Add(item);
-        }
-
-        if (kept.Count != _selection.Count) SelectMany(kept, false);
-
+        Forget();
         Repaint();
     }
 
@@ -326,7 +317,7 @@ public partial class InfiniteCanvas
         // In PAINT order, taken from the scene rather than from the selection: what was selected first is not what is
         // drawn first, and a group that reordered its own contents would change the drawing by being made.
         var ordered = new List<ICanvasItem>();
-        foreach (var item in Scene.ItemsIn(Everything))
+        foreach (var item in Scene.Items)
         {
             if (_selection.Contains(item)) ordered.Add(item);
         }
@@ -378,11 +369,6 @@ public partial class InfiniteCanvas
         SelectMany(kept, false);
         return true;
     }
-
-    // Everything there is. The scene answers by VISIBLE region, and grouping is about what is selected wherever it
-    // happens to be - including the part of it that is off screen.
-    private static Rect Everything =>
-        new(Double.MinValue / 4, Double.MinValue / 4, Double.MaxValue / 2, Double.MaxValue / 2);
 
     /// <summary>Raised before anything is taken out, so the application can ask first. See
     /// <see cref="CanvasDeleteRequestedEventArgs"/> for what answering means.</summary>
@@ -452,8 +438,7 @@ public partial class InfiniteCanvas
     {
         if (Scene is not { } scene) return false;
 
-        var many = 0;
-        foreach (var _ in scene.ItemsIn(Everything)) many++;
+        var many = scene.Items.Count;
 
         if (many == 0) return false;
 
@@ -633,7 +618,7 @@ public partial class InfiniteCanvas
         into ??= _clipboardWires;
         if (Scene == null) return;
 
-        foreach (var item in Scene.ItemsIn(Everything))
+        foreach (var item in Scene.Items)
         {
             if (item is not ConnectionItem wire) continue;
 
@@ -934,7 +919,7 @@ public partial class InfiniteCanvas
         if (node == null || Scene == null) return;
 
         var wires = new List<ConnectionItem>();
-        foreach (var item in Scene.ItemsIn(Everything))
+        foreach (var item in Scene.Items)
         {
             if (item is ConnectionItem wire && wire.Holds(node)) wires.Add(wire);
         }
@@ -945,7 +930,7 @@ public partial class InfiniteCanvas
     private void RemoveFromGroups(ICanvasItem item)
     {
         // Taken as a LIST first: emptying a group removes it from the store this is walking.
-        var tops = new List<ICanvasItem>(Scene.ItemsIn(Everything));
+        var tops = new List<ICanvasItem>(Scene.Items);
 
         foreach (var top in tops)
         {

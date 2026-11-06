@@ -1,6 +1,9 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Text.Json;
 using Adamantium.Core.Collections;
+using Adamantium.UI.Core;
+using Adamantium.UI.Core.Media;
 using Adamantium.UI.Sandbox.Canvases.ViewModels;
 using Adamantium.UI.Controls;
 using Adamantium.UI.Controls.Canvases;
@@ -13,7 +16,8 @@ namespace Adamantium.UI.Sandbox.Canvases.Models;
 /// written under its kind, which is also what says how to read it back.</para></summary>
 public static class GraphFile
 {
-    private const int Version = 3;
+    private const int Version = 4;
+    private const int WithoutFrames = 3;
 
     private sealed class Saved
     {
@@ -26,6 +30,21 @@ public static class GraphFile
 
         public List<SavedNode> Nodes { get; set; } = new();
         public List<SavedWire> Wires { get; set; } = new();
+        public List<SavedFrame> Frames { get; set; } = new();
+    }
+
+    private sealed class SavedFrame
+    {
+        public string Title { get; set; } = string.Empty;
+        public double Left { get; set; }
+        public double Top { get; set; }
+        public double Width { get; set; }
+        public double Height { get; set; }
+        public bool Outlined { get; set; } = true;
+        public int[] Stroke { get; set; }
+        public int[] Fill { get; set; }
+        public double? Thickness { get; set; }
+        public double? TitleHeight { get; set; }
     }
 
     private sealed class SavedNode
@@ -64,8 +83,8 @@ public static class GraphFile
 
     /// <summary>Writes the graph out. The nodes FIRST and numbered, because a wire can only be written once both its
     /// ends have names. The wires are found by walking the outputs - each one is met exactly once, from the end it
-    /// leaves.</summary>
-    public static string Write(IReadOnlyList<ICanvasNode> nodes, GraphNodeSet set)
+    /// leaves. The comment frames are the scene's, written in paint order.</summary>
+    public static string Write(IReadOnlyList<ICanvasNode> nodes, CanvasScene scene, GraphNodeSet set)
     {
         var saved = new Saved { Version = Version, Set = set?.Name ?? string.Empty };
         var numbers = new Dictionary<ICanvasNode, int>();
@@ -96,13 +115,23 @@ public static class GraphFile
             }
         }
 
+        if (scene != null)
+        {
+            foreach (var item in scene.Items)
+            {
+                if (item is CanvasFrameItem frame) saved.Frames.Add(Describe(frame));
+            }
+        }
+
         return JsonSerializer.Serialize(saved, new JsonSerializerOptions { WriteIndented = true });
     }
 
-    /// <summary>Reads one back with the given catalog, replacing what is there. Says what stopped it and changes
+    /// <summary>Reads one back with the given catalog, replacing what is there - the nodes, and the comment frames in the
+    /// scene; a frame written in the accent comes back in <paramref name="accent"/>. Says what stopped it and changes
     /// nothing when it cannot: text this version does not understand, or a graph made with another set of kinds.
     /// </summary>
-    public static string Read(string text, TrackingCollection<ICanvasNode> nodes, GraphNodeSet set)
+    public static string Read(string text, TrackingCollection<ICanvasNode> nodes, CanvasScene scene, GraphNodeSet set,
+        Brush accent)
     {
         Saved saved;
         try
@@ -114,7 +143,10 @@ public static class GraphFile
             return "that file is not a graph this version can read";
         }
 
-        if (saved == null || saved.Version != Version) return "that file is not a graph this version can read";
+        if (saved == null || (saved.Version != Version && saved.Version != WithoutFrames))
+        {
+            return "that file is not a graph this version can read";
+        }
 
         // THE WRONG CATALOG is not a broken file, and saying so is the difference between "this needs the shading
         // nodes" and a plane of nodes that are blank for no visible reason.
@@ -122,6 +154,9 @@ public static class GraphFile
         {
             return $"that graph is made of {saved.Set} nodes, and this page is holding {set.Name}";
         }
+
+        // Everything is checked BEFORE anything is let go of, so a broken entry leaves the graph as it was.
+        if (!Whole(saved)) return "that file is not a graph this version can read";
 
         nodes.Clear();
 
@@ -176,8 +211,119 @@ public static class GraphFile
             _ = new CanvasConnection(from, to);
         }
 
+        if (scene != null) Frame(saved.Frames, scene, accent);
+
         return null;
     }
+
+    private static void Frame(List<SavedFrame> written, CanvasScene scene, Brush accent)
+    {
+        for (var i = scene.Items.Count - 1; i >= 0; i--)
+        {
+            if (scene.Items[i] is CanvasFrameItem old) scene.Remove(old);
+        }
+
+        var made = new List<CanvasFrameItem>(written.Count);
+
+        foreach (var entry in written)
+        {
+            if (entry.Width <= 0 || entry.Height <= 0) continue;
+
+            var stroke = !entry.Outlined
+                ? null
+                : Paint(entry.Stroke) is { } line
+                    ? new SolidColorBrush(line)
+                    : accent?.Copy();
+            var fill = Paint(entry.Fill) is { } wash ? new SolidColorBrush(wash) : null;
+
+            var frame = new CanvasFrameItem(new Rect(entry.Left, entry.Top, entry.Width, entry.Height), entry.Title,
+                stroke, fill);
+            frame.Thickness = Math.Max(0, entry.Thickness ?? frame.Thickness);
+            frame.TitleHeight = Math.Clamp(entry.TitleHeight ?? frame.TitleHeight, 0, entry.Height);
+
+            made.Add(frame);
+            scene.Add(frame);
+        }
+
+        for (var i = made.Count - 1; i >= 0; i--) scene.SendToBack(made[i]);
+    }
+
+    private static bool Whole(Saved saved)
+    {
+        saved.Frames ??= [];
+
+        if (saved.Nodes == null || saved.Wires == null) return false;
+
+        foreach (var node in saved.Nodes)
+        {
+            if (node == null || node.In == null || node.Out == null) return false;
+            if (!Finite(node.Left, node.Top, node.Width) || !Channels(node.Accent)) return false;
+
+            foreach (var socket in node.In)
+            {
+                if (socket == null) return false;
+            }
+
+            foreach (var socket in node.Out)
+            {
+                if (socket == null) return false;
+            }
+        }
+
+        foreach (var wire in saved.Wires)
+        {
+            if (wire == null) return false;
+        }
+
+        foreach (var frame in saved.Frames)
+        {
+            if (frame == null || !Channels(frame.Stroke) || !Channels(frame.Fill)) return false;
+            if (!Finite(frame.Left, frame.Top, frame.Width, frame.Height)) return false;
+            if (!Finite(frame.Thickness ?? 0, frame.TitleHeight ?? 0)) return false;
+        }
+
+        return true;
+    }
+
+    private static bool Finite(params double[] values)
+    {
+        foreach (var value in values)
+        {
+            if (!double.IsFinite(value)) return false;
+        }
+
+        return true;
+    }
+
+    private static bool Channels(int[] written)
+    {
+        if (written == null) return true;
+        if (written.Length != 4) return false;
+
+        foreach (var channel in written)
+        {
+            if (channel is < byte.MinValue or > byte.MaxValue) return false;
+        }
+
+        return true;
+    }
+
+    private static SavedFrame Describe(CanvasFrameItem frame) => new()
+    {
+        Title = frame.Title ?? string.Empty,
+        Left = frame.World.X,
+        Top = frame.World.Y,
+        Width = frame.World.Width,
+        Height = frame.World.Height,
+        Outlined = frame.Stroke != null,
+        Stroke = Rgba(frame.Stroke),
+        Fill = Rgba(frame.Fill),
+        Thickness = frame.Thickness,
+        TitleHeight = frame.TitleHeight
+    };
+
+    private static int[] Rgba(Brush brush) =>
+        brush is SolidColorBrush { Color: var c } ? [c.R, c.G, c.B, c.A] : null;
 
     private static SavedNode Describe(ICanvasNode node)
     {

@@ -1193,14 +1193,7 @@ public partial class InfiniteCanvas : Control, ISceneFollower
 
     // Anything AT ALL on the plane, of either mode: emptying it is not about the mode in hand, and a bin that switched
     // itself off over a plane full of the other mode's work would be saying the plane is empty when it is not.
-    private bool Anything()
-    {
-        if (Scene is not { } scene) return false;
-
-        foreach (var _ in scene.ItemsIn(Everything)) return true;
-
-        return false;
-    }
+    private bool Anything() => Scene is { Items.Count: > 0 };
 
     // BACK TO FRONT when raising and front to back when lowering, so a selection of several keeps its own order instead
     // of being reversed by each item leapfrogging the last.
@@ -1551,7 +1544,7 @@ public partial class InfiniteCanvas : Control, ISceneFollower
 
         var there = new HashSet<ICanvasItem>();
 
-        foreach (var item in scene.ItemsIn(Everything)) Gather(item, there);
+        foreach (var item in scene.Items) Gather(item, there);
 
         var gone = false;
 

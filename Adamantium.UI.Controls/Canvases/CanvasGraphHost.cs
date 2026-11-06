@@ -615,10 +615,8 @@ internal sealed class CanvasGraphHost
     {
         if (_scene == null) return;
 
-        var all = new Rect(double.MinValue / 4, double.MinValue / 4, double.MaxValue / 2, double.MaxValue / 2);
-
         var drawn = new HashSet<ConnectionItem>();
-        foreach (var item in _scene.ItemsIn(all))
+        foreach (var item in _scene.Items)
         {
             if (item is ConnectionItem wire) drawn.Add(wire);
         }

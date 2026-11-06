@@ -308,7 +308,7 @@ public partial class NodeGraphViewModel : CanvasPageViewModel
 
         try
         {
-            System.IO.File.WriteAllText(path, Models.GraphFile.Write(Nodes, NodeSet));
+            System.IO.File.WriteAllText(path, Models.GraphFile.Write(Nodes, Scene, NodeSet));
             GraphPath = path;
             GraphStatus = $"saved to {path}";
         }
@@ -342,8 +342,15 @@ public partial class NodeGraphViewModel : CanvasPageViewModel
             }
 
             GraphPath = path;
-            GraphStatus = Models.GraphFile.Read(System.IO.File.ReadAllText(path), Nodes, NodeSet)
-                          ?? $"loaded from {path}";
+
+            var refused = Models.GraphFile.Read(System.IO.File.ReadAllText(path), Nodes, Scene, NodeSet,
+                graph.SelectionBrush);
+
+            // A loaded graph starts its own history: a step taken back past the load would bring back the old graph's
+            // frames and the items of nodes that are no longer there.
+            if (refused == null) History.Clear();
+
+            GraphStatus = refused ?? $"loaded from {path}";
 
             graph.FitAll();
         }
