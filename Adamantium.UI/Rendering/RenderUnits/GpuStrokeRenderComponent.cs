@@ -529,10 +529,6 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
     // Device pixels per geometry-local unit, the least over the stroke under a perspective.
     private float DeviceScale() => WindowScale() * (float)RenderData.RenderScale;
 
-    // Window pixels per geometry-local unit a width in pixels is measured in: under a perspective, the plane's own at the
-    // depth of the screen (w = 1), the same for every unit drawn on that plane - so a leaned map's line is one width on
-    // the ground that the perspective narrows into the distance, rather than each tile measuring by its own far corner
-    // and the line stepping at every tile's edge.
     private float PixelWidthScale()
     {
         var t = RenderData.TransformMatrix;
@@ -542,7 +538,7 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
         return plane > 1e-4f ? plane : WindowScale();
     }
 
-    // Window (layout) pixels per geometry-local unit.
+    // Window (layout) units per geometry-local unit.
     private float WindowScale()
     {
         var t = RenderData.TransformMatrix;
@@ -555,7 +551,7 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
     private float HalfThickness()
     {
         var thickness = _pen.Thickness;
-        if (_pen.ThicknessUnit == PenThicknessUnit.Pixels)
+        if (_pen.ThicknessUnit == PenThicknessUnit.Window)
         {
             var pixelScale = PixelWidthScale();
             if (pixelScale > 1e-4f) thickness /= pixelScale;
@@ -757,7 +753,7 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
         record.PatternCount = PatternCountValue;
         record.Flags = (c.IsClosed ? StrokeRecord.Closed : 0u) | (c.Batched ? StrokeRecord.BatchedContours : 0u) |
                        (HasRuns ? StrokeRecord.HasRuns : 0u) |
-                       (_pen.ThicknessUnit == PenThicknessUnit.Pixels ? StrokeRecord.PixelThickness : 0u);
+                       (_pen.ThicknessUnit == PenThicknessUnit.Window ? StrokeRecord.WindowThickness : 0u);
         record.Caps = MapCap(_pen.StartLineCap) | MapCap(_pen.EndLineCap) << 4 | MapCap(_pen.DashStartCap) << 8 |
                       MapCap(_pen.DashEndCap) << 12;
         record.RoundSegments = c.RoundSegments;

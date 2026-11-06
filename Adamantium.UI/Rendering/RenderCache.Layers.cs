@@ -803,7 +803,7 @@ public partial class RenderCache
         var scale = System.Math.Sqrt(System.Math.Abs(toWindow.M11 * toWindow.M22 - toWindow.M12 * toWindow.M21));
         if (scale > 1e-4)
         {
-            if (pen.ThicknessUnit == PenThicknessUnit.Pixels) thickness /= scale;
+            if (pen.ThicknessUnit == PenThicknessUnit.Window) thickness /= scale;
             thickness = System.Math.Max(thickness, pen.MinimumDeviceThickness / (scale * _renderScale));
         }
 

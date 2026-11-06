@@ -353,7 +353,7 @@ public class PlacementRenderTests
     [Test]
     public void APenInPixels_StaysAsWideUnderAZoom()
     {
-        var pen = new Pen(Brushes.White, 2) { ThicknessUnit = PenThicknessUnit.Pixels };
+        var pen = new Pen(Brushes.White, 2) { ThicknessUnit = PenThicknessUnit.Window };
         var near = OutlineAt(1, pen);
         var far = OutlineAt(4, pen);
 
@@ -556,7 +556,7 @@ public class PlacementRenderTests
     {
         _shapes.Fill = null;
         _shapes.Pen = new Pen(Brushes.White, 2, dashStrokeArray: [6, 2], startLineCap: PenLineCap.ConvexRound)
-            { ThicknessUnit = PenThicknessUnit.Pixels };
+            { ThicknessUnit = PenThicknessUnit.Window };
         var placement = new Placement { Matrix = At(8, 8) };
         _shapes.Placements.Add(placement);
         var near = Draw().Count;

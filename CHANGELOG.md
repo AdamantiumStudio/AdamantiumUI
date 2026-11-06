@@ -23,9 +23,9 @@ All packages share one version.
   `DrawText` take one in new overloads; writing `Placement.Matrix` moves what was drawn with it by rewriting one matrix
   on the GPU - the element is not recorded again. A camera over many objects gives each object its own placement.
 
-- `Pen.ThicknessUnit`: a stroke of geometry can be as wide in the window's pixels under any scale and on any monitor -
-  a road on a zoomed map - and `Pen.MinimumDeviceThickness` keeps a line scaled far down at least that many pixels
-  wide. Dash lengths stay in local units; the batched outlines of rounded rectangles, ellipses and regular polygons take
+- `Pen.ThicknessUnit`: a stroke of geometry can be as wide in the window's units (`PenThicknessUnit.Window`, as layout
+  counts them, the same on any monitor) under any zoom - a road on a zoomed map - and `Pen.MinimumDeviceThickness` keeps
+  a line scaled far down at least that many of the monitor's own pixels wide. Dash lengths stay in local units; the batched outlines of rounded rectangles, ellipses and regular polygons take
   the thickness in local units.
 
 - A stroke can be painted with any brush: gradients (conic and mesh too), `PatternBrush`, `NoiseBrush` (animated as
@@ -119,7 +119,8 @@ All packages share one version.
 
 ### Fixed
 
-- A pen whose width is in pixels, drawn on a plane under a perspective - a leaned map's roads - is one width on the
+- A pen whose width is in the window's units (`PenThicknessUnit.Window`, named `Pixels` before - it never was the
+  monitor's pixels), drawn on a plane under a perspective - a leaned map's roads - is one width on the
   plane, measured at the depth of the screen, which the perspective narrows into the distance. Each draw measured by
   its own farthest corner, so a road was wide in the tile nearest the eye and stepped thinner at every tile's edge.
 
