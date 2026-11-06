@@ -53,7 +53,9 @@ All packages share one version.
   `IsCheckable`, a command that has said whether it is on, or checked - and then on every row, so its labels start on
   one line and none moves as a check comes or goes on a row that says it can be checked (`MenuItem.ShowsCheckColumn`).
   The icon column is kept the same way, while one of the rows has an icon (`MenuItem.ShowsIconColumn`): a menu with no
-  icon has no empty column. A row in no menu keeps the columns it needs. In every theme.
+  icon has no empty column. A row in no menu keeps the columns it needs. In every theme. The check mark is the theme's
+  icon `MenuCheckIcon`, drawn in the row's color (`CurrentColor`) - grayed on a row that cannot be used, the on-accent
+  color on a lit row - rather than a shape of each template's own.
 
 - `RenderDirty.IsNodeMoved` and `RenderDirty.IsGeometryDirty` replace `MovedNodes` and `Geometry`, which handed out the
   live sets while other threads marked them. Every set of the dirty marks is locked by a lock of its own, not by the
