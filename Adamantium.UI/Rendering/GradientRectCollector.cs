@@ -47,7 +47,7 @@ internal sealed class GradientRectCollector : BrushSdfCollector<GradientRectItem
         EnsureCpuCapacity(Count + 1);
         if (Count + 1 > GpuCapacity) return false;
         if (!BakeItem(p, world, opacity, transformSlot, fadeSlot, out var item)) return false;
-        item.Clip = new Vector4F(clipSlot, 0, 0, 0);
+        item.Clip.X = clipSlot;
         Items[Count++] = item;
         MarkPending(scissor, logicalBounds);
         return true;
@@ -82,7 +82,7 @@ internal sealed class GradientRectCollector : BrushSdfCollector<GradientRectItem
         EnsureCpuCapacity(Count + 1);
         if (Count + 1 > GpuCapacity) return false;
         if (!BakePolygonItem(p, world, opacity, transformSlot, fadeSlot, out var item)) return false;
-        item.Clip = new Vector4F(clipSlot, 0, 0, 0);
+        item.Clip.X = clipSlot;
         Items[Count++] = item;
         MarkPending(scissor, logicalBounds);
         return true;
@@ -138,8 +138,9 @@ internal sealed class GradientRectCollector : BrushSdfCollector<GradientRectItem
         // unpacks it.
         item.Params = new Vector4F(shape.RadiusFlag(rectRadii), type, count,
             (float)g.SpreadMethod + 8f * (float)g.ColorInterpolationMode + 16f * (fadeSlot + 1));
-        // -1, never 0: zero is a valid clip slot belonging to somebody else. Stamped by TryAdd/TryStage/the patch.
-        item.Clip = new Vector4F(-1, 0, 0, 0);
+        // -1, never 0: zero is a valid clip slot belonging to somebody else. Stamped by TryAdd/TryStage/the patch. .y the
+        // pen's floor, in device pixels.
+        item.Clip = new Vector4F(-1, RectBatchCollector.FloorOf(pen), 0, 0);
         return true;
     }
 
@@ -150,7 +151,7 @@ internal sealed class GradientRectCollector : BrushSdfCollector<GradientRectItem
         if (unit is not RenderUnits.RectangleRenderUnit u || !CanBatch(u.RectPayload)) return false;
         if (!BakeItem(u.RectPayload, world, u.FillOpacity, transformSlot, unit.FadeSlot, out var item)) return false;
 
-        item.Clip = new Vector4F(clipSlot, 0, 0, 0);   // the same stamp TryAdd makes - see BatchArena.TryStage
+        item.Clip.X = clipSlot;   // the same stamp TryAdd makes - see BatchArena.TryStage
         Stage.Add(item);
         return true;
     }

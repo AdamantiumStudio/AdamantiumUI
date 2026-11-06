@@ -1624,22 +1624,24 @@ public partial class InfiniteCanvas : Control, ISceneFollower
             canvas.KeepTheMiddle(e.OldValue as Double? ?? 0);
         }
 
-        // The controls on the plane MOVE with the camera, and moving them is an arrange: what is inside one was measured
-        // for its own rectangle, which the camera does not change. A zoom changes that rectangle, so it measures again.
+        // What comes into view and what leaves it - the only part of a camera move that changes what is on the layers.
         canvas.SyncElements();
-        canvas.Hosts(host =>
-        {
-            host.InvalidateArrange();
-            if (e.Property == ScaleProperty) host.InvalidateMeasure();
-        });
+
+        // ...and the rest is MATRICES. A control on the plane is moved by its render transform, a drawn thing by its
+        // placement: nothing is laid out again, nothing is drawn again, and what reaches the GPU is the camera worked
+        // out against each thing's own origin in double.
+        canvas.Hosts(host => host.Place());
+        canvas.Drawn(layer => layer.Place());
 
         // A pane that FOLLOWS THE SELECTION is placed from where the frame is on screen, and the camera is half of that
         // sum - so moving the camera has to re-place it just as it re-places the controls. Without this the bar kept
-        // the pixels it had when the selection was made and slid off the frame at the first turn of the wheel: the
-        // frame is drawn every render, the panes only when something arranges them.
+        // the pixels it had when the selection was made and slid off the frame at the first turn of the wheel.
         canvas._chromeLayer?.InvalidateArrange();
 
-        canvas.Repaint();
+        // The ground is one quad whose shader is handed the camera, and the glass is what the hand is doing - both are
+        // drawn again, and both are small.
+        canvas.InvalidateRender(false);
+        canvas._front?.InvalidateRender(false);
     }
 
     private static void OnDesignModeChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)

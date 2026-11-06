@@ -329,8 +329,8 @@ internal sealed class FractalRectCollector : BrushSdfCollector<FractalRectItem>
             Dash = dash,
             // .x the rounded ancestor clip, .y the opacity slot its alpha comes from (-1 = none for either). Until the
             // slot was read here a faded ancestor reached a fractal only through a full re-bake, so it lagged behind
-            // every neighbor on the Opacity stand until something forced a walk.
-            Clip = new Vector4F(clipSlot, fadeSlot, 0, 0)
+            // every neighbor on the Opacity stand until something forced a walk. .z the pen's floor, in device pixels.
+            Clip = new Vector4F(clipSlot, fadeSlot, RectBatchCollector.FloorOf(p.Pen), 0)
         };
         return true;
     }

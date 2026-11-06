@@ -10,7 +10,11 @@ namespace Adamantium.UI.Controls.Canvases;
 /// one paint order. Draw-only; picking is the canvas's own walk.</summary>
 public class CanvasDrawLayer : MeasurableUIComponent
 {
+    private const double RedrawZoom = 2;
+
     private readonly List<ICanvasItem> _items = new();
+    private readonly CanvasPlacements _places = new();
+    private double _drawnAt;
 
     /// <summary>The canvas whose items this draws. Written by the canvas when it makes the layer.</summary>
     public InfiniteCanvas Owner { get; set; }
@@ -40,6 +44,26 @@ public class CanvasDrawLayer : MeasurableUIComponent
     /// dragged. The list is the same objects, so <see cref="Sync"/> would do nothing.</summary>
     public void Repaint() => InvalidateRender(false);
 
+    /// <summary>Follows the camera: every item's placement is put where the camera shows it now, and nothing is drawn
+    /// again - unless the zoom has moved twice as far either way from the one the items were drawn at, where what was
+    /// worked out for the screen (a curve's steps, text's shaping) is drawn again for the screen as it is.</summary>
+    public void Place()
+    {
+        if (Owner == null) return;
+
+        var ratio = _drawnAt > 0 ? Owner.Scale / _drawnAt : 0;
+        if (ratio is >= RedrawZoom or <= 1 / RedrawZoom)
+        {
+            InvalidateRender(false);
+            return;
+        }
+
+        _places.Place(Owner);
+    }
+
+    /// <summary>How many things this layer keeps placements for - each one a slot the camera rewrites.</summary>
+    internal int Placed => _places.Count;
+
     private bool Same(List<ICanvasItem> items)
     {
         if (items.Count != _items.Count) return false;
@@ -64,21 +88,29 @@ public class CanvasDrawLayer : MeasurableUIComponent
     {
         base.OnRender(context);
 
-        if (Owner == null || _items.Count == 0) return;
+        if (Owner == null || _items.Count == 0)
+        {
+            _places.Clear();
+            return;
+        }
 
         var session = context.ForControl(this);
+        _places.Start();
+        _drawnAt = Owner.Scale;
 
         // THE FRAME STANDS WHERE ITS OBJECT STANDS. Drawn over everything, it said nothing about where the thing it is
         // round actually is - and where a thing is in the order is the one question a person moving it is asking. So
         // the canvas is asked at each step whether the frame belongs HERE: before this run, when what is held is a
         // control in the run below, and straight after the item itself otherwise.
-        if (Owner.ChromeGoesBefore(_items[0])) Owner.DrawChrome(session);
+        if (Owner.ChromeGoesBefore(_items[0])) Owner.DrawChrome(session, _places);
 
         foreach (var item in _items)
         {
-            item.Render(session, Owner);
+            item.Render(_places.For(session, Owner, item));
 
-            if (Owner.ChromeGoesAfter(item)) Owner.DrawChrome(session);
+            if (Owner.ChromeGoesAfter(item)) Owner.DrawChrome(session, _places);
         }
+
+        _places.End();
     }
 }

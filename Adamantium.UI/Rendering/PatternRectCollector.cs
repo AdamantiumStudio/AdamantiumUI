@@ -269,7 +269,8 @@ internal sealed class PatternRectCollector : BrushSdfCollector<PatternRectItem>
             // above instead (see `alpha`), so the number sits here for whoever wires the slot up.
             // .w = the ROUNDED CLIP's slot, -1 for none, and this one IS read - in the vertex stage, by both pattern
             // carriers. Anim's spare components rather than fields of their own: the record has no room for either.
-            Anim = new Vector4F((float)brushRecord.PhaseOffset, (float)brushRecord.FrozenPhase, fadeSlot, clipSlot)
+            Anim = new Vector4F((float)brushRecord.PhaseOffset, (float)brushRecord.FrozenPhase, fadeSlot, clipSlot),
+            Floor = new Vector4F(RectBatchCollector.FloorOf(pen), 0, 0, 0)
         };
         return true;
     }

@@ -41,6 +41,21 @@ public interface IDrawingSession
     /// <summary>Draws the geometry where <paramref name="placement"/> puts it. Rewriting the placement's matrix later
     /// moves the drawing without recording it again - a camera over many objects, each with its own placement.</summary>
     IDrawingSession DrawGeometry(Brush brush, Geometry geometry, Pen pen, Placement placement);
+
+    /// <summary>Draws the rect where <paramref name="placement"/> puts it; moving the placement moves it without recording
+    /// it again. The pen is in the drawing's own units and scales with the placement, never thinner on screen than its
+    /// <see cref="Pen.MinimumDeviceThickness"/>.</summary>
+    IDrawingSession DrawRectangle(Brush brush, Rect destinationRect, CornerRadius corners, Pen pen, Placement placement);
+
+    /// <summary>Draws the ellipse the rect holds where <paramref name="placement"/> puts it - see
+    /// <see cref="DrawRectangle(Brush, Rect, CornerRadius, Pen, Placement)"/>.</summary>
+    IDrawingSession DrawEllipse(Rect destinationRect, Brush brush, Pen pen, Placement placement);
+
+    /// <summary>Draws the regular polygon the rect holds where <paramref name="placement"/> puts it - see
+    /// <see cref="DrawRectangle(Brush, Rect, CornerRadius, Pen, Placement)"/>.</summary>
+    IDrawingSession DrawRegularPolygon(Brush brush, Rect destinationRect, int corners, Double startAngle, Pen pen,
+        Placement placement);
+
     IDrawingSession DrawImage(ImageSource image, Brush filter, Rect destinationRect, CornerRadius corners);
 
     /// <summary>Draws a normalized (0..1) SUB-RECT of the image into <paramref name="destinationRect"/> - a mosaic tile

@@ -1,4 +1,5 @@
 ﻿using System;
+using Adamantium.Mathematics;
 using Adamantium.ProceduralGeometry.Shapes;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Graphics;
@@ -13,8 +14,23 @@ public class EllipsePayload(
     double sweepAngle,
     EllipseType ellipseType,
     Pen pen)
-    : IEquatable<EllipsePayload>, IRenderCachePolicy
+    : IEquatable<EllipsePayload>, IRenderCachePolicy, IPlacedPayload
 {
+    /// <summary>Where a placed fill sits on top of the element's world; identity for every other draw.</summary>
+    public Matrix4x4F LocalTransform { get; private set; } = Matrix4x4F.Identity;
+
+    /// <summary>The placement the fill moves with, or null.</summary>
+    public Placement Placement { get; private set; }
+
+    public long PlacedVersion { get; private set; }
+
+    void IPlacedPayload.PlaceBy(Placement placement)
+    {
+        Placement = placement;
+        LocalTransform = placement.Matrix;
+        PlacedVersion = placement.Version;
+    }
+
     // The LIVE brush, read through its immutable snapshot - see RectanglePayload.
     private readonly Brush _brush = brush?.ForRendering();
 
@@ -54,7 +70,7 @@ public class EllipsePayload(
 
     public override int GetHashCode()
     {
-        return HashCode.Combine(StartAngle, SweepAngle, EllipseType, DestinationRect, Pen, RingThickness);
+        return HashCode.Combine(StartAngle, SweepAngle, EllipseType, DestinationRect, Pen, RingThickness, Placement);
     }
 
     public bool Equals(EllipsePayload other)
@@ -64,7 +80,7 @@ public class EllipsePayload(
         return Equals(DestinationRect, other.DestinationRect) && Equals(Brush, other.Brush) &&
                StartAngle.Equals(other.StartAngle) && SweepAngle.Equals(other.SweepAngle) &&
                EllipseType == other.EllipseType && Equals(Pen, other.Pen) &&
-               RingThickness.Equals(other.RingThickness);
+               RingThickness.Equals(other.RingThickness) && ReferenceEquals(Placement, other.Placement);
     }
 
     public override bool Equals(object obj)

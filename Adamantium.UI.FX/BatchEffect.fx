@@ -209,7 +209,7 @@ struct RectData
     float4 Stroke1;      // dashOffset, trimStart, trimEnd, flags
     float4 Dash;         // dash runs 2..5 (device px); runs 0 and 1 ride in Stroke0.zw, the count in Stroke1.w
     float4 Inset;        // border thickness per side in device px: x left, y top, z right, w bottom (all 0 = no border)
-    float4 Clip;         // .x = the ROUNDED CLIP's slot, or -1; .yzw spare
+    float4 Clip;         // .x = the ROUNDED CLIP's slot, or -1; .y = the pen's floor in device px (0 none); .zw spare
     int OwnerTag;        // CPU bookkeeping (which paint group baked this instance) - never read here, but it is part of
                          // the record, so the layout has to know about it or every instance after the first would be
                          // read from the wrong offset
@@ -232,7 +232,7 @@ PSInput RectBatchInstancedVS(uint vertexId : SV_VertexID, uint instanceId : SV_I
     float2 px = SlotPixelScale(nodeWorld);
     float iso = min(px.x, px.y);   // stroke width / radius / dashes are one number: an anisotropic slot has no exact answer
 
-    float widthPx = item.Stroke0.x * iso;
+    float widthPx = FloorWidthPx(item.Stroke0.x * iso, item.Clip.y);
     float outsetPx = max(widthPx * (0.5 * (1.0 + item.Stroke0.y) + 0.5), 0.0) + 1.0;
     float2 localPos = item.Bounds.xy + corner * item.Bounds.zw + (corner * 2.0 - 1.0) * (outsetPx / px);
     float4 worldPos = mul(float4(localPos, 0.0, 1.0), nodeWorld);
@@ -373,7 +373,8 @@ float4 EllipseBatchPS(EllipsePSInput input) : SV_Target
 struct EllipseData
 {
     float4 Bounds;       // NODE-local x, y, w, h (world for slot-0 legacy bakes - identity matrix)
-    float4 Params;       // .x = transform-table slot; .y = fade slot (-1 = none); .zw reserved (mirrors EllipseItem)
+    float4 Params;       // .x = transform-table slot; .y = fade slot (-1 = none); .z = rounded clip slot; .w = the pen's
+                         // floor in device px (0 none) (mirrors EllipseItem)
     uint8_t4 Color;       // straight RGBA in four bytes
     uint8_t4 StrokeColor; // straight stroke RGBA in four bytes (alpha 0 -> no stroke)
     float4 Stroke0;      // width_px, align, dashOn, dashGap
@@ -397,7 +398,7 @@ EllipsePSInput EllipseBatchInstancedVS(uint vertexId : SV_VertexID, uint instanc
     float2 px = SlotPixelScale(nodeWorld);
     float iso = min(px.x, px.y);
 
-    float widthPx = item.Stroke0.x * iso;
+    float widthPx = FloorWidthPx(item.Stroke0.x * iso, item.Params.w);
     float outsetPx = max(widthPx * (0.5 * (1.0 + item.Stroke0.y) + 0.5), 0.0) + 1.0;
     float2 localPos = item.Bounds.xy + corner * item.Bounds.zw + (corner * 2.0 - 1.0) * (outsetPx / px);
     float4 worldPos = mul(float4(localPos, 0.0, 1.0), nodeWorld);
@@ -433,7 +434,8 @@ struct PolygonData
     float4 Stroke0;      // width_px, align, dashOn, dashGap
     float4 Stroke1;      // dashOffset, trimStart, trimEnd, flags
     float4 Dash;         // dash runs 2..5 (device px)
-    float4 Clip;         // .x = the ROUNDED CLIP's slot, or -1; .y = the OPACITY slot (-1 = opaque); .zw spare
+    float4 Clip;         // .x = the ROUNDED CLIP's slot, or -1; .y = the OPACITY slot (-1 = opaque); .z = the pen's
+                         // floor in device px (0 none); .w spare
 };
 
 struct PolygonPSInput
@@ -464,7 +466,7 @@ PolygonPSInput PolygonBatchInstancedVS(uint vertexId : SV_VertexID, uint instanc
     float2 px = SlotPixelScale(nodeWorld);
     float iso = min(px.x, px.y);
 
-    float widthPx = item.Stroke0.x * iso;
+    float widthPx = FloorWidthPx(item.Stroke0.x * iso, item.Clip.z);
     float outsetPx = max(widthPx * (0.5 * (1.0 + item.Stroke0.y) + 0.5), 0.0) + 1.0;
     float2 localPos = item.Bounds.xy + corner * item.Bounds.zw + (corner * 2.0 - 1.0) * (outsetPx / px);
     float4 worldPos = mul(float4(localPos, 0.0, 1.0), nodeWorld);

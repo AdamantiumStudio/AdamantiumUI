@@ -1,4 +1,5 @@
 using System;
+using Adamantium.Mathematics;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Graphics;
 using Adamantium.UI.Core.Media;
@@ -10,8 +11,23 @@ namespace Adamantium.UI.Rendering.Payloads;
 /// <para>Its own payload rather than a corner count bolted onto the ellipse: they are two shapes, and one of them would
 /// have ended up carrying fields (an angular cut, a chord) that mean nothing to it.</para></summary>
 public class RegularPolygonPayload(Brush brush, Rect destinationRect, int corners, Pen pen)
-    : IEquatable<RegularPolygonPayload>, IRenderCachePolicy
+    : IEquatable<RegularPolygonPayload>, IRenderCachePolicy, IPlacedPayload
 {
+    /// <summary>Where a placed fill sits on top of the element's world; identity for every other draw.</summary>
+    public Matrix4x4F LocalTransform { get; private set; } = Matrix4x4F.Identity;
+
+    /// <summary>The placement the fill moves with, or null.</summary>
+    public Placement Placement { get; private set; }
+
+    public long PlacedVersion { get; private set; }
+
+    void IPlacedPayload.PlaceBy(Placement placement)
+    {
+        Placement = placement;
+        LocalTransform = placement.Matrix;
+        PlacedVersion = placement.Version;
+    }
+
     /// <summary>Fewer than three corners is not a polygon; the shape clamps rather than refuses, the way the tessellator
     /// does (Shapes.Polygon raises anything below three to three).</summary>
     public const int MinCorners = 3;
@@ -48,7 +64,8 @@ public class RegularPolygonPayload(Brush brush, Rect destinationRect, int corner
                RingThickness != payload.RingThickness || StartAngle != payload.StartAngle;
     }
 
-    public override int GetHashCode() => HashCode.Combine(DestinationRect, Corners, Pen, RingThickness, StartAngle);
+    public override int GetHashCode() =>
+        HashCode.Combine(DestinationRect, Corners, Pen, RingThickness, StartAngle, Placement);
 
     public bool Equals(RegularPolygonPayload other)
     {
@@ -56,7 +73,7 @@ public class RegularPolygonPayload(Brush brush, Rect destinationRect, int corner
         if (ReferenceEquals(this, other)) return true;
         return Equals(DestinationRect, other.DestinationRect) && Equals(Brush, other.Brush) &&
                Corners == other.Corners && Equals(Pen, other.Pen) && RingThickness.Equals(other.RingThickness) &&
-               StartAngle.Equals(other.StartAngle);
+               StartAngle.Equals(other.StartAngle) && ReferenceEquals(Placement, other.Placement);
     }
 
     public override bool Equals(object obj)

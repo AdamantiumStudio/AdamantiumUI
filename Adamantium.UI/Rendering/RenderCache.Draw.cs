@@ -2817,7 +2817,7 @@ public partial class RenderCache
                 // The record the WALK writes carries its rounded clip (TryAdd, same line after the same bake). A patch
                 // that leaves it out writes a record the walk would never have written: dragging a shape across a rounded
                 // corner un-rounded the cut under it, and it came back only when something forced a walk.
-                item.Clip = new Vector4F(RoundedClipSlot(u.Component, _frameScissor), 0, 0, 0);
+                item.Clip.X = RoundedClipSlot(u.Component, _frameScissor);
                 _rectBatch.UpdateSlot(device, rectSlot, item);
                 return true;
             }
@@ -2869,7 +2869,7 @@ public partial class RenderCache
             }
 
             if (!GradientRectCollector.BakeItem(rru.RectPayload, bakeWorld, rru.FillOpacity, transformSlot, rru.FadeSlot, out var gradItem)) return false;
-            gradItem.Clip = new Vector4F(rectClip, 0, 0, 0);   // as the walk stamps it
+            gradItem.Clip.X = rectClip;   // as the walk stamps it
             _gradientRectBatch.UpdateSlot(device, rectEntry.Slot, gradItem);
             return true;
         }
@@ -2909,7 +2909,8 @@ public partial class RenderCache
             {
                 case SdfSlotKind.Polygon:
                     if (!RegularPolygonCollector.BakeItem(pru.PolygonPayload, bakeWorld, pru.FillOpacity, transformSlot, out var polyItem)) return false;
-                    polyItem.Clip = new Vector4F(polyClip, pru.FadeSlot, 0, 0);   // both slots, as the walk stamps them
+                    polyItem.Clip.X = polyClip;   // both slots, as the walk stamps them
+                    polyItem.Clip.Y = pru.FadeSlot;
                     _polygonBatch.UpdateSlot(device, poly.Slot, polyItem);
                     return true;
 

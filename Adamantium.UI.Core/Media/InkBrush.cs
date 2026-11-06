@@ -25,6 +25,12 @@ public sealed class InkBrush : Brush
     public static readonly AdamantiumProperty WidthsProperty = AdamantiumProperty.Register(nameof(Widths),
         typeof(float[]), typeof(InkBrush), new PropertyMetadata(null, PropertyMetadataOptions.AffectsPaint));
 
+    /// <summary>The least the ink is drawn wide, in device pixels, however small the drawing is scaled; 0 for no floor.
+    /// What keeps a stroke on a zoomed-out canvas a hairline rather than nothing.</summary>
+    public static readonly AdamantiumProperty MinimumDeviceThicknessProperty = AdamantiumProperty.Register(
+        nameof(MinimumDeviceThickness), typeof(double), typeof(InkBrush),
+        new PropertyMetadata(0.0, PropertyMetadataOptions.AffectsPaint));
+
     public static readonly AdamantiumProperty ColorProperty = AdamantiumProperty.Register(nameof(Color),
         typeof(Color), typeof(InkBrush), new PropertyMetadata(Colors.White, PropertyMetadataOptions.AffectsPaint));
 
@@ -57,6 +63,12 @@ public sealed class InkBrush : Brush
         set => SetValue(WidthsProperty, value);
     }
 
+    public double MinimumDeviceThickness
+    {
+        get => GetValue<double>(MinimumDeviceThicknessProperty);
+        set => SetValue(MinimumDeviceThicknessProperty, value);
+    }
+
     public Color Color
     {
         get => GetValue<Color>(ColorProperty);
@@ -76,6 +88,7 @@ public sealed class InkBrush : Brush
         Count = Count,
         Revision = Revision,
         Thickness = Thickness,
+        MinimumDeviceThickness = MinimumDeviceThickness,
         Color = Color,
         Opacity = Opacity
     };

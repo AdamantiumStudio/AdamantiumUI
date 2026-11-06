@@ -401,6 +401,24 @@ public partial class InfiniteCanvas
         if (_erasing != null) _penEraser.Render(session, this);
     }
 
+    /// <summary>Draws an item that is on no layer - what a tool is making - on the glass, the way a layer would draw it.
+    /// Only while the glass is being drawn, from a tool's <see cref="ICanvasTool.Render"/>.</summary>
+    public void DrawLoose(IDrawingSession session, ICanvasItem item)
+    {
+        if (item != null && DrawingOnGlass(session, item) is { } drawing) item.Render(drawing);
+    }
+
+    /// <summary>The drawing <see cref="DrawLoose"/> hands an item - for a tool that draws it with something more, the
+    /// point under the pointer. Null when the canvas has no glass.</summary>
+    public CanvasDrawing DrawingOnGlass(IDrawingSession session, ICanvasItem item) =>
+        _front?.Places.For(session, this, item);
+
+    /// <summary>A drawing on the glass for something that is not an item - a wire still being pulled - kept under
+    /// <paramref name="key"/> and stated from <paramref name="origin"/>, in world units. Null when the canvas has no
+    /// glass. Only while the glass is being drawn.</summary>
+    public CanvasDrawing DrawingOnGlass(IDrawingSession session, object key, Vector2<double> origin) =>
+        _front?.Places.For(session, this, key, origin, CanvasTransform.None, default);
+
     /// <summary>Whether the frame belongs straight AFTER this item - true for the topmost selected thing that a layer
     /// draws itself. Asked by the layers as they paint.</summary>
     public bool ChromeGoesAfter(ICanvasItem item) => _chromeAfter != null && ReferenceEquals(item, _chromeAfter);
@@ -413,7 +431,17 @@ public partial class InfiniteCanvas
     /// is held is at the very top, or off the screen entirely.</summary>
     public bool ChromeGoesOnGlass => _chromeOnGlass;
 
-    public void DrawChrome(IDrawingSession session) => DrawManipulation(session);
+    /// <summary>Draws the frame round what is selected, with placements kept by <paramref name="places"/>.</summary>
+    internal void DrawChrome(IDrawingSession session, CanvasPlacements places)
+    {
+        // Not while the controls are being USED: nothing on the plane can be edited in that mode, and a frame drawn
+        // there is a handle that does not work.
+        if (!IsDesignMode || SelectionBounds is not { } bounds || SelectionBrush == null) return;
+
+        DrawManipulation(places.For(session, this, _chromeKey, default, CanvasTransform.None, default), bounds);
+    }
+
+    private readonly object _chromeKey = new();
 
     /// <summary>Draws what belongs to the POINTER rather than to the plane - the snap mark it has caught and the plate
     /// saying where it is. Always on the glass: a plate read through the drawing it measures is no plate at all.
@@ -607,47 +635,14 @@ public partial class InfiniteCanvas
     }
 
     // The manipulation frame: one box round everything selected, with eight grips on it. Drawn in SCREEN pixels and
-    // never scaled - a grip that grew with the zoom would be part of the drawing, which is exactly what it is not.
-    private void DrawManipulation(IDrawingSession session)
+    // never scaled - a grip that grew with the zoom would be part of the drawing, which is exactly what it is not. Every
+    // piece rides a placement worked out from the camera, so a pan or a zoom carries the frame without drawing it again.
+    private void DrawManipulation(CanvasDrawing drawing, Rect bounds)
     {
-        // Not while the controls are being USED: nothing on the plane can be edited in that mode, and a frame drawn
-        // there is a handle that does not work.
-        if (!IsDesignMode) return;
-
-        if (SelectionBounds is not { } bounds || SelectionBrush == null) return;
-
+        var session = drawing.Session;
         var pen = PenOf(SelectionBrush, ref _selectionPen, ref _selectionPenBrush);
-        var frame = FrameOf(bounds);
-
-        // TURNED, the frame is four lines and not a rectangle: a rectangle stands square by definition, and a square
-        // frame round a turned shape says the shape is somewhere it is not.
-        if (SelectionTurn is { } turn)
-        {
-            var about = WorldToScreen(SelectionMiddle);
-            var corner = new[]
-            {
-                turn.Apply(new Vector2<double>(frame.X, frame.Y), about),
-                turn.Apply(new Vector2<double>(frame.X + frame.Width, frame.Y), about),
-                turn.Apply(new Vector2<double>(frame.X + frame.Width, frame.Y + frame.Height), about),
-                turn.Apply(new Vector2<double>(frame.X, frame.Y + frame.Height), about)
-            };
-
-            for (var i = 0; i < 4; i++) session.DrawLine(corner[i], corner[(i + 1) % 4], pen);
-
-            if (HandleSize > 0 && OfferedHandles.HasFlag(CanvasHandles.Corners))
-            {
-                var side = HandleSize;
-                var half = side / 2;
-
-                foreach (var grip in corner)
-                {
-                    session.DrawRectangle(HandleBrush ?? SelectionBrush,
-                        new Rect(grip.X - half, grip.Y - half, side, side), pen);
-                }
-            }
-
-            return;
-        }
+        var turn = SelectionTurn;
+        var grip = HandleBrush ?? SelectionBrush;
 
         // Only the grips that would ANSWER: one drawn where nothing can be dragged is an invitation to a gesture that
         // does nothing.
@@ -657,62 +652,98 @@ public partial class InfiniteCanvas
 
         // A frame round ONE thing whose own shape says where it is - a line, a curve - is the same mistake one size
         // larger: the box of a diagonal is mostly nowhere near the shape. SEVERAL things at once are the exception:
-        // a band round five says nothing by itself, and its box is the only mark that says what was caught.
-        if (corners || sides || _selection.Count > 1) session.DrawRectangle(null, frame, pen);
+        // a band round five says nothing by itself, and its box is the only mark that says what was caught. TURNED,
+        // the frame is always drawn: it is what says the shape is turned.
+        if (turn != null || corners || sides || _selection.Count > 1)
+        {
+            // Each edge a unit square stretched along it: the edge's length on screen is not a world length - the
+            // frame is held off by half a grip in pixels - so no one scale carries it.
+            for (var edge = 0; edge < 4; edge++)
+            {
+                var side = edge;
+                session.DrawRectangle(SelectionBrush, UnitEdge, ProceduralGeometry.CornerRadius.Empty, null,
+                    drawing.PartBy(() => Edge(bounds, turn, side)));
+            }
+        }
 
         if (HandleSize <= 0) return;
 
-        // BEFORE the frame's own grips, and outside the test below: an item reshaped by its points usually offers no
-        // frame grips at all, and its points would then be hidden on exactly the items that have nothing else.
-        DrawPointHandles(session, pen);
+        // BEFORE the frame's own grips: an item reshaped by its points usually offers no frame grips at all, and its
+        // points would then be hidden on exactly the items that have nothing else.
+        if (turn == null) DrawPointHandles(drawing, pen, grip);
 
-        if (!corners && !sides) return;
+        var half = HandleSize / 2;
+        var box = new Rect(-half, -half, HandleSize, HandleSize);
 
-        var at = 0;
-        foreach (var grip in Grips(frame))
+        for (var at = 0; at < 8; at++)
         {
-            // Grips come round the frame, so they ALTERNATE: corner, middle, corner, middle.
-            var wanted = at++ % 2 == 0 ? corners : sides;
-            if (wanted) session.DrawRectangle(HandleBrush ?? SelectionBrush, grip, pen);
+            // Grips come round the frame, so they ALTERNATE: corner, middle, corner, middle. A turned frame has its
+            // corners only.
+            var wanted = at % 2 == 0 ? corners : sides && turn == null;
+            if (!wanted) continue;
+
+            var which = at;
+            session.DrawRectangle(grip, box, ProceduralGeometry.CornerRadius.Empty, pen,
+                drawing.PartBy(() => Pin(GripAt(bounds, turn, which))));
         }
     }
 
+    private static readonly Rect UnitEdge = new(0, -0.5, 1, 1);
+
     // The POINTS of a single selected item that has them, in screen pixels like every other grip.
-    private void DrawPointHandles(IDrawingSession session, Pen pen)
+    private void DrawPointHandles(CanvasDrawing drawing, Pen pen, Brush brush)
     {
         if (_selection.Count != 1 || _selection[0] is not ICanvasPoints shaped) return;
 
-        var side = HandleSize;
-        var half = side / 2;
-        var brush = HandleBrush ?? SelectionBrush;
+        var half = HandleSize / 2;
+        var box = new Rect(-half, -half, HandleSize, HandleSize);
 
         foreach (var point in shaped.Points)
         {
-            var at = WorldToScreen(point);
-            session.DrawEllipse(new Rect(at.X - half, at.Y - half, side, side), brush, 0, 360, EllipseType.Sector, pen);
+            var world = point;
+            drawing.Session.DrawEllipse(box, brush, pen, drawing.PartBy(() => Pin(WorldToScreen(world))));
         }
     }
 
-    private IEnumerable<Rect> Grips(Rect frame)
+    private static Matrix4x4F Pin(Vector2<double> screen) =>
+        Matrix4x4.CreateTranslation<float>((float)screen.X, (float)screen.Y, 0);
+
+    private Vector2<double> FrameCorner(Rect bounds, CanvasTransform? turn, int corner)
     {
-        var side = HandleSize;
-        var half = side / 2;
+        var frame = FrameOf(bounds);
+        var point = corner switch
+        {
+            0 => new Vector2<double>(frame.X, frame.Y),
+            1 => new Vector2<double>(frame.X + frame.Width, frame.Y),
+            2 => new Vector2<double>(frame.X + frame.Width, frame.Y + frame.Height),
+            _ => new Vector2<double>(frame.X, frame.Y + frame.Height)
+        };
 
-        var left = frame.X;
-        var middle = frame.X + frame.Width / 2;
-        var right = frame.X + frame.Width;
-        var top = frame.Y;
-        var center = frame.Y + frame.Height / 2;
-        var bottom = frame.Y + frame.Height;
+        if (turn is not { } turned) return point;
 
-        yield return new Rect(left - half, top - half, side, side);
-        yield return new Rect(middle - half, top - half, side, side);
-        yield return new Rect(right - half, top - half, side, side);
-        yield return new Rect(right - half, center - half, side, side);
-        yield return new Rect(right - half, bottom - half, side, side);
-        yield return new Rect(middle - half, bottom - half, side, side);
-        yield return new Rect(left - half, bottom - half, side, side);
-        yield return new Rect(left - half, center - half, side, side);
+        var about = WorldToScreen(new Vector2<double>(bounds.X + bounds.Width / 2, bounds.Y + bounds.Height / 2));
+        return turned.Apply(point, about);
+    }
+
+    private Matrix4x4F Edge(Rect bounds, CanvasTransform? turn, int edge)
+    {
+        var from = FrameCorner(bounds, turn, edge);
+        var to = FrameCorner(bounds, turn, (edge + 1) % 4);
+        var along = to - from;
+        var length = Math.Sqrt(along.X * along.X + along.Y * along.Y);
+
+        return Matrix4x4.CreateScale<float>((float)length, 1, 1)
+               * Matrix4x4.CreateRotationZ<float>((float)Math.Atan2(along.Y, along.X))
+               * Pin(from);
+    }
+
+    private Vector2<double> GripAt(Rect bounds, CanvasTransform? turn, int grip)
+    {
+        var from = FrameCorner(bounds, turn, grip / 2);
+        if (grip % 2 == 0) return from;
+
+        var to = FrameCorner(bounds, turn, (grip / 2 + 1) % 4);
+        return new Vector2<double>((from.X + to.X) / 2, (from.Y + to.Y) / 2);
     }
 
     /// <summary>A world rectangle as it lands on screen.</summary>
@@ -1004,7 +1035,7 @@ public partial class InfiniteCanvas
         List<ICanvasItem> run = null;
         var hosted = false;
 
-        foreach (var item in Laid(ItemsHere(WorldAcross(viewport))))
+        foreach (var item in Laid(ItemsHere(CutFor(WorldAcross(viewport)))))
         {
             var control = item is ElementItem;
 
@@ -1023,6 +1054,31 @@ public partial class InfiniteCanvas
 
         Restack(viewport);
     }
+
+    private Rect CutFor(Rect view)
+    {
+        var fresh = view.Inflate(Math.Max(view.Width, view.Height) * CutMargin);
+
+        // Measured against the cut it would make now, not against the view: a strip of a view is tiny beside its own
+        // margin, and measured against the view it was cut afresh on every step.
+        if (_cut.Width > 0 && Contains(_cut, view) &&
+            _cut.Width * _cut.Height <= fresh.Width * fresh.Height * CutMostOfFresh)
+        {
+            return _cut;
+        }
+
+        _cut = fresh;
+        return _cut;
+    }
+
+    private static bool Contains(Rect outer, Rect inner) =>
+        inner.X >= outer.X && inner.Y >= outer.Y &&
+        inner.X + inner.Width <= outer.X + outer.Width && inner.Y + inner.Height <= outer.Y + outer.Height;
+
+    private const double CutMargin = 0.5;
+    private const double CutMostOfFresh = 4;
+
+    private Rect _cut;
 
     // MATCHED BY SORT, and only then rebuilt: a layer that is already the right kind keeps the controls it is holding.
     // Emptying the stack and filling it again would take every control off the plane and put it back - re-templated,

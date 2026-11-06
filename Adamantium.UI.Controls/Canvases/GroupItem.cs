@@ -237,9 +237,11 @@ public class GroupItem : AdamantiumViewModel, ICanvasItem
         return false;
     }
 
-    public void Render(IDrawingSession session, InfiniteCanvas canvas)
+    /// <summary>Its members in its own drawing - each standing square, since a member's turn is its own placement's. The
+    /// layers never draw a group whole: they open it and draw every member with a placement of its own.</summary>
+    public void Render(CanvasDrawing drawing)
     {
-        foreach (var child in _children) child.Render(session, canvas);
+        foreach (var child in _children) child.Render(drawing);
     }
 
     private static Rect Union(Rect a, Rect b)

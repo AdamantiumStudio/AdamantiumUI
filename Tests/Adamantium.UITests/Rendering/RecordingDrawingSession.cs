@@ -99,6 +99,15 @@ internal sealed class RecordingDrawingSession : IDrawingSession
     public IDrawingSession DrawGeometry(Brush brush, Geometry geometry, Pen pen, Placement placement) =>
         DrawGeometry(brush, geometry, pen, placement?.Matrix ?? Matrix4x4F.Identity);
 
+    public IDrawingSession DrawRectangle(Brush brush, Rect destinationRect, CornerRadius corners, Pen pen,
+        Placement placement) =>
+        DrawRectangle(brush, destinationRect, corners, pen);
+
+    public IDrawingSession DrawEllipse(Rect destinationRect, Brush brush, Pen pen, Placement placement) => this;
+
+    public IDrawingSession DrawRegularPolygon(Brush brush, Rect destinationRect, int corners, double startAngle, Pen pen,
+        Placement placement) => this;
+
     public List<IReadOnlyList<GlyphEffect>> Effects { get; } = [];
 
     public IDrawingSession DrawText(TextRenderingParameters renderingParameters, Size<double> desiredSize, TextLayout textLayout,

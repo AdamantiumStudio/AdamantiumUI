@@ -102,7 +102,8 @@ internal sealed class EllipseBatchCollector : ShapeSdfCollector<EllipseItem>
             Bounds = new Vector4F((float)(r.X * sx + tx), (float)(r.Y * sy + ty), (float)(r.Width * sx), (float)(r.Height * sy)),
             // .z = the rounded CLIP slot, and it starts at -1, never 0: zero is a perfectly valid slot belonging to
             // somebody else, so a record that forgot to set it would be cut by a stranger's shape.
-            Params = new Vector4F(transformSlot, fadeSlot, -1, 0),
+            // .w the pen's floor, in device pixels.
+            Params = new Vector4F(transformSlot, fadeSlot, -1, RectBatchCollector.FloorOf(p.Pen)),
             Color = color,
             StrokeColor = new Color(strokeColor),
             Stroke0 = stroke0,

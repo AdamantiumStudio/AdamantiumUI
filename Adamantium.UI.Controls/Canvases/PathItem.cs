@@ -113,33 +113,28 @@ public partial class PathItem : AdamantiumViewModel, ICanvasItem, ICanvasTransfo
     /// by a band round it far more often than by a press inside one of its holes.</summary>
     public bool HitTest(Vector2<double> world, double tolerance) => World.Inflate(tolerance).Contains(world);
 
-    public void Render(IDrawingSession session, InfiniteCanvas canvas)
+    public Vector2<double> Pivot => new(World.X + World.Width / 2, World.Y + World.Height / 2);
+
+    public void Render(CanvasDrawing drawing)
     {
-        if (_geometry == null || canvas == null) return;
+        if (_geometry == null || World.Width <= 0 || World.Height <= 0) return;
 
-        var box = canvas.ToScreen(World);
+        var sx = _source.Width > 1e-9 ? World.Width / _source.Width : 1;
+        var sy = _source.Height > 1e-9 ? World.Height / _source.Height : 1;
 
-        if (box.Width <= 0 || box.Height <= 0) return;
-
+        // The pen is stated in the CONTOUR's units, which the fit then scales: divided back out by the fit's mean scale,
+        // it is as wide on the plane as the item says where the fit is even, and stretched with the contour where it is
+        // not - what a stroke under a scale does in an SVG. Never thinner than a pixel on screen.
         var pen = Stroke != null && Thickness > 0
-            ? new Pen(Stroke, Thickness * canvas.Scale)
+            ? new Pen(Stroke, Thickness / Math.Sqrt(sx * sy)) { MinimumDeviceThickness = CanvasDrawing.Hairline }
             : null;
 
-        session.DrawGeometry(Fill, _geometry, pen, Place(box));
+        drawing.Session.DrawGeometry(Fill, _geometry, pen, drawing.PartWith(Fit(drawing.Local(World), sx, sy)));
     }
 
-    // The contour states itself in the file's own units; this is what puts it in the box the item stands in, on screen.
-    private Matrix4x4F Place(Rect box)
-    {
-        var sx = _source.Width > 1e-9 ? box.Width / _source.Width : 1;
-        var sy = _source.Height > 1e-9 ? box.Height / _source.Height : 1;
-
-        var into = Matrix4x4.CreateTranslation<float>((float)-_source.X, (float)-_source.Y, 0)
-                   * Matrix4x4.CreateScale<float>((float)sx, (float)sy, 1)
-                   * Matrix4x4.CreateTranslation<float>((float)box.X, (float)box.Y, 0);
-
-        if (Transform.Angle == 0 && Transform.SkewX == 0 && Transform.SkewY == 0) return into;
-
-        return into * Transform.Matrix(new Vector2<double>(box.X + box.Width / 2, box.Y + box.Height / 2));
-    }
+    // The contour states itself in the file's own units; this is what puts it in the box the item stands in.
+    private Matrix4x4F Fit(Rect box, double sx, double sy) =>
+        Matrix4x4.CreateTranslation<float>((float)-_source.X, (float)-_source.Y, 0)
+        * Matrix4x4.CreateScale<float>((float)sx, (float)sy, 1)
+        * Matrix4x4.CreateTranslation<float>((float)box.X, (float)box.Y, 0);
 }

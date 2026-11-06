@@ -77,6 +77,7 @@ internal sealed class InkCollector : SdfBatchCollector<InkSegmentItem>
 
         var color = Straight(ink.Color, (float)(opacity * ink.Opacity));
         var half = (float)(Math.Max(ink.Thickness, 0.1) * 0.5 * Math.Abs(sx));
+        var floor = new Vector4F((float)(Math.Max(ink.MinimumDeviceThickness, 0) * 0.5), 0, 0, 0);
         var widths = ink.Widths;
 
         var first = Count;
@@ -112,7 +113,8 @@ internal sealed class InkCollector : SdfBatchCollector<InkSegmentItem>
                 // to begin at zero, and reads somebody else's record as soon as one does not. .w the half width at this
                 // point.
                 Clip = new Vector4F(clipSlot, points, first - at, here),
-                Color = color
+                Color = color,
+                Floor = floor
             };
         }
 

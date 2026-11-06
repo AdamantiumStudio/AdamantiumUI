@@ -58,7 +58,7 @@ public class CanvasPaintOrderTests
         public Rect Bounds { get; init; }
         public int Order { get; set; }
         public bool HitTest(Vector2<double> world, double tolerance) => Bounds.Contains(world);
-        public void Render(IDrawingSession session, InfiniteCanvas canvas) { }
+        public void Render(CanvasDrawing drawing) { }
         public void Move(Vector2<double> worldDelta) { }
         public void Resize(Rect world) { }
     }

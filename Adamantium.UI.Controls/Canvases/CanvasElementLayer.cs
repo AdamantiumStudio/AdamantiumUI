@@ -177,16 +177,13 @@ public class CanvasElementLayer : Panel
     {
         if (Owner == null) return finalSize;
 
-        var scale = Owner.Scale;
-
         for (var i = 0; i < Children.Count && i < _items.Count; i++)
         {
             var world = _items[i].World;
-            var at = Owner.WorldToScreen(new Vector2<double>(world.X, world.Y));
 
-            // Placed in SCREEN pixels but sized in WORLD units, and then scaled about its own top-left: the camera is a
-            // transform on a finished control, never a new layout for it.
-            Children[i].Arrange(new Rect(at.X, at.Y, world.Width, world.Height));
+            // Laid out at its OWN size and nowhere in particular: where it stands on screen, and how big, is the
+            // camera's, and the camera is a transform on a finished control - never a new layout for it.
+            Children[i].Arrange(new Rect(0, 0, world.Width, world.Height));
 
             if (Children[i] is not IUIComponent visual) continue;
 
@@ -198,31 +195,9 @@ public class CanvasElementLayer : Panel
                 _items[i].Smallest = visual.RenderSize;
                 _items[i].World = new Rect(world.X, world.Y,
                     Math.Max(world.Width, visual.RenderSize.Width), Math.Max(world.Height, visual.RenderSize.Height));
-
-                world = _items[i].World;
             }
 
-            if (visual.RenderTransform is not { } transform)
-            {
-                transform = new Transform();
-                visual.RenderTransform = transform;
-            }
-
-            visual.RenderTransformOrigin = Vector2<double>.Zero;
-            transform.ScaleX = scale;
-            transform.ScaleY = scale;
-
-            // ...AND THE ITEM'S OWN TURN, in the SAME transform. One control has one render transform: a second one
-            // written anywhere else simply replaces this, and the control then stands unscaled inside a frame drawn at
-            // the camera's scale. The turn is about the MIDDLE of the control's own box - stated as a center rather
-            // than as an origin, because the origin here is the top-left the zoom scales about.
-            var turn = _items[i] is ICanvasTransformed turned ? turned.Transform : CanvasTransform.None;
-
-            transform.RotationAngle = turn.Angle;
-            transform.SkewX = turn.SkewX;
-            transform.SkewY = turn.SkewY;
-            transform.RotationCenterX = world.Width / 2;
-            transform.RotationCenterY = world.Height / 2;
+            Place(i);
         }
 
         // The hosted controls have just been put somewhere, and what the canvas DRAWS depends on where they are - a
@@ -231,6 +206,56 @@ public class CanvasElementLayer : Panel
         Owner.Repaint();
 
         return finalSize;
+    }
+
+    /// <summary>Follows the camera: every control's render transform is put where the camera shows it now. Nothing is
+    /// laid out again and nothing on the plane is drawn again - a control is moved by its transform alone.</summary>
+    public void Place()
+    {
+        if (Owner == null) return;
+
+        for (var i = 0; i < Children.Count && i < _items.Count; i++) Place(i);
+    }
+
+    private void Place(int i)
+    {
+        if (Children[i] is not IUIComponent visual) return;
+
+        var world = _items[i].World;
+        var at = Owner.WorldToScreen(new Vector2<double>(world.X, world.Y));
+        var scale = Owner.Scale;
+
+        if (visual.RenderTransform is not { } transform)
+        {
+            transform = new Transform();
+            visual.RenderTransform = transform;
+        }
+
+        // ...AND THE ITEM'S OWN TURN, in the SAME transform. One control has one render transform: a second one written
+        // anywhere else simply replaces this, and the control then stands unscaled inside a frame drawn at the camera's
+        // scale. The turn is about the MIDDLE of the control's own box - stated as a center rather than as an origin,
+        // because the origin here is the top-left the zoom scales about.
+        var turn = _items[i] is ICanvasTransformed turned ? turned.Transform : CanvasTransform.None;
+        var middle = new Vector2<double>(world.Width / 2, world.Height / 2);
+
+        // The transform leans about that center BEFORE it scales and turns about it AFTER, so the turn would stand off
+        // the middle by however far the scale moved it. Made up here, in the one move: the middle scaled, less the
+        // same turned - which is zero at a zoom of one, or with nothing turned.
+        var moved = middle * (scale - 1);
+        var angle = turn.Angle * Math.PI / 180;
+        var turnedMoved = new Vector2<double>(moved.X * Math.Cos(angle) - moved.Y * Math.Sin(angle),
+            moved.X * Math.Sin(angle) + moved.Y * Math.Cos(angle));
+
+        visual.RenderTransformOrigin = Vector2<double>.Zero;
+        transform.ScaleX = scale;
+        transform.ScaleY = scale;
+        transform.TranslateX = at.X + moved.X - turnedMoved.X;
+        transform.TranslateY = at.Y + moved.Y - turnedMoved.Y;
+        transform.RotationAngle = turn.Angle;
+        transform.SkewX = turn.SkewX;
+        transform.SkewY = turn.SkewY;
+        transform.RotationCenterX = middle.X;
+        transform.RotationCenterY = middle.Y;
     }
 
     // Whether the control's size is its OWN business - nothing was written into Width/Height from outside.

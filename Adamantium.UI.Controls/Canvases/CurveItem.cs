@@ -4,6 +4,7 @@ using System.Runtime.InteropServices;
 using Adamantium.Core;
 using Adamantium.MVVM;
 using Adamantium.Mathematics;
+using Adamantium.ProceduralGeometry;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Graphics;
 using Adamantium.UI.Core.Media;
@@ -16,7 +17,7 @@ public class CurveItem : AdamantiumViewModel, ICanvasItem, ICanvasPoints
 {
     // What the curve is DRAWN with: a polyline handed to the ink pass as data. See Render for why it is not a geometry.
     private readonly InkBrush _ink = new();
-    private Vector2F[] _screen;
+    private Vector2F[] _local;
 
     private readonly List<Vector2<double>> _points = new();
 
@@ -176,35 +177,30 @@ public class CurveItem : AdamantiumViewModel, ICanvasItem, ICanvasPoints
     /// <summary>Whether a world rectangle touches the line itself, not the box round it.</summary>
     public bool Touches(Rect world) => CanvasTouch.RunTouches(Walk(), Math.Max(Thickness, 0) / 2, world);
 
-    public void Render(IDrawingSession session, InfiniteCanvas canvas) => Render(session, canvas, null);
+    public void Render(CanvasDrawing drawing) => Render(drawing, null);
 
     /// <summary>Draws the curve with ONE MORE point on the end that the item does not hold - where the pointer is,
     /// while the curve is still being placed.
     /// <para>Given rather than added, because drawing runs on its own thread: a tool that added a point, drew and took
     /// it off again was racing every click, and a curve placed with six clicks came out with twenty-one points.</para>
     /// </summary>
-    public void Render(IDrawingSession session, InfiniteCanvas canvas, Vector2<double>? extra)
+    public void Render(CanvasDrawing drawing, Vector2<double>? extra)
     {
-        if (canvas == null) return;
-
         var count = _points.Count + (extra.HasValue ? 1 : 0);
         if (count < 2 || Stroke is not SolidColorBrush solid || Thickness <= 0) return;
 
-        // Never thinner than a pixel: a line zoomed out should thin to a hair, not vanish.
-        var width = Math.Max(Thickness * canvas.Scale, 1.0);
-
-        // The control points in SCREEN coordinates - the curve is then walked in the same units, so how finely it is
-        // sampled follows how big it actually is on screen rather than how big it is on the plane.
+        // The control points in the drawing's own units. How finely the curve is walked follows how big it is on
+        // SCREEN as it is drawn - the canvas draws it again when the zoom has moved far enough for that to show.
         var control = new List<Vector2<double>>(count);
-        for (var i = 0; i < _points.Count; i++) control.Add(canvas.WorldToScreen(_points[i]));
-        if (extra.HasValue) control.Add(canvas.WorldToScreen(extra.Value));
+        for (var i = 0; i < _points.Count; i++) control.Add(drawing.Local(_points[i]));
+        if (extra.HasValue) control.Add(drawing.Local(extra.Value));
 
-        var along = Walk(control, Kind, Degree, IsUniform, StepsFor(control));
+        var along = Walk(control, Kind, Degree, IsUniform, StepsFor(control, drawing.Canvas.Scale));
         if (along.Count < 2) return;
 
-        // Drawn as ink, not geometry: a screen-space geometry is new content every pan and fills the geometry cache.
-        if (_screen == null || _screen.Length < along.Count)
-            Array.Resize(ref _screen, Math.Max(64, along.Count * 2));
+        // Drawn as ink, not geometry: the pass places the line from its points, and rides the placement with them.
+        if (_local == null || _local.Length < along.Count)
+            Array.Resize(ref _local, Math.Max(64, along.Count * 2));
 
         var lowX = double.MaxValue;
         var lowY = double.MaxValue;
@@ -213,7 +209,7 @@ public class CurveItem : AdamantiumViewModel, ICanvasItem, ICanvasPoints
 
         for (var i = 0; i < along.Count; i++)
         {
-            _screen[i] = new Vector2F((float)along[i].X, (float)along[i].Y);
+            _local[i] = new Vector2F((float)along[i].X, (float)along[i].Y);
 
             if (along[i].X < lowX) lowX = along[i].X;
             if (along[i].Y < lowY) lowY = along[i].Y;
@@ -221,32 +217,36 @@ public class CurveItem : AdamantiumViewModel, ICanvasItem, ICanvasPoints
             if (along[i].Y > highY) highY = along[i].Y;
         }
 
-        _ink.Points = _screen;
+        _ink.Points = _local;
         _ink.Count = along.Count;
         _ink.Color = solid.Color;
-        _ink.Thickness = width;
+        _ink.Thickness = Thickness;
+
+        // Never thinner than a pixel: a line zoomed out should thin to a hair, not vanish.
+        _ink.MinimumDeviceThickness = CanvasDrawing.Hairline;
 
         // The CONTENTS of the borrowed array just changed and its reference did not, so the paint has to be told - see
         // InkBrush.Revision. Without it the curve stays baked wherever it first was.
         _ink.Revision++;
 
-        // The rectangle is the curve's own box on screen: what the record measures overlap and clipping by. The pass
-        // places the line from the points rather than from it.
-        var half = width / 2 + 1;
+        // The rectangle is the curve's own box: what the record measures overlap and clipping by. The pass places the
+        // line from the points rather than from it.
+        var half = Thickness / 2;
 
-        session.DrawRectangle(_ink, new Rect(lowX - half, lowY - half,
-            highX - lowX + 2 * half, highY - lowY + 2 * half));
+        drawing.Session.DrawRectangle(_ink, new Rect(lowX - half, lowY - half,
+            highX - lowX + 2 * half, highY - lowY + 2 * half), CornerRadius.Empty, null, drawing.Placement);
     }
 
     // How finely to sample, from how long the line through the control points is ON SCREEN: about a sample every four
     // pixels, floored so a short curve is still a curve and capped so a curve dragged across a wall of monitors does
     // not hand the pass a polyline nobody can see the detail of.
-    private static int StepsFor(List<Vector2<double>> control)
+    // A step per four SCREEN pixels of the control polygon, at the scale given.
+    private static int StepsFor(List<Vector2<double>> control, double scale)
     {
         double reach = 0;
         for (var i = 1; i < control.Count; i++) reach += (control[i] - control[i - 1]).Length();
 
-        return (int)Math.Clamp(reach / 4, 32, 512);
+        return (int)Math.Clamp(reach * scale / 4, 32, 512);
     }
 
     // The curve as a polyline - what is DRAWN and what hit-testing measures against, in whatever units it was handed.

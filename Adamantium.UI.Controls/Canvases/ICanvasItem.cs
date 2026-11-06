@@ -1,7 +1,6 @@
 ﻿using System.ComponentModel;
 using Adamantium.Mathematics;
 using Adamantium.UI.Core;
-using Adamantium.UI.Core.Graphics;
 
 namespace Adamantium.UI.Controls.Canvases;
 
@@ -61,9 +60,10 @@ public interface ICanvasItem : INotifyPropertyChanged
     /// an item whose box is mostly empty (an outline, a stroke, a frame) answers by what it draws, as its hit test does.</summary>
     bool Touches(Rect world) => CanvasTouch.Meets(Bounds, world);
 
-    /// <summary>Draw it. The points are handed over already in SCREEN coordinates by the canvas, which is what keeps the
-    /// numbers reaching the GPU small however far from the origin the item is.</summary>
-    void Render(IDrawingSession session, InfiniteCanvas canvas);
+    /// <summary>Draw it, in WORLD units relative to the drawing's origin and with its placements, never in screen
+    /// pixels: the camera is the placement's business, so moving it moves what is drawn without drawing it again.
+    /// </summary>
+    void Render(CanvasDrawing drawing);
 
     /// <summary>Moves it by a WORLD distance. Separate from <see cref="Resize"/> because moving is the one edit an item
     /// can always do exactly - a stroke moves by one field, not by a walk over its points.</summary>

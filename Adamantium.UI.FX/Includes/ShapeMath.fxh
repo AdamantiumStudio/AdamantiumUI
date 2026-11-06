@@ -16,6 +16,13 @@ float2 SlotPixelScale(float4x4 nodeWorld)
     return ViewportSize.x < 1.0 ? float2(1.0, 1.0) : scale;   // no viewport supplied: leave the bake untouched
 }
 
+// A pen's width in device pixels, never under the floor its record carries however small the slot scales it - a pen of
+// no width stays none.
+float FloorWidthPx(float widthPx, float floorPx)
+{
+    return widthPx > 0.0 ? max(widthPx, floorPx) : 0.0;
+}
+
 // Approximate SIGNED DISTANCE (device px) to an ellipse boundary: the implicit F = length(p/half) - 1 normalized by the
 // length of its gradient (first-order/Taylor distance). Exact for a circle (rx==ry); for rx!=ry it's the correct shape
 // with sub-pixel-accurate distance near the boundary - which is exactly where fill AA and the stroke ring live.

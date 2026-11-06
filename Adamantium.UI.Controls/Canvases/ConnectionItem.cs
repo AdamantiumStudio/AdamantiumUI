@@ -160,16 +160,16 @@ public class ConnectionItem : AdamantiumViewModel, ICanvasItem
     {
     }
 
-    public void Render(IDrawingSession session, InfiniteCanvas canvas)
+    public void Render(CanvasDrawing drawing)
     {
-        if (canvas == null || !Ends(out var from, out var to)) return;
+        if (!Ends(out var from, out var to)) return;
 
         // WORKED OUT HERE and remembered: drawing is the one moment a wire has a canvas to look at, and the box and the
         // hit test have to agree with the line that was actually put on the screen.
-        Route(canvas, from, to, out _first, out _second);
+        Route(drawing.Canvas, from, to, out _first, out _second);
         _routed = true;
 
-        _painter.Draw(session, canvas, from, _first, _second, to, Stroke ?? FromPin?.Color ?? ToPin?.Color, Thickness);
+        _painter.Draw(drawing, from, _first, _second, to, Stroke ?? FromPin?.Color ?? ToPin?.Color, Thickness);
     }
 
     // The two control points of the curve. A wire leaves an output SIDEWAYS and arrives at an input sideways, which is

@@ -80,6 +80,10 @@ internal sealed class RectBatchCollector : ShapeSdfCollector<RectItem>
     /// <param name="contourLength">Length of the outline being stroked, in LOCAL units, or 0 when the caller cannot say.
     /// Only <see cref="Pen.FitDashesToContour"/> needs it: the pattern is stretched so a whole number of periods goes
     /// round, which is what keeps a closed dashed ring from carrying one long dash at its seam.</param>
+    /// <summary>The least a pen is drawn wide, in device pixels, whatever its element's scale - what every shape batch
+    /// carries to its vertex shader beside the pen; 0 for no floor.</summary>
+    internal static float FloorOf(Pen pen) => pen == null ? 0f : (float)Math.Max(pen.MinimumDeviceThickness, 0);
+
     internal static void BakeStroke(Pen pen, double opacity, float sx,
         out Vector4F strokeColor, out Vector4F stroke0, out Vector4F stroke1, double contourLength = 0)
         => BakeStroke(pen, opacity, sx, out strokeColor, out stroke0, out stroke1, out _, contourLength);
@@ -262,8 +266,8 @@ internal sealed class RectBatchCollector : ShapeSdfCollector<RectItem>
             Inset = inset,
             // NO CLIP is -1, and it has to be set HERE rather than only where a clip is known: zero is a perfectly
             // valid slot number belonging to somebody else, so an instance baked through any other path (a patch, the
-            // stage) would be read against a stranger's matrix and vanish.
-            Clip = new Vector4F(-1, 0, 0, 0)
+            // stage) would be read against a stranger's matrix and vanish. .y the pen's floor, in device pixels.
+            Clip = new Vector4F(-1, FloorOf(p.Pen), 0, 0)
         };
         return true;
     }
@@ -372,7 +376,7 @@ internal sealed class RectBatchCollector : ShapeSdfCollector<RectItem>
         EnsureCpuCapacity(Count + 1);
         if (Count + 1 > GpuCapacity) return false;
         if (!BakeItem(p, world, opacity, transformSlot, fadeSlot, out var item)) return false;   // rotation/shear -> per-unit
-        item.Clip = new Vector4F(clipSlot, 0, 0, 0);
+        item.Clip.X = clipSlot;
         item.OwnerTag = ownerTag;   // travels with the bytes through every copy the arena makes - see RectItem.OwnerTag
         Items[Count++] = item;
         MarkPending(scissor, logicalBounds);
@@ -389,7 +393,7 @@ internal sealed class RectBatchCollector : ShapeSdfCollector<RectItem>
         // The same stamp TryAdd makes. Without it a patched-in rectangle had no owner, and the orphan sweep - which asks
         // the INSTANCE whose it is - could never blank it once the control stopped drawing.
         item.OwnerTag = ownerTag;
-        item.Clip = new Vector4F(clipSlot, 0, 0, 0);   // ...and the same clip, for the same reason - see BatchArena.TryStage
+        item.Clip.X = clipSlot;   // ...and the same clip, for the same reason - see BatchArena.TryStage
         Stage.Add(item);
         return true;
     }

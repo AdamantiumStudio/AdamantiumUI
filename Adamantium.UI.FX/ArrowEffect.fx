@@ -13,7 +13,7 @@ struct ArrowRecord
     float4 Ends;      // .xy the start, .zw the end - NODE-local
     float4 Params;    // .x half thickness (local), .y transform slot, .z opacity slot, .w head length (local)
     float4 Head;      // .x head half width (local), .y what sits on the start, .z what sits on the end, .w spare
-    float4 Clip;      // .x rounded-clip slot or -1, .yzw spare
+    float4 Clip;      // .x rounded-clip slot or -1, .y the least half thickness in DEVICE pixels (0 none), .zw spare
     float4 Color;     // straight RGBA, opacity folded into the alpha
 };
 
@@ -21,7 +21,9 @@ struct ArrowPSInput
 {
     float4 Position : SV_Position;
     float2 Local    : TEXCOORD0;   // the fragment in NODE-local units - the space the ends are stated in
-    nointerpolation float2 Shape   : TEXCOORD1;   // .x half thickness (local), .y device pixels per local unit
+    // .x half thickness (local), .y device pixels per local unit, .z how much the floor widened the arrow - the heads
+    // grow with it, or a hairline arrow would lose them
+    nointerpolation float3 Shape   : TEXCOORD1;
     nointerpolation uint InstId    : TEXCOORD2;
     nointerpolation float Fade     : TEXCOORD3;
     nointerpolation float4 ClipBox   : TEXCOORD4;
@@ -44,7 +46,8 @@ ArrowPSInput ArrowVS(uint vertexId : SV_VertexID, uint instanceId : SV_InstanceI
     // The box the whole arrow covers: the two ends, grown by whichever reaches further - half the thickness, or half
     // the head's width - plus one DEVICE pixel in local units so the analytic edge has somewhere to fade. A quad cut to
     // the exact shape clips the fade and leaves a hard, aliased rim.
-    float reach = max(it.Params.x, it.Head.x) + 1.0 / max(iso, 1e-6);
+    float grown = max(1.0, it.Clip.y / max(iso, 1e-6) / max(it.Params.x, 1e-6));
+    float reach = max(it.Params.x, it.Head.x) * grown + 1.0 / max(iso, 1e-6);
     float2 low = min(it.Ends.xy, it.Ends.zw) - reach;
     float2 high = max(it.Ends.xy, it.Ends.zw) + reach;
 
@@ -53,7 +56,7 @@ ArrowPSInput ArrowVS(uint vertexId : SV_VertexID, uint instanceId : SV_InstanceI
 
     o.Position = mul(mul(float4(localPos, 0.0, 1.0), nodeWorld), Projection);
     o.Local   = localPos;
-    o.Shape   = float2(it.Params.x, iso);
+    o.Shape   = float3(it.Params.x * grown, iso, grown);
     o.InstId  = instanceId;
 
     int fadeSlot = int(it.Params.z);
@@ -85,7 +88,8 @@ float4 ArrowPS(ArrowPSInput i) : SV_Target
     float2 from = it.Ends.xy;
     float2 to = it.Ends.zw;
     float edge = i.Shape.x;
-    float wide = it.Head.x;
+    float wide = it.Head.x * i.Shape.z;
+    float headLength = it.Params.w * i.Shape.z;
 
     // Which way the arrow runs, once. Both heads are measured out from this - one forwards, one backwards - so there is
     // no direction worked out twice and no way for the two ends to disagree about where the axis is.
@@ -96,7 +100,7 @@ float4 ArrowPS(ArrowPSInput i) : SV_Target
 
     // Never longer than the line it sits on: on a very short arrow a head of the stated length would start behind the
     // tail and point the wrong way.
-    float back = min(it.Params.w, span);
+    float back = min(headLength, span);
 
     // WHICH kind, as numbers rather than as branches. 1 is barbs, 2 is a filled triangle, anything below a half is
     // nothing at all - and "nothing" is a distance far outside any quad rather than a path not taken.
@@ -107,10 +111,10 @@ float4 ArrowPS(ArrowPSInput i) : SV_Target
 
     // Where the shaft stops: at a triangle's base, or for barbs just short of the tip, where its round end fits inside
     // the narrowing head.
-    float tuck = edge / max(wide * rsqrt(max(it.Params.w * it.Params.w + wide * wide, 1e-12)), 1e-6);
+    float tuck = edge / max(wide * rsqrt(max(headLength * headLength + wide * wide, 1e-12)), 1e-6);
 
-    float endBack = min(lerp(tuck, it.Params.w, endSolid), span);
-    float startBack = min(lerp(tuck, it.Params.w, startSolid), span);
+    float endBack = min(lerp(tuck, headLength, endSolid), span);
+    float startBack = min(lerp(tuck, headLength, startSolid), span);
 
     float2 shaftFrom = lerp(from, from + along * startBack, startWanted);
     float2 shaftTo = lerp(to, to - along * endBack, endWanted);

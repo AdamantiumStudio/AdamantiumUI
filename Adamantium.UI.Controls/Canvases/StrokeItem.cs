@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Adamantium.Core;
 using Adamantium.MVVM;
 using Adamantium.Mathematics;
+using Adamantium.ProceduralGeometry;
 using Adamantium.ProceduralGeometry.Shapes;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Graphics;
@@ -18,10 +19,10 @@ public partial class StrokeItem : AdamantiumViewModel, ICanvasItem
     private Vector2F _min = new(float.MaxValue, float.MaxValue);
     private Vector2F _max = new(float.MinValue, float.MinValue);
 
-    // The stroke's points in the canvas's coordinates, and the parameter block that carries them to the ink pass. Both
+    // The stroke's points in its drawing's own units, and the parameter block that carries them to the ink pass. Both
     // are kept and re-pointed rather than made per frame - a stroke being drawn hands the same array over every frame
     // and simply says a higher count.
-    private Vector2F[] _screen;
+    private Vector2F[] _local;
     private float[] _widths;
     private readonly InkBrush _ink = new();
 
@@ -489,53 +490,50 @@ public partial class StrokeItem : AdamantiumViewModel, ICanvasItem
         return false;
     }
 
-    public void Render(IDrawingSession session, InfiniteCanvas canvas)
+    public void Render(CanvasDrawing drawing)
     {
-        if (_points.Count == 0 || Brush == null || canvas == null) return;
+        if (_points.Count == 0 || Brush == null) return;
 
         // ONE rectangle, and the ink pass turns it into a capsule per segment. What stood here built a path of
         // quadratic Beziers and stroked it, and that was wrong three times over - see the note at the top of
-        // InkEffect.fx. The points are handed over in the canvas's own coordinates, into a BORROWED array: a stroke
-        // being drawn hands the same one over every frame and simply says a higher count.
-        if (_screen == null || _screen.Length < _points.Count) Array.Resize(ref _screen, Math.Max(64, _points.Count * 2));
+        // InkEffect.fx. The points are handed over in the drawing's own units, into a BORROWED array: a stroke being
+        // drawn hands the same one over every frame and simply says a higher count.
+        if (_local == null || _local.Length < _points.Count) Array.Resize(ref _local, Math.Max(64, _points.Count * 2));
 
         var pressed = false;
         for (var i = 0; i < _points.Count; i++)
         {
-            var at = canvas.WorldToScreen(World(i));
-            _screen[i] = new Vector2F((float)at.X, (float)at.Y);
+            var at = drawing.Local(World(i));
+            _local[i] = new Vector2F((float)at.X, (float)at.Y);
             pressed |= _points[i].Pressure != 1f;
         }
 
-        // Never thinner than a pixel: ink zoomed out should thin to a hair, not disappear.
-        var thickness = Math.Max(Thickness * canvas.Scale, 1.0);
         if (pressed)
         {
-            if (_widths == null || _widths.Length < _screen.Length) Array.Resize(ref _widths, _screen.Length);
-            var hair = (float)(1.0 / thickness);
+            if (_widths == null || _widths.Length < _local.Length) Array.Resize(ref _widths, _local.Length);
             for (var i = 0; i < _points.Count; i++)
             {
-                _widths[i] = Math.Max(_points[i].Pressure, hair);
+                _widths[i] = Math.Max(_points[i].Pressure, 0f);
             }
         }
 
-        _ink.Points = _screen;
+        _ink.Points = _local;
         _ink.Widths = pressed ? _widths : null;
         _ink.Count = _points.Count;
         _ink.Color = ColorOf(Brush);
-        _ink.Thickness = thickness;
+        _ink.Thickness = Thickness;
+
+        // Never thinner than a pixel, however far the plane is zoomed out: ink should thin to a hair, not disappear.
+        // The pass holds this, since only it knows the scale the placement shows.
+        _ink.MinimumDeviceThickness = CanvasDrawing.Hairline;
+
         // The CONTENTS of the borrowed array just changed and its reference did not, so the paint has to be told - see
         // InkBrush.Revision. Without it a stroke stays baked as whatever it was when first recorded: a single dot.
         _ink.Revision++;
 
-        // The rectangle is the stroke's own box on screen: it is what the record measures overlap and clipping by, and
-        // the pass places each capsule from the points rather than from it.
-        var box = Bounds;
-        var topLeft = canvas.WorldToScreen(new Vector2<double>(box.X, box.Y));
-        var bottomRight = canvas.WorldToScreen(new Vector2<double>(box.X + box.Width, box.Y + box.Height));
-
-        session.DrawRectangle(_ink,
-            new Rect(topLeft.X, topLeft.Y, bottomRight.X - topLeft.X, bottomRight.Y - topLeft.Y));
+        // The rectangle is the stroke's own box: it is what the record measures overlap and clipping by, and the pass
+        // places each capsule from the points rather than from it.
+        drawing.Session.DrawRectangle(_ink, drawing.Local(Bounds), CornerRadius.Empty, null, drawing.Placement);
     }
 
     // What the ink pass paints with - a plain color, because a capsule is shaded by a color and not by a fill. A

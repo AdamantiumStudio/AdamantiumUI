@@ -164,19 +164,22 @@ public class CanvasArrowTests
         var canvas = Sized();
         var session = new RecordingDrawingSession();
         var arrow = Arrow(CanvasArrowHead.Triangle, CanvasArrowHead.Triangle);
+        var drawing = arrow.Drawing(session, canvas);
 
-        arrow.Render(session, canvas);
+        arrow.Render(drawing);
 
         var from = canvas.WorldToScreen(Vector2<double>.Zero);
         var to = canvas.WorldToScreen(new Vector2<double>(100, 0));
         var painted = Painted(session);
+        var paintedFrom = drawing.Placement.OnScreen(painted.From);
+        var paintedTo = drawing.Placement.OnScreen(painted.To);
 
         Assert.Multiple(() =>
         {
-            Assert.That(painted.From.X, Is.EqualTo(from.X).Within(0.5));
-            Assert.That(painted.From.Y, Is.EqualTo(from.Y).Within(0.5));
-            Assert.That(painted.To.X, Is.EqualTo(to.X).Within(0.5));
-            Assert.That(painted.To.Y, Is.EqualTo(to.Y).Within(0.5));
+            Assert.That(paintedFrom.X, Is.EqualTo(from.X).Within(0.5));
+            Assert.That(paintedFrom.Y, Is.EqualTo(from.Y).Within(0.5));
+            Assert.That(paintedTo.X, Is.EqualTo(to.X).Within(0.5));
+            Assert.That(paintedTo.Y, Is.EqualTo(to.Y).Within(0.5));
         });
     }
 
@@ -275,14 +278,16 @@ public class CanvasArrowTests
         var arrow = Arrow(CanvasArrowHead.None, CanvasArrowHead.Triangle);
 
         arrow.MovePoint(1, new Vector2<double>(-60, 0));
-        arrow.Render(session, canvas);
+        var drawing = arrow.Drawing(session, canvas);
+        arrow.Render(drawing);
 
         var tip = canvas.WorldToScreen(new Vector2<double>(-60, 0));
         var painted = Painted(session);
 
         Assert.Multiple(() =>
         {
-            Assert.That(painted.To.X, Is.EqualTo(tip.X).Within(0.5), "the head is on the end that was not dragged");
+            Assert.That(drawing.Placement.OnScreen(painted.To).X, Is.EqualTo(tip.X).Within(0.5),
+                "the head is on the end that was not dragged");
             Assert.That(painted.EndHead, Is.EqualTo((int)CanvasArrowHead.Triangle));
             Assert.That(painted.StartHead, Is.EqualTo(0));
         });
