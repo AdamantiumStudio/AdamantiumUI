@@ -379,6 +379,7 @@ public partial class RenderCache
         _canvasGridBatch?.DisposeGpuResources(device);
         _inkBatch?.DisposeGpuResources(device);
         _arrowBatch?.DisposeGpuResources(device);
+        _strokeBatch?.DisposeGpuResources(device);
         _instancedFill?.Dispose();
         _transformTable?.Dispose();
         _offscreenLayers?.Dispose();
@@ -401,6 +402,7 @@ public partial class RenderCache
         _canvasGridBatch = null;
         _inkBatch = null;
         _arrowBatch = null;
+        _strokeBatch = null;
         _instancedFill = null;
         _transformTable = null;
         _offscreenLayers = null;
