@@ -201,7 +201,7 @@ public abstract class ButtonBase : ContentControl
     {
         CommandManager.ExecuteFrom(Command, CommandParameter, this, CommandTarget);
         RaiseEvent(new RoutedEventArgs(ClickEvent, this) { RoutedEvent = ClickEvent });
-        if (AutomationEvents.IsListening && GetAutomationPeer() is IInvokeProvider)
+        if (AutomationEvents.IsListening && GetAutomationPeer()?.GetPattern(PatternId.Invoke) != null)
         {
             AutomationEvents.Raise(this, AutomationEvent.Invoked);
         }

@@ -2,6 +2,7 @@ using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Media;
+using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Controls;
 
@@ -17,6 +18,30 @@ public class RibbonSplitButton : RibbonDropDownButton
 
     public static readonly AdamantiumProperty IndicatorBrushProperty = AdamantiumProperty.Register(nameof(IndicatorBrush),
         typeof(Brush), typeof(RibbonSplitButton), new PropertyMetadata(null, PropertyMetadataOptions.AffectsRender));
+
+    public static readonly AdamantiumProperty IsCheckableProperty = AdamantiumProperty.Register(nameof(IsCheckable),
+        typeof(bool), typeof(RibbonSplitButton), new PropertyMetadata(false, OnIsCheckableChanged));
+
+    /// <summary>Whether the body is a toggle - underline, say - lit while its command says it is on, and a toggle to
+    /// automation. Off, as for the borders, what the command says of itself is not shown.</summary>
+    public bool IsCheckable
+    {
+        get => GetValue<bool>(IsCheckableProperty);
+        set => SetValue(IsCheckableProperty, value);
+    }
+
+    private protected override bool ShowsCommandChecked => IsCheckable;
+
+    private static void OnIsCheckableChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
+    {
+        var button = (RibbonSplitButton)a;
+        if (Equals(e.NewValue, false))
+        {
+            button.SetCurrentValue(IsCheckedProperty, false);
+        }
+
+        CommandManager.InvalidateRequerySuggested(button);
+    }
 
     private InputUIComponent _dropDownArea;
     private bool _pressedDropDown;
@@ -85,6 +110,7 @@ public class RibbonSplitButton : RibbonDropDownButton
     {
         if (_pressedDropDown)
         {
+            _pressedDropDown = false;
             base.OnToggle();
             return;
         }

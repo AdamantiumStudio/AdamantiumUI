@@ -190,6 +190,27 @@ public class RibbonLabelLinesThemeTests
             Is.EqualTo(split.Bounds.Height - split.BorderThickness.Bottom).Within(0.5));
     }
 
+    // A split button whose body is a toggle lights the body while checked; one that is not keeps it plain.
+    [TestCaseSource(nameof(Themes))]
+    public void OnlyASplitButtonThatIsAToggle_LightsItsBodyWhileChecked(string theme)
+    {
+        Use(theme);
+        var underline = new RibbonSplitButton { Content = "Underline", IsCheckable = true };
+        var borders = new RibbonSplitButton { Content = "Borders" };
+        var group = Laid(underline, borders);
+        var plain = ((Adamantium.UI.Controls.Decorators.Border)Part(underline, "ActionArea")).Background?.ToString();
+
+        underline.IsChecked = true;
+        borders.IsChecked = true;
+        Relaid(group);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(((Adamantium.UI.Controls.Decorators.Border)Part(underline, "ActionArea")).Background?.ToString(), Is.Not.EqualTo(plain), "lit");
+            Assert.That(((Adamantium.UI.Controls.Decorators.Border)Part(borders, "ActionArea")).Background?.ToString(), Is.EqualTo(plain), "plain");
+        });
+    }
+
     [TestCaseSource(nameof(Themes))]
     public void SteppingDownAndBackUp_LeavesNoPartOfTheOtherSize(string theme)
     {

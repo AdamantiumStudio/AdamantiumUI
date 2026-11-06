@@ -1323,8 +1323,8 @@
         <PropertyTrigger Property="IsEnabled" Value="false">
             <Setter TargetName="DropDownGlyph" Property="Stroke" Value="{TemplateBinding ForegroundDisabled}"/>
         </PropertyTrigger>
-        <!-- Checked IS "the menu is down" - the command stays lit for as long as its flyout is. -->
-        <PropertyTrigger Property="IsChecked" Value="true">
+        <!-- The command stays lit for as long as its flyout is down. -->
+        <PropertyTrigger Property="IsDropDownOpen" Value="true">
             <Setter TargetName="Chrome" Property="Background" Value="{ThemeResource AccentFillColorDefault}"/>
             <Setter TargetName="PART_ContentPresenter" Property="Foreground" Value="{ThemeResource AccentForegroundColor}"/>
             <Setter TargetName="PART_Icon" Property="Foreground" Value="{ThemeResource AccentForegroundColor}"/>
@@ -1523,7 +1523,17 @@
             </MultiTrigger.Conditions>
             <Setter TargetName="ActionArea" Property="Background" Value="{TemplateBinding BackgroundPointerOver}"/>
         </MultiTrigger>
-        <PropertyTrigger Property="IsChecked" Value="true">
+        <!-- A split button that is a toggle lights its body while its command is on, as a checked toggle does. -->
+        <MultiTrigger>
+            <MultiTrigger.Conditions>
+                <Condition Property="IsCheckable" Value="true"/>
+                <Condition Property="IsChecked" Value="true"/>
+            </MultiTrigger.Conditions>
+            <Setter TargetName="ActionArea" Property="Background" Value="{ThemeResource AccentFillColorDefault}"/>
+            <Setter TargetName="PART_ContentPresenter" Property="Foreground" Value="{ThemeResource AccentForegroundColor}"/>
+            <Setter TargetName="PART_Icon" Property="Foreground" Value="{ThemeResource AccentForegroundColor}"/>
+        </MultiTrigger>
+        <PropertyTrigger Property="IsDropDownOpen" Value="true">
             <Setter TargetName="PART_DropDownArea" Property="Background" Value="{ThemeResource AccentFillColorDefault}"/>
             <Setter TargetName="DropDownGlyph" Property="Stroke" Value="{ThemeResource AccentForegroundColor}"/>
         </PropertyTrigger>

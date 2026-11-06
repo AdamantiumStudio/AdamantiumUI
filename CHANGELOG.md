@@ -40,6 +40,14 @@ All packages share one version.
 
 ### Changed
 
+- **Breaking:** a ribbon drop-down's menu being open is `RibbonDropDownButton.IsDropDownOpen`, a property of its own
+  that binds two-way and stays false with no menu or while the command cannot be used. `IsChecked` no longer says the
+  menu is open. A `RibbonSplitButton` whose body is a toggle - `IsCheckable`, as WPF's and Fluent.Ribbon's - takes it
+  from its command, lights its body while it is on and is a toggle to automation; one that is not, as the borders',
+  shows nothing of it.
+  Code that read or bound `IsChecked` to know whether the menu is open reads `IsDropDownOpen` now. A menu given while
+  the button is open opens in the place of the one it replaces, and a group that recycles a drop-down puts its menu away.
+
 - A checked menu row keeps its icon, in a lit frame, as Word's - which border is on stays to be seen; a row with no icon
   shows the check mark in that frame. The check took the icon's place. In every theme.
 
@@ -63,8 +71,8 @@ All packages share one version.
 ### Fixed
 
 - A `RibbonSplitButton` whose body's command says its choice is on - a border the paragraphs show - no longer drops its
-  menu by itself, nor leaves it open after a row is picked: a drop-down's checked state is its menu being open, and the
-  command's answer no longer sets it.
+  menu by itself, nor leaves it open after a row is picked. After its arrow was clicked, invoking its body runs the
+  body, not the menu, and a drop-down that cannot be used is not opened by its key tip.
 
 - The anti-aliased edge of a shape filled with a mesh gradient takes the gradient's corner colors rather than one of
   them.
