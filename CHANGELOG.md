@@ -113,6 +113,9 @@ All packages share one version.
 
 ### Fixed
 
+- The wheel over a node, or over any control standing on a canvas that does not use it, zooms the canvas; it did
+  nothing there. A scroller on the plane with somewhere to scroll keeps the wheel even at its end, and the panels over
+  the canvas keep it as before.
 - A turned control on a canvas turns about its own middle at any zoom; away from a zoom of one it turned about a point
   off it and stood beside its frame.
 

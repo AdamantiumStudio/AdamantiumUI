@@ -1088,10 +1088,10 @@ public partial class InfiniteCanvas
     {
         if (!ZoomWithWheel || e.Handled) return;
 
-        // A wheel turned over a panel or over a control standing on the drawing belongs to THAT, even when it did
-        // nothing with it: a scroller at its end leaves the wheel unhandled so a page carries on scrolling, and here
-        // the thing underneath is the camera.
-        if (FromGlass(e.OriginalSource)) return;
+        // A wheel a control on the plane left alone is the camera's - a node has nothing to scroll. Only a panel, or a
+        // scroller with somewhere to go, keeps it even unused: one at its end leaves the wheel unhandled, and a zoom
+        // there would be a list that jumped into the camera at its last row.
+        if (WheelStaysWith(e.OriginalSource)) return;
 
         // ZoomStep is one standard notch (120) raised to how far the wheel turned, so a hi-res wheel firing many
         // fractional events zooms the same total as a standard one.
@@ -1544,6 +1544,22 @@ public partial class InfiniteCanvas
         e.Handled = true;
     }
 
+    private bool WheelStaysWith(object source)
+    {
+        if (_overlayRoot == null && _layers == null && _chromeLayer == null) return false;
+
+        for (var at = source as IUIComponent; at != null && !ReferenceEquals(at, this); at = at.VisualParent)
+        {
+            if (at is CanvasPane) return true;
+            if (ReferenceEquals(at, _chromeLayer)) return false;
+            if (at is ScrollViewer { HasRange: true }) return true;
+            if (ReferenceEquals(at, _overlayRoot)) return true;
+            if (at is CanvasElementLayer) return false;
+        }
+
+        return false;
+    }
+
     // Whether an event came from something the canvas CARRIES rather than from the plane. Their events bubble through
     // here and the ones that matter are not marked handled by whoever answered them, so where the event came from is
     // the only thing to go on.
@@ -1551,7 +1567,7 @@ public partial class InfiniteCanvas
     {
         if (_overlayRoot == null && _layers == null && _chromeLayer == null) return false;
 
-        for (var at = source as IUIComponent; at != null; at = at.VisualParent)
+        for (var at = source as IUIComponent; at != null && !ReferenceEquals(at, this); at = at.VisualParent)
         {
             // A PANE is glass; the layer holding them is not - it covers the entire canvas, so counting it as glass
             // threw away every press meant for the drawing. The pane is met first walking up, which is the whole fix.
