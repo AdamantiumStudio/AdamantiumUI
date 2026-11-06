@@ -48,6 +48,10 @@ public class ColorPalette : Control
         typeof(Color?), typeof(ColorPalette),
         new PropertyMetadata(null, PropertyMetadataOptions.BindsTwoWayByDefault, OnSelectedColorChanged));
 
+    public static readonly AdamantiumProperty ShowsCommandColorProperty = AdamantiumProperty.Register(
+        nameof(ShowsCommandColor), typeof(bool), typeof(ColorPalette),
+        new PropertyMetadata(false, (a, _) => ((ColorPalette)a).UpdateCommandState()));
+
     public static readonly AdamantiumProperty NoColorTextProperty = AdamantiumProperty.Register(nameof(NoColorText),
         typeof(object), typeof(ColorPalette), new PropertyMetadata(null, (a, _) => ((ColorPalette)a).ShowNoColor()));
 
@@ -92,6 +96,14 @@ public class ColorPalette : Control
     {
         get => GetValue<Color?>(SelectedColorProperty);
         set => SetValue(SelectedColorProperty, value);
+    }
+
+    /// <summary>Whether <see cref="SelectedColor"/> is the color a routed <see cref="Command"/> answers - the color of
+    /// what a pick changes, as a card's palette shows it - rather than the one picked last, as a split button's.</summary>
+    public bool ShowsCommandColor
+    {
+        get => GetValue<bool>(ShowsCommandColorProperty);
+        set => SetValue(ShowsCommandColorProperty, value);
     }
 
     /// <summary>The words of the choice of no color - "Automatic" for text, "No color" for a highlighter; null leaves
@@ -222,9 +234,9 @@ public class ColorPalette : Control
     private static void OnCommandChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
     {
         var palette = (ColorPalette)a;
-        palette._commandListener ??= new CommandSourceListener<ColorPalette>(palette, static p => p.UpdateCanExecute());
+        palette._commandListener ??= new CommandSourceListener<ColorPalette>(palette, static p => p.UpdateCommandState());
         palette._commandListener.Listen(e.NewValue as ICommand);
-        palette.UpdateCanExecute();
+        palette.UpdateCommandState();
     }
 
     private void Remember(Color color)
@@ -299,8 +311,15 @@ public class ColorPalette : Control
         HasRecentColors = count > 0 && recent is { Count: > 0 };
     }
 
-    private void UpdateCanExecute() =>
-        SetCurrentValue(IsEnabledProperty, CommandManager.QueryFrom(Command, null, this, null).CanExecute);
+    private void UpdateCommandState()
+    {
+        var state = CommandManager.QueryFrom(Command, null, this, null);
+        SetCurrentValue(IsEnabledProperty, state.CanExecute);
+        if (ShowsCommandColor && Command is RoutedCommand)
+        {
+            SetCurrentValue(SelectedColorProperty, state.Value as Color?);
+        }
+    }
 
     private void ShowNoColor()
     {

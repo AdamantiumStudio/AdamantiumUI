@@ -371,6 +371,37 @@ public class RibbonAdaptiveLayoutTests
         });
     }
 
+    // A drop-down given back by a removed item puts its menu away: it stood open for a command that is gone.
+    [Test]
+    public void ARecycledDropDown_PutsItsMenuAway()
+    {
+        var items = new System.Collections.ObjectModel.ObservableCollection<object> { "paste", "borders" };
+        var group = Group(0);
+        group.ItemTemplate = new DataTemplate(() =>
+        {
+            var menu = new ContextMenu();
+            menu.Items.Add(new Adamantium.UI.Controls.Primitives.MenuItem { Header = "row" });
+            return new TemplateResult { RootComponent = new RibbonDropDownButton { DropDownMenu = menu } };
+        });
+        group.ItemsSource = items;
+        var (panel, _) = Row(group);
+        LayoutAt(panel, 2000);
+        var paste = (RibbonDropDownButton)ContainerOf(group, 0);
+        paste.IsDropDownOpen = true;
+        var opened = paste.DropDownMenu.IsOpen;
+
+        items.RemoveAt(0);
+        items.Add("shading");
+        LayoutAt(panel, 2000);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(opened, Is.True);
+            Assert.That(paste.IsDropDownOpen, Is.False);
+            Assert.That(paste.DropDownMenu.IsOpen, Is.False);
+        });
+    }
+
     // The width a group is laid out at has to be the GROUP's, not its commands'. Missing the chrome, every group is
     // arranged narrower than it needs and the rule down its edge is pushed back over the commands - which is what the
     // separators "sliding" looked like on screen.

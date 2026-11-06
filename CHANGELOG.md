@@ -7,6 +7,12 @@ All packages share one version.
 
 ### Added
 
+- `DashedLine`: a dotted or dashed line of laid-out text, as `TextBlock` draws it and an editor can - a paragraph's
+  dotted or dashed border at its side runs down its band, as a line under vertical text does (it ran across it).
+
+- `ColorPalette.ShowsCommandColor`: the palette shows the color its routed command answers - what a pick changes, as a
+  card's palette - instead of the one picked last.
+
 - `Placement`: where an element puts a drawing, which it can move later without drawing again. `DrawGeometry` and
   `DrawText` take one in new overloads; writing `Placement.Matrix` moves what was drawn with it by rewriting one matrix
   on the GPU - the element is not recorded again. A camera over many objects gives each object its own placement.
@@ -34,6 +40,14 @@ All packages share one version.
 
 ### Changed
 
+- **Breaking:** a ribbon drop-down's menu being open is `RibbonDropDownButton.IsDropDownOpen`, a property of its own
+  that binds two-way and stays false with no menu or while the command cannot be used. `IsChecked` no longer says the
+  menu is open. A `RibbonSplitButton` whose body is a toggle - `IsCheckable`, as WPF's and Fluent.Ribbon's - takes it
+  from its command, lights its body while it is on and is a toggle to automation; one that is not, as the borders',
+  shows nothing of it.
+  Code that read or bound `IsChecked` to know whether the menu is open reads `IsDropDownOpen` now. A menu given while
+  the button is open opens in the place of the one it replaces, and a group that recycles a drop-down puts its menu away.
+
 - A menu row's check mark has a column of its own, before the icon's: a checked row keeps its icon beside the check,
   where the check took the icon's place. A menu keeps the column only while one of its rows can be checked -
   `IsCheckable`, a command that has said whether it is on, or checked - and then on every row, so its labels start on
@@ -60,6 +74,10 @@ All packages share one version.
 - `StrokeGeometry`, which tessellated strokes on the CPU, and `RenderUnit.UseGpuStroke`: every stroke is drawn on the GPU.
 
 ### Fixed
+
+- A `RibbonSplitButton` whose body's command says its choice is on - a border the paragraphs show - no longer drops its
+  menu by itself, nor leaves it open after a row is picked. After its arrow was clicked, invoking its body runs the
+  body, not the menu, and a drop-down that cannot be used is not opened by its key tip.
 
 - The anti-aliased edge of a shape filled with a mesh gradient takes the gradient's corner colors rather than one of
   them.

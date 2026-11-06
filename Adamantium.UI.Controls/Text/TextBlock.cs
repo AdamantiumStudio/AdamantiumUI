@@ -1980,32 +1980,26 @@ public class TextBlock : InputUIComponent, IFocusableInParts, IGlyphEffectSource
             {
                 session.DrawRectangle(brush, new Rect(rect.X, rect.Y, rect.Width, rect.Height));
             }
-            else if (adornment.Dashes != null)
-            {
-                DrawDashedLine(session, OnPixels(new Rect(rect.X, rect.Y, rect.Width, rect.Height)), brush,
-                    adornment.Dashes);
-            }
             else
             {
-                session.DrawRectangle(brush, OnPixels(new Rect(rect.X, rect.Y, rect.Width, rect.Height)));
+                var down = adornment.Kind == TextAdornmentKind.Border
+                    ? DashedLine.RunsDown(rect)
+                    : WritingMode == WritingMode.VerticalRightToLeft;
+                var band = OnPixels(new Rect(rect.X, rect.Y, rect.Width, rect.Height), down);
+                if (adornment.Dashes != null)
+                {
+                    DashedLine.Draw(session, band, brush, adornment.Dashes, down);
+                }
+                else
+                {
+                    session.DrawRectangle(brush, band);
+                }
             }
         }
     }
 
-    private void DrawDashedLine(IDrawingSession session, Rect band, Brush brush, IReadOnlyList<double> dashes)
+    private Rect OnPixels(Rect line, bool vertical)
     {
-        var down = WritingMode == WritingMode.VerticalRightToLeft;
-        var thickness = down ? band.Width : band.Height;
-        var pen = new Pen(brush, thickness, dashStrokeArray: dashes, dashStartCap: PenLineCap.Flat,
-            dashEndCap: PenLineCap.Flat);
-        var middle = (down ? band.X : band.Y) + thickness / 2;
-        session.DrawLine(down ? new Vector2<double>(middle, band.Y) : new Vector2<double>(band.X, middle),
-            down ? new Vector2<double>(middle, band.Y + band.Height) : new Vector2<double>(band.X + band.Width, middle), pen);
-    }
-
-    private Rect OnPixels(Rect line)
-    {
-        var vertical = WritingMode == WritingMode.VerticalRightToLeft;
         var thickness = vertical ? line.Width : line.Height;
         var snapped = line;
         if (!this.Snap(ref snapped, ref thickness))

@@ -296,6 +296,12 @@ public class RibbonGroup : ItemsControl, IHeaderedItemsControl
         {
             toggle.ClearValue(Primitives.ToggleButton.IsCheckedProperty, ValuePriority.Binding);
         }
+
+        if (command is RibbonDropDownButton dropDown
+            && Core.Data.BindingEngine.GetBindingExpression(dropDown, RibbonDropDownButton.IsDropDownOpenProperty) == null)
+        {
+            dropDown.SetCurrentValue(RibbonDropDownButton.IsDropDownOpenProperty, false);
+        }
     }
 
     private DataTemplate TemplateFor(object item) => ItemTemplate ?? ItemTemplateSelector?.SelectTemplate(item, this);

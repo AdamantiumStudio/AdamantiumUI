@@ -1360,9 +1360,9 @@
         <PropertyTrigger Property="IsEnabled" Value="false">
             <Setter TargetName="DropDownGlyph" Property="Stroke" Value="{TemplateBinding ForegroundDisabled}"/>
         </PropertyTrigger>
-        <!-- Checked here is "the menu is down" - a command HELD open, not a command switched on. So it takes the
+        <!-- The menu is down - a command HELD open, not a command switched on. So it takes the
              pressed plate rather than the accent: the accent would say this command is now in effect. -->
-        <PropertyTrigger Property="IsChecked" Value="true">
+        <PropertyTrigger Property="IsDropDownOpen" Value="true">
             <Setter TargetName="Chrome" Property="Background" Value="{ResourceReference ControlFillColorTertiary}"/>
         </PropertyTrigger>
     </Style>
@@ -1560,7 +1560,17 @@
             <Setter TargetName="ActionArea" Property="Background" Value="{TemplateBinding BackgroundPointerOver}"/>
         </MultiTrigger>
         <!-- Held open, not switched on - the same distinction the drop-down button makes above. -->
-        <PropertyTrigger Property="IsChecked" Value="true">
+        <!-- A split button that is a toggle lights its body while its command is on, as a checked toggle does. -->
+        <MultiTrigger>
+            <MultiTrigger.Conditions>
+                <Condition Property="IsCheckable" Value="true"/>
+                <Condition Property="IsChecked" Value="true"/>
+            </MultiTrigger.Conditions>
+            <Setter TargetName="ActionArea" Property="Background" Value="{ThemeResource AccentFillColorDefault}"/>
+            <Setter TargetName="PART_ContentPresenter" Property="Foreground" Value="{ThemeResource AccentForegroundColor}"/>
+            <Setter TargetName="PART_Icon" Property="Foreground" Value="{ThemeResource AccentForegroundColor}"/>
+        </MultiTrigger>
+        <PropertyTrigger Property="IsDropDownOpen" Value="true">
             <Setter TargetName="PART_DropDownArea" Property="Background" Value="{ResourceReference ControlFillColorTertiary}"/>
         </PropertyTrigger>
         <PropertyTrigger Property="IsEnabled" Value="false">

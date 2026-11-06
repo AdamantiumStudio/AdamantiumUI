@@ -27,17 +27,42 @@ public class RibbonMenuButtonTests
         return menu;
     }
 
-    // Checked IS open: one state, so the lit command and the menu under it can never disagree.
+    // One open state, so the lit command and the menu under it can never disagree.
     [Test]
-    public void CheckingTheCommand_DropsItsMenu()
+    public void OpeningTheDropDown_DropsItsMenu()
     {
         var button = new RibbonDropDownButton { DropDownMenu = MenuWith("Keep formatting") };
 
-        button.IsChecked = true;
+        button.IsDropDownOpen = true;
         Assert.That(button.DropDownMenu.IsOpen, Is.True);
 
-        button.IsChecked = false;
+        button.IsDropDownOpen = false;
         Assert.That(button.DropDownMenu.IsOpen, Is.False);
+    }
+
+    private sealed class AnsweredSplitButton : RibbonSplitButton
+    {
+        public void Answer(CommandState state) => OnCommandState(state);
+    }
+
+    // A command saying its choice is on - "is the bottom border on?" - never drops the menu. It checks only a split button
+    // whose body is a toggle; the borders' is not one, and shows nothing of it.
+    [Test]
+    public void ACommandSayingItsChoiceIsOn_ChecksOnlyAToggleBody_AndDoesNotDropTheMenu()
+    {
+        var borders = new AnsweredSplitButton { DropDownMenu = MenuWith("Bottom Border") };
+        var underline = new AnsweredSplitButton { DropDownMenu = MenuWith("Double"), IsCheckable = true };
+
+        borders.Answer(new CommandState(true, IsChecked: true));
+        underline.Answer(new CommandState(true, IsChecked: true));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(borders.IsChecked, Is.Not.True);
+            Assert.That(underline.IsChecked, Is.True);
+            Assert.That(new[] { borders.IsDropDownOpen, underline.IsDropDownOpen }, Is.All.False);
+            Assert.That(new[] { borders.DropDownMenu.IsOpen, underline.DropDownMenu.IsOpen }, Is.All.False);
+        });
     }
 
     // The menu closes itself on an outside press, on Escape, and on a row being picked. Nothing else is listening, so a
@@ -46,11 +71,11 @@ public class RibbonMenuButtonTests
     public void TheMenuClosingItself_UnlightsTheCommand()
     {
         var button = new RibbonDropDownButton { DropDownMenu = MenuWith("Values only") };
-        button.IsChecked = true;
+        button.IsDropDownOpen = true;
 
         button.DropDownMenu.IsOpen = false;
 
-        Assert.That(button.IsChecked, Is.False);
+        Assert.That(button.IsDropDownOpen, Is.False);
     }
 
     // A logical child, like the right-click ContextMenu a control already owns: that is what themes it and hands it the
@@ -76,7 +101,7 @@ public class RibbonMenuButtonTests
 
         button.DropDownMenu = first;
         button.DropDownMenu = second;
-        button.IsChecked = true;
+        button.IsDropDownOpen = true;
 
         Assert.Multiple(() =>
         {
@@ -86,13 +111,62 @@ public class RibbonMenuButtonTests
         });
     }
 
-    // A command with nothing to drop must not throw when it is clicked - the menu is optional until an author fills it.
+    // A command with nothing to drop, or one that cannot be used, stays shut rather than lit over no menu.
     [Test]
-    public void ACommandWithNoMenu_TogglesQuietly()
+    public void ACommandWithNoMenu_OrOneThatCannotBeUsed_StaysShut()
     {
-        var button = new RibbonDropDownButton();
+        var empty = new RibbonDropDownButton();
+        var disabled = new RibbonDropDownButton { DropDownMenu = MenuWith("Paste"), IsEnabled = false };
 
-        Assert.DoesNotThrow(() => button.IsChecked = true);
+        Assert.DoesNotThrow(() => empty.IsDropDownOpen = true);
+        disabled.PressKeyTip();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(empty.IsDropDownOpen, Is.False);
+            Assert.That(disabled.IsDropDownOpen, Is.False);
+            Assert.That(disabled.DropDownMenu.IsOpen, Is.False);
+        });
+    }
+
+    // A menu swapped while open: the old one goes, the new one stands in its place; none left over the button.
+    [Test]
+    public void AMenuSwappedWhileOpen_TakesTheOldOnesPlace_AndNoneLeavesItOpen()
+    {
+        var first = MenuWith("a");
+        var second = MenuWith("b");
+        var button = new RibbonDropDownButton { DropDownMenu = first };
+        button.IsDropDownOpen = true;
+
+        button.DropDownMenu = second;
+        var swapped = (first.IsOpen, second.IsOpen, button.IsDropDownOpen);
+        button.DropDownMenu = null;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(swapped, Is.EqualTo((false, true, true)));
+            Assert.That(second.IsOpen, Is.False);
+            Assert.That(button.IsDropDownOpen, Is.False);
+        });
+    }
+
+    // A split button's peer is a toggle only when its body is one; a plain drop-down, or the borders' split, is not.
+    [Test]
+    public void ASplitButtonsPeer_IsAToggleOnlyWhenItsBodyIsOne()
+    {
+        var underline = new AnsweredSplitButton { DropDownMenu = MenuWith("Double"), IsCheckable = true };
+        underline.Answer(new CommandState(true, IsChecked: true));
+        var peer = (Adamantium.UI.Controls.Automation.RibbonDropDownButtonAutomationPeer)underline.GetAutomationPeer();
+        var borders = new RibbonSplitButton().GetAutomationPeer();
+        var plain = new RibbonDropDownButton().GetAutomationPeer();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(peer.GetPattern(Adamantium.UI.Core.Automation.PatternId.Toggle), Is.Not.Null);
+            Assert.That(peer.ToggleState, Is.EqualTo(Adamantium.UI.Core.Automation.ToggleState.On));
+            Assert.That(borders.GetPattern(Adamantium.UI.Core.Automation.PatternId.Toggle), Is.Null);
+            Assert.That(plain.GetPattern(Adamantium.UI.Core.Automation.PatternId.Toggle), Is.Null);
+        });
     }
 
     // --- The split button: which half a press belongs to -------------------------------------------------------------
@@ -176,7 +250,7 @@ public class RibbonMenuButtonTests
         Assert.Multiple(() =>
         {
             Assert.That(command.Runs, Is.EqualTo(1));
-            Assert.That(button.IsChecked, Is.False);
+            Assert.That(button.IsDropDownOpen, Is.False);
             Assert.That(button.DropDownMenu.IsOpen, Is.False);
         });
     }
@@ -193,7 +267,7 @@ public class RibbonMenuButtonTests
         Assert.Multiple(() =>
         {
             Assert.That(command.Runs, Is.EqualTo(0));
-            Assert.That(button.IsChecked, Is.True);
+            Assert.That(button.IsDropDownOpen, Is.True);
             Assert.That(button.DropDownMenu.IsOpen, Is.True);
         });
     }
@@ -206,7 +280,7 @@ public class RibbonMenuButtonTests
         button.DropDownMenu = MenuWith("Values only");
 
         PressAndRelease(button, ActionWidth + ArrowWidth / 2, 15);   // the press that made the arrow the last half hit
-        button.IsChecked = false;
+        button.IsDropDownOpen = false;
 
         ((IObservableComponent)button).RaiseEvent(new KeyEventArgs(KeyboardDevice.CurrentDevice, Key.Enter, InputModifiers.None, 0)
         { RoutedEvent = Keyboard.KeyDownEvent });
@@ -214,7 +288,25 @@ public class RibbonMenuButtonTests
         Assert.Multiple(() =>
         {
             Assert.That(command.Runs, Is.EqualTo(1));
-            Assert.That(button.IsChecked, Is.False, "Enter runs the action, it does not drop the menu");
+            Assert.That(button.IsDropDownOpen, Is.False, "Enter runs the action, it does not drop the menu");
+        });
+    }
+
+    // A click on the arrow is spent once: the body pressed after - by automation, with no press of its own - runs the action.
+    [Test]
+    public void TheBodyPressedAfterTheArrow_RunsTheAction()
+    {
+        var (button, command) = ArrangedSplitButton();
+        button.DropDownMenu = MenuWith("Values only");
+        PressAndRelease(button, ActionWidth + ArrowWidth / 2, 15);
+        button.IsDropDownOpen = false;
+
+        button.PerformClick();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(command.Runs, Is.EqualTo(1));
+            Assert.That(button.IsDropDownOpen, Is.False);
         });
     }
 
