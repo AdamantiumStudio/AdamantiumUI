@@ -110,19 +110,29 @@ public class ScrollViewer : ContentControl
     // common between the two screens, which is why every reader (and every browser) keeps a couple of lines.
     private const double PageOverlap = 2 * LineStep;
 
+    private const double EdgeSlack = 0.5;
+
+    private bool HasVerticalRange =>
+        _presenter is { CanScrollVertically: true } p && p.Extent.Height > p.Viewport.Height + EdgeSlack;
+
+    private bool HasHorizontalRange =>
+        _presenter is { CanScrollHorizontally: true } p && p.Extent.Width > p.Viewport.Width + EdgeSlack;
+
+    /// <summary>Whether it has anywhere to scroll, on an axis it may scroll - what makes a wheel over it its own, even
+    /// at an end.</summary>
+    internal bool HasRange => HasVerticalRange || HasHorizontalRange;
+
     /// <summary>Scrolls one viewport minus a little overlap; false at the end or with nothing to scroll, so an outer
     /// viewer can take the key. Called by the window, since a ScrollViewer is not focusable.</summary>
     public bool PageVertically(bool back)
     {
-        if (_presenter is not { CanScrollVertically: true }) return false;
+        if (!HasVerticalRange) return false;
 
         var extent = _presenter.Extent;
         var viewport = _presenter.Viewport;
-        if (extent.Height <= viewport.Height + 0.5) return false;
-
         var max = extent.Height - viewport.Height;
         var offset = ScrollOffset;
-        if (back ? offset.Y <= 0.5 : offset.Y >= max - 0.5) return false;
+        if (back ? offset.Y <= EdgeSlack : offset.Y >= max - EdgeSlack) return false;
 
         _presenter.AnimateScrollBy(new Vector2<double>(0, back ? -Math.Max(viewport.Height - PageOverlap, LineStep)
                                                       : Math.Max(viewport.Height - PageOverlap, LineStep)));
@@ -134,15 +144,13 @@ public class ScrollViewer : ContentControl
     /// caller can leave the key for someone else.</summary>
     public bool ScrollToVerticalEdge(bool toStart)
     {
-        if (_presenter is not { CanScrollVertically: true }) return false;
+        if (!HasVerticalRange) return false;
 
         var extent = _presenter.Extent;
         var viewport = _presenter.Viewport;
-        if (extent.Height <= viewport.Height + 0.5) return false;
-
         var max = extent.Height - viewport.Height;
         var offset = ScrollOffset;
-        if (toStart ? offset.Y <= 0.5 : offset.Y >= max - 0.5) return false;
+        if (toStart ? offset.Y <= EdgeSlack : offset.Y >= max - EdgeSlack) return false;
 
         _presenter.AnimateScrollBy(new Vector2<double>(0, (toStart ? 0 : max) - offset.Y));
         return true;
@@ -404,8 +412,8 @@ public class ScrollViewer : ContentControl
         var extent = _presenter.Extent;
         var viewport = _presenter.Viewport;
         var offset = ScrollOffset;
-        var canV = _presenter.CanScrollVertically && extent.Height > viewport.Height + 0.5;
-        var canH = _presenter.CanScrollHorizontally && extent.Width > viewport.Width + 0.5;
+        var canV = HasVerticalRange;
+        var canH = HasHorizontalRange;
 
         // A HORIZONTAL (tilt) wheel scrolls X; a vertical wheel scrolls Y, or X when there's no vertical range (a
         // horizontally-scrolling list). `delta` is the signed move on the active axis, with current/max for edge testing.
@@ -433,7 +441,7 @@ public class ScrollViewer : ContentControl
         // so a nested list hands off instead of dead-ending under the cursor. Disabled -> classic (always swallow).
         if (GetScrollChaining(this))
         {
-            var atEdge = delta > 0 ? current >= max - 0.5 : current <= 0.5;
+            var atEdge = delta > 0 ? current >= max - EdgeSlack : current <= EdgeSlack;
             if (atEdge) return;   // e.Handled stays false -> bubbles up
         }
 
@@ -464,7 +472,7 @@ public class ScrollViewer : ContentControl
     private static Visibility ComputeVisibility(ScrollBarVisibility mode, double extent, double viewport) => mode switch
     {
         ScrollBarVisibility.Visible => Visibility.Visible,
-        ScrollBarVisibility.Auto => viewport > 0 && extent > viewport + 0.5 ? Visibility.Visible : Visibility.Collapsed,
+        ScrollBarVisibility.Auto => viewport > 0 && extent > viewport + EdgeSlack ? Visibility.Visible : Visibility.Collapsed,
         _ => Visibility.Collapsed   // Disabled, Hidden: no bar (Hidden still scrolls via wheel/programmatic)
     };
 
