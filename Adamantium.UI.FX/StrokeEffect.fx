@@ -29,6 +29,7 @@ static float Fringe;             // AA feather width in geometry-LOCAL units (~1
 static float* Pattern;           // dash pattern (on,off,...); PatternCount entries, 0 = solid
 static uint PatternCount;
 static float DashOffset;
+static float DashScale;          // the pattern's units to local ones: 1, or the window's units' for a pen measured in them
 static float TrimStart;          // 0..1 fraction of total arc length
 static float TrimEnd;            // 0..1
 static uint Runs;                // the ends are the runs' - see StrokeCoverage
@@ -61,6 +62,7 @@ float UFringe;
 float* UPattern;
 uint UPatternCount;
 float UDashOffset;
+float UDashScale;
 float UTrimStart;
 float UTrimEnd;
 uint URuns;
@@ -86,6 +88,7 @@ void LoadUniforms()
     Pattern = UPattern;
     PatternCount = UPatternCount;
     DashOffset = UDashOffset;
+    DashScale = UDashScale;
     TrimStart = UTrimStart;
     TrimEnd = UTrimEnd;
     Runs = URuns;
@@ -107,7 +110,7 @@ struct StrokeRecord
     float* Pattern;
     uint PointCount;
     uint PatternCount;
-    uint Flags;              // 1 closed, 2 batched contours, 4 runs, 8 thickness in window pixels
+    uint Flags;              // 1 closed, 2 batched contours, 4 runs, 8 thickness and dashes in window units
     uint Caps;               // start | end << 4 | dash start << 8 | dash end << 12
     uint RoundSegments;
     uint JoinType;
@@ -118,7 +121,7 @@ struct StrokeRecord
 };
 
 StrokeRecord* Records;
-float RenderScale;           // device pixels per window pixel
+float RenderScale;           // device pixels per window unit
 uint AntiAlias;              // 0 = hard edges
 
 // Device pixels per local unit of a stroke drawn by `m`, at its point `p`: the area scale of its map to the viewport's
@@ -166,11 +169,14 @@ StrokeRecord LoadRecord(uint index)
     PieceSalt = r.Pen.w;
 
     // The width in local units, worked out from the matrix as it is now: a camera that moved the slot moved the record
-    // with it, and a line measured in pixels or held to a least width keeps it.
+    // with it, and a line measured in the window's units or held to a least width keeps it - its dashes too. A record is
+    // flat (a stroke under a perspective is drawn on its own), so its scale is the same at every point.
     float2* points = r.Points;
     float device = max(DevicePixelScale(Wvp, r.PointCount > 0u ? points[0] : float2(0.0, 0.0)), 1e-6);
     float thickness = r.Pen.x;
-    if ((r.Flags & 8u) != 0u) thickness *= RenderScale / device;
+    DashScale = (r.Flags & 8u) != 0u ? RenderScale / device : 1.0;
+    thickness *= DashScale;
+
     if (r.Pen.y > 0.0) thickness = max(thickness, r.Pen.y / device);
     HalfThickness = thickness * 0.5;
     Fringe = AntiAlias != 0u ? 1.0 / device : 0.0;
@@ -466,7 +472,7 @@ float RunsSd(float arc, float v, float contourLength, bool closed)
     float* pattern = Pattern;
     uint runs = PatternCount % 2u == 1u ? PatternCount * 2u : PatternCount;
     float total = 0.0;
-    for (uint k = 0u; k < runs; ++k) total += pattern[k % PatternCount];
+    for (uint k = 0u; k < runs; ++k) total += pattern[k % PatternCount] * DashScale;
     if (PatternCount == 0u || total <= 0.0)
     {
         return windowed ? RunSd(arc, v, ws, we, StartCap, EndCap) : 1e9;
@@ -474,7 +480,7 @@ float RunsSd(float arc, float v, float contourLength, bool closed)
 
     // Where the period holding `arc` starts along the contour; its runs and those of as many periods either side as an
     // end's reach spans are near enough - more than one for tight dots on a thick line.
-    float at = arc + DashOffset;
+    float at = arc + DashOffset * DashScale;
     float periodStart = arc - (at - floor(at / total) * total);
     int reach = min(int(ceil((HalfThickness + Fringe) / total)) + 1, 8);
     float sd = -1e9;
@@ -483,7 +489,7 @@ float RunsSd(float arc, float v, float contourLength, bool closed)
         float start = periodStart + float(n) * total;
         for (uint k = 0u; k < runs; ++k)
         {
-            float end = start + pattern[k % PatternCount];
+            float end = start + pattern[k % PatternCount] * DashScale;
             if ((k % 2u) == 0u && end > ws && start < we)
             {
                 uint capS = start <= ws ? StartCap : DashStartCap;

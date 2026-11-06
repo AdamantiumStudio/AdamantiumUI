@@ -27,13 +27,16 @@ public class Pen : IEquatable<Pen>
    /// <summary>How the stroke paints where it crosses itself: in one pass, or in two that paint each pixel once.</summary>
    public PenOverlap Overlap { get; init; }
 
+   /// <summary>How far along the line the dash pattern starts, in the same unit as <see cref="DashStrokeArray"/>.
+   /// </summary>
    public Double DashOffset { get; }
 
    private AdamantiumCollection<Double> _dashStrokeArray;
    private readonly double[] _dashes;
    private readonly bool _isRenderCopy;
 
-   /// <summary>The lengths of the dashes and gaps, in the geometry's units, as a list the loop thread may edit. A copy
+   /// <summary>The lengths of the dashes and gaps, in the units <see cref="ThicknessUnit"/> names - the geometry's, or
+   /// the window's, as the width is - as a list the loop thread may edit. A copy
    /// for rendering (<see cref="CloneForRendering"/>) draws the dashes it was made with: editing its list changes
    /// nothing drawn.</summary>
    public AdamantiumCollection<Double> DashStrokeArray =>
@@ -67,9 +70,9 @@ public class Pen : IEquatable<Pen>
    /// contour, with no long dash at the seam.</summary>
    public Boolean FitDashesToContour { get; }
 
-   /// <summary>Dash offset expressed in PERIODS instead of pixels, added to <see cref="DashOffset"/>. One period is the
+   /// <summary>Dash offset expressed in PERIODS instead of the pattern's unit, added to <see cref="DashOffset"/>. One period is the
    /// whole pattern, so animating this 0 -> 1 marches the dashes exactly one step and lands back on itself - seamlessly,
-   /// whatever the array says and whatever the contour fit scaled it to. The pixel offset cannot do that: it makes the
+   /// whatever the array says and whatever the contour fit scaled it to. <see cref="DashOffset"/> cannot do that: it makes the
    /// author work out the period by hand and then re-derive it every time the pattern changes.</summary>
    public Double DashPhase { get; }
 
