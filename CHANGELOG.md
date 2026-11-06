@@ -34,8 +34,12 @@ All packages share one version.
 
 ### Changed
 
-- A checked menu row keeps its icon, in a lit frame, as Word's - which border is on stays to be seen; a row with no icon
-  shows the check mark in that frame. The check took the icon's place. In every theme.
+- A menu row's check mark has a column of its own, before the icon's: a checked row keeps its icon beside the check,
+  where the check took the icon's place. A menu keeps the column only while one of its rows can be checked -
+  `IsCheckable`, a command that has said whether it is on, or checked - and then on every row, so its labels start on
+  one line and none moves as a check comes or goes on a row that says it can be checked (`MenuItem.ShowsCheckColumn`).
+  The icon column is kept the same way, while one of the rows has an icon (`MenuItem.ShowsIconColumn`): a menu with no
+  icon has no empty column. A row in no menu keeps the columns it needs. In every theme.
 
 - `RenderDirty.IsNodeMoved` and `RenderDirty.IsGeometryDirty` replace `MovedNodes` and `Geometry`, which handed out the
   live sets while other threads marked them. Every set of the dirty marks is locked by a lock of its own, not by the

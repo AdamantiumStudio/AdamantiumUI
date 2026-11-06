@@ -24,7 +24,7 @@ public class MenuItem : ItemsControl, IHeaderedItemsControl
         typeof(DataTemplate), typeof(MenuItem), new PropertyMetadata(null));
 
     public static readonly AdamantiumProperty IconProperty = AdamantiumProperty.Register(nameof(Icon),
-        typeof(object), typeof(MenuItem), new PropertyMetadata(null));
+        typeof(object), typeof(MenuItem), new PropertyMetadata(null, OnCheckabilityChanged));
 
     public static readonly AdamantiumProperty InputGestureTextProperty = AdamantiumProperty.Register(nameof(InputGestureText),
         typeof(string), typeof(MenuItem), new PropertyMetadata(null));
@@ -39,10 +39,17 @@ public class MenuItem : ItemsControl, IHeaderedItemsControl
         typeof(IInputComponent), typeof(MenuItem), new PropertyMetadata(null, OnCommandParameterChanged));
 
     public static readonly AdamantiumProperty IsCheckableProperty = AdamantiumProperty.Register(nameof(IsCheckable),
-        typeof(bool), typeof(MenuItem), new PropertyMetadata(false));
+        typeof(bool), typeof(MenuItem), new PropertyMetadata(false, OnCheckabilityChanged));
 
     public static readonly AdamantiumProperty IsCheckedProperty = AdamantiumProperty.Register(nameof(IsChecked),
-        typeof(bool), typeof(MenuItem), new PropertyMetadata(false, PropertyMetadataOptions.BindsTwoWayByDefault));
+        typeof(bool), typeof(MenuItem), new PropertyMetadata(false, PropertyMetadataOptions.BindsTwoWayByDefault,
+            OnCheckabilityChanged));
+
+    public static readonly AdamantiumProperty ShowsCheckColumnProperty = AdamantiumProperty.RegisterReadOnly(
+        nameof(ShowsCheckColumn), typeof(bool), typeof(MenuItem), new PropertyMetadata(false));
+
+    public static readonly AdamantiumProperty ShowsIconColumnProperty = AdamantiumProperty.RegisterReadOnly(
+        nameof(ShowsIconColumn), typeof(bool), typeof(MenuItem), new PropertyMetadata(false));
 
     public static readonly AdamantiumProperty StaysOpenOnClickProperty = AdamantiumProperty.Register(nameof(StaysOpenOnClick),
         typeof(bool), typeof(MenuItem), new PropertyMetadata(false));
@@ -77,6 +84,7 @@ public class MenuItem : ItemsControl, IHeaderedItemsControl
             }
         }
 
+        _commandChecks = false;
         UpdateCanExecute();
     }
 
@@ -85,10 +93,79 @@ public class MenuItem : ItemsControl, IHeaderedItemsControl
         // A PARENT row opens a submenu and runs nothing, so a command on it says nothing about whether it can be used.
         var state = CommandManager.QueryFrom(Command, CommandParameter, this, CommandTarget);
         IsEnabled = HasItems || state.CanExecute;
+        _commandChecks |= state.IsChecked.HasValue;
         if (state.IsChecked is { } on)
         {
             SetCurrentValue(IsCheckedProperty, on);
         }
+
+        CountColumns();
+    }
+
+    private bool _commandChecks;
+    private MenuRows _rows;
+
+    private bool CanBeChecked => IsCheckable || _commandChecks || IsChecked;
+
+    /// <summary>This row's own rows, the ones in its submenu.</summary>
+    internal MenuRows Rows => _rows ??= new MenuRows();
+
+    /// <summary>The rows of the menu this row is listed in; null for a row in no menu, which keeps a check column while
+    /// it can be checked and an icon column while it has an icon.</summary>
+    internal MenuRows ListedIn { get; private set; }
+
+    /// <summary>Whether the row could be checked when it was last counted.</summary>
+    internal bool CountedCheckable { get; private set; }
+
+    /// <summary>Whether the row had an icon when it was last counted.</summary>
+    internal bool CountedIcon { get; private set; }
+
+    private static void OnCheckabilityChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e) =>
+        ((MenuItem)a).CountColumns();
+
+    private void CountColumns()
+    {
+        var checkable = CanBeChecked;
+        var icon = Icon != null;
+        if (checkable == CountedCheckable && icon == CountedIcon)
+        {
+            return;
+        }
+
+        var checks = checkable == CountedCheckable ? 0 : checkable ? 1 : -1;
+        var icons = icon == CountedIcon ? 0 : icon ? 1 : -1;
+        CountedCheckable = checkable;
+        CountedIcon = icon;
+        if (ListedIn != null)
+        {
+            ListedIn.Count(checks, icons);
+        }
+        else
+        {
+            ShowColumns(checkable, icon);
+        }
+    }
+
+    /// <summary>Lists the row among <paramref name="rows"/>, counted as it is now.</summary>
+    internal void JoinRows(MenuRows rows)
+    {
+        ListedIn = rows;
+        CountedCheckable = CanBeChecked;
+        CountedIcon = Icon != null;
+    }
+
+    /// <summary>Takes the row off its menu's rows; on its own it keeps the columns it needs.</summary>
+    internal void LeaveRows()
+    {
+        ListedIn = null;
+        ShowColumns(CountedCheckable, CountedIcon);
+    }
+
+    /// <summary>Keeps the check and icon columns, or not, as the menu's rows do.</summary>
+    internal void ShowColumns(bool check, bool icon)
+    {
+        ShowsCheckColumn = check;
+        ShowsIconColumn = icon;
     }
 
     // Read-only: true once the item has children (so it's a submenu parent, not a leaf). Drives the chevron + the flyout.
@@ -142,8 +219,26 @@ public class MenuItem : ItemsControl, IHeaderedItemsControl
     /// <summary>Whether choosing the row flips <see cref="IsChecked"/>.</summary>
     public bool IsCheckable { get => GetValue<bool>(IsCheckableProperty); set => SetValue(IsCheckableProperty, value); }
 
-    /// <summary>Whether the row is checked; the theme draws a check mark in the icon gutter. Binds two-way by default.</summary>
+    /// <summary>Whether the row is checked; the theme draws a check mark in its check column. Binds two-way by default.</summary>
     public bool IsChecked { get => GetValue<bool>(IsCheckedProperty); set => SetValue(IsCheckedProperty, value); }
+
+    /// <summary>Whether the row keeps a column for a check mark. Every row of a menu does once one of them can be
+    /// checked - <see cref="IsCheckable"/>, a command that says whether it is on, or checked - so their labels start on
+    /// one line and none moves as a check comes or goes. Set by the menu. Read-only.</summary>
+    public bool ShowsCheckColumn
+    {
+        get => GetValue<bool>(ShowsCheckColumnProperty);
+        private set => SetValue(ShowsCheckColumnProperty, value);
+    }
+
+    /// <summary>Whether the row keeps a column for an icon. Every row of a menu does once one of them has an
+    /// <see cref="Icon"/>, so their labels start on one line; a menu with no icon has no empty column. Set by the menu.
+    /// Read-only.</summary>
+    public bool ShowsIconColumn
+    {
+        get => GetValue<bool>(ShowsIconColumnProperty);
+        private set => SetValue(ShowsIconColumnProperty, value);
+    }
 
     /// <summary>Whether the menu stays open after the row is chosen - for a list of switches flipped one after another.</summary>
     public bool StaysOpenOnClick { get => GetValue<bool>(StaysOpenOnClickProperty); set => SetValue(StaysOpenOnClickProperty, value); }
@@ -211,6 +306,26 @@ public class MenuItem : ItemsControl, IHeaderedItemsControl
         }
 
         base.PrepareContainer(container, item);
+        if (container is MenuItem joining)
+        {
+            Rows.Join(joining);
+        }
+    }
+
+    protected internal override void ClearContainer(IUIComponent container)
+    {
+        if (container is MenuItem row)
+        {
+            _rows?.Leave(row);
+        }
+
+        base.ClearContainer(container);
+    }
+
+    protected override void OnItemsChanged(NotifyCollectionChangedEventArgs e)
+    {
+        base.OnItemsChanged(e);
+        _rows?.LeaveRemoved(e, Items, ItemContainerGenerator);
     }
 
     /// <summary>The MenuItem whose submenu this row lives in (null for a ContextMenu's own top-level rows).</summary>

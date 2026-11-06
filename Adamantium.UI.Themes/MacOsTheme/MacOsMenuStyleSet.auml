@@ -27,31 +27,30 @@
                     <Grid>
                         <Border x:Name="Root" Background="{TemplateBinding Background}"
                                 CornerRadius="4" Margin="5 0" Padding="10 3" MinHeight="22">
-                            <Grid ColumnDefinitions="22,*,Auto,Auto">
-                                <!-- A checked row's mark: a lit frame round its icon - or round the check of a row with none. -->
-                                <Border x:Name="CheckFrame" Grid.Column="0" Width="20" Height="20" CornerRadius="4"
-                                        Background="{ResourceReference SubtleFillColorSecondary}"
-                                        BorderBrush="{ThemeResource AccentFillColorDefault}" BorderThickness="1"
-                                        HorizontalAlignment="Center" VerticalAlignment="Center"
-                                        Visibility="Collapsed"/>
-                                <ContentPresenter x:Name="IconPresenter" Grid.Column="0" Content="{TemplateBinding Icon}"
+                            <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto">
+                                <!-- The check column, then the icon column: each there in a menu with a row that needs it,
+                                     on every row, so the labels start on one line. -->
+                                <Border x:Name="CheckColumn" Grid.Column="0" Width="18" Visibility="Collapsed">
+                                    <Path x:Name="CheckGlyph"
+                                            Data="M0,5 L4,9 L12,1"
+                                            Stroke="{TemplateBinding Foreground}" StrokeThickness="1.5"
+                                            HorizontalAlignment="Center" VerticalAlignment="Center"
+                                            Visibility="Hidden"/>
+                                </Border>
+                                <Border x:Name="IconColumn" Grid.Column="1" Width="22" Visibility="Collapsed"/>
+                                <ContentPresenter x:Name="IconPresenter" Grid.Column="1" Content="{TemplateBinding Icon}"
                                         HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                <Path x:Name="CheckGlyph" Grid.Column="0"
-                                        Data="M0,5 L4,9 L12,1"
-                                        Stroke="{TemplateBinding Foreground}" StrokeThickness="1.5"
-                                        HorizontalAlignment="Center" VerticalAlignment="Center"
-                                        Visibility="Collapsed"/>
-                                <ContentPresenter x:Name="PART_ContentPresenter" Grid.Column="1"
+                                <ContentPresenter x:Name="PART_ContentPresenter" Grid.Column="2"
                                         Content="{TemplateBinding Header}"
                                         ContentTemplate="{TemplateBinding HeaderTemplate}"
                                         Foreground="{TemplateBinding Foreground}"
                                         FontSize="{TemplateBinding FontSize}"
                                         HorizontalAlignment="Stretch" VerticalAlignment="Center"/>
-                                <TextBlock x:Name="Gesture" Grid.Column="2" Text="{TemplateBinding InputGestureText}"
+                                <TextBlock x:Name="Gesture" Grid.Column="3" Text="{TemplateBinding InputGestureText}"
                                         Foreground="{ObservableResource TextFillColorSecondary}"
                                         FontSize="{ResourceReference FontSizeCaption}"
                                         VerticalAlignment="Center" Margin="24 0 0 0"/>
-                                <Image x:Name="Chevron" Grid.Column="3"
+                                <Image x:Name="Chevron" Grid.Column="4"
                                         Source="{ResourceReference ChevronRightIcon}"
                                         Width="{ResourceReference DropDownIconSize}"
                                         Height="{ResourceReference DropDownIconSize}"
@@ -97,18 +96,15 @@
             <Setter TargetName="PART_ContentPresenter" Property="Foreground" Value="{ResourceReference TextFillColorDisabled}"/>
             <Setter TargetName="CheckGlyph" Property="Stroke" Value="{ResourceReference TextFillColorDisabled}"/>
         </PropertyTrigger>
-        <!-- A checked row keeps its icon in a lit frame - a border on, and which one; a row with no icon shows the check
-             mark there instead. -->
-        <PropertyTrigger Property="IsChecked" Value="true">
-            <Setter TargetName="CheckFrame" Property="Visibility" Value="Visible"/>
+        <PropertyTrigger Property="ShowsCheckColumn" Value="true">
+            <Setter TargetName="CheckColumn" Property="Visibility" Value="Visible"/>
         </PropertyTrigger>
-        <MultiTrigger>
-            <MultiTrigger.Conditions>
-                <Condition Property="IsChecked" Value="true"/>
-                <Condition Property="Icon" Value="{x:Null}"/>
-            </MultiTrigger.Conditions>
+        <PropertyTrigger Property="ShowsIconColumn" Value="true">
+            <Setter TargetName="IconColumn" Property="Visibility" Value="Visible"/>
+        </PropertyTrigger>
+        <PropertyTrigger Property="IsChecked" Value="true">
             <Setter TargetName="CheckGlyph" Property="Visibility" Value="Visible"/>
-        </MultiTrigger>
+        </PropertyTrigger>
         <PropertyTrigger Property="HasItems" Value="true">
             <Setter TargetName="Chevron" Property="Visibility" Value="Visible"/>
         </PropertyTrigger>
