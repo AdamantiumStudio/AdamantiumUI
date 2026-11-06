@@ -31,39 +31,36 @@
                                 CornerRadius="{ResourceReference CornerRadiusSmall}"
                                 Padding="{ResourceReference PaddingRow}"
                                 MinHeight="{ResourceReference RowHeight}">
-                            <Grid ColumnDefinitions="Auto,*,Auto,Auto">
-                                <!-- The gutter is always reserved, with or without an icon, so every label in the menu
-                                     starts on the same vertical line; the icon stands in its middle, not at its left. -->
-                                <Border x:Name="Gutter" Grid.Column="0" Width="{ResourceReference MenuIconGutter}"/>
-                                <!-- A checked row's mark, as Word's: a lit frame round its icon - or round the check of a row
-                                     with none. -->
-                                <Border x:Name="CheckFrame" Grid.Column="0" Width="{ResourceReference MenuIconGutter}"
-                                        Height="{ResourceReference MenuIconGutter}" CornerRadius="4"
-                                        Background="{ResourceReference SubtleFillColorSecondary}"
-                                        BorderBrush="{ThemeResource AccentFillColorDefault}" BorderThickness="1"
-                                        HorizontalAlignment="Center" VerticalAlignment="Center"
+                            <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto">
+                                <!-- The check column, then the icon column: each there in a menu with a row that needs it,
+                                     on every row, so the labels start on one line. -->
+                                <Border x:Name="CheckColumn" Grid.Column="0" Width="{ResourceReference MenuIconGutter}"
+                                        Visibility="Collapsed">
+                                    <Path x:Name="CheckGlyph"
+                                            Data="M0,5 L4,9 L12,1"
+                                            Stroke="{TemplateBinding Foreground}" StrokeThickness="1.5"
+                                            HorizontalAlignment="Center" VerticalAlignment="Center"
+                                            Visibility="Hidden"/>
+                                </Border>
+                                <!-- The icon stands in the middle of its column, not at its left. -->
+                                <Border x:Name="IconColumn" Grid.Column="1" Width="{ResourceReference MenuIconGutter}"
                                         Visibility="Collapsed"/>
-                                <ContentPresenter x:Name="IconPresenter" Grid.Column="0" Content="{TemplateBinding Icon}"
+                                <ContentPresenter x:Name="IconPresenter" Grid.Column="1" Content="{TemplateBinding Icon}"
                                         HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                <Path x:Name="CheckGlyph" Grid.Column="0"
-                                        Data="M0,5 L4,9 L12,1"
-                                        Stroke="{TemplateBinding Foreground}" StrokeThickness="1.5"
-                                        HorizontalAlignment="Center" VerticalAlignment="Center"
-                                        Visibility="Collapsed"/>
-                                <ContentPresenter x:Name="PART_ContentPresenter" Grid.Column="1"
+                                <ContentPresenter x:Name="PART_ContentPresenter" Grid.Column="2"
                                         Content="{TemplateBinding Header}"
                                         ContentTemplate="{TemplateBinding HeaderTemplate}"
                                         Foreground="{TemplateBinding Foreground}"
                                         FontSize="{TemplateBinding FontSize}"
                                         HorizontalAlignment="Stretch" VerticalAlignment="Center"/>
                                 <!-- The shortcut, a step down in size and color: it is a reminder, not a label. -->
-                                <TextBlock Grid.Column="2" Text="{TemplateBinding InputGestureText}"
+                                <TextBlock Grid.Column="3" Text="{TemplateBinding InputGestureText}"
                                         Foreground="{ObservableResource TextFillColorTertiary}"
                                         FontSize="{ResourceReference FontSizeCaption}"
                                         VerticalAlignment="Center"
                                         Margin="{ResourceReference MenuGestureInset}"/>
                                 <!-- A vector chevron rather than a font glyph: it draws whatever the UI font covers. -->
-                                <Image x:Name="Chevron" Grid.Column="3"
+                                <Image x:Name="Chevron" Grid.Column="4"
                                         Source="{ResourceReference ChevronRightIcon}"
                                         Width="{ResourceReference DropDownIconSize}"
                                         Height="{ResourceReference DropDownIconSize}"
@@ -110,18 +107,15 @@
                     Value="{ResourceReference TextFillColorDisabled}"/>
             <Setter TargetName="CheckGlyph" Property="Stroke" Value="{ResourceReference TextFillColorDisabled}"/>
         </PropertyTrigger>
-        <!-- A checked row keeps its icon in a lit frame, as Word's - a border on, and which one; a row with no icon shows
-             the check mark there instead. -->
-        <PropertyTrigger Property="IsChecked" Value="true">
-            <Setter TargetName="CheckFrame" Property="Visibility" Value="Visible"/>
+        <PropertyTrigger Property="ShowsCheckColumn" Value="true">
+            <Setter TargetName="CheckColumn" Property="Visibility" Value="Visible"/>
         </PropertyTrigger>
-        <MultiTrigger>
-            <MultiTrigger.Conditions>
-                <Condition Property="IsChecked" Value="true"/>
-                <Condition Property="Icon" Value="{x:Null}"/>
-            </MultiTrigger.Conditions>
+        <PropertyTrigger Property="ShowsIconColumn" Value="true">
+            <Setter TargetName="IconColumn" Property="Visibility" Value="Visible"/>
+        </PropertyTrigger>
+        <PropertyTrigger Property="IsChecked" Value="true">
             <Setter TargetName="CheckGlyph" Property="Visibility" Value="Visible"/>
-        </MultiTrigger>
+        </PropertyTrigger>
         <PropertyTrigger Property="HasItems" Value="true">
             <Setter TargetName="Chevron" Property="Visibility" Value="Visible"/>
         </PropertyTrigger>

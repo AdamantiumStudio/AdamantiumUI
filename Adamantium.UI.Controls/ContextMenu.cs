@@ -141,6 +141,33 @@ public class ContextMenu : ItemsControl
     protected internal override IUIComponent GetContainerForItem(object item)
         => item is ISeparatorItem { IsSeparator: true } ? new Separator() : MenuItem.CreateContainer(ItemContainerStyle);
 
+    protected internal override void PrepareContainer(IUIComponent container, object item)
+    {
+        base.PrepareContainer(container, item);
+        if (container is MenuItem row)
+        {
+            _rows.Join(row);
+        }
+    }
+
+    protected internal override void ClearContainer(IUIComponent container)
+    {
+        if (container is MenuItem row)
+        {
+            _rows.Leave(row);
+        }
+
+        base.ClearContainer(container);
+    }
+
+    protected override void OnItemsChanged(System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+    {
+        base.OnItemsChanged(e);
+        _rows.LeaveRemoved(e, Items, ItemContainerGenerator);
+    }
+
+    private readonly MenuRows _rows = new();
+
     public override void OnApplyTemplate()
     {
         base.OnApplyTemplate();

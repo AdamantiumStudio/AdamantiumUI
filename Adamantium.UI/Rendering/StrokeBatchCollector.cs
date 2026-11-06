@@ -29,6 +29,10 @@ internal sealed class StrokeBatchCollector : BatchCollector<StrokeRecord>
 
     public static bool Enabled = true;
 
+    /// <summary>Whether a segment goes as one indirect command where the device takes many. Off, every device draws a
+    /// record at a time - the path a device without multiDrawIndirect always takes.</summary>
+    internal static bool MultiDraw = true;
+
     private StrokeEffect _effect;
     private bool _effectUnavailable;
 
@@ -177,6 +181,13 @@ internal sealed class StrokeBatchCollector : BatchCollector<StrokeRecord>
     {
         _effect?.Dispose();
         _effect = null;
+        if (_commands != null)
+        {
+            // Frames in flight may still read them.
+            foreach (var buffer in _commands) _commandDevice.AddToDeferDisposeQueue(buffer);
+            _commands = null;
+        }
+
         _owners.Clear();
     }
 
@@ -268,6 +279,7 @@ internal sealed class StrokeBatchCollector : BatchCollector<StrokeRecord>
         _effect.AntiAlias.SetValue(AnalyticAa.Enabled ? 1u : 0u);
         _effect.IsGradient.SetValue(0);
 
+        WriteCommands(device, firstInstance, count);
         var union = (Items[firstInstance].Flags & UnionFlag) != 0 && device.HasDepthAttachment;
         if (!union)
         {
@@ -295,15 +307,110 @@ internal sealed class StrokeBatchCollector : BatchCollector<StrokeRecord>
         device.DepthWriteEnable = true;
     }
 
-    // One pass applied, then a draw a record, its first instance naming the record.
+    // One pass applied, then the segment's records: one indirect command for as many of them as the device takes at once,
+    // or a draw a record where it takes one - its first instance naming the record either way.
     private void DrawRecords(IGraphicsDevice device, IEffectPass pass, uint first, uint count)
     {
         pass.Apply();
+        if (_commands != null)
+        {
+            // Counted in ulong: a device that takes uint.MaxValue draws at once would wrap a uint step back to the start.
+            ulong most = Math.Max(device.MainDevice.MaxDrawIndirectCount, 1u);
+            ulong end = (ulong)first + count;
+            for (ulong at = first; at < end; at += most)
+            {
+                device.DrawIndirect(_commands[_commandCopy], at * CommandBytes, (uint)Math.Min(most, end - at), CommandBytes);
+            }
+
+            return;
+        }
+
         for (var i = first; i < first + count; i++)
         {
             var vertices = Items[i].VertexCount;
             if (vertices > 0) device.Draw(vertices, 1, 0, i);
         }
+    }
+
+    // VkDrawIndirectCommand: vertex count, instance count, first vertex, first instance.
+    private const uint CommandBytes = 16;
+
+    // The indirect commands, a copy for each frame that can be in flight and one more. A copy is left alone while what it
+    // holds is still right - a still scene keeps drawing the same bytes, so a frame recorded once can be executed again -
+    // and the next one taken, whole, the first time in a frame that a command changes: frames before it may still be
+    // reading the one it leaves. Null where the device takes one draw at a time.
+    private Buffer<uint>[] _commands;
+    private IGraphicsDevice _commandDevice;
+    private int _commandCopy;
+    private ulong _commandFrame = ulong.MaxValue;   // the frame the current copy was taken in
+    private uint[] _commandData = [];               // what the current copy holds
+    private int _commandCount;                      // ...in commands
+
+    // This segment's commands into the current copy, as its records say now.
+    private void WriteCommands(IGraphicsDevice device, uint first, uint count)
+    {
+        if (!device.MainDevice.IsMultiDrawIndirectEnabled || !MultiDraw)
+        {
+            // A device that takes one draw at a time is drawn a draw a record, and keeps no commands.
+            if (_commands != null)
+            {
+                foreach (var old in _commands) device.AddToDeferDisposeQueue(old);
+                _commands = null;
+            }
+
+            return;
+        }
+
+        // Grown only when this segment does not fit, and then to the records' whole capacity: the CPU array doubles as a walk
+        // adds to it, and new copies each time would be new buffers for a frame to record again.
+        var end = (int)(first + count);
+        var needed = Math.Max(Items.Length, end);
+        if (_commands == null || _commands[0].ElementCount < (ulong)end * 4)
+        {
+            if (_commands != null)
+            {
+                foreach (var old in _commands) device.AddToDeferDisposeQueue(old);
+            }
+
+            _commandDevice = device;
+            _commands = new Buffer<uint>[Math.Max(1, (int)device.MaxFramesInFlight) + 1];
+            for (var i = 0; i < _commands.Length; i++)
+            {
+                _commands[i] = Adamantium.Graphics.Buffer.New<uint>(device, (uint)needed * 4, BufferUsageFlags.IndirectBuffer,
+                    MemoryPropertyFlags.HostVisible | MemoryPropertyFlags.HostCoherent);
+            }
+
+            _commandFrame = ulong.MaxValue;
+            _commandCount = 0;   // the new copies hold nothing yet
+        }
+
+        if (_commandData.Length < end * 4) Array.Resize(ref _commandData, needed * 4);
+        var changed = end > _commandCount;
+        for (var i = (int)first; i < end && !changed; i++)
+            changed = _commandData[i * 4] != Items[i].VertexCount || _commandData[i * 4 + 3] != (uint)i;
+        if (!changed) return;
+
+        for (var i = (int)first; i < end; i++)
+        {
+            _commandData[i * 4] = Items[i].VertexCount;
+            _commandData[i * 4 + 1] = 1;
+            _commandData[i * 4 + 2] = 0;
+            _commandData[i * 4 + 3] = (uint)i;
+        }
+
+        if (_commandCount < end) _commandCount = end;
+        if (device.FrameTicket != _commandFrame)
+        {
+            // The first change this frame: a copy nobody in flight reads, given everything - the segments drawn later this
+            // frame read it too.
+            _commandFrame = device.FrameTicket;
+            _commandCopy = (_commandCopy + 1) % _commands.Length;
+            _commands[_commandCopy].SetData(new ReadOnlySpan<uint>(_commandData, 0, _commandCount * 4));
+            return;
+        }
+
+        _commands[_commandCopy].SetData(new ReadOnlySpan<uint>(_commandData, (int)first * 4, (int)count * 4),
+            first * CommandBytes);
     }
 
     private static Rect2D ScissorNow(IGraphicsDevice device)
