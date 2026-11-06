@@ -170,38 +170,6 @@ public abstract class UIRenderComponent : DeferredDisposableObject
     }
 }
 
-public class StrokeRenderComponent : UIRenderComponent
-{
-    public StrokeRenderComponent(IGraphicsDevice graphicsDevice, UIBasicEffect uiBasicEffect, Mesh mesh, Pen pen, GpuBufferManager bufferManager) : base(graphicsDevice, uiBasicEffect, mesh, bufferManager)
-    {
-        PrimitiveType = PrimitiveType.TriangleList;
-        Pen = pen;
-    }
-    
-    public Pen Pen {get; set; }
-
-    public override void Render()
-    {
-        // Same rule as the fill: a stroke brush this path cannot paint draws NOTHING, rather than falling through with
-        // no pass applied and inheriting whatever the last draw bound.
-        if (Pen?.Brush is not SolidColorBrush solidColor)
-        {
-            UnpaintableBrush.ReportOnce(Pen?.Brush);
-            return;
-        }
-
-        var world = RenderData.TransformMatrix;
-        UIBasicEffect.Wvp.SetValue(world * RenderData.ProjectionMatrix);
-        UIBasicEffect.Opacity.SetValue(RenderData.Opacity);
-
-        var fill = solidColor.Color.ToVector4();
-        fill.W *= (float)solidColor.Opacity;   // fold the brush's own Opacity into the color alpha
-        UIBasicEffect.FillColor.SetValue(fill);
-        UIBasicEffect.BasicSolidColorPass.Apply();
-        base.Render();
-    }
-}
-
 public class GeometryRenderComponent : UIRenderComponent
 {
     private readonly IResourceFactory _resourceFactory;

@@ -88,14 +88,17 @@ internal sealed class TextureBatchCollector : BrushSdfCollector<TextureItem>
     /// <summary>The GPU texture a brush samples, or null - either it is not a textured brush, or its source is still
     /// decoding (in which case the next re-render picks it up, the way ImageRenderUnit does). ONE statement of "which
     /// brushes carry a texture", asked by every render unit that can route here rather than restated per shape. A layer
-    /// of a <see cref="TextureArrayImage"/> only for <paramref name="layers"/> - the textured batch, the one draw that
-    /// samples an array; everywhere else it has no texture and draws nothing.</summary>
+    /// of a <see cref="TextureArrayImage"/> only for <paramref name="layers"/> - the draws that sample an array: the
+    /// textured batch and the stroke; everywhere else it has no texture and draws nothing. Nor does a layer the array no
+    /// longer holds - given back, or of an earlier generation.</summary>
     internal static ITexture BrushTexture(Brush brush, IResourceFactory factory, Size<double> size = default,
         IUIComponent owner = null, bool layers = false)
     {
         if (brush is TileBrush { ContentSource: ImageLayer layer })
         {
-            return layers ? layer.Image.GetOrCreateTexture(factory) : null;
+            if (!layers) return null;
+            var array = layer.Image.GetOrCreateTexture(factory);
+            return layer.Image.Holds(layer) ? array : null;
         }
 
         var source = brush switch

@@ -47,12 +47,9 @@ public abstract class RenderUnit<TPayload> : DeferredDisposableObject, IRenderUn
 
     public UIBasicEffect UIBasicEffect => Context.UIBasicEffect;
 
-    // Global toggle: lets the stroke fall back to the CPU path on the fly if anything is wrong with the GPU path.
-    public static bool UseGpuStroke { get; set; } = true;
-
     protected StrokeEffect StrokeEffect => Context.StrokeEffect;
 
-    // Analytic-AA fill fringe (GPU coverage edge). On like UseGpuStroke; toggle off to A/B against MSAA.
+    // Analytic-AA fill fringe (GPU coverage edge). On by default; toggle off to A/B against MSAA.
     public static bool UseGpuFill { get; set; } = true;
 
     protected FillFringeEffect FillFringeEffect => Context.FillFringeEffect;
@@ -120,29 +117,27 @@ public abstract class RenderUnit<TPayload> : DeferredDisposableObject, IRenderUn
         }
 
         StrokeRenderer?.DeferDispose();
+        StrokeRenderer = null;
 
-        // The GPU path handles any solid-color stroke: one OR many contours (combined/group geometry, shapes with
-        // holes), open or closed, with dashes/trim and every cap/join - all as real geometry. Only a non-solid brush
-        // (e.g. a gradient stroke) still falls back to the CPU StrokeGeometry path.
-        if (UseGpuStroke && StrokeEffect != null && TryGetSolidContours(pen, geometry, out var prepared))
+        // Every stroke is drawn on the GPU from its contours: one OR many (combined/group geometry, shapes with holes),
+        // open or closed, with dashes, trim, every cap and join and any brush. A geometry with no contour has no stroke.
+        if (StrokeEffect == null || !TryGetStrokeContours(pen, geometry, out var prepared)) return;
+
+        StrokeRenderer = new GpuStrokeRenderComponent(GraphicsDevice, UIBasicEffect, StrokeEffect, prepared.Contours,
+            prepared.Batches, pen, BufferManager)
         {
-            StrokeRenderer = new GpuStrokeRenderComponent(GraphicsDevice, UIBasicEffect, StrokeEffect, prepared.Contours,
-                prepared.Batches, pen, BufferManager);
-        }
-        else
-        {
-            var strokeGeometry = new StrokeGeometry(pen, geometry);
-            StrokeRenderer = new StrokeRenderComponent(GraphicsDevice, UIBasicEffect, strokeGeometry.Mesh, pen, BufferManager);
-        }
-        StrokeRenderer.RenderData = DrawCommand.RenderData;
+            ResourceFactory = ResourceFactory,
+            Owner = DrawCommand.Component,
+            RenderData = DrawCommand.RenderData,
+        };
     }
 
-    // Every outline contour of a solid-color stroke (combined/group geometry yields several), each as its raw points
-    // plus whether it is a closed loop. False (CPU fallback) only for a non-solid brush or a geometry with no contour.
-    private static bool TryGetSolidContours(Pen pen, Geometry geometry, out PreparedStroke contours)
+    // Every outline contour of a stroke (combined/group geometry yields several), each as its raw points plus whether it
+    // is a closed loop. False for a brush that paints nothing here or a geometry with no contour.
+    private static bool TryGetStrokeContours(Pen pen, Geometry geometry, out PreparedStroke contours)
     {
         contours = null;
-        if (pen.Brush is not SolidColorBrush) return false;
+        if (!GpuStrokeRenderComponent.Paints(pen)) return false;
 
         var mesh = geometry?.Mesh;
         if (mesh == null || mesh.Contours.Count == 0) return false;
@@ -155,12 +150,12 @@ public abstract class RenderUnit<TPayload> : DeferredDisposableObject, IRenderUn
     }
 
     // On a geometry change, try to rewrite the existing GPU stroke's points in place (same topology + size-compatible
-    // pen) instead of rebuilding it - the resize fast path. False (caller rebuilds via ProcessStrokeData) for the CPU
-    // stroke, the dash/cut path, or a topology/pen-size change.
+    // pen) instead of rebuilding it - the resize fast path. False (caller rebuilds via ProcessStrokeData) on a
+    // topology/pen-size change.
     protected bool TryUpdateStroke(Pen pen, Geometry geometry)
     {
         if (pen == null || StrokeRenderer is not GpuStrokeRenderComponent gpuStroke) return false;
-        if (!TryGetSolidContours(pen, geometry, out var contours)) return false;
+        if (!TryGetStrokeContours(pen, geometry, out var contours)) return false;
         if (!gpuStroke.TryUpdateGeometry(contours.Contours, pen)) return false;
 
         gpuStroke.RenderData = DrawCommand.RenderData;
@@ -330,6 +325,8 @@ public abstract class RenderUnit<TPayload> : DeferredDisposableObject, IRenderUn
 
     public bool AwaitsFrame => _geometryRenderer?.AwaitsFrame == true;
 
+    public bool DrawsMoving => StrokeRenderer is GpuStrokeRenderComponent { DrawsMoving: true };
+
     public virtual void PreRender()
     {
         GeometryRenderer?.PreRender();
@@ -365,8 +362,11 @@ public abstract class RenderUnit<TPayload> : DeferredDisposableObject, IRenderUn
     }
 }
 
-public class GeometryRenderUnit : RenderUnit<GeometryPayload>
+public class GeometryRenderUnit : RenderUnit<GeometryPayload>, IStrokeOnlyUnit
 {
+    GpuStrokeRenderComponent IStrokeOnlyUnit.Stroke =>
+        Payload.Brush == null && FillFringeRenderer == null ? StrokeRenderer as GpuStrokeRenderComponent : null;
+
     public GeometryRenderUnit(IDrawCommand command, RenderUnitContext context) : base(command, context)
     {
         // No ProcessGeometry here: the payload tessellated on the RECORD thread (see GeometryPayload). The applier only
@@ -547,8 +547,10 @@ public class GeometryRenderUnit : RenderUnit<GeometryPayload>
     }
 }
 
-public class LineRenderUnit : RenderUnit<LinePayload>
+public class LineRenderUnit : RenderUnit<LinePayload>, IStrokeOnlyUnit
 {
+    GpuStrokeRenderComponent IStrokeOnlyUnit.Stroke => StrokeRenderer as GpuStrokeRenderComponent;
+
     public LineRenderUnit(IDrawCommand command, RenderUnitContext context) : base(command, context)
     {
         var geometry = new LineGeometry(Payload.LineStart, Payload.LineEnd);

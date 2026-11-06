@@ -260,6 +260,17 @@ public abstract class Shape : InputUIComponent
       AdamantiumProperty.Register(nameof(StrokeDashPhase), typeof(Double), typeof(Shape),
          new PropertyMetadata(0d, PropertyMetadataOptions.AffectsRender));
 
+   // How the stroke brush is laid on: over the shape's bounds (as its fill is), or along the line - a gradient from end to
+   // end, a pattern or a picture following every bend.
+   public static readonly AdamantiumProperty StrokeBrushMappingProperty =
+      AdamantiumProperty.Register(nameof(StrokeBrushMapping), typeof(PenBrushMapping), typeof(Shape),
+         new PropertyMetadata(PenBrushMapping.Bounds, PropertyMetadataOptions.AffectsRender));
+
+   // Where the stroke crosses itself: one pass, or two that paint each pixel once. Auto lets the brush decide.
+   public static readonly AdamantiumProperty StrokeOverlapProperty =
+      AdamantiumProperty.Register(nameof(StrokeOverlap), typeof(PenOverlap), typeof(Shape),
+         new PropertyMetadata(PenOverlap.Auto, PropertyMetadataOptions.AffectsRender));
+
    public Brush Fill
    {
       get => GetValue<Brush>(FillProperty);
@@ -363,6 +374,20 @@ public abstract class Shape : InputUIComponent
       get => GetValue<Double>(StrokeDashPhaseProperty);
       set => SetValue(StrokeDashPhaseProperty, value);
    }
+
+   /// <summary>See <see cref="StrokeBrushMappingProperty"/>.</summary>
+   public PenBrushMapping StrokeBrushMapping
+   {
+      get => GetValue<PenBrushMapping>(StrokeBrushMappingProperty);
+      set => SetValue(StrokeBrushMappingProperty, value);
+   }
+
+   /// <summary>See <see cref="StrokeOverlapProperty"/>.</summary>
+   public PenOverlap StrokeOverlap
+   {
+      get => GetValue<PenOverlap>(StrokeOverlapProperty);
+      set => SetValue(StrokeOverlapProperty, value);
+   }
       
    private static object CoerceStrokeThickness(AdamantiumComponent adamantiumAdamantiumComponent, object baseValue)
    {
@@ -395,7 +420,7 @@ public abstract class Shape : InputUIComponent
          StrokeDashStartCap,
          StrokeDashEndCap,
          StrokeDashFit,
-         StrokeDashPhase);
+         StrokeDashPhase) { BrushMapping = StrokeBrushMapping, Overlap = StrokeOverlap };
    }
 
    // Expands StrokeDashSymbols ("Dash Dot Dot Dash") into a dash array using the named widths + gap from
