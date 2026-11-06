@@ -91,6 +91,45 @@ public class ColorPaletteTests
         });
     }
 
+    // Automation tells which color is selected - a screen reader says it, a scenario checks it - and selects one by it.
+    [Test]
+    public void TheSelectedSwatch_IsSelectedToAutomation_AndSelectingOnePicksIt()
+    {
+        Use(ThemeNamed("Fluent"));
+        var palette = new ColorPalette { SelectedColor = Color.FromRgba(255, 0, 0) };
+        Lay(palette);
+        var swatches = Below(palette).OfType<ColorPaletteSwatch>().Where(s => s.HasColor).ToList();
+        var red = swatches.First(s => s.Color == Color.FromRgba(255, 0, 0));
+        var blue = swatches.First(s => s.Color == Color.FromRgba(0, 112, 192));
+        var redItem = (ISelectionItemProvider)red.GetAutomationPeer().GetPattern(PatternId.SelectionItem);
+        var blueItem = (ISelectionItemProvider)blue.GetAutomationPeer().GetPattern(PatternId.SelectionItem);
+        var selected = new List<string>();
+        void Seen(object sender, AutomationEventArgs e)
+        {
+            if (e.Event == AutomationEvent.ElementSelected) selected.Add(AutomationProperties.GetName(e.Element));
+        }
+
+        var before = (redItem.IsSelected, blueItem.IsSelected);
+        AutomationEvents.Raised += Seen;
+        try
+        {
+            blueItem.Select();
+        }
+        finally
+        {
+            AutomationEvents.Raised -= Seen;
+        }
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(before, Is.EqualTo((true, false)));
+            Assert.That(palette.SelectedColor, Is.EqualTo(Color.FromRgba(0, 112, 192)));
+            Assert.That((redItem.IsSelected, blueItem.IsSelected), Is.EqualTo((false, true)));
+            Assert.That(redItem.SelectionContainer, Is.SameAs(palette.GetAutomationPeer()));
+            Assert.That(selected, Does.Contain("#0070C0"), "announced");
+        });
+    }
+
     [Test]
     public void MoreColors_ShowsThePicker_AndApplyTakesItsColor()
     {

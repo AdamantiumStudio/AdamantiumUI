@@ -1,4 +1,5 @@
 using Adamantium.Mathematics;
+using Adamantium.UI.Controls.Automation;
 using Adamantium.UI.Controls.Primitives;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Automation;
@@ -89,13 +90,26 @@ public class ColorPaletteSwatch : ButtonBase
     private static void OnSelectedColorChanged(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
     {
         var swatch = (ColorPaletteSwatch)a;
-        swatch.IsSelected = swatch.Color.HasValue && swatch.Color == swatch.SelectedColor;
+        swatch.Mark(swatch.Color.HasValue && swatch.Color == swatch.SelectedColor);
     }
+
+    private void Mark(bool selected)
+    {
+        if (selected == IsSelected)
+        {
+            return;
+        }
+
+        IsSelected = selected;
+        AutomationEvents.RaiseSelected(this, selected);
+    }
+
+    protected override AutomationPeer OnCreateAutomationPeer() => new ColorPaletteSwatchAutomationPeer(this);
 
     private void Show(Color? color)
     {
         HasColor = color.HasValue;
-        IsSelected = color.HasValue && color == SelectedColor;
+        Mark(color.HasValue && color == SelectedColor);
         SwatchBrush = color is { } shown ? new SolidColorBrush(shown) : null;
         SetCurrentValue(IsEnabledProperty, color.HasValue);
         AutomationProperties.SetName(this, color is { } named ? $"#{named.R:X2}{named.G:X2}{named.B:X2}" : string.Empty);
