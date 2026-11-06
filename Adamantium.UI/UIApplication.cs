@@ -100,6 +100,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
 
     private long _publishedFrame;
     private bool _drawFailing;
+    private bool _loopFailing;
     private long _presentedFrame;
     private long _requestsAtRecord;
     private long _loadsAtRecord;
@@ -1474,10 +1475,18 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
                 }
 
                 OnCycleFinishedInternal();
+                _loopFailing = false;
             }
             catch (Exception ex)
             {
                 Console.WriteLine(ex);
+                // Logged once until a frame goes through again: a fault that comes back every frame would fill the log.
+                if (!_loopFailing)
+                {
+                    _loopFailing = true;
+                    Serilog.Log.Logger.Error(ex, "The application loop's frame threw");
+                }
+
                 UnhandledException?.Invoke(this, new UnhandledExceptionEventArgs(ex));
             }
         }
