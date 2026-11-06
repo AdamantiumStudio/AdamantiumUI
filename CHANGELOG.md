@@ -119,6 +119,11 @@ All packages share one version.
 
 ### Fixed
 
+- A `Grid` measures a cell across star rows and an Auto row in star columns - or star columns and an Auto column in
+  star rows - at its tracks' size only. It measured it at the whole grid's size first, and read none of that measure;
+  a child laid out by its width did that work for nothing and forgot what it had found at its own width. Whether the
+  grid has star cells is asked again of the cells there are at each measure.
+
 - An animation or a ticker (`AnimationManager.AddTicker`) that throws is stopped and its error logged; the others go on.
   It stayed on and threw again on every tick, and each time the frame stopped there - no layout, no frame drawn, the
   application never idle - with the error only on the console. An error the application loop catches is logged too.

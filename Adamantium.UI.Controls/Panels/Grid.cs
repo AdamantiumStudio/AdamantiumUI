@@ -427,6 +427,9 @@ public class Grid: Panel
          }
       }
 
+      // Said again of the cells there are now, as the groups are.
+      hasStarRows = false;
+      hasStarColumns = false;
       if (Children.Count > 0)
       {
          if (gridCells == null || gridCells.Length != Children.Count) gridCells = new GridCell[Children.Count];
@@ -807,6 +810,12 @@ public class Grid: Panel
          else
          {
             childSize.Width = CalculateSizeForRange(colSegments, cell.ColumnIndex, cell.ColSpan);
+         }
+
+         // Both results would go unread before the stars have a size; the real pass measures it.
+         if (ignoreMeasuredRow && ignoreMeasuredColumn)
+         {
+            continue;
          }
 
          var element = Children[cell.ChildIndex];
