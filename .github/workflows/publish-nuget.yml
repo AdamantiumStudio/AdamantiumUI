@@ -35,6 +35,12 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # The binding generator is in the solution but is not packed: it builds from QuantumBinding's source, which needs
+      # no published QuantumBinding package for each generator change.
+      - name: QuantumBinding
+        shell: bash
+        run: git clone --depth 1 --branch master https://github.com/AdamantiumStudio/QuantumBinding.git ../QuantumBinding
+
       # Version comes from global.json, so CI and a developer's machine build with the same SDK.
       - uses: actions/setup-dotnet@v6
         with:

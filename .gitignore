@@ -351,5 +351,9 @@ logs/
 # committed separately).
 **/native/build/
 
+# CEF, downloaded and staged by Adamantium.UI.WebView/native/fetch-cef - hundreds of MB per platform.
+/Adamantium.UI.WebView/native/download/
+/Adamantium.UI.WebView/runtimes/
+
 # Asset files the content build imports beside their sources (Ship.dae -> Ship.dae.aemf), made again from them.
 *.aemf

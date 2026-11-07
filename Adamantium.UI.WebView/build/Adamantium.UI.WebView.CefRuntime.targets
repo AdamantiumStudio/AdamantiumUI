@@ -1,0 +1,17 @@
+<Project>
+
+  <!-- CEF next to an application inside this repository: the current platform's copy staged by native/fetch-cef under
+       runtimes\<rid>\native\cef goes into the application's cef\ folder. Imported by the applications that run CEF
+       (the tests), not by the WebView library or the helper, which would otherwise each carry hundreds of MB of it.
+       The build machine's platform decides the copy, as these applications run where they are built. -->
+  <PropertyGroup>
+    <AdamantiumCefRuntime>$(MSBuildThisFileDirectory)..\runtimes\</AdamantiumCefRuntime>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="$(AdamantiumCefRuntime)win-x64\native\cef\**" Condition="$([MSBuild]::IsOSPlatform('Windows'))" Link="cef\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" Visible="false" />
+    <None Include="$(AdamantiumCefRuntime)linux-x64\native\cef\**" Condition="$([MSBuild]::IsOSPlatform('Linux'))" Link="cef\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" Visible="false" />
+    <None Include="$(AdamantiumCefRuntime)osx-arm64\native\cef\**" Condition="$([MSBuild]::IsOSPlatform('OSX'))" Link="cef\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" Visible="false" />
+  </ItemGroup>
+
+</Project>

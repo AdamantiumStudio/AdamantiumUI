@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <!-- The process CEF starts its renderer, GPU and other processes on. It lives in the cef folder beside libcef, and
+         is published ahead of time: Chromium starts several of these, so each should cost little to start and to keep. -->
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Platforms>AnyCPU</Platforms>
+        <LangVersion>latest</LangVersion>
+        <PublishAot>true</PublishAot>
+        <InvariantGlobalization>true</InvariantGlobalization>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Adamantium.UI.WebView\Adamantium.UI.WebView.csproj" />
+    </ItemGroup>
+
+</Project>
