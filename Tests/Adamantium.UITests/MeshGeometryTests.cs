@@ -102,6 +102,29 @@ public class MeshGeometryTests
         });
     }
 
+    // Refused before it is written: the mesh keeps nothing of a value it would not take.
+    [Test]
+    public void AValueAFrozenMeshRefuses_IsNotKept()
+    {
+        var mesh = new MeshGeometry(Square, [0, 1, 2, 2, 3, 0], [Square]);
+        mesh.Freeze();
+
+        var refused = Refuse(mesh);
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        GC.Collect();
+
+        Assert.That(refused.IsAlive, Is.False);
+        GC.KeepAlive(mesh);
+
+        static WeakReference Refuse(MeshGeometry frozen)
+        {
+            var points = new PointsCollection(Square);
+            Assert.Throws<InvalidOperationException>(() => frozen.Positions = points);
+            return new WeakReference(points);
+        }
+    }
+
     [Test]
     public void AFrozenMesh_TakesTheSameValueAgain()
     {

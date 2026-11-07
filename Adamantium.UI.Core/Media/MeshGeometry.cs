@@ -19,23 +19,31 @@ public class MeshGeometry : Geometry
 {
     public static readonly AdamantiumProperty PositionsProperty = AdamantiumProperty.Register(nameof(Positions),
         typeof(PointsCollection), typeof(MeshGeometry),
-        new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure, CollectionChangedCallback,
-            StaysFrozen(mesh => mesh.Positions)));
+        new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure, CollectionChangedCallback)
+        {
+            WriteCheckCallback = StaysFrozen(mesh => mesh.Positions)
+        });
 
     public static readonly AdamantiumProperty TriangleIndicesProperty = AdamantiumProperty.Register(
         nameof(TriangleIndices), typeof(IndexCollection), typeof(MeshGeometry),
-        new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure, CollectionChangedCallback,
-            StaysFrozen(mesh => mesh.TriangleIndices)));
+        new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure, CollectionChangedCallback)
+        {
+            WriteCheckCallback = StaysFrozen(mesh => mesh.TriangleIndices)
+        });
 
     public static readonly AdamantiumProperty BoundaryProperty = AdamantiumProperty.Register(nameof(Boundary),
         typeof(ContourCollection), typeof(MeshGeometry),
-        new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure, CollectionChangedCallback,
-            StaysFrozen(mesh => mesh.Boundary)));
+        new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure, CollectionChangedCallback)
+        {
+            WriteCheckCallback = StaysFrozen(mesh => mesh.Boundary)
+        });
 
     public static readonly AdamantiumProperty CutBoxProperty = AdamantiumProperty.Register(nameof(CutBox),
         typeof(Rect), typeof(MeshGeometry),
-        new PropertyMetadata(Rect.Empty, PropertyMetadataOptions.AffectsRender, CutBoxChangedCallback,
-            StaysFrozen(mesh => mesh.CutBox)));
+        new PropertyMetadata(Rect.Empty, PropertyMetadataOptions.AffectsRender, CutBoxChangedCallback)
+        {
+            WriteCheckCallback = StaysFrozen(mesh => mesh.CutBox)
+        });
 
     private const string FrozenStaysAsItIs = "A frozen mesh does not change: it has let go of what it was made of.";
 
@@ -48,12 +56,16 @@ public class MeshGeometry : Geometry
     {
     }
 
-    // Refused before the value takes effect, so a frozen mesh is never left half changed; the same value written again
-    // - a binding refreshed - is let through.
-    private static CoerceValueCallback StaysFrozen(Func<MeshGeometry, object> now) => (a, value) =>
-        a is MeshGeometry { IsFrozen: true } mesh && !Equals(value, now(mesh))
-            ? throw new InvalidOperationException(FrozenStaysAsItIs)
-            : value;
+    // Refused before it is written, so a frozen mesh keeps nothing of it; only the value it has, written again - a
+    // binding refreshed - is let through. A value cleared is refused too: what lay under it would come through.
+    private static WriteCheckCallback StaysFrozen(Func<MeshGeometry, object> now) => (a, value) =>
+    {
+        if (a is MeshGeometry { IsFrozen: true } mesh &&
+            (value == AdamantiumProperty.UnsetValue || !Equals(value, now(mesh))))
+        {
+            throw new InvalidOperationException(FrozenStaysAsItIs);
+        }
+    };
 
     /// <summary>A mesh of <paramref name="positions"/> and, three to a triangle, <paramref name="triangleIndices"/>,
     /// with the closed rings of its edge, if known, as <paramref name="boundary"/>.</summary>

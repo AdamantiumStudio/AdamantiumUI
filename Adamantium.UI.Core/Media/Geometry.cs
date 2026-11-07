@@ -20,13 +20,21 @@ public abstract class Geometry : AdamantiumComponent
    public static readonly AdamantiumProperty TransformProperty = AdamantiumProperty.Register(nameof(Transform),
       typeof(Transform), 
       typeof(Geometry),
-      new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure, TransformChangedCallback, KeptWhenFrozen));
+      new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure, TransformChangedCallback)
+      {
+         WriteCheckCallback = KeptWhenFrozen
+      });
 
-   // A frozen geometry is not moved: refused when written, the same value written again let through.
-   private static object KeptWhenFrozen(AdamantiumComponent a, object value) =>
-      a is Geometry { RefusesChange: true } geometry && !ReferenceEquals(value, geometry.Transform)
-         ? throw new InvalidOperationException("The geometry is frozen: it has let go of what it was made of.")
-         : value;
+   // A frozen geometry is not moved; only the transform it has, written again - a binding refreshed - is let through.
+   // A value cleared is refused too: what lay under it would come through.
+   private static void KeptWhenFrozen(AdamantiumComponent a, object value)
+   {
+      if (a is Geometry { RefusesChange: true } geometry &&
+          (value == AdamantiumProperty.UnsetValue || !ReferenceEquals(value, geometry.Transform)))
+      {
+         throw new InvalidOperationException("The geometry is frozen: it has let go of what it was made of.");
+      }
+   }
 
    public static readonly AdamantiumProperty IsClosedProperty =
       AdamantiumProperty.Register(nameof(IsClosed), typeof(bool), typeof(Geometry), new PropertyMetadata(true));
