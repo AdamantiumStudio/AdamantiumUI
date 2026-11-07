@@ -133,7 +133,10 @@ public class PropertyMetadata
          : baseMetadata.DefaultUpdateSourceTrigger;
 
       return new PropertyMetadata(defaultValue, options,
-         Chain(baseMetadata.PropertyChangedCallback, PropertyChangedCallback), coerce, trigger);
+         Chain(baseMetadata.PropertyChangedCallback, PropertyChangedCallback), coerce, trigger)
+      {
+         WriteCheckCallback = WriteCheckCallback ?? baseMetadata.WriteCheckCallback
+      };
    }
 
    // base + derived, minus anything already in base: a handler restated by an override must still run once per change.
@@ -233,6 +236,11 @@ public class PropertyMetadata
          }
       }
    }
+
+   /// <summary>Asked before a value is written to the property, to refuse it - a component that no longer changes - so
+   /// the refused value is not kept, as a coercion would keep it to map again later. Null for none; an override that
+   /// states none keeps the base's.</summary>
+   public WriteCheckCallback WriteCheckCallback { get; init; }
 
    public bool IsSealed { get; internal set; }
 

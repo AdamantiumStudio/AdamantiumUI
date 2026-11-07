@@ -20,7 +20,21 @@ public abstract class Geometry : AdamantiumComponent
    public static readonly AdamantiumProperty TransformProperty = AdamantiumProperty.Register(nameof(Transform),
       typeof(Transform), 
       typeof(Geometry),
-      new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure, TransformChangedCallback));
+      new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure, TransformChangedCallback)
+      {
+         WriteCheckCallback = KeptWhenFrozen
+      });
+
+   // A frozen geometry is not moved; only the transform it has, written again - a binding refreshed - is let through.
+   // A value cleared is refused too: what lay under it would come through.
+   private static void KeptWhenFrozen(AdamantiumComponent a, object value)
+   {
+      if (a is Geometry { RefusesChange: true } geometry &&
+          (value == AdamantiumProperty.UnsetValue || !ReferenceEquals(value, geometry.Transform)))
+      {
+         throw new InvalidOperationException("The geometry is frozen: it has let go of what it was made of.");
+      }
+   }
 
    public static readonly AdamantiumProperty IsClosedProperty =
       AdamantiumProperty.Register(nameof(IsClosed), typeof(bool), typeof(Geometry), new PropertyMetadata(true));
@@ -51,6 +65,12 @@ public abstract class Geometry : AdamantiumComponent
 
    private void TransformOnPropertyChanged(object sender, AdamantiumPropertyChangedEventArgs e)
    {
+      // A frozen geometry keeps what it draws; quietly, so whoever else the transform tells is told too.
+      if (RefusesChange)
+      {
+         return;
+      }
+
       InvalidateGeometry();
       RaiseComponentUpdated();
    }
@@ -78,7 +98,7 @@ public abstract class Geometry : AdamantiumComponent
 
    public abstract Geometry Clone();
 
-   public Boolean IsEmpty()
+   public virtual Boolean IsEmpty()
    {
       return Mesh.Points.Length == 0;
    }
@@ -173,11 +193,20 @@ public abstract class Geometry : AdamantiumComponent
 
    public void InvalidateGeometry()
    {
+      if (RefusesChange)
+      {
+         throw new InvalidOperationException("The geometry is frozen: it has let go of what it was made of.");
+      }
+
       IsProcessed = false;
       Version++;
    }
    
    protected internal abstract void ProcessGeometryCore(GeometryType geometryType);
+
+   /// <summary>Whether the geometry no longer changes - it let go of what it was made of - so a change, of its own or of
+   /// its transform's, is refused where it is made rather than when it is next drawn.</summary>
+   protected virtual bool RefusesChange => false;
 
    /// <summary>Whether the mesh's contours are exactly the edge of its fill - outer rings and holes - so the renderer
    /// takes them as they are rather than working the edge out of the triangles.</summary>
