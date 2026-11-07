@@ -125,6 +125,11 @@ All packages share one version.
 
 ### Fixed
 
+- A `Grid` measures a cell across star rows and an Auto row in star columns - or star columns and an Auto column in
+  star rows - at its tracks' size only. It measured it at the whole grid's size first, and read none of that measure;
+  a child laid out by its width did that work for nothing and forgot what it had found at its own width. Whether the
+  grid has star cells is asked again of the cells there are at each measure.
+
 - A pen whose width is in the window's units (`PenThicknessUnit.Window`), drawn on a plane under a perspective - a leaned map's roads - is one width on the
   plane, measured at the depth of the screen, which the perspective narrows into the distance. Each draw measured by
   its own farthest corner, so a road was wide in the tile nearest the eye and stepped thinner at every tile's edge.
