@@ -66,4 +66,14 @@
     <AdamantiumEngineVersion>0.1.0-alpha.5</AdamantiumEngineVersion>
   </PropertyGroup>
 
+  <!-- QuantumBinding, the binding generator, the same way: from its source when it is checked out beside this
+       repository, so a generator change needs no package; from its package of this version when it is not - a version
+       published with the next QuantumBinding release, as the generator uses what its source has gained since.
+       -p:UseQuantumBindingSource=false takes the package even with the source beside. -->
+  <PropertyGroup>
+    <QuantumBindingDir>$(MSBuildThisFileDirectory)..\QuantumBinding\</QuantumBindingDir>
+    <UseQuantumBindingSource Condition="'$(UseQuantumBindingSource)' == ''">$([System.IO.Directory]::Exists('$(QuantumBindingDir)'))</UseQuantumBindingSource>
+    <QuantumBindingVersion>3.3.0</QuantumBindingVersion>
+  </PropertyGroup>
+
 </Project>
