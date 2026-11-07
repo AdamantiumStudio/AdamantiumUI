@@ -25,6 +25,13 @@
   <Drop Target="id=DragDropDemoView/type=List,name=Animals>name=Item 03" Onto="id=DragDropDemoView/type=List,name=Fruits>name=Item 04" Side="Before" />
   <Expect Target="id=DragDropDemoView/type=List,name=Fruits>type=ListItem[2]" Name="Item 03" />
   <Absent Target="id=DragDropDemoView/type=List,name=Animals>name=Item 03" />
+  <!-- Onto the pane that only records what came, so it takes a copy with no Ctrl held: the row stays in its list. -->
+  <Scroll Target="id=DragDropDemoView>type=Pane" Vertical="40" />
+  <Drop Target="id=DragDropDemoView/type=List,name=Fruits>name=Item 04" Onto="id=DragDropDemoView/type=List,name=Drop from another app" />
+  <Wait Target="id=DragDropDemoView/type=List,name=Drop from another app>type=ListItem[0]" />
+  <Expect Target="id=DragDropDemoView/type=List,name=Fruits>type=ListItem[3]" Name="Item 04" />
+  <Invoke Target="id=DragDropDemoView/name=Clear" />
+  <Absent Target="id=DragDropDemoView/type=List,name=Drop from another app>type=ListItem[0]" />
   <!-- In a tree: into a folder, and back out after the last one. -->
   <Scroll Target="id=DragDropDemoView/type=Tree>name=Loose item" />
   <Drop Target="id=DragDropDemoView/type=Tree>name=Loose item" Onto="id=DragDropDemoView/type=Tree>name=Folder A" />

@@ -240,7 +240,8 @@
         <StackPanel Orientation="Horizontal" MarginBottom="16">
 
             <Border CornerRadius="8" Padding="12" Width="420" MinHeight="220" MarginRight="16" BorderThickness="2"
-                    DragDrop.AllowDrop="True" DragDrop.DropCommand="{Binding DropExternalCommand}">
+                    DragDrop.AllowDrop="True" DragDrop.DropCommand="{Binding DropExternalCommand}"
+                    DragDrop.DragOverCommand="{Binding DragOverExternalCommand}">
                 <Border.Styles>
                     <Style Selector="Border">
                         <Setter Property="Background" Value="{ResourceReference CardBackgroundFillColorDefault}"/>

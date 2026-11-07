@@ -158,9 +158,15 @@ public partial class DragDropDemoViewModel : TabPageViewModel
     }
 
     [Command]
+    private void DragOverExternal(object arg)
+    {
+        if (arg is DragDropEventArgs e) e.Effects = DragDropEffects.Copy;
+    }
+
+    [Command]
     private void DragOverPictures(object arg)
     {
-        if (arg is DragDropEventArgs e && !HasPictures(e)) e.Effects = DragDropEffects.None;
+        if (arg is DragDropEventArgs e) e.Effects = HasPictures(e) ? DragDropEffects.Copy : DragDropEffects.None;
     }
 
     private static bool HasPictures(DragDropEventArgs e) =>
