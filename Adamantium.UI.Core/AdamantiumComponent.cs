@@ -1101,6 +1101,9 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
             throw new ArgumentException($"Value {value} is incorrect!");
         }
 
+        // Before the slot is written: a value refused leaves nothing of itself behind.
+        metadata.WriteCheckCallback?.Invoke(this, value);
+
         // What the elements inheriting through this one inherit can change only with a value of its own: one below Style
         // never outranks what they inherit, and one coming down is passed on as it came.
         var tellsInheritors = inherited == null && property.CanInherit && priority <= ValuePriority.Style

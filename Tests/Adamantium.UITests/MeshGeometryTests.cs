@@ -1,3 +1,4 @@
+using System;
 using System.Threading.Tasks;
 using Adamantium.Core.TypeParsing;
 using Adamantium.Mathematics;
@@ -28,6 +29,170 @@ public class MeshGeometryTests
         {
             Assert.That(mesh.FillForDrawing, Is.SameAs(mesh.FillForDrawing));
             Assert.That(mesh.FillForDrawing.Ring, Has.Length.EqualTo(4));
+        });
+    }
+
+    // A frozen mesh keeps only what is drawn: the fill made ready, its edge, its bounds.
+    [Test]
+    public void AFrozenMesh_LetsGoOfWhatItWasGiven_AndIsDrawnAsBefore()
+    {
+        var mesh = new MeshGeometry(Square, [0, 1, 2, 2, 3, 0], [Square]);
+        mesh.ProcessGeometry(GeometryType.Both);
+        var fill = mesh.FillForDrawing;
+        var bounds = mesh.Bounds;
+        var version = mesh.Version;
+
+        mesh.Freeze();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(mesh.IsFrozen);
+            Assert.That(mesh.Positions, Is.Null);
+            Assert.That(mesh.TriangleIndices, Is.Null);
+            Assert.That(mesh.Boundary, Is.Null);
+            Assert.That(mesh.Mesh.Points, Is.Empty);
+            Assert.That(mesh.Mesh.Contours, Has.Count.EqualTo(1), "the edge stays, for a pen");
+            Assert.That(mesh.Version, Is.EqualTo(version));
+            Assert.That(mesh.FillForDrawing, Is.SameAs(fill));
+            Assert.That(mesh.Bounds, Is.EqualTo(bounds));
+        });
+    }
+
+    [Test]
+    public void AFrozenMesh_IsMadeReadyFirst_WhenItWasNot()
+    {
+        var mesh = new MeshGeometry(Square, [0, 1, 2, 2, 3, 0], [Square]);
+
+        mesh.Freeze();
+
+        Assert.That(mesh.FillForDrawing.Vertices, Has.Length.EqualTo(4));
+    }
+
+    // Without a boundary the fill is made from the mesh when drawn, so the mesh stays.
+    [Test]
+    public void AFrozenMeshWithoutABoundary_KeepsItsMesh()
+    {
+        var mesh = new MeshGeometry(Square, [0, 1, 2, 2, 3, 0]);
+
+        mesh.Freeze();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(mesh.Positions, Is.Null);
+            Assert.That(mesh.Mesh.Points, Has.Length.EqualTo(4));
+            Assert.That(mesh.FillForDrawing, Is.Not.Null);
+        });
+    }
+
+    [Test]
+    public void AFrozenMesh_IsNotChanged_NorCopied()
+    {
+        var mesh = new MeshGeometry(Square, [0, 1, 2, 2, 3, 0], [Square]);
+        mesh.Freeze();
+
+        Assert.Multiple(() =>
+        {
+            Assert.Throws<InvalidOperationException>(() => mesh.Positions = new PointsCollection(Square));
+            Assert.Throws<InvalidOperationException>(() => mesh.CutBox = new Rect(0, 0, 5, 5));
+            Assert.Throws<InvalidOperationException>(() => mesh.Transform = new Transform { TranslateX = 5 });
+            Assert.Throws<InvalidOperationException>(() => mesh.Clone());
+            Assert.That(mesh.Positions, Is.Null, "refused before it was written");
+            Assert.That(mesh.Transform, Is.Null);
+            Assert.That(mesh.IsProcessed, Is.True);
+        });
+    }
+
+    // Refused before it is written: the mesh keeps nothing of a value it would not take.
+    [Test]
+    public void AValueAFrozenMeshRefuses_IsNotKept()
+    {
+        var mesh = new MeshGeometry(Square, [0, 1, 2, 2, 3, 0], [Square]);
+        mesh.Freeze();
+
+        var refused = Refuse(mesh);
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        GC.Collect();
+
+        Assert.That(refused.IsAlive, Is.False);
+        GC.KeepAlive(mesh);
+
+        static WeakReference Refuse(MeshGeometry frozen)
+        {
+            var points = new PointsCollection(Square);
+            Assert.Throws<InvalidOperationException>(() => frozen.Positions = points);
+            return new WeakReference(points);
+        }
+    }
+
+    [Test]
+    public void AFrozenMesh_TakesTheSameValueAgain()
+    {
+        var mesh = new MeshGeometry(Square, [0, 1, 2, 2, 3, 0], [Square]) { CutBox = new Rect(0, 0, 10, 10) };
+        mesh.Freeze();
+
+        Assert.DoesNotThrow(() =>
+        {
+            mesh.Positions = null;
+            mesh.CutBox = new Rect(0, 0, 10, 10);
+            mesh.Transform = null;
+        });
+    }
+
+    // A transform it shares with another geometry still moves the other one.
+    [Test]
+    public void ATransformAFrozenMeshShares_StillMovesTheOther()
+    {
+        var move = new Transform { TranslateX = 5 };
+        var frozen = new MeshGeometry(Square, [0, 1, 2, 2, 3, 0], [Square]) { Transform = move };
+        frozen.Freeze();
+        var other = new MeshGeometry(Square, [0, 1, 2, 2, 3, 0], [Square]) { Transform = move };
+        other.ProcessGeometry(GeometryType.Both);
+        var version = other.Version;
+
+        move.TranslateX = 20;
+
+        Assert.That(other.Version, Is.GreaterThan(version));
+    }
+
+    // Someone listening to it - a binding - does not make freezing undo what was made ready.
+    [Test]
+    public void AMeshListenedTo_IsFrozenWithItsFillKept()
+    {
+        var mesh = new MeshGeometry(Square, [0, 1, 2, 2, 3, 0], [Square]);
+        mesh.PropertyChanged += (_, _) => { };
+        mesh.ProcessGeometry(GeometryType.Both);
+        var fill = mesh.FillForDrawing;
+
+        mesh.Freeze();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(mesh.IsProcessed, Is.True);
+            Assert.That(mesh.FillForDrawing, Is.SameAs(fill));
+        });
+    }
+
+    // A change of its transform's is refused by the mesh - the transform tells it of the change and is told no - so what
+    // was made ready is drawn on as it was, never made again of what it let go of.
+    [Test]
+    public void AFrozenMesh_KeepsWhatItDraws_WhenItsTransformChanges()
+    {
+        var move = new Transform { TranslateX = 5 };
+        var mesh = new MeshGeometry(Square, [0, 1, 2, 2, 3, 0], [Square]) { Transform = move };
+        mesh.Freeze();
+        var bounds = mesh.Bounds;
+        var fill = mesh.FillForDrawing;
+        var version = mesh.Version;
+
+        move.TranslateX = 20;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(mesh.IsProcessed, Is.True);
+            Assert.That(mesh.Version, Is.EqualTo(version));
+            Assert.That(mesh.FillForDrawing, Is.SameAs(fill));
+            Assert.That(mesh.Bounds, Is.EqualTo(bounds));
         });
     }
 

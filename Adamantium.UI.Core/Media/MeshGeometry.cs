@@ -19,27 +19,53 @@ public class MeshGeometry : Geometry
 {
     public static readonly AdamantiumProperty PositionsProperty = AdamantiumProperty.Register(nameof(Positions),
         typeof(PointsCollection), typeof(MeshGeometry),
-        new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure, CollectionChangedCallback));
+        new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure, CollectionChangedCallback)
+        {
+            WriteCheckCallback = StaysFrozen(mesh => mesh.Positions)
+        });
 
     public static readonly AdamantiumProperty TriangleIndicesProperty = AdamantiumProperty.Register(
         nameof(TriangleIndices), typeof(IndexCollection), typeof(MeshGeometry),
-        new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure, CollectionChangedCallback));
+        new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure, CollectionChangedCallback)
+        {
+            WriteCheckCallback = StaysFrozen(mesh => mesh.TriangleIndices)
+        });
 
     public static readonly AdamantiumProperty BoundaryProperty = AdamantiumProperty.Register(nameof(Boundary),
         typeof(ContourCollection), typeof(MeshGeometry),
-        new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure, CollectionChangedCallback));
+        new PropertyMetadata(null, PropertyMetadataOptions.AffectsMeasure, CollectionChangedCallback)
+        {
+            WriteCheckCallback = StaysFrozen(mesh => mesh.Boundary)
+        });
 
     public static readonly AdamantiumProperty CutBoxProperty = AdamantiumProperty.Register(nameof(CutBox),
         typeof(Rect), typeof(MeshGeometry),
-        new PropertyMetadata(Rect.Empty, PropertyMetadataOptions.AffectsRender, CutBoxChangedCallback));
+        new PropertyMetadata(Rect.Empty, PropertyMetadataOptions.AffectsRender, CutBoxChangedCallback)
+        {
+            WriteCheckCallback = StaysFrozen(mesh => mesh.CutBox)
+        });
+
+    private const string FrozenStaysAsItIs = "A frozen mesh does not change: it has let go of what it was made of.";
 
     private Rect _bounds;
     private bool _boundsStale = true;
     private bool _hasBoundary;
+    private bool _freezing;
 
     public MeshGeometry()
     {
     }
+
+    // Refused before it is written, so a frozen mesh keeps nothing of it; only the value it has, written again - a
+    // binding refreshed - is let through. A value cleared is refused too: what lay under it would come through.
+    private static WriteCheckCallback StaysFrozen(Func<MeshGeometry, object> now) => (a, value) =>
+    {
+        if (a is MeshGeometry { IsFrozen: true } mesh &&
+            (value == AdamantiumProperty.UnsetValue || !Equals(value, now(mesh))))
+        {
+            throw new InvalidOperationException(FrozenStaysAsItIs);
+        }
+    };
 
     /// <summary>A mesh of <paramref name="positions"/> and, three to a triangle, <paramref name="triangleIndices"/>,
     /// with the closed rings of its edge, if known, as <paramref name="boundary"/>.</summary>
@@ -104,8 +130,50 @@ public class MeshGeometry : Geometry
         }
     }
 
-    public override Geometry Clone() =>
-        new MeshGeometry(Positions ?? [], TriangleIndices ?? [], Boundary) { Transform = Transform, CutBox = CutBox };
+    /// <summary>Whether <see cref="Freeze"/> has let go of what the area was given as.</summary>
+    public bool IsFrozen { get; private set; }
+
+    protected override bool RefusesChange => IsFrozen;
+
+    /// <summary>Lets go of what the area was given as - <see cref="Positions"/>, <see cref="TriangleIndices"/>,
+    /// <see cref="Boundary"/> and, when it has a boundary, the points and indices of its <see cref="Geometry.Mesh"/> -
+    /// keeping only what is drawn, made ready first if it was not: an area that will not change - a map tile's - then
+    /// weighs about half. Its
+    /// edge stays, for its antialiasing and a pen. Changing it afterwards, or making a copy, throws; it is drawn on its
+    /// own, not inside a <see cref="GeometryGroup"/> or a <see cref="CombinedGeometry"/>.</summary>
+    public void Freeze()
+    {
+        if (IsFrozen)
+        {
+            return;
+        }
+
+        ProcessGeometry(GeometryType.Both);
+        _freezing = true;
+        try
+        {
+            Positions = null;
+            TriangleIndices = null;
+            Boundary = null;
+        }
+        finally
+        {
+            _freezing = false;
+        }
+
+        IsFrozen = true;
+
+        // Without a boundary the fill is not kept ready but made from the mesh when drawn: then the mesh stays.
+        if (ContoursAreFillBoundary)
+        {
+            Mesh.SetPoints(Array.Empty<Vector3<double>>(), updateBoundingBox: false);
+            Mesh.SetIndices(Array.Empty<int>());
+        }
+    }
+
+    public override Geometry Clone() => IsFrozen
+        ? throw new InvalidOperationException("A frozen mesh has let go of what it was made of; it is not copied.")
+        : new MeshGeometry(Positions ?? [], TriangleIndices ?? [], Boundary) { Transform = Transform, CutBox = CutBox };
 
     /// <summary>True when the last processing put at least one ring of the <see cref="Boundary"/> - three distinct
     /// points or more - into the mesh; else the edge is worked out of the triangles.</summary>
@@ -114,6 +182,11 @@ public class MeshGeometry : Geometry
     public override void RecalculateBounds()
     {
         _boundsStale = false;
+        if (IsFrozen)
+        {
+            return;
+        }
+
         var bounds = Rect.Empty;
         var any = false;
         if (Positions != null)
@@ -138,6 +211,11 @@ public class MeshGeometry : Geometry
     // One snapshot of each collection: what is checked is what is drawn, even if a collection changes meanwhile.
     protected internal override void ProcessGeometryCore(GeometryType geometryType)
     {
+        if (IsFrozen)
+        {
+            throw new InvalidOperationException(FrozenStaysAsItIs);
+        }
+
         var positions = Corners(Positions);
         var indices = TriangleIndices?.ToArray();
         var rings = Boundary?.Select(ring => ring?.ToArray()).ToArray();
@@ -238,10 +316,24 @@ public class MeshGeometry : Geometry
     }
 
     // Marked, not recomputed: a collection filled point by point would otherwise walk all of it on every point. Comes
-    // for a changed collection and a changed transform alike.
+    // for a changed collection and a changed transform alike. Letting go while freezing changes nothing that is drawn;
+    // a change once frozen - a value of its transform's - is refused where it is made.
     protected override void OnComponentUpdated()
     {
+        if (_freezing)
+        {
+            return;
+        }
+
+        if (IsFrozen)
+        {
+            throw new InvalidOperationException(FrozenStaysAsItIs);
+        }
+
         base.OnComponentUpdated();
         _boundsStale = true;
     }
+
+    /// <summary>Empty when nothing is drawn; a frozen mesh is drawn from the fill it kept ready.</summary>
+    public override bool IsEmpty() => IsFrozen && ContoursAreFillBoundary ? FillForDrawing == null : base.IsEmpty();
 }
