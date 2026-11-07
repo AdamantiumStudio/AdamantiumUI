@@ -32,7 +32,22 @@ internal static class FringeGeometry
     /// where it ends, and gets no ring.</summary>
     public static RingEdge[] BuildRing(List<(Vector2<double>[] Points, float Winding)> contours, Rect? cut = null)
     {
-        var edges = new List<RingEdge>();
+        // Counted first, so the ring is one array of its own size: a tile's areas have edges by the hundred thousand.
+        var count = 0;
+        foreach (var (points, _) in contours)
+        {
+            var n = points.Length;
+            for (var i = 0; i < n; i++)
+            {
+                if (cut is not { } box || !AlongASide(points[i], points[(i + 1) % n], box))
+                {
+                    count++;
+                }
+            }
+        }
+
+        var edges = new RingEdge[count];
+        var at = 0;
         foreach (var (points, winding) in contours)
         {
             var n = points.Length;
@@ -46,17 +61,18 @@ internal static class FringeGeometry
 
                 // Winding folded into the directions' sign: reversing a direction reverses its 90-degree normal, which is
                 // how a hole feathers inward.
-                edges.Add(new RingEdge
+                edges[at++] = new RingEdge
                 {
                     A = new Vector2F((float)points[i].X, (float)points[i].Y),
                     B = new Vector2F((float)points[ni].X, (float)points[ni].Y),
                     InDir = SafeDir(points[i] - points[(i + n - 1) % n]) * winding,
                     EdgeDir = SafeDir(points[ni] - points[i]) * winding,
                     OutDir = SafeDir(points[(ni + 1) % n] - points[ni]) * winding
-                });
+                };
             }
         }
-        return edges.ToArray();
+
+        return edges;
     }
 
     private static bool AlongASide(Vector2<double> a, Vector2<double> b, Rect box)
