@@ -46,7 +46,12 @@ public abstract class UIRenderComponent : DeferredDisposableObject
         if (mesh != null) SetMesh(mesh);
     }
 
+    /// <summary>The mesh drawn; null when drawn from a snapshot taken of it, which keeps all that is drawn - the mesh
+    /// is not held twice, and one let go of by its geometry is not held at all.</summary>
     public Mesh Mesh { get; private set; }
+
+    /// <summary>The box round what is drawn, in its own units: what a picture is laid across.</summary>
+    protected Rect Box { get; private set; }
 
     public Type VertexType { get; set; }
 
@@ -75,7 +80,10 @@ public abstract class UIRenderComponent : DeferredDisposableObject
             return;
         }
 
-        SetSnapshot(mesh, snapshot.Vertices, snapshot.Indices is { Length: > 0 } indices ? indices : null);
+        // The box of the points drawn - the mesh's, while it has them; a mesh let go of by its geometry, the fill's.
+        _texturedVertices = null;
+        SetSnapshot(null, snapshot.Topology, mesh is { HasPoints: true } ? BoxOf(mesh) : snapshot.Bounds,
+            snapshot.Vertices, snapshot.Indices is { Length: > 0 } indices ? indices : null);
     }
 
     /// <summary>Whether the vertices carry where the texture is sampled (<see cref="UITexturedVertex"/>) - a picture's -
@@ -93,13 +101,26 @@ public abstract class UIRenderComponent : DeferredDisposableObject
         // this component must hold a snapshot, exactly as it does for the vertices.
         var indices = mesh is { HasIndices: true } && count > 0 ? (int[])mesh.Indices.Clone() : null;
         _texturedVertices = textured;
-        SetSnapshot(mesh, vertices, indices);
+        SetSnapshot(mesh, mesh?.MeshTopology ?? PrimitiveType, BoxOf(mesh), vertices, indices);
     }
 
-    private void SetSnapshot(Mesh mesh, UIVertex[] vertices, int[] indices)
+    private static Rect BoxOf(Mesh mesh)
+    {
+        if (mesh == null)
+        {
+            return Rect.Empty;
+        }
+
+        var bounds = mesh.Bounds;
+        return new Rect(bounds.Center.X - bounds.HalfExtent.X, bounds.Center.Y - bounds.HalfExtent.Y, bounds.Size.X,
+            bounds.Size.Y);
+    }
+
+    private void SetSnapshot(Mesh mesh, PrimitiveType topology, Rect box, UIVertex[] vertices, int[] indices)
     {
         Mesh = mesh;
-        if (mesh != null) PrimitiveType = mesh.MeshTopology;
+        PrimitiveType = topology;
+        Box = box;
 
         _vertices = vertices;
         if (vertices != null) _texturedVertices = null;
@@ -147,7 +168,7 @@ public abstract class UIRenderComponent : DeferredDisposableObject
 
         GraphicsDevice.VertexType = _texturedVertices != null ? typeof(UITexturedVertex) : VertexType;
         GraphicsDevice.PolygonMode = PolygonMode.Fill;
-        GraphicsDevice.PrimitiveTopology = Mesh.MeshTopology;
+        GraphicsDevice.PrimitiveTopology = PrimitiveType;
         GraphicsDevice.ColorBlendEquation = ColorBlendEquation;
         GraphicsDevice.DepthCompareFunction = CompareOp.Always;
         GraphicsDevice.DepthTestEnabled = true;
@@ -240,12 +261,7 @@ public class GeometryRenderComponent : UIRenderComponent
     private void RenderTextured(TileBrush image)
     {
         var world = RenderData.TransformMatrix;
-        var bounds = Mesh.Bounds;
-        var box = new Rect(
-            bounds.Center.X - bounds.HalfExtent.X,
-            bounds.Center.Y - bounds.HalfExtent.Y,
-            bounds.Size.X,
-            bounds.Size.Y);
+        var box = Box;
         if (box.Width <= 0 || box.Height <= 0)
         {
             return;

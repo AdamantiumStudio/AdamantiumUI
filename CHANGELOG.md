@@ -7,6 +7,10 @@ All packages share one version.
 
 ### Added
 
+- `MeshGeometry.Freeze`: an area that will not change - a map tile's - lets go of what it was given as
+  (`Positions`, `TriangleIndices`, `Boundary`) and, with a boundary, of its mesh's points and indices, keeping only the
+  fill made ready to draw and its edge; changing or copying it afterwards throws. A body drawn from a snapshot of its
+  mesh no longer holds the mesh as well.
 - An `InfiniteCanvas` - the drawing board and the node graph - coasts on after a drag or a pinch let go while still
   moving, slowing to a stop; a pinch carries its zoom on about the fingers. A press catches the plane where it is, and
   the wheel or a camera placed by code stops it. `IsInertiaEnabled` turns it off. The camera is remembered where it
