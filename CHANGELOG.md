@@ -128,6 +128,11 @@ All packages share one version.
 
 ### Fixed
 
+- A drop inside the application ends as its target's `DragOver` says, asked once more as the button is let go with
+  the modifiers held then: a target that takes only copies ends a drag with no Ctrl held as a copy, and the source
+  keeps what it carried - it was a move, and the source took it out. The sandbox's panes that record what is dropped
+  take copies.
+
 - A `Grid` measures a cell across star rows and an Auto row in star columns - or star columns and an Auto column in
   star rows - at its tracks' size only. It measured it at the whole grid's size first, and read none of that measure;
   a child laid out by its width did that work for nothing and forgot what it had found at its own width. Whether the

@@ -398,10 +398,7 @@ public static partial class DragDrop
         Cursor cursor = null;
         if (target != null)
         {
-            // Controls first (they may own this drag entirely), then the view-model's command unless one of them handled it.
-            var args = RaiseDragPair(target, DragArgs(target, DragDropEvents.PreviewDragOverEvent),
-                DragDropEvents.PreviewDragOverEvent, DragDropEvents.DragOverEvent);
-            if (!args.Handled && GetDragOverCommand((AdamantiumComponent)target) is { } over && over.CanExecute(args)) over.Execute(args);
+            var args = AskDragOver(target);
             effects = args.Effects;
             cursor = args.DragCursor;   // a target that wants to say something the effect cannot
         }
@@ -417,6 +414,15 @@ public static partial class DragDrop
         // effect we report back), so our override - DragCursor included - would only fight it.
         if (_externalActive) _externalEffect = effects;
         else Mouse.OverrideCursor = cursor ?? CursorFor(effects);
+    }
+
+    // Controls first (they may own this drag entirely), then the view-model's command unless one of them handled it.
+    private static DragDropEventArgs AskDragOver(IUIComponent target)
+    {
+        var args = RaiseDragPair(target, DragArgs(target, DragDropEvents.PreviewDragOverEvent),
+            DragDropEvents.PreviewDragOverEvent, DragDropEvents.DragOverEvent);
+        if (!args.Handled && GetDragOverCommand((AdamantiumComponent)target) is { } over && over.CanExecute(args)) over.Execute(args);
+        return args;
     }
 
     // The routed half of the drop API: the same argument the commands get, raised on the AllowDrop target so a CONTROL can
@@ -1322,11 +1328,14 @@ public static partial class DragDrop
     {
         Ghost?.Hide();
 
-        // Decide the effect FRESH at release: over a target, read Ctrl now (Copy) else Move; None with no target (incl. a
-        // drop-disabled panel, which isn't an AllowDrop target). Honor a per-target DragOver that downgraded to None. Using
-        // the live Ctrl here - not the last DragOver's cached value - is what makes Move actually remove from the source.
+        // Decide the effect FRESH at release: over a target, its DragOver is asked once more with the live Ctrl (Copy, else
+        // Move), so a target that takes only copies narrows a Move to Copy and the source keeps what it carried; None with
+        // no target (incl. a drop-disabled panel, which isn't an AllowDrop target). Using the live Ctrl here - not the last
+        // DragOver's cached value - is what makes Move actually remove from the source.
         var target = HitTestDropTarget(out var positionInTarget);
-        var effects = target != null && _dragEffects != DragDropEffects.None ? DefaultEffects() : DragDropEffects.None;
+        var effects = target != null && _dragEffects != DragDropEffects.None
+            ? AskDragOver(target).Effects & _allowedEffects
+            : DragDropEffects.None;
         var args = new DragDropEventArgs(_data, _source, positionInTarget)
         {
             Effects = effects,
