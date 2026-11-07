@@ -59,6 +59,9 @@ All packages share one version.
 
 ### Changed
 
+- A fill whose contours are its edge - a `MeshGeometry` with a `Boundary`, a map tile's areas - is made ready for
+  drawing with less memory: the edge is taken from the contours as they are, not copied again, and its antialiased
+  ring is put in one array of its own size.
 - A fill of thousands of contours - a map tile's buildings - finds its holes in a fraction of the time: each contour
   is asked only of those whose box shares its cell of a grid, not of every other. A vector map's tile at zoom 14 is
   made ready in about a third of the time it took (IGN's Plan, Paris: 316 ms a tile to 69).

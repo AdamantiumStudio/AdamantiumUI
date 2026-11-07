@@ -16,9 +16,9 @@ internal static class FillBoundary
     private static (long, long, long, long) EdgeKey((long, long) a, (long, long) b)
         => Comparer<(long, long)>.Default.Compare(a, b) <= 0 ? (a.Item1, a.Item2, b.Item1, b.Item2) : (b.Item1, b.Item2, a.Item1, a.Item2);
 
-    /// <summary>The edge of <paramref name="geometry"/>'s fill: copies of its contours when the geometry says they are
-    /// exactly that edge, else - or when none of them is a ring after all - worked out of its triangles by
-    /// <see cref="ExtractLoops"/>.</summary>
+    /// <summary>The edge of <paramref name="geometry"/>'s fill: its contours' own points when the geometry says they are
+    /// exactly that edge - a mesh never changes a contour's points once made, it makes new contours - else, or when
+    /// none of them is a ring after all, worked out of its triangles by <see cref="ExtractLoops"/>.</summary>
     public static List<(Vector2<double>[] Points, bool IsClosed)> LoopsOf(Geometry geometry)
     {
         if (geometry is not { ContoursAreFillBoundary: true })
@@ -31,7 +31,7 @@ internal static class FillBoundary
         {
             if (contour.IsGeometryClosed && contour.Points is { Length: >= 3 } points)
             {
-                loops.Add(((Vector2<double>[])points.Clone(), true));
+                loops.Add((points, true));
             }
         }
 
