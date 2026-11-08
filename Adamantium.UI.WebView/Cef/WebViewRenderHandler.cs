@@ -17,6 +17,88 @@ internal sealed unsafe class WebViewRenderHandler : CefObject
         handler->get_screen_info = &GetScreenInfo;
         handler->on_paint = &OnPaint;
         handler->on_accelerated_paint = &OnAcceleratedPaint;
+        handler->on_virtual_keyboard_requested = &OnVirtualKeyboardRequested;
+        handler->on_ime_composition_range_changed = &OnImeCompositionRangeChanged;
+        handler->start_dragging = &StartDragging;
+        handler->update_drag_cursor = &UpdateDragCursor;
+    }
+
+    [UnmanagedCallersOnly]
+    private static int StartDragging(CefRenderHandler* self, CefBrowser* cefBrowser, CefDragData* data,
+        CefDragOperationsMask allowed, int x, int y)
+    {
+        var taken = false;
+        try
+        {
+            var owner = From<WebViewRenderHandler>(self).browser;
+            taken = owner.Is(cefBrowser) && owner.OnStartDragging(data, allowed);
+        }
+        catch (Exception exception)
+        {
+            CefCallbacks.Report(exception);
+        }
+
+        CefRefCounting.ReleaseCef(data);
+        CefRefCounting.ReleaseCef(cefBrowser);
+        return taken ? 1 : 0;
+    }
+
+    [UnmanagedCallersOnly]
+    private static void UpdateDragCursor(CefRenderHandler* self, CefBrowser* cefBrowser, CefDragOperationsMask operation)
+    {
+        try
+        {
+            var owner = From<WebViewRenderHandler>(self).browser;
+            if (owner.Is(cefBrowser))
+            {
+                owner.OnDragCursor(operation);
+            }
+        }
+        catch (Exception exception)
+        {
+            CefCallbacks.Report(exception);
+        }
+
+        CefRefCounting.ReleaseCef(cefBrowser);
+    }
+
+    [UnmanagedCallersOnly]
+    private static void OnVirtualKeyboardRequested(CefRenderHandler* self, CefBrowser* cefBrowser, CefTextInputMode mode)
+    {
+        try
+        {
+            var owner = From<WebViewRenderHandler>(self).browser;
+            if (owner.Is(cefBrowser))
+            {
+                owner.OnTextInputMode(mode);
+            }
+        }
+        catch (Exception exception)
+        {
+            CefCallbacks.Report(exception);
+        }
+
+        CefRefCounting.ReleaseCef(cefBrowser);
+    }
+
+    [UnmanagedCallersOnly]
+    private static void OnImeCompositionRangeChanged(CefRenderHandler* self, CefBrowser* cefBrowser, CefRange* selected,
+        ulong boundsCount, CefRect* characterBounds)
+    {
+        try
+        {
+            var owner = From<WebViewRenderHandler>(self).browser;
+            if (boundsCount > 0 && owner.Is(cefBrowser))
+            {
+                owner.OnCompositionBounds(characterBounds[boundsCount - 1]);
+            }
+        }
+        catch (Exception exception)
+        {
+            CefCallbacks.Report(exception);
+        }
+
+        CefRefCounting.ReleaseCef(cefBrowser);
     }
 
     [UnmanagedCallersOnly]

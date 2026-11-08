@@ -6,8 +6,11 @@ using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Automation;
+using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.RoutedEvents;
+using Adamantium.UI.Input;
 using Adamantium.UI.WebView.Cef;
+using Adamantium.UI.WebView.Cef.Interop;
 using Adamantium.UI.WebView.Themes;
 
 namespace Adamantium.UI.WebView;
@@ -18,7 +21,7 @@ namespace Adamantium.UI.WebView;
 /// The page's browser is made once the view is in a window and has an <see cref="Engine"/>; its address is
 /// <see cref="Source"/>.
 /// </summary>
-public class WebView : Control
+public partial class WebView : Control, IWebViewBrowserView, ITextEntry
 {
     public static readonly AdamantiumProperty SourceProperty = AdamantiumProperty.Register(nameof(Source), typeof(Uri),
         typeof(WebView), new PropertyMetadata(null, OnSourceChanged));
@@ -45,11 +48,24 @@ public class WebView : Control
     static WebView()
     {
         AddStyleSetToThemes<WebViewStyleSet>();
+        FocusableProperty.OverrideMetadata(typeof(WebView), new PropertyMetadata(true));
+        DragDrop.AllowDropProperty.OverrideMetadata(typeof(WebView), new PropertyMetadata(true));
     }
 
     public WebView()
     {
         SizeChanged += OnSizeChanged;
+        PointerWheelChanged += OnWheel;
+        PointerCanceled += OnPointerCanceled;
+        TextInput += OnTyped;
+        DragEnter += OnDragEnter;
+        DragOver += OnDragOver;
+        DragLeave += OnDragLeave;
+        Drop += OnDrop;
+        AddHandler(DragDropEvents.DragCompletedEvent, new DragDropEventHandler(OnDragCompleted));
+        AddHandler(Keyboard.TextCompositionStartedEvent, new TextCompositionEventHandler(OnCompositionStarted));
+        AddHandler(Keyboard.TextCompositionChangedEvent, new TextCompositionEventHandler(OnCompositionChanged));
+        AddHandler(Keyboard.TextCompositionEndedEvent, new TextCompositionEventHandler(OnCompositionEnded));
     }
 
     /// <summary>The page's address.</summary>
@@ -193,41 +209,12 @@ public class WebView : Control
 
         try
         {
-            WebViewBrowser made = null;
-            made = browser = engine.CreateBrowser(AllowSharedTexture,
-                descriptor =>
-                {
-                    if (ReferenceEquals(browser, made))
-                    {
-                        Show(descriptor);
-                    }
-                },
-                () =>
-                {
-                    if (ReferenceEquals(browser, made))
-                    {
-                        LetGo();
-                    }
-                },
-                () =>
-                {
-                    if (ReferenceEquals(browser, made))
-                    {
-                        RequestFrame();
-                    }
-                },
-                rate =>
-                {
-                    if (ReferenceEquals(browser, made))
-                    {
-                        SetCurrentValue(FrameRateProperty, rate);
-                    }
-                },
-                () => RestartOnPixels(made));
+            browser = engine.CreateBrowser(AllowSharedTexture, this);
             SetCurrentValue(FramePathProperty, browser.FramePath);
             browser.Create(Source?.AbsoluteUri ?? "about:blank", (int)Math.Ceiling(ActualWidth),
                 (int)Math.Ceiling(ActualHeight), Scale(), window?.Handle ?? IntPtr.Zero);
             browser.SetHidden(IsWindowOutOfSight());
+            browser.SetFocus(IsKeyboardFocused);
         }
         catch (Exception exception)
         {
@@ -243,15 +230,60 @@ public class WebView : Control
             return;
         }
 
+        ForgetInput();
+        touching.Clear();
+        draggingFromPage = false;
         browser.Dispose();
         browser = null;
         SetCurrentValue(FramePathProperty, WebViewFramePath.None);
         SetCurrentValue(FrameRateProperty, 0);
     }
 
-    private void RestartOnPixels(WebViewBrowser refused)
+    void IWebViewBrowserView.Show(WebViewBrowser from, SharedSurfaceDescriptor descriptor)
     {
-        if (!ReferenceEquals(browser, refused))
+        if (!ReferenceEquals(browser, from))
+        {
+            return;
+        }
+
+        frameWidth = descriptor.Width;
+        frameHeight = descriptor.Height;
+        InvalidateArrange();
+        surface?.SetSource(descriptor);
+    }
+
+    void IWebViewBrowserView.LetGo(WebViewBrowser from)
+    {
+        if (!ReferenceEquals(browser, from))
+        {
+            return;
+        }
+
+        surface?.ClearSource();
+        frameWidth = 0;
+        frameHeight = 0;
+        InvalidateArrange();
+    }
+
+    void IWebViewBrowserView.FrameWritten(WebViewBrowser from)
+    {
+        if (ReferenceEquals(browser, from) && window is WindowBase drawn)
+        {
+            (drawn.Renderer ?? drawn.DefaultRenderer)?.RequestFrame();
+        }
+    }
+
+    void IWebViewBrowserView.FrameRate(WebViewBrowser from, int rate)
+    {
+        if (ReferenceEquals(browser, from))
+        {
+            SetCurrentValue(FrameRateProperty, rate);
+        }
+    }
+
+    void IWebViewBrowserView.SharedTextureRefused(WebViewBrowser from)
+    {
+        if (!ReferenceEquals(browser, from))
         {
             return;
         }
@@ -260,12 +292,20 @@ public class WebView : Control
         StartBrowser();
     }
 
-    private void LetGo()
+    void IWebViewBrowserView.CursorChanged(WebViewBrowser from, Cursor cursor)
     {
-        surface?.ClearSource();
-        frameWidth = 0;
-        frameHeight = 0;
-        InvalidateArrange();
+        if (ReferenceEquals(browser, from))
+        {
+            SetCurrentValue(CursorProperty, cursor);
+        }
+    }
+
+    void IWebViewBrowserView.CompositionBoundsChanged(WebViewBrowser from, Rect bounds)
+    {
+        if (ReferenceEquals(browser, from) && IsKeyboardFocused)
+        {
+            InputMethod.SetCaretBounds(this, bounds);
+        }
     }
 
     private void ResizeBrowser() =>
@@ -301,22 +341,6 @@ public class WebView : Control
     private void OnWindowStateChanged(object sender, StateChangedEventArgs e) => browser?.SetHidden(IsWindowOutOfSight());
 
     private bool IsWindowOutOfSight() => window?.State == WindowState.Minimized;
-
-    private void Show(SharedSurfaceDescriptor descriptor)
-    {
-        frameWidth = descriptor.Width;
-        frameHeight = descriptor.Height;
-        InvalidateArrange();
-        surface?.SetSource(descriptor);
-    }
-
-    private void RequestFrame()
-    {
-        if (window is WindowBase drawn)
-        {
-            (drawn.Renderer ?? drawn.DefaultRenderer)?.RequestFrame();
-        }
-    }
 
     private float Scale() => window is WindowBase scaled ? (float)scaled.DpiScale.X : 1;
 }

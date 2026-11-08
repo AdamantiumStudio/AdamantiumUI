@@ -16,7 +16,13 @@ All packages share one version.
   `FramePath` and `FrameRate` tell which path the frames take and how many come a second. A texture that cannot be
   copied makes the page again on pixels in memory. CEF is told our adapter (`--use-adapter-luid`). A browser closed
   while its page is busy no longer stops every page drawing: CEF calls its handlers while it closes, and they were
-  gone. Input, popups and the browser API come later.
+  gone. The page takes input as a browser does: the mouse (clicks, double clicks, a drag beyond the view) and the
+  wheel, both ways and Shift for across; the cursor it asks for; keys, the characters they type and an input method's
+  composition, its candidates beside the text; fingers and pens as touches; drags out of the page, carried by our drag,
+  and our drags dropped into it. A key bound in the window is the window's, the page gets the rest; while the page's
+  focus is in a field, keys that type stay with it (`WebView` is an `ITextEntry`), and Ctrl+Tab leaves it. Popups and
+  the browser API come later.
+- `Win32ScanCodes` (Windows): a key's scan code as a HID usage and back (`TryFromHidUsage`).
 - `IUIApplication.UIThreadExiting`: raised once as the application shuts down, on the UI thread after its last frame
   and before the windows' services and the graphics device go - for what was started on the UI thread and must end on
   it, as CEF.
