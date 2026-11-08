@@ -5,8 +5,22 @@
 
     <!-- The page is drawn into the panel, laid out at the frame's size in pixels - up to a pixel past the view, which
          clips it. -->
+    <!-- What a drag the page starts carries under the pointer: its text on a small plate, not a picture of the view. -->
     <Style Selector="WebView">
         <Setter Property="ClipToBounds" Value="True"/>
+        <Setter Property="DragDrop.DragTemplate">
+            <Setter.Value>
+                <DataTemplate>
+                    <Grid>
+                        <Border HorizontalAlignment="Left" MaxWidth="360" CornerRadius="6" Padding="10 6"
+                                Background="{ThemeResource AccentFillColorDefault}">
+                            <TextBlock Text="{Binding}" TextTrimming="CharEllipses" MaxLines="2"
+                                       Foreground="{ThemeResource AccentForegroundColor}"/>
+                        </Border>
+                    </Grid>
+                </DataTemplate>
+            </Setter.Value>
+        </Setter>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="local:WebView">

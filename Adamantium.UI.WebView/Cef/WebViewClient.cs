@@ -9,17 +9,22 @@ internal sealed unsafe class WebViewClient : CefObject
 {
     private readonly WebViewRenderHandler renderHandler;
     private readonly WebViewLifeSpanHandler lifeSpanHandler;
+    private readonly WebViewDisplayHandler displayHandler;
 
-    public WebViewClient(WebViewRenderHandler renderHandler, WebViewLifeSpanHandler lifeSpanHandler)
+    public WebViewClient(WebViewRenderHandler renderHandler, WebViewLifeSpanHandler lifeSpanHandler,
+        WebViewDisplayHandler displayHandler)
         : base(sizeof(CefClient))
     {
         this.renderHandler = renderHandler;
         this.lifeSpanHandler = lifeSpanHandler;
+        this.displayHandler = displayHandler;
         renderHandler.AddReference();
         lifeSpanHandler.AddReference();
+        displayHandler.AddReference();
         var client = (CefClient*)Native;
         client->get_render_handler = &GetRenderHandler;
         client->get_life_span_handler = &GetLifeSpanHandler;
+        client->get_display_handler = &GetDisplayHandler;
     }
 
     /// <summary>The struct with a reference taken for CEF.</summary>
@@ -29,6 +34,13 @@ internal sealed unsafe class WebViewClient : CefObject
     {
         renderHandler.Release();
         lifeSpanHandler.Release();
+        displayHandler.Release();
+    }
+
+    [UnmanagedCallersOnly]
+    private static CefDisplayHandler* GetDisplayHandler(CefClient* self)
+    {
+        return (CefDisplayHandler*)From<WebViewClient>(self).displayHandler.Share();
     }
 
     [UnmanagedCallersOnly]

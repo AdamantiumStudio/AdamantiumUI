@@ -1,5 +1,6 @@
 using Adamantium.Graphics.Core;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Input;
 using Adamantium.UI.WebView.Cef.Interop;
 
 namespace Adamantium.UI.WebView.Cef;
@@ -12,12 +13,11 @@ namespace Adamantium.UI.WebView.Cef;
 internal sealed unsafe class WebViewBrowser : IDisposable
 {
     private readonly WebViewEngine engine;
-    private readonly Action letGo;
-    private readonly Action sharedTextureRefused;
-    private readonly Action<int> frameRate;
+    private readonly IWebViewBrowserView view;
     private readonly WebViewClient client;
     private readonly WebViewRenderHandler renderHandler;
     private readonly WebViewLifeSpanHandler lifeSpanHandler;
+    private readonly WebViewDisplayHandler displayHandler;
     private readonly WebViewFrameProducer producer;
     private CefBrowser* browser;
     private string address;
@@ -27,27 +27,26 @@ internal sealed unsafe class WebViewBrowser : IDisposable
     private bool disposed;
     private bool repaintOwed;
     private bool hidden;
+    private bool focused;
     private bool refused;
     private int framesCounted;
     private long countedSince;
 
     public WebViewBrowser(WebViewEngine engine, IGraphicsDevice device, WebViewFramePath framePath,
-        Action<SharedSurfaceDescriptor> show, Action letGo, Action frameWritten, Action<int> frameRate,
-        Action sharedTextureRefused)
+        IWebViewBrowserView view)
     {
         this.engine = engine;
-        this.letGo = letGo;
-        this.frameRate = frameRate;
-        this.sharedTextureRefused = sharedTextureRefused;
+        this.view = view;
         FramePath = framePath;
-        producer = new WebViewFrameProducer(device, show, () =>
+        producer = new WebViewFrameProducer(device, descriptor => view.Show(this, descriptor), () =>
         {
             framesCounted++;
-            frameWritten();
+            view.FrameWritten(this);
         });
         renderHandler = new WebViewRenderHandler(this);
         lifeSpanHandler = new WebViewLifeSpanHandler(this);
-        client = new WebViewClient(renderHandler, lifeSpanHandler);
+        displayHandler = new WebViewDisplayHandler(this);
+        client = new WebViewClient(renderHandler, lifeSpanHandler, displayHandler);
     }
 
     /// <summary>The view's size in device-independent pixels, never empty.</summary>
@@ -173,6 +172,325 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         CefRefCounting.ReleaseCef(host);
     }
 
+    /// <summary>The mouse moved to <paramref name="x"/>, <paramref name="y"/> in the view's units, or left the view.
+    /// </summary>
+    public void SendMouseMove(double x, double y, InputModifiers modifiers, bool leave)
+    {
+        var host = LiveHost();
+        if (host == null)
+        {
+            return;
+        }
+
+        var mouse = MouseEvent(x, y, modifiers);
+        host->send_mouse_move_event(host, &mouse, leave ? 1 : 0);
+        CefRefCounting.ReleaseCef(host);
+    }
+
+    /// <summary>A mouse button pressed or released at <paramref name="x"/>, <paramref name="y"/> in the view's units,
+    /// the <paramref name="clickCount"/>th click in a row.</summary>
+    public void SendMouseClick(double x, double y, InputModifiers modifiers, CefMouseButtonType button, bool up,
+        int clickCount)
+    {
+        var host = LiveHost();
+        if (host == null)
+        {
+            return;
+        }
+
+        var mouse = MouseEvent(x, y, modifiers);
+        host->send_mouse_click_event(host, &mouse, button, up ? 1 : 0, clickCount);
+        CefRefCounting.ReleaseCef(host);
+    }
+
+    /// <summary>The wheel turned over <paramref name="x"/>, <paramref name="y"/> in the view's units, by 120 a notch.
+    /// </summary>
+    public void SendMouseWheel(double x, double y, InputModifiers modifiers, int deltaX, int deltaY)
+    {
+        var host = LiveHost();
+        if (host == null)
+        {
+            return;
+        }
+
+        var mouse = MouseEvent(x, y, modifiers);
+        host->send_mouse_wheel_event(host, &mouse, deltaX, deltaY);
+        CefRefCounting.ReleaseCef(host);
+    }
+
+    /// <summary>A finger or a pen, <paramref name="id"/> while it touches, at <paramref name="x"/>, <paramref name="y"/>
+    /// in the view's units: put down, moved, lifted or cancelled.</summary>
+    public void SendTouch(uint id, double x, double y, CefTouchEventType type, CefPointerType pointerType,
+        PointerPointProperties properties, InputModifiers modifiers)
+    {
+        var host = LiveHost();
+        if (host == null)
+        {
+            return;
+        }
+
+        var touch = new CefTouchEvent
+        {
+            id = (int)id,
+            x = (float)x,
+            y = (float)y,
+            radius_x = (float)(properties.ContactRect.Width / 2),
+            radius_y = (float)(properties.ContactRect.Height / 2),
+            rotation_angle = properties.Twist,
+            pressure = properties.Pressure,
+            type = type,
+            modifiers = CefInputMap.Flags(modifiers),
+            pointer_type = pointerType
+        };
+        host->send_touch_event(host, &touch);
+        CefRefCounting.ReleaseCef(host);
+    }
+
+    /// <summary>What the page last said it does with what is dragged over it.</summary>
+    public DragDropEffects DragEffects { get; private set; }
+
+    /// <summary>Whether the page has answered the drag over it yet - it answers a move late.</summary>
+    public bool DragAnswered { get; private set; }
+
+    /// <summary>A drag came over the view, carrying <paramref name="data"/> and allowing <paramref name="allowed"/>.
+    /// </summary>
+    public void DragEnter(IDataPackage data, double x, double y, InputModifiers modifiers, DragDropEffects allowed)
+    {
+        DragEffects = DragDropEffects.None;
+        DragAnswered = false;
+        var host = LiveHost();
+        if (host == null)
+        {
+            return;
+        }
+
+        var mouse = MouseEvent(x, y, modifiers);
+        host->drag_target_drag_enter(host, CefDragDatas.FromPackage(data), &mouse, CefInputMap.Operations(allowed));
+        CefRefCounting.ReleaseCef(host);
+    }
+
+    /// <summary>The drag moved over the view.</summary>
+    public void DragOver(double x, double y, InputModifiers modifiers, DragDropEffects allowed)
+    {
+        var host = LiveHost();
+        if (host == null)
+        {
+            return;
+        }
+
+        var mouse = MouseEvent(x, y, modifiers);
+        host->drag_target_drag_over(host, &mouse, CefInputMap.Operations(allowed));
+        CefRefCounting.ReleaseCef(host);
+    }
+
+    /// <summary>The drag left the view.</summary>
+    public void DragLeave()
+    {
+        var host = LiveHost();
+        if (host == null)
+        {
+            return;
+        }
+
+        host->drag_target_drag_leave(host);
+        CefRefCounting.ReleaseCef(host);
+    }
+
+    /// <summary>What was dragged was dropped on the view.</summary>
+    public void Drop(double x, double y, InputModifiers modifiers)
+    {
+        var host = LiveHost();
+        if (host == null)
+        {
+            return;
+        }
+
+        var mouse = MouseEvent(x, y, modifiers);
+        host->drag_target_drop(host, &mouse);
+        CefRefCounting.ReleaseCef(host);
+    }
+
+    /// <summary>A drag the page started ended at <paramref name="x"/>, <paramref name="y"/> in the view's units, as
+    /// <paramref name="effects"/> - none when it landed nowhere.</summary>
+    public void DragEnded(double x, double y, DragDropEffects effects)
+    {
+        var host = LiveHost();
+        if (host == null)
+        {
+            return;
+        }
+
+        host->drag_source_ended_at(host, (int)Math.Round(x), (int)Math.Round(y), CefInputMap.Operations(effects));
+        host->drag_source_system_drag_ended(host);
+        CefRefCounting.ReleaseCef(host);
+    }
+
+    internal bool OnStartDragging(CefDragData* data, CefDragOperationsMask allowed) =>
+        !closing && view.StartDragging(this, CefDragDatas.ToPackage(data), CefInputMap.Effects(allowed));
+
+    internal void OnDragCursor(CefDragOperationsMask operation)
+    {
+        DragEffects = CefInputMap.Effects(operation);
+        DragAnswered = true;
+    }
+
+    /// <summary>The view lost the mouse it had captured.</summary>
+    public void SendCaptureLost()
+    {
+        var host = LiveHost();
+        if (host == null)
+        {
+            return;
+        }
+
+        host->send_capture_lost_event(host);
+        CefRefCounting.ReleaseCef(host);
+    }
+
+    /// <summary>The view took the keyboard focus, or lost it; told to a browser not made yet once it is.</summary>
+    public void SetFocus(bool focused)
+    {
+        this.focused = focused;
+        var host = LiveHost();
+        if (host == null)
+        {
+            return;
+        }
+
+        host->set_focus(host, focused ? 1 : 0);
+        CefRefCounting.ReleaseCef(host);
+    }
+
+    /// <summary>Whether the page's focus is in a field that takes typing, as CEF last said - true until it has said,
+    /// since it says so only after a focus the user gave, so keys that type go to the page rather than away from it.
+    /// </summary>
+    public bool InEditableField { get; private set; } = true;
+
+    /// <summary>A key went down or up: <paramref name="key"/> is the key the layout makes it, <paramref name="physicalKey"/>
+    /// where it is on the keyboard (a HID usage, 0 when not known).</summary>
+    public void SendKey(Key key, uint physicalKey, InputModifiers modifiers, bool up, bool repeated)
+    {
+        var host = LiveHost();
+        if (host == null)
+        {
+            return;
+        }
+
+        var flags = CefInputMap.Flags(modifiers) | (repeated ? (uint)CefEventFlags.IsRepeat : 0);
+        var alt = (flags & (uint)CefEventFlags.AltDown) != 0;
+        var control = (flags & (uint)CefEventFlags.ControlDown) != 0;
+        var keyEvent = new CefKeyEvent
+        {
+            size = (ulong)sizeof(CefKeyEvent),
+            type = up ? CefKeyEventType.Keyup : CefKeyEventType.Rawkeydown,
+            modifiers = flags,
+            windows_key_code = (int)key,
+            native_key_code = CefInputMap.NativeKeyCode(physicalKey),
+            is_system_key = alt && !control ? 1 : 0,
+            focus_on_editable_field = InEditableField ? 1 : 0
+        };
+        host->send_key_event(host, &keyEvent);
+        CefRefCounting.ReleaseCef(host);
+    }
+
+    /// <summary>A character typed - what a key that types sends after it went down.</summary>
+    public void SendCharacter(char character, InputModifiers modifiers)
+    {
+        var host = LiveHost();
+        if (host == null)
+        {
+            return;
+        }
+
+        var keyEvent = new CefKeyEvent
+        {
+            size = (ulong)sizeof(CefKeyEvent),
+            type = CefKeyEventType.Char,
+            modifiers = CefInputMap.Flags(modifiers),
+            windows_key_code = character,
+            character = character,
+            unmodified_character = character,
+            focus_on_editable_field = InEditableField ? 1 : 0
+        };
+        host->send_key_event(host, &keyEvent);
+        CefRefCounting.ReleaseCef(host);
+    }
+
+    /// <summary>The text an input method is composing, its cursor at <paramref name="cursor"/>: shown in the page, not yet
+    /// part of it.</summary>
+    public void SetComposition(string text, int cursor)
+    {
+        var host = LiveHost();
+        if (host == null)
+        {
+            return;
+        }
+
+        var cefText = new CefStringUtf16();
+        try
+        {
+            CefStrings.Set(&cefText, text);
+            var underline = new CefCompositionUnderline
+            {
+                size = (ulong)sizeof(CefCompositionUnderline),
+                range = new CefRange { from = 0, to = (uint)text.Length },
+                color = new CefColor { value = 0xFF000000 },
+                style = CefCompositionUnderlineStyle.Solid
+            };
+            var replacement = new CefRange { from = uint.MaxValue, to = uint.MaxValue };
+            var selection = new CefRange { from = (uint)cursor, to = (uint)cursor };
+            host->ime_set_composition(host, &cefText, text.Length > 0 ? 1ul : 0ul, &underline, &replacement, &selection);
+        }
+        finally
+        {
+            CefStrings.Clear(&cefText);
+            CefRefCounting.ReleaseCef(host);
+        }
+    }
+
+    /// <summary>The text an input method composed, put into the page in place of the composition.</summary>
+    public void CommitComposition(string text)
+    {
+        var host = LiveHost();
+        if (host == null)
+        {
+            return;
+        }
+
+        var cefText = new CefStringUtf16();
+        try
+        {
+            CefStrings.Set(&cefText, text);
+            var replacement = new CefRange { from = uint.MaxValue, to = uint.MaxValue };
+            host->ime_commit_text(host, &cefText, &replacement, 0);
+        }
+        finally
+        {
+            CefStrings.Clear(&cefText);
+            CefRefCounting.ReleaseCef(host);
+        }
+    }
+
+    /// <summary>The input method's composition is dropped, nothing put into the page.</summary>
+    public void CancelComposition()
+    {
+        var host = LiveHost();
+        if (host == null)
+        {
+            return;
+        }
+
+        host->ime_cancel_composition(host);
+        CefRefCounting.ReleaseCef(host);
+    }
+
+    internal void OnCursorChange(CefCursorType type) => view.CursorChanged(this, CefInputMap.Cursor(type));
+
+    internal void OnTextInputMode(CefTextInputMode mode) => InEditableField = mode != CefTextInputMode.None;
+
+    internal void OnCompositionBounds(CefRect bounds) =>
+        view.CompositionBoundsChanged(this, new Rect(bounds.x, bounds.y, bounds.width, bounds.height));
+
     /// <summary>Hands on the frames written in the last second, once a second, from the engine's pump.</summary>
     public void MeasureFrameRate(long now)
     {
@@ -187,7 +505,7 @@ internal sealed unsafe class WebViewBrowser : IDisposable
             return;
         }
 
-        frameRate((int)(framesCounted * 1000 / (now - countedSince)));
+        view.FrameRate(this, (int)(framesCounted * 1000 / (now - countedSince)));
         framesCounted = 0;
         countedSince = now;
     }
@@ -221,6 +539,11 @@ internal sealed unsafe class WebViewBrowser : IDisposable
             if (hidden)
             {
                 SetHidden(true);
+            }
+
+            if (focused)
+            {
+                SetFocus(true);
             }
 
             if (address != createdWith)
@@ -273,7 +596,7 @@ internal sealed unsafe class WebViewBrowser : IDisposable
             refused = true;
             Serilog.Log.Logger.Warning(exception, "The page's texture is not copied; it is drawn into memory instead");
             engine.SharedTextureRefused();
-            LoopSignal.Post(sharedTextureRefused);
+            LoopSignal.Post(() => view.SharedTextureRefused(this));
         }
     }
 
@@ -308,7 +631,7 @@ internal sealed unsafe class WebViewBrowser : IDisposable
 
         disposed = true;
         closing = true;
-        letGo();
+        view.LetGo(this);
         producer.Dispose();
         if (browser != null)
         {
@@ -322,6 +645,7 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         client.Release();
         renderHandler.Release();
         lifeSpanHandler.Release();
+        displayHandler.Release();
     }
 
     private void Close()
@@ -340,6 +664,13 @@ internal sealed unsafe class WebViewBrowser : IDisposable
     {
         browser = null;
     }
+
+    private static CefMouseEvent MouseEvent(double x, double y, InputModifiers modifiers) => new()
+    {
+        x = (int)Math.Round(x),
+        y = (int)Math.Round(y),
+        modifiers = CefInputMap.Flags(modifiers)
+    };
 
     private CefBrowserHost* Host() => browser == null ? null : browser->get_host(browser);
 

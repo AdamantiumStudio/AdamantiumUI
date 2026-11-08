@@ -85,13 +85,12 @@ public sealed unsafe class WebViewEngine : IDisposable
     /// <summary>A browser for one WebView, its frames written on the engine's device on the UI's main device: copied
     /// from Chromium's textures when <paramref name="allowSharedTexture"/> and the device takes them, else written from
     /// pixels in memory.</summary>
-    internal WebViewBrowser CreateBrowser(bool allowSharedTexture, Action<SharedSurfaceDescriptor> show, Action letGo,
-        Action frameWritten, Action<int> frameRate, Action sharedTextureRefused)
+    internal WebViewBrowser CreateBrowser(bool allowSharedTexture, IWebViewBrowserView view)
     {
         EnsureInitialized();
         device ??= devices.MainGraphicsDevice.CreateRenderDevice();
         var path = allowSharedTexture && SharesTextures() ? WebViewFramePath.SharedTexture : WebViewFramePath.PixelBuffer;
-        var browser = new WebViewBrowser(this, device, path, show, letGo, frameWritten, frameRate, sharedTextureRefused);
+        var browser = new WebViewBrowser(this, device, path, view);
         browsers.Add(browser);
         ArmPumpTimer(MaxPumpDelayMs);
         return browser;

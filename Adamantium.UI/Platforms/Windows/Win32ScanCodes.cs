@@ -1,14 +1,43 @@
+using System.Collections.Generic;
+
 namespace Adamantium.UI.Platforms.Windows;
 
-internal static class Win32ScanCodes
+/// <summary>A key's place on the keyboard as Windows names it - a scan code, extended or not - and as a USB HID usage,
+/// the way our key events carry it (<see cref="Core.Input.KeyPressInfo.PhysicalKey"/>).</summary>
+public static class Win32ScanCodes
 {
     private const uint KeyboardPage = 0x0007_0000;
     private const uint ConsumerPage = 0x000C_0000;
     private const uint GenericDesktopPage = 0x0001_0000;
 
+    private static Dictionary<uint, (int ScanCode, bool Extended)> byUsage;
+
+    /// <summary>The HID usage of the key at <paramref name="scanCode"/>; 0 for one with none.</summary>
     public static uint ToHidUsage(int scanCode, bool extended)
     {
         return extended ? Extended(scanCode) : Plain(scanCode);
+    }
+
+    /// <summary>The scan code of the key at HID usage <paramref name="usage"/>, as Windows reports it; false for a usage
+    /// no scan code has.</summary>
+    public static bool TryFromHidUsage(uint usage, out int scanCode, out bool extended)
+    {
+        if (byUsage == null)
+        {
+            var map = new Dictionary<uint, (int, bool)>();
+            for (var code = 0; code <= 0xFF; code++)
+            {
+                map.TryAdd(Plain(code), (code, false));
+                map.TryAdd(Extended(code), (code, true));
+            }
+
+            map.Remove(0);
+            byUsage = map;
+        }
+
+        var found = byUsage.TryGetValue(usage, out var key);
+        (scanCode, extended) = key;
+        return found;
     }
 
     private static uint Plain(int scanCode)
