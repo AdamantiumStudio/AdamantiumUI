@@ -23,13 +23,14 @@
     </ItemGroup>
 
     <ItemGroup>
-        <AdamantiumEngineReference Include="Adamantium.Core" GeneratePathProperty="true" />
+        <AdamantiumEngineReference Include="Adamantium.Core" />
+        <AdamantiumEngineReference Include="Adamantium.Core.Shared" GeneratePathProperty="true" />
         <AdamantiumEngineReference Include="Adamantium.Mathematics" />
-        <AdamantiumEngineReference Include="Adamantium.Core" Role="NetStandardAnalyzer" />
+        <AdamantiumEngineReference Include="Adamantium.Core.Shared" Role="NetStandardAnalyzer" />
     </ItemGroup>
 
     <ItemGroup Condition="'$(UseEngineSource)' != 'true'">
-        <Analyzer Include="$(PkgAdamantium_Core)\lib\netstandard2.0\Adamantium.Core.dll" Condition="'$(PkgAdamantium_Core)' != ''" />
+        <Analyzer Include="$(PkgAdamantium_Core_Shared)\lib\netstandard2.0\Adamantium.Core.Shared.dll" Condition="'$(PkgAdamantium_Core_Shared)' != ''" />
     </ItemGroup>
 
     <ItemGroup>

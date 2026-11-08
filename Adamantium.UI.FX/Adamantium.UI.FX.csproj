@@ -32,11 +32,9 @@
         <AdamantiumEngineReference Include="Adamantium.Mathematics" />
         <AdamantiumEngineReference Include="Adamantium.EffectsCompiler" Role="EffectsCompiler" />
         <AdamantiumEngineReference Include="Adamantium.Engine.Generators" Role="Generator" />
-        <!-- The source generators above are Roslyn analyzers (netstandard2.0); they need Core as an analyzer assembly
-             too. Analyzer-ONLY (ReferenceOutputAssembly=false) so the netstandard2.0 build is NOT copied into this
-             net10.0 app's output - the runtime/compile Core comes from the normal net10.0 ref above. The generator
-             package carries the assemblies it loads, Core among them. -->
-        <AdamantiumEngineReference Include="Adamantium.Core" Role="NetStandardAnalyzer" />
+        <!-- What the source generators above load: Core.Shared, analyzer-only - the assembly itself comes through Core.
+             The generator package carries the assemblies it loads, Core.Shared among them. -->
+        <AdamantiumEngineReference Include="Adamantium.Core.Shared" Role="NetStandardAnalyzer" />
     </ItemGroup>
 
     <ItemGroup>

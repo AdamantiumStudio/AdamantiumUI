@@ -22,17 +22,16 @@
     </ItemGroup>
 
     <ItemGroup>
-        <AdamantiumEngineReference Include="Adamantium.Core" GeneratePathProperty="true" />
+        <AdamantiumEngineReference Include="Adamantium.Core" />
+        <AdamantiumEngineReference Include="Adamantium.Core.Shared" GeneratePathProperty="true" />
         <AdamantiumEngineReference Include="Adamantium.Mathematics" />
-        <!-- netstandard2.0 analyzer dep for the source generator above (Roslyn analyzers must be netstandard2.0).
-             Analyzer-ONLY so the netstandard2.0 build isn't copied into this net10.0 output - runtime/compile
-             Core comes from the normal net10.0 ref above. -->
-        <AdamantiumEngineReference Include="Adamantium.Core" Role="NetStandardAnalyzer" />
+        <!-- What the source generator above loads: Core.Shared, analyzer-only - the assembly itself comes above. -->
+        <AdamantiumEngineReference Include="Adamantium.Core.Shared" Role="NetStandardAnalyzer" />
     </ItemGroup>
 
-    <!-- The same netstandard2.0 analyzer dep, taken from the package's own netstandard2.0 build. -->
+    <!-- The same analyzer dep, taken from the package. -->
     <ItemGroup Condition="'$(UseEngineSource)' != 'true'">
-        <Analyzer Include="$(PkgAdamantium_Core)\lib\netstandard2.0\Adamantium.Core.dll" Condition="'$(PkgAdamantium_Core)' != ''" />
+        <Analyzer Include="$(PkgAdamantium_Core_Shared)\lib\netstandard2.0\Adamantium.Core.Shared.dll" Condition="'$(PkgAdamantium_Core_Shared)' != ''" />
     </ItemGroup>
 
     <!-- The themes' strings: language tables (Localization\*.alang) the themes name in {Localize}. -->

@@ -11,14 +11,14 @@
 		<BuildProjectReferences Condition="'$(NoBuild)' == 'true'">false</BuildProjectReferences>
     </PropertyGroup>
 
-    <!-- What Adamantium.UI packs as its analyzers: the generator and the assemblies it loads - Markup and the
-         netstandard2.0 Core (font weights, stretches and feature lists are checked at build), whether they come from
-         the engine's source or from its packages. The same set a project reference hands the compiler. -->
+    <!-- What Adamantium.UI packs as its analyzers: the generator and the assemblies it loads - Markup and
+         Core.Shared (font weights, stretches and feature lists are checked at build), whether they come from the
+         engine's source or from its packages. The same set a project reference hands the compiler. -->
     <Target Name="GetAumlAnalyzerAssemblies" DependsOnTargets="ResolveReferences" Returns="@(_AumlAnalyzer->Distinct())">
         <ItemGroup>
             <_AumlAnalyzer Include="$(TargetPath)" />
             <_AumlAnalyzer Include="@(ReferencePath)" Condition="'%(ReferencePath.ReferenceSourceTarget)' == 'ProjectReference'" />
-            <_AumlAnalyzer Include="@(ReferencePath)" Condition="'%(ReferencePath.NuGetPackageId)' == 'Adamantium.Core'" />
+            <_AumlAnalyzer Include="@(ReferencePath)" Condition="'%(ReferencePath.NuGetPackageId)' == 'Adamantium.Core.Shared'" />
         </ItemGroup>
     </Target>
 
@@ -47,7 +47,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <AdamantiumEngineReference Include="Adamantium.Core" PrivateAssets="all" />
+      <AdamantiumEngineReference Include="Adamantium.Core.Shared" PrivateAssets="all" />
     </ItemGroup>
 
 </Project>
