@@ -24,7 +24,16 @@ public class WebView : Control
         typeof(WebView), new PropertyMetadata(null, OnSourceChanged));
 
     public static readonly AdamantiumProperty EngineProperty = AdamantiumProperty.Register(nameof(Engine),
-        typeof(WebViewEngine), typeof(WebView), new PropertyMetadata(null, OnEngineChanged));
+        typeof(WebViewEngine), typeof(WebView), new PropertyMetadata(null, OnBrowserSettingChanged));
+
+    public static readonly AdamantiumProperty AllowSharedTextureProperty = AdamantiumProperty.Register(
+        nameof(AllowSharedTexture), typeof(bool), typeof(WebView), new PropertyMetadata(true, OnBrowserSettingChanged));
+
+    public static readonly AdamantiumProperty FramePathProperty = AdamantiumProperty.Register(nameof(FramePath),
+        typeof(WebViewFramePath), typeof(WebView), new PropertyMetadata(WebViewFramePath.None));
+
+    public static readonly AdamantiumProperty FrameRateProperty = AdamantiumProperty.Register(nameof(FrameRate),
+        typeof(int), typeof(WebView), new PropertyMetadata(0));
 
     private RenderTargetPanel surface;
     private WebViewBrowser browser;
@@ -55,6 +64,28 @@ public class WebView : Control
     {
         get => GetValue<WebViewEngine>(EngineProperty);
         set => SetValue(EngineProperty, value);
+    }
+
+    /// <summary>Whether the page's frames may come in Chromium's own textures on the GPU, where the device takes them;
+    /// otherwise, and where it does not, they come as pixels in memory. Changing it makes the page again.</summary>
+    public bool AllowSharedTexture
+    {
+        get => GetValue<bool>(AllowSharedTextureProperty);
+        set => SetValue(AllowSharedTextureProperty, value);
+    }
+
+    /// <summary>How the page's frames come, set by the view.</summary>
+    public WebViewFramePath FramePath
+    {
+        get => GetValue<WebViewFramePath>(FramePathProperty);
+        set => SetValue(FramePathProperty, value);
+    }
+
+    /// <summary>The page's frames in the last second, set by the view.</summary>
+    public int FrameRate
+    {
+        get => GetValue<int>(FrameRateProperty);
+        set => SetValue(FrameRateProperty, value);
     }
 
     public override void OnApplyTemplate()
@@ -134,7 +165,7 @@ public class WebView : Control
         }
     }
 
-    private static void OnEngineChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)
+    private static void OnBrowserSettingChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)
     {
         var view = (WebView)component;
         view.StopBrowser();
@@ -162,7 +193,38 @@ public class WebView : Control
 
         try
         {
-            browser = engine.CreateBrowser(Show, LetGo, RequestFrame);
+            WebViewBrowser made = null;
+            made = browser = engine.CreateBrowser(AllowSharedTexture,
+                descriptor =>
+                {
+                    if (ReferenceEquals(browser, made))
+                    {
+                        Show(descriptor);
+                    }
+                },
+                () =>
+                {
+                    if (ReferenceEquals(browser, made))
+                    {
+                        LetGo();
+                    }
+                },
+                () =>
+                {
+                    if (ReferenceEquals(browser, made))
+                    {
+                        RequestFrame();
+                    }
+                },
+                rate =>
+                {
+                    if (ReferenceEquals(browser, made))
+                    {
+                        SetCurrentValue(FrameRateProperty, rate);
+                    }
+                },
+                () => RestartOnPixels(made));
+            SetCurrentValue(FramePathProperty, browser.FramePath);
             browser.Create(Source?.AbsoluteUri ?? "about:blank", (int)Math.Ceiling(ActualWidth),
                 (int)Math.Ceiling(ActualHeight), Scale(), window?.Handle ?? IntPtr.Zero);
             browser.SetHidden(IsWindowOutOfSight());
@@ -183,6 +245,19 @@ public class WebView : Control
 
         browser.Dispose();
         browser = null;
+        SetCurrentValue(FramePathProperty, WebViewFramePath.None);
+        SetCurrentValue(FrameRateProperty, 0);
+    }
+
+    private void RestartOnPixels(WebViewBrowser refused)
+    {
+        if (!ReferenceEquals(browser, refused))
+        {
+            return;
+        }
+
+        StopBrowser();
+        StartBrowser();
     }
 
     private void LetGo()

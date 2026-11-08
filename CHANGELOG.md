@@ -11,7 +11,12 @@ All packages share one version.
   `RenderTargetPanel` - no window of its own. `AddWebView()` registers the application's `WebViewEngine`; a view
   model takes it from the container and a `WebView` binds its `Engine` to it. A view kept between visits
   (`x:KeepAlive`) keeps its page: the browser is hidden while parked and closed once the view is let go. `WebViewOptions` name the profile folder and the locale. The
-  sandbox has a "Web" tab. Input, popups and the browser API come later.
+  sandbox has a "Web" tab. Where the device imports Chromium's own D3D11 texture on the same adapter, a frame is
+  copied from it on the GPU instead of written from pixels in memory; `AllowSharedTexture` (on by default) lets it, and
+  `FramePath` and `FrameRate` tell which path the frames take and how many come a second. A texture that cannot be
+  copied makes the page again on pixels in memory. CEF is told our adapter (`--use-adapter-luid`). A browser closed
+  while its page is busy no longer stops every page drawing: CEF calls its handlers while it closes, and they were
+  gone. Input, popups and the browser API come later.
 - `IUIApplication.UIThreadExiting`: raised once as the application shuts down, on the UI thread after its last frame
   and before the windows' services and the graphics device go - for what was started on the UI thread and must end on
   it, as CEF.

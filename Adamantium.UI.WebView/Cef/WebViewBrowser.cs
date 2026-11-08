@@ -1,4 +1,5 @@
 using Adamantium.Graphics.Core;
+using Adamantium.UI.Core;
 using Adamantium.UI.WebView.Cef.Interop;
 
 namespace Adamantium.UI.WebView.Cef;
@@ -12,6 +13,8 @@ internal sealed unsafe class WebViewBrowser : IDisposable
 {
     private readonly WebViewEngine engine;
     private readonly Action letGo;
+    private readonly Action sharedTextureRefused;
+    private readonly Action<int> frameRate;
     private readonly WebViewClient client;
     private readonly WebViewRenderHandler renderHandler;
     private readonly WebViewLifeSpanHandler lifeSpanHandler;
@@ -24,13 +27,24 @@ internal sealed unsafe class WebViewBrowser : IDisposable
     private bool disposed;
     private bool repaintOwed;
     private bool hidden;
+    private bool refused;
+    private int framesCounted;
+    private long countedSince;
 
-    public WebViewBrowser(WebViewEngine engine, IGraphicsDevice device, Action<SharedSurfaceDescriptor> show,
-        Action letGo, Action frameWritten)
+    public WebViewBrowser(WebViewEngine engine, IGraphicsDevice device, WebViewFramePath framePath,
+        Action<SharedSurfaceDescriptor> show, Action letGo, Action frameWritten, Action<int> frameRate,
+        Action sharedTextureRefused)
     {
         this.engine = engine;
         this.letGo = letGo;
-        producer = new WebViewFrameProducer(device, show, frameWritten);
+        this.frameRate = frameRate;
+        this.sharedTextureRefused = sharedTextureRefused;
+        FramePath = framePath;
+        producer = new WebViewFrameProducer(device, show, () =>
+        {
+            framesCounted++;
+            frameWritten();
+        });
         renderHandler = new WebViewRenderHandler(this);
         lifeSpanHandler = new WebViewLifeSpanHandler(this);
         client = new WebViewClient(renderHandler, lifeSpanHandler);
@@ -42,6 +56,9 @@ internal sealed unsafe class WebViewBrowser : IDisposable
     /// <summary>The screen's pixels per device-independent pixel.</summary>
     public float Scale { get; private set; } = 1;
 
+    /// <summary>How the frames come: Chromium's textures where the engine shares them, else pixels in memory.</summary>
+    public WebViewFramePath FramePath { get; }
+
     /// <summary>Asks CEF to make the browser, showing <paramref name="url"/>.</summary>
     public void Create(string url, int width, int height, float scale, IntPtr parentWindow)
     {
@@ -50,7 +67,7 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         ViewSize = (Math.Max(1, width), Math.Max(1, height));
         Scale = scale;
 
-        var info = CefWindowInfos.Windowless(parentWindow);
+        var info = CefWindowInfos.Windowless(parentWindow, FramePath == WebViewFramePath.SharedTexture);
         var settings = new CefBrowserSettings
         {
             size = (ulong)sizeof(CefBrowserSettings),
@@ -146,8 +163,7 @@ internal sealed unsafe class WebViewBrowser : IDisposable
             return;
         }
 
-        repaintOwed = false;
-        var host = LiveHost();
+        repaintOwed = false;        var host = LiveHost();
         if (host == null)
         {
             return;
@@ -155,6 +171,25 @@ internal sealed unsafe class WebViewBrowser : IDisposable
 
         host->invalidate(host, CefPaintElementType.View);
         CefRefCounting.ReleaseCef(host);
+    }
+
+    /// <summary>Hands on the frames written in the last second, once a second, from the engine's pump.</summary>
+    public void MeasureFrameRate(long now)
+    {
+        if (countedSince == 0)
+        {
+            countedSince = now;
+            return;
+        }
+
+        if (now - countedSince < 1000)
+        {
+            return;
+        }
+
+        frameRate((int)(framesCounted * 1000 / (now - countedSince)));
+        framesCounted = 0;
+        countedSince = now;
     }
 
     /// <summary>Whether <paramref name="other"/> is this view's browser - not a popup or DevTools of it.</summary>
@@ -170,8 +205,7 @@ internal sealed unsafe class WebViewBrowser : IDisposable
     }
 
     internal void OnCreated(CefBrowser* created)
-    {
-        if (browser != null)
+    {        if (browser != null)
         {
             CefRefCounting.ReleaseCef(created);
             return;
@@ -210,6 +244,39 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         }
     }
 
+    /// <summary>A frame in Chromium's <paramref name="texture"/>, copied before the call returns, when CEF takes the
+    /// texture back. One that cannot be copied - not BGRA, its visible part not at the corner, or not taken by the
+    /// device - ends the shared path: the engine starts no more browsers on it, and the view makes this one again on
+    /// pixels in memory.</summary>
+    internal void OnAcceleratedPaint(ReadOnlySpan<CefRect> dirty, IntPtr texture, CefColorType format, int textureWidth,
+        int textureHeight, CefRect visible)
+    {
+        if (closing || refused)
+        {
+            return;
+        }
+
+        try
+        {
+            if (format != CefColorType.Bgra8888 || visible.x != 0 || visible.y != 0)
+            {
+                throw new NotSupportedException($"A {format} texture whose visible part is at {visible.x},{visible.y}.");
+            }
+
+            if (!producer.Copy(dirty, texture, textureWidth, textureHeight, visible.width, visible.height))
+            {
+                repaintOwed = true;
+            }
+        }
+        catch (Exception exception)
+        {
+            refused = true;
+            Serilog.Log.Logger.Warning(exception, "The page's texture is not copied; it is drawn into memory instead");
+            engine.SharedTextureRefused();
+            LoopSignal.Post(sharedTextureRefused);
+        }
+    }
+
     /// <summary>A page opening a window of its own - a link to a new tab, window.open: the view shows it instead when
     /// the user asked for it; a script's own is refused.</summary>
     internal void OnPopup(string url, bool userGesture)
@@ -221,8 +288,7 @@ internal sealed unsafe class WebViewBrowser : IDisposable
     }
 
     internal void OnClosing(CefBrowser* closed)
-    {
-        if (!Is(closed))
+    {        if (!Is(closed))
         {
             return;
         }
@@ -259,8 +325,7 @@ internal sealed unsafe class WebViewBrowser : IDisposable
     }
 
     private void Close()
-    {
-        var host = Host();
+    {        var host = Host();
         if (host == null)
         {
             return;

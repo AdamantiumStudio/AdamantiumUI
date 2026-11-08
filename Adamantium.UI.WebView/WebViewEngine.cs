@@ -1,4 +1,6 @@
+using Adamantium.Graphics;
 using Adamantium.Graphics.Core;
+using Adamantium.Imaging;
 using Adamantium.UI.Core;
 using Adamantium.UI.WebView.Cef;
 using Adamantium.UI.WebView.Cef.Interop;
@@ -29,6 +31,8 @@ public sealed unsafe class WebViewEngine : IDisposable
     private IGraphicsDevice device;
     private int pumpPosted;
     private long timerDue;
+    private long? adapterLuid;
+    private bool sharedTextureRefused;
     private bool initialized;
     private bool failed;
     private volatile bool shutDown;
@@ -78,12 +82,16 @@ public sealed unsafe class WebViewEngine : IDisposable
         }
     }
 
-    /// <summary>A browser for one WebView, its frames written on the engine's device on the UI's main device.</summary>
-    internal WebViewBrowser CreateBrowser(Action<SharedSurfaceDescriptor> show, Action letGo, Action frameWritten)
+    /// <summary>A browser for one WebView, its frames written on the engine's device on the UI's main device: copied
+    /// from Chromium's textures when <paramref name="allowSharedTexture"/> and the device takes them, else written from
+    /// pixels in memory.</summary>
+    internal WebViewBrowser CreateBrowser(bool allowSharedTexture, Action<SharedSurfaceDescriptor> show, Action letGo,
+        Action frameWritten, Action<int> frameRate, Action sharedTextureRefused)
     {
         EnsureInitialized();
         device ??= devices.MainGraphicsDevice.CreateRenderDevice();
-        var browser = new WebViewBrowser(this, device, show, letGo, frameWritten);
+        var path = allowSharedTexture && SharesTextures() ? WebViewFramePath.SharedTexture : WebViewFramePath.PixelBuffer;
+        var browser = new WebViewBrowser(this, device, path, show, letGo, frameWritten, frameRate, sharedTextureRefused);
         browsers.Add(browser);
         ArmPumpTimer(MaxPumpDelayMs);
         return browser;
@@ -91,6 +99,13 @@ public sealed unsafe class WebViewEngine : IDisposable
 
     /// <summary>A browser of <see cref="CreateBrowser"/> closed by CEF, or never made by it.</summary>
     internal void BrowserClosed(WebViewBrowser browser) => browsers.Remove(browser);
+
+    /// <summary>A texture of Chromium's the device did not take: browsers made from now on get pixels in memory.</summary>
+    internal void SharedTextureRefused() => sharedTextureRefused = true;
+
+    private bool SharesTextures() =>
+        !sharedTextureRefused && adapterLuid != null &&
+        SharedSurface.CanCopyFrom(device, SharedHandleType.D3D11Texture, SurfaceFormat.B8G8R8A8.UNorm);
 
     /// <summary>Closes the browsers and CEF, running CEF's work until they have gone; on the UI loop, which CEF was
     /// started on.</summary>
@@ -147,7 +162,7 @@ public sealed unsafe class WebViewEngine : IDisposable
 
         CefLibrary.Load(CefLibrary.ApplicationFolder);
         browserProcess = new WebViewBrowserProcessHandler(SchedulePumpWork);
-        app = new WebViewApp(browserProcess);
+        app = new WebViewApp(browserProcess, Switches());
         mainArguments = new CefMainArguments(Environment.GetCommandLineArgs());
 
         var settings = new CefSettings
@@ -190,6 +205,18 @@ public sealed unsafe class WebViewEngine : IDisposable
         }
 
         initialized = true;
+    }
+
+    private List<KeyValuePair<string, string>> Switches()
+    {
+        var switches = new List<KeyValuePair<string, string>>();
+        adapterLuid = OperatingSystem.IsWindows() ? devices.MainGraphicsDevice.GraphicsAdapter.Luid : null;
+        if (adapterLuid is { } luid)
+        {
+            switches.Add(new("use-adapter-luid", $"{(int)(luid >> 32)},{(uint)luid}"));
+        }
+
+        return switches;
     }
 
     private void ReleaseHandlers()
@@ -249,9 +276,11 @@ public sealed unsafe class WebViewEngine : IDisposable
         }
 
         CefInterop.CefDoMessageLoopWork();
+        var now = Environment.TickCount64;
         foreach (var browser in browsers)
         {
             browser.RepaintIfOwed();
+            browser.MeasureFrameRate(now);
         }
 
         if (browsers.Count > 0 && Volatile.Read(ref timerDue) <= Environment.TickCount64)

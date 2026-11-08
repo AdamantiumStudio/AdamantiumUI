@@ -6,14 +6,16 @@ namespace Adamantium.UI.WebView.Cef;
 /// its own, its parent window given for what the platform still asks of one (input methods, screen).</summary>
 internal static unsafe class CefWindowInfos
 {
-    /// <summary>A new window info in native memory, freed with <see cref="Free"/>.</summary>
-    public static void* Windowless(IntPtr parentWindow)
+    /// <summary>A new window info in native memory, freed with <see cref="Free"/>; with <paramref name="sharedTexture"/>
+    /// the frames come in Chromium's own textures (Windows) instead of pixels in memory.</summary>
+    public static void* Windowless(IntPtr parentWindow, bool sharedTexture)
     {
         if (OperatingSystem.IsWindows())
         {
             var info = (Interop.Windows.CefWindowInfo*)NativeMemory.AllocZeroed((nuint)sizeof(Interop.Windows.CefWindowInfo));
             info->size = (ulong)sizeof(Interop.Windows.CefWindowInfo);
             info->windowless_rendering_enabled = 1;
+            info->shared_texture_enabled = sharedTexture ? 1 : 0;
             info->parent_window = new Interop.Windows.CefWindowHandle { pointer = (void*)parentWindow };
             return info;
         }
