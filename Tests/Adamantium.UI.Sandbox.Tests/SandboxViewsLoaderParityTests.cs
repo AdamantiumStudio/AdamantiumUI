@@ -20,7 +20,8 @@ namespace Adamantium.UI.Sandbox.Tests;
 /// <summary>
 /// The designer builds a view from its markup by running the build plan; the application runs the code generated from
 /// the same plan. Every view the sandbox ships comes out the same both ways: the same elements, and on each the same
-/// properties set, from the same source, to the same values.
+/// properties set, from the same source, to the same values. A read-only property is left out: the element sets it, not
+/// the markup - an image's frame count once its file has loaded, which one build may reach before the other.
 /// </summary>
 [TestFixture]
 public class SandboxViewsLoaderParityTests
@@ -158,7 +159,7 @@ public class SandboxViewsLoaderParityTests
         {
             foreach (var property in SlottedProperties(ca).Union(SlottedProperties(cb)).OrderBy(p => p.Name))
             {
-                if (property.Name == "Id")
+                if (property.Name == "Id" || property.ReadOnly)
                 {
                     continue;
                 }
