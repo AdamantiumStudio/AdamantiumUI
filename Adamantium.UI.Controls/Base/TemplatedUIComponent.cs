@@ -148,6 +148,7 @@ public class TemplatedUIComponent : InputUIComponent, ITemplatedUIComponent, ITe
         // nothing to tear down then.
         if (templateResult == null) return;
 
+        OnTemplateRemoving();
         GiveBackShownElements(templateResult.RootComponent);
         TemplateRootChanged(templateResult.RootComponent, joined: false);
         TraverseVisualTreeAndUnload(templateResult.RootComponent);
@@ -180,7 +181,13 @@ public class TemplatedUIComponent : InputUIComponent, ITemplatedUIComponent, ITe
 
     public virtual void OnRemoveTemplate()
     {
-        
+
+    }
+
+    /// <summary>The template is about to be taken down, its parts still whole: the moment to take back what the control
+    /// put into them and keeps beyond them - taking the template down walks every part it still holds.</summary>
+    protected virtual void OnTemplateRemoving()
+    {
     }
     
     private static void GiveBackShownElements(IUIComponent oldRoot)

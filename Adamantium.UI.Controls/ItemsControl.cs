@@ -227,10 +227,24 @@ public class ItemsControl : Control, IContainer, IKeyboardEntry
         ItemContainerGenerator.Clear();
     }
 
+    /// <summary>Takes the containers out of the presenter's panel before the template goes: an item that is its own
+    /// container is shown again by the next template, and taking the template down would otherwise reach into it; a
+    /// virtualizing panel left serving this control would take the containers out of the next template's panel.</summary>
+    protected override void OnTemplateRemoving()
+    {
+        base.OnTemplateRemoving();
+        _presenter?.Disconnect();
+    }
+
     /// <summary>Connect an items host that arrives AFTER OnApplyTemplate - e.g. a MenuItem whose PART_ItemsPresenter lives in
     /// its submenu Popup's lazily-built <see cref="Popup.ChildTemplate"/>, so GetTemplateChild couldn't find it up front.</summary>
     protected void ConnectPresenter(ItemsPresenter presenter)
     {
+        if (!ReferenceEquals(_presenter, presenter))
+        {
+            _presenter?.Disconnect();
+        }
+
         _presenter = presenter;
         _presenter?.Connect(this);
     }
