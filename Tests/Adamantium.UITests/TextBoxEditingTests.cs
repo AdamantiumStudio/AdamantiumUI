@@ -9,6 +9,7 @@ using Adamantium.UI.Controls.Panels;
 using Adamantium.UI.Controls.Primitives;
 using Adamantium.UI.Controls.Text;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Data;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Text;
 using Adamantium.UI.Extensions;
@@ -153,7 +154,7 @@ public class TextBoxEditingTests
     {
         var behavior = box.Behaviors.OfType<SpellCheckBehavior>().Single();
         behavior.ChecksInBackground = false;
-        behavior.Checker = checker;
+        SpellCheck.SetChecker(box, checker);
     }
 
     [Test]
@@ -171,6 +172,57 @@ public class TextBoxEditingTests
         {
             Assert.That(attached, Is.EqualTo(1));
             Assert.That(box.Behaviors.OfType<SpellCheckBehavior>(), Is.Empty);
+        });
+    }
+
+    private sealed class Spelling
+    {
+        public ISpellChecker Checker { get; set; }
+    }
+
+    [Test]
+    public void SpellCheck_TakesItsWordsBoundAbove_AndChecksAgainWhenTheyChange()
+    {
+        var box = new TextBox { Text = "teh wrod" };
+        var panel = new StackPanel { Children = { box } };
+        SpellCheck.SetIsEnabled(box, true);
+        box.Behaviors.OfType<SpellCheckBehavior>().Single().ChecksInBackground = false;
+        var withoutWords = box.MisspelledRanges.Count;
+
+        panel.SetBinding(SpellCheck.CheckerProperty, new Binding(nameof(Spelling.Checker)));
+        panel.DataContext = new Spelling { Checker = new Words("teh") };
+        var first = box.MisspelledRanges.ToList();
+        panel.DataContext = new Spelling { Checker = new Words("wrod") };
+        var second = box.MisspelledRanges.ToList();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(withoutWords, Is.Zero, "no words, nothing marked");
+            Assert.That(first, Is.EqualTo(new[] { new TextRange(0, 3) }));
+            Assert.That(second, Is.EqualTo(new[] { new TextRange(4, 4) }));
+        });
+    }
+
+    [Test]
+    public void SpellCheck_TurnedOnUnderWordsAlreadyGiven_ChecksAtOnce_AndAMovedBoxTakesItsNewPlacesWords()
+    {
+        var box = new TextBox { Text = "teh wrod" };
+        var first = new StackPanel { Children = { box } };
+        var second = new StackPanel();
+        SpellCheck.SetChecker(first, new Words("teh"));
+        SpellCheck.SetChecker(second, new Words("wrod"));
+        SpellCheck.SetIsEnabled(box, true);
+        var underFirst = box.MisspelledRanges.ToList();
+        box.Behaviors.OfType<SpellCheckBehavior>().Single().ChecksInBackground = false;
+
+        first.Children.Remove(box);
+        second.Children.Add(box);
+        var underSecond = box.MisspelledRanges.ToList();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(underFirst, Is.EqualTo(new[] { new TextRange(0, 3) }));
+            Assert.That(underSecond, Is.EqualTo(new[] { new TextRange(4, 4) }));
         });
     }
 

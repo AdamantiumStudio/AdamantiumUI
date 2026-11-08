@@ -105,7 +105,7 @@ public class TextBoxThemeMenuTests
         SpellCheck.SetIsEnabled(box, true);
         var behavior = box.Behaviors.OfType<SpellCheckBehavior>().Single();
         behavior.ChecksInBackground = false;
-        behavior.Checker = new Words();
+        SpellCheck.SetChecker(box, new Words());
         Shown(new StackPanel { Children = { box } });
         box.CaretIndex = 1;
 

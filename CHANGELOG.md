@@ -73,6 +73,10 @@ All packages share one version.
 
 ### Changed
 
+- Spelling takes its words from `SpellCheck.Checker`, an inherited attached property bound from a view model (which
+  takes the application's `ISpellChecker` from the container), not from the application's container reached by
+  `SpellCheckBehavior`. Nothing is checked without it. `SpellCheckBehavior.Checker` is gone; set `SpellCheck.Checker`
+  on the box or an element above it instead.
 - A fill whose contours are its edge - a `MeshGeometry` with a `Boundary`, a map tile's areas - is made ready for
   drawing with less memory: the edge is taken from the contours as they are, not copied again, and its antialiased
   ring is put in one array of its own size.
