@@ -2,15 +2,26 @@
       xmlns="http://adamantium/ui"
       xmlns:x="http://adamantium/ui/xaml/extensions"
       xmlns:web="clr-namespace:Adamantium.UI.WebView;assembly=Adamantium.UI.WebView">
-    <!-- Step 1 of the WebView: the address, gone to on Enter, and the page it draws. Input, popups and the navigation
+    <!-- The WebView as its steps come: the address, gone to on Enter, the page it draws, and below how its frames come
+         - Chromium's texture on the GPU or pixels in memory - and how many a second. Input, popups and the navigation
          buttons come with their steps. Kept between visits, so the page is where it was when the tab comes back. -->
-    <Grid RowDefinitions="Auto,*">
+    <Grid RowDefinitions="Auto,*,Auto">
         <TextBox Text="{Binding Address, Mode=TwoWay}" Margin="8" AutomationProperties.AutomationId="WebAddress">
             <TextBox.InputBindings>
                 <KeyBinding Gesture="Enter" Command="{Binding GoCommand}"/>
             </TextBox.InputBindings>
         </TextBox>
-        <web:WebView Grid.Row="1" Engine="{Binding Engine}" Source="{Binding Source}"
+        <web:WebView x:Name="Page" Grid.Row="1" Engine="{Binding Engine}" Source="{Binding Source}"
+                     AllowSharedTexture="{Binding AllowSharedTexture}"
                      AutomationProperties.AutomationId="WebPage"/>
+        <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="8">
+            <CheckBox Content="Shared texture" IsChecked="{Binding AllowSharedTexture, Mode=TwoWay}"
+                      AutomationProperties.AutomationId="WebSharedTexture"/>
+            <TextBlock Text="{Binding FramePath, ElementName=Page}" Margin="16,0,0,0" VerticalAlignment="Center"
+                       AutomationProperties.AutomationId="WebFramePath"/>
+            <TextBlock Text="{Binding FrameRate, ElementName=Page}" Margin="16,0,4,0" VerticalAlignment="Center"
+                       AutomationProperties.AutomationId="WebFrameRate"/>
+            <TextBlock Text="fps" VerticalAlignment="Center"/>
+        </StackPanel>
     </Grid>
 </View>

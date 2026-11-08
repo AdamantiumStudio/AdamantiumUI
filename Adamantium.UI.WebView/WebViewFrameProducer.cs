@@ -7,10 +7,11 @@ using Adamantium.UI.WebView.Cef.Interop;
 namespace Adamantium.UI.WebView;
 
 /// <summary>
-/// Hands a page's frames - BGRA pixels in memory - to the panel that shows them, as a producer on the panel's own
-/// device does: a ring of two surfaces, each frame written into the one the panel gave back. CEF always hands the whole
-/// frame, so a surface gets the rectangles that changed since it was last written, read from the frame at hand. Runs on
-/// the thread CEF paints on, the UI loop, with the engine's device - not the panel's.
+/// Hands a page's frames to the panel that shows them, as a producer on the panel's own device does: a ring of two
+/// surfaces, each frame written into the one the panel gave back. A frame comes whole - BGRA pixels in memory, or
+/// Chromium's texture on the same GPU, copied there before it goes back to Chromium - so a surface gets the rectangles
+/// that changed since it was last written, read from the frame at hand. Runs on the thread CEF paints on, the UI loop,
+/// with the engine's device - not the panel's.
 /// </summary>
 internal sealed unsafe class WebViewFrameProducer : IDisposable
 {
@@ -22,6 +23,8 @@ internal sealed unsafe class WebViewFrameProducer : IDisposable
     private readonly ulong[] written = new ulong[RingSize];
     private readonly Rectangle<int>?[] changed = new Rectangle<int>?[RingSize];
     private SharedSurface ring;
+    private SharedSurface retired;
+    private bool shown;
     private ulong frame;
     private byte[] scratch = [];
 
@@ -37,35 +40,36 @@ internal sealed unsafe class WebViewFrameProducer : IDisposable
     /// the page is to be asked for it again.</summary>
     public bool Write(ReadOnlySpan<CefRect> dirty, byte* pixels, int width, int height)
     {
-        if (width <= 0 || height <= 0)
-        {
-            return true;
-        }
-
-        if (ring == null || ring.Width != width || ring.Height != height)
-        {
-            StartRing(pixels, width, height);
-            return true;
-        }
-
-        foreach (var rect in dirty)
-        {
-            var area = new Rectangle<int>(rect.x, rect.y, rect.width, rect.height);
-            for (var i = 0; i < RingSize; i++)
-            {
-                changed[i] = changed[i] is { } before ? Rectangle<int>.Union(before, area) : area;
-            }
-        }
-
-        var slot = FreeSurface();
-        if (slot < 0)
+        if (!NextWrite(dirty, width, height, out var slot, out var region))
         {
             return false;
         }
 
-        if (changed[slot] is { } region && Clip(region, width, height) is { Width: > 0, Height: > 0 } inFrame)
+        if (slot >= 0)
         {
-            WriteRegion(ring.SurfaceAt(slot), slot, pixels, width, inFrame);
+            WriteRegion(slot, pixels, width, region);
+        }
+
+        return true;
+    }
+
+    /// <summary>Copies a frame of <paramref name="width"/> × <paramref name="height"/> pixels from Chromium's
+    /// <paramref name="texture"/> (a D3D11 texture's NT handle, <paramref name="textureWidth"/> ×
+    /// <paramref name="textureHeight"/>) whose <paramref name="dirty"/> rectangles changed, done before the call
+    /// returns. False as for <see cref="Write"/>; a texture the device does not take throws
+    /// <see cref="NotSupportedException"/>.</summary>
+    public bool Copy(ReadOnlySpan<CefRect> dirty, IntPtr texture, int textureWidth, int textureHeight, int width, int height)
+    {
+        if (!NextWrite(dirty, width, height, out var slot, out var region))
+        {
+            return false;
+        }
+
+        if (slot >= 0 && ring.SurfaceAt(slot).CopyFrom(device, texture, SharedHandleType.D3D11Texture,
+                (uint)textureWidth, (uint)textureHeight, [region], frame + 1))
+        {
+            frame++;
+            Written(slot);
         }
 
         return true;
@@ -77,33 +81,81 @@ internal sealed unsafe class WebViewFrameProducer : IDisposable
     /// <summary>Retires the ring; the panel is to have let go of it first.</summary>
     public void Dispose()
     {
-        Retire(ring);
-        ring = null;
+        Retire(ref retired);
+        Retire(ref ring);
     }
 
-    private void StartRing(byte* pixels, int width, int height)
+    private bool NextWrite(ReadOnlySpan<CefRect> dirty, int width, int height, out int slot, out Rectangle<int> region)
     {
-        var previous = ring;
+        slot = -1;
+        region = default;
+        if (width <= 0 || height <= 0)
+        {
+            return true;
+        }
+
+        if (ring == null || ring.Width != width || ring.Height != height)
+        {
+            StartRing(width, height);
+        }
+        else
+        {
+            foreach (var rect in dirty)
+            {
+                var area = new Rectangle<int>(rect.x, rect.y, rect.width, rect.height);
+                for (var i = 0; i < RingSize; i++)
+                {
+                    changed[i] = changed[i] is { } before ? Rectangle<int>.Union(before, area) : area;
+                }
+            }
+        }
+
+        var free = FreeSurface();
+        if (free < 0)
+        {
+            return false;
+        }
+
+        if (changed[free] is { } changedRegion && Clip(changedRegion, width, height) is { Width: > 0, Height: > 0 } inFrame)
+        {
+            slot = free;
+            region = inFrame;
+        }
+
+        return true;
+    }
+
+    private void StartRing(int width, int height)
+    {
+        if (shown)
+        {
+            retired = ring;
+            ring = null;
+        }
+        else
+        {
+            Retire(ref ring);
+        }
+
         ring = SharedSurface.CreateInDevice(device, (uint)width, (uint)height, SurfaceFormat.B8G8R8A8.UNorm,
             bufferCount: RingSize);
         Array.Clear(written);
+        shown = false;
         var whole = new Rectangle<int>(0, 0, width, height);
         changed[0] = whole;
         changed[1] = whole;
-        WriteRegion(ring.SurfaceAt(0), 0, pixels, width, whole);
-        show(ring.Descriptor);
-        Retire(previous);
     }
 
-    private void Retire(SharedSurface surface)
+    private void Retire(ref SharedSurface surface)
     {
         if (surface != null)
         {
             device.AddToDeferDisposeQueue(surface);
+            surface = null;
         }
     }
 
-    private void WriteRegion(SharedSurface surface, int slot, byte* pixels, int width, Rectangle<int> region)
+    private void WriteRegion(int slot, byte* pixels, int width, Rectangle<int> region)
     {
         var size = region.Width * region.Height * 4;
         if (scratch.Length < size)
@@ -118,14 +170,28 @@ internal sealed unsafe class WebViewFrameProducer : IDisposable
                 .CopyTo(scratch.AsSpan(row * rowBytes, rowBytes));
         }
 
-        frame++;
-        surface.WriteRegions(device,
-            [new TextureRegionUpdate(0, 0, region.X, region.Y, (uint)region.Width, (uint)region.Height,
-                scratch.AsMemory(0, size))],
-            frame);
+        if (ring.SurfaceAt(slot).WriteRegions(device,
+                [new TextureRegionUpdate(0, 0, region.X, region.Y, (uint)region.Width, (uint)region.Height,
+                    scratch.AsMemory(0, size))],
+                frame + 1))
+        {
+            frame++;
+            Written(slot);
+        }
+    }
+
+    private void Written(int slot)
+    {
         written[slot] = frame;
         changed[slot] = null;
         ring.Descriptor.NoteSubmitted(frame);
+        if (!shown)
+        {
+            shown = true;
+            show(ring.Descriptor);
+            Retire(ref retired);
+        }
+
         frameWritten();
     }
 

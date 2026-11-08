@@ -60,7 +60,14 @@ internal abstract unsafe class CefObject
 
         self.Free();
         NativeMemory.Free(native);
+        OnFreed();
         return true;
+    }
+
+    /// <summary>Called once the last reference - CEF's or ours - is gone: lets go of the objects this one hands CEF.
+    /// </summary>
+    protected virtual void OnFreed()
+    {
     }
 
     internal bool HasOneReference => Volatile.Read(ref references) == 1;

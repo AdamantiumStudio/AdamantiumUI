@@ -76,6 +76,14 @@ jobs:
           git clone --depth 1 --branch master https://github.com/AdamantiumStudio/AdamantiumEngine.git ../AdamantiumEngine
           git -C ../AdamantiumEngine log -1 --format='Engine at %h: %s'
 
+      # AdamantiumVulkan beside them, for the engine and the UI alike: a binding change is built here once it is merged.
+      - name: AdamantiumVulkan
+        if: steps.changes.outputs.code == 'true'
+        shell: bash
+        run: |
+          git clone --depth 1 --branch master https://github.com/AdamantiumStudio/AdamantiumVulkan.git ../AdamantiumVulkan
+          git -C ../AdamantiumVulkan log -1 --format='AdamantiumVulkan at %h: %s'
+
       # QuantumBinding beside it too, for the binding generator: a generator change is built here once it is merged.
       - name: QuantumBinding
         if: steps.changes.outputs.code == 'true'

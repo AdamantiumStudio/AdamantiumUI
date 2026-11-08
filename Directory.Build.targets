@@ -57,6 +57,16 @@
     <PackageReference Include="@(AdamantiumEngineReference->WithMetadataValue('Role', 'EffectsCompiler')->'%(Identity)')" Version="$(AdamantiumEngineVersion)" />
   </ItemGroup>
 
+  <!-- An AdamantiumVulkan assembly, named once as an AdamantiumVulkanReference: its project when the source is beside,
+       its package of AdamantiumVulkanVersion when it is not (see Directory.Build.props). -->
+  <ItemGroup Condition="'$(UseVulkanSource)' == 'true'">
+    <ProjectReference Include="@(AdamantiumVulkanReference->'$(AdamantiumVulkanDir)%(Identity)\%(Identity).csproj')" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(UseVulkanSource)' != 'true'">
+    <PackageReference Include="@(AdamantiumVulkanReference)" Version="$(AdamantiumVulkanVersion)" />
+  </ItemGroup>
+
   <!-- The repository's applications carry their icon as the package's do; a project that imports the package's targets
        itself has it from them. -->
   <Import Project="$(MSBuildThisFileDirectory)Adamantium.UI\buildTransitive\Adamantium.UI.ApplicationIcon.targets"

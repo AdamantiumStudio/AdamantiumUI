@@ -24,6 +24,10 @@ public partial class WebPageViewModel : TabPageViewModel
     /// <summary>The page shown: the address last gone to, read as a web address.</summary>
     [Bindable] private Uri _source;
 
+    /// <summary>Whether the page's frames may come in Chromium's textures on the GPU rather than as pixels in memory.
+    /// </summary>
+    [Bindable] private bool _allowSharedTexture = true;
+
     [Command] private void Go()
     {
         if (AddressToUri(Address) is { } address)
