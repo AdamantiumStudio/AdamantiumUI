@@ -167,6 +167,8 @@ All packages share one version.
 
 ### Fixed
 
+- A `DispatcherTimer` restarted with a delay no longer ticks once at once: a callback of the old schedule caught between
+  the restart's new generation and its new due time took itself for the new start's tick.
 - A tab strip of its own on a side, built on the theme's, shows its tabs after the strip moves there: the theme's
   template for the side was applied first and taken away again, and its panel, still serving the control, took the tabs
   out of the new strip. A template taken away now lets go of its panel.
