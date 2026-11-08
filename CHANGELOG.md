@@ -9,7 +9,8 @@ All packages share one version.
 
 - `WebView` (Adamantium.UI.WebView, Windows): a web page drawn by Chromium (CEF) off screen and shown by a
   `RenderTargetPanel` - no window of its own. `AddWebView()` registers the application's `WebViewEngine`; a view
-  model takes it from the container and a `WebView` binds its `Engine` to it. `WebViewOptions` name the profile folder and the locale. The
+  model takes it from the container and a `WebView` binds its `Engine` to it. A view kept between visits
+  (`x:KeepAlive`) keeps its page: the browser is hidden while parked and closed once the view is let go. `WebViewOptions` name the profile folder and the locale. The
   sandbox has a "Web" tab. Input, popups and the browser API come later.
 - `IUIApplication.UIThreadExiting`: raised once as the application shuts down, on the UI thread after its last frame
   and before the windows' services and the graphics device go - for what was started on the UI thread and must end on

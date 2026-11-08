@@ -77,15 +77,36 @@ public class WebView : Control
         base.OnAttachedToVisualTree(e);
         attached = true;
         WatchWindow(RootVisual?.Window);
+        if (browser != null)
+        {
+            ResizeBrowser();
+            browser.SetHidden(IsWindowOutOfSight());
+            return;
+        }
+
         StartBrowser();
     }
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
         attached = false;
-        StopBrowser();
+        if (IsParked)
+        {
+            browser?.SetHidden(true);
+        }
+        else
+        {
+            StopBrowser();
+        }
+
         WatchWindow(null);
         base.OnDetachedFromVisualTree(e);
+    }
+
+    protected override void OnDiscarded()
+    {
+        StopBrowser();
+        base.OnDiscarded();
     }
 
     protected override AutomationPeer OnCreateAutomationPeer() => new PaneAutomationPeer(this);

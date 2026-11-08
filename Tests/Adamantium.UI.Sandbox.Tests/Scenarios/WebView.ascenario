@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Scenario xmlns="http://adamantium/automation/scenario" Description="The Web page: an address is gone to on Enter; leaving the page closes its browser and coming back makes a new one - with no error left behind, CEF staged beside the sandbox or not.">
+<Scenario xmlns="http://adamantium/automation/scenario" Description="The Web page: an address is gone to on Enter; leaving the page parks it with its browser hidden and coming back shows it again - with no error left behind, CEF staged beside the sandbox or not.">
   <Select Target="id=GalleryTabs/id=Web" />
   <Wait Target="id=WebPage" />
   <Set Target="id=WebAddress" Value="about:blank" />

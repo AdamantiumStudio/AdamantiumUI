@@ -1,8 +1,9 @@
-<View xmlns="http://adamantium/ui"
+<View x:KeepAlive="Enabled"
+      xmlns="http://adamantium/ui"
       xmlns:x="http://adamantium/ui/xaml/extensions"
       xmlns:web="clr-namespace:Adamantium.UI.WebView;assembly=Adamantium.UI.WebView">
     <!-- Step 1 of the WebView: the address, gone to on Enter, and the page it draws. Input, popups and the navigation
-         buttons come with their steps. -->
+         buttons come with their steps. Kept between visits, so the page is where it was when the tab comes back. -->
     <Grid RowDefinitions="Auto,*">
         <TextBox Text="{Binding Address, Mode=TwoWay}" Margin="8" AutomationProperties.AutomationId="WebAddress">
             <TextBox.InputBindings>
