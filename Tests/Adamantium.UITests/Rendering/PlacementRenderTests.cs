@@ -25,6 +25,7 @@ public class PlacementRenderTests
 {
     private const int Width = 160;
     private const int Height = 96;
+    private const int SolidFrom = 192;
 
     private sealed class PlacedShapes : MeasurableUIComponent
     {
@@ -131,7 +132,7 @@ public class PlacementRenderTests
         public FontRenderer GetFontRenderer(IGraphicsDevice graphicsDevice) => _fonts ??= new FontRenderer(graphicsDevice);
     }
 
-    private readonly record struct Lit(int Count, int Left, int Top, int Right, int Bottom);
+    private readonly record struct Lit(int Count, int Solid, int Left, int Top, int Right, int Bottom);
 
     private OffscreenTestRenderer _renderer;
     private VisualRoot _root;
@@ -171,7 +172,7 @@ public class PlacementRenderTests
         using var img = _renderer.RenderTarget.ResolveTexture.ToImage();
         var pixels = new byte[(int)img.TotalSizeInBytes];
         Marshal.Copy(img.DataPointer, pixels, 0, pixels.Length);
-        int count = 0, left = int.MaxValue, top = int.MaxValue, right = -1, bottom = -1;
+        int count = 0, solid = 0, left = int.MaxValue, top = int.MaxValue, right = -1, bottom = -1;
         for (var i = 0; i < pixels.Length; i += 4)
         {
             if (pixels[i] < 128 && pixels[i + 1] < 128 && pixels[i + 2] < 128)
@@ -182,13 +183,18 @@ public class PlacementRenderTests
             var x = i / 4 % Width;
             var y = i / 4 / Width;
             count++;
+            if (pixels[i] >= SolidFrom || pixels[i + 1] >= SolidFrom || pixels[i + 2] >= SolidFrom)
+            {
+                solid++;
+            }
+
             left = Math.Min(left, x);
             top = Math.Min(top, y);
             right = Math.Max(right, x);
             bottom = Math.Max(bottom, y);
         }
 
-        return new Lit(count, left, top, right, bottom);
+        return new Lit(count, solid, left, top, right, bottom);
     }
 
     [Test]
@@ -207,7 +213,7 @@ public class PlacementRenderTests
             Assert.That(before.Left, Is.EqualTo(10).Within(1));
             Assert.That(after.Left - before.Left, Is.EqualTo(60).Within(1), "the drawing follows the placement");
             Assert.That(after.Top - before.Top, Is.EqualTo(30).Within(1));
-            Assert.That(after.Count, Is.EqualTo(before.Count).Within(4), "the same square, only moved");
+            Assert.That(after.Solid, Is.EqualTo(before.Solid).Within(4), "the same square, only moved");
             Assert.That(_shapes.Renders, Is.EqualTo(renders), "a move is not a record");
             Assert.That(_renderer.Cache.LastFrameReplayed, Is.True, "a move is a replay, not a walk");
         });
@@ -511,9 +517,9 @@ public class PlacementRenderTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(before.Count, Is.GreaterThan(0), "the layer shows the drawing");
+            Assert.That(before.Solid, Is.EqualTo(16 * 16).Within(4), "the layer shows the drawing");
             Assert.That(after.Left - before.Left, Is.EqualTo(80).Within(1), "and shows it moved");
-            Assert.That(after.Count, Is.EqualTo(before.Count).Within(4), "whole, not cut by the layer's region");
+            Assert.That(after.Solid, Is.EqualTo(before.Solid).Within(4), "whole, not cut by the layer's region");
         });
     }
 

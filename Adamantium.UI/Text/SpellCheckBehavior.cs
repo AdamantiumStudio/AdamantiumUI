@@ -19,7 +19,8 @@ namespace Adamantium.UI.Text;
 /// <summary>Checks the spelling of the text box it is attached to: marks its misspelled words and, at the top of the
 /// box's menu, offers for the word under the pointer (or at the caret) what it may have been meant as, to ignore it or
 /// to add it to the dictionary. The text is checked off the UI thread, the latest text winning; the marks follow when
-/// the check is done. <see cref="SpellCheck.IsEnabled"/> attaches it.</summary>
+/// the check is done. <see cref="SpellCheck.IsEnabledProperty"/> attaches it; the words are the box's
+/// <see cref="SpellCheck.CheckerProperty"/>'s.</summary>
 public class SpellCheckBehavior : Behavior<TextBox>
 {
     private const int MostSuggestions = 5;
@@ -28,21 +29,9 @@ public class SpellCheckBehavior : Behavior<TextBox>
     private readonly List<object> _rows = [];
     private TextBox _box;
     private ContextMenu _menu;
-    private ISpellChecker _checker;
     private string _markedText = string.Empty;
     private int _version;
     private bool _checking;
-
-    /// <summary>The checker used; null takes the application's (the system's spelling, by default).</summary>
-    public ISpellChecker Checker
-    {
-        get => _checker;
-        set
-        {
-            _checker = value;
-            Recheck();
-        }
-    }
 
     /// <summary>Whether the text is checked off the UI thread (default). Off, every change is checked at once, as a
     /// quick checker of an application's own words can afford.</summary>
@@ -73,7 +62,7 @@ public class SpellCheckBehavior : Behavior<TextBox>
             Mark(_box.MisspelledRanges, _markedText);
             Recheck();
         }
-        else if (e.Property == UIComponent.LanguageProperty)
+        else if (e.Property == UIComponent.LanguageProperty || e.Property == SpellCheck.CheckerProperty)
         {
             Recheck();
         }
@@ -145,7 +134,11 @@ public class SpellCheckBehavior : Behavior<TextBox>
                 return;
             }
 
-            Mark(done.Result, text);
+            if (ReferenceEquals(checker, SpellChecker()))
+            {
+                Mark(done.Result, text);
+            }
+
             if (version != _version)
             {
                 Recheck();
@@ -279,10 +272,7 @@ public class SpellCheckBehavior : Behavior<TextBox>
         _rows.Clear();
     }
 
-    private ISpellChecker SpellChecker() =>
-        _checker ?? (UIApplication.Current?.Container is { } container && container.IsRegistered<ISpellChecker>()
-            ? container.Resolve<ISpellChecker>()
-            : null);
+    private ISpellChecker SpellChecker() => _box == null ? null : SpellCheck.GetChecker(_box);
 
     private string Language()
     {

@@ -18,6 +18,7 @@ using Adamantium.UI.Core;
 using Adamantium.UI.Core.Automation;
 using Adamantium.UI.Core.Resources;
 using Adamantium.UI.Universes;
+using Adamantium.UI.WebView;
 using NUnit.Framework;
 using Rectangle = Adamantium.UI.Controls.Shapes.Rectangle;
 using T = Adamantium.UI.Core.Automation.AutomationControlType;
@@ -161,6 +162,7 @@ public class AutomationAuditTests
         [typeof(NodeGraph)] = (T.Pane, null),
         [typeof(GridSplitter)] = (T.Thumb, null),
         [typeof(PaneSplitter)] = (T.Thumb, null),
+        [typeof(WebView)] = (T.Pane, "OPEN: a Document holding the page's own tree comes with the page's accessibility"),
         [typeof(RenderTargetPanel)] = (null, "a surface the engine draws its scene into; the scene is not UI"),
         [typeof(MenuItem)] = (T.MenuItem, null),
         [typeof(RepeatButton)] = (T.Button, null),
@@ -211,7 +213,7 @@ public class AutomationAuditTests
     }
 
     private static IEnumerable<Type> Elements() =>
-        new[] { typeof(Control).Assembly, typeof(VirtualWindow).Assembly }
+        new[] { typeof(Control).Assembly, typeof(VirtualWindow).Assembly, typeof(WebView).Assembly }
             .SelectMany(assembly => assembly.GetExportedTypes())
             .Where(type => !type.IsAbstract && !type.ContainsGenericParameters && typeof(UIComponent).IsAssignableFrom(type))
             .OrderBy(type => type.FullName);

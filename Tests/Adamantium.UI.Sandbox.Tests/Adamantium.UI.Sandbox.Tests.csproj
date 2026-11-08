@@ -39,5 +39,7 @@
     </Target>
 
     <Import Project="..\..\Adamantium.UI\buildTransitive\Adamantium.UI.targets" />
+    <!-- The sandbox is started from this folder: its Web page starts CEF from here, with the helper beside it. -->
+    <Import Project="..\..\Adamantium.UI.WebView\build\Adamantium.UI.WebView.CefRuntime.targets" />
 
 </Project>

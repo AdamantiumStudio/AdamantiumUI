@@ -5,10 +5,12 @@ using System.Linq;
 using Adamantium.Fonts;
 using Adamantium.Fonts.Common;
 using Adamantium.Graphics.Fonts;
+using Adamantium.Core.DependencyInjection;
 using Adamantium.MVVM;
 using Adamantium.Navigation;
 using Adamantium.UI.Controls.Text;
 using Adamantium.UI.Core.Media;
+using Adamantium.UI.Core.Text;
 using Adamantium.UI.Sandbox.Content;
 
 namespace Adamantium.UI.Sandbox.ViewModels;
@@ -23,11 +25,15 @@ public partial class TextViewModel : TabPageViewModel
 
     private readonly IRegionManager _regions;
 
-    public TextViewModel(IRegionManager regions) : base("Text")
+    public TextViewModel(IRegionManager regions, IDependencyContainer container) : base("Text")
     {
         _regions = regions;
+        SpellChecker = container.IsRegistered<ISpellChecker>() ? container.Resolve<ISpellChecker>() : null;
         ShowStand(_stand);
     }
+
+    /// <summary>The system's spelling, for the boxes that check it; null where the platform has none.</summary>
+    public ISpellChecker SpellChecker { get; }
 
     /// <summary>Which topic the tab is showing.</summary>
     [Bindable] private TextStand _stand = TextStand.Basics;

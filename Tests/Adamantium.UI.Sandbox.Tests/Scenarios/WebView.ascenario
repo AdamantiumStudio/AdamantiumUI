@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Scenario xmlns="http://adamantium/automation/scenario" Description="The Web page: an address is gone to on Enter; leaving the page parks it with its browser hidden and coming back shows it again - with no error left behind, CEF staged beside the sandbox or not.">
+  <Select Target="id=GalleryTabs/id=Web" />
+  <Wait Target="id=WebPage" />
+  <Set Target="id=WebAddress" Value="about:blank" />
+  <Key Keys="Enter" Into="id=WebAddress" />
+  <WaitIdle />
+  <Select Target="id=GalleryTabs/id=Text" />
+  <WaitIdle />
+  <Select Target="id=GalleryTabs/id=Web" />
+  <Wait Target="id=WebPage" />
+  <WaitIdle />
+  <!-- Back as the page opens. -->
+  <Set Target="id=WebAddress" Value="https://example.org" />
+  <Key Keys="Enter" Into="id=WebAddress" />
+  <WaitIdle />
+</Scenario>

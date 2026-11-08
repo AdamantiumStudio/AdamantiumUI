@@ -548,7 +548,7 @@ float4 MaterialFrostedPS(MaterialPSInput input) : SV_Target
     // where the self-anti-aliased edge comes from. A pen of zero width degrades to the fill alone.
     // Params.z is the element's own alpha, Fade the slot chain above it. The pen already carries the element's alpha
     // from the bake, so only the chain is applied to the composited result.
-    float4 painted = CompositeFillStroke(d, float4(color, it.Params.z), it.StrokeColor,
+    float4 painted = CompositeFillStroke(d, input.Local, ShapeDistanceRate(isEllipse + isPolygon * 2.0, 2), float4(color, it.Params.z), it.StrokeColor,
                                          it.Stroke0.x * input.Scale, it.Stroke0.y, 1.0, 0.0);
     return float4(painted.rgb, painted.a * input.Fade * ClipCoverage(input.Position.xy, input.ClipBox, input.ClipRadii));
 }
@@ -630,7 +630,7 @@ float4 MaterialGlassPS(MaterialPSInput input) : SV_Target
 
     // Params.z is the element's own alpha, Fade the slot chain above it. The pen already carries the element's alpha
     // from the bake, so only the chain is applied to the composited result.
-    float4 painted = CompositeFillStroke(d, float4(color, it.Params.z), it.StrokeColor,
+    float4 painted = CompositeFillStroke(d, input.Local, ShapeDistanceRate(isEllipse + isPolygon * 2.0, 2), float4(color, it.Params.z), it.StrokeColor,
                                          it.Stroke0.x * input.Scale, it.Stroke0.y, 1.0, 0.0);
     return float4(painted.rgb, painted.a * input.Fade * ClipCoverage(input.Position.xy, input.ClipBox, input.ClipRadii));
 }
@@ -653,7 +653,7 @@ float4 MaterialSheenPS(MaterialPSInput input) : SV_Target
     float4 surface = SheenSurface(input.Local, it.Surface, it.Response, it.Light);
 
     // No film grain - see MaterialMetalPS.
-    float4 painted = CompositeFillStroke(d, float4(saturate(surface.rgb), it.Params.z), it.StrokeColor,
+    float4 painted = CompositeFillStroke(d, input.Local, ShapeDistanceRate(isEllipse + isPolygon * 2.0, 2), float4(saturate(surface.rgb), it.Params.z), it.StrokeColor,
                                          it.Stroke0.x * input.Scale, it.Stroke0.y, 1.0, 0.0);
     return float4(painted.rgb, painted.a * input.Fade * ClipCoverage(input.Position.xy, input.ClipBox, input.ClipRadii));
 }
@@ -679,7 +679,7 @@ float4 MaterialMetalPS(MaterialPSInput input) : SV_Target
     float4 surface = MetalSurface(input.Local, input.Half, outward * rise * 0.9, it.Surface, it.Response, it.Light);
 
     // No film grain: it hides the banding an 8-bit CAPTURE brings, and a surface captures nothing.
-    float4 painted = CompositeFillStroke(d, float4(saturate(surface.rgb), it.Params.z), it.StrokeColor,
+    float4 painted = CompositeFillStroke(d, input.Local, ShapeDistanceRate(isEllipse + isPolygon * 2.0, 2), float4(saturate(surface.rgb), it.Params.z), it.StrokeColor,
                                          it.Stroke0.x * input.Scale, it.Stroke0.y, 1.0, 0.0);
     return float4(painted.rgb, painted.a * input.Fade * ClipCoverage(input.Position.xy, input.ClipBox, input.ClipRadii));
 }
@@ -706,7 +706,7 @@ float4 MaterialWoodPS(MaterialPSInput input) : SV_Target
                                  it.Surface, it.Response, it.Light);
 
     // No film grain - see MaterialMetalPS.
-    float4 painted = CompositeFillStroke(d, float4(saturate(surface.rgb), it.Params.z), it.StrokeColor,
+    float4 painted = CompositeFillStroke(d, input.Local, ShapeDistanceRate(isEllipse + isPolygon * 2.0, 2), float4(saturate(surface.rgb), it.Params.z), it.StrokeColor,
                                          it.Stroke0.x * input.Scale, it.Stroke0.y, 1.0, 0.0);
     return float4(painted.rgb, painted.a * input.Fade * ClipCoverage(input.Position.xy, input.ClipBox, input.ClipRadii));
 }

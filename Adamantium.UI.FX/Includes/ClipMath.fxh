@@ -10,6 +10,27 @@ float CornerRadiusAt(float2 p, float4 radii)
                      : (p.y < 0.0 ? radii.y : radii.z);
 }
 
+// The width of the coverage ramp of distance d measured at p: d's gradient on screen. A field changing by at most `rate`
+// per unit of p cannot change faster than `rate` times p's largest stretch across a pixel, so the gradient is held to
+// that: across the crease of a sharp corner the two derivatives come from its two sides and overstate it. A rate of 0
+// holds nothing, for a field that may change faster, as an ellipse's approximation.
+float EdgeRamp(float d, float2 p, float rate)
+{
+    float ramp = length(float2(ddx(d), ddy(d)));
+    float2 u = ddx(p);
+    float2 v = ddy(p);
+    float trace = dot(u, u) + dot(v, v);
+    float area = u.x * v.y - u.y * v.x;
+    float stretch = sqrt(max(0.5 * trace + sqrt(max(0.25 * trace * trace - area * area, 0.0)), 0.0));
+    return max(rate > 0.0 ? min(ramp, rate * stretch) : ramp, 1e-5);
+}
+
+// How fast SdRoundRectJoin changes per unit of its point: 1, but 1.41 along a bevel's chamfer.
+float RectDistanceRate(int joinType)
+{
+    return joinType == 1 ? 1.41422 : 1.0;
+}
+
 // Signed distance (device px) to a rounded rect with a selectable outer-corner JOIN: 0 = miter (sharp, Chebyshev outer
 // corner), 1 = bevel (45-deg chamfer), 2 = round (Euclidean, the natural offset). Straight edges are identical across all
 // three; only the corner (both q>0) differs. This is what gives stroke-join parity with the pen (PenLineJoin).
@@ -83,7 +104,7 @@ float ClipCoverageBySlot(float2 fragment, float slotIndex)
     float4 r4 = min(clip.World[1], float4(lim, lim, lim, lim));
 
     float d = SdRoundRectJoin(local, halfSize, r4, 2);
-    float aa = fwidth(d) + 1e-4;
+    float aa = EdgeRamp(d, local, 1.0) + 1e-4;
     return 1.0 - smoothstep(-aa, aa, d);
 }
 
@@ -98,6 +119,6 @@ float ClipCoverage(float2 fragment, float4 box, float4 radii)
     float4 r4 = min(radii, float4(lim, lim, lim, lim));
 
     float d = SdRoundRectJoin(local, halfSize, r4, 2);
-    float aa = fwidth(d) + 1e-4;
+    float aa = EdgeRamp(d, local, 1.0) + 1e-4;
     return 1.0 - smoothstep(-aa, aa, d);
 }

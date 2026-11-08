@@ -1292,7 +1292,11 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
         {
             if (inherited is { } change)
             {
-                NotifyInheritanceChildren(property, change.Before, change.After, change.Epoch);
+                if (Equals(PassedDown(property), change.After))
+                {
+                    NotifyInheritanceChildren(property, change.Before, change.After, change.Epoch);
+                }
+
                 return;
             }
 

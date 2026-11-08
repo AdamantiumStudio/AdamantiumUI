@@ -69,6 +69,7 @@
         <TextBox AutomationProperties.AutomationId="Draft"
                  Text="{Binding Draft, Mode=TwoWay}"
                  SpellCheck.IsEnabled="True"
+                 SpellCheck.Checker="{Binding SpellChecker}"
                  Language="en-US"
                  AcceptsReturn="True"
                  AcceptsTab="True"

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<StyleSet xmlns="http://adamantium/ui"
+          xmlns:x="http://adamantium/ui/xaml/extensions"
+          xmlns:local="clr-namespace:Adamantium.UI.WebView">
+
+    <!-- The page is drawn into the panel, laid out at the frame's size in pixels - up to a pixel past the view, which
+         clips it. -->
+    <Style Selector="WebView">
+        <Setter Property="ClipToBounds" Value="True"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="local:WebView">
+                    <RenderTargetPanel x:Name="PART_Surface" AcceptsTab="False"/>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+</StyleSet>

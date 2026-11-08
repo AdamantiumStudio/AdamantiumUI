@@ -37,6 +37,14 @@ public interface IUIApplication
     
     IUIContext UIContext { get; }
 
+    /// <summary>Raised once as the application shuts down, on the UI thread after its last frame and before the
+    /// windows' services and the graphics device go: for what was started on the UI thread and must end on it.</summary>
+    event EventHandler<EventArgs> UIThreadExiting
+    {
+        add { }
+        remove { }
+    }
+
     void AddWindow(IWindow window);
     
     void RemoveWindow(IWindow window);
