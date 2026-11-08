@@ -1,7 +1,10 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
+using System.Threading.Tasks;
 using Adamantium.Graphics;
 using Adamantium.Graphics.Core;
 using Adamantium.Multiverse;
@@ -312,11 +315,253 @@ public class WebViewFrameTests
         browser.SendMouseClick(x, y, InputModifiers.None, CefMouseButtonType.Left, true, 1);
     }
 
-    private (WebViewFramePath Path, int Frames, bool Refused, byte[] Center) ShowPage(WebViewFramePath path) =>
-        ShowPage(path, RedPage, null);
+    // Two pages and back: the address and title come back to the first, and the history says where it can go.
+    [Test]
+    public void BackFromASecondPage_ComesToTheFirst()
+    {
+        const string first = "data:text/html,<title>First</title><body>1</body>";
+        const string second = "data:text/html,<title>Second</title><body>2</body>";
+        string titleOnSecond = null, addressBack = null, titleBack = null;
+        bool backOnSecond = false, forwardBack = false;
+        loop.Run(() => ShowPage(WebViewFramePath.PixelBuffer, first, (browser, view) =>
+        {
+            Pump(() => view.Title == "First" && !view.IsLoading, TimeSpan.FromSeconds(5));
+            browser.Navigate(second);
+            Pump(() => view.Title == "Second" && !view.IsLoading, TimeSpan.FromSeconds(5));
+            titleOnSecond = view.Title;
+            backOnSecond = view.CanGoBack;
+            browser.GoBack();
+            Pump(() => view.Title == "First" && !view.IsLoading, TimeSpan.FromSeconds(5));
+            addressBack = view.Address;
+            titleBack = view.Title;
+            forwardBack = view.CanGoForward;
+        }));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(titleOnSecond, Is.EqualTo("Second"));
+            Assert.That(backOnSecond, Is.True, "the second page can go back");
+            Assert.That(titleBack, Is.EqualTo("First"));
+            Assert.That(addressBack, Is.EqualTo(first));
+            Assert.That(forwardBack, Is.True, "the first page can go forward again");
+        });
+    }
+
+    // An address that cannot be reached says why: the net error and the address. It still says so once Chromium's own
+    // page for the error has loaded - that load once took the error away - and stops when the page goes elsewhere.
+    [Test]
+    public void AnAddressThatCannotBeReached_SaysWhyUntilThePageGoesElsewhere()
+    {
+        const string nowhere = "https://nothing-here.invalid/";
+        WebViewLoadError error = null;
+        WebViewLoadError afterErrorPage = null;
+        WebViewLoadError afterLeaving = new(0, "not yet", null);
+        List<string> started = [];
+        List<string> completed = [];
+        loop.Run(() => ShowPage(WebViewFramePath.PixelBuffer, RedPage, (browser, view) =>
+        {
+            browser.Navigate(nowhere);
+            Pump(() => view.Error != null, TimeSpan.FromSeconds(15));
+            error = view.Error;
+            var loads = view.LoadsStarted;
+            Pump(() => view.LoadsStarted > loads && !view.IsLoading, TimeSpan.FromSeconds(5));
+            afterErrorPage = view.Error;
+
+            started = [.. view.Started];
+            completed = [.. view.Completed];
+
+            browser.Navigate(RedPage);
+            Pump(() => view.Completed.Contains(RedPage), TimeSpan.FromSeconds(15));
+            afterLeaving = view.Error;
+        }));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(error, Is.Not.Null, "an error came");
+            Assert.That(error?.Code, Is.LessThan(0), "a net error");
+            Assert.That(error?.Address, Is.EqualTo(nowhere));
+            Assert.That(afterErrorPage, Is.SameAs(error), "the error page loading leaves the error");
+            Assert.That(afterLeaving, Is.Null, "going elsewhere ends it");
+            Assert.That(started.Count(address => address == nowhere), Is.EqualTo(1),
+                "the error page is no navigation of the page's");
+            Assert.That(completed.Count(address => address == nowhere), Is.EqualTo(1),
+                "the failed address completes once, with its error");
+        });
+    }
+
+    // An address asked for before the browser is made is gone to once it is.
+    [Test]
+    public void AnAddressAskedForBeforeTheBrowserIsMade_IsGoneTo()
+    {
+        const string later = "data:text/html,<title>Later</title>";
+        string title = null;
+        loop.Run(() =>
+        {
+            var view = new RecordingBrowserView();
+            var browser = engine.CreateBrowser(false, view);
+            try
+            {
+                browser.Create(RedPage, Width, Height, 1, IntPtr.Zero);
+                browser.Navigate(later);
+                Pump(() => view.Title == "Later", TimeSpan.FromSeconds(15));
+                title = view.Title;
+            }
+            finally
+            {
+                browser.Dispose();
+                Pump(() => false, TimeSpan.FromMilliseconds(300));
+            }
+        });
+
+        Assert.That(title, Is.EqualTo("Later"));
+    }
+
+    // Going to the address the page is at loads it again, as a browser does on Enter.
+    [Test]
+    public void GoingToTheAddressThePageIsAt_LoadsItAgain()
+    {
+        var starts = 0;
+        loop.Run(() => ShowPage(WebViewFramePath.PixelBuffer, RedPage, (browser, view) =>
+        {
+            var before = view.Started.Count;
+            browser.Navigate(RedPage);
+            Pump(() => view.Started.Count > before, TimeSpan.FromSeconds(10));
+            starts = view.Started.Count - before;
+        }));
+
+        Assert.That(starts, Is.EqualTo(1));
+    }
+
+    // A page shown at twice its size lays itself out in half the width.
+    [Test]
+    public void APageZoomedTwice_LaysOutInHalfTheWidth()
+    {
+        const string page = "data:text/html,<html style='height:100%;background:%23ff0000'><script>" +
+                            "addEventListener('resize',()=>document.documentElement.style.background=" +
+                            "innerWidth<=34?'%2300ff00':'%230000ff')</script></html>";
+        var (_, _, _, center) = loop.Run(() => ShowPage(WebViewFramePath.PixelBuffer, page, (browser, view) =>
+        {
+            browser.SetZoom(2);
+            Pump(() => false, TimeSpan.FromMilliseconds(500));
+        }));
+
+        Assert.That(center, Is.EqualTo(new byte[] { 0, 255, 0, 255 }),
+            $"green: laid out at half the width (blue: another width) - {string.Join(",", center ?? [])}");
+    }
+
+    // A script answers with its value as JSON, a promise waited for; one that throws says why.
+    [Test]
+    public void AScript_AnswersWithItsValue_OrWhyItThrew()
+    {
+        const string page = "data:text/html,<title>Answers</title>";
+        string sum = null, title = null, later = null, why = null;
+        loop.Run(() => ShowPage(WebViewFramePath.PixelBuffer, page, (browser, view) =>
+        {
+            sum = Await(browser.EvaluateAsync("1 + 2"));
+            title = Await(browser.EvaluateAsync("document.title"));
+            later = Await(browser.EvaluateAsync("new Promise(r => setTimeout(() => r({ok: true}), 50))"));
+            var thrown = browser.EvaluateAsync("(() => { throw new Error('nope'); })()");
+            Pump(() => thrown.IsCompleted, TimeSpan.FromSeconds(5));
+            why = thrown.Exception?.InnerException?.Message;
+        }));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(sum, Is.EqualTo("3"));
+            Assert.That(title, Is.EqualTo("\"Answers\""));
+            Assert.That(later, Is.EqualTo("{\"ok\":true}"));
+            Assert.That(why, Does.Contain("nope"));
+        });
+    }
+
+    // The page sends with window.adamantium.postMessage and hears what is posted to it.
+    [Test]
+    public void Messages_GoBothWays()
+    {
+        const string page = "data:text/html,<title>none</title>";
+        string title = null;
+        List<string> received = null;
+        loop.Run(() => ShowPage(WebViewFramePath.PixelBuffer, page, (browser, view) =>
+        {
+            Await(browser.EvaluateAsync(
+                "window.adamantium.addEventListener('message', e => document.title = 'got ' + e.data.x)"));
+            Await(browser.EvaluateAsync("window.adamantium.postMessage({hello: 'world'})"));
+            browser.Post("{\"x\":5}");
+            Pump(() => view.Title == "got 5" && view.Messages.Count > 0, TimeSpan.FromSeconds(5));
+            title = view.Title;
+            browser.Navigate("data:text/html,<script>window.adamantium.postMessage('as it loads')</script>");
+            Pump(() => view.Messages.Count > 1, TimeSpan.FromSeconds(5));
+            received = view.Messages.ToList();
+        }));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(received, Is.EqualTo(new[] { "{\"hello\":\"world\"}", "\"as it loads\"" }),
+                "page to .NET, from a script run and from a page's own as it loads");
+            Assert.That(title, Is.EqualTo("got 5"), ".NET to page");
+        });
+    }
+
+    // A navigation the view model refuses keeps the page where it is; HTML shown from a string loads.
+    [Test]
+    public void ARefusedNavigation_KeepsThePage_AndHtmlFromAStringLoads()
+    {
+        const string page = "data:text/html,<title>Here</title>";
+        string titleAfterRefusal = null, titleOfHtml = null;
+        bool asked = false;
+        loop.Run(() => ShowPage(WebViewFramePath.PixelBuffer, page, (browser, view) =>
+        {
+            Pump(() => view.Title == "Here", TimeSpan.FromSeconds(5));
+            view.Refuse = address => address.Contains("Elsewhere");
+            browser.Navigate("data:text/html,<title>Elsewhere</title>");
+            Pump(() => false, TimeSpan.FromMilliseconds(800));
+            asked = view.Started.Any(address => address.Contains("Elsewhere"));
+            titleAfterRefusal = view.Title;
+            browser.LoadHtml("<title>From a string</title><p>hello</p>");
+            Pump(() => view.Title == "From a string", TimeSpan.FromSeconds(5));
+            titleOfHtml = view.Title;
+        }));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(asked, Is.True, "the view model was asked");
+            Assert.That(titleAfterRefusal, Is.EqualTo("Here"), "the page stayed");
+            Assert.That(titleOfHtml, Is.EqualTo("From a string"));
+        });
+    }
+
+    private static string Await(Task<string> answer)
+    {
+        Pump(() => answer.IsCompleted, TimeSpan.FromSeconds(5));
+        return answer.IsCompletedSuccessfully ? answer.Result : null;
+    }
+
+    // The pointer over a link puts the link's address in the status.
+    [Test]
+    public void ThePointerOverALink_ShowsItsAddress()
+    {
+        const string page = "data:text/html,<body style='margin:0'><a href='https://example.org/target' " +
+                            "style='display:block;height:48px'>link</a></body>";
+        string status = null;
+        loop.Run(() => ShowPage(WebViewFramePath.PixelBuffer, page, (browser, view) =>
+        {
+            browser.SendMouseMove(Width / 2, Height / 2, InputModifiers.None, false);
+            Pump(() => !string.IsNullOrEmpty(view.Status), TimeSpan.FromSeconds(3));
+            status = view.Status;
+        }));
+
+        Assert.That(status, Is.EqualTo("https://example.org/target"));
+    }
 
     private (WebViewFramePath Path, int Frames, bool Refused, byte[] Center) ShowPage(WebViewFramePath path, string page,
-        Action<WebViewBrowser> act, Action<RecordingBrowserView> look = null)
+        Action<WebViewBrowser> act, Action<RecordingBrowserView> look = null) =>
+        ShowPage(path, page, act == null ? null : (browser, _) => act(browser), look);
+
+    private (WebViewFramePath Path, int Frames, bool Refused, byte[] Center) ShowPage(WebViewFramePath path) =>
+        ShowPage(path, RedPage, (Action<WebViewBrowser, RecordingBrowserView>)null);
+
+    private (WebViewFramePath Path, int Frames, bool Refused, byte[] Center) ShowPage(WebViewFramePath path, string page,
+        Action<WebViewBrowser, RecordingBrowserView> act, Action<RecordingBrowserView> look = null)
     {
         var view = new RecordingBrowserView();
         var browser = engine.CreateBrowser(path == WebViewFramePath.SharedTexture, view);
@@ -333,7 +578,7 @@ public class WebViewFrameTests
             Pump(() => false, TimeSpan.FromMilliseconds(500), view, consumer);
             if (act != null)
             {
-                act(browser);
+                act(browser, view);
                 Pump(() => false, TimeSpan.FromMilliseconds(700), view, consumer);
             }
 

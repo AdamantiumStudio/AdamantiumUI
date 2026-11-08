@@ -54,6 +54,7 @@ public partial class WebView : Control, IWebViewBrowserView, ITextEntry
 
     public WebView()
     {
+        MakeCommands();
         SizeChanged += OnSizeChanged;
         PointerWheelChanged += OnWheel;
         PointerCanceled += OnPointerCanceled;
@@ -68,7 +69,8 @@ public partial class WebView : Control, IWebViewBrowserView, ITextEntry
         AddHandler(Keyboard.TextCompositionEndedEvent, new TextCompositionEventHandler(OnCompositionEnded));
     }
 
-    /// <summary>The page's address.</summary>
+    /// <summary>The page's address: set, it is gone to; the page going somewhere of its own - a link, a redirect, back or
+    /// forward - sets it in turn.</summary>
     public Uri Source
     {
         get => GetValue<Uri>(SourceProperty);
@@ -175,7 +177,7 @@ public partial class WebView : Control, IWebViewBrowserView, ITextEntry
     private static void OnSourceChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)
     {
         var view = (WebView)component;
-        if (view.browser != null && e.NewValue is Uri address)
+        if (view.browser != null && !view.followingPage && e.NewValue is Uri address)
         {
             view.browser.Navigate(address.AbsoluteUri);
         }
@@ -184,6 +186,13 @@ public partial class WebView : Control, IWebViewBrowserView, ITextEntry
     private static void OnBrowserSettingChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)
     {
         var view = (WebView)component;
+        // The engine is the application's and outlives the page: an engine gone for a moment - a data context passing
+        // through null - leaves the page on the one it has rather than losing it and its history.
+        if (e.Property == EngineProperty && e.NewValue == null && view.browser != null)
+        {
+            return;
+        }
+
         view.StopBrowser();
         view.StartBrowser();
     }
@@ -211,10 +220,12 @@ public partial class WebView : Control, IWebViewBrowserView, ITextEntry
         {
             browser = engine.CreateBrowser(AllowSharedTexture, this);
             SetCurrentValue(FramePathProperty, browser.FramePath);
+            RaiseCommandsChanged();
             browser.Create(Source?.AbsoluteUri ?? "about:blank", (int)Math.Ceiling(ActualWidth),
                 (int)Math.Ceiling(ActualHeight), Scale(), window?.Handle ?? IntPtr.Zero);
             browser.SetHidden(IsWindowOutOfSight());
             browser.SetFocus(IsKeyboardFocused);
+            browser.SetZoom(Math.Clamp(ZoomFactor, MinZoom, MaxZoom));
         }
         catch (Exception exception)
         {
@@ -237,6 +248,7 @@ public partial class WebView : Control, IWebViewBrowserView, ITextEntry
         browser = null;
         SetCurrentValue(FramePathProperty, WebViewFramePath.None);
         SetCurrentValue(FrameRateProperty, 0);
+        ForgetPage();
     }
 
     void IWebViewBrowserView.Show(WebViewBrowser from, SharedSurfaceDescriptor descriptor)

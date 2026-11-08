@@ -31,6 +31,38 @@ internal interface IWebViewBrowserView
     /// view does not take the drag, which the page then drops.</summary>
     bool StartDragging(WebViewBrowser browser, DataPackage data, DragDropEffects allowed);
 
+    /// <summary>The page's address, after it went somewhere of its own - a link, a redirect, back or forward.</summary>
+    void AddressChanged(WebViewBrowser browser, string address);
+
+    /// <summary>The page's title.</summary>
+    void TitleChanged(WebViewBrowser browser, string title);
+
+    /// <summary>Whether the page is loading, and whether it can go back and forward.</summary>
+    void LoadingChanged(WebViewBrowser browser, bool isLoading, bool canGoBack, bool canGoForward);
+
+    /// <summary>How far the page has loaded, 0 to 1.</summary>
+    void ProgressChanged(WebViewBrowser browser, double progress);
+
+    /// <summary>What the page puts in a status line: the address of the link under the pointer; empty for none.</summary>
+    void StatusChanged(WebViewBrowser browser, string status);
+
+    /// <summary>The page is about to go to <paramref name="address"/> in its main frame: true keeps it where it is.
+    /// </summary>
+    bool NavigationStarting(WebViewBrowser browser, string address, bool userGesture, bool isRedirect);
+
+    /// <summary>The page at <paramref name="address"/> loaded in the main frame, or failed to: <paramref name="error"/>
+    /// says why.</summary>
+    void NavigationCompleted(WebViewBrowser browser, string address, WebViewLoadError error);
+
+    /// <summary>The page sent <paramref name="json"/> with <c>window.adamantium.postMessage</c>.</summary>
+    void MessageReceived(WebViewBrowser browser, string json);
+
+    /// <summary>The page's zoom, as Chromium keeps it for its site, once a page has loaded.</summary>
+    void ZoomChanged(WebViewBrowser browser, double factor);
+
+    /// <summary>The page failed to load; null when one starts loading again.</summary>
+    void LoadFailed(WebViewBrowser browser, WebViewLoadError error);
+
     /// <summary>Where the text an input method composes stands in the view, in its units: the input method's windows go
     /// beside it.</summary>
     void CompositionBoundsChanged(WebViewBrowser browser, Rect bounds);

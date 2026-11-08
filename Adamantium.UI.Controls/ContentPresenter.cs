@@ -157,9 +157,11 @@ public class ContentPresenter : InputUIComponent
         _isContentChanged = false;
 
         // Same template as the current visual (a recycled container): keep the visual and its GPU buffers - rebuilding
-        // per scroll frame ran the device out of memory.
+        // per scroll frame ran the device out of memory. Not a visual kept between visits (x:KeepAlive): it belongs to
+        // the content it was built for, which comes back to it, and handed another it would show that one in its place.
+        // Only where an owner of items lets it go with its item; anywhere else nothing would ever let it go.
         if (newContent != null && newContent is not IUIComponent && _currentRoot != null && _currentTemplate != null
-            && !_deferInFlight)
+            && !_deferInFlight && !(TemplatedParent is ItemsControl && ParkedVisuals.ShouldKeep(_currentRoot)))
         {
             var reuseTemplate = ContentTemplate ?? ContentTemplateSelector?.SelectTemplate(newContent, this);
             if (ReferenceEquals(reuseTemplate, _currentTemplate))
@@ -463,7 +465,9 @@ public class ContentPresenter : InputUIComponent
         if (_outgoingRoot == null)
             return;
 
-        if (_outgoingParkedKey != null) ParkCurrent(_outgoingParkedKey, _outgoingRoot, _outgoingTemplateResult, template: null);
+        // Asked again: the content may have left its owner while the page slid out - a tab closed mid-transition.
+        if (_outgoingParkedKey != null && CanComeBack(_outgoingParkedKey))
+            ParkCurrent(_outgoingParkedKey, _outgoingRoot, _outgoingTemplateResult, template: null);
         else Release(_outgoingRoot, _outgoingTemplateResult);
 
         _outgoingRoot = null;

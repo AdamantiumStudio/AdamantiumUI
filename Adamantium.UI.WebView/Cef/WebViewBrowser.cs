@@ -12,15 +12,23 @@ namespace Adamantium.UI.WebView.Cef;
 /// </summary>
 internal sealed unsafe class WebViewBrowser : IDisposable
 {
+    private const double ZoomStep = 1.2;
+
     private readonly WebViewEngine engine;
     private readonly IWebViewBrowserView view;
     private readonly WebViewClient client;
     private readonly WebViewRenderHandler renderHandler;
     private readonly WebViewLifeSpanHandler lifeSpanHandler;
     private readonly WebViewDisplayHandler displayHandler;
+    private readonly WebViewLoadHandler loadHandler;
+    private readonly WebViewRequestHandler requestHandler;
+    private readonly WebViewDevTools devTools;
     private readonly WebViewFrameProducer producer;
     private CefBrowser* browser;
     private string address;
+    private string wanted;
+    private string errorPageFor;
+    private string failedAddress;
     private string createdWith;
     private bool requested;
     private bool closing;
@@ -28,6 +36,7 @@ internal sealed unsafe class WebViewBrowser : IDisposable
     private bool repaintOwed;
     private bool hidden;
     private bool focused;
+    private double zoom = 1;
     private bool refused;
     private int framesCounted;
     private long countedSince;
@@ -45,8 +54,11 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         });
         renderHandler = new WebViewRenderHandler(this);
         lifeSpanHandler = new WebViewLifeSpanHandler(this);
+        loadHandler = new WebViewLoadHandler(this);
+        requestHandler = new WebViewRequestHandler(this);
+        devTools = new WebViewDevTools(json => view.MessageReceived(this, json));
         displayHandler = new WebViewDisplayHandler(this);
-        client = new WebViewClient(renderHandler, lifeSpanHandler, displayHandler);
+        client = new WebViewClient(renderHandler, lifeSpanHandler, displayHandler, loadHandler, requestHandler);
     }
 
     /// <summary>The view's size in device-independent pixels, never empty.</summary>
@@ -93,9 +105,10 @@ internal sealed unsafe class WebViewBrowser : IDisposable
     /// <summary>Shows <paramref name="url"/>: at once in a browser already made, else once it is.</summary>
     public void Navigate(string url)
     {
-        address = url;
+        errorPageFor = null;
         if (browser == null || closing)
         {
+            wanted = url;
             return;
         }
 
@@ -484,7 +497,103 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         CefRefCounting.ReleaseCef(host);
     }
 
+    /// <summary>Shows the page at <paramref name="factor"/> times its size; told to a browser not made yet once it is.
+    /// Chromium keeps it for the page's site.</summary>
+    public void SetZoom(double factor)
+    {
+        zoom = factor;
+        var host = LiveHost();
+        if (host == null)
+        {
+            return;
+        }
+
+        host->set_zoom_level(host, Math.Log(factor) / Math.Log(ZoomStep));
+        CefRefCounting.ReleaseCef(host);
+    }
+
+    /// <summary>Goes back a page in the browser's history.</summary>
+    public void GoBack()
+    {
+        errorPageFor = null;
+        if (browser != null && !closing)
+        {
+            browser->go_back(browser);
+        }
+    }
+
+    /// <summary>Goes forward a page in the browser's history.</summary>
+    public void GoForward()
+    {
+        errorPageFor = null;
+        if (browser != null && !closing)
+        {
+            browser->go_forward(browser);
+        }
+    }
+
+    /// <summary>Loads the page again.</summary>
+    public void Reload()
+    {
+        errorPageFor = null;
+        if (browser != null && !closing)
+        {
+            browser->reload(browser);
+        }
+    }
+
+    /// <summary>Stops loading the page.</summary>
+    public void Stop()
+    {
+        if (browser != null && !closing)
+        {
+            browser->stop_load(browser);
+        }
+    }
+
     internal void OnCursorChange(CefCursorType type) => view.CursorChanged(this, CefInputMap.Cursor(type));
+
+    internal void OnAddressChange(string url)
+    {
+        address = url;
+        view.AddressChanged(this, url);
+    }
+
+    internal void OnTitleChange(string title) => view.TitleChanged(this, title);
+
+    internal void OnStatusMessage(string message) => view.StatusChanged(this, message);
+
+    internal void OnLoadingProgress(double progress) => view.ProgressChanged(this, progress);
+
+    internal void OnLoadingState(bool isLoading, bool canGoBack, bool canGoForward)
+    {
+        if (!isLoading)
+        {
+            var host = LiveHost();
+            if (host != null)
+            {
+                zoom = Math.Pow(ZoomStep, host->get_zoom_level(host));
+                CefRefCounting.ReleaseCef(host);
+                view.ZoomChanged(this, zoom);
+            }
+
+            // A load stopped before it got anywhere leaves the page where it was: the view gets that address back.
+            if (address != null)
+            {
+                view.AddressChanged(this, address);
+            }
+        }
+
+        view.LoadingChanged(this, isLoading, canGoBack, canGoForward);
+    }
+
+    internal void OnLoadError(WebViewLoadError error)
+    {
+        errorPageFor = error.Address;
+        failedAddress = error.Address;
+        view.LoadFailed(this, error);
+        view.NavigationCompleted(this, error.Address, error);
+    }
 
     internal void OnTextInputMode(CefTextInputMode mode) => InEditableField = mode != CefTextInputMode.None;
 
@@ -523,13 +632,17 @@ internal sealed unsafe class WebViewBrowser : IDisposable
     }
 
     internal void OnCreated(CefBrowser* created)
-    {        if (browser != null)
+    {
+        if (browser != null)
         {
             CefRefCounting.ReleaseCef(created);
             return;
         }
 
         browser = created;
+        var host = Host();
+        devTools.Attach(host);
+        CefRefCounting.ReleaseCef(host);
         if (closing)
         {
             Close();
@@ -546,10 +659,17 @@ internal sealed unsafe class WebViewBrowser : IDisposable
                 SetFocus(true);
             }
 
-            if (address != createdWith)
+            if (Math.Abs(zoom - 1) > 1e-6)
             {
-                Navigate(address);
+                SetZoom(zoom);
             }
+
+            if (wanted != null && wanted != createdWith)
+            {
+                Navigate(wanted);
+            }
+
+            wanted = null;
         }
     }
 
@@ -611,11 +731,13 @@ internal sealed unsafe class WebViewBrowser : IDisposable
     }
 
     internal void OnClosing(CefBrowser* closed)
-    {        if (!Is(closed))
+    {
+        if (!Is(closed))
         {
             return;
         }
 
+        devTools.Detach();
         var own = browser;
         browser = null;
         CefRefCounting.ReleaseCef(own);
@@ -646,10 +768,13 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         renderHandler.Release();
         lifeSpanHandler.Release();
         displayHandler.Release();
+        loadHandler.Release();
+        requestHandler.Release();
     }
 
     private void Close()
-    {        var host = Host();
+    {
+        var host = Host();
         if (host == null)
         {
             return;
@@ -662,7 +787,95 @@ internal sealed unsafe class WebViewBrowser : IDisposable
     /// <summary>Lets go of a browser CEF did not close before it shut down: CEF and its objects are gone.</summary>
     internal void Abandon()
     {
+        devTools.Abandon();
         browser = null;
+    }
+
+    /// <summary>Shows <paramref name="html"/> as the page.</summary>
+    public void LoadHtml(string html) =>
+        Navigate("data:text/html;charset=utf-8;base64," + Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(html)));
+
+    /// <summary>Runs <paramref name="script"/> in the page; its value as JSON.</summary>
+    public Task<string> EvaluateAsync(string script)
+    {
+        var host = LiveHost();
+        if (host == null)
+        {
+            return Task.FromException<string>(new WebViewScriptException("The page is not there yet."));
+        }
+
+        try
+        {
+            return devTools.EvaluateAsync(host, script);
+        }
+        finally
+        {
+            CefRefCounting.ReleaseCef(host);
+        }
+    }
+
+    /// <summary>Hands the page a message, as JSON.</summary>
+    public void Post(string json)
+    {
+        var host = LiveHost();
+        if (host == null)
+        {
+            return;
+        }
+
+        devTools.Post(host, json);
+        CefRefCounting.ReleaseCef(host);
+    }
+
+    /// <summary>The page is about to go to <paramref name="url"/>: true keeps it from going. Chromium going to the failed
+    /// address by itself is its own page for the error loading: not a navigation of the page's, and the error stays.
+    /// Any other going on ends the last load's error.</summary>
+    internal bool OnBeforeBrowse(string url, bool userGesture, bool isRedirect)
+    {
+        if (closing)
+        {
+            return false;
+        }
+
+        if (!userGesture && url == errorPageFor)
+        {
+            errorPageFor = null;
+            return false;
+        }
+
+        if (view.NavigationStarting(this, url, userGesture, isRedirect))
+        {
+            if (address != null)
+            {
+                view.AddressChanged(this, address);
+            }
+
+            return true;
+        }
+
+        errorPageFor = null;
+        failedAddress = null;
+        view.LoadFailed(this, null);
+        return false;
+    }
+
+    internal void OnLoadEnd(string url)
+    {
+        var host = LiveHost();
+        if (host != null)
+        {
+            devTools.Prepare(host);
+            CefRefCounting.ReleaseCef(host);
+        }
+
+        // The failed load and Chromium's page for its error end too: completed already, with the error.
+        if (url == failedAddress)
+        {
+            return;
+        }
+
+        errorPageFor = null;
+        view.NavigationCompleted(this, url, null);
     }
 
     private static CefMouseEvent MouseEvent(double x, double y, InputModifiers modifiers) => new()

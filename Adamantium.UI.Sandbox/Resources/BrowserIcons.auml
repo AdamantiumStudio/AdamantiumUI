@@ -1,0 +1,35 @@
+<ResourceDictionary xmlns:x="http://adamantium/ui/xaml/extensions"
+        xmlns="http://adamantium/ui">
+
+    <!-- The Web page's navigation buttons, drawn like the tab icons: outlines in CurrentColor, the button's text color, in
+         a 16-unit box stated by the empty frame first in every icon. -->
+
+    <DrawingImage x:Key="WebBackIcon">
+        <DrawingGroup>
+            <GeometryDrawing><GeometryDrawing.Geometry><RectangleGeometry Rect="0,0,16,16"/></GeometryDrawing.Geometry></GeometryDrawing>
+            <GeometryDrawing Geometry="M7.5,3.5 L3,8 L7.5,12.5 M3,8 L13.5,8" Stroke="CurrentColor" StrokeThickness="1.3"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="WebForwardIcon">
+        <DrawingGroup>
+            <GeometryDrawing><GeometryDrawing.Geometry><RectangleGeometry Rect="0,0,16,16"/></GeometryDrawing.Geometry></GeometryDrawing>
+            <GeometryDrawing Geometry="M8.5,3.5 L13,8 L8.5,12.5 M2.5,8 L13,8" Stroke="CurrentColor" StrokeThickness="1.3"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <!-- A circle not closed, its arrowhead at the open end. -->
+    <DrawingImage x:Key="WebReloadIcon">
+        <DrawingGroup>
+            <GeometryDrawing><GeometryDrawing.Geometry><RectangleGeometry Rect="0,0,16,16"/></GeometryDrawing.Geometry></GeometryDrawing>
+            <GeometryDrawing Geometry="M13,5.5 A5.5,5.5 0 1 0 13.5,9.5 M13.5,2.5 L13.5,6 L10,6" Stroke="CurrentColor" StrokeThickness="1.3"/>
+        </DrawingGroup>
+    </DrawingImage>
+
+    <DrawingImage x:Key="WebStopIcon">
+        <DrawingGroup>
+            <GeometryDrawing><GeometryDrawing.Geometry><RectangleGeometry Rect="0,0,16,16"/></GeometryDrawing.Geometry></GeometryDrawing>
+            <GeometryDrawing Geometry="M4,4 L12,12 M12,4 L4,12" Stroke="CurrentColor" StrokeThickness="1.3"/>
+        </DrawingGroup>
+    </DrawingImage>
+</ResourceDictionary>

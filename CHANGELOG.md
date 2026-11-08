@@ -20,8 +20,13 @@ All packages share one version.
   wheel, both ways and Shift for across; the cursor it asks for; keys, the characters they type and an input method's
   composition, its candidates beside the text; fingers and pens as touches; drags out of the page, carried by our drag,
   and our drags dropped into it. A key bound in the window is the window's, the page gets the rest; while the page's
-  focus is in a field, keys that type stay with it (`WebView` is an `ITextEntry`), and Ctrl+Tab leaves it. Popups and
-  the browser API come later.
+  focus is in a field, keys that type stay with it (`WebView` is an `ITextEntry`), and Ctrl+Tab leaves it. The page as a
+  browser shows it: `Source` both ways, `Title`, `IsLoading`, `LoadProgress`, `CanGoBack`/`CanGoForward`,
+  `StatusText` (the link under the pointer), `LoadError` (until the page goes elsewhere), `ZoomFactor` (Ctrl with the
+  wheel steps it) and the commands to go back, forward, reload and stop. `WebViewBridge`, bound to `Bridge`, gives a
+  view model `LoadHtml`, `ExecuteScriptAsync`, `PostMessage` and the events `NavigationStarting` (cancelable),
+  `NavigationCompleted` and `MessageReceived`; a page posts with `window.adamantium.postMessage` and listens with
+  `window.adamantium.addEventListener('message', ...)`. Popups come later.
 - `Win32ScanCodes` (Windows): a key's scan code as a HID usage and back (`TryFromHidUsage`).
 - `IUIApplication.UIThreadExiting`: raised once as the application shuts down, on the UI thread after its last frame
   and before the windows' services and the graphics device go - for what was started on the UI thread and must end on
@@ -162,6 +167,9 @@ All packages share one version.
 
 ### Fixed
 
+- Tabs bound to items keep a page each when their page asks to be kept (`x:KeepAlive`): one content template for all of
+  them made the presenter re-point the first tab's page at every tab, so a page showed each tab in turn and loaded
+  again.
 - A sharp corner of a rect, border, polygon or image drawn by its distance field is whole, and so is the square corner
   of a clip: the edge ramp came from `fwidth` of the distance, which doubles across the corner's crease, so one corner
   of four came out cut by a pixel. The ramp is now the distance's gradient on screen (a diagonal or curved edge is no
