@@ -243,7 +243,7 @@ float4 GradientPS(GradPSInput input) : SV_Target
     }
     // The element's fade came across from the vertex stage - fill and stroke both take it. So did the ancestor clip's
     // shape, and for the same reason; here it is only arithmetic.
-    float4 outColor = CompositeFillStroke(d, float4(fill.rgb, fill.a * input.Fade),
+    float4 outColor = CompositeFillStroke(d, input.Local, ShapeDistanceRate(shape, joinType), float4(fill.rgb, fill.a * input.Fade),
                                float4(it.StrokeColor.x, it.StrokeColor.y, it.StrokeColor.z,
                                       float(it.StrokeColor.w) * input.Fade) * (1.0 / 255.0), widthPx, it.Stroke0.y, mask, 0.0);
     return float4(outColor.rgb, outColor.a * ClipCoverage(input.Position.xy, input.ClipBox, input.ClipRadii));
@@ -513,7 +513,7 @@ float4 PatternSdfShade(PatternPSInput input, int kind)
                             it.Stroke1.z, dPerp * capScl, halfW * capScl, it.Stroke1.w, it.Dash * sc);
     }
     // The shape's own edge is the SDF above; this is the ANCESTOR's rounding, as coverage - and its FADE beside it.
-    float4 patOut = CompositeFillStroke(d, fill, float4(it.StrokeColor) * (1.0 / 255.0), widthPx, it.Stroke0.y, mask, 0.0);
+    float4 patOut = CompositeFillStroke(d, input.Local, ShapeDistanceRate(shape, joinType), fill, float4(it.StrokeColor) * (1.0 / 255.0), widthPx, it.Stroke0.y, mask, 0.0);
     return float4(patOut.rgb, patOut.a * input.Fade * ClipCoverage(input.Position.xy, input.ClipBox, input.ClipRadii));
 }
 
@@ -720,7 +720,7 @@ float4 TexRectShade(TexPSInput input, int source)
     // coverage ramp puts 0.5 on both sides of every shared edge - alpha-composited that is ~0.75, a dark hairline down
     // every joint. Feathering is for a shape with a curve to it, so only a corner radius earns the ramp.
     // Picked between the two with a step on the radius.
-    float aa = max(fwidth(d), 1e-4);
+    float aa = max(EdgeRamp(d, input.Local, ShapeDistanceRate(isEllipse + isPolygon * 2.0, 2)), 1e-4);
     float ramp = saturate(0.5 - d / aa);
     float crisp = step(d, 0.0);
     fill.a *= lerp(crisp, ramp, max(step(0.001, max(max(r4.x, r4.y), max(r4.z, r4.w))), isEllipse));   // an ellipse is ALL curve, so it always earns the ramp
@@ -1145,7 +1145,7 @@ float4 FractalShade(FractalPSInput input, int formula, bool deep)
         mask = DashTrimMask(s, s, perim, it.Stroke0.z * sc, it.Stroke0.w * sc, it.Stroke1.x * sc, it.Stroke1.y,
                             it.Stroke1.z, dPerp * capScl, halfW * capScl, it.Stroke1.w, it.Dash * sc);
     }
-    float4 fracOut = CompositeFillStroke(d, fill, float4(it.StrokeColor) * (1.0 / 255.0),
+    float4 fracOut = CompositeFillStroke(d, input.Local, RectDistanceRate(joinType), fill, float4(it.StrokeColor) * (1.0 / 255.0),
                                          widthPx, it.Stroke0.y, mask, 0.0);
     return float4(fracOut.rgb, fracOut.a * input.Fade * ClipCoverage(input.Position.xy, input.ClipBox, input.ClipRadii));
 }

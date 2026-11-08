@@ -21,6 +21,12 @@ float BrushShapeDistance(float2 p, float2 half, float4 radii, int joinType, floa
     return lerp(lerp(dRect, dEllipse, step(0.5, shape)), dPoly, step(1.5, shape));
 }
 
+// How fast BrushShapeDistance changes per unit of its point, for EdgeRamp: an ellipse's approximation is not held.
+float ShapeDistanceRate(float shape, int joinType)
+{
+    return shape > 1.5 ? 1.0 : (shape > 0.5 ? 0.0 : RectDistanceRate(joinType));
+}
+
 float DashTrimMask(float sTrim, float sDash, float perimeter, float dashOn, float dashGap, float dashOffset,
     float trimStart, float trimEnd, float dPerp, float halfW, float capFlags, float4 dashRest)
 {

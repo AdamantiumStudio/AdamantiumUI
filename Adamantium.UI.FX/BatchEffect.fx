@@ -84,7 +84,7 @@ float4 RectBatchPS(PSInput input) : SV_Target
         mask = DashTrimMaskCapped(s, s, perim, input.Stroke0.z, input.Stroke0.w, input.Stroke1.x, input.Stroke1.y,
                             input.Stroke1.z, dPerp * capScl, halfW * capScl, input.Stroke1.w, input.Dash);
     }
-    float4 painted = CompositeFillStroke(d, input.Color, input.StrokeColor, input.Stroke0.x, input.Stroke0.y, mask, input.Crisp);
+    float4 painted = CompositeFillStroke(d, input.Local, RectDistanceRate(joinType), input.Color, input.StrokeColor, input.Stroke0.x, input.Stroke0.y, mask, input.Crisp);
     return float4(painted.rgb, painted.a * clip);
 }
 
@@ -340,7 +340,7 @@ float4 EllipseBatchPS(EllipsePSInput input) : SV_Target
         {
             // The ends are cut by the two radii - the same wedge a sector is bounded by, used here only as a mask.
             float dWedge = EllipseCutDistance(input.Local, input.Half, input.Arc.x, input.Arc.y, 1.0);
-            mask = saturate(0.5 - dWedge / max(fwidth(dWedge), 1e-5));
+            mask = saturate(0.5 - dWedge / EdgeRamp(dWedge, input.Local, 0.0));
         }
         else
         {
@@ -363,7 +363,7 @@ float4 EllipseBatchPS(EllipsePSInput input) : SV_Target
                             input.Stroke1.z, dPerp * capScl, halfW * capScl, input.Stroke1.w, input.Dash);
     }
     // The ROUNDED clip of an ancestor, as coverage - see ClipCoverage. 1 when there is none.
-    float4 outColor = CompositeFillStrokeSplit(d, dStroke, input.Color, input.StrokeColor, input.Stroke0.x, input.Stroke0.y, mask, 0.0);
+    float4 outColor = CompositeFillStrokeSplit(d, dStroke, input.Local, 0.0, input.Color, input.StrokeColor, input.Stroke0.x, input.Stroke0.y, mask, 0.0);
     return float4(outColor.rgb, outColor.a * ClipCoverage(input.Position.xy, input.ClipBox, input.ClipRadii));
 }
 
@@ -504,7 +504,7 @@ float4 PolygonBatchPS(PolygonPSInput input) : SV_Target
     }
 
     // The ROUNDED clip of an ancestor, as coverage - see ClipCoverage. 1 when there is none.
-    float4 outColor = CompositeFillStroke(d, input.Color, input.StrokeColor, input.Stroke0.x, input.Stroke0.y, 1.0, 0.0);
+    float4 outColor = CompositeFillStroke(d, input.Local, 1.0, input.Color, input.StrokeColor, input.Stroke0.x, input.Stroke0.y, 1.0, 0.0);
     return float4(outColor.rgb, outColor.a * ClipCoverage(input.Position.xy, input.ClipBox, input.ClipRadii));
 }
 
@@ -641,7 +641,7 @@ float4 HaloRectPS(HaloPSInput input) : SV_Target
     // Clipped to the correct side of the REAL outline, as CSS clips a box-shadow: an outer band is not painted beneath
     // the shape (or a translucent card would darken itself), an inner one never leaves it. Under a soft-edged element
     // (-1) the outer band goes on beneath it, so the edge fades into the glow rather than into a gap before it.
-    float aa = max(fwidth(dShape), 1e-4);
+    float aa = max(EdgeRamp(dShape, input.Local, 0.0), 1e-4);
     a *= lerp(lerp(saturate(dShape / aa + 0.5), saturate(1.0 + dShape / max(it.Field.w * sc, 1e-3)), step(inner, -0.5)),
               saturate(-dShape / aa + 0.5), step(0.5, inner));
 
@@ -768,7 +768,7 @@ float4 HaloLivingPS(HaloPSInput input) : SV_Target
     float aInner = (1.0 - tInner) * (1.0 - tInner);
     float a = lerp(aOuter, aInner, step(0.5, inner));
 
-    float aa = max(fwidth(dShape), 1e-4);
+    float aa = max(EdgeRamp(dShape, input.Local, 0.0), 1e-4);
     a *= lerp(lerp(saturate(dShape / aa + 0.5), saturate(1.0 + dShape / max(it.Ramp.w * sc, 1e-3)), step(inner, -0.5)),
               saturate(-dShape / aa + 0.5), step(0.5, inner));
     a *= lerp(1.0, bandFade, sampled);

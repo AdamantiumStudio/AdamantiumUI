@@ -3,13 +3,14 @@
 
 // Separate fill and stroke distances (an edge-to-edge ellipse fills a segment but strokes an arc). `crisp` takes edges
 // hard, so pixel-aligned rects abut without a seam.
-float4 CompositeFillStrokeSplit(float dFill, float dStroke, float4 fill, float4 stroke, float width, float align,
-    float strokeMask, float crisp)
+// `p` is the point both distances are measured at and `rate` how fast they may change per unit of it (see EdgeRamp).
+float4 CompositeFillStrokeSplit(float dFill, float dStroke, float2 p, float rate, float4 fill, float4 stroke,
+    float width, float align, float strokeMask, float crisp)
 {
-    float aa = max(fwidth(dFill), 1e-5);
+    float aa = EdgeRamp(dFill, p, rate);
     float covFill = saturate(0.5 - dFill / aa);
 
-    float aaS = max(fwidth(dStroke), 1e-5);
+    float aaS = EdgeRamp(dStroke, p, rate);
     float halfW = width * 0.5;
     float dRing = abs(dStroke - align * halfW) - halfW;      // signed distance to the stroke ring
     float covStroke = (width > 0.0) ? saturate(0.5 - dRing / aaS) * saturate(strokeMask) : 0.0;
@@ -30,9 +31,10 @@ float4 CompositeFillStrokeSplit(float dFill, float dStroke, float4 fill, float4 
 }
 
 // What every pass but one calls: fill and outline are the same curve.
-float4 CompositeFillStroke(float d, float4 fill, float4 stroke, float width, float align, float strokeMask, float crisp)
+float4 CompositeFillStroke(float d, float2 p, float rate, float4 fill, float4 stroke, float width, float align,
+    float strokeMask, float crisp)
 {
-    return CompositeFillStrokeSplit(d, d, fill, stroke, width, align, strokeMask, crisp);
+    return CompositeFillStrokeSplit(d, d, p, rate, fill, stroke, width, align, strokeMask, crisp);
 }
 
 // A per-side border: the ring between the outline and an inner outline inset by (left, top, right, bottom), composited
@@ -48,8 +50,8 @@ float4 CompositeFillBorder(float dOuter, float2 p, float2 half, float4 radii, fl
                            float4(0.0, 0.0, 0.0, 0.0), float4(lim, lim, lim, lim));
     float dInner = SdRoundRectJoin(p - shift, halfIn, radiiIn, joinType);
 
-    float aaO = max(fwidth(dOuter), 1e-5);
-    float aaI = max(fwidth(dInner), 1e-5);
+    float aaO = EdgeRamp(dOuter, p, RectDistanceRate(joinType));
+    float aaI = EdgeRamp(dInner, p, RectDistanceRate(joinType));
     float covOuter = (crisp > 0.5) ? step(dOuter, 0.0) : saturate(0.5 - dOuter / aaO);
     float covFill  = (crisp > 0.5) ? step(dInner, 0.0) : saturate(0.5 - dInner / aaI);
     // The border is what the shape covers and the fill does not. Written as a DIFFERENCE rather than as its own distance

@@ -78,7 +78,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
     private readonly object _renderGate = new object();
     // ShutDown can arrive from any thread at any time; this guards re-entry.
     private volatile bool _isShuttingDown;
-    private int _loopStopped;
+    private int _uiThreadExit;
     private int _framesInFlight;
     private AppTime _renderAppTime;   // time of the newest recorded frame
     private const int MaxFramesInFlight = 2;
@@ -92,10 +92,10 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
     private IVisualRenderer _visualRenderer;
     private bool _recordedThisFrame;
     private const int LoopExitWaitMs = 2000;
-    private const int LoopStoppingWaitMs = 15000;
-    private const int LoopStopNone = 0;
-    private const int LoopStopRunning = 1;
-    private const int LoopStopDone = 2;
+    private const int UIThreadExitingWaitMs = 15000;
+    private const int UIThreadExitNotRaised = 0;
+    private const int UIThreadExitRaising = 1;
+    private const int UIThreadExitRaised = 2;
     private const double LowestLoopRate = 60;
     private long _frameRequestsRecorded = -1;
     private bool _withheldSinceShown;
@@ -1496,7 +1496,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
             }
         }
 
-        RaiseLoopStopping();
+        RaiseUIThreadExiting();
     }
 
     private void RecordIfOwed(AppTime time)
@@ -2182,7 +2182,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         }
         else if (Thread.CurrentThread == applicationLoopThread)
         {
-            RaiseLoopStopping();
+            RaiseUIThreadExiting();
         }
 
         lock (_renderGate)
@@ -2243,33 +2243,33 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
         }
     }
 
-    private void RaiseLoopStopping()
+    private void RaiseUIThreadExiting()
     {
-        if (Interlocked.CompareExchange(ref _loopStopped, LoopStopRunning, LoopStopNone) != LoopStopNone)
+        if (Interlocked.CompareExchange(ref _uiThreadExit, UIThreadExitRaising, UIThreadExitNotRaised) != UIThreadExitNotRaised)
         {
             return;
         }
 
         try
         {
-            LoopStopping?.Invoke(this, EventArgs.Empty);
+            UIThreadExiting?.Invoke(this, EventArgs.Empty);
         }
         catch (Exception fault)
         {
-            Log.Logger.Error(fault, "A handler of the loop's stop threw");
+            Log.Logger.Error(fault, "A handler of UIThreadExiting threw");
         }
         finally
         {
-            Volatile.Write(ref _loopStopped, LoopStopDone);
+            Volatile.Write(ref _uiThreadExit, UIThreadExitRaised);
         }
     }
 
     private void FreeResources()
     {
-        if (Interlocked.Exchange(ref _loopStopped, LoopStopDone) == LoopStopRunning
+        if (Interlocked.Exchange(ref _uiThreadExit, UIThreadExitRaised) == UIThreadExitRaising
             && applicationLoopThread is { IsAlive: true } loop && loop != Thread.CurrentThread)
         {
-            loop.Join(LoopStoppingWaitMs);
+            loop.Join(UIThreadExitingWaitMs);
         }
 
         if (GraphicsDeviceService is IDisposable disposableDevice)
@@ -2304,7 +2304,7 @@ public abstract class UIApplication : FundamentalUIComponent, IAdamantiumApplica
 
     public event EventHandler<EventArgs> Started;
     public event EventHandler<EventArgs> ShuttingDown;
-    public event EventHandler<EventArgs> LoopStopping;
+    public event EventHandler<EventArgs> UIThreadExiting;
     public event EventHandler<EventArgs> Stopped;
     public event EventHandler Paused;
     public event EventHandler Resumed;

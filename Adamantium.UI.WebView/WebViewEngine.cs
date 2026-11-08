@@ -40,7 +40,7 @@ public sealed unsafe class WebViewEngine : IDisposable
         pumpTimer = new Timer(_ => PostPumpWork());
         if (application != null)
         {
-            application.LoopStopping += OnLoopStopping;
+            application.UIThreadExiting += OnUIThreadExiting;
         }
     }
 
@@ -103,7 +103,7 @@ public sealed unsafe class WebViewEngine : IDisposable
         shutDown = true;
         if (application != null)
         {
-            application.LoopStopping -= OnLoopStopping;
+            application.UIThreadExiting -= OnUIThreadExiting;
         }
 
         if (initialized)
@@ -201,7 +201,7 @@ public sealed unsafe class WebViewEngine : IDisposable
         mainArguments = null;
     }
 
-    private void OnLoopStopping(object sender, EventArgs e) => Dispose();
+    private void OnUIThreadExiting(object sender, EventArgs e) => Dispose();
 
     private void SchedulePumpWork(long delayMs)
     {
