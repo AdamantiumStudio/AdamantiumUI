@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Text;
-using Adamantium.Core.Fonts;
+using Adamantium.Core.Shared.Fonts;
 using Adamantium.Fonts;
 using Adamantium.Graphics.Fonts;
 using Adamantium.UI.Controls.Automation;

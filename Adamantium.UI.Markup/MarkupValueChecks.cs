@@ -1,5 +1,5 @@
-using Adamantium.Core.Fonts;
-using Adamantium.Core.Fonts.Shaping;
+using Adamantium.Core.Shared.Fonts;
+using Adamantium.Core.Shared.Fonts.Shaping;
 using Adamantium.UI.Markup.CodeGeneration;
 using Adamantium.UI.Markup.Localization;
 
@@ -15,8 +15,8 @@ public static class MarkupValueChecks
     private static readonly Dictionary<string, Func<string, string>> Checks = new()
     {
         ["Adamantium.UI.Core.Media.FontFeatureList"] = FontFeatures,
-        ["Adamantium.Core.Fonts.FontWeight"] = FontWeightValue,
-        ["Adamantium.Core.Fonts.FontStretch"] = FontStretchValue,
+        ["Adamantium.Core.Shared.Fonts.FontWeight"] = FontWeightValue,
+        ["Adamantium.Core.Shared.Fonts.FontStretch"] = FontStretchValue,
     };
 
     /// <summary>What is wrong with <paramref name="value"/> for a property of <paramref name="type"/> - of a

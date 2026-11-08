@@ -1,4 +1,4 @@
-using Adamantium.Core;
+using Adamantium.Core.Shared;
 using Adamantium.UI.Markup.AST;
 
 namespace Adamantium.UI.Markup.CodeGeneration;

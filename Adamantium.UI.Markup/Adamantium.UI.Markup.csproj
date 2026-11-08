@@ -17,7 +17,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <AdamantiumEngineReference Include="Adamantium.Core" />
+      <AdamantiumEngineReference Include="Adamantium.Core.Shared" />
     </ItemGroup>
 
 </Project>
