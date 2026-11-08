@@ -1,5 +1,5 @@
 ﻿using System.Text;
-using Adamantium.Core;
+using Adamantium.Core.Shared;
 using Adamantium.UI.Markup.AST;
 using Adamantium.UI.Markup.Building;
 

@@ -248,7 +248,7 @@ namespace Adamantium.UI.Generators
             }
             catch (System.Xml.XmlException e)
             {
-                var logger = new Adamantium.Core.Logger();
+                var logger = new Adamantium.Core.Shared.Logger();
                 logger.Error(e.Message);
                 document = new AumlDocument
                 {

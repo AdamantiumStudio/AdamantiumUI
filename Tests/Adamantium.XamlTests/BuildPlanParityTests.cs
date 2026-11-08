@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Adamantium.Core;
+using Adamantium.Core.Shared;
 using Adamantium.Core.DependencyInjection;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Markup;

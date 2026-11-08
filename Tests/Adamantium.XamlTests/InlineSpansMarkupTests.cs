@@ -1,5 +1,5 @@
 using System.Linq;
-using Adamantium.Core.Fonts;
+using Adamantium.Core.Shared.Fonts;
 using Adamantium.Fonts;
 using Adamantium.UI.Controls.Buttons;
 using Adamantium.UI.Controls.Text;

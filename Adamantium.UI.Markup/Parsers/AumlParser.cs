@@ -1,5 +1,5 @@
 using System.Xml.Linq;
-using Adamantium.Core;
+using Adamantium.Core.Shared;
 using Adamantium.UI.Markup.AST;
 using Adamantium.UI.Markup.AST.TypeReference;
 using Adamantium.UI.Markup.Localization;

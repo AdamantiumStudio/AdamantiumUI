@@ -90,6 +90,10 @@ All packages share one version.
 
 ### Changed
 
+- `FontWeight`, `FontStretch` and `FontFeature` come from the engine's new `Adamantium.Core.Shared`, under
+  `Adamantium.Core.Shared.Fonts`; markup and the AUML generator take that package, as an analyzer too, instead of the
+  netstandard2.0 build of `Adamantium.Core`, which the engine no longer makes.
+
 - Spelling takes its words from `SpellCheck.Checker`, an inherited attached property bound from a view model (which
   takes the application's `ISpellChecker` from the container), not from the application's container reached by
   `SpellCheckBehavior`. Nothing is checked without it. `SpellCheckBehavior.Checker` is gone; set `SpellCheck.Checker`

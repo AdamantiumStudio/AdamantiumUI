@@ -34,8 +34,9 @@
          (none)              an assembly the code uses;
          Generator           a source generator - from source an analyzer whose assembly the project does not take;
          EffectsCompiler     the effect compiler - from source an analyzer whose assembly the project takes too;
-         NetStandardAnalyzer the netstandard2.0 build a generator from source loads, as an analyzer only; a generator's
-                             package carries it, so packages need none.
+         NetStandardAnalyzer a netstandard2.0 assembly a generator from source loads, as an analyzer only; a generator's
+                             package carries it, so packages need none. The project builds for its one framework, so
+                             this reference and a plain one to it are one build, not two writing the same file.
        PrivateAssets and GeneratePathProperty go with the item; a generator's package keeps its assets private unless the
        item says otherwise. -->
   <ItemGroup Condition="'$(UseEngineSource)' == 'true'">
@@ -45,7 +46,7 @@
     <ProjectReference Include="@(AdamantiumEngineReference->WithMetadataValue('Role', 'EffectsCompiler')->'$(AdamantiumEngineDir)%(Identity)\%(Identity).csproj')"
                       OutputItemType="Analyzer" ReferenceOutputAssembly="true" />
     <ProjectReference Include="@(AdamantiumEngineReference->WithMetadataValue('Role', 'NetStandardAnalyzer')->'$(AdamantiumEngineDir)%(Identity)\%(Identity).csproj')"
-                      OutputItemType="Analyzer" ReferenceOutputAssembly="false" SetTargetFramework="TargetFramework=netstandard2.0" />
+                      OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(UseEngineSource)' != 'true'">
