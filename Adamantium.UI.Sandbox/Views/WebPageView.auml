@@ -1,27 +1,59 @@
 <View x:KeepAlive="Enabled"
       xmlns="http://adamantium/ui"
       xmlns:x="http://adamantium/ui/xaml/extensions"
-      xmlns:web="clr-namespace:Adamantium.UI.WebView;assembly=Adamantium.UI.WebView">
-    <!-- The WebView as its steps come: the address, gone to on Enter, the page it draws, and below how its frames come
-         - Chromium's texture on the GPU or pixels in memory - and how many a second. Input, popups and the navigation
-         buttons come with their steps. Kept between visits, so the page is where it was when the tab comes back. -->
+      xmlns:web="clr-namespace:Adamantium.UI.WebView;assembly=Adamantium.UI.WebView"
+      xmlns:conv="clr-namespace:Adamantium.UI.Sandbox.Converters">
+    <!-- The WebView as its steps come: back, forward, reload or stop and the address, which follows the page; the page;
+         and below, for the stand, how its frames come and what it is doing. Popups come with their step. Kept between
+         visits, so the page is where it was when the tab comes back. -->
     <Grid RowDefinitions="Auto,*,Auto">
-        <TextBox Text="{Binding Address, Mode=TwoWay}" Margin="8" AutomationProperties.AutomationId="WebAddress">
-            <TextBox.InputBindings>
-                <KeyBinding Gesture="Enter" Command="{Binding GoCommand}"/>
-            </TextBox.InputBindings>
-        </TextBox>
-        <web:WebView x:Name="Page" Grid.Row="1" Engine="{Binding Engine}" Source="{Binding Source}"
+        <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto" Margin="8" ColumnSpacing="6">
+            <Button Command="{Binding GoBackCommand, ElementName=Page}" ToolTipService.ToolTip="Back" Padding="8 4"
+                    AutomationProperties.AutomationId="WebBack" AutomationProperties.Name="Back">
+                <IconPresenter Icon="{ObservableResource WebBackIcon}" Width="16" Height="16"/>
+            </Button>
+            <Button Grid.Column="1" Command="{Binding GoForwardCommand, ElementName=Page}" ToolTipService.ToolTip="Forward"
+                    Padding="8 4" AutomationProperties.AutomationId="WebForward" AutomationProperties.Name="Forward">
+                <IconPresenter Icon="{ObservableResource WebForwardIcon}" Width="16" Height="16"/>
+            </Button>
+            <Button Grid.Column="2" Command="{Binding ReloadCommand, ElementName=Page}" ToolTipService.ToolTip="Reload"
+                    Padding="8 4" AutomationProperties.AutomationId="WebReload" AutomationProperties.Name="Reload"
+                    Visibility="{Binding IsLoading, ElementName=Page, Converter={conv:BoolToVisibilityConverter}, ConverterParameter=Invert}">
+                <IconPresenter Icon="{ObservableResource WebReloadIcon}" Width="16" Height="16"/>
+            </Button>
+            <Button Grid.Column="2" Command="{Binding StopCommand, ElementName=Page}" ToolTipService.ToolTip="Stop"
+                    Padding="8 4" AutomationProperties.AutomationId="WebStop" AutomationProperties.Name="Stop"
+                    Visibility="{Binding IsLoading, ElementName=Page, Converter={conv:BoolToVisibilityConverter}}">
+                <IconPresenter Icon="{ObservableResource WebStopIcon}" Width="16" Height="16"/>
+            </Button>
+            <TextBox Grid.Column="3" Text="{Binding Address, Mode=TwoWay}" AutomationProperties.AutomationId="WebAddress">
+                <TextBox.InputBindings>
+                    <KeyBinding Gesture="Enter" Command="{Binding GoCommand}"/>
+                </TextBox.InputBindings>
+            </TextBox>
+            <Button Grid.Column="4" Content="Go" Command="{Binding GoCommand}" AutomationProperties.AutomationId="WebGo"/>
+        </Grid>
+        <web:WebView x:Name="Page" Grid.Row="1" Engine="{Binding Engine}" Source="{Binding Source, Mode=TwoWay}"
                      AllowSharedTexture="{Binding AllowSharedTexture}"
                      AutomationProperties.AutomationId="WebPage"/>
-        <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="8">
+        <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="8" Spacing="16">
             <CheckBox Content="Shared texture" IsChecked="{Binding AllowSharedTexture, Mode=TwoWay}"
                       AutomationProperties.AutomationId="WebSharedTexture"/>
-            <TextBlock Text="{Binding FramePath, ElementName=Page}" Margin="16,0,0,0" VerticalAlignment="Center"
+            <TextBlock Text="{Binding Title, ElementName=Page}" VerticalAlignment="Center"
+                       AutomationProperties.AutomationId="WebTitle"/>
+            <TextBlock Text="loading" VerticalAlignment="Center"
+                       Visibility="{Binding IsLoading, ElementName=Page, Converter={conv:BoolToVisibilityConverter}}"/>
+            <TextBlock Text="{Binding LoadError.Text, ElementName=Page}" VerticalAlignment="Center"
+                       AutomationProperties.AutomationId="WebError"/>
+            <TextBlock Text="{Binding StatusText, ElementName=Page}" VerticalAlignment="Center"
+                       AutomationProperties.AutomationId="WebStatus"/>
+            <TextBlock Text="{Binding FramePath, ElementName=Page}" VerticalAlignment="Center"
                        AutomationProperties.AutomationId="WebFramePath"/>
-            <TextBlock Text="{Binding FrameRate, ElementName=Page}" Margin="16,0,4,0" VerticalAlignment="Center"
-                       AutomationProperties.AutomationId="WebFrameRate"/>
-            <TextBlock Text="fps" VerticalAlignment="Center"/>
+            <StackPanel Orientation="Horizontal" Spacing="4">
+                <TextBlock Text="{Binding FrameRate, ElementName=Page}" VerticalAlignment="Center"
+                           AutomationProperties.AutomationId="WebFrameRate"/>
+                <TextBlock Text="fps" VerticalAlignment="Center"/>
+            </StackPanel>
         </StackPanel>
     </Grid>
 </View>

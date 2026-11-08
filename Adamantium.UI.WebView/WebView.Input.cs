@@ -406,6 +406,13 @@ public partial class WebView
             return;
         }
 
+        if (!e.IsHorizontal && (e.Modifiers & (InputModifiers.LeftControl | InputModifiers.RightControl)) != 0)
+        {
+            StepZoom(e.Delta > 0);
+            e.Handled = true;
+            return;
+        }
+
         var at = e.GetPosition(this);
         var shift = (e.Modifiers & (InputModifiers.LeftShift | InputModifiers.RightShift)) != 0;
         var horizontal = e.IsHorizontal || shift;
