@@ -1,5 +1,6 @@
 using System;
 using Adamantium.MVVM;
+using Adamantium.UI.WebView;
 
 namespace Adamantium.UI.Sandbox.ViewModels;
 
@@ -8,10 +9,14 @@ namespace Adamantium.UI.Sandbox.ViewModels;
 [ViewModel]
 public partial class WebPageViewModel : TabPageViewModel
 {
-    public WebPageViewModel() : base("Web")
+    public WebPageViewModel(WebViewEngine engine) : base("Web")
     {
+        Engine = engine;
         Source = AddressToUri(_address);
     }
+
+    /// <summary>The application's CEF, the page is drawn by.</summary>
+    public WebViewEngine Engine { get; }
 
     /// <summary>The address as typed.</summary>
     [Bindable] private string _address = "https://example.org";

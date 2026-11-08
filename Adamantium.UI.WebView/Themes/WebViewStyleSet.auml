@@ -4,9 +4,8 @@
           xmlns:local="clr-namespace:Adamantium.UI.WebView">
 
     <!-- The page is drawn into the panel, laid out at the frame's size in pixels - up to a pixel past the view, which
-         clips it. The view takes the application's engine unless it is given its own. -->
+         clips it. -->
     <Style Selector="WebView">
-        <Setter Property="local:WebViewEngines.UseApplicationEngine" Value="True"/>
         <Setter Property="ClipToBounds" Value="True"/>
         <Setter Property="Template">
             <Setter.Value>

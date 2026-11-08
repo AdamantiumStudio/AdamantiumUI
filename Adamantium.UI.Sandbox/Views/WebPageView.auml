@@ -9,6 +9,7 @@
                 <KeyBinding Gesture="Enter" Command="{Binding GoCommand}"/>
             </TextBox.InputBindings>
         </TextBox>
-        <web:WebView Grid.Row="1" Source="{Binding Source}" AutomationProperties.AutomationId="WebPage"/>
+        <web:WebView Grid.Row="1" Engine="{Binding Engine}" Source="{Binding Source}"
+                     AutomationProperties.AutomationId="WebPage"/>
     </Grid>
 </View>

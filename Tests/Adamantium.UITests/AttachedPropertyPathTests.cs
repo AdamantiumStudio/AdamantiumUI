@@ -6,8 +6,8 @@ using NUnit.Framework;
 namespace Adamantium.UITests;
 
 // A library's style names its own attached property with the prefix its markup maps to the library's namespace -
-// local:WebViewEngines.UseApplicationEngine. The setter was given that name as it is, and the owner was looked for by
-// "local:WebViewEngines", which no type is called: the setter set nothing.
+// local:Owner.Property. The setter was given that name as it is, and the owner was looked for by "local:Owner", which no
+// type is called: the setter set nothing.
 [TestFixture]
 public class AttachedPropertyPathTests
 {

@@ -7,9 +7,10 @@ namespace Adamantium.UI.WebView;
 
 /// <summary>
 /// CEF for the application, one for the process as CEF is: initialized once with every setting at the first
-/// <see cref="WebView"/>, its work run on the UI loop when CEF asks for it, shut down on the loop as the application
+/// <see cref="WebView"/>, its work run on the UI thread when CEF asks for it, shut down on it as the application
 /// stops, its browsers closed first. Registered in the application's container
-/// (<see cref="WebViewRegistration.AddWebView"/>); a WebView is given it by <see cref="WebViewEngineBehavior"/>.
+/// (<see cref="WebViewRegistration.AddWebView"/>); a view model takes it from there and a WebView's
+/// <see cref="WebView.Engine"/> is bound to it.
 /// </summary>
 public sealed unsafe class WebViewEngine : IDisposable
 {

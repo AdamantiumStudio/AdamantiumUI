@@ -50,8 +50,7 @@ public class WebView : Control
         set => SetValue(SourceProperty, value);
     }
 
-    /// <summary>The CEF of the application the page is drawn by; <see cref="WebViewEngineBehavior"/> gives the
-    /// application's when none is set.</summary>
+    /// <summary>The CEF of the application the page is drawn by, bound from the view model; no page without it.</summary>
     public WebViewEngine Engine
     {
         get => GetValue<WebViewEngine>(EngineProperty);
