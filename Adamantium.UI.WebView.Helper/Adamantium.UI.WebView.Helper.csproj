@@ -1,19 +1,29 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <!-- The process CEF starts its renderer, GPU and other processes on. It lives in the cef folder beside libcef, and
-         is published ahead of time: Chromium starts several of these, so each should cost little to start and to keep. -->
+         is published ahead of time: Chromium starts several of these, so each should cost little to start and to keep.
+         It takes the binding and what runs a subprocess as source, not the WebView assembly, which brings the whole UI.
+         WinExe, so Windows opens no console for each process Chromium starts. -->
     <PropertyGroup>
-        <OutputType>Exe</OutputType>
+        <OutputType>WinExe</OutputType>
         <TargetFramework>net10.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Platforms>AnyCPU</Platforms>
         <LangVersion>latest</LangVersion>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <PublishAot>true</PublishAot>
         <InvariantGlobalization>true</InvariantGlobalization>
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\Adamantium.UI.WebView\Adamantium.UI.WebView.csproj" />
+        <Compile Include="..\Adamantium.UI.WebView\Generated\**\*.cs" LinkBase="Generated" />
+        <Compile Include="..\Adamantium.UI.WebView\Cef\CefLibrary.cs" Link="Cef\CefLibrary.cs" />
+        <Compile Include="..\Adamantium.UI.WebView\Cef\CefMainArguments.cs" Link="Cef\CefMainArguments.cs" />
+        <Compile Include="..\Adamantium.UI.WebView\Cef\CefSubprocess.cs" Link="Cef\CefSubprocess.cs" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="QuantumBinding.Utils" Version="3.0.2" />
     </ItemGroup>
 
 </Project>

@@ -14,4 +14,17 @@
     <None Include="$(AdamantiumCefRuntime)osx-arm64\native\cef\**" Condition="$([MSBuild]::IsOSPlatform('OSX'))" Link="cef\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" Visible="false" />
   </ItemGroup>
 
+  <!-- The helper CEF starts its processes on goes beside CEF, built as it is - published ahead of time it is the same
+       program, smaller and quicker to start. -->
+  <Target Name="CopyWebViewHelper" AfterTargets="Build">
+    <MSBuild Projects="$(MSBuildThisFileDirectory)..\..\Adamantium.UI.WebView.Helper\Adamantium.UI.WebView.Helper.csproj"
+             Targets="Build" Properties="Configuration=$(Configuration)" RemoveProperties="TargetFramework;RuntimeIdentifier">
+      <Output TaskParameter="TargetOutputs" ItemName="_WebViewHelperAssembly" />
+    </MSBuild>
+    <ItemGroup>
+      <_WebViewHelperFiles Include="%(_WebViewHelperAssembly.RootDir)%(_WebViewHelperAssembly.Directory)Adamantium.UI.WebView.Helper*;%(_WebViewHelperAssembly.RootDir)%(_WebViewHelperAssembly.Directory)QuantumBinding.Utils.dll" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_WebViewHelperFiles)" DestinationFolder="$(OutDir)cef\" SkipUnchangedFiles="true" />
+  </Target>
+
 </Project>

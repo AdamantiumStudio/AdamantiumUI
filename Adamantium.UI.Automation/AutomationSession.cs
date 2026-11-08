@@ -17,6 +17,8 @@ public sealed class AutomationSession : IAsyncDisposable
     private static readonly TimeSpan DefaultConnectTimeout = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan DefaultLaunchTimeout = TimeSpan.FromSeconds(60);
     private static readonly TimeSpan ExitTimeout = TimeSpan.FromSeconds(10);
+    private const int DeleteDataAttempts = 20;
+    private const int DeleteDataRetryMs = 100;
     private static readonly object EnvironmentLock = new();
 
     private readonly IAutomationChannel _channel;
@@ -68,7 +70,7 @@ public sealed class AutomationSession : IAsyncDisposable
         }
         catch
         {
-            DeleteData(data);
+            await DeleteDataAsync(data);
             throw;
         }
 
@@ -126,7 +128,7 @@ public sealed class AutomationSession : IAsyncDisposable
                 await process.WaitForExitAsync();
             }
 
-            DeleteData(data);
+            await DeleteDataAsync(data);
             throw;
         }
     }
@@ -288,25 +290,39 @@ public sealed class AutomationSession : IAsyncDisposable
         await _channel.DisposeAsync();
         if (_process?.HasExited ?? true)
         {
-            DeleteData(_dataFolder);
+            await DeleteDataAsync(_dataFolder);
         }
 
         _process?.Dispose();
     }
 
-    private static void DeleteData(string folder)
+    private static async Task DeleteDataAsync(string folder)
     {
         if (folder == null)
         {
             return;
         }
 
-        try
+        for (var attempt = 1; ; attempt++)
         {
-            Directory.Delete(folder, recursive: true);
-        }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
-        {
+            try
+            {
+                Directory.Delete(folder, recursive: true);
+                return;
+            }
+            catch (DirectoryNotFoundException)
+            {
+                return;
+            }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+            {
+                if (attempt == DeleteDataAttempts)
+                {
+                    return;
+                }
+
+                await Task.Delay(DeleteDataRetryMs);
+            }
         }
     }
 

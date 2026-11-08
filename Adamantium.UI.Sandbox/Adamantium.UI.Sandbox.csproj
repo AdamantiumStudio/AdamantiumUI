@@ -33,6 +33,7 @@
 		<ProjectReference Include="..\Adamantium.UI.Sandbox.Modules\Adamantium.UI.Sandbox.Modules.csproj" />
 		<ProjectReference Include="..\Adamantium.UI.Sandbox.Content\Adamantium.UI.Sandbox.Content.csproj" />
 		<ProjectReference Include="..\Adamantium.UI.Automation.Cli\Adamantium.UI.Automation.Cli.csproj" />
+		<ProjectReference Include="..\Adamantium.UI.WebView\Adamantium.UI.WebView.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -96,4 +97,7 @@
 	</ItemGroup>
 
 	<!--    <Import Project="$(SolutionDir)Adamantium.targets" />-->
+
+	<!-- CEF and its helper beside the sandbox, for the Web tab; without CEF staged (native/fetch-cef) the tab stays empty. -->
+	<Import Project="..\Adamantium.UI.WebView\build\Adamantium.UI.WebView.CefRuntime.targets" />
 </Project>

@@ -6,6 +6,8 @@
         <Platforms>AnyCPU</Platforms>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <LangVersion>latest</LangVersion>
+        <EmitCompilerGeneratedFiles>false</EmitCompilerGeneratedFiles>
+        <CompilerGeneratedFilesOutputPath>$(BaseIntermediateOutputPath)Generated</CompilerGeneratedFilesOutputPath>
         <!-- CEF itself, downloaded and staged by native/fetch-cef: not part of the project. An application takes it with
              build/Adamantium.UI.WebView.CefRuntime.targets. -->
         <DefaultItemExcludes>$(DefaultItemExcludes);runtimes\**;native\download\**</DefaultItemExcludes>
@@ -13,11 +15,34 @@
 
     <ItemGroup>
         <InternalsVisibleTo Include="Adamantium.UI.WebView.Tests" />
-        <InternalsVisibleTo Include="Adamantium.UI.WebView.Helper" />
     </ItemGroup>
 
     <ItemGroup>
         <PackageReference Include="QuantumBinding.Utils" Version="3.0.2" />
+    </ItemGroup>
+
+    <!-- The view's style set (Themes/*.auml) is compiled by the markup generator, as in the UI's other libraries. -->
+    <ItemGroup>
+        <ProjectReference Include="..\Adamantium.UI\Adamantium.UI.csproj" />
+        <ProjectReference Include="..\Adamantium.UI.Markup\Adamantium.UI.Markup.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="true" />
+        <ProjectReference Include="..\Adamantium.UI.Generators\Adamantium.UI.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+        <ProjectReference Include="..\Adamantium.UI.Core\Adamantium.UI.Core.csproj" OutputItemType="Analyzer" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <AdamantiumEngineReference Include="Adamantium.Core" GeneratePathProperty="true" />
+        <AdamantiumEngineReference Include="Adamantium.Core" Role="NetStandardAnalyzer" />
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(UseEngineSource)' != 'true'">
+        <Analyzer Include="$(PkgAdamantium_Core)\lib\netstandard2.0\Adamantium.Core.dll" Condition="'$(PkgAdamantium_Core)' != ''" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <AdditionalFiles Include="$(ProjectDir)Themes\**\*.auml" />
+        <CompilerVisibleProperty Include="RootNamespace" />
+        <CompilerVisibleProperty Include="NeutralLanguage" />
+        <CompilerVisibleProperty Include="OutputType" />
     </ItemGroup>
 
 </Project>

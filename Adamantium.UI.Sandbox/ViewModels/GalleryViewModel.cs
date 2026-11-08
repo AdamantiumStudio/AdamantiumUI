@@ -47,6 +47,7 @@ public partial class GalleryViewModel
         new TilesViewModel(),
         new InstancingViewModel(),
         new TransformsViewModel(),
+        new WebPageViewModel(),
     };
 
     [Bindable] private TabPageViewModel _selectedTab;

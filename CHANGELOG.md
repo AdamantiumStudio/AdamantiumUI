@@ -7,6 +7,13 @@ All packages share one version.
 
 ### Added
 
+- `WebView` (Adamantium.UI.WebView, Windows): a web page drawn by Chromium (CEF) off screen and shown by a
+  `RenderTargetPanel` - no window of its own. `AddWebView()` registers the application's `WebViewEngine`, which the
+  view's style hands to every `WebView` with none set; `WebViewOptions` name the profile folder and the locale. The
+  sandbox has a "Web" tab. Input, popups and the browser API come later.
+- `IUIApplication.LoopStopping`: raised once as the application shuts down, on the loop thread after its last frame
+  and before the windows' services and the graphics device go - for what was started on the loop thread and must end
+  on it, as CEF.
 - `MeshGeometry.Freeze`: an area that will not change - a map tile's - lets go of what it was given as
   (`Positions`, `TriangleIndices`, `Boundary`) and, with a boundary, of its mesh's points and indices, keeping only the
   fill made ready to draw and its edge; changing or copying it afterwards throws. A body drawn from a snapshot of its
@@ -135,6 +142,13 @@ All packages share one version.
 
 ### Fixed
 
+- A DataContext reaching an element that takes one of its own while it is told - its DataContext bound to a member of
+  the arriving one - no longer goes on past it to its children, over the one it just gave them: a button in a module's
+  pane of the ribbon shell sometimes resolved its command against the window's view model and reported a broken path.
+- An automation session's fresh data folder is deleted when the application's own child processes let go of their
+  files a moment after it exits - a WebView's helpers holding the CEF log left the folder behind.
+- A style's setter of an attached property named with its markup prefix (`local:Owner.Property`) sets it: the owner
+  was looked for with the prefix and not found, and the setter set nothing.
 - A drop inside the application ends as its target's `DragOver` says, asked once more as the button is let go with
   the modifiers held then: a target that takes only copies ends a drag with no Ctrl held as a copy, and the source
   keeps what it carried - it was a move, and the source took it out. The sandbox's panes that record what is dropped

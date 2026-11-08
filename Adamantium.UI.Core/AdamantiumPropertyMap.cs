@@ -181,7 +181,13 @@ public static class AdamantiumPropertyMap
       if (string.IsNullOrEmpty(path)) return null;
       if (path.Length > 1 && path[0] == '(' && path[^1] == ')') path = path[1..^1];
       var dot = path.IndexOf('.');
-      return dot < 0 ? FindRegistered(componentType, path) : ResolveAttached(path[..dot], path[(dot + 1)..]);
+      return dot < 0 ? FindRegistered(componentType, path) : ResolveAttached(OwnerName(path[..dot]), path[(dot + 1)..]);
+   }
+
+   private static string OwnerName(string owner)
+   {
+      var colon = owner.LastIndexOf(':');
+      return colon < 0 ? owner : owner[(colon + 1)..];
    }
 
    private static readonly ConcurrentDictionary<(string owner, string prop), AdamantiumProperty> AttachedByPath = new();

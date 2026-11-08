@@ -3,6 +3,7 @@ using System.IO;
 using Adamantium.Core.DependencyInjection;
 using Adamantium.UI.Automation;
 using Adamantium.UI.Controls.Navigation;
+using Adamantium.UI.WebView;
 
 namespace Adamantium.UI.Sandbox;
 
@@ -49,6 +50,7 @@ public class SandboxApplication : Adamantium.UI.Universes.MultiverseApplication
     protected override void RegisterServices(IContainerRegistry containerRegistry)
     {
         base.RegisterServices(containerRegistry);
+        containerRegistry.AddWebView();
         // Register the app's own window shell under "workspace"; the Workspace command opens the second window in it.
         Container.Resolve<IWindowShellRegistry>().Register<WorkspaceWindow>("workspace");
         // A dedicated shell for the drag-drop cross-window demo, so items can be dragged between it and the main window.
