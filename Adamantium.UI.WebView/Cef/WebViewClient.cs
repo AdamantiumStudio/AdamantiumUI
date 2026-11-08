@@ -10,21 +10,29 @@ internal sealed unsafe class WebViewClient : CefObject
     private readonly WebViewRenderHandler renderHandler;
     private readonly WebViewLifeSpanHandler lifeSpanHandler;
     private readonly WebViewDisplayHandler displayHandler;
+    private readonly WebViewLoadHandler loadHandler;
+    private readonly WebViewRequestHandler requestHandler;
 
     public WebViewClient(WebViewRenderHandler renderHandler, WebViewLifeSpanHandler lifeSpanHandler,
-        WebViewDisplayHandler displayHandler)
+        WebViewDisplayHandler displayHandler, WebViewLoadHandler loadHandler, WebViewRequestHandler requestHandler)
         : base(sizeof(CefClient))
     {
         this.renderHandler = renderHandler;
         this.lifeSpanHandler = lifeSpanHandler;
         this.displayHandler = displayHandler;
+        this.loadHandler = loadHandler;
+        this.requestHandler = requestHandler;
         renderHandler.AddReference();
         lifeSpanHandler.AddReference();
         displayHandler.AddReference();
+        loadHandler.AddReference();
+        requestHandler.AddReference();
         var client = (CefClient*)Native;
         client->get_render_handler = &GetRenderHandler;
         client->get_life_span_handler = &GetLifeSpanHandler;
         client->get_display_handler = &GetDisplayHandler;
+        client->get_load_handler = &GetLoadHandler;
+        client->get_request_handler = &GetRequestHandler;
     }
 
     /// <summary>The struct with a reference taken for CEF.</summary>
@@ -35,12 +43,26 @@ internal sealed unsafe class WebViewClient : CefObject
         renderHandler.Release();
         lifeSpanHandler.Release();
         displayHandler.Release();
+        loadHandler.Release();
+        requestHandler.Release();
+    }
+
+    [UnmanagedCallersOnly]
+    private static CefRequestHandler* GetRequestHandler(CefClient* self)
+    {
+        return (CefRequestHandler*)From<WebViewClient>(self).requestHandler.Share();
     }
 
     [UnmanagedCallersOnly]
     private static CefDisplayHandler* GetDisplayHandler(CefClient* self)
     {
         return (CefDisplayHandler*)From<WebViewClient>(self).displayHandler.Share();
+    }
+
+    [UnmanagedCallersOnly]
+    private static CefLoadHandler* GetLoadHandler(CefClient* self)
+    {
+        return (CefLoadHandler*)From<WebViewClient>(self).loadHandler.Share();
     }
 
     [UnmanagedCallersOnly]

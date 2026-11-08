@@ -8,6 +8,7 @@
         <ResourceLink Source="CaptionIcons"/>
         <ResourceLink Source="StatusIcons"/>
         <ResourceLink Source="TabIcons"/>
+        <ResourceLink Source="BrowserIcons"/>
     </ApplicationBlueprint.Resources>
     <ApplicationBlueprint.StyleIncludes>
         <StyleInclude Source="RibbonShellStyleSet"/>

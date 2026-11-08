@@ -21,12 +21,21 @@ public partial class WebPageViewModel : TabPageViewModel
     /// <summary>The address as typed.</summary>
     [Bindable] private string _address = "https://example.org";
 
-    /// <summary>The page shown: the address last gone to, read as a web address.</summary>
+    /// <summary>The page shown: the address last gone to, read as a web address - or the one the page went to itself,
+    /// which the address box then shows.</summary>
     [Bindable] private Uri _source;
 
     /// <summary>Whether the page's frames may come in Chromium's textures on the GPU rather than as pixels in memory.
     /// </summary>
     [Bindable] private bool _allowSharedTexture = true;
+
+    partial void OnSourceChanged(Uri value)
+    {
+        if (value != null)
+        {
+            Address = value.AbsoluteUri;
+        }
+    }
 
     [Command] private void Go()
     {
