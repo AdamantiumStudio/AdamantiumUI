@@ -167,6 +167,11 @@ All packages share one version.
 
 ### Fixed
 
+- A `DispatcherTimer` restarted with a delay no longer ticks once at once: a callback of the old schedule caught between
+  the restart's new generation and its new due time took itself for the new start's tick.
+- A tab strip of its own on a side, built on the theme's, shows its tabs after the strip moves there: the theme's
+  template for the side was applied first and taken away again, and its panel, still serving the control, took the tabs
+  out of the new strip. A template taken away now lets go of its panel.
 - Tabs bound to items keep a page each when their page asks to be kept (`x:KeepAlive`): one content template for all of
   them made the presenter re-point the first tab's page at every tab, so a page showed each tab in turn and loaded
   again.

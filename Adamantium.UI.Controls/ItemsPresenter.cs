@@ -38,24 +38,7 @@ public class ItemsPresenter : InputUIComponent
     /// finds unrealized, and would otherwise find every item realized - in the panel it replaced.</summary>
     internal void Rebuild()
     {
-        if (_panel != null)
-        {
-            if (_panel is VirtualizingPanel replaced)
-            {
-                replaced.DetachOwner();
-            }
-            else
-            {
-                _panel.Children.Clear();
-            }
-
-            _panel.ItemsOwner = null;
-            _owner?.ItemContainerGenerator.Clear();
-            RemoveVisualChild(_panel);
-            RemoveLogicalChild(_panel);
-            _panel = null;
-        }
-
+        ReleasePanel();
         if (_owner == null) return;
 
         var template = _owner.ItemsPanel ?? ItemsPanelTemplate.Default;
@@ -73,6 +56,36 @@ public class ItemsPresenter : InputUIComponent
         // where an element settles the layout debt it could not register while it was out of a tree - see
         // MeasurableUIComponent.OnAttachedToVisualTree, which re-registers what has a constraint of its own and tells the
         // parent to re-read the rest. Repeating that here was one mechanism written twice.
+    }
+
+    /// <summary>Lets go of the owner, with the template it was in: its panel stops hosting the owner's containers. A
+    /// virtualizing panel left attached realizes them on its own next measure, out of the panel of the template that
+    /// replaced this one.</summary>
+    internal void Disconnect()
+    {
+        ReleasePanel();
+        _owner = null;
+    }
+
+    private void ReleasePanel()
+    {
+        if (_panel != null)
+        {
+            if (_panel is VirtualizingPanel replaced)
+            {
+                replaced.DetachOwner();
+            }
+            else
+            {
+                _panel.Children.Clear();
+            }
+
+            _panel.ItemsOwner = null;
+            _owner?.ItemContainerGenerator.Clear();
+            RemoveVisualChild(_panel);
+            RemoveLogicalChild(_panel);
+            _panel = null;
+        }
     }
 
     /// <summary>Regenerates the item containers into the panel: full, non-virtualizing realization.</summary>

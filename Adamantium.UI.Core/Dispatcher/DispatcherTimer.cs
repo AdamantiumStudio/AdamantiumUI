@@ -52,9 +52,12 @@ public sealed class DispatcherTimer : IDisposable
     /// <summary>Starts with a custom first delay, then ticks every <see cref="Interval"/> (the press-then-repeat pattern).</summary>
     public void Start(TimeSpan firstDelay)
     {
+        // The new due time before the new generation: a callback that reads the new generation reads this due time too,
+        // and is not taken for the new start's tick before its delay.
+        var due = SetDue(firstDelay);
         Renew();
         _isEnabled = true;
-        Schedule(firstDelay);
+        Change(due);
     }
 
     public void Stop()
@@ -70,14 +73,21 @@ public sealed class DispatcherTimer : IDisposable
         Volatile.Write(ref _queued, 0);
     }
 
-    private void Schedule(TimeSpan firstDelay)
+    private void Schedule(TimeSpan firstDelay) => Change(SetDue(firstDelay));
+
+    private TimeSpan SetDue(TimeSpan firstDelay)
     {
         var due = firstDelay <= TimeSpan.Zero ? TimeSpan.FromMilliseconds(1) : firstDelay;
-        var period = _interval <= TimeSpan.Zero ? TimeSpan.FromMilliseconds(1) : _interval;
         // A millisecond's leeway: the system timer may round its due time down.
         var leeway = due > TimeSpan.FromMilliseconds(1) ? due - TimeSpan.FromMilliseconds(1) : TimeSpan.Zero;
         Volatile.Write(ref _dueAt, System.Diagnostics.Stopwatch.GetTimestamp()
                                    + (long)(leeway.TotalSeconds * System.Diagnostics.Stopwatch.Frequency));
+        return due;
+    }
+
+    private void Change(TimeSpan due)
+    {
+        var period = _interval <= TimeSpan.Zero ? TimeSpan.FromMilliseconds(1) : _interval;
         _timer.Change(due, period);
     }
 
