@@ -29,6 +29,8 @@ internal sealed unsafe class WebViewBrowser : IDisposable
     private string wanted;
     private string errorPageFor;
     private string failedAddress;
+    private bool isDevTools;
+    private WebViewDevToolsSocket devToolsSocket;
     private string createdWith;
     private bool requested;
     private bool closing;
@@ -69,6 +71,69 @@ internal sealed unsafe class WebViewBrowser : IDisposable
 
     /// <summary>How the frames come: Chromium's textures where the engine shares them, else pixels in memory.</summary>
     public WebViewFramePath FramePath { get; }
+
+    /// <summary>Opens the way this page's DevTools front end talks to it, if it is not open: the address the front end
+    /// is shown at, which tells it where to connect.</summary>
+    public string OpenDevTools()
+    {
+        if (devToolsSocket == null)
+        {
+            devToolsSocket = new WebViewDevToolsSocket(ForwardToPage, FrontEndGone);
+            devTools.ServeFrontEnd(null, devToolsSocket.Send);
+        }
+
+        return devToolsSocket.FrontEndAddress;
+    }
+
+    /// <summary>Closes the way the DevTools front end talked to this page; the page's own protocol channel goes on.
+    /// </summary>
+    public void CloseDevTools()
+    {
+        if (devToolsSocket == null)
+        {
+            return;
+        }
+
+        devToolsSocket.Dispose();
+        devToolsSocket = null;
+        var host = LiveHost();
+        devTools.ServeFrontEnd(host, null);
+        if (host != null)
+        {
+            CefRefCounting.ReleaseCef(host);
+        }
+    }
+
+    private void FrontEndGone()
+    {
+        var host = LiveHost();
+        devTools.FrontEndGone(host);
+        if (host != null)
+        {
+            CefRefCounting.ReleaseCef(host);
+        }
+    }
+
+    private void ForwardToPage(string json)
+    {
+        var host = LiveHost();
+        if (host == null)
+        {
+            return;
+        }
+
+        devTools.Forward(host, json);
+        CefRefCounting.ReleaseCef(host);
+    }
+
+    /// <summary>Asks CEF to make the browser for a page's DevTools, showing their front end at <paramref name="url"/>:
+    /// an ordinary page drawn off screen - CEF's own DevTools come only in a window - and none of the application's, so
+    /// it gets no protocol channel and no window.adamantium.</summary>
+    public void CreateDevToolsFrontEnd(string url, int width, int height, float scale, IntPtr parentWindow)
+    {
+        isDevTools = true;
+        Create(url, width, height, scale, parentWindow);
+    }
 
     /// <summary>Asks CEF to make the browser, showing <paramref name="url"/>.</summary>
     public void Create(string url, int width, int height, float scale, IntPtr parentWindow)
@@ -640,9 +705,14 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         }
 
         browser = created;
-        var host = Host();
-        devTools.Attach(host);
-        CefRefCounting.ReleaseCef(host);
+        // DevTools are not a page of the application's: no protocol channel, no window.adamantium in them.
+        if (!isDevTools)
+        {
+            var host = Host();
+            devTools.Attach(host);
+            CefRefCounting.ReleaseCef(host);
+        }
+
         if (closing)
         {
             Close();
@@ -752,6 +822,8 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         }
 
         disposed = true;
+        devToolsSocket?.Dispose();
+        devToolsSocket = null;
         closing = true;
         view.LetGo(this);
         producer.Dispose();
@@ -787,6 +859,8 @@ internal sealed unsafe class WebViewBrowser : IDisposable
     /// <summary>Lets go of a browser CEF did not close before it shut down: CEF and its objects are gone.</summary>
     internal void Abandon()
     {
+        devToolsSocket?.Dispose();
+        devToolsSocket = null;
         devTools.Abandon();
         browser = null;
     }
@@ -861,7 +935,7 @@ internal sealed unsafe class WebViewBrowser : IDisposable
 
     internal void OnLoadEnd(string url)
     {
-        var host = LiveHost();
+        var host = isDevTools ? null : LiveHost();
         if (host != null)
         {
             devTools.Prepare(host);

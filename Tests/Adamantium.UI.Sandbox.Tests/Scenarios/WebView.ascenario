@@ -10,6 +10,14 @@
   <Select Target="id=GalleryTabs/id=Web" />
   <Wait Target="id=WebPage" />
   <WaitIdle />
+  <!-- The DevTools open beside the page, under it, and close again - with no error left behind. -->
+  <Toggle Target="id=WebDevToolsOpen" />
+  <Wait Target="id=WebDevTools" />
+  <WaitIdle />
+  <Select Target="id=WebDevToolsDock/name=Bottom" />
+  <WaitIdle />
+  <Toggle Target="id=WebDevToolsOpen" />
+  <WaitIdle />
   <!-- Back as the page opens. -->
   <Set Target="id=WebAddress" Value="https://example.org" />
   <Key Keys="Enter" Into="id=WebAddress" />

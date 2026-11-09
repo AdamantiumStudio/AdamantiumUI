@@ -44,11 +44,24 @@ public partial class WebView
         {
             Touch(e, CefTouchEventType.Moved);
         }
+
+        // The page took it: the view around the DevTools must not take it for its own page too.
+        e.Handled = true;
     }
 
     protected override void OnPointerExited(PointerEventArgs e)
     {
         base.OnPointerExited(e);
+        if (!IsPointerCaptured && !draggingFromPage)
+        {
+            var at = e.GetPosition(this);
+            browser?.SendMouseMove(at.X, at.Y, e.Modifiers, true);
+        }
+    }
+
+    // The pointer left the page's part for the splitter or the DevTools, still inside the view: the page hears it go.
+    private void OnPageExited(object sender, PointerEventArgs e)
+    {
         if (!IsPointerCaptured && !draggingFromPage)
         {
             var at = e.GetPosition(this);
@@ -116,7 +129,7 @@ public partial class WebView
         if (e.Properties.Buttons == MouseButtons.None)
         {
             LetGoOf(e.Pointer);
-            if (at.X < 0 || at.Y < 0 || at.X >= ActualWidth || at.Y >= ActualHeight)
+            if (at.X < 0 || at.Y < 0 || at.X >= PageWidth || at.Y >= PageHeight)
             {
                 browser?.SendMouseMove(at.X, at.Y, e.Modifiers, true);
             }

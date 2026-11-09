@@ -29,6 +29,15 @@ public partial class WebPageViewModel : TabPageViewModel
     /// </summary>
     [Bindable] private bool _allowSharedTexture = true;
 
+    /// <summary>Whether the page's DevTools are shown beside it.</summary>
+    [Bindable] private bool _devToolsOpen;
+
+    /// <summary>The side of the page the DevTools stand on.</summary>
+    [Bindable] private WebViewDevToolsDock _devToolsDock = WebViewDevToolsDock.Right;
+
+    /// <summary>The sides the DevTools can stand on.</summary>
+    public WebViewDevToolsDock[] DevToolsDocks { get; } = Enum.GetValues<WebViewDevToolsDock>();
+
     partial void OnSourceChanged(Uri value)
     {
         if (value != null)

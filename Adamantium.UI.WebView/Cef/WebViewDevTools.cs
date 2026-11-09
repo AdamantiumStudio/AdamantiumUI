@@ -1,5 +1,6 @@
 using System.Buffers;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Adamantium.UI.WebView.Cef.Interop;
 
 namespace Adamantium.UI.WebView.Cef;
@@ -22,6 +23,8 @@ internal sealed class WebViewDevTools
 
     private readonly Action<string> messageReceived;
     private readonly Dictionary<int, TaskCompletionSource<JsonElement>> pending = [];
+    private readonly Dictionary<int, JsonNode> forwarded = [];
+    private Action<string> frontEnd;
     private WebViewDevToolsObserver observer;
     private unsafe CefRegistration* registration;
     private int nextId;
@@ -82,9 +85,68 @@ internal sealed class WebViewDevTools
             writer => writer.WriteString("expression",
                 "window.adamantium&&window.adamantium.__receive(" + Quoted(json) + ")"));
 
+    /// <summary>Speaks for a DevTools front end too: what <see cref="Forward"/> hands on is answered to
+    /// <paramref name="send"/>, and every event the page tells goes there as well. Null lets it go, and the page's own
+    /// runtime, page and binding are asked for again - the front end may have turned them off.</summary>
+    public unsafe void ServeFrontEnd(CefBrowserHost* host, Action<string> send)
+    {
+        frontEnd = send;
+        if (send == null)
+        {
+            FrontEndGone(host);
+        }
+    }
+
+    /// <summary>A front end went, or another took its place: its calls are forgotten - their answers would reach the
+    /// next under the same ids - and what it may have left the page in is undone: a debugger paused at a breakpoint,
+    /// the inspect overlay, a device emulated, new targets held for a debugger, the cache off. The page's own runtime,
+    /// page and binding are asked for again.</summary>
+    public unsafe void FrontEndGone(CefBrowserHost* host)
+    {
+        forwarded.Clear();
+        if (host == null)
+        {
+            return;
+        }
+
+        Send(host, "Debugger.disable", null);
+        Send(host, "Overlay.disable", null);
+        Send(host, "Emulation.clearDeviceMetricsOverride", null);
+        Send(host, "Target.setAutoAttach", writer =>
+        {
+            writer.WriteBoolean("autoAttach", false);
+            writer.WriteBoolean("waitForDebuggerOnStart", false);
+        });
+        Send(host, "Network.setCacheDisabled", writer => writer.WriteBoolean("cacheDisabled", false));
+        Send(host, "Runtime.enable", null);
+        Send(host, "Page.enable", null);
+        Send(host, "Runtime.addBinding", writer => writer.WriteString("name", Binding));
+    }
+
+    /// <summary>Hands the page a call of the DevTools front end's, as JSON: under an id of ours, so it never meets one of
+    /// our own calls, and answered under the front end's.</summary>
+    public unsafe void Forward(CefBrowserHost* host, string json)
+    {
+        if (frontEnd == null || JsonNode.Parse(json) is not JsonObject call || call["id"] is not { } theirs)
+        {
+            return;
+        }
+
+        var ours = ++nextId;
+        forwarded[ours] = theirs.DeepClone();
+        call["id"] = ours;
+        var bytes = System.Text.Encoding.UTF8.GetBytes(call.ToJsonString());
+        fixed (byte* message = bytes)
+        {
+            host->send_dev_tools_message(host, message, (ulong)bytes.Length);
+        }
+    }
+
     /// <summary>Stops: what was asked and not answered fails, the browser hears nothing more.</summary>
     public unsafe void Detach()
     {
+        frontEnd = null;
+        forwarded.Clear();
         foreach (var call in pending.Values)
         {
             call.TrySetException(new WebViewScriptException("The page went away before it answered."));
@@ -119,7 +181,21 @@ internal sealed class WebViewDevTools
     {
         using var document = JsonDocument.Parse(message.ToArray());
         var root = document.RootElement;
-        if (root.TryGetProperty("id", out var id) && pending.Remove(id.GetInt32(), out var call))
+        var hasId = root.TryGetProperty("id", out var id) && id.ValueKind == JsonValueKind.Number;
+        if (hasId && forwarded.Remove(id.GetInt32(), out var theirs))
+        {
+            var answer = JsonNode.Parse(message);
+            answer!["id"] = theirs;
+            frontEnd?.Invoke(answer.ToJsonString());
+            return;
+        }
+
+        if (!hasId && frontEnd != null)
+        {
+            frontEnd(System.Text.Encoding.UTF8.GetString(message));
+        }
+
+        if (hasId && pending.Remove(id.GetInt32(), out var call))
         {
             if (root.TryGetProperty("result", out var result))
             {

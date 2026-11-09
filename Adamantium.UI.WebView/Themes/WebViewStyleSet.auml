@@ -3,8 +3,9 @@
           xmlns:x="http://adamantium/ui/xaml/extensions"
           xmlns:local="clr-namespace:Adamantium.UI.WebView">
 
-    <!-- The page is drawn into the panel, laid out at the frame's size in pixels - up to a pixel past the view, which
-         clips it. -->
+    <!-- The page is drawn into the panel, laid out at the frame's size in pixels - up to a pixel past the page's part,
+         which clips it. Beside the page, when they are open, its DevTools: a view of their own, to the right or under
+         it, with a splitter between that the mouse drags. -->
     <!-- What a drag the page starts carries under the pointer: its text on a small plate, not a picture of the view. -->
     <Style Selector="WebView">
         <Setter Property="ClipToBounds" Value="True"/>
@@ -24,7 +25,55 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="local:WebView">
-                    <RenderTargetPanel x:Name="PART_Surface" AcceptsTab="False"/>
+                    <local:WebViewDevToolsLayout IsDevToolsOpen="{TemplateBinding IsDevToolsOpen}"
+                                                 Dock="{TemplateBinding DevToolsDock}">
+                        <Border x:Name="PART_PageHost" ClipToBounds="True">
+                            <RenderTargetPanel x:Name="PART_Surface" AcceptsTab="False"
+                                               HorizontalAlignment="Left" VerticalAlignment="Top"/>
+                        </Border>
+                        <Thumb x:Name="PART_DevToolsSplitter" Classes="WebViewSplitter"
+                               AutomationProperties.AutomationId="WebDevToolsSplitter"/>
+                        <local:WebViewDevToolsView x:Name="PART_DevTools"
+                                               Engine="{TemplateBinding Engine}"
+                                               AllowSharedTexture="{TemplateBinding AllowSharedTexture}"
+                                               AutomationProperties.AutomationId="WebDevTools"/>
+                    </local:WebViewDevToolsLayout>
+                    <ControlTemplate.Triggers>
+                        <PropertyTrigger Property="DevToolsDock" Value="Right">
+                            <Setter TargetName="PART_DevToolsSplitter" Property="Cursor" Value="SizeWE"/>
+                        </PropertyTrigger>
+                        <PropertyTrigger Property="DevToolsDock" Value="Bottom">
+                            <Setter TargetName="PART_DevToolsSplitter" Property="Cursor" Value="SizeNS"/>
+                        </PropertyTrigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- The DevTools beside a page: only their own surface, no DevTools of their own. -->
+    <Style Selector="WebViewDevToolsView">
+        <Setter Property="ClipToBounds" Value="True"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="local:WebViewDevToolsView">
+                    <Border x:Name="PART_PageHost" ClipToBounds="True">
+                        <RenderTargetPanel x:Name="PART_Surface" AcceptsTab="False"
+                                           HorizontalAlignment="Left" VerticalAlignment="Top"/>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- The splitter between the page and its DevTools: a bar in the theme's line color, as thick as the layout makes
+         it. -->
+    <Style Selector="Thumb.WebViewSplitter">
+        <Setter Property="Background" Value="{ResourceReference ControlStrokeColorDefault}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Thumb">
+                    <Border Background="{TemplateBinding Background}"/>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>

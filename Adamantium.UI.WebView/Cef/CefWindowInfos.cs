@@ -3,7 +3,9 @@ using System.Runtime.InteropServices;
 namespace Adamantium.UI.WebView.Cef;
 
 /// <summary>cef_window_info_t for a browser drawn off screen, as the platform declares it: drawn without a window of
-/// its own, its parent window given for what the platform still asks of one (input methods, screen).</summary>
+/// its own, its parent window given for what the platform still asks of one (input methods, screen). Alloy style,
+/// stated: a page drawn off screen gets it anyway, but DevTools asked for without it are Chrome style, which CEF draws
+/// only in a window.</summary>
 internal static unsafe class CefWindowInfos
 {
     /// <summary>A new window info in native memory, freed with <see cref="Free"/>; with <paramref name="sharedTexture"/>
@@ -15,6 +17,7 @@ internal static unsafe class CefWindowInfos
             var info = (Interop.Windows.CefWindowInfo*)NativeMemory.AllocZeroed((nuint)sizeof(Interop.Windows.CefWindowInfo));
             info->size = (ulong)sizeof(Interop.Windows.CefWindowInfo);
             info->windowless_rendering_enabled = 1;
+            info->runtime_style = CefRuntimeStyle.Alloy;
             info->shared_texture_enabled = sharedTexture ? 1 : 0;
             info->parent_window = new Interop.Windows.CefWindowHandle { pointer = (void*)parentWindow };
             return info;
@@ -25,12 +28,14 @@ internal static unsafe class CefWindowInfos
             var info = (Interop.MacOS.CefWindowInfo*)NativeMemory.AllocZeroed((nuint)sizeof(Interop.MacOS.CefWindowInfo));
             info->size = (ulong)sizeof(Interop.MacOS.CefWindowInfo);
             info->windowless_rendering_enabled = 1;
+            info->runtime_style = CefRuntimeStyle.Alloy;
             return info;
         }
 
         var linux = (Interop.Linux.CefWindowInfo*)NativeMemory.AllocZeroed((nuint)sizeof(Interop.Linux.CefWindowInfo));
         linux->size = (ulong)sizeof(Interop.Linux.CefWindowInfo);
         linux->windowless_rendering_enabled = 1;
+        linux->runtime_style = CefRuntimeStyle.Alloy;
         return linux;
     }
 

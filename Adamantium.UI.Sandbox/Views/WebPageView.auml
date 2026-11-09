@@ -35,10 +35,16 @@
         </Grid>
         <web:WebView x:Name="Page" Grid.Row="1" Engine="{Binding Engine}" Source="{Binding Source, Mode=TwoWay}"
                      AllowSharedTexture="{Binding AllowSharedTexture}"
+                     IsDevToolsOpen="{Binding DevToolsOpen, Mode=TwoWay}"
+                     DevToolsDock="{Binding DevToolsDock}"
                      AutomationProperties.AutomationId="WebPage"/>
         <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="8" Spacing="16">
             <CheckBox Content="Shared texture" IsChecked="{Binding AllowSharedTexture, Mode=TwoWay}"
                       AutomationProperties.AutomationId="WebSharedTexture"/>
+            <CheckBox Content="DevTools" IsChecked="{Binding DevToolsOpen, Mode=TwoWay}"
+                      AutomationProperties.AutomationId="WebDevToolsOpen"/>
+            <DropDown ItemsSource="{Binding DevToolsDocks}" SelectedItem="{Binding DevToolsDock, Mode=TwoWay}"
+                      AutomationProperties.AutomationId="WebDevToolsDock" AutomationProperties.Name="DevTools side"/>
             <TextBlock Text="{Binding Title, ElementName=Page}" VerticalAlignment="Center"
                        AutomationProperties.AutomationId="WebTitle"/>
             <TextBlock Text="loading" VerticalAlignment="Center"
