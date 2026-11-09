@@ -816,6 +816,13 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
         return Slots(property) is { } container && container.GetValue(priority) != AdamantiumProperty.UnsetValue;
     }
 
+    /// <summary>Whether the value comes from the template that made this element - written in it, or handed on by a
+    /// template binding from the control it templates - rather than bound to data by the template's markup, whose
+    /// <c>{Binding}</c> stands at the same level.</summary>
+    internal bool IsGivenByTemplate(AdamantiumProperty property) =>
+        GetValueSource(property) == ValuePriority.Template &&
+        Data.BindingEngine.GetBindingExpression(this, property) is not { Priority: ValuePriority.Template };
+
     /// <summary>Where the value <see cref="GetValue(AdamantiumProperty)"/> returns comes from: the highest-priority slot
     /// holding one, or <see cref="ValuePriority.Default"/> when none does and the declared default stands.</summary>
     public ValuePriority GetValueSource(AdamantiumProperty property)
@@ -1009,21 +1016,21 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
     /// the templated parent could never set the property again.</summary>
     public void SetCurrentValue(AdamantiumProperty property, object value)
     {
+        // A {Binding} a template's markup set stands at Template: the value goes into its slot whatever shows over it - a
+        // trigger, or nothing yet as the binding has written nothing - since raised to Binding it would mask it for good.
+        if (Data.BindingEngine.GetBindingExpression(this, property) is { Priority: ValuePriority.Template })
+        {
+            SetValue(property, value, ValuePriority.Template);
+            return;
+        }
+
         var basePriority = GetBaseValuePriority(property);
         var priority = basePriority <= ValuePriority.Binding
                        || IsFedByTemplateBinding(property, basePriority)
                        || IsFedByStyleBinding(property, basePriority)
-                       || IsFedByTemplatesBinding(property, basePriority)
             ? basePriority
             : ValuePriority.Binding;
         SetValue(property, value, priority);
-    }
-
-    // A {Binding} a template's markup set stands at Template: raised to Binding, the value would mask it for good.
-    private bool IsFedByTemplatesBinding(AdamantiumProperty property, ValuePriority basePriority)
-    {
-        return basePriority == ValuePriority.Template &&
-               Data.BindingEngine.GetBindingExpression(this, property) is { Priority: ValuePriority.Template };
     }
 
     private bool IsFedByTemplateBinding(AdamantiumProperty property, ValuePriority basePriority)

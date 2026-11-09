@@ -322,6 +322,18 @@ public class AncestorBindingExpression : BindingExpressionBase
         }
     }
 
+    // With no ancestor to read from, what shows is the fallback.
+    private protected override void ShowAgain()
+    {
+        if (_source == null)
+        {
+            ApplyFallback();
+            return;
+        }
+
+        _path?.ResolveSubstitutesAgain();
+    }
+
     public override void UpdateSource()
     {
         if (_source != null)

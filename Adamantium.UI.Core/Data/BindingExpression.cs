@@ -698,6 +698,13 @@ public class BindingExpression : BindingExpressionBase
       EstablishConnection();
    }
 
+   // A trigger's value shown over a binding below it - a template's, at Template - is the trigger's, not an edit of the
+   // target: written back, it would change the source and stay in the binding's slot once the trigger let go. A
+   // trigger's own binding is the trigger's value.
+   private bool ShownByATrigger() =>
+      TriggerToken == null && Priority > ValuePriority.Trigger && Target is AdamantiumComponent component &&
+      component.GetValueSource(TargetProperty) == ValuePriority.Trigger;
+
    private void OnTargetPropertyChanged(object sender, AdamantiumPropertyChangedEventArgs e)
    {
       if (_writingTarget)
@@ -707,6 +714,11 @@ public class BindingExpression : BindingExpressionBase
       }
 
       if (Mode is not (BindingMode.TwoWay or BindingMode.OneWayToSource) || e.Property != TargetProperty) return;
+      if (ShownByATrigger())
+      {
+         return;
+      }
+
       if (IsSourceAheadOfTarget())
       {
          return;

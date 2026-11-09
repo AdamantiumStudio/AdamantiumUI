@@ -3,6 +3,7 @@ using System.Globalization;
 using Adamantium.UI.Core.Diagnostics;
 using Adamantium.UI.Core.Localization;
 using Adamantium.UI.Core.Resources;
+using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Core.Data;
 
@@ -84,9 +85,14 @@ public abstract class BindingExpressionBase
       }
    }
 
+   private Resources.ResourceReference _substituteFor;
+   private object _substitute;
+   private IUIComponent _substituteAnchor;
+
    /// <summary>A FallbackValue or TargetNullValue as the target gets it: a <c>{ResourceReference}</c> is looked up from
-   /// the target - its own and its ancestors' resources, then the theme's - when it is wanted, so a template's resources
-   /// answer it; anything else is itself. A resource nowhere to be found is no value.</summary>
+   /// the target - its own and its ancestors' resources, then the theme's - as a <c>{ResourceReference}</c> set on the
+   /// target is: once, again when the target enters the tree (markup binds an element before adding it to its parent)
+   /// and when its theme scope changes; anything else is itself. A resource nowhere to be found is null.</summary>
    internal object Substitute(object value)
    {
       if (value is not Resources.ResourceReference reference)
@@ -94,11 +100,47 @@ public abstract class BindingExpressionBase
          return value;
       }
 
+      if (ReferenceEquals(_substituteFor, reference))
+      {
+         return _substitute;
+      }
+
       var resources = UIAppContext.Current?.ResourceManager;
-      var found = Target is IFundamentalUIComponent element
+      _substituteFor = reference;
+      _substitute = Target is IFundamentalUIComponent element
          ? resources?.FindResource(element, reference.Name)
          : resources?.FindResource(reference.Name);
-      return found ?? AdamantiumProperty.UnsetValue;
+      if (_substituteAnchor == null && Target is IUIComponent { IsAttachedToVisualTree: false } visual)
+      {
+         _substituteAnchor = visual;
+         visual.AttachedToVisualTreeEvent += OnSubstituteAnchorAttached;
+      }
+
+      return _substitute;
+   }
+
+   /// <summary>Looks the resources this binding falls back on up again - its target's theme scope changed - and shows
+   /// what it finds; a binding that falls back on none is left alone.</summary>
+   internal void ResolveSubstitutesAgain()
+   {
+      if (_substituteFor == null)
+      {
+         return;
+      }
+
+      _substituteFor = null;
+      _substitute = null;
+      ShowAgain();
+   }
+
+   /// <summary>Shows the value again, its fallbacks looked up anew.</summary>
+   private protected virtual void ShowAgain() => UpdateTarget();
+
+   private void OnSubstituteAnchorAttached(object sender, VisualTreeAttachmentEventArgs e)
+   {
+      _substituteAnchor.AttachedToVisualTreeEvent -= OnSubstituteAnchorAttached;
+      _substituteAnchor = null;
+      ResolveSubstitutesAgain();
    }
 
    protected T WritingHere<T>(T inner) where T : BindingExpressionBase

@@ -90,6 +90,11 @@ public static class ResourceResolver
             own.ResolveResources();
         }
 
+        foreach (var binding in Data.BindingEngine.GetBindings(root))
+        {
+            binding.ResolveSubstitutesAgain();
+        }
+
         ReResolveParts(root);
         foreach (var child in root.VisualChildren) ReResolveSubtree(child);
     }

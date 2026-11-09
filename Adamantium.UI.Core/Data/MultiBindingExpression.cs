@@ -91,6 +91,8 @@ public class MultiBindingExpression : BindingExpressionBase
 
    internal override void OnLanguageChanged() => Refresh();
 
+   private protected override void ShowAgain() => Refresh();
+
    public override void CloseConnection()
    {
       Languages.Unfollow(this);

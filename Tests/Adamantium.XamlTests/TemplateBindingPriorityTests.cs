@@ -164,6 +164,124 @@ public class TemplateBindingPriorityTests
         });
     }
 
+    private sealed class Task : INotifyPropertyChanged
+    {
+        private bool done;
+        private bool locked;
+        private object size;
+
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        public bool Done
+        {
+            get => done;
+            set
+            {
+                done = value;
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Done)));
+            }
+        }
+
+        public bool Locked
+        {
+            get => locked;
+            set
+            {
+                locked = value;
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Locked)));
+            }
+        }
+
+        public object Size
+        {
+            get => size;
+            set
+            {
+                size = value;
+                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Size)));
+            }
+        }
+    }
+
+    private const string LockedBox =
+        "<DataTemplate><CheckBox x:Name=\"Box\" IsChecked=\"{Binding Done}\"/>" +
+        "<DataTemplate.Triggers><DataTrigger Binding=\"{Binding Locked}\" Value=\"True\">" +
+        "<Setter TargetName=\"Box\" Property=\"IsChecked\" Value=\"False\"/></DataTrigger></DataTemplate.Triggers>" +
+        "</DataTemplate>";
+
+    // A trigger's value over a two-way binding of the template is not written back into the source, and once the trigger
+    // lets go the source's value shows again.
+    [Test]
+    public void ATriggersValue_IsNotWrittenBackThroughTheTemplatesBinding()
+    {
+        var control = Load(LockedBox);
+        var task = new Task { Done = true };
+        control.Content = task;
+        var window = Shown(control);
+        var box = Find<CheckBox>(control);
+        task.Locked = true;
+        Update(window);
+        var locked = (box.IsChecked, task.Done);
+        task.Locked = false;
+        Update(window);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(locked, Is.EqualTo(((bool?)false, true)), "the trigger shows; the source keeps its value");
+            Assert.That(box.IsChecked, Is.True, "the source's value again");
+        });
+    }
+
+    // The control's own value written while a trigger shows over the binding goes into the binding's slot: once the
+    // trigger lets go, the source still reaches the property.
+    [Test]
+    public void ACurrentValueWrittenUnderATrigger_LeavesTheBindingAlive()
+    {
+        var control = Load(LockedBox);
+        var task = new Task { Done = true, Locked = true };
+        control.Content = task;
+        var window = Shown(control);
+        var box = Find<CheckBox>(control);
+        box.SetCurrentValue(Adamantium.UI.Controls.Primitives.ToggleButton.IsCheckedProperty, true);
+        task.Locked = false;
+        task.Done = false;
+        Update(window);
+
+        Assert.That(box.IsChecked, Is.False);
+    }
+
+    // The control's own value written before the binding has written anything leaves the binding alive too.
+    [Test]
+    public void ACurrentValueWrittenBeforeTheBindingWrote_LeavesItAlive()
+    {
+        var control = Load("<DataTemplate><Border Width=\"{Binding Size}\"/></DataTemplate>");
+        var task = new Task();
+        control.Content = task;
+        var window = Shown(control);
+        var border = Find<Adamantium.UI.Controls.Decorators.Border>(control);
+        border.SetCurrentValue(Adamantium.UI.Controls.Decorators.Border.WidthProperty, 50d);
+        task.Size = 20d;
+        Update(window);
+
+        Assert.That(border.Width, Is.EqualTo(20));
+    }
+
+    // A fallback resource found nowhere is null: the bound value going null takes the old one away.
+    [Test]
+    public void AFallbackResourceFoundNowhere_IsNull()
+    {
+        var control = Load(
+            "<DataTemplate><Rectangle Fill=\"{Binding Paint, TargetNullValue={ResourceReference NoSuchPaint}}\"/></DataTemplate>");
+        var item = new Painted { Paint = Adamantium.UI.Core.Media.Brushes.Green };
+        control.Content = item;
+        var window = Shown(control);
+        var shape = Find<Adamantium.UI.Controls.Shapes.Rectangle>(control);
+        item.Paint = null;
+        Update(window);
+
+        Assert.That(shape.Fill, Is.Not.SameAs(Adamantium.UI.Core.Media.Brushes.Green));
+    }
+
     private sealed class Painted : INotifyPropertyChanged
     {
         private Adamantium.UI.Core.Media.Brush paint;

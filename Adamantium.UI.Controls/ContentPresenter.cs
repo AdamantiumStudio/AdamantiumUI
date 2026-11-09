@@ -551,7 +551,7 @@ public class ContentPresenter : InputUIComponent
     }
 
     private FundamentalUIComponent ViewHolder =>
-        GetValueSource(ContentProperty) == ValuePriority.Template ? TemplatedParent as FundamentalUIComponent : null;
+        IsGivenByTemplate(ContentProperty) ? TemplatedParent as FundamentalUIComponent : null;
 
     private void Unhost(IUIComponent root)
     {
