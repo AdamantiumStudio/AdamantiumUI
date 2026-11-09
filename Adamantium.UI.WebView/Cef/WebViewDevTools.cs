@@ -1,6 +1,5 @@
 using System.Buffers;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 using Adamantium.UI.WebView.Cef.Interop;
 
 namespace Adamantium.UI.WebView.Cef;
@@ -23,7 +22,7 @@ internal sealed class WebViewDevTools
 
     private readonly Action<string> messageReceived;
     private readonly Dictionary<int, TaskCompletionSource<JsonElement>> pending = [];
-    private readonly Dictionary<int, JsonNode> forwarded = [];
+    private readonly Dictionary<int, byte[]> forwarded = [];
     private Action<string> frontEnd;
     private WebViewDevToolsObserver observer;
     private unsafe CefRegistration* registration;
@@ -127,15 +126,15 @@ internal sealed class WebViewDevTools
     /// our own calls, and answered under the front end's.</summary>
     public unsafe void Forward(CefBrowserHost* host, string json)
     {
-        if (frontEnd == null || JsonNode.Parse(json) is not JsonObject call || call["id"] is not { } theirs)
+        var call = System.Text.Encoding.UTF8.GetBytes(json);
+        if (frontEnd == null || !TryReadTop(call, out var id, out _) || id.Start < 0)
         {
             return;
         }
 
         var ours = ++nextId;
-        forwarded[ours] = theirs.DeepClone();
-        call["id"] = ours;
-        var bytes = System.Text.Encoding.UTF8.GetBytes(call.ToJsonString());
+        forwarded[ours] = call[id.Start..id.End];
+        var bytes = WithId(call, id, System.Text.Encoding.UTF8.GetBytes(ours.ToString(System.Globalization.CultureInfo.InvariantCulture)));
         fixed (byte* message = bytes)
         {
             host->send_dev_tools_message(host, message, (ulong)bytes.Length);
@@ -177,26 +176,43 @@ internal sealed class WebViewDevTools
         observer = null;
     }
 
+    // A message of the page's is read only as deep as its top - its id and method - however deep the rest goes: a
+    // real site's document tree nests far past a JSON reader's usual depth, and a message lost to it leaves the front
+    // end waiting for an answer forever. Only our own answers and the page's binding calls, both shallow, are read
+    // whole.
     internal void OnMessage(ReadOnlySpan<byte> message)
     {
-        using var document = JsonDocument.Parse(message.ToArray());
-        var root = document.RootElement;
-        var hasId = root.TryGetProperty("id", out var id) && id.ValueKind == JsonValueKind.Number;
-        if (hasId && forwarded.Remove(id.GetInt32(), out var theirs))
+        if (!TryReadTop(message, out var idRange, out var method))
         {
-            var answer = JsonNode.Parse(message);
-            answer!["id"] = theirs;
-            frontEnd?.Invoke(answer.ToJsonString());
             return;
         }
 
-        if (!hasId && frontEnd != null)
+        if (idRange.Start < 0)
         {
-            frontEnd(System.Text.Encoding.UTF8.GetString(message));
+            frontEnd?.Invoke(System.Text.Encoding.UTF8.GetString(message));
+            if (method == "Runtime.bindingCalled")
+            {
+                OnBindingCalled(message);
+            }
+
+            return;
         }
 
-        if (hasId && pending.Remove(id.GetInt32(), out var call))
+        if (!int.TryParse(message[idRange.Start..idRange.End], out var id))
         {
+            return;
+        }
+
+        if (forwarded.Remove(id, out var theirs))
+        {
+            frontEnd?.Invoke(System.Text.Encoding.UTF8.GetString(WithId(message, idRange, theirs)));
+            return;
+        }
+
+        if (pending.Remove(id, out var call))
+        {
+            using var document = JsonDocument.Parse(message.ToArray(), Whole);
+            var root = document.RootElement;
             if (root.TryGetProperty("result", out var result))
             {
                 call.TrySetResult(result.Clone());
@@ -208,16 +224,72 @@ internal sealed class WebViewDevTools
                     : "The page did not answer.";
                 call.TrySetException(new WebViewScriptException(error));
             }
-
-            return;
         }
+    }
 
-        if (root.TryGetProperty("method", out var method) && method.GetString() == "Runtime.bindingCalled" &&
-            root.TryGetProperty("params", out var parameters) &&
-            parameters.GetProperty("name").GetString() == Binding)
+    private static readonly JsonDocumentOptions Whole = new() { MaxDepth = 256 };
+
+    private void OnBindingCalled(ReadOnlySpan<byte> message)
+    {
+        using var document = JsonDocument.Parse(message.ToArray(), Whole);
+        if (document.RootElement.TryGetProperty("params", out var parameters) &&
+            parameters.TryGetProperty("name", out var name) && name.GetString() == Binding &&
+            parameters.TryGetProperty("payload", out var payload))
         {
-            messageReceived(parameters.GetProperty("payload").GetString());
+            messageReceived(payload.GetString());
         }
+    }
+
+    // The top of a protocol message: where its id's value stands (Start -1 for none) and its method, the rest skipped
+    // unread whatever its depth. False for what is not an object.
+    private static bool TryReadTop(ReadOnlySpan<byte> json, out (int Start, int End) id, out string method)
+    {
+        id = (-1, -1);
+        method = null;
+        var reader = new Utf8JsonReader(json, new JsonReaderOptions { MaxDepth = int.MaxValue });
+        try
+        {
+            if (!reader.Read() || reader.TokenType != JsonTokenType.StartObject)
+            {
+                return false;
+            }
+
+            while (reader.Read() && reader.TokenType == JsonTokenType.PropertyName)
+            {
+                var isId = reader.ValueTextEquals("id"u8);
+                var isMethod = !isId && reader.ValueTextEquals("method"u8);
+                reader.Read();
+                if (isId && reader.TokenType is JsonTokenType.Number or JsonTokenType.String)
+                {
+                    var start = (int)reader.TokenStartIndex;
+                    id = (start, (int)reader.BytesConsumed);
+                }
+                else if (isMethod && reader.TokenType == JsonTokenType.String)
+                {
+                    method = reader.GetString();
+                }
+                else
+                {
+                    reader.Skip();
+                }
+            }
+
+            return true;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
+
+    // The message with the value at id put in place of its own: the raw JSON of a number or a string.
+    private static byte[] WithId(ReadOnlySpan<byte> message, (int Start, int End) id, ReadOnlySpan<byte> value)
+    {
+        var bytes = new byte[message.Length - (id.End - id.Start) + value.Length];
+        message[..id.Start].CopyTo(bytes);
+        value.CopyTo(bytes.AsSpan(id.Start));
+        message[id.End..].CopyTo(bytes.AsSpan(id.Start + value.Length));
+        return bytes;
     }
 
     private static string Quoted(string text)
