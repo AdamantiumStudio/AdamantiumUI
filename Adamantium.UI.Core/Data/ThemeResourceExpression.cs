@@ -120,8 +120,8 @@ public class ThemeResourceExpression : BindingExpressionBase
     {
         lock (RoutersLock)
         {
-            // The router itself STAYS, with the theme's subscription: a theme lives as long as the application, and
-            // dropping the one subscription only to take it again on the next consumer buys nothing.
+            // The router itself STAYS, with the theme's subscription, as long as the theme does: dropping the one
+            // subscription only to take it again on the next consumer buys nothing.
             if (e._handle != null &&
                 Routers.TryGetValue(theme, out var router) &&
                 router.ByProperty.TryGetValue(property, out var consumers))

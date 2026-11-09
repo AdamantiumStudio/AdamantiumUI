@@ -18,10 +18,10 @@ public class ThemeManager : IThemeManager
     // Set when the application asked for ThemeVariant.System, so a later change of the OS appearance is followed
     // rather than being a one-off resolution that goes stale at sunset.
     private bool _followingSystem;
+    private ThemeManagerSystemFollower _systemFollower;
 
     public ThemeManager(IDependencyResolver dependencyResolver)
     {
-        _ = new ThemeManagerSystemFollower(this);
         this.dependencyResolver = dependencyResolver;
         _themes = new TrackingCollection<ITheme>();
         _themesMap = new Dictionary<string, ITheme>();
@@ -77,6 +77,7 @@ public class ThemeManager : IThemeManager
             // Remembered, so the application KEEPS following: the OS changes its mind at sunset, and an application
             // that resolved "system" once and forgot would be right only until then.
             _followingSystem = true;
+            _systemFollower ??= new ThemeManagerSystemFollower(this);
             if (!theme.ApplyVariant(resolved)) return false;
             PaletteVersion++;
             UIAppContext.Current?.ResourceManager?.NotifyResourcesChanged();
@@ -84,6 +85,8 @@ public class ThemeManager : IThemeManager
         }
 
         _followingSystem = false;
+        _systemFollower?.Stop();
+        _systemFollower = null;
         if (!theme.ApplyVariant(variant)) return false;
         PaletteVersion++;
 

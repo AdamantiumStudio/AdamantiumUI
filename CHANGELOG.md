@@ -181,9 +181,8 @@ All packages share one version.
 ### Fixed
 
 - A theme manager let go is collected with its theme and all its styles: it followed the OS appearance through a
-  static event that kept it, and the theme's resource routing kept the theme. A change of language writes each string
-  at once instead of queueing it: the queue held the strings of windows closed but not yet collected, and the next
-  change queued them again - a run that switched languages kept every view it made.
+  static event that kept it - now only while it follows the system, and weakly - and the theme's resource routing
+  kept the theme.
 - `Grid.ColumnSpacing` stands between every two columns: a grid of one row lost it after its first column, and kept
   it after its last.
 - A `{TemplateBinding}` in a `{Localize}` of a text set inside a template part's content (a `TextBlock` in a
