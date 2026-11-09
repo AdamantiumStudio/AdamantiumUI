@@ -7,6 +7,11 @@ All packages share one version.
 
 ### Added
 
+- `Image.QualityLevel`: the quality a picture is drawn at - 0 the full one, each next one a JPEG 2000 quality layer
+  less - beside `MipLevel`, which for a JPEG 2000 picture is its resolution; `Image.MipLevelCount` and
+  `Image.QualityLevelCount` report what the source has, to bound a choice. A level is decoded off the UI thread, once,
+  and kept by the `BitmapImage` (`GetLevel`, `FindLevel`, `QualityLevelsCount`). `.jp2` and `.j2k` files load as any
+  picture; the sandbox's Image tab shows two of them with a slider for each.
 - macOS theme: a small `Slider` (`Classes="Small"`), as a Mac's status bar has it - a 14 knob in the compact height,
   its shadow kept clear.
 - `WebView` (Adamantium.UI.WebView, Windows): a web page drawn by Chromium (CEF) off screen and shown by a
