@@ -97,6 +97,8 @@ All packages share one version.
 
 ### Changed
 
+- `StatusBar` is a little lower: its items take less room above and below.
+
 - `FontWeight`, `FontStretch` and `FontFeature` come from the engine's new `Adamantium.Core.Shared`, under
   `Adamantium.Core.Shared.Fonts`; markup and the AUML generator take that package, as an analyzer too, instead of the
   netstandard2.0 build of `Adamantium.Core`, which the engine no longer makes.
@@ -174,6 +176,8 @@ All packages share one version.
 
 ### Fixed
 
+- A `{TemplateBinding}` in a `{Localize}` of a text set inside a template part's content (a `TextBlock` in a
+  `StatusBarItem`) reads the templated control: the text was empty.
 - A `DispatcherTimer` restarted with a delay no longer ticks once at once: a callback of the old schedule caught between
   the restart's new generation and its new due time took itself for the new start's tick.
 - A tab strip of its own on a side, built on the theme's, shows its tabs after the strip moves there: the theme's

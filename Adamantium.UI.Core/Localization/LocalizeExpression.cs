@@ -13,6 +13,7 @@ public sealed class LocalizeExpression : BindingExpressionBase
     private BindingExpressionBase _table;
     private bool _connecting;
     private FundamentalUIComponent _waitingOn;
+    private FundamentalUIComponent _joining;
 
     public LocalizeExpression(IAdamantiumComponent target, AdamantiumProperty targetProperty, Localize localize)
     {
@@ -77,13 +78,36 @@ public sealed class LocalizeExpression : BindingExpressionBase
 
         // A part's bindings are made before the template is stamped onto its control, so the control may not be known
         // yet - and is the moment it is.
+        var holder = HolderOf(part);
         if (_waitingOn == null)
         {
-            _waitingOn = part;
-            part.TemplatedParentChanged += OnStamped;
+            _waitingOn = holder;
+            holder.TemplatedParentChanged += OnStamped;
         }
 
-        return part.TemplatedParent is { } control ? new Binding(template.Path) { Source = control } : null;
+        if (_joining == null && holder.TemplatedParent == null)
+        {
+            _joining = part;
+            part.AttachedToLogicalTree += OnStamped;
+        }
+
+        return holder.TemplatedParent is { } control ? new Binding(template.Path) { Source = control } : null;
+    }
+
+    private static FundamentalUIComponent HolderOf(FundamentalUIComponent part)
+    {
+        var outermost = part;
+        for (var at = part; at != null; at = at.LogicalParent as FundamentalUIComponent)
+        {
+            if (at.TemplatedParent != null)
+            {
+                return at;
+            }
+
+            outermost = at;
+        }
+
+        return outermost;
     }
 
     private void OnStamped(object sender, EventArgs e) => EstablishConnection();
@@ -95,6 +119,12 @@ public sealed class LocalizeExpression : BindingExpressionBase
         {
             _waitingOn.TemplatedParentChanged -= OnStamped;
             _waitingOn = null;
+        }
+
+        if (_joining != null)
+        {
+            _joining.AttachedToLogicalTree -= OnStamped;
+            _joining = null;
         }
 
         foreach (var argument in _arguments.Values.Append(_key).Append(_table).Where(a => a != null))
