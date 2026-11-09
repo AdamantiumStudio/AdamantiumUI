@@ -42,7 +42,12 @@ All packages share one version.
   `ZoomOutCommand`, `ResetZoomCommand`, `ZoomPercent`), and the DevTools. The main device made again - after the GPU
   lost it - leaves the pages alive: their frames come again on the new device. `Icon` is the page's icon at a tab's
   size, drawn at the screen's scale (null while a page loads and for none); `IsSecure` tells a page that came over a
-  connection with nothing wrong - encrypted, its certificate good, nothing of it loaded unencrypted. Popups come later.
+  connection with nothing wrong - encrypted, its certificate good, nothing of it loaded unencrypted. The page's menu
+  is the view's own (`PART_PageMenu`, a `ContextMenu` of the theme): Chromium's rows for the point pressed, and
+  "Inspect", which opens the DevTools on the element under it; an element's `title` shows as the view's tooltip. A
+  select's list, which Chromium draws apart from the page, shows in `PART_PopupSurface` over the page where the page
+  places it - moved into the view where it would stand past its edge - and takes presses as the list. Other popups
+  come later.
 - `TextBox.TextEffects` (and every `TextBoxBase`'s): ranges of the text drawn apart, as a `TextBlock`'s - recolored,
   moved, turned; only the drawing changes, the caret and selection stay where the layout put them.
 - `Win32ScanCodes` (Windows): a key's scan code as a HID usage and back (`TryFromHidUsage`).

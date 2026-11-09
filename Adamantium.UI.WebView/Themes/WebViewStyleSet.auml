@@ -29,8 +29,12 @@
                         <local:WebViewDevToolsLayout IsDevToolsOpen="{TemplateBinding IsDevToolsOpen}"
                                                      Dock="{TemplateBinding DevToolsDock}">
                             <Border x:Name="PART_PageHost" ClipToBounds="True">
-                                <RenderTargetPanel x:Name="PART_Surface" AcceptsTab="False"
-                                                   HorizontalAlignment="Left" VerticalAlignment="Top"/>
+                                <!-- The page, and over it the list it drops - a select's - where the page places it. -->
+                                <Canvas>
+                                    <RenderTargetPanel x:Name="PART_Surface" AcceptsTab="False"/>
+                                    <RenderTargetPanel x:Name="PART_PopupSurface" AcceptsTab="False"
+                                                       Visibility="Collapsed" IsHitTestVisible="False"/>
+                                </Canvas>
                             </Border>
                             <Thumb x:Name="PART_DevToolsSplitter" Classes="WebViewSplitter"
                                    AutomationProperties.AutomationId="WebDevToolsSplitter"/>
@@ -40,6 +44,13 @@
                                                        AutomationProperties.AutomationId="WebDevTools"/>
                         </local:WebViewDevToolsLayout>
                         <local:WebViewStatusBar x:Name="PART_StatusBar" Grid.Row="1"/>
+                        <!-- The page's menu, its rows the page's at each ask. -->
+                        <ContextMenu x:Name="PART_PageMenu" AutomationProperties.AutomationId="WebPageMenu"/>
+                        <!-- The page's tooltip, beside the pointer: the theme's card, taking neither hover nor press. -->
+                        <Popup x:Name="PART_PageTipPopup" Placement="Relative" KeepOpen="True" DismissOnEscape="False">
+                            <ToolTip x:Name="PART_PageTip" IsHitTestVisible="False"
+                                     AutomationProperties.AutomationId="WebPageTip"/>
+                        </Popup>
                     </Grid>
                     <ControlTemplate.Triggers>
                         <PropertyTrigger Property="ShowStatusBar" Value="false">
@@ -64,8 +75,11 @@
             <Setter.Value>
                 <ControlTemplate TargetType="local:WebViewDevToolsView">
                     <Border x:Name="PART_PageHost" ClipToBounds="True">
-                        <RenderTargetPanel x:Name="PART_Surface" AcceptsTab="False"
-                                           HorizontalAlignment="Left" VerticalAlignment="Top"/>
+                        <Canvas>
+                            <RenderTargetPanel x:Name="PART_Surface" AcceptsTab="False"/>
+                            <RenderTargetPanel x:Name="PART_PopupSurface" AcceptsTab="False"
+                                               Visibility="Collapsed" IsHitTestVisible="False"/>
+                        </Canvas>
                     </Border>
                 </ControlTemplate>
             </Setter.Value>

@@ -91,6 +91,32 @@ internal sealed class RecordingBrowserView : IWebViewBrowserView
 
     public void SecurityChanged(WebViewBrowser browser, bool isSecure) => IsSecure = isSecure;
 
+    /// <summary>The page's tooltip as last told.</summary>
+    public string Tooltip { get; private set; }
+
+    /// <summary>The menus the page asked for, in order.</summary>
+    public List<WebViewContextMenu> Menus { get; } = [];
+
+    public void TooltipChanged(WebViewBrowser browser, string text) => Tooltip = text;
+
+    /// <summary>The surfaces the page's dropped list was last given; null for none.</summary>
+    public SharedSurfaceDescriptor PopupShown { get; private set; }
+
+    /// <summary>Where the page's dropped list stands; null while none is dropped.</summary>
+    public Rect? Popup { get; private set; }
+
+    public void ShowPopup(WebViewBrowser browser, SharedSurfaceDescriptor descriptor) => PopupShown = descriptor;
+
+    public void PopupPlaced(WebViewBrowser browser, Rect bounds) => Popup = bounds;
+
+    public void PopupClosed(WebViewBrowser browser) => Popup = null;
+
+    public bool ContextMenuRequested(WebViewBrowser browser, WebViewContextMenu menu)
+    {
+        Menus.Add(menu);
+        return true;
+    }
+
     public void AddressChanged(WebViewBrowser browser, string address) => Address = address;
 
     public void TitleChanged(WebViewBrowser browser, string title) => Title = title;

@@ -112,6 +112,7 @@ public partial class WebView : Control, IWebViewBrowserView, ITextEntry
         base.OnApplyTemplate();
         StopBrowser();
         surface = GetTemplateChild("PART_Surface") as RenderTargetPanel;
+        TakePopupSurface(GetTemplateChild("PART_PopupSurface") as RenderTargetPanel);
         pageHost = GetTemplateChild("PART_PageHost") as InputUIComponent;
         if (pageHost != null)
         {
@@ -120,6 +121,8 @@ public partial class WebView : Control, IWebViewBrowserView, ITextEntry
         }
 
         TakeDevToolsView(GetTemplateChild("PART_DevTools") as WebViewDevToolsView);
+        TakePageMenu(GetTemplateChild("PART_PageMenu") as ContextMenu, GetTemplateChild("PART_PageTipPopup") as Popup,
+            GetTemplateChild("PART_PageTip") as ToolTip);
         if (GetTemplateChild("PART_StatusBar") is WebViewStatusBar statusBar)
         {
             statusBar.SetCurrentValue(WebViewStatusBar.ViewProperty, this);
@@ -131,6 +134,7 @@ public partial class WebView : Control, IWebViewBrowserView, ITextEntry
     public override void OnRemoveTemplate()
     {
         TakeDevToolsView(null);
+        TakePageMenu(null, null, null);
         StopBrowser();
         if (pageHost != null)
         {
@@ -140,6 +144,7 @@ public partial class WebView : Control, IWebViewBrowserView, ITextEntry
 
         pageHost = null;
         surface = null;
+        TakePopupSurface(null);
         base.OnRemoveTemplate();
     }
 
@@ -253,6 +258,13 @@ public partial class WebView : Control, IWebViewBrowserView, ITextEntry
         }
 
         ForgetInput();
+        DismissPageMenu();
+        HidePageTip();
+        if (pageMenu != null)
+        {
+            pageMenu.IsOpen = false;
+        }
+
         touching.Clear();
         draggingFromPage = false;
         browser.Dispose();
@@ -304,6 +316,8 @@ public partial class WebView : Control, IWebViewBrowserView, ITextEntry
         }
 
         surface?.ClearSource();
+        popupSurface?.ClearSource();
+        HidePopup();
         frameWidth = 0;
         frameHeight = 0;
         SizeSurfaceToFrame();

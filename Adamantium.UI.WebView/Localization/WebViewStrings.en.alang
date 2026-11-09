@@ -4,4 +4,5 @@
     <Phrase Key="ResetZoom" Text="Reset zoom"/>
     <Phrase Key="DevTools" Text="DevTools"/>
     <Phrase Key="StatusBar" Text="Page status"/>
+    <Phrase Key="Inspect" Text="Inspect"/>
 </Language>

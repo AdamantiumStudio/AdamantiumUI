@@ -4,7 +4,8 @@ using Adamantium.UI.WebView.Cef.Interop;
 namespace Adamantium.UI.WebView.Cef;
 
 /// <summary>A browser drawn off screen: CEF asks it the view's size and the screen's scale, and hands it each frame -
-/// BGRA pixels, or its own texture where the browser was made to share one - with the rectangles that changed.</summary>
+/// BGRA pixels, or its own texture where the browser was made to share one - with the rectangles that changed; the
+/// page's and, while one is dropped, a list's of its own.</summary>
 internal sealed unsafe class WebViewRenderHandler : CefObject
 {
     private readonly WebViewBrowser browser;
@@ -17,6 +18,8 @@ internal sealed unsafe class WebViewRenderHandler : CefObject
         handler->get_screen_info = &GetScreenInfo;
         handler->on_paint = &OnPaint;
         handler->on_accelerated_paint = &OnAcceleratedPaint;
+        handler->on_popup_show = &OnPopupShow;
+        handler->on_popup_size = &OnPopupSize;
         handler->on_virtual_keyboard_requested = &OnVirtualKeyboardRequested;
         handler->on_ime_composition_range_changed = &OnImeCompositionRangeChanged;
         handler->start_dragging = &StartDragging;
@@ -116,15 +119,57 @@ internal sealed unsafe class WebViewRenderHandler : CefObject
         return 1;
     }
 
+    // A list the page drops - a <select>'s - is drawn by Chromium apart from the page: shown or hidden, placed, then
+    // painted as a frame of its own.
+    [UnmanagedCallersOnly]
+    private static void OnPopupShow(CefRenderHandler* self, CefBrowser* cefBrowser, int show)
+    {
+        try
+        {
+            var owner = From<WebViewRenderHandler>(self).browser;
+            if (owner.Is(cefBrowser))
+            {
+                owner.OnPopupShow(show != 0);
+            }
+        }
+        catch (Exception exception)
+        {
+            CefCallbacks.Report(exception);
+        }
+
+        CefRefCounting.ReleaseCef(cefBrowser);
+    }
+
+    [UnmanagedCallersOnly]
+    private static void OnPopupSize(CefRenderHandler* self, CefBrowser* cefBrowser, CefRect* rect)
+    {
+        try
+        {
+            var owner = From<WebViewRenderHandler>(self).browser;
+            if (owner.Is(cefBrowser))
+            {
+                owner.OnPopupSize(*rect);
+            }
+        }
+        catch (Exception exception)
+        {
+            CefCallbacks.Report(exception);
+        }
+
+        CefRefCounting.ReleaseCef(cefBrowser);
+    }
+
     [UnmanagedCallersOnly]
     private static void OnPaint(CefRenderHandler* self, CefBrowser* cefBrowser, CefPaintElementType type, ulong dirtyCount,
         CefRect* dirtyRects, void* buffer, int width, int height)
     {
         try
         {
-            var owner = From<WebViewRenderHandler>(self).browser;            if (type == CefPaintElementType.View && owner.Is(cefBrowser))
+            var owner = From<WebViewRenderHandler>(self).browser;
+            if (owner.Is(cefBrowser))
             {
-                owner.OnPaint(new ReadOnlySpan<CefRect>(dirtyRects, (int)dirtyCount), (byte*)buffer, width, height);
+                owner.OnPaint(type, new ReadOnlySpan<CefRect>(dirtyRects, (int)dirtyCount), (byte*)buffer, width,
+                    height);
             }
         }
         catch (Exception exception)
@@ -142,11 +187,11 @@ internal sealed unsafe class WebViewRenderHandler : CefObject
         try
         {
             var owner = From<WebViewRenderHandler>(self).browser;
-            if (OperatingSystem.IsWindows() && type == CefPaintElementType.View && owner.Is(cefBrowser))
+            if (OperatingSystem.IsWindows() && owner.Is(cefBrowser))
             {
                 var paint = (Interop.Windows.CefAcceleratedPaintInfo*)info;
                 var visible = paint->extra.visible_rect;
-                owner.OnAcceleratedPaint(new ReadOnlySpan<CefRect>(dirtyRects, (int)dirtyCount),
+                owner.OnAcceleratedPaint(type, new ReadOnlySpan<CefRect>(dirtyRects, (int)dirtyCount),
                     (IntPtr)paint->shared_texture_handle.pointer, paint->format, paint->extra.coded_size.width,
                     paint->extra.coded_size.height, visible);
             }
