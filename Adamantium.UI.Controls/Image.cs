@@ -115,7 +115,17 @@ public class Image : InputUIComponent, IDesignTimeAnimatedMedia
    
    public static readonly AdamantiumProperty MipLevelProperty = AdamantiumProperty.Register(nameof(MipLevel),
       typeof(UInt32), typeof(Image),
-      new PropertyMetadata(0U, OnMipLevelChangedCallback));
+      new PropertyMetadata(0U, OnLevelChangedCallback));
+
+   public static readonly AdamantiumProperty QualityLevelProperty = AdamantiumProperty.Register(nameof(QualityLevel),
+      typeof(UInt32), typeof(Image),
+      new PropertyMetadata(0U, OnLevelChangedCallback));
+
+   public static readonly AdamantiumProperty MipLevelCountProperty = AdamantiumProperty.RegisterReadOnly(
+      nameof(MipLevelCount), typeof(UInt32), typeof(Image), new PropertyMetadata(0U));
+
+   public static readonly AdamantiumProperty QualityLevelCountProperty = AdamantiumProperty.RegisterReadOnly(
+      nameof(QualityLevelCount), typeof(UInt32), typeof(Image), new PropertyMetadata(0U));
 
    public static readonly AdamantiumProperty ContentPixelLimitProperty = AdamantiumProperty.Register(
       nameof(ContentPixelLimit), typeof(uint), typeof(Image),
@@ -136,7 +146,7 @@ public class Image : InputUIComponent, IDesignTimeAnimatedMedia
       if (a is Image img && (bool)e.NewValue) img.StartRuntimePlayback();
    }
 
-   private static void OnMipLevelChangedCallback(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
+   private static void OnLevelChangedCallback(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
    {
       if (a is Image img)
       {
@@ -245,6 +255,30 @@ public class Image : InputUIComponent, IDesignTimeAnimatedMedia
    {
       get => GetValue<UInt32>(MipLevelProperty);
       set => SetValue(MipLevelProperty, value);
+   }
+
+   /// <summary>The quality the picture is drawn at: 0 the full one, each next one coarser - a JPEG 2000's quality
+   /// layers. A level the source does not have draws the full picture.</summary>
+   public UInt32 QualityLevel
+   {
+      get => GetValue<UInt32>(QualityLevelProperty);
+      set => SetValue(QualityLevelProperty, value);
+   }
+
+   /// <summary>The mip levels of the current source, the full size counted; 0 until it has loaded or for a source
+   /// without them.</summary>
+   public UInt32 MipLevelCount
+   {
+      get => GetValue<UInt32>(MipLevelCountProperty);
+      private set => SetValue(MipLevelCountProperty, value);
+   }
+
+   /// <summary>The quality levels of the current source: 1 for a picture of one quality, 0 until it has loaded.
+   /// </summary>
+   public UInt32 QualityLevelCount
+   {
+      get => GetValue<UInt32>(QualityLevelCountProperty);
+      private set => SetValue(QualityLevelCountProperty, value);
    }
 
    /// <summary>The longest side, in pixels, of the picture this image draws; 0 for no limit. A larger still bitmap,
@@ -424,8 +458,23 @@ public class Image : InputUIComponent, IDesignTimeAnimatedMedia
 
    private async Task Process()
    {
+      if (Source is not BitmapImage)
+      {
+         _bitmap = null;
+         _frame = null;
+         MipLevelCount = 0;
+         QualityLevelCount = 0;
+      }
+
       if (Source is BitmapImage bitmap)
       {
+         if (!ReferenceEquals(_bitmap, bitmap))
+         {
+            _frame = null;
+            MipLevelCount = 0;
+            QualityLevelCount = 0;
+         }
+
          _bitmap = bitmap;
 
          // Wait for the URI's background load (BitmapImage loads off the UI thread) so decoding never freezes the UI.
@@ -435,6 +484,8 @@ public class Image : InputUIComponent, IDesignTimeAnimatedMedia
          // Frames decode on demand in GetFrameFromCache; decoding them all here ran synchronously on the loop thread and
          // froze the UI for a large GIF.
          FrameCount = _bitmap.FrameCount;
+         MipLevelCount = _bitmap.MipLevelsCount;
+         QualityLevelCount = _bitmap.QualityLevelsCount;
          _frameCursor = FrameRange().Start;
          _layerIndex = _frameCursor;
 
@@ -451,7 +502,28 @@ public class Image : InputUIComponent, IDesignTimeAnimatedMedia
          }
          else
          {
-            _frame = _bitmap.HasMipLevels && MipLevel > 0 ? _bitmap.GetMipLevel(MipLevel) : null;
+            var (askedMip, askedQuality) = (MipLevel, QualityLevel);
+            var mip = bitmap.HasMipLevels ? askedMip : 0;
+            var quality = askedQuality < bitmap.QualityLevelsCount ? askedQuality : 0;
+            BitmapFrame level = null;
+            if (mip > 0 || quality > 0)
+            {
+               level = bitmap.FindLevel(mip, quality);
+               if (level == null && !bitmap.DecodesLevelsOnDemand)
+               {
+                  level = bitmap.GetLevel(mip, quality);
+               }
+               else if (level == null)
+               {
+                  await Task.Yield();
+                  if (!ReferenceEquals(_bitmap, bitmap) || askedMip != MipLevel || askedQuality != QualityLevel)
+                     return;
+                  level = await Task.Run(() => bitmap.GetLevel(mip, quality));
+               }
+            }
+
+            if (!ReferenceEquals(_bitmap, bitmap) || askedMip != MipLevel || askedQuality != QualityLevel) return;
+            _frame = level;
          }
 
          // The async load can finish AFTER the Source-change layout/render already ran (measuring/painting nothing);

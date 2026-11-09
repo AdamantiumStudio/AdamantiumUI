@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using Adamantium.Core.Collections;
 using Adamantium.MVVM;
 using Adamantium.UI.Controls;
 using Adamantium.UI.Core;
@@ -22,6 +23,13 @@ public partial class ImageViewModel : TabPageViewModel
         new("GIF (infinity)", SandboxContentAssets.Textures.Infinity, 25),
         new("GIF (earth)", SandboxContentAssets.Textures.RotatingEarth2, 25),
         new("PNG (elephant)", SandboxContentAssets.Textures.Elephant, 40)
+    ];
+
+    /// <summary>The JPEG 2000 pictures, each shown at the resolution and quality its own sliders choose.</summary>
+    public TrackingCollection<Jpeg2000PictureViewModel> Jpeg2000Pictures { get; } =
+    [
+        new("JPEG 2000: 4 quality layers, 9-7", SandboxContentAssets.Textures.Photo_layers),
+        new("JPEG 2000: lossless 5-3, 3 layers", SandboxContentAssets.Textures.Picture_lossless),
     ];
 
     [Bindable] private double _opacity = 1;
