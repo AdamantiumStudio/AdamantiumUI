@@ -180,6 +180,9 @@ All packages share one version.
 
 ### Fixed
 
+- A theme manager let go is collected with its theme and all its styles: it followed the OS appearance through a
+  static event that kept it - now only while it follows the system, and weakly - and the theme's resource routing
+  kept the theme.
 - `Grid.ColumnSpacing` stands between every two columns: a grid of one row lost it after its first column, and kept
   it after its last.
 - A `{TemplateBinding}` in a `{Localize}` of a text set inside a template part's content (a `TextBlock` in a
