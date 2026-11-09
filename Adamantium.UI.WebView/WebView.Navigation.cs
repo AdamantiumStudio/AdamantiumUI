@@ -32,6 +32,9 @@ public partial class WebView
     public static readonly AdamantiumProperty ZoomFactorProperty = AdamantiumProperty.Register(nameof(ZoomFactor),
         typeof(double), typeof(WebView), new PropertyMetadata(1d, OnZoomFactorChanged));
 
+    public static readonly AdamantiumProperty ZoomPercentProperty = AdamantiumProperty.Register(nameof(ZoomPercent),
+        typeof(int), typeof(WebView), new PropertyMetadata(100));
+
     private const double MinZoom = 0.25;
     private const double MaxZoom = 5;
     private static readonly double[] ZoomSteps = [0.25, 0.33, 0.5, 0.67, 0.75, 0.8, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2, 2.5, 3, 4, 5];
@@ -108,12 +111,31 @@ public partial class WebView
     /// <summary>Stops loading the page; disabled when it is not loading.</summary>
     public WebViewCommand StopCommand { get; private set; }
 
+    /// <summary>Shows the page a step larger, as Ctrl with the wheel does.</summary>
+    public WebViewCommand ZoomInCommand { get; private set; }
+
+    /// <summary>Shows the page a step smaller, as Ctrl with the wheel does.</summary>
+    public WebViewCommand ZoomOutCommand { get; private set; }
+
+    /// <summary>Shows the page at its size.</summary>
+    public WebViewCommand ResetZoomCommand { get; private set; }
+
+    /// <summary>The zoom as a whole percentage, as the status bar shows it; set by the view.</summary>
+    public int ZoomPercent
+    {
+        get => GetValue<int>(ZoomPercentProperty);
+        set => SetValue(ZoomPercentProperty, value);
+    }
+
     private void MakeCommands()
     {
         GoBackCommand = new WebViewCommand(() => browser?.GoBack(), () => browser != null && CanGoBack);
         GoForwardCommand = new WebViewCommand(() => browser?.GoForward(), () => browser != null && CanGoForward);
         ReloadCommand = new WebViewCommand(() => browser?.Reload(), () => browser != null);
         StopCommand = new WebViewCommand(() => browser?.Stop(), () => browser != null && IsLoading);
+        ZoomInCommand = new WebViewCommand(() => StepZoom(true), () => ZoomFactor < MaxZoom - 1e-3);
+        ZoomOutCommand = new WebViewCommand(() => StepZoom(false), () => ZoomFactor > MinZoom + 1e-3);
+        ResetZoomCommand = new WebViewCommand(() => SetCurrentValue(ZoomFactorProperty, 1d), () => true);
     }
 
     private void RaiseCommandsChanged()
@@ -213,9 +235,18 @@ public partial class WebView
     private static void OnZoomFactorChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)
     {
         var view = (WebView)component;
-        if (!view.followingZoom && e.NewValue is double factor)
+        if (e.NewValue is not double factor)
         {
-            view.browser?.SetZoom(Math.Clamp(factor, MinZoom, MaxZoom));
+            return;
+        }
+
+        var shown = Math.Clamp(factor, MinZoom, MaxZoom);
+        view.SetCurrentValue(ZoomPercentProperty, (int)Math.Round(shown * 100));
+        view.ZoomInCommand?.RaiseCanExecuteChanged();
+        view.ZoomOutCommand?.RaiseCanExecuteChanged();
+        if (!view.followingZoom)
+        {
+            view.browser?.SetZoom(shown);
         }
     }
 

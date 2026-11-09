@@ -23,7 +23,7 @@ internal sealed unsafe class WebViewBrowser : IDisposable
     private readonly WebViewLoadHandler loadHandler;
     private readonly WebViewRequestHandler requestHandler;
     private readonly WebViewDevTools devTools;
-    private readonly WebViewFrameProducer producer;
+    private WebViewFrameProducer producer;
     private CefBrowser* browser;
     private string address;
     private string wanted;
@@ -49,11 +49,7 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         this.engine = engine;
         this.view = view;
         FramePath = framePath;
-        producer = new WebViewFrameProducer(device, descriptor => view.Show(this, descriptor), () =>
-        {
-            framesCounted++;
-            view.FrameWritten(this);
-        });
+        producer = MakeProducer(device);
         renderHandler = new WebViewRenderHandler(this);
         lifeSpanHandler = new WebViewLifeSpanHandler(this);
         loadHandler = new WebViewLoadHandler(this);
@@ -232,15 +228,47 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         CefRefCounting.ReleaseCef(host);
     }
 
-    /// <summary>Asks the page again for a frame no surface was free for, once the panel has given one back.</summary>
-    public void RepaintIfOwed()
+    /// <summary>The device the frames were written on is lost: the panel lets go of them and they go. The page lives on
+    /// and paints into nothing until <see cref="TakeDevice"/>.</summary>
+    public void LetGoOfDevice()
     {
-        if (!repaintOwed || closing || !producer.HasFreeSurface)
+        if (producer == null)
         {
             return;
         }
 
-        repaintOwed = false;        var host = LiveHost();
+        view.LetGo(this);
+        producer.Dispose();
+        producer = null;
+    }
+
+    /// <summary>Writes the frames on <paramref name="device"/> from now on - the one made in place of a lost one - and
+    /// asks the page for a whole frame again.</summary>
+    public void TakeDevice(IGraphicsDevice device)
+    {
+        LetGoOfDevice();
+        producer = MakeProducer(device);
+        repaintOwed = true;
+        RepaintIfOwed();
+    }
+
+    private WebViewFrameProducer MakeProducer(IGraphicsDevice device) =>
+        new(device, descriptor => view.Show(this, descriptor), () =>
+        {
+            framesCounted++;
+            view.FrameWritten(this);
+        });
+
+    /// <summary>Asks the page again for a frame no surface was free for, once the panel has given one back.</summary>
+    public void RepaintIfOwed()
+    {
+        if (!repaintOwed || closing || producer == null || !producer.HasFreeSurface)
+        {
+            return;
+        }
+
+        repaintOwed = false;
+        var host = LiveHost();
         if (host == null)
         {
             return;
@@ -751,7 +779,8 @@ internal sealed unsafe class WebViewBrowser : IDisposable
             return;
         }
 
-        if (!producer.Write(dirty, pixels, width, height))
+        // No device to write on - it was lost and the new one is not there yet: the frame is asked for again then.
+        if (producer == null || !producer.Write(dirty, pixels, width, height))
         {
             repaintOwed = true;
         }
@@ -766,6 +795,12 @@ internal sealed unsafe class WebViewBrowser : IDisposable
     {
         if (closing || refused)
         {
+            return;
+        }
+
+        if (producer == null)
+        {
+            repaintOwed = true;
             return;
         }
 
@@ -826,7 +861,8 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         devToolsSocket = null;
         closing = true;
         view.LetGo(this);
-        producer.Dispose();
+        producer?.Dispose();
+        producer = null;
         if (browser != null)
         {
             Close();

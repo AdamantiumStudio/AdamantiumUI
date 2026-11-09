@@ -389,6 +389,71 @@ public class WebViewFrameTests
         });
     }
 
+    // The main device made again - as after the GPU lost it: the page lives on and its frames come again, red as before,
+    // on surfaces of the new device.
+    [TestCase(WebViewFramePath.PixelBuffer)]
+    [TestCase(WebViewFramePath.SharedTexture)]
+    public void ThePage_OutlivesTheMainDeviceMadeAgain(WebViewFramePath path)
+    {
+        byte[] before = null, after = null;
+        SharedSurfaceDescriptor shownBefore = null, shownAfter = null;
+        var titleKept = false;
+        var pathTaken = path;
+        loop.Run(() =>
+        {
+            var view = new RecordingBrowserView();
+            var browser = engine.CreateBrowser(path == WebViewFramePath.SharedTexture, view);
+            pathTaken = browser.FramePath;
+            if (pathTaken != path)
+            {
+                browser.Dispose();
+                Pump(() => false, TimeSpan.FromMilliseconds(300));
+                return;
+            }
+
+            var consumer = new FrameConsumer(devices);
+            try
+            {
+                browser.Create("data:text/html,<title>Kept</title><html style='background:%23ff0000'></html>", Width,
+                    Height, 1, IntPtr.Zero);
+                Pump(() => view.Frames > 0 && view.Title == "Kept", TimeSpan.FromSeconds(30), view, consumer);
+                consumer.Take(view.Shown);
+                before = consumer.Center();
+                shownBefore = view.Shown;
+
+                consumer.Dispose();
+                devices.ChangeOrCreateMainDevice("WebViewFrameTests", true);
+                consumer = new FrameConsumer(devices);
+                var frames = view.Frames;
+                Pump(() => view.Frames > frames && view.Shown != null, TimeSpan.FromSeconds(10), view, consumer);
+                Pump(() => false, TimeSpan.FromMilliseconds(300), view, consumer);
+                consumer.Take(view.Shown);
+                after = consumer.Center();
+                shownAfter = view.Shown;
+                titleKept = view.Title == "Kept";
+            }
+            finally
+            {
+                browser.Dispose();
+                Pump(() => false, TimeSpan.FromMilliseconds(300));
+                consumer.Dispose();
+            }
+        });
+
+        if (pathTaken != path)
+        {
+            Assert.Ignore($"This device takes the {pathTaken} path, not the {path} one.");
+        }
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(before, Is.EqualTo(new byte[] { 0, 0, 255, 255 }), "red before, as BGRA");
+            Assert.That(shownAfter, Is.Not.Null.And.Not.SameAs(shownBefore), "new surfaces on the new device");
+            Assert.That(after, Is.EqualTo(new byte[] { 0, 0, 255, 255 }), "red again after");
+            Assert.That(titleKept, Is.True, "the same page");
+        });
+    }
+
     // An address asked for before the browser is made is gone to once it is.
     [Test]
     public void AnAddressAskedForBeforeTheBrowserIsMade_IsGoneTo()

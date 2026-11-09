@@ -1,0 +1,7 @@
+<Language>
+    <Phrase Key="ZoomIn" Text="Zoom in"/>
+    <Phrase Key="ZoomOut" Text="Zoom out"/>
+    <Phrase Key="ResetZoom" Text="Reset zoom"/>
+    <Phrase Key="DevTools" Text="DevTools"/>
+    <Phrase Key="StatusBar" Text="Page status"/>
+</Language>

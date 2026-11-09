@@ -165,6 +165,7 @@ public class AutomationAuditTests
         [typeof(WebView)] = (T.Pane, "OPEN: a Document holding the page's own tree comes with the page's accessibility"),
         [typeof(WebViewDevToolsView)] = (T.Pane, "OPEN: the DevTools' own tree comes with the page's accessibility"),
         [typeof(WebViewDevToolsLayout)] = (null, "lays out a page and its DevTools, which answer for themselves"),
+        [typeof(WebViewStatusBar)] = (null, "shows a status bar of the theme's, which answers for itself and its fields"),
         [typeof(RenderTargetPanel)] = (null, "a surface the engine draws its scene into; the scene is not UI"),
         [typeof(MenuItem)] = (T.MenuItem, null),
         [typeof(RepeatButton)] = (T.Button, null),

@@ -120,6 +120,11 @@ public partial class WebView : Control, IWebViewBrowserView, ITextEntry
         }
 
         TakeDevToolsView(GetTemplateChild("PART_DevTools") as WebViewDevToolsView);
+        if (GetTemplateChild("PART_StatusBar") is WebViewStatusBar statusBar)
+        {
+            statusBar.SetCurrentValue(WebViewStatusBar.ViewProperty, this);
+        }
+
         StartBrowser();
     }
 

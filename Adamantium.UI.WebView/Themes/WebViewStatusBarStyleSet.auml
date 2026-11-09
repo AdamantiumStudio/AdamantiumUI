@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<StyleSet xmlns="http://adamantium/ui"
+          xmlns:x="http://adamantium/ui/xaml/extensions"
+          xmlns:local="clr-namespace:Adamantium.UI.WebView">
+
+    <!-- The theme's status bar, telling of its view: the link under the pointer from the left; from the right the
+         DevTools, then the zoom - a step down, the percentage (pressed, back to 100%), a step up. Its fields read the
+         view itself, its data context. -->
+    <Style Selector="WebViewStatusBar">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="local:WebViewStatusBar">
+                    <StatusBar DataContext="{TemplateBinding View}"
+                               AutomationProperties.AutomationId="WebStatusBar"
+                               AutomationProperties.Name="{Localize WebViewStrings.StatusBar}">
+                        <StatusBarItem Content="{Binding StatusText}"
+                                       AutomationProperties.AutomationId="WebStatus"/>
+                        <ToggleButton DockPanel.Dock="Right" Classes="WebViewStatusToggle"
+                                      Content="{Localize WebViewStrings.DevTools}"
+                                      IsChecked="{Binding IsDevToolsOpen, Mode=TwoWay}"
+                                      AutomationProperties.AutomationId="WebStatusDevTools"/>
+                        <Separator DockPanel.Dock="Right" Orientation="Vertical"/>
+                        <StatusBarItem DockPanel.Dock="Right" Content="+"
+                                       Command="{Binding ZoomInCommand}"
+                                       ToolTipService.ToolTip="{Localize WebViewStrings.ZoomIn}"
+                                       AutomationProperties.AutomationId="WebZoomIn"
+                                       AutomationProperties.Name="{Localize WebViewStrings.ZoomIn}"/>
+                        <StatusBarItem DockPanel.Dock="Right"
+                                       Command="{Binding ResetZoomCommand}"
+                                       ToolTipService.ToolTip="{Localize WebViewStrings.ResetZoom}"
+                                       AutomationProperties.AutomationId="WebZoomReset"
+                                       AutomationProperties.Name="{Localize WebViewStrings.ResetZoom}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="{Binding ZoomPercent}"/>
+                                <TextBlock Text="%"/>
+                            </StackPanel>
+                        </StatusBarItem>
+                        <StatusBarItem DockPanel.Dock="Right" Content="−"
+                                       Command="{Binding ZoomOutCommand}"
+                                       ToolTipService.ToolTip="{Localize WebViewStrings.ZoomOut}"
+                                       AutomationProperties.AutomationId="WebZoomOut"
+                                       AutomationProperties.Name="{Localize WebViewStrings.ZoomOut}"/>
+                    </StatusBar>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- The DevTools switch: as flat as the fields beside it, lit while the DevTools are shown. -->
+    <Style Selector="ToggleButton.WebViewStatusToggle">
+        <Setter Property="Focusable" Value="False"/>
+        <Setter Property="Padding" Value="8 0"/>
+        <Setter Property="MinHeight" Value="0"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Background" Value="Transparent"/>
+    </Style>
+
+</StyleSet>

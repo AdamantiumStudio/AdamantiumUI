@@ -23,13 +23,17 @@ All packages share one version.
   focus is in a field, keys that type stay with it (`WebView` is an `ITextEntry`), and Ctrl+Tab leaves it. The page as a
   browser shows it: `Source` both ways, `Title`, `IsLoading`, `LoadProgress`, `CanGoBack`/`CanGoForward`,
   `StatusText` (the link under the pointer), `LoadError` (until the page goes elsewhere), `ZoomFactor` (Ctrl with the
-  wheel steps it) and the commands to go back, forward, reload and stop. `WebViewBridge`, bound to `Bridge`, gives a
+  wheel steps it) and the commands to go back, forward, reload, stop and zoom in and out a step. `WebViewBridge`, bound to `Bridge`, gives a
   view model `LoadHtml`, `ExecuteScriptAsync`, `PostMessage` and the events `NavigationStarting` (cancelable),
   `NavigationCompleted` and `MessageReceived`; a page posts with `window.adamantium.postMessage` and listens with
   `window.adamantium.addEventListener('message', ...)`. The page's DevTools open inside the view (`IsDevToolsOpen`), to
   the right of the page or under it (`DevToolsDock`), with a splitter the mouse drags: Chromium's desktop DevTools
   front end drawn off screen like the page, talking to it through a WebSocket on this machine only, at an address with
-  a key of its own, one front end at a time - CEF's own DevTools come only in a window. Popups come later.
+  a key of its own, one front end at a time - CEF's own DevTools come only in a window. Under the page its status bar
+  (`WebViewStatusBar`, a control of its own, which an application can place elsewhere given its `View`; hidden with
+  `ShowStatusBar`): the link under the pointer, the zoom a step down, back to 100% and a step up (`ZoomInCommand`,
+  `ZoomOutCommand`, `ResetZoomCommand`, `ZoomPercent`), and the DevTools. The main device made again - after the GPU
+  lost it - leaves the pages alive: their frames come again on the new device. Popups come later.
 - `Win32ScanCodes` (Windows): a key's scan code as a HID usage and back (`TryFromHidUsage`).
 - `IUIApplication.UIThreadExiting`: raised once as the application shuts down, on the UI thread after its last frame
   and before the windows' services and the graphics device go - for what was started on the UI thread and must end on
