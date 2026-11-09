@@ -187,6 +187,13 @@ All packages share one version.
   kept the theme.
 - `Grid.ColumnSpacing` stands between every two columns: a grid of one row lost it after its first column, and kept
   it after its last.
+- What a template's markup binds stands at the template's level, as its plain values do: the template's triggers -
+  a `DataTrigger` of a `DataTemplate` too - outrank it, where a `{Binding}` used to outrank every trigger; a control
+  writing its own current value into such a property leaves the binding alive.
+- `{Binding}` takes `FallbackValue` and `TargetNullValue` in markup: they were dropped with only a warning (now an
+  unknown binding property is an error). A `{ResourceReference}` given there - and in `{Ancestor}`'s and `{Self}`'s - is
+  looked up from the bound element when wanted, its own and its ancestors' resources first, rather than asked of the
+  theme alone as the markup was built, which a template's own resources never answered.
 - A `{TemplateBinding}` in a `{Localize}` of a text set inside a template part's content (a `TextBlock` in a
   `StatusBarItem`) reads the templated control: the text was empty.
 - A `DispatcherTimer` restarted with a delay no longer ticks once at once: a callback of the old schedule caught between

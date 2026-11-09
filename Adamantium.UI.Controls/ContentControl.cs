@@ -44,7 +44,7 @@ public class ContentControl : Control, IContentControl
       if (a is ContentControl o)
       {
          if (e.OldValue is UIComponent { ContentOwner: var owner } old && ReferenceEquals(owner, o)) old.ContentOwner = null;
-         if (e.NewValue is UIComponent content && o.GetValueSource(ContentProperty) != ValuePriority.Template)
+         if (e.NewValue is UIComponent content && !o.IsGivenByTemplate(ContentProperty))
             content.ContentOwner = o;
          o.ChangeContent(e.OldValue, o.HoldsContent ? e.NewValue : null);
          o.OnContentChangedInternal(e.OldValue, e.NewValue);
