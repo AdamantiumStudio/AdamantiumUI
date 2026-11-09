@@ -1,0 +1,7 @@
+<Language>
+    <Phrase Key="ZoomIn" Text="Увеличить"/>
+    <Phrase Key="ZoomOut" Text="Уменьшить"/>
+    <Phrase Key="ResetZoom" Text="Сбросить масштаб"/>
+    <Phrase Key="DevTools" Text="DevTools"/>
+    <Phrase Key="StatusBar" Text="Состояние страницы"/>
+</Language>

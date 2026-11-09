@@ -41,6 +41,7 @@
 
     <ItemGroup>
         <AdditionalFiles Include="$(ProjectDir)Themes\**\*.auml" />
+        <AdditionalFiles Include="$(ProjectDir)Localization\**\*.alang" />
         <CompilerVisibleProperty Include="RootNamespace" />
         <CompilerVisibleProperty Include="NeutralLanguage" />
         <CompilerVisibleProperty Include="OutputType" />

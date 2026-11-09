@@ -10,6 +10,15 @@
   <Select Target="id=GalleryTabs/id=Web" />
   <Wait Target="id=WebPage" />
   <WaitIdle />
+  <!-- The status bar under the page: the zoom a step up and back to 100%, the DevTools shown and put away. -->
+  <Invoke Target="id=WebZoomIn" />
+  <Expect Target="id=WebPage" ZoomPercent="110" />
+  <Invoke Target="id=WebZoomReset" />
+  <Expect Target="id=WebPage" ZoomPercent="100" />
+  <Toggle Target="id=WebStatusDevTools" />
+  <Wait Target="id=WebDevTools" />
+  <Toggle Target="id=WebStatusDevTools" />
+  <WaitIdle />
   <!-- The DevTools open beside the page, under it, and close again - with no error left behind. -->
   <Toggle Target="id=WebDevToolsOpen" />
   <Wait Target="id=WebDevTools" />

@@ -47,6 +47,77 @@ public sealed unsafe class WebViewEngine : IDisposable
         {
             application.UIThreadExiting += OnUIThreadExiting;
         }
+
+        devices.DeviceChangeBegin += OnDeviceChanging;
+        devices.DeviceChangeEnd += OnDeviceChanged;
+    }
+
+    // The main device is made again - lost, most often: the frames and the device they were written on go while the
+    // old main device is still there to let go of them. The pages live on, CEF knows nothing of it.
+    private void OnDeviceChanging(object sender, EventArgs e)
+    {
+        foreach (var browser in browsers)
+        {
+            try
+            {
+                browser.LetGoOfDevice();
+            }
+            catch (Exception exception)
+            {
+                Serilog.Log.Logger.Warning(exception, "A WebView's frames did not go cleanly with the lost device");
+            }
+        }
+
+        if (device == null)
+        {
+            return;
+        }
+
+        try
+        {
+            device.Dispose();
+        }
+        catch (Exception exception)
+        {
+            Serilog.Log.Logger.Warning(exception, "The WebView's device did not go cleanly with the lost main device");
+        }
+
+        device = null;
+    }
+
+    // A device on the new main device, the pages' frames written on it from now on, each page asked for a whole one; the
+    // new device may take Chromium's textures where the old refused them. Nothing thrown here may stop the rest of the
+    // application making itself again: a device not made now is made by the next browser.
+    private void OnDeviceChanged(object sender, EventArgs e)
+    {
+        sharedTextureRefused = false;
+        if (shutDown || browsers.Count == 0 || devices.MainGraphicsDevice is not { IsLost: false } main)
+        {
+            return;
+        }
+
+        try
+        {
+            device = main.CreateRenderDevice();
+        }
+        catch (Exception exception)
+        {
+            Serilog.Log.Logger.Warning(exception, "The WebView's device could not be made on the new main device");
+            device = null;
+            return;
+        }
+
+        foreach (var browser in browsers)
+        {
+            try
+            {
+                browser.TakeDevice(device);
+            }
+            catch (Exception exception)
+            {
+                Serilog.Log.Logger.Warning(exception, "A WebView did not take the new device");
+            }
+        }
     }
 
     /// <summary>Whether CEF is beside the application, where native/fetch-cef stages it, and has not refused to start.
@@ -116,6 +187,8 @@ public sealed unsafe class WebViewEngine : IDisposable
         }
 
         shutDown = true;
+        devices.DeviceChangeBegin -= OnDeviceChanging;
+        devices.DeviceChangeEnd -= OnDeviceChanged;
         if (application != null)
         {
             application.UIThreadExiting -= OnUIThreadExiting;

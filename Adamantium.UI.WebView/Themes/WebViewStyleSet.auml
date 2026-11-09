@@ -25,20 +25,26 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="local:WebView">
-                    <local:WebViewDevToolsLayout IsDevToolsOpen="{TemplateBinding IsDevToolsOpen}"
-                                                 Dock="{TemplateBinding DevToolsDock}">
-                        <Border x:Name="PART_PageHost" ClipToBounds="True">
-                            <RenderTargetPanel x:Name="PART_Surface" AcceptsTab="False"
-                                               HorizontalAlignment="Left" VerticalAlignment="Top"/>
-                        </Border>
-                        <Thumb x:Name="PART_DevToolsSplitter" Classes="WebViewSplitter"
-                               AutomationProperties.AutomationId="WebDevToolsSplitter"/>
-                        <local:WebViewDevToolsView x:Name="PART_DevTools"
-                                               Engine="{TemplateBinding Engine}"
-                                               AllowSharedTexture="{TemplateBinding AllowSharedTexture}"
-                                               AutomationProperties.AutomationId="WebDevTools"/>
-                    </local:WebViewDevToolsLayout>
+                    <Grid RowDefinitions="*,Auto">
+                        <local:WebViewDevToolsLayout IsDevToolsOpen="{TemplateBinding IsDevToolsOpen}"
+                                                     Dock="{TemplateBinding DevToolsDock}">
+                            <Border x:Name="PART_PageHost" ClipToBounds="True">
+                                <RenderTargetPanel x:Name="PART_Surface" AcceptsTab="False"
+                                                   HorizontalAlignment="Left" VerticalAlignment="Top"/>
+                            </Border>
+                            <Thumb x:Name="PART_DevToolsSplitter" Classes="WebViewSplitter"
+                                   AutomationProperties.AutomationId="WebDevToolsSplitter"/>
+                            <local:WebViewDevToolsView x:Name="PART_DevTools"
+                                                       Engine="{TemplateBinding Engine}"
+                                                       AllowSharedTexture="{TemplateBinding AllowSharedTexture}"
+                                                       AutomationProperties.AutomationId="WebDevTools"/>
+                        </local:WebViewDevToolsLayout>
+                        <local:WebViewStatusBar x:Name="PART_StatusBar" Grid.Row="1"/>
+                    </Grid>
                     <ControlTemplate.Triggers>
+                        <PropertyTrigger Property="ShowStatusBar" Value="false">
+                            <Setter TargetName="PART_StatusBar" Property="Visibility" Value="Collapsed"/>
+                        </PropertyTrigger>
                         <PropertyTrigger Property="DevToolsDock" Value="Right">
                             <Setter TargetName="PART_DevToolsSplitter" Property="Cursor" Value="SizeWE"/>
                         </PropertyTrigger>

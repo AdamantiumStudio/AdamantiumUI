@@ -30,7 +30,7 @@ public partial class WebView
     protected override void OnPointerMoved(PointerEventArgs e)
     {
         base.OnPointerMoved(e);
-        if (browser == null || draggingFromPage)
+        if (browser == null || draggingFromPage || !IsPagesPointer(e))
         {
             return;
         }
@@ -59,6 +59,23 @@ public partial class WebView
         }
     }
 
+    // Whether the pointer is over the page's own part, not the status bar or the DevTools beside it.
+    private bool IsOverPage(PointerEventArgs e)
+    {
+        if (pageHost == null)
+        {
+            return true;
+        }
+
+        var at = e.GetPosition(pageHost);
+        return at.X >= 0 && at.Y >= 0 && at.X < PageWidth && at.Y < PageHeight;
+    }
+
+    // Whether the pointer of the event is the page's: a finger it took, or the mouse over it or held by it - not one
+    // over the status bar beside it.
+    private bool IsPagesPointer(PointerEventArgs e) =>
+        e.Pointer.Type == PointerType.Mouse ? IsPointerCaptured || IsOverPage(e) : touching.Contains(e.Pointer.Id);
+
     // The pointer left the page's part for the splitter or the DevTools, still inside the view: the page hears it go.
     private void OnPageExited(object sender, PointerEventArgs e)
     {
@@ -72,7 +89,7 @@ public partial class WebView
     protected override void OnPointerPressed(PointerPressedEventArgs e)
     {
         base.OnPointerPressed(e);
-        if (browser == null)
+        if (browser == null || !IsOverPage(e))
         {
             return;
         }
@@ -119,7 +136,9 @@ public partial class WebView
             return;
         }
 
-        if (draggingFromPage || CefInputMap.Button(e.ChangedButton) is not { } button)
+        // A button let go that the page never had pressed - pressed on the status bar - is not the page's: a right one
+        // would open its menu.
+        if (draggingFromPage || !IsPointerCaptured || CefInputMap.Button(e.ChangedButton) is not { } button)
         {
             return;
         }
@@ -414,7 +433,7 @@ public partial class WebView
 
     private void OnWheel(object sender, PointerWheelEventArgs e)
     {
-        if (browser == null)
+        if (browser == null || !IsOverPage(e))
         {
             return;
         }
