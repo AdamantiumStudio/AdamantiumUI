@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Adamantium.Graphics.Core;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Input;
+using Adamantium.UI.Core.Media.Imaging;
 using Adamantium.UI.WebView.Cef;
 
 namespace Adamantium.UI.WebView.Tests;
@@ -79,6 +80,16 @@ internal sealed class RecordingBrowserView : IWebViewBrowserView
     public void CompositionBoundsChanged(WebViewBrowser browser, Rect bounds)
     {
     }
+
+    /// <summary>The page's icon as last told; null for none.</summary>
+    public ImageSource Icon { get; private set; }
+
+    /// <summary>Whether the page was last told secure.</summary>
+    public bool IsSecure { get; private set; }
+
+    public void IconChanged(WebViewBrowser browser, ImageSource icon) => Icon = icon;
+
+    public void SecurityChanged(WebViewBrowser browser, bool isSecure) => IsSecure = isSecure;
 
     public void AddressChanged(WebViewBrowser browser, string address) => Address = address;
 

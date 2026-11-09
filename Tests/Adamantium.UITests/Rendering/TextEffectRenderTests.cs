@@ -12,6 +12,7 @@ using Adamantium.UI.Controls.Text;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Graphics;
 using Adamantium.UI.Core.Media;
+using Adamantium.UI.Core.Templates;
 using Adamantium.UI.Rendering;
 using Adamantium.Vulkan.Core;
 using NUnit.Framework;
@@ -182,6 +183,100 @@ public class TextEffectRenderTests
             Assert.That(plain.Red, Is.Zero);
             Assert.That(red.Red, Is.GreaterThan(red.Count / 2));
         });
+    }
+
+    // A text box draws its effects as a block does: the range in its own color, the rest in the box's.
+    [Test]
+    public void ATextBoxsEffect_RecolorsItsRange()
+    {
+        _canvas.Children.Remove(_block);
+        var presenter = new TextPresenter();
+        var box = new TextBox
+        {
+            Text = "abcdef",
+            Foreground = Brushes.White,
+            FontSize = 24,
+            Template = new ControlTemplate(() =>
+            {
+                var result = new TemplateResult { RootComponent = presenter };
+                result.RegisterName("PART_TextPresenter", presenter);
+                return result;
+            }),
+        };
+        Canvas.SetLeft(box, 20);
+        Canvas.SetTop(box, 30);
+        _canvas.Children.Add(box);
+        var plain = Settled();
+        box.TextEffects.Add(new TextEffect
+        {
+            PositionStart = 0,
+            PositionCount = 2,
+            Foreground = new SolidColorBrush(Colors.Red),
+        });
+        var front = Settled();
+        box.TextEffects.Add(new TextEffect
+        {
+            PositionStart = 4,
+            PositionCount = int.MaxValue,
+            Foreground = new SolidColorBrush(Colors.Red),
+        });
+        var red = Settled();
+        TestContext.Out.WriteLine($"plain {plain} front {front} both {red}");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(plain.Count, Is.GreaterThan(0), "the text is drawn");
+            Assert.That(plain.Red, Is.Zero);
+            Assert.That(red.Red, Is.GreaterThan(red.Count / 4), "the range is red");
+            Assert.That(red.Red, Is.LessThan(red.Count * 3 / 4), "the rest is not");
+        });
+    }
+
+    public sealed class Range
+    {
+        public int Count { get; set; } = 3;
+    }
+
+    // An effect bound to the box's data is drawn by the value it first gets, whether the data is there before the
+    // effect or comes after it.
+    [TestCase(true)]
+    [TestCase(false)]
+    public void ATextBoxsBoundEffect_IsDrawnByItsFirstValue(bool dataFirst)
+    {
+        _canvas.Children.Remove(_block);
+        var presenter = new TextPresenter();
+        var box = new TextBox
+        {
+            Text = "abcdef",
+            Foreground = Brushes.White,
+            FontSize = 24,
+            Template = new ControlTemplate(() =>
+            {
+                var result = new TemplateResult { RootComponent = presenter };
+                result.RegisterName("PART_TextPresenter", presenter);
+                return result;
+            }),
+        };
+        if (dataFirst)
+        {
+            box.DataContext = new Range();
+        }
+
+        var effect = new TextEffect { Foreground = new SolidColorBrush(Colors.Red) };
+        effect.SetBinding(TextEffect.PositionCountProperty, new Adamantium.UI.Core.Data.Binding(nameof(Range.Count)));
+        box.TextEffects.Add(effect);
+        Canvas.SetLeft(box, 20);
+        Canvas.SetTop(box, 30);
+        _canvas.Children.Add(box);
+        Settled();
+        if (!dataFirst)
+        {
+            _canvas.DataContext = new Range();
+        }
+
+        var shown = Settled();
+
+        Assert.That(shown.Red, Is.GreaterThan(shown.Count / 4), $"count {effect.PositionCount}");
     }
 
     // In the block's own space: its left half.

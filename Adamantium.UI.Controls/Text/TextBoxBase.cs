@@ -23,7 +23,7 @@ namespace Adamantium.UI.Controls.Text;
 
 /// <summary>The editing core of text input controls: buffer, caret, selection, keyboard, clipboard and scroll. The
 /// template supplies a <see cref="TextPresenter"/> named <c>PART_TextPresenter</c>.</summary>
-public abstract class TextBoxBase : Control, ITextStyleUser, Adamantium.UI.Core.Resources.IResolvesOwnResources,
+public abstract partial class TextBoxBase : Control, ITextStyleUser, Adamantium.UI.Core.Resources.IResolvesOwnResources,
    Adamantium.UI.Core.Input.ITextEntry
 {
     // --- Editing state -------------------------------------------------------------------------------------------
@@ -141,6 +141,7 @@ public abstract class TextBoxBase : Control, ITextStyleUser, Adamantium.UI.Core.
         AddHandler(Keyboard.TextCompositionStartedEvent, new TextCompositionEventHandler((_, _) => Composing(true)));
         AddHandler(Keyboard.TextCompositionEndedEvent, new TextCompositionEventHandler((_, _) => Composing(false)));
         _styleBrushes = new HeldBrushes(this);
+        _effectBrushes = new HeldBrushes(this);
         _engineStyles = new EngineTextStyles(this, _styleBrushes);
         // On a baseline grid the text's lines stand on the grid from where the text surface is, its scroll left out.
         _grid = new BaselineGridFollower(this, () => _presenter, FloatStripHeight, RelayOutText);
@@ -149,6 +150,8 @@ public abstract class TextBoxBase : Control, ITextStyleUser, Adamantium.UI.Core.
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
+        _styleBrushes.Take();
+        _effectBrushes.Take();
         _grid.Follow(attached: true);
         // Moved under other resources, its styles answer from there.
         ((Adamantium.UI.Core.Resources.IResolvesOwnResources)this).ResolveResources();
@@ -157,6 +160,8 @@ public abstract class TextBoxBase : Control, ITextStyleUser, Adamantium.UI.Core.
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnDetachedFromVisualTree(e);
+        _styleBrushes.Released();
+        _effectBrushes.Released();
         _grid.Follow(attached: false);
     }
 
@@ -1565,7 +1570,18 @@ public abstract class TextBoxBase : Control, ITextStyleUser, Adamantium.UI.Core.
         // Text.
         if (hasText)
         {
-            session.DrawText(BuildTextParameters(Foreground, ox, oy, size), size, _textLayout, Foreground, Brushes.Transparent, Brushes.Transparent);
+            var effects = DrawnEffects(new Vector2F((float)ox, (float)oy));
+            if (effects.Length > 0)
+            {
+                session.DrawText(BuildTextParameters(Foreground, ox, oy, size), size, _textLayout, Foreground,
+                    Brushes.Transparent, Brushes.Transparent, effects);
+            }
+            else
+            {
+                session.DrawText(BuildTextParameters(Foreground, ox, oy, size), size, _textLayout, Foreground,
+                    Brushes.Transparent, Brushes.Transparent);
+            }
+
             DrawMisspellings(session, ox, oy);
         }
 

@@ -1,6 +1,7 @@
 using Adamantium.Graphics.Core;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Input;
+using Adamantium.UI.Core.Media.Imaging;
 
 namespace Adamantium.UI.WebView.Cef;
 
@@ -66,4 +67,10 @@ internal interface IWebViewBrowserView
     /// <summary>Where the text an input method composes stands in the view, in its units: the input method's windows go
     /// beside it.</summary>
     void CompositionBoundsChanged(WebViewBrowser browser, Rect bounds);
+
+    /// <summary>The page's icon, shown at the screen's scale; null for none or not yet.</summary>
+    void IconChanged(WebViewBrowser browser, ImageSource icon);
+
+    /// <summary>Whether the page came over a connection with nothing wrong.</summary>
+    void SecurityChanged(WebViewBrowser browser, bool isSecure);
 }

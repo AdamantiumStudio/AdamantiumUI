@@ -33,7 +33,11 @@ All packages share one version.
   (`WebViewStatusBar`, a control of its own, which an application can place elsewhere given its `View`; hidden with
   `ShowStatusBar`): the link under the pointer, the zoom a step down, back to 100% and a step up (`ZoomInCommand`,
   `ZoomOutCommand`, `ResetZoomCommand`, `ZoomPercent`), and the DevTools. The main device made again - after the GPU
-  lost it - leaves the pages alive: their frames come again on the new device. Popups come later.
+  lost it - leaves the pages alive: their frames come again on the new device. `Icon` is the page's icon at a tab's
+  size, drawn at the screen's scale (null while a page loads and for none); `IsSecure` tells a page that came over a
+  connection with nothing wrong - encrypted, its certificate good, nothing of it loaded unencrypted. Popups come later.
+- `TextBox.TextEffects` (and every `TextBoxBase`'s): ranges of the text drawn apart, as a `TextBlock`'s - recolored,
+  moved, turned; only the drawing changes, the caret and selection stay where the layout put them.
 - `Win32ScanCodes` (Windows): a key's scan code as a HID usage and back (`TryFromHidUsage`).
 - `IUIApplication.UIThreadExiting`: raised once as the application shuts down, on the UI thread after its last frame
   and before the windows' services and the graphics device go - for what was started on the UI thread and must end on
@@ -176,6 +180,8 @@ All packages share one version.
 
 ### Fixed
 
+- `Grid.ColumnSpacing` stands between every two columns: a grid of one row lost it after its first column, and kept
+  it after its last.
 - A `{TemplateBinding}` in a `{Localize}` of a text set inside a template part's content (a `TextBlock` in a
   `StatusBarItem`) reads the templated control: the text was empty.
 - A `DispatcherTimer` restarted with a delay no longer ticks once at once: a callback of the old schedule caught between

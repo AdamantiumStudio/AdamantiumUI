@@ -16,6 +16,28 @@ internal sealed unsafe class WebViewLoadHandler : CefObject
         handler->on_loading_state_change = &OnLoadingStateChange;
         handler->on_load_error = &OnLoadError;
         handler->on_load_end = &OnLoadEnd;
+        handler->on_load_start = &OnLoadStart;
+    }
+
+    [UnmanagedCallersOnly]
+    private static void OnLoadStart(CefLoadHandler* self, CefBrowser* cefBrowser, CefFrame* frame,
+        CefTransitionType transition)
+    {
+        try
+        {
+            var owner = From<WebViewLoadHandler>(self).browser;
+            if (frame->is_main(frame) != 0 && owner.Is(cefBrowser))
+            {
+                owner.OnLoadStart();
+            }
+        }
+        catch (Exception exception)
+        {
+            CefCallbacks.Report(exception);
+        }
+
+        CefRefCounting.ReleaseCef(frame);
+        CefRefCounting.ReleaseCef(cefBrowser);
     }
 
     [UnmanagedCallersOnly]

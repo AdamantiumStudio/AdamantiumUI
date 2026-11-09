@@ -120,6 +120,38 @@ public class TextEffectsMarkupTests
         });
     }
 
+    public sealed class Range
+    {
+        public int Start { get; set; } = 8;
+
+        public Brush Paint { get; set; } = new SolidColorBrush(Colors.Gray);
+    }
+
+    private const string Box =
+        "<TextBox " + Namespaces + " Text=\"https://example.org/\"><TextBox.TextEffects>" +
+        "<TextEffect PositionStart=\"0\" PositionCount=\"{Binding Start}\" Foreground=\"{Binding Paint}\"/>" +
+        "</TextBox.TextEffects></TextBox>";
+
+    // A text box's effects bind against its data, as a block's do.
+    [Test]
+    public void ATextBoxsEffect_BindsAgainstItsData()
+    {
+        var data = new Range();
+        var result = AumlLoader.Load(Box);
+        Assert.That(result.Diagnostics, Is.Empty, string.Join(" | ", result.Diagnostics));
+        var box = (TextBox)result.Root;
+        box.DataContext = data;
+        var effect = box.TextEffects[0];
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(effect.PositionCount, Is.EqualTo(8));
+            Assert.That(effect.Foreground, Is.SameAs(data.Paint));
+            Assert.That(AumlCodegenHarness.Compile("<Window " + Namespaces + ">" +
+                Box.Replace(" " + Namespaces, string.Empty) + "</Window>"), Is.Empty);
+        });
+    }
+
     [Test]
     public void TheDesignersLoader_BuildsAnInlinesEffects()
     {

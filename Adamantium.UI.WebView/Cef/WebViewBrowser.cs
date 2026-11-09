@@ -1,6 +1,8 @@
 using Adamantium.Graphics.Core;
+using Adamantium.Imaging;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Input;
+using Adamantium.UI.Core.Media.Imaging;
 using Adamantium.UI.WebView.Cef.Interop;
 
 namespace Adamantium.UI.WebView.Cef;
@@ -39,6 +41,10 @@ internal sealed unsafe class WebViewBrowser : IDisposable
     private bool hidden;
     private bool focused;
     private double zoom = 1;
+    private int iconsAsked;
+    private string[] iconAddresses = [];
+    private bool secure;
+    private long securityAskedAt;
     private bool refused;
     private int framesCounted;
     private long countedSince;
@@ -650,6 +656,31 @@ internal sealed unsafe class WebViewBrowser : IDisposable
     {
         address = url;
         view.AddressChanged(this, url);
+        TellSecurity();
+    }
+
+    /// <summary>Asks again, once a second from the engine's pump, whether the page is secure: what it loads after it
+    /// has loaded - a script's request in the open - can make it less than secure, and CEF tells nothing of it.
+    /// </summary>
+    public void FollowSecurity(long now)
+    {
+        if (now - securityAskedAt < 1000)
+        {
+            return;
+        }
+
+        securityAskedAt = now;
+        TellSecurity();
+    }
+
+    private void TellSecurity()
+    {
+        var isSecure = PageIsSecure();
+        if (isSecure != secure)
+        {
+            secure = isSecure;
+            view.SecurityChanged(this, isSecure);
+        }
     }
 
     internal void OnTitleChange(string title) => view.TitleChanged(this, title);
@@ -675,9 +706,141 @@ internal sealed unsafe class WebViewBrowser : IDisposable
             {
                 view.AddressChanged(this, address);
             }
+
+            // What the page loaded once it is done tells too: content in the open makes it less than secure.
+            TellSecurity();
         }
 
         view.LoadingChanged(this, isLoading, canGoBack, canGoForward);
+    }
+
+    // A page's icons, 16 device-independent pixels across as a tab shows them.
+    private const int IconSize = 16;
+
+    /// <summary>A new page in the main frame: its icon is not known yet, and no icon asked for the last one is shown.
+    /// </summary>
+    internal void OnLoadStart()
+    {
+        iconsAsked++;
+        view.IconChanged(this, null);
+    }
+
+    /// <summary>The page's icons as it names them, the one it prefers first: fetched in turn until one comes; none
+    /// shows none.</summary>
+    internal void OnIconAddresses(string[] addresses)
+    {
+        iconsAsked++;
+        iconAddresses = addresses;
+        FetchIcon(0);
+    }
+
+    private void FetchIcon(int index)
+    {
+        var host = isDevTools || index >= iconAddresses.Length ? null : LiveHost();
+        if (host == null)
+        {
+            view.IconChanged(this, null);
+            return;
+        }
+
+        var download = new WebViewIconDownload(this, iconsAsked, index);
+        var target = new CefStringUtf16();
+        try
+        {
+            CefStrings.Set(&target, iconAddresses[index]);
+            host->download_image(host, &target, 1, IconSize, 0, download.Shared);
+        }
+        finally
+        {
+            CefStrings.Clear(&target);
+            download.Release();
+            CefRefCounting.ReleaseCef(host);
+        }
+    }
+
+    /// <summary>The icon asked for under <paramref name="asked"/> from the page's <paramref name="index"/>th address,
+    /// or null for none: shown at the screen's scale if it is still the page's; none tries the next address.</summary>
+    internal void OnIconDownloaded(int asked, int index, CefImage* image)
+    {
+        if (asked != iconsAsked || disposed)
+        {
+            return;
+        }
+
+        var icon = image == null || image->is_empty(image) != 0 ? null : IconOf(image);
+        if (icon == null)
+        {
+            FetchIcon(index + 1);
+            return;
+        }
+
+        view.IconChanged(this, icon);
+    }
+
+    private BitmapSource IconOf(CefImage* image)
+    {
+        int width, height;
+        var bitmap = image->get_as_bitmap(image, Scale, CefColorType.Bgra8888, CefAlphaType.Postmultiplied, &width,
+            &height);
+        if (bitmap == null)
+        {
+            return null;
+        }
+
+        try
+        {
+            var size = (int)bitmap->get_size(bitmap);
+            if (width <= 0 || height <= 0 || size < width * height * 4)
+            {
+                return null;
+            }
+
+            var pixels = new byte[width * height * 4];
+            fixed (byte* into = pixels)
+            {
+                bitmap->get_data(bitmap, into, (ulong)pixels.Length, 0);
+            }
+
+            // As wide as the page's image is in device-independent pixels, whatever the pixels of the one that came.
+            var across = (double)image->get_width(image);
+            var scale = across > 0 ? across / width : 1 / Scale;
+            return new BitmapSource((uint)width, (uint)height, scale, scale, SurfaceFormat.B8G8R8A8.UNorm, pixels);
+        }
+        finally
+        {
+            CefRefCounting.ReleaseCef(bitmap);
+        }
+    }
+
+    /// <summary>Whether the page the browser shows came over a connection with nothing wrong: encrypted, its
+    /// certificate good, nothing of it loaded in the open.</summary>
+    private bool PageIsSecure()
+    {
+        var host = LiveHost();
+        if (host == null)
+        {
+            return false;
+        }
+
+        var entry = host->get_visible_navigation_entry(host);
+        CefRefCounting.ReleaseCef(host);
+        if (entry == null)
+        {
+            return false;
+        }
+
+        var status = entry->is_valid(entry) != 0 ? entry->get_sslstatus(entry) : null;
+        CefRefCounting.ReleaseCef(entry);
+        if (status == null)
+        {
+            return false;
+        }
+
+        var secure = status->is_secure_connection(status) != 0 &&
+                     CefInterop.CefIsCertStatusError(status->get_cert_status(status)) == 0 &&
+                     status->get_content_status(status) == CefSslContentStatus.NormalContent;
+        CefRefCounting.ReleaseCef(status);
+        return secure;
     }
 
     internal void OnLoadError(WebViewLoadError error)
