@@ -124,6 +124,44 @@ public class LocalizeMarkupTests
     }
 
     // Where a theme writes its strings: a setter's value and an element of a control template.
+    // Text the template's markup sets in a part's content - a field's words - is presented into the part only later and
+    // is never stamped itself: it takes the control of the part it stands in, though it was made before its parent.
+    [Test]
+    public void InAPartsContent_TheStringTakesTheControlsOwnValue()
+    {
+        var table = DesignerTable();
+        TextBlock text = null;
+        var control = new ContentControl
+        {
+            Content = 2,
+            Template = new ControlTemplate(() =>
+            {
+                text = new TextBlock();
+                var localize = new Localize(table, "PageOf");
+                localize.Arguments["page"] = new TemplateBinding { Path = nameof(ContentControl.Content) };
+                localize.Arguments["count"] = 5;
+                text.SetBinding(TextBlock.TextProperty, localize);
+                var field = new Adamantium.UI.Controls.Buttons.Button { Content = text };
+                return new TemplateResult { RootComponent = new StackPanel { Children = { field } } };
+            })
+        };
+        var root = new Root();
+        root.Children.Add(control);
+        root.Measure(new Size<double>(300, 100), force: true);
+        root.Arrange(new Rect(0, 0, 300, 100));
+        BindingUpdateQueue.Flush();
+
+        var first = text?.Text;
+        control.Content = 3;
+        BindingUpdateQueue.Flush();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(first, Is.EqualTo("Page 2 of 5"));
+            Assert.That(text?.Text, Is.EqualTo("Page 3 of 5"));
+        });
+    }
+
     [Test]
     public void AStyleSet_TakesItInASetterAndInATemplate()
     {
