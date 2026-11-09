@@ -26,6 +26,13 @@
     <Phrase Key="Jpeg2000Bytes" Text="Прочитано данных: {used} из {total} КБ"/>
     <Phrase Key="Jpeg2000Time" Text="Декодирование: {ms} мс"/>
 
+    <Phrase Key="ColorProfile" Text="Цветовой профиль"/>
+    <Phrase Key="ColorProfileHint" Text="Файл может нести профиль ICC — что значат его числа. BitmapImage применяет его, когда задано ApplyColorProfile; по умолчанию пиксели берутся как sRGB, как записаны, — это верно для текстур, масок и карт высот и неверно для картинки, сделанной в другом цветовом пространстве."/>
+    <Phrase Key="WideGamut" Text="RGB с широким охватом (основные цвета как у Adobe RGB, гамма 2.2): прочитанные как sRGB, цвета блёкнут"/>
+    <Phrase Key="SrgbProfile" Text="Профиль sRGB: с ним и без него картинка одна и та же"/>
+    <Phrase Key="AsStored" Text="Как записано"/>
+    <Phrase Key="ProfileApplied" Text="С профилем"/>
+
     <Phrase Key="AnimationControl" Text="Управление анимацией"/>
     <Phrase Key="AnimationHint" Text="Каждый источник играет по своим правилам: диапазон кадров, который он повторяет, задержка между кадрами, идёт ли он вообще и четыре радиуса углов. Число кадров сообщает САМА картинка, когда её файл раскодирован, — оно и ограничивает ползунки диапазона."/>
     <Phrase Key="PlayPause" Select="playing" True="Пауза" False="Играть"/>

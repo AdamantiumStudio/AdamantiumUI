@@ -18,6 +18,8 @@ public sealed class BitmapImage : BitmapSource
    private readonly Dictionary<uint, BitmapFrame> _indexToFrame = new();
    private readonly ConcurrentDictionary<(uint Mip, uint Quality), Lazy<BitmapFrame>> _levels = new();
    private volatile bool _released;
+   private readonly Lock _loading = new();
+   private int _loadGeneration;
    private volatile ITexture _framePalette;
 
    public BitmapImage()
@@ -67,15 +69,76 @@ public sealed class BitmapImage : BitmapSource
    {
       if (adamantiumAdamantiumComponent is BitmapImage bitmap)
       {
-         var uri = (Uri)e.NewValue;
-         if (uri is { IsAbsoluteUri: true, IsFile: true })
+         bitmap.StartLoad((Uri)e.NewValue);
+      }
+   }
+
+   public static readonly AdamantiumProperty ApplyColorProfileProperty = AdamantiumProperty.Register(
+      nameof(ApplyColorProfile), typeof(bool), typeof(BitmapImage),
+      new PropertyMetadata(false, ApplyColorProfileChangedCallback));
+
+   private static void ApplyColorProfileChangedCallback(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
+   {
+      if (a is BitmapImage bitmap && bitmap.UriSource != null)
+      {
+         bitmap.StartLoad(bitmap.UriSource);
+      }
+   }
+
+   /// <summary>Whether the ICC profile the file holds is applied as the file is read, its colors shown as the profile
+   /// means them; off, as by default, the pixels are taken as sRGB as they are stored. A change reads the file again,
+   /// as a new <see cref="UriSource"/> does, and an image showing the picture draws it anew (<see cref="Reloaded"/>).
+   /// </summary>
+   public bool ApplyColorProfile
+   {
+      get => GetValue<bool>(ApplyColorProfileProperty);
+      set => SetValue(ApplyColorProfileProperty, value);
+   }
+
+   private void StartLoad(Uri uri)
+   {
+      var file = FileOf(uri, out var error);
+      lock (_loading)
+      {
+         var generation = ++_loadGeneration;
+         if (file == null)
          {
-            // Load OFF the UI thread: decoding (especially every frame of an animated APNG/GIF) is heavy and froze the UI
-            // while a view full of images was being built (a multi-second tab-switch hang). Consumers await LoadTask
-            // before reading frames (see Image.ProcessImageSource); FrameCount/GetFrame report empty until it completes.
-            Interlocked.Increment(ref _loadsInFlight);
-            bitmap.LoadTask = Task.Run(() => bitmap.Load(uri));
+            LoadError = error;
+            LoadTask = Task.CompletedTask;
+            return;
          }
+
+         // Load OFF the UI thread: decoding (especially every frame of an animated APNG/GIF) is heavy and froze the UI
+         // while a view full of images was being built (a multi-second tab-switch hang). Consumers await LoadTask
+         // before reading frames (see Image.ProcessImageSource); FrameCount/GetFrame report empty until it completes.
+         var options = new BitmapLoadOptions { ApplyColorProfile = ApplyColorProfile };
+         Interlocked.Increment(ref _loadsInFlight);
+         LoadTask = Task.Run(() => Load(file, options, generation));
+      }
+   }
+
+   private static string FileOf(Uri uri, out Exception error)
+   {
+      error = null;
+      if (uri == null || string.IsNullOrWhiteSpace(uri.OriginalString))
+      {
+         return null;
+      }
+
+      if (uri.IsAbsoluteUri)
+      {
+         return uri.IsFile ? uri.LocalPath : null;
+      }
+
+      try
+      {
+         var path = uri.OriginalString;
+         return Path.GetFullPath(Path.IsPathRooted(path) ? path : Path.Combine(AppContext.BaseDirectory, path));
+      }
+      catch (Exception e) when (e is ArgumentException or NotSupportedException or PathTooLongException)
+      {
+         error = e;
+         return null;
       }
    }
    
@@ -421,28 +484,133 @@ public sealed class BitmapImage : BitmapSource
             data.RawPixels, mipLevel);
    }
 
-   private void Load(Uri uri)
+   private async Task Load(string path, BitmapLoadOptions options, int generation)
    {
-      var path = uri.OriginalString.Replace("file://", "");
+      Task latest = null;
+      IRawBitmap read = null;
+      Exception failed = null;
 
-      // An unreadable file must not throw from this async void, which would kill the process; the image just stays
-      // unloaded.
+      // An unreadable file must not throw from this task, which nobody may observe; the image just stays unloaded.
       try
       {
-         var rawImg = BitmapLoader.Load(path);
-         FillData(rawImg);
-         IsLoaded = true;
+         lock (_loading)
+         {
+            if (generation != _loadGeneration)
+            {
+               latest = LoadTask;
+            }
+         }
+
+         if (latest == null)
+         {
+            read = BitmapLoader.Load(path, options);
+         }
       }
       catch (Exception e)
       {
-         LoadError = e;
+         failed = e;
       }
       finally
       {
          Interlocked.Increment(ref _loadsFinished);
          Interlocked.Decrement(ref _loadsInFlight);
       }
+
+      latest ??= await Commit(read, failed, generation);
+      if (latest != null)
+      {
+         await latest;
+      }
    }
+
+   private Task<Task> Commit(IRawBitmap read, Exception failed, int generation)
+   {
+      bool first;
+      lock (_loading)
+      {
+         first = _rawBitmap == null;
+      }
+
+      var dispatcher = UIAppContext.Current?.Dispatcher;
+      if (first || dispatcher is not { IsRunning: true })
+      {
+         return Task.FromResult(Apply(read, failed, generation));
+      }
+
+      var applied = new TaskCompletionSource<Task>(TaskCreationOptions.RunContinuationsAsynchronously);
+      dispatcher.Post(() => applied.SetResult(Apply(read, failed, generation)));
+      return applied.Task;
+   }
+
+   private Task Apply(IRawBitmap read, Exception failed, int generation)
+   {
+      bool replaced;
+      lock (_loading)
+      {
+         if (generation != _loadGeneration)
+         {
+            return LoadTask;
+         }
+
+         replaced = _rawBitmap != null;
+         if (replaced)
+         {
+            ForgetDecoded();
+         }
+
+         if (failed == null)
+         {
+            FillData(read);
+            LoadError = null;
+            IsLoaded = true;
+         }
+         else
+         {
+            LoadError = failed;
+            IsLoaded = false;
+         }
+      }
+
+      if (replaced)
+      {
+         Reloaded?.Invoke(this, EventArgs.Empty);
+      }
+
+      return null;
+   }
+
+   private void ForgetDecoded()
+   {
+      foreach (var frame in _indexToFrame.Values)
+      {
+         frame?.Dispose();
+      }
+
+      _indexToFrame.Clear();
+      _framesCache.Clear();
+      foreach (var level in _levels.Values)
+      {
+         if (level.IsValueCreated)
+         {
+            level.Value?.Dispose();
+         }
+      }
+
+      _levels.Clear();
+      Retire(_frameArrayTexture);
+      _frameArrayTexture = null;
+      Retire(_framePalette);
+      _framePalette = null;
+      Interlocked.Exchange(ref _frameArrayRequested, 0);
+      _rawBitmap.ReleaseDecodedFrames();
+      _rawBitmap = null;
+      base.ReleaseUnmanagedResources();
+   }
+
+   /// <summary>Raised once a picture that had loaded has been read again - a new <see cref="UriSource"/>,
+   /// <see cref="ApplyColorProfile"/> changed - and its pixels, frames and texture replaced; on the UI loop thread
+   /// while the application runs.</summary>
+   public event EventHandler Reloaded;
 
    /// <summary>Why the file did not load, where it did not. Null while it has not been tried, and null once it has
    /// loaded - a picture that failed is not a picture that is still coming, and something has to be able to tell the
