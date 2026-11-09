@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Concurrent;
+using System.Runtime.InteropServices;
 using System.Threading;
 using Adamantium.Core;
 using Adamantium.Graphics.Core;
@@ -10,7 +12,10 @@ using Adamantium.UI.Core;
 using Adamantium.UI.Core.Graphics;
 using Adamantium.UI.FX;
 using Adamantium.Vulkan.Core;
+using Adamantium.UI.Core.Media.Imaging;
+using Adamantium.UI.Core.RoutedEvents;
 using Adamantium.Win32;
+using Serilog;
 
 namespace Adamantium.UI.Rendering;
 
@@ -25,6 +30,9 @@ public abstract class WindowRendererBase : IWindowRenderer
     private volatile bool _isRendererUpToDate;
     private double _renderScale = 1.0;
     private WindowOpacityEffect _opacityEffect;
+    private readonly ConcurrentQueue<ScreenshotRequest> _screenshots = new();
+    private long _recordsTaken;
+    private long _recordsApplied;
 
     protected Viewport Viewport { get; set; }
     protected Rect2D Scissor { get; set; }
@@ -106,6 +114,145 @@ public abstract class WindowRendererBase : IWindowRenderer
         RenderSignal.Wake();
     }
 
+    public void RequestScreenshot(Action<BitmapSource> onReady)
+    {
+        if (onReady == null)
+        {
+            return;
+        }
+
+        // A window that draws nothing gets no frame to read; it is answered at once rather than left waiting.
+        if (Window == null || Window.State == WindowState.Minimized || !(Window.IsDisplayed || Window.ShouldDisplayWindow))
+        {
+            Answer(onReady, null);
+            return;
+        }
+
+        // Answered by a frame that applied a record taken after this ask, so it shows what the window held when asked.
+        _screenshots.Enqueue(new ScreenshotRequest(onReady, Interlocked.Read(ref _recordsTaken) + 1));
+        LoopSignal.Request();
+        RequestFrame();
+    }
+
+    /// <summary>Counts a record of the window's tree taken on the loop: the record a screenshot asked now waits for.
+    /// </summary>
+    protected void RecordTaken() => Interlocked.Increment(ref _recordsTaken);
+
+    /// <summary>The records taken so far; read before a frame applies them, and passed to <see cref="RecordsApplied"/>.
+    /// </summary>
+    protected long RecordsTaken => Interlocked.Read(ref _recordsTaken);
+
+    /// <summary>The frame being drawn shows every record up to <paramref name="taken"/>.</summary>
+    protected void RecordsApplied(long taken) => Interlocked.Exchange(ref _recordsApplied, taken);
+
+    // Render thread, the frame just ended: what the window drew is read back from its own target, which the swapchain
+    // image is only a copy of. A frame that applied no record taken since an ask leaves it for a later one.
+    private void DeliverScreenshots()
+    {
+        if (_screenshots.IsEmpty)
+        {
+            return;
+        }
+
+        var applied = Interlocked.Read(ref _recordsApplied);
+        if (!_screenshots.TryPeek(out var first) || first.After > applied)
+        {
+            RequestFrame();
+            return;
+        }
+
+        BitmapSource picture = null;
+        try
+        {
+            picture = ReadFrame();
+        }
+        catch (Exception ex)
+        {
+            Log.Logger.Error($"Reading the window's frame back failed: {ex}");
+        }
+
+        // Each asker gets a picture of its own to keep or dispose of.
+        var handed = false;
+        while (_screenshots.TryPeek(out var request) && request.After <= applied && _screenshots.TryDequeue(out request))
+        {
+            Answer(request.OnReady, handed ? Copy(picture) : picture);
+            handed = true;
+        }
+
+        if (!_screenshots.IsEmpty)
+        {
+            RequestFrame();
+        }
+    }
+
+    // A window minimized or hidden while asked draws no frame to answer from: what it was asked is answered with nothing.
+    private void Watch()
+    {
+        Window.StateChanged += OnWindowStateChanged;
+        Window.Hidden += OnWindowHidden;
+    }
+
+    private void Unwatch()
+    {
+        if (Window == null)
+        {
+            return;
+        }
+
+        Window.StateChanged -= OnWindowStateChanged;
+        Window.Hidden -= OnWindowHidden;
+    }
+
+    private void OnWindowStateChanged(object sender, StateChangedEventArgs e)
+    {
+        if (Window?.State == WindowState.Minimized)
+        {
+            AnswerAllWithNothing();
+        }
+    }
+
+    private void OnWindowHidden(object sender, EventArgs e) => AnswerAllWithNothing();
+
+    private void AnswerAllWithNothing()
+    {
+        while (_screenshots.TryDequeue(out var request))
+        {
+            Answer(request.OnReady, null);
+        }
+    }
+
+    private void Answer(Action<BitmapSource> onReady, BitmapSource picture)
+    {
+        if (Window?.UIContext?.Dispatcher is { } dispatcher)
+        {
+            dispatcher.Post(() => onReady(picture));
+        }
+        else
+        {
+            onReady(picture);
+        }
+    }
+
+    private static BitmapSource Copy(BitmapSource picture) => picture?.PixelBytes == null
+        ? null
+        : new BitmapSource(picture.PixelWidth, picture.PixelHeight, picture.DpiXScale, picture.DpiYScale,
+            picture.SurfaceLayout, (byte[])picture.PixelBytes.Clone());
+
+    private BitmapSource ReadFrame()
+    {
+        if (GraphicsDevice.CurrentRenderTarget?.ResolveTexture is not { } drawn || Presenter == null)
+        {
+            return null;
+        }
+
+        GraphicsDevice.DeviceWaitIdle();
+        using var image = drawn.ToImage();
+        var pixels = new byte[(int)image.TotalSizeInBytes];
+        Marshal.Copy(image.DataPointer, pixels, 0, pixels.Length);
+        var density = RenderScale > 0 ? 1.0 / RenderScale : 1.0;
+        return new BitmapSource(drawn.Width, drawn.Height, density, density, Presenter.SurfaceFormat, pixels);
+    }
+
     // Render resolution multiplier (1 = on-screen 1:1). The presenter + viewport are sized ClientSize x RenderScale,
     // the projection stays ClientSize - so the designer renders crisply at design x scale (zoom) without changing layout.
     public double RenderScale
@@ -140,10 +287,12 @@ public abstract class WindowRendererBase : IWindowRenderer
         if (window == null) return;
 
         UnsubscribeFromEvents();
+        Unwatch();
         Window = window;
         Window.Renderer = this;
         FillParameters();
         SubscribeToEvents();
+        Watch();
         InitializeWindowResources();
     }
 
@@ -156,9 +305,11 @@ public abstract class WindowRendererBase : IWindowRenderer
         if (Presenter == null) { SetWindow(window); return; }
 
         UnsubscribeFromEvents();
+        Unwatch();
         Window = window;
         Window.Renderer = this;
         SubscribeToEvents();
+        Watch();
         ResizePresenterToWindow();
         InitializeWindowResources();
     }
@@ -356,6 +507,10 @@ public abstract class WindowRendererBase : IWindowRenderer
     public virtual void OnFrameEnded()
     {
         FirstFrameProcessed = true;
+        if (GraphicsDevice.CanPresent && DrawsRecordedContent)
+        {
+            DeliverScreenshots();
+        }
     }
 
     public virtual void Present()
@@ -387,6 +542,8 @@ public abstract class WindowRendererBase : IWindowRenderer
     
     public virtual void Dispose()
     {
+        AnswerAllWithNothing();
+        Unwatch();
         UnsubscribeFromEvents();
         Presenter?.Dispose();
         Presenter = null;

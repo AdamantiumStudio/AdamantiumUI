@@ -7,6 +7,15 @@ All packages share one version.
 
 ### Added
 
+- `IWindow.TakeScreenshotAsync`: the frame the window shows, read back from the target it draws into - popups,
+  adorners and hosted surfaces included - at its pixel size, once it has drawn its next frame
+  (`IWindowRenderer.RequestScreenshot` beneath it).
+- `BitmapImage.ApplyColorProfile`: the ICC profile a PNG, JPEG, TIFF or JPEG 2000 file holds is applied as it is
+  read, its colors shown as the profile means them; off by default, the pixels taken as sRGB as stored. It can be set
+  before or after `UriSource`, from markup too, and a relative `UriSource` is the application's, as an image path is.
+  A picture read again - a new `UriSource` or `ApplyColorProfile` changed - drops its kept frames, levels and texture
+  and says so (`BitmapImage.Reloaded`), and an `Image` showing it draws the new one. The sandbox's Image tab shows a
+  wide-gamut picture and an sRGB one, each as stored and with its profile.
 - `Image.QualityLevel`: the quality a picture is drawn at - 0 the full one, each next one a JPEG 2000 quality layer
   less - beside `MipLevel`, which for a JPEG 2000 picture is its resolution; `Image.MipLevelCount` and
   `Image.QualityLevelCount` report what the source has, to bound a choice. A level is decoded off the UI thread, once,
@@ -198,6 +207,9 @@ All packages share one version.
 
 ### Fixed
 
+- `adam-auto shot` takes the window's own frame, read back from what it drew - popups, adorners and hosted surfaces
+  included - and cuts an element's picture from it; it drew the element again on its own, which left out the menus,
+  drop-downs and tooltips over it.
 - A theme manager let go is collected with its theme and all its styles: it followed the OS appearance through a
   static event that kept it - now only while it follows the system, and weakly - and the theme's resource routing
   kept the theme.

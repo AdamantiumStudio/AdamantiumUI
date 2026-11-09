@@ -210,7 +210,7 @@ public class Image : InputUIComponent, IDesignTimeAnimatedMedia
    {
       if (a is not Image img) return;
 
-      img.WatchDrawing(img.IsAttachedToVisualTree ? e.NewValue as DrawingImage : null);
+      img.WatchSource(img.IsAttachedToVisualTree ? e.NewValue as ImageSource : null);
       if (e.OldValue is DrawingImage previous)
       {
          previous.Detach(img);
@@ -219,23 +219,41 @@ public class Image : InputUIComponent, IDesignTimeAnimatedMedia
       img.ProcessImageSource();
    }
 
-   // A DRAWING source only. It is MUTABLE and nobody else is watching it: the property system re-renders when a
-   // BRUSH-valued property changes, but Source is an ImageSource, so recoloring a shape three levels down inside the
-   // drawing would otherwise never reach this element. Every other source kind is immutable and needs none of this.
-   private void WatchDrawing(DrawingImage drawing)
+   // A DRAWING is MUTABLE and nobody else is watching it: the property system re-renders when a BRUSH-valued property
+   // changes, but Source is an ImageSource, so recoloring a shape three levels down inside the drawing would otherwise
+   // never reach this element. A BITMAP is read again when its file or ApplyColorProfile changes.
+   private void WatchSource(ImageSource source)
    {
-      if (drawing == null)
+      switch (source)
       {
-         Follow(SourceProperty, null);
+         case DrawingImage drawing:
+            drawing.Changed += OnDrawingChanged;
+            Follow(SourceProperty, () =>
+            {
+               drawing.Changed -= OnDrawingChanged;
+               drawing.Detach(this);
+            });
+            break;
+         case BitmapImage bitmap:
+            bitmap.Reloaded += OnBitmapReloaded;
+            Follow(SourceProperty, () => bitmap.Reloaded -= OnBitmapReloaded);
+            break;
+         default:
+            Follow(SourceProperty, null);
+            break;
+      }
+   }
+
+   private void OnBitmapReloaded(object sender, EventArgs e)
+   {
+      if (!ReferenceEquals(sender, Source))
+      {
          return;
       }
 
-      drawing.Changed += OnDrawingChanged;
-      Follow(SourceProperty, () =>
-      {
-         drawing.Changed -= OnDrawingChanged;
-         drawing.Detach(this);
-      });
+      _bitmap = null;
+      ProcessImageSource();
+      InvalidateRender(false);
    }
 
    // A drawing changing is a SHAPE change, not a recolor of the same commands - the replay emits different geometry -
@@ -539,15 +557,16 @@ public class Image : InputUIComponent, IDesignTimeAnimatedMedia
       // Resume playback after a re-attach; the ticker removed itself on detach. Off-screen bakes and the designer host
       // attach without an application, so there may be no dispatcher.
       UIAppContext.Current?.Dispatcher?.Post(StartRuntimePlayback);
-      WatchDrawing(Source as DrawingImage);
+      WatchSource(Source);
    }
 
-   /// <summary>Stops watching the drawing, and gives up owning it, while out of the tree: a DrawingImage theme resource
-   /// outlives this element, and an element taken out of a panel is not announced as discarded.</summary>
+   /// <summary>Stops watching the source - and gives up owning a drawing - while out of the tree: a DrawingImage theme
+   /// resource or a shared BitmapImage outlives this element, and an element taken out of a panel is not announced as
+   /// discarded.</summary>
    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
    {
       base.OnDetachedFromVisualTree(e);
-      WatchDrawing(null);
+      WatchSource(null);
       ReleaseShrunk();
    }
 
