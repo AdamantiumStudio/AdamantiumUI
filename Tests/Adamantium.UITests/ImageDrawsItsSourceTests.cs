@@ -143,6 +143,30 @@ public class ImageDrawsItsSourceTests
     }
 
     [Test]
+    public void AMipLevelThePictureHoldsIsDrawnAtOnce()
+    {
+        var picture = new BitmapImage(BitmapLoader.Load(Texture("balls.dds")));
+
+        var drawn = DrawnPicture(new Image { Width = 64, Height = 64, Source = picture, MipLevel = 1 });
+
+        Assert.That(drawn, Is.SameAs(picture.FindLevel(1, 0)), "no trip off the thread for a level already decoded");
+    }
+
+    [Test]
+    public void ANewSourceDropsTheLevelOfTheOldOne()
+    {
+        var jpeg2000 = new BitmapImage(BitmapLoader.Load(Texture("photo-layers.jp2")));
+        var image = new Image { Width = 64, Height = 64, Source = jpeg2000, MipLevel = 2 };
+        Assume.That(DrawnLevel(image, jpeg2000), Is.Not.SameAs(jpeg2000), "precondition: the level was drawn");
+        var plain = new BitmapImage(BitmapLoader.Load(Texture("texture2.jpg")));
+
+        image.Source = plain;
+
+        Assert.That(DrawnAgain(image), Is.SameAs(plain));
+        Assert.That((image.MipLevelCount, image.QualityLevelCount), Is.EqualTo((0u, 1u)));
+    }
+
+    [Test]
     public void AQualityLevelThePictureDoesNotHaveDrawsTheFullPicture()
     {
         var picture = new BitmapImage(BitmapLoader.Load(Texture("texture2.jpg")));

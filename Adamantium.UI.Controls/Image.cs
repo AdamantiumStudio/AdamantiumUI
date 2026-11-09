@@ -115,11 +115,11 @@ public class Image : InputUIComponent, IDesignTimeAnimatedMedia
    
    public static readonly AdamantiumProperty MipLevelProperty = AdamantiumProperty.Register(nameof(MipLevel),
       typeof(UInt32), typeof(Image),
-      new PropertyMetadata(0U, OnMipLevelChangedCallback));
+      new PropertyMetadata(0U, OnLevelChangedCallback));
 
    public static readonly AdamantiumProperty QualityLevelProperty = AdamantiumProperty.Register(nameof(QualityLevel),
       typeof(UInt32), typeof(Image),
-      new PropertyMetadata(0U, OnMipLevelChangedCallback));
+      new PropertyMetadata(0U, OnLevelChangedCallback));
 
    public static readonly AdamantiumProperty MipLevelCountProperty = AdamantiumProperty.RegisterReadOnly(
       nameof(MipLevelCount), typeof(UInt32), typeof(Image), new PropertyMetadata(0U));
@@ -146,7 +146,7 @@ public class Image : InputUIComponent, IDesignTimeAnimatedMedia
       if (a is Image img && (bool)e.NewValue) img.StartRuntimePlayback();
    }
 
-   private static void OnMipLevelChangedCallback(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
+   private static void OnLevelChangedCallback(AdamantiumComponent a, AdamantiumPropertyChangedEventArgs e)
    {
       if (a is Image img)
       {
@@ -458,8 +458,23 @@ public class Image : InputUIComponent, IDesignTimeAnimatedMedia
 
    private async Task Process()
    {
+      if (Source is not BitmapImage)
+      {
+         _bitmap = null;
+         _frame = null;
+         MipLevelCount = 0;
+         QualityLevelCount = 0;
+      }
+
       if (Source is BitmapImage bitmap)
       {
+         if (!ReferenceEquals(_bitmap, bitmap))
+         {
+            _frame = null;
+            MipLevelCount = 0;
+            QualityLevelCount = 0;
+         }
+
          _bitmap = bitmap;
 
          // Wait for the URI's background load (BitmapImage loads off the UI thread) so decoding never freezes the UI.
@@ -490,8 +505,23 @@ public class Image : InputUIComponent, IDesignTimeAnimatedMedia
             var (askedMip, askedQuality) = (MipLevel, QualityLevel);
             var mip = bitmap.HasMipLevels ? askedMip : 0;
             var quality = askedQuality < bitmap.QualityLevelsCount ? askedQuality : 0;
-            var level = mip == 0 && quality == 0 ? null
-               : bitmap.FindLevel(mip, quality) ?? await Task.Run(() => bitmap.GetLevel(mip, quality));
+            BitmapFrame level = null;
+            if (mip > 0 || quality > 0)
+            {
+               level = bitmap.FindLevel(mip, quality);
+               if (level == null && !bitmap.DecodesLevelsOnDemand)
+               {
+                  level = bitmap.GetLevel(mip, quality);
+               }
+               else if (level == null)
+               {
+                  await Task.Yield();
+                  if (!ReferenceEquals(_bitmap, bitmap) || askedMip != MipLevel || askedQuality != QualityLevel)
+                     return;
+                  level = await Task.Run(() => bitmap.GetLevel(mip, quality));
+               }
+            }
+
             if (!ReferenceEquals(_bitmap, bitmap) || askedMip != MipLevel || askedQuality != QualityLevel) return;
             _frame = level;
          }

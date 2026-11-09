@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 using Adamantium.Core.TypeParsing;
+using Adamantium.Imaging;
 using Adamantium.Imaging.Jpeg2000;
 using Adamantium.MVVM;
 using Adamantium.UI.Core.Media.Imaging;
@@ -22,22 +23,16 @@ public partial class Jpeg2000PictureViewModel : AdamantiumViewModel
         Title = title;
         _path = Path.IsPathRooted(path) ? path : Path.Combine(AppContext.BaseDirectory, path);
         Source = TypeParser.Parse<ImageSource>(path);
-        Measure();
     }
 
     public string Title { get; }
 
     public ImageSource Source { get; }
 
-    /// <summary>The resolutions the file has, the full one counted - bound FROM the image.</summary>
     [Bindable] private uint _mipLevelCount;
-
-    /// <summary>The quality layers the file has - bound FROM the image.</summary>
     [Bindable] private uint _qualityLevelCount;
-
     [Bindable] private uint _mipLevel;
     [Bindable] private uint _qualityLevel;
-
     [Bindable] private int _decodedWidth;
     [Bindable] private int _decodedHeight;
     [Bindable] private string _usedKilobytes = "";
@@ -70,11 +65,16 @@ public partial class Jpeg2000PictureViewModel : AdamantiumViewModel
 
     private async void Measure()
     {
+        if (QualityLevelCount == 0)
+        {
+            return;
+        }
+
         var ticket = ++_measuring;
         var options = new Jpeg2000Options
         {
             DiscardLevels = (int)MipLevel,
-            Layers = QualityLevelCount > QualityLevel ? (int)(QualityLevelCount - QualityLevel) : 0,
+            Layers = QualityLevel == 0 ? 0 : (int)LayersShown,
         };
         try
         {
@@ -82,7 +82,7 @@ public partial class Jpeg2000PictureViewModel : AdamantiumViewModel
             {
                 var data = File.ReadAllBytes(_path);
                 var watch = Stopwatch.StartNew();
-                var decoded = Jpeg2000Decoder.Decode(data, 1L << 28, options);
+                var decoded = Jpeg2000Decoder.Decode(data, BitmapLoader.MaxPixels, options);
                 return (decoded, watch.ElapsedMilliseconds);
             });
             if (ticket != _measuring)
@@ -96,9 +96,16 @@ public partial class Jpeg2000PictureViewModel : AdamantiumViewModel
             TotalKilobytes = (image.CodedBytes / 1024.0).ToString("0.0");
             Milliseconds = elapsed;
         }
-        catch (Exception exception) when (exception is IOException or InvalidDataException or NotSupportedException)
+        catch (Exception)
         {
+            if (ticket != _measuring)
+            {
+                return;
+            }
+
+            DecodedWidth = DecodedHeight = 0;
             UsedKilobytes = TotalKilobytes = "-";
+            Milliseconds = 0;
         }
     }
 }

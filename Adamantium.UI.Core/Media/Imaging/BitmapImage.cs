@@ -16,7 +16,8 @@ public sealed class BitmapImage : BitmapSource
    // leave both caches null and every frame fetch threw (swallowed -> an animated source silently froze on frame 0).
    private readonly Queue<BitmapFrame> _framesCache = new();
    private readonly Dictionary<uint, BitmapFrame> _indexToFrame = new();
-   private readonly ConcurrentDictionary<(uint Mip, uint Quality), BitmapFrame> _levels = new();
+   private readonly ConcurrentDictionary<(uint Mip, uint Quality), Lazy<BitmapFrame>> _levels = new();
+   private volatile bool _released;
    private volatile ITexture _framePalette;
 
    public BitmapImage()
@@ -370,41 +371,54 @@ public sealed class BitmapImage : BitmapSource
    /// showing that level shares one texture. Null while the bitmap has not loaded or has no such level.</summary>
    public BitmapFrame GetMipLevel(uint level) => GetLevel(level, 0);
 
-   /// <summary>The picture at mip <paramref name="mipLevel"/> and quality <paramref name="qualityLevel"/> - 0 the
-   /// full quality, each next one coarser - made on first ask and kept by this image. Null while the bitmap has not
-   /// loaded or has no such level. Decoding a level can take a while: ask off the UI thread.</summary>
+   /// <summary>Whether a level is decoded when first asked for, which can take a while - a JPEG 2000's - rather than
+   /// read from what the picture already holds.</summary>
+   public bool DecodesLevelsOnDemand => _rawBitmap?.DecodesLevelsOnDemand ?? false;
+
    /// <summary>The level <see cref="GetLevel"/> has made already, or null - nothing is decoded.</summary>
    public BitmapFrame FindLevel(uint mipLevel, uint qualityLevel) =>
-      _levels.TryGetValue((mipLevel, qualityLevel), out var kept) ? kept : null;
+      _levels.TryGetValue((mipLevel, qualityLevel), out var kept) && kept.IsValueCreated ? kept.Value : null;
 
+   /// <summary>The picture at mip <paramref name="mipLevel"/> and quality <paramref name="qualityLevel"/> - 0 the
+   /// full quality, each next one coarser - made once, however many ask at a time, and kept by this image. Null while
+   /// the bitmap has not loaded, once it is released, or for a level it does not have. Where
+   /// <see cref="DecodesLevelsOnDemand"/>, ask off the UI thread.</summary>
    public BitmapFrame GetLevel(uint mipLevel, uint qualityLevel)
    {
-      if (_levels.TryGetValue((mipLevel, qualityLevel), out var kept))
-      {
-         return kept;
-      }
-
-      var data = _rawBitmap?.GetLevelData(mipLevel, qualityLevel);
-      if (data == null)
+      if (_released || _rawBitmap == null)
       {
          return null;
       }
 
-      var frame = new BitmapFrame(
-         data.Description.Width,
-         data.Description.Height,
-         DpiXScale,
-         DpiYScale,
-         SurfaceLayout,
-         data.RawPixels,
-         mipLevel);
-      var shared = _levels.GetOrAdd((mipLevel, qualityLevel), frame);
-      if (!ReferenceEquals(shared, frame))
+      var key = (mipLevel, qualityLevel);
+      var level = _levels.GetOrAdd(key, k => new Lazy<BitmapFrame>(() => MakeLevel(k.Mip, k.Quality)));
+      var frame = level.Value;
+      if (frame == null)
       {
-         frame.Dispose();
+         _levels.TryRemove(new KeyValuePair<(uint, uint), Lazy<BitmapFrame>>(key, level));
+         return null;
       }
 
-      return shared;
+      if (_released)
+      {
+         if (_levels.TryRemove(key, out var dropped))
+         {
+            dropped.Value?.Dispose();
+         }
+
+         return null;
+      }
+
+      return frame;
+   }
+
+   private BitmapFrame MakeLevel(uint mipLevel, uint qualityLevel)
+   {
+      var data = _rawBitmap?.GetLevelData(mipLevel, qualityLevel);
+      return data == null
+         ? null
+         : new BitmapFrame(data.Description.Width, data.Description.Height, DpiXScale, DpiYScale, SurfaceLayout,
+            data.RawPixels, mipLevel);
    }
 
    private void Load(Uri uri)
@@ -473,9 +487,13 @@ public sealed class BitmapImage : BitmapSource
          bitmapFrame.Value?.Dispose();
       }
       _indexToFrame.Clear();
+      _released = true;
       foreach (var level in _levels.Values)
       {
-         level.Dispose();
+         if (level.IsValueCreated)
+         {
+            level.Value?.Dispose();
+         }
       }
 
       _levels.Clear();
