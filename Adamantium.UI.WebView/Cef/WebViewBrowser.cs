@@ -24,6 +24,7 @@ internal sealed unsafe class WebViewBrowser : IDisposable
     private readonly WebViewDisplayHandler displayHandler;
     private readonly WebViewLoadHandler loadHandler;
     private readonly WebViewRequestHandler requestHandler;
+    private readonly WebViewContextMenuHandler contextMenuHandler;
     private readonly WebViewDevTools devTools;
     private WebViewFrameProducer producer;
     private CefBrowser* browser;
@@ -42,6 +43,7 @@ internal sealed unsafe class WebViewBrowser : IDisposable
     private bool focused;
     private double zoom = 1;
     private int iconsAsked;
+    private Task<System.Text.Json.JsonElement> inspected;
     private string[] iconAddresses = [];
     private bool secure;
     private long securityAskedAt;
@@ -60,9 +62,11 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         lifeSpanHandler = new WebViewLifeSpanHandler(this);
         loadHandler = new WebViewLoadHandler(this);
         requestHandler = new WebViewRequestHandler(this);
-        devTools = new WebViewDevTools(json => view.MessageReceived(this, json));
+        devTools = new WebViewDevTools(json => view.MessageReceived(this, json)) { OverlayHeard = RevealWaiting };
         displayHandler = new WebViewDisplayHandler(this);
-        client = new WebViewClient(renderHandler, lifeSpanHandler, displayHandler, loadHandler, requestHandler);
+        contextMenuHandler = new WebViewContextMenuHandler(this);
+        client = new WebViewClient(renderHandler, lifeSpanHandler, displayHandler, loadHandler, requestHandler,
+            contextMenuHandler);
     }
 
     /// <summary>The view's size in device-independent pixels, never empty.</summary>
@@ -687,6 +691,42 @@ internal sealed unsafe class WebViewBrowser : IDisposable
 
     internal void OnStatusMessage(string message) => view.StatusChanged(this, message);
 
+    internal void OnTooltip(string text) => view.TooltipChanged(this, text);
+
+    /// <summary>Opens the element at <paramref name="x"/>, <paramref name="y"/> of the view, in device-independent
+    /// pixels, in the DevTools' Elements panel: now, if their front end listens, else once it does - while the page
+    /// is the same.</summary>
+    public void InspectAt(double x, double y)
+    {
+        var host = LiveHost();
+        if (host == null)
+        {
+            return;
+        }
+
+        // Found now, as the page is laid out under the menu: the DevTools opening beside it lay it out narrower.
+        inspected = devTools.Locate(host, x / zoom, y / zoom);
+        CefRefCounting.ReleaseCef(host);
+        if (devTools.FrontEndHearsOverlay)
+        {
+            RevealWaiting();
+        }
+    }
+
+    private void RevealWaiting()
+    {
+        if (inspected == null)
+        {
+            return;
+        }
+
+        devTools.Reveal(inspected);
+        inspected = null;
+    }
+
+    /// <summary>The menu the page asks for: the view shows it, or answers it at once with none.</summary>
+    internal bool OnRunContextMenu(WebViewContextMenu menu) => !isDevTools && view.ContextMenuRequested(this, menu);
+
     internal void OnLoadingProgress(double progress) => view.ProgressChanged(this, progress);
 
     internal void OnLoadingState(bool isLoading, bool canGoBack, bool canGoForward)
@@ -721,6 +761,8 @@ internal sealed unsafe class WebViewBrowser : IDisposable
     /// </summary>
     internal void OnLoadStart()
     {
+        // An element of the page gone is none of the next's.
+        inspected = null;
         iconsAsked++;
         view.IconChanged(this, null);
     }
@@ -1041,6 +1083,7 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         displayHandler.Release();
         loadHandler.Release();
         requestHandler.Release();
+        contextMenuHandler.Release();
     }
 
     private void Close()

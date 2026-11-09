@@ -38,6 +38,7 @@ public partial class WebView
         var at = e.GetPosition(this);
         if (e.Pointer.Type == PointerType.Mouse)
         {
+            pointerAt = at;
             browser.SendMouseMove(at.X, at.Y, e.Modifiers, false);
         }
         else if (touching.Contains(e.Pointer.Id))
@@ -79,6 +80,7 @@ public partial class WebView
     // The pointer left the page's part for the splitter or the DevTools, still inside the view: the page hears it go.
     private void OnPageExited(object sender, PointerEventArgs e)
     {
+        HidePageTip();
         if (!IsPointerCaptured && !draggingFromPage)
         {
             var at = e.GetPosition(this);

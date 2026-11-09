@@ -622,6 +622,96 @@ public class WebViewFrameTests
         });
     }
 
+    // A right press asks for the page's menu: Chromium's rows come, and a row chosen runs in the page.
+    [Test]
+    public void ARightPress_BringsThePagesMenu_AndARowRunsInThePage()
+    {
+        const string page = "data:text/html,<body style='margin:0'>" +
+                            "<input id='field' value='abc' style='width:100%;height:100vh'></body>";
+        WebViewContextMenu menu = null;
+        string selection = null;
+        loop.Run(() => ShowPage(WebViewFramePath.PixelBuffer, page, (browser, view) =>
+        {
+            Click(browser, Width / 2, Height / 2);
+            browser.SendMouseClick(Width / 2, Height / 2, InputModifiers.RightMouseButton, CefMouseButtonType.Right, false, 1);
+            browser.SendMouseClick(Width / 2, Height / 2, InputModifiers.None, CefMouseButtonType.Right, true, 1);
+            Pump(() => view.Menus.Count > 0, TimeSpan.FromSeconds(5));
+            menu = view.Menus.FirstOrDefault();
+            menu?.Choose((int)CefMenuId.SelectAll);
+            Pump(() => false, TimeSpan.FromMilliseconds(500));
+            selection = Await(browser.EvaluateAsync("field.selectionStart + ',' + field.selectionEnd"));
+        }));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(menu, Is.Not.Null, "the menu was asked for");
+            Assert.That(menu?.Items.Select(item => item.Command), Does.Contain((int)CefMenuId.SelectAll));
+            Assert.That(menu?.X, Is.EqualTo(Width / 2).Within(1));
+            Assert.That(menu?.IsAnswered, Is.True);
+            Assert.That(selection, Is.EqualTo("\"0,3\""), "Select all chosen selects the field's text");
+        });
+    }
+
+    // An element's title comes to the view as its tooltip while the pointer is over it.
+    [Test]
+    public void AnElementsTitle_ComesAsTheTooltip()
+    {
+        const string page = "data:text/html,<body style='margin:0'><div title='Hint' style='height:100vh'>x</div></body>";
+        string tooltip = null;
+        loop.Run(() => ShowPage(WebViewFramePath.PixelBuffer, page, (browser, view) =>
+        {
+            browser.SendMouseMove(Width / 2, Height / 2, InputModifiers.None, false);
+            browser.SendMouseMove(Width / 2 + 2, Height / 2 + 2, InputModifiers.None, false);
+            Pump(() => !string.IsNullOrEmpty(view.Tooltip), TimeSpan.FromSeconds(5));
+            tooltip = view.Tooltip;
+        }));
+
+        Assert.That(tooltip, Is.EqualTo("Hint"));
+    }
+
+    // Inspecting a point shows the DevTools front end the element there, as its inspect mode does.
+    [Test]
+    public void InspectingAPoint_ShowsTheFrontEndTheElementThere()
+    {
+        const string page = "data:text/html,<body style='margin:0'><p id='target' style='height:100vh'>x</p></body>";
+        string revealed = null, described = null;
+        loop.Run(() => ShowPage(WebViewFramePath.PixelBuffer, page, (browser, _) =>
+        {
+            var address = browser.OpenDevTools();
+            var socketAddress = new Uri("ws://" + address[(address.IndexOf("ws=", StringComparison.Ordinal) + 3)..]);
+            using var frontEnd = new System.Net.WebSockets.ClientWebSocket();
+            frontEnd.Options.SetRequestHeader("Origin", "devtools://devtools");
+            var connected = frontEnd.ConnectAsync(socketAddress, CancellationToken.None);
+            Pump(() => connected.IsCompleted, TimeSpan.FromSeconds(5));
+            browser.InspectAt(Width / 2, Height / 2);
+            foreach (var call in new[] { "{\"id\":1,\"method\":\"DOM.enable\",\"params\":{}}",
+                                         "{\"id\":2,\"method\":\"Overlay.enable\",\"params\":{}}" })
+            {
+                frontEnd.SendAsync(System.Text.Encoding.UTF8.GetBytes(call),
+                    System.Net.WebSockets.WebSocketMessageType.Text, true, CancellationToken.None).Wait();
+            }
+
+            revealed = Receive(frontEnd, reply => reply.Contains("Overlay.inspectNodeRequested"));
+            if (revealed == null)
+            {
+                return;
+            }
+
+            var node = System.Text.Json.JsonDocument.Parse(revealed).RootElement.GetProperty("params")
+                .GetProperty("backendNodeId").GetInt32();
+            var describe = $"{{\"id\":3,\"method\":\"DOM.describeNode\",\"params\":{{\"backendNodeId\":{node}}}}}";
+            frontEnd.SendAsync(System.Text.Encoding.UTF8.GetBytes(describe),
+                System.Net.WebSockets.WebSocketMessageType.Text, true, CancellationToken.None).Wait();
+            described = Receive(frontEnd, reply => reply.StartsWith("{\"id\":3,", StringComparison.Ordinal));
+        }));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(revealed, Does.Contain("backendNodeId"));
+            Assert.That(described, Does.Contain("\"target\""), "the element under the point");
+        });
+    }
+
     // The front end's Styles pane: the element's matched rules come, as the DOM and CSS domains give them.
     [Test]
     public void TheDevToolsFrontEnd_GetsAnElementsStyles()

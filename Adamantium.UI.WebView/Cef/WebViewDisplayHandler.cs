@@ -19,6 +19,28 @@ internal sealed unsafe class WebViewDisplayHandler : CefObject
         handler->on_status_message = &OnStatusMessage;
         handler->on_loading_progress_change = &OnLoadingProgressChange;
         handler->on_favicon_urlchange = &OnFaviconUrlChange;
+        handler->on_tooltip = &OnTooltip;
+    }
+
+    // Off screen no window draws Chromium's tooltip: the view shows its own, and the answer is that it did.
+    [UnmanagedCallersOnly]
+    private static int OnTooltip(CefDisplayHandler* self, CefBrowser* cefBrowser, CefStringUtf16* text)
+    {
+        try
+        {
+            var owner = From<WebViewDisplayHandler>(self).browser;
+            if (owner.Is(cefBrowser))
+            {
+                owner.OnTooltip(CefStrings.Read(text));
+            }
+        }
+        catch (Exception exception)
+        {
+            CefCallbacks.Report(exception);
+        }
+
+        CefRefCounting.ReleaseCef(cefBrowser);
+        return 1;
     }
 
     [UnmanagedCallersOnly]

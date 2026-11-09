@@ -73,4 +73,11 @@ internal interface IWebViewBrowserView
 
     /// <summary>Whether the page came over a connection with nothing wrong.</summary>
     void SecurityChanged(WebViewBrowser browser, bool isSecure);
+
+    /// <summary>The tooltip the page wants for what is under the pointer; empty for none.</summary>
+    void TooltipChanged(WebViewBrowser browser, string text);
+
+    /// <summary>Shows the menu the page asks for and answers it once the user picks a row or lets it go; false leaves it
+    /// to be answered with none.</summary>
+    bool ContextMenuRequested(WebViewBrowser browser, WebViewContextMenu menu);
 }

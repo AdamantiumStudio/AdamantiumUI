@@ -22,7 +22,7 @@ internal sealed class WebViewDevTools
 
     private readonly Action<string> messageReceived;
     private readonly Dictionary<int, TaskCompletionSource<JsonElement>> pending = [];
-    private readonly Dictionary<int, byte[]> forwarded = [];
+    private readonly Dictionary<int, (byte[] Id, bool EnablesOverlay)> forwarded = [];
     private Action<string> frontEnd;
     private WebViewDevToolsObserver observer;
     private unsafe CefRegistration* registration;
@@ -90,6 +90,7 @@ internal sealed class WebViewDevTools
     public unsafe void ServeFrontEnd(CefBrowserHost* host, Action<string> send)
     {
         frontEnd = send;
+        FrontEndHearsOverlay = false;
         if (send == null)
         {
             FrontEndGone(host);
@@ -103,6 +104,7 @@ internal sealed class WebViewDevTools
     public unsafe void FrontEndGone(CefBrowserHost* host)
     {
         forwarded.Clear();
+        FrontEndHearsOverlay = false;
         if (host == null)
         {
             return;
@@ -127,18 +129,57 @@ internal sealed class WebViewDevTools
     public unsafe void Forward(CefBrowserHost* host, string json)
     {
         var call = System.Text.Encoding.UTF8.GetBytes(json);
-        if (frontEnd == null || !TryReadTop(call, out var id, out _) || id.Start < 0)
+        if (frontEnd == null || !TryReadTop(call, out var id, out var method) || id.Start < 0)
         {
             return;
         }
 
         var ours = ++nextId;
-        forwarded[ours] = call[id.Start..id.End];
+        forwarded[ours] = (call[id.Start..id.End], method == "Overlay.enable");
         var bytes = WithId(call, id, System.Text.Encoding.UTF8.GetBytes(ours.ToString(System.Globalization.CultureInfo.InvariantCulture)));
         fixed (byte* message = bytes)
         {
             host->send_dev_tools_message(host, message, (ulong)bytes.Length);
         }
+    }
+
+    /// <summary>Whether the front end served now listens to the page's overlay - it has enabled it, and an element shown
+    /// to it the way its inspect mode shows one opens in its Elements panel, whatever panel it shows.</summary>
+    public bool FrontEndHearsOverlay { get; private set; }
+
+    /// <summary>Raised on the UI loop once the front end listens to the overlay.</summary>
+    public Action OverlayHeard { get; set; }
+
+    /// <summary>The element at <paramref name="x"/>, <paramref name="y"/> of the page, in its CSS pixels, as the page is
+    /// laid out now - before the DevTools opening beside it lay it out again.</summary>
+    public unsafe Task<JsonElement> Locate(CefBrowserHost* host, double x, double y) =>
+        Call(host, "DOM.getNodeForLocation", writer =>
+        {
+            writer.WriteNumber("x", (int)Math.Round(x));
+            writer.WriteNumber("y", (int)Math.Round(y));
+            writer.WriteBoolean("ignorePointerEventsNone", true);
+        });
+
+    /// <summary>Shows the front end served now the element <paramref name="located"/> found, as its own inspect mode
+    /// would: the Elements panel opens on it.</summary>
+    public void Reveal(Task<JsonElement> located)
+    {
+        var send = frontEnd;
+        if (send == null)
+        {
+            return;
+        }
+
+        located.ContinueWith(answer =>
+        {
+            // Nothing there, or the page gone before it answered: nothing to show, and the failure is seen here.
+            _ = answer.Exception;
+            if (answer.IsCompletedSuccessfully && answer.Result.TryGetProperty("backendNodeId", out var node))
+            {
+                send("{\"method\":\"Overlay.inspectNodeRequested\",\"params\":{\"backendNodeId\":" +
+                     node.GetInt32().ToString(System.Globalization.CultureInfo.InvariantCulture) + "}}");
+            }
+        }, TaskScheduler.Default);
     }
 
     /// <summary>Stops: what was asked and not answered fails, the browser hears nothing more.</summary>
@@ -205,7 +246,13 @@ internal sealed class WebViewDevTools
 
         if (forwarded.Remove(id, out var theirs))
         {
-            frontEnd?.Invoke(System.Text.Encoding.UTF8.GetString(WithId(message, idRange, theirs)));
+            frontEnd?.Invoke(System.Text.Encoding.UTF8.GetString(WithId(message, idRange, theirs.Id)));
+            if (theirs.EnablesOverlay && frontEnd != null && message.IndexOf("\"error\""u8) < 0)
+            {
+                FrontEndHearsOverlay = true;
+                OverlayHeard?.Invoke();
+            }
+
             return;
         }
 

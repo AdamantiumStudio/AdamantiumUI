@@ -4,4 +4,5 @@
     <Phrase Key="ResetZoom" Text="Сбросить масштаб"/>
     <Phrase Key="DevTools" Text="DevTools"/>
     <Phrase Key="StatusBar" Text="Состояние страницы"/>
+    <Phrase Key="Inspect" Text="Просмотреть код"/>
 </Language>

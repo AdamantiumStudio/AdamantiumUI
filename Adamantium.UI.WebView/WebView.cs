@@ -120,6 +120,8 @@ public partial class WebView : Control, IWebViewBrowserView, ITextEntry
         }
 
         TakeDevToolsView(GetTemplateChild("PART_DevTools") as WebViewDevToolsView);
+        TakePageMenu(GetTemplateChild("PART_PageMenu") as ContextMenu, GetTemplateChild("PART_PageTipPopup") as Popup,
+            GetTemplateChild("PART_PageTip") as ToolTip);
         if (GetTemplateChild("PART_StatusBar") is WebViewStatusBar statusBar)
         {
             statusBar.SetCurrentValue(WebViewStatusBar.ViewProperty, this);
@@ -131,6 +133,7 @@ public partial class WebView : Control, IWebViewBrowserView, ITextEntry
     public override void OnRemoveTemplate()
     {
         TakeDevToolsView(null);
+        TakePageMenu(null, null, null);
         StopBrowser();
         if (pageHost != null)
         {
@@ -253,6 +256,13 @@ public partial class WebView : Control, IWebViewBrowserView, ITextEntry
         }
 
         ForgetInput();
+        DismissPageMenu();
+        HidePageTip();
+        if (pageMenu != null)
+        {
+            pageMenu.IsOpen = false;
+        }
+
         touching.Clear();
         draggingFromPage = false;
         browser.Dispose();
