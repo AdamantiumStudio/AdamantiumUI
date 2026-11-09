@@ -181,6 +181,7 @@ public class ForwardWindowRenderer : WindowRendererBase
         TrackVerification();
         var t0 = Stopwatch.GetTimestamp();
         _renderCache.RecordFrame(Window);
+        RecordTaken();
         _lastRecordMs = Stopwatch.GetElapsedTime(t0).TotalMilliseconds;
         RuntimeStats.LastRecordMs = _lastRecordMs;
     }
@@ -192,7 +193,9 @@ public class ForwardWindowRenderer : WindowRendererBase
         if (Window == null) return;
 
         var t0 = Stopwatch.GetTimestamp();
+        var taken = RecordsTaken;   // read first: every record counted by now was published before the apply drains them
         _renderCache.ApplyFrame();
+        RecordsApplied(taken);
         RuntimeStats.LastApplyMs = Stopwatch.GetElapsedTime(t0).TotalMilliseconds;
         RuntimeStats.LastRenderBuildMs = _lastRecordMs + RuntimeStats.LastApplyMs;
 

@@ -12,6 +12,7 @@ using Adamantium.UI.Controls.Text;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Localization;
 using Adamantium.UI.Core.Media;
+using Adamantium.UI.Core.Media.Imaging;
 using Adamantium.UI.Core.Resources;
 using Adamantium.UI.Core.RoutedEvents;
 using System.Runtime.ExceptionServices;
@@ -1351,10 +1352,25 @@ public abstract class WindowBase : ContentControl, IWindow, IWindowInternals, IA
     /// those that were there when it was shown, take no input until it closes or is hidden.</summary>
     public bool IsModal => _isModal;
 
+    /// <summary>The frame the window shows, read back from what its renderer drew; null while it has no renderer, and
+    /// for a minimized or hidden window.</summary>
+    public Task<BitmapSource> TakeScreenshotAsync()
+    {
+        if ((Renderer ?? DefaultRenderer) is not { } renderer)
+        {
+            return Task.FromResult<BitmapSource>(null);
+        }
+
+        var taken = new TaskCompletionSource<BitmapSource>(TaskCreationOptions.RunContinuationsAsynchronously);
+        renderer.RequestScreenshot(picture => taken.TrySetResult(picture));
+        return taken.Task;
+    }
+
     /// <summary>Shows the window modally over its <see cref="Owner"/>: the application's other windows, those that are
     /// there now, take no input until this window closes or is hidden, which ends the task; how they are kept from input
     /// is the platform's. With no owner, the active window becomes it, else the application's main window. A window
     /// already closed ends the task at once.</summary>
+
     public Task ShowDialogAsync()
     {
         TaskCompletionSource dialogClosed;

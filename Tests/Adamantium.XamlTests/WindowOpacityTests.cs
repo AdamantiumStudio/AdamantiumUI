@@ -161,6 +161,7 @@ public class WindowOpacityTests
         public void InvalidatePresenter() => Invalidations++;
 
         public void RequestFrame() => FrameRequests++;
+        public void RequestScreenshot(System.Action<Adamantium.UI.Core.Media.Imaging.BitmapSource> onReady) { }
 
         public IDrawingContext DrawingContext => null;
         public bool IsRendererUpToDate => true;

@@ -204,27 +204,80 @@ public sealed class AutomationExecutor
             throw new AutomationException("A picture needs a file to go to.");
         }
 
-        var renderer = _host.Renderer ?? throw new AutomationException("Nothing is drawn here, so there is no picture to take.");
-        var taken = new TaskCompletionSource<ImageSource>(TaskCreationOptions.RunContinuationsAsynchronously);
-        await _host.RunOnLoopAsync(() =>
+        // The picture is the window's own frame - what is on screen, popups and all - and an element's is cut from it.
+        var (window, area) = await _host.RunOnLoopAsync(() =>
         {
-            var element = string.IsNullOrWhiteSpace(request.Target)
-                ? _host.Windows.OfType<UIComponent>().FirstOrDefault() ?? throw new AutomationException("No window is open.")
-                : OwnerOf(Resolve(request.Target));
-            renderer.RequestSnapshot(element, image => taken.TrySetResult(image));
-            LoopSignal.Request();
-            return true;
+            if (string.IsNullOrWhiteSpace(request.Target))
+            {
+                return (_host.Windows.FirstOrDefault() ?? throw new AutomationException("No window is open."), (Rect?)null);
+            }
+
+            var element = OwnerOf(Resolve(request.Target));
+            if (element is IWindow shown)
+            {
+                return (shown, (Rect?)null);
+            }
+
+            var holder = element.RootVisual?.Window ?? throw new AutomationException($"{request.Target} is not in a window.");
+            return (holder, InWindow(element));
         }, timeout);
 
-        using var picture = await taken.Task.WaitAsync(timeout);
-        if (picture is not BitmapSource { PixelBytes: not null } bitmap)
+        using var frame = await window.TakeScreenshotAsync().WaitAsync(timeout);
+        if (frame is not { PixelBytes: not null })
         {
-            throw new AutomationException("The element has no size to take a picture of.");
+            throw new AutomationException("The window has drawn nothing to take a picture of.");
         }
 
+        using var cut = area is { } part ? Cut(frame, part) : null;
         var path = Path.GetFullPath(request.Value);
-        SnapshotFile.Save(bitmap, path);
+        SnapshotFile.Save(cut ?? frame, path);
         return new AutomationReply { Ok = true, Text = path };
+    }
+
+    private static Rect InWindow(UIComponent element)
+    {
+        // Every corner: a mirrored or turned element has its far corner anywhere.
+        var world = element.WorldTransform;
+        var width = (float)element.RenderSize.Width;
+        var height = (float)element.RenderSize.Height;
+        double left = double.MaxValue, top = double.MaxValue, right = double.MinValue, bottom = double.MinValue;
+        foreach (var corner in new[] { Vector3F.Zero, new Vector3F(width, 0, 0), new Vector3F(0, height, 0), new Vector3F(width, height, 0) })
+        {
+            var point = Vector3F.TransformCoordinate(corner, world);
+            left = Math.Min(left, point.X);
+            top = Math.Min(top, point.Y);
+            right = Math.Max(right, point.X);
+            bottom = Math.Max(bottom, point.Y);
+        }
+
+        return new Rect(new Vector2<double>(left, top), new Vector2<double>(right, bottom));
+    }
+
+    // The part of the frame the element covers, in the frame's pixels; what lies outside the window is left out.
+    private static BitmapSource Cut(BitmapSource frame, Rect area)
+    {
+        var scaleX = frame.DpiXScale > 0 ? 1.0 / frame.DpiXScale : 1.0;
+        var scaleY = frame.DpiYScale > 0 ? 1.0 / frame.DpiYScale : 1.0;
+        var left = (int)Math.Clamp(Math.Floor(area.X * scaleX), 0, frame.PixelWidth);
+        var top = (int)Math.Clamp(Math.Floor(area.Y * scaleY), 0, frame.PixelHeight);
+        var right = (int)Math.Clamp(Math.Ceiling((area.X + area.Width) * scaleX), left, frame.PixelWidth);
+        var bottom = (int)Math.Clamp(Math.Ceiling((area.Y + area.Height) * scaleY), top, frame.PixelHeight);
+        if (right <= left || bottom <= top)
+        {
+            throw new AutomationException("The element shows nothing inside its window to take a picture of.");
+        }
+
+        var pixelSize = frame.PixelBytes.Length / ((int)frame.PixelWidth * (int)frame.PixelHeight);
+        var width = right - left;
+        var height = bottom - top;
+        var pixels = new byte[width * height * pixelSize];
+        for (var row = 0; row < height; row++)
+        {
+            Buffer.BlockCopy(frame.PixelBytes, ((top + row) * (int)frame.PixelWidth + left) * pixelSize, pixels,
+                row * width * pixelSize, width * pixelSize);
+        }
+
+        return new BitmapSource((uint)width, (uint)height, frame.DpiXScale, frame.DpiYScale, frame.SurfaceLayout, pixels);
     }
 
     private async Task<AutomationReply> ActAsync(AutomationRequest request, TimeSpan timeout)

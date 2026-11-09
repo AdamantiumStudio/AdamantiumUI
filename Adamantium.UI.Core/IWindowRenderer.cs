@@ -2,6 +2,7 @@ using Adamantium.Core;
 using Adamantium.Graphics.Core;
 using Adamantium.Graphics.Core.Presentation;
 using Adamantium.UI.Core.Graphics;
+using Adamantium.UI.Core.Media.Imaging;
 
 namespace Adamantium.UI.Core;
 
@@ -30,6 +31,11 @@ public interface IWindowRenderer : IDisposable
     /// <summary>Asks for a frame of this window alone: something it shows changed without the loop, such as a hosted
     /// scene's frame. Safe from any thread.</summary>
     public void RequestFrame();
+
+    /// <summary>Asks for the frame the window shows - read back from what it drew, popups and all, not drawn again.
+    /// <paramref name="onReady"/> is called on the UI thread with the first frame drawn from what the window held when
+    /// asked, or with null for a window that draws nothing - minimized, hidden or let go. Safe from any thread.</summary>
+    public void RequestScreenshot(Action<BitmapSource> onReady);
 
     /// <summary>Render resolution multiplier over the window's logical size: presenter + viewport are sized
     /// ClientSize x RenderScale, while the projection stays the logical size. 1 = on-screen 1:1; the designer sets it

@@ -57,6 +57,7 @@ public class WindowPresenterInvalidationTests
         public int ChangedFrames => 0;
         public long FrameRequests => 0;
         public void RequestFrame() { }
+        public void RequestScreenshot(System.Action<Adamantium.UI.Core.Media.Imaging.BitmapSource> onReady) { }
         public double RenderScale { get; set; } = 1.0;
         public GraphicsPresenter Presenter => null;
 

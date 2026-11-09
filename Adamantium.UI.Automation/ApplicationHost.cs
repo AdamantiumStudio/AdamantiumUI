@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using Adamantium.Graphics;
 using Adamantium.Graphics.Core;
 using Adamantium.UI.Core;
-using Adamantium.UI.Core.Rendering;
 
 namespace Adamantium.UI.Automation;
 
@@ -22,8 +21,6 @@ public sealed class ApplicationHost : IAutomationHost
     public IReadOnlyList<IWindow> Windows => _application.Windows;
 
     public bool IsStarting => _application.IsStarting;
-
-    public IVisualRenderer Renderer => _application.Container.Resolve<IVisualRenderer>();
 
     public string DescribeDeviceMemory() =>
         _application.Container.Resolve<IGraphicsDeviceService>()?.MainGraphicsDevice is { } main
