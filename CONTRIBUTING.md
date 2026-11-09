@@ -27,7 +27,8 @@ dotnet build AdamantiumUI.sln -c Debug
 ```
 
 Each project builds into a folder of its own, `artifacts/bin/<project>/<Configuration>/<target framework>/`. The
-sandbox's folder also holds `adam-auto`, which starts it from there.
+sandbox's folder also holds `adam-auto`, which starts it from there. Its pipe is the working copy's own, so copies
+driven at once keep to their own instances; `--pipe` names another.
 
 **The engine.** `main` builds against the engine's `master`, as CI does: with
 [AdamantiumEngine](https://github.com/AdamantiumStudio/AdamantiumEngine) cloned beside this repository, in
