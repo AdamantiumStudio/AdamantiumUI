@@ -648,13 +648,9 @@ public class AumlLowering
                                             _writer.Add(new AssignStep(ancestor, "ConverterParameter",
                                                 EmitValueExpression(argument.Value, "object", diagnostics, isResource) ?? Unescaped(text)));
                                             break;
-                                        case "FallbackValue":
-                                            _writer.Add(new AssignStep(ancestor, "FallbackValue",
-                                                EmitValueExpression(argument.Value, "object", diagnostics, isResource) ?? Unescaped(text)));
-                                            break;
-                                        case "TargetNullValue":
-                                            _writer.Add(new AssignStep(ancestor, "TargetNullValue",
-                                                EmitValueExpression(argument.Value, "object", diagnostics, isResource) ?? Unescaped(text)));
+                                        case "FallbackValue" or "TargetNullValue":
+                                            _writer.Add(new AssignStep(ancestor, argument.Name,
+                                                EmitFallbackExpression(argument.Value, diagnostics, isResource) ?? Unescaped(text)));
                                             break;
                                         default:
                                             diagnostics.ReportError(Metadata.ClassName, MarkupMessages.AncestorUnknownArgument(argument.Name), extension);
@@ -672,7 +668,9 @@ public class AumlLowering
                             else
                             {
                                 var acTarget = isRoot ? "this" : CurrentParent;
-                                _writer.Add(Invoke(ancestor, "Apply", Variable(acTarget), Unescaped(propRef.Name)));
+                                _writer.Add(CurrentTemplate != null
+                                    ? Invoke(ancestor, "Apply", Variable(acTarget), Unescaped(propRef.Name), Priority("Template"))
+                                    : Invoke(ancestor, "Apply", Variable(acTarget), Unescaped(propRef.Name)));
                             }
                             break;
                         }
@@ -713,13 +711,9 @@ public class AumlLowering
                                         _writer.Add(new AssignStep(self, "ConverterParameter",
                                             EmitValueExpression(argument.Value, "object", diagnostics, isResource) ?? Unescaped(text)));
                                         break;
-                                    case "FallbackValue":
-                                        _writer.Add(new AssignStep(self, "FallbackValue",
-                                            EmitValueExpression(argument.Value, "object", diagnostics, isResource) ?? Unescaped(text)));
-                                        break;
-                                    case "TargetNullValue":
-                                        _writer.Add(new AssignStep(self, "TargetNullValue",
-                                            EmitValueExpression(argument.Value, "object", diagnostics, isResource) ?? Unescaped(text)));
+                                    case "FallbackValue" or "TargetNullValue":
+                                        _writer.Add(new AssignStep(self, argument.Name,
+                                            EmitFallbackExpression(argument.Value, diagnostics, isResource) ?? Unescaped(text)));
                                         break;
                                     default:
                                         diagnostics.ReportError(Metadata.ClassName, MarkupMessages.SelfUnknownArgument(argument.Name), extension);
@@ -733,7 +727,9 @@ public class AumlLowering
                             else
                             {
                                 var slfTarget = isRoot ? "this" : CurrentParent;
-                                _writer.Add(Invoke(self, "Apply", Variable(slfTarget), Unescaped(propRef.Name)));
+                                _writer.Add(CurrentTemplate != null
+                                    ? Invoke(self, "Apply", Variable(slfTarget), Unescaped(propRef.Name), Priority("Template"))
+                                    : Invoke(self, "Apply", Variable(slfTarget), Unescaped(propRef.Name)));
                             }
                             break;
                         }
@@ -1401,11 +1397,16 @@ public class AumlLowering
     // target's type, so binding by NAME (SetBinding("ToolTip", ...)) can't resolve it and throws. Bind to the property
     // OBJECT instead - <Owner>.<Name>Property - exactly as WPF binds to the DependencyProperty; the target type is
     // irrelevant, the property object fully identifies it.
-    private static InvokeStep EmitSetBinding(string bindingTarget, AumlAstPropertyReference propRef, BuildValue binding)
+    // Inside a template the binding stands at Template, as the template's plain values do: the template's triggers
+    // outrank it, as WPF's outrank what a template sets.
+    private InvokeStep EmitSetBinding(string bindingTarget, AumlAstPropertyReference propRef, BuildValue binding)
     {
-        if (propRef.IsAttachedProperty)
-            return Invoke(Variable(bindingTarget), "SetBinding", new MemberValue(OwnerOf(propRef), $"{propRef.Name}Property"), binding);
-        return Invoke(Variable(bindingTarget), "SetBinding", Unescaped(propRef.Name), binding);
+        BuildValue property = propRef.IsAttachedProperty
+            ? new MemberValue(OwnerOf(propRef), $"{propRef.Name}Property")
+            : Unescaped(propRef.Name);
+        return CurrentTemplate != null
+            ? Invoke(Variable(bindingTarget), "SetBinding", property, binding, Priority("Template"))
+            : Invoke(Variable(bindingTarget), "SetBinding", property, binding);
     }
 
     private static string Qualified(string fullTypeName) => $"global::{fullTypeName}";
@@ -1438,6 +1439,7 @@ public class AumlLowering
     private const string MultiValueConverterFqn = "global::Adamantium.UI.Core.Data.IMultiValueConverter";
     private const string LocalizeFqn = "global::Adamantium.UI.Core.Localization.Localize";
     private const string ResourceResolverFqn = "global::Adamantium.UI.Core.Resources.ResourceResolver";
+    private const string ResourceReferenceFqn = "global::Adamantium.UI.Core.Resources.ResourceReference";
     private const string NameScopeFqn = "global::Adamantium.UI.Core.Templates.NameScope";
     private const string ValuePriorityFqn = "global::Adamantium.UI.Core.ValuePriority";
     private const string DesignFqn = "global::Adamantium.UI.Core.Design";
@@ -1738,10 +1740,31 @@ public class AumlLowering
                 }
 
                 break;
+            case "FallbackValue" or "TargetNullValue":
+                if (EmitFallbackExpression(value, diagnostics, isResource) is { } fallback)
+                {
+                    _writer.Add(new AssignStep(binding, name, fallback));
+                }
+
+                break;
             default:
-                diagnostics.ReportWarning(Metadata.ClassName, MarkupMessages.UnknownBindingProperty(name), value);
+                diagnostics.ReportError(Metadata.ClassName, MarkupMessages.UnknownBindingProperty(name), value);
                 break;
         }
+    }
+
+    // A FallbackValue / TargetNullValue: a {ResourceReference} stays a reference the binding looks up from its target
+    // when the value is wanted - the target's own and its ancestors' resources, then the theme's - rather than one asked
+    // of the theme alone while the markup is built, which a template's own resources never answered.
+    private BuildValue EmitFallbackExpression(IAumlAstValueNode value, IDiagnosticSink diagnostics, bool isResource)
+    {
+        if (value is AumlAstMarkupExtensionNode me && me.TypeReference?.Name?.StartsWith("ResourceReference") == true)
+        {
+            var key = (me.Arguments.FirstOrDefault()?.Value as AumlAstTextNode)?.Text;
+            return string.IsNullOrEmpty(key) ? null : new NewValue(Type(ResourceReferenceFqn), Unescaped(key));
+        }
+
+        return EmitValueExpression(value, "object", diagnostics, isResource);
     }
 
     // A binding sub-value (Converter / ConverterParameter / Source): a {ResourceReference}, an inline element, a

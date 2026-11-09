@@ -17,6 +17,13 @@ public static class BindingEngine
 
     public static BindingExpressionBase SetBinding(IAdamantiumComponent target, AdamantiumProperty targetProperty,
         BindingBase bindingBase)
+        => SetBinding(target, targetProperty, bindingBase, ValuePriority.Binding);
+
+    /// <summary>Binds <paramref name="targetProperty"/> at <paramref name="priority"/>: what a template's markup binds
+    /// stands at <see cref="ValuePriority.Template"/>, as its plain values do, so the template's triggers outrank it.
+    /// </summary>
+    public static BindingExpressionBase SetBinding(IAdamantiumComponent target, AdamantiumProperty targetProperty,
+        BindingBase bindingBase, ValuePriority priority)
     {
         var map = _bindings.GetValue(target, static _ => new Dictionary<AdamantiumProperty, BindingExpressionBase>());
 
@@ -26,7 +33,9 @@ public static class BindingEngine
         // sockets, re-fitted after one of them moved, all ended up called the same thing.
         if (map.TryGetValue(targetProperty, out var existing)) existing.CloseConnection();
 
-        var expression = BindingExpression.CreateBindingExpression(target, targetProperty, bindingBase);
+        var expression = bindingBase.CreateExpression(target, targetProperty);
+        expression.Priority = priority;
+        expression.EstablishConnection();
         map[targetProperty] = expression;
         return expression;
     }

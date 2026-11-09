@@ -95,9 +95,9 @@ public abstract class Timeline : AdamantiumComponent
         var copy = CreateInstance();
         foreach (var property in AdamantiumPropertyMap.GetRegistered(this))
         {
-            if (Data.BindingEngine.GetBindingExpression(this, property) is { BindingBase: { } binding })
+            if (Data.BindingEngine.GetBindingExpression(this, property) is { BindingBase: { } binding } expression)
             {
-                copy.SetBinding(property, binding);
+                copy.SetBinding(property, binding, expression.Priority);
                 continue;
             }
 

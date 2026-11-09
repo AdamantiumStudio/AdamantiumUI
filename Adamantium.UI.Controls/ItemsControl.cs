@@ -330,7 +330,7 @@ public class ItemsControl : Control, IContainer, IKeyboardEntry
     /// handed its items by a template binding - that control, as a part of a template does not take what a page gave.
     /// </summary>
     internal FundamentalUIComponent Holder =>
-        GetValueSource(ItemsSourceProperty) == ValuePriority.Template && TemplatedParent is FundamentalUIComponent outer
+        IsGivenByTemplate(ItemsSourceProperty) && TemplatedParent is FundamentalUIComponent outer
             ? (outer as ItemsControl)?.Holder ?? outer
             : this;
 
