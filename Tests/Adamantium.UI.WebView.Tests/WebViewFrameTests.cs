@@ -622,9 +622,54 @@ public class WebViewFrameTests
         });
     }
 
+    // The front end's Styles pane: the element's matched rules come, as the DOM and CSS domains give them.
+    [Test]
+    public void TheDevToolsFrontEnd_GetsAnElementsStyles()
+    {
+        // Nested deeper than a JSON reader's default depth, as a real site's document is.
+        var page = "data:text/html,<style>p{color:rgb(1,2,3)}</style>" + string.Concat(Enumerable.Repeat("<div>", 80)) +
+                   "<p>styled</p>";
+        string styles = null, deep = null;
+        loop.Run(() => ShowPage(WebViewFramePath.PixelBuffer, page, (browser, _) =>
+        {
+            var address = browser.OpenDevTools();
+            var socketAddress = new Uri("ws://" + address[(address.IndexOf("ws=", StringComparison.Ordinal) + 3)..]);
+            using var frontEnd = new System.Net.WebSockets.ClientWebSocket();
+            frontEnd.Options.SetRequestHeader("Origin", "devtools://devtools");
+            var connected = frontEnd.ConnectAsync(socketAddress, CancellationToken.None);
+            Pump(() => connected.IsCompleted, TimeSpan.FromSeconds(5));
+
+            string Ask(int id, string method, string parameters)
+            {
+                var call = $"{{\"id\":{id},\"method\":\"{method}\",\"params\":{parameters}}}";
+                frontEnd.SendAsync(System.Text.Encoding.UTF8.GetBytes(call),
+                    System.Net.WebSockets.WebSocketMessageType.Text, true, CancellationToken.None).Wait();
+                return Receive(frontEnd, reply => reply.StartsWith($"{{\"id\":{id},", StringComparison.Ordinal));
+            }
+
+            Ask(1, "DOM.enable", "{}");
+            Ask(2, "CSS.enable", "{}");
+            deep = Ask(6, "DOM.getDocument", "{\"depth\":-1}");
+            var document = Ask(3, "DOM.getDocument", "{}");
+            var root = System.Text.Json.JsonDocument.Parse(document).RootElement.GetProperty("result")
+                .GetProperty("root").GetProperty("nodeId").GetInt32();
+            var found = Ask(4, "DOM.querySelector", $"{{\"nodeId\":{root},\"selector\":\"p\"}}");
+            var node = System.Text.Json.JsonDocument.Parse(found).RootElement.GetProperty("result")
+                .GetProperty("nodeId").GetInt32();
+            styles = Ask(5, "CSS.getMatchedStylesForNode", $"{{\"nodeId\":{node}}}");
+        }));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(deep, Does.Contain("\"nodeName\":\"P\""), "the whole document, however deep");
+            Assert.That(styles, Does.Contain("rgb(1, 2, 3)").Or.Contain("rgb(1,2,3)"));
+        });
+    }
+
     private static string Receive(System.Net.WebSockets.ClientWebSocket socket, Func<string, bool> wanted)
     {
         var buffer = new byte[256 * 1024];
+        var message = new MemoryStream();
         var until = Environment.TickCount64 + 5000;
         while (Environment.TickCount64 < until)
         {
@@ -635,7 +680,14 @@ public class WebViewFrameTests
                 return null;
             }
 
-            var text = System.Text.Encoding.UTF8.GetString(buffer, 0, received.Result.Count);
+            message.Write(buffer, 0, received.Result.Count);
+            if (!received.Result.EndOfMessage)
+            {
+                continue;
+            }
+
+            var text = System.Text.Encoding.UTF8.GetString(message.GetBuffer(), 0, (int)message.Length);
+            message.SetLength(0);
             if (wanted(text))
             {
                 return text;
