@@ -74,6 +74,16 @@ internal interface IWebViewBrowserView
     /// <summary>Whether the page came over a connection with nothing wrong.</summary>
     void SecurityChanged(WebViewBrowser browser, bool isSecure);
 
+    /// <summary>The surfaces the frames of the page's dropped list - a select's - are written to from now on.</summary>
+    void ShowPopup(WebViewBrowser browser, SharedSurfaceDescriptor descriptor);
+
+    /// <summary>Where the page's dropped list stands, in the view's device-independent pixels: shown there over the
+    /// page.</summary>
+    void PopupPlaced(WebViewBrowser browser, Rect bounds);
+
+    /// <summary>The page put its dropped list away.</summary>
+    void PopupClosed(WebViewBrowser browser);
+
     /// <summary>The tooltip the page wants for what is under the pointer; empty for none.</summary>
     void TooltipChanged(WebViewBrowser browser, string text);
 

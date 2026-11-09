@@ -99,6 +99,18 @@ internal sealed class RecordingBrowserView : IWebViewBrowserView
 
     public void TooltipChanged(WebViewBrowser browser, string text) => Tooltip = text;
 
+    /// <summary>The surfaces the page's dropped list was last given; null for none.</summary>
+    public SharedSurfaceDescriptor PopupShown { get; private set; }
+
+    /// <summary>Where the page's dropped list stands; null while none is dropped.</summary>
+    public Rect? Popup { get; private set; }
+
+    public void ShowPopup(WebViewBrowser browser, SharedSurfaceDescriptor descriptor) => PopupShown = descriptor;
+
+    public void PopupPlaced(WebViewBrowser browser, Rect bounds) => Popup = bounds;
+
+    public void PopupClosed(WebViewBrowser browser) => Popup = null;
+
     public bool ContextMenuRequested(WebViewBrowser browser, WebViewContextMenu menu)
     {
         Menus.Add(menu);

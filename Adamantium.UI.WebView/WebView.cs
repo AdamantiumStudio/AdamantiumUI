@@ -112,6 +112,7 @@ public partial class WebView : Control, IWebViewBrowserView, ITextEntry
         base.OnApplyTemplate();
         StopBrowser();
         surface = GetTemplateChild("PART_Surface") as RenderTargetPanel;
+        TakePopupSurface(GetTemplateChild("PART_PopupSurface") as RenderTargetPanel);
         pageHost = GetTemplateChild("PART_PageHost") as InputUIComponent;
         if (pageHost != null)
         {
@@ -143,6 +144,7 @@ public partial class WebView : Control, IWebViewBrowserView, ITextEntry
 
         pageHost = null;
         surface = null;
+        TakePopupSurface(null);
         base.OnRemoveTemplate();
     }
 
@@ -314,6 +316,8 @@ public partial class WebView : Control, IWebViewBrowserView, ITextEntry
         }
 
         surface?.ClearSource();
+        popupSurface?.ClearSource();
+        HidePopup();
         frameWidth = 0;
         frameHeight = 0;
         SizeSurfaceToFrame();

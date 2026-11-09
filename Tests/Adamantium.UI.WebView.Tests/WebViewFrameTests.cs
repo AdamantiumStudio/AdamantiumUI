@@ -652,6 +652,59 @@ public class WebViewFrameTests
         });
     }
 
+    // A select's list is dropped apart from the page - placed, drawn as frames of its own - and a press on it chooses.
+    [TestCase(WebViewFramePath.PixelBuffer)]
+    [TestCase(WebViewFramePath.SharedTexture)]
+    public void ASelectsList_IsDroppedApart_AndAPressOnItChooses(WebViewFramePath path)
+    {
+        // Small enough for its three rows to fit the view under it, which is small.
+        const string page = "data:text/html,<body style='margin:0'><select id='pick' style='font-size:7px'>" +
+                            "<option>a</option><option>b</option><option>c</option></select></body>";
+        Rect? dropped = null;
+        SharedSurfaceDescriptor frames = null;
+        string chosen = null;
+        var closed = false;
+        var (taken, _, _, _) = loop.Run(() => ShowPage(path, page, (browser, view) =>
+        {
+            Click(browser, 5, 5);
+            Pump(() => view.Popup != null && view.PopupShown?.Width > 0, TimeSpan.FromSeconds(5));
+            dropped = view.Popup;
+            frames = view.PopupShown;
+            if (dropped is not { } list)
+            {
+                return;
+            }
+
+            // Onto a row below the first, as a hand would come to it: the list lights the row under the pointer. How tall
+            // its rows are is Chromium's.
+            var x = list.X + 5;
+            var y = list.Y + list.Height - 3;
+            browser.SendMouseMove(x, list.Y + 2, InputModifiers.None, false);
+            browser.SendMouseMove(x, y, InputModifiers.None, false);
+            Pump(() => false, TimeSpan.FromMilliseconds(300));
+            browser.SendMouseClick(x, y, InputModifiers.LeftMouseButton, CefMouseButtonType.Left, false, 1);
+            Pump(() => false, TimeSpan.FromMilliseconds(100));
+            browser.SendMouseClick(x, y, InputModifiers.None, CefMouseButtonType.Left, true, 1);
+            Pump(() => view.Popup == null, TimeSpan.FromSeconds(5));
+            closed = view.Popup == null;
+            Pump(() => false, TimeSpan.FromMilliseconds(300));
+            chosen = Await(browser.EvaluateAsync("pick.value"));
+        }));
+        if (taken != path)
+        {
+            Assert.Ignore($"This device takes the {taken} path, not the {path} one.");
+        }
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(dropped, Is.Not.Null, "the list was dropped");
+            Assert.That(dropped?.Height, Is.GreaterThan(0), "it has a size");
+            Assert.That(frames?.Width, Is.GreaterThan(0u), "its frames are its own");
+            Assert.That(closed, Is.True, "a row pressed puts it away");
+            Assert.That(chosen, Is.Not.EqualTo("\"a\"").And.Not.Null, "a row below the first chosen");
+        });
+    }
+
     // An element's title comes to the view as its tooltip while the pointer is over it.
     [Test]
     public void AnElementsTitle_ComesAsTheTooltip()

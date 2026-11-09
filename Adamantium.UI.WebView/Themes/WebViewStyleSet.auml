@@ -29,8 +29,12 @@
                         <local:WebViewDevToolsLayout IsDevToolsOpen="{TemplateBinding IsDevToolsOpen}"
                                                      Dock="{TemplateBinding DevToolsDock}">
                             <Border x:Name="PART_PageHost" ClipToBounds="True">
-                                <RenderTargetPanel x:Name="PART_Surface" AcceptsTab="False"
-                                                   HorizontalAlignment="Left" VerticalAlignment="Top"/>
+                                <!-- The page, and over it the list it drops - a select's - where the page places it. -->
+                                <Canvas>
+                                    <RenderTargetPanel x:Name="PART_Surface" AcceptsTab="False"/>
+                                    <RenderTargetPanel x:Name="PART_PopupSurface" AcceptsTab="False"
+                                                       Visibility="Collapsed" IsHitTestVisible="False"/>
+                                </Canvas>
                             </Border>
                             <Thumb x:Name="PART_DevToolsSplitter" Classes="WebViewSplitter"
                                    AutomationProperties.AutomationId="WebDevToolsSplitter"/>
@@ -71,8 +75,11 @@
             <Setter.Value>
                 <ControlTemplate TargetType="local:WebViewDevToolsView">
                     <Border x:Name="PART_PageHost" ClipToBounds="True">
-                        <RenderTargetPanel x:Name="PART_Surface" AcceptsTab="False"
-                                           HorizontalAlignment="Left" VerticalAlignment="Top"/>
+                        <Canvas>
+                            <RenderTargetPanel x:Name="PART_Surface" AcceptsTab="False"/>
+                            <RenderTargetPanel x:Name="PART_PopupSurface" AcceptsTab="False"
+                                               Visibility="Collapsed" IsHitTestVisible="False"/>
+                        </Canvas>
                     </Border>
                 </ControlTemplate>
             </Setter.Value>
