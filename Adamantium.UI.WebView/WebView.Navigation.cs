@@ -1,4 +1,5 @@
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Media.Imaging;
 using Adamantium.UI.Core.RoutedEvents;
 using Adamantium.UI.WebView.Cef;
 
@@ -34,6 +35,12 @@ public partial class WebView
 
     public static readonly AdamantiumProperty ZoomPercentProperty = AdamantiumProperty.Register(nameof(ZoomPercent),
         typeof(int), typeof(WebView), new PropertyMetadata(100));
+
+    public static readonly AdamantiumProperty IconProperty = AdamantiumProperty.Register(nameof(Icon),
+        typeof(ImageSource), typeof(WebView), new PropertyMetadata(null));
+
+    public static readonly AdamantiumProperty IsSecureProperty = AdamantiumProperty.Register(nameof(IsSecure),
+        typeof(bool), typeof(WebView), new PropertyMetadata(false));
 
     private const double MinZoom = 0.25;
     private const double MaxZoom = 5;
@@ -99,6 +106,22 @@ public partial class WebView
         set => SetValue(ZoomFactorProperty, value);
     }
 
+    /// <summary>The page's icon, as a tab shows it: 16 device-independent pixels across, drawn at the screen's scale;
+    /// null while a page loads and for a page without one. Set by the view.</summary>
+    public ImageSource Icon
+    {
+        get => GetValue<ImageSource>(IconProperty);
+        set => SetValue(IconProperty, value);
+    }
+
+    /// <summary>Whether the page came over a connection with nothing wrong: encrypted, its certificate good, nothing of
+    /// it loaded unencrypted. False for an unencrypted page and before one is shown. Set by the view.</summary>
+    public bool IsSecure
+    {
+        get => GetValue<bool>(IsSecureProperty);
+        set => SetValue(IsSecureProperty, value);
+    }
+
     /// <summary>Goes back a page; disabled when there is none.</summary>
     public WebViewCommand GoBackCommand { get; private set; }
 
@@ -155,7 +178,41 @@ public partial class WebView
         SetCurrentValue(CanGoForwardProperty, false);
         SetCurrentValue(StatusTextProperty, string.Empty);
         SetCurrentValue(LoadErrorProperty, null);
+        ShowIcon(null);
+        SetCurrentValue(IsSecureProperty, false);
         RaiseCommandsChanged();
+    }
+
+    void IWebViewBrowserView.IconChanged(WebViewBrowser from, ImageSource icon)
+    {
+        if (ReferenceEquals(browser, from))
+        {
+            ShowIcon(icon);
+        }
+        else
+        {
+            icon?.Dispose();
+        }
+    }
+
+    // The icons are the view's own, made for it from the page's: the one replaced goes, its texture with it once no
+    // frame draws it.
+    private void ShowIcon(ImageSource icon)
+    {
+        var previous = Icon;
+        SetCurrentValue(IconProperty, icon);
+        if (!ReferenceEquals(previous, icon))
+        {
+            previous?.Dispose();
+        }
+    }
+
+    void IWebViewBrowserView.SecurityChanged(WebViewBrowser from, bool isSecure)
+    {
+        if (ReferenceEquals(browser, from))
+        {
+            SetCurrentValue(IsSecureProperty, isSecure);
+        }
     }
 
     void IWebViewBrowserView.AddressChanged(WebViewBrowser from, string address)

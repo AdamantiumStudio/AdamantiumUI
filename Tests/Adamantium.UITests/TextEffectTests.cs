@@ -790,6 +790,34 @@ public class TextEffectTests
         Assert.That(shared.Element, Is.SameAs(text));
     }
 
+    // A text box discarded lets go of its effects as a block does: their brushes are no longer baked in for it.
+    [Test]
+    public void ADiscardedTextBox_LetsGoOfItsEffects()
+    {
+        var brush = new SolidColorBrush(Colors.Gray);
+        var box = new TextBox { Text = "abc" };
+        var effect = new TextEffect { PositionStart = 0, PositionCount = 1, Foreground = brush };
+        box.TextEffects.Add(effect);
+        var window = new Window { Width = 600, Height = 300, Content = new Border { Child = box } };
+        for (var i = 0; i < 5; i++)
+        {
+            WindowExtension.UpdateTree(window);
+        }
+
+        Assume.That(brush.IsBakedIn, Is.True);
+
+        DiscardedVisuals.Publish(box);
+        while (DiscardedVisuals.Drain(int.MaxValue) > 0)
+        {
+        }
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(effect.IsDiscarded, Is.True);
+            Assert.That(brush.IsBakedIn, Is.False);
+        });
+    }
+
     [Test]
     public void ALongLivedTransform_LetsGoOfADiscardedBlock()
     {

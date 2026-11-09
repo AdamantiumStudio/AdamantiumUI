@@ -353,6 +353,7 @@ public sealed unsafe class WebViewEngine : IDisposable
         {
             browser.RepaintIfOwed();
             browser.MeasureFrameRate(now);
+            browser.FollowSecurity(now);
         }
 
         if (browsers.Count > 0 && Volatile.Read(ref timerDue) <= Environment.TickCount64)

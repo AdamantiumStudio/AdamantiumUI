@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Linq;
 using Adamantium.Mathematics;
 using Adamantium.ProceduralGeometry;
 using Adamantium.UI.Controls;
@@ -1456,6 +1457,30 @@ namespace Adamantium.UITests
 
          g.Measure(new Size<double>(Double.PositiveInfinity, Double.PositiveInfinity));
          Assert.AreEqual(new Size<double>(360, 400), g.DesiredSize);
+      }
+
+      // The spacing stands between every two columns of a grid of one row, after the first too, and not after the last.
+      [Test]
+      public void ColumnSpacing_StandsBetweenTheColumnsOfOneRow()
+      {
+         var g = new Grid { ColumnSpacing = 6 };
+         var children = new Canvas[3];
+         for (var i = 0; i < children.Length; i++)
+         {
+            g.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            children[i] = new Canvas { Width = 10, Height = 10 };
+            Grid.SetColumn(children[i], i);
+            g.Children.Add(children[i]);
+         }
+
+         g.Measure(new Size<double>(Double.PositiveInfinity, Double.PositiveInfinity));
+         g.Arrange(new Rect(0, 0, g.DesiredSize.Width, g.DesiredSize.Height));
+
+         Assert.Multiple(() =>
+         {
+            Assert.That(children.Select(child => child.Bounds.X), Is.EqualTo(new double[] { 0, 16, 32 }));
+            Assert.That(g.DesiredSize.Width, Is.EqualTo(42));
+         });
       }
 
       [Test]

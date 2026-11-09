@@ -10,6 +10,7 @@ using Adamantium.Graphics.Core;
 using Adamantium.Multiverse;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Input;
+using Adamantium.UI.Core.Media.Imaging;
 using Adamantium.UI.WebView.Cef;
 using Adamantium.UI.WebView.Cef.Interop;
 using NUnit.Framework;
@@ -693,6 +694,72 @@ public class WebViewFrameTests
         }));
 
         Assert.That(status, Is.EqualTo("https://example.org/target"));
+    }
+
+    // The icon a page names comes to the view at a tab's size, in its colors; a page over no encryption is not secure.
+    [Test]
+    public void ThePagesIcon_ComesAtATabsSize_AndAnOpenPageIsNotSecure()
+    {
+        var page = "data:text/html,<html><head><link rel='icon' href='data:image/bmp;base64," +
+                   Convert.ToBase64String(RedBitmap(16)) + "'></head><body>icon</body></html>";
+        BitmapSource icon = null;
+        var secure = true;
+        loop.Run(() => ShowPage(WebViewFramePath.PixelBuffer, page, (_, view) =>
+        {
+            Pump(() => view.Icon != null, TimeSpan.FromSeconds(5));
+            icon = view.Icon as BitmapSource;
+            secure = view.IsSecure;
+        }));
+
+        Assert.That(icon, Is.Not.Null, "the icon came");
+        var middle = ((int)icon.PixelHeight / 2 * (int)icon.PixelWidth + (int)icon.PixelWidth / 2) * 4;
+        Assert.Multiple(() =>
+        {
+            Assert.That(icon.Width, Is.EqualTo(16).Within(0.01), "a tab's size");
+            Assert.That(icon.PixelBytes[middle..(middle + 4)], Is.EqualTo(new byte[] { 0, 0, 255, 255 }), "red, BGRA");
+            Assert.That(secure, Is.False);
+        });
+    }
+
+    // An icon that does not come gives way to the page's next.
+    [Test]
+    public void AnIconThatDoesNotCome_GivesWayToThePagesNext()
+    {
+        var page = "data:text/html,<html><head><link rel='icon' href='data:image/bmp;base64,AAAA'>" +
+                   "<link rel='icon' href='data:image/bmp;base64," + Convert.ToBase64String(RedBitmap(16)) +
+                   "'></head><body>icons</body></html>";
+        BitmapSource icon = null;
+        loop.Run(() => ShowPage(WebViewFramePath.PixelBuffer, page, (_, view) =>
+        {
+            Pump(() => view.Icon != null, TimeSpan.FromSeconds(5));
+            icon = view.Icon as BitmapSource;
+        }));
+
+        Assert.That(icon?.PixelBytes[..4], Is.EqualTo(new byte[] { 0, 0, 255, 255 }));
+    }
+
+    // A bitmap file of one red square, 24 bits a pixel.
+    private static byte[] RedBitmap(int side)
+    {
+        var row = side * 3;
+        var pixels = row * side;
+        var file = new byte[54 + pixels];
+        file[0] = (byte)'B';
+        file[1] = (byte)'M';
+        BitConverter.TryWriteBytes(file.AsSpan(2), file.Length);
+        BitConverter.TryWriteBytes(file.AsSpan(10), 54);
+        BitConverter.TryWriteBytes(file.AsSpan(14), 40);
+        BitConverter.TryWriteBytes(file.AsSpan(18), side);
+        BitConverter.TryWriteBytes(file.AsSpan(22), side);
+        BitConverter.TryWriteBytes(file.AsSpan(26), (short)1);
+        BitConverter.TryWriteBytes(file.AsSpan(28), (short)24);
+        BitConverter.TryWriteBytes(file.AsSpan(34), pixels);
+        for (var i = 54; i < file.Length; i += 3)
+        {
+            file[i + 2] = 255;
+        }
+
+        return file;
     }
 
     private (WebViewFramePath Path, int Frames, bool Refused, byte[] Center) ShowPage(WebViewFramePath path, string page,

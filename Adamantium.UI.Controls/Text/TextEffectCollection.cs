@@ -5,7 +5,7 @@ using Adamantium.UI.Core;
 
 namespace Adamantium.UI.Controls.Text;
 
-/// <summary>The effects of a text block or an inline (its <c>TextEffects</c>); observable, so the text is drawn again when
+/// <summary>The effects of a text block, an inline or a text box (its <c>TextEffects</c>); observable, so the text is drawn again when
 /// one is added, removed or changed. Each effect in it is a logical child of the holder, so it binds against the holder's
 /// data. It holds no null.</summary>
 public sealed class TextEffectCollection : ObservableCollection<TextEffect>
@@ -58,7 +58,7 @@ public sealed class TextEffectCollection : ObservableCollection<TextEffect>
         _holder.AddLogicalChild(effect);
         effect.Changed += OnEffectChanged;
         effect.ReparentTransform();
-        effect.SetInBlock(_holder is TextBlock || _holder is Inline { InBlock: true });
+        effect.SetInBlock(_holder is TextBlock or TextBoxBase || _holder is Inline { InBlock: true });
     }
 
     private void Release(TextEffect effect)
@@ -66,7 +66,7 @@ public sealed class TextEffectCollection : ObservableCollection<TextEffect>
         effect.Changed -= OnEffectChanged;
         _holder.RemoveLogicalChild(effect);
         effect.ReparentTransform();
-        effect.SetInBlock(effect.LogicalParent is TextBlock || effect.LogicalParent is Inline { InBlock: true });
+        effect.SetInBlock(effect.LogicalParent is TextBlock or TextBoxBase || effect.LogicalParent is Inline { InBlock: true });
     }
 
     private void OnEffectChanged(object sender, EventArgs e) => Changed?.Invoke(this, EventArgs.Empty);

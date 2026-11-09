@@ -42,6 +42,27 @@ internal static unsafe class CefStrings
         return text;
     }
 
+    /// <summary>The texts of a list CEF owns; none for a null list.</summary>
+    public static string[] ReadList(CefStringList list)
+    {
+        if (list.pointer == null)
+        {
+            return [];
+        }
+
+        var count = (int)CefInterop.CefStringListSize(list);
+        var texts = new string[count];
+        for (var i = 0; i < count; i++)
+        {
+            var value = new CefStringUtf16();
+            CefInterop.CefStringListValue(list, (ulong)i, &value);
+            texts[i] = Read(&value);
+            Clear(&value);
+        }
+
+        return texts;
+    }
+
     /// <summary>Frees what <see cref="Set"/> put into <paramref name="target"/>.</summary>
     public static void Clear(CefStringUtf16* target) => CefInterop.CefStringUtf16Clear(target);
 }

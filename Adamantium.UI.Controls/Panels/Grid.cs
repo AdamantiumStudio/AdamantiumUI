@@ -390,7 +390,7 @@ public class Grid: Panel
 
             var padding = def.Padding;
 
-            if (i == rowCount - 1)
+            if (i == colCount - 1)
             {
                margin = 0;
             }

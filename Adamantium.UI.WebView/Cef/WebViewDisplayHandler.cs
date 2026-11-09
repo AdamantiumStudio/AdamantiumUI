@@ -3,8 +3,8 @@ using Adamantium.UI.WebView.Cef.Interop;
 
 namespace Adamantium.UI.WebView.Cef;
 
-/// <summary>What a browser shows outside its frame: the address and title of its page, how far it has loaded, the
-/// address of the link under the pointer, and the cursor its page asks for.</summary>
+/// <summary>What a browser shows outside its frame: the address, title and icons of its page, how far it has loaded,
+/// the address of the link under the pointer, and the cursor its page asks for.</summary>
 internal sealed unsafe class WebViewDisplayHandler : CefObject
 {
     private readonly WebViewBrowser browser;
@@ -18,6 +18,26 @@ internal sealed unsafe class WebViewDisplayHandler : CefObject
         handler->on_title_change = &OnTitleChange;
         handler->on_status_message = &OnStatusMessage;
         handler->on_loading_progress_change = &OnLoadingProgressChange;
+        handler->on_favicon_urlchange = &OnFaviconUrlChange;
+    }
+
+    [UnmanagedCallersOnly]
+    private static void OnFaviconUrlChange(CefDisplayHandler* self, CefBrowser* cefBrowser, CefStringList addresses)
+    {
+        try
+        {
+            var owner = From<WebViewDisplayHandler>(self).browser;
+            if (owner.Is(cefBrowser))
+            {
+                owner.OnIconAddresses(CefStrings.ReadList(addresses));
+            }
+        }
+        catch (Exception exception)
+        {
+            CefCallbacks.Report(exception);
+        }
+
+        CefRefCounting.ReleaseCef(cefBrowser);
     }
 
     [UnmanagedCallersOnly]
