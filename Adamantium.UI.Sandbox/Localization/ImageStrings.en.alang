@@ -17,6 +17,15 @@
     <Phrase Key="OpacityLabel" Text="Opacity:"/>
     <Phrase Key="MipLevel" Text="PNG (mip level 2)"/>
 
+    <Phrase Key="Jpeg2000" Text="JPEG 2000: resolutions and quality layers"/>
+    <Phrase Key="Jpeg2000Hint" Text="One file holds every resolution and every quality: each resolution step halves the picture, each quality step leaves out the last layer. Only the part asked for is read and decoded - the numbers below say how much that is. The image draws it in the same frame, so a smaller part shows coarser."/>
+    <Phrase Key="Resolution" Text="Resolution step:"/>
+    <Phrase Key="Quality" Text="Quality step:"/>
+    <Phrase Key="Jpeg2000Size" Text="Decoded: {width} × {height} px"/>
+    <Phrase Key="Jpeg2000Layers" Text="Quality layers: {shown} of {count}"/>
+    <Phrase Key="Jpeg2000Bytes" Text="Data read: {used} of {total} KB"/>
+    <Phrase Key="Jpeg2000Time" Text="Decoding took {ms} ms"/>
+
     <Phrase Key="AnimationControl" Text="Animation control"/>
     <Phrase Key="AnimationHint" Text="Each source plays on its own terms: the frame range it loops over, the delay between frames, whether it runs at all, and the four corner radii. The frame count is reported BY the image once its file has decoded, which is what bounds the range sliders."/>
     <Phrase Key="PlayPause" Select="playing" True="Pause" False="Play"/>

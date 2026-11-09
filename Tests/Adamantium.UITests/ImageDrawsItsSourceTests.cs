@@ -122,9 +122,46 @@ public class ImageDrawsItsSourceTests
         var picture = new BitmapImage(BitmapLoader.Load(Texture("balls.dds")));
         Assume.That(picture.MipLevelsCount, Is.GreaterThan(1), "precondition: the file has mip levels");
 
-        var first = DrawnPicture(new Image { Width = 64, Height = 64, Source = picture, MipLevel = 1 });
-        var second = DrawnPicture(new Image { Width = 64, Height = 64, Source = picture, MipLevel = 1 });
+        var first = DrawnLevel(new Image { Width = 64, Height = 64, Source = picture, MipLevel = 1 }, picture);
+        var second = DrawnLevel(new Image { Width = 64, Height = 64, Source = picture, MipLevel = 1 }, picture);
 
+        Assert.That(first, Is.Not.SameAs(picture), "the level was never drawn");
         Assert.That(second, Is.SameAs(first), "each image of the same mip level built its own frame and texture");
+    }
+
+    [Test]
+    public void AJpeg2000PictureIsDrawnAtTheChosenResolutionAndQuality()
+    {
+        var picture = new BitmapImage(BitmapLoader.Load(Texture("photo-layers.jp2")));
+        var image = new Image { Width = 64, Height = 64, Source = picture, MipLevel = 3, QualityLevel = 2 };
+
+        var drawn = DrawnLevel(image, picture);
+
+        Assert.That((image.MipLevelCount, image.QualityLevelCount), Is.EqualTo((6u, 4u)));
+        Assert.That((drawn.Width, drawn.Height), Is.EqualTo((200.0, 155.0)), "1600 x 1238 three times halved");
+        Assert.That(drawn, Is.SameAs(picture.FindLevel(3, 2)));
+    }
+
+    [Test]
+    public void AQualityLevelThePictureDoesNotHaveDrawsTheFullPicture()
+    {
+        var picture = new BitmapImage(BitmapLoader.Load(Texture("texture2.jpg")));
+
+        var drawn = DrawnPicture(new Image { Width = 64, Height = 64, Source = picture, QualityLevel = 2 });
+
+        Assert.That(drawn, Is.SameAs(picture));
+    }
+
+    private static ImageSource DrawnLevel(Image image, BitmapImage picture)
+    {
+        var drawn = DrawnPicture(image);
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+        while (ReferenceEquals(drawn, picture) && watch.Elapsed < TimeSpan.FromSeconds(10))
+        {
+            System.Threading.Thread.Sleep(10);
+            drawn = DrawnAgain(image);
+        }
+
+        return drawn;
     }
 }

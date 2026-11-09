@@ -16,7 +16,7 @@ public sealed class BitmapImage : BitmapSource
    // leave both caches null and every frame fetch threw (swallowed -> an animated source silently froze on frame 0).
    private readonly Queue<BitmapFrame> _framesCache = new();
    private readonly Dictionary<uint, BitmapFrame> _indexToFrame = new();
-   private readonly ConcurrentDictionary<uint, BitmapFrame> _mipLevels = new();
+   private readonly ConcurrentDictionary<(uint Mip, uint Quality), BitmapFrame> _levels = new();
    private volatile ITexture _framePalette;
 
    public BitmapImage()
@@ -123,7 +123,7 @@ public sealed class BitmapImage : BitmapSource
       set => SetValue(FrameCacheLimitProperty, value);
    }
 
-   [MarkupFile("png", "jpg", "jpeg", "gif", "bmp", "tga", "dds", "ico", "tif", "tiff")]
+   [MarkupFile("png", "jpg", "jpeg", "gif", "bmp", "tga", "dds", "ico", "tif", "tiff", "jp2", "j2k")]
    public Uri UriSource
    {
       get => GetValue<Uri>(UriSourceProperty);
@@ -362,30 +362,49 @@ public sealed class BitmapImage : BitmapSource
 
    public bool HasMipLevels => MipLevelsCount > 0;
 
+   /// <summary>The qualities the picture's data holds - a JPEG 2000's quality layers; 1 for any other loaded picture,
+   /// 0 until it has loaded.</summary>
+   public uint QualityLevelsCount => _rawBitmap?.QualityLevelsCount ?? 0;
+
    /// <summary>The picture at mip <paramref name="level"/>, made on first ask and kept by this image, so every image
    /// showing that level shares one texture. Null while the bitmap has not loaded or has no such level.</summary>
-   public BitmapFrame GetMipLevel(uint level)
+   public BitmapFrame GetMipLevel(uint level) => GetLevel(level, 0);
+
+   /// <summary>The picture at mip <paramref name="mipLevel"/> and quality <paramref name="qualityLevel"/> - 0 the
+   /// full quality, each next one coarser - made on first ask and kept by this image. Null while the bitmap has not
+   /// loaded or has no such level. Decoding a level can take a while: ask off the UI thread.</summary>
+   /// <summary>The level <see cref="GetLevel"/> has made already, or null - nothing is decoded.</summary>
+   public BitmapFrame FindLevel(uint mipLevel, uint qualityLevel) =>
+      _levels.TryGetValue((mipLevel, qualityLevel), out var kept) ? kept : null;
+
+   public BitmapFrame GetLevel(uint mipLevel, uint qualityLevel)
    {
-      if (_mipLevels.TryGetValue(level, out var kept))
+      if (_levels.TryGetValue((mipLevel, qualityLevel), out var kept))
       {
          return kept;
       }
 
-      var mipData = _rawBitmap?.GetMipLevelData(level);
-      if (mipData == null)
+      var data = _rawBitmap?.GetLevelData(mipLevel, qualityLevel);
+      if (data == null)
       {
          return null;
       }
 
       var frame = new BitmapFrame(
-         mipData.Description.Width,
-         mipData.Description.Height,
+         data.Description.Width,
+         data.Description.Height,
          DpiXScale,
          DpiYScale,
          SurfaceLayout,
-         mipData.RawPixels,
-         level);
-      return _mipLevels.GetOrAdd(level, frame);
+         data.RawPixels,
+         mipLevel);
+      var shared = _levels.GetOrAdd((mipLevel, qualityLevel), frame);
+      if (!ReferenceEquals(shared, frame))
+      {
+         frame.Dispose();
+      }
+
+      return shared;
    }
 
    private void Load(Uri uri)
@@ -454,12 +473,12 @@ public sealed class BitmapImage : BitmapSource
          bitmapFrame.Value?.Dispose();
       }
       _indexToFrame.Clear();
-      foreach (var mipLevel in _mipLevels.Values)
+      foreach (var level in _levels.Values)
       {
-         mipLevel.Dispose();
+         level.Dispose();
       }
 
-      _mipLevels.Clear();
+      _levels.Clear();
       Retire(_frameArrayTexture);
       _frameArrayTexture = null;
       Retire(_framePalette);
