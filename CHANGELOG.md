@@ -12,6 +12,8 @@ All packages share one version.
   `Image.QualityLevelCount` report what the source has, to bound a choice. A level is decoded off the UI thread, once,
   and kept by the `BitmapImage` (`GetLevel`, `FindLevel`, `QualityLevelsCount`). `.jp2` and `.j2k` files load as any
   picture; the sandbox's Image tab shows two of them with a slider for each.
+- macOS theme: a small `Slider` (`Classes="Small"`), as a Mac's status bar has it - a 14 knob in the compact height,
+  its shadow kept clear.
 - `WebView` (Adamantium.UI.WebView, Windows): a web page drawn by Chromium (CEF) off screen and shown by a
   `RenderTargetPanel` - no window of its own. `AddWebView()` registers the application's `WebViewEngine`; a view
   model takes it from the container and a `WebView` binds its `Engine` to it. A view kept between visits
