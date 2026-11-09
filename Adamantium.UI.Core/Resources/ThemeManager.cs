@@ -21,16 +21,17 @@ public class ThemeManager : IThemeManager
 
     public ThemeManager(IDependencyResolver dependencyResolver)
     {
-        SystemAppearance.Changed += (_, _) =>
-        {
-            if (_followingSystem) SetVariant(ThemeVariant.System);
-        };
-
+        _ = new ThemeManagerSystemFollower(this);
         this.dependencyResolver = dependencyResolver;
         _themes = new TrackingCollection<ITheme>();
         _themesMap = new Dictionary<string, ITheme>();
         components = new Dictionary<StyleSelector, IUIComponent>();
         _resourceManager = UIAppContext.Current.ResourceManager;
+    }
+
+    internal void OnSystemAppearanceChanged()
+    {
+        if (_followingSystem) SetVariant(ThemeVariant.System);
     }
 
     public event EventHandler<ThemeChangedEventArgs> ThemeChanging;

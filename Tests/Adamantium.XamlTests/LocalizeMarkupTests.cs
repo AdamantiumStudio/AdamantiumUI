@@ -309,6 +309,29 @@ public class LocalizeMarkupTests
         });
     }
 
+    // A change of language reaches every string not yet collected, those of a closed window among them: queued, each
+    // would be held to the next frame, and the next change would queue it again.
+    [Test]
+    public void AStringLetGo_IsNotKeptByAChangeOfLanguage()
+    {
+        var text = LetGo();
+        Languages.Current = "ru";
+        RenderDirty.Clear();
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        GC.Collect();
+
+        Assert.That(text.TryGetTarget(out _), Is.False);
+    }
+
+    [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+    private WeakReference<TextBlock> LetGo()
+    {
+        var text = new TextBlock();
+        text.SetBinding(TextBlock.TextProperty, new Localize(DesignerTable(), "Close"));
+        return new WeakReference<TextBlock>(text);
+    }
+
     [Test]
     public void ACountedString_TakesTheFormOfItsNumber_AsTheNumberChanges()
     {

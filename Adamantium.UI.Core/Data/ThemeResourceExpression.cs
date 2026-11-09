@@ -89,7 +89,7 @@ public class ThemeResourceExpression : BindingExpressionBase
         public readonly Dictionary<AdamantiumProperty, HashSet<WeakReference<ThemeResourceExpression>>> ByProperty = new();
     }
 
-    private static readonly Dictionary<AdamantiumComponent, Router> Routers = new();
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<AdamantiumComponent, Router> Routers = new();
     private static readonly object RoutersLock = new();
 
     // The handle this expression is registered under - kept so Unsubscribe can drop the exact entry rather than hunt for
@@ -102,7 +102,7 @@ public class ThemeResourceExpression : BindingExpressionBase
         {
             if (!Routers.TryGetValue(theme, out var router))
             {
-                Routers[theme] = router = new Router();
+                Routers.Add(theme, router = new Router());
                 theme.PropertyChanged += OnThemeChanged;
             }
 

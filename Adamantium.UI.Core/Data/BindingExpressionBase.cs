@@ -156,7 +156,13 @@ public abstract class BindingExpressionBase
 
    internal CultureInfo FormatCulture => Languages.CultureFor(BindingBase?.Culture);
 
-   internal virtual void OnLanguageChanged() => ScheduleUpdate();
+   // Written at once, not queued: the queue holds a binding strongly, and every follower not yet collected - those of a
+   // window closed among them - would be kept by it to the next frame, and by each change of language after.
+   internal virtual void OnLanguageChanged()
+   {
+      ValuePending = true;
+      ApplyPending();
+   }
 
    public abstract void EstablishConnection();
    public abstract void CloseConnection();
