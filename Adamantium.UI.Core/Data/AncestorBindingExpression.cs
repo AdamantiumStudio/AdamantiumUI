@@ -205,7 +205,7 @@ public class AncestorBindingExpression : BindingExpressionBase
     {
         if (TargetProperty == null) return;
         var value = RelativeBindingPipeline.Produce(RelativeBindingPipeline.Unset, _def.Converter, _def.ConverterParameter,
-            TargetProperty.PropertyType, _def.FallbackValue, _def.TargetNullValue);
+            TargetProperty.PropertyType, Substitute(_def.FallbackValue), Substitute(_def.TargetNullValue));
         if (!ReferenceEquals(value, RelativeBindingPipeline.Unset)) WriteTarget(value);
     }
 

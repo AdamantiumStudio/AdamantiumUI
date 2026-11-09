@@ -858,6 +858,17 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
     public Data.BindingExpressionBase SetBinding(AdamantiumProperty property, Data.BindingBase bindingBase)
         => Data.BindingEngine.SetBinding(this, property, bindingBase);
 
+    /// <summary>Binds a property at <paramref name="priority"/>: a template's markup binds at
+    /// <see cref="ValuePriority.Template"/>, so the template's triggers outrank what it binds as they do its values.
+    /// </summary>
+    public Data.BindingExpressionBase SetBinding(string property, Data.BindingBase bindingBase, ValuePriority priority)
+        => Data.BindingEngine.SetBinding(this, GetProperty(property), bindingBase, priority);
+
+    /// <inheritdoc cref="SetBinding(string, Data.BindingBase, ValuePriority)"/>
+    public Data.BindingExpressionBase SetBinding(AdamantiumProperty property, Data.BindingBase bindingBase,
+        ValuePriority priority)
+        => Data.BindingEngine.SetBinding(this, property, bindingBase, priority);
+
     public void SetTriggerValue(string propertyName, object value, object token)
     {
         var property = AdamantiumPropertyMap.ResolveProperty(GetType(), propertyName);
@@ -1002,9 +1013,17 @@ public abstract class AdamantiumComponent : IAdamantiumComponent
         var priority = basePriority <= ValuePriority.Binding
                        || IsFedByTemplateBinding(property, basePriority)
                        || IsFedByStyleBinding(property, basePriority)
+                       || IsFedByTemplatesBinding(property, basePriority)
             ? basePriority
             : ValuePriority.Binding;
         SetValue(property, value, priority);
+    }
+
+    // A {Binding} a template's markup set stands at Template: raised to Binding, the value would mask it for good.
+    private bool IsFedByTemplatesBinding(AdamantiumProperty property, ValuePriority basePriority)
+    {
+        return basePriority == ValuePriority.Template &&
+               Data.BindingEngine.GetBindingExpression(this, property) is { Priority: ValuePriority.Template };
     }
 
     private bool IsFedByTemplateBinding(AdamantiumProperty property, ValuePriority basePriority)

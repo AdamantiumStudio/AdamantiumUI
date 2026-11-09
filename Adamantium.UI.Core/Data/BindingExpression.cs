@@ -823,22 +823,22 @@ public class BindingExpression : BindingExpressionBase
       if (_bindToSource)
       {
          if (ResolvedSource == null)
-            return BindingBase.TargetNullValue ?? BindingBase.FallbackValue ?? AdamantiumProperty.UnsetValue;
+            return InPlaceOfNull() ?? AdamantiumProperty.UnsetValue;
 
          return Binding.Converter != null ? ConvertCached(ResolvedSource, targetType) : ResolvedSource;
       }
       if (_leaf != null)
       {
-         if (!Walk()) return BindingBase.FallbackValue ?? AdamantiumProperty.UnsetValue;
+         if (!Walk()) return Fallback() ?? AdamantiumProperty.UnsetValue;
 
          var read = Read(_leaf, _boxes[^1]);
          _lastRead = read;
          if (Binding.Converter != null) read = ConvertCached(read, targetType);
-         return read ?? BindingBase.TargetNullValue ?? BindingBase.FallbackValue;
+         return read ?? InPlaceOfNull();
       }
       if (_source == null)
       {
-         return BindingBase.FallbackValue ?? AdamantiumProperty.UnsetValue;
+         return Fallback() ?? AdamantiumProperty.UnsetValue;
       }
 
       var value = Read(_source, ResolvedSource);
@@ -846,9 +846,13 @@ public class BindingExpression : BindingExpressionBase
       if (Binding.Converter != null)
          value = ConvertCached(value, targetType);
       if (value == null)
-         value = BindingBase.TargetNullValue ?? BindingBase.FallbackValue;
+         value = InPlaceOfNull();
       return value;
    }
+
+   private object Fallback() => Substitute(BindingBase.FallbackValue);
+
+   private object InPlaceOfNull() => Substitute(BindingBase.TargetNullValue ?? BindingBase.FallbackValue);
 
    // Converted-value cache weakly keyed by source object: one instance per item across rebinds, re-converted when the
    // raw input or the converter changes. Value-type sources convert directly. ONE entry per slot, the converter kept in

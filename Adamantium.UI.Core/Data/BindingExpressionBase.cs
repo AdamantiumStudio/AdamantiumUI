@@ -84,6 +84,23 @@ public abstract class BindingExpressionBase
       }
    }
 
+   /// <summary>A FallbackValue or TargetNullValue as the target gets it: a <c>{ResourceReference}</c> is looked up from
+   /// the target - its own and its ancestors' resources, then the theme's - when it is wanted, so a template's resources
+   /// answer it; anything else is itself. A resource nowhere to be found is no value.</summary>
+   internal object Substitute(object value)
+   {
+      if (value is not Resources.ResourceReference reference)
+      {
+         return value;
+      }
+
+      var resources = UIAppContext.Current?.ResourceManager;
+      var found = Target is IFundamentalUIComponent element
+         ? resources?.FindResource(element, reference.Name)
+         : resources?.FindResource(reference.Name);
+      return found ?? AdamantiumProperty.UnsetValue;
+   }
+
    protected T WritingHere<T>(T inner) where T : BindingExpressionBase
    {
       inner.Priority = Priority;

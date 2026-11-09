@@ -86,7 +86,7 @@ public class MultiBindingExpression : BindingExpressionBase
          return values;
 
       // Converter produced no value: fall back (TargetNullValue first, then FallbackValue) - WPF semantics.
-      return result ?? MultiBinding.TargetNullValue ?? MultiBinding.FallbackValue;
+      return result ?? Substitute(MultiBinding.TargetNullValue ?? MultiBinding.FallbackValue);
    }
 
    internal override void OnLanguageChanged() => Refresh();
