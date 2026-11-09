@@ -113,6 +113,7 @@ public partial class WebView : Control, IWebViewBrowserView, ITextEntry
         StopBrowser();
         surface = GetTemplateChild("PART_Surface") as RenderTargetPanel;
         TakePopupSurface(GetTemplateChild("PART_PopupSurface") as RenderTargetPanel);
+        TakeScriptDialog(GetTemplateChild("PART_ScriptDialog") as WebViewScriptDialog);
         pageHost = GetTemplateChild("PART_PageHost") as InputUIComponent;
         if (pageHost != null)
         {
@@ -145,6 +146,7 @@ public partial class WebView : Control, IWebViewBrowserView, ITextEntry
         pageHost = null;
         surface = null;
         TakePopupSurface(null);
+        TakeScriptDialog(null);
         base.OnRemoveTemplate();
     }
 
@@ -260,6 +262,7 @@ public partial class WebView : Control, IWebViewBrowserView, ITextEntry
         ForgetInput();
         DismissPageMenu();
         HidePageTip();
+        AnswerScriptDialog(false);
         if (pageMenu != null)
         {
             pageMenu.IsOpen = false;

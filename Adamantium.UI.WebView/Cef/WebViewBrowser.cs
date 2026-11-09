@@ -26,6 +26,7 @@ internal sealed unsafe class WebViewBrowser : IDisposable
     private readonly WebViewLoadHandler loadHandler;
     private readonly WebViewRequestHandler requestHandler;
     private readonly WebViewContextMenuHandler contextMenuHandler;
+    private readonly WebViewJsDialogHandler jsDialogHandler;
     private readonly WebViewDevTools devTools;
     private WebViewFrameProducer producer;
     private WebViewFrameProducer popupProducer;
@@ -72,8 +73,9 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         devTools = new WebViewDevTools(json => view.MessageReceived(this, json)) { OverlayHeard = RevealWaiting };
         displayHandler = new WebViewDisplayHandler(this);
         contextMenuHandler = new WebViewContextMenuHandler(this);
+        jsDialogHandler = new WebViewJsDialogHandler(this);
         client = new WebViewClient(renderHandler, lifeSpanHandler, displayHandler, loadHandler, requestHandler,
-            contextMenuHandler);
+            contextMenuHandler, jsDialogHandler);
     }
 
     /// <summary>The view's size in device-independent pixels, never empty.</summary>
@@ -732,6 +734,13 @@ internal sealed unsafe class WebViewBrowser : IDisposable
 
     internal void OnTooltip(string text) => view.TooltipChanged(this, text);
 
+    /// <summary>A dialog the page's script asks: the view asks it over the page, or answers it at once as cancelled.
+    /// </summary>
+    internal bool OnScriptDialog(WebViewScriptDialogRequest request) => view.ScriptDialogRequested(this, request);
+
+    /// <summary>The page went on - navigated, closed: what its dialogs asked is asked no more.</summary>
+    internal void OnScriptDialogsReset() => view.ScriptDialogsReset(this);
+
     /// <summary>Opens the element at <paramref name="x"/>, <paramref name="y"/> of the view, in device-independent
     /// pixels, in the DevTools' Elements panel: now, if their front end listens, else once it does - while the page
     /// is the same.</summary>
@@ -1165,6 +1174,7 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         loadHandler.Release();
         requestHandler.Release();
         contextMenuHandler.Release();
+        jsDialogHandler.Release();
     }
 
     private void Close()

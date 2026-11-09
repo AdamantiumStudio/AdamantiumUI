@@ -5,4 +5,12 @@
     <Phrase Key="DevTools" Text="DevTools"/>
     <Phrase Key="StatusBar" Text="Page status"/>
     <Phrase Key="Inspect" Text="Inspect"/>
+    <Phrase Key="Ok" Text="OK"/>
+    <Phrase Key="Cancel" Text="Cancel"/>
+    <Phrase Key="PageSays" Text="{site} says"/>
+    <Phrase Key="LeaveSite" Text="Leave site?"/>
+    <Phrase Key="Leave" Text="Leave"/>
+    <Phrase Key="ReloadSite" Text="Reload site?"/>
+    <Phrase Key="Reload" Text="Reload"/>
+    <Phrase Key="ChangesMayBeLost" Text="Changes you made may not be saved."/>
 </Language>

@@ -63,6 +63,12 @@ public partial class WebView
     // Whether the pointer is over the page's own part, not the status bar or the DevTools beside it.
     private bool IsOverPage(PointerEventArgs e)
     {
+        // A page waiting for its script's dialog takes nothing: the dialog over it does.
+        if (PageWaits)
+        {
+            return false;
+        }
+
         if (pageHost == null)
         {
             return true;
@@ -181,7 +187,7 @@ public partial class WebView
     protected override void OnKeyDown(KeyEventArgs e)
     {
         base.OnKeyDown(e);
-        if (e.Handled || browser == null)
+        if (e.Handled || browser == null || PageWaits)
         {
             return;
         }
@@ -275,7 +281,7 @@ public partial class WebView
 
     private void OnTyped(object sender, TextInputEventArgs e)
     {
-        if (e.Handled || browser == null || string.IsNullOrEmpty(e.Text))
+        if (e.Handled || browser == null || string.IsNullOrEmpty(e.Text) || PageWaits)
         {
             return;
         }

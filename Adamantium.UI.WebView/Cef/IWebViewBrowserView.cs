@@ -84,6 +84,13 @@ internal interface IWebViewBrowserView
     /// <summary>The page put its dropped list away.</summary>
     void PopupClosed(WebViewBrowser browser);
 
+    /// <summary>Asks the dialog the page's script asks, over the page, and answers it once the user has; false leaves it
+    /// to be answered as cancelled.</summary>
+    bool ScriptDialogRequested(WebViewBrowser browser, WebViewScriptDialogRequest request);
+
+    /// <summary>The page went on: a dialog of its still asked is asked no more.</summary>
+    void ScriptDialogsReset(WebViewBrowser browser);
+
     /// <summary>The tooltip the page wants for what is under the pointer; empty for none.</summary>
     void TooltipChanged(WebViewBrowser browser, string text);
 

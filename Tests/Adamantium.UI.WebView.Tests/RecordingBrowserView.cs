@@ -111,6 +111,20 @@ internal sealed class RecordingBrowserView : IWebViewBrowserView
 
     public void PopupClosed(WebViewBrowser browser) => Popup = null;
 
+    /// <summary>The script dialogs the page asked, in order.</summary>
+    public List<WebViewScriptDialogRequest> Dialogs { get; } = [];
+
+    /// <summary>How many times the page's dialogs were reset.</summary>
+    public int DialogResets { get; private set; }
+
+    public bool ScriptDialogRequested(WebViewBrowser browser, WebViewScriptDialogRequest request)
+    {
+        Dialogs.Add(request);
+        return true;
+    }
+
+    public void ScriptDialogsReset(WebViewBrowser browser) => DialogResets++;
+
     public bool ContextMenuRequested(WebViewBrowser browser, WebViewContextMenu menu)
     {
         Menus.Add(menu);

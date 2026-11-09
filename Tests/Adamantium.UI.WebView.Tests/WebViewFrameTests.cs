@@ -705,6 +705,75 @@ public class WebViewFrameTests
         });
     }
 
+    // A script's dialogs are asked of the view, and its answers go back to the script: confirm's yes, prompt's text,
+    // alert's OK.
+    [Test]
+    public void AScriptsDialogs_AreAskedOfTheView_AndAnsweredBack()
+    {
+        const string page = "data:text/html,<title>asks</title>";
+        WebViewScriptDialogRequest confirm = null, prompt = null, alert = null;
+        string confirmed = null, typed = null, alerted = null;
+        loop.Run(() => ShowPage(WebViewFramePath.PixelBuffer, page, (browser, view) =>
+        {
+            var asking = browser.EvaluateAsync("confirm('Sure?')");
+            Pump(() => view.Dialogs.Count > 0, TimeSpan.FromSeconds(5));
+            confirm = view.Dialogs.LastOrDefault();
+            confirm?.Answer(true, null);
+            confirmed = Await(asking);
+
+            asking = browser.EvaluateAsync("prompt('Name?', 'x')");
+            Pump(() => view.Dialogs.Count > 1, TimeSpan.FromSeconds(5));
+            prompt = view.Dialogs.LastOrDefault();
+            prompt?.Answer(true, "Anna");
+            typed = Await(asking);
+
+            asking = browser.EvaluateAsync("alert('Hi'), 7");
+            Pump(() => view.Dialogs.Count > 2, TimeSpan.FromSeconds(5));
+            alert = view.Dialogs.LastOrDefault();
+            alert?.Answer(true, null);
+            alerted = Await(asking);
+        }));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That((confirm?.Kind, confirm?.Message), Is.EqualTo((WebViewScriptDialogKind.Confirm, "Sure?")));
+            Assert.That(confirmed, Is.EqualTo("true"));
+            Assert.That((prompt?.Kind, prompt?.DefaultText), Is.EqualTo((WebViewScriptDialogKind.Prompt, "x")));
+            Assert.That(typed, Is.EqualTo("\"Anna\""));
+            Assert.That(alert?.Kind, Is.EqualTo(WebViewScriptDialogKind.Alert));
+            Assert.That(alerted, Is.EqualTo("7"));
+        });
+    }
+
+    // A page that asks before it is left asks the view; answered "stay", it stays.
+    [Test]
+    public void APageAskingBeforeItIsLeft_StaysWhenTheAnswerIsStay()
+    {
+        const string page = "data:text/html,<body style='margin:0;height:100vh' " +
+                            "onload=\"addEventListener('beforeunload', e => { e.preventDefault(); e.returnValue = ''; })\">" +
+                            "stay</body>";
+        WebViewScriptDialogRequest asked = null;
+        string title = null;
+        loop.Run(() => ShowPage(WebViewFramePath.PixelBuffer, page, (browser, view) =>
+        {
+            // A page asks only after the user has done something on it.
+            Click(browser, Width / 2, Height / 2);
+            Pump(() => false, TimeSpan.FromMilliseconds(300));
+            browser.Navigate("data:text/html,<title>gone</title>");
+            Pump(() => view.Dialogs.Count > 0, TimeSpan.FromSeconds(5));
+            asked = view.Dialogs.LastOrDefault();
+            asked?.Answer(false, null);
+            Pump(() => false, TimeSpan.FromSeconds(1));
+            title = view.Title;
+        }));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(asked?.Kind, Is.EqualTo(WebViewScriptDialogKind.LeavePage));
+            Assert.That(title, Is.Not.EqualTo("gone"), "the page stayed");
+        });
+    }
+
     // An element's title comes to the view as its tooltip while the pointer is over it.
     [Test]
     public void AnElementsTitle_ComesAsTheTooltip()

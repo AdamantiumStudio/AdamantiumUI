@@ -29,12 +29,16 @@
                         <local:WebViewDevToolsLayout IsDevToolsOpen="{TemplateBinding IsDevToolsOpen}"
                                                      Dock="{TemplateBinding DevToolsDock}">
                             <Border x:Name="PART_PageHost" ClipToBounds="True">
-                                <!-- The page, and over it the list it drops - a select's - where the page places it. -->
-                                <Canvas>
-                                    <RenderTargetPanel x:Name="PART_Surface" AcceptsTab="False"/>
-                                    <RenderTargetPanel x:Name="PART_PopupSurface" AcceptsTab="False"
-                                                       Visibility="Collapsed" IsHitTestVisible="False"/>
-                                </Canvas>
+                                <!-- The page, and over it the list it drops - a select's - where the page places it, and
+                                     the dialog its script asks, over the page only. -->
+                                <Grid>
+                                    <Canvas>
+                                        <RenderTargetPanel x:Name="PART_Surface" AcceptsTab="False"/>
+                                        <RenderTargetPanel x:Name="PART_PopupSurface" AcceptsTab="False"
+                                                           Visibility="Collapsed" IsHitTestVisible="False"/>
+                                    </Canvas>
+                                    <local:WebViewScriptDialog x:Name="PART_ScriptDialog"/>
+                                </Grid>
                             </Border>
                             <Thumb x:Name="PART_DevToolsSplitter" Classes="WebViewSplitter"
                                    AutomationProperties.AutomationId="WebDevToolsSplitter"/>

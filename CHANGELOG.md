@@ -46,8 +46,10 @@ All packages share one version.
   is the view's own (`PART_PageMenu`, a `ContextMenu` of the theme): Chromium's rows for the point pressed, and
   "Inspect", which opens the DevTools on the element under it; an element's `title` shows as the view's tooltip. A
   select's list, which Chromium draws apart from the page, shows in `PART_PopupSurface` over the page where the page
-  places it - moved into the view where it would stand past its edge - and takes presses as the list. Other popups
-  come later.
+  places it - moved into the view where it would stand past its edge - and takes presses as the list. A script's
+  `alert`, `confirm` and `prompt`, and the question before a page is left or loaded again, are asked by
+  `WebViewScriptDialog` (`PART_ScriptDialog`, the theme's card) over the page only: the page waits under it, the rest of
+  the window goes on, and the answer goes back to the script. Other popups come later.
 - `TextBox.TextEffects` (and every `TextBoxBase`'s): ranges of the text drawn apart, as a `TextBlock`'s - recolored,
   moved, turned; only the drawing changes, the caret and selection stay where the layout put them.
 - `Win32ScanCodes` (Windows): a key's scan code as a HID usage and back (`TryFromHidUsage`).
