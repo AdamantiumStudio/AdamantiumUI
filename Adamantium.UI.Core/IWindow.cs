@@ -1,6 +1,7 @@
 ﻿using Adamantium.Graphics.Core;
 using Adamantium.Mathematics;
 using Adamantium.UI.Core.Graphics;
+using Adamantium.UI.Core.Media.Imaging;
 using Adamantium.UI.Core.RoutedEvents;
 
 namespace Adamantium.UI.Core;
@@ -80,6 +81,12 @@ public interface IWindow : IRootVisualComponent, IContentControl
 
     /// <summary>Shows the window modally over its <see cref="Owner"/>; the task ends when it closes or is hidden.</summary>
     Task ShowDialogAsync();
+
+    /// <summary>The frame the window shows, as drawn - popups, overlays and hosted surfaces included - at its pixel
+    /// size; taken from the first frame drawn from what the window held when asked. Null while it has no renderer,
+    /// for a minimized or hidden window, and when the window closes first. Each caller gets a picture of its own.
+    /// </summary>
+    Task<BitmapSource> TakeScreenshotAsync();
 
     /// <summary>Counts <paramref name="window"/> among the windows this one owns, to be closed with it; false once
     /// <see cref="Closing"/> has let this window close, when it takes no more. Called by the owned window's
