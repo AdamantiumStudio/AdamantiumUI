@@ -7,6 +7,8 @@ All packages share one version.
 
 ### Added
 
+- macOS theme: a small `Slider` (`Classes="Small"`), as a Mac's status bar has it - a 14 knob in the compact height,
+  its shadow kept clear.
 - `WebView` (Adamantium.UI.WebView, Windows): a web page drawn by Chromium (CEF) off screen and shown by a
   `RenderTargetPanel` - no window of its own. `AddWebView()` registers the application's `WebViewEngine`; a view
   model takes it from the container and a `WebView` binds its `Engine` to it. A view kept between visits
@@ -180,6 +182,9 @@ All packages share one version.
 
 ### Fixed
 
+- A theme manager let go is collected with its theme and all its styles: it followed the OS appearance through a
+  static event that kept it - now only while it follows the system, and weakly - and the theme's resource routing
+  kept the theme.
 - `Grid.ColumnSpacing` stands between every two columns: a grid of one row lost it after its first column, and kept
   it after its last.
 - What a template's markup binds stands at the template's level, as its plain values do: the template's triggers -

@@ -80,4 +80,40 @@
         </PropertyTrigger>
     </Style>
 
+    <!-- Small (Classes="Small"), as a Mac's status bar has it: a 14 knob in the compact 22, the same four clear on each
+         side for its shadow. -->
+    <Style Selector="Slider.Small">
+        <Setter Property="MinHeight" Value="{ResourceReference ControlHeightCompact}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Slider">
+                    <Grid x:Name="Layout" Margin="4 0">
+                        <Border x:Name="Rail" Height="{ResourceReference SliderTrackThickness}" CornerRadius="2"
+                                Background="{ResourceReference SelectionControlFillColorOff}"
+                                VerticalAlignment="Center"/>
+                        <Border x:Name="PART_SelectionRange" Height="{ResourceReference SliderTrackThickness}" CornerRadius="2"
+                                Background="{ThemeResource AccentFillColorDefault}"
+                                HorizontalAlignment="Left" VerticalAlignment="Center" Width="0"/>
+                        <Track x:Name="PART_Track"
+                               Orientation="{TemplateBinding Orientation}"
+                               Minimum="{TemplateBinding Minimum}"
+                               Maximum="{TemplateBinding Maximum}"
+                               Value="{TemplateBinding Value}"
+                               ViewportSize="0">
+                            <Track.DecreaseRepeatButton>
+                                <ScrollBarPageButton Focusable="false"/>
+                            </Track.DecreaseRepeatButton>
+                            <Track.Thumb>
+                                <Thumb Width="14" Height="14" Classes="SliderKnob"/>
+                            </Track.Thumb>
+                            <Track.IncreaseRepeatButton>
+                                <ScrollBarPageButton Focusable="false"/>
+                            </Track.IncreaseRepeatButton>
+                        </Track>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
 </StyleSet>

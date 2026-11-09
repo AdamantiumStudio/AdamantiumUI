@@ -89,7 +89,7 @@ public class ThemeResourceExpression : BindingExpressionBase
         public readonly Dictionary<AdamantiumProperty, HashSet<WeakReference<ThemeResourceExpression>>> ByProperty = new();
     }
 
-    private static readonly Dictionary<AdamantiumComponent, Router> Routers = new();
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<AdamantiumComponent, Router> Routers = new();
     private static readonly object RoutersLock = new();
 
     // The handle this expression is registered under - kept so Unsubscribe can drop the exact entry rather than hunt for
@@ -102,7 +102,7 @@ public class ThemeResourceExpression : BindingExpressionBase
         {
             if (!Routers.TryGetValue(theme, out var router))
             {
-                Routers[theme] = router = new Router();
+                Routers.Add(theme, router = new Router());
                 theme.PropertyChanged += OnThemeChanged;
             }
 
@@ -120,8 +120,8 @@ public class ThemeResourceExpression : BindingExpressionBase
     {
         lock (RoutersLock)
         {
-            // The router itself STAYS, with the theme's subscription: a theme lives as long as the application, and
-            // dropping the one subscription only to take it again on the next consumer buys nothing.
+            // The router itself STAYS, with the theme's subscription, as long as the theme does: dropping the one
+            // subscription only to take it again on the next consumer buys nothing.
             if (e._handle != null &&
                 Routers.TryGetValue(theme, out var router) &&
                 router.ByProperty.TryGetValue(property, out var consumers))
