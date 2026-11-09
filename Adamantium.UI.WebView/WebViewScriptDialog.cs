@@ -2,6 +2,7 @@ using Adamantium.Core.Commands;
 using Adamantium.UI.Controls.Base;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Automation;
+using Adamantium.UI.Core.Input;
 using Adamantium.UI.WebView.Themes;
 
 namespace Adamantium.UI.WebView;
@@ -42,6 +43,29 @@ public class WebViewScriptDialog : Control
 
     // No peer of its own: the theme's card inside answers for itself, its text and its buttons.
     protected override AutomationPeer OnCreateAutomationPeer() => null;
+
+    /// <summary>Enter agrees and Esc cancels - an alert's too - while the keyboard is in the dialog; nowhere else, not
+    /// the window's own default buttons.</summary>
+    protected override void OnKeyDown(KeyEventArgs e)
+    {
+        base.OnKeyDown(e);
+        if (e.Handled || Kind == WebViewScriptDialogKind.None)
+        {
+            return;
+        }
+
+        var command = e.Key switch
+        {
+            Key.Enter => AcceptCommand,
+            Key.Escape => CancelCommand,
+            _ => null
+        };
+        if (command?.CanExecute(null) == true)
+        {
+            command.Execute(null);
+            e.Handled = true;
+        }
+    }
 
     /// <summary>What the page asks; <see cref="WebViewScriptDialogKind.None"/> while it asks nothing.</summary>
     public WebViewScriptDialogKind Kind

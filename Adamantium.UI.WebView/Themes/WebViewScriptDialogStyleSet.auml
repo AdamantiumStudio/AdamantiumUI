@@ -4,7 +4,8 @@
           xmlns:local="clr-namespace:Adamantium.UI.WebView">
 
     <!-- A page's script dialog over the page only: the page dimmed under it, a card near its top with who asks, what
-         is asked, a field for a prompt, and the answers - Enter agrees, Esc cancels. Nothing while nothing is asked. -->
+         is asked, a field for a prompt, and the answers - Enter agrees and Esc cancels while the keyboard is in it (the
+         control's own keys, not the window's default buttons). Nothing while nothing is asked. -->
     <Style Selector="WebViewScriptDialog">
         <Setter Property="Template">
             <Setter.Value>
@@ -27,11 +28,11 @@
                                          AutomationProperties.AutomationId="WebDialogText"
                                          AutomationProperties.Name="{TemplateBinding Message}"/>
                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
-                                    <Button x:Name="PART_Cancel" IsCancel="True" MinWidth="88"
+                                    <Button x:Name="PART_Cancel" MinWidth="88"
                                             Content="{Localize WebViewStrings.Cancel}"
                                             Command="{TemplateBinding CancelCommand}"
                                             AutomationProperties.AutomationId="WebDialogCancel"/>
-                                    <Button x:Name="PART_Accept" IsDefault="True" Classes="Accent" MinWidth="88"
+                                    <Button x:Name="PART_Accept" Classes="Accent" MinWidth="88"
                                             Content="{TemplateBinding AcceptText}"
                                             Command="{TemplateBinding AcceptCommand}"
                                             AutomationProperties.AutomationId="WebDialogAccept"/>

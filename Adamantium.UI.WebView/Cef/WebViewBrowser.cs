@@ -30,6 +30,9 @@ internal sealed unsafe class WebViewBrowser : IDisposable
     private readonly WebViewDevTools devTools;
     private WebViewFrameProducer producer;
     private WebViewFrameProducer popupProducer;
+    private IGraphicsDevice frameDevice;
+    private WebViewScriptDialogRequest askedDialog;
+    private WebViewContextMenu askedMenu;
     private bool popupShown;
     private bool popupRepaintOwed;
     private Rect popupShownAt;
@@ -64,6 +67,7 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         this.engine = engine;
         this.view = view;
         FramePath = framePath;
+        frameDevice = device;
         producer = MakeProducer(device);
         popupProducer = MakePopupProducer(device);
         renderHandler = new WebViewRenderHandler(this);
@@ -268,10 +272,16 @@ internal sealed unsafe class WebViewBrowser : IDisposable
     public void TakeDevice(IGraphicsDevice device)
     {
         LetGoOfDevice();
+        frameDevice = device;
         producer = MakeProducer(device);
         popupProducer = MakePopupProducer(device);
         repaintOwed = true;
         popupRepaintOwed = popupShown;
+        if (popupShown)
+        {
+            view.PopupPlaced(this, popupShownAt);
+        }
+
         RepaintIfOwed();
     }
 
@@ -386,6 +396,7 @@ internal sealed unsafe class WebViewBrowser : IDisposable
             return;
         }
 
+        (x, y) = OnTheList(x, y);
         var touch = new CefTouchEvent
         {
             id = (int)id,
@@ -421,7 +432,7 @@ internal sealed unsafe class WebViewBrowser : IDisposable
             return;
         }
 
-        var mouse = MouseEvent(x, y, modifiers);
+        var mouse = DragEvent(x, y, modifiers);
         host->drag_target_drag_enter(host, CefDragDatas.FromPackage(data), &mouse, CefInputMap.Operations(allowed));
         CefRefCounting.ReleaseCef(host);
     }
@@ -435,7 +446,7 @@ internal sealed unsafe class WebViewBrowser : IDisposable
             return;
         }
 
-        var mouse = MouseEvent(x, y, modifiers);
+        var mouse = DragEvent(x, y, modifiers);
         host->drag_target_drag_over(host, &mouse, CefInputMap.Operations(allowed));
         CefRefCounting.ReleaseCef(host);
     }
@@ -462,7 +473,7 @@ internal sealed unsafe class WebViewBrowser : IDisposable
             return;
         }
 
-        var mouse = MouseEvent(x, y, modifiers);
+        var mouse = DragEvent(x, y, modifiers);
         host->drag_target_drop(host, &mouse);
         CefRefCounting.ReleaseCef(host);
     }
@@ -736,7 +747,20 @@ internal sealed unsafe class WebViewBrowser : IDisposable
 
     /// <summary>A dialog the page's script asks: the view asks it over the page, or answers it at once as cancelled.
     /// </summary>
-    internal bool OnScriptDialog(WebViewScriptDialogRequest request) => view.ScriptDialogRequested(this, request);
+    internal bool OnScriptDialog(WebViewScriptDialogRequest request)
+    {
+        askedDialog = request;
+        return view.ScriptDialogRequested(this, request);
+    }
+
+    /// <summary>A dialog the view did not take is not the page's to answer at the end.</summary>
+    internal void ForgetScriptDialog(WebViewScriptDialogRequest request)
+    {
+        if (ReferenceEquals(askedDialog, request))
+        {
+            askedDialog = null;
+        }
+    }
 
     /// <summary>The page went on - navigated, closed: what its dialogs asked is asked no more.</summary>
     internal void OnScriptDialogsReset() => view.ScriptDialogsReset(this);
@@ -773,7 +797,21 @@ internal sealed unsafe class WebViewBrowser : IDisposable
     }
 
     /// <summary>The menu the page asks for: the view shows it, or answers it at once with none.</summary>
-    internal bool OnRunContextMenu(WebViewContextMenu menu) => !isDevTools && view.ContextMenuRequested(this, menu);
+    internal bool OnRunContextMenu(WebViewContextMenu menu)
+    {
+        askedMenu = menu;
+        return !isDevTools && view.ContextMenuRequested(this, menu);
+    }
+
+    /// <summary>Puts the page back at the address it is at - its own question kept it there, as a navigation it asked
+    /// about was not made.</summary>
+    public void KeepAddress()
+    {
+        if (address != null)
+        {
+            view.AddressChanged(this, address);
+        }
+    }
 
     internal void OnLoadingProgress(double progress) => view.ProgressChanged(this, progress);
 
@@ -1054,10 +1092,18 @@ internal sealed unsafe class WebViewBrowser : IDisposable
     internal void OnPopupShow(bool show)
     {
         popupShown = show;
-        if (!show)
+        if (show)
         {
-            popupRepaintOwed = false;
-            view.PopupClosed(this);
+            return;
+        }
+
+        // Put away with its surfaces: the next list comes on surfaces of its own, never over this one's last frame.
+        popupRepaintOwed = false;
+        view.PopupClosed(this);
+        if (popupProducer != null && frameDevice != null)
+        {
+            popupProducer.Dispose();
+            popupProducer = MakePopupProducer(frameDevice);
         }
     }
 
@@ -1153,6 +1199,12 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         devToolsSocket?.Dispose();
         devToolsSocket = null;
         closing = true;
+        // What the page still asks is answered while CEF is there to hear it: the view may answer only later, CEF gone.
+        askedDialog?.Answer(false, null);
+        askedDialog = null;
+        askedMenu?.Dismiss();
+        askedMenu = null;
+        view.ScriptDialogsReset(this);
         view.LetGo(this);
         producer?.Dispose();
         producer = null;
@@ -1285,23 +1337,25 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         view.NavigationCompleted(this, url, null);
     }
 
-    // Over the dropped list the pointer is where the list really is: moved into the view, it is shown apart from where
-    // the page placed it, and the page is told the place it knows.
+    // Over the dropped list a pointer is where the list really is: moved into the view, it is shown apart from where
+    // the page placed it, and the page is told the place it knows. A drag is the page's, not the list's.
+    private (double X, double Y) OnTheList(double x, double y) =>
+        popupShown && popupShownAt.Contains(new Vector2<double>(x, y))
+            ? (x + popupMovedBy.X, y + popupMovedBy.Y)
+            : (x, y);
+
     private CefMouseEvent MouseEvent(double x, double y, InputModifiers modifiers)
     {
-        if (popupShown && popupShownAt.Contains(new Vector2<double>(x, y)))
-        {
-            x += popupMovedBy.X;
-            y += popupMovedBy.Y;
-        }
-
-        return new CefMouseEvent
-        {
-            x = (int)Math.Round(x),
-            y = (int)Math.Round(y),
-            modifiers = CefInputMap.Flags(modifiers)
-        };
+        (x, y) = OnTheList(x, y);
+        return DragEvent(x, y, modifiers);
     }
+
+    private static CefMouseEvent DragEvent(double x, double y, InputModifiers modifiers) => new()
+    {
+        x = (int)Math.Round(x),
+        y = (int)Math.Round(y),
+        modifiers = CefInputMap.Flags(modifiers)
+    };
 
     private CefBrowserHost* Host() => browser == null ? null : browser->get_host(browser);
 

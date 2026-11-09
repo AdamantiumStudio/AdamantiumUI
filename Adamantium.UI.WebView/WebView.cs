@@ -397,6 +397,7 @@ public partial class WebView : Control, IWebViewBrowserView, ITextEntry
     {
         ResizeBrowser();
         SizeSurfaceToFrame();
+        SizePopupToFrame();
     }
 
     private void OnWindowStateChanged(object sender, StateChangedEventArgs e) => browser?.SetHidden(IsWindowOutOfSight());

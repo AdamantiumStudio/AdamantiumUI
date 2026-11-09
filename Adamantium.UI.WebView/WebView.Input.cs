@@ -308,8 +308,14 @@ public partial class WebView
         e.Handled = true;
     }
 
+    // A page waiting for its dialog takes no composition: what is composed is the dialog's field's.
     private void OnCompositionStarted(object sender, TextCompositionEventArgs e)
     {
+        if (PageWaits)
+        {
+            return;
+        }
+
         composing = true;
         compositionShown = false;
         e.Handled = true;
@@ -317,6 +323,11 @@ public partial class WebView
 
     private void OnCompositionChanged(object sender, TextCompositionEventArgs e)
     {
+        if (PageWaits)
+        {
+            return;
+        }
+
         composing = true;
         if (e.Text.Length > 0)
         {
@@ -334,6 +345,11 @@ public partial class WebView
 
     private void OnCompositionEnded(object sender, TextCompositionEventArgs e)
     {
+        if (PageWaits && !composing)
+        {
+            return;
+        }
+
         if (compositionShown)
         {
             browser?.CancelComposition();
@@ -344,9 +360,10 @@ public partial class WebView
         e.Handled = true;
     }
 
+    // A page waiting for its dialog takes nothing dropped on it.
     private void OnDragEnter(object sender, DragDropEventArgs e)
     {
-        if (browser == null)
+        if (browser == null || PageWaits)
         {
             return;
         }
@@ -359,7 +376,7 @@ public partial class WebView
 
     private void OnDragOver(object sender, DragDropEventArgs e)
     {
-        if (browser == null)
+        if (browser == null || PageWaits)
         {
             return;
         }
@@ -377,7 +394,7 @@ public partial class WebView
 
     private void OnDrop(object sender, DragDropEventArgs e)
     {
-        if (browser == null)
+        if (browser == null || PageWaits)
         {
             return;
         }

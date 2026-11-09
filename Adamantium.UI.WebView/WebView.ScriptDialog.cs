@@ -104,6 +104,11 @@ public partial class WebView
 
         RaiseScriptDialogCommands();
         request.Answer(accepted, text);
+        // Stayed: the address asked for was not gone to, and the view shows the page's own again.
+        if (!accepted && request.Kind is WebViewScriptDialogKind.LeavePage or WebViewScriptDialogKind.ReloadPage)
+        {
+            browser?.KeepAddress();
+        }
     }
 
     private void RaiseScriptDialogCommands()

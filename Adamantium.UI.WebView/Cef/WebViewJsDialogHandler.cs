@@ -29,23 +29,25 @@ internal sealed unsafe class WebViewJsDialogHandler : CefObject
             CefJsdialogType.Prompt => WebViewScriptDialogKind.Prompt,
             _ => WebViewScriptDialogKind.Alert
         };
-        var handled = Ask(self, cefBrowser, callback, () => new WebViewScriptDialogRequest(kind,
-            CefStrings.Read(originUrl), CefStrings.Read(messageText), CefStrings.Read(defaultPromptText), callback));
+        var asked = Ask(self, cefBrowser, callback, () => new WebViewScriptDialogRequest(kind,
+            CefStrings.Read(originUrl), CefStrings.Read(messageText), CefStrings.Read(defaultPromptText), callback),
+            refusedAnswer: null);
         // Not asked - a view that cannot show it: the script goes on as if it was cancelled, saying nothing.
-        if (!handled)
+        if (!asked)
         {
             *suppressMessage = 1;
         }
 
-        return handled ? 1 : 0;
+        return asked ? 1 : 0;
     }
 
+    // A view that cannot ask lets the page go: a page kept by a question nobody saw could never be left.
     [UnmanagedCallersOnly]
     private static int OnBeforeUnloadDialog(CefJsdialogHandler* self, CefBrowser* cefBrowser, CefStringUtf16* messageText,
         int isReload, CefJsdialogCallback* callback) =>
         Ask(self, cefBrowser, callback, () => new WebViewScriptDialogRequest(
             isReload != 0 ? WebViewScriptDialogKind.ReloadPage : WebViewScriptDialogKind.LeavePage, string.Empty,
-            CefStrings.Read(messageText), string.Empty, callback)) ? 1 : 0;
+            CefStrings.Read(messageText), string.Empty, callback), refusedAnswer: true) ? 1 : 0;
 
     [UnmanagedCallersOnly]
     private static void OnResetDialogState(CefJsdialogHandler* self, CefBrowser* cefBrowser)
@@ -66,10 +68,10 @@ internal sealed unsafe class WebViewJsDialogHandler : CefObject
         CefRefCounting.ReleaseCef(cefBrowser);
     }
 
-    // Handed to the view; a request it does not take, or one that failed on the way, is answered as cancelled at once,
-    // so the callback is never left held.
+    // Handed to the view. One it does not take is answered at once with refusedAnswer, or - null - left to CEF unasked;
+    // one that failed on the way is answered as cancelled. Either way the callback is never left held.
     private static bool Ask(CefJsdialogHandler* self, CefBrowser* cefBrowser, CefJsdialogCallback* callback,
-        Func<WebViewScriptDialogRequest> make)
+        Func<WebViewScriptDialogRequest> make, bool? refusedAnswer)
     {
         var handled = false;
         WebViewScriptDialogRequest request = null;
@@ -82,15 +84,24 @@ internal sealed unsafe class WebViewJsDialogHandler : CefObject
                 handled = owner.OnScriptDialog(request);
                 if (!handled)
                 {
-                    request.Answer(false, null);
-                    handled = true;
+                    owner.ForgetScriptDialog(request);
+                    if (refusedAnswer is { } answer)
+                    {
+                        request.Answer(answer, null);
+                        handled = true;
+                    }
+                    else
+                    {
+                        // The request never answers: the reference it took goes, CEF answers for itself.
+                        request.Forget();
+                    }
                 }
             }
         }
         catch (Exception exception)
         {
             CefCallbacks.Report(exception);
-            if (request != null)
+            if (request is { IsAnswered: false })
             {
                 request.Answer(false, null);
                 handled = true;

@@ -38,6 +38,19 @@ internal sealed unsafe class WebViewScriptDialogRequest
     /// <summary>Whether it is answered.</summary>
     public bool IsAnswered => callback == null;
 
+    /// <summary>Lets the callback go unanswered - CEF answers the dialog itself, as nobody asked it.</summary>
+    public void Forget()
+    {
+        if (callback == null)
+        {
+            return;
+        }
+
+        var held = callback;
+        callback = null;
+        CefRefCounting.ReleaseCef(held);
+    }
+
     /// <summary>Answers: OK - leave, reload - with <paramref name="text"/> for a prompt; or Cancel - stay.</summary>
     public void Answer(bool accepted, string text)
     {

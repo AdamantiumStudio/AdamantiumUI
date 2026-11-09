@@ -79,11 +79,14 @@
             <Setter.Value>
                 <ControlTemplate TargetType="local:WebViewDevToolsView">
                     <Border x:Name="PART_PageHost" ClipToBounds="True">
-                        <Canvas>
-                            <RenderTargetPanel x:Name="PART_Surface" AcceptsTab="False"/>
-                            <RenderTargetPanel x:Name="PART_PopupSurface" AcceptsTab="False"
-                                               Visibility="Collapsed" IsHitTestVisible="False"/>
-                        </Canvas>
+                        <Grid>
+                            <Canvas>
+                                <RenderTargetPanel x:Name="PART_Surface" AcceptsTab="False"/>
+                                <RenderTargetPanel x:Name="PART_PopupSurface" AcceptsTab="False"
+                                                   Visibility="Collapsed" IsHitTestVisible="False"/>
+                            </Canvas>
+                            <local:WebViewScriptDialog x:Name="PART_ScriptDialog"/>
+                        </Grid>
                     </Border>
                 </ControlTemplate>
             </Setter.Value>
