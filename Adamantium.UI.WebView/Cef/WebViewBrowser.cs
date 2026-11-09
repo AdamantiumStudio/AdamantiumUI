@@ -1,5 +1,6 @@
 using Adamantium.Graphics.Core;
 using Adamantium.Imaging;
+using Adamantium.Mathematics;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Media.Imaging;
@@ -24,8 +25,14 @@ internal sealed unsafe class WebViewBrowser : IDisposable
     private readonly WebViewDisplayHandler displayHandler;
     private readonly WebViewLoadHandler loadHandler;
     private readonly WebViewRequestHandler requestHandler;
+    private readonly WebViewContextMenuHandler contextMenuHandler;
     private readonly WebViewDevTools devTools;
     private WebViewFrameProducer producer;
+    private WebViewFrameProducer popupProducer;
+    private bool popupShown;
+    private bool popupRepaintOwed;
+    private Rect popupShownAt;
+    private Vector2<double> popupMovedBy;
     private CefBrowser* browser;
     private string address;
     private string wanted;
@@ -42,6 +49,7 @@ internal sealed unsafe class WebViewBrowser : IDisposable
     private bool focused;
     private double zoom = 1;
     private int iconsAsked;
+    private Task<System.Text.Json.JsonElement> inspected;
     private string[] iconAddresses = [];
     private bool secure;
     private long securityAskedAt;
@@ -56,13 +64,16 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         this.view = view;
         FramePath = framePath;
         producer = MakeProducer(device);
+        popupProducer = MakePopupProducer(device);
         renderHandler = new WebViewRenderHandler(this);
         lifeSpanHandler = new WebViewLifeSpanHandler(this);
         loadHandler = new WebViewLoadHandler(this);
         requestHandler = new WebViewRequestHandler(this);
-        devTools = new WebViewDevTools(json => view.MessageReceived(this, json));
+        devTools = new WebViewDevTools(json => view.MessageReceived(this, json)) { OverlayHeard = RevealWaiting };
         displayHandler = new WebViewDisplayHandler(this);
-        client = new WebViewClient(renderHandler, lifeSpanHandler, displayHandler, loadHandler, requestHandler);
+        contextMenuHandler = new WebViewContextMenuHandler(this);
+        client = new WebViewClient(renderHandler, lifeSpanHandler, displayHandler, loadHandler, requestHandler,
+            contextMenuHandler);
     }
 
     /// <summary>The view's size in device-independent pixels, never empty.</summary>
@@ -234,7 +245,7 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         CefRefCounting.ReleaseCef(host);
     }
 
-    /// <summary>The device the frames were written on is lost: the panel lets go of them and they go. The page lives on
+    /// <summary>The device the frames were written on is lost: the panels let go of them and they go. The page lives on
     /// and paints into nothing until <see cref="TakeDevice"/>.</summary>
     public void LetGoOfDevice()
     {
@@ -246,15 +257,19 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         view.LetGo(this);
         producer.Dispose();
         producer = null;
+        popupProducer?.Dispose();
+        popupProducer = null;
     }
 
     /// <summary>Writes the frames on <paramref name="device"/> from now on - the one made in place of a lost one - and
-    /// asks the page for a whole frame again.</summary>
+    /// asks the page for a whole frame again, and its dropped list for one if it has one.</summary>
     public void TakeDevice(IGraphicsDevice device)
     {
         LetGoOfDevice();
         producer = MakeProducer(device);
+        popupProducer = MakePopupProducer(device);
         repaintOwed = true;
+        popupRepaintOwed = popupShown;
         RepaintIfOwed();
     }
 
@@ -265,22 +280,50 @@ internal sealed unsafe class WebViewBrowser : IDisposable
             view.FrameWritten(this);
         });
 
-    /// <summary>Asks the page again for a frame no surface was free for, once the panel has given one back.</summary>
+    private WebViewFrameProducer MakePopupProducer(IGraphicsDevice device) =>
+        new(device, descriptor => view.ShowPopup(this, descriptor), () => view.FrameWritten(this));
+
+    private void Owe(bool popup)
+    {
+        if (popup)
+        {
+            popupRepaintOwed = true;
+        }
+        else
+        {
+            repaintOwed = true;
+        }
+    }
+
+    /// <summary>Asks the page again for a frame no surface was free for, once the panel has given one back - the
+    /// page's, and its dropped list's.</summary>
     public void RepaintIfOwed()
     {
-        if (!repaintOwed || closing || producer == null || !producer.HasFreeSurface)
+        var page = repaintOwed && producer is { HasFreeSurface: true };
+        var popup = popupRepaintOwed && popupShown && popupProducer is { HasFreeSurface: true };
+        if (closing || !page && !popup)
         {
             return;
         }
 
-        repaintOwed = false;
         var host = LiveHost();
         if (host == null)
         {
             return;
         }
 
-        host->invalidate(host, CefPaintElementType.View);
+        if (page)
+        {
+            repaintOwed = false;
+            host->invalidate(host, CefPaintElementType.View);
+        }
+
+        if (popup)
+        {
+            popupRepaintOwed = false;
+            host->invalidate(host, CefPaintElementType.Popup);
+        }
+
         CefRefCounting.ReleaseCef(host);
     }
 
@@ -687,6 +730,42 @@ internal sealed unsafe class WebViewBrowser : IDisposable
 
     internal void OnStatusMessage(string message) => view.StatusChanged(this, message);
 
+    internal void OnTooltip(string text) => view.TooltipChanged(this, text);
+
+    /// <summary>Opens the element at <paramref name="x"/>, <paramref name="y"/> of the view, in device-independent
+    /// pixels, in the DevTools' Elements panel: now, if their front end listens, else once it does - while the page
+    /// is the same.</summary>
+    public void InspectAt(double x, double y)
+    {
+        var host = LiveHost();
+        if (host == null)
+        {
+            return;
+        }
+
+        // Found now, as the page is laid out under the menu: the DevTools opening beside it lay it out narrower.
+        inspected = devTools.Locate(host, x / zoom, y / zoom);
+        CefRefCounting.ReleaseCef(host);
+        if (devTools.FrontEndHearsOverlay)
+        {
+            RevealWaiting();
+        }
+    }
+
+    private void RevealWaiting()
+    {
+        if (inspected == null)
+        {
+            return;
+        }
+
+        devTools.Reveal(inspected);
+        inspected = null;
+    }
+
+    /// <summary>The menu the page asks for: the view shows it, or answers it at once with none.</summary>
+    internal bool OnRunContextMenu(WebViewContextMenu menu) => !isDevTools && view.ContextMenuRequested(this, menu);
+
     internal void OnLoadingProgress(double progress) => view.ProgressChanged(this, progress);
 
     internal void OnLoadingState(bool isLoading, bool canGoBack, bool canGoForward)
@@ -721,6 +800,8 @@ internal sealed unsafe class WebViewBrowser : IDisposable
     /// </summary>
     internal void OnLoadStart()
     {
+        // An element of the page gone is none of the next's.
+        inspected = null;
         iconsAsked++;
         view.IconChanged(this, null);
     }
@@ -934,11 +1015,22 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         }
     }
 
-    /// <summary>A frame from CEF; one no surface was free for is asked for again by <see cref="RepaintIfOwed"/>.</summary>
-    internal void OnPaint(ReadOnlySpan<CefRect> dirty, byte* pixels, int width, int height)
+    /// <summary>A frame from CEF, the page's or its dropped list's; one no surface was free for is asked for again by
+    /// <see cref="RepaintIfOwed"/>.</summary>
+    internal void OnPaint(CefPaintElementType type, ReadOnlySpan<CefRect> dirty, byte* pixels, int width, int height)
     {
         if (closing)
         {
+            return;
+        }
+
+        if (type == CefPaintElementType.Popup)
+        {
+            if (popupShown && (popupProducer == null || !popupProducer.Write(dirty, pixels, width, height)))
+            {
+                popupRepaintOwed = true;
+            }
+
             return;
         }
 
@@ -949,21 +1041,50 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         }
     }
 
+    /// <summary>The page dropped a list - a select's - or put it away: shown apart from the page, over it.</summary>
+    internal void OnPopupShow(bool show)
+    {
+        popupShown = show;
+        if (!show)
+        {
+            popupRepaintOwed = false;
+            view.PopupClosed(this);
+        }
+    }
+
+    /// <summary>Where the page places its dropped list, in the view's device-independent pixels: moved into the view
+    /// where it would stand past its edge - a select near the bottom - and shown there.</summary>
+    internal void OnPopupSize(CefRect rect)
+    {
+        var x = Math.Max(0, Math.Min(rect.x, ViewSize.Width - rect.width));
+        var y = Math.Max(0, Math.Min(rect.y, ViewSize.Height - rect.height));
+        popupShownAt = new Rect(x, y, rect.width, rect.height);
+        popupMovedBy = new Vector2<double>(rect.x - x, rect.y - y);
+        view.PopupPlaced(this, popupShownAt);
+    }
+
     /// <summary>A frame in Chromium's <paramref name="texture"/>, copied before the call returns, when CEF takes the
     /// texture back. One that cannot be copied - not BGRA, its visible part not at the corner, or not taken by the
     /// device - ends the shared path: the engine starts no more browsers on it, and the view makes this one again on
     /// pixels in memory.</summary>
-    internal void OnAcceleratedPaint(ReadOnlySpan<CefRect> dirty, IntPtr texture, CefColorType format, int textureWidth,
-        int textureHeight, CefRect visible)
+    internal void OnAcceleratedPaint(CefPaintElementType type, ReadOnlySpan<CefRect> dirty, IntPtr texture,
+        CefColorType format, int textureWidth, int textureHeight, CefRect visible)
     {
         if (closing || refused)
         {
             return;
         }
 
-        if (producer == null)
+        var popup = type == CefPaintElementType.Popup;
+        if (popup && !popupShown)
         {
-            repaintOwed = true;
+            return;
+        }
+
+        var into = popup ? popupProducer : producer;
+        if (into == null)
+        {
+            Owe(popup);
             return;
         }
 
@@ -974,9 +1095,9 @@ internal sealed unsafe class WebViewBrowser : IDisposable
                 throw new NotSupportedException($"A {format} texture whose visible part is at {visible.x},{visible.y}.");
             }
 
-            if (!producer.Copy(dirty, texture, textureWidth, textureHeight, visible.width, visible.height))
+            if (!into.Copy(dirty, texture, textureWidth, textureHeight, visible.width, visible.height))
             {
-                repaintOwed = true;
+                Owe(popup);
             }
         }
         catch (Exception exception)
@@ -1026,6 +1147,8 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         view.LetGo(this);
         producer?.Dispose();
         producer = null;
+        popupProducer?.Dispose();
+        popupProducer = null;
         if (browser != null)
         {
             Close();
@@ -1041,6 +1164,7 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         displayHandler.Release();
         loadHandler.Release();
         requestHandler.Release();
+        contextMenuHandler.Release();
     }
 
     private void Close()
@@ -1151,12 +1275,23 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         view.NavigationCompleted(this, url, null);
     }
 
-    private static CefMouseEvent MouseEvent(double x, double y, InputModifiers modifiers) => new()
+    // Over the dropped list the pointer is where the list really is: moved into the view, it is shown apart from where
+    // the page placed it, and the page is told the place it knows.
+    private CefMouseEvent MouseEvent(double x, double y, InputModifiers modifiers)
     {
-        x = (int)Math.Round(x),
-        y = (int)Math.Round(y),
-        modifiers = CefInputMap.Flags(modifiers)
-    };
+        if (popupShown && popupShownAt.Contains(new Vector2<double>(x, y)))
+        {
+            x += popupMovedBy.X;
+            y += popupMovedBy.Y;
+        }
+
+        return new CefMouseEvent
+        {
+            x = (int)Math.Round(x),
+            y = (int)Math.Round(y),
+            modifiers = CefInputMap.Flags(modifiers)
+        };
+    }
 
     private CefBrowserHost* Host() => browser == null ? null : browser->get_host(browser);
 

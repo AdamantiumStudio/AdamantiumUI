@@ -12,9 +12,11 @@ internal sealed unsafe class WebViewClient : CefObject
     private readonly WebViewDisplayHandler displayHandler;
     private readonly WebViewLoadHandler loadHandler;
     private readonly WebViewRequestHandler requestHandler;
+    private readonly WebViewContextMenuHandler contextMenuHandler;
 
     public WebViewClient(WebViewRenderHandler renderHandler, WebViewLifeSpanHandler lifeSpanHandler,
-        WebViewDisplayHandler displayHandler, WebViewLoadHandler loadHandler, WebViewRequestHandler requestHandler)
+        WebViewDisplayHandler displayHandler, WebViewLoadHandler loadHandler, WebViewRequestHandler requestHandler,
+        WebViewContextMenuHandler contextMenuHandler)
         : base(sizeof(CefClient))
     {
         this.renderHandler = renderHandler;
@@ -22,17 +24,26 @@ internal sealed unsafe class WebViewClient : CefObject
         this.displayHandler = displayHandler;
         this.loadHandler = loadHandler;
         this.requestHandler = requestHandler;
+        this.contextMenuHandler = contextMenuHandler;
         renderHandler.AddReference();
         lifeSpanHandler.AddReference();
         displayHandler.AddReference();
         loadHandler.AddReference();
         requestHandler.AddReference();
+        contextMenuHandler.AddReference();
         var client = (CefClient*)Native;
         client->get_render_handler = &GetRenderHandler;
         client->get_life_span_handler = &GetLifeSpanHandler;
         client->get_display_handler = &GetDisplayHandler;
         client->get_load_handler = &GetLoadHandler;
         client->get_request_handler = &GetRequestHandler;
+        client->get_context_menu_handler = &GetContextMenuHandler;
+    }
+
+    [UnmanagedCallersOnly]
+    private static CefContextMenuHandler* GetContextMenuHandler(CefClient* self)
+    {
+        return (CefContextMenuHandler*)From<WebViewClient>(self).contextMenuHandler.Share();
     }
 
     /// <summary>The struct with a reference taken for CEF.</summary>
@@ -45,6 +56,7 @@ internal sealed unsafe class WebViewClient : CefObject
         displayHandler.Release();
         loadHandler.Release();
         requestHandler.Release();
+        contextMenuHandler.Release();
     }
 
     [UnmanagedCallersOnly]

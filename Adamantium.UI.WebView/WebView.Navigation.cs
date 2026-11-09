@@ -179,6 +179,7 @@ public partial class WebView
         SetCurrentValue(StatusTextProperty, string.Empty);
         SetCurrentValue(LoadErrorProperty, null);
         ShowIcon(null);
+        HidePageTip();
         SetCurrentValue(IsSecureProperty, false);
         RaiseCommandsChanged();
     }
