@@ -22,4 +22,8 @@
         <ProjectReference Include="..\Adamantium.UI.Automation\Adamantium.UI.Automation.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+        <InternalsVisibleTo Include="Adamantium.UI.Sandbox.Tests" />
+    </ItemGroup>
+
 </Project>

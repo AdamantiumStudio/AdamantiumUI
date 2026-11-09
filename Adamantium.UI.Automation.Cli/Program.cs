@@ -10,7 +10,7 @@ namespace Adamantium.UI.Automation.Cli;
 
 public static class Program
 {
-    private const string DefaultPipe = "adam-auto";
+    private const string PipePrefix = "adam-auto";
     private const string DefaultApplication = "Adamantium.UI.Sandbox.exe";
     private const string GalleryTabs = "GalleryTabs";
 
@@ -98,7 +98,8 @@ public static class Program
                                                               after each pass, every theme in every variant and back,
                                                               and the memory left once all garbage is collected
 
-          --pipe <name>     the agent's pipe (default adam-auto)
+          --pipe <name>     the agent's pipe; by default one of the working copy adam-auto was built in, so
+                            instances started from two working copies never answer for each other
           --allow-errors    an action may leave errors in the journal; by default that fails it
 
         A selector: id=Cut   name="Cut out"   type=Button,name=OK   class=RibbonButton
@@ -110,7 +111,7 @@ public static class Program
     {
         Console.OutputEncoding = Encoding.UTF8;
         var arguments = new ScriptArguments(args);
-        var pipe = arguments.Option("pipe") ?? DefaultPipe;
+        var pipe = arguments.Option("pipe") ?? DefaultPipe(AppContext.BaseDirectory);
         try
         {
             switch (arguments.Command)
@@ -136,6 +137,30 @@ public static class Program
         {
             return Fail(e.Message, 1);
         }
+    }
+
+    /// <summary>The pipe a tool run from <paramref name="folder"/> uses when none is named: one for the working copy it
+    /// was built in - the folder above its <c>artifacts</c>, whichever project's output it runs from - or, for a tool
+    /// that is not in one, for its own folder. Two working copies never answer for each other.</summary>
+    internal static string DefaultPipe(string folder)
+    {
+        var path = Path.GetFullPath(folder).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        for (var at = new DirectoryInfo(path); at?.Parent != null; at = at.Parent)
+        {
+            if (string.Equals(at.Name, "artifacts", StringComparison.OrdinalIgnoreCase))
+            {
+                path = at.Parent.FullName.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+                break;
+            }
+        }
+
+        if (OperatingSystem.IsWindows())
+        {
+            path = path.ToLowerInvariant();
+        }
+
+        var hash = System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(path));
+        return $"{PipePrefix}-{Convert.ToHexString(hash, 0, 4).ToLowerInvariant()}";
     }
 
     private static async Task<int> StartAsync(ScriptArguments arguments, string pipe)
