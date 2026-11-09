@@ -32,6 +32,9 @@ public partial class WebView : Control, IWebViewBrowserView, ITextEntry
     public static readonly AdamantiumProperty AllowSharedTextureProperty = AdamantiumProperty.Register(
         nameof(AllowSharedTexture), typeof(bool), typeof(WebView), new PropertyMetadata(true, OnBrowserSettingChanged));
 
+    public static readonly AdamantiumProperty PageBackgroundProperty = AdamantiumProperty.Register(
+        nameof(PageBackground), typeof(Color), typeof(WebView), new PropertyMetadata(Colors.White, OnBrowserSettingChanged));
+
     public static readonly AdamantiumProperty FramePathProperty = AdamantiumProperty.Register(nameof(FramePath),
         typeof(WebViewFramePath), typeof(WebView), new PropertyMetadata(WebViewFramePath.None));
 
@@ -91,6 +94,15 @@ public partial class WebView : Control, IWebViewBrowserView, ITextEntry
     {
         get => GetValue<bool>(AllowSharedTextureProperty);
         set => SetValue(AllowSharedTextureProperty, value);
+    }
+
+    /// <summary>What shows where a page paints no background of its own, and before it loads: white, as in a browser.
+    /// Fully transparent shows what lies under the view - a page over a scene; any other alpha is taken as opaque.
+    /// Changing it makes the page again.</summary>
+    public Color PageBackground
+    {
+        get => GetValue<Color>(PageBackgroundProperty);
+        set => SetValue(PageBackgroundProperty, value);
     }
 
     /// <summary>How the page's frames come, set by the view.</summary>
@@ -236,6 +248,7 @@ public partial class WebView : Control, IWebViewBrowserView, ITextEntry
             browser = engine.CreateBrowser(AllowSharedTexture, this);
             SetCurrentValue(FramePathProperty, browser.FramePath);
             RaiseCommandsChanged();
+            browser.Background = PageBackground;
             BeginBrowser(browser, (int)Math.Ceiling(PageWidth), (int)Math.Ceiling(PageHeight), Scale(),
                 window?.Handle ?? IntPtr.Zero);
             browser.SetHidden(IsWindowOutOfSight());

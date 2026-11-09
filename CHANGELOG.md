@@ -49,7 +49,8 @@ All packages share one version.
   places it - moved into the view where it would stand past its edge - and takes presses as the list. A script's
   `alert`, `confirm` and `prompt`, and the question before a page is left or loaded again, are asked by
   `WebViewScriptDialog` (`PART_ScriptDialog`, the theme's card) over the page only: the page waits under it, the rest of
-  the window goes on, and the answer goes back to the script. Other popups come later.
+  the window goes on, and the answer goes back to the script. Other popups come later. `PageBackground` (white, as in
+  a browser) shows where a page paints no background of its own; transparent shows what lies under the view.
 - `TextBox.TextEffects` (and every `TextBoxBase`'s): ranges of the text drawn apart, as a `TextBlock`'s - recolored,
   moved, turned; only the drawing changes, the caret and selection stay where the layout put them.
 - `Win32ScanCodes` (Windows): a key's scan code as a HID usage and back (`TryFromHidUsage`).

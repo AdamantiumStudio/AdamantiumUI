@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Adamantium.Graphics;
 using Adamantium.Graphics.Core;
+using Adamantium.Mathematics;
 using Adamantium.Multiverse;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Input;
@@ -90,6 +91,22 @@ public class WebViewFrameTests
             Assert.That(refused, Is.False, "the device took Chromium's texture");
             Assert.That(frames, Is.GreaterThan(0), "a frame came");
             Assert.That(center, Is.EqualTo(new byte[] { 0, 0, 255, 255 }), "red, as BGRA, in the middle");
+        });
+    }
+
+    // A page with no background of its own shows white, as in a browser; asked for, a transparent one shows through.
+    [Test]
+    public void APageWithNoBackground_IsWhite_OrSeeThroughWhenAskedFor()
+    {
+        const string bare = "data:text/html,<body></body>";
+        var (_, _, _, white) = loop.Run(() => ShowPage(WebViewFramePath.PixelBuffer, bare, (Action<WebViewBrowser, RecordingBrowserView>)null));
+        var (_, _, _, clear) = loop.Run(() => ShowPage(WebViewFramePath.PixelBuffer, bare,
+            (Action<WebViewBrowser, RecordingBrowserView>)null, background: Colors.Transparent));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(white, Is.EqualTo(new byte[] { 255, 255, 255, 255 }), "white");
+            Assert.That(clear?[3], Is.EqualTo(0), "transparent");
         });
     }
 
@@ -1034,7 +1051,7 @@ public class WebViewFrameTests
         ShowPage(path, RedPage, (Action<WebViewBrowser, RecordingBrowserView>)null);
 
     private (WebViewFramePath Path, int Frames, bool Refused, byte[] Center) ShowPage(WebViewFramePath path, string page,
-        Action<WebViewBrowser, RecordingBrowserView> act, Action<RecordingBrowserView> look = null)
+        Action<WebViewBrowser, RecordingBrowserView> act, Action<RecordingBrowserView> look = null, Color? background = null)
     {
         var view = new RecordingBrowserView();
         var browser = engine.CreateBrowser(path == WebViewFramePath.SharedTexture, view);
@@ -1044,6 +1061,11 @@ public class WebViewFrameTests
             if (browser.FramePath != path)
             {
                 return (browser.FramePath, 0, false, null);
+            }
+
+            if (background is { } color)
+            {
+                browser.Background = color;
             }
 
             browser.Create(page, Width, Height, 1, IntPtr.Zero);

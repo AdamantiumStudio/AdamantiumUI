@@ -154,6 +154,9 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         Create(url, width, height, scale, parentWindow);
     }
 
+    /// <summary>What shows where the page paints no background of its own; read when the browser is made.</summary>
+    public Color Background { get; set; } = Colors.White;
+
     /// <summary>Asks CEF to make the browser, showing <paramref name="url"/>.</summary>
     public void Create(string url, int width, int height, float scale, IntPtr parentWindow)
     {
@@ -166,7 +169,12 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         var settings = new CefBrowserSettings
         {
             size = (ulong)sizeof(CefBrowserSettings),
-            windowless_frame_rate = 60
+            windowless_frame_rate = 60,
+            // CEF takes fully opaque or fully transparent alone; left unset, a windowless page paints transparent.
+            background_color = new CefColor
+            {
+                value = Background.A == 0 ? 0u : 0xFF000000u | ((uint)Background.R << 16) | ((uint)Background.G << 8) | Background.B
+            }
         };
         var target = new CefStringUtf16();
         try
