@@ -103,6 +103,9 @@ All packages share one version.
 
 ### Changed
 
+- `adam-auto` talks, unless `--pipe` names one, on a pipe of the working copy it was built in - the folder above its
+  `artifacts`, whichever project's output it runs from - instead of `adam-auto` for everyone: instances started from
+  two working copies at once no longer answer for each other.
 - `StatusBar` is a little lower: its items take less room above and below.
 
 - `FontWeight`, `FontStretch` and `FontFeature` come from the engine's new `Adamantium.Core.Shared`, under
