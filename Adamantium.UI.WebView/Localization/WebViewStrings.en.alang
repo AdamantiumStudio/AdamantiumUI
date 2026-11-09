@@ -8,6 +8,7 @@
     <Phrase Key="Ok" Text="OK"/>
     <Phrase Key="Cancel" Text="Cancel"/>
     <Phrase Key="PageSays" Text="{site} says"/>
+    <Phrase Key="ThisPageSays" Text="This page says"/>
     <Phrase Key="LeaveSite" Text="Leave site?"/>
     <Phrase Key="Leave" Text="Leave"/>
     <Phrase Key="ReloadSite" Text="Reload site?"/>

@@ -45,7 +45,7 @@ public partial class WebView
         {
             WebViewScriptDialogKind.LeavePage => WebViewStrings.LeaveSite,
             WebViewScriptDialogKind.ReloadPage => WebViewStrings.ReloadSite,
-            _ => WebViewStrings.PageSays(SiteOf(request.Origin))
+            _ => SiteOf(request.Origin) is { } site ? WebViewStrings.PageSays(site) : WebViewStrings.ThisPageSays
         });
         // A page leaving or loading again says nothing of its own, as browsers let none: what it would lose is said.
         scriptDialog.SetCurrentValue(WebViewScriptDialog.MessageProperty,
@@ -77,8 +77,9 @@ public partial class WebView
         }
     }
 
+    // The site that asks; null for a page with none - a data or file address, said as "this page".
     private static string SiteOf(string origin) =>
-        Uri.TryCreate(origin, UriKind.Absolute, out var address) && address.Host.Length > 0 ? address.Host : origin;
+        Uri.TryCreate(origin, UriKind.Absolute, out var address) && address.Host.Length > 0 ? address.Host : null;
 
     // Answers what the page asks - agreed, with the text typed for a prompt, or cancelled - and puts the dialog away;
     // the keyboard goes back to the page.
