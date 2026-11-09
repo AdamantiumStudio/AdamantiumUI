@@ -39,6 +39,7 @@ public partial class WebView : Control, IWebViewBrowserView, ITextEntry
         typeof(int), typeof(WebView), new PropertyMetadata(0));
 
     private RenderTargetPanel surface;
+    private InputUIComponent pageHost;
     private WebViewBrowser browser;
     private IWindow window;
     private bool attached;
@@ -111,12 +112,28 @@ public partial class WebView : Control, IWebViewBrowserView, ITextEntry
         base.OnApplyTemplate();
         StopBrowser();
         surface = GetTemplateChild("PART_Surface") as RenderTargetPanel;
+        pageHost = GetTemplateChild("PART_PageHost") as InputUIComponent;
+        if (pageHost != null)
+        {
+            pageHost.SizeChanged += OnSizeChanged;
+            pageHost.PointerExited += OnPageExited;
+        }
+
+        TakeDevToolsView(GetTemplateChild("PART_DevTools") as WebViewDevToolsView);
         StartBrowser();
     }
 
     public override void OnRemoveTemplate()
     {
+        TakeDevToolsView(null);
         StopBrowser();
+        if (pageHost != null)
+        {
+            pageHost.SizeChanged -= OnSizeChanged;
+            pageHost.PointerExited -= OnPageExited;
+        }
+
+        pageHost = null;
         surface = null;
         base.OnRemoveTemplate();
     }
@@ -160,20 +177,6 @@ public partial class WebView : Control, IWebViewBrowserView, ITextEntry
 
     protected override AutomationPeer OnCreateAutomationPeer() => new PaneAutomationPeer(this);
 
-    protected override Size<double> ArrangeOverride(Size<double> finalSize)
-    {
-        var scale = Scale();
-        var size = frameWidth > 0 && frameHeight > 0
-            ? new Size<double>(frameWidth / scale, frameHeight / scale)
-            : finalSize;
-        foreach (var visual in VisualChildren)
-        {
-            ((IMeasurableComponent)visual).Arrange(new Rect(size));
-        }
-
-        return finalSize;
-    }
-
     private static void OnSourceChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)
     {
         var view = (WebView)component;
@@ -208,10 +211,10 @@ public partial class WebView : Control, IWebViewBrowserView, ITextEntry
         ResizeBrowser();
     }
 
-    private void StartBrowser()
+    private protected void StartBrowser()
     {
         if (browser != null || !attached || surface == null || Engine is not { IsAvailable: true } engine ||
-            ActualWidth <= 0 || ActualHeight <= 0)
+            PageWidth <= 0 || PageHeight <= 0 || !CanStartBrowser)
         {
             return;
         }
@@ -221,8 +224,8 @@ public partial class WebView : Control, IWebViewBrowserView, ITextEntry
             browser = engine.CreateBrowser(AllowSharedTexture, this);
             SetCurrentValue(FramePathProperty, browser.FramePath);
             RaiseCommandsChanged();
-            browser.Create(Source?.AbsoluteUri ?? "about:blank", (int)Math.Ceiling(ActualWidth),
-                (int)Math.Ceiling(ActualHeight), Scale(), window?.Handle ?? IntPtr.Zero);
+            BeginBrowser(browser, (int)Math.Ceiling(PageWidth), (int)Math.Ceiling(PageHeight), Scale(),
+                window?.Handle ?? IntPtr.Zero);
             browser.SetHidden(IsWindowOutOfSight());
             browser.SetFocus(IsKeyboardFocused);
             browser.SetZoom(Math.Clamp(ZoomFactor, MinZoom, MaxZoom));
@@ -231,10 +234,13 @@ public partial class WebView : Control, IWebViewBrowserView, ITextEntry
         {
             Serilog.Log.Logger.Error(exception, "The WebView's page could not be started");
             StopBrowser();
+            return;
         }
+
+        PageChanged();
     }
 
-    private void StopBrowser()
+    private protected void StopBrowser()
     {
         if (browser == null)
         {
@@ -249,7 +255,13 @@ public partial class WebView : Control, IWebViewBrowserView, ITextEntry
         SetCurrentValue(FramePathProperty, WebViewFramePath.None);
         SetCurrentValue(FrameRateProperty, 0);
         ForgetPage();
+        PageChanged();
     }
+
+    // The page's own part of the view: all of it, or what the DevTools beside it leave.
+    private double PageWidth => pageHost?.ActualWidth ?? ActualWidth;
+
+    private double PageHeight => pageHost?.ActualHeight ?? ActualHeight;
 
     void IWebViewBrowserView.Show(WebViewBrowser from, SharedSurfaceDescriptor descriptor)
     {
@@ -260,8 +272,23 @@ public partial class WebView : Control, IWebViewBrowserView, ITextEntry
 
         frameWidth = descriptor.Width;
         frameHeight = descriptor.Height;
-        InvalidateArrange();
+        SizeSurfaceToFrame();
         surface?.SetSource(descriptor);
+    }
+
+    // The panel is laid out at the frame's size in pixels - up to a pixel past the page's part, which clips it - so the
+    // frame is drawn one to one, never scaled.
+    private void SizeSurfaceToFrame()
+    {
+        if (surface == null)
+        {
+            return;
+        }
+
+        var scale = Scale();
+        var drawn = frameWidth > 0 && frameHeight > 0;
+        surface.Width = drawn ? frameWidth / scale : double.NaN;
+        surface.Height = drawn ? frameHeight / scale : double.NaN;
     }
 
     void IWebViewBrowserView.LetGo(WebViewBrowser from)
@@ -274,7 +301,7 @@ public partial class WebView : Control, IWebViewBrowserView, ITextEntry
         surface?.ClearSource();
         frameWidth = 0;
         frameHeight = 0;
-        InvalidateArrange();
+        SizeSurfaceToFrame();
     }
 
     void IWebViewBrowserView.FrameWritten(WebViewBrowser from)
@@ -321,7 +348,7 @@ public partial class WebView : Control, IWebViewBrowserView, ITextEntry
     }
 
     private void ResizeBrowser() =>
-        browser?.Resize((int)Math.Ceiling(ActualWidth), (int)Math.Ceiling(ActualHeight), Scale());
+        browser?.Resize((int)Math.Ceiling(PageWidth), (int)Math.Ceiling(PageHeight), Scale());
 
     private void WatchWindow(IWindow next)
     {
@@ -347,7 +374,7 @@ public partial class WebView : Control, IWebViewBrowserView, ITextEntry
     private void OnWindowDpiChanged(object sender, EventArgs e)
     {
         ResizeBrowser();
-        InvalidateArrange();
+        SizeSurfaceToFrame();
     }
 
     private void OnWindowStateChanged(object sender, StateChangedEventArgs e) => browser?.SetHidden(IsWindowOutOfSight());

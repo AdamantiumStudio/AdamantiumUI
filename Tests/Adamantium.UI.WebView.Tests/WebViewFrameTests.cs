@@ -502,6 +502,83 @@ public class WebViewFrameTests
         });
     }
 
+    // The DevTools front end talks to the page through the page's socket: its calls answered under its own ids while
+    // the page's own calls go on beside them; a new front end takes the old one's place; closed, the page's messages
+    // still come.
+    [Test]
+    public void TheDevToolsFrontEnd_TalksToThePage_BesideThePagesOwnCalls()
+    {
+        const string page = "data:text/html,<title>Inspected</title>";
+        string answer = null, ours = null, address = null, secondAnswer = null;
+        var firstLetGo = false;
+        List<string> messagesAfter = null;
+        loop.Run(() => ShowPage(WebViewFramePath.PixelBuffer, page, (browser, view) =>
+        {
+            address = browser.OpenDevTools();
+            var socketAddress = new Uri("ws://" + address[(address.IndexOf("ws=", StringComparison.Ordinal) + 3)..]);
+            using var frontEnd = new System.Net.WebSockets.ClientWebSocket();
+            frontEnd.Options.SetRequestHeader("Origin", "devtools://devtools");
+            var connected = frontEnd.ConnectAsync(socketAddress, CancellationToken.None);
+            Pump(() => connected.IsCompleted, TimeSpan.FromSeconds(5));
+
+            var call = "{\"id\":1,\"method\":\"Runtime.evaluate\",\"params\":{\"expression\":\"6*7\",\"returnByValue\":true}}";
+            var sent = frontEnd.SendAsync(System.Text.Encoding.UTF8.GetBytes(call),
+                System.Net.WebSockets.WebSocketMessageType.Text, true, CancellationToken.None);
+            ours = Await(browser.EvaluateAsync("1 + 1"));
+            answer = Receive(frontEnd, reply => reply.Contains("\"id\":1"));
+
+            Pump(() => sent.IsCompleted, TimeSpan.FromSeconds(1));
+            using var second = new System.Net.WebSockets.ClientWebSocket();
+            second.Options.SetRequestHeader("Origin", "devtools://devtools");
+            var secondConnect = second.ConnectAsync(socketAddress, CancellationToken.None);
+            Pump(() => secondConnect.IsCompleted, TimeSpan.FromSeconds(5));
+            var secondCall = "{\"id\":1,\"method\":\"Runtime.evaluate\",\"params\":{\"expression\":\"5*5\",\"returnByValue\":true}}";
+            second.SendAsync(System.Text.Encoding.UTF8.GetBytes(secondCall),
+                System.Net.WebSockets.WebSocketMessageType.Text, true, CancellationToken.None);
+            secondAnswer = Receive(second, reply => reply.Contains("\"id\":1"));
+            firstLetGo = Receive(frontEnd, _ => false) == null && frontEnd.State != System.Net.WebSockets.WebSocketState.Open;
+
+            browser.CloseDevTools();
+            Await(browser.EvaluateAsync("window.adamantium.postMessage('after')"));
+            Pump(() => view.Messages.Count > 0, TimeSpan.FromSeconds(5));
+            messagesAfter = view.Messages.ToList();
+        }));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(address, Does.StartWith("devtools://devtools/bundled/devtools_app.html?ws=127.0.0.1:"));
+            Assert.That(answer, Does.Contain("\"id\":1").And.Contain("42"), "the front end's call, under its own id");
+            Assert.That(ours, Is.EqualTo("2"), "the page's own call beside it");
+            Assert.That(secondAnswer, Does.Contain("\"id\":1").And.Contain("25"),
+                "a new front end takes the old one's place, its ids its own");
+            Assert.That(firstLetGo, Is.True, "the old front end is let go");
+            Assert.That(messagesAfter, Is.EqualTo(new[] { "\"after\"" }), "the page's messages after the DevTools close");
+        });
+    }
+
+    private static string Receive(System.Net.WebSockets.ClientWebSocket socket, Func<string, bool> wanted)
+    {
+        var buffer = new byte[256 * 1024];
+        var until = Environment.TickCount64 + 5000;
+        while (Environment.TickCount64 < until)
+        {
+            var received = socket.ReceiveAsync(buffer, CancellationToken.None);
+            Pump(() => received.IsCompleted, TimeSpan.FromMilliseconds(until - Environment.TickCount64));
+            if (!received.IsCompletedSuccessfully)
+            {
+                return null;
+            }
+
+            var text = System.Text.Encoding.UTF8.GetString(buffer, 0, received.Result.Count);
+            if (wanted(text))
+            {
+                return text;
+            }
+        }
+
+        return null;
+    }
+
     // A navigation the view model refuses keeps the page where it is; HTML shown from a string loads.
     [Test]
     public void ARefusedNavigation_KeepsThePage_AndHtmlFromAStringLoads()
