@@ -26,6 +26,11 @@ All packages share one version.
   stencil masks, forms and their transparency groups, soft masks and blend modes, axial, radial and function shadings,
   tiling patterns, optional content and annotations' appearances; what it could not draw is told in `Problems`. The
   sandbox's "PDF page" tab shows the page of a sample written there or of a file of one's own.
+- `RadialGradientBrush.GradientOriginRadius`: the gradient between two circles - the origin's of this radius, as a
+  fraction of the end ellipse's, and the end one - as Canvas 2D's `createRadialGradient` and SVG 2's `fr` draw it;
+  where no circle passes nothing is painted. 0, the default, is the radial gradient as before. A PDF page's radial
+  shadings of any two circles are drawn with it. `GradientBrush.MaxRenderedStops` says how many stops are drawn (8),
+  and a gradient fill the batches cannot record is drawn by its own unit instead of not at all.
 - `IDrawingSession.DrawImage(image, filter, rect, Matrix4x4F)`: an image placed by a matrix - turned and sheared with
   it, not laid upright into its bounds. An `ImageDrawing` inside a turned `DrawingGroup` turns with it now.
 - `ZoomBox` places content smaller than its view by `HorizontalContentAlignment` and `VerticalContentAlignment` - the

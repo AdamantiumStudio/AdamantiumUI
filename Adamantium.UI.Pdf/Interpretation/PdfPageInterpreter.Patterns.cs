@@ -20,6 +20,18 @@ internal sealed partial class PdfPageInterpreter
     // How far a gradient's brush may stray from its function, in sRGB; and how many samples a function is drawn with
     // where a brush's stops cannot follow it.
     private const double StopTolerance = 1.0 / 255;
+
+    // How far a radial shading's brush may stray before it is told: past what an eye tells apart.
+    private const double VisibleTolerance = 4.0 / 255;
+
+    private void TellIfVisiblyNear(double strays)
+    {
+        if (strays > VisibleTolerance)
+        {
+            Tell($"A radial shading is drawn through {GradientBrush.MaxRenderedStops} stops, its colors off by up " +
+                 $"to {Math.Ceiling(strays * 255)} of 255.");
+        }
+    }
     private const int FunctionSamples = 256;
 
     private readonly Dictionary<PdfObject, PdfShading> _shadings = new(ReferenceEqualityComparer.Instance);
@@ -156,7 +168,7 @@ internal sealed partial class PdfPageInterpreter
             EndPoint = new Vector2<double>((1 - from) / (to - from), 0.5),
             SpreadMethod = GradientSpreadMethod.Pad,
         };
-        if (AddStops(brush, shading, alpha))
+        if (AddStops(brush, shading, alpha) <= StopTolerance)
         {
             Write(new PdfGeometryStep(new RectangleGeometry(new Rect(from, cover.Y, to - from, cover.Height)),
                 brush.CaptureBase(), null, PdfMatrices.ToDrawing(axis)), output);
@@ -212,10 +224,7 @@ internal sealed partial class PdfPageInterpreter
             RadiusY = r1 / area.Height,
             SpreadMethod = GradientSpreadMethod.Pad,
         };
-        if (!AddStops(brush, shading, alpha))
-        {
-            Tell($"A radial shading's colors are drawn through {GradientBrush.MaxRenderedStops} stops, near its function.");
-        }
+        TellIfVisiblyNear(AddStops(brush, shading, alpha));
         Geometry geometry = shading.ExtendEnd
             ? new RectangleGeometry(area)
             : new EllipseGeometry(new Rect(x1 - r1, y1 - r1, 2 * r1, 2 * r1));
@@ -252,10 +261,7 @@ internal sealed partial class PdfPageInterpreter
             GradientOriginRadius = Math.Max(startRadius / endRadius, 1e-9),
             SpreadMethod = GradientSpreadMethod.Pad,
         };
-        if (!AddStops(brush, shading, alpha, reversed, extendStart, extendEnd))
-        {
-            Tell($"A radial shading's colors are drawn through {GradientBrush.MaxRenderedStops} stops, near its function.");
-        }
+        TellIfVisiblyNear(AddStops(brush, shading, alpha, reversed, extendStart, extendEnd));
         Write(new PdfGeometryStep(new RectangleGeometry(area), brush.CaptureBase(), null, PdfMatrices.ToDrawing(space)),
             output);
     }
@@ -299,13 +305,11 @@ internal sealed partial class PdfPageInterpreter
         }
     }
 
-    // The gradient's colors at stops close enough that drawing straight between them strays no more than
-    // StopTolerance from the function - split where it would, no more than MaxStops in all.
-    // The stops a brush can carry, set where the function strays most from a straight run between them; false when even
-    // all of them leave it further than StopTolerance - the brush is then only near. Reversed, the brush's offset u is
+    // The stops a brush can carry, set where the function strays most from a straight run between them until it strays
+    // by no more than StopTolerance; the answer is how far it still strays, in sRGB. Reversed, the brush's offset u is
     // the shading's 1 - u. A side that does not extend spends a stop on a clear end, the brush padding with it past that
     // end.
-    private bool AddStops(GradientBrush brush, PdfGradientShading shading, double alpha, bool reversed = false,
+    private double AddStops(GradientBrush brush, PdfGradientShading shading, double alpha, bool reversed = false,
         bool extendStart = true, bool extendEnd = true)
     {
         const double edge = 1e-4;
@@ -322,7 +326,7 @@ internal sealed partial class PdfPageInterpreter
         }
 
         var chosen = new List<int> { 0, FunctionSamples };
-        var fits = false;
+        double strays;
         while (true)
         {
             var (worst, worstSample) = (0.0, -1);
@@ -342,13 +346,8 @@ internal sealed partial class PdfPageInterpreter
                 }
             }
 
-            if (worst <= StopTolerance)
-            {
-                fits = true;
-                break;
-            }
-
-            if (chosen.Count >= budget)
+            strays = worst;
+            if (worst <= StopTolerance || chosen.Count >= budget)
             {
                 break;
             }
@@ -378,7 +377,7 @@ internal sealed partial class PdfPageInterpreter
             brush.GradientStops.Add(new GradientStop(Colors.Transparent, 1));
         }
 
-        return fits;
+        return strays;
     }
 
     private static (double R, double G, double B) ColorAt(PdfGradientShading shading, double u)
