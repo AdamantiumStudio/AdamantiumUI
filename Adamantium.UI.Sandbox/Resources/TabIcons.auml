@@ -215,6 +215,17 @@
         </DrawingGroup>
     </DrawingImage>
 
+    <!-- A page with a corner turned and lines of text on it. -->
+    <DrawingImage x:Key="PdfPageTabIcon">
+        <DrawingGroup>
+            <GeometryDrawing><GeometryDrawing.Geometry><RectangleGeometry Rect="0,0,16,16"/></GeometryDrawing.Geometry></GeometryDrawing>
+            <GeometryDrawing Geometry="M3.5,1.5 L10,1.5 L13.5,5 L13.5,14.5 L3.5,14.5 Z M10,1.5 L10,5 L13.5,5"
+                             Stroke="CurrentColor" StrokeThickness="1"/>
+            <GeometryDrawing Geometry="M5.5,7.5 L11.5,7.5 M5.5,9.5 L11.5,9.5 M5.5,11.5 L9.5,11.5"
+                             Stroke="CurrentColor" StrokeThickness="1"/>
+        </DrawingGroup>
+    </DrawingImage>
+
     <!-- A solid circle under a clear one. -->
     <DrawingImage x:Key="OpacityTabIcon">
         <DrawingGroup>

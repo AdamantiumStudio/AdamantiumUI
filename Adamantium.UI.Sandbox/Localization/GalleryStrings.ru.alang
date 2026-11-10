@@ -45,6 +45,7 @@
     <Phrase Key="Layout" Text="Раскладка"/>
     <Phrase Key="Clipping" Text="Обрезка"/>
     <Phrase Key="PdfDrawing" Text="Рисование PDF"/>
+    <Phrase Key="PdfPage" Text="Страница PDF"/>
     <Phrase Key="Opacity" Text="Прозрачность"/>
     <Phrase Key="Viewbox" Text="Viewbox"/>
     <Phrase Key="ZoomBox" Text="ZoomBox"/>

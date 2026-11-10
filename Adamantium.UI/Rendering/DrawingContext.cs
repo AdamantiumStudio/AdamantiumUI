@@ -298,6 +298,12 @@ public class DrawingContext : IDrawingContext, IDrawingContextInternal, IDrawing
       return this;
    }
 
+   IDrawingSession IDrawingSession.DrawImage(ImageSource image, Brush filter, Rect destinationRect, Matrix4x4F transform)
+   {
+      CreateCommand(new ImagePayload(filter, image, destinationRect, CornerRadius.Empty, localTransform: transform));
+      return this;
+   }
+
    IDrawingSession IDrawingSession.DrawImageFrame(ImageSource image, Brush filter, Rect destinationRect, CornerRadius corners, int frameLayer)
    {
       var payload = new ImagePayload(filter, image, destinationRect, corners, null, frameLayer);

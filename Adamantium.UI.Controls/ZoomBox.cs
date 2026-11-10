@@ -92,6 +92,11 @@ public class ZoomBox : ContentControl
     static ZoomBox()
     {
         Gestures.IsManipulationEnabledProperty.OverrideMetadata(typeof(ZoomBox), new PropertyMetadata(true));
+        // Content smaller than the view sits where these say - the top left corner unless set otherwise.
+        HorizontalContentAlignmentProperty.OverrideMetadata(typeof(ZoomBox),
+            new PropertyMetadata(HorizontalAlignment.Left, PropertyMetadataOptions.AffectsArrange));
+        VerticalContentAlignmentProperty.OverrideMetadata(typeof(ZoomBox),
+            new PropertyMetadata(VerticalAlignment.Top, PropertyMetadataOptions.AffectsArrange));
     }
 
     public ZoomBox()
@@ -180,10 +185,30 @@ public class ZoomBox : ContentControl
         e.Handled = true; // consumed as zoom, not scroll
 
         _zoomAnchorViewport = e.GetPosition(_scroll);
-        _zoomAnchorContent = (_scroll.ScrollOffset + _zoomAnchorViewport) * (float)(1.0 / ScaleX);
+        _zoomAnchorContent = (_scroll.ScrollOffset + _zoomAnchorViewport - SurfaceOrigin()) * (float)(1.0 / ScaleX);
 
         _zoom.Rate = ZoomSmoothRate;
         _zoom.EaseBy(Math.Log(ZoomStep) * e.Delta / 120.0, Math.Log(MinScale), Math.Log(MaxScale));
+    }
+
+    // Where content smaller than the view stands in it, by the content alignment; a scrolled axis starts at 0.
+    private Vector2<double> SurfaceOrigin()
+    {
+        var spareX = Math.Max(0, _scroll.ViewportSize.Width - _scroll.ExtentSize.Width);
+        var spareY = Math.Max(0, _scroll.ViewportSize.Height - _scroll.ExtentSize.Height);
+        var x = HorizontalContentAlignment switch
+        {
+            HorizontalAlignment.Center => spareX / 2,
+            HorizontalAlignment.Right => spareX,
+            _ => 0
+        };
+        var y = VerticalContentAlignment switch
+        {
+            VerticalAlignment.Center => spareY / 2,
+            VerticalAlignment.Bottom => spareY,
+            _ => 0
+        };
+        return new Vector2<double>(x, y);
     }
 
     private void ApplyZoomLevel(double level)
@@ -232,7 +257,7 @@ public class ZoomBox : ContentControl
         if (_scroll != null && next != ScaleX)
         {
             var middle = new Vector2<double>((float)(_scroll.ViewportSize.Width / 2), (float)(_scroll.ViewportSize.Height / 2));
-            _pendingOffset = (_scroll.ScrollOffset + middle) * (float)(next / ScaleX) - middle;
+            _pendingOffset = (_scroll.ScrollOffset + middle - SurfaceOrigin()) * (float)(next / ScaleX) - middle;
         }
 
         SetCurrentValue(ScaleXProperty, next);

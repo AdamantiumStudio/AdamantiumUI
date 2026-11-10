@@ -34,6 +34,7 @@
 		<ProjectReference Include="..\Adamantium.UI.Sandbox.Content\Adamantium.UI.Sandbox.Content.csproj" />
 		<ProjectReference Include="..\Adamantium.UI.Automation.Cli\Adamantium.UI.Automation.Cli.csproj" />
 		<ProjectReference Include="..\Adamantium.UI.WebView\Adamantium.UI.WebView.csproj" />
+		<ProjectReference Include="..\Adamantium.UI.Pdf\Adamantium.UI.Pdf.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

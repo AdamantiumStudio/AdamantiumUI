@@ -14,8 +14,8 @@
                                            HorizontalScrollBarVisibility="Auto"
                                            VerticalScrollBarVisibility="Auto">
                         <ContentPresenter x:Name="PART_Surface"
-                                                   HorizontalAlignment="Left"
-                                                   VerticalAlignment="Top"
+                                                   HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                   VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
                                                    Content="{TemplateBinding Content}"
                                                    ContentTemplate="{TemplateBinding ContentTemplate}"/>
                     </ScrollViewer>

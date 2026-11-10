@@ -33,6 +33,16 @@ All packages share one version.
   matrix puts the run - filled through the glyph atlas, outlined as paths (`GlyphRun.Outline`).
 - The sandbox has a "PDF drawing" tab: clips by a path, a rectangle and letters, both soft masks, a group in a group and
   every blend mode.
+- `Adamantium.UI.Pdf`, a new package: a PDF page as a drawing (`PdfPageDrawing`), read once - on any thread - and then
+  drawn at any size and zoom without being read again. Paths with their pens, clips by paths and by text, text in every
+  rendering mode set in the file's own fonts or the system fonts standing in for them, Type 3 glyphs, images and
+  stencil masks, forms and their transparency groups, soft masks and blend modes, axial, radial and function shadings,
+  tiling patterns, optional content and annotations' appearances; what it could not draw is told in `Problems`. The
+  sandbox's "PDF page" tab shows the page of a sample written there or of a file of one's own.
+- `IDrawingSession.DrawImage(image, filter, rect, Matrix4x4F)`: an image placed by a matrix - turned and sheared with
+  it, not laid upright into its bounds. An `ImageDrawing` inside a turned `DrawingGroup` turns with it now.
+- `ZoomBox` places content smaller than its view by `HorizontalContentAlignment` and `VerticalContentAlignment` - the
+  top left corner as before unless set - and zooms toward the cursor wherever the content stands.
 - `IWindow.TakeScreenshotAsync`: the frame the window shows, read back from the target it draws into - popups,
   adorners and hosted surfaces included - at its pixel size, once it has drawn its next frame
   (`IWindowRenderer.RequestScreenshot` beneath it).

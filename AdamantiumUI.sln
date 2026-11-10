@@ -47,6 +47,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Adamantium.UI.BindingGenera
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Adamantium.UI.WebView.Helper", "Adamantium.UI.WebView.Helper\Adamantium.UI.WebView.Helper.csproj", "{87C3D602-F7CE-4B50-8A0C-232D7BB0A722}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Adamantium.UI.Pdf", "Adamantium.UI.Pdf\Adamantium.UI.Pdf.csproj", "{823D87B7-AE72-4CE9-B8BC-578E6095E1B3}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -297,6 +299,18 @@ Global
 		{2169144A-54AD-4694-9E85-005144E6F243}.Release|x64.Build.0 = Release|Any CPU
 		{2169144A-54AD-4694-9E85-005144E6F243}.Release|x86.ActiveCfg = Release|Any CPU
 		{2169144A-54AD-4694-9E85-005144E6F243}.Release|x86.Build.0 = Release|Any CPU
+		{823D87B7-AE72-4CE9-B8BC-578E6095E1B3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{823D87B7-AE72-4CE9-B8BC-578E6095E1B3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{823D87B7-AE72-4CE9-B8BC-578E6095E1B3}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{823D87B7-AE72-4CE9-B8BC-578E6095E1B3}.Debug|x64.Build.0 = Debug|Any CPU
+		{823D87B7-AE72-4CE9-B8BC-578E6095E1B3}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{823D87B7-AE72-4CE9-B8BC-578E6095E1B3}.Debug|x86.Build.0 = Debug|Any CPU
+		{823D87B7-AE72-4CE9-B8BC-578E6095E1B3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{823D87B7-AE72-4CE9-B8BC-578E6095E1B3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{823D87B7-AE72-4CE9-B8BC-578E6095E1B3}.Release|x64.ActiveCfg = Release|Any CPU
+		{823D87B7-AE72-4CE9-B8BC-578E6095E1B3}.Release|x64.Build.0 = Release|Any CPU
+		{823D87B7-AE72-4CE9-B8BC-578E6095E1B3}.Release|x86.ActiveCfg = Release|Any CPU
+		{823D87B7-AE72-4CE9-B8BC-578E6095E1B3}.Release|x86.Build.0 = Release|Any CPU
 		{572C01A2-4858-4245-9812-15C861EFC27A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{572C01A2-4858-4245-9812-15C861EFC27A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{572C01A2-4858-4245-9812-15C861EFC27A}.Debug|x64.ActiveCfg = Debug|Any CPU
