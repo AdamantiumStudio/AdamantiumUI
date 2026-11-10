@@ -458,6 +458,12 @@ internal sealed unsafe class WebViewBrowser : IDisposable
             return;
         }
 
+        // A blank page asked for is the page's, heard of like any other.
+        if (url == Blank)
+        {
+            blankBehind = false;
+        }
+
         var frame = browser->get_main_frame(browser);
         var target = new CefStringUtf16();
         try
@@ -1214,7 +1220,7 @@ internal sealed unsafe class WebViewBrowser : IDisposable
 
     /// <summary>A new page in the main frame: its icon is not known yet, and no icon asked for the last one is shown.
     /// </summary>
-    internal void OnLoadStart()
+    internal void OnLoadStart(string url)
     {
         // What the page left asked is asked no more: Chromium puts its prompts away itself, a media request is refused.
         for (var i = permissionsAsked.Count - 1; i >= 0; i--)
@@ -1229,7 +1235,8 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         inspected = null;
         iconsAsked++;
         view.IconChanged(this, null);
-        if (blankBehind)
+        // The blank page's own start, late, is not the page that gives it away.
+        if (blankBehind && url != Blank)
         {
             ForgetTheBlankPage();
         }
@@ -1459,14 +1466,25 @@ internal sealed unsafe class WebViewBrowser : IDisposable
             return;
         }
 
-        if (wanted != null && wanted != createdWith)
+        var first = wanted;
+        wanted = null;
+        if (madeBlank && first == Blank)
+        {
+            // Asked to be blank meanwhile: the blank page it was made with is the page asked for, and told as it.
+            madeBlank = false;
+            address = Blank;
+            view.AddressChanged(this, Blank);
+            view.LoadingChanged(this, false, false, false);
+            view.NavigationCompleted(this, Blank, null);
+            return;
+        }
+
+        if (first != null && first != createdWith)
         {
             blankBehind = madeBlank;
             madeBlank = false;
-            Navigate(wanted);
+            Navigate(first);
         }
-
-        wanted = null;
     }
 
     // What the blank page the browser was made with says - nobody's to hear: its address, and while the browser is on
@@ -1483,14 +1501,18 @@ internal sealed unsafe class WebViewBrowser : IDisposable
             return;
         }
 
-        devTools.ResetHistory(host, () =>
+        devTools.ResetHistory(host, reset =>
         {
             blankBehind = false;
-            if (browser != null && !closing)
+            if (browser == null || closing)
             {
-                view.LoadingChanged(this, isLoading, browser->can_go_back(browser) != 0,
-                    browser->can_go_forward(browser) != 0);
+                return;
             }
+
+            // Wiped, the history is the page alone - CEF tells what it last heard until the next loading change.
+            // Refused, the blank page stays behind, and is not hidden.
+            view.LoadingChanged(this, isLoading, !reset && browser->can_go_back(browser) != 0,
+                !reset && browser->can_go_forward(browser) != 0);
         });
         CefRefCounting.ReleaseCef(host);
     }
@@ -1708,7 +1730,7 @@ internal sealed unsafe class WebViewBrowser : IDisposable
 
     /// <summary>Runs <paramref name="script"/> in the page's script world <paramref name="context"/>; its value as
     /// JSON.</summary>
-    internal Task<string> EvaluateInAsync(int context, string script)
+    internal Task<string> EvaluateInAsync(string context, string script)
     {
         var host = LiveHost();
         if (host == null)
@@ -1728,7 +1750,7 @@ internal sealed unsafe class WebViewBrowser : IDisposable
 
     /// <summary>Hands the page the answer to its call of an object of the application's, into the script world it
     /// called from.</summary>
-    internal void AnswerHost(int context, string json)
+    internal void AnswerHost(string context, string json)
     {
         var host = LiveHost();
         if (host == null)
@@ -1739,6 +1761,9 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         devTools.AnswerHost(host, context, json);
         CefRefCounting.ReleaseCef(host);
     }
+
+    /// <summary>Whether the page's script world <paramref name="context"/> is still there.</summary>
+    internal bool HasContext(string context) => !closing && devTools.HasContext(context);
 
     /// <summary>Hands the page a message, as JSON.</summary>
     public void Post(string json)

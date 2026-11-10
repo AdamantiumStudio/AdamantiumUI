@@ -66,7 +66,7 @@ internal interface IWebViewBrowserView
     void HostCalled(WebViewBrowser browser, WebHostCall call);
 
     /// <summary>A script world of the page is gone, and whatever it was given with it.</summary>
-    void HostContextGone(WebViewBrowser browser, int context);
+    void HostContextGone(WebViewBrowser browser, string context);
 
     /// <summary>The page's zoom, as Chromium keeps it for its site, once a page has loaded.</summary>
     void ZoomChanged(WebViewBrowser browser, double factor);

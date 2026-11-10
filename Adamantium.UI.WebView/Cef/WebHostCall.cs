@@ -7,7 +7,7 @@ namespace Adamantium.UI.WebView.Cef;
 /// in the main frame and at which origin, the call itself as JSON - and the way back to answer it.</summary>
 internal sealed class WebHostCall
 {
-    public WebHostCall(WebViewBrowser browser, int context, bool isMainFrame, string origin, string json)
+    public WebHostCall(WebViewBrowser browser, string context, bool isMainFrame, string origin, string json)
     {
         Browser = browser;
         Context = context;
@@ -19,8 +19,8 @@ internal sealed class WebHostCall
     /// <summary>The browser the page is in.</summary>
     public WebViewBrowser Browser { get; }
 
-    /// <summary>The script world the call came from, and is answered into.</summary>
-    public int Context { get; }
+    /// <summary>The script world the call came from, and is answered into, by its unique id.</summary>
+    public string Context { get; }
 
     /// <summary>Whether the call came from the page's main frame.</summary>
     public bool IsMainFrame { get; }
@@ -32,12 +32,15 @@ internal sealed class WebHostCall
     /// </summary>
     public string Json { get; }
 
-    /// <summary>Answers the call <paramref name="id"/> with <paramref name="answer"/>, on the UI loop.</summary>
-    public void Answer(int id, WebHostAnswer answer, string handle)
+    /// <summary>Answers the call <paramref name="id"/> with <paramref name="answer"/> - the object given under
+    /// <paramref name="handle"/> - on the UI loop, telling the page which of the functions it passed were not taken,
+    /// for it to let go of. An answer that is no JSON refuses the call instead.</summary>
+    public void Answer(int id, WebHostAnswer answer, string handle, IReadOnlyList<int> untaken)
     {
         var reply = new System.Buffers.ArrayBufferWriter<byte>();
-        using (var writer = new Utf8JsonWriter(reply))
+        try
         {
+            using var writer = new Utf8JsonWriter(reply);
             writer.WriteStartObject();
             writer.WriteNumber("id", id);
             if (handle != null)
@@ -50,7 +53,23 @@ internal sealed class WebHostCall
                 writer.WriteRawValue(answer.Json);
             }
 
+            if (untaken != null)
+            {
+                writer.WriteStartArray("letGo");
+                foreach (var number in untaken)
+                {
+                    writer.WriteNumberValue(number);
+                }
+
+                writer.WriteEndArray();
+            }
+
             writer.WriteEndObject();
+        }
+        catch (Exception exception) when (exception is JsonException or ArgumentException or InvalidOperationException)
+        {
+            Refuse(id, "The answer is no JSON.");
+            return;
         }
 
         Send(System.Text.Encoding.UTF8.GetString(reply.WrittenSpan));

@@ -115,7 +115,7 @@ public sealed class WebViewBridge
 
     internal void OnHostCall(WebHostCall call) => hostObjects.Call(call);
 
-    internal void OnHostContextGone(WebViewBrowser browser, int context) => hostObjects.ContextGone(browser, context);
+    internal void OnHostContextGone(WebViewBrowser browser, string context) => hostObjects.ContextGone(browser, context);
 
     internal bool OnNavigationStarting(string address, bool userGesture, bool isRedirect)
     {

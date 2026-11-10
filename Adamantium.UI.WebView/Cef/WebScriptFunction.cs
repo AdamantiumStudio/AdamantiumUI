@@ -9,12 +9,12 @@ namespace Adamantium.UI.WebView.Cef;
 internal sealed class WebScriptFunction : IWebScriptFunction
 {
     private readonly WebViewBrowser browser;
-    private readonly int context;
+    private readonly string context;
     private readonly int number;
     private readonly JsonSerializerOptions options;
     private int disposed;
 
-    public WebScriptFunction(WebViewBrowser browser, int context, int number, JsonSerializerOptions options)
+    public WebScriptFunction(WebViewBrowser browser, string context, int number, JsonSerializerOptions options)
     {
         this.browser = browser;
         this.context = context;
@@ -62,7 +62,16 @@ internal sealed class WebScriptFunction : IWebScriptFunction
         return called.Task;
     }
 
+    // One the application never disposed is let go of in the page once collected - the page would keep it otherwise.
+    ~WebScriptFunction() => LetGo();
+
     public void Dispose()
+    {
+        LetGo();
+        GC.SuppressFinalize(this);
+    }
+
+    private void LetGo()
     {
         if (Interlocked.Exchange(ref disposed, 1) != 0)
         {

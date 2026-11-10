@@ -820,6 +820,79 @@ public class WebViewFrameTests
         });
     }
 
+    // An object taken away while a call of it still runs: the object the call answers with is not given - the page
+    // reaches nothing of what was taken away.
+    [Test]
+    public void AnObjectTakenAwayMidCall_GivesNothingItsCallAnswers()
+    {
+        using var site = new LocalSite("<title>site</title><body></body>");
+        string answer = null;
+        loop.Run(() =>
+        {
+            var bridge = new WebViewBridge();
+            bridge.AddHostObject("calc", new Calculator(), site.Origin);
+            var view = new RecordingBrowserView { Bridge = bridge };
+            var browser = engine.CreateBrowser(false, view);
+            try
+            {
+                browser.Create(site.Origin + "/", Width, Height, 1, IntPtr.Zero);
+                Pump(() => view.Title == "site" && !view.IsLoading, TimeSpan.FromSeconds(10));
+                var later = browser.EvaluateAsync(
+                    "adamantium.hostObjects.calc.counterLaterAsync().then(c => c.increment()).then(v => 'got ' + v, e => e.message)");
+                Pump(() => false, TimeSpan.FromMilliseconds(100));
+                bridge.RemoveHostObject("calc");
+                answer = Await(later);
+            }
+            finally
+            {
+                browser.Dispose();
+                Pump(() => false, TimeSpan.FromMilliseconds(300));
+            }
+        });
+
+        Assert.That(answer, Is.EqualTo("\"The object is gone.\""));
+    }
+
+    // Asked to be blank before it could go anywhere: the blank page it was made with is the page asked for - told as
+    // it, nothing behind it - and what comes next is heard as ever.
+    [Test]
+    public void ABlankPageAskedForAtOnce_IsThePage_AndThePageIsHeardAfter()
+    {
+        string address = null, titleAfter = null;
+        var completedBlank = false;
+        var backOnBlank = true;
+        loop.Run(() =>
+        {
+            var view = new RecordingBrowserView();
+            view.Scripts.Add(new WebDocumentScript(MarkScript("A")));
+            var browser = engine.CreateBrowser(false, view);
+            try
+            {
+                browser.Create(MarksPage(1), Width, Height, 1, IntPtr.Zero);
+                browser.Navigate("about:blank");
+                Pump(() => view.Completed.Contains("about:blank"), TimeSpan.FromSeconds(10));
+                address = view.Address;
+                completedBlank = view.Completed.Contains("about:blank");
+                backOnBlank = view.CanGoBack;
+                browser.Navigate(MarksPage(2));
+                titleAfter = TitleOf(view, 2);
+            }
+            finally
+            {
+                browser.Dispose();
+                Pump(() => false, TimeSpan.FromMilliseconds(300));
+            }
+        });
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(address, Is.EqualTo("about:blank"));
+            Assert.That(completedBlank, Is.True, "completed, as a page asked for");
+            Assert.That(backOnBlank, Is.False);
+            Assert.That(titleAfter, Is.EqualTo("2:A+bridge"), "the next page heard, its scripts run");
+        });
+    }
+
     private static string MarkScript(string mark) =>
         "window.__marks = (window.__marks || '') + '" + mark + "'; window.__bridge = !!window.adamantium;";
 

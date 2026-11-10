@@ -10,3 +10,5 @@ AWV002 | WebView | Error | A page names one method by one name
 AWV003 | WebView | Error | A page passes values, not references or cancellation tokens
 AWV004 | WebView | Error | A page names no type arguments
 AWV005 | WebView | Error | An interface a page calls is declared in a namespace
+AWV006 | WebView | Error | An interface a page calls is not generic
+AWV007 | WebView | Error | A page cannot call a method named 'then'

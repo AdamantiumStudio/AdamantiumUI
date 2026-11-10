@@ -18,6 +18,12 @@ public sealed class Calculator : ICalculator
 
     public ICounter Counter() => new Counter();
 
+    public async Task<ICounter> CounterLaterAsync()
+    {
+        await Task.Delay(300);
+        return new Counter();
+    }
+
     public async Task<string> CallBackAsync(IWebScriptFunction function)
     {
         using (function)

@@ -20,16 +20,22 @@ internal sealed class WebViewDevTools
     public const string FunctionKey = "__adamantiumFunction";
 
     // hostObjects.name.method(...) is a promise of the call's answer; a function among the arguments is kept by the
-    // page under a number, and the object an answer may be stands for one of the application's until it is let go of.
+    // page under a number - until the call is refused, the method does not take it, or the application lets go of
+    // it - and the object an answer may be stands for one of the application's until it, and every method taken from
+    // it, is let go of.
     private const string PageScript =
         "(()=>{if(window.adamantium)return;" +
         "const listeners=[],calls=new Map(),fns=new Map();let next=0,nextFn=0;" +
         "const host=m=>" + HostBinding + "(JSON.stringify(m));" +
         "const gone=new FinalizationRegistry(h=>{try{host({release:h})}catch(e){}});" +
-        "const call=(target,method,args)=>new Promise((resolve,reject)=>{const id=++next;calls.set(id,{resolve,reject});" +
+        "const drop=l=>{if(l)for(const f of l)fns.delete(f)};" +
+        "const call=(target,method,args,keep)=>new Promise((resolve,reject)=>{const id=++next,own=[];" +
+        "calls.set(id,{resolve,reject,own,keep});" +
         "try{host({id,target,method,args:args.map(a=>{if(typeof a!=='function')return a===undefined?null:a;" +
-        "const f=++nextFn;fns.set(f,a);return{" + FunctionKey + ":f}})})}catch(e){calls.delete(id);reject(e)}});" +
-        "const object=t=>new Proxy({},{get:(_,m)=>typeof m!=='string'||m==='then'?undefined:(...a)=>call(t,m,a)});" +
+        "const f=++nextFn;fns.set(f,a);own.push(f);return{" + FunctionKey + ":f}})})}" +
+        "catch(e){calls.delete(id);drop(own);reject(e)}});" +
+        "const object=t=>{const p=new Proxy({},{get:(_,m)=>typeof m!=='string'||m==='then'?undefined:" +
+        "(...a)=>call(t,m,a,p)});return p};" +
         "window.adamantium={" +
         "postMessage:m=>" + Binding + "(JSON.stringify(m))," +
         "addEventListener:(t,f)=>{if(t==='message')listeners.push(f)}," +
@@ -37,8 +43,8 @@ internal sealed class WebViewDevTools
         "__receive:j=>{const data=JSON.parse(j);for(const f of listeners.slice())f({data})}," +
         "hostObjects:new Proxy({},{get:(_,n)=>typeof n!=='string'||n==='then'?undefined:object(n)})," +
         "__hostReply:j=>{const r=JSON.parse(j),c=calls.get(r.id);if(!c)return;calls.delete(r.id);" +
-        "if('error' in r)c.reject(new Error(r.error));" +
-        "else if('object' in r){const p=object(r.object);gone.register(p,r.object);c.resolve(p)}" +
+        "if('error' in r){drop(c.own);c.reject(new Error(r.error));return}drop(r.letGo);" +
+        "if('object' in r){const p=object(r.object);gone.register(p,r.object);c.resolve(p)}" +
         "else c.resolve(r.value)}," +
         "__call:(f,a)=>{const g=fns.get(f);if(!g)throw new Error('The function was let go of.');return g(...a)}," +
         "__letGo:f=>{fns.delete(f)}};})()";
@@ -47,7 +53,7 @@ internal sealed class WebViewDevTools
 
     // The page's script worlds: where each runs - its origin, its frame - so a call of the application's objects is
     // answered only where they are let in.
-    private readonly Dictionary<int, (string Origin, string Frame)> contexts = [];
+    private readonly Dictionary<int, (string Origin, string Frame, string Unique)> contexts = [];
     private string mainFrame;
     private readonly Dictionary<int, TaskCompletionSource<JsonElement>> pending = [];
     private readonly Dictionary<int, (byte[] Id, bool EnablesOverlay)> forwarded = [];
@@ -123,34 +129,50 @@ internal sealed class WebViewDevTools
         });
 
     /// <summary>Wipes the page's history but the page it is at; <paramref name="answered"/> runs on the UI loop once it
-    /// is done, or refused.</summary>
-    public unsafe void ResetHistory(CefBrowserHost* host, Action answered) =>
-        Send(host, "Page.resetNavigationHistory", null, id => answeredOnTheLoop[id] = _ => answered());
+    /// is done (true) or refused.</summary>
+    public unsafe void ResetHistory(CefBrowserHost* host, Action<bool> answered) =>
+        Send(host, "Page.resetNavigationHistory", null,
+            id => answeredOnTheLoop[id] = result => answered(result.ValueKind == JsonValueKind.Object));
 
-    /// <summary>Raised on the UI loop when a page calls an object of the application's: the script world it calls from
-    /// (to answer into), whether it runs in the main frame and at which origin, and the call as JSON.</summary>
-    public Action<int, bool, string, string> HostCalled { get; set; }
+    /// <summary>Raised on the UI loop when a page calls an object of the application's: the script world it calls from,
+    /// by its unique id - a number is another world's in another process - whether it runs in the main frame and at
+    /// which origin, and the call as JSON.</summary>
+    public Action<string, bool, string, string> HostCalled { get; set; }
 
-    /// <summary>Raised on the UI loop when a script world of the page is gone - its document left - with all it held.
-    /// </summary>
-    public Action<int> ContextGone { get; set; }
+    /// <summary>Raised on the UI loop when a script world of the page, by its unique id, is gone - its document left -
+    /// with all it held.</summary>
+    public Action<string> ContextGone { get; set; }
 
-    /// <summary>Hands the answer to a call of the application's objects back into the script world it came from.
-    /// </summary>
-    public unsafe void AnswerHost(CefBrowserHost* host, int context, string json) =>
+    /// <summary>Whether the script world <paramref name="context"/> is still there.</summary>
+    public bool HasContext(string context)
+    {
+        foreach (var world in contexts.Values)
+        {
+            if (world.Unique == context)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>Hands the answer to a call of the application's objects back into the script world it came from; a
+    /// world gone answers nothing, whoever has its number now.</summary>
+    public unsafe void AnswerHost(CefBrowserHost* host, string context, string json) =>
         Send(host, "Runtime.evaluate", writer =>
         {
             writer.WriteString("expression", "window.adamantium&&window.adamantium.__hostReply(" + Quoted(json) + ")");
-            writer.WriteNumber("contextId", context);
+            writer.WriteString("uniqueContextId", context);
         });
 
     /// <summary>Runs <paramref name="script"/> in the script world <paramref name="context"/>; its value as JSON, or the
-    /// page's message as a <see cref="WebViewScriptException"/>.</summary>
-    public unsafe Task<string> EvaluateInAsync(CefBrowserHost* host, int context, string script) =>
+    /// page's message as a <see cref="WebViewScriptException"/> - also when the world is gone.</summary>
+    public unsafe Task<string> EvaluateInAsync(CefBrowserHost* host, string context, string script) =>
         ValueOf(Call(host, "Runtime.evaluate", writer =>
         {
             writer.WriteString("expression", script);
-            writer.WriteNumber("contextId", context);
+            writer.WriteString("uniqueContextId", context);
             writer.WriteBoolean("returnByValue", true);
             writer.WriteBoolean("awaitPromise", true);
         }));
@@ -174,6 +196,12 @@ internal sealed class WebViewDevTools
             {
                 AddScript(host, script.Source, id => scriptsAsked.Add((script, id)));
             }
+        }
+
+        // One added while the first address waits for the scripts is waited for too.
+        if (scriptsReady != null && scriptsAsked.Count > 0)
+        {
+            scriptsReadyAt = Math.Max(scriptsReadyAt, scriptsAsked[^1].Asked);
         }
     }
 
@@ -434,7 +462,7 @@ internal sealed class WebViewDevTools
     // whole.
     internal unsafe void OnMessage(CefBrowser* browser, ReadOnlySpan<byte> message)
     {
-        if (!TryReadTop(message, out var idRange, out var method))
+        if (!TryReadTop(message, out var idRange, out var method, out var ofASession))
         {
             return;
         }
@@ -442,6 +470,12 @@ internal sealed class WebViewDevTools
         if (idRange.Start < 0)
         {
             frontEnd?.Invoke(System.Text.Encoding.UTF8.GetString(message));
+            // What a frame, worker or prerender the front end attached to tells is its own, not the page's.
+            if (ofASession)
+            {
+                return;
+            }
+
             switch (method)
             {
                 case "Runtime.bindingCalled":
@@ -532,9 +566,9 @@ internal sealed class WebViewDevTools
             messageReceived(payload.GetString());
         }
         else if (bindingName == HostBinding && parameters.TryGetProperty("executionContextId", out var contextId) &&
-                 contexts.TryGetValue(contextId.GetInt32(), out var world))
+                 contexts.TryGetValue(contextId.GetInt32(), out var world) && world.Unique != null)
         {
-            HostCalled?.Invoke(contextId.GetInt32(), world.Frame != null && world.Frame == mainFrame, world.Origin,
+            HostCalled?.Invoke(world.Unique, world.Frame != null && world.Frame == mainFrame, world.Origin,
                 payload.GetString());
         }
     }
@@ -556,14 +590,21 @@ internal sealed class WebViewDevTools
                     var frame = context.TryGetProperty("auxData", out var aux) && aux.TryGetProperty("frameId", out var f)
                         ? f.GetString()
                         : null;
-                    contexts[id.GetInt32()] = (origin, frame);
+                    var unique = context.TryGetProperty("uniqueId", out var u) ? u.GetString() : null;
+                    if (contexts.Remove(id.GetInt32(), out var before) && before.Unique != unique)
+                    {
+                        ContextGone?.Invoke(before.Unique);
+                    }
+
+                    contexts[id.GetInt32()] = (origin, frame, unique);
                 }
 
                 break;
             case "Runtime.executionContextDestroyed":
-                if (parameters.TryGetProperty("executionContextId", out var gone) && contexts.Remove(gone.GetInt32()))
+                if (parameters.TryGetProperty("executionContextId", out var gone) &&
+                    contexts.Remove(gone.GetInt32(), out var goneWorld))
                 {
-                    ContextGone?.Invoke(gone.GetInt32());
+                    ContextGone?.Invoke(goneWorld.Unique);
                 }
 
                 break;
@@ -584,20 +625,25 @@ internal sealed class WebViewDevTools
     // Every script world of the page gone: what each held goes with it.
     private void ForgetContexts()
     {
-        foreach (var context in contexts.Keys)
+        foreach (var world in contexts.Values)
         {
-            ContextGone?.Invoke(context);
+            ContextGone?.Invoke(world.Unique);
         }
 
         contexts.Clear();
     }
 
-    // The top of a protocol message: where its id's value stands (Start -1 for none) and its method, the rest skipped
-    // unread whatever its depth. False for what is not an object.
-    private static bool TryReadTop(ReadOnlySpan<byte> json, out (int Start, int End) id, out string method)
+    // The top of a protocol message: where its id's value stands (Start -1 for none), its method and whether it is of
+    // a session the front end attached to, the rest skipped unread whatever its depth. False for what is not an object.
+    private static bool TryReadTop(ReadOnlySpan<byte> json, out (int Start, int End) id, out string method) =>
+        TryReadTop(json, out id, out method, out _);
+
+    private static bool TryReadTop(ReadOnlySpan<byte> json, out (int Start, int End) id, out string method,
+        out bool ofASession)
     {
         id = (-1, -1);
         method = null;
+        ofASession = false;
         var reader = new Utf8JsonReader(json, new JsonReaderOptions { MaxDepth = int.MaxValue });
         try
         {
@@ -610,6 +656,7 @@ internal sealed class WebViewDevTools
             {
                 var isId = reader.ValueTextEquals("id"u8);
                 var isMethod = !isId && reader.ValueTextEquals("method"u8);
+                ofASession |= reader.ValueTextEquals("sessionId"u8);
                 reader.Read();
                 if (isId && reader.TokenType is JsonTokenType.Number or JsonTokenType.String)
                 {

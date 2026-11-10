@@ -135,7 +135,7 @@ internal sealed class WebViewWaitingView : IWebViewBrowserView
 
     public void HostCalled(WebViewBrowser browser, WebHostCall call) => call.Refuse("The page is not shown yet.");
 
-    public void HostContextGone(WebViewBrowser browser, int context)
+    public void HostContextGone(WebViewBrowser browser, string context)
     {
     }
 

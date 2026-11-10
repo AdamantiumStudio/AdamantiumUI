@@ -74,6 +74,6 @@ public partial class WebView
         }
     }
 
-    void IWebViewBrowserView.HostContextGone(WebViewBrowser from, int context) =>
+    void IWebViewBrowserView.HostContextGone(WebViewBrowser from, string context) =>
         Bridge?.OnHostContextGone(from, context);
 }

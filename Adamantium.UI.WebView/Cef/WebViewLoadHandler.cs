@@ -28,7 +28,7 @@ internal sealed unsafe class WebViewLoadHandler : CefObject
             var owner = From<WebViewLoadHandler>(self).browser;
             if (frame->is_main(frame) != 0 && owner.Is(cefBrowser))
             {
-                owner.OnLoadStart();
+                owner.OnLoadStart(CefStrings.ReadAndFree(frame->get_url(frame)));
             }
         }
         catch (Exception exception)

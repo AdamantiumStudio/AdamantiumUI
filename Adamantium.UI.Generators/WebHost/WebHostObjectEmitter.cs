@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 
 namespace Adamantium.UI.Generators.WebHost;
 
@@ -35,6 +36,12 @@ internal static class WebHostObjectEmitter
         "'{0}' is declared in a type: an interface a page calls is declared in a namespace", Category,
         DiagnosticSeverity.Error, true);
 
+    private static readonly DiagnosticDescriptor GenericInterface = new("AWV006", "An object's interface names its types",
+        "'{0}' is generic: the object a page calls is of one type", Category, DiagnosticSeverity.Error, true);
+
+    private static readonly DiagnosticDescriptor NamedThen = new("AWV007", "A page awaits what has a 'then'",
+        "'{0}' is 'then' in JavaScript, which awaiting an object calls by itself", Category, DiagnosticSeverity.Error, true);
+
     private static readonly SymbolDisplayFormat Full = SymbolDisplayFormat.FullyQualifiedFormat;
 
     public static WebHostObjectSource Emit(INamedTypeSymbol contract)
@@ -46,11 +53,18 @@ internal static class WebHostObjectEmitter
             return new WebHostObjectSource([], diagnostics);
         }
 
+        if (contract.IsGenericType)
+        {
+            diagnostics.Add(Diagnostic.Create(GenericInterface, contract.Locations.FirstOrDefault(), contract.Name));
+            return new WebHostObjectSource([], diagnostics);
+        }
+
         var methods = new List<IMethodSymbol>();
         var names = new HashSet<string>();
         foreach (var member in new[] { contract }.Concat(contract.AllInterfaces).SelectMany(type => type.GetMembers()))
         {
-            if (member.IsStatic)
+            // A private member, with its body, is the interface's own: no part of what it offers.
+            if (member.IsStatic || member.DeclaredAccessibility != Accessibility.Public)
             {
                 continue;
             }
@@ -71,11 +85,17 @@ internal static class WebHostObjectEmitter
                 foreach (var parameter in method.Parameters)
                 {
                     if (parameter.RefKind is RefKind.Ref or RefKind.Out ||
-                        parameter.Type.ToDisplayString() == "System.Threading.CancellationToken")
+                        Is(parameter.Type, "System.Threading.CancellationToken"))
                     {
                         diagnostics.Add(Diagnostic.Create(CannotPass, Where(method, contract), method.Name,
                             parameter.Name, parameter.RefKind == RefKind.None ? "as a token" : "by reference"));
                     }
+                }
+
+                if (JavaScriptName(method.Name) == "then")
+                {
+                    diagnostics.Add(Diagnostic.Create(NamedThen, Where(method, contract), method.Name));
+                    continue;
                 }
 
                 if (!names.Add(JavaScriptName(method.Name)))
@@ -102,10 +122,12 @@ internal static class WebHostObjectEmitter
         var access = contract.DeclaredAccessibility == Accessibility.Public ? "public" : "internal";
         var name = HostObjectName(contract);
         var type = contract.ToDisplayString(Full);
+        // Named for the interface itself, which no other in the compilation shares: the made classes' names may.
+        var hint = contract.ToDisplayString();
         return new WebHostObjectSource(
         [
-            (Hint(space, name), HostObject(space, access, name, type, methods)),
-            (Hint(space, name + "Bridge"), Bridge(space, access, name, type))
+            (hint + ".HostObject.g.cs", HostObject(space, access, name, type, methods)),
+            (hint + ".HostObjectBridge.g.cs", Bridge(space, access, name, type))
         ], diagnostics);
     }
 
@@ -173,10 +195,7 @@ internal static class WebHostObjectEmitter
     // The call of one method and its answer: a value at once, or once the method's task is done.
     private static string Call(IMethodSymbol method)
     {
-        var arguments = string.Join(", ", method.Parameters.Select((parameter, index) =>
-            parameter.Type.ToDisplayString() == "Adamantium.UI.WebView.IWebScriptFunction"
-                ? $"arguments.Function({index})"
-                : $"arguments.Get<{parameter.Type.ToDisplayString(Full)}>({index})"));
+        var arguments = string.Join(", ", method.Parameters.Select(Argument));
         var invocation = $"target.{method.Name}({arguments})";
         if (method.ReturnsVoid)
         {
@@ -197,6 +216,44 @@ internal static class WebHostObjectEmitter
         }
     }
 
+    // One argument as the method takes it: a function of the page's, or a value - its default when the page passed
+    // none and the parameter has one.
+    private static string Argument(IParameterSymbol parameter, int index)
+    {
+        if (Is(parameter.Type, "Adamantium.UI.WebView.IWebScriptFunction"))
+        {
+            return $"arguments.Function({index})";
+        }
+
+        var type = parameter.Type.ToDisplayString(Full);
+        var read = $"arguments.Get<{type}>({index})";
+        return parameter.HasExplicitDefaultValue ? $"(arguments.Count > {index} ? {read} : {Default(parameter, type)})" : read;
+    }
+
+    private static string Default(IParameterSymbol parameter, string type)
+    {
+        var value = parameter.ExplicitDefaultValue;
+        return value switch
+        {
+            null => $"default({type})",
+            string text => SymbolDisplay.FormatLiteral(text, true),
+            char character => SymbolDisplay.FormatLiteral(character, true),
+            bool flag => flag ? "true" : "false",
+            _ => $"({type})({System.Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture)})"
+        };
+    }
+
+    // Whether type is the one named, a nullable one of it too.
+    private static bool Is(ITypeSymbol type, string name)
+    {
+        if (type is INamedTypeSymbol { OriginalDefinition.SpecialType: SpecialType.System_Nullable_T } nullable)
+        {
+            type = nullable.TypeArguments[0];
+        }
+
+        return type.ToDisplayString(Full) == "global::" + name;
+    }
+
     // The answer that is value: an object of its own for an interface a page calls, JSON for the rest.
     private static string Answer(ITypeSymbol type, string value)
     {
@@ -213,8 +270,24 @@ internal static class WebHostObjectEmitter
     private static Location Where(ISymbol member, INamedTypeSymbol contract) =>
         member.Locations.FirstOrDefault(location => location.IsInSource) ?? contract.Locations.FirstOrDefault();
 
-    private static string JavaScriptName(string name) =>
-        name.Length == 0 ? name : char.ToLowerInvariant(name[0]) + name.Substring(1);
+    // Camel case: the capitals a name starts with go small - all of them, but for the last of several where a small
+    // letter follows it, which starts the next word (URLFor is urlFor, ID is id).
+    private static string JavaScriptName(string name)
+    {
+        var upper = 0;
+        while (upper < name.Length && char.IsUpper(name[upper]))
+        {
+            upper++;
+        }
+
+        if (upper == 0)
+        {
+            return name;
+        }
+
+        var lowered = upper > 1 && upper < name.Length ? upper - 1 : upper;
+        return name.Substring(0, lowered).ToLowerInvariant() + name.Substring(lowered);
+    }
 
     private static string HostObjectName(INamedTypeSymbol contract)
     {
@@ -226,8 +299,6 @@ internal static class WebHostObjectEmitter
 
         return name + "HostObject";
     }
-
-    private static string Hint(string space, string name) => (space == null ? name : space + "." + name) + ".g.cs";
 
     private static StringBuilder Header(string space)
     {

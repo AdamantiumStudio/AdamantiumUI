@@ -15,6 +15,8 @@ public interface ICalculator
 
     ICounter Counter();
 
+    Task<ICounter> CounterLaterAsync();
+
     Task<string> CallBackAsync(IWebScriptFunction function);
 
     Point Mirror(Point point);

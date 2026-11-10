@@ -66,6 +66,7 @@ namespace Probe
     [TestCase("void Take(out int a);", "AWV003")]
     [TestCase("void Take(System.Threading.CancellationToken token);", "AWV003")]
     [TestCase("T Take<T>(T a);", "AWV004")]
+    [TestCase("void Then(int a);", "AWV007")]
     public void WhatAPageCannotCall_IsAnErrorOfTheBuild(string member, string id)
     {
         var (generated, diagnostics) = Run(@"
@@ -97,6 +98,68 @@ namespace Probe
 }");
 
         Assert.That(diagnostics.Select(d => d.Id), Is.EqualTo(new[] { "AWV005" }));
+    }
+
+    [Test]
+    public void AGenericInterface_IsAnErrorOfTheBuild()
+    {
+        var (_, diagnostics) = Run(@"
+namespace Probe
+{
+    [Adamantium.UI.WebView.WebHostObject]
+    public interface IRepository<T> { T Get(int id); }
+}");
+
+        Assert.That(diagnostics.Select(d => d.Id), Is.EqualTo(new[] { "AWV006" }));
+    }
+
+    // Names in camel case as JSON writes them; a default the page leaves out is the parameter's own; a private member
+    // of the interface is its own; a nullable function is a function still.
+    [Test]
+    public void Names_Defaults_PrivateMembers_AndNullableFunctions_AreMadeAsAPageCallsThem()
+    {
+        var (generated, diagnostics) = Run(@"
+#nullable enable
+namespace Probe
+{
+    [Adamantium.UI.WebView.WebHostObject]
+    public interface IProbe
+    {
+        string URLFor(string name = ""home"", int times = 2, bool loud = true);
+        int ID();
+        void Subscribe(Adamantium.UI.WebView.IWebScriptFunction? function);
+        private int Helper() => 1;
+    }
+}");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(diagnostics, Is.Empty);
+            Assert.That(generated, Does.Contain("case \"urlFor\":").And.Contain("case \"id\":"));
+            Assert.That(generated, Does.Contain("(arguments.Count > 0 ? arguments.Get<string>(0) : \"home\")")
+                .And.Contain(": (int)(2))").And.Contain(": true)"));
+            Assert.That(generated, Does.Contain("arguments.Function(0)"));
+            Assert.That(generated, Does.Not.Contain("Helper"));
+        });
+    }
+
+    // Two interfaces whose made classes would share a name each still make their files: the build says the names
+    // clash, the generator does not fail for every interface.
+    [Test]
+    public void InterfacesWhoseObjectsShareAName_StillMakeTheirFiles()
+    {
+        var (generated, diagnostics) = Run(@"
+namespace Probe
+{
+    [Adamantium.UI.WebView.WebHostObject] public interface ICounter { int Increment(); }
+    [Adamantium.UI.WebView.WebHostObject] public interface Counter { int Increment(); }
+}");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(diagnostics, Is.Empty);
+            Assert.That(generated.Split("class CounterHostObject ").Length - 1, Is.EqualTo(2));
+        });
     }
 
     private static (string Generated, Diagnostic[] Diagnostics) Run(string source)

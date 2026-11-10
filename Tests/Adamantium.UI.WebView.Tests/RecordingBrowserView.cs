@@ -230,7 +230,7 @@ internal sealed class RecordingBrowserView : IWebViewBrowserView
         }
     }
 
-    public void HostContextGone(WebViewBrowser browser, int context) => Bridge?.OnHostContextGone(browser, context);
+    public void HostContextGone(WebViewBrowser browser, string context) => Bridge?.OnHostContextGone(browser, context);
 
     public void LoadFailed(WebViewBrowser browser, WebViewLoadError error) => Error = error;
 

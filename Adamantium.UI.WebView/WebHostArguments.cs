@@ -14,6 +14,7 @@ public sealed class WebHostArguments
     private readonly JsonElement arguments;
     private readonly JsonSerializerOptions options;
     private readonly Func<int, IWebScriptFunction> function;
+    private HashSet<int> taken;
 
     internal WebHostArguments(JsonElement arguments, JsonSerializerOptions options, Func<int, IWebScriptFunction> function)
     {
@@ -52,7 +53,26 @@ public sealed class WebHostArguments
             throw new ArgumentException($"Argument {index} is to be a function.");
         }
 
+        taken ??= [];
+        taken.Add(number);
         return function(number);
+    }
+
+    // The functions the page passed that the method did not take: the page lets go of them.
+    internal List<int> Untaken()
+    {
+        List<int> untaken = null;
+        for (var i = 0; i < Count; i++)
+        {
+            if (arguments[i].ValueKind == JsonValueKind.Object &&
+                arguments[i].TryGetProperty(WebViewDevTools.FunctionKey, out var id) && id.TryGetInt32(out var number) &&
+                taken?.Contains(number) != true)
+            {
+                (untaken ??= []).Add(number);
+            }
+        }
+
+        return untaken;
     }
 
     /// <summary>The answer that is <paramref name="value"/>, written as JSON.</summary>
