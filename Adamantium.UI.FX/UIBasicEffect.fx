@@ -34,6 +34,41 @@ float4 texAdjust;     // the picture's colors, before the tint - see AdjustColor
 float texRepeat;      // 1 = the tile repeats; 0 = a single copy, which must never wrap
 float texMirror;      // mirror flags: 1 = X, 2 = Y, 3 = both
 
+// A COLORED MESH: triangles with a color at each corner, the corners read by address (ColoredMeshVertexRecord.cs) - no
+// vertex format of their own - and the color interpolated across each triangle.
+struct ColoredMeshVertex
+{
+    float2 Position;
+    float4 Color;
+};
+
+ColoredMeshVertex* MeshVertices;
+
+struct COLORED_OUTPUT
+{
+    float4 position : SV_POSITION;
+    float4 color : COLOR0;
+};
+
+[shader("vertex")]
+COLORED_OUTPUT ColoredMeshVS(uint vertexId : SV_VertexID)
+{
+    ColoredMeshVertex* vertices = MeshVertices;
+    ColoredMeshVertex v = vertices[vertexId];
+    COLORED_OUTPUT output;
+    output.position = mul(float4(v.Position, 0, 1), wvp);
+    output.color = v.Color;
+    return output;
+}
+
+[shader("fragment")]
+float4 ColoredMesh_PS(COLORED_OUTPUT input) : SV_TARGET
+{
+    float4 color = input.color;
+    color.a *= opacity;
+    return color;
+}
+
 [shader("vertex")]
 VERTEX_OUTPUT UIVertexShader(UI_VERTEX input)
 {
@@ -175,6 +210,12 @@ technique Basic
 	{
 		VertexShader = TexturedFillVS;
 		PixelShader = GradientFill_PS;
+	}
+
+	pass ColoredMesh
+	{
+		VertexShader = ColoredMeshVS;
+		PixelShader = ColoredMesh_PS;
 	}
 
 	pass TexturedArray

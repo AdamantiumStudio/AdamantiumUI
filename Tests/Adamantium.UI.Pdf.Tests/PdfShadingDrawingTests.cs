@@ -146,6 +146,66 @@ public class PdfShadingDrawingTests
     }
 
     [Test]
+    public void AFreeFormMeshIsItsTriangles_EachCornerItsColor()
+    {
+        // One triangle: 8-bit flag, x, y and RGB per vertex, coordinates 0..255 as written.
+        var pdf = new TestPdf { Resources = "<< /Shading << /S 5 0 R >> >>" };
+        pdf.AddStream("/ShadingType 4 /ColorSpace /DeviceRGB /BitsPerCoordinate 8 /BitsPerComponent 8 /BitsPerFlag 8 " +
+                      "/Decode [0 255 0 255 0 1 0 1 0 1]",
+            new byte[] { 0, 0, 0, 255, 0, 0, 0, 100, 0, 0, 255, 0, 0, 0, 50, 0, 0, 255 });
+        var (_, session) = Draw(pdf, "/S sh");
+        var mesh = session.All<DrawnMesh>().Single();
+        Assert.That(mesh.Mesh.Vertices, Has.Count.EqualTo(3));
+        Assert.That(mesh.Mesh.Vertices.Select(v => v.Color), Is.EqualTo(new[]
+        {
+            new Color(255, 0, 0, 255), new Color(0, 255, 0, 255), new Color(0, 0, 255, 255),
+        }));
+        Assert.That(At(mesh.Transform, 100, 0), Is.EqualTo((100.0, 100.0)));
+    }
+
+    [Test]
+    public void AMeshWhoseColorsComeThroughAFunctionIsCutFiner()
+    {
+        var pdf = new TestPdf { Resources = "<< /Shading << /S 5 0 R >> >>" };
+        pdf.AddStream("/ShadingType 4 /ColorSpace /DeviceRGB /BitsPerCoordinate 8 /BitsPerComponent 8 /BitsPerFlag 8 " +
+                      "/Decode [0 255 0 255 0 1] /Function 6 0 R",
+            new byte[] { 0, 0, 0, 0, 0, 100, 0, 255, 0, 0, 50, 128 });
+        pdf.Add(RedToBlue);
+        var (_, session) = Draw(pdf, "/S sh");
+        var mesh = session.All<DrawnMesh>().Single().Mesh;
+        Assert.That(mesh.Vertices.Count, Is.GreaterThan(3));
+        Assert.That(mesh.Vertices.Count % 3, Is.Zero);
+    }
+
+    [Test]
+    public void ACoonsPatchIsSampledOnAGrid_ItsCornersAtThePatchsCorners()
+    {
+        // A flat square 0..60 by its twelve boundary points, the corners red, green, blue and white.
+        var points = new[] { 0, 1, 2, 3, 7, 11, 15, 14, 13, 12, 8, 4 };
+        var data = new System.Collections.Generic.List<byte> { 0 };
+        foreach (var index in points)
+        {
+            data.Add((byte)(index / 4 * 20));
+            data.Add((byte)(index % 4 * 20));
+        }
+
+        data.AddRange(new byte[] { 255, 0, 0, 0, 255, 0, 0, 0, 255, 255, 255, 255 });
+        var pdf = new TestPdf { Resources = "<< /Shading << /S 5 0 R >> >>" };
+        pdf.AddStream("/ShadingType 6 /ColorSpace /DeviceRGB /BitsPerCoordinate 8 /BitsPerComponent 8 /BitsPerFlag 8 " +
+                      "/Decode [0 255 0 255 0 1 0 1 0 1]", data.ToArray());
+        var (_, session) = Draw(pdf, "/S sh");
+        var mesh = session.All<DrawnMesh>().Single().Mesh;
+        Assert.That(mesh.Vertices.Count, Is.GreaterThan(6), "cut into a grid");
+        var corner = mesh.Vertices.First(v => v.Position == new Vector2<double>(0, 0));
+        Assert.That(corner.Color, Is.EqualTo(new Color(255, 0, 0, 255)), "c00 at p00");
+        var far = mesh.Vertices.First(v => v.Position == new Vector2<double>(60, 60));
+        Assert.That(far.Color, Is.EqualTo(new Color(0, 0, 255, 255)), "c33 at p33");
+        Assert.That((mesh.Bounds.X, mesh.Bounds.Y), Is.EqualTo((0.0, 0.0)));
+        Assert.That(mesh.Bounds.Width, Is.EqualTo(60).Within(1e-9));
+        Assert.That(mesh.Bounds.Height, Is.EqualTo(60).Within(1e-9));
+    }
+
+    [Test]
     public void ATilingPatternsCellIsDrawnOnceAndTiledByABrush()
     {
         var pdf = new TestPdf { Resources = "<< /Pattern << /P 5 0 R >> >>" };

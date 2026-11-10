@@ -769,6 +769,11 @@ public partial class RenderCache
                     ? image.LocalTransform * Newest(imagePlaced)
                     : image.LocalTransform);
                 break;
+            case ColoredMeshRenderUnit { Payload: { } mesh }:
+                ink = mesh.Mesh.Bounds.TransformToAABB(mesh.Placement is { } meshPlaced
+                    ? mesh.LocalTransform * Newest(meshPlaced)
+                    : mesh.LocalTransform);
+                break;
             case GeometryRenderUnit { Payload.Geometry: { } geometry } shape:
                 var place = shape.Payload.Placement is { } placed
                     ? shape.Payload.LocalTransform * Newest(placed)

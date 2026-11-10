@@ -25,6 +25,7 @@ public static class PdfSampleDocument
         q 1 0 0 1 430 450 cm 0 0 m 0 0 70 70 re W n /Sh2 sh Q
         q 330 380 50 140 re W n /Sh2 sh Q
         q 480 520 110 160 re W n /Sh3 sh Q
+        /Sh4 sh
 
         q /Pattern cs /P1 scn 48 220 250 130 re f Q
         q 0 0 0 RG 1 w 48 220 250 130 re S Q
@@ -59,7 +60,7 @@ public static class PdfSampleDocument
             Latin1("<< /Type /Catalog /Pages 2 0 R >>"),
             Latin1("<< /Type /Pages /Kids [3 0 R] /Count 1 >>"),
             Latin1("<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << " +
-                   "/Font << /F1 5 0 R /F2 6 0 R >> /Shading << /Sh1 7 0 R /Sh2 8 0 R /Sh3 12 0 R >> " +
+                   "/Font << /F1 5 0 R /F2 6 0 R >> /Shading << /Sh1 7 0 R /Sh2 8 0 R /Sh3 12 0 R /Sh4 13 0 R >> " +
                    "/Pattern << /P1 10 0 R >> " +
                    "/ExtGState << /GA << /ca 0.6 >> /GM << /BM /Multiply >> >> >> >>"),
             Stream("", contents),
@@ -76,6 +77,8 @@ public static class PdfSampleDocument
             // Two circles apart: a cone of circles from a small one low down to a large one higher up.
             Latin1("<< /ShadingType 3 /ColorSpace /DeviceRGB /Coords [510 545 8 545 640 36] /Function 9 0 R " +
                    "/Extend [true true] >>"),
+            Stream("/ShadingType 6 /ColorSpace /DeviceRGB /BitsPerCoordinate 16 /BitsPerComponent 8 /BitsPerFlag 8 " +
+                   "/Decode [0 65535 0 65535 0 1 0 1 0 1]", CoonsPatch()),
         };
 
         using var output = new MemoryStream();
@@ -101,6 +104,27 @@ public static class PdfSampleDocument
             .Append(xref).Append("\n%%EOF\n");
         output.Write(Latin1(table.ToString()));
         return output.ToArray();
+    }
+
+    // One Coons patch, its edges bowed: the twelve boundary points from p00 round, sixteen bits a coordinate, then the
+    // colors at the corners p00, p03, p33 and p30.
+    private static byte[] CoonsPatch()
+    {
+        (int X, int Y)[] points =
+        [
+            (200, 160), (215, 185), (205, 205), (220, 230),
+            (250, 245), (280, 225), (310, 235),
+            (300, 210), (310, 185), (300, 160),
+            (270, 145), (235, 170),
+        ];
+        var data = new List<byte> { 0 };
+        foreach (var (x, y) in points)
+        {
+            data.AddRange([(byte)(x >> 8), (byte)x, (byte)(y >> 8), (byte)y]);
+        }
+
+        data.AddRange([255, 80, 0, 255, 220, 0, 0, 160, 255, 160, 0, 200]);
+        return data.ToArray();
     }
 
     private static byte[] Stream(string dictionary, byte[] data) =>

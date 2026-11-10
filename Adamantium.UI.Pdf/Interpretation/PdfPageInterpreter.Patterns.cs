@@ -36,6 +36,7 @@ internal sealed partial class PdfPageInterpreter
 
     private readonly Dictionary<PdfObject, PdfShading> _shadings = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<PdfFunctionShading, ImageSource> _sampled = new(ReferenceEqualityComparer.Instance);
+    private readonly Dictionary<(PdfMeshShading, double), ColoredMesh> _meshes = [];
     private Rect _pageBox;
 
     /// <summary>What a pattern may cover in the stream being walked: the page, or the cell being drawn.</summary>
@@ -132,8 +133,14 @@ internal sealed partial class PdfPageInterpreter
             case PdfFunctionShading function:
                 DrawFunction(function, space, alpha, output);
                 break;
-            default:
-                Tell($"A shading of type {shading.Type} is not drawn yet.");
+            case PdfMeshShading mesh:
+                if (!_meshes.TryGetValue((mesh, alpha), out var triangles))
+                {
+                    triangles = PdfMeshTessellator.Tessellate(mesh, space, alpha);
+                    _meshes[(mesh, alpha)] = triangles;
+                }
+
+                Write(new PdfMeshStep(triangles, PdfMatrices.ToDrawing(space)), output);
                 break;
         }
 

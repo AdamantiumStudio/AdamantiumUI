@@ -35,6 +35,14 @@ internal sealed class RecordingDrawingSession : IDrawingSession
     public IDrawingSession DrawImage(ImageSource image, Brush filter, Rect destinationRect, CornerRadius corners, Rect sourceUv) =>
         DrawImage(image, filter, destinationRect, corners);
 
+    public List<(ColoredMesh Mesh, Matrix4x4F Transform)> Meshes { get; } = [];
+
+    public IDrawingSession DrawColoredMesh(ColoredMesh mesh, Matrix4x4F transform)
+    {
+        Meshes.Add((mesh, transform));
+        return this;
+    }
+
     public List<(ImageSource Image, Rect Destination, Matrix4x4F Transform)> PlacedImages { get; } = [];
 
     public IDrawingSession DrawImage(ImageSource image, Brush filter, Rect destinationRect, Matrix4x4F transform)
