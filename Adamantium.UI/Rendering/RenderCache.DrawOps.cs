@@ -6,6 +6,7 @@ using Adamantium.Mathematics;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Graphics;
 using Adamantium.Vulkan.Core;
+using Adamantium.UI.Rendering.Payloads;
 using Adamantium.UI.Rendering.RenderUnits;
 using Adamantium.UI.Rendering.Retained;
 
@@ -22,6 +23,7 @@ public partial class RenderCache
         // contiguous range of the stream - and saying it this way is what makes the structure of a recorded frame legible:
         // the stream is a flat list, the layers are what it MEANS.
         var reusedDepth = 0;
+        CommandGroup hidden = null;
         ResetGroups();
         foreach (var layer in _layers)
             for (var i = layer.OpFirst; i < layer.OpFirst + layer.OpCount; i++)
@@ -41,10 +43,24 @@ public partial class RenderCache
                     continue;
                 }
 
+                // A group moved out of sight: nothing of it is drawn up to its end, which leaves the scissor full - as
+                // the end of a group drawn apart does.
+                if (hidden != null)
+                {
+                    if (op.Kind == RenderOpKind.Group && op.Unit is GroupMarkRenderUnit { Kind: GroupMarkKind.End } end
+                        && ReferenceEquals(end.Group, hidden))
+                    {
+                        hidden = null;
+                        device.SetScissors(fullScissor);
+                    }
+
+                    continue;
+                }
+
                 switch (op.Kind)
                 {
                     case RenderOpKind.Scissor:
-                        device.SetScissors(InOwnSpace ? ScissorIn(op.Clip, fullScissor) : op.Scissor);
+                        device.SetScissors(RederivesScissors ? CutByGroups(op.Clip, fullScissor) : op.Scissor);
                         break;
                     case RenderOpKind.LayerBegin:
                         fullScissor = ReplayLayer(device, op.Layer, fullScissor, out var reused);
@@ -64,13 +80,19 @@ public partial class RenderCache
                         fullScissor = CloseBands(device);
                         break;
                     case RenderOpKind.Group:
-                        fullScissor = ReplayGroupMark(device, (GroupMarkRenderUnit)op.Unit, fullScissor);
+                        var mark = (GroupMarkRenderUnit)op.Unit;
+                        fullScissor = ReplayGroupMark(device, mark, fullScissor, out var outOfSight);
+                        if (outOfSight)
+                        {
+                            hidden = mark.Group;
+                        }
+
                         break;
                     case RenderOpKind.Unit:
                         // Per-unit draws bake their world and projection at record time while batches follow slots live,
                         // so re-point the ones whose batched half moved this frame (see RepointIfItMoved) - and every one
                         // in a layer's own space: what it was last baked with may be the window's projection.
-                        if (InOwnSpace && op.Unit.Component is { } owner)
+                        if ((InOwnSpace || _catchingUp != null) && op.Unit.Component is { } owner)
                         {
                             CatchUp(op.Unit);
                             op.Unit.Update(World(owner), _projectionMatrix, _renderScale);
@@ -89,9 +111,9 @@ public partial class RenderCache
                         _unitDrewMoving |= op.Unit.DrawsMoving;
                         break;
                     case RenderOpKind.Segment:
-                        if (InOwnSpace)
+                        if (RederivesScissors)
                         {
-                            ArenaOf(op.Batch)?.SetSegmentScissor(op.SegId, ScissorIn(op.Clip, fullScissor));
+                            ArenaOf(op.Batch)?.SetSegmentScissor(op.SegId, CutByGroups(op.Clip, fullScissor));
                         }
 
                         switch (op.Batch)
@@ -117,9 +139,9 @@ public partial class RenderCache
                         }
                         break;
                     case RenderOpKind.InstancedFlush:
-                        if (InOwnSpace)
+                        if (RederivesScissors)
                         {
-                            _instancedFill.SetFlushScissor(op.SegId, ScissorIn(op.Clip, fullScissor));
+                            _instancedFill.SetFlushScissor(op.SegId, CutByGroups(op.Clip, fullScissor));
                         }
 
                         _instancedFill.ReplayFlush(op.SegId, fullScissor, _projectionMatrix);

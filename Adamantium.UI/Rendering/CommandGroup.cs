@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Adamantium.UI.Core.Graphics;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.Rendering.RenderUnits;
 using Adamantium.Vulkan.Core;
@@ -18,6 +19,16 @@ internal sealed class CommandGroup(GroupMarkRenderUnit begin)
     public DrawingGroupOptions Options => Begin.Payload.Options;
 
     public CommandGroupMode Mode;
+
+    /// <summary>Its element's units as the walk met them, and where its begin mark stands among them: what a replay
+    /// places it again from.</summary>
+    public List<IRenderUnit> Units;
+
+    public int BeginAt;
+
+    /// <summary>A replay found it out of sight and drew nothing of it: the next replay places it again even when nothing
+    /// moves, and once it shows, its draws are brought to where their elements now stand.</summary>
+    public bool Hidden;
 
     /// <summary><see cref="CommandGroupMode.Layer"/>: the window region its targets hold, in device pixels.</summary>
     public Rect2D Region;

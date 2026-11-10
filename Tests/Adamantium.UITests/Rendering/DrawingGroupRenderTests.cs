@@ -407,6 +407,209 @@ public class DrawingGroupRenderTests
         });
     }
 
+    // One element drawing `draw` at `from`, then moved to `to` as a row of a scrolled list is: whether the frame after the
+    // move was replayed, and what it shows.
+    private static (Frame Frame, bool Replayed) Moved(Action<IDrawingSession> draw, Rect from, Rect to)
+    {
+        var device = GpuTestDevice.Device;
+        var factory = new RenderUnitFactory(device, new DeviceResourceFactory(device));
+        using var renderer = new OffscreenTestRenderer(device, factory, Dim, Dim) { ClearColor = Colors.White };
+        var stage = new TestControl { Bounds = new Rect(0, 0, Dim, Dim), RenderSize = new Size<double>(Dim, Dim) };
+        var mover = new TestControl
+        {
+            Bounds = from, RenderSize = new Size<double>(from.Width, from.Height), RenderAction = draw
+        };
+        stage.Add(mover);
+        var root = new VisualRoot(stage, Dim, Dim);
+        Assert.That(renderer.RenderFrame(root), Is.True);
+        RenderDirty.Clear();
+
+        mover.Bounds = to;
+        Assert.That(renderer.RenderFrame(root), Is.True);
+        RenderDirty.Clear();
+        var replayed = renderer.Cache.LastFrameReplayed;
+
+        using var image = renderer.RenderTarget.ResolveTexture.ToImage();
+        var bytes = new byte[(int)image.TotalSizeInBytes];
+        Marshal.Copy(image.DataPointer, bytes, 0, bytes.Length);
+        return (new Frame(bytes, 0), replayed);
+    }
+
+    private static Geometry Box(double width, double height)
+    {
+        var geometry = new StreamGeometry { FillRule = FillRule.NonZero };
+        geometry.Open().BeginFigure(new Vector2<double>(0, 0), true, true)
+            .LineTo(new Vector2<double>(width, 0)).LineTo(new Vector2<double>(width, height))
+            .LineTo(new Vector2<double>(0, height)).CloseFigure();
+        geometry.RecalculateBounds();
+        return geometry;
+    }
+
+    [Test]
+    public void AGroupDrawnApart_FollowsItsElement_WithoutAWalk()
+    {
+        // Half off the window when walked: the group's target held only the half in sight.
+        var (frame, replayed) = Moved(session =>
+        {
+            session.PushGroup(new DrawingGroupOptions { Clip = Box(40, 20) });
+            Fill(session, Red, new Rect(0, 0, 40, 40));
+            session.PopGroup();
+        }, new Rect(-20, 0, 40, 40), new Rect(30, 40, 40, 40));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(replayed, Is.True, "the move is replayed");
+            Near(frame.At(34, 44), Solid, "the half that was out of sight");
+            Near(frame.At(64, 54), Solid, "the half that was in sight");
+            Near(frame.At(50, 66), White, "below the clip");
+            Near(frame.At(10, 10), White, "where the element was");
+        });
+    }
+
+    [Test]
+    public void AGroupCutToARectangle_FollowsItsElement_WithoutAWalk()
+    {
+        var (frame, replayed) = Moved(session =>
+        {
+            session.PushGroup(new DrawingGroupOptions { Clip = new RectangleGeometry(new Rect(0, 0, 20, 20)) });
+            Fill(session, Red, new Rect(0, 0, 40, 40));
+            session.PopGroup();
+        }, new Rect(4, 4, 40, 40), new Rect(48, 40, 40, 40));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(replayed, Is.True, "the move is replayed");
+            Near(frame.At(58, 50), Solid, "inside the rectangle where it is now");
+            Near(frame.At(78, 70), White, "outside it");
+            Near(frame.At(12, 12), White, "where the element was");
+        });
+    }
+
+    // Scrolling proper: the list moves as a node of its own, its rows ride it. A group multiplying inside one cut by a path,
+    // and a soft mask, all placed again where the row now stands.
+    [Test]
+    public void GroupsInAScrolledRow_FollowIt_WithoutAWalk()
+    {
+        var device = GpuTestDevice.Device;
+        var factory = new RenderUnitFactory(device, new DeviceResourceFactory(device));
+        using var renderer = new OffscreenTestRenderer(device, factory, Dim, Dim) { ClearColor = Colors.White };
+        var stage = new TestControl { Bounds = new Rect(0, 0, Dim, Dim), RenderSize = new Size<double>(Dim, Dim) };
+        var list = new TestControl
+        {
+            Bounds = new Rect(0, 0, Dim, Dim), RenderSize = new Size<double>(Dim, Dim), IsRenderMotionNode = true
+        };
+        stage.Add(list);
+        var mask = new GeometryDrawing
+        {
+            Brush = Brushes.White, Geometry = new RectangleGeometry(new Rect(0, 30, 40, 10))
+        };
+        var row = new TestControl
+        {
+            Bounds = new Rect(0, 0, 40, 40), RenderSize = new Size<double>(40, 40),
+            RenderAction = session =>
+            {
+                Fill(session, new Color(51, 153, 230), new Rect(0, 0, 40, 40));
+                session.PushGroup(new DrawingGroupOptions { Clip = Box(40, 20) });
+                // The outer group is isolated: the inner one multiplies with what is drawn inside it.
+                Fill(session, new Color(51, 153, 230), new Rect(0, 0, 40, 40));
+                session.PushGroup(new DrawingGroupOptions { BlendMode = BlendMode.Multiply });
+                Fill(session, new Color(204, 77, 128), new Rect(0, 0, 40, 40));
+                session.PopGroup();
+                session.PopGroup();
+                session.PushGroup(new DrawingGroupOptions
+                {
+                    Mask = mask, MaskKind = MaskKind.Luminosity, MaskBackdrop = Colors.Black
+                });
+                Fill(session, Red, new Rect(0, 0, 40, 40));
+                session.PopGroup();
+            }
+        };
+        list.Add(row);
+        var root = new VisualRoot(stage, Dim, Dim);
+        Assert.That(renderer.RenderFrame(root), Is.True);
+        RenderDirty.Clear();
+
+        list.Bounds = new Rect(40, 44, Dim, Dim);
+        Assert.That(renderer.RenderFrame(root), Is.True);
+        RenderDirty.Clear();
+        var replayed = renderer.Cache.LastFrameReplayed;
+        using var image = renderer.RenderTarget.ResolveTexture.ToImage();
+        var bytes = new byte[(int)image.TotalSizeInBytes];
+        Marshal.Copy(image.DataPointer, bytes, 0, bytes.Length);
+        var frame = new Frame(bytes, 0);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(replayed, Is.True, "the scroll is replayed");
+            Near(frame.At(60, 54), Composite(BlendMode.Multiply, new Color(204, 77, 128), new Color(51, 153, 230)),
+                "the multiplied group inside the clip");
+            Near(frame.At(60, 69), (51, 153, 230), "the row's own fill between");
+            Near(frame.At(60, 78), Solid, "the masked group where the mask lets it through");
+            Near(frame.At(10, 10), White, "where the row was");
+        });
+    }
+
+    // A row scrolled out of the window, then a frame where nothing moves, then scrolled back: its group is drawn nowhere
+    // while out, and where the row is once back - never where it was before it left.
+    [Test]
+    public void AGroupScrolledOutAndBack_LeavesNoGhost()
+    {
+        var device = GpuTestDevice.Device;
+        var factory = new RenderUnitFactory(device, new DeviceResourceFactory(device));
+        using var renderer = new OffscreenTestRenderer(device, factory, Dim, Dim) { ClearColor = Colors.White };
+        var stage = new TestControl { Bounds = new Rect(0, 0, Dim, Dim), RenderSize = new Size<double>(Dim, Dim) };
+        var list = new TestControl
+        {
+            Bounds = new Rect(0, 0, Dim, Dim), RenderSize = new Size<double>(Dim, Dim), IsRenderMotionNode = true
+        };
+        stage.Add(list);
+        list.Add(new TestControl
+        {
+            Bounds = new Rect(8, 8, 40, 40), RenderSize = new Size<double>(40, 40),
+            RenderAction = session =>
+            {
+                session.PushGroup(new DrawingGroupOptions { Clip = Box(40, 40), BlendMode = BlendMode.Multiply });
+                Fill(session, Red, new Rect(0, 0, 40, 40));
+                session.PopGroup();
+            }
+        });
+        var root = new VisualRoot(stage, Dim, Dim);
+        Assert.That(renderer.RenderFrame(root), Is.True);
+        RenderDirty.Clear();
+
+        Frame Shot()
+        {
+            using var image = renderer.RenderTarget.ResolveTexture.ToImage();
+            var bytes = new byte[(int)image.TotalSizeInBytes];
+            Marshal.Copy(image.DataPointer, bytes, 0, bytes.Length);
+            return new Frame(bytes, 0);
+        }
+
+        list.Bounds = new Rect(0, -200, Dim, Dim);
+        Assert.That(renderer.RenderFrame(root), Is.True);
+        RenderDirty.Clear();
+        var outReplayed = renderer.Cache.LastFrameReplayed;
+        Assert.That(renderer.RenderAgain(root), Is.True);
+        var still = renderer.Cache.LastFrameReplayed;
+        var targets = renderer.Cache.LayersRedrawn;
+        var gone = Shot();
+
+        list.Bounds = new Rect(40, 40, Dim, Dim);
+        Assert.That(renderer.RenderFrame(root), Is.True);
+        RenderDirty.Clear();
+        var back = Shot();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(outReplayed, Is.True, "the scroll out of the window is replayed");
+            Assert.That(still, Is.True, "the frame where nothing moves is replayed");
+            Assert.That(targets, Is.Zero, "the group out of sight opens no target where it stood before");
+            Near(gone.At(20, 20), White, "nothing where the row stood before it left");
+            Near(back.At(60, 60), Solid, "the group where the row is now");
+            Near(back.At(20, 20), White, "nothing where it stood before it left");
+        });
+    }
+
     [Test]
     public void ARunsOutline_LiesOverItsInk()
     {
