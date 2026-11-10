@@ -94,6 +94,10 @@ public class DrawingGroupSample : MeasurableUIComponent
                 session.PopGroup();
                 session.PopGroup();
                 break;
+            case DrawingGroupSampleKind.ColoredMesh:
+                session.DrawRectangle(Brushes.White, new Rect(0, 0, w, h));
+                session.DrawColoredMesh(Wheel(w, h), Matrix4x4F.Identity);
+                break;
             default:
                 DrawPicture(session, w, h);
                 session.PushGroup(new DrawingGroupOptions { BlendMode = BlendMode });
@@ -101,6 +105,32 @@ public class DrawingGroupSample : MeasurableUIComponent
                 session.PopGroup();
                 break;
         }
+    }
+
+    // Twelve triangles round a white middle, their outer corners the hues of a color wheel.
+    private static ColoredMesh Wheel(double w, double h)
+    {
+        var center = new Vector2<double>(w / 2, h / 2);
+        var r = Math.Min(w, h) * 0.45;
+        var hues = new[]
+        {
+            new Color(0xEF, 0x44, 0x44), new Color(0xF9, 0x73, 0x16), new Color(0xEA, 0xB3, 0x08),
+            new Color(0x84, 0xCC, 0x16), new Color(0x22, 0xC5, 0x5E), new Color(0x14, 0xB8, 0xA6),
+            new Color(0x06, 0xB6, 0xD4), new Color(0x3B, 0x82, 0xF6), new Color(0x63, 0x66, 0xF1),
+            new Color(0xA8, 0x55, 0xF7), new Color(0xEC, 0x48, 0x99), new Color(0xF4, 0x3F, 0x5E),
+        };
+        var vertices = new List<ColoredVertex>();
+        for (var i = 0; i < hues.Length; i++)
+        {
+            var a0 = 2 * Math.PI * i / hues.Length;
+            var a1 = 2 * Math.PI * (i + 1) / hues.Length;
+            vertices.Add(new ColoredVertex(center, Colors.White));
+            vertices.Add(new ColoredVertex(new Vector2<double>(center.X + r * Math.Cos(a0), center.Y + r * Math.Sin(a0)), hues[i]));
+            vertices.Add(new ColoredVertex(new Vector2<double>(center.X + r * Math.Cos(a1), center.Y + r * Math.Sin(a1)),
+                hues[(i + 1) % hues.Length]));
+        }
+
+        return new ColoredMesh(vertices);
     }
 
     // The picture on white, cut or masked by the group.

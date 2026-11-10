@@ -10,5 +10,6 @@
     <Phrase Key="LuminosityMask" Text="Маска по яркости"/>
     <Phrase Key="AlphaMask" Text="Маска по альфе"/>
     <Phrase Key="Nested" Text="Группа в группе"/>
+    <Phrase Key="ColoredMesh" Text="Треугольники с цветом в вершинах"/>
     <Phrase Key="BlendModes" Text="Режимы наложения — три круга поверх картинки"/>
 </Language>

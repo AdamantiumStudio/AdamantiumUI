@@ -10,5 +10,6 @@
     <Phrase Key="LuminosityMask" Text="Mask by luminosity"/>
     <Phrase Key="AlphaMask" Text="Mask by alpha"/>
     <Phrase Key="Nested" Text="A group in a group"/>
+    <Phrase Key="ColoredMesh" Text="Triangles colored at each corner"/>
     <Phrase Key="BlendModes" Text="Blend modes — three discs over the picture"/>
 </Language>

@@ -31,6 +31,10 @@ All packages share one version.
   where no circle passes nothing is painted. 0, the default, is the radial gradient as before. A PDF page's radial
   shadings of any two circles are drawn with it. `GradientBrush.MaxRenderedStops` says how many stops are drawn (8),
   and a gradient fill the batches cannot record is drawn by its own unit instead of not at all.
+- `IDrawingSession.DrawColoredMesh` and `ColoredMesh`: triangles with a color at each corner (`ColoredVertex`), each
+  triangle's color running smoothly between its corners - a mesh gradient, exact at any zoom. A PDF page's mesh
+  shadings - free-form and lattice triangles, Coons and tensor-product patches - are drawn with it. The sandbox's "PDF
+  drawing" tab shows a color wheel of them.
 - `IDrawingSession.DrawImage(image, filter, rect, Matrix4x4F)`: an image placed by a matrix - turned and sheared with
   it, not laid upright into its bounds. An `ImageDrawing` inside a turned `DrawingGroup` turns with it now.
 - `ZoomBox` places content smaller than its view by `HorizontalContentAlignment` and `VerticalContentAlignment` - the
