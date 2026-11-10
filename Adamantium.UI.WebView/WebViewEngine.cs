@@ -34,6 +34,7 @@ public sealed unsafe class WebViewEngine : IDisposable
     private long timerDue;
     private long? adapterLuid;
     private bool sharedTextureRefused;
+    private bool changingDevice;
     private bool initialized;
     private bool failed;
     private volatile bool shutDown;
@@ -159,6 +160,7 @@ public sealed unsafe class WebViewEngine : IDisposable
     // old main device is still there to let go of them. The pages live on, CEF knows nothing of it.
     private void OnDeviceChanging(object sender, EventArgs e)
     {
+        changingDevice = true;
         foreach (var browser in browsers)
         {
             try
@@ -193,10 +195,26 @@ public sealed unsafe class WebViewEngine : IDisposable
     // application making itself again: a device not made now is made by the next browser.
     private void OnDeviceChanged(object sender, EventArgs e)
     {
+        changingDevice = false;
         sharedTextureRefused = false;
-        if (shutDown || browsers.Count == 0 || devices.MainGraphicsDevice is not { IsLost: false } main)
+        if (!shutDown && browsers.Count > 0)
         {
-            return;
+            EnsureDevice();
+        }
+    }
+
+    // The engine's device on the main one, made when there is none and the main device can make one - not while it is
+    // being made again; the pages left without a device take it then. Null while none can be made.
+    private IGraphicsDevice EnsureDevice()
+    {
+        if (device != null)
+        {
+            return device;
+        }
+
+        if (changingDevice || devices.MainGraphicsDevice is not { IsLost: false } main)
+        {
+            return null;
         }
 
         try
@@ -205,13 +223,18 @@ public sealed unsafe class WebViewEngine : IDisposable
         }
         catch (Exception exception)
         {
-            Serilog.Log.Logger.Warning(exception, "The WebView's device could not be made on the new main device");
+            Serilog.Log.Logger.Warning(exception, "The WebView's device could not be made on the main device");
             device = null;
-            return;
+            return null;
         }
 
         foreach (var browser in browsers)
         {
+            if (!browser.IsDeviceLost)
+            {
+                continue;
+            }
+
             try
             {
                 browser.TakeDevice(device);
@@ -221,6 +244,8 @@ public sealed unsafe class WebViewEngine : IDisposable
                 Serilog.Log.Logger.Warning(exception, "A WebView did not take the new device");
             }
         }
+
+        return device;
     }
 
     /// <summary>Whether CEF is beside the application, where native/fetch-cef stages it, and has not refused to start.
@@ -262,9 +287,12 @@ public sealed unsafe class WebViewEngine : IDisposable
     internal WebViewBrowser CreateBrowser(bool allowSharedTexture, IWebViewBrowserView view)
     {
         EnsureInitialized();
-        device ??= devices.MainGraphicsDevice.CreateRenderDevice();
-        var path = allowSharedTexture && SharesTextures() ? WebViewFramePath.SharedTexture : WebViewFramePath.PixelBuffer;
-        var browser = new WebViewBrowser(this, device, path, view);
+        // None while the main device is made again: the page starts without one, and takes the next with the rest.
+        var made = EnsureDevice();
+        var path = made != null && allowSharedTexture && SharesTextures()
+            ? WebViewFramePath.SharedTexture
+            : WebViewFramePath.PixelBuffer;
+        var browser = new WebViewBrowser(this, made, path, view);
         browsers.Add(browser);
         ArmPumpTimer(MaxPumpDelayMs);
         return browser;

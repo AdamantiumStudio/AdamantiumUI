@@ -142,6 +142,47 @@ public class WebViewFrameTests
         });
     }
 
+    // Out of sight, a page gives its surfaces back - a frame's size each - and seen again it gets new ones and a whole
+    // frame in them, the page as it was.
+    [TestCase(WebViewFramePath.PixelBuffer)]
+    [TestCase(WebViewFramePath.SharedTexture)]
+    public void AHiddenPage_GivesItsSurfacesBack_AndDrawsAgainWhenSeen(WebViewFramePath path)
+    {
+        bool shownBefore = false, shownHidden = true, shownAgain = false;
+        int framesHidden = -1, framesAfter = 0;
+        var (madePath, _, _, center) = loop.Run(() => ShowPage(path, RedPage, (browser, view) =>
+        {
+            shownBefore = view.Shown != null;
+            browser.SetHidden(true);
+            Pump(() => false, TimeSpan.FromMilliseconds(300));
+            shownHidden = view.Shown != null;
+            var framesWhenHidden = view.Frames;
+            Pump(() => false, TimeSpan.FromMilliseconds(300));
+            framesHidden = view.Frames - framesWhenHidden;
+
+            var framesBeforeSeen = view.Frames;
+            browser.SetHidden(false);
+            Pump(() => view.Shown != null && view.Frames > framesBeforeSeen, TimeSpan.FromSeconds(5));
+            shownAgain = view.Shown != null;
+            framesAfter = view.Frames - framesBeforeSeen;
+        }));
+
+        if (path == WebViewFramePath.SharedTexture)
+        {
+            Assume.That(madePath, Is.EqualTo(path), "the device does not import Chromium's textures");
+        }
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(shownBefore, Is.True);
+            Assert.That(shownHidden, Is.False, "hidden, its surfaces are let go");
+            Assert.That(framesHidden, Is.Zero, "and nothing is written");
+            Assert.That(shownAgain, Is.True, "seen again, it has surfaces");
+            Assert.That(framesAfter, Is.GreaterThan(0), "and a frame in them");
+            Assert.That(center, Is.EqualTo(new byte[] { 0, 0, 255, 255 }), "the page as it was, red as BGRA");
+        });
+    }
+
     // A click on the page reaches it: its handler paints the page green.
     [Test]
     public void AClick_ReachesThePage()

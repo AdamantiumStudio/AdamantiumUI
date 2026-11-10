@@ -58,6 +58,7 @@ internal sealed unsafe class WebViewBrowser : IDisposable
     private bool disposed;
     private bool repaintOwed;
     private bool hidden;
+    private bool deviceLost;
     private bool focused;
     private double zoom = 1;
     private int iconsAsked;
@@ -76,8 +77,13 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         this.view = view;
         FramePath = framePath;
         frameDevice = device;
-        producer = MakeProducer(device);
-        popupProducer = MakePopupProducer(device);
+        // Made while the main device is made again: no device to write on until the engine hands it the next one.
+        deviceLost = device == null;
+        if (device != null)
+        {
+            producer = MakeProducer(device);
+            popupProducer = MakePopupProducer(device);
+        }
         renderHandler = new WebViewRenderHandler(this);
         lifeSpanHandler = new WebViewLifeSpanHandler(this);
         loadHandler = new WebViewLoadHandler(this);
@@ -276,14 +282,14 @@ internal sealed unsafe class WebViewBrowser : IDisposable
     /// <paramref name="waited"/> meanwhile, and given its frames from the next one on.</summary>
     internal void Adopt(IWebViewBrowserView adopter, WebViewWaitingView waited)
     {
-        // Frames on the device they were written on, if they still are: one lost meanwhile is taken when it is made anew.
-        var writing = producer != null;
-        LetGoOfDevice();
+        // Surfaces for the new view, once the page is seen - on the device of the moment; one lost meanwhile gives them
+        // when it is made anew.
+        ReleaseSurfaces();
         view = adopter;
         waited?.Replay(adopter, this);
-        if (writing && !closing)
+        if (!hidden)
         {
-            TakeDevice(frameDevice);
+            MakeSurfaces();
         }
     }
 
@@ -312,8 +318,8 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         popup.Scale = Scale;
         popup.parentWindow = parentWindow;
         popup.Background = Background;
-        // Out of sight until a view shows it: a tab opened behind draws nothing.
-        popup.hidden = true;
+        // Out of sight until a view shows it: a tab opened behind draws nothing and holds no surfaces.
+        popup.SetHidden(true);
         var page = new WebViewNewPage(url, popup, waiting);
         bool shown;
         try
@@ -459,20 +465,66 @@ internal sealed unsafe class WebViewBrowser : IDisposable
     /// <summary>Tells the browser whether it is out of sight, when CEF stops drawing it.</summary>
     public void SetHidden(bool hidden)
     {
+        var changed = this.hidden != hidden;
         this.hidden = hidden;
         var host = LiveHost();
-        if (host == null)
+        if (host != null)
+        {
+            host->was_hidden(host, hidden ? 1 : 0);
+            CefRefCounting.ReleaseCef(host);
+        }
+
+        // Out of sight, the page draws nothing: its surfaces - a frame's size each, a few of them - go back to the GPU,
+        // and come again with a whole frame once it is seen.
+        if (!changed)
         {
             return;
         }
 
-        host->was_hidden(host, hidden ? 1 : 0);
-        CefRefCounting.ReleaseCef(host);
+        if (hidden)
+        {
+            // A dropped list goes with the page out of sight: nothing would draw it there once seen again.
+            if (popupShown)
+            {
+                popupShown = false;
+                popupRepaintOwed = false;
+                view.PopupClosed(this);
+            }
+
+            ReleaseSurfaces();
+        }
+        else if (producer == null)
+        {
+            MakeSurfaces();
+        }
     }
+
+    /// <summary>Whether the device the frames were written on is gone and no other given yet.</summary>
+    internal bool IsDeviceLost => deviceLost;
 
     /// <summary>The device the frames were written on is lost: the panels let go of them and they go. The page lives on
     /// and paints into nothing until <see cref="TakeDevice"/>.</summary>
     public void LetGoOfDevice()
+    {
+        deviceLost = true;
+        ReleaseSurfaces();
+    }
+
+    /// <summary>Writes the frames on <paramref name="device"/> from now on - the one made in place of a lost one - and
+    /// asks the page for a whole frame again, and its dropped list for one if it has one; a page out of sight, once it is
+    /// seen.</summary>
+    public void TakeDevice(IGraphicsDevice device)
+    {
+        ReleaseSurfaces();
+        deviceLost = false;
+        frameDevice = device;
+        if (!hidden)
+        {
+            MakeSurfaces();
+        }
+    }
+
+    private void ReleaseSurfaces()
     {
         if (producer == null)
         {
@@ -486,14 +538,18 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         popupProducer = null;
     }
 
-    /// <summary>Writes the frames on <paramref name="device"/> from now on - the one made in place of a lost one - and
-    /// asks the page for a whole frame again, and its dropped list for one if it has one.</summary>
-    public void TakeDevice(IGraphicsDevice device)
+    // Surfaces on the device of the moment, and a whole frame asked for them; none while the device is lost or the page
+    // going.
+    private void MakeSurfaces()
     {
-        LetGoOfDevice();
-        frameDevice = device;
-        producer = MakeProducer(device);
-        popupProducer = MakePopupProducer(device);
+        if (deviceLost || closing || frameDevice == null)
+        {
+            return;
+        }
+
+        ReleaseSurfaces();
+        producer = MakeProducer(frameDevice);
+        popupProducer = MakePopupProducer(frameDevice);
         repaintOwed = true;
         popupRepaintOwed = popupShown;
         if (popupShown)
