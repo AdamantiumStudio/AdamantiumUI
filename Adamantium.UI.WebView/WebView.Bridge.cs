@@ -32,12 +32,30 @@ public partial class WebView
 
     internal void ScriptsForNewDocumentsChanged() => browser?.ScriptsForNewDocumentsChanged();
 
+    // The page's requests are asked of the bridge while it listens to them, and of nobody otherwise.
+    internal void ResourceInterceptionChanged()
+    {
+        if (browser != null)
+        {
+            browser.InterceptsResources = Bridge?.InterceptsResources == true;
+        }
+    }
+
     private static void OnBridgeChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)
     {
         var view = (WebView)component;
         (e.OldValue as WebViewBridge)?.Detach(view);
         (e.NewValue as WebViewBridge)?.Attach(view);
         view.ScriptsForNewDocumentsChanged();
+        view.ResourceInterceptionChanged();
+    }
+
+    void IWebViewBrowserView.ResourceRequested(WebViewBrowser from, WebResourceRequestedEventArgs asked)
+    {
+        if (ReferenceEquals(browser, from))
+        {
+            Bridge?.OnResourceRequested(asked);
+        }
     }
 
     IReadOnlyList<WebDocumentScript> IWebViewBrowserView.ScriptsForNewDocuments(WebViewBrowser from) =>

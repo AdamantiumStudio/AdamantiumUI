@@ -65,6 +65,11 @@ internal interface IWebViewBrowserView
     /// view that has none.</summary>
     void HostCalled(WebViewBrowser browser, WebHostCall call);
 
+    /// <summary>The page is about to make a request - asked only while the browser's
+    /// <see cref="WebViewBrowser.InterceptsResources"/> is set: the view answers, redirects or refuses it through
+    /// <paramref name="asked"/>, or leaves it alone.</summary>
+    void ResourceRequested(WebViewBrowser browser, WebResourceRequestedEventArgs asked);
+
     /// <summary>A script world of the page is gone, and whatever it was given with it.</summary>
     void HostContextGone(WebViewBrowser browser, string context);
 

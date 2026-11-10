@@ -13,6 +13,7 @@ namespace Adamantium.UI.WebView.Cef;
 internal sealed class WebViewWaitingView : IWebViewBrowserView
 {
     private readonly IReadOnlyList<WebDocumentScript> openersScripts;
+    private readonly Action<WebResourceRequestedEventArgs> openersRequests;
     private string address;
     private string title;
     private bool isLoading;
@@ -25,11 +26,14 @@ internal sealed class WebViewWaitingView : IWebViewBrowserView
     private ImageSource icon;
     private bool? isSecure;
 
-    /// <summary>A view for a page the page with <paramref name="openersScripts"/> opens: its documents run those until
-    /// a view takes it up - it is the application's page as much as its opener.</summary>
-    public WebViewWaitingView(IReadOnlyList<WebDocumentScript> openersScripts)
+    /// <summary>A view for a page the page with <paramref name="openersScripts"/> opens: its documents run those, and
+    /// its requests are asked of <paramref name="openersRequests"/>, until a view takes it up - it is the application's
+    /// page as much as its opener.</summary>
+    public WebViewWaitingView(IReadOnlyList<WebDocumentScript> openersScripts,
+        Action<WebResourceRequestedEventArgs> openersRequests)
     {
         this.openersScripts = openersScripts;
+        this.openersRequests = openersRequests;
     }
 
     /// <summary>Whether the browser can no longer be shown as it is: CEF gave it up, or its frames cannot come as they
@@ -134,6 +138,8 @@ internal sealed class WebViewWaitingView : IWebViewBrowserView
     public IReadOnlyList<WebDocumentScript> ScriptsForNewDocuments(WebViewBrowser browser) => openersScripts;
 
     public void HostCalled(WebViewBrowser browser, WebHostCall call) => call.Refuse("The page is not shown yet.");
+
+    public void ResourceRequested(WebViewBrowser browser, WebResourceRequestedEventArgs asked) => openersRequests(asked);
 
     public void HostContextGone(WebViewBrowser browser, string context)
     {

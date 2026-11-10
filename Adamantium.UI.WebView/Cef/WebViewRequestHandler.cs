@@ -9,11 +9,47 @@ internal sealed unsafe class WebViewRequestHandler : CefObject
 {
     private readonly WebViewBrowser browser;
 
+    // Held here, as long as CEF holds this handler: CEF asks for it on its IO thread up to the browser's last request.
+    private readonly WebViewResourceRequestHandler resourceRequests;
+
     public WebViewRequestHandler(WebViewBrowser browser) : base(sizeof(CefRequestHandler))
     {
         this.browser = browser;
+        resourceRequests = new WebViewResourceRequestHandler(browser);
         ((CefRequestHandler*)Native)->on_before_browse = &OnBeforeBrowse;
         ((CefRequestHandler*)Native)->on_open_urlfrom_tab = &OnOpenUrlFromTab;
+        ((CefRequestHandler*)Native)->get_resource_request_handler = &GetResourceRequestHandler;
+    }
+
+    /// <summary>Refuses the page's requests still waiting for the view: the browser closes.</summary>
+    public void RefuseWaiting() => resourceRequests.RefuseWaiting();
+
+    protected override void OnFreed() => resourceRequests.Release();
+
+    // Asked on CEF's IO thread for each request: the view is asked of it only while it listens.
+    [UnmanagedCallersOnly]
+    private static CefResourceRequestHandler* GetResourceRequestHandler(CefRequestHandler* self, CefBrowser* cefBrowser,
+        CefFrame* frame, CefRequest* request, int isNavigation, int isDownload, CefStringUtf16* requestInitiator,
+        int* disableDefaultHandling)
+    {
+        CefResourceRequestHandler* handler = null;
+        try
+        {
+            var owner = From<WebViewRequestHandler>(self);
+            if (owner.browser.InterceptsResources)
+            {
+                handler = owner.resourceRequests.Shared;
+            }
+        }
+        catch (Exception exception)
+        {
+            CefCallbacks.Report(exception);
+        }
+
+        CefRefCounting.ReleaseCef(cefBrowser);
+        CefRefCounting.ReleaseCef(frame);
+        CefRefCounting.ReleaseCef(request);
+        return handler;
     }
 
     [UnmanagedCallersOnly]

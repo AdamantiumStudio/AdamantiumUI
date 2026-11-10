@@ -19,6 +19,7 @@ internal sealed unsafe class WebViewApp : CefObject
         var app = (CefApp*)Native;
         app->get_browser_process_handler = &GetBrowserProcessHandler;
         app->on_before_command_line_processing = &OnBeforeCommandLineProcessing;
+        app->on_register_custom_schemes = &OnRegisterCustomSchemes;
     }
 
     /// <summary>The struct with a reference taken for CEF.</summary>
@@ -51,6 +52,19 @@ internal sealed unsafe class WebViewApp : CefObject
         }
 
         CefRefCounting.ReleaseCef(commandLine);
+    }
+
+    [UnmanagedCallersOnly]
+    private static void OnRegisterCustomSchemes(CefApp* self, CefSchemeRegistrar* registrar)
+    {
+        try
+        {
+            WebViewSchemes.Register(registrar);
+        }
+        catch (Exception exception)
+        {
+            CefCallbacks.Report(exception);
+        }
     }
 
     private static void AppendSwitch(CefCommandLine* commandLine, string name, string value)

@@ -13,6 +13,10 @@ public sealed class WebViewBridge
 {
     private readonly List<WebDocumentScript> scriptsForNewDocuments = [];
     private readonly WebHostObjects hostObjects = new();
+    private EventHandler<WebResourceRequestedEventArgs> resourceRequested;
+
+    // Every view the bridge is bound to hears what changes; the page reached is the last bound's.
+    private readonly List<WebView> views = [];
     private WebView view;
 
     /// <summary>The scripts every new document of the page runs before its own, in the order they were added - held
@@ -27,7 +31,7 @@ public sealed class WebViewBridge
         ArgumentNullException.ThrowIfNull(source);
         var script = new WebDocumentScript(source);
         scriptsForNewDocuments.Add(script);
-        view?.ScriptsForNewDocumentsChanged();
+        ScriptsChanged();
         return script;
     }
 
@@ -40,7 +44,7 @@ public sealed class WebViewBridge
             return false;
         }
 
-        view?.ScriptsForNewDocumentsChanged();
+        ScriptsChanged();
         return true;
     }
 
@@ -82,6 +86,41 @@ public sealed class WebViewBridge
     /// </summary>
     public event EventHandler<WebPermissionRequestedEventArgs> PermissionRequested;
 
+    /// <summary>The page is about to make a request - its document, a frame's, a script, an image, a fetch: a handler
+    /// may answer it, send it elsewhere or refuse it. Listened to, every request of the page waits a turn of the UI
+    /// thread; not listened to, none is asked.</summary>
+    public event EventHandler<WebResourceRequestedEventArgs> ResourceRequested
+    {
+        add
+        {
+            resourceRequested += value;
+            InterceptionChanged();
+        }
+        remove
+        {
+            resourceRequested -= value;
+            InterceptionChanged();
+        }
+    }
+
+    private void ScriptsChanged()
+    {
+        for (var i = 0; i < views.Count; i++)
+        {
+            views[i].ScriptsForNewDocumentsChanged();
+        }
+    }
+
+    private void InterceptionChanged()
+    {
+        for (var i = 0; i < views.Count; i++)
+        {
+            views[i].ResourceInterceptionChanged();
+        }
+    }
+
+    internal bool InterceptsResources => resourceRequested != null;
+
     /// <summary>Whether the bridge is bound to a view with a page.</summary>
     public bool HasPage => view?.HasPage == true;
 
@@ -100,13 +139,19 @@ public sealed class WebViewBridge
     /// </summary>
     public void PostMessage(string json) => Page().PostMessage(json);
 
-    internal void Attach(WebView attached) => view = attached;
+    internal void Attach(WebView attached)
+    {
+        views.Remove(attached);
+        views.Add(attached);
+        view = attached;
+    }
 
     internal void Detach(WebView detached)
     {
+        views.Remove(detached);
         if (ReferenceEquals(view, detached))
         {
-            view = null;
+            view = views.Count > 0 ? views[^1] : null;
             hostObjects.ForgetGiven();
         }
     }
@@ -114,6 +159,8 @@ public sealed class WebViewBridge
     internal void OnMessage(string json) => MessageReceived?.Invoke(this, new WebMessageEventArgs(json));
 
     internal void OnHostCall(WebHostCall call) => hostObjects.Call(call);
+
+    internal void OnResourceRequested(WebResourceRequestedEventArgs asked) => resourceRequested?.Invoke(this, asked);
 
     internal void OnHostContextGone(WebViewBrowser browser, string context) => hostObjects.ContextGone(browser, context);
 
