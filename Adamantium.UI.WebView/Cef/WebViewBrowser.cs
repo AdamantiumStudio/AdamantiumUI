@@ -18,7 +18,11 @@ internal sealed unsafe class WebViewBrowser : IDisposable
     private const double ZoomStep = 1.2;
 
     private readonly WebViewEngine engine;
-    private readonly IWebViewBrowserView view;
+    private readonly Dictionary<int, WebViewBrowser> popupsAsked = [];
+    private IWebViewBrowserView view;
+    private WebViewBrowser opener;
+    private int popupId;
+    private IntPtr parentWindow;
     private readonly WebViewClient client;
     private readonly WebViewRenderHandler renderHandler;
     private readonly WebViewLifeSpanHandler lifeSpanHandler;
@@ -26,9 +30,13 @@ internal sealed unsafe class WebViewBrowser : IDisposable
     private readonly WebViewLoadHandler loadHandler;
     private readonly WebViewRequestHandler requestHandler;
     private readonly WebViewContextMenuHandler contextMenuHandler;
+    private readonly WebViewJsDialogHandler jsDialogHandler;
     private readonly WebViewDevTools devTools;
     private WebViewFrameProducer producer;
     private WebViewFrameProducer popupProducer;
+    private IGraphicsDevice frameDevice;
+    private WebViewScriptDialogRequest askedDialog;
+    private WebViewContextMenu askedMenu;
     private bool popupShown;
     private bool popupRepaintOwed;
     private Rect popupShownAt;
@@ -63,17 +71,20 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         this.engine = engine;
         this.view = view;
         FramePath = framePath;
+        frameDevice = device;
         producer = MakeProducer(device);
         popupProducer = MakePopupProducer(device);
         renderHandler = new WebViewRenderHandler(this);
         lifeSpanHandler = new WebViewLifeSpanHandler(this);
         loadHandler = new WebViewLoadHandler(this);
         requestHandler = new WebViewRequestHandler(this);
-        devTools = new WebViewDevTools(json => view.MessageReceived(this, json)) { OverlayHeard = RevealWaiting };
+        // The view of the moment: a page another opened is adopted by a view of its own.
+        devTools = new WebViewDevTools(json => this.view.MessageReceived(this, json)) { OverlayHeard = RevealWaiting };
         displayHandler = new WebViewDisplayHandler(this);
         contextMenuHandler = new WebViewContextMenuHandler(this);
+        jsDialogHandler = new WebViewJsDialogHandler(this);
         client = new WebViewClient(renderHandler, lifeSpanHandler, displayHandler, loadHandler, requestHandler,
-            contextMenuHandler);
+            contextMenuHandler, jsDialogHandler);
     }
 
     /// <summary>The view's size in device-independent pixels, never empty.</summary>
@@ -148,6 +159,9 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         Create(url, width, height, scale, parentWindow);
     }
 
+    /// <summary>What shows where the page paints no background of its own; read when the browser is made.</summary>
+    public Color Background { get; set; } = Colors.White;
+
     /// <summary>Asks CEF to make the browser, showing <paramref name="url"/>.</summary>
     public void Create(string url, int width, int height, float scale, IntPtr parentWindow)
     {
@@ -155,13 +169,11 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         createdWith = url;
         ViewSize = (Math.Max(1, width), Math.Max(1, height));
         Scale = scale;
+        this.parentWindow = parentWindow;
 
         var info = CefWindowInfos.Windowless(parentWindow, FramePath == WebViewFramePath.SharedTexture);
-        var settings = new CefBrowserSettings
-        {
-            size = (ulong)sizeof(CefBrowserSettings),
-            windowless_frame_rate = 60
-        };
+        var settings = new CefBrowserSettings { size = (ulong)sizeof(CefBrowserSettings) };
+        Configure(&settings);
         var target = new CefStringUtf16();
         try
         {
@@ -179,6 +191,153 @@ internal sealed unsafe class WebViewBrowser : IDisposable
             CefWindowInfos.Free(info);
         }
     }
+
+    /// <summary>Where the page is, or is going in a browser not made yet.</summary>
+    public string Address => address;
+
+    // What every browser of the view is made with.
+    private void Configure(CefBrowserSettings* settings)
+    {
+        settings->windowless_frame_rate = 60;
+        // CEF takes fully opaque or fully transparent alone; left unset, a windowless page paints transparent.
+        settings->background_color = new CefColor
+        {
+            value = Background.A == 0 ? 0u : 0xFF000000u | ((uint)Background.R << 16) | ((uint)Background.G << 8) | Background.B
+        };
+    }
+
+    /// <summary>Hands the page to <paramref name="adopter"/>, the view that shows it now: told what the page said to
+    /// <paramref name="waited"/> meanwhile, and given its frames from the next one on.</summary>
+    internal void Adopt(IWebViewBrowserView adopter, WebViewWaitingView waited)
+    {
+        // Frames on the device they were written on, if they still are: one lost meanwhile is taken when it is made anew.
+        var writing = producer != null;
+        LetGoOfDevice();
+        view = adopter;
+        waited?.Replay(adopter, this);
+        if (writing && !closing)
+        {
+            TakeDevice(frameDevice);
+        }
+    }
+
+    /// <summary>The page opens <paramref name="url"/> in a window of its own - a link to a new tab, <c>window.open</c>:
+    /// asked of the view by the user's own doing alone. Shown, the browser CEF makes for it is <paramref name="popup"/>'s,
+    /// drawn off screen like this one, its <c>window.opener</c> this page; false refuses it.</summary>
+    internal bool OnBeforePopup(int id, string url, CefWindowOpenDisposition disposition, bool userGesture,
+        void* windowInfo, CefClient** popupClient, CefBrowserSettings* settings)
+    {
+        if (!userGesture || closing || string.IsNullOrEmpty(url))
+        {
+            return false;
+        }
+
+        var waiting = new WebViewWaitingView();
+        if (engine.CreatePopupBrowser(FramePath, waiting) is not { } popup)
+        {
+            // No device to draw it on yet: the page goes there itself, as when nobody shows it apart.
+            Navigate(url);
+            return false;
+        }
+
+        popup.address = url;
+        popup.createdWith = url;
+        popup.ViewSize = ViewSize;
+        popup.Scale = Scale;
+        popup.parentWindow = parentWindow;
+        popup.Background = Background;
+        // Out of sight until a view shows it: a tab opened behind draws nothing.
+        popup.hidden = true;
+        var page = new WebViewNewPage(url, popup, waiting);
+        bool shown;
+        try
+        {
+            shown = view.NewWindowRequested(this, page, KindOf(disposition));
+        }
+        catch
+        {
+            page.Dispose();
+            throw;
+        }
+
+        // Let go of already - a view model that kept it no longer - it is refused: its client is gone.
+        if (!shown || popup.disposed)
+        {
+            page.Dispose();
+            if (!shown)
+            {
+                // Nobody shows it apart: the page goes there itself, as it did before new pages were asked for.
+                Navigate(url);
+            }
+
+            return false;
+        }
+
+        CefWindowInfos.MakeWindowless(windowInfo, parentWindow, popup.FramePath == WebViewFramePath.SharedTexture);
+        popup.Configure(settings);
+        // Handed back with a reference CEF takes.
+        *popupClient = popup.client.Shared;
+        popup.requested = true;
+        popup.opener = this;
+        popup.popupId = id;
+        popupsAsked[id] = popup;
+        return true;
+    }
+
+    /// <summary>CEF gave up making the browser of a popup it was allowed.</summary>
+    internal void OnPopupAborted(int id)
+    {
+        if (!popupsAsked.Remove(id, out var popup))
+        {
+            return;
+        }
+
+        popup.requested = false;
+        popup.opener = null;
+        if (popup.disposed)
+        {
+            engine.BrowserClosed(popup);
+            return;
+        }
+
+        // A view showing it already makes the page again at its address; one still waiting for it gets a page that
+        // never comes, as a page refused would be.
+        popup.view.BrowserLost(popup);
+    }
+
+    /// <summary>A link the page opens elsewhere - Ctrl, Shift or the middle button: true when the view opened it, and
+    /// the page stays where it is; false lets the page go there itself.</summary>
+    internal bool OnOpenElsewhere(string url, CefWindowOpenDisposition disposition, bool userGesture)
+    {
+        if (closing || string.IsNullOrEmpty(url) || disposition is not (CefWindowOpenDisposition.NewForegroundTab or
+                CefWindowOpenDisposition.NewBackgroundTab or CefWindowOpenDisposition.NewPopup or
+                CefWindowOpenDisposition.NewWindow))
+        {
+            return false;
+        }
+
+        if (!userGesture)
+        {
+            return true;
+        }
+
+        var page = new WebViewNewPage(url);
+        if (view.NewWindowRequested(this, page, KindOf(disposition)))
+        {
+            return true;
+        }
+
+        page.Dispose();
+        return false;
+    }
+
+    private static WebNewWindowKind KindOf(CefWindowOpenDisposition disposition) => disposition switch
+    {
+        CefWindowOpenDisposition.NewBackgroundTab => WebNewWindowKind.BackgroundTab,
+        CefWindowOpenDisposition.NewPopup => WebNewWindowKind.Popup,
+        CefWindowOpenDisposition.NewWindow => WebNewWindowKind.Window,
+        _ => WebNewWindowKind.ForegroundTab
+    };
 
     /// <summary>Shows <paramref name="url"/>: at once in a browser already made, else once it is.</summary>
     public void Navigate(string url)
@@ -266,10 +425,16 @@ internal sealed unsafe class WebViewBrowser : IDisposable
     public void TakeDevice(IGraphicsDevice device)
     {
         LetGoOfDevice();
+        frameDevice = device;
         producer = MakeProducer(device);
         popupProducer = MakePopupProducer(device);
         repaintOwed = true;
         popupRepaintOwed = popupShown;
+        if (popupShown)
+        {
+            view.PopupPlaced(this, popupShownAt);
+        }
+
         RepaintIfOwed();
     }
 
@@ -384,6 +549,7 @@ internal sealed unsafe class WebViewBrowser : IDisposable
             return;
         }
 
+        (x, y) = OnTheList(x, y);
         var touch = new CefTouchEvent
         {
             id = (int)id,
@@ -419,7 +585,7 @@ internal sealed unsafe class WebViewBrowser : IDisposable
             return;
         }
 
-        var mouse = MouseEvent(x, y, modifiers);
+        var mouse = DragEvent(x, y, modifiers);
         host->drag_target_drag_enter(host, CefDragDatas.FromPackage(data), &mouse, CefInputMap.Operations(allowed));
         CefRefCounting.ReleaseCef(host);
     }
@@ -433,7 +599,7 @@ internal sealed unsafe class WebViewBrowser : IDisposable
             return;
         }
 
-        var mouse = MouseEvent(x, y, modifiers);
+        var mouse = DragEvent(x, y, modifiers);
         host->drag_target_drag_over(host, &mouse, CefInputMap.Operations(allowed));
         CefRefCounting.ReleaseCef(host);
     }
@@ -460,7 +626,7 @@ internal sealed unsafe class WebViewBrowser : IDisposable
             return;
         }
 
-        var mouse = MouseEvent(x, y, modifiers);
+        var mouse = DragEvent(x, y, modifiers);
         host->drag_target_drop(host, &mouse);
         CefRefCounting.ReleaseCef(host);
     }
@@ -697,9 +863,31 @@ internal sealed unsafe class WebViewBrowser : IDisposable
 
     internal void OnAddressChange(string url)
     {
+        url = Shown(url);
         address = url;
         view.AddressChanged(this, url);
         TellSecurity();
+    }
+
+    // A page's source is told as the page's own address: the address it is shown at says it is the source.
+    private string Shown(string url)
+    {
+        var host = LiveHost();
+        if (host == null)
+        {
+            return url;
+        }
+
+        var entry = host->get_visible_navigation_entry(host);
+        CefRefCounting.ReleaseCef(host);
+        if (entry == null)
+        {
+            return url;
+        }
+
+        var shown = entry->is_valid(entry) != 0 ? CefStrings.ReadAndFree(entry->get_display_url(entry)) : null;
+        CefRefCounting.ReleaseCef(entry);
+        return shown != null && shown.StartsWith("view-source:", StringComparison.Ordinal) ? shown : url;
     }
 
     /// <summary>Asks again, once a second from the engine's pump, whether the page is secure: what it loads after it
@@ -731,6 +919,26 @@ internal sealed unsafe class WebViewBrowser : IDisposable
     internal void OnStatusMessage(string message) => view.StatusChanged(this, message);
 
     internal void OnTooltip(string text) => view.TooltipChanged(this, text);
+
+    /// <summary>A dialog the page's script asks: the view asks it over the page, or answers it at once as cancelled.
+    /// </summary>
+    internal bool OnScriptDialog(WebViewScriptDialogRequest request)
+    {
+        askedDialog = request;
+        return view.ScriptDialogRequested(this, request);
+    }
+
+    /// <summary>A dialog the view did not take is not the page's to answer at the end.</summary>
+    internal void ForgetScriptDialog(WebViewScriptDialogRequest request)
+    {
+        if (ReferenceEquals(askedDialog, request))
+        {
+            askedDialog = null;
+        }
+    }
+
+    /// <summary>The page went on - navigated, closed: what its dialogs asked is asked no more.</summary>
+    internal void OnScriptDialogsReset() => view.ScriptDialogsReset(this);
 
     /// <summary>Opens the element at <paramref name="x"/>, <paramref name="y"/> of the view, in device-independent
     /// pixels, in the DevTools' Elements panel: now, if their front end listens, else once it does - while the page
@@ -764,7 +972,21 @@ internal sealed unsafe class WebViewBrowser : IDisposable
     }
 
     /// <summary>The menu the page asks for: the view shows it, or answers it at once with none.</summary>
-    internal bool OnRunContextMenu(WebViewContextMenu menu) => !isDevTools && view.ContextMenuRequested(this, menu);
+    internal bool OnRunContextMenu(WebViewContextMenu menu)
+    {
+        askedMenu = menu;
+        return !isDevTools && view.ContextMenuRequested(this, menu);
+    }
+
+    /// <summary>Puts the page back at the address it is at - its own question kept it there, as a navigation it asked
+    /// about was not made.</summary>
+    public void KeepAddress()
+    {
+        if (address != null)
+        {
+            view.AddressChanged(this, address);
+        }
+    }
 
     internal void OnLoadingProgress(double progress) => view.ProgressChanged(this, progress);
 
@@ -977,6 +1199,8 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         }
 
         browser = created;
+        opener?.popupsAsked.Remove(popupId);
+        opener = null;
         // DevTools are not a page of the application's: no protocol channel, no window.adamantium in them.
         if (!isDevTools)
         {
@@ -1045,10 +1269,18 @@ internal sealed unsafe class WebViewBrowser : IDisposable
     internal void OnPopupShow(bool show)
     {
         popupShown = show;
-        if (!show)
+        if (show)
         {
-            popupRepaintOwed = false;
-            view.PopupClosed(this);
+            return;
+        }
+
+        // Put away with its surfaces: the next list comes on surfaces of its own, never over this one's last frame.
+        popupRepaintOwed = false;
+        view.PopupClosed(this);
+        if (popupProducer != null && frameDevice != null)
+        {
+            popupProducer.Dispose();
+            popupProducer = MakePopupProducer(frameDevice);
         }
     }
 
@@ -1109,16 +1341,6 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         }
     }
 
-    /// <summary>A page opening a window of its own - a link to a new tab, window.open: the view shows it instead when
-    /// the user asked for it; a script's own is refused.</summary>
-    internal void OnPopup(string url, bool userGesture)
-    {
-        if (userGesture && !closing && !string.IsNullOrEmpty(url))
-        {
-            Navigate(url);
-        }
-    }
-
     internal void OnClosing(CefBrowser* closed)
     {
         if (!Is(closed))
@@ -1144,6 +1366,12 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         devToolsSocket?.Dispose();
         devToolsSocket = null;
         closing = true;
+        // What the page still asks is answered while CEF is there to hear it: the view may answer only later, CEF gone.
+        askedDialog?.Answer(false, null);
+        askedDialog = null;
+        askedMenu?.Dismiss();
+        askedMenu = null;
+        view.ScriptDialogsReset(this);
         view.LetGo(this);
         producer?.Dispose();
         producer = null;
@@ -1165,6 +1393,7 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         loadHandler.Release();
         requestHandler.Release();
         contextMenuHandler.Release();
+        jsDialogHandler.Release();
     }
 
     private void Close()
@@ -1275,23 +1504,25 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         view.NavigationCompleted(this, url, null);
     }
 
-    // Over the dropped list the pointer is where the list really is: moved into the view, it is shown apart from where
-    // the page placed it, and the page is told the place it knows.
+    // Over the dropped list a pointer is where the list really is: moved into the view, it is shown apart from where
+    // the page placed it, and the page is told the place it knows. A drag is the page's, not the list's.
+    private (double X, double Y) OnTheList(double x, double y) =>
+        popupShown && popupShownAt.Contains(new Vector2<double>(x, y))
+            ? (x + popupMovedBy.X, y + popupMovedBy.Y)
+            : (x, y);
+
     private CefMouseEvent MouseEvent(double x, double y, InputModifiers modifiers)
     {
-        if (popupShown && popupShownAt.Contains(new Vector2<double>(x, y)))
-        {
-            x += popupMovedBy.X;
-            y += popupMovedBy.Y;
-        }
-
-        return new CefMouseEvent
-        {
-            x = (int)Math.Round(x),
-            y = (int)Math.Round(y),
-            modifiers = CefInputMap.Flags(modifiers)
-        };
+        (x, y) = OnTheList(x, y);
+        return DragEvent(x, y, modifiers);
     }
+
+    private static CefMouseEvent DragEvent(double x, double y, InputModifiers modifiers) => new()
+    {
+        x = (int)Math.Round(x),
+        y = (int)Math.Round(y),
+        modifiers = CefInputMap.Flags(modifiers)
+    };
 
     private CefBrowserHost* Host() => browser == null ? null : browser->get_host(browser);
 

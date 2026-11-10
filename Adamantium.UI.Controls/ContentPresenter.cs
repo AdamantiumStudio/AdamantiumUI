@@ -507,7 +507,7 @@ public class ContentPresenter : InputUIComponent
         ReferenceEquals(visual, _builtFor) || ReferenceEquals(visual, _outgoingRoot) && _outgoingIsContent;
 
     private bool CanComeBack(object content) =>
-        TemplatedParent is not ItemsControl owner || owner.Items.Contains(content);
+        TemplatedParent is not ItemsControl owner || owner.HoldsContent(content);
 
     private void Release(IUIComponent visual, TemplateResult built)
     {

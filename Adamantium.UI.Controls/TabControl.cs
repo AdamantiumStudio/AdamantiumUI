@@ -441,7 +441,7 @@ public class TabControl : Selector
 
         if (_reordering) return;
 
-        ParkedVisuals.ReleaseAbsent(this, Items.Contains);
+        ParkedVisuals.ReleaseAbsent(this, HoldsContent);
 
         // Re-run the selection, not just clamp the index: closing the selected tab leaves the index valid but on another
         // item. A tab named before the strip had any wins over the first one.
@@ -495,6 +495,18 @@ public class TabControl : Selector
 
     private TabItem _pageShownBy;
 
+    // A tab authored as a TabItem shows its Content, not itself.
+    internal override bool HoldsContent(object content)
+    {
+        if (Items.Contains(content)) return true;
+
+        foreach (var item in Items)
+        {
+            if (item is TabItem tab && Equals(tab.Content, content)) return true;
+        }
+
+        return false;
+    }
     private void UpdateSelectedContent()
     {
         var item = SelectedItem;

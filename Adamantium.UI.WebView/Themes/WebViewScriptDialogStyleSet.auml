@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<StyleSet xmlns="http://adamantium/ui"
+          xmlns:x="http://adamantium/ui/xaml/extensions"
+          xmlns:local="clr-namespace:Adamantium.UI.WebView">
+
+    <!-- A page's script dialog over the page only: the page dimmed under it, a card near its top with who asks, what
+         is asked, a field for a prompt, and the answers - Enter agrees and Esc cancels while the keyboard is in it (the
+         control's own keys, not the window's default buttons). Nothing while nothing is asked. -->
+    <Style Selector="WebViewScriptDialog">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="local:WebViewScriptDialog">
+                    <Grid Background="{ResourceReference SmokeFillColorDefault}">
+                        <Border HorizontalAlignment="Center" VerticalAlignment="Top" Margin="16 32 16 0"
+                                MaxWidth="440" MinWidth="320" Padding="20" CornerRadius="8" BorderThickness="1"
+                                Background="{ResourceReference SolidBackgroundFillColorBase}"
+                                BorderBrush="{ResourceReference ControlStrokeColorDefault}"
+                                AutomationProperties.AutomationId="WebDialog"
+                                AutomationProperties.Name="{TemplateBinding Title}">
+                            <StackPanel Spacing="12">
+                                <TextBlock Text="{TemplateBinding Title}" TextWrapping="WrapByWords"
+                                           Foreground="{ResourceReference TextFillColorSecondary}"/>
+                                <TextBlock x:Name="PART_Message" Text="{TemplateBinding Message}"
+                                           TextWrapping="WrapByWords"
+                                           AutomationProperties.AutomationId="WebDialogMessage"/>
+                                <TextBox x:Name="PART_Text" Visibility="Collapsed"
+                                         Text="{TemplateBinding Text, Mode=TwoWay}"
+                                         AutomationProperties.AutomationId="WebDialogText"
+                                         AutomationProperties.Name="{TemplateBinding Message}"/>
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+                                    <Button x:Name="PART_Cancel" MinWidth="88"
+                                            Content="{Localize WebViewStrings.Cancel}"
+                                            Command="{TemplateBinding CancelCommand}"
+                                            AutomationProperties.AutomationId="WebDialogCancel"/>
+                                    <Button x:Name="PART_Accept" Classes="Accent" MinWidth="88"
+                                            Content="{TemplateBinding AcceptText}"
+                                            Command="{TemplateBinding AcceptCommand}"
+                                            AutomationProperties.AutomationId="WebDialogAccept"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <PropertyTrigger Property="Kind" Value="None">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                        </PropertyTrigger>
+                        <PropertyTrigger Property="Kind" Value="Alert">
+                            <Setter TargetName="PART_Cancel" Property="Visibility" Value="Collapsed"/>
+                        </PropertyTrigger>
+                        <PropertyTrigger Property="Kind" Value="Prompt">
+                            <Setter TargetName="PART_Text" Property="Visibility" Value="Visible"/>
+                        </PropertyTrigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+</StyleSet>

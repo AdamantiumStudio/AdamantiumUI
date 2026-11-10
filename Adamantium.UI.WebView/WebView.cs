@@ -32,6 +32,9 @@ public partial class WebView : Control, IWebViewBrowserView, ITextEntry
     public static readonly AdamantiumProperty AllowSharedTextureProperty = AdamantiumProperty.Register(
         nameof(AllowSharedTexture), typeof(bool), typeof(WebView), new PropertyMetadata(true, OnBrowserSettingChanged));
 
+    public static readonly AdamantiumProperty PageBackgroundProperty = AdamantiumProperty.Register(
+        nameof(PageBackground), typeof(Color), typeof(WebView), new PropertyMetadata(Colors.White, OnBrowserSettingChanged));
+
     public static readonly AdamantiumProperty FramePathProperty = AdamantiumProperty.Register(nameof(FramePath),
         typeof(WebViewFramePath), typeof(WebView), new PropertyMetadata(WebViewFramePath.None));
 
@@ -93,6 +96,15 @@ public partial class WebView : Control, IWebViewBrowserView, ITextEntry
         set => SetValue(AllowSharedTextureProperty, value);
     }
 
+    /// <summary>What shows where a page paints no background of its own, and before it loads: white, as in a browser.
+    /// Fully transparent shows what lies under the view - a page over a scene; any other alpha is taken as opaque.
+    /// Changing it makes the page again.</summary>
+    public Color PageBackground
+    {
+        get => GetValue<Color>(PageBackgroundProperty);
+        set => SetValue(PageBackgroundProperty, value);
+    }
+
     /// <summary>How the page's frames come, set by the view.</summary>
     public WebViewFramePath FramePath
     {
@@ -113,6 +125,7 @@ public partial class WebView : Control, IWebViewBrowserView, ITextEntry
         StopBrowser();
         surface = GetTemplateChild("PART_Surface") as RenderTargetPanel;
         TakePopupSurface(GetTemplateChild("PART_PopupSurface") as RenderTargetPanel);
+        TakeScriptDialog(GetTemplateChild("PART_ScriptDialog") as WebViewScriptDialog);
         pageHost = GetTemplateChild("PART_PageHost") as InputUIComponent;
         if (pageHost != null)
         {
@@ -145,6 +158,7 @@ public partial class WebView : Control, IWebViewBrowserView, ITextEntry
         pageHost = null;
         surface = null;
         TakePopupSurface(null);
+        TakeScriptDialog(null);
         base.OnRemoveTemplate();
     }
 
@@ -200,8 +214,9 @@ public partial class WebView : Control, IWebViewBrowserView, ITextEntry
     {
         var view = (WebView)component;
         // The engine is the application's and outlives the page: an engine gone for a moment - a data context passing
-        // through null - leaves the page on the one it has rather than losing it and its history.
-        if (e.Property == EngineProperty && e.NewValue == null && view.browser != null)
+        // through null - leaves the page on the one it has rather than losing it and its history. A new page let go of
+        // once shown is the view's page all the same.
+        if ((e.Property == EngineProperty || e.Property == NewPageProperty) && e.NewValue == null && view.browser != null)
         {
             return;
         }
@@ -231,11 +246,17 @@ public partial class WebView : Control, IWebViewBrowserView, ITextEntry
 
         try
         {
-            browser = engine.CreateBrowser(AllowSharedTexture, this);
+            var width = (int)Math.Ceiling(PageWidth);
+            var height = (int)Math.Ceiling(PageHeight);
+            if (AdoptNewPage(width, height, Scale()) == null)
+            {
+                browser = engine.CreateBrowser(AllowSharedTexture, this);
+                browser.Background = PageBackground;
+                BeginBrowser(browser, width, height, Scale(), window?.Handle ?? IntPtr.Zero);
+            }
+
             SetCurrentValue(FramePathProperty, browser.FramePath);
             RaiseCommandsChanged();
-            BeginBrowser(browser, (int)Math.Ceiling(PageWidth), (int)Math.Ceiling(PageHeight), Scale(),
-                window?.Handle ?? IntPtr.Zero);
             browser.SetHidden(IsWindowOutOfSight());
             browser.SetFocus(IsKeyboardFocused);
             browser.SetZoom(Math.Clamp(ZoomFactor, MinZoom, MaxZoom));
@@ -260,6 +281,7 @@ public partial class WebView : Control, IWebViewBrowserView, ITextEntry
         ForgetInput();
         DismissPageMenu();
         HidePageTip();
+        AnswerScriptDialog(false);
         if (pageMenu != null)
         {
             pageMenu.IsOpen = false;
@@ -394,6 +416,7 @@ public partial class WebView : Control, IWebViewBrowserView, ITextEntry
     {
         ResizeBrowser();
         SizeSurfaceToFrame();
+        SizePopupToFrame();
     }
 
     private void OnWindowStateChanged(object sender, StateChangedEventArgs e) => browser?.SetHidden(IsWindowOutOfSight());

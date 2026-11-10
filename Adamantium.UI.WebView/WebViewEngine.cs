@@ -167,6 +167,20 @@ public sealed unsafe class WebViewEngine : IDisposable
         return browser;
     }
 
+    /// <summary>A browser for a page another one opens, its frames coming as its opener's do: CEF makes it, from the
+    /// opener's request. None while the device is lost and not made anew.</summary>
+    internal WebViewBrowser CreatePopupBrowser(WebViewFramePath path, IWebViewBrowserView view)
+    {
+        if (device == null)
+        {
+            return null;
+        }
+
+        var browser = new WebViewBrowser(this, device, path, view);
+        browsers.Add(browser);
+        return browser;
+    }
+
     /// <summary>A browser of <see cref="CreateBrowser"/> closed by CEF, or never made by it.</summary>
     internal void BrowserClosed(WebViewBrowser browser) => browsers.Remove(browser);
 

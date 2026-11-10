@@ -12,6 +12,8 @@ namespace Adamantium.UI.WebView;
 public partial class WebView
 {
     private RenderTargetPanel popupSurface;
+    private uint popupFrameWidth;
+    private uint popupFrameHeight;
 
     private void TakePopupSurface(RenderTargetPanel panel)
     {
@@ -26,10 +28,23 @@ public partial class WebView
             return;
         }
 
-        var scale = Scale();
-        popupSurface.Width = descriptor.Width / scale;
-        popupSurface.Height = descriptor.Height / scale;
+        popupFrameWidth = descriptor.Width;
+        popupFrameHeight = descriptor.Height;
+        SizePopupToFrame();
         popupSurface.SetSource(descriptor);
+    }
+
+    // One to one, as the page's frame: the list's pixels at the screen's scale.
+    private void SizePopupToFrame()
+    {
+        if (popupSurface == null || popupFrameWidth == 0 || popupFrameHeight == 0)
+        {
+            return;
+        }
+
+        var scale = Scale();
+        popupSurface.Width = popupFrameWidth / scale;
+        popupSurface.Height = popupFrameHeight / scale;
     }
 
     void IWebViewBrowserView.PopupPlaced(WebViewBrowser from, Rect bounds)
@@ -52,11 +67,16 @@ public partial class WebView
         }
     }
 
+    // Put away with its surfaces: the next list comes on its own.
     private void HidePopup()
     {
         if (popupSurface != null)
         {
             popupSurface.Visibility = Visibility.Collapsed;
+            popupSurface.ClearSource();
         }
+
+        popupFrameWidth = 0;
+        popupFrameHeight = 0;
     }
 }

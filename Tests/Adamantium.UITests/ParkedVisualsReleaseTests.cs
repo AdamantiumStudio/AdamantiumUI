@@ -139,6 +139,85 @@ public class ParkedVisualsReleaseTests
         });
     }
 
+    // A tab authored as a TabItem shows its Content, which is not one of the items: a kept view there was let go on every
+    // visit elsewhere - a browser's pages reloaded each time its tab came back.
+    [Test]
+    public void AKeptViewInATabItem_IsParkedWhileAway_AndGoesWithItsTab()
+    {
+        var (owner, tab, view, presenter) = TwoTabsAwayFromTheFirst();
+        var parkedWhileAway = view.IsAwaitingReturn;
+
+        presenter.Content = view;
+        presenter.Measure(new Size<double>(100, 100), force: true);
+        var back = presenter.VisualChildren.Single();
+
+        presenter.Content = owner.Items.OfType<TabItem>().Last().Content;
+        presenter.Measure(new Size<double>(100, 100), force: true);
+        owner.Items.Remove(tab);
+        var discardedWithTheTabAlive = view.IsDiscarded;
+        DiscardedVisuals.Publish(tab);
+        while (DiscardedVisuals.Drain(64) > 0) { }
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(parkedWhileAway, Is.True, "away, the view waits for its tab");
+            Assert.That(back, Is.SameAs(view), "and comes back as it was");
+            Assert.That(discardedWithTheTabAlive, Is.False, "the tab owns its page: out of the strip, it may go to another");
+            Assert.That(view.IsDiscarded, Is.True, "the tab gone, its page goes");
+        });
+    }
+
+    // Docking moves a pane by taking it out of its group and putting it in again, here or in another group: its page, not
+    // shown, must come through whole.
+    [Test]
+    public void ATabTakenOutAndPutBack_KeepsItsPage()
+    {
+        var (owner, tab, view, _) = TwoTabsAwayFromTheFirst();
+
+        owner.Items.Remove(tab);
+        var elsewhere = new TabControl();
+        elsewhere.Items.Add(tab);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(view.IsDiscarded, Is.False);
+            Assert.That(view.IsAwaitingReturn, Is.False, "no longer parked: the strip it waited for let it go");
+            Assert.That(ParkedVisuals.TryTake(owner, view, null, out _, out _, out _, out _), Is.False);
+        });
+    }
+
+    [Test]
+    public void ATabGivenOtherContentWhileAway_LetsItsOldPageGo_WithoutDiscardingIt()
+    {
+        var (owner, tab, view, _) = TwoTabsAwayFromTheFirst();
+
+        tab.Content = new Border();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(view.IsDiscarded, Is.False, "the element is whoever gave it's, to show again");
+            Assert.That(view.IsAwaitingReturn, Is.False);
+            Assert.That(ParkedVisuals.TryTake(owner, view, null, out _, out _, out _, out _), Is.False, "nothing kept for it");
+        });
+    }
+
+    // Two tabs authored as TabItems, the first one's kept page left for the second's.
+    private static (TabControl owner, TabItem tab, ParkedView view, ContentPresenter presenter) TwoTabsAwayFromTheFirst()
+    {
+        var view = new ParkedView();
+        var other = new Border();
+        var owner = new TabControl();
+        var tab = new TabItem { Content = view };
+        owner.Items.Add(tab);
+        owner.Items.Add(new TabItem { Content = other });
+        var presenter = new ContentPresenter { Content = view, TemplatedParent = owner };
+        presenter.Measure(new Size<double>(100, 100));
+
+        presenter.Content = other;
+        presenter.Measure(new Size<double>(100, 100), force: true);
+        return (owner, tab, view, presenter);
+    }
+
     // Outside an owner of items nothing lets a kept page go with its content: one page follows the content, as before,
     // rather than a page kept for good for every content ever shown.
     [Test]
