@@ -1985,6 +1985,24 @@ public partial class RenderCache
                 unit.Update(wt, _projectionMatrix, _renderScale);
             }
 
+            // A shape built for a batch that no batch takes now - its brush became one no record carries, a radial
+            // between two circles - has no body of its own yet; drawn without one, it would draw nothing.
+            if (unit is RectangleRenderUnit { GeometryRenderer: null } unbatchedRect)
+            {
+                unbatchedRect.EnsureMachinery();
+                unit.Update(wt, _projectionMatrix, _renderScale);
+            }
+            else if (unit is EllipseRenderUnit { GeometryRenderer: null } unbatchedEllipse)
+            {
+                unbatchedEllipse.EnsureMachinery();
+                unit.Update(wt, _projectionMatrix, _renderScale);
+            }
+            else if (unit is RegularPolygonRenderUnit { GeometryRenderer: null } unbatchedPolygon)
+            {
+                unbatchedPolygon.EnsureMachinery();
+                unit.Update(wt, _projectionMatrix, _renderScale);
+            }
+
             if (device != null)
             {
                 if (clipped)
