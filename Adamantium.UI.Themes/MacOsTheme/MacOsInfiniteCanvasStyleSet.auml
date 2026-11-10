@@ -43,6 +43,12 @@
                             <ContentPresenter x:Name="PART_Overlay"/>
                         </StackPanel>
 
+                        <!-- The plane's scroll bars - see Fluent's set. -->
+                        <ScrollBar x:Name="PART_HorizontalScrollBar" Orientation="Horizontal" VerticalAlignment="Bottom"
+                                   Visibility="Collapsed"/>
+                        <ScrollBar x:Name="PART_VerticalScrollBar" Orientation="Vertical" HorizontalAlignment="Right"
+                                   Visibility="Collapsed"/>
+
                         <!-- The panes, above everything, and the canvas's OWN among them - see Fluent's set. Roomier
                              inset, like everything here. -->
                         <CanvasChromeLayer x:Name="PART_Chrome" PaneInset="14" PaneGap="10">

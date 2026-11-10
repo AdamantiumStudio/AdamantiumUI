@@ -139,6 +139,7 @@ public partial class InfiniteCanvas
 
     private Vector2<double>? _lookWanted;
     private Thickness _lastInset = new(-1);
+    private Thickness _clampedInset = new(-1);
 
     private static bool Same(Thickness one, Thickness other) =>
         Math.Abs(one.Left - other.Left) < 0.01 && Math.Abs(one.Top - other.Top) < 0.01
@@ -337,10 +338,15 @@ public partial class InfiniteCanvas
         StopCoasting();
     }
 
+    // Stopped where it is - but never left past an edge: a spring-back cut short, or a flick's band, lands on it.
     private void StopCoasting()
     {
         _coast.Stop();
         _zoomCoast.Stop();
+        _glide.Stop();
+        _springBack.Stop();
+        _touchCoast = false;
+        Reclamp();
     }
 
     private static void OnInertiaSwitched(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)
@@ -354,7 +360,7 @@ public partial class InfiniteCanvas
 
     private void CatchCamera()
     {
-        var moving = _zoom.IsActive || _coast.IsActive || _zoomCoast.IsActive;
+        var moving = _zoom.IsActive || _coast.IsActive || _zoomCoast.IsActive || _glide.IsActive || _springBack.IsActive;
 
         StopZoom();
         if (moving) RememberLayout();
@@ -363,8 +369,20 @@ public partial class InfiniteCanvas
     private void Travel(Vector2<double> to)
     {
         var by = to - _travel;
-        _travel = to;
+
+        // A finger's flick meets the edge with the band: past it, each step carries a quarter, and the plane springs
+        // back once the flick dies.
+        if (_touchCoast)
+        {
+            if (Offset != ClampToPlane(Offset, Scale)) by *= PastEdgeStep;
+            MoveByHand(by);
+            return;
+        }
+
+        // What the edge let through is what the camera travelled: a step it stops is no step, and a coast ends there.
+        var before = Offset;
         SetCurrentValue(OffsetProperty, Offset + by);
+        _travel += Offset - before;
     }
 
     private void ApplyCoastedZoom(Double level) => ScaleHolding(_zoomCoastAt, Math.Exp(level));
@@ -868,6 +886,7 @@ public partial class InfiniteCanvas
         if (_overlayGrip != null) _overlayGrip.Click += OnGripClicked;
 
         PlaceOverlay();
+        TakeScrollBars();
     }
 
     public override void OnRemoveTemplate()
@@ -883,6 +902,7 @@ public partial class InfiniteCanvas
 
         if (_overlayGrip != null) _overlayGrip.Click -= OnGripClicked;
 
+        LeaveScrollBars();
         Hosts(host => host.Owner = null);
         Drawn(drawn => drawn.Owner = null);
 
@@ -1252,6 +1272,8 @@ public partial class InfiniteCanvas
     protected override Size<double> ArrangeOverride(Size<double> finalSize)
     {
         var size = base.ArrangeOverride(finalSize);
+        var resized = _viewport != finalSize;
+        _viewport = finalSize;
 
         // From finalSize, not RenderSize: this IS the pass that sets the latter.
         if (!_cameraPlaced && finalSize is { Width: > 0, Height: > 0 })
@@ -1278,6 +1300,15 @@ public partial class InfiniteCanvas
                 InvalidateArrange();
             }
         }
+
+        // A plane with edges is kept on screen against the viewport as it now is - and against the panels docked over it.
+        if (HasPlaneBounds && (resized || !Same(_chromeLayer?.Inset() ?? new Thickness(0), _clampedInset)))
+        {
+            _clampedInset = _chromeLayer?.Inset() ?? new Thickness(0);
+            Reclamp();
+        }
+
+        SyncScrollBars();
 
         // The controls on the plane are asked for again HERE: "which of them can be seen" is answered from the
         // viewport, and until this pass there is none to answer from.

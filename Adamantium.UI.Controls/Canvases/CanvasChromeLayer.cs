@@ -278,6 +278,8 @@ public class CanvasChromeLayer : Panel
             pane.Arrange(new Rect(x, y, size.Width, size.Height));
         }
 
+        // A pane docked, undocked or resized changes the room the canvas looks through - and nothing else tells it.
+        _owner?.OnChromeArranged();
         return finalSize;
     }
 

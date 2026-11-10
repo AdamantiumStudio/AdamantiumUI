@@ -491,6 +491,17 @@
                     <NumericProperty ShowButtons="{Ancestor CanvasInspector, Canvas.ShowsNumberButtons}" ButtonsPlacement="{Ancestor CanvasInspector, Canvas.NumberButtonsPlacement}" Header="X" Binding="{Binding Offset.X}" Step="1"/>
                     <NumericProperty ShowButtons="{Ancestor CanvasInspector, Canvas.ShowsNumberButtons}" ButtonsPlacement="{Ancestor CanvasInspector, Canvas.NumberButtonsPlacement}" Header="Y" Binding="{Binding Offset.Y}" Step="1"/>
                 </CompositeProperty>
+                <ChoiceProperty Header="{Localize InspectorStrings.Wheel}" Binding="{Binding WheelMode}"
+                                ItemsSource="{Ancestor CanvasInspector, Canvas.WheelModes}"/>
+                <!-- The plane's edges: a width or a height of 0 leaves it endless, as it is by default. -->
+                <CompositeProperty Header="{Localize InspectorStrings.Edges}" Description="{Localize InspectorStrings.EdgesHint}">
+                    <NumericProperty ShowButtons="{Ancestor CanvasInspector, Canvas.ShowsNumberButtons}" ButtonsPlacement="{Ancestor CanvasInspector, Canvas.NumberButtonsPlacement}" Header="X" Binding="{Binding PlaneBounds.X}" Step="10" DefaultValue="0"/>
+                    <NumericProperty ShowButtons="{Ancestor CanvasInspector, Canvas.ShowsNumberButtons}" ButtonsPlacement="{Ancestor CanvasInspector, Canvas.NumberButtonsPlacement}" Header="Y" Binding="{Binding PlaneBounds.Y}" Step="10" DefaultValue="0"/>
+                    <NumericProperty ShowButtons="{Ancestor CanvasInspector, Canvas.ShowsNumberButtons}" ButtonsPlacement="{Ancestor CanvasInspector, Canvas.NumberButtonsPlacement}" Header="{Localize InspectorStrings.Width}" Binding="{Binding PlaneBounds.Width}"
+                                     Minimum="0" Step="100" DefaultValue="0"/>
+                    <NumericProperty ShowButtons="{Ancestor CanvasInspector, Canvas.ShowsNumberButtons}" ButtonsPlacement="{Ancestor CanvasInspector, Canvas.NumberButtonsPlacement}" Header="{Localize InspectorStrings.Height}" Binding="{Binding PlaneBounds.Height}"
+                                     Minimum="0" Step="100" DefaultValue="0"/>
+                </CompositeProperty>
                 <!-- Where Home goes - what the bookmark keeps, in numbers, so it can be typed and put back. -->
                 <CompositeProperty Header="{Localize InspectorStrings.Home}" IsExpanded="True">
                     <NumericProperty ShowButtons="{Ancestor CanvasInspector, Canvas.ShowsNumberButtons}" ButtonsPlacement="{Ancestor CanvasInspector, Canvas.NumberButtonsPlacement}" Header="X" Binding="{Binding HomeAt.X}" Step="1" DefaultValue="0"/>

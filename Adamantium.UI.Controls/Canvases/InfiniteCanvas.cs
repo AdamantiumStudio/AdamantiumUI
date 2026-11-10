@@ -102,7 +102,8 @@ public partial class InfiniteCanvas : Control, ISceneFollower
     public static readonly AdamantiumProperty OffsetProperty = AdamantiumProperty.Register(nameof(Offset),
         typeof(Vector2<double>), typeof(InfiniteCanvas),
         new PropertyMetadata(Vector2<double>.Zero,
-            PropertyMetadataOptions.AffectsRender | PropertyMetadataOptions.BindsTwoWayByDefault, OnCameraChanged));
+            PropertyMetadataOptions.AffectsRender | PropertyMetadataOptions.BindsTwoWayByDefault, OnCameraChanged,
+            CoerceOffset));
 
     /// <summary>How far the camera may zoom out and in: a practical default, not a precision limit, since drawing receives
     /// screen coordinates.</summary>
@@ -297,9 +298,6 @@ public partial class InfiniteCanvas : Control, ISceneFollower
         RememberLayout();
     }
 
-    public static readonly AdamantiumProperty ZoomWithWheelProperty = AdamantiumProperty.Register(nameof(ZoomWithWheel),
-        typeof(Boolean), typeof(InfiniteCanvas), new PropertyMetadata(true));
-
     /// <summary>Whether the plane coasts on after a drag or a pinch that lets go while still moving, slowing to a stop -
     /// and a pinched zoom with it.</summary>
     public static readonly AdamantiumProperty IsInertiaEnabledProperty = AdamantiumProperty.Register(
@@ -440,6 +438,15 @@ public partial class InfiniteCanvas : Control, ISceneFollower
         typeof(IEnumerable), typeof(InfiniteCanvas), new PropertyMetadata(Grids));
 
     public IEnumerable GridStyles => GetValue<IEnumerable>(GridStylesProperty);
+
+    private static readonly IReadOnlyList<CanvasWheelMode> Wheels =
+        [CanvasWheelMode.Zoom, CanvasWheelMode.Scroll, CanvasWheelMode.None];
+
+    /// <summary>What the wheel can be made to do, for the line that chooses it.</summary>
+    public static readonly AdamantiumProperty WheelModesProperty = AdamantiumProperty.Register(nameof(WheelModes),
+        typeof(IEnumerable), typeof(InfiniteCanvas), new PropertyMetadata(Wheels));
+
+    public IEnumerable WheelModes => GetValue<IEnumerable>(WheelModesProperty);
 
     /// <summary>Whether the plane is a <see cref="DrawingBoard"/>, as a switch a binding can ask. A line offered only on
     /// a drawing - snapping, which a graph does none of - says so itself: <c>IsVisible="{Binding IsDrawing}"</c>, with no
@@ -675,7 +682,9 @@ public partial class InfiniteCanvas : Control, ISceneFollower
     public InfiniteCanvas()
     {
         _zoom = new EasedValue(() => Math.Log(Math.Clamp(Scale, MinScale, MaxScale)), ApplyZoomLevel, RememberLayout);
-        _coast = new PanInertia(() => _travel, Travel, RememberLayout);
+        _coast = new PanInertia(() => _travel, Travel, CoastSettled);
+        _glide = new PanInertia(() => Offset, to => SetCurrentValue(OffsetProperty, to), RememberLayout);
+        _springBack = new PanInertia(Overshoot, Overshoot, RememberLayout);
         _zoomCoast = new FlingValue(() => Math.Log(Math.Clamp(Scale, MinScale, MaxScale)), ApplyCoastedZoom,
             RememberLayout) { Friction = ZoomCoastFriction };
         Focusable = true;
@@ -737,12 +746,6 @@ public partial class InfiniteCanvas : Control, ISceneFollower
     {
         get => GetValue<Double>(MaxScaleProperty);
         set => SetValue(MaxScaleProperty, value);
-    }
-
-    public Boolean ZoomWithWheel
-    {
-        get => GetValue<Boolean>(ZoomWithWheelProperty);
-        set => SetValue(ZoomWithWheelProperty, value);
     }
 
     public Boolean IsInertiaEnabled
@@ -1635,6 +1638,11 @@ public partial class InfiniteCanvas : Control, ISceneFollower
         {
             canvas.SyncThicknessSteps();
             canvas.KeepTheMiddle(e.OldValue as Double? ?? 0);
+
+            // A plane with edges is kept in view at the new size too: zoomed out it centers, zoomed in at its edge it
+            // is pressed to the edge rather than leaving empty room. Whoever holds a point writes the offset next and
+            // is kept on the plane then; this is for a scale written alone.
+            if (!canvas._holdingPoint && !canvas._zoom.IsActive) canvas.Reclamp();
         }
 
         // What comes into view and what leaves it - the only part of a camera move that changes what is on the layers.
@@ -1650,6 +1658,7 @@ public partial class InfiniteCanvas : Control, ISceneFollower
         // sum - so moving the camera has to re-place it just as it re-places the controls. Without this the bar kept
         // the pixels it had when the selection was made and slid off the frame at the first turn of the wheel.
         canvas._chromeLayer?.InvalidateArrange();
+        canvas.SyncScrollBars();
 
         // The ground is one quad whose shader is handed the camera, and the glass is what the hand is doing - both are
         // drawn again, and both are small.

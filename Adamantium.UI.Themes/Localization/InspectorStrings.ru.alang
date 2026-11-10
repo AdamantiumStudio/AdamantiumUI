@@ -80,6 +80,9 @@
     <Phrase Key="Least" Text="Наименьший"/>
     <Phrase Key="Most" Text="Наибольший"/>
     <Phrase Key="Origin" Text="Начало координат"/>
+    <Phrase Key="Wheel" Text="Колесо"/>
+    <Phrase Key="Edges" Text="Края"/>
+    <Phrase Key="EdgesHint" Text="Где кончается плоскость; камера не уходит с неё. Без ширины или высоты — бесконечная."/>
     <Phrase Key="Home" Text="Домой"/>
     <Phrase Key="Remember" Text="Запоминать"/>
     <Phrase Key="Panels" Text="Панели"/>
