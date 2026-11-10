@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Adamantium.Graphics;
 using Adamantium.Graphics.Core;
+using Adamantium.Graphics.Core.EffectsFramework;
 using Adamantium.Mathematics;
 using Adamantium.UI.Core.Media;
 using Adamantium.UI.FX;
@@ -18,6 +19,7 @@ internal sealed class OffscreenLayers : IDisposable
     private readonly Dictionary<object, CachedLayer> _cached = new();
     private readonly List<object> _idle = [];
     private LayerCompositeEffect _composite;
+    private GroupCompositeEffect _group;
     private LayerSoftEdgeEffect _soft;
     private long _frame;
 
@@ -266,7 +268,19 @@ internal sealed class OffscreenLayers : IDisposable
     /// texture already holds a drawing with this <paramref name="print"/>: draw nothing until <see cref="End"/>, which
     /// lays it down. Otherwise drawing lands in a fresh texture, kept for reuse when <paramref name="reusable"/>.</summary>
     public DrawSpace Begin(IGraphicsDevice gd, object owner, Rect2D region, ulong print, bool reusable,
-        bool allowReuse, Matrix4x4F projection, Rect2D bounds, bool whole, out bool reused)
+        bool allowReuse, Matrix4x4F projection, Rect2D bounds, bool whole, out bool reused) =>
+        Open(gd, owner, region, print, reusable, allowReuse, projection, bounds, whole, Colors.Transparent, out reused);
+
+    /// <summary>Opens a target of <paramref name="owner"/>'s own over <paramref name="region"/> (window device pixels),
+    /// cleared to <paramref name="clear"/>: what a group of draws, or one of its masks, is drawn into, in the space it was
+    /// opened in - its <paramref name="projection"/> and <paramref name="bounds"/>. Drawn afresh every frame;
+    /// <see cref="EndGroupTarget"/> closes it and keeps what it holds for <see cref="LayDownGroup"/>.</summary>
+    public DrawSpace BeginGroupTarget(IGraphicsDevice gd, object owner, Rect2D region, Color clear, Matrix4x4F projection,
+        Rect2D bounds) =>
+        Open(gd, owner, region, 0, false, false, projection, bounds, false, clear, out _);
+
+    private DrawSpace Open(IGraphicsDevice gd, object owner, Rect2D region, ulong print, bool reusable,
+        bool allowReuse, Matrix4x4F projection, Rect2D bounds, bool whole, Color clear, out bool reused)
     {
         reused = false;
         if (gd?.CurrentRenderTarget == null || region.Extent.Width == 0 || region.Extent.Height == 0)
@@ -318,12 +332,124 @@ internal sealed class OffscreenLayers : IDisposable
 
         gd.SetRenderTargets(color);
         gd.SetDepthBuffer(depth);
-        gd.ClearColor = Colors.Transparent;
+        gd.ClearColor = clear;
         gd.MSAALevel = MSAALevel.None;
         gd.BeginRendering(commandBuffer);
         gd.TargetOrigin = new NativePoint(region.Offset.X, region.Offset.Y);
         Redrawn++;
         return EnterSpace(gd, region, projection, bounds, whole);
+    }
+
+    /// <summary>Closes the target <see cref="BeginGroupTarget"/> opened and goes back to the one, and the space, it was
+    /// opened over; what it holds stays for <see cref="LayDownGroup"/> this frame.</summary>
+    public GroupTarget EndGroupTarget(IGraphicsDevice gd)
+    {
+        var open = _open.Pop();
+        if (gd == null || open.Color == null)
+        {
+            LeaveSpace(gd);
+            return default;
+        }
+
+        gd.SuspendRendering();
+        gd.InsertImageMemoryBarrier(gd.CurrentCommandBuffer, open.Color,
+            AccessFlagBits2.ColorAttachmentWriteBit, AccessFlagBits2.ShaderReadBit,
+            ImageLayout.ColorAttachmentOptimal, ImageLayout.ShaderReadOnlyOptimal,
+            PipelineStageFlagBits2.ColorAttachmentOutputBit, PipelineStageFlagBits2.FragmentShaderBit);
+        gd.SetRenderTargets(open.Target);
+        gd.SetDepthBuffer(open.Depth);
+        gd.ClearColor = open.Clear;
+        gd.MSAALevel = open.Samples;
+        gd.TargetOrigin = open.Origin;
+        gd.ResumeRendering();
+
+        var entry = open.Entry;
+        entry.Latest = open.Slot;
+        entry.Valid = false;
+        entry.Width = open.Region.Extent.Width;
+        entry.Height = open.Region.Extent.Height;
+        LeaveSpace(gd);
+        return new GroupTarget(open.Color, open.Region, open.TextureWidth, open.TextureHeight);
+    }
+
+    /// <summary>Lays a group down on the current target, cut by <paramref name="scissor"/> (window device pixels): its
+    /// <paramref name="content"/> through up to three <paramref name="masks"/> (by alpha, or by luminosity), faded to
+    /// <paramref name="alpha"/>, mixed by <paramref name="blendMode"/> with <paramref name="backdrop"/> - a copy of what
+    /// lies under it, which every mode but Normal reads.</summary>
+    public void LayDownGroup(IGraphicsDevice gd, in GroupTarget content, ReadOnlySpan<(GroupTarget Target, bool Luminosity)> masks,
+        GroupBackdrop backdrop, BlendMode blendMode, float alpha, Rect2D scissor)
+    {
+        if (gd == null || !content.Drawn || gd.CurrentViewports.Length == 0 || scissor.Extent.Width == 0
+            || scissor.Extent.Height == 0)
+        {
+            return;
+        }
+
+        _group ??= new GroupCompositeEffect(gd);
+        var viewport = gd.CurrentViewports[0];
+        var restore = gd.CurrentScissors.Length > 0 ? gd.CurrentScissors[0] : scissor;
+        var region = content.Region;
+        // Without a copy of what lies under it a mode has nothing to mix with: the group is laid over it instead.
+        var normal = blendMode == BlendMode.Normal || backdrop?.Image == null;
+
+        gd.SetScissors(scissor);
+        gd.ColorComponentFlags = ColorComponentFlagBits.RBit | ColorComponentFlagBits.GBit |
+                                 ColorComponentFlagBits.BBit | ColorComponentFlagBits.ABit;
+        gd.ColorBlendEnabled = normal;
+        gd.ColorBlendEquation = ColorBlendEquations.Premultiplied;
+        gd.DepthTestEnabled = false;
+        gd.DepthWriteEnable = false;
+        gd.PrimitiveTopology = PrimitiveTopology.TriangleStrip;
+        gd.VertexType = null;
+
+        _group.LayerBox.SetValue(new Vector4F(region.Offset.X - viewport.X, region.Offset.Y - viewport.Y,
+            region.Extent.Width, region.Extent.Height));
+        _group.SourceRegion.SetValue(new Vector4F(region.Offset.X, region.Offset.Y, region.Extent.Width,
+            region.Extent.Height));
+        var texels = content.Texels;
+        _group.LayerTexels.SetValue(new Vector4F(texels.Width, texels.Height, 0, 0));
+        SetMask(_group.Mask0Texture, _group.Mask0, masks, 0, content);
+        SetMask(_group.Mask1Texture, _group.Mask1, masks, 1, content);
+        SetMask(_group.Mask2Texture, _group.Mask2, masks, 2, content);
+        var under = !normal && backdrop?.Image != null;
+        if (under)
+        {
+            _group.BackdropTexture.SetResource(backdrop.Image);
+        }
+        else
+        {
+            _group.BackdropTexture.SetResource(content.Texture);
+        }
+
+        _group.Backdrop.SetValue(under
+            ? new Vector4F(backdrop.Texels.Width, backdrop.Texels.Height, 0, 0)
+            : new Vector4F(texels.Width, texels.Height, 0, 0));
+        _group.GroupAlpha.SetValue(alpha);
+        _group.BlendMode.SetValue(normal ? 0f : (float)blendMode);
+        _group.ViewportSize.SetValue(new Vector2F(viewport.Width, viewport.Height));
+        _group.TargetOrigin.SetValue(new Vector2F(gd.TargetOrigin.X, gd.TargetOrigin.Y));
+        _group.SourceTexture.SetResource(content.Texture);
+        _group.SourceSampler.SetResource(SamplerStates.LinearClampToEdge);
+        _group.GroupCompositeDrawPass.Apply();
+        gd.Draw(4, 1);
+        gd.ColorBlendEnabled = true;
+        gd.SetScissors(restore);
+    }
+
+    private static void SetMask(EffectParameter texture, EffectParameter info,
+        ReadOnlySpan<(GroupTarget Target, bool Luminosity)> masks, int index, in GroupTarget content)
+    {
+        if (index >= masks.Length || !masks[index].Target.Drawn)
+        {
+            texture.SetResource(content.Texture);
+            info.SetValue(Vector4F.Zero);
+            return;
+        }
+
+        var (target, luminosity) = masks[index];
+        var texels = target.Texels;
+        texture.SetResource(target.Texture);
+        info.SetValue(new Vector4F(texels.Width, texels.Height, 1f, luminosity ? 1f : 0f));
     }
 
     /// <summary>Closes the innermost layer, goes back to the target it was opened over and lays the layer down there with
@@ -688,6 +814,8 @@ internal sealed class OffscreenLayers : IDisposable
         _cached.Clear();
         _composite?.Dispose();
         _composite = null;
+        _group?.Dispose();
+        _group = null;
         _soft?.Dispose();
         _soft = null;
     }

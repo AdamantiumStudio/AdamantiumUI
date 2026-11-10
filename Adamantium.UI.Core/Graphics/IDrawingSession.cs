@@ -115,5 +115,18 @@ public interface IDrawingSession
         IReadOnlyList<GlyphEffect> effects,
         RectangleF window);
 
+    /// <summary>Draws glyphs the caller placed (a PDF page's text) where <paramref name="transform"/> puts the run: filled
+    /// with <paramref name="fill"/> through the glyph atlas, then outlined with <paramref name="stroke"/> as paths. Either
+    /// may be null.</summary>
+    IDrawingSession DrawGlyphs(GlyphRun run, Brush fill, Pen stroke, Matrix4x4F transform);
+
+    /// <summary>Starts a group: everything drawn until the matching <see cref="PopGroup"/> is drawn apart and laid down as
+    /// <paramref name="options"/> say - cut, masked, blended, faded. Groups nest.</summary>
+    IDrawingSession PushGroup(DrawingGroupOptions options);
+
+    /// <summary>Ends the group the last <see cref="PushGroup"/> started; one left open ends with the element's
+    /// drawing.</summary>
+    IDrawingSession PopGroup();
+
     IDrawingSession PushImage(ImageSource image);
 }

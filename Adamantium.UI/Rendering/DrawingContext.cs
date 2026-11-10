@@ -44,7 +44,14 @@ public class DrawingContext : IDrawingContext, IDrawingContextInternal, IDrawing
    public void Clear()
    {
       drawCommands.Clear();
+      _openGroups = 0;
    }
+
+   // Groups the element being recorded has pushed and not yet popped.
+   private int _openGroups;
+
+   // Inside a group's masks: what is drawn there is drawn at full strength, with no bands (RenderData.DrawsMask).
+   private int _drawingMask;
 
    // Per-frame WorldTransform memo: the property recomposes the O(depth) chain on every call, and recording asks once
    // per draw command. Composed exactly as the property does.
@@ -64,6 +71,12 @@ public class DrawingContext : IDrawingContext, IDrawingContextInternal, IDrawing
 
    public IReadOnlyList<IDrawCommand> GetDrawCommands()
    {
+      // Taken once the element has drawn: a group it left open ends with its drawing.
+      while (_openGroups > 0)
+      {
+         ((IDrawingSession)this).PopGroup();
+      }
+
       return drawCommands;
    }
 
@@ -365,8 +378,117 @@ public class DrawingContext : IDrawingContext, IDrawingContextInternal, IDrawing
       return this;
    }
 
+   IDrawingSession IDrawingSession.DrawGlyphs(GlyphRun run, Brush fill, Pen stroke, Matrix4x4F transform)
+   {
+      ArgumentNullException.ThrowIfNull(run);
+      if (run.Glyphs.Count == 0) return this;
+
+      if (fill.IsVisible())
+      {
+         var layout = run.Layout;
+         CreateCommand(new TextPayload(PlacedGlyphs, layout.CalculatedLayoutSize, layout, fill, null, null, transform)
+         {
+            Ink = run.Bounds
+         });
+      }
+
+      if (stroke != null)
+      {
+         ((IDrawingSession)this).DrawGeometry(null, run.Outline, stroke, transform);
+      }
+
+      return this;
+   }
+
+   // Placed glyphs stand where their run says: no area to align them in.
+   private static readonly TextRenderingParameters PlacedGlyphs = new();
+
+   // A group is recorded as marks around ordinary draws (GroupMarkKind): its masks are drawn between their marks - the
+   // path and the glyphs as coverage, the soft mask as its picture - and its content after them.
+   IDrawingSession IDrawingSession.PushGroup(DrawingGroupOptions options)
+   {
+      ArgumentNullException.ThrowIfNull(options);
+      CreateCommand(GroupMarkPayload.Begin(options, RectClipOf(options)));
+      var session = (IDrawingSession)this;
+      _drawingMask++;
+      try
+      {
+         if (options.Clip != null)
+         {
+            CreateCommand(GroupMarkPayload.MaskBegin(MaskKind.Alpha, default));
+            session.DrawGeometry(Brushes.Black, options.Clip, null, options.ClipTransform);
+            CreateCommand(GroupMarkPayload.MaskEnd);
+         }
+
+         if (options.TextClip is { Count: > 0 } glyphs)
+         {
+            CreateCommand(GroupMarkPayload.MaskBegin(MaskKind.Alpha, default));
+            foreach (var clip in glyphs)
+            {
+               session.DrawGlyphs(clip.Run, Brushes.Black, null, clip.Transform);
+            }
+
+            CreateCommand(GroupMarkPayload.MaskEnd);
+         }
+
+         if (options.Mask != null)
+         {
+            CreateCommand(GroupMarkPayload.MaskBegin(options.MaskKind, options.MaskBackdrop));
+            options.Mask.Render(this, options.MaskTransform, null);
+            CreateCommand(GroupMarkPayload.MaskEnd);
+         }
+      }
+      finally
+      {
+         _drawingMask--;
+      }
+
+      CreateCommand(GroupMarkPayload.ContentBegin);
+      _openGroups++;
+      return this;
+   }
+
+   IDrawingSession IDrawingSession.PopGroup()
+   {
+      if (_openGroups == 0)
+      {
+         throw new InvalidOperationException("No group to end: PopGroup without a PushGroup.");
+      }
+
+      _openGroups--;
+      CreateCommand(GroupMarkPayload.End);
+      return this;
+   }
+
+   // The clip as a rectangle in the element's units, when cutting to it is all the group does and it lies along the axes
+   // of the element: then the walk can cut by a scissor instead of a mask.
+   private static Rect? RectClipOf(DrawingGroupOptions options)
+   {
+      if (options.Clip is not RectangleGeometry { Transform: null } rectangle || rectangle.CornerRadius != CornerRadius.Empty
+          || options.TextClip is { Count: > 0 } || options.Mask != null || options.BlendMode != BlendMode.Normal
+          || options.Opacity < 1)
+      {
+         return null;
+      }
+
+      var m = options.ClipTransform;
+      if (MathF.Abs(m.M12) > 1e-6f || MathF.Abs(m.M21) > 1e-6f || m.M14 != 0f || m.M24 != 0f || m.M34 != 0f
+          || m.M44 != 1f)
+      {
+         return null;
+      }
+
+      return rectangle.Rect.TransformToAABB(m);
+   }
+
    private RenderData GetRenderDataFromComponent()
    {
+      if (_drawingMask > 0)
+      {
+         return new RenderData(1f, World(_currentComponent), _currentComponent.ClipToBounds,
+            _currentComponent.ClipRectangle) { DrawsMask = true };
+      }
+
       var renderData = new RenderData(GetEffectiveOpacity(),
          World(_currentComponent),
          _currentComponent.ClipToBounds,

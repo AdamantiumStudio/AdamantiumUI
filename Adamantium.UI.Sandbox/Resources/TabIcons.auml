@@ -204,6 +204,17 @@
         </DrawingGroup>
     </DrawingImage>
 
+    <!-- A page with a corner turned, a star cut out of it. -->
+    <DrawingImage x:Key="PdfDrawingTabIcon">
+        <DrawingGroup>
+            <GeometryDrawing><GeometryDrawing.Geometry><RectangleGeometry Rect="0,0,16,16"/></GeometryDrawing.Geometry></GeometryDrawing>
+            <GeometryDrawing Geometry="M3.5,1.5 L10,1.5 L13.5,5 L13.5,14.5 L3.5,14.5 Z M10,1.5 L10,5 L13.5,5"
+                             Stroke="CurrentColor" StrokeThickness="1"/>
+            <GeometryDrawing Geometry="M8.5,6.5 L9.4,8.6 L11.6,8.7 L9.9,10.1 L10.5,12.3 L8.5,11 L6.5,12.3 L7.1,10.1 L5.4,8.7 L7.6,8.6 Z"
+                             Brush="CurrentColor"/>
+        </DrawingGroup>
+    </DrawingImage>
+
     <!-- A solid circle under a clear one. -->
     <DrawingImage x:Key="OpacityTabIcon">
         <DrawingGroup>

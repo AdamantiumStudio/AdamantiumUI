@@ -1,0 +1,66 @@
+<View xmlns="http://adamantium/ui"
+      xmlns:x="http://adamantium/ui/xaml/extensions"
+      xmlns:ctl="clr-namespace:Adamantium.UI.Sandbox.Controls">
+    <!-- Groups of draws inside ONE element, as a PDF page puts them down: each sample is a single element whose drawing
+         pushes a group - cut, masked, nested, blended - over a picture of its own. -->
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+        <StackPanel Orientation="Vertical" Margin="24">
+            <TextBlock Text="{Localize PdfDrawingStrings.Title}" FontSize="18" MarginBottom="6"/>
+            <TextBlock Text="{Localize PdfDrawingStrings.Hint}" TextWrapping="WrapByWords" MarginBottom="12"
+                       Foreground="{ResourceReference TextFillColorSecondary}"/>
+
+            <TextBlock x:Name="ClipsHeading" Text="{Localize PdfDrawingStrings.Clips}" FontSize="16" MarginBottom="8"/>
+            <WrapPanel Orientation="Horizontal" AutomationProperties.LabeledBy="{Binding ElementName=ClipsHeading}">
+                <StackPanel Orientation="Vertical" Margin="0,0,16,16">
+                    <TextBlock Text="{Localize PdfDrawingStrings.StarClip}" MarginBottom="4"/>
+                    <ctl:DrawingGroupSample AutomationProperties.AutomationId="StarClip" Sample="StarClip" Width="200" Height="140"/>
+                </StackPanel>
+                <StackPanel Orientation="Vertical" Margin="0,0,16,16">
+                    <TextBlock Text="{Localize PdfDrawingStrings.EvenOddClip}" MarginBottom="4"/>
+                    <ctl:DrawingGroupSample AutomationProperties.AutomationId="EvenOddClip" Sample="EvenOddClip" Width="200" Height="140"/>
+                </StackPanel>
+                <StackPanel Orientation="Vertical" Margin="0,0,16,16">
+                    <TextBlock Text="{Localize PdfDrawingStrings.RectangleClip}" MarginBottom="4"/>
+                    <ctl:DrawingGroupSample AutomationProperties.AutomationId="RectangleClip" Sample="RectangleClip" Width="200" Height="140"/>
+                </StackPanel>
+                <StackPanel Orientation="Vertical" Margin="0,0,16,16">
+                    <TextBlock Text="{Localize PdfDrawingStrings.TextClip}" MarginBottom="4"/>
+                    <ctl:DrawingGroupSample AutomationProperties.AutomationId="TextClip" Sample="TextClip" Width="200" Height="140"/>
+                </StackPanel>
+            </WrapPanel>
+
+            <TextBlock x:Name="MasksHeading" Text="{Localize PdfDrawingStrings.Masks}" FontSize="16" Margin="0,12,0,8"/>
+            <WrapPanel Orientation="Horizontal" AutomationProperties.LabeledBy="{Binding ElementName=MasksHeading}">
+                <StackPanel Orientation="Vertical" Margin="0,0,16,16">
+                    <TextBlock Text="{Localize PdfDrawingStrings.LuminosityMask}" MarginBottom="4"/>
+                    <ctl:DrawingGroupSample AutomationProperties.AutomationId="LuminosityMask" Sample="LuminosityMask" Width="200" Height="140"/>
+                </StackPanel>
+                <StackPanel Orientation="Vertical" Margin="0,0,16,16">
+                    <TextBlock Text="{Localize PdfDrawingStrings.AlphaMask}" MarginBottom="4"/>
+                    <ctl:DrawingGroupSample AutomationProperties.AutomationId="AlphaMask" Sample="AlphaMask" Width="200" Height="140"/>
+                </StackPanel>
+                <StackPanel Orientation="Vertical" Margin="0,0,16,16">
+                    <TextBlock Text="{Localize PdfDrawingStrings.Nested}" MarginBottom="4"/>
+                    <ctl:DrawingGroupSample AutomationProperties.AutomationId="Nested" Sample="Nested" Width="200" Height="140"/>
+                </StackPanel>
+            </WrapPanel>
+
+            <TextBlock x:Name="BlendHeading" Text="{Localize PdfDrawingStrings.BlendModes}" FontSize="16" Margin="0,12,0,8"/>
+            <ItemsControl ItemsSource="{Binding BlendModes}" AutomationProperties.LabeledBy="{Binding ElementName=BlendHeading}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <WrapPanel Orientation="Horizontal"/>
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel Orientation="Vertical" Margin="0,0,16,16">
+                            <TextBlock Text="{Binding}" MarginBottom="4"/>
+                            <ctl:DrawingGroupSample Sample="Blend" BlendMode="{Binding}" Width="160" Height="112"/>
+                        </StackPanel>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
+    </ScrollViewer>
+</View>

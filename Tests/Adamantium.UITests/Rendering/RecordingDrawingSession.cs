@@ -126,5 +126,30 @@ internal sealed class RecordingDrawingSession : IDrawingSession
         return this;
     }
 
+    public List<(GlyphRun Run, Brush Fill, Pen Stroke, Matrix4x4F Transform)> GlyphRuns { get; } = [];
+
+    public IDrawingSession DrawGlyphs(GlyphRun run, Brush fill, Pen stroke, Matrix4x4F transform)
+    {
+        GlyphRuns.Add((run, fill, stroke, transform));
+        return this;
+    }
+
+    public List<DrawingGroupOptions> Groups { get; } = [];
+
+    public int GroupsOpen { get; private set; }
+
+    public IDrawingSession PushGroup(DrawingGroupOptions options)
+    {
+        Groups.Add(options);
+        GroupsOpen++;
+        return this;
+    }
+
+    public IDrawingSession PopGroup()
+    {
+        GroupsOpen--;
+        return this;
+    }
+
     public IDrawingSession PushImage(ImageSource image) => this;
 }

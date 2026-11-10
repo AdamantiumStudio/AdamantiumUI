@@ -21,6 +21,10 @@ public class TextPayload(
     /// <summary>The part of the layout drawn, in its units: the glyphs touching it; null for all of them.</summary>
     public RectangleF? Window { get; } = window;
 
+    /// <summary>Where the glyphs' ink lies in the layout's units, when the caller knows it - glyphs it placed reach above
+    /// the origin and past <see cref="DesiredSize"/>; null to take the size with room for overhangs.</summary>
+    public Core.Rect? Ink { get; init; }
+
     /// <summary>Where this run sits ON TOP of the element's world transform. The text quad is anchored at its own CENTER
     /// in mesh-local space and placed by the unit's transform - the text AREA only aligns the run inside the layout - so
     /// a drawing putting several runs at their own spots inside one element has nowhere else to say where they go.</summary>
