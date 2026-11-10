@@ -263,6 +263,7 @@ public partial class WebView : Control, IWebViewBrowserView, ITextEntry
             {
                 browser = engine.CreateBrowser(AllowSharedTexture, this);
                 browser.Background = PageBackground;
+                ResourceInterceptionChanged();
                 BeginBrowser(browser, width, height, Scale(), window?.Handle ?? IntPtr.Zero);
             }
 

@@ -37,7 +37,9 @@ internal sealed unsafe class WebSiteSchemeHandlerFactory : CefObject
                 type = TypeOf(path);
             }
 
-            handler = new WebSiteResourceHandler(content, type).Shared;
+            handler = content == null
+                ? new WebViewResourceAnswer(null, "text/plain", 404).Shared
+                : new WebViewResourceAnswer(content, type, 200).Shared;
         }
         catch (Exception exception)
         {

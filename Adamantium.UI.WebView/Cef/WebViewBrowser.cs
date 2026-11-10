@@ -27,6 +27,8 @@ internal sealed unsafe class WebViewBrowser : IDisposable
     private readonly WebViewDisplayHandler displayHandler;
     private readonly WebViewLoadHandler loadHandler;
     private readonly WebViewRequestHandler requestHandler;
+    private readonly WebViewResourceRequestHandler resourceRequests;
+    private volatile bool interceptsResources;
     private readonly WebViewContextMenuHandler contextMenuHandler;
     private readonly WebViewJsDialogHandler jsDialogHandler;
     private readonly WebViewDialogHandler dialogHandler;
@@ -93,6 +95,7 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         lifeSpanHandler = new WebViewLifeSpanHandler(this);
         loadHandler = new WebViewLoadHandler(this);
         requestHandler = new WebViewRequestHandler(this);
+        resourceRequests = new WebViewResourceRequestHandler(this);
         // The view of the moment: a page another opened is adopted by a view of its own.
         devTools = new WebViewDevTools(json => this.view.MessageReceived(this, json))
         {
@@ -1678,11 +1681,30 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         displayHandler.Release();
         loadHandler.Release();
         requestHandler.Release();
+        resourceRequests.Release();
         contextMenuHandler.Release();
         jsDialogHandler.Release();
         dialogHandler.Release();
         permissionHandler.Release();
     }
+
+    /// <summary>Whether the view listens to the page's requests: each is asked of it then, else none is - read on
+    /// CEF's IO thread.</summary>
+    public bool InterceptsResources
+    {
+        get => interceptsResources;
+        set => interceptsResources = value;
+    }
+
+    /// <summary>The handler that asks the view of the page's requests, with a reference taken for CEF; null while the
+    /// view does not listen.</summary>
+    internal CefResourceRequestHandler* ResourceRequestsShared => interceptsResources ? resourceRequests.Shared : null;
+
+    /// <summary>Whether the browser is closing, or closed.</summary>
+    internal bool IsClosing => closing;
+
+    /// <summary>The page is about to make a request: the view decides, on the UI loop.</summary>
+    internal void OnResourceRequested(WebResourceRequestedEventArgs asked) => view.ResourceRequested(this, asked);
 
     private void Close()
     {

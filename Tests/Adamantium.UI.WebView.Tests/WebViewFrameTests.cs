@@ -987,6 +987,104 @@ public class WebViewFrameTests
         Assert.That(answer, Is.EqualTo("5"));
     }
 
+    // A request the page makes is asked of the bridge listening: answered by it, refused, sent elsewhere - the page's
+    // document too - each told for what it is.
+    [Test]
+    public void APagesRequests_AreAnsweredRefusedOrSentElsewhere_ByTheBridgeListening()
+    {
+        using var site = new LocalSite("<title>site</title><body></body>");
+        var kinds = new List<(string Address, WebResourceKind Kind)>();
+        string answered = null, refused = null, redirected = null, madeTitle = null;
+        loop.Run(() =>
+        {
+            var bridge = new WebViewBridge();
+            bridge.ResourceRequested += (_, asked) =>
+            {
+                kinds.Add((asked.Address, asked.Kind));
+                if (asked.Address.EndsWith("/answered.json", StringComparison.Ordinal))
+                {
+                    asked.Respond(new MemoryStream("{\"n\":7}"u8.ToArray()), "application/json");
+                }
+                else if (asked.Address.EndsWith("/refused.txt", StringComparison.Ordinal))
+                {
+                    asked.Refuse();
+                }
+                else if (asked.Address.EndsWith("/old", StringComparison.Ordinal))
+                {
+                    asked.Redirect(site.Origin + "/new");
+                }
+                else if (asked.Address.EndsWith("/made", StringComparison.Ordinal))
+                {
+                    asked.Respond(new MemoryStream("<title>made</title>"u8.ToArray()), "text/html");
+                }
+            };
+            var view = new RecordingBrowserView { Bridge = bridge };
+            var browser = engine.CreateBrowser(false, view);
+            browser.InterceptsResources = true;
+            try
+            {
+                browser.Create(site.Origin + "/", Width, Height, 1, IntPtr.Zero);
+                Pump(() => view.Title == "site" && !view.IsLoading, TimeSpan.FromSeconds(30));
+                answered = Await(browser.EvaluateAsync("fetch('/answered.json').then(r => r.json()).then(d => d.n)"));
+                refused = Await(browser.EvaluateAsync("fetch('/refused.txt').then(() => 'came', () => 'refused')"));
+                redirected = Await(browser.EvaluateAsync("fetch('/old').then(r => r.url)"));
+                browser.Navigate(site.Origin + "/made");
+                Pump(() => view.Title == "made", TimeSpan.FromSeconds(10));
+                madeTitle = view.Title;
+            }
+            finally
+            {
+                browser.Dispose();
+                Pump(() => false, TimeSpan.FromMilliseconds(300));
+            }
+        });
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(answered, Is.EqualTo("7"), "answered by the bridge");
+            Assert.That(refused, Is.EqualTo("\"refused\""));
+            Assert.That(redirected, Is.EqualTo("\"" + site.Origin + "/new\""), "sent elsewhere");
+            Assert.That(madeTitle, Is.EqualTo("made"), "the page's document answered by the bridge");
+            Assert.That(kinds, Does.Contain((site.Origin + "/", WebResourceKind.Document)));
+            Assert.That(kinds, Does.Contain((site.Origin + "/answered.json", WebResourceKind.Fetch)));
+        });
+    }
+
+    // Nobody listening, no request is asked: the page loads as ever.
+    [Test]
+    public void APagesRequests_AreAskedOfNobody_WhenNobodyListens()
+    {
+        using var site = new LocalSite("<title>site</title><body></body>");
+        var asked = 0;
+        string title = null;
+        loop.Run(() =>
+        {
+            var bridge = new WebViewBridge();
+            void Count(object sender, WebResourceRequestedEventArgs e) => asked++;
+            bridge.ResourceRequested += Count;
+            bridge.ResourceRequested -= Count;
+            var view = new RecordingBrowserView { Bridge = bridge };
+            var browser = engine.CreateBrowser(false, view);
+            try
+            {
+                browser.Create(site.Origin + "/", Width, Height, 1, IntPtr.Zero);
+                Pump(() => view.Title == "site" && !view.IsLoading, TimeSpan.FromSeconds(30));
+                title = view.Title;
+            }
+            finally
+            {
+                browser.Dispose();
+                Pump(() => false, TimeSpan.FromMilliseconds(300));
+            }
+        });
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(title, Is.EqualTo("site"));
+            Assert.That(asked, Is.Zero);
+        });
+    }
+
     private static string MarkScript(string mark) =>
         "window.__marks = (window.__marks || '') + '" + mark + "'; window.__bridge = !!window.adamantium;";
 

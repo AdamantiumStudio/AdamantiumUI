@@ -3,17 +3,20 @@ using Adamantium.UI.WebView.Cef.Interop;
 
 namespace Adamantium.UI.WebView.Cef;
 
-/// <summary>One answer of a site of the application's: the file read as Chromium asks for it, typed as its extension
-/// says, or 404 for none. Called on CEF's IO thread.</summary>
-internal sealed unsafe class WebSiteResourceHandler : CefObject
+/// <summary>An answer the application gives a request itself - a file of a site of its own, or what a handler of the
+/// page's requests answered: the content read as Chromium asks for it, with its type and status. Called on CEF's IO
+/// thread.</summary>
+internal sealed unsafe class WebViewResourceAnswer : CefObject
 {
     private readonly string mimeType;
+    private readonly int status;
     private Stream content;
 
-    public WebSiteResourceHandler(Stream content, string mimeType) : base(sizeof(CefResourceHandler))
+    public WebViewResourceAnswer(Stream content, string mimeType, int status) : base(sizeof(CefResourceHandler))
     {
         this.content = content;
         this.mimeType = mimeType;
+        this.status = status;
         var handler = (CefResourceHandler*)Native;
         handler->open = &Open;
         handler->get_response_headers = &GetResponseHeaders;
@@ -35,7 +38,7 @@ internal sealed unsafe class WebSiteResourceHandler : CefObject
     [UnmanagedCallersOnly]
     private static int Open(CefResourceHandler* self, CefRequest* request, int* handleRequest, CefCallback* callback)
     {
-        // The file is at hand: answered at once, nothing to wait for.
+        // The content is at hand: answered at once, nothing to wait for.
         *handleRequest = 1;
         CefRefCounting.ReleaseCef(request);
         CefRefCounting.ReleaseCef(callback);
@@ -48,15 +51,15 @@ internal sealed unsafe class WebSiteResourceHandler : CefObject
     {
         try
         {
-            var handler = From<WebSiteResourceHandler>(self);
+            var handler = From<WebViewResourceAnswer>(self);
             var content = handler.content;
             var type = new CefStringUtf16();
             var text = new CefStringUtf16();
             try
             {
-                CefStrings.Set(&type, content == null ? "text/plain" : handler.mimeType);
-                CefStrings.Set(&text, content == null ? "Not Found" : "OK");
-                response->set_status(response, content == null ? 404 : 200);
+                CefStrings.Set(&type, handler.mimeType);
+                CefStrings.Set(&text, handler.status switch { 200 => "OK", 404 => "Not Found", _ => string.Empty });
+                response->set_status(response, handler.status);
                 response->set_status_text(response, &text);
                 response->set_mime_type(response, &type);
             }
@@ -82,7 +85,7 @@ internal sealed unsafe class WebSiteResourceHandler : CefObject
         CefRefCounting.ReleaseCef(callback);
         try
         {
-            var content = From<WebSiteResourceHandler>(self).content;
+            var content = From<WebViewResourceAnswer>(self).content;
             if (content == null)
             {
                 *bytesSkipped = -2;
@@ -117,7 +120,7 @@ internal sealed unsafe class WebSiteResourceHandler : CefObject
         CefRefCounting.ReleaseCef(callback);
         try
         {
-            var content = From<WebSiteResourceHandler>(self).content;
+            var content = From<WebViewResourceAnswer>(self).content;
             var read = content?.Read(new Span<byte>(dataOut, bytesToRead)) ?? 0;
             *bytesRead = read;
             return read > 0 ? 1 : 0;
@@ -135,7 +138,7 @@ internal sealed unsafe class WebSiteResourceHandler : CefObject
     {
         try
         {
-            From<WebSiteResourceHandler>(self).Close();
+            From<WebViewResourceAnswer>(self).Close();
         }
         catch (Exception exception)
         {

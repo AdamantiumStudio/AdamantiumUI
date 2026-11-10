@@ -13,6 +13,7 @@ public sealed class WebViewBridge
 {
     private readonly List<WebDocumentScript> scriptsForNewDocuments = [];
     private readonly WebHostObjects hostObjects = new();
+    private EventHandler<WebResourceRequestedEventArgs> resourceRequested;
     private WebView view;
 
     /// <summary>The scripts every new document of the page runs before its own, in the order they were added - held
@@ -82,6 +83,25 @@ public sealed class WebViewBridge
     /// </summary>
     public event EventHandler<WebPermissionRequestedEventArgs> PermissionRequested;
 
+    /// <summary>The page is about to make a request - its document, a frame's, a script, an image, a fetch: a handler
+    /// may answer it, send it elsewhere or refuse it. Listened to, every request of the page waits a turn of the UI
+    /// thread; not listened to, none is asked.</summary>
+    public event EventHandler<WebResourceRequestedEventArgs> ResourceRequested
+    {
+        add
+        {
+            resourceRequested += value;
+            view?.ResourceInterceptionChanged();
+        }
+        remove
+        {
+            resourceRequested -= value;
+            view?.ResourceInterceptionChanged();
+        }
+    }
+
+    internal bool InterceptsResources => resourceRequested != null;
+
     /// <summary>Whether the bridge is bound to a view with a page.</summary>
     public bool HasPage => view?.HasPage == true;
 
@@ -114,6 +134,8 @@ public sealed class WebViewBridge
     internal void OnMessage(string json) => MessageReceived?.Invoke(this, new WebMessageEventArgs(json));
 
     internal void OnHostCall(WebHostCall call) => hostObjects.Call(call);
+
+    internal void OnResourceRequested(WebResourceRequestedEventArgs asked) => resourceRequested?.Invoke(this, asked);
 
     internal void OnHostContextGone(WebViewBrowser browser, string context) => hostObjects.ContextGone(browser, context);
 
