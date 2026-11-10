@@ -765,7 +765,9 @@ public partial class RenderCache
                 pen = MiterReach * (polygon.Pen?.Thickness ?? 0);
                 break;
             case ImageRenderUnit { Payload: { } image }:
-                ink = image.DestinationRect;
+                ink = image.DestinationRect.TransformToAABB(image.Placement is { } imagePlaced
+                    ? image.LocalTransform * Newest(imagePlaced)
+                    : image.LocalTransform);
                 break;
             case GeometryRenderUnit { Payload.Geometry: { } geometry } shape:
                 var place = shape.Payload.Placement is { } placed

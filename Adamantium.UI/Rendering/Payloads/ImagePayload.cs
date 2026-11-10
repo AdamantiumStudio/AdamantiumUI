@@ -1,4 +1,5 @@
 ﻿using System;
+using Adamantium.Mathematics;
 using Adamantium.ProceduralGeometry;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Graphics;
@@ -7,11 +8,26 @@ using Adamantium.UI.Core.Media.Imaging;
 
 namespace Adamantium.UI.Rendering.Payloads;
 
-public class ImagePayload(Brush filter, ImageSource image, Rect destinationRect, CornerRadius cornerRadius, Rect? sourceUv = null, int? frameLayer = null) :
-    IEquatable<ImagePayload>, IRenderCachePolicy
+public class ImagePayload(Brush filter, ImageSource image, Rect destinationRect, CornerRadius cornerRadius, Rect? sourceUv = null, int? frameLayer = null,
+    Matrix4x4F? localTransform = null) :
+    IEquatable<ImagePayload>, IRenderCachePolicy, IPlacedPayload
 {
     // The LIVE brush, read through its immutable snapshot - see RectanglePayload.
     private readonly Brush _filter = filter?.ForRendering();
+
+    /// <summary>Where the image's rect is placed on top of the element's world - turned or sheared as the matrix says;
+    /// identity for an ordinary draw.</summary>
+    public Matrix4x4F LocalTransform { get; } = localTransform ?? Matrix4x4F.Identity;
+
+    public Placement Placement { get; private set; }
+
+    public long PlacedVersion { get; private set; }
+
+    void IPlacedPayload.PlaceBy(Placement placement)
+    {
+        Placement = placement;
+        PlacedVersion = placement.Version;
+    }
 
     public ImageSource Image { get; } = image;
     public Brush Filter => _filter?.Snapshot;
@@ -46,7 +62,8 @@ public class ImagePayload(Brush filter, ImageSource image, Rect destinationRect,
 
     public override int GetHashCode()
     {
-        return HashCode.Combine(Image, Filter, DestinationRect, CornerRadius, SourceUv, FrameLayer);
+        return HashCode.Combine(Image, Filter, DestinationRect, CornerRadius, SourceUv, FrameLayer,
+            Placement != null ? Placement.GetHashCode() : LocalTransform.GetHashCode());
     }
 
     public bool Equals(ImagePayload other)
@@ -55,7 +72,9 @@ public class ImagePayload(Brush filter, ImageSource image, Rect destinationRect,
         if (ReferenceEquals(this, other)) return true;
         return Equals(Image, other.Image) && Equals(Filter, other.Filter) && DestinationRect.Equals(other.DestinationRect)
                && CornerRadius.Equals(other.CornerRadius) && Nullable.Equals(SourceUv, other.SourceUv)
-               && Nullable.Equals(FrameLayer, other.FrameLayer);
+               && Nullable.Equals(FrameLayer, other.FrameLayer)
+               && ReferenceEquals(Placement, other.Placement)
+               && (Placement != null || LocalTransform == other.LocalTransform);
     }
 
     public override bool Equals(object obj)

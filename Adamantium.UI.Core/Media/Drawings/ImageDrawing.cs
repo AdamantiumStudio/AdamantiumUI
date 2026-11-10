@@ -47,10 +47,7 @@ public class ImageDrawing : Drawing
         var image = ImageSource;
         if (image == null) return;
 
-        // The image path draws into an axis-aligned destination rect, so the placement is the transformed BOX. A rotated
-        // or sheared enclosing group therefore lays this child out upright inside its rotated extent instead of turning
-        // it - the geometry children of the same group DO rotate. Turning a raster child needs the image draw to carry a
-        // matrix the way DrawGeometry now does; until it does, this is the honest limit rather than a silent wrong picture.
-        session.DrawImage(image, null, Rect.TransformToAABB(transform), default);
+        // Placed by the matrix, so a turned or sheared group turns the picture with its other children.
+        session.DrawImage(image, null, Rect, transform);
     }
 }
