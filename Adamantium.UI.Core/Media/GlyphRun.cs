@@ -69,22 +69,21 @@ public sealed class GlyphRun
         var scale = FontSize / Font.UnitsPerEm;
         foreach (var placed in Glyphs)
         {
-            var contours = Font.GetGlyphByIndex(placed.Index).GetContours();
-            foreach (var contour in contours)
+            foreach (var contour in Font.GetGlyphByIndex(placed.Index).GetContours())
             {
-                var figure = context.BeginFigure(At(contour[0][0]), true, true);
-                foreach (var segment in contour)
+                var figure = context.BeginFigure(At(contour.Segments[0].Start), true, true);
+                foreach (var segment in contour.Segments)
                 {
-                    switch (segment.Length)
+                    switch (segment.Kind)
                     {
-                        case 2:
-                            figure.LineTo(At(segment[1]));
+                        case GlyphSegmentKind.Line:
+                            figure.LineTo(At(segment.End));
                             break;
-                        case 3:
-                            figure.QuadraticBezierTo(At(segment[1]), At(segment[2]));
+                        case GlyphSegmentKind.Quadratic:
+                            figure.QuadraticBezierTo(At(segment.Control1), At(segment.End));
                             break;
                         default:
-                            figure.CubicBezierTo(At(segment[1]), At(segment[2]), At(segment[3]));
+                            figure.CubicBezierTo(At(segment.Control1), At(segment.Control2), At(segment.End));
                             break;
                     }
                 }

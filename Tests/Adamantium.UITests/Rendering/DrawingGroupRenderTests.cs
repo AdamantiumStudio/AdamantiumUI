@@ -408,6 +408,22 @@ public class DrawingGroupRenderTests
     }
 
     [Test]
+    public void ARunsOutline_LiesOverItsInk()
+    {
+        var run = Bar(60, 10, 70);
+
+        var outline = run.Outline.Bounds;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(outline.X, Is.EqualTo(run.Bounds.X).Within(0.5));
+            Assert.That(outline.Y, Is.EqualTo(run.Bounds.Y).Within(0.5));
+            Assert.That(outline.Width, Is.EqualTo(run.Bounds.Width).Within(0.5));
+            Assert.That(outline.Height, Is.EqualTo(run.Bounds.Height).Within(0.5));
+        });
+    }
+
+    [Test]
     public void PopGroup_WithNoGroup_IsAnError()
     {
         var session = (IDrawingSession)new DrawingContext();
