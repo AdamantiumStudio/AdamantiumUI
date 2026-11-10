@@ -6,21 +6,49 @@ namespace Adamantium.UI.WebView.Cef;
 
 /// <summary>
 /// A browser's own DevTools protocol, spoken to run a script with its answer and to give its pages
-/// <c>window.adamantium</c>: a binding the page's messages arrive through, and a script on every new document that
-/// wraps it with <c>postMessage</c> and message listeners. Lives on the UI loop, where CEF calls back.
+/// <c>window.adamantium</c>: bindings the page's messages and its calls of the application's objects arrive through,
+/// and a script on every new document that wraps them with <c>postMessage</c>, message listeners and
+/// <c>hostObjects</c>. Lives on the UI loop, where CEF calls back.
 /// </summary>
 internal sealed class WebViewDevTools
 {
     private const string Binding = "__adamantiumPost";
+    private const string HostBinding = "__adamantiumHost";
 
+    /// <summary>What a function a page hands an object of the application's stands as in the call's arguments.
+    /// </summary>
+    public const string FunctionKey = "__adamantiumFunction";
+
+    // hostObjects.name.method(...) is a promise of the call's answer; a function among the arguments is kept by the
+    // page under a number, and the object an answer may be stands for one of the application's until it is let go of.
     private const string PageScript =
-        "(()=>{if(window.adamantium)return;const listeners=[];window.adamantium={" +
+        "(()=>{if(window.adamantium)return;" +
+        "const listeners=[],calls=new Map(),fns=new Map();let next=0,nextFn=0;" +
+        "const host=m=>" + HostBinding + "(JSON.stringify(m));" +
+        "const gone=new FinalizationRegistry(h=>{try{host({release:h})}catch(e){}});" +
+        "const call=(target,method,args)=>new Promise((resolve,reject)=>{const id=++next;calls.set(id,{resolve,reject});" +
+        "try{host({id,target,method,args:args.map(a=>{if(typeof a!=='function')return a===undefined?null:a;" +
+        "const f=++nextFn;fns.set(f,a);return{" + FunctionKey + ":f}})})}catch(e){calls.delete(id);reject(e)}});" +
+        "const object=t=>new Proxy({},{get:(_,m)=>typeof m!=='string'||m==='then'?undefined:(...a)=>call(t,m,a)});" +
+        "window.adamantium={" +
         "postMessage:m=>" + Binding + "(JSON.stringify(m))," +
         "addEventListener:(t,f)=>{if(t==='message')listeners.push(f)}," +
         "removeEventListener:(t,f)=>{const i=listeners.indexOf(f);if(i>=0)listeners.splice(i,1)}," +
-        "__receive:j=>{const data=JSON.parse(j);for(const f of listeners.slice())f({data})}};})()";
+        "__receive:j=>{const data=JSON.parse(j);for(const f of listeners.slice())f({data})}," +
+        "hostObjects:new Proxy({},{get:(_,n)=>typeof n!=='string'||n==='then'?undefined:object(n)})," +
+        "__hostReply:j=>{const r=JSON.parse(j),c=calls.get(r.id);if(!c)return;calls.delete(r.id);" +
+        "if('error' in r)c.reject(new Error(r.error));" +
+        "else if('object' in r){const p=object(r.object);gone.register(p,r.object);c.resolve(p)}" +
+        "else c.resolve(r.value)}," +
+        "__call:(f,a)=>{const g=fns.get(f);if(!g)throw new Error('The function was let go of.');return g(...a)}," +
+        "__letGo:f=>{fns.delete(f)}};})()";
 
     private readonly Action<string> messageReceived;
+
+    // The page's script worlds: where each runs - its origin, its frame - so a call of the application's objects is
+    // answered only where they are let in.
+    private readonly Dictionary<int, (string Origin, string Frame)> contexts = [];
+    private string mainFrame;
     private readonly Dictionary<int, TaskCompletionSource<JsonElement>> pending = [];
     private readonly Dictionary<int, (byte[] Id, bool EnablesOverlay)> forwarded = [];
 
@@ -33,7 +61,7 @@ internal sealed class WebViewDevTools
     private Action scriptsReady;
     private int scriptsReadyAt;
     private int lastScriptAnswered;
-    private readonly Dictionary<int, Action> answeredOnTheLoop = [];
+    private readonly Dictionary<int, Action<JsonElement>> answeredOnTheLoop = [];
 
     private Action<string> frontEnd;
     private WebViewDevToolsObserver observer;
@@ -55,7 +83,8 @@ internal sealed class WebViewDevTools
         registration = host->add_dev_tools_message_observer(host, observer.Shared);
         Send(host, "Runtime.enable", null);
         Send(host, "Page.enable", null);
-        Send(host, "Runtime.addBinding", writer => writer.WriteString("name", Binding));
+        AddBindings(host);
+        AskForTheMainFrame(host);
         AddScript(host, PageScript, id => pageScriptAsked = id);
         SetScriptsForNewDocuments(host, scripts);
         // The page answers in the order it is asked: the last script's answer comes after all the others.
@@ -76,10 +105,55 @@ internal sealed class WebViewDevTools
         ready?.Invoke();
     }
 
+    private unsafe void AddBindings(CefBrowserHost* host)
+    {
+        Send(host, "Runtime.addBinding", writer => writer.WriteString("name", Binding));
+        Send(host, "Runtime.addBinding", writer => writer.WriteString("name", HostBinding));
+    }
+
+    // The main frame is the root of the page's frame tree; a frame navigated without a parent is it too.
+    private unsafe void AskForTheMainFrame(CefBrowserHost* host) =>
+        Send(host, "Page.getFrameTree", null, id => answeredOnTheLoop[id] = result =>
+        {
+            if (result.ValueKind == JsonValueKind.Object && result.TryGetProperty("frameTree", out var tree) &&
+                tree.TryGetProperty("frame", out var frame) && frame.TryGetProperty("id", out var frameId))
+            {
+                mainFrame = frameId.GetString();
+            }
+        });
+
     /// <summary>Wipes the page's history but the page it is at; <paramref name="answered"/> runs on the UI loop once it
     /// is done, or refused.</summary>
     public unsafe void ResetHistory(CefBrowserHost* host, Action answered) =>
-        Send(host, "Page.resetNavigationHistory", null, id => answeredOnTheLoop[id] = answered);
+        Send(host, "Page.resetNavigationHistory", null, id => answeredOnTheLoop[id] = _ => answered());
+
+    /// <summary>Raised on the UI loop when a page calls an object of the application's: the script world it calls from
+    /// (to answer into), whether it runs in the main frame and at which origin, and the call as JSON.</summary>
+    public Action<int, bool, string, string> HostCalled { get; set; }
+
+    /// <summary>Raised on the UI loop when a script world of the page is gone - its document left - with all it held.
+    /// </summary>
+    public Action<int> ContextGone { get; set; }
+
+    /// <summary>Hands the answer to a call of the application's objects back into the script world it came from.
+    /// </summary>
+    public unsafe void AnswerHost(CefBrowserHost* host, int context, string json) =>
+        Send(host, "Runtime.evaluate", writer =>
+        {
+            writer.WriteString("expression", "window.adamantium&&window.adamantium.__hostReply(" + Quoted(json) + ")");
+            writer.WriteNumber("contextId", context);
+        });
+
+    /// <summary>Runs <paramref name="script"/> in the script world <paramref name="context"/>; its value as JSON, or the
+    /// page's message as a <see cref="WebViewScriptException"/>.</summary>
+    public unsafe Task<string> EvaluateInAsync(CefBrowserHost* host, int context, string script) =>
+        ValueOf(Call(host, "Runtime.evaluate", writer =>
+        {
+            writer.WriteString("expression", script);
+            writer.WriteNumber("contextId", context);
+            writer.WriteBoolean("returnByValue", true);
+            writer.WriteBoolean("awaitPromise", true);
+        }));
 
     /// <summary>Has the page's documents from now on run <paramref name="scripts"/>, after its own
     /// <c>window.adamantium</c>: those no longer there are taken away, those new added after the rest.</summary>
@@ -230,7 +304,7 @@ internal sealed class WebViewDevTools
         Send(host, "Network.setCacheDisabled", writer => writer.WriteBoolean("cacheDisabled", false));
         Send(host, "Runtime.enable", null);
         Send(host, "Page.enable", null);
-        Send(host, "Runtime.addBinding", writer => writer.WriteString("name", Binding));
+        AddBindings(host);
 
         var scripts = new List<WebDocumentScript>(scriptsAsked.Count);
         LetGoOfScript(host, pageScriptAsked);
@@ -335,6 +409,8 @@ internal sealed class WebViewDevTools
         scriptsReadyAt = 0;
         lastScriptAnswered = 0;
         answeredOnTheLoop.Clear();
+        ForgetContexts();
+        mainFrame = null;
     }
 
     /// <summary>Forgets the browser CEF did not close before it shut down: what was asked fails, nothing is released
@@ -366,9 +442,17 @@ internal sealed class WebViewDevTools
         if (idRange.Start < 0)
         {
             frontEnd?.Invoke(System.Text.Encoding.UTF8.GetString(message));
-            if (method == "Runtime.bindingCalled")
+            switch (method)
             {
-                OnBindingCalled(message);
+                case "Runtime.bindingCalled":
+                    OnBindingCalled(message);
+                    break;
+                case "Runtime.executionContextCreated":
+                case "Runtime.executionContextDestroyed":
+                case "Runtime.executionContextsCleared":
+                case "Page.frameNavigated":
+                    OnPageWorlds(method, message);
+                    break;
             }
 
             return;
@@ -408,7 +492,8 @@ internal sealed class WebViewDevTools
 
         if (answeredOnTheLoop.Remove(id, out var answered))
         {
-            answered();
+            using var document = JsonDocument.Parse(message.ToArray(), Whole);
+            answered(document.RootElement.TryGetProperty("result", out var result) ? result.Clone() : default);
             return;
         }
 
@@ -435,12 +520,76 @@ internal sealed class WebViewDevTools
     private void OnBindingCalled(ReadOnlySpan<byte> message)
     {
         using var document = JsonDocument.Parse(message.ToArray(), Whole);
-        if (document.RootElement.TryGetProperty("params", out var parameters) &&
-            parameters.TryGetProperty("name", out var name) && name.GetString() == Binding &&
-            parameters.TryGetProperty("payload", out var payload))
+        if (!document.RootElement.TryGetProperty("params", out var parameters) ||
+            !parameters.TryGetProperty("name", out var name) || !parameters.TryGetProperty("payload", out var payload))
+        {
+            return;
+        }
+
+        var bindingName = name.GetString();
+        if (bindingName == Binding)
         {
             messageReceived(payload.GetString());
         }
+        else if (bindingName == HostBinding && parameters.TryGetProperty("executionContextId", out var contextId) &&
+                 contexts.TryGetValue(contextId.GetInt32(), out var world))
+        {
+            HostCalled?.Invoke(contextId.GetInt32(), world.Frame != null && world.Frame == mainFrame, world.Origin,
+                payload.GetString());
+        }
+    }
+
+    private void OnPageWorlds(string method, ReadOnlySpan<byte> message)
+    {
+        using var document = JsonDocument.Parse(message.ToArray(), Whole);
+        if (!document.RootElement.TryGetProperty("params", out var parameters))
+        {
+            return;
+        }
+
+        switch (method)
+        {
+            case "Runtime.executionContextCreated":
+                if (parameters.TryGetProperty("context", out var context) && context.TryGetProperty("id", out var id))
+                {
+                    var origin = context.TryGetProperty("origin", out var o) ? o.GetString() : null;
+                    var frame = context.TryGetProperty("auxData", out var aux) && aux.TryGetProperty("frameId", out var f)
+                        ? f.GetString()
+                        : null;
+                    contexts[id.GetInt32()] = (origin, frame);
+                }
+
+                break;
+            case "Runtime.executionContextDestroyed":
+                if (parameters.TryGetProperty("executionContextId", out var gone) && contexts.Remove(gone.GetInt32()))
+                {
+                    ContextGone?.Invoke(gone.GetInt32());
+                }
+
+                break;
+            case "Runtime.executionContextsCleared":
+                ForgetContexts();
+                break;
+            case "Page.frameNavigated":
+                if (parameters.TryGetProperty("frame", out var navigated) && !navigated.TryGetProperty("parentId", out _) &&
+                    navigated.TryGetProperty("id", out var frameId))
+                {
+                    mainFrame = frameId.GetString();
+                }
+
+                break;
+        }
+    }
+
+    // Every script world of the page gone: what each held goes with it.
+    private void ForgetContexts()
+    {
+        foreach (var context in contexts.Keys)
+        {
+            ContextGone?.Invoke(context);
+        }
+
+        contexts.Clear();
     }
 
     // The top of a protocol message: where its id's value stands (Start -1 for none) and its method, the rest skipped

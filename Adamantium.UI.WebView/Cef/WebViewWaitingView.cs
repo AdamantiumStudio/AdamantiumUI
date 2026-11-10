@@ -133,6 +133,12 @@ internal sealed class WebViewWaitingView : IWebViewBrowserView
 
     public IReadOnlyList<WebDocumentScript> ScriptsForNewDocuments(WebViewBrowser browser) => openersScripts;
 
+    public void HostCalled(WebViewBrowser browser, WebHostCall call) => call.Refuse("The page is not shown yet.");
+
+    public void HostContextGone(WebViewBrowser browser, int context)
+    {
+    }
+
     public void ZoomChanged(WebViewBrowser browser, double factor)
     {
         zoom = factor;

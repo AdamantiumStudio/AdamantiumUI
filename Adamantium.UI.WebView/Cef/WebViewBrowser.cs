@@ -94,7 +94,13 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         loadHandler = new WebViewLoadHandler(this);
         requestHandler = new WebViewRequestHandler(this);
         // The view of the moment: a page another opened is adopted by a view of its own.
-        devTools = new WebViewDevTools(json => this.view.MessageReceived(this, json)) { OverlayHeard = RevealWaiting };
+        devTools = new WebViewDevTools(json => this.view.MessageReceived(this, json))
+        {
+            OverlayHeard = RevealWaiting,
+            HostCalled = (context, isMainFrame, origin, json) =>
+                this.view.HostCalled(this, new WebHostCall(this, context, isMainFrame, origin, json)),
+            ContextGone = context => this.view.HostContextGone(this, context)
+        };
         displayHandler = new WebViewDisplayHandler(this);
         contextMenuHandler = new WebViewContextMenuHandler(this);
         jsDialogHandler = new WebViewJsDialogHandler(this);
@@ -1698,6 +1704,40 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         {
             CefRefCounting.ReleaseCef(host);
         }
+    }
+
+    /// <summary>Runs <paramref name="script"/> in the page's script world <paramref name="context"/>; its value as
+    /// JSON.</summary>
+    internal Task<string> EvaluateInAsync(int context, string script)
+    {
+        var host = LiveHost();
+        if (host == null)
+        {
+            return Task.FromException<string>(new WebViewScriptException("The page went away."));
+        }
+
+        try
+        {
+            return devTools.EvaluateInAsync(host, context, script);
+        }
+        finally
+        {
+            CefRefCounting.ReleaseCef(host);
+        }
+    }
+
+    /// <summary>Hands the page the answer to its call of an object of the application's, into the script world it
+    /// called from.</summary>
+    internal void AnswerHost(int context, string json)
+    {
+        var host = LiveHost();
+        if (host == null)
+        {
+            return;
+        }
+
+        devTools.AnswerHost(host, context, json);
+        CefRefCounting.ReleaseCef(host);
     }
 
     /// <summary>Hands the page a message, as JSON.</summary>

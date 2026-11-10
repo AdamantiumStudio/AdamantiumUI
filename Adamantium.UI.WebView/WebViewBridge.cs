@@ -1,3 +1,6 @@
+using System.Text.Json;
+using Adamantium.UI.WebView.Cef;
+
 namespace Adamantium.UI.WebView;
 
 /// <summary>
@@ -9,6 +12,7 @@ namespace Adamantium.UI.WebView;
 public sealed class WebViewBridge
 {
     private readonly List<WebDocumentScript> scriptsForNewDocuments = [];
+    private readonly WebHostObjects hostObjects = new();
     private WebView view;
 
     /// <summary>The scripts every new document of the page runs before its own, in the order they were added - held
@@ -39,6 +43,24 @@ public sealed class WebViewBridge
         view?.ScriptsForNewDocumentsChanged();
         return true;
     }
+
+    /// <summary>Lets pages at <paramref name="origins"/> - in their main frame, nowhere else - call
+    /// <paramref name="hostObject"/> as <c>adamantium.hostObjects.<paramref name="name"/></c>; one added under the name
+    /// before is taken away. Arguments and answers are written by <see cref="JsonSerializerOptions.Web"/>. For an
+    /// interface marked <see cref="WebHostObjectAttribute"/>, the build gives an <c>AddHostObject</c> taking the object
+    /// itself.</summary>
+    public void AddHostObject(string name, WebHostObject hostObject, params string[] origins) =>
+        hostObjects.Add(name, hostObject, null, origins);
+
+    /// <summary>As <see cref="AddHostObject(string, WebHostObject, string[])"/>, its arguments and answers written by
+    /// <paramref name="options"/> - their type information resolver for an application compiled ahead of time.
+    /// </summary>
+    public void AddHostObject(string name, WebHostObject hostObject, JsonSerializerOptions options, params string[] origins) =>
+        hostObjects.Add(name, hostObject, options, origins);
+
+    /// <summary>Pages can no longer call the object added under <paramref name="name"/>, nor the objects its calls
+    /// answered with; false for a name none was added under.</summary>
+    public bool RemoveHostObject(string name) => hostObjects.Remove(name);
 
     /// <summary>The page sent a message.</summary>
     public event EventHandler<WebMessageEventArgs> MessageReceived;
@@ -85,10 +107,15 @@ public sealed class WebViewBridge
         if (ReferenceEquals(view, detached))
         {
             view = null;
+            hostObjects.ForgetGiven();
         }
     }
 
     internal void OnMessage(string json) => MessageReceived?.Invoke(this, new WebMessageEventArgs(json));
+
+    internal void OnHostCall(WebHostCall call) => hostObjects.Call(call);
+
+    internal void OnHostContextGone(WebViewBrowser browser, int context) => hostObjects.ContextGone(browser, context);
 
     internal bool OnNavigationStarting(string address, bool userGesture, bool isRedirect)
     {

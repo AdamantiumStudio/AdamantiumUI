@@ -19,6 +19,23 @@
         <ProjectReference Include="..\..\Adamantium.UI.WebView\Adamantium.UI.WebView.csproj" />
     </ItemGroup>
 
+    <!-- The generators an application gets with the UI's package, here from source as the WebView library takes them:
+         the objects a page calls are made for the tests' interfaces. -->
+    <ItemGroup>
+        <ProjectReference Include="..\..\Adamantium.UI.Markup\Adamantium.UI.Markup.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+        <ProjectReference Include="..\..\Adamantium.UI.Generators\Adamantium.UI.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+        <ProjectReference Include="..\..\Adamantium.UI.Core\Adamantium.UI.Core.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <AdamantiumEngineReference Include="Adamantium.Core.Shared" GeneratePathProperty="true" />
+        <AdamantiumEngineReference Include="Adamantium.Core.Shared" Role="NetStandardAnalyzer" />
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(UseEngineSource)' != 'true'">
+        <Analyzer Include="$(PkgAdamantium_Core_Shared)\lib\netstandard2.0\Adamantium.Core.Shared.dll" Condition="'$(PkgAdamantium_Core_Shared)' != ''" />
+    </ItemGroup>
+
     <Import Project="..\..\Adamantium.UI.WebView\build\Adamantium.UI.WebView.CefRuntime.targets" />
 
 </Project>

@@ -61,4 +61,19 @@ public partial class WebView
             Bridge?.OnMessage(json);
         }
     }
+
+    void IWebViewBrowserView.HostCalled(WebViewBrowser from, WebHostCall call)
+    {
+        if (ReferenceEquals(browser, from) && Bridge is { } bridge)
+        {
+            bridge.OnHostCall(call);
+        }
+        else
+        {
+            call.Refuse("There is no object here.");
+        }
+    }
+
+    void IWebViewBrowserView.HostContextGone(WebViewBrowser from, int context) =>
+        Bridge?.OnHostContextGone(from, context);
 }
