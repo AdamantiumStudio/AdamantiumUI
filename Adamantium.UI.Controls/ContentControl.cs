@@ -43,7 +43,13 @@ public class ContentControl : Control, IContentControl
    {
       if (a is ContentControl o)
       {
-         if (e.OldValue is UIComponent { ContentOwner: var owner } old && ReferenceEquals(owner, o)) old.ContentOwner = null;
+         if (e.OldValue is UIComponent { ContentOwner: var owner } old && ReferenceEquals(owner, o))
+         {
+            old.ContentOwner = null;
+            // Parked as a tab's page while another was shown: not coming back for this control any more.
+            ParkedVisuals.Forget(old);
+         }
+
          if (e.NewValue is UIComponent content && !o.IsGivenByTemplate(ContentProperty))
             content.ContentOwner = o;
          o.ChangeContent(e.OldValue, o.HoldsContent ? e.NewValue : null);

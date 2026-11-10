@@ -96,8 +96,9 @@ public static class ParkedVisuals
     /// left. Read straight after taking it, before it is attached.</summary>
     public static bool IsUnchanged { get; private set; }
 
-    /// <summary>Discards for good, whatever their mode, the visuals <paramref name="owner"/> kept for content it no
-    /// longer <paramref name="holds"/> - a closed tab: nothing will come back for them.</summary>
+    /// <summary>Lets go, whatever their mode, of the visuals <paramref name="owner"/> kept for content it no longer
+    /// <paramref name="holds"/> - a closed tab: nothing will come back for them. Built ones are discarded; a control's
+    /// own content element only stops being parked, and goes with that control.</summary>
     public static void ReleaseAbsent(object owner, Predicate<object> holds) =>
         Release(slot => ReferenceEquals(slot.Owner, owner) && !holds(slot.Key));
 
@@ -121,9 +122,52 @@ public static class ParkedVisuals
         {
             _kept.Remove(slot, out var entry);
             _evictable.Remove(slot);
-            ParkedSubtree.Discard(entry.Root);
-            entry.Built?.Destroy();
+            EndPark(entry);
         }
+    }
+
+    /// <summary>Stops keeping <paramref name="element"/>, kept as itself - a control's content element, parked while a
+    /// host showed something else - now that the control was given other content: wherever it waited, it is only no
+    /// longer parked, for whoever gave it to show again.</summary>
+    public static void Forget(IUIComponent element)
+    {
+        if (element is not { IsParked: true }) return;
+
+        List<Slot> gone = null;
+        foreach (var (slot, entry) in _kept)
+        {
+            if (ReferenceEquals(entry.Root, element) && ReferenceEquals(slot.Key, element))
+            {
+                (gone ??= []).Add(slot);
+            }
+        }
+
+        if (gone == null) return;
+
+        foreach (var slot in gone)
+        {
+            _kept.Remove(slot);
+            _evictable.Remove(slot);
+        }
+
+        ParkedSubtree.Revalidate(element);
+    }
+
+    // A control's own content element - a tab's page while its tab is not shown - is that control's: it may take it to
+    // another strip, or the application may show it elsewhere, so ending the park only drops the mark and the element
+    // goes with its control. Anything else was built to be kept here and goes now.
+    private static void EndPark(Entry entry)
+    {
+        if (ContentControl.IsLentContent(entry.Root))
+        {
+            ParkedSubtree.Revalidate(entry.Root);
+        }
+        else
+        {
+            ParkedSubtree.Discard(entry.Root);
+        }
+
+        entry.Built?.Destroy();
     }
 
     /// <summary>Files everything kept under <paramref name="from"/> under <paramref name="to"/> instead: a view taken up
@@ -208,8 +252,7 @@ public static class ParkedVisuals
             _evictable.RemoveAt(0);
             if (_kept.Remove(oldest, out var entry))
             {
-                ParkedSubtree.Discard(entry.Root);
-                entry.Built?.Destroy();
+                EndPark(entry);
             }
         }
     }

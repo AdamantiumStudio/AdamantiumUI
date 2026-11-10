@@ -207,6 +207,9 @@ All packages share one version.
 
 ### Fixed
 
+- `TabControl`: a view kept alive (`x:KeepAlive`) in a tab authored as a `TabItem` waits for its tab while another is
+  shown; it was let go on every visit elsewhere and built again on the way back - a browser's page reloaded each time.
+  It still goes when its tab is closed.
 - `adam-auto shot` takes the window's own frame, read back from what it drew - popups, adorners and hosted surfaces
   included - and cuts an element's picture from it; it drew the element again on its own, which left out the menus,
   drop-downs and tooltips over it.
