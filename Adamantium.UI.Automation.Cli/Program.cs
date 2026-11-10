@@ -29,6 +29,10 @@ public static class Program
           start ... --screen <id>                             its windows on the monitor whose id ends with <id>, as
                                                               DISPLAY2 on Windows; ADAM_AUTOMATION_SCREEN does it for all
           start ... --args <text>                             the application's own command line
+                                                              (what it remembers - its window's place too - is kept
+                                                              apart from a copy started by hand, in its data's
+                                                              Automation folder, one a pipe; ADAMANTIUM_APP_DATA
+                                                              names another)
           stop                                                close it
           windows                                             the open windows
           tree [<selector>] [--depth <n>] [--out <file>]      the automation tree
@@ -192,6 +196,16 @@ public static class Program
                 : $"No application at {Path.GetFullPath(exe)}.", 2);
         }
 
+        // What it remembers kept from run to run apart from a copy started by hand, and from one another working copy's
+        // automation starts - each its own pipe: its window comes back where it stood on the automation's monitor, and
+        // the place of the copy someone works in stays theirs.
+        if (Environment.GetEnvironmentVariable(ApplicationData.FolderVariable) is not { Length: > 0 })
+        {
+            options.Environment[ApplicationData.FolderVariable] = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), ApplicationName(exe),
+                "Automation", pipe);
+        }
+
         await using var session = await AutomationSession.LaunchAsync(exe, options);
         if (arguments.Option("tab") is { } tab)
         {
@@ -202,6 +216,14 @@ public static class Program
         Console.WriteLine($"Started {Path.GetFileName(exe)} (process {session.Process.Id}) on pipe '{pipe}'.");
         Console.WriteLine(ScriptPrinter.Line(windows[0]));
         return 0;
+    }
+
+    // The application's name as its data folder takes it: the file's name, but for Windows' ".exe" - a Linux or macOS
+    // application has none, and the dots are its name's.
+    private static string ApplicationName(string exe)
+    {
+        var name = Path.GetFileName(exe);
+        return name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) ? name[..^4] : name;
     }
 
     private static async Task<int> StopAsync(string pipe)
