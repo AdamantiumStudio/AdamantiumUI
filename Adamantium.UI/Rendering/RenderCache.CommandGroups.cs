@@ -25,15 +25,55 @@ public partial class RenderCache
     // outer one still needs its own.
     private readonly List<GroupBackdrop> _groupBackdrops = [];
 
-    // The recorded stream holds groups whose regions were worked out from where things stood: anything moving means a walk.
+    // The recorded stream holds groups whose regions were worked out from where things stood.
     private bool _opsHoldCommandGroups;
 
-    /// <summary>Whether a replay or a patch may draw the recorded groups: nothing they were worked out from has moved
-    /// since - no node, no carried mover, no placement, nothing the compositor moves.</summary>
-    private bool GroupsHoldStill() =>
-        !_opsHoldCommandGroups
-        || (_movedNodesBuf.Count == 0 && _movedOwnersBuf.Count == 0 && _movedPlacements.Count == 0
-            && _compositedOwners.Count == 0);
+    // The groups the last walk cut to a rectangle or left out: what a replay cannot follow by placing them again - one
+    // that turned, one that came into view.
+    private readonly List<CommandGroup> _groupsCut = [];
+    private readonly List<CommandGroup> _groupsLeftOut = [];
+
+    // Something the recorded groups were placed from moves this frame: a replay places each again where it now stands.
+    private bool _groupsMove;
+
+    /// <summary>Whether anything the recorded groups were placed from moves this frame - a node, a carried mover, a
+    /// placement, something the compositor moves. Asked before those are carried, which forgets them.</summary>
+    private void NoteGroupsMoving() =>
+        _groupsMove = _opsHoldCommandGroups
+                      && (_movedNodesBuf.Count > 0 || _movedOwnersBuf.Count > 0 || _movedPlacements.Count > 0
+                          || _compositedOwners.Count > 0);
+
+    /// <summary>Whether a replay or a patch can draw the recorded groups where things stand now, once the movers are
+    /// carried: a group cut to a rectangle still lies along the axes, and none left out comes into view - its draws were
+    /// never recorded. The window and its viewports are all that is asked about the second: a group left out inside
+    /// another one's target, or a layer's, is taken as coming into view when the window alone would show it.</summary>
+    private bool GroupsFollow()
+    {
+        if (!_groupsMove)
+        {
+            return true;
+        }
+
+        foreach (var state in _groupsCut)
+        {
+            if (!AlongTheAxes(World(state.Begin.Component)))
+            {
+                return false;
+            }
+        }
+
+        foreach (var state in _groupsLeftOut)
+        {
+            var component = state.Begin.Component;
+            var bounds = ResolveScissor(component, World(component), _frameScissor, out _, out _);
+            if (Place(state, _frameScissor, bounds, true, out _, out _, out _) != CommandGroupMode.Skipped)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
 
     // The walk meets a group's mark at `index` among the group's units: does what the mark asks and says which unit to
     // draw next - past whatever of the group is not drawn.
@@ -101,84 +141,134 @@ public partial class RenderCache
         _openGroups.Clear();
         _contentOpen.Clear();
         _commandScissor = null;
+        _catchingUp = null;
     }
 
     private int BeginGroup(IGraphicsDevice device, ControlGroup group, int index, GroupMarkRenderUnit mark,
         ref Rect2D fullScissor, ref bool scissorNarrowed)
     {
         var state = mark.Group ??= new CommandGroup(mark);
-        var units = group.Units;
-        // Past its end mark: a group nothing of which is drawn is left out whole.
-        var end = ScanGroup(units, index, out var contentAt, out var content, out var clip, out var clipped) + 1;
-        var options = state.Options;
+        state.Units = group.Units;
+        state.BeginAt = index;
+        state.Hidden = false;
         state.Depth = _openGroups.Count;
         state.Masks.Clear();
         state.BackdropTaken = false;
         state.OuterScissor = _commandScissor;
-        if (content.IsEmpty || contentAt < 0 || options.Opacity <= 0)
+        state.Mode = Place(state, fullScissor, BoundsInside(fullScissor), true, out var area, out var contentAt,
+            out var end);
+        switch (state.Mode)
         {
-            state.Mode = CommandGroupMode.Skipped;
-            return end;
-        }
+            case CommandGroupMode.Skipped:
+                if (_recording && contentAt >= 0 && state.Options.Opacity > 0)
+                {
+                    _groupsLeftOut.Add(state);
+                }
 
-        var world = World(mark.Component);
-        if (_cloneMatrix.HasValue) world *= _cloneMatrix.Value;
-        if (IsPlain(options))
-        {
-            state.Mode = CommandGroupMode.Pass;
-            _openGroups.Push(state);
-            return contentAt + 1;
-        }
-
-        // Inside another group drawn apart, its target is all there is to draw on.
-        var bounds = _commandScissor is { } outer ? Intersect(fullScissor, outer) : fullScissor;
-        if (EnclosingLayer() is { } enclosing)
-        {
-            bounds = Intersect(bounds, enclosing.Region);
-        }
-        if (mark.Payload.ClipRect is { } rect && AlongTheAxes(world))
-        {
-            state.Mode = CommandGroupMode.Scissor;
-            state.Scissor = Intersect(ToFramebufferScissor(rect.TransformToAABB(world), fullScissor), bounds);
-            if (state.Scissor.Extent.Width == 0 || state.Scissor.Extent.Height == 0)
-            {
-                state.Mode = CommandGroupMode.Skipped;
                 return end;
-            }
-
-            _commandScissor = state.Scissor;
-            _openGroups.Push(state);
-            return contentAt + 1;
+            case CommandGroupMode.Pass:
+                _openGroups.Push(state);
+                return contentAt + 1;
         }
 
-        var region = Intersect(Grow(ToFramebufferScissor(content, fullScissor), FringePixels), bounds);
-        if (clipped)
-        {
-            // A mask covering nothing shows nothing of the group.
-            region = clip.Width <= 0 || clip.Height <= 0
-                ? new Rect2D { Offset = new Offset2D(), Extent = new Extent2D() }
-                : Intersect(region, Grow(ToFramebufferScissor(clip, fullScissor), FringePixels));
-        }
-
-        if (region.Extent.Width == 0 || region.Extent.Height == 0)
-        {
-            state.Mode = CommandGroupMode.Skipped;
-            return end;
-        }
-
-        state.Mode = CommandGroupMode.Layer;
-        state.Region = region;
-        // Copies of a clone run share the mark and its one state, which holds the last copy's region: such a stream is
+        // Copies of a clone run share the mark and its one state, which holds the last copy's place: such a stream is
         // walked every frame, never replayed.
         if (_cloneMatrix.HasValue)
         {
             _opsReplayable = false;
         }
+
+        if (state.Mode == CommandGroupMode.Scissor)
+        {
+            state.Scissor = area;
+            if (_recording)
+            {
+                _groupsCut.Add(state);
+            }
+
+            _openGroups.Push(state);
+            // In a stretch of the stream of its own, so a replay can cut by it again what it cuts.
+            FlushKeepingScissor(device, fullScissor, ref scissorNarrowed);
+            _commandScissor = state.Scissor;
+            RecordGroupMark(mark);
+            return contentAt + 1;
+        }
+
+        state.Region = area;
         _openGroups.Push(state);
         FlushBatches(device, fullScissor, ref scissorNarrowed);
         fullScissor = ApplyGroupMark(device, mark, fullScissor);
         RecordGroupMark(mark);
         return index + 1;
+    }
+
+    // Flushes the batches at a group cut to a rectangle without forgetting that the device's scissor may still be narrow:
+    // the flush puts it back only when something drew, and an unclipped draw after the group must still widen it.
+    private void FlushKeepingScissor(IGraphicsDevice device, Rect2D fullScissor, ref bool scissorNarrowed)
+    {
+        var narrowed = scissorNarrowed;
+        FlushBatches(device, fullScissor, ref scissorNarrowed);
+        scissorNarrowed |= narrowed;
+    }
+
+    // What a group opened here may draw on: the scissor of a group around it that cuts, the target of one drawn apart.
+    private Rect2D BoundsInside(Rect2D fullScissor)
+    {
+        var bounds = _commandScissor is { } outer ? Intersect(fullScissor, outer) : fullScissor;
+        return EnclosingLayer() is { } enclosing ? Intersect(bounds, enclosing.Region) : bounds;
+    }
+
+    // How a group is drawn where things stand now, within `bounds`, and the scissor or the region that takes - the walk
+    // decides by it, a replay places the group again by it (`cutAllowed` false keeps one drawn apart drawn apart). Says
+    // where its content starts and the unit past its end.
+    private CommandGroupMode Place(CommandGroup state, Rect2D fullScissor, Rect2D bounds, bool cutAllowed,
+        out Rect2D area, out int contentAt, out int end)
+    {
+        area = default;
+        var units = state.Units;
+        var begin = state.BeginAt < units.Count && ReferenceEquals(units[state.BeginAt], state.Begin)
+            ? state.BeginAt
+            : units.IndexOf(state.Begin);
+        if (begin < 0)
+        {
+            contentAt = -1;
+            end = 0;
+            return CommandGroupMode.Skipped;
+        }
+
+        // Past its end mark: a group nothing of which is drawn is left out whole.
+        end = ScanGroup(units, begin, out contentAt, out var content, out var clip, out var clipped) + 1;
+        var options = state.Options;
+        if (content.IsEmpty || contentAt < 0 || options.Opacity <= 0)
+        {
+            return CommandGroupMode.Skipped;
+        }
+
+        if (IsPlain(options))
+        {
+            return CommandGroupMode.Pass;
+        }
+
+        var world = World(state.Begin.Component);
+        if (_cloneMatrix.HasValue) world *= _cloneMatrix.Value;
+        if (cutAllowed && state.Begin.Payload.ClipRect is { } rect && AlongTheAxes(world))
+        {
+            area = Intersect(ToFramebufferScissor(rect.TransformToAABB(world), fullScissor), bounds);
+            return area.Extent.Width == 0 || area.Extent.Height == 0 ? CommandGroupMode.Skipped : CommandGroupMode.Scissor;
+        }
+
+        // The fringe grows the ink before the window cuts it: ink wholly past an edge leaves nothing, not a strip along it.
+        var fringe = FringePixels / _renderScale;
+        area = Intersect(ToFramebufferScissor(content.Inflate(fringe), fullScissor), bounds);
+        if (clipped)
+        {
+            // A mask covering nothing shows nothing of the group.
+            area = clip.Width <= 0 || clip.Height <= 0
+                ? new Rect2D { Offset = new Offset2D(), Extent = new Extent2D() }
+                : Intersect(area, ToFramebufferScissor(clip.Inflate(fringe), fullScissor));
+        }
+
+        return area.Extent.Width == 0 || area.Extent.Height == 0 ? CommandGroupMode.Skipped : CommandGroupMode.Layer;
     }
 
     private void EndGroup(IGraphicsDevice device, GroupMarkRenderUnit mark, ref Rect2D fullScissor,
@@ -188,14 +278,31 @@ public partial class RenderCache
         switch (state.Mode)
         {
             case CommandGroupMode.Scissor:
+                FlushKeepingScissor(device, fullScissor, ref scissorNarrowed);
                 _openGroups.Pop();
                 _commandScissor = state.OuterScissor;
+                if (mark != null)
+                {
+                    RecordGroupMark(mark);
+                }
+                else if (_recording)
+                {
+                    // Left open: no mark in the stream would stop a replay cutting by it.
+                    _opsReplayable = false;
+                }
+
                 return;
             case CommandGroupMode.Layer:
                 FlushBatches(device, fullScissor, ref scissorNarrowed);
                 if (mark == null)
                 {
-                    // Left open: everything a mark would have done before its content, then its end.
+                    // Left open: everything a mark would have done before its content, then its end - which no op in
+                    // the stream does for a replay.
+                    if (_recording)
+                    {
+                        _opsReplayable = false;
+                    }
+
                     fullScissor = FinishGroup(device, state, fullScissor);
                     return;
                 }
@@ -310,21 +417,82 @@ public partial class RenderCache
         }
     }
 
-    // A replayed frame meets a recorded mark: the device does what it did when the walk recorded it.
-    private Rect2D ReplayGroupMark(IGraphicsDevice device, GroupMarkRenderUnit mark, Rect2D fullScissor)
+    // A replayed frame meets a recorded mark: the device does what it did when the walk recorded it - for a group that
+    // moved, where it stands now. `hidden` says the group, moved out of sight, draws nothing this frame: its ops up to
+    // its end are passed over.
+    private Rect2D ReplayGroupMark(IGraphicsDevice device, GroupMarkRenderUnit mark, Rect2D fullScissor, out bool hidden)
     {
-        if (mark.Group == null)
+        hidden = false;
+        var state = mark.Group;
+        if (state == null)
         {
             return fullScissor;
         }
 
         if (mark.Kind == GroupMarkKind.Begin)
         {
-            _openGroups.Push(mark.Group);
+            if (_groupsMove || state.Hidden)
+            {
+                var cut = state.Mode == CommandGroupMode.Scissor;
+                if (Place(state, fullScissor, BoundsInside(fullScissor), cut, out var area, out _, out _)
+                    == CommandGroupMode.Skipped)
+                {
+                    state.Hidden = true;
+                    hidden = true;
+                    return fullScissor;
+                }
+
+                if (cut) state.Scissor = area;
+                else state.Region = area;
+                // Back in sight: its per-unit draws were passed over while it moved, so they catch up before they draw.
+                if (state.Hidden)
+                {
+                    state.Hidden = false;
+                    _catchingUp ??= state;
+                }
+            }
+
+            state.OuterScissor = _commandScissor;
+            _openGroups.Push(state);
+            if (state.Mode == CommandGroupMode.Scissor)
+            {
+                _commandScissor = state.Scissor;
+                return fullScissor;
+            }
+        }
+        else if (mark.Kind == GroupMarkKind.End && ReferenceEquals(_catchingUp, state))
+        {
+            _catchingUp = null;
+        }
+
+        if (mark.Kind == GroupMarkKind.End && state.Mode == CommandGroupMode.Scissor)
+        {
+            if (_openGroups.Count > 0 && ReferenceEquals(_openGroups.Peek(), state))
+            {
+                _openGroups.Pop();
+            }
+
+            _commandScissor = state.OuterScissor;
+            return fullScissor;
         }
 
         return ApplyGroupMark(device, mark, fullScissor);
     }
+
+    // A recorded scissor inside an open group, where the group lets it reach this frame: the walk recorded it cut by
+    // where the group stood then.
+    private Rect2D CutByGroups(IUIComponent owner, Rect2D fullScissor)
+    {
+        var scissor = ScissorIn(owner, fullScissor);
+        return _commandScissor is { } cut ? Intersect(scissor, cut) : scissor;
+    }
+
+    // Whether a replay derives its recorded scissors again: in a layer's own space, or inside a group.
+    private bool RederivesScissors => InOwnSpace || _openGroups.Count > 0;
+
+    // The group a replay is drawing again after it was out of sight, until its end: its per-unit draws are brought to
+    // where their elements stand, as in a layer's own space.
+    private CommandGroup _catchingUp;
 
     // The innermost open group drawn into a target of its own, or null.
     private CommandGroup EnclosingLayer()

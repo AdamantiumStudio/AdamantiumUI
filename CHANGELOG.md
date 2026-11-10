@@ -13,8 +13,9 @@ All packages share one version.
   laid down by any of the sixteen PDF blend modes (`BlendMode`). A group is drawn apart into a target the size of what
   it shows and laid down at its end; one that only cuts to a rectangle along the axes is cut by a scissor, with no
   target. Groups nest; one left open ends with its element's drawing; a group's masks are drawn at full strength, the
-  element's opacity reaching the group itself. While the frame a window last recorded holds any group, a move anywhere
-  in the window - a scroll, a placement, a composited animation - draws the window again rather than replaying it.
+  element's opacity reaching the group itself. A move - a scroll, a placement, a composited animation - replays the
+  frame with each group placed again where it now stands; the window is drawn again only when a group left out of
+  sight comes into view or one cut to a rectangle turns.
 - `IDrawingSession.DrawGlyphs` and `GlyphRun`: glyphs the caller placed, by index and pen position, drawn where one
   matrix puts the run - filled through the glyph atlas, outlined as paths (`GlyphRun.Outline`).
 - The sandbox has a "PDF drawing" tab: clips by a path, a rectangle and letters, both soft masks, a group in a group and

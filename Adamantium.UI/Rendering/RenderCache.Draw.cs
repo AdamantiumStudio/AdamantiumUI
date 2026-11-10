@@ -824,11 +824,12 @@ public partial class RenderCache
 
         // Clean-frame replay: re-issue the last recorded walk's op stream and skip the per-unit loop (the retained buffers
         // still hold its bytes). Only a fully-Clean build qualifies; a Partial/Full re-walks and re-records.
+        NoteGroupsMoving();   // before the movers are carried, which forgets them
         if (device != null && !ReplayDisabled && _opsRecorded && _opsReplayable && LastBuildKind == RenderBuildKind.Clean && OpsMatchTransforms
-            && GroupsHoldStill()                  // groups of draws were laid out where things stood: a move needs a walk
             && RefreshMovedNodes(device)          // moved nodes first: write their matrices, or the replay draws them where they were
             && RefreshMovedComponents(device, fullScissor)     // ...and the ordinary movers' subtrees, for the same reason
-            && RefreshMovedPlacements(device))                 // ...and the placements, last, from the worlds now
+            && RefreshMovedPlacements(device)                  // ...and the placements, last, from the worlds now
+            && GroupsFollow())                    // groups of draws are placed again from those worlds - unless one cannot be
         {
             RefreshMovedScissors(fullScissor);    // the viewports they carried past are world-space rects - derive again
             AcceptPatchedTransforms();
@@ -848,7 +849,7 @@ public partial class RenderCache
         // ExecuteOps redraws batch segments from last frame's baked positions, so a MOVE would leave batched fills stale
         // while per-unit draws follow the new transform (the "outline runs ahead of its fill" tear) -> fall through to the walk.
         if (device != null && !PatchDisabled && _opsRecorded && _opsReplayable && LastBuildKind == RenderBuildKind.Partial
-            && !LastBuildTransformDirty && OpsMatchTransforms && !_partialSpliced && _rectBatch != null && GroupsHoldStill()
+            && !LastBuildTransformDirty && OpsMatchTransforms && !_partialSpliced && _rectBatch != null && GroupsFollow()
             && TryPartialReplay(device, fullScissor))
         { LastFrameReplayed = true; LastDrawPath = DrawPath.Patch; return; }
 
@@ -857,7 +858,7 @@ public partial class RenderCache
         // surgery (excise its old run, its re-baked items append as a new segment spliced into the op stream at the same
         // paint position) then replayed. O(dirty groups). Falls back to the full walk on anything not yet patchable.
         if (device != null && !PatchDisabled && _opsRecorded && _opsReplayable && LastBuildKind == RenderBuildKind.Partial
-            && !LastBuildTransformDirty && OpsMatchTransforms && _partialSpliced && _rectBatch != null && GroupsHoldStill()
+            && !LastBuildTransformDirty && OpsMatchTransforms && _partialSpliced && _rectBatch != null && GroupsFollow()
             && TrySplicedPatch(device, fullScissor))
         { LastFrameReplayed = true; LastDrawPath = DrawPath.Splice; return; }
 
@@ -890,6 +891,8 @@ public partial class RenderCache
             _ops.Clear();
             _layers.Clear();
             _opsHoldCommandGroups = false;
+            _groupsCut.Clear();
+            _groupsLeftOut.Clear();
             _openLayer = null;
             _opsReplayable = true; 
             _rectSlotByUnit.Clear();
