@@ -7,6 +7,11 @@ All packages share one version.
 
 ### Added
 
+- `WebViewBridge.AddScriptToNewDocument` / `RemoveScriptFromNewDocument` / `ScriptsForNewDocuments`: a script every
+  document the page loads from then on runs before its own, `window.adamantium` already there - the first document
+  too, a page made again and a page this one opens. The page is made blank and goes to its address once it took them;
+  nobody hears of the blank page, and it leaves no history behind.
+
 - Groups of draws inside one element (`IDrawingSession.PushGroup` / `PopGroup`, `DrawingGroupOptions`), as a PDF page
   puts down what lies between `q` and `Q`: cut to a path by its own fill rule, to glyphs (`PlacedGlyphRun`), let
   through a soft mask read by its alpha or by its luminosity over a backdrop color (`MaskKind`), faded as a whole and

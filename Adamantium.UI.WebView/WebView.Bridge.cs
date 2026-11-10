@@ -30,12 +30,18 @@ public partial class WebView
 
     internal void PostMessage(string json) => browser?.Post(json);
 
+    internal void ScriptsForNewDocumentsChanged() => browser?.ScriptsForNewDocumentsChanged();
+
     private static void OnBridgeChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)
     {
         var view = (WebView)component;
         (e.OldValue as WebViewBridge)?.Detach(view);
         (e.NewValue as WebViewBridge)?.Attach(view);
+        view.ScriptsForNewDocumentsChanged();
     }
+
+    IReadOnlyList<WebDocumentScript> IWebViewBrowserView.ScriptsForNewDocuments(WebViewBrowser from) =>
+        Bridge?.ScriptsForNewDocuments ?? [];
 
     bool IWebViewBrowserView.NavigationStarting(WebViewBrowser from, string address, bool userGesture, bool isRedirect) =>
         ReferenceEquals(browser, from) && Bridge?.OnNavigationStarting(address, userGesture, isRedirect) == true;

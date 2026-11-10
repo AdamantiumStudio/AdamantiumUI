@@ -48,6 +48,9 @@ internal sealed class RecordingBrowserView : IWebViewBrowserView
     /// <summary>The messages the page sent, as JSON.</summary>
     public List<string> Messages { get; } = [];
 
+    /// <summary>The scripts the page's new documents are to run.</summary>
+    public List<WebDocumentScript> Scripts { get; } = [];
+
     /// <summary>Says which addresses the page is kept from going to.</summary>
     public Func<string, bool> Refuse { get; set; }
 
@@ -209,6 +212,8 @@ internal sealed class RecordingBrowserView : IWebViewBrowserView
         Completed.Add(address);
 
     public void MessageReceived(WebViewBrowser browser, string json) => Messages.Add(json);
+
+    public IReadOnlyList<WebDocumentScript> ScriptsForNewDocuments(WebViewBrowser browser) => Scripts;
 
     public void LoadFailed(WebViewBrowser browser, WebViewLoadError error) => Error = error;
 

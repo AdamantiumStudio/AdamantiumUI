@@ -12,6 +12,7 @@ namespace Adamantium.UI.WebView.Cef;
 /// </summary>
 internal sealed class WebViewWaitingView : IWebViewBrowserView
 {
+    private readonly IReadOnlyList<WebDocumentScript> openersScripts;
     private string address;
     private string title;
     private bool isLoading;
@@ -23,6 +24,13 @@ internal sealed class WebViewWaitingView : IWebViewBrowserView
     private WebViewLoadError error;
     private ImageSource icon;
     private bool? isSecure;
+
+    /// <summary>A view for a page the page with <paramref name="openersScripts"/> opens: its documents run those until
+    /// a view takes it up - it is the application's page as much as its opener.</summary>
+    public WebViewWaitingView(IReadOnlyList<WebDocumentScript> openersScripts)
+    {
+        this.openersScripts = openersScripts;
+    }
 
     /// <summary>Whether the browser can no longer be shown as it is: CEF gave it up, or its frames cannot come as they
     /// were to - the view that shows the page makes one of its own.</summary>
@@ -122,6 +130,8 @@ internal sealed class WebViewWaitingView : IWebViewBrowserView
     public void MessageReceived(WebViewBrowser browser, string json)
     {
     }
+
+    public IReadOnlyList<WebDocumentScript> ScriptsForNewDocuments(WebViewBrowser browser) => openersScripts;
 
     public void ZoomChanged(WebViewBrowser browser, double factor)
     {

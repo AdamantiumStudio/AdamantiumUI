@@ -8,7 +8,37 @@ namespace Adamantium.UI.WebView;
 /// </summary>
 public sealed class WebViewBridge
 {
+    private readonly List<WebDocumentScript> scriptsForNewDocuments = [];
     private WebView view;
+
+    /// <summary>The scripts every new document of the page runs before its own, in the order they were added - held
+    /// here, so a page made again, or opened by this one, runs them too.</summary>
+    public IReadOnlyList<WebDocumentScript> ScriptsForNewDocuments => scriptsForNewDocuments;
+
+    /// <summary>Has every document the page loads from now on run <paramref name="source"/> before its own scripts,
+    /// <c>window.adamantium</c> already there; the document shown now does not. What it gives takes it away again.
+    /// </summary>
+    public WebDocumentScript AddScriptToNewDocument(string source)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        var script = new WebDocumentScript(source);
+        scriptsForNewDocuments.Add(script);
+        view?.ScriptsForNewDocumentsChanged();
+        return script;
+    }
+
+    /// <summary>Documents loaded from now on no longer run <paramref name="script"/>; false for one not added here.
+    /// </summary>
+    public bool RemoveScriptFromNewDocument(WebDocumentScript script)
+    {
+        if (!scriptsForNewDocuments.Remove(script))
+        {
+            return false;
+        }
+
+        view?.ScriptsForNewDocumentsChanged();
+        return true;
+    }
 
     /// <summary>The page sent a message.</summary>
     public event EventHandler<WebMessageEventArgs> MessageReceived;

@@ -23,6 +23,18 @@ internal sealed class WebViewDevTools
     private readonly Action<string> messageReceived;
     private readonly Dictionary<int, TaskCompletionSource<JsonElement>> pending = [];
     private readonly Dictionary<int, (byte[] Id, bool EnablesOverlay)> forwarded = [];
+
+    // The scripts for new documents asked for, in order, each under the id of its call; the page's identifier for one
+    // comes with the answer, and one let go of before the answer came is removed then.
+    private readonly List<(WebDocumentScript Script, int Asked)> scriptsAsked = [];
+    private readonly Dictionary<int, string> scriptIdentifiers = [];
+    private readonly HashSet<int> scriptsLetGo = [];
+    private int pageScriptAsked;
+    private Action scriptsReady;
+    private int scriptsReadyAt;
+    private int lastScriptAnswered;
+    private readonly Dictionary<int, Action> answeredOnTheLoop = [];
+
     private Action<string> frontEnd;
     private WebViewDevToolsObserver observer;
     private unsafe CefRegistration* registration;
@@ -34,16 +46,112 @@ internal sealed class WebViewDevTools
     }
 
     /// <summary>Starts speaking to the browser behind <paramref name="host"/>: its runtime, the page's binding and
-    /// script, for the documents to come and the one there now.</summary>
-    public unsafe void Attach(CefBrowserHost* host)
+    /// script, for the documents to come and the one there now, and <paramref name="scripts"/> for the documents to
+    /// come. <paramref name="ready"/> runs once the page has taken them all - a document loaded before would miss
+    /// them.</summary>
+    public unsafe void Attach(CefBrowserHost* host, IReadOnlyList<WebDocumentScript> scripts, Action ready)
     {
         observer = new WebViewDevToolsObserver(this);
         registration = host->add_dev_tools_message_observer(host, observer.Shared);
         Send(host, "Runtime.enable", null);
         Send(host, "Page.enable", null);
         Send(host, "Runtime.addBinding", writer => writer.WriteString("name", Binding));
-        Send(host, "Page.addScriptToEvaluateOnNewDocument", writer => writer.WriteString("source", PageScript));
+        AddScript(host, PageScript, id => pageScriptAsked = id);
+        SetScriptsForNewDocuments(host, scripts);
+        // The page answers in the order it is asked: the last script's answer comes after all the others.
+        scriptsReady = ready;
+        scriptsReadyAt = scriptsAsked.Count > 0 ? scriptsAsked[^1].Asked : pageScriptAsked;
+        if (lastScriptAnswered >= scriptsReadyAt)
+        {
+            TellScriptsReady();
+        }
+
         Prepare(host);
+    }
+
+    private void TellScriptsReady()
+    {
+        var ready = scriptsReady;
+        scriptsReady = null;
+        ready?.Invoke();
+    }
+
+    /// <summary>Wipes the page's history but the page it is at; <paramref name="answered"/> runs on the UI loop once it
+    /// is done, or refused.</summary>
+    public unsafe void ResetHistory(CefBrowserHost* host, Action answered) =>
+        Send(host, "Page.resetNavigationHistory", null, id => answeredOnTheLoop[id] = answered);
+
+    /// <summary>Has the page's documents from now on run <paramref name="scripts"/>, after its own
+    /// <c>window.adamantium</c>: those no longer there are taken away, those new added after the rest.</summary>
+    public unsafe void SetScriptsForNewDocuments(CefBrowserHost* host, IReadOnlyList<WebDocumentScript> scripts)
+    {
+        for (var i = scriptsAsked.Count - 1; i >= 0; i--)
+        {
+            if (!Contains(scripts, scriptsAsked[i].Script))
+            {
+                LetGoOfScript(host, scriptsAsked[i].Asked);
+                scriptsAsked.RemoveAt(i);
+            }
+        }
+
+        foreach (var script in scripts)
+        {
+            if (!scriptsAsked.Exists(asked => ReferenceEquals(asked.Script, script)))
+            {
+                AddScript(host, script.Source, id => scriptsAsked.Add((script, id)));
+            }
+        }
+    }
+
+    private static bool Contains(IReadOnlyList<WebDocumentScript> scripts, WebDocumentScript script)
+    {
+        foreach (var each in scripts)
+        {
+            if (ReferenceEquals(each, script))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private unsafe void AddScript(CefBrowserHost* host, string source, Action<int> asked) =>
+        Send(host, "Page.addScriptToEvaluateOnNewDocument", writer => writer.WriteString("source", source), asked);
+
+    private unsafe void LetGoOfScript(CefBrowserHost* host, int asked)
+    {
+        if (scriptIdentifiers.Remove(asked, out var identifier))
+        {
+            RemoveScript(host, identifier);
+        }
+        else
+        {
+            scriptsLetGo.Add(asked);
+        }
+    }
+
+    private unsafe void RemoveScript(CefBrowserHost* host, string identifier) =>
+        Send(host, "Page.removeScriptToEvaluateOnNewDocument", writer => writer.WriteString("identifier", identifier));
+
+    // The answer to a script for new documents asked for under id: its identifier is kept, or the script removed when
+    // it was let go of meanwhile.
+    private unsafe void TakeScriptAnswer(CefBrowserHost* host, int id, ReadOnlySpan<byte> message)
+    {
+        var letGo = scriptsLetGo.Remove(id);
+        using var document = JsonDocument.Parse(message.ToArray(), Whole);
+        if (document.RootElement.TryGetProperty("result", out var result) &&
+            result.TryGetProperty("identifier", out var identifier))
+        {
+            if (letGo)
+            {
+                RemoveScript(host, identifier.GetString());
+            }
+            else
+            {
+                scriptIdentifiers[id] = identifier.GetString();
+            }
+        }
     }
 
     /// <summary>Gives the page there now its <c>window.adamantium</c>, when the script for new documents came too late
@@ -100,7 +208,8 @@ internal sealed class WebViewDevTools
     /// <summary>A front end went, or another took its place: its calls are forgotten - their answers would reach the
     /// next under the same ids - and what it may have left the page in is undone: a debugger paused at a breakpoint,
     /// the inspect overlay, a device emulated, new targets held for a debugger, the cache off. The page's own runtime,
-    /// page and binding are asked for again.</summary>
+    /// page, binding and scripts for new documents are asked for again - turning the page off drops the scripts.
+    /// </summary>
     public unsafe void FrontEndGone(CefBrowserHost* host)
     {
         forwarded.Clear();
@@ -122,6 +231,18 @@ internal sealed class WebViewDevTools
         Send(host, "Runtime.enable", null);
         Send(host, "Page.enable", null);
         Send(host, "Runtime.addBinding", writer => writer.WriteString("name", Binding));
+
+        var scripts = new List<WebDocumentScript>(scriptsAsked.Count);
+        LetGoOfScript(host, pageScriptAsked);
+        foreach (var (script, asked) in scriptsAsked)
+        {
+            scripts.Add(script);
+            LetGoOfScript(host, asked);
+        }
+
+        scriptsAsked.Clear();
+        AddScript(host, PageScript, id => pageScriptAsked = id);
+        SetScriptsForNewDocuments(host, scripts);
     }
 
     /// <summary>Hands the page a call of the DevTools front end's, as JSON: under an id of ours, so it never meets one of
@@ -193,6 +314,7 @@ internal sealed class WebViewDevTools
         }
 
         pending.Clear();
+        ForgetScripts();
         if (registration != null)
         {
             CefRefCounting.ReleaseCef(registration);
@@ -201,6 +323,18 @@ internal sealed class WebViewDevTools
 
         observer?.Release();
         observer = null;
+    }
+
+    private void ForgetScripts()
+    {
+        scriptsAsked.Clear();
+        scriptIdentifiers.Clear();
+        scriptsLetGo.Clear();
+        pageScriptAsked = 0;
+        scriptsReady = null;
+        scriptsReadyAt = 0;
+        lastScriptAnswered = 0;
+        answeredOnTheLoop.Clear();
     }
 
     /// <summary>Forgets the browser CEF did not close before it shut down: what was asked fails, nothing is released
@@ -213,6 +347,7 @@ internal sealed class WebViewDevTools
         }
 
         pending.Clear();
+        ForgetScripts();
         registration = null;
         observer = null;
     }
@@ -221,7 +356,7 @@ internal sealed class WebViewDevTools
     // real site's document tree nests far past a JSON reader's usual depth, and a message lost to it leaves the front
     // end waiting for an answer forever. Only our own answers and the page's binding calls, both shallow, are read
     // whole.
-    internal void OnMessage(ReadOnlySpan<byte> message)
+    internal unsafe void OnMessage(CefBrowser* browser, ReadOnlySpan<byte> message)
     {
         if (!TryReadTop(message, out var idRange, out var method))
         {
@@ -253,6 +388,27 @@ internal sealed class WebViewDevTools
                 OverlayHeard?.Invoke();
             }
 
+            return;
+        }
+
+        if (browser != null && (scriptsLetGo.Contains(id) || id == pageScriptAsked ||
+                                scriptsAsked.Exists(asked => asked.Asked == id)))
+        {
+            var host = browser->get_host(browser);
+            TakeScriptAnswer(host, id, message);
+            CefRefCounting.ReleaseCef(host);
+            lastScriptAnswered = id;
+            if (id == scriptsReadyAt)
+            {
+                TellScriptsReady();
+            }
+
+            return;
+        }
+
+        if (answeredOnTheLoop.Remove(id, out var answered))
+        {
+            answered();
             return;
         }
 
@@ -353,13 +509,17 @@ internal sealed class WebViewDevTools
     private unsafe Task<JsonElement> Call(CefBrowserHost* host, string method, Action<Utf8JsonWriter> parameters)
     {
         var call = new TaskCompletionSource<JsonElement>(TaskCreationOptions.RunContinuationsAsynchronously);
-        pending[Send(host, method, parameters)] = call;
+        Send(host, method, parameters, id => pending[id] = call);
         return call.Task;
     }
 
-    private unsafe int Send(CefBrowserHost* host, string method, Action<Utf8JsonWriter> parameters)
+    // What the browser itself answers, it answers before sending returns: whoever waits for the answer is told the id
+    // through asked before it is sent.
+    private unsafe int Send(CefBrowserHost* host, string method, Action<Utf8JsonWriter> parameters,
+        Action<int> asked = null)
     {
         var id = ++nextId;
+        asked?.Invoke(id);
         var buffer = new ArrayBufferWriter<byte>();
         using (var writer = new Utf8JsonWriter(buffer))
         {
