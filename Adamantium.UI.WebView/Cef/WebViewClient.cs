@@ -14,14 +14,21 @@ internal sealed unsafe class WebViewClient : CefObject
     private readonly WebViewRequestHandler requestHandler;
     private readonly WebViewContextMenuHandler contextMenuHandler;
     private readonly WebViewJsDialogHandler jsDialogHandler;
+    private readonly WebViewDialogHandler dialogHandler;
+    private readonly WebViewPermissionHandler permissionHandler;
 
     public WebViewClient(WebViewRenderHandler renderHandler, WebViewLifeSpanHandler lifeSpanHandler,
         WebViewDisplayHandler displayHandler, WebViewLoadHandler loadHandler, WebViewRequestHandler requestHandler,
-        WebViewContextMenuHandler contextMenuHandler, WebViewJsDialogHandler jsDialogHandler)
+        WebViewContextMenuHandler contextMenuHandler, WebViewJsDialogHandler jsDialogHandler,
+        WebViewDialogHandler dialogHandler, WebViewPermissionHandler permissionHandler)
         : base(sizeof(CefClient))
     {
         this.jsDialogHandler = jsDialogHandler;
         jsDialogHandler.AddReference();
+        this.dialogHandler = dialogHandler;
+        dialogHandler.AddReference();
+        this.permissionHandler = permissionHandler;
+        permissionHandler.AddReference();
         this.renderHandler = renderHandler;
         this.lifeSpanHandler = lifeSpanHandler;
         this.displayHandler = displayHandler;
@@ -42,6 +49,20 @@ internal sealed unsafe class WebViewClient : CefObject
         client->get_request_handler = &GetRequestHandler;
         client->get_context_menu_handler = &GetContextMenuHandler;
         client->get_jsdialog_handler = &GetJsDialogHandler;
+        client->get_dialog_handler = &GetDialogHandler;
+        client->get_permission_handler = &GetPermissionHandler;
+    }
+
+    [UnmanagedCallersOnly]
+    private static CefDialogHandler* GetDialogHandler(CefClient* self)
+    {
+        return (CefDialogHandler*)From<WebViewClient>(self).dialogHandler.Share();
+    }
+
+    [UnmanagedCallersOnly]
+    private static CefPermissionHandler* GetPermissionHandler(CefClient* self)
+    {
+        return (CefPermissionHandler*)From<WebViewClient>(self).permissionHandler.Share();
     }
 
     [UnmanagedCallersOnly]
@@ -68,6 +89,8 @@ internal sealed unsafe class WebViewClient : CefObject
         requestHandler.Release();
         contextMenuHandler.Release();
         jsDialogHandler.Release();
+        dialogHandler.Release();
+        permissionHandler.Release();
     }
 
     [UnmanagedCallersOnly]

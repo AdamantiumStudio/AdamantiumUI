@@ -105,4 +105,12 @@ internal interface IWebViewBrowserView
     /// <summary>CEF will not make the browser after all - a page another opened, given up as its opener went: the view
     /// is to make one of its own at the page's address.</summary>
     void BrowserLost(WebViewBrowser browser);
+
+    /// <summary>The page's file field asks for files: the view model is asked, and answers <paramref name="request"/>;
+    /// false leaves it to be answered with none.</summary>
+    bool FileDialogRequested(WebViewBrowser browser, WebViewFileDialogRequest request);
+
+    /// <summary>A site asks to use something it was never answered for: the view model is asked, and answers
+    /// <paramref name="request"/>; false leaves it to be refused.</summary>
+    bool PermissionRequested(WebViewBrowser browser, WebViewPermissionRequest request);
 }

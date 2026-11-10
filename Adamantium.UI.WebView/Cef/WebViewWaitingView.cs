@@ -174,4 +174,8 @@ internal sealed class WebViewWaitingView : IWebViewBrowserView
     public bool NewWindowRequested(WebViewBrowser browser, WebViewNewPage page, WebNewWindowKind kind) => false;
 
     public void BrowserLost(WebViewBrowser browser) => IsLost = true;
+
+    public bool FileDialogRequested(WebViewBrowser browser, WebViewFileDialogRequest request) => false;
+
+    public bool PermissionRequested(WebViewBrowser browser, WebViewPermissionRequest request) => false;
 }

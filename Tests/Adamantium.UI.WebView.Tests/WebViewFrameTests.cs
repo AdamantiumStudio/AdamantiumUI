@@ -968,6 +968,212 @@ public class WebViewFrameTests
         });
     }
 
+    // A file field asks the view - what it takes, as filters with their extensions - and the file chosen reaches the
+    // page.
+    [Test]
+    public void AFileField_AsksTheView_AndTheFileChosenReachesThePage()
+    {
+        const string page = "data:text/html,<input type=file accept='image/*,.txt' " +
+                            "onchange=\"document.title='got:'+this.files[0].name\" style='display:block;width:100%;height:100vh'>";
+        var file = Path.Combine(profile, "pick.txt");
+        Directory.CreateDirectory(profile);
+        File.WriteAllText(file, "picked");
+        WebFileDialogMode? mode = null;
+        IReadOnlyList<WebFileFilter> filters = null;
+        string title = null;
+        loop.Run(() => ShowPage(WebViewFramePath.PixelBuffer, page, (browser, view) =>
+        {
+            ClickTheMiddle(browser);
+            Pump(() => view.FileDialogs.Count > 0, TimeSpan.FromSeconds(5));
+            if (view.FileDialogs.Count == 0)
+            {
+                return;
+            }
+
+            var asked = view.FileDialogs[0];
+            mode = asked.Mode;
+            filters = asked.Filters;
+            asked.Choose([file]);
+            Pump(() => view.Title?.StartsWith("got:") == true, TimeSpan.FromSeconds(5));
+            title = view.Title;
+        }));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(mode, Is.EqualTo(WebFileDialogMode.Open));
+            Assert.That(filters?.SelectMany(filter => filter.Extensions), Does.Contain("txt").And.Contain("png"));
+            Assert.That(title, Is.EqualTo("got:pick.txt"));
+        });
+    }
+
+    // Answered through the platform's own dialog: it is offered the kinds the field takes, and the file it gives reaches
+    // the page.
+    [Test]
+    public void AFileField_AnsweredFromThePlatformsDialog_GetsTheFileChosenThere()
+    {
+        const string page = "data:text/html,<input type=file accept='.txt' " +
+                            "onchange=\"document.title='got:'+this.files[0].name\" style='display:block;width:100%;height:100vh'>";
+        Directory.CreateDirectory(profile);
+        var file = Path.Combine(profile, "platform.txt");
+        File.WriteAllText(file, "chosen");
+        var platform = new ChoosingFileDialog(file);
+        var before = Adamantium.UI.Core.FileDialog.Platform;
+        string title = null;
+        try
+        {
+            Adamantium.UI.Core.FileDialog.Platform = platform;
+            loop.Run(() => ShowPage(WebViewFramePath.PixelBuffer, page, (browser, view) =>
+            {
+                ClickTheMiddle(browser);
+                Pump(() => view.FileDialogs.Count > 0, TimeSpan.FromSeconds(5));
+                if (view.FileDialogs.Count == 0)
+                {
+                    return;
+                }
+
+                new WebFileDialogRequestedEventArgs(view.FileDialogs[0]).AnswerFromFileDialog();
+                Pump(() => view.Title?.StartsWith("got:") == true, TimeSpan.FromSeconds(5));
+                title = view.Title;
+            }));
+        }
+        finally
+        {
+            Adamantium.UI.Core.FileDialog.Platform = before;
+        }
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(platform.Offered?.SelectMany(type => type.Extensions), Is.EqualTo(new[] { "txt" }));
+            Assert.That(title, Is.EqualTo("got:platform.txt"));
+        });
+    }
+
+    // A field taking several files asks for several, and gets them all.
+    [Test]
+    public void AFieldTakingSeveralFiles_GetsThemAll()
+    {
+        const string page = "data:text/html,<input type=file multiple " +
+                            "onchange=\"document.title='n:'+this.files.length\" style='display:block;width:100%;height:100vh'>";
+        Directory.CreateDirectory(profile);
+        var first = Path.Combine(profile, "one.txt");
+        var second = Path.Combine(profile, "two.txt");
+        File.WriteAllText(first, "1");
+        File.WriteAllText(second, "2");
+        WebFileDialogMode? mode = null;
+        string title = null;
+        loop.Run(() => ShowPage(WebViewFramePath.PixelBuffer, page, (browser, view) =>
+        {
+            ClickTheMiddle(browser);
+            Pump(() => view.FileDialogs.Count > 0, TimeSpan.FromSeconds(5));
+            if (view.FileDialogs.Count == 0)
+            {
+                return;
+            }
+
+            mode = view.FileDialogs[0].Mode;
+            view.FileDialogs[0].Choose([first, second]);
+            Pump(() => view.Title?.StartsWith("n:") == true, TimeSpan.FromSeconds(5));
+            title = view.Title;
+        }));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(mode, Is.EqualTo(WebFileDialogMode.OpenMultiple));
+            Assert.That(title, Is.EqualTo("n:2"));
+        });
+    }
+
+    // A site asking where the device is asks the view once: the answer is kept, the site gets it unasked next time, and
+    // once taken back it is asked again. Needs the network: example.org is a site, a data address is none.
+    [Test]
+    public void APermissionAnswered_IsKeptForTheSite_UntilTakenBack()
+    {
+        const string site = "https://example.org";
+        const string ask = "navigator.geolocation.getCurrentPosition(() => document.title = 'where', " +
+                           "e => document.title = 'error ' + e.code), 1";
+        WebPermission? asked = null;
+        string askedSite = null, refused = null, refusedAgain = null;
+        int askedFirst = 0, askedSecond = 0, askedAfterForgetting = 0, askedAfterRefusing = 0;
+        bool kept = false, forgotten = false;
+        loop.Run(() => ShowPage(WebViewFramePath.PixelBuffer, site + "/", (browser, view) =>
+        {
+            Pump(() => view.Title == "Example Domain", TimeSpan.FromSeconds(15));
+            Await(browser.EvaluateAsync(ask));
+            Pump(() => view.Permissions.Count > 0, TimeSpan.FromSeconds(5));
+            askedFirst = view.Permissions.Count;
+            if (askedFirst == 0)
+            {
+                return;
+            }
+
+            asked = view.Permissions[0].Permissions;
+            askedSite = view.Permissions[0].Site;
+            view.Permissions[0].Decide(false);
+            Pump(() => view.Title.StartsWith("error"), TimeSpan.FromSeconds(5));
+            refused = view.Title;
+            kept = engine.SitePermissions.Any(p => p.Site == site && p.Permission == WebPermission.Geolocation && !p.IsAllowed);
+
+            Await(browser.EvaluateAsync("document.title = 'again', 1"));
+            Await(browser.EvaluateAsync(ask));
+            Pump(() => view.Title.StartsWith("error"), TimeSpan.FromSeconds(5));
+            askedSecond = view.Permissions.Count;
+            refusedAgain = view.Title;
+
+            engine.ForgetSitePermission(site, WebPermission.Geolocation);
+            forgotten = !engine.SitePermissions.Any(p => p.Site == site);
+            Await(browser.EvaluateAsync(ask));
+            Pump(() => view.Permissions.Count > 1, TimeSpan.FromSeconds(5));
+            askedAfterForgetting = view.Permissions.Count;
+            // Refused by nobody's answer - the view model let it be: kept nowhere, Chromium included.
+            view.Permissions.LastOrDefault()?.Answer(false);
+            Pump(() => false, TimeSpan.FromMilliseconds(300));
+            Await(browser.EvaluateAsync(ask));
+            Pump(() => view.Permissions.Count > 2, TimeSpan.FromSeconds(5));
+            askedAfterRefusing = view.Permissions.Count;
+            view.Permissions.LastOrDefault()?.Answer(false);
+        }));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(askedFirst, Is.EqualTo(1), "asked of the view");
+            Assert.That((asked, askedSite), Is.EqualTo(((WebPermission?)WebPermission.Geolocation, site)));
+            Assert.That(refused, Is.EqualTo("error 1"), "PERMISSION_DENIED");
+            Assert.That(kept, Is.True, "the answer is kept for the site");
+            Assert.That(askedSecond, Is.EqualTo(1), "not asked again");
+            Assert.That(refusedAgain, Is.EqualTo("error 1"), "the kept answer is given");
+            Assert.That(forgotten, Is.True);
+            Assert.That(askedAfterForgetting, Is.EqualTo(2), "taken back, asked again");
+            Assert.That(askedAfterRefusing, Is.EqualTo(3), "refused unanswered, asked again");
+        });
+    }
+
+    // Refused again and again without the user's answer - a question put away, a view that asks nothing - a site is
+    // still asked: Chromium blocks a site for days after a few prompts the user let go, and nothing here could undo it.
+    // Needs the network, as above.
+    [Test]
+    public void ASiteRefusedUnansweredOften_IsStillAsked()
+    {
+        const string ask = "navigator.geolocation.getCurrentPosition(() => document.title = 'where', " +
+                           "e => document.title = 'error ' + e.code), 1";
+        var asked = 0;
+        loop.Run(() => ShowPage(WebViewFramePath.PixelBuffer, "https://example.com/", (browser, view) =>
+        {
+            Pump(() => view.Title == "Example Domain", TimeSpan.FromSeconds(15));
+            for (var round = 1; round <= 5; round++)
+            {
+                Await(browser.EvaluateAsync(ask));
+                var expected = round;
+                Pump(() => view.Permissions.Count >= expected, TimeSpan.FromSeconds(5));
+                view.Permissions.LastOrDefault()?.Answer(false);
+                Pump(() => false, TimeSpan.FromMilliseconds(200));
+            }
+
+            asked = view.Permissions.Count;
+        }));
+
+        Assert.That(asked, Is.EqualTo(5), "asked each time");
+    }
+
     // An element's title comes to the view as its tooltip while the pointer is over it.
     [Test]
     public void AnElementsTitle_ComesAsTheTooltip()

@@ -33,8 +33,28 @@
             </TextBox>
             <Button Grid.Column="4" Content="Go" Command="{Binding GoCommand}" AutomationProperties.AutomationId="WebGo"/>
         </Grid>
-        <Grid Grid.Row="1" ColumnDefinitions="*,Auto">
-            <web:WebView x:Name="Page" Engine="{Binding Engine}" Source="{Binding Source, Mode=TwoWay}"
+        <Grid Grid.Row="1" ColumnDefinitions="*,Auto" RowDefinitions="Auto,*">
+            <!-- A site asking to use something - the camera, where the device is: answered here, kept for the site. -->
+            <ContentControl Grid.ColumnSpan="2" Content="{Binding AskedPermission}" AutomationProperties.AutomationId="WebAsked">
+                <ContentControl.ContentTemplate>
+                    <DataTemplate>
+                        <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6" Margin="8,0,8,8">
+                            <TextBlock VerticalAlignment="Center" AutomationProperties.AutomationId="WebAskedText">
+                                <Run Text="{Binding Site}"/>
+                                <Run Text=" asks to use: "/>
+                                <Run Text="{Binding Permissions}"/>
+                            </TextBlock>
+                            <Button Grid.Column="1" Content="Allow" Padding="8 2"
+                                    Command="{Ancestor View, DataContext.AllowPermissionCommand}"
+                                    AutomationProperties.AutomationId="WebAskedAllow"/>
+                            <Button Grid.Column="2" Content="Block" Padding="8 2"
+                                    Command="{Ancestor View, DataContext.BlockPermissionCommand}"
+                                    AutomationProperties.AutomationId="WebAskedBlock"/>
+                        </Grid>
+                    </DataTemplate>
+                </ContentControl.ContentTemplate>
+            </ContentControl>
+            <web:WebView x:Name="Page" Grid.Row="1" Engine="{Binding Engine}" Source="{Binding Source, Mode=TwoWay}"
                          Bridge="{Binding Bridge}"
                          AllowSharedTexture="{Binding AllowSharedTexture}"
                          IsDevToolsOpen="{Binding DevToolsOpen, Mode=TwoWay}"
@@ -42,7 +62,7 @@
                          AutomationProperties.AutomationId="WebPage"/>
             <!-- What the page opened last - a link to a new tab, window.open, its page source - beside it, as a browser
                  shows it in a tab of its own, the page that opened it still there. -->
-            <ContentControl Grid.Column="1" Content="{Binding OpenedPage}" AutomationProperties.AutomationId="WebOpened">
+            <ContentControl Grid.Row="1" Grid.Column="1" Content="{Binding OpenedPage}" AutomationProperties.AutomationId="WebOpened">
                 <ContentControl.ContentTemplate>
                     <DataTemplate>
                         <Grid RowDefinitions="Auto,*" Width="520" Margin="8,0,8,8">

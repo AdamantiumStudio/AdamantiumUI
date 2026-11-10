@@ -25,6 +25,7 @@ public sealed unsafe class WebViewEngine : IDisposable
     private readonly WebViewOptions options;
     private readonly Timer pumpTimer;
     private readonly List<WebViewBrowser> browsers = [];
+    private readonly WebViewSitePermissions sitePermissions;
     private WebViewBrowserProcessHandler browserProcess;
     private WebViewApp app;
     private CefMainArguments mainArguments;
@@ -42,6 +43,7 @@ public sealed unsafe class WebViewEngine : IDisposable
         this.devices = devices;
         this.application = application;
         this.options = options ?? new WebViewOptions();
+        sitePermissions = new WebViewSitePermissions(this.options.ProfileFolder ?? DefaultProfileFolder());
         pumpTimer = new Timer(_ => PostPumpWork());
         if (application != null)
         {
@@ -50,6 +52,107 @@ public sealed unsafe class WebViewEngine : IDisposable
 
         devices.DeviceChangeBegin += OnDeviceChanging;
         devices.DeviceChangeEnd += OnDeviceChanged;
+    }
+
+    /// <summary>The answers sites were given - what each may use, or may not - kept in the profile, so a site is not
+    /// asked again; in the order of the sites.</summary>
+    public IReadOnlyList<WebSitePermission> SitePermissions => sitePermissions.All;
+
+    /// <summary><see cref="SitePermissions"/> changed: an answer kept, or taken back.</summary>
+    public event EventHandler SitePermissionsChanged;
+
+    /// <summary>Takes back what <paramref name="site"/> was answered for <paramref name="permission"/>: it is asked
+    /// again the next time it wants it.</summary>
+    public void ForgetSitePermission(string site, WebPermission permission)
+    {
+        if (!sitePermissions.Forget(site, permission))
+        {
+            return;
+        }
+
+        SetChromiumSetting(site, permission, CefContentSettingValues.Default);
+        ClearSiteEmbargo(site);
+        SitePermissionsChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>Clears what Chromium counted against <paramref name="site"/> - prompts let go unanswered - after which it
+    /// would block the site for days unasked.</summary>
+    internal void ClearSiteEmbargo(string site)
+    {
+        if (!initialized || shutDown)
+        {
+            return;
+        }
+
+        var context = CefInterop.CefRequestContextGetGlobalContext();
+        if (context == null)
+        {
+            return;
+        }
+
+        var address = new CefStringUtf16();
+        try
+        {
+            CefStrings.Set(&address, site);
+            context->set_website_setting(context, &address, &address, CefContentSettingTypes.PermissionAutoblockerData, null);
+        }
+        finally
+        {
+            CefStrings.Clear(&address);
+            CefRefCounting.ReleaseCef(context);
+        }
+    }
+
+    /// <summary>What <paramref name="site"/> was answered for all of <paramref name="permissions"/>: true when each was
+    /// allowed, false when any was blocked, null when one was never answered.</summary>
+    internal bool? SitePermissionAnswer(string site, WebPermission permissions) => sitePermissions.Answer(site, permissions);
+
+    /// <summary>Keeps the user's answer for the site, here and in Chromium's own settings - whose answer would otherwise
+    /// outlive one taken back here.</summary>
+    internal void KeepSitePermission(string site, WebPermission permissions, bool allowed)
+    {
+        sitePermissions.Keep(site, permissions, allowed);
+        foreach (var permission in WebViewSitePermissions.Each(permissions & ~WebPermission.ScreenCapture))
+        {
+            SetChromiumSetting(site, permission, allowed ? CefContentSettingValues.Allow : CefContentSettingValues.Block);
+        }
+
+        SitePermissionsChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void SetChromiumSetting(string site, WebPermission permission, CefContentSettingValues value)
+    {
+        CefContentSettingTypes? type = permission switch
+        {
+            WebPermission.Camera => CefContentSettingTypes.MediastreamCamera,
+            WebPermission.Microphone => CefContentSettingTypes.MediastreamMic,
+            WebPermission.Geolocation => CefContentSettingTypes.Geolocation,
+            WebPermission.Notifications => CefContentSettingTypes.Notifications,
+            WebPermission.Clipboard => CefContentSettingTypes.ClipboardReadWrite,
+            _ => null
+        };
+        if (type == null || !initialized || shutDown)
+        {
+            return;
+        }
+
+        var context = CefInterop.CefRequestContextGetGlobalContext();
+        if (context == null)
+        {
+            return;
+        }
+
+        var address = new CefStringUtf16();
+        try
+        {
+            CefStrings.Set(&address, site);
+            context->set_content_setting(context, &address, &address, type.Value, value);
+        }
+        finally
+        {
+            CefStrings.Clear(&address);
+            CefRefCounting.ReleaseCef(context);
+        }
     }
 
     // The main device is made again - lost, most often: the frames and the device they were written on go while the

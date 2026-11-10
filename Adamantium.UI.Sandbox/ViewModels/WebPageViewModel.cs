@@ -14,7 +14,32 @@ public partial class WebPageViewModel : TabPageViewModel
         Engine = engine;
         Source = AddressToUri(_address);
         Bridge.NewWindowRequested += OnNewWindowRequested;
+        Bridge.FileDialogRequested += (_, e) => e.AnswerFromFileDialog();
+        Bridge.PermissionRequested += OnPermissionRequested;
     }
+
+    /// <summary>A site asking to use something, shown over the page until answered; none while nobody asks.</summary>
+    [Bindable] private WebPermissionRequestedEventArgs _askedPermission;
+
+    // The latest asks; one asked before and still there is put away unanswered - asked again next time - as a browser
+    // shows one question at a time.
+    private void OnPermissionRequested(object sender, WebPermissionRequestedEventArgs e)
+    {
+        AskedPermission?.Dismiss();
+        e.Handled = true;
+        e.Closed += (_, _) =>
+        {
+            if (ReferenceEquals(AskedPermission, e))
+            {
+                AskedPermission = null;
+            }
+        };
+        AskedPermission = e;
+    }
+
+    [Command] private void AllowPermission() => AskedPermission?.Allow();
+
+    [Command] private void BlockPermission() => AskedPermission?.Block();
 
     /// <summary>The application's CEF, the page is drawn by.</summary>
     public WebViewEngine Engine { get; }
