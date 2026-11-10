@@ -245,6 +245,12 @@ All packages share one version.
 
 ### Fixed
 
+- `WebView` on Linux: Chromium's processes start - each is exec'd instead of forked from a zygote, which the .NET
+  helper did not live through - and a key typed reaches the page as the key in that place (`KeyboardEvent.code`), from
+  its XKB code. The evdev key table is one public type, `EvdevKeyCodes`, both ways.
+- Wayland: NumLock is NumLock and Pause is Pause as a key's place (`PhysicalKey`) - NumLock came as Pause and Pause
+  as nothing - and the keys past the main block (F13-F24, volume and media keys, the keypad's `=` and `,`, the
+  Japanese conversion keys) have their places too.
 - `TabControl`: a view kept alive (`x:KeepAlive`) in a tab authored as a `TabItem` waits for its tab while another is
   shown; it was let go on every visit elsewhere and built again on the way back - a browser's page reloaded each time.
   It still goes when its tab is closed.

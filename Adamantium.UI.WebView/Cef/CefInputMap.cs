@@ -1,5 +1,6 @@
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Input;
+using Adamantium.UI.Platforms.Linux;
 using Adamantium.UI.Platforms.Windows;
 using Adamantium.UI.WebView.Cef.Interop;
 
@@ -9,6 +10,8 @@ namespace Adamantium.UI.WebView.Cef;
 /// and the cursor a page asks for as one of ours.</summary>
 internal static class CefInputMap
 {
+    private const int XkbKeyCodeOffset = 8;
+
     /// <summary>The keys and mouse buttons held, as CEF's event flags.</summary>
     public static uint Flags(InputModifiers modifiers)
     {
@@ -47,15 +50,21 @@ internal static class CefInputMap
     }
 
     /// <summary>The key's own code on this platform as Chromium takes it - on Windows the scan code, 0xE0 above it for an
-    /// extended key - from which a page's KeyboardEvent.code comes; 0 where it is not known.</summary>
+    /// extended key; on Linux the XKB key code, the evdev code plus 8 - from which a page's KeyboardEvent.code comes; 0
+    /// where it is not known.</summary>
     public static int NativeKeyCode(uint physicalKey)
     {
-        if (!OperatingSystem.IsWindows() || !Win32ScanCodes.TryFromHidUsage(physicalKey, out var scanCode, out var extended))
+        if (OperatingSystem.IsWindows() && Win32ScanCodes.TryFromHidUsage(physicalKey, out var scanCode, out var extended))
         {
-            return 0;
+            return (scanCode & 0xFF) | (extended ? 0xE000 : 0);
         }
 
-        return (scanCode & 0xFF) | (extended ? 0xE000 : 0);
+        if (OperatingSystem.IsLinux() && EvdevKeyCodes.TryFromHidUsage(physicalKey, out var evdevCode))
+        {
+            return (int)evdevCode + XkbKeyCodeOffset;
+        }
+
+        return 0;
     }
 
     /// <summary>The outcomes a drag allows, as CEF's operations.</summary>
