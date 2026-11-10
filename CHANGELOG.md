@@ -8,13 +8,17 @@ All packages share one version.
 ### Added
 
 - Sites of the application's own: `WebViewEngine.AddSite(host, content)` serves `app://host/...` - a standard, secure
-  scheme with an origin of its own (fetch, modules, storage; an object of the application's can be let in for it).
-  `IWebSiteContent` gives the files; `WebSiteFolder` serves a folder (a path out of it names nothing) and
-  `WebSiteResources` an assembly's resources by their logical names. A file or site there is none of answers 404.
+  scheme with an origin of its own (fetch, modules, storage; an object of the application's can be let in for it),
+  shown only by the application's own pages: a site out there can neither link to it, frame it nor fetch from it.
+  `IWebSiteContent` gives the files; `WebSiteFolder` serves a folder - a path out of it, through a link or junction,
+  to a file's other stream or to a name with a last dot or space names nothing - and `WebSiteResources` an assembly's
+  resources by their logical names. A folder asked for without its last slash is sent to the address with it; a file
+  or site there is none of answers 404, one that cannot be read 500. International host names work.
 - `WebViewBridge.ResourceRequested`: a request the page makes - its document, a frame's, a script, an image, a
   fetch (`WebResourceKind`) - is asked of the bridge while it listens, and may be answered (`Respond` with content,
-  type and status), sent elsewhere (`Redirect`) or refused (`Refuse`). The request waits without holding CEF's IO
-  thread; nobody listening, no request is asked.
+  type, status and headers), sent elsewhere (`Redirect`) or refused (`Refuse`); a handler that throws refuses it. The
+  request waits without holding CEF's IO thread; nobody listening, no request is asked. A page this one opens is asked
+  of the same bridge until a view takes it up.
 - `WebViewBridge.AddScriptToNewDocument` / `RemoveScriptFromNewDocument` / `ScriptsForNewDocuments`: a script every
   document the page loads from then on runs before its own, `window.adamantium` already there - the first document
   too, a page made again and a page this one opens. The page is made blank and goes to its address once it took them;

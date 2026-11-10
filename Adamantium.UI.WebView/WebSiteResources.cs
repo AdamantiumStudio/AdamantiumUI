@@ -5,7 +5,7 @@ namespace Adamantium.UI.WebView;
 /// <summary>
 /// A site of the application's whose files are resources built into an assembly: the file at <c>css/site.css</c> is
 /// the resource named <c>prefix/css/site.css</c> - give each its name with <c>LogicalName</c>, as the build would make
-/// another of it. A folder's path names its <c>index.html</c>.
+/// another of it. A folder's path - with its last slash - names its <c>index.html</c>.
 /// </summary>
 public sealed class WebSiteResources : IWebSiteContent
 {
@@ -35,7 +35,6 @@ public sealed class WebSiteResources : IWebSiteContent
             path += "index.html";
         }
 
-        return assembly.GetManifestResourceStream(prefix + path) ??
-               assembly.GetManifestResourceStream(prefix + path + "/index.html");
+        return assembly.GetManifestResourceStream(prefix + path);
     }
 }

@@ -71,16 +71,19 @@ public sealed unsafe class WebViewEngine : IDisposable
 
         lock (sitesLock)
         {
-            sites[host] = content;
+            sites[ChromiumHost(host)] = content;
         }
     }
+
+    // A host as Chromium asks for it: an international name in punycode.
+    private static string ChromiumHost(string host) => new System.Globalization.IdnMapping().GetAscii(host);
 
     /// <summary>The site <c>app://<paramref name="host"/>/</c> is served no more; false for one not added.</summary>
     public bool RemoveSite(string host)
     {
         lock (sitesLock)
         {
-            return host != null && sites.Remove(host);
+            return !string.IsNullOrEmpty(host) && sites.Remove(ChromiumHost(host));
         }
     }
 

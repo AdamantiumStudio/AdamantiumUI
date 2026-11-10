@@ -906,9 +906,12 @@ public class WebViewFrameTests
             ".then(d => document.title = 'app:' + d.n + ':' + location.origin)</script>");
         File.WriteAllText(Path.Combine(folder, "data.json"), "{\"n\":42}");
         File.WriteAllText(Path.Combine(parent, "secret.txt"), "secret");
+        Directory.CreateDirectory(Path.Combine(folder, "sub"));
+        File.WriteAllText(Path.Combine(folder, "sub", "index.html"), "<title>sub</title><script src='s.js'></script>");
+        File.WriteAllText(Path.Combine(folder, "sub", "s.js"), "document.title = 'sub:' + location.pathname");
         engine.AddSite("test", new WebSiteFolder(folder));
         engine.AddSite("built", new WebSiteResources(typeof(WebViewFrameTests).Assembly, "Site"));
-        string title = null, missing = null, outside = null, noSite = null, builtIn = null;
+        string title = null, missing = null, outside = null, noSite = null, builtIn = null, folderTitle = null;
         try
         {
             loop.Run(() =>
@@ -926,6 +929,9 @@ public class WebViewFrameTests
                     browser.Navigate("app://built/");
                     Pump(() => view.Title == "built in", TimeSpan.FromSeconds(10));
                     builtIn = view.Title;
+                    browser.Navigate("app://test/sub");
+                    Pump(() => view.Title?.StartsWith("sub:", StringComparison.Ordinal) == true, TimeSpan.FromSeconds(10));
+                    folderTitle = view.Title;
                 }
                 finally
                 {
@@ -948,6 +954,49 @@ public class WebViewFrameTests
             Assert.That(outside, Is.EqualTo("404"), "a path out of the folder");
             Assert.That(noSite, Is.EqualTo("404").Or.EqualTo("\"refused\""), "a site there is none of");
             Assert.That(builtIn, Is.EqualTo("built in"), "a site built into an assembly");
+            Assert.That(folderTitle, Is.EqualTo("sub:/sub/"),
+                "a folder without its last slash is sent to the one with it, where its own addresses resolve");
+        });
+    }
+
+    // A site out there cannot send its page to the application's own sites, nor reach their files.
+    [Test]
+    public void ASiteOutThere_CannotReachTheApplicationsSites()
+    {
+        using var site = new LocalSite("<title>site</title><body></body>");
+        engine.AddSite("built", new WebSiteResources(typeof(WebViewFrameTests).Assembly, "Site"));
+        string titleAfter = null, fetched = null;
+        try
+        {
+            loop.Run(() =>
+            {
+                var view = new RecordingBrowserView();
+                var browser = engine.CreateBrowser(false, view);
+                try
+                {
+                    browser.Create(site.Origin + "/", Width, Height, 1, IntPtr.Zero);
+                    Pump(() => view.Title == "site" && !view.IsLoading, TimeSpan.FromSeconds(30));
+                    fetched = Await(browser.EvaluateAsync("fetch('app://built/').then(r => 'came', () => 'refused')"));
+                    Await(browser.EvaluateAsync("location.href = 'app://built/'; 1"));
+                    Pump(() => view.Title == "built in", TimeSpan.FromSeconds(2));
+                    titleAfter = view.Title;
+                }
+                finally
+                {
+                    browser.Dispose();
+                    Pump(() => false, TimeSpan.FromMilliseconds(300));
+                }
+            });
+        }
+        finally
+        {
+            engine.RemoveSite("built");
+        }
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(titleAfter, Is.EqualTo("site"), "the page is not sent there");
+            Assert.That(fetched, Is.EqualTo("\"refused\""), "nor are its files fetched");
         });
     }
 
@@ -994,7 +1043,7 @@ public class WebViewFrameTests
     {
         using var site = new LocalSite("<title>site</title><body></body>");
         var kinds = new List<(string Address, WebResourceKind Kind)>();
-        string answered = null, refused = null, redirected = null, madeTitle = null;
+        string answered = null, refused = null, redirected = null, madeTitle = null, written = null, thrown = null;
         loop.Run(() =>
         {
             var bridge = new WebViewBridge();
@@ -1017,6 +1066,17 @@ public class WebViewFrameTests
                 {
                     asked.Respond(new MemoryStream("<title>made</title>"u8.ToArray()), "text/html");
                 }
+                else if (asked.Address.EndsWith("/written.json", StringComparison.Ordinal))
+                {
+                    // Written and not rewound: still read from its start.
+                    var written = new MemoryStream();
+                    written.Write("{\"n\":8}"u8);
+                    asked.Respond(written, "application/json");
+                }
+                else if (asked.Address.EndsWith("/thrown.txt", StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException("a handler that broke");
+                }
             };
             var view = new RecordingBrowserView { Bridge = bridge };
             var browser = engine.CreateBrowser(false, view);
@@ -1028,6 +1088,8 @@ public class WebViewFrameTests
                 answered = Await(browser.EvaluateAsync("fetch('/answered.json').then(r => r.json()).then(d => d.n)"));
                 refused = Await(browser.EvaluateAsync("fetch('/refused.txt').then(() => 'came', () => 'refused')"));
                 redirected = Await(browser.EvaluateAsync("fetch('/old').then(r => r.url)"));
+                written = Await(browser.EvaluateAsync("fetch('/written.json').then(r => r.json()).then(d => d.n)"));
+                thrown = Await(browser.EvaluateAsync("fetch('/thrown.txt').then(() => 'came', () => 'refused')"));
                 browser.Navigate(site.Origin + "/made");
                 Pump(() => view.Title == "made", TimeSpan.FromSeconds(10));
                 madeTitle = view.Title;
@@ -1045,6 +1107,8 @@ public class WebViewFrameTests
             Assert.That(refused, Is.EqualTo("\"refused\""));
             Assert.That(redirected, Is.EqualTo("\"" + site.Origin + "/new\""), "sent elsewhere");
             Assert.That(madeTitle, Is.EqualTo("made"), "the page's document answered by the bridge");
+            Assert.That(written, Is.EqualTo("8"), "an answer written and not rewound is read from its start");
+            Assert.That(thrown, Is.EqualTo("\"refused\""), "a handler that throws refuses the request");
             Assert.That(kinds, Does.Contain((site.Origin + "/", WebResourceKind.Document)));
             Assert.That(kinds, Does.Contain((site.Origin + "/answered.json", WebResourceKind.Fetch)));
         });

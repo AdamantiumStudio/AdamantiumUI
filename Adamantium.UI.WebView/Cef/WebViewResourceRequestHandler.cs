@@ -7,12 +7,15 @@ namespace Adamantium.UI.WebView.Cef;
 
 /// <summary>
 /// The page's requests, asked of the view when it listens: each waits - on CEF's IO thread, without holding it - while
-/// the view decides on the UI thread, then goes on as asked, elsewhere, refused, or answered by the view itself.
+/// the view decides on the UI thread, then goes on as asked, elsewhere, refused, or answered by the view itself. A
+/// handler that throws refuses the request; one the page gave up meanwhile is let go of; what still waits when the
+/// browser closes is refused then, before CEF goes.
 /// </summary>
 internal sealed unsafe class WebViewResourceRequestHandler : CefObject
 {
     private readonly WebViewBrowser browser;
-    private readonly ConcurrentDictionary<ulong, (Stream Content, string MimeType, int Status)> answers = new();
+    private readonly ConcurrentDictionary<ulong, WebViewWaitingRequest> waiting = new();
+    private readonly ConcurrentDictionary<ulong, (Stream Content, string MimeType, int Status, IReadOnlyDictionary<string, string> Headers)> answers = new();
 
     public WebViewResourceRequestHandler(WebViewBrowser browser) : base(sizeof(CefResourceRequestHandler))
     {
@@ -20,10 +23,25 @@ internal sealed unsafe class WebViewResourceRequestHandler : CefObject
         var handler = (CefResourceRequestHandler*)Native;
         handler->on_before_resource_load = &OnBeforeResourceLoad;
         handler->get_resource_handler = &GetResourceHandler;
+        handler->on_resource_load_complete = &OnResourceLoadComplete;
     }
 
     /// <summary>The struct with a reference taken for CEF.</summary>
     public CefResourceRequestHandler* Shared => (CefResourceRequestHandler*)Share();
+
+    /// <summary>Refuses every request still waiting for the view: the browser closes, and CEF may go before the view
+    /// would decide. On the UI loop.</summary>
+    public void RefuseWaiting()
+    {
+        foreach (var id in waiting.Keys)
+        {
+            if (waiting.TryRemove(id, out var asked))
+            {
+                asked.Finish(false);
+                Release();
+            }
+        }
+    }
 
     protected override void OnFreed()
     {
@@ -50,7 +68,8 @@ internal sealed unsafe class WebViewResourceRequestHandler : CefObject
 
             // The request and the callback are kept until the view decides; they came with a reference each.
             handler.AddReference();
-            LoopSignal.Post(() => handler.Decide(asked, id, request, callback));
+            handler.waiting[id] = new WebViewWaitingRequest(request, callback);
+            LoopSignal.Post(() => handler.Decide(asked, id));
             waits = true;
         }
         catch (Exception exception)
@@ -70,55 +89,41 @@ internal sealed unsafe class WebViewResourceRequestHandler : CefObject
         return CefReturnValue.Continue;
     }
 
-    private void Decide(WebResourceRequestedEventArgs asked, ulong id, CefRequest* request, CefCallback* callback)
+    private void Decide(WebResourceRequestedEventArgs asked, ulong id)
     {
-        var refuse = false;
+        // Refused already - the browser closed - or given up by the page meanwhile: nothing to decide.
+        if (!waiting.TryRemove(id, out var request))
+        {
+            return;
+        }
+
+        var goesOn = false;
         try
         {
-            if (browser.IsClosing)
-            {
-                refuse = true;
-            }
-            else
+            if (!request.GivenUp && !browser.IsClosing)
             {
                 browser.OnResourceRequested(asked);
-                refuse = asked.Refused;
+                goesOn = !asked.Refused;
                 if (asked.RedirectedTo != null)
                 {
-                    var address = new CefStringUtf16();
-                    try
-                    {
-                        CefStrings.Set(&address, asked.RedirectedTo);
-                        request->set_url(request, &address);
-                    }
-                    finally
-                    {
-                        CefStrings.Clear(&address);
-                    }
+                    request.Redirect(asked.RedirectedTo);
                 }
                 else if (asked.Answered)
                 {
-                    answers[id] = (asked.Content, asked.MimeType, asked.Status);
+                    answers[id] = (asked.Content, asked.MimeType, asked.Status, asked.Headers);
                 }
             }
         }
         catch (Exception exception)
         {
+            // A handler that throws decided nothing it meant: the request is refused, not let through.
+            goesOn = false;
+            asked.Discard();
             CefCallbacks.Report(exception);
         }
         finally
         {
-            if (refuse)
-            {
-                callback->cancel(callback);
-            }
-            else
-            {
-                callback->cont(callback);
-            }
-
-            CefRefCounting.ReleaseCef(request);
-            CefRefCounting.ReleaseCef(callback);
+            request.Finish(goesOn);
             Release();
         }
     }
@@ -132,7 +137,7 @@ internal sealed unsafe class WebViewResourceRequestHandler : CefObject
         {
             if (From<WebViewResourceRequestHandler>(self).answers.TryRemove(request->get_identifier(request), out var given))
             {
-                answer = new WebViewResourceAnswer(given.Content, given.MimeType, given.Status).Shared;
+                answer = WebViewResourceAnswer.Make(given.Content, given.MimeType, given.Status, given.Headers);
             }
         }
         catch (Exception exception)
@@ -144,6 +149,37 @@ internal sealed unsafe class WebViewResourceRequestHandler : CefObject
         CefRefCounting.ReleaseCef(frame);
         CefRefCounting.ReleaseCef(request);
         return answer;
+    }
+
+    // A request done - or given up - before its answer was taken: the answer is let go of; one still waiting for the
+    // view is decided no more.
+    [UnmanagedCallersOnly]
+    private static void OnResourceLoadComplete(CefResourceRequestHandler* self, CefBrowser* cefBrowser, CefFrame* frame,
+        CefRequest* request, CefResponse* response, CefUrlrequestStatus status, long receivedContentLength)
+    {
+        try
+        {
+            var handler = From<WebViewResourceRequestHandler>(self);
+            var id = request->get_identifier(request);
+            if (handler.waiting.TryGetValue(id, out var asked))
+            {
+                asked.GivenUp = true;
+            }
+
+            if (handler.answers.TryRemove(id, out var unused))
+            {
+                unused.Content?.Dispose();
+            }
+        }
+        catch (Exception exception)
+        {
+            CefCallbacks.Report(exception);
+        }
+
+        CefRefCounting.ReleaseCef(cefBrowser);
+        CefRefCounting.ReleaseCef(frame);
+        CefRefCounting.ReleaseCef(request);
+        CefRefCounting.ReleaseCef(response);
     }
 
     private static WebResourceKind Kind(CefResourceType type) => type switch

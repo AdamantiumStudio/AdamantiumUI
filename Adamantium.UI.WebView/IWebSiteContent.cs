@@ -9,7 +9,8 @@ namespace Adamantium.UI.WebView;
 public interface IWebSiteContent
 {
     /// <summary>The file at <paramref name="path"/> - the address's path without its first slash, its escapes undone,
-    /// empty for the site's root - to read from its start; null for none, which answers 404. The caller disposes it.
-    /// Its type is told by its extension.</summary>
+    /// empty for the site's root, ending in a slash for a folder - to read from its start; null for none, which answers
+    /// 404. The caller disposes it. Its type is told by its extension. A folder asked for without its last slash, which
+    /// the path with one opens, is sent there.</summary>
     Stream Open(string path);
 }

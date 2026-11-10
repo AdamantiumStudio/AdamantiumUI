@@ -27,7 +27,6 @@ internal sealed unsafe class WebViewBrowser : IDisposable
     private readonly WebViewDisplayHandler displayHandler;
     private readonly WebViewLoadHandler loadHandler;
     private readonly WebViewRequestHandler requestHandler;
-    private readonly WebViewResourceRequestHandler resourceRequests;
     private volatile bool interceptsResources;
     private readonly WebViewContextMenuHandler contextMenuHandler;
     private readonly WebViewJsDialogHandler jsDialogHandler;
@@ -95,7 +94,6 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         lifeSpanHandler = new WebViewLifeSpanHandler(this);
         loadHandler = new WebViewLoadHandler(this);
         requestHandler = new WebViewRequestHandler(this);
-        resourceRequests = new WebViewResourceRequestHandler(this);
         // The view of the moment: a page another opened is adopted by a view of its own.
         devTools = new WebViewDevTools(json => this.view.MessageReceived(this, json))
         {
@@ -344,7 +342,8 @@ internal sealed unsafe class WebViewBrowser : IDisposable
             return false;
         }
 
-        var waiting = new WebViewWaitingView(view.ScriptsForNewDocuments(this));
+        var waiting = new WebViewWaitingView(view.ScriptsForNewDocuments(this),
+            asked => this.view.ResourceRequested(this, asked));
         if (engine.CreatePopupBrowser(FramePath, waiting) is not { } popup)
         {
             // No device to draw it on yet: the page goes there itself, as when nobody shows it apart.
@@ -354,6 +353,8 @@ internal sealed unsafe class WebViewBrowser : IDisposable
 
         popup.address = url;
         popup.createdWith = url;
+        // Its requests are the opener's view's to decide while nobody shows it - from its very first.
+        popup.interceptsResources = interceptsResources;
         popup.ViewSize = ViewSize;
         popup.Scale = Scale;
         popup.parentWindow = parentWindow;
@@ -1647,6 +1648,9 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         devToolsSocket?.Dispose();
         devToolsSocket = null;
         closing = true;
+        // The page's requests are asked of nobody now, and what still waits is refused while CEF is there.
+        interceptsResources = false;
+        requestHandler.RefuseWaiting();
         // What the page still asks is answered while CEF is there to hear it: the view may answer only later, CEF gone.
         askedDialog?.Answer(false, null);
         askedDialog = null;
@@ -1681,7 +1685,6 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         displayHandler.Release();
         loadHandler.Release();
         requestHandler.Release();
-        resourceRequests.Release();
         contextMenuHandler.Release();
         jsDialogHandler.Release();
         dialogHandler.Release();
@@ -1695,10 +1698,6 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         get => interceptsResources;
         set => interceptsResources = value;
     }
-
-    /// <summary>The handler that asks the view of the page's requests, with a reference taken for CEF; null while the
-    /// view does not listen.</summary>
-    internal CefResourceRequestHandler* ResourceRequestsShared => interceptsResources ? resourceRequests.Shared : null;
 
     /// <summary>Whether the browser is closing, or closed.</summary>
     internal bool IsClosing => closing;

@@ -10,9 +10,11 @@ internal static unsafe class WebViewSchemes
     public const string App = "app";
 
     // A site of the application's is a site as any other - a standard address, an origin of its own, secure, reached by
-    // fetch and by CORS - so its pages have what a page on https has.
-    private const CefSchemeOptions AppOptions =
-        CefSchemeOptions.Standard | CefSchemeOptions.Secure | CefSchemeOptions.CorsEnabled | CefSchemeOptions.FetchEnabled;
+    // fetch and by CORS - so its pages have what a page on https has. Only the application's own pages show it: a site
+    // out there can neither link to it nor frame it, nor send the page there - the objects let in for it stay its own.
+    private const CefSchemeOptions AppOptions = CefSchemeOptions.Standard | CefSchemeOptions.Secure |
+                                                CefSchemeOptions.CorsEnabled | CefSchemeOptions.FetchEnabled |
+                                                CefSchemeOptions.DisplayIsolated;
 
     /// <summary>Registers the schemes with <paramref name="registrar"/>, as CEF asks of each process.</summary>
     public static void Register(CefSchemeRegistrar* registrar)

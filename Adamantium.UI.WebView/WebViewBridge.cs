@@ -14,6 +14,9 @@ public sealed class WebViewBridge
     private readonly List<WebDocumentScript> scriptsForNewDocuments = [];
     private readonly WebHostObjects hostObjects = new();
     private EventHandler<WebResourceRequestedEventArgs> resourceRequested;
+
+    // Every view the bridge is bound to hears what changes; the page reached is the last bound's.
+    private readonly List<WebView> views = [];
     private WebView view;
 
     /// <summary>The scripts every new document of the page runs before its own, in the order they were added - held
@@ -28,7 +31,7 @@ public sealed class WebViewBridge
         ArgumentNullException.ThrowIfNull(source);
         var script = new WebDocumentScript(source);
         scriptsForNewDocuments.Add(script);
-        view?.ScriptsForNewDocumentsChanged();
+        ScriptsChanged();
         return script;
     }
 
@@ -41,7 +44,7 @@ public sealed class WebViewBridge
             return false;
         }
 
-        view?.ScriptsForNewDocumentsChanged();
+        ScriptsChanged();
         return true;
     }
 
@@ -91,12 +94,28 @@ public sealed class WebViewBridge
         add
         {
             resourceRequested += value;
-            view?.ResourceInterceptionChanged();
+            InterceptionChanged();
         }
         remove
         {
             resourceRequested -= value;
-            view?.ResourceInterceptionChanged();
+            InterceptionChanged();
+        }
+    }
+
+    private void ScriptsChanged()
+    {
+        for (var i = 0; i < views.Count; i++)
+        {
+            views[i].ScriptsForNewDocumentsChanged();
+        }
+    }
+
+    private void InterceptionChanged()
+    {
+        for (var i = 0; i < views.Count; i++)
+        {
+            views[i].ResourceInterceptionChanged();
         }
     }
 
@@ -120,13 +139,19 @@ public sealed class WebViewBridge
     /// </summary>
     public void PostMessage(string json) => Page().PostMessage(json);
 
-    internal void Attach(WebView attached) => view = attached;
+    internal void Attach(WebView attached)
+    {
+        views.Remove(attached);
+        views.Add(attached);
+        view = attached;
+    }
 
     internal void Detach(WebView detached)
     {
+        views.Remove(detached);
         if (ReferenceEquals(view, detached))
         {
-            view = null;
+            view = views.Count > 0 ? views[^1] : null;
             hostObjects.ForgetGiven();
         }
     }
