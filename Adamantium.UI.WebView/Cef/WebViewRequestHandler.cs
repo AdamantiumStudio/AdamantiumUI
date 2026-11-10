@@ -3,7 +3,8 @@ using Adamantium.UI.WebView.Cef.Interop;
 
 namespace Adamantium.UI.WebView.Cef;
 
-/// <summary>A browser's requests: the page about to go somewhere in its main frame, which the view may stop.</summary>
+/// <summary>A browser's requests: the page about to go somewhere in its main frame, which the view may stop, and a link
+/// it opens elsewhere, which the view may open apart.</summary>
 internal sealed unsafe class WebViewRequestHandler : CefObject
 {
     private readonly WebViewBrowser browser;
@@ -12,6 +13,30 @@ internal sealed unsafe class WebViewRequestHandler : CefObject
     {
         this.browser = browser;
         ((CefRequestHandler*)Native)->on_before_browse = &OnBeforeBrowse;
+        ((CefRequestHandler*)Native)->on_open_urlfrom_tab = &OnOpenUrlFromTab;
+    }
+
+    [UnmanagedCallersOnly]
+    private static int OnOpenUrlFromTab(CefRequestHandler* self, CefBrowser* cefBrowser, CefFrame* frame,
+        CefStringUtf16* targetUrl, CefWindowOpenDisposition disposition, int userGesture)
+    {
+        var opened = false;
+        try
+        {
+            var owner = From<WebViewRequestHandler>(self).browser;
+            if (owner.Is(cefBrowser))
+            {
+                opened = owner.OnOpenElsewhere(CefStrings.Read(targetUrl), disposition, userGesture != 0);
+            }
+        }
+        catch (Exception exception)
+        {
+            CefCallbacks.Report(exception);
+        }
+
+        CefRefCounting.ReleaseCef(frame);
+        CefRefCounting.ReleaseCef(cefBrowser);
+        return opened ? 1 : 0;
     }
 
     [UnmanagedCallersOnly]

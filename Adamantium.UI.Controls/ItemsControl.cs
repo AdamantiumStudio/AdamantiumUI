@@ -65,6 +65,10 @@ public class ItemsControl : Control, IContainer, IKeyboardEntry
     [Content]
     public ItemCollection Items { get; }
 
+    /// <summary>Whether <paramref name="content"/> a template part shows for this control is still this control's to
+    /// show again - what a view kept for it (<c>x:KeepAlive</c>) is kept for.</summary>
+    internal virtual bool HoldsContent(object content) => Items.Contains(content);
+
     public ItemContainerGenerator ItemContainerGenerator { get; }
 
     /// <summary>The index in <see cref="Items"/> of the item the keyboard is on, or -1. It is kept as the place, not as a

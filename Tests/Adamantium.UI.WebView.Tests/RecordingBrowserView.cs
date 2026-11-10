@@ -111,11 +111,51 @@ internal sealed class RecordingBrowserView : IWebViewBrowserView
 
     public void PopupClosed(WebViewBrowser browser) => Popup = null;
 
+    /// <summary>The script dialogs the page asked, in order.</summary>
+    public List<WebViewScriptDialogRequest> Dialogs { get; } = [];
+
+    /// <summary>How many times the page's dialogs were reset.</summary>
+    public int DialogResets { get; private set; }
+
+    public bool ScriptDialogRequested(WebViewBrowser browser, WebViewScriptDialogRequest request)
+    {
+        Dialogs.Add(request);
+        return true;
+    }
+
+    public void ScriptDialogsReset(WebViewBrowser browser) => DialogResets++;
+
     public bool ContextMenuRequested(WebViewBrowser browser, WebViewContextMenu menu)
     {
         Menus.Add(menu);
         return true;
     }
+
+    /// <summary>The pages the page opened, in order, and how.</summary>
+    public List<(WebViewNewPage Page, WebNewWindowKind Kind)> NewPages { get; } = [];
+
+    /// <summary>Whether the pages the page opens are shown apart; false leaves them to the page itself.</summary>
+    public bool ShowsNewPages { get; set; } = true;
+
+    /// <summary>Whether a page opened is let go of at once, though said to be shown.</summary>
+    public bool DropsNewPages { get; set; }
+
+    public bool NewWindowRequested(WebViewBrowser browser, WebViewNewPage page, WebNewWindowKind kind)
+    {
+        NewPages.Add((page, kind));
+        if (DropsNewPages)
+        {
+            page.Dispose();
+            return true;
+        }
+
+        return ShowsNewPages;
+    }
+
+    /// <summary>How many times CEF gave the browser up before it was made.</summary>
+    public int Lost { get; private set; }
+
+    public void BrowserLost(WebViewBrowser browser) => Lost++;
 
     public void AddressChanged(WebViewBrowser browser, string address) => Address = address;
 

@@ -5,4 +5,14 @@
     <Phrase Key="DevTools" Text="DevTools"/>
     <Phrase Key="StatusBar" Text="Состояние страницы"/>
     <Phrase Key="Inspect" Text="Просмотреть код"/>
+    <Phrase Key="OpenLinkInNewTab" Text="Открыть ссылку в новой вкладке"/>
+    <Phrase Key="Ok" Text="ОК"/>
+    <Phrase Key="Cancel" Text="Отмена"/>
+    <Phrase Key="PageSays" Text="{site} сообщает"/>
+    <Phrase Key="ThisPageSays" Text="Эта страница сообщает"/>
+    <Phrase Key="LeaveSite" Text="Покинуть сайт?"/>
+    <Phrase Key="Leave" Text="Покинуть"/>
+    <Phrase Key="ReloadSite" Text="Перезагрузить сайт?"/>
+    <Phrase Key="Reload" Text="Перезагрузить"/>
+    <Phrase Key="ChangesMayBeLost" Text="Внесённые изменения могут не сохраниться."/>
 </Language>

@@ -13,12 +13,15 @@ internal sealed unsafe class WebViewClient : CefObject
     private readonly WebViewLoadHandler loadHandler;
     private readonly WebViewRequestHandler requestHandler;
     private readonly WebViewContextMenuHandler contextMenuHandler;
+    private readonly WebViewJsDialogHandler jsDialogHandler;
 
     public WebViewClient(WebViewRenderHandler renderHandler, WebViewLifeSpanHandler lifeSpanHandler,
         WebViewDisplayHandler displayHandler, WebViewLoadHandler loadHandler, WebViewRequestHandler requestHandler,
-        WebViewContextMenuHandler contextMenuHandler)
+        WebViewContextMenuHandler contextMenuHandler, WebViewJsDialogHandler jsDialogHandler)
         : base(sizeof(CefClient))
     {
+        this.jsDialogHandler = jsDialogHandler;
+        jsDialogHandler.AddReference();
         this.renderHandler = renderHandler;
         this.lifeSpanHandler = lifeSpanHandler;
         this.displayHandler = displayHandler;
@@ -38,6 +41,13 @@ internal sealed unsafe class WebViewClient : CefObject
         client->get_load_handler = &GetLoadHandler;
         client->get_request_handler = &GetRequestHandler;
         client->get_context_menu_handler = &GetContextMenuHandler;
+        client->get_jsdialog_handler = &GetJsDialogHandler;
+    }
+
+    [UnmanagedCallersOnly]
+    private static CefJsdialogHandler* GetJsDialogHandler(CefClient* self)
+    {
+        return (CefJsdialogHandler*)From<WebViewClient>(self).jsDialogHandler.Share();
     }
 
     [UnmanagedCallersOnly]
@@ -57,6 +67,7 @@ internal sealed unsafe class WebViewClient : CefObject
         loadHandler.Release();
         requestHandler.Release();
         contextMenuHandler.Release();
+        jsDialogHandler.Release();
     }
 
     [UnmanagedCallersOnly]
