@@ -863,9 +863,31 @@ internal sealed unsafe class WebViewBrowser : IDisposable
 
     internal void OnAddressChange(string url)
     {
+        url = Shown(url);
         address = url;
         view.AddressChanged(this, url);
         TellSecurity();
+    }
+
+    // A page's source is told as the page's own address: the address it is shown at says it is the source.
+    private string Shown(string url)
+    {
+        var host = LiveHost();
+        if (host == null)
+        {
+            return url;
+        }
+
+        var entry = host->get_visible_navigation_entry(host);
+        CefRefCounting.ReleaseCef(host);
+        if (entry == null)
+        {
+            return url;
+        }
+
+        var shown = entry->is_valid(entry) != 0 ? CefStrings.ReadAndFree(entry->get_display_url(entry)) : null;
+        CefRefCounting.ReleaseCef(entry);
+        return shown != null && shown.StartsWith("view-source:", StringComparison.Ordinal) ? shown : url;
     }
 
     /// <summary>Asks again, once a second from the engine's pump, whether the page is secure: what it loads after it

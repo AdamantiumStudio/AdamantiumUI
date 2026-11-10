@@ -871,6 +871,23 @@ public class WebViewFrameTests
         });
     }
 
+    // A page's source is told as its own address: "view-source:" and the page's, not the page's alone - Enter in an
+    // address box showing it would leave the source for the page.
+    [Test]
+    public void APagesSource_IsToldAtItsOwnAddress()
+    {
+        const string page = "data:text/html,<title>src</title>";
+        string address = null;
+        loop.Run(() => ShowPage(WebViewFramePath.PixelBuffer, page, (browser, view) =>
+        {
+            browser.Navigate("view-source:" + page);
+            Pump(() => view.Address?.StartsWith("view-source:") == true, TimeSpan.FromSeconds(5));
+            address = view.Address;
+        }));
+
+        Assert.That(address, Is.EqualTo("view-source:" + page));
+    }
+
     // A window a script opens on its own, the user doing nothing, is refused before the view hears of it.
     [Test]
     public void AWindowAScriptOpensOnItsOwn_IsRefused()
