@@ -40,6 +40,7 @@ internal sealed partial class PdfPageInterpreter
 
     private readonly Dictionary<PdfObject, PdfShading> _shadings = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<PdfFunctionShading, ImageSource> _sampled = new(ReferenceEqualityComparer.Instance);
+    private readonly Dictionary<(PdfRadialShading, Rect, double), ImageSource> _rasterized = [];
     private readonly Dictionary<(PdfMeshShading, double), ColoredMesh> _meshes = [];
     private Rect _pageBox;
 
@@ -153,6 +154,12 @@ internal sealed partial class PdfPageInterpreter
                 }
 
                 var faded = alpha < 1 && OpenGroup(new PdfPushGroupStep { Opacity = alpha }, output);
+                if (alpha < 1 && !faded)
+                {
+                    // No group to be seen through as one: at least each triangle is, its corners carrying the opacity.
+                    triangles = Faded(triangles, alpha);
+                }
+
                 Write(new PdfMeshStep(triangles, PdfMatrices.ToDrawing(space)), output);
                 if (faded)
                 {
@@ -321,6 +328,20 @@ internal sealed partial class PdfPageInterpreter
             return;
         }
 
+        var picture = new PdfMatrix(area.Width, 0, 0, area.Height, area.X, area.Y).Then(space);
+        if (!_rasterized.TryGetValue((shading, area, alpha), out var image))
+        {
+            image = RasterizeTwoCircles(shading, area, alpha);
+            _rasterized[(shading, area, alpha)] = image;
+        }
+
+        Write(new PdfImageStep(image, PdfMatrices.ToDrawing(picture)), output);
+    }
+
+    private static ImageSource RasterizeTwoCircles(PdfRadialShading shading, Rect area, double alpha)
+    {
+        var (x0, y0, r0) = (shading.StartCenter.X, shading.StartCenter.Y, shading.StartRadius);
+        var (x1, y1, r1) = (shading.EndCenter.X, shading.EndCenter.Y, shading.EndRadius);
         var scale = RadialRasterSide / Math.Max(area.Width, area.Height);
         var (width, height) = (Math.Max(1, (int)Math.Ceiling(area.Width * scale)),
             Math.Max(1, (int)Math.Ceiling(area.Height * scale)));
@@ -333,6 +354,7 @@ internal sealed partial class PdfPageInterpreter
 
         var (cx, cy, dr) = (x1 - x0, y1 - y0, r1 - r0);
         var a = cx * cx + cy * cy - dr * dr;
+        var size = cx * cx + cy * cy + dr * dr;
         var opacity = Byte(alpha);
         var rgba = new byte[width * height * 4];
         for (var row = 0; row < height; row++)
@@ -341,7 +363,7 @@ internal sealed partial class PdfPageInterpreter
             for (var column = 0; column < width; column++)
             {
                 var px = area.X + (column + 0.5) * area.Width / width - x0;
-                if (RadialParameter(shading, a, px * cx + py * cy + r0 * dr, px * px + py * py - r0 * r0, r0, dr)
+                if (RadialParameter(shading, a, size, px * cx + py * cy + r0 * dr, px * px + py * py - r0 * r0, r0, dr)
                     is not { } s)
                 {
                     continue;
@@ -353,19 +375,75 @@ internal sealed partial class PdfPageInterpreter
             }
         }
 
-        var picture = new PdfMatrix(area.Width, 0, 0, area.Height, area.X, area.Y).Then(space);
-        Write(new PdfImageStep(ToImage(width, height, rgba), PdfMatrices.ToDrawing(picture)), output);
+        BleedUnderClear(rgba, width, height);
+        return ToImage(width, height, rgba);
+    }
+
+    // Gives every clear pixel the color of the nearest painted one along its row, then its column: a smooth sampler
+    // blends a painted pixel with its clear neighbors, and their black would rim the shading's edge dark.
+    private static void BleedUnderClear(byte[] rgba, int width, int height)
+    {
+        var colored = new bool[width * height];
+        for (var i = 0; i < colored.Length; i++)
+        {
+            colored[i] = rgba[i * 4 + 3] != 0;
+        }
+
+        for (var row = 0; row < height; row++)
+        {
+            Bleed(rgba, colored, row * width, 1, width);
+        }
+
+        for (var column = 0; column < width; column++)
+        {
+            Bleed(rgba, colored, column, width, height);
+        }
+    }
+
+    // Along one line of `count` pixels from `first`, `step` apart: each uncolored pixel takes the color last seen going
+    // forward, and those before the first colored one the first one's.
+    private static void Bleed(byte[] rgba, bool[] colored, int first, int step, int count)
+    {
+        var seen = -1;
+        for (var k = 0; k < count; k++)
+        {
+            var i = first + k * step;
+            if (colored[i])
+            {
+                if (seen < 0)
+                {
+                    for (var j = 0; j < k; j++)
+                    {
+                        CopyColor(rgba, colored, i, first + j * step);
+                    }
+                }
+
+                seen = i;
+            }
+            else if (seen >= 0)
+            {
+                CopyColor(rgba, colored, seen, i);
+            }
+        }
+    }
+
+    private static void CopyColor(byte[] rgba, bool[] colored, int from, int to)
+    {
+        (rgba[to * 4], rgba[to * 4 + 1], rgba[to * 4 + 2]) = (rgba[from * 4], rgba[from * 4 + 1], rgba[from * 4 + 2]);
+        colored[to] = true;
     }
 
     // The largest s the shading allows - [0, 1], and past an end it extends - at which the circle of radius r0 + s dr,
-    // at least 0, passes through the point: the roots of a s^2 - 2 b s + c = 0. Null where there is none.
-    private static double? RadialParameter(PdfRadialShading shading, double a, double b, double c, double r0, double dr)
+    // at least 0, passes through the point: the roots of a s^2 - 2 b s + c = 0. Null where there is none. `size` is
+    // the circles' own scale (|centers|² + |radii|²), what "a is next to nothing" is measured against.
+    private static double? RadialParameter(PdfRadialShading shading, double a, double size, double b, double c,
+        double r0, double dr)
     {
         bool Allowed(double s) => r0 + s * dr >= 0 && (s >= 0 || shading.ExtendStart) && (s <= 1 || shading.ExtendEnd);
 
-        if (Math.Abs(a) < 1e-12)
+        if (Math.Abs(a) <= 1e-12 * size)
         {
-            if (Math.Abs(b) < 1e-12)
+            if (b == 0)
             {
                 return null;
             }
@@ -390,6 +468,18 @@ internal sealed partial class PdfPageInterpreter
         }
 
         return Allowed(low) ? low : null;
+    }
+
+    private static ColoredMesh Faded(ColoredMesh mesh, double alpha)
+    {
+        var vertices = new ColoredVertex[mesh.Vertices.Count];
+        for (var i = 0; i < vertices.Length; i++)
+        {
+            var v = mesh.Vertices[i];
+            vertices[i] = v with { Color = new Color(v.Color.R, v.Color.G, v.Color.B, Byte(alpha)) };
+        }
+
+        return new ColoredMesh(vertices);
     }
 
     private static Rect Intersection(Rect a, Rect b)

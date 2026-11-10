@@ -17,7 +17,7 @@ public partial class RenderCache
     private const int FringePixels = 2;
     // How far a stroke reaches past its points, in thicknesses: a miter's point up to half its limit, two at least.
     private static double MiterReach(Pen pen) =>
-        System.Math.Max(2.0, pen?.PenLineJoin == PenLineJoin.Miter ? System.Math.Max(pen.MiterLimit, 1.0) / 2 : 0.0);
+        System.Math.Max(2.0, pen?.PenLineJoin == PenLineJoin.Miter ? Pen.ClampMiterLimit(pen.MiterLimit) / 2 : 0.0);
     private const double TextOverhang = 0.25;
     private const ulong PrintSeed = 0xCBF29CE484222325UL;
 
@@ -789,7 +789,7 @@ public partial class RenderCache
                     System.Math.Min(line.LineStart.Y, line.LineEnd.Y),
                     System.Math.Abs(line.LineEnd.X - line.LineStart.X),
                     System.Math.Abs(line.LineEnd.Y - line.LineStart.Y));
-                pen = MiterReach(line.Pen) * (line.Pen?.Thickness ?? 0);
+                pen = 2.0 * (line.Pen?.Thickness ?? 0);   // one segment: no corner to miter
                 break;
             case TextRenderUnit { Payload: { } text }:
                 var overhang = text.DesiredSize.Height * TextOverhang;

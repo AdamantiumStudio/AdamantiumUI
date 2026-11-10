@@ -138,7 +138,7 @@ public abstract class Shape : InputUIComponent
                var miter = SafeNormalize(sum);
                var denom = Vector2<double>.Dot(miter, n0);
                if (join == PenLineJoin.Miter && sum.X * sum.X + sum.Y * sum.Y > 1e-8 &&
-                   denom * Math.Max(miterLimit, 1.0) >= 1.0)
+                   denom * Pen.ClampMiterLimit(miterLimit) >= 1.0)
                {
                   var len = half / denom;
                   Include(ref min, ref max, ref any, p + miter * len);

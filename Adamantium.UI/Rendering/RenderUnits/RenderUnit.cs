@@ -279,6 +279,9 @@ public abstract class RenderUnit<TPayload> : DeferredDisposableObject, IRenderUn
             renderData.RenderScale = renderScale;
             if (GeometryRenderer != null) GeometryRenderer.RenderData = renderData;
             if (FillFringeRenderer != null) FillFringeRenderer.RenderData = renderData;
+            // The edge spans its gradient over the body's box as the body has it now - after a resize too.
+            if (FillFringeRenderer is GpuFillRenderComponent fringe)
+                fringe.GradientBox = (GeometryRenderer as GeometryRenderComponent)?.GradientBox;
             if (StrokeRenderer != null) StrokeRenderer.RenderData = renderData;
         }
         // Place() FIRST, then hand the result to every renderer: a draw carrying its own placement must move its body,
@@ -332,6 +335,16 @@ public abstract class RenderUnit<TPayload> : DeferredDisposableObject, IRenderUn
     public bool AwaitsFrame => _geometryRenderer?.AwaitsFrame == true;
 
     public bool DrawsMoving => StrokeRenderer is GpuStrokeRenderComponent { DrawsMoving: true };
+
+    /// <summary>Places what was just built in the walk - after this frame's <see cref="PreRender"/>, inside the pass - and
+    /// fills its fringe's and stroke's buffers, which would otherwise be drawn from unwritten memory. Their writes are
+    /// the host's, so the pass need not be left for them.</summary>
+    protected void PrepareBuiltLate(Matrix4x4F transform, Matrix4x4F projection, double renderScale)
+    {
+        Update(transform, projection, renderScale);
+        FillFringeRenderer?.PreRender();
+        StrokeRenderer?.PreRender();
+    }
 
     public virtual void PreRender()
     {
@@ -395,20 +408,33 @@ public class GeometryRenderUnit : RenderUnit<GeometryPayload>, IStrokeOnlyUnit
     // fill kind with no instanced pass at all (an image fill).
     protected override bool FringeInstanced => HasInstancedFringe;
 
-    /// <summary>This unit's AA edge rides the instanced flush, where it is drawn AFTER every pending fill - so it is the
-    /// one that can land on a later shape's fill (see the overlap flush in the draw loop).</summary>
+    // The geometry a fringe of its own was last tried for: one with no closed contour gets none, and is not tried again.
+    private Geometry _fringeTriedFor;
+
     /// <summary>Takes the fill back from the instanced path once its brush became a gradient no instanced record carries
-    /// (a radial between two circles): the body is drawn by the unit again and the edge gets its own fringe. True when
-    /// something was built, so the caller re-places it.</summary>
-    public bool TakeBackFill()
+    /// (a radial between two circles): the body is drawn by the unit again and the edge gets its own fringe, placed and
+    /// filled at once - this runs in the walk, after the frame's PreRender.</summary>
+    public void TakeBackFill(Matrix4x4F transform, Matrix4x4F projection, double renderScale)
     {
-        if (Payload.Brush is not GradientBrush gradient || GradientBake.FitsBatch(gradient)) return false;
+        if (Payload.Brush is not GradientBrush gradient || GradientBake.FitsBatch(gradient)) return;
         FillInstanced = false;
-        if (FillFringeRenderer != null) return false;
+        if (FillFringeRenderer != null || ReferenceEquals(_fringeTriedFor, Payload.Geometry)) return;
+        _fringeTriedFor = Payload.Geometry;
         ProcessFillFringe(Payload.Geometry, Payload.Brush);
-        return FillFringeRenderer != null;
+        if (FillFringeRenderer != null) PrepareBuiltLate(transform, projection, renderScale);
     }
 
+    // A fringe of its own built while its gradient was one no instanced record carries is not drawn while the instanced
+    // path draws the edge again: both would darken it.
+    public override void Render()
+    {
+        if (!FillInstanced) GeometryRenderer?.Render();
+        if (!(FillInstanced && HasInstancedFringe)) FillFringeRenderer?.Render();
+        StrokeRenderer?.Render();
+    }
+
+    /// <summary>This unit's AA edge rides the instanced flush, where it is drawn AFTER every pending fill - so it is the
+    /// one that can land on a later shape's fill (see the overlap flush in the draw loop).</summary>
     public bool HasInstancedFringe =>
         InstancedFillCollector.Enabled && _frozenMesh is { Ring.Length: > 0 } &&
         Payload.Brush is SolidColorBrush or GradientBrush or PatternBrush or NoiseBrush &&
@@ -769,14 +795,14 @@ public class RectangleRenderUnit : RenderUnit<RectanglePayload>
     private bool _bodyOnly;
 
     /// <summary>Builds everything this rect draws itself with - body, fringe, stroke, frame - when no batch takes it now
-    /// though it was built for one: its brush became one no batch records, with nothing recorded again. True when it
-    /// built.</summary>
-    public bool EnsureOwnDrawing()
+    /// though it was built for one: its brush became one no batch records, with nothing recorded again. Runs in the walk,
+    /// so what it builds is placed and filled at once.</summary>
+    public void EnsureOwnDrawing(Matrix4x4F transform, Matrix4x4F projection, double renderScale)
     {
         if (IsSdfBatchable(Payload) || IsGradientBatchable(Payload) || IsTexBatchable(Payload) ||
             (GeometryRenderer != null && !_machineryStale && !_bodyOnly))
         {
-            return false;
+            return;
         }
 
         GeometryRenderer?.DeferDispose();
@@ -784,7 +810,7 @@ public class RectangleRenderUnit : RenderUnit<RectanglePayload>
         BuildMachinery(Payload);
         _machineryStale = false;
         _bodyOnly = false;
-        return true;
+        PrepareBuiltLate(transform, projection, renderScale);
     }
 
     public override void UpdateWithDrawCommand(IDrawCommand drawCommand)
@@ -831,6 +857,7 @@ public class RectangleRenderUnit : RenderUnit<RectanglePayload>
             ((GeometryRenderComponent)GeometryRenderer).UpdateGeometry(rectangleGeometry.Mesh);
         }
         ((GeometryRenderComponent)GeometryRenderer).Background = inputPayload.LiveBrush;
+        ((GeometryRenderComponent)GeometryRenderer).GradientBox = inputPayload.DestinationRect;
         DrawCommand = drawCommand;
         Payload = inputPayload;
         GeometryRenderer.RenderData = DrawCommand.RenderData;
@@ -942,19 +969,19 @@ public class EllipseRenderUnit : RenderUnit<EllipsePayload>
     }
 
     /// <summary>Builds everything this ellipse draws itself with when no batch takes it now though it was built for one -
-    /// see the rect's twin. True when it built.</summary>
-    public bool EnsureOwnDrawing()
+    /// see the rect's twin.</summary>
+    public void EnsureOwnDrawing(Matrix4x4F transform, Matrix4x4F projection, double renderScale)
     {
         if (IsSdfBatchable(Payload) || IsGradientBatchable(Payload) || IsPatternBatchable(Payload) ||
             IsTexBatchable(Payload) || (GeometryRenderer != null && _ownDrawing))
         {
-            return false;
+            return;
         }
 
         GeometryRenderer?.DeferDispose();
         GeometryRenderer = null;
         BuildMachinery(Payload);
-        return true;
+        PrepareBuiltLate(transform, projection, renderScale);
     }
 
     /// <summary>The shape this ellipse actually is. A RING is the outer shape with the inner one taken out of it - the
@@ -1007,6 +1034,7 @@ public class EllipseRenderUnit : RenderUnit<EllipsePayload>
             ((GeometryRenderComponent)GeometryRenderer).UpdateGeometry(ellipseGeometry.Mesh);
         }
         ((GeometryRenderComponent)GeometryRenderer).Background = inputPayload.LiveBrush;
+        ((GeometryRenderComponent)GeometryRenderer).GradientBox = inputPayload.DestinationRect;
         DrawCommand = drawCommand;
         Payload = inputPayload;
         GeometryRenderer.RenderData = drawCommand.RenderData;
@@ -1097,7 +1125,7 @@ public class ImageRenderUnit : RenderUnit<ImagePayload>
         if (texture == null) return null;   // decode still pending - no texture yet, draw nothing until a re-render
         var component = new ImageRenderComponent(GraphicsDevice, UIBasicEffect, mesh, texture, BufferManager)
         {
-            Sampler = SamplerStates.LinearClampToEdge,
+            Image = image,
             FrameLayer = layer,
             FramePalette = layer.HasValue ? palette : null
         };
@@ -1423,18 +1451,18 @@ public class RegularPolygonRenderUnit : RenderUnit<RegularPolygonPayload>
     }
 
     /// <summary>Builds everything this polygon draws itself with when no batch takes it now though it was built for one -
-    /// see the rect's twin. True when it built.</summary>
-    public bool EnsureOwnDrawing()
+    /// see the rect's twin.</summary>
+    public void EnsureOwnDrawing(Matrix4x4F transform, Matrix4x4F projection, double renderScale)
     {
         if (IsSdfBatchable(Payload) || (GeometryRenderer != null && _ownDrawing))
         {
-            return false;
+            return;
         }
 
         GeometryRenderer?.DeferDispose();
         GeometryRenderer = null;
         BuildMachinery(Payload);
-        return true;
+        PrepareBuiltLate(transform, projection, renderScale);
     }
 
     public override void UpdateWithDrawCommand(IDrawCommand drawCommand)
@@ -1462,6 +1490,7 @@ public class RegularPolygonRenderUnit : RenderUnit<RegularPolygonPayload>
         }
 
         ((GeometryRenderComponent)GeometryRenderer).Background = inputPayload.LiveBrush;
+        ((GeometryRenderComponent)GeometryRenderer).GradientBox = inputPayload.DestinationRect;
         // Asked before the payload is replaced: after it, the pen compared is the new one with itself.
         var penChanged = !Equals(Payload.Pen, inputPayload.Pen);
         DrawCommand = drawCommand;

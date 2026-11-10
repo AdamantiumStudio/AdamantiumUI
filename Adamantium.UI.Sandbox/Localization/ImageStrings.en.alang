@@ -16,6 +16,8 @@
     <Phrase Key="Formats" Text="Formats and animation"/>
     <Phrase Key="OpacityLabel" Text="Opacity:"/>
     <Phrase Key="MipLevel" Text="PNG (mip level 2)"/>
+    <Phrase Key="SmoothPixels" Text="8×8 enlarged smoothly"/>
+    <Phrase Key="PixelatedPixels" Text="8×8 enlarged in squares"/>
 
     <Phrase Key="Jpeg2000" Text="JPEG 2000: resolutions and quality layers"/>
     <Phrase Key="Jpeg2000Hint" Text="One file holds every resolution and every quality: each resolution step halves the picture, each quality step leaves out the last layer. Only the part asked for is read and decoded - the numbers below say how much that is. The image draws it in the same frame, so a smaller part shows coarser."/>

@@ -11,6 +11,7 @@ using Adamantium.Mathematics;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Graphics;
 using Adamantium.UI.Core.Media;
+using Adamantium.UI.Core.Media.Imaging;
 using Adamantium.UI.FX;
 using Adamantium.UI.Rendering.Retained;
 using Adamantium.Vulkan.Core;
@@ -325,7 +326,7 @@ public class GeometryRenderComponent : UIRenderComponent
         UIBasicEffect.TexRepeat.SetValue(layout.Repeats ? 1f : 0f);
         UIBasicEffect.TexMirror.SetValue(layout.Mirror);
         UIBasicEffect.ShaderTexture.SetResource(texture);
-        UIBasicEffect.SampleType.SetResource(SamplerStates.LinearClampToEdge);
+        UIBasicEffect.SampleType.SetResource(ImageSamplers.Of(image));
         UIBasicEffect.BasicTexturedFillPass.Apply();
 
         base.Render();
@@ -380,7 +381,11 @@ public class ImageRenderComponent : UIRenderComponent
     /// <summary>The palette of a frame array whose layers hold palette indices; null when they hold the colors.</summary>
     public ITexture FramePalette { get; set; }
 
-    public SamplerState Sampler { get; set; }
+    /// <summary>The picture drawn, whose <see cref="ImageSource.Sampling"/> the sampler follows - read at every draw, so
+    /// a change shows at once.</summary>
+    public ImageSource Image { get; set; }
+
+    private SamplerState Sampler => ImageSamplers.Of(Image);
 
     /// <summary>When set, this image is backed by an externally produced shared surface. Sampled via the private
     /// <see cref="UIRenderComponent.Texture"/>, refreshed each frame by the latch in <see cref="PreRender"/>.</summary>

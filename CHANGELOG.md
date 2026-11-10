@@ -40,7 +40,11 @@ All packages share one version.
 - `Pen.MiterLimit` and `Shape.StrokeMiterLimit`: how far a miter join's point may reach, in half thicknesses (10 by
   default); a sharper corner is beveled, as SVG, WPF and PDF do - before, every miter was cut short at four half
   thicknesses, sharper corners with a slanted stub. A PDF page's `M` reaches its pens. The sandbox's "Shapes" tab has
-  a slider for it.
+  a slider for it. `Pen.ClampMiterLimit` and `Pen.MostMiterLimit` say what is drawn (1 to 1000; 10 for NaN).
+- `ImageSource.Sampling` (`ImageSampling.Smooth`, `Pixelated`): a picture enlarged in hard squares, the nearest pixel,
+  and reduced smoothly - for every way a picture is drawn, `Image`, `DrawImage` and image brushes. A PDF image that
+  does not ask to be interpolated is drawn so (`Interpolate` is false by default). The sandbox's "Image" tab shows an
+  8×8 picture enlarged both ways.
 - `IDrawingSession.DrawImage(image, filter, rect, Matrix4x4F)`: an image placed by a matrix - turned and sheared with
   it, not laid upright into its bounds. An `ImageDrawing` inside a turned `DrawingGroup` turns with it now.
 - `ZoomBox` places content smaller than its view by `HorizontalContentAlignment` and `VerticalContentAlignment` - the
@@ -275,6 +279,7 @@ All packages share one version.
   a path whose gradient fill stops being instanced draws its body and edge again. The edge of a sector or a framed
   rectangle spans its gradient over the body's box, so it takes the body's colors.
 - A regular polygon whose outline pen changed kept its old outline.
+- A `BitmapImage` made from pixels in memory was never drawn by `Image`: it did not count as loaded.
 - A group that blends by a mode inside a group that only cuts mixed with nothing: the cut is drawn apart from what
   lies under it. A cut holding such a group now starts from a copy of what lies under it and is laid back in its place,
   so the blend mixes with that. The sandbox's "PDF drawing" tab shows discs multiplied inside a star.

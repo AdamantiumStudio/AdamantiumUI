@@ -58,6 +58,9 @@ internal sealed class CommandGroup(GroupMarkRenderUnit begin)
     /// so the blend mixes with that, and it is laid back in place of it where its masks let it through.</summary>
     public bool StartsFromBackdrop;
 
+    /// <summary>Whether a group inside it blends by a mode - found when it is placed.</summary>
+    public bool HoldsBlend;
+
     /// <summary>The keys its targets are kept under from frame to frame: its content's, then its masks'.</summary>
     public readonly object ContentKey = new();
 

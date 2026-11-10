@@ -248,7 +248,8 @@ public partial class RenderCache
         }
 
         // Past its end mark: a group nothing of which is drawn is left out whole.
-        end = ScanGroup(units, begin, out contentAt, out var content, out var clip, out var clipped) + 1;
+        end = ScanGroup(units, begin, out contentAt, out var content, out var clip, out var clipped, out var holdsBlend) + 1;
+        state.HoldsBlend = holdsBlend;
         var options = state.Options;
         if (content.IsEmpty || contentAt < 0 || options.Opacity <= 0)
         {
@@ -386,7 +387,7 @@ public partial class RenderCache
     private Rect2D OpenGroupContent(IGraphicsDevice device, CommandGroup state, Rect2D fullScissor)
     {
         // A cut is no group of its own: what blends inside one mixes with what lies under it, as it would uncut.
-        state.StartsFromBackdrop = OnlyCuts(state.Options) && HoldsABlend(state);
+        state.StartsFromBackdrop = OnlyCuts(state.Options) && state.HoldsBlend;
         if (state.Options.BlendMode != BlendMode.Normal || state.StartsFromBackdrop)
         {
             while (_groupBackdrops.Count <= state.Depth)
@@ -411,38 +412,6 @@ public partial class RenderCache
     private static bool OnlyCuts(DrawingGroupOptions options) =>
         options.Mask == null && options.BlendMode == BlendMode.Normal && options.Opacity >= 1;
 
-    // Whether a group inside this one blends by a mode.
-    private static bool HoldsABlend(CommandGroup state)
-    {
-        var units = state.Units;
-        var begin = state.BeginAt < units.Count && ReferenceEquals(units[state.BeginAt], state.Begin)
-            ? state.BeginAt
-            : units.IndexOf(state.Begin);
-        var depth = 0;
-        for (var i = begin + 1; i < units.Count; i++)
-        {
-            if (units[i] is not GroupMarkRenderUnit mark)
-            {
-                continue;
-            }
-
-            if (mark.Kind == GroupMarkKind.Begin)
-            {
-                if (mark.Payload.Options.BlendMode != BlendMode.Normal)
-                {
-                    return true;
-                }
-
-                depth++;
-            }
-            else if (mark.Kind == GroupMarkKind.End && depth-- == 0)
-            {
-                return false;
-            }
-        }
-
-        return false;
-    }
 
     private Rect2D CloseGroup(IGraphicsDevice device, CommandGroup state)
     {
@@ -571,14 +540,15 @@ public partial class RenderCache
 
     // Walks the group whose begin mark is at `begin`: where its content starts, where it ends (past the last unit when
     // its element left it open), what its content covers, and what its masks that cut by coverage leave of it, in window
-    // units - `clipped` saying whether any does.
+    // units - `clipped` saying whether any does; `holdsBlend` whether a group inside it blends by a mode.
     private int ScanGroup(List<IRenderUnit> units, int begin, out int contentAt, out Rect content, out Rect clip,
-        out bool clipped)
+        out bool clipped, out bool holdsBlend)
     {
         contentAt = -1;
         content = Rect.Empty;
         clip = Rect.Empty;
         clipped = false;
+        holdsBlend = false;
         var hasContent = false;
         var section = 0;   // 0 between, 1 a mask, 2 the content
         var depth = 0;
@@ -592,6 +562,7 @@ public partial class RenderCache
                 switch (mark.Kind)
                 {
                     case GroupMarkKind.Begin:
+                        holdsBlend |= mark.Payload.Options.BlendMode != BlendMode.Normal;
                         depth++;
                         continue;
                     case GroupMarkKind.End when depth == 0:

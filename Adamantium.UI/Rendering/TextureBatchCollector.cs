@@ -20,7 +20,9 @@ internal sealed class TextureBatchCollector : BrushSdfCollector<TextureItem>
     public static bool Enabled = true;
 
     private ITexture _texture;                          // the pending segment's texture (one bind per draw)
-    private readonly List<ITexture> _segState = new();  // parallel to the base segment list, for the clean-frame replay
+    private SamplerState _sampler;                      // and how its picture is read - one picture's, as the texture is
+    // Parallel to the base segment list, for the clean-frame replay.
+    private readonly List<(ITexture Texture, SamplerState Sampler)> _segState = new();
 
     public TextureBatchCollector() : base(256) { }
 
@@ -36,17 +38,17 @@ internal sealed class TextureBatchCollector : BrushSdfCollector<TextureItem>
 
     protected override void OnSegmentRecorded(int index)
     {
-        while (_segState.Count <= index) _segState.Add(null);
-        _segState[index] = _texture;
+        while (_segState.Count <= index) _segState.Add(default);
+        _segState[index] = (_texture, _sampler);
     }
 
     protected override void OnSegmentInserted(int index)
     {
-        while (_segState.Count < index) _segState.Add(null);
-        _segState.Insert(index, index > 0 ? _segState[index - 1] : null);
+        while (_segState.Count < index) _segState.Add(default);
+        _segState.Insert(index, index > 0 ? _segState[index - 1] : default);
     }
 
-    protected override void BindSegment(int index) => _texture = _segState[index];
+    protected override void BindSegment(int index) => (_texture, _sampler) = _segState[index];
 
     /// <summary>Still the pending segment's texture? One draw binds one texture, so a change flushes the batch - the
     /// caller asks this before adding (mirrors TextBatchCollector.SameAtlas).</summary>
@@ -75,7 +77,7 @@ internal sealed class TextureBatchCollector : BrushSdfCollector<TextureItem>
             Effect.SourceTexture.SetResource(_texture);
         }
 
-        Effect.SourceSampler.SetResource(SamplerStates.LinearClampToEdge);
+        Effect.SourceSampler.SetResource(_sampler ?? SamplerStates.LinearClampToEdge);
         base.DrawSegment(device, buffer, count, firstInstance, projection);
     }
 
@@ -183,6 +185,7 @@ internal sealed class TextureBatchCollector : BrushSdfCollector<TextureItem>
         }
 
         _texture = texture;
+        _sampler = ImageSamplers.Of(p.Brush);
         LastFirst = Count;
         LastCount = baked.Length;
         foreach (var item in baked)
@@ -265,6 +268,7 @@ internal sealed class TextureBatchCollector : BrushSdfCollector<TextureItem>
         }
 
         _texture = texture;
+        _sampler = ImageSamplers.Of(p.Brush);
         // Where THIS fill landed. Set on every accepting path, not just the rect one: the move path reads it to learn
         // which record belongs to this unit, and a stale value from the previous fill points it at somebody else's -
         // dragging a textured polygon by one pixel then rewrote the textured RECTANGLE's record and the rectangle vanished.
@@ -304,6 +308,7 @@ internal sealed class TextureBatchCollector : BrushSdfCollector<TextureItem>
         }
 
         _texture = texture;
+        _sampler = ImageSamplers.Of(p.Brush);
         // Where THIS fill landed. Set on every accepting path, not just the rect one: the move path reads it to learn
         // which record belongs to this unit, and a stale value from the previous fill points it at somebody else's -
         // dragging a textured polygon by one pixel then rewrote the textured RECTANGLE's record and the rectangle vanished.

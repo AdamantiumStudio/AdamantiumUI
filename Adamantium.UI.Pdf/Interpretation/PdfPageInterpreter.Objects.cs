@@ -45,7 +45,7 @@ internal sealed partial class PdfPageInterpreter
                 if (operation.InlineImage != null && !Hidden)
                 {
                     DrawImage(() => PdfImageDecoder.Decode(operation.InlineImage, frame.Resources, _document), null,
-                        frame);
+                        operation.InlineImage.Dictionary, frame);
                 }
 
                 return true;
@@ -72,7 +72,8 @@ internal sealed partial class PdfPageInterpreter
         switch ((_document.Resolve(stream.Dictionary["Subtype"]) as PdfName)?.Value)
         {
             case "Image":
-                DrawImage(() => PdfImageDecoder.Decode(stream, frame.Resources, _document), stream, frame);
+                DrawImage(() => PdfImageDecoder.Decode(stream, frame.Resources, _document), stream, stream.Dictionary,
+                    frame);
                 break;
             case "Form":
                 var resources = _document.Resolve(stream.Dictionary["Resources"]) is PdfDictionary own
@@ -137,9 +138,13 @@ internal sealed partial class PdfPageInterpreter
     }
 
     // An image is decoded once - or found not to decode once - however often it is drawn; an inline image each time
-    // it is met.
-    private void DrawImage(Func<PdfImageBitmap> decode, PdfStream stream, PdfFrame frame)
+    // it is met. Unless it asks to be interpolated, its pixels show as squares where it is enlarged (ISO 32000-2,
+    // 8.9.5.3: Interpolate is false by default).
+    private void DrawImage(Func<PdfImageBitmap> decode, PdfStream stream, PdfDictionary dictionary, PdfFrame frame)
     {
+        var sampling = _document.Resolve(dictionary?["Interpolate"]) is PdfBoolean { Value: true }
+            ? ImageSampling.Smooth
+            : ImageSampling.Pixelated;
         PdfImageBitmap bitmap;
         if (stream != null && _decoded.TryGetValue(stream, out var known))
         {
@@ -172,13 +177,13 @@ internal sealed partial class PdfPageInterpreter
         var matrix = ImageRows.Then(_state.Ctm);
         if (bitmap.IsStencil)
         {
-            DrawStencil(bitmap, stream, matrix, frame);
+            DrawStencil(bitmap, stream, matrix, sampling, frame);
             return;
         }
 
         if (stream == null || !_images.TryGetValue(stream, out var image))
         {
-            image = ToImage(bitmap.Width, bitmap.Height, bitmap.Rgba);
+            image = ToImage(bitmap.Width, bitmap.Height, bitmap.Rgba, sampling);
             if (stream != null)
             {
                 _images[stream] = image;
@@ -194,7 +199,8 @@ internal sealed partial class PdfPageInterpreter
     // A stencil mask paints the fill where it is set. In a color, it is a picture of that color - kept for the first
     // MaxStencilColors colors of a stencil; past them, and for a pattern, the stencil is the mask of a group the fill
     // is painted through, one picture whatever the color.
-    private void DrawStencil(PdfImageBitmap bitmap, PdfStream stream, PdfMatrix matrix, PdfFrame frame)
+    private void DrawStencil(PdfImageBitmap bitmap, PdfStream stream, PdfMatrix matrix, ImageSampling sampling,
+        PdfFrame frame)
     {
         var drawing = PdfMatrices.ToDrawing(matrix);
         var color = Pack(_state.Fill.Rgb(), _state.FillAlpha);
@@ -202,7 +208,7 @@ internal sealed partial class PdfPageInterpreter
         if (_state.Fill.Pattern == null && (stream == null || !_stencils.TryGetValue((stream, color), out tinted)) &&
             (stream == null || StencilColors(stream) < MaxStencilColors))
         {
-            tinted = Tint(bitmap, color);
+            tinted = Tint(bitmap, color, sampling);
             if (stream != null)
             {
                 _stencils[(stream, color)] = tinted;
@@ -218,7 +224,7 @@ internal sealed partial class PdfPageInterpreter
         {
             if (stream == null || !_stencilMasks.TryGetValue(stream, out var shape))
             {
-                shape = ToImage(bitmap.Width, bitmap.Height, bitmap.Rgba);
+                shape = ToImage(bitmap.Width, bitmap.Height, bitmap.Rgba, sampling);
                 if (stream != null)
                 {
                     _stencilMasks[stream] = shape;
@@ -260,7 +266,7 @@ internal sealed partial class PdfPageInterpreter
         return count;
     }
 
-    private static ImageSource Tint(PdfImageBitmap bitmap, uint color)
+    private static ImageSource Tint(PdfImageBitmap bitmap, uint color, ImageSampling sampling)
     {
         var rgba = new byte[bitmap.Rgba.Length];
         for (var i = 0; i < rgba.Length; i += 4)
@@ -271,13 +277,14 @@ internal sealed partial class PdfPageInterpreter
             rgba[i + 3] = (byte)(bitmap.Rgba[i + 3] * (color & 0xFF) / 255);
         }
 
-        return ToImage(bitmap.Width, bitmap.Height, rgba);
+        return ToImage(bitmap.Width, bitmap.Height, rgba, sampling);
     }
 
-    private static ImageSource ToImage(int width, int height, byte[] rgba) =>
+    private static ImageSource ToImage(int width, int height, byte[] rgba,
+        ImageSampling sampling = ImageSampling.Smooth) =>
         width <= 0 || height <= 0
             ? null
-            : new BitmapImage((uint)width, (uint)height, 1, 1, SurfaceFormat.R8G8B8A8.UNorm, rgba);
+            : new BitmapImage((uint)width, (uint)height, 1, 1, SurfaceFormat.R8G8B8A8.UNorm, rgba) { Sampling = sampling };
 
     // A soft mask is drawn when gs sets it, in the matrix in force then; the state it is set in gets the picture.
     private void BeginSoftMask(PdfSoftMask mask, PdfFrame frame)

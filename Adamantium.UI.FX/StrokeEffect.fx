@@ -325,7 +325,8 @@ void OffsetPair(uint i, float2 segmentNormal, out float2 plus, out float2 minus)
         miter = float2(-dir.y, dir.x);
         miterLen = hw;
     }
-    else if (PastMiterLimit(i))
+    // A contour with no fan has no corner past the limit - the CPU found none - so it is not asked again here.
+    else if (RoundSegments != 0u && PastMiterLimit(i))
     {
         miter = segmentNormal;
         miterLen = hw;

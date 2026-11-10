@@ -1991,15 +1991,21 @@ public partial class RenderCache
             // A shape built for a batch that no batch takes now - its brush became one no record carries, a radial
             // between two circles - has no drawing of its own yet (or only the bare body a batch-rejected one gets);
             // drawn without it, it would draw nothing, or no edge and no outline.
-            var ownDrawingBuilt = unit switch
+            switch (unit)
             {
-                RectangleRenderUnit rect => rect.EnsureOwnDrawing(),
-                EllipseRenderUnit ellipse => ellipse.EnsureOwnDrawing(),
-                RegularPolygonRenderUnit polygon => polygon.EnsureOwnDrawing(),
-                GeometryRenderUnit geometry => geometry.TakeBackFill(),
-                _ => false
-            };
-            if (ownDrawingBuilt) unit.Update(wt, _projectionMatrix, _renderScale);
+                case RectangleRenderUnit rect:
+                    rect.EnsureOwnDrawing(wt, _projectionMatrix, _renderScale);
+                    break;
+                case EllipseRenderUnit ellipse:
+                    ellipse.EnsureOwnDrawing(wt, _projectionMatrix, _renderScale);
+                    break;
+                case RegularPolygonRenderUnit polygon:
+                    polygon.EnsureOwnDrawing(wt, _projectionMatrix, _renderScale);
+                    break;
+                case GeometryRenderUnit geometry:
+                    geometry.TakeBackFill(wt, _projectionMatrix, _renderScale);
+                    break;
+            }
 
             if (device != null)
             {

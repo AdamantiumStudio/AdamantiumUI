@@ -145,14 +145,55 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
     private static List<(int Start, int Count)> Batches(IReadOnlyList<(Vector2<double>[] Points, bool IsClosed)> contours) =>
         PreparedStrokeBatch.Batches(contours);
 
-    // The triangles a point draws for its join: a miter keeps a bevel's two for a corner past its limit.
-    private uint JoinTriangles => _joinType switch
+    // The triangles a point of the contour draws for its join, and so its draw's vertices: a round join's fan, a bevel's
+    // two - and a miter's two only where some corner reaches past the limit, where it is beveled.
+    private void SetJoinTriangles(Contour c)
     {
-        2u => RoundSegmentsCount,
-        _ => 2u,
-    };
+        c.RoundSegments = _joinType switch
+        {
+            2u => RoundSegmentsCount,
+            1u => 2u,
+            _ => AnyCornerPastLimit(c) ? 2u : 0u,
+        };
+        c.VertexCount = c.PointCount * (6u + c.RoundSegments * 3u);
+    }
 
-    private float MiterLimitValue => (float)Math.Max(_pen.MiterLimit, 1.0);
+    private bool AnyCornerPastLimit(Contour c)
+    {
+        var limit = MiterLimitValue;
+        if (!c.Batched) return AnyCornerPastLimit(c.PointsData, 0, (int)c.PointCount, c.IsClosed, limit);
+        for (var k = 0; k + 2 < c.ContoursData.Length; k += 3)
+        {
+            if (AnyCornerPastLimit(c.PointsData, (int)c.ContoursData[k], (int)c.ContoursData[k + 1],
+                    c.ContoursData[k + 2] != 0, limit))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    // The shader's test (StrokeEffect.fx PastMiterLimit): the cosine of half the turn times the limit below 1 - with a
+    // little room, so a corner the shader's float arithmetic bevels always has its two triangles.
+    private static bool AnyCornerPastLimit(float[] points, int first, int count, bool closed, float limit)
+    {
+        for (var i = 0; i < count; i++)
+        {
+            if (!closed && (i == 0 || i == count - 1)) continue;
+            var (prev, here, next) = (first + (i + count - 1) % count, first + i, first + (i + 1) % count);
+            var (ax, ay) = (points[2 * here] - points[2 * prev], points[2 * here + 1] - points[2 * prev + 1]);
+            var (bx, by) = (points[2 * next] - points[2 * here], points[2 * next + 1] - points[2 * here + 1]);
+            var lengths = MathF.Sqrt(ax * ax + ay * ay) * MathF.Sqrt(bx * bx + by * by);
+            if (lengths <= 0) return true;
+            var halfTurnCos = MathF.Sqrt(MathF.Max(0f, (1f + (ax * bx + ay * by) / lengths) / 2f));
+            if (halfTurnCos * limit < 1.001f) return true;
+        }
+
+        return false;
+    }
+
+    private float MiterLimitValue => (float)Pen.ClampMiterLimit(_pen.MiterLimit);
 
     // One contour standing for all of them: their points one after another, a table of where each starts, and for every
     // point the contour it is in.
@@ -169,8 +210,7 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
             ArcsData = batch.Arcs,
         };
 
-        c.RoundSegments = JoinTriangles;
-        c.VertexCount = c.PointCount * (6u + c.RoundSegments * 3u);
+        SetJoinTriangles(c);
         c.PointsBuffer = NewStorage(c.PointsBytes);
         c.ContoursBuffer = NewStorage((ulong)(c.ContoursData.Length * sizeof(uint)));
         c.PointContoursBuffer = NewStorage((ulong)(c.PointContoursData.Length * sizeof(uint)));
@@ -194,8 +234,7 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
         };
         FillBatch(c, contours, start, count);
 
-        c.RoundSegments = JoinTriangles;
-        c.VertexCount = c.PointCount * (6u + c.RoundSegments * 3u);
+        SetJoinTriangles(c);
         c.PointsBuffer = NewStorage(c.PointsBytes);
         c.ContoursBuffer = NewStorage((ulong)(c.ContoursData.Length * sizeof(uint)));
         c.PointContoursBuffer = NewStorage((ulong)(c.PointContoursData.Length * sizeof(uint)));
@@ -330,7 +369,13 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
     private void Adopt(Pen pen)
     {
         var patternChanged = _hasDashes && PatternChanged(pen);
+        var limitChanged = _joinType == 0u && !Pen.ClampMiterLimit(pen.MiterLimit).Equals(Pen.ClampMiterLimit(_pen.MiterLimit));
         _pen = pen;
+        if (limitChanged)
+        {
+            foreach (var c in _contours) SetJoinTriangles(c);
+        }
+
         if (!patternChanged) return;
 
         foreach (var c in _contours)
@@ -372,6 +417,7 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
 
                 if (c.Batched) FillBatch(c, valid, parts[i].Start, parts[i].Count);
                 else c.PointsData = ToFloats(valid[parts[i].Start].Points);
+                SetJoinTriangles(c);
                 FillArcs(c);
                 c.PointsBuffer.Invalidate();
                 c.ArcsBuffer.Invalidate();
@@ -395,6 +441,7 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
         {
             var c = _contours[i];
             c.PointsData = ToFloats(valid[i].Points);
+            SetJoinTriangles(c);
             FillArcs(c);
             c.PointsBuffer.Invalidate();
             c.ArcsBuffer.Invalidate();
@@ -481,12 +528,9 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
         var c = new Contour { IsClosed = isClosed, PointCount = (uint)points.Length, PointsData = ToFloats(points) };
 
         // Disc segments are needed by the JOIN only: round (a disc) or bevel (a wedge). Caps need none - they are a
-        // per-fragment mask.
-        c.RoundSegments = JoinTriangles;
+        // per-fragment mask. Drawn straight from its points (StrokePullVS).
+        SetJoinTriangles(c);
         c.PointsBuffer = NewStorage(c.PointsBytes);
-
-        // Drawn straight from its points (StrokePullVS).
-        c.VertexCount = c.PointCount * (6u + c.RoundSegments * 3u);
         c.ArcsData = new float[points.Length];
         FillArcs(c);
         c.ArcsBuffer = NewStorage((ulong)(points.Length * sizeof(float)));
@@ -753,9 +797,15 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
     }
 
     /// <summary>How far past its points the ribbon can reach, in its local units: a miter's point up to its limit in
-    /// half-widths - four at least, for the caps - and the feather on top.</summary>
-    internal float LocalReach =>
-        Math.Max(4f, _joinType == 0u ? MiterLimitValue : 0f) * HalfThickness() + 2f * ComputeFringe();
+    /// half-widths of the feathered ribbon - four at least, for the caps - and the feather on top.</summary>
+    internal float LocalReach
+    {
+        get
+        {
+            var fringe = ComputeFringe();
+            return Math.Max(4f, _joinType == 0u ? MiterLimitValue : 0f) * (HalfThickness() + fringe * 0.5f) + 2f * fringe;
+        }
+    }
 
     /// <summary>How many records it takes: one a draw - a batch of contours, or a contour standing alone.</summary>
     internal int RecordCount => _contours.Count;

@@ -32,6 +32,14 @@ public class Pen : IEquatable<Pen>
    /// </summary>
    public Double MiterLimit { get; init; } = 10;
 
+   /// <summary>The highest miter limit drawn: a corner whose point would reach further than this many half widths turns
+   /// back by all but a ninth of a degree.</summary>
+   public const double MostMiterLimit = 1000;
+
+   /// <summary>A miter limit as it is drawn: 1 to <see cref="MostMiterLimit"/>, the default 10 for one that is not a
+   /// number.</summary>
+   public static double ClampMiterLimit(double limit) => double.IsNaN(limit) ? 10 : Math.Clamp(limit, 1, MostMiterLimit);
+
    /// <summary>How far along the line the dash pattern starts, in the same unit as <see cref="DashStrokeArray"/>.
    /// </summary>
    public Double DashOffset { get; }

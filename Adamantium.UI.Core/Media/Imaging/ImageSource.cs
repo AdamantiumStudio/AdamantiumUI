@@ -7,7 +7,18 @@ namespace Adamantium.UI.Core.Media.Imaging;
 [MarkupFile("png", "jpg", "jpeg", "gif", "bmp", "tga", "dds", "ico", "tif", "tiff")]
 public abstract class ImageSource : AdamantiumComponent, IDisposable
 {
+   public static readonly AdamantiumProperty SamplingProperty = AdamantiumProperty.Register(nameof(Sampling),
+      typeof(ImageSampling), typeof(ImageSource), new PropertyMetadata(ImageSampling.Smooth));
+
    private int _disposed;
+
+   /// <summary>How its pixels are read where it is drawn larger or smaller than they are; read when it is drawn.
+   /// </summary>
+   public ImageSampling Sampling
+   {
+      get => GetValue<ImageSampling>(SamplingProperty);
+      set => SetValue(SamplingProperty, value);
+   }
 
    public abstract double Width { get; }
    public abstract double Height { get; }
