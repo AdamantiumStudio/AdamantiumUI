@@ -17,7 +17,7 @@ namespace Adamantium.UI.Pdf.Interpretation;
 internal sealed partial class PdfPageInterpreter
 {
     private readonly Dictionary<uint, Brush> _brushes = [];
-    private readonly Dictionary<(uint, double, int, int, string, double), Pen> _pens = [];
+    private readonly Dictionary<(uint, double, int, int, string, double, double), Pen> _pens = [];
     private readonly Dictionary<(PdfStream, uint), PdfContentDrawing> _cells = [];
     private readonly Dictionary<PdfObject, PdfPattern> _patterns = new(ReferenceEqualityComparer.Instance);
 
@@ -200,7 +200,7 @@ internal sealed partial class PdfPageInterpreter
         var key = Pack(_state.Stroke.Rgb(), _state.StrokeAlpha);
         var dash = _state.Dash.IsSolid ? "" : string.Join(" ", _state.Dash.Lengths);
         var phase = _state.Dash.IsSolid ? 0 : _state.Dash.Phase;
-        var penKey = (key, _state.LineWidth, _state.LineCap, _state.LineJoin, dash, phase);
+        var penKey = (key, _state.LineWidth, _state.LineCap, _state.LineJoin, dash, phase, _state.MiterLimit);
         if (_pens.TryGetValue(penKey, out var pen))
         {
             return pen;
@@ -224,6 +224,8 @@ internal sealed partial class PdfPageInterpreter
         {
             // A width of 0 is the thinnest line the device can show (ISO 32000-2, 8.4.3.2).
             MinimumDeviceThickness = _state.LineWidth == 0 ? 1 : 0,
+            // The miter's length over the line's width, as the pen counts it: its point's reach over half the width.
+            MiterLimit = _state.MiterLimit,
         };
         _pens[penKey] = pen;
         return pen;

@@ -20,6 +20,7 @@
     <Phrase Key="StartCap" Text="Start cap"/>
     <Phrase Key="EndCap" Text="End cap"/>
     <Phrase Key="Join" Text="Join"/>
+    <Phrase Key="MiterLimit" Text="Miter limit"/>
     <Phrase Key="DashFit" Text="Dash fit"/>
     <Phrase Key="Color" Text="Color"/>
     <Phrase Key="Brush" Text="Brush"/>

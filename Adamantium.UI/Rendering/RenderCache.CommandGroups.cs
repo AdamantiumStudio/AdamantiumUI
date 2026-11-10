@@ -385,7 +385,9 @@ public partial class RenderCache
 
     private Rect2D OpenGroupContent(IGraphicsDevice device, CommandGroup state, Rect2D fullScissor)
     {
-        if (state.Options.BlendMode != BlendMode.Normal)
+        // A cut is no group of its own: what blends inside one mixes with what lies under it, as it would uncut.
+        state.StartsFromBackdrop = OnlyCuts(state.Options) && HoldsABlend(state);
+        if (state.Options.BlendMode != BlendMode.Normal || state.StartsFromBackdrop)
         {
             while (_groupBackdrops.Count <= state.Depth)
             {
@@ -396,8 +398,50 @@ public partial class RenderCache
         }
 
         _contentOpen.Add(state);
-        return DrawIn(_offscreenLayers.BeginGroupTarget(device, state.ContentKey, state.Region, Colors.Transparent,
+        var space = DrawIn(_offscreenLayers.BeginGroupTarget(device, state.ContentKey, state.Region, Colors.Transparent,
             _projectionMatrix, fullScissor));
+        if (state.StartsFromBackdrop && state.BackdropTaken)
+        {
+            _offscreenLayers.FillFromBackdrop(device, _groupBackdrops[state.Depth], state.Region);
+        }
+
+        return space;
+    }
+
+    private static bool OnlyCuts(DrawingGroupOptions options) =>
+        options.Mask == null && options.BlendMode == BlendMode.Normal && options.Opacity >= 1;
+
+    // Whether a group inside this one blends by a mode.
+    private static bool HoldsABlend(CommandGroup state)
+    {
+        var units = state.Units;
+        var begin = state.BeginAt < units.Count && ReferenceEquals(units[state.BeginAt], state.Begin)
+            ? state.BeginAt
+            : units.IndexOf(state.Begin);
+        var depth = 0;
+        for (var i = begin + 1; i < units.Count; i++)
+        {
+            if (units[i] is not GroupMarkRenderUnit mark)
+            {
+                continue;
+            }
+
+            if (mark.Kind == GroupMarkKind.Begin)
+            {
+                if (mark.Payload.Options.BlendMode != BlendMode.Normal)
+                {
+                    return true;
+                }
+
+                depth++;
+            }
+            else if (mark.Kind == GroupMarkKind.End && depth-- == 0)
+            {
+                return false;
+            }
+        }
+
+        return false;
     }
 
     private Rect2D CloseGroup(IGraphicsDevice device, CommandGroup state)
@@ -413,7 +457,8 @@ public partial class RenderCache
         var scissor = Intersect(state.Region, state.OuterScissor is { } outer ? Intersect(fullScissor, outer) : fullScissor);
         var backdrop = state.BackdropTaken ? _groupBackdrops[state.Depth] : null;
         _offscreenLayers.LayDownGroup(device, content, System.Runtime.InteropServices.CollectionsMarshal.AsSpan(state.Masks),
-            backdrop, state.Options.BlendMode, (float)Math.Clamp(state.Options.Opacity, 0, 1), scissor);
+            backdrop, state.Options.BlendMode, (float)Math.Clamp(state.Options.Opacity, 0, 1), scissor,
+            state.StartsFromBackdrop && state.BackdropTaken);
         return fullScissor;
     }
 

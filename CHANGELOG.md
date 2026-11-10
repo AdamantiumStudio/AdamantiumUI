@@ -37,6 +37,10 @@ All packages share one version.
   shadings - free-form and lattice triangles, Coons and tensor-product patches - are drawn with it, seen through as one
   where they are translucent, and a mesh past a million triangles is told. The sandbox's "PDF
   drawing" tab shows a color wheel of them.
+- `Pen.MiterLimit` and `Shape.StrokeMiterLimit`: how far a miter join's point may reach, in half thicknesses (10 by
+  default); a sharper corner is beveled, as SVG, WPF and PDF do - before, every miter was cut short at four half
+  thicknesses, sharper corners with a slanted stub. A PDF page's `M` reaches its pens. The sandbox's "Shapes" tab has
+  a slider for it.
 - `IDrawingSession.DrawImage(image, filter, rect, Matrix4x4F)`: an image placed by a matrix - turned and sheared with
   it, not laid upright into its bounds. An `ImageDrawing` inside a turned `DrawingGroup` turns with it now.
 - `ZoomBox` places content smaller than its view by `HorizontalContentAlignment` and `VerticalContentAlignment` - the
@@ -271,6 +275,9 @@ All packages share one version.
   a path whose gradient fill stops being instanced draws its body and edge again. The edge of a sector or a framed
   rectangle spans its gradient over the body's box, so it takes the body's colors.
 - A regular polygon whose outline pen changed kept its old outline.
+- A group that blends by a mode inside a group that only cuts mixed with nothing: the cut is drawn apart from what
+  lies under it. A cut holding such a group now starts from a copy of what lies under it and is laid back in its place,
+  so the blend mixes with that. The sandbox's "PDF drawing" tab shows discs multiplied inside a star.
 - The frame verifier no longer reports as lost the text the glyph batch cannot pack and draws by itself (turned
   against its element), nor text in a group of draws left out of sight.
 - A gradient with more than eight stops drew its first eight and padded past them; how many are drawn is now said

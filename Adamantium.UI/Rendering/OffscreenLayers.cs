@@ -375,9 +375,10 @@ internal sealed class OffscreenLayers : IDisposable
     /// <summary>Lays a group down on the current target, cut by <paramref name="scissor"/> (window device pixels): its
     /// <paramref name="content"/> through up to three <paramref name="masks"/> (by alpha, or by luminosity), faded to
     /// <paramref name="alpha"/>, mixed by <paramref name="blendMode"/> with <paramref name="backdrop"/> - a copy of what
-    /// lies under it, which every mode but Normal reads.</summary>
+    /// lies under it, which every mode but Normal reads. <paramref name="replaces"/>: the content started as that copy,
+    /// and takes its place where the masks let it through.</summary>
     public void LayDownGroup(IGraphicsDevice gd, in GroupTarget content, ReadOnlySpan<(GroupTarget Target, bool Luminosity)> masks,
-        GroupBackdrop backdrop, BlendMode blendMode, float alpha, Rect2D scissor)
+        GroupBackdrop backdrop, BlendMode blendMode, float alpha, Rect2D scissor, bool replaces = false)
     {
         if (gd == null || !content.Drawn || gd.CurrentViewports.Length == 0 || scissor.Extent.Width == 0
             || scissor.Extent.Height == 0)
@@ -389,8 +390,9 @@ internal sealed class OffscreenLayers : IDisposable
         var viewport = gd.CurrentViewports[0];
         var restore = gd.CurrentScissors.Length > 0 ? gd.CurrentScissors[0] : scissor;
         var region = content.Region;
+        replaces &= backdrop?.Image != null;
         // Without a copy of what lies under it a mode has nothing to mix with: the group is laid over it instead.
-        var normal = blendMode == BlendMode.Normal || backdrop?.Image == null;
+        var normal = !replaces && (blendMode == BlendMode.Normal || backdrop?.Image == null);
 
         gd.SetScissors(scissor);
         gd.ColorComponentFlags = ColorComponentFlagBits.RBit | ColorComponentFlagBits.GBit |
@@ -425,10 +427,62 @@ internal sealed class OffscreenLayers : IDisposable
             ? new Vector4F(backdrop.Texels.Width, backdrop.Texels.Height, 0, 0)
             : new Vector4F(texels.Width, texels.Height, 0, 0));
         _group.GroupAlpha.SetValue(alpha);
-        _group.BlendMode.SetValue(normal ? 0f : (float)blendMode);
+        _group.BlendMode.SetValue(replaces ? ReplaceMode : normal ? 0f : (float)blendMode);
         _group.ViewportSize.SetValue(new Vector2F(viewport.Width, viewport.Height));
         _group.TargetOrigin.SetValue(new Vector2F(gd.TargetOrigin.X, gd.TargetOrigin.Y));
         _group.SourceTexture.SetResource(content.Texture);
+        _group.SourceSampler.SetResource(SamplerStates.LinearClampToEdge);
+        _group.GroupCompositeDrawPass.Apply();
+        gd.Draw(4, 1);
+        gd.ColorBlendEnabled = true;
+        gd.SetScissors(restore);
+    }
+
+    // The composite's mode past BlendMode's: the content in place of the copy of what lay under it, by the masks.
+    private const float ReplaceMode = 16f;
+
+    /// <summary>Fills the group target just opened over <paramref name="region"/> with the copy of what lay under it.
+    /// </summary>
+    public void FillFromBackdrop(IGraphicsDevice gd, GroupBackdrop backdrop, Rect2D region)
+    {
+        if (gd == null || backdrop?.Image == null || gd.CurrentViewports.Length == 0 || region.Extent.Width == 0
+            || region.Extent.Height == 0)
+        {
+            return;
+        }
+
+        _group ??= new GroupCompositeEffect(gd);
+        var viewport = gd.CurrentViewports[0];
+        var restore = gd.CurrentScissors.Length > 0 ? gd.CurrentScissors[0] : region;
+        gd.SetScissors(region);
+        gd.ColorComponentFlags = ColorComponentFlagBits.RBit | ColorComponentFlagBits.GBit |
+                                 ColorComponentFlagBits.BBit | ColorComponentFlagBits.ABit;
+        gd.ColorBlendEnabled = false;
+        gd.DepthTestEnabled = false;
+        gd.DepthWriteEnable = false;
+        gd.PrimitiveTopology = PrimitiveTopology.TriangleStrip;
+        gd.VertexType = null;
+
+        var texels = backdrop.Texels;
+        _group.LayerBox.SetValue(new Vector4F(region.Offset.X - viewport.X, region.Offset.Y - viewport.Y,
+            region.Extent.Width, region.Extent.Height));
+        _group.SourceRegion.SetValue(new Vector4F(region.Offset.X, region.Offset.Y, region.Extent.Width,
+            region.Extent.Height));
+        _group.LayerTexels.SetValue(new Vector4F(texels.Width, texels.Height, 0, 0));
+        _group.Mask0Texture.SetResource(backdrop.Image);
+        _group.Mask1Texture.SetResource(backdrop.Image);
+        _group.Mask2Texture.SetResource(backdrop.Image);
+        _group.Mask0.SetValue(Vector4F.Zero);
+        _group.Mask1.SetValue(Vector4F.Zero);
+        _group.Mask2.SetValue(Vector4F.Zero);
+
+        _group.BackdropTexture.SetResource(backdrop.Image);
+        _group.Backdrop.SetValue(new Vector4F(texels.Width, texels.Height, 0, 0));
+        _group.GroupAlpha.SetValue(1f);
+        _group.BlendMode.SetValue(0f);
+        _group.ViewportSize.SetValue(new Vector2F(viewport.Width, viewport.Height));
+        _group.TargetOrigin.SetValue(new Vector2F(gd.TargetOrigin.X, gd.TargetOrigin.Y));
+        _group.SourceTexture.SetResource(backdrop.Image);
         _group.SourceSampler.SetResource(SamplerStates.LinearClampToEdge);
         _group.GroupCompositeDrawPass.Apply();
         gd.Draw(4, 1);

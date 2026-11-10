@@ -94,6 +94,14 @@ public class DrawingGroupSample : MeasurableUIComponent
                 session.PopGroup();
                 session.PopGroup();
                 break;
+            case DrawingGroupSampleKind.BlendInClip:
+                DrawPicture(session, w, h);
+                session.PushGroup(new DrawingGroupOptions { Clip = Star(w, h, FillRule.NonZero) });
+                session.PushGroup(new DrawingGroupOptions { BlendMode = BlendMode.Multiply });
+                Discs(session, w, h);
+                session.PopGroup();
+                session.PopGroup();
+                break;
             case DrawingGroupSampleKind.ColoredMesh:
                 session.DrawRectangle(Brushes.White, new Rect(0, 0, w, h));
                 session.DrawColoredMesh(Wheel(w, h), Matrix4x4F.Identity);

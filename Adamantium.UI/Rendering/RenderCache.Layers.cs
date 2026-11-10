@@ -15,7 +15,9 @@ namespace Adamantium.UI.Rendering;
 public partial class RenderCache
 {
     private const int FringePixels = 2;
-    private const double MiterReach = 2.0;
+    // How far a stroke reaches past its points, in thicknesses: a miter's point up to half its limit, two at least.
+    private static double MiterReach(Pen pen) =>
+        System.Math.Max(2.0, pen?.PenLineJoin == PenLineJoin.Miter ? System.Math.Max(pen.MiterLimit, 1.0) / 2 : 0.0);
     private const double TextOverhang = 0.25;
     private const ulong PrintSeed = 0xCBF29CE484222325UL;
 
@@ -762,7 +764,7 @@ public partial class RenderCache
                 break;
             case RegularPolygonRenderUnit { Payload: { } polygon }:
                 ink = Placed(polygon, polygon.DestinationRect);
-                pen = MiterReach * (polygon.Pen?.Thickness ?? 0);
+                pen = MiterReach(polygon.Pen) * (polygon.Pen?.Thickness ?? 0);
                 break;
             case ImageRenderUnit { Payload: { } image }:
                 ink = image.DestinationRect.TransformToAABB(image.Placement is { } imagePlaced
@@ -778,7 +780,7 @@ public partial class RenderCache
                 var place = shape.Payload.Placement is { } placed
                     ? shape.Payload.LocalTransform * Newest(placed)
                     : shape.Payload.LocalTransform;
-                var stroke = MiterReach * LocalWidth(shape.Payload.Pen, place * World(shape.Component));
+                var stroke = MiterReach(shape.Payload.Pen) * LocalWidth(shape.Payload.Pen, place * World(shape.Component));
                 ink = geometry.Bounds.Inflate(stroke).TransformToAABB(place);
                 break;
             case LineRenderUnit { Payload: { } line }:
@@ -787,7 +789,7 @@ public partial class RenderCache
                     System.Math.Min(line.LineStart.Y, line.LineEnd.Y),
                     System.Math.Abs(line.LineEnd.X - line.LineStart.X),
                     System.Math.Abs(line.LineEnd.Y - line.LineStart.Y));
-                pen = MiterReach * (line.Pen?.Thickness ?? 0);
+                pen = MiterReach(line.Pen) * (line.Pen?.Thickness ?? 0);
                 break;
             case TextRenderUnit { Payload: { } text }:
                 var overhang = text.DesiredSize.Height * TextOverhang;

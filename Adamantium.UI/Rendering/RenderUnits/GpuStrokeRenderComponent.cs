@@ -145,13 +145,14 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
     private static List<(int Start, int Count)> Batches(IReadOnlyList<(Vector2<double>[] Points, bool IsClosed)> contours) =>
         PreparedStrokeBatch.Batches(contours);
 
-    // The triangles a point draws for its join.
+    // The triangles a point draws for its join: a miter keeps a bevel's two for a corner past its limit.
     private uint JoinTriangles => _joinType switch
     {
         2u => RoundSegmentsCount,
-        1u => 2u,
-        _ => 0u,
+        _ => 2u,
     };
+
+    private float MiterLimitValue => (float)Math.Max(_pen.MiterLimit, 1.0);
 
     // One contour standing for all of them: their points one after another, a table of where each starts, and for every
     // point the contour it is in.
@@ -751,9 +752,10 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
         }
     }
 
-    /// <summary>How far past its points the ribbon can reach, in its local units: a miter clamped at four half-widths and
-    /// the feather on top.</summary>
-    internal float LocalReach => 4f * HalfThickness() + 2f * ComputeFringe();
+    /// <summary>How far past its points the ribbon can reach, in its local units: a miter's point up to its limit in
+    /// half-widths - four at least, for the caps - and the feather on top.</summary>
+    internal float LocalReach =>
+        Math.Max(4f, _joinType == 0u ? MiterLimitValue : 0f) * HalfThickness() + 2f * ComputeFringe();
 
     /// <summary>How many records it takes: one a draw - a batch of contours, or a contour standing alone.</summary>
     internal int RecordCount => _contours.Count;
@@ -794,6 +796,7 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
                       MapCap(_pen.DashEndCap) << 12;
         record.RoundSegments = c.RoundSegments;
         record.JoinType = _joinType;
+        record.Extra = new Vector4F(record.Extra.X, record.Extra.Y, MiterLimitValue, record.Extra.W);
         record.Pen = new Vector4F((float)_pen.Thickness, (float)Math.Max(_pen.MinimumDeviceThickness, 0.0),
             DashOffsetOf(c), record.Pen.W);
         record.Window = new Vector4F(TrimStartValue, TrimEndValue, record.Window.Z, record.Window.W);
@@ -1006,6 +1009,7 @@ public sealed class GpuStrokeRenderComponent : UIRenderComponent
     private void DrawContours(IEffectPass pass)
     {
         _effect.UJoinType.SetValue(_joinType);
+        _effect.UMiterLimit.SetValue(MiterLimitValue);
         _effect.UStartCap.SetValue(MapCap(_pen.StartLineCap));
         _effect.UEndCap.SetValue(MapCap(_pen.EndLineCap));
         // The two ends of a dash are separate properties: one dash can be a concave bite and a convex tip - an arrow.

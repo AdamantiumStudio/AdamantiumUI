@@ -20,7 +20,8 @@ static uint StartCap;            // start cap: 0 = flat, 1 = square, 2 = convex 
 static uint EndCap;              // end cap (same codes)
 static uint DashStartCap;        // cap on the STARTING end of each dash; the stroke's real ends use Start/EndCap
 static uint DashEndCap;          // cap on the ENDING end of each dash - separate, so a dash can be an arrow
-static uint JoinType;            // 0 = miter (bisector ribbon, clamped), 1 = bevel (per-segment rectangles + corner wedge), 2 = round (rectangles + disc fan)
+static uint JoinType;            // 0 = miter (bisector ribbon, beveled past MiterLimit), 1 = bevel (per-segment rectangles + corner wedge), 2 = round (rectangles + disc fan)
+static float MiterLimit;         // how far a miter's point may reach, in half thicknesses
 static uint RoundSegments;       // triangles a point keeps for its join; 0 = none
 static float HalfThickness;
 static float Fringe;             // AA feather width in geometry-LOCAL units (~1 device px / scale); ribbon/discs widen by Fringe/2
@@ -56,6 +57,7 @@ uint UEndCap;
 uint UDashStartCap;
 uint UDashEndCap;
 uint UJoinType;
+float UMiterLimit;
 uint URoundSegments;
 float UHalfThickness;
 float UFringe;
@@ -82,6 +84,7 @@ void LoadUniforms()
     DashStartCap = UDashStartCap;
     DashEndCap = UDashEndCap;
     JoinType = UJoinType;
+    MiterLimit = UMiterLimit;
     RoundSegments = URoundSegments;
     HalfThickness = UHalfThickness;
     Fringe = UFringe;
@@ -117,7 +120,7 @@ struct StrokeRecord
     float4 Pen;              // .x thickness, .y least device thickness (0 none), .z dash offset, .w piece salt
     float4 Window;           // .x trim start, .y trim end, .z transform slot, .w opacity slot (-1 none)
     float4 Color;            // straight RGBA, the element's own alpha folded in
-    float4 Extra;            // .x rounded clip slot (-1 none)
+    float4 Extra;            // .x rounded clip slot (-1 none), .y the record's owner, .z miter limit
 };
 
 StrokeRecord* Records;
@@ -157,6 +160,7 @@ StrokeRecord LoadRecord(uint index)
     DashStartCap = (r.Caps >> 8u) & 15u;
     DashEndCap = (r.Caps >> 12u) & 15u;
     JoinType = r.JoinType;
+    MiterLimit = r.Extra.z;
     RoundSegments = r.RoundSegments;
     Pattern = r.Pattern;
     PatternCount = r.PatternCount;
@@ -281,11 +285,24 @@ float EndExtend(uint i)
     return 0.0;
 }
 
+// Whether interior point i's miter would reach past MiterLimit half thicknesses: then it is beveled.
+bool PastMiterLimit(uint i)
+{
+    float2* points = ContourPoints;
+    uint prev = (i + ContourPointCount - 1u) % ContourPointCount;
+    uint next = (i + 1u) % ContourPointCount;
+    float2 n0 = SegmentNormal(points[prev], points[i]);
+    float2 n1 = SegmentNormal(points[i], points[next]);
+    float2 sum = n0 + n1;
+    if (dot(sum, sum) <= 1e-8) return true;
+    return dot(normalize(sum), n0) * max(MiterLimit, 1.0) < 1.0;
+}
+
 // The two offset vertices (centerline +/- miter) at polyline point i, for the MITER join path only (bevel/round build
 // full-width per-segment rectangles instead - see StrokePullVS). Open endpoints use the single adjacent segment
 // normal (flat) or push out by the cap's reach; interior points and every point of a closed loop use the bisector
-// miter, length clamped so a sharp corner can't shoot the tip to infinity.
-void OffsetPair(uint i, out float2 plus, out float2 minus)
+// miter - but one past the miter limit ends the segment square, along `segmentNormal`, and its fan bevels the corner.
+void OffsetPair(uint i, float2 segmentNormal, out float2 plus, out float2 minus)
 {
     float2* points = ContourPoints;
     float2 p = points[i];
@@ -308,17 +325,19 @@ void OffsetPair(uint i, out float2 plus, out float2 minus)
         miter = float2(-dir.y, dir.x);
         miterLen = hw;
     }
+    else if (PastMiterLimit(i))
+    {
+        miter = segmentNormal;
+        miterLen = hw;
+    }
     else
     {
         uint prev = (i + ContourPointCount - 1) % ContourPointCount;
         uint next = (i + 1) % ContourPointCount;
         float2 n0 = SegmentNormal(points[prev], p);
         float2 n1 = SegmentNormal(p, points[next]);
-        float2 sum = n0 + n1;
-        // A line turning straight back has no miter: its ends meet flat.
-        miter = dot(sum, sum) > 1e-8 ? normalize(sum) : n0;
-        float denom = max(dot(miter, n0), 0.25);       // clamp -> miter length capped at 4*half on sharp corners
-        miterLen = hw / denom;
+        miter = normalize(n0 + n1);
+        miterLen = hw / max(dot(miter, n0), 1e-6);
     }
 
     plus = p + miter * miterLen;
@@ -618,8 +637,9 @@ PSInput PullCorner(uint vertexId)
         float2 aP, aM, bP, bM;
         if (JoinType == 0u)
         {
-            OffsetPair(i, aP, aM);
-            OffsetPair(ni, bP, bM);
+            float2 segmentNormal = SegmentNormal(p, points[ni]);
+            OffsetPair(i, segmentNormal, aP, aM);
+            OffsetPair(ni, segmentNormal, bP, bM);
         }
         else
         {
@@ -677,7 +697,9 @@ PSInput PullCorner(uint vertexId)
         return Corner(p + r, hw, back + dot(r, dIn), fwd - dot(r, dOut), frame, fanId, along + dot(r, bisector));
     }
 
-    if (JoinType == 1u && hasSegment && !isStart && tri < 2u)
+    // A bevel - or a miter past its limit, beveled - is two triangles from the point to the two segments' corners.
+    bool beveled = JoinType == 1u || (JoinType == 0u && !isStart && !isEnd && PastMiterLimit(i));
+    if (beveled && hasSegment && !isStart && tri < 2u)
     {
         if (v == 2u)
         {
