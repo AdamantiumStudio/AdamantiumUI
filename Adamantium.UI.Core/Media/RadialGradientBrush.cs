@@ -51,6 +51,21 @@ public sealed class RadialGradientBrush : GradientBrush
         set { if (IsFrozen) return; SetValue(RadiusYProperty, value); }
     }
 
+    public static readonly AdamantiumProperty GradientOriginRadiusProperty = AdamantiumProperty.Register(
+        nameof(GradientOriginRadius), typeof(double), typeof(RadialGradientBrush),
+        new PropertyMetadata(0.0, PropertyMetadataOptions.AffectsPaint));
+
+    /// <summary>The radius of the circle offset 0 lies on, around <see cref="GradientOrigin"/>, as a fraction of
+    /// <see cref="RadiusX"/> and <see cref="RadiusY"/>; 0, the default, makes the origin a point. Above 0 the gradient
+    /// runs between two circles, centers and radii moving in step, a later circle over an earlier one - Canvas 2D's
+    /// <c>createRadialGradient</c>, SVG 2's <c>fr</c>, a PDF radial shading. Where no circle passes nothing is painted.
+    /// </summary>
+    public double GradientOriginRadius
+    {
+        get => GetValue<double>(GradientOriginRadiusProperty);
+        set { if (IsFrozen) return; SetValue(GradientOriginRadiusProperty, value); }
+    }
+
     protected override Brush CreateClone() =>
         new RadialGradientBrush(CopyStops())
         {
@@ -58,6 +73,7 @@ public sealed class RadialGradientBrush : GradientBrush
             GradientOrigin = GradientOrigin,
             RadiusX = RadiusX,
             RadiusY = RadiusY,
+            GradientOriginRadius = GradientOriginRadius,
             SpreadMethod = SpreadMethod,
             ColorInterpolationMode = ColorInterpolationMode,
             Opacity = Opacity

@@ -10,7 +10,7 @@ namespace Adamantium.UI.Rendering;
 // place so the shader-side layout can't drift between the paths. Up to 8 stops (the shader/instance cap).
 internal static class GradientBake
 {
-    public const int MaxStops = 8;
+    public const int MaxStops = GradientBrush.MaxRenderedStops;
 
     // Stops sorted by offset, opacity folded into each color's alpha, packed into the 8-slot color/offset arrays.
     // Returns the valid stop count (<= 8). Unused slots are left as passed in (callers zero-init the instance).
@@ -60,6 +60,14 @@ internal static class GradientBake
     // Conic: Geom0 = (centerXY, startAngleTurns, 0) - the shader sweeps the angle around the center.
     private static Vector4F Fold(Color c, float alpha) { var v = c.ToVector4(); v.W *= alpha; return v; }
 
+    /// <summary>The type of a radial gradient between two circles: its origin's radius rides <c>Geom1.z</c>, which only the
+    /// per-unit uniforms leave free.</summary>
+    public const float TwoCircleRadial = 5f;
+
+    /// <summary>Whether a gradient can be packed into a batched record, whose <c>Geom1.zw</c> carry the record's own
+    /// flags.</summary>
+    public static bool FitsBatch(GradientBrush g) => g is not RadialGradientBrush { GradientOriginRadius: > 0 };
+
     public static float PackGeometry(GradientBrush g, out Vector4F geom0, out Vector4F geom1)
     {
         if (g is MeshGradientBrush)   // 4-corner mesh: no axis geometry; the corners ride the stop slots
@@ -71,8 +79,12 @@ internal static class GradientBake
         if (g is RadialGradientBrush radial)
         {
             geom0 = new Vector4F((float)radial.Center.X, (float)radial.Center.Y, (float)radial.RadiusX, (float)radial.RadiusY);
-            geom1 = new Vector4F((float)radial.GradientOrigin.X, (float)radial.GradientOrigin.Y, 0f, 0f);
-            return 2f;
+            // Between two circles: type 5, the origin's radius in Geom1.z - which the batched records keep for their own
+            // flags, so a type 5 gradient is drawn by its unit (TwoCircleRadial).
+            var originRadius = radial.GradientOriginRadius;
+            geom1 = new Vector4F((float)radial.GradientOrigin.X, (float)radial.GradientOrigin.Y,
+                originRadius > 0 ? (float)originRadius : 0f, 0f);
+            return originRadius > 0 ? TwoCircleRadial : 2f;
         }
         if (g is ConicGradientBrush conic)
         {

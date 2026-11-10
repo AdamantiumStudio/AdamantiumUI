@@ -46,16 +46,61 @@ public class PdfShadingDrawingTests
     }
 
     [Test]
-    public void AGradientGetsStopsWhereItsFunctionBends()
+    public void AGradientGetsAStopWhereItsFunctionBends()
     {
+        // Red to green to blue, bending at a quarter: three stops follow it exactly.
         var pdf = new TestPdf { Resources = "<< /Shading << /S 5 0 R >> >>" };
-        pdf.Add("<< /ShadingType 2 /ColorSpace /DeviceGray /Coords [0 0 100 0] /Function 6 0 R >>");
-        pdf.Add("<< /FunctionType 2 /Domain [0 1] /C0 [0] /C1 [1] /N 3 >>");
+        pdf.Add("<< /ShadingType 2 /ColorSpace /DeviceRGB /Coords [0 0 100 0] /Function 6 0 R >>");
+        pdf.Add("<< /FunctionType 3 /Domain [0 1] /Functions [7 0 R 8 0 R] /Bounds [0.25] /Encode [0 1 0 1] >>");
+        pdf.Add("<< /FunctionType 2 /Domain [0 1] /C0 [1 0 0] /C1 [0 1 0] /N 1 >>");
+        pdf.Add("<< /FunctionType 2 /Domain [0 1] /C0 [0 1 0] /C1 [0 0 1] /N 1 >>");
         var (_, session) = Draw(pdf, "/S sh");
         var stops = ((LinearGradientBrush)session.All<DrawnGeometry>().Single().Brush).GradientStops;
-        Assert.That(stops.Count, Is.GreaterThan(4));
-        var middle = stops.OrderBy(s => System.Math.Abs(s.Offset - 0.5)).First();
-        Assert.That(middle.Color.R, Is.EqualTo(32).Within(2), "0.5 cubed");
+        Assert.That(stops.Count, Is.LessThanOrEqualTo(GradientBrush.MaxRenderedStops));
+        Assert.That(stops.Any(s => s.Offset == 0.25 && s.Color.G == 255), Is.True, "a stop on the bend");
+    }
+
+    [Test]
+    public void AFunctionTooCurvedForTheStopsIsSampledAlongItsAxis()
+    {
+        var pdf = new TestPdf { Resources = "<< /Shading << /S 5 0 R >> >>" };
+        pdf.Add("<< /ShadingType 2 /ColorSpace /DeviceGray /Coords [50 0 150 0] /Function 6 0 R /Extend [true false] >>");
+        // Ten waves: more turns than eight stops can follow.
+        pdf.AddStream("/FunctionType 4 /Domain [0 1] /Range [0 1]", "{ 3600 mul sin 1 add 2 div }");
+        var (_, session) = Draw(pdf, "/S sh");
+        var strip = session.All<DrawnImage>().Single();
+        Assert.That(strip.Image.Width, Is.EqualTo(256));
+        Assert.That(At(strip.Transform, 0, 0).Item1, Is.EqualTo(50).Within(1e-3), "the strip spans the axis");
+        Assert.That(At(strip.Transform, 1, 0).Item1, Is.EqualTo(150).Within(1e-3));
+        var before = session.All<DrawnGeometry>().Single();
+        Assert.That(((SolidColorBrush)before.Brush).Color.R, Is.EqualTo(128).Within(1), "the extended start in the first color");
+    }
+
+    [Test]
+    public void ARadialShadingBetweenTwoCirclesIsTheBrushsOwn()
+    {
+        var pdf = new TestPdf { Resources = "<< /Shading << /S 5 0 R >> >>" };
+        pdf.Add("<< /ShadingType 3 /ColorSpace /DeviceRGB /Coords [30 50 10 60 50 40] /Function 6 0 R " +
+                "/Extend [false true] >>");
+        pdf.Add(RedToBlue);
+        var (_, session) = Draw(pdf, "/S sh");
+        var brush = (RadialGradientBrush)session.All<DrawnGeometry>().Single().Brush;
+        Assert.That(brush.GradientOriginRadius, Is.EqualTo(0.25).Within(1e-9));
+        Assert.That(brush.GradientStops.First().Color.A, Is.Zero, "nothing before the start circle");
+        Assert.That(brush.GradientStops.Last().Color, Is.EqualTo(new Color(0, 0, 255, 255)), "the end goes on");
+    }
+
+    [Test]
+    public void ARadialShadingShrinkingToAPointIsDrawnTheOtherWayRound()
+    {
+        var pdf = new TestPdf { Resources = "<< /Shading << /S 5 0 R >> >>" };
+        pdf.Add("<< /ShadingType 3 /ColorSpace /DeviceRGB /Coords [50 50 40 50 50 0] /Function 6 0 R " +
+                "/Extend [true true] >>");
+        pdf.Add(RedToBlue);
+        var (_, session) = Draw(pdf, "/S sh");
+        var brush = (RadialGradientBrush)session.All<DrawnGeometry>().Single().Brush;
+        Assert.That(brush.GradientStops.First().Color, Is.EqualTo(new Color(0, 0, 255, 255)), "blue at the point");
+        Assert.That(brush.GradientStops.Last().Color, Is.EqualTo(new Color(255, 0, 0, 255)));
     }
 
     [Test]

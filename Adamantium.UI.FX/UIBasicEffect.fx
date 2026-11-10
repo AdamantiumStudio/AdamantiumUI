@@ -1,6 +1,8 @@
 #include "Includes/CommonData.fxh"
 #include "Includes/ColorMath.fxh"
 #include "Includes/TileMath.fxh"
+#include "Includes/GradientMath.fxh"
+#include "Includes/GradientUniforms.fxh"
 
 float4x4 wvp;
 
@@ -81,6 +83,16 @@ VERTEX_OUTPUT TexturedFillVS(UI_VERTEX input)
     return output;
 }
 
+// A GRADIENT fill drawn by its unit - one the batched records cannot carry (a radial between two circles): the gradient
+// of GradientUniforms over the shape's local box, as the batches would paint it.
+[shader("fragment")]
+float4 GradientFill_PS(VERTEX_OUTPUT input) : SV_TARGET
+{
+    float4 color = GradientColorIn(input.uv0, float4(0.0, 0.0, 1.0, 1.0));
+    color.a *= opacity;
+    return color;
+}
+
 [shader("fragment")]
 float4 TexturedFill_PS(VERTEX_OUTPUT input) : SV_TARGET
 {
@@ -157,6 +169,12 @@ technique Basic
 	{
 		VertexShader = TexturedFillVS;
 		PixelShader = TexturedFill_PS;
+	}
+
+	pass GradientFill
+	{
+		VertexShader = TexturedFillVS;
+		PixelShader = GradientFill_PS;
 	}
 
 	pass TexturedArray

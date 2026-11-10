@@ -227,6 +227,13 @@ public class GeometryRenderComponent : UIRenderComponent
             return;
         }
 
+        // A gradient the batches turned away - one they have no room to record.
+        if (brush is GradientBrush gradient)
+        {
+            RenderGradient(gradient);
+            return;
+        }
+
         // A brush this path cannot paint is DRAWN NOT AT ALL. It used to fall through to base.Render() with no pass
         // applied, so the geometry was drawn with whatever effect state the PREVIOUS draw left bound - in practice the
         // glyph pass, which smeared the font atlas across the frame and cost hours to trace. Nothing on screen is the
@@ -251,6 +258,27 @@ public class GeometryRenderComponent : UIRenderComponent
             UIBasicEffect.Opacity.SetValue(0f);
         }
         UIBasicEffect.BasicSolidColorPass.Apply();
+
+        base.Render();
+    }
+
+    private GradientUniforms _gradient;
+
+    // The gradient across the shape's own LOCAL box, packed as the batches pack it.
+    private void RenderGradient(GradientBrush gradient)
+    {
+        var box = Box;
+        if (box.Width <= 0 || box.Height <= 0)
+        {
+            return;
+        }
+
+        var bounds = new Vector4F((float)box.X, (float)box.Y, (float)box.Width, (float)box.Height);
+        UIBasicEffect.Wvp.SetValue(RenderData.TransformMatrix * RenderData.ProjectionMatrix);
+        UIBasicEffect.Opacity.SetValue(RenderData.Opacity);
+        UIBasicEffect.FillBounds.SetValue(bounds);
+        (_gradient ??= new GradientUniforms(UIBasicEffect)).Set(gradient, (float)gradient.Opacity, bounds);
+        UIBasicEffect.BasicGradientFillPass.Apply();
 
         base.Render();
     }

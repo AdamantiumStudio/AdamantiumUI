@@ -17,10 +17,9 @@ namespace Adamantium.UI.Pdf.Interpretation;
 // space of its own where its brush lies along the axes: an axial one along its axis, a function one over its domain.
 internal sealed partial class PdfPageInterpreter
 {
-    // How far a sampled gradient may stray from its function before another stop is put in, in sRGB; and the most
-    // stops one gradient gets.
+    // How far a gradient's brush may stray from its function, in sRGB; and how many samples a function is drawn with
+    // where a brush's stops cannot follow it.
     private const double StopTolerance = 1.0 / 255;
-    private const int MaxStops = 256;
     private const int FunctionSamples = 256;
 
     private readonly Dictionary<PdfObject, PdfShading> _shadings = new(ReferenceEqualityComparer.Instance);
@@ -157,9 +156,39 @@ internal sealed partial class PdfPageInterpreter
             EndPoint = new Vector2<double>((1 - from) / (to - from), 0.5),
             SpreadMethod = GradientSpreadMethod.Pad,
         };
-        AddStops(brush, shading, alpha);
-        Write(new PdfGeometryStep(new RectangleGeometry(new Rect(from, cover.Y, to - from, cover.Height)),
-            brush.CaptureBase(), null, PdfMatrices.ToDrawing(axis)), output);
+        if (AddStops(brush, shading, alpha))
+        {
+            Write(new PdfGeometryStep(new RectangleGeometry(new Rect(from, cover.Y, to - from, cover.Height)),
+                brush.CaptureBase(), null, PdfMatrices.ToDrawing(axis)), output);
+            return;
+        }
+
+        // More turns than a brush's stops can follow: the function sampled along the axis into a strip, and the
+        // extensions in its end colors.
+        const int samples = FunctionSamples;
+        var rgba = new byte[samples * 4];
+        for (var i = 0; i < samples; i++)
+        {
+            var color = ColorAt(shading, (i + 0.5) / samples);
+            rgba[i * 4] = Byte(color.R);
+            rgba[i * 4 + 1] = Byte(color.G);
+            rgba[i * 4 + 2] = Byte(color.B);
+            rgba[i * 4 + 3] = Byte(alpha);
+        }
+
+        var band = new PdfMatrix(1, 0, 0, cover.Height, 0, cover.Y).Then(axis);
+        Write(new PdfImageStep(ToImage(samples, 1, rgba), PdfMatrices.ToDrawing(band)), output);
+        if (from < 0)
+        {
+            Write(new PdfGeometryStep(new RectangleGeometry(new Rect(from, cover.Y, -from, cover.Height)),
+                Solid(ColorAt(shading, 0), alpha), null, PdfMatrices.ToDrawing(axis)), output);
+        }
+
+        if (to > 1)
+        {
+            Write(new PdfGeometryStep(new RectangleGeometry(new Rect(1, cover.Y, to - 1, cover.Height)),
+                Solid(ColorAt(shading, 1), alpha), null, PdfMatrices.ToDrawing(axis)), output);
+        }
     }
 
     // A radial shading the brush draws as it is: its start circle a point - the focus - inside the end circle.
@@ -169,7 +198,7 @@ internal sealed partial class PdfPageInterpreter
         var (fx, fy) = (shading.StartCenter.X - x1, shading.StartCenter.Y - y1);
         if (shading.StartRadius > 1e-9 || r1 <= 1e-12 || fx * fx + fy * fy > r1 * r1)
         {
-            Tell("A radial shading whose start circle is not a point inside its end circle is not drawn yet.");
+            DrawTwoCircles(shading, space, alpha, output);
             return;
         }
 
@@ -183,11 +212,52 @@ internal sealed partial class PdfPageInterpreter
             RadiusY = r1 / area.Height,
             SpreadMethod = GradientSpreadMethod.Pad,
         };
-        AddStops(brush, shading, alpha);
+        if (!AddStops(brush, shading, alpha))
+        {
+            Tell($"A radial shading's colors are drawn through {GradientBrush.MaxRenderedStops} stops, near its function.");
+        }
         Geometry geometry = shading.ExtendEnd
             ? new RectangleGeometry(area)
             : new EllipseGeometry(new Rect(x1 - r1, y1 - r1, 2 * r1, 2 * r1));
         Write(new PdfGeometryStep(geometry, brush.CaptureBase(), null, PdfMatrices.ToDrawing(space)), output);
+    }
+
+    // Any other radial shading is the brush between two circles over all a group can let through. The brush's end circle
+    // must have a radius, so one that shrinks to a point is drawn the other way round, its colors reversed. Where the
+    // shading does not extend, its first or last stop is clear: past t's ends nothing is painted.
+    private void DrawTwoCircles(PdfRadialShading shading, PdfMatrix space, double alpha, List<PdfDrawStep> output)
+    {
+        var (start, startRadius, end, endRadius) =
+            (shading.StartCenter, shading.StartRadius, shading.EndCenter, shading.EndRadius);
+        var (extendStart, extendEnd) = (shading.ExtendStart, shading.ExtendEnd);
+        var reversed = endRadius <= 1e-9;
+        if (reversed)
+        {
+            (start, startRadius, end, endRadius) = (end, endRadius, start, startRadius);
+            (extendStart, extendEnd) = (extendEnd, extendStart);
+        }
+
+        if (endRadius <= 1e-9)
+        {
+            return;
+        }
+
+        var area = Cover(space);
+        var brush = new RadialGradientBrush
+        {
+            Center = Relative(area, end.X, end.Y),
+            GradientOrigin = Relative(area, start.X, start.Y),
+            RadiusX = endRadius / area.Width,
+            RadiusY = endRadius / area.Height,
+            GradientOriginRadius = Math.Max(startRadius / endRadius, 1e-9),
+            SpreadMethod = GradientSpreadMethod.Pad,
+        };
+        if (!AddStops(brush, shading, alpha, reversed, extendStart, extendEnd))
+        {
+            Tell($"A radial shading's colors are drawn through {GradientBrush.MaxRenderedStops} stops, near its function.");
+        }
+        Write(new PdfGeometryStep(new RectangleGeometry(area), brush.CaptureBase(), null, PdfMatrices.ToDrawing(space)),
+            output);
     }
 
     // The function sampled over its domain into a picture, once for the shading however often it is painted: a smooth
@@ -231,33 +301,84 @@ internal sealed partial class PdfPageInterpreter
 
     // The gradient's colors at stops close enough that drawing straight between them strays no more than
     // StopTolerance from the function - split where it would, no more than MaxStops in all.
-    private void AddStops(GradientBrush brush, PdfGradientShading shading, double alpha)
+    // The stops a brush can carry, set where the function strays most from a straight run between them; false when even
+    // all of them leave it further than StopTolerance - the brush is then only near. Reversed, the brush's offset u is
+    // the shading's 1 - u. A side that does not extend spends a stop on a clear end, the brush padding with it past that
+    // end.
+    private bool AddStops(GradientBrush brush, PdfGradientShading shading, double alpha, bool reversed = false,
+        bool extendStart = true, bool extendEnd = true)
     {
-        var stops = new List<(double At, (double R, double G, double B) Color)>
+        const double edge = 1e-4;
+        var (from, to) = (extendStart ? 0 : edge, extendEnd ? 1 : 1 - edge);
+        var budget = GradientBrush.MaxRenderedStops - (extendStart ? 0 : 1) - (extendEnd ? 0 : 1);
+        (double R, double G, double B) At(double u) => ColorAt(shading, reversed ? 1 - u : u);
+        // The function at FunctionSamples + 1 points: a stop goes where a straight run between the stops strays most from
+        // them, and the stops fit when it strays from none by more than StopTolerance.
+        var samples = new (double At, (double R, double G, double B) Color)[FunctionSamples + 1];
+        for (var i = 0; i < samples.Length; i++)
         {
-            (0, ColorAt(shading, 0)), (1, ColorAt(shading, 1)),
-        };
-        for (var i = 0; i + 1 < stops.Count && stops.Count < MaxStops;)
+            var u = from + (to - from) * i / FunctionSamples;
+            samples[i] = (u, At(u));
+        }
+
+        var chosen = new List<int> { 0, FunctionSamples };
+        var fits = false;
+        while (true)
         {
-            var (a, ca) = stops[i];
-            var (b, cb) = stops[i + 1];
-            var middle = (a + b) / 2;
-            var cm = ColorAt(shading, middle);
-            var straight = ((ca.R + cb.R) / 2, (ca.G + cb.G) / 2, (ca.B + cb.B) / 2);
-            if (b - a > 1.0 / MaxStops && Distance(cm, straight) > StopTolerance)
+            var (worst, worstSample) = (0.0, -1);
+            for (var s = 0; s + 1 < chosen.Count; s++)
             {
-                stops.Insert(i + 1, (middle, cm));
+                var (a, b) = (samples[chosen[s]], samples[chosen[s + 1]]);
+                for (var i = chosen[s] + 1; i < chosen[s + 1]; i++)
+                {
+                    var k = (samples[i].At - a.At) / (b.At - a.At);
+                    var straight = (a.Color.R + (b.Color.R - a.Color.R) * k, a.Color.G + (b.Color.G - a.Color.G) * k,
+                        a.Color.B + (b.Color.B - a.Color.B) * k);
+                    var off = Distance(samples[i].Color, straight);
+                    if (off > worst)
+                    {
+                        (worst, worstSample) = (off, i);
+                    }
+                }
             }
-            else
+
+            if (worst <= StopTolerance)
             {
-                i++;
+                fits = true;
+                break;
             }
+
+            if (chosen.Count >= budget)
+            {
+                break;
+            }
+
+            var at = chosen.BinarySearch(worstSample);
+            chosen.Insert(~at, worstSample);
+        }
+
+        var stops = new List<(double At, (double R, double G, double B) Color)>(chosen.Count);
+        foreach (var index in chosen)
+        {
+            stops.Add(samples[index]);
+        }
+
+        if (!extendStart)
+        {
+            brush.GradientStops.Add(new GradientStop(Colors.Transparent, 0));
         }
 
         foreach (var (at, color) in stops)
         {
             brush.GradientStops.Add(new GradientStop(ColorOf(Pack(color, alpha)), at));
         }
+
+        if (!extendEnd)
+        {
+            brush.GradientStops.Add(new GradientStop(Colors.Transparent, 1));
+        }
+
+        return fits;
     }
 
     private static (double R, double G, double B) ColorAt(PdfGradientShading shading, double u)

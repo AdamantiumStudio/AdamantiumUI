@@ -421,7 +421,7 @@ public class GeometryRenderUnit : RenderUnit<GeometryPayload>, IStrokeOnlyUnit
         out Rect localBounds, out double opacity)
     {
         key = default; mesh = null; brush = null; localBounds = default; opacity = 1.0;
-        if (Payload.Brush is not GradientBrush g) return false;
+        if (Payload.Brush is not GradientBrush g || !GradientBake.FitsBatch(g)) return false;
         if (_frozenMesh is not { HasPoints: true } fm) return false;
 
         key = fm.Key;

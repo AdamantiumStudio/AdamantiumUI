@@ -24,6 +24,7 @@ public static class PdfSampleDocument
         q 48 380 250 140 re W n /Sh1 sh Q
         q 1 0 0 1 430 450 cm 0 0 m 0 0 70 70 re W n /Sh2 sh Q
         q 330 380 50 140 re W n /Sh2 sh Q
+        q 480 520 110 160 re W n /Sh3 sh Q
 
         q /Pattern cs /P1 scn 48 220 250 130 re f Q
         q 0 0 0 RG 1 w 48 220 250 130 re S Q
@@ -58,7 +59,8 @@ public static class PdfSampleDocument
             Latin1("<< /Type /Catalog /Pages 2 0 R >>"),
             Latin1("<< /Type /Pages /Kids [3 0 R] /Count 1 >>"),
             Latin1("<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << " +
-                   "/Font << /F1 5 0 R /F2 6 0 R >> /Shading << /Sh1 7 0 R /Sh2 8 0 R >> /Pattern << /P1 10 0 R >> " +
+                   "/Font << /F1 5 0 R /F2 6 0 R >> /Shading << /Sh1 7 0 R /Sh2 8 0 R /Sh3 12 0 R >> " +
+                   "/Pattern << /P1 10 0 R >> " +
                    "/ExtGState << /GA << /ca 0.6 >> /GM << /BM /Multiply >> >> >> >>"),
             Stream("", contents),
             Latin1("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>"),
@@ -71,6 +73,9 @@ public static class PdfSampleDocument
             Stream("/PatternType 1 /PaintType 1 /TilingType 1 /BBox [0 0 20 20] /XStep 20 /YStep 20 /Resources << >>",
                 Latin1("0.9 0.9 0.9 rg 0 0 20 20 re f 0.2 0.6 0.4 rg 0 0 10 10 re f 10 10 10 10 re f")),
             Latin1("<< /FunctionType 2 /Domain [0 1] /C0 [1 1 0.8] /C1 [0.8 0.2 0.1] /N 1 >>"),
+            // Two circles apart: a cone of circles from a small one low down to a large one higher up.
+            Latin1("<< /ShadingType 3 /ColorSpace /DeviceRGB /Coords [510 545 8 545 640 36] /Function 9 0 R " +
+                   "/Extend [true true] >>"),
         };
 
         using var output = new MemoryStream();
