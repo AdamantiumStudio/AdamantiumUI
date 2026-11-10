@@ -257,7 +257,7 @@ public class ZoomBox : ContentControl
         if (_scroll != null && next != ScaleX)
         {
             var middle = new Vector2<double>((float)(_scroll.ViewportSize.Width / 2), (float)(_scroll.ViewportSize.Height / 2));
-            _pendingOffset = (_scroll.ScrollOffset + middle) * (float)(next / ScaleX) - middle;
+            _pendingOffset = (_scroll.ScrollOffset + middle - SurfaceOrigin()) * (float)(next / ScaleX) - middle;
         }
 
         SetCurrentValue(ScaleXProperty, next);

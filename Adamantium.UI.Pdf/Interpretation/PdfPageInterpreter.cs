@@ -9,6 +9,7 @@ using Adamantium.Pdf.Graphics;
 using Adamantium.Pdf.Objects;
 using Adamantium.Pdf.Resources;
 using Adamantium.UI.Core;
+using Adamantium.UI.Core.Media;
 using Adamantium.UI.Pdf.Steps;
 
 namespace Adamantium.UI.Pdf.Interpretation;
@@ -26,6 +27,12 @@ internal sealed partial class PdfPageInterpreter
     public const int MaxSteps = 4_000_000;
     public const int MaxProblems = 100;
 
+    /// <summary>The most operations a page's streams, forms and glyphs may run in all.</summary>
+    public const long MaxOperations = 50_000_000;
+
+    /// <summary>The most groups open at once: clips past it are not applied.</summary>
+    public const int MaxOpenGroups = 1024;
+
     private readonly PdfDocument _document;
     private readonly PdfPageDrawingOptions _options;
     private readonly CancellationToken _cancellation;
@@ -41,6 +48,7 @@ internal sealed partial class PdfPageInterpreter
     private int _streamsEntered;
     private int _glyphsEntered;
     private int _steps;
+    private long _operations;
 
     // Optional content hidden by BDC /OC: how deep in marked content the walk is, and from which depth on it draws
     // nothing; -1 while it draws.
@@ -76,11 +84,15 @@ internal sealed partial class PdfPageInterpreter
             contents = ReadOnlyMemory<byte>.Empty;
         }
 
+        // Nothing is drawn outside the crop box, annotations included (ISO 32000-2, 14.11.2).
+        OpenGroup(new PdfPushGroupStep { Clip = new RectangleGeometry(_pageBox) }, output);
         Enter(new PdfFrame(PdfFrameKind.Page, PdfContentReader.Read(contents).GetEnumerator(), resources, output,
-            pageMatrix, _states.Count, _openGroups, null));
+            pageMatrix, _states.Count, _openGroups, null) { Area = _pageBox });
         Walk();
         if (_options.Annotations)
         {
+            _markedDepth = 0;
+            _hiddenFrom = -1;
             DrawAnnotations(page, pageMatrix, output);
         }
 
@@ -119,6 +131,19 @@ internal sealed partial class PdfPageInterpreter
 
     private void Enter(PdfFrame frame)
     {
+        frame.MarkedAtStart = _markedDepth;
+        frame.HiddenAtStart = _hiddenFrom;
+        // A soft mask's or a cell's picture is not optional content: it is drawn whole, even when set while hidden.
+        if (frame.Kind is PdfFrameKind.SoftMask or PdfFrameKind.PatternCell)
+        {
+            _hiddenFrom = -1;
+        }
+
+        if (frame.Kind == PdfFrameKind.Glyph)
+        {
+            frame.TextAtStart = new PdfTextPosition(_textMatrix, _lineMatrix, [.. _textClip]);
+        }
+
         _frames.Push(frame);
         if (frame.Form != null && frame.Kind != PdfFrameKind.Glyph)
         {
@@ -132,7 +157,12 @@ internal sealed partial class PdfPageInterpreter
         {
             _cancellation.ThrowIfCancellationRequested();
             var frame = _frames.Peek();
-            if (_steps >= MaxSteps || !Advance(frame))
+            if (++_operations == MaxOperations)
+            {
+                Tell($"The page runs more than {MaxOperations} operations; the rest are not drawn.");
+            }
+
+            if (_steps >= MaxSteps || _operations >= MaxOperations || !Advance(frame))
             {
                 Leave(frame);
                 continue;
@@ -182,6 +212,15 @@ internal sealed partial class PdfPageInterpreter
         if (frame.Kind != PdfFrameKind.Page && _states.Count > 0 && _states.Count == frame.Floor)
         {
             _state = _states.Pop();
+        }
+
+        _markedDepth = frame.MarkedAtStart;
+        _hiddenFrom = frame.HiddenAtStart;
+        if (frame.TextAtStart is { } text)
+        {
+            (_textMatrix, _lineMatrix) = (text.Text, text.Line);
+            _textClip.Clear();
+            _textClip.AddRange(text.Clip);
         }
 
         frame.Finish?.Invoke(frame.Output);
@@ -239,12 +278,18 @@ internal sealed partial class PdfPageInterpreter
 
                 break;
             case "EMC":
+                // An EMC with no BMC or BDC of its own stream before it ends nothing.
+                if (_markedDepth <= frame.MarkedAtStart)
+                {
+                    break;
+                }
+
                 if (_markedDepth == _hiddenFrom)
                 {
                     _hiddenFrom = -1;
                 }
 
-                _markedDepth = Math.Max(_markedDepth - 1, 0);
+                _markedDepth--;
                 break;
             case "BX":
             case "EX":
@@ -331,10 +376,23 @@ internal sealed partial class PdfPageInterpreter
 
     // Opens groups so that what follows is cut, masked or blended; every group is closed when the state that opened it
     // is restored, or when the stream ends.
-    private void OpenGroup(PdfPushGroupStep group, List<PdfDrawStep> output)
+    // Whether the group was opened: past MaxOpenGroups it is not, and what it would cut, mask or blend is drawn as it
+    // is.
+    private bool OpenGroup(PdfPushGroupStep group, List<PdfDrawStep> output)
     {
+        if (_openGroups >= MaxOpenGroups || _steps >= MaxSteps)
+        {
+            if (_openGroups == MaxOpenGroups)
+            {
+                Tell($"More than {MaxOpenGroups} clips and groups are open at once; the deeper ones are not applied.");
+            }
+
+            return false;
+        }
+
         Write(group, output);
         _openGroups++;
+        return true;
     }
 
     private void CloseGroupsDownTo(int count, List<PdfDrawStep> output)

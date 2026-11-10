@@ -17,6 +17,8 @@ public class PdfPageDrawingTests
         var session = new RecordingSession();
         page.Render(session, Matrix4x4<float>.Identity, null);
         Assert.That(session.Depth, Is.Zero, "every group is closed");
+        var crop = (RectangleGeometry)session.UnwrapPage();
+        Assert.That(crop.Rect, Is.EqualTo(page.Bounds), "cut to the crop box");
         return (page, session);
     }
 

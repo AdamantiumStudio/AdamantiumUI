@@ -19,6 +19,7 @@ internal sealed partial class PdfPageInterpreter
     private readonly Dictionary<uint, Brush> _brushes = [];
     private readonly Dictionary<(uint, double, int, int, string, double), Pen> _pens = [];
     private readonly Dictionary<(PdfStream, uint), PdfContentDrawing> _cells = [];
+    private readonly Dictionary<PdfObject, PdfPattern> _patterns = new(ReferenceEqualityComparer.Instance);
 
     private bool ColorOperator(PdfContentOperation operation, PdfFrame frame)
     {
@@ -109,7 +110,7 @@ internal sealed partial class PdfPageInterpreter
             }
             else if (operand is PdfName name && paint.Space is PdfPatternColorSpace)
             {
-                pattern = PdfPattern.Create(frame.Resources.Pattern(name.Value), frame.Resources, _document);
+                pattern = PatternOf(frame.Resources.Pattern(name.Value), frame.Resources);
                 if (pattern == null)
                 {
                     Tell($"The pattern '{name.Value}' could not be read.");
@@ -129,6 +130,23 @@ internal sealed partial class PdfPageInterpreter
         }
 
         return new PdfPaint(paint.Space, components);
+    }
+
+    // A pattern is read once however often it is chosen.
+    private PdfPattern PatternOf(PdfObject value, Adamantium.Pdf.Resources.PdfResources resources)
+    {
+        if (value == null)
+        {
+            return null;
+        }
+
+        if (!_patterns.TryGetValue(value, out var pattern))
+        {
+            pattern = PdfPattern.Create(value, resources, _document);
+            _patterns[value] = pattern;
+        }
+
+        return pattern;
     }
 
     // A tiling pattern's cell is walked as soon as the pattern is chosen - drawn later, it would have to stop the
@@ -160,7 +178,7 @@ internal sealed partial class PdfPageInterpreter
         {
             paint.Cell = new PdfContentDrawing(steps, bounds);
             _cells[(tiling.Cell, color)] = paint.Cell;
-        });
+        }, bounds);
     }
 
     private Brush FillBrush() => Solid(_state.Fill.Rgb(), _state.FillAlpha);
@@ -211,16 +229,11 @@ internal sealed partial class PdfPageInterpreter
         return pen;
     }
 
-    // Each drawn object with a blend mode or a soft mask is put down as a group of its own.
-    private bool BeginObjectGroup(List<PdfDrawStep> output)
+    // Each drawn object with a blend mode or a soft mask is put down as a group of its own; so is one whose opacity its
+    // own brush cannot carry - an image.
+    private bool BeginObjectGroup(List<PdfDrawStep> output, double opacity = 1)
     {
-        if (!_state.NeedsObjectGroup)
-        {
-            return false;
-        }
-
-        OpenGroup(ObjectGroup(1), output);
-        return true;
+        return (_state.NeedsObjectGroup || opacity < 1) && OpenGroup(ObjectGroup(opacity), output);
     }
 
     private void EndObjectGroup(bool grouped, List<PdfDrawStep> output)

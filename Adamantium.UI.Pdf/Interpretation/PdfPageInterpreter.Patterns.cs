@@ -2,9 +2,12 @@ using System;
 using System.Collections.Generic;
 using Adamantium.Mathematics;
 using Adamantium.Pdf.Document;
+using Adamantium.Pdf.Objects;
+using Adamantium.Pdf.Resources;
 using Adamantium.Pdf.Shadings;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Media;
+using Adamantium.UI.Core.Media.Imaging;
 using Adamantium.UI.Pdf.Steps;
 
 namespace Adamantium.UI.Pdf.Interpretation;
@@ -20,11 +23,33 @@ internal sealed partial class PdfPageInterpreter
     private const int MaxStops = 256;
     private const int FunctionSamples = 256;
 
+    private readonly Dictionary<PdfObject, PdfShading> _shadings = new(ReferenceEqualityComparer.Instance);
+    private readonly Dictionary<PdfFunctionShading, ImageSource> _sampled = new(ReferenceEqualityComparer.Instance);
     private Rect _pageBox;
+
+    /// <summary>What a pattern may cover in the stream being walked: the page, or the cell being drawn.</summary>
+    private Rect Area => _frames.Count > 0 ? _frames.Peek().Area : _pageBox;
+
+    // A shading is read once however often it is painted.
+    private PdfShading ShadingOf(PdfObject value, PdfResources resources)
+    {
+        if (value == null)
+        {
+            return null;
+        }
+
+        if (!_shadings.TryGetValue(value, out var shading))
+        {
+            shading = PdfShading.Create(value, resources, _document);
+            _shadings[value] = shading;
+        }
+
+        return shading;
+    }
 
     private void PaintShading(string name, PdfFrame frame)
     {
-        var shading = PdfShading.Create(frame.Resources.Shading(name), frame.Resources, _document);
+        var shading = ShadingOf(frame.Resources.Shading(name), frame.Resources);
         if (shading == null)
         {
             Tell($"The shading '{name}' could not be read.");
@@ -40,8 +65,13 @@ internal sealed partial class PdfPageInterpreter
     private void PaintPattern(PdfPaint paint, Geometry area, Matrix4x4F areaMatrix, PdfFrame frame, bool stroking)
     {
         var alpha = stroking ? _state.StrokeAlpha : _state.FillAlpha;
-        OpenGroup(new PdfPushGroupStep { Clip = area, ClipMatrix = areaMatrix }, frame.Output);
         var space = paint.Pattern.Matrix.Then(paint.PatternBase);
+        if (Cover(space) is not { Width: > 0, Height: > 0 } ||
+            !OpenGroup(new PdfPushGroupStep { Clip = area, ClipMatrix = areaMatrix }, frame.Output))
+        {
+            return;
+        }
+
         switch (paint.Pattern)
         {
             case PdfShadingPattern shading:
@@ -50,7 +80,7 @@ internal sealed partial class PdfPageInterpreter
                 {
                     Span<double> rgb = stackalloc double[3];
                     shading.Shading.ColorSpace.ToRgb(background, rgb);
-                    Write(new PdfGeometryStep(new RectangleGeometry(_pageBox), Solid((rgb[0], rgb[1], rgb[2]),
+                    Write(new PdfGeometryStep(new RectangleGeometry(Area), Solid((rgb[0], rgb[1], rgb[2]),
                         patternAlpha), null, Matrix4x4F.Identity), frame.Output);
                 }
 
@@ -68,17 +98,17 @@ internal sealed partial class PdfPageInterpreter
 
     private void DrawShading(PdfShading shading, PdfMatrix space, double alpha, List<PdfDrawStep> output)
     {
-        var cut = shading.BBox is { } box;
-        if (cut)
+        if (Cover(space) is not { Width: > 0, Height: > 0 })
         {
-            var b = shading.BBox.Value;
-            OpenGroup(new PdfPushGroupStep
-            {
-                Clip = new RectangleGeometry(new Rect(Math.Min(b.Left, b.Right), Math.Min(b.Bottom, b.Top),
-                    Math.Abs(b.Width), Math.Abs(b.Height))),
-                ClipMatrix = PdfMatrices.ToDrawing(space),
-            }, output);
+            return;
         }
+
+        var cut = shading.BBox is { } b && OpenGroup(new PdfPushGroupStep
+        {
+            Clip = new RectangleGeometry(new Rect(Math.Min(b.Left, b.Right), Math.Min(b.Bottom, b.Top),
+                Math.Abs(b.Width), Math.Abs(b.Height))),
+            ClipMatrix = PdfMatrices.ToDrawing(space),
+        }, output);
 
         switch (shading)
         {
@@ -160,31 +190,43 @@ internal sealed partial class PdfPageInterpreter
         Write(new PdfGeometryStep(geometry, brush.CaptureBase(), null, PdfMatrices.ToDrawing(space)), output);
     }
 
-    // The function sampled over its domain into a picture: a smooth function keeps its look at any zoom.
+    // The function sampled over its domain into a picture, once for the shading however often it is painted: a smooth
+    // function keeps its look at any zoom. An opacity below 1 is the group's around it.
     private void DrawFunction(PdfFunctionShading shading, PdfMatrix space, double alpha, List<PdfDrawStep> output)
     {
         var (x0, x1, y0, y1) = (shading.Domain[0], shading.Domain[1], shading.Domain[2], shading.Domain[3]);
-        const int side = FunctionSamples;
-        var rgba = new byte[side * side * 4];
-        Span<double> input = stackalloc double[2];
-        Span<double> rgb = stackalloc double[3];
-        for (var row = 0; row < side; row++)
+        if (!_sampled.TryGetValue(shading, out var image))
         {
-            for (var column = 0; column < side; column++)
+            const int side = FunctionSamples;
+            var rgba = new byte[side * side * 4];
+            Span<double> input = stackalloc double[2];
+            Span<double> rgb = stackalloc double[3];
+            for (var row = 0; row < side; row++)
             {
-                input[0] = x0 + (column + 0.5) / side * (x1 - x0);
-                input[1] = y0 + (row + 0.5) / side * (y1 - y0);
-                shading.ToRgb(input, rgb);
-                var at = (row * side + column) * 4;
-                rgba[at] = Byte(rgb[0]);
-                rgba[at + 1] = Byte(rgb[1]);
-                rgba[at + 2] = Byte(rgb[2]);
-                rgba[at + 3] = Byte(alpha);
+                for (var column = 0; column < side; column++)
+                {
+                    input[0] = x0 + (column + 0.5) / side * (x1 - x0);
+                    input[1] = y0 + (row + 0.5) / side * (y1 - y0);
+                    shading.ToRgb(input, rgb);
+                    var at = (row * side + column) * 4;
+                    rgba[at] = Byte(rgb[0]);
+                    rgba[at + 1] = Byte(rgb[1]);
+                    rgba[at + 2] = Byte(rgb[2]);
+                    rgba[at + 3] = 255;
+                }
             }
+
+            image = ToImage(side, side, rgba);
+            _sampled[shading] = image;
         }
 
+        var faded = alpha < 1 && OpenGroup(new PdfPushGroupStep { Opacity = alpha }, output);
         var domain = new PdfMatrix(x1 - x0, 0, 0, y1 - y0, x0, y0).Then(shading.Matrix).Then(space);
-        Write(new PdfImageStep(ToImage(side, side, rgba), PdfMatrices.ToDrawing(domain)), output);
+        Write(new PdfImageStep(image, PdfMatrices.ToDrawing(domain)), output);
+        if (faded)
+        {
+            CloseGroupsDownTo(_openGroups - 1, output);
+        }
     }
 
     // The gradient's colors at stops close enough that drawing straight between them strays no more than
@@ -250,7 +292,8 @@ internal sealed partial class PdfPageInterpreter
         }.CaptureBase();
     }
 
-    // The page's box as seen in a space placed by `space`: all a group cut to the page can let through.
+    // The area of the stream being walked - the page, or a cell - as seen in a space placed by `space`: all a group cut
+    // to it can let through. Empty for a space that flattens everything.
     private Rect Cover(PdfMatrix space)
     {
         if (space.Inverse() is not { } inverse)
@@ -258,11 +301,11 @@ internal sealed partial class PdfPageInterpreter
             return Rect.Empty;
         }
 
+        var area = Area;
         double left = double.MaxValue, top = double.MaxValue, right = double.MinValue, bottom = double.MinValue;
         foreach (var (x, y) in new[]
                  {
-                     (_pageBox.X, _pageBox.Y), (_pageBox.Right, _pageBox.Y), (_pageBox.Right, _pageBox.Bottom),
-                     (_pageBox.X, _pageBox.Bottom),
+                     (area.X, area.Y), (area.Right, area.Y), (area.Right, area.Bottom), (area.X, area.Bottom),
                  })
         {
             var point = inverse.Transform(x, y);

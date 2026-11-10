@@ -19,6 +19,33 @@ internal sealed class RecordingSession : IDrawingSession
 
     public int DeepestGroup { get; private set; }
 
+    /// <summary>Takes away the group a page opens first, cutting everything to its crop box, and returns its clip: what
+    /// is left is what the page's content drew, depths counted inside that group.</summary>
+    public Geometry UnwrapPage()
+    {
+        if (Calls.Count < 2 || Calls[0] is not OpenedGroup { Depth: 0 } page || Calls[^1] is not ClosedGroup)
+        {
+            throw new System.InvalidOperationException("A page draws inside the group of its crop box.");
+        }
+
+        Calls.RemoveAt(Calls.Count - 1);
+        Calls.RemoveAt(0);
+        for (var i = 0; i < Calls.Count; i++)
+        {
+            Calls[i] = Calls[i] switch
+            {
+                DrawnGeometry g => g with { Depth = g.Depth - 1 },
+                DrawnGlyphs g => g with { Depth = g.Depth - 1 },
+                DrawnImage g => g with { Depth = g.Depth - 1 },
+                OpenedGroup g => g with { Depth = g.Depth - 1 },
+                var other => other
+            };
+        }
+
+        DeepestGroup--;
+        return page.Options.Clip;
+    }
+
     public IEnumerable<T> All<T>()
     {
         foreach (var call in Calls)

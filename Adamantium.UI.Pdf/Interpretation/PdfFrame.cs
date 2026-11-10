@@ -55,6 +55,19 @@ internal sealed class PdfFrame
     public PdfType3Font GlyphFont { get; init; }
 
     /// <summary>What to do with <see cref="Output"/> when the frame ends: for a soft mask or a pattern cell, keep it as a
-    /// picture.</summary>
+    /// picture; for a Type 3 glyph, go on to the next.</summary>
     public System.Action<List<PdfDrawStep>> Finish { get; init; }
+
+    /// <summary>What a pattern drawn here may cover, in the units the frame's matrices end in: the page, or a pattern
+    /// cell's box.</summary>
+    public Adamantium.UI.Core.Rect Area { get; init; }
+
+    /// <summary>How deep in marked content the walk was when the frame began, and from which depth it hid: both are
+    /// brought back when it ends, and an <c>EMC</c> of the frame never ends what was begun before it.</summary>
+    public int MarkedAtStart { get; set; }
+
+    public int HiddenAtStart { get; set; }
+
+    /// <summary>The text state a Type 3 glyph's stream must leave as it found it.</summary>
+    public PdfTextPosition TextAtStart { get; set; }
 }

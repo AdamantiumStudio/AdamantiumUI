@@ -23,7 +23,11 @@ internal sealed partial class PdfPageInterpreter
     // An image's unit square, its first row at the top: y = 1 in image space.
     private static readonly PdfMatrix ImageRows = new(1, 0, 0, -1, 0, 1);
 
+    private const int MaxStencilColors = 8;
+
+    private readonly Dictionary<PdfStream, PdfImageBitmap> _decoded = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<PdfStream, ImageSource> _images = new(ReferenceEqualityComparer.Instance);
+    private readonly Dictionary<PdfStream, ImageSource> _stencilMasks = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<(PdfStream, uint), ImageSource> _stencils = [];
 
     private bool ObjectOperator(PdfContentOperation operation, PdfFrame frame)
@@ -87,7 +91,7 @@ internal sealed partial class PdfPageInterpreter
     /// <paramref name="ctm"/>, cut to its box; a form with a transparency group - or any form drawn while a blend mode
     /// or soft mask is set - is put down as one group.</summary>
     private bool EnterForm(PdfStream form, PdfResources resources, PdfMatrix ctm, PdfFrameKind kind,
-        List<PdfDrawStep> output, PdfGraphicsState inside, Action<List<PdfDrawStep>> finish = null)
+        List<PdfDrawStep> output, PdfGraphicsState inside, Action<List<PdfDrawStep>> finish = null, Rect? area = null)
     {
         if (!CanEnter(form, kind) || StreamData(form) is not { } data)
         {
@@ -97,7 +101,7 @@ internal sealed partial class PdfPageInterpreter
         _states.Push(_state.Copy());
         inside.Ctm = ctm;
         var frame = new PdfFrame(kind, PdfContentReader.Read(data).GetEnumerator(), resources, output, ctm,
-            _states.Count, _openGroups, form) { Finish = finish };
+            _states.Count, _openGroups, form) { Finish = finish, Area = area ?? Area };
         var groups = _openGroups;
         if (kind == PdfFrameKind.Form && PdfTransparencyGroup.Of(form, resources, _document) is { } group)
         {
@@ -114,7 +118,8 @@ internal sealed partial class PdfPageInterpreter
             inside.SoftMask = null;
         }
 
-        if (PdfRectangle.From(form.Dictionary["BBox"], _document) is { } box)
+        // A Type 3 glyph's stream is not a form: it has no box to be cut to.
+        if (kind != PdfFrameKind.Glyph && PdfRectangle.From(form.Dictionary["BBox"], _document) is { } box)
         {
             OpenGroup(new PdfPushGroupStep
             {
@@ -131,11 +136,16 @@ internal sealed partial class PdfPageInterpreter
         return true;
     }
 
+    // An image is decoded once - or found not to decode once - however often it is drawn; an inline image each time
+    // it is met.
     private void DrawImage(Func<PdfImageBitmap> decode, PdfStream stream, PdfFrame frame)
     {
-        ImageSource image;
-        PdfImageBitmap bitmap = null;
-        if (stream == null || !_images.TryGetValue(stream, out image))
+        PdfImageBitmap bitmap;
+        if (stream != null && _decoded.TryGetValue(stream, out var known))
+        {
+            bitmap = known;
+        }
+        else
         {
             try
             {
@@ -145,49 +155,113 @@ internal sealed partial class PdfPageInterpreter
                                                   ArgumentException or OverflowException)
             {
                 Tell("An image could not be decoded: " + exception.Message);
-                if (stream != null)
-                {
-                    _images[stream] = null;
-                }
-
-                return;
+                bitmap = null;
             }
 
-            image = bitmap.IsStencil ? null : ToImage(bitmap.Width, bitmap.Height, bitmap.Rgba);
+            if (stream != null)
+            {
+                _decoded[stream] = bitmap;
+            }
+        }
+
+        if (bitmap == null || bitmap.Width <= 0 || bitmap.Height <= 0)
+        {
+            return;
+        }
+
+        var matrix = ImageRows.Then(_state.Ctm);
+        if (bitmap.IsStencil)
+        {
+            DrawStencil(bitmap, stream, matrix, frame);
+            return;
+        }
+
+        if (stream == null || !_images.TryGetValue(stream, out var image))
+        {
+            image = ToImage(bitmap.Width, bitmap.Height, bitmap.Rgba);
             if (stream != null)
             {
                 _images[stream] = image;
             }
         }
 
-        if (image == null && (bitmap?.IsStencil ?? IsStencil(stream)))
-        {
-            image = Stencil(stream, bitmap, decode);
-        }
-
-        if (image == null)
-        {
-            return;
-        }
-
-        var grouped = BeginObjectGroup(frame.Output);
-        Write(new PdfImageStep(image, PdfMatrices.ToDrawing(ImageRows.Then(_state.Ctm))), frame.Output);
+        // An image's opacity is the fill's (ISO 32000-2, 11.6.4.4); its own pixels carry none of it.
+        var grouped = BeginObjectGroup(frame.Output, _state.FillAlpha);
+        Write(new PdfImageStep(image, PdfMatrices.ToDrawing(matrix)), frame.Output);
         EndObjectGroup(grouped, frame.Output);
     }
 
-    private bool IsStencil(PdfStream stream) =>
-        stream != null && _document.Resolve(stream.Dictionary["ImageMask"]) is PdfBoolean { Value: true };
-
-    // A stencil mask paints the fill color where it is set: one picture of it for each color it is painted in.
-    private ImageSource Stencil(PdfStream stream, PdfImageBitmap bitmap, Func<PdfImageBitmap> decode)
+    // A stencil mask paints the fill where it is set. In a color, it is a picture of that color - kept for the first
+    // MaxStencilColors colors of a stencil; past them, and for a pattern, the stencil is the mask of a group the fill
+    // is painted through, one picture whatever the color.
+    private void DrawStencil(PdfImageBitmap bitmap, PdfStream stream, PdfMatrix matrix, PdfFrame frame)
     {
+        var drawing = PdfMatrices.ToDrawing(matrix);
         var color = Pack(_state.Fill.Rgb(), _state.FillAlpha);
-        if (stream != null && _stencils.TryGetValue((stream, color), out var known))
+        ImageSource tinted = null;
+        if (_state.Fill.Pattern == null && (stream == null || !_stencils.TryGetValue((stream, color), out tinted)) &&
+            (stream == null || StencilColors(stream) < MaxStencilColors))
         {
-            return known;
+            tinted = Tint(bitmap, color);
+            if (stream != null)
+            {
+                _stencils[(stream, color)] = tinted;
+            }
         }
 
-        bitmap ??= decode();
+        var grouped = BeginObjectGroup(frame.Output);
+        if (tinted != null)
+        {
+            Write(new PdfImageStep(tinted, drawing), frame.Output);
+        }
+        else
+        {
+            if (stream == null || !_stencilMasks.TryGetValue(stream, out var shape))
+            {
+                shape = ToImage(bitmap.Width, bitmap.Height, bitmap.Rgba);
+                if (stream != null)
+                {
+                    _stencilMasks[stream] = shape;
+                }
+            }
+
+            var unit = new RectangleGeometry(new Rect(0, 0, 1, 1));
+            var mask = new PdfContentDrawing([new PdfImageStep(shape, drawing)],
+                PageBounds(new PdfRectangle(0, 0, 1, 1), matrix));
+            if (OpenGroup(new PdfPushGroupStep { Mask = mask, MaskKind = MaskKind.Alpha }, frame.Output))
+            {
+                if (_state.Fill.Pattern != null)
+                {
+                    PaintPattern(_state.Fill, unit, drawing, frame, stroking: false);
+                }
+                else
+                {
+                    Write(new PdfGeometryStep(unit, FillBrush(), null, drawing), frame.Output);
+                }
+
+                CloseGroupsDownTo(_openGroups - 1, frame.Output);
+            }
+        }
+
+        EndObjectGroup(grouped, frame.Output);
+    }
+
+    private int StencilColors(PdfStream stream)
+    {
+        var count = 0;
+        foreach (var key in _stencils.Keys)
+        {
+            if (ReferenceEquals(key.Item1, stream))
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    private static ImageSource Tint(PdfImageBitmap bitmap, uint color)
+    {
         var rgba = new byte[bitmap.Rgba.Length];
         for (var i = 0; i < rgba.Length; i += 4)
         {
@@ -197,13 +271,7 @@ internal sealed partial class PdfPageInterpreter
             rgba[i + 3] = (byte)(bitmap.Rgba[i + 3] * (color & 0xFF) / 255);
         }
 
-        var image = ToImage(bitmap.Width, bitmap.Height, rgba);
-        if (stream != null)
-        {
-            _stencils[(stream, color)] = image;
-        }
-
-        return image;
+        return ToImage(bitmap.Width, bitmap.Height, rgba);
     }
 
     private static ImageSource ToImage(int width, int height, byte[] rgba) =>

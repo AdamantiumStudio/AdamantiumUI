@@ -287,23 +287,31 @@ internal sealed partial class PdfPageInterpreter
         return program;
     }
 
-    // A Type 3 glyph is a content stream drawn in glyph space; the glyphs go on the stack last first, so the first is
-    // drawn first.
+    // A Type 3 glyph is a content stream drawn in glyph space. The glyphs of a string are walked one after another, each
+    // entering the next as it ends, so a long string takes one frame of depth, not one a glyph.
     private void DrawType3(PdfType3Font font, List<(PdfStream Proc, PdfMatrix At)> glyphs, PdfFrame frame)
     {
-        if (Hidden)
+        var mode = _state.TextRenderMode;
+        if (Hidden || mode is 3 or 7 || glyphs.Count == 0)
         {
             return;
         }
 
-        var resources = font.Resources ?? frame.Resources;
-        for (var i = glyphs.Count - 1; i >= 0; i--)
+        if (mode >= 4)
         {
-            var inside = _state.Copy();
-            if (!EnterForm(glyphs[i].Proc, resources, glyphs[i].At, PdfFrameKind.Glyph, frame.Output, inside))
-            {
-                break;
-            }
+            Tell("Text drawn in a Type 3 font does not clip; it is drawn only.");
         }
+
+        EnterGlyph(font.Resources ?? frame.Resources, glyphs, 0, frame.Output);
+    }
+
+    private void EnterGlyph(PdfResources resources, List<(PdfStream Proc, PdfMatrix At)> glyphs, int index,
+        List<PdfDrawStep> output)
+    {
+        var (proc, at) = glyphs[index];
+        Action<List<PdfDrawStep>> next = index + 1 < glyphs.Count
+            ? _ => EnterGlyph(resources, glyphs, index + 1, output)
+            : null;
+        EnterForm(proc, resources, at, PdfFrameKind.Glyph, output, _state.Copy(), next);
     }
 }
