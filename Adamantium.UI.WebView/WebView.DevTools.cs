@@ -39,7 +39,7 @@ public partial class WebView
     /// <summary>Asks CEF for the browser just made for the view: the page at <see cref="Source"/>.</summary>
     private protected virtual void BeginBrowser(WebViewBrowser created, int width, int height, float scale,
         IntPtr parentWindow) =>
-        created.Create(Source?.AbsoluteUri ?? "about:blank", width, height, scale, parentWindow);
+        created.Create(StartAddress(), width, height, scale, parentWindow);
 
     private void TakeDevToolsView(WebViewDevToolsView next)
     {

@@ -18,7 +18,11 @@ internal sealed unsafe class WebViewBrowser : IDisposable
     private const double ZoomStep = 1.2;
 
     private readonly WebViewEngine engine;
-    private readonly IWebViewBrowserView view;
+    private readonly Dictionary<int, WebViewBrowser> popupsAsked = [];
+    private IWebViewBrowserView view;
+    private WebViewBrowser opener;
+    private int popupId;
+    private IntPtr parentWindow;
     private readonly WebViewClient client;
     private readonly WebViewRenderHandler renderHandler;
     private readonly WebViewLifeSpanHandler lifeSpanHandler;
@@ -74,7 +78,8 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         lifeSpanHandler = new WebViewLifeSpanHandler(this);
         loadHandler = new WebViewLoadHandler(this);
         requestHandler = new WebViewRequestHandler(this);
-        devTools = new WebViewDevTools(json => view.MessageReceived(this, json)) { OverlayHeard = RevealWaiting };
+        // The view of the moment: a page another opened is adopted by a view of its own.
+        devTools = new WebViewDevTools(json => this.view.MessageReceived(this, json)) { OverlayHeard = RevealWaiting };
         displayHandler = new WebViewDisplayHandler(this);
         contextMenuHandler = new WebViewContextMenuHandler(this);
         jsDialogHandler = new WebViewJsDialogHandler(this);
@@ -164,18 +169,11 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         createdWith = url;
         ViewSize = (Math.Max(1, width), Math.Max(1, height));
         Scale = scale;
+        this.parentWindow = parentWindow;
 
         var info = CefWindowInfos.Windowless(parentWindow, FramePath == WebViewFramePath.SharedTexture);
-        var settings = new CefBrowserSettings
-        {
-            size = (ulong)sizeof(CefBrowserSettings),
-            windowless_frame_rate = 60,
-            // CEF takes fully opaque or fully transparent alone; left unset, a windowless page paints transparent.
-            background_color = new CefColor
-            {
-                value = Background.A == 0 ? 0u : 0xFF000000u | ((uint)Background.R << 16) | ((uint)Background.G << 8) | Background.B
-            }
-        };
+        var settings = new CefBrowserSettings { size = (ulong)sizeof(CefBrowserSettings) };
+        Configure(&settings);
         var target = new CefStringUtf16();
         try
         {
@@ -193,6 +191,153 @@ internal sealed unsafe class WebViewBrowser : IDisposable
             CefWindowInfos.Free(info);
         }
     }
+
+    /// <summary>Where the page is, or is going in a browser not made yet.</summary>
+    public string Address => address;
+
+    // What every browser of the view is made with.
+    private void Configure(CefBrowserSettings* settings)
+    {
+        settings->windowless_frame_rate = 60;
+        // CEF takes fully opaque or fully transparent alone; left unset, a windowless page paints transparent.
+        settings->background_color = new CefColor
+        {
+            value = Background.A == 0 ? 0u : 0xFF000000u | ((uint)Background.R << 16) | ((uint)Background.G << 8) | Background.B
+        };
+    }
+
+    /// <summary>Hands the page to <paramref name="adopter"/>, the view that shows it now: told what the page said to
+    /// <paramref name="waited"/> meanwhile, and given its frames from the next one on.</summary>
+    internal void Adopt(IWebViewBrowserView adopter, WebViewWaitingView waited)
+    {
+        // Frames on the device they were written on, if they still are: one lost meanwhile is taken when it is made anew.
+        var writing = producer != null;
+        LetGoOfDevice();
+        view = adopter;
+        waited?.Replay(adopter, this);
+        if (writing && !closing)
+        {
+            TakeDevice(frameDevice);
+        }
+    }
+
+    /// <summary>The page opens <paramref name="url"/> in a window of its own - a link to a new tab, <c>window.open</c>:
+    /// asked of the view by the user's own doing alone. Shown, the browser CEF makes for it is <paramref name="popup"/>'s,
+    /// drawn off screen like this one, its <c>window.opener</c> this page; false refuses it.</summary>
+    internal bool OnBeforePopup(int id, string url, CefWindowOpenDisposition disposition, bool userGesture,
+        void* windowInfo, CefClient** popupClient, CefBrowserSettings* settings)
+    {
+        if (!userGesture || closing || string.IsNullOrEmpty(url))
+        {
+            return false;
+        }
+
+        var waiting = new WebViewWaitingView();
+        if (engine.CreatePopupBrowser(FramePath, waiting) is not { } popup)
+        {
+            // No device to draw it on yet: the page goes there itself, as when nobody shows it apart.
+            Navigate(url);
+            return false;
+        }
+
+        popup.address = url;
+        popup.createdWith = url;
+        popup.ViewSize = ViewSize;
+        popup.Scale = Scale;
+        popup.parentWindow = parentWindow;
+        popup.Background = Background;
+        // Out of sight until a view shows it: a tab opened behind draws nothing.
+        popup.hidden = true;
+        var page = new WebViewNewPage(url, popup, waiting);
+        bool shown;
+        try
+        {
+            shown = view.NewWindowRequested(this, page, KindOf(disposition));
+        }
+        catch
+        {
+            page.Dispose();
+            throw;
+        }
+
+        // Let go of already - a view model that kept it no longer - it is refused: its client is gone.
+        if (!shown || popup.disposed)
+        {
+            page.Dispose();
+            if (!shown)
+            {
+                // Nobody shows it apart: the page goes there itself, as it did before new pages were asked for.
+                Navigate(url);
+            }
+
+            return false;
+        }
+
+        CefWindowInfos.MakeWindowless(windowInfo, parentWindow, popup.FramePath == WebViewFramePath.SharedTexture);
+        popup.Configure(settings);
+        // Handed back with a reference CEF takes.
+        *popupClient = popup.client.Shared;
+        popup.requested = true;
+        popup.opener = this;
+        popup.popupId = id;
+        popupsAsked[id] = popup;
+        return true;
+    }
+
+    /// <summary>CEF gave up making the browser of a popup it was allowed.</summary>
+    internal void OnPopupAborted(int id)
+    {
+        if (!popupsAsked.Remove(id, out var popup))
+        {
+            return;
+        }
+
+        popup.requested = false;
+        popup.opener = null;
+        if (popup.disposed)
+        {
+            engine.BrowserClosed(popup);
+            return;
+        }
+
+        // A view showing it already makes the page again at its address; one still waiting for it gets a page that
+        // never comes, as a page refused would be.
+        popup.view.BrowserLost(popup);
+    }
+
+    /// <summary>A link the page opens elsewhere - Ctrl, Shift or the middle button: true when the view opened it, and
+    /// the page stays where it is; false lets the page go there itself.</summary>
+    internal bool OnOpenElsewhere(string url, CefWindowOpenDisposition disposition, bool userGesture)
+    {
+        if (closing || string.IsNullOrEmpty(url) || disposition is not (CefWindowOpenDisposition.NewForegroundTab or
+                CefWindowOpenDisposition.NewBackgroundTab or CefWindowOpenDisposition.NewPopup or
+                CefWindowOpenDisposition.NewWindow))
+        {
+            return false;
+        }
+
+        if (!userGesture)
+        {
+            return true;
+        }
+
+        var page = new WebViewNewPage(url);
+        if (view.NewWindowRequested(this, page, KindOf(disposition)))
+        {
+            return true;
+        }
+
+        page.Dispose();
+        return false;
+    }
+
+    private static WebNewWindowKind KindOf(CefWindowOpenDisposition disposition) => disposition switch
+    {
+        CefWindowOpenDisposition.NewBackgroundTab => WebNewWindowKind.BackgroundTab,
+        CefWindowOpenDisposition.NewPopup => WebNewWindowKind.Popup,
+        CefWindowOpenDisposition.NewWindow => WebNewWindowKind.Window,
+        _ => WebNewWindowKind.ForegroundTab
+    };
 
     /// <summary>Shows <paramref name="url"/>: at once in a browser already made, else once it is.</summary>
     public void Navigate(string url)
@@ -1032,6 +1177,8 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         }
 
         browser = created;
+        opener?.popupsAsked.Remove(popupId);
+        opener = null;
         // DevTools are not a page of the application's: no protocol channel, no window.adamantium in them.
         if (!isDevTools)
         {
@@ -1169,16 +1316,6 @@ internal sealed unsafe class WebViewBrowser : IDisposable
             Serilog.Log.Logger.Warning(exception, "The page's texture is not copied; it is drawn into memory instead");
             engine.SharedTextureRefused();
             LoopSignal.Post(() => view.SharedTextureRefused(this));
-        }
-    }
-
-    /// <summary>A page opening a window of its own - a link to a new tab, window.open: the view shows it instead when
-    /// the user asked for it; a script's own is refused.</summary>
-    internal void OnPopup(string url, bool userGesture)
-    {
-        if (userGesture && !closing && !string.IsNullOrEmpty(url))
-        {
-            Navigate(url);
         }
     }
 

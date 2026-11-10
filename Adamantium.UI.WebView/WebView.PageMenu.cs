@@ -60,6 +60,17 @@ public partial class WebView
         HidePageTip();
         askedMenu = menu;
         pageMenu.Items.Clear();
+        if (!string.IsNullOrEmpty(menu.LinkAddress))
+        {
+            var link = menu.LinkAddress;
+            pageMenu.Items.Add(Row(WebViewStrings.OpenLinkInNewTab, true, () =>
+            {
+                menu.Dismiss();
+                OpenNewPage(link, WebNewWindowKind.BackgroundTab);
+            }));
+            pageMenu.Items.Add(new Separator());
+        }
+
         foreach (var row in Rows(menu, menu.Items))
         {
             pageMenu.Items.Add(row);
@@ -151,8 +162,17 @@ public partial class WebView
             }
 
             var command = item.Command;
-            var row = Row(item.Label, item.IsEnabled,
-                item.Kind == WebViewMenuItemKind.Submenu ? null : () => menu.Choose(command));
+            // Off screen Chromium prints nothing; its page source it opens in a window of its own, which off screen it
+            // does not make - the view opens it as a page of its own instead.
+            if (command == (int)CefMenuId.Print)
+            {
+                continue;
+            }
+
+            Action chosen = item.Kind == WebViewMenuItemKind.Submenu ? null
+                : command == (int)CefMenuId.ViewSource ? () => ViewSource(menu)
+                : () => menu.Choose(command);
+            var row = Row(item.Label, item.IsEnabled, chosen);
             if (item.Kind == WebViewMenuItemKind.Check)
             {
                 row.IsCheckable = true;
@@ -177,6 +197,15 @@ public partial class WebView
         }
 
         return row;
+    }
+
+    private void ViewSource(WebViewContextMenu menu)
+    {
+        menu.Dismiss();
+        if (browser?.Address is { Length: > 0 } address)
+        {
+            OpenNewPage("view-source:" + address, WebNewWindowKind.ForegroundTab);
+        }
     }
 
     // The DevTools at the element the menu was asked for over: found before they open, as they lay the page out anew.

@@ -97,4 +97,12 @@ internal interface IWebViewBrowserView
     /// <summary>Shows the menu the page asks for and answers it once the user picks a row or lets it go; false leaves it
     /// to be answered with none.</summary>
     bool ContextMenuRequested(WebViewBrowser browser, WebViewContextMenu menu);
+
+    /// <summary>The page opens <paramref name="page"/> as <paramref name="kind"/> says: true when the application shows
+    /// it, false refuses it.</summary>
+    bool NewWindowRequested(WebViewBrowser browser, WebViewNewPage page, WebNewWindowKind kind);
+
+    /// <summary>CEF will not make the browser after all - a page another opened, given up as its opener went: the view
+    /// is to make one of its own at the page's address.</summary>
+    void BrowserLost(WebViewBrowser browser);
 }

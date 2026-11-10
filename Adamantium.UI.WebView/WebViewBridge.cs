@@ -19,6 +19,10 @@ public sealed class WebViewBridge
     /// <summary>The page in the main frame loaded, or failed to.</summary>
     public event EventHandler<WebNavigationCompletedEventArgs> NavigationCompleted;
 
+    /// <summary>The page opens another, by the user's doing: the view model shows it in a view of its own, or the page
+    /// goes there itself.</summary>
+    public event EventHandler<WebNewWindowRequestedEventArgs> NewWindowRequested;
+
     /// <summary>Whether the bridge is bound to a view with a page.</summary>
     public bool HasPage => view?.HasPage == true;
 
@@ -58,6 +62,13 @@ public sealed class WebViewBridge
 
     internal void OnNavigationCompleted(string address, WebViewLoadError error) =>
         NavigationCompleted?.Invoke(this, new WebNavigationCompletedEventArgs(address, error));
+
+    internal bool OnNewWindowRequested(WebViewNewPage page, WebNewWindowKind kind)
+    {
+        var args = new WebNewWindowRequestedEventArgs(page, kind);
+        NewWindowRequested?.Invoke(this, args);
+        return args.Handled;
+    }
 
     private WebView Page() =>
         view?.HasPage == true ? view : throw new InvalidOperationException("The bridge is bound to no WebView with a page.");

@@ -214,8 +214,9 @@ public partial class WebView : Control, IWebViewBrowserView, ITextEntry
     {
         var view = (WebView)component;
         // The engine is the application's and outlives the page: an engine gone for a moment - a data context passing
-        // through null - leaves the page on the one it has rather than losing it and its history.
-        if (e.Property == EngineProperty && e.NewValue == null && view.browser != null)
+        // through null - leaves the page on the one it has rather than losing it and its history. A new page let go of
+        // once shown is the view's page all the same.
+        if ((e.Property == EngineProperty || e.Property == NewPageProperty) && e.NewValue == null && view.browser != null)
         {
             return;
         }
@@ -245,12 +246,17 @@ public partial class WebView : Control, IWebViewBrowserView, ITextEntry
 
         try
         {
-            browser = engine.CreateBrowser(AllowSharedTexture, this);
+            var width = (int)Math.Ceiling(PageWidth);
+            var height = (int)Math.Ceiling(PageHeight);
+            if (AdoptNewPage(width, height, Scale()) == null)
+            {
+                browser = engine.CreateBrowser(AllowSharedTexture, this);
+                browser.Background = PageBackground;
+                BeginBrowser(browser, width, height, Scale(), window?.Handle ?? IntPtr.Zero);
+            }
+
             SetCurrentValue(FramePathProperty, browser.FramePath);
             RaiseCommandsChanged();
-            browser.Background = PageBackground;
-            BeginBrowser(browser, (int)Math.Ceiling(PageWidth), (int)Math.Ceiling(PageHeight), Scale(),
-                window?.Handle ?? IntPtr.Zero);
             browser.SetHidden(IsWindowOutOfSight());
             browser.SetFocus(IsKeyboardFocused);
             browser.SetZoom(Math.Clamp(ZoomFactor, MinZoom, MaxZoom));

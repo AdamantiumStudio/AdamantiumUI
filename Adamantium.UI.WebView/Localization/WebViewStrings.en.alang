@@ -5,6 +5,7 @@
     <Phrase Key="DevTools" Text="DevTools"/>
     <Phrase Key="StatusBar" Text="Page status"/>
     <Phrase Key="Inspect" Text="Inspect"/>
+    <Phrase Key="OpenLinkInNewTab" Text="Open link in new tab"/>
     <Phrase Key="Ok" Text="OK"/>
     <Phrase Key="Cancel" Text="Cancel"/>
     <Phrase Key="PageSays" Text="{site} says"/>

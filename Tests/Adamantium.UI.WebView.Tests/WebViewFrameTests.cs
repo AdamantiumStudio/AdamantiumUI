@@ -791,6 +791,166 @@ public class WebViewFrameTests
         });
     }
 
+    // A window the page opens on a click comes to the view as a new page: Chromium's own, which another view takes up -
+    // drawn there, its window.opener still the page that opened it.
+    [Test]
+    public void AWindowOpenedOnAClick_IsANewPage_WhoseOpenerIsThePage()
+    {
+        const string page = "data:text/html,<body style='margin:0;height:100vh' onclick=\"w=window.open('','_blank');" +
+                            "w.document.write('<title>opener:'+(w.opener===window)+'</title><p>new</p>')\"></body>";
+        WebNewWindowKind? kind = null;
+        string address = null, title = null, message = null;
+        var frames = 0;
+        loop.Run(() => ShowPage(WebViewFramePath.PixelBuffer, page, (browser, view) =>
+        {
+            ClickTheMiddle(browser);
+            Pump(() => view.NewPages.Count > 0, TimeSpan.FromSeconds(5));
+            if (view.NewPages.Count == 0)
+            {
+                return;
+            }
+
+            (var opened, kind) = view.NewPages[0];
+            address = opened.Address;
+            var shown = new RecordingBrowserView();
+            var popup = opened.Take(out var waited);
+            popup.Adopt(shown, waited);
+            popup.SetHidden(false);
+            var consumer = new FrameConsumer(devices);
+            try
+            {
+                Pump(() => shown.Title?.StartsWith("opener") == true && shown.Frames > 0, TimeSpan.FromSeconds(10), shown,
+                    consumer);
+                title = shown.Title;
+                frames = shown.Frames;
+                Await(popup.EvaluateAsync("window.adamantium.postMessage({ from: 'popup' }), 1"));
+                Pump(() => shown.Messages.Count > 0, TimeSpan.FromSeconds(5), shown, consumer);
+                message = shown.Messages.FirstOrDefault();
+            }
+            finally
+            {
+                popup.Dispose();
+                Pump(() => false, TimeSpan.FromMilliseconds(300));
+                consumer.Dispose();
+            }
+        }));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(kind, Is.EqualTo(WebNewWindowKind.ForegroundTab));
+            Assert.That(address, Is.EqualTo("about:blank"));
+            Assert.That(title, Is.EqualTo("opener:true"), "the opener reaches the page it opened");
+            Assert.That(frames, Is.GreaterThan(0), "drawn for the view that took it up");
+            Assert.That(message, Is.EqualTo("{\"from\":\"popup\"}"), "and its messages come to that view");
+        });
+    }
+
+    // A page the view model lets go of while it is asked - shown and dropped at once - is refused, its browser never
+    // made: nothing is drawn for nobody, and the page that asked stays.
+    [Test]
+    public void ANewPageLetGoOfAtOnce_IsRefused()
+    {
+        const string page = "data:text/html,<title>stays</title><body style='margin:0;height:100vh' " +
+                            "onclick=\"window.open('about:blank%23gone','_blank')\"></body>";
+        var asked = 0;
+        string title = null;
+        loop.Run(() => ShowPage(WebViewFramePath.PixelBuffer, page, (browser, view) =>
+        {
+            view.DropsNewPages = true;
+            ClickTheMiddle(browser);
+            Pump(() => view.NewPages.Count > 0, TimeSpan.FromSeconds(5));
+            Pump(() => false, TimeSpan.FromMilliseconds(500));
+            asked = view.NewPages.Count;
+            title = view.Title;
+        }));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(asked, Is.EqualTo(1));
+            Assert.That(title, Is.EqualTo("stays"));
+        });
+    }
+
+    // A window a script opens on its own, the user doing nothing, is refused before the view hears of it.
+    [Test]
+    public void AWindowAScriptOpensOnItsOwn_IsRefused()
+    {
+        const string page = "data:text/html,<title>here</title><body onload=\"window.open('about:blank%23x','_blank')\"></body>";
+        var asked = -1;
+        string address = null;
+        loop.Run(() => ShowPage(WebViewFramePath.PixelBuffer, page, (browser, view) =>
+        {
+            Pump(() => false, TimeSpan.FromSeconds(1));
+            asked = view.NewPages.Count;
+            address = view.Address;
+        }));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(asked, Is.Zero);
+            Assert.That(address, Does.StartWith("data:"), "and the page stays where it is");
+        });
+    }
+
+    // A window nobody shows apart: the page goes there itself, as before pages were asked for.
+    [Test]
+    public void ANewPageNobodyShows_OpensInThePageItself()
+    {
+        const string page = "data:text/html,<body style='margin:0;height:100vh' " +
+                            "onclick=\"window.open('about:blank%23there','_blank')\"></body>";
+        string address = null;
+        var asked = 0;
+        loop.Run(() => ShowPage(WebViewFramePath.PixelBuffer, page, (browser, view) =>
+        {
+            view.ShowsNewPages = false;
+            ClickTheMiddle(browser);
+            Pump(() => view.Address?.EndsWith("#there") == true, TimeSpan.FromSeconds(5));
+            asked = view.NewPages.Count;
+            address = view.Address;
+        }));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(asked, Is.EqualTo(1));
+            Assert.That(address, Is.EqualTo("about:blank#there"));
+        });
+    }
+
+    // A link opened with Ctrl comes as a page behind the open one, and the page that had the link stays.
+    [Test]
+    public void ALinkOpenedWithCtrl_IsANewPageBehind_AndThePageStays()
+    {
+        const string page = "data:text/html,<title>links</title><a href='about:blank%23ctrl' " +
+                            "style='display:block;height:100vh'>link</a>";
+        WebNewWindowKind? kind = null;
+        string address = null, stayedAt = null;
+        loop.Run(() => ShowPage(WebViewFramePath.PixelBuffer, page, (browser, view) =>
+        {
+            browser.SetFocus(true);
+            browser.SendMouseMove(Width / 2, Height / 2, InputModifiers.LeftControl, false);
+            browser.SendMouseClick(Width / 2, Height / 2, InputModifiers.LeftControl | InputModifiers.LeftMouseButton,
+                CefMouseButtonType.Left, false, 1);
+            browser.SendMouseClick(Width / 2, Height / 2, InputModifiers.LeftControl, CefMouseButtonType.Left, true, 1);
+            Pump(() => view.NewPages.Count > 0, TimeSpan.FromSeconds(5));
+            if (view.NewPages.Count > 0)
+            {
+                (var opened, kind) = view.NewPages[0];
+                address = opened.Address;
+                opened.Dispose();
+            }
+
+            Pump(() => false, TimeSpan.FromMilliseconds(500));
+            stayedAt = view.Title;
+        }));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(kind, Is.EqualTo(WebNewWindowKind.BackgroundTab));
+            Assert.That(address, Is.EqualTo("about:blank#ctrl"));
+            Assert.That(stayedAt, Is.EqualTo("links"));
+        });
+    }
+
     // An element's title comes to the view as its tooltip while the pointer is over it.
     [Test]
     public void AnElementsTitle_ComesAsTheTooltip()
