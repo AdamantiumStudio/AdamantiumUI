@@ -122,6 +122,10 @@ All packages share one version.
 
 ### Changed
 
+- `adam-auto start` keeps what the application remembers - its windows' places, layouts, caches - in the
+  `Automation` folder of its data, one for each pipe (each working copy), from run to run, apart from a copy started by
+  hand (`ADAMANTIUM_APP_DATA` set names another): the copy driven comes back on the automation's monitor, where it
+  opened first, not where the one someone works in stood, and copies started from two working copies keep apart.
 - `adam-auto` talks, unless `--pipe` names one, on a pipe of the working copy it was built in - the folder above its
   `artifacts`, whichever project's output it runs from - instead of `adam-auto` for everyone: instances started from
   two working copies at once no longer answer for each other.
