@@ -48,6 +48,12 @@ internal sealed class RecordingBrowserView : IWebViewBrowserView
     /// <summary>The messages the page sent, as JSON.</summary>
     public List<string> Messages { get; } = [];
 
+    /// <summary>The scripts the page's new documents are to run.</summary>
+    public List<WebDocumentScript> Scripts { get; } = [];
+
+    /// <summary>The bridge whose objects the page calls; none refuses its calls.</summary>
+    public WebViewBridge Bridge { get; set; }
+
     /// <summary>Says which addresses the page is kept from going to.</summary>
     public Func<string, bool> Refuse { get; set; }
 
@@ -209,6 +215,22 @@ internal sealed class RecordingBrowserView : IWebViewBrowserView
         Completed.Add(address);
 
     public void MessageReceived(WebViewBrowser browser, string json) => Messages.Add(json);
+
+    public IReadOnlyList<WebDocumentScript> ScriptsForNewDocuments(WebViewBrowser browser) => Scripts;
+
+    public void HostCalled(WebViewBrowser browser, WebHostCall call)
+    {
+        if (Bridge != null)
+        {
+            Bridge.OnHostCall(call);
+        }
+        else
+        {
+            call.Refuse("There is no object here.");
+        }
+    }
+
+    public void HostContextGone(WebViewBrowser browser, string context) => Bridge?.OnHostContextGone(browser, context);
 
     public void LoadFailed(WebViewBrowser browser, WebViewLoadError error) => Error = error;
 

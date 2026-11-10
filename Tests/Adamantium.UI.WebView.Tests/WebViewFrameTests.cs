@@ -627,6 +627,285 @@ public class WebViewFrameTests
         });
     }
 
+    // A script for new documents runs in each document loaded after it was added, before the page's own scripts and
+    // with window.adamantium there, in the order added; the document shown when it came does not run it, and one
+    // taken away - even before Chromium answered for it - runs no more.
+    [Test]
+    public void AScriptForNewDocuments_RunsBeforeThePagesOwn_UntilTakenAway()
+    {
+        string first = null, afterAdding = null, shownWhenAdded = null, afterRemoving = null;
+        var backAtFirst = true;
+        List<string> heard = null;
+        loop.Run(() =>
+        {
+            var view = new RecordingBrowserView();
+            view.Scripts.Add(new WebDocumentScript(MarkScript("A")));
+            var browser = engine.CreateBrowser(false, view);
+            try
+            {
+                browser.Create(MarksPage(1), Width, Height, 1, IntPtr.Zero);
+                first = TitleOf(view, 1);
+                Pump(() => !view.IsLoading, TimeSpan.FromSeconds(5));
+                backAtFirst = view.CanGoBack;
+
+                var b = new WebDocumentScript(MarkScript("B"));
+                view.Scripts.Add(b);
+                browser.ScriptsForNewDocumentsChanged();
+                shownWhenAdded = Await(browser.EvaluateAsync("window.__marks"));
+                browser.Navigate(MarksPage(2));
+                afterAdding = TitleOf(view, 2);
+
+                var c = new WebDocumentScript(MarkScript("C"));
+                view.Scripts.Add(c);
+                browser.ScriptsForNewDocumentsChanged();
+                view.Scripts.Remove(c);
+                view.Scripts.RemoveAt(0);
+                browser.ScriptsForNewDocumentsChanged();
+                browser.Navigate(MarksPage(3));
+                afterRemoving = TitleOf(view, 3);
+                heard = [.. view.Started, .. view.Completed];
+            }
+            finally
+            {
+                browser.Dispose();
+                Pump(() => false, TimeSpan.FromMilliseconds(300));
+            }
+        });
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(first, Is.EqualTo("1:A+bridge"), "before the page's own script, window.adamantium there");
+            Assert.That(backAtFirst, Is.False, "the first page is the first: nothing to go back to");
+            Assert.That(heard, Is.Not.Empty.And.No.EqualTo("about:blank"),
+                "nobody hears of the blank page the browser is made with");
+            Assert.That(shownWhenAdded, Is.EqualTo("\"A\""), "the document shown when it came does not run it");
+            Assert.That(afterAdding, Is.EqualTo("2:AB+bridge"), "in the order added");
+            Assert.That(afterRemoving, Is.EqualTo("3:B+bridge"), "taken away, even at once, it runs no more");
+        });
+    }
+
+    // The DevTools front end may turn the page off, which drops its scripts for new documents: gone, the page's
+    // scripts run again in the next document - once each.
+    [Test]
+    public void ScriptsForNewDocuments_OutliveAFrontEndTurningThePageOff()
+    {
+        string title = null;
+        loop.Run(() =>
+        {
+            var view = new RecordingBrowserView();
+            view.Scripts.Add(new WebDocumentScript(MarkScript("A")));
+            var browser = engine.CreateBrowser(false, view);
+            try
+            {
+                browser.Create(MarksPage(1), Width, Height, 1, IntPtr.Zero);
+                TitleOf(view, 1);
+                var address = browser.OpenDevTools();
+                var socketAddress = new Uri("ws://" + address[(address.IndexOf("ws=", StringComparison.Ordinal) + 3)..]);
+                using var frontEnd = new System.Net.WebSockets.ClientWebSocket();
+                frontEnd.Options.SetRequestHeader("Origin", "devtools://devtools");
+                var connected = frontEnd.ConnectAsync(socketAddress, CancellationToken.None);
+                Pump(() => connected.IsCompleted, TimeSpan.FromSeconds(5));
+                frontEnd.SendAsync("{\"id\":1,\"method\":\"Page.disable\",\"params\":{}}"u8.ToArray(),
+                    System.Net.WebSockets.WebSocketMessageType.Text, true, CancellationToken.None);
+                Receive(frontEnd, reply => reply.Contains("\"id\":1"));
+                browser.CloseDevTools();
+                browser.Navigate(MarksPage(2));
+                title = TitleOf(view, 2);
+            }
+            finally
+            {
+                browser.Dispose();
+                Pump(() => false, TimeSpan.FromMilliseconds(300));
+            }
+        });
+
+        Assert.That(title, Is.EqualTo("2:A+bridge"));
+    }
+
+    // A page at the origin an object was added for calls it: a value, an awaited one, the object's failure, another
+    // object it answers with, the page's own function called back, a value of several fields - and a method there is
+    // none of, or a public member outside the interface, is refused.
+    [Test]
+    public void AnObjectOfTheApplications_IsCalledByThePage()
+    {
+        using var site = new LocalSite("<title>site</title><body></body>");
+        var answers = new Dictionary<string, string>();
+        loop.Run(() =>
+        {
+            var bridge = new WebViewBridge();
+            bridge.AddHostObject("calc", new Calculator(), site.Origin);
+            var view = new RecordingBrowserView { Bridge = bridge };
+            var browser = engine.CreateBrowser(false, view);
+            try
+            {
+                browser.Create(site.Origin + "/", Width, Height, 1, IntPtr.Zero);
+                Pump(() => view.Title == "site" && !view.IsLoading, TimeSpan.FromSeconds(10));
+                const string calc = "adamantium.hostObjects.calc";
+                const string refused = ".then(v => 'resolved', e => 'refused: ' + e.message)";
+                answers["add"] = Await(browser.EvaluateAsync(calc + ".add(2, 3)"));
+                answers["greet"] = Await(browser.EvaluateAsync(calc + ".greetAsync('web')"));
+                answers["fail"] = Await(browser.EvaluateAsync(calc + ".fail()" + refused));
+                answers["counter"] = Await(browser.EvaluateAsync(
+                    "(async () => { const c = await " + calc + ".counter(); await c.increment(); return await c.increment(); })()"));
+                answers["callBack"] = Await(browser.EvaluateAsync(calc + ".callBackAsync((a, b) => a + b)"));
+                answers["mirror"] = Await(browser.EvaluateAsync(calc + ".mirror({x: 1, y: 2})"));
+                answers["nothing"] = Await(browser.EvaluateAsync(calc + ".nothing()" + refused));
+                answers["secret"] = Await(browser.EvaluateAsync(calc + ".secret()" + refused));
+            }
+            finally
+            {
+                browser.Dispose();
+                Pump(() => false, TimeSpan.FromMilliseconds(300));
+            }
+        });
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(answers["add"], Is.EqualTo("5"));
+            Assert.That(answers["greet"], Is.EqualTo("\"hello web\""), "an awaited method is awaited");
+            Assert.That(answers["fail"], Is.EqualTo("\"refused: broken\""), "what it throws refuses the promise");
+            Assert.That(answers["counter"], Is.EqualTo("2"), "an object answered with is called in turn");
+            Assert.That(answers["callBack"], Is.EqualTo("\"42\""), "the page's function called back");
+            Assert.That(answers["mirror"], Is.EqualTo("{\"x\":2,\"y\":1}"), "a value of several fields, both ways");
+            Assert.That(answers["nothing"], Does.StartWith("\"refused: There is no method 'nothing'"));
+            Assert.That(answers["secret"], Does.StartWith("\"refused: There is no method 'secret'"),
+                "a public member outside the interface is no page's");
+        });
+    }
+
+    // An object reaches no page it was not let in for: another origin, a frame of the page's own origin, a page after
+    // it is taken away - all refused alike, as if there were none.
+    [Test]
+    public void AnObjectOfTheApplications_ReachesOnlyTheMainFrameAtItsOrigins_UntilTakenAway()
+    {
+        using var site = new LocalSite("<title>site</title><body><iframe srcdoc='<p>frame</p>'></iframe></body>");
+        using var other = new LocalSite("<title>other</title><body></body>");
+        string ownMain = null, ownFrame = null, otherSite = null, afterRemoving = null;
+        loop.Run(() =>
+        {
+            var bridge = new WebViewBridge();
+            bridge.AddHostObject("calc", new Calculator(), site.Origin);
+            var view = new RecordingBrowserView { Bridge = bridge };
+            var browser = engine.CreateBrowser(false, view);
+            try
+            {
+                const string call = "adamantium.hostObjects.calc.add(1, 1).then(v => 'got ' + v, e => e.message)";
+                browser.Create(site.Origin + "/", Width, Height, 1, IntPtr.Zero);
+                Pump(() => view.Title == "site" && !view.IsLoading, TimeSpan.FromSeconds(10));
+                ownMain = Await(browser.EvaluateAsync(call));
+                ownFrame = Await(browser.EvaluateAsync("frames[0]." + call));
+
+                browser.Navigate(other.Origin + "/");
+                Pump(() => view.Title == "other" && !view.IsLoading, TimeSpan.FromSeconds(10));
+                otherSite = Await(browser.EvaluateAsync(call));
+
+                browser.Navigate(site.Origin + "/again");
+                Pump(() => view.Title == "site" && !view.IsLoading, TimeSpan.FromSeconds(10));
+                bridge.RemoveHostObject("calc");
+                afterRemoving = Await(browser.EvaluateAsync(call));
+            }
+            finally
+            {
+                browser.Dispose();
+                Pump(() => false, TimeSpan.FromMilliseconds(300));
+            }
+        });
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(ownMain, Is.EqualTo("\"got 2\""));
+            Assert.That(ownFrame, Is.EqualTo("\"There is no object 'calc' here.\""), "a frame is not the main frame");
+            Assert.That(otherSite, Is.EqualTo("\"There is no object 'calc' here.\""), "another origin");
+            Assert.That(afterRemoving, Is.EqualTo("\"There is no object 'calc' here.\""), "taken away");
+        });
+    }
+
+    // An object taken away while a call of it still runs: the object the call answers with is not given - the page
+    // reaches nothing of what was taken away.
+    [Test]
+    public void AnObjectTakenAwayMidCall_GivesNothingItsCallAnswers()
+    {
+        using var site = new LocalSite("<title>site</title><body></body>");
+        string answer = null;
+        loop.Run(() =>
+        {
+            var bridge = new WebViewBridge();
+            bridge.AddHostObject("calc", new Calculator(), site.Origin);
+            var view = new RecordingBrowserView { Bridge = bridge };
+            var browser = engine.CreateBrowser(false, view);
+            try
+            {
+                browser.Create(site.Origin + "/", Width, Height, 1, IntPtr.Zero);
+                Pump(() => view.Title == "site" && !view.IsLoading, TimeSpan.FromSeconds(10));
+                var later = browser.EvaluateAsync(
+                    "adamantium.hostObjects.calc.counterLaterAsync().then(c => c.increment()).then(v => 'got ' + v, e => e.message)");
+                Pump(() => false, TimeSpan.FromMilliseconds(100));
+                bridge.RemoveHostObject("calc");
+                answer = Await(later);
+            }
+            finally
+            {
+                browser.Dispose();
+                Pump(() => false, TimeSpan.FromMilliseconds(300));
+            }
+        });
+
+        Assert.That(answer, Is.EqualTo("\"The object is gone.\""));
+    }
+
+    // Asked to be blank before it could go anywhere: the blank page it was made with is the page asked for - told as
+    // it, nothing behind it - and what comes next is heard as ever.
+    [Test]
+    public void ABlankPageAskedForAtOnce_IsThePage_AndThePageIsHeardAfter()
+    {
+        string address = null, titleAfter = null;
+        var completedBlank = false;
+        var backOnBlank = true;
+        loop.Run(() =>
+        {
+            var view = new RecordingBrowserView();
+            view.Scripts.Add(new WebDocumentScript(MarkScript("A")));
+            var browser = engine.CreateBrowser(false, view);
+            try
+            {
+                browser.Create(MarksPage(1), Width, Height, 1, IntPtr.Zero);
+                browser.Navigate("about:blank");
+                Pump(() => view.Completed.Contains("about:blank"), TimeSpan.FromSeconds(10));
+                address = view.Address;
+                completedBlank = view.Completed.Contains("about:blank");
+                backOnBlank = view.CanGoBack;
+                browser.Navigate(MarksPage(2));
+                titleAfter = TitleOf(view, 2);
+            }
+            finally
+            {
+                browser.Dispose();
+                Pump(() => false, TimeSpan.FromMilliseconds(300));
+            }
+        });
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(address, Is.EqualTo("about:blank"));
+            Assert.That(completedBlank, Is.True, "completed, as a page asked for");
+            Assert.That(backOnBlank, Is.False);
+            Assert.That(titleAfter, Is.EqualTo("2:A+bridge"), "the next page heard, its scripts run");
+        });
+    }
+
+    private static string MarkScript(string mark) =>
+        "window.__marks = (window.__marks || '') + '" + mark + "'; window.__bridge = !!window.adamantium;";
+
+    private static string MarksPage(int load) =>
+        "data:text/html,<script>document.title = '" + load + ":' + (window.__marks || '') + " +
+        "(window.__bridge ? '+bridge' : '')</script>";
+
+    private static string TitleOf(RecordingBrowserView view, int load)
+    {
+        Pump(() => view.Title?.StartsWith(load + ":", StringComparison.Ordinal) == true, TimeSpan.FromSeconds(10));
+        return view.Title;
+    }
+
     // The DevTools front end talks to the page through the page's socket: its calls answered under its own ids while
     // the page's own calls go on beside them; a new front end takes the old one's place; closed, the page's messages
     // still come.

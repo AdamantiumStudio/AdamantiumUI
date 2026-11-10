@@ -58,6 +58,16 @@ internal interface IWebViewBrowserView
     /// <summary>The page sent <paramref name="json"/> with <c>window.adamantium.postMessage</c>.</summary>
     void MessageReceived(WebViewBrowser browser, string json);
 
+    /// <summary>The scripts the page's new documents run before their own, in order.</summary>
+    IReadOnlyList<WebDocumentScript> ScriptsForNewDocuments(WebViewBrowser browser);
+
+    /// <summary>The page calls an object of the application's: answered through <paramref name="call"/>, refused by a
+    /// view that has none.</summary>
+    void HostCalled(WebViewBrowser browser, WebHostCall call);
+
+    /// <summary>A script world of the page is gone, and whatever it was given with it.</summary>
+    void HostContextGone(WebViewBrowser browser, string context);
+
     /// <summary>The page's zoom, as Chromium keeps it for its site, once a page has loaded.</summary>
     void ZoomChanged(WebViewBrowser browser, double factor);
 

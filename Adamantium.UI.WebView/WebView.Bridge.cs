@@ -30,12 +30,18 @@ public partial class WebView
 
     internal void PostMessage(string json) => browser?.Post(json);
 
+    internal void ScriptsForNewDocumentsChanged() => browser?.ScriptsForNewDocumentsChanged();
+
     private static void OnBridgeChanged(AdamantiumComponent component, AdamantiumPropertyChangedEventArgs e)
     {
         var view = (WebView)component;
         (e.OldValue as WebViewBridge)?.Detach(view);
         (e.NewValue as WebViewBridge)?.Attach(view);
+        view.ScriptsForNewDocumentsChanged();
     }
+
+    IReadOnlyList<WebDocumentScript> IWebViewBrowserView.ScriptsForNewDocuments(WebViewBrowser from) =>
+        Bridge?.ScriptsForNewDocuments ?? [];
 
     bool IWebViewBrowserView.NavigationStarting(WebViewBrowser from, string address, bool userGesture, bool isRedirect) =>
         ReferenceEquals(browser, from) && Bridge?.OnNavigationStarting(address, userGesture, isRedirect) == true;
@@ -55,4 +61,19 @@ public partial class WebView
             Bridge?.OnMessage(json);
         }
     }
+
+    void IWebViewBrowserView.HostCalled(WebViewBrowser from, WebHostCall call)
+    {
+        if (ReferenceEquals(browser, from) && Bridge is { } bridge)
+        {
+            bridge.OnHostCall(call);
+        }
+        else
+        {
+            call.Refuse("There is no object here.");
+        }
+    }
+
+    void IWebViewBrowserView.HostContextGone(WebViewBrowser from, string context) =>
+        Bridge?.OnHostContextGone(from, context);
 }

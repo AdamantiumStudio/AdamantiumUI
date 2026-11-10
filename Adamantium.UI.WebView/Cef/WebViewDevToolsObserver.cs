@@ -24,7 +24,8 @@ internal sealed unsafe class WebViewDevToolsObserver : CefObject
     {
         try
         {
-            From<WebViewDevToolsObserver>(self).devTools.OnMessage(new ReadOnlySpan<byte>(message, (int)size));
+            From<WebViewDevToolsObserver>(self).devTools.OnMessage(cefBrowser,
+                new ReadOnlySpan<byte>(message, (int)size));
         }
         catch (Exception exception)
         {

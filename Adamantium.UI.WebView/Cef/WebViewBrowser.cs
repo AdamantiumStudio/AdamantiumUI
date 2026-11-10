@@ -16,6 +16,7 @@ namespace Adamantium.UI.WebView.Cef;
 internal sealed unsafe class WebViewBrowser : IDisposable
 {
     private const double ZoomStep = 1.2;
+    private const string Blank = "about:blank";
 
     private readonly WebViewEngine engine;
     private readonly Dictionary<int, WebViewBrowser> popupsAsked = [];
@@ -48,6 +49,10 @@ internal sealed unsafe class WebViewBrowser : IDisposable
     private CefBrowser* browser;
     private string address;
     private string wanted;
+    private bool scriptsPending;
+    private bool madeBlank;
+    private bool blankBehind;
+    private bool isLoading;
     private string errorPageFor;
     private string failedAddress;
     private bool isDevTools;
@@ -89,7 +94,13 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         loadHandler = new WebViewLoadHandler(this);
         requestHandler = new WebViewRequestHandler(this);
         // The view of the moment: a page another opened is adopted by a view of its own.
-        devTools = new WebViewDevTools(json => this.view.MessageReceived(this, json)) { OverlayHeard = RevealWaiting };
+        devTools = new WebViewDevTools(json => this.view.MessageReceived(this, json))
+        {
+            OverlayHeard = RevealWaiting,
+            HostCalled = (context, isMainFrame, origin, json) =>
+                this.view.HostCalled(this, new WebHostCall(this, context, isMainFrame, origin, json)),
+            ContextGone = context => this.view.HostContextGone(this, context)
+        };
         displayHandler = new WebViewDisplayHandler(this);
         contextMenuHandler = new WebViewContextMenuHandler(this);
         jsDialogHandler = new WebViewJsDialogHandler(this);
@@ -238,7 +249,18 @@ internal sealed unsafe class WebViewBrowser : IDisposable
     public void Create(string url, int width, int height, float scale, IntPtr parentWindow)
     {
         address = url;
-        createdWith = url;
+        // The application's page is made blank and goes to its address once it took its scripts for new documents:
+        // they and window.adamantium are there for the first document too. Made with nothing, it would have no page to
+        // take them. The blank page is ours, not the page's: nobody hears of it, and it is wiped from the history once
+        // the next is there. DevTools, and a page asked to be blank, go there at once.
+        var goesThereAtOnce = isDevTools || url == Blank;
+        createdWith = goesThereAtOnce ? url : Blank;
+        madeBlank = !goesThereAtOnce;
+        if (!isDevTools)
+        {
+            wanted ??= url;
+        }
+
         ViewSize = (Math.Max(1, width), Math.Max(1, height));
         Scale = scale;
         this.parentWindow = parentWindow;
@@ -249,7 +271,7 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         var target = new CefStringUtf16();
         try
         {
-            CefStrings.Set(&target, url);
+            CefStrings.Set(&target, createdWith);
             if (CefInterop.CefBrowserHostCreateBrowser(info, client.Shared, &target, &settings, null, null) == 0)
             {
                 throw new InvalidOperationException($"CEF refused to make a browser for {url}.");
@@ -287,10 +309,25 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         ReleaseSurfaces();
         view = adopter;
         waited?.Replay(adopter, this);
+        ScriptsForNewDocumentsChanged();
         if (!hidden)
         {
             MakeSurfaces();
         }
+    }
+
+    /// <summary>The view's scripts for new documents changed: the page's next documents run them as they are now.
+    /// </summary>
+    public void ScriptsForNewDocumentsChanged()
+    {
+        var host = isDevTools ? null : LiveHost();
+        if (host == null)
+        {
+            return;
+        }
+
+        devTools.SetScriptsForNewDocuments(host, view.ScriptsForNewDocuments(this));
+        CefRefCounting.ReleaseCef(host);
     }
 
     /// <summary>The page opens <paramref name="url"/> in a window of its own - a link to a new tab, <c>window.open</c>:
@@ -304,7 +341,7 @@ internal sealed unsafe class WebViewBrowser : IDisposable
             return false;
         }
 
-        var waiting = new WebViewWaitingView();
+        var waiting = new WebViewWaitingView(view.ScriptsForNewDocuments(this));
         if (engine.CreatePopupBrowser(FramePath, waiting) is not { } popup)
         {
             // No device to draw it on yet: the page goes there itself, as when nobody shows it apart.
@@ -415,10 +452,16 @@ internal sealed unsafe class WebViewBrowser : IDisposable
     public void Navigate(string url)
     {
         errorPageFor = null;
-        if (browser == null || closing)
+        if (browser == null || closing || scriptsPending)
         {
             wanted = url;
             return;
+        }
+
+        // A blank page asked for is the page's, heard of like any other.
+        if (url == Blank)
+        {
+            blankBehind = false;
         }
 
         var frame = browser->get_main_frame(browser);
@@ -946,7 +989,7 @@ internal sealed unsafe class WebViewBrowser : IDisposable
     public void GoBack()
     {
         errorPageFor = null;
-        if (browser != null && !closing)
+        if (browser != null && !closing && !blankBehind)
         {
             browser->go_back(browser);
         }
@@ -985,6 +1028,11 @@ internal sealed unsafe class WebViewBrowser : IDisposable
 
     internal void OnAddressChange(string url)
     {
+        if (OfTheBlankPage(url))
+        {
+            return;
+        }
+
         url = Shown(url);
         address = url;
         view.AddressChanged(this, url);
@@ -1028,6 +1076,11 @@ internal sealed unsafe class WebViewBrowser : IDisposable
 
     private void TellSecurity()
     {
+        if (madeBlank)
+        {
+            return;
+        }
+
         var isSecure = PageIsSecure();
         if (isSecure != secure)
         {
@@ -1036,9 +1089,21 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         }
     }
 
-    internal void OnTitleChange(string title) => view.TitleChanged(this, title);
+    internal void OnTitleChange(string title)
+    {
+        if (!madeBlank && !OfTheBlankPage(title))
+        {
+            view.TitleChanged(this, title);
+        }
+    }
 
-    internal void OnStatusMessage(string message) => view.StatusChanged(this, message);
+    internal void OnStatusMessage(string message)
+    {
+        if (!madeBlank)
+        {
+            view.StatusChanged(this, message);
+        }
+    }
 
     internal void OnTooltip(string text) => view.TooltipChanged(this, text);
 
@@ -1110,10 +1175,22 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         }
     }
 
-    internal void OnLoadingProgress(double progress) => view.ProgressChanged(this, progress);
+    internal void OnLoadingProgress(double progress)
+    {
+        if (!madeBlank)
+        {
+            view.ProgressChanged(this, progress);
+        }
+    }
 
     internal void OnLoadingState(bool isLoading, bool canGoBack, bool canGoForward)
     {
+        this.isLoading = isLoading;
+        if (madeBlank)
+        {
+            return;
+        }
+
         if (!isLoading)
         {
             var host = LiveHost();
@@ -1134,7 +1211,8 @@ internal sealed unsafe class WebViewBrowser : IDisposable
             TellSecurity();
         }
 
-        view.LoadingChanged(this, isLoading, canGoBack, canGoForward);
+        // Behind the first page is only the blank one it was made with, until that is wiped.
+        view.LoadingChanged(this, isLoading, canGoBack && !blankBehind, canGoForward);
     }
 
     // A page's icons, 16 device-independent pixels across as a tab shows them.
@@ -1142,7 +1220,7 @@ internal sealed unsafe class WebViewBrowser : IDisposable
 
     /// <summary>A new page in the main frame: its icon is not known yet, and no icon asked for the last one is shown.
     /// </summary>
-    internal void OnLoadStart()
+    internal void OnLoadStart(string url)
     {
         // What the page left asked is asked no more: Chromium puts its prompts away itself, a media request is refused.
         for (var i = permissionsAsked.Count - 1; i >= 0; i--)
@@ -1157,6 +1235,11 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         inspected = null;
         iconsAsked++;
         view.IconChanged(this, null);
+        // The blank page's own start, late, is not the page that gives it away.
+        if (blankBehind && url != Blank)
+        {
+            ForgetTheBlankPage();
+        }
     }
 
     /// <summary>The page's icons as it names them, the one it prefers first: fetched in turn until one comes; none
@@ -1279,6 +1362,11 @@ internal sealed unsafe class WebViewBrowser : IDisposable
 
     internal void OnLoadError(WebViewLoadError error)
     {
+        if (OfTheBlankPage(error.Address))
+        {
+            return;
+        }
+
         errorPageFor = error.Address;
         failedAddress = error.Address;
         view.LoadFailed(this, error);
@@ -1336,38 +1424,97 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         if (!isDevTools)
         {
             var host = Host();
-            devTools.Attach(host);
+            scriptsPending = true;
+            devTools.Attach(host, view.ScriptsForNewDocuments(this), GoWhereWanted);
             CefRefCounting.ReleaseCef(host);
         }
 
         if (closing)
         {
             Close();
+            return;
         }
-        else
+
+        if (hidden)
         {
-            if (hidden)
-            {
-                SetHidden(true);
-            }
-
-            if (focused)
-            {
-                SetFocus(true);
-            }
-
-            if (Math.Abs(zoom - 1) > 1e-6)
-            {
-                SetZoom(zoom);
-            }
-
-            if (wanted != null && wanted != createdWith)
-            {
-                Navigate(wanted);
-            }
-
-            wanted = null;
+            SetHidden(true);
         }
+
+        if (focused)
+        {
+            SetFocus(true);
+        }
+
+        if (Math.Abs(zoom - 1) > 1e-6)
+        {
+            SetZoom(zoom);
+        }
+
+        if (!scriptsPending)
+        {
+            GoWhereWanted();
+        }
+    }
+
+    // Goes where the page was asked to before it could: once made, and for the application's page once it took its
+    // scripts for new documents.
+    private void GoWhereWanted()
+    {
+        scriptsPending = false;
+        if (closing)
+        {
+            return;
+        }
+
+        var first = wanted;
+        wanted = null;
+        if (madeBlank && first == Blank)
+        {
+            // Asked to be blank meanwhile: the blank page it was made with is the page asked for, and told as it.
+            madeBlank = false;
+            address = Blank;
+            view.AddressChanged(this, Blank);
+            view.LoadingChanged(this, false, false, false);
+            view.NavigationCompleted(this, Blank, null);
+            return;
+        }
+
+        if (first != null && first != createdWith)
+        {
+            blankBehind = madeBlank;
+            madeBlank = false;
+            Navigate(first);
+        }
+    }
+
+    // What the blank page the browser was made with says - nobody's to hear: its address, and while the browser is on
+    // it, all it tells.
+    private bool OfTheBlankPage(string url) => (madeBlank || blankBehind) && url == Blank;
+
+    // The page the blank one it was made with gave way to is there: the blank one goes from its history - nothing to
+    // go back to - and the history is told again once it went.
+    private void ForgetTheBlankPage()
+    {
+        var host = LiveHost();
+        if (host == null)
+        {
+            return;
+        }
+
+        devTools.ResetHistory(host, reset =>
+        {
+            blankBehind = false;
+            if (browser == null || closing)
+            {
+                return;
+            }
+
+            // Wiped, the history is the page alone - CEF tells what it last heard until the next loading change.
+            // Refused, the blank page stays behind, and is not hidden.
+            view.LoadingChanged(this, isLoading, !reset && browser->can_go_back(browser) != 0,
+                !reset && browser->can_go_forward(browser) != 0);
+        });
+        CefRefCounting.ReleaseCef(host);
     }
 
     /// <summary>A frame from CEF, the page's or its dropped list's; one no surface was free for is asked for again by
@@ -1581,6 +1728,43 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         }
     }
 
+    /// <summary>Runs <paramref name="script"/> in the page's script world <paramref name="context"/>; its value as
+    /// JSON.</summary>
+    internal Task<string> EvaluateInAsync(string context, string script)
+    {
+        var host = LiveHost();
+        if (host == null)
+        {
+            return Task.FromException<string>(new WebViewScriptException("The page went away."));
+        }
+
+        try
+        {
+            return devTools.EvaluateInAsync(host, context, script);
+        }
+        finally
+        {
+            CefRefCounting.ReleaseCef(host);
+        }
+    }
+
+    /// <summary>Hands the page the answer to its call of an object of the application's, into the script world it
+    /// called from.</summary>
+    internal void AnswerHost(string context, string json)
+    {
+        var host = LiveHost();
+        if (host == null)
+        {
+            return;
+        }
+
+        devTools.AnswerHost(host, context, json);
+        CefRefCounting.ReleaseCef(host);
+    }
+
+    /// <summary>Whether the page's script world <paramref name="context"/> is still there.</summary>
+    internal bool HasContext(string context) => !closing && devTools.HasContext(context);
+
     /// <summary>Hands the page a message, as JSON.</summary>
     public void Post(string json)
     {
@@ -1610,6 +1794,11 @@ internal sealed unsafe class WebViewBrowser : IDisposable
             return false;
         }
 
+        if (OfTheBlankPage(url))
+        {
+            return false;
+        }
+
         if (view.NavigationStarting(this, url, userGesture, isRedirect))
         {
             if (address != null)
@@ -1636,7 +1825,7 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         }
 
         // The failed load and Chromium's page for its error end too: completed already, with the error.
-        if (url == failedAddress)
+        if (url == failedAddress || OfTheBlankPage(url))
         {
             return;
         }

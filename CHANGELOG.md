@@ -7,6 +7,19 @@ All packages share one version.
 
 ### Added
 
+- `WebViewBridge.AddScriptToNewDocument` / `RemoveScriptFromNewDocument` / `ScriptsForNewDocuments`: a script every
+  document the page loads from then on runs before its own, `window.adamantium` already there - the first document
+  too, a page made again and a page this one opens. The page is made blank and goes to its address once it took them;
+  nobody hears of the blank page, and it leaves no history behind.
+- Objects of the application's a page calls: an interface marked `[WebHostObject]` is made, at build, into a
+  `WebHostObject` and a `WebViewBridge.AddHostObject(name, target, origins)` for it. The page calls
+  `await adamantium.hostObjects.name.method(...)` - methods by their camel-case names, arguments and answers as JSON
+  (`JsonSerializerOptions.Web`, or options given), an awaited method awaited, a throw refusing the promise, an interface
+  so marked answered as an object of its own (let go of with the page's), a function of the page's passed as an
+  `IWebScriptFunction`. Only the main frame of a page at an origin named reaches it; a call of anything else is
+  refused alike. Properties, events, overloads, `ref`/`out`, cancellation tokens and generic methods are build errors
+  (AWV001-AWV005).
+
 - Groups of draws inside one element (`IDrawingSession.PushGroup` / `PopGroup`, `DrawingGroupOptions`), as a PDF page
   puts down what lies between `q` and `Q`: cut to a path by its own fill rule, to glyphs (`PlacedGlyphRun`), let
   through a soft mask read by its alpha or by its luminosity over a backdrop color (`MaskKind`), faded as a whole and

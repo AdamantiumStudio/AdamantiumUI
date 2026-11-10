@@ -6,23 +6,69 @@ namespace Adamantium.UI.WebView.Cef;
 
 /// <summary>
 /// A browser's own DevTools protocol, spoken to run a script with its answer and to give its pages
-/// <c>window.adamantium</c>: a binding the page's messages arrive through, and a script on every new document that
-/// wraps it with <c>postMessage</c> and message listeners. Lives on the UI loop, where CEF calls back.
+/// <c>window.adamantium</c>: bindings the page's messages and its calls of the application's objects arrive through,
+/// and a script on every new document that wraps them with <c>postMessage</c>, message listeners and
+/// <c>hostObjects</c>. Lives on the UI loop, where CEF calls back.
 /// </summary>
 internal sealed class WebViewDevTools
 {
     private const string Binding = "__adamantiumPost";
+    private const string HostBinding = "__adamantiumHost";
 
+    /// <summary>What a function a page hands an object of the application's stands as in the call's arguments.
+    /// </summary>
+    public const string FunctionKey = "__adamantiumFunction";
+
+    // hostObjects.name.method(...) is a promise of the call's answer; a function among the arguments is kept by the
+    // page under a number - until the call is refused, the method does not take it, or the application lets go of
+    // it - and the object an answer may be stands for one of the application's until it, and every method taken from
+    // it, is let go of.
     private const string PageScript =
-        "(()=>{if(window.adamantium)return;const listeners=[];window.adamantium={" +
+        "(()=>{if(window.adamantium)return;" +
+        "const listeners=[],calls=new Map(),fns=new Map();let next=0,nextFn=0;" +
+        "const host=m=>" + HostBinding + "(JSON.stringify(m));" +
+        "const gone=new FinalizationRegistry(h=>{try{host({release:h})}catch(e){}});" +
+        "const drop=l=>{if(l)for(const f of l)fns.delete(f)};" +
+        "const call=(target,method,args,keep)=>new Promise((resolve,reject)=>{const id=++next,own=[];" +
+        "calls.set(id,{resolve,reject,own,keep});" +
+        "try{host({id,target,method,args:args.map(a=>{if(typeof a!=='function')return a===undefined?null:a;" +
+        "const f=++nextFn;fns.set(f,a);own.push(f);return{" + FunctionKey + ":f}})})}" +
+        "catch(e){calls.delete(id);drop(own);reject(e)}});" +
+        "const object=t=>{const p=new Proxy({},{get:(_,m)=>typeof m!=='string'||m==='then'?undefined:" +
+        "(...a)=>call(t,m,a,p)});return p};" +
+        "window.adamantium={" +
         "postMessage:m=>" + Binding + "(JSON.stringify(m))," +
         "addEventListener:(t,f)=>{if(t==='message')listeners.push(f)}," +
         "removeEventListener:(t,f)=>{const i=listeners.indexOf(f);if(i>=0)listeners.splice(i,1)}," +
-        "__receive:j=>{const data=JSON.parse(j);for(const f of listeners.slice())f({data})}};})()";
+        "__receive:j=>{const data=JSON.parse(j);for(const f of listeners.slice())f({data})}," +
+        "hostObjects:new Proxy({},{get:(_,n)=>typeof n!=='string'||n==='then'?undefined:object(n)})," +
+        "__hostReply:j=>{const r=JSON.parse(j),c=calls.get(r.id);if(!c)return;calls.delete(r.id);" +
+        "if('error' in r){drop(c.own);c.reject(new Error(r.error));return}drop(r.letGo);" +
+        "if('object' in r){const p=object(r.object);gone.register(p,r.object);c.resolve(p)}" +
+        "else c.resolve(r.value)}," +
+        "__call:(f,a)=>{const g=fns.get(f);if(!g)throw new Error('The function was let go of.');return g(...a)}," +
+        "__letGo:f=>{fns.delete(f)}};})()";
 
     private readonly Action<string> messageReceived;
+
+    // The page's script worlds: where each runs - its origin, its frame - so a call of the application's objects is
+    // answered only where they are let in.
+    private readonly Dictionary<int, (string Origin, string Frame, string Unique)> contexts = [];
+    private string mainFrame;
     private readonly Dictionary<int, TaskCompletionSource<JsonElement>> pending = [];
     private readonly Dictionary<int, (byte[] Id, bool EnablesOverlay)> forwarded = [];
+
+    // The scripts for new documents asked for, in order, each under the id of its call; the page's identifier for one
+    // comes with the answer, and one let go of before the answer came is removed then.
+    private readonly List<(WebDocumentScript Script, int Asked)> scriptsAsked = [];
+    private readonly Dictionary<int, string> scriptIdentifiers = [];
+    private readonly HashSet<int> scriptsLetGo = [];
+    private int pageScriptAsked;
+    private Action scriptsReady;
+    private int scriptsReadyAt;
+    private int lastScriptAnswered;
+    private readonly Dictionary<int, Action<JsonElement>> answeredOnTheLoop = [];
+
     private Action<string> frontEnd;
     private WebViewDevToolsObserver observer;
     private unsafe CefRegistration* registration;
@@ -34,16 +80,180 @@ internal sealed class WebViewDevTools
     }
 
     /// <summary>Starts speaking to the browser behind <paramref name="host"/>: its runtime, the page's binding and
-    /// script, for the documents to come and the one there now.</summary>
-    public unsafe void Attach(CefBrowserHost* host)
+    /// script, for the documents to come and the one there now, and <paramref name="scripts"/> for the documents to
+    /// come. <paramref name="ready"/> runs once the page has taken them all - a document loaded before would miss
+    /// them.</summary>
+    public unsafe void Attach(CefBrowserHost* host, IReadOnlyList<WebDocumentScript> scripts, Action ready)
     {
         observer = new WebViewDevToolsObserver(this);
         registration = host->add_dev_tools_message_observer(host, observer.Shared);
         Send(host, "Runtime.enable", null);
         Send(host, "Page.enable", null);
-        Send(host, "Runtime.addBinding", writer => writer.WriteString("name", Binding));
-        Send(host, "Page.addScriptToEvaluateOnNewDocument", writer => writer.WriteString("source", PageScript));
+        AddBindings(host);
+        AskForTheMainFrame(host);
+        AddScript(host, PageScript, id => pageScriptAsked = id);
+        SetScriptsForNewDocuments(host, scripts);
+        // The page answers in the order it is asked: the last script's answer comes after all the others.
+        scriptsReady = ready;
+        scriptsReadyAt = scriptsAsked.Count > 0 ? scriptsAsked[^1].Asked : pageScriptAsked;
+        if (lastScriptAnswered >= scriptsReadyAt)
+        {
+            TellScriptsReady();
+        }
+
         Prepare(host);
+    }
+
+    private void TellScriptsReady()
+    {
+        var ready = scriptsReady;
+        scriptsReady = null;
+        ready?.Invoke();
+    }
+
+    private unsafe void AddBindings(CefBrowserHost* host)
+    {
+        Send(host, "Runtime.addBinding", writer => writer.WriteString("name", Binding));
+        Send(host, "Runtime.addBinding", writer => writer.WriteString("name", HostBinding));
+    }
+
+    // The main frame is the root of the page's frame tree; a frame navigated without a parent is it too.
+    private unsafe void AskForTheMainFrame(CefBrowserHost* host) =>
+        Send(host, "Page.getFrameTree", null, id => answeredOnTheLoop[id] = result =>
+        {
+            if (result.ValueKind == JsonValueKind.Object && result.TryGetProperty("frameTree", out var tree) &&
+                tree.TryGetProperty("frame", out var frame) && frame.TryGetProperty("id", out var frameId))
+            {
+                mainFrame = frameId.GetString();
+            }
+        });
+
+    /// <summary>Wipes the page's history but the page it is at; <paramref name="answered"/> runs on the UI loop once it
+    /// is done (true) or refused.</summary>
+    public unsafe void ResetHistory(CefBrowserHost* host, Action<bool> answered) =>
+        Send(host, "Page.resetNavigationHistory", null,
+            id => answeredOnTheLoop[id] = result => answered(result.ValueKind == JsonValueKind.Object));
+
+    /// <summary>Raised on the UI loop when a page calls an object of the application's: the script world it calls from,
+    /// by its unique id - a number is another world's in another process - whether it runs in the main frame and at
+    /// which origin, and the call as JSON.</summary>
+    public Action<string, bool, string, string> HostCalled { get; set; }
+
+    /// <summary>Raised on the UI loop when a script world of the page, by its unique id, is gone - its document left -
+    /// with all it held.</summary>
+    public Action<string> ContextGone { get; set; }
+
+    /// <summary>Whether the script world <paramref name="context"/> is still there.</summary>
+    public bool HasContext(string context)
+    {
+        foreach (var world in contexts.Values)
+        {
+            if (world.Unique == context)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>Hands the answer to a call of the application's objects back into the script world it came from; a
+    /// world gone answers nothing, whoever has its number now.</summary>
+    public unsafe void AnswerHost(CefBrowserHost* host, string context, string json) =>
+        Send(host, "Runtime.evaluate", writer =>
+        {
+            writer.WriteString("expression", "window.adamantium&&window.adamantium.__hostReply(" + Quoted(json) + ")");
+            writer.WriteString("uniqueContextId", context);
+        });
+
+    /// <summary>Runs <paramref name="script"/> in the script world <paramref name="context"/>; its value as JSON, or the
+    /// page's message as a <see cref="WebViewScriptException"/> - also when the world is gone.</summary>
+    public unsafe Task<string> EvaluateInAsync(CefBrowserHost* host, string context, string script) =>
+        ValueOf(Call(host, "Runtime.evaluate", writer =>
+        {
+            writer.WriteString("expression", script);
+            writer.WriteString("uniqueContextId", context);
+            writer.WriteBoolean("returnByValue", true);
+            writer.WriteBoolean("awaitPromise", true);
+        }));
+
+    /// <summary>Has the page's documents from now on run <paramref name="scripts"/>, after its own
+    /// <c>window.adamantium</c>: those no longer there are taken away, those new added after the rest.</summary>
+    public unsafe void SetScriptsForNewDocuments(CefBrowserHost* host, IReadOnlyList<WebDocumentScript> scripts)
+    {
+        for (var i = scriptsAsked.Count - 1; i >= 0; i--)
+        {
+            if (!Contains(scripts, scriptsAsked[i].Script))
+            {
+                LetGoOfScript(host, scriptsAsked[i].Asked);
+                scriptsAsked.RemoveAt(i);
+            }
+        }
+
+        foreach (var script in scripts)
+        {
+            if (!scriptsAsked.Exists(asked => ReferenceEquals(asked.Script, script)))
+            {
+                AddScript(host, script.Source, id => scriptsAsked.Add((script, id)));
+            }
+        }
+
+        // One added while the first address waits for the scripts is waited for too.
+        if (scriptsReady != null && scriptsAsked.Count > 0)
+        {
+            scriptsReadyAt = Math.Max(scriptsReadyAt, scriptsAsked[^1].Asked);
+        }
+    }
+
+    private static bool Contains(IReadOnlyList<WebDocumentScript> scripts, WebDocumentScript script)
+    {
+        foreach (var each in scripts)
+        {
+            if (ReferenceEquals(each, script))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private unsafe void AddScript(CefBrowserHost* host, string source, Action<int> asked) =>
+        Send(host, "Page.addScriptToEvaluateOnNewDocument", writer => writer.WriteString("source", source), asked);
+
+    private unsafe void LetGoOfScript(CefBrowserHost* host, int asked)
+    {
+        if (scriptIdentifiers.Remove(asked, out var identifier))
+        {
+            RemoveScript(host, identifier);
+        }
+        else
+        {
+            scriptsLetGo.Add(asked);
+        }
+    }
+
+    private unsafe void RemoveScript(CefBrowserHost* host, string identifier) =>
+        Send(host, "Page.removeScriptToEvaluateOnNewDocument", writer => writer.WriteString("identifier", identifier));
+
+    // The answer to a script for new documents asked for under id: its identifier is kept, or the script removed when
+    // it was let go of meanwhile.
+    private unsafe void TakeScriptAnswer(CefBrowserHost* host, int id, ReadOnlySpan<byte> message)
+    {
+        var letGo = scriptsLetGo.Remove(id);
+        using var document = JsonDocument.Parse(message.ToArray(), Whole);
+        if (document.RootElement.TryGetProperty("result", out var result) &&
+            result.TryGetProperty("identifier", out var identifier))
+        {
+            if (letGo)
+            {
+                RemoveScript(host, identifier.GetString());
+            }
+            else
+            {
+                scriptIdentifiers[id] = identifier.GetString();
+            }
+        }
     }
 
     /// <summary>Gives the page there now its <c>window.adamantium</c>, when the script for new documents came too late
@@ -100,7 +310,8 @@ internal sealed class WebViewDevTools
     /// <summary>A front end went, or another took its place: its calls are forgotten - their answers would reach the
     /// next under the same ids - and what it may have left the page in is undone: a debugger paused at a breakpoint,
     /// the inspect overlay, a device emulated, new targets held for a debugger, the cache off. The page's own runtime,
-    /// page and binding are asked for again.</summary>
+    /// page, binding and scripts for new documents are asked for again - turning the page off drops the scripts.
+    /// </summary>
     public unsafe void FrontEndGone(CefBrowserHost* host)
     {
         forwarded.Clear();
@@ -121,7 +332,19 @@ internal sealed class WebViewDevTools
         Send(host, "Network.setCacheDisabled", writer => writer.WriteBoolean("cacheDisabled", false));
         Send(host, "Runtime.enable", null);
         Send(host, "Page.enable", null);
-        Send(host, "Runtime.addBinding", writer => writer.WriteString("name", Binding));
+        AddBindings(host);
+
+        var scripts = new List<WebDocumentScript>(scriptsAsked.Count);
+        LetGoOfScript(host, pageScriptAsked);
+        foreach (var (script, asked) in scriptsAsked)
+        {
+            scripts.Add(script);
+            LetGoOfScript(host, asked);
+        }
+
+        scriptsAsked.Clear();
+        AddScript(host, PageScript, id => pageScriptAsked = id);
+        SetScriptsForNewDocuments(host, scripts);
     }
 
     /// <summary>Hands the page a call of the DevTools front end's, as JSON: under an id of ours, so it never meets one of
@@ -193,6 +416,7 @@ internal sealed class WebViewDevTools
         }
 
         pending.Clear();
+        ForgetScripts();
         if (registration != null)
         {
             CefRefCounting.ReleaseCef(registration);
@@ -201,6 +425,20 @@ internal sealed class WebViewDevTools
 
         observer?.Release();
         observer = null;
+    }
+
+    private void ForgetScripts()
+    {
+        scriptsAsked.Clear();
+        scriptIdentifiers.Clear();
+        scriptsLetGo.Clear();
+        pageScriptAsked = 0;
+        scriptsReady = null;
+        scriptsReadyAt = 0;
+        lastScriptAnswered = 0;
+        answeredOnTheLoop.Clear();
+        ForgetContexts();
+        mainFrame = null;
     }
 
     /// <summary>Forgets the browser CEF did not close before it shut down: what was asked fails, nothing is released
@@ -213,6 +451,7 @@ internal sealed class WebViewDevTools
         }
 
         pending.Clear();
+        ForgetScripts();
         registration = null;
         observer = null;
     }
@@ -221,9 +460,9 @@ internal sealed class WebViewDevTools
     // real site's document tree nests far past a JSON reader's usual depth, and a message lost to it leaves the front
     // end waiting for an answer forever. Only our own answers and the page's binding calls, both shallow, are read
     // whole.
-    internal void OnMessage(ReadOnlySpan<byte> message)
+    internal unsafe void OnMessage(CefBrowser* browser, ReadOnlySpan<byte> message)
     {
-        if (!TryReadTop(message, out var idRange, out var method))
+        if (!TryReadTop(message, out var idRange, out var method, out var ofASession))
         {
             return;
         }
@@ -231,9 +470,23 @@ internal sealed class WebViewDevTools
         if (idRange.Start < 0)
         {
             frontEnd?.Invoke(System.Text.Encoding.UTF8.GetString(message));
-            if (method == "Runtime.bindingCalled")
+            // What a frame, worker or prerender the front end attached to tells is its own, not the page's.
+            if (ofASession)
             {
-                OnBindingCalled(message);
+                return;
+            }
+
+            switch (method)
+            {
+                case "Runtime.bindingCalled":
+                    OnBindingCalled(message);
+                    break;
+                case "Runtime.executionContextCreated":
+                case "Runtime.executionContextDestroyed":
+                case "Runtime.executionContextsCleared":
+                case "Page.frameNavigated":
+                    OnPageWorlds(method, message);
+                    break;
             }
 
             return;
@@ -253,6 +506,28 @@ internal sealed class WebViewDevTools
                 OverlayHeard?.Invoke();
             }
 
+            return;
+        }
+
+        if (browser != null && (scriptsLetGo.Contains(id) || id == pageScriptAsked ||
+                                scriptsAsked.Exists(asked => asked.Asked == id)))
+        {
+            var host = browser->get_host(browser);
+            TakeScriptAnswer(host, id, message);
+            CefRefCounting.ReleaseCef(host);
+            lastScriptAnswered = id;
+            if (id == scriptsReadyAt)
+            {
+                TellScriptsReady();
+            }
+
+            return;
+        }
+
+        if (answeredOnTheLoop.Remove(id, out var answered))
+        {
+            using var document = JsonDocument.Parse(message.ToArray(), Whole);
+            answered(document.RootElement.TryGetProperty("result", out var result) ? result.Clone() : default);
             return;
         }
 
@@ -279,20 +554,96 @@ internal sealed class WebViewDevTools
     private void OnBindingCalled(ReadOnlySpan<byte> message)
     {
         using var document = JsonDocument.Parse(message.ToArray(), Whole);
-        if (document.RootElement.TryGetProperty("params", out var parameters) &&
-            parameters.TryGetProperty("name", out var name) && name.GetString() == Binding &&
-            parameters.TryGetProperty("payload", out var payload))
+        if (!document.RootElement.TryGetProperty("params", out var parameters) ||
+            !parameters.TryGetProperty("name", out var name) || !parameters.TryGetProperty("payload", out var payload))
+        {
+            return;
+        }
+
+        var bindingName = name.GetString();
+        if (bindingName == Binding)
         {
             messageReceived(payload.GetString());
         }
+        else if (bindingName == HostBinding && parameters.TryGetProperty("executionContextId", out var contextId) &&
+                 contexts.TryGetValue(contextId.GetInt32(), out var world) && world.Unique != null)
+        {
+            HostCalled?.Invoke(world.Unique, world.Frame != null && world.Frame == mainFrame, world.Origin,
+                payload.GetString());
+        }
     }
 
-    // The top of a protocol message: where its id's value stands (Start -1 for none) and its method, the rest skipped
-    // unread whatever its depth. False for what is not an object.
-    private static bool TryReadTop(ReadOnlySpan<byte> json, out (int Start, int End) id, out string method)
+    private void OnPageWorlds(string method, ReadOnlySpan<byte> message)
+    {
+        using var document = JsonDocument.Parse(message.ToArray(), Whole);
+        if (!document.RootElement.TryGetProperty("params", out var parameters))
+        {
+            return;
+        }
+
+        switch (method)
+        {
+            case "Runtime.executionContextCreated":
+                if (parameters.TryGetProperty("context", out var context) && context.TryGetProperty("id", out var id))
+                {
+                    var origin = context.TryGetProperty("origin", out var o) ? o.GetString() : null;
+                    var frame = context.TryGetProperty("auxData", out var aux) && aux.TryGetProperty("frameId", out var f)
+                        ? f.GetString()
+                        : null;
+                    var unique = context.TryGetProperty("uniqueId", out var u) ? u.GetString() : null;
+                    if (contexts.Remove(id.GetInt32(), out var before) && before.Unique != unique)
+                    {
+                        ContextGone?.Invoke(before.Unique);
+                    }
+
+                    contexts[id.GetInt32()] = (origin, frame, unique);
+                }
+
+                break;
+            case "Runtime.executionContextDestroyed":
+                if (parameters.TryGetProperty("executionContextId", out var gone) &&
+                    contexts.Remove(gone.GetInt32(), out var goneWorld))
+                {
+                    ContextGone?.Invoke(goneWorld.Unique);
+                }
+
+                break;
+            case "Runtime.executionContextsCleared":
+                ForgetContexts();
+                break;
+            case "Page.frameNavigated":
+                if (parameters.TryGetProperty("frame", out var navigated) && !navigated.TryGetProperty("parentId", out _) &&
+                    navigated.TryGetProperty("id", out var frameId))
+                {
+                    mainFrame = frameId.GetString();
+                }
+
+                break;
+        }
+    }
+
+    // Every script world of the page gone: what each held goes with it.
+    private void ForgetContexts()
+    {
+        foreach (var world in contexts.Values)
+        {
+            ContextGone?.Invoke(world.Unique);
+        }
+
+        contexts.Clear();
+    }
+
+    // The top of a protocol message: where its id's value stands (Start -1 for none), its method and whether it is of
+    // a session the front end attached to, the rest skipped unread whatever its depth. False for what is not an object.
+    private static bool TryReadTop(ReadOnlySpan<byte> json, out (int Start, int End) id, out string method) =>
+        TryReadTop(json, out id, out method, out _);
+
+    private static bool TryReadTop(ReadOnlySpan<byte> json, out (int Start, int End) id, out string method,
+        out bool ofASession)
     {
         id = (-1, -1);
         method = null;
+        ofASession = false;
         var reader = new Utf8JsonReader(json, new JsonReaderOptions { MaxDepth = int.MaxValue });
         try
         {
@@ -305,6 +656,7 @@ internal sealed class WebViewDevTools
             {
                 var isId = reader.ValueTextEquals("id"u8);
                 var isMethod = !isId && reader.ValueTextEquals("method"u8);
+                ofASession |= reader.ValueTextEquals("sessionId"u8);
                 reader.Read();
                 if (isId && reader.TokenType is JsonTokenType.Number or JsonTokenType.String)
                 {
@@ -353,13 +705,17 @@ internal sealed class WebViewDevTools
     private unsafe Task<JsonElement> Call(CefBrowserHost* host, string method, Action<Utf8JsonWriter> parameters)
     {
         var call = new TaskCompletionSource<JsonElement>(TaskCreationOptions.RunContinuationsAsynchronously);
-        pending[Send(host, method, parameters)] = call;
+        Send(host, method, parameters, id => pending[id] = call);
         return call.Task;
     }
 
-    private unsafe int Send(CefBrowserHost* host, string method, Action<Utf8JsonWriter> parameters)
+    // What the browser itself answers, it answers before sending returns: whoever waits for the answer is told the id
+    // through asked before it is sent.
+    private unsafe int Send(CefBrowserHost* host, string method, Action<Utf8JsonWriter> parameters,
+        Action<int> asked = null)
     {
         var id = ++nextId;
+        asked?.Invoke(id);
         var buffer = new ArrayBufferWriter<byte>();
         using (var writer = new Utf8JsonWriter(buffer))
         {
