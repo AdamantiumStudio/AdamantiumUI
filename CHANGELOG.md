@@ -260,6 +260,10 @@ All packages share one version.
 
 ### Fixed
 
+- A rectangle, ellipse or regular polygon whose brush changes into one no batch can record drew nothing: it had been
+  built for the batch and was left without a body of its own. It gets one, and is drawn.
+- A gradient with more than eight stops drew its first eight and padded past them; how many are drawn is now said
+  (`GradientBrush.MaxRenderedStops`).
 - `WebView` on Linux: Chromium's processes start - each is exec'd instead of forked from a zygote, which the .NET
   helper did not live through - and a key typed reaches the page as the key in that place (`KeyboardEvent.code`), from
   its XKB code. The evdev key table is one public type, `EvdevKeyCodes`, both ways.
