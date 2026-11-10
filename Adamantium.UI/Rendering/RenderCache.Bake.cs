@@ -383,6 +383,7 @@ public partial class RenderCache
         _instancedFill?.Dispose();
         _transformTable?.Dispose();
         _offscreenLayers?.Dispose();
+        DisposeGroupBackdrops();
         DisposeRecordings();
 
         _rectBatch = null;

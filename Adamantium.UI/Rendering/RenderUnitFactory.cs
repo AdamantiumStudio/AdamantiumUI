@@ -35,6 +35,7 @@ public class RenderUnitFactory : IRenderUnitFactory, IDisposable
         RegisterFactory<ImagePayload>(command => new ImageRenderUnit(command, _context));
         RegisterFactory<GeometryPayload>(command => new GeometryRenderUnit(command, _context));
         RegisterFactory<TextPayload>(command => new TextRenderUnit(command, _context));
+        RegisterFactory<GroupMarkPayload>(command => new GroupMarkRenderUnit(command, _context));
     }
 
     public void RegisterFactory<T>(Func<IDrawCommand, IRenderUnit> factory)

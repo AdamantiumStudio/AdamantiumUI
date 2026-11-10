@@ -22,6 +22,7 @@ public partial class RenderCache
         // contiguous range of the stream - and saying it this way is what makes the structure of a recorded frame legible:
         // the stream is a flat list, the layers are what it MEANS.
         var reusedDepth = 0;
+        ResetGroups();
         foreach (var layer in _layers)
             for (var i = layer.OpFirst; i < layer.OpFirst + layer.OpCount; i++)
             {
@@ -61,6 +62,9 @@ public partial class RenderCache
                         break;
                     case RenderOpKind.BandsEnd:
                         fullScissor = CloseBands(device);
+                        break;
+                    case RenderOpKind.Group:
+                        fullScissor = ReplayGroupMark(device, (GroupMarkRenderUnit)op.Unit, fullScissor);
                         break;
                     case RenderOpKind.Unit:
                         // Per-unit draws bake their world and projection at record time while batches follow slots live,

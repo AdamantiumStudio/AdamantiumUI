@@ -47,4 +47,8 @@ public class RenderData
     public double RenderScale { get; set; } = 1.0;
 
     public Effect CustomEffect { get; }
+
+    /// <summary>The command draws a mask of a group of draws (<see cref="IDrawingSession.PushGroup"/>): at full strength,
+    /// with no fade and no bands - the element's opacity reaches the group it lets through.</summary>
+    public bool DrawsMask { get; init; }
 }

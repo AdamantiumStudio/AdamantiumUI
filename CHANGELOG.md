@@ -7,6 +7,18 @@ All packages share one version.
 
 ### Added
 
+- Groups of draws inside one element (`IDrawingSession.PushGroup` / `PopGroup`, `DrawingGroupOptions`), as a PDF page
+  puts down what lies between `q` and `Q`: cut to a path by its own fill rule, to glyphs (`PlacedGlyphRun`), let
+  through a soft mask read by its alpha or by its luminosity over a backdrop color (`MaskKind`), faded as a whole and
+  laid down by any of the sixteen PDF blend modes (`BlendMode`). A group is drawn apart into a target the size of what
+  it shows and laid down at its end; one that only cuts to a rectangle along the axes is cut by a scissor, with no
+  target. Groups nest; one left open ends with its element's drawing; a group's masks are drawn at full strength, the
+  element's opacity reaching the group itself. While the frame a window last recorded holds any group, a move anywhere
+  in the window - a scroll, a placement, a composited animation - draws the window again rather than replaying it.
+- `IDrawingSession.DrawGlyphs` and `GlyphRun`: glyphs the caller placed, by index and pen position, drawn where one
+  matrix puts the run - filled through the glyph atlas, outlined as paths (`GlyphRun.Outline`).
+- The sandbox has a "PDF drawing" tab: clips by a path, a rectangle and letters, both soft masks, a group in a group and
+  every blend mode.
 - `IWindow.TakeScreenshotAsync`: the frame the window shows, read back from the target it draws into - popups,
   adorners and hosted surfaces included - at its pixel size, once it has drawn its next frame
   (`IWindowRenderer.RequestScreenshot` beneath it).
@@ -122,6 +134,8 @@ All packages share one version.
 
 ### Changed
 
+- The sandbox's color-profile pictures are six large patches of saturated colors and a gray ramp - where a wide gamut
+  differs from sRGB most - instead of a color wheel, which differed little and had no smooth edge.
 - `adam-auto` talks, unless `--pipe` names one, on a pipe of the working copy it was built in - the folder above its
   `artifacts`, whichever project's output it runs from - instead of `adam-auto` for everyone: instances started from
   two working copies at once no longer answer for each other.

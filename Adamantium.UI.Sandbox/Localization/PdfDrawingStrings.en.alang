@@ -1,0 +1,14 @@
+<Language>
+    <Phrase Key="Title" Text="PDF drawing — groups of draws inside one element"/>
+    <Phrase Key="Hint" Text="Each sample is one element. Its drawing pushes a group, draws a picture into it and pops it: the group is cut, masked or blended as a whole, the way a PDF page puts down what lies between q and Q."/>
+    <Phrase Key="Clips" Text="Clipping"/>
+    <Phrase Key="StarClip" Text="By a path (nonzero)"/>
+    <Phrase Key="EvenOddClip" Text="By a path (even-odd)"/>
+    <Phrase Key="RectangleClip" Text="By a rectangle — a scissor"/>
+    <Phrase Key="TextClip" Text="By letters"/>
+    <Phrase Key="Masks" Text="Soft masks and nesting"/>
+    <Phrase Key="LuminosityMask" Text="Mask by luminosity"/>
+    <Phrase Key="AlphaMask" Text="Mask by alpha"/>
+    <Phrase Key="Nested" Text="A group in a group"/>
+    <Phrase Key="BlendModes" Text="Blend modes — three discs over the picture"/>
+</Language>
