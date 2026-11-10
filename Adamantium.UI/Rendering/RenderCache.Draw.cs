@@ -14,7 +14,7 @@ namespace Adamantium.UI.Rendering;
 
 // What one recorded draw IS. At namespace scope because an ARENA is asked whether a recorded op draws it (see
 // BatchArena.MatchesOp) - the instanced fill is drawn by a flush op, not by a segment op, and that is its own business.
-internal enum RenderOpKind : byte { Scissor, Unit, Segment, InstancedFlush, LayerBegin, LayerEnd, BandsBegin, BandsEnd }
+internal enum RenderOpKind : byte { Scissor, Unit, Segment, InstancedFlush, LayerBegin, LayerEnd, BandsBegin, BandsEnd, Group }
 
 public partial class RenderCache
 {
@@ -825,6 +825,7 @@ public partial class RenderCache
         // Clean-frame replay: re-issue the last recorded walk's op stream and skip the per-unit loop (the retained buffers
         // still hold its bytes). Only a fully-Clean build qualifies; a Partial/Full re-walks and re-records.
         if (device != null && !ReplayDisabled && _opsRecorded && _opsReplayable && LastBuildKind == RenderBuildKind.Clean && OpsMatchTransforms
+            && GroupsHoldStill()                  // groups of draws were laid out where things stood: a move needs a walk
             && RefreshMovedNodes(device)          // moved nodes first: write their matrices, or the replay draws them where they were
             && RefreshMovedComponents(device, fullScissor)     // ...and the ordinary movers' subtrees, for the same reason
             && RefreshMovedPlacements(device))                 // ...and the placements, last, from the worlds now
@@ -847,7 +848,8 @@ public partial class RenderCache
         // ExecuteOps redraws batch segments from last frame's baked positions, so a MOVE would leave batched fills stale
         // while per-unit draws follow the new transform (the "outline runs ahead of its fill" tear) -> fall through to the walk.
         if (device != null && !PatchDisabled && _opsRecorded && _opsReplayable && LastBuildKind == RenderBuildKind.Partial
-            && !LastBuildTransformDirty && OpsMatchTransforms && !_partialSpliced && _rectBatch != null && TryPartialReplay(device, fullScissor))
+            && !LastBuildTransformDirty && OpsMatchTransforms && !_partialSpliced && _rectBatch != null && GroupsHoldStill()
+            && TryPartialReplay(device, fullScissor))
         { LastFrameReplayed = true; LastDrawPath = DrawPath.Patch; return; }
 
         // SPLICED partial patch: a dirty control's unit COUNT changed (hover background 0<->1, a live chart re-recording a
@@ -855,7 +857,8 @@ public partial class RenderCache
         // surgery (excise its old run, its re-baked items append as a new segment spliced into the op stream at the same
         // paint position) then replayed. O(dirty groups). Falls back to the full walk on anything not yet patchable.
         if (device != null && !PatchDisabled && _opsRecorded && _opsReplayable && LastBuildKind == RenderBuildKind.Partial
-            && !LastBuildTransformDirty && OpsMatchTransforms && _partialSpliced && _rectBatch != null && TrySplicedPatch(device, fullScissor))
+            && !LastBuildTransformDirty && OpsMatchTransforms && _partialSpliced && _rectBatch != null && GroupsHoldStill()
+            && TrySplicedPatch(device, fullScissor))
         { LastFrameReplayed = true; LastDrawPath = DrawPath.Splice; return; }
 
         // Traced: WHY this frame is walking instead of patching - the walk is O(scene) and the patch is O(dirty), so
@@ -886,7 +889,8 @@ public partial class RenderCache
         {
             _ops.Clear();
             _layers.Clear();
-            _openLayer = null; 
+            _opsHoldCommandGroups = false;
+            _openLayer = null;
             _opsReplayable = true; 
             _rectSlotByUnit.Clear();
             _sdfSlotByUnit.Clear();
@@ -986,6 +990,7 @@ public partial class RenderCache
         ControlGroup cloneHost = null;
         var recordingBeforeClones = _recording;
         _bandsDrawnUnder = null;
+        ResetGroups();
 
         for (var groupIndex = 0; groupIndex < _groups.Count; groupIndex++)
         {
@@ -1025,8 +1030,9 @@ public partial class RenderCache
                 }
             }
 
-            foreach (var unit in group.Units)
+            for (var unitIndex = 0; unitIndex < group.Units.Count; unitIndex++)
             {
+            var unit = group.Units[unitIndex];
             // Group boundary (recording walks): reset this group's spliced-patch records once per group (re-derived by the
             // draw decisions below). Boundary detection instead of an outer block keeps the hot loop flat.
             if (_recording && !ReferenceEquals(group, _walkGroup))
@@ -1049,6 +1055,18 @@ public partial class RenderCache
                 _clonedWhenRecorded.Add(group);
             }
 
+            // A mark of a group of the element's draws: a target opened or laid down here, and whatever of the group is not
+            // drawn passed over.
+            if (unit is GroupMarkRenderUnit groupMark)
+            {
+                if (device != null)
+                {
+                    unitIndex = WalkGroupMark(device, group, unitIndex, groupMark, ref fullScissor, ref scissorNarrowed) - 1;
+                }
+
+                continue;
+            }
+
             // Text bakes from its component's brush snapshot, so refresh it once here for every bake path below.
             if (unit is TextRenderUnit walkText) walkText.RefreshColors();
 
@@ -1069,6 +1087,14 @@ public partial class RenderCache
             if (device != null)
             {
                 scissor = ResolveScissor(unit.Component, wt, fullScissor, out clipped, out var cull);
+                // Inside a group that cuts to a rectangle, the rectangle cuts too.
+                if (_commandScissor is { } commandScissor)
+                {
+                    scissor = Intersect(scissor, commandScissor);
+                    clipped = true;
+                    cull |= scissor.Extent.Width == 0 || scissor.Extent.Height == 0;
+                }
+
                 // Owner entirely outside its clip (a virtualized item just off the viewport, content sliding out): draw
                 // nothing, feed no batch. The per-surviving-unit scissor is set below.
                 if (cull)
@@ -1980,6 +2006,11 @@ public partial class RenderCache
             unit.Render();
             _unitDrewMoving |= unit.DrawsMoving;
             if (_recording) RecordOp(new RenderOp { Kind = RenderOpKind.Unit, Unit = unit, Fade = unit.FadeSlot, Order = _recordOrder });
+            }
+
+            if (device != null && _openGroups.Count > 0)
+            {
+                EndGroupsLeftOpen(device, ref fullScissor, ref scissorNarrowed);
             }
 
             // End of a clone run's subtree: rewind to its first group under the next matrix, or leave the run.

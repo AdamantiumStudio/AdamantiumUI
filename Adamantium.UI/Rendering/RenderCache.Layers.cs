@@ -740,46 +740,54 @@ public partial class RenderCache
 
     private Rect LocalInk(IRenderUnit unit, Size<double> size, bool bands = true)
     {
-        var ink = new Rect(0, 0, size.Width, size.Height);
+        var box = new Rect(0, 0, size.Width, size.Height);
+        return (DrawnInk(unit, bands, out var grow) is { } drawn ? Union(box, drawn) : box).Inflate(grow);
+    }
+
+    // What the unit's own draw covers in its element's units, before it grows by `grow` - its pen and its bands; null for
+    // a unit whose ink is not known, or that has none (a group's mark).
+    private Rect? DrawnInk(IRenderUnit unit, bool bands, out double grow)
+    {
+        Rect? ink = null;
         var pen = 0.0;
         switch (unit)
         {
             case RectangleRenderUnit { Payload: { } rectangle }:
-                ink = Union(ink, Placed(rectangle, rectangle.DestinationRect));
+                ink = Placed(rectangle, rectangle.DestinationRect);
                 pen = rectangle.Pen?.Thickness ?? 0;
                 break;
             case EllipseRenderUnit { Payload: { } ellipse }:
-                ink = Union(ink, Placed(ellipse, ellipse.DestinationRect));
+                ink = Placed(ellipse, ellipse.DestinationRect);
                 pen = (ellipse.Pen?.Thickness ?? 0) / 2;
                 break;
             case RegularPolygonRenderUnit { Payload: { } polygon }:
-                ink = Union(ink, Placed(polygon, polygon.DestinationRect));
+                ink = Placed(polygon, polygon.DestinationRect);
                 pen = MiterReach * (polygon.Pen?.Thickness ?? 0);
                 break;
             case ImageRenderUnit { Payload: { } image }:
-                ink = Union(ink, image.DestinationRect);
+                ink = image.DestinationRect;
                 break;
             case GeometryRenderUnit { Payload.Geometry: { } geometry } shape:
                 var place = shape.Payload.Placement is { } placed
                     ? shape.Payload.LocalTransform * Newest(placed)
                     : shape.Payload.LocalTransform;
                 var stroke = MiterReach * LocalWidth(shape.Payload.Pen, place * World(shape.Component));
-                ink = Union(ink, geometry.Bounds.Inflate(stroke).TransformToAABB(place));
+                ink = geometry.Bounds.Inflate(stroke).TransformToAABB(place);
                 break;
             case LineRenderUnit { Payload: { } line }:
-                ink = Union(ink, new Rect(
+                ink = new Rect(
                     System.Math.Min(line.LineStart.X, line.LineEnd.X),
                     System.Math.Min(line.LineStart.Y, line.LineEnd.Y),
                     System.Math.Abs(line.LineEnd.X - line.LineStart.X),
-                    System.Math.Abs(line.LineEnd.Y - line.LineStart.Y)));
+                    System.Math.Abs(line.LineEnd.Y - line.LineStart.Y));
                 pen = MiterReach * (line.Pen?.Thickness ?? 0);
                 break;
             case TextRenderUnit { Payload: { } text }:
                 var overhang = text.DesiredSize.Height * TextOverhang;
-                ink = Union(ink, new Rect(0, 0, text.DesiredSize.Width, text.DesiredSize.Height).Inflate(overhang)
-                    .TransformToAABB(text.Placement is { } textPlaced
-                        ? text.LocalTransform * Newest(textPlaced)
-                        : text.LocalTransform));
+                var drawn = text.Ink ?? new Rect(0, 0, text.DesiredSize.Width, text.DesiredSize.Height).Inflate(overhang);
+                ink = drawn.TransformToAABB(text.Placement is { } textPlaced
+                    ? text.LocalTransform * Newest(textPlaced)
+                    : text.LocalTransform);
                 break;
         }
 
@@ -787,7 +795,8 @@ public partial class RenderCache
             ? 0
             : System.Math.Max(HaloRectCollector.MaxReach(unit.RenderData.Halo),
                 HaloLivingCollector.MaxReach(unit.RenderData.LivingHalo));
-        return ink.Inflate(pen + reach);
+        grow = pen + reach;
+        return ink;
     }
 
     // A pen's width in the units of the space toWindow maps to the window: window-unit widths and device minimums undone

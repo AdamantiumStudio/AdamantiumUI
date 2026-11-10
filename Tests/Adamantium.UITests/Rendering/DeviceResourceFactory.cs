@@ -34,5 +34,15 @@ internal sealed class DeviceResourceFactory : IResourceFactory
     public IRenderTarget CreateRenderTarget(uint width, uint height, MSAALevel msaa, SurfaceFormat format, ImageLayout desiredLayout)
         => throw new NotSupportedException();
 
-    public FontRenderer GetFontRenderer(IGraphicsDevice graphicsDevice) => throw new NotSupportedException();
+    private readonly Dictionary<IGraphicsDevice, FontRenderer> _fontRenderers = new();
+
+    public FontRenderer GetFontRenderer(IGraphicsDevice graphicsDevice)
+    {
+        if (!_fontRenderers.TryGetValue(graphicsDevice, out var renderer))
+        {
+            _fontRenderers[graphicsDevice] = renderer = new FontRenderer(graphicsDevice);
+        }
+
+        return renderer;
+    }
 }

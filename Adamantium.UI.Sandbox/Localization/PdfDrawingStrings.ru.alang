@@ -1,0 +1,14 @@
+<Language>
+    <Phrase Key="Title" Text="Рисование PDF — группы рисования внутри одного элемента"/>
+    <Phrase Key="Hint" Text="Каждый образец — один элемент. Он открывает группу, рисует в неё картинку и закрывает её: группа обрезается, маскируется или накладывается целиком — так страница PDF кладёт то, что между q и Q."/>
+    <Phrase Key="Clips" Text="Обрезка"/>
+    <Phrase Key="StarClip" Text="Путём (ненулевое правило)"/>
+    <Phrase Key="EvenOddClip" Text="Путём (чёт-нечет)"/>
+    <Phrase Key="RectangleClip" Text="Прямоугольником — ножницы"/>
+    <Phrase Key="TextClip" Text="Буквами"/>
+    <Phrase Key="Masks" Text="Мягкие маски и вложение"/>
+    <Phrase Key="LuminosityMask" Text="Маска по яркости"/>
+    <Phrase Key="AlphaMask" Text="Маска по альфе"/>
+    <Phrase Key="Nested" Text="Группа в группе"/>
+    <Phrase Key="BlendModes" Text="Режимы наложения — три круга поверх картинки"/>
+</Language>

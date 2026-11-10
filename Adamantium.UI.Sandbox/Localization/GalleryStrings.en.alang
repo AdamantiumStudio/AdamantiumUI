@@ -44,6 +44,7 @@
     <Phrase Key="VectorIcons" Text="Vector icons"/>
     <Phrase Key="Layout" Text="Layout"/>
     <Phrase Key="Clipping" Text="Clipping"/>
+    <Phrase Key="PdfDrawing" Text="PDF drawing"/>
     <Phrase Key="Opacity" Text="Opacity"/>
     <Phrase Key="Viewbox" Text="Viewbox"/>
     <Phrase Key="ZoomBox" Text="ZoomBox"/>

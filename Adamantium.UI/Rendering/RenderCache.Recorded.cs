@@ -104,7 +104,7 @@ public partial class RenderCache
     {
         foreach (var op in _ops)
         {
-            if (op.Kind == RenderOpKind.LayerBegin
+            if (op.Kind is RenderOpKind.LayerBegin or RenderOpKind.Group
                 || (op.Kind == RenderOpKind.Segment && op.Batch == 13)
                 || (op.Kind == RenderOpKind.InstancedFlush && _instancedFill.FlushDrawsMaterials(op.SegId)))
             {

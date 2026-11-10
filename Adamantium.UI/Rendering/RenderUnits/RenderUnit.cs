@@ -255,14 +255,16 @@ public abstract class RenderUnit<TPayload> : DeferredDisposableObject, IRenderUn
     // consumer (batch FillOpacity, the per-unit fill/stroke/fringe) reads RenderData.Opacity, so one write covers them
     // all. What an ANCESTOR contributes does not come through here: that is the fade chain, read from the slot table at
     // draw time, so fading a container costs one float instead of a re-bake of its whole subtree.
+    // A group's mask is drawn at full strength: the element's opacity and its fades reach the group it lets through, and
+    // would reach it twice if the mask carried them too.
     public void SetEffectiveOpacity(float opacity)
     {
-        if (DrawCommand?.RenderData is { } rd) rd.Opacity = opacity;
+        if (DrawCommand?.RenderData is { } rd) rd.Opacity = rd.DrawsMask ? 1f : opacity;
     }
 
     public int FadeSlot { get; private set; } = -1;
 
-    public void SetFadeSlot(int slot) => FadeSlot = slot;
+    public void SetFadeSlot(int slot) => FadeSlot = DrawCommand?.RenderData is { DrawsMask: true } ? -1 : slot;
 
     public virtual void Update(Matrix4x4F transform, Matrix4x4F projection, double renderScale)
     {
