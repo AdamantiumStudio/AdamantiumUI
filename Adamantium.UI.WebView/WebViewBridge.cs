@@ -23,6 +23,13 @@ public sealed class WebViewBridge
     /// goes there itself.</summary>
     public event EventHandler<WebNewWindowRequestedEventArgs> NewWindowRequested;
 
+    /// <summary>The page's file field asks for files: the view model asks the user, or the page gets none.</summary>
+    public event EventHandler<WebFileDialogRequestedEventArgs> FileDialogRequested;
+
+    /// <summary>A site asks to use something it was never answered for: the view model asks the user, or it is refused.
+    /// </summary>
+    public event EventHandler<WebPermissionRequestedEventArgs> PermissionRequested;
+
     /// <summary>Whether the bridge is bound to a view with a page.</summary>
     public bool HasPage => view?.HasPage == true;
 
@@ -62,6 +69,10 @@ public sealed class WebViewBridge
 
     internal void OnNavigationCompleted(string address, WebViewLoadError error) =>
         NavigationCompleted?.Invoke(this, new WebNavigationCompletedEventArgs(address, error));
+
+    internal void OnFileDialogRequested(WebFileDialogRequestedEventArgs args) => FileDialogRequested?.Invoke(this, args);
+
+    internal void OnPermissionRequested(WebPermissionRequestedEventArgs args) => PermissionRequested?.Invoke(this, args);
 
     internal bool OnNewWindowRequested(WebViewNewPage page, WebNewWindowKind kind)
     {

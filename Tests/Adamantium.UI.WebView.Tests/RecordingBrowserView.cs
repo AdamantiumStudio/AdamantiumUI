@@ -157,6 +157,24 @@ internal sealed class RecordingBrowserView : IWebViewBrowserView
 
     public void BrowserLost(WebViewBrowser browser) => Lost++;
 
+    /// <summary>The file dialogs the page asked for, in order.</summary>
+    public List<WebViewFileDialogRequest> FileDialogs { get; } = [];
+
+    public bool FileDialogRequested(WebViewBrowser browser, WebViewFileDialogRequest request)
+    {
+        FileDialogs.Add(request);
+        return true;
+    }
+
+    /// <summary>The permissions sites asked for, in order.</summary>
+    public List<WebViewPermissionRequest> Permissions { get; } = [];
+
+    public bool PermissionRequested(WebViewBrowser browser, WebViewPermissionRequest request)
+    {
+        Permissions.Add(request);
+        return true;
+    }
+
     public void AddressChanged(WebViewBrowser browser, string address) => Address = address;
 
     public void TitleChanged(WebViewBrowser browser, string title) => Title = title;

@@ -78,7 +78,16 @@ All packages share one version.
   `window.open` the page Chromium made, its `window.opener` still the page that opened it; `WebNewWindowKind` says
   how it was asked to open. Unhandled, the page goes there itself, as before; one a script opens on its own is
   refused. The menu has no "Print" row: off screen Chromium prints nothing. The sandbox shows the page opened beside
-  the one that opened it.
+  the one that opened it. A page's file field asks the view model through `WebViewBridge.FileDialogRequested`
+  (`WebFileDialogMode`, the field's `accept` as `WebFileFilter`s); `AnswerFromFileDialog` asks the platform's
+  `FileDialog` and gives the page what was chosen; unhandled, the page gets no file - Chromium shows no window of its
+  own. A site asking for the camera, the microphone, the screen, the device's place, notifications or the clipboard
+  asks through `WebViewBridge.PermissionRequested` (`WebPermission`); the answer - `Allow` or `Block` - is kept for the
+  site in the profile, as a browser keeps it, listed by `WebViewEngine.SitePermissions` and taken back with
+  `ForgetSitePermission`, after which the site is asked again; unhandled, it is refused and asked again next time.
+  Anything else a site asks for is refused unasked. The sandbox answers files through the platform's dialog and asks
+  permissions in a bar over the page. A view whose CEF is missing says so in `LoadError`
+  (`WebViewLoadError.EngineUnavailable`) instead of staying empty.
 - `TextBox.TextEffects` (and every `TextBoxBase`'s): ranges of the text drawn apart, as a `TextBlock`'s - recolored,
   moved, turned; only the drawing changes, the caret and selection stay where the layout put them.
 - `Win32ScanCodes` (Windows): a key's scan code as a HID usage and back (`TryFromHidUsage`).

@@ -19,10 +19,7 @@ internal sealed unsafe class WebViewBrowser : IDisposable
 
     private readonly WebViewEngine engine;
     private readonly Dictionary<int, WebViewBrowser> popupsAsked = [];
-    private IWebViewBrowserView view;
-    private WebViewBrowser opener;
-    private int popupId;
-    private IntPtr parentWindow;
+    private readonly List<WebViewPermissionRequest> permissionsAsked = [];
     private readonly WebViewClient client;
     private readonly WebViewRenderHandler renderHandler;
     private readonly WebViewLifeSpanHandler lifeSpanHandler;
@@ -31,7 +28,14 @@ internal sealed unsafe class WebViewBrowser : IDisposable
     private readonly WebViewRequestHandler requestHandler;
     private readonly WebViewContextMenuHandler contextMenuHandler;
     private readonly WebViewJsDialogHandler jsDialogHandler;
+    private readonly WebViewDialogHandler dialogHandler;
+    private readonly WebViewPermissionHandler permissionHandler;
     private readonly WebViewDevTools devTools;
+    private IWebViewBrowserView view;
+    private WebViewBrowser opener;
+    private int popupId;
+    private IntPtr parentWindow;
+    private WebViewFileDialogRequest askedFiles;
     private WebViewFrameProducer producer;
     private WebViewFrameProducer popupProducer;
     private IGraphicsDevice frameDevice;
@@ -83,9 +87,71 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         displayHandler = new WebViewDisplayHandler(this);
         contextMenuHandler = new WebViewContextMenuHandler(this);
         jsDialogHandler = new WebViewJsDialogHandler(this);
+        dialogHandler = new WebViewDialogHandler(this);
+        permissionHandler = new WebViewPermissionHandler(this);
         client = new WebViewClient(renderHandler, lifeSpanHandler, displayHandler, loadHandler, requestHandler,
-            contextMenuHandler, jsDialogHandler);
+            contextMenuHandler, jsDialogHandler, dialogHandler, permissionHandler);
     }
+
+    /// <summary>The page's file field asks for files: asked of the view, false when it cannot ask.</summary>
+    internal bool OnFileDialog(WebViewFileDialogRequest request)
+    {
+        if (closing)
+        {
+            return false;
+        }
+
+        // One at a time, as Chromium asks: one still asked is left unanswered no longer.
+        askedFiles?.Cancel();
+        askedFiles = request;
+        return view.FileDialogRequested(this, request);
+    }
+
+    /// <summary>A site asks to use something: answered as it was answered before, else asked of the view; refused
+    /// unasked when it asks for something unknown, or the view cannot ask.</summary>
+    internal void OnPermissionRequest(WebViewPermissionRequest request, bool known)
+    {
+        if (closing || !known)
+        {
+            request.Answer(false);
+            return;
+        }
+
+        if (engine.SitePermissionAnswer(request.Site, request.Permissions) is { } kept)
+        {
+            request.Answer(kept);
+            return;
+        }
+
+        permissionsAsked.Add(request);
+        request.Closed += (_, _) => permissionsAsked.Remove(request);
+        if (!view.PermissionRequested(this, request))
+        {
+            request.Answer(false);
+        }
+    }
+
+    /// <summary>The user answered <paramref name="request"/>: kept for the site.</summary>
+    internal void PermissionDecided(WebViewPermissionRequest request, bool allowed)
+    {
+        engine.KeepSitePermission(request.Site, request.Permissions, allowed);
+        // The same question asked again meanwhile - another frame, a retry - has its answer now too.
+        for (var i = permissionsAsked.Count - 1; i >= 0; i--)
+        {
+            if (i < permissionsAsked.Count && permissionsAsked[i] is var waiting && waiting.Site == request.Site &&
+                engine.SitePermissionAnswer(waiting.Site, waiting.Permissions) is { } kept)
+            {
+                waiting.Answer(kept);
+            }
+        }
+    }
+
+    /// <summary>A prompt refused without the user's answer: not held against the site.</summary>
+    internal void PermissionRefusedUnasked(WebViewPermissionRequest request) => engine.ClearSiteEmbargo(request.Site);
+
+    /// <summary>Chromium put a prompt away itself.</summary>
+    internal void OnPermissionPromptGone(ulong promptId) =>
+        permissionsAsked.Find(asked => asked.PromptId != 0 && asked.PromptId == promptId)?.Withdraw();
 
     /// <summary>The view's size in device-independent pixels, never empty.</summary>
     public (int Width, int Height) ViewSize { get; private set; } = (1, 1);
@@ -1022,6 +1088,15 @@ internal sealed unsafe class WebViewBrowser : IDisposable
     /// </summary>
     internal void OnLoadStart()
     {
+        // What the page left asked is asked no more: Chromium puts its prompts away itself, a media request is refused.
+        for (var i = permissionsAsked.Count - 1; i >= 0; i--)
+        {
+            if (i < permissionsAsked.Count && permissionsAsked[i].PromptId == 0)
+            {
+                permissionsAsked[i].Withdraw();
+            }
+        }
+
         // An element of the page gone is none of the next's.
         inspected = null;
         iconsAsked++;
@@ -1371,6 +1446,14 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         askedDialog = null;
         askedMenu?.Dismiss();
         askedMenu = null;
+        askedFiles?.Cancel();
+        askedFiles = null;
+        // Refused, kept for nobody: the page asking is going.
+        for (var i = permissionsAsked.Count - 1; i >= 0; i--)
+        {
+            permissionsAsked[i].Answer(false);
+        }
+
         view.ScriptDialogsReset(this);
         view.LetGo(this);
         producer?.Dispose();
@@ -1394,6 +1477,8 @@ internal sealed unsafe class WebViewBrowser : IDisposable
         requestHandler.Release();
         contextMenuHandler.Release();
         jsDialogHandler.Release();
+        dialogHandler.Release();
+        permissionHandler.Release();
     }
 
     private void Close()

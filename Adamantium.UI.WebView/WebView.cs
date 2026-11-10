@@ -238,6 +238,17 @@ public partial class WebView : Control, IWebViewBrowserView, ITextEntry
 
     private protected void StartBrowser()
     {
+        // No CEF to draw the page: said, rather than an empty view nobody can tell from a page still coming.
+        var unavailable = attached && Engine is { IsAvailable: false } && CanStartBrowser;
+        if (unavailable != LoadError is { Code: WebViewLoadError.EngineUnavailable })
+        {
+            SetCurrentValue(LoadErrorProperty, unavailable
+                ? new WebViewLoadError(WebViewLoadError.EngineUnavailable,
+                    "The web engine (CEF) is not beside the application, or did not start.",
+                    Source?.AbsoluteUri ?? NewPage?.Address ?? string.Empty)
+                : null);
+        }
+
         if (browser != null || !attached || surface == null || Engine is not { IsAvailable: true } engine ||
             PageWidth <= 0 || PageHeight <= 0 || !CanStartBrowser)
         {
