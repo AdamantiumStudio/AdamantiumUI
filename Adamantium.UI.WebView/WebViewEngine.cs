@@ -433,6 +433,14 @@ public sealed unsafe class WebViewEngine : IDisposable
             switches.Add(new("use-adapter-luid", $"{(int)(luid >> 32)},{(uint)luid}"));
         }
 
+        // Chromium forks its processes on Linux from a zygote it starts first, without exec - and the helper is a .NET
+        // process, whose runtime does not live through a fork. Each process is exec'd instead, as with no sandbox
+        // Chromium allows.
+        if (OperatingSystem.IsLinux())
+        {
+            switches.Add(new("no-zygote", null));
+        }
+
         return switches;
     }
 

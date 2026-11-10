@@ -9,6 +9,7 @@ using Adamantium.Mathematics;
 using Adamantium.UI.Core;
 using Adamantium.UI.Core.Input;
 using Adamantium.UI.Core.Input.Raw;
+using Adamantium.UI.Platforms.Linux;
 using Adamantium.Wayland;
 using KeyState = Adamantium.UI.Core.Input.KeyState;
 
@@ -834,7 +835,7 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
                 var press = new KeyPressInfo
                 {
                     PreviousState = KeyState.Down, CurrentState = KeyState.Up, RepeatCount = 1,
-                    PhysicalKey = WaylandKeys.ToHidUsage(code), PressTime = time,
+                    PhysicalKey = EvdevKeyCodes.ToHidUsage(code), PressTime = time,
                 };
                 var modifiers = KeyModifiers();
                 WaylandPlatform.DispatchInput(() => KeyboardDevice.CurrentDevice.ProcessEvent(
@@ -857,7 +858,7 @@ internal sealed class WaylandSeat : INativeMouse, INativeKeyboard, INativePlatfo
         var press = new KeyPressInfo
         {
             PreviousState = repeated ? KeyState.Down : KeyState.Up, CurrentState = KeyState.Down, RepeatCount = 1,
-            PhysicalKey = WaylandKeys.ToHidUsage(code), PressTime = time,
+            PhysicalKey = EvdevKeyCodes.ToHidUsage(code), PressTime = time,
         };
         var modifiers = KeyModifiers();
         WaylandPlatform.DispatchInput(() => KeyboardDevice.CurrentDevice.ProcessEvent(

@@ -475,7 +475,8 @@ public class WebViewFrameTests
             {
                 browser.Create("data:text/html,<title>Kept</title><html style='background:%23ff0000'></html>", Width,
                     Height, 1, IntPtr.Zero);
-                Pump(() => view.Frames > 0 && view.Title == "Kept", TimeSpan.FromSeconds(30), view, consumer);
+                // A slow device's first frame may still be the white before the page's background.
+                Pump(() => view.Title == "Kept" && IsRed(consumer.Center()), TimeSpan.FromSeconds(30), view, consumer);
                 consumer.Take(view.Shown);
                 before = consumer.Center();
                 shownBefore = view.Shown;
@@ -1512,6 +1513,8 @@ public class WebViewFrameTests
             consumer.Dispose();
         }
     }
+
+    private static bool IsRed(byte[] bgra) => bgra != null && bgra.AsSpan().SequenceEqual(new byte[] { 0, 0, 255, 255 });
 
     private static void Pump(Func<bool> done, TimeSpan timeout, RecordingBrowserView view = null,
         FrameConsumer consumer = null)

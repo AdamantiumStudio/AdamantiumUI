@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using Adamantium.UI.Core.Input;
-using Adamantium.UI.Platforms.Windows;
 
 namespace Adamantium.UI.Platforms.Wayland;
 
@@ -53,14 +52,6 @@ internal static class WaylandKeys
         [83] = Key.Delete,
     };
 
-    private static readonly Dictionary<uint, int> ExtendedScanCodes = new()
-    {
-        [96] = 0x1C, [97] = 0x1D, [98] = 0x35, [99] = 0x37, [100] = 0x38,
-        [102] = 0x47, [103] = 0x48, [104] = 0x49, [105] = 0x4B, [106] = 0x4D,
-        [107] = 0x4F, [108] = 0x50, [109] = 0x51, [110] = 0x52, [111] = 0x53,
-        [125] = 0x5B, [126] = 0x5C, [127] = 0x5D,
-    };
-
     /// <summary>The key, from its evdev code and the keysym the layout gives it.</summary>
     public static Key ToKey(uint evdevCode, uint keysym, bool numLock)
     {
@@ -80,17 +71,5 @@ internal static class WaylandKeys
         }
 
         return ByPlace.GetValueOrDefault(evdevCode, Key.None);
-    }
-
-    /// <summary>The key's place as a USB HID usage, the way <see cref="KeyPressInfo.PhysicalKey"/> carries it. The
-    /// evdev codes of the main block are the PC scan codes themselves; the rest are looked up.</summary>
-    public static uint ToHidUsage(uint evdevCode)
-    {
-        if (ExtendedScanCodes.TryGetValue(evdevCode, out var extended))
-        {
-            return Win32ScanCodes.ToHidUsage(extended, true);
-        }
-
-        return evdevCode <= 0x58 ? Win32ScanCodes.ToHidUsage((int)evdevCode, false) : 0;
     }
 }

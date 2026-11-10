@@ -60,6 +60,12 @@ internal sealed unsafe class WebViewApp : CefObject
         try
         {
             CefStrings.Set(&cefName, name);
+            if (value == null)
+            {
+                commandLine->append_switch(commandLine, &cefName);
+                return;
+            }
+
             CefStrings.Set(&cefValue, value);
             commandLine->append_switch_with_value(commandLine, &cefName, &cefValue);
         }
