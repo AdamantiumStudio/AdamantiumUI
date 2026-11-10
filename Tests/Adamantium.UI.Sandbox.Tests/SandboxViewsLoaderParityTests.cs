@@ -204,6 +204,13 @@ public class SandboxViewsLoaderParityTests
 
         foreach (var property in WalkedProperties(a.GetType()))
         {
+            // A picture loads off the thread: one build may have it read and the other not yet - what markup set is
+            // compared, not how far loading has got.
+            if (a is Adamantium.UI.Core.Media.Imaging.BitmapImage && property.Name is "IsLoaded" or "PixelBytes")
+            {
+                continue;
+            }
+
             object va, vb;
             try
             {
