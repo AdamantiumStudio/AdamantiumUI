@@ -111,7 +111,10 @@ public class PdfShadingDrawingTests
         Assert.That(fills, Has.Length.EqualTo(2));
         var brushes = fills.Select(f => (DrawingBrush)f.Brush).ToArray();
         Assert.That(brushes[0].TileMode, Is.EqualTo(TileMode.Tile));
-        Assert.That(brushes[0].Viewport.Width, Is.EqualTo(5));
+        var area = ((RectangleGeometry)fills[0].Geometry).Rect;
+        Assert.That(brushes[0].ViewportUnits, Is.EqualTo(BrushMappingMode.RelativeToBoundingBox));
+        Assert.That(brushes[0].Viewport.Width * area.Width, Is.EqualTo(5).Within(1e-9), "a step, in pattern space");
+        Assert.That(area.X + brushes[0].Viewport.X * area.Width, Is.EqualTo(0).Within(1e-9), "on the cell's corner");
         Assert.That(brushes[0].Drawing, Is.SameAs(brushes[1].Drawing));
         var cell = new RecordingSession();
         brushes[0].Drawing.Render(cell, Matrix4x4<float>.Identity, null);

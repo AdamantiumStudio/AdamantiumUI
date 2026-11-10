@@ -1,0 +1,49 @@
+<View xmlns="http://adamantium/ui"
+      xmlns:x="http://adamantium/ui/xaml/extensions">
+    <!-- A PDF page as one drawing: read once, then zoomed and panned in the box without being read again. -->
+    <Grid RowDefinitions="Auto,Auto,*,Auto" Margin="24">
+        <StackPanel Grid.Row="0" Orientation="Vertical" MarginBottom="12">
+            <TextBlock Text="{Localize PdfPageStrings.Title}" FontSize="18" MarginBottom="6"/>
+            <TextBlock Text="{Localize PdfPageStrings.Hint}" TextWrapping="WrapByWords"
+                       Foreground="{ResourceReference TextFillColorSecondary}"/>
+        </StackPanel>
+
+        <StackPanel Grid.Row="1" Orientation="Horizontal" MarginBottom="12">
+            <TextBlock x:Name="FileLabel" Text="{Localize PdfPageStrings.File}" VerticalAlignment="Center" MarginRight="8"/>
+            <TextBox Text="{Binding FilePath, Mode=TwoWay}" Width="420" VerticalAlignment="Center"
+                     AutomationProperties.LabeledBy="{Binding ElementName=FileLabel}"/>
+            <Button Content="{Localize PdfPageStrings.Open}" Command="{Binding OpenCommand}" MarginLeft="8"/>
+            <Button Content="{Localize PdfPageStrings.Sample}" Command="{Binding SampleCommand}" MarginLeft="8"/>
+            <Button Content="◀" Command="{Binding PreviousCommand}" MarginLeft="24"
+                    AutomationProperties.Name="{Localize PdfPageStrings.Previous}"/>
+            <TextBlock VerticalAlignment="Center" Margin="8,0">
+                <Run Text="{Binding PageNumber}"/>
+                <Run Text=" / "/>
+                <Run Text="{Binding PageCount}"/>
+            </TextBlock>
+            <Button Content="▶" Command="{Binding NextCommand}"
+                    AutomationProperties.Name="{Localize PdfPageStrings.Next}"/>
+            <TextBox x:Name="GoToBox" Text="{Binding GoTo, Mode=TwoWay}" Width="64" VerticalAlignment="Center" MarginLeft="12"
+                     AutomationProperties.Name="{Localize PdfPageStrings.PageNumber}"/>
+            <Button Content="{Localize PdfPageStrings.Go}" Command="{Binding GoCommand}" MarginLeft="4"/>
+            <TextBlock Text="{Binding Status}" VerticalAlignment="Center" MarginLeft="16"
+                       Foreground="{ResourceReference TextFillColorSecondary}"/>
+        </StackPanel>
+
+        <Border Grid.Row="2" BorderBrush="{ResourceReference ControlStrokeColorDefault}" BorderThickness="1">
+            <ZoomBox MinScale="0.1" MaxScale="64" HorizontalContentAlignment="Center" VerticalContentAlignment="Center">
+                <!-- A page draws no paper of its own: the sheet under it is the viewer's. -->
+                <Border Background="White" Margin="24">
+                    <Image Source="{Binding Page}" Width="{Binding PageWidth}" Height="{Binding PageHeight}"
+                           Stretch="Fill"/>
+                </Border>
+            </ZoomBox>
+        </Border>
+
+        <StackPanel Grid.Row="3" Orientation="Vertical" MarginTop="8">
+            <TextBlock x:Name="ProblemsLabel" Text="{Localize PdfPageStrings.Problems}" FontSize="14" MarginBottom="4"/>
+            <ItemsControl ItemsSource="{Binding Problems}" MaxHeight="120"
+                          AutomationProperties.LabeledBy="{Binding ElementName=ProblemsLabel}"/>
+        </StackPanel>
+    </Grid>
+</View>

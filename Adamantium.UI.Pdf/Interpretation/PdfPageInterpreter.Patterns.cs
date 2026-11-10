@@ -57,7 +57,8 @@ internal sealed partial class PdfPageInterpreter
                 DrawShading(shading.Shading, space, patternAlpha, frame.Output);
                 break;
             case PdfTilingPattern tiling when paint.Cell != null:
-                Write(new PdfGeometryStep(new RectangleGeometry(Cover(space)), TileBrush(tiling, paint.Cell, alpha), null,
+                var cover = Cover(space);
+                Write(new PdfGeometryStep(new RectangleGeometry(cover), TileBrush(tiling, paint.Cell, alpha, cover), null,
                     PdfMatrices.ToDrawing(space)), frame.Output);
                 break;
         }
@@ -229,19 +230,22 @@ internal sealed partial class PdfPageInterpreter
     private static double Distance((double R, double G, double B) a, (double R, double G, double B) b) =>
         Math.Max(Math.Abs(a.R - b.R), Math.Max(Math.Abs(a.G - b.G), Math.Abs(a.B - b.B)));
 
-    private Brush TileBrush(PdfTilingPattern tiling, PdfContentDrawing cell, double alpha)
+    // One tile is a step's worth of the cell from its box's corner. The brush's viewport is a fraction of the area it
+    // fills - so the tiles scale with the page, as pattern space does - counted from the area's corner; its viewbox is
+    // counted from the corner of the cell's picture. The tiles are shifted to stand on the cell's corner in pattern
+    // space, wherever the area begins.
+    private static Brush TileBrush(PdfTilingPattern tiling, PdfContentDrawing cell, double alpha, Rect area)
     {
-        var box = tiling.BBox;
-        var tile = new Rect(Math.Min(box.Left, box.Right), Math.Min(box.Bottom, box.Top), Math.Abs(tiling.XStep),
-            Math.Abs(tiling.YStep));
+        var (width, height) = (Math.Abs(tiling.XStep), Math.Abs(tiling.YStep));
         return new DrawingBrush(cell)
         {
             TileMode = TileMode.Tile,
             Stretch = Stretch.Fill,
-            Viewbox = tile,
+            Viewbox = new Rect(0, 0, width, height),
             ViewboxUnits = BrushMappingMode.Absolute,
-            Viewport = tile,
-            ViewportUnits = BrushMappingMode.Absolute,
+            Viewport = new Rect((cell.Bounds.X - area.X) / area.Width, (cell.Bounds.Y - area.Y) / area.Height,
+                width / area.Width, height / area.Height),
+            ViewportUnits = BrushMappingMode.RelativeToBoundingBox,
             Opacity = alpha,
         }.CaptureBase();
     }
