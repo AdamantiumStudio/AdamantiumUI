@@ -154,6 +154,9 @@ All packages share one version.
 
 ### Changed
 
+- A `WebView` out of sight - a tab not shown, a minimized window, a page another opened and not yet looked at - gives
+  its frame surfaces back to the GPU (a few, each the page's size in pixels: ~26 MB at 4K) and gets new ones with a
+  whole frame once it is seen; each background tab of a browser held them for good.
 - The sandbox's color-profile pictures are six large patches of saturated colors and a gray ramp - where a wide gamut
   differs from sRGB most - instead of a color wheel, which differed little and had no smooth edge.
 - `adam-auto start` keeps what the application remembers - its windows' places, layouts, caches - in the
