@@ -12,6 +12,14 @@ internal static unsafe class CefSubprocess
     {
         CefLibrary.Load(cefFolder);
         using var mainArguments = new CefMainArguments(arguments);
-        return CefInterop.CefExecuteProcess(mainArguments.Pointer, null, null);
+        var app = new WebViewSubprocessApp();
+        try
+        {
+            return CefInterop.CefExecuteProcess(mainArguments.Pointer, app.Shared, null);
+        }
+        finally
+        {
+            app.Release();
+        }
     }
 }

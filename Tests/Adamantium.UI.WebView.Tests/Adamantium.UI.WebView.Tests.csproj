@@ -19,6 +19,11 @@
         <ProjectReference Include="..\..\Adamantium.UI.WebView\Adamantium.UI.WebView.csproj" />
     </ItemGroup>
 
+    <!-- A site built into the assembly, as an application would ship its pages. -->
+    <ItemGroup>
+        <EmbeddedResource Include="Site\index.html" LogicalName="Site/index.html" />
+    </ItemGroup>
+
     <!-- The generators an application gets with the UI's package, here from source as the WebView library takes them:
          the objects a page calls are made for the tests' interfaces. -->
     <ItemGroup>
