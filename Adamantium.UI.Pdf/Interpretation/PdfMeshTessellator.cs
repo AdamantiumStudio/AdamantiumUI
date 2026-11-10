@@ -1,17 +1,19 @@
 using System;
 using System.Collections.Generic;
 using Adamantium.Mathematics;
+using Adamantium.Pdf.ColorSpaces;
 using Adamantium.Pdf.Document;
 using Adamantium.Pdf.Shadings;
 using Adamantium.UI.Core.Media;
 
 namespace Adamantium.UI.Pdf.Interpretation;
 
-/// <summary>A mesh shading as triangles with a color at each corner (ISO 32000-2, 8.7.4.5.5 to 8.7.4.5.8). A triangle is
-/// cut finer where its colors come through a function or a space that is not sRGB-like, so that the color between its
-/// corners is the shading's, not a straight run in sRGB. A patch is its tensor surface sampled on a grid, as fine as
-/// the patch is large on the page - with room for the deepest zoom - its color bilinear in the patch's parameters.
-/// Every mesh keeps under <see cref="MaxTriangles"/>; past that it is cut coarser.</summary>
+/// <summary>A mesh shading as triangles with an opaque color at each corner (ISO 32000-2, 8.7.4.5.5 to 8.7.4.5.8). A
+/// triangle is cut finer unless its colors are DeviceGray or DeviceRGB values taken straight, so that the color between
+/// its corners is the shading's, not a straight run in sRGB. A patch is its tensor surface sampled on a grid, as fine as
+/// the patch is large on the page - with room for the deepest zoom - its color bilinear in the patch's parameters, and
+/// drawn row by row of v, so where it folds over itself the larger v lies on top. Every mesh keeps under
+/// <see cref="MaxTriangles"/>: past that it is cut coarser, and what still does not fit is left out.</summary>
 internal static class PdfMeshTessellator
 {
     public const int MaxTriangles = 1_000_000;
@@ -20,29 +22,46 @@ internal static class PdfMeshTessellator
     private const double PieceLength = 2.0;
     private const int MaxCuts = 32;
 
-    public static ColoredMesh Tessellate(PdfMeshShading shading, PdfMatrix space, double alpha)
+    /// <summary>The mesh as the page shows it at the scale <paramref name="space"/> puts it; <paramref name="cut"/> is
+    /// whether pieces were left out to keep it under <see cref="MaxTriangles"/>.</summary>
+    public static ColoredMesh Tessellate(PdfMeshShading shading, PdfMatrix space, out bool cut)
     {
         var scale = PdfMatrices.Scale(space);
         var vertices = new List<ColoredVertex>();
-        var smoothInSrgb = shading.Function == null && shading.ColorSpace.Components is 1 or 3;
+        var straight = shading.Function == null &&
+                       shading.ColorSpace is PdfDeviceGrayColorSpace or PdfDeviceRgbColorSpace;
         var budget = MaxTriangles / Math.Max(1, shading.Triangles.Count + shading.Patches.Count);
+        cut = false;
         foreach (var triangle in shading.Triangles)
         {
-            var cuts = smoothInSrgb ? 1 : Cuts(scale, budget, triangle.A.Position, triangle.B.Position, triangle.C.Position);
-            AddTriangle(vertices, shading, triangle, cuts, alpha);
+            var cuts = straight ? 1 : Cuts(scale, budget, 1, triangle.A.Position, triangle.B.Position, triangle.C.Position);
+            if (vertices.Count / 3 + cuts * cuts > MaxTriangles)
+            {
+                cut = true;
+                break;
+            }
+
+            AddTriangle(vertices, shading, triangle, cuts);
         }
 
         foreach (var patch in shading.Patches)
         {
-            AddPatch(vertices, shading, patch, Cuts(scale, budget * 2, patch.Points), alpha);
+            var cuts = Cuts(scale, budget, 2, patch.Points);
+            if (vertices.Count / 3 + 2 * cuts * cuts > MaxTriangles)
+            {
+                cut = true;
+                break;
+            }
+
+            AddPatch(vertices, shading, patch, cuts);
         }
 
         return new ColoredMesh(vertices);
     }
 
     // As many cuts along a side as keep each piece under PieceLength on the page, within the triangles this one may
-    // have.
-    private static int Cuts(double scale, int budget, params PdfPoint[] points)
+    // have: a piece of a patch is two of them.
+    private static int Cuts(double scale, int budget, int perPiece, params PdfPoint[] points)
     {
         double left = double.MaxValue, bottom = double.MaxValue, right = double.MinValue, top = double.MinValue;
         foreach (var p in points)
@@ -53,7 +72,7 @@ internal static class PdfMeshTessellator
 
         var size = Math.Max(right - left, top - bottom) * scale;
         var cuts = Math.Clamp((int)Math.Ceiling(size / PieceLength), 1, MaxCuts);
-        while (cuts > 1 && cuts * cuts * 2 > budget)
+        while (cuts > 1 && cuts * cuts * perPiece > budget)
         {
             cuts--;
         }
@@ -63,8 +82,7 @@ internal static class PdfMeshTessellator
 
     // The triangle cut into cuts² smaller ones, the values at each corner taken between the big one's by barycentric
     // weights, then turned into color.
-    private static void AddTriangle(List<ColoredVertex> vertices, PdfShading shading, PdfMeshTriangle triangle, int cuts,
-        double alpha)
+    private static void AddTriangle(List<ColoredVertex> vertices, PdfShading shading, PdfMeshTriangle triangle, int cuts)
     {
         ColoredVertex At(int i, int j)
         {
@@ -79,7 +97,7 @@ internal static class PdfMeshTessellator
                 values[k] = triangle.A.Values[k] * c + Value(triangle.B.Values, k) * a + Value(triangle.C.Values, k) * b;
             }
 
-            return new ColoredVertex(position, ColorOf(shading, values, alpha));
+            return new ColoredVertex(position, ColorOf(shading, values));
         }
 
         for (var j = 0; j < cuts; j++)
@@ -101,8 +119,7 @@ internal static class PdfMeshTessellator
 
     // S(u, v) = sum of Pij Bi(u) Bj(v) (ISO 32000-2, 8.7.4.5.8), with the corner colors c00, c03, c33, c30 at
     // (u, v) = (0, 0), (0, 1), (1, 1), (1, 0).
-    private static void AddPatch(List<ColoredVertex> vertices, PdfShading shading, PdfMeshPatch patch, int cuts,
-        double alpha)
+    private static void AddPatch(List<ColoredVertex> vertices, PdfShading shading, PdfMeshPatch patch, int cuts)
     {
         var grid = new ColoredVertex[(cuts + 1) * (cuts + 1)];
         Span<double> bu = stackalloc double[4];
@@ -133,13 +150,14 @@ internal static class PdfMeshTessellator
                                 Value(patch.Corners[2], k) * u * v + Value(patch.Corners[3], k) * u * (1 - v);
                 }
 
-                grid[iu * (cuts + 1) + iv] = new ColoredVertex(new Vector2<double>(x, y), ColorOf(shading, values, alpha));
+                grid[iu * (cuts + 1) + iv] = new ColoredVertex(new Vector2<double>(x, y), ColorOf(shading, values));
             }
         }
 
-        for (var iu = 0; iu < cuts; iu++)
+        // Rows of v outermost and u within: the triangles drawn later lie on top, as the larger v and then u must.
+        for (var iv = 0; iv < cuts; iv++)
         {
-            for (var iv = 0; iv < cuts; iv++)
+            for (var iu = 0; iu < cuts; iu++)
             {
                 var a = grid[iu * (cuts + 1) + iv];
                 var b = grid[(iu + 1) * (cuts + 1) + iv];
@@ -166,11 +184,11 @@ internal static class PdfMeshTessellator
 
     private static double Value(double[] values, int k) => k < values.Length ? values[k] : 0;
 
-    private static Color ColorOf(PdfShading shading, double[] values, double alpha)
+    private static Color ColorOf(PdfShading shading, double[] values)
     {
         Span<double> rgb = stackalloc double[3];
         shading.ToRgb(values, rgb);
-        return new Color(Byte(rgb[0]), Byte(rgb[1]), Byte(rgb[2]), Byte(alpha));
+        return new Color(Byte(rgb[0]), Byte(rgb[1]), Byte(rgb[2]));
     }
 
     private static byte Byte(double value) =>

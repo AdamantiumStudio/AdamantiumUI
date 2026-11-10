@@ -37,6 +37,10 @@ public sealed class GpuFillRenderComponent : UIRenderComponent
     // (the CPU body doesn't render non-solid fills either), so no stale outline is left when a fill turns into a gradient.
     public Brush Brush { get; set; }
 
+    /// <summary>The box a gradient spans when it is not the contour's own bounds - the body's, so the edge takes the
+    /// body's colors.</summary>
+    public Rect? GradientBox { get; set; }
+
     public GpuFillRenderComponent(IGraphicsDevice device, UIBasicEffect uiBasicEffect, FillFringeEffect effect,
         IReadOnlyList<(Vector2<double>[] Points, bool IsClosed)> contours, Brush brush, GpuBufferManager bufferManager,
         Rect? cut = null) : base(device, uiBasicEffect, null, bufferManager)
@@ -99,7 +103,10 @@ public sealed class GpuFillRenderComponent : UIRenderComponent
         {
             // The same gradient as the fill (packed by the shared GradientBake, same as the fill batch), so the AA edge
             // matches the fill instead of one flat color.
-            _gradient.Set(g, (float)(g.Opacity * RenderData.Opacity), _localBounds);
+            var bounds = GradientBox is { } box
+                ? new Vector4F((float)box.X, (float)box.Y, (float)box.Width, (float)box.Height)
+                : _localBounds;
+            _gradient.Set(g, (float)(g.Opacity * RenderData.Opacity), bounds);
         }
         else if (Brush is SolidColorBrush solid)
         {

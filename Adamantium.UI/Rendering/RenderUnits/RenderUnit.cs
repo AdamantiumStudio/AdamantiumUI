@@ -183,8 +183,12 @@ public abstract class RenderUnit<TPayload> : DeferredDisposableObject, IRenderUn
         var contours = FillBoundary.LoopsOf(geometry) ?? BuildFillContours(geometry);
         if (contours == null) return;
 
+        // The edge spans its gradient over the body's box, so a sector or a framed rect gets the body's colors.
         FillFringeRenderer = new GpuFillRenderComponent(GraphicsDevice, UIBasicEffect, FillFringeEffect, contours, brush,
-            BufferManager, PreparedFill.CutBoxOf(geometry));
+            BufferManager, PreparedFill.CutBoxOf(geometry))
+        {
+            GradientBox = (GeometryRenderer as GeometryRenderComponent)?.GradientBox
+        };
         FillFringeRenderer.RenderData = DrawCommand.RenderData;
     }
 
@@ -393,9 +397,22 @@ public class GeometryRenderUnit : RenderUnit<GeometryPayload>, IStrokeOnlyUnit
 
     /// <summary>This unit's AA edge rides the instanced flush, where it is drawn AFTER every pending fill - so it is the
     /// one that can land on a later shape's fill (see the overlap flush in the draw loop).</summary>
+    /// <summary>Takes the fill back from the instanced path once its brush became a gradient no instanced record carries
+    /// (a radial between two circles): the body is drawn by the unit again and the edge gets its own fringe. True when
+    /// something was built, so the caller re-places it.</summary>
+    public bool TakeBackFill()
+    {
+        if (Payload.Brush is not GradientBrush gradient || GradientBake.FitsBatch(gradient)) return false;
+        FillInstanced = false;
+        if (FillFringeRenderer != null) return false;
+        ProcessFillFringe(Payload.Geometry, Payload.Brush);
+        return FillFringeRenderer != null;
+    }
+
     public bool HasInstancedFringe =>
         InstancedFillCollector.Enabled && _frozenMesh is { Ring.Length: > 0 } &&
-        Payload.Brush is SolidColorBrush or GradientBrush or PatternBrush or NoiseBrush;
+        Payload.Brush is SolidColorBrush or GradientBrush or PatternBrush or NoiseBrush &&
+        (Payload.Brush is not GradientBrush gradient || GradientBake.FitsBatch(gradient));
 
     public override bool TryGetInstancedFill(out GeometryKey key, out object mesh, out Vector4F color)
     {
@@ -669,8 +686,12 @@ public class RectangleRenderUnit : RenderUnit<RectanglePayload>
         var fillCorners = payload.HasFrame ? payload.FrameInnerCorners : payload.CornerRadius;
         var g = new RectangleGeometry(fillRect, fillCorners);
         g.ProcessGeometry(GeometryType.Both);
-        // The LIVE brush, not its snapshot - see GeometryRenderComponent.Render, which dereferences it on every draw.
-        GeometryRenderer = new GeometryRenderComponent(GraphicsDevice, UIBasicEffect, g.Mesh, payload.LiveBrush, BufferManager, ResourceFactory);
+        // The LIVE brush, not its snapshot - see GeometryRenderComponent.Render, which dereferences it on every draw. A
+        // gradient spans the whole rect, as the batch spans it, even where a frame takes the edge.
+        GeometryRenderer = new GeometryRenderComponent(GraphicsDevice, UIBasicEffect, g.Mesh, payload.LiveBrush, BufferManager, ResourceFactory)
+        {
+            GradientBox = payload.DestinationRect,
+        };
         GeometryRenderer.RenderData = DrawCommand.RenderData;
         GeometryRenderer.Owner = DrawCommand.Component;
         ProcessFillFringe(g, payload.Brush);
@@ -727,10 +748,14 @@ public class RectangleRenderUnit : RenderUnit<RectanglePayload>
         {
             existing.UpdateGeometry(g.Mesh);
             existing.Background = Payload.LiveBrush;
+            existing.GradientBox = Payload.DestinationRect;
         }
         else
         {
-            GeometryRenderer = new GeometryRenderComponent(GraphicsDevice, UIBasicEffect, g.Mesh, Payload.LiveBrush, BufferManager, ResourceFactory);
+            GeometryRenderer = new GeometryRenderComponent(GraphicsDevice, UIBasicEffect, g.Mesh, Payload.LiveBrush, BufferManager, ResourceFactory)
+            {
+                GradientBox = Payload.DestinationRect,
+            };
         }
 
         GeometryRenderer.RenderData = DrawCommand.RenderData;
@@ -742,6 +767,25 @@ public class RectangleRenderUnit : RenderUnit<RectanglePayload>
 
     // The body EnsureMachinery built - no fringe, no stroke: a rect that stops being batchable builds all of it.
     private bool _bodyOnly;
+
+    /// <summary>Builds everything this rect draws itself with - body, fringe, stroke, frame - when no batch takes it now
+    /// though it was built for one: its brush became one no batch records, with nothing recorded again. True when it
+    /// built.</summary>
+    public bool EnsureOwnDrawing()
+    {
+        if (IsSdfBatchable(Payload) || IsGradientBatchable(Payload) || IsTexBatchable(Payload) ||
+            (GeometryRenderer != null && !_machineryStale && !_bodyOnly))
+        {
+            return false;
+        }
+
+        GeometryRenderer?.DeferDispose();
+        GeometryRenderer = null;
+        BuildMachinery(Payload);
+        _machineryStale = false;
+        _bodyOnly = false;
+        return true;
+    }
 
     public override void UpdateWithDrawCommand(IDrawCommand drawCommand)
     {
@@ -867,12 +911,19 @@ public class EllipseRenderUnit : RenderUnit<EllipsePayload>
         var g = EllipseShape(payload);
         g.ProcessGeometry(GeometryType.Both);
         // The LIVE brush, not its snapshot - see GeometryRenderComponent.Render, which dereferences it on every draw.
-        GeometryRenderer = new GeometryRenderComponent(GraphicsDevice, UIBasicEffect, g.Mesh, payload.LiveBrush, BufferManager, ResourceFactory);
+        GeometryRenderer = new GeometryRenderComponent(GraphicsDevice, UIBasicEffect, g.Mesh, payload.LiveBrush, BufferManager, ResourceFactory)
+        {
+            GradientBox = payload.DestinationRect,
+        };
         GeometryRenderer.RenderData = DrawCommand.RenderData;
         GeometryRenderer.Owner = DrawCommand.Component;
         ProcessFillFringe(g, payload.Brush);
         ProcessStrokeData(payload.Pen, g);
+        _ownDrawing = true;
     }
+
+    // Whether the body, fringe and stroke are all built, rather than the body alone EnsureMachinery makes.
+    private bool _ownDrawing;
 
     // A batchable ellipse the batch REJECTED this frame (rotated/sheared world, or overflow) must draw itself, so build
     // its BODY on demand. No fringe (its PreRender is already past this frame); the body self-fills its buffer in Render.
@@ -881,9 +932,29 @@ public class EllipseRenderUnit : RenderUnit<EllipsePayload>
         if (GeometryRenderer != null) return;
         var g = EllipseShape(Payload);
         g.ProcessGeometry(GeometryType.Both);
-        GeometryRenderer = new GeometryRenderComponent(GraphicsDevice, UIBasicEffect, g.Mesh, Payload.LiveBrush, BufferManager, ResourceFactory);
+        GeometryRenderer = new GeometryRenderComponent(GraphicsDevice, UIBasicEffect, g.Mesh, Payload.LiveBrush, BufferManager, ResourceFactory)
+        {
+            GradientBox = Payload.DestinationRect,
+        };
         GeometryRenderer.RenderData = DrawCommand.RenderData;
         GeometryRenderer.Owner = DrawCommand.Component;
+        _ownDrawing = false;
+    }
+
+    /// <summary>Builds everything this ellipse draws itself with when no batch takes it now though it was built for one -
+    /// see the rect's twin. True when it built.</summary>
+    public bool EnsureOwnDrawing()
+    {
+        if (IsSdfBatchable(Payload) || IsGradientBatchable(Payload) || IsPatternBatchable(Payload) ||
+            IsTexBatchable(Payload) || (GeometryRenderer != null && _ownDrawing))
+        {
+            return false;
+        }
+
+        GeometryRenderer?.DeferDispose();
+        GeometryRenderer = null;
+        BuildMachinery(Payload);
+        return true;
     }
 
     /// <summary>The shape this ellipse actually is. A RING is the outer shape with the inner one taken out of it - the
@@ -1319,12 +1390,19 @@ public class RegularPolygonRenderUnit : RenderUnit<RegularPolygonPayload>
         var g = PolygonShape(payload);
         g.ProcessGeometry(GeometryType.Both);
         // The LIVE brush, not its snapshot - see GeometryRenderComponent.Render, which dereferences it on every draw.
-        GeometryRenderer = new GeometryRenderComponent(GraphicsDevice, UIBasicEffect, g.Mesh, payload.LiveBrush, BufferManager, ResourceFactory);
+        GeometryRenderer = new GeometryRenderComponent(GraphicsDevice, UIBasicEffect, g.Mesh, payload.LiveBrush, BufferManager, ResourceFactory)
+        {
+            GradientBox = payload.DestinationRect,
+        };
         GeometryRenderer.RenderData = DrawCommand.RenderData;
         GeometryRenderer.Owner = DrawCommand.Component;
         ProcessFillFringe(g, payload.Brush);
         ProcessStrokeData(payload.Pen, g);
+        _ownDrawing = true;
     }
+
+    // Whether the body, fringe and stroke are all built, rather than the body alone EnsureMachinery makes.
+    private bool _ownDrawing;
 
     private static Geometry PolygonShape(RegularPolygonPayload payload) =>
         RegularPolygonGeometry.Build(payload.DestinationRect, payload.Corners, payload.StartAngle, payload.RingThickness);
@@ -1335,9 +1413,28 @@ public class RegularPolygonRenderUnit : RenderUnit<RegularPolygonPayload>
         if (GeometryRenderer != null) return;
         var g = PolygonShape(Payload);
         g.ProcessGeometry(GeometryType.Both);
-        GeometryRenderer = new GeometryRenderComponent(GraphicsDevice, UIBasicEffect, g.Mesh, Payload.LiveBrush, BufferManager, ResourceFactory);
+        GeometryRenderer = new GeometryRenderComponent(GraphicsDevice, UIBasicEffect, g.Mesh, Payload.LiveBrush, BufferManager, ResourceFactory)
+        {
+            GradientBox = Payload.DestinationRect,
+        };
         GeometryRenderer.RenderData = DrawCommand.RenderData;
         GeometryRenderer.Owner = DrawCommand.Component;
+        _ownDrawing = false;
+    }
+
+    /// <summary>Builds everything this polygon draws itself with when no batch takes it now though it was built for one -
+    /// see the rect's twin. True when it built.</summary>
+    public bool EnsureOwnDrawing()
+    {
+        if (IsSdfBatchable(Payload) || (GeometryRenderer != null && _ownDrawing))
+        {
+            return false;
+        }
+
+        GeometryRenderer?.DeferDispose();
+        GeometryRenderer = null;
+        BuildMachinery(Payload);
+        return true;
     }
 
     public override void UpdateWithDrawCommand(IDrawCommand drawCommand)
@@ -1365,11 +1462,13 @@ public class RegularPolygonRenderUnit : RenderUnit<RegularPolygonPayload>
         }
 
         ((GeometryRenderComponent)GeometryRenderer).Background = inputPayload.LiveBrush;
+        // Asked before the payload is replaced: after it, the pen compared is the new one with itself.
+        var penChanged = !Equals(Payload.Pen, inputPayload.Pen);
         DrawCommand = drawCommand;
         Payload = inputPayload;
         GeometryRenderer.RenderData = drawCommand.RenderData;
 
-        if (rebuild || !Equals(Payload.Pen, inputPayload.Pen))
+        if (rebuild || penChanged)
         {
             geometry.ProcessGeometry(GeometryType.Both);
             ProcessStrokeData(inputPayload.Pen, geometry);

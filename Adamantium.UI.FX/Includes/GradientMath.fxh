@@ -40,9 +40,11 @@ float GradientParam(int type, float4 geom0, float4 geom1, float2 uv)
 
         float disc = b * b - a * c;
         if (disc < 0.0) return GradientNowhere;
-        float s = sqrt(disc);
-        float t1 = (b + s) / a;
-        float t2 = (b - s) / a;
+        // q / a and c / q: neither root is a difference of near-equal numbers, so a near 0 loses nothing.
+        float q = b + (b >= 0.0 ? 1.0 : -1.0) * sqrt(disc);
+        if (abs(q) < 1e-12) return 0.0;
+        float t1 = q / a;
+        float t2 = c / q;
         float hi = max(t1, t2);
         float lo = min(t1, t2);
         if (r0 + hi * dr >= 0.0) return hi;

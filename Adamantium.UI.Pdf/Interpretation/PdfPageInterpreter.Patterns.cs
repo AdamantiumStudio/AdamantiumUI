@@ -32,7 +32,11 @@ internal sealed partial class PdfPageInterpreter
                  $"to {Math.Ceiling(strays * 255)} of 255.");
         }
     }
+
     private const int FunctionSamples = 256;
+
+    // The longer side of the picture a radial shading the brush cannot draw is worked out into.
+    private const int RadialRasterSide = 1024;
 
     private readonly Dictionary<PdfObject, PdfShading> _shadings = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<PdfFunctionShading, ImageSource> _sampled = new(ReferenceEqualityComparer.Instance);
@@ -134,13 +138,27 @@ internal sealed partial class PdfPageInterpreter
                 DrawFunction(function, space, alpha, output);
                 break;
             case PdfMeshShading mesh:
-                if (!_meshes.TryGetValue((mesh, alpha), out var triangles))
+                // Cut as fine as the scale it is shown at asks; see through as one, so triangles that overlap do not
+                // darken where they do.
+                var scale = PdfMatrices.Scale(space);
+                if (!_meshes.TryGetValue((mesh, scale), out var triangles))
                 {
-                    triangles = PdfMeshTessellator.Tessellate(mesh, space, alpha);
-                    _meshes[(mesh, alpha)] = triangles;
+                    triangles = PdfMeshTessellator.Tessellate(mesh, space, out var left);
+                    if (left)
+                    {
+                        Tell($"A mesh shading is drawn with its first {PdfMeshTessellator.MaxTriangles} triangles only.");
+                    }
+
+                    _meshes[(mesh, scale)] = triangles;
                 }
 
+                var faded = alpha < 1 && OpenGroup(new PdfPushGroupStep { Opacity = alpha }, output);
                 Write(new PdfMeshStep(triangles, PdfMatrices.ToDrawing(space)), output);
+                if (faded)
+                {
+                    CloseGroupsDownTo(_openGroups - 1, output);
+                }
+
                 break;
         }
 
@@ -238,15 +256,27 @@ internal sealed partial class PdfPageInterpreter
         Write(new PdfGeometryStep(geometry, brush.CaptureBase(), null, PdfMatrices.ToDrawing(space)), output);
     }
 
-    // Any other radial shading is the brush between two circles over all a group can let through. The brush's end circle
-    // must have a radius, so one that shrinks to a point is drawn the other way round, its colors reversed. Where the
-    // shading does not extend, its first or last stop is clear: past t's ends nothing is painted.
+    // Any other radial shading is the brush between two circles over all a group can let through - where the brush's rule
+    // is the shading's. The brush takes the largest s whose circle passes through a point; the shading the largest it
+    // allows, so the two part where a point lies on two circles and the larger s is one the shading does not extend to.
+    // One circle inside the other puts every point on one circle only; an end that extends allows every larger s. The
+    // brush's end circle must have a radius, so one that shrinks to a point - only inside the other - is drawn the other
+    // way round, its colors reversed. Where the shading does not extend, its first or last stop is clear: past t's ends
+    // nothing is painted. Anything else is worked out point by point into a picture.
     private void DrawTwoCircles(PdfRadialShading shading, PdfMatrix space, double alpha, List<PdfDrawStep> output)
     {
         var (start, startRadius, end, endRadius) =
             (shading.StartCenter, shading.StartRadius, shading.EndCenter, shading.EndRadius);
         var (extendStart, extendEnd) = (shading.ExtendStart, shading.ExtendEnd);
+        var (cx, cy, dr) = (end.X - start.X, end.Y - start.Y, endRadius - startRadius);
+        var nested = cx * cx + cy * cy < dr * dr;
         var reversed = endRadius <= 1e-9;
+        if (!nested && (reversed || !extendEnd))
+        {
+            RasterizeTwoCircles(shading, space, alpha, output);
+            return;
+        }
+
         if (reversed)
         {
             (start, startRadius, end, endRadius) = (end, endRadius, start, startRadius);
@@ -271,6 +301,102 @@ internal sealed partial class PdfPageInterpreter
         TellIfVisiblyNear(AddStops(brush, shading, alpha, reversed, extendStart, extendEnd));
         Write(new PdfGeometryStep(new RectangleGeometry(area), brush.CaptureBase(), null, PdfMatrices.ToDrawing(space)),
             output);
+    }
+
+    // The shading worked out at each pixel of a picture over what it can paint: the largest s it allows whose circle
+    // passes through the pixel's middle, its color from a table along s.
+    private void RasterizeTwoCircles(PdfRadialShading shading, PdfMatrix space, double alpha, List<PdfDrawStep> output)
+    {
+        var (x0, y0, r0) = (shading.StartCenter.X, shading.StartCenter.Y, shading.StartRadius);
+        var (x1, y1, r1) = (shading.EndCenter.X, shading.EndCenter.Y, shading.EndRadius);
+        var area = Cover(space);
+        if (!shading.ExtendStart && !shading.ExtendEnd)
+        {
+            var circles = Union(new Rect(x0 - r0, y0 - r0, 2 * r0, 2 * r0), new Rect(x1 - r1, y1 - r1, 2 * r1, 2 * r1));
+            area = Intersection(area, circles);
+        }
+
+        if (area.Width <= 0 || area.Height <= 0)
+        {
+            return;
+        }
+
+        var scale = RadialRasterSide / Math.Max(area.Width, area.Height);
+        var (width, height) = (Math.Max(1, (int)Math.Ceiling(area.Width * scale)),
+            Math.Max(1, (int)Math.Ceiling(area.Height * scale)));
+        var table = new (byte R, byte G, byte B)[FunctionSamples + 1];
+        for (var i = 0; i < table.Length; i++)
+        {
+            var color = ColorAt(shading, (double)i / FunctionSamples);
+            table[i] = (Byte(color.R), Byte(color.G), Byte(color.B));
+        }
+
+        var (cx, cy, dr) = (x1 - x0, y1 - y0, r1 - r0);
+        var a = cx * cx + cy * cy - dr * dr;
+        var opacity = Byte(alpha);
+        var rgba = new byte[width * height * 4];
+        for (var row = 0; row < height; row++)
+        {
+            var py = area.Y + (row + 0.5) * area.Height / height - y0;
+            for (var column = 0; column < width; column++)
+            {
+                var px = area.X + (column + 0.5) * area.Width / width - x0;
+                if (RadialParameter(shading, a, px * cx + py * cy + r0 * dr, px * px + py * py - r0 * r0, r0, dr)
+                    is not { } s)
+                {
+                    continue;
+                }
+
+                var (r, g, b) = table[(int)Math.Round(Math.Clamp(s, 0, 1) * FunctionSamples)];
+                var at = (row * width + column) * 4;
+                (rgba[at], rgba[at + 1], rgba[at + 2], rgba[at + 3]) = (r, g, b, opacity);
+            }
+        }
+
+        var picture = new PdfMatrix(area.Width, 0, 0, area.Height, area.X, area.Y).Then(space);
+        Write(new PdfImageStep(ToImage(width, height, rgba), PdfMatrices.ToDrawing(picture)), output);
+    }
+
+    // The largest s the shading allows - [0, 1], and past an end it extends - at which the circle of radius r0 + s dr,
+    // at least 0, passes through the point: the roots of a s^2 - 2 b s + c = 0. Null where there is none.
+    private static double? RadialParameter(PdfRadialShading shading, double a, double b, double c, double r0, double dr)
+    {
+        bool Allowed(double s) => r0 + s * dr >= 0 && (s >= 0 || shading.ExtendStart) && (s <= 1 || shading.ExtendEnd);
+
+        if (Math.Abs(a) < 1e-12)
+        {
+            if (Math.Abs(b) < 1e-12)
+            {
+                return null;
+            }
+
+            var only = c / (2 * b);
+            return Allowed(only) ? only : null;
+        }
+
+        var disc = b * b - a * c;
+        if (disc < 0)
+        {
+            return null;
+        }
+
+        // q / a and c / q: neither root is a difference of near-equal numbers.
+        var q = b + Math.CopySign(Math.Sqrt(disc), b);
+        var (t1, t2) = Math.Abs(q) < 1e-300 ? (0.0, 0.0) : (q / a, c / q);
+        var (high, low) = (Math.Max(t1, t2), Math.Min(t1, t2));
+        if (Allowed(high))
+        {
+            return high;
+        }
+
+        return Allowed(low) ? low : null;
+    }
+
+    private static Rect Intersection(Rect a, Rect b)
+    {
+        var (left, top) = (Math.Max(a.X, b.X), Math.Max(a.Y, b.Y));
+        var (right, bottom) = (Math.Min(a.Right, b.Right), Math.Min(a.Bottom, b.Bottom));
+        return right > left && bottom > top ? new Rect(left, top, right - left, bottom - top) : Rect.Empty;
     }
 
     // The function sampled over its domain into a picture, once for the shading however often it is painted: a smooth

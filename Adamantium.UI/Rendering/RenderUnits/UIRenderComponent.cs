@@ -264,10 +264,15 @@ public class GeometryRenderComponent : UIRenderComponent
 
     private GradientUniforms _gradient;
 
-    // The gradient across the shape's own LOCAL box, packed as the batches pack it.
+    /// <summary>The box a gradient fill spans, in the shape's local units, when it is not the mesh's own: a rect, ellipse
+    /// or polygon spans its whole destination, as its batch spans it, so the gradient does not jump between the two.
+    /// </summary>
+    public Rect? GradientBox { get; set; }
+
+    // The gradient across the shape's box, packed as the batches pack it.
     private void RenderGradient(GradientBrush gradient)
     {
-        var box = Box;
+        var box = GradientBox ?? Box;
         if (box.Width <= 0 || box.Height <= 0)
         {
             return;

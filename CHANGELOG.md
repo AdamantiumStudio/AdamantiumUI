@@ -29,11 +29,13 @@ All packages share one version.
 - `RadialGradientBrush.GradientOriginRadius`: the gradient between two circles - the origin's of this radius, as a
   fraction of the end ellipse's, and the end one - as Canvas 2D's `createRadialGradient` and SVG 2's `fr` draw it;
   where no circle passes nothing is painted. 0, the default, is the radial gradient as before. A PDF page's radial
-  shadings of any two circles are drawn with it. `GradientBrush.MaxRenderedStops` says how many stops are drawn (8),
+  shadings are drawn with it where its rule is theirs - one circle inside the other, or the end extended - and worked
+  out point by point into a picture where it is not. `GradientBrush.MaxRenderedStops` says how many stops are drawn (8),
   and a gradient fill the batches cannot record is drawn by its own unit instead of not at all.
 - `IDrawingSession.DrawColoredMesh` and `ColoredMesh`: triangles with a color at each corner (`ColoredVertex`), each
   triangle's color running smoothly between its corners - a mesh gradient, exact at any zoom. A PDF page's mesh
-  shadings - free-form and lattice triangles, Coons and tensor-product patches - are drawn with it. The sandbox's "PDF
+  shadings - free-form and lattice triangles, Coons and tensor-product patches - are drawn with it, seen through as one
+  where they are translucent, and a mesh past a million triangles is told. The sandbox's "PDF
   drawing" tab shows a color wheel of them.
 - `IDrawingSession.DrawImage(image, filter, rect, Matrix4x4F)`: an image placed by a matrix - turned and sheared with
   it, not laid upright into its bounds. An `ImageDrawing` inside a turned `DrawingGroup` turns with it now.
@@ -265,7 +267,10 @@ All packages share one version.
 ### Fixed
 
 - A rectangle, ellipse or regular polygon whose brush changes into one no batch can record drew nothing: it had been
-  built for the batch and was left without a body of its own. It gets one, and is drawn.
+  built for the batch and was left without a body of its own. It gets one - with its edge and outline - and is drawn;
+  a path whose gradient fill stops being instanced draws its body and edge again. The edge of a sector or a framed
+  rectangle spans its gradient over the body's box, so it takes the body's colors.
+- A regular polygon whose outline pen changed kept its old outline.
 - A gradient with more than eight stops drew its first eight and padded past them; how many are drawn is now said
   (`GradientBrush.MaxRenderedStops`).
 - `WebView` on Linux: Chromium's processes start - each is exec'd instead of forked from a zygote, which the .NET
