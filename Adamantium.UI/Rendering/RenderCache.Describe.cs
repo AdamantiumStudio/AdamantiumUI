@@ -145,11 +145,17 @@ public partial class RenderCache
     /// <summary>Whether a segment of the glyph batch draws the instances [first, first + count).</summary>
     internal bool GlyphsIssued(int first, int count) => _textBatch != null && _textBatch.Issues(first, count);
 
-    /// <summary>Whether the last walk left <paramref name="unit"/> out because it lies outside its clip.</summary>
-    internal bool WasCulled(Core.Graphics.IRenderUnit unit) => _culledWhenRecorded.Contains(unit);
+    /// <summary>Whether the last walk left <paramref name="unit"/> out because it lies outside its clip, or with a group
+    /// of draws it left out.</summary>
+    internal bool WasCulled(Core.Graphics.IRenderUnit unit) =>
+        _culledWhenRecorded.Contains(unit) || _unitsLeftOutWithGroup.Contains(unit);
 
     /// <summary>Whether text of this kind is drawn through the glyph batch rather than on its own.</summary>
     internal bool BatchesText(RenderUnits.TextRenderComponent text) => _textBatch != null && _textBatch.CanBatch(text, out _);
+
+    /// <summary>Whether this text, of a kind the glyph batch takes, was drawn by itself when the stream was recorded:
+    /// the batch could not pack it, turned or sheared against its node.</summary>
+    internal bool DrewTextItself(Core.Graphics.IRenderUnit unit) => _textDrawnItself.Contains(unit);
 
     /// <summary>One glyph instance as the shader reads it.</summary>
     internal GlyphItem GlyphAt(int index) => _textBatch.ItemAt(index);

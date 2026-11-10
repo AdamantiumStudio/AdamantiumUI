@@ -33,6 +33,9 @@ public partial class RenderCache
     private readonly List<CommandGroup> _groupsCut = [];
     private readonly List<CommandGroup> _groupsLeftOut = [];
 
+    // The units the last walk passed over with a group it left out, out of sight or clear.
+    private readonly HashSet<Core.Graphics.IRenderUnit> _unitsLeftOutWithGroup = new();
+
     // Something the recorded groups were placed from moves this frame: a replay places each again where it now stands.
     private bool _groupsMove;
 
@@ -163,6 +166,14 @@ public partial class RenderCache
                 if (_recording && contentAt >= 0 && state.Options.Opacity > 0)
                 {
                     _groupsLeftOut.Add(state);
+                }
+
+                if (_recording)
+                {
+                    for (var i = index + 1; i < end && i < group.Units.Count; i++)
+                    {
+                        _unitsLeftOutWithGroup.Add(group.Units[i]);
+                    }
                 }
 
                 return end;

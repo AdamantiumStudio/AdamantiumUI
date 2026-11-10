@@ -893,6 +893,7 @@ public partial class RenderCache
             _opsHoldCommandGroups = false;
             _groupsCut.Clear();
             _groupsLeftOut.Clear();
+            _unitsLeftOutWithGroup.Clear();
             _openLayer = null;
             _opsReplayable = true; 
             _rectSlotByUnit.Clear();
@@ -911,6 +912,7 @@ public partial class RenderCache
             _walkVersion++;
             _nodeAllAware.Clear();
             _culledWhenRecorded.Clear();
+            _textDrawnItself.Clear();
             _clonedWhenRecorded.Clear();
             ForgetCopies();
             _nodeStragglers.Clear();   // recorded per walk, exactly like the answers above it
@@ -1781,6 +1783,7 @@ public partial class RenderCache
                 }
                 // else: rotated/sheared RELATIVE transform or overflow -> fall through to the per-block direct draw below
                 // (which re-marks the node not-aware, exactly like a rejected rect)
+                if (_recording) _textDrawnItself.Add(unit);
             }
             else if (device != null && InstancedFillCollector.Enabled && unit is GeometryRenderUnit gru && _instancedFill.CanBatch(gru))
             {

@@ -271,6 +271,8 @@ All packages share one version.
   a path whose gradient fill stops being instanced draws its body and edge again. The edge of a sector or a framed
   rectangle spans its gradient over the body's box, so it takes the body's colors.
 - A regular polygon whose outline pen changed kept its old outline.
+- The frame verifier no longer reports as lost the text the glyph batch cannot pack and draws by itself (turned
+  against its element), nor text in a group of draws left out of sight.
 - A gradient with more than eight stops drew its first eight and padded past them; how many are drawn is now said
   (`GradientBrush.MaxRenderedStops`).
 - `WebView` on Linux: Chromium's processes start - each is exec'd instead of forked from a zygote, which the .NET
