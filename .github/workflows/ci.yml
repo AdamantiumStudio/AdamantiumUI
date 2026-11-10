@@ -135,6 +135,7 @@ jobs:
           run sweeps $xaml --filter "TestCategory=MarkupSweep"
           run ui Tests/Adamantium.UITests/Adamantium.UITests.csproj --filter "TestCategory!=Gpu"
           run sandbox Tests/Adamantium.UI.Sandbox.Tests/Adamantium.UI.Sandbox.Tests.csproj --filter "TestCategory!=Scenario"
+          run pdf Tests/Adamantium.UI.Pdf.Tests/Adamantium.UI.Pdf.Tests.csproj
           status=0
           for i in "${!pids[@]}"; do
             wait "${pids[$i]}" || status=1

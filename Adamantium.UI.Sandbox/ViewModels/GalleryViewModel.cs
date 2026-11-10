@@ -40,6 +40,7 @@ public partial class GalleryViewModel
         new VectorIconsViewModel(),
         new ClippingViewModel(),
         new PdfDrawingViewModel(),
+        new PdfPageViewModel(),
         new OpacityViewModel(),
         new ViewboxViewModel(),
         new ZoomBoxViewModel(),

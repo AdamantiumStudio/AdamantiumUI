@@ -62,6 +62,11 @@ public interface IDrawingSession
     /// shows just its fragment of one shared photo without cropping/copying the bitmap.</summary>
     IDrawingSession DrawImage(ImageSource image, Brush filter, Rect destinationRect, CornerRadius corners, Rect sourceUv);
 
+    /// <summary>Draws the image into <paramref name="destinationRect"/> placed by <paramref name="transform"/> - turned
+    /// and sheared with it, not laid upright into its bounds: a picture inside a turned drawing, a PDF page's image.
+    /// </summary>
+    IDrawingSession DrawImage(ImageSource image, Brush filter, Rect destinationRect, Matrix4x4F transform);
+
     /// <summary>Draws one FRAME of an animated image: its frames are the layers of a single texture, and the frame is
     /// chosen in the shader. Advancing an animation therefore uploads nothing and allocates nothing.</summary>
     IDrawingSession DrawImageFrame(ImageSource image, Brush filter, Rect destinationRect, CornerRadius corners, int frameLayer);

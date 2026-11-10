@@ -1,0 +1,12 @@
+<Language>
+    <Phrase Key="Title" Text="PDF page — a page as one drawing"/>
+    <Phrase Key="Hint" Text="The page is read once into draws and then shown at any zoom without being read again. Open a PDF of your own by its path, or look at the sample written here. Wheel zooms, dragging pans."/>
+    <Phrase Key="File" Text="File"/>
+    <Phrase Key="Open" Text="Open"/>
+    <Phrase Key="Sample" Text="Sample"/>
+    <Phrase Key="Previous" Text="Previous page"/>
+    <Phrase Key="Next" Text="Next page"/>
+    <Phrase Key="Problems" Text="Not drawn"/>
+    <Phrase Key="PageNumber" Text="Page number"/>
+    <Phrase Key="Go" Text="Go"/>
+</Language>

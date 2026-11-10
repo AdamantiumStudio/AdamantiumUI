@@ -1,0 +1,12 @@
+<Language>
+    <Phrase Key="Title" Text="Страница PDF — страница как одно рисование"/>
+    <Phrase Key="Hint" Text="Страница один раз читается в команды рисования и дальше показывается на любом масштабе без нового чтения. Откройте свой PDF по пути или посмотрите образец, написанный здесь. Колесо меняет масштаб, перетаскивание сдвигает."/>
+    <Phrase Key="File" Text="Файл"/>
+    <Phrase Key="Open" Text="Открыть"/>
+    <Phrase Key="Sample" Text="Образец"/>
+    <Phrase Key="Previous" Text="Предыдущая страница"/>
+    <Phrase Key="Next" Text="Следующая страница"/>
+    <Phrase Key="Problems" Text="Не нарисовано"/>
+    <Phrase Key="PageNumber" Text="Номер страницы"/>
+    <Phrase Key="Go" Text="Перейти"/>
+</Language>
