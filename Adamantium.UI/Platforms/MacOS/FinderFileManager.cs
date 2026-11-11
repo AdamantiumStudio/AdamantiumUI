@@ -9,6 +9,11 @@ namespace Adamantium.UI.Platforms.MacOS;
 /// <summary>The Finder, revealing the file in its folder or opening it, through <c>open</c>.</summary>
 internal sealed class FinderFileManager : IFileManagerPlatform
 {
+    /// <summary>Downloads in the home folder: macOS keeps it there, named in English whatever the language the Finder
+    /// shows it in.</summary>
+    public string DownloadsFolder =>
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
+
     public bool ShowItem(string path) => Open(["-R", Path.GetFullPath(path)]);
 
     // A full path begins with '/', never read as an option.

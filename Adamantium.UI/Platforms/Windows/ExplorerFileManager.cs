@@ -11,6 +11,35 @@ internal sealed class ExplorerFileManager : IFileManagerPlatform
 {
     private const int NoAssociation = 1155;
 
+    private const string ShellFolders = @"Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders";
+    private const string DownloadsId = "{374DE290-123F-4565-9164-39C4925E467B}";
+
+    /// <summary>The Downloads folder as the shell records it for the user - moved, if they moved it - under its known
+    /// folder id in User Shell Folders, its variables expanded once.</summary>
+    public string DownloadsFolder
+    {
+        get
+        {
+            if (!OperatingSystem.IsWindows())
+            {
+                return null;
+            }
+
+            try
+            {
+                using var folders = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(ShellFolders);
+                return folders?.GetValue(DownloadsId, null, Microsoft.Win32.RegistryValueOptions.DoNotExpandEnvironmentNames)
+                    is string folder
+                    ? Environment.ExpandEnvironmentVariables(folder)
+                    : null;
+            }
+            catch (Exception e) when (e is System.Security.SecurityException or IOException or UnauthorizedAccessException)
+            {
+                return null;
+            }
+        }
+    }
+
     public bool OpenItem(string path)
     {
         try
