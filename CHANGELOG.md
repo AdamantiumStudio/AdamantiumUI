@@ -13,10 +13,11 @@ All packages share one version.
   A `WebDownload` tells its address, suggested name, type, size, bytes come in, speed, progress and state as they
   change (`INotifyPropertyChanged`), and pauses, goes on and cancels. One interrupted - the connection, the server,
   the disk - says why (`InterruptReason`) and is not finished: Chromium may resume it by itself, at the path given,
-  unasked; `Resume` goes on with it, `Cancel` gives it up and deletes its part. Saved ones are listed in
+  unasked; `Resume` goes on with it, `Cancel` gives it up for good and deletes its part. Saved ones are listed in
   `WebViewEngine.Downloads` until `ForgetDownload`. A download outlives the page that started it: closed while one
-  comes in, the page is kept - shown nowhere, silent, blank - until the last is done; one still asked when its page
-  closes is refused. The sandbox's Web tab lists them under the page.
+  comes in, the page is kept - shown nowhere, silent, blank - until the last is done or given up, an interrupted one
+  keeping it until it is resumed or cancelled; one still asked when its page closes is refused, and `Save` coming too
+  late says so. The sandbox's Web tab lists them under the page.
 - `WebViewEngine.StartAhead()`: Chromium started before the first page - CEF, and its processes (the GPU's, the
   network's, a page's) kept up by a blank page shown nowhere until the first browser is made, which then shows its
   page without waiting for them to start. Until then they hold their memory; an application calls it as it starts.

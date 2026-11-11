@@ -38,19 +38,31 @@ internal sealed unsafe class WebViewDownloadHandler : CefObject
         try
         {
             owner = From<WebViewDownloadHandler>(self).browser;
-            download = owner.Download(item->get_id(item));
-            download.Origin = owner;
-            download.Read(item);
-            // Resuming one interrupted, Chromium asks again: it goes on where the application said, unasked.
-            if (download.GoOnWhereSaved(callback))
+            var id = item->get_id(item);
+            if (owner.IsDownloadGivenUp(id))
             {
-                taken = true;
+                // Given up here while Chromium kept it to resume: not going on is the cancel it honours.
+                taken = false;
+            }
+            else if ((download = owner.Download(id)).Ended)
+            {
+                taken = false;
             }
             else
             {
-                download.Suggest(CefStrings.Read(suggestedName));
-                download.Ask(callback);
-                taken = owner.Is(cefBrowser) && owner.OnDownloadRequested(download);
+                download.Origin = owner;
+                download.Read(item);
+                // Resuming one interrupted, Chromium asks again: it goes on where the application said, unasked.
+                if (download.GoOnWhereSaved(callback))
+                {
+                    taken = true;
+                }
+                else
+                {
+                    download.Suggest(CefStrings.Read(suggestedName));
+                    download.Ask(callback);
+                    taken = owner.Is(cefBrowser) && owner.OnDownloadRequested(download);
+                }
             }
         }
         catch (Exception exception)
@@ -59,10 +71,17 @@ internal sealed unsafe class WebViewDownloadHandler : CefObject
             taken = false;
         }
 
-        if (!taken && download != null)
+        try
         {
-            download.Refuse();
-            owner.DownloadHeard(download);
+            if (!taken && download is { Ended: false })
+            {
+                download.Refuse();
+                owner.DownloadHeard(download);
+            }
+        }
+        catch (Exception exception)
+        {
+            CefCallbacks.Report(exception);
         }
 
         CefRefCounting.ReleaseCef(callback);
@@ -78,11 +97,19 @@ internal sealed unsafe class WebViewDownloadHandler : CefObject
         try
         {
             var owner = From<WebViewDownloadHandler>(self).browser;
-            var download = owner.Download(item->get_id(item));
-            download.Origin = owner;
-            download.Read(item);
-            download.TakeControl(callback);
-            owner.DownloadHeard(download);
+            var id = item->get_id(item);
+            if (!owner.IsDownloadGivenUp(id))
+            {
+                var download = owner.Download(id);
+                if (!download.Ended)
+                {
+                    download.Origin = owner;
+                    download.Read(item);
+                    download.TakeControl(callback);
+                }
+
+                owner.DownloadHeard(download);
+            }
         }
         catch (Exception exception)
         {

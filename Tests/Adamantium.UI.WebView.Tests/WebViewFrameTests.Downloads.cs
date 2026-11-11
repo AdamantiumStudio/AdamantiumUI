@@ -275,6 +275,7 @@ public partial class WebViewFrameTests
         using var site = new LocalSite("<title>files</title>");
         WebDownload asked = null;
         var listed = true;
+        var lateSaveTook = true;
         var stateAfter = WebDownloadState.Asked;
         loop.Run(() =>
         {
@@ -288,7 +289,7 @@ public partial class WebViewFrameTests
             // Answered too late: nothing comes of it.
             if (asked != null)
             {
-                new WebDownloadRequestedEventArgs(asked).Save(Path.Combine(Path.GetTempPath(), "never.bin"));
+                lateSaveTook = new WebDownloadRequestedEventArgs(asked).Save(Path.Combine(Path.GetTempPath(), "never.bin"));
                 listed = engine.Downloads.Contains(asked);
             }
         });
@@ -302,7 +303,8 @@ public partial class WebViewFrameTests
         {
             Assert.That(asked, Is.Not.Null, "the view was asked");
             Assert.That(stateAfter, Is.EqualTo(WebDownloadState.Cancelled));
-            Assert.That(listed, Is.False, "a late answer saves nothing");
+            Assert.That(lateSaveTook, Is.False, "a late answer is told it came too late");
+            Assert.That(listed, Is.False, "and saves nothing");
             Assert.That(left, Is.Zero, "the page went");
         });
     }
@@ -362,8 +364,9 @@ public partial class WebViewFrameTests
         var folder = Path.Combine(Path.GetTempPath(), "AdamantiumDownloads", Guid.NewGuid().ToString("N"));
         WebDownload asked = null;
         var state = WebDownloadState.Asked;
-        string reason = null;
+        var reason = WebDownloadInterruption.None;
         var finished = true;
+        var forgotten = false;
         try
         {
             loop.Run(() => ShowPage(WebViewFramePath.PixelBuffer, site.Origin + "/", (browser, view) =>
@@ -382,17 +385,28 @@ public partial class WebViewFrameTests
                 state = asked.State;
                 reason = asked.InterruptReason;
                 finished = asked.IsFinished;
+                // Forgotten as it finishes, as a list that drops finished downloads does.
+                asked.PropertyChanged += (_, e) =>
+                {
+                    if (e.PropertyName == nameof(WebDownload.IsFinished) && asked.IsFinished)
+                    {
+                        engine.ForgetDownload(asked);
+                    }
+                };
                 asked.Cancel();
-                Pump(() => false, TimeSpan.FromSeconds(1));
+                // Long enough for Chromium to try resuming it: given up here, it is told no.
+                Pump(() => false, TimeSpan.FromSeconds(3));
+                forgotten = !engine.Downloads.Contains(asked);
             }));
 
             Assert.Multiple(() =>
             {
                 Assert.That(state, Is.EqualTo(WebDownloadState.Interrupted));
-                Assert.That(reason, Is.Not.Empty);
+                Assert.That(reason, Is.EqualTo(WebDownloadInterruption.Server), "it sent less than it said");
                 Assert.That(finished, Is.False, "it may still go on");
                 Assert.That(asked?.State, Is.EqualTo(WebDownloadState.Cancelled), "and cancelled, it is done");
                 Assert.That(Directory.Exists(folder) ? Directory.GetFiles(folder) : [], Is.Empty, "its part with it");
+                Assert.That(forgotten, Is.True);
             });
         }
         finally

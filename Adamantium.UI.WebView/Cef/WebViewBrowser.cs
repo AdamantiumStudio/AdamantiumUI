@@ -121,6 +121,9 @@ internal sealed unsafe class WebViewBrowser : IDisposable
     /// <summary>Chromium told of <paramref name="download"/>: one it says no more of is let go of when not saved.</summary>
     internal void DownloadHeard(WebDownload download) => engine.DownloadHeard(download);
 
+    /// <summary>Whether the download Chromium numbers <paramref name="id"/> was given up here: it is not to go on.</summary>
+    internal bool IsDownloadGivenUp(uint id) => engine.IsDownloadGivenUp(id);
+
     /// <summary>The page downloads a file: asked of the view, false when it cannot ask - the download is refused.
     /// </summary>
     internal bool OnDownloadRequested(WebDownload download) => !closing && view.DownloadRequested(this, download);

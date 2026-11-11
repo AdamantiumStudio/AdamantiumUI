@@ -22,7 +22,7 @@ public sealed unsafe class WebDownload : INotifyPropertyChanged
     private string suggestedName = string.Empty;
     private string mimeType = string.Empty;
     private string filePath = string.Empty;
-    private string interruptReason = string.Empty;
+    private WebDownloadInterruption interruptReason;
     private long totalBytes = -1;
     private long receivedBytes;
     private long bytesPerSecond;
@@ -114,9 +114,9 @@ public sealed unsafe class WebDownload : INotifyPropertyChanged
         private set => Set(ref state, value);
     }
 
-    /// <summary>What stopped it, as Chromium names it - "NetworkFailed", "FileNoSpace"; empty unless
-    /// <see cref="WebDownloadState.Interrupted"/>.</summary>
-    public string InterruptReason
+    /// <summary>What stopped it; <see cref="WebDownloadInterruption.None"/> unless <see cref="WebDownloadState.Interrupted"/>.
+    /// </summary>
+    public WebDownloadInterruption InterruptReason
     {
         get => interruptReason;
         private set => Set(ref interruptReason, value);
@@ -154,7 +154,6 @@ public sealed unsafe class WebDownload : INotifyPropertyChanged
     private void GiveUpInterrupted()
     {
         TakeControl(null);
-        Ended = true;
         if (partialPath.Length > 0 && partialPath != filePath)
         {
             try
@@ -167,9 +166,26 @@ public sealed unsafe class WebDownload : INotifyPropertyChanged
             }
         }
 
-        InterruptReason = string.Empty;
+        InterruptReason = WebDownloadInterruption.None;
+        IsGivenUp = true;
+        // Told before it counts as ended: an application forgetting it as it finishes leaves its page to be closed.
         State = WebDownloadState.Cancelled;
+        Ended = true;
         ended?.Invoke(this);
+    }
+
+    /// <summary>Whether it was given up here, interrupted, while Chromium kept it to resume.</summary>
+    internal bool IsGivenUp { get; private set; }
+
+    private static WebDownloadInterruption Interruption(CefDownloadInterruptReason reason)
+    {
+        var name = reason.ToString();
+        return name.StartsWith("File", StringComparison.Ordinal) ? WebDownloadInterruption.File
+            : name.StartsWith("Network", StringComparison.Ordinal) ? WebDownloadInterruption.Network
+            : name.StartsWith("Server", StringComparison.Ordinal) ? WebDownloadInterruption.Server
+            : name.StartsWith("User", StringComparison.Ordinal) ? WebDownloadInterruption.User
+            : name.StartsWith("Crash", StringComparison.Ordinal) ? WebDownloadInterruption.Crash
+            : WebDownloadInterruption.Other;
     }
 
     /// <summary>Pauses it while it comes in.</summary>
@@ -198,17 +214,17 @@ public sealed unsafe class WebDownload : INotifyPropertyChanged
     internal bool Ended { get; private set; }
 
     /// <summary>Saves it at <paramref name="path"/>, a full path with the file's name; the folder is made if need be.
-    /// Once only, while it is asked: nothing otherwise.</summary>
-    internal void Save(string path)
+    /// Once only, while it is asked: false otherwise - answered before, refused, its page gone, or finished.</summary>
+    internal bool Save(string path)
     {
         if (string.IsNullOrEmpty(path) || !Path.IsPathFullyQualified(path))
         {
             throw new ArgumentException($"'{path}' is no full path to save at.", nameof(path));
         }
 
-        if (asking == null)
+        if (asking == null || Ended)
         {
-            return;
+            return false;
         }
 
         var held = asking;
@@ -226,8 +242,13 @@ public sealed unsafe class WebDownload : INotifyPropertyChanged
         }
 
         FilePath = path;
-        State = WebDownloadState.InProgress;
+        if (state == WebDownloadState.Asked)
+        {
+            State = WebDownloadState.InProgress;
+        }
+
         saved?.Invoke(this);
+        return true;
     }
 
     /// <summary>Answers Chromium asking again - as it resumes a download that was interrupted - with the path the
@@ -322,7 +343,7 @@ public sealed unsafe class WebDownload : INotifyPropertyChanged
         {
             TotalBytes = ReceivedBytes;
             Progress = 1;
-            InterruptReason = string.Empty;
+            InterruptReason = WebDownloadInterruption.None;
             State = WebDownloadState.Completed;
         }
         else
@@ -335,18 +356,20 @@ public sealed unsafe class WebDownload : INotifyPropertyChanged
             }
             else if (item->is_interrupted(item) != 0)
             {
-                InterruptReason = item->get_interrupt_reason(item).ToString();
+                InterruptReason = Interruption(item->get_interrupt_reason(item));
                 State = WebDownloadState.Interrupted;
             }
             else if (asking == null && FilePath.Length > 0)
             {
-                InterruptReason = string.Empty;
+                InterruptReason = WebDownloadInterruption.None;
                 State = item->is_paused(item) != 0 ? WebDownloadState.Paused : WebDownloadState.InProgress;
             }
         }
 
         if (IsFinished)
         {
+            // Finished before the application answered: there is nothing left to answer.
+            LetGoOfAsking();
             Ended = true;
             TakeControl(null);
         }

@@ -25,8 +25,9 @@ public sealed class WebDownloadRequestedEventArgs : EventArgs
     public bool IsAnswered => !Download.IsAsked;
 
     /// <summary>Saves it at <paramref name="path"/> - a full path with the file's name; the folder is made if need be.
-    /// It is then among <see cref="WebViewEngine.Downloads"/>.</summary>
-    public void Save(string path) => Download.Save(path);
+    /// It is then among <see cref="WebViewEngine.Downloads"/>. False when it is no longer asked: answered before, or
+    /// refused - the page that started it closed meanwhile, say.</summary>
+    public bool Save(string path) => Download.Save(path);
 
     /// <summary>Refuses it: nothing is downloaded.</summary>
     public void Refuse() => Download.Refuse();

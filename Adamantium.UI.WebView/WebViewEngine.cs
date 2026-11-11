@@ -29,6 +29,7 @@ public sealed unsafe class WebViewEngine : IDisposable
     private readonly Lock sitesLock = new();
     private readonly Dictionary<string, IWebSiteContent> sites = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<uint, WebDownload> downloadsById = [];
+    private readonly HashSet<uint> downloadsGivenUp = [];
     private readonly Adamantium.Core.Collections.TrackingCollection<WebDownload> downloads = [];
     private WebViewBrowserProcessHandler browserProcess;
     private WebViewApp app;
@@ -143,6 +144,11 @@ public sealed unsafe class WebViewEngine : IDisposable
             return;
         }
 
+        if (download.IsGivenUp)
+        {
+            downloadsGivenUp.Add(download.Id);
+        }
+
         if (!downloads.Contains(download))
         {
             downloadsById.Remove(download.Id);
@@ -161,6 +167,10 @@ public sealed unsafe class WebViewEngine : IDisposable
             LoopSignal.Post(origin.CloseKept);
         }
     }
+
+    /// <summary>Whether the download Chromium numbers <paramref name="id"/> was given up here, interrupted: Chromium keeps
+    /// it to resume, and is answered no each time it tries.</summary>
+    internal bool IsDownloadGivenUp(uint id) => downloadsGivenUp.Contains(id);
 
     /// <summary>Refuses the downloads <paramref name="browser"/> asked about and the application has not answered: the
     /// page goes, and an answer coming later would start a download nobody hears of.</summary>
