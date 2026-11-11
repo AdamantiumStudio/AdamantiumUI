@@ -359,6 +359,12 @@ All packages share one version.
 
 ### Fixed
 
+- An `Ellipse` drawn as a ring (`RingThickness`) swept through part of a turn is the band it says: it was cut from a
+  sector by a boolean whose two sectors share their radial edges, which hung the render thread from about 295 degrees
+  on and at other sweeps (45, 135) filled the hole and left the band empty. The band is now built as its outline - out
+  along the outer arc, back along the inner. A `CombinedGeometry` whose walk of contours falls into such a loop stops
+  after as many steps as it has segments, its contour cut short rather than the thread lost; one whose outlines share a
+  segment no longer throws as it is cut into triangles.
 - A page that asks before it is left - `beforeunload` - closes when its `WebView` goes: the question came to the view
   again as the browser closed, and a view that answered "stay", or was gone and never answered, kept the browser and its
   process for good.
