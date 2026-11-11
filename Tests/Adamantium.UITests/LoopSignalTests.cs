@@ -195,11 +195,14 @@ public class LoopSignalTests
     [Test]
     public void WorkBetweenFrames_WakesAnIdleLoop()
     {
+        var ran = false;
+        var frames = LoopSignal.FrameRequests;
+        LoopSignal.Wait(20, CancellationToken.None);
         var clock = Stopwatch.StartNew();
         var poster = Task.Run(() =>
         {
             Thread.Sleep(50);
-            LoopSignal.PostBetweenFrames(() => { });
+            LoopSignal.PostBetweenFrames(() => ran = true);
         });
 
         LoopSignal.Wait(5000, CancellationToken.None);
@@ -210,8 +213,86 @@ public class LoopSignalTests
         Assert.Multiple(() =>
         {
             Assert.That(woke, Is.LessThan(2000));
+            Assert.That(ran, Is.True);
             Assert.That(LoopSignal.HasPostedWork, Is.False);
+            Assert.That(LoopSignal.FrameRequests, Is.EqualTo(frames));
         });
+    }
+
+    // Work that posts more while the frame drains it - Chromium asking for its next turn - must still wake the loop.
+    [Test]
+    public void WorkPostedAgainWhileDrained_WakesTheLoopAfter()
+    {
+        var runs = 0;
+        void Turn()
+        {
+            if (++runs < 2) LoopSignal.PostBetweenFrames(Turn);
+        }
+
+        LoopSignal.PostBetweenFrames(Turn);
+        LoopSignal.Drain();
+        Assert.That(runs, Is.EqualTo(1), "what the work posts again is left for the pause");
+
+        var clock = Stopwatch.StartNew();
+        LoopSignal.Wait(5000, CancellationToken.None);
+        var wokeForTheLeftWork = clock.ElapsedMilliseconds;
+        LoopSignal.Drain();
+
+        // The wake is not left marked as pending with no token behind it: the next post from another thread wakes too.
+        clock.Restart();
+        var later = Task.Run(() =>
+        {
+            Thread.Sleep(50);
+            LoopSignal.PostBetweenFrames(() => { });
+        });
+        LoopSignal.Wait(5000, CancellationToken.None);
+        var wokeForTheNext = clock.ElapsedMilliseconds;
+        later.Wait();
+        LoopSignal.Drain();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(runs, Is.EqualTo(2));
+            Assert.That(wokeForTheLeftWork, Is.LessThan(100));
+            Assert.That(wokeForTheNext, Is.LessThan(200));
+        });
+    }
+
+    [Test]
+    public void WorkThatKeepsPostingMore_DoesNotHoldThePausePastItsEnd()
+    {
+        var keepGoing = true;
+        void Turn()
+        {
+            Thread.Sleep(1);
+            if (keepGoing) LoopSignal.PostBetweenFrames(Turn);
+        }
+
+        LoopSignal.PostBetweenFrames(Turn);
+        var clock = Stopwatch.StartNew();
+        LoopSignal.Pause(50, CancellationToken.None);
+        var paused = clock.ElapsedMilliseconds;
+        keepGoing = false;
+        LoopSignal.Drain();
+        LoopSignal.Drain();
+
+        Assert.That(paused, Is.LessThan(500));
+    }
+
+    // What posted work makes another loop ask for runs in the same frame, after it, as before.
+    [Test]
+    public void WorkBetweenFramesPostedByPostedWork_RunsInTheSameDrainAfterIt()
+    {
+        var order = "";
+        LoopSignal.Post(() =>
+        {
+            order += "posted ";
+            LoopSignal.PostBetweenFrames(() => order += "between");
+        });
+
+        LoopSignal.Drain();
+
+        Assert.That(order, Is.EqualTo("posted between"));
     }
 
     [Test]

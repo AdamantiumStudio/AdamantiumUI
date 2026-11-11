@@ -189,6 +189,12 @@ All packages share one version.
 
 ### Changed
 
+- Chromium gets its turn on the UI loop between frames, as soon as it asks, not at the start of the next frame: at a
+  low or variable frame rate, or with no frame asked for, a page waited for the frame - up to a quarter of a second
+  each time. `LoopSignal.PostBetweenFrames` runs work so: while the loop holds between frames, up to the frame's due
+  time, waking an idle loop and asking for no frame. Work posted with `LoopSignal.Post` keeps running first in a
+  frame, and what it has Chromium ask for runs in the same frame.
+
 - A `WebView` out of sight - a tab not shown, a minimized window, a page another opened and not yet looked at - gives
   its frame surfaces back to the GPU (a few, each the page's size in pixels: ~26 MB at 4K) and gets new ones with a
   whole frame once it is seen; each background tab of a browser held them for good.
