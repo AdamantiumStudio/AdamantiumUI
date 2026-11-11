@@ -10,8 +10,8 @@ All packages share one version.
 - `InfiniteCanvas.PlaneBounds`: the plane's edges. Empty - the default - leaves it endless, as before. With edges the
   camera stays on the plane through every move - drag, wheel, zoom, inertia, fit: scrolled no further than its edges,
   centered across where it is narrower than the viewport, at the top where it is shorter; zooming out centers it and a
-  zoom near an edge presses it to the edge. A finger pulls it a little past an edge against a growing pull and it
-  springs back; a flick meets the edge the same way, a mouse's coast stops at it. Scroll bars (`PART_HorizontalScrollBar`,
+  zoom near an edge presses it to the edge. A finger or a dragging mouse pulls it a little past an edge against a
+  growing pull and it springs back; a flick meets the edge the same way. Scroll bars (`PART_HorizontalScrollBar`,
   `PART_VerticalScrollBar` in the canvas's template) show the camera along an axis there is somewhere to go and move
   it. `ClampToPlane` says where a camera would be kept. The canvas's panel edits the edges.
 - `InfiniteCanvas.WheelMode` (`CanvasWheelMode.Zoom`, `Scroll`, `None`): the wheel zooms, as before, or scrolls as

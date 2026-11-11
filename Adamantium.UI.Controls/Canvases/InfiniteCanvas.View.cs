@@ -345,7 +345,7 @@ public partial class InfiniteCanvas
         _zoomCoast.Stop();
         _glide.Stop();
         _springBack.Stop();
-        _touchCoast = false;
+        _handCoast = false;
         Reclamp();
     }
 
@@ -353,7 +353,7 @@ public partial class InfiniteCanvas
     {
         if (component is not InfiniteCanvas canvas || e.NewValue is true) return;
 
-        var moving = canvas._coast.IsActive || canvas._zoomCoast.IsActive;
+        var moving = canvas._coast.IsActive || canvas._zoomCoast.IsActive || canvas._springBack.IsActive;
         canvas.StopCoasting();
         if (moving) canvas.RememberLayout();
     }
@@ -370,9 +370,9 @@ public partial class InfiniteCanvas
     {
         var by = to - _travel;
 
-        // A finger's flick meets the edge with the band: past it, each step carries a quarter, and the plane springs
-        // back once the flick dies.
-        if (_touchCoast)
+        // A hand's flick meets the edge with the band: past it, each step carries a quarter, and the plane springs back
+        // once the flick dies.
+        if (_handCoast)
         {
             if (Offset != ClampToPlane(Offset, Scale)) by *= PastEdgeStep;
             MoveByHand(by);
